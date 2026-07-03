@@ -19,7 +19,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@leela/core": "workspace:*"
+    "@leela/core": "workspace:*",
+    "firebase": "^11.9.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

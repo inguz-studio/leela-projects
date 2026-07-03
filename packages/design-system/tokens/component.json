@@ -1,0 +1,45 @@
+{
+  "btn": {
+    "height-sm":     "32px",
+    "height-md":     "40px",
+    "height-lg":     "48px",
+    "radius":        "{radius.sm}",
+    "font-size-sm":  "{font.size.sm}",
+    "font-size-md":  "{font.size.md}",
+    "font-size-lg":  "{font.size.md}",
+    "font-weight":   "600",
+    "px-sm":         "{spacing.3}",
+    "px-md":         "{spacing.4}",
+    "px-lg":         "{spacing.5}",
+    "focus-ring":    "2px"
+  },
+  "input": {
+    "height":        "40px",
+    "radius":        "{radius.sm}",
+    "font-size":     "{font.size.md}",
+    "px":            "{spacing.4}",
+    "border-width":  "1px"
+  },
+  "badge": {
+    "height":        "22px",
+    "radius":        "{radius.sm}",
+    "font-size":     "{font.size.sm}",
+    "font-weight":   "600",
+    "px":            "{spacing.2}"
+  },
+  "chip": {
+    "height":        "32px",
+    "radius":        "{radius.pill}",
+    "font-size":     "{font.size.base}",
+    "px":            "{spacing.3}"
+  },
+  "avatar": {
+    "size-sm":       "32px",
+    "size-md":       "40px",
+    "size-lg":       "48px",
+    "radius":        "{radius.pill}"
+  },
+  "divider": {
+    "thickness":     "1px"
+  }
+}

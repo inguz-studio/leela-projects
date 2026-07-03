@@ -1,25 +1,56 @@
 {
   "name": "@leela/design-system",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/index.mjs",
       "require": "./dist/index.js"
-    }
+    },
+    "./tailwind-preset": {
+      "types":   "./dist/tailwind-preset.d.ts",
+      "import":  "./dist/tailwind-preset.mjs",
+      "require": "./dist/tailwind-preset.js"
+    },
+    "./themes/brasa.css": "./themes/brasa.css",
+    "./themes/leela.css": "./themes/leela.css",
+    "./themes/index.css": "./themes/index.css"
   },
-  "files": ["dist"],
+  "files": ["dist", "themes"],
   "scripts": {
-    "build": "tsup",
-    "lint": "eslint src --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "build":           "tsup",
+    "lint":            "eslint src --max-warnings 0",
+    "type-check":      "tsc --noEmit",
+    "test":            "vitest run",
+    "test:watch":      "vitest",
+    "generate-tokens": "tsx src/scripts/generate-tokens.ts"
+  },
+  "peerDependencies": {
+    "react":     "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot":      "^1.1.0",
+    "class-variance-authority":  "^0.7.0",
+    "clsx":                      "^2.1.1",
+    "tailwind-merge":            "^2.5.2"
   },
   "devDependencies": {
-    "tsup": "^8.0.0",
-    "typescript": "^5.7.0"
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react":    "^16.0.0",
+    "@testing-library/user-event": "^14.5.0",
+    "@types/node":               "^22.0.0",
+    "@types/react":              "^18.3.12",
+    "@types/react-dom":          "^18.3.1",
+    "jsdom":                     "^25.0.0",
+    "tailwindcss":               "^3.4.14",
+    "tsx":                       "^4.19.0",
+    "tsup":                      "^8.0.0",
+    "typescript":                "^5.7.0",
+    "vitest":                    "^2.1.0"
   }
 }
