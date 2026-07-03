@@ -6,9 +6,11 @@ epic_name: Fundação Técnica
 onda: 0
 surface: todas
 moscow: Must
-status: backlog
+status: done
 v1: true
 tasks_total: 2
+tasks_done: 2
+commit: 4230654
 tags: [leela, story]
 ---
 
@@ -21,7 +23,12 @@ tags: [leela, story]
 
 ## Subtarefas
 - [x] LEELA-S000-3-T1 — GitHub Actions (lint/type/test/build) + preview deploy
-- [ ] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
+- [x] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
+
+## Pendências humanas (pós-Onda 0)
+- Criar três projetos no Sentry (leela-painel, leela-landing, leela-mobile) e preencher DSNs no `.env`.
+- Testar disparo de erro: `reportError(new Error('teste'))` no console e confirmar no dashboard Sentry com release + ambiente.
+- Para crash reports nativos iOS/Android: adicionar plugin `@sentry/react-native/expo` ao `app.json` e fazer build EAS com `SENTRY_AUTH_TOKEN`.
 
 ## Links
 Épico: [[LEELA-E00-fundacao-tecnica]]

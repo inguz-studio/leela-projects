@@ -21,7 +21,7 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S000-2-T1 — Firebase (Firestore + Functions + Auth) + Emulator Suite
 - [x] LEELA-S000-2-T2 — Firebase Auth (email/Google/Apple) + custom claims de papel
 - [x] LEELA-S000-3-T1 — GitHub Actions (lint/type/test/build) + preview deploy
-- [ ] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
+- [x] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
 - [x] LEELA-S000-4-T1 — Documento de convenções de código
 - [x] LEELA-S000-4-T2 — Interface `PaymentProvider` + adapter mock/sandbox
 
@@ -32,7 +32,7 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S001-2-T1 — Button (variantes/estados/a11y)
 - [x] LEELA-S001-2-T2 — Input, Badge, Chip, Avatar, Divider
 - [x] LEELA-S001-3-T1 — Shell (Sidebar + Breadcrumb + Header 96px + SubNav)
-- [ ] LEELA-S001-3-T2 — Table densa + EmptyState + paginação + Popover
+- [x] LEELA-S001-3-T2 — Table densa + EmptyState + paginação + Popover
 - [ ] LEELA-S001-3-T3 — Modal + ConfirmModal (§2.15)
 - [ ] LEELA-S001-3-T4 — Toast, Cards (Evento/Desafio), Stepper, Skeleton, Tabs
 - [ ] LEELA-S001-4-T1 — Catálogo (Storybook) nos 2 temas
