@@ -23,10 +23,11 @@ tags:
 ## 🔨 Fazendo
 
 - [ ] **O0** · E00 · Fundação técnica — 10/10T commitado · FIX-E00 (Fable) aplicando 19 achados da revisão
-- [ ] **O0** · E01 · Design System (tema brasa) — Storybook ✅ · T4 (Toast/Cards/Stepper/Skeleton/Tabs) + lint de tokens em curso (Fable)
 
 
 ## 🔍 Revisão
+
+- [ ] **O0** · E01 · Design System (tema brasa) — 10/10T · 22 componentes · 356 testes · Storybook 2 temas · revisão Fable em curso
 
 
 
