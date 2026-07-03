@@ -51,7 +51,12 @@
   },
   "subnav": {
     "height":        "48px",
-    "underline":     "2px"
+    "underline":     "2px",
+    "px":            "{spacing.10}",
+    "pill-height":   "20px",
+    "pill-min-width": "28px",
+    "pill-radius":   "10px",
+    "pill-font-size": "11px"
   },
   "table": {
     "row-height":    "64px",

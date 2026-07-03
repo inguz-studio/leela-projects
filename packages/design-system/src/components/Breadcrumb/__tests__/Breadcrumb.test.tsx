@@ -44,6 +44,20 @@ describe('Breadcrumb', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
+  it('intermediate item without href renders as plain text, not link', () => {
+    render(
+      <Breadcrumb
+        items={[
+          { label: 'Início', href: '/' },
+          { label: 'Sem Rota' },
+          { label: 'Atual' },
+        ]}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: 'Sem Rota' })).not.toBeInTheDocument();
+    expect(screen.getByText('Sem Rota').tagName).toBe('SPAN');
+  });
+
   it('renders separator between items', () => {
     const { container } = render(<Breadcrumb items={items} />);
     const separators = container.querySelectorAll('[aria-hidden]');

@@ -89,6 +89,14 @@ describe('Sidebar', () => {
     expect(count).toBe(8);
   });
 
+  it('collapsed items keep accessible names (sr-only label)', () => {
+    render(<Sidebar sections={sections} collapsed />);
+    expect(screen.getByText('Visão Geral')).toHaveClass('sr-only');
+    expect(
+      screen.getByRole('button', { name: /Configurações/ }),
+    ).toBeInTheDocument();
+  });
+
   it('toggle button is keyboard focusable', async () => {
     render(<Sidebar sections={sections} />);
     const btn = screen.getByRole('button', { name: 'Recolher menu' });

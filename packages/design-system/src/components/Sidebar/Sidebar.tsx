@@ -178,9 +178,10 @@ function SidebarNavItem({ item, collapsed }: SidebarNavItemProps): JSX.Element {
           {item.icon}
         </span>
       )}
-      {!collapsed && (
-        <span className="flex-1 truncate text-left">{item.label}</span>
-      )}
+      {/* Label sempre no DOM — sr-only quando colapsada, para manter nome acessível */}
+      <span className={cn('flex-1 truncate text-left', collapsed && 'sr-only')}>
+        {item.label}
+      </span>
       {!collapsed && item.badge !== undefined && (
         <span
           className={cn(

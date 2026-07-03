@@ -54,6 +54,15 @@ function Breadcrumb({ items, className }: BreadcrumbProps): JSX.Element {
                 >
                   {item.label}
                 </span>
+              ) : !item.href ? (
+                <span
+                  className={cn(
+                    'text-[length:var(--font-size-sm)]',
+                    'text-[var(--text-secondary)]',
+                  )}
+                >
+                  {item.label}
+                </span>
               ) : (
                 <a
                   href={item.href}

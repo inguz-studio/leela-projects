@@ -201,6 +201,11 @@
   --sidebar-collapsed-width: 64px;
   --subnav-height: 48px;
   --subnav-underline: 2px;
+  --subnav-px: var(--spacing-10);
+  --subnav-pill-height: 20px;
+  --subnav-pill-min-width: 28px;
+  --subnav-pill-radius: 10px;
+  --subnav-pill-font-size: 11px;
   --table-row-height: 64px;
   --table-cell-px: 20px;
   --table-cell-py: 14px;
