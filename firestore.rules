@@ -1,17 +1,204 @@
 // firestore.rules — LEELA · Onda 0
 //
 // Deny-by-default: toda coleção é bloqueada por padrão.
-// Isolamento por tenant (ADR-009) virá na task LEELA-S1600-T3.
-// Nunca inverta este padrão sem uma rule explícita e testada.
+// Isolamento multi-tenant completo em S1600-T3 (ADR-009).
+//
+// Partição de coleções (ADR-009 §Estratégia de partição):
+//   TENANT-SCOPED : eventos, clubes, inscritos, comunicados, parcerias,
+//                   programaAfiliacao, pagamentos, equipe, promotores, subscriptions
+//   GLOBAL        : atletas, catalogoAcoes, config/system
+//   PLATAFORMA    : tenants/{id}, tenants/{id}/commercialTerms, platform/…
+//
+// Helpers de autorização reutilizados em todas as rules:
+//   isSignedIn()              — usuário autenticado
+//   isPlatformAdmin()         — role == 'platform_admin' no custom claim
+//   isTenantMember(tenantId)  — tenantId do claim bate com o documento
+//   tenantAtivo(tenantId)     — bloqueia escrita em tenant suspenso (RN-402)
 
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Bloqueia qualquer acesso não autorizado ─────────────────────────────
-    // Esta regra catch-all nega tudo que não for explicitamente permitido
-    // por rules abaixo (ou em tasks futuras).
+    // ── Helpers de autorização (ADR-009) ───────────────────────────────────
+
+    /** Usuário autenticado */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** platform_admin: acesso cross-tenant (leitura macro + configuração) */
+    function isPlatformAdmin() {
+      return isSignedIn() && request.auth.token.role == 'platform_admin';
+    }
+
+    /**
+     * Membro do tenant: claim.tenantId bate com o tenantId do recurso.
+     * Usado em toda coleção tenant-scoped (RN-400).
+     */
+    function isTenantMember(tenantId) {
+      return isSignedIn() && request.auth.token.tenantId == tenantId;
+    }
+
+    /**
+     * Tenant ativo: bloqueia ESCRITA quando o tenant está suspenso (RN-402).
+     * Só nega writes; reads de dados existentes permanecem (leitura preservada).
+     * Requer leitura do doc tenants/{tenantId} — usa get().
+     */
+    function tenantAtivo(tenantId) {
+      return get(/databases/$(database)/documents/tenants/$(tenantId)).data.status == 'ativo';
+    }
+
+    // ── `tenants/{tenantId}` — coleção de plataforma ──────────────────────
+    //
+    // Leitura: membro do tenant (claim.tenantId bate) OU platform_admin.
+    // Escrita: APENAS platform_admin (ou Function/Admin SDK via bypass de Rules).
+    //
+    // RN-400: dado de um tenant nunca é legível por outro tenant.
+    // RN-401: papel vem do custom claim, não do cliente.
+    // RN-404: termos comerciais exclusivo do platform_admin.
+    match /tenants/{tenantId} {
+      allow read: if isTenantMember(tenantId) || isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+
+      // `commercialTerms/current` — termos por tenant
+      // Leitura: membro do tenant ou platform_admin.
+      // Escrita: APENAS platform_admin (RN-404).
+      match /commercialTerms/{doc} {
+        allow read: if isTenantMember(tenantId) || isPlatformAdmin();
+        allow write: if isPlatformAdmin();
+      }
+
+      // `subscriptions/{subId}` — mensalidades da comunidade (S1603)
+      // Status escrito só por Function; leitura pelo atleta dono e pelo tenant.
+      match /subscriptions/{subId} {
+        allow read: if isTenantMember(tenantId)
+                    || isPlatformAdmin()
+                    || (isSignedIn() && request.auth.uid == resource.data.atletaId);
+        // Cliente não escreve status/proximaCobranca — só Function (Admin SDK)
+        allow write: if false;
+      }
+    }
+
+    // ── `platform/{doc}` — dados macro da plataforma ──────────────────────
+    // Leitura: apenas platform_admin.
+    // Escrita: apenas Function/Admin SDK (client nunca escreve).
+    match /platform/{doc=**} {
+      allow read: if isPlatformAdmin();
+      allow write: if false;
+    }
+
+    // ── Coleções tenant-scoped ────────────────────────────────────────────
+    //
+    // Toda coleção de domínio carrega `tenantId` (ADR-009).
+    // Padrão: read se membro do tenant ou platform_admin;
+    //         write se membro do tenant E tenant ativo (RN-402) ou platform_admin.
+    //
+    // Coleções: eventos, clubes, inscritos, comunicados, parcerias,
+    //           programaAfiliacao, pagamentos, equipe, promotores, subscriptions
+
+    match /eventos/{eventoId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+
+      match /{subcol}/{docId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId);
+        allow write: if isPlatformAdmin();
+      }
+    }
+
+    match /clubes/{clubeId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+
+      match /{subcol}/{docId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(get(/databases/$(database)/documents/clubes/$(clubeId)).data.tenantId);
+        allow write: if isPlatformAdmin();
+      }
+    }
+
+    match /comunicados/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+    }
+
+    match /parcerias/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+    }
+
+    match /programaAfiliacao/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+    }
+
+    match /pagamentos/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      // Escrita de estado financeiro apenas por Function
+      allow write: if false;
+    }
+
+    match /equipe/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+    }
+
+    match /promotores/{docId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if (isTenantMember(request.resource.data.tenantId)
+                       && tenantAtivo(request.resource.data.tenantId))
+                   || isPlatformAdmin();
+    }
+
+    // ── Coleções globais ──────────────────────────────────────────────────
+
+    /**
+     * `atletas/{atletaId}` — identidade global cross-tenant (ADR-009).
+     * Leitura: o próprio atleta (uid bate com o doc) ou platform_admin.
+     * Escrita: o próprio atleta ou Function (onCreateUser usa Admin SDK).
+     *
+     * Nota: Functions gravam via Admin SDK e não passam por estas Rules.
+     */
+    match /atletas/{atletaId} {
+      allow read: if (isSignedIn() && request.auth.uid == atletaId)
+                  || isPlatformAdmin();
+      allow write: if isSignedIn() && request.auth.uid == atletaId;
+    }
+
+    match /catalogoAcoes/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isPlatformAdmin();
+    }
+
+    // ── `profissionais/{profId}` — tenant-scoped via claim ────────────────
+    match /profissionais/{profId} {
+      allow read: if (isSignedIn() && request.auth.uid == profId)
+                  || (isSignedIn() && isTenantMember(resource.data.tenantId))
+                  || isPlatformAdmin();
+      allow write: if isPlatformAdmin();
+    }
+
+    // ── Bloqueia qualquer coleção não modelada acima ─────────────────────
+    // Deny-by-default — não inverta sem rule explícita e testada.
     match /{document=**} {
       allow read, write: if false;
     }

@@ -197,3 +197,9 @@ export type {
   PayoutResult,
   PaymentProvider,
 } from './payments/PaymentProvider';
+
+// ---------------------------------------------------------------------------
+// Plataforma multi-tenant (ADR-009 · E16-S1600-T1)
+// ---------------------------------------------------------------------------
+export type { TenantStatus, TenantTipo, Tenant, TenantInput } from './platform/tenant';
+export { canTransition } from './platform/tenant';
