@@ -70,13 +70,16 @@
   "modal": {
     "width-sm":      "480px",
     "width-md":      "560px",
-    "width-lg":      "640px"
+    "width-lg":      "640px",
+    "overlay-bg":    "rgba(0,0,0,0.6)",
+    "overlay-blur":  "4px"
   },
   "toast": {
     "border-left":   "3px"
   },
   "card": {
-    "radius":        "{radius.md}"
+    "radius":        "{radius.md}",
+    "critical-border": "3px"
   },
   "stepper": {
     "step-size":     "32px"

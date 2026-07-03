@@ -207,8 +207,11 @@ export const brasaTheme: FlatTokens = {
   "modal-width-sm": "480px",
   "modal-width-md": "560px",
   "modal-width-lg": "640px",
+  "modal-overlay-bg": "rgba(0,0,0,0.6)",
+  "modal-overlay-blur": "4px",
   "toast-border-left": "3px",
   "card-radius": "8px",
+  "card-critical-border": "3px",
   "stepper-step-size": "32px",
   "skeleton-radius": "4px"
 };
@@ -429,8 +432,11 @@ export const leelaTheme: FlatTokens = {
   "modal-width-sm": "480px",
   "modal-width-md": "560px",
   "modal-width-lg": "640px",
+  "modal-overlay-bg": "rgba(0,0,0,0.6)",
+  "modal-overlay-blur": "4px",
   "toast-border-left": "3px",
   "card-radius": "8px",
+  "card-critical-border": "3px",
   "stepper-step-size": "32px",
   "skeleton-radius": "4px"
 };

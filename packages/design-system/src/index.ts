@@ -59,5 +59,9 @@ export { Pagination, type PaginationProps } from './components/Pagination';
 export { Popover } from './components/Popover';
 export type { PopoverProps, PopoverAction } from './components/Popover';
 
+// ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
+export { Modal, ConfirmModal } from './components/Modal';
+export type { ModalProps, ModalSize, ConfirmModalProps, ConfirmModalDetails } from './components/Modal';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

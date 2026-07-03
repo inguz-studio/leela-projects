@@ -22,7 +22,7 @@ tags: [leela, story]
 ## Subtarefas
 - [x] LEELA-S001-3-T1 — Shell (Sidebar 8 itens + Breadcrumb + Header 96px + SubNav §2.14)
 - [x] LEELA-S001-3-T2 — Table densa (§2.5) + EmptyState + paginação + Popover de linha
-- [ ] LEELA-S001-3-T3 — Modal + ConfirmModal (§2.15) com 4 vias de fechamento
+- [x] LEELA-S001-3-T3 — Modal + ConfirmModal (§2.15) com 4 vias de fechamento
 - [ ] LEELA-S001-3-T4 — Toast, Cards (Evento/Desafio), Stepper, Skeleton, Tabs (§2.7)
 
 ## Links
