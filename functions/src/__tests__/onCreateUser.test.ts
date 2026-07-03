@@ -15,8 +15,10 @@ import { onCreateUser } from '../auth/onCreateUser';
 type AnyRec = Record<string, unknown>;
 
 const setCustomUserClaims = vi.fn(async (_uid: string, _claims: AnyRec) => undefined);
+// M5 (review E00): onCreateUser passou de set() a create() retry-safe — o stub
+// expoe ambos apontando ao MESMO spy para nao alterar as assercoes originais.
 const docSet = vi.fn(async () => undefined);
-const docRef = { set: docSet };
+const docRef = { set: docSet, create: docSet };
 const collection = vi.fn(() => ({ doc: vi.fn(() => docRef) }));
 
 function stubAdmin(): void {
