@@ -59,9 +59,12 @@ describe('Firestore Rules — deny-by-default (S000-2-T1)', () => {
     );
   });
 
-  it('nega leitura mesmo com usuário autenticado (nenhuma rule permissiva)', async () => {
+  it('nega leitura de coleção tenant-scoped sem claims de tenantId', async () => {
+    // Após S1600-T3, atletas/{uid} permite leitura pelo próprio dono.
+    // Este teste usa 'eventos' — coleção que requer claim tenantId (ADR-009).
+    // Um usuário autenticado sem tenantId no claim não acessa dados tenant-scoped.
     const ctx = testEnv.authenticatedContext('uid-123');
-    const docRef = doc(ctx.firestore(), 'atletas', 'uid-123');
+    const docRef = doc(ctx.firestore(), 'eventos', 'qualquer-evento');
     await assertFails(getDoc(docRef));
   });
 });

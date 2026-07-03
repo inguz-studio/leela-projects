@@ -40,9 +40,9 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 
 ### LEELA-E16 · Plataforma & Super-admin (recorte V1 — fundacional multi-tenant)
 
-- [ ] LEELA-S1600-T1 — Modelo `tenants` + tipos + status/lifecycle + Rules base + seed
-- [ ] LEELA-S1600-T2 — Custom claims (`role` + `tenantId`) — `setTenantClaims` + propagação
-- [ ] LEELA-S1600-T3 — Security Rules multi-tenant (isolamento por `tenantId`) + testes
+- [x] LEELA-S1600-T1 — Modelo `tenants` + tipos + status/lifecycle + Rules base + seed
+- [x] LEELA-S1600-T2 — Custom claims (`role` + `tenantId`) — `setTenantClaims` + propagação
+- [x] LEELA-S1600-T3 — Security Rules multi-tenant (isolamento por `tenantId`) + testes
 
 ---
 
