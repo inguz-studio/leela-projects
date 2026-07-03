@@ -24,11 +24,11 @@ tags:
 
 - [ ] **O0** · E00 · Fundação técnica — 9/10T (Firebase+Emulator, Auth+claims, convenções, PaymentProvider mock ✅; falta só Sentry)
 - [ ] **O0** · E01 · Design System (tema brasa) — 4/10T (tokens+ThemeProvider+Button+primitivos ✅ · 199 testes; S001-3 em execução)
-- [ ] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 0/3T (em execução)
-
 
 
 ## 🔍 Revisão
+
+- [ ] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 3/3T · 67/67 testes no Emulator · revisão Fable em curso
 
 
 
