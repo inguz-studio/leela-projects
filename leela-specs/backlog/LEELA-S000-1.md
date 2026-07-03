@@ -23,7 +23,7 @@ tags: [leela, story]
 - [x] LEELA-S000-1-T1 — Inicializar monorepo Turborepo + pnpm workspaces
 - [ ] LEELA-S000-1-T2 — Scaffold `apps/painel` e `apps/landing` (Next.js App Router)
 - [ ] LEELA-S000-1-T3 — Scaffold `apps/mobile` (Expo)
-- [ ] LEELA-S000-1-T4 — Pacotes compartilhados `core`, `design-system`, `api-client` (esqueleto)
+- [x] LEELA-S000-1-T4 — Pacotes compartilhados `core`, `design-system`, `api-client` (esqueleto)
 
 ## Links
 Épico: [[LEELA-E00-fundacao-tecnica]]
