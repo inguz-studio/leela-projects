@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Leela Mobile",
+    "slug": "leela-mobile",
+    "version": "1.0.0",
+    "scheme": "leela",
+    "orientation": "portrait",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.leela.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.leela.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
