@@ -13,6 +13,7 @@
   "dependencies": {
     "@leela/core": "workspace:*",
     "@leela/design-system": "workspace:*",
+    "@sentry/react": "^10.63.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.446.0",
@@ -22,6 +23,7 @@
     "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^5.3.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

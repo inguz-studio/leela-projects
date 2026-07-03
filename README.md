@@ -87,6 +87,49 @@ cp .env.example .env
 
 Em desenvolvimento com emuladores, `VITE_USE_FIREBASE_EMULATOR=true` e `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true` apontam as apps para os emuladores locais — nenhuma chave real é necessária na Onda 0.
 
+## Observabilidade (Sentry)
+
+O Sentry é **env-gated**: sem DSN configurado, o init vira no-op silencioso e as apps sobem normalmente.
+
+### Ativar o Sentry
+
+1. Crie três projetos no [Sentry](https://sentry.io): `leela-painel`, `leela-landing`, `leela-mobile`.
+2. Copie o DSN de cada projeto (Settings → Projects → Client Keys).
+3. Adicione ao `.env` (nunca commitar):
+
+```bash
+VITE_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<id>
+NEXT_PUBLIC_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<id>
+EXPO_PUBLIC_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<id>
+```
+
+4. Para verificar: rode a app, execute `reportError(new Error('teste'))` no console e confirme que o erro aparece no Sentry dashboard com release e ambiente corretos.
+
+### Source maps (CI/CD)
+
+Adicione `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` e `SENTRY_PROJECT` como secrets no CI. Com eles definidos, o build gera source maps e os envia automaticamente.
+
+### Sentry: ativar crash reporting nativo no app mobile
+
+Para crash reports nativos (crashes de código iOS/Android, não apenas JS):
+
+1. Adicione o plugin ao `apps/mobile/app.json`:
+
+```json
+{
+  "expo": {
+    "plugins": [["@sentry/react-native/expo", { "organization": "<org>", "project": "leela-mobile" }]]
+  }
+}
+```
+
+2. Configure as credenciais EAS com `SENTRY_AUTH_TOKEN`.
+3. Faça um build EAS: `eas build --platform all`.
+
+Sem esse passo, apenas erros JS são capturados — suficiente para a Onda 0.
+
+---
+
 ## Convenções
 
 - TypeScript strict. Proibido `any` sem justificativa documentada.

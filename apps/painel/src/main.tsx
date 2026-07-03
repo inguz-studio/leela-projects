@@ -4,6 +4,10 @@ import '@leela/design-system/themes/index.css';
 import './globals.css';
 import { ThemeProvider } from '@leela/design-system';
 import { App } from './App';
+import { initSentry } from './lib/sentry';
+
+// Sentry: no-op silencioso quando VITE_SENTRY_DSN não está definido
+initSentry();
 
 const rootElement = document.getElementById('root');
 if (rootElement === null) {
