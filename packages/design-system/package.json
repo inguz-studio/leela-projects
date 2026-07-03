@@ -16,10 +16,16 @@
       "import":  "./dist/tailwind-preset.mjs",
       "require": "./dist/tailwind-preset.js"
     },
+    "./rn": {
+      "types":   "./dist/rn.d.ts",
+      "import":  "./dist/rn.mjs",
+      "require": "./dist/rn.js"
+    },
     "./themes/brasa.css": "./themes/brasa.css",
     "./themes/leela.css": "./themes/leela.css",
     "./themes/index.css": "./themes/index.css"
   },
+  "sideEffects": ["themes/*.css"],
   "files": ["dist", "themes"],
   "scripts": {
     "build":           "tsup",

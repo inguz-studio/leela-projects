@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index:            'src/index.ts',
     'tailwind-preset':'src/tailwind-preset.ts',
+    rn:               'src/rn.ts',
   },
   format: ['cjs', 'esm'],
   dts: true,
