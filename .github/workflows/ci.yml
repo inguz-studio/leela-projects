@@ -18,7 +18,7 @@
 #   TURBO_TOKEN / TURBO_TEAM — habilita Turbo Remote Cache (Vercel)
 #     Descomente as linhas no bloco `env` abaixo para ativar.
 #
-# BRACH PROTECTION:
+# BRANCH PROTECTION:
 #   Configure em: Settings → Branches → Require status checks before merging
 #   Status checks obrigatórios: "Lint · Type-check · Build · Test"
 
@@ -52,8 +52,9 @@ jobs:
   lint-type-build-test:
     name: Lint · Type-check · Build · Test
     runs-on: ubuntu-latest
-    # Roda em push/PR e também no schedule (para acionar o job e2e abaixo)
-    if: github.event_name != 'schedule' || github.event_name == 'workflow_dispatch'
+    # Roda em push/PR/dispatch; NÃO roda no schedule nightly — o cron
+    # existe só para acionar o job e2e abaixo.
+    if: github.event_name != 'schedule'
 
     steps:
       - name: Checkout
