@@ -48,15 +48,28 @@ export const onCreateUser = auth.user().onCreate(async (user) => {
   // ── 1. Criar doc do atleta ──────────────────────────────────────────────
   // Por default, todo novo usuário vira `atleta`.
   // Profissionais são promovidos via setTenantClaims (S1600-T2).
+  //
+  // Retry-safe (achado M5, review E00): triggers do Cloud Functions têm
+  // entrega at-least-once. `create()` falha com ALREADY_EXISTS na segunda
+  // entrega — capturamos e seguimos sem regravar `criadoEm`.
   const atletaRef = db.collection('atletas').doc(uid);
 
-  await atletaRef.set({
-    id: uid,
-    nome: displayName ?? email ?? uid,
-    email: email ?? '',
-    avatarInit,
-    criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-  });
+  try {
+    await atletaRef.create({
+      id: uid,
+      nome: displayName ?? email ?? uid,
+      email: email ?? '',
+      avatarInit,
+      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    // gRPC code 6 = ALREADY_EXISTS — retry do trigger; doc já criado.
+    if ((err as { code?: number }).code === 6) {
+      logger.info('user_doc_already_exists', { uid });
+    } else {
+      throw err;
+    }
+  }
 
   // ── 2. Setar custom claim `role` ────────────────────────────────────────
   // O claim é lido pelas Security Rules e pela lógica de autorização dos apps.
