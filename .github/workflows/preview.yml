@@ -49,13 +49,36 @@ env:
   TURBO_TELEMETRY_DISABLED: '1'
 
 jobs:
+  # Guard: o contexto `secrets` NÃO está disponível em `jobs.<id>.if`
+  # (GitHub Actions só expõe github/needs/vars/inputs lá — achado A1,
+  # review E00). A checagem vive num job auxiliar que exporta um output;
+  # o job de preview consome via `needs`, contexto permitido em job-if.
+  guard:
+    name: Check FIREBASE_SERVICE_ACCOUNT
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Detect secret
+        id: check
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::FIREBASE_SERVICE_ACCOUNT ausente — preview deploy pulado (Onda 0, Emulator-only)"
+          fi
+
   preview:
     name: Build & Deploy Preview (painel)
     runs-on: ubuntu-latest
-    # Guard: skip silencioso quando FIREBASE_SERVICE_ACCOUNT não está configurado.
+    needs: guard
+    # Skip silencioso quando FIREBASE_SERVICE_ACCOUNT não está configurado.
     # Isso é intencional durante a Onda 0 (Emulator-only).
-    # Remove esta condição quando o projeto Firebase real existir.
-    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    # Remove guard + esta condição quando o projeto Firebase real existir.
+    if: needs.guard.outputs.enabled == 'true'
 
     permissions:
       # Necessário para a action-hosting-deploy comentar no PR
