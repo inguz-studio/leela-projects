@@ -16,3 +16,6 @@ export { onCreateUser } from './auth/onCreateUser';
 
 // Plataforma — multi-tenancy (E16-S1600-T2)
 export { setTenantClaims } from './platform/setTenantClaims';
+
+// Plataforma — lifecycle do tenant (RN-402; wire de canTransition)
+export { transitionTenant } from './platform/tenantLifecycle';
