@@ -94,20 +94,33 @@ export interface ChargeResult {
   expiresAt?: Timestamp;
 }
 
-/** Beneficiário de um split de pagamento */
-export interface SplitRecipient {
-  /** ID do destinatário no gateway */
+/**
+ * Beneficiário de um split de pagamento.
+ *
+ * União discriminada: `amount` (centavos fixos) OU `percentage` (%),
+ * nunca os dois — o compilador rejeita a combinação (achado B4, review E00).
+ */
+export type SplitRecipient =
+  | {
+      /** ID do destinatário no gateway */
+      recipientId: string;
+      /** Valor em centavos alocado a este destinatário */
+      amount: number;
+      percentage?: never;
+    }
+  | {
+      /** ID do destinatário no gateway */
+      recipientId: string;
+      /** Percentual do total (0–100) alocado a este destinatário */
+      percentage: number;
+      amount?: never;
+    };
+
+/** Recipient com valor resolvido em centavos (saída de split calculado) */
+export interface ResolvedSplitRecipient {
   recipientId: string;
-  /**
-   * Valor em centavos alocado a este destinatário.
-   * Mutuamente exclusivo com `percentage` — use um ou outro.
-   */
+  /** Valor final em centavos */
   amount: number;
-  /**
-   * Percentual alternativo ao amount fixo.
-   * Se informado, `amount` é ignorado pelo gateway.
-   */
-  percentage?: number;
 }
 
 /** Parâmetros para configuração de split */
@@ -123,7 +136,7 @@ export interface SplitRulesParams {
 export interface SplitRulesResult {
   ruleId: string;
   chargeId: string;
-  recipients: SplitRecipient[];
+  recipients: ResolvedSplitRecipient[];
   appliedAt: Timestamp;
 }
 

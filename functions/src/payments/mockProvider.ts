@@ -24,6 +24,7 @@ import type {
   GetPayoutParams,
   PayoutResult,
   SplitRecipient,
+  ResolvedSplitRecipient,
 } from '@leela/core';
 
 // ---------------------------------------------------------------------------
@@ -83,11 +84,11 @@ export function calcularSplit(
   totalAmount: number,
   platformFeePct: number,
   recipients: SplitRecipient[]
-): { platformAmount: number; recipientsResolved: SplitRecipient[] } {
+): { platformAmount: number; recipientsResolved: ResolvedSplitRecipient[] } {
   const platformAmount = Math.floor((totalAmount * platformFeePct) / 100);
   let remaining = totalAmount - platformAmount;
 
-  const resolved: SplitRecipient[] = [];
+  const resolved: ResolvedSplitRecipient[] = [];
 
   for (let i = 0; i < recipients.length; i++) {
     const r = recipients[i];

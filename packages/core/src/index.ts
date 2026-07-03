@@ -187,6 +187,7 @@ export type {
   CreateChargeParams,
   ChargeResult,
   SplitRecipient,
+  ResolvedSplitRecipient,
   SplitRulesParams,
   SplitRulesResult,
   RefundParams,

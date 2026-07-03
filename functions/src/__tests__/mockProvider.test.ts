@@ -23,7 +23,7 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
   it('distribui platform fee e recipient amount corretamente', () => {
     const total = 10_000; // R$ 100,00 em centavos
     const platformFeePct = 5; // 5%
-    const recipients = [{ recipientId: 'producer-1', amount: 0, percentage: 95 }];
+    const recipients = [{ recipientId: 'producer-1', percentage: 95 }];
 
     const { platformAmount, recipientsResolved } = calcularSplit(
       total,
@@ -40,8 +40,8 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
     const total = 10_000;
     const platformFeePct = 5;
     const recipients = [
-      { recipientId: 'affiliate-1', amount: 0, percentage: 10 },
-      { recipientId: 'producer-1', amount: 0, percentage: 85 },
+      { recipientId: 'affiliate-1', percentage: 10 },
+      { recipientId: 'producer-1', percentage: 85 },
     ];
 
     const { platformAmount, recipientsResolved } = calcularSplit(
@@ -64,7 +64,7 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
     // 97% recipient = 9700.97 → floor = 9700 (mas como é o último, recebe o resíduo = 9701)
     const total = 10_001;
     const platformFeePct = 3;
-    const recipients = [{ recipientId: 'producer-1', amount: 0, percentage: 97 }];
+    const recipients = [{ recipientId: 'producer-1', percentage: 97 }];
 
     const { platformAmount, recipientsResolved } = calcularSplit(
       total,
@@ -236,7 +236,7 @@ describe('MockPaymentProvider — integração (S000-4-T2)', () => {
       chargeId: chargeResult.chargeId,
       tenantId: 'tenant-split',
       platformFeePct: 5,
-      recipients: [{ recipientId: 'producer-split', amount: 0, percentage: 95 }],
+      recipients: [{ recipientId: 'producer-split', percentage: 95 }],
     });
 
     expect(splitResult.chargeId).toBe(chargeResult.chargeId);
