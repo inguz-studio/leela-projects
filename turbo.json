@@ -27,6 +27,9 @@
     "type-check": {
       "dependsOn": ["^build"]
     },
+    "@leela/landing#type-check": {
+      "dependsOn": ["^build", "build"]
+    },
     "test:e2e": {
       "cache": false,
       "persistent": false
