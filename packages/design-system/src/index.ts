@@ -63,5 +63,19 @@ export type { PopoverProps, PopoverAction } from './components/Popover';
 export { Modal, ConfirmModal } from './components/Modal';
 export type { ModalProps, ModalSize, ConfirmModalProps, ConfirmModalDetails } from './components/Modal';
 
+// ── Feedback, cards & fluxo (S001-3-T4) ─────────────────────────────────────
+export { Toast, toastVariants, ToastProvider, useToast, DEFAULT_TOAST_DURATION } from './components/Toast';
+export type { ToastProps, ToastVariant, ToastProviderProps, ToastOptions, ToastContextValue } from './components/Toast';
+export { CardEvento } from './components/CardEvento';
+export type { CardEventoProps } from './components/CardEvento';
+export { CardDesafio } from './components/CardDesafio';
+export type { CardDesafioProps } from './components/CardDesafio';
+export { Stepper } from './components/Stepper';
+export type { StepperProps, StepperStep } from './components/Stepper';
+export { Skeleton } from './components/Skeleton';
+export type { SkeletonProps } from './components/Skeleton';
+export { Tabs } from './components/Tabs';
+export type { TabsProps, TabItem } from './components/Tabs';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

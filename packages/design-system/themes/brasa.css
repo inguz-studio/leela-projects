@@ -206,6 +206,7 @@
   --modal-width-lg: 640px;
   --modal-overlay-bg: rgba(0,0,0,0.6);
   --modal-overlay-blur: 4px;
+  --toast-width: 360px;
   --toast-border-left: 3px;
   --card-radius: var(--radius-md);
   --card-critical-border: 3px;

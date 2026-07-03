@@ -75,6 +75,7 @@
     "overlay-blur":  "4px"
   },
   "toast": {
+    "width":         "360px",
     "border-left":   "3px"
   },
   "card": {
