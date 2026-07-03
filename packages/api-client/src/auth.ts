@@ -28,7 +28,7 @@ import {
   type Unsubscribe,
   type UserCredential,
 } from 'firebase/auth';
-import { getLeelAuth } from './firebase';
+import { getLeelaAuth } from './firebase';
 
 // ---------------------------------------------------------------------------
 // Provedores OAuth
@@ -64,7 +64,7 @@ appleProvider.addScope('name');
  * // Em cleanup: unsubscribe();
  */
 export function onSessionChange(callback: (user: User | null) => void): Unsubscribe {
-  return onAuthStateChanged(getLeelAuth(), callback);
+  return onAuthStateChanged(getLeelaAuth(), callback);
 }
 
 /**
@@ -72,7 +72,7 @@ export function onSessionChange(callback: (user: User | null) => void): Unsubscr
  * Prefira `onSessionChange` para reatividade; este helper é para leitura síncrona.
  */
 export function getCurrentUser(): User | null {
-  return getLeelAuth().currentUser;
+  return getLeelaAuth().currentUser;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ export async function loginComEmail(
   email: string,
   senha: string
 ): Promise<UserCredential> {
-  return signInWithEmailAndPassword(getLeelAuth(), email, senha);
+  return signInWithEmailAndPassword(getLeelaAuth(), email, senha);
 }
 
 /**
@@ -98,7 +98,7 @@ export async function criarContaComEmail(
   email: string,
   senha: string
 ): Promise<UserCredential> {
-  return createUserWithEmailAndPassword(getLeelAuth(), email, senha);
+  return createUserWithEmailAndPassword(getLeelaAuth(), email, senha);
 }
 
 // ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ export async function criarContaComEmail(
  * Em mobile/web-view pode ser necessário trocar para `signInWithRedirect`.
  */
 export async function loginComGoogle(): Promise<UserCredential> {
-  return signInWithPopup(getLeelAuth(), googleProvider);
+  return signInWithPopup(getLeelaAuth(), googleProvider);
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ export async function loginComGoogle(): Promise<UserCredential> {
  *   Sem configuração, este método lança FirebaseError auth/invalid-oauth-provider.
  */
 export async function loginComApple(): Promise<UserCredential> {
-  return signInWithPopup(getLeelAuth(), appleProvider);
+  return signInWithPopup(getLeelaAuth(), appleProvider);
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ export async function loginComApple(): Promise<UserCredential> {
 
 /** Encerra a sessão do usuário atual. */
 export async function logout(): Promise<void> {
-  return signOut(getLeelAuth());
+  return signOut(getLeelaAuth());
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +154,7 @@ export async function logout(): Promise<void> {
 export async function getClaims(
   forceRefresh = false
 ): Promise<Record<string, unknown> | null> {
-  const user = getLeelAuth().currentUser;
+  const user = getLeelaAuth().currentUser;
   if (!user) return null;
   const token = await user.getIdTokenResult(forceRefresh);
   return token.claims as Record<string, unknown>;

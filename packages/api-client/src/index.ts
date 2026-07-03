@@ -98,8 +98,8 @@ export type CreateLeelaCoreClient = () => LeelaCoreClient;
 // ---------------------------------------------------------------------------
 // Firebase SDK — inicialização e acessores (LEELA-S000-2-T1)
 // ---------------------------------------------------------------------------
-export { initLeela, getLeelDb, getLeelAuth, getLeelFunctions } from './firebase';
-export type { FirebaseClientConfig, LeelFirebaseConfig } from './firebase';
+export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions } from './firebase';
+export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 
 // ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)

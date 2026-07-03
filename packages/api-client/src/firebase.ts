@@ -74,7 +74,7 @@ export interface FirebaseClientConfig {
 }
 
 /** Opções de inicialização passadas pelo app no entry-point */
-export interface LeelFirebaseConfig {
+export interface LeelaFirebaseConfig {
   /**
    * Liga conexão com o Firebase Emulator Suite.
    * Passe `true` em desenvolvimento; `false` em produção.
@@ -102,7 +102,7 @@ export interface LeelFirebaseConfig {
  * Idempotente — chamadas subsequentes são no-ops.
  * DEVE ser chamado no entry-point do app antes de qualquer uso do Firestore/Auth.
  */
-export function initLeela(config: LeelFirebaseConfig = {}): void {
+export function initLeela(config: LeelaFirebaseConfig = {}): void {
   const { useEmulator = false, emulatorHost = 'localhost', firebaseConfig } = config;
 
   if (!_app) {
@@ -128,7 +128,7 @@ export function initLeela(config: LeelFirebaseConfig = {}): void {
 // ---------------------------------------------------------------------------
 
 /** @internal */
-export function getLeelDb(): Firestore {
+export function getLeelaDb(): Firestore {
   if (!_db) {
     throw new Error(
       '[leela/api-client] Firestore não inicializado. Chame initLeela() no entry-point.'
@@ -138,7 +138,7 @@ export function getLeelDb(): Firestore {
 }
 
 /** @internal */
-export function getLeelAuth(): Auth {
+export function getLeelaAuth(): Auth {
   if (!_auth) {
     throw new Error(
       '[leela/api-client] Auth não inicializado. Chame initLeela() no entry-point.'
@@ -148,7 +148,7 @@ export function getLeelAuth(): Auth {
 }
 
 /** @internal */
-export function getLeelFunctions(): Functions {
+export function getLeelaFunctions(): Functions {
   if (!_functions) {
     throw new Error(
       '[leela/api-client] Functions não inicializado. Chame initLeela() no entry-point.'
