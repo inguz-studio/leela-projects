@@ -28,7 +28,7 @@ tags:
 
 ## 🔍 Revisão
 
-- [ ] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 3/3T · 67/67 testes no Emulator · revisão Fable em curso
+- [ ] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 3/3T · revisão Fable: **exploit CRÍTICO confirmado** (write takeover cross-tenant) · fix em fila
 
 
 
