@@ -28,6 +28,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import {
+  deleteDoc,
   doc,
   getDoc,
   setDoc,
@@ -141,6 +142,51 @@ async function seedFixtures(): Promise<void> {
     id: ATHLETE_UID, nome: 'Atleta Global',
     email: 'atleta@leela.app', criadoEm: now,
   });
+
+  // Clube do Passo Certo (vítima da matriz de hijack)
+  batch.set(adminDb.collection('clubes').doc('clube-passo-1'), {
+    id: 'clube-passo-1', tenantId: PASSO_ID,
+    nome: 'Clube Passo', criadoEm: now, atualizadoEm: now,
+  });
+
+  // Coleções tenant-scoped restantes — um doc por tenant (castelo × passo)
+  const scopedPairs: Array<[string, string, string, Record<string, unknown>]> = [
+    ['comunicados', 'com-castelo-1', 'com-passo-1', { titulo: 'Aviso' }],
+    ['parcerias', 'parc-castelo-1', 'parc-passo-1', { parceiro: 'Loja X' }],
+    ['programaAfiliacao', 'afil-castelo-1', 'afil-passo-1', { pct: 5 }],
+    ['equipe', 'eq-castelo-1', 'eq-passo-1', { nome: 'Membro Equipe' }],
+    ['promotores', 'prom-castelo-1', 'prom-passo-1', { nome: 'Promotor' }],
+    ['inscritos', 'insc-castelo-1', 'insc-passo-1', {
+      atletaId: ATHLETE_UID, kit: 'kit_basico', status: 'confirmado',
+      modalidade: '5k', chipNumero: null,
+    }],
+  ];
+  for (const [col, casteloDoc, passoDoc, extra] of scopedPairs) {
+    batch.set(adminDb.collection(col).doc(casteloDoc), {
+      id: casteloDoc, tenantId: CASTELO_ID, ...extra, criadoEm: now,
+    });
+    batch.set(adminDb.collection(col).doc(passoDoc), {
+      id: passoDoc, tenantId: PASSO_ID, ...extra, criadoEm: now,
+    });
+  }
+
+  // Profissionais (tenant-scoped via claim)
+  batch.set(adminDb.collection('profissionais').doc(MARINA_UID), {
+    id: MARINA_UID, nome: 'Marina Castelo', tenantId: CASTELO_ID, criadoEm: now,
+  });
+  batch.set(adminDb.collection('profissionais').doc(PASSO_OWNER_UID), {
+    id: PASSO_OWNER_UID, nome: 'Owner Passo', tenantId: PASSO_ID, criadoEm: now,
+  });
+
+  // Subscription da comunidade (tenants/{id}/subscriptions — S1603)
+  batch.set(
+    adminDb.collection('tenants').doc(CASTELO_ID)
+      .collection('subscriptions').doc('sub-castelo-1'),
+    {
+      id: 'sub-castelo-1', atletaId: ATHLETE_UID, clubeId: 'clube-castelo',
+      valor: 49.9, status: 'ativa', criadoEm: now,
+    }
+  );
 
   await batch.commit();
 }
@@ -499,6 +545,191 @@ describe('commercialTerms — escrita só platform_admin (RN-404)', () => {
       getDoc(
         doc(ctx.firestore(), 'tenants', CASTELO_ID, 'commercialTerms', 'current')
       )
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// F1 — Write-takeover cross-tenant por OVERWRITE (o pior bug — ADR-009).
+// Owner de A tenta SOBRESCREVER doc de B carimbando o próprio tenantId.
+// A rule de update valida resource.data.tenantId (dono ATUAL = B) + exige
+// tenantId imutável, então o hijack DEVE falhar em TODA coleção writable.
+// ─────────────────────────────────────────────────────────────────────────
+describe('F1 — takeover cross-tenant por overwrite (matriz completa)', () => {
+  // [coleção, docId da vítima (tenant B = Passo), payload de hijack]
+  const hijackTargets: Array<[string, string, Record<string, unknown>]> = [
+    ['eventos', 'evento-passo-1', { nome: 'HIJACK', status: 'rascunho' }],
+    ['clubes', 'clube-passo-1', { nome: 'HIJACK' }],
+    ['comunicados', 'com-passo-1', { titulo: 'HIJACK' }],
+    ['parcerias', 'parc-passo-1', { parceiro: 'HIJACK' }],
+    ['programaAfiliacao', 'afil-passo-1', { pct: 99 }],
+    ['equipe', 'eq-passo-1', { nome: 'HIJACK' }],
+    ['promotores', 'prom-passo-1', { nome: 'HIJACK' }],
+    ['inscritos', 'insc-passo-1', { status: 'cancelado' }],
+  ];
+
+  for (const [col, victimId, payload] of hijackTargets) {
+    it(`owner de A NÃO sobrescreve ${col}/${victimId} carimbando tenantId=A`, async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        setDoc(doc(ctx.firestore(), col, victimId), {
+          id: victimId, tenantId: CASTELO_ID, ...payload,
+        })
+      );
+    });
+
+    it(`owner de A NÃO deleta ${col}/${victimId} de B`, async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(deleteDoc(doc(ctx.firestore(), col, victimId)));
+    });
+  }
+
+  it('owner NÃO muda o tenantId do próprio doc (tenantId imutável)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'eventos', 'evento-castelo-1'), {
+        id: 'evento-castelo-1', tenantId: PASSO_ID, nome: 'Doa pra B', status: 'publicado',
+      })
+    );
+  });
+
+  it('owner ATUALIZA o próprio evento mantendo o tenantId (caminho feliz)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      setDoc(doc(ctx.firestore(), 'eventos', 'evento-castelo-1'), {
+        id: 'evento-castelo-1', tenantId: CASTELO_ID,
+        nome: 'Corrida Castelo 2026 (editada)', status: 'publicado',
+      })
+    );
+  });
+
+  it('owner CRIA evento no próprio tenant (caminho feliz)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      setDoc(doc(ctx.firestore(), 'eventos', 'evento-castelo-novo'), {
+        id: 'evento-castelo-novo', tenantId: CASTELO_ID,
+        nome: 'Novo', status: 'rascunho',
+      })
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// F2 — Isolamento de leitura das coleções antes sem cobertura.
+// ─────────────────────────────────────────────────────────────────────────
+describe('F2 — isolamento de leitura (coleções sem cobertura prévia)', () => {
+  const readTargets: Array<[string, string]> = [
+    ['comunicados', 'com-passo-1'],
+    ['parcerias', 'parc-passo-1'],
+    ['programaAfiliacao', 'afil-passo-1'],
+    ['equipe', 'eq-passo-1'],
+    ['promotores', 'prom-passo-1'],
+    ['inscritos', 'insc-passo-1'],
+  ];
+
+  for (const [col, docId] of readTargets) {
+    it(`owner de A NÃO lê ${col} de B`, async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(getDoc(doc(ctx.firestore(), col, docId)));
+    });
+
+    it(`owner de B lê o próprio ${col}`, async () => {
+      const ctx = ctxAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
+      await assertSucceeds(getDoc(doc(ctx.firestore(), col, docId)));
+    });
+
+    it(`platform_admin lê ${col} de qualquer tenant`, async () => {
+      const ctx = ctxAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
+      await assertSucceeds(getDoc(doc(ctx.firestore(), col, docId)));
+    });
+  }
+
+  it('profissionais: owner de A NÃO lê profissional de B', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(getDoc(doc(ctx.firestore(), 'profissionais', PASSO_OWNER_UID)));
+  });
+
+  it('profissionais: membro do tenant lê profissional do próprio tenant', async () => {
+    const ctx = ctxAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+    await assertSucceeds(getDoc(doc(ctx.firestore(), 'profissionais', MARINA_UID)));
+  });
+
+  it('subscriptions: atleta dono lê a própria assinatura da comunidade', async () => {
+    const ctx = ctxAs(ATHLETE_UID, { role: 'athlete' });
+    await assertSucceeds(
+      getDoc(doc(ctx.firestore(), 'tenants', CASTELO_ID, 'subscriptions', 'sub-castelo-1'))
+    );
+  });
+
+  it('subscriptions: owner do tenant lê assinatura da própria comunidade', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      getDoc(doc(ctx.firestore(), 'tenants', CASTELO_ID, 'subscriptions', 'sub-castelo-1'))
+    );
+  });
+
+  it('subscriptions: cliente NÃO escreve status (só Function)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(
+        doc(ctx.firestore(), 'tenants', CASTELO_ID, 'subscriptions', 'sub-castelo-1'),
+        { status: 'cancelada' }
+      )
+    );
+  });
+
+  it('subscriptions: owner de B NÃO lê assinatura de A', async () => {
+    const ctx = ctxAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
+    await assertFails(
+      getDoc(doc(ctx.firestore(), 'tenants', CASTELO_ID, 'subscriptions', 'sub-castelo-1'))
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// F4 — RBAC intra-tenant: promoter/staff não escrevem como owner.
+// ─────────────────────────────────────────────────────────────────────────
+describe('F4 — RBAC intra-tenant (papel de escrita)', () => {
+  it('promoter do tenant NÃO cria evento (não é writer)', async () => {
+    const ctx = ctxAs('uid-promoter-castelo', { role: 'promoter', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'eventos', 'evento-promoter'), {
+        id: 'evento-promoter', tenantId: CASTELO_ID, nome: 'x', status: 'rascunho',
+      })
+    );
+  });
+
+  it('promoter do tenant LÊ eventos do próprio tenant (é membro)', async () => {
+    const ctx = ctxAs('uid-promoter-castelo', { role: 'promoter', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      getDoc(doc(ctx.firestore(), 'eventos', 'evento-castelo-1'))
+    );
+  });
+
+  it('tenant_staff CRIA evento (é writer)', async () => {
+    const ctx = ctxAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      setDoc(doc(ctx.firestore(), 'eventos', 'evento-staff'), {
+        id: 'evento-staff', tenantId: CASTELO_ID, nome: 'ok', status: 'rascunho',
+      })
+    );
+  });
+
+  it('tenant_staff NÃO gerencia equipe (só owner)', async () => {
+    const ctx = ctxAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'equipe', 'eq-nova'), {
+        id: 'eq-nova', tenantId: CASTELO_ID, nome: 'Novo membro',
+      })
+    );
+  });
+
+  it('tenant_owner gerencia equipe (só owner)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertSucceeds(
+      setDoc(doc(ctx.firestore(), 'equipe', 'eq-nova'), {
+        id: 'eq-nova', tenantId: CASTELO_ID, nome: 'Novo membro',
+      })
     );
   });
 });
