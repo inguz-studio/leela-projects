@@ -51,5 +51,13 @@ export type { SubNavProps, SubNavTab } from './components/SubNav';
 export { AppShell } from './components/AppShell';
 export type { AppShellProps } from './components/AppShell';
 
+// ── Table densa & apoio (S001-3-T2) ─────────────────────────────────────────
+export { Table } from './components/Table';
+export type { TableProps, TableColumn } from './components/Table';
+export { EmptyState, type EmptyStateProps } from './components/EmptyState';
+export { Pagination, type PaginationProps } from './components/Pagination';
+export { Popover } from './components/Popover';
+export type { PopoverProps, PopoverAction } from './components/Popover';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

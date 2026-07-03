@@ -64,6 +64,9 @@
     "cell-py":       "14px",
     "header-spacing": "0.08em"
   },
+  "popover": {
+    "min-width":     "160px"
+  },
   "modal": {
     "width-sm":      "480px",
     "width-md":      "560px",
