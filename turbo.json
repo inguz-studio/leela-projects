@@ -17,6 +17,11 @@
     "test": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env.test*"],
+      "env": [
+        "FIRESTORE_EMULATOR_HOST",
+        "FIREBASE_AUTH_EMULATOR_HOST",
+        "LEELA_USE_EMULATOR"
+      ],
       "outputs": ["coverage/**"]
     },
     "type-check": {
