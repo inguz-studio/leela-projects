@@ -40,6 +40,7 @@ dist/
 build/
 .next/
 out/
+storybook-static/
 
 # Environment secrets — NEVER commit .env
 .env

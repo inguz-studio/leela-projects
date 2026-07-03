@@ -35,7 +35,7 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S001-3-T2 — Table densa + EmptyState + paginação + Popover
 - [x] LEELA-S001-3-T3 — Modal + ConfirmModal (§2.15)
 - [x] LEELA-S001-3-T4 — Toast, Cards (Evento/Desafio), Stepper, Skeleton, Tabs
-- [ ] LEELA-S001-4-T1 — Catálogo (Storybook) nos 2 temas
+- [x] LEELA-S001-4-T1 — Catálogo (Storybook) nos 2 temas
 - [ ] LEELA-S001-4-T2 — Lint de tokens + doc de governança
 
 ### LEELA-E16 · Plataforma & Super-admin (recorte V1 — fundacional multi-tenant)

@@ -1,0 +1,13 @@
+/* Catálogo Storybook — carrega os dois temas + utilidades Tailwind. */
+@import '../themes/index.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* A surface do docs/canvas acompanha o tema ativo (vars vêm de [data-theme]). */
+html,
+body {
+  background: var(--surface-base);
+  color: var(--text-primary);
+}

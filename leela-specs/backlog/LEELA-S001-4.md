@@ -20,7 +20,7 @@ tags: [leela, story]
 - Dado um PR de tela, quando usa cor/spacing hardcoded, então o lint de tokens acusa.
 
 ## Subtarefas
-- [ ] LEELA-S001-4-T1 — Catálogo (Storybook) dos componentes nos 2 temas
+- [x] LEELA-S001-4-T1 — Catálogo (Storybook) dos componentes nos 2 temas
 - [ ] LEELA-S001-4-T2 — Lint de tokens (proíbe hex/px hardcoded) + doc de governança
 
 ## Links
