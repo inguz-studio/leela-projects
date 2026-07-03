@@ -21,7 +21,7 @@ tags: [leela, story]
 
 ## Subtarefas
 - [x] LEELA-S001-4-T1 — Catálogo (Storybook) dos componentes nos 2 temas
-- [ ] LEELA-S001-4-T2 — Lint de tokens (proíbe hex/px hardcoded) + doc de governança
+- [x] LEELA-S001-4-T2 — Lint de tokens (proíbe hex/px hardcoded) + doc de governança
 
 ## Links
 Épico: [[LEELA-E01-design-system]]
