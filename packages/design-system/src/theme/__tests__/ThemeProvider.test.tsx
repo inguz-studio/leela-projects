@@ -158,7 +158,6 @@ describe('getThemeInitScript', () => {
   });
 
   it('aplica o tema padrão quando não há preferência persistida', () => {
-    // eslint-disable-next-line no-new-func -- executa o script inline como o browser faria
     new Function(getThemeInitScript('brasa'))();
     expect(document.documentElement.getAttribute('data-theme')).toBe('brasa');
   });

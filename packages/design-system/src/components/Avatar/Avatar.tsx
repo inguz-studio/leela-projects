@@ -104,7 +104,7 @@ const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
         ) : (
           <span
             aria-hidden
-            className="flex h-full w-full items-center justify-center font-semibold text-white"
+            className="flex h-full w-full items-center justify-center font-semibold text-[var(--action-primary-fg)]"
             style={{
               background: `linear-gradient(${angle}deg, var(--action-primary), var(--action-primary-pressed))`,
             }}
