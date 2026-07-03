@@ -139,4 +139,17 @@ describe('Popover', () => {
       'true',
     );
   });
+
+  it('F07: menu renderiza em portal no document.body (não é clipado por overflow)', () => {
+    render(
+      <div style={{ overflow: 'hidden', width: 40, height: 10 }}>
+        <Controlled actions={makeActions()} initialOpen />
+      </div>,
+    );
+    const menu = screen.getByRole('menu', { name: 'Ações' });
+    // Portal: o menu é filho direto do body, fora do container com overflow
+    expect(menu.parentElement).toBe(document.body);
+    // Ancoragem via position fixed (viewport), não absolute (container)
+    expect(menu.className).toContain('fixed');
+  });
 });

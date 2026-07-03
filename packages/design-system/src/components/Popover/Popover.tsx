@@ -7,6 +7,9 @@
  *   - Click fora fecha; Esc fecha e devolve o foco ao trigger.
  *   - stopPropagation no trigger e em cada item (não dispara click da linha).
  *   - Teclado no menu: ↓ ↑ Home End percorrem os itens.
+ *   - Menu renderiza em PORTAL no document.body com position:fixed ancorada
+ *     no rect do trigger (F07): nunca é clipado por overflow de Table/células;
+ *     reposiciona em scroll (capture) e resize enquanto aberto.
  *
  * Trigger: elemento único (ex.: <Button/>) — recebe onClick, aria-haspopup,
  * aria-expanded e aria-controls via Radix Slot (sem wrapper div clicável).
@@ -16,6 +19,7 @@
  */
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { Slot } from '@radix-ui/react-slot';
 import { cn } from '../../utils/cn';
 
@@ -58,12 +62,46 @@ function Popover({
   const triggerRef = React.useRef<HTMLElement>(null);
   const menuId = React.useId();
 
-  // Fecha em click fora
+  // Posição fixa ancorada no rect do trigger (menu vive em portal)
+  const [position, setPosition] = React.useState<{
+    top: number;
+    left?: number;
+    right?: number;
+  }>({ top: 0, left: 0 });
+
+  const updatePosition = React.useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPosition(
+      align === 'right'
+        ? { top: rect.bottom, right: Math.max(0, window.innerWidth - rect.right) }
+        : { top: rect.bottom, left: rect.left },
+    );
+  }, [align]);
+
+  // Ancora ao abrir e re-ancora em scroll (capture pega scroll de qualquer
+  // container pai, ex.: wrapper com overflow da Table) e resize.
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open, updatePosition]);
+
+  // Fecha em click fora — menu está em portal, então checa trigger E menu
   React.useEffect(() => {
     if (!open) return;
 
     function handleOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideTrigger = containerRef.current?.contains(target) ?? false;
+      const insideMenu = menuRef.current?.contains(target) ?? false;
+      if (!insideTrigger && !insideMenu) {
         onOpenChange(false);
       }
     }
@@ -141,23 +179,27 @@ function Popover({
         {trigger}
       </Slot>
 
-      {/* Menu */}
-      {open && (
+      {/* Menu — portal no body: overflow de containers não clipa (F07) */}
+      {open && createPortal(
         <div
           ref={menuRef}
           id={menuId}
           role="menu"
           aria-label="Ações"
           onKeyDown={handleMenuKeyDown}
+          style={{
+            top: position.top,
+            left: position.left,
+            right: position.right,
+          }}
           className={cn(
-            'absolute top-full mt-[var(--spacing-1)] z-50',
+            'fixed mt-[var(--spacing-1)] z-50',
             'min-w-[var(--popover-min-width)] w-max',
             'bg-[var(--surface-raised)]',
             'rounded-[var(--radius-md)]',
             'shadow-[var(--elevation-2)]',
             'py-[var(--spacing-1)]',
             'overflow-hidden',
-            align === 'right' ? 'right-0' : 'left-0',
           )}
         >
           {actions.map((action) => (
@@ -188,7 +230,8 @@ function Popover({
               {action.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
