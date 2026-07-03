@@ -110,6 +110,16 @@ export function flattenTokens(
 // Public API
 // ---------------------------------------------------------------------------
 
+export interface GenerateCSSOptions {
+  /**
+   * When true, the block also matches `:root:not([data-theme])`, making this
+   * theme the paint-time default. Anti-FOUC em SSR: o HTML chega sem
+   * `data-theme` (o atributo só é aplicado no cliente) e ainda assim pinta
+   * com o tema padrão em vez de flash sem estilo.
+   */
+  rootFallback?: boolean;
+}
+
 /**
  * Generate a CSS block for a given theme.
  *
@@ -127,6 +137,7 @@ export function generateCSS(
   primitives: TokenRecord,
   semantic: TokenRecord,
   component: TokenRecord,
+  options: GenerateCSSOptions = {},
 ): string {
   const primVars = flattenTokens(primitives, '', primitives, 'css');
   const semVars  = flattenTokens(semantic,   '', primitives, 'css');
@@ -134,8 +145,12 @@ export function generateCSS(
 
   const allVars = [...primVars, ...semVars, ...compVars];
 
+  const selector = options.rootFallback
+    ? `:root:not([data-theme]),\n[data-theme="${theme}"] {`
+    : `[data-theme="${theme}"] {`;
+
   const lines = [
-    `[data-theme="${theme}"] {`,
+    selector,
     ...allVars.map(([name, value]) => `  --${name}: ${value};`),
     '}',
   ];

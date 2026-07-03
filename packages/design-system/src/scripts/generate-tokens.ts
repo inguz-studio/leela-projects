@@ -30,7 +30,8 @@ const semanticLeelaMerged = mergeTokens(semanticBase as TokenRecord, semanticLee
 // Generate CSS files
 // ---------------------------------------------------------------------------
 
-const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord);
+// brasa é o tema padrão: também cobre :root sem data-theme (anti-FOUC SSR)
+const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true });
 const leelaCSS = generateCSS('leela', primitivesLeela as TokenRecord, semanticLeelaMerged, component as TokenRecord);
 const indexCSS = `/* Leela Design System — all themes combined */\n\n${brasaCSS}\n\n${leelaCSS}`;
 

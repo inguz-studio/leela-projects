@@ -1,6 +1,21 @@
 /**
  * ThemeProvider (web) — sets data-theme on <html> and persists user preference.
  *
+ * Precedência do tema ativo:
+ *   1. prop `theme` (controlada pelo app — vence no mount e a cada mudança)
+ *   2. preferência persistida em localStorage (quando a prop não é passada)
+ *   3. 'brasa' (default)
+ *
+ * `setTheme()` troca o tema em runtime e persiste a escolha do usuário.
+ * Uma mudança posterior da prop `theme` volta a mandar (fonte controlada).
+ *
+ * Anti-FOUC em SSR:
+ *   - themes/*.css já pintam o tema padrão via `:root:not([data-theme])`;
+ *   - para respeitar a preferência persistida ANTES do primeiro paint,
+ *     injete `getThemeInitScript()` num <script> inline no <head>:
+ *
+ *       <script dangerouslySetInnerHTML={{ __html: getThemeInitScript() }} />
+ *
  * Usage:
  *   import '@leela/design-system/themes/index.css';
  *   <ThemeProvider theme="brasa"><App /></ThemeProvider>
@@ -10,6 +25,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from 'react';
@@ -50,36 +66,75 @@ function readStoredTheme(defaultTheme: Theme): Theme {
   return defaultTheme;
 }
 
+// useLayoutEffect no cliente (aplica data-theme antes do paint pós-hidratação),
+// useEffect no servidor (evita o warning de useLayoutEffect em SSR).
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+// ---------------------------------------------------------------------------
+// Anti-FOUC init script (SSR)
+// ---------------------------------------------------------------------------
+
+/**
+ * Retorna o script inline que aplica `data-theme` antes do primeiro paint,
+ * respeitando a preferência persistida. Injetar no <head> em apps SSR.
+ */
+export function getThemeInitScript(defaultTheme: Theme = 'brasa'): string {
+  return (
+    '(function(){try{' +
+    `var t=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});` +
+    'if(t!=="brasa"&&t!=="leela")' +
+    `t=${JSON.stringify(defaultTheme)};` +
+    'document.documentElement.setAttribute("data-theme",t);' +
+    '}catch(e){' +
+    `document.documentElement.setAttribute("data-theme",${JSON.stringify(defaultTheme)});` +
+    '}})();'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
 
 export interface ThemeProviderProps {
-  /** Initial theme. Overridden by stored user preference if present. */
+  /**
+   * Tema controlado pelo app. Quando presente, vence a preferência
+   * persistida (no mount e a cada mudança). Sem a prop, a preferência
+   * do usuário em localStorage decide, com fallback 'brasa'.
+   */
   theme?: Theme;
   children: ReactNode;
 }
 
 export function ThemeProvider({
-  theme: defaultTheme = 'brasa',
+  theme: themeProp,
   children,
 }: ThemeProviderProps): JSX.Element {
-  const [theme, setThemeState] = useState<Theme>(() =>
-    readStoredTheme(defaultTheme),
+  const [theme, setThemeState] = useState<Theme>(
+    () => themeProp ?? readStoredTheme('brasa'),
   );
 
-  // Apply data-theme attribute to <html> whenever theme changes
+  // Prop controlada muda → ela manda (F04: a prop nunca é ignorada)
   useEffect(() => {
+    if (themeProp !== undefined) {
+      setThemeState(themeProp);
+    }
+  }, [themeProp]);
+
+  // Aplica data-theme no <html> antes do paint (layout effect no cliente)
+  useIsomorphicLayoutEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // Persiste apenas escolha explícita do usuário (setTheme), nunca o mount —
+  // assim a prop do app não sobrescreve a preferência guardada.
+  const setTheme = (next: Theme): void => {
+    setThemeState(next);
     try {
-      localStorage.setItem(STORAGE_KEY, theme);
+      localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // ignore storage errors
     }
-  }, [theme]);
-
-  const setTheme = (next: Theme): void => {
-    setThemeState(next);
   };
 
   return (

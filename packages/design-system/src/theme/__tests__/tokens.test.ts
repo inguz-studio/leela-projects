@@ -120,6 +120,17 @@ describe('generateCSS', () => {
     const css = generateCSS('brasa', brasa, sem, comp);
     expect(css).toContain('--btn-height-md: 40px');
   });
+
+  it('rootFallback: brasa também pinta :root sem data-theme (anti-FOUC SSR)', () => {
+    const css = generateCSS('brasa', brasa, sem, comp, { rootFallback: true });
+    expect(css).toContain(':root:not([data-theme])');
+    expect(css).toContain('[data-theme="brasa"]');
+  });
+
+  it('sem rootFallback o seletor fica restrito ao data-theme', () => {
+    const css = generateCSS('leela', leela, semLeela, comp);
+    expect(css).not.toContain(':root');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 export {
   ThemeProvider,
   useTheme,
+  getThemeInitScript,
   type Theme,
   type ThemeContextValue,
   type ThemeProviderProps,

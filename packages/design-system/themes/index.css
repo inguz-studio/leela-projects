@@ -1,5 +1,6 @@
 /* Leela Design System — all themes combined */
 
+:root:not([data-theme]),
 [data-theme="brasa"] {
   --primary-50: #FFF3F0;
   --primary-100: #FFD9CC;
