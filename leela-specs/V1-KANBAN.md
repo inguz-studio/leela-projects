@@ -22,7 +22,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O0** · E00 · Fundação técnica — 10/10T commitado · FIX-E00 (Fable) aplicando 19 achados da revisão
+- [x] **O0** · E00 · Fundação técnica — 10/10T · VERIFY-FIX-E00 (Fable): **pass** — achados nomeados corrigidos e verificados em disco; gate 20/20 tasks verde (--force) + Emulator Java 21 165/165 zero skip · residuais críticos fechados: turbo strict env escondia skip das rules; race .next/types na landing
 - [ ] **O0** · E01 · Design System (tema brasa) — 10/10T · revisão Fable: **needs_fixes** (2 críticas: tema leela ilegível + Badge invisível; 9 altas) · FIX-E01 em curso
 
 
