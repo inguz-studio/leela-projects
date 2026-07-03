@@ -338,6 +338,90 @@ describe('MockPaymentProvider — integração (S000-4-T2)', () => {
     expect(r2.status).toBe('approved');
   });
 
+  // ── refund: validações (M1, review E00) ────────────────────────────────
+
+  it('refund rejeita cobrança inexistente em vez de aprovar', async () => {
+    await expect(
+      provider.refund({
+        chargeId: 'charge-que-nao-existe',
+        tenantId: 'tenant-x',
+        reason: 'teste',
+        idempotencyKey: 'refund-ghost-001',
+      })
+    ).rejects.toThrow('inexistente');
+  });
+
+  it('refund rejeita double-refund com idempotencyKeys distintas', async () => {
+    const chargeId = await criarCobranca('order-double-ref', 4_000);
+
+    const r1 = await provider.refund({
+      chargeId,
+      tenantId: 'tenant-double',
+      reason: 'primeiro estorno total',
+      idempotencyKey: 'refund-d1',
+    });
+    expect(r1.amount).toBe(4_000);
+
+    // Segunda tentativa com key DIFERENTE — não pode estornar de novo
+    await expect(
+      provider.refund({
+        chargeId,
+        tenantId: 'tenant-double',
+        reason: 'segundo estorno indevido',
+        idempotencyKey: 'refund-d2',
+      })
+    ).rejects.toThrow('já integralmente estornada');
+  });
+
+  it('refund rejeita valor maior que o estornável', async () => {
+    const chargeId = await criarCobranca('order-over-ref', 3_000);
+
+    await expect(
+      provider.refund({
+        chargeId,
+        tenantId: 'tenant-over',
+        amount: 5_000,
+        reason: 'estorno acima do valor',
+        idempotencyKey: 'refund-over-001',
+      })
+    ).rejects.toThrow('excede o estornável');
+  });
+
+  it('refunds parciais acumulam até o limite da cobrança', async () => {
+    const chargeId = await criarCobranca('order-partial-ref', 3_000);
+
+    const r1 = await provider.refund({
+      chargeId,
+      tenantId: 'tenant-partial',
+      amount: 1_000,
+      reason: 'parcial 1',
+      idempotencyKey: 'refund-p1',
+    });
+    expect(r1.amount).toBe(1_000);
+    expect(provider.getCharge(chargeId)?.status).toBe('confirmed'); // ainda não total
+
+    const r2 = await provider.refund({
+      chargeId,
+      tenantId: 'tenant-partial',
+      amount: 2_000,
+      reason: 'parcial 2 (completa)',
+      idempotencyKey: 'refund-p2',
+    });
+    expect(r2.amount).toBe(2_000);
+    expect(provider.getCharge(chargeId)?.status).toBe('refunded');
+
+    // Terceiro estorno: nada mais estornável
+    await expect(
+      provider.refund({
+        chargeId,
+        tenantId: 'tenant-partial',
+        amount: 1,
+        reason: 'parcial 3 indevida',
+        idempotencyKey: 'refund-p3',
+      })
+    ).rejects.toThrow('já integralmente estornada');
+  });
+
   // ── splitRules ─────────────────────────────────────────────────────────
 
   it('splitRules calcula split correto sobre cobrança existente', async () => {

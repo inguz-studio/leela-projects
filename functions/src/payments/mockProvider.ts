@@ -54,6 +54,8 @@ interface StoredCharge {
   amount: number;
   status: 'pending' | 'confirmed' | 'failed' | 'refunded' | 'cancelled';
   idempotencyKey: string;
+  /** Total já estornado em centavos (soma de refunds aprovados) */
+  refundedAmount: number;
 }
 
 interface StoredWebhookResult {
@@ -236,6 +238,7 @@ export class MockPaymentProvider implements PaymentProvider {
       // Mock: confirma imediatamente (sem gateway real)
       status: 'confirmed',
       idempotencyKey: params.idempotencyKey,
+      refundedAmount: 0,
     };
 
     this.charges.set(chargeId, stored);
@@ -286,10 +289,35 @@ export class MockPaymentProvider implements PaymentProvider {
       };
     }
 
+    // Validações (achado M1, review E00) — antes: estorno de cobrança
+    // inexistente retornava 'approved' e double-refund com keys distintas
+    // passava sem limite.
     const charge = this.charges.get(params.chargeId);
-    const refundAmount = params.amount ?? charge?.amount ?? 0;
+    if (!charge) {
+      throw new Error(
+        `[mock] Estorno rejeitado: cobrança inexistente (${params.chargeId})`
+      );
+    }
 
-    if (charge) {
+    const refundable = charge.amount - charge.refundedAmount;
+    if (refundable <= 0) {
+      throw new Error(
+        `[mock] Estorno rejeitado: cobrança ${params.chargeId} já integralmente estornada`
+      );
+    }
+
+    const refundAmount = params.amount ?? refundable;
+    if (!Number.isInteger(refundAmount) || refundAmount <= 0) {
+      throw new Error(`[mock] Estorno rejeitado: amount inválido (${refundAmount})`);
+    }
+    if (refundAmount > refundable) {
+      throw new Error(
+        `[mock] Estorno rejeitado: ${refundAmount} excede o estornável (${refundable}) da cobrança ${params.chargeId}`
+      );
+    }
+
+    charge.refundedAmount += refundAmount;
+    if (charge.refundedAmount >= charge.amount) {
       charge.status = 'refunded';
     }
 
