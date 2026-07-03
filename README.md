@@ -40,7 +40,7 @@ leela/
 - Node >= 20
 - pnpm >= 9 (`npm i -g pnpm`)
 - Firebase CLI (`npm i -g firebase-tools`)
-- Java 17+ (para o Firestore Emulator)
+- Java 21+ Temurin (para o Firestore Emulator — firebase-tools 15.x exige 21)
 
 ### Instalar dependências
 
