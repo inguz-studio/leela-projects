@@ -15,8 +15,8 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 ### LEELA-E00 · Fundação técnica (completo)
 
 - [x] LEELA-S000-1-T1 — Inicializar monorepo Turborepo + pnpm workspaces
-- [ ] LEELA-S000-1-T2 — Scaffold `apps/painel` e `apps/landing` (Next.js App Router)
-- [ ] LEELA-S000-1-T3 — Scaffold `apps/mobile` (Expo)
+- [x] LEELA-S000-1-T2 — Scaffold `apps/painel` e `apps/landing` (Next.js App Router)
+- [x] LEELA-S000-1-T3 — Scaffold `apps/mobile` (Expo)
 - [x] LEELA-S000-1-T4 — Pacotes `core`, `design-system`, `api-client` (esqueleto)
 - [ ] LEELA-S000-2-T1 — Firebase (Firestore + Functions + Auth) + Emulator Suite
 - [ ] LEELA-S000-2-T2 — Firebase Auth (email/Google/Apple) + custom claims de papel
