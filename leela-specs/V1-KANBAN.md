@@ -23,11 +23,10 @@ tags:
 ## 🔨 Fazendo
 
 - [ ] **O0** · E00 · Fundação técnica — 10/10T commitado · FIX-E00 (Fable) aplicando 19 achados da revisão
+- [ ] **O0** · E01 · Design System (tema brasa) — 10/10T · revisão Fable: **needs_fixes** (2 críticas: tema leela ilegível + Badge invisível; 9 altas) · FIX-E01 em curso
 
 
 ## 🔍 Revisão
-
-- [ ] **O0** · E01 · Design System (tema brasa) — 10/10T · 22 componentes · 356 testes · Storybook 2 temas · revisão Fable em curso
 
 
 
