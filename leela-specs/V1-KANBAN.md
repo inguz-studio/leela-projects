@@ -22,17 +22,18 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O0** · E00 · Fundação técnica — 9/10T · revisão Fable: needs_fixes (1 crítica, 5 altas) · correções em fila
-- [ ] **O0** · E01 · Design System (tema brasa) — 4/10T (tokens+ThemeProvider+Button+primitivos ✅ · 199 testes; S001-3 em execução)
+- [ ] **O0** · E00 · Fundação técnica — 10/10T commitado · FIX-E00 (Fable) aplicando 19 achados da revisão
+- [ ] **O0** · E01 · Design System (tema brasa) — Storybook ✅ · T4 (Toast/Cards/Stepper/Skeleton/Tabs) + lint de tokens em curso (Fable)
 
 
 ## 🔍 Revisão
 
-- [ ] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 3/3T · revisão Fable: **exploit CRÍTICO confirmado** (write takeover cross-tenant) · fix em fila
 
 
 
 ## ✅ Feito
+
+- [x] **O0** · E16·S1600 · Multi-tenant (isolamento+claims) — 3/3T · exploit de takeover corrigido · 150/150 testes no Emulator (Java 21) · teste de regressão commitado
 
 
 
