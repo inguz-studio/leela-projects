@@ -153,13 +153,13 @@
   --border-brand: var(--primary-500);
   --border-focus: var(--primary-500);
   --border-danger: var(--danger-600);
-  --feedback-success: var(--success-600);
+  --feedback-success: var(--success-700);
   --feedback-success-fg: var(--success-800);
   --feedback-success-surface: var(--success-100);
   --feedback-danger: var(--danger-600);
   --feedback-danger-fg: var(--danger-800);
   --feedback-danger-surface: var(--danger-100);
-  --feedback-warning: var(--warning-600);
+  --feedback-warning: var(--warning-700);
   --feedback-warning-fg: var(--warning-900);
   --feedback-warning-surface: var(--warning-100);
   --feedback-info: var(--info-500);

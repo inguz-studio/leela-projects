@@ -140,6 +140,11 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-warning', 'surface-raised'],
   ['feedback-info',    'surface-base'],
   ['feedback-info',    'surface-raised'],
+  // Toast: borda esquerda semântica sobre o bg do toast (surface-overlay)
+  ['feedback-success', 'surface-overlay'],
+  ['feedback-danger',  'surface-overlay'],
+  ['feedback-warning', 'surface-overlay'],
+  ['feedback-info',    'surface-overlay'],
 ];
 
 // ---------------------------------------------------------------------------

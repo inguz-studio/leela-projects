@@ -66,13 +66,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             'h-[var(--input-height)] px-[var(--input-px)]',
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
-            // Colors & border (input is an exception to flat §2.16)
+            // Colors & border (input is an exception to flat §2.16).
+            // Borda de repouso usa border-strong: é o ÚNICO identificador
+            // visual do campo (bg raised ≈ bg da página) e WCAG 1.4.11 exige
+            // ≥3:1 — border-default ficava em 2.4–1.5:1 nos temas.
             'bg-[var(--surface-raised)] text-[var(--text-primary)]',
-            'border-[length:var(--input-border-width)] border-[var(--border-default)]',
+            'border-[length:var(--input-border-width)] border-[var(--border-strong)]',
             // Placeholder
             'placeholder:text-[var(--text-tertiary)]',
-            // Hover
-            'hover:border-[var(--border-strong)]',
             // Focus — glow ring via outline (not border)
             'focus:outline-none',
             'focus:ring-2 focus:ring-[color:var(--border-focus)] focus:ring-offset-0',

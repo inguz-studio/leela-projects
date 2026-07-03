@@ -37,13 +37,13 @@
     "danger":  "{danger.600}"
   },
   "feedback": {
-    "success":         "{success.600}",
+    "success":         "{success.700}",
     "success-fg":      "{success.800}",
     "success-surface": "{success.100}",
     "danger":          "{danger.600}",
     "danger-fg":       "{danger.800}",
     "danger-surface":  "{danger.100}",
-    "warning":         "{warning.600}",
+    "warning":         "{warning.700}",
     "warning-fg":      "{warning.900}",
     "warning-surface": "{warning.100}",
     "info-fg":         "{info.800}",
