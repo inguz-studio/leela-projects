@@ -1,14 +1,13 @@
 /**
  * rules.test.ts — integração: Firestore Security Rules deny-by-default
  *
- * Requer o Firestore Emulator rodando na porta 8080.
- * Pré-requisito: Java 17+ no PATH (JAVA_HOME configurado).
+ * Requer o Firestore Emulator. A suite inteira é pulada de verdade
+ * (describe.skipIf) quando FIRESTORE_EMULATOR_HOST não está definido —
+ * sem emulador nenhum hook roda e a suite reporta "skipped", não "failed".
  *
- * Rodar isoladamente:
- *   export JAVA_HOME="/c/Program Files/Microsoft/jdk-17.0.19.10-hotspot"
- *   export PATH="$JAVA_HOME/bin:$PATH"
- *   firebase emulators:start --only firestore &
- *   pnpm test:rules
+ * Rodar isoladamente (Java 21+ no PATH):
+ *   firebase emulators:exec --only firestore --project demo-leela \
+ *     "npx vitest run src/__tests__/rules.test.ts"
  */
 
 import {
@@ -24,47 +23,60 @@ import { doc, getDoc } from 'firebase/firestore';
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 
+// Skip real: sem FIRESTORE_EMULATOR_HOST a suite não executa nenhum hook.
+// (Antes o beforeAll estourava timeout e a suite FALHAVA sem emulador — C1.)
+const hasEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+
 let testEnv: RulesTestEnvironment;
 
-beforeAll(async () => {
-  // Se o emulador não estiver rodando, initializeTestEnvironment falha —
-  // o teste é pulado automaticamente ao reportar como suite sem executar.
-  testEnv = await initializeTestEnvironment({
-    projectId: PROJECT_ID,
-    firestore: {
-      rules: readFileSync(RULES_PATH, 'utf8'),
-      host: 'localhost',
-      port: 8080,
-    },
-  });
-});
+describe.skipIf(!hasEmulator)(
+  'Firestore Rules — deny-by-default (S000-2-T1)',
+  () => {
+    beforeAll(async () => {
+      testEnv = await initializeTestEnvironment({
+        projectId: PROJECT_ID,
+        firestore: {
+          rules: readFileSync(RULES_PATH, 'utf8'),
+          host: 'localhost',
+          port: 8080,
+        },
+      });
+    });
 
-afterAll(async () => {
-  await testEnv?.cleanup();
-});
+    afterAll(async () => {
+      await testEnv?.cleanup();
+    });
 
-describe('Firestore Rules — deny-by-default (S000-2-T1)', () => {
-  it('nega leitura de qualquer coleção por usuário anônimo', async () => {
-    const ctx = testEnv.unauthenticatedContext();
-    const docRef = doc(ctx.firestore(), 'atletas', 'qualquer-id');
-    await assertFails(getDoc(docRef));
-  });
+    it('nega leitura de qualquer coleção por usuário anônimo', async () => {
+      const ctx = testEnv.unauthenticatedContext();
+      const docRef = doc(ctx.firestore(), 'atletas', 'qualquer-id');
+      await assertFails(getDoc(docRef));
+    });
 
-  it('nega escrita de qualquer coleção por usuário anônimo', async () => {
-    const ctx = testEnv.unauthenticatedContext();
-    const { setDoc } = await import('firebase/firestore');
-    const docRef = doc(ctx.firestore(), 'atletas', 'qualquer-id');
-    await assertFails(
-      setDoc(docRef, { nome: 'Teste', email: 'teste@leela.app' })
-    );
-  });
+    it('nega escrita de qualquer coleção por usuário anônimo', async () => {
+      const ctx = testEnv.unauthenticatedContext();
+      const { setDoc } = await import('firebase/firestore');
+      const docRef = doc(ctx.firestore(), 'atletas', 'qualquer-id');
+      await assertFails(
+        setDoc(docRef, { nome: 'Teste', email: 'teste@leela.app' })
+      );
+    });
 
-  it('nega leitura de coleção tenant-scoped sem claims de tenantId', async () => {
-    // Após S1600-T3, atletas/{uid} permite leitura pelo próprio dono.
-    // Este teste usa 'eventos' — coleção que requer claim tenantId (ADR-009).
-    // Um usuário autenticado sem tenantId no claim não acessa dados tenant-scoped.
-    const ctx = testEnv.authenticatedContext('uid-123');
-    const docRef = doc(ctx.firestore(), 'eventos', 'qualquer-evento');
-    await assertFails(getDoc(docRef));
-  });
-});
+    it('nega leitura mesmo autenticado em coleção sem rule permissiva', async () => {
+      // `pagamentos` não tem nenhuma rule permissiva para quem não é membro
+      // do tenant: read exige claim tenantId compatível e write é `false`.
+      // (atletas/{uid} permite self-read, então não serve para esta asserção.)
+      const ctx = testEnv.authenticatedContext('uid-123');
+      const docRef = doc(ctx.firestore(), 'pagamentos', 'qualquer-pagamento');
+      await assertFails(getDoc(docRef));
+    });
+
+    it('nega escrita mesmo autenticado em coleção write-only-por-Function', async () => {
+      // pagamentos: `allow write: if false` — nem platform_admin escreve pelo cliente.
+      const ctx = testEnv.authenticatedContext('uid-123');
+      const { setDoc } = await import('firebase/firestore');
+      const docRef = doc(ctx.firestore(), 'pagamentos', 'qualquer-pagamento');
+      await assertFails(setDoc(docRef, { tenantId: 't1', valor: 100 }));
+    });
+  }
+);
