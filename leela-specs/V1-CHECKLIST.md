@@ -18,12 +18,12 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S000-1-T2 — Scaffold `apps/painel` e `apps/landing` (Next.js App Router)
 - [x] LEELA-S000-1-T3 — Scaffold `apps/mobile` (Expo)
 - [x] LEELA-S000-1-T4 — Pacotes `core`, `design-system`, `api-client` (esqueleto)
-- [ ] LEELA-S000-2-T1 — Firebase (Firestore + Functions + Auth) + Emulator Suite
-- [ ] LEELA-S000-2-T2 — Firebase Auth (email/Google/Apple) + custom claims de papel
+- [x] LEELA-S000-2-T1 — Firebase (Firestore + Functions + Auth) + Emulator Suite
+- [x] LEELA-S000-2-T2 — Firebase Auth (email/Google/Apple) + custom claims de papel
 - [x] LEELA-S000-3-T1 — GitHub Actions (lint/type/test/build) + preview deploy
 - [ ] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
-- [ ] LEELA-S000-4-T1 — Documento de convenções de código
-- [ ] LEELA-S000-4-T2 — Interface `PaymentProvider` + adapter mock/sandbox
+- [x] LEELA-S000-4-T1 — Documento de convenções de código
+- [x] LEELA-S000-4-T2 — Interface `PaymentProvider` + adapter mock/sandbox
 
 ### LEELA-E01 · Design System temável & Shell (completo, tema `brasa`)
 
