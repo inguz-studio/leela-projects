@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Leela · Roadmap operacional — V1 Produtor</title>
+<style>
+  :root{
+    --bg:#0C0C0C; --surface:#161616; --raised:#1C1C1C; --high:#292929;
+    --brasa:#FF450C; --brasa-400:#FF6520; --brasa-600:#E03800;
+    --vitoria:#2D9315; --alerta:#E8B100; --vulcao:#FF2F2D; --heroico:#ED3585;
+    --txt:#fff; --txt2:#B6B6B6; --txt3:#6D6D6D; --border:rgba(255,255,255,.08);
+    --font: "Exo 2","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 0% -10%,rgba(255,69,12,.10),transparent 60%),var(--bg);color:var(--txt);font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1360px;margin:0 auto;padding:32px 28px 64px}
+  header .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brasa-400)}
+  h1{font-size:34px;font-weight:800;font-style:italic;letter-spacing:-.02em;margin:6px 0 4px}
+  .sub{color:var(--txt2);font-size:15px}
+  .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:24px 0 8px}
+  .metric{background:var(--surface);border-radius:12px;padding:16px}
+  .metric .v{font-size:26px;font-weight:800;font-style:italic}
+  .metric .l{font-size:11px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+  .metric .v.brasa{color:var(--brasa)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:18px 0 8px;font-size:12px;color:var(--txt2)}
+  .legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:16px;align-items:start}
+  @media(max-width:1000px){.board{grid-template-columns:1fr 1fr}.metrics{grid-template-columns:repeat(3,1fr)}}
+  .col{background:linear-gradient(180deg,var(--surface),rgba(22,22,22,.6));border-radius:14px;padding:14px;border-top:2px solid var(--brasa)}
+  .col.out{border-top-color:var(--txt3);opacity:.9}
+  .col h2{font-size:14px;margin:2px 0 2px;font-weight:700}
+  .col .cnt{font-family:var(--mono);font-size:11px;color:var(--txt3)}
+  .barwrap{height:6px;background:var(--bg);border-radius:4px;margin:10px 0 14px;overflow:hidden}
+  .bar{height:100%;background:linear-gradient(90deg,var(--brasa-600),var(--brasa-400));border-radius:4px}
+  .card{background:var(--raised);border-radius:10px;padding:12px 12px 10px;margin-bottom:10px;border-left:3px solid var(--brasa)}
+  .card.should{border-left-color:var(--alerta)}
+  .card.out{border-left-color:var(--txt3)}
+  .card .id{font-family:var(--mono);font-size:11px;color:var(--brasa-400)}
+  .card .nm{font-size:13px;font-weight:600;margin:2px 0 6px;line-height:1.25}
+  .card .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:20px}
+  .pill.must{background:rgba(255,69,12,.16);color:var(--brasa-400)}
+  .pill.should{background:rgba(232,177,0,.16);color:var(--alerta)}
+  .pill.t{background:var(--high);color:var(--txt2);font-family:var(--mono)}
+  .dep{font-size:11px;color:var(--txt3);margin-top:7px}
+  .dep b{color:var(--txt2)}
+  .out-list{font-size:12px;color:var(--txt2);line-height:1.7}
+  .out-list .tag{font-family:var(--mono);color:var(--txt3)}
+  footer{margin-top:28px;color:var(--txt3);font-size:12px;border-top:1px solid var(--border);padding-top:14px}
+  .flow{background:var(--surface);border-radius:14px;padding:16px 18px;margin-top:22px;font-family:var(--mono);font-size:12.5px;color:var(--txt2);overflow-x:auto;white-space:pre;line-height:1.6}
+  .flow b{color:var(--brasa-400)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Leela · plano operacional</div>
+    <h1>Roadmap V1 — Produtor (web) + app simples</h1>
+    <div class="sub">Marketplace multi-tenant · React (Next.js + Expo) + Firestore · 142 tasks em 4 ondas. Fonte: <span class="tag">leela-specs/V1-CHECKLIST.md</span></div>
+  </header>
+
+  <div class="metrics">
+    <div class="metric"><div class="v brasa">142</div><div class="l">tasks na V1</div></div>
+    <div class="metric"><div class="v">4</div><div class="l">ondas</div></div>
+    <div class="metric"><div class="v">11</div><div class="l">épicos na V1</div></div>
+    <div class="metric"><div class="v">17</div><div class="l">épicos no total</div></div>
+    <div class="metric"><div class="v">3</div><div class="l">superfícies</div></div>
+    <div class="metric"><div class="v">React</div><div class="l">stack (Next+Expo)</div></div>
+  </div>
+
+  <div class="legend">
+    <span><b style="background:var(--brasa)"></b>Must</span>
+    <span><b style="background:var(--alerta)"></b>Should</span>
+    <span><b style="background:var(--txt3)"></b>Fora da V1 / adiado</span>
+    <span><b style="background:var(--high)"></b>T = nº de tasks (= PRs)</span>
+  </div>
+
+  <div class="board">
+    <!-- ONDA 0 -->
+    <div class="col">
+      <h2>Onda 0 · Fundação</h2>
+      <div class="cnt">23 tasks · bloqueia tudo</div>
+      <div class="barwrap"><div class="bar" style="width:16%"></div></div>
+      <div class="card"><div class="id">E00</div><div class="nm">Fundação técnica</div><div class="row"><span class="pill must">Must</span><span class="pill t">10 T</span></div><div class="dep">monorepo · Next.js · Firestore · Auth · CI</div></div>
+      <div class="card"><div class="id">E01</div><div class="nm">Design System (tema brasa)</div><div class="row"><span class="pill must">Must</span><span class="pill t">10 T</span></div><div class="dep"><b>dep:</b> E00</div></div>
+      <div class="card"><div class="id">E16 · S1600</div><div class="nm">Multi-tenant (isolamento + claims)</div><div class="row"><span class="pill must">Must</span><span class="pill t">3 T</span></div><div class="dep"><b>fundacional</b> · ADR-009 · vem antes de qualquer domínio</div></div>
+    </div>
+
+    <!-- ONDA 1 -->
+    <div class="col">
+      <h2>Onda 1 · Operar</h2>
+      <div class="cnt">59 tasks</div>
+      <div class="barwrap"><div class="bar" style="width:42%"></div></div>
+      <div class="card"><div class="id">E03</div><div class="nm">Operação do evento</div><div class="row"><span class="pill must">Must</span><span class="pill t">20 T</span></div><div class="dep">inscritos · kits · entrega/check-in · <b>dep:</b> E01</div></div>
+      <div class="card"><div class="id">E05</div><div class="nm">Clubs (núcleo + desafio mínimo)</div><div class="row"><span class="pill must">Must</span><span class="pill t">22 T</span></div><div class="dep">membros · comunicação · parcerias · <b>dep:</b> E01</div></div>
+      <div class="card should"><div class="id">E02</div><div class="nm">Dashboard do produtor</div><div class="row"><span class="pill should">Should</span><span class="pill t">7 T</span></div><div class="dep"><b>dep:</b> E01</div></div>
+      <div class="card"><div class="id">E16-slim</div><div class="nm">Onboard tenant + termos comerciais</div><div class="row"><span class="pill must">Must</span><span class="pill t">10 T</span></div><div class="dep"><b>dep:</b> S1600</div></div>
+    </div>
+
+    <!-- ONDA 2 -->
+    <div class="col">
+      <h2>Onda 2 · Vender</h2>
+      <div class="cnt">46 tasks · fecha descobrir→pagar→receita</div>
+      <div class="barwrap"><div class="bar" style="width:32%"></div></div>
+      <div class="card"><div class="id">E04</div><div class="nm">Config &amp; Vendas (+ afiliação/split)</div><div class="row"><span class="pill must">Must</span><span class="pill t">19 T</span></div><div class="dep">lotes · cupons · programa de afiliação · <b>dep:</b> E03</div></div>
+      <div class="card"><div class="id">E12</div><div class="nm">Landing + checkout público</div><div class="row"><span class="pill must">Must</span><span class="pill t">18 T</span></div><div class="dep"><b>dep:</b> E04 · PaymentProvider</div></div>
+      <div class="card"><div class="id">E08</div><div class="nm">Promotor self-service</div><div class="row"><span class="pill must">Must</span><span class="pill t">4 T</span></div><div class="dep">link · conversões · repasse · <b>dep:</b> E04</div></div>
+      <div class="card should"><div class="id">E06</div><div class="nm">Comunicação do evento</div><div class="row"><span class="pill should">Should</span><span class="pill t">5 T</span></div><div class="dep">push/email segmentado · <b>dep:</b> E03</div></div>
+    </div>
+
+    <!-- ONDA 3 -->
+    <div class="col">
+      <h2>Onda 3 · App simples</h2>
+      <div class="cnt">14 tasks · lado do atleta</div>
+      <div class="barwrap"><div class="bar" style="width:10%"></div></div>
+      <div class="card"><div class="id">E13-slim</div><div class="nm">App do atleta (mínimo)</div><div class="row"><span class="pill must">Must</span><span class="pill t">14 T</span></div><div class="dep">descobrir · comprar · ingresso QR · push · ler clube · <b>dep:</b> E12, E05</div></div>
+      <div class="card out"><div class="id">— horizonte —</div><div class="nm">Depois da V1</div><div class="dep">jornada heroica · sync de treino (E14) · desafios completos</div></div>
+    </div>
+  </div>
+
+  <!-- FLUXO -->
+  <div class="flow"><b>E00</b> ─► <b>E01</b> ─► E03 ─► E04 ─► E12 ─► (checkout)
+ │            ├─► E02        ├─► E06
+ │            │              └─► E08
+ └─► <b>E16·S1600</b>       └─► E05 ─► E13-slim
+     (multi-tenant)  ─► E16-slim (onboard+termos)</div>
+
+  <!-- FORA -->
+  <div class="col out" style="margin-top:22px;border-top-color:var(--txt3)">
+    <h2>Fora da V1 — não construir agora</h2>
+    <div class="out-list">
+      <b>Épicos adiados:</b> <span class="tag">E07</span> Estados · <span class="tag">E09</span> Financeiro do profissional · <span class="tag">E10</span> Marcas · <span class="tag">E11</span> Analytics · <span class="tag">E14</span> Integrações de treino (TrainingProvider) · <span class="tag">E15</span> Creator Studio (MyDose)<br/>
+      <b>Recortes pós-V1 dentro de épicos da fatia:</b> desafio anti-streak completo (E05) · recorrências de mensalidade (E16 S1603/S1604) · campanhas &amp; automações (E06) · jornada heroica / medalhas / sync (E13)
+    </div>
+  </div>
+
+  <footer>
+    Leela · roadmap operacional gerado a partir de <span class="tag">leela-specs/</span> (17 épicos · discovery · nuvem de ~70 features). Durações e progresso das barras são ilustrativos. Detalhe task-a-task em <span class="tag">V1-CHECKLIST.md</span>.
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,1402 @@
+# LEELA-E12 · Landing Pública (evento/clube, inscrição, checkout, SEO)
+
+- **Superfície:** Landing (web pública, SSR/ISR, sem login)
+- **Horizonte:** H1 (Onda 2 — vendas ponta a ponta)
+- **MoSCoW:** Must
+- **Estimativa:** XL
+- **Status:** 🔄 conteúdo em `PaginaVendas-Conteudo.html`; código a fazer
+- **Depende de:** LEELA-E01 (DS: Banner Hero, Card de Evento, Stepper de checkout 5 etapas, Card de Desafio), LEELA-E04 (Configuração e Vendas — quando existir; até lá basear em JIRA-03 BH-300/BH-301), PaymentProvider (ADR-006), LEELA-E00 (app `apps/landing`)
+- **De-para:** novo (sem BH- direto). Rastreabilidade de conteúdo: BH-300 (Página de vendas), BH-301 (Promotores/afiliação), BH-201 (publicação gera URL+QR)
+
+## Objetivo
+
+Entregar a superfície **web pública** da Leela: as páginas que o atleta anônimo encontra pelo Google, por link de organizador/afiliado ou por compartilhamento em redes, e o fluxo que o converte em inscrito pagante sem exigir login. São páginas **renderizadas no servidor (SSR/ISR)** para SEO e velocidade, alimentadas pelos dados que o organizador publica no painel (E03/E04) e pelo modelo de dados comum. A landing fecha o ciclo de negócio do H1: *"atleta descobre → inscreve → paga → organizador vê receita"* e ativa o lock-in financeiro da afiliação (clube/promotor recebe comissão pela conversão que originou).
+
+O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois canais (app do atleta e landing pública); este épico constrói **o canal web**. O checkout usa a camada plugável `PaymentProvider` (ADR-006), nunca um gateway concreto: um provider sandbox permite construir e testar o fluxo ponta a ponta antes da escolha do fornecedor.
+
+## Personas & JTBD
+
+- **Atleta anônimo (persona primária).** JTBD Transacional: *"Quando descubro um evento, quero me inscrever em poucos cliques, para reduzir a fricção"* e *"Quando compro inscrição, quero acompanhar kit e pagamento no mesmo lugar"* (`jobs-to-be-done.md` 04.1). Não tem conta; a landing não exige login para inscrever e pagar.
+- **Organizador (persona secundária).** JTBD *"Quando descubro/publico evento, quero minha página no ar com link compartilhável e QR"* — a landing é a materialização pública da página de vendas que ele configura.
+- **Clube/Promotor afiliado (persona secundária).** JTBD *"Vendo com promotor, quero link rastreável em tempo real, para calcular comissão sem planilha"* — a landing captura a atribuição de conversão do link master/cupom.
+
+## Critérios de sucesso do épico
+
+- Uma URL pública de evento publicado (`{leela-domain}/{eventSlug}`) abre sem login, renderizada no servidor, com todas as seções ativas que o organizador publicou e passa em Core Web Vitals (LCP do Hero < 2,5s).
+- Uma URL pública de clube com visibilidade `publica`/`indexavel` (`{leela-domain}/c/{clubSlug}`) abre e é indexável; clube `privada` responde 404.
+- Um atleta anônimo completa **inscrição → pagamento → confirmação** pelo Stepper de 5 etapas usando o `PaymentProvider` sandbox, e o inscrito aparece confirmado no painel do organizador com a receita agregada.
+- Um acesso via link master `beh.ro/mfl26?c=cps` (ou cupom `CORRIDAPERFEITA10`) que converte dentro da janela de atribuição gera uma conversão atribuída ao afiliado e o valor a receber correspondente.
+- `sitemap.xml`, `robots.txt`, metadata dinâmica e OG por página existem e validam; o og:image do evento aparece ao compartilhar.
+
+## Regras de negócio aplicáveis
+
+- **RN-201** — publicar evento gera URL pública + QR automaticamente (a landing consome a URL/QR; publicação em si é do E03).
+- **RN-200** — preço bloqueado após 1ª venda (a landing sempre lê o preço vigente do lote/kit; nunca recalcula).
+- **RN-202 / RN-216** — inscrito escolhe um `kit` (`kit_ouro`/`kit_prata`/`kit_basico`/`sem_kit`); "kit" nunca "tier".
+- **RN-211** — "Sem kit" é kit válido e pode ter preço negativo (desconto).
+- **RN-204** — inscrito nasce `pendente`, vira `confirmado` no webhook de pagamento aprovado.
+- **RN-207** — o passo de chip não existe no checkout público (chip é preenchido na entrega); nada a suprimir aqui, apenas não coletar.
+- **RN-140** — visibilidade da página do clube: `publica` (link direto), `indexavel` (aparece em buscadores), `privada` (404 público).
+- **RN-141** — clube com aprovação manual: CTA de entrada informa que a entrada aguarda liberação (a entrada em si é mobile/app).
+- **RN-117** — visibilidade do desafio (membros/convite/público): só desafios `público` aparecem na página pública do clube.
+- **RN-125** — evento promovido gera link master rastreável + cupom exclusivo + comissão (lado do clube).
+- **RN-310** — o organizador define a comissão; para a landing é read-only.
+- **RN-311** — programa de afiliação define %, janela de atribuição (dias), teto mensal e cupom; a atribuição de conversão respeita a janela.
+- **RN-301** — cada modalidade/percurso tem preço independente (a landing exibe "a partir de R$ X").
+- **RN-218** (S1206) — toda inscrição confirmada gera um ingresso digital com QR assinado (`qrToken` opaco por inscrito), disponível no app e por e-mail.
+- **RN-219** (S1206) — e-mail transacional de confirmação usa template de marca Leela com variáveis (`{nome}`, `{evento}`, `{kit}`, `{modalidade}`), disparado ao responsável do pedido pela Function de webhook confirmado, idempotente (não reenvia no reprocessamento).
+- **RN-220** (S1206) — PDF do ingresso é gerado sob demanda a partir do mesmo ingresso/QR; opcional, para impressão/offline ou retirada por terceiro.
+- **RN-145** (S1207) — contato de emergência (nome + telefone) é obrigatório na inscrição, por inscrito do pedido.
+- **RN-148** (S1207) — aceite de regulamento é obrigatório e distinto do consentimento LGPD; persiste versão + timestamp (+ hash de IP opcional) no inscrito.
+- **RN-150** (S1208) — o portal público do organizador vive sob a plataforma (`tenants/{id}/portal`), renderizado por SSR/ISR, sem domínio próprio nem white-label.
+- **RN-151** (S1208) — captura de newsletter grava lead sob o tenant com registro de consentimento LGPD e finalidade declarada.
+- **RN-152** (S1208) — blocos do portal são ativáveis e ordenáveis; blocos desativados não aparecem.
+
+## Modelo de dados tocado
+
+Ver `modelo-de-dados-firestore.md`. Leitura pública (server-side) e escrita transacional:
+
+- **`eventos/{eventoId}`** (docId = slug) — leitura pública apenas quando `status == 'publicado'|'ao_vivo'`. Campos lidos: `nome`, `data`, `local`, `modalidades[]`, `usaChip`, `slug`. ∑ `qtdInscritos`, `receitaConfirmada` (mantidos por Function; a landing só lê/dispara).
+- **`eventos/{eventoId}/kits/{kitId}`** — `nome`, `preco` (aceita negativo), `capacidade`, `modalidades[]` (RN-210/211/216).
+- **`eventos/{eventoId}/inscritos/{inscritoId}`** — **criado pelo checkout** (via Function). `atletaId?` (anônimo → cria/associa `atletas` por email), 🔁`atletaNome`, `kit`, `modalidade`, `status` (`pendente`→`confirmado`), `chipNumero: null`, `origem`/`atribuicaoAfiliadoRef?`.
+- **`eventos/{eventoId}/programaAfiliacao/{unico}`** — read-only na landing: `comissaoPct`, `janelaAtribuicaoDias`, `tetoMensal?`, `cupom?` (RN-310/311).
+- **`clubes/{clubId}`** (docId = slug) — leitura pública gated por `visibilidade` (RN-140). Campos: `nome`, `descricao`, `slug`, `categoria`, `modalidade`, `localizacao`, `codigoConvite` (não exposto), ∑ `qtdMembrosAtivos`.
+- **`clubes/{clubId}/desafios/{desafioId}`** — só `visibilidade == 'publico'` (RN-117).
+- **`clubes/{clubId}/parcerias/{parceriaId}`** (tipo `evento_afiliado`) — ∑ `conversoes`, `valorAReceber` atualizados pela Function de conversão/split. 🔁 `cupom`, `linkMaster`, `comissaoPct`, `janelaAtribuicaoDias`.
+- **Documento de seed/atribuição de clique** (novo) — `linkClicks/{clickId}` ou cookie assinado: captura `affiliateCode`, `eventoId`, `clicadoEm` para resolver atribuição na conversão dentro da janela.
+- **`eventos/{eventoId}/inscritos/{inscritoId}`** — campos novos coletados/emitidos por inscrito do pedido: ➕ `qrToken` (opaco, assinado, gerado na confirmação — S1206), ➕ `ingressoEmitidoEm` (S1206), ➕ `contatoEmergencia{ nome, telefone }` (S1207), ➕ `regulamentoAceite{ versao, aceitoEm, ipHash? }` (S1207), ➕ `consentimentoLgpd{ aceitoEm }` (S1207, separado do aceite de regulamento).
+- ➕ **Subcoleção `eventos/{eventoId}/inscritos/{inscritoId}/notificacoes/{tipo}`** (S1206) — auditoria/idempotência do disparo transacional (`emailConfirmacao`): `enviadoEm`, `provedorMessageId?`, `status`. Escrita só por Function; sem leitura pública.
+- ➕ **`tenants/{tenantId}/portal`** (S1208) — config do portal público: `blocos[] { tipo, ativo, ordem }`, `status`/`visibilidade`, `publicadoEm?`; leitura pública só quando publicado.
+- ➕ **Subcoleção `tenants/{tenantId}/newsletterLeads/{leadId}`** (S1208) — captura de newsletter: `email`, `consentimentoEm`, `finalidade`, `origem`. Escrita só por Function; sem leitura pública.
+- **`pedidos/{pedidoId}`** (ADR-011) — referência ao pedido em grupo consumida por S1206/S1207: `responsavel` (pagador, destinatário do e-mail), `inscritoRefs[]`, `pagamentoRef`, `valorTotal`. Um `createCharge`/webhook por pedido; ingresso, contato de emergência e aceite de regulamento são por inscrito, não pelo pedido.
+
+Todo agregado (∑) e campo financeiro é escrito **apenas por Cloud Function** (Admin SDK); a landing nunca escreve receita/conversão a partir do cliente. Security Rules na task que cria coleção.
+
+## Fora de escopo (Won't nesta fase)
+
+- Login / conta do atleta (é E13 mobile; a landing pode oferecer "baixar o app", mas não autentica).
+- Edição de conteúdo/SEO da página (é do painel, E04/BH-300 — a landing só **renderiza** o que foi publicado).
+- Painel do promotor/influenciador (E08) — a landing só **atribui** a conversão; o dashboard do afiliado é outro épico.
+- Gateway de pagamento concreto (Pagar.me/Asaas/Stripe) — só a **interface** `PaymentProvider` + sandbox (ADR-006).
+- Reembolso e estorno na UI pública (fluxo de pós-venda fica no painel/financeiro E09).
+- Mapa interativo real de percurso (a seção "Percurso detalhado" renderiza imagem/altimetria estática; mapa vivo é V2).
+- Telas genéricas de sistema (404/500/offline) — E07; aqui só os estados **públicos específicos** (evento não publicado, vendas encerradas, esgotado, clube privado).
+
+> **Domínio público:** a Leela ainda não fixou o domínio. Todo path público usa o placeholder **`{leela-domain}`** (TBD) — **não** hardcodar `be-hero.com.br`. O link master de mock `beh.ro/mfl26?c=cps` é preservado como dado de mock de afiliação (encurtador), não como o domínio canônico da landing.
+
+---
+
+## User stories
+
+Stories: **LEELA-S1200** (setup da superfície) · **S1201** (página de evento) · **S1202** (página de clube) · **S1203** (checkout 5 etapas) · **S1204** (atribuição de afiliado) · **S1205** (SEO técnico) · **S1206** (ingresso digital + e-mail de marca + PDF) · **S1207** (aceite de regulamento + contato de emergência) · **S1208** (portal público do organizador).
+
+---
+
+### LEELA-S1200 · Superfície landing SSR/ISR + shell público + leitura pública de dados · (de-para novo)
+
+**Como** time, **quero** o app `apps/landing` em Next.js App Router com SSR/ISR, tema `leela` e um leitor server-side de dados publicados, **para** que todas as páginas públicas tenham fundação comum, seguras e rápidas.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Landing
+- **Tela(s) de referência:** `WEB-APPV2 (1)/PaginaVendas-Conteudo.html` (banner de contexto "uma edição, dois canais" — o canal web é esta superfície)
+- **RNs:** RN-140, RN-200 (só leitura de preço vigente)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o app landing, **quando** faço build, **então** as rotas públicas são Server Components com estratégia ISR (revalidação por tag) e nenhum segredo Firebase vaza no bundle do cliente.
+- **Dado** um documento não publicado/privado, **quando** o leitor server-side tenta lê-lo para render público, **então** ele não retorna dados (gate por `status`/`visibilidade`), resultando em 404.
+- **Dado** o tema, **quando** renderizo qualquer página pública, **então** aplica `theme="leela"` do DS (E01) sem redefinir token localmente.
+
+**Tasks:** S1200-T1, S1200-T2
+
+#### LEELA-S1200-T1 · Scaffold `apps/landing` (App Router, SSR/ISR) + layout público + ThemeProvider
+- **Tipo:** setup · **Depende de:** E00 (monorepo + Firebase), E01-S001-1-T2 (ThemeProvider), E01-S001-3-T1 (Shell) · **Bloqueia:** todas as demais tasks do épico · **Estimativa:** M
+
+**Objetivo**
+Criar o app Next.js `apps/landing` com App Router, layout público (header simples + footer público, sem sidebar/breadcrumb de painel), `ThemeProvider theme="leela"` e ISR configurado, pronto para receber as rotas de evento/clube/checkout.
+
+**Contexto & referências**
+- Tela: `WEB-APPV2 (1)/PaginaVendas-Conteudo.html` (contexto de conteúdo; a landing NÃO reusa o shell de painel).
+- ADR-004 (Next.js App Router, SSR/ISR para SEO), ADR-007 (Turborepo).
+- DS: `ThemeProvider`, tokens semânticos (E01). Componentes de app (Sidebar/Breadcrumb) **não** entram aqui.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/layout.tsx` — root layout: `<html lang="pt-BR">`, `ThemeProvider theme="leela"`, fontes do tema.
+- `apps/landing/app/(public)/layout.tsx` — layout público (header/footer públicos).
+- `apps/landing/app/components/PublicHeader.tsx`, `PublicFooter.tsx` — logo Leela, links institucionais mínimos, "baixar o app".
+- `apps/landing/next.config.js` — ISR/imagens/headers.
+- `apps/landing/app/page.tsx` — home mínima (placeholder institucional; catálogo público é fora de escopo).
+- `turbo.json` / `package.json` — registrar o app no monorepo.
+
+**Passos de implementação**
+1. Inicializar o app no monorepo consumindo `packages/design-system` e `packages/core`.
+2. Root layout com `ThemeProvider theme="leela"`; header/footer públicos (sem navegação de painel).
+3. Configurar renderização como Server Components por padrão; definir convenção de `revalidate` e `revalidateTag`.
+4. Garantir que credenciais Firebase Admin ficam só no server (variáveis de ambiente server-only).
+
+**Modelo de dados / contratos**
+- Nenhuma coleção nova. Define a convenção de tags de revalidação: `event:{slug}`, `club:{slug}`.
+
+**Regras de negócio a respeitar**
+- Governança E01: tema `leela`, tokens semânticos, sem hardcode.
+
+**Critérios de aceite (testáveis)**
+- **Dado** o build, **quando** inspeciono o bundle do cliente, **então** não há chave/credencial Firebase Admin.
+- **Dado** o app, **quando** abro a home, **então** renderiza no servidor com o tema `leela`.
+
+**Testes a escrever**
+- unit: layout monta `ThemeProvider` com `theme="leela"`.
+- integração: rota SSR responde 200 e não expõe env server-only no HTML.
+
+**Definition of Done** — ver checklist padrão (`definition-of-done.md`), DoD de Tela/rota + transversal (sem segredo no cliente).
+
+**Fora de escopo**
+Rotas de evento/clube/checkout (tasks seguintes); catálogo/busca pública de eventos.
+
+#### LEELA-S1200-T2 · Leitor público server-side (Admin SDK) com gate de publicação/visibilidade + revalidação
+- **Tipo:** api/function · **Depende de:** S1200-T1 · **Bloqueia:** S1201, S1202 · **Estimativa:** M
+
+**Objetivo**
+Expor funções server-side tipadas em `packages/api-client` que leem dados públicos de evento e clube aplicando o gate de `status`/`visibilidade`, para as rotas SSR consumirem sem lógica de autorização espalhada.
+
+**Contexto & referências**
+- Modelo: `eventos/{slug}` (`status`), `clubes/{slug}` (`visibilidade` — RN-140), subcoleções `kits`, `desafios` (RN-117), `programaAfiliacao`.
+- ADR-005 (Firestore), Security Rules: atleta/anônimo lê só evento publicado + clube publico/indexavel.
+
+**Arquivos (criar/editar)**
+- `packages/api-client/src/public/getPublishedEvent.ts` — `getPublishedEvent(slug): PublicEvent | null`.
+- `packages/api-client/src/public/getPublicClub.ts` — `getPublicClub(slug): PublicClub | null` (respeita RN-140).
+- `packages/core/src/public/types.ts` — tipos `PublicEvent`, `PublicClub`, `PublicKit`, `PublicChallenge` (só campos públicos; sem `codigoConvite`).
+- `firestore.rules` — regras de leitura pública (evento publicado; clube publico/indexavel).
+
+**Passos de implementação**
+1. `getPublishedEvent`: retorna `null` se `status ∉ {publicado, ao_vivo}`; monta `PublicEvent` (evento + kits + modalidades + programaAfiliacao read-only).
+2. `getPublicClub`: retorna `null` se `visibilidade == 'privada'`; monta `PublicClub` (clube + desafios `publico` + eventos afiliados públicos); nunca inclui `codigoConvite`.
+3. Mapear campos para os tipos públicos em `core` (nenhum dado sensível cruza para o cliente).
+4. Escrever/atualizar Security Rules e testá-las no emulador.
+
+**Modelo de dados / contratos**
+- `getPublishedEvent(slug: string): Promise<PublicEvent | null>`
+- `getPublicClub(slug: string): Promise<PublicClub | null>`
+- Tipos em `packages/core`.
+
+**Regras de negócio a respeitar**
+- RN-140 (visibilidade clube), RN-117 (só desafio público), RN-200 (preço lido, nunca recalculado).
+
+**Critérios de aceite (testáveis)**
+- **Dado** evento `rascunho`, **quando** chamo `getPublishedEvent`, **então** retorna `null`.
+- **Dado** clube `privada`, **quando** chamo `getPublicClub`, **então** retorna `null`; **dado** `indexavel`, **então** retorna o clube sem `codigoConvite`.
+
+**Testes a escrever**
+- unit: mapeamento evento→`PublicEvent` omite campos privados.
+- integração (emulador): Security Rules bloqueiam leitura de evento não publicado e clube privado por cliente anônimo.
+
+**Definition of Done** — DoD de API/Function (Security Rules na task) + transversal.
+
+**Fora de escopo**
+Render das páginas (S1201/S1202); qualquer escrita.
+
+---
+
+### LEELA-S1201 · Página pública de evento (SSR/SEO, seções publicadas, CTA de inscrição, URL+QR) · (de-para BH-300/BH-201)
+
+**Como** atleta anônimo, **quero** abrir a página pública de um evento e ver tudo que preciso para decidir (data, local, modalidades, kits, retirada, FAQ, percurso, patrocinadores, depoimentos), **para** me inscrever com confiança e baixa fricção.
+
+- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Landing
+- **Tela(s) de referência:** `WEB-APPV2 (1)/PaginaVendas-Conteudo.html` (lista canônica de seções e agrupamento Web+App / Só Web)
+- **RNs:** RN-201 (URL+QR), RN-200/301 (preços vigentes por modalidade/kit), RN-202/211/216 (kits), RN-207 (não coleta chip)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um evento publicado com seções ativas, **quando** abro `{leela-domain}/{eventSlug}`, **então** vejo o Hero (título, data, local, imagem) e as seções ativas na ordem publicada, renderizadas no servidor.
+- **Dado** que uma seção está desativada no painel (toggle off), **quando** renderizo, **então** ela não aparece na página.
+- **Dado** uma seção marcada "Só Web" (Percurso, Patrocinadores, Depoimentos), **quando** renderizo, **então** ela aparece na landing (o app a ignora — não é problema da landing).
+- **Dado** o Hero, **quando** clico em "Garantir inscrição", **então** vou para o checkout do evento preservando parâmetros de atribuição.
+- **Dado** um evento com `status == 'rascunho'`, **quando** acesso a URL, **então** recebo 404 público (`notFound()`).
+- **Dado** vendas encerradas/esgotado, **quando** abro a página, **então** o CTA principal fica desabilitado com mensagem de estado e o conteúdo informativo permanece visível.
+
+**Tasks:** S1201-T1, S1201-T2, S1201-T3
+
+#### LEELA-S1201-T1 · Rota SSR/ISR do evento + renderizador de seções orientado por configuração
+- **Tipo:** screen · **Depende de:** S1200-T2 · **Bloqueia:** S1201-T2, S1203-T1 · **Estimativa:** M
+
+**Objetivo**
+Criar `app/(public)/[eventSlug]/page.tsx` que carrega o evento publicado via leitor server-side, com ISR, e renderiza dinamicamente as seções ativas na ordem definida pelo organizador.
+
+**Contexto & referências**
+- Tela: `PaginaVendas-Conteudo.html` — seções essenciais (Capa, Modalidades, Kit do atleta, Retirada de kits, Informações gerais) + só-web (Percurso, Patrocinadores, Depoimentos) + Checkout (sistema).
+- Mocks: Meia Maratona Floripa 2026 (`meia-floripa-2026`), 3 modalidades 5k/10k/21k, "a partir de R$ 99".
+- DS: Banner Hero (E01), layout de seções, tokens `leela`.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/page.tsx` — Server Component; `getPublishedEvent(slug)`; `notFound()` se `null`; `export const revalidate` + tag `event:{slug}`.
+- `apps/landing/app/(public)/[eventSlug]/SectionRenderer.tsx` — mapeia `sectionKey → componente`, filtra por `ativo` e ordena.
+- `apps/landing/app/(public)/[eventSlug]/sections/index.ts` — registro das seções.
+
+**Passos de implementação**
+1. Carregar `PublicEvent` no server; `notFound()` quando `null`.
+2. Ler a config de seções publicada (ativo + ordem); iterar e renderizar só as ativas.
+3. Configurar ISR com `revalidate` e tag `event:{slug}` (revalidada quando o organizador republica).
+4. Renderizar Hero como primeira seção; CTA "Garantir inscrição" aponta para `/{eventSlug}/inscricao`.
+
+**Modelo de dados / contratos**
+- Lê `eventos/{slug}` + `kits` + config de seções. Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-201 (URL pública), RN-200/301 (exibe preço vigente).
+
+**Critérios de aceite (testáveis)**
+- **Dado** `meia-floripa-2026` publicado, **quando** acesso a rota, **então** renderiza Hero + seções ativas na ordem publicada.
+- **Dado** slug inexistente/rascunho, **quando** acesso, **então** 404.
+
+**Testes a escrever**
+- unit: `SectionRenderer` oculta seção com `ativo=false` e respeita ordem.
+- e2e: abrir `/{eventSlug}` renderiza Hero + CTA (fluxo crítico #4 início — `estrategia-testes.md`).
+
+**Definition of Done** — DoD Tela/rota (estados de carregando/erro; ISR) + transversal.
+
+**Fora de escopo**
+Conteúdo de cada seção (T2); estados de venda (T3); metadata/OG (S1205).
+
+#### LEELA-S1201-T2 · Componentes de seção (Hero, Modalidades, Kits, Retirada, Info/FAQ, Percurso, Patrocinadores, Depoimentos)
+- **Tipo:** ui-component · **Depende de:** S1201-T1 · **Estimativa:** M
+
+**Objetivo**
+Implementar os componentes de conteúdo de cada seção pública do evento, consumindo dados do `PublicEvent` e os componentes do DS, com estados vazios quando um campo opcional não foi preenchido.
+
+**Contexto & referências**
+- Tela: `PaginaVendas-Conteudo.html` — descrição de cada seção (ex.: Modalidades "3 percursos lado a lado · 5km · 10km · 21km · a partir de R$ 99"; Kit "4 kits · Ouro/Prata/Básico/Sem kit · galeria de itens"; Retirada "24 e 25 Abr · Academia Athletico Beira-Mar"; Info "accordion 12 tópicos").
+- Mocks: kits Ouro/Prata/Básico/Sem kit; itens por kit (Olympikus sacochila, Growth whey, Centauro viseira, Probiótica gel — de BH-205).
+- DS: Card de Evento/Modalidade, Card de kit + galeria, Accordion, grid de logos, Card de depoimento (E01).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/sections/HeroSection.tsx` — Banner Hero (título, data, local, imagem/gradiente por categoria) + CTA.
+- `.../sections/ModalidadesSection.tsx` — modalidades lado a lado, preço "a partir de" (RN-301).
+- `.../sections/KitsSection.tsx` — kits com galeria de itens; "Sem kit" exibido (RN-211/216); nunca "tier".
+- `.../sections/RetiradaSection.tsx` — janela/local/documentos.
+- `.../sections/InfoGeraisSection.tsx` — accordion de tópicos (FAQ/regulamento).
+- `.../sections/PercursoSection.tsx` — imagem/altimetria estática (só-web).
+- `.../sections/PatrocinadoresSection.tsx` — grid de logos em níveis (só-web).
+- `.../sections/DepoimentosSection.tsx` — cards de depoimento (só-web).
+
+**Passos de implementação**
+1. Cada seção recebe seu slice tipado do `PublicEvent` e renderiza com componentes DS.
+2. Preços por modalidade/kit sempre lidos do dado (RN-200/301); "a partir de" = menor preço vigente.
+3. Kits: rótulo "kit" (RN-216); "Sem kit" é opção válida (RN-211).
+4. Estado vazio por seção quando o slice está vazio (ex.: sem patrocinadores → seção não renderiza).
+
+**Modelo de dados / contratos**
+- Consome `PublicEvent` (S1200-T2). Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-216 ("kit"), RN-211 (Sem kit), RN-301 (preço por modalidade), RN-207 (nenhuma coleta de chip aqui).
+
+**Critérios de aceite (testáveis)**
+- **Dado** 4 kits incluindo "Sem kit", **quando** renderizo Kits, **então** os 4 aparecem com rótulo "kit" e preços vigentes.
+- **Dado** evento sem depoimentos, **quando** renderizo, **então** a seção Depoimentos não aparece.
+
+**Testes a escrever**
+- unit: KitsSection nunca renderiza a string "tier"; "a partir de" calcula o menor preço.
+- unit: seção só-web sem dados retorna `null`.
+
+**Definition of Done** — DoD Componente + Tela/rota (estados vazios) + transversal.
+
+**Fora de escopo**
+Interatividade de checkout (S1203); mapa vivo de percurso.
+
+#### LEELA-S1201-T3 · Estados públicos do evento (rascunho→404, vendas encerradas, esgotado) + bloco compartilhar/QR (RN-201)
+- **Tipo:** screen · **Depende de:** S1201-T1 · **Estimativa:** S
+
+**Objetivo**
+Cobrir os estados públicos específicos do evento e renderizar o bloco de compartilhamento (URL amigável + QR) coerente com a publicação (RN-201).
+
+**Contexto & referências**
+- Tela: `PaginaVendas-Conteudo.html` (ações rápidas: copiar link público, compartilhar redes, baixar QR — no painel; a landing expõe o compartilhamento ao visitante).
+- Glossário (`HANDOFF-07`): toasts "Link da página pública copiado".
+- E07 cobre 404/500 genéricos; aqui só os estados de venda específicos.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/SaleState.tsx` — deriva estado de venda (aberto/encerrado/esgotado) a partir de datas/`qtdInscritos`/capacidade.
+- `apps/landing/app/(public)/[eventSlug]/ShareBlock.tsx` — URL amigável + botão copiar + QR (imagem gerada da URL pública).
+- `packages/core/src/public/saleState.ts` — derivação pura do estado de venda.
+
+**Passos de implementação**
+1. Derivar estado de venda em `core` (encerrado se passou a data/limite; esgotado se capacidade atingida).
+2. CTA "Garantir inscrição" desabilita em encerrado/esgotado com mensagem; conteúdo informativo permanece.
+3. `notFound()` já tratado em T1 para rascunho; garantir cobertura de teste.
+4. ShareBlock: copiar URL (toast do glossário) + QR da URL pública (RN-201).
+
+**Modelo de dados / contratos**
+- `deriveSaleState(event): 'aberto' | 'encerrado' | 'esgotado'` em `core`.
+
+**Regras de negócio a respeitar**
+- RN-201 (URL+QR consistentes com a publicação).
+
+**Critérios de aceite (testáveis)**
+- **Dado** evento com data passada, **quando** abro, **então** CTA desabilitado + "Inscrições encerradas".
+- **Dado** capacidade atingida, **quando** abro, **então** "Esgotado" e CTA desabilitado.
+- **Dado** a página, **quando** copio o link, **então** toast "Link da página pública copiado".
+
+**Testes a escrever**
+- unit: `deriveSaleState` por data/capacidade.
+- e2e: evento encerrado bloqueia entrada no checkout.
+
+**Definition of Done** — DoD Tela/rota + transversal.
+
+**Fora de escopo**
+404/500/offline genéricos (E07).
+
+---
+
+### LEELA-S1202 · Página pública de clube (visibilidade RN-140, desafios públicos, eventos afiliados, CTA) · (de-para BH-110)
+
+**Como** atleta anônimo, **quero** abrir a página pública de um clube e entender o que ele é, seus desafios públicos e eventos que promove, **para** decidir entrar (via app) ou me inscrever num evento associado.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Landing
+- **Tela(s) de referência:** identidade do clube (mock Corrida Perfeita Sul; slug `corrida-perfeita-sul`)
+- **RNs:** RN-140 (visibilidade), RN-117 (desafio público), RN-141 (aprovação manual no CTA), RN-125 (eventos afiliados)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um clube `publica`/`indexavel`, **quando** abro `{leela-domain}/c/{clubSlug}`, **então** vejo nome, bio, KPIs públicos (nº de membros), desafios públicos e eventos que o clube promove.
+- **Dado** um clube `privada`, **quando** acesso a URL, **então** recebo 404 público.
+- **Dado** desafios do clube, **quando** renderizo, **então** só os de `visibilidade == 'publico'` aparecem (RN-117).
+- **Dado** clube com aprovação manual (RN-141), **quando** vejo o CTA de entrada, **então** ele informa que a entrada aguarda liberação e direciona ao app.
+- **Dado** um evento afiliado do clube, **quando** clico nele, **então** vou para a página pública do evento preservando a atribuição do clube (link master/cupom).
+
+**Tasks:** S1202-T1, S1202-T2
+
+#### LEELA-S1202-T1 · Rota SSR/ISR do clube com gate de visibilidade (RN-140)
+- **Tipo:** screen · **Depende de:** S1200-T2 · **Estimativa:** S
+
+**Objetivo**
+Criar `app/(public)/c/[clubSlug]/page.tsx` que carrega o clube público (gate RN-140) via leitor server-side, com ISR, e trata `privada`→404.
+
+**Contexto & referências**
+- Mock: Corrida Perfeita Sul (`corrida-perfeita-sul`, 120 membros ativos, categoria Assessoria esportiva).
+- RN-140 (publica/indexavel/privada). ISR tag `club:{slug}`.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/c/[clubSlug]/page.tsx` — `getPublicClub(slug)`; `notFound()` se `null`; `revalidate` + tag `club:{slug}`.
+
+**Passos de implementação**
+1. Carregar `PublicClub`; `notFound()` quando `null` (cobre `privada`).
+2. Configurar ISR e tag de revalidação.
+3. `indexavel` permite indexação; `publica` acessível por link mas metadata `robots: noindex` (tratado em S1205).
+
+**Modelo de dados / contratos**
+- Lê `clubes/{slug}` (gate por `visibilidade`). Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-140.
+
+**Critérios de aceite (testáveis)**
+- **Dado** clube `privada`, **quando** acesso, **então** 404.
+- **Dado** clube `indexavel`, **quando** acesso, **então** 200 com dados públicos.
+
+**Testes a escrever**
+- e2e: `privada` → 404; `indexavel` → 200 (fluxo crítico de visibilidade).
+- integração: leitor respeita `visibilidade`.
+
+**Definition of Done** — DoD Tela/rota + transversal.
+
+**Fora de escopo**
+Conteúdo (T2); entrada no clube (é app/E13).
+
+#### LEELA-S1202-T2 · Conteúdo da página do clube (hero, bio, KPIs, desafios públicos, eventos afiliados, CTA)
+- **Tipo:** ui-component · **Depende de:** S1202-T1 · **Estimativa:** M
+
+**Objetivo**
+Renderizar o conteúdo público do clube: hero + bio, KPIs públicos, lista de desafios públicos (RN-117), eventos que o clube promove (RN-125) e o CTA de entrada coerente com RN-141.
+
+**Contexto & referências**
+- Mock: bio aprovada do Corrida Perfeita Sul; desafios (só os `publico`); eventos afiliados (Meia Floripa 2026 cupom `CORRIDAPERFEITA10`, Trail Ratones, Corrida da Ponte).
+- DS: Banner Hero, Card de Desafio (progress-bar), Card de Evento (E01).
+- Glossário: toasts de copiar link.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/c/[clubSlug]/ClubHero.tsx`, `ClubStats.tsx`, `ClubChallenges.tsx`, `ClubEvents.tsx`, `ClubJoinCTA.tsx`.
+
+**Passos de implementação**
+1. Hero + bio + KPIs públicos (nº membros ativos ∑, categoria, localização); nunca expor `codigoConvite`.
+2. Desafios: renderizar só `visibilidade == 'publico'` (RN-117) com Card de Desafio.
+3. Eventos afiliados: Card de Evento, cada link preserva atribuição do clube (cupom/link master — coordena com S1204).
+4. CTA de entrada: se `aprovacaoManual` (RN-141), texto informa liberação pendente; direciona ao app (download/deep link).
+
+**Modelo de dados / contratos**
+- Consome `PublicClub`. Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-117, RN-125, RN-141.
+
+**Critérios de aceite (testáveis)**
+- **Dado** clube com 1 desafio `publico` e 2 `membros`, **quando** renderizo, **então** só o público aparece.
+- **Dado** clube com aprovação manual, **quando** vejo o CTA, **então** informa que a entrada aguarda liberação.
+
+**Testes a escrever**
+- unit: filtro de desafios por visibilidade; CTA muda com `aprovacaoManual`.
+
+**Definition of Done** — DoD Componente + Tela/rota (estados vazios) + transversal.
+
+**Fora de escopo**
+Fluxo de entrada no clube (app/E13); códigos de convite.
+
+---
+
+### LEELA-S1203 · Checkout do atleta anônimo — Stepper de 5 etapas + PaymentProvider · (de-para BH-300)
+
+**Como** atleta anônimo, **quero** me inscrever e pagar por um evento em um fluxo guiado de 5 etapas sem criar conta, **para** garantir minha vaga com o mínimo de fricção.
+
+- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Landing
+- **Tela(s) de referência:** `PaginaVendas-Conteudo.html` (seção Checkout = sistema: "modalidade → kit → dados → pagamento"); o Stepper canônico do épico é **Dados → Modalidade/Kit → Resumo → Pagamento → Confirmação** (5 etapas do DS E01-S001-3-T4)
+- **RNs:** RN-202/211/216 (kit), RN-204 (status), RN-200/301 (preço), RN-207 (sem chip), RN-311/125 (cupom/atribuição — integra S1204)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o CTA "Garantir inscrição", **quando** entro no checkout, **então** vejo o Stepper com 5 etapas na ordem Dados → Modalidade/Kit → Resumo → Pagamento → Confirmação.
+- **Dado** a etapa Dados, **quando** deixo campo obrigatório inválido, **então** avanço é bloqueado com erro inline.
+- **Dado** a etapa Modalidade/Kit, **quando** escolho modalidade e um kit (inclusive "Sem kit"), **então** o Resumo reflete o preço vigente; nunca aparece "tier".
+- **Dado** o Resumo com cupom `CORRIDAPERFEITA10`, **quando** aplico, **então** o total cai 10% e o afiliado é resolvido (S1204).
+- **Dado** a etapa Pagamento, **quando** confirmo via `PaymentProvider` sandbox, **então** a inscrição nasce `pendente` e, no webhook aprovado, vira `confirmado`.
+- **Dado** o pagamento aprovado, **quando** chego à Confirmação, **então** vejo os dados da inscrição, kit, valor e próximos passos (retirada), sem coletar número de chip (RN-207).
+
+**Tasks:** S1203-T1 … S1203-T6
+
+#### LEELA-S1203-T1 · Rota + máquina de estado do Stepper (5 etapas) + preservação de contexto
+- **Tipo:** screen · **Depende de:** S1201-T1, E01-S001-3-T4 (Stepper) · **Bloqueia:** T2–T6 · **Estimativa:** M
+
+**Objetivo**
+Criar `app/(public)/[eventSlug]/inscricao/page.tsx` com a máquina de estado das 5 etapas, validação de avanço, e preservação dos parâmetros de atribuição (`?c=`) e do evento.
+
+**Contexto & referências**
+- DS: Stepper de checkout 5 etapas (E01). Ordem canônica: Dados → Modalidade/Kit → Resumo → Pagamento → Confirmação.
+- Sem `localStorage` para estado de domínio (usar estado de navegação/URL + memória do componente).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/page.tsx` — carrega `PublicEvent`; monta o Stepper.
+- `apps/landing/app/(public)/[eventSlug]/inscricao/CheckoutMachine.tsx` — estado das etapas + guards de avanço.
+- `packages/core/src/checkout/steps.ts` — definição pura das etapas e validações de transição.
+
+**Passos de implementação**
+1. Definir as 5 etapas e as regras de avanço em `core` (transição só com etapa válida).
+2. Bloquear checkout se evento encerrado/esgotado (reusa `deriveSaleState`, S1201-T3).
+3. Preservar `eventSlug` e `affiliateCode` do query/cookie ao longo das etapas.
+4. Não persistir dados sensíveis em `localStorage`.
+
+**Modelo de dados / contratos**
+- Estado em memória; nenhuma escrita até o Pagamento (T5/T6).
+
+**Regras de negócio a respeitar**
+- RN-207 (sem etapa de chip); estado de venda (S1201-T3).
+
+**Critérios de aceite (testáveis)**
+- **Dado** o checkout, **quando** monto, **então** há exatamente 5 etapas na ordem canônica.
+- **Dado** evento esgotado, **quando** tento entrar no checkout, **então** sou bloqueado.
+
+**Testes a escrever**
+- unit: máquina de estado — transições válidas/ inválidas.
+- e2e (início): CTA → checkout mostra etapa Dados.
+
+**Definition of Done** — DoD Tela/rota + transversal (sem `localStorage` de domínio).
+
+**Fora de escopo**
+Conteúdo de cada etapa (T2–T6).
+
+#### LEELA-S1203-T2 · Etapa Dados (formulário do atleta anônimo + validação)
+- **Tipo:** ui-component · **Depende de:** S1203-T1 · **Estimativa:** S
+
+**Objetivo**
+Coletar os dados do atleta anônimo (nome, email, CPF, telefone, e dados obrigatórios da prova) com validação inline, sem exigir login.
+
+**Contexto & referências**
+- Modelo: `atletas/{atletaId}` (nome, email) — o email é a chave de associação/criação do atleta no T6.
+- DS: Input (estados invalid + erro inline), Button.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/DadosStep.tsx`.
+- `packages/core/src/checkout/validateDados.ts` — validações puras (email, CPF, obrigatórios).
+
+**Passos de implementação**
+1. Formulário com validação client + regras puras em `core`.
+2. Bloquear avanço enquanto inválido; erro inline por campo.
+3. LGPD: consentimento de uso de dados (checkbox) antes de avançar.
+
+**Modelo de dados / contratos**
+- Produz `DadosAtleta` (em memória) para o T6.
+
+**Regras de negócio a respeitar**
+- Sem login; consentimento LGPD.
+
+**Critérios de aceite (testáveis)**
+- **Dado** email inválido, **quando** tento avançar, **então** erro inline e avanço bloqueado.
+- **Dado** todos os campos válidos + consentimento, **quando** avanço, **então** vou para Modalidade/Kit.
+
+**Testes a escrever**
+- unit: `validateDados` (email/CPF/obrigatórios).
+
+**Definition of Done** — DoD Componente + transversal (LGPD).
+
+**Fora de escopo**
+Persistência (T6).
+
+#### LEELA-S1203-T3 · Etapa Modalidade/Kit (seleção com preço vigente; "Sem kit"; RN-216)
+- **Tipo:** ui-component · **Depende de:** S1203-T1 · **Estimativa:** S
+
+**Objetivo**
+Permitir escolher a modalidade e um kit (incluindo "Sem kit") com preços vigentes, alimentando o Resumo.
+
+**Contexto & referências**
+- Mocks: modalidades 5k/10k/21k; kits Ouro/Prata/Básico/Sem kit.
+- RN-202/211/216 (kit; "Sem kit" válido; nunca "tier"), RN-301 (preço por modalidade).
+- DS: Card de kit + galeria.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/ModalidadeKitStep.tsx`.
+- `packages/core/src/checkout/pricing.ts` — cálculo puro do subtotal (modalidade + kit, aceita kit negativo).
+
+**Passos de implementação**
+1. Selecionar modalidade → filtra kits disponíveis para a modalidade (RN-210).
+2. Selecionar kit (rótulo "kit"; "Sem kit" válido, RN-211/216).
+3. Calcular subtotal com preço vigente (RN-200/301); kit "Sem kit" pode aplicar desconto (preço negativo).
+
+**Modelo de dados / contratos**
+- Produz `{ modalidade, kitId, subtotal }` (memória).
+
+**Regras de negócio a respeitar**
+- RN-216, RN-211, RN-301, RN-210.
+
+**Critérios de aceite (testáveis)**
+- **Dado** kits disponíveis, **quando** escolho "Sem kit" com desconto, **então** o subtotal reflete o preço (negativo) corretamente.
+- **Dado** a UI, **quando** inspeciono, **então** nunca aparece "tier".
+
+**Testes a escrever**
+- unit: `pricing` (kit negativo, preço por modalidade).
+
+**Definition of Done** — DoD Componente + transversal.
+
+**Fora de escopo**
+Cupom (T4/S1204).
+
+#### LEELA-S1203-T4 · Etapa Resumo (order summary + aplicação de cupom)
+- **Tipo:** ui-component · **Depende de:** S1203-T2, S1203-T3, S1204-T2 · **Estimativa:** S
+
+**Objetivo**
+Mostrar o resumo do pedido (dados + modalidade + kit + valores) e permitir aplicar cupom, exibindo o total final antes do pagamento.
+
+**Contexto & referências**
+- Mock cupom: `CORRIDAPERFEITA10` (−10%).
+- RN-311 (cupom do programa de afiliação); coordena com S1204-T2 (validação/atribuição).
+- DS: resumo de valores, Input de cupom, toast "Cupom [código] copiado/aplicado".
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/ResumoStep.tsx`.
+- `packages/core/src/checkout/applyCoupon.ts` — desconto puro (reusa validação de S1204-T2).
+
+**Passos de implementação**
+1. Exibir dados, modalidade, kit, subtotal.
+2. Campo de cupom → valida via S1204-T2 → aplica desconto → total.
+3. Cupom inválido/expirado → erro inline, total inalterado.
+
+**Modelo de dados / contratos**
+- Produz `{ total, cupomAplicado?, afiliadoRef? }` (memória).
+
+**Regras de negócio a respeitar**
+- RN-311 (cupom), RN-200 (preço base vigente).
+
+**Critérios de aceite (testáveis)**
+- **Dado** `CORRIDAPERFEITA10`, **quando** aplico, **então** total = subtotal −10% e afiliado resolvido.
+- **Dado** cupom inválido, **quando** aplico, **então** erro e total inalterado.
+
+**Testes a escrever**
+- unit: `applyCoupon` (percentual, cupom inválido/expirado).
+
+**Definition of Done** — DoD Componente + transversal.
+
+**Fora de escopo**
+Cálculo de split/comissão (S1204-T3).
+
+#### LEELA-S1203-T5 · Etapa Pagamento (`PaymentProvider.createCharge`, Pix/cartão)
+- **Tipo:** integration · **Depende de:** S1203-T4, ADR-006 (interface) · **Estimativa:** M
+
+**Objetivo**
+Iniciar a cobrança via interface `PaymentProvider` (Pix + cartão), sem gateway concreto, criando a inscrição `pendente` e aguardando o retorno de pagamento.
+
+**Contexto & referências**
+- ADR-006: `PaymentProvider` (`createCharge`, `splitRules`, `refund`, `handleWebhook`, `getPayout`) em `packages/core`, implementação sandbox em `functions/`.
+- `estrategia-testes.md`: pagamento é cobertura crítica (risco financeiro).
+- RN-204 (inscrito nasce `pendente`).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/PagamentoStep.tsx` — UI Pix/cartão; chama Function server.
+- `functions/src/payments/createInscricaoCharge.ts` — callable/HTTPS: cria inscrito `pendente` + `PaymentProvider.createCharge`.
+- `functions/src/payments/sandboxProvider.ts` — implementação sandbox da interface.
+
+**Passos de implementação**
+1. UI escolhe Pix ou cartão; envia dados do pedido à Function (validação server, nunca confiar no cliente).
+2. Function cria `inscritos/{id}` `status='pendente'` e chama `createCharge` (com `splitRules` do afiliado quando houver — S1204).
+3. Retorna Pix copia-e-cola / status de cartão ao cliente; não confirma inscrição no cliente.
+4. Erros observáveis no Sentry (sem dado sensível).
+
+**Modelo de dados / contratos**
+- Escreve `eventos/{id}/inscritos/{inscritoId}` (`pendente`) via Function; `createCharge(input) -> { chargeId, pixCode?, status }`.
+
+**Regras de negócio a respeitar**
+- RN-204 (pendente), validação server-side.
+
+**Critérios de aceite (testáveis)**
+- **Dado** o pedido válido, **quando** confirmo pagamento, **então** a Function cria inscrito `pendente` e retorna a cobrança do provider sandbox.
+- **Dado** falha do provider, **quando** confirmo, **então** erro tratado sem criar inscrição confirmada.
+
+**Testes a escrever**
+- integração (emulador + provider sandbox): `createCharge` cria inscrito `pendente`; falha não confirma.
+- unit: montagem de `splitRules` quando há afiliado.
+
+**Definition of Done** — DoD API/Function (validação server, Sentry) + transversal (sem segredo no cliente).
+
+**Fora de escopo**
+Confirmação via webhook (T6); split/atribuição (S1204-T3); gateway concreto.
+
+#### LEELA-S1203-T6 · Confirmação + webhook idempotente (inscrito→confirmado, ∑ receita/inscritos)
+- **Tipo:** api/function · **Depende de:** S1203-T5 · **Estimativa:** M
+
+**Objetivo**
+Processar o webhook de pagamento aprovado de forma idempotente: confirmar a inscrição (RN-204), criar/associar o atleta anônimo, atualizar agregados e renderizar a tela de Confirmação.
+
+**Contexto & referências**
+- Modelo: `atletas/{id}` (cria por email se anônimo), `eventos/{id}/inscritos/{id}` (`confirmado`), ∑ `qtdInscritos`, `receitaConfirmada` (Function).
+- `estrategia-testes.md` fluxo crítico #4 (inscrição → pagamento → confirmação); webhook idempotente.
+- RN-204, RN-207 (chip nulo).
+
+**Arquivos (criar/editar)**
+- `functions/src/payments/handlePaymentWebhook.ts` — `PaymentProvider.handleWebhook`, assinatura verificada, idempotente.
+- `functions/src/aggregates/onInscritoConfirmed.ts` — atualiza ∑ `qtdInscritos`/`receitaConfirmada` (idempotente).
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/ConfirmacaoStep.tsx` — resumo final + próximos passos (retirada).
+- `apps/landing/app/(public)/[eventSlug]/inscricao/confirmacao/[inscritoId]/page.tsx` — página de confirmação acessível por link (pós-pagamento).
+
+**Passos de implementação**
+1. Webhook verifica assinatura; idempotência por `chargeId`/eventId (reprocessar não duplica).
+2. Cria/associa `atletas` por email; atualiza inscrito para `confirmado`; `chipNumero` permanece `null` (RN-207).
+3. Trigger de agregado atualiza ∑ receita/inscritos de forma idempotente.
+4. Confirmação exibe kit, modalidade, valor pago e instruções de retirada.
+
+**Modelo de dados / contratos**
+- `handleWebhook(payload) -> void` (idempotente); atualiza inscrito + agregados.
+
+**Regras de negócio a respeitar**
+- RN-204 (confirmado), RN-207 (chip nulo), agregados só por Function.
+
+**Critérios de aceite (testáveis)**
+- **Dado** webhook aprovado, **quando** processo, **então** inscrito vira `confirmado` e ∑ receita/inscritos sobem uma vez.
+- **Dado** o mesmo webhook reenviado, **quando** reprocesso, **então** nada duplica (idempotente).
+- **Dado** pagamento confirmado, **quando** chego à Confirmação, **então** vejo dados + próximos passos, sem número de chip.
+
+**Testes a escrever**
+- integração (crítico): webhook idempotente confirma inscrição e agrega uma vez; reprocessamento não duplica.
+- e2e (fluxo crítico #4): inscrição → pagamento → confirmação ponta a ponta (provider sandbox).
+
+**Definition of Done** — DoD API/Function (webhook idempotente/assinado, agregados idempotentes) + Tela/rota + transversal.
+
+**Fora de escopo**
+Atribuição/split ao afiliado (S1204-T3); reembolso (E09).
+
+---
+
+### LEELA-S1204 · Atribuição de conversão via link master / cupom de afiliado (dentro da janela) · (de-para BH-301)
+
+**Como** clube/promotor afiliado, **quero** que uma venda originada pelo meu link master ou cupom seja atribuída a mim quando ocorre dentro da janela, **para** receber a comissão sem controlar em planilha.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Landing + Functions
+- **Tela(s) de referência:** — (backstage; a UI é o checkout de S1203)
+- **RNs:** RN-125 (link master + cupom + comissão), RN-310 (organizador define comissão, read-only), RN-311 (%, janela, teto, cupom)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o acesso via link master `beh.ro/mfl26?c=cps`, **quando** chego à página do evento, **então** o código de afiliado é capturado e persiste (cookie assinado) pela janela de atribuição.
+- **Dado** o cupom `CORRIDAPERFEITA10` aplicado no checkout, **quando** valido, **então** resolvo o afiliado dono do cupom e aplico o desconto.
+- **Dado** uma conversão paga dentro da janela (RN-311), **quando** o pagamento é confirmado, **então** registro a conversão atribuída ao afiliado e atualizo ∑ `conversoes`/`valorAReceber` via `splitRules`.
+- **Dado** uma conversão fora da janela, **quando** o pagamento é confirmado, **então** não atribuo comissão.
+- **Dado** teto mensal atingido (RN-311), **quando** processo a conversão, **então** respeito o teto.
+
+**Tasks:** S1204-T1, S1204-T2, S1204-T3
+
+#### LEELA-S1204-T1 · Captura de link master (`?c=`) + cookie de atribuição por janela
+- **Tipo:** integration · **Depende de:** S1200-T1 · **Estimativa:** S
+
+**Objetivo**
+Capturar o código de afiliado do link master no acesso à página pública e persistir a atribuição (cookie assinado, server-side) com validade igual à janela de atribuição do programa.
+
+**Contexto & referências**
+- Mock: link master `beh.ro/mfl26?c=cps` (afiliado `cps` = Corrida Perfeita Sul), janela 7 dias (RN-311).
+- Cookie assinado server-side (sem `localStorage` de domínio).
+
+**Arquivos (criar/editar)**
+- `apps/landing/middleware.ts` ou route handler — lê `?c=`, seta cookie `leela_aff` assinado com `expires = janelaAtribuicaoDias`.
+- `packages/core/src/affiliation/attribution.ts` — resolução pura de atribuição (código → afiliado, dentro da janela).
+
+**Passos de implementação**
+1. Ao acessar `/{eventSlug}?c=<code>`, resolver o programa de afiliação e a janela; setar cookie assinado.
+2. Se já houver atribuição válida, aplicar política (primeiro clique dentro da janela; documentar).
+3. Não usar `localStorage`; cookie httpOnly assinado.
+
+**Modelo de dados / contratos**
+- Lê `eventos/{id}/programaAfiliacao` (read-only). Cookie `{ affiliateCode, eventoId, clicadoEm }`.
+
+**Regras de negócio a respeitar**
+- RN-311 (janela), RN-125 (link master).
+
+**Critérios de aceite (testáveis)**
+- **Dado** `?c=cps`, **quando** acesso, **então** cookie de atribuição é setado com validade da janela.
+- **Dado** cookie expirado, **quando** converto, **então** não há atribuição.
+
+**Testes a escrever**
+- unit: `attribution` — dentro/fora da janela.
+- integração: middleware seta cookie assinado a partir de `?c=`.
+
+**Definition of Done** — DoD API/Function + transversal (sem `localStorage`, cookie assinado).
+
+**Fora de escopo**
+Aplicação do cupom (T2); split (T3).
+
+#### LEELA-S1204-T2 · Validação e resolução de cupom de afiliado (aplica desconto + resolve afiliado)
+- **Tipo:** api/function · **Depende de:** S1204-T1 · **Bloqueia:** S1203-T4 · **Estimativa:** S
+
+**Objetivo**
+Validar o cupom no checkout, resolver o afiliado dono e retornar o desconto, para o Resumo aplicar e a conversão ser atribuída.
+
+**Contexto & referências**
+- Mocks: `CORRIDAPERFEITA10` (−10%, afiliado CPS, Meia Floripa), `CORRIDAPS15` (Trail Ratones).
+- RN-311 (cupom do programa), RN-310 (comissão read-only).
+
+**Arquivos (criar/editar)**
+- `functions/src/affiliation/validateCoupon.ts` — callable: `validateCoupon(eventoId, code) -> { valid, descontoPct, afiliadoRef }`.
+- `packages/core/src/affiliation/coupon.ts` — regras puras (formato, expiração, associação a afiliado).
+
+**Passos de implementação**
+1. Resolver cupom no `programaAfiliacao`/`parcerias` do evento; validar expiração/uso.
+2. Retornar desconto e `afiliadoRef` (para atribuição na conversão).
+3. Cupom inválido → `{ valid: false }`.
+
+**Modelo de dados / contratos**
+- `validateCoupon(eventoId, code) -> { valid, descontoPct, afiliadoRef? }`.
+
+**Regras de negócio a respeitar**
+- RN-311, RN-310 (comissão não editável na landing).
+
+**Critérios de aceite (testáveis)**
+- **Dado** `CORRIDAPERFEITA10`, **quando** valido, **então** `valid=true`, desconto 10%, afiliado CPS.
+- **Dado** cupom inexistente, **quando** valido, **então** `valid=false`.
+
+**Testes a escrever**
+- unit: `coupon` (válido/expirado/inexistente).
+- integração: `validateCoupon` resolve afiliado do mock.
+
+**Definition of Done** — DoD API/Function + transversal.
+
+**Fora de escopo**
+Cálculo/registro de split (T3).
+
+#### LEELA-S1204-T3 · Function de conversão + split (∑ conversoes/valorAReceber, janela, teto)
+- **Tipo:** api/function · **Depende de:** S1203-T6, S1204-T1, S1204-T2 · **Estimativa:** M
+
+**Objetivo**
+No pagamento confirmado, registrar a conversão atribuída ao afiliado (se dentro da janela) e calcular o split de comissão, atualizando os agregados do afiliado de forma idempotente.
+
+**Contexto & referências**
+- Modelo: `clubes/{id}/parcerias/{id}` (evento_afiliado) — ∑ `conversoes`, `valorAReceber`; `PaymentProvider.splitRules`.
+- Mock: comissão 10% Meia Floripa, janela 7 dias, teto sem limite; R$ 528 a receber (28 conversões).
+- `estrategia-testes.md` fluxo crítico #2 (link master rastreável → conversão na janela); RN-125/310/311.
+
+**Arquivos (criar/editar)**
+- `functions/src/affiliation/onConversion.ts` — trigger no inscrito `confirmado`: resolve atribuição (cookie/cupom), valida janela + teto, registra conversão, aplica `splitRules`, atualiza ∑.
+- `packages/core/src/affiliation/commission.ts` — cálculo puro da comissão (%, teto).
+
+**Passos de implementação**
+1. Ao confirmar inscrição (S1203-T6), resolver afiliado (cupom `afiliadoRef` tem prioridade; senão cookie de link master).
+2. Validar `clicadoEm`/data da conversão dentro de `janelaAtribuicaoDias` (RN-311); fora → sem atribuição.
+3. Calcular comissão (`comissaoPct`, respeitando `tetoMensal`) e registrar conversão + `splitRules` no provider.
+4. Atualizar ∑ `conversoes`/`valorAReceber` idempotentemente (reprocessar não duplica).
+
+**Modelo de dados / contratos**
+- Escreve conversão + ∑ na `parcerias` do afiliado; `splitRules` no `PaymentProvider`.
+
+**Regras de negócio a respeitar**
+- RN-125, RN-310 (comissão definida pelo organizador), RN-311 (janela/teto). Agregados só por Function.
+
+**Critérios de aceite (testáveis)**
+- **Dado** conversão dentro da janela via `?c=cps`, **quando** confirmo pagamento, **então** conversão atribuída ao CPS e `valorAReceber` sobe pela comissão (10%).
+- **Dado** conversão fora da janela, **quando** confirmo, **então** sem atribuição.
+- **Dado** o mesmo evento de conversão reprocessado, **quando** roda de novo, **então** ∑ não duplica.
+
+**Testes a escrever**
+- unit: `commission` (%, teto).
+- integração (crítico): atribuição dentro/fora da janela; idempotência do split; cupom prioriza sobre cookie.
+
+**Definition of Done** — DoD API/Function (idempotente, agregados por Function) + transversal.
+
+**Fora de escopo**
+Dashboard do afiliado (E08); repasse/payout efetivo (E09/financeiro).
+
+---
+
+### LEELA-S1205 · SEO técnico (metadata dinâmica, OpenGraph, sitemap, robots, JSON-LD) · (de-para BH-300 SEO)
+
+**Como** organizador/afiliado, **quero** que as páginas públicas sejam bem indexadas e tenham preview rico ao compartilhar, **para** maximizar descoberta e conversão.
+
+- **MoSCoW:** Must · **Estimativa:** S · **Superfície:** Landing
+- **Tela(s) de referência:** `PaginaVendas-Conteudo.html` (card "SEO e compartilhamento": título, meta descrição, URL amigável, og:image 1200×630)
+- **RNs:** RN-140 (indexação por visibilidade), RN-201 (URL amigável canônica)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** uma página de evento, **quando** o buscador/rede a lê, **então** há `<title>`, meta descrição, canonical e OpenGraph/Twitter com og:image do evento.
+- **Dado** um clube `indexavel`, **quando** gero o sitemap, **então** ele aparece; **dado** clube `publica`/`privada`, **então** não aparece / `noindex`.
+- **Dado** `/sitemap.xml` e `/robots.txt`, **quando** acesso, **então** listam eventos publicados e clubes indexáveis e apontam o sitemap.
+- **Dado** uma página de evento, **quando** valido, **então** há JSON-LD `Event` (schema.org) com data, local e ofertas.
+
+**Tasks:** S1205-T1, S1205-T2
+
+#### LEELA-S1205-T1 · `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event
+- **Tipo:** integration · **Depende de:** S1201-T1, S1202-T1 · **Estimativa:** S
+
+**Objetivo**
+Gerar metadata dinâmica (title, description, canonical, OG, Twitter) e JSON-LD por página de evento e clube, usando os campos publicados (SEO card do painel).
+
+**Contexto & referências**
+- Tela: SEO card (título, meta descrição, URL amigável, og:image 1200×630 — mock "Meia Maratona Floripa 2026 · Inscrições abertas").
+- RN-140 (noindex quando `publica`; index quando `indexavel`), RN-201 (canonical = URL amigável).
+- Domínio `{leela-domain}` (TBD) — nunca hardcodar `be-hero.com.br`.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/page.tsx` — `export async function generateMetadata()`.
+- `apps/landing/app/(public)/c/[clubSlug]/page.tsx` — idem, com `robots` por visibilidade.
+- `apps/landing/app/lib/seo.ts` — builders de metadata + JSON-LD `Event`.
+
+**Passos de implementação**
+1. `generateMetadata` lê os campos SEO publicados; canonical = `{leela-domain}/{slug}`.
+2. OG/Twitter com og:image publicado (fallback padrão do evento).
+3. Clube: `robots: index` se `indexavel`, `noindex` se `publica`; `privada` já é 404.
+4. JSON-LD `Event` (nome, `startDate`, `location`, `offers` por modalidade/kit).
+
+**Modelo de dados / contratos**
+- Lê campos SEO de `eventos`/`clubes`. Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-140 (index/noindex), RN-201 (canonical).
+
+**Critérios de aceite (testáveis)**
+- **Dado** evento publicado, **quando** leio o `<head>`, **então** há title/description/canonical/OG/JSON-LD Event.
+- **Dado** clube `publica`, **quando** leio metadata, **então** `noindex`.
+
+**Testes a escrever**
+- unit: builder de metadata (canonical, robots por visibilidade); JSON-LD válido.
+
+**Definition of Done** — DoD Tela/rota + transversal (domínio TBD, sem hardcode).
+
+**Fora de escopo**
+sitemap/robots (T2).
+
+#### LEELA-S1205-T2 · `sitemap.ts` + `robots.ts` (eventos publicados + clubes indexáveis)
+- **Tipo:** integration · **Depende de:** S1200-T2 · **Estimativa:** S
+
+**Objetivo**
+Gerar `sitemap.xml` e `robots.txt` dinâmicos listando eventos publicados e clubes `indexavel`, apontando o sitemap.
+
+**Contexto & referências**
+- RN-140 (só `indexavel` no sitemap), RN-201 (URLs canônicas). Domínio `{leela-domain}` (TBD).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/sitemap.ts` — Next.js sitemap dinâmico (query de eventos publicados + clubes indexáveis).
+- `apps/landing/app/robots.ts` — permite indexação, aponta `sitemap`.
+- `packages/api-client/src/public/listIndexable.ts` — lista slugs indexáveis (server).
+
+**Passos de implementação**
+1. Query server de eventos `publicado`/`ao_vivo` e clubes `indexavel`.
+2. Emitir entradas de sitemap com `lastModified`.
+3. `robots.ts` referencia `{leela-domain}/sitemap.xml`.
+
+**Modelo de dados / contratos**
+- `listIndexable(): { events: string[], clubs: string[] }`.
+
+**Regras de negócio a respeitar**
+- RN-140 (exclui `publica`/`privada` do sitemap).
+
+**Critérios de aceite (testáveis)**
+- **Dado** 2 eventos publicados + 1 clube indexável, **quando** gero o sitemap, **então** as 3 URLs aparecem.
+- **Dado** clube `publica`, **quando** gero o sitemap, **então** ele não aparece.
+
+**Testes a escrever**
+- integração: `listIndexable` filtra por status/visibilidade; sitemap contém só indexáveis.
+
+**Definition of Done** — DoD API/Function + Tela/rota + transversal.
+
+**Fora de escopo**
+Metadata por página (T1).
+
+---
+
+### LEELA-S1206 · Ingresso digital + e-mail transacional de marca + PDF (por inscrito do pedido) · (de-para novo)
+
+**Como** responsável por um pedido em grupo, **quero** receber por e-mail a confirmação com os ingressos de todos os inscritos do meu pedido, cada um com seu QR, **para** ter o comprovante e o primeiro toque de marca logo após o pagamento.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Landing + Functions
+- **Tela(s) de referência:** `WEB-APPV2 (1)` — `EVENTOS-MEUS INGRESSOS` (`39:605`), estado "Meus Qr Codes"; template de e-mail de marca é **greenfield** (a desenhar, sem HTML/Figma de referência)
+- **RNs:** RN-218 (ingresso digital + QR assinado por inscrito), RN-219 (e-mail de marca idempotente ao responsável), RN-220 (PDF sob demanda), RN-204 (dispara só no `confirmado`)
+- **Pedido em grupo (ADR-011):** o e-mail vai ao **responsável/pagador** do pedido e lista **todos os inscritos**; cada inscrito tem seu ingresso/QR individual. O disparo nasce no webhook de confirmação (S1203-T6), que é único por pedido (um `createCharge`, um webhook).
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um pedido em grupo confirmado, **quando** o pagamento confirma, **então** cada inscrito do pedido gera um ingresso digital com `qrToken` assinado (token opaco por inscrito), disponível no app e por e-mail (RN-218).
+- **Dado** o pagamento confirmado, **quando** a Function do webhook confirmado dispara (S1203-T6), **então** o responsável pelo pedido recebe um e-mail transacional com template de marca Leela listando os inscritos do pedido e usando variáveis (`{nome}`, `{evento}`, `{kit}`, `{modalidade}`) (RN-219).
+- **Dado** um reprocessamento do webhook, **quando** a Function roda de novo, **então** o e-mail não é reenviado (idempotência via subcoleção `inscritos/{id}/notificacoes/{tipo}`) (RN-219).
+- **Dado** um ingresso emitido, **quando** o usuário solicita o PDF, **então** ele é gerado sob demanda a partir do mesmo ingresso/QR, para impressão/offline ou retirada por terceiro (RN-220).
+- **Dado** a tela `EVENTOS-MEUS INGRESSOS` (`39:605`), **quando** abro "Meus Qr Codes", **então** vejo o ingresso de cada inscrito com seu QR.
+
+**Tasks:** S1206-T1, S1206-T2, S1206-T3, S1206-T4
+
+#### LEELA-S1206-T1 · `qrToken` assinado + `ingressoEmitidoEm` por inscrito (gerados na confirmação)
+- **Tipo:** api/function · **Depende de:** S1203-T6 (webhook confirmado) · **Bloqueia:** S1206-T3, S1206-T4 · **Estimativa:** S
+
+**Objetivo**
+Emitir, na confirmação do pagamento, um ingresso digital por inscrito do pedido: gerar `qrToken` (opaco, assinado server-side) e carimbar `ingressoEmitidoEm` em cada `eventos/{id}/inscritos/{inscritoId}` do pedido, sem confiar em payload do cliente.
+
+**Contexto & referências**
+- Fluxo: o webhook idempotente de S1203-T6 confirma a inscrição; a emissão do ingresso é aditiva a esse passo (mesmo ponto de idempotência por `chargeId`/pedido).
+- Modelo: `eventos/{id}/inscritos/{inscritoId}` (por inscrito do pedido — ADR-011); o `qrToken` é consumido pelo app (E13-S1314) e pela leitura de QR no balcão (E03).
+- Assinatura do token server-side (chave só no server), coerente com "nenhum segredo no cliente" do épico.
+
+**Arquivos (criar/editar)**
+- `functions/src/payments/handlePaymentWebhook.ts` — no passo de confirmação, iterar os inscritos do pedido e emitir ingresso (chama o emissor abaixo).
+- `functions/src/tickets/issueTicket.ts` — gera `qrToken` assinado (opaco) + seta `ingressoEmitidoEm`; idempotente por inscrito.
+- `packages/core/src/tickets/qrToken.ts` — assinatura/verificação pura do token (sem I/O).
+
+**Passos de implementação**
+1. Ao confirmar o pagamento (S1203-T6), para cada inscrito do pedido, gerar `qrToken` assinado e setar `ingressoEmitidoEm` se ainda não emitido.
+2. Idempotência: se `qrToken`/`ingressoEmitidoEm` já existem, não regerar (reprocessar o webhook não muda o token).
+3. Nunca aceitar `qrToken` vindo do cliente; a verificação de assinatura é server-side.
+
+**Modelo de dados / contratos**
+- `eventos/{id}/inscritos/{inscritoId}` — ➕ `qrToken` (opaco, assinado), ➕ `ingressoEmitidoEm`.
+- `signQrToken(inscritoId): string` / `verifyQrToken(token): { inscritoId } | null` em `core`.
+
+**Regras de negócio a respeitar**
+- RN-218 (um ingresso + QR assinado por inscrito confirmado), RN-204 (só no `confirmado`).
+
+**Critérios de aceite (testáveis)**
+- **Dado** um pedido de 3 inscritos confirmado, **quando** o webhook processa, **então** os 3 inscritos ganham `qrToken` distinto e `ingressoEmitidoEm`.
+- **Dado** o mesmo webhook reprocessado, **quando** roda de novo, **então** os tokens não mudam (idempotente).
+
+**Testes a escrever**
+- unit: `qrToken` assina/verifica; token adulterado é rejeitado.
+- integração (emulador): emissão por inscrito é idempotente no reprocessamento do webhook.
+
+**Definition of Done** — DoD API/Function (idempotente, assinatura server-side) + transversal (sem segredo no cliente).
+
+**Fora de escopo**
+Envio do e-mail (T3); PDF (T4); exibição do QR no app (E13-S1314).
+
+#### LEELA-S1206-T2 · Subcoleção de auditoria `inscritos/{id}/notificacoes/{tipo}` (idempotência do disparo)
+- **Tipo:** api/function · **Depende de:** S1203-T6 · **Bloqueia:** S1206-T3 · **Estimativa:** S
+
+**Objetivo**
+Criar a subcoleção de auditoria/idempotência que registra os disparos transacionais por inscrito (`emailConfirmacao`), para garantir que reprocessar o webhook não reenvie notificações.
+
+**Contexto & referências**
+- Idempotência espelha o padrão do webhook (S1203-T6): registrar "já notifiquei" antes/depois do envio evita duplicidade.
+- Escrita só por Function (Admin SDK); o cliente nunca escreve notificação.
+
+**Arquivos (criar/editar)**
+- `functions/src/notifications/notificationLog.ts` — helpers `hasSent(inscritoId, tipo)` / `markSent(inscritoId, tipo, meta)` sobre `inscritos/{id}/notificacoes/{tipo}`.
+- `firestore.rules` — subcoleção `notificacoes` sem leitura/escrita pública (só Function/owner do evento conforme regra existente).
+
+**Passos de implementação**
+1. Modelar `inscritos/{id}/notificacoes/{tipo}` (docId = `tipo`, ex.: `emailConfirmacao`) com `enviadoEm`, `provedorMessageId?`, `status`.
+2. Antes de enviar, checar `hasSent`; após envio bem-sucedido, `markSent` (transacional/idempotente).
+3. Security Rules: bloquear leitura/escrita por cliente anônimo.
+
+**Modelo de dados / contratos**
+- ➕ subcoleção `eventos/{id}/inscritos/{inscritoId}/notificacoes/{tipo}` — `enviadoEm`, `provedorMessageId?`, `status`.
+
+**Regras de negócio a respeitar**
+- RN-219 (idempotência do disparo transacional).
+
+**Critérios de aceite (testáveis)**
+- **Dado** um disparo já registrado, **quando** chamo `hasSent`, **então** retorna `true` e o envio é pulado.
+- **Dado** um cliente anônimo, **quando** tenta ler `notificacoes`, **então** as Rules bloqueiam.
+
+**Testes a escrever**
+- unit: `notificationLog` (marca/checa).
+- integração (emulador): segundo disparo não cria segunda notificação; Rules bloqueiam cliente.
+
+**Definition of Done** — DoD API/Function (Security Rules na task, idempotente) + transversal.
+
+**Fora de escopo**
+Conteúdo/envio do e-mail (T3); PDF (T4).
+
+#### LEELA-S1206-T3 · Interface `EmailProvider` (espelho de `PaymentProvider`, ADR-006) + disparo ao responsável do pedido
+- **Tipo:** integration · **Depende de:** S1206-T1, S1206-T2 · **Estimativa:** M
+
+**Objetivo**
+Definir a interface plugável `EmailProvider` em `packages/core` (espelhando `PaymentProvider`, ADR-006), com implementação sandbox em `functions/`, e disparar o e-mail transacional de confirmação ao **responsável do pedido** listando todos os inscritos, no webhook confirmado, de forma idempotente.
+
+**Contexto & referências**
+- ADR-006: padrão de interface plugável em `core` + implementação sandbox em `functions/` (nunca fornecedor concreto no domínio). `EmailProvider` é o espelho para e-mail; o fornecedor concreto (Resend/SendGrid) fica atrás da interface e é decidido em ADR de e-mail (ver Lacunas).
+- Pedido em grupo (ADR-011): destinatário é o `responsavel` do pedido; corpo lista os inscritos (`inscritoRefs`).
+- Idempotência via `notificacoes/{tipo}` (S1206-T2).
+
+**Arquivos (criar/editar)**
+- `packages/core/src/email/EmailProvider.ts` — interface (`sendTransactional(input) -> { messageId }`), tipos de template/variáveis; sem fornecedor concreto.
+- `functions/src/email/sandboxEmailProvider.ts` — implementação sandbox (loga/mock) da interface.
+- `functions/src/payments/handlePaymentWebhook.ts` — após confirmar e emitir ingressos, montar o payload do pedido (responsável + inscritos) e chamar `EmailProvider.sendTransactional` guardado por `notificacoes`.
+
+**Passos de implementação**
+1. Especificar `EmailProvider` em `core` (contrato tipado, variáveis de template, sem dependência de fornecedor).
+2. Implementar provider sandbox em `functions/` (para testar o fluxo ponta a ponta antes da escolha do fornecedor).
+3. No webhook confirmado, resolver o `responsavel` do pedido e a lista de inscritos; se `!hasSent(pedido/inscrito, 'emailConfirmacao')`, enviar e `markSent`.
+4. Erros observáveis (Sentry) sem dado sensível.
+
+**Modelo de dados / contratos**
+- `EmailProvider.sendTransactional({ to, template, vars, inscritos[] }) -> { messageId }` (contrato em `core`).
+- Lê `pedidos/{pedidoId}` (responsável + `inscritoRefs`, ADR-011); escreve `notificacoes` (S1206-T2).
+
+**Regras de negócio a respeitar**
+- RN-219 (template de marca, variáveis, idempotente, ao responsável do pedido).
+
+**Critérios de aceite (testáveis)**
+- **Dado** um pedido confirmado, **quando** o webhook dispara, **então** o `EmailProvider` sandbox recebe um envio ao responsável com a lista dos inscritos e as variáveis preenchidas.
+- **Dado** o webhook reprocessado, **quando** roda de novo, **então** nenhum segundo e-mail é enviado (idempotente).
+
+**Testes a escrever**
+- unit: montagem do payload do pedido (responsável + inscritos + variáveis).
+- integração (emulador + provider sandbox): envio único; reprocessamento não reenvia.
+
+**Definition of Done** — DoD API/Function (interface + sandbox, idempotente, Sentry) + transversal (sem fornecedor concreto acoplado).
+
+**Fora de escopo**
+Fornecedor de e-mail concreto (ADR de e-mail — ver Lacunas); template visual final (T4); PDF (T4).
+
+#### LEELA-S1206-T4 · Template de e-mail de marca (variáveis) + PDF do ingresso sob demanda
+- **Tipo:** ui-component · **Depende de:** S1206-T1, S1206-T3 · **Estimativa:** M
+
+**Objetivo**
+Construir o template de e-mail de marca Leela com as variáveis do pedido e a geração de PDF do ingresso sob demanda a partir do mesmo ingresso/QR (impressão/offline, retirada por terceiro).
+
+**Contexto & referências**
+- Greenfield: sem HTML/Figma de referência para o e-mail; aplica identidade de marca Leela (tokens/DS onde couber no e-mail; e-mail usa HTML próprio, mas segue paleta/logo).
+- PDF derivado do ingresso: reusa `qrToken`/dados do inscrito (S1206-T1); não recria QR próprio.
+
+**Arquivos (criar/editar)**
+- `functions/src/email/templates/confirmacaoPedido.ts` — template HTML de marca com variáveis (`{nome}`, `{evento}`, `{kit}`, `{modalidade}`) e a lista de inscritos.
+- `functions/src/tickets/renderTicketPdf.ts` — geração sob demanda do PDF a partir do ingresso/QR do inscrito.
+- `apps/landing/app/(public)/[eventSlug]/inscricao/confirmacao/[inscritoId]/page.tsx` — expõe ação "baixar PDF do ingresso" (reusa a página de confirmação de S1203-T6).
+
+**Passos de implementação**
+1. Montar o template de marca com as variáveis do pedido e a lista de inscritos (um bloco de ingresso por inscrito, cada um com seu QR).
+2. Geração de PDF sob demanda a partir do `qrToken`/dados do inscrito (não persiste PDF; gera on-the-fly).
+3. Garantir que o PDF serve para impressão/offline e retirada por terceiro (contém o QR do inscrito).
+
+**Modelo de dados / contratos**
+- Consome `qrToken`/dados do inscrito (S1206-T1) e variáveis do pedido. Sem novos campos.
+
+**Regras de negócio a respeitar**
+- RN-219 (marca + variáveis), RN-220 (PDF sob demanda a partir do mesmo ingresso/QR).
+
+**Critérios de aceite (testáveis)**
+- **Dado** as variáveis do pedido, **quando** renderizo o template, **então** `{nome}`/`{evento}`/`{kit}`/`{modalidade}` são substituídos e cada inscrito aparece com seu QR.
+- **Dado** um ingresso emitido, **quando** peço o PDF, **então** ele é gerado sob demanda com o QR do inscrito.
+
+**Testes a escrever**
+- unit: substituição de variáveis do template; um bloco de ingresso por inscrito.
+- unit: `renderTicketPdf` produz PDF com o QR do inscrito (sem regerar token).
+
+**Definition of Done** — DoD Componente + API/Function + transversal.
+
+**Fora de escopo**
+Escolha do fornecedor de e-mail (ADR de e-mail); exibição do QR no app (E13-S1314).
+
+---
+
+### LEELA-S1207 · Aceite de regulamento + contato de emergência no checkout (por inscrito) · (de-para BH-300 INFORMAÇÕES)
+
+**Como** responsável por um pedido em grupo, **quero** informar contato de emergência e aceitar o regulamento por inscrito dentro do pedido, **para** cumprir a responsabilidade legal do evento e a segurança operacional de cada atleta.
+
+- **MoSCoW:** Must · **Estimativa:** S · **Superfície:** Landing (etapa Dados do Stepper) + `core`
+- **Tela(s) de referência:** `WEB-APPV2 (1)` — INFORMAÇÕES (`39:2633`, "Nome contato de segurança + telefone" já desenhado); etapa Dados do Stepper (S1203-T2)
+- **RNs:** RN-145 (contato de emergência obrigatório por inscrito), RN-148 (aceite de regulamento obrigatório, distinto do consentimento LGPD, com versão + timestamp)
+- **Pedido em grupo (ADR-011):** contato de emergência e aceite de regulamento são coletados e persistidos **por inscrito**, não herdados do responsável.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um inscrito no pedido, **quando** preencho a etapa Dados do Stepper (S1203-T2), **então** o contato de emergência (nome + telefone) é obrigatório por inscrito e persiste em `inscritos.contatoEmergencia` (RN-145).
+- **Dado** a etapa Dados, **quando** avanço, **então** o aceite de regulamento é um checkbox obrigatório e distinto do consentimento LGPD, coletado por inscrito (RN-148).
+- **Dado** o aceite de regulamento, **quando** o inscrito aceita, **então** persiste `regulamentoAceite{ versao, aceitoEm, ipHash? }` no inscrito, separado de `consentimentoLgpd{ aceitoEm }` (RN-148).
+- **Dado** um inscrito sem contato de emergência ou sem aceite de regulamento, **quando** tento concluir a inscrição, **então** a validação bloqueia e sinaliza qual inscrito do pedido está incompleto.
+- **Dado** a tela INFORMAÇÕES (`39:2633`), **quando** renderizo o checkout, **então** o contato de segurança já desenhado é formalizado como obrigatório e o aceite de regulamento é adicionado.
+
+**Tasks:** S1207-T1, S1207-T2, S1207-T3
+
+#### LEELA-S1207-T1 · Campos por inscrito: `contatoEmergencia`, `regulamentoAceite`, `consentimentoLgpd`
+- **Tipo:** api/function · **Depende de:** S1203-T6 (persistência do inscrito) · **Bloqueia:** S1207-T2, S1207-T3 · **Estimativa:** S
+
+**Objetivo**
+Estender o modelo do inscrito com os três campos coletados no checkout, mantendo o aceite de regulamento **separado** do consentimento LGPD, por inscrito do pedido.
+
+**Contexto & referências**
+- Compliance ancorada em RN-144 (LGPD); o aceite de regulamento é juridicamente distinto do consentimento de dados (não pode ser um único checkbox).
+- Modelo: `eventos/{id}/inscritos/{inscritoId}` (por inscrito — ADR-011).
+
+**Arquivos (criar/editar)**
+- `packages/core/src/checkout/types.ts` — tipos `ContatoEmergencia`, `RegulamentoAceite`, `ConsentimentoLgpd`.
+- `functions/src/payments/createInscricaoCharge.ts` — persistir os três campos ao criar o inscrito `pendente` (S1203-T5), por inscrito do pedido.
+
+**Passos de implementação**
+1. Modelar `contatoEmergencia{ nome, telefone }`, `regulamentoAceite{ versao, aceitoEm, ipHash? }`, `consentimentoLgpd{ aceitoEm }` — campos independentes.
+2. Persistir na criação do inscrito (fluxo de checkout), um conjunto por inscrito do pedido.
+3. Capturar `versao` do regulamento vigente no momento do aceite (versionamento é do E04-S306; aqui grava-se a versão recebida).
+
+**Modelo de dados / contratos**
+- `eventos/{id}/inscritos/{inscritoId}` — ➕ `contatoEmergencia{ nome, telefone }`, ➕ `regulamentoAceite{ versao, aceitoEm, ipHash? }`, ➕ `consentimentoLgpd{ aceitoEm }`.
+
+**Regras de negócio a respeitar**
+- RN-145 (contato obrigatório), RN-148 (aceite distinto do LGPD, com versão + timestamp).
+
+**Critérios de aceite (testáveis)**
+- **Dado** um inscrito criado, **quando** inspeciono o doc, **então** os três campos existem e são independentes.
+- **Dado** o aceite, **quando** persiste, **então** `regulamentoAceite.versao` reflete a versão vigente e `consentimentoLgpd` é um campo separado.
+
+**Testes a escrever**
+- unit: tipos/serialização dos três campos.
+- integração (emulador): inscrito criado com contato + aceite + consentimento separados.
+
+**Definition of Done** — DoD API/Function + transversal (LGPD, separação de consentimentos).
+
+**Fora de escopo**
+Validação de bloqueio (T2); UI de coleta (T3); versionamento do regulamento (E04-S306).
+
+#### LEELA-S1207-T2 · Validação por inscrito (contato obrigatório + aceite distinto do LGPD) em `core`
+- **Tipo:** ui-component · **Depende de:** S1207-T1 · **Bloqueia:** S1207-T3 · **Estimativa:** S
+
+**Objetivo**
+Implementar a validação pura por inscrito: contato de emergência obrigatório e aceite de regulamento obrigatório e distinto do consentimento LGPD, sinalizando qual inscrito do pedido está incompleto.
+
+**Contexto & referências**
+- Espelha o padrão de validação pura de S1203-T2 (`validateDados`) em `packages/core`.
+- Pedido em grupo (ADR-011): a validação roda por inscrito e reporta o índice/identificador do inscrito incompleto.
+
+**Arquivos (criar/editar)**
+- `packages/core/src/checkout/validateInscrito.ts` — validação pura (contato de emergência + aceite de regulamento + LGPD) por inscrito.
+
+**Passos de implementação**
+1. Contato de emergência (nome + telefone) obrigatório e não vazio.
+2. Aceite de regulamento obrigatório e independente do consentimento LGPD (dois flags distintos).
+3. Retornar erros por inscrito, identificando qual inscrito do pedido está incompleto.
+
+**Modelo de dados / contratos**
+- `validateInscrito(dados): { valid: boolean, erros: { inscritoRef, campo }[] }` em `core`.
+
+**Regras de negócio a respeitar**
+- RN-145, RN-148.
+
+**Critérios de aceite (testáveis)**
+- **Dado** um inscrito sem telefone de emergência, **quando** valido, **então** `valid=false` apontando o inscrito e o campo.
+- **Dado** aceite de regulamento marcado mas LGPD não, **quando** valido, **então** bloqueia (são distintos).
+
+**Testes a escrever**
+- unit: `validateInscrito` (contato faltando; aceite × LGPD distintos; múltiplos inscritos).
+
+**Definition of Done** — DoD Componente + transversal.
+
+**Fora de escopo**
+Persistência (T1); UI (T3).
+
+#### LEELA-S1207-T3 · Coleta na etapa Dados do Stepper (por inscrito), espelhada em E13
+- **Tipo:** ui-component · **Depende de:** S1203-T2, S1207-T2 · **Estimativa:** S
+
+**Objetivo**
+Adicionar à etapa Dados do Stepper (S1203-T2) a coleta, por inscrito do pedido, do contato de emergência (formalizando o campo já desenhado em `39:2633`) e do aceite de regulamento como checkbox distinto do consentimento LGPD.
+
+**Contexto & referências**
+- Tela: INFORMAÇÕES (`39:2633`) — "Nome contato de segurança + telefone" já desenhado; falta formalizar como obrigatório e adicionar o aceite de regulamento.
+- Estende `DadosStep` (S1203-T2); mesma coleta espelhada no app do atleta (E13-S1306).
+- DS: Input (estados invalid + erro inline), Checkbox, Button.
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/[eventSlug]/inscricao/steps/DadosStep.tsx` — por inscrito: campos de contato de emergência + checkbox de aceite de regulamento (link ao regulamento) + checkbox LGPD separado.
+
+**Passos de implementação**
+1. Renderizar, por inscrito do pedido, contato de emergência (nome + telefone) obrigatório.
+2. Adicionar checkbox de aceite de regulamento (com link ao regulamento vigente) distinto do checkbox LGPD.
+3. Bloquear avanço via `validateInscrito` (S1207-T2), sinalizando o inscrito incompleto com erro inline.
+
+**Modelo de dados / contratos**
+- Produz, por inscrito, `{ contatoEmergencia, regulamentoAceite, consentimentoLgpd }` (memória → persistência em S1207-T1).
+
+**Regras de negócio a respeitar**
+- RN-145, RN-148; consentimentos distintos.
+
+**Critérios de aceite (testáveis)**
+- **Dado** a etapa Dados de um pedido com 2 inscritos, **quando** deixo um sem contato de emergência, **então** o avanço é bloqueado apontando o inscrito.
+- **Dado** ambos com contato + aceite de regulamento + LGPD, **quando** avanço, **então** sigo para Modalidade/Kit.
+
+**Testes a escrever**
+- unit: bloqueio de avanço por inscrito incompleto; aceite × LGPD como campos distintos.
+
+**Definition of Done** — DoD Componente + transversal (LGPD).
+
+**Fora de escopo**
+Espelho no app (E13-S1306); versionamento do regulamento (E04-S306).
+
+---
+
+### LEELA-S1208 · Portal público do organizador (hub de eventos, agenda, fotos, blog, patrocinadores, newsletter) · (de-para novo)
+
+**Como** Organizador de Evento, **quero** um portal público sob a plataforma com blocos configuráveis, **para** reunir meus eventos, agenda, fotos, blog, patrocinadores e captar newsletter num único endereço público, sem depender de domínio próprio.
+
+> **Greenfield.** Precisa de rodada de **design** antes do plano de execução (sem HTML/Figma de referência). O escopo substitui a leitura anterior de "white-label / domínio próprio": é um portal público hospedado **sob a plataforma** (`tenants/{id}/portal`), **não** um domínio custom.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Landing
+- **Tela(s) de referência:** — (greenfield; a desenhar)
+- **RNs:** RN-150 (portal sob a plataforma, SSR/ISR, sem domínio próprio), RN-151 (newsletter com consentimento LGPD + finalidade), RN-152 (blocos ativáveis/ordenáveis; desativados não aparecem)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o tenant, **quando** configura o portal, **então** ativa e ordena blocos (`links de fotos`, `eventos + agenda`, `blog`, `patrocinadores`, `newsletter`) em `tenants/{id}/portal`; blocos desativados não aparecem (RN-152).
+- **Dado** o portal, **quando** um visitante acessa, **então** vê o hub público com os eventos do organizador e a agenda, renderizado por SSR/ISR (RN-150).
+- **Dado** que o portal não é domínio próprio nem white-label, **quando** publicado, **então** vive sob a plataforma (`tenants/{id}/portal`), sem custom domain (RN-150).
+- **Dado** o portal não publicado, **quando** um visitante tenta acessar, **então** o gate por `status`/`visibilidade` resulta em 404 (reusa a fundação de leitura pública de S1200).
+- **Dado** o campo de newsletter, **quando** um visitante submete o e-mail, **então** grava lead sob o tenant com registro de consentimento LGPD e finalidade declarada (RN-151).
+- **Dado** o tema, **quando** qualquer bloco renderiza, **então** aplica `theme="leela"` do DS sem redefinir token localmente.
+
+**Tasks:** S1208-T1, S1208-T2, S1208-T3
+
+#### LEELA-S1208-T1 · Modelo `tenants/{id}/portal` (blocos ordenáveis + publicação) + leitor público SSR/ISR
+- **Tipo:** screen · **Depende de:** S1200-T2 (leitor público com gate) · **Bloqueia:** S1208-T2, S1208-T3 · **Estimativa:** M
+
+**Objetivo**
+Modelar o portal do organizador sob o tenant (blocos ativáveis/ordenáveis + estado de publicação) e criar a rota SSR/ISR que o lê pela fundação pública de S1200, com gate de publicação (não publicado → 404).
+
+**Contexto & referências**
+- Reusa `getPublished*`/gate de S1200-T2 (mesma disciplina de leitura pública server-side, sem segredo no cliente).
+- ADR de multitenancy: portal vive sob `tenants/{id}` (plataforma), **sem** custom domain (RN-150).
+- Greenfield: rota e layout do portal a desenhar; segue tema `leela`.
+
+**Arquivos (criar/editar)**
+- `packages/core/src/portal/types.ts` — tipos `PortalConfig`, `PortalBloco` (`tipo`, `ativo`, `ordem`), estado de publicação.
+- `packages/api-client/src/public/getPublicPortal.ts` — `getPublicPortal(tenantId): PublicPortal | null` (gate por `status`/`visibilidade`).
+- `apps/landing/app/(public)/o/[tenantSlug]/page.tsx` — Server Component; `notFound()` se `null`; `revalidate` + tag `portal:{tenantId}`.
+- `firestore.rules` — leitura pública de `tenants/{id}/portal` só quando publicado.
+
+**Passos de implementação**
+1. Modelar `tenants/{id}/portal` com lista de blocos (`tipo`, `ativo`, `ordem`) e estado de publicação/visibilidade.
+2. `getPublicPortal`: retorna `null` se não publicado; monta `PublicPortal` só com blocos `ativo`, ordenados.
+3. Rota SSR/ISR com ISR por tag; `notFound()` quando `null`.
+4. Security Rules: leitura pública só do portal publicado.
+
+**Modelo de dados / contratos**
+- ➕ `tenants/{id}/portal` — `blocos[] { tipo, ativo, ordem }`, `status`/`visibilidade`, `publicadoEm?`.
+- `getPublicPortal(tenantId): Promise<PublicPortal | null>`.
+
+**Regras de negócio a respeitar**
+- RN-150 (sob a plataforma, SSR/ISR, sem domínio próprio), RN-152 (blocos ativáveis/ordenáveis).
+
+**Critérios de aceite (testáveis)**
+- **Dado** portal não publicado, **quando** acesso a rota, **então** 404.
+- **Dado** portal publicado com um bloco `ativo=false`, **quando** leio, **então** ele não vem no `PublicPortal`.
+
+**Testes a escrever**
+- unit: `getPublicPortal` filtra blocos inativos e ordena.
+- integração (emulador): Rules bloqueiam portal não publicado.
+
+**Definition of Done** — DoD Tela/rota (ISR, estados) + API/Function (Rules) + transversal.
+
+**Fora de escopo**
+Conteúdo dos blocos (T2); newsletter (T3); editor do portal no painel (E04).
+
+#### LEELA-S1208-T2 · Blocos do portal: hub de eventos + agenda, links de fotos, blog, patrocinadores
+- **Tipo:** ui-component · **Depende de:** S1208-T1 · **Estimativa:** M
+
+**Objetivo**
+Renderizar os blocos de conteúdo do portal a partir do `PublicPortal`, na ordem publicada, usando componentes do DS e o tema `leela`, com estado vazio por bloco.
+
+**Contexto & referências**
+- Greenfield: layout dos blocos a desenhar; reusa Card de Evento (E01) para o hub de eventos.
+- Hub de eventos + agenda lê os eventos publicados do tenant (reusa leitura pública de evento, S1200/S1201).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/o/[tenantSlug]/blocks/EventosAgendaBlock.tsx` — hub de eventos do organizador + agenda.
+- `.../blocks/FotosBlock.tsx` — links de fotos.
+- `.../blocks/BlogBlock.tsx` — posts/links de blog.
+- `.../blocks/PatrocinadoresBlock.tsx` — grid de logos.
+- `.../blocks/PortalRenderer.tsx` — mapeia `tipo → bloco`, filtra `ativo` e ordena (espelha `SectionRenderer` de S1201-T1).
+
+**Passos de implementação**
+1. `PortalRenderer` itera blocos ativos na ordem publicada (RN-152).
+2. Cada bloco recebe seu slice tipado do `PublicPortal` e renderiza com DS/tema `leela`.
+3. Estado vazio por bloco (bloco sem dados não renderiza conteúdo vazio).
+
+**Modelo de dados / contratos**
+- Consome `PublicPortal` (S1208-T1). Sem escrita.
+
+**Regras de negócio a respeitar**
+- RN-152 (ordem/ativação), tema `leela` sem hardcode.
+
+**Critérios de aceite (testáveis)**
+- **Dado** blocos publicados em ordem `[eventos, patrocinadores]`, **quando** renderizo, **então** aparecem nessa ordem.
+- **Dado** bloco de fotos vazio, **quando** renderizo, **então** ele não mostra conteúdo vazio.
+
+**Testes a escrever**
+- unit: `PortalRenderer` respeita ordem e oculta inativos; bloco vazio → `null`.
+
+**Definition of Done** — DoD Componente + Tela/rota (estados vazios) + transversal.
+
+**Fora de escopo**
+Newsletter (T3); edição de conteúdo no painel (E04).
+
+#### LEELA-S1208-T3 · Captura de newsletter (form + `tenants/{id}/newsletterLeads` + consentimento LGPD)
+- **Tipo:** api/function · **Depende de:** S1208-T1 · **Estimativa:** S
+
+**Objetivo**
+Capturar o e-mail de newsletter do visitante, gravando o lead sob o tenant com registro de consentimento LGPD e finalidade declarada.
+
+**Contexto & referências**
+- LGPD (RN-144, RN-151): consentimento específico + finalidade declarada; escrita server-side (nunca gravar lead direto do cliente sem validação).
+- Bloco `newsletter` do portal (S1208-T1/T2).
+
+**Arquivos (criar/editar)**
+- `apps/landing/app/(public)/o/[tenantSlug]/blocks/NewsletterBlock.tsx` — form de e-mail + checkbox de consentimento com finalidade declarada.
+- `functions/src/portal/subscribeNewsletter.ts` — callable/HTTPS: valida e grava `tenants/{id}/newsletterLeads/{leadId}` com consentimento.
+- `firestore.rules` — `newsletterLeads` sem leitura pública; escrita só via Function.
+
+**Passos de implementação**
+1. Form coleta e-mail + checkbox de consentimento (finalidade declarada; sem pré-marcação).
+2. Function valida e grava `tenants/{id}/newsletterLeads/{leadId}` com `email`, `consentimentoEm`, `finalidade`, `origem`.
+3. Security Rules: bloquear leitura pública dos leads; escrita só por Function.
+
+**Modelo de dados / contratos**
+- ➕ subcoleção `tenants/{id}/newsletterLeads/{leadId}` — `email`, `consentimentoEm`, `finalidade`, `origem`.
+- `subscribeNewsletter(tenantId, email, consentimento) -> { ok }`.
+
+**Regras de negócio a respeitar**
+- RN-151 (lead com consentimento LGPD + finalidade declarada).
+
+**Critérios de aceite (testáveis)**
+- **Dado** e-mail + consentimento, **quando** submeto, **então** o lead é gravado com `consentimentoEm` e `finalidade`.
+- **Dado** submissão sem consentimento, **quando** envio, **então** é bloqueada.
+- **Dado** um cliente anônimo, **quando** tenta ler `newsletterLeads`, **então** as Rules bloqueiam.
+
+**Testes a escrever**
+- unit: validação do form (consentimento obrigatório).
+- integração (emulador): grava lead com consentimento; Rules bloqueiam leitura pública.
+
+**Definition of Done** — DoD API/Function (Rules, LGPD) + Componente + transversal.
+
+**Fora de escopo**
+Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel (E04).
+
+---
+
+## Ordem sugerida
+
+`S1200 (setup + leitor) → S1201 (evento) + S1202 (clube) → S1204-T1/T2 (atribuição/cupom) → S1203 (checkout 5 etapas) → S1204-T3 (split na conversão) → S1205 (SEO)`.
+Fecha a Onda 2 junto com E04 (config de vendas) e o `PaymentProvider` sandbox: atleta descobre → inscreve → paga → organizador vê receita → afiliado recebe conversão.
+
+## Lacunas / decisões pendentes (a resolver com E04 e ADR-006)
+
+- **Domínio público `{leela-domain}`** — TBD; não fixar `be-hero.com.br`. Bloqueia canonical/sitemap definitivos.
+- **E04 ainda não existe** — a config de seções, SEO, lotes (RN-300) e programa de afiliação são produzidos no painel (BH-300/BH-301). Este épico assume os contratos de leitura; se E04 divergir, revisar `getPublishedEvent`/config de seções.
+- **Fornecedor de pagamento (ADR-006 concreto)** — pendente; o épico depende só da interface + sandbox. Split real e Pix nativo dependem do fornecedor.
+- **Lotes (RN-300, virada por data/quantidade)** — a landing lê o preço vigente do lote; a lógica de virada de lote é do E04/Function (não reimplementar na landing).
+- **Política de atribuição em múltiplos toques** — assumido "primeiro clique dentro da janela; cupom tem prioridade sobre cookie"; confirmar com E08 (influenciador) antes de generalizar.
+- **Deep link do app** (CTA "baixar o app"/entrada no clube RN-141) — depende de E13; usar placeholder até definir esquema de deep link.
+- **Fornecedor de e-mail transacional (ADR de e-mail, S1206)** — pendente. A interface `EmailProvider` (`packages/core`) espelha o padrão plugável de `PaymentProvider` (ADR-006): o épico depende só da interface + implementação sandbox; o fornecedor concreto (Resend/SendGrid) fica atrás da interface e deve ser fixado em ADR de e-mail própria (fecha `integracoes.md §6`). Sem a ADR, o envio real e a entregabilidade ficam bloqueados; o fluxo é construído/testado com o provider sandbox.
+- **Design do portal público do organizador (S1208, greenfield)** — sem HTML/Figma de referência; layout do portal e dos blocos (hub eventos/agenda, fotos, blog, patrocinadores, newsletter) e do editor no painel (E04) precisam de rodada de design antes do plano de execução.
+- **Template de e-mail de marca (S1206, greenfield)** — sem referência visual; depende de rodada de design do template transacional (identidade Leela) antes de finalizar T4.
