@@ -4,7 +4,11 @@
  * radius-pill, cor ativa = brand (action-primary).
  * Suporta variante toggleable (active/inactive) e removível (onRemove).
  *
- * A11y: role="option" quando em grupo, aria-selected para estado ativo.
+ * A11y (F10): toggle button nativo com aria-pressed — role="option" era
+ * inválido fora de um listbox (aria-selected órfão), e o × interno com
+ * role="button"+tabIndex criava interativo focável aninhado em <button>
+ * (violação ARIA). O × agora é decorativo (aria-hidden, clique por bubbling
+ * controlado) e a remoção por teclado é Delete/Backspace no próprio chip.
  * §2.16 flat — sem borda decorativa.
  */
 
@@ -27,14 +31,21 @@ export interface ChipProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 // ---------------------------------------------------------------------------
 
 const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
-  ({ className, active = false, onRemove, children, disabled, ...props }, ref) => {
+  ({ className, active = false, onRemove, children, disabled, onKeyDown, ...props }, ref) => {
     return (
       <button
         ref={ref}
         type="button"
-        role="option"
-        aria-selected={active}
+        aria-pressed={active}
         disabled={disabled}
+        onKeyDown={(e) => {
+          // Remoção por teclado no próprio chip (o × é decorativo)
+          if (onRemove && (e.key === 'Delete' || e.key === 'Backspace')) {
+            e.preventDefault();
+            onRemove();
+          }
+          onKeyDown?.(e);
+        }}
         className={cn(
           // Base
           'inline-flex items-center gap-1',
@@ -64,21 +75,14 @@ const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
       >
         {children}
         {onRemove ? (
+          // Decorativo: sem role/tabIndex (interativo aninhado é ARIA inválida).
+          // Clique no × remove; teclado remove via Delete/Backspace no chip.
           <span
-            role="button"
-            aria-label="Remover"
-            tabIndex={0}
-            className="ml-1 inline-flex items-center text-xs leading-none opacity-70 hover:opacity-100 cursor-pointer"
+            aria-hidden
+            className="ml-1 inline-flex items-center text-[length:var(--font-size-xs)] leading-none opacity-70 hover:opacity-100 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                onRemove();
-              }
             }}
           >
             ×
