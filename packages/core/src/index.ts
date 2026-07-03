@@ -199,7 +199,11 @@ export type {
 } from './payments/PaymentProvider';
 
 // ---------------------------------------------------------------------------
-// Plataforma multi-tenant (ADR-009 · E16-S1600-T1)
+// Plataforma multi-tenant (ADR-009 · E16-S1600)
 // ---------------------------------------------------------------------------
 export type { TenantStatus, TenantTipo, Tenant, TenantInput } from './platform/tenant';
 export { canTransition } from './platform/tenant';
+
+// Papéis e guards puros (E16-S1600-T2)
+export type { Role, AuthClaims } from './platform/roles';
+export { isPlatformAdmin, belongsToTenant, isTenantMember, canSetClaims } from './platform/roles';

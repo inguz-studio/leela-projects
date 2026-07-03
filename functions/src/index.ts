@@ -13,3 +13,6 @@ if (!admin.apps.length) {
 
 // Auth
 export { onCreateUser } from './auth/onCreateUser';
+
+// Plataforma — multi-tenancy (E16-S1600-T2)
+export { setTenantClaims } from './platform/setTenantClaims';
