@@ -8,7 +8,7 @@ describe('Badge', () => {
     expect(screen.getByText('Ativo')).toBeInTheDocument();
   });
 
-  it.each(['brand', 'heroico', 'volcao', 'vitoria', 'alerta', 'neutro'] as const)(
+  it.each(['brand', 'heroico', 'vulcao', 'vitoria', 'alerta', 'neutro'] as const)(
     'renders %s variant',
     (variant) => {
       render(<Badge variant={variant}>{variant}</Badge>);

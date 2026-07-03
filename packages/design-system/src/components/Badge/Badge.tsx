@@ -2,7 +2,7 @@
  * Badge — indicador semântico de estado/categoria.
  *
  * Variantes semânticas (nunca misturar semântica):
- *   brand | heroico | volcao | vitoria | alerta | neutro
+ *   brand | heroico | vulcao | vitoria | alerta | neutro
  *
  * §2.16 flat — sem borda decorativa.
  * A11y: role="status" implícito; use aria-label para contexto quando necessário.
@@ -31,7 +31,7 @@ const badgeVariants = cva(
       variant: {
         brand:   'bg-[var(--action-primary)] text-[var(--action-primary-fg)]',
         heroico: 'bg-[var(--feedback-info-surface)] text-[var(--feedback-info-fg)]',
-        volcao:  'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
+        vulcao:  'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
         vitoria: 'bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]',
         alerta:  'bg-[var(--feedback-warning-surface)] text-[var(--feedback-warning-fg)]',
         neutro:  'bg-[var(--surface-overlay)] text-[var(--text-secondary)]',

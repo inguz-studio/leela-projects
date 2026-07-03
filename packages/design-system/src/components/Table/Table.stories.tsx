@@ -29,7 +29,7 @@ const COLUMNS: TableColumn<Inscrito>[] = [
     render: (row) => (
       <Badge
         variant={
-          row.status === 'Confirmada' ? 'vitoria' : row.status === 'Pendente' ? 'alerta' : 'volcao'
+          row.status === 'Confirmada' ? 'vitoria' : row.status === 'Pendente' ? 'alerta' : 'vulcao'
         }
       >
         {row.status}
