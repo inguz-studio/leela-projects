@@ -94,3 +94,23 @@ export interface LeelaCoreClient {
  * Declarada aqui como contrato para o DI dos apps.
  */
 export type CreateLeelaCoreClient = () => LeelaCoreClient;
+
+// ---------------------------------------------------------------------------
+// Firebase SDK — inicialização e acessores (LEELA-S000-2-T1)
+// ---------------------------------------------------------------------------
+export { initLeela, getLeelDb, getLeelAuth, getLeelFunctions } from './firebase';
+export type { FirebaseClientConfig, LeelFirebaseConfig } from './firebase';
+
+// ---------------------------------------------------------------------------
+// Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
+// ---------------------------------------------------------------------------
+export {
+  onSessionChange,
+  getCurrentUser,
+  loginComEmail,
+  criarContaComEmail,
+  loginComGoogle,
+  loginComApple,
+  logout,
+  getClaims,
+} from './auth';

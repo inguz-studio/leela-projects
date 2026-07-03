@@ -1,0 +1,31 @@
+{
+  "name": "@leela/functions",
+  "version": "0.0.0",
+  "private": true,
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "lint": "eslint src --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:rules": "vitest run src/__tests__/rules.test.ts",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "@leela/core": "workspace:*",
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.6.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.9.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}

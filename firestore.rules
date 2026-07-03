@@ -1,0 +1,20 @@
+// firestore.rules — LEELA · Onda 0
+//
+// Deny-by-default: toda coleção é bloqueada por padrão.
+// Isolamento por tenant (ADR-009) virá na task LEELA-S1600-T3.
+// Nunca inverta este padrão sem uma rule explícita e testada.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Bloqueia qualquer acesso não autorizado ─────────────────────────────
+    // Esta regra catch-all nega tudo que não for explicitamente permitido
+    // por rules abaixo (ou em tasks futuras).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+  }
+}
