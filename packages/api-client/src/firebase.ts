@@ -105,6 +105,16 @@ export interface LeelaFirebaseConfig {
 export function initLeela(config: LeelaFirebaseConfig = {}): void {
   const { useEmulator = false, emulatorHost = 'localhost', firebaseConfig } = config;
 
+  // Fail-closed: DEMO_CONFIG é Emulator-only. Sem emulador, o app DEVE
+  // fornecer firebaseConfig real — apontar produção para demo-leela
+  // silenciosamente seria erro grave de configuração (achado B3, review E00).
+  if (!useEmulator && !firebaseConfig) {
+    throw new Error(
+      '[leela/api-client] initLeela({ useEmulator: false }) exige firebaseConfig. ' +
+        'DEMO_CONFIG (demo-leela) é permitido apenas com useEmulator: true.'
+    );
+  }
+
   if (!_app) {
     _app = getApps()[0] ?? initializeApp(firebaseConfig ?? DEMO_CONFIG);
   }
