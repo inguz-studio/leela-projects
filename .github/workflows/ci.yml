@@ -7,8 +7,11 @@
 #   navegadores Chromium são pesados (~300 MB) e não devem rodar em todo PR.
 #
 # RUNNER (ubuntu-latest — GitHub-hosted):
-#   - Java 17 pré-instalado (necessário para o Firestore Emulator)
-#   - firebase-tools instalado no step "Install Firebase CLI"
+#   - Java 21 (Temurin) instalado explicitamente via actions/setup-java —
+#     firebase-tools 14+ exige Java 21 para o Firestore Emulator; não
+#     dependemos da versão pré-instalada do runner
+#   - firebase-tools PINADO no step "Install Firebase CLI" (mesma major
+#     usada em dev local) — evita breaking change silencioso do CLI
 #   - pnpm 11.9.0 + Node 20 configurados pelos steps de setup
 #
 # SECRETS OPCIONAIS:
@@ -87,9 +90,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # firebase-tools provê `firebase emulators:exec` usado no step "Test"
+      # Firestore Emulator exige Java 21 (firebase-tools 14+).
+      - name: Setup Java 21 (Firestore Emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # firebase-tools provê `firebase emulators:exec` usado no step "Test".
+      # Versão pinada — alinhada ao CLI usado em dev local (15.x).
       - name: Install Firebase CLI
-        run: npm install -g firebase-tools
+        run: npm install -g firebase-tools@15.22.4
 
       - name: Lint
         run: pnpm turbo run lint
@@ -103,7 +114,7 @@ jobs:
       # `firebase emulators:exec --only firestore` inicia o emulador Firestore
       # na porta 8080, executa o comando e retorna o exit code do comando.
       # --project demo-leela usa modo demo (sem credenciais reais).
-      # Java 17 já está disponível nos runners ubuntu-latest do GitHub.
+      # Java 21 configurado pelo step "Setup Java 21" acima.
       - name: Test (Firestore emulator)
         run: |
           firebase emulators:exec \
