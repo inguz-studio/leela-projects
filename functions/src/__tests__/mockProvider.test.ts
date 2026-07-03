@@ -13,6 +13,7 @@ import {
   MockPaymentProvider,
   calcularSplit,
   mockPaymentProvider,
+  signMockWebhook,
 } from '../payments/mockProvider';
 
 // ---------------------------------------------------------------------------
@@ -204,36 +205,88 @@ describe('MockPaymentProvider — integração (S000-4-T2)', () => {
 
   // ── handleWebhook idempotência ─────────────────────────────────────────
 
-  it('handleWebhook idempotente: reprocessar o mesmo webhook não duplica estado', async () => {
-    // Criar cobrança primeiro
-    const chargeResult = await provider.createCharge({
-      orderId: 'order-wh',
-      tenantId: 'tenant-wh',
-      amount: 8_000,
+  // Helper: cria uma cobrança confirmada e retorna o chargeId
+  async function criarCobranca(orderId: string, amount: number): Promise<string> {
+    const result = await provider.createCharge({
+      orderId,
+      tenantId: `tenant-${orderId}`,
+      amount,
       paymentMethod: 'pix' as const,
-      customer: { name: 'Carlos Ferreira', email: 'carlos@test.com' },
-      items: [{ id: 'kit-ouro', description: 'Kit Ouro', amount: 8_000, quantity: 1 }],
-      idempotencyKey: 'idem-wh-001',
+      customer: { name: 'Atleta Teste', email: 'atleta@test.com' },
+      items: [{ id: 'kit-ouro', description: 'Kit Ouro', amount, quantity: 1 }],
+      idempotencyKey: `idem-${orderId}`,
     });
+    return result.chargeId;
+  }
 
-    const payload = {
-      event: 'charge.confirmed',
-      data: { chargeId: chargeResult.chargeId, amount: 8_000 },
-      signature: 'mock-sig-valid',
+  // Helper: monta payload de webhook com assinatura HMAC válida
+  function webhookPayload(event: string, data: Record<string, unknown>) {
+    return {
+      event,
+      data,
+      signature: signMockWebhook(event, data),
       deliveredAt: new Date().toISOString(),
     };
+  }
+
+  it('handleWebhook: replay idêntico não duplica estado (idempotência por eventId)', async () => {
+    const chargeId = await criarCobranca('order-wh', 8_000);
+    const payload = webhookPayload('charge.confirmed', {
+      chargeId,
+      amount: 8_000,
+      eventId: 'evt-001',
+    });
 
     const r1 = await provider.handleWebhook(payload);
-    const r2 = await provider.handleWebhook(payload); // reprocessar
+    const r2 = await provider.handleWebhook(payload); // replay idêntico
 
-    // Mesmo resultado
     expect(r2.chargeId).toBe(r1.chargeId);
     expect(r2.amount).toBe(r1.amount);
     expect(r2.status).toBe('confirmed');
+    expect(r2.processedAt.toMillis()).toBe(r1.processedAt.toMillis()); // cache, não reprocesso
 
-    // Estado interno não duplicou
-    const stored = provider.getCharge(chargeResult.chargeId);
+    const stored = provider.getCharge(chargeId);
     expect(stored?.status).toBe('confirmed');
+  });
+
+  it('handleWebhook: charge.failed vira status failed, não confirmed', async () => {
+    const chargeId = await criarCobranca('order-fail', 2_000);
+    const payload = webhookPayload('charge.failed', { chargeId, amount: 2_000 });
+
+    const result = await provider.handleWebhook(payload);
+
+    expect(result.status).toBe('failed');
+    expect(provider.getCharge(chargeId)?.status).toBe('failed');
+  });
+
+  it('handleWebhook: refund após confirmed processa como evento distinto', async () => {
+    const chargeId = await criarCobranca('order-refund-flow', 6_000);
+
+    const confirmed = await provider.handleWebhook(
+      webhookPayload('charge.confirmed', { chargeId, amount: 6_000 })
+    );
+    expect(confirmed.status).toBe('confirmed');
+
+    // Evento diferente do mesmo charge NÃO pode cair no cache do confirmed
+    const refunded = await provider.handleWebhook(
+      webhookPayload('charge.refunded', { chargeId, amount: 6_000 })
+    );
+    expect(refunded.status).toBe('refunded');
+    expect(provider.getCharge(chargeId)?.status).toBe('refunded');
+  });
+
+  it('handleWebhook rejeita assinatura inválida', async () => {
+    const chargeId = await criarCobranca('order-badsig', 1_000);
+    const payload = {
+      event: 'charge.confirmed',
+      data: { chargeId, amount: 1_000 },
+      signature: 'assinatura-forjada-qualquer',
+      deliveredAt: new Date().toISOString(),
+    };
+
+    await expect(provider.handleWebhook(payload)).rejects.toThrow('assinatura');
+    // Nenhuma escrita aconteceu — verificação vem ANTES do estado
+    expect(provider.getCharge(chargeId)?.status).toBe('confirmed'); // status original do mock
   });
 
   it('handleWebhook rejeita payload sem assinatura', async () => {
@@ -245,6 +298,16 @@ describe('MockPaymentProvider — integração (S000-4-T2)', () => {
     };
 
     await expect(provider.handleWebhook(payload)).rejects.toThrow('assinatura');
+  });
+
+  it('handleWebhook rejeita evento desconhecido em vez de assumir confirmed', async () => {
+    const chargeId = await criarCobranca('order-unknown', 1_500);
+    const payload = webhookPayload('charge.subscription_renewed', {
+      chargeId,
+      amount: 1_500,
+    });
+
+    await expect(provider.handleWebhook(payload)).rejects.toThrow('desconhecido');
   });
 
   // ── refund idempotência ────────────────────────────────────────────────

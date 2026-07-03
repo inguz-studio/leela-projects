@@ -7,11 +7,14 @@
 //
 // Invariantes preservadas:
 //   - createCharge: idempotente via idempotencyKey (reprocessar = mesmo resultado)
-//   - handleWebhook: idempotente via chargeId (reprocessar não duplica estado)
+//   - handleWebhook: assinatura HMAC verificada ANTES de qualquer escrita;
+//     idempotente via eventId (replay idêntico não duplica estado);
+//     payload.event mapeado a status (confirmed/failed/refunded)
 //   - splitRules: cálculo determinístico; fee + recipients nunca excede o
 //     total e fecha exato quando percentuais + fee = 100%
 // =============================================================================
 
+import { createHmac } from 'crypto';
 import type {
   PaymentProvider,
   CreateChargeParams,
@@ -55,9 +58,37 @@ interface StoredCharge {
 
 interface StoredWebhookResult {
   chargeId: string;
+  status: 'confirmed' | 'failed' | 'refunded';
   amount: number;
   processedAt: ReturnType<typeof nowTimestamp>;
 }
+
+// ---------------------------------------------------------------------------
+// Assinatura HMAC simulada (secret mock — Emulator-only, não é segredo real)
+// ---------------------------------------------------------------------------
+
+/** Secret do gateway mock. NÃO é segredo de produção — só assina webhooks fake. */
+export const MOCK_WEBHOOK_SECRET = 'mock-webhook-secret-demo-leela';
+
+/**
+ * Assina um payload de webhook como o gateway mock faria.
+ * Use nos testes para produzir `payload.signature` válida.
+ */
+export function signMockWebhook(
+  event: string,
+  data: Record<string, unknown>
+): string {
+  return createHmac('sha256', MOCK_WEBHOOK_SECRET)
+    .update(`${event}:${JSON.stringify(data)}`)
+    .digest('hex');
+}
+
+/** Mapa event do gateway → ChargeStatus normalizado */
+const EVENT_TO_STATUS: Record<string, 'confirmed' | 'failed' | 'refunded'> = {
+  'charge.confirmed': 'confirmed',
+  'charge.failed': 'failed',
+  'charge.refunded': 'refunded',
+};
 
 interface StoredRefund {
   refundId: string;
@@ -284,23 +315,37 @@ export class MockPaymentProvider implements PaymentProvider {
   // ── handleWebhook ───────────────────────────────────────────────────────
 
   async handleWebhook(payload: WebhookPayload): Promise<WebhookResult> {
-    // Verificação de assinatura (mock: aceita assinatura "mock-sig" ou qualquer non-empty)
-    if (!payload.signature) {
-      throw new Error('[mock] Webhook sem assinatura — rejeitado');
+    // 1. Verificação de assinatura ANTES de qualquer leitura/escrita de estado.
+    //    (Antes: qualquer string non-empty passava — achado A6, review E00.)
+    const expected = signMockWebhook(payload.event, payload.data);
+    if (!payload.signature || payload.signature !== expected) {
+      throw new Error('[mock] Webhook com assinatura inválida — rejeitado');
     }
 
-    // Extrair chargeId do payload
+    // 2. Mapear event → status. Evento desconhecido é erro, nunca 'confirmed'.
+    const status = EVENT_TO_STATUS[payload.event];
+    if (!status) {
+      throw new Error(`[mock] Evento de webhook desconhecido: ${payload.event}`);
+    }
+
+    // 3. Extrair chargeId do payload
     const chargeId = payload.data['chargeId'] as string | undefined;
     if (!chargeId) {
       throw new Error('[mock] Webhook sem chargeId no data');
     }
 
-    // Idempotência: mesmo chargeId já processado → retorna resultado anterior
-    const cached = this.webhookResults.get(chargeId);
+    // 4. Idempotência por ENTREGA (eventId), não por chargeId — eventos
+    //    distintos do mesmo charge (confirmed → refunded) devem processar.
+    //    Sem eventId explícito, deriva chave determinística de event+chargeId.
+    const eventId =
+      (payload.data['eventId'] as string | undefined) ??
+      `${payload.event}:${chargeId}`;
+
+    const cached = this.webhookResults.get(eventId);
     if (cached) {
       return {
         chargeId: cached.chargeId,
-        status: 'confirmed',
+        status: cached.status,
         amount: cached.amount,
         processedAt: cached.processedAt,
       };
@@ -311,14 +356,14 @@ export class MockPaymentProvider implements PaymentProvider {
     const processedAt = nowTimestamp();
 
     if (charge) {
-      charge.status = 'confirmed';
+      charge.status = status;
     }
 
-    this.webhookResults.set(chargeId, { chargeId, amount, processedAt });
+    this.webhookResults.set(eventId, { chargeId, status, amount, processedAt });
 
     return {
       chargeId,
-      status: 'confirmed',
+      status,
       amount,
       processedAt,
     };
