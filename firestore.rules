@@ -2,6 +2,13 @@
 //
 // Deny-by-default: toda coleção é bloqueada por padrão.
 // Isolamento multi-tenant completo em S1600-T3 (ADR-009).
+// Hardening pós-review S1600 (fix write-takeover cross-tenant):
+//   - create/update/delete separados em TODA coleção tenant-scoped;
+//   - update valida o DONO ATUAL (resource.data.tenantId) e exige
+//     tenantId IMUTÁVEL (request.resource.data.tenantId == resource.data.tenantId);
+//   - delete valida o dono atual;
+//   - writes de cliente exigem papel de escrita (tenant_owner/tenant_staff),
+//     nunca promoter/athlete (RBAC intra-tenant mínimo).
 //
 // Partição de coleções (ADR-009 §Estratégia de partição):
 //   TENANT-SCOPED : eventos, clubes, inscritos, comunicados, parcerias,
@@ -12,7 +19,9 @@
 // Helpers de autorização reutilizados em todas as rules:
 //   isSignedIn()              — usuário autenticado
 //   isPlatformAdmin()         — role == 'platform_admin' no custom claim
-//   isTenantMember(tenantId)  — tenantId do claim bate com o documento
+//   isTenantMember(tenantId)  — tenantId do claim bate com o documento (leitura)
+//   isTenantWriter(tenantId)  — membro com papel de escrita (owner/staff)
+//   isTenantOwner(tenantId)   — apenas tenant_owner (writes mais sensíveis)
 //   tenantAtivo(tenantId)     — bloqueia escrita em tenant suspenso (RN-402)
 
 rules_version = '2';
@@ -34,10 +43,29 @@ service cloud.firestore {
 
     /**
      * Membro do tenant: claim.tenantId bate com o tenantId do recurso.
-     * Usado em toda coleção tenant-scoped (RN-400).
+     * Usado para LEITURA em coleção tenant-scoped (RN-400).
+     * Qualquer papel com claim de tenant (owner/staff/promoter) lê o próprio tenant.
      */
     function isTenantMember(tenantId) {
       return isSignedIn() && request.auth.token.tenantId == tenantId;
+    }
+
+    /**
+     * Papel de ESCRITA dentro do tenant: tenant_owner ou tenant_staff.
+     * promoter é membro (lê), mas NÃO escreve dados de domínio pelo cliente.
+     * Nota de dívida: o épico S1600 exige isolamento ENTRE tenants (RN-400);
+     * o RBAC intra-tenant fino (por coleção/campo) adensa em stories futuras.
+     */
+    function isTenantWriter(tenantId) {
+      return isTenantMember(tenantId)
+        && (request.auth.token.role == 'tenant_owner'
+            || request.auth.token.role == 'tenant_staff');
+    }
+
+    /** Apenas o tenant_owner — writes mais sensíveis (ex.: equipe). */
+    function isTenantOwner(tenantId) {
+      return isTenantMember(tenantId)
+        && request.auth.token.role == 'tenant_owner';
     }
 
     /**
@@ -49,17 +77,26 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/tenants/$(tenantId)).data.status == 'ativo';
     }
 
+    /** Status de tenant válido (RN-402) — valida enum na escrita de tenants. */
+    function isValidTenantStatus(status) {
+      return status in ['pending', 'ativo', 'suspenso'];
+    }
+
     // ── `tenants/{tenantId}` — coleção de plataforma ──────────────────────
     //
     // Leitura: membro do tenant (claim.tenantId bate) OU platform_admin.
     // Escrita: APENAS platform_admin (ou Function/Admin SDK via bypass de Rules).
+    // Transições de status passam pela Function `transitionTenant`
+    // (valida canTransition — RN-402); a rule ao menos trava o enum.
     //
     // RN-400: dado de um tenant nunca é legível por outro tenant.
     // RN-401: papel vem do custom claim, não do cliente.
     // RN-404: termos comerciais exclusivo do platform_admin.
     match /tenants/{tenantId} {
       allow read: if isTenantMember(tenantId) || isPlatformAdmin();
-      allow write: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin()
+                            && isValidTenantStatus(request.resource.data.status);
+      allow delete: if isPlatformAdmin();
 
       // `commercialTerms/current` — termos por tenant
       // Leitura: membro do tenant ou platform_admin.
@@ -91,17 +128,31 @@ service cloud.firestore {
     // ── Coleções tenant-scoped ────────────────────────────────────────────
     //
     // Toda coleção de domínio carrega `tenantId` (ADR-009).
-    // Padrão: read se membro do tenant ou platform_admin;
-    //         write se membro do tenant E tenant ativo (RN-402) ou platform_admin.
+    // Padrão seguro (fix write-takeover):
+    //   read   — membro do tenant DONO ATUAL (resource) ou platform_admin;
+    //   create — papel de escrita no tenant carimbado + tenant ativo (RN-402);
+    //   update — papel de escrita no tenant DONO ATUAL + tenantId imutável
+    //            + tenant ativo;
+    //   delete — papel de escrita no tenant DONO ATUAL + tenant ativo.
     //
     // Coleções: eventos, clubes, inscritos, comunicados, parcerias,
     //           programaAfiliacao, pagamentos, equipe, promotores, subscriptions
 
     match /eventos/{eventoId} {
+      // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
+      // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
+      // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
 
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
@@ -112,9 +163,16 @@ service cloud.firestore {
 
     match /clubes/{clubeId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
 
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
@@ -123,25 +181,66 @@ service cloud.firestore {
       }
     }
 
+    // `inscritos/{inscritoId}` — join Atleta↔Evento, tenant-scoped (ADR-009).
+    // Shape: modelo-de-dados-firestore.md (atletaId, kit, chipNumero, status,
+    // modalidade + tenantId). Escrita de cliente: só papel de escrita do tenant.
+    // TODO(E04/compra): quando o fluxo de inscrição/compra entrar, o atleta
+    // dono (request.auth.uid == resource.data.atletaId) passa a LER a própria
+    // inscrição — abrir só com teste na story de E04.
+    match /inscritos/{inscritoId} {
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+    }
+
     match /comunicados/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
     }
 
     match /parcerias/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
     }
 
     match /programaAfiliacao/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
     }
 
     match /pagamentos/{docId} {
@@ -150,18 +249,34 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // `equipe` — gestão de time do tenant: write restrito ao tenant_owner
+    // (staff/promoter não gerenciam a própria equipe pelo cliente).
     match /equipe/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantOwner(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantOwner(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantOwner(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
     }
 
     match /promotores/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow write: if (isTenantMember(request.resource.data.tenantId)
-                       && tenantAtivo(request.resource.data.tenantId))
-                   || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
     }
 
     // ── Coleções globais ──────────────────────────────────────────────────
