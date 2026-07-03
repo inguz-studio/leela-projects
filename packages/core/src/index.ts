@@ -174,203 +174,26 @@ export interface Evento {
 
 // ---------------------------------------------------------------------------
 // PaymentProvider — interface plugável (ADR-006)
-// Nenhum SDK de gateway concreto aqui; adapters ficam em functions/src/payments/
+// Movida para src/payments/PaymentProvider.ts; re-exportada aqui para
+// manter retrocompatibilidade de imports de '@leela/core'.
 // ---------------------------------------------------------------------------
-
-/** Métodos de pagamento suportados */
-export type PaymentMethod = 'credit_card' | 'pix' | 'boleto';
-
-/** Status do ciclo de vida de uma cobrança */
-export type ChargeStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'failed'
-  | 'refunded'
-  | 'cancelled';
-
-/** Status de um estorno */
-export type RefundStatus = 'pending' | 'approved' | 'rejected';
-
-/** Status de repasse ao produtor */
-export type PayoutStatus = 'pending' | 'scheduled' | 'paid' | 'failed';
-
-/** Dados do pagador/cliente */
-export interface CustomerData {
-  name: string;
-  email: string;
-  /** CPF ou CNPJ (opcional, exigido por alguns gateways) */
-  taxId?: string;
-  phone?: string;
-}
-
-/** Item individual dentro de uma cobrança */
-export interface ChargeItem {
-  id: string;
-  description: string;
-  /** Valor em centavos */
-  amount: number;
-  quantity: number;
-}
-
-/** Parâmetros para criação de cobrança */
-export interface CreateChargeParams {
-  /** ID do pedido no domínio Leela (ADR-011) */
-  orderId: string;
-  tenantId: string;
-  /** Valor total em centavos */
-  amount: number;
-  paymentMethod: PaymentMethod;
-  /** Parcelas — somente para cartão de crédito */
-  installments?: number;
-  customer: CustomerData;
-  items: ChargeItem[];
-  /** Chave de idempotência obrigatória (invariante: webhook idempotente) */
-  idempotencyKey: string;
-}
-
-/** Resultado da criação de cobrança */
-export interface ChargeResult {
-  chargeId: string;
-  status: ChargeStatus;
-  /** URL de checkout (PIX/boleto) */
-  paymentUrl?: string;
-  /** Payload do QR Code PIX (base64 ou string raw) */
-  qrCode?: string;
-  /** URL do boleto bancário */
-  boletoUrl?: string;
-  /** Linha digitável do boleto */
-  boletoBarCode?: string;
-  expiresAt?: Timestamp;
-}
-
-/** Beneficiário de um split de pagamento */
-export interface SplitRecipient {
-  /** ID do destinatário no gateway */
-  recipientId: string;
-  /** Valor em centavos */
-  amount: number;
-  /** Percentual alternativo ao amount fixo */
-  percentage?: number;
-}
-
-/** Parâmetros para configuração de split */
-export interface SplitRulesParams {
-  chargeId: string;
-  tenantId: string;
-  /** Taxa da plataforma em % (RN-330) */
-  platformFeePct: number;
-  recipients: SplitRecipient[];
-}
-
-/** Resultado do split configurado */
-export interface SplitRulesResult {
-  ruleId: string;
-  chargeId: string;
-  recipients: SplitRecipient[];
-  appliedAt: Timestamp;
-}
-
-/** Parâmetros para solicitação de estorno */
-export interface RefundParams {
-  chargeId: string;
-  tenantId: string;
-  /** Valor em centavos; estorno total se omitido */
-  amount?: number;
-  reason: string;
-  /** Chave de idempotência — reprocessamento do webhook não duplica (RN-333) */
-  idempotencyKey: string;
-}
-
-/** Resultado do estorno */
-export interface RefundResult {
-  refundId: string;
-  chargeId: string;
-  status: RefundStatus;
-  /** Valor efetivamente estornado em centavos */
-  amount: number;
-  processedAt: Timestamp;
-}
-
-/**
- * Payload bruto recebido do gateway via webhook.
- * Assinatura deve ser verificada antes do processamento (invariante: webhook assinado).
- */
-export interface WebhookPayload {
-  event: string;
-  data: Record<string, unknown>;
-  /** Assinatura HMAC ou equivalente do gateway */
-  signature: string;
-  deliveredAt: string;
-}
-
-/** Resultado normalizado do processamento do webhook */
-export interface WebhookResult {
-  chargeId: string;
-  status: ChargeStatus;
-  /** Valor confirmado em centavos */
-  amount: number;
-  processedAt: Timestamp;
-}
-
-/** Parâmetros para consulta de repasses */
-export interface GetPayoutParams {
-  tenantId: string;
-  /** Filtro por período; sem filtro = consulta o saldo disponível */
-  period?: {
-    start: Timestamp;
-    end: Timestamp;
-  };
-}
-
-/** Resultado da consulta de repasse */
-export interface PayoutResult {
-  payoutId: string;
-  tenantId: string;
-  /** Valor em centavos */
-  amount: number;
-  status: PayoutStatus;
-  scheduledAt: Timestamp;
-  /** Preenchido quando status = 'paid' */
-  paidAt?: Timestamp;
-}
-
-/**
- * PaymentProvider — contrato plugável de gateway de pagamento (ADR-006).
- *
- * Implementações concretas (Stripe, PagarMe, Asaas, etc.) ficam em
- * `functions/src/payments/{provider}Adapter.ts` e são injetadas por DI.
- * Nenhum cliente nunca instancia o gateway diretamente.
- *
- * Suporte obrigatório a assinatura + split (RN-104, ADR-006).
- */
-export interface PaymentProvider {
-  /**
-   * Cria uma cobrança. Idempotente via `idempotencyKey`.
-   * Deve suportar PIX, boleto e cartão de crédito.
-   */
-  createCharge(params: CreateChargeParams): Promise<ChargeResult>;
-
-  /**
-   * Configura regras de split para uma cobrança existente.
-   * Chamado após `createCharge` para definir repasse plataforma/produtor.
-   */
-  splitRules(params: SplitRulesParams): Promise<SplitRulesResult>;
-
-  /**
-   * Solicita estorno total ou parcial. Idempotente via `idempotencyKey`.
-   * Reverte split quando aplicável (RN-337).
-   */
-  refund(params: RefundParams): Promise<RefundResult>;
-
-  /**
-   * Processa payload de webhook do gateway.
-   * DEVE verificar assinatura antes de atualizar estado financeiro.
-   * Idempotente — reprocessamento não duplica estado.
-   */
-  handleWebhook(payload: WebhookPayload): Promise<WebhookResult>;
-
-  /**
-   * Consulta repasse disponível ou por período para um tenant.
-   */
-  getPayout(params: GetPayoutParams): Promise<PayoutResult>;
-}
+export type {
+  PaymentMethod,
+  ChargeStatus,
+  RefundStatus,
+  PayoutStatus,
+  CustomerData,
+  ChargeItem,
+  CreateChargeParams,
+  ChargeResult,
+  SplitRecipient,
+  SplitRulesParams,
+  SplitRulesResult,
+  RefundParams,
+  RefundResult,
+  WebhookPayload,
+  WebhookResult,
+  GetPayoutParams,
+  PayoutResult,
+  PaymentProvider,
+} from './payments/PaymentProvider';

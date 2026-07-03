@@ -1,26 +1,43 @@
 // =============================================================================
-// @leela/design-system — stub de export mínimo tipado
-// Componentes visuais e tokens completos são implementados em LEELA-E01.
+// @leela/design-system — public API
 // =============================================================================
 
-/**
- * Variantes de tema disponíveis no Design System Leela.
- * `brasa` é o tema padrão da marca (LEELA-E01).
- */
-export type ThemeVariant = 'brasa' | 'light' | 'dark';
+// ── Theme ──────────────────────────────────────────────────────────────────
+export {
+  ThemeProvider,
+  useTheme,
+  type Theme,
+  type ThemeContextValue,
+  type ThemeProviderProps,
+} from './theme/ThemeProvider';
 
-/**
- * Mapa de tokens de design (tier 3 — valores resolvidos).
- * Valores são CSS custom property values (strings).
- * Estrutura completa definida em LEELA-S001-1-T1.
- */
-export type DesignTokens = Readonly<Record<string, string>>;
+export {
+  ThemeProviderRN,
+  useTheme as useThemeRN,
+  type ThemeProviderRNProps,
+  type StorageAdapter,
+  type RNThemeContextValue,
+} from './theme/ThemeProviderRN';
 
-/**
- * Configuração de tema passada ao ThemeProvider.
- * ThemeProvider implementado em LEELA-S001-1-T2.
- */
-export interface ThemeConfig {
-  variant: ThemeVariant;
-  tokens?: DesignTokens;
-}
+export {
+  generateCSS,
+  generateRNTheme,
+  collectRefs,
+  resolvePath,
+  flattenTokens,
+  type TokenRecord,
+  type FlatTokens,
+} from './theme/generate';
+
+export { brasaTheme, leelaTheme } from './theme/rn-themes';
+
+// ── Atoms ──────────────────────────────────────────────────────────────────
+export { Button, buttonVariants, type ButtonProps } from './components/Button';
+export { Input, type InputProps } from './components/Input';
+export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
+export { Chip, type ChipProps } from './components/Chip';
+export { Avatar, type AvatarProps } from './components/Avatar';
+export { Divider, type DividerProps } from './components/Divider';
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+export { cn } from './utils/cn';

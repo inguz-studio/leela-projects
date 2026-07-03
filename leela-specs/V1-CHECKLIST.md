@@ -27,10 +27,10 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 
 ### LEELA-E01 · Design System temável & Shell (completo, tema `brasa`)
 
-- [ ] LEELA-S001-1-T1 — `tokens.json` (3 tiers) + gerador CSS vars / tema RN
-- [ ] LEELA-S001-1-T2 — `ThemeProvider` (web + RN) com troca em runtime
-- [ ] LEELA-S001-2-T1 — Button (variantes/estados/a11y)
-- [ ] LEELA-S001-2-T2 — Input, Badge, Chip, Avatar, Divider
+- [x] LEELA-S001-1-T1 — `tokens.json` (3 tiers) + gerador CSS vars / tema RN
+- [x] LEELA-S001-1-T2 — `ThemeProvider` (web + RN) com troca em runtime
+- [x] LEELA-S001-2-T1 — Button (variantes/estados/a11y)
+- [x] LEELA-S001-2-T2 — Input, Badge, Chip, Avatar, Divider
 - [ ] LEELA-S001-3-T1 — Shell (Sidebar + Breadcrumb + Header 96px + SubNav)
 - [ ] LEELA-S001-3-T2 — Table densa + EmptyState + paginação + Popover
 - [ ] LEELA-S001-3-T3 — Modal + ConfirmModal (§2.15)
