@@ -20,6 +20,9 @@ const sentryPlugins = hasSentryAuthToken
 
 // https://vite.dev/config/
 export default defineConfig({
+  // .env vive na RAIZ do monorepo (contrato do .env.example — VITE_USE_EMULATOR
+  // etc.). Sem envDir, o Vite só leria apps/painel/.env, que não existe.
+  envDir: fileURLToPath(new URL('../..', import.meta.url)),
   plugins: [react(), ...sentryPlugins],
   build: {
     // Source maps gerados e enviados apenas quando SENTRY_AUTH_TOKEN existir
