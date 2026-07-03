@@ -43,6 +43,7 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S1600-T1 — Modelo `tenants` + tipos + status/lifecycle + Rules base + seed
 - [x] LEELA-S1600-T2 — Custom claims (`role` + `tenantId`) — `setTenantClaims` + propagação
 - [x] LEELA-S1600-T3 — Security Rules multi-tenant (isolamento por `tenantId`) + testes
+- [x] LEELA-S1600-FIX — Hardening pós-review: fix write-takeover cross-tenant (create/update/delete separados, `tenantId` imutável, RBAC intra-tenant `isTenantWriter`), cobertura de overwrite/delete/isolamento em todas as coleções, testes de `setTenantClaims`/`onCreateUser`/`transitionTenant`, guard anti-produção no seed, `vitest.config` (include/exclude), wire de `canTransition`. Suite: 150 verdes no emulator.
 
 ---
 

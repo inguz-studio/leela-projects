@@ -27,5 +27,20 @@ tags: [leela, story]
 - [x] LEELA-S1600-T2 — Custom claims (`role` + `tenantId`) — Function `setTenantClaims` + propagação
 - [x] LEELA-S1600-T3 — Security Rules multi-tenant (isolamento por `tenantId`) + testes
 
+## Hardening pós-review (fix crítico de segurança)
+Revisão do multi-tenancy achou um exploit de **takeover cross-tenant por overwrite**: as write rules validavam só `request.resource.data.tenantId` (doc novo), nunca `resource.data.tenantId` (dono atual). Owner de A sobrescrevia doc de B carimbando o próprio tenantId. Corrigido:
+
+- **F1 (crítica)** — create/update/delete separados em toda coleção tenant-scoped; `update` valida o dono atual e exige `tenantId` imutável; `delete` valida o dono atual. Exploit bloqueado (2 asserts de `_EXPLOIT_crossTenantOverwrite` passam).
+- **F2** — cobertura: matriz de overwrite/delete-hijack + isolamento de leitura em `comunicados`, `parcerias`, `programaAfiliacao`, `equipe`, `promotores`, `inscritos`, `profissionais`, `subscriptions`; testes de integração de `setTenantClaims`, `onCreateUser` e `transitionTenant`.
+- **F3** — coleção `inscritos` modelada com o padrão seguro (shape do modelo-de-dados) + teste.
+- **F4** — RBAC intra-tenant: helper `isTenantWriter` (owner/staff); `promoter` lê mas não escreve; `equipe` restrita ao owner.
+- **F5** — seed com guard anti-produção (`assertEmulatorOnly`).
+- **F6** — `vitest.config` com `include: ['src/**/*.test.ts']` + `exclude: ['lib/**','node_modules/**']` (+ `fileParallelism:false` p/ suites que compartilham o emulator).
+- **F7** — `canTransition` finalmente no write path: Function `transitionTenant`.
+- **F8** — seed grava `criadoEm` só na criação.
+- **F9** — TODO nas rules p/ leitura pública de eventos publicados (fluxo de compra, E04) — não aberto agora.
+
+Suite emulator: **150 testes verdes** (`firebase emulators:exec --only firestore --project demo-leela "npx vitest run"`). type-check + lint verdes em `@leela/core`, `@leela/api-client`, `@leela/functions`.
+
 ## Links
 Épico: [[LEELA-E16-plataforma-superadmin]]
