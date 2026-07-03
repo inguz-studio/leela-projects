@@ -8,7 +8,8 @@
 // Invariantes preservadas:
 //   - createCharge: idempotente via idempotencyKey (reprocessar = mesmo resultado)
 //   - handleWebhook: idempotente via chargeId (reprocessar não duplica estado)
-//   - splitRules: cálculo determinístico (platform fee + recipients = total)
+//   - splitRules: cálculo determinístico; fee + recipients nunca excede o
+//     total e fecha exato quando percentuais + fee = 100%
 // =============================================================================
 
 import type {
@@ -74,40 +75,93 @@ interface StoredRefund {
  *
  * Regras:
  *   1. Platform fee = floor(totalAmount * platformFeePct / 100)
- *   2. Cada recipient com `percentage` recebe floor(totalAmount * pct / 100)
- *   3. Cada recipient com `amount` fixo usa o valor diretamente
- *   4. A diferença residual (por arredondamento) vai ao último recipient
+ *   2. Recipient com `percentage` recebe floor(totalAmount * pct / 100)
+ *   3. Recipient com `amount` fixo recebe exatamente o valor declarado
+ *      (nunca é sobrescrito — achado A5, review E00)
+ *   4. Resíduo de arredondamento (sobras dos floors) vai ao ÚLTIMO recipient
+ *      percentual, e somente quando percentuais + fee fecham 100% —
+ *      só aí a diferença é atribuível a arredondamento.
  *
- * @returns array de SplitRecipient com amounts em centavos
+ * Validações (erro em misconfiguração):
+ *   - platformFeePct fora de [0, 100]
+ *   - percentage fora de (0, 100] ou amount fixo negativo
+ *   - soma de percentuais + platformFeePct > 100
+ *   - alocação total (fee + percentuais + fixos) > totalAmount
+ *
+ * Invariantes:
+ *   - platformAmount + Σ recipients ≤ totalAmount (nunca excede)
+ *   - quando percentuais + fee = 100 e não há amounts fixos,
+ *     platformAmount + Σ recipients = totalAmount exato
  */
 export function calcularSplit(
   totalAmount: number,
   platformFeePct: number,
   recipients: SplitRecipient[]
 ): { platformAmount: number; recipientsResolved: ResolvedSplitRecipient[] } {
+  if (!Number.isInteger(totalAmount) || totalAmount < 0) {
+    throw new Error(`[mock] totalAmount inválido: ${totalAmount}`);
+  }
+  if (platformFeePct < 0 || platformFeePct > 100) {
+    throw new Error(`[mock] platformFeePct fora de [0, 100]: ${platformFeePct}`);
+  }
+
+  let percentSum = 0;
+  for (const r of recipients) {
+    if (r.percentage !== undefined) {
+      if (r.percentage <= 0 || r.percentage > 100) {
+        throw new Error(
+          `[mock] percentage inválido para ${r.recipientId}: ${r.percentage}`
+        );
+      }
+      percentSum += r.percentage;
+    } else if (!Number.isInteger(r.amount) || r.amount < 0) {
+      throw new Error(
+        `[mock] amount inválido para ${r.recipientId}: ${r.amount}`
+      );
+    }
+  }
+
+  if (percentSum + platformFeePct > 100) {
+    throw new Error(
+      `[mock] Split não fecha: percentuais (${percentSum}%) + fee (${platformFeePct}%) > 100%`
+    );
+  }
+
   const platformAmount = Math.floor((totalAmount * platformFeePct) / 100);
-  let remaining = totalAmount - platformAmount;
 
   const resolved: ResolvedSplitRecipient[] = [];
+  let lastPercentIdx = -1;
+  let allocatedSum = 0;
 
-  for (let i = 0; i < recipients.length; i++) {
-    const r = recipients[i];
-    if (!r) continue;
-    let allocated: number;
-
+  for (const r of recipients) {
+    const allocated =
+      r.percentage !== undefined
+        ? Math.floor((totalAmount * r.percentage) / 100)
+        : r.amount;
     if (r.percentage !== undefined) {
-      allocated = Math.floor((totalAmount * r.percentage) / 100);
-    } else {
-      allocated = r.amount;
+      lastPercentIdx = resolved.length;
     }
-
-    // Último recipient absorve o resíduo de arredondamento
-    if (i === recipients.length - 1) {
-      allocated = remaining;
-    }
-
-    remaining -= allocated;
+    allocatedSum += allocated;
     resolved.push({ recipientId: r.recipientId, amount: allocated });
+  }
+
+  if (platformAmount + allocatedSum > totalAmount) {
+    throw new Error(
+      `[mock] Split excede o total: fee ${platformAmount} + recipients ${allocatedSum} > ${totalAmount}`
+    );
+  }
+
+  // Resíduo de arredondamento: só quando fee + percentuais fecham 100%
+  // (aí a diferença vem exclusivamente dos floors) e há recipient percentual.
+  if (percentSum + platformFeePct === 100 && lastPercentIdx >= 0) {
+    const residue = totalAmount - platformAmount - allocatedSum;
+    const last = resolved[lastPercentIdx];
+    if (residue > 0 && last) {
+      resolved[lastPercentIdx] = {
+        recipientId: last.recipientId,
+        amount: last.amount + residue,
+      };
+    }
   }
 
   return { platformAmount, recipientsResolved: resolved };

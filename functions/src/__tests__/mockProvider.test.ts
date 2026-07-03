@@ -56,7 +56,7 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
     expect(sum).toBe(total);
     expect(platformAmount).toBe(500);
     expect(recipientsResolved[0]?.amount).toBe(1_000); // 10%
-    expect(recipientsResolved[1]?.amount).toBe(8_500); // 85% (absorve resíduo = 8500)
+    expect(recipientsResolved[1]?.amount).toBe(8_500); // 85% exato (sem resíduo)
   });
 
   it('resíduo de arredondamento vai ao último recipient', () => {
@@ -76,7 +76,7 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
     expect(sum).toBe(total); // invariante: soma = total
   });
 
-  it('recipient com amount fixo usa o valor sem calcular percentual', () => {
+  it('recipient com amount fixo recebe exatamente o valor declarado', () => {
     const total = 10_000;
     const platformFeePct = 5;
     const recipients = [{ recipientId: 'producer-1', amount: 8_500 }];
@@ -87,15 +87,71 @@ describe('calcularSplit — unit (S000-4-T2)', () => {
       recipients
     );
 
-    // Último recipient absorve resíduo: 10000 - 500 = 9500 (ignora amount=8500)
+    // Regressão A5 (review E00): o valor fixo era sobrescrito pelo resíduo
+    // total (8500 → 9500). Amount fixo é contrato — nunca sobrescrever.
     expect(platformAmount).toBe(500);
-    expect(recipientsResolved[0]?.amount).toBe(9_500);
+    expect(recipientsResolved[0]?.amount).toBe(8_500);
   });
 
   it('zero recipients retorna lista vazia e platform fee', () => {
     const { platformAmount, recipientsResolved } = calcularSplit(10_000, 10, []);
     expect(platformAmount).toBe(1_000);
     expect(recipientsResolved).toHaveLength(0);
+  });
+
+  // ── Misconfiguração → erro (A5) ─────────────────────────────────────────
+
+  it('lança erro quando percentuais + platform fee excedem 100%', () => {
+    expect(() =>
+      calcularSplit(10_000, 10, [
+        { recipientId: 'a', percentage: 60 },
+        { recipientId: 'b', percentage: 40 },
+      ])
+    ).toThrow('não fecha');
+  });
+
+  it('lança erro quando amounts fixos + fee excedem o total', () => {
+    expect(() =>
+      calcularSplit(10_000, 5, [
+        { recipientId: 'a', amount: 6_000 },
+        { recipientId: 'b', amount: 4_000 },
+      ])
+    ).toThrow('excede o total');
+  });
+
+  it('lança erro para percentage fora de (0, 100]', () => {
+    expect(() =>
+      calcularSplit(10_000, 5, [{ recipientId: 'a', percentage: 0 }])
+    ).toThrow('percentage inválido');
+    expect(() =>
+      calcularSplit(10_000, 5, [{ recipientId: 'a', percentage: 101 }])
+    ).toThrow('percentage inválido');
+  });
+
+  it('lança erro para amount fixo negativo ou não-inteiro', () => {
+    expect(() =>
+      calcularSplit(10_000, 5, [{ recipientId: 'a', amount: -1 }])
+    ).toThrow('amount inválido');
+    expect(() =>
+      calcularSplit(10_000, 5, [{ recipientId: 'a', amount: 10.5 }])
+    ).toThrow('amount inválido');
+  });
+
+  it('lança erro para platformFeePct fora de [0, 100]', () => {
+    expect(() => calcularSplit(10_000, -1, [])).toThrow('platformFeePct');
+    expect(() => calcularSplit(10_000, 101, [])).toThrow('platformFeePct');
+  });
+
+  it('mistura de fixo + percentual respeita ambos sem redistribuir sobra', () => {
+    // fee 5% = 500 · fixo 2000 · 20% = 2000 → alocado 4500 ≤ 10000
+    // fee + percentuais (25%) < 100% → sobra NÃO é resíduo de arredondamento
+    const { platformAmount, recipientsResolved } = calcularSplit(10_000, 5, [
+      { recipientId: 'fixo', amount: 2_000 },
+      { recipientId: 'pct', percentage: 20 },
+    ]);
+    expect(platformAmount).toBe(500);
+    expect(recipientsResolved[0]?.amount).toBe(2_000);
+    expect(recipientsResolved[1]?.amount).toBe(2_000);
   });
 });
 
