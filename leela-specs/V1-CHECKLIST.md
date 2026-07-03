@@ -20,7 +20,7 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S000-1-T4 — Pacotes `core`, `design-system`, `api-client` (esqueleto)
 - [ ] LEELA-S000-2-T1 — Firebase (Firestore + Functions + Auth) + Emulator Suite
 - [ ] LEELA-S000-2-T2 — Firebase Auth (email/Google/Apple) + custom claims de papel
-- [ ] LEELA-S000-3-T1 — GitHub Actions (lint/type/test/build) + preview deploy
+- [x] LEELA-S000-3-T1 — GitHub Actions (lint/type/test/build) + preview deploy
 - [ ] LEELA-S000-3-T2 — Sentry (web + mobile) + gestão de env
 - [ ] LEELA-S000-4-T1 — Documento de convenções de código
 - [ ] LEELA-S000-4-T2 — Interface `PaymentProvider` + adapter mock/sandbox

@@ -1,0 +1,113 @@
+# .github/workflows/preview.yml
+# Preview deploy de apps/painel → Firebase Hosting (LEELA-S000-3-T1)
+#
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  ATIVA QUANDO: o projeto Firebase real existir e os secrets abaixo      ║
+# ║  forem configurados em: Settings → Secrets → Actions                    ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+#
+# HOJE (Onda 0 — Emulator-only):
+#   O workflow é registrado no repositório mas os jobs são skipped enquanto
+#   FIREBASE_SERVICE_ACCOUNT não estiver configurado. Isso mantém o repo
+#   pronto para produção sem gerar erros de CI.
+#
+# SECRETS NECESSÁRIOS (configurar quando o projeto Firebase existir):
+#   FIREBASE_SERVICE_ACCOUNT   — JSON da service account com role
+#                                "Firebase Hosting Admin" (roles/firebasehosting.admin)
+#                                Gerado em: Console → IAM → Service Accounts → Keys
+#   FIREBASE_PROJECT_ID        — ID do projeto Firebase (ex: leela-prod)
+#                                Se ausente, usa "demo-leela" (emulator only)
+#
+# PRÉ-REQUISITOS ADICIONAIS ANTES DE ATIVAR:
+#   1. Adicionar hosting target no firebase.json:
+#        "hosting": {
+#          "target": "painel",
+#          "public": "apps/painel/dist",
+#          "ignore": ["**/node_modules/**", "**/.git/**"]
+#        }
+#   2. Criar o site no Firebase Console → Hosting → Add custom site
+#   3. Linkar o target: `firebase target:apply hosting painel <site-id>`
+#   4. Configurar branch protection para exigir o check de preview (opcional)
+#
+# FUNCIONAMENTO (quando ativo):
+#   1. Abre PR → workflow builda apps/painel e faz deploy em canal de preview
+#   2. Action posta um comentário no PR com a URL de preview
+#   3. PR fechado → Firebase automaticamente expira o canal em 7 dias
+
+name: Preview Deploy
+
+on:
+  pull_request:
+    # Roda apenas em PRs — o guard de secret impede falha quando inativo
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: '1'
+
+jobs:
+  preview:
+    name: Build & Deploy Preview (painel)
+    runs-on: ubuntu-latest
+    # Guard: skip silencioso quando FIREBASE_SERVICE_ACCOUNT não está configurado.
+    # Isso é intencional durante a Onda 0 (Emulator-only).
+    # Remove esta condição quando o projeto Firebase real existir.
+    if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+
+    permissions:
+      # Necessário para a action-hosting-deploy comentar no PR
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Build apenas do painel e suas dependências de workspace (core, design-system, api-client)
+      # --filter=@leela/painel... constrói o grafo de dependências completo
+      - name: Build painel
+        run: pnpm turbo run build --filter='@leela/painel...'
+        env:
+          # Injeta variáveis de ambiente de preview se disponíveis
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID || 'demo-leela' }}
+
+      # FirebaseExtended/action-hosting-deploy@v0:
+      #   - Faz deploy em um canal de preview nomeado "pr-<number>"
+      #   - Posta comentário no PR com a URL de preview
+      #   - Expira o canal automaticamente em 7 dias
+      - name: Deploy to Firebase Hosting (preview channel)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID || 'demo-leela' }}
+          channelId: pr-${{ github.event.pull_request.number }}
+          # Target deve corresponder ao hosting.target em firebase.json
+          # (configurar quando adicionar a seção "hosting" ao firebase.json)
+          target: painel
+          expires: 7d
