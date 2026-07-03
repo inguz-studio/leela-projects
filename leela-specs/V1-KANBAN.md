@@ -22,7 +22,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O0** · E00 · Fundação técnica — 9/10T (Firebase+Emulator, Auth+claims, convenções, PaymentProvider mock ✅; falta só Sentry)
+- [ ] **O0** · E00 · Fundação técnica — 9/10T · revisão Fable: needs_fixes (1 crítica, 5 altas) · correções em fila
 - [ ] **O0** · E01 · Design System (tema brasa) — 4/10T (tokens+ThemeProvider+Button+primitivos ✅ · 199 testes; S001-3 em execução)
 
 
