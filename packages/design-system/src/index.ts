@@ -39,5 +39,17 @@ export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
 export { Divider, type DividerProps } from './components/Divider';
 
+// ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
+export { Sidebar, DEFAULT_SIDEBAR_SECTIONS } from './components/Sidebar';
+export type { SidebarProps, SidebarSection, SidebarItem } from './components/Sidebar';
+export { Breadcrumb } from './components/Breadcrumb';
+export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb';
+export { PageHeader } from './components/PageHeader';
+export type { PageHeaderProps } from './components/PageHeader';
+export { SubNav } from './components/SubNav';
+export type { SubNavProps, SubNavTab } from './components/SubNav';
+export { AppShell } from './components/AppShell';
+export type { AppShellProps } from './components/AppShell';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

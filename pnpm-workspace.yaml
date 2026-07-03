@@ -3,5 +3,6 @@ packages:
   - "packages/*"
   - "functions"
 allowBuilds:
+  '@sentry/cli': false
   esbuild: true
   unrs-resolver: true

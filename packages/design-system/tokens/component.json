@@ -41,5 +41,39 @@
   },
   "divider": {
     "thickness":     "1px"
+  },
+  "header": {
+    "height":        "96px"
+  },
+  "sidebar": {
+    "width":         "240px",
+    "collapsed-width": "64px"
+  },
+  "subnav": {
+    "height":        "48px",
+    "underline":     "2px"
+  },
+  "table": {
+    "row-height":    "64px",
+    "cell-px":       "20px",
+    "cell-py":       "14px",
+    "header-spacing": "0.08em"
+  },
+  "modal": {
+    "width-sm":      "480px",
+    "width-md":      "560px",
+    "width-lg":      "640px"
+  },
+  "toast": {
+    "border-left":   "3px"
+  },
+  "card": {
+    "radius":        "{radius.md}"
+  },
+  "stepper": {
+    "step-size":     "32px"
+  },
+  "skeleton": {
+    "radius":        "{radius.sm}"
   }
 }
