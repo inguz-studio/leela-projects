@@ -17,6 +17,10 @@
 // Ou dentro de firebase emulators:exec + a suite de testes (que chama seedTenants).
 // =============================================================================
 
+// Seed é script dev-only (nunca roda em produção — ver assertEmulatorOnly);
+// console.log é a saída natural de um script de linha de comando.
+/* eslint-disable no-console */
+
 import * as admin from 'firebase-admin';
 
 // IDs canônicos — fixos para os seeds serem idempotentes
@@ -59,32 +63,58 @@ export const TENANT_SEEDS: TenantSeed[] = [
 ];
 
 /**
+ * Guard anti-produção (F5 — review S1600): o seed SÓ roda contra o Emulator.
+ * Lança erro se não houver FIRESTORE_EMULATOR_HOST e o projectId não for
+ * claramente de demo (prefixo 'demo-').
+ */
+function assertEmulatorOnly(): void {
+  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
+  const projectId =
+    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
+
+  if (!emulatorHost && !projectId.startsWith('demo-')) {
+    throw new Error(
+      '[seed] BLOQUEADO: seedTenants só roda no Emulator. ' +
+        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
+        'NUNCA execute este seed contra produção.'
+    );
+  }
+}
+
+/**
  * Popula a coleção `tenants` no Firestore (Emulator).
  * Idempotente — usa set() com merge, então reprocessar não duplica.
+ * `criadoEm` é gravado APENAS na criação (F8); reruns só tocam `atualizadoEm`.
  */
 export async function seedTenants(db: admin.firestore.Firestore): Promise<void> {
+  assertEmulatorOnly();
+
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   const batch = db.batch();
 
   for (const tenant of TENANT_SEEDS) {
     const ref = db.collection('tenants').doc(tenant.id);
-    batch.set(
-      ref,
-      {
-        id: tenant.id,
-        nome: tenant.nome,
-        slug: tenant.slug,
-        status: tenant.status,
-        ownerUid: tenant.ownerUid,
-        tipo: tenant.tipo,
-        gmvAcumulado: tenant.gmvAcumulado,
-        eventosAtivos: tenant.eventosAtivos,
-        criadoEm: now,
-        atualizadoEm: now,
-      },
-      { merge: true }
-    );
+    const snap = await ref.get();
+
+    const data: Record<string, unknown> = {
+      id: tenant.id,
+      nome: tenant.nome,
+      slug: tenant.slug,
+      status: tenant.status,
+      ownerUid: tenant.ownerUid,
+      tipo: tenant.tipo,
+      gmvAcumulado: tenant.gmvAcumulado,
+      eventosAtivos: tenant.eventosAtivos,
+      atualizadoEm: now,
+    };
+
+    // criadoEm só na criação — rerun não regrava (F8)
+    if (!snap.exists) {
+      data['criadoEm'] = now;
+    }
+
+    batch.set(ref, data, { merge: true });
   }
 
   await batch.commit();
