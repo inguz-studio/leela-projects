@@ -1,56 +1,56 @@
 {
   "surface": {
-    "base":    "{neutral.950}",
-    "raised":  "{neutral.900}",
+    "base": "{neutral.950}",
+    "raised": "{neutral.900}",
     "overlay": "{neutral.800}",
-    "high":    "{neutral.700}",
-    "sunken":  "{neutral.950}"
+    "high": "{neutral.700}",
+    "sunken": "{neutral.950}"
   },
   "text": {
-    "primary":   "{neutral.50}",
+    "primary": "{neutral.50}",
     "secondary": "{neutral.300}",
-    "tertiary":  "{neutral.500}",
-    "disabled":  "{neutral.600}",
-    "brand":     "{primary.500}",
-    "danger":    "{danger.400}",
-    "success":   "{success.400}"
+    "tertiary": "{neutral.400}",
+    "disabled": "{neutral.600}",
+    "brand": "{primary.500}",
+    "danger": "{danger.300}",
+    "success": "{success.400}"
   },
   "action": {
-    "primary":            "{primary.500}",
-    "primary-hover":      "{primary.400}",
-    "primary-pressed":    "{primary.600}",
-    "primary-disabled":   "{neutral.700}",
-    "primary-fg":         "{neutral.50}",
-    "secondary":          "{neutral.800}",
-    "secondary-hover":    "{neutral.700}",
-    "secondary-fg":       "{neutral.50}",
-    "ghost-hover":        "{neutral.800}",
-    "ghost-fg":           "{neutral.50}",
-    "destructive":        "{danger.500}",
-    "destructive-hover":  "{danger.400}",
-    "destructive-pressed":"{danger.600}",
-    "destructive-fg":     "{neutral.50}"
+    "primary": "{primary.500}",
+    "primary-hover": "{primary.400}",
+    "primary-pressed": "{primary.300}",
+    "primary-disabled": "{neutral.700}",
+    "primary-fg": "{neutral.950}",
+    "secondary": "{neutral.800}",
+    "secondary-hover": "{neutral.700}",
+    "secondary-fg": "{neutral.50}",
+    "ghost-hover": "{neutral.800}",
+    "ghost-fg": "{neutral.50}",
+    "destructive": "{danger.500}",
+    "destructive-hover": "{danger.400}",
+    "destructive-pressed": "{danger.300}",
+    "destructive-fg": "{neutral.950}"
   },
   "border": {
-    "subtle":  "{neutral.800}",
+    "subtle": "{neutral.800}",
     "default": "{neutral.700}",
-    "strong":  "{neutral.500}",
-    "brand":   "{primary.500}",
-    "focus":   "{primary.400}",
-    "danger":  "{danger.500}"
+    "strong": "{neutral.500}",
+    "brand": "{primary.500}",
+    "focus": "{primary.400}",
+    "danger": "{danger.500}"
   },
   "feedback": {
-    "success":         "{success.500}",
-    "success-fg":      "{success.50}",
+    "success": "{success.500}",
+    "success-fg": "{success.50}",
     "success-surface": "{success.900}",
-    "danger":          "{danger.500}",
-    "danger-fg":       "{danger.50}",
-    "danger-surface":  "{danger.900}",
-    "warning":         "{warning.500}",
-    "warning-fg":      "{warning.900}",
+    "danger": "{danger.500}",
+    "danger-fg": "{danger.50}",
+    "danger-surface": "{danger.900}",
+    "warning": "{warning.500}",
+    "warning-fg": "{warning.100}",
     "warning-surface": "{warning.900}",
-    "info":            "{info.500}",
-    "info-fg":         "{info.50}",
-    "info-surface":    "{info.900}"
+    "info": "{info.500}",
+    "info-fg": "{info.50}",
+    "info-surface": "{info.900}"
   }
 }

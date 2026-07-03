@@ -52,6 +52,31 @@ function refToValue(ref: string, primitives: TokenRecord): string {
 }
 
 // ---------------------------------------------------------------------------
+// Deep merge (per-theme semantic overrides over the shared semantic base)
+// ---------------------------------------------------------------------------
+
+/**
+ * Deep-merges `overrides` over `base` without mutating either.
+ * Used to apply per-theme semantic overrides (e.g. semantic.leela.json)
+ * on top of the shared semantic.json before generating CSS/RN outputs.
+ */
+export function mergeTokens(base: TokenRecord, overrides: TokenRecord): TokenRecord {
+  const result: TokenRecord = { ...base };
+  for (const [key, value] of Object.entries(overrides)) {
+    const existing = result[key];
+    if (
+      typeof value === 'object' && value !== null && !Array.isArray(value) &&
+      typeof existing === 'object' && existing !== null && !Array.isArray(existing)
+    ) {
+      result[key] = mergeTokens(existing as TokenRecord, value as TokenRecord);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Flatten nested token object → flat list of [cssVarName, value] pairs
 // ---------------------------------------------------------------------------
 

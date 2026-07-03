@@ -1,0 +1,52 @@
+{
+  "surface": {
+    "base":    "{neutral.50}",
+    "raised":  "{neutral.0}",
+    "overlay": "{neutral.100}",
+    "high":    "{neutral.200}",
+    "sunken":  "{neutral.100}"
+  },
+  "text": {
+    "primary":   "{neutral.900}",
+    "secondary": "{neutral.700}",
+    "tertiary":  "{neutral.600}",
+    "disabled":  "{neutral.400}",
+    "danger":    "{danger.700}",
+    "success":   "{success.700}"
+  },
+  "action": {
+    "primary-hover":      "{primary.400}",
+    "primary-pressed":    "{primary.600}",
+    "primary-disabled":   "{neutral.200}",
+    "primary-fg":         "{neutral.0}",
+    "secondary":          "{neutral.100}",
+    "secondary-hover":    "{neutral.200}",
+    "secondary-fg":       "{neutral.900}",
+    "ghost-hover":        "{neutral.100}",
+    "ghost-fg":           "{neutral.900}",
+    "destructive":        "{danger.600}",
+    "destructive-hover":  "{danger.700}",
+    "destructive-pressed":"{danger.800}",
+    "destructive-fg":     "{neutral.0}"
+  },
+  "border": {
+    "subtle":  "{neutral.200}",
+    "default": "{neutral.300}",
+    "strong":  "{neutral.500}",
+    "focus":   "{primary.500}",
+    "danger":  "{danger.600}"
+  },
+  "feedback": {
+    "success":         "{success.600}",
+    "success-fg":      "{success.800}",
+    "success-surface": "{success.100}",
+    "danger":          "{danger.600}",
+    "danger-fg":       "{danger.800}",
+    "danger-surface":  "{danger.100}",
+    "warning":         "{warning.600}",
+    "warning-fg":      "{warning.900}",
+    "warning-surface": "{warning.100}",
+    "info-fg":         "{info.800}",
+    "info-surface":    "{info.100}"
+  }
+}

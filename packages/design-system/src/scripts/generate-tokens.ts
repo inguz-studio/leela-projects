@@ -12,20 +12,26 @@ import { fileURLToPath } from 'node:url';
 // Static JSON imports (tsx resolves these natively, resolveJsonModule in base tsconfig)
 import primitivesBrasa from '../../tokens/primitives.brasa.json';
 import primitivesLeela from '../../tokens/primitives.leela.json';
-import semantic from '../../tokens/semantic.json';
+import semanticBase from '../../tokens/semantic.json';
+import semanticLeela from '../../tokens/semantic.leela.json';
 import component from '../../tokens/component.json';
 
-import { generateCSS, generateRNTheme, type TokenRecord } from '../theme/generate.js';
+import { generateCSS, generateRNTheme, mergeTokens, type TokenRecord } from '../theme/generate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = resolve(__dirname, '..', '..');
+
+// Semantic por tema: base compartilhada + overrides do tema claro (leela).
+// A base descreve o tema escuro (brasa); leela inverte os papéis dos neutros.
+const semanticBrasa = semanticBase as TokenRecord;
+const semanticLeelaMerged = mergeTokens(semanticBase as TokenRecord, semanticLeela as TokenRecord);
 
 // ---------------------------------------------------------------------------
 // Generate CSS files
 // ---------------------------------------------------------------------------
 
-const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semantic as TokenRecord, component as TokenRecord);
-const leelaCSS = generateCSS('leela', primitivesLeela as TokenRecord, semantic as TokenRecord, component as TokenRecord);
+const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord);
+const leelaCSS = generateCSS('leela', primitivesLeela as TokenRecord, semanticLeelaMerged, component as TokenRecord);
 const indexCSS = `/* Leela Design System — all themes combined */\n\n${brasaCSS}\n\n${leelaCSS}`;
 
 const themesDir = resolve(pkg, 'themes');
@@ -39,8 +45,8 @@ writeFileSync(resolve(themesDir, 'index.css'), indexCSS, 'utf8');
 // Generate RN theme file
 // ---------------------------------------------------------------------------
 
-const brasaRN = generateRNTheme(primitivesBrasa as TokenRecord, semantic as TokenRecord, component as TokenRecord);
-const leelaRN = generateRNTheme(primitivesLeela as TokenRecord, semantic as TokenRecord, component as TokenRecord);
+const brasaRN = generateRNTheme(primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord);
+const leelaRN = generateRNTheme(primitivesLeela as TokenRecord, semanticLeelaMerged, component as TokenRecord);
 
 const rnContent = `// AUTO-GENERATED — do not edit manually. Run: pnpm generate-tokens
 import type { FlatTokens } from './generate';

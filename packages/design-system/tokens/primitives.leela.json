@@ -1,6 +1,6 @@
 {
   "primary": {
-    "50":  "#FFF0F0",
+    "50": "#FFF0F0",
     "100": "#FFD5D8",
     "200": "#FF9EA6",
     "300": "#E85662",
@@ -12,7 +12,7 @@
     "900": "#230409"
   },
   "accent": {
-    "50":  "#F9FEE5",
+    "50": "#F9FEE5",
     "100": "#EFFBC9",
     "200": "#DDF594",
     "300": "#CFEE62",
@@ -24,7 +24,7 @@
     "900": "#364004"
   },
   "danger": {
-    "50":  "#FFF2F2",
+    "50": "#FFF2F2",
     "100": "#FFDDDD",
     "200": "#FFBBBB",
     "300": "#FF8888",
@@ -36,7 +36,7 @@
     "900": "#660000"
   },
   "success": {
-    "50":  "#F0FDF4",
+    "50": "#F0FDF4",
     "100": "#DCFCE7",
     "200": "#BBF7D0",
     "300": "#86EFAC",
@@ -48,7 +48,7 @@
     "900": "#14532D"
   },
   "warning": {
-    "50":  "#FFFBEB",
+    "50": "#FFFBEB",
     "100": "#FEF3C7",
     "200": "#FDE68A",
     "300": "#FCD34D",
@@ -60,7 +60,7 @@
     "900": "#78350F"
   },
   "info": {
-    "50":  "#EFF6FF",
+    "50": "#EFF6FF",
     "100": "#DBEAFE",
     "200": "#BFDBFE",
     "300": "#93C5FD",
@@ -72,56 +72,56 @@
     "900": "#1E3A8A"
   },
   "neutral": {
-    "0":   "#1A1A1A",
-    "50":  "#F9F6F3",
-    "100": "#F0EBE7",
-    "200": "#E0D9D3",
-    "300": "#BFBAB5",
-    "400": "#999390",
-    "500": "#736E6B",
-    "600": "#54504E",
-    "700": "#3A3736",
-    "800": "#EDE9E5",
-    "900": "#F5F2EE",
-    "950": "#FDFAF7"
+    "0": "#FFFFFF",
+    "50": "#FDFAF7",
+    "100": "#F5F1EC",
+    "200": "#EAE4DD",
+    "300": "#D8D1C8",
+    "400": "#A8A199",
+    "500": "#8A837B",
+    "600": "#6E6862",
+    "700": "#57514B",
+    "800": "#3A3531",
+    "900": "#262220",
+    "950": "#171412"
   },
   "font": {
     "family": {
       "display": "\"Syne\", sans-serif",
-      "ui":      "\"Figtree\", sans-serif",
-      "mono":    "\"JetBrains Mono\", monospace"
+      "ui": "\"Figtree\", sans-serif",
+      "mono": "\"JetBrains Mono\", monospace"
     },
     "size": {
-      "xs":  "0.625rem",
-      "sm":  "0.75rem",
-      "base":"0.875rem",
-      "md":  "1rem",
-      "lg":  "1.25rem",
-      "xl":  "1.5rem",
+      "xs": "0.625rem",
+      "sm": "0.75rem",
+      "base": "0.875rem",
+      "md": "1rem",
+      "lg": "1.25rem",
+      "xl": "1.5rem",
       "2xl": "2rem",
       "3xl": "2.5rem",
       "4xl": "3rem"
     },
     "weight": {
-      "regular":  "400",
+      "regular": "400",
       "semibold": "600",
-      "bold":     "700"
+      "bold": "700"
     },
     "lineHeight": {
       "tight": "1.2",
-      "base":  "1.5",
+      "base": "1.5",
       "loose": "1.8"
     }
   },
   "spacing": {
-    "0":  "0px",
-    "1":  "4px",
-    "2":  "8px",
-    "3":  "12px",
-    "4":  "16px",
-    "5":  "20px",
-    "6":  "24px",
-    "8":  "32px",
+    "0": "0px",
+    "1": "4px",
+    "2": "8px",
+    "3": "12px",
+    "4": "16px",
+    "5": "20px",
+    "6": "24px",
+    "8": "32px",
     "10": "40px",
     "12": "48px",
     "16": "64px",
@@ -130,33 +130,33 @@
   },
   "radius": {
     "none": "0px",
-    "sm":   "4px",
-    "md":   "8px",
-    "lg":   "12px",
-    "xl":   "16px",
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px",
     "pill": "9999px"
   },
   "elevation": {
-    "0":     "none",
-    "1":     "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
-    "2":     "0 4px 6px -1px rgba(0,0,0,0.15), 0 2px 4px -2px rgba(0,0,0,0.15)",
-    "3":     "0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2)",
+    "0": "none",
+    "1": "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",
+    "2": "0 4px 6px -1px rgba(0,0,0,0.15), 0 2px 4px -2px rgba(0,0,0,0.15)",
+    "3": "0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2)",
     "brand": "0 0 20px 0 rgba(122,21,32,0.5)"
   },
   "motion": {
     "duration": {
-      "fast":   "150ms",
+      "fast": "150ms",
       "normal": "250ms",
-      "slow":   "400ms"
+      "slow": "400ms"
     },
     "easing": {
       "default": "cubic-bezier(0.4, 0, 0.2, 1)",
-      "enter":   "cubic-bezier(0, 0, 0.2, 1)",
-      "exit":    "cubic-bezier(0.4, 0, 1, 1)"
+      "enter": "cubic-bezier(0, 0, 0.2, 1)",
+      "exit": "cubic-bezier(0.4, 0, 1, 1)"
     }
   },
   "icon": {
-    "size":   "24px",
+    "size": "24px",
     "stroke": "1.75"
   }
 }
