@@ -44,8 +44,7 @@ export function initFirebase(): void {
   const useEmulator =
     explicit === undefined ? import.meta.env.DEV : explicit === 'true';
 
-  initLeela({
-    useEmulator,
-    firebaseConfig: readFirebaseConfig(),
-  });
+  // exactOptionalPropertyTypes: nunca passar firebaseConfig: undefined
+  const firebaseConfig = readFirebaseConfig();
+  initLeela(firebaseConfig ? { useEmulator, firebaseConfig } : { useEmulator });
 }
