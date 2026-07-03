@@ -25,7 +25,7 @@ tags:
 ## 🔨 Fazendo
 
 - [ ] **O0** · E00 · Fundação técnica — 5/10T (S000-1 completo + CI; S000-2 + S000-4 em execução; falta Sentry)
-- [ ] **O0** · E01 · Design System (tema brasa) — 0/10T (S001-1/S001-2 em execução)
+- [ ] **O0** · E01 · Design System (tema brasa) — 4/10T (tokens+ThemeProvider+Button+primitivos ✅ · 199 testes; S001-3 em execução)
 
 
 
