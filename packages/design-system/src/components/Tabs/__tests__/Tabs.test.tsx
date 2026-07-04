@@ -63,8 +63,12 @@ describe('Tabs', () => {
 
   it('navigates with arrow keys (Radix roving focus)', async () => {
     render(<Tabs tabs={TABS} />);
-    const first = screen.getByRole('tab', { name: /Inscritos/ });
-    first.focus();
+    // Entra no tablist como o usuário: Tab (act-wrapped via user-event).
+    // `.focus()` cru disparava o onFocus do RovingFocusGroup do Radix
+    // (setState de currentTabStopId) FORA de act → warning determinístico.
+    // Bônus: também prova o roving tabindex (só a aba ativa é tabbável).
+    await userEvent.tab();
+    expect(screen.getByRole('tab', { name: /Inscritos/ })).toHaveFocus();
     await userEvent.keyboard('{ArrowRight}');
     expect(screen.getByRole('tab', { name: /Kits/ })).toHaveFocus();
     expect(screen.getByRole('tab', { name: /Kits/ })).toHaveAttribute(
