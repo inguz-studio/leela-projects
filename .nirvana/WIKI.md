@@ -57,3 +57,7 @@
 - **`.nirvana/outputs/<trace>/`** — sumários, gates e reviews (gitignored). Trace atual: `leela-build-2d6ee98d`.
 - **`leela-specs/modelo-de-dados-firestore.md`** — modelo de dados Firestore (coleções, ∑ agregados, 🔁 desnormalização, RNs). Fonte de verdade das coleções.
 - Complementos: `leela-specs/{convencoes-codigo,definition-of-done,estrategia-testes,governanca-design}.md`, `adr/`.
+
+## 6. RTK — economia de tokens (obrigatório p/ agentes)
+
+`rtk` (instalado em `~/.local/bin`, auditado) comprime saída de comandos verbosos 60-90% antes de virar contexto. **Prefixe**: `rtk git status`, `rtk git log`, `rtk vitest run ...`, `rtk tsc`, `rtk grep`/`rtk rg`, `rtk ls`/`rtk tree`, `rtk err <build>`. **NÃO prefixe**: `git diff` (denso, ganho ~4%), commits/push, nem comandos cuja saída crua você precise citar como evidência (reviews/gates citam cru). Falhas preservam exit code + stderr integral sob `[FAIL]`. **PROIBIDO**: `rtk proxy` e `rtk run` (deny rules de segurança, CVE-2026-33068).

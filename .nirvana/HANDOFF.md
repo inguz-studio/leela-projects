@@ -66,6 +66,9 @@ Para CADA lote abaixo: o WIP não commitado (se houver) está no worktree; inven
   reler do disco) · `.emu-mutex` (emulator/pipeline pesado) · `.index-mutex` (barrels compartilhados).
 - Emulator: JAVA_HOME="$HOME/.jdks/jdk-21.0.11+10" (fora do PATH), `--only firestore,auth`.
   **Baseline: 531/531 zero skip.** Turbo concurrency 6 / metro maxWorkers 2 (não subir).
+- **WIKI + RTK (novos, obrigatórios):** todo agente lê `.nirvana/WIKI.md` como PRIMEIRA leitura
+  (substitui escanear o repo) e prefixa comandos verbosos com `rtk` (protocolo na §6 do WIKI;
+  `rtk proxy`/`rtk run` PROIBIDOS — deny rules em .claude/settings.json).
 - Ritual por lote: review antagonista → testes → KANBAN+CHECKLIST → audit (trace leela-build-2d6ee98d)
   → push. Relatórios em .nirvana/outputs/<trace>/ (gitignored). Emulator-only. Git Bash.
 - **Regra permanente do Vitor:** ao se aproximar de limite de cota/contexto → atualizar este HANDOFF
