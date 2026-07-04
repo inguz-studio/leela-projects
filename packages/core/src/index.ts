@@ -234,3 +234,6 @@ export {
   buildInstallmentOptions,
 } from './finance/calc';
 
+// Rollups macro da plataforma (E16-S1605-T1/T2 · RN-409)
+export type { TenantHealth, TenantRollup, PlatformRollups } from './platform/rollups';
+export { PLATFORM_ROLLUPS_DOC_PATH, deriveTenantHealth } from './platform/rollups';
