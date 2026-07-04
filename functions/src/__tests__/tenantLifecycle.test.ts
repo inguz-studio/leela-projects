@@ -16,6 +16,7 @@ import { transitionTenant } from '../platform/tenantLifecycle';
 type AnyRec = Record<string, unknown>;
 
 const txUpdate = vi.fn();
+const txSet = vi.fn();
 let currentStatus = 'ativo';
 let docExists = true;
 
@@ -24,15 +25,23 @@ const txGet = vi.fn(async () => ({
   get: (_field: string) => currentStatus,
 }));
 
-const runTransaction = vi.fn(async (fn: (tx: AnyRec) => Promise<void>) => {
-  await fn({ get: txGet, update: txUpdate });
-});
+const runTransaction = vi.fn(
+  async (fn: (tx: AnyRec) => Promise<unknown>) => {
+    return fn({ get: txGet, update: txUpdate, set: txSet });
+  }
+);
+
+// Ref do tenant precisa expor .collection('lifecycleAudit').doc() — trilha
+// de auditoria da S1601-T2 é gravada na mesma transação.
+const tenantRef = {
+  collection: () => ({ doc: () => ({ __audit: true }) }),
+};
 
 function stubFirestore(): void {
   Object.defineProperty(admin, 'firestore', {
     value: Object.assign(
       () => ({
-        collection: () => ({ doc: () => ({}) }),
+        collection: () => ({ doc: () => tenantRef }),
         runTransaction,
       }),
       { FieldValue: { serverTimestamp: () => '__ts__' } }
@@ -52,6 +61,7 @@ function run(data: AnyRec, ctx: AnyRec = adminCtx): Promise<unknown> {
 
 beforeEach(() => {
   txUpdate.mockClear();
+  txSet.mockClear();
   txGet.mockClear();
   runTransaction.mockClear();
   currentStatus = 'ativo';
@@ -92,13 +102,21 @@ describe('transitionTenant — autorização e validação (RN-402)', () => {
     expect(txUpdate).not.toHaveBeenCalled();
   });
 
-  it('transição válida ativo→suspenso → aplica status', async () => {
+  it('transição válida ativo→suspenso → aplica status + auditoria (quem/quando)', async () => {
     currentStatus = 'ativo';
     const res = (await run({ tenantId: 'castelo-producoes', to: 'suspenso' })) as AnyRec;
     expect(res).toMatchObject({ success: true, status: 'suspenso' });
     expect(txUpdate).toHaveBeenCalledWith(expect.anything(), {
       status: 'suspenso',
       atualizadoEm: '__ts__',
+      atualizadoPor: 'admin-1',
+    });
+    // Trilha lifecycleAudit gravada na MESMA transação (S1601-T2)
+    expect(txSet).toHaveBeenCalledWith(expect.anything(), {
+      from: 'ativo',
+      to: 'suspenso',
+      por: 'admin-1',
+      em: '__ts__',
     });
   });
 

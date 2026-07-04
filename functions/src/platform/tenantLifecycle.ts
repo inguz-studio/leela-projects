@@ -9,8 +9,15 @@
 // (a rule de `tenants` só permite escrita ao platform_admin e trava o enum).
 //
 // Autorização: só platform_admin transita (RN-402/RN-401).
-// Escopo mínimo do F7; a story completa de lifecycle é LEELA-S1601-T2
-// (auditoria rica, Sentry, efeitos colaterais).
+//
+// LEELA-S1601-T2 (auditoria mínima — quem/quando):
+//   - o doc do tenant registra `atualizadoPor` (uid do admin) a cada transição;
+//   - trilha imutável em `tenants/{id}/lifecycleAudit/{autoId}` (from → to,
+//     quem, quando) gravada NA MESMA transação da mudança de status;
+//   - suspensão apenas muda status — dados de domínio ficam intactos (a Rule
+//     de S1600-T3 bloqueia escrita de cliente enquanto `suspenso`).
+//   - Sentry: functions ainda não têm SDK de Sentry no workspace (pendência
+//     registrada); erros saem por logger.error + HttpsError estruturado.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -70,8 +77,9 @@ export const transitionTenant = https.onCall(async (data: unknown, context) => {
   // ── 3. Ler status atual + validar transição + aplicar (transação) ─────
   const db = admin.firestore();
   const ref = db.collection('tenants').doc(input.tenantId);
+  const callerUid = context.auth.uid;
 
-  await db.runTransaction(async (tx) => {
+  const fromStatus = await db.runTransaction<TenantStatus>(async (tx) => {
     const snap = await tx.get(ref);
 
     if (!snap.exists) {
@@ -90,15 +98,31 @@ export const transitionTenant = https.onCall(async (data: unknown, context) => {
       );
     }
 
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    // Suspensão/reativação só muda status — nenhum doc de domínio é tocado
+    // (dados preservados, RN-402). Auditoria mínima: quem/quando no doc.
     tx.update(ref, {
       status: input.to,
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: now,
+      atualizadoPor: callerUid,
     });
+
+    // Trilha de auditoria imutável, na MESMA transação da mudança
+    tx.set(ref.collection('lifecycleAudit').doc(), {
+      from: currentStatus,
+      to: input.to,
+      por: callerUid,
+      em: now,
+    });
+
+    return currentStatus;
   });
 
   logger.info('tenant_transition', {
-    callerUid: context.auth.uid,
+    callerUid,
     tenantId: input.tenantId,
+    from: fromStatus,
     to: input.to,
   });
 
