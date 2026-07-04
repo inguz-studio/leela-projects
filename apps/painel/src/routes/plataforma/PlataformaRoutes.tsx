@@ -15,6 +15,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { PlatformShell } from './_components/PlatformShell';
 import { TenantsListRoute } from './tenants/TenantsListRoute';
+import { TenantDetailRoute } from './tenants/TenantDetailRoute';
 
 export function PlataformaRoutes(): JSX.Element {
   return (
@@ -23,6 +24,7 @@ export function PlataformaRoutes(): JSX.Element {
         <Route element={<PlatformShell />}>
           <Route index element={<Navigate to="tenants" replace />} />
           <Route path="tenants" element={<TenantsListRoute />} />
+          <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
         </Route>
       </Routes>
     </ToastProvider>
