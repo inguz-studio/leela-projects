@@ -199,3 +199,17 @@ export { canTransition } from './platform/tenant';
 // Papéis e guards puros (E16-S1600-T2)
 export type { Role, AuthClaims } from './platform/roles';
 export { isPlatformAdmin, belongsToTenant, isTenantMember, canSetClaims } from './platform/roles';
+
+// Termos comerciais por tenant (E16-S1602-T1 · RN-404/405/406/410)
+export type {
+  InstallmentRules,
+  Anticipation,
+  CommercialTerms,
+  CommercialTermsInput,
+} from './platform/commercialTerms';
+export {
+  DEFAULT_COMMERCIAL_TERMS,
+  validateCommercialTerms,
+  isValidTermsVersionBump,
+} from './platform/commercialTerms';
+

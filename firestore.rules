@@ -98,12 +98,65 @@ service cloud.firestore {
                             && isValidTenantStatus(request.resource.data.status);
       allow delete: if isPlatformAdmin();
 
-      // `commercialTerms/current` — termos por tenant
-      // Leitura: membro do tenant ou platform_admin.
-      // Escrita: APENAS platform_admin (RN-404).
+      // `commercialTerms/{doc}` — termos por tenant (E16 · S1602-T1)
+      //
+      // Leitura: membro do tenant (read-only) ou platform_admin.
+      // Escrita: APENAS platform_admin (RN-404) — defesa em profundidade:
+      // a Rule revalida ranges (RN-405: saasMonthlyFee 0 é VÁLIDO) e o
+      // versionamento que o core/api-client já validam no cliente.
+      //
+      // Versionamento (fonte de auditoria econômica — RN-406):
+      //   - `current`: create exige versao == 1; update exige bump exato
+      //     (versao == anterior + 1); delete NEGADO (termo vigente nunca some);
+      //   - snapshots `v{n}`: create-only com nome coerente à versao
+      //     (histórico imutável — update/delete negados até para admin).
       match /commercialTerms/{doc} {
+
+        /** Shape completo dos termos + ranges (RN-404/405/410). */
+        function termsShapeValido() {
+          return request.resource.data.keys().hasAll([
+              'platformFeePct', 'installmentRules', 'anticipation',
+              'communityMonthlyEnabled', 'saasMonthlyFee', 'versao',
+              'atualizadoPor', 'atualizadoEm'
+            ])
+            && request.resource.data.platformFeePct is number
+            && request.resource.data.platformFeePct >= 0
+            && request.resource.data.platformFeePct <= 100
+            && request.resource.data.saasMonthlyFee is number
+            && request.resource.data.saasMonthlyFee >= 0
+            && request.resource.data.installmentRules is map
+            && request.resource.data.installmentRules.maxParcelas is int
+            && request.resource.data.installmentRules.maxParcelas >= 1
+            && request.resource.data.installmentRules.jurosAoMes is number
+            && request.resource.data.installmentRules.jurosAoMes >= 0
+            && request.resource.data.installmentRules.parcelaMinima is number
+            && request.resource.data.installmentRules.parcelaMinima >= 0
+            && request.resource.data.anticipation is map
+            && request.resource.data.anticipation.disponivel is bool
+            && (!('custoPct' in request.resource.data.anticipation)
+                || (request.resource.data.anticipation.custoPct is number
+                    && request.resource.data.anticipation.custoPct >= 0
+                    && request.resource.data.anticipation.custoPct <= 100))
+            && request.resource.data.communityMonthlyEnabled is bool
+            && request.resource.data.versao is int
+            && request.resource.data.versao >= 1
+            && request.resource.data.atualizadoPor is string;
+        }
+
         allow read: if isTenantMember(tenantId) || isPlatformAdmin();
-        allow write: if isPlatformAdmin();
+        // create: `current` nasce na versao 1; snapshot exige nome coerente
+        allow create: if isPlatformAdmin()
+                      && termsShapeValido()
+                      && (doc == 'current'
+                            ? request.resource.data.versao == 1
+                            : doc == 'v' + string(request.resource.data.versao));
+        // update: SÓ `current`, com bump exato (snapshots são imutáveis)
+        allow update: if isPlatformAdmin()
+                      && doc == 'current'
+                      && termsShapeValido()
+                      && request.resource.data.versao == resource.data.versao + 1;
+        // delete: NUNCA — termo vigente não some; histórico é preservado
+        allow delete: if false;
       }
 
       // `subscriptions/{subId}` — mensalidades da comunidade (S1603)

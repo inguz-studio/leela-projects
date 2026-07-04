@@ -502,12 +502,30 @@ describe('pagamentos — escrita bloqueada ao cliente', () => {
 });
 
 // ── commercialTerms: escrita só platform_admin (RN-404) ──────────────────
+// S1602-T1 endureceu a Rule: além do papel, a escrita exige shape completo
+// + versionamento (current: bump exato). Payloads aqui seguem o shape;
+// a suíte dedicada é commercialTermsRules.integration.test.ts.
 describe('commercialTerms — escrita só platform_admin (RN-404)', () => {
+  /** Payload de termos com shape completo (S1602-T1). */
+  function termsPayload(versao: number, overrides: Record<string, unknown> = {}) {
+    return {
+      platformFeePct: 10.5,
+      installmentRules: { maxParcelas: 12, jurosAoMes: 0, parcelaMinima: 10 },
+      anticipation: { disponivel: false },
+      communityMonthlyEnabled: false,
+      saasMonthlyFee: 0,
+      versao,
+      atualizadoPor: PLATFORM_ADMIN_UID,
+      atualizadoEm: new Date(),
+      ...overrides,
+    };
+  }
+
   beforeEach(async () => {
     await adminDb
       .collection('tenants').doc(CASTELO_ID)
       .collection('commercialTerms').doc('current')
-      .set({ platformFeePct: 10.5, saasMonthlyFee: 0 });
+      .set(termsPayload(1));
   });
 
   it('platform_admin escreve commercialTerms', async () => {
@@ -515,7 +533,7 @@ describe('commercialTerms — escrita só platform_admin (RN-404)', () => {
     await assertSucceeds(
       setDoc(
         doc(ctx.firestore(), 'tenants', CASTELO_ID, 'commercialTerms', 'current'),
-        { platformFeePct: 12, saasMonthlyFee: 0 }
+        termsPayload(2, { platformFeePct: 12 })
       )
     );
   });

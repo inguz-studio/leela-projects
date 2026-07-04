@@ -102,9 +102,10 @@ export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions } from './fireba
 export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 
 // ---------------------------------------------------------------------------
-// Clubs — leitura tipada de `clubes` (LEELA-E05 · S101-T1)
+// Clubs — leitura tipada de `clubes` (S101-T1) + `membros` (S103-T1)
 // ---------------------------------------------------------------------------
-export { getClube, listClubesByTenant, listClubesByOwner } from './clubs';
+export { getClube, listClubesByTenant, listClubesByOwner, listMembros } from './clubs';
+export type { ListMembrosOptions } from './clubs';
 
 // ---------------------------------------------------------------------------
 // Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
@@ -146,3 +147,8 @@ export {
   logout,
   getClaims,
 } from './auth';
+
+// ---------------------------------------------------------------------------
+// Plataforma — termos comerciais por tenant (LEELA-E16 · S1602-T1 · RN-404)
+// ---------------------------------------------------------------------------
+export { getCommercialTerms, saveCommercialTerms } from './platform/commercialTerms';
