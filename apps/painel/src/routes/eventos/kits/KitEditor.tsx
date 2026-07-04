@@ -1,0 +1,270 @@
+// =============================================================================
+// KitEditor — edição de kit em TELA CHEIA (S206-T1 · substitui o modal de
+// "tier"). Breadcrumb nível 4, 2 pontos de entrada (RN-217), identidade,
+// modalidades (chips removíveis + select), preço (aceita negativo — RN-211;
+// bloqueado após 1ª venda — RN-200), capacidade e checklist de itens (N:N,
+// RN-215). Nomenclatura "kit", nunca "tier" (RN-216). Presentational.
+// =============================================================================
+
+import * as React from 'react';
+import { Breadcrumb, Button, Chip, Input, useToast } from '@leela/design-system';
+import { MSG_PRECO_BLOQUEADO, precoBloqueado, type Evento, type ItemKit, type Kit } from '@leela/core';
+import type { SalvarKitInput } from '@leela/api-client';
+import type { ItemKitPayload } from './ItemKitModal';
+
+export type KitPayload = Omit<SalvarKitInput, 'tenantId'>;
+
+export interface KitEditorProps {
+  evento: Evento;
+  /** Kit a editar; null = novo kit (2º ponto de entrada — RN-217). */
+  kit: Kit | null;
+  itens: ItemKit[];
+  onSalvarKit: (kitId: string, input: KitPayload) => Promise<void>;
+  onSalvarItem: (itemId: string, input: ItemKitPayload) => Promise<void>;
+  onConcluir: () => void;
+}
+
+function slugify(nome: string): string {
+  const base = nome
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return base.length > 0 ? `kit-${base}` : `kit-${Date.now()}`;
+}
+
+export function KitEditor({
+  evento,
+  kit,
+  itens,
+  onSalvarKit,
+  onSalvarItem,
+  onConcluir,
+}: KitEditorProps): JSX.Element {
+  const { toast } = useToast();
+  const bloqueado = precoBloqueado(evento);
+
+  const [nome, setNome] = React.useState(kit?.nome ?? '');
+  const [precoStr, setPrecoStr] = React.useState(String(kit?.preco ?? 0));
+  const [capacidadeStr, setCapacidadeStr] = React.useState(String(kit?.capacidade ?? 0));
+  const [modalidades, setModalidades] = React.useState<string[]>(kit?.modalidades ?? []);
+  const [novaModalidade, setNovaModalidade] = React.useState('');
+  const [itensSel, setItensSel] = React.useState<Set<string>>(
+    () => new Set(kit ? itens.filter((i) => i.kits.includes(kit.id)).map((i) => i.id) : []),
+  );
+  const [erro, setErro] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const disponiveis = evento.modalidades.filter((m) => !modalidades.includes(m));
+
+  function addModalidade(m: string): void {
+    const t = m.trim();
+    if (t.length === 0 || modalidades.includes(t)) return;
+    setModalidades((prev) => [...prev, t]);
+    setNovaModalidade('');
+  }
+  function removeModalidade(m: string): void {
+    setModalidades((prev) => prev.filter((x) => x !== m));
+  }
+  function toggleItem(id: string): void {
+    setItensSel((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function salvar(): Promise<void> {
+    if (nome.trim().length === 0) {
+      setErro('Informe o nome do kit.');
+      return;
+    }
+    const preco = Number.parseFloat(precoStr.replace(',', '.'));
+    if (!Number.isFinite(preco)) {
+      setErro('Preço inválido.');
+      return;
+    }
+    const capacidade = Number.parseInt(capacidadeStr, 10);
+    setBusy(true);
+    try {
+      const kitId = kit?.id ?? slugify(nome);
+      await onSalvarKit(kitId, {
+        nome: nome.trim(),
+        preco,
+        capacidade: Number.isFinite(capacidade) ? capacidade : 0,
+        modalidades,
+      });
+      // Sincroniza a pertinência N:N (RN-215): item.kits inclui/exclui este kit.
+      await Promise.all(
+        itens
+          .filter((item) => {
+            const antes = item.kits.includes(kitId);
+            const agora = itensSel.has(item.id);
+            return antes !== agora;
+          })
+          .map((item) => {
+            const kits = itensSel.has(item.id)
+              ? [...item.kits, kitId]
+              : item.kits.filter((k) => k !== kitId);
+            return onSalvarItem(item.id, {
+              nome: item.nome,
+              tamanhado: item.tamanhado,
+              origem: item.origem,
+              exibirLogo: item.exibirLogo,
+              kits,
+              ...(item.marca !== undefined ? { marca: item.marca } : {}),
+            });
+          }),
+      );
+      toast({ title: kit ? 'Kit atualizado' : 'Kit criado', variant: 'success' });
+      onConcluir();
+    } catch {
+      toast({ title: 'Falha ao salvar o kit', variant: 'danger' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-[var(--spacing-6)]">
+      <Breadcrumb
+        items={[
+          { label: 'Eventos', href: '/eventos' },
+          { label: evento.nome, href: `/eventos/${evento.slug}` },
+          { label: 'Kits', href: `/eventos/${evento.slug}/kits` },
+          { label: 'Cadastro', href: `/eventos/${evento.slug}/kits` },
+          { label: kit ? kit.nome : 'Novo kit' },
+        ]}
+      />
+
+      <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
+        {kit ? `Editar ${kit.nome}` : 'Novo kit'}
+      </h1>
+
+      {/* Identidade */}
+      <section aria-label="Identidade do kit" className="flex flex-col gap-[var(--spacing-4)]">
+        <Input
+          id="kit-nome"
+          label="Nome do kit"
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          {...(erro && nome.trim().length === 0 ? { errorMessage: erro } : {})}
+        />
+      </section>
+
+      {/* Modalidades */}
+      <section aria-label="Modalidades" className="flex flex-col gap-[var(--spacing-3)]">
+        <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+          Modalidades
+        </span>
+        <div className="flex flex-wrap gap-[var(--spacing-2)]">
+          {modalidades.length === 0 ? (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Nenhuma modalidade.
+            </span>
+          ) : (
+            modalidades.map((m) => (
+              <Chip key={m} onRemove={() => removeModalidade(m)}>
+                {m}
+              </Chip>
+            ))
+          )}
+        </div>
+        <div className="flex items-end gap-[var(--spacing-2)]">
+          <label className="flex flex-col gap-[var(--spacing-1)]">
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              Adicionar modalidade
+            </span>
+            <select
+              aria-label="Adicionar modalidade"
+              value={novaModalidade}
+              onChange={(e) => setNovaModalidade(e.target.value)}
+              className="h-[var(--input-height)] rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-raised)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)]"
+            >
+              <option value="">Selecione…</option>
+              {disponiveis.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            variant="secondary"
+            disabled={novaModalidade === ''}
+            onClick={() => addModalidade(novaModalidade)}
+          >
+            Adicionar
+          </Button>
+        </div>
+      </section>
+
+      {/* Preço + capacidade */}
+      <section aria-label="Preço e capacidade" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+        <Input
+          id="kit-preco"
+          label="Preço (delta sobre a inscrição, aceita negativo)"
+          type="text"
+          inputMode="decimal"
+          value={precoStr}
+          onChange={(e) => setPrecoStr(e.target.value)}
+          disabled={bloqueado}
+          {...(bloqueado ? { errorMessage: MSG_PRECO_BLOQUEADO } : {})}
+        />
+        <Input
+          id="kit-capacidade"
+          label="Capacidade"
+          type="number"
+          value={capacidadeStr}
+          onChange={(e) => setCapacidadeStr(e.target.value)}
+        />
+      </section>
+
+      {/* Checklist de itens */}
+      <section aria-label="Itens do kit" className="flex flex-col gap-[var(--spacing-3)]">
+        <div className="flex items-center justify-between">
+          <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+            Itens do kit
+          </span>
+          <span role="status" className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            {itensSel.size} {itensSel.size === 1 ? 'item selecionado' : 'itens selecionados'}
+          </span>
+        </div>
+        {itens.length === 0 ? (
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Nenhum item no catálogo. Adicione itens no cadastro.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-[var(--spacing-2)]">
+            {itens.map((item) => (
+              <li key={item.id}>
+                <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
+                  <input
+                    type="checkbox"
+                    checked={itensSel.has(item.id)}
+                    onChange={() => toggleItem(item.id)}
+                  />
+                  {item.nome}
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="flex justify-end gap-[var(--spacing-3)]">
+        <Button variant="secondary" onClick={onConcluir} disabled={busy}>
+          Cancelar
+        </Button>
+        <Button variant="primary" onClick={() => void salvar()} disabled={busy}>
+          Salvar kit
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+KitEditor.displayName = 'KitEditor';
