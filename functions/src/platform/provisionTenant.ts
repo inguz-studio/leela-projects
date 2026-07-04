@@ -14,6 +14,13 @@
 //      provisionamento criou (docs e usuário Auth) e restaura o estado
 //      anterior do tenant quando era aprovação de `pending`. Nunca fica
 //      tenant meio-provisionado (RN-403).
+//      Fix review Onda1 #1: a falha pode ocorrer APÓS setCustomUserClaims
+//      (ex.: revokeRefreshTokens cai) — a claim tenant_owner JÁ está gravada.
+//      Para owner PRÉ-existente o rollback RESTAURA as claims anteriores
+//      (snapshot capturado antes do passo 5), nunca deixa claim órfã que
+//      viraria takeover cross-owner num re-provisionamento do mesmo slug.
+//      Prova de ownership no replay é o doc tenants/{slug}.ownerUid no
+//      Firestore — claim existente NUNCA é usada como prova.
 //
 // Idempotência / retry-safe:
 //   - tenantId == slug (deterministico — ver core/platform/provisioning.ts):
@@ -102,10 +109,24 @@ export async function provisionTenantCore(
   // ── Resolver/criar owner no Auth (idempotente por e-mail) ──────────────
   let ownerUid: string;
   let ownerCreated = false;
+  /**
+   * Claims do owner ANTES deste provisionamento (null = sem claims).
+   * Insumo do rollback compensatório (fix review Onda1 #1): se o setClaims
+   * falhar DEPOIS de setCustomUserClaims (ex.: revokeRefreshTokens caiu),
+   * a claim tenant_owner já foi gravada — o rollback restaura EXATAMENTE
+   * este snapshot, nunca deixa claim órfã.
+   */
+  let previousClaims: object | null = null;
+  let existingUser: admin.auth.UserRecord | null = null;
   try {
-    const existing = await auth.getUserByEmail(input.ownerEmail);
-    ownerUid = existing.uid;
+    existingUser = await auth.getUserByEmail(input.ownerEmail);
   } catch {
+    existingUser = null;
+  }
+  if (existingUser) {
+    ownerUid = existingUser.uid;
+    previousClaims = existingUser.customClaims ?? null;
+  } else {
     const created = await auth.createUser({
       email: input.ownerEmail,
       emailVerified: false,
@@ -263,6 +284,7 @@ export async function provisionTenantCore(
       outcome,
       ownerUid,
       ownerCreated,
+      previousClaims,
     });
     logger.error('provision_tenant_rollback', {
       tenantId,
@@ -289,6 +311,14 @@ export async function provisionTenantCore(
  * Rollback compensatório: apaga o que ESTE provisionamento criou e restaura
  * o snapshot anterior do tenant quando a operação era aprovação de pending.
  * Nunca toca em docs pré-existentes que não foram alterados.
+ *
+ * Claims (fix review Onda1 #1): a falha de setClaims pode ter acontecido
+ * DEPOIS de setCustomUserClaims (revoke caiu / processo morreu no meio) —
+ * a claim tenant_owner já estaria gravada. Para owner criado AQUI, o
+ * deleteUser leva a claim junto; para owner PRÉ-existente, restauramos o
+ * snapshot anterior das claims (não apenas delete) + revoke dos refresh
+ * tokens. Sem isso, re-provisionar o mesmo slug para OUTRO owner daria ao
+ * usuário da falha acesso de writer ao tenant novo (takeover cross-owner).
  */
 async function rollbackProvisioning(
   db: admin.firestore.Firestore,
@@ -300,9 +330,11 @@ async function rollbackProvisioning(
     outcome: TxOutcome;
     ownerUid: string;
     ownerCreated: boolean;
+    /** Claims do owner ANTES do provisionamento (null = sem claims). */
+    previousClaims: object | null;
   }
 ): Promise<void> {
-  const { tenantRef, profRef, termsCol, outcome, ownerUid, ownerCreated } = ctx;
+  const { tenantRef, profRef, termsCol, outcome, ownerUid, ownerCreated, previousClaims } = ctx;
   const batch = db.batch();
 
   if (outcome.createdTenant) {
@@ -320,6 +352,21 @@ async function rollbackProvisioning(
 
   if (ownerCreated) {
     await auth.deleteUser(ownerUid).catch(() => undefined);
+  } else {
+    // Owner pré-existente: restaura o estado ANTERIOR das claims e revoga
+    // refresh tokens (mata tokens eventualmente cunhados com a claim stale).
+    try {
+      await auth.setCustomUserClaims(ownerUid, previousClaims);
+      await auth.revokeRefreshTokens(ownerUid);
+    } catch (restoreErr) {
+      // Falha aqui é ALARME (claim possivelmente órfã) — nunca engolir:
+      // log estruturado de erro para runbook/observabilidade.
+      logger.error('provision_tenant_rollback_claims_restore_failed', {
+        ownerUid,
+        reason:
+          restoreErr instanceof Error ? restoreErr.message : String(restoreErr),
+      });
+    }
   }
 }
 

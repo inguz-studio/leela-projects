@@ -10,6 +10,9 @@
  *   - aprovação: tenant `pending` (Passo Certo) → `ativo` com owner/termos
  *   - ROLLBACK: falha ao setar claim → nenhum doc sobrevive, usuário Auth
  *     criado é removido (não fica tenant meio-provisionado)
+ *   - ROLLBACK pós-setCustomUserClaims (fix review Onda1 #1): falha DEPOIS
+ *     da claim gravada (revoke caiu) → claims anteriores RESTAURADAS, sem
+ *     claim órfã; re-provisionar o slug p/ outro owner NÃO dá takeover
  *   - rollback de aprovação: doc pending restaurado byte a byte
  *   - conflitos: slug ativo de outro owner; owner já de outro tenant;
  *     tenant suspenso
@@ -286,6 +289,85 @@ describe('provisionTenantCore — rollback em falha de claims', () => {
     expect(
       (await db.doc('tenants/passo-certo/commercialTerms/current').get()).exists
     ).toBe(false);
+  });
+});
+
+// ── Rollback com falha PÓS-setCustomUserClaims (fix review Onda1 #1) ──────
+//
+// O achado: setTenantClaimsAdmin roda em 2 etapas (setCustomUserClaims →
+// revokeRefreshTokens). Se a 1ª grava e a 2ª falha, a claim tenant_owner JÁ
+// está no usuário quando o rollback roda. O rollback antigo (só delete de
+// docs) deixava a claim órfã → re-provisionar o slug para OUTRO owner dava
+// ao usuário da falha acesso de writer ao tenant novo (takeover cross-owner).
+// Estes testes injetam a falha DEPOIS do set — falhariam no código antigo.
+describe('provisionTenantCore — falha PÓS-setCustomUserClaims (fix review #1)', () => {
+  /** Grava a claim de verdade e SÓ ENTÃO falha (simula revoke caindo). */
+  function failAfterSetDeps(): ProvisionDeps {
+    return {
+      setClaims: async (uid, role, tenantId) => {
+        await auth.setCustomUserClaims(
+          uid,
+          tenantId ? { role, tenantId } : { role }
+        );
+        throw new Error('revokeRefreshTokens caiu (falha injetada PÓS-set)');
+      },
+    };
+  }
+
+  it('owner pré-existente NÃO fica com claim stale de tenant_owner', async () => {
+    const pre = await auth.createUser({ email: 'marina@castelo.com.br' });
+
+    await expect(
+      provisionTenantCore(db, auth, input(), ADMIN_UID, failAfterSetDeps())
+    ).rejects.toMatchObject({ code: 'internal' });
+
+    // Docs revertidos E claims limpas — nada de claim órfã
+    expect((await db.doc('tenants/castelo-producoes').get()).exists).toBe(false);
+    const after = await auth.getUser(pre.uid);
+    expect(after.customClaims ?? {}).toEqual({});
+  });
+
+  it('claims ANTERIORES são RESTAURADAS (snapshot, não apenas delete)', async () => {
+    const pre = await auth.createUser({ email: 'marina@castelo.com.br' });
+    // Claims prévias SEM role (não conflitam com a guarda de reuso)
+    await auth.setCustomUserClaims(pre.uid, { beta: true });
+
+    await expect(
+      provisionTenantCore(db, auth, input(), ADMIN_UID, failAfterSetDeps())
+    ).rejects.toMatchObject({ code: 'internal' });
+
+    const after = await auth.getUser(pre.uid);
+    expect(after.customClaims).toEqual({ beta: true }); // estado anterior, intacto
+  });
+
+  it('EXPLOIT do review: re-provisionar o slug para OUTRO owner não dá acesso ao usuário da falha', async () => {
+    // 1. U pré-existe no Auth; provisionamento de castelo-producoes p/ U
+    //    falha APÓS setCustomUserClaims (claim chegou a ser gravada)
+    const u = await auth.createUser({ email: 'marina@castelo.com.br' });
+    await expect(
+      provisionTenantCore(db, auth, input(), ADMIN_UID, failAfterSetDeps())
+    ).rejects.toMatchObject({ code: 'internal' });
+
+    // 2. Mais tarde o admin re-provisiona o MESMO slug para V (outro owner)
+    const res = await provisionTenantCore(
+      db,
+      auth,
+      input({ ownerEmail: 'victor@vencedor.com', ownerNome: 'Victor' }),
+      ADMIN_UID
+    );
+    expect(res.replay).toBe(false);
+    expect(res.ownerUid).not.toBe(u.uid);
+
+    // 3. V é o único com claims do tenant; U NÃO carrega role/tenantId
+    //    (sem takeover cross-owner — eixo RBAC do handoff)
+    const v = await auth.getUser(res.ownerUid);
+    expect(v.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+    const uAfter = await auth.getUser(u.uid);
+    expect(uAfter.customClaims?.['role']).toBeUndefined();
+    expect(uAfter.customClaims?.['tenantId']).toBeUndefined();
   });
 });
 
