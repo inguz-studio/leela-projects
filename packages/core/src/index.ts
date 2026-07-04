@@ -113,6 +113,15 @@ export type {
   PapelMembro,
   StatusMembro,
   EntradaVia,
+  Pilar,
+  CatalogoAcao,
+  ModeloDesafio,
+  StatusDesafio,
+  RecompensaTipo,
+  VisibilidadeDesafio,
+  ProgressoPilar,
+  Desafio,
+  AcaoDesafio,
 } from './clubs';
 export {
   CLUBE_NOME_MAX,
@@ -127,6 +136,22 @@ export {
   MEMBRO_INATIVO_DIAS,
   derivarStatus,
   contaComoAtivo,
+  PILARES,
+  isPilar,
+  CATALOGO_ACOES,
+  TOTAL_ACOES_CATALOGO,
+  ACOES_POR_PILAR,
+  getAcaoCatalogo,
+  MODELOS_DESAFIO,
+  STATUS_DESAFIO,
+  RECOMPENSAS_DESAFIO,
+  VISIBILIDADES_DESAFIO,
+  isModeloDesafio,
+  isStatusDesafio,
+  isRecompensaTipo,
+  isVisibilidadeDesafio,
+  CAMPOS_AGREGADOS_DESAFIO,
+  contaComoDesafioAtivo,
 } from './clubs';
 
 // ---------------------------------------------------------------------------

@@ -33,3 +33,7 @@ export { recomputePlatformRollups } from './platform/rollups';
 // por recontagem idempotente (E05-S103-T1)
 export { onMembroWrite } from './clubs/onMembroWrite';
 export { recalcularStatusMembros } from './clubs/recalcularStatusMembros';
+
+// Clubs — agregado ∑ qtdDesafiosAtivos por recontagem idempotente
+// (E05-S105-T1 — fecha a pendência herdada do L1)
+export { onDesafioWrite } from './clubs/onDesafioWrite';

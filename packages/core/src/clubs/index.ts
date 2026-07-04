@@ -35,3 +35,35 @@ export {
   derivarStatus,
   contaComoAtivo,
 } from './membro';
+
+export type { Pilar, CatalogoAcao } from './catalogo-acoes';
+export {
+  PILARES,
+  isPilar,
+  CATALOGO_ACOES,
+  TOTAL_ACOES_CATALOGO,
+  ACOES_POR_PILAR,
+  getAcaoCatalogo,
+} from './catalogo-acoes';
+
+export type {
+  ModeloDesafio,
+  StatusDesafio,
+  RecompensaTipo,
+  VisibilidadeDesafio,
+  ProgressoPilar,
+  Desafio,
+  AcaoDesafio,
+} from './desafio';
+export {
+  MODELOS_DESAFIO,
+  STATUS_DESAFIO,
+  RECOMPENSAS_DESAFIO,
+  VISIBILIDADES_DESAFIO,
+  isModeloDesafio,
+  isStatusDesafio,
+  isRecompensaTipo,
+  isVisibilidadeDesafio,
+  CAMPOS_AGREGADOS_DESAFIO,
+  contaComoDesafioAtivo,
+} from './desafio';

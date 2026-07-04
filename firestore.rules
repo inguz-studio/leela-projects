@@ -443,6 +443,88 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // `desafios/{desafioId}` — motor de engajamento (E05 · S105-T1).
+      //
+      // RN-110/116/117: modelo/recompensa/visibilidade dentro dos enums.
+      // Agregados ∑ de progresso (qtdParticipantes, progressoPct,
+      // progressoPorPilar) são de escrita EXCLUSIVA da Cloud Function
+      // (registros de ação chegam no E13): create exige zerados/ausentes,
+      // update não pode tocá-los. `clubes.qtdDesafiosAtivos` é recontado
+      // pela Function onDesafioWrite. Validações condicionais por modelo
+      // (meta por ação no A; minimoPorPilar no C — RN-111) vivem em
+      // packages/core (validarPublicacao, S106-T1) — a Rule trava enums e
+      // campos de Function; o "publicar" honesto é responsabilidade do
+      // cliente autenticado do próprio tenant.
+      match /desafios/{desafioId} {
+
+        /** Shape básico do desafio — enums canônicos (RN-110/116/117). */
+        function shapeDesafioValido() {
+          return request.resource.data.modelo in ['A', 'B', 'C']
+            && request.resource.data.status in ['rascunho', 'ativo', 'encerrado']
+            && request.resource.data.recompensaTipo in
+                ['medalha_digital', 'cupom', 'medalha_fisica', 'custom']
+            && request.resource.data.visibilidade in ['membros', 'convite', 'publico']
+            && request.resource.data.nome is string
+            && request.resource.data.nome.size() > 0;
+        }
+
+        /** Agregados ∑ nascem zerados/ausentes — cliente nunca inventa progresso. */
+        function desafioAgregadosZerados() {
+          return request.resource.data.get('qtdParticipantes', 0) == 0
+            && request.resource.data.get('progressoPct', 0) == 0
+            && !('progressoPorPilar' in request.resource.data);
+        }
+
+        /** Update de cliente não toca campos ∑ (só a Function os mantém). */
+        function desafioAgregadosIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['qtdParticipantes', 'progressoPct', 'progressoPorPilar']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoClubePai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoClubePai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeDesafioValido()
+                          && desafioAgregadosZerados())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeDesafioValido()
+                          && desafioAgregadosIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+
+        // Junção N:N Desafio↔CatálogoAção — `acoes/{acaoId}` (docId = id da
+        // ação no catálogo global). `meta` opcional (obrigatória só no
+        // Modelo A — validação de publicação em core, S106-T1).
+        match /acoes/{acaoId} {
+
+          /** Shape da junção: acaoRef coerente com o docId; meta number > 0. */
+          function shapeAcaoDesafioValido() {
+            return request.resource.data.acaoRef is string
+              && request.resource.data.acaoRef == acaoId
+              && (!('meta' in request.resource.data)
+                  || (request.resource.data.meta is number
+                      && request.resource.data.meta > 0));
+          }
+
+          allow read: if isPlatformAdmin()
+                      || isTenantMember(tenantDoClubePai());
+          allow create, update: if (isTenantWriter(tenantDoClubePai())
+                                    && tenantAtivo(tenantDoClubePai())
+                                    && shapeAcaoDesafioValido())
+                                || isPlatformAdmin();
+          allow delete: if (isTenantWriter(tenantDoClubePai())
+                            && tenantAtivo(tenantDoClubePai()))
+                        || isPlatformAdmin();
+        }
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantMember(tenantDoClubePai());
