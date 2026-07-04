@@ -161,14 +161,39 @@ service cloud.firestore {
       }
     }
 
+    // `clubes/{clubeId}` — módulo Clubs (E05 · S101-T1). docId = slug.
+    //
+    // Além do padrão tenant-scoped:
+    //   - leitura PÚBLICA quando visibilidade in ['publica','indexavel']
+    //     (RN-140 — página pública/SEO); clube 'privada' segue só tenant;
+    //   - agregados ∑ (qtdMembrosAtivos, qtdDesafiosAtivos) são de escrita
+    //     EXCLUSIVA da Cloud Function (Admin SDK): create exige 0/ausente,
+    //     update não pode tocá-los (S101-T1/S103-T1).
     match /clubes/{clubeId} {
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+
+      /** Agregados ∑ nascem zerados (ou ausentes) — cliente nunca inventa contagem. */
+      function clubeAgregadosZerados() {
+        return request.resource.data.get('qtdMembrosAtivos', 0) == 0
+          && request.resource.data.get('qtdDesafiosAtivos', 0) == 0;
+      }
+
+      /** Update de cliente não toca campos ∑ (só a Function os mantém). */
+      function clubeAgregadosIntocados() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['qtdMembrosAtivos', 'qtdDesafiosAtivos']);
+      }
+
+      allow read: if isTenantMember(resource.data.tenantId)
+                  || isPlatformAdmin()
+                  || resource.data.visibilidade in ['publica', 'indexavel'];
       allow create: if (isTenantWriter(request.resource.data.tenantId)
-                        && tenantAtivo(request.resource.data.tenantId))
+                        && tenantAtivo(request.resource.data.tenantId)
+                        && clubeAgregadosZerados())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
-                        && tenantAtivo(resource.data.tenantId))
+                        && tenantAtivo(resource.data.tenantId)
+                        && clubeAgregadosIntocados())
                     || isPlatformAdmin();
       allow delete: if (isTenantWriter(resource.data.tenantId)
                         && tenantAtivo(resource.data.tenantId))

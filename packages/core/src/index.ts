@@ -29,12 +29,6 @@ export type StatusMembro = 'ativo' | 'novo' | 'inativo';
 /** Via pela qual o atleta entrou no clube */
 export type EntradaVia = 'codigo' | 'convite' | 'link';
 
-/** Visibilidade do clube (RN-140) */
-export type VisibilidadeClube = 'publica' | 'indexavel' | 'privada';
-
-/** Modelo de entrada do clube (RN-104) */
-export type ModeloEntradaClube = 'gratuito' | 'pago_em_breve';
-
 /** Papéis do profissional na plataforma (via custom claims) */
 export type PapelProfissional = 'coordenador' | 'organizador' | 'admin';
 
@@ -87,40 +81,6 @@ export interface Profissional {
   papeis: PapelProfissional[];
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
-}
-
-/**
- * Clube de corrida — tenant-scoped.
- * Coleção: `clubes/{clubId}` (docId = slug).
- * Subcoleções: membros, desafios, parcerias, comunicados, permissoesAdmin.
- */
-export interface Clube {
-  /** docId = slug */
-  id: string;
-  /** Isolamento multi-tenant (ADR-009) */
-  tenantId: string;
-  /** Máx. 60 caracteres */
-  nome: string;
-  /** Máx. 280 caracteres */
-  descricao: string;
-  slug: string;
-  categoria: string;
-  modalidade: string;
-  localizacao: string;
-  /** Referência ao profissional owner */
-  ownerId: string;
-  /** 5 chars; exclui 0/O/1/I/L (RN-101) */
-  codigoConvite: string;
-  visibilidade: VisibilidadeClube;
-  /** Exige aprovação manual de novos membros (RN-141) */
-  aprovacaoManual: boolean;
-  modeloEntrada: ModeloEntradaClube;
-  criadoEm: Timestamp;
-  atualizadoEm: Timestamp;
-  /** Agregado ∑ — mantido por Cloud Function */
-  qtdMembrosAtivos: number;
-  /** Agregado ∑ — mantido por Cloud Function */
-  qtdDesafiosAtivos: number;
 }
 
 /**
@@ -198,6 +158,29 @@ export type {
   PayoutResult,
   PaymentProvider,
 } from './payments/PaymentProvider';
+
+// ---------------------------------------------------------------------------
+// Módulo Clubs (LEELA-E05 · S101-T1)
+// Entidade Clube movida para src/clubs/clube.ts; re-exportada aqui para
+// manter retrocompatibilidade de imports de '@leela/core'.
+// ---------------------------------------------------------------------------
+export type {
+  Clube,
+  ClubeInput,
+  PapelClube,
+  VisibilidadeClube,
+  ModeloEntradaClube,
+} from './clubs';
+export {
+  CLUBE_NOME_MAX,
+  CLUBE_DESCRICAO_MAX,
+  validarSlugClube,
+  validarClube,
+  ALFABETO_CODIGO_CONVITE,
+  TAMANHO_CODIGO_CONVITE,
+  gerarCodigoConvite,
+  validarCodigoConvite,
+} from './clubs';
 
 // ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)

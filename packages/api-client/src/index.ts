@@ -102,6 +102,11 @@ export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions } from './fireba
 export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 
 // ---------------------------------------------------------------------------
+// Clubs — leitura tipada de `clubes` (LEELA-E05 · S101-T1)
+// ---------------------------------------------------------------------------
+export { getClube, listClubesByTenant, listClubesByOwner } from './clubs';
+
+// ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
 // ---------------------------------------------------------------------------
 export {
