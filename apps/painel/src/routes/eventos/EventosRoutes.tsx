@@ -17,6 +17,7 @@ import { HubRoute } from './hub/HubRoute';
 import { NovoEventoRoute } from './novo/NovoEventoRoute';
 import { EventoLayout } from './evento/EventoLayout';
 import { OverviewPage } from './evento/overview/OverviewPage';
+import { InscritosPage } from './inscritos/InscritosPage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -26,6 +27,7 @@ export function EventosRoutes(): JSX.Element {
         <Route path="novo" element={<NovoEventoRoute />} />
         <Route path=":slug" element={<EventoLayout />}>
           <Route index element={<OverviewPage />} />
+          <Route path="inscritos" element={<InscritosPage />} />
         </Route>
       </Routes>
     </ToastProvider>
