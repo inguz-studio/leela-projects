@@ -18,6 +18,7 @@ import { NovoEventoRoute } from './novo/NovoEventoRoute';
 import { EventoLayout } from './evento/EventoLayout';
 import { OverviewPage } from './evento/overview/OverviewPage';
 import { InscritosPage } from './inscritos/InscritosPage';
+import { BalcaoPage } from './entrega/BalcaoPage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -28,6 +29,7 @@ export function EventosRoutes(): JSX.Element {
         <Route path=":slug" element={<EventoLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="inscritos" element={<InscritosPage />} />
+          <Route path="entrega" element={<BalcaoPage />} />
         </Route>
       </Routes>
     </ToastProvider>
