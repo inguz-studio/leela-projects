@@ -15,7 +15,22 @@ Frase de entrada: **"retomar leela"** + ler este arquivo. Tudo commitado está P
   Hotfixes AINDA SEM review antagonista — entram no review da onda.
 - Kanban (V1-KANBAN.md) e checklist (V1-CHECKLIST.md) sincronizados task a task com hashes.
 
-## EM VOO no momento do handoff (5 lotes — retomar por despacho fresco)
+## ⚠️ QUEDA POR LIMITE DE SESSÃO (~21:3xZ 2026-07-04, reset 17:20 BRT)
+Os 4 agentes em voo foram TERMINADOS pelo session limit. E03-L3 já havia fechado antes (4/4T pushed).
+Mutexes órfãos removidos pelo maestro. WIP não-commitado dos mortos, por dono (git status confirmado):
+- **E03-L2** (morreu aplicando contrato do L3): `M core/eventos/evento.ts` (percursos?), `M functions/package.json`,
+  `M functions/__tests__/eventosRules.test.ts` + untracked: functions/src/eventos/{criarEvento,publicarEvento,slug,
+  guardPreco,vincularChip,registrarEntrega,agregarFinanceiro}.ts, core/eventos/{entrega,precoBloqueado}.ts,
+  api-client/eventos/mutations.ts, testes (criarPublicarEvento.integration, precoBloqueado, entrega*, financeiroEvento.integration).
+  PENDÊNCIA DO L3 pro L2: confirmar CriarEventoInput (apps/painel/src/routes/eventos/_data/contracts.ts) + getEvento(db,slug).
+- **E05-L2** (estava aguardando index-mutex p/ S106→S109): untracked functions/src/clubs/{onComunicadoEnvio,onConversao}.ts,
+  core/clubs/{comunicado,comunicado-validacao,desafio-validacao,evento-vinculo,parceria,pontuacao,segmentacao}.ts,
+  seeds (comunicados, parcerias), testes (pontuacao, parceria*, comunicado*, segmentacao).
+- **E02-L1** (pronto, faltava barrels+indexes+rules+suíte+commit): functions/src/overview/, core/overview/,
+  api-client/overview.ts, testes (overviewKpis, overviewAlerts, overviewDashboard, dashboardRules).
+- **E16-L2 telas** (T3 escrito, ia validar): apps/painel/src/routes/plataforma/, api-client/platform/{mutations,rollups}.ts.
+
+## EM VOO no momento do handoff anterior (briefs de referência — retomar por despacho fresco)
 Para CADA lote abaixo: o WIP não commitado (se houver) está no worktree; inventarie com
 `git status` filtrando pelos caminhos do dono ANTES de redespachar, e passe o inventário no prompt.
 1. **E03-L2** (Fable, sf-backend-engineer) — Functions transacionais criar/publicar/chip/financeiro
