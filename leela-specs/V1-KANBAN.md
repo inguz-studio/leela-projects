@@ -20,7 +20,7 @@ tags:
 ## 🔨 Fazendo
 
 - [ ] **O1** · E03 · Operação do evento — L1 ✅ 3/3T · **L3 telas ✅ 4/4T** (f599032, 9781173, 83d4036, d97250f · 45/45 testes) · **L2 EM EXECUÇÃO** (Fable; recebeu contratos do L3: input de criarEvento + getEvento) · L4/L5 na fila
-- [ ] **O1** · E05 · Clubs núcleo — L1 ✅ 2/2T (review pass) · **L2 EM EXECUÇÃO** (motores desafios/parcerias/comunicados — Fable) · L3+ na fila
+- [ ] **O1** · E05 · Clubs núcleo — L1 ✅ 2/2T · **L3 telas ✅ 5/5T** (af18fe8, adc9c93, b0f991b, 171222b, 19103a1 · 49/49) · L2 motores: WIP no worktree, redespacho na vez da trilha Fable (recebe contratos do L3: removerMembro/transferirPropriedade/enviarConvites) · L4/L5 na fila
 - [ ] **O1** · E16-slim · onboard tenant + termos — L1 ✅ 6/6T + fixes + HOTFIX ✅ · **L2 telas ✅ 4/4T** (e5ce3a5, 704f17a, 1103d1e, da27d37 · 62/62 RTL) · falta só review da onda (inclui hotfixes)
 - [ ] **O1** · E02 · Dashboard do produtor — **L1 ✅ 1/1T** (c48b0e6 · S600-T2: agregado idempotente + getOverview + Rules dashboard/** + índice CG inscritos p/ S601-T2 · 50/50 testes, zero regressão) · L2/L3 telas DESTRAVADOS (Opus; consomem `api-client/overview.getOverview`)
 

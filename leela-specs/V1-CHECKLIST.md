@@ -89,12 +89,12 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 Membros, convites, parcerias, comunicação, configurações + desafio em versão mínima (listar/criar). A execução gameficada anti-streak (jornada diária do atleta) fica em E13 e está fora da V1.
 
 - [x] LEELA-S101-T1 — Modelo `clubes` + tipos + Security Rules (`ee39d9a`)
-- [ ] LEELA-S101-T2 — Tela Hub de clubes (2 zonas + KPIs)
-- [ ] LEELA-S102-T1 — Shell do contexto de clube (header 96px + sub-nav 6 tabs)
-- [ ] LEELA-S102-T2 — Conteúdo do Overview (4 KPIs + novos membros)
+- [x] LEELA-S101-T2 — Tela Hub de clubes (2 zonas + KPIs) (`af18fe8`)
+- [x] LEELA-S102-T1 — Shell do contexto de clube (header 96px + sub-nav 6 tabs) (`adc9c93`)
+- [x] LEELA-S102-T2 — Conteúdo do Overview (4 KPIs + novos membros) (`b0f991b`)
 - [x] LEELA-S103-T1 — Modelo `membros` + derivação de status + Function + Rules (`e2762f8`)
-- [ ] LEELA-S103-T2 — Tela de membros (tabela densa + busca + filtros + popover)
-- [ ] LEELA-S104-T1 — Modal de convite (3 tabs + validações + 4 vias)
+- [x] LEELA-S103-T2 — Tela de membros (tabela densa + busca + filtros + popover) (`171222b`; mutations removerMembro/transferir → L2)
+- [x] LEELA-S104-T1 — Modal de convite (3 tabs + validações + 4 vias) (`19103a1`; Function enviarConvites → L2)
 - [ ] LEELA-S105-T1 — Modelo `desafios` + `catalogoAcoes` (seed 16) + junção + Rules
 - [ ] LEELA-S105-T2 — Tela lista de desafios (KPIs + cards + filtros)
 - [ ] LEELA-S106-T1 — Motor de pontuação + validação de modelo (core, desafio mínimo)
