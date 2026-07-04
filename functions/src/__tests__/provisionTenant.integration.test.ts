@@ -374,6 +374,108 @@ describe('provisionTenantCore — falha PÓS-setCustomUserClaims (fix review #1)
   });
 });
 
+// ── Ordem do rollback: claims ANTES de docs (fix re-review R1) ─────────────
+//
+// R1: o rollback antigo commitava o batch de docs ANTES de neutralizar as
+// claims. Morte do processo entre os dois passos deixava claim stale SEM doc
+// e SEM log (o alarme só cobre restore que LANÇA, não processo morto). Agora
+// as claims são neutralizadas PRIMEIRO: o pior resíduo de morte parcial é
+// doc órfão — que o retry do admin conclui como replay; nunca claim órfã
+// (takeover). Estes testes "matam o processo" no passo de docs (batch()
+// lança) e provam que as claims JÁ estavam neutralizadas — na ordem antiga
+// o batch lançava primeiro e a claim tenant_owner sobrevivia (falhariam).
+describe('provisionTenantCore — ordem do rollback: claims primeiro (fix re-review R1)', () => {
+  /**
+   * Firestore proxied: `batch()` LANÇA — simula a morte do processo no passo
+   * de docs do rollback. Leituras e transações funcionam normalmente
+   * (`batch()` só é usado pelo rollbackProvisioning).
+   */
+  function dbWithDeadBatch(realDb: admin.firestore.Firestore): admin.firestore.Firestore {
+    return new Proxy(realDb, {
+      get(target, prop, receiver) {
+        if (prop === 'batch') {
+          return () => {
+            throw new Error('processo morto no passo de docs (falha injetada)');
+          };
+        }
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        return typeof value === 'function'
+          ? (value as (...args: unknown[]) => unknown).bind(target)
+          : value;
+      },
+    }) as admin.firestore.Firestore;
+  }
+
+  /** Grava a claim de verdade e SÓ ENTÃO falha (mesma injeção do fix #1). */
+  function failAfterSetDeps(): ProvisionDeps {
+    return {
+      setClaims: async (uid, role, tenantId) => {
+        await auth.setCustomUserClaims(
+          uid,
+          tenantId ? { role, tenantId } : { role }
+        );
+        throw new Error('revokeRefreshTokens caiu (falha injetada PÓS-set)');
+      },
+    };
+  }
+
+  it('owner PRÉ-existente: morte no passo de docs NÃO deixa claim stale (claims restauradas antes)', async () => {
+    const pre = await auth.createUser({ email: 'marina@castelo.com.br' });
+
+    await expect(
+      provisionTenantCore(
+        dbWithDeadBatch(db),
+        auth,
+        input(),
+        ADMIN_UID,
+        failAfterSetDeps()
+      )
+    ).rejects.toThrow();
+
+    // Claims foram restauradas ANTES do passo de docs (que "morreu"):
+    const after = await auth.getUser(pre.uid);
+    expect(after.customClaims ?? {}).toEqual({});
+
+    // O doc órfão ficou (o passo de docs nunca rodou) — resíduo inócuo…
+    expect((await db.doc('tenants/castelo-producoes').get()).exists).toBe(true);
+
+    // …porque o retry do admin conclui como replay (doc é recuperável):
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+    expect(retry.ownerUid).toBe(pre.uid);
+    expect((await auth.getUser(pre.uid)).customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('owner CRIADO no run: morte no passo de docs deixa conta SEM role — nunca claim stale', async () => {
+    await expect(
+      provisionTenantCore(
+        dbWithDeadBatch(db),
+        auth,
+        input(),
+        ADMIN_UID,
+        failAfterSetDeps()
+      )
+    ).rejects.toThrow();
+
+    // A conta criada sobrevive (deleteUser viria DEPOIS dos docs), mas as
+    // claims já foram limpas no passo 1 — sem claim órfã de tenant_owner.
+    const orphan = await auth.getUserByEmail('marina@castelo.com.br');
+    expect(orphan.customClaims ?? {}).toEqual({});
+
+    // Retry do admin reaproveita a conta órfã e conclui como replay:
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+    expect(retry.ownerUid).toBe(orphan.uid);
+    expect((await auth.getUser(orphan.uid)).customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+});
+
 // ── Conflitos ──────────────────────────────────────────────────────────────
 describe('provisionTenantCore — conflitos', () => {
   it('slug ativo com OUTRO owner → already-exists', async () => {

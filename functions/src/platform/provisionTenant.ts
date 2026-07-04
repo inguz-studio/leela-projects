@@ -21,6 +21,9 @@
 //      viraria takeover cross-owner num re-provisionamento do mesmo slug.
 //      Prova de ownership no replay é o doc tenants/{slug}.ownerUid no
 //      Firestore — claim existente NUNCA é usada como prova.
+//      Fix re-review R1: dentro do rollback, claims são neutralizadas ANTES
+//      da deleção dos docs — morte parcial deixa no pior caso doc órfão
+//      (recuperável por replay), nunca claim órfã (takeover).
 //
 // Idempotência / retry-safe:
 //   - tenantId == slug (deterministico — ver core/platform/provisioning.ts):
@@ -348,6 +351,14 @@ export async function provisionTenantCore(
  * snapshot anterior das claims (não apenas delete) + revoke dos refresh
  * tokens. Sem isso, re-provisionar o mesmo slug para OUTRO owner daria ao
  * usuário da falha acesso de writer ao tenant novo (takeover cross-owner).
+ *
+ * ORDEM (fix re-review R1): claims Auth PRIMEIRO, docs Firestore depois.
+ * Se o processo morrer entre os dois passos, o resíduo deve ser o inócuo:
+ * doc órfão é recuperável — o retry do admin conclui como replay; claim
+ * órfã é exatamente o takeover cross-owner do achado #1, e morte de
+ * processo não deixa log (o alarme abaixo só cobre restore que LANÇA).
+ * Por isso o owner criado neste run tem as claims LIMPAS já no passo 1
+ * (o deleteUser, que também as levaria, só roda depois dos docs).
  */
 async function rollbackProvisioning(
   db: admin.firestore.Firestore,
@@ -364,23 +375,20 @@ async function rollbackProvisioning(
   }
 ): Promise<void> {
   const { tenantRef, profRef, termsCol, outcome, ownerUid, ownerCreated, previousClaims } = ctx;
-  const batch = db.batch();
 
-  if (outcome.createdTenant) {
-    batch.delete(tenantRef);
-  } else if (outcome.previousTenantData) {
-    // Aprovação de pending → restaura o doc exatamente como estava
-    batch.set(tenantRef, outcome.previousTenantData);
-  }
-  if (outcome.createdProfissional) batch.delete(profRef);
-  if (outcome.createdTerms) {
-    batch.delete(termsCol.doc('current'));
-    batch.delete(termsCol.doc('v1'));
-  }
-  await batch.commit();
-
+  // ── 1. Claims Auth PRIMEIRO (fix re-review R1 — ordem importa) ──────────
   if (ownerCreated) {
-    await auth.deleteUser(ownerUid).catch(() => undefined);
+    // Owner criado NESTE run: neutraliza as claims antes de tocar nos docs.
+    // Morte após este passo deixa conta sem role + docs órfãos — estado que
+    // o retry do admin conclui como replay (nunca claim stale).
+    try {
+      await auth.setCustomUserClaims(ownerUid, null);
+    } catch (clearErr) {
+      logger.error('provision_tenant_rollback_claims_clear_failed', {
+        ownerUid,
+        reason: clearErr instanceof Error ? clearErr.message : String(clearErr),
+      });
+    }
   } else {
     // Owner pré-existente: restaura o estado ANTERIOR das claims e revoga
     // refresh tokens (mata tokens eventualmente cunhados com a claim stale).
@@ -396,6 +404,27 @@ async function rollbackProvisioning(
           restoreErr instanceof Error ? restoreErr.message : String(restoreErr),
       });
     }
+  }
+
+  // ── 2. Docs Firestore ────────────────────────────────────────────────────
+  const batch = db.batch();
+
+  if (outcome.createdTenant) {
+    batch.delete(tenantRef);
+  } else if (outcome.previousTenantData) {
+    // Aprovação de pending → restaura o doc exatamente como estava
+    batch.set(tenantRef, outcome.previousTenantData);
+  }
+  if (outcome.createdProfissional) batch.delete(profRef);
+  if (outcome.createdTerms) {
+    batch.delete(termsCol.doc('current'));
+    batch.delete(termsCol.doc('v1'));
+  }
+  await batch.commit();
+
+  // ── 3. Usuário Auth criado neste run (claims já foram limpas no passo 1) ─
+  if (ownerCreated) {
+    await auth.deleteUser(ownerUid).catch(() => undefined);
   }
 }
 
