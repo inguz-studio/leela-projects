@@ -19,16 +19,15 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O1** · E03 · Operação do evento — **L1 ✅ 3/3T** (475574d, 8caec72, df09392 · Emulator 284/284 zero skip) · L2-L5 na fila · escopo S200–S207
-- [ ] **O1** · E05 · Clubs núcleo — **L1 ✅ 2/2T** (ee39d9a, e2762f8 · 57 testes novos · suíte 503/503 zero skip) · em REVIEW-ONDA1-L1 · L2/L3 destravados
-- [ ] **O1** · E16-slim · onboard tenant + termos — **L1 ✅ 6/6T** (2ec1e85, 0eca288, 73e8366, 1d5e1af, de14546, 7876d9b · suíte 503/503 zero skip c/ Auth emulator) · em REVIEW-ONDA1-L1 · 5 pontos sinalizados p/ review antagonista
+- [ ] **O1** · E03 · Operação do evento — L1 ✅ 3/3T (review pass) · **L2 EM EXECUÇÃO** (Functions transacionais — Fable) · **L3 telas EM EXECUÇÃO** (Opus) · L4/L5 na fila
+- [ ] **O1** · E05 · Clubs núcleo — L1 ✅ 2/2T (review pass) · **L2 EM EXECUÇÃO** (motores desafios/parcerias/comunicados — Fable) · L3+ na fila
+- [ ] **O1** · E16-slim · onboard tenant + termos — L1 ✅ 6/6T + fixes ✅ (re-review: 3/3 FECHADOS) · **HOTFIX R1+#8 EM EXECUÇÃO** (Fable): ordem do rollback + corrida onCreateUser×provisionTenant (bloqueia UI de provisionamento) · L2/L3 telas após hotfix
+- [ ] **O1** · E02 · Dashboard do produtor — **L1 EM EXECUÇÃO** (Fable; dependência E03-L1+E05-L1 satisfeita pelo review pass)
 
 
 ## 🔍 Revisão
 
-- [ ] **O1** · REVIEW-ONDA1-L1 — **CONCLUÍDO 2026-07-04**: E03 pass-c/-ressalvas · E05 pass-c/-ressalvas · **E16 FAIL** (#1 crítico stale-claim rollback→takeover cross-owner; #2 alto reuso Auth por e-mail sobrescreve claims) · **gate Onda 1 BLOQUEADO** · relatório em .nirvana/outputs/leela-build-2d6ee98d/REVIEW-ONDA1-L1.md
-- [ ] **O1** · FIX-ONDA1-E16 — **EM EXECUÇÃO** (sf-platform-lead/Fable): fix #1 + #2 c/ testes de injeção de falha pós-setCustomUserClaims + aposentar /inscritos legada (#4) · re-review na sequência
-- [ ] **O1** · Follow-ups do review (não bloqueiam gate, datar na Onda 1): #3 teste adversarial cross-tenant em `eventos` · teste de leitura deny do lifecycleAudit · protocolo `.index-mutex` p/ arquivos-índice compartilhados (adotar nas regras do HANDOFF)
+- [ ] **O1** · Follow-ups do review (registrados por exigência do gate; não bloqueiam): **#8 [médio]** corrida onCreateUser×provisionTenant → no HOTFIX em voo · **R1 [baixo]** ordem do rollback → no HOTFIX · R3 caminho feliz destrói claims não relacionadas (hipotético, registrado) · #3 teste adversarial cross-tenant em `eventos` · teste deny de leitura do lifecycleAudit · #5 scheduler de rollups/health → E12 · #6 protocolo `.index-mutex` **ADOTADO** (regras do HANDOFF)
 
 
 ## ✅ Feito
