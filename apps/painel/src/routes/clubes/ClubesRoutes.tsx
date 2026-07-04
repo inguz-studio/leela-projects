@@ -15,12 +15,16 @@
 import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { HubRoute } from './hub/HubRoute';
+import { ClubeLayout } from './clube/ClubeLayout';
 
 export function ClubesRoutes(): JSX.Element {
   return (
     <ToastProvider>
       <Routes>
         <Route index element={<HubRoute />} />
+        <Route path=":slug" element={<ClubeLayout />}>
+          {/* index (Overview) e membros entram nos commits S102-T2 / S103-T2 */}
+        </Route>
       </Routes>
     </ToastProvider>
   );
