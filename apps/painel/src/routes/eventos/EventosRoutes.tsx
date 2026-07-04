@@ -19,6 +19,7 @@ import { EventoLayout } from './evento/EventoLayout';
 import { OverviewPage } from './evento/overview/OverviewPage';
 import { InscritosPage } from './inscritos/InscritosPage';
 import { BalcaoPage } from './entrega/BalcaoPage';
+import { GaleriaEstados } from './entrega/estados/GaleriaEstados';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -30,6 +31,7 @@ export function EventosRoutes(): JSX.Element {
           <Route index element={<OverviewPage />} />
           <Route path="inscritos" element={<InscritosPage />} />
           <Route path="entrega" element={<BalcaoPage />} />
+          <Route path="entrega/estados" element={<GaleriaEstados />} />
         </Route>
       </Routes>
     </ToastProvider>
