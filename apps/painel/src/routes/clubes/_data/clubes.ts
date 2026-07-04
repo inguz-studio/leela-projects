@@ -86,13 +86,20 @@ export function useClube(slug: string): AsyncState<Clube> {
 /**
  * Membros de um clube. O filtro fino (status × papel × busca) roda no cliente
  * (ver _lib/membros); aqui buscamos a página densa ordenada por nome.
+ *
+ * `reload()` re-busca a página — usado após remover membro / transferir
+ * propriedade (mutations que recontam agregados no servidor) para refletir o
+ * novo estado sem recarregar a rota.
  */
-export function useMembros(clubeId: string | null): AsyncState<Membro[]> {
+export function useMembros(clubeId: string | null): AsyncState<Membro[]> & {
+  reload: () => void;
+} {
   const [state, setState] = useState<AsyncState<Membro[]>>({
     data: null,
     loading: true,
     error: null,
   });
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!clubeId) return;
@@ -104,7 +111,7 @@ export function useMembros(clubeId: string | null): AsyncState<Membro[]> {
     return () => {
       ativo = false;
     };
-  }, [clubeId]);
+  }, [clubeId, tick]);
 
-  return state;
+  return { ...state, reload: () => setTick((t) => t + 1) };
 }

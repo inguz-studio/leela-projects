@@ -59,8 +59,9 @@ export function ConviteModal({ open, onOpenChange, clube, onEnviar }: ConviteMod
 
   function enviar(): void {
     if (!resultado.valido) return;
+    // O container (MembrosPage) chama o callable real e dá o feedback com a
+    // contagem efetiva (após dedupe no servidor) — o modal só valida e fecha.
     onEnviar?.(emails);
-    toast({ variant: 'success', title: `${resultado.total} convite(s) enviado(s)` });
     setRawEmails('');
     onOpenChange(false);
   }
