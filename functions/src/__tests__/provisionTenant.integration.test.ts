@@ -30,6 +30,7 @@ import {
   provisionTenant,
   type ProvisionDeps,
 } from '../platform/provisionTenant';
+import { onCreateUser } from '../auth/onCreateUser';
 import type { ProvisionInput } from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
@@ -522,6 +523,96 @@ describe('provisionTenantCore — conflitos', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
     const users = await auth.listUsers(10);
     expect(users.users.length).toBe(0);
+  });
+});
+
+// ── Corrida onCreateUser × provisionTenant (fix re-review #8) ──────────────
+//
+// O trigger Auth onCreate seta role default em TODO usuário novo — inclusive
+// no owner que o provisionamento cria via auth.createUser(). A entrega do
+// trigger é at-least-once, SEM ordem garantida com o fluxo chamador: se ele
+// executar DEPOIS de setTenantClaimsAdmin, o owner era rebaixado a athlete —
+// e o retry do admin era REJEITADO pela guarda de papel conflitante do fix #2
+// (recuperação só manual, via setTenantClaims). A suíte roda com
+// `--only firestore,auth` (triggers de Functions NÃO executam): a ordem
+// adversa é simulada aqui invocando a função do trigger DIRETAMENTE, depois
+// do provisionamento, contra o Emulator real.
+describe('provisionTenantCore — corrida onCreateUser × provisionTenant (fix re-review #8)', () => {
+  function runTrigger(user: AnyRec): Promise<unknown> {
+    return (
+      onCreateUser as unknown as { run: (u: AnyRec) => Promise<unknown> }
+    ).run(user);
+  }
+
+  it('ordem ADVERSA: trigger executando DEPOIS do provisionamento NÃO rebaixa o owner', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const owner = await auth.getUser(res.ownerUid);
+
+    // Entrega tardia do trigger, com o payload da criação (snapshot SEM claims)
+    await runTrigger({
+      uid: owner.uid,
+      email: owner.email,
+      displayName: owner.displayName,
+    });
+
+    // O trigger re-leu as claims atuais e preservou o papel do owner
+    const after = await auth.getUser(res.ownerUid);
+    expect(after.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('corrida PERDIDA (owner rebaixado a athlete): retry do admin se AUTO-RECUPERA via replay', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    // Estado pós-corrida no código antigo do trigger: athlete gravado por cima
+    await auth.setCustomUserClaims(res.ownerUid, { role: 'athlete' });
+
+    // Código antigo da guarda: failed-precondition (recuperação manual).
+    // Agora: doc tenants/{slug}.ownerUid prova ownership → replay reaplica.
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+    expect(retry.ownerUid).toBe(res.ownerUid);
+
+    const healed = await auth.getUser(res.ownerUid);
+    expect(healed.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('exceção é ESTREITA: athlete que NÃO é o owner do doc continua rejeitado', async () => {
+    await provisionTenantCore(db, auth, input(), ADMIN_UID); // castelo já tem owner
+
+    const intruso = await auth.createUser({ email: 'intruso@leela.app' });
+    await auth.setCustomUserClaims(intruso.uid, { role: 'athlete' });
+
+    await expect(
+      provisionTenantCore(
+        db,
+        auth,
+        input({ ownerEmail: 'intruso@leela.app' }),
+        ADMIN_UID
+      )
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect((await auth.getUser(intruso.uid)).customClaims).toEqual({
+      role: 'athlete',
+    });
+  });
+
+  it('papel conflitante NÃO-athlete nunca entra na exceção (mesmo sendo o ownerUid do doc)', async () => {
+    // Estado forjado: doc diz owner, claim diz platform_admin. Rebaixar um
+    // admin silenciosamente seria pior que falhar — a exceção cobre SÓ o
+    // valor que a corrida do trigger produz ('athlete').
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    await auth.setCustomUserClaims(res.ownerUid, { role: 'platform_admin' });
+
+    await expect(
+      provisionTenantCore(db, auth, input(), ADMIN_UID)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect((await auth.getUser(res.ownerUid)).customClaims).toEqual({
+      role: 'platform_admin',
+    });
   });
 });
 

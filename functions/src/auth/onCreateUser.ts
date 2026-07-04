@@ -5,7 +5,9 @@
 //
 // Responsabilidades:
 //   1. Cria o doc do usuário no Firestore (atletas/{uid} por default).
-//   2. Seta o custom claim `role` com o valor default `athlete`.
+//   2. Seta o custom claim `role` com o valor default `athlete` — SÓ quando
+//      o usuário ainda não tem role (fix re-review #8: o trigger nunca
+//      sobrescreve role existente; ver comentário no passo 2).
 //
 // Papéis possíveis (ADR-009):
 //   platform_admin | tenant_owner | tenant_staff | promoter | athlete
@@ -71,11 +73,39 @@ export const onCreateUser = auth.user().onCreate(async (user) => {
     }
   }
 
-  // ── 2. Setar custom claim `role` ────────────────────────────────────────
+  // ── 2. Setar custom claim `role` default ────────────────────────────────
   // O claim é lido pelas Security Rules e pela lógica de autorização dos apps.
   // tenantId é adicionado pelo setTenantClaims quando o profissional é vinculado
   // a um tenant; atletas não carregam tenantId (cross-tenant por design).
+  //
+  // CORRIDA com provisionTenant (fix re-review #8): triggers Auth têm entrega
+  // assíncrona at-least-once SEM ordem garantida com o fluxo chamador. O owner
+  // que provisionTenant cria via auth.createUser() dispara ESTE trigger; se o
+  // trigger executar DEPOIS de setTenantClaimsAdmin, gravar {role:'athlete'}
+  // incondicional rebaixava o owner recém-provisionado. Por isso:
+  //   1. RE-LEMOS as claims atuais via getUser — o payload `user` é snapshot
+  //      da criação e nunca carrega claims setadas depois dele;
+  //   2. role JÁ presente → NÃO tocamos nas claims (o default nunca rebaixa
+  //      elevação; cobre também redelivery tardia do trigger em usuário já
+  //      promovido — at-least-once);
+  //   3. sem role → default 'athlete' por MERGE (claims não relacionadas
+  //      preservadas — mesma disciplina do fix R3 em setTenantClaims).
+  // Janela residual (leitura aqui × escrita do provisionamento em paralelo):
+  // milissegundos; se ocorrer, o retry do provisionTenant se auto-recupera
+  // pela exceção doc-proven-owner da guarda (ver provisionTenant.ts).
+  const fresh = await admin.auth().getUser(uid);
+  const currentClaims = (fresh.customClaims ?? {}) as Record<string, unknown>;
+  const existingRole = currentClaims['role'];
+
+  if (existingRole !== undefined) {
+    // Elevação já aconteceu (ex.: provisionTenant venceu a corrida) — o
+    // default NUNCA sobrescreve. Log estruturado para auditoria da corrida.
+    logger.info('user_role_preserved', { uid, role: existingRole, email });
+    return;
+  }
+
   await admin.auth().setCustomUserClaims(uid, {
+    ...currentClaims,
     role: DEFAULT_ROLE,
   });
 

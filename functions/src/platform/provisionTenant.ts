@@ -46,6 +46,10 @@
 //     onda1-decisoes.md é omisso sobre conversão → rejeitar é o default
 //     seguro. Conta pré-existente SEM role (ex.: criada pelo fluxo pending)
 //     e tenant_owner do MESMO tenant (replay) seguem normalmente.
+//     Exceção estreita (fix re-review #8): claim 'athlete' + doc
+//     tenants/{slug} provando que o usuário é o owner DESTE tenant ativo =
+//     rebaixamento pela corrida do trigger onCreateUser → segue como replay
+//     e reaplica as claims corretas (auto-recuperação).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -150,13 +154,39 @@ export async function provisionTenantCore(
       claims.role !== undefined &&
       (claims.role !== 'tenant_owner' || claims.tenantId !== tenantId);
     if (conflictingRole) {
-      throw new https.HttpsError(
-        'failed-precondition',
-        `E-mail '${input.ownerEmail}' já pertence a uma conta com papel ` +
-          `'${claims.role}'${claims.tenantId ? ` (tenant '${claims.tenantId}')` : ''}` +
-          ' — provisionamento não converte papel de conta existente. ' +
-          'Use outro e-mail de owner ou trate a conta antes (RN-401).'
-      );
+      // Exceção ESTREITA (fix re-review #8): a corrida com o trigger
+      // onCreateUser pode ter rebaixado a 'athlete' um owner recém-
+      // provisionado (trigger é assíncrono, sem ordem garantida). Ownership
+      // é provado pelo DOC tenants/{slug} (status ativo + ownerUid) — nunca
+      // pela claim. Se o doc diz que ESTE usuário é o owner DESTE tenant e
+      // a claim diz 'athlete' (o ÚNICO valor que a corrida produz), o
+      // provisionamento segue: a transação detecta replay e REAPLICA as
+      // claims corretas (auto-recuperação — sem isso o retry do admin era
+      // rejeitado aqui e a recuperação exigia setTenantClaims manual).
+      // Qualquer papel conflitante NÃO-athlete continua rejeitado: rebaixar
+      // um platform_admin/staff silenciosamente seria pior que falhar.
+      let docProvenOwner = false;
+      if (claims.role === 'athlete') {
+        const tenantSnap = await db.collection('tenants').doc(tenantId).get();
+        docProvenOwner =
+          tenantSnap.exists &&
+          tenantSnap.get('status') === 'ativo' &&
+          tenantSnap.get('ownerUid') === ownerUid;
+      }
+      if (!docProvenOwner) {
+        throw new https.HttpsError(
+          'failed-precondition',
+          `E-mail '${input.ownerEmail}' já pertence a uma conta com papel ` +
+            `'${claims.role}'${claims.tenantId ? ` (tenant '${claims.tenantId}')` : ''}` +
+            ' — provisionamento não converte papel de conta existente. ' +
+            'Use outro e-mail de owner ou trate a conta antes (RN-401).'
+        );
+      }
+      logger.warn('provision_tenant_claim_repair', {
+        tenantId,
+        ownerUid,
+        staleRole: claims.role,
+      });
     }
   } else {
     const created = await auth.createUser({
