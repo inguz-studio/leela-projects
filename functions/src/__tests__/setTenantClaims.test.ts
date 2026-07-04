@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as admin from 'firebase-admin';
-import { setTenantClaims } from '../platform/setTenantClaims';
+import { mergeTenantClaims, setTenantClaims } from '../platform/setTenantClaims';
 
 type AnyRec = Record<string, unknown>;
 
@@ -130,5 +130,58 @@ describe('setTenantClaims — alvo e caminho feliz', () => {
   it('athlete válido (sem tenantId) → grava só role', async () => {
     await run({ uid: 'u-ath', role: 'athlete' });
     expect(setCustomUserClaims).toHaveBeenCalledWith('u-ath', { role: 'athlete' });
+  });
+});
+
+// Fix re-review R3: o caminho feliz substituía o objeto INTEIRO de claims,
+// destruindo claims não relacionadas. Agora role/tenantId entram por MERGE.
+// Os testes de preservação falhariam no código antigo (replace).
+describe('setTenantClaims — merge preserva claims não relacionadas (fix re-review R3)', () => {
+  it('claims não relacionadas SOBREVIVEM à atribuição de papel', async () => {
+    getUser.mockImplementationOnce(async (uid: string) => ({
+      uid,
+      customClaims: { beta: true },
+    }));
+
+    await run({ uid: 'u-beta', role: 'tenant_owner', tenantId: 'castelo-producoes' });
+    expect(setCustomUserClaims).toHaveBeenCalledWith('u-beta', {
+      beta: true,
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('papel sem tenant REMOVE tenantId anterior (merge não deixa tenantId stale)', async () => {
+    getUser.mockImplementationOnce(async (uid: string) => ({
+      uid,
+      customClaims: { beta: true, role: 'tenant_owner', tenantId: 'castelo-producoes' },
+    }));
+
+    await run({ uid: 'u-down', role: 'athlete' });
+    expect(setCustomUserClaims).toHaveBeenCalledWith('u-down', {
+      beta: true,
+      role: 'athlete',
+    });
+  });
+});
+
+describe('mergeTenantClaims (puro)', () => {
+  it('preserva claims não relacionadas e aplica role/tenantId autoritativos', () => {
+    expect(
+      mergeTenantClaims({ beta: true, role: 'athlete' }, 'tenant_owner', 'castelo-producoes')
+    ).toEqual({ beta: true, role: 'tenant_owner', tenantId: 'castelo-producoes' });
+  });
+
+  it('remove tenantId quando o papel não o carrega', () => {
+    expect(
+      mergeTenantClaims({ role: 'tenant_owner', tenantId: 'castelo-producoes' }, 'athlete')
+    ).toEqual({ role: 'athlete' });
+  });
+
+  it('current null/undefined → só role (sem tenantId espúrio)', () => {
+    expect(mergeTenantClaims(null, 'athlete')).toEqual({ role: 'athlete' });
+    expect(mergeTenantClaims(undefined, 'platform_admin')).toEqual({
+      role: 'platform_admin',
+    });
   });
 });

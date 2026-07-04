@@ -14,6 +14,11 @@
 //   user.getIdTokenResult(forceRefresh: true) no próximo request.
 //
 // ADR-009: claims são a fonte única de papel; cliente nunca eleva o próprio papel.
+//
+// Fix re-review R3: role/tenantId são gravados por MERGE sobre as claims
+// atuais do usuário — replace do objeto inteiro destruía claims não
+// relacionadas no caminho feliz. `role` e `tenantId` seguem autoritativos:
+// tenantId é REMOVIDO quando o papel não o carrega (athlete/platform_admin).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -128,8 +133,9 @@ export const setTenantClaims = https.onCall(
     }
 
     // ── 3. Verificar que o usuário-alvo existe ────────────────────────────
+    let targetUser: admin.auth.UserRecord;
     try {
-      await admin.auth().getUser(input.uid);
+      targetUser = await admin.auth().getUser(input.uid);
     } catch {
       throw new https.HttpsError(
         'not-found',
@@ -137,11 +143,12 @@ export const setTenantClaims = https.onCall(
       );
     }
 
-    // ── 4. Construir e gravar claims ──────────────────────────────────────
-    const newClaims: AuthClaims = { role: input.role };
-    if (input.tenantId) {
-      newClaims.tenantId = input.tenantId;
-    }
+    // ── 4. Construir e gravar claims (MERGE — fix re-review R3) ──────────
+    const newClaims = mergeTenantClaims(
+      targetUser.customClaims,
+      input.role,
+      input.tenantId
+    );
 
     await admin.auth().setCustomUserClaims(input.uid, newClaims);
 
@@ -175,6 +182,29 @@ export const setTenantClaims = https.onCall(
 // ---------------------------------------------------------------------------
 
 /**
+ * Merge das claims (fix re-review R3): `role` e `tenantId` são autoritativos,
+ * claims NÃO relacionadas são preservadas — o replace do objeto inteiro
+ * destruía qualquer claim extra no caminho feliz (assimetria com o rollback
+ * do provisionTenant, que preserva). tenantId é REMOVIDO quando o papel não
+ * o carrega — o merge nunca deixa tenantId stale de um papel anterior.
+ *
+ * Puro e exportado para teste unitário direto.
+ */
+export function mergeTenantClaims(
+  current: object | null | undefined,
+  role: Role,
+  tenantId?: string
+): AuthClaims {
+  const merged: Record<string, unknown> = { ...(current ?? {}), role };
+  if (tenantId) {
+    merged['tenantId'] = tenantId;
+  } else {
+    delete merged['tenantId'];
+  }
+  return merged as unknown as AuthClaims;
+}
+
+/**
  * Seta claims diretamente via Admin SDK sem verificação de caller.
  * USE APENAS dentro de Cloud Functions privilegiadas (Admin SDK context).
  * NÃO exponha ao cliente.
@@ -184,8 +214,8 @@ export async function setTenantClaimsAdmin(
   role: Role,
   tenantId?: string
 ): Promise<void> {
-  const claims: AuthClaims = { role };
-  if (tenantId) claims.tenantId = tenantId;
+  const user = await admin.auth().getUser(uid);
+  const claims = mergeTenantClaims(user.customClaims, role, tenantId);
 
   await admin.auth().setCustomUserClaims(uid, claims);
   await admin.auth().revokeRefreshTokens(uid);

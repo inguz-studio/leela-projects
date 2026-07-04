@@ -724,6 +724,29 @@ describe('provisionTenantCore — guarda de reuso de conta por e-mail (fix revie
   });
 });
 
+// ── Merge de claims no caminho FELIZ (fix re-review R3) ────────────────────
+//
+// R3: o rollback preservava claims não relacionadas, mas o caminho FELIZ as
+// destruía (setTenantClaimsAdmin substituía o objeto inteiro). Este é o teste
+// que o re-review provou falhar no Emulator com o código antigo.
+describe('provisionTenantCore — merge de claims no caminho feliz (fix re-review R3)', () => {
+  it('claims não relacionadas SOBREVIVEM ao provisionamento (merge, não replace)', async () => {
+    const pre = await auth.createUser({ email: 'marina@castelo.com.br' });
+    // Sem role — a guarda de reuso deixa passar; `beta` não é papel
+    await auth.setCustomUserClaims(pre.uid, { beta: true });
+
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(res.ownerUid).toBe(pre.uid);
+
+    const owner = await auth.getUser(pre.uid);
+    expect(owner.customClaims).toEqual({
+      beta: true,
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+});
+
 // ── Autorização do callable (RN-401) ──────────────────────────────────────
 describe('provisionTenant (callable) — autorização', () => {
   function runCallable(data: AnyRec, ctx: AnyRec): Promise<unknown> {
