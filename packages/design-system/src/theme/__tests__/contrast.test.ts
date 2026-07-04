@@ -90,7 +90,7 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['text-primary',   'surface-high'],
   ['text-secondary', 'surface-base'],
   ['text-secondary', 'surface-raised'],
-  ['text-secondary', 'surface-overlay'],
+  ['text-secondary', 'surface-overlay'], // também cobre Badge neutro / Chip inativo
   ['text-tertiary',  'surface-base'],
   ['text-tertiary',  'surface-raised'],
   ['text-tertiary',  'surface-overlay'],
@@ -117,8 +117,6 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-danger-fg',  'feedback-danger-surface'],
   ['feedback-warning-fg', 'feedback-warning-surface'],
   ['feedback-info-fg',    'feedback-info-surface'],
-  // Badge neutro / Chip inativo
-  ['text-secondary', 'surface-overlay'],
 ];
 
 // ---------------------------------------------------------------------------
@@ -146,6 +144,26 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-warning', 'surface-overlay'],
   ['feedback-info',    'surface-overlay'],
 ];
+
+// ---------------------------------------------------------------------------
+// Higiene da matriz — sem duplicatas e contagem auto-verificada (B3 do
+// REVIEW-E01-b: havia par duplicado e o relatório declarava "44 pares").
+// Ao adicionar/remover pares, atualize os números AQUI e no relatório.
+// ---------------------------------------------------------------------------
+
+describe('Higiene da matriz', () => {
+  const key = ([fg, bg]: [string, string]): string => `${fg}→${bg}`;
+
+  it('sem pares duplicados nas duas tabelas', () => {
+    expect(new Set(TEXT_PAIRS.map(key)).size).toBe(TEXT_PAIRS.length);
+    expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
+  });
+
+  it('contagem declarada bate com o disco: 31 texto + 17 não-texto = 48 pares', () => {
+    expect(TEXT_PAIRS.length).toBe(31);
+    expect(NON_TEXT_PAIRS.length).toBe(17);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Testes
