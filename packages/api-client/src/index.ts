@@ -117,6 +117,10 @@ export { listDesafios, getDesafio } from './clubs';
 export { criarDesafio, atualizarDesafio } from './clubs';
 export type { CriarDesafioInput, CriarDesafioResult } from './clubs';
 
+// Clubs — parcerias (S107-T2): leitura + transição de status (aceitar/recusar/
+// pausar — write direto; comissão/termos read-only pela Function/Rules).
+export { listParcerias, transicionarParceria } from './clubs';
+
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e
 // enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)

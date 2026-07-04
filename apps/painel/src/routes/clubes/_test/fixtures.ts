@@ -4,6 +4,8 @@ import type {
   Desafio,
   Membro,
   PapelMembro,
+  ParceriaEventoAfiliado,
+  ParceriaPatrocinador,
   StatusMembro,
   Timestamp,
 } from '@leela/core';
@@ -59,6 +61,55 @@ export function mkDesafio(over: Partial<Desafio> = {}): Desafio {
     atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-20T00:00:00Z')),
     qtdParticipantes: over.qtdParticipantes ?? 42,
     progressoPct: over.progressoPct ?? 60,
+    ...over,
+  };
+}
+
+let pseq = 0;
+export function mkEventoAfiliado(
+  over: Partial<ParceriaEventoAfiliado> = {},
+): ParceriaEventoAfiliado {
+  pseq += 1;
+  return {
+    id: over.id ?? `paf-${pseq}`,
+    tenantId: 'castelo',
+    tipo: 'evento_afiliado',
+    status: over.status ?? 'ativa',
+    eventoId: over.eventoId ?? 'meia-maratona-floripa-2026',
+    organizadorId: over.organizadorId ?? 'org-1',
+    programaAfiliacaoRef: over.programaAfiliacaoRef ?? 'eventos/meia-maratona-floripa-2026/programaAfiliacao/current',
+    comissaoPct: over.comissaoPct ?? 15,
+    cupom: over.cupom ?? 'CLUBE10',
+    linkMaster: over.linkMaster ?? 'be-hero.com.br/e/meia-floripa?ref=cps',
+    janelaAtribuicaoDias: over.janelaAtribuicaoDias ?? 30,
+    termosEspelho: over.termosEspelho ?? {
+      criterioLiberacao: 'Após 28 Abr 2026',
+      prazoRepasseDiasUteis: 15,
+      tetoMensal: null,
+    },
+    conversoes: over.conversoes ?? 8,
+    valorAReceber: over.valorAReceber ?? 640,
+    criadoEm: over.criadoEm ?? ts(new Date('2026-03-01T00:00:00Z')),
+    atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-20T00:00:00Z')),
+    ...over,
+  };
+}
+
+export function mkPatrocinador(
+  over: Partial<ParceriaPatrocinador> = {},
+): ParceriaPatrocinador {
+  pseq += 1;
+  return {
+    id: over.id ?? `ppa-${pseq}`,
+    tenantId: 'castelo',
+    tipo: 'patrocinador',
+    status: over.status ?? 'ativa',
+    nome: over.nome ?? 'Loja do Corredor',
+    modeloComercial: over.modeloComercial ?? 'financeiro',
+    valorAnual: over.valorAnual ?? 12000,
+    contrapartida: over.contrapartida ?? 'Logo na camiseta e posts mensais nas redes do clube.',
+    criadoEm: over.criadoEm ?? ts(new Date('2026-02-01T00:00:00Z')),
+    atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-20T00:00:00Z')),
     ...over,
   };
 }

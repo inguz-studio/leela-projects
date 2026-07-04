@@ -36,9 +36,11 @@ import type {
   Membro,
   ModeloDesafio,
   PapelMembro,
+  Parceria,
   Pilar,
   RecompensaTipo,
   StatusMembro,
+  StatusParceria,
   VisibilidadeDesafio,
 } from '@leela/core';
 
@@ -269,6 +271,51 @@ export async function atualizarDesafio(
     patch.minimoPorPilar = input.minimoPorPilar;
   }
   await updateDoc(doc(db, 'clubes', clubeId, 'desafios', desafioId), patch);
+}
+
+// ---------------------------------------------------------------------------
+// Parcerias (subcoleção `clubes/{clubeId}/parcerias` · S107-T1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lista as parcerias de um clube (union evento_afiliado | patrocinador).
+ * Security Rules: leitura só para membros do tenant dono. Campos espelhados
+ * (comissão/termos/link/cupom) e ∑ vêm da Function — a tela só lê.
+ */
+export async function listParcerias(
+  db: Firestore,
+  clubeId: string,
+  options: { pageLimit?: number } = {}
+): Promise<Parceria[]> {
+  const { pageLimit = 100 } = options;
+  const snap = await getDocs(
+    query(
+      collection(db, 'clubes', clubeId, 'parcerias'),
+      orderBy('criadoEm', 'desc'),
+      firestoreLimit(pageLimit)
+    )
+  );
+  // `Parceria` é union discriminada por `tipo`; o cast final preserva o shape
+  // específico (Omit<Parceria,'id'> colapsaria só as chaves comuns).
+  return snap.docs.map((d) => ({ ...(d.data() as Parceria), id: d.id }) as Parceria);
+}
+
+/**
+ * Transiciona o `status` de uma parceria (aceitar/recusar/pausar — RN-120/122).
+ * Write direto: para evento_afiliado as Rules só permitem tocar status +
+ * atualizadoEm (comissão/termos são read-only do organizador). Para
+ * patrocinador o shape completo permanece válido no doc mesclado.
+ */
+export async function transicionarParceria(
+  db: Firestore,
+  clubeId: string,
+  parceriaId: string,
+  status: StatusParceria
+): Promise<void> {
+  await updateDoc(doc(db, 'clubes', clubeId, 'parcerias', parceriaId), {
+    status,
+    atualizadoEm: serverTimestamp(),
+  });
 }
 
 // ---------------------------------------------------------------------------
