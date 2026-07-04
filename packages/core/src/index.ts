@@ -217,3 +217,20 @@ export {
 export type { ProvisionInput } from './platform/provisioning';
 export { validateProvisionInput, buildInitialTerms } from './platform/provisioning';
 
+// Contrato de consumo dos termos — E04/E09 leem por aqui (E16-S1602-T3 · RN-406)
+export type { TermsProvider, TermsReader } from './platform/termsProvider';
+export {
+  createTermsProvider,
+  TermsNotFoundError,
+  DEFAULT_TERMS_CACHE_TTL_MS,
+} from './platform/termsProvider';
+
+// Cálculo financeiro puro — taxa/split (E09 · RN-330/406) e parcelamento (E04 · RN-311)
+export type { InstallmentOption } from './finance/calc';
+export {
+  roundMoney,
+  computeTaxa,
+  computeReceitaLiquida,
+  buildInstallmentOptions,
+} from './finance/calc';
+
