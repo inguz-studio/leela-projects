@@ -32,9 +32,6 @@ export type EntradaVia = 'codigo' | 'convite' | 'link';
 /** Papéis do profissional na plataforma (via custom claims) */
 export type PapelProfissional = 'coordenador' | 'organizador' | 'admin';
 
-/** Status do ciclo de vida de um evento */
-export type StatusEvento = 'rascunho' | 'publicado' | 'ao_vivo' | 'encerrado';
-
 /**
  * Papéis de plataforma via Firebase custom claims (ADR-008, ADR-009).
  * Accompanhados de `tenantId` no claim para todos os papéis não-athlete.
@@ -103,35 +100,6 @@ export interface Membro {
   status: StatusMembro;
 }
 
-/**
- * Evento de corrida — tenant-scoped.
- * Coleção: `eventos/{eventoId}` (docId = slug).
- * Subcoleções: inscritos, kits, programaAfiliacao, politicaVendas, aprovisionamento, etc.
- */
-export interface Evento {
-  /** docId = slug */
-  id: string;
-  /** Isolamento multi-tenant (ADR-009) */
-  tenantId: string;
-  /** Referência ao profissional organizador */
-  organizadorId: string;
-  nome: string;
-  data: Timestamp;
-  local: string;
-  /** Lista de percursos/modalidades do evento */
-  modalidades: string[];
-  slug: string;
-  status: StatusEvento;
-  /** Usa chip de cronometragem (RN-207) */
-  usaChip: boolean;
-  criadoEm: Timestamp;
-  atualizadoEm: Timestamp;
-  /** Agregado ∑ — mantido por Cloud Function */
-  qtdInscritos: number;
-  /** Agregado ∑ financeiro confirmado — mantido por Cloud Function */
-  receitaConfirmada: number;
-}
-
 // ---------------------------------------------------------------------------
 // PaymentProvider — interface plugável (ADR-006)
 // Movida para src/payments/PaymentProvider.ts; re-exportada aqui para
@@ -181,6 +149,21 @@ export {
   gerarCodigoConvite,
   validarCodigoConvite,
 } from './clubs';
+
+// ---------------------------------------------------------------------------
+// Módulo Eventos (LEELA-E03 · S200-T1)
+// Entidade Evento movida para src/eventos/evento.ts; re-exportada aqui para
+// manter retrocompatibilidade de imports de '@leela/core'.
+// ---------------------------------------------------------------------------
+export type { Evento, StatusEvento } from './eventos/evento';
+export {
+  STATUS_EVENTO,
+  isStatusEvento,
+  CAMPOS_AGREGADOS_EVENTO,
+  temVenda,
+  eventoPublico,
+  parseEvento,
+} from './eventos/evento';
 
 // ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)

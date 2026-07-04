@@ -5,6 +5,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@leela/core': resolve(__dirname, '../packages/core/src/index.ts'),
+      // api-client direto da fonte: os testes de Rules exercitam as queries
+      // reais (paginação por cursor etc.) contra o Emulator (E03-L1).
+      '@leela/api-client': resolve(__dirname, '../packages/api-client/src/index.ts'),
     },
   },
   test: {

@@ -107,6 +107,13 @@ export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 export { getClube, listClubesByTenant, listClubesByOwner } from './clubs';
 
 // ---------------------------------------------------------------------------
+// Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
+// ---------------------------------------------------------------------------
+// S200-T1 — eventos por organizador
+export { listarEventosDoOrganizador } from './eventos/queries';
+export type { ListarEventosDoOrganizadorParams } from './eventos/queries';
+
+// ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
 // ---------------------------------------------------------------------------
 export {
