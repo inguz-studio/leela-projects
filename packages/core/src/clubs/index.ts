@@ -95,3 +95,27 @@ export { validarPublicacao, podePublicar } from './desafio-validacao';
 
 // Copy de vínculo Desafio ↔ Evento (S106-T1 · RN-113)
 export { copyPreparacao } from './evento-vinculo';
+
+// Parcerias — captura de valor (S107-T1 · RN-120/122/123/125)
+export type {
+  TipoParceria,
+  StatusParceria,
+  ModeloComercial,
+  TermosEspelho,
+  Parceria,
+  ParceriaEventoAfiliado,
+  ParceriaPatrocinador,
+} from './parceria';
+export {
+  TIPOS_PARCERIA,
+  STATUS_PARCERIA,
+  MODELOS_COMERCIAIS,
+  isTipoParceria,
+  isStatusParceria,
+  isModeloComercial,
+  isParceriaEventoAfiliado,
+  isParceriaPatrocinador,
+  CAMPOS_AGREGADOS_PARCERIA,
+  CAMPOS_ESPELHO_PARCERIA,
+  dentroDaJanelaAtribuicao,
+} from './parceria';

@@ -559,6 +559,87 @@ service cloud.firestore {
         }
       }
 
+      // `parcerias/{parceriaId}` — captura de valor do clube (E05 · S107-T1).
+      //
+      // Union por `tipo` (RN-123): evento_afiliado | patrocinador.
+      // RN-120/122: comissão/termos/link/cupom são espelhados por Function a
+      // partir do programa do ORGANIZADOR — read-only para o clube. Em
+      // evento_afiliado o clube apenas TRANSICIONA `status` (aceitar/recusar/
+      // pausar). Agregados ∑ (conversoes, valorAReceber) só via Function
+      // (recontagem — onConversao). Patrocinador é CRUD do próprio clube,
+      // com shape (RN-123 + SPEC-02).
+      match /parcerias/{parceriaId} {
+
+        /** Campos espelhados do programa (RN-120/122) + ∑ — intocáveis. */
+        function camposProtegidosParceria() {
+          return ['comissaoPct', 'cupom', 'linkMaster', 'janelaAtribuicaoDias',
+                  'termosEspelho', 'programaAfiliacaoRef',
+                  'conversoes', 'valorAReceber'];
+        }
+
+        /** Ciclo de vida dentro do enum canônico. */
+        function statusParceriaValido() {
+          return request.resource.data.status in
+            ['convite_pendente', 'ativa', 'inativa'];
+        }
+
+        /** Shape do patrocinador (RN-123): modelo no enum; contrapartida
+            ≥ 20 chars (SPEC-02); financeiro exige valorAnual > 0; nunca
+            nasce com campos de afiliação/∑ (fraude de shape). */
+        function shapePatrocinadorValido() {
+          return request.resource.data.tipo == 'patrocinador'
+            && statusParceriaValido()
+            && request.resource.data.modeloComercial in ['financeiro', 'permuta']
+            && request.resource.data.contrapartida is string
+            && request.resource.data.contrapartida.size() >= 20
+            && (request.resource.data.modeloComercial != 'financeiro'
+                || (request.resource.data.get('valorAnual', 0) is number
+                    && request.resource.data.get('valorAnual', 0) > 0))
+            && !request.resource.data.keys().hasAny(camposProtegidosParceria());
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoClubePai());
+
+        // Create de cliente: APENAS patrocinador — convite de evento_afiliado
+        // nasce do organizador via Function (Admin SDK bypassa Rules).
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoClubePai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapePatrocinadorValido())
+                      || isPlatformAdmin();
+
+        // Update: evento_afiliado → SÓ transição de status (RN-120/122);
+        //         patrocinador → edição com shape (não vira afiliado).
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && statusParceriaValido()
+                          && ((resource.data.tipo == 'evento_afiliado'
+                               && request.resource.data.diff(resource.data)
+                                    .affectedKeys()
+                                    .hasOnly(['status', 'atualizadoEm']))
+                              || (resource.data.tipo == 'patrocinador'
+                                  && shapePatrocinadorValido())))
+                      || isPlatformAdmin();
+
+        // Delete: patrocinador pode; evento_afiliado NUNCA pelo cliente
+        // (trilha financeira de conversões não some).
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.tipo == 'patrocinador')
+                      || isPlatformAdmin();
+
+        // `conversoes/{conversaoId}` — trilha ∑ de atribuição (RN-125).
+        // Escrita EXCLUSIVA da Function (onConversao, Admin SDK). Leitura
+        // tenant-only; cliente nunca cria/edita/deleta conversão.
+        match /conversoes/{conversaoId} {
+          allow read: if isPlatformAdmin()
+                      || isTenantMember(tenantDoClubePai());
+          allow write: if false;
+        }
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantMember(tenantDoClubePai());
