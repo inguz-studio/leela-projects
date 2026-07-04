@@ -109,7 +109,13 @@ export type { ListMembrosOptions } from './clubs';
 
 // Clubs — leitura de desafios (S105-T2), parcerias (S107-T2) e comunicados
 // (S108-T2). Filtro fino roda no cliente; agregados ∑ vêm das Functions.
-export { listDesafios } from './clubs';
+export { listDesafios, getDesafio } from './clubs';
+
+// Clubs — criação/edição de desafio via write direto do cliente (editor
+// S106-T2 — Rules de desafios permitem create/update do papel de escrita; ∑
+// zerados no create, intocados no update).
+export { criarDesafio, atualizarDesafio } from './clubs';
+export type { CriarDesafioInput, CriarDesafioResult } from './clubs';
 
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e

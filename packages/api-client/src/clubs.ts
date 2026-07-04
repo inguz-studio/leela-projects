@@ -20,17 +20,26 @@ import {
   limit as firestoreLimit,
   orderBy,
   query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  updateDoc,
   where,
   type Firestore,
   type QueryConstraint,
 } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type {
+  AcaoDesafio,
   Clube,
   Desafio,
   Membro,
+  ModeloDesafio,
   PapelMembro,
+  Pilar,
+  RecompensaTipo,
   StatusMembro,
+  VisibilidadeDesafio,
 } from '@leela/core';
 
 // ---------------------------------------------------------------------------
@@ -147,6 +156,119 @@ export async function listDesafios(
     )
   );
   return snap.docs.map((d) => ({ ...(d.data() as Omit<Desafio, 'id'>), id: d.id }));
+}
+
+/** Lê um desafio pelo id (edição do editor — S106-T2). Null se não existir. */
+export async function getDesafio(
+  db: Firestore,
+  clubeId: string,
+  desafioId: string
+): Promise<Desafio | null> {
+  const snap = await getDoc(doc(db, 'clubes', clubeId, 'desafios', desafioId));
+  if (!snap.exists()) return null;
+  return { ...(snap.data() as Omit<Desafio, 'id'>), id: snap.id };
+}
+
+// ---------------------------------------------------------------------------
+// Escrita — desafio (S106-T2). Write DIRETO do cliente (não Function): as
+// Rules de `clubes/{id}/desafios` (S105-T1, testadas) permitem create pelo
+// papel de escrita do tenant, exigindo shape válido + agregados ∑ zerados. A
+// recontagem de `qtdDesafiosAtivos` é da Function onDesafioWrite. Não há
+// callable de criação (recorte V1 = listar/criar por write client).
+// ---------------------------------------------------------------------------
+
+/** Payload de criação de desafio (editor S106-T2). Datas em `Date`. */
+export interface CriarDesafioInput {
+  /** tenantId do clube pai (Rules exigem coerência — ADR-009). */
+  tenantId: string;
+  nome: string;
+  descricao: string;
+  modelo: ModeloDesafio;
+  dataInicio: Date;
+  dataFim: Date;
+  /** 'rascunho' ao salvar; 'ativo' ao publicar (validação no cliente). */
+  status: 'rascunho' | 'ativo';
+  metaTotalPontos?: number;
+  minimoPorPilar?: Partial<Record<Pilar, number>>;
+  recompensaTipo: RecompensaTipo;
+  visibilidade: VisibilidadeDesafio;
+  /** Junção N:N com o catálogo (`acoes/{acaoId}`). */
+  acoes: AcaoDesafio[];
+}
+
+export interface CriarDesafioResult {
+  desafioId: string;
+}
+
+/**
+ * Cria um desafio (+ junção de ações) via write direto do cliente. Agregados ∑
+ * nascem zerados (a Function os mantém). Retorna o id gerado.
+ */
+export async function criarDesafio(
+  db: Firestore,
+  clubeId: string,
+  input: CriarDesafioInput
+): Promise<CriarDesafioResult> {
+  const ref = doc(collection(db, 'clubes', clubeId, 'desafios'));
+  const data: Record<string, unknown> = {
+    tenantId: input.tenantId,
+    nome: input.nome,
+    descricao: input.descricao,
+    modelo: input.modelo,
+    status: input.status,
+    dataInicio: Timestamp.fromDate(input.dataInicio),
+    dataFim: Timestamp.fromDate(input.dataFim),
+    recompensaTipo: input.recompensaTipo,
+    visibilidade: input.visibilidade,
+    qtdParticipantes: 0,
+    progressoPct: 0,
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  };
+  if (input.metaTotalPontos !== undefined) data.metaTotalPontos = input.metaTotalPontos;
+  if (input.minimoPorPilar && Object.keys(input.minimoPorPilar).length > 0) {
+    data.minimoPorPilar = input.minimoPorPilar;
+  }
+  await setDoc(ref, data);
+
+  await Promise.all(
+    input.acoes.map((a) =>
+      setDoc(
+        doc(db, 'clubes', clubeId, 'desafios', ref.id, 'acoes', a.acaoRef),
+        a.meta !== undefined ? { acaoRef: a.acaoRef, meta: a.meta } : { acaoRef: a.acaoRef }
+      )
+    )
+  );
+
+  return { desafioId: ref.id };
+}
+
+/**
+ * Atualiza um desafio existente (edição — S106-T2). NUNCA toca agregados ∑
+ * (Rules negam). A junção `acoes` não é re-sincronizada aqui (recorte V1).
+ */
+export async function atualizarDesafio(
+  db: Firestore,
+  clubeId: string,
+  desafioId: string,
+  input: Omit<CriarDesafioInput, 'tenantId' | 'acoes'>
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    nome: input.nome,
+    descricao: input.descricao,
+    modelo: input.modelo,
+    status: input.status,
+    dataInicio: Timestamp.fromDate(input.dataInicio),
+    dataFim: Timestamp.fromDate(input.dataFim),
+    recompensaTipo: input.recompensaTipo,
+    visibilidade: input.visibilidade,
+    atualizadoEm: serverTimestamp(),
+  };
+  if (input.metaTotalPontos !== undefined) patch.metaTotalPontos = input.metaTotalPontos;
+  if (input.minimoPorPilar && Object.keys(input.minimoPorPilar).length > 0) {
+    patch.minimoPorPilar = input.minimoPorPilar;
+  }
+  await updateDoc(doc(db, 'clubes', clubeId, 'desafios', desafioId), patch);
 }
 
 // ---------------------------------------------------------------------------
