@@ -113,7 +113,7 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 ### LEELA-E16 · Super-admin mínimo (recorte V1 — onboarding, termos, macro básico)
 
-- [x] LEELA-S1601-T1 — Function `provisionTenant` (cria tenant + owner + claims, atômico) (`0eca288` + fixes de segurança `2042577`/`bda8039`; hotfix R1+#8 em voo)
+- [x] LEELA-S1601-T1 — Function `provisionTenant` (cria tenant + owner + claims, atômico) (`0eca288` + fixes `2042577`/`bda8039` + hotfix `35894cb`/`1e50e49`; merge de claims `0acea80`)
 - [x] LEELA-S1601-T2 — Function de lifecycle (`activate`/`suspend`/`reactivate`) (`73e8366`, c/ trilha `lifecycleAudit`)
 - [ ] LEELA-S1601-T3 — Tela lista de tenants (tabela densa, filtros, saúde)
 - [ ] LEELA-S1601-T4 — Tela detalhe do tenant + provisionar/suspender (ConfirmModal)
