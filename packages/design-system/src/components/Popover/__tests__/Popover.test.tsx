@@ -140,6 +140,40 @@ describe('Popover', () => {
     );
   });
 
+  it('B4: Tab-out fecha o menu (WAI-APG), sem aria-expanded velho e sem perder o lugar', async () => {
+    render(
+      <div>
+        <Controlled actions={makeActions()} initialOpen />
+        <button type="button">Depois</button>
+      </div>,
+    );
+    expect(screen.getByRole('menuitem', { name: 'Ver perfil' })).toHaveFocus();
+
+    await userEvent.keyboard('{Tab}');
+
+    // menu fechou e aria-expanded não fica velho
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: 'Abrir ações' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    // foco NÃO se perde no fim do body (portal): volta ao trigger
+    // (paridade com Esc) — o usuário mantém o lugar dele na página...
+    expect(trigger).toHaveFocus();
+
+    // ...e o PRÓXIMO Tab segue a ordem normal do documento
+    await userEvent.keyboard('{Tab}');
+    expect(screen.getByRole('button', { name: 'Depois' })).toHaveFocus();
+  });
+
+  it('B4: Shift+Tab também fecha o menu e devolve o foco ao trigger', async () => {
+    render(<Controlled actions={makeActions()} initialOpen />);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir ações' })).toHaveFocus();
+  });
+
   it('F07: menu renderiza em portal no document.body (não é clipado por overflow)', () => {
     render(
       <div style={{ overflow: 'hidden', width: 40, height: 10 }}>

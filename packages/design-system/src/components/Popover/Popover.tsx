@@ -5,6 +5,11 @@
  *   - Controlado (open/onOpenChange): o pai garante "só um aberto por vez"
  *     guardando um único id aberto (padrão em Table renderActions).
  *   - Click fora fecha; Esc fecha e devolve o foco ao trigger.
+ *   - Tab (e Shift+Tab) fecha o menu (WAI-APG menu pattern) e devolve o
+ *     foco ao trigger (paridade com Esc). preventDefault: o menu vive em
+ *     portal no fim do body, então o Tab nativo a partir do menuitem
+ *     jogaria o foco para fora da página; do trigger, o próximo Tab segue
+ *     a ordem normal do documento.
  *   - stopPropagation no trigger e em cada item (não dispara click da linha).
  *   - Teclado no menu: ↓ ↑ Home End percorrem os itens.
  *   - Menu renderiza em PORTAL no document.body com position:fixed ancorada
@@ -135,8 +140,23 @@ function Popover({
     }
   }, [open]);
 
-  // Navegação por teclado dentro do menu (↓ ↑ Home End)
+  // Navegação por teclado dentro do menu (↓ ↑ Home End; Tab fecha)
   function handleMenuKeyDown(e: React.KeyboardEvent) {
+    // WAI-APG (menu): Tab/Shift+Tab fecha o menu. O menu vive em portal no
+    // fim do body — deixar o Tab nativo correr a partir do menuitem jogaria
+    // o foco para fora da página (depois do body não há nada). Fechamos,
+    // prevenimos o default e devolvemos o foco ao trigger (paridade com
+    // Esc): o usuário fica no lugar dele na página e o próximo Tab segue a
+    // ordem normal do documento. aria-expanded volta a false junto.
+    // (Radix Menu bloqueia Tab sem fechar; Headless UI fecha com foco
+    // manual — fechar + trigger é o meio-termo determinístico.)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      onOpenChange(false);
+      triggerRef.current?.focus();
+      return;
+    }
+
     const items = menuRef.current
       ? Array.from(
           menuRef.current.querySelectorAll<HTMLButtonElement>(
