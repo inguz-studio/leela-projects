@@ -17,6 +17,7 @@ import { ToastProvider } from '@leela/design-system';
 import { HubRoute } from './hub/HubRoute';
 import { ClubeLayout } from './clube/ClubeLayout';
 import { OverviewPage } from './clube/overview/OverviewPage';
+import { MembrosPage } from './clube/membros/MembrosPage';
 
 export function ClubesRoutes(): JSX.Element {
   return (
@@ -25,7 +26,7 @@ export function ClubesRoutes(): JSX.Element {
         <Route index element={<HubRoute />} />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
-          {/* membros entra no commit S103-T2 */}
+          <Route path="membros" element={<MembrosPage />} />
         </Route>
       </Routes>
     </ToastProvider>
