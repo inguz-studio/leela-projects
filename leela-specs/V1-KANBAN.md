@@ -22,7 +22,7 @@ tags:
 - [ ] **O1** · E03 · Operação do evento — L1 ✅ 3/3T · **L3 telas ✅ 4/4T** (f599032, 9781173, 83d4036, d97250f · 45/45 testes) · **L2 ✅ 4/4T** (fcb7e1b, 908359c, 6fe2e9f, a0a48b3 + follow-up #3 9530caa · 105/105 na suíte de eventos, zero regressão nos rastreados) — contratos do L3 publicados: `CriarEventoInput` c/ percursos em `api-client/eventos/mutations.ts` + `getEvento(db, slug)` (falta só o swap de 1 linha em `_data/criarEvento.ts`, dono L3) · L4/L5 DESTRAVADOS
 - [ ] **O1** · E05 · Clubs núcleo — L1 ✅ 2/2T · **L3 telas ✅ 5/5T** (af18fe8, adc9c93, b0f991b, 171222b, 19103a1 · 49/49) · L2 motores: WIP no worktree, redespacho na vez da trilha Fable (recebe contratos do L3: removerMembro/transferirPropriedade/enviarConvites) · L4/L5 na fila
 - [ ] **O1** · E16-slim · onboard tenant + termos — L1 ✅ 6/6T + fixes + HOTFIX ✅ · **L2 telas ✅ 4/4T** (e5ce3a5, 704f17a, 1103d1e, da27d37 · 62/62 RTL) · falta só review da onda (inclui hotfixes)
-- [ ] **O1** · E02 · Dashboard do produtor — **L1 ✅ 1/1T** (c48b0e6 · S600-T2: agregado idempotente + getOverview + Rules dashboard/** + índice CG inscritos p/ S601-T2 · 50/50 testes, zero regressão) · L2/L3 telas DESTRAVADOS (Opus; consomem `api-client/overview.getOverview`)
+- [ ] **O1** · E02 · Dashboard do produtor — **L1 ✅ 1/1T** (c48b0e6) · **L2/L3 telas ✅ 6/6T** (6b11674 S600-T3 · d15fa06 S601-T1 · c451d01 S601-T2 · da20569 S602-T1 · 8e9ae80 S602-T2 · +S600-T1 rota/shell/layout · 206/206 na suíte do painel, zero regressão · build+tsc+lint verdes) — consomem `getOverview` (KPIs+alerts, 1 round-trip) + `listarEventosDoOrganizador`; falta review antagonista da onda
 
 
 ## 🔍 Revisão

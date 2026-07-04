@@ -76,13 +76,13 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 
 ### LEELA-E02 · Visão geral do profissional (completo)
 
-- [ ] LEELA-S600-T1 — Rota `(overview)` + layout 2 colunas + cabeçalho
+- [x] LEELA-S600-T1 — Rota raiz `(overview)` + shell (AppShell/Sidebar "Visão Geral" ativa) + layout 2 colunas + saudação (este commit · greeting/sidebar/session/data + App.tsx)
 - [x] LEELA-S600-T2 — Cloud Function de agregado do dashboard do profissional (c48b0e6 · kpis+alerts core puro, fan-out idempotente, getOverview 1 round-trip, Rules dashboard/**, 50/50 testes)
-- [ ] LEELA-S600-T3 — KPI row (4 cards) consumindo o agregado
-- [ ] LEELA-S601-T1 — Seção "Seus eventos ativos"
-- [ ] LEELA-S601-T2 — Tabela "Últimas inscrições" (cross-evento)
-- [ ] LEELA-S602-T1 — Countdown card do próximo evento + ações rápidas
-- [ ] LEELA-S602-T2 — Painel de alertas operacionais
+- [x] LEELA-S600-T3 — KPI row (4 cards) consumindo o agregado (6b11674 · Inscrições/Receita/Vagas[Esgotando]/Conversão; null→"—")
+- [x] LEELA-S601-T1 — Seção "Seus eventos ativos" (d15fa06 · status + inscritos + "Últimas vagas" + Gerenciar→E03)
+- [x] LEELA-S601-T2 — Tabela "Últimas inscrições" (cross-evento) (c451d01 · ordena data desc + badge RN-204 Pago/Pendente/Recusado)
+- [x] LEELA-S602-T1 — Countdown card do próximo evento + ações rápidas (da20569 · "08 dias restantes" + inscritos/vagas + Check-in→balcão E03)
+- [x] LEELA-S602-T2 — Painel de alertas operacionais (8e9ae80 · consome alerts[] do MESMO getOverview; warn/info; "Tudo em dia")
 
 ### LEELA-E05 · Clubs (recorte V1 — núcleo + desafio mínimo)
 
