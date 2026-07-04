@@ -35,6 +35,14 @@
 //   - tenant suspenso → failed-precondition (reative via transitionTenant).
 //   - owner já pertencente a OUTRO tenant → failed-precondition (um
 //     profissional tem no máximo um tenant na V1).
+//   - e-mail de conta com papel CONFLITANTE (athlete / platform_admin /
+//     tenant_staff / promoter / tenant_owner de outro tenant) →
+//     failed-precondition. Fix review Onda1 #2: o provisionamento NUNCA
+//     converte papel de conta existente em tenant_owner silenciosamente
+//     (typo de admin ou colisão atleta↔produtor não vira takeover de conta).
+//     onda1-decisoes.md é omisso sobre conversão → rejeitar é o default
+//     seguro. Conta pré-existente SEM role (ex.: criada pelo fluxo pending)
+//     e tenant_owner do MESMO tenant (replay) seguem normalmente.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -126,6 +134,27 @@ export async function provisionTenantCore(
   if (existingUser) {
     ownerUid = existingUser.uid;
     previousClaims = existingUser.customClaims ?? null;
+
+    // Guarda de reuso de conta (fix review Onda1 #2): conta pré-existente
+    // com papel CONFLITANTE nunca é convertida em tenant_owner no caminho
+    // feliz. Rejeitar é o default seguro (onda1-decisoes.md é omisso).
+    //   - athlete / platform_admin / tenant_staff / promoter → rejeita;
+    //   - tenant_owner de OUTRO tenant → rejeita (1 owner = 1 tenant, V1);
+    //   - tenant_owner do MESMO tenant → segue (replay idempotente);
+    //   - sem role → segue (conta pré-criada sem papel pode virar owner).
+    const claims = (previousClaims ?? {}) as Partial<AuthClaims>;
+    const conflictingRole =
+      claims.role !== undefined &&
+      (claims.role !== 'tenant_owner' || claims.tenantId !== tenantId);
+    if (conflictingRole) {
+      throw new https.HttpsError(
+        'failed-precondition',
+        `E-mail '${input.ownerEmail}' já pertence a uma conta com papel ` +
+          `'${claims.role}'${claims.tenantId ? ` (tenant '${claims.tenantId}')` : ''}` +
+          ' — provisionamento não converte papel de conta existente. ' +
+          'Use outro e-mail de owner ou trate a conta antes (RN-401).'
+      );
+    }
   } else {
     const created = await auth.createUser({
       email: input.ownerEmail,

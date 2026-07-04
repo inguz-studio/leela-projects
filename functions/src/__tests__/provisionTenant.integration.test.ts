@@ -16,6 +16,9 @@
  *   - rollback de aprovação: doc pending restaurado byte a byte
  *   - conflitos: slug ativo de outro owner; owner já de outro tenant;
  *     tenant suspenso
+ *   - guarda de reuso de conta (fix review Onda1 #2): e-mail de athlete/
+ *     platform_admin/owner de outro tenant → failed-precondition e conta
+ *     INTACTA; e-mail novo → ok; mesmo owner re-provisionando → replay
  *   - autorização do callable: só platform_admin
  *
  * Pré-requisito: Emulator Firestore (8080) + Auth (9099) via emulators:exec.
@@ -417,6 +420,114 @@ describe('provisionTenantCore — conflitos', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
     const users = await auth.listUsers(10);
     expect(users.users.length).toBe(0);
+  });
+});
+
+// ── Guarda de reuso de conta por e-mail (fix review Onda1 #2) ─────────────
+//
+// O achado: o caminho FELIZ reaproveitava qualquer conta Auth pelo e-mail e
+// setTenantClaimsAdmin SUBSTITUÍA o claim inteiro — um athlete (ou admin)
+// virava tenant_owner silenciosamente por typo/colisão de e-mail. Agora o
+// papel conflitante é rejeitado com erro de negócio ANTES de qualquer
+// escrita. Os testes de rejeição falhariam no código antigo (provisionava).
+describe('provisionTenantCore — guarda de reuso de conta por e-mail (fix review #2)', () => {
+  it('e-mail de ATHLETE → failed-precondition e conta intacta (sem conversão)', async () => {
+    const athlete = await auth.createUser({ email: 'atleta@leela.app' });
+    await auth.setCustomUserClaims(athlete.uid, { role: 'athlete' });
+
+    await expect(
+      provisionTenantCore(
+        db,
+        auth,
+        input({ ownerEmail: 'atleta@leela.app' }),
+        ADMIN_UID
+      )
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+
+    // Conta intacta: papel athlete preservado, NENHUM doc de tenant criado
+    const after = await auth.getUser(athlete.uid);
+    expect(after.customClaims).toEqual({ role: 'athlete' });
+    expect((await db.doc('tenants/castelo-producoes').get()).exists).toBe(false);
+    expect((await db.collection('profissionais').get()).size).toBe(0);
+  });
+
+  it('e-mail de PLATFORM_ADMIN → failed-precondition (nunca rebaixa admin)', async () => {
+    const otherAdmin = await auth.createUser({ email: 'admin@leela.app' });
+    await auth.setCustomUserClaims(otherAdmin.uid, { role: 'platform_admin' });
+
+    await expect(
+      provisionTenantCore(
+        db,
+        auth,
+        input({ ownerEmail: 'admin@leela.app' }),
+        ADMIN_UID
+      )
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+
+    const after = await auth.getUser(otherAdmin.uid);
+    expect(after.customClaims).toEqual({ role: 'platform_admin' });
+  });
+
+  it('e-mail de tenant_owner de OUTRO tenant (só claim, sem doc) → failed-precondition', async () => {
+    // Claims-only: sem doc profissionais/ — o código antigo passava pela
+    // checagem de profissional e SOBRESCREVIA o claim (este teste o pegava)
+    const dono = await auth.createUser({ email: 'dono@outra-marca.com' });
+    await auth.setCustomUserClaims(dono.uid, {
+      role: 'tenant_owner',
+      tenantId: 'outra-marca',
+    });
+
+    await expect(
+      provisionTenantCore(
+        db,
+        auth,
+        input({ ownerEmail: 'dono@outra-marca.com' }),
+        ADMIN_UID
+      )
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+
+    const after = await auth.getUser(dono.uid);
+    expect(after.customClaims).toEqual({
+      role: 'tenant_owner',
+      tenantId: 'outra-marca',
+    });
+  });
+
+  it('e-mail NOVO → provisiona normalmente (guarda não afeta o caminho feliz)', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(res.replay).toBe(false);
+    const owner = await auth.getUser(res.ownerUid);
+    expect(owner.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('conta pré-existente SEM role → reusada (fluxo de conta pré-criada)', async () => {
+    const pre = await auth.createUser({ email: 'marina@castelo.com.br' });
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(res.ownerUid).toBe(pre.uid);
+    const owner = await auth.getUser(pre.uid);
+    expect(owner.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('tenant_owner do MESMO tenant re-provisionando → replay idempotente documentado', async () => {
+    // Comportamento CANÔNICO: retry/replay do mesmo pedido devolve
+    // replay:true, não duplica docs e reaplica exatamente as mesmas claims.
+    // A prova de ownership é o doc tenants/{slug}.ownerUid — NÃO a claim.
+    const r1 = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const r2 = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+
+    expect(r2.replay).toBe(true);
+    expect(r2.ownerUid).toBe(r1.ownerUid);
+    const owner = await auth.getUser(r1.ownerUid);
+    expect(owner.customClaims).toEqual({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
   });
 });
 
