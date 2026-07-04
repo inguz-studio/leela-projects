@@ -26,6 +26,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -266,6 +267,54 @@ describe('agregados ∑ de eventos — escrita só por Function', () => {
     }).firestore() as unknown as Firestore;
     await assertSucceeds(
       updateDoc(doc(db, 'eventos', MEIA_FLORIPA_ID), { qtdInscritos: 454 })
+    );
+  });
+});
+
+// ── Adversariais cross-tenant + imutabilidade (review Onda1 #3) ───────────
+//
+// A coleção-pai `eventos` é o primeiro-movedor global (E02/E05/E16 leem) —
+// o review antagonista da Onda 1 exigiu provar por TENTATIVA DE QUEBRA o que
+// as subcoleções já provavam: write cross-tenant e troca de tenantId negados.
+
+describe('eventos — write cross-tenant e tenantId imutável (review #3)', () => {
+  function passoDb(): Firestore {
+    return ctxAs(PASSO_OWNER_UID, {
+      role: 'tenant_owner',
+      tenantId: PASSO_ID,
+    }).firestore() as unknown as Firestore;
+  }
+
+  it('(a) owner de B NÃO cria evento carimbando tenant de A', async () => {
+    const db = passoDb();
+    await assertFails(
+      setDoc(doc(db, 'eventos', 'evento-invasao'), {
+        id: 'evento-invasao', tenantId: CASTELO_ID,
+        organizadorId: PASSO_OWNER_UID, nome: 'Invasão',
+        status: 'rascunho',
+      })
+    );
+  });
+
+  it('(b) owner de B NÃO atualiza nem deleta evento de A', async () => {
+    const db = passoDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', MEIA_FLORIPA_ID), { nome: 'HIJACK' })
+    );
+    await assertFails(deleteDoc(doc(db, 'eventos', MEIA_FLORIPA_ID)));
+  });
+
+  it('(b2) owner de A também NÃO atualiza evento de B (simetria)', async () => {
+    const db = marinaDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', 'trail-ratones-2026'), { nome: 'HIJACK' })
+    );
+  });
+
+  it('(c) tenantId de evento é IMUTÁVEL no update (anti write-takeover)', async () => {
+    const db = marinaDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', MEIA_FLORIPA_ID), { tenantId: PASSO_ID })
     );
   });
 });
