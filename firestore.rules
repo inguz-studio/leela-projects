@@ -183,6 +183,75 @@ service cloud.firestore {
                         && tenantAtivo(resource.data.tenantId))
                     || isPlatformAdmin();
 
+      /** tenantId do evento pai — subcoleções carregam tenantId coerente (ADR-009). */
+      function tenantDoEventoPai() {
+        return get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId;
+      }
+
+      // `inscritos/{inscritoId}` — join Atleta↔Evento (E03 · S203-T1).
+      //
+      // Shape (RN-202/203/204): kit e status dentro dos enums; chipNumero
+      // string|null (null até a entrega). Carimbos de operação
+      // (kitEntregueEm/checkinEm/qrToken/ingressoEmitidoEm) são de escrita
+      // EXCLUSIVA de Function (RN-205/221/222) — cliente nunca escreve.
+      // TODO(E04/E12): atleta dono lê a própria inscrição só na story do
+      // checkout, com teste (mesmo gate do TODO de leitura pública acima).
+      match /inscritos/{inscritoId} {
+
+        /** Kit dentro do enum canônico (RN-202; "kit", nunca "tier" — RN-216). */
+        function kitInscritoValido() {
+          return request.resource.data.kit in ['kit_ouro', 'kit_prata', 'kit_basico', 'sem_kit'];
+        }
+
+        /** Status dentro do enum canônico (RN-204). */
+        function statusInscritoValido() {
+          return request.resource.data.status in ['confirmado', 'pendente', 'cancelado'];
+        }
+
+        /** chipNumero é string ou null — null até a entrega (RN-203). */
+        function chipInscritoValido() {
+          return !('chipNumero' in request.resource.data)
+            || request.resource.data.chipNumero == null
+            || request.resource.data.chipNumero is string;
+        }
+
+        /** Cliente não CRIA doc já carimbado com campos de Function. */
+        function semCamposDeFunctionInscrito() {
+          return !request.resource.data.keys().hasAny(
+            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm']
+          );
+        }
+
+        /** Update de cliente não TOCA campos de Function (RN-205/221/222). */
+        function camposDeFunctionIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm']
+          );
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && kitInscritoValido()
+                          && statusInscritoValido()
+                          && chipInscritoValido()
+                          && semCamposDeFunctionInscrito())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && kitInscritoValido()
+                          && statusInscritoValido()
+                          && chipInscritoValido()
+                          && camposDeFunctionIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId);

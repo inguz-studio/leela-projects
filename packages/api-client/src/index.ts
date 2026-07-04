@@ -113,6 +113,14 @@ export { getClube, listClubesByTenant, listClubesByOwner } from './clubs';
 export { listarEventosDoOrganizador } from './eventos/queries';
 export type { ListarEventosDoOrganizadorParams } from './eventos/queries';
 
+// S203-T1 — inscritos paginados por cursor (18/página — §2.5)
+export { listarInscritos, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
+export type {
+  InscritosCursor,
+  ListarInscritosOptions,
+  ListarInscritosResult,
+} from './eventos/inscritos';
+
 // ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
 // ---------------------------------------------------------------------------

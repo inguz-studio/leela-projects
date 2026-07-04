@@ -151,7 +151,7 @@ export {
 } from './clubs';
 
 // ---------------------------------------------------------------------------
-// Módulo Eventos (LEELA-E03 · S200-T1)
+// Módulo Eventos (LEELA-E03 · S200-T1 / S203-T1)
 // Entidade Evento movida para src/eventos/evento.ts; re-exportada aqui para
 // manter retrocompatibilidade de imports de '@leela/core'.
 // ---------------------------------------------------------------------------
@@ -164,6 +164,18 @@ export {
   eventoPublico,
   parseEvento,
 } from './eventos/evento';
+
+export type { Inscrito, KitInscrito, StatusInscrito } from './eventos/inscrito';
+export {
+  KITS_INSCRITO,
+  isKitInscrito,
+  STATUS_INSCRITO,
+  isStatusInscrito,
+  CAMPOS_FUNCTION_INSCRITO,
+  chipVinculado,
+  inscritoAtivo,
+  parseInscrito,
+} from './eventos/inscrito';
 
 // ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)
