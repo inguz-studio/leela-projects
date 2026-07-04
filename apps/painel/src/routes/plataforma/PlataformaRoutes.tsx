@@ -16,6 +16,7 @@ import { ToastProvider } from '@leela/design-system';
 import { PlatformShell } from './_components/PlatformShell';
 import { TenantsListRoute } from './tenants/TenantsListRoute';
 import { TenantDetailRoute } from './tenants/TenantDetailRoute';
+import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 
 export function PlataformaRoutes(): JSX.Element {
   return (
@@ -25,6 +26,7 @@ export function PlataformaRoutes(): JSX.Element {
           <Route index element={<Navigate to="tenants" replace />} />
           <Route path="tenants" element={<TenantsListRoute />} />
           <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
+          <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
         </Route>
       </Routes>
     </ToastProvider>
