@@ -53,19 +53,19 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 
 ### LEELA-E03 · Operação do evento (completo)
 
-- [ ] LEELA-S200-T1 — Tipo `Evento` + query por organizador + Rules
+- [x] LEELA-S200-T1 — Tipo `Evento` + query por organizador + Rules (`475574d`)
 - [ ] LEELA-S200-T2 — Tela Hub de eventos (`/eventos`) + KPIs globais + EmptyState
 - [ ] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview)
 - [ ] LEELA-S201-T2 — Function `criarEvento` + `publicarEvento` (slug, URL, QR)
 - [ ] LEELA-S201-T3 — Bloqueio de edição de preço após 1ª venda (RN-200)
 - [ ] LEELA-S202-T1 — Layout do evento (header 96px §2.1 + sub-nav §2.14)
 - [ ] LEELA-S202-T2 — Dashboard Overview (KPIs, alertas, atividade recente)
-- [ ] LEELA-S203-T1 — Subcoleção `inscritos` + tipo + query paginada + Rules
+- [x] LEELA-S203-T1 — Subcoleção `inscritos` + tipo + query paginada + Rules (`8caec72`; legada top-level aposentada em `90a65cf`)
 - [ ] LEELA-S203-T2 — Tela de inscritos (tabela densa, paginação, 4 tabs, slide-in)
 - [ ] LEELA-S204-T1 — Tela do balcão (layout 60/40 + 3 passos + painel operacional)
 - [ ] LEELA-S204-T2 — Function de vínculo de chip + registro de presença
 - [ ] LEELA-S204-T3 — Galeria de estados do balcão (§2.9)
-- [ ] LEELA-S205-T1 — Modelo `kits` + `itensKit` + N:N Kit↔Item + Rules
+- [x] LEELA-S205-T1 — Modelo `kits` + `itensKit` + N:N Kit↔Item + Rules (`df09392`)
 - [ ] LEELA-S205-T2 — Tela Kits · Cadastro (sub-nav, cards, catálogo, resumo)
 - [ ] LEELA-S205-T3 — Modal de item de kit (tamanhado, origem, patrocinador)
 - [ ] LEELA-S205-T4 — Sub-telas Distribuição e Estoque de kits
@@ -88,11 +88,11 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 
 Membros, convites, parcerias, comunicação, configurações + desafio em versão mínima (listar/criar). A execução gameficada anti-streak (jornada diária do atleta) fica em E13 e está fora da V1.
 
-- [ ] LEELA-S101-T1 — Modelo `clubes` + tipos + Security Rules
+- [x] LEELA-S101-T1 — Modelo `clubes` + tipos + Security Rules (`ee39d9a`)
 - [ ] LEELA-S101-T2 — Tela Hub de clubes (2 zonas + KPIs)
 - [ ] LEELA-S102-T1 — Shell do contexto de clube (header 96px + sub-nav 6 tabs)
 - [ ] LEELA-S102-T2 — Conteúdo do Overview (4 KPIs + novos membros)
-- [ ] LEELA-S103-T1 — Modelo `membros` + derivação de status + Function + Rules
+- [x] LEELA-S103-T1 — Modelo `membros` + derivação de status + Function + Rules (`e2762f8`)
 - [ ] LEELA-S103-T2 — Tela de membros (tabela densa + busca + filtros + popover)
 - [ ] LEELA-S104-T1 — Modal de convite (3 tabs + validações + 4 vias)
 - [ ] LEELA-S105-T1 — Modelo `desafios` + `catalogoAcoes` (seed 16) + junção + Rules
@@ -113,15 +113,15 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 ### LEELA-E16 · Super-admin mínimo (recorte V1 — onboarding, termos, macro básico)
 
-- [ ] LEELA-S1601-T1 — Function `provisionTenant` (cria tenant + owner + claims, atômico)
-- [ ] LEELA-S1601-T2 — Function de lifecycle (`activate`/`suspend`/`reactivate`)
+- [x] LEELA-S1601-T1 — Function `provisionTenant` (cria tenant + owner + claims, atômico) (`0eca288` + fixes de segurança `2042577`/`bda8039`; hotfix R1+#8 em voo)
+- [x] LEELA-S1601-T2 — Function de lifecycle (`activate`/`suspend`/`reactivate`) (`73e8366`, c/ trilha `lifecycleAudit`)
 - [ ] LEELA-S1601-T3 — Tela lista de tenants (tabela densa, filtros, saúde)
 - [ ] LEELA-S1601-T4 — Tela detalhe do tenant + provisionar/suspender (ConfirmModal)
-- [ ] LEELA-S1602-T1 — Modelo `commercialTerms/current` + tipos + Rules (escrita só platform_admin)
+- [x] LEELA-S1602-T1 — Modelo `commercialTerms/current` + tipos + Rules (escrita só platform_admin) (`2ec1e85`, c/ snapshots versionados)
 - [ ] LEELA-S1602-T2 — Tela/editor de termos comerciais (por tenant)
-- [ ] LEELA-S1602-T3 — Contrato de consumo dos termos por E04 (checkout) e E09 (taxa)
-- [ ] LEELA-S1605-T1 — Modelo `platform/rollups` + Rules (leitura só admin)
-- [ ] LEELA-S1605-T2 — Function de agregação macro cross-tenant (básico)
+- [x] LEELA-S1602-T3 — Contrato de consumo dos termos por E04 (checkout) e E09 (taxa) (`1d5e1af` — `createTermsProvider` + `finance/calc`)
+- [x] LEELA-S1605-T1 — Modelo `platform/rollups` + Rules (leitura só admin) (`de14546`)
+- [x] LEELA-S1605-T2 — Function de agregação macro cross-tenant (básico) (`7876d9b`, full-recompute idempotente)
 - [ ] LEELA-S1605-T3 — Tela dashboard macro (KPIs + saúde por tenant, básico)
 
 ---
