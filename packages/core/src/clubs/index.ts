@@ -143,3 +143,16 @@ export {
   PUSH_SEMANA_MAX,
   temCanalPush,
 } from './comunicado';
+
+// Validações de formulário do comunicado (S109-T1 · RN-134/135)
+export type { ComunicadoInput } from './comunicado-validacao';
+export {
+  COMUNICADO_TITULO_MIN,
+  COMUNICADO_CONTEUDO_MIN,
+  validarComunicado,
+  truncarPush,
+} from './comunicado-validacao';
+
+// Segmentação — estimativa de alcance (S109-T1)
+export type { AgregadosSegmentacao } from './segmentacao';
+export { estimarAlcance } from './segmentacao';
