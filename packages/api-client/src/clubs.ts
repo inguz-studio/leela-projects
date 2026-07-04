@@ -34,6 +34,7 @@ import type {
   Clube,
   Desafio,
   Membro,
+  ModeloComercial,
   ModeloDesafio,
   PapelMembro,
   Parceria,
@@ -316,6 +317,43 @@ export async function transicionarParceria(
     status,
     atualizadoEm: serverTimestamp(),
   });
+}
+
+/** Payload de cadastro de patrocinador (modal S107-T3). */
+export interface CriarPatrocinadorInput {
+  tenantId: string;
+  nome: string;
+  modeloComercial: ModeloComercial;
+  valorAnual?: number;
+  contrapartida: string;
+  contratoUrl?: string;
+}
+
+/**
+ * Cria uma parceria de patrocinador (write direto — Rules
+ * shapePatrocinadorValido: contrapartida ≥ 20, financeiro exige valorAnual > 0,
+ * nunca nasce com campos de afiliação/∑). Nasce `ativa`.
+ */
+export async function criarPatrocinador(
+  db: Firestore,
+  clubeId: string,
+  input: CriarPatrocinadorInput
+): Promise<{ parceriaId: string }> {
+  const ref = doc(collection(db, 'clubes', clubeId, 'parcerias'));
+  const data: Record<string, unknown> = {
+    tenantId: input.tenantId,
+    tipo: 'patrocinador',
+    status: 'ativa',
+    nome: input.nome,
+    modeloComercial: input.modeloComercial,
+    contrapartida: input.contrapartida,
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  };
+  if (input.valorAnual !== undefined) data.valorAnual = input.valorAnual;
+  if (input.contratoUrl) data.contratoUrl = input.contratoUrl;
+  await setDoc(ref, data);
+  return { parceriaId: ref.id };
 }
 
 // ---------------------------------------------------------------------------

@@ -121,6 +121,11 @@ export type { CriarDesafioInput, CriarDesafioResult } from './clubs';
 // pausar — write direto; comissão/termos read-only pela Function/Rules).
 export { listParcerias, transicionarParceria } from './clubs';
 
+// Clubs — cadastro de patrocinador via write direto (modal S107-T3 —
+// shapePatrocinadorValido nas Rules).
+export { criarPatrocinador } from './clubs';
+export type { CriarPatrocinadorInput } from './clubs';
+
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e
 // enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)

@@ -6,9 +6,11 @@
 
 import { useEffect, useState } from 'react';
 import {
+  criarPatrocinador,
   getLeelaDb,
   listParcerias,
   transicionarParceria,
+  type CriarPatrocinadorInput,
 } from '@leela/api-client';
 import type { Parceria, StatusParceria } from '@leela/core';
 import type { AsyncState } from './clubes';
@@ -45,3 +47,9 @@ export const transicionarParceriaPadrao = (
   parceriaId: string,
   status: StatusParceria,
 ): Promise<void> => transicionarParceria(getLeelaDb(), clubeId, parceriaId, status);
+
+/** Porta real de cadastro de patrocinador (write direto — Rules-guarded). */
+export const criarPatrocinadorPadrao = (
+  clubeId: string,
+  input: CriarPatrocinadorInput,
+): Promise<{ parceriaId: string }> => criarPatrocinador(getLeelaDb(), clubeId, input);

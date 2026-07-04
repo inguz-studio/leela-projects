@@ -81,3 +81,38 @@ export function formatBRL(valor: number): string {
     currency: 'BRL',
   }).format(valor);
 }
+
+// ---------------------------------------------------------------------------
+// Cadastro de patrocinador (S107-T3) — validação pura (espelha shape das Rules)
+// ---------------------------------------------------------------------------
+
+/** Contrapartida exige ≥ 20 chars (SPEC-02 / RN-123, mesma da Rule). */
+export const CONTRAPARTIDA_MIN = 20;
+
+/** Payload do formulário do modal de patrocinador. */
+export interface PatrocinadorInput {
+  nome: string;
+  modeloComercial: ModeloComercial;
+  /** Obrigatório e > 0 quando `modeloComercial == 'financeiro'`. */
+  valorAnual?: number;
+  contrapartida: string;
+  contratoUrl?: string;
+}
+
+/**
+ * Valida o cadastro de patrocinador (mesma superfície da Rule
+ * shapePatrocinadorValido). Retorna lista de erros (vazia = válido).
+ */
+export function validarPatrocinador(input: PatrocinadorInput): string[] {
+  const erros: string[] = [];
+  if (!input.nome?.trim()) erros.push('nome é obrigatório');
+  if ((input.contrapartida?.trim().length ?? 0) < CONTRAPARTIDA_MIN) {
+    erros.push(`contrapartida deve ter no mínimo ${CONTRAPARTIDA_MIN} caracteres`);
+  }
+  if (input.modeloComercial === 'financeiro') {
+    if (input.valorAnual === undefined || !(input.valorAnual > 0)) {
+      erros.push('modelo financeiro exige valor anual maior que zero');
+    }
+  }
+  return erros;
+}

@@ -5,17 +5,25 @@
 // ligados nos commits S107-T3/T4/T5.
 // =============================================================================
 
+import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '@leela/design-system';
 import type { ParceriaEventoAfiliado } from '@leela/core';
 import { ParceriasView } from './ParceriasView';
-import { useParcerias, transicionarParceriaPadrao } from '../../_data/parcerias';
+import { AddPatrocinadorModal } from './AddPatrocinadorModal';
+import {
+  useParcerias,
+  transicionarParceriaPadrao,
+  criarPatrocinadorPadrao,
+} from '../../_data/parcerias';
+import type { PatrocinadorInput } from '../../_lib/parcerias';
 import type { ClubeOutletContext } from '../ClubeLayout';
 
 export function ParceriasPage(): JSX.Element {
   const { clube } = useOutletContext<ClubeOutletContext>();
   const { toast } = useToast();
   const { data: parcerias, loading, error, reload } = useParcerias(clube.id);
+  const [addAberto, setAddAberto] = useState(false);
 
   async function transicionar(
     p: ParceriaEventoAfiliado,
@@ -42,19 +50,36 @@ export function ParceriasPage(): JSX.Element {
     toast({ variant: 'info', title: 'Disponível em breve' });
   };
 
+  async function criarPatrocinador(input: PatrocinadorInput): Promise<void> {
+    try {
+      await criarPatrocinadorPadrao(clube.id, { tenantId: clube.tenantId, ...input });
+      toast({ variant: 'success', title: `${input.nome} adicionado como patrocinador` });
+      reload();
+    } catch {
+      toast({ variant: 'danger', title: 'Não foi possível adicionar o patrocinador' });
+    }
+  }
+
   return (
-    <ParceriasView
-      parcerias={parcerias}
-      loading={loading}
-      error={error}
-      onAceitar={(p) => void transicionar(p, 'ativa', `Parceria com ${p.eventoId} aceita`)}
-      onRecusar={(p) => void transicionar(p, 'inativa', 'Convite recusado')}
-      onCopiarLink={copiarLink}
-      onVerTermos={emBreve}
-      onRemoverEvento={emBreve}
-      onAdicionarPatrocinador={emBreve}
-      onDesativarPatrocinador={emBreve}
-    />
+    <>
+      <ParceriasView
+        parcerias={parcerias}
+        loading={loading}
+        error={error}
+        onAceitar={(p) => void transicionar(p, 'ativa', `Parceria com ${p.eventoId} aceita`)}
+        onRecusar={(p) => void transicionar(p, 'inativa', 'Convite recusado')}
+        onCopiarLink={copiarLink}
+        onVerTermos={emBreve}
+        onRemoverEvento={emBreve}
+        onAdicionarPatrocinador={() => setAddAberto(true)}
+        onDesativarPatrocinador={emBreve}
+      />
+      <AddPatrocinadorModal
+        open={addAberto}
+        onOpenChange={setAddAberto}
+        onCriar={criarPatrocinador}
+      />
+    </>
   );
 }
 
