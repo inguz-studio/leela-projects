@@ -12,6 +12,8 @@
 
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit as firestoreLimit,
   orderBy,
@@ -20,6 +22,22 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import { parseEvento, type Evento } from '@leela/core';
+
+/**
+ * Lê UM evento pelo slug — leitura direta O(1) (docId = slug).
+ * Retorna null quando não existe. A Security Rule garante que só o tenant
+ * dono (ou platform_admin) consegue ler — cross-tenant vira permission-denied.
+ *
+ * Contrato pedido pelo L3 (layout do evento S202-T1 — ver _data/eventos.ts).
+ */
+export async function getEvento(
+  db: Firestore,
+  slug: string
+): Promise<Evento | null> {
+  const snap = await getDoc(doc(db, 'eventos', slug));
+  if (!snap.exists()) return null;
+  return parseEvento(snap.id, snap.data());
+}
 
 /** Parâmetros de listagem de eventos do organizador */
 export interface ListarEventosDoOrganizadorParams {

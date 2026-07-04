@@ -45,3 +45,7 @@ export {
   onClubeWriteDashboard,
 } from './overview/aggregateProfessionalDashboard';
 export { getOverview } from './overview/getOverview';
+
+// Eventos — criação/publicação transacional (E03-S201-T2 · RN-201)
+export { criarEvento } from './eventos/criarEvento';
+export { publicarEvento } from './eventos/publicarEvento';

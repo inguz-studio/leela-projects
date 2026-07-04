@@ -110,9 +110,18 @@ export type { ListMembrosOptions } from './clubs';
 // ---------------------------------------------------------------------------
 // Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
 // ---------------------------------------------------------------------------
-// S200-T1 — eventos por organizador
-export { listarEventosDoOrganizador } from './eventos/queries';
+// S200-T1 — eventos por organizador · S201-T2 — leitura direta por slug (L3)
+export { listarEventosDoOrganizador, getEvento } from './eventos/queries';
 export type { ListarEventosDoOrganizadorParams } from './eventos/queries';
+
+// S201-T2 — mutations via Cloud Function (criar/publicar — ADR-005, RN-201)
+export { criarEvento, publicarEvento } from './eventos/mutations';
+export type {
+  CriarEventoInput,
+  CriarEventoPercurso,
+  CriarEventoResult,
+  PublicarEventoResult,
+} from './eventos/mutations';
 
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)
 export { listarInscritos, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';

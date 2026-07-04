@@ -165,10 +165,11 @@ export {
 // Entidade Evento movida para src/eventos/evento.ts; re-exportada aqui para
 // manter retrocompatibilidade de imports de '@leela/core'.
 // ---------------------------------------------------------------------------
-export type { Evento, StatusEvento } from './eventos/evento';
+export type { Evento, StatusEvento, PercursoEvento } from './eventos/evento';
 export {
   STATUS_EVENTO,
   isStatusEvento,
+  isPercursoEvento,
   CAMPOS_AGREGADOS_EVENTO,
   temVenda,
   eventoPublico,

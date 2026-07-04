@@ -38,6 +38,29 @@ export function isStatusEvento(value: unknown): value is StatusEvento {
 // ---------------------------------------------------------------------------
 
 /**
+ * Percurso do evento com preço independente (S201-T1/T2).
+ * Preço em reais, ≥ 0. Após a 1ª venda, `percursos` fica IMUTÁVEL para o
+ * cliente (RN-200 — o preço faz parte do percurso; Rules travam o array).
+ */
+export interface PercursoEvento {
+  nome: string;
+  preco: number;
+}
+
+/** Type guard de PercursoEvento (parsing de dados vindos do Firestore). */
+export function isPercursoEvento(value: unknown): value is PercursoEvento {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const p = value as Record<string, unknown>;
+  return (
+    typeof p['nome'] === 'string' &&
+    p['nome'].length > 0 &&
+    typeof p['preco'] === 'number' &&
+    Number.isFinite(p['preco']) &&
+    p['preco'] >= 0
+  );
+}
+
+/**
  * Evento de corrida — tenant-scoped.
  * Coleção: `eventos/{eventoId}` (docId = slug).
  * Subcoleções: inscritos, kits, programaAfiliacao, politicaVendas, etc.
@@ -54,6 +77,12 @@ export interface Evento {
   local: string;
   /** Lista de percursos/modalidades do evento */
   modalidades: string[];
+  /**
+   * Percursos com preço independente (S201-T1/T2). OPCIONAL na entidade:
+   * eventos legados/seed/mocks não têm — `parseEvento` SEMPRE normaliza
+   * para [] (docs vindos do Firestore nunca chegam undefined). Ver RN-200.
+   */
+  percursos?: PercursoEvento[];
   slug: string;
   status: StatusEvento;
   /** Usa chip de cronometragem (RN-207) */
@@ -131,6 +160,13 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
   const qtdInscritos = data['qtdInscritos'];
   const receitaConfirmada = data['receitaConfirmada'];
 
+  // Percursos: eventos legados/seed não têm — normaliza para [] (nunca falha);
+  // entradas malformadas são descartadas item a item (borda de I/O defensiva).
+  const percursosRaw = data['percursos'];
+  const percursos = Array.isArray(percursosRaw)
+    ? percursosRaw.filter(isPercursoEvento)
+    : [];
+
   return {
     id,
     tenantId,
@@ -139,6 +175,7 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     data: data['data'] as Timestamp,
     local: typeof local === 'string' ? local : '',
     modalidades,
+    percursos,
     slug: typeof slug === 'string' && slug.length > 0 ? slug : id,
     status,
     usaChip: usaChip === true,
