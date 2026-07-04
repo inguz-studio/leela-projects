@@ -171,6 +171,7 @@ export {
   salvarItemKit,
   removerItemKit,
 } from './eventos/kits';
+export type { SalvarKitInput, SalvarItemKitInput } from './eventos/kits';
 
 // ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
