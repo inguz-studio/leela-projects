@@ -11,6 +11,8 @@
  *   - Tenant SUSPENSO: escrita NEGADA, leitura PERMITIDA (RN-402)
  *   - atletas global: leitura pelo próprio uid; outros tenants negados
  *   - Escrita de campos financeiros/status negada ao cliente (pagamentos)
+ *   - Coleção legada /inscritos top-level APOSENTADA (review Onda1 #4):
+ *     inscritos só na subcoleção canônica eventos/{id}/inscritos (E03)
  *
  * Também cobre os testes deny-by-default da S000-2-T1 (estavam skipped).
  *
@@ -156,10 +158,6 @@ async function seedFixtures(): Promise<void> {
     ['programaAfiliacao', 'afil-castelo-1', 'afil-passo-1', { pct: 5 }],
     ['equipe', 'eq-castelo-1', 'eq-passo-1', { nome: 'Membro Equipe' }],
     ['promotores', 'prom-castelo-1', 'prom-passo-1', { nome: 'Promotor' }],
-    ['inscritos', 'insc-castelo-1', 'insc-passo-1', {
-      atletaId: ATHLETE_UID, kit: 'kit_basico', status: 'confirmado',
-      modalidade: '5k', chipNumero: null,
-    }],
   ];
   for (const [col, casteloDoc, passoDoc, extra] of scopedPairs) {
     batch.set(adminDb.collection(col).doc(casteloDoc), {
@@ -169,6 +167,24 @@ async function seedFixtures(): Promise<void> {
       id: passoDoc, tenantId: PASSO_ID, ...extra, criadoEm: now,
     });
   }
+
+  // Inscritos: SUBCOLEÇÃO canônica do E03 (`eventos/{id}/inscritos`).
+  // A coleção legada top-level /inscritos foi APOSENTADA (review Onda1 #4)
+  // — cai no deny-by-default; ver suite "coleção legada /inscritos" abaixo.
+  const inscritoBase = {
+    atletaId: ATHLETE_UID, kit: 'kit_basico', status: 'confirmado',
+    modalidade: '5k', chipNumero: null, criadoEm: now,
+  };
+  batch.set(
+    adminDb.collection('eventos').doc('evento-castelo-1')
+      .collection('inscritos').doc('insc-castelo-1'),
+    { id: 'insc-castelo-1', tenantId: CASTELO_ID, ...inscritoBase }
+  );
+  batch.set(
+    adminDb.collection('eventos').doc('evento-passo-1')
+      .collection('inscritos').doc('insc-passo-1'),
+    { id: 'insc-passo-1', tenantId: PASSO_ID, ...inscritoBase }
+  );
 
   // Profissionais (tenant-scoped via claim)
   batch.set(adminDb.collection('profissionais').doc(MARINA_UID), {
@@ -583,7 +599,8 @@ describe('F1 — takeover cross-tenant por overwrite (matriz completa)', () => {
     ['programaAfiliacao', 'afil-passo-1', { pct: 99 }],
     ['equipe', 'eq-passo-1', { nome: 'HIJACK' }],
     ['promotores', 'prom-passo-1', { nome: 'HIJACK' }],
-    ['inscritos', 'insc-passo-1', { status: 'cancelado' }],
+    // inscritos: subcoleção canônica do E03 (top-level aposentada — #4)
+    ['eventos/evento-passo-1/inscritos', 'insc-passo-1', { status: 'cancelado' }],
   ];
 
   for (const [col, victimId, payload] of hijackTargets) {
@@ -642,7 +659,8 @@ describe('F2 — isolamento de leitura (coleções sem cobertura prévia)', () =
     ['programaAfiliacao', 'afil-passo-1'],
     ['equipe', 'eq-passo-1'],
     ['promotores', 'prom-passo-1'],
-    ['inscritos', 'insc-passo-1'],
+    // inscritos: subcoleção canônica do E03 (top-level aposentada — #4)
+    ['eventos/evento-passo-1/inscritos', 'insc-passo-1'],
   ];
 
   for (const [col, docId] of readTargets) {
@@ -748,6 +766,38 @@ describe('F4 — RBAC intra-tenant (papel de escrita)', () => {
       setDoc(doc(ctx.firestore(), 'equipe', 'eq-nova'), {
         id: 'eq-nova', tenantId: CASTELO_ID, nome: 'Novo membro',
       })
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review Onda1 #4 — coleção legada /inscritos (top-level) APOSENTADA.
+// A rule legada permitia create por isTenantWriter + tenantAtivo, SEM shape
+// e SEM guarda dos campos de Function. Removida: o caminho cai no
+// deny-by-default. O teste de escrita abaixo FALHARIA com a rule legada
+// (a escrita era permitida) — é a prova da aposentadoria.
+// ─────────────────────────────────────────────────────────────────────────
+describe('coleção legada /inscritos top-level — aposentada (review #4)', () => {
+  it('nem tenant_owner do próprio tenant escreve na /inscritos top-level', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'inscritos', 'insc-legado'), {
+        id: 'insc-legado', tenantId: CASTELO_ID,
+        atletaId: ATHLETE_UID, kit: 'kit_basico', status: 'confirmado',
+        modalidade: '5k', chipNumero: null,
+      })
+    );
+  });
+
+  it('leitura na /inscritos top-level negada (deny-by-default)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(getDoc(doc(ctx.firestore(), 'inscritos', 'qualquer')));
+  });
+
+  it('inscrito segue acessível na subcoleção canônica pelo tenant dono', async () => {
+    const ctx = ctxAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
+    await assertSucceeds(
+      getDoc(doc(ctx.firestore(), 'eventos/evento-passo-1/inscritos', 'insc-passo-1'))
     );
   });
 });

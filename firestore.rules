@@ -11,8 +11,10 @@
 //     nunca promoter/athlete (RBAC intra-tenant mínimo).
 //
 // Partição de coleções (ADR-009 §Estratégia de partição):
-//   TENANT-SCOPED : eventos, clubes, inscritos, comunicados, parcerias,
+//   TENANT-SCOPED : eventos, clubes, comunicados, parcerias,
 //                   programaAfiliacao, pagamentos, equipe, promotores, subscriptions
+//                   (inscritos vive APENAS em eventos/{id}/inscritos — E03;
+//                   a top-level /inscritos foi aposentada no review Onda1 #4)
 //   GLOBAL        : atletas, catalogoAcoes, config/system
 //   PLATAFORMA    : tenants/{id}, tenants/{id}/commercialTerms, platform/…
 //
@@ -188,8 +190,9 @@ service cloud.firestore {
     //            + tenant ativo;
     //   delete — papel de escrita no tenant DONO ATUAL + tenant ativo.
     //
-    // Coleções: eventos, clubes, inscritos, comunicados, parcerias,
+    // Coleções: eventos, clubes, comunicados, parcerias,
     //           programaAfiliacao, pagamentos, equipe, promotores, subscriptions
+    // (inscritos: só a subcoleção eventos/{id}/inscritos — review Onda1 #4)
 
     // `eventos/{eventoId}` — Operação do Evento (E03 · S200-T1). docId = slug.
     //
@@ -447,25 +450,12 @@ service cloud.firestore {
       }
     }
 
-    // `inscritos/{inscritoId}` — join Atleta↔Evento, tenant-scoped (ADR-009).
-    // Shape: modelo-de-dados-firestore.md (atletaId, kit, chipNumero, status,
-    // modalidade + tenantId). Escrita de cliente: só papel de escrita do tenant.
-    // TODO(E04/compra): quando o fluxo de inscrição/compra entrar, o atleta
-    // dono (request.auth.uid == resource.data.atletaId) passa a LER a própria
-    // inscrição — abrir só com teste na story de E04.
-    match /inscritos/{inscritoId} {
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow create: if (isTenantWriter(request.resource.data.tenantId)
-                        && tenantAtivo(request.resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow update: if (isTenantWriter(resource.data.tenantId)
-                        && request.resource.data.tenantId == resource.data.tenantId
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow delete: if (isTenantWriter(resource.data.tenantId)
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-    }
+    // Coleção legada `/inscritos` (top-level) — APOSENTADA (review Onda1 #4).
+    // Inscrito vive APENAS na subcoleção canônica `eventos/{id}/inscritos`
+    // (E03 · S203-T1), que valida shape + guarda campos de Function. A rule
+    // legada (mais fraca — sem shape, sem guarda de kit/status/chip/qrToken)
+    // foi removida: o caminho top-level cai no deny-by-default do final do
+    // arquivo. NÃO reintroduzir sem rule endurecida + teste adversarial.
 
     match /comunicados/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
