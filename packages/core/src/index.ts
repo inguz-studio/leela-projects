@@ -213,3 +213,7 @@ export {
   isValidTermsVersionBump,
 } from './platform/commercialTerms';
 
+// Provisionamento de tenant (E16-S1601-T1 · RN-403)
+export type { ProvisionInput } from './platform/provisioning';
+export { validateProvisionInput, buildInitialTerms } from './platform/provisioning';
+

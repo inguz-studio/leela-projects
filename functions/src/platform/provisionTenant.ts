@@ -1,0 +1,353 @@
+// =============================================================================
+// functions/src/platform/provisionTenant.ts
+//
+// Cloud Function callable: provisiona um tenant de ponta a ponta (RN-403).
+//
+// Fluxo atômico (aprovar produtor → conta isolada operável):
+//   1. Autorização: SÓ platform_admin invoca (RN-401).
+//   2. Validação pura do input (@leela/core validateProvisionInput).
+//   3. Resolve/cria o usuário owner no Auth (idempotente por e-mail).
+//   4. TRANSAÇÃO Firestore: tenants/{slug} (status ativo) + profissionais/
+//      {ownerUid} + commercialTerms/current (versao 1) + snapshot v1.
+//   5. Custom claims tenant_owner + tenantId (setTenantClaimsAdmin).
+//   6. Falha no passo 5 → ROLLBACK COMPENSATÓRIO: desfaz TUDO que este
+//      provisionamento criou (docs e usuário Auth) e restaura o estado
+//      anterior do tenant quando era aprovação de `pending`. Nunca fica
+//      tenant meio-provisionado (RN-403).
+//
+// Idempotência / retry-safe:
+//   - tenantId == slug (deterministico — ver core/platform/provisioning.ts):
+//     o retry do mesmo pedido encontra o MESMO doc.
+//   - Replay completo (tenant ativo + mesmo owner) → devolve sucesso com
+//     `replay: true` e reaplica claims (cobre retry após falha pós-commit).
+//   - Aprovação: tenant `pending` existente é promovido a `ativo`
+//     (canTransition — RN-402) com owner/termos/claims completados.
+//
+// Conflitos (nunca sobrescreve silenciosamente):
+//   - slug já ativo com OUTRO owner → already-exists.
+//   - tenant suspenso → failed-precondition (reative via transitionTenant).
+//   - owner já pertencente a OUTRO tenant → failed-precondition (um
+//     profissional tem no máximo um tenant na V1).
+// =============================================================================
+
+import * as admin from 'firebase-admin';
+import { https } from 'firebase-functions/v1';
+import * as logger from 'firebase-functions/logger';
+import {
+  buildInitialTerms,
+  canTransition,
+  validateProvisionInput,
+} from '@leela/core';
+import type { AuthClaims, ProvisionInput, Role, TenantStatus } from '@leela/core';
+import { setTenantClaimsAdmin } from './setTenantClaims';
+
+// ---------------------------------------------------------------------------
+// Tipos internos
+// ---------------------------------------------------------------------------
+
+export interface ProvisionResult {
+  tenantId: string;
+  ownerUid: string;
+  /** true quando o pedido já estava integralmente provisionado (retry) */
+  replay: boolean;
+}
+
+/** O que a transação criou/alterou — insumo do rollback compensatório. */
+interface TxOutcome {
+  replay: boolean;
+  createdTenant: boolean;
+  /** Snapshot anterior do tenant quando foi UPDATE (aprovação de pending) */
+  previousTenantData: FirebaseFirestore.DocumentData | null;
+  createdProfissional: boolean;
+  createdTerms: boolean;
+}
+
+/** Dependências injetáveis — testes de rollback substituem setClaims. */
+export interface ProvisionDeps {
+  setClaims: (uid: string, role: Role, tenantId?: string) => Promise<void>;
+}
+
+const defaultDeps: ProvisionDeps = { setClaims: setTenantClaimsAdmin };
+
+// ---------------------------------------------------------------------------
+// Núcleo (testável com DI; o callable é um wrapper fino)
+// ---------------------------------------------------------------------------
+
+/**
+ * Provisiona o tenant de ponta a ponta. Ver contrato no cabeçalho do arquivo.
+ * Exportado para testes de integração (injeção de falha no passo de claims).
+ */
+export async function provisionTenantCore(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  rawInput: unknown,
+  callerUid: string,
+  deps: ProvisionDeps = defaultDeps
+): Promise<ProvisionResult> {
+  // ── Validação pura do input ────────────────────────────────────────────
+  const input = rawInput as ProvisionInput;
+  if (!input || typeof input !== 'object') {
+    throw new https.HttpsError('invalid-argument', 'Input é obrigatório.');
+  }
+  const errors = validateProvisionInput(input);
+  if (errors.length > 0) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      `ProvisionInput inválido: ${errors.join(' ')}`
+    );
+  }
+
+  const tenantId = input.slug;
+
+  // ── Resolver/criar owner no Auth (idempotente por e-mail) ──────────────
+  let ownerUid: string;
+  let ownerCreated = false;
+  try {
+    const existing = await auth.getUserByEmail(input.ownerEmail);
+    ownerUid = existing.uid;
+  } catch {
+    const created = await auth.createUser({
+      email: input.ownerEmail,
+      emailVerified: false,
+      displayName: input.ownerNome ?? input.nome,
+    });
+    ownerUid = created.uid;
+    ownerCreated = true;
+  }
+
+  const tenantRef = db.collection('tenants').doc(tenantId);
+  const profRef = db.collection('profissionais').doc(ownerUid);
+  const termsCol = tenantRef.collection('commercialTerms');
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  // ── Transação: docs do tenant (tudo-ou-nada no Firestore) ──────────────
+  let outcome: TxOutcome;
+  try {
+    outcome = await db.runTransaction<TxOutcome>(async (tx) => {
+      const [tenantSnap, profSnap, termsSnap] = await Promise.all([
+        tx.get(tenantRef),
+        tx.get(profRef),
+        tx.get(termsCol.doc('current')),
+      ]);
+
+      // Owner já pertence a OUTRO tenant → conflito (V1: 1 owner = 1 tenant)
+      if (profSnap.exists) {
+        const profTenant = profSnap.get('tenantId') as string | undefined;
+        if (profTenant && profTenant !== tenantId) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            `Owner '${input.ownerEmail}' já pertence ao tenant '${profTenant}'.`
+          );
+        }
+      }
+
+      let createdTenant = false;
+      let previousTenantData: FirebaseFirestore.DocumentData | null = null;
+
+      if (tenantSnap.exists) {
+        const status = tenantSnap.get('status') as TenantStatus;
+        const currentOwner = tenantSnap.get('ownerUid') as string | undefined;
+
+        if (status === 'ativo' && currentOwner === ownerUid) {
+          // Replay integral (retry de pedido já concluído) — reaplicar
+          // claims fora da tx cobre falha pós-commit do run anterior.
+          return {
+            replay: true,
+            createdTenant: false,
+            previousTenantData: null,
+            createdProfissional: false,
+            createdTerms: false,
+          };
+        }
+
+        if (status === 'pending') {
+          // Aprovação de pedido pending → ativo (RN-402 via canTransition)
+          if (!canTransition(status, 'ativo')) {
+            throw new https.HttpsError(
+              'failed-precondition',
+              `Transição inválida: '${status}' → 'ativo' (RN-402).`
+            );
+          }
+          previousTenantData = tenantSnap.data() ?? null;
+          tx.update(tenantRef, {
+            status: 'ativo' satisfies TenantStatus,
+            ownerUid,
+            nome: input.nome,
+            tipo: input.tipo,
+            atualizadoEm: now,
+            atualizadoPor: callerUid,
+          });
+        } else if (status === 'suspenso') {
+          throw new https.HttpsError(
+            'failed-precondition',
+            `Tenant '${tenantId}' está suspenso — reative via transitionTenant (RN-402).`
+          );
+        } else {
+          // ativo com outro owner → slug em uso
+          throw new https.HttpsError(
+            'already-exists',
+            `Slug '${tenantId}' já está em uso por outro tenant ativo.`
+          );
+        }
+      } else {
+        // Criação do zero — tenant nasce ATIVO (aprovação implícita, RN-402)
+        createdTenant = true;
+        tx.set(tenantRef, {
+          id: tenantId,
+          nome: input.nome,
+          slug: input.slug,
+          status: 'ativo' satisfies TenantStatus,
+          ownerUid,
+          tipo: input.tipo,
+          gmvAcumulado: 0,
+          eventosAtivos: 0,
+          criadoEm: now,
+          atualizadoEm: now,
+          atualizadoPor: callerUid,
+        });
+      }
+
+      // Profissional owner (cria só se não existe — preserva perfil prévio)
+      let createdProfissional = false;
+      if (!profSnap.exists) {
+        createdProfissional = true;
+        tx.set(profRef, {
+          id: ownerUid,
+          tenantId,
+          nome: input.ownerNome ?? input.nome,
+          email: input.ownerEmail,
+          papeis: ['organizador'],
+          criadoEm: now,
+          atualizadoEm: now,
+        });
+      }
+
+      // Termos iniciais (versao 1 + snapshot imutável v1) — só se ausentes
+      let createdTerms = false;
+      if (!termsSnap.exists) {
+        createdTerms = true;
+        const termsPayload = {
+          ...buildInitialTerms(input),
+          versao: 1,
+          atualizadoPor: callerUid,
+          atualizadoEm: now,
+        };
+        tx.set(termsCol.doc('current'), termsPayload);
+        tx.set(termsCol.doc('v1'), termsPayload);
+      }
+
+      return {
+        replay: false,
+        createdTenant,
+        previousTenantData,
+        createdProfissional,
+        createdTerms,
+      };
+    });
+  } catch (err) {
+    // Transação falhou → nada foi gravado no Firestore; desfazer só o Auth.
+    if (ownerCreated) {
+      await auth.deleteUser(ownerUid).catch(() => undefined);
+    }
+    throw err;
+  }
+
+  // ── Claims (RN-401) + rollback compensatório em falha (RN-403) ─────────
+  try {
+    await deps.setClaims(ownerUid, 'tenant_owner', tenantId);
+  } catch (claimErr) {
+    await rollbackProvisioning(db, auth, {
+      tenantRef,
+      profRef,
+      termsCol,
+      outcome,
+      ownerUid,
+      ownerCreated,
+    });
+    logger.error('provision_tenant_rollback', {
+      tenantId,
+      ownerUid,
+      reason: claimErr instanceof Error ? claimErr.message : String(claimErr),
+    });
+    throw new https.HttpsError(
+      'internal',
+      'Falha ao aplicar claims do owner — provisionamento revertido (RN-403).'
+    );
+  }
+
+  logger.info('provision_tenant', {
+    callerUid,
+    tenantId,
+    ownerUid,
+    replay: outcome.replay,
+  });
+
+  return { tenantId, ownerUid, replay: outcome.replay };
+}
+
+/**
+ * Rollback compensatório: apaga o que ESTE provisionamento criou e restaura
+ * o snapshot anterior do tenant quando a operação era aprovação de pending.
+ * Nunca toca em docs pré-existentes que não foram alterados.
+ */
+async function rollbackProvisioning(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  ctx: {
+    tenantRef: FirebaseFirestore.DocumentReference;
+    profRef: FirebaseFirestore.DocumentReference;
+    termsCol: FirebaseFirestore.CollectionReference;
+    outcome: TxOutcome;
+    ownerUid: string;
+    ownerCreated: boolean;
+  }
+): Promise<void> {
+  const { tenantRef, profRef, termsCol, outcome, ownerUid, ownerCreated } = ctx;
+  const batch = db.batch();
+
+  if (outcome.createdTenant) {
+    batch.delete(tenantRef);
+  } else if (outcome.previousTenantData) {
+    // Aprovação de pending → restaura o doc exatamente como estava
+    batch.set(tenantRef, outcome.previousTenantData);
+  }
+  if (outcome.createdProfissional) batch.delete(profRef);
+  if (outcome.createdTerms) {
+    batch.delete(termsCol.doc('current'));
+    batch.delete(termsCol.doc('v1'));
+  }
+  await batch.commit();
+
+  if (ownerCreated) {
+    await auth.deleteUser(ownerUid).catch(() => undefined);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Callable
+// ---------------------------------------------------------------------------
+
+/**
+ * `provisionTenant` — callable exposta ao back-office (L2).
+ * Autorização: SÓ platform_admin (RN-401/403).
+ */
+export const provisionTenant = https.onCall(async (data: unknown, context) => {
+  if (!context.auth) {
+    throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
+  }
+
+  const callerClaims = context.auth.token as unknown as AuthClaims;
+  if (callerClaims.role !== 'platform_admin') {
+    throw new https.HttpsError(
+      'permission-denied',
+      'Apenas platform_admin provisiona tenants.'
+    );
+  }
+
+  return provisionTenantCore(
+    admin.firestore(),
+    admin.auth(),
+    data,
+    context.auth.uid
+  );
+});

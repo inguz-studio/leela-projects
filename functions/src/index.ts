@@ -22,3 +22,6 @@ export { transitionTenant } from './platform/tenantLifecycle';
 
 // Eventos — índice inverso N:N Kit↔Item "usado em" (E03-S205-T1 · RN-215)
 export { onItemKitWrite, onKitWrite } from './eventos/itemKitIndex';
+
+// Plataforma — provisionamento atômico do tenant (E16-S1601-T1 · RN-403)
+export { provisionTenant } from './platform/provisionTenant';
