@@ -1,6 +1,7 @@
 // Fixtures de teste das telas de clube (não é *.test → não é coletado).
 import type {
   Clube,
+  Desafio,
   Membro,
   PapelMembro,
   StatusMembro,
@@ -36,6 +37,28 @@ export function mkClube(over: Partial<Clube> = {}): Clube {
     atualizadoEm: ts(new Date('2026-04-20T00:00:00Z')),
     qtdMembrosAtivos: 120,
     qtdDesafiosAtivos: 3,
+    ...over,
+  };
+}
+
+let dseq = 0;
+export function mkDesafio(over: Partial<Desafio> = {}): Desafio {
+  dseq += 1;
+  return {
+    id: over.id ?? `des-${dseq}`,
+    tenantId: 'castelo',
+    nome: over.nome ?? 'Desafio 21 dias',
+    descricao: over.descricao ?? 'Constância nos 3 pilares.',
+    modelo: over.modelo ?? 'B',
+    dataInicio: over.dataInicio ?? ts(new Date('2026-04-01T00:00:00Z')),
+    dataFim: over.dataFim ?? ts(new Date('2026-04-30T00:00:00Z')),
+    status: over.status ?? 'ativo',
+    recompensaTipo: over.recompensaTipo ?? 'medalha_digital',
+    visibilidade: over.visibilidade ?? 'membros',
+    criadoEm: over.criadoEm ?? ts(new Date('2026-03-20T00:00:00Z')),
+    atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-20T00:00:00Z')),
+    qtdParticipantes: over.qtdParticipantes ?? 42,
+    progressoPct: over.progressoPct ?? 60,
     ...over,
   };
 }

@@ -18,6 +18,7 @@ import { HubRoute } from './hub/HubRoute';
 import { ClubeLayout } from './clube/ClubeLayout';
 import { OverviewPage } from './clube/overview/OverviewPage';
 import { MembrosPage } from './clube/membros/MembrosPage';
+import { DesafiosPage } from './clube/desafios/DesafiosPage';
 
 export function ClubesRoutes(): JSX.Element {
   return (
@@ -27,6 +28,7 @@ export function ClubesRoutes(): JSX.Element {
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="membros" element={<MembrosPage />} />
+          <Route path="desafios" element={<DesafiosPage />} />
         </Route>
       </Routes>
     </ToastProvider>

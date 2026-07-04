@@ -25,7 +25,13 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
-import type { Clube, Membro, PapelMembro, StatusMembro } from '@leela/core';
+import type {
+  Clube,
+  Desafio,
+  Membro,
+  PapelMembro,
+  StatusMembro,
+} from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Leitura — clubes
@@ -115,6 +121,32 @@ export async function listMembros(
     query(collection(db, 'clubes', clubeId, 'membros'), ...constraints)
   );
   return snap.docs.map((d) => ({ ...(d.data() as Omit<Membro, 'id'>), id: d.id }));
+}
+
+// ---------------------------------------------------------------------------
+// Leitura — desafios (subcoleção `clubes/{clubeId}/desafios` · S105-T1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lista os desafios de um clube, mais recentes primeiro (lista S105-T2).
+ * Filtro fino (status/modelo/busca) roda no cliente — aqui trazemos a página.
+ * Security Rules: leitura só para membros do tenant dono do clube pai.
+ * Agregados ∑ (qtdParticipantes, progressoPct) vêm da Function; a tela só lê.
+ */
+export async function listDesafios(
+  db: Firestore,
+  clubeId: string,
+  options: { pageLimit?: number } = {}
+): Promise<Desafio[]> {
+  const { pageLimit = 100 } = options;
+  const snap = await getDocs(
+    query(
+      collection(db, 'clubes', clubeId, 'desafios'),
+      orderBy('criadoEm', 'desc'),
+      firestoreLimit(pageLimit)
+    )
+  );
+  return snap.docs.map((d) => ({ ...(d.data() as Omit<Desafio, 'id'>), id: d.id }));
 }
 
 // ---------------------------------------------------------------------------

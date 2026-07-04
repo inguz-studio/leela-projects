@@ -107,6 +107,10 @@ export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 export { getClube, listClubesByTenant, listClubesByOwner, listMembros } from './clubs';
 export type { ListMembrosOptions } from './clubs';
 
+// Clubs — leitura de desafios (S105-T2), parcerias (S107-T2) e comunicados
+// (S108-T2). Filtro fino roda no cliente; agregados ∑ vêm das Functions.
+export { listDesafios } from './clubs';
+
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e
 // enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)
