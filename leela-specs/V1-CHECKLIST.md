@@ -93,20 +93,20 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 - [x] LEELA-S102-T1 — Shell do contexto de clube (header 96px + sub-nav 6 tabs) (`adc9c93`)
 - [x] LEELA-S102-T2 — Conteúdo do Overview (4 KPIs + novos membros) (`b0f991b`)
 - [x] LEELA-S103-T1 — Modelo `membros` + derivação de status + Function + Rules (`e2762f8`)
-- [x] LEELA-S103-T2 — Tela de membros (tabela densa + busca + filtros + popover) (`171222b`; mutations removerMembro/transferir → L2)
-- [x] LEELA-S104-T1 — Modal de convite (3 tabs + validações + 4 vias) (`19103a1`; Function enviarConvites → L2)
-- [ ] LEELA-S105-T1 — Modelo `desafios` + `catalogoAcoes` (seed 16) + junção + Rules
+- [x] LEELA-S103-T2 — Tela de membros (tabela densa + busca + filtros + popover) (`171222b`; mutations removerMembro/transferirPropriedade PUBLICADAS em `f463337` — falta wire no container, dono L3)
+- [x] LEELA-S104-T1 — Modal de convite (3 tabs + validações + 4 vias) (`19103a1`; Function enviarConvites PUBLICADA em `f463337` — falta wire no container, dono L3)
+- [x] LEELA-S105-T1 — Modelo `desafios` + `catalogoAcoes` (seed 16) + junção + Rules (`43cf589`; fecha pendência `qtdDesafiosAtivos` do L1)
 - [ ] LEELA-S105-T2 — Tela lista de desafios (KPIs + cards + filtros)
-- [ ] LEELA-S106-T1 — Motor de pontuação + validação de modelo (core, desafio mínimo)
+- [x] LEELA-S106-T1 — Motor de pontuação + validação de modelo (core, desafio mínimo) (`22431eb`)
 - [ ] LEELA-S106-T2 — Editor de desafio (70/30 + modelo dual + preview ao vivo)
-- [ ] LEELA-S107-T1 — Modelo `parcerias` + espelho read-only + agregados + Rules
+- [x] LEELA-S107-T1 — Modelo `parcerias` + espelho read-only + agregados + Rules (`cd591cf`)
 - [ ] LEELA-S107-T2 — Tela de parcerias (3 blocos + aceitar/recusar convite)
 - [ ] LEELA-S107-T3 — Modal adicionar patrocinador
 - [ ] LEELA-S107-T4 — Modais destrutivos (desativar patrocinador + remover evento)
 - [ ] LEELA-S107-T5 — Modal termos do programa (read-only)
-- [ ] LEELA-S108-T1 — Modelo `comunicados` + limite de push + agregados + Rules
+- [x] LEELA-S108-T1 — Modelo `comunicados` + limite de push + agregados + Rules (`c83532c`)
 - [ ] LEELA-S108-T2 — Tela lista de comunicados (KPIs + filtros + popover)
-- [ ] LEELA-S109-T1 — Segmentação + validações de comunicado (core)
+- [x] LEELA-S109-T1 — Segmentação + validações de comunicado (core) (`da301cf`)
 - [ ] LEELA-S109-T2 — Editor de comunicado (70/30 + preview Push/Email)
 - [ ] LEELA-S110-T1 — Tela de configurações (25/75 + scroll spy + 5 seções)
 - [ ] LEELA-S110-T2 — Deletar clube (§2.15 + LGPD) + exportação (Function)
