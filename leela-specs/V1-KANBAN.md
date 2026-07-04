@@ -19,7 +19,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O1** · E03 · Operação do evento — L1 ✅ 3/3T (review pass) · **L2 EM EXECUÇÃO** (Functions transacionais — Fable) · **L3 telas EM EXECUÇÃO** (Opus) · L4/L5 na fila
+- [ ] **O1** · E03 · Operação do evento — L1 ✅ 3/3T · **L3 telas ✅ 4/4T** (f599032, 9781173, 83d4036, d97250f · 45/45 testes) · **L2 EM EXECUÇÃO** (Fable; recebeu contratos do L3: input de criarEvento + getEvento) · L4/L5 na fila
 - [ ] **O1** · E05 · Clubs núcleo — L1 ✅ 2/2T (review pass) · **L2 EM EXECUÇÃO** (motores desafios/parcerias/comunicados — Fable) · L3+ na fila
 - [ ] **O1** · E16-slim · onboard tenant + termos — L1 ✅ 6/6T + fixes ✅ + **HOTFIX ✅ 3/3** (35894cb R1 ordem rollback · 1e50e49 #8 corrida trigger morta c/ prova · 0acea80 R3 merge de claims · suíte 531/531) · **L2 telas EM EXECUÇÃO** (Opus) · review dos hotfixes entra no REVIEW da onda
 - [ ] **O1** · E02 · Dashboard do produtor — **L1 EM EXECUÇÃO** (Fable; dependência E03-L1+E05-L1 satisfeita pelo review pass)

@@ -54,12 +54,12 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 ### LEELA-E03 · Operação do evento (completo)
 
 - [x] LEELA-S200-T1 — Tipo `Evento` + query por organizador + Rules (`475574d`)
-- [ ] LEELA-S200-T2 — Tela Hub de eventos (`/eventos`) + KPIs globais + EmptyState
-- [ ] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview)
+- [x] LEELA-S200-T2 — Tela Hub de eventos (`/eventos`) + KPIs globais + EmptyState (`f599032`)
+- [x] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview) (`9781173`; porta criarEvento aguarda contrato do L2)
 - [ ] LEELA-S201-T2 — Function `criarEvento` + `publicarEvento` (slug, URL, QR)
 - [ ] LEELA-S201-T3 — Bloqueio de edição de preço após 1ª venda (RN-200)
-- [ ] LEELA-S202-T1 — Layout do evento (header 96px §2.1 + sub-nav §2.14)
-- [ ] LEELA-S202-T2 — Dashboard Overview (KPIs, alertas, atividade recente)
+- [x] LEELA-S202-T1 — Layout do evento (header 96px §2.1 + sub-nav §2.14) (`83d4036`)
+- [x] LEELA-S202-T2 — Dashboard Overview (KPIs, alertas, atividade recente) (`d97250f`)
 - [x] LEELA-S203-T1 — Subcoleção `inscritos` + tipo + query paginada + Rules (`8caec72`; legada top-level aposentada em `90a65cf`)
 - [ ] LEELA-S203-T2 — Tela de inscritos (tabela densa, paginação, 4 tabs, slide-in)
 - [ ] LEELA-S204-T1 — Tela do balcão (layout 60/40 + 3 passos + painel operacional)
