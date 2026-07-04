@@ -55,6 +55,13 @@ function resolveTokens(theme: Theme): FlatTokens {
 // ---------------------------------------------------------------------------
 
 export interface ThemeProviderRNProps {
+  /**
+   * Tema controlado pelo app. Quando presente, vence a preferência
+   * persistida (no mount e a cada mudança). Sem a prop, a preferência
+   * do usuário no storage decide, com fallback 'brasa'.
+   * Mesmo contrato de precedência do ThemeProvider web (F04):
+   * prop > storage > default.
+   */
   theme?: Theme;
   /** Optional async storage for persistence. Pass AsyncStorage or equivalent. */
   storage?: StorageAdapter;
@@ -62,18 +69,30 @@ export interface ThemeProviderRNProps {
 }
 
 export function ThemeProviderRN({
-  theme: defaultTheme = 'brasa',
+  theme: themeProp,
   storage,
   children,
 }: ThemeProviderRNProps): JSX.Element {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme);
+  const [theme, setThemeState] = useState<Theme>(themeProp ?? 'brasa');
 
-  // Restore persisted preference on mount
+  // Prop controlada muda → ela manda (espelha F04 web: a prop nunca é
+  // ignorada, nem no mount nem depois)
   useEffect(() => {
-    if (!storage) return;
+    if (themeProp !== undefined) {
+      setThemeState(themeProp);
+    }
+  }, [themeProp]);
+
+  // Restaura preferência persistida no mount — SÓ quando a prop não é
+  // passada (prop > storage > default). Guard de cancelamento: um getItem
+  // que resolve tarde nunca sobrescreve prop que apareceu depois.
+  useEffect(() => {
+    if (!storage || themeProp !== undefined) return;
+    let cancelled = false;
     storage
       .getItem(STORAGE_KEY)
       .then((stored) => {
+        if (cancelled) return;
         if (stored === 'brasa' || stored === 'leela') {
           setThemeState(stored);
         }
@@ -81,7 +100,10 @@ export function ThemeProviderRN({
       .catch(() => {
         // ignore storage errors
       });
-  }, [storage]);
+    return () => {
+      cancelled = true;
+    };
+  }, [storage, themeProp]);
 
   const setTheme = (next: Theme): void => {
     setThemeState(next);
