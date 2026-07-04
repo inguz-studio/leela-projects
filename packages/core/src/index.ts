@@ -176,6 +176,13 @@ export {
   parseEvento,
 } from './eventos/evento';
 
+// RN-200 — preço bloqueado após 1ª venda (E03 · S201-T3)
+export {
+  MSG_PRECO_BLOQUEADO,
+  precoBloqueado,
+  podeAlterarPreco,
+} from './eventos/precoBloqueado';
+
 export type { Inscrito, KitInscrito, StatusInscrito } from './eventos/inscrito';
 export {
   KITS_INSCRITO,

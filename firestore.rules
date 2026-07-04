@@ -220,6 +220,16 @@ service cloud.firestore {
         return request.resource.data.status in ['rascunho', 'publicado', 'ao_vivo', 'encerrado'];
       }
 
+      /**
+       * RN-200 (S201-T3): após a 1ª venda (∑ qtdInscritos > 0) o cliente não
+       * toca `percursos` — o preço faz parte do percurso. Sem venda, edita.
+       */
+      function percursosEditaveis() {
+        return resource.data.get('qtdInscritos', 0) == 0
+          || !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['percursos']);
+      }
+
       // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
       // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
       // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
@@ -233,7 +243,8 @@ service cloud.firestore {
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
                         && eventoAgregadosIntocados()
-                        && statusEventoValido())
+                        && statusEventoValido()
+                        && percursosEditaveis())
                     || isPlatformAdmin();
       allow delete: if (isTenantWriter(resource.data.tenantId)
                         && tenantAtivo(resource.data.tenantId))
@@ -242,6 +253,12 @@ service cloud.firestore {
       /** tenantId do evento pai — subcoleções carregam tenantId coerente (ADR-009). */
       function tenantDoEventoPai() {
         return get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId;
+      }
+
+      /** ∑ qtdInscritos do evento pai > 0 ⇒ evento tem venda (RN-200). */
+      function eventoPaiTemVenda() {
+        return get(/databases/$(database)/documents/eventos/$(eventoId))
+          .data.get('qtdInscritos', 0) > 0;
       }
 
       // `inscritos/{inscritoId}` — join Atleta↔Evento (E03 · S203-T1).
@@ -324,6 +341,17 @@ service cloud.firestore {
             && request.resource.data.modalidades is list;
         }
 
+        /**
+         * RN-200 (S201-T3): evento COM venda ⇒ cliente não muda `preco` do
+         * kit. Outros campos seguem editáveis; sem venda, preço livre
+         * (inclusive mais negativo no "Sem kit" — RN-211 preservada).
+         */
+        function precoEditavel() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['preco'])
+            || !eventoPaiTemVenda();
+        }
+
         allow read: if isPlatformAdmin()
                     || isTenantMember(tenantDoEventoPai());
         allow create: if (isTenantWriter(request.resource.data.tenantId)
@@ -334,7 +362,8 @@ service cloud.firestore {
         allow update: if (isTenantWriter(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
-                          && shapeKitValido())
+                          && shapeKitValido()
+                          && precoEditavel())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)
                           && tenantAtivo(resource.data.tenantId))
