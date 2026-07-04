@@ -160,9 +160,9 @@ export {
   validarConvite,
 } from './clubs';
 
-// Motores de domínio do clube (E05-L2 · S106-T1/S107-T1):
+// Motores de domínio do clube (E05-L2 · S106-T1/S107-T1/S108-T1):
 // pontuação (RN-115), validação de publicação (RN-110/111), vínculo de
-// evento (RN-113) e parcerias (RN-120…125).
+// evento (RN-113), parcerias (RN-120…125) e comunicados (RN-130…135).
 export type {
   RegistroAcao,
   ResultadoPontuacao,
@@ -174,6 +174,12 @@ export type {
   Parceria,
   ParceriaEventoAfiliado,
   ParceriaPatrocinador,
+  StatusComunicado,
+  CanalComunicado,
+  OrigemComunicado,
+  TipoSegmento,
+  Segmento,
+  Comunicado,
 } from './clubs';
 export {
   BONUS_3_PILARES_DIA,
@@ -197,6 +203,18 @@ export {
   CAMPOS_AGREGADOS_PARCERIA,
   CAMPOS_ESPELHO_PARCERIA,
   dentroDaJanelaAtribuicao,
+  STATUS_COMUNICADO,
+  CANAIS_COMUNICADO,
+  ORIGENS_COMUNICADO,
+  TIPOS_SEGMENTO,
+  isStatusComunicado,
+  isCanalComunicado,
+  isOrigemComunicado,
+  isTipoSegmento,
+  CAMPOS_FUNCTION_COMUNICADO,
+  PUSH_MAX_CHARS,
+  PUSH_SEMANA_MAX,
+  temCanalPush,
 } from './clubs';
 
 // ---------------------------------------------------------------------------

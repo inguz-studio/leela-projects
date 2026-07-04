@@ -640,6 +640,69 @@ service cloud.firestore {
         }
       }
 
+      // `comunicados/{comunicadoId}` — comunicação segmentada (E05 · S108-T1).
+      //
+      // RN-130: cliente cria/edita APENAS rascunho/agendado — o carimbo
+      // 'enviado' (+ enviadoEm/alcance/aberturasPct) é EXCLUSIVO da Function
+      // de envio (onComunicadoEnvio, que também valida o limite RN-133).
+      // Comunicado enviado é imutável e indeletável para o cliente (trilha).
+      // RN-131/132: canal 1..2 dentro do enum; origem no enum.
+      // RN-135: imagem de capa só existe quando o canal inclui email.
+      match /comunicados/{comunicadoId} {
+
+        /** Shape básico (RN-131/132 + segmento + RN-135). */
+        function shapeComunicadoValido() {
+          return request.resource.data.canal is list
+            && request.resource.data.canal.size() >= 1
+            && request.resource.data.canal.size() <= 2
+            && request.resource.data.canal.hasOnly(['push', 'email'])
+            && request.resource.data.origem in ['manual', 'automatizada']
+            && request.resource.data.segmento.tipo in
+                ['todos', 'por_desafio', 'por_pilar', 'por_engajamento']
+            && (!('capaUrl' in request.resource.data)
+                || 'email' in request.resource.data.canal);
+        }
+
+        /** Cliente nunca escreve status 'enviado' (RN-130). */
+        function statusEditavelPeloCliente() {
+          return request.resource.data.status in ['rascunho', 'agendado'];
+        }
+
+        /** Cliente não CRIA doc carimbado com campos da Function de envio. */
+        function semCamposDeEnvio() {
+          return !request.resource.data.keys().hasAny(['enviadoEm', 'aberturasPct'])
+            && request.resource.data.get('alcance', 0) == 0;
+        }
+
+        /** Update de cliente não TOCA campos da Function de envio. */
+        function camposDeEnvioIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['alcance', 'aberturasPct', 'enviadoEm']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoClubePai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoClubePai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeComunicadoValido()
+                          && statusEditavelPeloCliente()
+                          && semCamposDeEnvio())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.status != 'enviado'
+                          && shapeComunicadoValido()
+                          && statusEditavelPeloCliente()
+                          && camposDeEnvioIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.status != 'enviado')
+                      || isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantMember(tenantDoClubePai());

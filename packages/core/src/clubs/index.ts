@@ -119,3 +119,27 @@ export {
   CAMPOS_ESPELHO_PARCERIA,
   dentroDaJanelaAtribuicao,
 } from './parceria';
+
+// Comunicados — comunicação segmentada (S108-T1 · RN-130…135)
+export type {
+  StatusComunicado,
+  CanalComunicado,
+  OrigemComunicado,
+  TipoSegmento,
+  Segmento,
+  Comunicado,
+} from './comunicado';
+export {
+  STATUS_COMUNICADO,
+  CANAIS_COMUNICADO,
+  ORIGENS_COMUNICADO,
+  TIPOS_SEGMENTO,
+  isStatusComunicado,
+  isCanalComunicado,
+  isOrigemComunicado,
+  isTipoSegmento,
+  CAMPOS_FUNCTION_COMUNICADO,
+  PUSH_MAX_CHARS,
+  PUSH_SEMANA_MAX,
+  temCanalPush,
+} from './comunicado';
