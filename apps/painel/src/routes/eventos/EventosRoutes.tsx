@@ -22,6 +22,8 @@ import { BalcaoPage } from './entrega/BalcaoPage';
 import { GaleriaEstados } from './entrega/estados/GaleriaEstados';
 import { KitsLayout } from './kits/KitsLayout';
 import { KitsCadastroPage } from './kits/KitsCadastroPage';
+import { DistribuicaoPage } from './kits/DistribuicaoPage';
+import { EstoquePage } from './kits/EstoquePage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -36,6 +38,8 @@ export function EventosRoutes(): JSX.Element {
           <Route path="entrega/estados" element={<GaleriaEstados />} />
           <Route path="kits" element={<KitsLayout />}>
             <Route index element={<KitsCadastroPage />} />
+            <Route path="distribuicao" element={<DistribuicaoPage />} />
+            <Route path="estoque" element={<EstoquePage />} />
           </Route>
         </Route>
       </Routes>
