@@ -25,6 +25,7 @@ import { KitsCadastroPage } from './kits/KitsCadastroPage';
 import { DistribuicaoPage } from './kits/DistribuicaoPage';
 import { EstoquePage } from './kits/EstoquePage';
 import { KitEditorPage } from './kits/KitEditorPage';
+import { FinanceiroPage } from './financeiro/FinanceiroPage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -45,6 +46,7 @@ export function EventosRoutes(): JSX.Element {
           {/* Editor de kit em tela cheia (RN-217, 2 pontos de entrada) — fora da sub-nav de Kits */}
           <Route path="kits/novo" element={<KitEditorPage />} />
           <Route path="kits/editar/:kitId" element={<KitEditorPage />} />
+          <Route path="financeiro" element={<FinanceiroPage />} />
         </Route>
       </Routes>
     </ToastProvider>
