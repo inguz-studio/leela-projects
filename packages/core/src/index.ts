@@ -160,6 +160,27 @@ export {
   validarConvite,
 } from './clubs';
 
+// Motores de domínio do clube (E05-L2 · S106-T1):
+// pontuação (RN-115), validação de publicação (RN-110/111) e vínculo de
+// evento (RN-113).
+export type {
+  RegistroAcao,
+  ResultadoPontuacao,
+  DesafioParaPublicar,
+} from './clubs';
+export {
+  BONUS_3_PILARES_DIA,
+  BONUS_5_DIAS_SEMANA,
+  DIAS_MINIMOS_BONUS_SEMANA,
+  chaveDia,
+  chaveSemanaIso,
+  pontosDoRegistro,
+  calcularPontos,
+  validarPublicacao,
+  podePublicar,
+  copyPreparacao,
+} from './clubs';
+
 // ---------------------------------------------------------------------------
 // Módulo Eventos (LEELA-E03 · S200-T1 / S203-T1 / S205-T1)
 // Entidade Evento movida para src/eventos/evento.ts; re-exportada aqui para

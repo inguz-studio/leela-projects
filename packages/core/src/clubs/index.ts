@@ -76,3 +76,22 @@ export {
   parseEmails,
   validarConvite,
 } from './convite';
+
+// Motor de pontuação (S106-T1 · RN-115)
+export type { RegistroAcao, ResultadoPontuacao } from './pontuacao';
+export {
+  BONUS_3_PILARES_DIA,
+  BONUS_5_DIAS_SEMANA,
+  DIAS_MINIMOS_BONUS_SEMANA,
+  chaveDia,
+  chaveSemanaIso,
+  pontosDoRegistro,
+  calcularPontos,
+} from './pontuacao';
+
+// Validação de publicação de desafio por modelo (S106-T1 · RN-110/111)
+export type { DesafioParaPublicar } from './desafio-validacao';
+export { validarPublicacao, podePublicar } from './desafio-validacao';
+
+// Copy de vínculo Desafio ↔ Evento (S106-T1 · RN-113)
+export { copyPreparacao } from './evento-vinculo';
