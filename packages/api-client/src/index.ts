@@ -107,6 +107,16 @@ export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 export { getClube, listClubesByTenant, listClubesByOwner, listMembros } from './clubs';
 export type { ListMembrosOptions } from './clubs';
 
+// Clubs — mutations via Cloud Function (contrato das telas L3):
+// removerMembro/transferirPropriedade (tela de membros, §2.15) e
+// enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)
+export { removerMembro, transferirPropriedade, enviarConvites } from './clubs';
+export type {
+  RemoverMembroResult,
+  TransferirPropriedadeResult,
+  EnviarConvitesResult,
+} from './clubs';
+
 // ---------------------------------------------------------------------------
 // Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
 // ---------------------------------------------------------------------------

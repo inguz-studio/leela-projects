@@ -24,6 +24,7 @@ import {
   type Firestore,
   type QueryConstraint,
 } from 'firebase/firestore';
+import { httpsCallable, type Functions } from 'firebase/functions';
 import type { Clube, Membro, PapelMembro, StatusMembro } from '@leela/core';
 
 // ---------------------------------------------------------------------------
@@ -114,4 +115,81 @@ export async function listMembros(
     query(collection(db, 'clubes', clubeId, 'membros'), ...constraints)
   );
   return snap.docs.map((d) => ({ ...(d.data() as Omit<Membro, 'id'>), id: d.id }));
+}
+
+// ---------------------------------------------------------------------------
+// Mutations — membros e convites via Cloud Function (contrato das telas L3)
+// Espelham `functions/src/clubs/{membrosMutations,enviarConvites}.ts`.
+// Autorização, guardas (owner não removível, RN-106) e agregados ∑ são do
+// SERVIDOR — estes wrappers só tipam o contrato.
+// ---------------------------------------------------------------------------
+
+export interface RemoverMembroResult {
+  removido: true;
+}
+
+/**
+ * Remove um membro do clube via Cloud Function `removerMembro` e reconta
+ * o agregado ∑ qtdMembrosAtivos no servidor. O owner não é removível
+ * (`failed-precondition` — a tela oferece transferir propriedade antes).
+ */
+export async function removerMembro(
+  functions: Functions,
+  clubeId: string,
+  membroId: string
+): Promise<RemoverMembroResult> {
+  const call = httpsCallable<
+    { clubeId: string; membroId: string },
+    RemoverMembroResult
+  >(functions, 'removerMembro');
+  return (await call({ clubeId, membroId })).data;
+}
+
+export interface TransferirPropriedadeResult {
+  /** uid (atletaId) do novo owner do clube */
+  novoOwnerUid: string;
+  /** membroId do owner anterior rebaixado para admin — null se não havia */
+  ownerAnteriorMembroId: string | null;
+}
+
+/**
+ * Transfere a propriedade do clube para um membro via Cloud Function
+ * `transferirPropriedade` (atômica: clube.ownerId + papéis dos membros).
+ * Transferir para quem já é owner devolve `failed-precondition`.
+ */
+export async function transferirPropriedade(
+  functions: Functions,
+  clubeId: string,
+  membroId: string
+): Promise<TransferirPropriedadeResult> {
+  const call = httpsCallable<
+    { clubeId: string; membroId: string },
+    TransferirPropriedadeResult
+  >(functions, 'transferirPropriedade');
+  return (await call({ clubeId, membroId })).data;
+}
+
+export interface EnviarConvitesResult {
+  /** Convites efetivamente gravados (após dedupe case-insensitive) */
+  enviados: number;
+  /** Total de emails recebidos no input */
+  total: number;
+}
+
+/**
+ * Envia convites por email via Cloud Function `enviarConvites` (modal
+ * S104-T1). O servidor revalida RN-106 (1..50 emails, formato) com a mesma
+ * `validarConvite` pura que o modal usa como UX; lote inválido devolve
+ * `invalid-argument`.
+ */
+export async function enviarConvites(
+  functions: Functions,
+  clubeId: string,
+  emails: string[]
+): Promise<EnviarConvitesResult> {
+  const call = httpsCallable<
+    { clubeId: string; emails: string[] },
+    EnviarConvitesResult
+  >(functions, 'enviarConvites');
+  return (await call({ clubeId, emails })).data;
 }

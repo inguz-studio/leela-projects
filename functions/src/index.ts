@@ -38,6 +38,15 @@ export { recalcularStatusMembros } from './clubs/recalcularStatusMembros';
 // (E05-S105-T1 — fecha a pendência herdada do L1)
 export { onDesafioWrite } from './clubs/onDesafioWrite';
 
+// Clubs — mutations de membros + convites (E05 · contrato das telas L3):
+// removerMembro (guarda owner + recontagem ∑), transferirPropriedade
+// (troca atômica de ownerId/papéis) e enviarConvites (RN-106 no servidor)
+export {
+  removerMembro,
+  transferirPropriedade,
+} from './clubs/membrosMutations';
+export { enviarConvites } from './clubs/enviarConvites';
+
 // Overview — dashboard do profissional (E02-S600-T2): fan-out eventos/clubes
 // → profissionais/{profId}/dashboard/current + callable de leitura
 export {
