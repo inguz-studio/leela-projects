@@ -77,7 +77,7 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 ### LEELA-E02 · Visão geral do profissional (completo)
 
 - [ ] LEELA-S600-T1 — Rota `(overview)` + layout 2 colunas + cabeçalho
-- [ ] LEELA-S600-T2 — Cloud Function de agregado do dashboard do profissional
+- [x] LEELA-S600-T2 — Cloud Function de agregado do dashboard do profissional (c48b0e6 · kpis+alerts core puro, fan-out idempotente, getOverview 1 round-trip, Rules dashboard/**, 50/50 testes)
 - [ ] LEELA-S600-T3 — KPI row (4 cards) consumindo o agregado
 - [ ] LEELA-S601-T1 — Seção "Seus eventos ativos"
 - [ ] LEELA-S601-T2 — Tabela "Últimas inscrições" (cross-evento)
