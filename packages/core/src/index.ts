@@ -20,15 +20,6 @@ export interface Timestamp {
 // Enums / literal types de domínio
 // ---------------------------------------------------------------------------
 
-/** Papel do membro dentro de um clube (RN-103) */
-export type PapelMembro = 'owner' | 'admin' | 'membro';
-
-/** Status derivado do membro no clube (RN-102 — calculado por Function) */
-export type StatusMembro = 'ativo' | 'novo' | 'inativo';
-
-/** Via pela qual o atleta entrou no clube */
-export type EntradaVia = 'codigo' | 'convite' | 'link';
-
 /** Papéis do profissional na plataforma (via custom claims) */
 export type PapelProfissional = 'coordenador' | 'organizador' | 'admin';
 
@@ -80,26 +71,6 @@ export interface Profissional {
   atualizadoEm: Timestamp;
 }
 
-/**
- * Membro — join Atleta ↔ Clube.
- * Subcoleção: `clubes/{clubId}/membros/{membroId}`.
- * Herda tenantId do clube pai.
- */
-export interface Membro {
-  id: string;
-  /** Propagado do clube pai para filtragem direta (ADR-009) */
-  tenantId: string;
-  /** Referência ao atleta */
-  atletaId: string;
-  /** 🔁 Desnormalizado — mantido por Function */
-  atletaNome: string;
-  papel: PapelMembro;
-  entrouEm: Timestamp;
-  entrouVia: EntradaVia;
-  /** Status derivado (RN-102) — calculado por Function ou no read via core */
-  status: StatusMembro;
-}
-
 // ---------------------------------------------------------------------------
 // PaymentProvider — interface plugável (ADR-006)
 // Movida para src/payments/PaymentProvider.ts; re-exportada aqui para
@@ -128,8 +99,8 @@ export type {
 } from './payments/PaymentProvider';
 
 // ---------------------------------------------------------------------------
-// Módulo Clubs (LEELA-E05 · S101-T1)
-// Entidade Clube movida para src/clubs/clube.ts; re-exportada aqui para
+// Módulo Clubs (LEELA-E05 · S101-T1 / S103-T1)
+// Entidades Clube e Membro movidas para src/clubs/; re-exportadas aqui para
 // manter retrocompatibilidade de imports de '@leela/core'.
 // ---------------------------------------------------------------------------
 export type {
@@ -138,6 +109,10 @@ export type {
   PapelClube,
   VisibilidadeClube,
   ModeloEntradaClube,
+  Membro,
+  PapelMembro,
+  StatusMembro,
+  EntradaVia,
 } from './clubs';
 export {
   CLUBE_NOME_MAX,
@@ -148,6 +123,10 @@ export {
   TAMANHO_CODIGO_CONVITE,
   gerarCodigoConvite,
   validarCodigoConvite,
+  MEMBRO_NOVO_DIAS,
+  MEMBRO_INATIVO_DIAS,
+  derivarStatus,
+  contaComoAtivo,
 } from './clubs';
 
 // ---------------------------------------------------------------------------

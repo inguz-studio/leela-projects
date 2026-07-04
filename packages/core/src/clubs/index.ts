@@ -22,3 +22,16 @@ export {
   gerarCodigoConvite,
   validarCodigoConvite,
 } from './codigo-convite';
+
+export type {
+  Membro,
+  PapelMembro,
+  StatusMembro,
+  EntradaVia,
+} from './membro';
+export {
+  MEMBRO_NOVO_DIAS,
+  MEMBRO_INATIVO_DIAS,
+  derivarStatus,
+  contaComoAtivo,
+} from './membro';

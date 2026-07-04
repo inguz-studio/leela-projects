@@ -28,3 +28,8 @@ export { provisionTenant } from './platform/provisionTenant';
 
 // Plataforma — rollups macro cross-tenant (E16-S1605-T2 · RN-409)
 export { recomputePlatformRollups } from './platform/rollups';
+
+// Clubs — status derivado do membro (RN-102) + agregado ∑ qtdMembrosAtivos
+// por recontagem idempotente (E05-S103-T1)
+export { onMembroWrite } from './clubs/onMembroWrite';
+export { recalcularStatusMembros } from './clubs/recalcularStatusMembros';

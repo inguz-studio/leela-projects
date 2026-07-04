@@ -8,6 +8,31 @@
         { "fieldPath": "organizadorId", "order": "ASCENDING" },
         { "fieldPath": "data", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "membros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "membros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "papel", "order": "ASCENDING" },
+        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "membros",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "papel", "order": "ASCENDING" },
+        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

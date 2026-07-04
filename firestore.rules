@@ -383,9 +383,66 @@ service cloud.firestore {
                         && tenantAtivo(resource.data.tenantId))
                     || isPlatformAdmin();
 
+      /** tenantId do clube pai — subcoleções carregam tenantId coerente (ADR-009). */
+      function tenantDoClubePai() {
+        return get(/databases/$(database)/documents/clubes/$(clubeId)).data.tenantId;
+      }
+
+      // `membros/{membroId}` — join Atleta↔Clube (E05 · S103-T1).
+      //
+      // RN-102: `status` é DERIVADO por data — escrita EXCLUSIVA da Cloud
+      // Function (onMembroWrite + cron recalcularStatusMembros). O mesmo vale
+      // para `ultimaAtividadeEm` (trilha de atividade). Papel de escrita do
+      // tenant gerencia membros (remover/transferir — S103-T2), mas nunca
+      // inventa status nem atividade. Membros NUNCA são públicos, mesmo em
+      // clube com visibilidade 'publica' — leitura só do tenant dono.
+      match /membros/{membroId} {
+
+        /** Papel dentro do enum canônico (RN-103). */
+        function papelMembroValido() {
+          return request.resource.data.papel in ['owner', 'admin', 'membro'];
+        }
+
+        /** Via de entrada dentro do enum canônico. */
+        function entradaViaValida() {
+          return request.resource.data.entrouVia in ['codigo', 'convite', 'link'];
+        }
+
+        /** Cliente não CRIA doc já carimbado com campos de Function (RN-102). */
+        function semCamposDeFunctionMembro() {
+          return !request.resource.data.keys().hasAny(['status', 'ultimaAtividadeEm']);
+        }
+
+        /** Update de cliente não TOCA campos de Function (RN-102). */
+        function camposDeFunctionMembroIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['status', 'ultimaAtividadeEm']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoClubePai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoClubePai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && papelMembroValido()
+                          && entradaViaValida()
+                          && semCamposDeFunctionMembro())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && papelMembroValido()
+                          && entradaViaValida()
+                          && camposDeFunctionMembroIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
-                    || isTenantMember(get(/databases/$(database)/documents/clubes/$(clubeId)).data.tenantId);
+                    || isTenantMember(tenantDoClubePai());
         allow write: if isPlatformAdmin();
       }
     }
