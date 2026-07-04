@@ -1,0 +1,417 @@
+/**
+ * kitsRules.test.ts — LEELA-S205-T1
+ *
+ * Integração (Emulator): Security Rules de `eventos/{id}/kits` e `itensKit`
+ * + índice inverso "usado em" (syncItemUsadoEm — mesmo código da Function).
+ *
+ * Cobre (aceite E03-L1):
+ *   - "Sem kit" com preço NEGATIVO persiste (RN-211)
+ *   - Item em 2 kits lista "usado em" os 2 (RN-215) + idempotência do sync
+ *   - Cross-tenant DENY: create E update E delete (kits e itensKit)
+ *   - RBAC por papel (owner/staff escrevem; promoter/athlete não)
+ *   - Shape: preco number, origem no enum, organizador sem logo (RN-214),
+ *     `usadoEm` nunca escrito pelo cliente
+ *
+ * Pré-requisito: Firestore Emulator na porta 8080 (via emulators:exec).
+ */
+
+import {
+  assertFails,
+  assertSucceeds,
+  initializeTestEnvironment,
+  type RulesTestEnvironment,
+} from '@firebase/rules-unit-testing';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+  setDoc,
+  updateDoc,
+  type Firestore,
+} from 'firebase/firestore';
+import * as admin from 'firebase-admin';
+import { listarKits, listarItensKit } from '@leela/api-client';
+import { seedEventos, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
+import { seedKits, KIT_SEEDS, ITEM_KIT_SEEDS } from '../seed/kits.seed';
+import { syncItemUsadoEm, syncItensDoKit } from '../eventos/itemKitIndex';
+
+const PROJECT_ID = 'demo-leela';
+const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
+
+const CASTELO_ID = 'castelo-producoes';
+const PASSO_ID = 'passo-certo';
+
+const MARINA_UID = 'uid-marina-castelo';
+const PASSO_OWNER_UID = 'uid-passo-owner';
+const PLATFORM_ADMIN_UID = 'uid-platform-admin';
+
+let testEnv: RulesTestEnvironment;
+let adminDb: admin.firestore.Firestore;
+
+beforeAll(async () => {
+  testEnv = await initializeTestEnvironment({
+    projectId: PROJECT_ID,
+    firestore: {
+      rules: readFileSync(RULES_PATH, 'utf8'),
+      host: 'localhost',
+      port: 8080,
+    },
+  });
+
+  if (!admin.apps.length) {
+    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    admin.initializeApp({ projectId: PROJECT_ID });
+  }
+  adminDb = admin.firestore();
+});
+
+afterAll(async () => {
+  await testEnv?.cleanup();
+});
+
+function dbAs(uid: string, claims: Record<string, unknown>): Firestore {
+  return testEnv
+    .authenticatedContext(uid, claims)
+    .firestore() as unknown as Firestore;
+}
+
+const marinaClaims = { role: 'tenant_owner', tenantId: CASTELO_ID };
+const staffClaims = { role: 'tenant_staff', tenantId: CASTELO_ID };
+const promoterClaims = { role: 'promoter', tenantId: CASTELO_ID };
+const passoClaims = { role: 'tenant_owner', tenantId: PASSO_ID };
+
+async function seedBase(): Promise<void> {
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  const batch = adminDb.batch();
+  batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
+    id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
+    status: 'ativo', ownerUid: MARINA_UID, tipo: 'produtor',
+    criadoEm: now, atualizadoEm: now,
+  });
+  batch.set(adminDb.collection('tenants').doc(PASSO_ID), {
+    id: PASSO_ID, nome: 'Passo Certo Eventos', slug: PASSO_ID,
+    status: 'ativo', ownerUid: PASSO_OWNER_UID, tipo: 'promotor',
+    criadoEm: now, atualizadoEm: now,
+  });
+  await batch.commit();
+  await seedEventos(adminDb);
+  await seedKits(adminDb);
+}
+
+beforeEach(async () => {
+  await testEnv.clearFirestore();
+  await seedBase();
+});
+
+function kitRef(db: Firestore, kitId: string) {
+  return doc(db, 'eventos', MEIA_FLORIPA_ID, 'kits', kitId);
+}
+
+function kitValido(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'kit-teste', tenantId: CASTELO_ID, nome: 'Kit Teste',
+    preco: 10, capacidade: 50, modalidades: ['5k'],
+    ...overrides,
+  };
+}
+
+function itemValido(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'item-teste', tenantId: CASTELO_ID, eventoId: MEIA_FLORIPA_ID,
+    nome: 'Squeeze do evento', tamanhado: false,
+    origem: 'organizador', exibirLogo: false, kits: ['kit-basico'],
+    ...overrides,
+  };
+}
+
+// ── Seed canônico + RN-211 ────────────────────────────────────────────────
+
+describe('kits canônicos e preço negativo (RN-210/211)', () => {
+  it('seed tem 4 kits e "Sem kit" persiste com −15 (RN-211)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    const kits = await listarKits(db, MEIA_FLORIPA_ID);
+    expect(kits).toHaveLength(4);
+    // orderBy preco desc → Sem kit por último
+    expect(kits.map((k) => k.id)).toEqual(['kit-ouro', 'kit-prata', 'kit-basico', 'sem-kit']);
+    expect(kits[3]?.preco).toBe(-15);
+  });
+
+  it('cliente CRIA kit com preço negativo e o valor persiste (RN-211)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      setDoc(kitRef(db, 'sem-kit-vip'), kitValido({
+        id: 'sem-kit-vip', nome: 'Sem kit VIP', preco: -25,
+      }))
+    );
+    const snap = await getDoc(kitRef(db, 'sem-kit-vip'));
+    expect(snap.data()?.['preco']).toBe(-25);
+  });
+
+  it('preco string é NEGADO (shape)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(kitRef(db, 'kit-shape'), kitValido({ id: 'kit-shape', preco: '89' }))
+    );
+  });
+
+  it('nome vazio é NEGADO (shape)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(kitRef(db, 'kit-sem-nome'), kitValido({ id: 'kit-sem-nome', nome: '' }))
+    );
+  });
+});
+
+// ── Cross-tenant + RBAC em kits ───────────────────────────────────────────
+
+describe('kits — cross-tenant e RBAC (S205-T1)', () => {
+  it('owner de B NÃO CRIA kit no evento de A (nem carimbando tenant de A)', async () => {
+    const db = dbAs(PASSO_OWNER_UID, passoClaims);
+    await assertFails(
+      setDoc(kitRef(db, 'kit-hijack'), kitValido({ tenantId: PASSO_ID }))
+    );
+    await assertFails(
+      setDoc(kitRef(db, 'kit-hijack-2'), kitValido({ tenantId: CASTELO_ID }))
+    );
+  });
+
+  it('owner de B NÃO ATUALIZA kit de A', async () => {
+    const db = dbAs(PASSO_OWNER_UID, passoClaims);
+    await assertFails(updateDoc(kitRef(db, 'kit-ouro'), { preco: 1 }));
+  });
+
+  it('owner de B NÃO DELETA kit de A', async () => {
+    const db = dbAs(PASSO_OWNER_UID, passoClaims);
+    await assertFails(deleteDoc(kitRef(db, 'kit-ouro')));
+  });
+
+  it('owner de B NÃO LÊ kits de A', async () => {
+    const db = dbAs(PASSO_OWNER_UID, passoClaims);
+    await assertFails(getDoc(kitRef(db, 'kit-ouro')));
+  });
+
+  it('tenantId de kit é IMUTÁVEL no update', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(updateDoc(kitRef(db, 'kit-ouro'), { tenantId: PASSO_ID }));
+  });
+
+  it('staff CRIA/ATUALIZA kit; promoter NÃO (RBAC)', async () => {
+    const staffDb = dbAs('uid-staff-castelo', staffClaims);
+    await assertSucceeds(
+      setDoc(kitRef(staffDb, 'kit-staff'), kitValido({ id: 'kit-staff' }))
+    );
+    await assertSucceeds(updateDoc(kitRef(staffDb, 'kit-ouro'), { capacidade: 90 }));
+
+    const promoterDb = dbAs('uid-promoter-castelo', promoterClaims);
+    await assertFails(
+      setDoc(kitRef(promoterDb, 'kit-promoter'), kitValido({ id: 'kit-promoter' }))
+    );
+    // promoter LÊ (é membro)
+    await assertSucceeds(getDoc(kitRef(promoterDb, 'kit-ouro')));
+  });
+
+  it('owner DELETA kit do próprio evento (RN-210 — 0..N kits)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(deleteDoc(kitRef(db, 'kit-basico')));
+  });
+});
+
+// ── itensKit: catálogo top-level ──────────────────────────────────────────
+
+describe('itensKit — shape, RBAC e cross-tenant (S205-T1)', () => {
+  it('catálogo canônico: 6 itens com badges de tipo/origem (RN-212/213)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    const itens = await listarItensKit(db, {
+      tenantId: CASTELO_ID, eventoId: MEIA_FLORIPA_ID,
+    });
+    expect(itens).toHaveLength(ITEM_KIT_SEEDS.length);
+    expect(itens.filter((i) => i.tamanhado)).toHaveLength(1);
+    expect(itens.filter((i) => i.origem === 'patrocinador')).toHaveLength(4);
+  });
+
+  it('owner CRIA item do organizador (logo false) — caminho feliz', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(setDoc(doc(db, 'itensKit', 'item-teste'), itemValido()));
+  });
+
+  it('item do ORGANIZADOR com exibirLogo=true é NEGADO (RN-214)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(doc(db, 'itensKit', 'item-logo-errado'), itemValido({
+        id: 'item-logo-errado', exibirLogo: true,
+      }))
+    );
+  });
+
+  it('item PATROCINADO com exibirLogo=true é permitido (RN-214)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      setDoc(doc(db, 'itensKit', 'item-patrocinado'), itemValido({
+        id: 'item-patrocinado', origem: 'patrocinador',
+        marca: 'Olympikus', exibirLogo: true,
+      }))
+    );
+  });
+
+  it('origem fora do enum é NEGADA (RN-213)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(doc(db, 'itensKit', 'item-origem'), itemValido({
+        id: 'item-origem', origem: 'loja',
+      }))
+    );
+  });
+
+  it('cliente NÃO CRIA item carimbando usadoEm (índice é da Function)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(doc(db, 'itensKit', 'item-usadoem'), itemValido({
+        id: 'item-usadoem',
+        usadoEm: [{ kitId: 'kit-ouro', nome: 'Kit Ouro' }],
+      }))
+    );
+  });
+
+  it('cliente NÃO TOCA usadoEm no update', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      updateDoc(doc(db, 'itensKit', 'camiseta-tecnica'), {
+        usadoEm: [{ kitId: 'kit-ouro', nome: 'Hack' }],
+      })
+    );
+  });
+
+  it('cliente ATUALIZA kits[] do item sem tocar usadoEm (caminho feliz)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      updateDoc(doc(db, 'itensKit', 'camiseta-tecnica'), {
+        kits: ['kit-prata', 'kit-basico', 'kit-ouro'],
+      })
+    );
+  });
+
+  it('cross-tenant: owner de B não cria/atualiza/deleta/lê item de A', async () => {
+    const db = dbAs(PASSO_OWNER_UID, passoClaims);
+    // B carimba o PRÓPRIO tenant mas aponta evento de A → coerência nega
+    await assertFails(
+      setDoc(doc(db, 'itensKit', 'item-b'), itemValido({ id: 'item-b', tenantId: PASSO_ID }))
+    );
+    await assertFails(
+      updateDoc(doc(db, 'itensKit', 'camiseta-tecnica'), { nome: 'HIJACK' })
+    );
+    await assertFails(deleteDoc(doc(db, 'itensKit', 'camiseta-tecnica')));
+    await assertFails(getDoc(doc(db, 'itensKit', 'camiseta-tecnica')));
+  });
+
+  it('item apontando evento INEXISTENTE é negado (coerência de tenant)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(doc(db, 'itensKit', 'item-orfao'), itemValido({
+        id: 'item-orfao', eventoId: 'evento-fantasma',
+      }))
+    );
+  });
+
+  it('item sem eventoId é negado (shape)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    const semEvento = itemValido({ id: 'item-sem-evento' });
+    delete (semEvento as Record<string, unknown>)['eventoId'];
+    await assertFails(setDoc(doc(db, 'itensKit', 'item-sem-evento'), semEvento));
+  });
+
+  it('query de itensKit SEM filtro de tenant é NEGADA (ADR-009)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      getDocs(query(collection(db, 'itensKit'), where('eventoId', '==', MEIA_FLORIPA_ID)))
+    );
+  });
+
+  it('promoter NÃO escreve item; athlete não lê catálogo alheio', async () => {
+    const promoterDb = dbAs('uid-promoter-castelo', promoterClaims);
+    await assertFails(
+      setDoc(doc(promoterDb, 'itensKit', 'item-promoter'), itemValido({ id: 'item-promoter' }))
+    );
+    const athleteDb = dbAs('uid-atleta', { role: 'athlete' });
+    await assertFails(getDoc(doc(athleteDb, 'itensKit', 'camiseta-tecnica')));
+  });
+
+  it('platform_admin cruza tenants em itensKit', async () => {
+    const db = dbAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
+    await assertSucceeds(getDoc(doc(db, 'itensKit', 'camiseta-tecnica')));
+  });
+});
+
+// ── Índice inverso "usado em" (RN-215) ────────────────────────────────────
+
+describe('usadoEm — índice inverso N:N via sync (RN-215)', () => {
+  it('item em 2 kits lista "usado em" os 2 (aceite L1)', async () => {
+    const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
+    expect(snap.data()?.['usadoEm']).toEqual([
+      { kitId: 'kit-prata', nome: 'Kit Prata' },
+      { kitId: 'kit-basico', nome: 'Kit básico' },
+    ]);
+  });
+
+  it('sync é IDEMPOTENTE: 2ª passada não escreve nada', async () => {
+    // seedKits já materializou; nova passada deve ser 100% no-op
+    for (const item of ITEM_KIT_SEEDS) {
+      const escreveu = await syncItemUsadoEm(adminDb, item.id);
+      expect(escreveu).toBe(false);
+    }
+  });
+
+  it('mudar kits[] do item e ressincronizar recomputa o índice', async () => {
+    const ref = adminDb.collection('itensKit').doc('viseira-tecnica');
+    await ref.update({ kits: ['kit-ouro'] });
+    const escreveu = await syncItemUsadoEm(adminDb, 'viseira-tecnica');
+    expect(escreveu).toBe(true);
+    const snap = await ref.get();
+    expect(snap.data()?.['usadoEm']).toEqual([{ kitId: 'kit-ouro', nome: 'Kit Ouro' }]);
+  });
+
+  it('renomear kit e ressincronizar propaga o novo nome aos itens (gatilho 2)', async () => {
+    await adminDb
+      .collection('eventos').doc(MEIA_FLORIPA_ID)
+      .collection('kits').doc('kit-prata')
+      .update({ nome: 'Kit Prata Plus' });
+
+    const n = await syncItensDoKit(adminDb, MEIA_FLORIPA_ID, 'kit-prata');
+    expect(n).toBeGreaterThan(0);
+
+    const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
+    expect(snap.data()?.['usadoEm']).toEqual([
+      { kitId: 'kit-prata', nome: 'Kit Prata Plus' },
+      { kitId: 'kit-basico', nome: 'Kit básico' },
+    ]);
+  });
+
+  it('kit deletado sai do índice na ressincronização', async () => {
+    await adminDb
+      .collection('eventos').doc(MEIA_FLORIPA_ID)
+      .collection('kits').doc('kit-basico')
+      .delete();
+
+    await syncItemUsadoEm(adminDb, 'camiseta-tecnica');
+    const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
+    expect(snap.data()?.['usadoEm']).toEqual([
+      { kitId: 'kit-prata', nome: 'Kit Prata' },
+    ]);
+  });
+
+  it('seedKits é idempotente (rerun preserva contagens e índice)', async () => {
+    await seedKits(adminDb);
+    const kits = await adminDb
+      .collection('eventos').doc(MEIA_FLORIPA_ID).collection('kits').get();
+    expect(kits.size).toBe(KIT_SEEDS.length);
+    const itens = await adminDb
+      .collection('itensKit').where('eventoId', '==', MEIA_FLORIPA_ID).get();
+    expect(itens.size).toBe(ITEM_KIT_SEEDS.length);
+  });
+});

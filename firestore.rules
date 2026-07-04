@@ -252,6 +252,39 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // `kits/{kitId}` — kits do evento (E03 · S205-T1).
+      //
+      // RN-210: 0..N kits por evento. RN-211: "Sem kit" é kit válido e o
+      // preço ACEITA NEGATIVO (desconto) — shape exige number, sem piso.
+      // RN-216: o campo/conceito é "kit" — "tier" não existe no produto.
+      match /kits/{kitId} {
+
+        /** Shape mínimo do kit (nome não-vazio; preco number, negativo ok). */
+        function shapeKitValido() {
+          return request.resource.data.nome is string
+            && request.resource.data.nome.size() > 0
+            && request.resource.data.preco is number
+            && request.resource.data.capacidade is number
+            && request.resource.data.modalidades is list;
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeKitValido())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeKitValido())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId);
@@ -396,6 +429,69 @@ service cloud.firestore {
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+      allow delete: if (isTenantWriter(resource.data.tenantId)
+                        && tenantAtivo(resource.data.tenantId))
+                    || isPlatformAdmin();
+    }
+
+    // `itensKit/{itemId}` — catálogo de itens de kit do organizador
+    // (E03 · S205-T1). Tenant-scoped; item referencia kits do evento via
+    // `kits[]` (N:N Kit↔Item — RN-215) e carrega `eventoId`.
+    //
+    // Shape: RN-212 (tamanhado bool), RN-213 (origem organizador|patrocinador),
+    // RN-214 (exibirLogo só faz sentido em item patrocinado — organizador
+    // sempre false). `usadoEm` é índice inverso DESNORMALIZADO mantido pela
+    // Function itemKitIndex — cliente nunca escreve.
+    match /itensKit/{itemId} {
+
+      /** Shape do item (RN-212/213/214) — enums e booleans coerentes. */
+      function shapeItemKitValido() {
+        return request.resource.data.nome is string
+          && request.resource.data.nome.size() > 0
+          && request.resource.data.tamanhado is bool
+          && request.resource.data.origem in ['organizador', 'patrocinador']
+          && request.resource.data.exibirLogo is bool
+          && (request.resource.data.origem == 'patrocinador'
+              || request.resource.data.exibirLogo == false)
+          && request.resource.data.kits is list
+          && request.resource.data.eventoId is string
+          && request.resource.data.eventoId.size() > 0;
+      }
+
+      /**
+       * Coerência de tenant com o EVENTO referenciado (ADR-009): o item só
+       * aponta evento do PRÓPRIO tenant — sem itens órfãos em evento alheio.
+       */
+      function eventoDoItemCoerente() {
+        return get(/databases/$(database)/documents/eventos/$(request.resource.data.eventoId))
+          .data.tenantId == request.resource.data.tenantId;
+      }
+
+      /** Cliente não CRIA item com índice inverso carimbado (só Function). */
+      function semUsadoEm() {
+        return !request.resource.data.keys().hasAny(['usadoEm']);
+      }
+
+      /** Update de cliente não TOCA o índice inverso (só Function). */
+      function usadoEmIntocado() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['usadoEm']);
+      }
+
+      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      allow create: if (isTenantWriter(request.resource.data.tenantId)
+                        && tenantAtivo(request.resource.data.tenantId)
+                        && shapeItemKitValido()
+                        && eventoDoItemCoerente()
+                        && semUsadoEm())
+                    || isPlatformAdmin();
+      allow update: if (isTenantWriter(resource.data.tenantId)
+                        && request.resource.data.tenantId == resource.data.tenantId
+                        && tenantAtivo(resource.data.tenantId)
+                        && shapeItemKitValido()
+                        && eventoDoItemCoerente()
+                        && usadoEmIntocado())
                     || isPlatformAdmin();
       allow delete: if (isTenantWriter(resource.data.tenantId)
                         && tenantAtivo(resource.data.tenantId))

@@ -151,7 +151,7 @@ export {
 } from './clubs';
 
 // ---------------------------------------------------------------------------
-// Módulo Eventos (LEELA-E03 · S200-T1 / S203-T1)
+// Módulo Eventos (LEELA-E03 · S200-T1 / S203-T1 / S205-T1)
 // Entidade Evento movida para src/eventos/evento.ts; re-exportada aqui para
 // manter retrocompatibilidade de imports de '@leela/core'.
 // ---------------------------------------------------------------------------
@@ -176,6 +176,19 @@ export {
   inscritoAtivo,
   parseInscrito,
 } from './eventos/inscrito';
+
+export type { Kit, ItemKit, OrigemItem, UsadoEmKit } from './eventos/kit';
+export {
+  precoKitValido,
+  kitEhDesconto,
+  parseKit,
+  ORIGENS_ITEM,
+  isOrigemItem,
+  podeExibirLogo,
+  exibirLogoCoerente,
+  computeUsadoEm,
+  parseItemKit,
+} from './eventos/kit';
 
 // ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)

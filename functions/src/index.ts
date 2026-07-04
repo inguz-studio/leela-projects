@@ -19,3 +19,6 @@ export { setTenantClaims } from './platform/setTenantClaims';
 
 // Plataforma — lifecycle do tenant (RN-402; wire de canTransition)
 export { transitionTenant } from './platform/tenantLifecycle';
+
+// Eventos — índice inverso N:N Kit↔Item "usado em" (E03-S205-T1 · RN-215)
+export { onItemKitWrite, onKitWrite } from './eventos/itemKitIndex';

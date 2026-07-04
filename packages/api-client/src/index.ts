@@ -121,6 +121,18 @@ export type {
   ListarInscritosResult,
 } from './eventos/inscritos';
 
+// S205-T1 — kits do evento + catálogo de itens (N:N — RN-215)
+export {
+  listarKits,
+  getKit,
+  salvarKit,
+  removerKit,
+  listarItensKit,
+  getItemKit,
+  salvarItemKit,
+  removerItemKit,
+} from './eventos/kits';
+
 // ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
 // ---------------------------------------------------------------------------
