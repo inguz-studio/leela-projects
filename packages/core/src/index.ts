@@ -183,6 +183,18 @@ export {
   podeAlterarPreco,
 } from './eventos/precoBloqueado';
 
+// Balcão de entrega/check-in — regras puras (E03 · S204-T2 · RN-205/206/207)
+export type { PassoBalcao, PlanoAtendimento, ResultadoChip } from './eventos/entrega';
+export {
+  derivarPassosBalcao,
+  podeAtender,
+  presencaRegistrada,
+  exigeChipParaFechar,
+  CHIP_MAX_LENGTH,
+  normalizarChip,
+  classificarVinculoChip,
+} from './eventos/entrega';
+
 export type { Inscrito, KitInscrito, StatusInscrito } from './eventos/inscrito';
 export {
   KITS_INSCRITO,

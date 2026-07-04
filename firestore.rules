@@ -281,11 +281,14 @@ service cloud.firestore {
           return request.resource.data.status in ['confirmado', 'pendente', 'cancelado'];
         }
 
-        /** chipNumero é string ou null — null até a entrega (RN-203). */
-        function chipInscritoValido() {
+        /**
+         * chipNumero no CREATE: ausente ou null — o vínculo é escrita
+         * EXCLUSIVA da Function `vincularChip` (RN-203/206; S204-T2). Sem
+         * isso a detecção de conflito seria contornável por escrita direta.
+         */
+        function chipNuloNoCreate() {
           return !('chipNumero' in request.resource.data)
-            || request.resource.data.chipNumero == null
-            || request.resource.data.chipNumero is string;
+            || request.resource.data.chipNumero == null;
         }
 
         /** Cliente não CRIA doc já carimbado com campos de Function. */
@@ -295,10 +298,13 @@ service cloud.firestore {
           );
         }
 
-        /** Update de cliente não TOCA campos de Function (RN-205/221/222). */
+        /**
+         * Update de cliente não TOCA campos de Function (RN-205/206/221/222).
+         * `chipNumero` incluso (S204-T2): nem para setar, nem para limpar.
+         */
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
-            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm']
+            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero']
           );
         }
 
@@ -309,7 +315,7 @@ service cloud.firestore {
                           && tenantAtivo(request.resource.data.tenantId)
                           && kitInscritoValido()
                           && statusInscritoValido()
-                          && chipInscritoValido()
+                          && chipNuloNoCreate()
                           && semCamposDeFunctionInscrito())
                       || isPlatformAdmin();
         allow update: if (isTenantWriter(resource.data.tenantId)
@@ -317,7 +323,6 @@ service cloud.firestore {
                           && tenantAtivo(resource.data.tenantId)
                           && kitInscritoValido()
                           && statusInscritoValido()
-                          && chipInscritoValido()
                           && camposDeFunctionIntocados())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)
