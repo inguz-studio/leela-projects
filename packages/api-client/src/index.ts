@@ -149,6 +149,17 @@ export {
 } from './auth';
 
 // ---------------------------------------------------------------------------
-// Plataforma — termos comerciais por tenant (LEELA-E16 · S1602-T1 · RN-404)
+// Plataforma — tenants, mutações, termos e rollups (LEELA-E16 · S1601/S1602/S1605)
 // ---------------------------------------------------------------------------
+export { getTenant, listTenants, getMyTenant } from './platform/tenants';
+export {
+  provisionTenant,
+  transitionTenant,
+} from './platform/mutations';
+export type {
+  ProvisionResult,
+  TransitionTenantInput,
+  TransitionResult,
+} from './platform/mutations';
 export { getCommercialTerms, saveCommercialTerms } from './platform/commercialTerms';
+export { getPlatformRollups } from './platform/rollups';
