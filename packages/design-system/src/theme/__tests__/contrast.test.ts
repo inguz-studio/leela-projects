@@ -209,4 +209,9 @@ describe('Regressões do REVIEW-E01', () => {
   it('F03: Button primary brasa passa AA (era 3.27:1)', () => {
     expect(contrastRatio(brasa['action-primary-fg']!, brasa['action-primary']!)).toBeGreaterThanOrEqual(4.5);
   });
+
+  it('M1: ConfirmModal textarea — border-strong sobre surface-base ≥ 3:1 (era border-default 1.67/1.46)', () => {
+    expect(contrastRatio(brasa['border-strong']!, brasa['surface-base']!)).toBeGreaterThanOrEqual(3.0);
+    expect(contrastRatio(leela['border-strong']!, leela['surface-base']!)).toBeGreaterThanOrEqual(3.0);
+  });
 });

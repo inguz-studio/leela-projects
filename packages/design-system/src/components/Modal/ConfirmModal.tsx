@@ -198,7 +198,11 @@ function ConfirmModal({
               'bg-[var(--surface-base)]',
               'text-[length:var(--input-font-size)] text-[var(--text-primary)]',
               'rounded-[var(--input-radius)]',
-              'border-[length:var(--input-border-width)] border-[var(--border-default)]',
+              // Borda de repouso usa border-strong (mesma razão do Input):
+              // é o ÚNICO identificador visual do campo (bg base ≈ bg do
+              // modal) e WCAG 1.4.11 exige ≥3:1 — border-default ficava em
+              // 1.67 (brasa) / 1.46 (leela); border-strong dá 4.13 / 3.60.
+              'border-[length:var(--input-border-width)] border-[var(--border-strong)]',
               'p-[var(--spacing-3)]',
               'placeholder:text-[var(--text-tertiary)]',
               'focus-visible:outline-none focus-visible:border-[var(--border-focus)]',
