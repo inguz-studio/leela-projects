@@ -53,3 +53,6 @@ export { publicarEvento } from './eventos/publicarEvento';
 // Eventos — balcão: chip + entrega/presença (E03-S204-T2 · RN-205/206/207)
 export { vincularChip } from './eventos/vincularChip';
 export { registrarEntrega } from './eventos/registrarEntrega';
+
+// Eventos — agregado financeiro por recontagem idempotente (E03-S207-T2)
+export { onInscritoWrite } from './eventos/agregarFinanceiro';
