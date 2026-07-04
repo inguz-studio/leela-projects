@@ -55,15 +55,15 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 
 - [x] LEELA-S200-T1 — Tipo `Evento` + query por organizador + Rules (`475574d`)
 - [x] LEELA-S200-T2 — Tela Hub de eventos (`/eventos`) + KPIs globais + EmptyState (`f599032`)
-- [x] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview) (`9781173`; porta criarEvento aguarda contrato do L2)
-- [ ] LEELA-S201-T2 — Function `criarEvento` + `publicarEvento` (slug, URL, QR)
-- [ ] LEELA-S201-T3 — Bloqueio de edição de preço após 1ª venda (RN-200)
+- [x] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview) (`9781173`; contrato do L2 publicado em `fcb7e1b` — falta só o swap da porta em `_data/criarEvento.ts`, dono L3)
+- [x] LEELA-S201-T2 — Function `criarEvento` + `publicarEvento` (slug, URL, QR) (`fcb7e1b`; + `getEvento(db, slug)` e `CriarEventoInput` c/ percursos no api-client)
+- [x] LEELA-S201-T3 — Bloqueio de edição de preço após 1ª venda (RN-200) (`908359c`; core + guard de Function + Rules kits.preco e eventos.percursos)
 - [x] LEELA-S202-T1 — Layout do evento (header 96px §2.1 + sub-nav §2.14) (`83d4036`)
 - [x] LEELA-S202-T2 — Dashboard Overview (KPIs, alertas, atividade recente) (`d97250f`)
 - [x] LEELA-S203-T1 — Subcoleção `inscritos` + tipo + query paginada + Rules (`8caec72`; legada top-level aposentada em `90a65cf`)
 - [ ] LEELA-S203-T2 — Tela de inscritos (tabela densa, paginação, 4 tabs, slide-in)
 - [ ] LEELA-S204-T1 — Tela do balcão (layout 60/40 + 3 passos + painel operacional)
-- [ ] LEELA-S204-T2 — Function de vínculo de chip + registro de presença
+- [x] LEELA-S204-T2 — Function de vínculo de chip + registro de presença (`6fe2e9f`; RN-205/206/207 + chipNumero exclusivo de Function nas Rules)
 - [ ] LEELA-S204-T3 — Galeria de estados do balcão (§2.9)
 - [x] LEELA-S205-T1 — Modelo `kits` + `itensKit` + N:N Kit↔Item + Rules (`df09392`)
 - [ ] LEELA-S205-T2 — Tela Kits · Cadastro (sub-nav, cards, catálogo, resumo)
@@ -72,7 +72,7 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 - [ ] LEELA-S206-T1 — Tela cheia de edição de kit (2 entradas, composição, preço)
 - [ ] LEELA-S206-T2 — Nomenclatura "kit" nunca "tier" (RN-216) + guarda de regressão
 - [ ] LEELA-S207-T1 — Tela Financeiro do evento (bruto/taxa/líquido, breakdown, CSV)
-- [ ] LEELA-S207-T2 — Agregado financeiro do evento por Function
+- [x] LEELA-S207-T2 — Agregado financeiro do evento por Function (`a0a48b3`; recontagem count() idempotente + taxa do termo RN-406, sem fallback)
 
 ### LEELA-E02 · Visão geral do profissional (completo)
 
