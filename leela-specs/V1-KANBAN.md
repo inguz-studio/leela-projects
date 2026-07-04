@@ -19,9 +19,9 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **O1** · E03 · Operação do evento — L1 (dados+rules eventos/inscritos/kits) em curso (Fable) · L2-L5 na fila · escopo S200–S207
-- [ ] **O1** · E05 · Clubs núcleo — L1 (clubes+membros+agregados) em curso (Fable) · L2-L5 na fila
-- [ ] **O1** · E16-slim · onboard tenant + termos — L1 (provision/lifecycle/termos/bootstrap admin) em curso (Fable) · L2-L3 na fila
+- [ ] **O1** · E03 · Operação do evento — **L1 ✅ 3/3T** (475574d, 8caec72, df09392 · Emulator 284/284 zero skip) · L2-L5 na fila · escopo S200–S207
+- [ ] **O1** · E05 · Clubs núcleo — L1 parcial: S101-T1 commitado (ee39d9a) · S103-T1 WIP não-commitado no tree (functions/src/clubs + core/clubs) · retomar via HANDOFF
+- [ ] **O1** · E16-slim · onboard tenant + termos — L1 WIP não-commitado no tree, 0 commits (provisionTenant/lifecycle/termos/platformAdmin seeds+testes) · retomar via HANDOFF
 - [ ] **O0** · Gate da Onda 0 — pendente: root-cause mobile exit 134 + turbo verde total com DS reincluído (roda quando L1s aterrissarem)
 
 
