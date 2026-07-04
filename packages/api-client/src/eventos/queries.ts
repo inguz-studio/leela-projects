@@ -21,7 +21,14 @@ import {
   where,
   type Firestore,
 } from 'firebase/firestore';
-import { parseEvento, type Evento } from '@leela/core';
+import {
+  isKitInscrito,
+  isStatusInscrito,
+  parseEvento,
+  type Evento,
+  type KitInscrito,
+  type StatusInscrito,
+} from '@leela/core';
 
 /**
  * Lê UM evento pelo slug — leitura direta O(1) (docId = slug).
@@ -74,4 +81,85 @@ export async function listarEventosDoOrganizador(
 
   const snap = await getDocs(q);
   return snap.docs.map((d) => parseEvento(d.id, d.data()));
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro do evento — leitura do agregado (S207-T1 · lê S207-T2)
+// ---------------------------------------------------------------------------
+
+/** Contagens de inscritos do agregado financeiro (espelha o servidor). */
+export interface ContagemInscritos {
+  total: number;
+  porStatus: Record<StatusInscrito, number>;
+  porKit: Record<KitInscrito, number>;
+  /** Chaves = percursos configurados no evento */
+  porModalidade: Record<string, number>;
+}
+
+/**
+ * Shape do doc `eventos/{id}/financeiro/current` (S207-T2).
+ * taxa/líquido são `null` quando o tenant não tem termos (RN-406, sem
+ * fallback). O cliente NUNCA recalcula receita — só lê este agregado.
+ */
+export interface FinanceiroEvento {
+  tenantId: string;
+  /** Receita bruta confirmada (R$) — espelho do ∑ `receitaConfirmada` */
+  receitaBruta: number;
+  /** % do termo do tenant (RN-406) — null quando o tenant não tem termos */
+  taxaPct: number | null;
+  /** Taxa Leela (R$) — null quando não há termo */
+  taxaValor: number | null;
+  /** Líquido do produtor (R$) — null quando não há termo */
+  receitaLiquida: number | null;
+  inscritos: ContagemInscritos;
+}
+
+function toNum(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+function toNumOrNull(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+function parseContagem(raw: unknown): ContagemInscritos {
+  const data = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const porStatus = {} as Record<StatusInscrito, number>;
+  const statusRaw = (data['porStatus'] ?? {}) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(statusRaw)) {
+    if (isStatusInscrito(k)) porStatus[k] = toNum(v);
+  }
+  const porKit = {} as Record<KitInscrito, number>;
+  const kitRaw = (data['porKit'] ?? {}) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(kitRaw)) {
+    if (isKitInscrito(k)) porKit[k] = toNum(v);
+  }
+  const porModalidade: Record<string, number> = {};
+  const modRaw = (data['porModalidade'] ?? {}) as Record<string, unknown>;
+  for (const [k, v] of Object.entries(modRaw)) {
+    porModalidade[k] = toNum(v);
+  }
+  return { total: toNum(data['total']), porStatus, porKit, porModalidade };
+}
+
+/**
+ * Lê o agregado financeiro do evento (`financeiro/current`). Retorna null
+ * quando ainda não foi computado (evento sem inscritos / gatilho não rodou).
+ * Só o tenant dono (ou platform_admin) lê — cross-tenant vira permission-denied.
+ */
+export async function getFinanceiroEvento(
+  db: Firestore,
+  eventoId: string
+): Promise<FinanceiroEvento | null> {
+  const snap = await getDoc(doc(db, 'eventos', eventoId, 'financeiro', 'current'));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    tenantId: typeof data['tenantId'] === 'string' ? data['tenantId'] : '',
+    receitaBruta: toNum(data['receitaBruta']),
+    taxaPct: toNumOrNull(data['taxaPct']),
+    taxaValor: toNumOrNull(data['taxaValor']),
+    receitaLiquida: toNumOrNull(data['receitaLiquida']),
+    inscritos: parseContagem(data['inscritos']),
+  };
 }

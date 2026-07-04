@@ -111,16 +111,35 @@ export type { ListMembrosOptions } from './clubs';
 // Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
 // ---------------------------------------------------------------------------
 // S200-T1 — eventos por organizador · S201-T2 — leitura direta por slug (L3)
-export { listarEventosDoOrganizador, getEvento } from './eventos/queries';
-export type { ListarEventosDoOrganizadorParams } from './eventos/queries';
+// S207-T1 — leitura do agregado financeiro/current (lê S207-T2)
+export {
+  listarEventosDoOrganizador,
+  getEvento,
+  getFinanceiroEvento,
+} from './eventos/queries';
+export type {
+  ListarEventosDoOrganizadorParams,
+  FinanceiroEvento,
+  ContagemInscritos,
+} from './eventos/queries';
 
 // S201-T2 — mutations via Cloud Function (criar/publicar — ADR-005, RN-201)
-export { criarEvento, publicarEvento } from './eventos/mutations';
+// S204-T2 — balcão: vínculo de chip + presença (RN-205/206/207)
+export {
+  criarEvento,
+  publicarEvento,
+  vincularChip,
+  registrarEntrega,
+} from './eventos/mutations';
 export type {
   CriarEventoInput,
   CriarEventoPercurso,
   CriarEventoResult,
   PublicarEventoResult,
+  VincularChipInput,
+  VincularChipResult,
+  RegistrarEntregaInput,
+  RegistrarEntregaResult,
 } from './eventos/mutations';
 
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)

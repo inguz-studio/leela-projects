@@ -90,3 +90,73 @@ export async function publicarEvento(
   );
   return (await call({ eventoId })).data;
 }
+
+// ---------------------------------------------------------------------------
+// Balcão de entrega — vínculo de chip + presença (S204-T2, RN-205/206/207)
+// Espelham `functions/src/eventos/{vincularChip,registrarEntrega}.ts`.
+// Consumidas pela tela do balcão (S204-T1). Escrita de chip/carimbos é
+// EXCLUSIVA de Function — o cliente nunca grava esses campos direto (Rules).
+// ---------------------------------------------------------------------------
+
+/** Input de `vincularChip` (RN-206). `sobrescrever` só após ConfirmModal. */
+export interface VincularChipInput {
+  eventoId: string;
+  inscritoId: string;
+  /** Número lido/digitado — o servidor normaliza (RN-203) */
+  chip: string;
+  /** Reatribui chip em conflito com outro atleta (RN-206) */
+  sobrescrever?: boolean;
+}
+
+/**
+ * Resultado de `vincularChip`.
+ *   - `{ ok: true, ... }` → vinculado (jaVinculado/reatribuido sinalizam o caso);
+ *   - `{ ok: false, conflito }` → chip em OUTRO atleta; UI abre ConfirmModal
+ *     e reenvia com `sobrescrever: true` (RN-206).
+ */
+export type VincularChipResult =
+  | { ok: true; chip: string; jaVinculado?: boolean; reatribuido?: boolean }
+  | { ok: false; conflito: { inscritoId: string; atletaNome: string } };
+
+/**
+ * Vincula um chip ao inscrito no balcão via Cloud Function `vincularChip`.
+ * Conflito (chip de outro atleta) volta `{ ok: false, conflito }` SEM
+ * sobrescrever — a UI confirma e reenvia com `sobrescrever: true` (RN-206).
+ */
+export async function vincularChip(
+  functions: Functions,
+  input: VincularChipInput
+): Promise<VincularChipResult> {
+  const call = httpsCallable<VincularChipInput, VincularChipResult>(
+    functions,
+    'vincularChip'
+  );
+  return (await call(input)).data;
+}
+
+/** Input de `registrarEntrega` (fecha o atendimento — RN-205). */
+export interface RegistrarEntregaInput {
+  eventoId: string;
+  inscritoId: string;
+}
+
+export interface RegistrarEntregaResult {
+  ok: true;
+  /** true quando a presença já estava registrada (retry idempotente) */
+  jaRegistrado: boolean;
+}
+
+/**
+ * Fecha o atendimento do balcão via Cloud Function `registrarEntrega`:
+ * entrega o kit e registra presença juntos (RN-205). Idempotente.
+ */
+export async function registrarEntrega(
+  functions: Functions,
+  input: RegistrarEntregaInput
+): Promise<RegistrarEntregaResult> {
+  const call = httpsCallable<RegistrarEntregaInput, RegistrarEntregaResult>(
+    functions,
+    'registrarEntrega'
+  );
+  return (await call(input)).data;
+}
