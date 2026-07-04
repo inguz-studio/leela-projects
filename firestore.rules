@@ -711,6 +711,24 @@ service cloud.firestore {
                   || (isSignedIn() && isTenantMember(resource.data.tenantId))
                   || isPlatformAdmin();
       allow write: if isPlatformAdmin();
+
+      // `dashboard/{docId}` — agregado ∑ do painel do profissional
+      // (E02 · S600-T2: KPIs + alertas em `dashboard/current`).
+      //
+      // ESCRITA: NUNCA pelo cliente — o doc é mantido exclusivamente pela
+      // Cloud Function (Admin SDK bypassa Rules). Qualquer write de cliente
+      // é fraude de KPI; negado até para platform_admin (que escreve, se
+      // precisar, via Admin SDK — nunca pelo SDK de cliente).
+      //
+      // LEITURA: só o PRÓPRIO profissional (uid == profId) e platform_admin
+      // (visão macro). Staff do MESMO tenant não lê dashboard alheio — o
+      // agregado é do indivíduo, não do tenant; o painel consome via
+      // callable `getOverview`, a leitura direta fica para debug/fallback.
+      match /dashboard/{docId} {
+        allow read: if (isSignedIn() && request.auth.uid == profId)
+                    || isPlatformAdmin();
+        allow write: if false;
+      }
     }
 
     // ── Bloqueia qualquer coleção não modelada acima ─────────────────────

@@ -33,6 +33,14 @@
         { "fieldPath": "papel", "order": "ASCENDING" },
         { "fieldPath": "atletaNome", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "inscritos",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

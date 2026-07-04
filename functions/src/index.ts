@@ -37,3 +37,11 @@ export { recalcularStatusMembros } from './clubs/recalcularStatusMembros';
 // Clubs — agregado ∑ qtdDesafiosAtivos por recontagem idempotente
 // (E05-S105-T1 — fecha a pendência herdada do L1)
 export { onDesafioWrite } from './clubs/onDesafioWrite';
+
+// Overview — dashboard do profissional (E02-S600-T2): fan-out eventos/clubes
+// → profissionais/{profId}/dashboard/current + callable de leitura
+export {
+  onEventoWriteDashboard,
+  onClubeWriteDashboard,
+} from './overview/aggregateProfessionalDashboard';
+export { getOverview } from './overview/getOverview';

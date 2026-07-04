@@ -241,3 +241,38 @@ export {
 // Rollups macro da plataforma (E16-S1605-T1/T2 · RN-409)
 export type { TenantHealth, TenantRollup, PlatformRollups } from './platform/rollups';
 export { PLATFORM_ROLLUPS_DOC_PATH, deriveTenantHealth } from './platform/rollups';
+
+// ---------------------------------------------------------------------------
+// Overview — Visão Geral do profissional (E02 · S600-T2)
+// Derivação PURA de KPIs e alertas: o servidor monta os inputs a partir dos
+// agregados ∑ canônicos (E03/E05) e grava dashboard/current; o cliente só
+// consome o retorno de getOverview — nunca soma nem infere KPI.
+// ---------------------------------------------------------------------------
+export type {
+  EventoKpiInput,
+  ClubeKpiInput,
+  JanelaInscricoes,
+  OverviewKPIs,
+} from './overview/kpis';
+export {
+  LIMIAR_ESGOTANDO,
+  ocupacaoDoEvento,
+  vagasRestantesDoEvento,
+  emEsgotamento,
+  derivarTrendPct,
+  derivarTaxaConversao,
+  derivarKpis,
+} from './overview/kpis';
+
+export type {
+  SeveridadeAlerta,
+  OverviewAlert,
+  EventoAlertaInput,
+  PendentesAlertaInput,
+} from './overview/alerts';
+export {
+  PENDENTE_ALERTA_HORAS,
+  PRAZO_PUBLICACAO_DIAS,
+  formatarRelativo,
+  derivarAlertas,
+} from './overview/alerts';

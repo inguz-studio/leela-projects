@@ -163,3 +163,10 @@ export type {
 } from './platform/mutations';
 export { getCommercialTerms, saveCommercialTerms } from './platform/commercialTerms';
 export { getPlatformRollups } from './platform/rollups';
+
+// ---------------------------------------------------------------------------
+// Overview — dashboard do profissional (LEELA-E02 · S600-T2)
+// KPIs + alertas via callable getOverview (contrato único, 1 round-trip).
+// ---------------------------------------------------------------------------
+export { getOverview } from './overview';
+export type { OverviewResult } from './overview';
