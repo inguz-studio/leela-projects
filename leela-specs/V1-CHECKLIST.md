@@ -115,14 +115,14 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 - [x] LEELA-S1601-T1 — Function `provisionTenant` (cria tenant + owner + claims, atômico) (`0eca288` + fixes `2042577`/`bda8039` + hotfix `35894cb`/`1e50e49`; merge de claims `0acea80`)
 - [x] LEELA-S1601-T2 — Function de lifecycle (`activate`/`suspend`/`reactivate`) (`73e8366`, c/ trilha `lifecycleAudit`)
-- [ ] LEELA-S1601-T3 — Tela lista de tenants (tabela densa, filtros, saúde)
-- [ ] LEELA-S1601-T4 — Tela detalhe do tenant + provisionar/suspender (ConfirmModal)
+- [x] LEELA-S1601-T3 — Tela lista de tenants (tabela densa, filtros, saúde) (`e5ce3a5`)
+- [x] LEELA-S1601-T4 — Tela detalhe do tenant + provisionar/suspender (ConfirmModal) (`704f17a`)
 - [x] LEELA-S1602-T1 — Modelo `commercialTerms/current` + tipos + Rules (escrita só platform_admin) (`2ec1e85`, c/ snapshots versionados)
-- [ ] LEELA-S1602-T2 — Tela/editor de termos comerciais (por tenant)
+- [x] LEELA-S1602-T2 — Tela/editor de termos comerciais (por tenant) (`1103d1e`)
 - [x] LEELA-S1602-T3 — Contrato de consumo dos termos por E04 (checkout) e E09 (taxa) (`1d5e1af` — `createTermsProvider` + `finance/calc`)
 - [x] LEELA-S1605-T1 — Modelo `platform/rollups` + Rules (leitura só admin) (`de14546`)
 - [x] LEELA-S1605-T2 — Function de agregação macro cross-tenant (básico) (`7876d9b`, full-recompute idempotente)
-- [ ] LEELA-S1605-T3 — Tela dashboard macro (KPIs + saúde por tenant, básico)
+- [x] LEELA-S1605-T3 — Tela dashboard macro (KPIs + saúde por tenant, básico) (`da27d37`)
 
 ---
 
