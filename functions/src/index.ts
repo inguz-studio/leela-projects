@@ -25,3 +25,6 @@ export { onItemKitWrite, onKitWrite } from './eventos/itemKitIndex';
 
 // Plataforma — provisionamento atômico do tenant (E16-S1601-T1 · RN-403)
 export { provisionTenant } from './platform/provisionTenant';
+
+// Plataforma — rollups macro cross-tenant (E16-S1605-T2 · RN-409)
+export { recomputePlatformRollups } from './platform/rollups';
