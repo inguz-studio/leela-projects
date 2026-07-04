@@ -67,3 +67,12 @@ export {
   CAMPOS_AGREGADOS_DESAFIO,
   contaComoDesafioAtivo,
 } from './desafio';
+
+export type { ResultadoConvite } from './convite';
+export {
+  CONVITE_MIN_EMAILS,
+  CONVITE_MAX_EMAILS,
+  validarEmail,
+  parseEmails,
+  validarConvite,
+} from './convite';

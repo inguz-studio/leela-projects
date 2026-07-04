@@ -122,6 +122,7 @@ export type {
   ProgressoPilar,
   Desafio,
   AcaoDesafio,
+  ResultadoConvite,
 } from './clubs';
 export {
   CLUBE_NOME_MAX,
@@ -152,6 +153,11 @@ export {
   isVisibilidadeDesafio,
   CAMPOS_AGREGADOS_DESAFIO,
   contaComoDesafioAtivo,
+  CONVITE_MIN_EMAILS,
+  CONVITE_MAX_EMAILS,
+  validarEmail,
+  parseEmails,
+  validarConvite,
 } from './clubs';
 
 // ---------------------------------------------------------------------------
