@@ -5,6 +5,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@leela/core": ["../../packages/core/src/index.ts"],
       "@leela/design-system": ["../../packages/design-system/src/index.ts"],
