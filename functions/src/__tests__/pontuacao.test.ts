@@ -320,6 +320,55 @@ describe('validarPublicacao (RN-110/111)', () => {
     expect(erros.some((e) => e.includes('dataFim'))).toBe(true);
     expect(erros.some((e) => e.includes('1 ação'))).toBe(true);
   });
+
+  // ── T13 · decisão RATIFICADA (Vitor): SEM limite/cap de pontuação ────────
+  // A pontuação não tem teto em nenhuma camada (form/core/Rules) — apenas
+  // sanidade: número finito e positivo. Estes testes CONGELAM a decisão:
+  // se um cap for introduzido, eles quebram e exigem nova decisão.
+
+  it('T13: SEM cap de pontuação — metas e mínimos arbitrariamente altos publicam', () => {
+    const desafio: DesafioParaPublicar = {
+      ...base,
+      modelo: 'C',
+      metaTotalPontos: 1_000_000_000,
+      minimoPorPilar: {
+        fisico: 50_000_000, mental: 50_000_000, espiritual: 50_000_000,
+      },
+    };
+    expect(validarPublicacao(desafio, [{ acaoRef: 'correr' }])).toEqual([]);
+    expect(podePublicar(desafio, [{ acaoRef: 'correr' }])).toBe(true);
+
+    // Modelo A com meta por ação gigante também passa
+    expect(
+      validarPublicacao({ ...base, modelo: 'A' }, [
+        { acaoRef: 'correr', meta: 999_999_999 },
+      ])
+    ).toEqual([]);
+  });
+
+  it('T13: sanidade mantida — negativo e NaN seguem rejeitados', () => {
+    expect(
+      validarPublicacao(
+        { ...base, metaTotalPontos: -100 },
+        [{ acaoRef: 'correr' }]
+      ).some((e) => e.includes('Modelo B'))
+    ).toBe(true);
+    expect(
+      validarPublicacao(
+        { ...base, metaTotalPontos: Number.NaN },
+        [{ acaoRef: 'correr' }]
+      ).some((e) => e.includes('Modelo B'))
+    ).toBe(true);
+    expect(
+      validarPublicacao(
+        {
+          ...base, modelo: 'C',
+          minimoPorPilar: { fisico: -1, mental: 300, espiritual: 300 },
+        },
+        [{ acaoRef: 'correr' }]
+      ).some((e) => e.includes('fisico'))
+    ).toBe(true);
+  });
 });
 
 // ── copyPreparacao (RN-113) ─────────────────────────────────────────────────

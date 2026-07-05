@@ -316,6 +316,20 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
         })
       );
     });
+
+    it('T13 · decisão RATIFICADA (Vitor): SEM cap de pontuação — meta/mínimos gigantes passam nas Rules', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertSucceeds(
+        setDoc(desafioDoc(db, 'desafio-sem-cap'), {
+          ...desafioValido,
+          status: 'ativo',
+          metaTotalPontos: 1_000_000_000,
+          minimoPorPilar: {
+            fisico: 50_000_000, mental: 50_000_000, espiritual: 50_000_000,
+          },
+        })
+      );
+    });
   });
 
   // ── Matriz de transição — reabertura owner-only (S7/T14, decisão Vitor) ──
