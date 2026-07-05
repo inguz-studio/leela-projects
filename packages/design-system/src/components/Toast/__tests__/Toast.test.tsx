@@ -30,6 +30,15 @@ describe('Toast', () => {
     expect(el.className).toContain('border-l-[color:var(--feedback-success)]');
   });
 
+  it('adopts the shadcn frame via aliases (border-border + bg-popover), left marker preserved', () => {
+    render(<Toast title="Ok" variant="warning" />);
+    const el = screen.getByRole('status');
+    expect(el.className).toContain('bg-popover');
+    expect(el.className).toContain('border-border');
+    expect(el.className).toContain('rounded-md');
+    expect(el.className).toContain('border-l-[color:var(--feedback-warning)]');
+  });
+
   it('renders description and dismiss button', () => {
     const onDismiss = vi.fn();
     render(<Toast title="Título" description="Detalhe" onDismiss={onDismiss} />);

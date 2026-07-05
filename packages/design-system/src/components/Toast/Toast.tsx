@@ -1,13 +1,23 @@
 /**
  * Toast — feedback de ação de escrita (DoD Tela).
  *
- * Regras:
+ * PROVENIÊNCIA (Lote A restante, decisão bd31974): VISUAL shadcn `toast`,
+ * COMPORTAMENTO nosso. O frame adota a receita stock (rounded-md + border +
+ * shadow + animate-in) via classes de ALIAS shadcn→brasa (border-border,
+ * bg-popover = surface-overlay — mesma cor resolvida de antes) e motion
+ * tokenizado (A2: animate-in roda em var(--motion-duration-fast)). A fila do
+ * `useToast` (ToastProvider) fica INTACTA — nada de Radix Toast primitives.
+ *
+ * Regras preservadas do E01:
  *   - Some em 4s; variante danger persiste até dismiss manual (ToastProvider).
- *   - Borda esquerda 3px por variante (--toast-border-left + feedback-*).
+ *   - Borda esquerda 3px por variante (--toast-border-left + feedback-*) —
+ *     marcador semântico brasa, sobrepõe a borda stock só no lado esquerdo.
  *   - danger usa role="alert" (assertivo); demais role="status" (polite).
  *
- * §2.16 flat — se diferencia por surface-overlay + elevação; a borda
- * esquerda é o marcador semântico da variante (mesma exceção do card crítico).
+ * AA: título/descrição sobre bg-popover = text-primary|secondary sobre
+ * surface-overlay; borda esquerda = feedback-* sobre surface-overlay — todos
+ * na matriz de contraste (contrast.test.ts). border-border é decorativa
+ * (frame shadcn), não-funcional — fora do gate 1.4.11.
  */
 
 import { cva, type VariantProps } from 'class-variance-authority';
@@ -19,13 +29,17 @@ import { cn } from '../../utils/cn';
 
 const toastVariants = cva(
   [
-    'flex items-start gap-[var(--spacing-3)]',
+    'group relative flex items-start gap-[var(--spacing-3)]',
     'w-[var(--toast-width)] max-w-[calc(100vw-var(--spacing-8))]',
-    'bg-[var(--surface-overlay)]',
-    'rounded-[var(--radius-md)]',
-    'shadow-[var(--elevation-2)]',
+    // Frame shadcn stock via aliases: superfície + borda + raio + elevação
+    'bg-popover',
+    'rounded-md border border-border',
+    'shadow-elev-2',
     'p-[var(--spacing-4)]',
+    // Marcador semântico brasa (E01): borda esquerda por variante
     'border-l-[length:var(--toast-border-left)]',
+    // Motion tokenizado (A2): entrada stock do toast shadcn
+    'animate-in fade-in-0 slide-in-from-bottom-2',
   ].join(' '),
   {
     variants: {
@@ -92,10 +106,10 @@ function Toast({
             'h-[var(--spacing-6)] w-[var(--spacing-6)]',
             'rounded-[var(--radius-sm)]',
             'text-[var(--text-secondary)]',
-            'hover:text-[var(--text-primary)] hover:bg-[var(--action-ghost-hover)]',
+            'hover:bg-accent hover:text-accent-foreground',
             'transition-colors duration-[var(--motion-duration-fast)]',
             'focus-visible:outline-none focus-visible:ring-2',
-            'focus-visible:ring-[color:var(--border-focus)]',
+            'focus-visible:ring-ring',
           )}
         >
           <span aria-hidden>✕</span>
