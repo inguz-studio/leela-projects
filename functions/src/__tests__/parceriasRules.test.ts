@@ -199,6 +199,42 @@ describe.skipIf(!hasEmulator)('parcerias — Rules (S107-T1)', () => {
       );
     });
 
+    it('T15 · decisão RATIFICADA (Vitor): reativação inativa→ativa PODE ser unilateral por um dos lados — clube reativa com sucesso', async () => {
+      // Decisão de produto (S7/T15): reativar parceria não exige novo
+      // aceite mútuo. Comissão/link espelhados continuam os do convite
+      // original (RN-120/122 seguem read-only para o clube).
+      await parceriaAdminRef(EVENTO_PARCERIA_ID).update({ status: 'inativa' });
+      await assertSucceeds(
+        updateDoc(parceriaDoc(castelo(), EVENTO_PARCERIA_ID), {
+          status: 'ativa',
+        })
+      );
+    });
+
+    it('T15b: cross-tenant e terceiros NÃO reativam parceria inativa', async () => {
+      await parceriaAdminRef(EVENTO_PARCERIA_ID).update({ status: 'inativa' });
+      // Outro tenant (não é o clube nem o organizador dono do doc)
+      await assertFails(
+        updateDoc(parceriaDoc(outroTenant(), EVENTO_PARCERIA_ID), {
+          status: 'ativa',
+        })
+      );
+      // Terceiro sem papel de escrita (promoter do próprio tenant)
+      const promoter = dbAs('uid-promoter', { role: 'promoter', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(parceriaDoc(promoter, EVENTO_PARCERIA_ID), {
+          status: 'ativa',
+        })
+      );
+      // Anônimo
+      const anon = testEnv.unauthenticatedContext().firestore() as unknown as Firestore;
+      await assertFails(
+        updateDoc(parceriaDoc(anon, EVENTO_PARCERIA_ID), {
+          status: 'ativa',
+        })
+      );
+    });
+
     it('clube tenta escrever comissaoPct → NEGADO (aceite RN-120/122)', async () => {
       await assertFails(
         updateDoc(parceriaDoc(castelo(), EVENTO_PARCERIA_ID), {
