@@ -65,4 +65,27 @@ describe('EventoForm', () => {
 
     expect(await screen.findByText('Não foi possível criar o evento')).toBeInTheDocument();
   });
+
+  it('failed-precondition (RN-402) mostra toast ESPECÍFICO, não o genérico (review #34)', async () => {
+    renderForm(
+      vi.fn().mockRejectedValue({
+        code: 'functions/failed-precondition',
+        message: "Tenant 'castelo' não está ativo — operação bloqueada (RN-402).",
+      }),
+    );
+
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Y');
+    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await userEvent.type(screen.getByLabelText('Local'), 'SP');
+    await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await userEvent.type(screen.getByLabelText('Nome do percurso 1'), '5k');
+    await userEvent.type(screen.getByLabelText('Preço do percurso 1'), '80');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+
+    expect(
+      await screen.findByText('Sua conta não pode criar eventos agora'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Tente novamente em instantes.')).not.toBeInTheDocument();
+  });
 });

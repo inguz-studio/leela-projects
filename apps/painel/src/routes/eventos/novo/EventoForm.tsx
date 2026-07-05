@@ -8,6 +8,7 @@
 import * as React from 'react';
 import { Button, Chip, Input, useToast } from '@leela/design-system';
 import type { CriarEventoFn, CriarEventoInput, CriarEventoResult } from '../_data/contracts';
+import { toastErroCriarEvento } from './erros';
 import {
   validaNovoEvento,
   type ErrosNovoEvento,
@@ -101,12 +102,10 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         description: `"${values.nome.trim()}" foi salvo como rascunho.`,
       });
       onSuccess?.(result);
-    } catch {
-      toast({
-        variant: 'danger',
-        title: 'Não foi possível criar o evento',
-        description: 'Tente novamente em instantes.',
-      });
+    } catch (err) {
+      // Traduz error.codes do servidor (RN-402, slug esgotado, validação)
+      // em mensagem acionável — nunca o genérico cego (review #34).
+      toast({ variant: 'danger', ...toastErroCriarEvento(err) });
     } finally {
       setEnviando(false);
     }
