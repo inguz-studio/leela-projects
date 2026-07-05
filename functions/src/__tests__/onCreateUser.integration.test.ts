@@ -101,6 +101,22 @@ describe('onCreateUser — reparo pós-escrita da corrida residual (fix Onda1-L2
       role: 'tenant_owner',
       tenantId: 'castelo-producoes',
     });
+
+    // Fix #28: o doc atletas/{uid} criado por este run é removido no reparo
+    // (owner não é atleta — poluição de segmentação E13).
+    expect((await db.doc(`atletas/${res.ownerUid}`).get()).exists).toBe(false);
+  });
+
+  it('entrega tardia com role tenant_owner já presente → NÃO cria doc atletas (fix #28)', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const owner = await auth.getUser(res.ownerUid);
+
+    await runTrigger({ uid: owner.uid, email: owner.email, displayName: owner.displayName });
+
+    expect((await auth.getUser(res.ownerUid)).customClaims).toMatchObject({
+      role: 'tenant_owner',
+    });
+    expect((await db.doc(`atletas/${res.ownerUid}`).get()).exists).toBe(false);
   });
 
   it('redelivery em owner JÁ rebaixado (athlete sem marcador) → repara sem nova demoção', async () => {

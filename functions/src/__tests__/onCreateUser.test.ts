@@ -256,6 +256,44 @@ describe('onCreateUser — verificação pós-escrita e reparo (fix Onda1-L2 #11
   });
 });
 
+// Fix review Onda1-L2 #28: o create incondicional (antes do check de role)
+// dava doc atletas/{uid} a TODO owner provisionado — poluição para E13/
+// segmentação. Agora a decisão de papel vem PRIMEIRO: profissional não ganha
+// doc; owner reparado pelo #11 tem o doc deste run removido. Os dois testes
+// falhariam no código antigo (create rodava antes de qualquer decisão).
+describe('onCreateUser — sem doc de atleta para profissionais (fix Onda1-L2 #28)', () => {
+  it('role profissional JÁ presente (tenant_owner) → doc atletas NÃO é criado', async () => {
+    authClaims = { role: 'tenant_owner', tenantId: 'castelo-producoes' };
+
+    await run({ uid: 'owner-6', email: 'o6@castelo.com.br', displayName: 'O6' });
+
+    expect(docSet).not.toHaveBeenCalled();
+    expect(setCustomUserClaims).not.toHaveBeenCalled();
+  });
+
+  it('reparo do #11 remove o doc atletas criado neste run (owner não é atleta)', async () => {
+    tenantsGet.mockImplementation(async () => ({
+      empty: false,
+      docs: [tenantDocStub('castelo-producoes')],
+    }));
+
+    await run({ uid: 'owner-7', email: 'o7@castelo.com.br', displayName: 'O7' });
+
+    expect(docSet).toHaveBeenCalledTimes(1); // criado no fluxo athlete-bound…
+    expect(docDelete).toHaveBeenCalledTimes(1); // …e removido pelo reparo
+    expect(setCustomUserClaims).toHaveBeenLastCalledWith('owner-7', {
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+
+  it('atleta legítimo continua ganhando doc normalmente', async () => {
+    await run({ uid: 'atleta-2', email: 'a2@leela.app', displayName: 'A2' });
+    expect(docSet).toHaveBeenCalledTimes(1);
+    expect(docDelete).not.toHaveBeenCalled();
+  });
+});
+
 // Fix review Onda1-L2 #27 (corrida 3 vias rollback × trigger): o rollback do
 // provisionTenant deleta o usuário entre o create do doc e as chamadas Auth
 // do trigger — getUser lançava USER_NOT_FOUND não tratado (1 erro/ocorrência,
