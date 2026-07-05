@@ -32,6 +32,7 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import type {
   AcaoDesafio,
   Clube,
+  Comunicado,
   Desafio,
   Membro,
   ModeloComercial,
@@ -354,6 +355,31 @@ export async function criarPatrocinador(
   if (input.contratoUrl) data.contratoUrl = input.contratoUrl;
   await setDoc(ref, data);
   return { parceriaId: ref.id };
+}
+
+// ---------------------------------------------------------------------------
+// Comunicados (subcoleção `clubes/{clubeId}/comunicados` · S108-T1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lista os comunicados de um clube, mais recentes primeiro (lista S108-T2).
+ * Security Rules: leitura só para membros do tenant dono. O carimbo de envio
+ * (status='enviado', alcance) é da Function; a tela só lê.
+ */
+export async function listComunicados(
+  db: Firestore,
+  clubeId: string,
+  options: { pageLimit?: number } = {}
+): Promise<Comunicado[]> {
+  const { pageLimit = 100 } = options;
+  const snap = await getDocs(
+    query(
+      collection(db, 'clubes', clubeId, 'comunicados'),
+      orderBy('criadoEm', 'desc'),
+      firestoreLimit(pageLimit)
+    )
+  );
+  return snap.docs.map((d) => ({ ...(d.data() as Omit<Comunicado, 'id'>), id: d.id }));
 }
 
 // ---------------------------------------------------------------------------

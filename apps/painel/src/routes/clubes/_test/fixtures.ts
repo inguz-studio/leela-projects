@@ -1,6 +1,7 @@
 // Fixtures de teste das telas de clube (não é *.test → não é coletado).
 import type {
   Clube,
+  Comunicado,
   Desafio,
   Membro,
   PapelMembro,
@@ -110,6 +111,25 @@ export function mkPatrocinador(
     contrapartida: over.contrapartida ?? 'Logo na camiseta e posts mensais nas redes do clube.',
     criadoEm: over.criadoEm ?? ts(new Date('2026-02-01T00:00:00Z')),
     atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-20T00:00:00Z')),
+    ...over,
+  };
+}
+
+let cseq = 0;
+export function mkComunicado(over: Partial<Comunicado> = {}): Comunicado {
+  cseq += 1;
+  return {
+    id: over.id ?? `com-${cseq}`,
+    tenantId: 'castelo',
+    titulo: over.titulo ?? 'Treino especial de sábado',
+    conteudo: over.conteudo ?? 'Nos vemos às 7h na Lagoa para o longão.',
+    canal: over.canal ?? ['push'],
+    origem: over.origem ?? 'manual',
+    status: over.status ?? 'enviado',
+    segmento: over.segmento ?? { tipo: 'todos' },
+    criadoEm: over.criadoEm ?? ts(new Date('2026-04-10T00:00:00Z')),
+    atualizadoEm: over.atualizadoEm ?? ts(new Date('2026-04-12T00:00:00Z')),
+    alcance: over.alcance ?? 118,
     ...over,
   };
 }

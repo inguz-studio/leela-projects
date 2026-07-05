@@ -126,6 +126,10 @@ export { listParcerias, transicionarParceria } from './clubs';
 export { criarPatrocinador } from './clubs';
 export type { CriarPatrocinadorInput } from './clubs';
 
+// Clubs — leitura de comunicados (S108-T2). Filtro fino no cliente; carimbo de
+// envio + alcance vêm da Function (onComunicadoEnvio).
+export { listComunicados } from './clubs';
+
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e
 // enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)
