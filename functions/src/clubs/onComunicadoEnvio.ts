@@ -13,6 +13,11 @@
 //     email-only não consome cota.
 //   - IDEMPOTENTE: reenviar um comunicado já 'enviado' é no-op (não
 //     duplica alcance nem consome cota de novo) — retry-safe.
+//   - TRANSACIONAL (fix #05 do review Onda1): get do doc + contagem da
+//     cota + update rodam numa runTransaction — o check-then-act antigo
+//     permitia dois envios concorrentes furarem a cota RN-133 e o carimbo
+//     duplo. Escrita concorrente na janela invalida a tx (retry do SDK
+//     re-conta com dados frescos). Mesmo padrão de publicarEvento.
 //   - ALCANCE: segmento 'todos' → recontagem real de membros não-inativos
 //     (mesma definição de qtdMembrosAtivos); demais segmentos → fotografia
 //     `segmento.tamanhoEstimado` (estimarAlcance — S109-T1), até registros
@@ -52,7 +57,9 @@ export interface EnvioResultado {
 
 /**
  * Envia um comunicado: valida RN-133, calcula alcance e carimba
- * status='enviado' + enviadoEm. Idempotente para retry.
+ * status='enviado' + enviadoEm. Idempotente para retry e TRANSACIONAL
+ * (fix #05): cota e carimbo são serializados pela runTransaction — dois
+ * envios concorrentes não furam mais o limite nem carimbam duas vezes.
  */
 export async function enviarComunicado(
   db: firestore.Firestore,
@@ -63,40 +70,54 @@ export async function enviarComunicado(
   const clubeRef = db.collection('clubes').doc(clubId);
   const comunicadoRef = clubeRef.collection('comunicados').doc(comunicadoId);
 
-  const snap = await comunicadoRef.get();
-  if (!snap.exists) {
-    return { enviado: false, motivo: 'comunicado_invalido' };
-  }
-
-  // Idempotência: reenvio de doc já enviado é no-op (retry-safe)
-  if (snap.get('status') === 'enviado') {
-    return { enviado: false, motivo: 'ja_enviado' };
-  }
-
-  const canal = (snap.get('canal') ?? []) as string[];
-
-  // RN-133: o 5º push da janela é bloqueado (email-only não conta)
-  if (temCanalPush(canal as never)) {
-    const pushNaJanela = await contarPushNaJanela(
-      db,
-      clubId,
-      agora,
-      comunicadoId
-    );
-    if (pushNaJanela >= PUSH_SEMANA_MAX) {
-      return { enviado: false, motivo: 'limite_push_semana', pushNaJanela };
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(comunicadoRef);
+    if (!snap.exists) {
+      return { enviado: false, motivo: 'comunicado_invalido' as const };
     }
-  }
 
-  const alcance = await calcularAlcance(db, clubId, snap);
+    // Idempotência: reenvio de doc já enviado é no-op (retry-safe)
+    if (snap.get('status') === 'enviado') {
+      return { enviado: false, motivo: 'ja_enviado' as const };
+    }
 
-  await comunicadoRef.update({
-    status: 'enviado',
-    enviadoEm: agora,
-    alcance,
+    const canal = (snap.get('canal') ?? []) as string[];
+
+    // RN-133: o 5º push da janela é bloqueado (email-only não conta).
+    // Query DENTRO da tx: commit concorrente na janela invalida e re-conta.
+    if (temCanalPush(canal as never)) {
+      const inicioJanela = new Date(
+        agora.getTime() - JANELA_PUSH_DIAS * DIA_MS
+      );
+      const enviados = await tx.get(
+        clubeRef
+          .collection('comunicados')
+          .where('status', '==', 'enviado')
+          .where('canal', 'array-contains', 'push')
+          .where('enviadoEm', '>=', inicioJanela)
+      );
+      const pushNaJanela = enviados.docs.filter(
+        (d) => d.id !== comunicadoId
+      ).length;
+      if (pushNaJanela >= PUSH_SEMANA_MAX) {
+        return {
+          enviado: false,
+          motivo: 'limite_push_semana' as const,
+          pushNaJanela,
+        };
+      }
+    }
+
+    const alcance = await calcularAlcance(tx, clubeRef, snap);
+
+    tx.update(comunicadoRef, {
+      status: 'enviado',
+      enviadoEm: agora,
+      alcance,
+    });
+
+    return { enviado: true, motivo: 'ok' as const };
   });
-
-  return { enviado: true, motivo: 'ok' };
 }
 
 // ---------------------------------------------------------------------------
@@ -134,10 +155,12 @@ export async function contarPushNaJanela(
 /**
  * Alcance do envio: 'todos' → recontagem real de membros não-inativos;
  * segmentos específicos → fotografia `segmento.tamanhoEstimado` (S109-T1).
+ * Roda DENTRO da transação de envio (fix #05) — o count agregado participa
+ * do snapshot da tx.
  */
 async function calcularAlcance(
-  db: firestore.Firestore,
-  clubId: string,
+  tx: firestore.Transaction,
+  clubeRef: firestore.DocumentReference,
   snap: firestore.DocumentSnapshot
 ): Promise<number> {
   const segmento = (snap.get('segmento') ?? {}) as {
@@ -146,13 +169,12 @@ async function calcularAlcance(
   };
 
   if (segmento.tipo === 'todos') {
-    const countSnap = await db
-      .collection('clubes')
-      .doc(clubId)
-      .collection('membros')
-      .where('status', 'in', ['ativo', 'novo'])
-      .count()
-      .get();
+    const countSnap = await tx.get(
+      clubeRef
+        .collection('membros')
+        .where('status', 'in', ['ativo', 'novo'])
+        .count()
+    );
     return countSnap.data().count;
   }
 

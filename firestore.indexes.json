@@ -41,6 +41,15 @@
         { "fieldPath": "tenantId", "order": "ASCENDING" },
         { "fieldPath": "criadoEm", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "comunicados",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "canal", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "enviadoEm", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
