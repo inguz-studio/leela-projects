@@ -98,7 +98,8 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['text-brand',     'surface-raised'],
   ['text-danger',    'surface-base'],
   ['text-danger',    'surface-raised'],
-  ['text-danger',    'feedback-danger-surface'], // Popover item destrutivo em hover
+  ['text-danger',    'surface-overlay'], // DropdownMenu (A5): item destrutivo em repouso sobre bg-popover
+  ['text-danger',    'feedback-danger-surface'], // DropdownMenu item destrutivo em hover/focus
   ['text-success',   'surface-base'],
   ['text-success',   'surface-raised'],
   // Botões (Button/Chip ativo/Badge brand) — todos os estados
@@ -159,8 +160,12 @@ describe('Higiene da matriz', () => {
     expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
   });
 
-  it('contagem declarada bate com o disco: 31 texto + 17 não-texto = 48 pares', () => {
-    expect(TEXT_PAIRS.length).toBe(31);
+  it('contagem declarada bate com o disco: 32 texto + 17 não-texto = 49 pares', () => {
+    // Lote A restante (shadcn): +1 par texto — text-danger/surface-overlay
+    // (DropdownMenu, bg-popover). Toast/Dialog/Tabs/Card/Table/Avatar shadcn
+    // resolvem por alias em pares pré-existentes (ver PROVENIÊNCIA de cada um);
+    // border-border dos frames é decorativa, fora do gate 1.4.11.
+    expect(TEXT_PAIRS.length).toBe(32);
     expect(NON_TEXT_PAIRS.length).toBe(17);
   });
 });
