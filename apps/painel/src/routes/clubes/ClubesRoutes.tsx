@@ -22,6 +22,7 @@ import { DesafiosPage } from './clube/desafios/DesafiosPage';
 import { DesafioEditorPage } from './clube/desafios/DesafioEditorPage';
 import { ParceriasPage } from './clube/parcerias/ParceriasPage';
 import { ComunicadosPage } from './clube/comunicacao/ComunicadosPage';
+import { ComunicadoEditorPage } from './clube/comunicacao/ComunicadoEditorPage';
 
 export function ClubesRoutes(): JSX.Element {
   return (
@@ -35,6 +36,7 @@ export function ClubesRoutes(): JSX.Element {
           <Route path="desafios/novo" element={<DesafioEditorPage />} />
           <Route path="parcerias" element={<ParceriasPage />} />
           <Route path="comunicacao" element={<ComunicadosPage />} />
+          <Route path="comunicacao/nova" element={<ComunicadoEditorPage />} />
         </Route>
       </Routes>
     </ToastProvider>

@@ -5,7 +5,13 @@
 // =============================================================================
 
 import { useEffect, useState } from 'react';
-import { getLeelaDb, listComunicados } from '@leela/api-client';
+import {
+  criarComunicado,
+  getComunicado,
+  getLeelaDb,
+  listComunicados,
+  type CriarComunicadoInput,
+} from '@leela/api-client';
 import type { Comunicado } from '@leela/core';
 import type { AsyncState } from './clubes';
 
@@ -31,3 +37,45 @@ export function useComunicados(clubeId: string | null): AsyncState<Comunicado[]>
 
   return state;
 }
+
+/** Um comunicado pelo id (modo edição do editor). */
+export function useComunicado(
+  clubeId: string | null,
+  comunicadoId: string | null,
+): AsyncState<Comunicado> {
+  const [state, setState] = useState<AsyncState<Comunicado>>({
+    data: null,
+    loading: Boolean(comunicadoId),
+    error: null,
+  });
+
+  useEffect(() => {
+    if (!clubeId || !comunicadoId) {
+      setState({ data: null, loading: false, error: null });
+      return;
+    }
+    let ativo = true;
+    setState({ data: null, loading: true, error: null });
+    getComunicado(getLeelaDb(), clubeId, comunicadoId)
+      .then((c) => {
+        if (!ativo) return;
+        if (!c) {
+          setState({ data: null, loading: false, error: new Error('Comunicado não encontrado.') });
+          return;
+        }
+        setState({ data: c, loading: false, error: null });
+      })
+      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
+    return () => {
+      ativo = false;
+    };
+  }, [clubeId, comunicadoId]);
+
+  return state;
+}
+
+/** Porta real de composição de comunicado (write direto — Rules-guarded). */
+export const criarComunicadoPadrao = (
+  clubeId: string,
+  input: CriarComunicadoInput,
+): Promise<{ comunicadoId: string }> => criarComunicado(getLeelaDb(), clubeId, input);

@@ -382,6 +382,63 @@ export async function listComunicados(
   return snap.docs.map((d) => ({ ...(d.data() as Omit<Comunicado, 'id'>), id: d.id }));
 }
 
+/** Lê um comunicado pelo id (edição do editor — S109-T2). Null se não existir. */
+export async function getComunicado(
+  db: Firestore,
+  clubeId: string,
+  comunicadoId: string
+): Promise<Comunicado | null> {
+  const snap = await getDoc(doc(db, 'clubes', clubeId, 'comunicados', comunicadoId));
+  if (!snap.exists()) return null;
+  return { ...(snap.data() as Omit<Comunicado, 'id'>), id: snap.id };
+}
+
+/** Payload de composição do comunicado (editor S109-T2). */
+export interface CriarComunicadoInput {
+  tenantId: string;
+  titulo: string;
+  conteudo: string;
+  canal: Comunicado['canal'];
+  origem: Comunicado['origem'];
+  segmento: Comunicado['segmento'];
+  /** 'rascunho' ao salvar; 'agendado' exige `agendadoPara`. Nunca 'enviado'. */
+  status: 'rascunho' | 'agendado';
+  /** Data/hora do agendamento (obrigatória quando status == 'agendado'). */
+  agendadoPara?: Date;
+  /** Só quando o canal inclui email (RN-135). */
+  capaUrl?: string;
+}
+
+/**
+ * Cria/agenda um comunicado (write direto — Rules permitem rascunho/agendado;
+ * o carimbo 'enviado'/alcance é EXCLUSIVO da Function onComunicadoEnvio, RN-130).
+ */
+export async function criarComunicado(
+  db: Firestore,
+  clubeId: string,
+  input: CriarComunicadoInput
+): Promise<{ comunicadoId: string }> {
+  const ref = doc(collection(db, 'clubes', clubeId, 'comunicados'));
+  const data: Record<string, unknown> = {
+    tenantId: input.tenantId,
+    titulo: input.titulo,
+    conteudo: input.conteudo,
+    canal: input.canal,
+    origem: input.origem,
+    status: input.status,
+    segmento: input.segmento,
+    alcance: 0,
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  };
+  if (input.status === 'agendado' && input.agendadoPara) {
+    data.agendadoPara = Timestamp.fromDate(input.agendadoPara);
+  }
+  if (input.capaUrl) data.capaUrl = input.capaUrl;
+  await setDoc(ref, data);
+  return { comunicadoId: ref.id };
+}
+
 // ---------------------------------------------------------------------------
 // Mutations — membros e convites via Cloud Function (contrato das telas L3)
 // Espelham `functions/src/clubs/{membrosMutations,enviarConvites}.ts`.

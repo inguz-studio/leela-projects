@@ -130,6 +130,11 @@ export type { CriarPatrocinadorInput } from './clubs';
 // envio + alcance vêm da Function (onComunicadoEnvio).
 export { listComunicados } from './clubs';
 
+// Clubs — composição de comunicado: leitura + criar/agendar via write direto
+// (editor S109-T2 — Rules permitem rascunho/agendado; 'enviado' é da Function).
+export { getComunicado, criarComunicado } from './clubs';
+export type { CriarComunicadoInput } from './clubs';
+
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e
 // enviarConvites (modal S104-T1 — RN-106 revalidada no servidor)
