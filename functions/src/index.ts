@@ -47,6 +47,12 @@ export {
 } from './clubs/membrosMutations';
 export { enviarConvites } from './clubs/enviarConvites';
 
+// Clubs — exclusão irreversível em cascata + exportação LGPD com retenção
+// de 90 dias (E05 · S110-T2 · RN-144). Delete de clube pelo cliente é
+// NEGADO nas Rules — só a Function exclui (retenção nunca é pulada).
+export { deleteClube } from './clubs/deleteClube';
+export { exportClubeData } from './clubs/exportClubeData';
+
 // Overview — dashboard do profissional (E02-S600-T2): fan-out eventos/clubes
 // → profissionais/{profId}/dashboard/current + callable de leitura
 export {

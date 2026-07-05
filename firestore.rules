@@ -389,7 +389,13 @@ service cloud.firestore {
     //     (RN-140 — página pública/SEO); clube 'privada' segue só tenant;
     //   - agregados ∑ (qtdMembrosAtivos, qtdDesafiosAtivos) são de escrita
     //     EXCLUSIVA da Cloud Function (Admin SDK): create exige 0/ausente,
-    //     update não pode tocá-los (S101-T1/S103-T1).
+    //     update não pode tocá-los (S101-T1/S103-T1);
+    //   - delete NEGADO para TODO cliente (S110-T2 · RN-144): exclusão é
+    //     EXCLUSIVA da Function `deleteClube` — cascata completa + retenção
+    //     LGPD 90d em `clubesExcluidos` (sem match = deny-by-default, como
+    //     `exportsClube`). Não existe caminho de exclusão que pule a retenção
+    //     — nem platform_admin via client SDK (Admin SDK segue disponível
+    //     para tooling).
     match /clubes/{clubeId} {
 
       /** Agregados ∑ nascem zerados (ou ausentes) — cliente nunca inventa contagem. */
@@ -416,9 +422,7 @@ service cloud.firestore {
                         && tenantAtivo(resource.data.tenantId)
                         && clubeAgregadosIntocados())
                     || isPlatformAdmin();
-      allow delete: if (isTenantWriter(resource.data.tenantId)
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
+      allow delete: if false;
 
       /** tenantId do clube pai — subcoleções carregam tenantId coerente (ADR-009). */
       function tenantDoClubePai() {
