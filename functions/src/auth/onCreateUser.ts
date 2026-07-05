@@ -94,44 +94,64 @@ export const onCreateUser = auth.user().onCreate(async (user) => {
   //      promovido — at-least-once);
   //   3. sem role → default 'athlete' por MERGE (claims não relacionadas
   //      preservadas — mesma disciplina do fix R3 em setTenantClaims).
-  const fresh = await admin.auth().getUser(uid);
-  const currentClaims = (fresh.customClaims ?? {}) as Record<string, unknown>;
-  const existingRole = currentClaims['role'];
+  // Corrida 3 vias rollback × trigger (fix review Onda1-L2 #27): o rollback
+  // do provisionTenant pode DELETAR o usuário entre o create do doc acima e
+  // as chamadas Auth abaixo — getUser/setCustomUserClaims lançam
+  // USER_NOT_FOUND. Sem tratamento: 1 erro logado por ocorrência (sem
+  // failurePolicy = sem retry) + atletas/{uid} órfão PERMANENTE. Usuário
+  // inexistente não tem claims a setar: warn distinguível, limpa o doc
+  // recém-criado (best-effort) e encerra limpo — sem retry storm.
+  try {
+    const fresh = await admin.auth().getUser(uid);
+    const currentClaims = (fresh.customClaims ?? {}) as Record<string, unknown>;
+    const existingRole = currentClaims['role'];
 
-  if (existingRole !== undefined && existingRole !== 'athlete') {
-    // Elevação já aconteceu (ex.: provisionTenant venceu a corrida) — o
-    // default NUNCA sobrescreve. Log estruturado para auditoria da corrida.
-    logger.info('user_role_preserved', { uid, role: existingRole, email });
-    return;
+    if (existingRole !== undefined && existingRole !== 'athlete') {
+      // Elevação já aconteceu (ex.: provisionTenant venceu a corrida) — o
+      // default NUNCA sobrescreve. Log estruturado para auditoria da corrida.
+      logger.info('user_role_preserved', { uid, role: existingRole, email });
+      return;
+    }
+
+    if (existingRole === undefined) {
+      await admin.auth().setCustomUserClaims(uid, {
+        ...currentClaims,
+        role: DEFAULT_ROLE,
+      });
+
+      // Log estruturado — visível no Cloud Logging e no Emulator UI
+      logger.info('user_created', { uid, role: DEFAULT_ROLE, email });
+    } else {
+      // Redelivery em usuário já athlete — claims intocadas. NÃO retornamos:
+      // a verificação pós-escrita abaixo precisa rodar também aqui, senão um
+      // crash entre a escrita do default e o check deixaria a demoção da
+      // corrida permanente (a redelivery at-least-once é quem cura).
+      logger.info('user_role_preserved', { uid, role: existingRole, email });
+    }
+
+    // ── 3. Verificação pós-escrita (fix review Onda1-L2 #11) ──────────────
+    // A releitura do passo 2 fecha a corrida "provisionamento ANTES do
+    // trigger", mas resta a janela getUser→setCustomUserClaims: se a escrita
+    // do provisionamento cair NO MEIO, o default 'athlete' clobbera a claim
+    // tenant_owner com provisionTenant JÁ retornado SUCESSO — lockout
+    // silencioso, recuperação só manual. Quando a escrita do trigger é a
+    // última, a transação do provisionamento (que grava tenants/{slug} ANTES
+    // das claims) já commitou — o doc é o sinal confiável para detectar e
+    // REPARAR aqui, espelhando a exceção doc-proven-owner do hotfix #8.
+    await repairIfDemotedOwner(db, uid);
+  } catch (err) {
+    if (!isUserNotFound(err)) {
+      throw err; // semântica atual preservada para qualquer outra falha
+    }
+    logger.warn('user_created_user_missing', { uid, email });
+    await atletaRef.delete().catch(() => undefined);
   }
-
-  if (existingRole === undefined) {
-    await admin.auth().setCustomUserClaims(uid, {
-      ...currentClaims,
-      role: DEFAULT_ROLE,
-    });
-
-    // Log estruturado — visível no Cloud Logging e no Emulator UI
-    logger.info('user_created', { uid, role: DEFAULT_ROLE, email });
-  } else {
-    // Redelivery em usuário já athlete — claims intocadas. NÃO retornamos:
-    // a verificação pós-escrita abaixo precisa rodar também aqui, senão um
-    // crash entre a escrita do default e o check deixaria a demoção da
-    // corrida permanente (a redelivery at-least-once é quem cura).
-    logger.info('user_role_preserved', { uid, role: existingRole, email });
-  }
-
-  // ── 3. Verificação pós-escrita (fix review Onda1-L2 #11) ────────────────
-  // A releitura do passo 2 fecha a corrida "provisionamento ANTES do
-  // trigger", mas resta a janela getUser→setCustomUserClaims: se a escrita
-  // do provisionamento cair NO MEIO, o default 'athlete' clobbera a claim
-  // tenant_owner com provisionTenant JÁ retornado SUCESSO — lockout
-  // silencioso, recuperação só manual. Quando a escrita do trigger é a
-  // última, a transação do provisionamento (que grava tenants/{slug} ANTES
-  // das claims) já commitou — o doc é o sinal confiável para detectar e
-  // REPARAR aqui, espelhando a exceção doc-proven-owner do hotfix #8.
-  await repairIfDemotedOwner(db, uid);
 });
+
+/** Erro do Admin SDK Auth para usuário deletado (rollback venceu a corrida). */
+function isUserNotFound(err: unknown): boolean {
+  return (err as { code?: unknown }).code === 'auth/user-not-found';
+}
 
 /**
  * Auto-reparo da corrida trigger × provisionamento (achado #11):

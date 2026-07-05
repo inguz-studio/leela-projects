@@ -255,3 +255,51 @@ describe('onCreateUser — verificação pós-escrita e reparo (fix Onda1-L2 #11
     expect(setCustomUserClaims).toHaveBeenCalledWith('u-pend', { role: 'athlete' });
   });
 });
+
+// Fix review Onda1-L2 #27 (corrida 3 vias rollback × trigger): o rollback do
+// provisionTenant deleta o usuário entre o create do doc e as chamadas Auth
+// do trigger — getUser lançava USER_NOT_FOUND não tratado (1 erro/ocorrência,
+// sem retry) e atletas/{uid} ficava órfão permanente. No código antigo, o
+// teste de user-not-found abaixo REJEITAVA (unhandled rethrow) e o delete
+// nunca era chamado.
+describe('onCreateUser — usuário deletado pelo rollback (fix Onda1-L2 #27)', () => {
+  function userNotFound(): Error {
+    return Object.assign(new Error('There is no user record...'), {
+      code: 'auth/user-not-found',
+    });
+  }
+
+  it('getUser lança user-not-found → SEM throw, doc atletas/{uid} limpo, claims intocadas', async () => {
+    getUser.mockRejectedValueOnce(userNotFound());
+
+    await expect(
+      run({ uid: 'ghost-1', email: 'ghost@leela.app', displayName: 'Ghost' })
+    ).resolves.toBeUndefined();
+
+    expect(setCustomUserClaims).not.toHaveBeenCalled();
+    expect(docDelete).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith('user_created_user_missing', {
+      uid: 'ghost-1',
+      email: 'ghost@leela.app',
+    });
+  });
+
+  it('setCustomUserClaims lança user-not-found (delete entre getUser e a escrita) → SEM throw, doc limpo', async () => {
+    setCustomUserClaims.mockRejectedValueOnce(userNotFound());
+
+    await expect(
+      run({ uid: 'ghost-2', email: 'g2@leela.app', displayName: 'G2' })
+    ).resolves.toBeUndefined();
+
+    expect(docDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('erro genérico de getUser → RETHROW (semântica atual preservada)', async () => {
+    getUser.mockRejectedValueOnce(new Error('deadline exceeded'));
+
+    await expect(
+      run({ uid: 'err-1', email: 'e@leela.app', displayName: 'E' })
+    ).rejects.toThrow('deadline exceeded');
+    expect(docDelete).not.toHaveBeenCalled();
+  });
+});
