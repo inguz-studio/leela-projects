@@ -308,6 +308,52 @@ describe('Same-tenant (leitura permitida)', () => {
   });
 });
 
+// ── lifecycleAudit — deny-by-default PROVADO (S1601-T2, follow-up review L1) ─
+//
+// `tenants/{id}/lifecycleAudit` não tem match block nas Rules de propósito:
+// cai no deny-by-default. Só a Function `transitionTenant` grava (Admin SDK,
+// bypassa Rules) e nenhum papel lê pelo client SDK — auditoria é superfície
+// administrativa server-side. A rule era implícita; estes testes são a prova.
+describe('lifecycleAudit — deny-by-default (S1601-T2)', () => {
+  const AUDIT_PATH = `tenants/${CASTELO_ID}/lifecycleAudit`;
+
+  beforeEach(async () => {
+    // Trilha gravada como a Function grava (Admin SDK — bypassa Rules)
+    await adminDb
+      .collection('tenants').doc(CASTELO_ID)
+      .collection('lifecycleAudit').doc('audit-1')
+      .set({
+        from: 'pending', to: 'ativo', por: PLATFORM_ADMIN_UID,
+        em: admin.firestore.FieldValue.serverTimestamp(),
+      });
+  });
+
+  it('tenant_owner do PRÓPRIO tenant NÃO lê a trilha (read do pai não cascateia)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(getDoc(doc(ctx.firestore(), AUDIT_PATH, 'audit-1')));
+  });
+
+  it('platform_admin NÃO lê pelo client SDK (sem match block — só Admin SDK)', async () => {
+    const ctx = ctxAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
+    await assertFails(getDoc(doc(ctx.firestore(), AUDIT_PATH, 'audit-1')));
+  });
+
+  it('anônimo NÃO lê a trilha', async () => {
+    const ctx = testEnv.unauthenticatedContext();
+    await assertFails(getDoc(doc(ctx.firestore(), AUDIT_PATH, 'audit-1')));
+  });
+
+  it('trilha imutável: nem admin cria/apaga pelo client (escrita só via Function)', async () => {
+    const ctx = ctxAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), AUDIT_PATH, 'audit-forjado'), {
+        from: 'ativo', to: 'suspenso', por: PLATFORM_ADMIN_UID, em: new Date(),
+      })
+    );
+    await assertFails(deleteDoc(doc(ctx.firestore(), AUDIT_PATH, 'audit-1')));
+  });
+});
+
 // ── platform_admin cruza tenants ──────────────────────────────────────────
 describe('platform_admin — acesso cross-tenant', () => {
   it('lê evento de qualquer tenant', async () => {
