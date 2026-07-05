@@ -22,6 +22,14 @@ describe('diasAte', () => {
   it('27 Abr vs 19 Abr → 8', () => {
     expect(diasAte(ts(new Date('2026-04-27T09:00:00Z')), new Date('2026-04-19T09:00:00Z'))).toBe(8);
   });
+
+  it('BORDA 21:00–00:00 UTC-3 (review #02): dias civis, não buckets de 24h', () => {
+    // Prova em 05/07 (meia-noite civil SP = 05T03:00Z); agora = 04/07 22:30 SP.
+    const prova = ts(new Date('2026-07-05T03:00:00Z'));
+    expect(diasAte(prova, new Date('2026-07-04T22:30:00-03:00'))).toBe(1);
+    // No dia da prova, à noite, ainda é "Hoje" (0) — não -1.
+    expect(diasAte(prova, new Date('2026-07-05T22:30:00-03:00'))).toBe(0);
+  });
 });
 
 describe('derivarCountdown (S602-T1)', () => {

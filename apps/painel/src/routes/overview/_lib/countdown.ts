@@ -5,7 +5,12 @@
 // próximo evento é o não-encerrado com a data futura mais próxima de `agora`.
 // =============================================================================
 
-import { vagasRestantesDoEvento, type StatusEvento, type Timestamp } from '@leela/core';
+import {
+  diasCivisAte,
+  vagasRestantesDoEvento,
+  type StatusEvento,
+  type Timestamp,
+} from '@leela/core';
 
 /** Recorte de um evento para o countdown. */
 export interface EventoCountdownInput {
@@ -34,19 +39,22 @@ export interface CountdownView {
   checkinHref: string;
 }
 
-const DIA_MS = 24 * 60 * 60 * 1000;
-
 function toMillis(t: Timestamp): number | null {
   if (typeof t?.toMillis === 'function') return t.toMillis();
   if (typeof t?.toDate === 'function') return t.toDate().getTime();
   return null;
 }
 
-/** Dias inteiros (arredondados p/ cima) entre `agora` e a data. @pure */
+/**
+ * Dias CIVIS (calendário em FUSO_EVENTO) entre `agora` e a data. 0 = hoje.
+ * Buckets de 24h deslocavam a contagem conforme a hora/fuso do dispositivo —
+ * mesma correção de `eventos/_lib/format.diasParaEvento` (review Onda1 #02).
+ * @pure
+ */
 export function diasAte(data: Timestamp, agora: Date): number | null {
   const ms = toMillis(data);
   if (ms === null) return null;
-  return Math.ceil((ms - agora.getTime()) / DIA_MS);
+  return diasCivisAte(new Date(ms), agora);
 }
 
 /** "08 dias restantes" / "01 dia restante" / "Hoje". @pure */

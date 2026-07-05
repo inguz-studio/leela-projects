@@ -1,9 +1,15 @@
 // =============================================================================
 // Formatação pura para as telas de evento (E03-L3).
 // pt-BR. Sem dependência de React/DOM — 100% testável.
+//
+// DATA DO EVENTO é date-only pinada em `FUSO_EVENTO` (review Onda1 #02):
+// formatar/contar dias no fuso do runtime deslocava a exibição para o dia
+// N−1 em UTC-negativo (Timestamp UTC-midnight legado) e a contagem de dias
+// variava com a hora local. Aqui TODA leitura de `evento.data` passa por
+// Intl pinado + `diasCivisAte` (dias de calendário no fuso do produto).
 // =============================================================================
 
-import type { Timestamp } from '@leela/core';
+import { diasCivisAte, FUSO_EVENTO, type Timestamp } from '@leela/core';
 
 /**
  * Formata um valor em reais (BRL) sem casas decimais.
@@ -32,15 +38,20 @@ export function formatDataEvento(data: Timestamp | null | undefined): string {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+    timeZone: FUSO_EVENTO, // pinado — nunca o fuso do runtime (review #02)
   }).format(data.toDate());
 }
 
-/** Dias inteiros entre `agora` e a data da prova (negativo se já passou). */
+/**
+ * Dias CIVIS (calendário em `FUSO_EVENTO`) entre `agora` e a data da prova.
+ * 0 = a prova é hoje; negativo se já passou. Alimenta alertas (S202-T2) e a
+ * janela do balcão (S204) — "é hoje" bate com o dia que o produtor digitou,
+ * independentemente da hora e do fuso do dispositivo (review #02).
+ */
 export function diasParaEvento(
   data: Timestamp | null | undefined,
   agora: Date = new Date(),
 ): number | null {
   if (!data || typeof data.toDate !== 'function') return null;
-  const ms = data.toDate().getTime() - agora.getTime();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return diasCivisAte(data.toDate(), agora);
 }
