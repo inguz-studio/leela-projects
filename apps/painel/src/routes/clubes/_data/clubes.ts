@@ -10,13 +10,21 @@
 
 import { useEffect, useState } from 'react';
 import {
+  atualizarClube,
   getClube,
   getLeelaDb,
   listClubesByTenant,
   listMembros,
+  type AtualizarClubeInput,
 } from '@leela/api-client';
 import type { Clube, Membro } from '@leela/core';
 import { useClubesSession } from './session';
+
+/** Porta real de atualização de configurações do clube (write direto). */
+export const atualizarClubePadrao = (
+  slug: string,
+  patch: AtualizarClubeInput,
+): Promise<void> => atualizarClube(getLeelaDb(), slug, patch);
 
 export interface AsyncState<T> {
   data: T | null;

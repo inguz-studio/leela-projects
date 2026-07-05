@@ -107,6 +107,11 @@ export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
 export { getClube, listClubesByTenant, listClubesByOwner, listMembros } from './clubs';
 export type { ListMembrosOptions } from './clubs';
 
+// Clubs — atualização de configurações do clube (S110-T1 — write direto; slug e
+// agregados ∑ fora do patch).
+export { atualizarClube } from './clubs';
+export type { AtualizarClubeInput } from './clubs';
+
 // Clubs — leitura de desafios (S105-T2), parcerias (S107-T2) e comunicados
 // (S108-T2). Filtro fino roda no cliente; agregados ∑ vêm das Functions.
 export { listDesafios, getDesafio } from './clubs';

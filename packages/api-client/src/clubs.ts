@@ -137,6 +137,40 @@ export async function listMembros(
 }
 
 // ---------------------------------------------------------------------------
+// Escrita — configurações do clube (S110-T1). Write direto: as Rules de
+// `clubes/{id}` permitem update pelo papel de escrita do tenant, desde que
+// tenantId permaneça e os agregados ∑ não sejam tocados. Slug (docId) NÃO é
+// editável por aqui (mudar docId é recriar). Nunca inclui tenantId nem ∑.
+// ---------------------------------------------------------------------------
+
+/** Campos de configuração editáveis pelo cliente (sem slug/tenantId/∑). */
+export type AtualizarClubeInput = Partial<
+  Pick<
+    Clube,
+    | 'nome'
+    | 'descricao'
+    | 'categoria'
+    | 'modalidade'
+    | 'localizacao'
+    | 'visibilidade'
+    | 'aprovacaoManual'
+    | 'modeloEntrada'
+  >
+>;
+
+/** Atualiza campos de configuração do clube (write direto — ∑ intocados). */
+export async function atualizarClube(
+  db: Firestore,
+  slug: string,
+  patch: AtualizarClubeInput
+): Promise<void> {
+  await updateDoc(doc(db, 'clubes', slug), {
+    ...patch,
+    atualizadoEm: serverTimestamp(),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Leitura — desafios (subcoleção `clubes/{clubeId}/desafios` · S105-T1)
 // ---------------------------------------------------------------------------
 
