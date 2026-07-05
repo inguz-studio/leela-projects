@@ -232,6 +232,24 @@ export async function setTenantClaimsAdmin(
   role: Role,
   tenantId?: string
 ): Promise<void> {
+  // Invariante papel↔tenantId (fix review L2 #31): o callable valida no
+  // input, mas este helper interno aceitava qualquer combinação —
+  // setTenantClaimsAdmin(uid, 'tenant_owner') SEM tenantId compilava e o
+  // merge APAGAVA o tenantId vigente do usuário (lockout fail-closed).
+  // Validar ANTES de tocar o Auth: falha aqui vira rollback compensatório
+  // no provisionTenant, nunca claim inválida gravada.
+  if (ROLES_REQUIRING_TENANT.has(role) && (!tenantId || !tenantId.trim())) {
+    throw new Error(
+      `setTenantClaimsAdmin: papel '${role}' exige tenantId (RN-401) — ` +
+        'chamada sem tenantId apagaria o vínculo vigente do usuário.'
+    );
+  }
+  if (ROLES_WITHOUT_TENANT.has(role) && tenantId) {
+    throw new Error(
+      `setTenantClaimsAdmin: papel '${role}' não carrega tenantId (RN-401).`
+    );
+  }
+
   const user = await admin.auth().getUser(uid);
   const claims = mergeTenantClaims(user.customClaims, role, tenantId);
 

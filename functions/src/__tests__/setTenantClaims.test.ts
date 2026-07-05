@@ -14,7 +14,11 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as admin from 'firebase-admin';
-import { mergeTenantClaims, setTenantClaims } from '../platform/setTenantClaims';
+import {
+  mergeTenantClaims,
+  setTenantClaims,
+  setTenantClaimsAdmin,
+} from '../platform/setTenantClaims';
 
 type AnyRec = Record<string, unknown>;
 
@@ -233,5 +237,52 @@ describe('mergeTenantClaims — marcador de demoção deliberada (fix review L2 
       role: 'athlete',
     });
     expect(mergeTenantClaims(null, 'athlete')).toEqual({ role: 'athlete' });
+  });
+});
+
+// Fix review L2 #31: setTenantClaimsAdmin não validava o invariante
+// papel↔tenantId — setTenantClaimsAdmin(uid, 'tenant_owner') SEM tenantId
+// compilava e o merge apagava o tenantId vigente (lockout fail-closed).
+// O brief onda2-E04 planeja reuso do helper — footgun exportado. Estes
+// testes de rejeição falhariam no código antigo (gravava claim inválida).
+describe('setTenantClaimsAdmin — invariante papel↔tenantId (fix review L2 #31)', () => {
+  it('tenant_owner SEM tenantId → lança ANTES de tocar o Auth', async () => {
+    await expect(setTenantClaimsAdmin('u1', 'tenant_owner')).rejects.toThrow(
+      /exige tenantId/
+    );
+    expect(getUser).not.toHaveBeenCalled();
+    expect(setCustomUserClaims).not.toHaveBeenCalled();
+    expect(revokeRefreshTokens).not.toHaveBeenCalled();
+  });
+
+  it('tenant_staff/promoter SEM tenantId → lança (todos os papéis tenant-scoped)', async () => {
+    await expect(setTenantClaimsAdmin('u1', 'tenant_staff')).rejects.toThrow();
+    await expect(setTenantClaimsAdmin('u1', 'promoter', '  ')).rejects.toThrow();
+    expect(setCustomUserClaims).not.toHaveBeenCalled();
+  });
+
+  it('athlete/platform_admin COM tenantId → lança (papéis cross-tenant)', async () => {
+    await expect(
+      setTenantClaimsAdmin('u1', 'athlete', 'castelo-producoes')
+    ).rejects.toThrow(/não carrega tenantId/);
+    await expect(
+      setTenantClaimsAdmin('u1', 'platform_admin', 'castelo-producoes')
+    ).rejects.toThrow();
+    expect(setCustomUserClaims).not.toHaveBeenCalled();
+  });
+
+  it('combo válido segue: grava merge + revoga tokens', async () => {
+    getUser.mockImplementationOnce(async (uid: string) => ({
+      uid,
+      customClaims: { beta: true },
+    }));
+
+    await setTenantClaimsAdmin('u-ok', 'tenant_owner', 'castelo-producoes');
+    expect(setCustomUserClaims).toHaveBeenCalledWith('u-ok', {
+      beta: true,
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+    expect(revokeRefreshTokens).toHaveBeenCalledWith('u-ok');
   });
 });
