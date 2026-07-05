@@ -12,6 +12,9 @@
 // E16 e dos agregados de membros E05): recontagem via aggregate count()
 // sobre a subcoleção `inscritos` + derivação de taxa/líquido a partir do
 // TERMO do tenant. Reprocessar N vezes produz o MESMO doc — nada acumula.
+// SNAPSHOT-CONSISTENTE (review Onda1 #07): leituras E escritas rodam numa
+// única transação — corrida entre dois onInscritoWrite não persiste mais
+// agregado stale nem doc com total ≠ Σ porStatus.
 //
 // Fontes:
 //   - contagens (total, por status/kit/modalidade): count() na subcoleção;
@@ -99,8 +102,13 @@ export function computeFinanceiro(
 // Recomputação (núcleo — testável com Admin SDK contra o Emulator)
 // ---------------------------------------------------------------------------
 
-/** Reconta os inscritos do evento via aggregate count() (fonte da verdade). */
+/**
+ * Reconta os inscritos do evento via aggregate count() DENTRO da transação
+ * (fonte da verdade, snapshot-consistente — review Onda1 #07: as ~10 counts
+ * sequenciais fora de tx podiam misturar estados de writes concorrentes).
+ */
 async function contarInscritos(
+  tx: admin.firestore.Transaction,
   db: Db,
   eventoId: string,
   modalidades: readonly string[]
@@ -108,7 +116,7 @@ async function contarInscritos(
   const col = db.collection('eventos').doc(eventoId).collection('inscritos');
 
   const count = async (q: FirebaseFirestore.Query): Promise<number> =>
-    (await q.count().get()).data().count;
+    (await tx.get(q.count())).data().count;
 
   const total = await count(col);
 
@@ -137,6 +145,12 @@ async function contarInscritos(
  *   - `eventos/{id}/financeiro/current` — set() integral (idempotente);
  *   - `eventos/{id}.qtdInscritos` — sincronizado quando difere (no-op senão).
  *
+ * TUDO dentro de UMA transação (fix review Onda1 #07): leituras (evento,
+ * counts, termo) saem do MESMO snapshot e o commit falha/retenta se um write
+ * concorrente de inscrito invalidar o snapshot — dois onInscritoWrite em
+ * corrida não gravam mais agregado stale (que persistia até o próximo write),
+ * nem doc com `total` ≠ Σ porStatus na tela S207.
+ *
  * @returns o doc financeiro recomputado, ou null quando o evento não existe
  *          (inscrito órfão de evento deletado — nada a manter).
  */
@@ -144,60 +158,64 @@ export async function recomputarFinanceiroEvento(
   db: Db,
   eventoId: string
 ): Promise<FinanceiroEvento | null> {
-  const eventoRef = db.collection('eventos').doc(eventoId);
-  const eventoSnap = await eventoRef.get();
-  if (!eventoSnap.exists) return null;
+  return db.runTransaction(async (tx) => {
+    const eventoRef = db.collection('eventos').doc(eventoId);
+    const eventoSnap = await tx.get(eventoRef);
+    if (!eventoSnap.exists) return null;
 
-  const tenantId = (eventoSnap.get('tenantId') as string) ?? '';
-  const receitaBruta =
-    typeof eventoSnap.get('receitaConfirmada') === 'number'
-      ? (eventoSnap.get('receitaConfirmada') as number)
-      : 0;
-  const modalidades = Array.isArray(eventoSnap.get('modalidades'))
-    ? (eventoSnap.get('modalidades') as unknown[]).filter(
-        (m): m is string => typeof m === 'string'
-      )
-    : [];
+    const tenantId = (eventoSnap.get('tenantId') as string) ?? '';
+    const receitaBruta =
+      typeof eventoSnap.get('receitaConfirmada') === 'number'
+        ? (eventoSnap.get('receitaConfirmada') as number)
+        : 0;
+    const modalidades = Array.isArray(eventoSnap.get('modalidades'))
+      ? (eventoSnap.get('modalidades') as unknown[]).filter(
+          (m): m is string => typeof m === 'string'
+        )
+      : [];
 
-  const inscritos = await contarInscritos(db, eventoId, modalidades);
+    const inscritos = await contarInscritos(tx, db, eventoId, modalidades);
 
-  // Termo do PRÓPRIO tenant (RN-406) — sem termo, sem taxa imputada
-  const terms = createTermsProvider(
-    async (id: string): Promise<CommercialTerms | null> => {
-      const snap = await db.doc(`tenants/${id}/commercialTerms/current`).get();
-      return snap.exists ? (snap.data() as CommercialTerms) : null;
-    },
-    { ttlMs: 0 }
-  );
-  let taxaPct: number | null = null;
-  try {
-    taxaPct = await terms.getPlatformFeePct(tenantId);
-  } catch (err) {
-    if (!(err instanceof TermsNotFoundError)) throw err;
-  }
+    // Termo do PRÓPRIO tenant (RN-406) — sem termo, sem taxa imputada.
+    // Leitura via tx (mesmo snapshot); parsing/validação seguem no provider.
+    const termoSnap = await tx.get(
+      db.doc(`tenants/${tenantId}/commercialTerms/current`)
+    );
+    const terms = createTermsProvider(
+      async (): Promise<CommercialTerms | null> =>
+        termoSnap.exists ? (termoSnap.data() as CommercialTerms) : null,
+      { ttlMs: 0 }
+    );
+    let taxaPct: number | null = null;
+    try {
+      taxaPct = await terms.getPlatformFeePct(tenantId);
+    } catch (err) {
+      if (!(err instanceof TermsNotFoundError)) throw err;
+    }
 
-  const financeiro: FinanceiroEvento = {
-    tenantId,
-    receitaBruta,
-    ...computeFinanceiro(receitaBruta, taxaPct),
-    inscritos,
-  };
+    const financeiro: FinanceiroEvento = {
+      tenantId,
+      receitaBruta,
+      ...computeFinanceiro(receitaBruta, taxaPct),
+      inscritos,
+    };
 
-  // set() integral (não merge): o doc É a recomputação — idempotente
-  await eventoRef.collection('financeiro').doc('current').set({
-    ...financeiro,
-    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
-  });
-
-  // ∑ qtdInscritos — sincroniza só quando difere (no-op em reprocesso)
-  if (eventoSnap.get('qtdInscritos') !== inscritos.total) {
-    await eventoRef.update({
-      qtdInscritos: inscritos.total,
+    // set() integral (não merge): o doc É a recomputação — idempotente
+    tx.set(eventoRef.collection('financeiro').doc('current'), {
+      ...financeiro,
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     });
-  }
 
-  return financeiro;
+    // ∑ qtdInscritos — sincroniza só quando difere (no-op em reprocesso)
+    if (eventoSnap.get('qtdInscritos') !== inscritos.total) {
+      tx.update(eventoRef, {
+        qtdInscritos: inscritos.total,
+        atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return financeiro;
+  });
 }
 
 // ---------------------------------------------------------------------------

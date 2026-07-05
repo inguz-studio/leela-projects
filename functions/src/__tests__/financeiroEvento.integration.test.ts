@@ -214,6 +214,44 @@ describe('recomputarFinanceiroEvento — agregado por Function (S207-T2)', () =>
     expect(evento.get('qtdInscritos')).toBe(452);
   }, 30_000);
 
+  it('CORRIDA (review #07): recomputes concorrentes + writes de inscrito nunca persistem doc inconsistente', async () => {
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    // Writes de inscrito interleaved com dois recomputes em paralelo — o
+    // cenário do achado #07 (dois onInscritoWrite em corrida).
+    const writesConcorrentes = (async () => {
+      await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/inscritos/insc-0002`).delete();
+      await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/inscritos/insc-race-1`).set({
+        id: 'insc-race-1', tenantId: CASTELO_ID, atletaId: 'atl-race',
+        atletaNome: 'Atleta Corrida', kit: 'kit_basico', chipNumero: null,
+        status: 'confirmado', modalidade: '5k',
+        criadoEm: now, atualizadoEm: now,
+      });
+    })();
+    await Promise.all([
+      recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID),
+      recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID),
+      writesConcorrentes,
+    ]);
+
+    // Invariante do doc persistido (tx snapshot): total = Σ porStatus SEMPRE,
+    // mesmo que este retrato ainda não seja o estado final da subcoleção.
+    const parcial = await adminDb
+      .doc(`eventos/${MEIA_FLORIPA_ID}/financeiro/current`)
+      .get();
+    const porStatusParcial = parcial.get('inscritos.porStatus') as Record<string, number>;
+    const somaParcial = Object.values(porStatusParcial).reduce((a, b) => a + b, 0);
+    expect(parcial.get('inscritos.total')).toBe(somaParcial);
+
+    // Convergência: o recompute seguinte (gatilho at-least-once) fecha com a fonte.
+    const fin = await recomputarFinanceiroEvento(adminDb, MEIA_FLORIPA_ID);
+    const real = (
+      await adminDb.collection(`eventos/${MEIA_FLORIPA_ID}/inscritos`).count().get()
+    ).data().count;
+    expect(fin?.inscritos.total).toBe(real);
+    const evento = await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}`).get();
+    expect(evento.get('qtdInscritos')).toBe(real);
+  }, 30_000);
+
   it('tenant SEM termos: taxa/líquido null e bruto preservado (RN-406)', async () => {
     const fin = await recomputarFinanceiroEvento(adminDb, EVENTO_SEM_TERMOS);
     expect(fin?.receitaBruta).toBe(1200);
