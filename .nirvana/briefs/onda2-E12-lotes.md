@@ -32,7 +32,8 @@ A decisão "Sem afiliados neste início. Cupons sim." (`decisoes-escopo-2026-07-
 - **Estado atual → muda:** `commercialTerms.platformFeePct` (mock 10,5% único) era deduzido da receita bruta (RN-330). Passa a **taxa por método:** `CommercialTerms.taxaPorMetodo = { credit_card: 10, pix: 8 }`, **configurável pelo `platform_admin`** (mesmo padrão da retenção de 15%; editor E16-S1602-T2). `computeReceitaLiquida`/`computeTaxa` passam a receber o método e aplicar a alíquota correspondente.
 - **Núcleo:** `core/checkout/serviceFee.ts` — dado `subtotal` + `metodo`, lê a alíquota do método e retorna `{ totalComprador, receitaProdutor, taxaPlataforma }` (sem `taxaIncorporada`, sem `linhaTaxaVisivel`).
 - **Pendência (não bloqueia):** **mínimos por método** (R$ piso cartão/PIX) ficam **adiados p/ V1.1** — percentual puro na V1, campo `taxaMinima` no termo depois. **Não** copiar os números da Cheers.
-- **Dono do campo `taxaPorMetodo`:** E16/E04 (termo comercial, `CommercialTerms`). Dependência cross-épico (ver Decisão aberta #1).
+- **Dono do campo `taxaPorMetodo`:** E16/plataforma (termo comercial, `CommercialTerms`). Dependência cross-épico (ver Decisão aberta #1).
+- **Origem das taxas (Vitor 2026-07-05, 2ª rodada):** o checkout **lê** `commercialTerms/current` do tenant — **nada muda no consumo**; esses valores são **estampados** pelo `platform_admin` ao aplicar um **plano de cobrança** (T2-L4, transversais). E12 é indiferente a como os termos foram populados (plano ou edição fina).
 
 ### Decisão 2 — Parcelamento com tabela de taxas por parcela (VINCULANTE — Vitor 2026-07-05)
 - **Decisão:** parcelamento com **taxa variável por número de parcelas, de 2x a 12x**. Os **VALORES exatos serão exercitados depois**; o modelo de dados e `finance/calc` **devem suportar a tabela por parcela desde já**. **NÃO** fixar "12x sem juros". 1x (à vista) sem taxa; só cartão parcela; **PIX à vista (sem boleto)**.

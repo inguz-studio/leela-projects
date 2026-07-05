@@ -7,27 +7,36 @@ Landing=Next App Router), `.rules-mutex` para `firestore.rules`, roteamento Fabl
 ritual 1 task = 1 commit atômico `[LEELA-S###-T#]`, sem push (maestro faz push nos gates), Emulator Java 21 zero skip,
 review antagonista Fable antes do gate de cada épico.
 
-**Composição da onda: 23 lotes · 71 tasks.** E04-slim 6L/11T · E12 6L/25T · E09-slim 4L/15T · E07-web 1L/6T ·
-E06 3L/7T · Transversais 3L/7T. Cortes vinculantes (decisões do Vitor 2026-07-04): sem afiliados (S301/S303/S1204-T1/T3
+**Composição da onda: 24 lotes · 74 tasks.** E04-slim 6L/11T · E12 6L/25T · E09-slim 4L/15T · E07-web 1L/6T ·
+E06 3L/7T · Transversais 4L/10T (inclui **T2-L4 plano de cobrança**, decisão Vitor 2026-07-05 2ª rodada). Cortes vinculantes (decisões do Vitor 2026-07-04): sem afiliados (S301/S303/S1204-T1/T3
 cortadas, E08 adiado), cupons ficam, E09-slim entra, E07 só web, E11 só coleta, E15 só higiene, backend do desafio no fim.
 
 ---
 
 ## Pendências do VITOR (lista única — nada disso bloqueia o INÍCIO da onda)
 
-**Decisões comerciais do checkout — RATIFICADAS (Vitor, 2026-07-05; vinculantes, substituem os defaults do E12-L0):**
+**Decisões comerciais do checkout — RATIFICADAS (Vitor, 2026-07-05, inclui 2ª rodada; vinculantes, substituem os defaults do E12-L0):**
+- **Plano de cobrança (fluxo primário, NOVO — Vitor 2026-07-05 2ª rodada)**: o `platform_admin` (admin master) cria
+  UMA VEZ um **plano nomeado** — tabela de taxas por parcela do cartão (2x-12x) + taxa PIX + taxa cartão à vista +
+  mensalidade SaaS — e **APLICA** o plano ao organizador (tenant). Coleção `platform/planosCobranca/{planoId}`
+  **platform-only**. **Aplicar = estampar os valores nos `commercialTerms/current` do tenant** com bump versionado
+  (reusa o versionamento/snapshot de E16-S1602, sem mecanismo novo), **sem vínculo vivo** — editar o plano depois
+  NÃO retroage em tenants já aplicados; só reaplicar re-estampa. Defaults iniciais via plano "Padrão": **10% cartão /
+  8% PIX**. Substitui a edição campo-a-campo como fluxo primário; **a edição fina por tenant (editor S1602-T2)
+  continua possível**. Modelo + Rules + `aplicarPlano(tenantId, planoId)` + tela = **novo lote T2-L4** (transversais,
+  território E16/plataforma; NÃO E04 — organizador não gere planos). Ver decisão vinculante #15.
 - **Taxa por método de pagamento**: **10% cartão de crédito · 8% PIX são DEFAULTS INICIAIS, não valores fixos**
-  (clarificação Vitor 2026-07-05). O modelo é por método (não incorporada/não-incorporada; comissão da plataforma
-  deduzida da receita do produtor). Mora em `CommercialTerms.taxaPorMetodo`, **editável pelo `platform_admin`
-  a qualquer momento** (mesmo padrão da retenção de 15%; editor E16-S1602-T2) — o seed/provisionamento aplica 10/8
-  como padrão e o admin ajusta por tenant quando quiser. Testes devem cobrir taxa ≠ default.
+  (nascem do plano "Padrão"). Modelo por método (não incorporada/não-incorporada; comissão da plataforma
+  deduzida da receita do produtor). Mora em `CommercialTerms.taxaPorMetodo`, **estampado pelo plano** e ainda
+  ajustável campo-a-campo pelo `platform_admin` (editor E16-S1602-T2). Testes devem cobrir taxa ≠ default.
 - **Parcelamento com tabela de taxas por parcela (2x-12x)**: o modelo de dados (`CommercialTerms.tabelaTaxasParcela`)
-  e `finance/calc` **devem suportar a tabela configurável pelo `platform_admin` desde já**. **NÃO** fixar "12x sem
-  juros"; 1x à vista sem taxa; só cartão parcela.
+  e `finance/calc` **devem suportar a tabela desde já**; a tabela chega ao tenant **via plano** (estampa) e segue
+  ajustável campo-a-campo pelo `platform_admin`. **NÃO** fixar "12x sem juros"; 1x à vista sem taxa; só cartão parcela.
 - **Sem boleto** — métodos V1 = **cartão de crédito + PIX** (stepper de pagamento com 2 métodos).
 - **Retirada-only mantido** (stepper sem etapa de entrega; frete V1.1).
 - **Zero pendências comerciais bloqueantes.** Única pendência comercial explícita: **os VALORES da tabela de taxa
-  por parcela (2x-12x)** — "exercitar depois"; o modelo já os comporta, então não bloqueia o build.
+  por parcela (2x-12x) e da mensalidade SaaS do plano** — "exercitar depois"; o modelo já os comporta, então não
+  bloqueia o build.
 
 **Adiados pelo Vitor (saíram da lista de decisões pendentes; seguem em sandbox/mock/placeholder):**
 1. **Gateway de pagamento** (+ fornecedor de e-mail transacional): sem integração agora — tudo roda em sandbox/mock
@@ -106,13 +115,23 @@ Tudo o mais abaixo é PREMISSA decidida pelo consolidador — vale como lei da o
     **críticos/altos**; `high` para **médios**; **baixos** vão direto à lista (sem re-verify dedicado). **Painel
     completo** de review só nos **gates de onda**; **lotes** fecham com **reviewer único** (Fable antagonista).
     Refina o "review antagonista Fable antes do gate de cada épico" do topo.
+15. **Plano de cobrança (Vitor 2026-07-05, 2ª rodada — vinculante):** coleção `platform/planosCobranca/{planoId}`
+    **platform-only** (Rules: só `platform_admin` faz CRUD; `tenant_owner` nem lê nem escreve). Um plano nomeado
+    carrega tabela de taxas por parcela (2x-12x) + taxa PIX + taxa cartão à vista + mensalidade SaaS.
+    `aplicarPlano(tenantId, planoId)` **estampa** esses valores nos `commercialTerms/current` do tenant como **novo
+    snapshot versionado** (reusa o versionamento de E16-S1602, NÃO cria mecanismo novo). **Semântica canônica:
+    aplicar = estampar snapshot, SEM vínculo vivo** — editar o plano NÃO retroage em tenants já aplicados; só
+    reaplicar re-estampa. A edição fina campo-a-campo por tenant (editor S1602-T2) permanece disponível. Defaults
+    10/8 nascem do plano "Padrão" (seed). Consumo a jusante (E12 checkout, E09 repasse) **não muda**: seguem lendo
+    `commercialTerms/current`. Implementação = **T2-L4** (transversais). Território **E16/plataforma**; NÃO é E04
+    (organizador não gere planos). Único dono de `planosCobranca` = T2-L4; ninguém mais define a coleção.
 
 ---
 
 ## Sequência de execução (trilha FABLE serial · OPUS paralelo por gate)
 
 **Fable (1 lote por vez, nesta ordem):**
-`F1 E04-L1 → F2 E12-L1 → F3 E04-L2 → F4 E04-L4 → F5 E12-L0 → F6 E12-L4a (validateCoupon + validateInscrito + persist compliance) → F7 E04-L6 (T1; T2 gated no gateway) → F8 E12-L4b (createInscricaoCharge + webhook) → F9 E12-L5 → F10 E09s-L1 → F11 E09s-L2 → F12 E06-L1 → F13 E06-L2 → F14 T2-L1 → F15 T2-L2 → F16 T2-L3/S105-hig`
+`F1 E04-L1 → F2 E12-L1 → F3 E04-L2 → F4 E04-L4 → F5 E12-L0 → F6 E12-L4a (validateCoupon + validateInscrito + persist compliance) → F7 E04-L6 (T1; T2 gated no gateway) → F8 E12-L4b (createInscricaoCharge + webhook) → F9 E12-L5 → F10 E09s-L1 → F11 E09s-L2 → F12 E06-L1 → F13 E06-L2 → F14 T2-L1 → F15 T2-L2 → F16 T2-L3/S105-hig → F17 T2-L4 (CB-T1 modelo planosCobranca + Rules → CB-T2 aplicarPlano/estampa versionada)`
 
 **Opus (paralelo, entra quando o gate Fable correspondente fecha):**
 - Imediato (sem dep Fable): **E07-T1** (SystemStateScreen) + **S1601-hig** (lint XS).
@@ -122,7 +141,20 @@ Tudo o mais abaixo é PREMISSA decidida pelo consolidador — vale como lei da o
 - Após F5+F6: **E12-L3** (stepper 5 etapas).
 - Após F11: **E09s-L3 ∥ E09s-L4** (superfícies distintas).
 - Após F13: **E06-L3** (aba + lista + editor).
+- Após F17 (CB-T2): **T2-L4 CB-T3** (tela do admin — CRUD de plano de cobrança + aplicar a tenant; **estende a tela
+  de termos S1602-T2** em `apps/painel/src/routes/plataforma/`). Independente das superfícies de E04/E12/E06.
 
 Racional da ordem: E04-L1/E12-L1 destravam o maior leque Opus; E09s/E06/transversais são independentes e fecham a
-trilha; T2-L1..L3 podem adiantar se algum gate comercial travar (zero conflito de superfície). Gate de épico =
-review antagonista Fable + relatório com números reais, como na Onda 1.
+trilha; T2-L1..L4 podem adiantar se algum gate comercial travar (zero conflito de superfície — T2-L4 só toca
+`platform/planosCobranca` + `commercialTerms/current`, ambos território E16). Gate de épico = review antagonista
+Fable + relatório com números reais, como na Onda 1.
+
+---
+
+## Nota V1.5 (herança para o planejamento da Onda 3)
+
+- **Perfil do atleta nasce com seção Strava "em desenvolvimento" (Vitor 2026-07-05, 2ª rodada):** o front-end da
+  V1.5 já entrega a **superfície** de conexão Strava no perfil — seção/CTA em estado **"em desenvolvimento"**, UI
+  honesta, **sem funcionalidade** (nenhuma chamada OAuth, nenhum dado importado). O registro do app OAuth na Strava
+  deixa de ser ação urgente; a integração viva (importar atividades) é da **Onda 3.1** e herda esta superfície
+  pronta. Ao planejar a Onda 3, tratar como stub visível a ativar, não como feature nova a desenhar do zero.

@@ -1,6 +1,6 @@
 # Onda 2 · Transversais — brief de lotes
 
-Lotes transversais da Onda 2: decisões **6** (coleta E11), **7** (higiene E15), **10** (backend desafio adiantado) + higienes de lint. Tudo **surface-agnostic** (zero tela). Dep: E00/E01/E03/E05/E16-slim (Onda 1, feitos/em-fix). 1 task = 1 commit atômico. Roteamento: **Fable** = core/Functions/rules/segurança; **Opus** = arquivos de painel.
+Lotes transversais da Onda 2: decisões **6** (coleta E11), **7** (higiene E15), **10** (backend desafio adiantado), **plano de cobrança** (Vitor 2026-07-05 2ª rodada — extensão do território E16-S1602) + higienes de lint. Os três primeiros lotes são **surface-agnostic** (zero tela); T2-L4 tem backend surface-agnostic + **uma** tela de plataforma (estende S1602-T2). Dep: E00/E01/E03/E05/E16-slim (Onda 1, feitos/em-fix). 1 task = 1 commit atômico. Roteamento: **Fable** = core/Functions/rules/segurança; **Opus** = arquivos de painel.
 
 ## Cortes registrados no topo (spec original × decisões do Vitor)
 
@@ -114,15 +114,62 @@ Duas edições XS independentes, sem dependência entre si.
 
 ---
 
+## Lote T2-L4 · Plano de cobrança (template aplicável por tenant) — FABLE (backend) + OPUS (tela)
+
+**Extensão do território E16-S1602 (plataforma superadmin), decisão Vitor 2026-07-05 (2ª rodada).** O `platform_admin`
+(admin master) cria **planos nomeados** e os **aplica** a organizadores; **aplicar estampa** os valores comerciais nos
+`commercialTerms/current` do tenant reusando o **versionamento/snapshot que S1602-T1 já implementou** — não se cria
+mecanismo novo. Fluxo primário substitui a edição campo-a-campo; a **edição fina por tenant (S1602-T2) permanece**.
+Consumo a jusante **não muda**: E12 (checkout) e E09-slim (repasse) seguem lendo `commercialTerms/current` — o plano só
+muda **como** os termos são populados, não **quem** os lê.
+
+**Semântica canônica (EXPLÍCITA, repetida do `onda2-decisoes.md` #15): aplicar = estampar snapshot, SEM vínculo vivo.**
+Editar um plano DEPOIS **não** retroage em tenants já aplicados; só uma nova aplicação re-estampa. O tenant não "assina"
+o plano — recebe uma **cópia** dos valores no momento da aplicação.
+
+- **Tasks:** CB-T1 (modelo `planosCobranca` + Rules + seed), CB-T2 (`aplicarPlano` — estampa versionada nos termos), CB-T3 (tela do admin — CRUD de plano + aplicar, estende S1602-T2) → 3 tasks
+- **Superfície:** `packages/core/src/platform/planoCobranca.ts`, `packages/api-client/src/platform/planosCobranca.ts`, `functions/src/platform/aplicarPlano.ts`, `functions/seed/planosCobranca.seed.ts`, `firestore.rules` (bloco `planosCobranca`), `apps/painel/src/routes/plataforma/*` (tela de planos + ação "Aplicar" no detalhe do tenant, estende S1602-T2)
+- **Dep:** E16-slim **S1602-T1** (`commercialTerms/current` + tipo `CommercialTerms` + versionamento/snapshot + Rules — **feito Onda 1**), **S1602-T2** (editor de termos por tenant — **feito Onda 1**, a tela de CB-T3 estende), S1600 (helpers `isPlatformAdmin`/`isTenantMember`). **Não bloqueia nenhum lote comercial** (E12/E09 seguem lendo `commercialTerms/current`). Roda tarde na trilha Fable (**F17**), independente de E11/desafio/E15.
+- **RNs:** governança de termos (só Function escreve `commercialTerms`; **RN-404** — `tenant_owner` read-only), versionamento de snapshot de S1602 **preservado** (aplicar bumpa versão como o editor faz ao salvar).
+
+**CB-T1 — `core/platform/planoCobranca.ts` + `platform/planosCobranca` + Rules + seed (FABLE)**
+- `type PlanoCobranca = { id; nome; tabelaTaxasParcela: Record<'2'..'12', number>; taxaPix: number; taxaCartaoAVista: number; saasMonthlyFee: number; criadoEm; atualizadoEm }`. Função pura `planoParaTerms(plano): Pick<CommercialTerms,'taxaPorMetodo'|'tabelaTaxasParcela'|'saasMonthlyFee'>` — mapeia campos do plano para o shape dos termos (`taxaCartaoAVista`/`taxaPix` → `taxaPorMetodo.{credit_card,pix}`; tabela por parcela → `tabelaTaxasParcela`; mensalidade → `saasMonthlyFee`). **Zero recálculo — mapeamento fiel.**
+- Coleção `platform/planosCobranca/{planoId}` (**platform-scoped**, fora do namespace de tenant). Rules: read **e** write **só `platform_admin`** (`isPlatformAdmin()`); `tenant_owner`/anônimo negados em ambos.
+- Seed: cria o plano **"Padrão"** — 10% cartão / 8% PIX, tabela por parcela placeholder (taxa 0, chaves 2x-12x), `saasMonthlyFee` placeholder.
+- **Aceite (falsificável):**
+  - `planoParaTerms(planoPadrao)` → `{ taxaPorMetodo: { credit_card: 10, pix: 8 }, tabelaTaxasParcela: {…2x-12x…}, saasMonthlyFee }` (unit; cópia campo a campo, sem recálculo).
+  - Rules (emulator): `platform_admin` cria/edita/lê `planosCobranca/{id}`; `tenant_owner` **lendo** `planosCobranca` → **negado**; `tenant_owner` **escrevendo** → **negado**; anônimo → negado.
+  - Seed grava o plano "Padrão" com `taxaPix=8`, `taxaCartaoAVista=10`.
+
+**CB-T2 — `functions/src/platform/aplicarPlano.ts` (callable) — estampa versionada (FABLE)**
+- Callable `aplicarPlano(tenantId, planoId)` (só `platform_admin`): lê o plano, chama `planoParaTerms`, e **estampa** o resultado nos `commercialTerms/current` do tenant como **novo snapshot versionado**, **reusando o mesmo mecanismo de versionamento/arquivamento de snapshot que S1602-T1 já implementou** (bump de versão + arquivamento do snapshot anterior, exatamente como o editor S1602-T2 faz ao salvar — **NÃO** inventar caminho novo). Grava metadado de auditoria `planoAplicadoId`/`planoAplicadoEm` no snapshot **como referência morta** (rastro de origem), **sem** vínculo vivo.
+- **Aceite (falsificável):**
+  - `aplicarPlano(tenantA, 'promo-agressivo')` com plano **≠ "Padrão"** → `commercialTerms/current` de tenantA reflete os valores do plano (`taxaPorMetodo`/`tabelaTaxasParcela`/`saasMonthlyFee`), **com bump de versão** (versão nova > anterior; snapshot anterior arquivado — mesma asserção de versionamento de S1602).
+  - **Editar o plano** `promo-agressivo` DEPOIS de aplicado a tenantA → `commercialTerms/current` de tenantA **NÃO muda** (sem vínculo vivo); só muda ao **reaplicar** (integration; asserção antes/depois).
+  - **Reaplicar** o mesmo plano com valores idênticos → **no-op** (sem novo bump — política canônica: não poluir o histórico de versões quando nada mudou; fixar no teste).
+  - Edição fina campo-a-campo via S1602-T2 **depois** de aplicar plano → funciona, sobrescreve só o campo tocado e gera novo snapshot (aplicar não trava a edição fina).
+  - Rules: `tenant_owner` chamando `aplicarPlano` → **negado**; `tenant_owner` escrevendo `commercialTerms/current` direto → negado (RN-404, já vigente).
+
+**CB-T3 — tela do admin: CRUD de plano + aplicar a tenant (OPUS · estende S1602-T2)**
+- Em `apps/painel/src/routes/plataforma/*`: tela de **gestão de planos de cobrança** (lista + criar/editar plano nomeado: tabela por parcela 2x-12x + PIX + cartão à vista + mensalidade) e **ação "Aplicar plano"** no detalhe do tenant — **estende a tela de termos S1602-T2** (adiciona um seletor "Aplicar plano de cobrança" **acima** da edição campo-a-campo). Fluxo primário = escolher plano e aplicar; a edição fina campo-a-campo permanece **abaixo** como fallback.
+- UI deixa **explícito** que aplicar = estampa snapshot: `ConfirmModal` §2.15 informa "isto grava uma **nova versão** dos termos deste organizador; editar o plano depois **não** altera organizadores já aplicados".
+- **Aceite (falsificável):**
+  - Criar plano nomeado (tabela 2x-12x + PIX + cartão à vista + mensalidade) → persiste em `planosCobranca`; editar plano → atualiza; RTL do formulário verde.
+  - No detalhe do tenant: selecionar plano + "Aplicar" → `ConfirmModal` → `aplicarPlano` chamado + Toast "Plano aplicado" + os campos de termos passam a refletir o plano (nova versão).
+  - Edição fina campo-a-campo (S1602-T2) permanece acessível/funcional na mesma tela; papel sem `platform_admin` **não** vê a gestão de planos (gate); estados §2.12 (skeleton, nunca spinner solto).
+
+---
+
 ## Sequência interna
 
-`T2-L1 ∥ T2-L2 ∥ T2-L3` — **os três lotes são paralelizáveis entre si** (superfícies disjuntas). Ordem interna: L1 `T1a→T1b`; L2 `S1307-T1 → (S1308-T1 ∥ S1308-T3)` (board e participação dependem de registros; S1308-T3 também precisa do agregado de S1307-T1); L3 as duas tasks independentes.
+`T2-L1 ∥ T2-L2 ∥ T2-L3 ∥ T2-L4` — **os quatro lotes são paralelizáveis entre si** (superfícies disjuntas). Ordem interna: L1 `T1a→T1b`; L2 `S1307-T1 → (S1308-T1 ∥ S1308-T3)` (board e participação dependem de registros; S1308-T3 também precisa do agregado de S1307-T1); L3 as duas tasks independentes; **L4 `CB-T1 → CB-T2 → CB-T3`** (aplicar depende do modelo; a tela depende de ambos). L4 roda tarde na trilha Fable (F17) — só depende de E16-slim (Onda 1, feito).
 
 ## Paralelismo entre épicos / barreiras compartilhadas
 
-- **`firestore.rules`** é a barreira única (arquivo compartilhado, `.rules-mutex`): L1 adiciona bloco `analyticsSnapshots`, L2 adiciona `registros`/`participantes`/`board`, L3(E15) não toca rules. Serializar sob mutex; relê do disco ao adquirir (convenção WIKI §3).
-- **`functions/src/seed/*`** — um seed por coleção (baixo risco).
-- Contra a Onda 2 comercial (E04/E12/E09 de outros planners): **zero conflito de superfície** — analytics/jornada são pastas novas; a única sobreposição é o **padrão de scheduler** (esta é a fonte da convenção; E12/E09 reusam). Coordenar via ADR-007.
+- **`firestore.rules`** é a barreira única (arquivo compartilhado, `.rules-mutex`): L1 adiciona bloco `analyticsSnapshots`, L2 adiciona `registros`/`participantes`/`board`, **L4 adiciona bloco `planosCobranca` (platform-only)**, L3(E15) não toca rules. Serializar sob mutex; relê do disco ao adquirir (convenção WIKI §3).
+- **`functions/src/seed/*`** — um seed por coleção (baixo risco); L4 adiciona `planosCobranca.seed.ts`.
+- **T2-L4 sobrepõe território E16/plataforma**, não analytics/jornada: toca `commercialTerms/current` (via Function, reusando o versionamento de S1602-T1) e **estende a tela S1602-T2** em `apps/painel/src/routes/plataforma/*`. Coordenar com qualquer lote que toque plataforma/termos; o **consumo comercial (E12 checkout, E09 repasse) não muda** — seguem lendo `commercialTerms/current`.
+- Contra a Onda 2 comercial (E04/E12/E09 de outros planners): **zero conflito de superfície** — analytics/jornada são pastas novas; as sobreposições são (a) o **padrão de scheduler** (esta é a fonte da convenção; E12/E09 reusam, ADR-007) e (b) o **território de termos comerciais** de T2-L4 (E16), que popula o que E12/E09 já consomem sem alterar o contrato de leitura.
 
 ## Riscos / entidades compartilhadas
 
