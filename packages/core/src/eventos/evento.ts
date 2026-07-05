@@ -93,6 +93,14 @@ export interface Evento {
   qtdInscritos: number;
   /** Agregado ∑ financeiro confirmado — mantido por Cloud Function */
   receitaConfirmada: number;
+  /**
+   * Capacidade direta do evento (total de vagas). OPCIONAL na entidade
+   * (mocks/literais legados não têm — padrão `percursos`): `parseEvento`
+   * SEMPRE normaliza para `number > 0` ou `null` (desconhecida). A resolução
+   * canônica evento|Σkits (RN-210) continua server-side — este campo espelha
+   * apenas a leitura direta do doc, base do ratio 453/500 nas telas E02/E03.
+   */
+  capacidade?: number | null;
 }
 
 /**
@@ -167,6 +175,17 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     ? percursosRaw.filter(isPercursoEvento)
     : [];
 
+  // Capacidade direta do doc — mesma semântica da leitura direta de
+  // `resolverCapacidade` (server): número finito > 0, senão null (desconhecida
+  // — a UI degrada sem ratio/badge; nunca inventa capacidade). RN-210.
+  const capacidadeRaw = data['capacidade'];
+  const capacidade =
+    typeof capacidadeRaw === 'number' &&
+    Number.isFinite(capacidadeRaw) &&
+    capacidadeRaw > 0
+      ? capacidadeRaw
+      : null;
+
   return {
     id,
     tenantId,
@@ -183,5 +202,6 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     atualizadoEm: data['atualizadoEm'] as Timestamp,
     qtdInscritos: typeof qtdInscritos === 'number' ? qtdInscritos : 0,
     receitaConfirmada: typeof receitaConfirmada === 'number' ? receitaConfirmada : 0,
+    capacidade,
   };
 }

@@ -109,6 +109,28 @@ describe('parseEvento (S200-T1)', () => {
   });
 });
 
+describe('parseEvento — capacidade (S600-T2-fix · handoff E02/E03)', () => {
+  it('expõe a capacidade direta do doc (base do ratio 453/500)', () => {
+    const raw = docMeiaFloripa();
+    raw['capacidade'] = 500;
+    const evento = parseEvento('meia-floripa-2026', raw);
+    expect(evento.capacidade).toBe(500);
+    expect(evento.qtdInscritos).toBe(453);
+  });
+
+  it('ausente → null (desconhecida; resolução Σkits é server-side — RN-210)', () => {
+    expect(parseEvento('meia-floripa-2026', docMeiaFloripa()).capacidade).toBeNull();
+  });
+
+  it('inválida (0, negativa, não-finita, não-numérica) → null — nunca inventa', () => {
+    for (const invalida of [0, -10, Number.NaN, Number.POSITIVE_INFINITY, '500', null]) {
+      const raw = docMeiaFloripa();
+      raw['capacidade'] = invalida;
+      expect(parseEvento('x', raw).capacidade).toBeNull();
+    }
+  });
+});
+
 describe('derivações puras (S200-T1)', () => {
   it('temVenda: 453 inscritos → true; 0 → false (base da RN-200)', () => {
     expect(temVenda({ qtdInscritos: 453 })).toBe(true);

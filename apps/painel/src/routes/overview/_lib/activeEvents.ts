@@ -5,11 +5,11 @@
 // limiar — NÃO duplica LIMIAR_ESGOTANDO). Evento "ativo" = qualquer status que
 // não seja `encerrado` (rascunho aparece — é do negócio do produtor).
 //
-// ⚠ Capacidade: o `Evento` do cliente NÃO carrega `capacidade` (parseEvento não
-// a expõe; a resolução canônica evento|Σkits vive no servidor). Aqui ela entra
-// como input opcional (null = desconhecida) — sem capacidade não há razão de
+// Capacidade: `parseEvento` expõe a capacidade DIRETA do doc (S600-T2-fix);
+// a resolução canônica evento|Σkits segue no servidor (RN-210). Aqui ela entra
+// como input nullable (null = desconhecida) — sem capacidade não há razão de
 // ocupação nem badge "Últimas vagas", coerente com o core (capacidade null →
-// fora de vagas/risco). Ver SUMMARY §handoff.
+// fora de vagas/risco).
 // =============================================================================
 
 import {
@@ -24,7 +24,7 @@ export interface EventoAtivoInput {
   slug: string;
   status: StatusEvento;
   qtdInscritos: number;
-  /** null = desconhecida (Onda 1 — cliente não tem o campo) */
+  /** null = desconhecida (doc sem capacidade direta — Σkits é server-side) */
   capacidade: number | null;
 }
 

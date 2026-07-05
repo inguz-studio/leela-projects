@@ -4,8 +4,9 @@
 //
 // KPIs + alertas: `getOverview` (contrato único). Eventos ativos + countdown:
 // listagem do organizador. Inscrições recentes: fusão cross-evento (Onda 1).
-// Capacidade por evento não está no `Evento` do cliente (parseEvento não a
-// expõe) → entra como null; a UI degrada sem ratio/badge de ocupação.
+// Capacidade: `parseEvento` expõe a capacidade DIRETA do doc (S600-T2-fix);
+// null = desconhecida (a resolução Σkits é server-side, RN-210) e a UI
+// degrada sem ratio/badge de ocupação — com capacidade, exibe 453/500.
 // =============================================================================
 
 import { useMemo } from 'react';
@@ -27,13 +28,14 @@ function comCapacidade(evento: Evento): {
   capacidade: number | null;
   data: Evento['data'];
 } {
-  // Capacidade desconhecida no cliente (Onda 1) — resolução canônica é server-side.
+  // Capacidade direta do doc via parseEvento (S600-T2-fix); `?? null` cobre
+  // literais legados sem o campo (opcional na entidade — padrão `percursos`).
   return {
     nome: evento.nome,
     slug: evento.slug,
     status: evento.status,
     qtdInscritos: evento.qtdInscritos,
-    capacidade: null,
+    capacidade: evento.capacidade ?? null,
     data: evento.data,
   };
 }
