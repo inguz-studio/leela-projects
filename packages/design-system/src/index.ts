@@ -57,8 +57,10 @@ export { Table } from './components/Table';
 export type { TableProps, TableColumn } from './components/Table';
 export { EmptyState, type EmptyStateProps } from './components/EmptyState';
 export { Pagination, type PaginationProps } from './components/Pagination';
-export { Popover } from './components/Popover';
+export { Popover } from './components/Popover'; // @deprecated alias de DropdownMenu
 export type { PopoverProps, PopoverAction } from './components/Popover';
+export { DropdownMenu } from './components/DropdownMenu';
+export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
 
 // ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
 export { Modal, ConfirmModal } from './components/Modal';

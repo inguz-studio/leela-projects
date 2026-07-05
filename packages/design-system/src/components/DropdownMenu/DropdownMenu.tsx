@@ -1,7 +1,16 @@
 /**
- * Popover — menu de ações flutuante ancorado a um trigger (§2.5, C3).
+ * DropdownMenu — menu de ações flutuante ancorado a um trigger (§2.5, C3).
  *
- * Comportamento:
+ * PROVENIÊNCIA (Lote A restante, decisão bd31974): VISUAL shadcn
+ * `dropdown-menu`, COMPORTAMENTO nosso. Este componente É o antigo Popover do
+ * E01 renomeado para o vocabulário shadcn: o painel do menu adota a receita
+ * stock (rounded-md + border + bg-popover + p-1 + shadow + animate-in) via
+ * classes de ALIAS shadcn→brasa, e os itens adotam hover/focus em accent
+ * (= action-ghost-hover/-fg). O MOTOR de foco/teclado WAI-APG é o do E01,
+ * portado integralmente — os 13 testes de comportamento migram juntos, não
+ * são reescritos (DropdownMenu.test.tsx).
+ *
+ * Comportamento (inalterado vs Popover E01):
  *   - Controlado (open/onOpenChange): o pai garante "só um aberto por vez"
  *     guardando um único id aberto (padrão em Table renderActions).
  *   - Click fora fecha; Esc fecha e devolve o foco ao trigger.
@@ -20,7 +29,13 @@
  * aria-expanded e aria-controls via Radix Slot (sem wrapper div clicável).
  *
  * A11y: role="menu" + role="menuitem" + foco no primeiro item ao abrir.
- * §2.16 flat — menu se diferencia por surface-raised + elevação, sem borda.
+ *
+ * AA (matriz de contraste): item default = popover-foreground sobre popover
+ * (text-primary/surface-overlay ✓); hover/focus = accent-foreground sobre
+ * accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
+ * text-danger sobre surface-overlay (PAR NOVO do lote, provado 6.75/6.68 na
+ * matriz) e sobre feedback-danger-surface em hover (✓). border-border é
+ * decorativa (frame shadcn), fora do gate 1.4.11.
  */
 
 import * as React from 'react';
@@ -32,7 +47,7 @@ import { cn } from '../../utils/cn';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface PopoverAction {
+export interface DropdownMenuAction {
   id: string;
   label: string;
   onClick: () => void;
@@ -40,8 +55,8 @@ export interface PopoverAction {
   disabled?: boolean;
 }
 
-export interface PopoverProps {
-  actions: PopoverAction[];
+export interface DropdownMenuProps {
+  actions: DropdownMenuAction[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Elemento único que dispara o menu (recebe props via Slot). */
@@ -54,14 +69,14 @@ export interface PopoverProps {
 // Component
 // ---------------------------------------------------------------------------
 
-function Popover({
+function DropdownMenu({
   actions,
   open,
   onOpenChange,
   trigger,
   align = 'right',
   className,
-}: PopoverProps): JSX.Element {
+}: DropdownMenuProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLElement>(null);
@@ -199,7 +214,8 @@ function Popover({
         {trigger}
       </Slot>
 
-      {/* Menu — portal no body: overflow de containers não clipa (F07) */}
+      {/* Menu — portal no body: overflow de containers não clipa (F07).
+          Painel shadcn dropdown-menu stock via aliases. */}
       {open && createPortal(
         <div
           ref={menuRef}
@@ -215,11 +231,11 @@ function Popover({
           className={cn(
             'fixed mt-[var(--spacing-1)] z-50',
             'min-w-[var(--popover-min-width)] w-max',
-            'bg-[var(--surface-raised)]',
-            'rounded-[var(--radius-md)]',
-            'shadow-[var(--elevation-2)]',
-            'py-[var(--spacing-1)]',
-            'overflow-hidden',
+            'overflow-hidden rounded-md border border-border',
+            'bg-popover text-popover-foreground',
+            'shadow-elev-2',
+            'p-[var(--spacing-1)]',
+            'animate-in fade-in-0 zoom-in-95',
           )}
         >
           {actions.map((action) => (
@@ -235,15 +251,15 @@ function Popover({
                 triggerRef.current?.focus();
               }}
               className={cn(
-                'flex items-center w-full',
-                'h-[var(--btn-height-sm)] px-[var(--spacing-4)]',
+                'flex items-center w-full rounded-sm',
+                'h-[var(--btn-height-sm)] px-[var(--spacing-3)]',
                 'text-[length:var(--font-size-base)] text-left whitespace-nowrap',
                 'transition-colors duration-[var(--motion-duration-fast)]',
                 'focus-visible:outline-none focus-visible:ring-inset',
-                'focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
+                'focus-visible:ring-2 focus-visible:ring-ring',
                 action.destructive
-                  ? 'text-[var(--text-danger)] hover:bg-[var(--feedback-danger-surface)]'
-                  : 'text-[var(--text-primary)] hover:bg-[var(--action-ghost-hover)]',
+                  ? 'text-[var(--text-danger)] hover:bg-[var(--feedback-danger-surface)] focus:bg-[var(--feedback-danger-surface)]'
+                  : 'text-[var(--text-primary)] hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
                 action.disabled && 'opacity-40 pointer-events-none',
               )}
             >
@@ -257,6 +273,6 @@ function Popover({
   );
 }
 
-Popover.displayName = 'Popover';
+DropdownMenu.displayName = 'DropdownMenu';
 
-export { Popover };
+export { DropdownMenu };
