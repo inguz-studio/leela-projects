@@ -1,82 +1,58 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-04 ~21h UTC
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · checkpoint 95% · 2026-07-04 ~23h UTC
 
-**Cota/contexto no limite — este handoff é a fonte de retomada.** Agentes da sessão anterior NÃO
-existem mais; retomada = despacho fresco por lote usando os briefs + o inventário de WIP abaixo.
-Frase de entrada: **"retomar leela"** + ler este arquivo. Tudo commitado está PUSHED até `50abc5c`.
+**Tudo commitado está PUSHED até `cce5c9e`** (github.com/inguz-studio/leela-projects, main).
+Retomada em terminal novo: **"retomar leela"** + ler este arquivo. Agentes antigos não existem;
+retomada é SEMPRE por despacho fresco com os artefatos versionados abaixo.
 
-## Fechado e pushed nesta sessão (github.com/inguz-studio/leela-projects, main)
-- **Gate Onda 0 PASSED**: root-cause exit 134 (force-exit expo CLI, handles libuv; NÃO OOM) → fix
-  config `f9f5acb` (turbo concurrency 6, metro maxWorkers 2). Relatório GATE-ONDA0.md.
-- **Gate ONDA1-L1 PASSED**: E03-L1 3/3T, E05-L1 2/2T, E16-L1 6/6T + fixes de segurança
-  (`2042577` stale-claim, `bda8039` reuso de conta, `90a65cf` /inscritos legada) — re-review
-  independente fechou 3/3. Suíte era 515/515.
-- **HOTFIX-E16 3/3**: `35894cb` (R1 ordem rollback), `1e50e49` (#8 corrida onCreateUser MORTA,
-  prova por execução; replay auto-recupera), `0acea80` (R3 merge de claims). Suíte 531/531.
-  Hotfixes AINDA SEM review antagonista — entram no review da onda.
-- Kanban (V1-KANBAN.md) e checklist (V1-CHECKLIST.md) sincronizados task a task com hashes.
+## Estado da build — ONDA 1 100% CONSTRUÍDA (pendente gate)
+- **E03 20/20T ✅** · **E02 7/7T ✅** · **E16-slim ✅** (L1+fixes+hotfix+4 telas) · **E05 ✅** (motores 844/844
+  + 16 telas 156/156; único backend pendente: deleteClube/exportClubeData — em voo, ver abaixo).
+- **FIX-LOTE ✅** (0f422b5 capacidade no parseEvento → ratio real nas telas; 282de2c doc subcoleção
+  convites; f9e46a5 4 testes deny lifecycleAudit). Glossário RN-216 fica no painel (decisão documentada).
+- Suítes de referência: functions 844/844 · painel 206/206+ (eventos 124, clubes 156, overview 50,
+  plataforma 62) · DS 502/502. Protocolo WIKI+RTK ativo (WIKI §6; rtk proxy/run PROIBIDOS, deny rules
+  em .claude/settings.json).
 
-## ⚠️ QUEDA POR LIMITE DE SESSÃO (~21:3xZ 2026-07-04, reset 17:20 BRT)
-Os 4 agentes em voo foram TERMINADOS pelo session limit. E03-L3 já havia fechado antes (4/4T pushed).
-Mutexes órfãos removidos pelo maestro. WIP não-commitado dos mortos, por dono (git status confirmado):
-- **E03-L2** (morreu aplicando contrato do L3): `M core/eventos/evento.ts` (percursos?), `M functions/package.json`,
-  `M functions/__tests__/eventosRules.test.ts` + untracked: functions/src/eventos/{criarEvento,publicarEvento,slug,
-  guardPreco,vincularChip,registrarEntrega,agregarFinanceiro}.ts, core/eventos/{entrega,precoBloqueado}.ts,
-  api-client/eventos/mutations.ts, testes (criarPublicarEvento.integration, precoBloqueado, entrega*, financeiroEvento.integration).
-  PENDÊNCIA DO L3 pro L2: confirmar CriarEventoInput (apps/painel/src/routes/eventos/_data/contracts.ts) + getEvento(db,slug).
-- **E05-L2** (estava aguardando index-mutex p/ S106→S109): untracked functions/src/clubs/{onComunicadoEnvio,onConversao}.ts,
-  core/clubs/{comunicado,comunicado-validacao,desafio-validacao,evento-vinculo,parceria,pontuacao,segmentacao}.ts,
-  seeds (comunicados, parcerias), testes (pontuacao, parceria*, comunicado*, segmentacao).
-- **E02-L1** (pronto, faltava barrels+indexes+rules+suíte+commit): functions/src/overview/, core/overview/,
-  api-client/overview.ts, testes (overviewKpis, overviewAlerts, overviewDashboard, dashboardRules).
-- **E16-L2 telas** (T3 escrito, ia validar): apps/painel/src/routes/plataforma/, api-client/platform/{mutations,rollups}.ts.
+## Decisões de escopo (VINCULANTES) — leela-specs/discovery/decisoes-escopo-2026-07-04.md
+V1=vender/V1.5=engajar · E09-slim repasses ENTRA (retenção 15% pós-evento editável pelo admin,
+comprovante, dados bancários salvos, histórico) · **SEM afiliados (cupons sim); E08 ADIADO** ·
+GymRats sem medalhas (V1.5) · Leela+ PAGO mensalidade receita 100% Leela (teaser na V1) · E07-web
+entra · E11 coleta e E15 higiene APROVADOS explicitamente · Strava gated O3.1.
+**AÇÃO EXTERNA PENDENTE DO VITOR: registrar app OAuth na Strava (lead time semanas).**
+Discovery relacionado: proposta-revisao-escopo, benchmark-cheers, leela-plus-hipotese-jtbd (todos pushed).
 
-## EM VOO no momento do handoff anterior (briefs de referência — retomar por despacho fresco)
-Para CADA lote abaixo: o WIP não commitado (se houver) está no worktree; inventarie com
-`git status` filtrando pelos caminhos do dono ANTES de redespachar, e passe o inventário no prompt.
-1. **E03-L2** (Fable, sf-backend-engineer) — Functions transacionais criar/publicar/chip/financeiro
-   + teste adversarial #3. Brief: onda1-E03-lotes.md §L2. Caminhos: functions/src/eventos*, core/eventos.
-2. **E05-L2** (Fable, sf-backend-engineer) — motores desafios/parcerias/comunicados; S105-T1 usa
-   recontagem count() p/ qtdDesafiosAtivos. Brief: onda1-E05-lotes.md §L2. Caminhos: functions/src/clubs*,
-   core/clubs, packages/core/src/desafios*. Estava segurando .rules-mutex/.index-mutex no meio do S105-T1.
-3. **E02-L1** (Fable, sf-backend-lead) — camada de dados do dashboard. JÁ PRONTO no worktree (não
-   commitado): core/overview/{kpis,alerts}.ts, functions/src/overview/{aggregateProfessionalDashboard,getOverview}.ts,
-   api-client/overview.ts + 4 arquivos de teste. Faltava: barrels + indexes + rules (aguardava mutex)
-   + suíte + commit. Brief: onda1-E02-lotes.md §L1.
-4. **E03-L3 telas** (Opus, sf-frontend-engineer) — telas de eventos consumindo DS + dados do L1;
-   contratos do L2 por interface tipada/mock. Brief: onda1-E03-lotes.md §L3. Caminhos: apps/painel.
-5. **E16-L2 telas** (Opus, sf-frontend-engineer) — lista/detalhe tenants (S1601-T3/T4), editor termos
-   (S1602-T2), dashboard macro (S1605-T3). Backend endurecido pronto; UI trata failed-precondition.
-   Brief: onda1-E16slim-lotes.md. Caminhos: apps/painel (área admin).
+## EM VOO no checkpoint (4 trabalhos — como retomar cada um)
+1. **GATE Onda 1 (workflow REVIEW-ONDA1-L2)**: 5 lentes antagonistas → verificação adversarial →
+   suíte → síntese. Deve escrever `.nirvana/outputs/leela-build-2d6ee98d/REVIEW-ONDA1-L2.md` + audit
+   gate. Se morreu antes de escrever: redespachar como agente único Fable xhigh lendo os sumários
+   em outputs/ (escopo congelado até 28ce61a; eixos: rules novas, idempotência, hotfixes E16,
+   contratos UI↔backend, qualidade de testes).
+2. **Passe suplementar de review** (Fable): range pós-28ce61a (E05-L4/L5 + api-client estendido pelo
+   frontend + fix-lote). Deve escrever REVIEW-ONDA1-L2-SUPLEMENTAR.md. Foco: writes diretos de
+   cliente (desafios/parcerias/comunicados/config) vs Rules; validações client-side sem espelho
+   server-side; lista de *Rules.integration exigidos. Se morreu: redespachar com este parágrafo.
+3. **S110-T2 backend** (Fable): deleteClube (cascata LGPD transacional) + exportClubeData (guard 90d),
+   assinaturas EXATAS dos callables já publicados no api-client (contratos no E05-L4L5-SUMMARY.md).
+   WIP possivelmente untracked em functions/src/clubs — inventariar com git status antes de redespachar.
+4. **Planejamento Onda 2 (workflow)**: 6 planners Opus escrevendo `.nirvana/briefs/onda2-*.md`
+   (E04-slim SEM afiliação, E12 c/ decisões comerciais do benchmark, E09-slim spec do Vitor, E07-web,
+   E06, transversais: coleta E11 + higiene E15 + backend desafio + lint PlatformShell) + consolidador
+   Fable que audita coerência, escreve `.nirvana/plans/onda2-decisoes.md`, atualiza V1-CHECKLIST
+   (remove S301/S303 afiliação, adiciona E09/E07/transversais) e commita tudo `[LEELA-PLAN-O2]`.
+   Se morreu no meio: briefs parciais podem estar no worktree sem commit — inventariar e completar.
 
-## Ordem de retomada no terminal novo
-1. `git status` → inventário de WIP por dono (caminhos acima). Commitar NADA antes de inventariar.
-2. Redespachar os 5 lotes (mesmos briefs, mesmas personas, modelos: 1-3 Fable, 4-5 Opus) com o
-   inventário; instrução-chave: "commite o que passa (1 task = 1 commit) e complete o lote".
-3. Conforme aterrissam: atualizar V1-KANBAN.md E V1-CHECKLIST.md (regra do Vitor: SEMPRE os dois),
-   commit + push a cada aterrissagem.
-4. **REVIEW-ONDA1-L2** (Fable, sf-qa-engineer antagonista): L2s + E02-L1 + telas + HOTFIX-E16
-   (35894cb/1e50e49/0acea80 ainda sem review). Fix-loop se falhar → gate → push + tags.
-5. Depois: E05-L3+ telas, E03-L4/L5, E16-L3, E02-L2/L3 (Opus) → gates por épico (tags e03/e05/e02/e16-slim)
-   → gate Onda 1 → Onda 2 (E04 → E12 → E08+E06) → Onda 3 (E13-slim + tag v1).
+## Ordem de retomada
+1. `git status` → inventário (briefs onda2 parciais? functions/src/clubs WIP? outputs novos?).
+2. Completar/redespachar os 4 acima (1 e 2 podem virar um review único se ambos morreram).
+3. **Fix-loop** dos achados do gate (Fable, autor por área) → re-verify → **GATE FINAL Onda 1** →
+   push + tags `e03`/`e05`/`e02`/`e16-slim` + atualizar kanban (épicos → Feito).
+4. Executar Onda 2 conforme `.nirvana/plans/onda2-decisoes.md` (trilha Fable serial + Opus telas
+   paralelo, mutexes, commit-por-task, kanban+checklist SEMPRE os dois, push por aterrissagem).
+5. Preview local p/ Vitor: emulator (JAVA_HOME jdk-21) + `pnpm --filter @leela/painel dev` :5173 —
+   janela livre quando o gate não estiver rodando suíte.
 
-## Regras vigentes (inalteradas desta sessão — ver detalhes no histórico do arquivo)
-- Roteamento: Fable = backend/rules/segurança + toda review/gate · Opus = telas/docs · Sonnet PROIBIDO.
-- 1 task = 1 commit `[LEELA-S###-T#]` · staging seletivo SEMPRE (nunca add -A).
-- Mutexes mkdir na raiz: `.forge-mutex` (commits/install) · `.rules-mutex`+HOLDER.txt (firestore.rules,
-  reler do disco) · `.emu-mutex` (emulator/pipeline pesado) · `.index-mutex` (barrels compartilhados).
-- Emulator: JAVA_HOME="$HOME/.jdks/jdk-21.0.11+10" (fora do PATH), `--only firestore,auth`.
-  **Baseline: 531/531 zero skip.** Turbo concurrency 6 / metro maxWorkers 2 (não subir).
-- **WIKI + RTK (novos, obrigatórios):** todo agente lê `.nirvana/WIKI.md` como PRIMEIRA leitura
-  (substitui escanear o repo) e prefixa comandos verbosos com `rtk` (protocolo na §6 do WIKI;
-  `rtk proxy`/`rtk run` PROIBIDOS — deny rules em .claude/settings.json).
-- Ritual por lote: review antagonista → testes → KANBAN+CHECKLIST → audit (trace leela-build-2d6ee98d)
-  → push. Relatórios em .nirvana/outputs/<trace>/ (gitignored). Emulator-only. Git Bash.
-- **Regra permanente do Vitor:** ao se aproximar de limite de cota/contexto → atualizar este HANDOFF
-  com inventário dos agentes em voo + push imediato de tudo que está commitado. Nada se perde: WIP
-  fica no worktree, briefs/decisões estão versionados, retomada é sempre por despacho fresco.
-
-## Pendências e premissas (inalteradas)
-- Follow-ups registrados no kanban (#3 teste adversarial eventos → incluído no E03-L2; deny-read
-  lifecycleAudit; scheduler rollups → E12; R2/Functions-emulator-em-CI do hotfix).
-- Kits E03: capacidades 80/260/300/60 (premissa). Triggers v1 por chamada direta.
-- Follow-ups E01: laranja AA, Playwright Popover, border-hover, motion, paleta lima.
+## Regras vigentes (inalteradas — detalhe no WIKI §3/§6)
+Roteamento Fable/Opus (Sonnet PROIBIDO) · 1 task = 1 commit `[LEELA-S###-T#]` · staging cirúrgico ·
+mutexes .forge/.rules/.emu/.index (mkdir; HOLDER.txt nas rules; reler do disco) · Java 21 fora do
+PATH · emulator --only firestore,auth · turbo concurrency 6 · handoff a 90%+97% (regra do Vitor) ·
+review antagonista antes de todo gate · relatórios em outputs/ no ato · audit JSONL por evento.
