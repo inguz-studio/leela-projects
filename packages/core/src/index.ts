@@ -248,6 +248,18 @@ export {
   podeAlterarPreco,
 } from './eventos/precoBloqueado';
 
+// Data do evento — dia civil no fuso do produto (fix review Onda1 #01/#02).
+// Fonte ÚNICA da validação hoje-ou-futuro (form + Function) e da conversão
+// date-only → instante; telas formatam pinadas em FUSO_EVENTO.
+export {
+  FUSO_EVENTO,
+  isDataEventoISO,
+  dataLocalISO,
+  dataEventoNoFuturo,
+  dataEventoParaDate,
+  diasCivisAte,
+} from './eventos/dataEvento';
+
 // Balcão de entrega/check-in — regras puras (E03 · S204-T2 · RN-205/206/207)
 export type { PassoBalcao, PlanoAtendimento, ResultadoChip } from './eventos/entrega';
 export {

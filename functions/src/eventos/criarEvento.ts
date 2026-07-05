@@ -27,7 +27,14 @@
 import * as admin from 'firebase-admin';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
-import { isPercursoEvento, type AuthClaims, type PercursoEvento } from '@leela/core';
+import {
+  dataEventoNoFuturo,
+  dataEventoParaDate,
+  isDataEventoISO,
+  isPercursoEvento,
+  type AuthClaims,
+  type PercursoEvento,
+} from '@leela/core';
 import { MAX_TENTATIVAS_SLUG, slugCandidato, slugify } from './slug';
 
 // ---------------------------------------------------------------------------
@@ -42,7 +49,14 @@ import { MAX_TENTATIVAS_SLUG, slugCandidato, slugify } from './slug';
  */
 export interface CriarEventoInput {
   nome: string;
-  /** Data da prova — ISO 8601 (ex.: '2027-04-25T07:00:00-03:00'), futura */
+  /**
+   * Data da prova. Dois shapes aceitos (fix review Onda1 #01):
+   *   - `yyyy-mm-dd` (o que o form do painel envia — input date): dia CIVIL
+   *     no fuso do produto (`FUSO_EVENTO`); HOJE é válido — mesma regra
+   *     `dataEventoNoFuturo` que a UI aplica (fonte única em @leela/core);
+   *   - ISO 8601 com hora (ex.: '2027-04-25T07:00:00-03:00'): instante
+   *     exato, deve ser futuro.
+   */
   data: string;
   local: string;
   /** Nomes de percursos/modalidades (ex.: ['5k','10k','21k']) — mínimo 1 */
@@ -101,8 +115,15 @@ export function validarCriarEventoInput(
     erros.push('"nome" não gera slug válido (use letras ou números).');
   }
 
+  // Data: shape date-only do form → dia civil no fuso do produto, HOJE
+  // válido (fonte única com a UI — fix review Onda1 #01); ISO com hora →
+  // instante futuro (contrato original preservado p/ chamadas programáticas).
   const data = input['data'];
-  if (typeof data !== 'string' || Number.isNaN(Date.parse(data))) {
+  if (typeof data === 'string' && isDataEventoISO(data)) {
+    if (!dataEventoNoFuturo(data, agora())) {
+      erros.push('"data" deve ser hoje ou futura.');
+    }
+  } else if (typeof data !== 'string' || Number.isNaN(Date.parse(data))) {
     erros.push('"data" deve ser uma data ISO 8601 válida.');
   } else if (Date.parse(data) <= agora().getTime()) {
     erros.push('"data" deve ser futura.');
@@ -239,7 +260,13 @@ export async function criarEventoCore(
         tenantId,
         organizadorId: caller.uid, // NUNCA vem do input
         nome: input.nome.trim(),
-        data: admin.firestore.Timestamp.fromDate(new Date(input.data)),
+        // date-only → meia-noite CIVIL no fuso do produto (nunca UTC-midnight,
+        // que renderizava dia N−1 no Brasil — fix review Onda1 #02)
+        data: admin.firestore.Timestamp.fromDate(
+          isDataEventoISO(input.data)
+            ? dataEventoParaDate(input.data)
+            : new Date(input.data)
+        ),
         local: input.local.trim(),
         modalidades: input.modalidades.map((m) => m.trim()),
         percursos: input.percursos.map((p) => ({
