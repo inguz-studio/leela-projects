@@ -17,7 +17,7 @@ tags:
 - [ ] **O2** · Coleta E11 (rollup, não backfillável) + higiene E15 (autorId+anexo, XS) + lote backend desafio (fim da onda, surface-agnostic)
 - [ ] **O3/V1.5** · E13-slim + GymRats — perfil, registro de ações, leaderboard consistência, SEM medalhas · Strava gated O3.1 (⚠️ AÇÃO VITOR: registrar app OAuth na Strava — lead time semanas)
 - [ ] **O3** · Leela+ teaser — decisões: PAGO/mensalidade/receita 100% Leela · tela "em breve" + CTA interesse + lista de espera · discovery em leela-plus-hipotese-jtbd.md
-- [ ] **✅ ESCOPO DECIDIDO 2026-07-04** — 10 decisões + corte de afiliados registrados em discovery/decisoes-escopo-2026-07-04.md · E08 promotor ADIADO (dependia de afiliação) · planejamento operacional da Onda 2 em produção
+- [ ] **✅ ONDA 2 PLANEJADA (2e35997)** — 23 lotes / 71 tasks · briefs onda2-* + plans/onda2-decisoes.md + checklist atualizado · sequência Fable serial + Opus por gate definida · **3 DECISÕES PENDENTES DO VITOR** (nada bloqueia o início): gateway de pagamento (recomendação Asaas, KYC tem lead time — iniciar já) + e-mail transacional · domínio público {DOMINIO_LEELA} + e-mail de suporte · ratificar defaults comerciais (taxa incorporada por tenant, 12x sem juros, retirada-only, % efetivo da taxa Leela)
 
 
 ## 🔨 Fazendo
@@ -30,6 +30,7 @@ tags:
 
 ## 🔍 Revisão
 
+- [ ] **O1** · REVIEW SUPLEMENTAR (range pós-28ce61a) — **REPROVADO, bloqueia gate até fix-loop** · 4 ALTOS: S1 update de clubes não fecha campo-set (ownerId/codigoConvite/slug graváveis por write direto) · S2 editar comunicado DUPLICA (falta atualizarComunicado) · S3 blocos legados top-level /comunicados e /parcerias abertos · S4 config exibe sucesso sem persistir (RN-142/143) · médios S5-S8 + S9 lint · **15 testes de integração exigidos (12 obrigatórios)** · fix-lote 3/3 PASSA · relatório REVIEW-ONDA1-L2-SUPLEMENTAR.md · fix-loop consolidado aguarda o gate principal (em execução)
 - [ ] **O1** · Follow-ups do review (registrados por exigência do gate; não bloqueiam): **#8 [médio]** corrida onCreateUser×provisionTenant → no HOTFIX em voo · **R1 [baixo]** ordem do rollback → no HOTFIX · R3 caminho feliz destrói claims não relacionadas (hipotético, registrado) · **#3 ✅ FECHADO** teste adversarial cross-tenant em `eventos` (9530caa) · teste deny de leitura do lifecycleAudit · #5 scheduler de rollups/health → E12 · #6 protocolo `.index-mutex` **ADOTADO** (regras do HANDOFF)
 
 

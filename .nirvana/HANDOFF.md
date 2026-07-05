@@ -41,6 +41,24 @@ Discovery relacionado: proposta-revisao-escopo, benchmark-cheers, leela-plus-hip
    (remove S301/S303 afiliação, adiciona E09/E07/transversais) e commita tudo `[LEELA-PLAN-O2]`.
    Se morreu no meio: briefs parciais podem estar no worktree sem commit — inventariar e completar.
 
+## DELTA checkpoint 97% (2026-07-05 ~0h UTC)
+- Item 2 ✅ **REVIEW SUPLEMENTAR ENTREGUE: REPROVADO** (REVIEW-ONDA1-L2-SUPLEMENTAR.md) — 4 ALTOS
+  (S1 campo-set de clubes aberto; S2 editar comunicado duplica; S3 blocos legados top-level
+  /comunicados e /parcerias; S4 config sucesso sem persistir) + S5-S9 + **15 testes de integração
+  exigidos (12 obrigatórios, 3 atrás de decisão: T13 RN-111, T14 reabrir encerrado, T15 reativação
+  unilateral de parceria)**. Fix-lote 3/3 passa.
+- Item 3 ✅ **S110-T2 backend COMMITADO** (524607f + 3b9d91c): deleteClube cascata + retenção 90d
+  replay-safe + exportClubeData guard + Rules delete negado. functions 882/882. E05 = 100% total.
+- Item 4 ✅ **ONDA 2 PLANEJADA E COMMITADA** (2e35997): 23 lotes/71 tasks, briefs onda2-*,
+  plans/onda2-decisoes.md (sequência Fable serial + Opus por gate), checklist atualizado.
+  **3 decisões pendentes do Vitor** (não bloqueiam início): gateway (rec. Asaas; KYC lead time) +
+  e-mail transacional; domínio {DOMINIO_LEELA} + e-mail suporte; ratificar defaults comerciais
+  (taxa incorporada/tenant, 12x sem juros, retirada-only, % efetivo da taxa).
+- Item 1 (gate principal) AINDA EM VOO: resumed wf_3f0b3f66-439 — Find cacheado (58 achados),
+  re-executando ~30 verifies + suite + síntese. Se morrer de novo: journal.jsonl do run tem os
+  resultados por agente; sintetizar a partir dele + suplementar num REVIEW único.
+- Fix-loop consolidado (gate principal + suplementar) é o PRÓXIMO passo após o gate aterrissar.
+
 ## Ordem de retomada
 1. `git status` → inventário (briefs onda2 parciais? functions/src/clubs WIP? outputs novos?).
 2. Completar/redespachar os 4 acima (1 e 2 podem virar um review único se ambos morreram).
