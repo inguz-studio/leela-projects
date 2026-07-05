@@ -29,25 +29,46 @@ describe('ConfiguracoesView', () => {
     expect(btnRegras).toHaveAttribute('aria-current', 'true');
   });
 
-  it('slug sanitiza em tempo real', async () => {
+  it('slug é read-only com hint — docId não é editável (fix S4)', () => {
     renderView();
     const slug = screen.getByLabelText('Slug público');
-    await userEvent.clear(slug);
-    await userEvent.click(slug);
-    await userEvent.paste('Nova Corrida!!');
-    expect(slug).toHaveValue('nova-corrida');
+    expect(slug).toHaveAttribute('readonly');
+    expect(slug).toHaveValue('corrida-perfeita-sul');
+    expect(screen.getByText(/não pode ser alterado/)).toBeInTheDocument();
   });
 
   it('modelo Pago vem desabilitado com badge "Em breve" (RN-104)', () => {
     renderView();
     expect(screen.getByRole('button', { name: 'Pago' })).toBeDisabled();
-    expect(screen.getByText('Em breve')).toBeInTheDocument();
+    const regras = screen.getByRole('region', { name: 'Regras' });
+    expect(within(regras).getByText('Em breve')).toBeInTheDocument();
   });
 
   it('mostra as 6 permissões independentes (RN-142)', () => {
     renderView();
     const grupo = screen.getByRole('group', { name: 'Permissões de admin' });
     expect(within(grupo).getAllByRole('checkbox')).toHaveLength(6);
+  });
+
+  it('Moderação e Permissões são "Em breve": inputs desabilitados, sem botão de salvar ativo (fix S4 — nunca sucesso falso)', () => {
+    renderView();
+    for (const nome of ['Moderação', 'Admin avançada']) {
+      const secao = screen.getByRole('region', { name: nome });
+      expect(within(secao).getByText('Em breve')).toBeInTheDocument();
+      expect(within(secao).getByRole('button', { name: 'Disponível em breve' })).toBeDisabled();
+      expect(within(secao).queryByRole('button', { name: 'Salvar alterações' })).not.toBeInTheDocument();
+    }
+    const radios = within(screen.getByRole('group', { name: 'Comportamento dos membros' })).getAllByRole('radio');
+    radios.forEach((r) => expect(r).toBeDisabled());
+    const checks = within(screen.getByRole('group', { name: 'Permissões de admin' })).getAllByRole('checkbox');
+    checks.forEach((c) => expect(c).toBeDisabled());
+  });
+
+  it('nome vazio desabilita o salvar da Identidade (espelho do guard das Rules)', async () => {
+    renderView();
+    const secao = screen.getByRole('region', { name: 'Identidade' });
+    await userEvent.clear(within(secao).getByLabelText('Nome do clube'));
+    expect(within(secao).getByRole('button', { name: 'Salvar alterações' })).toBeDisabled();
   });
 
   it('salvar identidade persiste o patch', async () => {

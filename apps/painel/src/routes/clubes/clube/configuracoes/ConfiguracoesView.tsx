@@ -1,10 +1,13 @@
 // =============================================================================
 // ConfiguracoesView - configuracoes do clube (S110-T1 / SPEC 2.10). Layout
 // 25/75: esquerda com navegacao ancora sticky + scroll spy; direita com 5
-// secoes (Identidade, Pagina publica, Regras, Moderacao, Admin avancada), cada
-// uma com "Salvar alteracoes" proprio. Slug sanitiza em tempo real; modelo
-// "Pago" desabilitado (RN-104); 6 permissoes independentes (RN-142); card
-// "Deletar clube" com borda Vulcao (excecao 2.16, abre o modal S110-T2).
+// secoes (Identidade, Pagina publica, Regras, Moderacao, Admin avancada).
+// Estado HONESTO (fix S4 do review Onda1): Moderacao (RN-143) e Permissoes
+// (RN-142) nao tem persistencia de cliente modelada na V1 — secoes ficam
+// desabilitadas com badge "Em breve" (padrao do popover de desafios), SEM
+// toast de sucesso falso. Slug e read-only (docId = slug por design; mudar
+// slug e recriar o doc). Modelo "Pago" desabilitado (RN-104); card "Deletar
+// clube" com borda Vulcao (excecao 2.16, abre o modal S110-T2).
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
@@ -17,7 +20,6 @@ import {
   PERMISSOES_ADMIN,
   SECOES_CONFIG,
   VISIBILIDADES,
-  sanitizeSlug,
   type ComportamentoMembros,
   type PermissaoAdminId,
   type SecaoConfigId,
@@ -27,8 +29,6 @@ export interface ConfiguracoesViewProps {
   clube: Clube;
   /** Persiste os campos de configuracao do clube (write real). */
   onSalvar: (patch: AtualizarClubeInput) => void | Promise<void>;
-  /** Preferencias sem persistencia dedicada em V1 (moderacao/permissoes). */
-  onSalvarPreferencias?: (rotulo: string) => void;
   /** Abre o fluxo de exclusao (S110-T2). */
   onDeletar: () => void;
 }
@@ -39,12 +39,18 @@ function Secao({
   refCb,
   children,
   onSalvar,
+  salvarDisabled = false,
+  emBreve = false,
 }: {
   id: SecaoConfigId;
   titulo: string;
   refCb: (el: HTMLElement | null) => void;
   children: React.ReactNode;
-  onSalvar: () => void;
+  onSalvar?: () => void;
+  /** Desabilita o salvar (ex.: nome vazio — espelho do guard das Rules). */
+  salvarDisabled?: boolean;
+  /** Secao sem persistencia na V1: badge + botao desabilitado, sem sucesso falso. */
+  emBreve?: boolean;
 }): JSX.Element {
   return (
     <section
@@ -53,14 +59,21 @@ function Secao({
       aria-label={titulo}
       className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
     >
-      <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+      <h2 className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
         {titulo}
+        {emBreve ? <Badge variant="neutro">Em breve</Badge> : null}
       </h2>
       {children}
       <div>
-        <Button variant="secondary" onClick={onSalvar}>
-          Salvar alterações
-        </Button>
+        {emBreve ? (
+          <Button variant="secondary" disabled>
+            Disponível em breve
+          </Button>
+        ) : (
+          <Button variant="secondary" disabled={salvarDisabled} onClick={onSalvar}>
+            Salvar alterações
+          </Button>
+        )}
       </div>
     </section>
   );
@@ -69,12 +82,10 @@ function Secao({
 export function ConfiguracoesView({
   clube,
   onSalvar,
-  onSalvarPreferencias,
   onDeletar,
 }: ConfiguracoesViewProps): JSX.Element {
   const [nome, setNome] = useState(clube.nome);
   const [descricao, setDescricao] = useState(clube.descricao);
-  const [slug, setSlug] = useState(clube.slug);
   const [visibilidade, setVisibilidade] = useState<VisibilidadeClube>(clube.visibilidade);
   const [aprovacaoManual, setAprovacaoManual] = useState(clube.aprovacaoManual);
   const [modeloEntrada, setModeloEntrada] = useState<ModeloEntradaClube>(clube.modeloEntrada);
@@ -151,6 +162,7 @@ export function ConfiguracoesView({
           titulo="Identidade"
           refCb={(el) => { if (el) refs.current.identidade = el; }}
           onSalvar={() => void onSalvar({ nome: nome.trim(), descricao: descricao.trim() })}
+          salvarDisabled={nome.trim().length === 0}
         >
           <label className="flex flex-col gap-1">
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do clube</span>
@@ -181,13 +193,18 @@ export function ConfiguracoesView({
         >
           <label className="flex flex-col gap-1">
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Slug público</span>
+            {/* Read-only (fix S4): docId = slug por design — editar aqui era
+                descartado em silêncio sob o toast de sucesso da seção. */}
             <input
-              value={slug}
-              onChange={(e) => setSlug(sanitizeSlug(e.target.value))}
+              value={clube.slug}
+              readOnly
               aria-label="Slug público"
-              className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
+              aria-describedby="slug-hint"
+              className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-tertiary)] focus:outline-none"
             />
-            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">be-hero.com.br/c/{slug || '—'}</span>
+            <span id="slug-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              be-hero.com.br/c/{clube.slug} — o endereço público é definido na criação do clube e não pode ser alterado.
+            </span>
           </label>
           <div className="flex flex-col gap-[var(--spacing-2)]">
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Visibilidade</span>
@@ -230,11 +247,15 @@ export function ConfiguracoesView({
           </label>
         </Secao>
 
+        {/* Moderação (RN-143) e Permissões (RN-142): sem persistência de
+            cliente modelada na V1 (permissoesAdmin é por profissional e
+            write de admin) — estado honesto "Em breve", nunca sucesso falso
+            (fix S4). */}
         <Secao
           id="moderacao"
           titulo="Moderação"
           refCb={(el) => { if (el) refs.current.moderacao = el; }}
-          onSalvar={() => onSalvarPreferencias?.('Moderação')}
+          emBreve
         >
           <div role="group" aria-label="Comportamento dos membros" className="flex flex-col gap-[var(--spacing-2)]">
             {COMPORTAMENTOS.map((c) => (
@@ -242,10 +263,11 @@ export function ConfiguracoesView({
                 <input
                   type="radio"
                   name="comportamento"
+                  disabled
                   checked={comportamento === c.id}
                   onChange={() => setComportamento(c.id)}
                 />
-                <span className="text-[var(--text-primary)]">{c.label}</span>
+                <span className="text-[var(--text-secondary)]">{c.label}</span>
                 <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">{c.hint}</span>
               </label>
             ))}
@@ -256,18 +278,19 @@ export function ConfiguracoesView({
           id="admin"
           titulo="Admin avançada"
           refCb={(el) => { if (el) refs.current.admin = el; }}
-          onSalvar={() => onSalvarPreferencias?.('Permissões')}
+          emBreve
         >
           <div role="group" aria-label="Permissões de admin" className="flex flex-col gap-[var(--spacing-2)]">
             {PERMISSOES_ADMIN.map((p) => (
               <label key={p.id} className="flex items-center gap-[var(--spacing-2)]">
                 <input
                   type="checkbox"
+                  disabled
                   checked={permissoes.has(p.id)}
                   onChange={() => togglePermissao(p.id)}
                   aria-label={p.label}
                 />
-                <span className="text-[var(--text-primary)]">{p.label}</span>
+                <span className="text-[var(--text-secondary)]">{p.label}</span>
               </label>
             ))}
           </div>

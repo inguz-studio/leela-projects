@@ -1,8 +1,9 @@
 // =============================================================================
 // ConfiguracoesPage - container das configuracoes (`/clubes/:slug/
 // configuracoes`). Persiste os campos do clube via atualizarClube (write real);
-// moderacao/permissoes dao feedback (V1). O fluxo de exclusao abre o modal LGPD
-// (S110-T2); deletar/exportar chamam os callables (Functions Fable S110-T2).
+// moderacao/permissoes ficam "Em breve" na view (fix S4 — sem sucesso falso).
+// O fluxo de exclusao abre o modal LGPD (S110-T2); deletar/exportar chamam os
+// callables (Functions Fable S110-T2).
 // =============================================================================
 
 import { useState } from 'react';
@@ -58,7 +59,6 @@ export function ConfiguracoesPage(): JSX.Element {
       <ConfiguracoesView
         clube={clube}
         onSalvar={salvar}
-        onSalvarPreferencias={(rotulo) => toast({ variant: 'success', title: `${rotulo} atualizada` })}
         onDeletar={() => setDeletarAberto(true)}
       />
       <DeletarClubeModal
