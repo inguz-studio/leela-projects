@@ -85,7 +85,7 @@ fechar a janela depois.
 
 ---
 
-## Se algo der errado (as 3 mais comuns)
+## Se algo der errado (as 4 mais comuns)
 
 ### 1. "porta ocupada" / o link não abre
 Já tem um preview aberto, ou a automação está usando as portas.
@@ -119,6 +119,15 @@ Faltou instalar as dependências do projeto.
   ```
 - Depois rode `bash preview.sh` normalmente.
 
+### 4. Tela **em branco** ao abrir o link
+O painel depende de pacotes internos compilados. Se eles estiverem
+desatualizados, o navegador mostra uma página vazia, sem mensagem de erro.
+
+- O `preview.sh` já recompila esses pacotes sozinho a cada execução (passo
+  "Compilando pacotes internos"). Se mesmo assim a tela ficar em branco,
+  pare (Ctrl+C) e rode `bash preview.sh` de novo.
+- Persistindo, veja o `build.log` na pasta de logs impressa ao encerrar.
+
 ---
 
 ## Detalhes técnicos (para quem quiser saber)
@@ -131,6 +140,12 @@ Faltou instalar as dependências do projeto.
   variáveis, o comportamento é exatamente o de sempre** (8080/9099/5001).
 - O auto-login só liga com `VITE_PREVIEW_AUTOLOGIN=true` (o `preview.sh` define
   isso). Em `pnpm dev`, testes e produção ele é um no-op — zero impacto.
+- Antes de subir o Vite, o preview roda
+  `pnpm turbo run build --filter='@leela/painel^...'` — compila só as
+  dependências internas do painel (`@leela/core`, `@leela/api-client`,
+  `@leela/design-system`). O painel resolve esses pacotes pelo `dist/` de cada
+  um; um `dist/` velho quebra a montagem do app no navegador (tela em branco).
+  Com o cache do Turbo, o passo é quase instantâneo quando nada mudou.
 - Os seeds rodam via `functions/scripts/preview-seed.ts` (importa as funções de
   `functions/src/seed/*` e aponta ao banco de teste em portas alternativas).
 - Os logs de cada execução ficam numa pasta temporária (o caminho é impresso ao

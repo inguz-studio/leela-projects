@@ -48,6 +48,7 @@ mkdir -p "$LOG_DIR"
 EMU_LOG="$LOG_DIR/emulator.log"
 VITE_LOG="$LOG_DIR/vite.log"
 SEED_LOG="$LOG_DIR/seed.log"
+BUILD_LOG="$LOG_DIR/build.log"
 
 EMU_PID=""
 VITE_PID=""
@@ -171,14 +172,27 @@ start_vite() {
 }
 
 # =============================================================================
-# 1. Painel (Vite) PRIMEIRO — reserva a porta antes do boot lento do Emulator,
+# 1. Pacotes internos ANTES do Vite — o painel resolve @leela/* pelo `dist/`
+#    de cada pacote (package.json > exports). Sem rebuild, um dist desatualizado
+#    (ex.: export novo só no src/) derruba a avaliação de módulos no navegador
+#    (SyntaxError de export ausente) e a tela fica em branco, sem nada no
+#    console. O fluxo dos agentes passa por `turbo build` (dependsOn ^build);
+#    o preview precisa do mesmo pré-passo. Turbo com cache: rápido quando fresco.
+# =============================================================================
+c_yellow "==> Compilando pacotes internos do painel (@leela/*)..."
+pnpm turbo run build --filter='@leela/painel^...' >"$BUILD_LOG" 2>&1 \
+  || die "falha ao compilar os pacotes internos (@leela/*)." "$BUILD_LOG"
+c_green "    Pacotes internos em dia."
+
+# =============================================================================
+# 2. Painel (Vite) — reserva a porta antes do boot lento do Emulator,
 #    evitando corrida com os agentes.
 # =============================================================================
 start_vite "$VITE_BASE"
 c_green "    Painel no ar em :$VITE_PORT (aguardando o Emulator para os dados)."
 
 # =============================================================================
-# 2. Emulator Suite (portas alt) — isolado dos agentes
+# 3. Emulator Suite (portas alt) — isolado dos agentes
 # =============================================================================
 c_yellow "==> Subindo Firebase Emulator (Firestore :$FS_PORT · Auth :$AUTH_PORT · UI :$UI_PORT)..."
 firebase emulators:start \
@@ -192,7 +206,7 @@ wait_http "http://127.0.0.1:$AUTH_PORT/" "Auth Emulator" "$EMU_PID" "$EMU_LOG"
 c_green "    Emulator no ar."
 
 # =============================================================================
-# 3. Seeds + usuários de login (apontando para as portas alt)
+# 4. Seeds + usuários de login (apontando para as portas alt)
 # =============================================================================
 c_yellow "==> Aplicando dados de exemplo (seed) e criando logins..."
 export FIRESTORE_EMULATOR_HOST="127.0.0.1:$FS_PORT"
@@ -203,7 +217,7 @@ node "$TSX_CLI" functions/scripts/preview-seed.ts >"$SEED_LOG" 2>&1 \
 c_green "    Seeds aplicados."
 
 # =============================================================================
-# 4. Instruções
+# 5. Instruções
 # =============================================================================
 BASE="http://127.0.0.1:$VITE_PORT"
 echo ""
