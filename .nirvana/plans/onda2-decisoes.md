@@ -16,9 +16,11 @@ cortadas, E08 adiado), cupons ficam, E09-slim entra, E07 só web, E11 só coleta
 ## Pendências do VITOR (lista única — nada disso bloqueia o INÍCIO da onda)
 
 **Decisões comerciais do checkout — RATIFICADAS (Vitor, 2026-07-05; vinculantes, substituem os defaults do E12-L0):**
-- **Taxa por método de pagamento**: **10% cartão de crédito · 8% PIX** (modelo por método — não é mais
-  incorporada/não-incorporada; a taxa é comissão da plataforma deduzida da receita do produtor). Mora em
-  `CommercialTerms.taxaPorMetodo`, configurável pelo `platform_admin` (mesmo padrão da retenção de 15%; editor E16-S1602-T2).
+- **Taxa por método de pagamento**: **10% cartão de crédito · 8% PIX são DEFAULTS INICIAIS, não valores fixos**
+  (clarificação Vitor 2026-07-05). O modelo é por método (não incorporada/não-incorporada; comissão da plataforma
+  deduzida da receita do produtor). Mora em `CommercialTerms.taxaPorMetodo`, **editável pelo `platform_admin`
+  a qualquer momento** (mesmo padrão da retenção de 15%; editor E16-S1602-T2) — o seed/provisionamento aplica 10/8
+  como padrão e o admin ajusta por tenant quando quiser. Testes devem cobrir taxa ≠ default.
 - **Parcelamento com tabela de taxas por parcela (2x-12x)**: o modelo de dados (`CommercialTerms.tabelaTaxasParcela`)
   e `finance/calc` **devem suportar a tabela configurável pelo `platform_admin` desde já**. **NÃO** fixar "12x sem
   juros"; 1x à vista sem taxa; só cartão parcela.
