@@ -389,3 +389,27 @@ describe('ciclo de vida de eventos — cliente nunca grava status (review #18)',
   });
 });
 
+// ── Delete de evento: EXCLUSIVO de Function/Admin (review #17) ────────────
+//
+// Subcoleções não cascateiam no Firestore: deletar um evento vendido órfãna
+// os inscritos (PII/LGPD). Precedente S110-T2 (clubes): deny para TODO
+// cliente — inclusive platform_admin via client SDK; Admin SDK/tooling segue.
+
+describe('delete de eventos — negado para todo cliente (review #17)', () => {
+  it('owner NÃO deleta o próprio evento VENDIDO (453 inscritos ficariam órfãos)', async () => {
+    const db = marinaDb();
+    await assertFails(deleteDoc(doc(db, 'eventos', MEIA_FLORIPA_ID)));
+  });
+
+  it('owner NÃO deleta nem o próprio rascunho SEM venda (superfície é de Function)', async () => {
+    const db = marinaDb();
+    await assertFails(deleteDoc(doc(db, 'eventos', MARATONA_2027_ID)));
+  });
+
+  it('platform_admin via client SDK também NÃO deleta (espelha clubes S110)', async () => {
+    const db = ctxAs(PLATFORM_ADMIN_UID, {
+      role: 'platform_admin',
+    }).firestore() as unknown as Firestore;
+    await assertFails(deleteDoc(doc(db, 'eventos', MEIA_FLORIPA_ID)));
+  });
+});

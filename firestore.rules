@@ -205,7 +205,11 @@ service cloud.firestore {
     //   - CICLO DE VIDA é de escrita EXCLUSIVA de Function (ADR-005 — fix
     //     review Onda1 #18): create nasce 'rascunho'; update de cliente NÃO
     //     toca `status`. Publicar/encerrar passam por `publicarEvento` &
-    //     afins (Admin SDK), que validam completude/publicadoEm/URL/QR.
+    //     afins (Admin SDK), que validam completude/publicadoEm/URL/QR;
+    //   - delete NEGADO para TODO cliente (fix review Onda1 #17, precedente
+    //     S110/RN-144 dos clubes): subcoleções não cascateiam — deletar
+    //     evento vendido órfãnaria os inscritos (PII, LGPD). Exclusão real é
+    //     superfície de Function com cascata (handoff E04) ou tooling Admin.
     match /eventos/{eventoId} {
 
       /** Agregados ∑ nascem zerados (ou ausentes) — cliente nunca inventa contagem. */
@@ -260,9 +264,9 @@ service cloud.firestore {
                         && statusIntocado()
                         && percursosEditaveis())
                     || isPlatformAdmin();
-      allow delete: if (isTenantWriter(resource.data.tenantId)
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
+      // Delete de evento é EXCLUSIVO de Function/Admin (review #17) — nem
+      // platform_admin via client SDK (espelha o delete de clubes, S110-T2).
+      allow delete: if false;
 
       /** tenantId do evento pai — subcoleções carregam tenantId coerente (ADR-009). */
       function tenantDoEventoPai() {
