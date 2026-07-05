@@ -81,4 +81,14 @@ describe('OverviewContent (S600-T1 layout)', () => {
     render(<OverviewContent {...props()} />);
     expect(screen.getByText('1.284')).toBeInTheDocument();
   });
+
+  it('staff → nota de escopo em vez de zeros mudos (#16)', () => {
+    render(<OverviewContent {...props({ papel: 'tenant_staff', eventos: [], countdown: null })} />);
+    expect(screen.getByRole('note')).toHaveTextContent('apenas os eventos que você organiza');
+  });
+
+  it('produtor (owner) → sem nota de escopo de staff (#16)', () => {
+    render(<OverviewContent {...props({ papel: 'tenant_owner', eventos: [] })} />);
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
 });

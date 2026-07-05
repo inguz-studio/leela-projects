@@ -29,6 +29,8 @@ export interface ActiveEventsProps {
   /** Falha ao listar eventos — nunca fabricar "crie seu primeiro evento" (#03). */
   error?: boolean;
   onRetry?: (() => void) | undefined;
+  /** Staff sem eventos próprios: escopo individual, não "primeiro evento" (#16). */
+  contextoStaff?: boolean;
   onGerenciar: (slug: string) => void;
   onNovoEvento: () => void;
 }
@@ -45,6 +47,7 @@ export function ActiveEvents({
   loading,
   error,
   onRetry,
+  contextoStaff,
   onGerenciar,
   onNovoEvento,
 }: ActiveEventsProps): JSX.Element {
@@ -67,15 +70,22 @@ export function ActiveEvents({
       ) : error ? (
         <PanelError message="Não foi possível carregar seus eventos." onRetry={onRetry} />
       ) : !eventos || eventos.length === 0 ? (
-        <EmptyState
-          title="Você ainda não tem eventos ativos"
-          description="Crie seu primeiro evento para vender ingressos e operar no dia da prova."
-          action={
-            <Button variant="primary" onClick={onNovoEvento}>
-              Crie seu primeiro evento
-            </Button>
-          }
-        />
+        contextoStaff ? (
+          <EmptyState
+            title="Você ainda não organiza eventos"
+            description="Este resumo é do seu escopo. Os eventos do tenant aparecem no painel de quem os criou."
+          />
+        ) : (
+          <EmptyState
+            title="Você ainda não tem eventos ativos"
+            description="Crie seu primeiro evento para vender ingressos e operar no dia da prova."
+            action={
+              <Button variant="primary" onClick={onNovoEvento}>
+                Crie seu primeiro evento
+              </Button>
+            }
+          />
+        )
       ) : (
         <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
           {eventos.map((evento) => {

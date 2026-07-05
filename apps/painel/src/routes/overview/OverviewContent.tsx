@@ -6,12 +6,13 @@
 // =============================================================================
 
 import { Button, Skeleton } from '@leela/design-system';
-import type { OverviewAlert, OverviewKPIs } from '@leela/core';
+import type { OverviewAlert, OverviewKPIs, Role } from '@leela/core';
 import { KpiRow } from './_components/KpiRow';
 import { ActiveEvents } from './_components/ActiveEvents';
 import { RecentRegistrations } from './_components/RecentRegistrations';
 import { Countdown } from './_components/Countdown';
 import { AlertsPanel } from './_components/AlertsPanel';
+import { StaffScopeNote } from './_components/StaffScopeNote';
 import type { EventoAtivoView } from './_lib/activeEvents';
 import type { InscricaoRecenteView } from './_lib/recentRegistrations';
 import type { CountdownView } from './_lib/countdown';
@@ -35,6 +36,8 @@ export interface OverviewContentProps {
   onRetryInscricoes?: (() => void) | undefined;
   countdown: CountdownView | null;
   countdownLoading: boolean;
+  /** Papel do usuário — staff vê nota de escopo em vez de zeros mudos (#16). */
+  papel?: Role | null;
   onNavigate: (href: string) => void;
   onNovoEvento: () => void;
 }
@@ -76,14 +79,19 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
     onRetryInscricoes,
     countdown,
     countdownLoading,
+    papel,
     onNavigate,
     onNovoEvento,
   } = props;
+
+  const contextoStaff = papel === 'tenant_staff';
 
   return (
     <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-3">
       {/* Coluna principal (2/3) */}
       <div className="flex flex-col gap-[var(--spacing-6)] lg:col-span-2">
+        {contextoStaff ? <StaffScopeNote /> : null}
+
         {kpisLoading ? (
           <KpiSkeletons />
         ) : kpisError ? (
@@ -107,6 +115,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           loading={eventosLoading}
           error={eventosError ?? false}
           onRetry={onRetryEventos}
+          contextoStaff={contextoStaff}
           onGerenciar={(slug) => onNavigate(`/eventos/${slug}`)}
           onNovoEvento={onNovoEvento}
         />

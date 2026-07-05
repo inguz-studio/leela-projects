@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { getClaims, onSessionChange } from '@leela/api-client';
-import type { AuthClaims } from '@leela/core';
+import type { AuthClaims, Role } from '@leela/core';
 
 export type SessionStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -18,6 +18,9 @@ export interface OverviewSession {
   uid: string | null;
   tenantId: string | null;
   nome: string | null;
+  /** Papel do token — o dashboard é agregado por INDIVÍDUO (decisão E02-L1),
+   *  então a UI distingue staff sem eventos próprios de produtor sem eventos. */
+  role: Role | null;
 }
 
 /** Observa a sessão Firebase e extrai uid + tenantId (claim) + nome (displayName). */
@@ -27,6 +30,7 @@ export function useOverviewSession(): OverviewSession {
     uid: null,
     tenantId: null,
     nome: null,
+    role: null,
   });
 
   useEffect(() => {
@@ -34,18 +38,19 @@ export function useOverviewSession(): OverviewSession {
     const unsub = onSessionChange((user) => {
       if (!user) {
         if (ativo) {
-          setSession({ status: 'anonymous', uid: null, tenantId: null, nome: null });
+          setSession({ status: 'anonymous', uid: null, tenantId: null, nome: null, role: null });
         }
         return;
       }
       void getClaims().then((claims) => {
         if (!ativo) return;
-        const tenantId = (claims as AuthClaims | null)?.tenantId ?? null;
+        const parsed = claims as AuthClaims | null;
         setSession({
           status: 'authenticated',
           uid: user.uid,
-          tenantId,
+          tenantId: parsed?.tenantId ?? null,
           nome: user.displayName ?? null,
+          role: parsed?.role ?? null,
         });
       });
     });

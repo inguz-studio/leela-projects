@@ -88,6 +88,7 @@ export function OverviewPage(): JSX.Element {
         onRetryInscricoes={eventosState.error ? eventosState.refetch : inscricoesState.refetch}
         countdown={countdown}
         countdownLoading={eventosState.loading}
+        papel={session.role}
         onNavigate={(href) => navigate(href)}
         onNovoEvento={() => navigate('/eventos/novo')}
       />

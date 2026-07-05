@@ -41,6 +41,16 @@ describe('ActiveEvents (S601-T1)', () => {
     expect(screen.getByRole('button', { name: 'Crie seu primeiro evento' })).toBeInTheDocument();
   });
 
+  it('staff sem eventos → escopo individual, sem CTA "primeiro evento" (#16)', () => {
+    render(
+      <ActiveEvents eventos={[]} loading={false} contextoStaff onGerenciar={vi.fn()} onNovoEvento={vi.fn()} />
+    );
+    expect(screen.getByText('Você ainda não organiza eventos')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Crie seu primeiro evento' })
+    ).not.toBeInTheDocument();
+  });
+
   it('erro ≠ vazio ≠ carregando: erro mostra retry, nunca o CTA de criar (#03)', async () => {
     const onRetry = vi.fn();
     render(
