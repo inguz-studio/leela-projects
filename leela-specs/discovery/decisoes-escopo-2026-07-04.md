@@ -16,8 +16,8 @@ Respostas às 10 decisões da `proposta-revisao-escopo-2026-07-04.md`. Vinculant
    - **Retenção de 15%** do total, liberada **somente após o evento** (contingência de fraude). Percentual **editável pelo admin master** (platform_admin).
    - V1: registro/workflow (PaymentProvider mock — "pago" é registro, sem transferência bancária real; UI explícita).
 5. Strava: integração segue gated (Onda 3.1). **Ação externa pendente do Vitor: registrar o app OAuth na Strava** (lead time de semanas). Não respondido explicitamente; default da proposta mantido.
-6. E11 coleta: **default aprovado** (rollup de coleta entra cedo na Onda 2 — histórico não é backfillável). Não respondido explicitamente; sujeito a veto.
-7. E15 Creator Studio: **só higiene** no E05 (autorId + campo de anexo). Default da proposta; sem recorte encomendado.
+6. E11 coleta: **APROVADO explicitamente pelo Vitor** (2026-07-04) — rollup de coleta entra cedo na Onda 2 (histórico não é backfillável).
+7. E15 Creator Studio: **só higiene, confirmado pelo Vitor** (2026-07-04) — autorId + campo de anexo no E05; sem recorte encomendado.
 8. **Leela+: PAGO, mensalidade, receita 100% Leela** (sem split com clube/parceiro neste início). Namespacing `parceirosBeneficio` separado de `parcerias` (afiliação).
 9. **E07 aprovado**: 403 casado com papéis (E04-S304). Fatia web na Onda 2; manutenção/offline-web V1.1.
 10. **Backend do desafio adiantado aprovado**: lote surface-agnostic no fim da Onda 2.
