@@ -7,8 +7,42 @@
  */
 
 import type { Config } from 'tailwindcss';
+import type { PluginAPI, PluginCreator } from 'tailwindcss/types/config';
+import createPlugin from 'tailwindcss/plugin';
+import animate from 'tailwindcss-animate';
+
+/**
+ * tailwindcss-animate registra os utilitários `duration`/`delay`/`ease`, que
+ * COLIDEM com os de TRANSIÇÃO do core Tailwind (transition-duration,
+ * transition-delay, transition-timing-function). O DS aplica
+ * `duration-[var(--motion-*)]` e `ease-[var(--motion-*)]` em transições por
+ * ~todos os componentes (Button, Input, Modal, Sidebar, Table, Toast…); com o
+ * plugin cru essas classes viram ambíguas e o Tailwind as DESCARTA — a transição
+ * some no app inteiro (provado no build do painel). Envolvemos o plugin para
+ * registrar só os utilitários de ANIMAÇÃO que a esteira shadcn usa (animate-in/out,
+ * fade/zoom/slide + keyframes) e descartamos duration/delay/ease: o core volta a
+ * mandar nas transições e `animate-in` segue tokenizado por
+ * animationDuration/TimingFunction.DEFAULT (abaixo). animate.config é repassado
+ * para preservar keyframes e os defaults de animation* que fade/zoom/slide leem.
+ */
+const CORE_TRANSITION_UTILITIES = new Set(['duration', 'delay', 'ease']);
+const animateBase = animate as unknown as {
+  handler: PluginCreator;
+  config?: Partial<Config>;
+};
+
+const animateAnimationsOnly = createPlugin((api: PluginAPI) => {
+  const matchUtilities: PluginAPI['matchUtilities'] = (utilities, options) => {
+    const kept = Object.fromEntries(
+      Object.entries(utilities).filter(([name]) => !CORE_TRANSITION_UTILITIES.has(name)),
+    ) as typeof utilities;
+    if (Object.keys(kept).length > 0) api.matchUtilities(kept, options);
+  };
+  animateBase.handler({ ...api, matchUtilities });
+}, animateBase.config);
 
 const leelaPreset: Partial<Config> = {
+  plugins: [animateAnimationsOnly],
   theme: {
     extend: {
       colors: {
@@ -119,6 +153,22 @@ const leelaPreset: Partial<Config> = {
         'ds-default': 'var(--motion-easing-default)',
         'ds-enter':   'var(--motion-easing-enter)',
         'ds-exit':    'var(--motion-easing-exit)',
+      },
+      // Motion para tailwindcss-animate (animate-in/out). O plugin lê
+      // animationDuration.DEFAULT em .animate-in/.animate-out; herda de transition*
+      // se não sobrescrito (traria a duração/easing crus, hardcoded, do core
+      // Tailwind). Aqui os DEFAULT são tokenizados para que `animate-in` sem
+      // modificador rode em var(--motion-duration-fast) + var(--motion-easing-default).
+      animationDuration: {
+        DEFAULT: 'var(--motion-duration-fast)',
+        fast:    'var(--motion-duration-fast)',
+        normal:  'var(--motion-duration-normal)',
+        slow:    'var(--motion-duration-slow)',
+      },
+      animationTimingFunction: {
+        DEFAULT:    'var(--motion-easing-default)',
+        'ds-enter': 'var(--motion-easing-enter)',
+        'ds-exit':  'var(--motion-easing-exit)',
       },
     },
   },

@@ -68,6 +68,13 @@ describe('Tooltip (shadcn stock + aliases brasa)', () => {
     expect(content.className).toContain('shadow-elev-2');
   });
 
+  it('motion stock devolvido (A2): TooltipContent carrega animate-in (tokenizado via preset)', () => {
+    renderOpenTooltip();
+    const content = screen.getByTestId('tt-content');
+    expect(content.className).toContain('animate-in');
+    expect(content.className).toContain('data-[state=closed]:animate-out');
+  });
+
   it('aceita className extra sem perder as classes base (cn merge)', () => {
     renderOpenTooltip({ className: 'max-w-[var(--modal-width-sm)]' });
     const content = screen.getByTestId('tt-content');

@@ -8,8 +8,10 @@
  *   - spacing/tipografia via tokens: px-3→var(--spacing-3), py-1.5→var(--spacing-1),
  *     text-sm (0.875rem stock) → var(--font-size-base) (0.875rem brasa);
  *   - shadow-md → shadow-elev-2 (token de elevação);
- *   - classes animate-in/out removidas (tailwindcss-animate não instalado);
- *     motion tokenizado entra na task de motion do Lote A.
+ *   - classes animate-in/out DEVOLVIDAS stock (A2): tailwindcss-animate agora é
+ *     dependency do DS e entra no preset via `plugins: [animate]`; o motion sai
+ *     tokenizado — animate-in sem modificador roda em var(--motion-duration-fast)
+ *     + var(--motion-easing-default) (animationDuration/TimingFunction.DEFAULT no preset).
  * As classes de ALIAS (bg-popover, text-popover-foreground, rounded-md, border)
  * ficam stock de propósito: são a prova de que a ponte shadcn→brasa funciona.
  *
@@ -44,6 +46,7 @@ const TooltipContent = React.forwardRef<
       'px-[var(--spacing-3)] py-[var(--spacing-1)]',
       'text-[length:var(--font-size-base)] text-popover-foreground',
       'shadow-elev-2',
+      'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
       className,
     )}
     {...props}
