@@ -11,10 +11,12 @@
 //     nunca promoter/athlete (RBAC intra-tenant mínimo).
 //
 // Partição de coleções (ADR-009 §Estratégia de partição):
-//   TENANT-SCOPED : eventos, clubes, comunicados, parcerias,
-//                   programaAfiliacao, pagamentos, equipe, promotores, subscriptions
+//   TENANT-SCOPED : eventos, clubes, programaAfiliacao, pagamentos,
+//                   equipe, promotores, subscriptions
 //                   (inscritos vive APENAS em eventos/{id}/inscritos — E03;
-//                   a top-level /inscritos foi aposentada no review Onda1 #4)
+//                   comunicados e parcerias vivem APENAS em clubes/{id}/… —
+//                   E05; as top-level /inscritos, /comunicados e /parcerias
+//                   foram aposentadas nos reviews Onda1 #4 e #10/S3)
 //   GLOBAL        : atletas, catalogoAcoes, config/system
 //   PLATAFORMA    : tenants/{id}, tenants/{id}/commercialTerms, platform/…
 //
@@ -733,33 +735,15 @@ service cloud.firestore {
     // foi removida: o caminho top-level cai no deny-by-default do final do
     // arquivo. NÃO reintroduzir sem rule endurecida + teste adversarial.
 
-    match /comunicados/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow create: if (isTenantWriter(request.resource.data.tenantId)
-                        && tenantAtivo(request.resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow update: if (isTenantWriter(resource.data.tenantId)
-                        && request.resource.data.tenantId == resource.data.tenantId
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow delete: if (isTenantWriter(resource.data.tenantId)
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-    }
-
-    match /parcerias/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
-      allow create: if (isTenantWriter(request.resource.data.tenantId)
-                        && tenantAtivo(request.resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow update: if (isTenantWriter(resource.data.tenantId)
-                        && request.resource.data.tenantId == resource.data.tenantId
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-      allow delete: if (isTenantWriter(resource.data.tenantId)
-                        && tenantAtivo(resource.data.tenantId))
-                    || isPlatformAdmin();
-    }
+    // Coleções legadas `/comunicados` e `/parcerias` (top-level) — APOSENTADAS
+    // (review Onda1 #10 / suplementar S3, mesmo padrão do fechamento de
+    // /inscritos no review #4). As coleções canônicas são SUBCOLEÇÕES de
+    // `clubes/{id}` — é lá que vivem os guardas (RN-130 anti-'enviado',
+    // espelhados read-only RN-120/122, shape de patrocinador RN-123). As
+    // rules legadas (sem shape, sem guarda) permitiam fabricar
+    // `status:'enviado'/alcance` ou `comissaoPct/conversoes` forjados.
+    // Removidas: os caminhos top-level caem no deny-by-default do final do
+    // arquivo. NÃO reintroduzir sem rule endurecida + teste adversarial.
 
     match /programaAfiliacao/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();

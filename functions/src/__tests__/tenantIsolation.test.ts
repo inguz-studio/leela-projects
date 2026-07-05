@@ -34,6 +34,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 
@@ -151,7 +152,32 @@ async function seedFixtures(): Promise<void> {
     nome: 'Clube Passo', criadoEm: now, atualizadoEm: now,
   });
 
-  // Coleções tenant-scoped restantes — um doc por tenant (castelo × passo)
+  // Subcoleções canônicas do E05 (leitura tenant-only via clube pai) —
+  // alvo do F2 após a aposentadoria das top-level (review #10/S3)
+  batch.set(
+    adminDb.collection('clubes').doc('clube-passo-1')
+      .collection('comunicados').doc('com-sub-passo-1'),
+    {
+      id: 'com-sub-passo-1', tenantId: PASSO_ID, titulo: 'Aviso canônico',
+      conteudo: 'x', canal: ['push'], origem: 'manual',
+      segmento: { tipo: 'todos' }, status: 'rascunho', alcance: 0,
+      criadoEm: now, atualizadoEm: now,
+    }
+  );
+  batch.set(
+    adminDb.collection('clubes').doc('clube-passo-1')
+      .collection('parcerias').doc('parc-sub-passo-1'),
+    {
+      id: 'parc-sub-passo-1', tenantId: PASSO_ID, tipo: 'patrocinador',
+      status: 'ativa', nome: 'Loja X',
+      modeloComercial: 'permuta', contrapartida: 'Divulgação da marca no kit dos atletas',
+      criadoEm: now, atualizadoEm: now,
+    }
+  );
+
+  // Coleções tenant-scoped restantes — um doc por tenant (castelo × passo).
+  // comunicados/parcerias top-level seguem SEMEADOS (Admin SDK bypassa
+  // Rules) como alvo das matrizes de deny F1/aposentadoria.
   const scopedPairs: Array<[string, string, string, Record<string, unknown>]> = [
     ['comunicados', 'com-castelo-1', 'com-passo-1', { titulo: 'Aviso' }],
     ['parcerias', 'parc-castelo-1', 'parc-passo-1', { parceiro: 'Loja X' }],
@@ -700,8 +726,10 @@ describe('F1 — takeover cross-tenant por overwrite (matriz completa)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 describe('F2 — isolamento de leitura (coleções sem cobertura prévia)', () => {
   const readTargets: Array<[string, string]> = [
-    ['comunicados', 'com-passo-1'],
-    ['parcerias', 'parc-passo-1'],
+    // comunicados/parcerias: subcoleções canônicas do E05 (top-level
+    // aposentadas — review #10/S3, ver suite dedicada abaixo)
+    ['clubes/clube-passo-1/comunicados', 'com-sub-passo-1'],
+    ['clubes/clube-passo-1/parcerias', 'parc-sub-passo-1'],
     ['programaAfiliacao', 'afil-passo-1'],
     ['equipe', 'eq-passo-1'],
     ['promotores', 'prom-passo-1'],
@@ -845,5 +873,51 @@ describe('coleção legada /inscritos top-level — aposentada (review #4)', () 
     await assertSucceeds(
       getDoc(doc(ctx.firestore(), 'eventos/evento-passo-1/inscritos', 'insc-passo-1'))
     );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Review Onda1 #10 / suplementar S3 — coleções legadas /comunicados e
+// /parcerias (top-level) APOSENTADAS, mesmo padrão do #4 (/inscritos).
+// As rules legadas permitiam create por isTenantWriter + tenantAtivo SEM
+// shape e SEM os guardas das subcoleções canônicas de clubes/{id}: dava
+// para fabricar `status:'enviado', alcance:999999` (RN-130) ou
+// `comissaoPct/conversoes/valorAReceber` forjados (RN-120/122/125).
+// Os testes de escrita abaixo FALHARIAM com as rules legadas — são a
+// prova da aposentadoria (T7/T8 do fix-loop do suplementar).
+// ─────────────────────────────────────────────────────────────────────────
+describe('coleções legadas /comunicados e /parcerias top-level — aposentadas (review #10/S3)', () => {
+  it('T7: nem tenant_owner do próprio tenant cria na /comunicados top-level (carimbo de envio forjado)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'comunicados', 'com-legado'), {
+        id: 'com-legado', tenantId: CASTELO_ID, titulo: 'Forjado',
+        conteudo: 'x', status: 'enviado', alcance: 999999,
+      })
+    );
+  });
+
+  it('T8: nem tenant_owner do próprio tenant cria na /parcerias top-level (comissão/∑ forjados)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      setDoc(doc(ctx.firestore(), 'parcerias', 'parc-legada'), {
+        id: 'parc-legada', tenantId: CASTELO_ID, tipo: 'evento_afiliado',
+        comissaoPct: 90, conversoes: 9999, valorAReceber: 999999,
+      })
+    );
+  });
+
+  it('leitura na /comunicados e /parcerias top-level negada (deny-by-default)', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(getDoc(doc(ctx.firestore(), 'comunicados', 'com-castelo-1')));
+    await assertFails(getDoc(doc(ctx.firestore(), 'parcerias', 'parc-castelo-1')));
+  });
+
+  it('update/delete na top-level negados mesmo para o tenant dono', async () => {
+    const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+    await assertFails(
+      updateDoc(doc(ctx.firestore(), 'comunicados', 'com-castelo-1'), { titulo: 'X' })
+    );
+    await assertFails(deleteDoc(doc(ctx.firestore(), 'parcerias', 'parc-castelo-1')));
   });
 });
