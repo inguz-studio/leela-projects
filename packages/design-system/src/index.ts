@@ -82,6 +82,14 @@ export type { TabsProps, TabItem } from './components/Tabs';
 
 // ── shadcn+brasa (PoC Lote A · brief ds-consolidacao) ──────────────────────
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/Tooltip';
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from './components/Card';
 
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';
