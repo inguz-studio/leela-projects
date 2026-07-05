@@ -1,11 +1,21 @@
 /**
  * Badge — indicador semântico de estado/categoria.
  *
- * Variantes semânticas (nunca misturar semântica):
- *   brand | heroico | vulcao | vitoria | alerta | neutro
+ * PROVENIÊNCIA: miolo shadcn stock `badge` (cva) restilizado ao brasa. Diff vs
+ * stock (esteira shadcn→brasa):
+ *   - API pública PRESERVADA: variantes semânticas brand|heroico|vulcao|vitoria|
+ *     alerta|neutro (NÃO os nomes stock default/secondary/destructive/outline);
+ *   - `brand` por alias (bg-primary/text-primary-foreground = action-primary/-fg,
+ *     provado em shadcn-aliases.test.ts); `neutro` por alias bg-muted
+ *     (= surface-overlay) + text-secondary (par na matriz L93);
+ *   - variantes de feedback (heroico/vulcao/vitoria/alerta) por TOKEN dedicado
+ *     (--feedback-*-surface/-fg): não há alias shadcn para a paleta de feedback,
+ *     e o par fg/surface já está na matriz (L116-119);
+ *   - flat (border-0): o stock traz `border`; o brasa é flat (§2.16);
+ *   - dimensões/tipo/radius por token de componente (--badge-*).
  *
- * §2.16 flat — sem borda decorativa.
- * A11y: role="status" implícito; use aria-label para contexto quando necessário.
+ * AA: nenhum par novo — todos caem na matriz de contraste já provada.
+ * A11y: use aria-label para contexto quando o texto não bastar.
  */
 
 import * as React from 'react';
@@ -29,12 +39,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        brand:   'bg-[var(--action-primary)] text-[var(--action-primary-fg)]',
+        brand:   'bg-primary text-primary-foreground',
         heroico: 'bg-[var(--feedback-info-surface)] text-[var(--feedback-info-fg)]',
         vulcao:  'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
         vitoria: 'bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]',
         alerta:  'bg-[var(--feedback-warning-surface)] text-[var(--feedback-warning-fg)]',
-        neutro:  'bg-[var(--surface-overlay)] text-[var(--text-secondary)]',
+        neutro:  'bg-muted text-[var(--text-secondary)]',
       },
     },
     defaultVariants: {

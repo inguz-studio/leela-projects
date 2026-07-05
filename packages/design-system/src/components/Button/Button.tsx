@@ -1,17 +1,30 @@
 /**
  * Button — §2.16 flat, sem borda decorativa.
  *
- * Variantes: primary | secondary | ghost | destructive
- * Sizes:     sm | md | lg
- * Estados:   default, hover, pressed (active), disabled, focus-visible
+ * PROVENIÊNCIA: miolo shadcn stock `button` (Slot + cva) restilizado ao brasa.
+ * O stock JÁ é a nossa arquitetura (Radix Slot + class-variance-authority). Diff
+ * vs stock (esteira shadcn→brasa, mesma receita do Tooltip):
+ *   - API pública PRESERVADA: variantes primary|secondary|ghost|destructive e
+ *     sizes sm|md|lg (NÃO os nomes stock default/outline/link/icon) — as ~33
+ *     telas do painel importam por estes nomes;
+ *   - cores de estado por TOKEN semântico (bg-[var(--action-*)] /
+ *     text-[var(--action-*-fg)] + hover/active em --action-*-hover|-pressed): a
+ *     matriz de contraste referencia esses tokens DIRETO e outros componentes
+ *     compõem sobre eles (ex.: ConfirmModal afirma o botão destrutivo pelo token),
+ *     então ficam token (não alias) — o stock usaria `bg-primary/90`, modificador
+ *     de alpha PROIBIDO com var() hex, trocado por token de estado do brasa;
+ *   - focus ring por ALIAS shadcn→brasa: ring-ring (= border-focus) +
+ *     ring-offset-background (= surface-base), com largura por token
+ *     (--btn-focus-ring) — prova a ponte de aliases no anel de foco;
+ *   - dimensões (altura/px/font) por token de componente (--btn-*), motion
+ *     tokenizado, flat (border-0) e opacity de disabled do brasa (40).
  *
- * A11y:
- * - type="button" por padrão (evita submit acidental)
- * - foco via ring 2 px (border-focus token)
- * - contraste WCAG AA em todos os pares variante/estado
- * - `aria-disabled` reflete estado disabled
+ * AA: todos os pares fg/bg caem na matriz já provada — cada action-*-fg sobre a
+ * própria superfície de ação e seus estados hover/pressed (contrast.test.ts) e
+ * ring/offset por alias (shadcn-aliases.test.ts). Nenhum par novo.
  *
- * Tokens consumidos: apenas semantic/component (nunca hex/primitivo direto).
+ * A11y: type="button" por padrão (evita submit acidental); foco via ring;
+ * `aria-disabled` reflete o estado disabled; contraste WCAG AA em todos os pares.
  */
 
 import * as React from 'react';
@@ -29,13 +42,13 @@ const buttonVariants = cva(
     'inline-flex items-center justify-center gap-2',
     'font-[var(--btn-font-weight)] not-italic select-none whitespace-nowrap',
     'rounded-[var(--btn-radius)]',
+    'ring-offset-background',
     'transition-colors duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
-    // Focus ring — contraste AA, 2 px offset
+    // Focus ring — cor por alias (ring = border-focus), largura por token, offset AA
     'focus-visible:outline-none',
     'focus-visible:ring-[length:var(--btn-focus-ring)]',
-    'focus-visible:ring-[color:var(--border-focus)]',
+    'focus-visible:ring-ring',
     'focus-visible:ring-offset-2',
-    'focus-visible:ring-offset-[color:var(--surface-base)]',
     // Disabled
     'disabled:pointer-events-none disabled:opacity-40',
     // Flat (§2.16): sem borda decorativa

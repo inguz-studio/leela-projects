@@ -1,10 +1,21 @@
 /**
  * Input — §2.16 borda permitida (excepção explícita ao flat).
  *
- * Estados: default | hover | focus (glow via ring) | invalid (border-danger + erro inline) | disabled
- * A11y: aria-invalid, aria-describedby para erros, focus-visible ring.
+ * PROVENIÊNCIA: campo interno = shadcn stock `input` restilizado ao brasa; a
+ * casca (label + mensagem de erro + aria-describedby) é o valor da NOSSA API e
+ * fica por cima do primitivo stock. Diff vs stock (esteira shadcn→brasa):
+ *   - API pública PRESERVADA: props errorMessage, label, wrapperClassName;
+ *   - borda por alias `border-input` (= border-strong): é o ÚNICO identificador
+ *     visual do campo (bg raised ≈ bg da página) e WCAG 1.4.11 exige ≥3:1 —
+ *     border-default ficava em 2.4–1.5:1; input/background está provado
+ *     (shadcn-aliases.test.ts) e border-strong/surface-raised na matriz (L130);
+ *   - placeholder por alias `text-muted-foreground` (= text-tertiary);
+ *   - foco por `focus:ring-2 ring-ring` (ring = border-focus) — mantido `focus:`
+ *     (glow ao clique também), não o `focus-visible:` do stock;
+ *   - dimensões/tipo/radius por token de componente (--input-*), motion tokenizado.
  *
- * Tokens consumidos: apenas semantic/component.
+ * Estados: default | hover | focus (glow via ring) | invalid (border-danger +
+ * erro inline) | disabled. A11y: aria-invalid, aria-describedby, focus ring.
  */
 
 import * as React from 'react';
@@ -67,16 +78,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
             // Colors & border (input is an exception to flat §2.16).
-            // Borda de repouso usa border-strong: é o ÚNICO identificador
-            // visual do campo (bg raised ≈ bg da página) e WCAG 1.4.11 exige
-            // ≥3:1 — border-default ficava em 2.4–1.5:1 nos temas.
+            // bg raised ≈ bg da página → a borda (border-input = border-strong) é
+            // o único identificador visual e cumpre WCAG 1.4.11 (≥3:1).
             'bg-[var(--surface-raised)] text-[var(--text-primary)]',
-            'border-[length:var(--input-border-width)] border-[var(--border-strong)]',
-            // Placeholder
-            'placeholder:text-[var(--text-tertiary)]',
-            // Focus — glow ring via outline (not border)
+            'border-[length:var(--input-border-width)] border-input',
+            // Placeholder — alias muted-foreground = text-tertiary
+            'placeholder:text-muted-foreground',
+            // Focus — glow ring via alias ring (border-focus), não border
             'focus:outline-none',
-            'focus:ring-2 focus:ring-[color:var(--border-focus)] focus:ring-offset-0',
+            'focus:ring-2 focus:ring-ring focus:ring-offset-0',
             // Invalid
             hasError && 'border-[var(--border-danger)] focus:ring-[color:var(--border-danger)]',
             // Disabled

@@ -1,10 +1,21 @@
 /**
  * Breadcrumb — trilha de navegação hierárquica.
  *
- * Último item: não clicável (página atual, aria-current="page").
- * Separador: "/" entre items.
- * A11y: nav[aria-label="Breadcrumb"] + ordered list + aria-current.
- * §2.16 flat.
+ * PROVENIÊNCIA: estrutura do shadcn stock `breadcrumb` (nav[aria-label] > ol >
+ * li, item atual = span[aria-current="page"], separador aria-hidden entre itens)
+ * restilizada ao brasa. Diff vs stock (esteira shadcn→brasa):
+ *   - API pública PRESERVADA: o consumidor passa `items: BreadcrumbItem[]`
+ *     ({label, href?}); a composição stock (Breadcrumb/List/Item/Link/Page/
+ *     Separator) fica encapsulada aqui dentro — as telas do painel não mudam;
+ *   - separador textual "/" (aria-hidden), não o ChevronRight do lucide: lucide
+ *     só entra no DS no Lote B (evita dep prematura);
+ *   - cores por alias: item atual `text-foreground` (= text-primary), separador
+ *     `text-muted-foreground` (= text-tertiary); links `text-[var(--text-secondary)]`
+ *     (sem alias) com hover `text-foreground` — todos na matriz (L87/L91/L94);
+ *   - foco/tipo/radius/motion por token.
+ *
+ * A11y: nav[aria-label="Breadcrumb"] + ordered list + aria-current="page" no
+ * último item (não clicável). §2.16 flat.
  */
 
 import { cn } from '../../utils/cn';
@@ -38,7 +49,7 @@ function Breadcrumb({ items, className }: BreadcrumbProps): JSX.Element {
               {index > 0 && (
                 <span
                   aria-hidden
-                  className="text-[var(--text-tertiary)] text-[length:var(--font-size-sm)] select-none"
+                  className="text-muted-foreground text-[length:var(--font-size-sm)] select-none"
                 >
                   /
                 </span>
@@ -48,7 +59,7 @@ function Breadcrumb({ items, className }: BreadcrumbProps): JSX.Element {
                   aria-current="page"
                   className={cn(
                     'text-[length:var(--font-size-sm)]',
-                    'text-[var(--text-primary)]',
+                    'text-foreground',
                     'font-[var(--font-weight-semibold)]',
                   )}
                 >
@@ -69,10 +80,10 @@ function Breadcrumb({ items, className }: BreadcrumbProps): JSX.Element {
                   className={cn(
                     'text-[length:var(--font-size-sm)]',
                     'text-[var(--text-secondary)]',
-                    'hover:text-[var(--text-primary)]',
+                    'hover:text-foreground',
                     'transition-colors duration-[var(--motion-duration-fast)]',
                     'focus-visible:outline-none focus-visible:ring-2',
-                    'focus-visible:ring-[color:var(--border-focus)]',
+                    'focus-visible:ring-ring',
                     'rounded-[var(--radius-sm)]',
                   )}
                 >

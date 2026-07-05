@@ -30,4 +30,15 @@ describe('Divider', () => {
     render(<Divider className="test-divider" />);
     expect(screen.getByRole('separator')).toHaveClass('test-divider');
   });
+
+  // ── Contrato Radix Separator (miolo shadcn) ──────────────────────────────
+  it('exposes data-orientation="horizontal" by default (Radix Separator)', () => {
+    render(<Divider />);
+    expect(screen.getByRole('separator')).toHaveAttribute('data-orientation', 'horizontal');
+  });
+
+  it('exposes data-orientation="vertical" when vertical', () => {
+    render(<Divider orientation="vertical" />);
+    expect(screen.getByRole('separator')).toHaveAttribute('data-orientation', 'vertical');
+  });
 });
