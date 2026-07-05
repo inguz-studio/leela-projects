@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import {
   atualizarClube,
+  criarClube,
   deletarClube,
   exportarDadosClube,
   getClube,
@@ -22,8 +23,12 @@ import {
   type DeletarClubeResult,
   type ExportarDadosClubeResult,
 } from '@leela/api-client';
-import type { Clube, Membro } from '@leela/core';
+import type { Clube, ClubeInput, Membro } from '@leela/core';
 import { useClubesSession } from './session';
+
+/** Porta real de CRIAÇÃO de clube (fix #14 — rota /clubes/novo). */
+export const criarClubePadrao = (input: ClubeInput): Promise<{ slug: string }> =>
+  criarClube(getLeelaDb(), input);
 
 /** Porta real de atualização de configurações do clube (write direto). */
 export const atualizarClubePadrao = (

@@ -33,6 +33,7 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import type {
   AcaoDesafio,
   Clube,
+  ClubeInput,
   Comunicado,
   Desafio,
   Membro,
@@ -135,6 +136,38 @@ export async function listMembros(
     query(collection(db, 'clubes', clubeId, 'membros'), ...constraints)
   );
   return snap.docs.map((d) => ({ ...(d.data() as Omit<Membro, 'id'>), id: d.id }));
+}
+
+// ---------------------------------------------------------------------------
+// Escrita — criação do clube (fix #14 do review Onda1: rota /clubes/novo).
+// Write direto: as Rules de `clubes/{id}` permitem create pelo papel de
+// escrita do tenant com agregados ∑ zerados + shape válido (nome 1..60,
+// modeloEntrada no enum). docId = slug (determinístico).
+// ---------------------------------------------------------------------------
+
+/**
+ * Cria um clube (docId = slug). Agregados ∑ nascem zerados — a Function os
+ * mantém dali em diante.
+ *
+ * Colisão de slug: setDoc sobre doc EXISTENTE vira update nas Rules e cai
+ * na guarda de identidade (ownerId/codigoConvite/slug/criadoEm imutáveis)
+ * → permission-denied. Não dá para pré-checar existência via getDoc (ler
+ * doc inexistente também nega); a tela traduz o erro sugerindo ajustar o
+ * nome/endereço.
+ */
+export async function criarClube(
+  db: Firestore,
+  input: ClubeInput
+): Promise<{ slug: string }> {
+  await setDoc(doc(db, 'clubes', input.slug), {
+    ...input,
+    id: input.slug,
+    qtdMembrosAtivos: 0,
+    qtdDesafiosAtivos: 0,
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
+  return { slug: input.slug };
 }
 
 // ---------------------------------------------------------------------------
@@ -268,6 +301,7 @@ export async function criarDesafio(
   if (input.minimoPorPilar && Object.keys(input.minimoPorPilar).length > 0) {
     data.minimoPorPilar = input.minimoPorPilar;
   }
+
   await setDoc(ref, data);
 
   await Promise.all(

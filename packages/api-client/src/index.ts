@@ -111,6 +111,10 @@ export type {
 export { getClube, listClubesByTenant, listClubesByOwner, listMembros } from './clubs';
 export type { ListMembrosOptions } from './clubs';
 
+// Clubs — criação do clube (fix #14 — rota /clubes/novo; write direto com
+// ∑ zerados, docId = slug).
+export { criarClube } from './clubs';
+
 // Clubs — atualização de configurações do clube (S110-T1 — write direto; slug e
 // agregados ∑ fora do patch).
 export { atualizarClube } from './clubs';
