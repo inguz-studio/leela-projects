@@ -319,15 +319,31 @@ describe('eventos — write cross-tenant e tenantId imutável (review #3)', () =
   });
 });
 
-// ── Shape: status fora do enum ────────────────────────────────────────────
+// ── Ciclo de vida: status é escrita EXCLUSIVA de Function (ADR-005) ───────
+//
+// Fix review Onda1 #18: `statusEventoValido` só checava o enum — a publicação
+// por updateDoc direto passava (e ERA consagrada como caminho feliz por esta
+// suíte), pulando completude/publicadoEm/URL/QR de `publicarEvento` e
+// permitindo encerrado→publicado. Agora: create nasce 'rascunho'; update de
+// cliente NÃO toca `status` — transição alguma, nem "válida".
 
-describe('shape de eventos — status válido obrigatório', () => {
+describe('ciclo de vida de eventos — cliente nunca grava status (review #18)', () => {
   it('cliente NÃO cria evento com status fora do enum', async () => {
     const db = marinaDb();
     await assertFails(
       setDoc(doc(db, 'eventos', 'evento-status-invalido'), {
         id: 'evento-status-invalido', tenantId: CASTELO_ID,
         organizadorId: MARINA_UID, nome: 'X', status: 'hackeado',
+      })
+    );
+  });
+
+  it('cliente NÃO cria evento já "publicado" (nasce rascunho — ADR-005)', async () => {
+    const db = marinaDb();
+    await assertFails(
+      setDoc(doc(db, 'eventos', 'evento-nasce-publicado'), {
+        id: 'evento-nasce-publicado', tenantId: CASTELO_ID,
+        organizadorId: MARINA_UID, nome: 'Fura Fila', status: 'publicado',
       })
     );
   });
@@ -339,10 +355,37 @@ describe('shape de eventos — status válido obrigatório', () => {
     );
   });
 
-  it('cliente atualiza status dentro do enum (rascunho → publicado ok no L1)', async () => {
+  it('rascunho → publicado por updateDoc direto é NEGADO (era o greenlight do L1)', async () => {
     const db = marinaDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { status: 'publicado' })
+    );
+  });
+
+  it('encerrado → publicado (ressurreição) é NEGADO', async () => {
+    await adminDb.doc(`eventos/${MARATONA_2027_ID}`).update({ status: 'encerrado' });
+    const db = marinaDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { status: 'publicado' })
+    );
+  });
+
+  it('update SEM tocar status segue permitido (campo comum + status intacto)', async () => {
+    const db = marinaDb();
+    await assertSucceeds(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { local: 'Jurerê, Floripa/SC' })
+    );
+    const snap = await getDoc(doc(db, 'eventos', MARATONA_2027_ID));
+    expect(snap.data()?.['status']).toBe('rascunho');
+  });
+
+  it('platform_admin segue corrigindo status (papel de plataforma)', async () => {
+    const db = ctxAs(PLATFORM_ADMIN_UID, {
+      role: 'platform_admin',
+    }).firestore() as unknown as Firestore;
     await assertSucceeds(
       updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { status: 'publicado' })
     );
   });
 });
+

@@ -202,7 +202,10 @@ service cloud.firestore {
     //   - agregados ∑ (qtdInscritos, receitaConfirmada) são de escrita
     //     EXCLUSIVA da Cloud Function (Admin SDK): create exige 0/ausente,
     //     update não pode tocá-los;
-    //   - status sempre dentro do enum {rascunho,publicado,ao_vivo,encerrado}.
+    //   - CICLO DE VIDA é de escrita EXCLUSIVA de Function (ADR-005 — fix
+    //     review Onda1 #18): create nasce 'rascunho'; update de cliente NÃO
+    //     toca `status`. Publicar/encerrar passam por `publicarEvento` &
+    //     afins (Admin SDK), que validam completude/publicadoEm/URL/QR.
     match /eventos/{eventoId} {
 
       /** Agregados ∑ nascem zerados (ou ausentes) — cliente nunca inventa contagem. */
@@ -217,9 +220,18 @@ service cloud.firestore {
           .hasAny(['qtdInscritos', 'receitaConfirmada']);
       }
 
-      /** Status dentro do ciclo de vida canônico do evento. */
-      function statusEventoValido() {
-        return request.resource.data.status in ['rascunho', 'publicado', 'ao_vivo', 'encerrado'];
+      /**
+       * ADR-005 (review #18): cliente NUNCA grava status. Create = sempre
+       * 'rascunho'; transições (publicado/ao_vivo/encerrado) são de Function.
+       */
+      function statusNasceRascunho() {
+        return request.resource.data.status == 'rascunho';
+      }
+
+      /** Update de cliente não TOCA `status` (transição é da Function). */
+      function statusIntocado() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status']);
       }
 
       /**
@@ -239,13 +251,13 @@ service cloud.firestore {
       allow create: if (isTenantWriter(request.resource.data.tenantId)
                         && tenantAtivo(request.resource.data.tenantId)
                         && eventoAgregadosZerados()
-                        && statusEventoValido())
+                        && statusNasceRascunho())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
                         && eventoAgregadosIntocados()
-                        && statusEventoValido()
+                        && statusIntocado()
                         && percursosEditaveis())
                     || isPlatformAdmin();
       allow delete: if (isTenantWriter(resource.data.tenantId)
