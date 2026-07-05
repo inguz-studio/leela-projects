@@ -8,7 +8,7 @@
 // primeiras páginas de cada evento (ver SUMMARY §handoff sobre a query CG).
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   getLeelaDb,
   getOverview,
@@ -25,6 +25,9 @@ export interface AsyncState<T> {
   loading: boolean;
   error: Error | null;
 }
+
+/** Estado assíncrono + recarga manual (retry honesto sobre erro — FIX-E02 #03). */
+export type Refetchable<S> = S & { refetch: () => void };
 
 /** Tipo de erro do callable getOverview — a UI mostra a mensagem adequada. */
 export type OverviewErrorKind = 'unauthenticated' | 'permission-denied' | 'unknown';
@@ -44,13 +47,15 @@ function classificarErro(error: unknown): OverviewErrorKind {
  * KPIs + alertas consolidados via `getOverview` (contrato único).
  * Só dispara com sessão autenticada; trata unauthenticated/permission-denied.
  */
-export function useOverview(session: OverviewSession): OverviewState {
+export function useOverview(session: OverviewSession): Refetchable<OverviewState> {
   const [state, setState] = useState<OverviewState>({
     data: null,
     loading: true,
     error: null,
     errorKind: null,
   });
+  const [tick, setTick] = useState(0);
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (session.status === 'loading') return;
@@ -77,18 +82,20 @@ export function useOverview(session: OverviewSession): OverviewState {
     return () => {
       ativo = false;
     };
-  }, [session.status, session.uid]);
+  }, [session.status, session.uid, tick]);
 
-  return state;
+  return { ...state, refetch };
 }
 
 /** Lista de eventos do produtor logado (fonte de S601-T1 e do countdown S602-T1). */
-export function useEventosProdutor(session: OverviewSession): AsyncState<Evento[]> {
+export function useEventosProdutor(session: OverviewSession): Refetchable<AsyncState<Evento[]>> {
   const [state, setState] = useState<AsyncState<Evento[]>>({
     data: null,
     loading: true,
     error: null,
   });
+  const [tick, setTick] = useState(0);
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (session.status === 'loading') return;
@@ -107,9 +114,9 @@ export function useEventosProdutor(session: OverviewSession): AsyncState<Evento[
     return () => {
       ativo = false;
     };
-  }, [session.status, session.uid, session.tenantId]);
+  }, [session.status, session.uid, session.tenantId, tick]);
 
-  return state;
+  return { ...state, refetch };
 }
 
 /**
@@ -121,13 +128,16 @@ export function useEventosProdutor(session: OverviewSession): AsyncState<Evento[
  */
 export function useInscricoesRecentes(
   eventos: Evento[] | null,
+  eventosError: Error | null = null,
   porEvento = 10
-): AsyncState<InscricaoRecenteInput[]> {
+): Refetchable<AsyncState<InscricaoRecenteInput[]>> {
   const [state, setState] = useState<AsyncState<InscricaoRecenteInput[]>>({
     data: null,
     loading: true,
     error: null,
   });
+  const [tick, setTick] = useState(0);
+  const refetch = useCallback(() => setTick((t) => t + 1), []);
 
   // Chave estável dos eventos ativos (evita refetch por refs novas)
   const chave = (eventos ?? [])
@@ -136,7 +146,17 @@ export function useInscricoesRecentes(
     .join(',');
 
   useEffect(() => {
-    if (eventos === null) return;
+    // Erro da fonte-mãe (eventos) NÃO deixa este bloco em skeleton eterno (#39):
+    // propaga como erro real em vez de travar em loading.
+    if (eventosError) {
+      setState({ data: null, loading: false, error: eventosError });
+      return;
+    }
+    if (eventos === null) {
+      // eventos ainda carregando (ou recarregando via retry) → reflete loading.
+      setState({ data: null, loading: true, error: null });
+      return;
+    }
     const ativos = eventos.filter((e) => e.status !== 'encerrado');
     if (ativos.length === 0) {
       setState({ data: [], loading: false, error: null });
@@ -171,8 +191,9 @@ export function useInscricoesRecentes(
       ativo = false;
     };
     // Deps intencionais: `chave` (ids dos eventos ativos) estabiliza o refetch;
-    // `eventos` como ref muda a cada render e causaria loop.
-  }, [chave, porEvento]);
+    // `eventos` como ref muda a cada render e causaria loop. `eventosError` e
+    // `tick` (retry) completam as transições de estado honestas.
+  }, [chave, porEvento, eventosError, tick]);
 
-  return state;
+  return { ...state, refetch };
 }

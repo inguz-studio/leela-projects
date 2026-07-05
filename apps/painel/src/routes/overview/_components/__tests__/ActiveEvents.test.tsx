@@ -40,4 +40,23 @@ describe('ActiveEvents (S601-T1)', () => {
     render(<ActiveEvents eventos={[]} loading={false} onGerenciar={vi.fn()} onNovoEvento={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Crie seu primeiro evento' })).toBeInTheDocument();
   });
+
+  it('erro ≠ vazio ≠ carregando: erro mostra retry, nunca o CTA de criar (#03)', async () => {
+    const onRetry = vi.fn();
+    render(
+      <ActiveEvents
+        eventos={null}
+        loading={false}
+        error
+        onRetry={onRetry}
+        onGerenciar={vi.fn()}
+        onNovoEvento={vi.fn()}
+      />
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar seus eventos.');
+    expect(screen.queryByRole('button', { name: 'Crie seu primeiro evento' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Carregando eventos' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });

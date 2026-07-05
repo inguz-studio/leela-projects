@@ -7,15 +7,22 @@
 
 import { Badge, Skeleton } from '@leela/design-system';
 import type { InscricaoRecenteView } from '../_lib/recentRegistrations';
+import { PanelError } from './PanelError';
 
 export interface RecentRegistrationsProps {
   inscricoes: InscricaoRecenteView[] | null;
   loading: boolean;
+  /** Falha ao carregar (própria ou herdada da lista de eventos) — não trava
+   *  em skeleton eterno nem finge "nenhuma inscrição" (#03/#39). */
+  error?: boolean;
+  onRetry?: (() => void) | undefined;
 }
 
 export function RecentRegistrations({
   inscricoes,
   loading,
+  error,
+  onRetry,
 }: RecentRegistrationsProps): JSX.Element {
   return (
     <section aria-label="Últimas inscrições" className="flex flex-col gap-[var(--spacing-3)]">
@@ -33,6 +40,8 @@ export function RecentRegistrations({
             <Skeleton key={i} variant="text" />
           ))}
         </div>
+      ) : error ? (
+        <PanelError message="Não foi possível carregar as inscrições." onRetry={onRetry} />
       ) : !inscricoes || inscricoes.length === 0 ? (
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           Nenhuma inscrição recente.

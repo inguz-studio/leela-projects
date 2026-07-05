@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { RecentRegistrations } from '../RecentRegistrations';
 import { derivarInscricoesRecentes } from '../../_lib/recentRegistrations';
 import { mkInscricao, ts } from '../../_test/fixtures';
@@ -27,5 +28,15 @@ describe('RecentRegistrations (S601-T2)', () => {
   it('vazio → mensagem', () => {
     render(<RecentRegistrations inscricoes={[]} loading={false} />);
     expect(screen.getByText('Nenhuma inscrição recente.')).toBeInTheDocument();
+  });
+
+  it('erro → mostra erro com retry, nunca skeleton eterno nem "nenhuma" (#39)', async () => {
+    const onRetry = vi.fn();
+    render(<RecentRegistrations inscricoes={null} loading={false} error onRetry={onRetry} />);
+    expect(screen.getByText('Não foi possível carregar as inscrições.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma inscrição recente.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Carregando inscrições' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });

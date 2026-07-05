@@ -8,10 +8,14 @@
 import { Button, Skeleton } from '@leela/design-system';
 import type { CountdownView } from '../_lib/countdown';
 import { formatInt } from '../_lib/format';
+import { PanelError } from './PanelError';
 
 export interface CountdownProps {
   countdown: CountdownView | null;
   loading: boolean;
+  /** Falha ao listar eventos — nunca fabricar "Nenhum evento agendado" (#03). */
+  error?: boolean;
+  onRetry?: (() => void) | undefined;
   onNavigate: (href: string) => void;
   onNovoEvento: () => void;
 }
@@ -19,6 +23,8 @@ export interface CountdownProps {
 export function Countdown({
   countdown,
   loading,
+  error,
+  onRetry,
   onNavigate,
   onNovoEvento,
 }: CountdownProps): JSX.Element {
@@ -34,6 +40,8 @@ export function Countdown({
             <Skeleton variant="text" />
             <Skeleton variant="rect" className="h-10" />
           </div>
+        ) : error ? (
+          <PanelError message="Não foi possível carregar o próximo evento." onRetry={onRetry} />
         ) : !countdown ? (
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             Nenhum evento agendado.

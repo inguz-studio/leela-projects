@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { AlertsPanel } from '../AlertsPanel';
 import { mkAlert } from '../../_test/fixtures';
 
@@ -27,5 +28,20 @@ describe('AlertsPanel (S602-T2)', () => {
   it('loading → skeleton', () => {
     render(<AlertsPanel alerts={null} loading />);
     expect(screen.getByRole('status', { name: 'Carregando alertas' })).toBeInTheDocument();
+  });
+
+  it('erro → NÃO fabrica "Tudo em dia"; mostra erro com retry (#03)', async () => {
+    const onRetry = vi.fn();
+    render(<AlertsPanel alerts={null} loading={false} error onRetry={onRetry} />);
+    expect(screen.queryByText('Tudo em dia. Nenhum alerta.')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar os alertas.');
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('erro sem retry (permission-denied) → mensagem sem botão', () => {
+    render(<AlertsPanel alerts={null} loading={false} error />);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
   });
 });

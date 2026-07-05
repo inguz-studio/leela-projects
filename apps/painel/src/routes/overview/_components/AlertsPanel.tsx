@@ -9,10 +9,14 @@
 
 import { Skeleton, cn } from '@leela/design-system';
 import type { OverviewAlert, SeveridadeAlerta } from '@leela/core';
+import { PanelError } from './PanelError';
 
 export interface AlertsPanelProps {
   alerts: OverviewAlert[] | null;
   loading: boolean;
+  /** Falha do getOverview — nunca fabricar "Tudo em dia" sobre erro (#03). */
+  error?: boolean;
+  onRetry?: (() => void) | undefined;
 }
 
 const BORDA_SEVERIDADE: Record<SeveridadeAlerta, string> = {
@@ -21,7 +25,7 @@ const BORDA_SEVERIDADE: Record<SeveridadeAlerta, string> = {
   ok: '',
 };
 
-export function AlertsPanel({ alerts, loading }: AlertsPanelProps): JSX.Element {
+export function AlertsPanel({ alerts, loading, error, onRetry }: AlertsPanelProps): JSX.Element {
   return (
     <section aria-label="Alertas operacionais" className="flex flex-col gap-[var(--spacing-3)]">
       <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
@@ -34,6 +38,8 @@ export function AlertsPanel({ alerts, loading }: AlertsPanelProps): JSX.Element 
             <Skeleton key={i} variant="rect" className="h-14" />
           ))}
         </div>
+      ) : error ? (
+        <PanelError message="Não foi possível carregar os alertas." onRetry={onRetry} />
       ) : !alerts || alerts.length === 0 ? (
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           Tudo em dia. Nenhum alerta.

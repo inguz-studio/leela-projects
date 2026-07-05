@@ -38,4 +38,15 @@ describe('Countdown (S602-T1)', () => {
     render(<Countdown countdown={null} loading onNavigate={vi.fn()} onNovoEvento={vi.fn()} />);
     expect(screen.getByRole('status', { name: 'Carregando próximo evento' })).toBeInTheDocument();
   });
+
+  it('erro → mostra erro com retry, nunca "Nenhum evento agendado" (#03)', async () => {
+    const onRetry = vi.fn();
+    render(
+      <Countdown countdown={null} loading={false} error onRetry={onRetry} onNavigate={vi.fn()} onNovoEvento={vi.fn()} />
+    );
+    expect(screen.getByText('Não foi possível carregar o próximo evento.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum evento agendado.')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
 });

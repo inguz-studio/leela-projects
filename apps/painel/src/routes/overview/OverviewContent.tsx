@@ -5,7 +5,7 @@
 // (S602-T2). Viewport estreito → 1 coluna (grid colapsa).
 // =============================================================================
 
-import { Skeleton } from '@leela/design-system';
+import { Button, Skeleton } from '@leela/design-system';
 import type { OverviewAlert, OverviewKPIs } from '@leela/core';
 import { KpiRow } from './_components/KpiRow';
 import { ActiveEvents } from './_components/ActiveEvents';
@@ -21,11 +21,18 @@ export interface OverviewContentProps {
   kpis: OverviewKPIs | null;
   kpisLoading: boolean;
   kpisError: OverviewErrorKind | null;
+  /** Recarrega getOverview (KPIs + alertas partilham a fonte). */
+  onRetryOverview?: (() => void) | undefined;
   alerts: OverviewAlert[] | null;
   eventos: EventoAtivoView[] | null;
   eventosLoading: boolean;
+  /** Falha ao listar eventos (alimenta ActiveEvents + Countdown). */
+  eventosError?: boolean;
+  onRetryEventos?: (() => void) | undefined;
   inscricoes: InscricaoRecenteView[] | null;
   inscricoesLoading: boolean;
+  inscricoesError?: boolean;
+  onRetryInscricoes?: (() => void) | undefined;
   countdown: CountdownView | null;
   countdownLoading: boolean;
   onNavigate: (href: string) => void;
@@ -57,11 +64,16 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
     kpis,
     kpisLoading,
     kpisError,
+    onRetryOverview,
     alerts,
     eventos,
     eventosLoading,
+    eventosError,
+    onRetryEventos,
     inscricoes,
     inscricoesLoading,
+    inscricoesError,
+    onRetryInscricoes,
     countdown,
     countdownLoading,
     onNavigate,
@@ -77,9 +89,14 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         ) : kpisError ? (
           <div
             role="alert"
-            className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
+            className="flex flex-col items-start gap-[var(--spacing-3)] rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
           >
-            {MSG_ERRO[kpisError]}
+            <span>{MSG_ERRO[kpisError]}</span>
+            {kpisError === 'unknown' && onRetryOverview ? (
+              <Button variant="secondary" size="sm" onClick={onRetryOverview}>
+                Tentar novamente
+              </Button>
+            ) : null}
           </div>
         ) : kpis ? (
           <KpiRow kpis={kpis} />
@@ -88,11 +105,18 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         <ActiveEvents
           eventos={eventos}
           loading={eventosLoading}
+          error={eventosError ?? false}
+          onRetry={onRetryEventos}
           onGerenciar={(slug) => onNavigate(`/eventos/${slug}`)}
           onNovoEvento={onNovoEvento}
         />
 
-        <RecentRegistrations inscricoes={inscricoes} loading={inscricoesLoading} />
+        <RecentRegistrations
+          inscricoes={inscricoes}
+          loading={inscricoesLoading}
+          error={inscricoesError ?? false}
+          onRetry={onRetryInscricoes}
+        />
       </div>
 
       {/* Coluna lateral (1/3) */}
@@ -100,10 +124,17 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
         <Countdown
           countdown={countdown}
           loading={countdownLoading}
+          error={eventosError ?? false}
+          onRetry={onRetryEventos}
           onNavigate={onNavigate}
           onNovoEvento={onNovoEvento}
         />
-        <AlertsPanel alerts={alerts} loading={kpisLoading} />
+        <AlertsPanel
+          alerts={alerts}
+          loading={kpisLoading}
+          error={kpisError !== null}
+          onRetry={kpisError === 'unknown' ? onRetryOverview : undefined}
+        />
       </aside>
     </div>
   );

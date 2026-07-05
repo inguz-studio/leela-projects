@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { OverviewContent, type OverviewContentProps } from '../OverviewContent';
 import { mkKpis } from '../_test/fixtures';
 
@@ -36,7 +37,44 @@ describe('OverviewContent (S600-T1 layout)', () => {
 
   it('permission-denied → mensagem de erro sem quebrar', () => {
     render(<OverviewContent {...props({ kpis: null, kpisError: 'permission-denied' })} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('não tem um painel de produtor');
+    expect(screen.getByText(/não tem um painel de produtor/i)).toBeInTheDocument();
+    // Alertas NÃO fabricam "Tudo em dia" sobre erro (#03).
+    expect(screen.queryByText('Tudo em dia. Nenhum alerta.')).not.toBeInTheDocument();
+  });
+
+  it('unknown com retry → botão "Tentar novamente" recarrega o resumo (#03)', async () => {
+    const onRetryOverview = vi.fn();
+    render(<OverviewContent {...props({ kpis: null, kpisError: 'unknown', onRetryOverview })} />);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Tentar novamente' })[0]!);
+    expect(onRetryOverview).toHaveBeenCalled();
+  });
+
+  it('erro de eventos → ActiveEvents/Countdown mostram erro, não empty fabricado (#03)', () => {
+    render(
+      <OverviewContent {...props({ eventos: null, eventosError: true, countdown: null })} />
+    );
+    expect(
+      screen.getByText('Não foi possível carregar seus eventos.')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Não foi possível carregar o próximo evento.')
+    ).toBeInTheDocument();
+    // Estados felizes fabricados NÃO aparecem sobre erro.
+    expect(
+      screen.queryByRole('button', { name: 'Crie seu primeiro evento' })
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhum evento agendado.')).not.toBeInTheDocument();
+  });
+
+  it('erro de inscrições → RecentRegistrations mostra erro, não "nenhuma" nem skeleton (#39)', () => {
+    render(
+      <OverviewContent {...props({ inscricoes: null, inscricoesError: true })} />
+    );
+    expect(screen.getByText('Não foi possível carregar as inscrições.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma inscrição recente.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('status', { name: 'Carregando inscrições' })
+    ).not.toBeInTheDocument();
   });
 
   it('renderiza KPIs quando disponíveis', () => {

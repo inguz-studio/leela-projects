@@ -45,7 +45,8 @@ export function OverviewPage(): JSX.Element {
   const session = useOverviewSession();
   const overview = useOverview(session);
   const eventosState = useEventosProdutor(session);
-  const inscricoesState = useInscricoesRecentes(eventosState.data);
+  // Erro dos eventos é propagado: quebra o skeleton eterno das inscrições (#39).
+  const inscricoesState = useInscricoesRecentes(eventosState.data, eventosState.error);
 
   const eventosInput = useMemo(
     () => (eventosState.data ?? []).map(comCapacidade),
@@ -73,11 +74,18 @@ export function OverviewPage(): JSX.Element {
         kpis={overview.data}
         kpisLoading={overview.loading}
         kpisError={overview.error ? overview.errorKind : null}
+        onRetryOverview={overview.refetch}
         alerts={overview.data?.alerts ?? null}
         eventos={eventosAtivos}
         eventosLoading={eventosState.loading}
+        eventosError={eventosState.error !== null}
+        onRetryEventos={eventosState.refetch}
         inscricoes={inscricoes}
         inscricoesLoading={inscricoesState.loading}
+        inscricoesError={inscricoesState.error !== null}
+        // Retry aponta para a raiz: se os eventos falharam, recarrega eventos
+        // (as inscrições re-derivam); senão recarrega só as inscrições.
+        onRetryInscricoes={eventosState.error ? eventosState.refetch : inscricoesState.refetch}
         countdown={countdown}
         countdownLoading={eventosState.loading}
         onNavigate={(href) => navigate(href)}

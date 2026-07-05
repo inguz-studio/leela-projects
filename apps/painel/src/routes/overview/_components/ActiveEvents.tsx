@@ -9,6 +9,7 @@ import { Badge, Button, EmptyState, Skeleton, type BadgeProps } from '@leela/des
 import type { StatusEvento } from '@leela/core';
 import type { EventoAtivoView } from '../_lib/activeEvents';
 import { formatInt } from '../_lib/format';
+import { PanelError } from './PanelError';
 
 interface StatusInfo {
   label: string;
@@ -25,6 +26,9 @@ const STATUS: Record<StatusEvento, StatusInfo> = {
 export interface ActiveEventsProps {
   eventos: EventoAtivoView[] | null;
   loading: boolean;
+  /** Falha ao listar eventos — nunca fabricar "crie seu primeiro evento" (#03). */
+  error?: boolean;
+  onRetry?: (() => void) | undefined;
   onGerenciar: (slug: string) => void;
   onNovoEvento: () => void;
 }
@@ -39,6 +43,8 @@ function ocupacaoLabel(view: EventoAtivoView): string {
 export function ActiveEvents({
   eventos,
   loading,
+  error,
+  onRetry,
   onGerenciar,
   onNovoEvento,
 }: ActiveEventsProps): JSX.Element {
@@ -58,6 +64,8 @@ export function ActiveEvents({
             <Skeleton key={i} variant="rect" className="h-16" />
           ))}
         </div>
+      ) : error ? (
+        <PanelError message="Não foi possível carregar seus eventos." onRetry={onRetry} />
       ) : !eventos || eventos.length === 0 ? (
         <EmptyState
           title="Você ainda não tem eventos ativos"
