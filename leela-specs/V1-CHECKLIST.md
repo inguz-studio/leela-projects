@@ -128,67 +128,110 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 ## Onda 2 · Vender
 
-Página de vendas (lotes/cupons), checkout público, afiliação + split + painel self-service do promotor, comunicação do evento. Fecha o ciclo descobrir → pagar → receita.
+**Revisada em 2026-07-05** (decisões de escopo 2026-07-04 + `.nirvana/plans/onda2-decisoes.md`). Página de vendas (lotes/cupons simples), equipe/papéis, checkout público ponta a ponta (sandbox), repasses-slim, estados de sistema web, comunicação do evento (só campanhas), coleta E11 + backend do desafio. **Sem afiliados neste início**: S301/S303 removidas, S1204 reduzida a cupom, E08 adiado. Fecha o ciclo descobrir → pagar → receita.
 
-### LEELA-E04 · Configuração e vendas (completo)
+### LEELA-E04-slim · Configuração e vendas (sem afiliação; cupons simples) — brief `onda2-E04-lotes.md`
 
-- [ ] LEELA-S300-T1 — Modelo `paginaVendas` + `lotes` + `cupons` + Rules + seed
-- [ ] LEELA-S300-T2 — Function de virada de lote (RN-300) + preço vigente por percurso
-- [ ] LEELA-S300-T3 — Tela editor de conteúdo da página (seções + SEO + publicar)
+- [ ] LEELA-S300-T1 — Modelo `paginaVendas` + `lotes` + `cupons` simples (sem afiliado) + Rules + seed
+- [ ] LEELA-S300-T2 — Function de virada de lote (RN-300) + preço vigente por percurso + guard RN-200
+- [ ] LEELA-S300-T3 — Tela editor de conteúdo da página (seções web/app + SEO + publicar)
 - [ ] LEELA-S300-T4 — Modal de lote (virada por data/quantidade, preços por percurso)
-- [ ] LEELA-S300-T5 — Modal de cupom (código, tipo, valor, teto, validade)
-- [ ] LEELA-S300-T6 — Modal de percurso (preço independente por percurso)
-- [ ] LEELA-S301-T1 — Modelo `programaAfiliacao` + `afiliados` + Rules + seed
-- [ ] LEELA-S301-T2 — Interface `PaymentProvider` em core + provider mock/sandbox (ADR-006)
-- [ ] LEELA-S301-T3 — Function de conversão + atribuição por link master + split idempotente
-- [ ] LEELA-S301-T4 — Tela Promotores (lista de afiliados: conversões, cliques, comissão)
-- [ ] LEELA-S301-T5 — Modal Configurar programa (%, janela, teto, cupom)
-- [ ] LEELA-S301-T6 — Modal Convidar afiliado (clube ou promotor)
-- [ ] LEELA-S301-T7 — Tela Detalhe do afiliado (link master, cupom, conversões, a receber)
-- [ ] LEELA-S302-T1 — Tela Financeiro com repasses de afiliados (estende S207)
-- [ ] LEELA-S302-T2 — Function de agregado de repasse + payout via `getPayout`
-- [ ] LEELA-S303-T1 — Marcar comunicação do evento como escopo de E06 (rastreabilidade)
-- [ ] LEELA-S304-T1 — Modelo `equipe` + 4 papéis (RN-320) + custom claims + Rules
+- [ ] LEELA-S300-T5 — Modal de cupom simplificado (código, tipo, tetoDesconto, validade, usosMax)
+- [ ] LEELA-S300-T6 — Modal de percurso (preço independente por percurso, RN-301)
+- [ ] LEELA-S304-T1 — Modelo `equipe` + 4 papéis (RN-320) + matriz `podeAcessar` + custom claims por evento + Rules
 - [ ] LEELA-S304-T2 — Tela Configurações gerais do evento
 - [ ] LEELA-S304-T3 — Tela Equipe e permissões (4 papéis)
+- [ ] LEELA-E04-PAY-T1 — DI seam de payments + suíte de conformance provider-agnóstica
+- [ ] LEELA-E04-PAY-T2 — Adapter concreto do gateway em sandbox — **gated na escolha do gateway (Vitor)**
 
-### LEELA-E08 · Painel do influenciador (recorte V1 — self-service do promotor)
+Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-slim · ~~S303-T1~~ → E06 · S305/S306 → Onda 3.
 
-- [ ] LEELA-S701-T1 — Rota + shell + hub de KPIs do promotor
-- [ ] LEELA-S702-T1 — Lista de eventos elegíveis + aceitar afiliação (gera link/cupom)
-- [ ] LEELA-S703-T1 — Tabela de conversões com filtros e atribuição por janela
-- [ ] LEELA-S704-T1 — Painel financeiro do promotor sobre o split do PaymentProvider
+### LEELA-E12 · Landing + checkout público (recorte sem afiliação) — brief `onda2-E12-lotes.md`
 
-### LEELA-E12 · Landing pública (completo)
-
-- [ ] LEELA-S1200-T1 — Scaffold `apps/landing` (SSR/ISR) + layout público + ThemeProvider
-- [ ] LEELA-S1200-T2 — Leitor público server-side + gate de publicação/visibilidade
-- [ ] LEELA-S1201-T1 — Rota SSR/ISR do evento + renderizador de seções por configuração
-- [ ] LEELA-S1201-T2 — Componentes de seção (Hero, Modalidades, Kits, Retirada, FAQ, Percurso, Patrocinadores, Depoimentos)
-- [ ] LEELA-S1201-T3 — Estados públicos do evento (rascunho→404, encerrado, esgotado) + bloco compartilhar/QR
+- [ ] LEELA-E12-L0-T1 — `core/checkout/serviceFee.ts` (taxa incorporada × não incorporada, teste falsificável)
+- [ ] LEELA-E12-L0-T2 — `core/checkout/installments.ts` (parcelamento só cartão, sobre `buildInstallmentOptions`)
+- [ ] LEELA-S1200-T1 — Formalizar `apps/landing` (layout público, ThemeProvider leela, convenção ISR)
+- [ ] LEELA-S1200-T2 — Leitor público server-side + gate publicação/visibilidade + Rules + core-checkout puro (steps/validateDados/saleState)
+- [ ] LEELA-S1201-T1 — Rota SSR/ISR do evento + `SectionRenderer` por configuração
+- [ ] LEELA-S1201-T2 — Componentes de seção (Hero, Modalidades, Kits, Retirada, FAQ, Percurso, Patrocinadores, Depoimentos) + `BannerHero`/`CardKit` no DS
+- [ ] LEELA-S1201-T3 — Estados públicos do evento (rascunho→404, encerrado, esgotado) + ShareBlock URL/QR
 - [ ] LEELA-S1202-T1 — Rota SSR/ISR do clube com gate de visibilidade (RN-140)
-- [ ] LEELA-S1202-T2 — Conteúdo da página do clube (hero, bio, desafios públicos, eventos afiliados)
-- [ ] LEELA-S1203-T1 — Rota + máquina de estado do Stepper (5 etapas) + preservação de contexto
-- [ ] LEELA-S1203-T2 — Etapa Dados (formulário do atleta anônimo + validação)
-- [ ] LEELA-S1203-T3 — Etapa Modalidade/Kit (preço vigente; "Sem kit"; RN-216)
-- [ ] LEELA-S1203-T4 — Etapa Resumo (order summary + aplicação de cupom)
-- [ ] LEELA-S1203-T5 — Etapa Pagamento (`PaymentProvider.createCharge`, Pix/cartão)
-- [ ] LEELA-S1203-T6 — Confirmação + webhook idempotente (inscrito→confirmado, ∑ receita)
-- [ ] LEELA-S1204-T1 — Captura de link master (`?c=`) + cookie de atribuição por janela
-- [ ] LEELA-S1204-T2 — Validação e resolução de cupom de afiliado
-- [ ] LEELA-S1204-T3 — Function de conversão + split (∑ conversoes/valorAReceber, janela, teto)
+- [ ] LEELA-S1202-T2 — Conteúdo da página do clube (hero, bio, KPIs, desafios públicos, CTA — **sem** bloco de eventos afiliados)
 - [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event
 - [ ] LEELA-S1205-T2 — `sitemap.ts` + `robots.ts` (eventos publicados + clubes indexáveis)
+- [ ] LEELA-S1203-T1 — Rota + máquina de estado do Stepper (5 etapas, sem etapa de entrega)
+- [ ] LEELA-S1203-T2 — Etapa Dados (formulário do atleta anônimo + validação)
+- [ ] LEELA-S1203-T3 — Etapa Modalidade/Kit (preço vigente; "Sem kit" negativo RN-211; RN-216)
+- [ ] LEELA-S1203-T4 — Etapa Resumo (linha de taxa condicional + parcelamento + cupom)
+- [ ] LEELA-S1207-T3 — Compliance na etapa Dados (contato de emergência + aceite de regulamento ≠ LGPD, por inscrito)
+- [ ] LEELA-S1204-T2 — `validateCoupon` server-side (cupom de evento, sem afiliadoRef; consome S300-T1)
+- [ ] LEELA-S1207-T2 — `validateInscrito` core puro (RN-145/148)
+- [ ] LEELA-S1207-T1 — Persistência dos 3 campos de compliance ao criar inscrito
+- [ ] LEELA-S1203-T5 — `createInscricaoCharge` + `pedidos/{id}` (ADR-011) + sandbox provider
+- [ ] LEELA-S1203-T6 — Webhook idempotente (inscrito→confirmado, ∑ via `agregarFinanceiro` do E03)
+- [ ] LEELA-S1206-T1 — `qrToken` assinado + emissão idempotente do ingresso por inscrito
+- [ ] LEELA-S1206-T2 — Log de notificações (`hasSent`/`markSent`) + Rules
+- [ ] LEELA-S1206-T3 — Interface `EmailProvider` + sandbox + disparo ao responsável do pedido
+- [ ] LEELA-S1206-T4 — Template de e-mail de marca + `renderTicketPdf` sob demanda
 
-### LEELA-E06 · Marketing (recorte V1 — só comunicação do evento, push/email segmentado)
+Removidas (sem afiliados): ~~S1204-T1~~, ~~S1204-T3~~. Deferida V1.1: S1208 (portal público do organizador).
 
-Só a frente de comunicação segmentada do evento (Campanhas). A rede de parceiros de marketing (S400) e as automações (S402) ficam fora da V1. S400-T2 entra só como shell mínimo para hospedar Campanhas.
+### LEELA-E09-slim · Repasses do organizador — brief `onda2-E09slim-lotes.md`
 
-- [ ] LEELA-S400-T2 — Shell de Marketing (sub-nav interna §2.14) — recorte: shell para hospedar Campanhas, sem a sub-tela Parceiros
-- [ ] LEELA-S401-T1 — Modelo `campanhas` + segmento derivado de inscritos + estimativa de alcance + Rules
-- [ ] LEELA-S401-T2 — Sub-tela Campanhas (lista por estado, alcance/aberturas, filtros)
-- [ ] LEELA-S401-T3 — Editor "Nova campanha" (canal, capa, segmento, estimativa ao vivo, variáveis)
-- [ ] LEELA-S401-T4 — Function `enviarCampanha` + agregado de alcance/aberturas (limite push, idempotente)
+Vendido/disponível/retido + dados bancários LGPD + solicitação validada + retenção 15% (editável platform_admin) + comprovante numerado + histórico. "Pago" é registro manual mock (RN-356).
+
+- [ ] LEELA-E09s-L1-T1 — Modelo de dados tenant-scoped (dadosBancarios/secret, repasses, saldo, retenção) + doc
+- [ ] LEELA-E09s-L1-T2 — Security Rules (cross-tenant nega, secret read:false, escrita só Function)
+- [ ] LEELA-E09s-L1-T3 — Core puro (computeRetido/computeSaldoRepasse/validarSolicitacao/transitionRepasse/comprovante)
+- [ ] LEELA-E09s-L2-T1 — `updateSaldoRepasse` (trigger idempotente sobre financeiro/current + repasses)
+- [ ] LEELA-E09s-L2-T2 — `saveDadosBancarios` (cifra AES-256-GCM server-side, retorna só mascarado)
+- [ ] LEELA-E09s-L2-T3 — `requestRepasse` (validação transacional RN-352) + `cancelRepasse` (owner)
+- [ ] LEELA-E09s-L2-T4 — Transições admin (approve/reject/markPago) + comprovante gapless + `setRetencaoRepasse`
+- [ ] LEELA-E09s-L2-T5 — `getBankDetailsForPayout` auditado (LGPD)
+- [ ] LEELA-E09s-L2-T6 — `encerrarEventos` cron 03:10 (gatilho `evento→encerrado`, libera retenção — ADR-007)
+- [ ] LEELA-E09s-L3-T1 — Rota + 3 cards vendido/disponível/retido (lê só `saldo/current`)
+- [ ] LEELA-E09s-L3-T2 — Form de dados bancários (exibe só mascarado)
+- [ ] LEELA-E09s-L3-T3 — Modal solicitar repasse (espelho client de RN-352, servidor autoritativo)
+- [ ] LEELA-E09s-L3-T4 — Histórico + comprovante numerado com aviso de registro manual
+- [ ] LEELA-E09s-L4-T1 — Back-office: fila de repasses cross-tenant + aprovar/recusar + editor de retenção
+- [ ] LEELA-E09s-L4-T2 — Back-office: registrar pagamento (dados auditados + comprovante)
+
+### LEELA-E07-web · Estados de sistema web (404 · 500 · 403) — brief `onda2-E07web-lotes.md`
+
+- [ ] LEELA-E07w-T1 — `SystemStateScreen` (web) no Design System (5 variants, 3 ligadas)
+- [ ] LEELA-E07w-T2 — 404 no Painel (catch-all React Router, com shell)
+- [ ] LEELA-E07w-T3 — 404 na Landing + guarda SEO rascunho→HTTP 404
+- [ ] LEELA-E07w-T4 — 500 no Painel (ErrorBoundary raiz + segmento + Sentry eventId)
+- [ ] LEELA-E07w-T5 — 500 na Landing (`error.tsx` + upgrade `global-error.tsx`)
+- [ ] LEELA-E07w-T6 — 403 no Painel (guarda por papel via `podeAcessar` de E04-S304)
+
+Débito V1.1: offline (S503) + manutenção (S504) web; mobile inteiro na onda E13.
+
+### LEELA-E06 · Comunicação do evento (recorte V1 — só Campanhas) — brief `onda2-E06-lotes.md`
+
+- [ ] LEELA-E06-L1-T1 — Extração camadas A/B → `core/comunicacao` + `functions/shared` (re-point do clube, baseline 531 verde)
+- [ ] LEELA-S401-T1 — Modelo `campanhas` + taxonomia de segmento do evento + Rules + api-client + seed
+- [ ] LEELA-E06-L2-T1 — `estimarAlcance` (callable `count()` sobre inscritos por segmento)
+- [ ] LEELA-S401-T4 — `enviarCampanha` idempotente + limite push RN-133 (disparo físico mock)
+- [ ] LEELA-E06-L3-T1 — Aba "Comunicação" aditiva na sub-nav + rota + shell fino + teste-guarda
+- [ ] LEELA-S401-T2 — Lista de campanhas por estado (RN-130) + filtros + popover
+- [ ] LEELA-S401-T3 — Editor "Nova campanha" (canal, capa só-email, segmento, estimativa ao vivo, truncamento 160)
+
+Cortadas: S400 (parceiros/afiliação), S402 (automações → Onda 3), `aberturasPct`, segmento `por_engajamento`, scheduler de agendamento (estado `agendada` fica no modelo).
+
+### Transversais Onda 2 (coleta E11 · backend do desafio · higienes) — brief `onda2-transversais-lotes.md`
+
+- [ ] LEELA-S821-T1a — Tipo `AnalyticsSnapshot` (estende `OverviewKPIs`) + Rules (owner-only, imutável)
+- [ ] LEELA-S821-T1b — Cron coleta diária 03:05 + Core idempotente + seed + hook BigQuery atrás de flag
+- [ ] LEELA-S1307-T1 — `registros` do atleta + `onRegistroWrite` (pontos via `calcularPontos`, bônus RN-115) + Rules
+- [ ] LEELA-S1308-T1 — `participacao` + `entrarNoDesafio` (RN-117, idempotente) + Rules
+- [ ] LEELA-S1308-T3 — Board de consistência (dias ativos distintos, desempate por pontos) + Rules
+- [ ] LEELA-S105-hig — E15 higiene: `autorId` + `anexo?` no tipo `Desafio` (XS)
+- [ ] LEELA-S1601-hig — Fix `consistent-type-imports` em PlatformShell.tsx (XS)
+
+### LEELA-E08 · Painel do influenciador — **ADIADO** (dependia de afiliação; sem afiliados neste início)
+
+- ~~LEELA-S701-T1 / S702-T1 / S703-T1 / S704-T1~~ — retornam se/quando o programa de afiliação entrar (pós-V1).
 
 ---
 
@@ -241,11 +284,12 @@ Receber comunicados (push):
 - **E13 (App do atleta) — jornada heroica:** `LEELA-S1303` (Início/dashboard heroico), `LEELA-S1307` (Arena — registrar ações dos 3 pilares), `LEELA-S1308` (progresso de desafio + participação), `LEELA-S1309` (medalhas/recompensas), `LEELA-S1313` (perfil/identidade completo). Ou seja: registro de ações/pilares, progresso/medalhas e sync de treino fora da V1. Composição de posts no feed (S1311 write) também fora — na V1 o mural é só leitura.
 - **E06 (Marketing) — parceiros e automações:** `LEELA-S400-T1/T3/T4` (rede de parceiros de marketing + programa + convite), `LEELA-S402` (automações por gatilho, T1/T2) e `LEELA-S403` (migração de sub-nav 9→8 tabs, T1/T2 — adiada para não conflitar com a aba Promotores do E04 na V1).
 
-### Épicos inteiros adiados
+### Épicos adiados (revisado 2026-07-05 — recortes-slim entraram na Onda 2)
 
-- **LEELA-E07** — Telas de sistema (404/500/offline/403 genéricos).
-- **LEELA-E09** — Financeiro consolidado / repasses (além do agregado por evento em S207/S302).
+- **LEELA-E07** — só a fatia **web 404/500/403** entrou na Onda 2 (E07-web); offline/manutenção = V1.1; superfície mobile = onda E13.
+- **LEELA-E08** — Painel do influenciador: **adiado por inteiro** (dependia de afiliação).
+- **LEELA-E09** — só o recorte **E09-slim (repasses do organizador)** entrou na Onda 2; painel financeiro rico (KPIs/donut/CSV), split de afiliação e reembolso (S904 + S305/S306) ficam na Onda 3.
 - **LEELA-E10** — Marcas (patrocinadores/ativações).
-- **LEELA-E11** — Analytics avançado.
-- **LEELA-E14** — Integrações de treino / `TrainingProvider` (Strava/Garmin/Health).
-- **LEELA-E15** — Creator Studio (MyDose — desafios/programas + biblioteca + venda).
+- **LEELA-E11** — só a **coleta** (rollup diário S821-T1) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3.
+- **LEELA-E14** — Integrações de treino / `TrainingProvider` (Strava/Garmin/Health). Ação externa pendente: registrar o app OAuth na Strava (lead time).
+- **LEELA-E15** — Creator Studio: só a **higiene** (`autorId` + `anexo?` no tipo `Desafio`) entrou na Onda 2; o resto congelado até a V1 validar.
