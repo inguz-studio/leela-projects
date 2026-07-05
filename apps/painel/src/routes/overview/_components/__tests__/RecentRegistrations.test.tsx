@@ -30,6 +30,18 @@ describe('RecentRegistrations (S601-T2)', () => {
     expect(screen.getByText('Nenhuma inscrição recente.')).toBeInTheDocument();
   });
 
+  it('lista populada rotula a degradação de recência (#13); vazio não rotula', () => {
+    const views = derivarInscricoesRecentes([mkInscricao({ id: '1', atletaNome: 'Marina Silva' })]);
+    const { rerender } = render(<RecentRegistrations inscricoes={views} loading={false} />);
+    expect(
+      screen.getByText('Amostra por evento, não a ordem de chegada completa.')
+    ).toBeInTheDocument();
+    rerender(<RecentRegistrations inscricoes={[]} loading={false} />);
+    expect(
+      screen.queryByText('Amostra por evento, não a ordem de chegada completa.')
+    ).not.toBeInTheDocument();
+  });
+
   it('erro → mostra erro com retry, nunca skeleton eterno nem "nenhuma" (#39)', async () => {
     const onRetry = vi.fn();
     render(<RecentRegistrations inscricoes={null} loading={false} error onRetry={onRetry} />);

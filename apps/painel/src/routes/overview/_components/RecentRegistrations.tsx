@@ -1,8 +1,13 @@
 // =============================================================================
 // RecentRegistrations — "Últimas inscrições" cross-evento (S601-T2).
-// Presentational puro. Ordenadas por data desc (na derivação), badge RN-204:
-// Pago (confirmado) · Pendente (pendente) · Recusado (cancelado).
-// EmptyState quando vazio; skeleton no load.
+// Presentational puro. Badge RN-204: Pago (confirmado) · Pendente (pendente) ·
+// Recusado (cancelado). EmptyState quando vazio; skeleton no load.
+//
+// Honestidade (#13): a fonte na Onda 1 é a 1ª página de cada evento ordenada
+// por atletaNome (api-client `listarInscritos`), reordenada por data DENTRO
+// dessa amostra alfabética — logo NÃO é o feed de chegada global. Enquanto o
+// helper collection-group por criadoEm não existir, a UI rotula a degradação
+// em vez de prometer recência que não entrega.
 // =============================================================================
 
 import { Badge, Skeleton } from '@leela/design-system';
@@ -47,8 +52,12 @@ export function RecentRegistrations({
           Nenhuma inscrição recente.
         </p>
       ) : (
-        <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
-          {inscricoes.map((inscricao) => (
+        <>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Amostra por evento, não a ordem de chegada completa.
+          </p>
+          <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
+            {inscricoes.map((inscricao) => (
             <li
               key={inscricao.id}
               className="flex items-center justify-between gap-[var(--spacing-3)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] px-[var(--spacing-4)] py-[var(--spacing-3)]"
@@ -61,8 +70,9 @@ export function RecentRegistrations({
               </div>
               <Badge variant={inscricao.badge.variant}>{inscricao.badge.label}</Badge>
             </li>
-          ))}
-        </ul>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );
