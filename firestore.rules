@@ -410,6 +410,17 @@ service cloud.firestore {
           .hasAny(['qtdMembrosAtivos', 'qtdDesafiosAtivos']);
       }
 
+      /** Identidade/propriedade NÃO mudam por write direto (review Onda1
+          suplementar S1): `ownerId` só via Function `transferirPropriedade`
+          (RN-106 — troca de dono sincroniza os papéis em `membros`);
+          `codigoConvite` é gerado no create e estável (RN-101 — evita
+          sequestro/colisão do código); `slug` espelha o docId (mudar slug é
+          recriar o doc); `criadoEm` é trilha. */
+      function clubeIdentidadeIntocada() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['ownerId', 'codigoConvite', 'slug', 'criadoEm']);
+      }
+
       allow read: if isTenantMember(resource.data.tenantId)
                   || isPlatformAdmin()
                   || resource.data.visibilidade in ['publica', 'indexavel'];
@@ -420,7 +431,8 @@ service cloud.firestore {
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
-                        && clubeAgregadosIntocados())
+                        && clubeAgregadosIntocados()
+                        && clubeIdentidadeIntocada())
                     || isPlatformAdmin();
       allow delete: if false;
 

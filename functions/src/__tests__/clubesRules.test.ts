@@ -302,6 +302,73 @@ describe.skipIf(!hasEmulator)('clubes — Rules + seed (S101-T1)', () => {
     });
   });
 
+  // ── Campo-set do update — identidade/propriedade imutáveis (suplementar S1)
+
+  describe('update não muda identidade/propriedade (review suplementar S1)', () => {
+    const staffCtx = () =>
+      ctxAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+
+    it('T1: staff NÃO atualiza ownerId (transferência só via Function — RN-106)', async () => {
+      await assertFails(
+        updateDoc(doc(staffCtx().firestore(), 'clubes', 'clube-privado-castelo'), {
+          ownerId: 'uid-staff-castelo',
+        })
+      );
+    });
+
+    it('T2: staff NÃO atualiza codigoConvite (RN-101)', async () => {
+      await assertFails(
+        updateDoc(doc(staffCtx().firestore(), 'clubes', 'clube-privado-castelo'), {
+          codigoConvite: 'ZZZZZ',
+        })
+      );
+    });
+
+    it('T3: staff NÃO atualiza o campo slug (docId é o slug — mudar é recriar)', async () => {
+      await assertFails(
+        updateDoc(doc(staffCtx().firestore(), 'clubes', 'clube-privado-castelo'), {
+          slug: 'outro-slug',
+        })
+      );
+    });
+
+    it('T3b: nem o owner reescreve ownerId por write direto', async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          ownerId: 'uid-qualquer',
+        })
+      );
+    });
+
+    it('T6: caminho feliz da tela S110 segue permitido (nome/descricao; visibilidade; aprovacaoManual+modeloEntrada gratuito)', async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertSucceeds(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          nome: 'Clube Privado Castelo (S110)',
+          descricao: 'Descrição editada na tela de configurações',
+        })
+      );
+      await assertSucceeds(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          visibilidade: 'publica',
+        })
+      );
+      await assertSucceeds(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          aprovacaoManual: true, modeloEntrada: 'gratuito',
+        })
+      );
+    });
+
+    it('Function (Admin SDK) segue transferindo propriedade (bypassa Rules)', async () => {
+      await adminDb.collection('clubes').doc('clube-privado-castelo')
+        .update({ ownerId: 'uid-novo-owner' });
+      const snap = await adminDb.collection('clubes').doc('clube-privado-castelo').get();
+      expect(snap.get('ownerId')).toBe('uid-novo-owner');
+    });
+  });
+
   // ── Seed canônico ────────────────────────────────────────────────────────
 
   describe('seedClubes (Emulator-only)', () => {
