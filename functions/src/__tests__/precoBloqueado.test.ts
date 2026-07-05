@@ -21,7 +21,7 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { https } from 'firebase-functions/v1';
 import {
@@ -41,6 +41,9 @@ const PASSO_ID = 'passo-certo';
 const MARINA_UID = 'uid-marina-castelo';
 const PASSO_OWNER_UID = 'uid-passo-owner';
 const PLATFORM_ADMIN_UID = 'uid-platform-admin';
+
+/** Evento com EXATAMENTE 1 venda — boundary da RN-200 (review #40). */
+const EVENTO_1_VENDA = 'corrida-boundary-1-venda';
 
 let testEnv: RulesTestEnvironment;
 let adminDb: admin.firestore.Firestore;
@@ -98,6 +101,27 @@ async function seedBase(): Promise<void> {
     .set({
       id: 'kit-unico', tenantId: CASTELO_ID, nome: 'Kit Único',
       preco: 50, capacidade: 100, modalidades: ['42k'],
+      criadoEm: now, atualizadoEm: now,
+    });
+
+  // BOUNDARY RN-200 (review #40): evento com EXATAMENTE 1 venda — mata o
+  // mutante `>0`→`>1` que sobrevivia com fixtures só de 453 ou 0.
+  await adminDb.collection('eventos').doc(EVENTO_1_VENDA).set({
+    id: EVENTO_1_VENDA, tenantId: CASTELO_ID,
+    organizadorId: MARINA_UID, nome: 'Corrida Boundary 1 Venda',
+    data: admin.firestore.Timestamp.fromDate(new Date('2026-11-10T07:00:00-03:00')),
+    local: 'Florianópolis/SC', modalidades: ['5k'],
+    percursos: [{ nome: '5k', preco: 80 }],
+    slug: EVENTO_1_VENDA, status: 'publicado', usaChip: false,
+    qtdInscritos: 1, receitaConfirmada: 80,
+    criadoEm: now, atualizadoEm: now,
+  });
+  await adminDb
+    .collection('eventos').doc(EVENTO_1_VENDA)
+    .collection('kits').doc('kit-boundary')
+    .set({
+      id: 'kit-boundary', tenantId: CASTELO_ID, nome: 'Kit Boundary',
+      preco: 30, capacidade: 50, modalidades: ['5k'],
       criadoEm: now, atualizadoEm: now,
     });
 }
@@ -213,6 +237,60 @@ describe('Rules — kits.preco travado após 1ª venda (RN-200)', () => {
   it('platform_admin corrige preço mesmo com venda (papel de plataforma)', async () => {
     const db = dbAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
     await assertSucceeds(updateDoc(kitMeia(db, 'kit-ouro'), { preco: 90 }));
+  });
+});
+
+// ── BOUNDARY: exatamente 1 venda já trava (review #40) ─────────────────────
+//
+// Fixtures anteriores só tinham 453 (meia) ou 0 (maratona) — o mutante
+// `qtdInscritos > 0` → `> 1` sobrevivia 100% na camada Rules. Este describe
+// fixa o boundary: a PRIMEIRA venda congela preço e estrutura.
+
+describe('Rules — boundary RN-200: qtdInscritos = 1 já bloqueia (review #40)', () => {
+  it('owner NÃO altera preço de kit com exatamente 1 venda', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      updateDoc(doc(db, 'eventos', EVENTO_1_VENDA, 'kits', 'kit-boundary'), { preco: 31 })
+    );
+  });
+
+  it('owner NÃO altera percursos com exatamente 1 venda', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      updateDoc(doc(db, 'eventos', EVENTO_1_VENDA), {
+        percursos: [{ nome: '5k', preco: 999 }],
+      })
+    );
+  });
+
+  it('owner NÃO deleta nem recria kit com exatamente 1 venda (fecho do #04)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(deleteDoc(doc(db, 'eventos', EVENTO_1_VENDA, 'kits', 'kit-boundary')));
+    await assertFails(
+      setDoc(doc(db, 'eventos', EVENTO_1_VENDA, 'kits', 'kit-boundary-2'), {
+        id: 'kit-boundary-2', tenantId: CASTELO_ID, nome: 'Kit Boundary 2',
+        preco: 5, capacidade: 10, modalidades: ['5k'],
+      })
+    );
+  });
+
+  it('guard de Function também trava com exatamente 1 venda', async () => {
+    await expect(
+      assertPrecoEditavel(adminDb, EVENTO_1_VENDA, { precoAtual: 30, novoPreco: 31 })
+    ).rejects.toSatisfy(
+      (err: unknown) =>
+        err instanceof https.HttpsError && err.code === 'failed-precondition'
+    );
+  });
+
+  it('com 1 venda: campo ≠ preco segue editável e core bloqueia igual', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      updateDoc(doc(db, 'eventos', EVENTO_1_VENDA, 'kits', 'kit-boundary'), { capacidade: 60 })
+    );
+    expect(precoBloqueado({ qtdInscritos: 1 })).toBe(true);
+    expect(podeAlterarPreco({ qtdInscritos: 1 }, 30, 31)).toBe(false);
+    expect(podeAlterarPreco({ qtdInscritos: 1 }, 30, 30)).toBe(true);
   });
 });
 
