@@ -24,4 +24,23 @@ describe('KpiRow (S600-T3)', () => {
     render(<KpiRow kpis={mkKpis({ eventoEmRisco: null })} />);
     expect(screen.queryByText('Esgotando')).not.toBeInTheDocument();
   });
+
+  it('vagas=0 sem risco (capacidade ausente) → "—", nunca 0 falso (#15)', () => {
+    render(<KpiRow kpis={mkKpis({ vagasRestantes: 0, eventoEmRisco: null })} />);
+    // A célula de Vagas mostra "—", não "0".
+    const vagas = screen.getByText('Vagas restantes').closest('div')?.parentElement;
+    expect(vagas).toHaveTextContent('—');
+    expect(vagas).not.toHaveTextContent('0');
+  });
+
+  it('vagas=0 COM risco (esgotado real) → mostra 0 + badge Esgotando, não "—" (#15)', () => {
+    render(
+      <KpiRow
+        kpis={mkKpis({ vagasRestantes: 0, eventoEmRisco: { nome: 'X', slug: 'x' } })}
+      />
+    );
+    const vagas = screen.getByText('Vagas restantes').closest('div')?.parentElement;
+    expect(vagas).toHaveTextContent('0');
+    expect(screen.getByText('Esgotando')).toBeInTheDocument();
+  });
 });

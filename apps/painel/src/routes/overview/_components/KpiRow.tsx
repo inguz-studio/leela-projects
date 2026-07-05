@@ -5,6 +5,13 @@
 // Cards: Inscrições · Receita confirmada · Vagas restantes (badge "Esgotando"
 // quando há evento em risco) · Taxa de conversão (sparkline; "—" quando null).
 // §2.16 flat — cards sem borda decorativa (surface-raised).
+//
+// Honestidade das vagas (#15): `derivarKpis` só soma vagas de evento PÚBLICO
+// com capacidade conhecida e marca `eventoEmRisco` para qualquer ocupação
+// ≥ LIMIAR_ESGOTANDO (0,9). Logo, um esgotamento real (vagas=0) SEMPRE acende
+// o risco (ocupação ≥ 1,0). Um `vagasRestantes===0` COM `eventoEmRisco===null`
+// só acontece quando NENHUMA capacidade é conhecida → 0 falso: renderiza "—"
+// (nunca 0 falso, contrato do próprio kpis.ts), distinto de "esgotado".
 // =============================================================================
 
 import { Badge, cn } from '@leela/design-system';
@@ -56,6 +63,9 @@ function KpiCard({ label, value, trend, badge, sparkline }: KpiCardProps): JSX.E
 }
 
 export function KpiRow({ kpis }: KpiRowProps): JSX.Element {
+  // 0 sem risco = nenhuma capacidade conhecida (0 falso) → "—", não "0".
+  const vagasDesconhecidas = kpis.vagasRestantes === 0 && kpis.eventoEmRisco === null;
+
   return (
     <section
       aria-label="Indicadores consolidados"
@@ -73,7 +83,7 @@ export function KpiRow({ kpis }: KpiRowProps): JSX.Element {
       />
       <KpiCard
         label="Vagas restantes"
-        value={formatInt(kpis.vagasRestantes)}
+        value={vagasDesconhecidas ? '—' : formatInt(kpis.vagasRestantes)}
         badge={kpis.eventoEmRisco ? 'Esgotando' : undefined}
       />
       <KpiCard
