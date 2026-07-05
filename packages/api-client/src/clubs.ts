@@ -549,3 +549,49 @@ export async function enviarConvites(
   >(functions, 'enviarConvites');
   return (await call({ clubeId, emails })).data;
 }
+
+// ---------------------------------------------------------------------------
+// Exclusão do clube + exportação LGPD (S110-T2) — CONTRATO das telas.
+//
+// ⚠ BLOQUEIO/CONTRATO p/ backend (Fable · S110-T2): as Functions `deleteClube`
+// (exclusão irreversível em cascata) e `exportClubeData` (export LGPD com
+// retenção de 90 dias — RN-144) ainda NÃO estão deployadas. Estes wrappers
+// tipam o contrato que o editor de configurações (S110-T1) consome via modal
+// (S110-T2 frontend); a implementação servidor é do lote Fable sequenciado
+// APÓS a tela. Chamar antes do deploy devolve `not-found`/`unimplemented`.
+// ---------------------------------------------------------------------------
+
+export interface DeletarClubeResult {
+  deletado: true;
+}
+
+/** Exclui o clube em cascata via Cloud Function `deleteClube` (irreversível). */
+export async function deletarClube(
+  functions: Functions,
+  clubeId: string
+): Promise<DeletarClubeResult> {
+  const call = httpsCallable<{ clubeId: string }, DeletarClubeResult>(
+    functions,
+    'deleteClube'
+  );
+  return (await call({ clubeId })).data;
+}
+
+export interface ExportarDadosClubeResult {
+  /** Id do pacote de exportação (download posterior). */
+  exportId: string;
+  /** ISO da expiração do link de export (retenção LGPD 90 dias — RN-144). */
+  expiraEm: string;
+}
+
+/** Solicita a exportação LGPD dos dados do clube via `exportClubeData`. */
+export async function exportarDadosClube(
+  functions: Functions,
+  clubeId: string
+): Promise<ExportarDadosClubeResult> {
+  const call = httpsCallable<{ clubeId: string }, ExportarDadosClubeResult>(
+    functions,
+    'exportClubeData'
+  );
+  return (await call({ clubeId })).data;
+}

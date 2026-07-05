@@ -150,6 +150,12 @@ export type {
   EnviarConvitesResult,
 } from './clubs';
 
+// Clubs — exclusão + exportação LGPD (S110-T2). CONTRATO das telas: as
+// Functions deleteClube/exportClubeData são do lote Fable (sequenciado após a
+// tela) — chamar antes do deploy devolve not-found/unimplemented.
+export { deletarClube, exportarDadosClube } from './clubs';
+export type { DeletarClubeResult, ExportarDadosClubeResult } from './clubs';
+
 // ---------------------------------------------------------------------------
 // Eventos — queries de `eventos` e subcoleções (LEELA-E03 · L1)
 // ---------------------------------------------------------------------------

@@ -11,11 +11,16 @@
 import { useEffect, useState } from 'react';
 import {
   atualizarClube,
+  deletarClube,
+  exportarDadosClube,
   getClube,
   getLeelaDb,
+  getLeelaFunctions,
   listClubesByTenant,
   listMembros,
   type AtualizarClubeInput,
+  type DeletarClubeResult,
+  type ExportarDadosClubeResult,
 } from '@leela/api-client';
 import type { Clube, Membro } from '@leela/core';
 import { useClubesSession } from './session';
@@ -25,6 +30,15 @@ export const atualizarClubePadrao = (
   slug: string,
   patch: AtualizarClubeInput,
 ): Promise<void> => atualizarClube(getLeelaDb(), slug, patch);
+
+/** Porta de exclusão do clube (callable — CONTRATO, Function Fable S110-T2). */
+export const deletarClubePadrao = (clubeId: string): Promise<DeletarClubeResult> =>
+  deletarClube(getLeelaFunctions(), clubeId);
+
+/** Porta de exportação LGPD (callable — CONTRATO, Function Fable S110-T2). */
+export const exportarDadosPadrao = (
+  clubeId: string,
+): Promise<ExportarDadosClubeResult> => exportarDadosClube(getLeelaFunctions(), clubeId);
 
 export interface AsyncState<T> {
   data: T | null;
