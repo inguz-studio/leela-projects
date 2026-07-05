@@ -19,10 +19,15 @@ export const TERMO_KIT = {
   proibidos: ['tier'],
 } as const;
 
-/** A copy contém algum termo proibido? (whole-word, case-insensitive) @pure */
+/**
+ * A copy contém algum termo proibido? Whole-word, case-insensitive e com
+ * PLURAL (`tiers` também é violação — review Onda1 #19: `\btier\b` deixava
+ * o plural passar, verificado empiricamente).
+ * @pure
+ */
 export function contemTermoProibido(texto: string): string | null {
   for (const termo of TERMOS_PROIBIDOS) {
-    if (new RegExp(`\\b${termo}\\b`, 'i').test(texto)) return termo;
+    if (new RegExp(`\\b${termo}s?\\b`, 'i').test(texto)) return termo;
   }
   return null;
 }
