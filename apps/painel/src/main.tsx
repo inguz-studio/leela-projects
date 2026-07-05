@@ -6,6 +6,7 @@ import { ThemeProvider } from '@leela/design-system';
 import { App } from './App';
 import { initFirebase } from './lib/firebase';
 import { initSentry } from './lib/sentry';
+import { initPreviewAutologin } from './lib/preview-autologin';
 
 // Sentry: no-op silencioso quando VITE_SENTRY_DSN não está definido
 initSentry();
@@ -13,6 +14,11 @@ initSentry();
 // Firebase: Emulator em dev (VITE_USE_EMULATOR), fail-closed em produção
 // sem VITE_FIREBASE_* — achado A3, review E00
 initFirebase();
+
+// Auto-login do preview local: no-op absoluto a menos que
+// VITE_PREVIEW_AUTOLOGIN === 'true' (ligado só pelo preview.sh). Ver
+// lib/preview-autologin.ts e PREVIEW.md.
+initPreviewAutologin();
 
 const rootElement = document.getElementById('root');
 if (rootElement === null) {

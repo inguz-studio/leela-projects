@@ -14,7 +14,11 @@
 //     apontamos DEMO_CONFIG para produção silenciosamente
 // =============================================================================
 
-import { initLeela, type FirebaseClientConfig } from '@leela/api-client';
+import {
+  initLeela,
+  type FirebaseClientConfig,
+  type LeelaEmulatorPorts,
+} from '@leela/api-client';
 
 /**
  * Monta o FirebaseClientConfig a partir de VITE_FIREBASE_* quando TODAS as
@@ -36,6 +40,33 @@ function readFirebaseConfig(): FirebaseClientConfig | undefined {
   return complete ? (config as FirebaseClientConfig) : undefined;
 }
 
+/**
+ * Lê portas alternativas do Emulator a partir de VITE_EMULATOR_*_PORT.
+ * Ausentes → retorna undefined e o api-client usa os defaults 8080/9099/5001
+ * (comportamento inalterado). Usado pelo preview local (portas alt) — ver
+ * preview.sh / PREVIEW.md.
+ */
+function readEmulatorPorts(): LeelaEmulatorPorts | undefined {
+  const env = import.meta.env;
+  const parse = (raw: string | undefined): number | undefined => {
+    if (typeof raw !== 'string' || raw.length === 0) return undefined;
+    const n = Number(raw);
+    return Number.isInteger(n) && n > 0 ? n : undefined;
+  };
+  const firestore = parse(env.VITE_EMULATOR_FIRESTORE_PORT);
+  const auth = parse(env.VITE_EMULATOR_AUTH_PORT);
+  const functions = parse(env.VITE_EMULATOR_FUNCTIONS_PORT);
+  if (firestore === undefined && auth === undefined && functions === undefined) {
+    return undefined;
+  }
+  // exactOptionalPropertyTypes: montar só as chaves definidas
+  return {
+    ...(firestore !== undefined ? { firestore } : {}),
+    ...(auth !== undefined ? { auth } : {}),
+    ...(functions !== undefined ? { functions } : {}),
+  };
+}
+
 /** Inicializa o Firebase SDK. Idempotente — initLeela ignora chamadas extra. */
 export function initFirebase(): void {
   const explicit = import.meta.env.VITE_USE_EMULATOR;
@@ -44,7 +75,19 @@ export function initFirebase(): void {
   const useEmulator =
     explicit === undefined ? import.meta.env.DEV : explicit === 'true';
 
-  // exactOptionalPropertyTypes: nunca passar firebaseConfig: undefined
+  // exactOptionalPropertyTypes: nunca passar chaves com valor undefined
   const firebaseConfig = readFirebaseConfig();
-  initLeela(firebaseConfig ? { useEmulator, firebaseConfig } : { useEmulator });
+  const emulatorPorts = readEmulatorPorts();
+  // Host do Emulator: default 'localhost'; o preview força '127.0.0.1' para
+  // fixar IPv4 (no Windows 'localhost' pode resolver p/ ::1 e o Emulator só
+  // escuta em 127.0.0.1 — quebraria a conexão do navegador).
+  const rawHost = import.meta.env.VITE_EMULATOR_HOST;
+  const emulatorHost =
+    typeof rawHost === 'string' && rawHost.length > 0 ? rawHost : undefined;
+  initLeela({
+    useEmulator,
+    ...(emulatorHost ? { emulatorHost } : {}),
+    ...(firebaseConfig ? { firebaseConfig } : {}),
+    ...(emulatorPorts ? { emulatorPorts } : {}),
+  });
 }

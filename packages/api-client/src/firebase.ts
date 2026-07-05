@@ -73,6 +73,26 @@ export interface FirebaseClientConfig {
   appId: string;
 }
 
+/**
+ * Portas dos emuladores (dev). Omitir qualquer campo mantém o DEFAULT do
+ * Firebase (Firestore 8080, Auth 9099, Functions 5001) — o comportamento
+ * histórico não muda. Sobrescrever só é útil para rodar uma segunda instância
+ * do Emulator Suite em portas alternativas (ex.: preview local sem colidir
+ * com o Suite dos testes/agentes).
+ */
+export interface LeelaEmulatorPorts {
+  firestore?: number;
+  auth?: number;
+  functions?: number;
+}
+
+/** Portas padrão do Emulator Suite — NUNCA alterar (contrato de testes/CI). */
+const DEFAULT_EMULATOR_PORTS: Required<LeelaEmulatorPorts> = {
+  firestore: 8080,
+  auth: 9099,
+  functions: 5001,
+};
+
 /** Opções de inicialização passadas pelo app no entry-point */
 export interface LeelaFirebaseConfig {
   /**
@@ -86,6 +106,11 @@ export interface LeelaFirebaseConfig {
   useEmulator?: boolean;
   /** Host dos emuladores (padrão: 'localhost') */
   emulatorHost?: string;
+  /**
+   * Portas dos emuladores. Omitido → defaults 8080/9099/5001 (inalterado).
+   * Usado pelo preview local para apontar a uma instância em portas alt.
+   */
+  emulatorPorts?: LeelaEmulatorPorts;
   /**
    * Configuração do Firebase para produção.
    * Se omitido em dev com emuladores, usa valores demo-leela.
@@ -103,7 +128,19 @@ export interface LeelaFirebaseConfig {
  * DEVE ser chamado no entry-point do app antes de qualquer uso do Firestore/Auth.
  */
 export function initLeela(config: LeelaFirebaseConfig = {}): void {
-  const { useEmulator = false, emulatorHost = 'localhost', firebaseConfig } = config;
+  const {
+    useEmulator = false,
+    emulatorHost = 'localhost',
+    emulatorPorts,
+    firebaseConfig,
+  } = config;
+
+  // Portas: default inalterado (8080/9099/5001) quando emulatorPorts é omitido.
+  const ports: Required<LeelaEmulatorPorts> = {
+    firestore: emulatorPorts?.firestore ?? DEFAULT_EMULATOR_PORTS.firestore,
+    auth: emulatorPorts?.auth ?? DEFAULT_EMULATOR_PORTS.auth,
+    functions: emulatorPorts?.functions ?? DEFAULT_EMULATOR_PORTS.functions,
+  };
 
   // Fail-closed: DEMO_CONFIG é Emulator-only. Sem emulador, o app DEVE
   // fornecer firebaseConfig real — apontar produção para demo-leela
@@ -124,11 +161,11 @@ export function initLeela(config: LeelaFirebaseConfig = {}): void {
   if (!_functions) _functions = getFunctions(_app, 'us-central1');
 
   if (useEmulator && !_emulatorsConnected) {
-    connectFirestoreEmulator(_db, emulatorHost, 8080);
-    connectAuthEmulator(_auth, `http://${emulatorHost}:9099`, {
+    connectFirestoreEmulator(_db, emulatorHost, ports.firestore);
+    connectAuthEmulator(_auth, `http://${emulatorHost}:${ports.auth}`, {
       disableWarnings: true,
     });
-    connectFunctionsEmulator(_functions, emulatorHost, 5001);
+    connectFunctionsEmulator(_functions, emulatorHost, ports.functions);
     _emulatorsConnected = true;
   }
 }
