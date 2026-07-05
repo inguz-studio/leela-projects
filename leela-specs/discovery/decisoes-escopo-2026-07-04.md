@@ -39,6 +39,20 @@ Respostas às 10 decisões da `proposta-revisao-escopo-2026-07-04.md`. Vinculant
 - **Domínio público: ADIADO** ({DOMINIO_LEELA} permanece placeholder).
 - **Calibragem de gate aceita**: verificação adversarial `xhigh` só para achados críticos/altos; `high` para médios; baixos vão direto à lista. Painel completo só em gates de onda; lotes com reviewer único.
 
+## Decisões 2026-07-05 (2ª rodada — Vitor)
+
+- **T14 RESOLVIDO**: desafio `encerrado` PODE voltar a `ativo` pelo dono do clube (transição permitida, owner-only).
+- **Plano de cobrança (novo conceito, vinculante)**: o admin master configura UMA VEZ um plano nomeado —
+  tabela de taxas por parcela do cartão (2x-12x) + taxa PIX + taxa cartão à vista + mensalidade SaaS —
+  e APLICA o plano ao organizador (tenant). Defaults iniciais: 10% cartão / 8% PIX. Aplicar um plano
+  estampa os valores nos CommercialTerms do tenant (mantendo versionamento/snapshot existente).
+  Substitui a edição campo-a-campo como fluxo primário; edição fina por tenant continua possível.
+- **Strava: movido INTEIRO para evolução** (dependência do OAuth). PORÉM o front-end da V1.5 já nasce
+  com a superfície prevista: seção/CTA de conexão Strava no perfil com estado "em desenvolvimento"
+  (UI honesta, sem funcionalidade). Registro do app OAuth deixa de ser ação urgente.
+- **Domínio e e-mails (transacional + suporte): ficam para o FINAL** (pré-go-live).
+- Pendentes ainda: T15 (reativação unilateral de parceria), T13 (RN-111 no servidor), valores do plano de cobrança.
+
 ## Onda 2 revisada (composição para o planejamento operacional)
 
 E04-slim (config & vendas sem afiliação, com cupons + equipe/papéis + PaymentProvider concreto) → E12 (landing + checkout; decisões comerciais pendentes do benchmark Cheers: taxa incorporada 8% vs não incorporada 10%, parcelamento, frete vs retirada) → E09-slim (repasses, spec acima) + E07-web + E06 (comunicação) + coleta E11 (cedo) + higiene E15 (XS) + lote backend desafio (fim da onda).

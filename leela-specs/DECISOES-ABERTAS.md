@@ -3,22 +3,23 @@
 > Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança.
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md`.
 
-## 🔴 Aguardando você agora (destravam testes do fix-loop)
+## 🔴 Aguardando você agora
 
-1. **Reabrir desafio encerrado?** Um desafio `encerrado` pode voltar a `ativo` pelo dono do clube, ou encerrou acabou? (vira teste T14)
-2. **Reativação unilateral de parceria?** Parceria `inativa` pode ser reativada por um lado só, ou exige novo aceite mútuo? (vira teste T15)
-3. **RN-111 no servidor?** O limite de pontuação do desafio deve ser validado também no servidor, ou congela como está (só client) na V1? (vira teste T13)
+*(nenhuma — todas as decisões do fix-loop foram tomadas em 2026-07-05: T14 reabrir=owner-only ✅ · T15 reativação unilateral ✅ · T13 sem limite de pontuação ✅)*
 
 ## 🟡 Quando você tiver os dados (não bloqueiam código)
 
-4. **Valores da tabela de parcelamento 2x-12x** — estrutura pronta e configurável; percentuais quando o gateway/custos reais existirem.
+3. **Valores do plano de cobrança** (taxas por parcela 2x-12x, mensalidade) — mecanismo decidido (plano nomeado aplicável por organizador); percentuais quando houver custos reais do gateway.
 
-## 🟠 Ações externas suas (lead time longo)
+## 🟠 Ações externas suas
 
-5. **Registrar app OAuth na Strava** (strava.com/settings/api) — semanas de aprovação; Onda 3.1 depende. Callback pode ser localhost por ora.
-6. **Conta no gateway (rec. Asaas) + KYC** — integração adiada por decisão sua, mas a burocracia da conta corre em paralelo sem custar código.
-7. **Domínio público** `{DOMINIO_LEELA}` + e-mail de suporte — só trava go-live de SEO/QR/links.
-8. *(Opcional)* Exceção do Device Guard p/ `turbo.exe` — agentes têm contorno; é conveniência.
+4. **Conta no gateway (rec. Asaas) + KYC** — integração adiada, mas a burocracia corre em paralelo sem custar código.
+5. *(Opcional)* Exceção do Device Guard p/ `turbo.exe` — agentes têm contorno; é conveniência.
+
+## ⏸️ Para o final (decisão 2026-07-05)
+
+- **Strava** — inteiro para evolução (registro OAuth deixou de ser urgente); V1.5 já nasce com a seção no perfil em "em desenvolvimento".
+- **Domínio público + e-mails** (transacional e suporte) — pré-go-live.
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
