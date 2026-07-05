@@ -31,6 +31,7 @@ import {
   type ProvisionDeps,
 } from '../platform/provisionTenant';
 import { onCreateUser } from '../auth/onCreateUser';
+import { setTenantClaims } from '../platform/setTenantClaims';
 import type { ProvisionInput } from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
@@ -612,6 +613,91 @@ describe('provisionTenantCore — corrida onCreateUser × provisionTenant (fix r
     ).rejects.toMatchObject({ code: 'failed-precondition' });
     expect((await auth.getUser(res.ownerUid)).customClaims).toEqual({
       role: 'platform_admin',
+    });
+  });
+});
+
+// ── Demoção DELIBERADA não é re-elevada (fix review L2 #12) ────────────────
+//
+// O achado: a demoção deliberada do owner pelo admin (setTenantClaims
+// {role:'athlete'}) produzia estado byte-idêntico ao da corrida do trigger —
+// e a exceção athlete+doc re-elevava o owner rebaixado em QUALQUER
+// provisionTenant futuro do slug, como "claim repair" com replay:true.
+// Agora mergeTenantClaims grava `demotedFromRole` na demoção via superfície
+// admin; a exceção exige a AUSÊNCIA do marcador. Ordem adversa simulada
+// exercitando o CALLABLE real contra o Emulator, como no fix #8.
+// Estes testes falhariam no código antigo (re-elevação silenciosa).
+describe('provisionTenantCore — demoção deliberada × exceção athlete+doc (fix review L2 #12)', () => {
+  const adminCtx = { auth: { uid: ADMIN_UID, token: { role: 'platform_admin' } } };
+
+  function runSetClaims(data: AnyRec): Promise<unknown> {
+    return (
+      setTenantClaims as unknown as {
+        run: (d: AnyRec, c: AnyRec) => Promise<unknown>;
+      }
+    ).run(data, adminCtx);
+  }
+
+  it('owner rebaixado DELIBERADAMENTE pelo admin NÃO é re-elevado por provisionTenant', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+
+    // Demoção deliberada via callable real — grava o marcador
+    await runSetClaims({ uid: res.ownerUid, role: 'athlete' });
+    const demoted = await auth.getUser(res.ownerUid);
+    expect(demoted.customClaims).toEqual({
+      role: 'athlete',
+      demotedFromRole: 'tenant_owner',
+    });
+
+    // provisionTenant futuro do slug (doc segue ativo com ownerUid intacto):
+    // no código antigo era replay + re-elevação; agora REJEITA.
+    await expect(
+      provisionTenantCore(db, auth, input(), ADMIN_UID)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+
+    // Decisão administrativa preservada — claims intactas
+    const after = await auth.getUser(res.ownerUid);
+    expect(after.customClaims).toEqual({
+      role: 'athlete',
+      demotedFromRole: 'tenant_owner',
+    });
+  });
+
+  it('re-elevação SUPORTADA (setTenantClaims) limpa o marcador → replay volta a funcionar', async () => {
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+
+    await runSetClaims({ uid: res.ownerUid, role: 'athlete' });
+    await runSetClaims({
+      uid: res.ownerUid,
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+
+    const healed = await auth.getUser(res.ownerUid);
+    expect(healed.customClaims).toEqual({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+
+    // Marcador limpo → retry do admin conclui como replay normal
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+    expect(retry.ownerUid).toBe(res.ownerUid);
+  });
+
+  it('corrida ACIDENTAL segue auto-recuperável: athlete SEM marcador → replay repara', async () => {
+    // Gêmeo do teste do fix #8 — a corrida grava athlete CRU (sem marcador);
+    // a exceção athlete+doc continua valendo para este estado.
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    await auth.setCustomUserClaims(res.ownerUid, { role: 'athlete' });
+
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+
+    const healed = await auth.getUser(res.ownerUid);
+    expect(healed.customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
     });
   });
 });

@@ -188,6 +188,16 @@ export const setTenantClaims = https.onCall(
  * do provisionTenant, que preserva). tenantId é REMOVIDO quando o papel não
  * o carrega — o merge nunca deixa tenantId stale de um papel anterior.
  *
+ * Marcador de demoção deliberada (fix review Onda1 L2 #12): rebaixar a
+ * `athlete` por esta superfície ADMIN grava o papel anterior em
+ * `demotedFromRole` — distingue a demoção INTENCIONAL do athlete
+ * byte-idêntico que a corrida do trigger onCreateUser produz (o trigger
+ * nunca passa por aqui). A exceção athlete+doc do provisionTenant só
+ * repara claims quando o marcador está AUSENTE. Ciclo de vida:
+ *   - demoção (novo=athlete, anterior≠athlete)  → grava demotedFromRole;
+ *   - promoção (novo≠athlete)                   → remove o marcador;
+ *   - athlete→athlete                           → preserva marcador existente.
+ *
  * Puro e exportado para teste unitário direto.
  */
 export function mergeTenantClaims(
@@ -200,6 +210,14 @@ export function mergeTenantClaims(
     merged['tenantId'] = tenantId;
   } else {
     delete merged['tenantId'];
+  }
+  const prevRole = (current as Partial<AuthClaims> | null | undefined)?.role;
+  if (role === 'athlete') {
+    if (prevRole !== undefined && prevRole !== 'athlete') {
+      merged['demotedFromRole'] = prevRole;
+    }
+  } else {
+    delete merged['demotedFromRole'];
   }
   return merged as unknown as AuthClaims;
 }

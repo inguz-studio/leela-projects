@@ -50,6 +50,13 @@
 //     tenants/{slug} provando que o usuário é o owner DESTE tenant ativo =
 //     rebaixamento pela corrida do trigger onCreateUser → segue como replay
 //     e reaplica as claims corretas (auto-recuperação).
+//     Fix review L2 #12: a exceção exige AUSÊNCIA do marcador
+//     `demotedFromRole` (gravado por mergeTenantClaims quando o ADMIN
+//     rebaixa deliberadamente a athlete). Sem o marcador, a demoção
+//     deliberada era byte-idêntica à corrida e QUALQUER provisionTenant
+//     futuro do slug re-elevava o owner como "claim repair". Demoção
+//     deliberada agora é rejeitada com mensagem própria; re-elevação
+//     suportada é via setTenantClaims (que limpa o marcador).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -165,8 +172,16 @@ export async function provisionTenantCore(
       // rejeitado aqui e a recuperação exigia setTenantClaims manual).
       // Qualquer papel conflitante NÃO-athlete continua rejeitado: rebaixar
       // um platform_admin/staff silenciosamente seria pior que falhar.
+      //
+      // Fix review L2 #12: athlete com `demotedFromRole` presente é demoção
+      // DELIBERADA do admin (mergeTenantClaims grava o marcador; a corrida
+      // do trigger nunca o grava) — a exceção NÃO se aplica: re-elevar aqui
+      // desfaria silenciosamente uma decisão administrativa. Rejeitar com
+      // mensagem própria; o caminho suportado de re-elevação é
+      // setTenantClaims (que limpa o marcador).
+      const deliberatelyDemoted = claims.demotedFromRole !== undefined;
       let docProvenOwner = false;
-      if (claims.role === 'athlete') {
+      if (claims.role === 'athlete' && !deliberatelyDemoted) {
         const tenantSnap = await db.collection('tenants').doc(tenantId).get();
         docProvenOwner =
           tenantSnap.exists &&
@@ -174,6 +189,16 @@ export async function provisionTenantCore(
           tenantSnap.get('ownerUid') === ownerUid;
       }
       if (!docProvenOwner) {
+        if (claims.role === 'athlete' && deliberatelyDemoted) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            `E-mail '${input.ownerEmail}' pertence a um owner rebaixado ` +
+              `DELIBERADAMENTE pelo admin (demotedFromRole=` +
+              `'${claims.demotedFromRole}') — provisionamento não desfaz ` +
+              'demoção deliberada. Re-eleve via setTenantClaims ou trate o ' +
+              'tenant antes (RN-401).'
+          );
+        }
         throw new https.HttpsError(
           'failed-precondition',
           `E-mail '${input.ownerEmail}' já pertence a uma conta com papel ` +

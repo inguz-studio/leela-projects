@@ -158,9 +158,12 @@ describe('setTenantClaims — merge preserva claims não relacionadas (fix re-re
     }));
 
     await run({ uid: 'u-down', role: 'athlete' });
+    // Fix review L2 #12: demoção deliberada via superfície admin agora
+    // carrega o marcador demotedFromRole (distingue da corrida do trigger).
     expect(setCustomUserClaims).toHaveBeenCalledWith('u-down', {
       beta: true,
       role: 'athlete',
+      demotedFromRole: 'tenant_owner',
     });
   });
 });
@@ -173,9 +176,10 @@ describe('mergeTenantClaims (puro)', () => {
   });
 
   it('remove tenantId quando o papel não o carrega', () => {
+    // Fix review L2 #12: demoção owner→athlete via merge grava o marcador
     expect(
       mergeTenantClaims({ role: 'tenant_owner', tenantId: 'castelo-producoes' }, 'athlete')
-    ).toEqual({ role: 'athlete' });
+    ).toEqual({ role: 'athlete', demotedFromRole: 'tenant_owner' });
   });
 
   it('current null/undefined → só role (sem tenantId espúrio)', () => {
@@ -183,5 +187,51 @@ describe('mergeTenantClaims (puro)', () => {
     expect(mergeTenantClaims(undefined, 'platform_admin')).toEqual({
       role: 'platform_admin',
     });
+  });
+});
+
+// Fix review L2 #12: a demoção deliberada via superfície admin era
+// byte-idêntica ao athlete que a corrida do trigger onCreateUser produz —
+// qualquer provisionTenant futuro do slug re-elevava o owner rebaixado como
+// "claim repair". O marcador demotedFromRole desambigua os dois estados.
+// Estes testes falhariam no código antigo (sem marcador).
+describe('mergeTenantClaims — marcador de demoção deliberada (fix review L2 #12)', () => {
+  it('demoção owner→athlete grava demotedFromRole com o papel anterior', () => {
+    expect(
+      mergeTenantClaims(
+        { beta: true, role: 'tenant_owner', tenantId: 'castelo-producoes' },
+        'athlete'
+      )
+    ).toEqual({ beta: true, role: 'athlete', demotedFromRole: 'tenant_owner' });
+  });
+
+  it('demoção staff→athlete também grava o marcador (genérico por papel)', () => {
+    expect(
+      mergeTenantClaims({ role: 'tenant_staff', tenantId: 'passo-certo' }, 'athlete')
+    ).toEqual({ role: 'athlete', demotedFromRole: 'tenant_staff' });
+  });
+
+  it('re-promoção limpa o marcador (athlete demovido → tenant_owner)', () => {
+    expect(
+      mergeTenantClaims(
+        { role: 'athlete', demotedFromRole: 'tenant_owner' },
+        'tenant_owner',
+        'castelo-producoes'
+      )
+    ).toEqual({ role: 'tenant_owner', tenantId: 'castelo-producoes' });
+  });
+
+  it('athlete→athlete preserva marcador existente (re-atribuição não apaga)', () => {
+    expect(
+      mergeTenantClaims({ role: 'athlete', demotedFromRole: 'tenant_owner' }, 'athlete')
+    ).toEqual({ role: 'athlete', demotedFromRole: 'tenant_owner' });
+  });
+
+  it('atribuição de athlete SEM role anterior NÃO grava marcador (não é demoção)', () => {
+    expect(mergeTenantClaims({ beta: true }, 'athlete')).toEqual({
+      beta: true,
+      role: 'athlete',
+    });
+    expect(mergeTenantClaims(null, 'athlete')).toEqual({ role: 'athlete' });
   });
 });

@@ -34,6 +34,15 @@ export interface AuthClaims {
   role: Role;
   /** Ausente para athlete e platform_admin */
   tenantId?: string;
+  /**
+   * Papel anterior quando a superfície ADMIN rebaixou o usuário a `athlete`
+   * (gravado/limpo SOMENTE por mergeTenantClaims — functions setTenantClaims).
+   * Desambigua demoção DELIBERADA do estado byte-idêntico produzido pela
+   * corrida do trigger onCreateUser (review Onda1 L2 #12): a exceção
+   * athlete+doc do provisionTenant só re-eleva quando este marcador está
+   * AUSENTE. Promoção a qualquer papel não-athlete remove o marcador.
+   */
+  demotedFromRole?: Role;
 }
 
 // ---------------------------------------------------------------------------
