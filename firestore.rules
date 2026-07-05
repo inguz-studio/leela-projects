@@ -337,6 +337,13 @@ service cloud.firestore {
       // RN-210: 0..N kits por evento. RN-211: "Sem kit" é kit válido e o
       // preço ACEITA NEGATIVO (desconto) — shape exige number, sem piso.
       // RN-216: o campo/conceito é "kit" — "tier" não existe no produto.
+      //
+      // RN-200 (fix review Onda1 #04): com venda no evento pai, a ESTRUTURA
+      // de kits congela para o cliente — create e delete negados, update só
+      // sem tocar `preco`. Sem isso o bloqueio de preço era anulável em 2
+      // chamadas (delete + recreate com preço novo). Espelha a semântica de
+      // `percursosEditaveis` (o array congela inteiro após a 1ª venda).
+      // Ajustes legítimos pós-venda são superfície de Function/platform_admin.
       match /kits/{kitId} {
 
         /** Shape mínimo do kit (nome não-vazio; preco number, negativo ok). */
@@ -364,7 +371,8 @@ service cloud.firestore {
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
-                          && shapeKitValido())
+                          && shapeKitValido()
+                          && !eventoPaiTemVenda())
                       || isPlatformAdmin();
         allow update: if (isTenantWriter(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
@@ -373,7 +381,8 @@ service cloud.firestore {
                           && precoEditavel())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)
-                          && tenantAtivo(resource.data.tenantId))
+                          && tenantAtivo(resource.data.tenantId)
+                          && !eventoPaiTemVenda())
                       || isPlatformAdmin();
       }
 

@@ -38,7 +38,7 @@ import {
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { listarKits, listarItensKit } from '@leela/api-client';
-import { seedEventos, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
+import { seedEventos, MARATONA_2027_ID, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import { seedKits, KIT_SEEDS, ITEM_KIT_SEEDS } from '../seed/kits.seed';
 import { syncItemUsadoEm, syncItensDoKit } from '../eventos/itemKitIndex';
 
@@ -110,8 +110,14 @@ beforeEach(async () => {
   await seedBase();
 });
 
+/** Kit no evento COM venda (meia-floripa: 453) — estrutura CONGELADA (RN-200). */
 function kitRef(db: Firestore, kitId: string) {
   return doc(db, 'eventos', MEIA_FLORIPA_ID, 'kits', kitId);
+}
+
+/** Kit no evento SEM venda (maratona-2027) — create/delete livres (RN-210). */
+function kitRefSemVenda(db: Firestore, kitId: string) {
+  return doc(db, 'eventos', MARATONA_2027_ID, 'kits', kitId);
 }
 
 function kitValido(overrides: Record<string, unknown> = {}) {
@@ -144,27 +150,28 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
   });
 
   it('cliente CRIA kit com preço negativo e o valor persiste (RN-211)', async () => {
+    // Evento SEM venda — com venda o create é negado pela RN-200 (review #04)
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(
-      setDoc(kitRef(db, 'sem-kit-vip'), kitValido({
-        id: 'sem-kit-vip', nome: 'Sem kit VIP', preco: -25,
+      setDoc(kitRefSemVenda(db, 'sem-kit-vip'), kitValido({
+        id: 'sem-kit-vip', nome: 'Sem kit VIP', preco: -25, modalidades: ['42k'],
       }))
     );
-    const snap = await getDoc(kitRef(db, 'sem-kit-vip'));
+    const snap = await getDoc(kitRefSemVenda(db, 'sem-kit-vip'));
     expect(snap.data()?.['preco']).toBe(-25);
   });
 
   it('preco string é NEGADO (shape)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(
-      setDoc(kitRef(db, 'kit-shape'), kitValido({ id: 'kit-shape', preco: '89' }))
+      setDoc(kitRefSemVenda(db, 'kit-shape'), kitValido({ id: 'kit-shape', preco: '89' }))
     );
   });
 
   it('nome vazio é NEGADO (shape)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(
-      setDoc(kitRef(db, 'kit-sem-nome'), kitValido({ id: 'kit-sem-nome', nome: '' }))
+      setDoc(kitRefSemVenda(db, 'kit-sem-nome'), kitValido({ id: 'kit-sem-nome', nome: '' }))
     );
   });
 });
@@ -173,12 +180,13 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
 
 describe('kits — cross-tenant e RBAC (S205-T1)', () => {
   it('owner de B NÃO CRIA kit no evento de A (nem carimbando tenant de A)', async () => {
+    // Evento SEM venda: a negação aqui é o cross-tenant, não a RN-200
     const db = dbAs(PASSO_OWNER_UID, passoClaims);
     await assertFails(
-      setDoc(kitRef(db, 'kit-hijack'), kitValido({ tenantId: PASSO_ID }))
+      setDoc(kitRefSemVenda(db, 'kit-hijack'), kitValido({ tenantId: PASSO_ID }))
     );
     await assertFails(
-      setDoc(kitRef(db, 'kit-hijack-2'), kitValido({ tenantId: CASTELO_ID }))
+      setDoc(kitRefSemVenda(db, 'kit-hijack-2'), kitValido({ tenantId: CASTELO_ID }))
     );
   });
 
@@ -204,22 +212,63 @@ describe('kits — cross-tenant e RBAC (S205-T1)', () => {
 
   it('staff CRIA/ATUALIZA kit; promoter NÃO (RBAC)', async () => {
     const staffDb = dbAs('uid-staff-castelo', staffClaims);
+    // Create no evento SEM venda (com venda a RN-200 congela — review #04)
     await assertSucceeds(
-      setDoc(kitRef(staffDb, 'kit-staff'), kitValido({ id: 'kit-staff' }))
+      setDoc(kitRefSemVenda(staffDb, 'kit-staff'), kitValido({ id: 'kit-staff' }))
     );
+    // Update de campo ≠ preco segue permitido MESMO com venda
     await assertSucceeds(updateDoc(kitRef(staffDb, 'kit-ouro'), { capacidade: 90 }));
 
     const promoterDb = dbAs('uid-promoter-castelo', promoterClaims);
     await assertFails(
-      setDoc(kitRef(promoterDb, 'kit-promoter'), kitValido({ id: 'kit-promoter' }))
+      setDoc(kitRefSemVenda(promoterDb, 'kit-promoter'), kitValido({ id: 'kit-promoter' }))
     );
     // promoter LÊ (é membro)
     await assertSucceeds(getDoc(kitRef(promoterDb, 'kit-ouro')));
   });
 
-  it('owner DELETA kit do próprio evento (RN-210 — 0..N kits)', async () => {
+  it('SEM venda: owner cria e DELETA kit do próprio evento (RN-210 — 0..N kits)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
-    await assertSucceeds(deleteDoc(kitRef(db, 'kit-basico')));
+    await assertSucceeds(
+      setDoc(kitRefSemVenda(db, 'kit-descartavel'), kitValido({ id: 'kit-descartavel' }))
+    );
+    await assertSucceeds(deleteDoc(kitRefSemVenda(db, 'kit-descartavel')));
+  });
+});
+
+// ── RN-200: estrutura de kits CONGELADA com venda (review Onda1 #04) ──────
+//
+// Exploit fechado: `delete` + `setDoc` com preço novo (2 chamadas de client
+// SDK) anulava o bloqueio de preço sem tocar Function. Antes deste fix, o
+// teste desta suíte CONSAGRAVA o delete em evento vendido como caminho feliz.
+
+describe('kits — delete+recreate anulava RN-200 (review #04)', () => {
+  it('COM venda: owner NÃO deleta kit (era o greenlight do exploit)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(deleteDoc(kitRef(db, 'kit-basico')));
+  });
+
+  it('COM venda: owner NÃO cria kit novo (recreate com preço novo bloqueado)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(kitRef(db, 'kit-basico-2'), kitValido({ id: 'kit-basico-2', preco: 1 }))
+    );
+  });
+
+  it('COM venda: staff também não deleta nem recria (papel de escrita não basta)', async () => {
+    const db = dbAs('uid-staff-castelo', staffClaims);
+    await assertFails(deleteDoc(kitRef(db, 'kit-prata')));
+    await assertFails(
+      setDoc(kitRef(db, 'kit-prata'), kitValido({ id: 'kit-prata', nome: 'Kit Prata', preco: 1 }))
+    );
+  });
+
+  it('platform_admin segue operando kits mesmo com venda (papel de plataforma)', async () => {
+    const db = dbAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
+    await assertSucceeds(
+      setDoc(kitRef(db, 'kit-admin'), kitValido({ id: 'kit-admin' }))
+    );
+    await assertSucceeds(deleteDoc(kitRef(db, 'kit-admin')));
   });
 });
 
