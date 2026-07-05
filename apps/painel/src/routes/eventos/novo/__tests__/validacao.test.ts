@@ -56,6 +56,17 @@ describe('validaNovoEvento', () => {
     expect(r.erros.percursos).toBeTruthy();
   });
 
+  it('rejeita preço de percurso NEGATIVO — espelho do servidor (review #35)', () => {
+    const r = validaNovoEvento(base({ percursos: [{ nome: '10k', preco: '-10' }] }), HOJE);
+    expect(r.valido).toBe(false);
+    expect(r.erros.percursos).toBeTruthy();
+  });
+
+  it('aceita preço 0 (gratuito é válido; negativo é dos KITS — RN-211)', () => {
+    const r = validaNovoEvento(base({ percursos: [{ nome: '10k', preco: '0' }] }), HOJE);
+    expect(r.valido).toBe(true);
+  });
+
   it('rejeita percurso sem nome', () => {
     const r = validaNovoEvento(base({ percursos: [{ nome: '', preco: '120' }] }), HOJE);
     expect(r.erros.percursos).toBeTruthy();

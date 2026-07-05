@@ -67,12 +67,14 @@ export function validaNovoEvento(
   const percursoInvalido = values.percursos.some((p) => {
     if (p.nome.trim().length === 0) return true;
     const preco = Number(p.preco);
-    return p.preco.trim().length === 0 || Number.isNaN(preco);
+    // Espelha o servidor (isPercursoEvento): número finito e ≥ 0 — sem isso
+    // o negativo passava aqui e morria no genérico do submit (review #35).
+    return p.preco.trim().length === 0 || Number.isNaN(preco) || preco < 0;
   });
   if (values.percursos.length === 0) {
     erros.percursos = 'Adicione ao menos um percurso com preço.';
   } else if (percursoInvalido) {
-    erros.percursos = 'Cada percurso precisa de nome e preço numérico.';
+    erros.percursos = 'Cada percurso precisa de nome e preço numérico (R$ 0 ou mais).';
   }
 
   return { valido: Object.keys(erros).length === 0, erros };
