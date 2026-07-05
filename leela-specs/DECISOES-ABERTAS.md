@@ -9,7 +9,7 @@
 
 ## 🟡 Quando você tiver os dados (não bloqueiam código)
 
-3. **Valores do plano de cobrança** (taxas por parcela 2x-12x, mensalidade) — mecanismo decidido (plano nomeado aplicável por organizador); percentuais quando houver custos reais do gateway.
+3. **Valores restantes do plano de cobrança** — mensalidades (Leela+ e SaaS do produtor) e ajuste fino das taxas por parcela quando houver custos reais do gateway. *(Juros de parcelamento e modelo de taxa por transação: DECIDIDOS em 2026-07-05, ver Ratificadas.)*
 
 ## 🟠 Ações externas suas
 
@@ -23,6 +23,8 @@
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
+- **Parcelamento COM juros (Vitor, 2026-07-05): 3,49% a.m., tabela Price, repassado ao comprador** ("acrescido ao serviço", padrão ticketeira). Coeficiente 12x = 0,103424/parcela → total ≈ +24,11% sobre o valor financiado. Válido para 2x-12x; à vista sem juros.
+- **Modelo de taxa de serviço por transação (Vitor, 2026-07-05): além do percentual puro, opção percentual + fixo (ex.: 8% + R$2,00 por venda), configurável por tenant** no CommercialTerms. Os dois modelos coexistem; admin master escolhe por tenant.
 - Taxa por método: **defaults iniciais 10% cartão / 8% PIX, editáveis pelo admin master** por tenant (CommercialTerms).
 - Parcelamento: tabela por parcela 2x-12x configurável pelo admin; sem "12x sem juros" fixo. **Sem boleto.**
 - Retenção de repasse: 15% liberada pós-evento, editável pelo admin.
