@@ -1,8 +1,37 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · checkpoint 95% · 2026-07-04 ~23h UTC
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · PARADA POR SPEND LIMIT · 2026-07-05
 
-**Tudo commitado está PUSHED até `cce5c9e`** (github.com/inguz-studio/leela-projects, main).
-Retomada em terminal novo: **"retomar leela"** + ler este arquivo. Agentes antigos não existem;
-retomada é SEMPRE por despacho fresco com os artefatos versionados abaixo.
+**Tudo commitado está PUSHED até `77429ba`** (github.com/inguz-studio/leela-projects, main).
+Retomada: **"retomar leela"** + ler este arquivo. Mutexes todos livres.
+
+## ⛔ ONDE PARAMOS (spend limit mensal — claude.ai/settings/usage)
+FIX-LOOP do gate da Onda 1: **3 de 4 fix-agents COMPLETOS e pushed** (FIX-E02, FIX-E16, FIX-E03).
+**FIX-E05 morreu no meio — WIP NÃO COMMITADO no worktree (preservado, git status confirma):**
+`M apps/painel/src/routes/clubes/ClubesRoutes.tsx` · `M clubes/_data/clubes.ts` ·
+`?? apps/painel/src/routes/clubes/novo/` · `M functions/src/__tests__/desafiosRules.test.ts` ·
+`M functions/src/clubs/membrosMutations.ts` · `M functions/src/clubs/onComunicadoEnvio.ts` ·
+`M packages/api-client/src/clubs.ts` + `index.ts` · `M firestore.indexes.json`.
+(Logs de crash Java `hs_err_pid*`/`replay_pid*` = 2 OOMs da suíte monolítica na máquina 8GB — ignorar.)
+
+**PRÓXIMO PASSO ao retomar (com cota):**
+1. `git status` → inventariar o WIP do FIX-E05 acima. Redespachar sf-backend-engineer/Fable p/ CONCLUIR
+   FIX-E05 lendo REVIEW-ONDA1-L2-SUPLEMENTAR.md (S1-S9) + REVIEW-ONDA1-L2.md (médios E05) — S1 blocker
+   já resolvido por agente anterior (scrollIntoView); faltam S2 atualizarComunicado, S3 rules legadas
+   /comunicados+/parcerias, S4 config estado honesto, matriz de transições c/ decisões DO VITOR:
+   **T14 reabrir desafio=owner-only · T15 reativação parceria=unilateral · T13 SEM limite de pontuação**
+   (essas 3 já estão nas mensagens/DECISOES-ABERTAS.md — viram testes) + 12 testes integração do suplementar.
+2. Após FIX-E05: **re-verify CALIBRADO** (xhigh só nos altos) — RODAR SUÍTE EM BLOCOS, não monolítica
+   (a máquina deu 2 OOM com suíte full + agentes paralelos). Depois **GATE FINAL Onda 1** → push + tags
+   `e03`/`e05`/`e02`/`e16-slim` → kanban épicos → Feito → **Onda 2** (plans/onda2-decisoes.md, 24L/74T).
+3. Preview local pronto: `bash preview.sh` (portas alt 5273/8180 — NÃO colide). Subir só com worktree
+   estável (WIP do E05 quebra a montagem do painel). PREVIEW.md tem o passo a passo.
+
+## Fix-loop — o que JÁ fechou e pushed
+- FIX-E02 (e92aca8): #03 estados honestos + #13/#15/#16-ui · painel 430/430.
+- FIX-E16 (nos commits até ab32323): #11/#12 corridas admin + 7/8 baixos (#30 follow-up 2026-08-08) · E16 89/89.
+- FIX-E03 (77429ba): 12 achados, 3 altos c/ prova negativa (datas fuso SP, RN-200 blindada) + #16 dos dois lados.
+- Planos: plano de cobrança propagado (24L/74T); decisões comerciais (taxa por método default editável).
+
+
 
 ## Estado da build — ONDA 1 100% CONSTRUÍDA (pendente gate)
 - **E03 20/20T ✅** · **E02 7/7T ✅** · **E16-slim ✅** (L1+fixes+hotfix+4 telas) · **E05 ✅** (motores 844/844
