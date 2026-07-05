@@ -12,6 +12,10 @@ import type { ParceriaEventoAfiliado } from '@leela/core';
 import { ParceriasView } from './ParceriasView';
 import { AddPatrocinadorModal } from './AddPatrocinadorModal';
 import {
+  ParceriaDestrutivaModal,
+  type VarianteDestrutiva,
+} from './ParceriaDestrutivaModal';
+import {
   useParcerias,
   transicionarParceriaPadrao,
   criarPatrocinadorPadrao,
@@ -19,11 +23,18 @@ import {
 import type { PatrocinadorInput } from '../../_lib/parcerias';
 import type { ClubeOutletContext } from '../ClubeLayout';
 
+interface AlvoDestrutivo {
+  variante: VarianteDestrutiva;
+  id: string;
+  nome: string;
+}
+
 export function ParceriasPage(): JSX.Element {
   const { clube } = useOutletContext<ClubeOutletContext>();
   const { toast } = useToast();
   const { data: parcerias, loading, error, reload } = useParcerias(clube.id);
   const [addAberto, setAddAberto] = useState(false);
+  const [destrutiva, setDestrutiva] = useState<AlvoDestrutivo | null>(null);
 
   async function transicionar(
     p: ParceriaEventoAfiliado,
@@ -60,6 +71,23 @@ export function ParceriasPage(): JSX.Element {
     }
   }
 
+  async function confirmarDestrutiva(): Promise<void> {
+    if (!destrutiva) return;
+    const okTitle =
+      destrutiva.variante === 'desativar-patrocinador'
+        ? `${destrutiva.nome} desativado`
+        : `${destrutiva.nome} removido dos eventos promovidos`;
+    try {
+      await transicionarParceriaPadrao(clube.id, destrutiva.id, 'inativa');
+      toast({ variant: 'success', title: okTitle });
+      reload();
+    } catch {
+      toast({ variant: 'danger', title: 'Não foi possível concluir a ação' });
+    } finally {
+      setDestrutiva(null);
+    }
+  }
+
   return (
     <>
       <ParceriasView
@@ -70,15 +98,28 @@ export function ParceriasPage(): JSX.Element {
         onRecusar={(p) => void transicionar(p, 'inativa', 'Convite recusado')}
         onCopiarLink={copiarLink}
         onVerTermos={emBreve}
-        onRemoverEvento={emBreve}
+        onRemoverEvento={(p) =>
+          setDestrutiva({ variante: 'remover-evento', id: p.id, nome: p.eventoId })
+        }
         onAdicionarPatrocinador={() => setAddAberto(true)}
-        onDesativarPatrocinador={emBreve}
+        onDesativarPatrocinador={(p) =>
+          setDestrutiva({ variante: 'desativar-patrocinador', id: p.id, nome: p.nome })
+        }
       />
       <AddPatrocinadorModal
         open={addAberto}
         onOpenChange={setAddAberto}
         onCriar={criarPatrocinador}
       />
+      {destrutiva ? (
+        <ParceriaDestrutivaModal
+          open
+          onOpenChange={(o) => !o && setDestrutiva(null)}
+          variante={destrutiva.variante}
+          nome={destrutiva.nome}
+          onConfirm={() => void confirmarDestrutiva()}
+        />
+      ) : null}
     </>
   );
 }
