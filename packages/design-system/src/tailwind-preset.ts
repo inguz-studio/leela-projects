@@ -52,6 +52,24 @@ const leelaPreset: Partial<Config> = {
         'border-focus':   'var(--border-focus)',
         'border-danger':  'var(--border-danger)',
 
+        // shadcn/ui bridge — aliases gerados pelo pipeline (tokens/shadcn.json).
+        // Valores são var() diretos (nossas vars resolvem a hex), NUNCA hsl(var()).
+        // Componentes shadcn stock (bg-popover, text-muted-foreground, ring-ring…)
+        // nascem brasa/leela por estas entradas. Modificadores de alpha (bg-x/80)
+        // não funcionam com var() hex — adaptar para token dedicado.
+        border:     'var(--border)',
+        input:      'var(--input)',
+        ring:       'var(--ring)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        primary:     { DEFAULT: 'var(--primary)',     foreground: 'var(--primary-foreground)' },
+        secondary:   { DEFAULT: 'var(--secondary)',   foreground: 'var(--secondary-foreground)' },
+        destructive: { DEFAULT: 'var(--destructive)', foreground: 'var(--destructive-foreground)' },
+        muted:       { DEFAULT: 'var(--muted)',       foreground: 'var(--muted-foreground)' },
+        accent:      { DEFAULT: 'var(--accent)',      foreground: 'var(--accent-foreground)' },
+        popover:     { DEFAULT: 'var(--popover)',     foreground: 'var(--popover-foreground)' },
+        card:        { DEFAULT: 'var(--card)',        foreground: 'var(--card-foreground)' },
+
         // Feedback
         'feedback-success':         'var(--feedback-success)',
         'feedback-success-fg':      'var(--feedback-success-fg)',
@@ -78,6 +96,12 @@ const leelaPreset: Partial<Config> = {
         'ds-lg':   'var(--radius-lg)',
         'ds-xl':   'var(--radius-xl)',
         'ds-pill': 'var(--radius-pill)',
+        // shadcn/ui bridge — convenção stock: lg = --radius (alias de --radius-md
+        // do brasa), md/sm derivam por calc. Sobrescreve rounded-{sm,md,lg} default
+        // do Tailwind (nenhum uso bare no monorepo na adoção — auditado 2026-07-05).
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       boxShadow: {
         'elev-0':     'var(--elevation-0)',

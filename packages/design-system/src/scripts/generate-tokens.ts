@@ -15,6 +15,7 @@ import primitivesLeela from '../../tokens/primitives.leela.json';
 import semanticBase from '../../tokens/semantic.json';
 import semanticLeela from '../../tokens/semantic.leela.json';
 import component from '../../tokens/component.json';
+import shadcnAliases from '../../tokens/shadcn.json';
 
 import { generateCSS, generateRNTheme, mergeTokens, type TokenRecord } from '../theme/generate.js';
 
@@ -31,8 +32,9 @@ const semanticLeelaMerged = mergeTokens(semanticBase as TokenRecord, semanticLee
 // ---------------------------------------------------------------------------
 
 // brasa é o tema padrão: também cobre :root sem data-theme (anti-FOUC SSR)
-const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true });
-const leelaCSS = generateCSS('leela', primitivesLeela as TokenRecord, semanticLeelaMerged, component as TokenRecord);
+// aliases: ponte shadcn→brasa (tokens/shadcn.json) — CSS-only, vale nos 2 temas
+const brasaCSS = generateCSS('brasa', primitivesBrasa as TokenRecord, semanticBrasa, component as TokenRecord, { rootFallback: true, aliases: shadcnAliases as TokenRecord });
+const leelaCSS = generateCSS('leela', primitivesLeela as TokenRecord, semanticLeelaMerged, component as TokenRecord, { aliases: shadcnAliases as TokenRecord });
 const indexCSS = `/* Leela Design System — all themes combined */\n\n${brasaCSS}\n\n${leelaCSS}`;
 
 const themesDir = resolve(pkg, 'themes');

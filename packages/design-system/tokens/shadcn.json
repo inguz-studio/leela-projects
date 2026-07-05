@@ -1,0 +1,22 @@
+{
+  "background": "{surface.base}",
+  "foreground": "{text.primary}",
+  "card": "{surface.raised}",
+  "card-foreground": "{text.primary}",
+  "popover": "{surface.overlay}",
+  "popover-foreground": "{text.primary}",
+  "primary": "{action.primary}",
+  "primary-foreground": "{action.primary-fg}",
+  "secondary": "{action.secondary}",
+  "secondary-foreground": "{action.secondary-fg}",
+  "muted": "{surface.overlay}",
+  "muted-foreground": "{text.tertiary}",
+  "accent": "{action.ghost-hover}",
+  "accent-foreground": "{action.ghost-fg}",
+  "destructive": "{action.destructive}",
+  "destructive-foreground": "{action.destructive-fg}",
+  "border": "{border.default}",
+  "input": "{border.strong}",
+  "ring": "{border.focus}",
+  "radius": "{radius.md}"
+}

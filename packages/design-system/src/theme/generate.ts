@@ -118,6 +118,14 @@ export interface GenerateCSSOptions {
    * com o tema padrão em vez de flash sem estilo.
    */
   rootFallback?: boolean;
+  /**
+   * Extra alias tier appended AFTER primitives/semantic/component — used for
+   * the shadcn/ui bridge (tokens/shadcn.json): `--background: var(--surface-base)`.
+   * Refs here point at SEMANTIC names ({surface.base} → var(--surface-base)),
+   * so this tier is CSS-only (generateRNTheme não recebe aliases: RN não
+   * consome shadcn e refs semânticas não resolvem contra primitives).
+   */
+  aliases?: TokenRecord;
 }
 
 /**
@@ -142,8 +150,11 @@ export function generateCSS(
   const primVars = flattenTokens(primitives, '', primitives, 'css');
   const semVars  = flattenTokens(semantic,   '', primitives, 'css');
   const compVars = flattenTokens(component,  '', primitives, 'css');
+  const aliasVars = options.aliases
+    ? flattenTokens(options.aliases, '', primitives, 'css')
+    : [];
 
-  const allVars = [...primVars, ...semVars, ...compVars];
+  const allVars = [...primVars, ...semVars, ...compVars, ...aliasVars];
 
   const selector = options.rootFallback
     ? `:root:not([data-theme]),\n[data-theme="${theme}"] {`

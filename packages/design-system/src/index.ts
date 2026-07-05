@@ -78,5 +78,8 @@ export type { SkeletonProps } from './components/Skeleton';
 export { Tabs } from './components/Tabs';
 export type { TabsProps, TabItem } from './components/Tabs';
 
+// ── shadcn+brasa (PoC Lote A · brief ds-consolidacao) ──────────────────────
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/Tooltip';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

@@ -215,6 +215,26 @@
   --card-critical-border: 3px;
   --stepper-step-size: 32px;
   --skeleton-radius: var(--radius-sm);
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--action-primary);
+  --primary-foreground: var(--action-primary-fg);
+  --secondary: var(--action-secondary);
+  --secondary-foreground: var(--action-secondary-fg);
+  --muted: var(--surface-overlay);
+  --muted-foreground: var(--text-tertiary);
+  --accent: var(--action-ghost-hover);
+  --accent-foreground: var(--action-ghost-fg);
+  --destructive: var(--action-destructive);
+  --destructive-foreground: var(--action-destructive-fg);
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--border-focus);
+  --radius: var(--radius-md);
 }
 
 [data-theme="leela"] {
@@ -441,4 +461,24 @@
   --card-critical-border: 3px;
   --stepper-step-size: 32px;
   --skeleton-radius: var(--radius-sm);
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--action-primary);
+  --primary-foreground: var(--action-primary-fg);
+  --secondary: var(--action-secondary);
+  --secondary-foreground: var(--action-secondary-fg);
+  --muted: var(--surface-overlay);
+  --muted-foreground: var(--text-tertiary);
+  --accent: var(--action-ghost-hover);
+  --accent-foreground: var(--action-ghost-fg);
+  --destructive: var(--action-destructive);
+  --destructive-foreground: var(--action-destructive-fg);
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--border-focus);
+  --radius: var(--radius-md);
 }
