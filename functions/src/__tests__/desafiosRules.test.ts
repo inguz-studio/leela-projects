@@ -23,13 +23,14 @@ import {
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   deleteDoc,
   doc,
   getDoc,
   setDoc,
   updateDoc,
+  writeBatch,
   type Firestore,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
@@ -329,6 +330,39 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
           },
         })
       );
+    });
+  });
+
+  // ── S5 — criarDesafio atômico (writeBatch desafio + junção acoes) ────────
+
+  describe('atomicidade do create desafio+acoes (fix S5 — writeBatch)', () => {
+    it('batch com ação INVÁLIDA derruba o desafio junto (sem doc órfão)', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      const ref = desafioDoc(db, 'desafio-batch-fail');
+      const batch = writeBatch(db);
+      batch.set(ref, { ...desafioValido, status: 'ativo' });
+      batch.set(acaoDoc(db, 'desafio-batch-fail', 'correr'), {
+        acaoRef: 'correr', meta: -1, // meta <= 0 viola shapeAcaoDesafioValido
+      });
+      await assertFails(batch.commit());
+
+      // O desafio NÃO pode ter sobrado (era o furo do Promise.all do S5).
+      const orfao = await desafioAdminRef('desafio-batch-fail').get();
+      expect(orfao.exists).toBe(false);
+    });
+
+    it('batch válido grava desafio E junção juntos (caminho feliz do criarDesafio)', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      const batch = writeBatch(db);
+      batch.set(desafioDoc(db, 'desafio-batch-ok'), { ...desafioValido, status: 'ativo' });
+      batch.set(acaoDoc(db, 'desafio-batch-ok', 'correr'), { acaoRef: 'correr', meta: 80 });
+      await assertSucceeds(batch.commit());
+
+      const desafio = await desafioAdminRef('desafio-batch-ok').get();
+      const acao = await desafioAdminRef('desafio-batch-ok')
+        .collection('acoes').doc('correr').get();
+      expect(desafio.exists).toBe(true);
+      expect(acao.exists).toBe(true);
     });
   });
 

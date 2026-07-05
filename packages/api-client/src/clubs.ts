@@ -26,6 +26,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
   type Firestore,
   type QueryConstraint,
 } from 'firebase/firestore';
@@ -275,6 +276,12 @@ export interface CriarDesafioResult {
 /**
  * Cria um desafio (+ junção de ações) via write direto do cliente. Agregados ∑
  * nascem zerados (a Function os mantém). Retorna o id gerado.
+ *
+ * ATÔMICO via writeBatch (fix S5 do review Onda1): doc do desafio e junção
+ * `acoes` entram no MESMO batch — falha parcial (rede, Rules negando uma
+ * ação) não deixa mais desafio 'ativo' sem junção, premissa do motor de
+ * progresso (E13) e do publish validado (Modelo A exige meta por ação).
+ * As Rules avaliam cada doc do batch individualmente — nada muda nelas.
  */
 export async function criarDesafio(
   db: Firestore,
@@ -302,16 +309,15 @@ export async function criarDesafio(
     data.minimoPorPilar = input.minimoPorPilar;
   }
 
-  await setDoc(ref, data);
-
-  await Promise.all(
-    input.acoes.map((a) =>
-      setDoc(
-        doc(db, 'clubes', clubeId, 'desafios', ref.id, 'acoes', a.acaoRef),
-        a.meta !== undefined ? { acaoRef: a.acaoRef, meta: a.meta } : { acaoRef: a.acaoRef }
-      )
-    )
-  );
+  const batch = writeBatch(db);
+  batch.set(ref, data);
+  for (const a of input.acoes) {
+    batch.set(
+      doc(db, 'clubes', clubeId, 'desafios', ref.id, 'acoes', a.acaoRef),
+      a.meta !== undefined ? { acaoRef: a.acaoRef, meta: a.meta } : { acaoRef: a.acaoRef }
+    );
+  }
+  await batch.commit();
 
   return { desafioId: ref.id };
 }
