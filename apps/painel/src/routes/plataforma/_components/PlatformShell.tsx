@@ -10,6 +10,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AppShell, Sidebar } from '@leela/design-system';
 import type { SidebarItem, SidebarSection } from '@leela/design-system';
+import type { Role } from '@leela/core';
 import { PlatformGuard } from './PlatformGuard';
 import { usePlatformSession } from '../_data/session';
 import { PLATFORM_NAV, activeNavId } from '../_lib/nav';
@@ -58,5 +59,5 @@ PlatformShell.displayName = 'PlatformShell';
 export interface PlatformOutletContext {
   isAdmin: boolean;
   uid: string | null;
-  role: import('@leela/core').Role | null;
+  role: Role | null;
 }
