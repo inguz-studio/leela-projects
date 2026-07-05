@@ -132,6 +132,15 @@ export async function provisionTenantCore(
   let ownerUid: string;
   let ownerCreated = false;
   /**
+   * true quando o provisionamento entrou pela exceção athlete+doc (claim
+   * repair). A prova doc-proven-owner é lida FORA da transação — o flag
+   * exige o RE-CHECK da prova dentro da tx (fix review L2 #29): sem ele,
+   * um delete/transição concorrente do tenant entre a guarda e a tx
+   * convertia rejeição em promoção athlete→owner sobre prova stale (a tx
+   * caía no branch de CRIAÇÃO com o athlete como owner do tenant novo).
+   */
+  let viaClaimRepair = false;
+  /**
    * Claims do owner ANTES deste provisionamento (null = sem claims).
    * Insumo do rollback compensatório (fix review Onda1 #1): se o setClaims
    * falhar DEPOIS de setCustomUserClaims (ex.: revokeRefreshTokens caiu),
@@ -207,6 +216,7 @@ export async function provisionTenantCore(
             'Use outro e-mail de owner ou trate a conta antes (RN-401).'
         );
       }
+      viaClaimRepair = true;
       logger.warn('provision_tenant_claim_repair', {
         tenantId,
         ownerUid,
@@ -237,6 +247,27 @@ export async function provisionTenantCore(
         tx.get(profRef),
         tx.get(termsCol.doc('current')),
       ]);
+
+      // TOCTOU da exceção athlete+doc (fix review L2 #29): a prova
+      // doc-proven-owner foi lida FORA da tx. Se o tenant mudou entre a
+      // guarda e a tx (delete/transição concorrente por outro admin), a
+      // prova é stale — sem este re-check a tx caía no branch de CRIAÇÃO
+      // e promovia o athlete a owner de um tenant NOVO.
+      if (viaClaimRepair) {
+        const stillProven =
+          tenantSnap.exists &&
+          (tenantSnap.get('status') as TenantStatus) === 'ativo' &&
+          tenantSnap.get('ownerUid') === ownerUid;
+        if (!stillProven) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            `Prova de ownership expirou durante o provisionamento: ` +
+              `tenants/'${tenantId}' mudou entre a guarda e a transação ` +
+              '(operação concorrente de outro admin). Reavalie o estado do ' +
+              'tenant e repita a operação (RN-401).'
+          );
+        }
+      }
 
       // Owner já pertence a OUTRO tenant → conflito (V1: 1 owner = 1 tenant)
       if (profSnap.exists) {

@@ -615,6 +615,56 @@ describe('provisionTenantCore — corrida onCreateUser × provisionTenant (fix r
       role: 'platform_admin',
     });
   });
+
+  // TOCTOU da prova doc-proven-owner (fix review L2 #29): a prova é lida
+  // FORA da tx. O Proxy abaixo simula o delete concorrente do tenant por
+  // OUTRO admin exatamente na janela guarda→tx: `runTransaction` primeiro
+  // apaga tenants/{slug} no db real e só então delega à tx real. No código
+  // antigo, a tx caía no branch de CRIAÇÃO e promovia o athlete a owner de
+  // um tenant novo sobre prova stale (este teste falharia lá).
+  it('TOCTOU: delete concorrente do tenant entre a guarda e a tx → rejeição, nunca promoção', async () => {
+    function dbWithConcurrentTenantDelete(
+      realDb: admin.firestore.Firestore,
+      tenantPath: string
+    ): admin.firestore.Firestore {
+      return new Proxy(realDb, {
+        get(target, prop, receiver) {
+          if (prop === 'runTransaction') {
+            return async (...args: unknown[]) => {
+              await realDb.recursiveDelete(realDb.doc(tenantPath));
+              return (
+                target.runTransaction as (...a: unknown[]) => Promise<unknown>
+              ).apply(target, args);
+            };
+          }
+          const value = Reflect.get(target, prop, receiver) as unknown;
+          return typeof value === 'function'
+            ? (value as (...args: unknown[]) => unknown).bind(target)
+            : value;
+        },
+      }) as admin.firestore.Firestore;
+    }
+
+    // Estado pós-corrida: owner rebaixado a athlete CRU (o que a corrida
+    // produz) — a guarda entra na exceção athlete+doc com prova válida.
+    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    await auth.setCustomUserClaims(res.ownerUid, { role: 'athlete' });
+
+    await expect(
+      provisionTenantCore(
+        dbWithConcurrentTenantDelete(db, 'tenants/castelo-producoes'),
+        auth,
+        input(),
+        ADMIN_UID
+      )
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+
+    // NENHUM tenant recriado sobre a prova stale; athlete continua athlete
+    expect((await db.doc('tenants/castelo-producoes').get()).exists).toBe(false);
+    expect((await auth.getUser(res.ownerUid)).customClaims).toEqual({
+      role: 'athlete',
+    });
+  });
 });
 
 // ── Demoção DELIBERADA não é re-elevada (fix review L2 #12) ────────────────
