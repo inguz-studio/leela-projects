@@ -546,6 +546,20 @@ service cloud.firestore {
             (desafiosRules: "estado vigente RN-111"). Não endurecer aqui
             sem decisão do produto. */
 
+        /** Matriz de transição de status (S7/T14 — decisão do Vitor):
+            'encerrado' PODE voltar a 'ativo', mas SOMENTE pelo dono do
+            clube (ownerId do clube pai); staff/membros não reabrem, e
+            'encerrado' não vira 'rascunho'. Demais transições livres
+            para writers. */
+        function transicaoStatusDesafioValida() {
+          return resource.data.status != 'encerrado'
+            || request.resource.data.status == 'encerrado'
+            || (request.resource.data.status == 'ativo'
+                && request.auth.uid ==
+                    get(/databases/$(database)/documents/clubes/$(clubeId))
+                      .data.ownerId);
+        }
+
         /** Agregados ∑ nascem zerados/ausentes — cliente nunca inventa progresso. */
         function desafioAgregadosZerados() {
           return request.resource.data.get('qtdParticipantes', 0) == 0
@@ -571,6 +585,7 @@ service cloud.firestore {
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
                           && shapeDesafioValido()
+                          && transicaoStatusDesafioValida()
                           && desafioAgregadosIntocados())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)

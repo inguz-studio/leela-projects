@@ -318,6 +318,56 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
     });
   });
 
+  // ── Matriz de transição — reabertura owner-only (S7/T14, decisão Vitor) ──
+
+  describe('reabertura de desafio encerrado (S7/T14 — owner-only)', () => {
+    beforeEach(async () => {
+      await desafioAdminRef('desafio-base').update({ status: 'encerrado' });
+    });
+
+    it('dono do clube REABRE desafio encerrado (encerrado→ativo)', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertSucceeds(
+        updateDoc(desafioDoc(db, 'desafio-base'), { status: 'ativo' })
+      );
+    });
+
+    it('tenant_staff NÃO reabre desafio encerrado', async () => {
+      const db = dbAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(desafioDoc(db, 'desafio-base'), { status: 'ativo' })
+      );
+    });
+
+    it('membro (athlete) NÃO reabre desafio encerrado', async () => {
+      const db = dbAs('uid-membro-castelo', { role: 'athlete' });
+      await assertFails(
+        updateDoc(desafioDoc(db, 'desafio-base'), { status: 'ativo' })
+      );
+    });
+
+    it('cross-tenant NÃO reabre desafio encerrado', async () => {
+      const db = dbAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
+      await assertFails(
+        updateDoc(desafioDoc(db, 'desafio-base'), { status: 'ativo' })
+      );
+    });
+
+    it("encerrado NÃO vira 'rascunho' (nem pelo dono — reabertura é só →ativo)", async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(desafioDoc(db, 'desafio-base'), { status: 'rascunho' })
+      );
+    });
+
+    it('editar campos comuns de desafio encerrado sem mudar status segue permitido (writer)', async () => {
+      const db = dbAs('uid-staff-castelo', { role: 'tenant_staff', tenantId: CASTELO_ID });
+      await assertSucceeds(
+        updateDoc(desafioDoc(db, 'desafio-base'), { descricao: 'ajuste pós-encerramento' })
+      );
+    });
+  });
+
   // ── Junção acoes ─────────────────────────────────────────────────────────
 
   describe('junção acoes (docId = id da ação no catálogo)', () => {
