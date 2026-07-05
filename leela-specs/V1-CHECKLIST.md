@@ -109,7 +109,7 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 - [x] LEELA-S109-T1 — Segmentação + validações de comunicado (core) (`da301cf`)
 - [x] LEELA-S109-T2 — Editor de comunicado (70/30 + preview Push/Email) (`28ce61a`)
 - [x] LEELA-S110-T1 — Tela de configurações (25/75 + scroll spy + 5 seções) (`7bb112d`)
-- [~] LEELA-S110-T2 — Deletar clube (§2.15 + LGPD) + exportação — **frontend** modal + contrato tipado (`f1dd7e4`); **Function** deleteClube/exportClubeData = Fable (pendente, sequenciada após a tela)
+- [x] LEELA-S110-T2 — Deletar clube (§2.15 + LGPD) + exportação — **frontend** modal + contrato tipado (`f1dd7e4`); **backend** deleteClube (cascata + retenção 90d em `clubesExcluidos`, replay-safe) + exportClubeData (guard 90d, `exportsClube`) + Rules `allow delete: if false` em clubes (`524607f` · functions 882/882 no Emulator)
 
 ### LEELA-E16 · Super-admin mínimo (recorte V1 — onboarding, termos, macro básico)
 
