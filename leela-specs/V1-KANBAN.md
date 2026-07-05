@@ -9,12 +9,13 @@ tags:
 ---
 
 ## 📋 Backlog
-- [ ] **O1** · E02 · Dashboard do produtor — 7T · dep E03-L1+E05-L1 (agregados)
 - [ ] **O2** · E04 · Config & Vendas (+ afiliação/split) — 19T · dep E03
 - [ ] **O2** · E12 · Landing + checkout público — 18T · dep E04
 - [ ] **O2** · E08 · Promotor self-service — 4T · dep E04
 - [ ] **O2** · E06 · Comunicação do evento — 5T · dep E03
 - [ ] **O3** · E13-slim · App do atleta (mínimo) — 14T · dep E12,E05
+- [ ] **O3** · Leela+ teaser — tela "em breve" + CTA de interesse c/ tracking + lista de espera (decisão Vitor 2026-07-04: programa completo é evolução; teaser testa demanda) · discovery em leela-plus-hipotese-jtbd.md
+- [ ] **⏳ REVISÃO DE ESCOPO EM ANÁLISE** (painel workflow rodando): E07 telas sistema · E09 repasses (ENTRA, recorte a definir) · E11 analytics (3 opções) · E14 Strava-only · gamificação GymRats s/ medalhas + perfil atleta · proposta → discovery/proposta-revisao-escopo-2026-07-04.md
 
 
 ## 🔨 Fazendo
