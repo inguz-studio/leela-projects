@@ -15,6 +15,7 @@ import {
   ParceriaDestrutivaModal,
   type VarianteDestrutiva,
 } from './ParceriaDestrutivaModal';
+import { TermosModal } from './TermosModal';
 import {
   useParcerias,
   transicionarParceriaPadrao,
@@ -35,6 +36,7 @@ export function ParceriasPage(): JSX.Element {
   const { data: parcerias, loading, error, reload } = useParcerias(clube.id);
   const [addAberto, setAddAberto] = useState(false);
   const [destrutiva, setDestrutiva] = useState<AlvoDestrutivo | null>(null);
+  const [termos, setTermos] = useState<ParceriaEventoAfiliado | null>(null);
 
   async function transicionar(
     p: ParceriaEventoAfiliado,
@@ -56,10 +58,6 @@ export function ParceriasPage(): JSX.Element {
       .then(() => toast({ variant: 'success', title: 'Link master copiado' }))
       .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar o link' }));
   }
-
-  const emBreve = (): void => {
-    toast({ variant: 'info', title: 'Disponível em breve' });
-  };
 
   async function criarPatrocinador(input: PatrocinadorInput): Promise<void> {
     try {
@@ -97,7 +95,7 @@ export function ParceriasPage(): JSX.Element {
         onAceitar={(p) => void transicionar(p, 'ativa', `Parceria com ${p.eventoId} aceita`)}
         onRecusar={(p) => void transicionar(p, 'inativa', 'Convite recusado')}
         onCopiarLink={copiarLink}
-        onVerTermos={emBreve}
+        onVerTermos={(p) => setTermos(p)}
         onRemoverEvento={(p) =>
           setDestrutiva({ variante: 'remover-evento', id: p.id, nome: p.eventoId })
         }
@@ -119,6 +117,9 @@ export function ParceriasPage(): JSX.Element {
           nome={destrutiva.nome}
           onConfirm={() => void confirmarDestrutiva()}
         />
+      ) : null}
+      {termos ? (
+        <TermosModal open onOpenChange={(o) => !o && setTermos(null)} parceria={termos} />
       ) : null}
     </>
   );
