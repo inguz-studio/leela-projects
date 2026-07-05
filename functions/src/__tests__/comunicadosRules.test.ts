@@ -178,6 +178,32 @@ describe.skipIf(!hasEmulator)('comunicados — Rules (S108-T1)', () => {
       );
     });
 
+    it("T9: 'agendado' SEM agendadoPara é NEGADO (espelho S6a — form valida, rule espelha)", async () => {
+      await assertFails(
+        setDoc(comunicadoDoc(castelo(), 'agendado-sem-data'), {
+          ...comunicadoValido, status: 'agendado',
+        })
+      );
+    });
+
+    it('T11: título < 5 ou conteúdo < 10 chars é NEGADO (espelho mínimo RN-134/SPEC-02)', async () => {
+      await assertFails(
+        setDoc(comunicadoDoc(castelo(), 'titulo-curto'), {
+          ...comunicadoValido, titulo: 'Oi',
+        })
+      );
+      await assertFails(
+        setDoc(comunicadoDoc(castelo(), 'conteudo-curto'), {
+          ...comunicadoValido, conteudo: 'curto',
+        })
+      );
+      await assertFails(
+        setDoc(comunicadoDoc(castelo(), 'titulo-espacos'), {
+          ...comunicadoValido, titulo: '        ',
+        })
+      );
+    });
+
     it("cliente NÃO cria direto como 'enviado' (RN-130 — envio é da Function)", async () => {
       await assertFails(
         setDoc(comunicadoDoc(castelo(), 'enviado-forjado'), {
@@ -269,6 +295,14 @@ describe.skipIf(!hasEmulator)('comunicados — Rules (S108-T1)', () => {
       await assertSucceeds(
         updateDoc(comunicadoDoc(castelo(), 'rascunho-base'), {
           status: 'agendado', agendadoPara: new Date(),
+        })
+      );
+    });
+
+    it('update para agendado SEM agendadoPara é NEGADO (espelho S6a no update)', async () => {
+      await assertFails(
+        updateDoc(comunicadoDoc(castelo(), 'rascunho-base'), {
+          status: 'agendado',
         })
       );
     });

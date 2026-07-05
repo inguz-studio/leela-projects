@@ -369,6 +369,58 @@ describe.skipIf(!hasEmulator)('clubes — Rules + seed (S101-T1)', () => {
     });
   });
 
+  // ── Espelho de shape (suplementar S6e/S6f — T4/T5) ───────────────────────
+
+  describe('espelho server-side de shape (review suplementar S6e/S6f)', () => {
+    it("T4: update modeloEntrada:'pago' é NEGADO (RN-104 — Pago não existe na V1)", async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          modeloEntrada: 'pago',
+        })
+      );
+    });
+
+    it("T5: update nome:'' é NEGADO (nome obrigatório — validarClube espelhada)", async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          nome: '',
+        })
+      );
+      await assertFails(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          nome: '   ',
+        })
+      );
+    });
+
+    it('create sem nome válido ou com modeloEntrada:\'pago\' é NEGADO', async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        setDoc(doc(ctx.firestore(), 'clubes', 'clube-sem-nome'), {
+          id: 'clube-sem-nome', tenantId: CASTELO_ID,
+          nome: '', visibilidade: 'privada',
+        })
+      );
+      await assertFails(
+        setDoc(doc(ctx.firestore(), 'clubes', 'clube-pago'), {
+          id: 'clube-pago', tenantId: CASTELO_ID,
+          nome: 'Clube Pago', visibilidade: 'privada', modeloEntrada: 'pago',
+        })
+      );
+    });
+
+    it("update modeloEntrada:'gratuito' e nome válido seguem permitidos", async () => {
+      const ctx = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertSucceeds(
+        updateDoc(doc(ctx.firestore(), 'clubes', 'clube-privado-castelo'), {
+          nome: 'Clube Renomeado', modeloEntrada: 'gratuito',
+        })
+      );
+    });
+  });
+
   // ── Seed canônico ────────────────────────────────────────────────────────
 
   describe('seedClubes (Emulator-only)', () => {

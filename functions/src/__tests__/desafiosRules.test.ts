@@ -106,6 +106,8 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
       id: 'desafio-base', tenantId: CASTELO_ID,
       nome: 'Desafio Base', descricao: 'existente',
       modelo: 'B', status: 'ativo', metaTotalPontos: 500,
+      dataInicio: admin.firestore.Timestamp.fromDate(new Date('2026-07-01T12:00:00Z')),
+      dataFim: admin.firestore.Timestamp.fromDate(new Date('2026-07-31T12:00:00Z')),
       recompensaTipo: 'medalha_digital', visibilidade: 'membros',
       qtdParticipantes: 10, progressoPct: 40,
       criadoEm: now, atualizadoEm: now,
@@ -152,6 +154,9 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
     minimoPorPilar: { fisico: 100, mental: 100, espiritual: 100 },
     recompensaTipo: 'cupom',
     visibilidade: 'membros',
+    // Datas obrigatórias no shape (S6d) — client SDK converte Date→Timestamp
+    dataInicio: new Date('2026-07-01T12:00:00Z'),
+    dataFim: new Date('2026-07-31T12:00:00Z'),
   };
 
   // ── Leitura ──────────────────────────────────────────────────────────────
@@ -268,6 +273,48 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
     it('outro tenant NÃO deleta', async () => {
       const db = dbAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
       await assertFails(deleteDoc(desafioDoc(db, 'desafio-base')));
+    });
+  });
+
+  // ── Espelhos server-side do fix-loop (suplementar S6b/S6d + T12/T13) ─────
+
+  describe('espelhos server-side (review suplementar S6/T12/T13)', () => {
+    it('T12: update tocando progressoPorPilar é NEGADO (∑ só via Function)', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        updateDoc(desafioDoc(db, 'desafio-base'), {
+          progressoPorPilar: { fisico: { atual: 999, meta: 999 } },
+        })
+      );
+    });
+
+    it('S6d: create sem dataInicio/dataFim é NEGADO', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      const { dataInicio: _di, dataFim: _df, ...semDatas } = desafioValido;
+      await assertFails(setDoc(desafioDoc(db, 'desafio-sem-datas'), semDatas));
+    });
+
+    it('S6d: create com dataFim <= dataInicio é NEGADO (espelho de validarDesafio)', async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      await assertFails(
+        setDoc(desafioDoc(db, 'desafio-datas-invertidas'), {
+          ...desafioValido,
+          dataInicio: new Date('2026-07-31T12:00:00Z'),
+          dataFim: new Date('2026-07-01T12:00:00Z'),
+        })
+      );
+    });
+
+    it("T13 · estado VIGENTE (decisão de produto PENDENTE): create 'ativo' Modelo C sem minimoPorPilar PASSA na rule — RN-111 segue client-side (punt S6b)", async () => {
+      const db = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+      const { minimoPorPilar: _m, ...semMinimo } = desafioValido;
+      // Congela o comportamento atual: se este teste quebrar, alguém
+      // espelhou RN-111 no servidor — exige decisão de produto ratificada.
+      await assertSucceeds(
+        setDoc(desafioDoc(db, 'desafio-c-sem-minimo'), {
+          ...semMinimo, status: 'ativo',
+        })
+      );
     });
   });
 

@@ -423,18 +423,32 @@ service cloud.firestore {
           .hasAny(['ownerId', 'codigoConvite', 'slug', 'criadoEm']);
       }
 
+      /** Espelho server-side do shape mínimo (review suplementar S6e/S6f):
+          nome obrigatório 1..60 (validarClube, core) e modeloEntrada dentro
+          do enum do domínio — 'pago' NÃO existe na V1 (RN-104; o chip da UI
+          é disabled, mas UI não é fronteira de segurança). */
+      function clubeShapeValido() {
+        return request.resource.data.nome is string
+          && request.resource.data.nome.trim().size() > 0
+          && request.resource.data.nome.size() <= 60
+          && request.resource.data.get('modeloEntrada', 'gratuito')
+              in ['gratuito', 'pago_em_breve'];
+      }
+
       allow read: if isTenantMember(resource.data.tenantId)
                   || isPlatformAdmin()
                   || resource.data.visibilidade in ['publica', 'indexavel'];
       allow create: if (isTenantWriter(request.resource.data.tenantId)
                         && tenantAtivo(request.resource.data.tenantId)
-                        && clubeAgregadosZerados())
+                        && clubeAgregadosZerados()
+                        && clubeShapeValido())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
                         && clubeAgregadosIntocados()
-                        && clubeIdentidadeIntocada())
+                        && clubeIdentidadeIntocada()
+                        && clubeShapeValido())
                     || isPlatformAdmin();
       allow delete: if false;
 
@@ -509,7 +523,9 @@ service cloud.firestore {
       // cliente autenticado do próprio tenant.
       match /desafios/{desafioId} {
 
-        /** Shape básico do desafio — enums canônicos (RN-110/116/117). */
+        /** Shape básico do desafio — enums canônicos (RN-110/116/117) +
+            datas coerentes (review suplementar S6d: timestamps e
+            fim > início, espelho de validarDesafio no core). */
         function shapeDesafioValido() {
           return request.resource.data.modelo in ['A', 'B', 'C']
             && request.resource.data.status in ['rascunho', 'ativo', 'encerrado']
@@ -517,8 +533,18 @@ service cloud.firestore {
                 ['medalha_digital', 'cupom', 'medalha_fisica', 'custom']
             && request.resource.data.visibilidade in ['membros', 'convite', 'publico']
             && request.resource.data.nome is string
-            && request.resource.data.nome.size() > 0;
+            && request.resource.data.nome.size() > 0
+            && request.resource.data.dataInicio is timestamp
+            && request.resource.data.dataFim is timestamp
+            && request.resource.data.dataFim > request.resource.data.dataInicio;
         }
+
+        /** RN-111 (mínimo por pilar no C; meta por ação no A) segue
+            CLIENT-SIDE (validarPublicacao, core) — punt VIGENTE documentado
+            no review suplementar S6b, decisão de produto PENDENTE sobre
+            espelhar no servidor. Estado atual congelado por teste
+            (desafiosRules: "estado vigente RN-111"). Não endurecer aqui
+            sem decisão do produto. */
 
         /** Agregados ∑ nascem zerados/ausentes — cliente nunca inventa progresso. */
         function desafioAgregadosZerados() {
@@ -668,7 +694,9 @@ service cloud.firestore {
       // RN-135: imagem de capa só existe quando o canal inclui email.
       match /comunicados/{comunicadoId} {
 
-        /** Shape básico (RN-131/132 + segmento + RN-135). */
+        /** Shape básico (RN-131/132 + segmento + RN-135) + espelho mínimo
+            de título/conteúdo (review suplementar S6c — SPEC-02/RN-134:
+            título ≥ 5, conteúdo ≥ 10 após trim, como validarComunicado). */
         function shapeComunicadoValido() {
           return request.resource.data.canal is list
             && request.resource.data.canal.size() >= 1
@@ -678,7 +706,20 @@ service cloud.firestore {
             && request.resource.data.segmento.tipo in
                 ['todos', 'por_desafio', 'por_pilar', 'por_engajamento']
             && (!('capaUrl' in request.resource.data)
-                || 'email' in request.resource.data.canal);
+                || 'email' in request.resource.data.canal)
+            && request.resource.data.titulo is string
+            && request.resource.data.titulo.trim().size() >= 5
+            && request.resource.data.conteudo is string
+            && request.resource.data.conteudo.trim().size() >= 10;
+        }
+
+        /** 'agendado' exige `agendadoPara` timestamp (review suplementar
+            S6a — o form valida, a rule espelha; a Function de envio/cron
+            E04/E12 consumirá agendados confiando neste invariante). */
+        function agendamentoCoerente() {
+          return request.resource.data.status != 'agendado'
+            || (('agendadoPara' in request.resource.data)
+                && request.resource.data.agendadoPara is timestamp);
         }
 
         /** Cliente nunca escreve status 'enviado' (RN-130). */
@@ -704,6 +745,7 @@ service cloud.firestore {
                           && request.resource.data.tenantId == tenantDoClubePai()
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapeComunicadoValido()
+                          && agendamentoCoerente()
                           && statusEditavelPeloCliente()
                           && semCamposDeEnvio())
                       || isPlatformAdmin();
@@ -712,6 +754,7 @@ service cloud.firestore {
                           && tenantAtivo(resource.data.tenantId)
                           && resource.data.status != 'enviado'
                           && shapeComunicadoValido()
+                          && agendamentoCoerente()
                           && statusEditavelPeloCliente()
                           && camposDeEnvioIntocados())
                       || isPlatformAdmin();
