@@ -45,6 +45,11 @@ describe('Avatar', () => {
     expect(container.firstChild).toHaveClass('ring-2');
   });
 
+  it('VIP ring offset usa o alias shadcn→brasa (ring-offset-background)', () => {
+    const { container } = render(<Avatar name="VIP User" vip />);
+    expect(container.firstChild).toHaveClass('ring-offset-background');
+  });
+
   // ── Custom className ────────────────────────────────────────────────────
   it('accepts custom className', () => {
     render(<Avatar name="X" className="test-avatar" />);

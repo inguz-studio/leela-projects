@@ -1,12 +1,28 @@
 /**
  * Avatar — imagem circular com fallback de iniciais + estado VIP.
  *
+ * PROVENIÊNCIA: alinhado ao shadcn stock `avatar` (root relative + shrink-0 +
+ * overflow-hidden + rounded, image aspect-square/object-cover, fallback
+ * centrado h-full w-full), restilizado ao brasa. Diff vs stock:
+ *   - ENGINE de imagem própria (img + onError), NÃO Radix AvatarPrimitive:
+ *     o AvatarImage do Radix espera o evento de load e nunca renderiza em
+ *     jsdom — os testes de imagem virariam mock frágil (zero flake > vendor);
+ *   - `inline-flex` no root (stock usa flex): o Avatar vive inline em células
+ *     de Table e rodapé de Sidebar; flex block quebraria o fluxo das 33 telas;
+ *   - fallback com gradiente determinístico por nome + iniciais (restyle
+ *     brasa do `bg-muted` stock) e estado VIP com ring por token
+ *     (--action-primary) + offset por ALIAS (ring-offset-background);
+ *   - dimensões por token (--avatar-size-sm|md|lg, --avatar-radius).
+ *
  * Tamanhos: sm (32px) | md (40px) | lg (48px)
  * Fallback: gradiente com iniciais do nome (até 2 letras)
  * Estado VIP: ring dourado (elevation-brand)
  *
  * A11y: aria-label descrevendo o usuário representado.
  * §2.16 flat — sem borda decorativa (exceto ring VIP).
+ * AA: iniciais = action-primary-fg sobre action-primary/-pressed (gradiente),
+ * ambos na matriz; ring VIP = action-primary sobre surface-base ✓ (não-texto).
+ * Nenhum par novo.
  */
 
 import * as React from 'react';
@@ -90,7 +106,7 @@ const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
         aria-label={name}
         className={cn(
           avatarVariants({ size, className }),
-          vip && 'ring-2 ring-[color:var(--action-primary)] ring-offset-1 ring-offset-[color:var(--surface-base)]',
+          vip && 'ring-2 ring-[color:var(--action-primary)] ring-offset-1 ring-offset-background',
         )}
         {...props}
       >
@@ -98,7 +114,7 @@ const Avatar = React.forwardRef<HTMLSpanElement, AvatarProps>(
           <img
             src={src}
             alt={name}
-            className="h-full w-full object-cover"
+            className="aspect-square h-full w-full object-cover"
             onError={() => setImgError(true)}
           />
         ) : (
