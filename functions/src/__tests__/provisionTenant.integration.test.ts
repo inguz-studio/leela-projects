@@ -478,6 +478,86 @@ describe('provisionTenantCore — ordem do rollback: claims primeiro (fix re-rev
   });
 });
 
+// ── Falha no passo de DOCS do rollback (fix review L2 #26) ─────────────────
+//
+// O achado: o passo de docs do rollback rodava sem try/catch — a exceção
+// pulava o log estruturado `provision_tenant_rollback` do caller e o wrapper
+// devolvia o erro CRU do batch em vez do 'internal' contratual. Agora a falha
+// de docs é capturada + logada (`provision_tenant_rollback_docs_failed`), o
+// rollback conclui e o caller SEMPRE loga e lança 'internal'. O deleteUser é
+// PULADO deliberadamente quando os docs não foram desfeitos: conta deletada +
+// docs órfãos deadlocka o retry em 'already-exists' (owner inexistente);
+// conta órfã é replay-recuperável. Assertion `code:'internal'` falharia no
+// código antigo (erro cru do batch).
+describe('provisionTenantCore — falha no passo de docs do rollback (fix review L2 #26)', () => {
+  function dbWithDeadBatch(realDb: admin.firestore.Firestore): admin.firestore.Firestore {
+    return new Proxy(realDb, {
+      get(target, prop, receiver) {
+        if (prop === 'batch') {
+          return () => {
+            throw new Error('processo morto no passo de docs (falha injetada)');
+          };
+        }
+        const value = Reflect.get(target, prop, receiver) as unknown;
+        return typeof value === 'function'
+          ? (value as (...args: unknown[]) => unknown).bind(target)
+          : value;
+      },
+    }) as admin.firestore.Firestore;
+  }
+
+  function failAfterSetDeps(): ProvisionDeps {
+    return {
+      setClaims: async (uid, role, tenantId) => {
+        await auth.setCustomUserClaims(
+          uid,
+          tenantId ? { role, tenantId } : { role }
+        );
+        throw new Error('revokeRefreshTokens caiu (falha injetada PÓS-set)');
+      },
+    };
+  }
+
+  it('falha do batch NÃO vira erro cru: caller devolve o internal contratual', async () => {
+    await expect(
+      provisionTenantCore(
+        dbWithDeadBatch(db),
+        auth,
+        input(),
+        ADMIN_UID,
+        failAfterSetDeps()
+      )
+    ).rejects.toMatchObject({ code: 'internal' });
+  });
+
+  it('docs não desfeitos → deleteUser é pulado (conta órfã é replay-recuperável, nunca deadlock)', async () => {
+    await expect(
+      provisionTenantCore(
+        dbWithDeadBatch(db),
+        auth,
+        input(),
+        ADMIN_UID,
+        failAfterSetDeps()
+      )
+    ).rejects.toMatchObject({ code: 'internal' });
+
+    // Conta sobrevive com claims limpas (deletá-la deixaria tenants/
+    // castelo-producoes órfão apontando para owner INEXISTENTE — retry do
+    // admin morreria em already-exists para sempre)
+    const orphan = await auth.getUserByEmail('marina@castelo.com.br');
+    expect(orphan.customClaims ?? {}).toEqual({});
+
+    // Retry do admin reaproveita o uid e conclui como replay
+    const retry = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    expect(retry.replay).toBe(true);
+    expect(retry.ownerUid).toBe(orphan.uid);
+    expect((await auth.getUser(orphan.uid)).customClaims).toMatchObject({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+    });
+  });
+});
+
 // ── Conflitos ──────────────────────────────────────────────────────────────
 describe('provisionTenantCore — conflitos', () => {
   it('slug ativo com OUTRO owner → already-exists', async () => {

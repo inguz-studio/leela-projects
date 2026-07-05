@@ -493,23 +493,43 @@ async function rollbackProvisioning(
   }
 
   // ── 2. Docs Firestore ────────────────────────────────────────────────────
-  const batch = db.batch();
+  // Fix review L2 #26: falha aqui NUNCA aborta o rollback silenciosamente —
+  // sem o catch, a exceção pulava o log estruturado `provision_tenant_rollback`
+  // do caller (gap de observabilidade sobre exatamente o estado que exige
+  // runbook) e o wrapper devolvia erro cru em vez de 'internal'.
+  let docsReverted = true;
+  try {
+    const batch = db.batch();
 
-  if (outcome.createdTenant) {
-    batch.delete(tenantRef);
-  } else if (outcome.previousTenantData) {
-    // Aprovação de pending → restaura o doc exatamente como estava
-    batch.set(tenantRef, outcome.previousTenantData);
+    if (outcome.createdTenant) {
+      batch.delete(tenantRef);
+    } else if (outcome.previousTenantData) {
+      // Aprovação de pending → restaura o doc exatamente como estava
+      batch.set(tenantRef, outcome.previousTenantData);
+    }
+    if (outcome.createdProfissional) batch.delete(profRef);
+    if (outcome.createdTerms) {
+      batch.delete(termsCol.doc('current'));
+      batch.delete(termsCol.doc('v1'));
+    }
+    await batch.commit();
+  } catch (docsErr) {
+    docsReverted = false;
+    logger.error('provision_tenant_rollback_docs_failed', {
+      tenantId: tenantRef.id,
+      ownerUid,
+      reason: docsErr instanceof Error ? docsErr.message : String(docsErr),
+    });
   }
-  if (outcome.createdProfissional) batch.delete(profRef);
-  if (outcome.createdTerms) {
-    batch.delete(termsCol.doc('current'));
-    batch.delete(termsCol.doc('v1'));
-  }
-  await batch.commit();
 
   // ── 3. Usuário Auth criado neste run (claims já foram limpas no passo 1) ─
-  if (ownerCreated) {
+  // Se os docs NÃO foram desfeitos, PULAR deliberadamente o deleteUser:
+  // docs órfãos com ownerUid de conta DELETADA deadlockam o retry do admin
+  // em 'already-exists' (tenant ativo apontando para owner inexistente);
+  // conta órfã (claims já limpas no passo 1) + docs órfãos é o resíduo
+  // replay-recuperável — o retry reaproveita o uid pelo e-mail e conclui
+  // como replay.
+  if (ownerCreated && docsReverted) {
     await auth.deleteUser(ownerUid).catch(() => undefined);
   }
 }
