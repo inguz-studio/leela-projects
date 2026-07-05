@@ -9,13 +9,15 @@ tags:
 ---
 
 ## 📋 Backlog
-- [ ] **O2** · E04 · Config & Vendas (+ afiliação/split) — 19T · dep E03
-- [ ] **O2** · E12 · Landing + checkout público — 18T · dep E04
-- [ ] **O2** · E08 · Promotor self-service — 4T · dep E04
+- [ ] **O2** · E04-slim · Config & Vendas — SEM afiliação/split (decisão 2026-07-04); cupons + equipe/papéis + PaymentProvider ficam · dep E03 · re-planejamento em curso
+- [ ] **O2** · E12 · Landing + checkout público — dep E04 · decisões comerciais pendentes (taxa incorporada vs não, parcelamento, frete — insumo: benchmark-cheers.md)
+- [ ] **O2** · E09-slim · Repasses — ENTROU na V1 (spec vinculante do Vitor: vendido/disponível, dados bancários salvos, valor, histórico, comprovante, retenção 15% pós-evento editável pelo admin) · dep E12
+- [ ] **O2** · E07-web · Telas de sistema (404/500/403 c/ papéis) — ENTROU · 403 dep E04-S304
 - [ ] **O2** · E06 · Comunicação do evento — 5T · dep E03
-- [ ] **O3** · E13-slim · App do atleta (mínimo) — 14T · dep E12,E05
-- [ ] **O3** · Leela+ teaser — tela "em breve" + CTA de interesse c/ tracking + lista de espera (decisão Vitor 2026-07-04: programa completo é evolução; teaser testa demanda) · discovery em leela-plus-hipotese-jtbd.md
-- [ ] **⏳ REVISÃO DE ESCOPO EM ANÁLISE** (painel workflow rodando): E07 telas sistema · E09 repasses (ENTRA, recorte a definir) · E11 analytics (3 opções) · E14 Strava-only · gamificação GymRats s/ medalhas + perfil atleta · proposta → discovery/proposta-revisao-escopo-2026-07-04.md
+- [ ] **O2** · Coleta E11 (rollup, não backfillável) + higiene E15 (autorId+anexo, XS) + lote backend desafio (fim da onda, surface-agnostic)
+- [ ] **O3/V1.5** · E13-slim + GymRats — perfil, registro de ações, leaderboard consistência, SEM medalhas · Strava gated O3.1 (⚠️ AÇÃO VITOR: registrar app OAuth na Strava — lead time semanas)
+- [ ] **O3** · Leela+ teaser — decisões: PAGO/mensalidade/receita 100% Leela · tela "em breve" + CTA interesse + lista de espera · discovery em leela-plus-hipotese-jtbd.md
+- [ ] **✅ ESCOPO DECIDIDO 2026-07-04** — 10 decisões + corte de afiliados registrados em discovery/decisoes-escopo-2026-07-04.md · E08 promotor ADIADO (dependia de afiliação) · planejamento operacional da Onda 2 em produção
 
 
 ## 🔨 Fazendo
