@@ -16,6 +16,9 @@ Higiene AGORA, antes da Onda 2 (o shell é base de toda tela de vendas/checkout)
    (não perder os ~502 testes; migrar/reescrever contra as versões shadcn). Substituir sem re-estabelecer AA = FALHA.
 2. **Sidebar FIXA substitui o modo colapsável** (240px sempre visível, padrão Be Hero). Não manter as duas variantes.
 3. **Executar AGORA, antes da Onda 2.** Ordem: Lote A (fundação shadcn+brasa) → Lote B (sidebar fixa + ícones + shell).
+4. **Toast e Popover (2026-07-05): VISUAL shadcn, COMPORTAMENTO nosso.** Adotar a aparência shadcn mas preservar
+   a fila do `useToast` (Toast) e a navegação WAI-APG por teclado do Popover (vira DropdownMenu com os 13 testes de
+   foco/teclado PORTADOS integralmente). Não reescrever esses comportamentos do zero. Zero regressão de a11y aqui.
 
 ## Escopo por lote (do plano-shadcn + diagnóstico-sidebar)
 
