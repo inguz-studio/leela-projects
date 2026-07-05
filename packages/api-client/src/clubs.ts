@@ -14,6 +14,7 @@
 
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -471,6 +472,40 @@ export async function criarComunicado(
   if (input.capaUrl) data.capaUrl = input.capaUrl;
   await setDoc(ref, data);
   return { comunicadoId: ref.id };
+}
+
+/** Payload de edição do comunicado (modo edit do editor S109-T2). */
+export type AtualizarComunicadoInput = Omit<CriarComunicadoInput, 'tenantId'>;
+
+/**
+ * Atualiza um comunicado existente (fluxo EDIT — fix S2 do review Onda1:
+ * editar não duplica mais). Write direto guardado pelas Rules: apenas
+ * rascunho/agendado são editáveis; nunca promove 'enviado' nem toca os ∑
+ * de envio (RN-130). `agendadoPara` é gravado quando status == 'agendado'
+ * e REMOVIDO quando o comunicado volta a rascunho; capa vazia também é
+ * removida (a edição pode tirar a capa).
+ */
+export async function atualizarComunicado(
+  db: Firestore,
+  clubeId: string,
+  comunicadoId: string,
+  input: AtualizarComunicadoInput
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    titulo: input.titulo,
+    conteudo: input.conteudo,
+    canal: input.canal,
+    origem: input.origem,
+    status: input.status,
+    segmento: input.segmento,
+    agendadoPara:
+      input.status === 'agendado' && input.agendadoPara
+        ? Timestamp.fromDate(input.agendadoPara)
+        : deleteField(),
+    capaUrl: input.capaUrl ? input.capaUrl : deleteField(),
+    atualizadoEm: serverTimestamp(),
+  };
+  await updateDoc(doc(db, 'clubes', clubeId, 'comunicados', comunicadoId), patch);
 }
 
 // ---------------------------------------------------------------------------

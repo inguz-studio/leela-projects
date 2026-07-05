@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { AgregadosSegmentacao } from '@leela/core';
 import {
   buildComunicadoInput,
+  comunicadoToForm,
   estimativaSegmento,
   previewComunicado,
   toggleCanalForm,
@@ -9,6 +10,7 @@ import {
   VALORES_INICIAIS_COMUNICADO,
   type ComunicadoFormValues,
 } from '../comunicadoForm';
+import { mkComunicado, ts } from '../../_test/fixtures';
 
 const AGREGADOS: AgregadosSegmentacao = {
   totalMembrosAtivos: 120,
@@ -65,6 +67,26 @@ describe('estimativaSegmento', () => {
   });
   it('referência desconhecida → null', () => {
     expect(estimativaSegmento(base({ segmentoTipo: 'por_desafio', segmentoRef: 'xxx' }), AGREGADOS)).toBeNull();
+  });
+});
+
+describe('comunicadoToForm (fix S2 — round-trip da edição)', () => {
+  it('preserva agendadoPara em data/hora locais quando status é agendado', () => {
+    // Date por componentes locais — determinística em qualquer timezone.
+    const agendado = new Date(2026, 7, 15, 13, 30);
+    const form = comunicadoToForm(
+      mkComunicado({ status: 'agendado', agendadoPara: ts(agendado) }),
+    );
+    expect(form.agendamento).toBe('agendar');
+    expect(form.agendadoData).toBe('2026-08-15');
+    expect(form.agendadoHora).toBe('13:30');
+  });
+
+  it('rascunho/enviado voltam sem data (agendamento "agora")', () => {
+    const form = comunicadoToForm(mkComunicado({ status: 'rascunho' }));
+    expect(form.agendamento).toBe('agora');
+    expect(form.agendadoData).toBe('');
+    expect(form.agendadoHora).toBe('');
   });
 });
 

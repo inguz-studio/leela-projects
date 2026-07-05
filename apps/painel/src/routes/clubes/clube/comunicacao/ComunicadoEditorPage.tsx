@@ -16,7 +16,11 @@ import {
   comunicadoToForm,
   type ComunicadoFormValues,
 } from '../../_lib/comunicadoForm';
-import { useComunicado, criarComunicadoPadrao } from '../../_data/comunicados';
+import {
+  atualizarComunicadoPadrao,
+  criarComunicadoPadrao,
+  useComunicado,
+} from '../../_data/comunicados';
 import type { ClubeOutletContext } from '../ClubeLayout';
 
 export function ComunicadoEditorPage(): JSX.Element {
@@ -52,17 +56,22 @@ export function ComunicadoEditorPage(): JSX.Element {
       status === 'agendado' && values.agendadoData && values.agendadoHora
         ? new Date(`${values.agendadoData}T${values.agendadoHora}`)
         : undefined;
-    await criarComunicadoPadrao(clube.id, {
-      tenantId: clube.tenantId,
+    const comum = {
       titulo: input.titulo,
       conteudo: input.conteudo,
       canal: input.canal,
-      origem: 'manual',
+      origem: 'manual' as const,
       segmento: buildSegmento(values),
       status,
       ...(agendadoPara ? { agendadoPara } : {}),
       ...(input.capaUrl ? { capaUrl: input.capaUrl } : {}),
-    });
+    };
+    if (id) {
+      // Modo EDIT atualiza o doc existente (fix S2 — antes duplicava).
+      await atualizarComunicadoPadrao(clube.id, id, comum);
+    } else {
+      await criarComunicadoPadrao(clube.id, { tenantId: clube.tenantId, ...comum });
+    }
     voltar();
   }
 

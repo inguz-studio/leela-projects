@@ -136,7 +136,21 @@ export function estimativaSegmento(
 // Mapeamento Comunicado → form (edição)
 // ---------------------------------------------------------------------------
 
+/** Timestamp → par (yyyy-mm-dd, HH:mm) em hora LOCAL — inverso exato do
+    `new Date(\`${data}T${hora}\`)` que o submit monta (fix S2: editar um
+    agendado não pode descartar a data original). */
+function tsParaDataHora(ts: Comunicado['agendadoPara']): { data: string; hora: string } {
+  if (!ts || typeof ts.toDate !== 'function') return { data: '', hora: '' };
+  const d = ts.toDate();
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return {
+    data: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    hora: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
 export function comunicadoToForm(c: Comunicado): ComunicadoFormValues {
+  const agendado = c.status === 'agendado' ? tsParaDataHora(c.agendadoPara) : { data: '', hora: '' };
   return {
     titulo: c.titulo,
     conteudo: c.conteudo,
@@ -145,7 +159,7 @@ export function comunicadoToForm(c: Comunicado): ComunicadoFormValues {
     segmentoRef: c.segmento.referencia ?? '',
     capaUrl: c.capaUrl ?? '',
     agendamento: c.status === 'agendado' ? 'agendar' : 'agora',
-    agendadoData: '',
-    agendadoHora: '',
+    agendadoData: agendado.data,
+    agendadoHora: agendado.hora,
   };
 }

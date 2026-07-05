@@ -99,7 +99,11 @@ export type CreateLeelaCoreClient = () => LeelaCoreClient;
 // Firebase SDK — inicialização e acessores (LEELA-S000-2-T1)
 // ---------------------------------------------------------------------------
 export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions } from './firebase';
-export type { FirebaseClientConfig, LeelaFirebaseConfig } from './firebase';
+export type {
+  FirebaseClientConfig,
+  LeelaFirebaseConfig,
+  LeelaEmulatorPorts,
+} from './firebase';
 
 // ---------------------------------------------------------------------------
 // Clubs — leitura tipada de `clubes` (S101-T1) + `membros` (S103-T1)
@@ -135,10 +139,11 @@ export type { CriarPatrocinadorInput } from './clubs';
 // envio + alcance vêm da Function (onComunicadoEnvio).
 export { listComunicados } from './clubs';
 
-// Clubs — composição de comunicado: leitura + criar/agendar via write direto
-// (editor S109-T2 — Rules permitem rascunho/agendado; 'enviado' é da Function).
-export { getComunicado, criarComunicado } from './clubs';
-export type { CriarComunicadoInput } from './clubs';
+// Clubs — composição de comunicado: leitura + criar/agendar/editar via write
+// direto (editor S109-T2 — Rules permitem rascunho/agendado; 'enviado' é da
+// Function). atualizarComunicado é o fluxo EDIT (fix S2 — editar não duplica).
+export { getComunicado, criarComunicado, atualizarComunicado } from './clubs';
+export type { CriarComunicadoInput, AtualizarComunicadoInput } from './clubs';
 
 // Clubs — mutations via Cloud Function (contrato das telas L3):
 // removerMembro/transferirPropriedade (tela de membros, §2.15) e

@@ -6,10 +6,12 @@
 
 import { useEffect, useState } from 'react';
 import {
+  atualizarComunicado,
   criarComunicado,
   getComunicado,
   getLeelaDb,
   listComunicados,
+  type AtualizarComunicadoInput,
   type CriarComunicadoInput,
 } from '@leela/api-client';
 import type { Comunicado } from '@leela/core';
@@ -79,3 +81,10 @@ export const criarComunicadoPadrao = (
   clubeId: string,
   input: CriarComunicadoInput,
 ): Promise<{ comunicadoId: string }> => criarComunicado(getLeelaDb(), clubeId, input);
+
+/** Porta real de EDIÇÃO de comunicado (fix S2 — editar não duplica). */
+export const atualizarComunicadoPadrao = (
+  clubeId: string,
+  comunicadoId: string,
+  input: AtualizarComunicadoInput,
+): Promise<void> => atualizarComunicado(getLeelaDb(), clubeId, comunicadoId, input);
