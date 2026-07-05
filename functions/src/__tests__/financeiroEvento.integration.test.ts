@@ -157,6 +157,17 @@ describe('computeFinanceiro (pura — RN-406)', () => {
       receitaLiquida: null,
     });
   });
+
+  it('taxa 0% (produtor-sócio, RN-405) é TERMO VÁLIDO — não "sem termo" (review #41)', () => {
+    // Mata o mutante `taxaPct === null` → falsy: com 0%, taxa/líquido são
+    // NÚMEROS (0 e o próprio bruto), nunca null — a tela não pode exibir o
+    // falso alerta "sem termo" para tenant com fee zerado.
+    expect(computeFinanceiro(85617, 0)).toEqual({
+      taxaPct: 0,
+      taxaValor: 0,
+      receitaLiquida: 85617,
+    });
+  });
 });
 
 // ── Recomputação (integração) ──────────────────────────────────────────────
