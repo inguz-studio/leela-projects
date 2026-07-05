@@ -105,6 +105,13 @@ export async function assertClubeDoTenant(
 /**
  * Remove um membro do clube e reconta o agregado ∑ qtdMembrosAtivos.
  * O OWNER nunca é removível — transfira a propriedade antes.
+ *
+ * TRANSACIONAL (fix #09 do review Onda1): o check "não é owner" e o delete
+ * rodam na MESMA runTransaction — o read-then-delete antigo corria contra
+ * `transferirPropriedade` (o membro podia virar owner entre o check e o
+ * delete, deixando o clube com ownerId dangling e zero owners, em
+ * silêncio). Promoção concorrente invalida a tx; o retry revê o papel e
+ * devolve failed-precondition.
  */
 export async function removerMembroCore(
   db: admin.firestore.Firestore,
@@ -117,21 +124,24 @@ export async function removerMembroCore(
   const clubeRef = await assertClubeDoTenant(db, input.clubeId, tenantId);
 
   const membroRef = clubeRef.collection('membros').doc(input.membroId);
-  const membroSnap = await membroRef.get();
-  if (!membroSnap.exists) {
-    throw new https.HttpsError(
-      'not-found',
-      `Membro '${input.membroId}' não existe no clube '${input.clubeId}'.`
-    );
-  }
-  if (membroSnap.get('papel') === 'owner') {
-    throw new https.HttpsError(
-      'failed-precondition',
-      'O owner do clube não pode ser removido — transfira a propriedade antes.'
-    );
-  }
 
-  await membroRef.delete();
+  await db.runTransaction(async (tx) => {
+    const membroSnap = await tx.get(membroRef);
+    if (!membroSnap.exists) {
+      throw new https.HttpsError(
+        'not-found',
+        `Membro '${input.membroId}' não existe no clube '${input.clubeId}'.`
+      );
+    }
+    if (membroSnap.get('papel') === 'owner') {
+      throw new https.HttpsError(
+        'failed-precondition',
+        'O owner do clube não pode ser removido — transfira a propriedade antes.'
+      );
+    }
+    tx.delete(membroRef);
+  });
+
   await recontarMembrosAtivos(db, input.clubeId);
 
   return { removido: true };
