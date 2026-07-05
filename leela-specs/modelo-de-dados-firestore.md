@@ -36,6 +36,7 @@ Subcoleções:
 - **`desafios/{desafioId}`** — ver abaixo.
 - **`parcerias/{parceriaId}`** — ver abaixo.
 - **`comunicados/{comunicadoId}`** — ver abaixo.
+- ➕ **`convites/{emailKey}`** — convite por email (E05 · S104-T1) — ver abaixo.
 
 ### `clubes/{clubId}/desafios/{desafioId}`
 Campos: `nome`, `descricao`, `modelo`(A meta_acao / B meta_pontos / C equilibrio — RN-110/111), `dataInicio`, `dataFim`, `status`(rascunho/ativo/encerrado), `patrocinioId→parcerias?` (RN-112), `eventoVinculadoId?` (RN-113), `metaTotalPontos`(B/C), `minimoPorPilar`(C), `recompensaTipo`(medalha_digital/cupom/medalha_fisica/custom — RN-116), `visibilidade`(membros/convite/publico — RN-117).
@@ -54,6 +55,12 @@ Se **patrocinador**: `nome`, `modeloComercial`(financeiro/permuta — RN-123), `
 ### `clubes/{clubId}/comunicados/{comunicadoId}`
 Campos: `titulo`(≥5), `conteudo`(≥10; push ≤160 — RN-134), `capaUrl?`(só email — RN-135), `canal[]`(push/email — RN-131), `origem`(manual/automatizada — RN-132), `status`(rascunho/agendado/enviado — RN-130), `segmento`(embed: `tipo` todos/por_desafio/por_pilar/por_engajamento + `referencia?`), `agendadoPara?`, `enviadoEm?`, ∑`alcance`, ∑`aberturasPct?`.
 Regra: ≤4 push/semana/clube (RN-133) — validada por Function.
+
+### ➕ `clubes/{clubId}/convites/{emailKey}` (E05 · S104-T1, docId = email em minúsculas)
+Convite por email para entrar no clube — máquina de estados auditável do convite (o disparo físico do email é integração futura).
+Campos: `email`(lowercase, = docId — email não contém `/`), `tenantId`, `status`(`pendente`; estados futuros da máquina: aceito/expirado), `convidadoPor`(uid do profissional), `enviadoEm`, `criadoEm`.
+Regras: RN-106 — 1 a 50 emails por envio, revalidados server-side pela mesma `validarConvite` pura do modal; dedupe case-insensitive preservando a 1ª ocorrência; reenvio ao mesmo email é idempotente (regrava `enviadoEm`, preserva `criadoEm`).
+Escrita **só pela Function `enviarConvites`** — a subcoleção cai no catch-all de `clubes/{clubId}` nas Security Rules (leitura tenant-only; escrita de cliente NEGADA).
 
 ### `eventos/{eventoId}` (docId = slug)
 Campos: `organizadorId`, `nome`, `data`, `local`, `modalidades[]`, `slug`, `status`(rascunho/publicado/ao_vivo/encerrado), `usaChip`(bool — RN-207).
@@ -170,6 +177,7 @@ Estas coleções/campos foram introduzidos pelos specs por épico e devem ser co
 | ➕ `eventos/{id}/aprovisionamento/{sku}` | E03 (S210) | encomenda→estoque por SKU; ∑ "a encomendar" por Function; ajuste manual segue fora |
 | ➕ `eventos/{id}/inscritos/{id}/saude` (condicional) · `notificacoes` | E04/E12 (S306/S1206) | saúde = dado sensível LGPD Art. 11, Rules restritas; `notificacoes` = idempotência de e-mail |
 | ➕ `tenants/{id}/portal`, `newsletterLeads` | E12 (S1208) | portal público sob a plataforma (não domínio próprio); newsletter com consentimento LGPD |
+| ➕ `clubes/{id}/convites/{emailKey}` | E05 (S104-T1) | convite por email, docId = email lowercase; RN-106 (1–50, dedupe, reenvio idempotente); escrita só via Function `enviarConvites` |
 
 **Registro de RNs novas:** E09 introduziu regras financeiras renumeradas para **RN-330–337** (taxa da plataforma, liberação de repasse, split, idempotência, saldo consolidado, estados de valor, ticket médio, reembolso) para não colidir com RN-320 (papéis de equipe, E04). E04 propôs a definição canônica dos 4 papéis de RN-320 — validar com product owner.
 
