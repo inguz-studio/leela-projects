@@ -1,7 +1,9 @@
 // =============================================================================
 // EventoLayout — container do layout de `/eventos/:slug/*`. Carrega o evento
 // por slug, deriva a aba ativa do pathname e provê o evento às rotas-filhas
-// via Outlet context. Skeleton no load, EmptyState quando não encontrado.
+// via Outlet context. Skeleton no load; EmptyState distinto para "não existe"
+// vs "existe mas é de outro organizador do tenant" (review Onda1 #16 — staff
+// não recebe mais 404 seco; decisão E02-L1-SUMMARY §5: painel por uid).
 // =============================================================================
 
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -19,7 +21,7 @@ export function EventoLayout(): JSX.Element {
   const { slug = '' } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: evento, loading, error } = useEvento(slug);
+  const { data: evento, loading, error, motivo } = useEvento(slug);
 
   if (loading) {
     return (
@@ -30,6 +32,20 @@ export function EventoLayout(): JSX.Element {
           <Skeleton variant="rect" className="h-60" />
         </div>
       </div>
+    );
+  }
+
+  if (motivo === 'fora_do_escopo') {
+    return (
+      <EmptyState
+        title="Este evento é de outro organizador"
+        description="O evento existe na sua equipe, mas o painel mostra apenas os eventos criados por você. Peça o acompanhamento ao organizador responsável."
+        action={
+          <Button variant="primary" onClick={() => navigate('/eventos')}>
+            Voltar para meus eventos
+          </Button>
+        }
+      />
     );
   }
 
