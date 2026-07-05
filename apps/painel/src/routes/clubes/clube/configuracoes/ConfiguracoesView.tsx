@@ -106,7 +106,11 @@ export function ConfiguracoesView({
 
   function irPara(id: SecaoConfigId): void {
     setAtiva(id);
-    refs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // jsdom nao implementa scrollIntoView — guard coerente com o do observer acima.
+    const el = refs.current[id];
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   function togglePermissao(id: PermissaoAdminId): void {
