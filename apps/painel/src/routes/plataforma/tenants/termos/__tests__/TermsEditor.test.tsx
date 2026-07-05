@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TermsEditor } from '../TermsEditor';
 import { mkTerms } from '../../../_test/fixtures';
@@ -31,6 +31,22 @@ describe('TermsEditor', () => {
     render(<TermsEditor {...baseProps} terms={mkTerms()} readOnly />);
     expect(screen.queryByRole('button', { name: /Salvar/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Somente leitura/)).toBeInTheDocument();
+  });
+
+  it('readOnly (RN-404) → TODOS os inputs/controles do form ficam disabled', () => {
+    render(<TermsEditor {...baseProps} terms={mkTerms()} readOnly />);
+    const form = screen.getByRole('form', { name: 'Termos comerciais' });
+
+    // Inputs numéricos da economia do tenant (taxa, SaaS, parcelamento):
+    // nenhum editável quando o tenant_owner só visualiza (RN-404).
+    const numeric = within(form).getAllByRole('spinbutton');
+    expect(numeric).toHaveLength(5);
+    numeric.forEach((el) => expect(el).toBeDisabled());
+
+    // Checkboxes (mensalidade da comunidade + antecipação pós-V1) idem.
+    const checkboxes = within(form).getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(2);
+    checkboxes.forEach((el) => expect(el).toBeDisabled());
   });
 
   it('saasMonthlyFee=0 → aviso de isenção (RN-405)', () => {
