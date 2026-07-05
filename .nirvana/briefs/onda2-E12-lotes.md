@@ -27,34 +27,35 @@ A decisão "Sem afiliados neste início. Cupons sim." (`decisoes-escopo-2026-07-
 
 > Lote de **decisão + fundação**. As três decisões abaixo pedem martelo do Vitor; o código de L0 encoda a decisão default com testes falsificáveis, e é barato reverter porque o cálculo já existe em `finance/calc.ts`.
 
-### Decisão 1 — Taxa: incorporada vs não incorporada (modelo Cheers 8%/10%)
-- **Estado atual:** `commercialTerms.platformFeePct` (mock 10,5%) é deduzido da receita bruta (RN-330, `computeReceitaLiquida`) — ou seja, hoje a Leela é **incorporada** (produtor absorve). Não existe flag "quem paga a taxa" nem linha de taxa no checkout.
-- **Recomendação p/ o Vitor:** adicionar `commercialTerms.taxaIncorporada: boolean` (default `true`). Checkout lê o flag: `false` (não incorporada) → adiciona linha visível "Taxa de serviço" ao total do comprador (comprador paga `subtotal + taxa`; produtor recebe `subtotal` integral); `true` (incorporada) → sem linha (produtor recebe `subtotal − taxa`). Núcleo em `core/checkout/serviceFee.ts` reusando `finance/calc.computeTaxa`.
-- **Martelo pendente:** (a) aprovar flag + default incorporada; (b) escopo do flag: por-tenant (termo versionado) vs por-evento — recomendo **por-tenant V1**; (c) mínimos por método (R$ cartão/PIX): **NÃO copiar os números da Cheers** (R$1,50/0,80/2,00) — ou o Vitor fixa os mínimos da Leela ou adiamos (recomendo adiar; percentual puro na V1, campo `taxaMinima` no termo depois); (d) o **percentual efetivo** da Leela (mock 10,5% vs Cheers 8/10) é decisão de pricing do Vitor, é **dado do termo**, não código.
-- **Dono do campo `taxaIncorporada`:** E16/E04 (termo comercial). Dependência cross-épico (ver Decisão aberta #1).
+### Decisão 1 — Taxa por método de pagamento (VINCULANTE — Vitor 2026-07-05)
+- **Decisão:** **10% cartão de crédito · 8% PIX** (modelo **por método** — encerra o debate incorporada/não-incorporada). A taxa é a **comissão da plataforma**, deduzida da receita do produtor (`computeReceitaLiquida`); o comprador paga o valor de face, **sem** linha "Taxa de serviço" no checkout.
+- **Estado atual → muda:** `commercialTerms.platformFeePct` (mock 10,5% único) era deduzido da receita bruta (RN-330). Passa a **taxa por método:** `CommercialTerms.taxaPorMetodo = { credit_card: 10, pix: 8 }`, **configurável pelo `platform_admin`** (mesmo padrão da retenção de 15%; editor E16-S1602-T2). `computeReceitaLiquida`/`computeTaxa` passam a receber o método e aplicar a alíquota correspondente.
+- **Núcleo:** `core/checkout/serviceFee.ts` — dado `subtotal` + `metodo`, lê a alíquota do método e retorna `{ totalComprador, receitaProdutor, taxaPlataforma }` (sem `taxaIncorporada`, sem `linhaTaxaVisivel`).
+- **Pendência (não bloqueia):** **mínimos por método** (R$ piso cartão/PIX) ficam **adiados p/ V1.1** — percentual puro na V1, campo `taxaMinima` no termo depois. **Não** copiar os números da Cheers.
+- **Dono do campo `taxaPorMetodo`:** E16/E04 (termo comercial, `CommercialTerms`). Dependência cross-épico (ver Decisão aberta #1).
 
-### Decisão 2 — Parcelamento com taxa por parcela
-- **Estado atual:** `finance/calc.buildInstallmentOptions(valor, installmentRules)` **já** monta as opções a partir do termo (`maxParcelas`, `jurosAoMes`, `parcelaMinima`). `DEFAULT_COMMERCIAL_TERMS` = até 12x, `jurosAoMes: 0` (sem juros), parcela mínima R$10. Só cartão parcela (`PaymentProvider.installments` só cartão); PIX/boleto à vista.
-- **Recomendação p/ o Vitor:** V1 **apenas consome** `buildInstallmentOptions` no passo Pagamento e renderiza. Manter default 12x sem juros. O campo `jurosAoMes` já suporta juros se o Vitor decidir repassar o custo de parcelamento ao comprador (modelo Cheers de taxa por parcela).
-- **Martelo pendente:** `jurosAoMes = 0` (produtor/plataforma absorve, menos fricção de ticket alto) **ou** `> 0` (repassa ao comprador) na V1. Recomendo **0**; o custo real do parcelamento só é conhecido com o **gateway concreto (ADR-006 pendente)** — revisar quando fixar o fornecedor.
-- **Sem código novo de cálculo** (já existe); E12 só consome + renderiza (tratado em L0-T2 e S1203-T4).
+### Decisão 2 — Parcelamento com tabela de taxas por parcela (VINCULANTE — Vitor 2026-07-05)
+- **Decisão:** parcelamento com **taxa variável por número de parcelas, de 2x a 12x**. Os **VALORES exatos serão exercitados depois**; o modelo de dados e `finance/calc` **devem suportar a tabela por parcela desde já**. **NÃO** fixar "12x sem juros". 1x (à vista) sem taxa; só cartão parcela; **PIX à vista (sem boleto)**.
+- **Estado atual → muda:** `finance/calc.buildInstallmentOptions(valor, installmentRules)` monta as opções a partir do termo (`maxParcelas`, `parcelaMinima`). Em vez do `jurosAoMes` flat, o termo carrega `CommercialTerms.tabelaTaxasParcela` (mapa nº de parcelas → taxa, 2x-12x), **configurável pelo `platform_admin`** (como a retenção de 15%). `buildInstallmentOptions` passa a ler a tabela por parcela.
+- **Pendência explícita (não bloqueia):** os **VALORES da tabela por parcela** — "exercitar depois". O modelo comporta a tabela e roda com valores placeholder (ex.: zero) até o Vitor exercitar; trocar a tabela não toca código.
+- E12 só consome + renderiza (L0-T2 e S1203-T4); o cálculo mora em `finance/calc`.
 
 ### Decisão 3 — Frete vs retirada
 - **Recomendação p/ o Vitor: RETIRADA-ONLY V1; FRETE V1.1.**
 - **Justificativa:** (1) o kit da Leela é escopado ao evento com **balcão de retirada já construído** (E03: retirar kit = check-in, RN-205); o JTBD V1 é inscrição em prova com retirada no local, não e-commerce de merch enviado. (2) Frete exige coleta de endereço, cálculo de frete, integração com transportadora e máquina de fulfillment — **nada existe** e nada está no caminho crítico de vender. (3) A Cheers precisa de frete porque vende produto contínuo o ano todo; a Leela V1 vende inscrição com retirada. (4) **Consequência de desenho:** o checkout **não tem etapa "escolha de entrega"** (ao contrário do passo 1 da Cheers). O stepper permanece **5 etapas** (Dados → Modalidade/Kit → Resumo → Pagamento → Confirmação); retirada é implícita (balcão E03).
-- **Martelo pendente:** confirmar retirada-only V1. Se o Vitor quiser merch enviado já na V1, frete vira Must, o stepper ganha etapa de endereço + cálculo de frete, e L3 é replanejado.
+- **CONFIRMADO (Vitor 2026-07-05): retirada-only V1** (stepper sem etapa de entrega; frete V1.1). Se um dia entrar merch enviado, frete vira Must, o stepper ganha etapa de endereço + cálculo de frete, e L3 é replanejado.
 
 ### Tasks de fundação (encodam as decisões com teste)
-- **L0-T1** (`core/checkout/serviceFee.ts`): função pura que, dado `subtotal`, `platformFeePct`, `taxaIncorporada`, retorna `{ totalComprador, receitaProdutor, taxaPlataforma, linhaTaxaVisivel: boolean }`. Reusa `finance/calc.computeTaxa`/`computeReceitaLiquida`.
-- **L0-T2** (`core/checkout/installments.ts`): wrapper de exibição sobre `finance/calc.buildInstallmentOptions` — filtra por método (só `credit_card`), rotula "à vista" (1x) e "Nx de R$ Y".
+- **L0-T1** (`core/checkout/serviceFee.ts`): função pura que, dado `subtotal` + `metodo` (`'credit_card'|'pix'`), lê a alíquota do método (`taxaPorMetodo`: 10% cartão / 8% PIX) e retorna `{ totalComprador, receitaProdutor, taxaPlataforma }` (comprador paga o subtotal; produtor recebe `subtotal − taxaMétodo`; **sem** `taxaIncorporada`, **sem** `linhaTaxaVisivel`). Reusa `finance/calc.computeTaxa`/`computeReceitaLiquida` por método.
+- **L0-T2** (`core/checkout/installments.ts`): wrapper de exibição sobre `finance/calc.buildInstallmentOptions` (que lê a **tabela de taxas por parcela** do termo) — filtra por método (só `credit_card`; PIX à vista, sem boleto), rotula "à vista" (1x) e "Nx de R$ Y".
 
 - **Dep:** E00, `finance/calc.ts` (feito), `commercialTerms.ts` (feito). **Bloqueia:** S1203-T3/T4 (pricing no checkout).
 - **Aceite (falsificável por teste):**
-  - `serviceFee(100, 10, false)` → `{ totalComprador: 110, receitaProdutor: 100, taxaPlataforma: 10, linhaTaxaVisivel: true }`.
-  - `serviceFee(100, 10, true)` → `{ totalComprador: 100, receitaProdutor: 90, taxaPlataforma: 10, linhaTaxaVisivel: false }`.
-  - `buildInstallmentOptions(100, {maxParcelas:12, jurosAoMes:0, parcelaMinima:10})` → 10 opções (para em 10x; 100/11 = 9,09 < 10 quebra em 11x); todas com `valorTotal === 100`.
-  - `buildInstallmentOptions(120, {maxParcelas:12, jurosAoMes:0, parcelaMinima:10})` → 12 opções; 12x = R$10,00.
-  - `installments(...)` só oferta parcela para `credit_card`; PIX/boleto retornam só 1x.
+  - `serviceFee(100, 'credit_card')` (taxaPorMetodo {credit_card:10, pix:8}) → `{ totalComprador: 100, receitaProdutor: 90, taxaPlataforma: 10 }`.
+  - `serviceFee(100, 'pix')` → `{ totalComprador: 100, receitaProdutor: 92, taxaPlataforma: 8 }`.
+  - `buildInstallmentOptions(100, {maxParcelas:12, parcelaMinima:10, tabelaTaxasParcela:{}})` com tabela vazia/placeholder (taxa 0) → 10 opções (para em 10x; 100/11 = 9,09 < 10 quebra em 11x); todas com `valorTotal === 100`.
+  - trocar a `tabelaTaxasParcela` (ex.: taxa por parcela > 0) → os `valorTotal` refletem a taxa da parcela correspondente (sem tocar código); modelo suporta 2x-12x desde já.
+  - `installments(...)` só oferta parcela para `credit_card`; **PIX retorna só 1x; sem boleto**.
 
 ---
 
@@ -90,15 +91,16 @@ A decisão "Sem afiliados neste início. Cupons sim." (`decisoes-escopo-2026-07-
 
 ## L3 · Checkout — stepper 5 etapas (UI) + compliance na etapa Dados — OPUS
 
-- **Tasks:** S1203-T1 (rota `[eventSlug]/inscricao` + máquina de estado das 5 etapas, consome `steps.ts` de L1; bloqueia se `deriveSaleState` ≠ aberto; sem `localStorage` de domínio), S1203-T2 (etapa Dados: form anônimo + `validateDados`), S1203-T3 (etapa Modalidade/Kit: seleção + subtotal via `core/checkout/pricing.ts`, kit negativo RN-211), S1203-T4 (etapa Resumo: order summary + linha "Taxa de serviço" condicional de L0 + opções de parcelamento de L0 + campo de cupom via `validateCoupon` de L4), S1207-T3 (na etapa Dados, por inscrito: contato de emergência obrigatório + checkbox de aceite de regulamento distinto do checkbox LGPD, bloqueio via `validateInscrito`).
+- **Tasks:** S1203-T1 (rota `[eventSlug]/inscricao` + máquina de estado das 5 etapas, consome `steps.ts` de L1; bloqueia se `deriveSaleState` ≠ aberto; sem `localStorage` de domínio), S1203-T2 (etapa Dados: form anônimo + `validateDados`), S1203-T3 (etapa Modalidade/Kit: seleção + subtotal via `core/checkout/pricing.ts`, kit negativo RN-211), S1203-T4 (etapa Resumo: order summary [subtotal + desconto de cupom + total; **sem** linha de taxa ao comprador — a taxa por método é comissão da plataforma deduzida do produtor] + opções de parcelamento de L0 [tabela por parcela, só cartão] + campo de cupom via `validateCoupon` de L4), S1207-T3 (na etapa Dados, por inscrito: contato de emergência obrigatório + checkbox de aceite de regulamento distinto do checkbox LGPD, bloqueio via `validateInscrito`).
 - **Superfície:** `apps/landing/app/(public)/[eventSlug]/inscricao/*` (`page.tsx`, `CheckoutMachine.tsx`, `steps/*`), `packages/core/src/checkout/pricing.ts`, `applyCoupon.ts`.
 - **Dep:** L1 (S1200-T2, steps/validateDados), L0 (pricing/serviceFee/installments), L4 (S1204-T2 `validateCoupon`, S1207-T2 `validateInscrito`), **E01 Stepper** (existe em `packages/design-system/src/components/Stepper`).
 - **Aceite (falsificável):**
   - checkout monta exatamente **5 etapas** na ordem Dados → Modalidade/Kit → Resumo → Pagamento → Confirmação; **não há etapa de entrega** (Decisão 3).
   - etapa Dados: email inválido → erro inline + avanço bloqueado; sem consentimento LGPD → bloqueado.
   - Modalidade/Kit: escolher "Sem kit" com desconto → subtotal reflete preço negativo (RN-211); UI **nunca** renderiza a string "tier".
-  - Resumo: com `taxaIncorporada=false`, subtotal R$100 → mostra linha "Taxa de serviço R$10" e total R$110; com cupom `CORRIDAPERFEITA10` válido → total cai 10% (sem "afiliado resolvido"); cupom inválido → erro inline, total inalterado.
-  - Resumo mostra opções de parcelamento (só cartão) vindas de `buildInstallmentOptions`.
+  - Resumo: subtotal R$100 sem cupom → total R$100 (comprador paga o valor de face; a taxa por método é comissão da plataforma deduzida do produtor — **não** há linha "Taxa de serviço" para o comprador); com cupom `CORRIDAPERFEITA10` válido → total cai 10% (sem "afiliado resolvido"); cupom inválido → erro inline, total inalterado.
+  - Resumo mostra opções de parcelamento (só cartão) vindas de `buildInstallmentOptions` (tabela por parcela do termo).
+  - etapa Pagamento oferece exatamente **2 métodos**: cartão de crédito + PIX; **sem boleto**; parcelamento (tabela por parcela) só no cartão, PIX à vista.
   - etapa Dados com pedido de 2 inscritos: um sem contato de emergência → avanço bloqueado apontando o inscrito (RN-145); aceite de regulamento marcado mas LGPD não → bloqueado (são checkboxes distintos, RN-148).
   - evento esgotado → entrada no checkout bloqueada.
 
@@ -162,14 +164,14 @@ A decisão "Sem afiliados neste início. Cupons sim." (`decisoes-escopo-2026-07-
 - **PaymentProvider é interface + sandbox** (ADR-006) — funil ponta a ponta é testado no sandbox; Pix nativo/split real dependem do gateway concreto.
 
 ## Decisões em aberto (para o consolidador / Vitor)
-1. **Taxa incorporada/não (Decisão 1):** aprovar flag `commercialTerms.taxaIncorporada` (default incorporada) + dono E16/E04; escopo por-tenant vs por-evento (recomendo por-tenant); mínimos por método — **não copiar Cheers** (definir ou adiar); percentual efetivo Leela (dado do termo).
-2. **Parcelamento (Decisão 2):** `jurosAoMes = 0` vs `> 0` na V1 (recomendo 0); custo real depende do **gateway concreto (ADR-006 pendente)**.
-3. **Frete/retirada (Decisão 3):** confirmar **retirada-only V1** (recomendado; sem etapa de entrega no stepper). Frete V1.1.
+1. **Taxa por método (Decisão 1) — RESOLVIDO (Vitor 2026-07-05):** 10% cartão / 8% PIX em `CommercialTerms.taxaPorMetodo`, configurável pelo `platform_admin` (dono E16/E04). Modelo incorporada/não-incorporada encerrado. **Mínimos por método adiados p/ V1.1** (não copiar Cheers).
+2. **Parcelamento (Decisão 2) — RESOLVIDO (Vitor 2026-07-05):** tabela de taxas por parcela (2x-12x) em `CommercialTerms.tabelaTaxasParcela`, configurável pelo `platform_admin`; modelo suporta desde já. **Pendência aberta = só os VALORES da tabela** ("exercitar depois"); não bloqueia.
+3. **Frete/retirada (Decisão 3) — RESOLVIDO (Vitor 2026-07-05):** **retirada-only V1** (sem etapa de entrega no stepper). Frete V1.1.
 4. **Modelo de cupom — RESOLVIDO (consolidador, 2026-07-05): shape canônico é o do E04-slim S300-T1**, que roda ANTES de E12-L4 na trilha Fable: `eventos/{id}/cupons/{id}` com `codigo` (único por evento), `tipo:'percentual'|'valor'`, `valor`, `tetoDesconto?` (cap em R$ p/ percentual), `validadeAte?`, `usosMax?`, `usosFeitos` (Function-only — **E12 incrementa no webhook**, E04 nunca). Sem `afiliadoId`. E12 consome via `validateCoupon` server-side; não define contrato próprio.
 5. **Página de clube (S1202):** sem afiliação, o bloco "eventos que o clube promove" (RN-125) fica sem fonte (`parcerias/evento_afiliado` não populado). **Recomendo cortar o bloco na V1** (ou "em breve"); manter hero/bio/KPIs/desafios públicos/CTA. Confirmar.
 6. **S1208 Portal público (L6):** **recomendo DEFERIR p/ V1.1** (Should + greenfield + rodada de design + editor no E04). Confirmar se entra na Onda 2.
-7. **Domínio público `{leela-domain}` TBD** — bloqueia canonical/sitemap/QR definitivos; placeholder até o Vitor fixar (**não** `be-hero.com.br`). Ação externa do Vitor.
-8. **Fornecedor de pagamento (ADR-006 concreto)** pendente — Pix nativo, split real e **custo de parcelamento** dependem dele. V1 no sandbox.
+7. **Domínio público `{leela-domain}` — ADIADO (Vitor 2026-07-05):** `{DOMINIO_LEELA}` permanece placeholder; bloqueia só canonical/sitemap/QR definitivos, nunca o código (**não** `be-hero.com.br`). Fora da lista de decisões pendentes.
+8. **Gateway de pagamento (ADR-006 concreto) — ADIADO (Vitor 2026-07-05):** sem integração agora; V1 roda 100% no sandbox/mock. Pix nativo, split real e o custo real do parcelamento ficam para quando o Vitor retomar. Fora da lista de decisões pendentes.
 9. **Fornecedor + template de e-mail (ADR de e-mail, S1206):** `EmailProvider` interface + sandbox construídos; **entregabilidade real bloqueada** até a ADR; **template de marca (T4) precisa de rodada de design**.
 10. **`pedidos` (ADR-011) — RESOLVIDO (consolidador, 2026-07-05):** ownership é do E12 (S1203-T5). E09-slim verificado — não define `pedidos` nem toca suas Rules.
 11. **firestore.rules compartilhado** — serializar edições E12 (L1/L4/L5) via `.rules-mutex`; coordenar com E04/E09.

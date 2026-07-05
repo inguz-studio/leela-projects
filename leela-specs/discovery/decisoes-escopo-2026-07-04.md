@@ -30,6 +30,15 @@ Respostas às 10 decisões da `proposta-revisao-escopo-2026-07-04.md`. Vinculant
 - E12: atribuição por link de afiliado (S1204) **sai**; cupom no checkout **fica**.
 - Infra de split plugável permanece como desenho (ADR-006), sem UI.
 
+## Decisões comerciais do checkout (Vitor, 2026-07-05 — vinculantes, substituem os defaults do planejamento)
+
+- **Taxa por método de pagamento**: **10% cartão de crédito · 8% PIX** (modelo por método, não incorporada/não-incorporada).
+- **Parcelamento**: estruturar com **taxa variável por número de parcelas, de 2x a 12x** (valores exatos serão exercitados depois — o modelo de dados e o finance/calc devem suportar tabela de taxas por parcela desde já; NÃO fixar "12x sem juros").
+- **Sem boleto** (métodos V1: cartão de crédito + PIX).
+- **Gateway de pagamento: ADIADO** (sem integração agora; sandbox/mock segue).
+- **Domínio público: ADIADO** ({DOMINIO_LEELA} permanece placeholder).
+- **Calibragem de gate aceita**: verificação adversarial `xhigh` só para achados críticos/altos; `high` para médios; baixos vão direto à lista. Painel completo só em gates de onda; lotes com reviewer único.
+
 ## Onda 2 revisada (composição para o planejamento operacional)
 
 E04-slim (config & vendas sem afiliação, com cupons + equipe/papéis + PaymentProvider concreto) → E12 (landing + checkout; decisões comerciais pendentes do benchmark Cheers: taxa incorporada 8% vs não incorporada 10%, parcelamento, frete vs retirada) → E09-slim (repasses, spec acima) + E07-web + E06 (comunicação) + coleta E11 (cedo) + higiene E15 (XS) + lote backend desafio (fim da onda).

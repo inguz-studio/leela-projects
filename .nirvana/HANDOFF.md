@@ -74,3 +74,4 @@ Roteamento Fable/Opus (Sonnet PROIBIDO) · 1 task = 1 commit `[LEELA-S###-T#]` �
 mutexes .forge/.rules/.emu/.index (mkdir; HOLDER.txt nas rules; reler do disco) · Java 21 fora do
 PATH · emulator --only firestore,auth · turbo concurrency 6 · handoff a 90%+97% (regra do Vitor) ·
 review antagonista antes de todo gate · relatórios em outputs/ no ato · audit JSONL por evento.
+**Calibragem de gate (Vitor 2026-07-05):** verify `xhigh` só crítico/alto · `high` médio · baixo direto · painel completo só em gate de onda · lotes com reviewer único.

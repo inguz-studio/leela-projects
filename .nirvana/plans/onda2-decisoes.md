@@ -15,15 +15,23 @@ cortadas, E08 adiado), cupons ficam, E09-slim entra, E07 só web, E11 só coleta
 
 ## Pendências do VITOR (lista única — nada disso bloqueia o INÍCIO da onda)
 
-1. **Gateway de pagamento** (recomendação: Asaas; alternativas Pagar.me v5 / Stripe Connect) **+ fornecedor de
-   e-mail transacional** (recomendação: Resend ou SES). Destrava E04-PAY-T2 e o go-live real do funil; até lá
-   tudo roda em sandbox/mock por desenho. Lead time de KYC/contrato — iniciar em paralelo ao build.
-2. **Domínio público** `{DOMINIO_LEELA}` **+ e-mail de suporte** `{SUPORTE_LEELA}`. Bloqueia go-live de
-   SEO/canonical/sitemap/QR/mailto do 403 — nunca o código (constantes placeholder em todo lugar).
-3. **Ratificar os 3 defaults comerciais do checkout** (já encodados com teste em E12-L0; reverter é barato):
-   taxa **incorporada** (produtor absorve; flag `taxaIncorporada` por tenant), parcelamento **12x sem juros**
-   (`jurosAoMes=0`), **retirada-only** (stepper de 5 etapas, sem frete — frete V1.1). Junto: fixar o **% efetivo**
-   da taxa Leela (dado do termo comercial, hoje mock 10,5%; mínimos por método adiados).
+**Decisões comerciais do checkout — RATIFICADAS (Vitor, 2026-07-05; vinculantes, substituem os defaults do E12-L0):**
+- **Taxa por método de pagamento**: **10% cartão de crédito · 8% PIX** (modelo por método — não é mais
+  incorporada/não-incorporada; a taxa é comissão da plataforma deduzida da receita do produtor). Mora em
+  `CommercialTerms.taxaPorMetodo`, configurável pelo `platform_admin` (mesmo padrão da retenção de 15%; editor E16-S1602-T2).
+- **Parcelamento com tabela de taxas por parcela (2x-12x)**: o modelo de dados (`CommercialTerms.tabelaTaxasParcela`)
+  e `finance/calc` **devem suportar a tabela configurável pelo `platform_admin` desde já**. **NÃO** fixar "12x sem
+  juros"; 1x à vista sem taxa; só cartão parcela.
+- **Sem boleto** — métodos V1 = **cartão de crédito + PIX** (stepper de pagamento com 2 métodos).
+- **Retirada-only mantido** (stepper sem etapa de entrega; frete V1.1).
+- **Zero pendências comerciais bloqueantes.** Única pendência comercial explícita: **os VALORES da tabela de taxa
+  por parcela (2x-12x)** — "exercitar depois"; o modelo já os comporta, então não bloqueia o build.
+
+**Adiados pelo Vitor (saíram da lista de decisões pendentes; seguem em sandbox/mock/placeholder):**
+1. **Gateway de pagamento** (+ fornecedor de e-mail transacional): sem integração agora — tudo roda em sandbox/mock
+   por desenho; E04-PAY-T2 e o go-live real do funil ficam para quando o Vitor retomar (lead time de KYC/contrato).
+2. **Domínio público** `{DOMINIO_LEELA}` (+ e-mail de suporte `{SUPORTE_LEELA}`): placeholder em todo lugar; bloqueia
+   só o go-live de SEO/canonical/sitemap/QR/mailto do 403 — nunca o código.
 
 Tudo o mais abaixo é PREMISSA decidida pelo consolidador — vale como lei da onda; Vitor pode vetar num gate.
 
@@ -92,6 +100,10 @@ Tudo o mais abaixo é PREMISSA decidida pelo consolidador — vale como lei da o
 13. **Débitos V1.1 nomeados** (não construir agora, não esquecer): offline + manutenção web (`config/system`),
     PDF de comprovante, frete/etapa de entrega, S1208 portal, mínimos de taxa por método, deep-link de contato
     do organizador no 403, fornecedor real de e-mail/push, `aberturasPct`.
+14. **Calibragem de gate (aceita pelo Vitor, 2026-07-05):** verificação adversarial `xhigh` **só** para achados
+    **críticos/altos**; `high` para **médios**; **baixos** vão direto à lista (sem re-verify dedicado). **Painel
+    completo** de review só nos **gates de onda**; **lotes** fecham com **reviewer único** (Fable antagonista).
+    Refina o "review antagonista Fable antes do gate de cada épico" do topo.
 
 ---
 
