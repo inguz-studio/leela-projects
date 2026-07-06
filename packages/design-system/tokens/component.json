@@ -1,15 +1,15 @@
 {
   "btn": {
     "height-sm":     "32px",
-    "height-md":     "40px",
+    "height-md":     "36px",
     "height-lg":     "48px",
     "radius":        "{radius.sm}",
     "font-size-sm":  "{font.size.sm}",
-    "font-size-md":  "{font.size.md}",
+    "font-size-md":  "{font.size.base}",
     "font-size-lg":  "{font.size.md}",
     "font-weight":   "600",
     "px-sm":         "{spacing.3}",
-    "px-md":         "{spacing.4}",
+    "px-md":         "14px",
     "px-lg":         "{spacing.5}",
     "focus-ring":    "2px"
   },

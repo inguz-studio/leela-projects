@@ -17,11 +17,16 @@
  *     ring-offset-background (= surface-base), com largura por token
  *     (--btn-focus-ring) — prova a ponte de aliases no anel de foco;
  *   - dimensões (altura/px/font) por token de componente (--btn-*), motion
- *     tokenizado, flat (border-0) e opacity de disabled do brasa (40).
+ *     tokenizado, borda estrutural transparente (mockup `.btn`) e opacity de
+ *     disabled do brasa (40);
+ *   - secondary é OUTLINE + brand-tint (congruência mockup 2026-07-06): borda
+ *     border-strong em repouso, hover com --action-brand-tint + borda brand.
  *
- * AA: todos os pares fg/bg caem na matriz já provada — cada action-*-fg sobre a
- * própria superfície de ação e seus estados hover/pressed (contrast.test.ts) e
- * ring/offset por alias (shadcn-aliases.test.ts). Nenhum par novo.
+ * AA: pares fg/bg dos variants cheios caem na matriz já provada — cada
+ * action-*-fg sobre a própria superfície de ação e seus estados hover/pressed
+ * (contrast.test.ts) e ring/offset por alias (shadcn-aliases.test.ts). O hover
+ * do secondary (texto brand sobre tint alpha) é provado por composição
+ * alpha-sobre-surface no bloco brand-tint do contrast.test.ts.
  *
  * A11y: type="button" por padrão (evita submit acidental); foco via ring;
  * `aria-disabled` reflete o estado disabled; contraste WCAG AA em todos os pares.
@@ -51,8 +56,10 @@ const buttonVariants = cva(
     'focus-visible:ring-offset-2',
     // Disabled
     'disabled:pointer-events-none disabled:opacity-40',
-    // Flat (§2.16): sem borda decorativa
-    'border-0',
+    // Borda estrutural transparente (receita do mockup be-hero `.btn`): mantém
+    // §2.16 flat nos variants cheios E estabiliza dimensões quando o secondary
+    // (outline) pinta a borda — zero layout shift entre variantes.
+    'border border-transparent',
   ].join(' '),
   {
     variants: {
@@ -63,10 +70,18 @@ const buttonVariants = cva(
           'active:bg-[var(--action-primary-pressed)]',
         ].join(' '),
 
+        // Outline + brand-tint (congruência mockup be-hero `.btn-secondary`,
+        // patch 2026-07-06): transparente com borda strong em repouso; hover
+        // vira tint de marca (--action-brand-tint, literal rgba por tema) com
+        // borda brand e texto no hover da marca. AA provado por composição
+        // alpha-sobre-surface em contrast.test.ts (brand-tint §).
         secondary: [
-          'bg-[var(--action-secondary)] text-[var(--action-secondary-fg)]',
-          'hover:bg-[var(--action-secondary-hover)]',
-          'active:bg-[var(--action-secondary)]',
+          'bg-transparent text-[var(--text-primary)]',
+          'border-[var(--border-strong)]',
+          'hover:bg-[var(--action-brand-tint)]',
+          'hover:border-[var(--border-brand)]',
+          'hover:text-[var(--action-primary-hover)]',
+          'active:bg-[var(--action-brand-tint)]',
         ].join(' '),
 
         ghost: [

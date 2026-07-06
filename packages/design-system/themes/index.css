@@ -2,16 +2,16 @@
 
 :root:not([data-theme]),
 [data-theme="brasa"] {
-  --primary-50: #FFF3F0;
-  --primary-100: #FFD9CC;
-  --primary-200: #FFB49D;
-  --primary-300: #FF8E6E;
-  --primary-400: #FF6640;
+  --primary-50: #FFE9DC;
+  --primary-100: #FFC9A8;
+  --primary-200: #FFA575;
+  --primary-300: #FF8244;
+  --primary-400: #FF6520;
   --primary-500: #FF450C;
-  --primary-600: #D63600;
-  --primary-700: #A92A00;
-  --primary-800: #7D1E00;
-  --primary-900: #4F1300;
+  --primary-600: #E03800;
+  --primary-700: #B82D00;
+  --primary-800: #8C2100;
+  --primary-900: #5C1600;
   --danger-50: #FFF2F2;
   --danger-100: #FFDDDD;
   --danger-200: #FFBBBB;
@@ -61,9 +61,12 @@
   --neutral-500: #737373;
   --neutral-600: #545454;
   --neutral-700: #383838;
+  --neutral-750: #292929;
   --neutral-800: #242424;
+  --neutral-850: #1C1C1C;
   --neutral-900: #161616;
   --neutral-950: #0C0C0C;
+  --neutral-975: #0A0A0A;
   --font-family-display: "Exo 2", sans-serif;
   --font-family-ui: "Exo 2", sans-serif;
   --font-family-mono: "JetBrains Mono", monospace;
@@ -116,9 +119,9 @@
   --icon-stroke: 1.75;
   --surface-base: var(--neutral-950);
   --surface-raised: var(--neutral-900);
-  --surface-overlay: var(--neutral-800);
-  --surface-high: var(--neutral-700);
-  --surface-sunken: var(--neutral-950);
+  --surface-overlay: var(--neutral-850);
+  --surface-high: var(--neutral-750);
+  --surface-sunken: var(--neutral-975);
   --text-primary: var(--neutral-50);
   --text-secondary: var(--neutral-300);
   --text-tertiary: var(--neutral-400);
@@ -134,8 +137,9 @@
   --action-secondary: var(--neutral-800);
   --action-secondary-hover: var(--neutral-700);
   --action-secondary-fg: var(--neutral-50);
-  --action-ghost-hover: var(--neutral-800);
+  --action-ghost-hover: var(--neutral-750);
   --action-ghost-fg: var(--neutral-50);
+  --action-brand-tint: rgba(255, 69, 12, 0.10);
   --action-destructive: var(--danger-500);
   --action-destructive-hover: var(--danger-400);
   --action-destructive-pressed: var(--danger-300);
@@ -159,15 +163,15 @@
   --feedback-info-fg: var(--info-50);
   --feedback-info-surface: var(--info-900);
   --btn-height-sm: 32px;
-  --btn-height-md: 40px;
+  --btn-height-md: 36px;
   --btn-height-lg: 48px;
   --btn-radius: var(--radius-sm);
   --btn-font-size-sm: var(--font-size-sm);
-  --btn-font-size-md: var(--font-size-md);
+  --btn-font-size-md: var(--font-size-base);
   --btn-font-size-lg: var(--font-size-md);
   --btn-font-weight: 600;
   --btn-px-sm: var(--spacing-3);
-  --btn-px-md: var(--spacing-4);
+  --btn-px-md: 14px;
   --btn-px-lg: var(--spacing-5);
   --btn-focus-ring: 2px;
   --input-height: 40px;
@@ -382,6 +386,7 @@
   --action-secondary-fg: var(--neutral-900);
   --action-ghost-hover: var(--neutral-100);
   --action-ghost-fg: var(--neutral-900);
+  --action-brand-tint: rgba(122, 21, 32, 0.08);
   --action-destructive: var(--danger-600);
   --action-destructive-hover: var(--danger-700);
   --action-destructive-pressed: var(--danger-800);
@@ -405,15 +410,15 @@
   --feedback-info-fg: var(--info-800);
   --feedback-info-surface: var(--info-100);
   --btn-height-sm: 32px;
-  --btn-height-md: 40px;
+  --btn-height-md: 36px;
   --btn-height-lg: 48px;
   --btn-radius: var(--radius-sm);
   --btn-font-size-sm: var(--font-size-sm);
-  --btn-font-size-md: var(--font-size-md);
+  --btn-font-size-md: var(--font-size-base);
   --btn-font-size-lg: var(--font-size-md);
   --btn-font-weight: 600;
   --btn-px-sm: var(--spacing-3);
-  --btn-px-md: var(--spacing-4);
+  --btn-px-md: 14px;
   --btn-px-lg: var(--spacing-5);
   --btn-focus-ring: 2px;
   --input-height: 40px;

@@ -108,7 +108,10 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         aria-label="Navegação principal"
         className={cn(
           'flex flex-col h-full',
-          'bg-[var(--surface-raised)]',
+          // Congruência mockup be-hero (patch 2026-07-06): sidebar vive no
+          // fundo da página (surface-base), separada pelo conteúdo — não é um
+          // painel raised.
+          'bg-[var(--surface-base)]',
           'w-[var(--sidebar-width)]',
           className,
         )}
@@ -169,9 +172,19 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
       'transition-colors duration-[var(--motion-duration-fast)]',
       'focus-visible:outline-none focus-visible:ring-2',
       'focus-visible:ring-[color:var(--border-focus)]',
+      // Item ativo (congruência mockup be-hero `.nav-item.active`, patch
+      // 2026-07-06): tint de marca + texto laranja + barra 2px à esquerda
+      // (pseudo-elemento). AA do texto sobre o tint provado por composição
+      // alpha-sobre-surface em contrast.test.ts (brand-tint §).
       item.active
-        ? 'bg-[var(--action-ghost-hover)] text-[var(--text-primary)] font-[var(--font-weight-semibold)]'
-        : 'text-[var(--text-secondary)] hover:bg-[var(--action-ghost-hover)] hover:text-[var(--text-primary)]',
+        ? cn(
+            'relative bg-[var(--action-brand-tint)]',
+            'text-[var(--action-primary-hover)] font-[var(--font-weight-semibold)]',
+            'before:content-[""] before:absolute before:left-0',
+            'before:top-[6px] before:bottom-[6px] before:w-[2px]',
+            'before:rounded-r-[2px] before:bg-[var(--border-brand)]',
+          )
+        : 'text-[var(--text-secondary)] hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)]',
     ),
   };
 

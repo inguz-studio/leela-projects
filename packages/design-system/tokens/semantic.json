@@ -2,9 +2,9 @@
   "surface": {
     "base": "{neutral.950}",
     "raised": "{neutral.900}",
-    "overlay": "{neutral.800}",
-    "high": "{neutral.700}",
-    "sunken": "{neutral.950}"
+    "overlay": "{neutral.850}",
+    "high": "{neutral.750}",
+    "sunken": "{neutral.975}"
   },
   "text": {
     "primary": "{neutral.50}",
@@ -24,8 +24,9 @@
     "secondary": "{neutral.800}",
     "secondary-hover": "{neutral.700}",
     "secondary-fg": "{neutral.50}",
-    "ghost-hover": "{neutral.800}",
+    "ghost-hover": "{neutral.750}",
     "ghost-fg": "{neutral.50}",
+    "brand-tint": "rgba(255, 69, 12, 0.10)",
     "destructive": "{danger.500}",
     "destructive-hover": "{danger.400}",
     "destructive-pressed": "{danger.300}",

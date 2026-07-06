@@ -117,8 +117,9 @@ describe('generateCSS', () => {
   });
 
   it('CSS contains btn-height-md component token', () => {
+    // 36px = altura md do mockup be-hero (patch de congruência 2026-07-06)
     const css = generateCSS('brasa', brasa, sem, comp);
-    expect(css).toContain('--btn-height-md: 40px');
+    expect(css).toContain('--btn-height-md: 36px');
   });
 
   it('rootFallback: brasa também pinta :root sem data-theme (anti-FOUC SSR)', () => {

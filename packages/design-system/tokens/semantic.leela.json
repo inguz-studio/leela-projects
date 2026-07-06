@@ -24,6 +24,7 @@
     "secondary-fg":       "{neutral.900}",
     "ghost-hover":        "{neutral.100}",
     "ghost-fg":           "{neutral.900}",
+    "brand-tint":         "rgba(122, 21, 32, 0.08)",
     "destructive":        "{danger.600}",
     "destructive-hover":  "{danger.700}",
     "destructive-pressed":"{danger.800}",

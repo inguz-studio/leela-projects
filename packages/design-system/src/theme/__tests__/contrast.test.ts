@@ -238,3 +238,63 @@ describe('Regressões do REVIEW-E01', () => {
     expect(contrastRatio(leela['border-strong']!, leela['surface-base']!)).toBeGreaterThanOrEqual(3.0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// brand-tint (patch de congruência mockup 2026-07-06) — pares compostos.
+// --action-brand-tint é rgba literal por tema (alpha adapta à superfície; a
+// matriz principal só cobre hex opaco), então o AA é provado COMPONDO o tint
+// sobre a superfície e medindo o texto sobre o resultado:
+//   - Button secondary hover: text action-primary-hover sobre tint@base/raised
+//   - Sidebar item ativo:     text action-primary-hover sobre tint@base
+// ---------------------------------------------------------------------------
+
+function parseRgba(value: string): { r: number; g: number; b: number; a: number } {
+  const match = /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/.exec(value);
+  if (!match) throw new Error(`valor não é rgba(): ${value}`);
+  return {
+    r: Number(match[1]),
+    g: Number(match[2]),
+    b: Number(match[3]),
+    a: Number(match[4]),
+  };
+}
+
+/** Composição alpha-over (source-over) de um rgba sobre um hex opaco → hex. */
+function composeOver(rgba: string, bgHex: string): string {
+  const { r, g, b, a } = parseRgba(rgba);
+  const clean = bgHex.replace('#', '');
+  const bg = [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ] as const;
+  const out = [r, g, b].map((c, i) => Math.round(a * c + (1 - a) * bg[i]!));
+  return `#${out.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('brand-tint — AA por composição alpha sobre superfície', () => {
+  for (const [themeName, tokens] of themes) {
+    describe(`tema ${themeName}`, () => {
+      it('token existe e é rgba literal (nunca alpha sobre var() hex)', () => {
+        expect(tokens['action-brand-tint']).toBeDefined();
+        expect(() => parseRgba(tokens['action-brand-tint']!)).not.toThrow();
+      });
+
+      it('Button secondary hover: action-primary-hover sobre tint@surface-base ≥ 4.5:1', () => {
+        const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-base']!);
+        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('Button secondary hover: action-primary-hover sobre tint@surface-raised ≥ 4.5:1', () => {
+        const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-raised']!);
+        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('Sidebar item ativo: action-primary-hover sobre tint@surface-base ≥ 4.5:1 e barra brand ≥ 3:1', () => {
+        const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-base']!);
+        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(tokens['border-brand']!, tokens['surface-base']!)).toBeGreaterThanOrEqual(3.0);
+      });
+    });
+  }
+});
