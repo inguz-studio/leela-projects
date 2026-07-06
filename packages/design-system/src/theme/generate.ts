@@ -89,6 +89,10 @@ export function flattenTokens(
   const result: Array<[string, string]> = [];
 
   for (const [key, value] of Object.entries(obj)) {
+    // Chaves iniciadas em "$" são DOCUMENTAÇÃO (padrão DTCG, ex.: $description):
+    // carregam a diretriz de uso do grupo dentro do próprio JSON de tokens e
+    // NUNCA viram CSS var nem entrada RN.
+    if (key.startsWith('$')) continue;
     const name = prefix ? `${prefix}-${key}` : key;
 
     if (typeof value === 'object' && value !== null) {

@@ -172,3 +172,29 @@ describe('generateRNTheme', () => {
     expect(tokens['action-primary-fg']).toBe('#FFFFFF');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Chaves "$..." são documentação (diretriz DTCG) — nunca viram var/entrada RN
+// ---------------------------------------------------------------------------
+
+describe('Chaves $doc não vazam para o output', () => {
+  it('CSS não contém "--$" nem a diretriz de spacing como var', () => {
+    const css = generateCSS('brasa', brasa, sem, comp, { rootFallback: true });
+    expect(css).not.toContain('$description');
+    expect(css).not.toContain('--spacing-$');
+  });
+
+  it('RN theme não contém chaves $', () => {
+    const rn = generateRNTheme(brasa, sem, comp);
+    expect(Object.keys(rn).some((k) => k.includes('$'))).toBe(false);
+  });
+
+  it('meio-passos do mockup existem nos 2 temas (2/6/10/14px)', () => {
+    for (const prims of [brasa, leela]) {
+      expect(resolvePath(prims, ['spacing', '0-5'])).toBe('2px');
+      expect(resolvePath(prims, ['spacing', '1-5'])).toBe('6px');
+      expect(resolvePath(prims, ['spacing', '2-5'])).toBe('10px');
+      expect(resolvePath(prims, ['spacing', '3-5'])).toBe('14px');
+    }
+  });
+});

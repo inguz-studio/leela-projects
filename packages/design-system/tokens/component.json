@@ -1,5 +1,19 @@
 {
+  "layout": {
+    "$description": "Moldura da pagina do mockup be-hero (`.main` 32px 40px 48px, grid gap 24) e ritmos internos: colunas/section 16, section-head margin 14, listas de rows 8. Toolbar fecha com padding-bottom 16 sobre hairline.",
+    "page-pt":         "{spacing.8}",
+    "page-px":         "{spacing.10}",
+    "page-pb":         "{spacing.12}",
+    "main-gap":        "{spacing.6}",
+    "stack-gap":       "{spacing.4}",
+    "section-gap":     "{spacing.4}",
+    "section-head-mb": "{spacing.3-5}",
+    "grid-gap":        "{spacing.4}",
+    "list-gap":        "{spacing.2}",
+    "toolbar-pb":      "{spacing.4}"
+  },
   "btn": {
+    "$description": "Alturas 32/36/48 e px 12/14/20 do mockup `.btn`; radius sm 6.",
     "height-sm":     "32px",
     "height-md":     "36px",
     "height-lg":     "48px",
@@ -9,7 +23,7 @@
     "font-size-lg":  "{font.size.md}",
     "font-weight":   "600",
     "px-sm":         "{spacing.3}",
-    "px-md":         "14px",
+    "px-md":         "{spacing.3-5}",
     "px-lg":         "{spacing.5}",
     "focus-ring":    "2px"
   },
@@ -61,10 +75,11 @@
     "pill-font-size": "11px"
   },
   "table": {
+    "$description": "Densidade do mockup `.table`: celula 14x16 (compact 10x16 e coberto por row-height ~47), header py 12, corpo 13px, header 10px uppercase 0.08em.",
     "row-height":    "47px",
-    "cell-px":       "16px",
-    "cell-py":       "14px",
-    "header-py":     "12px",
+    "cell-px":       "{spacing.4}",
+    "cell-py":       "{spacing.3-5}",
+    "header-py":     "{spacing.3}",
     "font-size":     "{font.size.sm-plus}",
     "header-font-size": "{font.size.xs}",
     "header-spacing": "0.08em"
