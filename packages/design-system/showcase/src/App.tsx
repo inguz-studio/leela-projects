@@ -8,15 +8,14 @@ import {
   AppShell,
   Avatar,
   Badge,
-  Button,
   PageHeader,
   Sidebar,
   SidebarFooter,
   sidebarNavIcon,
-  useTheme,
   type SidebarSection,
 } from '@leela/design-system';
 import { Component, Home, Palette, Shapes, SwatchBook } from 'lucide-react';
+import { ShowroomBar } from './ShowroomBar';
 import { HomePage } from './sections/HomePage';
 import { TokensPage } from './sections/TokensPage';
 import { ComponentsPage } from './sections/ComponentsPage';
@@ -81,7 +80,6 @@ function parseHash(): RouteId {
 
 export function App(): JSX.Element {
   const [route, setRoute] = React.useState<RouteId>(parseHash);
-  const { theme, setTheme } = useTheme();
   const contentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -107,7 +105,6 @@ export function App(): JSX.Element {
   ];
 
   const meta = ROUTE_META[route];
-  const nextTheme = theme === 'brasa' ? 'leela' : 'brasa';
 
   return (
     <AppShell
@@ -124,20 +121,12 @@ export function App(): JSX.Element {
         />
       }
     >
+      <ShowroomBar />
+
       <PageHeader
         title={meta.title}
         subtitle={meta.subtitle}
         badges={<Badge variant="brand">showroom</Badge>}
-        actions={
-          <>
-            <Badge variant="neutro" aria-label={`Tema ativo: ${theme}`}>
-              tema: {theme}
-            </Badge>
-            <Button variant="secondary" size="sm" onClick={() => setTheme(nextTheme)}>
-              Alternar para {nextTheme}
-            </Button>
-          </>
-        }
       />
 
       <div ref={contentRef} className="flex-1 overflow-y-auto">
