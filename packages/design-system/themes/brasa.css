@@ -157,6 +157,8 @@
   --border-brand: var(--primary-500);
   --border-focus: var(--primary-400);
   --border-danger: var(--danger-500);
+  --table-row-hover: rgba(255, 255, 255, 0.02);
+  --table-header-bg: rgba(255, 255, 255, 0.015);
   --feedback-success: var(--success-500);
   --feedback-success-fg: var(--success-50);
   --feedback-success-surface: var(--success-900);
@@ -210,9 +212,12 @@
   --subnav-pill-min-width: 28px;
   --subnav-pill-radius: 10px;
   --subnav-pill-font-size: 11px;
-  --table-row-height: 64px;
-  --table-cell-px: 20px;
+  --table-row-height: 47px;
+  --table-cell-px: 16px;
   --table-cell-py: 14px;
+  --table-header-py: 12px;
+  --table-font-size: var(--font-size-sm-plus);
+  --table-header-font-size: var(--font-size-xs);
   --table-header-spacing: 0.08em;
   --popover-min-width: 160px;
   --modal-width-sm: 480px;

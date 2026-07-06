@@ -40,6 +40,10 @@
     "focus": "{primary.400}",
     "danger": "{danger.500}"
   },
+  "table": {
+    "row-hover": "rgba(255, 255, 255, 0.02)",
+    "header-bg": "rgba(255, 255, 255, 0.015)"
+  },
   "feedback": {
     "success": "{success.500}",
     "success-fg": "{success.50}",

@@ -115,6 +115,34 @@ describe('Table', () => {
     expect(cell?.className).toContain('px-[var(--table-cell-px)]');
   });
 
+  it('densidade do mockup (patch 2026-07-06): fontes, header e hover por token', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    // Corpo 13px e hover visível por token literal-por-tema (não surface-raised:
+    // sobre o wrap raised o hover antigo era invisível)
+    const cell = container.querySelector('tbody td');
+    expect(cell?.className).toContain('text-[length:var(--table-font-size)]');
+    const row = container.querySelector('tbody tr');
+    expect(row?.className).toContain('hover:bg-[var(--table-row-hover)]');
+    expect(row?.className).not.toContain('hover:bg-[var(--surface-raised)]');
+    // Header 10px, py 12px e fio de fundo do thead
+    const header = container.querySelector('thead th');
+    expect(header?.className).toContain('text-[length:var(--table-header-font-size)]');
+    expect(header?.className).toContain('py-[var(--table-header-py)]');
+    expect(header?.className).toContain('bg-[var(--table-header-bg)]');
+  });
+
+  it('wrap card do mockup (.table-wrap): raised + radius-lg + elev-1 no contêiner', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    const wrapper = container.firstElementChild!;
+    expect(wrapper.className).toContain('bg-[var(--surface-raised)]');
+    expect(wrapper.className).toContain('rounded-[var(--radius-lg)]');
+    expect(wrapper.className).toContain('shadow-elev-1');
+  });
+
   it('header is uppercase with §2.5 letter-spacing token', () => {
     render(<Table columns={columns} data={data} keyExtractor={(r) => r.id} />);
     const header = screen.getAllByRole('columnheader')[0]!;

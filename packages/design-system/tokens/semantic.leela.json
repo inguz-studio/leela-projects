@@ -37,6 +37,10 @@
     "focus":   "{primary.500}",
     "danger":  "{danger.600}"
   },
+  "table": {
+    "row-hover": "rgba(0, 0, 0, 0.02)",
+    "header-bg": "rgba(0, 0, 0, 0.015)"
+  },
   "feedback": {
     "success":         "{success.700}",
     "success-fg":      "{success.800}",

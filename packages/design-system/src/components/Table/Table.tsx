@@ -10,21 +10,28 @@
  *   - cor por ALIAS shadcn→brasa: header text-muted-foreground (= text-tertiary),
  *     célula text-foreground (= text-primary) — prova a ponte;
  *   - stock usa hover:bg-muted/50 (alpha PROIBIDO com var() hex) → substituído
- *     por hover:bg-[var(--surface-raised)] (token);
- *   - dimensões §2.5 por token de componente (--table-row-height, --table-cell-*,
- *     --table-header-spacing); motion do hover por token.
+ *     por hover:bg-[var(--table-row-hover)] (rgba literal por tema — alpha
+ *     adapta à superfície do wrap);
+ *   - dimensões por token de componente (--table-row-height, --table-cell-*,
+ *     --table-header-*, --table-font-size); motion do hover por token.
  *
- * Especificações:
- *   - Linha 64px (--table-row-height token)
- *   - Padding célula: 14px vertical / 20px horizontal (--table-cell-py/px)
- *   - Header: uppercase, letter-spacing 0.08em, text-tertiary, font-semibold
+ * Especificações (densidade do mockup be-hero `.table`, patch de congruência
+ * 2026-07-06):
+ *   - Wrap card: surface-raised + radius-lg 12px + elev-1 (`.table-wrap`)
+ *   - Linha ~47px (--table-row-height; densidade vem do py 14px)
+ *   - Padding célula: 14px vertical / 16px horizontal (--table-cell-py/px);
+ *     header py 12px (--table-header-py)
+ *   - Corpo 13px (--table-font-size = font.size.sm-plus); header 10px
+ *     (--table-header-font-size = font.size.xs), uppercase, ls 0.08em,
+ *     text-tertiary, font-semibold, fio de fundo --table-header-bg
  *   - EmptyState integrado quando data=[]; aceita componente externo
  *   - Popover de ações por linha via renderActions
  *
  * A11y: role="table" nativo, th[scope], caption opcional.
- * AA: header text-tertiary/surface-base (L94) e célula text-primary/surface-base
- * (L87) + sobre surface-raised no hover (L88) — todos na matriz. Nenhum par novo.
- * §2.16 flat — sem borda decorativa (linhas separadas por border-b subtl).
+ * AA: header text-tertiary e célula text-primary sobre surface-raised (wrap) —
+ * na matriz; header-bg/row-hover são tints ≤2% provados por composição
+ * alpha-sobre-surface no contrast.test.ts (tokens de mesa §).
+ * §2.16 flat — sem borda decorativa (linhas separadas por border-b subtle).
  */
 
 import * as React from 'react';
@@ -43,7 +50,16 @@ interface TableRootProps extends React.HTMLAttributes<HTMLTableElement> {
 
 const TableRoot = React.forwardRef<HTMLTableElement, TableRootProps>(
   ({ className, containerClassName, ...props }, ref) => (
-    <div className={cn('w-full overflow-x-auto', containerClassName)}>
+    // Wrap card do mockup (`.table-wrap`): a tabela é um card raised com
+    // radius-lg + elev-1, não uma <table> nua sobre o fundo. overflow-x-auto
+    // preserva o scroll horizontal E recorta os cantos arredondados.
+    <div
+      className={cn(
+        'w-full overflow-x-auto',
+        'bg-[var(--surface-raised)] rounded-[var(--radius-lg)] shadow-elev-1',
+        containerClassName,
+      )}
+    >
       <table ref={ref} className={cn('w-full border-collapse', className)} {...props} />
     </div>
   ),
@@ -93,12 +109,14 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'py-[var(--table-cell-py)] px-[var(--table-cell-px)]',
-      'text-[length:var(--font-size-sm)]',
+      'py-[var(--table-header-py)] px-[var(--table-cell-px)]',
+      'text-[length:var(--table-header-font-size)]',
       'font-[var(--font-weight-semibold)]',
       // Alias shadcn→brasa: muted-foreground = text-tertiary
       'text-muted-foreground',
       'uppercase tracking-[var(--table-header-spacing)]',
+      // Fio de fundo do thead (mockup: rgba branca 1.5% — literal por tema)
+      'bg-[var(--table-header-bg)]',
       'whitespace-nowrap',
       className,
     )}
@@ -115,7 +133,7 @@ const TableCell = React.forwardRef<
     ref={ref}
     className={cn(
       'py-[var(--table-cell-py)] px-[var(--table-cell-px)]',
-      'text-[length:var(--font-size-base)]',
+      'text-[length:var(--table-font-size)]',
       // Alias shadcn→brasa: foreground = text-primary
       'text-foreground',
       className,
@@ -221,7 +239,7 @@ function Table<TRow>({
         {data.map((row) => (
           <TableRow
             key={keyExtractor(row)}
-            className={cn('h-[var(--table-row-height)]', 'hover:bg-[var(--surface-raised)]')}
+            className={cn('h-[var(--table-row-height)]', 'hover:bg-[var(--table-row-hover)]')}
           >
             {columns.map((col) => (
               <TableCell key={col.key} className={alignClass(col.align)}>

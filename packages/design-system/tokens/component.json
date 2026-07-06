@@ -59,9 +59,12 @@
     "pill-font-size": "11px"
   },
   "table": {
-    "row-height":    "64px",
-    "cell-px":       "20px",
+    "row-height":    "47px",
+    "cell-px":       "16px",
     "cell-py":       "14px",
+    "header-py":     "12px",
+    "font-size":     "{font.size.sm-plus}",
+    "header-font-size": "{font.size.xs}",
     "header-spacing": "0.08em"
   },
   "popover": {

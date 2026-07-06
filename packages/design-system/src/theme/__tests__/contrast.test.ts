@@ -298,3 +298,30 @@ describe('brand-tint — AA por composição alpha sobre superfície', () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Tokens de mesa (Table, patch de congruência 2026-07-06) — a tabela vive num
+// wrap surface-raised; row-hover e header-bg são tints alpha ≤2% literais por
+// tema, então o texto é provado sobre a COMPOSIÇÃO tint@raised.
+// ---------------------------------------------------------------------------
+
+describe('Table — AA dos tints de hover/header por composição', () => {
+  for (const [themeName, tokens] of themes) {
+    describe(`tema ${themeName}`, () => {
+      it('row-hover e header-bg existem e são rgba literais', () => {
+        expect(() => parseRgba(tokens['table-row-hover']!)).not.toThrow();
+        expect(() => parseRgba(tokens['table-header-bg']!)).not.toThrow();
+      });
+
+      it('célula: text-primary sobre row-hover@surface-raised ≥ 4.5:1', () => {
+        const bg = composeOver(tokens['table-row-hover']!, tokens['surface-raised']!);
+        expect(contrastRatio(tokens['text-primary']!, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('header: text-tertiary sobre header-bg@surface-raised ≥ 4.5:1', () => {
+        const bg = composeOver(tokens['table-header-bg']!, tokens['surface-raised']!);
+        expect(contrastRatio(tokens['text-tertiary']!, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+  }
+});
