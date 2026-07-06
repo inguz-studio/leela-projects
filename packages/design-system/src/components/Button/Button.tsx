@@ -108,6 +108,11 @@ const buttonVariants = cva(
         sm: 'h-[var(--btn-height-sm)] px-[var(--btn-px-sm)] text-[length:var(--btn-font-size-sm)]',
         md: 'h-[var(--btn-height-md)] px-[var(--btn-px-md)] text-[length:var(--btn-font-size-md)]',
         lg: 'h-[var(--btn-height-lg)] px-[var(--btn-px-lg)] text-[length:var(--btn-font-size-lg)]',
+        // Quadrado 36×36 p-0 (stock shadcn `size: icon`; mockup `.btn-icon`) —
+        // fecha o gap de size apontado no QA (T3): botão só-ícone que participa
+        // da tríade de cor dos variants. Para o icon-btn GHOST da toolbar com
+        // pip de notificação, use o átomo IconButton.
+        icon: 'h-[var(--btn-height-md)] w-[var(--btn-height-md)] p-0 text-[length:var(--btn-font-size-md)]',
       },
     },
     defaultVariants: {

@@ -121,3 +121,47 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Lote FIDELIDADE T3 — toolbar global (busca ⌘K + icon-buttons + Novo evento)
+// ---------------------------------------------------------------------------
+
+describe('RootShell (T3 — toolbar global)', () => {
+  it('rotas do produtor montam a toolbar: busca, ajuda, notificações, Novo evento', () => {
+    renderAt('/');
+    const toolbar = screen.getByRole('toolbar', { name: 'Ferramentas globais' });
+    expect(within(toolbar).getByRole('searchbox')).toHaveAttribute(
+      'placeholder',
+      'Buscar atleta, evento, inscrição…'
+    );
+    expect(within(toolbar).getByRole('button', { name: 'Ajuda' })).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: 'Notificações' })).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: /Novo evento/ })).toBeInTheDocument();
+  });
+
+  it('/plataforma NÃO tem a toolbar do produtor', () => {
+    renderAt('/plataforma/tenants');
+    expect(screen.queryByRole('toolbar', { name: 'Ferramentas globais' })).not.toBeInTheDocument();
+  });
+
+  it('Ctrl+K foca a busca (stub navegável — Enter não navega)', async () => {
+    renderAt('/');
+    const input = screen.getByRole('searchbox');
+    await userEvent.keyboard('{Control>}k{/Control}');
+    expect(input).toHaveFocus();
+    await userEvent.keyboard('marina{Enter}');
+    // Busca real é stub (T3): o pathname não muda.
+    expect(screen.getByTestId('path')).toHaveTextContent('/');
+  });
+
+  it('"Novo evento" navega para /eventos/novo', async () => {
+    renderAt('/');
+    await userEvent.click(screen.getByRole('button', { name: /Novo evento/ }));
+    expect(screen.getByTestId('path')).toHaveTextContent('/eventos/novo');
+  });
+
+  it('pip de notificações desligado sem fonte de não-lidas (honestidade)', () => {
+    renderAt('/');
+    expect(screen.queryByTestId('iconbutton-pip')).not.toBeInTheDocument();
+  });
+});

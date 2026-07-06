@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { Plus } from 'lucide-react';
 import { Button } from './Button';
 
 const meta: Meta<typeof Button> = {
@@ -10,7 +11,7 @@ const meta: Meta<typeof Button> = {
       control: 'select',
       options: ['primary', 'secondary', 'ghost', 'destructive'],
     },
-    size: { control: 'select', options: ['sm', 'md', 'lg'] },
+    size: { control: 'select', options: ['sm', 'md', 'lg', 'icon'] },
   },
 };
 
@@ -35,8 +36,20 @@ export const Tamanhos: Story = {
       <Button size="sm">Pequeno</Button>
       <Button size="md">Médio</Button>
       <Button size="lg">Grande</Button>
+      <Button size="icon" aria-label="Novo evento">
+        <Plus aria-hidden />
+      </Button>
     </div>
   ),
+};
+
+/** Size `icon` (T3): quadrado 36×36 p-0 — participa da tríade de cor dos variants. */
+export const SizeIcon: Story = {
+  args: {
+    size: 'icon',
+    'aria-label': 'Novo evento',
+    children: <Plus aria-hidden />,
+  },
 };
 
 export const TodasAsVariantes: Story = {

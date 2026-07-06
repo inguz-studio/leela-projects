@@ -36,6 +36,7 @@
     "default": "{neutral.300}",
     "strong":  "{neutral.500}",
     "focus":   "{primary.500}",
+    "focus-ring-shadow": "0 0 0 3px rgba(122, 21, 32, 0.15)",
     "danger":  "{danger.600}"
   },
   "table": {

@@ -34,11 +34,13 @@
     "destructive-fg": "{neutral.950}"
   },
   "border": {
+    "$description": "focus-ring-shadow e o box-shadow de foco de inputs do mockup (`.search:focus-within`/`.input:focus`): halo 3px no tint da marca. Literal rgba por tema (alpha nao compoe com var() hex).",
     "subtle": "{neutral.800}",
     "default": "{neutral.700}",
     "strong": "{neutral.500}",
     "brand": "{primary.500}",
     "focus": "{primary.400}",
+    "focus-ring-shadow": "0 0 0 3px rgba(255, 69, 12, 0.15)",
     "danger": "{danger.500}"
   },
   "table": {

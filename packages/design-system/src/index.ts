@@ -39,6 +39,11 @@ export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
 export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
 export { Divider, type DividerProps } from './components/Divider';
+export { IconButton, type IconButtonProps } from './components/IconButton';
+
+// ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
+export { Toolbar, type ToolbarProps } from './components/Toolbar';
+export { SearchInput, type SearchInputProps } from './components/SearchInput';
 
 // ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
 export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon, SidebarBrand, SidebarFooter } from './components/Sidebar';

@@ -97,6 +97,33 @@
     "footer-name-size": "{font.size.sm-plus}",
     "footer-link-size": "{font.size.xs-plus}"
   },
+  "toolbar": {
+    "$description": "Toolbar global do mockup `.toolbar`: full-width, gap 12 (grupo direito 8), fecha em hairline com pb 16 (layout.toolbar-pb) e mb 4.",
+    "gap":     "{spacing.3}",
+    "end-gap": "{spacing.2}",
+    "mb":      "{spacing.1}"
+  },
+  "search": {
+    "$description": "Busca do mockup `.search`: 320px, pad 8x12 gap 8, texto 13, icone 16; kbd mono 10px pad 2x6 radius 3.",
+    "width":         "320px",
+    "px":            "{spacing.3}",
+    "py":            "{spacing.2}",
+    "gap":           "{spacing.2}",
+    "font-size":     "{font.size.sm-plus}",
+    "icon-size":     "16px",
+    "kbd-font-size": "{font.size.xs}",
+    "kbd-px":        "{spacing.1-5}",
+    "kbd-py":        "{spacing.0-5}",
+    "kbd-radius":    "3px"
+  },
+  "iconbtn": {
+    "$description": "Icon-button do mockup `.icon-btn`: 36x36 radius sm, icone 18; pip 7px com anel 1.5px na cor do fundo, inset 6.",
+    "size":       "36px",
+    "icon-size":  "18px",
+    "pip-size":   "7px",
+    "pip-border": "1.5px",
+    "pip-inset":  "{spacing.1-5}"
+  },
   "subnav": {
     "height":        "48px",
     "underline":     "2px",

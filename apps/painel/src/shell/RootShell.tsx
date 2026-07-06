@@ -9,7 +9,18 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AppShell, Avatar, Sidebar, SidebarBrand, SidebarFooter } from '@leela/design-system';
+import { Bell, CircleHelp, Plus } from 'lucide-react';
+import {
+  AppShell,
+  Avatar,
+  Button,
+  IconButton,
+  SearchInput,
+  Sidebar,
+  SidebarBrand,
+  SidebarFooter,
+  Toolbar,
+} from '@leela/design-system';
 import { shellSidebarSections } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
@@ -25,6 +36,25 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const eventosAtivos = useEventosAtivosBadge();
 
   const sections = shellSidebarSections(location.pathname, (href) => navigate(href), eventosAtivos);
+
+  // Toolbar global (T3) — só nas rotas do PRODUTOR (a /plataforma tem nav
+  // própria e nenhuma busca de operação). Mesma condição do sidebar.ts.
+  const produtor = !location.pathname.startsWith('/plataforma');
+  const searchRef = React.useRef<HTMLInputElement>(null);
+
+  // ⌘K / Ctrl+K foca a busca (visual + foco do mockup). A BUSCA REAL é stub:
+  // não existe rota/índice de busca no cliente — Enter não navega (honesto).
+  React.useEffect(() => {
+    if (!produtor) return undefined;
+    const onKey = (event: KeyboardEvent): void => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [produtor]);
 
   // Bloco de marca (T2): a ESTRUTURA (anatomia .brand do mockup) é do DS; o
   // texto "LEELA / Painel do Organizador" é do consumidor — a marca final do
@@ -43,7 +73,41 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   return (
     <AppShell sidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}>
       {/* Área principal: único contêiner de rolagem — a sidebar não rola junto. */}
-      <div className="flex flex-col flex-1 overflow-y-auto">{children}</div>
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        {produtor && (
+          // A toolbar vive dentro da moldura da página do mockup (`.main`
+          // 32px 40px) — o conteúdo abaixo mantém o padding próprio de cada
+          // tela (a recomposição da Visão Geral é T4–T6).
+          <div className="px-[var(--layout-page-px)] pt-[var(--layout-page-pt)]">
+            <Toolbar
+              start={
+                <SearchInput
+                  ref={searchRef}
+                  placeholder="Buscar atleta, evento, inscrição…"
+                />
+              }
+              end={
+                <>
+                  {/* Ajuda: sem destino real ainda — stub registrado (T3). */}
+                  <IconButton aria-label="Ajuda">
+                    <CircleHelp />
+                  </IconButton>
+                  {/* Notificações: sem fonte de não-lidas no cliente — pip
+                      desligado até existir dado real (stub registrado, T3). */}
+                  <IconButton aria-label="Notificações">
+                    <Bell />
+                  </IconButton>
+                  <Button variant="primary" size="sm" onClick={() => navigate('/eventos/novo')}>
+                    <Plus aria-hidden className="w-[var(--search-icon-size)] h-[var(--search-icon-size)]" />
+                    Novo evento
+                  </Button>
+                </>
+              }
+            />
+          </div>
+        )}
+        {children}
+      </div>
     </AppShell>
   );
 }
