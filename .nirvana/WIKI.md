@@ -38,6 +38,7 @@
 - **Suíte / baseline**: `pnpm turbo run test` (por pacote é `vitest run`). **Baseline 531/531, zero skip.** Integration/Rules exigem emulator ligado (Java 21). Rules isoladas: `functions` → `pnpm test:rules`.
 - **DS obrigatório nas telas** (tag `e01`): shell padrão, tokens semânticos, zero hardcode. Componentes em `packages/design-system/src/components/` (AppShell, Button, Table, Modal, SubNav, EmptyState, Skeleton, Toast, CardEvento, CardDesafio…).
 - `strict:true` + `noUncheckedIndexedAccess`; `any` proibido sem justificativa. Nunca `tier` (use `kit`, RN-216); nunca gateway concreto no domínio (use `PaymentProvider`).
+- **Roteamento de modelo (calibrado Vitor 2026-07-06)**: Sonnet PROIBIDO em qualquer despacho. **Opus 4.8** para trabalho mecânico com critério objetivo — QA visual de rotina/smoke (medir computed styles vs valores esperados, screenshots, navegação), lotes de execução padrão. **Fable** para o crítico: vereditos de gate, diagnóstico de blockers/root-cause, fix-loops, reviews antagonistas, planejamento e arbitragens. Racional: mesmo tokenizador, Fable = 2× o preço/token ($10/$50 vs $5/$25 por MTok); o dobro só se paga onde há julgamento.
 
 ## 4. Contratos e padrões estabelecidos (extraídos do código real)
 
