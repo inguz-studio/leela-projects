@@ -175,11 +175,13 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
       // Item ativo (congruência mockup be-hero `.nav-item.active`, patch
       // 2026-07-06): tint de marca + texto laranja + barra 2px à esquerda
       // (pseudo-elemento). AA do texto sobre o tint provado por composição
-      // alpha-sobre-surface em contrast.test.ts (brand-tint §).
+      // alpha-sobre-surface em contrast.test.ts (brand-tint §). O texto usa
+      // --action-brand-tint-fg (brasa-400): desde o D-PATCH, --action-primary-hover
+      // é o bg escurecido do botão primário (D4) — não serve mais como cor de texto.
       item.active
         ? cn(
             'relative bg-[var(--action-brand-tint)]',
-            'text-[var(--action-primary-hover)] font-[var(--font-weight-semibold)]',
+            'text-[var(--action-brand-tint-fg)] font-[var(--font-weight-semibold)]',
             'before:content-[""] before:absolute before:left-0',
             'before:top-[var(--sidebar-active-bar-inset)]',
             'before:bottom-[var(--sidebar-active-bar-inset)]',

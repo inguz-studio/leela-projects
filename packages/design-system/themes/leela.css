@@ -153,6 +153,7 @@
   --action-ghost-hover: var(--neutral-100);
   --action-ghost-fg: var(--neutral-900);
   --action-brand-tint: rgba(122, 21, 32, 0.08);
+  --action-brand-tint-fg: var(--primary-400);
   --action-destructive: var(--danger-600);
   --action-destructive-hover: var(--danger-700);
   --action-destructive-pressed: var(--danger-800);

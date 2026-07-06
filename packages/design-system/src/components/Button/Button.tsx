@@ -20,7 +20,14 @@
  *     tokenizado, borda estrutural transparente (mockup `.btn`) e opacity de
  *     disabled do brasa (40);
  *   - secondary é OUTLINE + brand-tint (congruência mockup 2026-07-06): borda
- *     border-strong em repouso, hover com --action-brand-tint + borda brand.
+ *     border-strong em repouso, hover com --action-brand-tint + borda brand e
+ *     texto --action-brand-tint-fg (brasa-400 — o "hover da marca" para TEXTO;
+ *     desacoplado de --action-primary-hover, que desde o D-PATCH é o bg do
+ *     botão primário escurecido para AA com fg branco, D4);
+ *   - primary tem fg BRANCO (D4, decisão Vitor): a tríade default/hover/pressed
+ *     usa laranja escurecido (#D63500/#DC3700/#B82D00) — branco ≥ 4.5:1 nos 3
+ *     estados, provado na matriz. Hover clareia e pressed escurece (direção do
+ *     mockup preservada).
  *
  * AA: pares fg/bg dos variants cheios caem na matriz já provada — cada
  * action-*-fg sobre a própria superfície de ação e seus estados hover/pressed
@@ -80,7 +87,7 @@ const buttonVariants = cva(
           'border-[var(--border-strong)]',
           'hover:bg-[var(--action-brand-tint)]',
           'hover:border-[var(--border-brand)]',
-          'hover:text-[var(--action-primary-hover)]',
+          'hover:text-[var(--action-brand-tint-fg)]',
           'active:bg-[var(--action-brand-tint)]',
         ].join(' '),
 

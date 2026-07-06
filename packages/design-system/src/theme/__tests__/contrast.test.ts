@@ -244,8 +244,11 @@ describe('Regressões do REVIEW-E01', () => {
 // --action-brand-tint é rgba literal por tema (alpha adapta à superfície; a
 // matriz principal só cobre hex opaco), então o AA é provado COMPONDO o tint
 // sobre a superfície e medindo o texto sobre o resultado:
-//   - Button secondary hover: text action-primary-hover sobre tint@base/raised
-//   - Sidebar item ativo:     text action-primary-hover sobre tint@base
+//   - Button secondary hover: text action-brand-tint-fg sobre tint@base/raised
+//   - Sidebar item ativo:     text action-brand-tint-fg sobre tint@base
+// (D-PATCH D4: o texto sobre tint migrou de action-primary-hover para o token
+// dedicado action-brand-tint-fg = primary.400 — action-primary-hover virou o
+// bg escurecido do botão primário e deixou de passar AA como texto.)
 // ---------------------------------------------------------------------------
 
 function parseRgba(value: string): { r: number; g: number; b: number; a: number } {
@@ -280,19 +283,19 @@ describe('brand-tint — AA por composição alpha sobre superfície', () => {
         expect(() => parseRgba(tokens['action-brand-tint']!)).not.toThrow();
       });
 
-      it('Button secondary hover: action-primary-hover sobre tint@surface-base ≥ 4.5:1', () => {
+      it('Button secondary hover: action-brand-tint-fg sobre tint@surface-base ≥ 4.5:1', () => {
         const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-base']!);
-        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(tokens['action-brand-tint-fg']!, bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('Button secondary hover: action-primary-hover sobre tint@surface-raised ≥ 4.5:1', () => {
+      it('Button secondary hover: action-brand-tint-fg sobre tint@surface-raised ≥ 4.5:1', () => {
         const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-raised']!);
-        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(tokens['action-brand-tint-fg']!, bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it('Sidebar item ativo: action-primary-hover sobre tint@surface-base ≥ 4.5:1 e barra brand ≥ 3:1', () => {
+      it('Sidebar item ativo: action-brand-tint-fg sobre tint@surface-base ≥ 4.5:1 e barra brand ≥ 3:1', () => {
         const bg = composeOver(tokens['action-brand-tint']!, tokens['surface-base']!);
-        expect(contrastRatio(tokens['action-primary-hover']!, bg)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(tokens['action-brand-tint-fg']!, bg)).toBeGreaterThanOrEqual(4.5);
         expect(contrastRatio(tokens['border-brand']!, tokens['surface-base']!)).toBeGreaterThanOrEqual(3.0);
       });
     });

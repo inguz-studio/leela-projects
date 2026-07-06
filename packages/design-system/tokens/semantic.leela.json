@@ -15,6 +15,7 @@
     "success":   "{success.700}"
   },
   "action": {
+    "primary":            "{primary.500}",
     "primary-hover":      "{primary.400}",
     "primary-pressed":    "{primary.600}",
     "primary-disabled":   "{neutral.200}",

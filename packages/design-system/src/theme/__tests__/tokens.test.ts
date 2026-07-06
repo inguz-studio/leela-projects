@@ -164,8 +164,11 @@ describe('generateRNTheme', () => {
     expect(tokens['surface-base']).toBe('#FDFAF7');
   });
 
-  it('brasa action-primary resolves to #FF450C', () => {
+  it('brasa action-primary resolves to #D63500 (D4: laranja escurecido p/ fg branco AA)', () => {
     const tokens = generateRNTheme(brasa, sem, comp);
-    expect(tokens['action-primary']).toBe('#FF450C');
+    // D-PATCH D4 (decisão Vitor): fg branco + bg escurecido até branco ≥ 4.5:1.
+    // #D63500 = 4.81:1 com branco; a marca #FF450C segue em text-brand/border-brand.
+    expect(tokens['action-primary']).toBe('#D63500');
+    expect(tokens['action-primary-fg']).toBe('#FFFFFF');
   });
 });
