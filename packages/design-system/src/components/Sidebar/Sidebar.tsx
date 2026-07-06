@@ -5,8 +5,11 @@
  *   OPERAÇÃO: Visão Geral, Eventos, Clubs, Financeiro, Comunicação, Marcas, Analytics
  *   CONTA:    Configurações
  *
- * Colapsável: ícone-only quando `collapsed=true`.
- * A11y: nav landmark, aria-current="page" no item ativo, aria-expanded no toggle.
+ * FIXA em 240px (`--sidebar-width`), padrão Be Hero — decisão vinculante do
+ * Vitor (2026-07-05, brief ds-consolidacao-shadcn-brasa §2): a variante fixa
+ * SUBSTITUI o modo colapsável; não há mais toggle nem largura de 64px.
+ * A11y: nav landmark "Navegação principal", aria-current="page" no item ativo,
+ * foco visível, navegação por teclado.
  * §2.16 flat — sem borda decorativa na nav.
  */
 
@@ -45,8 +48,6 @@ export interface SidebarSection {
 
 export interface SidebarProps {
   sections: SidebarSection[];
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
   className?: string;
 }
 
@@ -98,7 +99,7 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
 // ---------------------------------------------------------------------------
 
 const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
-  ({ sections, collapsed = false, onToggleCollapse, className }, ref) => {
+  ({ sections, className }, ref) => {
     return (
       <nav
         ref={ref}
@@ -106,58 +107,28 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         className={cn(
           'flex flex-col h-full',
           'bg-[var(--surface-raised)]',
-          'transition-[width] duration-[var(--motion-duration-normal)] ease-[var(--motion-easing-default)]',
-          collapsed
-            ? 'w-[var(--sidebar-collapsed-width)]'
-            : 'w-[var(--sidebar-width)]',
+          'w-[var(--sidebar-width)]',
           className,
         )}
       >
-        {/* Toggle button */}
-        <button
-          type="button"
-          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          aria-expanded={!collapsed}
-          onClick={onToggleCollapse}
-          className={cn(
-            'flex items-center justify-center',
-            'h-[var(--btn-height-md)] w-full',
-            'text-[var(--text-secondary)]',
-            'hover:text-[var(--text-primary)] hover:bg-[var(--action-ghost-hover)]',
-            'transition-colors duration-[var(--motion-duration-fast)]',
-            'focus-visible:outline-none focus-visible:ring-2',
-            'focus-visible:ring-[color:var(--border-focus)]',
-          )}
-        >
-          <span aria-hidden className="text-sm font-semibold">
-            {collapsed ? '→' : '←'}
-          </span>
-        </button>
-
         {/* Sections */}
         <div className="flex flex-col flex-1 overflow-y-auto gap-[var(--spacing-6)] py-[var(--spacing-4)]">
           {sections.map((section) => (
             <div key={section.label}>
-              {!collapsed && (
-                <p
-                  className={cn(
-                    'px-[var(--spacing-4)] pb-[var(--spacing-2)]',
-                    'text-[length:var(--font-size-xs)]',
-                    'font-[var(--font-weight-semibold)]',
-                    'text-[var(--text-tertiary)]',
-                    'tracking-widest uppercase',
-                  )}
-                >
-                  {section.label}
-                </p>
-              )}
+              <p
+                className={cn(
+                  'px-[var(--spacing-4)] pb-[var(--spacing-2)]',
+                  'text-[length:var(--font-size-xs)]',
+                  'font-[var(--font-weight-semibold)]',
+                  'text-[var(--text-tertiary)]',
+                  'tracking-widest uppercase',
+                )}
+              >
+                {section.label}
+              </p>
               <ul role="list" className="flex flex-col gap-[var(--spacing-1)]">
                 {section.items.map((item) => (
-                  <SidebarNavItem
-                    key={item.id}
-                    item={item}
-                    collapsed={collapsed}
-                  />
+                  <SidebarNavItem key={item.id} item={item} />
                 ))}
               </ul>
             </div>
@@ -175,10 +146,9 @@ Sidebar.displayName = 'Sidebar';
 
 interface SidebarNavItemProps {
   item: SidebarItem;
-  collapsed: boolean;
 }
 
-function SidebarNavItem({ item, collapsed }: SidebarNavItemProps): JSX.Element {
+function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
   const Comp: 'a' | 'button' = item.href ? 'a' : 'button';
 
   const sharedProps = {
@@ -207,11 +177,10 @@ function SidebarNavItem({ item, collapsed }: SidebarNavItemProps): JSX.Element {
           {item.icon}
         </span>
       )}
-      {/* Label sempre no DOM — sr-only quando colapsada, para manter nome acessível */}
-      <span className={cn('flex-1 truncate text-left', collapsed && 'sr-only')}>
+      <span className="flex-1 truncate text-left">
         {item.label}
       </span>
-      {!collapsed && item.badge !== undefined && (
+      {item.badge !== undefined && (
         <span
           className={cn(
             'ml-auto inline-flex items-center justify-center',

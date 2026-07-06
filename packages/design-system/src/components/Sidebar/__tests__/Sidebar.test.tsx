@@ -27,15 +27,17 @@ describe('Sidebar', () => {
     expect(screen.getByRole('navigation', { name: 'Navegação principal' })).toBeInTheDocument();
   });
 
-  it('renders section labels when expanded', () => {
+  it('renders section labels', () => {
     render(<Sidebar sections={sections} />);
     expect(screen.getByText('OPERAÇÃO')).toBeInTheDocument();
     expect(screen.getByText('CONTA')).toBeInTheDocument();
   });
 
-  it('hides section labels when collapsed', () => {
-    render(<Sidebar sections={sections} collapsed />);
-    expect(screen.queryByText('OPERAÇÃO')).not.toBeInTheDocument();
+  it('is fixed at the 240px width token (no collapsed variant)', () => {
+    render(<Sidebar sections={sections} />);
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    expect(nav.className).toContain('w-[var(--sidebar-width)]');
+    expect(nav.className).not.toContain('--sidebar-collapsed-width');
   });
 
   it('marks active item with aria-current="page"', () => {
@@ -49,16 +51,10 @@ describe('Sidebar', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('calls onToggleCollapse when toggle button clicked', async () => {
-    const onToggle = vi.fn();
-    render(<Sidebar sections={sections} onToggleCollapse={onToggle} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Recolher menu' }));
-    expect(onToggle).toHaveBeenCalledOnce();
-  });
-
-  it('toggle button shows "Expandir menu" label when collapsed', () => {
-    render(<Sidebar sections={sections} collapsed />);
-    expect(screen.getByRole('button', { name: 'Expandir menu' })).toBeInTheDocument();
+  it('does not render a collapse toggle (decisão vinculante: variante única fixa)', () => {
+    render(<Sidebar sections={sections} />);
+    expect(screen.queryByRole('button', { name: 'Recolher menu' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Expandir menu' })).not.toBeInTheDocument();
   });
 
   it('calls item onClick when clicked', async () => {
@@ -103,18 +99,18 @@ describe('Sidebar', () => {
     expect(svgs.length).toBe(8);
   });
 
-  it('collapsed items keep accessible names (sr-only label)', () => {
-    render(<Sidebar sections={sections} collapsed />);
-    expect(screen.getByText('Visão Geral')).toHaveClass('sr-only');
+  it('labels stay visible (nome acessível = label do item)', () => {
+    render(<Sidebar sections={sections} />);
+    expect(screen.getByText('Visão Geral')).not.toHaveClass('sr-only');
     expect(
       screen.getByRole('button', { name: /Configurações/ }),
     ).toBeInTheDocument();
   });
 
-  it('toggle button is keyboard focusable', async () => {
+  it('first nav item receives keyboard focus on tab', async () => {
     render(<Sidebar sections={sections} />);
-    const btn = screen.getByRole('button', { name: 'Recolher menu' });
+    const first = screen.getByRole('button', { name: /Visão Geral/ });
     await userEvent.tab();
-    expect(btn).toHaveFocus();
+    expect(first).toHaveFocus();
   });
 });
