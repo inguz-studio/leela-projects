@@ -69,7 +69,7 @@ export function OverviewPage(): JSX.Element {
   );
 
   return (
-    <OverviewShell nome={session.nome} onNavigate={(href) => navigate(href)}>
+    <OverviewShell nome={session.nome}>
       <OverviewContent
         kpis={overview.data}
         kpisLoading={overview.loading}

@@ -1,28 +1,25 @@
 // =============================================================================
-// OverviewShell — shell do produtor na Visão Geral (S600-T1). Presentational.
-// AppShell (Sidebar com "Visão Geral" ativa) + PageHeader com a saudação.
-// Testável sem router: recebe `nome` e `onNavigate` por prop.
+// OverviewShell — cabeçalho + contêiner da Visão Geral (S600-T1). Presentational.
+// A moldura (AppShell + Sidebar) agora é do layout RAIZ (shell/RootShell, Lote
+// B3) — aqui fica só o que é da tela: PageHeader com a saudação e o padding do
+// conteúdo. Testável sem router: recebe `nome` por prop.
 // =============================================================================
 
 import * as React from 'react';
-import { AppShell, PageHeader, Sidebar } from '@leela/design-system';
-import { overviewSidebarSections } from './_lib/sidebar';
+import { PageHeader } from '@leela/design-system';
 import { saudacaoProfissional } from './_lib/greeting';
 
 export interface OverviewShellProps {
   nome: string | null;
-  onNavigate: (href: string) => void;
   children: React.ReactNode;
 }
 
-export function OverviewShell({ nome, onNavigate, children }: OverviewShellProps): JSX.Element {
-  const sections = overviewSidebarSections('visao-geral', onNavigate);
-
+export function OverviewShell({ nome, children }: OverviewShellProps): JSX.Element {
   return (
-    <AppShell sidebar={<Sidebar sections={sections} />}>
+    <>
       <PageHeader title="Visão Geral" subtitle={saudacaoProfissional(nome)} />
-      <div className="flex-1 overflow-y-auto p-[var(--spacing-6)]">{children}</div>
-    </AppShell>
+      <div className="p-[var(--spacing-6)]">{children}</div>
+    </>
   );
 }
 

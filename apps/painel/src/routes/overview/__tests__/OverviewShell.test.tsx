@@ -1,33 +1,28 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { OverviewShell } from '../OverviewShell';
 
+// A moldura (AppShell + Sidebar) é do layout raiz desde o Lote B3 — os
+// contratos de navegação vivem em src/shell/__tests__/RootShell.test.tsx.
 describe('OverviewShell (S600-T1)', () => {
-  it('mostra a saudação do produtor e o item "Visão Geral" ativo', () => {
+  it('mostra o título e a saudação do produtor', () => {
     render(
-      <OverviewShell nome="Marina Castelo" onNavigate={vi.fn()}>
+      <OverviewShell nome="Marina Castelo">
         <div>conteúdo</div>
       </OverviewShell>
     );
+    expect(screen.getByText('Visão Geral')).toBeInTheDocument();
     expect(
       screen.getByText('Olá, Marina — aqui está o resumo das suas operações.')
     ).toBeInTheDocument();
-
-    // "Visão Geral" também é o título da PageHeader — desambiguar pela nav.
-    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
-    const visaoGeral = within(nav).getByText('Visão Geral').closest('a,button');
-    expect(visaoGeral).toHaveAttribute('aria-current', 'page');
   });
 
-  it('clicar em "Eventos" navega para /eventos', async () => {
-    const onNavigate = vi.fn();
+  it('saudação genérica sem nome e children renderizados', () => {
     render(
-      <OverviewShell nome={null} onNavigate={onNavigate}>
-        <div />
+      <OverviewShell nome={null}>
+        <div>painel do produtor</div>
       </OverviewShell>
     );
-    await userEvent.click(screen.getByText('Eventos'));
-    expect(onNavigate).toHaveBeenCalledWith('/eventos');
+    expect(screen.getByText('painel do produtor')).toBeInTheDocument();
   });
 });
