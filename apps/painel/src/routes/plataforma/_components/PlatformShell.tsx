@@ -8,12 +8,22 @@
 // =============================================================================
 
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AppShell, Sidebar } from '@leela/design-system';
+import { Building2, CreditCard, FileText, Gauge, type LucideIcon } from 'lucide-react';
+import { AppShell, Sidebar, sidebarNavIcon } from '@leela/design-system';
 import type { SidebarItem, SidebarSection } from '@leela/design-system';
 import type { Role } from '@leela/core';
 import { PlatformGuard } from './PlatformGuard';
 import { usePlatformSession } from '../_data/session';
 import { PLATFORM_NAV, activeNavId } from '../_lib/nav';
+
+/** Ícone Lucide por item da nav de plataforma (a nav do super-admin é própria —
+ *  fora da tabela do doc de IA do painel, que cobre só os 8 itens do produtor). */
+const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
+  tenants: Building2,
+  termos: FileText,
+  billing: CreditCard,
+  macro: Gauge,
+};
 
 export function PlatformShell(): JSX.Element {
   const session = usePlatformSession();
@@ -26,10 +36,11 @@ export function PlatformShell(): JSX.Element {
     {
       label: 'PLATAFORMA',
       items: PLATFORM_NAV.map((item): SidebarItem => {
+        const Icon = PLATFORM_NAV_ICONS[item.id];
         const base: SidebarItem = {
           id: item.id,
           label: item.label,
-          icon: null,
+          icon: Icon ? sidebarNavIcon(Icon) : undefined,
           active: item.id === ativo,
         };
         if (item.badge !== undefined) base.badge = item.badge;

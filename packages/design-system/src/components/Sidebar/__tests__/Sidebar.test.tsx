@@ -1,21 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Sidebar, DEFAULT_SIDEBAR_SECTIONS } from '../Sidebar';
+import { CalendarDays, LayoutDashboard, Settings } from 'lucide-react';
+import { Sidebar, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon } from '../Sidebar';
 import type { SidebarSection } from '../Sidebar';
 
 const sections: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
     items: [
-      { id: 'visao-geral', label: 'Visão Geral', icon: null, active: true },
-      { id: 'eventos',     label: 'Eventos',     icon: null, badge: 3 },
+      { id: 'visao-geral', label: 'Visão Geral', icon: sidebarNavIcon(LayoutDashboard), active: true },
+      { id: 'eventos',     label: 'Eventos',     icon: sidebarNavIcon(CalendarDays), badge: 3 },
     ],
   },
   {
     label: 'CONTA',
     items: [
-      { id: 'config', label: 'Configurações', icon: null },
+      { id: 'config', label: 'Configurações', icon: sidebarNavIcon(Settings) },
     ],
   },
 ];
@@ -65,7 +66,7 @@ describe('Sidebar', () => {
     const sectionsWithClick: SidebarSection[] = [
       {
         label: 'OPERAÇÃO',
-        items: [{ id: 'eventos', label: 'Eventos', icon: null, onClick }],
+        items: [{ id: 'eventos', label: 'Eventos', icon: sidebarNavIcon(CalendarDays), onClick }],
       },
     ];
     render(<Sidebar sections={sectionsWithClick} />);
@@ -77,7 +78,7 @@ describe('Sidebar', () => {
     const sectionsWithHref: SidebarSection[] = [
       {
         label: 'OPERAÇÃO',
-        items: [{ id: 'eventos', label: 'Eventos', icon: null, href: '/eventos' }],
+        items: [{ id: 'eventos', label: 'Eventos', icon: sidebarNavIcon(CalendarDays), href: '/eventos' }],
       },
     ];
     render(<Sidebar sections={sectionsWithHref} />);
@@ -87,6 +88,19 @@ describe('Sidebar', () => {
   it('DEFAULT_SIDEBAR_SECTIONS has 8 items total', () => {
     const count = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).length;
     expect(count).toBe(8);
+  });
+
+  it('every DEFAULT_SIDEBAR_SECTIONS item has a Lucide icon (B1 — fim do menu sem ícone)', () => {
+    const items = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items);
+    for (const item of items) {
+      expect(item.icon, `item "${item.id}" sem ícone`).toBeTruthy();
+    }
+  });
+
+  it('renders icons as decorative (aria-hidden) — nome acessível vem do label', () => {
+    const { container } = render(<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />);
+    const svgs = container.querySelectorAll('svg[aria-hidden="true"]');
+    expect(svgs.length).toBe(8);
   });
 
   it('collapsed items keep accessible names (sr-only label)', () => {

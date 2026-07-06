@@ -41,7 +41,7 @@ export { Avatar, type AvatarProps } from './components/Avatar';
 export { Divider, type DividerProps } from './components/Divider';
 
 // ── Shell (S001-3-T1) ───────────────────────────────────────────────────────
-export { Sidebar, DEFAULT_SIDEBAR_SECTIONS } from './components/Sidebar';
+export { Sidebar, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon } from './components/Sidebar';
 export type { SidebarProps, SidebarSection, SidebarItem } from './components/Sidebar';
 export { Breadcrumb } from './components/Breadcrumb';
 export type { BreadcrumbProps, BreadcrumbItem } from './components/Breadcrumb';

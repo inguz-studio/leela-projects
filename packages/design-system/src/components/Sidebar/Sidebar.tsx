@@ -11,6 +11,17 @@
  */
 
 import * as React from 'react';
+import {
+  BarChart3,
+  Bell,
+  Briefcase,
+  CalendarDays,
+  LayoutDashboard,
+  Settings,
+  TrendingUp,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 // ---------------------------------------------------------------------------
@@ -40,26 +51,44 @@ export interface SidebarProps {
 }
 
 // ---------------------------------------------------------------------------
-// Default 8 nav items (exported for convenience)
+// Nav icon helper + default 8 nav items (exported for convenience)
 // ---------------------------------------------------------------------------
 
+/**
+ * Renderiza um ícone Lucide nos tokens de ícone do DS: 24px (`--icon-size`),
+ * traço 1.75 (`--icon-stroke`), `currentColor` (herda a cor do item).
+ * Uso pelos consumidores ao montar seções próprias de Sidebar.
+ */
+export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
+  return (
+    <Icon
+      aria-hidden
+      className={cn(
+        'w-[var(--icon-size)] h-[var(--icon-size)]',
+        '[stroke-width:var(--icon-stroke)]',
+      )}
+    />
+  );
+}
+
+/** Mapeamento item → ícone da fonte da verdade (doc de IA do painel Be Hero, §Sidebar). */
 export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
     items: [
-      { id: 'visao-geral',  label: 'Visão Geral',   icon: null },
-      { id: 'eventos',      label: 'Eventos',        icon: null },
-      { id: 'clubs',        label: 'Clubs',          icon: null },
-      { id: 'financeiro',   label: 'Financeiro',     icon: null },
-      { id: 'comunicacao',  label: 'Comunicação',    icon: null },
-      { id: 'marcas',       label: 'Marcas',         icon: null },
-      { id: 'analytics',    label: 'Analytics',      icon: null },
+      { id: 'visao-geral',  label: 'Visão Geral',   icon: sidebarNavIcon(LayoutDashboard) },
+      { id: 'eventos',      label: 'Eventos',        icon: sidebarNavIcon(CalendarDays) },
+      { id: 'clubs',        label: 'Clubs',          icon: sidebarNavIcon(UsersRound) },
+      { id: 'financeiro',   label: 'Financeiro',     icon: sidebarNavIcon(BarChart3) },
+      { id: 'comunicacao',  label: 'Comunicação',    icon: sidebarNavIcon(Bell) },
+      { id: 'marcas',       label: 'Marcas',         icon: sidebarNavIcon(Briefcase) },
+      { id: 'analytics',    label: 'Analytics',      icon: sidebarNavIcon(TrendingUp) },
     ],
   },
   {
     label: 'CONTA',
     items: [
-      { id: 'configuracoes', label: 'Configurações', icon: null },
+      { id: 'configuracoes', label: 'Configurações', icon: sidebarNavIcon(Settings) },
     ],
   },
 ];
