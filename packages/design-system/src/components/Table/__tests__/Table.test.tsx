@@ -122,6 +122,25 @@ describe('Table', () => {
     expect(header.className).toContain('tracking-[var(--table-header-spacing)]');
   });
 
+  it('header/células usam aliases shadcn→brasa; className vai ao contêiner de scroll', () => {
+    const { container } = render(
+      <Table
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        className="mt-[var(--spacing-4)]"
+      />,
+    );
+    const header = screen.getAllByRole('columnheader')[0]!;
+    expect(header.className).toContain('text-muted-foreground');
+    const cell = container.querySelector('tbody td')!;
+    expect(cell.className).toContain('text-foreground');
+    // API preservada: className do consumidor cai no contêiner de scroll (wrapper)
+    const wrapper = container.firstElementChild!;
+    expect(wrapper.className).toContain('overflow-x-auto');
+    expect(wrapper.className).toContain('mt-[var(--spacing-4)]');
+  });
+
   it('has correct number of rows (tbody tr)', () => {
     const { container } = render(
       <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
