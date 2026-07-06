@@ -1,5 +1,10 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-06
 
+## ✅ QA VIVO 2 CONCLUÍDO (83b2d47) · 🎯 RESP-MOBILE DIMENSIONADO · SHOWROOM-MODO EM VOO
+Sessão agora em **Opus 4.8** (cota Fable esgotada — main e subagentes em Opus). Anexo A1/A2/A3 + fix do seed de conversão pushed (cc532da). QA vivo 2 concluído com Playwright headless (contorna clamp HiDPI do host que impedia mobile): **7 MAJOR / 1 minor · desktop 1440 = 0 defeito · todos os 7 MAJOR são mobile 390×844 com causa-raiz única**. Relatório: `outputs/leela-build-2d6ee98d/QA-LIVE-2-REPORT.md` (36 shots em shots-qa2/).
+**RESP-MOBILE dimensionado (1 lote, ordem de fix):** M1 RootShell/Sidebar (drawer + remove offset fixo do `main` — destrava o refluxo sozinho) → M3 KpiRow (grid→1col) → M5 Table (card/scroll mobile) → M4 Header+TabNav (truncamento + overflow das abas) → M2 Toolbar/CTA, M6 EventRow, M7 prose caem por tabela. Componentes: RootShell/Sidebar (todas rotas) · Toolbar · KpiRow (5 rotas) · Header+TabNav (drills) · Table (inscritos/membros/tenants/macro) · EventRow · prose. Confirmado: NÃO são regressões, é o escopo mobile-real já decidido.
+**EM VOO (Opus): SHOWROOM-MODO** (pedido Vitor: barra fixa tema+modo no topo do showroom + dimensão dark/claro no DS). Fila: SHOWROOM-MODO (em voo) → RESP-MOBILE → DS-Forms & UX → firebase-admin → Onda 2 E04.
+
 ## ⛔ CHECKPOINT 97-98% COTA FABLE (2026-07-06) — DESPACHOS FABLE ENCERRADOS
 **Delta desde os 90%:** Lote Fidelidade T1-T6 COMMITADOS E PUSHED (f611082..16ac386 — inclui as 2 queixas do Vitor: sidebar T2, tabela T6). Agente Fable interrompido pelo Vitor no T7; **WIP de 51 arquivos no worktree** (varredura Clubs×Clubes + minors nas telas de clubes). Gates finais NÃO rodaram.
 **AGORA:** finalizador do T7 + gates despachado em **OPUS 4.8** (decisão Vitor: concluir em Opus). Reset Fable ~03:50 America/Sao_Paulo. Pós-reset ou em Opus: QA vivo → DS-Forms & UX → firebase-admin → Onda 2 E04.
