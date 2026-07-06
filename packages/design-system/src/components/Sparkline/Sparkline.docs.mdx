@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Sparkline.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Sparkline
+
+Mini-gráfico de linha do mockup `.sparkline`: 28px de altura, linha 1.5 + degradê vertical, tudo em `currentColor` — a cor vem do container por token.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Sparkline"
+  snippet={`import { Sparkline } from '@leela/design-system';\n\n<Sparkline values={[3, 5, 4, 8, 9]} className="text-[var(--text-brand)]" />`}
+  contract={contract}
+/>

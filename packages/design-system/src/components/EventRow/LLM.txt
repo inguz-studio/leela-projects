@@ -1,0 +1,53 @@
+# EventRow — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: EventRow
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/EventRow
+verdict: APPROVE (lote FIDELIDADE T5/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { EventRow, type EventRowProps, type EventThumbVariant } from '@leela/design-system'
+
+## Quando usar
+Linha horizontal de evento do mockup `.event-row` (default compact): thumb 40px com gradiente por modalidade, nome + meta com dot-sep, contagem x/y à direita, badge de status e ação. Listas densas tipo "Seus eventos ativos".
+
+## Quando NÃO usar
+Não use no hub de eventos (lá o padrão é CardEvento — card vertical de mídia 16/10, anatomia disjunta; decisão de dedup registrada no T5). Não use para linhas tabulares (Table).
+
+## Props válidas
+- name: string
+- thumbVariant: 'corrida' | 'ciclismo' | 'yoga' | 'virtual' | 'crossfit'
+- thumbIcon?: ReactNode   (default lucide por variante: Footprints/Bike/Flower2/MonitorPlay/Dumbbell)
+- metaItems?: ReactNode[]   (intercalados com dot-sep 3px)
+- count?: { value: string; total?: string; label: string }
+- badge?: ReactNode   (Badge de status)
+- action?: ReactNode   (ex.: Button secondary sm "Gerenciar" — caminho acessível)
+- onClick?: () => void   (atalho de mouse na row; a11y vive no `action`)
+- className?: string
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --eventrow-* (px/py/gap/thumb-size/thumb-icon-size/name-*/meta-*/dot-size/count-*)
+- --thumb-corrida|ciclismo|yoga|virtual|crossfit + --thumb-icon-fg (gradientes AA provados na matriz)
+- --surface-raised / --radius-lg / --radius-md / --border-default (dot-sep) / elev-1→elev-2 + motion tokens
+
+## Proibido (do/don't)
+DON'T: thumbVariant fora do enum (união fechada) ou gradiente via style inline.
+DON'T: derivar a variante de dado inventado — use heurística de APRESENTAÇÃO documentada no consumidor.
+DO: mantenha a ação primária no slot `action` (a row com onClick não é botão).
+
+## Exemplo mínimo (válido, copiável)
+<EventRow name="Meia Maratona Floripa 2026" thumbVariant="corrida" />
+
+## Exemplo completo (válido, copiável)
+<EventRow
+  name="Meia Maratona Floripa 2026"
+  thumbVariant="corrida"
+  metaItems={['27 Abr · Florianópolis/SC', <Badge variant="alerta">Últimas vagas</Badge>]}
+  count={{ value: '453', total: '500', label: 'Inscrições' }}
+  badge={<Badge variant="heroico">Publicado</Badge>}
+  action={<Button variant="secondary" size="sm">Gerenciar</Button>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente EventRow apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

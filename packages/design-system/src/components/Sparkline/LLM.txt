@@ -1,0 +1,43 @@
+# Sparkline — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Sparkline
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/Sparkline
+verdict: APPROVE (lote FIDELIDADE T4/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { Sparkline, type SparklineProps } from '@leela/design-system'
+
+## Quando usar
+Mini-gráfico de linha decorativo (mockup `.sparkline`, 28px de altura) no rodapé de um KPI ou célula: tendência de uma série ≥ 2 pontos. Linha + degradê inteiros em `currentColor` — o CONSUMIDOR pinta com um token (ex.: `text-[var(--text-brand)]`).
+
+## Quando NÃO usar
+Não use como gráfico analítico (sem eixos, sem tooltip, sem interação). Não renderize com menos de 2 pontos (o componente retorna null — nunca invente série).
+
+## Props válidas
+- values: readonly number[]   (≥ 2 pontos; < 2 → null)
+- 'aria-label'?: string   (com label vira role="img"; sem, é decorativa aria-hidden)
+- className?: string   (é aqui que entra a COR, via classe text-[var(--…)])
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --kpi-sparkline-h (altura)
+- currentColor herdado do container (stroke + gradiente de fill com stop-opacity)
+
+## Proibido (do/don't)
+DON'T: stroke/fill com hex — a cor vem do container por token.
+DON'T: fabricar valores para "preencher" a curva (estado honesto: sem série, sem sparkline).
+DO: id de gradiente já é único por useId — pode haver várias na mesma tela.
+
+## Exemplo mínimo (válido, copiável)
+<Sparkline values={[3, 5, 4, 8, 9]} className="text-[var(--text-brand)]" />
+
+## Exemplo completo (válido, copiável)
+<Sparkline
+  values={serieDeConversao}
+  aria-label="Tendência da taxa de conversão nos últimos 14 dias"
+  className="text-[var(--text-brand)]"
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Sparkline apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

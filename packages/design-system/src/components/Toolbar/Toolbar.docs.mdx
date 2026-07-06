@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Toolbar.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Toolbar
+
+Barra global de ferramentas do mockup `.toolbar`: slot de busca à esquerda, ações à direita, fecho em hairline com padding tokenizado.
+
+<Canvas of={Stories.PainelDoOrganizador} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Toolbar"
+  snippet={`import { Toolbar, SearchInput } from '@leela/design-system';\n\n<Toolbar start={<SearchInput placeholder="Buscar…" />} />`}
+  contract={contract}
+/>

@@ -48,6 +48,8 @@ export interface EventoAtivoView {
   vagasRestantes: number | null;
   /** ocupação ≥ limiar (evento público com capacidade) → badge "Últimas vagas" */
   esgotando: boolean;
+  /** capacidade conhecida e ZERO vagas → badge "Esgotado" (QA m2; substitui "Últimas vagas") */
+  esgotado: boolean;
   /** rota de detalhe do evento (E03) — botão "Gerenciar" */
   href: string;
   /** "27 Abr · Florianópolis/SC" (null quando não há data nem local) */
@@ -112,16 +114,20 @@ export function derivarEventosAtivos(
 ): EventoAtivoView[] {
   return eventos
     .filter((e) => e.status !== 'encerrado')
-    .map((e) => ({
-      slug: e.slug,
-      nome: e.nome,
-      status: e.status,
-      qtdInscritos: e.qtdInscritos,
-      capacidade: e.capacidade,
-      vagasRestantes: vagasRestantesDoEvento(e),
-      esgotando: emEsgotamento(e),
-      href: `/eventos/${e.slug}`,
-      quando: quandoDoEvento(e.data, e.local),
-      thumbVariant: thumbVariantDoEvento(e.modalidades ?? [], e.nome),
-    }));
+    .map((e) => {
+      const vagasRestantes = vagasRestantesDoEvento(e);
+      return {
+        slug: e.slug,
+        nome: e.nome,
+        status: e.status,
+        qtdInscritos: e.qtdInscritos,
+        capacidade: e.capacidade,
+        vagasRestantes,
+        esgotando: emEsgotamento(e),
+        esgotado: e.capacidade !== null && vagasRestantes === 0,
+        href: `/eventos/${e.slug}`,
+        quando: quandoDoEvento(e.data, e.local),
+        thumbVariant: thumbVariantDoEvento(e.modalidades ?? [], e.nome),
+      };
+    });
 }

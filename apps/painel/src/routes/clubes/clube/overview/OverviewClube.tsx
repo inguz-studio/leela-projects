@@ -1,8 +1,8 @@
 // =============================================================================
-// OverviewClube — dashboard do clube (S102-T2). 4 KPIs + tabela densa de novos
+// OverviewClube — dashboard do club (S102-T2). 4 KPIs + tabela densa de novos
 // membros (NUNCA grid de avatares — RN-005/§2.5). Presentational puro.
 //
-// KPIs disponíveis vêm dos agregados ∑ do doc do clube (qtdMembrosAtivos,
+// KPIs disponíveis vêm dos agregados ∑ do doc do club (qtdMembrosAtivos,
 // qtdDesafiosAtivos). Dois KPIs dependem de dados fora do E05-L1:
 //   - Conversão em eventos → depende de visitas (E12); decisão onda1 #7: null
 //     até existir dado. Renderizado como "—".
@@ -27,7 +27,7 @@ export interface OverviewClubeProps {
 function Kpis({ clube }: { clube: Clube }): JSX.Element {
   return (
     <section
-      aria-label="Indicadores do clube"
+      aria-label="Indicadores do club"
       className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
     >
       <KpiCard label="Membros ativos" value={formatInt(clube.qtdMembrosAtivos)} />
@@ -61,7 +61,7 @@ function NovosMembros({
       ) : (
         <MembrosTable
           membros={membros ?? []}
-          caption="Novos membros do clube"
+          caption="Novos membros do club"
           emptyTitle="Nenhum membro novo ainda"
           emptyDescription="Novos membros aparecem aqui nos primeiros 7 dias após entrarem."
           agora={agora}

@@ -44,7 +44,9 @@ function PageHeader({
         'flex items-center gap-[var(--spacing-4)]',
         'min-h-[var(--header-height)]',
         'px-[var(--spacing-6)]',
-        'bg-[var(--surface-raised)]',
+        // Congruência mockup `.page-head` (T7, fecha Directive da T6): o
+        // page-head é FLAT sobre o fundo — sem surface raised.
+        'bg-transparent',
         className,
       )}
     >
@@ -60,7 +62,10 @@ function PageHeader({
         <div className="flex items-center gap-[var(--spacing-2)] flex-wrap">
           <h1
             className={cn(
-              'text-[length:var(--font-size-lg)]',
+              // `.h1` do mockup: display italic bold 40px ls -.01em (T7).
+              'font-display italic',
+              'text-[length:var(--header-title-size)]',
+              'tracking-[var(--header-title-spacing)]',
               'font-[var(--font-weight-bold)]',
               'text-[var(--text-primary)]',
               'truncate',

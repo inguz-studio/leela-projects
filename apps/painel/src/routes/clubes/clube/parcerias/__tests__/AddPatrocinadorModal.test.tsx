@@ -34,7 +34,7 @@ describe('validarPatrocinador', () => {
       validarPatrocinador({
         nome: 'Loja',
         modeloComercial: 'permuta',
-        contrapartida: 'Troca de produtos por divulgação nas redes do clube.',
+        contrapartida: 'Troca de produtos por divulgação nas redes do club.',
       }),
     ).toEqual([]);
   });

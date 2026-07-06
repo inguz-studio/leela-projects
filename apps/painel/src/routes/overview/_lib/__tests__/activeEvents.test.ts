@@ -33,6 +33,21 @@ describe('derivarEventosAtivos (S601-T1)', () => {
     ]);
     expect(view!.esgotando).toBe(false);
   });
+
+  // QA m2: 100% de ocupação fala "Esgotado", não "Últimas vagas".
+  it('capacidade conhecida e zero vagas → esgotado=true (m2)', () => {
+    const [cheio, quase, semCapacidade] = derivarEventosAtivos([
+      mkEventoAtivo({ slug: 'noturna', status: 'publicado', qtdInscritos: 60, capacidade: 60 }),
+      mkEventoAtivo({ slug: 'meia', status: 'publicado', qtdInscritos: 453, capacidade: 500 }),
+      mkEventoAtivo({ slug: 'sem-cap', status: 'publicado', qtdInscritos: 999, capacidade: null }),
+    ]);
+    expect(cheio!.esgotado).toBe(true);
+    expect(cheio!.vagasRestantes).toBe(0);
+    expect(quase!.esgotado).toBe(false);
+    expect(quase!.esgotando).toBe(true);
+    // sem capacidade não há como afirmar esgotamento (honesto)
+    expect(semCapacidade!.esgotado).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

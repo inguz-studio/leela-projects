@@ -53,6 +53,19 @@ describe('AtendimentoPanel', () => {
     ).toBeInTheDocument();
   });
 
+  // QA m3: a escrita do kit acontece no fechamento (RN-205) — com chip
+  // pendente e SEM kitEntregueEm, NENHUM passo pode aparecer concluído.
+  it('chip pendente sem entrega: passo "Entregar kit" NÃO aparece concluído (m3)', async () => {
+    setup({
+      evento: { usaChip: true },
+      inscrito: { kit: 'kit_ouro', chipNumero: null },
+    });
+    await selecionar('Marina Silva');
+    expect(screen.getByLabelText('Número do chip')).toBeInTheDocument();
+    // Antes do fix, o passo 1 herdava ✓ da derivação linear (current no chip).
+    expect(screen.queryByText('(concluída)')).not.toBeInTheDocument();
+  });
+
   it('usaChip=true: exibe input de chip e vincula', async () => {
     const { vincular } = setup({ evento: { usaChip: true }, inscrito: { kit: 'kit_ouro' } });
     await selecionar('Marina Silva');

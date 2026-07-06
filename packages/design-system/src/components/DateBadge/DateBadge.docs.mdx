@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './DateBadge.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# DateBadge
+
+Pill de contexto temporal do mockup `.date-badge`: hairline sobre surface-overlay, texto 12/500 e dot verde com glow tokenizado.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="DateBadge"
+  snippet={`import { DateBadge } from '@leela/design-system';\n\n<DateBadge>Domingo, 19 de Abril · 14:32</DateBadge>`}
+  contract={contract}
+/>

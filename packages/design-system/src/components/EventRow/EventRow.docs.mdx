@@ -1,0 +1,26 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './EventRow.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# EventRow
+
+Linha de evento do mockup `.event-row` (compact): thumb com gradiente por modalidade, meta com dot-sep, contagem x/y, badge e ação.
+
+<Canvas of={Stories.Corrida} />
+
+<Controls />
+
+## Variantes de thumb
+
+<Canvas of={Stories.TodasAsModalidades} />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="EventRow"
+  snippet={`import { EventRow, Badge, Button } from '@leela/design-system';\n\n<EventRow name="Meia Maratona" thumbVariant="corrida" count={{ value: '453', total: '500', label: 'Inscrições' }} />`}
+  contract={contract}
+/>

@@ -1,5 +1,5 @@
 // =============================================================================
-// ParceriasView — tela de parcerias do clube (S107-T2). 3 blocos (SPEC §2.7):
+// ParceriasView — tela de parcerias do club (S107-T2). 3 blocos (SPEC §2.7):
 // convites pendentes (aceitar/recusar), eventos promovidos (tabela densa +
 // ações) e patrocinadores (cards). Comissão/cupom/link/termos são espelhados do
 // organizador — read-only (RN-120/122). Presentational puro; ações via props.
@@ -187,7 +187,7 @@ export function ParceriasView({
             columns={colunas}
             data={eventosPromovidos}
             keyExtractor={(p) => p.id}
-            caption="Eventos promovidos pelo clube"
+            caption="Eventos promovidos pelo club"
             renderActions={(p) => (
               <div className="flex items-center gap-[var(--spacing-2)]">
                 <Button variant="ghost" onClick={() => onCopiarLink?.(p)}>

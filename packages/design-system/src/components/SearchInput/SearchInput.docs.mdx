@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './SearchInput.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# SearchInput
+
+Busca do mockup `.search`: contêiner raised de 320px com ícone, input de 13px e atalho `kbd` — foco com borda brand e halo tokenizado.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="SearchInput"
+  snippet={`import { SearchInput } from '@leela/design-system';\n\n<SearchInput placeholder="Buscar atleta, evento, inscrição…" />`}
+  contract={contract}
+/>

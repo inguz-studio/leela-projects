@@ -25,6 +25,18 @@ describe('ActiveEvents (S601-T1)', () => {
     expect(screen.getByText('Rascunho')).toBeInTheDocument();
   });
 
+  // QA m2: evento 100% cheio fala "Esgotado" (vulcão), nunca "Últimas vagas".
+  it('evento esgotado mostra badge "Esgotado" no lugar de "Últimas vagas" (m2)', () => {
+    const esgotado = derivarEventosAtivos([
+      mkEventoAtivo({ nome: 'Noturna', slug: 'noturna', status: 'publicado', qtdInscritos: 60, capacidade: 60 }),
+    ]);
+    render(
+      <ActiveEvents eventos={esgotado} loading={false} onGerenciar={vi.fn()} onNovoEvento={vi.fn()} />
+    );
+    expect(screen.getByText('Esgotado')).toBeInTheDocument();
+    expect(screen.queryByText('Últimas vagas')).not.toBeInTheDocument();
+  });
+
   it('section-head tem o link "Ver todos os eventos" (mockup .section-link)', async () => {
     const onVerTodos = vi.fn();
     render(

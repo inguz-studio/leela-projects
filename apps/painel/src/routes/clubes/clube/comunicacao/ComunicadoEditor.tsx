@@ -30,7 +30,7 @@ import {
 export interface ComunicadoEditorProps {
   modo: 'create' | 'edit';
   inicial?: ComunicadoFormValues | undefined;
-  /** Agregados do clube para estimar o alcance do segmento. */
+  /** Agregados do club para estimar o alcance do segmento. */
   agregados: AgregadosSegmentacao;
   onSalvar: (values: ComunicadoFormValues, status: 'rascunho' | 'agendado') => void | Promise<void>;
   onCancelar: () => void;

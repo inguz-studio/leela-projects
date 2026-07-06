@@ -1,0 +1,49 @@
+# SearchInput — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: SearchInput
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/SearchInput
+verdict: APPROVE (lote FIDELIDADE T3/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { SearchInput, type SearchInputProps } from '@leela/design-system'
+
+## Quando usar
+Campo de busca do mockup `.search`: contêiner raised 320px com ícone, input transparente 13px e atalho `kbd` (⌘K). Vive na Toolbar global ou em toolbars de listagem.
+
+## Quando NÃO usar
+Não use como campo de formulário (Input do DS: 40px com label e estados de erro). Não use para filtros enumeráveis (Chips).
+
+## Props válidas
+- shortcutLabel?: string | null   (default '⌘K'; null esconde o kbd)
+- onSubmit?: (value: string) => void   (Enter)
+- placeholder / value / onChange e demais props nativas de input (via ...rest)
+- className?: string
+- ref → encaminhada ao <input> (para foco programático, ex. atalho ⌘K do consumidor)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --search-width / --search-px / --search-py / --search-gap / --search-font-size / --search-icon-size
+- --search-kbd-font-size / --search-kbd-px / --search-kbd-py / --search-kbd-radius
+- --surface-raised / --surface-sunken / --border-default / --border-subtle / --border-focus
+- --border-focus-ring-shadow (halo 3px de foco, literal por tema)
+- --font-family-mono (kbd) / --text-tertiary / --text-primary
+
+## Proibido (do/don't)
+DON'T: box-shadow/cor de foco via literal — o halo é --border-focus-ring-shadow.
+DON'T: usar como input de formulário com label flutuante.
+DO: o consumidor registra o listener global do atalho e foca via ref.
+
+## Exemplo mínimo (válido, copiável)
+<SearchInput placeholder="Buscar…" />
+
+## Exemplo completo (válido, copiável)
+<SearchInput
+  ref={inputRef}
+  placeholder="Buscar atleta, evento, inscrição…"
+  shortcutLabel="⌘K"
+  onSubmit={(q) => runSearch(q)}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente SearchInput apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

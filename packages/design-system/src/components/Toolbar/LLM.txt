@@ -1,0 +1,50 @@
+# Toolbar — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Toolbar
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/Toolbar
+verdict: APPROVE (lote FIDELIDADE T3/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { Toolbar, type ToolbarProps } from '@leela/design-system'
+
+## Quando usar
+Barra global de ferramentas no topo da área principal (mockup `.toolbar`): busca à esquerda, ações de ícone + CTA à direita, fechando em hairline. Uma por página, acima do page-head.
+
+## Quando NÃO usar
+Não use como toolbar de listagem/filtros (o padrão é `.list-toolbar` com chips locais) nem como header de página (PageHeader). Não empilhe Toolbars.
+
+## Props válidas
+- start?: ReactNode   (slot esquerdo — tipicamente SearchInput)
+- end?: ReactNode     (slot direito — IconButtons + Button primário sm)
+- 'aria-label'?: string   (default: 'Ferramentas globais')
+- className?: string
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --toolbar-gap / --toolbar-end-gap / --toolbar-mb
+- --layout-toolbar-pb (fecho de 16px sobre a hairline)
+- --border-subtle
+
+## Proibido (do/don't)
+DON'T: pôr navegação de abas dentro da Toolbar (use SubNav/Tabs).
+DON'T: cor/espaçamento via literal.
+DO: componha `end` na ordem do mockup: ajuda, notificações, CTA primário sm.
+
+## Exemplo mínimo (válido, copiável)
+<Toolbar start={<SearchInput placeholder="Buscar…" />} />
+
+## Exemplo completo (válido, copiável)
+<Toolbar
+  start={<SearchInput placeholder="Buscar atleta, evento, inscrição…" />}
+  end={
+    <>
+      <IconButton aria-label="Ajuda"><HelpCircle /></IconButton>
+      <IconButton aria-label="Notificações"><Bell /></IconButton>
+      <Button variant="primary" size="sm">+ Novo evento</Button>
+    </>
+  }
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Toolbar apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

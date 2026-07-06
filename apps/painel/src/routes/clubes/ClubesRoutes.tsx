@@ -32,7 +32,7 @@ export function ClubesRoutes(): JSX.Element {
       <Routes>
         <Route index element={<HubRoute />} />
         {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
-            no :slug e renderizava "Clube não encontrado"). */}
+            no :slug e renderizava "Club não encontrado"). */}
         <Route path="novo" element={<NovoClubePage />} />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />

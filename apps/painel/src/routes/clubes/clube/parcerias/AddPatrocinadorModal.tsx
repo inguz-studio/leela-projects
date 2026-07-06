@@ -88,7 +88,7 @@ export function AddPatrocinadorModal({
       open={open}
       onOpenChange={onOpenChange}
       title="Adicionar patrocinador"
-      description="Cadastre um patrocinador institucional do clube."
+      description="Cadastre um patrocinador institucional do club."
       footer={footer}
     >
       <div className="flex flex-col gap-[var(--spacing-4)]">

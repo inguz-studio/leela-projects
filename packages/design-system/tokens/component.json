@@ -35,11 +35,15 @@
     "border-width":  "1px"
   },
   "badge": {
-    "height":        "22px",
+    "$description": "Tipografia do mockup `.badge` (QA m5): 10px/700 uppercase ls .04em, padding 3x7 (altura ~21px nasce do padding — sem height fixa), radius xs, gap 4, svg 10.",
     "radius":        "{radius.xs}",
-    "font-size":     "{font.size.sm}",
-    "font-weight":   "600",
-    "px":            "{spacing.2}"
+    "font-size":     "{font.size.xs}",
+    "font-weight":   "700",
+    "px":            "7px",
+    "py":            "3px",
+    "spacing":       "0.04em",
+    "gap":           "{spacing.1}",
+    "icon-size":     "10px"
   },
   "chip": {
     "height":        "32px",
@@ -59,7 +63,10 @@
     "thickness":     "1px"
   },
   "header": {
-    "height":        "96px"
+    "$description": "Page-head do mockup: h1 display italic bold 40px ls -.01em, flat sobre o fundo (`.page-head` nao tem surface raised).",
+    "height":        "96px",
+    "title-size":    "{font.size.3xl}",
+    "title-spacing": "-0.01em"
   },
   "sidebar": {
     "$description": "Métricas exatas do mockup be-hero: .brand 24/20/20 (mark 22 italic, sub 11 uppercase mt 6) · .nav 16x12 gap 2 · .nav-label 10px/.08em pad 12/12/8 · .nav-item 10x12 gap 12 texto 14 ícone 20 · .nav-badge 10px/700 pad 2x6 · .sidebar-footer 14x16 gap 12 (nome 13, link 11).",
@@ -190,6 +197,7 @@
     "cell-py":       "{spacing.3-5}",
     "header-py":     "{spacing.3}",
     "font-size":     "{font.size.sm-plus}",
+    "line-height":   "1.4",
     "header-font-size": "{font.size.xs}",
     "header-spacing": "0.08em"
   },

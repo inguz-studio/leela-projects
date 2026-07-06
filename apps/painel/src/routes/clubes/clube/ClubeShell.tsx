@@ -1,6 +1,6 @@
 // =============================================================================
 // ClubeShell — layout compartilhado das rotas de um clube (S102-T1):
-// header 96px (SPEC §1.2) + sub-nav do clube com 6 tabs (SPEC §1.3) e a aba
+// header 96px (SPEC §1.2) + sub-nav do club com 6 tabs (SPEC §1.3) e a aba
 // ativa marcada. Header traz o código de convite copiável (RN-101).
 // Presentational puro (props) — testável sem router nem dados. A ação de
 // copiar (clipboard + toast) é injetada por prop para manter a pureza.
@@ -77,7 +77,7 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
           <CodigoConvite codigo={clube.codigoConvite} slug={clube.slug} onCopiar={onCopiarCodigo} />
         }
       />
-      <SubNav tabs={tabs} aria-label="Seções do clube" />
+      <SubNav tabs={tabs} aria-label="Seções do club" />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

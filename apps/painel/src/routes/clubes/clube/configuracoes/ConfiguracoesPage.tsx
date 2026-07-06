@@ -1,6 +1,6 @@
 // =============================================================================
 // ConfiguracoesPage - container das configuracoes (`/clubes/:slug/
-// configuracoes`). Persiste os campos do clube via atualizarClube (write real);
+// configuracoes`). Persiste os campos do club via atualizarClube (write real);
 // moderacao/permissoes ficam "Em breve" na view (fix S4 — sem sucesso falso).
 // O fluxo de exclusao abre o modal LGPD (S110-T2); deletar/exportar chamam os
 // callables (Functions Fable S110-T2).
@@ -50,7 +50,7 @@ export function ConfiguracoesPage(): JSX.Element {
       setDeletarAberto(false);
       navigate('/clubes');
     } catch {
-      toast({ variant: 'danger', title: 'Não foi possível excluir o clube' });
+      toast({ variant: 'danger', title: 'Não foi possível excluir o club' });
     }
   }
 

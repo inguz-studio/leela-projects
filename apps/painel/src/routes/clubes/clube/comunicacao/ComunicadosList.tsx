@@ -1,5 +1,5 @@
 // =============================================================================
-// ComunicadosList — lista de comunicados do clube (S108-T2). 4 KPIs + filter
+// ComunicadosList — lista de comunicados do club (S108-T2). 4 KPIs + filter
 // bar com 3 grupos (status × canal × origem = interseção) + lista com borda
 // esquerda colorida por status e popover contextual por status (RN-130).
 // Filtro que zera → EmptyState. Stateful de UI; dados/ações vêm por props.

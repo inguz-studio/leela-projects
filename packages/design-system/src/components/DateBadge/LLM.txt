@@ -1,0 +1,40 @@
+# DateBadge — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: DateBadge
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/DateBadge
+verdict: APPROVE (lote FIDELIDADE T6/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { DateBadge, type DateBadgeProps } from '@leela/design-system'
+
+## Quando usar
+Pill de contexto temporal do mockup `.date-badge` no page-head ("Domingo, 19 de Abril · 14:32") com dot verde de "ao vivo/ok". O texto vem PRONTO do consumidor (formatador puro).
+
+## Quando NÃO usar
+Não use como badge de status (Badge) nem como data de célula de tabela (texto tertiary tabular). Não é interativo.
+
+## Props válidas
+- children: ReactNode   (o texto formatado — semântica <time> a cargo do consumidor)
+- showDot?: boolean   (default true — dot verde com glow)
+- className?: string
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --datebadge-px / --datebadge-py / --datebadge-gap / --datebadge-font-size / --datebadge-dot-size
+- --datebadge-dot-glow (box-shadow completo, literal por tema)
+- --surface-overlay / --border-subtle / --text-secondary / --feedback-success (dot) / --radius-pill
+
+## Proibido (do/don't)
+DON'T: relógio "vivo" com setInterval dentro do componente — snapshot no consumidor.
+DON'T: glow via box-shadow literal.
+DO: envolva em <time dateTime="…"> no consumidor quando o texto for uma data real.
+
+## Exemplo mínimo (válido, copiável)
+<DateBadge>Domingo, 19 de Abril · 14:32</DateBadge>
+
+## Exemplo completo (válido, copiável)
+<DateBadge showDot={false} className="ml-auto">Atualizado há 5 min</DateBadge>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente DateBadge apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

@@ -1,7 +1,7 @@
 // =============================================================================
 // ComunicadoEditorPage — container do editor (`/clubes/:slug/comunicacao/nova`).
 // `?id` ausente → create; presente → edit (pré-preenchido via getComunicado).
-// Monta o agregado de segmentação a partir do clube (qtdMembrosAtivos → 'todos')
+// Monta o agregado de segmentação a partir do club (qtdMembrosAtivos → 'todos')
 // e persiste via porta (rascunho/agendado; 'enviado' é da Function).
 // =============================================================================
 

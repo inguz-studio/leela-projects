@@ -23,6 +23,13 @@ export interface StepperProps {
   steps: StepperStep[];
   /** Índice (0-based) da etapa atual. */
   current: number;
+  /**
+   * Conclusão REAL por índice (QA m3): quando presente, um passo só mostra ✓
+   * se `completed[i]` for true — fluxos onde a escrita acontece no fechamento
+   * (balcão RN-205) não podem marcar entrega sem entrega. Ausente = derivação
+   * linear clássica (índice < current), backward compatible.
+   */
+  completed?: readonly boolean[];
   'aria-label'?: string;
   className?: string;
 }
@@ -34,13 +41,14 @@ export interface StepperProps {
 function Stepper({
   steps,
   current,
+  completed,
   'aria-label': ariaLabel = 'Progresso das etapas',
   className,
 }: StepperProps): JSX.Element {
   return (
     <ol aria-label={ariaLabel} className={cn('flex items-center w-full', className)}>
       {steps.map((step, index) => {
-        const isCompleted = index < current;
+        const isCompleted = completed ? completed[index] === true : index < current;
         const isCurrent = index === current;
 
         return (

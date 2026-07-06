@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './IconButton.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# IconButton
+
+Botão de ícone 36×36 do mockup `.icon-btn`, ghost com pip de notificação opcional. `aria-label` é obrigatório na tipagem.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="IconButton"
+  snippet={`import { IconButton } from '@leela/design-system';\nimport { Bell } from 'lucide-react';\n\n<IconButton aria-label="Notificações" pip><Bell /></IconButton>`}
+  contract={contract}
+/>

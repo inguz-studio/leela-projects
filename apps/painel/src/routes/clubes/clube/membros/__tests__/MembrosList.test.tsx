@@ -64,9 +64,9 @@ describe('MembrosList', () => {
     renderList({ onRemover });
     // abre o popover da 1ª linha (Camila)
     await userEvent.click(screen.getByRole('button', { name: 'Ações de Camila Ramos' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Remover do clube' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Remover do club' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Remover membro do clube')).toBeInTheDocument();
+    expect(within(dialog).getByText('Remover membro do club')).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remover membro' }));
     expect(onRemover).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
   });

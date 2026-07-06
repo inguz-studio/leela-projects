@@ -1,7 +1,7 @@
 // =============================================================================
 // ClubeCard — card de clube no hub (S101-T2). Duas variantes:
 //   own      — clube próprio (Zona A): destaque com borda de marca + stats.
-//   parceiro — clube parceiro (Zona B): card flat + popover contextual (•••).
+//   parceiro — club parceiro (Zona B): card flat + popover contextual (•••).
 // Presentational puro: recebe o Clube, callbacks e o estado do popover (a
 // exclusividade C3 é gerida pelo hub, que mantém um único popover aberto).
 // =============================================================================
@@ -14,7 +14,7 @@ import { anoDe, formatInt } from '../_lib/format';
 export interface ClubeCardProps {
   clube: Clube;
   variant: 'own' | 'parceiro';
-  /** Abre o painel interno do clube (SPA). */
+  /** Abre o painel interno do club (SPA). */
   onAbrir: (slug: string) => void;
   /** Ações do popover contextual (só variante parceiro). */
   popoverActions?: PopoverAction[];

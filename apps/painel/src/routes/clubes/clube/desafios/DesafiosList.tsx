@@ -1,5 +1,5 @@
 // =============================================================================
-// DesafiosList — lista de desafios do clube (S105-T2). 4 KPIs + filtros
+// DesafiosList — lista de desafios do club (S105-T2). 4 KPIs + filtros
 // combináveis (busca × status EXCLUSIVO × modelo TOGGLES = interseção) +
 // seções "em andamento" / "encerrados" com CardDesafio (DS) e popover de 6
 // ações por card (C3: exclusivo, um aberto por vez). Filtro que zera → EmptyState.

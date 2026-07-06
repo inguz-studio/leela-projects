@@ -30,10 +30,14 @@ import { cn } from '../../utils/cn';
 
 const badgeVariants = cva(
   [
-    'inline-flex items-center justify-center',
-    'h-[var(--badge-height)] px-[var(--badge-px)]',
+    'inline-flex items-center justify-center gap-[var(--badge-gap)]',
+    // Tipografia do mockup `.badge` (QA m5): 10px/700 uppercase .04em; a
+    // altura (~21px) nasce do padding 3x7 — sem height fixa.
+    'px-[var(--badge-px)] py-[var(--badge-py)]',
     'rounded-[var(--badge-radius)]',
     'text-[length:var(--badge-font-size)] font-[var(--badge-font-weight)]',
+    'uppercase tracking-[var(--badge-spacing)]',
+    '[&_svg]:w-[var(--badge-icon-size)] [&_svg]:h-[var(--badge-icon-size)]',
     'whitespace-nowrap select-none',
     // Flat (§2.16)
     'border-0',

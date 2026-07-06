@@ -134,7 +134,11 @@ export function ActiveEvents({
                   thumbVariant={evento.thumbVariant}
                   metaItems={[
                     evento.quando,
-                    evento.esgotando ? (
+                    // QA m2: esgotado (0 vagas) fala "Esgotado" em vulcão —
+                    // nunca mais "Últimas vagas" para 100% de ocupação.
+                    evento.esgotado ? (
+                      <Badge variant="vulcao">Esgotado</Badge>
+                    ) : evento.esgotando ? (
                       <Badge variant="alerta">Últimas vagas</Badge>
                     ) : null,
                   ]}

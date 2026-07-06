@@ -32,7 +32,8 @@ export const ListaCarregando: Story = {
             <Skeleton variant="text" className="w-1/3" />
             <Skeleton variant="text" className="w-1/5" />
           </div>
-          <Skeleton variant="rect" className="h-[var(--badge-height)] w-[var(--btn-height-lg)]" />
+          {/* Badge não tem mais height fixa (m5) — placeholder ~altura do badge */}
+          <Skeleton variant="rect" className="h-[var(--spacing-5)] w-[var(--btn-height-lg)]" />
         </div>
       ))}
     </div>

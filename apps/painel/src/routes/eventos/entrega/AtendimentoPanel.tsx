@@ -16,7 +16,7 @@ import {
   useToast,
 } from '@leela/design-system';
 import type { Evento, Inscrito } from '@leela/core';
-import { presencaRegistrada } from '@leela/core';
+import { chipVinculado, presencaRegistrada } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { filtrarInscritos } from '../_lib/inscritosFiltro';
 import { kitInscritoBadge } from '../_lib/kitLabels';
@@ -152,7 +152,21 @@ export function AtendimentoPanel({
         <Badge variant={kit.variant}>{kit.label}</Badge>
       </header>
 
-      <Stepper steps={passos} current={concluido ? passos.length : current} aria-label="Passos do atendimento" />
+      {/* QA m3: conclusão REAL por passo — a escrita do kit acontece no
+          fechamento (RN-205), então o ✓ segue os carimbos do inscrito, nunca
+          a posição do passo atual. Operador não lê "kit entregue" p/ pendente. */}
+      <Stepper
+        steps={passos}
+        current={concluido ? passos.length : current}
+        completed={passos.map((p) =>
+          p.id === 'kit'
+            ? Boolean(atual.kitEntregueEm)
+            : p.id === 'chip'
+              ? chipVinculado(atual)
+              : presencaRegistrada(atual),
+        )}
+        aria-label="Passos do atendimento"
+      />
 
       {concluido ? (
         <div className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--feedback-success-surface)] p-[var(--spacing-4)]">

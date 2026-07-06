@@ -134,6 +134,9 @@ const TableCell = React.forwardRef<
     className={cn(
       'py-[var(--table-cell-py)] px-[var(--table-cell-px)]',
       'text-[length:var(--table-font-size)]',
+      // Linha ~47px do mockup (QA m6): o line-height herdado (1.5+) rendia
+      // 50.5px; 13px × 1.4 + 28 de padding ≈ 46–47px.
+      'leading-[var(--table-line-height)]',
       // Alias shadcn→brasa: foreground = text-primary
       'text-foreground',
       className,

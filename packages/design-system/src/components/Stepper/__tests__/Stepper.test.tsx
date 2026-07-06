@@ -58,4 +58,27 @@ describe('Stepper', () => {
     render(<Stepper steps={CHECKOUT_STEPS} current={0} aria-label="Checkout" />);
     expect(screen.getByRole('list', { name: 'Checkout' })).toBeInTheDocument();
   });
+
+  // QA m3: conclusão explícita — passo anterior ao atual SÓ mostra ✓ se o
+  // dado real disser que concluiu (balcão: escrita acontece no fechamento).
+  it('completed explícito vence a derivação linear (m3)', () => {
+    render(
+      <Stepper
+        steps={CHECKOUT_STEPS.slice(0, 3)}
+        current={1}
+        completed={[false, false, true]}
+      />,
+    );
+    const items = screen.getAllByRole('listitem');
+    // índice 0 está ANTES do current mas completed[0]=false → sem ✓
+    expect(within(items[0] as HTMLElement).queryByText('✓')).not.toBeInTheDocument();
+    // índice 2 está DEPOIS do current mas completed[2]=true → ✓
+    expect(within(items[2] as HTMLElement).getByText('✓')).toBeInTheDocument();
+    expect(screen.getAllByText('(concluída)')).toHaveLength(1);
+  });
+
+  it('sem completed mantém a derivação linear (backward compatible)', () => {
+    render(<Stepper steps={CHECKOUT_STEPS} current={2} />);
+    expect(screen.getAllByText('(concluída)')).toHaveLength(2);
+  });
 });

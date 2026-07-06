@@ -1,7 +1,7 @@
 // =============================================================================
 // NovoClubePage — criação de clube (`/clubes/novo` · fix #14 do review Onda1:
 // o CTA primário do hub apontava para rota inexistente e caía no `:slug` com
-// "Clube não encontrado"). Form controlado com validação do core
+// "Club não encontrado"). Form controlado com validação do core
 // (validarClube), slug derivado do nome (sanitizeSlug — read-only, docId =
 // slug por design, mesmo contrato da tela de configurações), codigoConvite
 // gerado no submit (RN-101), modelo "Pago" desabilitado (RN-104). Persiste
@@ -59,7 +59,7 @@ export function NovoClubePage(): JSX.Element {
     };
     const erros = validarClube(input);
     if (erros.length > 0) {
-      toast({ variant: 'danger', title: 'Revise o clube', description: erros[0] ?? 'Há campos pendentes.' });
+      toast({ variant: 'danger', title: 'Revise o club', description: erros[0] ?? 'Há campos pendentes.' });
       return;
     }
     setCriando(true);
@@ -70,7 +70,7 @@ export function NovoClubePage(): JSX.Element {
     } catch {
       toast({
         variant: 'danger',
-        title: 'Não foi possível criar o clube',
+        title: 'Não foi possível criar o club',
         description: `O endereço "${slug}" pode já estar em uso — ajuste o nome e tente novamente.`,
       });
     } finally {
@@ -82,7 +82,7 @@ export function NovoClubePage(): JSX.Element {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
       <header className="flex items-center justify-between">
         <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Criar clube
+          Criar club
         </h1>
         <Button variant="ghost" onClick={() => navigate('/clubes')}>
           Cancelar
@@ -90,12 +90,12 @@ export function NovoClubePage(): JSX.Element {
       </header>
 
       <section
-        aria-label="Identidade do clube"
+        aria-label="Identidade do club"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do clube</span>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome do clube" className={inputCls} />
+          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do club</span>
+          <input value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome do club" className={inputCls} />
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             {slug
               ? `Endereço público: be-hero.com.br/c/${slug} (definido na criação, não pode ser alterado depois)`
@@ -123,7 +123,7 @@ export function NovoClubePage(): JSX.Element {
       </section>
 
       <section
-        aria-label="Regras do clube"
+        aria-label="Regras do club"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <div className="flex flex-col gap-[var(--spacing-2)]">
@@ -157,7 +157,7 @@ export function NovoClubePage(): JSX.Element {
 
       <div>
         <Button variant="primary" disabled={!podeCriar} onClick={() => void criar()}>
-          {criando ? 'Criando…' : 'Criar clube'}
+          {criando ? 'Criando…' : 'Criar club'}
         </Button>
       </div>
     </div>

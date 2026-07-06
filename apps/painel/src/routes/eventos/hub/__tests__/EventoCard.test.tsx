@@ -23,4 +23,25 @@ describe('EventoCard', () => {
     await userEvent.click(screen.getByRole('button'));
     expect(onAbrir).toHaveBeenCalledWith('meia-floripa-2026');
   });
+
+  // QA m2: a lista de eventos sinaliza esgotamento quando a capacidade é conhecida.
+  it('evento lotado (capacidade conhecida) mostra badge "Esgotado"', () => {
+    render(
+      <EventoCard
+        evento={mkEvento({ qtdInscritos: 60, capacidade: 60 })}
+        onAbrir={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Esgotado')).toBeInTheDocument();
+  });
+
+  it('sem capacidade conhecida não afirma esgotamento', () => {
+    render(
+      <EventoCard
+        evento={mkEvento({ qtdInscritos: 999, capacidade: null })}
+        onAbrir={vi.fn()}
+      />
+    );
+    expect(screen.queryByText('Esgotado')).not.toBeInTheDocument();
+  });
 });

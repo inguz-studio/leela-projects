@@ -10,7 +10,7 @@
 
 import { Badge, CardEvento } from '@leela/design-system';
 import type { Evento } from '@leela/core';
-import { statusEventoBadge } from '../_lib/status';
+import { eventoEsgotado, statusEventoBadge } from '../_lib/status';
 import { formatDataEvento, formatInt } from '../_lib/format';
 
 export interface EventoCardProps {
@@ -40,7 +40,11 @@ export function EventoCard({ evento, onAbrir }: EventoCardProps): JSX.Element {
       }
       footer={
         <div className="flex items-center justify-between gap-[var(--spacing-2)]">
-          <Badge variant={status.variant}>{status.label}</Badge>
+          <div className="flex items-center gap-[var(--spacing-2)]">
+            <Badge variant={status.variant}>{status.label}</Badge>
+            {/* QA m2: esgotamento sinalizado na lista (capacidade conhecida) */}
+            {eventoEsgotado(evento) ? <Badge variant="vulcao">Esgotado</Badge> : null}
+          </div>
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             {formatInt(evento.qtdInscritos)} inscritos
           </span>

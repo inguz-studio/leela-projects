@@ -25,7 +25,7 @@ export function ClubeLayout(): JSX.Element {
 
   if (loading) {
     return (
-      <div role="status" aria-label="Carregando clube" className="flex flex-col gap-[var(--spacing-4)]">
+      <div role="status" aria-label="Carregando club" className="flex flex-col gap-[var(--spacing-4)]">
         <Skeleton variant="rect" className="h-[var(--header-height)]" />
         <Skeleton variant="rect" className="h-[var(--subnav-height)]" />
         <div className="p-[var(--spacing-6)]">
@@ -38,7 +38,7 @@ export function ClubeLayout(): JSX.Element {
   if (error || !clube) {
     return (
       <EmptyState
-        title="Clube não encontrado"
+        title="Club não encontrado"
         description="Ele pode ter sido removido ou você não tem acesso."
         action={
           <Button variant="primary" onClick={() => navigate('/clubes')}>

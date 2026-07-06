@@ -1,7 +1,7 @@
 // =============================================================================
 // NovoClubePage — fluxo de criação de clube (fix #14 do review Onda1: o CTA
 // primário do hub navegava para /clubes/novo, rota inexistente, e caía no
-// :slug com "Clube não encontrado"). Prova: rota real registrada, form deriva
+// :slug com "Club não encontrado"). Prova: rota real registrada, form deriva
 // slug do nome, cria via porta com codigoConvite RN-101 válido + ∑ ausentes
 // do input (nascem zerados no api-client) e navega para o clube criado.
 // =============================================================================
@@ -38,7 +38,7 @@ function renderPage(): void {
       <MemoryRouter initialEntries={['/clubes/novo']}>
         <Routes>
           <Route path="/clubes/novo" element={<NovoClubePage />} />
-          <Route path="/clubes/:slug" element={<div>overview do clube</div>} />
+          <Route path="/clubes/:slug" element={<div>overview do club</div>} />
           <Route path="/clubes" element={<div>hub</div>} />
         </Routes>
       </MemoryRouter>
@@ -68,19 +68,19 @@ beforeEach(() => {
 describe('NovoClubePage (fix #14)', () => {
   it('botão desabilitado sem nome; slug derivado aparece no hint', async () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'Criar clube' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Criar club' })).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Corrida Perfeita Sul!');
+    await userEvent.type(screen.getByLabelText('Nome do club'), 'Corrida Perfeita Sul!');
     expect(screen.getByText(/be-hero\.com\.br\/c\/corrida-perfeita-sul/)).toBeInTheDocument();
     expect(screen.getByText(/não pode ser alterado depois/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Criar clube' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Criar club' })).toBeEnabled();
   });
 
   it('cria o clube com sessão + código RN-101 válido e navega para o novo slug', async () => {
     renderPage();
-    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
+    await userEvent.type(screen.getByLabelText('Nome do club'), 'Trilha Norte');
     await userEvent.type(screen.getByLabelText('Descrição'), 'Grupo de trail running.');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar club' }));
 
     await waitFor(() => expect(mocks.criarClubePadrao).toHaveBeenCalledTimes(1));
     const input = mocks.criarClubePadrao.mock.calls[0]?.[0] as {
@@ -99,18 +99,18 @@ describe('NovoClubePage (fix #14)', () => {
     // ∑ nunca saem do form (nascem zerados no api-client)
     expect(input).not.toHaveProperty('qtdMembrosAtivos');
 
-    await screen.findByText('overview do clube');
+    await screen.findByText('overview do club');
   });
 
   it('erro do write (ex.: slug em uso) mostra toast honesto e NÃO navega', async () => {
     mocks.criarClubePadrao.mockRejectedValue(new Error('permission-denied'));
     renderPage();
-    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
+    await userEvent.type(screen.getByLabelText('Nome do club'), 'Trilha Norte');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar club' }));
 
-    await screen.findByText('Não foi possível criar o clube');
+    await screen.findByText('Não foi possível criar o club');
     expect(screen.getByText(/"trilha-norte" pode já estar em uso/)).toBeInTheDocument();
-    expect(screen.queryByText('overview do clube')).not.toBeInTheDocument();
+    expect(screen.queryByText('overview do club')).not.toBeInTheDocument();
   });
 
   it('modelo Pago desabilitado com "Em breve" (RN-104)', () => {
@@ -121,8 +121,8 @@ describe('NovoClubePage (fix #14)', () => {
 
   // Prova de REGISTRO da rota (a raiz do #14): monta o ClubesRoutes real.
   // No código antigo /clubes/novo caía no coringa :slug e o ClubeLayout
-  // renderizava "Clube não encontrado" — este teste falha lá.
-  it('rota /clubes/novo registrada antes do coringa :slug — não cai em "Clube não encontrado"', async () => {
+  // renderizava "Club não encontrado" — este teste falha lá.
+  it('rota /clubes/novo registrada antes do coringa :slug — não cai em "Club não encontrado"', async () => {
     render(
       <MemoryRouter initialEntries={['/clubes/novo']}>
         <Routes>
@@ -130,7 +130,7 @@ describe('NovoClubePage (fix #14)', () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: 'Criar clube' })).toBeInTheDocument();
-    expect(screen.queryByText('Clube não encontrado')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Criar club' })).toBeInTheDocument();
+    expect(screen.queryByText('Club não encontrado')).not.toBeInTheDocument();
   });
 });

@@ -40,7 +40,7 @@ describe('ClubeShell', () => {
     expect(membros).toHaveAttribute('aria-current', 'page');
     const overview = screen.getByRole('link', { name: 'Overview' });
     expect(overview).not.toHaveAttribute('aria-current');
-    // Sub-nav lista as 6 tabs do clube.
+    // Sub-nav lista as 6 tabs do club.
     expect(screen.getByRole('link', { name: 'Parcerias' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Configurações' })).toBeInTheDocument();
   });

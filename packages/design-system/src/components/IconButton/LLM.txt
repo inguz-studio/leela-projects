@@ -1,0 +1,43 @@
+# IconButton — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: IconButton
+version: 0.0.1
+generated_at: "2026-07-06"
+source: src/components/IconButton
+verdict: APPROVE (lote FIDELIDADE T3/T7, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { IconButton, type IconButtonProps } from '@leela/design-system'
+
+## Quando usar
+Botão 36×36 só de ícone do mockup `.icon-btn` (ghost: transparente → hover raised): ajuda, notificações, ações de célula. `pip` acende o ponto de marca (notificação não-lida).
+
+## Quando NÃO usar
+Não use para ação com rótulo visível (Button, inclusive `size="icon"` quando precisar dos variants primary/secondary/destructive). Não use pip sem dado real de não-lidas.
+
+## Props válidas
+- 'aria-label': string   (OBRIGATÓRIA na tipagem — o botão não tem texto)
+- pip?: boolean   (default false; decorativo/aria-hidden — descreva no aria-label)
+- children: ReactNode   (o ícone, ~18px via token)
+- ...props nativas de button (onClick, disabled, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --iconbtn-size / --iconbtn-icon-size / --iconbtn-pip-size / --iconbtn-pip-border / --iconbtn-pip-inset
+- --radius-sm / --surface-raised / --surface-base / --text-secondary / --text-primary
+- --border-brand (cor do pip) / --border-focus (anel de foco) / motion tokens
+
+## Proibido (do/don't)
+DON'T: omitir aria-label (a tipagem reprova).
+DON'T: pip aceso sem fonte real de notificações (estado honesto).
+DO: prefira Button size="icon" quando o contexto pedir variant primário/destrutivo.
+
+## Exemplo mínimo (válido, copiável)
+<IconButton aria-label="Ajuda"><HelpCircle /></IconButton>
+
+## Exemplo completo (válido, copiável)
+<IconButton aria-label="Notificações — 3 não lidas" pip onClick={abrirPainel}>
+  <Bell />
+</IconButton>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente IconButton apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

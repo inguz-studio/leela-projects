@@ -25,4 +25,16 @@ describe('Badge', () => {
     render(<Badge variant="vitoria">Confirmado</Badge>);
     expect(screen.getByText('Confirmado')).toBeInTheDocument();
   });
+
+  // QA m5: tipografia do mockup `.badge` — 10px/700 uppercase, altura nasce
+  // do padding (sem height fixa).
+  it('usa a tipografia do mockup por token (m5)', () => {
+    render(<Badge>Publicado</Badge>);
+    const el = screen.getByText('Publicado');
+    expect(el.className).toContain('uppercase');
+    expect(el.className).toContain('tracking-[var(--badge-spacing)]');
+    expect(el.className).toContain('py-[var(--badge-py)]');
+    expect(el.className).toContain('text-[length:var(--badge-font-size)]');
+    expect(el.className).not.toContain('--badge-height');
+  });
 });

@@ -7,7 +7,7 @@ source: src/components/Sidebar
 verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
 
 ## Import canônico
-import { Sidebar, SidebarFooter, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon, type SidebarProps, type SidebarSection, type SidebarItem, type SidebarFooterProps } from '@leela/design-system'
+import { Sidebar, SidebarBrand, SidebarFooter, DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon, type SidebarProps, type SidebarSection, type SidebarItem, type SidebarBrandProps, type SidebarFooterProps } from '@leela/design-system'
 
 ## Quando usar
 Navegação lateral do shell, FIXA em 240px (--sidebar-width) — sem modo colapsado. Use DEFAULT_SIDEBAR_SECTIONS para as seções padrão do painel Be Hero e sidebarNavIcon(IconeLucide) para ícones nos tokens do DS.
@@ -17,8 +17,14 @@ Não use para menus contextuais (use DropdownMenu) nem para sub-navegação de p
 
 ## Props válidas
 Sidebar:
-- sections: SidebarSection[]   (obrigatório) — SidebarSection = { label: string; items: SidebarItem[] }; SidebarItem = { id: string; label: string; icon: React.ReactNode; href?: string; badge?: string | number; active?: boolean; onClick?: () => void }
+- sections: SidebarSection[]   (obrigatório) — SidebarSection = { label: string; items: SidebarItem[] }; SidebarItem = { id: string; label: string; icon: React.ReactNode; href?: string; badge?: string | number; badgeVariant?: 'danger' | 'neutral'; active?: boolean; onClick?: () => void }
+- brand: React.ReactNode   (default: undefined) — ex.: <SidebarBrand mark="LEELA" sub="Painel do Organizador" />
 - footer: React.ReactNode   (default: undefined) — ex.: <SidebarFooter ... />
+- className: string   (default: undefined)
+SidebarBrand (bloco `.brand` do mockup — mark 22 display itálico + dot brand + sub 11 uppercase):
+- mark: string   (obrigatório)
+- sub: string   (default: undefined)
+- showDot: boolean   (default: true)
 - className: string   (default: undefined)
 SidebarFooter:
 - name: string   (obrigatório)
@@ -29,20 +35,16 @@ SidebarFooter:
 Helper sidebarNavIcon(Icon: LucideIcon): React.ReactNode — renderiza ícone Lucide em --icon-size/--icon-stroke.
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --sidebar-width
-- --surface-raised
-- --icon-size / --icon-stroke
-- --spacing-1 / --spacing-2 / --spacing-3 / --spacing-4 / --spacing-6
-- --font-size-xs / --font-size-base / --font-size-sm
-- --font-weight-semibold
-- --text-primary / --text-secondary / --text-tertiary
-- --btn-height-md
-- --radius-sm
-- --border-focus / --border-subtle
-- --action-ghost-hover
-- --badge-height / --badge-px / --badge-radius / --badge-font-size / --badge-font-weight
-- --action-primary / --action-primary-fg
-- --motion-duration-fast
+- --sidebar-width / --sidebar-active-bar / --sidebar-active-bar-inset
+- --sidebar-brand-* / --sidebar-nav-* / --sidebar-label-* / --sidebar-item-* / --sidebar-icon-size
+- --sidebar-badge-px / --sidebar-badge-py / --sidebar-badge-size / --sidebar-badge-radius / --sidebar-badge-spacing (o nav-badge NÃO usa os tokens do Badge)
+- --sidebar-footer-*
+- --surface-base / --surface-raised / --surface-high
+- --feedback-danger-surface / --feedback-danger-fg (badge danger)
+- --action-brand-tint / --action-brand-tint-fg / --border-brand (item ativo)
+- --text-primary / --text-secondary / --text-tertiary / --text-brand
+- --radius-sm / --border-focus / --border-subtle
+- --font-family-display (brand mark) / --motion-duration-fast
 
 ## Proibido (do/don't)
 DON'T: props collapsed, collapsible, width, onToggle — NÃO existem; a Sidebar é fixa em 240px.

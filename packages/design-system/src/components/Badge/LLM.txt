@@ -20,11 +20,10 @@ Não use como filtro clicável (use Chip) nem como contador em aba (SubNav/Tabs 
 - ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> (className, aria-label, etc.)
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --badge-height
-- --badge-px
+- --badge-px / --badge-py (altura ~21px nasce do padding — sem height fixa desde o m5)
 - --badge-radius
-- --badge-font-size
-- --badge-font-weight
+- --badge-font-size / --badge-font-weight / --badge-spacing (10px/700 uppercase .04em, mockup)
+- --badge-gap / --badge-icon-size
 - --feedback-heroico-surface / --feedback-heroico-fg (rosa Be Hero — o azul info saiu do brasa no D-PATCH)
 - --feedback-danger-surface / --feedback-danger-fg
 - --feedback-success-surface / --feedback-success-fg

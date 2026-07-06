@@ -1,8 +1,8 @@
 // =============================================================================
-// DeletarClubeModal - exclusao do clube (S110-T2 / 2.15 + LGPD). Modal do DS
+// DeletarClubeModal - exclusao do club (S110-T2 / 2.15 + LGPD). Modal do DS
 // com preview de consequencias (o que se perde), disclaimer LGPD de
 // irreversibilidade + retencao de 90 dias (RN-144) e confirmacao por DIGITACAO
-// do nome do clube (guarda anti-acidente). Oferece exportar os dados antes de
+// do nome do club (guarda anti-acidente). Oferece exportar os dados antes de
 // excluir. As mutacoes (deletar/exportar) sao injetadas pelo container e
 // atendidas pelas Functions do lote Fable (S110-T2 backend).
 // =============================================================================
@@ -13,14 +13,14 @@ import { Badge, Button, Modal } from '@leela/design-system';
 export interface DeletarClubeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Nome do clube — o usuário deve digitá-lo para habilitar a exclusão. */
+  /** Nome do club — o usuário deve digitá-lo para habilitar a exclusão. */
   nomeClube: string;
   onExportar: () => void | Promise<void>;
   onConfirmar: () => void | Promise<void>;
 }
 
 const PERDAS = [
-  'Todos os membros e seus históricos no clube',
+  'Todos os membros e seus históricos no club',
   'Todos os desafios, pontuações e progresso',
   'Parcerias, comunicados e configurações',
   'A página pública e o código de convite',
@@ -53,7 +53,7 @@ export function DeletarClubeModal({
         Cancelar
       </Button>
       <Button variant="destructive" disabled={!podeExcluir || processando} onClick={() => void excluir()}>
-        {processando ? 'Excluindo…' : 'Excluir clube permanentemente'}
+        {processando ? 'Excluindo…' : 'Excluir club permanentemente'}
       </Button>
     </>
   );
@@ -62,7 +62,7 @@ export function DeletarClubeModal({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Deletar clube"
+      title="Deletar club"
       description="Esta ação é irreversível."
       footer={footer}
     >
@@ -88,7 +88,7 @@ export function DeletarClubeModal({
 
         <div>
           <Button variant="ghost" onClick={() => void onExportar()}>
-            Exportar dados do clube
+            Exportar dados do club
           </Button>
         </div>
 
@@ -99,7 +99,7 @@ export function DeletarClubeModal({
           <input
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
-            aria-label="Confirmar nome do clube"
+            aria-label="Confirmar nome do club"
             placeholder={nomeClube}
             className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
           />
