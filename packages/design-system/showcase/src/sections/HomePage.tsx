@@ -13,12 +13,22 @@ import {
   CardTitle,
   Divider,
   cn,
+  useTheme,
+  type Theme,
 } from '@leela/design-system';
-import primitives from '../../../tokens/primitives.brasa.json';
+import primitivesBrasa from '../../../tokens/primitives.brasa.json';
+import primitivesLeela from '../../../tokens/primitives.leela.json';
 import { Section, TokenLabel } from '../ui';
 
-// Hex exibido apenas como TEXTO informativo, lido do JSON de tokens.
-const PRIMARY_500_HEX = (primitives as Record<string, Record<string, string>>).primary?.['500'] ?? '';
+// Info por tema — a home reage ao tema ativo (o showroom alterna brasa↔leela),
+// então nome, fonte display e hex primário nunca podem ficar cravados em brasa.
+type PrimitiveMap = Record<string, Record<string, string>>;
+const primary500 = (p: unknown): string => (p as PrimitiveMap).primary?.['500'] ?? '';
+
+const THEME_INFO: Record<Theme, { name: string; displayFont: string; primaryHex: string }> = {
+  brasa: { name: 'Brasa', displayFont: 'Exo 2', primaryHex: primary500(primitivesBrasa) },
+  leela: { name: 'Leela', displayFont: 'Syne', primaryHex: primary500(primitivesLeela) },
+};
 
 const STATS = [
   { value: '25', label: 'componentes' },
@@ -50,6 +60,8 @@ const LINKS = [
 ];
 
 export function HomePage(): JSX.Element {
+  const { theme } = useTheme();
+  const info = THEME_INFO[theme];
   return (
     <>
       {/* Hero */}
@@ -71,7 +83,7 @@ export function HomePage(): JSX.Element {
         </h1>
         <p className="max-w-prose text-[length:var(--font-size-md)] text-[var(--text-secondary)]">
           Vitrine navegável construída com os próprios componentes do DS, dentro do AppShell,
-          na identidade brasa. Tudo que você vê aqui — sidebar, cabeçalho, cards, botões —
+          na identidade {info.name}. Tudo que você vê aqui — sidebar, cabeçalho, cards, botões —
           é o componente real, com as props reais.
         </p>
       </section>
@@ -99,13 +111,13 @@ export function HomePage(): JSX.Element {
       {/* Marca em destaque */}
       <Section
         title="Marca em um relance"
-        description="A cor primária e a tipografia display do tema brasa, pintadas por var(), nunca por valor cru."
+        description={`A cor primária e a tipografia display do tema ativo (${info.name}), pintadas por var(), nunca por valor cru.`}
       >
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-[length:var(--font-size-md)]">Brasa</CardTitle>
-              <CardDescription>cor primária do tema default</CardDescription>
+              <CardTitle className="text-[length:var(--font-size-md)]">{info.name}</CardTitle>
+              <CardDescription>cor primária do tema ativo</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center gap-[var(--spacing-4)]">
               <div
@@ -115,7 +127,7 @@ export function HomePage(): JSX.Element {
               />
               <div className="flex flex-col gap-[var(--spacing-1)]">
                 <TokenLabel>--primary-500</TokenLabel>
-                <TokenLabel>{PRIMARY_500_HEX}</TokenLabel>
+                <TokenLabel>{info.primaryHex}</TokenLabel>
               </div>
             </CardContent>
           </Card>
@@ -123,7 +135,7 @@ export function HomePage(): JSX.Element {
           <Card>
             <CardHeader>
               <CardTitle className="text-[length:var(--font-size-md)]">Tipografia display</CardTitle>
-              <CardDescription>--font-family-display (Exo 2 no brasa)</CardDescription>
+              <CardDescription>{`--font-family-display (${info.displayFont} no ${info.name})`}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-[var(--spacing-2)]">
               <p
@@ -134,7 +146,7 @@ export function HomePage(): JSX.Element {
                   'text-[var(--text-primary)]',
                 )}
               >
-                Corra com a brasa acesa
+                A corrida começa aqui
               </p>
               <Divider variant="subtle" />
               <p className="font-ui text-[length:var(--font-size-base)] text-[var(--text-secondary)]">
