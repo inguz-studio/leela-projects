@@ -79,7 +79,9 @@ const ALIAS_TO_SEMANTIC: Record<string, string> = {
   border: 'border-default',
   input: 'border-strong',
   ring: 'border-focus',
-  radius: 'radius-md',
+  // radius-lg desde o patch de congruência 2026-07-06 (card do mockup = 12px;
+  // rounded-md/sm derivam por calc -4/-6 no preset → 8px/6px, degraus da escala)
+  radius: 'radius-lg',
 };
 
 // Pares fg/bg que componentes shadcn stock formam com os aliases

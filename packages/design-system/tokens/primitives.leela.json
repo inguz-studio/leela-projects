@@ -130,7 +130,8 @@
   },
   "radius": {
     "none": "0px",
-    "sm": "4px",
+    "xs": "4px",
+    "sm": "6px",
     "md": "8px",
     "lg": "12px",
     "xl": "16px",
@@ -146,13 +147,13 @@
   "motion": {
     "duration": {
       "fast": "150ms",
-      "normal": "250ms",
+      "normal": "240ms",
       "slow": "400ms"
     },
     "easing": {
-      "default": "cubic-bezier(0.4, 0, 0.2, 1)",
-      "enter": "cubic-bezier(0, 0, 0.2, 1)",
-      "exit": "cubic-bezier(0.4, 0, 1, 1)"
+      "default": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      "enter": "cubic-bezier(0.3, 0.7, 0, 1)",
+      "exit": "cubic-bezier(0.3, 0.7, 0, 1)"
     }
   },
   "icon": {

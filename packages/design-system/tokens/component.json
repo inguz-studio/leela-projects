@@ -22,7 +22,7 @@
   },
   "badge": {
     "height":        "22px",
-    "radius":        "{radius.sm}",
+    "radius":        "{radius.xs}",
     "font-size":     "{font.size.sm}",
     "font-weight":   "600",
     "px":            "{spacing.2}"
@@ -79,13 +79,13 @@
     "border-left":   "3px"
   },
   "card": {
-    "radius":        "{radius.md}",
+    "radius":        "{radius.lg}",
     "critical-border": "3px"
   },
   "stepper": {
     "step-size":     "32px"
   },
   "skeleton": {
-    "radius":        "{radius.sm}"
+    "radius":        "{radius.xs}"
   }
 }

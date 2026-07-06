@@ -130,12 +130,15 @@ const leelaPreset: Partial<Config> = {
         'ds-lg':   'var(--radius-lg)',
         'ds-xl':   'var(--radius-xl)',
         'ds-pill': 'var(--radius-pill)',
-        // shadcn/ui bridge — convenção stock: lg = --radius (alias de --radius-md
-        // do brasa), md/sm derivam por calc. Sobrescreve rounded-{sm,md,lg} default
+        // shadcn/ui bridge — convenção stock: lg = --radius (alias de --radius-lg
+        // do brasa desde o patch de congruência 2026-07-06: cards do mockup são
+        // 12px), md/sm derivam por calc com offsets ajustados para cair NOS
+        // degraus da escala: md = 12-4 = 8px (menus do mockup), sm = 12-6 = 6px
+        // (= radius-sm, itens de menu). Sobrescreve rounded-{sm,md,lg} default
         // do Tailwind (nenhum uso bare no monorepo na adoção — auditado 2026-07-05).
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 6px)',
       },
       boxShadow: {
         'elev-0':     'var(--elevation-0)',

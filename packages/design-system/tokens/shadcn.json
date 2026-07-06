@@ -18,5 +18,5 @@
   "border": "{border.default}",
   "input": "{border.strong}",
   "ring": "{border.focus}",
-  "radius": "{radius.md}"
+  "radius": "{radius.lg}"
 }
