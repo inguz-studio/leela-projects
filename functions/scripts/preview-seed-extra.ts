@@ -770,6 +770,66 @@ async function recomputarFinanceiros(db: Db): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 7. Conversão do dashboard da Marina — série de PREVIEW (prova visual)
+// ---------------------------------------------------------------------------
+
+/**
+ * Injeta taxa de conversão + sparkline em `profissionais/{Marina}/dashboard/current`.
+ *
+ * Por quê aqui (e não no core): `taxaConversaoPct`/`conversaoSparkline` dependem
+ * de dado de VISITAS (E12/analytics), que o modelo da Onda 1 ainda não tem — a
+ * Function `recomputeProfessionalDashboard` grava, corretamente, `null`/`[]`
+ * (decisão nº 7 da Onda 1). Sem esse dado o card "Taxa de conversão" fica "—" e
+ * a Sparkline não desenha. Para PROVAR a feature no preview, escrevemos por cima
+ * do agregado — SÓ os dois campos de conversão, via merge — a série exata do
+ * mockup be-hero (Painel do Organizador: 68,2% + curva ascendente de 13 pontos).
+ * Os demais KPIs continuam sendo os do agregado real (fan-out de eventos/clubes).
+ *
+ * Ordem: roda por ÚLTIMO no seed. O settle deixa os triggers de fan-out (que
+ * regravam o doc por substituição total a cada write de evento) DRENAREM antes
+ * do merge — assim a conversão não é sobrescrita. Depois deste ponto não há mais
+ * write de evento/clube, então este é o último toque no doc. `computadoEm` fresco
+ * mantém o doc "fresh" (getOverview o devolve direto, sem recomputar e zerar).
+ * Emulator-only e idempotente (rerodar re-injeta os mesmos campos).
+ */
+const CONVERSAO_SPARKLINE_MOCKUP = [8, 10, 7, 13, 11, 16, 14, 19, 17, 21, 20, 23, 25] as const;
+const CONVERSAO_TAXA_MOCKUP = 68.2;
+
+async function seedConversaoDashboard(db: Db, agora: Date): Promise<void> {
+  // Deixa o fan-out de eventos drenar (o último write de evento foi lá no passo
+  // 1); só então o merge de conversão é o toque final no dashboard/current.
+  await new Promise((resolve) => setTimeout(resolve, 2500));
+
+  const ref = db
+    .collection('profissionais')
+    .doc(MARINA_CASTELO_UID)
+    .collection('dashboard')
+    .doc('current');
+  const snap = await ref.get();
+  if (!snap.exists) {
+    console.warn(
+      '[seed-extra] conversão: dashboard/current ausente (trigger de fan-out ' +
+        'não rodou?) — pulando injeção para não gravar KPIs parciais.'
+    );
+    return;
+  }
+
+  await ref.set(
+    {
+      taxaConversaoPct: CONVERSAO_TAXA_MOCKUP,
+      conversaoSparkline: [...CONVERSAO_SPARKLINE_MOCKUP],
+      computadoEm: agora.getTime(),
+      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  console.log(
+    `[seed-extra] conversão: taxaConversaoPct=${CONVERSAO_TAXA_MOCKUP}% + sparkline ` +
+      `(${CONVERSAO_SPARKLINE_MOCKUP.length} pts, série do mockup) no dashboard da Marina`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Orquestração
 // ---------------------------------------------------------------------------
 
@@ -787,6 +847,9 @@ export async function seedPreviewExtra(
   await seedClubeExtra(db, agora);
   await seedPlataformaExtra(db);
   await recomputarFinanceiros(db);
+  // Último toque: injeta a conversão de preview no dashboard/current da Marina
+  // (após os triggers de fan-out drenarem — ver seedConversaoDashboard).
+  await seedConversaoDashboard(db, agora);
 
   console.log('[seed-extra] OK — dados extras do preview aplicados.');
 }
