@@ -9,7 +9,7 @@ tags:
 ---
 
 ## 📋 Backlog
-- [ ] **Higiene pré-E04 · lote DS-Forms** (rota da auditoria de cobertura 80237d0): Select/Switch/Radio/Checkbox/Textarea via CLI shadcn + Progress + `size: icon` no Button (146 usos de .icon-btn no mockup) — E04 é form-pesado, fazer ANTES · + higiene: rename Popover→DropdownMenu nos consumidores · promover CardKPI ao DS (3 cópias locais) antes de E09s-L3 · + lote imports modulares firebase-admin (~13 módulos, Directive 73865e0)
+- [ ] **Higiene pré-E04 · lote DS-Forms** (rota da auditoria de cobertura 80237d0): Select/Switch/Radio/Checkbox/Textarea via CLI shadcn + Progress + `size: icon` no Button (146 usos de .icon-btn no mockup) — E04 é form-pesado, fazer ANTES · + higiene: rename Popover→DropdownMenu nos consumidores · promover CardKPI ao DS (3 cópias locais) antes de E09s-L3 · **+ self-host das fontes no DS (decisão Vitor 2026-07-06): woff2 Exo 2 + JetBrains Mono embarcados no pacote com @font-face, remover Google Fonts CDN do painel — LGPD/performance/consistência showroom** · + lote imports modulares firebase-admin (~13 módulos, Directive 73865e0)
 - [ ] **O2** · E04-slim · Config & Vendas — SEM afiliação/split (decisão 2026-07-04); cupons + equipe/papéis + PaymentProvider ficam · dep E03 · re-planejamento em curso
 - [ ] **O2** · E12 · Landing + checkout público — dep E04 · decisões comerciais pendentes (taxa incorporada vs não, parcelamento, frete — insumo: benchmark-cheers.md)
 - [ ] **O2** · E09-slim · Repasses — ENTROU na V1 (spec vinculante do Vitor: vendido/disponível, dados bancários salvos, valor, histórico, comprovante, retenção 15% pós-evento editável pelo admin) · dep E12
