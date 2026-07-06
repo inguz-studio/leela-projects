@@ -64,11 +64,10 @@ no link da área que quer ver.
 **Login manual** (se algum dia precisar digitar): `marina@demo-leela.dev` com a
 senha `demo1234` (usuário só existe no ambiente de teste).
 
-**Observação honesta:** alguns números do topo da "Visão geral" (os cartões de
-resumo) e os botões que **salvam/alteram** dados dependem do servidor (Cloud
-Functions), que **não** sobe neste preview leve. Eles podem aparecer vazios ou
-dar um aviso — é esperado. Tudo que é **listagem/visualização** funciona com os
-dados de exemplo.
+**Observação:** o preview também sobe o servidor local (Cloud Functions no
+Emulator), então os cartões de resumo e os alertas da "Visão geral" carregam
+com os dados de exemplo. Se algum botão de **salvar/alterar** reclamar, veja o
+`emulator.log` na pasta de logs impressa ao encerrar.
 
 ---
 
@@ -132,20 +131,23 @@ desatualizados, o navegador mostra uma página vazia, sem mensagem de erro.
 
 ## Detalhes técnicos (para quem quiser saber)
 
-- Portas do preview: **Firestore 8180 · Auth 9198 · Emulator UI 4001 · hub 4401
-  · logging 4501** e **painel 5273+**. Os defaults 8080/9099/4000/5173
-  (automação/testes) ficam **intocados**.
+- Portas do preview: **Firestore 8180 · Auth 9198 · Functions 5201 · Emulator
+  UI 4001 · hub 4401 · logging 4501** e **painel 5273+**. Os defaults
+  8080/9099/5001/4000/5173 (automação/testes) ficam **intocados**.
 - O painel lê `VITE_EMULATOR_HOST` / `VITE_EMULATOR_FIRESTORE_PORT` /
-  `VITE_EMULATOR_AUTH_PORT` para apontar às portas alternativas; **sem essas
-  variáveis, o comportamento é exatamente o de sempre** (8080/9099/5001).
+  `VITE_EMULATOR_AUTH_PORT` / `VITE_EMULATOR_FUNCTIONS_PORT` para apontar às
+  portas alternativas; **sem essas variáveis, o comportamento é exatamente o
+  de sempre** (8080/9099/5001).
 - O auto-login só liga com `VITE_PREVIEW_AUTOLOGIN=true` (o `preview.sh` define
   isso). Em `pnpm dev`, testes e produção ele é um no-op — zero impacto.
 - Antes de subir o Vite, o preview roda
-  `pnpm turbo run build --filter='@leela/painel^...'` — compila só as
-  dependências internas do painel (`@leela/core`, `@leela/api-client`,
-  `@leela/design-system`). O painel resolve esses pacotes pelo `dist/` de cada
-  um; um `dist/` velho quebra a montagem do app no navegador (tela em branco).
-  Com o cache do Turbo, o passo é quase instantâneo quando nada mudou.
+  `pnpm turbo run build --filter='@leela/painel^...' --filter='@leela/functions'`
+  — compila as dependências internas do painel (`@leela/core`,
+  `@leela/api-client`, `@leela/design-system`) e as Cloud Functions (o
+  Emulator carrega `functions/lib/`). O painel resolve esses pacotes pelo
+  `dist/` de cada um; um `dist/` velho quebra a montagem do app no navegador
+  (tela em branco). Com o cache do Turbo, o passo é quase instantâneo quando
+  nada mudou.
 - Os seeds rodam via `functions/scripts/preview-seed.ts` (importa as funções de
   `functions/src/seed/*` e aponta ao banco de teste em portas alternativas).
 - Os logs de cada execução ficam numa pasta temporária (o caminho é impresso ao

@@ -21,6 +21,13 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+// Estáticos do Firestore via import MODULAR (não `admin.firestore.Timestamp`):
+// o Functions Emulator (firebase-tools ≥15) intercepta o módulo firebase-admin
+// com um Proxy cujo `get` devolve `firestore.bind(target)` — e `.bind()` cria
+// uma função NOVA sem as propriedades estáticas (Timestamp/FieldValue ficam
+// undefined SÓ dentro do runtime emulado). O import modular não passa pelo
+// proxy e funciona igual em produção.
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { firestore } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -144,13 +151,13 @@ export async function recomputeProfessionalDashboard(
       // Janelas de trend: range só em `criadoEm` (single-field automático).
       eventoDoc.ref
         .collection('inscritos')
-        .where('criadoEm', '>=', admin.firestore.Timestamp.fromDate(inicioJanelaAtual))
+        .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAtual))
         .count()
         .get(),
       eventoDoc.ref
         .collection('inscritos')
-        .where('criadoEm', '>=', admin.firestore.Timestamp.fromDate(inicioJanelaAnterior))
-        .where('criadoEm', '<', admin.firestore.Timestamp.fromDate(inicioJanelaAtual))
+        .where('criadoEm', '>=', Timestamp.fromDate(inicioJanelaAnterior))
+        .where('criadoEm', '<', Timestamp.fromDate(inicioJanelaAtual))
         .count()
         .get(),
     ]);
@@ -213,7 +220,7 @@ export async function recomputeProfessionalDashboard(
     .doc('current')
     .set({
       ...current,
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
 
   return current;
