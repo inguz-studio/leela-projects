@@ -57,7 +57,8 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-DS-B3 — AppShell layout raiz em App.tsx — zero rota sem shell (2544ded)
 - [x] LEELA-DS-B4 — SidebarFooter componível (avatar+nome da sessão) (69439f0)
 - [x] LEELA-DS-B5 — **GATE VISUAL: PASS 2026-07-06 (maestro, 4 screenshots vs mockup)** · suítes DS 564/564 + painel 446/446 em blocos + shell 17/17 · tsc+ESLint 0 · follow-ups: brand block topo sidebar (aguarda marca Leela) · badges da nav (ligar dado) · KPIs preview (dado, pré-existente)
-- [ ] LEELA-DS-SHOWROOM — magic-ds: showcase vivo na identidade do DS (todos os componentes, 2 temas, animações) + LLM.txt (FILA AUTOMÁTICA pós-Lote B)
+- [x] LEELA-DS-SHOWROOM — **GATE PASS 2026-07-06 (maestro, 3 screenshots)** — Storybook 25/25 componentes (81 stories + 25 MDX copy-to-clipboard) · showcase 5 páginas no AppShell c/ tema ao vivo · LLM.txt por componente + índice · auditoria interna APPROVE (AA 5.29-18.58:1, teclado 11/11, zero request externo) · suíte 564/564 intacta (8a1e45e..da8227f)
+- [ ] Follow-ups do showroom (2026-07-13, pré-Onda 2): 6 bugs de componente registrados no DS-SHOWROOM-SUMMARY (Input aria-describedby s/ id · DropdownMenu className no trigger · Toast duration ignorado em danger · Card sem export de tipos · comentário Table cita Popover · CardEvento href+onClick) + arbitrar fontes Exo 2/JetBrains embarcadas vs fallback
 
 ### LEELA-E16 · Plataforma & Super-admin (recorte V1 — fundacional multi-tenant)
 
