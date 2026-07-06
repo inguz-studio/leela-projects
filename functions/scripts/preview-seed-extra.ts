@@ -873,48 +873,81 @@ async function recomputarFinanceiros(db: Db): Promise<void> {
  * mockup be-hero (Painel do Organizador: 68,2% + curva ascendente de 13 pontos).
  * Os demais KPIs continuam sendo os do agregado real (fan-out de eventos/clubes).
  *
- * Ordem: roda por ÚLTIMO no seed. O settle deixa os triggers de fan-out (que
- * regravam o doc por substituição total a cada write de evento) DRENAREM antes
- * do merge — assim a conversão não é sobrescrita. Depois deste ponto não há mais
- * write de evento/clube, então este é o último toque no doc. `computadoEm` fresco
- * mantém o doc "fresh" (getOverview o devolve direto, sem recomputar e zerar).
+ * Dois riscos reais (achados no QA vivo 2) e como são vencidos:
+ *  1) CLOBBER de fan-out: cada write de evento dispara onEventoWriteDashboard,
+ *     que regrava o doc INTEIRO (set sem merge → conversão volta a []). Como os
+ *     triggers são assíncronos no Emulator, um straggler pode aterrissar DEPOIS
+ *     do nosso merge. Solução: loop write→espera→relê até 2 leituras estáveis
+ *     consecutivas (o loop sobrevive a toda a fila de triggers dos eventos, que
+ *     é finita — nenhum write de evento acontece após este passo).
+ *  2) STALENESS na leitura: getOverview RECOMPUTA o doc quando computadoEm passa
+ *     de DASHBOARD_STALE_MS (5 min) — e a recomputação zera a conversão de novo.
+ *     Como não há como derivar conversão sem visitas (E12) e functions/src é
+ *     read-only, fixamos o doc do PREVIEW como sempre-fresco: computadoEm no
+ *     FUTURO → `agora - computadoEm < STALE_MS` é sempre verdade → getOverview
+ *     nunca recomputa e a conversão persiste a sessão toda. Seguro: nenhum
+ *     consumidor do painel exibe atualizadoEm/computadoEm da Visão geral.
  * Emulator-only e idempotente (rerodar re-injeta os mesmos campos).
  */
 const CONVERSAO_SPARKLINE_MOCKUP = [8, 10, 7, 13, 11, 16, 14, 19, 17, 21, 20, 23, 25] as const;
 const CONVERSAO_TAXA_MOCKUP = 68.2;
+// computadoEm ~10 anos à frente: fixa o dashboard do preview como sempre-fresco
+// (getOverview nunca marca stale → nunca recomputa e zera a conversão).
+const PREVIEW_COMPUTADO_EM_FUTURO = Date.now() + 10 * 365 * DIA_MS;
 
-async function seedConversaoDashboard(db: Db, agora: Date): Promise<void> {
-  // Deixa o fan-out de eventos drenar (o último write de evento foi lá no passo
-  // 1); só então o merge de conversão é o toque final no dashboard/current.
-  await new Promise((resolve) => setTimeout(resolve, 2500));
-
+async function seedConversaoDashboard(db: Db, _agora: Date): Promise<void> {
   const ref = db
     .collection('profissionais')
     .doc(MARINA_CASTELO_UID)
     .collection('dashboard')
     .doc('current');
-  const snap = await ref.get();
-  if (!snap.exists) {
-    console.warn(
-      '[seed-extra] conversão: dashboard/current ausente (trigger de fan-out ' +
-        'não rodou?) — pulando injeção para não gravar KPIs parciais.'
-    );
-    return;
+
+  // Settle inicial: a maior parte dos triggers de fan-out já drenou durante os
+  // passos 2..6; este respiro cobre o grosso da fila antes do loop de confirmação.
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  const conversao = {
+    taxaConversaoPct: CONVERSAO_TAXA_MOCKUP,
+    conversaoSparkline: [...CONVERSAO_SPARKLINE_MOCKUP],
+    computadoEm: PREVIEW_COMPUTADO_EM_FUTURO,
+    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Loop write→relê: escreve a conversão e confirma que persistiu. Se um trigger
+  // straggler tiver reescrito o doc (conversaoSparkline vazia), reescreve. Encerra
+  // após 2 leituras estáveis consecutivas (ou no teto de iterações).
+  let estaveis = 0;
+  let escreveuAlgumaVez = false;
+  for (let i = 0; i < 12 && estaveis < 2; i++) {
+    const snap = await ref.get();
+    if (!snap.exists) {
+      // Sem o doc base (KPIs do fan-out) ainda — espera o trigger criar.
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      continue;
+    }
+    const spark = snap.get('conversaoSparkline') as unknown;
+    const temSerie = Array.isArray(spark) && spark.length >= 2;
+    if (temSerie && escreveuAlgumaVez) {
+      estaveis++;
+    } else {
+      await ref.set(conversao, { merge: true });
+      escreveuAlgumaVez = true;
+      estaveis = 0;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600));
   }
 
-  await ref.set(
-    {
-      taxaConversaoPct: CONVERSAO_TAXA_MOCKUP,
-      conversaoSparkline: [...CONVERSAO_SPARKLINE_MOCKUP],
-      computadoEm: agora.getTime(),
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
-    },
-    { merge: true }
-  );
-  console.log(
-    `[seed-extra] conversão: taxaConversaoPct=${CONVERSAO_TAXA_MOCKUP}% + sparkline ` +
-      `(${CONVERSAO_SPARKLINE_MOCKUP.length} pts, série do mockup) no dashboard da Marina`
-  );
+  if (estaveis >= 2) {
+    console.log(
+      `[seed-extra] conversão: taxaConversaoPct=${CONVERSAO_TAXA_MOCKUP}% + sparkline ` +
+        `(${CONVERSAO_SPARKLINE_MOCKUP.length} pts, série do mockup) FIXA no dashboard da Marina`
+    );
+  } else {
+    console.warn(
+      '[seed-extra] conversão: não estabilizou após 12 tentativas — verifique ' +
+        'a fila de triggers de fan-out do Functions Emulator.'
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
