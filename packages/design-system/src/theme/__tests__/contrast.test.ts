@@ -334,3 +334,58 @@ describe('Table — AA dos tints de hover/header por composição', () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// EventThumb — ícone sobre gradiente (Lote FIDELIDADE T5). O thumb é um
+// gradiente 135° e o ícone (20px centrado num box de 40px) ocupa a REGIÃO
+// t∈[0.25, 0.75] do eixo do gradiente — os cantos puros ficam fora do ícone
+// (o endpoint claro do ciclismo brasa, #FF6520, é verbatim do mockup e não
+// passaria 3:1 sozinho; o ícone nunca senta nele). Prova: compõe o fg
+// rgba(255,255,255,.9) sobre as misturas sRGB em t=0.25/0.5/0.75 e exige
+// ≥ 3.0:1 (não-texto) em cada uma, nos 2 temas, nas 5 variantes.
+// ---------------------------------------------------------------------------
+
+const THUMB_VARIANTS = ['corrida', 'ciclismo', 'yoga', 'virtual', 'crossfit'] as const;
+
+function gradientEndpoints(gradient: string): [string, string] {
+  const hexes = gradient.match(/#[0-9a-fA-F]{6}/g);
+  if (!hexes || hexes.length !== 2) {
+    throw new Error(`gradiente sem 2 endpoints hex: ${gradient}`);
+  }
+  return [hexes[0]!, hexes[1]!];
+}
+
+/** Mistura sRGB canal a canal (como o browser interpola gradientes). */
+function mixHex(aHex: string, bHex: string, t: number): string {
+  const parse = (h: string): number[] => {
+    const c = h.replace('#', '');
+    return [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16));
+  };
+  const [a, b] = [parse(aHex), parse(bHex)];
+  const out = a.map((ch, i) => Math.round(ch + (b[i]! - ch) * t));
+  return `#${out.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe('EventThumb — ícone ≥ 3:1 sobre a região do gradiente que ocupa', () => {
+  for (const [themeName, tokens] of themes) {
+    describe(`tema ${themeName}`, () => {
+      it('icon-fg existe e é rgba literal', () => {
+        expect(() => parseRgba(tokens['thumb-icon-fg']!)).not.toThrow();
+      });
+
+      for (const variant of THUMB_VARIANTS) {
+        it(`thumb ${variant}: fg branco .9 composto ≥ 3:1 em t=0.25/0.5/0.75`, () => {
+          const [claro, escuro] = gradientEndpoints(tokens[`thumb-${variant}`]!);
+          for (const t of [0.25, 0.5, 0.75]) {
+            const bg = mixHex(claro, escuro, t);
+            const fg = composeOver(tokens['thumb-icon-fg']!, bg);
+            expect(
+              contrastRatio(fg, bg),
+              `${variant}@t=${t} (${bg})`,
+            ).toBeGreaterThanOrEqual(3.0);
+          }
+        });
+      }
+    });
+  }
+});

@@ -47,6 +47,15 @@
     "row-hover": "rgba(255, 255, 255, 0.02)",
     "header-bg": "rgba(255, 255, 255, 0.015)"
   },
+  "thumb": {
+    "$description": "Thumbs de modalidade (EventRow): gradiente por variante + fg do icone (branco .9 do mockup .event-thumb svg). AA do fg provado por composicao sobre a regiao do gradiente que o icone ocupa (contrast.test.ts, EventThumb §).",
+    "corrida":  "{gradient.corrida}",
+    "ciclismo": "{gradient.ciclismo}",
+    "yoga":     "{gradient.yoga}",
+    "virtual":  "{gradient.virtual}",
+    "crossfit": "{gradient.crossfit}",
+    "icon-fg":  "rgba(255, 255, 255, 0.9)"
+  },
   "feedback": {
     "success": "{success.400}",
     "success-fg": "{success.300}",

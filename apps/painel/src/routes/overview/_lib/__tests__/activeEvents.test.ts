@@ -34,3 +34,45 @@ describe('derivarEventosAtivos (S601-T1)', () => {
     expect(view!.esgotando).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// T5 FIDELIDADE — thumb por modalidade (heurística de APRESENTAÇÃO) + "quando"
+// ---------------------------------------------------------------------------
+
+import { quandoDoEvento, thumbVariantDoEvento } from '../activeEvents';
+import type { Timestamp } from '@leela/core';
+
+describe('thumbVariantDoEvento (heurística de apresentação, T5)', () => {
+  it('detecta ciclismo por modalidade ou nome', () => {
+    expect(thumbVariantDoEvento(['MTB 60km'], 'Desafio Serra')).toBe('ciclismo');
+    expect(thumbVariantDoEvento([], 'Gran Fondo Bike Tour')).toBe('ciclismo');
+  });
+
+  it('detecta yoga/bem-estar/retiro, virtual e crossfit', () => {
+    expect(thumbVariantDoEvento(['Pacote completo'], 'Retiro Bem-Estar')).toBe('yoga');
+    expect(thumbVariantDoEvento(['Desafio Virtual'], 'Corrida')).toBe('virtual');
+    expect(thumbVariantDoEvento(['WOD em dupla'], 'Throwdown')).toBe('crossfit');
+  });
+
+  it('default é corrida (domínio LEELA) — errar aqui muda só cor decorativa', () => {
+    expect(thumbVariantDoEvento(['5k', '10k', '21k'], 'Meia Maratona Floripa')).toBe('corrida');
+    expect(thumbVariantDoEvento([], 'Evento sem sinal')).toBe('corrida');
+  });
+});
+
+describe('quandoDoEvento (meta "27 Abr · Local", T5)', () => {
+  const ts = (iso: string): Timestamp =>
+    ({ toMillis: () => new Date(iso).getTime() }) as unknown as Timestamp;
+
+  it('data + local → "27 Abr · Florianópolis/SC"', () => {
+    expect(quandoDoEvento(ts('2026-04-27T09:00:00'), 'Florianópolis/SC')).toBe(
+      '27 Abr · Florianópolis/SC'
+    );
+  });
+
+  it('degrada honesto: só local, só data, ou null sem ambos', () => {
+    expect(quandoDoEvento(null, 'Cunha/SP')).toBe('Cunha/SP');
+    expect(quandoDoEvento(ts('2026-05-11T08:00:00'), '')).toBe('11 Mai');
+    expect(quandoDoEvento(null, undefined)).toBeNull();
+  });
+});

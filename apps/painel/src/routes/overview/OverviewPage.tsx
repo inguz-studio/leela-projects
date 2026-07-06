@@ -27,9 +27,12 @@ function comCapacidade(evento: Evento): {
   qtdInscritos: number;
   capacidade: number | null;
   data: Evento['data'];
+  local: string;
+  modalidades: string[];
 } {
   // Capacidade direta do doc via parseEvento (S600-T2-fix); `?? null` cobre
   // literais legados sem o campo (opcional na entidade — padrão `percursos`).
+  // local + modalidades alimentam a meta e o thumb do EventRow (T5).
   return {
     nome: evento.nome,
     slug: evento.slug,
@@ -37,6 +40,8 @@ function comCapacidade(evento: Evento): {
     qtdInscritos: evento.qtdInscritos,
     capacidade: evento.capacidade ?? null,
     data: evento.data,
+    local: evento.local,
+    modalidades: evento.modalidades,
   };
 }
 

@@ -141,6 +141,14 @@
     "xl":   "16px",
     "pill": "9999px"
   },
+  "gradient": {
+    "$description": "Gradientes de modalidade dos thumbs (mockup be-hero .event-thumb, 135deg). Raw e legitimo na camada primitive. corrida/ciclismo/yoga/virtual sao verbatim do mockup; crossfit nao existe como thumb no mockup (so como .event-cover #E8B100->#7A5000, claro demais para icone branco 3:1) — extrapolado para warning.700->900 por AA.",
+    "corrida":  "linear-gradient(135deg, #FF450C, #8C2100)",
+    "ciclismo": "linear-gradient(135deg, #FF6520, #5C1600)",
+    "yoga":     "linear-gradient(135deg, #ED3585, #420521)",
+    "virtual":  "linear-gradient(135deg, #2D9315, #042500)",
+    "crossfit": "linear-gradient(135deg, #9C7600, #4E3A00)"
+  },
   "elevation": {
     "0":     "none",
     "1":     "0 1px 2px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.04)",

@@ -1,11 +1,23 @@
 // =============================================================================
-// ActiveEvents — bloco "Seus eventos ativos" (S601-T1). Presentational puro.
-// Cada linha: nome, status (badge semântico), inscritos/capacidade, badge
-// "Últimas vagas" (esgotando), e "Gerenciar" → detalhe do evento (E03).
+// ActiveEvents — bloco "Seus eventos ativos" (S601-T1, recomposto no Lote
+// FIDELIDADE T5 como event-rows do mockup). Cada linha é um EventRow do DS:
+// thumb por modalidade (heurística de apresentação em _lib/activeEvents),
+// nome + meta ("27 Abr · Local" + badge "Últimas vagas"), contagem x/y,
+// badge de status e "Gerenciar" (secondary sm, como o mockup).
+// Section-head do mockup: título display + link "Ver todos os eventos".
 // EmptyState com CTA quando não há eventos ativos; skeleton no load.
 // =============================================================================
 
-import { Badge, Button, EmptyState, Skeleton, type BadgeProps } from '@leela/design-system';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  EventRow,
+  Skeleton,
+  cn,
+  type BadgeProps,
+} from '@leela/design-system';
+import { ChevronRight } from 'lucide-react';
 import type { StatusEvento } from '@leela/core';
 import type { EventoAtivoView } from '../_lib/activeEvents';
 import { formatInt } from '../_lib/format';
@@ -33,13 +45,8 @@ export interface ActiveEventsProps {
   contextoStaff?: boolean;
   onGerenciar: (slug: string) => void;
   onNovoEvento: () => void;
-}
-
-function ocupacaoLabel(view: EventoAtivoView): string {
-  if (view.capacidade !== null) {
-    return `${formatInt(view.qtdInscritos)}/${formatInt(view.capacidade)}`;
-  }
-  return `${formatInt(view.qtdInscritos)} inscritos`;
+  /** Link do section-head "Ver todos os eventos" (mockup `.section-link`). */
+  onVerTodos?: (() => void) | undefined;
 }
 
 export function ActiveEvents({
@@ -50,18 +57,48 @@ export function ActiveEvents({
   contextoStaff,
   onGerenciar,
   onNovoEvento,
+  onVerTodos,
 }: ActiveEventsProps): JSX.Element {
   return (
-    <section aria-label="Seus eventos ativos" className="flex flex-col gap-[var(--spacing-3)]">
-      <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-        Seus eventos ativos
-      </h2>
+    <section aria-label="Seus eventos ativos" className="flex flex-col">
+      {/* Section head do mockup: baseline, título + link à direita */}
+      <div className="flex items-baseline justify-between gap-[var(--spacing-3)] mb-[var(--layout-section-head-mb)]">
+        <h2
+          className={cn(
+            'font-display italic',
+            'text-[length:var(--section-title-size)] font-[var(--font-weight-bold)]',
+            'tracking-[var(--section-title-spacing)]',
+            'text-[var(--text-primary)]',
+          )}
+        >
+          Seus eventos ativos
+        </h2>
+        {onVerTodos ? (
+          <button
+            type="button"
+            onClick={onVerTodos}
+            className={cn(
+              'inline-flex items-center gap-[var(--spacing-1)]',
+              'text-[length:var(--section-link-size)] text-[var(--text-tertiary)]',
+              'transition-colors duration-[var(--motion-duration-fast)]',
+              'hover:text-[var(--action-brand-tint-fg)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]',
+            )}
+          >
+            Ver todos os eventos
+            <ChevronRight
+              aria-hidden
+              className="w-[var(--section-link-icon-size)] h-[var(--section-link-icon-size)]"
+            />
+          </button>
+        ) : null}
+      </div>
 
       {loading ? (
         <div
           role="status"
           aria-label="Carregando eventos"
-          className="flex flex-col gap-[var(--spacing-2)]"
+          className="flex flex-col gap-[var(--layout-list-gap)]"
         >
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} variant="rect" className="h-16" />
@@ -87,29 +124,38 @@ export function ActiveEvents({
           />
         )
       ) : (
-        <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
+        <ul role="list" className="flex flex-col gap-[var(--layout-list-gap)]">
           {eventos.map((evento) => {
             const status = STATUS[evento.status] ?? STATUS.rascunho;
             return (
-              <li
-                key={evento.slug}
-                className="flex items-center justify-between gap-[var(--spacing-3)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] px-[var(--spacing-4)] py-[var(--spacing-3)]"
-              >
-                <div className="flex min-w-0 flex-col gap-[var(--spacing-1)]">
-                  <div className="flex items-center gap-[var(--spacing-2)] flex-wrap">
-                    <span className="truncate text-[var(--text-primary)] font-[var(--font-weight-medium)]">
-                      {evento.nome}
-                    </span>
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                    {evento.esgotando ? <Badge variant="alerta">Últimas vagas</Badge> : null}
-                  </div>
-                  <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-                    {ocupacaoLabel(evento)}
-                  </span>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => onGerenciar(evento.slug)}>
-                  Gerenciar
-                </Button>
+              <li key={evento.slug}>
+                <EventRow
+                  name={evento.nome}
+                  thumbVariant={evento.thumbVariant}
+                  metaItems={[
+                    evento.quando,
+                    evento.esgotando ? (
+                      <Badge variant="alerta">Últimas vagas</Badge>
+                    ) : null,
+                  ]}
+                  count={{
+                    value: formatInt(evento.qtdInscritos),
+                    ...(evento.capacidade !== null
+                      ? { total: formatInt(evento.capacidade) }
+                      : {}),
+                    label: 'Inscrições',
+                  }}
+                  badge={<Badge variant={status.variant}>{status.label}</Badge>}
+                  action={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onGerenciar(evento.slug)}
+                    >
+                      Gerenciar
+                    </Button>
+                  }
+                />
               </li>
             );
           })}

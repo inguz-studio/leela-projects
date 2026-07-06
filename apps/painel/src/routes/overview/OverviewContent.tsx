@@ -118,6 +118,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           contextoStaff={contextoStaff}
           onGerenciar={(slug) => onNavigate(`/eventos/${slug}`)}
           onNovoEvento={onNovoEvento}
+          onVerTodos={() => onNavigate('/eventos')}
         />
 
         <RecentRegistrations

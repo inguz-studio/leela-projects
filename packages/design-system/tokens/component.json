@@ -148,6 +148,30 @@
     "gap":       "3px",
     "icon-size": "10px"
   },
+  "eventrow": {
+    "$description": "Event-row do mockup `.event-row` no DEFAULT COMPACT persistido: pad 8x14 (comfortable seria 12x16), grid thumb 40 (comfortable 48) + gap 12; nome 15/600 mb 3; meta 12 gap 10 com dot-sep 3px; contagem right min-w 110 (valor 14 tabular, label 10 uppercase .08em). Hover levanta 1px e sobe pra elev-2.",
+    "px":                  "{spacing.3-5}",
+    "py":                  "{spacing.2}",
+    "gap":                 "{spacing.3}",
+    "thumb-size":          "40px",
+    "thumb-icon-size":     "20px",
+    "name-size":           "{font.size.base-plus}",
+    "name-mb":             "3px",
+    "meta-size":           "{font.size.sm}",
+    "meta-gap":            "{spacing.2-5}",
+    "dot-size":            "3px",
+    "count-min-w":         "110px",
+    "count-size":          "{font.size.base}",
+    "count-label-size":    "{font.size.xs}",
+    "count-label-spacing": "0.08em"
+  },
+  "section": {
+    "$description": "Section head do mockup `.section-head`/`.h3`/`.section-link`: titulo 24px display italic -.01em; link 12px tertiary com chevron 14 (hover brand).",
+    "title-size":     "{font.size.xl}",
+    "title-spacing":  "-0.01em",
+    "link-size":      "{font.size.sm}",
+    "link-icon-size": "14px"
+  },
   "subnav": {
     "height":        "48px",
     "underline":     "2px",

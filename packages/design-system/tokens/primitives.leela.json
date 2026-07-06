@@ -162,6 +162,14 @@
     "xl": "16px",
     "pill": "9999px"
   },
+  "gradient": {
+    "$description": "Equivalentes leela dos gradientes de modalidade (paleta propria, mesma anatomia 135deg). Duplas escolhidas para icone branco >=3:1 na regiao do icone: virtual usa success.600 (400 reprova) e crossfit warning.600 (500 reprova).",
+    "corrida":  "linear-gradient(135deg, #E85662, #4A0A12)",
+    "ciclismo": "linear-gradient(135deg, #C42C3A, #230409)",
+    "yoga":     "linear-gradient(135deg, #ED3585, #4E0928)",
+    "virtual":  "linear-gradient(135deg, #16A34A, #14532D)",
+    "crossfit": "linear-gradient(135deg, #D97706, #78350F)"
+  },
   "elevation": {
     "0": "none",
     "1": "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",

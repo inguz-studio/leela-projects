@@ -12,14 +12,32 @@ const views = () =>
   ]);
 
 describe('ActiveEvents (S601-T1)', () => {
-  it('lista eventos com 453/500, badges Publicado/Últimas vagas e Rascunho', () => {
+  it('lista event-rows com 453 / 500, rótulo Inscrições e badges Publicado/Últimas vagas/Rascunho', () => {
     render(
       <ActiveEvents eventos={views()} loading={false} onGerenciar={vi.fn()} onNovoEvento={vi.fn()} />
     );
-    expect(screen.getByText('453/500')).toBeInTheDocument();
+    // Contagem do EventRow (T5): valor + "/ total" em elementos separados
+    expect(screen.getByText('453')).toBeInTheDocument();
+    expect(screen.getByText('/ 500')).toBeInTheDocument();
+    expect(screen.getAllByText('Inscrições').length).toBeGreaterThan(0);
     expect(screen.getByText('Publicado')).toBeInTheDocument();
     expect(screen.getByText('Últimas vagas')).toBeInTheDocument();
     expect(screen.getByText('Rascunho')).toBeInTheDocument();
+  });
+
+  it('section-head tem o link "Ver todos os eventos" (mockup .section-link)', async () => {
+    const onVerTodos = vi.fn();
+    render(
+      <ActiveEvents
+        eventos={views()}
+        loading={false}
+        onGerenciar={vi.fn()}
+        onNovoEvento={vi.fn()}
+        onVerTodos={onVerTodos}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Ver todos os eventos/ }));
+    expect(onVerTodos).toHaveBeenCalledOnce();
   });
 
   it('"Gerenciar" chama onGerenciar com o slug', async () => {

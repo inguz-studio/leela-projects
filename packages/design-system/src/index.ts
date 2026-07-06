@@ -77,6 +77,8 @@ export { Toast, toastVariants, ToastProvider, useToast, DEFAULT_TOAST_DURATION }
 export type { ToastProps, ToastVariant, ToastProviderProps, ToastOptions, ToastContextValue } from './components/Toast';
 export { CardEvento } from './components/CardEvento';
 export type { CardEventoProps } from './components/CardEvento';
+export { EventRow } from './components/EventRow';
+export type { EventRowProps, EventRowCount, EventThumbVariant } from './components/EventRow';
 export { CardDesafio } from './components/CardDesafio';
 export type { CardDesafioProps } from './components/CardDesafio';
 export { Stepper } from './components/Stepper';

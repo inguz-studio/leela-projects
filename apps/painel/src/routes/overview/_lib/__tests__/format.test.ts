@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBRL, formatInt, formatPct, formatTrend } from '../format';
+import { formatBRL, formatDataCurta, formatInt, formatPct, formatTrend } from '../format';
 
 describe('format', () => {
   it('formatInt — milhar pt-BR', () => {
@@ -21,5 +21,13 @@ describe('format', () => {
     expect(formatTrend(12.5)).toBe('+12,5%');
     expect(formatTrend(-3)).toBe('−3,0%');
     expect(formatTrend(null)).toBe('—');
+  });
+});
+
+describe('formatDataCurta (T5 — "27 Abr" do mockup)', () => {
+  it('dia + mês abreviado capitalizado, sem ponto', () => {
+    expect(formatDataCurta(new Date(2026, 3, 27))).toBe('27 Abr');
+    expect(formatDataCurta(new Date(2026, 0, 2))).toBe('2 Jan');
+    expect(formatDataCurta(new Date(2026, 11, 31))).toBe('31 Dez');
   });
 });

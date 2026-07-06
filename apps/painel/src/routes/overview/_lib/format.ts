@@ -42,3 +42,16 @@ export function formatTrend(valor: number | null): string {
   const sinal = valor > 0 ? '+' : valor < 0 ? '−' : '';
   return `${sinal}${abs}%`;
 }
+
+const MESES_CURTOS = [
+  'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+  'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+] as const;
+
+/**
+ * Data curta do mockup ("27 Abr") — dia + mês abreviado pt-BR capitalizado,
+ * sem o ponto do Intl ("abr."). Determinística (array fixo, sem locale data).
+ */
+export function formatDataCurta(data: Date): string {
+  return `${data.getDate()} ${MESES_CURTOS[data.getMonth()]}`;
+}
