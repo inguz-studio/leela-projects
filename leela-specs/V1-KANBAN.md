@@ -17,12 +17,13 @@ tags:
 - [ ] **O2** · Coleta E11 (rollup, não backfillável) + higiene E15 (autorId+anexo, XS) + lote backend desafio (fim da onda, surface-agnostic)
 - [ ] **O3/V1.5** · E13-slim + GymRats — perfil, registro de ações, leaderboard consistência, SEM medalhas · Strava gated O3.1 (⚠️ AÇÃO VITOR: registrar app OAuth na Strava — lead time semanas)
 - [ ] **O3** · Leela+ teaser — decisões: PAGO/mensalidade/receita 100% Leela · tela "em breve" + CTA interesse + lista de espera · discovery em leela-plus-hipotese-jtbd.md
-- [ ] **✅ ONDA 2 PLANEJADA (2e35997)** — 23 lotes / 71 tasks · briefs onda2-* + plans/onda2-decisoes.md + checklist atualizado · sequência Fable serial + Opus por gate definida · **3 DECISÕES PENDENTES DO VITOR** (nada bloqueia o início): gateway de pagamento (recomendação Asaas, KYC tem lead time — iniciar já) + e-mail transacional · domínio público {DOMINIO_LEELA} + e-mail de suporte · ratificar defaults comerciais (taxa incorporada por tenant, 12x sem juros, retirada-only, % efetivo da taxa Leela)
+- [ ] **✅ ONDA 2 PLANEJADA (2e35997)** — 23 lotes / 71 tasks · briefs onda2-* + plans/onda2-decisoes.md + checklist atualizado · sequência Fable serial + Opus por gate definida · **DECISÕES: defaults comerciais RATIFICADOS 2026-07-05** (12x COM juros 3,49% a.m. Price repassado ao comprador + taxa de serviço percentual OU percentual+fixa ex. 8%+R$2 por tenant — ver DECISOES-ABERTAS.md) · restam 2 (nada bloqueia o início): gateway de pagamento (rec. Asaas, KYC tem lead time — iniciar já) + e-mail transacional · domínio público {DOMINIO_LEELA} + e-mail de suporte
 
 
 ## 🔨 Fazendo
 
-- [ ] **O2 · E04-slim · Config & Vendas** — PRÓXIMO a executar (Onda 2 abre aqui; brief onda2-E04-lotes.md)
+- [ ] **Higiene · Consolidação DS Lote B** — sidebar fixa 240px + 8 ícones Lucide + AppShell raiz nas ~29 telas /eventos+/clubes + gate visual vs WEB-APPV2 · depois: SHOWROOM magic-ds + entrega visual ao Vitor (fila automática no HANDOFF)
+- [ ] **O2 · E04-slim · Config & Vendas** — abre APÓS showroom (Onda 2 abre aqui; brief onda2-E04-lotes.md)
 
 
 ## 🔍 Revisão
@@ -32,6 +33,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **Higiene · Consolidação DS Lote A: GATE PASS 2026-07-06** — A1-A11 (aliases shadcn→brasa, motion tokenizado, Button/Input/Badge/Skeleton/Separator/Breadcrumb/Toast/DropdownMenu/Card/Avatar/Modal/Tabs/Table shadcn stock brasa) · suíte DS 559/559 · matriz AA 49 pares × 2 temas · tsc+ESLint 0 · WIP órfão da sessão crashada 100% recuperado (A9-A11) · pushed até acfadb0
 - [x] **O1** · **GATE FINAL ONDA 1: PASS 2026-07-05** · 4 épicos, gate principal FAILED→fix-loop 4/4→re-verify · **9/9 altos confirmados fechados c/ prova negativa** (E03 #01 data/#02 timezone/#04 RN-200 · E02 #03 estados fabricados · E05 S1 suite/S2 comunicado/S3 rules legadas/S4 config) · 15/15 testes integração + T13/T14/T15 (decisões Vitor) · **suíte 1933/1933 zero regressão** · tags `e03`/`e05`/`e02`/`e16-slim`/`onda1` @ 18d4ffc
 - [x] **O1** · E03 · Operação do evento — **20/20T** (eventos, inscritos, balcão+galeria, kits N:N completos, financeiro+CSV) · tag `e03`
 - [x] **O1** · E05 · Clubs núcleo — **L1-L5 + backend LGPD** (membros, desafios+motor pontuação, parcerias, comunicados, config, deleteClube cascata+retenção 90d) · tag `e05`

@@ -38,6 +38,27 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S001-4-T1 — Catálogo (Storybook) nos 2 temas
 - [x] LEELA-S001-4-T2 — Lint de tokens + doc de governança
 
+### Consolidação DS · shadcn+brasa (higiene pré-Onda 2, brief ds-consolidacao-shadcn-brasa)
+
+- [x] LEELA-DS-A1 — Camada de aliases shadcn→brasa via pipeline + Tooltip PoC (954a8b7)
+- [x] LEELA-DS-A2 — Motion tokenizado via tailwindcss-animate no preset (ffcf704)
+- [x] LEELA-DS-A3 — Button/Input/Badge/Skeleton/Separator/Breadcrumb shadcn stock restilizados (3d42cff)
+- [x] LEELA-DS-A4 — Toast: frame shadcn, fila `useToast` intacta (6c5abf9)
+- [x] LEELA-DS-A5 — Popover→DropdownMenu: visual shadcn, 13 testes WAI-APG portados (5662960)
+- [x] LEELA-DS-A6 — Card genérico shadcn stock brasa (e1dbe58)
+- [x] LEELA-DS-A7 — Avatar shadcn stock, engine própria de imagem (determinístico, sem radix-avatar) (ed7a8f1)
+- [x] LEELA-DS-A8 — Matriz AA reconstruída: 49 pares × 2 temas (0adf4f9)
+- [x] LEELA-DS-A9 — Modal/ConfirmModal frame shadcn via aliases + motion (bde308c)
+- [x] LEELA-DS-A10 — Tabs: anéis de foco e pill por aliases, underline mantido (66fec9e)
+- [x] LEELA-DS-A11 — Table como composição sobre primitivos shadcn (acfadb0)
+- [x] **GATE LOTE A: PASS 2026-07-06** — suíte DS 559/559 · tsc 0 · ESLint 0 · AA 49×2 · verificação independente do maestro
+- [ ] LEELA-DS-B1 — lucide-react peer dep + 8 ícones no DEFAULT_SIDEBAR_SECTIONS (fim do icon:null)
+- [ ] LEELA-DS-B2 — Sidebar FIXA 240px substitui colapsável (a11y preservada)
+- [ ] LEELA-DS-B3 — AppShell como layout raiz (App.tsx) envolvendo /eventos e /clubes (~29 telas)
+- [ ] LEELA-DS-B4 — Rodapé sidebar (avatar/logo) conforme mockup
+- [ ] LEELA-DS-B5 — GATE VISUAL bloqueante vs export WEB-APPV2 (desktop+mobile)
+- [ ] LEELA-DS-SHOWROOM — magic-ds: showcase vivo na identidade do DS (todos os componentes, 2 temas, animações) + LLM.txt (FILA AUTOMÁTICA pós-Lote B)
+
 ### LEELA-E16 · Plataforma & Super-admin (recorte V1 — fundacional multi-tenant)
 
 - [x] LEELA-S1600-T1 — Modelo `tenants` + tipos + status/lifecycle + Rules base + seed
