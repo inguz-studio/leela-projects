@@ -17,9 +17,9 @@
 ## TRILHA PARALELA-3 — Founder-led growth & publisher wellness (Vitor, 2026-07-06)
 FILA AUTOMÁTICA aprovada: **Fase 1 EM VOO** — research-intelligence pesquisando (D1 benchmark FLG/build-in-public · D2 mapa publishers wellness · D3 riscos/kill-criteria) em `leela-specs/discovery/flg-publisher/`, brief `leela-flg-publisher-fase1-pesquisa-enriched.md`. **Fase 2 (auto, quando F1 aterrissar):** strategic-council — mesa delibera a estratégia FLG+publisher com a síntese executiva da pesquisa como insumo; pergunta: sequência, marcos e kill-criteria da marca pessoal servindo o Leela. **Fase 3 (auto, pós-parecer):** nyx-social com roster de 2 perfis (Vitor pessoal + Leela) — funde com a fila de pautas da trilha produto. Resultados alimentam `produto/` (tese FLG vira nota de primeira classe).
 
-## TRILHA PARALELA — Governança de produto (Vitor, 2026-07-06)
-1. **EM VOO:** squad nirvana-wiki-brain construindo vault `produto/` no Obsidian da LEELA (tese, personas, JTBD, índice das 77 stories, benchmarks, roadmap executivo, visão de futuro, linhas narrativas) — brief `leela-produto-governanca-enriched.md`. Só cria `produto/`; specs read-only; sem conflito com o Lote B.
-2. **NA FILA (após linhas narrativas prontas):** despachar business **nyx-social** para pautas Instagram/LinkedIn/blog a partir de `produto/08-linhas-narrativas.md` (handoff em `produto/09-pautas/README.md`).
+## TRILHA PARALELA — Governança de produto: ✅ ENTREGUE E PUSHED (gate PASS 2026-07-06)
+Vault `produto/` completo: 12 notas, lint 0 órfãs/0 links quebrados, commits 6e2a2b5..cda886c. 6 linhas narrativas prontas (L1 anti-streak · L2 clube>solo · L3 game master · L4 economia do produtor · L5 atleta comum · L6 build in public). Lacunas registradas: retenção 2x = dado emprestado (regra: "dado de mercado, nunca nosso") · 95 stories reais (não 77) · E14/E15 sem arquivo de épico.
+**nyx-social:** aguarda o parecer do strategic-council (fase 2 da trilha FLG) para despacho ÚNICO com roster de 2 perfis (Vitor + Leela), usando 08-linhas-narrativas + 09-pautas/README como insumos.
 
 ## Decisões novas (2026-07-05/06, já em leela-specs/DECISOES-ABERTAS.md)
 - Parcelamento **COM juros 3,49% a.m., tabela Price, repassado ao comprador** (coef. 12x = 0,103424/parcela ≈ +24,11%).
