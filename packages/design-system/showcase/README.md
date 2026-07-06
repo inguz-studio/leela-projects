@@ -10,12 +10,16 @@ Na raiz do pacote (`packages/design-system`):
 # desenvolvimento (servidor local; sem fast-refresh — recarrega a página ao salvar)
 npm run showcase
 
-# build estático + abrir
-npm run showcase:build
-start showcase/dist/index.html      # Windows; ou dê duplo clique no arquivo
+# build estático + abrir (1 comando serve o dist em http://localhost:4173)
+npm run showcase:build && npm run showcase:preview
 ```
 
-O build usa `base: './'`, então `showcase/dist/index.html` abre direto do disco, sem servidor. Também dá para servir com `npm run showcase:preview`.
+O build usa `base: './'` (assets relativos), mas Chrome e Edge bloqueiam ES modules carregados via `file://` — abrir o `dist/index.html` por duplo clique resulta em página em branco. Sirva por HTTP: `npm run showcase:preview` (dist) ou `npm run showcase` (dev).
+
+## Auditoria interna (S4 · 2026-07-05)
+
+Veredito do gate mds-ux-heuristics: **APPROVE** — 0 findings críticos.
+Contraste AA nas superfícies do showroom (medido via Playwright, 2 temas): mínimo 5.29:1 (`--text-tertiary`/`--surface-base` em leela), pares primários entre 7.5:1 e 18.6:1. Toggle de tema muda `data-theme` e persiste após reload. Teclado: 11/11 elementos tabuláveis com foco visível, troca de rota via Tab+Enter. Zero erro de console e zero request falho servindo por HTTP.
 
 ## Estrutura
 
