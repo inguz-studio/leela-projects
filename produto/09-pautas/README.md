@@ -8,7 +8,16 @@ atualizado: 2026-07-05
 
 # 09 · Pautas · estrutura e handoff para a nyx-social
 
-Esta pasta recebe as pautas de conteúdo produzidas pela agência nyx-social. Aqui vive só a estrutura e o brief de handoff. Nenhuma pauta foi produzida neste lote, de propósito: pauta é trabalho da agência, não do vault de produto.
+Esta pasta recebe as pautas de conteúdo produzidas pela agência nyx-social. Aqui vivem a estrutura, o brief de handoff e o sistema editorial da fase 3.
+
+## Sistema editorial FLG (fase 3, entregue pela nyx-social)
+
+Quatro documentos executam a diretriz vinculante do [[04-parecer-conselho-flg]]:
+
+1. [[01-estrategia-editorial]] — estratégia por perfil (Vitor pessoal + marca Leela), mix operacionalizado, gates transversais, métricas.
+2. [[02-calendario-m0-m2]] — calendário das 10 primeiras semanas dentro do teto de 5h/semana.
+3. [[03-pautas-iniciais]] — lote 1 com 24 pautas prontas, gates anti-streak e via negativa marcados.
+4. [[04-newsletter-L1-blueprint]] — blueprint da newsletter mensal anti-streak (nomes-candidatos, estrutura, edição nº 1 pautada, régua de crescimento).
 
 ## Estrutura esperada
 
