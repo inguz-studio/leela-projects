@@ -6,9 +6,10 @@
 // fora de functions/src (não entra em build/deploy/type-check de produção).
 //
 // O que este seed adiciona (schema EXISTENTE apenas — nenhum campo novo):
-//   Eventos (Castelo/Marina) — 4 novos, cobrindo os estados do domínio:
+//   Eventos (Castelo/Marina) — 6 novos, cobrindo os estados do domínio:
 //     publicado normal · publicado ESGOTADO (ocupação 100% → badge/alerta)
-//     · rascunho com prova próxima (alerta de publicação) · encerrado.
+//     · rascunho com prova próxima (alerta de publicação) · encerrado
+//     · MTB/ciclismo · retiro/wellness (thumbs por modalidade da Visão geral).
 //     ("cancelado"/"reembolsado" NÃO existem no domínio — StatusEvento/
 //      StatusInscrito são enums fechados; ver evento.ts/inscrito.ts.)
 //   Inscritos — pendente/cancelado/confirmado + carimbos de entrega/check-in
@@ -95,6 +96,12 @@ export const INVERNO_ID = 'corrida-inverno-floripa-2026';
 export const NOTURNA_ID = 'noturna-beira-mar-2026';
 export const TRILHA_ID = 'trilha-pantano-sul-2026';
 export const SAO_SILVESTRE_ID = 'sao-silvestre-floripa-2025';
+// Modalidades NÃO-corrida: provam os thumbs por modalidade da Visão geral
+// (EventRow → thumbVariantDoEvento: 'ciclismo' via /mtb|bike|cicli|pedal/,
+// 'yoga'/wellness via /yoga|bem-estar|retiro/). Sem eles, o painel LEELA (100%
+// corrida) renderiza todos os thumbs iguais — arbitragem A2.
+export const MTB_ID = 'desafio-mtb-costa-lagoa-2026';
+export const RETIRO_ID = 'retiro-bem-estar-rio-vermelho-2026';
 
 interface EventoExtra {
   id: string;
@@ -165,6 +172,34 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     receitaConfirmada: 5200,
     qtdInscritos: 40,
   },
+  {
+    // Ciclismo (A2): modalidade "MTB" → thumb 'ciclismo' (Bike) na Visão geral.
+    // Publicado, ocupação moderada (120/300) → sem risco de esgotamento.
+    id: MTB_ID,
+    nome: 'Desafio MTB Costa da Lagoa 2026',
+    dataDiasRelativos: 40,
+    local: 'Costa da Lagoa, Florianópolis/SC',
+    modalidades: ['MTB 45km', 'MTB 90km'],
+    status: 'publicado',
+    usaChip: true,
+    capacidade: 300,
+    receitaConfirmada: 34800,
+    qtdInscritos: 120,
+  },
+  {
+    // Wellness (A2): "Bem-estar/Yoga" → thumb 'yoga' (Flower2) na Visão geral.
+    // Publicado, ocupação baixa (28/60) → sem risco de esgotamento.
+    id: RETIRO_ID,
+    nome: 'Retiro Bem-Estar Rio Vermelho 2026',
+    dataDiasRelativos: 25,
+    local: 'Praia do Moçambique, Florianópolis/SC',
+    modalidades: ['Yoga', 'Bem-estar'],
+    status: 'publicado',
+    usaChip: false,
+    capacidade: 60,
+    receitaConfirmada: 9240,
+    qtdInscritos: 28,
+  },
 ];
 
 async function seedEventosExtra(db: Db, agora: Date): Promise<void> {
@@ -189,7 +224,8 @@ async function seedEventosExtra(db: Db, agora: Date): Promise<void> {
     });
   }
   console.log(
-    '[seed-extra] eventos: +4 (publicado · publicado ESGOTADO · rascunho prova próxima · encerrado)'
+    '[seed-extra] eventos: +6 (publicado · publicado ESGOTADO · rascunho prova ' +
+      'próxima · encerrado · MTB/ciclismo · retiro/wellness)'
   );
 }
 
@@ -214,6 +250,12 @@ const KITS_EXTRA: readonly KitExtra[] = [
   { eventoId: TRILHA_ID, id: 'kit_basico', nome: 'Kit trilha', preco: 0, capacidade: 80, modalidades: ['11k'] },
   { eventoId: SAO_SILVESTRE_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 100, modalidades: ['10k'] },
   { eventoId: SAO_SILVESTRE_ID, id: 'sem_kit', nome: 'Sem kit', preco: -10, capacidade: 20, modalidades: ['10k'] },
+  // A2 — ciclismo (MTB)
+  { eventoId: MTB_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 200, modalidades: ['MTB 45km', 'MTB 90km'] },
+  { eventoId: MTB_ID, id: 'kit_prata', nome: 'Kit Prata MTB', preco: 55, capacidade: 100, modalidades: ['MTB 90km'] },
+  // A2 — wellness (retiro)
+  { eventoId: RETIRO_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 40, modalidades: ['Yoga', 'Bem-estar'] },
+  { eventoId: RETIRO_ID, id: 'kit_ouro', nome: 'Kit Bem-Estar Plus', preco: 89, capacidade: 20, modalidades: ['Bem-estar'] },
 ];
 
 interface ItemKitExtra {
@@ -409,7 +451,53 @@ async function seedInscritosExtra(db: Db, agora: Date): Promise<void> {
   }
   await gravarInscritos(db, SAO_SILVESTRE_ID, saoSilvestre);
 
-  console.log('[seed-extra] inscritos: +90 (Inverno) · +60 (Noturna esgotada) · +40 (São Silvestre atendidos)');
+  // MTB (A2) — 120 inscritos recentes (mesmas regras do Inverno: mix pago/
+  // pendente/cancelado, datas nas duas janelas do trend), modalidade MTB.
+  const mtb: InscritoDoc[] = [];
+  for (let i = 1; i <= 120; i++) {
+    const seq = String(i).padStart(4, '0');
+    const kit = i % 3 === 0 ? 'kit_prata' : 'kit_basico';
+    const modalidade = kit === 'kit_prata' ? 'MTB 90km' : i % 2 === 0 ? 'MTB 45km' : 'MTB 90km';
+    const status: InscritoDoc['status'] =
+      i % 15 === 0 ? 'cancelado' : i % 9 === 0 ? 'pendente' : 'confirmado';
+    const criadoEm =
+      i <= 70
+        ? new Date(agora.getTime() - i * 2 * HORA_MS)
+        : new Date(agora.getTime() - 7 * DIA_MS - (i - 70) * 6 * HORA_MS);
+    mtb.push({
+      id: `insc-m-${seq}`,
+      atletaNome: nomeFicticio(i + 200),
+      kit,
+      status,
+      modalidade,
+      criadoEm,
+      chipNumero: null,
+    });
+  }
+  await gravarInscritos(db, MTB_ID, mtb);
+
+  // Retiro/wellness (A2) — 28 inscritos, quase todos confirmados, modalidade Yoga.
+  const retiro: InscritoDoc[] = [];
+  for (let i = 1; i <= 28; i++) {
+    const seq = String(i).padStart(4, '0');
+    const kit = i % 4 === 0 ? 'kit_ouro' : 'kit_basico';
+    const status: InscritoDoc['status'] = i % 14 === 0 ? 'pendente' : 'confirmado';
+    retiro.push({
+      id: `insc-r-${seq}`,
+      atletaNome: nomeFicticio(i + 330),
+      kit,
+      status,
+      modalidade: 'Yoga',
+      criadoEm: new Date(agora.getTime() - i * 10 * HORA_MS),
+      chipNumero: null,
+    });
+  }
+  await gravarInscritos(db, RETIRO_ID, retiro);
+
+  console.log(
+    '[seed-extra] inscritos: +90 (Inverno) · +60 (Noturna esgotada) · +40 ' +
+      '(São Silvestre atendidos) · +120 (MTB) · +28 (Retiro)'
+  );
 }
 
 /** Atleta-demo do balcão: "atendendo (sem chip)", pronto pro roteiro RN-206. */
@@ -743,8 +831,8 @@ async function seedPlataformaExtra(db: Db): Promise<void> {
   // dele, entram os valores coerentes com os eventos do preview)
   await db.collection('tenants').doc(CASTELO_TENANT_ID).set(
     {
-      gmvAcumulado: 123237, // 85.617 + 23.480 + 8.940 + 5.200
-      eventosAtivos: 3, // meia-floripa · inverno · noturna (publicados)
+      gmvAcumulado: 167277, // 85.617 + 23.480 + 8.940 + 5.200 + 34.800 (MTB) + 9.240 (retiro)
+      eventosAtivos: 5, // meia-floripa · inverno · noturna · MTB · retiro (publicados)
       atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
     },
     { merge: true }
@@ -762,7 +850,7 @@ async function seedPlataformaExtra(db: Db): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function recomputarFinanceiros(db: Db): Promise<void> {
-  const ids = [MEIA_FLORIPA_ID, INVERNO_ID, NOTURNA_ID, TRILHA_ID, SAO_SILVESTRE_ID];
+  const ids = [MEIA_FLORIPA_ID, INVERNO_ID, NOTURNA_ID, TRILHA_ID, SAO_SILVESTRE_ID, MTB_ID, RETIRO_ID];
   for (const id of ids) {
     await recomputarFinanceiroEvento(db, id);
   }
