@@ -25,7 +25,7 @@ Não use como filtro clicável (use Chip) nem como contador em aba (SubNav/Tabs 
 - --badge-radius
 - --badge-font-size
 - --badge-font-weight
-- --feedback-info-surface / --feedback-info-fg
+- --feedback-heroico-surface / --feedback-heroico-fg (rosa Be Hero — o azul info saiu do brasa no D-PATCH)
 - --feedback-danger-surface / --feedback-danger-fg
 - --feedback-success-surface / --feedback-success-fg
 - --feedback-warning-surface / --feedback-warning-fg

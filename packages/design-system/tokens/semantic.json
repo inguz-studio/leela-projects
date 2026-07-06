@@ -46,17 +46,20 @@
     "header-bg": "rgba(255, 255, 255, 0.015)"
   },
   "feedback": {
-    "success": "{success.500}",
-    "success-fg": "{success.50}",
-    "success-surface": "{success.900}",
+    "success": "{success.400}",
+    "success-fg": "{success.300}",
+    "success-surface": "#0D1F0A",
     "danger": "{danger.500}",
-    "danger-fg": "{danger.50}",
-    "danger-surface": "{danger.900}",
+    "danger-fg": "{danger.300}",
+    "danger-surface": "#331010",
     "warning": "{warning.500}",
-    "warning-fg": "{warning.100}",
-    "warning-surface": "{warning.900}",
-    "info": "{info.500}",
-    "info-fg": "{info.50}",
-    "info-surface": "{info.900}"
+    "warning-fg": "{warning.500}",
+    "warning-surface": "#342A0A",
+    "heroico": "{heroico.500}",
+    "heroico-fg": "{heroico.300}",
+    "heroico-surface": "#351322",
+    "info": "{heroico.500}",
+    "info-fg": "{heroico.300}",
+    "info-surface": "#351322"
   }
 }

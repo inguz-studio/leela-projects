@@ -49,6 +49,16 @@
   --warning-700: #B45309;
   --warning-800: #92400E;
   --warning-900: #78350F;
+  --heroico-50: #FDEBF3;
+  --heroico-100: #FCC9DE;
+  --heroico-200: #FB97BE;
+  --heroico-300: #F9619A;
+  --heroico-400: #F14890;
+  --heroico-500: #ED3585;
+  --heroico-600: #C9246D;
+  --heroico-700: #A11955;
+  --heroico-800: #770F3E;
+  --heroico-900: #4E0928;
   --info-50: #EFF6FF;
   --info-100: #DBEAFE;
   --info-200: #BFDBFE;
@@ -175,6 +185,9 @@
   --feedback-warning: var(--warning-700);
   --feedback-warning-fg: var(--warning-900);
   --feedback-warning-surface: var(--warning-100);
+  --feedback-heroico: var(--heroico-600);
+  --feedback-heroico-fg: var(--heroico-800);
+  --feedback-heroico-surface: var(--heroico-100);
   --feedback-info: var(--info-500);
   --feedback-info-fg: var(--info-800);
   --feedback-info-surface: var(--info-100);

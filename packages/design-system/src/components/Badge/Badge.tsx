@@ -10,7 +10,9 @@
  *     (= surface-overlay) + text-secondary (par na matriz L93);
  *   - variantes de feedback (heroico/vulcao/vitoria/alerta) por TOKEN dedicado
  *     (--feedback-*-surface/-fg): não há alias shadcn para a paleta de feedback,
- *     e o par fg/surface já está na matriz (L116-119);
+ *     e o par fg/surface já está na matriz. Desde o D-PATCH o heroico usa a
+ *     família rosa --feedback-heroico-* (paleta Be Hero restaurada) — o azul
+ *     info não existe no mockup e saiu do tema brasa;
  *   - flat (border-0): o stock traz `border`; o brasa é flat (§2.16);
  *   - dimensões/tipo/radius por token de componente (--badge-*).
  *
@@ -40,7 +42,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         brand:   'bg-primary text-primary-foreground',
-        heroico: 'bg-[var(--feedback-info-surface)] text-[var(--feedback-info-fg)]',
+        heroico: 'bg-[var(--feedback-heroico-surface)] text-[var(--feedback-heroico-fg)]',
         vulcao:  'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
         vitoria: 'bg-[var(--feedback-success-surface)] text-[var(--feedback-success-fg)]',
         alerta:  'bg-[var(--feedback-warning-surface)] text-[var(--feedback-warning-fg)]',

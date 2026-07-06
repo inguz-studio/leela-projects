@@ -52,6 +52,10 @@
     "warning":         "{warning.700}",
     "warning-fg":      "{warning.900}",
     "warning-surface": "{warning.100}",
+    "heroico":         "{heroico.600}",
+    "heroico-fg":      "{heroico.800}",
+    "heroico-surface": "{heroico.100}",
+    "info":            "{info.500}",
     "info-fg":         "{info.800}",
     "info-surface":    "{info.100}"
   }

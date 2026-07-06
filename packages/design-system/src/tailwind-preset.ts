@@ -114,6 +114,11 @@ const leelaPreset: Partial<Config> = {
         'feedback-warning':         'var(--feedback-warning)',
         'feedback-warning-fg':      'var(--feedback-warning-fg)',
         'feedback-warning-surface': 'var(--feedback-warning-surface)',
+        'feedback-heroico':         'var(--feedback-heroico)',
+        'feedback-heroico-fg':      'var(--feedback-heroico-fg)',
+        'feedback-heroico-surface': 'var(--feedback-heroico-surface)',
+        // info: alias de compatibilidade (Toast variant 'info') — no brasa
+        // resolve para a família heroico (rosa); azul só existe no tema leela.
         'feedback-info':            'var(--feedback-info)',
         'feedback-info-fg':         'var(--feedback-info-fg)',
         'feedback-info-surface':    'var(--feedback-info-surface)',

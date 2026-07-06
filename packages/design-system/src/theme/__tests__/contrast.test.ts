@@ -117,6 +117,7 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-success-fg', 'feedback-success-surface'],
   ['feedback-danger-fg',  'feedback-danger-surface'],
   ['feedback-warning-fg', 'feedback-warning-surface'],
+  ['feedback-heroico-fg', 'feedback-heroico-surface'], // D-PATCH: família rosa Be Hero (Badge heroico)
   ['feedback-info-fg',    'feedback-info-surface'],
 ];
 
@@ -137,12 +138,15 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-danger',  'surface-raised'],
   ['feedback-warning', 'surface-base'],
   ['feedback-warning', 'surface-raised'],
+  ['feedback-heroico', 'surface-base'],
+  ['feedback-heroico', 'surface-raised'],
   ['feedback-info',    'surface-base'],
   ['feedback-info',    'surface-raised'],
   // Toast: borda esquerda semântica sobre o bg do toast (surface-overlay)
   ['feedback-success', 'surface-overlay'],
   ['feedback-danger',  'surface-overlay'],
   ['feedback-warning', 'surface-overlay'],
+  ['feedback-heroico', 'surface-overlay'],
   ['feedback-info',    'surface-overlay'],
 ];
 
@@ -160,13 +164,15 @@ describe('Higiene da matriz', () => {
     expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
   });
 
-  it('contagem declarada bate com o disco: 32 texto + 17 não-texto = 49 pares', () => {
+  it('contagem declarada bate com o disco: 33 texto + 20 não-texto = 53 pares', () => {
     // Lote A restante (shadcn): +1 par texto — text-danger/surface-overlay
     // (DropdownMenu, bg-popover). Toast/Dialog/Tabs/Card/Table/Avatar shadcn
     // resolvem por alias em pares pré-existentes (ver PROVENIÊNCIA de cada um);
     // border-border dos frames é decorativa, fora do gate 1.4.11.
-    expect(TEXT_PAIRS.length).toBe(32);
-    expect(NON_TEXT_PAIRS.length).toBe(17);
+    // D-PATCH (paleta Be Hero + heroico): +1 texto (feedback-heroico-fg/surface)
+    // e +3 não-texto (feedback-heroico sobre base/raised/overlay).
+    expect(TEXT_PAIRS.length).toBe(33);
+    expect(NON_TEXT_PAIRS.length).toBe(20);
   });
 });
 
