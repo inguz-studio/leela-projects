@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Evento } from '@leela/core';
 import { mkEvento } from '../../_test/fixtures';
 
@@ -29,13 +30,20 @@ vi.mock('@leela/api-client', () => ({
 }));
 
 function renderLayoutEm(slug: string) {
+  // Client de teste: retry off (rejeição determinística, sem 3 tentativas —
+  // permission-denied resolve na hora) e gcTime 0 (sem vazamento entre casos).
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return import('../EventoLayout').then(({ EventoLayout }) =>
     render(
-      <MemoryRouter initialEntries={[`/eventos/${slug}`]}>
-        <Routes>
-          <Route path="/eventos/:slug/*" element={<EventoLayout />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/eventos/${slug}`]}>
+          <Routes>
+            <Route path="/eventos/:slug/*" element={<EventoLayout />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     ),
   );
 }
