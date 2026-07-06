@@ -35,7 +35,10 @@
     "test:watch":      "vitest",
     "generate-tokens": "tsx src/scripts/generate-tokens.ts",
     "storybook":       "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "showcase":         "vite --config showcase/vite.config.ts",
+    "showcase:build":   "vite build --config showcase/vite.config.ts",
+    "showcase:preview": "vite preview --config showcase/vite.config.ts"
   },
   "peerDependencies": {
     "lucide-react": "^0.446.0",

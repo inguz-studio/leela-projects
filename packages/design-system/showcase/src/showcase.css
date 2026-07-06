@@ -1,0 +1,23 @@
+/* Showroom — importa os temas do DS e as camadas do Tailwind (preset do DS). */
+@import '../../themes/index.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base mínima do showroom — tudo por token. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-base);
+  color: var(--text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-base);
+  line-height: var(--font-lineHeight-base);
+  -webkit-font-smoothing: antialiased;
+}
