@@ -136,7 +136,7 @@ export const brasaTheme: FlatTokens = {
   "text-tertiary": "#999999",
   "text-disabled": "#545454",
   "text-brand": "#FF450C",
-  "text-danger": "#FF5E5C",
+  "text-danger": "#FF2F2D",
   "text-success": "#2D9315",
   "action-primary": "#D63500",
   "action-primary-hover": "#DC3700",

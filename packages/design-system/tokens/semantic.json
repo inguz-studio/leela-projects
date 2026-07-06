@@ -12,7 +12,7 @@
     "tertiary": "{neutral.400}",
     "disabled": "{neutral.600}",
     "brand": "{primary.500}",
-    "danger": "{danger.300}",
+    "danger": "{danger.500}",
     "success": "{success.400}"
   },
   "action": {
