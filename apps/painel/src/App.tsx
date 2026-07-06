@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { HealthRoute } from './routes/health';
 import { OverviewRoutes } from './routes/overview/OverviewRoutes';
@@ -5,26 +8,36 @@ import { EventosRoutes } from './routes/eventos/EventosRoutes';
 import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
+import { createQueryClient } from './lib/query/client';
 
 export function App() {
+  // 1 QueryClient por instância do app. useState garante estabilidade entre
+  // renders (não recria o cache a cada render — Dan Abramov, lazy initializer).
+  const [queryClient] = useState(createQueryClient);
+
   return (
-    <BrowserRouter>
-      {/* Shell padrão no layout RAIZ (Lote B3): sidebar fixa em TODAS as
-          rotas — item 18 do DoD. Montagens locais de AppShell foram removidas
-          de OverviewShell/PlatformShell. */}
-      <RootShell>
-        <Routes>
-          {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
-          <Route path="/*" element={<OverviewRoutes />} />
-          <Route path="/health" element={<HealthRoute />} />
-          {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
-          <Route path="/eventos/*" element={<EventosRoutes />} />
-          {/* E05 · Clubs (hub, shell + overview + membros) */}
-          <Route path="/clubes/*" element={<ClubesRoutes />} />
-          {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
-          <Route path="/plataforma/*" element={<PlataformaRoutes />} />
-        </Routes>
-      </RootShell>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        {/* Shell padrão no layout RAIZ (Lote B3): sidebar fixa em TODAS as
+            rotas — item 18 do DoD. Montagens locais de AppShell foram removidas
+            de OverviewShell/PlatformShell. */}
+        <RootShell>
+          <Routes>
+            {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
+            <Route path="/*" element={<OverviewRoutes />} />
+            <Route path="/health" element={<HealthRoute />} />
+            {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
+            <Route path="/eventos/*" element={<EventosRoutes />} />
+            {/* E05 · Clubs (hub, shell + overview + membros) */}
+            <Route path="/clubes/*" element={<ClubesRoutes />} />
+            {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
+            <Route path="/plataforma/*" element={<PlataformaRoutes />} />
+          </Routes>
+        </RootShell>
+      </BrowserRouter>
+      {/* Devtools: tree-shaken em produção (o próprio pacote vira no-op no
+          build de prod). Só aparece no dev/preview. */}
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
