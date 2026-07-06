@@ -211,6 +211,8 @@
   --header-height: 96px;
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
+  --sidebar-active-bar: 2px;
+  --sidebar-active-bar-inset: 6px;
   --subnav-height: 48px;
   --subnav-underline: 2px;
   --subnav-px: var(--spacing-10);

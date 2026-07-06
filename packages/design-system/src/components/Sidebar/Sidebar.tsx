@@ -181,8 +181,11 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
             'relative bg-[var(--action-brand-tint)]',
             'text-[var(--action-primary-hover)] font-[var(--font-weight-semibold)]',
             'before:content-[""] before:absolute before:left-0',
-            'before:top-[6px] before:bottom-[6px] before:w-[2px]',
-            'before:rounded-r-[2px] before:bg-[var(--border-brand)]',
+            'before:top-[var(--sidebar-active-bar-inset)]',
+            'before:bottom-[var(--sidebar-active-bar-inset)]',
+            'before:w-[var(--sidebar-active-bar)]',
+            'before:rounded-r-[var(--sidebar-active-bar)]',
+            'before:bg-[var(--border-brand)]',
           )
         : 'text-[var(--text-secondary)] hover:bg-[var(--surface-raised)] hover:text-[var(--text-primary)]',
     ),
