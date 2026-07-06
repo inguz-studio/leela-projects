@@ -23,7 +23,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **Higiene · fix KPIs/alertas do preview** (pré-existente, camada de dados) → entrega visual ao Vitor (showroom + preview limpos)
+- [ ] **Higiene · LOTE FIDELIDADE em voo (LEELA-DS-FID T1-T7)** — spacing tokens do mockup, sidebar métricas exatas + brand slot, Visão Geral recomposta (toolbar ⌘K, KPIs c/ sparkline, event-rows, TABELA de últimas inscrições, countdown, alertas c/ ícone), revisão atômica shadcn, fecha os 6 minors do QA → no retorno: gate maestro + rebuild + QA ao vivo (Opus 4.8, roteamento calibrado) + entrega visual
 - [ ] **O2 · E04-slim · Config & Vendas** — abre APÓS showroom (Onda 2 abre aqui; brief onda2-E04-lotes.md)
 
 
