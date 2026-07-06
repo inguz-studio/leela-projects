@@ -22,7 +22,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **Higiene · Consolidação DS Lote B** — sidebar fixa 240px + 8 ícones Lucide + AppShell raiz nas ~29 telas /eventos+/clubes + gate visual vs WEB-APPV2 · depois: SHOWROOM magic-ds + entrega visual ao Vitor (fila automática no HANDOFF)
+- [ ] **Higiene · SHOWROOM magic-ds** — showcase vivo na identidade do DS (todos os componentes, 2 temas, animações, LLM.txt) → entrega visual ao Vitor (showroom + preview)
 - [ ] **O2 · E04-slim · Config & Vendas** — abre APÓS showroom (Onda 2 abre aqui; brief onda2-E04-lotes.md)
 
 
@@ -33,6 +33,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **Higiene · Consolidação DS Lote B: GATE PASS 2026-07-06 (incl. GATE VISUAL)** — B1-B4 (ícones Lucide, sidebar fixa 240px, AppShell raiz zero-rota-sem-shell, SidebarFooter) · DS 564/564 · painel 446+17 em blocos · 4 screenshots aprovados vs mockup Be Hero pelo maestro · DoD item 18 restabelecido · bd55a8e..69439f0
 - [x] **Higiene · Consolidação DS Lote A: GATE PASS 2026-07-06** — A1-A11 (aliases shadcn→brasa, motion tokenizado, Button/Input/Badge/Skeleton/Separator/Breadcrumb/Toast/DropdownMenu/Card/Avatar/Modal/Tabs/Table shadcn stock brasa) · suíte DS 559/559 · matriz AA 49 pares × 2 temas · tsc+ESLint 0 · WIP órfão da sessão crashada 100% recuperado (A9-A11) · pushed até acfadb0
 - [x] **O1** · **GATE FINAL ONDA 1: PASS 2026-07-05** · 4 épicos, gate principal FAILED→fix-loop 4/4→re-verify · **9/9 altos confirmados fechados c/ prova negativa** (E03 #01 data/#02 timezone/#04 RN-200 · E02 #03 estados fabricados · E05 S1 suite/S2 comunicado/S3 rules legadas/S4 config) · 15/15 testes integração + T13/T14/T15 (decisões Vitor) · **suíte 1933/1933 zero regressão** · tags `e03`/`e05`/`e02`/`e16-slim`/`onda1` @ 18d4ffc
 - [x] **O1** · E03 · Operação do evento — **20/20T** (eventos, inscritos, balcão+galeria, kits N:N completos, financeiro+CSV) · tag `e03`

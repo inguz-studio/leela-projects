@@ -52,11 +52,11 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-DS-A10 — Tabs: anéis de foco e pill por aliases, underline mantido (66fec9e)
 - [x] LEELA-DS-A11 — Table como composição sobre primitivos shadcn (acfadb0)
 - [x] **GATE LOTE A: PASS 2026-07-06** — suíte DS 559/559 · tsc 0 · ESLint 0 · AA 49×2 · verificação independente do maestro
-- [ ] LEELA-DS-B1 — lucide-react peer dep + 8 ícones no DEFAULT_SIDEBAR_SECTIONS (fim do icon:null)
-- [ ] LEELA-DS-B2 — Sidebar FIXA 240px substitui colapsável (a11y preservada)
-- [ ] LEELA-DS-B3 — AppShell como layout raiz (App.tsx) envolvendo /eventos e /clubes (~29 telas)
-- [ ] LEELA-DS-B4 — Rodapé sidebar (avatar/logo) conforme mockup
-- [ ] LEELA-DS-B5 — GATE VISUAL bloqueante vs export WEB-APPV2 (desktop+mobile)
+- [x] LEELA-DS-B1 — lucide-react peer dep + 8 ícones no DEFAULT_SIDEBAR_SECTIONS, fim do icon:null (bd55a8e)
+- [x] LEELA-DS-B2 — Sidebar FIXA 240px substitui colapsável, a11y preservada (650c005)
+- [x] LEELA-DS-B3 — AppShell layout raiz em App.tsx — zero rota sem shell (2544ded)
+- [x] LEELA-DS-B4 — SidebarFooter componível (avatar+nome da sessão) (69439f0)
+- [x] LEELA-DS-B5 — **GATE VISUAL: PASS 2026-07-06 (maestro, 4 screenshots vs mockup)** · suítes DS 564/564 + painel 446/446 em blocos + shell 17/17 · tsc+ESLint 0 · follow-ups: brand block topo sidebar (aguarda marca Leela) · badges da nav (ligar dado) · KPIs preview (dado, pré-existente)
 - [ ] LEELA-DS-SHOWROOM — magic-ds: showcase vivo na identidade do DS (todos os componentes, 2 temas, animações) + LLM.txt (FILA AUTOMÁTICA pós-Lote B)
 
 ### LEELA-E16 · Plataforma & Super-admin (recorte V1 — fundacional multi-tenant)
