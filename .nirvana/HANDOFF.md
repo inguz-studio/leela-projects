@@ -14,6 +14,10 @@
 3. **Pós-Lote B: despacho SHOWROOM ao squad magic-ds** — Storybook/showcase vivo na identidade do próprio DS, aplicando TODOS os componentes (tokens, temas brasa/leela, animações, sidebar fixa com ícones), com mds-storybook-scribe + build-local-showcase + audit-showcase + LLM.txt por componente.
 4. **Entrega visual ao Vitor:** showroom + preview local do painel com todos os ajustes (`bash preview.sh`, portas 5273/8180; subir só com worktree estável). Avisar explicitamente que os dois estão prontos pra ele abrir.
 
+## TRILHA PARALELA — Governança de produto (Vitor, 2026-07-06)
+1. **EM VOO:** squad nirvana-wiki-brain construindo vault `produto/` no Obsidian da LEELA (tese, personas, JTBD, índice das 77 stories, benchmarks, roadmap executivo, visão de futuro, linhas narrativas) — brief `leela-produto-governanca-enriched.md`. Só cria `produto/`; specs read-only; sem conflito com o Lote B.
+2. **NA FILA (após linhas narrativas prontas):** despachar business **nyx-social** para pautas Instagram/LinkedIn/blog a partir de `produto/08-linhas-narrativas.md` (handoff em `produto/09-pautas/README.md`).
+
 ## Decisões novas (2026-07-05/06, já em leela-specs/DECISOES-ABERTAS.md)
 - Parcelamento **COM juros 3,49% a.m., tabela Price, repassado ao comprador** (coef. 12x = 0,103424/parcela ≈ +24,11%).
 - Taxa de serviço: percentual puro **ou percentual + fixo (ex.: 8% + R$2,00)**, configurável por tenant no CommercialTerms.
