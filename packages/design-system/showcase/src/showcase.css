@@ -16,6 +16,16 @@ body,
   height: 100%;
 }
 
+/* App-shell fixo: o DOCUMENTO nunca rola — quem rola é só o painel interno
+   (o div .overflow-y-auto dentro do AppShell). Sem este lock, um descendente
+   position:absolute com posição estática (ex.: o .sr-only do Stepper, cujo
+   bloco de contenção sobe até o <html> porque os ancestrais são static) estica
+   o scrollHeight do documento e cria uma barra + scroll para o vazio abaixo do
+   conteúdo. Travar o overflow do html clipa esse excesso sem afetar o painel. */
+html {
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   background: var(--surface-base);
