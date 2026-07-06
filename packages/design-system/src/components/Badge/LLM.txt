@@ -1,0 +1,48 @@
+# Badge — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Badge
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Badge
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Badge, badgeVariants, type BadgeProps } from '@leela/design-system'
+
+## Quando usar
+Indicador semântico de estado ou categoria em texto curto: status de evento, modalidade, contagem rotulada, selo de marca.
+
+## Quando NÃO usar
+Não use como filtro clicável (use Chip) nem como contador em aba (SubNav/Tabs já têm pill de contador próprio). Badge não é interativo: não recebe onClick como ação primária.
+
+## Props válidas
+- variant: 'brand' | 'heroico' | 'vulcao' | 'vitoria' | 'alerta' | 'neutro'   (default: 'neutro')
+- ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> (className, aria-label, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --badge-height
+- --badge-px
+- --badge-radius
+- --badge-font-size
+- --badge-font-weight
+- --feedback-info-surface / --feedback-info-fg
+- --feedback-danger-surface / --feedback-danger-fg
+- --feedback-success-surface / --feedback-success-fg
+- --feedback-warning-surface / --feedback-warning-fg
+- --text-secondary
+Aliases shadcn->brasa usados: bg-primary/text-primary-foreground (= action-primary/-fg) na variante brand; bg-muted (= surface-overlay) na variante neutro.
+
+## Proibido (do/don't)
+DON'T: variant="default", variant="secondary", variant="destructive", variant="outline" — nomes do shadcn stock que NÃO existem; o enum é brand|heroico|vulcao|vitoria|alerta|neutro.
+DON'T: variant="success", variant="danger", variant="warning", variant="info" — os nomes semânticos aqui são vitoria|vulcao|alerta|heroico.
+DON'T: hex, rgb, px, rem em style inline.
+DO: use aria-label quando o texto do badge sozinho não der contexto suficiente.
+
+## Exemplo mínimo (válido, copiável)
+<Badge>Rascunho</Badge>
+
+## Exemplo completo (válido, copiável)
+<Badge variant="vitoria" aria-label="Evento publicado">Publicado</Badge>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Badge apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

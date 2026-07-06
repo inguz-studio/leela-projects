@@ -1,0 +1,55 @@
+# Tooltip — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Tooltip
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Tooltip
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@leela/design-system'
+
+## Quando usar
+Dica de texto curta flutuante em hover/focus (Radix Tooltip, WAI-APG). Composicional: TooltipProvider (uma vez por árvore) > Tooltip > TooltipTrigger + TooltipContent.
+
+## Quando NÃO usar
+Não use para menus de ação (DropdownMenu) nem para conteúdo interativo/clicável — tooltip é somente leitura. Não esconda informação essencial só no tooltip.
+
+## Props válidas
+- Tooltip: todas as props de TooltipPrimitive.Root do Radix (open, defaultOpen, onOpenChange, delayDuration, disableHoverableContent)
+- TooltipTrigger: todas as props de TooltipPrimitive.Trigger (asChild, etc.)
+- TooltipContent: todas as props de TooltipPrimitive.Content (side, align, etc.) com sideOffset (default: 4)
+- TooltipProvider: todas as props de TooltipPrimitive.Provider (delayDuration, skipDelayDuration, etc.)
+Este é o único componente do DS com API composicional Radix exposta diretamente.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-1 / --spacing-3
+- --font-size-base
+Aliases shadcn->brasa usados: bg-popover (= surface-overlay), text-popover-foreground (= text-primary), border-border (= border-default), shadow-elev-2.
+
+## Proibido (do/don't)
+DON'T: prop content no Tooltip raiz (estilo antd/mui) — o conteúdo vai em <TooltipContent>.
+DON'T: usar Tooltip sem <TooltipProvider> ancestral — o Radix exige o provider.
+DON'T: hex, rgb, px, rem em style inline.
+DO: use TooltipTrigger asChild para acoplar ao Button do DS sem wrapper extra.
+
+## Exemplo mínimo (válido, copiável)
+<TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger>Ajuda</TooltipTrigger>
+    <TooltipContent>Explicação curta.</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
+## Exemplo completo (válido, copiável)
+<TooltipProvider delayDuration={200}>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button variant="ghost" size="sm" aria-label="Exportar">Exportar</Button>
+    </TooltipTrigger>
+    <TooltipContent side="bottom">Exporta a lista em CSV</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Tooltip apenas com a composição e props listadas acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

@@ -1,0 +1,55 @@
+# Chip — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Chip
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Chip
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Chip, type ChipProps } from '@leela/design-system'
+
+## Quando usar
+Filtro ou seleção toggle com estado ativo/inativo (aria-pressed), opcionalmente removível (x decorativo + Delete/Backspace no teclado).
+
+## Quando NÃO usar
+Não use para indicar estado passivo (use Badge) nem como botão de ação primária (use Button). O Chip é sempre um botão toggle.
+
+## Props válidas
+- active: boolean   (default: false) — estado selecionado; reflete em aria-pressed
+- onRemove: () => void   (default: undefined) — renderiza o x de remoção; teclado remove com Delete/Backspace
+- disabled: boolean   (default: undefined)
+- onKeyDown: React.KeyboardEventHandler   (default: undefined) — chamado após o tratamento interno de Delete/Backspace
+- ...todas as props nativas de React.ButtonHTMLAttributes<HTMLButtonElement> (onClick, className, children, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --chip-height
+- --chip-px
+- --chip-radius
+- --chip-font-size
+- --font-size-xs
+- --surface-overlay / --surface-high
+- --text-secondary / --text-primary
+- --action-primary / --action-primary-fg / --action-primary-hover
+- --motion-duration-fast
+
+## Proibido (do/don't)
+DON'T: props variant, size, selected, removable — NÃO existem; o estado é active (boolean) e a remoção é onRemove.
+DON'T: colocar botão ou elemento focável dentro do Chip (interativo aninhado é ARIA inválida; o x interno é decorativo de propósito).
+DON'T: hex, rgb, px, rem em style inline.
+DO: controle active no estado do consumidor e alterne no onClick; quando o chip for removível, passe onRemove e deixe o teclado (Delete/Backspace) funcionar.
+
+## Exemplo mínimo (válido, copiável)
+<Chip active={filtroAtivo} onClick={() => setFiltroAtivo(!filtroAtivo)}>5K</Chip>
+
+## Exemplo completo (válido, copiável)
+<Chip
+  active={selecionados.includes('trail')}
+  onClick={() => toggle('trail')}
+  onRemove={() => remover('trail')}
+>
+  Trail Run
+</Chip>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Chip apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

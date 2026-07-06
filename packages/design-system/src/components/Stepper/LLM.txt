@@ -1,0 +1,61 @@
+# Stepper — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Stepper
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Stepper
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Stepper, type StepperProps, type StepperStep } from '@leela/design-system'
+
+## Quando usar
+Indicador de etapas de fluxo linear (checkout usa 5 etapas): concluída (Brasa + check), atual (ring brand + aria-current="step"), futura (surface-overlay). Conector entre etapas acompanha o estado.
+
+## Quando NÃO usar
+Não use para navegação livre entre seções (SubNav/Tabs) nem para progresso percentual contínuo (CardDesafio tem progressbar). O Stepper é indicador, não recebe onClick por etapa.
+
+## Props válidas
+- steps: StepperStep[]   (obrigatório) — StepperStep = { id: string; label: string }
+- current: number   (obrigatório) — índice 0-based da etapa atual
+- 'aria-label': string   (default: 'Progresso das etapas')
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --stepper-step-size
+- --radius-pill
+- --font-size-sm
+- --font-weight-semibold
+- --action-primary / --action-primary-fg
+- --surface-high / --surface-overlay
+- --text-primary / --text-secondary / --text-tertiary
+- --border-brand / --border-subtle
+- --divider-thickness
+- --spacing-2 / --spacing-3 / --spacing-4
+- --motion-duration-fast
+
+## Proibido (do/don't)
+DON'T: current 1-based — a primeira etapa é current={0}.
+DON'T: props onStepClick, completed[], orientation — NÃO existem; o estado deriva todo de current.
+DON'T: hex, rgb, px, rem em style inline.
+DO: avance current no estado do consumidor conforme o fluxo progride; etapas antes de current são marcadas concluídas automaticamente (com sr-only "(concluída)").
+
+## Exemplo mínimo (válido, copiável)
+<Stepper steps={[{ id: 'dados', label: 'Dados' }, { id: 'pagamento', label: 'Pagamento' }]} current={0} />
+
+## Exemplo completo (válido, copiável)
+<Stepper
+  aria-label="Etapas do checkout"
+  steps={[
+    { id: 'ingresso', label: 'Ingresso' },
+    { id: 'dados', label: 'Dados' },
+    { id: 'pagamento', label: 'Pagamento' },
+    { id: 'revisao', label: 'Revisão' },
+    { id: 'confirmacao', label: 'Confirmação' },
+  ]}
+  current={etapaAtual}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Stepper apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

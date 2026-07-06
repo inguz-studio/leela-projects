@@ -1,0 +1,43 @@
+# Divider — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Divider
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Divider
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Divider, type DividerProps } from '@leela/design-system'
+
+## Quando usar
+Separador visual entre blocos de conteúdo, horizontal ou vertical, com três pesos (subtle, default, strong). Baseado em Radix Separator com role="separator" e aria-orientation.
+
+## Quando NÃO usar
+Não use dentro de Table (as linhas já têm border-b própria) nem como underline de aba (SubNav/Tabs têm indicador próprio).
+
+## Props válidas
+- variant: 'subtle' | 'default' | 'strong'   (default: 'default')
+- orientation: 'horizontal' | 'vertical'   (default: 'horizontal')
+- ...todas as props de React.ComponentPropsWithoutRef<SeparatorPrimitive.Root> exceto orientation (decorative, className, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --border-subtle
+- --border-strong
+- --divider-thickness
+- --spacing-2
+Alias shadcn->brasa usado: bg-border (= border-default) na variante default.
+
+## Proibido (do/don't)
+DON'T: variant="light", variant="heavy", variant="dashed" — o enum é subtle|default|strong.
+DON'T: orientation="x" / "y" — os valores são horizontal|vertical.
+DON'T: hex, rgb, px, rem em style inline; não redefina espessura via className.
+DO: em layout vertical o contêiner precisa de altura definida (h-full vem do componente).
+
+## Exemplo mínimo (válido, copiável)
+<Divider />
+
+## Exemplo completo (válido, copiável)
+<Divider variant="strong" orientation="vertical" />
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Divider apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

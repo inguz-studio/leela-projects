@@ -1,0 +1,76 @@
+# Table — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Table
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Table
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Table, type TableProps, type TableColumn } from '@leela/design-system'
+
+## Quando usar
+Tabela densa de listagem (linha 64px) com colunas declarativas, EmptyState automático quando data=[] e menu de ações por linha via renderActions (componha com DropdownMenu).
+
+## Quando NÃO usar
+Não use para grids de cards (use CardEvento/CardDesafio em grid) nem para dados hierárquicos em árvore. Os primitivos TableRoot/TableHeader/TableRow etc. são INTERNOS e não exportados — não tente importá-los.
+
+## Props válidas
+Table<TRow> (genérico):
+- columns: TableColumn<TRow>[]   (obrigatório) — TableColumn = { key: string; header: string; width?: string | number; align?: 'left' | 'center' | 'right'; render?: (row: TRow) => React.ReactNode }
+- data: TRow[]   (obrigatório)
+- keyExtractor: (row: TRow) => string   (obrigatório)
+- caption: string   (default: undefined) — caption sr-only
+- emptyTitle: string   (default: 'Nenhum resultado encontrado')
+- emptyDescription: string   (default: 'Nenhum resultado encontrado com os filtros aplicados.')
+- emptyIcon: React.ReactNode   (default: undefined)
+- renderActions: (row: TRow) => React.ReactNode   (default: undefined) — adiciona coluna de ações à direita
+- className: string   (default: undefined) — aplicada no contêiner de scroll
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --table-row-height
+- --table-cell-py / --table-cell-px
+- --table-header-spacing
+- --border-subtle
+- --surface-raised (hover de linha)
+- --font-size-sm / --font-size-base
+- --font-weight-semibold
+- --motion-duration-fast
+Aliases shadcn->brasa usados: text-muted-foreground (= text-tertiary) no header, text-foreground (= text-primary) nas células.
+
+## Proibido (do/don't)
+DON'T: importar TableHeader, TableBody, TableRow, TableHead, TableCell, TableCaption — não são exportados; a API pública é só Table<TRow>.
+DON'T: props sortable, pagination, onRowClick, selection — NÃO existem; pagine com o componente Pagination fora da Table.
+DON'T: hex, rgb, px, rem em style inline.
+DO: sem render a célula exibe row[key] (primitivos); use render para células compostas (Badge, Avatar, etc.); use renderActions com DropdownMenu controlado.
+
+## Exemplo mínimo (válido, copiável)
+<Table
+  columns={[{ key: 'nome', header: 'Nome' }, { key: 'data', header: 'Data' }]}
+  data={eventos}
+  keyExtractor={(e) => e.id}
+/>
+
+## Exemplo completo (válido, copiável)
+<Table
+  caption="Lista de eventos"
+  columns={[
+    { key: 'nome', header: 'Nome' },
+    { key: 'status', header: 'Status', render: (e) => <Badge variant="vitoria">{e.status}</Badge> },
+    { key: 'inscritos', header: 'Inscritos', align: 'right' },
+  ]}
+  data={eventos}
+  keyExtractor={(e) => e.id}
+  emptyTitle="Nenhum evento encontrado"
+  renderActions={(e) => (
+    <DropdownMenu
+      actions={[{ id: 'editar', label: 'Editar', onClick: () => editar(e.id) }]}
+      open={abertoId === e.id}
+      onOpenChange={(o) => setAbertoId(o ? e.id : null)}
+      trigger={<Button variant="ghost" size="sm">...</Button>}
+    />
+  )}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Table apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

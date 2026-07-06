@@ -1,0 +1,99 @@
+# Modal — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Modal (+ ConfirmModal)
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Modal
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Modal, ConfirmModal, type ModalProps, type ModalSize, type ConfirmModalProps, type ConfirmModalDetails } from '@leela/design-system'
+
+## Quando usar
+Modal: diálogo base (Radix Dialog) com título, descrição, corpo e slot de rodapé; 4 vias de fechamento (X, Esc, overlay, botão do consumidor). ConfirmModal: confirmação de ação destrutiva com card do alvo, listas "o que você perde"/"o que se mantém", motivo e checkbox de notificação opcionais.
+
+## Quando NÃO usar
+Não use Modal para feedback passageiro (Toast) nem para menus (DropdownMenu). Para confirmar exclusões/desativações use ConfirmModal, não um Modal manual.
+
+## Props válidas
+Modal:
+- open: boolean   (obrigatório)
+- onOpenChange: (open: boolean) => void   (obrigatório)
+- title: string   (obrigatório)
+- description: string | undefined   (default: undefined)
+- size: 'sm' | 'md' | 'lg' (ModalSize)   (default: 'md')
+- children: React.ReactNode   (default: undefined)
+- footer: React.ReactNode   (default: undefined) — botões de ação
+- className: string   (default: undefined)
+ConfirmModal:
+- open: boolean   (obrigatório)
+- onOpenChange: (open: boolean) => void   (obrigatório)
+- title: string   (obrigatório)
+- description: string   (default: undefined)
+- target: React.ReactNode   (default: undefined) — card do alvo (borda esquerda Vulcão)
+- loses: string[]   (obrigatório) — o que se perde
+- keeps: string[]   (obrigatório) — o que se mantém
+- confirmLabel: string   (obrigatório)
+- cancelLabel: string   (default: 'Cancelar')
+- reasonLabel: string   (default: undefined) — quando presente exibe textarea de motivo
+- notifyLabel: string   (default: undefined) — quando presente exibe checkbox
+- loading: boolean   (default: false) — desabilita ações
+- size: 'sm' | 'md' | 'lg'   (default: 'sm')
+- onConfirm: (details: ConfirmModalDetails) => void   (obrigatório) — ConfirmModalDetails = { reason: string; notify: boolean }
+
+## Tokens consumidos (nenhum valor cru permitido)
+Modal:
+- --modal-overlay-bg / --modal-overlay-blur
+- --modal-width-sm / --modal-width-md / --modal-width-lg
+- --radius-lg / --radius-sm
+- --elevation-3
+- --spacing-2 / --spacing-3 / --spacing-4 / --spacing-6 / --spacing-8
+- --font-size-lg / --font-size-base
+- --font-weight-bold
+- --text-primary / --text-secondary
+- --btn-height-sm
+- --action-ghost-hover
+- --motion-duration-fast
+ConfirmModal (adicionais):
+- --font-size-sm / --font-weight-semibold
+- --table-header-spacing
+- --text-danger / --text-success / --text-tertiary
+- --surface-overlay / --surface-base
+- --card-radius / --card-critical-border
+- --feedback-danger
+- --input-font-size / --input-radius / --input-border-width
+- --border-strong / --border-focus
+- --spacing-1
+- --action-primary
+Aliases shadcn->brasa usados: bg-card (= surface-raised), ring-ring (= border-focus), ring-offset-background (= surface-base).
+
+## Proibido (do/don't)
+DON'T: subcomponentes DialogHeader/DialogFooter/DialogTrigger/ModalHeader — NÃO existem; a API é componente único com slots title/description/footer.
+DON'T: size="xl" ou size="full" — o enum ModalSize é sm|md|lg.
+DON'T: fechar o ConfirmModal dentro de onConfirm automaticamente — o consumidor decide quando fechar (spinner/toast antes de navegar).
+DON'T: hex, rgb, px, rem em style inline.
+DO: no footer do Modal use Button secondary (cancelar) + Button primary/destructive (confirmar); em ConfirmModal os botões já vêm prontos.
+
+## Exemplo mínimo (válido, copiável)
+<Modal open={aberto} onOpenChange={setAberto} title="Editar evento">
+  <p>Conteúdo</p>
+</Modal>
+
+## Exemplo completo (válido, copiável)
+<ConfirmModal
+  open={confirmando}
+  onOpenChange={setConfirmando}
+  title="Excluir evento?"
+  description="Esta ação não pode ser desfeita."
+  target={<span>Corrida da Serra — 128 inscritos</span>}
+  loses={['Inscrições ativas', 'Página pública do evento']}
+  keeps={['Histórico financeiro', 'Relatórios exportados']}
+  confirmLabel="Excluir evento"
+  reasonLabel="Motivo (opcional)"
+  notifyLabel="Notificar inscritos por e-mail"
+  loading={excluindo}
+  onConfirm={({ reason, notify }) => excluir(reason, notify)}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use os componentes Modal e ConfirmModal apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

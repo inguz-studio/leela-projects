@@ -1,0 +1,56 @@
+# PageHeader — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: PageHeader
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/PageHeader
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { PageHeader, type PageHeaderProps } from '@leela/design-system'
+
+## Quando usar
+Cabeçalho de contexto de página (96px via --header-height): título h1, subtítulo, avatar, badges de status, metadados e slot de ações à direita. Vive dentro do AppShell, acima do SubNav.
+
+## Quando NÃO usar
+Não use como cabeçalho de card (use CardHeader/CardTitle do Card) nem como barra de navegação (use SubNav).
+
+## Props válidas
+- title: string   (obrigatório) — vira h1 e aria-label do header
+- subtitle: string   (default: undefined)
+- avatar: React.ReactNode   (default: undefined) — ex.: <Avatar name={...} />
+- badges: React.ReactNode   (default: undefined) — ex.: <Badge variant="vitoria">Ativo</Badge>
+- metadata: React.ReactNode   (default: undefined) — texto terciário de apoio
+- actions: React.ReactNode   (default: undefined) — botões à direita
+- className: string   (default: undefined)
+Nenhuma outra prop existe; o componente não repassa atributos HTML arbitrários.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --header-height
+- --surface-raised
+- --spacing-1 / --spacing-2 / --spacing-3 / --spacing-4 / --spacing-6
+- --font-size-lg / --font-size-sm
+- --font-weight-bold
+- --text-primary / --text-secondary / --text-tertiary
+
+## Proibido (do/don't)
+DON'T: props breadcrumb, tabs, onBack — NÃO existem; componha Breadcrumb/SubNav fora do PageHeader.
+DON'T: passar strings estilizadas manualmente em badges/actions — use Badge e Button do DS.
+DON'T: hex, rgb, px, rem em style inline.
+DO: use os slots (avatar, badges, metadata, actions) com componentes do DS.
+
+## Exemplo mínimo (válido, copiável)
+<PageHeader title="Corrida da Serra" />
+
+## Exemplo completo (válido, copiável)
+<PageHeader
+  title="Corrida da Serra"
+  subtitle="Evento de trail run"
+  avatar={<Avatar name="Corrida da Serra" />}
+  badges={<Badge variant="vitoria">Publicado</Badge>}
+  metadata={<span>Criado em 02/07/2026</span>}
+  actions={<Button variant="primary">Editar</Button>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente PageHeader apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

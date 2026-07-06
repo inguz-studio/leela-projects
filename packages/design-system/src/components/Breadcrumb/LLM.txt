@@ -1,0 +1,52 @@
+# Breadcrumb — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Breadcrumb
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Breadcrumb
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Breadcrumb, type BreadcrumbProps, type BreadcrumbItem } from '@leela/design-system'
+
+## Quando usar
+Trilha de navegação hierárquica no topo de páginas de detalhe. O último item recebe aria-current="page" automaticamente e não é clicável.
+
+## Quando NÃO usar
+Não use para navegação entre seções irmãs (use SubNav) nem para troca de conteúdo in-page (use Tabs).
+
+## Props válidas
+- items: BreadcrumbItem[]   (obrigatório) — BreadcrumbItem = { label: string; href?: string }
+- className: string   (default: undefined)
+Nenhuma outra prop existe; o componente não repassa atributos HTML arbitrários.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-2
+- --font-size-sm
+- --font-weight-semibold
+- --text-secondary
+- --radius-sm
+- --motion-duration-fast
+Aliases shadcn->brasa usados: text-foreground (= text-primary), text-muted-foreground (= text-tertiary) no separador, ring-ring (= border-focus).
+
+## Proibido (do/don't)
+DON'T: subcomponentes BreadcrumbList/BreadcrumbItem/BreadcrumbLink/BreadcrumbSeparator do shadcn stock — NÃO são exportados; a API é a prop items.
+DON'T: prop separator — o separador é sempre "/" (aria-hidden), não configurável.
+DON'T: hex, rgb, px, rem em style inline.
+DO: omita href no item final (ele vira o item atual) e em itens não navegáveis.
+
+## Exemplo mínimo (válido, copiável)
+<Breadcrumb items={[{ label: 'Eventos', href: '/eventos' }, { label: 'Corrida da Serra' }]} />
+
+## Exemplo completo (válido, copiável)
+<Breadcrumb
+  items={[
+    { label: 'Painel', href: '/' },
+    { label: 'Eventos', href: '/eventos' },
+    { label: 'Corrida da Serra' },
+  ]}
+  className="mb-[var(--spacing-4)]"
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Breadcrumb apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

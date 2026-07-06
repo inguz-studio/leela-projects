@@ -1,0 +1,48 @@
+# EmptyState — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: EmptyState
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/EmptyState
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { EmptyState, type EmptyStateProps } from '@leela/design-system'
+
+## Quando usar
+Estado vazio obrigatório em listas filtráveis: mensagem padrão, ícone opcional e slot de ação (ex.: "Limpar filtros"). A Table já o renderiza automaticamente quando data=[].
+
+## Quando NÃO usar
+Não use como placeholder de carregamento (use Skeleton) nem como mensagem de erro de operação (use Toast variant="danger").
+
+## Props válidas
+- title: string   (default: 'Nenhum item encontrado')
+- description: string   (default: 'Nenhum resultado encontrado com os filtros aplicados.') — oculta quando igual ao title
+- icon: React.ReactNode   (default: undefined)
+- action: React.ReactNode   (default: undefined) — ex.: <Button variant="ghost">Limpar filtros</Button>
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-2 / --spacing-4 / --spacing-8 / --spacing-12
+- --font-size-base / --font-size-sm
+- --font-weight-semibold
+- --text-tertiary
+
+## Proibido (do/don't)
+DON'T: props variant, size, image — NÃO existem.
+DON'T: hex, rgb, px, rem em style inline.
+DO: passe uma action com Button do DS quando houver como sair do estado vazio.
+
+## Exemplo mínimo (válido, copiável)
+<EmptyState />
+
+## Exemplo completo (válido, copiável)
+<EmptyState
+  title="Nenhum inscrito encontrado"
+  description="Nenhum resultado encontrado com os filtros aplicados."
+  action={<Button variant="ghost" onClick={limparFiltros}>Limpar filtros</Button>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente EmptyState apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

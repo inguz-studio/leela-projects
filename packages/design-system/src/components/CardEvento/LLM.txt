@@ -1,0 +1,61 @@
+# CardEvento — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: CardEvento
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/CardEvento
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { CardEvento, type CardEventoProps } from '@leela/design-system'
+
+## Quando usar
+Card de evento com media 16/10, badge de modalidade sobreposto, metadados e footer. Com href vira link, com apenas onClick vira botão, sem ambos é um article estático.
+
+## Quando NÃO usar
+Não use para desafios com progresso (CardDesafio) nem como contêiner genérico de superfície (Card). É um componente de domínio de eventos.
+
+## Props válidas
+- title: string   (obrigatório)
+- media: React.ReactNode   (default: undefined) — imagem/gradiente 16/10; fallback: gradiente com tokens
+- modality: React.ReactNode   (default: undefined) — badge sobreposto na media (ex.: <Badge>5K</Badge>)
+- meta: React.ReactNode   (default: undefined) — data, local, contadores
+- footer: React.ReactNode   (default: undefined)
+- href: string   (default: undefined) — renderiza <a>
+- onClick: () => void   (default: undefined) — sem href, renderiza <button>
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --surface-raised / --surface-high
+- --card-radius
+- --action-primary (gradiente fallback da media)
+- --border-focus
+- --elevation-2
+- --spacing-1 / --spacing-2 / --spacing-3 / --spacing-4
+- --font-size-md / --font-size-sm
+- --font-weight-semibold
+- --text-primary / --text-secondary
+- --motion-duration-fast / --motion-easing-default
+
+## Proibido (do/don't)
+DON'T: props image, imageUrl, category, date — NÃO existem; media/meta são slots ReactNode.
+DON'T: aspect ratio custom na media — o 16/10 é fixo do contrato visual.
+DON'T: hex, rgb, px, rem em style inline (a media do consumidor deve usar imagem ou tokens).
+DO: passe modality como Badge do DS; para navegação use href (o onClick pode coexistir como tracking).
+
+## Exemplo mínimo (válido, copiável)
+<CardEvento title="Corrida da Serra" />
+
+## Exemplo completo (válido, copiável)
+<CardEvento
+  title="Corrida da Serra"
+  media={<img src={capaUrl} alt="" className="h-full w-full object-cover" />}
+  modality={<Badge variant="brand">Trail 21K</Badge>}
+  meta={<><span>12/08/2026</span><span>Serra do Cipó</span></>}
+  footer={<Badge variant="vitoria">Inscrições abertas</Badge>}
+  href="/eventos/corrida-da-serra"
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente CardEvento apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

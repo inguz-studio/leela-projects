@@ -1,0 +1,47 @@
+# Skeleton — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Skeleton
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Skeleton
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Skeleton, type SkeletonProps } from '@leela/design-system'
+
+## Quando usar
+Placeholder de carregamento: linha de texto (text), bloco retangular (rect, dimensione via className) ou círculo para avatar/ícone (circle). Shimmer respeita prefers-reduced-motion (motion-safe:animate-pulse). Decorativo: aria-hidden, sem role.
+
+## Quando NÃO usar
+Não use para estado vazio pós-carregamento (EmptyState) nem como spinner de ação em botão (use a prop disabled/loading do fluxo). Não anuncie skeletons a leitores de tela.
+
+## Props válidas
+- variant: 'text' | 'rect' | 'circle'   (default: 'rect')
+- ...todas as props nativas de React.HTMLAttributes<HTMLDivElement> (className para dimensões, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-4 (altura da variante text)
+- --skeleton-radius
+- --radius-pill (variante circle)
+Alias shadcn->brasa usado: bg-muted (= surface-overlay).
+
+## Proibido (do/don't)
+DON'T: variant="circular", variant="rectangular", variant="line" — o enum é text|rect|circle.
+DON'T: props width/height numéricas — dimensione via className com tokens (ex.: w-[var(--avatar-size-md)]).
+DON'T: hex, rgb, px, rem em style inline.
+DO: para rect e circle defina dimensões via className usando tokens de spacing/size; espelhe o layout final para evitar salto de conteúdo.
+
+## Exemplo mínimo (válido, copiável)
+<Skeleton variant="text" />
+
+## Exemplo completo (válido, copiável)
+<div className="flex items-center gap-[var(--spacing-3)]">
+  <Skeleton variant="circle" className="w-[var(--avatar-size-md)] h-[var(--avatar-size-md)]" />
+  <div className="flex-1 flex flex-col gap-[var(--spacing-2)]">
+    <Skeleton variant="text" />
+    <Skeleton variant="text" className="w-2/3" />
+  </div>
+</div>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Skeleton apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

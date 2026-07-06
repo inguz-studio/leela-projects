@@ -1,0 +1,62 @@
+# Tabs — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Tabs
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Tabs
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Tabs, type TabsProps, type TabItem } from '@leela/design-system'
+
+## Quando usar
+Troca de conteúdo IN-PAGE (Radix Tabs, tablist ARIA) com visual underline Brasa 2px na ativa e pill de contador opcional. Todos os painéis ficam no DOM (forceMount) — o inativo é apenas ocultado.
+
+## Quando NÃO usar
+Não use para navegação entre rotas — isso é SubNav (nav landmark com links). Tabs é sempre conteúdo na mesma página.
+
+## Props válidas
+- tabs: TabItem[]   (obrigatório) — TabItem = { id: string; label: string; count?: number; content: React.ReactNode }
+- defaultTab: string   (default: primeira tab) — modo não controlado
+- value: string   (default: undefined) — modo controlado
+- onValueChange: (id: string) => void   (default: undefined)
+- 'aria-label': string   (default: 'Abas')
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --subnav-height / --subnav-underline
+- --subnav-pill-height / --subnav-pill-min-width / --subnav-pill-radius / --subnav-pill-font-size
+- --border-subtle / --border-brand
+- --spacing-1 / --spacing-2 / --spacing-3 / --spacing-4
+- --font-size-base
+- --font-weight-regular / --font-weight-semibold
+- --text-primary / --text-secondary
+- --radius-sm
+- --motion-duration-fast
+Aliases shadcn->brasa usados: ring-ring (= border-focus), bg-background (= surface-base) no pill de contador.
+
+## Proibido (do/don't)
+DON'T: subcomponentes TabsList/TabsTrigger/TabsContent do shadcn stock — NÃO são exportados; a API é declarativa via tabs.
+DON'T: visual pill do stock (bg-muted na lista) — o visual é underline por contrato §2.14.
+DON'T: remover painéis inativos do DOM — o forceMount é intencional (busca em página).
+DON'T: hex, rgb, px, rem em style inline.
+DO: prefira modo não controlado (defaultTab); use value + onValueChange só quando outra parte da tela precisa reagir à aba ativa.
+
+## Exemplo mínimo (válido, copiável)
+<Tabs tabs={[{ id: 'geral', label: 'Geral', content: <p>Geral</p> }, { id: 'historico', label: 'Histórico', content: <p>Histórico</p> }]} />
+
+## Exemplo completo (válido, copiável)
+<Tabs
+  aria-label="Detalhes do inscrito"
+  defaultTab="geral"
+  tabs={[
+    { id: 'geral', label: 'Geral', content: <PerfilGeral /> },
+    { id: 'pedidos', label: 'Pedidos', count: 4, content: <ListaPedidos /> },
+  ]}
+  value={abaAtiva}
+  onValueChange={setAbaAtiva}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Tabs apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

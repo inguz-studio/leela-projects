@@ -1,0 +1,60 @@
+# Card — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Card
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Card
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@leela/design-system'
+
+## Quando usar
+Contêiner genérico de superfície (composicional, estilo shadcn): Card > CardHeader (CardTitle + CardDescription) + CardContent + CardFooter. Para blocos de conteúdo, painéis de resumo e formulários agrupados.
+
+## Quando NÃO usar
+Não use para cards de domínio: eventos usam CardEvento e desafios usam CardDesafio. Para diálogos use Modal.
+
+## Props válidas
+Todos os subcomponentes aceitam somente props nativas HTML (nenhuma prop própria, nenhum variant):
+- Card: React.HTMLAttributes<HTMLDivElement> (div)
+- CardHeader: React.HTMLAttributes<HTMLDivElement> (div)
+- CardTitle: React.HTMLAttributes<HTMLHeadingElement> (h3)
+- CardDescription: React.HTMLAttributes<HTMLParagraphElement> (p)
+- CardContent: React.HTMLAttributes<HTMLDivElement> (div)
+- CardFooter: React.HTMLAttributes<HTMLDivElement> (div)
+Observação: o barrel não exporta tipos de props para Card (não existe CardProps).
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-1 / --spacing-6
+- --font-size-lg / --font-size-sm
+- --font-weight-semibold
+Aliases shadcn->brasa usados: bg-card (= surface-raised), text-card-foreground (= text-primary), text-muted-foreground (= text-tertiary), border-border (= border-default), shadow-elev-1.
+
+## Proibido (do/don't)
+DON'T: props variant, elevation, padding — NÃO existem; ajuste via className com tokens.
+DON'T: CardAction ou CardMedia — não existem neste DS.
+DON'T: hex, rgb, px, rem em style inline.
+DO: siga a ordem CardHeader > CardContent > CardFooter; CardTitle já é h3 semântico.
+
+## Exemplo mínimo (válido, copiável)
+<Card>
+  <CardContent>Conteúdo</CardContent>
+</Card>
+
+## Exemplo completo (válido, copiável)
+<Card>
+  <CardHeader>
+    <CardTitle>Receita do mês</CardTitle>
+    <CardDescription>Consolidado de todos os eventos</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <p className="text-[length:var(--font-size-lg)] text-[var(--text-primary)]">R$ 42.180,00</p>
+  </CardContent>
+  <CardFooter>
+    <Button variant="ghost" size="sm">Ver detalhes</Button>
+  </CardFooter>
+</Card>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Card apenas com a composição e props listadas acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

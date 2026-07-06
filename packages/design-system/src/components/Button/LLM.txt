@@ -1,0 +1,55 @@
+# Button — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Button
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Button
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Button, buttonVariants, type ButtonProps } from '@leela/design-system'
+
+## Quando usar
+Qualquer ação clicável do painel: submits, CTAs, ações de modal, ações de linha. Com `asChild` envolve um `<Link>` mantendo o visual de botão.
+
+## Quando NÃO usar
+Não use para navegação entre seções (use SubNav ou Sidebar) nem para filtros toggle (use Chip). Para o botão de confirmação destrutiva dentro de fluxo de confirmação, prefira ConfirmModal, que já compõe o Button correto.
+
+## Props válidas
+- variant: 'primary' | 'secondary' | 'ghost' | 'destructive'   (default: 'primary')
+- size: 'sm' | 'md' | 'lg'   (default: 'md')
+- asChild: boolean   (default: false) — renderiza Radix Slot, repassa props ao filho imediato
+- type: 'button' | 'submit' | 'reset'   (default: 'button')
+- disabled: boolean   (default: undefined) — também define aria-disabled
+- ...todas as props nativas de React.ButtonHTMLAttributes<HTMLButtonElement> (onClick, className, aria-*, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --btn-font-weight
+- --btn-radius
+- --btn-focus-ring
+- --btn-height-sm / --btn-height-md / --btn-height-lg
+- --btn-px-sm / --btn-px-md / --btn-px-lg
+- --btn-font-size-sm / --btn-font-size-md / --btn-font-size-lg
+- --action-primary / --action-primary-fg / --action-primary-hover / --action-primary-pressed
+- --action-secondary / --action-secondary-fg / --action-secondary-hover
+- --action-ghost-fg / --action-ghost-hover
+- --action-destructive / --action-destructive-fg / --action-destructive-hover / --action-destructive-pressed
+- --motion-duration-fast / --motion-easing-default
+Aliases shadcn->brasa usados: ring-ring (= border-focus), ring-offset-background (= surface-base).
+
+## Proibido (do/don't)
+DON'T: variant="default", variant="outline", variant="link", size="icon" — nomes do shadcn stock que NÃO existem aqui; o enum é primary|secondary|ghost|destructive.
+DON'T: size="xs" ou size="xl" — só existem sm|md|lg.
+DON'T: hex, rgb, px, rem em style inline; nada de bg-orange-500 ou similares em className.
+DO: use disabled para estado inativo (opacity e aria-disabled já são tratados); use asChild para links com visual de botão.
+
+## Exemplo mínimo (válido, copiável)
+<Button>Salvar</Button>
+
+## Exemplo completo (válido, copiável)
+<Button variant="destructive" size="lg" disabled={loading} onClick={handleDelete}>
+  Excluir evento
+</Button>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Button apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

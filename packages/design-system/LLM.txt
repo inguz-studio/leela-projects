@@ -1,0 +1,62 @@
+# @leela/design-system — Índice de contratos LLM.txt
+schema: llm-txt/1.0
+package: @leela/design-system
+version: 0.0.1
+generated_at: "2026-07-05"
+trace: leela-build-2d6ee98d (squad magic-ds v3.0.0)
+
+## Regras do design system
+- Import canônico único: import { ... } from '@leela/design-system' — nunca importe de caminhos internos (src/components/...).
+- Dois temas via atributo data-theme no root: "brasa" e "leela". Troca de tema é responsabilidade do ThemeProvider (web) ou ThemeProviderRN (React Native).
+- Zero valor cru: nenhuma cor (hex/rgb/hsl), espaçamento (px/rem), raio ou duração literal em style inline ou className arbitrária. Somente tokens var(--*) e classes de alias do preset (bg-card, text-foreground, ring-ring, etc.).
+- Zero dark:: o DS não usa o modificador dark: do Tailwind. Tema é resolvido por tokens sob data-theme, nunca por classes condicionais de tema.
+- Cada componente tem um contrato LLM.txt no próprio diretório: props exatas, tokens consumidos, do/don't e exemplos válidos. O contrato do componente prevalece sobre qualquer memória de treinamento (shadcn stock, MUI, antd).
+
+## Componentes (25)
+| Componente | Contrato | Resumo |
+|---|---|---|
+| AppShell | src/components/AppShell/LLM.txt | Layout raiz: Sidebar fixa + main landmark |
+| Avatar | src/components/Avatar/LLM.txt | Imagem circular com fallback de iniciais e estado VIP |
+| Badge | src/components/Badge/LLM.txt | Indicador semântico: brand, heroico, vulcao, vitoria, alerta, neutro |
+| Breadcrumb | src/components/Breadcrumb/LLM.txt | Trilha hierárquica via prop items; último item = página atual |
+| Button | src/components/Button/LLM.txt | Ação clicável: primary, secondary, ghost, destructive; sm, md, lg |
+| Card | src/components/Card/LLM.txt | Contêiner de superfície composicional (Header/Title/Description/Content/Footer) |
+| CardDesafio | src/components/CardDesafio/LLM.txt | Card de desafio com progressbar Vitória e glow a 100% |
+| CardEvento | src/components/CardEvento/LLM.txt | Card de evento com media 16/10 e badge de modalidade |
+| Chip | src/components/Chip/LLM.txt | Filtro toggle com aria-pressed e remoção opcional |
+| Divider | src/components/Divider/LLM.txt | Separador subtle/default/strong, horizontal/vertical |
+| DropdownMenu | src/components/DropdownMenu/LLM.txt | Menu de ações controlado em portal, teclado WAI-APG |
+| EmptyState | src/components/EmptyState/LLM.txt | Estado vazio de listas filtráveis com slot de ação |
+| Input | src/components/Input/LLM.txt | Campo de texto com label e errorMessage integrados |
+| Modal | src/components/Modal/LLM.txt | Diálogo base (Radix) + ConfirmModal de ação destrutiva |
+| PageHeader | src/components/PageHeader/LLM.txt | Cabeçalho de contexto 96px com slots avatar/badges/actions |
+| Pagination | src/components/Pagination/LLM.txt | Paginação "Mostrando X–Y de Z" com anterior/próximo |
+| Popover | src/components/Popover/LLM.txt | @deprecated — alias 1:1 de DropdownMenu, só código legado |
+| Sidebar | src/components/Sidebar/LLM.txt | Navegação lateral fixa 240px + SidebarFooter + seções default |
+| Skeleton | src/components/Skeleton/LLM.txt | Placeholder de carregamento text/rect/circle, motion-safe |
+| Stepper | src/components/Stepper/LLM.txt | Indicador de etapas de fluxo linear (current 0-based) |
+| SubNav | src/components/SubNav/LLM.txt | Sub-navegação entre rotas com underline Brasa e contadores |
+| Table | src/components/Table/LLM.txt | Tabela densa declarativa com EmptyState e renderActions |
+| Tabs | src/components/Tabs/LLM.txt | Troca de conteúdo in-page (tablist) com underline e forceMount |
+| Toast | src/components/Toast/LLM.txt | Feedback de escrita via ToastProvider/useToast; danger persiste |
+| Tooltip | src/components/Tooltip/LLM.txt | Dica flutuante composicional (Radix), única API stock exposta |
+
+## Exports utilitários do barrel (src/index.ts)
+Tema web:
+- ThemeProvider, useTheme, getThemeInitScript
+- Tipos: Theme, ThemeContextValue, ThemeProviderProps
+Tema React Native:
+- ThemeProviderRN, useThemeRN (alias de useTheme do módulo RN)
+- Tipos: ThemeProviderRNProps, StorageAdapter, RNThemeContextValue
+- Temas RN prontos: brasaTheme, leelaTheme
+Geração de tokens:
+- generateCSS, generateRNTheme, collectRefs, resolvePath, flattenTokens
+- Tipos: TokenRecord, FlatTokens
+Utilidades:
+- cn (merge de classes)
+- buttonVariants, badgeVariants, toastVariants (cva dos respectivos componentes)
+- DEFAULT_SIDEBAR_SECTIONS, sidebarNavIcon (Sidebar)
+- DEFAULT_TOAST_DURATION, useToast (Toast)
+
+## Instrução para o modelo (colar no system prompt)
+Antes de gerar qualquer tela com @leela/design-system, consulte o LLM.txt do componente que vai usar. Use apenas componentes, props e valores listados nos contratos. Nunca aplique cor, espaço, raio ou duração via literal; use somente tokens var(--*) do design system. Nunca use o modificador dark:; o tema é resolvido por data-theme (brasa | leela).

@@ -1,0 +1,61 @@
+# Input — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Input
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Input
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Input, type InputProps } from '@leela/design-system'
+
+## Quando usar
+Campo de texto de formulário com label e mensagem de erro integrados (casca própria do DS sobre o primitivo). Estados: default, hover, focus (ring), invalid (errorMessage) e disabled.
+
+## Quando NÃO usar
+Não use para texto longo multilinha (não há Textarea no DS; ConfirmModal embute a própria textarea de motivo). Não use para busca com dropdown de resultados nem selects — componha com outros componentes.
+
+## Props válidas
+- errorMessage: string   (default: undefined) — mostra erro abaixo do campo e seta aria-invalid
+- label: string   (default: undefined) — label visível acima do campo
+- wrapperClassName: string   (default: undefined) — classe extra do wrapper flex
+- id: string   (default: undefined) — necessário para htmlFor do label e para o aria-describedby do erro
+- disabled: boolean   (default: undefined)
+- ...todas as props nativas de React.InputHTMLAttributes<HTMLInputElement> (value, onChange, placeholder, type, etc.)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --input-height
+- --input-px
+- --input-radius
+- --input-font-size
+- --input-border-width
+- --surface-raised
+- --text-primary
+- --text-danger
+- --border-danger
+- --font-size-sm
+- --font-weight-semibold
+- --motion-duration-fast / --motion-easing-default
+Aliases shadcn->brasa usados: border-input (= border-strong), placeholder:text-muted-foreground (= text-tertiary), ring-ring (= border-focus).
+
+## Proibido (do/don't)
+DON'T: props variant, size, error (boolean), helperText — NÃO existem; o erro é via errorMessage (string).
+DON'T: hex, rgb, px, rem em style inline.
+DO: passe sempre id junto com errorMessage — sem id o erro não é associado via aria-describedby; para uso inline compacto sem label visível, use aria-label.
+
+## Exemplo mínimo (válido, copiável)
+<Input id="nome" label="Nome do evento" placeholder="Corrida da Serra" />
+
+## Exemplo completo (válido, copiável)
+<Input
+  id="email"
+  label="E-mail"
+  type="email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  errorMessage={emailInvalido ? 'Informe um e-mail válido.' : undefined}
+  disabled={enviando}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Input apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

@@ -1,0 +1,69 @@
+# Toast — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Toast (+ ToastProvider / useToast)
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Toast
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Toast, toastVariants, ToastProvider, useToast, DEFAULT_TOAST_DURATION, type ToastProps, type ToastVariant, type ToastProviderProps, type ToastOptions, type ToastContextValue } from '@leela/design-system'
+
+## Quando usar
+Feedback de ação de escrita (salvou, excluiu, falhou). Uso normal: envolver a app com <ToastProvider> e disparar via useToast().toast({...}). Auto-dismiss em 4s; variant danger persiste até dismiss manual e usa role="alert".
+
+## Quando NÃO usar
+Não use para erros de validação de campo (Input errorMessage) nem para confirmações que exigem decisão (ConfirmModal). Raramente renderize <Toast> direto — a fila do ToastProvider é o caminho padrão.
+
+## Props válidas
+Toast:
+- title: string   (obrigatório)
+- description: string | undefined   (default: undefined)
+- variant: 'success' | 'danger' | 'warning' | 'info' (ToastVariant)   (default: 'info')
+- onDismiss: () => void   (default: undefined) — renderiza o botão fechar
+- className: string   (default: undefined)
+ToastProvider:
+- children: React.ReactNode   (obrigatório)
+- viewportClassName: string   (default: undefined)
+useToast(): ToastContextValue = { toast: (options: ToastOptions) => string; dismiss: (id: string) => void }
+ToastOptions = { title: string; description?: string; variant?: ToastVariant; duration?: number } — duration sobrescreve os 4000ms padrão; ignorado em danger (persiste).
+DEFAULT_TOAST_DURATION = 4000
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --toast-width
+- --toast-border-left
+- --feedback-success / --feedback-danger / --feedback-warning / --feedback-info
+- --spacing-1 / --spacing-3 / --spacing-4 / --spacing-6 / --spacing-8
+- --font-size-base / --font-size-sm
+- --font-weight-semibold
+- --text-primary / --text-secondary
+- --radius-sm
+- --motion-duration-fast
+Aliases shadcn->brasa usados: bg-popover (= surface-overlay), border-border (= border-default), shadow-elev-2, bg-accent/text-accent-foreground, ring-ring.
+
+## Proibido (do/don't)
+DON'T: variant="error" — o nome é danger; o enum é success|danger|warning|info.
+DON'T: toast.success(...) / toast.error(...) estilo sonner — a API é toast({ title, variant }).
+DON'T: passar duration esperando efeito em danger — danger persiste até dismiss manual por regra.
+DON'T: hex, rgb, px, rem em style inline.
+DO: chame useToast somente dentro de <ToastProvider> (fora dele lança erro); use o id retornado por toast() para dismiss programático.
+
+## Exemplo mínimo (válido, copiável)
+const { toast } = useToast();
+toast({ title: 'Evento salvo', variant: 'success' });
+
+## Exemplo completo (válido, copiável)
+<ToastProvider>
+  <App />
+</ToastProvider>
+// em um componente:
+const { toast, dismiss } = useToast();
+const id = toast({
+  title: 'Falha ao salvar',
+  description: 'Verifique a conexão e tente novamente.',
+  variant: 'danger',
+});
+// depois: dismiss(id);
+
+## Instrução para o modelo (colar no system prompt)
+Use os componentes Toast/ToastProvider e o hook useToast apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

@@ -1,0 +1,46 @@
+# AppShell — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: AppShell
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/AppShell
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { AppShell, type AppShellProps } from '@leela/design-system'
+
+## Quando usar
+Composição raiz de layout do painel: Sidebar fixa à esquerda + área principal (main landmark) com PageHeader, SubNav e conteúdo. Uma por página.
+
+## Quando NÃO usar
+Não use aninhado dentro de outro AppShell nem para layouts sem sidebar (nesse caso monte o layout direto com tokens de superfície).
+
+## Props válidas
+- sidebar: React.ReactNode   (obrigatório) — normalmente <Sidebar sections={...} footer={...} />
+- children: React.ReactNode   (obrigatório) — conteúdo principal (PageHeader, SubNav, página)
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --surface-base
+
+## Proibido (do/don't)
+DON'T: props header, footer, nav — NÃO existem; só sidebar e children.
+DON'T: renderizar outro <main> dentro de children (o AppShell já fornece o main landmark).
+DON'T: hex, rgb, px, rem em style inline.
+DO: passe o Sidebar do DS na prop sidebar; empilhe PageHeader e SubNav como primeiros filhos.
+
+## Exemplo mínimo (válido, copiável)
+<AppShell sidebar={<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />}>
+  <p>Conteúdo</p>
+</AppShell>
+
+## Exemplo completo (válido, copiável)
+<AppShell sidebar={<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} footer={<SidebarFooter name="Maria" />} />}>
+  <PageHeader title="Visão Geral" />
+  <SubNav tabs={tabs} />
+  <div className="flex-1 overflow-y-auto p-[var(--spacing-6)]">{conteudo}</div>
+</AppShell>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente AppShell apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

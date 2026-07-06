@@ -1,0 +1,56 @@
+# SubNav — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: SubNav
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/SubNav
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { SubNav, type SubNavProps, type SubNavTab } from '@leela/design-system'
+
+## Quando usar
+Barra de sub-navegação entre ROTAS de uma seção (nav landmark + links com aria-current="page"). Tab ativa ganha underline Brasa 2px; contador opcional em pill.
+
+## Quando NÃO usar
+Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tablist ARIA). SubNav é navegação entre rotas, não tablist.
+
+## Props válidas
+- tabs: SubNavTab[]   (obrigatório) — SubNavTab = { id: string; label: string; href?: string; count?: number; active?: boolean; onClick?: () => void }
+- 'aria-label': string   (default: 'Navegação de seções')
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --surface-raised / --surface-base
+- --border-subtle / --border-brand / --border-focus
+- --subnav-px / --subnav-height / --subnav-underline
+- --subnav-pill-height / --subnav-pill-min-width / --subnav-pill-radius / --subnav-pill-font-size
+- --spacing-1 / --spacing-2 / --spacing-3
+- --font-size-base
+- --font-weight-regular / --font-weight-semibold
+- --text-primary / --text-secondary
+- --radius-sm
+- --motion-duration-fast
+
+## Proibido (do/don't)
+DON'T: props value/onValueChange/defaultTab — NÃO existem aqui (isso é Tabs); o estado ativo vem de tab.active.
+DON'T: content dentro de SubNavTab — SubNav não renderiza painéis, só a barra.
+DON'T: hex, rgb, px, rem em style inline.
+DO: marque exatamente uma tab com active: true; use href para navegação real e onClick para SPAs.
+
+## Exemplo mínimo (válido, copiável)
+<SubNav tabs={[{ id: 'geral', label: 'Geral', active: true }, { id: 'inscritos', label: 'Inscritos' }]} />
+
+## Exemplo completo (válido, copiável)
+<SubNav
+  aria-label="Seções do evento"
+  tabs={[
+    { id: 'geral', label: 'Geral', href: '/evento/1', active: true },
+    { id: 'inscritos', label: 'Inscritos', href: '/evento/1/inscritos', count: 128 },
+    { id: 'financeiro', label: 'Financeiro', href: '/evento/1/financeiro' },
+  ]}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente SubNav apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

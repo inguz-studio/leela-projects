@@ -1,0 +1,46 @@
+# Avatar — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Avatar
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Avatar
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Avatar, type AvatarProps } from '@leela/design-system'
+
+## Quando usar
+Representação de usuário em células de Table, rodapé de Sidebar (via SidebarFooter) e PageHeader. Com imagem quebrada ou ausente cai automaticamente para iniciais sobre gradiente determinístico por nome.
+
+## Quando NÃO usar
+Não use para ícones decorativos ou logos de marca (não é um contêiner genérico de imagem). Para placeholder de carregamento circular, use Skeleton variant="circle".
+
+## Props válidas
+- name: string   (obrigatório) — deriva iniciais, gradiente e aria-label
+- src: string   (default: undefined) — URL da imagem; fallback para iniciais em erro/ausência
+- vip: boolean   (default: false) — ring dourado de destaque (action-primary)
+- size: 'sm' | 'md' | 'lg'   (default: 'md') — 32px | 40px | 48px
+- ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> EXCETO children (Omit<..., 'children'>)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --avatar-radius
+- --avatar-size-sm / --avatar-size-md / --avatar-size-lg
+- --font-size-xs / --font-size-sm / --font-size-base
+- --action-primary / --action-primary-fg / --action-primary-pressed
+Alias usado: ring-offset-background (= surface-base) no ring VIP.
+
+## Proibido (do/don't)
+DON'T: passar children (o tipo omite children; o conteúdo é gerado por name/src).
+DON'T: size="xs" ou size="xl" — só existem sm|md|lg.
+DON'T: subcomponentes AvatarImage/AvatarFallback — não existem; a engine de imagem é interna (não é Radix Avatar).
+DON'T: hex, rgb, px, rem em style inline.
+DO: sempre passe name (obrigatório e usado como aria-label); use vip apenas para o estado VIP real do usuário.
+
+## Exemplo mínimo (válido, copiável)
+<Avatar name="Maria Silva" />
+
+## Exemplo completo (válido, copiável)
+<Avatar name="Maria Silva" src="https://cdn.leela.app/u/maria.jpg" size="lg" vip />
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Avatar apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

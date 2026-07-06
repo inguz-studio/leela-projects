@@ -1,0 +1,57 @@
+# CardDesafio — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: CardDesafio
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/CardDesafio
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { CardDesafio, type CardDesafioProps } from '@leela/design-system'
+
+## Quando usar
+Card de desafio gameficado com barra de progresso (Vitória/feedback-success) e porcentagem; a 100% o card ganha glow de marca (elevation-brand). Progressbar acessível (role, aria-valuenow/min/max).
+
+## Quando NÃO usar
+Não use para eventos (CardEvento) nem como contêiner genérico (Card). Não é interativo: não há href/onClick — envolva em link externo se precisar navegar.
+
+## Props válidas
+- title: string   (obrigatório)
+- progress: number   (obrigatório) — 0 a 100; valores fora da faixa são grampeados e arredondados
+- meta: React.ReactNode   (default: undefined) — prazo, recompensa, participantes
+- icon: React.ReactNode   (default: undefined) — ícone em text-brand
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --surface-raised / --surface-overlay
+- --card-radius
+- --elevation-brand (glow quando progress >= 100)
+- --icon-size
+- --text-brand / --text-primary / --text-secondary / --text-success
+- --spacing-1 / --spacing-2 / --spacing-3 / --spacing-4
+- --font-size-md / --font-size-sm
+- --font-weight-semibold
+- --radius-pill
+- --feedback-success
+- --motion-duration-normal
+
+## Proibido (do/don't)
+DON'T: props onClick, href, variant, color — NÃO existem.
+DON'T: progress como string ("80%") — é number 0-100.
+DON'T: hex, rgb, px, rem em style inline; a cor da barra é fixa em feedback-success por contrato.
+DO: passe progress cru do backend (o clamp 0-100 é interno); use meta para prazo/recompensa.
+
+## Exemplo mínimo (válido, copiável)
+<CardDesafio title="Desafio 100K do mês" progress={62} />
+
+## Exemplo completo (válido, copiável)
+<CardDesafio
+  title="Desafio 100K do mês"
+  progress={progresso}
+  icon={<Trophy aria-hidden />}
+  meta={<><span>Até 31/07</span><span>324 participantes</span></>}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente CardDesafio apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

@@ -1,0 +1,57 @@
+# Pagination — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Pagination
+version: 0.0.1
+generated_at: "2026-07-05"
+source: src/components/Pagination
+verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
+
+## Import canônico
+import { Pagination, type PaginationProps } from '@leela/design-system'
+
+## Quando usar
+Controle de paginação para listas densas (DoD Tela: listas com 50+ itens). Mostra "Mostrando X–Y de Z", página atual e botões anterior/próximo.
+
+## Quando NÃO usar
+Não use para carrosséis nem para o Stepper de fluxo (etapas de checkout usam Stepper). Sem itens suficientes para paginar, omita o componente.
+
+## Props válidas
+- total: number   (obrigatório) — total de itens
+- page: number   (obrigatório) — página atual, 1-based
+- pageSize: number   (obrigatório)
+- onPageChange: (page: number) => void   (obrigatório)
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --btn-height-sm
+- --radius-sm
+- --font-size-base / --font-size-sm
+- --font-weight-semibold
+- --text-primary / --text-secondary / --text-tertiary / --text-disabled
+- --action-ghost-hover
+- --surface-overlay
+- --border-focus
+- --spacing-2 / --spacing-3 / --spacing-4 / --spacing-5
+- --motion-duration-fast
+
+## Proibido (do/don't)
+DON'T: props totalPages, currentPage, siblingCount, showFirstLast — NÃO existem; o cálculo de páginas é interno a partir de total/pageSize.
+DON'T: page 0-based — a primeira página é 1.
+DON'T: hex, rgb, px, rem em style inline.
+DO: guarde page no estado do consumidor e atualize em onPageChange; os botões já desabilitam nas bordas.
+
+## Exemplo mínimo (válido, copiável)
+<Pagination total={128} page={pagina} pageSize={20} onPageChange={setPagina} />
+
+## Exemplo completo (válido, copiável)
+<Pagination
+  total={inscritos.length}
+  page={pagina}
+  pageSize={50}
+  onPageChange={(p) => setPagina(p)}
+  className="border-t border-[color:var(--border-subtle)]"
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Pagination apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.
