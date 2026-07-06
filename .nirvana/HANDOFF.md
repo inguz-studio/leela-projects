@@ -4,6 +4,9 @@
 **Delta desde os 90%:** Lote Fidelidade T1-T6 COMMITADOS E PUSHED (f611082..16ac386 — inclui as 2 queixas do Vitor: sidebar T2, tabela T6). Agente Fable interrompido pelo Vitor no T7; **WIP de 51 arquivos no worktree** (varredura Clubs×Clubes + minors nas telas de clubes). Gates finais NÃO rodaram.
 **AGORA:** finalizador do T7 + gates despachado em **OPUS 4.8** (decisão Vitor: concluir em Opus). Reset Fable ~03:50 America/Sao_Paulo. Pós-reset ou em Opus: QA vivo → DS-Forms & UX → firebase-admin → Onda 2 E04.
 
+## 🔁 RETOMADA PÓS-CRASH DO TERMINAL (2026-07-06, ~11:16)
+Terminal morreu por exaustão de recursos (erros de fork 0xC000012D às 11:05, timeout do `_fid_shots.mjs` às 11:10). Inventário na retomada: **T7 COMMITADO pelo finalizador (58a049a, árvore limpa, 0 WIP)** — inclui docs.mdx+LLM.txt dos 6 componentes novos, minors m2..m6 e PageHeader da Directive T6. **Gates NÃO rodaram** (suíte/tsc/ESLint/QA visual — o crash pegou o gate visual no meio). 58a049a pushed nesta retomada. **EM VOO: gate Fidelidade redespachado em OPUS 4.8** (suíte em blocos + tsc + ESLint no-hardcoded + QA visual vivo 1440×900 e 390×844). Fila inalterada após o gate: QA vivo → DS-Forms & UX → firebase-admin → Onda 2 E04.
+
 ## (histórico) CHECKPOINT 90% DE COTA FABLE (2026-07-06, ~8% restante)
 **EM VOO (único consumidor de fundo):** Lote Fidelidade (LEELA-DS-FID T1-T7) em Fable — brief `leela-ds-lote-fidelidade-enriched.md`. Commits atômicos por task; se morrer, WIP fica no worktree — retomar por despacho fresco com `git status` + o brief. **Despachos NOVOS em Fable: SUSPENSOS** até reset da cota (~03:50 America/Sao_Paulo).
 **Fable restante reservado para:** (1) receber e gatear o retorno do Fidelidade (julgamento do maestro), (2) o passe de handoff a 97%. TODO o resto vai em **Opus 4.8** (roteamento calibrado, WIKI §3): QA ao vivo pós-Fidelidade, lote DS-Forms & UX, lote firebase-admin (~13 módulos — fix mecânico já validado 2×).
