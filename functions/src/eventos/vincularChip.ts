@@ -29,6 +29,13 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+// Estáticos do Firestore via import MODULAR (não `admin.firestore.FieldValue`):
+// o Functions Emulator (firebase-tools ≥15) intercepta o módulo firebase-admin
+// com um Proxy cujo `get` devolve `firestore.bind(target)` — e `.bind()` cria
+// uma função NOVA sem as propriedades estáticas (Timestamp/FieldValue ficam
+// undefined SÓ dentro do runtime emulado). O import modular não passa pelo
+// proxy e funciona igual em produção. (Mesmo fix do 73865e0 no dashboard.)
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -130,7 +137,7 @@ export async function vincularChipCore(
 
     const ocupante = ocupantesSnap.docs[0] ?? null;
     const vinculo = classificarVinculoChip(ocupante?.id ?? null, inscritoId);
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
 
     if (vinculo.tipo === 'ja_do_inscrito') {
       return { ok: true, chip, jaVinculado: true }; // idempotente — sem escrita

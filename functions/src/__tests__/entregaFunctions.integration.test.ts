@@ -16,6 +16,15 @@
  *   - Rules: cliente NÃO cria inscrito com chip preenchido nem toca
  *     chipNumero no update (senão o conflito RN-206 seria contornável)
  *
+ * Regressão B1 (QA leela-build-2d6ee98d): `vincularChip` quebrava DENTRO do
+ * Functions Emulator com `admin.firestore.FieldValue` undefined (Proxy do
+ * firebase-tools ≥15 — ver comentário no import modular de vincularChip.ts).
+ * Este suite roda o core IN-PROCESS (o Proxy não existe aqui), então o teste
+ * do vínculo normal afirma que `atualizadoEm` materializa como Timestamp real
+ * — se o serverTimestamp() do import modular regredir, falha aqui; o caminho
+ * proxiado do emulador é coberto pelo probe HTTP do preview (RN-206 via
+ * callable, não 500).
+ *
  * Pré-requisito: Firestore Emulator (8080) via emulators:exec.
  */
 import {
@@ -188,6 +197,9 @@ describe('vincularChipCore — vínculo, conflito e reatribuição (RN-206)', ()
     expect(res).toEqual({ ok: true, chip: 'CHIP-8891' });
     const snap = await inscritoRef('insc-ana').get();
     expect(snap.get('chipNumero')).toBe('CHIP-8891');
+    // Regressão B1: serverTimestamp() do import modular firebase-admin/firestore
+    // precisa materializar um Timestamp real no doc (não undefined/erro).
+    expect(snap.get('atualizadoEm')).toBeInstanceOf(admin.firestore.Timestamp);
   });
 
   it('mesmo chip no MESMO inscrito é idempotente (jaVinculado)', async () => {
