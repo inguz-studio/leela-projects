@@ -116,6 +116,8 @@ interface EventoExtra {
   capacidade: number;
   receitaConfirmada: number;
   qtdInscritos: number;
+  /** Capa 16/10 do card (path local em apps/painel/public/seed-images/). */
+  imagemUrl: string;
 }
 
 const EVENTOS_EXTRA: readonly EventoExtra[] = [
@@ -131,6 +133,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 400,
     receitaConfirmada: 23480,
     qtdInscritos: 90,
+    imagemUrl: '/seed-images/corrida-rua.jpg',
   },
   {
     // Publicado ESGOTADO: 60/60 → ocupação 100% ≥ LIMIAR_ESGOTANDO →
@@ -145,6 +148,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 60,
     receitaConfirmada: 8940,
     qtdInscritos: 60,
+    imagemUrl: '/seed-images/corrida-noturna.jpg',
   },
   {
     // Rascunho com prova a ~10 dias → alerta warn "ainda não foi publicado"
@@ -158,6 +162,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 80,
     receitaConfirmada: 0,
     qtdInscritos: 0,
+    imagemUrl: '/seed-images/trilha.jpg',
   },
   {
     // Encerrado (histórico completo: todos com kit entregue + check-in)
@@ -171,6 +176,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 120,
     receitaConfirmada: 5200,
     qtdInscritos: 40,
+    imagemUrl: '/seed-images/largada-rua.jpg',
   },
   {
     // Ciclismo (A2): modalidade "MTB" → thumb 'ciclismo' (Bike) na Visão geral.
@@ -185,6 +191,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 300,
     receitaConfirmada: 34800,
     qtdInscritos: 120,
+    imagemUrl: '/seed-images/mtb-ciclismo.jpg',
   },
   {
     // Wellness (A2): "Bem-estar/Yoga" → thumb 'yoga' (Flower2) na Visão geral.
@@ -199,6 +206,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     capacidade: 60,
     receitaConfirmada: 9240,
     qtdInscritos: 28,
+    imagemUrl: '/seed-images/yoga-retiro.jpg',
   },
 ];
 
@@ -221,12 +229,40 @@ async function seedEventosExtra(db: Db, agora: Date): Promise<void> {
       capacidade: e.capacidade,
       qtdInscritos: e.qtdInscritos,
       receitaConfirmada: e.receitaConfirmada,
+      imagemUrl: e.imagemUrl,
     });
   }
   console.log(
     '[seed-extra] eventos: +6 (publicado · publicado ESGOTADO · rascunho prova ' +
-      'próxima · encerrado · MTB/ciclismo · retiro/wellness)'
+      'próxima · encerrado · MTB/ciclismo · retiro/wellness) — todos com capa'
   );
+}
+
+// ---------------------------------------------------------------------------
+// 1b. Capas dos eventos CANÔNICOS (Meia/Maratona) — merge aditivo por cima
+//     do seed read-only (functions/src/seed/eventos.seed.ts não muda). Só o
+//     campo `imagemUrl` entra; nada mais é tocado. Preview-only.
+// ---------------------------------------------------------------------------
+
+const CAPAS_CANONICAS: readonly { id: string; imagemUrl: string }[] = [
+  { id: MEIA_FLORIPA_ID, imagemUrl: '/seed-images/meia-maratona.jpg' },
+  { id: 'maratona-floripa-2027', imagemUrl: '/seed-images/maratona.jpg' },
+];
+
+async function seedCapasCanonicas(db: Db): Promise<void> {
+  for (const c of CAPAS_CANONICAS) {
+    await db
+      .collection('eventos')
+      .doc(c.id)
+      .set(
+        {
+          imagemUrl: c.imagemUrl,
+          atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+  }
+  console.log('[seed-extra] capas canônicas: Meia Maratona + Maratona 2027');
 }
 
 // ---------------------------------------------------------------------------
@@ -962,6 +998,7 @@ export async function seedPreviewExtra(
   assertEmulatorOnly('seedPreviewExtra');
 
   await seedEventosExtra(db, agora);
+  await seedCapasCanonicas(db);
   await seedKitsExtra(db);
   await seedInscritosExtra(db, agora);
   await seedEntregasMeiaFloripa(db, agora);

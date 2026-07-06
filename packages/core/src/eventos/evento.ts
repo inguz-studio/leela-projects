@@ -89,6 +89,13 @@ export interface Evento {
   usaChip: boolean;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
+  /**
+   * URL da imagem de capa do evento (media 16/10 do card). OPCIONAL:
+   * eventos sem imagem caem no gradiente semantic do CardEvento (fallback).
+   * `parseEvento` normaliza para `string` não-vazia ou `undefined` (nunca
+   * string vazia) — a UI decide entre `<img>` e gradiente por presença.
+   */
+  imagemUrl?: string;
   /** Agregado ∑ — mantido por Cloud Function */
   qtdInscritos: number;
   /** Agregado ∑ financeiro confirmado — mantido por Cloud Function */
@@ -186,6 +193,14 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
       ? capacidadeRaw
       : null;
 
+  // Imagem de capa: string não-vazia ou omitida (nunca string vazia → a UI
+  // usa presença para escolher entre <img> e o gradiente de fallback).
+  const imagemUrlRaw = data['imagemUrl'];
+  const imagemUrl =
+    typeof imagemUrlRaw === 'string' && imagemUrlRaw.length > 0
+      ? imagemUrlRaw
+      : undefined;
+
   return {
     id,
     tenantId,
@@ -203,5 +218,7 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     qtdInscritos: typeof qtdInscritos === 'number' ? qtdInscritos : 0,
     receitaConfirmada: typeof receitaConfirmada === 'number' ? receitaConfirmada : 0,
     capacidade,
+    // Só entra quando presente (exactOptionalPropertyTypes: nunca `undefined`).
+    ...(imagemUrl !== undefined ? { imagemUrl } : {}),
   };
 }

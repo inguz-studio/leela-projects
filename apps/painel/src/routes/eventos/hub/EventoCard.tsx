@@ -26,6 +26,16 @@ export function EventoCard({ evento, onAbrir }: EventoCardProps): JSX.Element {
     <CardEvento
       title={evento.nome}
       onClick={() => onAbrir(evento.slug)}
+      media={
+        evento.imagemUrl ? (
+          <img
+            src={evento.imagemUrl}
+            alt={evento.nome}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : undefined
+      }
       modality={
         evento.modalidades.length > 0 ? (
           <Badge variant="neutro">{evento.modalidades[0]}</Badge>
