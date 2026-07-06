@@ -20,6 +20,7 @@
 
 - **Strava** — inteiro para evolução (registro OAuth deixou de ser urgente); V1.5 já nasce com a seção no perfil em "em desenvolvimento".
 - **Domínio público + e-mails** (transacional e suporte) — pré-go-live.
+- **Ação Comunicar do card Próximo evento — aguarda superfície de comunicação** *(anexo Fidelidade A3, 2026-07-06)*. O mockup WEB-APPV2 do card "Próximo evento" traz as quick-actions `Ver inscritos · Comunicar · Check-in`. Inventário das ~36 telas: existe comunicação SÓ no escopo de clube (`/clubes/:slug/comunicacao` — editor de comunicados), NÃO no escopo de evento (as rotas `/eventos/:slug/*` cobrem inscritos, entrega/check-in, kits, financeiro — sem comunicar). Como o card é de um EVENTO (não de um clube), não há destino próprio para "Comunicar" e apontá-lo para a comunicação de clube seria semanticamente errado. Decisão: NÃO inventar tela — a implementação mantém `Ver inscritos · Check-in · Gerenciar` (impl atual, `Countdown.tsx`). **Quando você definir se V1/V1.5 terá comunicação por evento**, o middle-action vira "Comunicar" apontando para ela e a ordem alinha ao mockup. Até lá, divergência consciente e registrada.
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
