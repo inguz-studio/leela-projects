@@ -23,7 +23,6 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **Higiene · LOTE FIDELIDADE em voo (LEELA-DS-FID T1-T7)** — spacing tokens do mockup, sidebar métricas exatas + brand slot, Visão Geral recomposta (toolbar ⌘K, KPIs c/ sparkline, event-rows, TABELA de últimas inscrições, countdown, alertas c/ ícone), revisão atômica shadcn, fecha os 6 minors do QA → no retorno: gate maestro + rebuild + QA ao vivo (Opus 4.8, roteamento calibrado) + entrega visual
 - [ ] **O2 · E04-slim · Config & Vendas** — abre APÓS showroom (Onda 2 abre aqui; brief onda2-E04-lotes.md)
 
 
@@ -34,6 +33,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **Higiene · LOTE FIDELIDADE: GATE PASS 2026-07-06 (finalizador Opus 4.8, pós-crash)** — T1-T7 (`f611082..58a049a`): tokens de espaçamento do mockup · sidebar métricas exatas + brand slot · toolbar ⌘K · KPI row (trend chips + badge risco + Sparkline) · event-rows com thumb por modalidade · TABELA 6 col + date-badge + countdown + alertas c/ ícone · revisão atômica shadcn + fecha m2..m6 · **tsc 0 · ESLint (no-hardcoded) 0 · suíte DS 836/836 em 4 blocos (0 regressão) · QA visual vivo 4 rotas vs mockup Be Hero (visão geral/eventos/clubs/plataforma) fiel** · 3 observações não-bloqueantes p/ maestro (sparkline sem dado de conversão no seed · label Gerenciar vs Comunicar no card próximo-evento fora de escopo · thumbs homogêneos pois seed só tem corrida) · relatório FID-GATE-REPORT.md
 - [x] **Higiene · SHOWROOM DS: GATE PASS 2026-07-06** — Storybook 25/25 componentes + showcase 5 páginas no AppShell (tema ao vivo) + LLM.txt anti-alucinação · auditoria interna APPROVE · 8a1e45e..da8227f
 - [x] **Higiene · Consolidação DS Lote B: GATE PASS 2026-07-06 (incl. GATE VISUAL)** — B1-B4 (ícones Lucide, sidebar fixa 240px, AppShell raiz zero-rota-sem-shell, SidebarFooter) · DS 564/564 · painel 446+17 em blocos · 4 screenshots aprovados vs mockup Be Hero pelo maestro · DoD item 18 restabelecido · bd55a8e..69439f0
 - [x] **Higiene · Consolidação DS Lote A: GATE PASS 2026-07-06** — A1-A11 (aliases shadcn→brasa, motion tokenizado, Button/Input/Badge/Skeleton/Separator/Breadcrumb/Toast/DropdownMenu/Card/Avatar/Modal/Tabs/Table shadcn stock brasa) · suíte DS 559/559 · matriz AA 49 pares × 2 temas · tsc+ESLint 0 · WIP órfão da sessão crashada 100% recuperado (A9-A11) · pushed até acfadb0
