@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Stepper.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Stepper
+
+Indicador de progresso de fluxo em etapas, com etapa atual 0-based.
+
+<Canvas of={Stories.Checkout} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Stepper"
+  snippet={`import { Stepper } from '@leela/design-system';\n\n<Stepper\n  steps={[\n    { id: 'dados', label: 'Dados' },\n    { id: 'kits', label: 'Kits' },\n    { id: 'pagamento', label: 'Pagamento' },\n  ]}\n  current={1}\n/>`}
+  contract={contract}
+/>

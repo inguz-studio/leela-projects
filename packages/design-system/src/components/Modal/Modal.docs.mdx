@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Modal.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Modal
+
+Diálogo modal controlado com três larguras e slot de rodapé; ConfirmModal cobre confirmações destrutivas com consequências explícitas.
+
+<Canvas of={Stories.Md} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Modal"
+  snippet={`import { Modal, Button } from '@leela/design-system';\n\nconst [open, setOpen] = useState(false);\n\n<Modal\n  open={open}\n  onOpenChange={setOpen}\n  title="Editar evento"\n  size="md"\n  footer={<Button variant="primary" onClick={salvar}>Salvar</Button>}\n>\n  {formulario}\n</Modal>`}
+  contract={contract}
+/>

@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Shell.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# AppShell
+
+Casca da aplicação: sidebar fixa de 240px + área de conteúdo com scroll próprio, ocupando a altura inteira da viewport.
+
+<Canvas of={Stories.Completo} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="AppShell"
+  snippet={`import { AppShell, Sidebar, DEFAULT_SIDEBAR_SECTIONS } from '@leela/design-system';\n\n<AppShell sidebar={<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />}>\n  {conteudoDaRota}\n</AppShell>`}
+  contract={contract}
+/>

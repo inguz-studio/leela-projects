@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './CardDesafio.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# CardDesafio
+
+Card de desafio gameficado com barra de progresso 0–100, ícone e metadados (prazo, recompensa, participantes).
+
+<Canvas of={Stories.EmAndamento} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="CardDesafio"
+  snippet={`import { CardDesafio } from '@leela/design-system';\n\n<CardDesafio title="Desafio 100km no mês" progress={62} />`}
+  contract={contract}
+/>

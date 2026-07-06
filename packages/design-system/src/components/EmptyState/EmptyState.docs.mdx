@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './EmptyState.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# EmptyState
+
+Estado vazio obrigatório em listas filtráveis, com ícone e ação de recuperação opcionais.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="EmptyState"
+  snippet={`import { EmptyState, Button } from '@leela/design-system';\n\n<EmptyState\n  title="Nenhum inscrito encontrado com os filtros aplicados"\n  description="Ajuste os filtros ou limpe a busca."\n  action={<Button variant="ghost">Limpar filtros</Button>}\n/>`}
+  contract={contract}
+/>

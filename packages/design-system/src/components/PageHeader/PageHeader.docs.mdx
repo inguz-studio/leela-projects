@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './PageHeader.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# PageHeader
+
+Cabeçalho de contexto de 96px com avatar, badges de status, metadados e slot de ações.
+
+<Canvas of={Stories.Completo} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="PageHeader"
+  snippet={`import { PageHeader } from '@leela/design-system';\n\n<PageHeader\n  title="Meia Maratona de Floripa"\n  subtitle="12 out 2026 · Florianópolis, SC"\n/>`}
+  contract={contract}
+/>

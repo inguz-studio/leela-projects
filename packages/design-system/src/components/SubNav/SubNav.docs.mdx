@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './SubNav.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# SubNav
+
+Sub-navegação entre rotas com underline Brasa de 2px na tab ativa e contadores em pill; para troca de conteúdo in-page, use Tabs.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="SubNav"
+  snippet={`import { SubNav } from '@leela/design-system';\n\n<SubNav\n  tabs={[\n    { id: 'visao', label: 'Visão geral', active: true },\n    { id: 'inscritos', label: 'Inscritos', count: 1284 },\n  ]}\n/>`}
+  contract={contract}
+/>

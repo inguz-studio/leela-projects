@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './DropdownMenu.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# DropdownMenu
+
+Menu de ações controlado ancorado a um trigger: teclado WAI-APG, item destrutivo em Vulcão e portal que escapa de qualquer overflow.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="DropdownMenu"
+  snippet={`import { DropdownMenu, Button } from '@leela/design-system';\n\nconst [open, setOpen] = useState(false);\n\n<DropdownMenu\n  open={open}\n  onOpenChange={setOpen}\n  trigger={<Button variant="secondary">Ações</Button>}\n  actions={[{ id: 'ver', label: 'Ver detalhes', onClick: verDetalhes }]}\n/>`}
+  contract={contract}
+/>

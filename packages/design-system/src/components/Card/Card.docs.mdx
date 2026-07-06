@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Card.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Card
+
+Contêiner genérico de superfície, composicional: CardHeader, CardTitle, CardDescription, CardContent e CardFooter.
+
+<Canvas of={Stories.Completo} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Card"
+  snippet={`import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@leela/design-system';\n\n<Card>\n  <CardHeader>\n    <CardTitle>Resumo do evento</CardTitle>\n    <CardDescription>Números consolidados até hoje.</CardDescription>\n  </CardHeader>\n  <CardContent>1.284 inscritos · 3 kits</CardContent>\n</Card>`}
+  contract={contract}
+/>

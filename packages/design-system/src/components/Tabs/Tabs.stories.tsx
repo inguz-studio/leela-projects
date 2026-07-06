@@ -4,7 +4,6 @@ import { Tabs } from './Tabs';
 const meta: Meta<typeof Tabs> = {
   title: 'Fluxo/Tabs',
   component: Tabs,
-  tags: ['autodocs'],
 };
 
 export default meta;

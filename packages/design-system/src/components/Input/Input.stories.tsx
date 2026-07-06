@@ -4,7 +4,6 @@ import { Input } from './Input';
 const meta: Meta<typeof Input> = {
   title: 'Átomos/Input',
   component: Input,
-  tags: ['autodocs'],
   args: { label: 'Nome do evento', placeholder: 'Meia Maratona de Floripa' },
 };
 

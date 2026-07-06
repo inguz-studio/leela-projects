@@ -41,7 +41,6 @@ const COLUMNS: TableColumn<Inscrito>[] = [
 const meta: Meta<typeof Table<Inscrito>> = {
   title: 'Organismos/Table densa',
   component: Table,
-  tags: ['autodocs'],
 };
 
 export default meta;

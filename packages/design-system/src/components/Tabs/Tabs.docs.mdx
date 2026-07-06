@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Tabs.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Tabs
+
+Troca de conteúdo in-page (tablist WAI-APG) com contadores opcionais; para navegação entre rotas, use SubNav.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Tabs"
+  snippet={`import { Tabs } from '@leela/design-system';\n\n<Tabs\n  tabs={[\n    { id: 'visao', label: 'Visão geral', content: <VisaoGeral /> },\n    { id: 'kits', label: 'Kits', count: 3, content: <Kits /> },\n  ]}\n/>`}
+  contract={contract}
+/>

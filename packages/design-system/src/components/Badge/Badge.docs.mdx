@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Badge.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Badge
+
+Selo de status compacto com seis variantes semânticas: brand, heroico, vulcão, vitória, alerta e neutro.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Badge"
+  snippet={`import { Badge } from '@leela/design-system';\n\n<Badge variant="vitoria">Publicado</Badge>`}
+  contract={contract}
+/>

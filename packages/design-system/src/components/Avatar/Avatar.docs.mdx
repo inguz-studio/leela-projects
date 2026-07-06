@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Avatar.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Avatar
+
+Avatar com iniciais derivadas do nome, imagem opcional com fallback automático e estado VIP com anel de marca.
+
+<Canvas of={Stories.Iniciais} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Avatar"
+  snippet={`import { Avatar } from '@leela/design-system';\n\n<Avatar name="Ana Souza" size="md" />`}
+  contract={contract}
+/>

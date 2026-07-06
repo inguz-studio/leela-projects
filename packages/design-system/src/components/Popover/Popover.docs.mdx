@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Popover.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Popover (descontinuado)
+
+Alias @deprecated de DropdownMenu, mantido só para compatibilidade da API pública do E01 — mesma API, mesmo comportamento. Em código novo, use DropdownMenu.
+
+<Canvas of={Stories.Deprecado} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Popover"
+  snippet={`// @deprecated — prefira DropdownMenu (mesma API)\nimport { DropdownMenu, Button } from '@leela/design-system';\n\n<DropdownMenu\n  open={open}\n  onOpenChange={setOpen}\n  trigger={<Button variant="secondary">Ações</Button>}\n  actions={[{ id: 'ver', label: 'Ver detalhes', onClick: verDetalhes }]}\n/>`}
+  contract={contract}
+/>

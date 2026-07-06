@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './CardEvento.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# CardEvento
+
+Card de evento com media 16/10 (imagem ou gradiente de fallback), badge de modalidade sobreposto e metadados.
+
+<Canvas of={Stories.GradientePadrao} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="CardEvento"
+  snippet={`import { CardEvento } from '@leela/design-system';\n\n<CardEvento\n  title="Meia Maratona de Floripa"\n  meta={<span>12 out 2026 · Florianópolis, SC</span>}\n/>`}
+  contract={contract}
+/>

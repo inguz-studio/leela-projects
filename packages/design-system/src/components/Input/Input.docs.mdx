@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Input.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Input
+
+Campo de texto com label, mensagem de erro abaixo do campo e aria-invalid automático.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Input"
+  snippet={`import { Input } from '@leela/design-system';\n\n<Input label="Nome do evento" placeholder="Ex.: Meia Maratona de Floripa" />`}
+  contract={contract}
+/>

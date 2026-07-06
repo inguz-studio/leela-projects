@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Skeleton.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Skeleton
+
+Placeholder de carregamento em três formas: linha de texto, retângulo e círculo.
+
+<Canvas of={Stories.Texto} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Skeleton"
+  snippet={`import { Skeleton } from '@leela/design-system';\n\n<Skeleton variant="text" />`}
+  contract={contract}
+/>

@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Sidebar.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Sidebar
+
+Navegação lateral fixa de 240px com seções rotuladas, item ativo, badges de contagem e rodapé componível (SidebarFooter).
+
+<Canvas of={Stories.Padrao} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Sidebar"
+  snippet={`import { Sidebar, DEFAULT_SIDEBAR_SECTIONS, SidebarFooter, Avatar } from '@leela/design-system';\n\n<Sidebar\n  sections={DEFAULT_SIDEBAR_SECTIONS}\n  footer={<SidebarFooter avatar={<Avatar size="sm" name={nome} />} name={nome} />}\n/>`}
+  contract={contract}
+/>

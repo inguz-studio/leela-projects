@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Button.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Button
+
+Botão de ação com quatro variantes (primary, secondary, ghost, destructive) e três tamanhos; asChild delega o render ao filho (ex.: Link).
+
+<Canvas of={Stories.Primary} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Button"
+  snippet={`import { Button } from '@leela/design-system';\n\n<Button variant="primary">Publicar evento</Button>`}
+  contract={contract}
+/>

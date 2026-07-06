@@ -4,7 +4,6 @@ import { Button } from './Button';
 const meta: Meta<typeof Button> = {
   title: 'Átomos/Button',
   component: Button,
-  tags: ['autodocs'],
   args: { children: 'Publicar evento', variant: 'primary', size: 'md' },
   argTypes: {
     variant: {

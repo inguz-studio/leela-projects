@@ -4,7 +4,6 @@ import { CardDesafio } from './CardDesafio';
 const meta: Meta<typeof CardDesafio> = {
   title: 'Cards/CardDesafio',
   component: CardDesafio,
-  tags: ['autodocs'],
   args: {
     title: 'Desafio 100km no mês',
     progress: 62,

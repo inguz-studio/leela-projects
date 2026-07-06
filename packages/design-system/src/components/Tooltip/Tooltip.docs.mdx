@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Tooltip.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Tooltip
+
+Dica flutuante acessível (Radix): abre em hover e foco de teclado, fecha em Esc, posiciona nos quatro lados.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Tooltip"
+  snippet={`import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, Button } from '@leela/design-system';\n\n<TooltipProvider>\n  <Tooltip>\n    <TooltipTrigger asChild>\n      <Button variant="secondary">Ação</Button>\n    </TooltipTrigger>\n    <TooltipContent>Dica contextual</TooltipContent>\n  </Tooltip>\n</TooltipProvider>`}
+  contract={contract}
+/>

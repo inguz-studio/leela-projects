@@ -5,7 +5,6 @@ import { Badge } from '../Badge';
 const meta: Meta<typeof CardEvento> = {
   title: 'Cards/CardEvento',
   component: CardEvento,
-  tags: ['autodocs'],
   args: {
     title: 'Meia Maratona de Floripa',
     modality: <Badge variant="brand">21K</Badge>,

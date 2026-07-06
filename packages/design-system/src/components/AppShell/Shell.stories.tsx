@@ -18,7 +18,6 @@ const SECTIONS: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
 const meta: Meta<typeof AppShell> = {
   title: 'Organismos/Shell',
   component: AppShell,
-  tags: ['autodocs'],
   parameters: { layout: 'fullscreen' },
 };
 

@@ -12,7 +12,6 @@ const CHECKOUT: StepperStep[] = [
 const meta: Meta<typeof Stepper> = {
   title: 'Fluxo/Stepper',
   component: Stepper,
-  tags: ['autodocs'],
   args: { steps: CHECKOUT, current: 2, 'aria-label': 'Checkout' },
 };
 

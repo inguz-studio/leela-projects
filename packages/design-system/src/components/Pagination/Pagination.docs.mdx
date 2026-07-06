@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Pagination.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Pagination
+
+Paginação de listas densas com contador "Mostrando X–Y de Z" e navegação anterior/próximo.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Pagination"
+  snippet={`import { Pagination } from '@leela/design-system';\n\n<Pagination total={87} page={page} pageSize={20} onPageChange={setPage} />`}
+  contract={contract}
+/>

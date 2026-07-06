@@ -4,7 +4,6 @@ import { Avatar } from './Avatar';
 const meta: Meta<typeof Avatar> = {
   title: 'Átomos/Avatar',
   component: Avatar,
-  tags: ['autodocs'],
   args: { name: 'Vitor Piagge', size: 'md' },
   argTypes: { size: { control: 'select', options: ['sm', 'md', 'lg'] } },
 };

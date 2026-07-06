@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Table.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Table
+
+Tabela densa com linha de 64px, caption acessível, estado vazio integrado e slot de ações por linha.
+
+<Canvas of={Stories.Densa} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Table"
+  snippet={`import { Table, type TableColumn } from '@leela/design-system';\n\nconst columns: TableColumn<Inscrito>[] = [\n  { key: 'nome', header: 'Nome' },\n  { key: 'kit', header: 'Kit' },\n];\n\n<Table\n  caption="Inscritos do evento"\n  columns={columns}\n  data={inscritos}\n  keyExtractor={(row) => row.id}\n/>`}
+  contract={contract}
+/>

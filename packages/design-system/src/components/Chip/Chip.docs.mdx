@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Chip.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Chip
+
+Filtro em pill com estado ativo (aria-pressed) e botão de remoção opcional via onRemove.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Chip"
+  snippet={`import { Chip } from '@leela/design-system';\n\n<Chip active>5K</Chip>`}
+  contract={contract}
+/>

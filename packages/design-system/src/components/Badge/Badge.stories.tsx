@@ -4,7 +4,6 @@ import { Badge } from './Badge';
 const meta: Meta<typeof Badge> = {
   title: 'Átomos/Badge',
   component: Badge,
-  tags: ['autodocs'],
   args: { children: 'Publicado', variant: 'vitoria' },
   argTypes: {
     variant: {

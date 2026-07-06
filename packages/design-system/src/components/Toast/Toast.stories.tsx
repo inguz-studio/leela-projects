@@ -6,7 +6,6 @@ import { Button } from '../Button';
 const meta: Meta<typeof Toast> = {
   title: 'Feedback/Toast',
   component: Toast,
-  tags: ['autodocs'],
   args: { title: 'Evento salvo', variant: 'success' },
   argTypes: {
     variant: { control: 'select', options: ['success', 'danger', 'warning', 'info'] },

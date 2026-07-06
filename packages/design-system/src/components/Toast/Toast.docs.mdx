@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Toast.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Toast
+
+Notificação transitória com variantes semânticas; ToastProvider + useToast gerenciam fila, duração e dismiss.
+
+<Canvas of={Stories.Success} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Toast"
+  snippet={`import { ToastProvider, useToast } from '@leela/design-system';\n\n// app raiz: <ToastProvider>{children}</ToastProvider>\nconst { toast } = useToast();\ntoast({ title: 'Evento salvo', variant: 'success' });`}
+  contract={contract}
+/>

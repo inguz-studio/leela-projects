@@ -4,7 +4,6 @@ import { Chip } from './Chip';
 const meta: Meta<typeof Chip> = {
   title: 'Átomos/Chip',
   component: Chip,
-  tags: ['autodocs'],
   args: { children: '5K', active: false },
 };
 

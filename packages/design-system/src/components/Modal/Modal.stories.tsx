@@ -8,7 +8,6 @@ import { Input } from '../Input';
 const meta: Meta<typeof Modal> = {
   title: 'Organismos/Modal',
   component: Modal,
-  tags: ['autodocs'],
 };
 
 export default meta;
