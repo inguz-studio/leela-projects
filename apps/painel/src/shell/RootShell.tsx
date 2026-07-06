@@ -9,8 +9,9 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AppShell, Sidebar } from '@leela/design-system';
+import { AppShell, Avatar, Sidebar, SidebarFooter } from '@leela/design-system';
 import { shellSidebarSections } from './sidebar';
+import { useShellSession } from './session';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -19,11 +20,21 @@ export interface RootShellProps {
 export function RootShell({ children }: RootShellProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
+  const { nome } = useShellSession();
 
   const sections = shellSidebarSections(location.pathname, (href) => navigate(href));
 
+  // Rodapé só com sessão nomeada — sem usuário hardcoded (B4).
+  const footer = nome ? (
+    <SidebarFooter
+      avatar={<Avatar size="sm" name={nome} />}
+      name={nome}
+      subtitle="Ver perfil"
+    />
+  ) : undefined;
+
   return (
-    <AppShell sidebar={<Sidebar sections={sections} />}>
+    <AppShell sidebar={<Sidebar sections={sections} footer={footer} />}>
       {/* Área principal: único contêiner de rolagem — a sidebar não rola junto. */}
       <div className="flex flex-col flex-1 overflow-y-auto">{children}</div>
     </AppShell>

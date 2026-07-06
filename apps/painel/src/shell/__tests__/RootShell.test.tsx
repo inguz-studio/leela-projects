@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { RootShell } from '../RootShell';
+
+// Sessão do rodapé (B4): usuário nomeado, sem Firebase real.
+vi.mock('@leela/api-client', () => ({
+  onSessionChange: (cb: (user: { uid: string; displayName: string | null } | null) => void) => {
+    cb({ uid: 'uid-marina', displayName: 'Marina Castelo' });
+    return () => {};
+  },
+}));
 
 // Smoke navegacional do Lote B3: a sidebar é SEMPRE visível (item 18 do DoD),
 // só o conteúdo troca; item ativo segue o pathname nas 4 áreas.
@@ -76,5 +84,12 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     renderAt('/');
     const svgs = nav().querySelectorAll('svg[aria-hidden="true"]');
     expect(svgs.length).toBe(8);
+  });
+
+  it('rodapé mostra avatar + nome da sessão (B4 — dados do consumidor)', () => {
+    renderAt('/');
+    const sidebar = nav();
+    expect(within(sidebar).getByText('Marina Castelo')).toBeInTheDocument();
+    expect(within(sidebar).getByText('Ver perfil')).toBeInTheDocument();
   });
 });

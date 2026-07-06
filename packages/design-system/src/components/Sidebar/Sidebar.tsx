@@ -48,6 +48,8 @@ export interface SidebarSection {
 
 export interface SidebarProps {
   sections: SidebarSection[];
+  /** Rodapé componível (ex.: `<SidebarFooter avatar={...} name={...} />`). */
+  footer?: React.ReactNode;
   className?: string;
 }
 
@@ -99,7 +101,7 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
 // ---------------------------------------------------------------------------
 
 const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
-  ({ sections, className }, ref) => {
+  ({ sections, footer, className }, ref) => {
     return (
       <nav
         ref={ref}
@@ -134,6 +136,9 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
             </div>
           ))}
         </div>
+
+        {/* Rodapé (avatar + nome — B4); dados vêm do consumidor */}
+        {footer}
       </nav>
     );
   },
