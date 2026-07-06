@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { Sidebar, DEFAULT_SIDEBAR_SECTIONS, type SidebarSection } from './Sidebar';
+import { SidebarBrand } from './SidebarBrand';
 import { SidebarFooter } from './SidebarFooter';
 import { Avatar } from '../Avatar';
 
@@ -11,12 +12,14 @@ const SECTIONS_ATIVAS: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section)
   ),
 }));
 
-/** Seções padrão com item ativo + badge de contagem em "Comunicação". */
+/** Seções padrão com item ativo + badges nas duas variantes do mockup:
+ *  Eventos = neutral (contagem operacional), Comunicação = danger (pendência). */
 const SECTIONS_COM_BADGE: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
   ...section,
   items: section.items.map((item) => {
-    if (item.id === 'eventos') return { ...item, active: true };
-    if (item.id === 'comunicacao') return { ...item, badge: 12 };
+    if (item.id === 'eventos')
+      return { ...item, active: true, badge: 3, badgeVariant: 'neutral' as const };
+    if (item.id === 'comunicacao') return { ...item, badge: 4 };
     return item;
   }),
 }));
@@ -34,9 +37,27 @@ export const Padrao: Story = {
   render: () => <Sidebar sections={SECTIONS_ATIVAS} />,
 };
 
-/** Item ativo (aria-current="page") + badge de contagem. */
+/** Item ativo (aria-current="page") + badges (Eventos neutral, Comunicação danger). */
 export const ComBadge: Story = {
   render: () => <Sidebar sections={SECTIONS_COM_BADGE} />,
+};
+
+/** Anatomia completa do mockup: brand slot (mark + sub) + nav + rodapé. */
+export const ComBrand: Story = {
+  render: () => (
+    <Sidebar
+      brand={<SidebarBrand mark="LEELA" sub="Painel do Organizador" />}
+      sections={SECTIONS_COM_BADGE}
+      footer={
+        <SidebarFooter
+          avatar={<Avatar size="sm" name="Marina Castelo" />}
+          name="Marina Castelo"
+          subtitle="Ver perfil"
+          onClick={() => undefined}
+        />
+      }
+    />
+  ),
 };
 
 /** Rodapé componível: avatar + nome + subtítulo, sem interação. */

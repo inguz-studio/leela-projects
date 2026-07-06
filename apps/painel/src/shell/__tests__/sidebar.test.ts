@@ -32,6 +32,21 @@ describe('shellSidebarSections', () => {
     expect(items.find((i) => i.id === 'financeiro')?.onClick).toBeUndefined();
   });
 
+  it('nav-badge de Eventos: contagem > 0 vira badge neutro (mockup)', () => {
+    const sections = shellSidebarSections('/', vi.fn(), 3);
+    const eventos = sections.flatMap((s) => s.items).find((i) => i.id === 'eventos');
+    expect(eventos?.badge).toBe(3);
+    expect(eventos?.badgeVariant).toBe('neutral');
+  });
+
+  it('sem contagem (null/0/undefined) não há badge — estado honesto', () => {
+    for (const contagem of [null, 0, undefined]) {
+      const sections = shellSidebarSections('/', vi.fn(), contagem);
+      const eventos = sections.flatMap((s) => s.items).find((i) => i.id === 'eventos');
+      expect(eventos?.badge, `contagem=${String(contagem)}`).toBeUndefined();
+    }
+  });
+
   it('/plataforma: nav própria com 4 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);

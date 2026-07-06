@@ -8,9 +8,20 @@
  * FIXA em 240px (`--sidebar-width`), padrão Be Hero — decisão vinculante do
  * Vitor (2026-07-05, brief ds-consolidacao-shadcn-brasa §2): a variante fixa
  * SUBSTITUI o modo colapsável; não há mais toggle nem largura de 64px.
+ *
+ * Métricas exatas do mockup be-hero (`.sidebar/.nav/.nav-label/.nav-item/
+ * .nav-badge`, lote FIDELIDADE T2): nav 16x12 gap 2; label 10px/.08em
+ * uppercase pad 12/12/8; item 10x12 gap 12 texto 14/500 ícone 20; badge
+ * 10px/700 pad 2x6. A borda-direita hairline é ANATOMIA do mockup
+ * (`.sidebar { border-right: .5px }`) — exceção deliberada ao §2.16 flat,
+ * registrada no patch de congruência: é o fio que separa a nav do conteúdo.
+ *
+ * Slot `brand`: bloco de marca componível (ex.: `<SidebarBrand mark="LEELA"
+ * sub="Painel do Organizador" />`) — o DS entrega a ESTRUTURA; o texto vem do
+ * consumidor.
+ *
  * A11y: nav landmark "Navegação principal", aria-current="page" no item ativo,
  * foco visível, navegação por teclado.
- * §2.16 flat — sem borda decorativa na nav.
  */
 
 import * as React from 'react';
@@ -31,12 +42,17 @@ import { cn } from '../../utils/cn';
 // Types
 // ---------------------------------------------------------------------------
 
+/** Variante do badge de contagem (mockup: Comunicação = danger, Eventos = neutral). */
+export type SidebarBadgeVariant = 'danger' | 'neutral';
+
 export interface SidebarItem {
   id: string;
   label: string;
   icon: React.ReactNode;
   href?: string;
   badge?: string | number;
+  /** Cor do badge — union fechada; default 'danger' (o `.nav-badge` do mockup). */
+  badgeVariant?: SidebarBadgeVariant;
   active?: boolean;
   onClick?: () => void;
 }
@@ -48,6 +64,8 @@ export interface SidebarSection {
 
 export interface SidebarProps {
   sections: SidebarSection[];
+  /** Bloco de marca componível no topo (ex.: `<SidebarBrand ... />`). */
+  brand?: React.ReactNode;
   /** Rodapé componível (ex.: `<SidebarFooter avatar={...} name={...} />`). */
   footer?: React.ReactNode;
   className?: string;
@@ -58,8 +76,9 @@ export interface SidebarProps {
 // ---------------------------------------------------------------------------
 
 /**
- * Renderiza um ícone Lucide nos tokens de ícone do DS: 24px (`--icon-size`),
- * traço 1.75 (`--icon-stroke`), `currentColor` (herda a cor do item).
+ * Renderiza um ícone Lucide nos tokens de ícone da Sidebar: 20px
+ * (`--sidebar-icon-size`, mockup `.nav-item svg`), traço 1.75
+ * (`--icon-stroke`), `currentColor` (a cor vem do wrapper do item).
  * Uso pelos consumidores ao montar seções próprias de Sidebar.
  */
 export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
@@ -67,7 +86,7 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
     <Icon
       aria-hidden
       className={cn(
-        'w-[var(--icon-size)] h-[var(--icon-size)]',
+        'w-[var(--sidebar-icon-size)] h-[var(--sidebar-icon-size)]',
         '[stroke-width:var(--icon-stroke)]',
       )}
     />
@@ -101,42 +120,51 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
 // ---------------------------------------------------------------------------
 
 const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
-  ({ sections, footer, className }, ref) => {
+  ({ sections, brand, footer, className }, ref) => {
     return (
       <nav
         ref={ref}
         aria-label="Navegação principal"
         className={cn(
           'flex flex-col h-full',
-          // Congruência mockup be-hero (patch 2026-07-06): sidebar vive no
-          // fundo da página (surface-base), separada pelo conteúdo — não é um
-          // painel raised.
+          // Congruência mockup be-hero: sidebar vive no fundo da página
+          // (surface-base) e fecha com a hairline direita do mockup.
           'bg-[var(--surface-base)]',
+          'border-r border-r-[var(--border-subtle)]',
           'w-[var(--sidebar-width)]',
           className,
         )}
       >
-        {/* Sections */}
-        <div className="flex flex-col flex-1 overflow-y-auto gap-[var(--spacing-6)] py-[var(--spacing-4)]">
+        {/* Bloco de marca (slot componível — dados do consumidor) */}
+        {brand}
+
+        {/* Nav (mockup `.nav`: 16x12, gap 2, labels no fluxo) */}
+        <div
+          className={cn(
+            'flex flex-col flex-1 overflow-y-auto',
+            'py-[var(--sidebar-nav-py)] px-[var(--sidebar-nav-px)]',
+            'gap-[var(--sidebar-nav-gap)]',
+          )}
+        >
           {sections.map((section) => (
-            <div key={section.label}>
+            <React.Fragment key={section.label}>
               <p
                 className={cn(
-                  'px-[var(--spacing-4)] pb-[var(--spacing-2)]',
-                  'text-[length:var(--font-size-xs)]',
+                  'pt-[var(--sidebar-label-pt)] pb-[var(--sidebar-label-pb)] px-[var(--sidebar-label-px)]',
+                  'text-[length:var(--sidebar-label-size)]',
                   'font-[var(--font-weight-semibold)]',
                   'text-[var(--text-tertiary)]',
-                  'tracking-widest uppercase',
+                  'tracking-[var(--sidebar-label-spacing)] uppercase',
                 )}
               >
                 {section.label}
               </p>
-              <ul role="list" className="flex flex-col gap-[var(--spacing-1)]">
+              <ul role="list" className="flex flex-col gap-[var(--sidebar-nav-gap)]">
                 {section.items.map((item) => (
                   <SidebarNavItem key={item.id} item={item} />
                 ))}
               </ul>
-            </div>
+            </React.Fragment>
           ))}
         </div>
 
@@ -152,6 +180,11 @@ Sidebar.displayName = 'Sidebar';
 // SidebarNavItem
 // ---------------------------------------------------------------------------
 
+const BADGE_VARIANT_CLASSES: Record<SidebarBadgeVariant, string> = {
+  danger: 'bg-[var(--feedback-danger-surface)] text-[var(--feedback-danger-fg)]',
+  neutral: 'bg-[var(--surface-high)] text-[var(--text-secondary)]',
+};
+
 interface SidebarNavItemProps {
   item: SidebarItem;
 }
@@ -163,26 +196,25 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
     'aria-current': item.active ? ('page' as const) : undefined,
     onClick: item.onClick,
     className: cn(
-      'flex items-center gap-[var(--spacing-3)]',
-      'h-[var(--btn-height-md)]',
-      'px-[var(--spacing-4)]',
+      'group relative flex items-center gap-[var(--sidebar-item-gap)]',
+      'py-[var(--sidebar-item-py)] px-[var(--sidebar-item-px)]',
       'w-full',
       'rounded-[var(--radius-sm)]',
-      'text-[length:var(--font-size-base)]',
+      // Mockup `.nav-item`: 14px/500 sempre — o ativo muda só as cores.
+      'text-[length:var(--sidebar-item-size)] font-[var(--font-weight-medium)]',
       'transition-colors duration-[var(--motion-duration-fast)]',
       'focus-visible:outline-none focus-visible:ring-2',
       'focus-visible:ring-[color:var(--border-focus)]',
-      // Item ativo (congruência mockup be-hero `.nav-item.active`, patch
-      // 2026-07-06): tint de marca + texto laranja + barra 2px à esquerda
-      // (pseudo-elemento). AA do texto sobre o tint provado por composição
-      // alpha-sobre-surface em contrast.test.ts (brand-tint §). O texto usa
-      // --action-brand-tint-fg (brasa-400): desde o D-PATCH, --action-primary-hover
-      // é o bg escurecido do botão primário (D4) — não serve mais como cor de texto.
+      // Item ativo (congruência mockup be-hero `.nav-item.active`): tint de
+      // marca + texto laranja + barra 2px encostada na borda da sidebar (o
+      // -12px do mockup = padding horizontal da nav). AA do texto sobre o tint
+      // provado por composição alpha-sobre-surface em contrast.test.ts.
       item.active
         ? cn(
-            'relative bg-[var(--action-brand-tint)]',
-            'text-[var(--action-brand-tint-fg)] font-[var(--font-weight-semibold)]',
-            'before:content-[""] before:absolute before:left-0',
+            'bg-[var(--action-brand-tint)]',
+            'text-[var(--action-brand-tint-fg)]',
+            'before:content-[""] before:absolute',
+            'before:left-[calc(-1*var(--sidebar-nav-px))]',
             'before:top-[var(--sidebar-active-bar-inset)]',
             'before:bottom-[var(--sidebar-active-bar-inset)]',
             'before:w-[var(--sidebar-active-bar)]',
@@ -196,7 +228,18 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
   const content = (
     <>
       {item.icon && (
-        <span aria-hidden className="shrink-0 w-[var(--icon-size)] h-[var(--icon-size)] flex items-center justify-center">
+        <span
+          aria-hidden
+          className={cn(
+            'shrink-0 flex items-center justify-center',
+            'w-[var(--sidebar-icon-size)] h-[var(--sidebar-icon-size)]',
+            'transition-colors duration-[var(--motion-duration-fast)]',
+            // Mockup: ícone tertiary no rest, secondary no hover, brasa no ativo.
+            item.active
+              ? 'text-[var(--text-brand)]'
+              : 'text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]',
+          )}
+        >
           {item.icon}
         </span>
       )}
@@ -207,10 +250,11 @@ function SidebarNavItem({ item }: SidebarNavItemProps): JSX.Element {
         <span
           className={cn(
             'ml-auto inline-flex items-center justify-center',
-            'h-[var(--badge-height)] min-w-[var(--badge-height)] px-[var(--badge-px)]',
-            'rounded-[var(--badge-radius)]',
-            'text-[length:var(--badge-font-size)] font-[var(--badge-font-weight)]',
-            'bg-[var(--action-primary)] text-[var(--action-primary-fg)]',
+            'px-[var(--sidebar-badge-px)] py-[var(--sidebar-badge-py)]',
+            'rounded-[var(--sidebar-badge-radius)]',
+            'text-[length:var(--sidebar-badge-size)] font-[var(--font-weight-bold)]',
+            'tracking-[var(--sidebar-badge-spacing)]',
+            BADGE_VARIANT_CLASSES[item.badgeVariant ?? 'danger'],
           )}
         >
           {item.badge}

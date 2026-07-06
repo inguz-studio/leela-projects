@@ -48,15 +48,23 @@ export function painelActiveId(pathname: string): string | null {
 
 function producerSections(
   ativoId: string | null,
-  navigate: (href: string) => void
+  navigate: (href: string) => void,
+  eventosAtivos?: number | null
 ): SidebarSection[] {
   return DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
     label: section.label,
     items: section.items.map((item) => {
       const href = HREF_POR_ID[item.id];
+      // nav-badge com dado REAL (mockup: Eventos = badge neutro com contagem).
+      // Sem contagem (null/0) não há badge — estado honesto, nunca 0 decorativo.
+      const badge =
+        item.id === 'eventos' && typeof eventosAtivos === 'number' && eventosAtivos > 0
+          ? { badge: eventosAtivos, badgeVariant: 'neutral' as const }
+          : {};
       return {
         ...item,
         active: item.id === ativoId,
+        ...badge,
         ...(href ? { onClick: () => navigate(href) } : {}),
       };
     }),
@@ -93,14 +101,17 @@ function platformSections(
 /**
  * Seções da sidebar para o pathname atual: nav de plataforma em
  * `/plataforma/*`, nav do produtor em todas as demais rotas.
+ * `eventosAtivos` (quando conhecido e > 0) vira o nav-badge neutro do item
+ * Eventos — dado real da mesma fonte da Visão Geral.
  * @pure
  */
 export function shellSidebarSections(
   pathname: string,
-  navigate: (href: string) => void
+  navigate: (href: string) => void,
+  eventosAtivos?: number | null
 ): SidebarSection[] {
   if (pathname.startsWith('/plataforma')) {
     return platformSections(pathname, navigate);
   }
-  return producerSections(painelActiveId(pathname), navigate);
+  return producerSections(painelActiveId(pathname), navigate, eventosAtivos);
 }

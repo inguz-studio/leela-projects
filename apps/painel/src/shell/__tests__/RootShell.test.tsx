@@ -1,16 +1,30 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { RootShell } from '../RootShell';
+import { _resetEventosBadgeCache } from '../eventosBadge';
 
-// Sessão do rodapé (B4): usuário nomeado, sem Firebase real.
+// Sessão do rodapé (B4) + fonte do nav-badge (T2): usuário nomeado, claims com
+// tenant e 2 eventos ativos + 1 encerrado — sem Firebase real.
 vi.mock('@leela/api-client', () => ({
   onSessionChange: (cb: (user: { uid: string; displayName: string | null } | null) => void) => {
     cb({ uid: 'uid-marina', displayName: 'Marina Castelo' });
     return () => {};
   },
+  getClaims: () => Promise.resolve({ tenantId: 'castelo', role: 'tenant_admin' }),
+  getLeelaDb: () => ({}),
+  listarEventosDoOrganizador: () =>
+    Promise.resolve([
+      { status: 'publicado' },
+      { status: 'rascunho' },
+      { status: 'encerrado' },
+    ]),
 }));
+
+beforeEach(() => {
+  _resetEventosBadgeCache();
+});
 
 // Smoke navegacional do Lote B3: a sidebar é SEMPRE visível (item 18 do DoD),
 // só o conteúdo troca; item ativo segue o pathname nas 4 áreas.
@@ -91,5 +105,19 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     const sidebar = nav();
     expect(within(sidebar).getByText('Marina Castelo')).toBeInTheDocument();
     expect(within(sidebar).getByText('Ver perfil')).toBeInTheDocument();
+  });
+
+  it('brand slot do consumidor: "LEELA" + "Painel do Organizador" (T2)', () => {
+    renderAt('/');
+    const sidebar = nav();
+    expect(within(sidebar).getByText('LEELA')).toBeInTheDocument();
+    expect(within(sidebar).getByText('Painel do Organizador')).toBeInTheDocument();
+  });
+
+  it('nav-badge de Eventos com contagem REAL de ativos (2 de 3 — encerrado fora)', async () => {
+    renderAt('/');
+    await waitFor(() => {
+      expect(within(nav()).getByText('2')).toBeInTheDocument();
+    });
   });
 });

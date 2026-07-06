@@ -40,7 +40,8 @@ export function SidebarFooter({
         <span
           className={cn(
             'truncate',
-            'text-[length:var(--font-size-base)]',
+            // Mockup `.sidebar-footer .name`: 13px/600
+            'text-[length:var(--sidebar-footer-name-size)]',
             'font-[var(--font-weight-semibold)]',
             'text-[var(--text-primary)]',
           )}
@@ -51,8 +52,11 @@ export function SidebarFooter({
           <span
             className={cn(
               'truncate',
-              'text-[length:var(--font-size-sm)]',
+              // Mockup `.sidebar-footer .link`: 11px tertiary (hover brand)
+              'text-[length:var(--sidebar-footer-link-size)]',
               'text-[var(--text-tertiary)]',
+              onClick && 'group-hover:text-[var(--action-brand-tint-fg)]',
+              'transition-colors duration-[var(--motion-duration-fast)]',
             )}
           >
             {subtitle}
@@ -64,8 +68,9 @@ export function SidebarFooter({
 
   const sharedClasses = cn(
     'flex items-center w-full',
-    'gap-[var(--spacing-3)]',
-    'px-[var(--spacing-4)] py-[var(--spacing-3)]',
+    // Mockup `.sidebar-footer`: padding 14px 16px, gap 12
+    'gap-[var(--sidebar-footer-gap)]',
+    'px-[var(--sidebar-footer-px)] py-[var(--sidebar-footer-py)]',
     'border-t border-[color:var(--border-subtle)]',
     className,
   );
@@ -77,6 +82,7 @@ export function SidebarFooter({
         onClick={onClick}
         className={cn(
           sharedClasses,
+          'group',
           'transition-colors duration-[var(--motion-duration-fast)]',
           'hover:bg-[var(--action-ghost-hover)]',
           'focus-visible:outline-none focus-visible:ring-2',
