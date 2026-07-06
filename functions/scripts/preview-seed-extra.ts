@@ -412,12 +412,27 @@ async function seedInscritosExtra(db: Db, agora: Date): Promise<void> {
   console.log('[seed-extra] inscritos: +90 (Inverno) · +60 (Noturna esgotada) · +40 (São Silvestre atendidos)');
 }
 
+/** Atleta-demo do balcão: "atendendo (sem chip)", pronto pro roteiro RN-206. */
+export const BALCAO_DEMO_INSC_ID = 'insc-0002'; // João Silva (canônico, confirmado)
+/** Chip EM USO para provocar o conflito RN-206 no balcão (dono: insc-0001). */
+export const BALCAO_DEMO_CHIP_EM_USO = 'CHIP-0001'; // Marina Silva
+
 /**
  * Carimbos de entrega/check-in em ~40% dos confirmados canônicos da Meia
- * Floripa (chip CHIP-{seq}) — Distribuição/Estoque com progresso real e
+ * Floripa (chip CHIP-{seq} SÓ nos atendidos — n % 5 <= 1, ou seja seq 0001,
+ * 0005, 0006, 0010, 0011...) — Distribuição/Estoque com progresso real e
  * balcão com estados "completo" (atendido) e "atendendo" (chip livre).
- * Para ver o CONFLITO de chip (RN-206): no balcão, vincule a um atleta sem
- * chip um número já usado (ex.: CHIP-0002) e confirme a sobrescrita.
+ *
+ * Roteiro do CONFLITO de chip (RN-206), determinístico e VERDADEIRO:
+ *   1. Balcão da Meia Floripa → buscar "João Silva" (insc-0002 — confirmado
+ *      no seed canônico e FORA do filtro de atendidos, n=2 → chip livre);
+ *   2. Passo "Vincular chip" → digitar CHIP-0001 (em uso por Marina Silva,
+ *      insc-0001, atendida pelo filtro) → modal RN-206 abre;
+ *   3. Confirmar a sobrescrita → reatribuição atômica.
+ * NÃO usar CHIP-0002 como exemplo: seq 0002 não é atendido (n % 5 = 2),
+ * então CHIP-0002 NÃO existe e vincularia silenciosamente (achado M1 do QA
+ * leela-build-2d6ee98d). O reset explícito abaixo garante o estado do
+ * João Silva mesmo depois de demos anteriores terem vinculado chip a ele.
  */
 async function seedEntregasMeiaFloripa(db: Db, agora: Date): Promise<void> {
   const col = db.collection('eventos').doc(MEIA_FLORIPA_ID).collection('inscritos');
@@ -444,8 +459,26 @@ async function seedEntregasMeiaFloripa(db: Db, agora: Date): Promise<void> {
     }
     await batch.commit();
   }
+
+  // Atleta-demo do balcão SEMPRE "atendendo (sem chip)": João Silva
+  // (insc-0002) fica fora do filtro acima por construção (n=2), mas uma demo
+  // anterior pode ter vinculado chip/fechado atendimento nele — o reset
+  // devolve o palco ao estado do roteiro (aditivo/idempotente: rerodar o
+  // seed re-arma o conflito RN-206 sem tocar em mais ninguém).
+  await col.doc(BALCAO_DEMO_INSC_ID).set(
+    {
+      chipNumero: null,
+      kitEntregueEm: admin.firestore.FieldValue.delete(),
+      checkinEm: admin.firestore.FieldValue.delete(),
+    },
+    { merge: true }
+  );
+
   console.log(
     `[seed-extra] entregas: ${atendidos.length} atendidos na Meia Floripa (chip CHIP-{seq} + kit + check-in)`
+  );
+  console.log(
+    `[seed-extra] balcão RN-206: ${BALCAO_DEMO_INSC_ID} (João Silva) resetado para "atendendo (sem chip)" — conflito com ${BALCAO_DEMO_CHIP_EM_USO} (Marina Silva, insc-0001)`
   );
 }
 
