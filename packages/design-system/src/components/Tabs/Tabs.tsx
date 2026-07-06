@@ -1,14 +1,21 @@
 /**
  * Tabs — troca de conteúdo in-page sobre Radix Tabs (§2.7).
  *
+ * PROVENIÊNCIA: mesma engine do shadcn stock `tabs` (Radix Tabs), restilizada ao
+ * brasa. Diff vs stock: o visual é o underline §2.14 (ativa: semibold + underline
+ * Brasa 2px), NÃO o pill `bg-muted`/`data-[state=active]:bg-background` do stock —
+ * as telas dependem do underline e os testes o afirmam. API pública INTACTA
+ * (tabs[]/defaultTab/value/onValueChange/aria-label). Anel de foco por alias
+ * shadcn→brasa (ring-ring = border-focus); pill de contador por alias
+ * (bg-background = surface-base). Underline/estado ativo por token
+ * (--border-brand, --subnav-*). §2.16 flat.
+ *
  * §2.7: TODOS os painéis ficam no DOM (forceMount); o inativo é ocultado
  * via data-[state=inactive]:hidden — busca em página e SEO de protótipo
  * dependem disso.
  *
- * Visual da lista segue §2.14: ativa com underline Brasa 2px + semibold;
- * contador pill opcional por tab.
  * A11y: roles tablist/tab/tabpanel, setas ← → e Home/End via Radix.
- * §2.16 flat.
+ * AA: pares texto sobre superfícies já na matriz (contrast.test.ts). Nenhum novo.
  */
 
 import * as React from 'react';
@@ -79,7 +86,7 @@ function Tabs({
               'hover:text-[var(--text-primary)]',
               'rounded-t-[var(--radius-sm)]',
               'focus-visible:outline-none focus-visible:ring-2',
-              'focus-visible:ring-[color:var(--border-focus)]',
+              'focus-visible:ring-ring',
               // Ativa: §2.14 — semibold + underline Brasa 2px
               'data-[state=active]:text-[var(--text-primary)]',
               'data-[state=active]:font-[var(--font-weight-semibold)]',
@@ -99,7 +106,7 @@ function Tabs({
                   'px-[var(--spacing-2)]',
                   'rounded-[var(--subnav-pill-radius)]',
                   'text-[length:var(--subnav-pill-font-size)] font-[var(--font-weight-semibold)]',
-                  'bg-[var(--surface-base)]',
+                  'bg-background',
                 )}
               >
                 {tab.count}
@@ -117,7 +124,7 @@ function Tabs({
           className={cn(
             'pt-[var(--spacing-4)]',
             'focus-visible:outline-none focus-visible:ring-2',
-            'focus-visible:ring-[color:var(--border-focus)]',
+            'focus-visible:ring-ring',
             // §2.7: painel inativo permanece no DOM, apenas oculto
             'data-[state=inactive]:hidden',
           )}

@@ -83,6 +83,13 @@ describe('Tabs', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 
+  it('anel de foco e pill de contador usam aliases shadcn→brasa', () => {
+    render(<Tabs tabs={TABS} />);
+    const tab = screen.getByRole('tab', { name: /Inscritos/ });
+    expect(tab.className).toContain('focus-visible:ring-ring');
+    expect(screen.getByText('128').className).toContain('bg-background');
+  });
+
   it('active trigger carries the Brasa underline classes (§2.14)', () => {
     render(<Tabs tabs={TABS} />);
     const active = screen.getByRole('tab', { name: /Inscritos/ });
