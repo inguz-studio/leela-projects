@@ -126,6 +126,7 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           loading={inscricoesLoading}
           error={inscricoesError ?? false}
           onRetry={onRetryInscricoes}
+          onVerTodas={() => onNavigate('/eventos')}
         />
       </div>
 
@@ -137,7 +138,6 @@ export function OverviewContent(props: OverviewContentProps): JSX.Element {
           error={eventosError ?? false}
           onRetry={onRetryEventos}
           onNavigate={onNavigate}
-          onNovoEvento={onNovoEvento}
         />
         <AlertsPanel
           alerts={alerts}

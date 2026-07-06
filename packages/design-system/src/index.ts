@@ -41,6 +41,7 @@ export { Avatar, type AvatarProps } from './components/Avatar';
 export { Divider, type DividerProps } from './components/Divider';
 export { IconButton, type IconButtonProps } from './components/IconButton';
 export { Sparkline, type SparklineProps } from './components/Sparkline';
+export { DateBadge, type DateBadgeProps } from './components/DateBadge';
 
 // ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
 export { Toolbar, type ToolbarProps } from './components/Toolbar';

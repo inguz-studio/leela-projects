@@ -14,7 +14,7 @@
  *     (--action-primary) + offset por ALIAS (ring-offset-background);
  *   - dimensões por token (--avatar-size-sm|md|lg, --avatar-radius).
  *
- * Tamanhos: sm (32px) | md (40px) | lg (48px)
+ * Tamanhos: xs (28px, `.avatar-sm` do mockup — células de tabela) | sm (32px) | md (40px) | lg (48px)
  * Fallback: gradiente com iniciais do nome (até 2 letras)
  * Estado VIP: ring dourado (elevation-brand)
  *
@@ -62,6 +62,8 @@ const avatarVariants = cva(
   {
     variants: {
       size: {
+        // xs = `.avatar-sm` do mockup (28px, iniciais 11px) — célula de tabela.
+        xs: 'w-[var(--avatar-size-xs)] h-[var(--avatar-size-xs)] text-[length:var(--font-size-xs-plus)]',
         sm: 'w-[var(--avatar-size-sm)] h-[var(--avatar-size-sm)] text-[length:var(--font-size-xs)]',
         md: 'w-[var(--avatar-size-md)] h-[var(--avatar-size-md)] text-[length:var(--font-size-sm)]',
         lg: 'w-[var(--avatar-size-lg)] h-[var(--avatar-size-lg)] text-[length:var(--font-size-base)]',

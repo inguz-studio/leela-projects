@@ -48,6 +48,8 @@
     "px":            "{spacing.3}"
   },
   "avatar": {
+    "$description": "Tamanhos do mockup: xs 28 (`.avatar-sm` das celulas de tabela), sm 32 (sidebar-footer), md 40, lg 48.",
+    "size-xs":       "28px",
     "size-sm":       "32px",
     "size-md":       "40px",
     "size-lg":       "48px",
@@ -208,6 +210,50 @@
   "card": {
     "radius":        "{radius.lg}",
     "critical-border": "3px"
+  },
+  "datebadge": {
+    "$description": "Pill de data do mockup `.date-badge`: pad 6x10 gap 8, texto 12/500 secondary sobre surface-overlay com hairline; dot 6px vitoria com glow (cor/sombra na camada semantic).",
+    "px":        "{spacing.2-5}",
+    "py":        "{spacing.1-5}",
+    "gap":       "{spacing.2}",
+    "font-size": "{font.size.sm}",
+    "dot-size":  "6px"
+  },
+  "countdown": {
+    "$description": "Countdown card do mockup `.countdown-*`: pad 20, eyebrow 10/700 .08em + icone 12, nome 22 display italic lh 1.15, numero 72 display 800 italic -.02em, unidade 14, when 12 + icone 12, stats 2-col (valor 20/700, label 10 uppercase .08em) py 14 gap 12, quick-actions 3-col gap 6 (btn 11/500 pad 12x6, icone 18). Gradientes/borda de marca na camada semantic.",
+    "padding":           "{spacing.5}",
+    "eyebrow-size":      "{font.size.xs}",
+    "eyebrow-icon-size": "12px",
+    "eyebrow-spacing":   "0.08em",
+    "name-size":         "{font.size.lg-plus}",
+    "name-leading":      "1.15",
+    "number-size":       "4.5rem",
+    "number-spacing":    "-0.02em",
+    "when-size":         "{font.size.sm}",
+    "when-icon-size":    "12px",
+    "stat-value-size":   "{font.size.lg}",
+    "stat-label-size":   "{font.size.xs}",
+    "label-spacing":     "0.08em",
+    "stats-gap":         "{spacing.3}",
+    "stats-py":          "{spacing.3-5}",
+    "quick-gap":         "{spacing.1-5}",
+    "quick-px":          "{spacing.1-5}",
+    "quick-py":          "{spacing.3}",
+    "quick-font-size":   "{font.size.xs-plus}",
+    "quick-icon-size":   "18px"
+  },
+  "sidepanel": {
+    "$description": "Painel lateral de alertas do mockup `.side-panel`/`.alert-*`: card pad 18 (sem passo — raw legitimo), head mb 14, item grid 28px+1fr gap 12 py 12 com hairline entre itens, icone 28 (svg 14), titulo 13/500 lh 1.35, meta 11 mt 3.",
+    "padding":       "18px",
+    "head-mb":       "{spacing.3-5}",
+    "item-py":       "{spacing.3}",
+    "item-gap":      "{spacing.3}",
+    "icon-size":     "28px",
+    "icon-svg-size": "14px",
+    "title-size":    "{font.size.sm-plus}",
+    "title-leading": "1.35",
+    "meta-size":     "{font.size.xs-plus}",
+    "meta-mt":       "3px"
   },
   "stepper": {
     "step-size":     "32px"

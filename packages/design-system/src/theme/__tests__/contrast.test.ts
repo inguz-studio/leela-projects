@@ -389,3 +389,35 @@ describe('EventThumb — ícone ≥ 3:1 sobre a região do gradiente que ocupa',
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Countdown — número em gradient-text (Lote FIDELIDADE T6). Texto GRANDE
+// (72px/800 ⇒ AA large = 3:1) pintado por --countdown-number-gradient sobre
+// surface-raised + os tints radiais de --countdown-bg. Prova conservadora:
+// endpoints e meio do gradiente do TEXTO contra (a) surface-raised puro e
+// (b) surface-raised composto com o tint MAIS FORTE do card (primeiro rgba
+// de countdown-bg, o pico dos radiais — em todo o resto do card o tint é
+// mais fraco). O gradiente leela usa primary.400→500: o 300 reprovava aqui.
+// ---------------------------------------------------------------------------
+
+describe('Countdown — número gradient-text ≥ 3:1 (texto grande)', () => {
+  for (const [themeName, tokens] of themes) {
+    it(`tema ${themeName}: endpoints e meio vs surface-raised puro e tingido`, () => {
+      const [claro, escuro] = gradientEndpoints(tokens['countdown-number-gradient']!);
+      const raised = tokens['surface-raised']!;
+      const tintMaisForte = tokens['countdown-bg']!.match(/rgba\([^)]+\)/)?.[0];
+      expect(tintMaisForte, 'countdown-bg sem rgba de tint').toBeDefined();
+      const tingido = composeOver(tintMaisForte!, raised);
+
+      for (const bg of [raised, tingido]) {
+        for (const t of [0, 0.5, 1]) {
+          const fg = mixHex(claro, escuro, t);
+          expect(
+            contrastRatio(fg, bg),
+            `${themeName} número@t=${t} (${fg}) sobre ${bg}`,
+          ).toBeGreaterThanOrEqual(3.0);
+        }
+      }
+    });
+  }
+});

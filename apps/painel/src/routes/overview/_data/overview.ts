@@ -17,7 +17,7 @@ import {
   type OverviewResult,
 } from '@leela/api-client';
 import type { Evento } from '@leela/core';
-import type { InscricaoRecenteInput } from '../_lib/recentRegistrations';
+import { valorDaInscricao, type InscricaoRecenteInput } from '../_lib/recentRegistrations';
 import type { OverviewSession } from './session';
 
 export interface AsyncState<T> {
@@ -176,6 +176,9 @@ export function useInscricoesRecentes(
               status: i.status,
               criadoEm: i.criadoEm,
               eventoNome: evento.nome,
+              // Coluna Valor (T6): preço do percurso casado com a modalidade
+              // (RN-200 — o preço vive no percurso); sem match → null ("—").
+              valor: valorDaInscricao(evento.percursos, i.modalidade),
             })
           )
         )

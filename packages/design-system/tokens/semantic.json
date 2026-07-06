@@ -56,6 +56,16 @@
     "crossfit": "{gradient.crossfit}",
     "icon-fg":  "rgba(255, 255, 255, 0.9)"
   },
+  "countdown": {
+    "$description": "Countdown card do mockup `.countdown-card`: bg = 2 radial-gradients de tint da marca (brasa .25 + heroico .18) POR CIMA de surface-raised (o componente poe a cor por baixo); borda hairline no tint brasa .25; numero em gradient-text brasa-300→500. Literais por tema (alpha/gradiente nao compoe com var() hex).",
+    "bg": "radial-gradient(120% 80% at 100% 0%, rgba(255,69,12,.25), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.18), transparent 60%)",
+    "border": "rgba(255, 69, 12, 0.25)",
+    "number-gradient": "linear-gradient(135deg, #FF8244, #FF450C)"
+  },
+  "datebadge": {
+    "$description": "Dot do `.date-badge`: verde vitoria com glow `0 0 8px` na MESMA cor (espelha feedback.success do tema — literal porque box-shadow nao aceita compor var na sombra tokenizada).",
+    "dot-glow": "0 0 8px #2D9315"
+  },
   "feedback": {
     "success": "{success.400}",
     "success-fg": "{success.300}",

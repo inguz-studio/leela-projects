@@ -5,19 +5,75 @@ import { RecentRegistrations } from '../RecentRegistrations';
 import { derivarInscricoesRecentes } from '../../_lib/recentRegistrations';
 import { mkInscricao, ts } from '../../_test/fixtures';
 
-describe('RecentRegistrations (S601-T2)', () => {
-  it('lista inscritos com badge RN-204; pendente → "Pendente" não "Pago"', () => {
-    const views = derivarInscricoesRecentes([
-      mkInscricao({ id: '1', atletaNome: 'Marina Silva', status: 'confirmado', criadoEm: ts(new Date('2026-04-18T00:00:00Z')) }),
-      mkInscricao({ id: '2', atletaNome: 'João Souza', status: 'pendente', criadoEm: ts(new Date('2026-04-17T00:00:00Z')) }),
-      mkInscricao({ id: '3', atletaNome: 'Ana Lima', status: 'cancelado', criadoEm: ts(new Date('2026-04-16T00:00:00Z')) }),
-    ]);
+const AGORA = new Date('2026-04-18T15:00:00');
+
+describe('RecentRegistrations (S601-T2 · T6 tabela 6 colunas)', () => {
+  it('renderiza TABELA com as 6 colunas do mockup (a queixa nº 1)', () => {
+    const views = derivarInscricoesRecentes(
+      [mkInscricao({ id: '1', atletaNome: 'Marina Silva' })],
+      5,
+      AGORA
+    );
     render(<RecentRegistrations inscricoes={views} loading={false} />);
-    expect(screen.getByText('Marina Silva')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    for (const header of ['Atleta', 'Evento', 'Modalidade', 'Valor', 'Status', 'Data']) {
+      expect(screen.getByRole('columnheader', { name: header })).toBeInTheDocument();
+    }
+  });
+
+  it('badge RN-204 por linha; pendente → "Pendente" não "Pago"', () => {
+    const views = derivarInscricoesRecentes(
+      [
+        mkInscricao({ id: '1', atletaNome: 'Marina Silva', status: 'confirmado', criadoEm: ts(new Date('2026-04-18T10:00:00')) }),
+        mkInscricao({ id: '2', atletaNome: 'João Souza', status: 'pendente', criadoEm: ts(new Date('2026-04-17T10:00:00')) }),
+        mkInscricao({ id: '3', atletaNome: 'Ana Lima', status: 'cancelado', criadoEm: ts(new Date('2026-04-16T10:00:00')) }),
+      ],
+      5,
+      AGORA
+    );
+    render(<RecentRegistrations inscricoes={views} loading={false} />);
     expect(screen.getByText('Pago')).toBeInTheDocument();
     expect(screen.getByText('Pendente')).toBeInTheDocument();
     expect(screen.getByText('Recusado')).toBeInTheDocument();
-    expect(screen.queryByText('João Souza')?.closest('li')).not.toHaveTextContent('Pago');
+    expect(screen.getByText('João Souza').closest('tr')).not.toHaveTextContent('Pago');
+  });
+
+  it('Atleta com avatar (iniciais) + coluna Data "Hoje/Ontem · hh:mm"', () => {
+    const views = derivarInscricoesRecentes(
+      [
+        mkInscricao({ id: '1', atletaNome: 'Marina Silva', criadoEm: ts(new Date('2026-04-18T14:22:00')) }),
+        mkInscricao({ id: '2', atletaNome: 'João Souza', criadoEm: ts(new Date('2026-04-17T19:58:00')) }),
+      ],
+      5,
+      AGORA
+    );
+    render(<RecentRegistrations inscricoes={views} loading={false} />);
+    expect(screen.getByRole('img', { name: 'Marina Silva' })).toBeInTheDocument();
+    expect(screen.getByText('Hoje · 14:22')).toBeInTheDocument();
+    expect(screen.getByText('Ontem · 19:58')).toBeInTheDocument();
+  });
+
+  it('Valor: preço do percurso em mono/tabular; sem preço → "—" honesto', () => {
+    const views = derivarInscricoesRecentes(
+      [
+        mkInscricao({ id: '1', atletaNome: 'Com Preço', valor: 189 }),
+        mkInscricao({ id: '2', atletaNome: 'Sem Preço', valor: null, criadoEm: ts(new Date('2026-04-17T10:00:00')) }),
+      ],
+      5,
+      AGORA
+    );
+    render(<RecentRegistrations inscricoes={views} loading={false} />);
+    // NBSP do Intl entre "R$" e o número
+    expect(screen.getByText(/R\$\s189,00/)).toBeInTheDocument();
+    expect(screen.getByText('Sem Preço').closest('tr')).toHaveTextContent('—');
+  });
+
+  it('section-link "Ver todas" navega', async () => {
+    const onVerTodas = vi.fn();
+    const views = derivarInscricoesRecentes([mkInscricao({ id: '1' })], 5, AGORA);
+    render(<RecentRegistrations inscricoes={views} loading={false} onVerTodas={onVerTodas} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Ver todas' }));
+    expect(onVerTodas).toHaveBeenCalledOnce();
   });
 
   it('loading → skeleton', () => {
@@ -31,7 +87,7 @@ describe('RecentRegistrations (S601-T2)', () => {
   });
 
   it('lista populada rotula a degradação de recência (#13); vazio não rotula', () => {
-    const views = derivarInscricoesRecentes([mkInscricao({ id: '1', atletaNome: 'Marina Silva' })]);
+    const views = derivarInscricoesRecentes([mkInscricao({ id: '1', atletaNome: 'Marina Silva' })], 5, AGORA);
     const { rerender } = render(<RecentRegistrations inscricoes={views} loading={false} />);
     expect(
       screen.getByText('Amostra por evento, não a ordem de chegada completa.')

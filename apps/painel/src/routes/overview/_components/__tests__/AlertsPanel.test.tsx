@@ -20,6 +20,32 @@ describe('AlertsPanel (S602-T2)', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(2);
   });
 
+  it('ícone por severidade (T6): warn/info/ok nos pares de feedback', () => {
+    render(
+      <AlertsPanel
+        loading={false}
+        alerts={[
+          mkAlert({ id: 'a', severidade: 'warn' }),
+          mkAlert({ id: 'b', severidade: 'info' }),
+          mkAlert({ id: 'c', severidade: 'ok' }),
+        ]}
+      />
+    );
+    expect(screen.getByTestId('alert-icon-warn').className).toContain('--feedback-warning-surface');
+    expect(screen.getByTestId('alert-icon-info').className).toContain('--feedback-info-surface');
+    expect(screen.getByTestId('alert-icon-ok').className).toContain('--feedback-success-surface');
+  });
+
+  it('head mostra contagem honesta "N ativos" (não há lido/não-lido no contrato)', () => {
+    render(
+      <AlertsPanel
+        loading={false}
+        alerts={[mkAlert({ id: 'a' }), mkAlert({ id: 'b' }), mkAlert({ id: 'c' })]}
+      />
+    );
+    expect(screen.getByText('3 ativos')).toBeInTheDocument();
+  });
+
   it('sem sinais → "Tudo em dia. Nenhum alerta."', () => {
     render(<AlertsPanel alerts={[]} loading={false} />);
     expect(screen.getByText('Tudo em dia. Nenhum alerta.')).toBeInTheDocument();

@@ -55,3 +55,62 @@ const MESES_CURTOS = [
 export function formatDataCurta(data: Date): string {
   return `${data.getDate()} ${MESES_CURTOS[data.getMonth()]}`;
 }
+
+/**
+ * Reais com 2 casas ("R$ 189,00") — a coluna Valor da tabela de inscrições
+ * (o formatBRL sem casas continua para os KPIs agregados).
+ */
+export function formatBRLExato(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(valor);
+}
+
+function hhmm(data: Date): string {
+  const h = String(data.getHours()).padStart(2, '0');
+  const m = String(data.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function mesmoDiaCivil(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * Coluna Data do mockup (`.col-date`): "Hoje · 14:22", "Ontem · 19:58" ou
+ * "12 Mar · 09:15". Dia civil local (mesma régua do resto da Visão Geral).
+ */
+export function formatQuando(data: Date, agora: Date): string {
+  const ontem = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1);
+  const dia = mesmoDiaCivil(data, agora)
+    ? 'Hoje'
+    : mesmoDiaCivil(data, ontem)
+      ? 'Ontem'
+      : formatDataCurta(data);
+  return `${dia} · ${hhmm(data)}`;
+}
+
+const DIAS_SEMANA = [
+  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+  'Quinta-feira', 'Sexta-feira', 'Sábado',
+] as const;
+
+const MESES_EXTENSO = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+] as const;
+
+/**
+ * Date-badge do page-head ("Domingo, 19 de Abril · 14:32") — snapshot do
+ * momento do render, sem relógio vivo. Arrays fixos capitalizados (mockup).
+ */
+export function formatAgoraExtenso(agora: Date): string {
+  return `${DIAS_SEMANA[agora.getDay()]}, ${agora.getDate()} de ${MESES_EXTENSO[agora.getMonth()]} · ${hhmm(agora)}`;
+}

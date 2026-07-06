@@ -11,6 +11,7 @@ import {
   type StatusEvento,
   type Timestamp,
 } from '@leela/core';
+import { quandoDoEvento } from './activeEvents';
 
 /** Recorte de um evento para o countdown. */
 export interface EventoCountdownInput {
@@ -21,6 +22,8 @@ export interface EventoCountdownInput {
   qtdInscritos: number;
   /** null = desconhecida (Onda 1 — cliente não tem o campo) */
   capacidade: number | null;
+  /** Local da prova (linha "when" do card — T6) */
+  local?: string;
 }
 
 /** Estado renderizável do countdown. */
@@ -31,12 +34,21 @@ export interface CountdownView {
   diasRestantes: number;
   /** Rótulo pt-BR ("08 dias restantes", "Hoje") */
   rotulo: string;
+  /** Número grande do card ("08"; "Hoje" quando dias=0) */
+  numero: string;
+  /** Unidade do número ("dias restantes"/"dia restante"; null quando "Hoje") */
+  unidade: string | null;
+  /** Linha "when" honesta: "27 Abr · Florianópolis/SC" (sem hora — o doc não
+   *  tem horário de largada confiável no cliente); null sem data/local. */
+  quando: string | null;
   qtdInscritos: number;
   vagasRestantes: number | null;
-  /** /eventos/:slug (botão "Gerenciar") */
+  /** /eventos/:slug (quick-action "Gerenciar") */
   gerenciarHref: string;
   /** /eventos/:slug/entrega — balcão de check-in (E03) */
   checkinHref: string;
+  /** /eventos/:slug/inscritos (quick-action "Ver inscritos") */
+  inscritosHref: string;
 }
 
 function toMillis(t: Timestamp): number | null {
@@ -65,6 +77,16 @@ export function rotuloDias(dias: number): string {
 }
 
 /**
+ * Número grande + unidade do card (mockup `.countdown-number`): "08" + "dias
+ * restantes"; dia da prova → "Hoje" sem unidade. @pure
+ */
+export function numeroUnidade(dias: number): { numero: string; unidade: string | null } {
+  if (dias <= 0) return { numero: 'Hoje', unidade: null };
+  const numero = dias < 10 ? `0${dias}` : `${dias}`;
+  return { numero, unidade: dias === 1 ? 'dia restante' : 'dias restantes' };
+}
+
+/**
  * Próximo evento (não encerrado, data >= agora, o mais próximo). null quando
  * não há evento futuro. @pure
  */
@@ -86,14 +108,19 @@ export function derivarCountdown(
   if (!melhor) return null;
 
   const { evento, dias } = melhor;
+  const { numero, unidade } = numeroUnidade(dias);
   return {
     slug: evento.slug,
     nome: evento.nome,
     diasRestantes: dias,
     rotulo: rotuloDias(dias),
+    numero,
+    unidade,
+    quando: quandoDoEvento(evento.data, evento.local),
     qtdInscritos: evento.qtdInscritos,
     vagasRestantes: vagasRestantesDoEvento(evento),
     gerenciarHref: `/eventos/${evento.slug}`,
     checkinHref: `/eventos/${evento.slug}/entrega`,
+    inscritosHref: `/eventos/${evento.slug}/inscritos`,
   };
 }

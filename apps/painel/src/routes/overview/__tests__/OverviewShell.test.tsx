@@ -25,4 +25,13 @@ describe('OverviewShell (S600-T1)', () => {
     );
     expect(screen.getByText('painel do produtor')).toBeInTheDocument();
   });
+
+  it('date-badge do mockup no page-head: "Domingo, 19 de Abril · 14:32" (T6)', () => {
+    render(
+      <OverviewShell nome="Marina Castelo" agora={new Date('2026-04-19T14:32:00')}>
+        <div>conteúdo</div>
+      </OverviewShell>
+    );
+    expect(screen.getByText('Domingo, 19 de Abril · 14:32')).toBeInTheDocument();
+  });
 });
