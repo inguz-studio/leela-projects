@@ -14,6 +14,9 @@
 3. **Pós-Lote B: despacho SHOWROOM ao squad magic-ds** — Storybook/showcase vivo na identidade do próprio DS, aplicando TODOS os componentes (tokens, temas brasa/leela, animações, sidebar fixa com ícones), com mds-storybook-scribe + build-local-showcase + audit-showcase + LLM.txt por componente.
 4. **Entrega visual ao Vitor:** showroom + preview local do painel com todos os ajustes (`bash preview.sh`, portas 5273/8180; subir só com worktree estável). Avisar explicitamente que os dois estão prontos pra ele abrir.
 
+## TRILHA PARALELA-3 — Founder-led growth & publisher wellness (Vitor, 2026-07-06)
+FILA AUTOMÁTICA aprovada: **Fase 1 EM VOO** — research-intelligence pesquisando (D1 benchmark FLG/build-in-public · D2 mapa publishers wellness · D3 riscos/kill-criteria) em `leela-specs/discovery/flg-publisher/`, brief `leela-flg-publisher-fase1-pesquisa-enriched.md`. **Fase 2 (auto, quando F1 aterrissar):** strategic-council — mesa delibera a estratégia FLG+publisher com a síntese executiva da pesquisa como insumo; pergunta: sequência, marcos e kill-criteria da marca pessoal servindo o Leela. **Fase 3 (auto, pós-parecer):** nyx-social com roster de 2 perfis (Vitor pessoal + Leela) — funde com a fila de pautas da trilha produto. Resultados alimentam `produto/` (tese FLG vira nota de primeira classe).
+
 ## TRILHA PARALELA — Governança de produto (Vitor, 2026-07-06)
 1. **EM VOO:** squad nirvana-wiki-brain construindo vault `produto/` no Obsidian da LEELA (tese, personas, JTBD, índice das 77 stories, benchmarks, roadmap executivo, visão de futuro, linhas narrativas) — brief `leela-produto-governanca-enriched.md`. Só cria `produto/`; specs read-only; sem conflito com o Lote B.
 2. **NA FILA (após linhas narrativas prontas):** despachar business **nyx-social** para pautas Instagram/LinkedIn/blog a partir de `produto/08-linhas-narrativas.md` (handoff em `produto/09-pautas/README.md`).
