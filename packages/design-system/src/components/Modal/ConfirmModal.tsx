@@ -2,6 +2,14 @@
  * ConfirmModal — confirmação de ação destrutiva com preview de consequências
  * (§2.15, C15).
  *
+ * PROVENIÊNCIA: COMPOSIÇÃO sobre o <Modal> (Radix Dialog restilizado ao brasa) —
+ * NÃO reimplementa o dialog. Herda do Modal as 4 vias de fechamento, o focus
+ * trap/retorno de foco e o MOTION tokenizado (fade+zoom); adiciona por cima o
+ * card do alvo, as listas de consequência e os controles opcionais
+ * (motivo/notificar). API pública INTACTA (mesmos props/exports). Botão de
+ * confirmar é o Button variant="destructive" (bg-[var(--action-destructive)],
+ * token referenciado direto pela matriz de contraste — não alias).
+ *
  * Estrutura:
  *   - Card do alvo (crítico: border-left 3px Vulcão — exceção §2.16)
  *   - "O que você perde" — lista em Vulcão (danger)

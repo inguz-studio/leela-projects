@@ -104,6 +104,19 @@ describe('Modal', () => {
     expect(overlay.className).toContain('backdrop-blur-[var(--modal-overlay-blur)]');
   });
 
+  it('adota o frame shadcn via aliases (bg-card) com motion tokenizado', () => {
+    render(<Controlled />);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('bg-card');
+    expect(dialog.className).toContain('data-[state=open]:animate-in');
+    expect(dialog.className).toContain('data-[state=open]:zoom-in-95');
+    const overlay = screen.getByTestId('modal-overlay');
+    expect(overlay.className).toContain('data-[state=open]:fade-in-0');
+    const close = screen.getByRole('button', { name: 'Fechar' });
+    expect(close.className).toContain('focus-visible:ring-ring');
+    expect(close.className).toContain('ring-offset-background');
+  });
+
   it('traps initial focus inside the dialog', () => {
     render(<Controlled />);
     const dialog = screen.getByRole('dialog');
