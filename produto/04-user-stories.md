@@ -6,11 +6,11 @@ fontes:
 atualizado: 2026-07-05
 ---
 
-# 04 · User stories — índice navegável
+# 04 · User stories · índice navegável
 
 Índice de navegação, não cópia: cada story vive no arquivo do épico de origem, com Given/When/Then e tasks. Contagem em 2026-07-05: **95 stories** em 15 épicos (a contagem histórica "77 stories" antecede as stories greenfield S208-S210, S305-S306, S904, S1206-S1208, S1314-S1316 e o épico E16). Convenção de IDs em [[ROADMAP]] §7.
 
-## E00 · Fundação técnica — [[LEELA-E00-fundacao-tecnica]]
+## E00 · Fundação técnica · [[LEELA-E00-fundacao-tecnica]]
 
 | ID | Story |
 |---|---|
@@ -19,7 +19,7 @@ atualizado: 2026-07-05
 | S000-3 | CI/CD e observabilidade |
 | S000-4 | Convenções e `PaymentProvider` (interface) |
 
-## E01 · Design system — [[LEELA-E01-design-system]]
+## E01 · Design system · [[LEELA-E01-design-system]]
 
 | ID | Story |
 |---|---|
@@ -28,7 +28,7 @@ atualizado: 2026-07-05
 | S001-3 | Moléculas e organismos |
 | S001-4 | Governança e catálogo |
 
-## E02 · Visão geral — [[LEELA-E02-visao-geral]]
+## E02 · Visão geral · [[LEELA-E02-visao-geral]]
 
 | ID | Story |
 |---|---|
@@ -36,7 +36,7 @@ atualizado: 2026-07-05
 | S601 | Eventos ativos e últimas inscrições |
 | S602 | Coluna lateral: próximo evento, ações rápidas e alertas |
 
-## E03 · Operação do evento — [[LEELA-E03-operacao-evento]]
+## E03 · Operação do evento · [[LEELA-E03-operacao-evento]]
 
 | ID | Story |
 |---|---|
@@ -52,19 +52,19 @@ atualizado: 2026-07-05
 | S209 | Persistência de tamanho por inscrito + coleta no checkout |
 | S210 | Aprovisionamento de kit (encomenda → estoque) |
 
-## E04 · Config e vendas — [[LEELA-E04-config-vendas]]
+## E04 · Config e vendas · [[LEELA-E04-config-vendas]]
 
 | ID | Story |
 |---|---|
 | S300 | Página de vendas (seções, lotes, percursos, cupons, SEO) |
-| S301 | Promotores e programa de afiliação — **fora da V1** ([[decisoes-escopo-2026-07-04]]) |
+| S301 | Promotores e programa de afiliação · **fora da V1** ([[decisoes-escopo-2026-07-04]]) |
 | S302 | Financeiro do evento com repasses de afiliados |
 | S303 | Comunicação do evento |
 | S304 | Configurações e equipe do evento (4 papéis) |
 | S305 | Política de reembolso e transferência |
 | S306 | Exigências de saúde e versionamento de regulamento |
 
-## E05 · Clubs — [[LEELA-E05-clubs]]
+## E05 · Clubs · [[LEELA-E05-clubs]]
 
 | ID | Story |
 |---|---|
@@ -80,7 +80,7 @@ atualizado: 2026-07-05
 | S110 | Configurações do clube |
 | S111 | Sub-afiliação de membros (placeholder) |
 
-## E06 · Marketing — [[LEELA-E06-marketing]]
+## E06 · Marketing · [[LEELA-E06-marketing]]
 
 | ID | Story |
 |---|---|
@@ -89,7 +89,7 @@ atualizado: 2026-07-05
 | S402 | Automações |
 | S403 | Patch retroativo de sub-nav (9 → 8 tabs) |
 
-## E07 · Estados de sistema — [[LEELA-E07-estados-sistema]]
+## E07 · Estados de sistema · [[LEELA-E07-estados-sistema]]
 
 | ID | Story |
 |---|---|
@@ -99,7 +99,7 @@ atualizado: 2026-07-05
 | S503 | Offline |
 | S504 | Manutenção |
 
-## E08 · Influenciador — [[LEELA-E08-influenciador]] · **épico adiado** ([[decisoes-escopo-2026-07-04]])
+## E08 · Influenciador · [[LEELA-E08-influenciador]] · **épico adiado** ([[decisoes-escopo-2026-07-04]])
 
 | ID | Story |
 |---|---|
@@ -108,7 +108,7 @@ atualizado: 2026-07-05
 | S703 | Minhas conversões |
 | S704 | Financeiro do influenciador |
 
-## E09 · Financeiro do profissional — [[LEELA-E09-financeiro-profissional]]
+## E09 · Financeiro do profissional · [[LEELA-E09-financeiro-profissional]]
 
 | ID | Story |
 |---|---|
@@ -120,14 +120,14 @@ atualizado: 2026-07-05
 
 Na V1 entra o recorte E09-slim de repasses (spec vinculante do Vitor em [[decisoes-escopo-2026-07-04]]), não o épico inteiro.
 
-## E10 · Marcas — [[LEELA-E10-marcas]]
+## E10 · Marcas · [[LEELA-E10-marcas]]
 
 | ID | Story |
 |---|---|
 | S811 | Gestão de marcas e patrocinadores |
 | S812 | Ativações da marca |
 
-## E11 · Analytics — [[LEELA-E11-analytics]]
+## E11 · Analytics · [[LEELA-E11-analytics]]
 
 | ID | Story |
 |---|---|
@@ -137,7 +137,7 @@ Na V1 entra o recorte E09-slim de repasses (spec vinculante do Vitor em [[deciso
 
 Rollup de coleta aprovado para entrar cedo (histórico não é backfillável, [[decisoes-escopo-2026-07-04]]).
 
-## E12 · Landing pública — [[LEELA-E12-landing]]
+## E12 · Landing pública · [[LEELA-E12-landing]]
 
 | ID | Story |
 |---|---|
@@ -145,35 +145,35 @@ Rollup de coleta aprovado para entrar cedo (histórico não é backfillável, [[
 | S1201 | Página pública de evento (SSR/SEO, CTA, URL+QR) |
 | S1202 | Página pública de clube |
 | S1203 | Checkout do atleta anônimo (stepper 5 etapas + PaymentProvider) |
-| S1204 | Atribuição via link master/cupom — **link de afiliado fora da V1**; cupom fica |
+| S1204 | Atribuição via link master/cupom · **link de afiliado fora da V1**; cupom fica |
 | S1205 | SEO técnico (metadata, OpenGraph, sitemap, JSON-LD) |
 | S1206 | Ingresso digital + e-mail transacional + PDF |
 | S1207 | Aceite de regulamento + contato de emergência |
 | S1208 | Portal público do organizador |
 
-## E13 · App do atleta — [[LEELA-E13-app-atleta]]
+## E13 · App do atleta · [[LEELA-E13-app-atleta]]
 
 | ID | Story |
 |---|---|
 | S1300 | Setup do app Expo + pipeline EAS |
 | S1301 | Onboarding + autenticação (Apple obrigatório + Google) |
 | S1302 | Shell mobile: tab bar 5 itens |
-| S1303 | Início — dashboard heroico |
+| S1303 | Início · dashboard heroico |
 | S1304 | Descoberta de eventos (feed + busca) |
 | S1305 | Página do evento |
 | S1306 | Inscrição / checkout mobile |
-| S1307 | Arena — registrar ações dos 3 pilares |
+| S1307 | Arena · registrar ações dos 3 pilares |
 | S1308 | Progresso de desafio + participação |
-| S1309 | Medalhas e recompensas — **cortada** (sem medalhas, [[decisoes-escopo-2026-07-04]]) |
-| S1310 | Clubs — entrar no clube + página do clube |
-| S1311 | Comunidade — feed social dentro do clube |
+| S1309 | Medalhas e recompensas · **cortada** (sem medalhas, [[decisoes-escopo-2026-07-04]]) |
+| S1310 | Clubs · entrar no clube + página do clube |
+| S1311 | Comunidade · feed social dentro do clube |
 | S1312 | Comunicados recebidos + push (FCM) |
 | S1313 | Perfil / identidade do atleta |
 | S1314 | QR do ingresso e estado de check-in |
 | S1315 | Solicitar reembolso / cancelar inscrição |
 | S1316 | Transferir titularidade / trocar ingresso |
 
-## E16 · Plataforma e super-admin — [[LEELA-E16-plataforma-superadmin]]
+## E16 · Plataforma e super-admin · [[LEELA-E16-plataforma-superadmin]]
 
 | ID | Story |
 |---|---|

@@ -6,7 +6,7 @@ fontes:
 atualizado: 2026-07-05
 ---
 
-# 09 · Pautas — estrutura e handoff para a nyx-social
+# 09 · Pautas · estrutura e handoff para a nyx-social
 
 Esta pasta recebe as pautas de conteúdo produzidas pela agência nyx-social. Aqui vive só a estrutura e o brief de handoff. Nenhuma pauta foi produzida neste lote, de propósito: pauta é trabalho da agência, não do vault de produto.
 

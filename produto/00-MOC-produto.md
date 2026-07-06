@@ -25,7 +25,7 @@ Hub do vault de produto. Cada nota abaixo é síntese executiva com link para a 
 | [[06-roadmap-visao]] | As ondas de execução em nível executivo: V1 vender, V1.5 engajar, o que vem depois |
 | [[07-visao-de-futuro]] | Horizontes H2-H4: Creator Studio, Leela+, rede coordinator-first |
 | [[08-linhas-narrativas]] | As linhas editoriais derivadas da tese, prontas para a agência de conteúdo |
-| [[09-pautas/README]] | Estrutura de pautas + brief de handoff para a nyx-social |
+| [[produto/09-pautas/README\|09-pautas/README]] | Estrutura de pautas + brief de handoff para a nyx-social |
 
 ## Entradas diretas na verdade técnica
 
