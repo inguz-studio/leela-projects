@@ -1,5 +1,10 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-06
 
+## ✅ LOTE #1 UX-DADOS: GATE PASS (4c7ffb1..6aaf73a, pushed) — fila avança p/ firebase-admin
+TanStack Query (ADR-010) implantado strangler-fig. T1 fundação+provider · T2 gateway `lib/query/queries.ts` (queryOptions centralizados reusando api-client) · T3-T5 Visão Geral/Hub/Inscritos → useQuery nos hooks `_data/` (consumidores intocados). **Gate do maestro (por evidência):** @tanstack instalado + provider raiz + useQuery nas 3 telas + 0 fetch-on-mount cru + queryOptions reusam api-client (grep) · journey L-001 A→B→A = 0 req/0 skeleton (Playwright, pixel-idêntico) · suíte 516/516 · tsc 0 · ESLint 0 · build limpo. Placement do gateway em `apps/painel/src/lib/query/` (não no api-client compartilhado) RATIFICADO pelo maestro (mantém api-client framework-agnóstico, Fowler, reversível). Reuso-first cumprido: nenhum fetch provado reescrito. Nada visual novo → nada a documentar no showroom neste lote.
+**Faltam migrar (lote UX-DADOS-2):** Financeiro + balcão (superfícies vivas → onSnapshot) · kits/estoque · Clubes (E05) · Plataforma (E16) · mutations → useMutation + invalidação (read-your-writes). Report: `outputs/leela-build-2d6ee98d/UXDADOS-REPORT.md`.
+**Fila:** ~~UX-DADOS~~ ✅ → **firebase-admin (#2, próximo)** → histórico→tabela → RESP-MOBILE → DS-Forms → Onda 2.
+
 ## 🔧 RODADA AJUSTES SHOWROOM + DIAGNÓSTICOS (2026-07-06, Opus)
 **Aterrissado e pushed:** fonte dos 2 temas no showroom (505f148) · home reativa ao tema (7b3929d) · **fix scroll fantasma do showroom (48eb2c2)** — root-cause medido no DOM: `.sr-only` do Stepper (absolute, top estático, ancestrais static) tinha bloco de contenção no `<html>`, esticando html.scrollHeight→3592 (viewport 911) = 2ª barra + scroll pro vazio; `html{overflow:hidden}` no showcase.css (padrão app-shell fixo, só o painel interno rola). Verificado: html scrollTop=0, painel rola 4378 e para limpo.
 **EM VOO (Opus):** agente das IMAGENS reais no mock (`[LEELA-DS-SEED-IMG]`) — CardEvento já tem slot `media`, baixa fotos topicais grátis p/ public/seed-images/ + campo no seed + fiação no EventoCard.
@@ -64,6 +69,9 @@ Vault `produto/` completo: 12 notas, lint 0 órfãs/0 links quebrados, commits 6
 ## Decisões novas (2026-07-05/06, já em leela-specs/DECISOES-ABERTAS.md)
 - Parcelamento **COM juros 3,49% a.m., tabela Price, repassado ao comprador** (coef. 12x = 0,103424/parcela ≈ +24,11%).
 - Taxa de serviço: percentual puro **ou percentual + fixo (ex.: 8% + R$2,00)**, configurável por tenant no CommercialTerms.
+
+## Regra vinculante NOVA (Vitor 2026-07-06 — vale p/ TODO lote daqui em diante)
+**Showroom = fonte-de-verdade + reuso-first.** (1) Todo componente/padrão novo é DOCUMENTADO no showroom no mesmo lote; o showroom é CONSULTADO antes de construir qualquer UI (mesmos botões/componentes, consistência de código). (2) SEMPRE procurar e reusar código existente, provado e funcionando antes de escrever novo — reusar quando fizer sentido em performance. Vira checagem de gate de UI: "consultou/reusou o existente?" + "documentou no showroom?". Par do padrão de design do harness (design-principles.md + design-critique + adr-conformance).
 
 ## Regras vigentes (inalteradas — detalhe WIKI §3/§6)
 Roteamento CALIBRADO (Vitor 2026-07-06): Opus 4.8 p/ QA visual de rotina/smoke e execução mecânica · Fable p/ vereditos de gate, root-cause, fix-loops, reviews e arbitragens · Sonnet PROIBIDO — detalhe no WIKI §3 · 1 task = 1 commit `[LEELA-DS-*]` · staging cirúrgico · mutexes · suíte em blocos (máquina 8GB) · handoff a 90%+97% · review antagonista antes de gate · relatórios em outputs/ no ato · audit JSONL (`~/.harness-logs/`) por evento · push por aterrissagem de lote (maestro).
