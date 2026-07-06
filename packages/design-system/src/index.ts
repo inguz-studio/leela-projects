@@ -40,6 +40,7 @@ export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
 export { Divider, type DividerProps } from './components/Divider';
 export { IconButton, type IconButtonProps } from './components/IconButton';
+export { Sparkline, type SparklineProps } from './components/Sparkline';
 
 // ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
 export { Toolbar, type ToolbarProps } from './components/Toolbar';

@@ -124,6 +124,30 @@
     "pip-border": "1.5px",
     "pip-inset":  "{spacing.1-5}"
   },
+  "kpi": {
+    "$description": "Card de KPI do mockup `.kpi` no DEFAULT COMPACT persistido: pad 16 (comfortable seria 20), gap 12, valor 34px display italic (comfortable 40), currency 22, label 12 c/ icone 14, foot min-h 24, sub 11, sparkline 28 de altura. Hover levanta 2px (spacing.0-5) e sobe pra elev-2.",
+    "padding":         "{spacing.4}",
+    "gap":             "{spacing.3}",
+    "label-size":      "{font.size.sm}",
+    "label-gap":       "{spacing.2}",
+    "label-icon-size": "14px",
+    "label-spacing":   "0.02em",
+    "value-size":      "2.125rem",
+    "value-spacing":   "-0.01em",
+    "currency-size":   "{font.size.lg-plus}",
+    "foot-min-h":      "{spacing.6}",
+    "sub-size":        "{font.size.xs-plus}",
+    "sparkline-h":     "28px"
+  },
+  "trend": {
+    "$description": "Chip de tendencia do mockup `.trend`: 10px/700 uppercase .04em, pad 3x7 (sem passo na escala — raw legitimo no token), gap 3, seta 10px. Cores pelos pares feedback-success/danger ja provados na matriz AA.",
+    "px":        "7px",
+    "py":        "3px",
+    "font-size": "{font.size.xs}",
+    "spacing":   "0.04em",
+    "gap":       "3px",
+    "icon-size": "10px"
+  },
   "subnav": {
     "height":        "48px",
     "underline":     "2px",
