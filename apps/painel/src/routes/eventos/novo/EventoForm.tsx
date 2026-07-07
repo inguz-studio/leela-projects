@@ -6,7 +6,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Chip, Input, useToast } from '@leela/design-system';
+import { Button, Chip, Input, Textarea, useToast } from '@leela/design-system';
 import type { CriarEventoFn, CriarEventoInput, CriarEventoResult } from '../_data/contracts';
 import { toastErroCriarEvento } from './erros';
 import {
@@ -131,21 +131,13 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         placeholder="Meia Maratona Floripa 2026"
       />
 
-      <div className="flex flex-col gap-1">
-        <label
-          htmlFor="descricao"
-          className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
-        >
-          Descrição
-        </label>
-        <textarea
-          id="descricao"
-          value={values.descricao}
-          onChange={(e) => set('descricao', e.target.value)}
-          rows={3}
-          className="w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-raised)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
-        />
-      </div>
+      <Textarea
+        id="descricao"
+        label="Descrição"
+        value={values.descricao}
+        onChange={(e) => set('descricao', e.target.value)}
+        rows={3}
+      />
 
       <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
         <Input
