@@ -12,6 +12,7 @@ import {
   Button,
   CardDesafio,
   CardEvento,
+  Checkbox,
   Chip,
   DonutChart,
   ConfirmModal,
@@ -22,6 +23,7 @@ import {
   Modal,
   PageHeader,
   Pagination,
+  Select,
   Skeleton,
   Stepper,
   SubNav,
@@ -110,6 +112,9 @@ export function ComponentsPage(): JSX.Element {
   const [modalAberto, setModalAberto] = React.useState(false);
   const [confirmAberto, setConfirmAberto] = React.useState(false);
   const [busca, setBusca] = React.useState('');
+  const [kitSel, setKitSel] = React.useState('');
+  const [check1, setCheck1] = React.useState(false);
+  const [check2, setCheck2] = React.useState(true);
 
   function toggleFiltro(id: string): void {
     setFiltros((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -173,8 +178,52 @@ export function ComponentsPage(): JSX.Element {
       </Section>
 
       {/* ── Formulários ───────────────────────────────────────────────── */}
-      <Section title="Formulários" description="Input e Chip.">
+      <Section title="Formulários" description="Input, Select, Checkbox e Chip.">
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="Select"
+            description="Filtro compacto de faceta (4-15 valores). Select nativo restilizado — a11y de teclado/leitor de tela de fábrica. Colapsa uma fileira de chips num controle."
+          >
+            <Select
+              id="demo-kit"
+              label="Kit"
+              value={kitSel}
+              onChange={(e) => setKitSel(e.target.value)}
+              options={[
+                { value: '', label: 'Todos os kits' },
+                { value: 'kit_ouro', label: 'Kit Ouro' },
+                { value: 'kit_prata', label: 'Kit Prata' },
+                { value: 'kit_basico', label: 'Kit Básico' },
+                { value: 'sem_kit', label: 'Sem kit' },
+              ]}
+            />
+            <Select aria-label="Desabilitado" disabled options={[{ value: '', label: 'Indisponível' }]} />
+          </DemoCard>
+
+          <DemoCard
+            title="Checkbox"
+            description="Seleção por linha e 'selecionar todos' (estado indeterminate) na tabela densa. Input nativo com marca restilizada."
+          >
+            <div className="flex flex-col gap-[var(--spacing-3)]">
+              <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
+                <Checkbox checked={check1} onChange={(e) => setCheck1(e.target.checked)} />
+                Selecionar inscrito
+              </label>
+              <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
+                <Checkbox checked={check2} onChange={(e) => setCheck2(e.target.checked)} />
+                Marcado
+              </label>
+              <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                <Checkbox aria-label="Selecionar todos" indeterminate checked={false} readOnly />
+                Selecionar todos (indeterminado)
+              </label>
+              <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                <Checkbox disabled />
+                Desabilitado
+              </label>
+            </div>
+          </DemoCard>
+
           <DemoCard
             title="Input"
             description="Com label, com erro (aria-invalid + mensagem) e desabilitado."

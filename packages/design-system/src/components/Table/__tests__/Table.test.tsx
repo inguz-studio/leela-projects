@@ -169,6 +169,51 @@ describe('Table', () => {
     expect(wrapper.className).toContain('mt-[var(--spacing-4)]');
   });
 
+  // ── onRowClick (clique/teclado na linha → detalhe) ──────────────────────
+  it('calls onRowClick with the row when the row is clicked', async () => {
+    const onRowClick = vi.fn();
+    render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} onRowClick={onRowClick} />,
+    );
+    await userEvent.click(screen.getByText('Meia Floripa'));
+    expect(onRowClick).toHaveBeenCalledWith(data[0]);
+  });
+
+  it('preserves row semantics (role=row) — does NOT turn <tr> into a button', () => {
+    render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} onRowClick={vi.fn()} />,
+    );
+    // header + 2 body rows, todas ainda são role=row (estrutura de tabela intacta)
+    expect(screen.getAllByRole('row')).toHaveLength(3);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('does NOT open the row detail when an inner control is clicked', async () => {
+    const onRowClick = vi.fn();
+    const onAction = vi.fn();
+    render(
+      <Table
+        columns={columns}
+        data={data}
+        keyExtractor={(r) => r.id}
+        onRowClick={onRowClick}
+        renderActions={(row) => (
+          <button type="button" onClick={() => onAction(row.id)}>
+            Ação
+          </button>
+        )}
+      />,
+    );
+    await userEvent.click(screen.getAllByRole('button', { name: 'Ação' })[0]!);
+    expect(onAction).toHaveBeenCalledWith('1');
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it('rows are not interactive when onRowClick is absent', () => {
+    render(<Table columns={columns} data={data} keyExtractor={(r) => r.id} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('has correct number of rows (tbody tr)', () => {
     const { container } = render(
       <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,

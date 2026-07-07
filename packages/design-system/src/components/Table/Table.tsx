@@ -152,7 +152,8 @@ TableCell.displayName = 'TableCell';
 
 export interface TableColumn<TRow> {
   key: string;
-  header: string;
+  /** Texto do cabeçalho, ou um nó (ex.: checkbox "selecionar todos"). */
+  header: React.ReactNode;
   width?: string | number;
   align?: 'left' | 'center' | 'right';
   /** Sem `render`, a célula exibe `row[key]` (valores primitivos). */
@@ -176,7 +177,23 @@ export interface TableProps<TRow> {
   emptyDescription?: string;
   emptyIcon?: React.ReactNode;
   renderActions?: (row: TRow) => React.ReactNode;
+  /**
+   * Clique na LINHA inteira (abre detalhe/slide-in) — conveniência de mouse.
+   * A linha PRESERVA role=row (semântica de tabela para leitor de tela); NÃO
+   * viramos a `<tr>` num role=button (isso apagaria a estrutura da tabela). O
+   * acesso por teclado fica no controle interno da linha (ex.: botão "Detalhe"
+   * em `renderActions`) — padrão acessível de "linha clicável com alvo real".
+   * Cliques em controles interativos dentro da linha (checkbox, botões, links)
+   * NÃO disparam o onRowClick (o handler ignora alvos input/button/a/label).
+   */
+  onRowClick?: (row: TRow) => void;
   className?: string;
+}
+
+/** Um clique nasceu de um controle interativo (não deve abrir o detalhe)? */
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(target.closest('button, a, input, label, select, [role="menu"], [data-row-stop]'));
 }
 
 // ---------------------------------------------------------------------------
@@ -198,9 +215,11 @@ function Table<TRow>({
   emptyDescription,
   emptyIcon,
   renderActions,
+  onRowClick,
   className,
 }: TableProps<TRow>): JSX.Element {
   const hasActions = Boolean(renderActions);
+  const clickable = Boolean(onRowClick);
 
   if (data.length === 0) {
     return (
@@ -242,7 +261,19 @@ function Table<TRow>({
         {data.map((row) => (
           <TableRow
             key={keyExtractor(row)}
-            className={cn('h-[var(--table-row-height)]', 'hover:bg-[var(--table-row-hover)]')}
+            className={cn(
+              'h-[var(--table-row-height)]',
+              'hover:bg-[var(--table-row-hover)]',
+              clickable && 'cursor-pointer',
+            )}
+            {...(clickable
+              ? {
+                  onClick: (e: React.MouseEvent<HTMLTableRowElement>) => {
+                    if (isInteractiveTarget(e.target)) return;
+                    onRowClick?.(row);
+                  },
+                }
+              : {})}
           >
             {columns.map((col) => (
               <TableCell key={col.key} className={alignClass(col.align)}>

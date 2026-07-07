@@ -35,6 +35,8 @@ export { brasaTheme, leelaTheme } from './theme/rn-themes';
 // ── Atoms ──────────────────────────────────────────────────────────────────
 export { Button, buttonVariants, type ButtonProps } from './components/Button';
 export { Input, type InputProps } from './components/Input';
+export { Select, type SelectProps, type SelectOption } from './components/Select';
+export { Checkbox, type CheckboxProps } from './components/Checkbox';
 export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
 export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
