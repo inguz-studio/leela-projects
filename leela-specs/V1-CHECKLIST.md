@@ -111,6 +111,7 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 
 - [x] LEELA-S200-T1 — Tipo `Evento` + query por organizador + Rules (`475574d`)
 - [x] LEELA-S200-T2 — Tela Hub de eventos (`/eventos`) + KPIs globais + EmptyState (`f599032`)
+- [x] LEELA-FID-EVT-HUB — Hub HÍBRIDO (S200 à fidelidade): EventRow estendido (thumb de foto + métricas inline, T1 `a656dc9`) + hub em linhas densas + filtro de status compacto (4 chips/1 linha) + KPIs globais mantidos (T2 `b407af8`) · gate vivo 1440×900 PASS · `FID-EVT-HUB-REPORT.md`
 - [x] LEELA-S201-T1 — Tela "Novo evento" (form + upload capa/regulamento + preview) (`9781173`; swap da porta para o wrapper real em `3706b6b`)
 - [x] LEELA-S201-T2 — Function `criarEvento` + `publicarEvento` (slug, URL, QR) (`fcb7e1b`; + `getEvento(db, slug)` e `CriarEventoInput` c/ percursos no api-client)
 - [x] LEELA-S201-T3 — Bloqueio de edição de preço após 1ª venda (RN-200) (`908359c`; core + guard de Function + Rules kits.preco e eventos.percursos)
