@@ -26,10 +26,27 @@ tags: [leela, story]
 ## Dependência de backend (registrada 2026-07-07)
 O slide-in rico depende do MODELO DE PEDIDO/PAGAMENTO: hoje `Inscrito` não carrega valor/forma/parcelamento/id-da-compra nem link para o pedido, e não há Function de estorno. NÃO inventar esses dados no cliente (mostrar dinheiro/pedido errado é pior que omitir). Requer lote de backend (link Inscrito↔pedido/pagamento + campos + Function de estorno) ANTES de enriquecer o slide-in. Cruza com E04/E12 (vendas/checkout) e com o lote firebase-admin.
 
+## Campos do slide-in "Detalhe do inscrito" — EXTRAÍDOS do protótipo Claude Design (`WEB-APPV2 (1)/Inscritos do Evento.html`, painel `#slidePanel`)
+Fonte-de-verdade dos campos (o protótipo JÁ especifica tudo; não é vago). 4 abas internas. Marcado o ORIGEM do dado: `[reg]` coletado na inscrição/checkout (S1202 — provavelmente já existe, só não é surfaçado) · `[pag]` do modelo de pedido/pagamento (backend E12/E04) · `[com]` do log de comunicação · `[hist]` do log de eventos.
+
+**Header:** avatar, nome, e-mail, badge de status, modalidade.
+
+**Aba Geral (dados do atleta) `[reg]`:** CPF · Telefone · Nascimento (+ idade) · Gênero · Cidade/UF · Modalidade · Camisa (tamanho) · Contato de emergência (nome + telefone) · Restrições médicas.
+
+**Aba Pagamento `[pag]` (o núcleo do que faltava):**
+- Status · **Valor da inscrição** (R$ + Lote, ex.: "R$ 189,00 · Lote 2 — Regular") · **Cupom aplicado** (código + % + "Aplicado") · **Desconto** (– R$) · **Data do pagamento** (data · hora) · **Valor final pago** (destacado, "após cupom").
+- **Forma de pagamento:** bandeira + •••• 4 últimos + parcelamento ("Visa •••• 4821 · 12× de R$ 14,18"); nota "à vista p/ organizador · parcelado p/ atleta pela Be Hero"; tag "custo do parcelamento absorvido".
+- **Conciliação da transação:** ID da transação (mono) · Gateway/adquirente · **Taxa Be Hero (%)** (– R$) · **Repasse ao organizador** (R$) · **Previsão de repasse** (data · "N dias após o evento").
+- **Ação: "Reembolsar inscrição"** → modal de confirmação de estorno ("estornado no cartão •••• em até N faturas; inscrição permanece cancelada" · "Confirmar reembolso").
+
+**Aba Comunicação `[com]`:** contador "Comunicações enviadas (N)" + filtro Todas/E-mail/Push; por item: tipo, assunto, trecho, data·hora, status (Entregue), "Abriu: Sim/Não".
+
+**Aba Histórico `[hist]`:** timeline de eventos do registro (inscrição criada, pagamento, cancelamento com motivo/reembolso — ver §"Cancelamentos aparecem aqui com histórico de motivo e reembolso").
+
 ## Subtarefas
 - [ ] LEELA-S203-T1 — Subcoleção `inscritos` + tipo `Inscrito` + query paginada + Rules
 - [ ] LEELA-S203-T2 — Tela de inscritos (tabela densa §2.5, paginação, 4 tabs §2.7, slide-in) — FEITO (slide-in enxuto)
-- [ ] LEELA-S203-T3 — **(novo)** Slide-in rico do pedido: pagamento completo + estorno. BLOQUEADO pela dependência de backend acima.
+- [ ] LEELA-S203-T3 — **(novo)** Slide-in rico: abas Geral `[reg]` + Pagamento `[pag]` + Comunicação `[com]` + Histórico `[hist]` conforme os campos acima. **Geral `[reg]` pode adiantar** se o dado da inscrição já existir (surfaçar, não backend novo). Pagamento/estorno `[pag]` BLOQUEADO pelo lote de backend (modelo pedido/pagamento + Function de estorno).
 
 ## Links
 Épico: [[LEELA-E03-operacao-evento]]
