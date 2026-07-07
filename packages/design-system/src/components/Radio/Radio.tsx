@@ -70,8 +70,9 @@ function RadioGroup({
   children,
   'aria-label': ariaLabel,
 }: RadioGroupProps): JSX.Element {
-  const descId = id && description ? `${id}-desc` : undefined;
-  const errorId = id && errorMessage ? `${id}-error` : undefined;
+  const baseId = id ?? React.useId();
+  const descId = description ? `${baseId}-desc` : undefined;
+  const errorId = errorMessage ? `${baseId}-error` : undefined;
   const describedBy = [descId, errorId].filter(Boolean).join(' ') || undefined;
 
   const ctx = React.useMemo<RadioGroupContextValue>(
@@ -126,7 +127,10 @@ function RadioGroup({
 RadioGroup.displayName = 'RadioGroup';
 
 export interface RadioProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'name' | 'onChange'> {
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'type' | 'value' | 'name' | 'onChange' | 'checked' | 'defaultChecked'
+  > {
   /** Valor desta opção (comparado ao value do grupo). */
   value: string;
   /** Rótulo visível ao lado do controle. */
@@ -160,6 +164,7 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
           <span className="relative inline-flex h-[var(--spacing-5)] w-[var(--spacing-5)] shrink-0 items-center justify-center">
             <input
               ref={ref}
+              {...props}
               type="radio"
               id={controlId}
               name={ctx.name}
@@ -181,7 +186,6 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
               'transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
               className,
             )}
-            {...props}
           />
             {/* Ponto central — visível só quando marcado. */}
             <span

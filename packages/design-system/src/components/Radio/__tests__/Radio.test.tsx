@@ -55,6 +55,31 @@ describe('RadioGroup / Radio', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Escolha uma origem');
   });
 
+  it('wires the group description via aria-describedby without a consumer id', () => {
+    render(
+      <RadioGroup name="origem" label="Origem" description="Escolha quem criou o item">
+        <Radio value="organizador" label="Organizador" />
+      </RadioGroup>,
+    );
+    const group = screen.getByRole('group', { name: 'Origem' });
+    const describedBy = group.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)).toHaveTextContent('Escolha quem criou o item');
+  });
+
+  it('keeps the group value in control even if a consumer forces checked', () => {
+    render(
+      <RadioGroup name="origem" label="Origem" value="organizador">
+        <Radio value="organizador" label="Organizador" />
+        {/* @ts-expect-error checked pertence ao grupo, não ao consumidor (Omit). */}
+        <Radio value="patrocinador" label="Patrocinador" checked />
+      </RadioGroup>,
+    );
+    // O value do grupo manda: o forced checked não desacopla a opção.
+    expect(screen.getByRole('radio', { name: 'Organizador' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Patrocinador' })).not.toBeChecked();
+  });
+
   it('throws if a Radio is used outside a RadioGroup', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     expect(() => render(<Radio value="x" label="X" />)).toThrow(/RadioGroup/);

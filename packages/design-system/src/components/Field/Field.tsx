@@ -56,8 +56,11 @@ function Field({
   className,
   children,
 }: FieldProps): JSX.Element {
+  // Um único filho: falha cedo com erro claro em vez de quebrar obscuro no
+  // cloneElement quando vier fragmento, 2 filhos ou nó não-elemento.
+  const child = React.Children.only(children);
   const generatedId = React.useId();
-  const childProps = children.props as InjectedControlProps;
+  const childProps = child.props as InjectedControlProps;
   const controlId = htmlFor ?? childProps.id ?? generatedId;
 
   const hasError = Boolean(errorMessage);
@@ -70,16 +73,16 @@ function Field({
   const describedBy =
     [existingDescribedBy, descId, errorId].filter(Boolean).join(' ') || undefined;
 
-  const control = React.cloneElement(children, {
+  const control = React.cloneElement(child, {
     id: controlId,
     'aria-describedby': describedBy,
-    'aria-invalid': hasError ? true : undefined,
+    'aria-invalid': hasError ? true : childProps['aria-invalid'],
     required: required || childProps.required,
     disabled: disabled || childProps.disabled,
   } as InjectedControlProps);
 
   return (
-    <div className={cn('flex w-full flex-col gap-1', className)}>
+    <div className={cn('flex w-full flex-col gap-[var(--spacing-1)]', className)}>
       {label ? (
         <label
           htmlFor={controlId}

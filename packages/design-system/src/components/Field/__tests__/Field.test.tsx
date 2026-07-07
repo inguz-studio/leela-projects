@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Field } from '../Field';
 
@@ -58,5 +58,29 @@ describe('Field', () => {
       </Field>,
     );
     expect(screen.getByLabelText('Nome')).toHaveAttribute('aria-describedby', 'hint nome-error');
+  });
+
+  it("preserves the child's own aria-invalid when the field has no error", () => {
+    render(
+      <Field label="Nome" htmlFor="nome">
+        <input aria-invalid />
+      </Field>,
+    );
+    // Sem errorMessage, o aria-invalid do próprio filho não é sobrescrito.
+    expect(screen.getByLabelText('Nome')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('fails fast with a clear error when given more than one child', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(() =>
+      render(
+        // @ts-expect-error Field aceita um único filho (React.Children.only).
+        <Field label="X">
+          <input />
+          <input />
+        </Field>,
+      ),
+    ).toThrow();
+    spy.mockRestore();
   });
 });

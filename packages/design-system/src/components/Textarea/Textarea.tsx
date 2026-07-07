@@ -30,14 +30,16 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, errorMessage, label, wrapperClassName, id, disabled, rows = 3, ...props }, ref) => {
-    const errorId = id ? `${id}-error` : undefined;
+    const reactId = React.useId();
+    const controlId = id ?? reactId;
     const hasError = Boolean(errorMessage);
+    const errorId = hasError ? `${controlId}-error` : undefined;
 
     return (
-      <div className={cn('flex flex-col gap-1', wrapperClassName)}>
+      <div className={cn('flex flex-col gap-[var(--spacing-1)]', wrapperClassName)}>
         {label ? (
           <label
-            htmlFor={id}
+            htmlFor={controlId}
             className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
           >
             {label}
@@ -46,7 +48,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         <textarea
           ref={ref}
-          id={id}
+          id={controlId}
           rows={rows}
           disabled={disabled}
           aria-invalid={hasError ? true : undefined}

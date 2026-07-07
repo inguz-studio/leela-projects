@@ -9,6 +9,16 @@ describe('Textarea', () => {
     expect(screen.getByLabelText('Descrição')).toBe(screen.getByRole('textbox'));
   });
 
+  it('has an accessible name from the label without a consumer id (generated id wires the label)', async () => {
+    render(<Textarea label="Descrição" />);
+    // Sem id: a casca gera um via useId e o <label htmlFor> aponta pra ele.
+    const box = screen.getByRole('textbox', { name: 'Descrição' });
+    expect(box).toBeInTheDocument();
+    // Clicar no label foca o campo → prova que htmlFor casa com o id do textarea.
+    await userEvent.click(screen.getByText('Descrição'));
+    expect(box).toHaveFocus();
+  });
+
   it('types multi-line text and fires onChange', async () => {
     const onChange = vi.fn();
     render(<Textarea aria-label="Descrição" onChange={onChange} />);
