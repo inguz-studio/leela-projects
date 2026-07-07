@@ -17,6 +17,7 @@ export function EstoquePage(): JSX.Element {
     <EstoqueView
       kits={kits.data ?? []}
       inscritos={inscritos.data ?? []}
+      modalidades={evento.modalidades}
       loading={kits.loading || inscritos.loading}
       error={kits.error ?? inscritos.error}
     />

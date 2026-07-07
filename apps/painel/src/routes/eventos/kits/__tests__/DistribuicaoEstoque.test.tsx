@@ -41,7 +41,13 @@ describe('DistribuicaoView', () => {
 describe('EstoqueView', () => {
   it('kit esgotado dispara alerta crítico', () => {
     render(
-      <EstoqueView kits={[mkKit({ capacidade: 1 })]} inscritos={pool} loading={false} error={null} />,
+      <EstoqueView
+        kits={[mkKit({ capacidade: 1 })]}
+        inscritos={pool}
+        modalidades={['21k']}
+        loading={false}
+        error={null}
+      />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('sem saldo');
     expect(screen.getByText('Esgotado')).toBeInTheDocument();
@@ -49,8 +55,68 @@ describe('EstoqueView', () => {
 
   it('capacidade ausente degrada para "—" sem fabricar número', () => {
     render(
-      <EstoqueView kits={[mkKit({ capacidade: 0 })]} inscritos={pool} loading={false} error={null} />,
+      <EstoqueView
+        kits={[mkKit({ capacidade: 0 })]}
+        inscritos={pool}
+        modalidades={['21k']}
+        loading={false}
+        error={null}
+      />,
     );
     expect(screen.getByText('Sem capacidade')).toBeInTheDocument();
+  });
+
+  it('mostra KPIs de estoque a partir do dado real (capacidade + presença)', () => {
+    render(
+      <EstoqueView
+        kits={[mkKit({ capacidade: 100 })]}
+        inscritos={pool}
+        modalidades={['21k']}
+        loading={false}
+        error={null}
+      />,
+    );
+    // pool: 2 confirmados em kit_ouro/21k, 1 com presença → retirados = 1
+    // "Retirados" é label de KPI e header de coluna → mais de um nó
+    expect(screen.getAllByText('Retirados').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Disponíveis')).toBeInTheDocument();
+    // saldo = 100 − 1 = 99 (KPI de disponíveis e coluna de saldo)
+    expect(screen.getAllByText('99').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('matriz kit × modalidade mostra retirados / confirmados por célula', () => {
+    render(
+      <EstoqueView
+        kits={[mkKit({ capacidade: 100 })]}
+        inscritos={pool}
+        modalidades={['21k']}
+        loading={false}
+        error={null}
+      />,
+    );
+    expect(screen.getByText('Kit por modalidade')).toBeInTheDocument();
+    // Kit Ouro em 21k: 1 retirado / 2 confirmados — aparece na célula e no total
+    expect(screen.getAllByText('1 / 2').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('estoque por tamanho e movimentações ficam como dependência de backend honesta', () => {
+    render(
+      <EstoqueView
+        kits={[mkKit({ capacidade: 100 })]}
+        inscritos={pool}
+        modalidades={['21k']}
+        loading={false}
+        error={null}
+      />,
+    );
+    expect(screen.getByText('Estoque por tamanho ainda não disponível')).toBeInTheDocument();
+    expect(screen.getByText('Movimentações ainda não disponíveis')).toBeInTheDocument();
+  });
+
+  it('sem kits cadastrados mostra empty state (não inventa linhas)', () => {
+    render(
+      <EstoqueView kits={[]} inscritos={[]} modalidades={['21k']} loading={false} error={null} />,
+    );
+    expect(screen.getByText('Nenhum kit para controlar')).toBeInTheDocument();
   });
 });

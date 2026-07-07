@@ -19,6 +19,19 @@ export function pct(retirados: number, total: number): number {
   return total > 0 ? Math.round((retirados / total) * 100) : 0;
 }
 
+/**
+ * `inscrito.kit` (enum fixo `KitInscrito`, ex.: 'kit_ouro') vs `Kit.id` (id do
+ * doc, ex.: 'kit-ouro' no seed): a única divergência é o DELIMITADOR. Reconcilia
+ * '-'/'_' e caixa para casar os dois lados sem inventar dado. No-op quando os
+ * ids já coincidem. NÃO é um mapeamento de negócio — só normaliza a chave de
+ * junção; a ligação estável Kit↔enum é dependência de modelo (ver relatório).
+ * @pure
+ */
+export function kitCasa(inscritoKit: string, kitId: string): boolean {
+  const norm = (s: string): string => s.toLowerCase().replace(/-/g, '_');
+  return norm(inscritoKit) === norm(kitId);
+}
+
 export interface ProgressoKit {
   kit: KitInscrito;
   label: string;
@@ -89,7 +102,7 @@ export function estoquePorKit(
   return kits.map((kit) => {
     let retirados = 0;
     for (const i of inscritos) {
-      if (i.status === 'confirmado' && i.kit === kit.id && presencaRegistrada(i)) {
+      if (i.status === 'confirmado' && kitCasa(i.kit, kit.id) && presencaRegistrada(i)) {
         retirados += 1;
       }
     }
@@ -100,6 +113,106 @@ export function estoquePorKit(
       nome: kit.nome,
       capacidade,
       retirados,
+      saldo,
+      esgotado: saldo !== null && saldo <= 0,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Agregado de topo do Estoque (KPIs). Sobre o dado REAL (capacidade + presença).
+// Capacidade desconhecida NÃO entra no total/disponíveis (null → "—" na UI):
+// nunca inventamos um denominador. @pure
+// ---------------------------------------------------------------------------
+
+export interface ResumoEstoque {
+  /** Σ capacidade dos kits com capacidade conhecida; null se nenhuma. */
+  totalCapacidade: number | null;
+  /** Σ retiradas (presença) — dado real, independe de capacidade. */
+  retirados: number;
+  /** Σ saldo dos kits com capacidade conhecida; null se nenhuma. */
+  disponiveis: number | null;
+  /** Nº de kits esgotados (saldo ≤ 0 com capacidade conhecida). */
+  emRisco: number;
+}
+
+export function resumoEstoque(
+  kits: readonly Kit[],
+  inscritos: readonly Inscrito[],
+): ResumoEstoque {
+  const linhas = estoquePorKit(kits, inscritos);
+  const conhecidas = linhas.filter((l) => l.capacidade !== null);
+  const retirados = linhas.reduce((s, l) => s + l.retirados, 0);
+  const totalCapacidade = conhecidas.length
+    ? conhecidas.reduce((s, l) => s + (l.capacidade ?? 0), 0)
+    : null;
+  const disponiveis = conhecidas.length
+    ? conhecidas.reduce((s, l) => s + (l.saldo ?? 0), 0)
+    : null;
+  const emRisco = linhas.filter((l) => l.esgotado).length;
+  return { totalCapacidade, retirados, disponiveis, emRisco };
+}
+
+// ---------------------------------------------------------------------------
+// Matriz kit × modalidade — a visão densa que serve "não errar o kit": mostra,
+// por kit e por modalidade, a DEMANDA (confirmados) e o RETIRADO (presença).
+// Ambas as dimensões são dado real (Inscrito tem kit E modalidade). A dimensão
+// TAMANHO do mockup NÃO é modelada (nem em Inscrito nem em Kit) → fica como
+// dependência de backend na UI, sem números fabricados. @pure
+// ---------------------------------------------------------------------------
+
+export interface CelulaMatriz {
+  modalidade: string;
+  /** Kit é oferecido nesta modalidade (Kit.modalidades)? */
+  oferecido: boolean;
+  confirmados: number;
+  retirados: number;
+}
+
+export interface LinhaMatriz {
+  id: string;
+  nome: string;
+  celulas: CelulaMatriz[];
+  totalConfirmados: number;
+  totalRetirados: number;
+  capacidade: number | null;
+  saldo: number | null;
+  esgotado: boolean;
+}
+
+export function matrizEstoque(
+  kits: readonly Kit[],
+  inscritos: readonly Inscrito[],
+  modalidades: readonly string[],
+): LinhaMatriz[] {
+  return kits.map((kit) => {
+    const celulas: CelulaMatriz[] = modalidades.map((modalidade) => {
+      let confirmados = 0;
+      let retirados = 0;
+      for (const i of inscritos) {
+        if (i.status === 'confirmado' && kitCasa(i.kit, kit.id) && i.modalidade === modalidade) {
+          confirmados += 1;
+          if (presencaRegistrada(i)) retirados += 1;
+        }
+      }
+      return {
+        modalidade,
+        oferecido: kit.modalidades.includes(modalidade),
+        confirmados,
+        retirados,
+      };
+    });
+    const totalConfirmados = celulas.reduce((s, c) => s + c.confirmados, 0);
+    const totalRetirados = celulas.reduce((s, c) => s + c.retirados, 0);
+    const capacidade = kit.capacidade > 0 ? kit.capacidade : null;
+    const saldo = capacidade === null ? null : capacidade - totalRetirados;
+    return {
+      id: kit.id,
+      nome: kit.nome,
+      celulas,
+      totalConfirmados,
+      totalRetirados,
+      capacidade,
       saldo,
       esgotado: saldo !== null && saldo <= 0,
     };
