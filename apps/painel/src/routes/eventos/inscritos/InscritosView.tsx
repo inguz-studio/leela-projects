@@ -216,15 +216,6 @@ export function InscritosView({
       },
     },
     {
-      key: 'chipNumero',
-      header: 'Chip',
-      render: (r) => (
-        <span className={r.chipNumero ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}>
-          {r.chipNumero ?? '—'}
-        </span>
-      ),
-    },
-    {
       key: 'status',
       header: 'Status',
       render: (r) => {
