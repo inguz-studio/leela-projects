@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Chip, Input, Tabs, useToast } from '@leela/design-system';
+import { Badge, Button, Chip, Input, RadioCard, RadioGroup, Tabs, useToast } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
 import type {
   AgregadosSegmentacao,
@@ -37,11 +37,15 @@ export interface ComunicadoEditorProps {
 }
 
 const CANAIS: CanalComunicado[] = ['push', 'email'];
-const SEGMENTOS: { id: TipoSegmento; label: string }[] = [
-  { id: 'todos', label: 'Todos os membros' },
-  { id: 'por_desafio', label: 'Por desafio' },
-  { id: 'por_pilar', label: 'Por pilar' },
-  { id: 'por_engajamento', label: 'Por engajamento' },
+// Segmentos como cards de decisão (S109). design-principles (a): escolher para
+// quem enviar é uma decisão que precisa de contexto (quem é cada segmento) →
+// radio-card com descrição, não chip. Cada card revela seu sub-seletor
+// (referência) só quando marcado — espelha o mockup Club-Comunicacao-Nova.
+const SEGMENTOS: { id: TipoSegmento; label: string; descricao: string }[] = [
+  { id: 'todos', label: 'Todos os membros', descricao: 'Toda a base ativa do club recebe o comunicado.' },
+  { id: 'por_desafio', label: 'Por desafio', descricao: 'Só os membros participantes de um desafio específico.' },
+  { id: 'por_pilar', label: 'Por pilar', descricao: 'Membros cujo pilar mais praticado é o escolhido.' },
+  { id: 'por_engajamento', label: 'Por engajamento', descricao: 'Membros ativos numa janela recente (7, 14 ou 30 dias).' },
 ];
 
 function CardSecao({ titulo, children }: { titulo: string; children: React.ReactNode }): JSX.Element {
@@ -171,22 +175,37 @@ export function ComunicadoEditor({
           </CardSecao>
 
           <CardSecao titulo="Segmentação">
-            <div role="group" aria-label="Tipo de segmento" className="flex flex-wrap gap-[var(--spacing-2)]">
+            <RadioGroup
+              name="comunicado-segmento"
+              aria-label="Tipo de segmento"
+              value={values.segmentoTipo}
+              onValueChange={(v) => patch({ segmentoTipo: v as TipoSegmento })}
+            >
               {SEGMENTOS.map((s) => (
-                <Chip key={s.id} active={values.segmentoTipo === s.id} onClick={() => patch({ segmentoTipo: s.id })}>
-                  {s.label}
-                </Chip>
+                <RadioCard
+                  key={s.id}
+                  value={s.id}
+                  aria-label={s.label}
+                  title={s.label}
+                  description={s.descricao}
+                  badge={
+                    s.id === 'todos' ? (
+                      <Badge variant="vitoria">{`${formatInt(agregados.totalMembrosAtivos)} membros`}</Badge>
+                    ) : undefined
+                  }
+                >
+                  {s.id !== 'todos' ? (
+                    <Input
+                      id="comunicado-segmento-ref"
+                      label="Referência do segmento"
+                      value={values.segmentoRef}
+                      onChange={(e) => patch({ segmentoRef: e.target.value })}
+                      placeholder="id do desafio, pilar ou janela (7d/14d/30d)"
+                    />
+                  ) : null}
+                </RadioCard>
               ))}
-            </div>
-            {values.segmentoTipo !== 'todos' ? (
-              <Input
-                id="comunicado-segmento-ref"
-                label="Referência do segmento"
-                value={values.segmentoRef}
-                onChange={(e) => patch({ segmentoRef: e.target.value })}
-                placeholder="id do desafio, pilar ou janela (7d/14d/30d)"
-              />
-            ) : null}
+            </RadioGroup>
             <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" aria-live="polite">
               Alcance estimado: {estimativa !== null ? `${formatInt(estimativa)} membros` : '—'}
             </p>

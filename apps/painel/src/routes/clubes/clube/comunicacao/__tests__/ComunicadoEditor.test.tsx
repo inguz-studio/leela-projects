@@ -68,6 +68,17 @@ describe('ComunicadoEditor', () => {
     );
   });
 
+  it('segmentação são radio-cards de decisão (não chips) e revelam a referência ao marcar', async () => {
+    renderEditor();
+    // Cada segmento é um radio (card), não um button (chip).
+    expect(screen.getByRole('radio', { name: 'Todos os membros' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Por desafio' })).toBeInTheDocument();
+    // A referência só aparece quando um segmento != todos é escolhido.
+    expect(screen.queryByLabelText('Referência do segmento')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: 'Por desafio' }));
+    expect(screen.getByLabelText('Referência do segmento')).toBeInTheDocument();
+  });
+
   it('cancelar dispara o callback', async () => {
     const onCancelar = vi.fn();
     renderEditor({ onCancelar });
