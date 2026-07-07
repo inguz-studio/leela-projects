@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  eventoNomeLegivel,
   formatBRL,
   modeloComercialLabel,
   separarParcerias,
@@ -21,6 +22,20 @@ describe('separarParcerias', () => {
     expect(b.eventosPromovidos.map((p) => p.id)).toEqual(['p2']);
     // evento inativo e patrocinador inativo somem
     expect(b.patrocinadores.map((p) => p.id)).toEqual(['s1']);
+  });
+});
+
+describe('eventoNomeLegivel', () => {
+  it('humaniza o slug do evento em nome legível (identificador → rótulo)', () => {
+    expect(eventoNomeLegivel('acate-corporativo-2026')).toBe('Acate Corporativo 2026');
+    expect(eventoNomeLegivel('meia-floripa-2026')).toBe('Meia Floripa 2026');
+    expect(eventoNomeLegivel('trail-ratones-2026')).toBe('Trail Ratones 2026');
+  });
+
+  it('tolera underscores, hifens repetidos e slug vazio', () => {
+    expect(eventoNomeLegivel('morro_da_cruz')).toBe('Morro Da Cruz');
+    expect(eventoNomeLegivel('corrida--ponte')).toBe('Corrida Ponte');
+    expect(eventoNomeLegivel('')).toBe('');
   });
 });
 

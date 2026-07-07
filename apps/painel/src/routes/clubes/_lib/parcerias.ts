@@ -71,6 +71,26 @@ export function modeloComercialLabel(modelo: ModeloComercial): string {
 }
 
 // ---------------------------------------------------------------------------
+// Nome legível do evento a partir do slug (S107)
+// ---------------------------------------------------------------------------
+
+/**
+ * O `eventoId` é um slug (docId — E03), IDENTIFICADOR, não RÓTULO. A tela de
+ * parcerias mostrava o slug cru ("acate-corporativo-2026") no card de convite —
+ * design-principles: identificador não é rótulo. Humaniza o slug em nome legível
+ * ("Acate Corporativo 2026") p/ o Coordenador reconhecer o evento na hora de
+ * aceitar/recusar. Transformação de exibição PURA: o nome canônico do evento
+ * (denormalizado por Function) é trabalho de backend — fora do escopo desta UI.
+ */
+export function eventoNomeLegivel(eventoId: string): string {
+  return eventoId
+    .split(/[-_]/)
+    .filter((parte) => parte.length > 0)
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join(' ');
+}
+
+// ---------------------------------------------------------------------------
 // Formatação de moeda (R$) — pt-BR
 // ---------------------------------------------------------------------------
 
