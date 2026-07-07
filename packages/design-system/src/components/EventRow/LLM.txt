@@ -1,51 +1,59 @@
 # EventRow — Contrato de reuso para IA
 schema: llm-txt/1.0
 component: EventRow
-version: 0.0.1
+version: 0.1.0
 generated_at: "2026-07-06"
 source: src/components/EventRow
-verdict: APPROVE (lote FIDELIDADE T5/T7, trace leela-build-2d6ee98d)
+verdict: APPROVE (lote FID-EVT-HUB, trace leela-build-2d6ee98d — estendido: thumb de foto + métricas inline)
 
 ## Import canônico
-import { EventRow, type EventRowProps, type EventThumbVariant } from '@leela/design-system'
+import { EventRow, type EventRowProps, type EventRowMetric, type EventRowThumbImage, type EventThumbVariant } from '@leela/design-system'
 
 ## Quando usar
-Linha horizontal de evento do mockup `.event-row` (default compact): thumb 40px com gradiente por modalidade, nome + meta com dot-sep, contagem x/y à direita, badge de status e ação. Listas densas tipo "Seus eventos ativos".
+Linha horizontal densa de evento. Dois modos:
+1. COMPACT (dashboard "Seus eventos ativos"): thumb 40px com gradiente por modalidade, nome + meta, contagem x/y única, badge, ação.
+2. HÍBRIDO (hub "Meus Eventos", decisão FID-EVT-HUB): thumb com FOTO da capa (`thumbImage`) + métricas inline (`metrics`: Inscritos/Receita/Vagas) — triagem veloz do Organizador.
 
 ## Quando NÃO usar
-Não use no hub de eventos (lá o padrão é CardEvento — card vertical de mídia 16/10, anatomia disjunta; decisão de dedup registrada no T5). Não use para linhas tabulares (Table).
+Não use para linhas tabulares (Table). CardEvento (card vertical de mídia 16/10) continua válido para vitrines de mídia; o hub de eventos migrou para EventRow híbrido (linha densa) por decisão do produto (JOB de triagem veloz vence a vitrine).
 
 ## Props válidas
 - name: string
-- thumbVariant: 'corrida' | 'ciclismo' | 'yoga' | 'virtual' | 'crossfit'
-- thumbIcon?: ReactNode   (default lucide por variante: Footprints/Bike/Flower2/MonitorPlay/Dumbbell)
+- thumbVariant: 'corrida' | 'ciclismo' | 'yoga' | 'virtual' | 'crossfit'  (fallback do thumb sem foto)
+- thumbImage?: { src: string; alt?: string }   (FOTO da capa; substitui o gradiente. alt default "" — decorativa, o nome rotula a linha)
+- thumbIcon?: ReactNode   (default lucide por variante: Footprints/Bike/Flower2/MonitorPlay/Dumbbell — ignorado quando há thumbImage)
 - metaItems?: ReactNode[]   (intercalados com dot-sep 3px)
 - count?: { value: string; total?: string; label: string }
+- metrics?: { value: string; label: string }[]   (grupo inline `.stats-inline`; TEM PRECEDÊNCIA sobre count)
 - badge?: ReactNode   (Badge de status)
-- action?: ReactNode   (ex.: Button secondary sm "Gerenciar" — caminho acessível)
+- action?: ReactNode   (ex.: Button secondary sm "Gerenciar"; pode combinar menu + botão — caminho acessível)
 - onClick?: () => void   (atalho de mouse na row; a11y vive no `action`)
 - className?: string
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --eventrow-* (px/py/gap/thumb-size/thumb-icon-size/name-*/meta-*/dot-size/count-*)
-- --thumb-corrida|ciclismo|yoga|virtual|crossfit + --thumb-icon-fg (gradientes AA provados na matriz)
+- métricas inline reusam --eventrow-count-*/-count-label-* + --spacing-5/-3 (gap/pad) + --border-subtle (divisor)
+- --thumb-corrida|ciclismo|yoga|virtual|crossfit + --thumb-icon-fg (gradientes AA provados na matriz); com foto: --surface-high de base
 - --surface-raised / --radius-lg / --radius-md / --border-default (dot-sep) / elev-1→elev-2 + motion tokens
 
 ## Proibido (do/don't)
 DON'T: thumbVariant fora do enum (união fechada) ou gradiente via style inline.
 DON'T: derivar a variante de dado inventado — use heurística de APRESENTAÇÃO documentada no consumidor.
+DON'T: valores crus nas métricas — formate no consumidor (formatInt/formatBRL) e passe string pronta.
 DO: mantenha a ação primária no slot `action` (a row com onClick não é botão).
+DO: no hub, passe `thumbImage` do `imagemUrl` do evento e `thumbVariant` como fallback quando não houver foto.
 
 ## Exemplo mínimo (válido, copiável)
 <EventRow name="Meia Maratona Floripa 2026" thumbVariant="corrida" />
 
-## Exemplo completo (válido, copiável)
+## Exemplo híbrido do hub (válido, copiável)
 <EventRow
   name="Meia Maratona Floripa 2026"
   thumbVariant="corrida"
-  metaItems={['27 Abr · Florianópolis/SC', <Badge variant="alerta">Últimas vagas</Badge>]}
-  count={{ value: '453', total: '500', label: 'Inscrições' }}
-  badge={<Badge variant="heroico">Publicado</Badge>}
+  thumbImage={{ src: evento.imagemUrl }}
+  metaItems={['14 Jul 2026 · Florianópolis/SC', <Badge variant="neutro">Corrida</Badge>, <Badge variant="alerta">Últimas vagas</Badge>]}
+  metrics={[{ value: '453', label: 'Inscritos' }, { value: 'R$ 85.617', label: 'Receita' }, { value: '47', label: 'Vagas' }]}
+  badge={<Badge variant="vitoria">Ativo</Badge>}
   action={<Button variant="secondary" size="sm">Gerenciar</Button>}
 />
 

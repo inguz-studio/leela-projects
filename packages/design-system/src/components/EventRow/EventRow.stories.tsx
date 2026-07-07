@@ -68,6 +68,35 @@ export const TodasAsModalidades: Story = {
   ),
 };
 
+/**
+ * Hub híbrido "Meus Eventos" (decisão FID-EVT-HUB): thumb de FOTO da capa +
+ * métricas inline (Inscritos/Receita/Vagas) + badge de status + ação. Serve a
+ * triagem veloz do Organizador ("abrir rápido o evento que gerencio").
+ */
+export const HubHibrido: Story = {
+  args: {
+    name: 'Meia Maratona Floripa 2026',
+    thumbVariant: 'corrida',
+    thumbImage: { src: 'https://placehold.co/80x80/FF450C/FFFFFF?text=MF' },
+    metaItems: [
+      '14 Jul 2026 · Florianópolis/SC',
+      <Badge key="mod" variant="neutro">Corrida</Badge>,
+      <Badge key="vagas" variant="alerta">Últimas vagas</Badge>,
+    ],
+    metrics: [
+      { value: '453', label: 'Inscritos' },
+      { value: 'R$ 85.617', label: 'Receita' },
+      { value: '47', label: 'Vagas' },
+    ],
+    badge: <Badge variant="vitoria">Ativo</Badge>,
+    action: (
+      <Button variant="secondary" size="sm">
+        Gerenciar
+      </Button>
+    ),
+  },
+};
+
 /** Sem capacidade conhecida: contagem sem "/ total" (estado honesto). */
 export const SemCapacidade: Story = {
   args: {

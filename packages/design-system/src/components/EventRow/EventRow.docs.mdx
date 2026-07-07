@@ -7,11 +7,17 @@ import contract from './LLM.txt?raw';
 
 # EventRow
 
-Linha de evento do mockup `.event-row` (compact): thumb com gradiente por modalidade, meta com dot-sep, contagem x/y, badge e ação.
+Linha densa de evento. Modo COMPACT (`.event-row` do dashboard): thumb com gradiente por modalidade, meta com dot-sep, contagem x/y, badge e ação. Modo HÍBRIDO (hub "Meus Eventos"): thumb com FOTO da capa + métricas inline (Inscritos/Receita/Vagas).
 
 <Canvas of={Stories.Corrida} />
 
 <Controls />
+
+## Hub híbrido (foto + métricas inline)
+
+Decisão FID-EVT-HUB: no hub de eventos a linha usa `thumbImage` (capa real) e `metrics` (grupo `.stats-inline`), servindo a triagem veloz do Organizador. `metrics` tem precedência sobre `count`; `thumbVariant` continua como fallback do thumb quando não há foto.
+
+<Canvas of={Stories.HubHibrido} />
 
 ## Variantes de thumb
 

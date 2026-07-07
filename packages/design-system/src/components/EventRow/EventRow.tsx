@@ -1,19 +1,26 @@
 /**
- * EventRow — linha de evento da Visão Geral (mockup be-hero `.event-row`,
- * DEFAULT COMPACT persistido: pad 8×14, thumb 40, gap 12).
+ * EventRow — linha densa de evento (mockup be-hero `.event-row` e o hub híbrido
+ * `.event-card` de "Meus Eventos"). DEFAULT COMPACT persistido: pad 8×14,
+ * thumb 40, gap 12.
  *
  * DEDUP (mds-librarian): NÃO é variante do CardEvento — aquele é card
- * VERTICAL de mídia 16/10 para o hub (media em cima, corpo embaixo); este é
- * grid HORIZONTAL denso (thumb 40 + nome/meta + contagem + badge + ação) para
- * listas do dashboard. Anatomias disjuntas → componente próprio.
+ * VERTICAL de mídia 16/10; este é grid HORIZONTAL denso para listas/hub.
+ * Anatomias disjuntas → componente próprio.
  *
  * Anatomia (grid `40px 1fr auto auto auto`):
- *   [thumb gradiente por modalidade] [nome + meta com dot-sep] [contagem x/y]
- *   [badge de status] [ação]
+ *   [thumb: FOTO da capa OU gradiente por modalidade]
+ *   [nome + meta com dot-sep]
+ *   [métricas inline `.stats-inline` (Inscritos/Receita/Vagas) OU contagem x/y]
+ *   [badge de status] [ação(ões) — menu + Gerenciar]
  *
- * - Thumb: gradiente semântico `--thumb-{variant}` (AA do ícone branco .9
- *   provado por composição sobre a região do gradiente que o ícone ocupa —
- *   contrast.test.ts, EventThumb §); ícone default por variante (lucide).
+ * - Thumb HÍBRIDO (decisão FID-EVT-HUB): `thumbImage` renderiza a capa real
+ *   (reconhecimento veloz do hub); sem foto, cai no gradiente semântico
+ *   `--thumb-{variant}` + ícone da modalidade (AA do ícone branco .9 provado
+ *   por composição — contrast.test.ts, EventThumb §). A foto é DECORATIVA
+ *   (alt=""): o nome do evento, ao lado, já é o rótulo acessível da linha.
+ * - `metrics` (mockup `.stats-inline`): grupo denso de KPIs por evento com
+ *   divisor à esquerda; substitui a `count` única. Serve a triagem do hub
+ *   ("inscritos / receita / vagas" batendo o olho).
  * - Hover: levanta 1px (mockup) + elev-2; motion por token.
  * - A11y: a navegação acessível é o slot `action` (botão real). `onClick` na
  *   row é atalho de mouse (cursor-pointer), sem role — replica o mockup sem
@@ -46,14 +53,39 @@ export interface EventRowCount {
   label: string;
 }
 
+/** Foto de capa do evento — substitui o gradiente por variante no thumb. */
+export interface EventRowThumbImage {
+  src: string;
+  /** Descrição; default decorativo (""), pois o nome já rotula a linha. */
+  alt?: string;
+}
+
+/** Uma métrica do grupo inline (`.stats-inline` do mockup). */
+export interface EventRowMetric {
+  /** Valor já formatado (ex.: "453", "R$ 85.617", "∞"). */
+  value: string;
+  /** Rótulo uppercase sob o valor (ex.: "Inscritos"). */
+  label: string;
+}
+
 export interface EventRowProps {
   name: string;
   thumbVariant: EventThumbVariant;
+  /**
+   * Foto de capa (hub híbrido). Quando presente, renderiza a imagem no lugar
+   * do gradiente+ícone. Ausente → fallback para o gradiente da `thumbVariant`.
+   */
+  thumbImage?: EventRowThumbImage;
   /** Ícone central do thumb; default: ícone lucide da variante. */
   thumbIcon?: React.ReactNode;
   /** Itens da linha de meta — intercalados com dot-sep (`.event-meta`). */
   metaItems?: React.ReactNode[];
   count?: EventRowCount;
+  /**
+   * Métricas inline (mockup `.stats-inline`): grupo denso Inscritos/Receita/
+   * Vagas. Tem precedência sobre `count` quando informado.
+   */
+  metrics?: EventRowMetric[];
   /** Badge de status (ex.: `<Badge variant="vitoria">Publicado</Badge>`). */
   badge?: React.ReactNode;
   /** Ação da linha (ex.: `<Button variant="secondary" size="sm">Gerenciar</Button>`). */
@@ -89,7 +121,19 @@ const THUMB_ICON: Record<EventThumbVariant, LucideIcon> = {
 
 const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
   (
-    { name, thumbVariant, thumbIcon, metaItems, count, badge, action, onClick, className },
+    {
+      name,
+      thumbVariant,
+      thumbImage,
+      thumbIcon,
+      metaItems,
+      count,
+      metrics,
+      badge,
+      action,
+      onClick,
+      className,
+    },
     ref,
   ) => {
     const DefaultIcon = THUMB_ICON[thumbVariant];
@@ -113,20 +157,30 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
           className,
         )}
       >
-        {/* Thumb */}
+        {/* Thumb híbrido: FOTO da capa quando houver; senão gradiente + ícone */}
         <span
           aria-hidden
           className={cn(
             'relative flex items-center justify-center shrink-0 overflow-hidden',
             'w-[var(--eventrow-thumb-size)] h-[var(--eventrow-thumb-size)]',
             'rounded-[var(--radius-md)]',
-            THUMB_BG[thumbVariant],
+            // Gradiente só sem foto (a foto cobre o box inteiro)
+            thumbImage ? 'bg-[var(--surface-high)]' : THUMB_BG[thumbVariant],
             'text-[color:var(--thumb-icon-fg)]',
             '[&_svg]:w-[var(--eventrow-thumb-icon-size)] [&_svg]:h-[var(--eventrow-thumb-icon-size)]',
             '[&_svg]:[stroke-width:var(--icon-stroke)]',
           )}
         >
-          {thumbIcon ?? <DefaultIcon />}
+          {thumbImage ? (
+            <img
+              src={thumbImage.src}
+              alt={thumbImage.alt ?? ''}
+              loading="lazy"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            (thumbIcon ?? <DefaultIcon />)
+          )}
         </span>
 
         {/* Nome + meta */}
@@ -170,8 +224,39 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
           )}
         </div>
 
-        {/* Contagem (x/y) */}
-        {count ? (
+        {/* Métricas inline (mockup `.stats-inline`) — precedem a contagem única */}
+        {metrics && metrics.length > 0 ? (
+          <div
+            className={cn(
+              'flex items-center',
+              'gap-[var(--spacing-5)] pl-[var(--spacing-3)]',
+              'border-l border-l-[var(--border-subtle)]',
+            )}
+          >
+            {metrics.map((m) => (
+              <div key={m.label}>
+                <div
+                  className={cn(
+                    'text-[length:var(--eventrow-count-size)] font-[var(--font-weight-semibold)]',
+                    'text-[var(--text-primary)] tabular-nums leading-tight',
+                  )}
+                >
+                  {m.value}
+                </div>
+                <div
+                  className={cn(
+                    'mt-[var(--spacing-0-5)]',
+                    'text-[length:var(--eventrow-count-label-size)] font-[var(--font-weight-semibold)]',
+                    'text-[var(--text-tertiary)] uppercase',
+                    'tracking-[var(--eventrow-count-label-spacing)]',
+                  )}
+                >
+                  {m.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : count ? (
           <div className="text-right min-w-[var(--eventrow-count-min-w)]">
             <div
               className={cn(

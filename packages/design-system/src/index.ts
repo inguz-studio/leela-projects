@@ -81,7 +81,13 @@ export type { ToastProps, ToastVariant, ToastProviderProps, ToastOptions, ToastC
 export { CardEvento } from './components/CardEvento';
 export type { CardEventoProps } from './components/CardEvento';
 export { EventRow } from './components/EventRow';
-export type { EventRowProps, EventRowCount, EventThumbVariant } from './components/EventRow';
+export type {
+  EventRowProps,
+  EventRowCount,
+  EventRowMetric,
+  EventRowThumbImage,
+  EventThumbVariant,
+} from './components/EventRow';
 export { CardDesafio } from './components/CardDesafio';
 export type { CardDesafioProps } from './components/CardDesafio';
 export { Stepper } from './components/Stepper';

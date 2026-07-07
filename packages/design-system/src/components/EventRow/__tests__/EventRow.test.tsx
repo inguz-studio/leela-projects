@@ -38,6 +38,54 @@ describe('EventRow', () => {
     expect(thumb!.querySelector('svg')).not.toBeNull();
   });
 
+  it('thumbImage renderiza a FOTO da capa (decorativa) no lugar do gradiente', () => {
+    const { container } = render(
+      <EventRow
+        name="Meia Maratona Floripa 2026"
+        thumbVariant="corrida"
+        thumbImage={{ src: '/seed-images/meia-maratona.jpg' }}
+      />,
+    );
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('src', '/seed-images/meia-maratona.jpg');
+    // Decorativa: nome da linha já rotula → alt vazio, sem ícone/gradiente
+    expect(img).toHaveAttribute('alt', '');
+    expect(container.querySelector('[class*="--thumb-corrida"]')).toBeNull();
+    expect(container.querySelector('svg')).toBeNull();
+  });
+
+  it('metrics renderiza o grupo inline de KPIs (Inscritos/Receita/Vagas)', () => {
+    render(
+      <EventRow
+        name="Meia Maratona Floripa 2026"
+        thumbVariant="corrida"
+        metrics={[
+          { value: '453', label: 'Inscritos' },
+          { value: 'R$ 85.617', label: 'Receita' },
+          { value: '47', label: 'Vagas' },
+        ]}
+      />,
+    );
+    expect(screen.getByText('453')).toBeInTheDocument();
+    expect(screen.getByText('R$ 85.617')).toBeInTheDocument();
+    expect(screen.getByText('47')).toBeInTheDocument();
+    expect(screen.getByText('Receita')).toHaveClass('uppercase');
+  });
+
+  it('metrics tem precedência sobre count quando ambos são passados', () => {
+    render(
+      <EventRow
+        name="Evento"
+        thumbVariant="corrida"
+        count={{ value: '999', label: 'Inscrições' }}
+        metrics={[{ value: '453', label: 'Inscritos' }]}
+      />,
+    );
+    expect(screen.getByText('453')).toBeInTheDocument();
+    expect(screen.queryByText('999')).toBeNull();
+  });
+
   it('metaItems são intercalados com dot-sep decorativo', () => {
     const { container } = render(
       <EventRow
