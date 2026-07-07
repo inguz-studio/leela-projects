@@ -4,7 +4,15 @@
 // por kit/modalidade/status e export CSV das linhas exibidas. Presentational.
 // =============================================================================
 
-import { Badge, Button, EmptyState, Skeleton, Table, type TableColumn } from '@leela/design-system';
+import {
+  BarChart,
+  Button,
+  DonutChart,
+  EmptyState,
+  Skeleton,
+  Table,
+  type TableColumn,
+} from '@leela/design-system';
 import type { FinanceiroEvento } from '@leela/api-client';
 import {
   breakdownFinanceiro,
@@ -12,6 +20,7 @@ import {
   gerarCsvFinanceiro,
   type LinhaBreakdown,
 } from '../_lib/financeiro';
+import { prepararModalidades } from '../evento/overview/modalidades';
 import { formatBRL, formatInt } from '../_lib/format';
 import { baixarTexto } from '../_lib/download';
 
@@ -46,6 +55,13 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
   const fin = financeiro;
   const semTermo = fin.taxaPct === null;
   const linhas = breakdownFinanceiro(fin);
+  // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
+  // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
+  // agregado que JÁ existe (S207-crit2: breakdown por modalidade).
+  const { inscricoes, receita } = prepararModalidades(
+    fin.inscritos.porModalidade,
+    fin.receitaPorModalidade,
+  );
 
   function exportar(): void {
     baixarTexto(gerarCsvFinanceiro(fin), `financeiro-${slug}.csv`);
@@ -96,6 +112,42 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
         </div>
       )}
 
+      {/* Gráficos de breakdown por modalidade (reuso dos charts do DS —
+          Recharts/ADR-010). Per-evento, sobre o agregado existente. */}
+      <section
+        aria-label="Distribuição por modalidade"
+        className="grid grid-cols-1 gap-[var(--spacing-4)] lg:grid-cols-[3fr_2fr]"
+      >
+        <CardGrafico titulo="Inscrições por modalidade" nota={`${formatInt(fin.inscritos.total)} inscritos`}>
+          {inscricoes.length > 0 ? (
+            <BarChart aria-label="Inscrições por modalidade" data={inscricoes} height={170} />
+          ) : (
+            <EmptyState
+              title="Sem inscrições por modalidade"
+              description="O detalhamento aparece após a primeira inscrição confirmada."
+            />
+          )}
+        </CardGrafico>
+
+        <CardGrafico titulo="Receita por modalidade" nota={`${formatBRL(fin.receitaBruta)} total`}>
+          {receita && receita.length > 0 ? (
+            <DonutChart
+              aria-label="Receita por modalidade"
+              data={receita}
+              centerValue={brlCompacto(fin.receitaBruta)}
+              centerLabel="Receita total"
+              size={180}
+              formatValue={formatBRL}
+            />
+          ) : (
+            <EmptyState
+              title="Sem detalhamento de receita"
+              description="A receita por modalidade ainda não está disponível para este evento."
+            />
+          )}
+        </CardGrafico>
+      </section>
+
       {/* Breakdown */}
       <section aria-label="Breakdown de inscrições" className="flex flex-col gap-[var(--spacing-3)]">
         <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
@@ -109,11 +161,46 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
         />
       </section>
 
-      <p className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-        Forma de pagamento, breakdown por lote e status de repasse dependem de dados de
-        pagamento/afiliação (E12) — indisponíveis neste agregado.
-        <Badge variant="neutro">Em breve</Badge>
-      </p>
+      {/* Backend-dependency honesto: NÃO inventamos dado. Estes cortes exigem o
+          modelo de pagamento/afiliação (E12), ausente no agregado atual. */}
+      <EmptyState
+        title="Disponível com o módulo de pagamento"
+        description="Inscrições por forma de pagamento, breakdown por lote e status de repasse do organizador dependem dos dados de pagamento (E12) — ainda não computados neste agregado."
+      />
+    </div>
+  );
+}
+
+/** "R$ 85,6k" — compacto para o centro do donut. @pure */
+function brlCompacto(valor: number): string {
+  if (valor >= 1000) {
+    const k = valor / 1000;
+    return `R$ ${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(k)}k`;
+  }
+  return formatBRL(valor);
+}
+
+/** Card de gráfico da tela Financeiro (mesmo padrão visual dos KPIs). */
+function CardGrafico({
+  titulo,
+  nota,
+  children,
+}: {
+  titulo: string;
+  nota: string;
+  children: JSX.Element;
+}): JSX.Element {
+  return (
+    <div className="rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
+      <div className="mb-[var(--spacing-4)] flex items-baseline justify-between gap-[var(--spacing-2)]">
+        <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+          {titulo}
+        </h3>
+        <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)] [font-variant-numeric:tabular-nums]">
+          {nota}
+        </span>
+      </div>
+      {children}
     </div>
   );
 }

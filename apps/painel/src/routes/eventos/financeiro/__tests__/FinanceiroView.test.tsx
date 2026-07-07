@@ -49,6 +49,40 @@ describe('FinanceiroView (S207-T1)', () => {
     expect(screen.getByText('Financeiro ainda não disponível')).toBeInTheDocument();
   });
 
+  it('renderiza o bar de inscrições por modalidade (reuso do chart do DS)', () => {
+    render(
+      <FinanceiroView
+        slug="e1"
+        financeiro={mkFin({ inscritos: { total: 300, porStatus: { confirmado: 300, pendente: 0, cancelado: 0 }, porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 }, porModalidade: { '5k': 100, '10k': 200 } } })}
+        loading={false}
+        error={null}
+      />,
+    );
+    expect(screen.getByRole('img', { name: 'Inscrições por modalidade' })).toBeInTheDocument();
+  });
+
+  it('renderiza o donut de receita por modalidade quando o agregado tem receitaPorModalidade', () => {
+    render(
+      <FinanceiroView
+        slug="e1"
+        financeiro={mkFin({ receitaPorModalidade: { '5k': 20000, '10k': 40000, '21k': 25617 } })}
+        loading={false}
+        error={null}
+      />,
+    );
+    expect(screen.getByRole('img', { name: 'Receita por modalidade' })).toBeInTheDocument();
+  });
+
+  it('sem receitaPorModalidade → EmptyState honesto no card de receita', () => {
+    render(<FinanceiroView slug="e1" financeiro={mkFin()} loading={false} error={null} />);
+    expect(screen.getByText('Sem detalhamento de receita')).toBeInTheDocument();
+  });
+
+  it('mostra a dependência de backend (forma de pagamento/lote/repasse) sem inventar dado', () => {
+    render(<FinanceiroView slug="e1" financeiro={mkFin()} loading={false} error={null} />);
+    expect(screen.getByText('Disponível com o módulo de pagamento')).toBeInTheDocument();
+  });
+
   it('exportar dispara download do CSV', async () => {
     const createObjectURL = vi.fn(() => 'blob:x');
     const revokeObjectURL = vi.fn();
