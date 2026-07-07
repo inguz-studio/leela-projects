@@ -43,6 +43,16 @@ describe('MacroDashboard', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
   });
 
+  it('ordena a tabela de saúde por GMV decrescente (maior primeiro)', () => {
+    // Fixture: Passo Certo (gmv 0) inserido depois; Castelo (gmv 100000) deve
+    // vir primeiro mesmo que o Record chegasse fora de ordem.
+    render(<MacroDashboard {...baseProps} rollups={mkRollups()} />);
+    const rows = screen.getAllByRole('row');
+    // rows[0] = header; a 1ª linha de dados carrega o maior GMV.
+    expect(rows[1]).toHaveTextContent('Castelo Produções');
+    expect(rows[2]).toHaveTextContent('Passo Certo');
+  });
+
   it('abrir tenant chama onOpenTenant com o id', async () => {
     const onOpenTenant = vi.fn();
     render(<MacroDashboard {...baseProps} rollups={mkRollups()} onOpenTenant={onOpenTenant} />);

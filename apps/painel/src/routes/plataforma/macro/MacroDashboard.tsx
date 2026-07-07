@@ -12,6 +12,7 @@ import type { PlatformRollups, TenantRollup } from '@leela/core';
 import { KpiCard } from '../_components/KpiCard';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
 import { formatBRL, formatInt, formatPct, formatDataHora } from '../_lib/format';
+import { sortTenantsByGmvDesc } from '../_lib/sort';
 
 export interface MacroDashboardProps {
   rollups: PlatformRollups | null;
@@ -94,7 +95,7 @@ export function MacroDashboard({ rollups, loading, error, onOpenTenant }: MacroD
 
             <Table
               columns={columns}
-              data={Object.values(rollups.tenants)}
+              data={sortTenantsByGmvDesc(Object.values(rollups.tenants))}
               keyExtractor={(t) => t.tenantId}
               caption="Saúde e receita por tenant"
               renderActions={(t) => (
