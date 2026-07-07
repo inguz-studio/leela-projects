@@ -1,53 +1,109 @@
 // =============================================================================
-// PainelOperacional — coluna direita (40%) do balcão (S204-T1): resumo ao vivo
-// (atendidos/pendentes), alertas e últimos atendimentos. Presentational puro.
+// PainelOperacional — coluna direita (40%) do balcão (S204 · painel operacional).
+// 4 cards, na ordem do mockup Entrega de Kit: (1) Retirada de kits — progressos
+// de kit/chip + Ritmo com Sparkline do DS; (2) Alertas do balcão — pendências
+// DERIVADAS dos carimbos reais (retirada + chip órfão), nunca inventadas;
+// (3) Últimos atendimentos; (4) Ações rápidas. Presentational puro.
 // =============================================================================
 
-import { Badge } from '@leela/design-system';
+import * as React from 'react';
+import { Badge, Button, Sparkline } from '@leela/design-system';
 import type { Inscrito } from '@leela/core';
-import { presencaRegistrada } from '@leela/core';
-import { resumoBalcao } from '../_lib/balcao';
+import { chipVinculado, presencaRegistrada } from '@leela/core';
+import { resumoBalcaoDetalhado, ritmoAtendimentos } from '../_lib/balcao';
 import { formatInt } from '../_lib/format';
 
 export interface PainelOperacionalProps {
   inscritos: Inscrito[];
   /** Nomes dos últimos atendidos nesta sessão (mais recente primeiro). */
   ultimosAtendidos: string[];
+  /** Evento usa chip? Governa o alerta de chip órfão (RN-207). */
+  usaChip: boolean;
 }
 
 export function PainelOperacional({
   inscritos,
   ultimosAtendidos,
+  usaChip,
 }: PainelOperacionalProps): JSX.Element {
-  const resumo = resumoBalcao(inscritos);
+  const resumo = resumoBalcaoDetalhado(inscritos);
+  const ritmo = ritmoAtendimentos(inscritos);
   const jaComPresenca = inscritos.filter((i) => presencaRegistrada(i)).map((i) => i.atletaNome);
   const ultimos = ultimosAtendidos.length > 0 ? ultimosAtendidos : jaComPresenca.slice(0, 5);
 
+  // Chip órfão (RN-207): retirou o kit mas o chip não foi vinculado — só quando
+  // o evento usa chip. Derivado, não inventado.
+  const chipOrfaos = usaChip
+    ? inscritos.filter(
+        (i) =>
+          i.status === 'confirmado' &&
+          i.kitEntregueEm !== undefined &&
+          i.kitEntregueEm !== null &&
+          !chipVinculado(i),
+      )
+    : [];
+
   return (
-    <aside
-      aria-label="Painel operacional"
-      className="flex flex-col gap-[var(--spacing-5)] rounded-[var(--radius-lg)] bg-[var(--surface-high)] p-[var(--spacing-5)]"
-    >
-      <section aria-label="Resumo ao vivo" className="grid grid-cols-2 gap-[var(--spacing-3)]">
-        <Estatistica rotulo="Atendidos" valor={resumo.atendidos} tom="success" />
-        <Estatistica rotulo="Pendentes" valor={resumo.pendentes} tom="warning" />
+    <div className="flex flex-col gap-[var(--spacing-3)]">
+      {/* Card 1 · Retirada de kits */}
+      <section aria-label="Retirada de kits" className={CARD}>
+        <CardTitulo titulo="Retirada de kits" sub="Progresso ao vivo do balcão" />
+        <div className="flex flex-col gap-[var(--spacing-4)]">
+          <KpiProgresso
+            rotulo="Kits entregues"
+            valor={resumo.kitsEntregues}
+            total={resumo.kitElegiveis}
+            tom="success"
+          />
+          <KpiProgresso
+            rotulo="Chips vinculados"
+            valor={resumo.chipsVinculados}
+            total={resumo.confirmados}
+            tom="brand"
+          />
+          <Ritmo porHora={ritmo.porHora} ultimaHora={ritmo.ultimaHora} />
+        </div>
       </section>
 
-      {resumo.pendentes > 0 && (
-        <section
-          aria-label="Alertas"
-          className="rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-3)]"
-        >
-          <p className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
-            {formatInt(resumo.pendentes)} atleta(s) ainda sem retirada de kit.
-          </p>
-        </section>
-      )}
+      {/* Card 2 · Alertas do balcão */}
+      <section aria-label="Alertas do balcão" className={CARD}>
+        <CardTitulo titulo="Alertas do balcão" sub="Pendências que exigem ação" />
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          {resumo.pendentes === 0 && chipOrfaos.length === 0 ? (
+            <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Sem pendências no balcão.
+            </p>
+          ) : (
+            <>
+              {resumo.pendentes > 0 && (
+                <Alerta variant="alerta" rotulo="Retirada">
+                  {formatInt(resumo.pendentes)} atleta(s) confirmados ainda sem retirada de kit.
+                </Alerta>
+              )}
+              {chipOrfaos.length > 0 && (
+                <Alerta variant="vulcao" rotulo="Chips">
+                  {chipOrfaos.length === 1 ? (
+                    <>
+                      <strong className="text-[var(--text-primary)]">
+                        {chipOrfaos[0]!.atletaNome}
+                      </strong>{' '}
+                      retirou o kit mas o chip não foi vinculado.
+                    </>
+                  ) : (
+                    <>
+                      {formatInt(chipOrfaos.length)} atletas retiraram o kit sem vincular o chip.
+                    </>
+                  )}
+                </Alerta>
+              )}
+            </>
+          )}
+        </div>
+      </section>
 
-      <section aria-label="Últimos atendimentos" className="flex flex-col gap-[var(--spacing-2)]">
-        <h3 className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-          Últimos atendimentos
-        </h3>
+      {/* Card 3 · Últimos atendimentos */}
+      <section aria-label="Últimos atendimentos" className={CARD}>
+        <CardTitulo titulo="Últimos atendimentos" sub="Presenças registradas nesta sessão" />
         {ultimos.length === 0 ? (
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             Nenhum atendimento ainda.
@@ -66,27 +122,110 @@ export function PainelOperacional({
           </ul>
         )}
       </section>
-    </aside>
+
+      {/* Card 4 · Ações rápidas */}
+      <section aria-label="Ações rápidas" className={CARD}>
+        <CardTitulo titulo="Ações rápidas" sub="Operações auxiliares do balcão" />
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <Button variant="secondary" className="justify-start">
+            Cadastrar atleta presencialmente
+          </Button>
+          <Button variant="ghost" className="justify-start">
+            Imprimir lista completa
+          </Button>
+          <Button variant="ghost" className="justify-start">
+            Exportar retiradas do dia
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }
 
-function Estatistica({
+const CARD =
+  'flex flex-col gap-[var(--spacing-4)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-5)]';
+
+function CardTitulo({ titulo, sub }: { titulo: string; sub: string }): JSX.Element {
+  return (
+    <header className="flex flex-col gap-[var(--spacing-1)]">
+      <h4 className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+        {titulo}
+      </h4>
+      <p className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">{sub}</p>
+    </header>
+  );
+}
+
+function KpiProgresso({
   rotulo,
   valor,
+  total,
   tom,
 }: {
   rotulo: string;
   valor: number;
-  tom: 'success' | 'warning';
+  total: number;
+  tom: 'success' | 'brand';
 }): JSX.Element {
-  const cor = tom === 'success' ? 'text-[var(--text-success)]' : 'text-[var(--feedback-warning-fg)]';
+  const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
+  const fill = tom === 'success' ? 'bg-[var(--text-success)]' : 'bg-[var(--text-brand)]';
   return (
-    <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-3)]">
-      <span className={`text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] ${cor}`}>
-        {formatInt(valor)}
-      </span>
-      <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-        {rotulo}
+    <div className="flex flex-col gap-[var(--spacing-2)]">
+      <div className="flex items-baseline justify-between gap-[var(--spacing-2)]">
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+          {rotulo}
+        </span>
+        <span className="text-[length:var(--font-size-sm)] tabular-nums text-[var(--text-primary)]">
+          <strong className="font-[var(--font-weight-semibold)]">{formatInt(valor)}</strong>
+          <span className="text-[var(--text-tertiary)]"> / {formatInt(total)}</span>
+          <span className="ml-[var(--spacing-2)] text-[var(--text-tertiary)]">{pct}%</span>
+        </span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label={rotulo}
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="h-[var(--spacing-1)] overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-high)]"
+      >
+        <div className={`h-full rounded-[var(--radius-pill)] ${fill}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function Ritmo({ porHora, ultimaHora }: { porHora: number[]; ultimaHora: number }): JSX.Element {
+  return (
+    <div className="flex flex-col gap-[var(--spacing-1)]">
+      <div className="flex items-baseline justify-between gap-[var(--spacing-2)]">
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">Ritmo</span>
+        <span className="text-[length:var(--font-size-sm)] tabular-nums text-[var(--text-primary)]">
+          <strong className="font-[var(--font-weight-semibold)]">{formatInt(ultimaHora)}</strong>
+          <span className="text-[var(--text-tertiary)]"> atletas · última hora</span>
+        </span>
+      </div>
+      <div className="text-[var(--text-brand)]">
+        <Sparkline values={porHora} aria-label="Atendimentos por hora na última janela" />
+      </div>
+    </div>
+  );
+}
+
+function Alerta({
+  variant,
+  rotulo,
+  children,
+}: {
+  variant: 'alerta' | 'vulcao';
+  rotulo: string;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <div className="flex items-start gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-3)]">
+      <Badge variant={variant}>{rotulo}</Badge>
+      <span className="text-[length:var(--font-size-sm)] leading-snug text-[var(--text-secondary)]">
+        {children}
       </span>
     </div>
   );

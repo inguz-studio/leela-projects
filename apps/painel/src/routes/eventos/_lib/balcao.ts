@@ -5,10 +5,13 @@
 // =============================================================================
 
 import {
+  chipVinculado,
   derivarPassosBalcao,
   presencaRegistrada,
   type Evento,
   type Inscrito,
+  type ItemKit,
+  type KitInscrito,
   type PassoBalcao,
 } from '@leela/core';
 import { diasParaEvento } from './format';
@@ -111,4 +114,107 @@ export function resumoBalcao(inscritos: readonly Inscrito[]): ResumoBalcao {
     if (presencaRegistrada(i)) atendidos += 1;
   }
   return { confirmados, atendidos, pendentes: confirmados - atendidos };
+}
+
+/**
+ * Resumo detalhado do painel operacional (S204 · painel lateral): além de
+ * atendidos/pendentes, os progressos de RETIRADA de kit e VÍNCULO de chip.
+ * Tudo derivado dos carimbos reais do inscrito — sem inventar número.
+ */
+export interface ResumoBalcaoDetalhado extends ResumoBalcao {
+  /** Confirmados com kit a retirar (kit != sem_kit) — denominador de kits. */
+  kitElegiveis: number;
+  /** Confirmados com `kitEntregueEm` (retirada física registrada — RN-205). */
+  kitsEntregues: number;
+  /** Confirmados com chip vinculado (`chipNumero`). */
+  chipsVinculados: number;
+}
+
+/** Deriva o resumo detalhado do painel a partir do pool de inscritos. @pure */
+export function resumoBalcaoDetalhado(
+  inscritos: readonly Inscrito[],
+): ResumoBalcaoDetalhado {
+  const base = resumoBalcao(inscritos);
+  let kitElegiveis = 0;
+  let kitsEntregues = 0;
+  let chipsVinculados = 0;
+  for (const i of inscritos) {
+    if (i.status !== 'confirmado') continue;
+    if (i.kit !== 'sem_kit') kitElegiveis += 1;
+    if (i.kitEntregueEm !== undefined && i.kitEntregueEm !== null) kitsEntregues += 1;
+    if (chipVinculado(i)) chipsVinculados += 1;
+  }
+  return { ...base, kitElegiveis, kitsEntregues, chipsVinculados };
+}
+
+/** Ritmo do balcão (S204 · sparkline): atendimentos por hora + última hora. */
+export interface RitmoBalcao {
+  /** Série de atendimentos por hora, do mais antigo → mais recente (Sparkline). */
+  porHora: number[];
+  /** Atendimentos registrados na última hora (headline). */
+  ultimaHora: number;
+  /** Total de atendimentos com carimbo de presença considerados. */
+  total: number;
+}
+
+/** Nº de baldes horários default da sparkline de ritmo. */
+export const RITMO_JANELA_HORAS = 12;
+
+const MS_POR_HORA = 60 * 60 * 1000;
+
+/**
+ * Deriva o ritmo de atendimento por hora a partir dos carimbos `checkinEm`
+ * reais (RN-205). Baldes horários terminando em `agora`; `ultimaHora` é o
+ * balde mais recente. Sem presença registrada → série vazia (a Sparkline não
+ * desenha nada com < 2 pontos — estado honesto). @pure
+ */
+export function ritmoAtendimentos(
+  inscritos: readonly Inscrito[],
+  janelaHoras: number = RITMO_JANELA_HORAS,
+  agora: Date = new Date(),
+): RitmoBalcao {
+  const millis: number[] = [];
+  for (const i of inscritos) {
+    const ci = i.checkinEm;
+    if (ci !== undefined && ci !== null && typeof ci.toMillis === 'function') {
+      millis.push(ci.toMillis());
+    }
+  }
+  if (millis.length === 0) return { porHora: [], ultimaHora: 0, total: 0 };
+
+  const fim = agora.getTime();
+  const porHora = new Array<number>(janelaHoras).fill(0);
+  for (const t of millis) {
+    const horasAtras = (fim - t) / MS_POR_HORA;
+    // idx 0 = balde mais antigo; janelaHoras-1 = última hora.
+    const idx = janelaHoras - 1 - Math.floor(horasAtras);
+    if (idx >= 0 && idx < janelaHoras) porHora[idx] = (porHora[idx] ?? 0) + 1;
+  }
+  return { porHora, ultimaHora: porHora[janelaHoras - 1] ?? 0, total: millis.length };
+}
+
+/**
+ * De-para do `kit` do inscrito (enum, underscore) → docId do Kit (hyphen).
+ * `kit_ouro` → `kit-ouro`; espelha os ids canônicos de `eventos/{}/kits`.
+ * @pure
+ */
+export function kitDocId(kit: KitInscrito): string {
+  return kit.replace(/_/g, '-');
+}
+
+/**
+ * Itens que compõem o kit do inscrito (checklist de conferência do balcão).
+ * Filtra o catálogo `itensKit` pelos que referenciam o kit do atleta (RN-215).
+ * `sem_kit` → nenhum item. Ordena tamanhados primeiro (conferência do tamanho
+ * é o passo que trava a fila). @pure
+ */
+export function itensDoKit(
+  itens: readonly ItemKit[],
+  kit: KitInscrito,
+): ItemKit[] {
+  if (kit === 'sem_kit') return [];
+  const docId = kitDocId(kit);
+  return itens
+    .filter((it) => it.kits.includes(docId))
+    .sort((a, b) => Number(b.tamanhado) - Number(a.tamanhado));
 }

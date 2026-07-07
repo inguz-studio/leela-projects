@@ -1,21 +1,24 @@
 // =============================================================================
-// BalcaoView — layout 60/40 do balcão de entrega (S204-T1). Esquerda:
-// atendimento (busca + 3 passos). Direita: painel operacional ao vivo.
-// Banner de "fora da janela" quando a entrega ainda não abriu (§2.9 estado
-// dedicado é a galeria S204-T3; aqui é só o aviso da tela viva).
+// BalcaoView — layout 60/40 do balcão de entrega (S204-T1). Topo: banner de
+// contexto (entrega ativa ↔ fora da janela). Esquerda: atendimento (busca +
+// 3 passos + checklist do kit). Direita: painel operacional ao vivo. Rodapé:
+// barra de atalhos de teclado. Os estados dedicados vivem na galeria (S204-T3).
 // =============================================================================
 
 import * as React from 'react';
 import { Skeleton } from '@leela/design-system';
-import type { Evento, Inscrito } from '@leela/core';
+import type { Evento, Inscrito, ItemKit } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { AtendimentoPanel } from './AtendimentoPanel';
 import { PainelOperacional } from './PainelOperacional';
-import { janelaEntregaAberta } from '../_lib/balcao';
+import { BalcaoBanner } from './BalcaoBanner';
+import { AtalhosBalcao } from './AtalhosBalcao';
 
 export interface BalcaoViewProps {
   evento: Evento;
   inscritos: Inscrito[];
+  /** Catálogo de itens do evento — compõe o checklist do kit (S205 · RN-215). */
+  itensKit: ItemKit[];
   loading: boolean;
   error: Error | null;
   onVincular: (
@@ -29,13 +32,13 @@ export interface BalcaoViewProps {
 export function BalcaoView({
   evento,
   inscritos,
+  itensKit,
   loading,
   error,
   onVincular,
   onRegistrar,
 }: BalcaoViewProps): JSX.Element {
   const [ultimos, setUltimos] = React.useState<string[]>([]);
-  const janelaAberta = janelaEntregaAberta(evento);
 
   if (loading) {
     return (
@@ -52,28 +55,25 @@ export function BalcaoView({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      {!janelaAberta && (
-        <div
-          role="alert"
-          className="rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-4)]"
-        >
-          <p className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
-            A janela de entrega ainda não abriu — a prova está distante. Atendimentos
-            liberam a partir de 2 dias antes do evento.
-          </p>
-        </div>
-      )}
+      <BalcaoBanner evento={evento} />
 
       <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-[3fr_2fr]">
         <AtendimentoPanel
           evento={evento}
           inscritos={inscritos}
+          itensKit={itensKit}
           onVincular={onVincular}
           onRegistrar={onRegistrar}
           onAtendido={(nome) => setUltimos((prev) => [nome, ...prev])}
         />
-        <PainelOperacional inscritos={inscritos} ultimosAtendidos={ultimos} />
+        <PainelOperacional
+          inscritos={inscritos}
+          ultimosAtendidos={ultimos}
+          usaChip={evento.usaChip}
+        />
       </div>
+
+      <AtalhosBalcao />
     </div>
   );
 }

@@ -15,17 +15,19 @@ import {
   Stepper,
   useToast,
 } from '@leela/design-system';
-import type { Evento, Inscrito } from '@leela/core';
+import type { Evento, Inscrito, ItemKit } from '@leela/core';
 import { chipVinculado, presencaRegistrada } from '@leela/core';
 import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-client';
 import { filtrarInscritos } from '../_lib/inscritosFiltro';
 import { kitInscritoBadge } from '../_lib/kitLabels';
-import { passoAtual, passosStepper } from '../_lib/balcao';
+import { itensDoKit, passoAtual, passosStepper } from '../_lib/balcao';
 
 export interface AtendimentoPanelProps {
   evento: Evento;
   /** Pool de inscritos para a busca por nome. */
   inscritos: Inscrito[];
+  /** Catálogo de itens do evento — compõe o checklist do kit (S205 · RN-215). */
+  itensKit: ItemKit[];
   onVincular: (
     inscritoId: string,
     chip: string,
@@ -39,6 +41,7 @@ export interface AtendimentoPanelProps {
 export function AtendimentoPanel({
   evento,
   inscritos,
+  itensKit,
   onVincular,
   onRegistrar,
   onAtendido,
@@ -49,6 +52,28 @@ export function AtendimentoPanel({
   const [chipInput, setChipInput] = React.useState('');
   const [conflito, setConflito] = React.useState<{ atletaNome: string } | null>(null);
   const [busy, setBusy] = React.useState(false);
+
+  // Atalhos do balcão (barra ⌘K/Esc): ⌘K/Ctrl+K foca a busca; Esc limpa o
+  // atendimento em curso (nunca com o modal de conflito aberto — ele tem o
+  // próprio Esc). Teclas de fila = velocidade no dia (design-principles · L-005).
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        document
+          .querySelector<HTMLInputElement>('input[aria-label="Buscar atleta"]')
+          ?.focus();
+        return;
+      }
+      if (e.key === 'Escape' && conflito === null && atual !== null) {
+        setAtual(null);
+        setChipInput('');
+        setConflito(null);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [conflito, atual]);
 
   const resultados = busca.trim()
     ? filtrarInscritos(inscritos, { busca }).slice(0, 6)
@@ -130,6 +155,7 @@ export function AtendimentoPanel({
   const concluido = presencaRegistrada(atual);
   const kit = kitInscritoBadge(atual.kit);
   const passoId = passos[current]?.id;
+  const itens = itensDoKit(itensKit, atual.kit);
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
@@ -167,6 +193,10 @@ export function AtendimentoPanel({
         )}
         aria-label="Passos do atendimento"
       />
+
+      {!concluido && itens.length > 0 && (
+        <ChecklistKit itens={itens} kitLabel={kit.label} />
+      )}
 
       {concluido ? (
         <div className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--feedback-success-surface)] p-[var(--spacing-4)]">
@@ -255,6 +285,52 @@ function BuscaAtleta({
         </ul>
       )}
     </div>
+  );
+}
+
+/**
+ * Checklist de conferência do kit — os itens REAIS que compõem o kit do atleta
+ * (catálogo `itensKit` do evento, RN-215). Auxílio visual do operador: confira
+ * e entregue. Não persiste marcação (a escrita da entrega é RN-205 no fechar).
+ */
+function ChecklistKit({
+  itens,
+  kitLabel,
+}: {
+  itens: ItemKit[];
+  kitLabel: string;
+}): JSX.Element {
+  return (
+    <section
+      aria-label={`Itens do ${kitLabel}`}
+      className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
+    >
+      <h4 className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+        Conferir e entregar · {kitLabel}
+      </h4>
+      <ul className="flex flex-col gap-[var(--spacing-2)]">
+        {itens.map((item) => (
+          <li
+            key={item.id}
+            className="flex items-center gap-[var(--spacing-2)] rounded-[var(--radius-sm)] bg-[var(--surface-base)] px-[var(--spacing-3)] py-[var(--spacing-2)] text-[length:var(--font-size-sm)]"
+          >
+            <span
+              aria-hidden="true"
+              className="h-[var(--spacing-3)] w-[var(--spacing-3)] shrink-0 rounded-[var(--radius-sm)] border-[length:var(--card-critical-border)] border-[var(--border-strong)]"
+            />
+            <span className="flex-1 text-[var(--text-primary)]">
+              {item.nome}
+              {item.tamanhado && (
+                <span className="text-[var(--text-tertiary)]"> · tamanho a conferir</span>
+              )}
+            </span>
+            {item.origem === 'patrocinador' && item.marca && (
+              <Badge variant="neutro">{item.marca}</Badge>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
