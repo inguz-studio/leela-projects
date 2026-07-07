@@ -95,4 +95,15 @@ describe('contarPendentesAntigos', () => {
     });
     expect(contarPendentesAntigos([antigo, recente, confirmadoAntigo], agora)).toBe(1);
   });
+
+  it('exatamente 72h NÃO conta como "mais de 72h" (fronteira estrita)', () => {
+    // limite = agora - 72h = 2026-02-26T12:00:00Z. criadoEm igual ao limite
+    // é exatamente 72h, não "mais de 72h" → não conta.
+    const naFronteira = mkInscrito({
+      id: 'f',
+      status: 'pendente',
+      criadoEm: ts(new Date('2026-02-26T12:00:00Z')),
+    });
+    expect(contarPendentesAntigos([naFronteira], agora)).toBe(0);
+  });
 });

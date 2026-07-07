@@ -69,7 +69,9 @@ export interface InscritosViewProps {
   agora?: Date;
 }
 
-const SEM_KIT_VALUE = '__todos__';
+// Sentinela de "sem filtro" compartilhada pelos selects de kit E modalidade
+// (o Select exige value string; null não trafega pelo DOM).
+const TODOS_VALUE = '__todos__';
 
 /** Dispara o download de um CSV no navegador (efeito de borda isolado). */
 function baixarCsv(nome: string, conteudo: string): void {
@@ -165,11 +167,11 @@ export function InscritosView({
 
   // ── Filtros compactos ─────────────────────────────────────────────────────
   const kitOptions: SelectOption[] = [
-    { value: SEM_KIT_VALUE, label: 'Todos os kits' },
+    { value: TODOS_VALUE, label: 'Todos os kits' },
     ...KITS_INSCRITO.map((k) => ({ value: k, label: kitInscritoBadge(k).label })),
   ];
   const modalidadeOptions: SelectOption[] = [
-    { value: SEM_KIT_VALUE, label: 'Todas as modalidades' },
+    { value: TODOS_VALUE, label: 'Todas as modalidades' },
     ...modalidades.map((m) => ({ value: m, label: m })),
   ];
 
@@ -321,16 +323,16 @@ export function InscritosView({
           <Select
             aria-label="Filtrar por kit"
             options={kitOptions}
-            value={kit ?? SEM_KIT_VALUE}
-            onChange={(e) => setKit(e.target.value === SEM_KIT_VALUE ? null : (e.target.value as KitInscrito))}
+            value={kit ?? TODOS_VALUE}
+            onChange={(e) => setKit(e.target.value === TODOS_VALUE ? null : (e.target.value as KitInscrito))}
             wrapperClassName="min-w-[var(--spacing-24)]"
           />
           {modalidades.length > 0 && (
             <Select
               aria-label="Filtrar por modalidade"
               options={modalidadeOptions}
-              value={modalidade ?? SEM_KIT_VALUE}
-              onChange={(e) => setModalidade(e.target.value === SEM_KIT_VALUE ? null : e.target.value)}
+              value={modalidade ?? TODOS_VALUE}
+              onChange={(e) => setModalidade(e.target.value === TODOS_VALUE ? null : e.target.value)}
               wrapperClassName="min-w-[var(--spacing-24)]"
             />
           )}

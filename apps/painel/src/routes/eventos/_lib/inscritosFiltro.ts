@@ -64,7 +64,7 @@ export type ContagemStatus = Record<StatusInscrito, number> & { total: number };
 export function contarPorStatus(inscritos: readonly Inscrito[]): ContagemStatus {
   const base = { total: inscritos.length } as ContagemStatus;
   for (const s of STATUS_INSCRITO) base[s] = 0;
-  for (const i of inscritos) base[i.status] += 1;
+  for (const i of inscritos) if (i.status in base) base[i.status] += 1;
   return base;
 }
 
@@ -90,6 +90,6 @@ export function contarPendentesAntigos(
   return inadimplentes(inscritos).filter((i) => {
     const criado = i.criadoEm;
     if (!criado || typeof criado.toMillis !== 'function') return false;
-    return criado.toMillis() <= limiteMs;
+    return criado.toMillis() < limiteMs;
   }).length;
 }
