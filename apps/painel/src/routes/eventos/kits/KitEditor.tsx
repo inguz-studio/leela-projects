@@ -7,7 +7,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Breadcrumb, Button, Chip, Input, useToast } from '@leela/design-system';
+import { Breadcrumb, Button, Checkbox, Chip, Input, Select, useToast } from '@leela/design-system';
 import { MSG_PRECO_BLOQUEADO, precoBloqueado, type Evento, type ItemKit, type Kit } from '@leela/core';
 import type { SalvarKitInput } from '@leela/api-client';
 import type { ItemKitPayload } from './ItemKitModal';
@@ -174,24 +174,16 @@ export function KitEditor({
           )}
         </div>
         <div className="flex items-end gap-[var(--spacing-2)]">
-          <label className="flex flex-col gap-[var(--spacing-1)]">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-              Adicionar modalidade
-            </span>
-            <select
-              aria-label="Adicionar modalidade"
-              value={novaModalidade}
-              onChange={(e) => setNovaModalidade(e.target.value)}
-              className="h-[var(--input-height)] rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-raised)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)]"
-            >
-              <option value="">Selecione…</option>
-              {disponiveis.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            id="kit-add-modalidade"
+            label="Adicionar modalidade"
+            value={novaModalidade}
+            onChange={(e) => setNovaModalidade(e.target.value)}
+            options={[
+              { value: '', label: 'Selecione…' },
+              ...disponiveis.map((m) => ({ value: m, label: m })),
+            ]}
+          />
           <Button
             variant="secondary"
             disabled={novaModalidade === ''}
@@ -242,8 +234,7 @@ export function KitEditor({
             {itens.map((item) => (
               <li key={item.id}>
                 <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={itensSel.has(item.id)}
                     onChange={() => toggleItem(item.id)}
                   />

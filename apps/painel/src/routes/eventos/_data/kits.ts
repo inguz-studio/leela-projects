@@ -13,12 +13,12 @@ import {
   removerItemKit,
   removerKit,
   salvarItemKit,
-  salvarKit,
   type SalvarItemKitInput,
   type SalvarKitInput,
 } from '@leela/api-client';
 import type { ItemKit, Kit } from '@leela/core';
 import { kitsDoEventoQuery } from '../../../lib/query/queries';
+import { useSalvarKit } from '../../../lib/query/mutations';
 import type { AsyncState } from './eventos';
 import { useEventosSession } from './session';
 
@@ -75,13 +75,19 @@ export interface KitMutations {
 export function useKitMutations(eventoId: string): KitMutations {
   const session = useEventosSession();
   const tenantId = session.tenantId;
+  // Escrita via camada de mutation (lib/query): salvarKit + invalidação da
+  // família de kits do evento no onSuccess — o Cadastro reflete o kit salvo ao
+  // voltar do editor sem contador de reload manual (read-your-writes, ADR-010).
+  const salvarKitMutation = useSalvarKit(eventoId);
 
   const salvar = useCallback(
     (kitId: string, input: Omit<SalvarKitInput, 'tenantId'>) => {
       if (!tenantId) return Promise.reject(new Error('Sessão sem tenant.'));
-      return salvarKit(getLeelaDb(), eventoId, kitId, { ...input, tenantId });
+      return salvarKitMutation
+        .mutateAsync({ kitId, input: { ...input, tenantId } })
+        .then(() => undefined);
     },
-    [eventoId, tenantId],
+    [salvarKitMutation, tenantId],
   );
 
   const remover = useCallback((kitId: string) => removerKit(getLeelaDb(), eventoId, kitId), [eventoId]);
