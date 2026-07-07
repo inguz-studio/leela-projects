@@ -15,25 +15,24 @@ import { useState } from 'react';
 import { MembrosList } from './MembrosList';
 import { ConviteModal } from './ConviteModal';
 import { useMembros } from '../../_data/clubes';
-import {
-  enviarConvitesPadrao,
-  isFailedPrecondition,
-  removerMembroPadrao,
-  transferirPropriedadePadrao,
-} from '../../_data/membrosMutations';
+import { enviarConvitesPadrao, isFailedPrecondition } from '../../_data/membrosMutations';
+import { useRemoverMembro, useTransferirPropriedade } from '../../../../lib/query/mutations';
 import type { ClubeOutletContext } from '../ClubeLayout';
 
 export function MembrosPage(): JSX.Element {
   const { clube } = useOutletContext<ClubeOutletContext>();
   const { toast } = useToast();
-  const { data: membros, loading, error, reload } = useMembros(clube.id);
+  const { data: membros, loading, error } = useMembros(clube.id);
+  // Mutações via gateway (lib/query): removem/transferem e invalidam a chave
+  // membros.doClube — a tabela reflete a escrita sem reload() manual (ADR-010).
+  const removerMembroMutation = useRemoverMembro(clube.id);
+  const transferirPropriedadeMutation = useTransferirPropriedade(clube.id);
   const [conviteAberto, setConviteAberto] = useState(false);
 
   async function remover(m: Membro): Promise<void> {
     try {
-      await removerMembroPadrao(clube.id, m.id);
+      await removerMembroMutation.mutateAsync(m.id);
       toast({ variant: 'success', title: `${m.atletaNome} removido do club` });
-      reload();
     } catch (err) {
       toast(
         isFailedPrecondition(err)
@@ -49,9 +48,8 @@ export function MembrosPage(): JSX.Element {
 
   async function transferir(m: Membro): Promise<void> {
     try {
-      await transferirPropriedadePadrao(clube.id, m.id);
+      await transferirPropriedadeMutation.mutateAsync(m.id);
       toast({ variant: 'success', title: `Propriedade transferida para ${m.atletaNome}` });
-      reload();
     } catch (err) {
       toast(
         isFailedPrecondition(err)

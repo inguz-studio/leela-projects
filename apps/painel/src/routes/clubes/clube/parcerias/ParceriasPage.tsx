@@ -16,11 +16,8 @@ import {
   type VarianteDestrutiva,
 } from './ParceriaDestrutivaModal';
 import { TermosModal } from './TermosModal';
-import {
-  useParcerias,
-  transicionarParceriaPadrao,
-  criarPatrocinadorPadrao,
-} from '../../_data/parcerias';
+import { useParcerias } from '../../_data/parcerias';
+import { useCriarPatrocinador, useTransicionarParceria } from '../../../../lib/query/mutations';
 import type { PatrocinadorInput } from '../../_lib/parcerias';
 import type { ClubeOutletContext } from '../ClubeLayout';
 
@@ -33,7 +30,11 @@ interface AlvoDestrutivo {
 export function ParceriasPage(): JSX.Element {
   const { clube } = useOutletContext<ClubeOutletContext>();
   const { toast } = useToast();
-  const { data: parcerias, loading, error, reload } = useParcerias(clube.id);
+  const { data: parcerias, loading, error } = useParcerias(clube.id);
+  // Mutações via gateway (lib/query): transicionar/adicionar patrocinador
+  // invalidam parcerias.doClube — a lista reflete a escrita sem reload() (ADR-010).
+  const transicionarMutation = useTransicionarParceria(clube.id);
+  const criarPatrocinadorMutation = useCriarPatrocinador(clube.id);
   const [addAberto, setAddAberto] = useState(false);
   const [destrutiva, setDestrutiva] = useState<AlvoDestrutivo | null>(null);
   const [termos, setTermos] = useState<ParceriaEventoAfiliado | null>(null);
@@ -44,9 +45,8 @@ export function ParceriasPage(): JSX.Element {
     okTitle: string,
   ): Promise<void> {
     try {
-      await transicionarParceriaPadrao(clube.id, p.id, status);
+      await transicionarMutation.mutateAsync({ parceriaId: p.id, status });
       toast({ variant: 'success', title: okTitle });
-      reload();
     } catch {
       toast({ variant: 'danger', title: 'Não foi possível atualizar a parceria' });
     }
@@ -61,9 +61,8 @@ export function ParceriasPage(): JSX.Element {
 
   async function criarPatrocinador(input: PatrocinadorInput): Promise<void> {
     try {
-      await criarPatrocinadorPadrao(clube.id, { tenantId: clube.tenantId, ...input });
+      await criarPatrocinadorMutation.mutateAsync({ tenantId: clube.tenantId, ...input });
       toast({ variant: 'success', title: `${input.nome} adicionado como patrocinador` });
-      reload();
     } catch {
       toast({ variant: 'danger', title: 'Não foi possível adicionar o patrocinador' });
     }
@@ -76,9 +75,8 @@ export function ParceriasPage(): JSX.Element {
         ? `${destrutiva.nome} desativado`
         : `${destrutiva.nome} removido dos eventos promovidos`;
     try {
-      await transicionarParceriaPadrao(clube.id, destrutiva.id, 'inativa');
+      await transicionarMutation.mutateAsync({ parceriaId: destrutiva.id, status: 'inativa' });
       toast({ variant: 'success', title: okTitle });
-      reload();
     } catch {
       toast({ variant: 'danger', title: 'Não foi possível concluir a ação' });
     } finally {

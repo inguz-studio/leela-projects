@@ -17,13 +17,21 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   criarEvento,
+  criarPatrocinador,
   getLeelaDb,
   getLeelaFunctions,
+  removerMembro,
   salvarKit,
+  transferirPropriedade,
+  transicionarParceria,
   type CriarEventoInput,
   type CriarEventoResult,
+  type CriarPatrocinadorInput,
+  type RemoverMembroResult,
   type SalvarKitInput,
+  type TransferirPropriedadeResult,
 } from '@leela/api-client';
+import type { StatusParceria } from '@leela/core';
 import { queryKeys } from './keys';
 
 /**
@@ -73,6 +81,89 @@ export function useSalvarKit(
     onSuccess: () => {
       // Prefixo da família (sem reloadKey) — casa todas as entradas do evento.
       void queryClient.invalidateQueries({ queryKey: ['kits', 'do-evento', eventoId] });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations de CLUBE (E05) — lote FID-CLUBES-F0. Cada uma reusa a escrita
+// provada do api-client e, no onSuccess, invalida a chave de leitura afetada do
+// clube (a MESMA que o hook de leitura consome): remover/transferir membro →
+// membros.doClube; transicionar/adicionar parceria → parcerias.doClube. Read-
+// your-writes declarativo — a lista reflete a escrita sem `reload()` manual
+// (aposenta o contador de refetch dos containers, ADR-010).
+// =============================================================================
+
+/**
+ * Remove um membro do clube (callable — recontagem ∑ no servidor) e invalida a
+ * lista de membros daquele clube: a tabela reflete a remoção sem reload manual.
+ * O erro `failed-precondition` (owner não removível, RN-106) sobe intacto para a
+ * UI distinguir a mensagem (a tela usa isFailedPrecondition).
+ */
+export function useRemoverMembro(
+  clubeId: string,
+): UseMutationResult<RemoverMembroResult, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation<RemoverMembroResult, Error, string>({
+    mutationFn: (membroId) => removerMembro(getLeelaFunctions(), clubeId, membroId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.membros.doClube(clubeId) });
+    },
+  });
+}
+
+/**
+ * Transfere a propriedade do clube (transação atômica) e invalida a lista de
+ * membros (o papel `owner` migra de linha — a tabela precisa refletir).
+ */
+export function useTransferirPropriedade(
+  clubeId: string,
+): UseMutationResult<TransferirPropriedadeResult, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation<TransferirPropriedadeResult, Error, string>({
+    mutationFn: (membroId) => transferirPropriedade(getLeelaFunctions(), clubeId, membroId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.membros.doClube(clubeId) });
+    },
+  });
+}
+
+/** Variáveis de `useTransicionarParceria`: qual parceria e o novo status. */
+export interface TransicionarParceriaVars {
+  parceriaId: string;
+  status: StatusParceria;
+}
+
+/**
+ * Transiciona o status de uma parceria (aceitar/recusar/desativar — RN-120/122,
+ * write direto guardado pelas Rules) e invalida a lista de parcerias do clube:
+ * o convite sai de "pendentes" / o patrocinador muda de estado sem reload.
+ */
+export function useTransicionarParceria(
+  clubeId: string,
+): UseMutationResult<void, Error, TransicionarParceriaVars> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, TransicionarParceriaVars>({
+    mutationFn: ({ parceriaId, status }) =>
+      transicionarParceria(getLeelaDb(), clubeId, parceriaId, status),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.parcerias.doClube(clubeId) });
+    },
+  });
+}
+
+/**
+ * Cadastra um patrocinador (write direto — Rules-guarded) e invalida a lista de
+ * parcerias: o card novo aparece na zona de patrocinadores sem reload manual.
+ */
+export function useCriarPatrocinador(
+  clubeId: string,
+): UseMutationResult<{ parceriaId: string }, Error, CriarPatrocinadorInput> {
+  const queryClient = useQueryClient();
+  return useMutation<{ parceriaId: string }, Error, CriarPatrocinadorInput>({
+    mutationFn: (input) => criarPatrocinador(getLeelaDb(), clubeId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.parcerias.doClube(clubeId) });
     },
   });
 }

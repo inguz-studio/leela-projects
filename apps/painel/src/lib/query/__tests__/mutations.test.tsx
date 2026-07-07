@@ -9,17 +9,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as React from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useCriarEvento, useSalvarKit } from '../mutations';
+import {
+  useCriarEvento,
+  useCriarPatrocinador,
+  useRemoverMembro,
+  useSalvarKit,
+  useTransferirPropriedade,
+  useTransicionarParceria,
+} from '../mutations';
 import { queryKeys } from '../keys';
 
 const mocks = vi.hoisted(() => ({
   criarEvento: vi.fn(),
   salvarKit: vi.fn(),
+  removerMembro: vi.fn(),
+  transferirPropriedade: vi.fn(),
+  transicionarParceria: vi.fn(),
+  criarPatrocinador: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', () => ({
   criarEvento: mocks.criarEvento,
   salvarKit: mocks.salvarKit,
+  removerMembro: mocks.removerMembro,
+  transferirPropriedade: mocks.transferirPropriedade,
+  transicionarParceria: mocks.transicionarParceria,
+  criarPatrocinador: mocks.criarPatrocinador,
   getLeelaFunctions: () => ({}),
   getLeelaDb: () => ({}),
 }));
@@ -79,6 +94,85 @@ describe('useSalvarKit', () => {
     expect(mocks.salvarKit).toHaveBeenCalledTimes(1);
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['kits', 'do-evento', 'e1'] }),
+    );
+  });
+});
+
+describe('mutações de clube (read-your-writes · FID-CLUBES-F0)', () => {
+  it('useRemoverMembro reusa removerMembro e invalida membros.doClube', async () => {
+    mocks.removerMembro.mockResolvedValue({ ok: true });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useRemoverMembro('clube-corrida'), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync('membro-1');
+
+    expect(mocks.removerMembro).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.membros.doClube('clube-corrida'),
+      }),
+    );
+  });
+
+  it('useTransferirPropriedade reusa transferirPropriedade e invalida membros.doClube', async () => {
+    mocks.transferirPropriedade.mockResolvedValue({ ok: true });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTransferirPropriedade('clube-corrida'), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync('membro-2');
+
+    expect(mocks.transferirPropriedade).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.membros.doClube('clube-corrida'),
+      }),
+    );
+  });
+
+  it('useTransicionarParceria reusa transicionarParceria e invalida parcerias.doClube', async () => {
+    mocks.transicionarParceria.mockResolvedValue(undefined);
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTransicionarParceria('clube-corrida'), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync({ parceriaId: 'parc-1', status: 'ativa' });
+
+    expect(mocks.transicionarParceria).toHaveBeenCalledWith({}, 'clube-corrida', 'parc-1', 'ativa');
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.parcerias.doClube('clube-corrida'),
+      }),
+    );
+  });
+
+  it('useCriarPatrocinador reusa criarPatrocinador e invalida parcerias.doClube', async () => {
+    mocks.criarPatrocinador.mockResolvedValue({ parceriaId: 'parc-nova' });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useCriarPatrocinador('clube-corrida'), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync({
+      tenantId: 'castelo',
+      nome: 'Loja X',
+      modeloComercial: 'permuta',
+      contrapartida: 'Brindes para os 100 primeiros inscritos',
+    });
+
+    expect(mocks.criarPatrocinador).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.parcerias.doClube('clube-corrida'),
+      }),
     );
   });
 });
