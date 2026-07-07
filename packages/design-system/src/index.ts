@@ -38,7 +38,14 @@ export { Input, type InputProps } from './components/Input';
 export { Select, type SelectProps, type SelectOption } from './components/Select';
 export { Checkbox, type CheckboxProps } from './components/Checkbox';
 export { Textarea, type TextareaProps } from './components/Textarea';
-export { Radio, RadioGroup, type RadioProps, type RadioGroupProps } from './components/Radio';
+export {
+  Radio,
+  RadioCard,
+  RadioGroup,
+  type RadioProps,
+  type RadioCardProps,
+  type RadioGroupProps,
+} from './components/Radio';
 export { Switch, type SwitchProps } from './components/Switch';
 export { Field, type FieldProps } from './components/Field';
 export { Badge, badgeVariants, type BadgeProps } from './components/Badge';

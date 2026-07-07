@@ -25,6 +25,7 @@ import {
   PageHeader,
   Pagination,
   Radio,
+  RadioCard,
   RadioGroup,
   Select,
   Skeleton,
@@ -122,6 +123,7 @@ export function ComponentsPage(): JSX.Element {
   const [check2, setCheck2] = React.useState(true);
   const [descricao, setDescricao] = React.useState('');
   const [origem, setOrigem] = React.useState('organizador');
+  const [modeloDemo, setModeloDemo] = React.useState('C');
   const [inscricoesAbertas, setInscricoesAbertas] = React.useState(true);
   const [eventoPublico, setEventoPublico] = React.useState(false);
   const [fieldNome, setFieldNome] = React.useState('');
@@ -330,6 +332,44 @@ export function ComponentsPage(): JSX.Element {
             <RadioGroup name="demo-invalido" label="Com erro" value="" errorMessage="Escolha uma origem.">
               <Radio value="a" label="Opção A" />
               <Radio value="b" label="Opção B" />
+            </RadioGroup>
+          </DemoCard>
+
+          <DemoCard
+            title="RadioCard"
+            description="Radio de conteúdo rico (título + descrição + selo) para ESCOLHA DE DECISÃO — quando cada opção precisa de contexto p/ decidir. Mesmo motor do Radio (input nativo, seta/foco/role de fábrica); a moldura marcada = --action-primary. É o padrão certo p/ modelo de desafio e segmentação, no lugar de chip/pill."
+          >
+            <RadioGroup
+              name="demo-modelo"
+              label="Modelo de conclusão"
+              value={modeloDemo}
+              onValueChange={setModeloDemo}
+            >
+              <RadioCard
+                value="A"
+                title="Meta por ação"
+                description="Cada ação tem sua meta. Concluir = bater todas as obrigatórias."
+                badge={<Badge variant="neutro">Mais simples</Badge>}
+                aria-label="Modelo A · Meta por ação"
+              />
+              <RadioCard
+                value="B"
+                title="Meta de pontos"
+                description="Ações somam pontos; o membro mistura o mix que quiser até a meta total."
+                badge={<Badge variant="vitoria">Flexível</Badge>}
+                aria-label="Modelo B · Meta de pontos"
+              />
+              <RadioCard
+                value="C"
+                title="Equilíbrio mínimo"
+                description="Meta total + mínimo em cada pilar. Único que opera os 3 pilares da Be Hero."
+                badge={<Badge variant="heroico">Be Hero signature</Badge>}
+                aria-label="Modelo C · Equilíbrio mínimo"
+              >
+                <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                  Sub-conteúdo revelado quando este card está marcado.
+                </p>
+              </RadioCard>
             </RadioGroup>
           </DemoCard>
 

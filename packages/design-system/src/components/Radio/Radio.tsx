@@ -210,4 +210,143 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
 );
 Radio.displayName = 'Radio';
 
-export { Radio, RadioGroup };
+// =============================================================================
+// RadioCard — Radio de conteúdo rico (título + descrição + ícone + badge) para
+// SELEÇÃO DE DECISÃO. design-principles (a): escolha única exclusiva de 2 a ~5
+// opções que precisam de CONTEXTO para decidir → radio-card, nunca chip/pill
+// (chip é filtro/toggle, não escolha rica). Usado no editor de desafio (escolher
+// o MODELO de conclusão) e no editor de comunicado (escolher a SEGMENTAÇÃO).
+//
+// REUSO, não reinvenção: compõe o MESMO motor do Radio — `<input type="radio">`
+// nativo dentro do RadioGroupContext, então navegação por seta / role / foco de
+// teclado vêm de fábrica e o card pluga em qualquer <RadioGroup>. A moldura §2.16
+// (borda) é o identificador visual do card; marcado = borda + anel --action-primary.
+// A descrição fica FORA do <label> (aria-describedby), como no Radio — nunca entra
+// no NOME acessível. `children` revela conteúdo condicional (sub-seletor) abaixo,
+// visível só quando o card está marcado, também fora do <label>.
+// =============================================================================
+
+export interface RadioCardProps
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'type' | 'value' | 'name' | 'onChange' | 'checked' | 'defaultChecked' | 'title'
+  > {
+  /** Valor desta opção (comparado ao value do grupo). */
+  value: string;
+  /** Título da opção (rótulo visível principal). */
+  title: React.ReactNode;
+  /** Texto de apoio que sustenta a decisão. Fora do nome acessível. */
+  description?: React.ReactNode;
+  /** Ícone opcional à esquerda (herda currentColor). */
+  icon?: React.ReactNode;
+  /** Selo opcional à direita (ex.: <Badge>). */
+  badge?: React.ReactNode;
+  /** Conteúdo revelado abaixo quando ESTE card está marcado (fora do <label>). */
+  children?: React.ReactNode;
+}
+
+const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
+  ({ className, value, title, description, icon, badge, children, disabled, id, ...props }, ref) => {
+    const ctx = React.useContext(RadioGroupContext);
+    if (!ctx) {
+      throw new Error('RadioCard deve ser usado dentro de <RadioGroup>.');
+    }
+    const isDisabled = disabled || ctx.disabled;
+    const checked = ctx.value === value;
+    const reactId = React.useId();
+    const controlId = id ?? reactId;
+    const descId = description ? `${controlId}-desc` : undefined;
+    // Alinha descrição e conteúdo revelado sob o título (largura do dot + gap).
+    const indent = 'pl-[calc(var(--spacing-5)+var(--spacing-3))]';
+
+    return (
+      <div
+        className={cn(
+          'flex flex-col gap-[var(--spacing-2)]',
+          'rounded-[var(--card-radius)] border-[length:var(--input-border-width)]',
+          'bg-[var(--surface-raised)] p-[var(--spacing-4)]',
+          'transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
+          'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0',
+          checked
+            ? 'border-[color:var(--action-primary)] ring-1 ring-[color:var(--action-primary)]'
+            : 'border-[var(--border-default)]',
+          isDisabled
+            ? 'cursor-not-allowed opacity-60'
+            : cn('cursor-pointer', !checked && 'hover:border-[var(--border-strong)]'),
+          className,
+        )}
+      >
+        <label
+          className={cn(
+            'flex items-start gap-[var(--spacing-3)]',
+            isDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
+          )}
+        >
+          <span className="relative inline-flex h-[var(--spacing-5)] w-[var(--spacing-5)] shrink-0 items-center justify-center">
+            <input
+              ref={ref}
+              {...props}
+              type="radio"
+              id={controlId}
+              name={ctx.name}
+              value={value}
+              checked={checked}
+              disabled={isDisabled}
+              aria-invalid={ctx.invalid ? true : undefined}
+              aria-describedby={descId}
+              onChange={() => ctx.onChange(value)}
+              className={cn(
+                'peer h-[var(--spacing-5)] w-[var(--spacing-5)] appearance-none',
+                'rounded-[var(--radius-pill)] bg-[var(--surface-base)]',
+                'border-[length:var(--input-border-width)] border-input',
+                'cursor-pointer',
+                'checked:border-[color:var(--action-primary)]',
+                'focus:outline-none',
+                'disabled:cursor-not-allowed disabled:opacity-40',
+              )}
+            />
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute hidden h-[var(--spacing-2-5)] w-[var(--spacing-2-5)] rounded-[var(--radius-pill)] bg-[var(--action-primary)] peer-checked:block"
+            />
+          </span>
+
+          {icon ? (
+            <span
+              aria-hidden="true"
+              className={cn(
+                'mt-[var(--spacing-0-5)] inline-flex h-[var(--spacing-5)] w-[var(--spacing-5)] shrink-0 items-center justify-center',
+                checked ? 'text-[var(--action-primary)]' : 'text-[var(--text-secondary)]',
+              )}
+            >
+              {icon}
+            </span>
+          ) : null}
+
+          <span className="flex-1 text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            {title}
+          </span>
+
+          {badge ? <span className="shrink-0">{badge}</span> : null}
+        </label>
+
+        {description ? (
+          <p
+            id={descId}
+            className={cn(
+              indent,
+              'text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]',
+            )}
+          >
+            {description}
+          </p>
+        ) : null}
+
+        {checked && children ? <div className={indent}>{children}</div> : null}
+      </div>
+    );
+  },
+);
+RadioCard.displayName = 'RadioCard';
+
+export { Radio, RadioCard, RadioGroup };
