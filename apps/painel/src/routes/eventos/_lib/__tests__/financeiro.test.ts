@@ -68,4 +68,48 @@ describe('gerarCsvFinanceiro', () => {
     expect(csv).toContain('Resumo,Taxa (%),\r\n');
     expect(csv).toContain('Resumo,Receita líquida (R$),\r\n');
   });
+
+  describe('injeção de fórmula (CSV/DDE)', () => {
+    it('neutraliza modalidade perigosa (texto livre público)', () => {
+      const csv = gerarCsvFinanceiro(
+        mkFin({
+          inscritos: {
+            total: 3,
+            porStatus: { confirmado: 3, pendente: 0, cancelado: 0 },
+            porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
+            porModalidade: { '=HYPERLINK("http://evil","x")': 3 },
+          },
+        }),
+      );
+      // Modalidade iniciando por `=` sai prefixada com apóstrofo → o Excel/Sheets
+      // trata como texto literal (não avalia a fórmula).
+      expect(csv).toContain("'=HYPERLINK");
+    });
+
+    it.each([
+      ['@SUM(A1)', "'@SUM(A1)"],
+      ['-2+3', "'-2+3"],
+      ['+cmd', "'+cmd"],
+      ['\tinjetado', "'\tinjetado"],
+    ])('neutraliza gatilho %j na modalidade', (modalidade, esperado) => {
+      const csv = gerarCsvFinanceiro(
+        mkFin({
+          inscritos: {
+            total: 1,
+            porStatus: { confirmado: 1, pendente: 0, cancelado: 0 },
+            porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
+            porModalidade: { [modalidade]: 1 },
+          },
+        }),
+      );
+      const linhaMod = csv.split('\r\n').find((l) => l.startsWith('Modalidade,')) ?? '';
+      const celula = linhaMod.split(',')[1] ?? '';
+      expect(celula.replace(/^"|"$/g, '')).toBe(esperado);
+    });
+
+    it('modalidade normal NÃO recebe apóstrofo', () => {
+      const csv = gerarCsvFinanceiro(mkFin());
+      expect(csv).toContain('Modalidade,5k,100');
+    });
+  });
 });

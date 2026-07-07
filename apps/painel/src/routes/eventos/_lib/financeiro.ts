@@ -8,6 +8,7 @@ import type { FinanceiroEvento } from '@leela/api-client';
 import { KITS_INSCRITO, STATUS_INSCRITO } from '@leela/core';
 import { kitInscritoLabel } from './kitLabels';
 import { statusInscritoBadge } from './statusInscrito';
+import { celulaCsv } from './csv';
 
 /** Formata a % da taxa (RN-406): null → "—". */
 export function formatTaxaPct(pct: number | null): string {
@@ -41,15 +42,12 @@ export function breakdownFinanceiro(fin: FinanceiroEvento): LinhaBreakdown[] {
   return linhas;
 }
 
-/** Escapa um campo CSV (aspas + separador + quebra). @pure */
-function csvField(v: string | number): string {
-  const s = String(v);
-  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
 /**
  * Gera o CSV das linhas exibidas: resumo (bruto/taxa/líquido) + breakdown.
- * Números crus (machine-readable); taxa/líquido ausentes viram vazio. @pure
+ * Números crus (machine-readable); taxa/líquido ausentes viram vazio. As
+ * células passam pela sanitização partilhada (`celulaCsv` · separador `,`):
+ * RFC 4180 + anti-injeção de fórmula — a modalidade é texto livre público
+ * (mesma superfície de ataque do inscritosCsv). @pure
  */
 export function gerarCsvFinanceiro(fin: FinanceiroEvento): string {
   const linhas: (string | number)[][] = [['Categoria', 'Item', 'Valor']];
@@ -61,5 +59,5 @@ export function gerarCsvFinanceiro(fin: FinanceiroEvento): string {
   for (const l of breakdownFinanceiro(fin)) {
     linhas.push([l.categoria, l.item, l.valor]);
   }
-  return linhas.map((row) => row.map(csvField).join(',')).join('\r\n');
+  return linhas.map((row) => row.map((c) => celulaCsv(c, ',')).join(',')).join('\r\n');
 }
