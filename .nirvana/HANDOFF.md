@@ -1,4 +1,18 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-06
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-07
+
+## ✅ LOTE firebase-admin: FECHADO (2026-07-07, Opus 4.8) — follow-up "~13 módulos" encerrado
+Migração mecânica `admin.firestore.{FieldValue,Timestamp}` estático → imports modulares de
+`firebase-admin/firestore`. Alvo real medido = **47 arquivos** em `functions/src` (não ~13):
+**45 migrados**, 2 já eram modulares (só menção em comentário). `import * as admin` mantido em
+todos (ainda usam `admin.firestore()`/`admin.auth()`/`admin.apps` ou os TIPOS
+`admin.firestore.Firestore/…` que são compile-time e não sofrem a interceptação de runtime).
+**Prova de destrave (não alegação):** emulator (firebase.preview.json) carrega as 23 definições +
+todos os callables inicializam sem erro de API estática · seeds aplicam · **criarEvento**,
+**vincularChip** e **registrarEntrega** chamados via HTTP no emulator (token de tenant real) →
+efetivam (`prova-migracao-fieldvalue-2027` gravado c/ `criadoEm` de servidor; `insc-0002.chipNumero`
+persistido) · log sem TypeError/serverTimestamp-undefined · tsc 0 · ESLint 0. Report:
+`outputs/leela-build-2d6ee98d/FIREBASE-ADMIN-REPORT.md`. Botões criar/salvar de evento + balcão
+DESTRAVADOS. QR server-side (S208) segue como frente Fable (segurança, escopo separado — não regressão).
 
 ## 🎯 REGRA (Vitor 2026-07-06): UX/UI se ancora no JTBD + critérios da story, NÃO no mockup
 Todo sub-lote de fidelidade/UI carrega no brief a persona + JTBD + os critérios Given/When/Then da user story da tela (`leela-specs/`). Mockup = aparência; story = job; divergiu, a story vence. Personas/JTBD: `be-hero-documentacao/be-hero-docs/{personas,jobs-to-be-done}.md`; stories em `leela-specs/{epics,backlog}/`. Encodado no harness: L-004 + SKILL.md Phase 4 (injeção de JOB).
