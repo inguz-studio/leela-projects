@@ -112,6 +112,21 @@ export interface FinanceiroEvento {
   /** Líquido do produtor (R$) — null quando não há termo */
   receitaLiquida: number | null;
   inscritos: ContagemInscritos;
+  /**
+   * Analytics do Overview que a Onda 1 ainda NÃO computa (dependem de dados de
+   * VISITAS/série temporal — gap E12, mesmo caso da conversão do dashboard). São
+   * OPCIONAIS: ausentes em produção (o agregado real não os grava) → o Overview
+   * degrada (esconde sparkline/conversão/donut). No preview, o seed-extra os
+   * injeta por cima de `financeiro/current` p/ provar a tela (ver preview-seed-extra).
+   */
+  /** % de conversão visitantes→inscritos (null = indisponível). */
+  taxaConversaoPct?: number | null;
+  /** Δ de receita confirmada na última semana (R$; null = indisponível). */
+  receitaSemana?: number | null;
+  /** Série curta do ticket médio p/ a Sparkline (vazio = sem série). */
+  ticketSparkline?: number[];
+  /** Receita (R$) por modalidade p/ o donut (chaves = percursos do evento). */
+  receitaPorModalidade?: Record<string, number>;
 }
 
 function toNum(v: unknown): number {
@@ -154,6 +169,21 @@ export async function getFinanceiroEvento(
   const snap = await getDoc(doc(db, 'eventos', eventoId, 'financeiro', 'current'));
   if (!snap.exists()) return null;
   const data = snap.data();
+
+  // Analytics opcionais (preview/E12): só entram se presentes no doc.
+  const sparkRaw = data['ticketSparkline'];
+  const ticketSparkline = Array.isArray(sparkRaw)
+    ? sparkRaw.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    : undefined;
+  const modRaw = data['receitaPorModalidade'];
+  let receitaPorModalidade: Record<string, number> | undefined;
+  if (modRaw && typeof modRaw === 'object' && !Array.isArray(modRaw)) {
+    receitaPorModalidade = {};
+    for (const [k, v] of Object.entries(modRaw as Record<string, unknown>)) {
+      receitaPorModalidade[k] = toNum(v);
+    }
+  }
+
   return {
     tenantId: typeof data['tenantId'] === 'string' ? data['tenantId'] : '',
     receitaBruta: toNum(data['receitaBruta']),
@@ -161,5 +191,13 @@ export async function getFinanceiroEvento(
     taxaValor: toNumOrNull(data['taxaValor']),
     receitaLiquida: toNumOrNull(data['receitaLiquida']),
     inscritos: parseContagem(data['inscritos']),
+    ...(data['taxaConversaoPct'] !== undefined
+      ? { taxaConversaoPct: toNumOrNull(data['taxaConversaoPct']) }
+      : {}),
+    ...(data['receitaSemana'] !== undefined
+      ? { receitaSemana: toNumOrNull(data['receitaSemana']) }
+      : {}),
+    ...(ticketSparkline ? { ticketSparkline } : {}),
+    ...(receitaPorModalidade ? { receitaPorModalidade } : {}),
   };
 }

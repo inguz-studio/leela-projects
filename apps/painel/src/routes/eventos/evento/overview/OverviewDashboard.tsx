@@ -1,43 +1,57 @@
 // =============================================================================
-// OverviewDashboard — dashboard do evento (S202-T2). Presentational puro:
-// KPIs (agregados), alertas operacionais inline e atividade recente (últimos
-// inscritos). Skeleton na atividade enquanto carrega (§2.12).
+// OverviewDashboard — dashboard do evento (S202-T2 · fidelidade LEELA-FID-EVT-T3).
+// Compõe, na ordem do mockup `Overview do Evento.html`:
+//   1. hero de contagem regressiva · 2. 4 KPIs · 3. bar + donut por modalidade ·
+//   4. atividade recente (feed tipado). Alertas operacionais entram só quando há
+//   (sinal honesto, não presente no mockup mas útil ao produtor). Presentational.
 // =============================================================================
 
-import { Badge, Skeleton } from '@leela/design-system';
-import type { Inscrito, KitInscrito } from '@leela/core';
+import { Badge } from '@leela/design-system';
+import type { BarChartDatum, DonutChartDatum } from '@leela/design-system';
+import { CountdownHero } from './CountdownHero';
 import { OverviewKpis } from './OverviewKpis';
+import { ModalidadesPanels } from './ModalidadesPanels';
+import { AtividadeFeed } from './AtividadeFeed';
+import type { AtividadeItem } from './atividade';
 import type { AlertaOperacional } from '../../_lib/alertas';
 
-const KIT_LABEL: Record<KitInscrito, string> = {
-  kit_ouro: 'Ouro',
-  kit_prata: 'Prata',
-  kit_basico: 'Básico',
-  sem_kit: 'Sem kit',
-};
-
 export interface OverviewDashboardProps {
+  // Hero
+  dias: number | null;
+  dataLinha?: string | undefined;
   qtdInscritos: number;
+  capacidade: number | null;
+  // KPIs
   receitaConfirmada: number;
+  receitaSemana?: number | null | undefined;
+  ticketSparkline?: number[] | undefined;
+  taxaConversaoPct?: number | null | undefined;
+  repassePrevisto?: number | null | undefined;
+  taxaPct?: number | null | undefined;
+  // Modalidades
+  inscricoesModal: BarChartDatum[];
+  receitaTotal: number;
+  receitaModal: DonutChartDatum[] | null;
+  // Feed + alertas
+  atividade: AtividadeItem[];
+  atividadeLoading: boolean;
   alertas: AlertaOperacional[];
-  inscritosRecentes: Inscrito[] | null;
-  inscritosLoading: boolean;
 }
 
 function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | null {
   if (alertas.length === 0) return null;
   return (
     <section aria-label="Alertas operacionais" className="flex flex-col gap-[var(--spacing-2)]">
-      <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+      <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
         Alertas operacionais
-      </h2>
+      </h3>
       <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
         {alertas.map((a) => (
           <li
             key={a.id}
             role="alert"
             className={
-              'rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-4)] text-[var(--text-primary)]' +
+              'flex items-center justify-between gap-[var(--spacing-3)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-4)] text-[var(--text-primary)]' +
               (a.severidade === 'critico'
                 ? ' border-l-4 border-l-[var(--border-danger)]'
                 : a.severidade === 'aviso'
@@ -45,7 +59,8 @@ function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | n
                   : '')
             }
           >
-            {a.mensagem}
+            <span>{a.mensagem}</span>
+            {a.severidade === 'critico' ? <Badge variant="vulcao">Atenção</Badge> : null}
           </li>
         ))}
       </ul>
@@ -53,62 +68,37 @@ function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | n
   );
 }
 
-function AtividadeRecente({
-  inscritos,
-  loading,
-}: {
-  inscritos: Inscrito[] | null;
-  loading: boolean;
-}): JSX.Element {
+export function OverviewDashboard(props: OverviewDashboardProps): JSX.Element {
   return (
-    <section aria-label="Atividade recente" className="flex flex-col gap-[var(--spacing-3)]">
-      <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-        Atividade recente
-      </h2>
-      {loading ? (
-        <div role="status" aria-label="Carregando atividade" className="flex flex-col gap-[var(--spacing-2)]">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} variant="text" />
-          ))}
-        </div>
-      ) : !inscritos || inscritos.length === 0 ? (
-        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Nenhuma inscrição recente.
-        </p>
-      ) : (
-        <ul role="list" className="flex flex-col gap-[var(--spacing-2)]">
-          {inscritos.map((ins) => (
-            <li
-              key={ins.id}
-              className="flex items-center justify-between gap-[var(--spacing-3)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] px-[var(--spacing-4)] py-[var(--spacing-3)]"
-            >
-              <span className="min-w-0 truncate text-[var(--text-primary)]">{ins.atletaNome}</span>
-              <span className="flex items-center gap-[var(--spacing-2)]">
-                <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-                  {ins.modalidade}
-                </span>
-                <Badge variant="neutro">{KIT_LABEL[ins.kit]}</Badge>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
+    <div className="flex flex-col gap-[var(--spacing-6)]">
+      <CountdownHero
+        dias={props.dias}
+        qtdInscritos={props.qtdInscritos}
+        capacidade={props.capacidade}
+        dataLinha={props.dataLinha}
+      />
 
-export function OverviewDashboard({
-  qtdInscritos,
-  receitaConfirmada,
-  alertas,
-  inscritosRecentes,
-  inscritosLoading,
-}: OverviewDashboardProps): JSX.Element {
-  return (
-    <div className="flex flex-col gap-[var(--spacing-8)]">
-      <OverviewKpis qtdInscritos={qtdInscritos} receitaConfirmada={receitaConfirmada} />
-      <Alertas alertas={alertas} />
-      <AtividadeRecente inscritos={inscritosRecentes} loading={inscritosLoading} />
+      <OverviewKpis
+        qtdInscritos={props.qtdInscritos}
+        receitaConfirmada={props.receitaConfirmada}
+        receitaSemana={props.receitaSemana}
+        ticketSparkline={props.ticketSparkline}
+        taxaConversaoPct={props.taxaConversaoPct}
+        repassePrevisto={props.repassePrevisto}
+        taxaPct={props.taxaPct}
+      />
+
+      <ModalidadesPanels
+        totalInscritos={props.qtdInscritos}
+        capacidade={props.capacidade}
+        inscricoes={props.inscricoesModal}
+        receitaTotal={props.receitaTotal}
+        receita={props.receitaModal}
+      />
+
+      <AtividadeFeed itens={props.atividade} loading={props.atividadeLoading} />
+
+      <Alertas alertas={props.alertas} />
     </div>
   );
 }

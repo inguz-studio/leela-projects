@@ -987,6 +987,102 @@ async function seedConversaoDashboard(db: Db, _agora: Date): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Overview da Meia Floripa — fidelidade do drill (LEELA-FID-EVT-T3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Enriquece o evento CANÔNICO Meia Floripa para o Overview fiel ao mockup:
+ *   - `capacidade` = 600 (o seed read-only não tem; base do ratio 453/600=76%);
+ *   - `data` = agora + 8 dias → a contagem regressiva do hero fica POSITIVA e
+ *     "viva" (o mockup mostra "8 dias"; o seed canônico é 27 Abr 2026, no passado
+ *     relativo ao preview). Preview-only, merge aditivo (functions/src intocado).
+ */
+const MEIA_CAPACIDADE = 600;
+const MEIA_DIAS_ATE_PROVA = 8;
+
+async function seedMeiaFloripaFidelidade(db: Db, agora: Date): Promise<void> {
+  const dataProva = new Date(agora.getTime() + MEIA_DIAS_ATE_PROVA * DIA_MS);
+  // Mantém a hora de largada 06:00 do mockup, no dia +8.
+  dataProva.setHours(6, 0, 0, 0);
+  await db.collection('eventos').doc(MEIA_FLORIPA_ID).set(
+    {
+      capacidade: MEIA_CAPACIDADE,
+      data: ts(dataProva),
+      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+  console.log(
+    `[seed-extra] meia floripa: capacidade=${MEIA_CAPACIDADE} + data +${MEIA_DIAS_ATE_PROVA}d (hero de contagem regressiva vivo)`
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 9. Analytics do Overview (gap E12) — injeção por cima de financeiro/current
+// ---------------------------------------------------------------------------
+
+/**
+ * Injeta em `eventos/{meia}/financeiro/current` os campos de analytics que a
+ * Onda 1 ainda NÃO computa (dependem de VISITAS/série temporal — gap E12, mesma
+ * classe da conversão do dashboard): taxa de conversão, Δ semana, série do ticket
+ * e receita por modalidade (valores do mockup, somando os R$ 85.617 confirmados).
+ *
+ * Por que aqui: `getFinanceiroEvento` lê estes campos OPCIONAIS; ausentes em
+ * produção, o Overview degrada (esconde sparkline/conversão/donut). O agregado é
+ * reescrito por `recomputarFinanceiroEvento` com set() INTEGRAL a cada write de
+ * inscrito (os carimbos de entrega da Meia disparam onInscritoWrite). Por isso
+ * este é o ÚLTIMO passo e usa o mesmo loop write→relê-estável da conversão: um
+ * straggler de recompute apagaria os campos; reescrevemos até 2 leituras estáveis.
+ * Emulator-only e idempotente.
+ */
+const TICKET_SPARKLINE_MOCKUP = [156, 162, 171, 168, 177, 181, 189] as const;
+const OVERVIEW_ANALYTICS = {
+  taxaConversaoPct: 42,
+  receitaSemana: 12400,
+  ticketSparkline: [...TICKET_SPARKLINE_MOCKUP],
+  // Soma = 85.617 (espelha o ∑ receitaConfirmada). Chaves = percursos do evento.
+  receitaPorModalidade: { '5k': 17124, '10k': 27397, '21k': 41096 },
+};
+
+async function seedOverviewAnalytics(db: Db): Promise<void> {
+  const ref = db.collection('eventos').doc(MEIA_FLORIPA_ID).collection('financeiro').doc('current');
+
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+
+  let estaveis = 0;
+  let escreveu = false;
+  for (let i = 0; i < 12 && estaveis < 2; i++) {
+    const snap = await ref.get();
+    if (!snap.exists) {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      continue;
+    }
+    const spark = snap.get('ticketSparkline') as unknown;
+    const persistiu = Array.isArray(spark) && spark.length >= 2;
+    if (persistiu && escreveu) {
+      estaveis++;
+    } else {
+      await ref.set(OVERVIEW_ANALYTICS, { merge: true });
+      escreveu = true;
+      estaveis = 0;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 600));
+  }
+
+  if (estaveis >= 2) {
+    console.log(
+      '[seed-extra] overview analytics: conversão 42% · Δ semana R$ 12.400 · ' +
+        'ticket sparkline · receita por modalidade FIXOS em financeiro/current da Meia'
+    );
+  } else {
+    console.warn(
+      '[seed-extra] overview analytics: não estabilizou após 12 tentativas — ' +
+        'verifique a fila de onInscritoWrite do Functions Emulator.'
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Orquestração
 // ---------------------------------------------------------------------------
 
@@ -999,15 +1095,16 @@ export async function seedPreviewExtra(
 
   await seedEventosExtra(db, agora);
   await seedCapasCanonicas(db);
+  await seedMeiaFloripaFidelidade(db, agora);
   await seedKitsExtra(db);
   await seedInscritosExtra(db, agora);
   await seedEntregasMeiaFloripa(db, agora);
   await seedClubeExtra(db, agora);
   await seedPlataformaExtra(db);
   await recomputarFinanceiros(db);
-  // Último toque: injeta a conversão de preview no dashboard/current da Marina
-  // (após os triggers de fan-out drenarem — ver seedConversaoDashboard).
+  // Últimos toques (após os triggers de fan-out/financeiro drenarem):
   await seedConversaoDashboard(db, agora);
+  await seedOverviewAnalytics(db);
 
   console.log('[seed-extra] OK — dados extras do preview aplicados.');
 }
