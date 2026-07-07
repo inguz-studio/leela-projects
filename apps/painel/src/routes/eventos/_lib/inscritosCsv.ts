@@ -14,10 +14,26 @@ import { formatDataCurta } from './format';
 
 const CABECALHO = ['Nome', 'Modalidade', 'Kit', 'Status', 'Chip', 'Inscrito em'] as const;
 
+// Neutralização de injeção de fórmula (CSV/DDE): nome e modalidade são texto
+// livre de inscrição pública. Um valor iniciando por = + - @ (ou TAB/CR, que o
+// Excel/Sheets tolera antes do gatilho) é avaliado como fórmula ao abrir o CSV.
+// Prefixamos apóstrofo para forçar interpretação literal. OWASP CSV Injection.
+const PERIGO_FORMULA = /^[=+\-@\t\r]/;
+
+/** Prefixa apóstrofo em campos que o Excel/Sheets avaliaria como fórmula. */
+function neutralizarFormula(campo: string): string {
+  return PERIGO_FORMULA.test(campo) ? `'${campo}` : campo;
+}
+
 /** Escapa um campo CSV (RFC 4180): envolve em aspas e duplica aspas internas. */
 function escapar(campo: string): string {
   if (/[";\n\r]/.test(campo)) return `"${campo.replace(/"/g, '""')}"`;
   return campo;
+}
+
+/** Sanitiza uma célula: neutraliza fórmula e então escapa por RFC 4180. */
+function celula(valor: unknown): string {
+  return escapar(neutralizarFormula(String(valor)));
 }
 
 /** Monta o CSV (separador `;`, padrão pt-BR/Excel) de uma lista de inscritos. @pure */
@@ -33,7 +49,7 @@ export function montarCsvInscritos(inscritos: readonly Inscrito[]): string {
         i.chipNumero ?? '—',
         formatDataCurta(i.criadoEm),
       ]
-        .map((c) => escapar(String(c)))
+        .map((c) => celula(c))
         .join(';'),
     );
   }
