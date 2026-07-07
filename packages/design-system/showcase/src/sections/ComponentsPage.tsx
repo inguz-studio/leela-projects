@@ -19,16 +19,21 @@ import {
   Divider,
   DropdownMenu,
   EmptyState,
+  Field,
   Input,
   Modal,
   PageHeader,
   Pagination,
+  Radio,
+  RadioGroup,
   Select,
   Skeleton,
   Stepper,
   SubNav,
+  Switch,
   Table,
   Tabs,
+  Textarea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -115,6 +120,11 @@ export function ComponentsPage(): JSX.Element {
   const [kitSel, setKitSel] = React.useState('');
   const [check1, setCheck1] = React.useState(false);
   const [check2, setCheck2] = React.useState(true);
+  const [descricao, setDescricao] = React.useState('');
+  const [origem, setOrigem] = React.useState('organizador');
+  const [inscricoesAbertas, setInscricoesAbertas] = React.useState(true);
+  const [eventoPublico, setEventoPublico] = React.useState(false);
+  const [fieldNome, setFieldNome] = React.useState('');
 
   function toggleFiltro(id: string): void {
     setFiltros((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -178,7 +188,10 @@ export function ComponentsPage(): JSX.Element {
       </Section>
 
       {/* ── Formulários ───────────────────────────────────────────────── */}
-      <Section title="Formulários" description="Input, Select, Checkbox e Chip.">
+      <Section
+        title="Formulários"
+        description="Input, Textarea, Select, Checkbox, Radio, Switch, Field e Chip. Todos com elemento nativo por baixo (a11y de teclado/foco/leitor de tela de fábrica), tokenizados e born-responsive."
+      >
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard
             title="Select"
@@ -278,6 +291,86 @@ export function ComponentsPage(): JSX.Element {
                 </Button>
               )}
             </div>
+          </DemoCard>
+
+          <DemoCard
+            title="Textarea"
+            description="Texto longo multi-linha (descrição, comunicado, regulamento). Mesma casca do Input — label, erro com aria-invalid e desabilitado. Textarea nativo; cresce só na vertical (resize-y) p/ não estourar no mobile."
+          >
+            <Textarea
+              id="demo-descricao"
+              label="Descrição do evento"
+              placeholder="Conte o que torna esta prova especial…"
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              rows={3}
+            />
+            <Textarea
+              id="demo-regulamento"
+              label="Regulamento"
+              defaultValue="x"
+              errorMessage="O regulamento precisa de ao menos 20 caracteres."
+              rows={2}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="Radio / RadioGroup"
+            description="Seleção única exclusiva (2 a ~5 opções visíveis p/ comparar). Radio nativo — navegação por seta e role de fábrica. O grupo é fieldset+legend; injeta name/checked/onChange por contexto."
+          >
+            <RadioGroup
+              name="demo-origem"
+              label="Origem do item do kit"
+              value={origem}
+              onValueChange={setOrigem}
+            >
+              <Radio value="organizador" label="Organizador" description="Custo entra no seu resultado." />
+              <Radio value="patrocinador" label="Patrocinador" description="Custeado pela marca parceira." />
+            </RadioGroup>
+            <RadioGroup name="demo-invalido" label="Com erro" value="" errorMessage="Escolha uma origem.">
+              <Radio value="a" label="Opção A" />
+              <Radio value="b" label="Opção B" />
+            </RadioGroup>
+          </DemoCard>
+
+          <DemoCard
+            title="Switch"
+            description="Liga/desliga de efeito imediato, sem Salvar (settings). Checkbox nativo com role=switch — o leitor de tela anuncia 'ligado/desligado'. Para on/off que só vale no Submit, use Checkbox."
+          >
+            <Switch
+              id="demo-inscricoes"
+              label="Inscrições abertas"
+              description="Fecha ou reabre as vendas na hora."
+              checked={inscricoesAbertas}
+              onCheckedChange={setInscricoesAbertas}
+            />
+            <Switch
+              id="demo-publico"
+              label="Evento público"
+              description="Aparece na busca e na vitrine."
+              checked={eventoPublico}
+              onCheckedChange={setEventoPublico}
+            />
+            <Switch aria-label="Desabilitado" disabled />
+          </DemoCard>
+
+          <DemoCard
+            title="Field"
+            description="Casca reusável p/ QUALQUER controle cru: label + descrição + erro + required/invalid/disabled com aria ligado automaticamente (id, aria-describedby, aria-invalid injetados no filho). Input/Select/Textarea já trazem a própria casca."
+          >
+            <Field
+              label="Nome do club"
+              htmlFor="demo-field-nome"
+              description="Vira o endereço público, não muda depois."
+              required
+              {...(fieldNome.trim().length === 0 ? { errorMessage: 'Informe o nome.' } : {})}
+            >
+              <input
+                value={fieldNome}
+                onChange={(e) => setFieldNome(e.target.value)}
+                className="h-[var(--input-height)] w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-input bg-[var(--surface-raised)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </Field>
           </DemoCard>
         </div>
       </Section>
