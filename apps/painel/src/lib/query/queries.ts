@@ -21,6 +21,7 @@ import {
   getOverview,
   listarEventosDoOrganizador,
   listarInscritos,
+  listarInscritosRecentes,
   INSCRITOS_PAGE_SIZE,
   type InscritosCursor,
   type OverviewResult,
@@ -91,15 +92,17 @@ export function todosInscritosQuery(eventoId: string) {
   });
 }
 
-/** Primeiros `limite` inscritos de um evento (atividade recente do detalhe). */
+/**
+ * Os `limite` inscritos MAIS RECENTES de um evento (atividade recente do
+ * detalhe). Usa `listarInscritosRecentes` (orderBy `criadoEm` desc) — NÃO
+ * `listarInscritos` (orderBy `atletaNome`): sob `atletaNome` o LIMIT traz os
+ * primeiros do alfabeto, e reordenar no cliente não recupera os recentes que a
+ * query nunca trouxe. `derivaAtividade` recebe já o conjunto certo.
+ */
 export function inscritosRecentesQuery(eventoId: string, limite: number) {
   return queryOptions({
     queryKey: queryKeys.inscritos.recentes(eventoId, limite),
-    queryFn: async (): Promise<Inscrito[]> => {
-      const { itens } = await listarInscritos(getLeelaDb(), eventoId, {
-        pageSize: limite,
-      });
-      return itens;
-    },
+    queryFn: (): Promise<Inscrito[]> =>
+      listarInscritosRecentes(getLeelaDb(), eventoId, limite),
   });
 }

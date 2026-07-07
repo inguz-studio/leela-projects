@@ -80,3 +80,32 @@ export async function listarInscritos(
 
   return { itens, proxCursor };
 }
+
+/**
+ * Lista os `limite` inscritos MAIS RECENTES do evento (por `criadoEm` DESC).
+ *
+ * Contrato SEPARADO de `listarInscritos` de propósito: aquela ordena por
+ * `atletaNome` (cursor estável da tela de Inscritos), então um `limit` traz os
+ * primeiros do ALFABETO — errado para "atividade recente". Aqui o `limit` cai
+ * sobre os inscritos mais novos, que é o que o feed do Overview precisa.
+ * Sem cursor: o teto é pequeno (~6 itens do card), não há paginação.
+ *
+ * `criadoEm` é o ÚNICO campo do `orderBy` → índice single-field automático do
+ * Firestore cobre a query; nenhum índice composto é necessário. Reusa
+ * `parseInscrito` (fonte única de parsing defensivo).
+ */
+export async function listarInscritosRecentes(
+  db: Firestore,
+  eventoId: string,
+  limite = INSCRITOS_PAGE_SIZE
+): Promise<Inscrito[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, 'eventos', eventoId, 'inscritos'),
+      orderBy('criadoEm', 'desc'),
+      firestoreLimit(limite)
+    )
+  );
+
+  return snap.docs.map((d) => parseInscrito(d.id, d.data()));
+}

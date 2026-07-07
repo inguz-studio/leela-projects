@@ -201,7 +201,7 @@ export type {
 } from './eventos/mutations';
 
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)
-export { listarInscritos, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
+export { listarInscritos, listarInscritosRecentes, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
 export type {
   InscritosCursor,
   ListarInscritosOptions,

@@ -606,6 +606,64 @@ async function seedEntregasMeiaFloripa(db: Db, agora: Date): Promise<void> {
   );
 }
 
+/**
+ * Atividade recente VIVA da Meia Floripa (LEELA-FID-EVT-T4).
+ *
+ * Os 453 inscritos canônicos têm `criadoEm` entre Jan e Abr 2026 — no preview
+ * (agora ≈ Jul/2026) todos aparecem como "há ~90d", e o feed do Overview
+ * (orderBy `criadoEm` desc, limit 6) mostraria só os do fim daquela janela.
+ * Este passo injeta um punhado de inscritos GENUINAMENTE recentes (últimos
+ * minutos/horas/dias), com nomes diversos e os três estados do feed
+ * (confirmado/pendente/cancelado → badges Confirmado/Pendente/Falha),
+ * espelhando as linhas de inscrito do mockup `Overview do Evento.html`
+ * (Rafael há 12 min, Camila há 34 min, Beatriz há 2h, Diego há 6h…).
+ *
+ * Aditivo (docIds fixos `insc-rec-NN`, fora dos canônicos `insc-0001…`) e
+ * idempotente. Roda ANTES de recomputarFinanceiros → o agregado do evento
+ * conta estes inscritos de forma determinística (receitaBruta NÃO muda: nasce
+ * de `eventos.receitaConfirmada`, não de contagem × preço — agregarFinanceiro).
+ */
+interface RecenteMeia {
+  nome: string;
+  kit: InscritoDoc['kit'];
+  status: InscritoDoc['status'];
+  modalidade: string;
+  /** Idade do registro em minutos (relativa a `agora`). */
+  minutosAtras: number;
+}
+
+// Nomes diversos (não alfabéticos) — os 4 primeiros espelham o mockup.
+const RECENTES_MEIA: readonly RecenteMeia[] = [
+  { nome: 'Rafael Guimarães', kit: 'kit_ouro', status: 'confirmado', modalidade: '21k', minutosAtras: 12 },
+  { nome: 'Camila Souza', kit: 'kit_prata', status: 'confirmado', modalidade: '10k', minutosAtras: 34 },
+  { nome: 'Otávio Vasconcelos', kit: 'kit_basico', status: 'pendente', modalidade: '5k', minutosAtras: 58 },
+  { nome: 'Beatriz Lima', kit: 'kit_ouro', status: 'pendente', modalidade: '21k', minutosAtras: 120 },
+  { nome: 'Helena Teixeira', kit: 'kit_prata', status: 'confirmado', modalidade: '10k', minutosAtras: 240 },
+  { nome: 'Diego Alves', kit: 'kit_prata', status: 'cancelado', modalidade: '10k', minutosAtras: 360 },
+  { nome: 'Larissa Prado', kit: 'kit_basico', status: 'confirmado', modalidade: '5k', minutosAtras: 560 },
+  { nome: 'Enzo Sartori', kit: 'kit_ouro', status: 'confirmado', modalidade: '21k', minutosAtras: 1560 },
+];
+
+async function seedAtividadeRecenteMeia(db: Db, agora: Date): Promise<void> {
+  const recentes: InscritoDoc[] = RECENTES_MEIA.map((r, idx) => {
+    const seq = String(idx + 1).padStart(2, '0');
+    return {
+      id: `insc-rec-${seq}`,
+      atletaNome: r.nome,
+      kit: r.kit,
+      status: r.status,
+      modalidade: r.modalidade,
+      criadoEm: new Date(agora.getTime() - r.minutosAtras * 60 * 1000),
+      chipNumero: null,
+    };
+  });
+  await gravarInscritos(db, MEIA_FLORIPA_ID, recentes);
+  console.log(
+    `[seed-extra] atividade recente: +${recentes.length} inscritos recentes na Meia ` +
+      '(12min…26h, nomes diversos, confirmado/pendente/cancelado) — feed do Overview vivo'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 4. Clube Corrida Perfeita Sul — membros, desafio rascunho, comunicados,
 //    parceria inativa
@@ -1099,6 +1157,7 @@ export async function seedPreviewExtra(
   await seedKitsExtra(db);
   await seedInscritosExtra(db, agora);
   await seedEntregasMeiaFloripa(db, agora);
+  await seedAtividadeRecenteMeia(db, agora);
   await seedClubeExtra(db, agora);
   await seedPlataformaExtra(db);
   await recomputarFinanceiros(db);
