@@ -44,10 +44,10 @@ export interface SecaoConfig {
 
 export const SECOES_CONFIG: readonly SecaoConfig[] = [
   { id: 'identidade', label: 'Identidade' },
-  { id: 'pagina', label: 'Pagina publica' },
+  { id: 'pagina', label: 'Página pública' },
   { id: 'regras', label: 'Regras' },
-  { id: 'moderacao', label: 'Moderacao' },
-  { id: 'admin', label: 'Admin avancada' },
+  { id: 'moderacao', label: 'Moderação' },
+  { id: 'admin', label: 'Admin avançada' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -55,9 +55,9 @@ export const SECOES_CONFIG: readonly SecaoConfig[] = [
 // ---------------------------------------------------------------------------
 
 export const VISIBILIDADES: { id: VisibilidadeClube; label: string; hint: string }[] = [
-  { id: 'publica', label: 'Publica', hint: 'Qualquer pessoa ve e entra' },
-  { id: 'indexavel', label: 'Indexavel', hint: 'Aparece em buscas do app' },
-  { id: 'privada', label: 'Privada', hint: 'So por link/codigo' },
+  { id: 'publica', label: 'Pública', hint: 'Qualquer pessoa vê e entra' },
+  { id: 'indexavel', label: 'Indexável', hint: 'Aparece em buscas do app' },
+  { id: 'privada', label: 'Privada', hint: 'Só por link/código' },
 ];
 
 export const MODELOS_ENTRADA: { id: ModeloEntradaClube; label: string; disabled: boolean }[] = [
@@ -69,9 +69,9 @@ export const MODELOS_ENTRADA: { id: ModeloEntradaClube; label: string; disabled:
 export type ComportamentoMembros = 'livre' | 'moderado' | 'restrito';
 
 export const COMPORTAMENTOS: { id: ComportamentoMembros; label: string; hint: string }[] = [
-  { id: 'livre', label: 'Livre', hint: 'Membros postam sem moderacao' },
-  { id: 'moderado', label: 'Moderado', hint: 'Posts de membros passam por aprovacao' },
-  { id: 'restrito', label: 'Restrito', hint: 'So admins publicam' },
+  { id: 'livre', label: 'Livre', hint: 'Membros postam sem moderação' },
+  { id: 'moderado', label: 'Moderado', hint: 'Posts de membros passam por aprovação' },
+  { id: 'restrito', label: 'Restrito', hint: 'Só admins publicam' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -96,6 +96,6 @@ export const PERMISSOES_ADMIN: readonly PermissaoAdminDef[] = [
   { id: 'criar_desafios', label: 'Criar e editar desafios' },
   { id: 'gerenciar_parcerias', label: 'Gerenciar parcerias' },
   { id: 'enviar_comunicados', label: 'Enviar comunicados' },
-  { id: 'editar_configuracoes', label: 'Editar configuracoes' },
+  { id: 'editar_configuracoes', label: 'Editar configurações' },
   { id: 'ver_financeiro', label: 'Ver financeiro' },
 ];

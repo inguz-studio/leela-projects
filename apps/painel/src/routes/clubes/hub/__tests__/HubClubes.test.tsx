@@ -19,8 +19,8 @@ describe('HubClubes', () => {
         onAbrirClube={noop}
       />,
     );
-    expect(screen.getByText(/ainda não tem nenhum club/i)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar club' }));
+    expect(screen.getByText(/ainda não tem nenhum clube/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
     expect(onCriarClube).toHaveBeenCalledOnce();
   });
 
@@ -40,8 +40,8 @@ describe('HubClubes', () => {
     );
     expect(screen.getByRole('heading', { name: 'Meu Clube' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Clube Parceiro' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Meus clubs' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Clubs parceiros' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Meus clubes' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Clubes parceiros' })).toBeInTheDocument();
   });
 
   it('KPI de atletas alcançados soma qtdMembrosAtivos', () => {
@@ -75,7 +75,7 @@ describe('HubClubes', () => {
         onAbrirClube={noop}
       />,
     );
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar club parceiro' }), 'Wiser');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar clube parceiro' }), 'Wiser');
     expect(screen.getByRole('heading', { name: 'Wiser Trilhas' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Assessoria Floripa Run' })).not.toBeInTheDocument();
   });
@@ -91,15 +91,15 @@ describe('HubClubes', () => {
         onAbrirClube={noop}
       />,
     );
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar club parceiro' }), 'zzz');
-    expect(screen.getByText(/nenhum club encontrado/i)).toBeInTheDocument();
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Buscar clube parceiro' }), 'zzz');
+    expect(screen.getByText(/nenhum clube encontrado/i)).toBeInTheDocument();
   });
 
   it('mostra skeleton no carregamento e erro no fail', () => {
     const { rerender } = render(
       <HubClubes clubes={null} loading error={null} ownUserId="felipe" onCriarClube={noop} onAbrirClube={noop} />,
     );
-    expect(screen.getByRole('status', { name: 'Carregando clubs' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Carregando clubes' })).toBeInTheDocument();
     rerender(
       <HubClubes clubes={null} loading={false} error={new Error('boom')} ownUserId="felipe" onCriarClube={noop} onAbrirClube={noop} />,
     );

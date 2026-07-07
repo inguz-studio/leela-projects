@@ -20,7 +20,7 @@ export interface DeletarClubeModalProps {
 }
 
 const PERDAS = [
-  'Todos os membros e seus históricos no club',
+  'Todos os membros e seus históricos no clube',
   'Todos os desafios, pontuações e progresso',
   'Parcerias, comunicados e configurações',
   'A página pública e o código de convite',
@@ -53,7 +53,7 @@ export function DeletarClubeModal({
         Cancelar
       </Button>
       <Button variant="destructive" disabled={!podeExcluir || processando} onClick={() => void excluir()}>
-        {processando ? 'Excluindo…' : 'Excluir club permanentemente'}
+        {processando ? 'Excluindo…' : 'Excluir clube permanentemente'}
       </Button>
     </>
   );
@@ -62,7 +62,7 @@ export function DeletarClubeModal({
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Deletar club"
+      title="Deletar clube"
       description="Esta ação é irreversível."
       footer={footer}
     >
@@ -88,7 +88,7 @@ export function DeletarClubeModal({
 
         <div>
           <Button variant="ghost" onClick={() => void onExportar()}>
-            Exportar dados do club
+            Exportar dados do clube
           </Button>
         </div>
 
@@ -99,7 +99,7 @@ export function DeletarClubeModal({
           <input
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
-            aria-label="Confirmar nome do club"
+            aria-label="Confirmar nome do clube"
             placeholder={nomeClube}
             className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
           />

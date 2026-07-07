@@ -27,7 +27,7 @@ export interface OverviewClubeProps {
 function Kpis({ clube }: { clube: Clube }): JSX.Element {
   return (
     <section
-      aria-label="Indicadores do club"
+      aria-label="Indicadores do clube"
       className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
     >
       <KpiCard label="Membros ativos" value={formatInt(clube.qtdMembrosAtivos)} />
@@ -61,7 +61,7 @@ function NovosMembros({
       ) : (
         <MembrosTable
           membros={membros ?? []}
-          caption="Novos membros do club"
+          caption="Novos membros do clube"
           emptyTitle="Nenhum membro novo ainda"
           emptyDescription="Novos membros aparecem aqui nos primeiros 7 dias após entrarem."
           agora={agora}

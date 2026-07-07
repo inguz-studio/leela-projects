@@ -67,7 +67,7 @@ describe('ConfiguracoesView', () => {
   it('nome vazio desabilita o salvar da Identidade (espelho do guard das Rules)', async () => {
     renderView();
     const secao = screen.getByRole('region', { name: 'Identidade' });
-    await userEvent.clear(within(secao).getByLabelText('Nome do club'));
+    await userEvent.clear(within(secao).getByLabelText('Nome do clube'));
     expect(within(secao).getByRole('button', { name: 'Salvar alterações' })).toBeDisabled();
   });
 
@@ -79,11 +79,11 @@ describe('ConfiguracoesView', () => {
     expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: expect.any(String) }));
   });
 
-  it('card crítico "Deletar club" dispara onDeletar', async () => {
+  it('card crítico "Deletar clube" dispara onDeletar', async () => {
     const onDeletar = vi.fn();
     renderView({ onDeletar });
-    const secao = screen.getByRole('region', { name: 'Deletar club' });
-    await userEvent.click(within(secao).getByRole('button', { name: 'Deletar club' }));
+    const secao = screen.getByRole('region', { name: 'Deletar clube' });
+    await userEvent.click(within(secao).getByRole('button', { name: 'Deletar clube' }));
     expect(onDeletar).toHaveBeenCalledOnce();
   });
 });

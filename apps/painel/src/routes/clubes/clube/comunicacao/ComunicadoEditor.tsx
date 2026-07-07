@@ -42,7 +42,7 @@ const CANAIS: CanalComunicado[] = ['push', 'email'];
 // radio-card com descrição, não chip. Cada card revela seu sub-seletor
 // (referência) só quando marcado — espelha o mockup Club-Comunicacao-Nova.
 const SEGMENTOS: { id: TipoSegmento; label: string; descricao: string }[] = [
-  { id: 'todos', label: 'Todos os membros', descricao: 'Toda a base ativa do club recebe o comunicado.' },
+  { id: 'todos', label: 'Todos os membros', descricao: 'Toda a base ativa do clube recebe o comunicado.' },
   { id: 'por_desafio', label: 'Por desafio', descricao: 'Só os membros participantes de um desafio específico.' },
   { id: 'por_pilar', label: 'Por pilar', descricao: 'Membros cujo pilar mais praticado é o escolhido.' },
   { id: 'por_engajamento', label: 'Por engajamento', descricao: 'Membros ativos numa janela recente (7, 14 ou 30 dias).' },

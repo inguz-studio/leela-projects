@@ -159,7 +159,7 @@ export function MembrosList({
 
       <MembrosTable
         membros={filtrados}
-        caption="Membros do club"
+        caption="Membros do clube"
         emptyTitle="Nenhum membro encontrado"
         emptyDescription="Nenhum membro casa com os filtros aplicados."
         agora={agora}
@@ -172,7 +172,7 @@ export function MembrosList({
               { id: 'perfil', label: 'Ver perfil', onClick: () => {} },
               { id: 'promover', label: 'Promover para Admin', onClick: () => {}, disabled: m.papel !== 'membro' },
               { id: 'transferir', label: 'Transferir propriedade', onClick: () => setConfirmar({ membro: m, tipo: 'transferir' }) },
-              { id: 'remover', label: 'Remover do club', destructive: true, onClick: () => setConfirmar({ membro: m, tipo: 'remover' }) },
+              { id: 'remover', label: 'Remover do clube', destructive: true, onClick: () => setConfirmar({ membro: m, tipo: 'remover' }) },
             ]}
             trigger={
               <button
@@ -191,22 +191,22 @@ export function MembrosList({
         <ConfirmModal
           open
           onOpenChange={(open) => !open && setConfirmar(null)}
-          title={confirmar.tipo === 'remover' ? 'Remover membro do club' : 'Transferir propriedade do club'}
+          title={confirmar.tipo === 'remover' ? 'Remover membro do clube' : 'Transferir propriedade do clube'}
           description={
             confirmar.tipo === 'remover'
-              ? `${confirmar.membro.atletaNome} perderá o acesso ao club.`
-              : `${confirmar.membro.atletaNome} passará a ser o owner do club.`
+              ? `${confirmar.membro.atletaNome} perderá o acesso ao clube.`
+              : `${confirmar.membro.atletaNome} passará a ser o owner do clube.`
           }
           target={<strong>{confirmar.membro.atletaNome}</strong>}
           loses={
             confirmar.tipo === 'remover'
-              ? ['Acesso ao club', 'Histórico de participação nos desafios']
+              ? ['Acesso ao clube', 'Histórico de participação nos desafios']
               : ['Seu papel de owner', 'A gestão de membros, desafios e parcerias']
           }
           keeps={
             confirmar.tipo === 'remover'
               ? ['A conta do atleta na Be Hero']
-              : [`${papelMembroLabel(confirmar.membro.papel)} vira owner`, 'Todos os membros e dados do club']
+              : [`${papelMembroLabel(confirmar.membro.papel)} vira owner`, 'Todos os membros e dados do clube']
           }
           confirmLabel={confirmar.tipo === 'remover' ? 'Remover membro' : 'Transferir propriedade'}
           onConfirm={() => {

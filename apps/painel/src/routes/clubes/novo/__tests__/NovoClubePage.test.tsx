@@ -68,19 +68,19 @@ beforeEach(() => {
 describe('NovoClubePage (fix #14)', () => {
   it('botão desabilitado sem nome; slug derivado aparece no hint', async () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'Criar club' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Criar clube' })).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText('Nome do club'), 'Corrida Perfeita Sul!');
+    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Corrida Perfeita Sul!');
     expect(screen.getByText(/be-hero\.com\.br\/c\/corrida-perfeita-sul/)).toBeInTheDocument();
     expect(screen.getByText(/não pode ser alterado depois/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Criar club' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Criar clube' })).toBeEnabled();
   });
 
   it('cria o clube com sessão + código RN-101 válido e navega para o novo slug', async () => {
     renderPage();
-    await userEvent.type(screen.getByLabelText('Nome do club'), 'Trilha Norte');
+    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
     await userEvent.type(screen.getByLabelText('Descrição'), 'Grupo de trail running.');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar club' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
 
     await waitFor(() => expect(mocks.criarClubePadrao).toHaveBeenCalledTimes(1));
     const input = mocks.criarClubePadrao.mock.calls[0]?.[0] as {
@@ -105,10 +105,10 @@ describe('NovoClubePage (fix #14)', () => {
   it('erro do write (ex.: slug em uso) mostra toast honesto e NÃO navega', async () => {
     mocks.criarClubePadrao.mockRejectedValue(new Error('permission-denied'));
     renderPage();
-    await userEvent.type(screen.getByLabelText('Nome do club'), 'Trilha Norte');
-    await userEvent.click(screen.getByRole('button', { name: 'Criar club' }));
+    await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
 
-    await screen.findByText('Não foi possível criar o club');
+    await screen.findByText('Não foi possível criar o clube');
     expect(screen.getByText(/"trilha-norte" pode já estar em uso/)).toBeInTheDocument();
     expect(screen.queryByText('overview do club')).not.toBeInTheDocument();
   });
@@ -130,7 +130,7 @@ describe('NovoClubePage (fix #14)', () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(await screen.findByRole('heading', { name: 'Criar club' })).toBeInTheDocument();
-    expect(screen.queryByText('Club não encontrado')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Criar clube' })).toBeInTheDocument();
+    expect(screen.queryByText('Clube não encontrado')).not.toBeInTheDocument();
   });
 });

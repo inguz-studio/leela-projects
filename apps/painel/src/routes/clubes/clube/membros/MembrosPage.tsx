@@ -32,14 +32,14 @@ export function MembrosPage(): JSX.Element {
   async function remover(m: Membro): Promise<void> {
     try {
       await removerMembroMutation.mutateAsync(m.id);
-      toast({ variant: 'success', title: `${m.atletaNome} removido do club` });
+      toast({ variant: 'success', title: `${m.atletaNome} removido do clube` });
     } catch (err) {
       toast(
         isFailedPrecondition(err)
           ? {
               variant: 'danger',
               title: 'Não é possível remover o owner',
-              description: 'Transfira a propriedade do club antes de removê-lo.',
+              description: 'Transfira a propriedade do clube antes de removê-lo.',
             }
           : { variant: 'danger', title: 'Não foi possível remover o membro' },
       );
@@ -53,7 +53,7 @@ export function MembrosPage(): JSX.Element {
     } catch (err) {
       toast(
         isFailedPrecondition(err)
-          ? { variant: 'danger', title: `${m.atletaNome} já é o owner do club` }
+          ? { variant: 'danger', title: `${m.atletaNome} já é o owner do clube` }
           : { variant: 'danger', title: 'Não foi possível transferir a propriedade' },
       );
     }

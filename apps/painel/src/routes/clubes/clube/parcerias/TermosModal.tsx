@@ -43,7 +43,7 @@ export function TermosModal({ open, onOpenChange, parceria }: TermosModalProps):
         <div className="flex flex-col rounded-[var(--radius-md)] bg-[var(--surface-base)] px-[var(--spacing-4)]">
           <Linha rotulo="Evento" valor={parceria.eventoId} />
           <Linha rotulo="Comissão" valor={`${parceria.comissaoPct}%`} />
-          <Linha rotulo="Cupom do club" valor={parceria.cupom ?? '—'} />
+          <Linha rotulo="Cupom do clube" valor={parceria.cupom ?? '—'} />
           <Linha rotulo="Janela de atribuição" valor={`${parceria.janelaAtribuicaoDias} dias`} />
           <Linha rotulo="Critério de liberação" valor={t.criterioLiberacao} />
           <Linha rotulo="Prazo de repasse" valor={`${t.prazoRepasseDiasUteis} dias úteis`} />

@@ -188,7 +188,7 @@ export function ParceriasView({
             columns={colunas}
             data={eventosPromovidos}
             keyExtractor={(p) => p.id}
-            caption="Eventos promovidos pelo club"
+            caption="Eventos promovidos pelo clube"
             renderActions={(p) => (
               <div className="flex items-center gap-[var(--spacing-2)]">
                 <Button variant="ghost" onClick={() => onCopiarLink?.(p)}>

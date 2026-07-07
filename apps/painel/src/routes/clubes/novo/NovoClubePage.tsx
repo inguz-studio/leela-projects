@@ -56,7 +56,7 @@ export function NovoClubePage(): JSX.Element {
     };
     const erros = validarClube(input);
     if (erros.length > 0) {
-      toast({ variant: 'danger', title: 'Revise o club', description: erros[0] ?? 'Há campos pendentes.' });
+      toast({ variant: 'danger', title: 'Revise o clube', description: erros[0] ?? 'Há campos pendentes.' });
       return;
     }
     setCriando(true);
@@ -67,7 +67,7 @@ export function NovoClubePage(): JSX.Element {
     } catch {
       toast({
         variant: 'danger',
-        title: 'Não foi possível criar o club',
+        title: 'Não foi possível criar o clube',
         description: `O endereço "${slug}" pode já estar em uso — ajuste o nome e tente novamente.`,
       });
     } finally {
@@ -79,7 +79,7 @@ export function NovoClubePage(): JSX.Element {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
       <header className="flex items-center justify-between">
         <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Criar club
+          Criar clube
         </h1>
         <Button variant="ghost" onClick={() => navigate('/clubes')}>
           Cancelar
@@ -87,13 +87,13 @@ export function NovoClubePage(): JSX.Element {
       </header>
 
       <section
-        aria-label="Identidade do club"
+        aria-label="Identidade do clube"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <Input
             id="clube-nome"
-            label="Nome do club"
+            label="Nome do clube"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
           />
@@ -133,7 +133,7 @@ export function NovoClubePage(): JSX.Element {
       </section>
 
       <section
-        aria-label="Regras do club"
+        aria-label="Regras do clube"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
         <div className="flex flex-col gap-[var(--spacing-2)]">
@@ -167,7 +167,7 @@ export function NovoClubePage(): JSX.Element {
 
       <div>
         <Button variant="primary" disabled={!podeCriar} onClick={() => void criar()}>
-          {criando ? 'Criando…' : 'Criar club'}
+          {criando ? 'Criando…' : 'Criar clube'}
         </Button>
       </div>
     </div>

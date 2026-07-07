@@ -77,7 +77,7 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
           <CodigoConvite codigo={clube.codigoConvite} slug={clube.slug} onCopiar={onCopiarCodigo} />
         }
       />
-      <SubNav tabs={tabs} aria-label="Seções do club" />
+      <SubNav tabs={tabs} aria-label="Seções do clube" />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

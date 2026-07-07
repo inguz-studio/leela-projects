@@ -50,7 +50,7 @@ export function ConfiguracoesPage(): JSX.Element {
       setDeletarAberto(false);
       navigate('/clubes');
     } catch {
-      toast({ variant: 'danger', title: 'Não foi possível excluir o club' });
+      toast({ variant: 'danger', title: 'Não foi possível excluir o clube' });
     }
   }
 

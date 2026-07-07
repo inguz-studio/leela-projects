@@ -165,11 +165,11 @@ export function ConfiguracoesView({
           salvarDisabled={nome.trim().length === 0}
         >
           <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do club</span>
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do clube</span>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              aria-label="Nome do club"
+              aria-label="Nome do clube"
               className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
             />
           </label>
@@ -203,7 +203,7 @@ export function ConfiguracoesView({
               className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-tertiary)] focus:outline-none"
             />
             <span id="slug-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-              be-hero.com.br/c/{clube.slug} — o endereço público é definido na criação do club e não pode ser alterado.
+              be-hero.com.br/c/{clube.slug} — o endereço público é definido na criação do clube e não pode ser alterado.
             </span>
           </label>
           <div className="flex flex-col gap-[var(--spacing-2)]">
@@ -298,18 +298,18 @@ export function ConfiguracoesView({
 
         {/* Card critico - excecao 2.16: border-left Vulcao */}
         <section
-          aria-label="Deletar club"
+          aria-label="Deletar clube"
           className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--card-radius)] border-l-4 border-l-[var(--feedback-danger)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
         >
           <h2 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-danger)]">
-            Deletar club
+            Deletar clube
           </h2>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             Ação irreversível. Todos os membros, desafios, parcerias e comunicados serão removidos (RN-144).
           </p>
           <div>
             <Button variant="destructive" onClick={onDeletar}>
-              Deletar club
+              Deletar clube
             </Button>
           </div>
         </section>

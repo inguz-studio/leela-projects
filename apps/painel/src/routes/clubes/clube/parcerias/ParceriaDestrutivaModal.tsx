@@ -29,9 +29,9 @@ interface Copy {
 const COPY: Record<VarianteDestrutiva, Copy> = {
   'desativar-patrocinador': {
     title: 'Desativar patrocinador',
-    description: 'O patrocinador deixa de aparecer nas páginas do club.',
+    description: 'O patrocinador deixa de aparecer nas páginas do clube.',
     loses: [
-      'A exibição do patrocinador nas páginas do club',
+      'A exibição do patrocinador nas páginas do clube',
       'Os benefícios ativos da parceria',
       'O acompanhamento de contrapartidas',
     ],
@@ -40,11 +40,11 @@ const COPY: Record<VarianteDestrutiva, Copy> = {
   },
   'remover-evento': {
     title: 'Remover evento promovido',
-    description: 'O club deixa de promover este evento afiliado.',
+    description: 'O clube deixa de promover este evento afiliado.',
     loses: [
       'O link master e o cupom de afiliação ativos',
-      'Novas conversões atribuídas ao club',
-      'A exibição do evento nas páginas do club',
+      'Novas conversões atribuídas ao clube',
+      'A exibição do evento nas páginas do clube',
     ],
     keeps: [
       'As conversões e comissões já registradas (trilha)',

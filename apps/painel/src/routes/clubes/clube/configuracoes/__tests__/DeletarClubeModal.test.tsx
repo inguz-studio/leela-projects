@@ -26,12 +26,12 @@ describe('DeletarClubeModal', () => {
     expect(within(dialog).getByText(/Todos os membros/)).toBeInTheDocument();
   });
 
-  it('exclusão só habilita ao digitar o nome exato do club', async () => {
+  it('exclusão só habilita ao digitar o nome exato do clube', async () => {
     const onConfirmar = vi.fn();
     renderModal({ onConfirmar });
-    const excluir = screen.getByRole('button', { name: 'Excluir club permanentemente' });
+    const excluir = screen.getByRole('button', { name: 'Excluir clube permanentemente' });
     expect(excluir).toBeDisabled();
-    const campo = screen.getByLabelText('Confirmar nome do club');
+    const campo = screen.getByLabelText('Confirmar nome do clube');
     await userEvent.type(campo, 'Corrida Errada');
     expect(excluir).toBeDisabled();
     await userEvent.clear(campo);
@@ -44,7 +44,7 @@ describe('DeletarClubeModal', () => {
   it('exportar dados dispara onExportar antes de excluir', async () => {
     const onExportar = vi.fn();
     renderModal({ onExportar });
-    await userEvent.click(screen.getByRole('button', { name: 'Exportar dados do club' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Exportar dados do clube' }));
     expect(onExportar).toHaveBeenCalledOnce();
   });
 
