@@ -246,7 +246,22 @@ export interface RadioCardProps
 }
 
 const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
-  ({ className, value, title, description, icon, badge, children, disabled, id, ...props }, ref) => {
+  (
+    {
+      className,
+      value,
+      title,
+      description,
+      icon,
+      badge,
+      children,
+      disabled,
+      id,
+      'aria-describedby': ariaDescribedBy,
+      ...props
+    },
+    ref,
+  ) => {
     const ctx = React.useContext(RadioGroupContext);
     if (!ctx) {
       throw new Error('RadioCard deve ser usado dentro de <RadioGroup>.');
@@ -256,6 +271,11 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
     const reactId = React.useId();
     const controlId = id ?? reactId;
     const descId = description ? `${controlId}-desc` : undefined;
+    // Painel de conteúdo revelado (aria-controls quando presente e visível).
+    const panelId = children ? `${controlId}-panel` : undefined;
+    // Preserva o aria-describedby do consumidor: compõe com a descrição interna,
+    // nunca sobrescreve (senão o consumidor perderia o próprio wiring de a11y).
+    const describedBy = [ariaDescribedBy, descId].filter(Boolean).join(' ') || undefined;
     // Alinha descrição e conteúdo revelado sob o título (largura do dot + gap).
     const indent = 'pl-[calc(var(--spacing-5)+var(--spacing-3))]';
 
@@ -266,13 +286,20 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
           'rounded-[var(--card-radius)] border-[length:var(--input-border-width)]',
           'bg-[var(--surface-raised)] p-[var(--spacing-4)]',
           'transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
-          'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0',
-          checked
-            ? 'border-[color:var(--action-primary)] ring-1 ring-[color:var(--action-primary)]'
-            : 'border-[var(--border-default)]',
+          // O anel de foco acende SÓ para o input nativo do radio (foco de teclado),
+          // não para qualquer controle do conteúdo revelado (era focus-within genérico).
+          'has-[.radiocard-native:focus-visible]:ring-2 has-[.radiocard-native:focus-visible]:ring-ring has-[.radiocard-native:focus-visible]:ring-offset-0',
+          ctx.invalid
+            ? // Grupo inválido: borda de perigo tokenizada como sinal visual (marcado ainda mantém o anel primário).
+              checked
+              ? 'border-[var(--border-danger)] ring-1 ring-[color:var(--action-primary)]'
+              : 'border-[var(--border-danger)]'
+            : checked
+              ? 'border-[color:var(--action-primary)] ring-1 ring-[color:var(--action-primary)]'
+              : 'border-[var(--border-default)]',
           isDisabled
             ? 'cursor-not-allowed opacity-60'
-            : cn('cursor-pointer', !checked && 'hover:border-[var(--border-strong)]'),
+            : cn('cursor-pointer', !checked && !ctx.invalid && 'hover:border-[var(--border-strong)]'),
           className,
         )}
       >
@@ -293,9 +320,15 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
               checked={checked}
               disabled={isDisabled}
               aria-invalid={ctx.invalid ? true : undefined}
-              aria-describedby={descId}
+              aria-describedby={describedBy}
+              // Reveal associado ao controle: informa se o painel condicional está
+              // expandido (visível quando marcado) e o aponta quando renderizado.
+              aria-expanded={children ? checked : undefined}
+              aria-controls={children && checked ? panelId : undefined}
               onChange={() => ctx.onChange(value)}
               className={cn(
+                // Marca-alvo do :has() do card — restringe o anel de foco a ESTE input.
+                'radiocard-native',
                 'peer h-[var(--spacing-5)] w-[var(--spacing-5)] appearance-none',
                 'rounded-[var(--radius-pill)] bg-[var(--surface-base)]',
                 'border-[length:var(--input-border-width)] border-input',
@@ -327,7 +360,12 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
             {title}
           </span>
 
-          {badge ? <span className="shrink-0">{badge}</span> : null}
+          {/* Selo decorativo: fora do NOME acessível (senão o nome viraria "título + selo"). */}
+          {badge ? (
+            <span aria-hidden="true" className="shrink-0">
+              {badge}
+            </span>
+          ) : null}
         </label>
 
         {description ? (
@@ -342,7 +380,11 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
           </p>
         ) : null}
 
-        {checked && children ? <div className={indent}>{children}</div> : null}
+        {checked && children ? (
+          <div id={panelId} className={indent}>
+            {children}
+          </div>
+        ) : null}
       </div>
     );
   },

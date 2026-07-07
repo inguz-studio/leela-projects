@@ -350,21 +350,18 @@ export function ComponentsPage(): JSX.Element {
                 title="Meta por ação"
                 description="Cada ação tem sua meta. Concluir = bater todas as obrigatórias."
                 badge={<Badge variant="neutro">Mais simples</Badge>}
-                aria-label="Modelo A · Meta por ação"
               />
               <RadioCard
                 value="B"
                 title="Meta de pontos"
                 description="Ações somam pontos; o membro mistura o mix que quiser até a meta total."
                 badge={<Badge variant="vitoria">Flexível</Badge>}
-                aria-label="Modelo B · Meta de pontos"
               />
               <RadioCard
                 value="C"
                 title="Equilíbrio mínimo"
                 description="Meta total + mínimo em cada pilar. Único que opera os 3 pilares da Be Hero."
                 badge={<Badge variant="heroico">Be Hero signature</Badge>}
-                aria-label="Modelo C · Equilíbrio mínimo"
               >
                 <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
                   Sub-conteúdo revelado quando este card está marcado.
