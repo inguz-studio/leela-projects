@@ -133,6 +133,9 @@ Criar/publicar evento, inscritos, kits, entrega/check-in; dashboard do produtor;
 - [x] LEELA-S206-T2 — Nomenclatura "kit" nunca "tier" (RN-216) + guarda de regressão (`11adcae`; glossário E03 + varredura de fontes que falha em "tier")
 - [x] LEELA-S207-T1 — Tela Financeiro do evento (bruto/taxa/líquido, breakdown, CSV) (`9e181ca`; lê agregado, null-safe RN-406, export CSV client-side)
 - [x] LEELA-S207-T2 — Agregado financeiro do evento por Function (`a0a48b3`; recontagem count() idempotente + taxa do termo RN-406, sem fallback)
+- [x] LEELA-FID-EVT-FIN-T1 — Sanitização CSV partilhada + fecha injeção de fórmula no financeiro (`8882d21`; `_lib/csv.ts` `neutralizarFormula`/`celulaCsv`, inscritosCsv reusa, testes de injeção)
+- [x] LEELA-FID-EVT-FIN-T2 — Gráficos de breakdown por modalidade na tela Financeiro, per-evento (`5ca8969`; reusa BarChart/DonutChart do DS + prepararModalidades; EmptyState honesto p/ forma de pagamento/lote/repasse = dep. de backend E12)
+- [x] LEELA-FID-EVT-FIN-T3 — `useFinanceiro` fetch cru → useQuery, ADR-010 (`314fda3`; financeiroCurrentQuery no gateway, contrato preservado, chave partilhada Overview↔Financeiro)
 
 ### LEELA-E02 · Visão geral do profissional (completo)
 
