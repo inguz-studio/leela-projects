@@ -73,6 +73,28 @@ describe('EventRow', () => {
     expect(screen.getByText('Receita')).toHaveClass('uppercase');
   });
 
+  it('cada métrica ocupa uma COLUNA de largura mínima fixa alinhada à direita (alinhamento entre linhas)', () => {
+    const { container } = render(
+      <EventRow
+        name="Meia Maratona Floripa 2026"
+        thumbVariant="corrida"
+        metrics={[
+          { value: '0', label: 'Inscritos' },
+          { value: 'R$ 167.277', label: 'Receita' },
+          { value: '80', label: 'Vagas' },
+        ]}
+      />,
+    );
+    // As 3 colunas carregam a mesma largura mínima tokenizada + text-right:
+    // é o que garante Inscritos/Receita/Vagas batendo na vertical entre linhas,
+    // independentemente do tamanho do valor ("0" vs "R$ 167.277").
+    const cols = container.querySelectorAll(
+      '[class*="--eventrow-metric-col-min-w"]',
+    );
+    expect(cols).toHaveLength(3);
+    cols.forEach((c) => expect(c).toHaveClass('text-right'));
+  });
+
   it('metrics tem precedência sobre count quando ambos são passados', () => {
     render(
       <EventRow

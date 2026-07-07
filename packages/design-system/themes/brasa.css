@@ -340,6 +340,8 @@
   --eventrow-count-size: var(--font-size-base);
   --eventrow-count-label-size: var(--font-size-xs);
   --eventrow-count-label-spacing: 0.08em;
+  --eventrow-metric-col-min-w: 88px;
+  --eventrow-metric-gap: var(--spacing-4);
   --section-title-size: var(--font-size-xl);
   --section-title-spacing: -0.01em;
   --section-link-size: var(--font-size-sm);

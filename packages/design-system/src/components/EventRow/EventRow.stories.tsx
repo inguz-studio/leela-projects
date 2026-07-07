@@ -97,6 +97,46 @@ export const HubHibrido: Story = {
   },
 };
 
+/**
+ * Métricas inline ALINHADAS entre linhas (fix FID-EVT-HUB): valores com
+ * contagens de dígitos MUITO diferentes ("0" vs "R$ 167.277") mantêm as
+ * colunas Inscritos/Receita/Vagas batendo na vertical. Cada métrica ocupa uma
+ * coluna de largura mínima fixa (token `--eventrow-metric-col-min-w`) com valor
+ * tabular à direita — zero desalinhamento com valor curto OU longo.
+ */
+export const HubMetricasAlinhadas: Story = {
+  render: () => (
+    <>
+      {(
+        [
+          ['Meia Maratona Floripa 2026', 'corrida', '461', 'R$ 167.277', '39'],
+          ['Noturna da Beira-Mar 2026', 'corrida', '60', 'R$ 8.940', '0'],
+          ['Trilha do Pântano do Sul 2026', 'corrida', '0', 'R$ 0', '80'],
+          ['Desafio MTB Costa da Lagoa', 'ciclismo', '120', 'R$ 34.800', '180'],
+        ] as const
+      ).map(([name, variant, inscritos, receita, vagas]) => (
+        <EventRow
+          key={name}
+          name={name}
+          thumbVariant={variant}
+          metaItems={['14 Jul 2026 · Florianópolis/SC']}
+          metrics={[
+            { value: inscritos, label: 'Inscritos' },
+            { value: receita, label: 'Receita' },
+            { value: vagas, label: 'Vagas' },
+          ]}
+          badge={<Badge variant="vitoria">Ativo</Badge>}
+          action={
+            <Button variant="secondary" size="sm">
+              Gerenciar
+            </Button>
+          }
+        />
+      ))}
+    </>
+  ),
+};
+
 /** Sem capacidade conhecida: contagem sem "/ total" (estado honesto). */
 export const SemCapacidade: Story = {
   args: {

@@ -180,7 +180,9 @@
     "count-min-w":         "110px",
     "count-size":          "{font.size.base}",
     "count-label-size":    "{font.size.xs}",
-    "count-label-spacing": "0.08em"
+    "count-label-spacing": "0.08em",
+    "metric-col-min-w":    "88px",
+    "metric-gap":          "{spacing.4}"
   },
   "section": {
     "$description": "Section head do mockup `.section-head`/`.h3`/`.section-link`: titulo 24px display italic -.01em; link 12px tertiary com chevron 14 (hover brand).",

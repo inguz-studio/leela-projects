@@ -20,7 +20,10 @@
  *   (alt=""): o nome do evento, ao lado, já é o rótulo acessível da linha.
  * - `metrics` (mockup `.stats-inline`): grupo denso de KPIs por evento com
  *   divisor à esquerda; substitui a `count` única. Serve a triagem do hub
- *   ("inscritos / receita / vagas" batendo o olho).
+ *   ("inscritos / receita / vagas" batendo o olho). Cada métrica é uma COLUNA
+ *   de largura mínima tokenizada (`--eventrow-metric-col-min-w`) com valor
+ *   tabular à direita → as colunas batem na vertical entre TODAS as linhas,
+ *   qualquer que seja o tamanho do número (fix FID-EVT-HUB).
  * - Hover: levanta 1px (mockup) + elev-2; motion por token.
  * - A11y: a navegação acessível é o slot `action` (botão real). `onClick` na
  *   row é atalho de mouse (cursor-pointer), sem role — replica o mockup sem
@@ -224,17 +227,26 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
           )}
         </div>
 
-        {/* Métricas inline (mockup `.stats-inline`) — precedem a contagem única */}
+        {/* Métricas inline (mockup `.stats-inline`) — precedem a contagem única.
+            Cada métrica é uma COLUNA de largura mínima fixa (token) com valor
+            tabular alinhado à DIREITA: Inscritos/Receita/Vagas batem na vertical
+            entre TODAS as linhas, independentemente do tamanho do número
+            ("0" ou "R$ 167.277") — some o desalinhamento com valores de dígitos
+            desiguais. Largura tokenizada dimensiona a maior métrica (Receita);
+            `min-w` cresce com gentileza em valores atípicos sem quebrar layout. */}
         {metrics && metrics.length > 0 ? (
           <div
             className={cn(
               'flex items-center',
-              'gap-[var(--spacing-5)] pl-[var(--spacing-3)]',
+              'gap-[var(--eventrow-metric-gap)] pl-[var(--spacing-3)]',
               'border-l border-l-[var(--border-subtle)]',
             )}
           >
             {metrics.map((m) => (
-              <div key={m.label}>
+              <div
+                key={m.label}
+                className="min-w-[var(--eventrow-metric-col-min-w)] text-right"
+              >
                 <div
                   className={cn(
                     'text-[length:var(--eventrow-count-size)] font-[var(--font-weight-semibold)]',
