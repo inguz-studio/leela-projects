@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { EventoShell } from '../EventoShell';
 import { mkEvento } from '../../_test/fixtures';
 
@@ -44,5 +44,27 @@ describe('EventoShell', () => {
       </EventoShell>,
     );
     expect(screen.getByText('conteúdo do overview')).toBeInTheDocument();
+  });
+
+  it('mostra o breadcrumb "Eventos › {nome}" com link de volta', () => {
+    render(
+      <EventoShell evento={mkEvento()} ativa="overview">
+        <p>c</p>
+      </EventoShell>,
+    );
+    const nav = screen.getByRole('navigation', { name: /breadcrumb/i });
+    const voltar = within(nav).getByRole('link', { name: 'Eventos' });
+    expect(voltar).toHaveAttribute('href', '/eventos');
+    expect(within(nav).getByText('Meia Maratona Floripa 2026')).toBeInTheDocument();
+  });
+
+  it('expõe as ações do header: "Ver página pública" e menu "…"', () => {
+    render(
+      <EventoShell evento={mkEvento()} ativa="overview">
+        <p>c</p>
+      </EventoShell>,
+    );
+    expect(screen.getByRole('button', { name: /ver página pública/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /mais ações do evento/i })).toBeInTheDocument();
   });
 });

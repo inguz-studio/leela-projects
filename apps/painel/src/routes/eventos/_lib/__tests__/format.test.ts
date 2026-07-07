@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { dataEventoParaDate } from '@leela/core';
-import { diasParaEvento, formatBRL, formatDataEvento, formatInt } from '../format';
+import { diasParaEvento, faltamDiasLabel, formatBRL, formatDataEvento, formatInt } from '../format';
 import { ts } from '../../_test/fixtures';
 
 describe('formatBRL', () => {
@@ -49,6 +49,23 @@ describe('diasParaEvento', () => {
 
   it('null quando não há data', () => {
     expect(diasParaEvento(undefined)).toBeNull();
+  });
+});
+
+describe('faltamDiasLabel', () => {
+  it('frase de contagem regressiva no futuro (plural e singular)', () => {
+    expect(faltamDiasLabel(8)).toBe('Faltam 8 dias para o evento');
+    expect(faltamDiasLabel(1)).toBe('Falta 1 dia para o evento');
+  });
+
+  it('estados de hoje/ontem/passado', () => {
+    expect(faltamDiasLabel(0)).toBe('O evento é hoje');
+    expect(faltamDiasLabel(-1)).toBe('O evento foi ontem');
+    expect(faltamDiasLabel(-8)).toBe('Evento realizado há 8 dias');
+  });
+
+  it('null sem data', () => {
+    expect(faltamDiasLabel(null)).toBeNull();
   });
 
   it('BORDA 21:00–00:00 UTC-3 (review #02): "é hoje" segue hoje às 22:30 locais', () => {

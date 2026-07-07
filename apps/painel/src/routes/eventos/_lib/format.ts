@@ -55,3 +55,38 @@ export function diasParaEvento(
   if (!data || typeof data.toDate !== 'function') return null;
   return diasCivisAte(data.toDate(), agora);
 }
+
+/**
+ * Linha "quando" do hero: "Segunda-feira, 27 de abril · 06:00" (fuso do evento,
+ * pinado — review #02). undefined sem data (o hero omite o trecho). @pure
+ */
+export function formatDataHoraExtenso(data: Timestamp | null | undefined): string | undefined {
+  if (!data || typeof data.toDate !== 'function') return undefined;
+  const d = data.toDate();
+  const dia = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    timeZone: FUSO_EVENTO,
+  }).format(d);
+  const hora = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: FUSO_EVENTO,
+  }).format(d);
+  return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} · ${hora}`;
+}
+
+/**
+ * Frase de contagem regressiva do header/hero, honesta em todos os estados
+ * (mockup Detalhe/Overview: "Faltam 8 dias para o evento"). Sem data → null
+ * (o consumidor omite o trecho). @pure
+ */
+export function faltamDiasLabel(dias: number | null): string | null {
+  if (dias === null) return null;
+  if (dias > 1) return `Faltam ${formatInt(dias)} dias para o evento`;
+  if (dias === 1) return 'Falta 1 dia para o evento';
+  if (dias === 0) return 'O evento é hoje';
+  if (dias === -1) return 'O evento foi ontem';
+  return `Evento realizado há ${formatInt(Math.abs(dias))} dias`;
+}
