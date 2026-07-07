@@ -1,5 +1,13 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-06
 
+## 🎯 REGRA (Vitor 2026-07-06): UX/UI se ancora no JTBD + critérios da story, NÃO no mockup
+Todo sub-lote de fidelidade/UI carrega no brief a persona + JTBD + os critérios Given/When/Then da user story da tela (`leela-specs/`). Mockup = aparência; story = job; divergiu, a story vence. Personas/JTBD: `be-hero-documentacao/be-hero-docs/{personas,jobs-to-be-done}.md`; stories em `leela-specs/{epics,backlog}/`. Encodado no harness: L-004 + SKILL.md Phase 4 (injeção de JOB).
+**Correções que a releitura dos JTBD produziu (aplicar):**
+- **Financeiro (S207 = "financeiro DO EVENTO"):** NÃO reconstruir p/ o multi-evento do mockup — o build por-evento está CERTO. Só adicionar os gráficos bar/donut que servem "acompanhar resultado de relance". O MAJOR #15 da auditoria (escopo multi-evento) é DESCARTADO.
+- **Inscritos (S203 + dor #1 "inadimplência invisível") SOBE de prioridade:** coluna de VALOR/pagamento + banner "N pendentes >72h" + seleção em massa servem o job número um do Organizador — antes de polir gráficos de outras telas.
+- **Hub híbrido validado por S200** ("abrir rapidamente o evento que gerencio" = varredura densa + thumb p/ reconhecer + métricas inline + status).
+**Fila de fidelidade reancorada por JTBD (recomendação, não ordem de tela):** Inscritos (dor #1) → Hub híbrido → Financeiro (só gráficos, per-evento) → Kits/Entrega (dor "kit errado"). Overview ✅ (feed em fix).
+
 ## ✅ LOTE #1 UX-DADOS: GATE PASS (4c7ffb1..6aaf73a, pushed) — fila avança p/ firebase-admin
 TanStack Query (ADR-010) implantado strangler-fig. T1 fundação+provider · T2 gateway `lib/query/queries.ts` (queryOptions centralizados reusando api-client) · T3-T5 Visão Geral/Hub/Inscritos → useQuery nos hooks `_data/` (consumidores intocados). **Gate do maestro (por evidência):** @tanstack instalado + provider raiz + useQuery nas 3 telas + 0 fetch-on-mount cru + queryOptions reusam api-client (grep) · journey L-001 A→B→A = 0 req/0 skeleton (Playwright, pixel-idêntico) · suíte 516/516 · tsc 0 · ESLint 0 · build limpo. Placement do gateway em `apps/painel/src/lib/query/` (não no api-client compartilhado) RATIFICADO pelo maestro (mantém api-client framework-agnóstico, Fowler, reversível). Reuso-first cumprido: nenhum fetch provado reescrito. Nada visual novo → nada a documentar no showroom neste lote.
 **Faltam migrar (lote UX-DADOS-2):** Financeiro + balcão (superfícies vivas → onSnapshot) · kits/estoque · Clubes (E05) · Plataforma (E16) · mutations → useMutation + invalidação (read-your-writes). Report: `outputs/leela-build-2d6ee98d/UXDADOS-REPORT.md`.
