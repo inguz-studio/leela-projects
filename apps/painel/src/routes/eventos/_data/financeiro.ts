@@ -1,31 +1,28 @@
 // =============================================================================
-// Hook de leitura do agregado financeiro do evento (S207-T1 · lê S207-T2).
-// Nunca recalcula receita — só lê `financeiro/current` (null quando o gatilho
-// ainda não computou).
+// Hook de leitura do agregado financeiro do evento (S207-T1 · lê S207-T2),
+// migrado para TanStack Query (ADR-010 · lote UX-DADOS) — o último straggler de
+// fetch cru vira useQuery, consistente com useEventos/useInscritos. Consome o
+// gateway (lib/query), que reusa `getFinanceiroEvento` do @leela/api-client.
+// NUNCA recalcula receita — só LÊ `financeiro/current` (null quando o gatilho
+// ainda não computou). Contrato de retorno preservado ({data, loading, error}):
+// consumidores (Overview S202, Financeiro S207) ficam intocados (strangler-fig).
+// A chave é partilhada Overview ↔ Financeiro → reidrata do cache sem refetch.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
-import { getFinanceiroEvento, getLeelaDb, type FinanceiroEvento } from '@leela/api-client';
+import { useQuery } from '@tanstack/react-query';
+import type { FinanceiroEvento } from '@leela/api-client';
+import { financeiroCurrentQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './eventos';
 
 export function useFinanceiro(eventoId: string | null): AsyncState<FinanceiroEvento | null> {
-  const [state, setState] = useState<AsyncState<FinanceiroEvento | null>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...financeiroCurrentQuery(eventoId ?? ''),
+    enabled: !!eventoId,
   });
 
-  useEffect(() => {
-    if (!eventoId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getFinanceiroEvento(getLeelaDb(), eventoId)
-      .then((fin) => ativo && setState({ data: fin, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [eventoId]);
-
-  return state;
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+  };
 }

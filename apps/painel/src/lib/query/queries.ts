@@ -17,12 +17,14 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   getEvento,
+  getFinanceiroEvento,
   getLeelaDb,
   getOverview,
   listarEventosDoOrganizador,
   listarInscritos,
   listarInscritosRecentes,
   INSCRITOS_PAGE_SIZE,
+  type FinanceiroEvento,
   type InscritosCursor,
   type OverviewResult,
 } from '@leela/api-client';
@@ -104,5 +106,20 @@ export function inscritosRecentesQuery(eventoId: string, limite: number) {
     queryKey: queryKeys.inscritos.recentes(eventoId, limite),
     queryFn: (): Promise<Inscrito[]> =>
       listarInscritosRecentes(getLeelaDb(), eventoId, limite),
+  });
+}
+
+/**
+ * Agregado financeiro do evento (`financeiro/current`) — chave partilhada
+ * Overview ↔ Financeiro (leem o MESMO doc; navegar entre elas reidrata do
+ * cache). Reusa `getFinanceiroEvento` do api-client; NUNCA recalcula receita —
+ * só LÊ o agregado (null quando o gatilho ainda não computou). Bounded staleness
+ * (o realtime via onSnapshot fica p/ o lote de superfície viva — ADR-010).
+ */
+export function financeiroCurrentQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.financeiro.current(eventoId),
+    queryFn: (): Promise<FinanceiroEvento | null> =>
+      getFinanceiroEvento(getLeelaDb(), eventoId),
   });
 }

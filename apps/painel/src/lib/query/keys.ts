@@ -31,4 +31,9 @@ export const queryKeys = {
     recentes: (eventoId: string, limite: number) =>
       ['inscritos', 'recentes', eventoId, limite] as const,
   },
+
+  financeiro: {
+    /** Agregado `financeiro/current` de um evento — partilhado Overview ↔ Financeiro. */
+    current: (eventoId: string) => ['financeiro', 'current', eventoId] as const,
+  },
 } as const;
