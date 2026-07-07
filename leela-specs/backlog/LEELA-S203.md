@@ -46,7 +46,7 @@ Fonte-de-verdade dos campos (o protótipo JÁ especifica tudo; não é vago). 4 
 ## Subtarefas
 - [ ] LEELA-S203-T1 — Subcoleção `inscritos` + tipo `Inscrito` + query paginada + Rules
 - [ ] LEELA-S203-T2 — Tela de inscritos (tabela densa §2.5, paginação, 4 tabs §2.7, slide-in) — FEITO (slide-in enxuto)
-- [ ] LEELA-S203-T3 — **(novo)** Slide-in rico: abas Geral `[reg]` + Pagamento `[pag]` + Comunicação `[com]` + Histórico `[hist]` conforme os campos acima. **Geral `[reg]` pode adiantar** se o dado da inscrição já existir (surfaçar, não backend novo). Pagamento/estorno `[pag]` BLOQUEADO pelo lote de backend (modelo pedido/pagamento + Function de estorno).
+- [ ] LEELA-S203-T3 — **(novo)** Slide-in rico: abas Geral `[reg]` + Pagamento `[pag]` + Comunicação `[com]` + Histórico `[hist]` conforme os campos acima. **TODAS bloqueadas por backend** — verificado em `packages/core/src/eventos/inscrito.ts`: o `Inscrito` é projeção FINA (só `atletaNome`/`kit`/`chipNumero`/`status`/`modalidade` + carimbos). Os dados pessoais `[reg]` são coletados no checkout (S1202) mas vivem no pedido/registro, NÃO nesta projeção → surfaçá-los exige denormalizar no `Inscrito` OU join ao pedido (backend). Pagamento/estorno `[pag]`, comunicação `[com]` e histórico `[hist]` idem. Escopo do lote de backend consolidado: (a) enriquecer a projeção `Inscrito` (ou join) com dados pessoais + pagamento/pedido; (b) Function de estorno; (c) logs de comunicação/histórico.
 
 ## Links
 Épico: [[LEELA-E03-operacao-evento]]
