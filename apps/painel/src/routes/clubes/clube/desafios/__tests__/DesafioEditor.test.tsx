@@ -30,7 +30,7 @@ describe('DesafioEditor', () => {
 
   it('Modelo C revela o mínimo por pilar (RN-111)', async () => {
     renderEditor();
-    await userEvent.click(screen.getByRole('button', { name: /Modelo C/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Modelo C/ }));
     const meta = screen.getByRole('group', { name: 'Mínimo por pilar (RN-111)' });
     expect(within(meta).getByLabelText('Físico')).toBeInTheDocument();
     expect(within(meta).getByLabelText('Mental')).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('DesafioEditor', () => {
   it('publicar Modelo C sem mínimo por pilar → erro (RN-111), não chama onPublicar', async () => {
     const onPublicar = vi.fn();
     renderEditor({ onPublicar });
-    await userEvent.click(screen.getByRole('button', { name: /Modelo C/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /Modelo C/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Publicar desafio' }));
     expect(onPublicar).not.toHaveBeenCalled();
     expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);

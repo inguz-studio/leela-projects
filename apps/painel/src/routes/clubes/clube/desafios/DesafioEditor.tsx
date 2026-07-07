@@ -13,6 +13,8 @@ import {
   Button,
   Chip,
   Input,
+  RadioCard,
+  RadioGroup,
   Tabs,
   CardDesafio,
   useToast,
@@ -65,6 +67,51 @@ const DICA_MODELO: Record<ModeloDesafio, string> = {
   A: 'Cada ação selecionada precisa de uma meta própria. Ideal para desafios objetivos ("corra 100 km").',
   B: 'Uma meta total de pontos; o atleta mistura ações livremente até atingi-la.',
   C: 'Equilíbrio: meta total + mínimo em cada um dos 3 pilares. É a assinatura do produto (RN-111).',
+};
+
+// Metadados dos cards de decisão do MODELO (S106). design-principles (a): a
+// escolha do modelo é uma decisão que precisa de contexto (o quê cada modelo é)
+// → radio-card com título + descrição + selo, não chip. Ícone/descrição/selo
+// espelham o mockup Club-Desafios-Editar.
+const MODELO_META: Record<
+  ModeloDesafio,
+  { titulo: string; descricao: string; badge: JSX.Element; icon: JSX.Element }
+> = {
+  A: {
+    titulo: 'Meta por ação',
+    descricao: 'Cada ação tem sua meta. Concluir = bater todas as obrigatórias.',
+    badge: <Badge variant="neutro">Mais simples</Badge>,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden className="h-full w-full">
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+  B: {
+    titulo: 'Meta de pontos',
+    descricao: 'Ações somam pontos. O membro bate uma meta total combinando o mix que quiser.',
+    badge: <Badge variant="vitoria">Flexível</Badge>,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-full w-full">
+        <polyline points="3 17 9 11 13 15 21 7" />
+        <polyline points="21 12 21 7 16 7" />
+      </svg>
+    ),
+  },
+  C: {
+    titulo: 'Equilíbrio mínimo',
+    descricao: 'Meta total + mínimo em cada pilar. Único modelo que opera os 3 pilares da Be Hero.',
+    badge: <Badge variant="heroico">Be Hero signature</Badge>,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="h-full w-full">
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </svg>
+    ),
+  },
 };
 
 function CardSecao({ titulo, children }: { titulo: string; children: React.ReactNode }): JSX.Element {
@@ -225,13 +272,24 @@ export function DesafioEditor({
           </CardSecao>
 
           <CardSecao titulo="Modelo de conclusão">
-            <div role="group" aria-label="Modelo de conclusão" className="flex flex-wrap gap-[var(--spacing-2)]">
+            <RadioGroup
+              name="desafio-modelo"
+              aria-label="Modelo de conclusão"
+              value={values.modelo}
+              onValueChange={(v) => patch({ modelo: v as ModeloDesafio })}
+            >
               {MODELOS.map((m) => (
-                <Chip key={m} active={values.modelo === m} onClick={() => patch({ modelo: m })}>
-                  {`Modelo ${m} · ${modeloDesafioLabel(m)}`}
-                </Chip>
+                <RadioCard
+                  key={m}
+                  value={m}
+                  aria-label={`Modelo ${m} · ${MODELO_META[m].titulo}`}
+                  title={MODELO_META[m].titulo}
+                  description={MODELO_META[m].descricao}
+                  icon={MODELO_META[m].icon}
+                  badge={MODELO_META[m].badge}
+                />
               ))}
-            </div>
+            </RadioGroup>
             <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">{DICA_MODELO[values.modelo]}</p>
 
             {values.modelo !== 'A' ? (
