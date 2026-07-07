@@ -5,18 +5,17 @@
 // (Rules enforçam no servidor; a UI ainda passa pelo PlatformGuard).
 // =============================================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  getLeelaDb,
   getLeelaFunctions,
-  getTenant,
-  listTenants,
   provisionTenant,
   transitionTenant,
   type ProvisionResult,
   type TransitionResult,
 } from '@leela/api-client';
+import { useQuery } from '@tanstack/react-query';
 import type { ProvisionInput, Tenant, TenantStatus } from '@leela/core';
+import { tenantDetalheQuery, tenantsQuery } from '../../../lib/query/queries';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -24,56 +23,30 @@ export interface AsyncState<T> {
   error: Error | null;
 }
 
-/** Lista todos os tenants da plataforma (filtro de status é client-side). */
+/**
+ * Lista todos os tenants da plataforma (filtro de status é client-side).
+ * Migrado para TanStack Query (ADR-010). `reloadKey` entra na chave (ponte
+ * pragmática do strangler-fig): o container o incrementa pós-mutação e a lista
+ * revalida SEM tocar a tela. Contrato {data,loading,error} preservado.
+ */
 export function useTenants(reloadKey = 0): AsyncState<Tenant[]> {
-  const [state, setState] = useState<AsyncState<Tenant[]>>({
-    data: null,
-    loading: true,
-    error: null,
-  });
-
-  useEffect(() => {
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listTenants(getLeelaDb())
-      .then((tenants) => ativo && setState({ data: tenants, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [reloadKey]);
-
-  return state;
+  const query = useQuery(tenantsQuery(reloadKey));
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
-/** Um tenant pelo id (detalhe). */
+/** Um tenant pelo id (detalhe). Migrado para TanStack Query (ADR-010). */
 export function useTenant(tenantId: string, reloadKey = 0): AsyncState<Tenant> {
-  const [state, setState] = useState<AsyncState<Tenant>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...tenantDetalheQuery(tenantId, reloadKey),
+    enabled: !!tenantId,
   });
 
-  useEffect(() => {
-    if (!tenantId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getTenant(getLeelaDb(), tenantId)
-      .then((tenant) => {
-        if (!ativo) return;
-        if (!tenant) {
-          setState({ data: null, loading: false, error: new Error('Tenant não encontrado.') });
-          return;
-        }
-        setState({ data: tenant, loading: false, error: null });
-      })
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [tenantId, reloadKey]);
-
-  return state;
+  if (!tenantId || query.isPending) return { data: null, loading: true, error: null };
+  if (query.error) return { data: null, loading: false, error: query.error };
+  if (!query.data) {
+    return { data: null, loading: false, error: new Error('Tenant não encontrado.') };
+  }
+  return { data: query.data, loading: false, error: null };
 }
 
 export interface MutationState {

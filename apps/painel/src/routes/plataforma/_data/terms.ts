@@ -5,36 +5,30 @@
 // Rules enforçam no servidor; a UI ainda respeita o papel via readOnly).
 // =============================================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   getLeelaDb,
-  getCommercialTerms,
   saveCommercialTerms,
 } from '@leela/api-client';
+import { useQuery } from '@tanstack/react-query';
 import type { CommercialTerms, CommercialTermsInput } from '@leela/core';
+import { commercialTermsQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './tenants';
 
-/** Termos vigentes do tenant (`commercialTerms/current`); null se ainda não há. */
+/**
+ * Termos vigentes do tenant (`commercialTerms/current`); null se ainda não há
+ * (não é erro — o editor abre com defaults). Migrado para TanStack Query
+ * (ADR-010): reusa getCommercialTerms via gateway; `reloadKey` na chave preserva
+ * o refetch pós-save do container. Contrato {data,loading,error} preservado.
+ */
 export function useCommercialTerms(tenantId: string, reloadKey = 0): AsyncState<CommercialTerms> {
-  const [state, setState] = useState<AsyncState<CommercialTerms>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...commercialTermsQuery(tenantId, reloadKey),
+    enabled: !!tenantId,
   });
 
-  useEffect(() => {
-    if (!tenantId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getCommercialTerms(getLeelaDb(), tenantId)
-      .then((terms) => ativo && setState({ data: terms, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [tenantId, reloadKey]);
-
-  return state;
+  if (!tenantId) return { data: null, loading: true, error: null };
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
 export interface SaveTermsState {

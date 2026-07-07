@@ -4,29 +4,17 @@
 // varre `tenants/*` no cliente (RN-409); só platform_admin lê (Rules).
 // =============================================================================
 
-import { useEffect, useState } from 'react';
-import { getLeelaDb, getPlatformRollups } from '@leela/api-client';
+import { useQuery } from '@tanstack/react-query';
 import type { PlatformRollups } from '@leela/core';
+import { platformRollupsQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './tenants';
 
-/** Rollups macro (`platform/rollups`); null quando a Function ainda não rodou. */
+/**
+ * Rollups macro (`platform/rollups`); null quando a Function ainda não rodou.
+ * Migrado para TanStack Query (ADR-010) — reusa getPlatformRollups do
+ * api-client via o gateway. Contrato {data,loading,error} preservado.
+ */
 export function usePlatformRollups(reloadKey = 0): AsyncState<PlatformRollups> {
-  const [state, setState] = useState<AsyncState<PlatformRollups>>({
-    data: null,
-    loading: true,
-    error: null,
-  });
-
-  useEffect(() => {
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getPlatformRollups(getLeelaDb())
-      .then((rollups) => ativo && setState({ data: rollups, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [reloadKey]);
-
-  return state;
+  const query = useQuery(platformRollupsQuery(reloadKey));
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
