@@ -105,14 +105,43 @@ function dataMsDoEvento(evento: Evento): number | null {
   return null;
 }
 
+/** Ordena por data ASCENDENTE; eventos sem data vão ao fim (ordem estável). @pure */
+function compararPorDataAsc(a: Evento, b: Evento): number {
+  const ma = dataMsDoEvento(a);
+  const mb = dataMsDoEvento(b);
+  if (ma === null || mb === null) {
+    if (ma === null && mb === null) return 0;
+    return ma === null ? 1 : -1;
+  }
+  return ma - mb;
+}
+
 /**
- * Ordena os eventos por PROXIMIDADE TEMPORAL do organizador:
- * 1. FUTUROS (inclui HOJE) primeiro, ASCENDENTE — o próximo a acontecer no topo;
- * 2. depois PASSADOS/encerrados, do mais RECENTE ao mais antigo;
- * 3. eventos SEM data (rascunho sem data marcada) ao FIM da lista.
+ * Compara dois NÃO-rascunhos por PROXIMIDADE TEMPORAL do organizador:
+ * FUTUROS (incl. hoje) primeiro ASC → depois PASSADOS do mais RECENTE ao antigo;
+ * sem data ao fim. Futuro × passado por DIA CIVIL no fuso do produto
+ * (`diasCivisAte`, fonte única — DST-safe): `dias >= 0` = hoje/futuro. @pure
+ */
+function compararTemporal(a: Evento, b: Evento, agora: Date): number {
+  const ma = dataMsDoEvento(a);
+  const mb = dataMsDoEvento(b);
+  if (ma === null || mb === null) {
+    if (ma === null && mb === null) return 0;
+    return ma === null ? 1 : -1;
+  }
+  const aFuturo = diasCivisAte(new Date(ma), agora) >= 0;
+  const bFuturo = diasCivisAte(new Date(mb), agora) >= 0;
+  if (aFuturo !== bFuturo) return aFuturo ? -1 : 1; // futuros antes dos passados
+  return aFuturo ? ma - mb : mb - ma; // futuros asc; passados desc
+}
+
+/**
+ * Ordena o hub por STATUS primeiro, TEMPO depois (decisão do Vitor):
+ * 1. bucket primário — RASCUNHO vai TODO ao FIM (independe de ter data marcada);
+ * 2. dentro dos NÃO-rascunhos: proximidade temporal (futuros ASC → passados DESC,
+ *    sem data ao fim);
+ * 3. dentro dos RASCUNHOS: por data ASC (sem data ao fim, ordem estável).
  *
- * Futuro × passado é decidido por DIA CIVIL no fuso do produto
- * (`diasCivisAte` do core, fonte única — DST-safe): `dias >= 0` = hoje/futuro.
  * `agora` é INJETÁVEL (determinismo em teste; a UI passa `new Date()`). `sort`
  * é estável (V8) → empates preservam a ordem recebida.
  * @pure
@@ -122,17 +151,11 @@ export function ordenarEventosHub(
   agora: Date,
 ): Evento[] {
   return [...eventos].sort((a, b) => {
-    const ma = dataMsDoEvento(a);
-    const mb = dataMsDoEvento(b);
-    // Sem data vai para o fim (mas mantém ordem relativa entre si).
-    if (ma === null || mb === null) {
-      if (ma === null && mb === null) return 0;
-      return ma === null ? 1 : -1;
-    }
-    const aFuturo = diasCivisAte(new Date(ma), agora) >= 0;
-    const bFuturo = diasCivisAte(new Date(mb), agora) >= 0;
-    if (aFuturo !== bFuturo) return aFuturo ? -1 : 1; // futuros antes dos passados
-    return aFuturo ? ma - mb : mb - ma; // futuros asc; passados desc
+    const aRascunho = a.status === 'rascunho';
+    const bRascunho = b.status === 'rascunho';
+    // Bucket primário: rascunho ao fim, publicados/encerrados antes.
+    if (aRascunho !== bRascunho) return aRascunho ? 1 : -1;
+    return aRascunho ? compararPorDataAsc(a, b) : compararTemporal(a, b, agora);
   });
 }
 

@@ -78,7 +78,7 @@ describe('hubRows — derivação pura do hub', () => {
   });
 });
 
-describe('ordenarEventosHub — ordem temporal (próximo → distante)', () => {
+describe('ordenarEventosHub — rascunho ao fim, temporal antes', () => {
   /** Evento com data (ms) num dia civil; datas ao meio-dia UTC (longe da borda). */
   const emDias = (slug: string, dias: number) =>
     mkEvento({
@@ -116,6 +116,32 @@ describe('ordenarEventosHub — ordem temporal (próximo → distante)', () => {
       'futuro',
       'passado',
       'rascunho-sem-data',
+    ]);
+  });
+
+  it('TODO rascunho vai ao FIM mesmo COM data (bucket por status, não por tempo)', () => {
+    // Espelha o gate: Trilha (rascunho, +10d) e Maratona 2027 (rascunho) vão ao
+    // fim, mesmo tendo data; publicados/encerrados ordenam temporal antes.
+    const rascunhoComData = (slug: string, dias: number) =>
+      mkEvento({
+        slug,
+        status: 'rascunho',
+        data: ts(new Date(AGORA.getTime() + dias * 24 * 60 * 60 * 1000)),
+      });
+    const ordenados = ordenarEventosHub(
+      [
+        rascunhoComData('trilha-rascunho', 10),
+        emDias('publicado-futuro', 3),
+        mkEvento({ slug: 'encerrado-passado', status: 'encerrado', data: ts(new Date(AGORA.getTime() - 30 * 24 * 60 * 60 * 1000)) }),
+        rascunhoComData('maratona-2027-rascunho', 200),
+      ],
+      AGORA,
+    );
+    expect(ordenados.map((e) => e.slug)).toEqual([
+      'publicado-futuro', // não-rascunho: futuro primeiro
+      'encerrado-passado', // não-rascunho: passado depois
+      'trilha-rascunho', // rascunhos ao FIM, entre si por data asc
+      'maratona-2027-rascunho',
     ]);
   });
 
