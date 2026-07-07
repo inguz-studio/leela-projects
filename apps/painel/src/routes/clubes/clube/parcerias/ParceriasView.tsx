@@ -18,10 +18,12 @@ import type {
   ParceriaEventoAfiliado,
   ParceriaPatrocinador,
 } from '@leela/core';
+import { KpiCard } from '../../_components/KpiCard';
 import { formatInt } from '../../_lib/format';
 import {
   eventoNomeLegivel,
   formatBRL,
+  kpisParcerias,
   modeloComercialLabel,
   separarParcerias,
   statusParceriaBadge,
@@ -140,7 +142,9 @@ export function ParceriasView({
     );
   }
 
-  const { convitesPendentes, eventosPromovidos, patrocinadores } = separarParcerias(parcerias ?? []);
+  const blocos = separarParcerias(parcerias ?? []);
+  const { convitesPendentes, eventosPromovidos, patrocinadores } = blocos;
+  const kpis = kpisParcerias(blocos);
   const vazioTotal =
     convitesPendentes.length === 0 && eventosPromovidos.length === 0 && patrocinadores.length === 0;
 
@@ -164,6 +168,18 @@ export function ParceriasView({
             </Button>
           }
         />
+      ) : null}
+
+      {!vazioTotal ? (
+        <section
+          aria-label="Indicadores de parcerias"
+          className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
+        >
+          <KpiCard label="Eventos" value={formatInt(kpis.eventos)} hint={`${formatInt(convitesPendentes.length)} pendente(s)`} />
+          <KpiCard label="Conversões" value={formatInt(kpis.conversoes)} />
+          <KpiCard label="A receber" value={formatBRL(kpis.valorAReceber)} />
+          <KpiCard label="Patrocinadores" value={formatInt(kpis.patrocinadores)} />
+        </section>
       ) : null}
 
       {convitesPendentes.length > 0 ? (

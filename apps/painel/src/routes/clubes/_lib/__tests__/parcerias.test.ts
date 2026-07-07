@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   eventoNomeLegivel,
   formatBRL,
+  kpisParcerias,
   modeloComercialLabel,
   separarParcerias,
   statusParceriaBadge,
@@ -22,6 +23,32 @@ describe('separarParcerias', () => {
     expect(b.eventosPromovidos.map((p) => p.id)).toEqual(['p2']);
     // evento inativo e patrocinador inativo somem
     expect(b.patrocinadores.map((p) => p.id)).toEqual(['s1']);
+  });
+});
+
+describe('kpisParcerias', () => {
+  it('deriva os KPIs dos blocos: ∑ conversões/a-receber dos promovidos, sem inventar dado', () => {
+    const parcerias = [
+      mkEventoAfiliado({ id: 'p1', status: 'convite_pendente' }),
+      mkEventoAfiliado({ id: 'p2', status: 'ativa', conversoes: 10, valorAReceber: 500 }),
+      mkEventoAfiliado({ id: 'p3', status: 'ativa', conversoes: 5, valorAReceber: 250 }),
+      mkPatrocinador({ id: 's1', status: 'ativa' }),
+      mkPatrocinador({ id: 's2', status: 'inativa' }),
+    ];
+    const kpis = kpisParcerias(separarParcerias(parcerias));
+    expect(kpis.eventos).toBe(3); // 2 promovidos + 1 convite pendente
+    expect(kpis.conversoes).toBe(15);
+    expect(kpis.valorAReceber).toBe(750);
+    expect(kpis.patrocinadores).toBe(1); // o inativo some
+  });
+
+  it('zera com nenhuma parceria', () => {
+    expect(kpisParcerias(separarParcerias([]))).toEqual({
+      eventos: 0,
+      conversoes: 0,
+      valorAReceber: 0,
+      patrocinadores: 0,
+    });
   });
 });
 

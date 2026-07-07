@@ -163,7 +163,7 @@ export function TenantsList({
             <div className="flex items-center justify-between gap-[var(--spacing-4)] flex-wrap">
               <FiltroChips filter={filter} onFilterChange={onFilterChange} counts={counts} />
               <p aria-live="polite" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                {visiveis.length} {visiveis.length === 1 ? 'tenant' : 'tenants'}
+                Mostrando {formatInt(visiveis.length)} de {formatInt(todos.length)} tenants
               </p>
             </div>
 

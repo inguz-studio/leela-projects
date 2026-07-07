@@ -25,7 +25,18 @@ describe('ParceriasView', () => {
     expect(screen.getByLabelText('Eventos promovidos')).toBeInTheDocument();
     expect(screen.getByLabelText('Patrocinadores')).toBeInTheDocument();
     expect(screen.getByText('Loja do Corredor')).toBeInTheDocument();
-    expect(screen.getByText(/R\$\s?640,00/)).toBeInTheDocument();
+    // R$ 640,00 aparece na tabela de eventos promovidos…
+    const tabela = screen.getByLabelText('Eventos promovidos');
+    expect(within(tabela).getByText(/R\$\s?640,00/)).toBeInTheDocument();
+  });
+
+  it('exibe a linha de KPIs derivada dos blocos (densidade L3)', () => {
+    renderView();
+    const kpis = screen.getByLabelText('Indicadores de parcerias');
+    // Eventos = 1 promovido + 1 convite; A receber = ∑ valorAReceber dos promovidos
+    expect(within(kpis).getByText('2')).toBeInTheDocument();
+    expect(within(kpis).getByText('1 pendente(s)')).toBeInTheDocument();
+    expect(within(kpis).getByText(/R\$\s?640,00/)).toBeInTheDocument();
   });
 
   it('aceitar convite dispara onAceitar com a parceria (RN-125)', async () => {

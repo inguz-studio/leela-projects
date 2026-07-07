@@ -47,8 +47,8 @@ describe('TenantsList', () => {
     );
     expect(screen.getByText('Castelo Produções')).toBeInTheDocument();
     expect(screen.getByText('Passo Certo')).toBeInTheDocument();
-    // contador de visíveis
-    expect(screen.getByText('3 tenants')).toBeInTheDocument();
+    // contador de visíveis (padrão "Mostrando X de Y")
+    expect(screen.getByText('Mostrando 3 de 3 tenants')).toBeInTheDocument();
     // saúde: suspenso → Crítico
     expect(screen.getByText('Crítico')).toBeInTheDocument();
   });
@@ -66,7 +66,7 @@ describe('TenantsList', () => {
     );
     expect(screen.getByText('Passo Certo')).toBeInTheDocument();
     expect(screen.queryByText('Castelo Produções')).not.toBeInTheDocument();
-    expect(screen.getByText('1 tenant')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 3 tenants')).toBeInTheDocument();
   });
 
   it('chip de filtro mostra a contagem por status e dispara onFilterChange', async () => {
@@ -98,7 +98,7 @@ describe('TenantsList', () => {
       />,
     );
     expect(screen.getByText(/Nenhum tenant com esse status/i)).toBeInTheDocument();
-    expect(screen.getByText('0 tenants')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando 0 de 1 tenants')).toBeInTheDocument();
   });
 
   it('abrir tenant chama onOpenTenant com o id', async () => {

@@ -43,6 +43,32 @@ export function separarParcerias(parcerias: Parceria[]): BlocosParcerias {
 }
 
 // ---------------------------------------------------------------------------
+// KPIs do topo (SPEC §2.7) — derivados dos blocos já separados. Sem dado
+// inventado: só ∑ do que a tela já carrega (eventos promovidos + convites).
+// ---------------------------------------------------------------------------
+
+export interface KpisParcerias {
+  /** Eventos afiliados ativos + convites pendentes (o pipeline do clube). */
+  eventos: number;
+  /** ∑ conversões atribuídas aos eventos promovidos. */
+  conversoes: number;
+  /** ∑ a receber (R$) dos eventos promovidos. */
+  valorAReceber: number;
+  /** Patrocinadores ativos. */
+  patrocinadores: number;
+}
+
+export function kpisParcerias(blocos: BlocosParcerias): KpisParcerias {
+  const { convitesPendentes, eventosPromovidos, patrocinadores } = blocos;
+  return {
+    eventos: eventosPromovidos.length + convitesPendentes.length,
+    conversoes: eventosPromovidos.reduce((acc, p) => acc + p.conversoes, 0),
+    valorAReceber: eventosPromovidos.reduce((acc, p) => acc + p.valorAReceber, 0),
+    patrocinadores: patrocinadores.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Rótulos
 // ---------------------------------------------------------------------------
 
