@@ -19,6 +19,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import type { AuthClaims } from '@leela/core';
 import { validarConvite } from '@leela/core';
@@ -92,7 +93,7 @@ export async function enviarConvitesCore(
     unicos.push(chave);
   }
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const convitesRef = clubeRef.collection('convites');
 
   // ≤ 50 docs (RN-106) — loop de get+set é aceitável e preserva criadoEm

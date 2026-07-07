@@ -24,6 +24,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import {
   recalcularStatusMembrosCore,
   recontarMembrosAtivos,
@@ -43,8 +44,8 @@ const hasEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 const DIA_MS = 24 * 60 * 60 * 1000;
 const AGORA = new Date('2026-07-04T12:00:00Z');
 
-function diasAtras(n: number): admin.firestore.Timestamp {
-  return admin.firestore.Timestamp.fromDate(
+function diasAtras(n: number): Timestamp {
+  return Timestamp.fromDate(
     new Date(AGORA.getTime() - n * DIA_MS)
   );
 }

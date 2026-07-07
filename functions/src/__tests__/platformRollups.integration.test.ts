@@ -17,6 +17,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   recomputePlatformRollupsCore,
   recomputePlatformRollups,
@@ -54,7 +55,7 @@ async function seedTenant(
       saasMonthlyFee: 0,
       versao: 1,
       atualizadoPor: ADMIN_UID,
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
   }
 }

@@ -21,6 +21,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { canTransition } from '@leela/core';
@@ -98,7 +99,7 @@ export const transitionTenant = https.onCall(async (data: unknown, context) => {
       );
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
 
     // Suspensão/reativação só muda status — nenhum doc de domínio é tocado
     // (dados preservados, RN-402). Auditoria mínima: quem/quando no doc.

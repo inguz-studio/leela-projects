@@ -23,6 +23,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -68,7 +69,7 @@ describe.skipIf(!hasEmulator)('dashboard — Rules (S600-T2)', () => {
       taxaConversaoPct: null,
       alerts: [],
       computadoEm: Date.now(),
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
   });
 

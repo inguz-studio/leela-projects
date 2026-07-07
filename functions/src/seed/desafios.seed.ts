@@ -29,6 +29,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type {
   ModeloDesafio,
   Pilar,
@@ -246,7 +247,7 @@ export async function seedDesafios(
   await seedClubes(db);
   await seedCatalogoAcoes(db);
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const clubeRef = db.collection('clubes').doc(CLUBE_CPS_SLUG);
 
   for (const spec of DESAFIOS_SEED) {
@@ -259,8 +260,8 @@ export async function seedDesafios(
       nome: spec.nome,
       descricao: spec.descricao,
       modelo: spec.modelo,
-      dataInicio: admin.firestore.Timestamp.fromDate(new Date(spec.dataInicio)),
-      dataFim: admin.firestore.Timestamp.fromDate(new Date(spec.dataFim)),
+      dataInicio: Timestamp.fromDate(new Date(spec.dataInicio)),
+      dataFim: Timestamp.fromDate(new Date(spec.dataFim)),
       status: spec.status,
       recompensaTipo: spec.recompensaTipo,
       visibilidade: spec.visibilidade,

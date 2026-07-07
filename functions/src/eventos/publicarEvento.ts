@@ -24,6 +24,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import QRCode from 'qrcode';
@@ -145,7 +146,7 @@ export async function publicarEventoCore(
       );
     }
 
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     tx.update(ref, {
       status: 'publicado',
       publicadoEm: now,

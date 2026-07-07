@@ -22,6 +22,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // IDs canônicos — fixos para os seeds serem idempotentes
 export const CASTELO_TENANT_ID = 'castelo-producoes';
@@ -89,7 +90,7 @@ function assertEmulatorOnly(): void {
 export async function seedTenants(db: admin.firestore.Firestore): Promise<void> {
   assertEmulatorOnly();
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   const batch = db.batch();
 

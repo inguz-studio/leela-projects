@@ -20,6 +20,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type {
   CanalComunicado,
   OrigemComunicado,
@@ -202,7 +203,7 @@ export async function seedComunicados(
 
   await seedClubes(db); // pré-requisito: clube canônico + tenant ativo
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const comunicadosRef = db
     .collection('clubes')
     .doc(CLUBE_CPS_SLUG)
@@ -225,12 +226,12 @@ export async function seedComunicados(
       atualizadoEm: now,
     };
     if (spec.enviadoDiasAtras !== undefined) {
-      data['enviadoEm'] = admin.firestore.Timestamp.fromDate(
+      data['enviadoEm'] = Timestamp.fromDate(
         new Date(agora.getTime() - spec.enviadoDiasAtras * DIA_MS)
       );
     }
     if (spec.agendadoDiasFrente !== undefined) {
-      data['agendadoPara'] = admin.firestore.Timestamp.fromDate(
+      data['agendadoPara'] = Timestamp.fromDate(
         new Date(agora.getTime() + spec.agendadoDiasFrente * DIA_MS)
       );
     }

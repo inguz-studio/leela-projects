@@ -20,6 +20,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 // IDs canônicos — fixos para o seed ser idempotente
 export const CORRIDA_PERFEITA_TENANT_ID = 'corrida-perfeita';
@@ -54,7 +55,7 @@ function assertEmulatorOnly(): void {
 export async function seedClubes(db: admin.firestore.Firestore): Promise<void> {
   assertEmulatorOnly();
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   // ── 1. Tenant da assessoria (pré-requisito de tenantAtivo nas Rules) ─────
   const tenantRef = db.collection('tenants').doc(CORRIDA_PERFEITA_TENANT_ID);
@@ -99,7 +100,7 @@ export async function seedClubes(db: admin.firestore.Firestore): Promise<void> {
 
   if (!clubeSnap.exists) {
     // criadoEm canônico: clube existe "desde 12 Jan 2022" (HANDOFF-05)
-    clubeData['criadoEm'] = admin.firestore.Timestamp.fromDate(
+    clubeData['criadoEm'] = Timestamp.fromDate(
       new Date('2022-01-12T12:00:00-03:00')
     );
     // Agregados ∑ nascem zerados; a Cloud Function os mantém dali em diante.

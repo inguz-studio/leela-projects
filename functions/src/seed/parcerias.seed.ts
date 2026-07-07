@@ -25,6 +25,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import type { ModeloComercial, StatusParceria, TermosEspelho } from '@leela/core';
 import {
   CLUBE_CPS_SLUG,
@@ -212,7 +213,7 @@ export async function seedParcerias(
 
   await seedClubes(db); // pré-requisito: clube canônico + tenant ativo
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const parceriasRef = db
     .collection('clubes')
     .doc(CLUBE_CPS_SLUG)

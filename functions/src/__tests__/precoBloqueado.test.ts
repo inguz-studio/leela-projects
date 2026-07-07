@@ -23,6 +23,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import {
   MSG_PRECO_BLOQUEADO,
@@ -78,7 +79,7 @@ const marinaClaims = { role: 'tenant_owner', tenantId: CASTELO_ID };
 const staffClaims = { role: 'tenant_staff', tenantId: CASTELO_ID };
 
 async function seedBase(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
     id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
@@ -109,7 +110,7 @@ async function seedBase(): Promise<void> {
   await adminDb.collection('eventos').doc(EVENTO_1_VENDA).set({
     id: EVENTO_1_VENDA, tenantId: CASTELO_ID,
     organizadorId: MARINA_UID, nome: 'Corrida Boundary 1 Venda',
-    data: admin.firestore.Timestamp.fromDate(new Date('2026-11-10T07:00:00-03:00')),
+    data: Timestamp.fromDate(new Date('2026-11-10T07:00:00-03:00')),
     local: 'Florianópolis/SC', modalidades: ['5k'],
     percursos: [{ nome: '5k', preco: 80 }],
     slug: EVENTO_1_VENDA, status: 'publicado', usaChip: false,

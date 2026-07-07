@@ -31,6 +31,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { AuthClaims } from '@leela/core';
@@ -106,7 +107,7 @@ export async function exportClubeDataCore(
     // Clube excluído: o export NUNCA sobrevive à retenção — expira junto
     // com ela (expiraEm do PRIMEIRO delete; retries nunca deslizam a janela).
     const expiraEmRetencao = estado.retencao['expiraEm'] as
-      | admin.firestore.Timestamp
+      | Timestamp
       | undefined;
     if (!expiraEmRetencao || !retencaoDisponivel(expiraEmRetencao.toDate(), agora())) {
       throw new https.HttpsError(
@@ -127,8 +128,8 @@ export async function exportClubeDataCore(
     tenantId,
     origem,
     solicitadoPor: caller.uid,
-    solicitadoEm: admin.firestore.Timestamp.fromDate(agora()),
-    expiraEm: admin.firestore.Timestamp.fromDate(expiraEm),
+    solicitadoEm: Timestamp.fromDate(agora()),
+    expiraEm: Timestamp.fromDate(expiraEm),
     totalDocumentos,
     status: 'solicitado',
   });

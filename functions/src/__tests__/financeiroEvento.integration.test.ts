@@ -27,6 +27,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
   computeFinanceiro,
   recomputarFinanceiroEvento,
@@ -68,7 +69,7 @@ afterAll(async () => {
 });
 
 async function seedBase(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
     id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
@@ -98,7 +99,7 @@ async function seedBase(): Promise<void> {
   batch.set(adminDb.collection('eventos').doc(EVENTO_SEM_TERMOS), {
     id: EVENTO_SEM_TERMOS, tenantId: PASSO_ID,
     organizadorId: PASSO_OWNER_UID, nome: 'Trail Run Ratones 2026',
-    data: admin.firestore.Timestamp.fromDate(new Date('2026-05-15T07:00:00-03:00')),
+    data: Timestamp.fromDate(new Date('2026-05-15T07:00:00-03:00')),
     local: 'Ratones, Florianópolis/SC', modalidades: ['11k'],
     slug: EVENTO_SEM_TERMOS, status: 'publicado', usaChip: false,
     qtdInscritos: 1, receitaConfirmada: 1200,
@@ -226,7 +227,7 @@ describe('recomputarFinanceiroEvento — agregado por Function (S207-T2)', () =>
   }, 30_000);
 
   it('CORRIDA (review #07): recomputes concorrentes + writes de inscrito nunca persistem doc inconsistente', async () => {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     // Writes de inscrito interleaved com dois recomputes em paralelo — o
     // cenário do achado #07 (dois onInscritoWrite em corrida).
     const writesConcorrentes = (async () => {

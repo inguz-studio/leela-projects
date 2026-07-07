@@ -20,6 +20,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import {
   criarEventoCore,
@@ -95,7 +96,7 @@ async function clearFirestore(): Promise<void> {
 }
 
 async function seedTenants(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = db.batch();
   batch.set(db.collection('tenants').doc(CASTELO_ID), {
     id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
@@ -346,7 +347,7 @@ describe('publicarEventoCore — RN-201', () => {
   });
 
   it('rascunho incompleto → failed-precondition listando o que falta', async () => {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     await db.doc('eventos/rascunho-incompleto').set({
       id: 'rascunho-incompleto', tenantId: CASTELO_ID,
       organizadorId: MARINA_UID, nome: 'Rascunho Incompleto',

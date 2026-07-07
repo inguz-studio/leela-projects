@@ -28,6 +28,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { auth } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { RolePlataforma } from '@leela/core';
@@ -103,7 +104,7 @@ export const onCreateUser = auth.user().onCreate(async (user) => {
         nome: displayName ?? email ?? uid,
         email: email ?? '',
         avatarInit,
-        criadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        criadoEm: FieldValue.serverTimestamp(),
       });
     } catch (err) {
       // gRPC code 6 = ALREADY_EXISTS — retry do trigger; doc já criado.

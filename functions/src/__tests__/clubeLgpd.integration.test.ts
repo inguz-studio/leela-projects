@@ -40,6 +40,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import {
   RETENCAO_LGPD_DIAS,
@@ -145,7 +146,7 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
   });
 
   async function seedFixtures(): Promise<void> {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const batch = db.batch();
 
     batch.set(db.collection('tenants').doc(CASTELO_ID), {
@@ -255,7 +256,7 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
       expect(marcador.get('deletadoPor')).toBe(MARINA_UID);
       expect(marcador.get('nome')).toBe('Clube LGPD Castelo');
       expect(marcador.get('totalDocumentos')).toBe(SUBARVORE.length);
-      const expiraEm = (marcador.get('expiraEm') as admin.firestore.Timestamp).toDate();
+      const expiraEm = (marcador.get('expiraEm') as Timestamp).toDate();
       expect(expiraEm.getTime() - deletadoEm.getTime()).toBe(MS_90_DIAS);
 
       // Snapshot íntegro: um doc por caminho, com chave determinística.
@@ -324,7 +325,7 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
       const primeiro = new Date('2026-07-04T21:00:00.000Z');
       await deleteClubeCore(db, { clubeId: CLUBE_ID }, marina, () => primeiro);
       const expiraOriginal = (
-        (await retencaoRef().get()).get('expiraEm') as admin.firestore.Timestamp
+        (await retencaoRef().get()).get('expiraEm') as Timestamp
       ).toDate();
 
       const retry = new Date('2026-07-10T09:00:00.000Z');
@@ -338,10 +339,10 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
 
       const marcador = await retencaoRef().get();
       expect(
-        (marcador.get('expiraEm') as admin.firestore.Timestamp).toDate().getTime()
+        (marcador.get('expiraEm') as Timestamp).toDate().getTime()
       ).toBe(expiraOriginal.getTime());
       expect(
-        (marcador.get('deletadoEm') as admin.firestore.Timestamp).toDate().getTime()
+        (marcador.get('deletadoEm') as Timestamp).toDate().getTime()
       ).toBe(primeiro.getTime());
     });
 
@@ -352,8 +353,8 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
         clubeId: CLUBE_ID, tenantId: CASTELO_ID, ownerId: MARINA_UID,
         nome: 'Clube LGPD Castelo', clube: { id: CLUBE_ID },
         deletadoPor: MARINA_UID,
-        deletadoEm: admin.firestore.Timestamp.fromDate(primeiro),
-        expiraEm: admin.firestore.Timestamp.fromDate(
+        deletadoEm: Timestamp.fromDate(primeiro),
+        expiraEm: Timestamp.fromDate(
           new Date(primeiro.getTime() + MS_90_DIAS)
         ),
         totalDocumentos: SUBARVORE.length,
@@ -367,10 +368,10 @@ describe.skipIf(!hasEmulator)('clubs — deleteClube + exportClubeData (LGPD RN-
       // …e a janela LGPD é a do PRIMEIRO delete.
       const marcador = await retencaoRef().get();
       expect(
-        (marcador.get('deletadoEm') as admin.firestore.Timestamp).toDate().getTime()
+        (marcador.get('deletadoEm') as Timestamp).toDate().getTime()
       ).toBe(primeiro.getTime());
       expect(
-        (marcador.get('expiraEm') as admin.firestore.Timestamp).toDate().getTime()
+        (marcador.get('expiraEm') as Timestamp).toDate().getTime()
       ).toBe(primeiro.getTime() + MS_90_DIAS);
     });
   });

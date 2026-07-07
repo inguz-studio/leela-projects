@@ -38,6 +38,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { listarEventosDoOrganizador } from '@leela/api-client';
 import {
   EVENTO_SEEDS,
@@ -86,7 +87,7 @@ afterAll(async () => {
 });
 
 async function seedFixtures(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
 
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
@@ -104,7 +105,7 @@ async function seedFixtures(): Promise<void> {
   batch.set(adminDb.collection('eventos').doc('trail-ratones-2026'), {
     id: 'trail-ratones-2026', tenantId: PASSO_ID,
     organizadorId: PASSO_OWNER_UID, nome: 'Trail Run Ratones 2026',
-    data: admin.firestore.Timestamp.fromDate(new Date('2026-05-15T07:00:00-03:00')),
+    data: Timestamp.fromDate(new Date('2026-05-15T07:00:00-03:00')),
     local: 'Ratones, Florianópolis/SC', modalidades: ['11k'],
     slug: 'trail-ratones-2026', status: 'publicado', usaChip: false,
     qtdInscritos: 180, receitaConfirmada: 0,

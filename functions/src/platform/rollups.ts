@@ -21,6 +21,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -111,7 +112,7 @@ export async function recomputePlatformRollupsCore(
     receitaLeelaTotal,
     tenantsAtivos,
     tenants,
-    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    atualizadoEm: FieldValue.serverTimestamp(),
   });
 
   return {

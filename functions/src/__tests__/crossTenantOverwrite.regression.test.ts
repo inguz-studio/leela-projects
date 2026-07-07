@@ -18,6 +18,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import { doc, setDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -43,7 +44,7 @@ afterAll(async () => { await testEnv?.cleanup(); });
 
 beforeEach(async () => {
   await testEnv.clearFirestore();
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
     id: CASTELO_ID, status: 'ativo', ownerUid: MARINA_UID, criadoEm: now,

@@ -42,6 +42,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { AuthClaims } from '@leela/core';
@@ -282,8 +283,8 @@ export async function deleteClubeCore(
       nome: clube['nome'] ?? null,
       clube,
       deletadoPor: caller.uid,
-      deletadoEm: admin.firestore.Timestamp.fromDate(deletadoEm),
-      expiraEm: admin.firestore.Timestamp.fromDate(
+      deletadoEm: Timestamp.fromDate(deletadoEm),
+      expiraEm: Timestamp.fromDate(
         calcularExpiracaoRetencao(deletadoEm)
       ),
       totalDocumentos: documentos.filter((d) => d.dados !== null).length,

@@ -39,6 +39,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -203,14 +204,14 @@ export async function recomputarFinanceiroEvento(
     // set() integral (não merge): o doc É a recomputação — idempotente
     tx.set(eventoRef.collection('financeiro').doc('current'), {
       ...financeiro,
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
 
     // ∑ qtdInscritos — sincroniza só quando difere (no-op em reprocesso)
     if (eventoSnap.get('qtdInscritos') !== inscritos.total) {
       tx.update(eventoRef, {
         qtdInscritos: inscritos.total,
-        atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        atualizadoEm: FieldValue.serverTimestamp(),
       });
     }
 

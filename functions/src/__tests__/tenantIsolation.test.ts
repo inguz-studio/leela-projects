@@ -37,6 +37,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -87,7 +88,7 @@ afterAll(async () => {
 // ── Seed (via Admin SDK — bypassa Rules) ─────────────────────────────────
 
 async function seedFixtures(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
 
   // Tenants
@@ -350,7 +351,7 @@ describe('lifecycleAudit — deny-by-default (S1601-T2)', () => {
       .collection('lifecycleAudit').doc('audit-1')
       .set({
         from: 'pending', to: 'ativo', por: PLATFORM_ADMIN_UID,
-        em: admin.firestore.FieldValue.serverTimestamp(),
+        em: FieldValue.serverTimestamp(),
       });
   });
 

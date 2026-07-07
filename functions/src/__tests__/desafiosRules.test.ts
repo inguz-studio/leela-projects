@@ -34,6 +34,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -80,7 +81,7 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
   });
 
   async function seedFixtures(): Promise<void> {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const batch = adminDb.batch();
 
     batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
@@ -107,8 +108,8 @@ describe.skipIf(!hasEmulator)('desafios — Rules (S105-T1)', () => {
       id: 'desafio-base', tenantId: CASTELO_ID,
       nome: 'Desafio Base', descricao: 'existente',
       modelo: 'B', status: 'ativo', metaTotalPontos: 500,
-      dataInicio: admin.firestore.Timestamp.fromDate(new Date('2026-07-01T12:00:00Z')),
-      dataFim: admin.firestore.Timestamp.fromDate(new Date('2026-07-31T12:00:00Z')),
+      dataInicio: Timestamp.fromDate(new Date('2026-07-01T12:00:00Z')),
+      dataFim: Timestamp.fromDate(new Date('2026-07-31T12:00:00Z')),
       recompensaTipo: 'medalha_digital', visibilidade: 'membros',
       qtdParticipantes: 10, progressoPct: 40,
       criadoEm: now, atualizadoEm: now,

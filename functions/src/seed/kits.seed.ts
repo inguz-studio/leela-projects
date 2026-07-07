@@ -20,6 +20,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 import { MEIA_FLORIPA_ID } from './eventos.seed';
@@ -114,7 +115,7 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
 export async function seedKits(db: admin.firestore.Firestore): Promise<void> {
   assertEmulatorOnly('seedKits');
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const kitsCol = db.collection('eventos').doc(MEIA_FLORIPA_ID).collection('kits');
   const itensCol = db.collection('itensKit');
 

@@ -21,6 +21,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { derivarStatus, type EntradaVia, type PapelMembro } from '@leela/core';
 import { recontarMembrosAtivos } from '../clubs/membrosAggregates';
 import {
@@ -151,9 +152,9 @@ export async function seedMembros(
     let entrouEm: Date;
     let ultimaAtividadeEm: Date | null;
     if (snap.exists) {
-      entrouEm = (snap.get('entrouEm') as admin.firestore.Timestamp).toDate();
+      entrouEm = (snap.get('entrouEm') as Timestamp).toDate();
       const ua = snap.get('ultimaAtividadeEm') as
-        | admin.firestore.Timestamp
+        | Timestamp
         | undefined;
       ultimaAtividadeEm = ua ? ua.toDate() : null;
     } else {
@@ -173,13 +174,13 @@ export async function seedMembros(
       atletaNome: spec.atletaNome,
       papel: spec.papel,
       entrouVia: spec.entrouVia,
-      entrouEm: admin.firestore.Timestamp.fromDate(entrouEm),
+      entrouEm: Timestamp.fromDate(entrouEm),
       // status SEMPRE derivado por data — mesma função pura da Function (RN-102)
       status: derivarStatus(entrouEm, ultimaAtividadeEm, agora),
     };
     if (ultimaAtividadeEm) {
       data['ultimaAtividadeEm'] =
-        admin.firestore.Timestamp.fromDate(ultimaAtividadeEm);
+        Timestamp.fromDate(ultimaAtividadeEm);
     }
 
     await ref.set(data, { merge: true });

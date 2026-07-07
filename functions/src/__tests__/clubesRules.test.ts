@@ -24,6 +24,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { validarCodigoConvite } from '@leela/core';
 import {
   CLUBE_CPS_CODIGO_CONVITE,
@@ -75,7 +76,7 @@ describe.skipIf(!hasEmulator)('clubes — Rules + seed (S101-T1)', () => {
   });
 
   async function seedFixtures(): Promise<void> {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const batch = adminDb.batch();
 
     batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {

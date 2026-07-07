@@ -24,6 +24,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { deriveTenantHealth } from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
@@ -72,7 +73,7 @@ beforeEach(async () => {
         health: 'saudavel',
       },
     },
-    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    atualizadoEm: FieldValue.serverTimestamp(),
   });
 });
 

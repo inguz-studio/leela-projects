@@ -26,6 +26,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { exigeChipParaFechar, podeAtender } from '@leela/core';
@@ -118,7 +119,7 @@ export async function registrarEntregaCore(
     }
 
     const kit = inscritoSnap.get('kit') as KitInscrito;
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const patch: Record<string, unknown> = {
       checkinEm: now, // presença (RN-205)
       atualizadoEm: now,

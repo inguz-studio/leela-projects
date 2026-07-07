@@ -25,6 +25,7 @@
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import {
   provisionTenantCore,
   provisionTenant,
@@ -189,8 +190,8 @@ describe('provisionTenantCore — aprovação de tenant pending', () => {
       tipo: 'promotor',
       gmvAcumulado: 0,
       eventosAtivos: 0,
-      criadoEm: admin.firestore.FieldValue.serverTimestamp(),
-      atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+      criadoEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
   });
 

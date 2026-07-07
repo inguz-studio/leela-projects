@@ -60,6 +60,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -236,7 +237,7 @@ export async function provisionTenantCore(
   const tenantRef = db.collection('tenants').doc(tenantId);
   const profRef = db.collection('profissionais').doc(ownerUid);
   const termsCol = tenantRef.collection('commercialTerms');
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   // ── Transação: docs do tenant (tudo-ou-nada no Firestore) ──────────────
   let outcome: TxOutcome;

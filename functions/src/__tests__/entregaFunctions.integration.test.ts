@@ -38,6 +38,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { doc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import { vincularChipCore } from '../eventos/vincularChip';
 import { registrarEntregaCore } from '../eventos/registrarEntrega';
@@ -101,7 +102,7 @@ afterAll(async () => {
 });
 
 function inscritoDoc(overrides: Record<string, unknown> = {}) {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   return {
     tenantId: CASTELO_ID,
     atletaId: 'atleta-x',
@@ -117,7 +118,7 @@ function inscritoDoc(overrides: Record<string, unknown> = {}) {
 }
 
 async function seedBase(): Promise<void> {
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
     id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
@@ -132,7 +133,7 @@ async function seedBase(): Promise<void> {
   batch.set(adminDb.collection('eventos').doc(EVENTO_CHIP), {
     id: EVENTO_CHIP, tenantId: CASTELO_ID, organizadorId: MARINA_UID,
     nome: 'Meia Maratona Floripa 2026',
-    data: admin.firestore.Timestamp.fromDate(new Date('2026-04-27T07:00:00-03:00')),
+    data: Timestamp.fromDate(new Date('2026-04-27T07:00:00-03:00')),
     local: 'Florianópolis/SC', modalidades: ['5k', '10k', '21k'],
     slug: EVENTO_CHIP, status: 'publicado', usaChip: true,
     qtdInscritos: 4, receitaConfirmada: 0, criadoEm: now, atualizadoEm: now,
@@ -140,7 +141,7 @@ async function seedBase(): Promise<void> {
   batch.set(adminDb.collection('eventos').doc(EVENTO_SEM_CHIP), {
     id: EVENTO_SEM_CHIP, tenantId: CASTELO_ID, organizadorId: MARINA_UID,
     nome: 'Corrida Sem Chip 2027',
-    data: admin.firestore.Timestamp.fromDate(new Date('2027-03-10T07:00:00-03:00')),
+    data: Timestamp.fromDate(new Date('2027-03-10T07:00:00-03:00')),
     local: 'Florianópolis/SC', modalidades: ['5k'],
     slug: EVENTO_SEM_CHIP, status: 'publicado', usaChip: false,
     qtdInscritos: 1, receitaConfirmada: 0, criadoEm: now, atualizadoEm: now,
@@ -199,7 +200,7 @@ describe('vincularChipCore — vínculo, conflito e reatribuição (RN-206)', ()
     expect(snap.get('chipNumero')).toBe('CHIP-8891');
     // Regressão B1: serverTimestamp() do import modular firebase-admin/firestore
     // precisa materializar um Timestamp real no doc (não undefined/erro).
-    expect(snap.get('atualizadoEm')).toBeInstanceOf(admin.firestore.Timestamp);
+    expect(snap.get('atualizadoEm')).toBeInstanceOf(Timestamp);
   });
 
   it('mesmo chip no MESMO inscrito é idempotente (jaVinculado)', async () => {
@@ -419,7 +420,7 @@ describe('registrarEntregaCore — retirar kit = presença (RN-205)', () => {
   });
 
   it('kit ANTECIPADO: preserva kitEntregueEm original, só seta checkinEm', async () => {
-    const entregaAntecipada = admin.firestore.Timestamp.fromDate(
+    const entregaAntecipada = Timestamp.fromDate(
       new Date('2026-04-20T14:00:00-03:00')
     );
     await inscritoRef('insc-bruno').update({

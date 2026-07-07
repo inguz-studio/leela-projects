@@ -28,6 +28,7 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import {
   removerMembroCore,
@@ -121,7 +122,7 @@ describe.skipIf(!hasEmulator)('clubs — mutations de membros e convites', () =>
   });
 
   async function seedFixtures(): Promise<void> {
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     const batch = db.batch();
 
     batch.set(db.collection('tenants').doc(CASTELO_ID), {

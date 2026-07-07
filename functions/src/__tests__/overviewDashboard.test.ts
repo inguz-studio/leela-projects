@@ -23,6 +23,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import {
   DASHBOARD_STALE_MS,
   recomputeProfessionalDashboard,
@@ -44,11 +45,11 @@ const OUTRO_UID = 'uid-passo-owner';
 let testEnv: RulesTestEnvironment;
 let adminDb: admin.firestore.Firestore;
 
-function ts(date: Date): admin.firestore.Timestamp {
-  return admin.firestore.Timestamp.fromDate(date);
+function ts(date: Date): Timestamp {
+  return Timestamp.fromDate(date);
 }
 
-function diasAtras(n: number): admin.firestore.Timestamp {
+function diasAtras(n: number): Timestamp {
   return ts(new Date(AGORA.getTime() - n * DIA_MS));
 }
 

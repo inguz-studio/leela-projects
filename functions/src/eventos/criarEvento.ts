@@ -25,6 +25,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -245,7 +246,7 @@ export async function criarEventoCore(
   await assertTenantAtivo(db, tenantId);
 
   const base = slugify(input.nome);
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
 
   const slug = await db.runTransaction(async (tx) => {
     // Todas as leituras ANTES da escrita (contrato de transação Firestore)
@@ -262,7 +263,7 @@ export async function criarEventoCore(
         nome: input.nome.trim(),
         // date-only → meia-noite CIVIL no fuso do produto (nunca UTC-midnight,
         // que renderizava dia N−1 no Brasil — fix review Onda1 #02)
-        data: admin.firestore.Timestamp.fromDate(
+        data: Timestamp.fromDate(
           isDataEventoISO(input.data)
             ? dataEventoParaDate(input.data)
             : new Date(input.data)

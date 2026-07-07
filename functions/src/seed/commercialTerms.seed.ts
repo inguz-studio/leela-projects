@@ -19,6 +19,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { DEFAULT_COMMERCIAL_TERMS } from '@leela/core';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 
@@ -69,7 +70,7 @@ export async function seedCommercialTerms(
     ...DEFAULT_COMMERCIAL_TERMS,
     versao: 1,
     atualizadoPor: SEED_ADMIN_UID,
-    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+    atualizadoEm: FieldValue.serverTimestamp(),
   };
 
   const batch = db.batch();

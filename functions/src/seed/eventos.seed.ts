@@ -17,6 +17,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID, MARINA_CASTELO_UID } from './tenants.seed';
 
@@ -79,7 +80,7 @@ export const EVENTO_SEEDS: EventoSeed[] = [
 export async function seedEventos(db: admin.firestore.Firestore): Promise<void> {
   assertEmulatorOnly('seedEventos');
 
-  const now = admin.firestore.FieldValue.serverTimestamp();
+  const now = FieldValue.serverTimestamp();
   const batch = db.batch();
 
   for (const evento of EVENTO_SEEDS) {
@@ -91,7 +92,7 @@ export async function seedEventos(db: admin.firestore.Firestore): Promise<void> 
       tenantId: evento.tenantId,
       organizadorId: evento.organizadorId,
       nome: evento.nome,
-      data: admin.firestore.Timestamp.fromDate(new Date(evento.data)),
+      data: Timestamp.fromDate(new Date(evento.data)),
       local: evento.local,
       modalidades: evento.modalidades,
       slug: evento.slug,

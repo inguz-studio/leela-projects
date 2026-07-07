@@ -20,6 +20,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import type { AuthClaims } from '@leela/core';
 import {
@@ -196,7 +197,7 @@ export async function transferirPropriedadeCore(
       clubeRef.collection('membros').where('papel', '==', 'owner')
     );
 
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = FieldValue.serverTimestamp();
     tx.update(clubeRef, { ownerId: atletaId, atualizadoEm: now });
     tx.update(novoOwnerRef, { papel: 'owner', atualizadoEm: now });
 

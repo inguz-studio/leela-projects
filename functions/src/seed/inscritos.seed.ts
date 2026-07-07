@@ -17,6 +17,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 import { MEIA_FLORIPA_ID } from './eventos.seed';
@@ -123,7 +124,7 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
   for (let inicio = 0; inicio < inscritos.length; inicio += 400) {
     const batch = db.batch();
     for (const inscrito of inscritos.slice(inicio, inicio + 400)) {
-      const ts = admin.firestore.Timestamp.fromMillis(inscrito.criadoEmMillis);
+      const ts = Timestamp.fromMillis(inscrito.criadoEmMillis);
       batch.set(col.doc(inscrito.id), {
         id: inscrito.id,
         tenantId: inscrito.tenantId,
