@@ -4,40 +4,27 @@
 // roda no cliente (_lib/desafios). Agregados ∑ vêm do backend — a tela só lê.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   atualizarDesafio,
   criarDesafio,
-  getDesafio,
   getLeelaDb,
-  listDesafios,
   type CriarDesafioInput,
   type CriarDesafioResult,
 } from '@leela/api-client';
 import type { Desafio } from '@leela/core';
+import { desafioDetalheQuery, desafiosDoClubeQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './clubes';
 
-/** Desafios de um clube, mais recentes primeiro. */
+/** Desafios de um clube, mais recentes primeiro (TanStack Query · ADR-010). */
 export function useDesafios(clubeId: string | null): AsyncState<Desafio[]> {
-  const [state, setState] = useState<AsyncState<Desafio[]>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...desafiosDoClubeQuery(clubeId ?? ''),
+    enabled: !!clubeId,
   });
 
-  useEffect(() => {
-    if (!clubeId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listDesafios(getLeelaDb(), clubeId)
-      .then((desafios) => ativo && setState({ data: desafios, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [clubeId]);
-
-  return state;
+  if (!clubeId) return { data: null, loading: true, error: null };
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
 /** Um desafio pelo id (modo edição do editor). Null-loading enquanto busca. */
@@ -45,35 +32,19 @@ export function useDesafio(
   clubeId: string | null,
   desafioId: string | null,
 ): AsyncState<Desafio> {
-  const [state, setState] = useState<AsyncState<Desafio>>({
-    data: null,
-    loading: Boolean(desafioId),
-    error: null,
+  const enabled = !!clubeId && !!desafioId;
+  const query = useQuery({
+    ...desafioDetalheQuery(clubeId ?? '', desafioId ?? ''),
+    enabled,
   });
 
-  useEffect(() => {
-    if (!clubeId || !desafioId) {
-      setState({ data: null, loading: false, error: null });
-      return;
-    }
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getDesafio(getLeelaDb(), clubeId, desafioId)
-      .then((d) => {
-        if (!ativo) return;
-        if (!d) {
-          setState({ data: null, loading: false, error: new Error('Desafio não encontrado.') });
-          return;
-        }
-        setState({ data: d, loading: false, error: null });
-      })
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [clubeId, desafioId]);
-
-  return state;
+  if (!enabled) return { data: null, loading: false, error: null };
+  if (query.isPending) return { data: null, loading: true, error: null };
+  if (query.error) return { data: null, loading: false, error: query.error };
+  if (!query.data) {
+    return { data: null, loading: false, error: new Error('Desafio não encontrado.') };
+  }
+  return { data: query.data, loading: false, error: null };
 }
 
 /** Porta real de criação de desafio (write direto — Rules-guarded). */

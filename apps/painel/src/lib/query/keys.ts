@@ -47,4 +47,61 @@ export const queryKeys = {
     doEvento: (eventoId: string, reloadKey = 0) =>
       ['kits', 'do-evento', eventoId, reloadKey] as const,
   },
+
+  // ---------------------------------------------------------------------------
+  // Clubes (E05) — mesma convenção de eventos. Lista por tenant + detalhe por
+  // slug partilham prefixo `['clubes']`; recursos-filhos (membros, comunicados,
+  // desafios, parcerias) têm prefixo próprio, keyed por clubeId, para invalidação
+  // cirúrgica pós-mutação (read-your-writes, ADR-010).
+  // ---------------------------------------------------------------------------
+  clubes: {
+    /** Clubes do tenant do profissional logado (hub). */
+    doTenant: (tenantId: string) => ['clubes', 'do-tenant', tenantId] as const,
+    /** Um clube pelo slug (docId = slug). */
+    detalhe: (slug: string) => ['clubes', 'detalhe', slug] as const,
+  },
+
+  membros: {
+    /** Membros de um clube (página densa ordenada por nome). */
+    doClube: (clubeId: string) => ['membros', 'do-clube', clubeId] as const,
+  },
+
+  comunicados: {
+    /** Comunicados de um clube, mais recentes primeiro. */
+    doClube: (clubeId: string) => ['comunicados', 'do-clube', clubeId] as const,
+    /** Um comunicado pelo id (modo edição). */
+    detalhe: (clubeId: string, comunicadoId: string) =>
+      ['comunicados', 'detalhe', clubeId, comunicadoId] as const,
+  },
+
+  desafios: {
+    /** Desafios de um clube, mais recentes primeiro. */
+    doClube: (clubeId: string) => ['desafios', 'do-clube', clubeId] as const,
+    /** Um desafio pelo id (modo edição). */
+    detalhe: (clubeId: string, desafioId: string) =>
+      ['desafios', 'detalhe', clubeId, desafioId] as const,
+  },
+
+  parcerias: {
+    /** Parcerias de um clube (union evento_afiliado | patrocinador). */
+    doClube: (clubeId: string) => ['parcerias', 'do-clube', clubeId] as const,
+  },
+
+  // ---------------------------------------------------------------------------
+  // Plataforma (E16) — super-admin. `reloadKey` entra na chave (mesma ponte
+  // pragmática de `kits`): os containers já incrementam um contador pós-mutação;
+  // mantê-lo na chave preserva o refetch SEM tocar as telas (strangler-fig).
+  // ---------------------------------------------------------------------------
+  plataforma: {
+    /** Rollups macro (`platform/rollups`). */
+    rollups: (reloadKey = 0) => ['plataforma', 'rollups', reloadKey] as const,
+    /** Lista de todos os tenants. */
+    tenants: (reloadKey = 0) => ['plataforma', 'tenants', reloadKey] as const,
+    /** Um tenant pelo id (detalhe). */
+    tenant: (tenantId: string, reloadKey = 0) =>
+      ['plataforma', 'tenant', tenantId, reloadKey] as const,
+    /** Termos comerciais vigentes de um tenant. */
+    termos: (tenantId: string, reloadKey = 0) =>
+      ['plataforma', 'termos', tenantId, reloadKey] as const,
+  },
 } as const;

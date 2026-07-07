@@ -16,20 +16,44 @@
 
 import { queryOptions } from '@tanstack/react-query';
 import {
+  getClube,
+  getCommercialTerms,
+  getComunicado,
+  getDesafio,
   getEvento,
   getFinanceiroEvento,
   getLeelaDb,
   getOverview,
+  getPlatformRollups,
+  getTenant,
   listarEventosDoOrganizador,
   listarInscritos,
   listarInscritosRecentes,
   listarKits,
+  listClubesByTenant,
+  listComunicados,
+  listDesafios,
+  listMembros,
+  listParcerias,
+  listTenants,
   INSCRITOS_PAGE_SIZE,
   type FinanceiroEvento,
   type InscritosCursor,
   type OverviewResult,
 } from '@leela/api-client';
-import type { Evento, Inscrito, Kit } from '@leela/core';
+import type {
+  Clube,
+  CommercialTerms,
+  Comunicado,
+  Desafio,
+  Evento,
+  Inscrito,
+  Kit,
+  Membro,
+  Parceria,
+  PlatformRollups,
+  Tenant,
+} from '@leela/core';
 import { queryKeys } from './keys';
 
 /** KPIs + alertas do produtor (contrato único getOverview — 1 round-trip). */
@@ -135,5 +159,115 @@ export function kitsDoEventoQuery(eventoId: string, reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.kits.doEvento(eventoId, reloadKey),
     queryFn: (): Promise<Kit[]> => listarKits(getLeelaDb(), eventoId),
+  });
+}
+
+// =============================================================================
+// Clubes (E05) — reusam a leitura provada do api-client (listClubesByTenant,
+// getClube, listMembros, listComunicados/getComunicado, listDesafios/getDesafio,
+// listParcerias). Bounded staleness: cache-then-revalidate basta nestas telas.
+// =============================================================================
+
+/** Clubes do tenant do profissional logado (hub — 2 zonas). */
+export function clubesDoTenantQuery(tenantId: string) {
+  return queryOptions({
+    queryKey: queryKeys.clubes.doTenant(tenantId),
+    queryFn: (): Promise<Clube[]> => listClubesByTenant(getLeelaDb(), tenantId),
+  });
+}
+
+/** Um clube pelo slug (leitura O(1) — docId = slug; null quando não existe). */
+export function clubeDetalheQuery(slug: string) {
+  return queryOptions({
+    queryKey: queryKeys.clubes.detalhe(slug),
+    queryFn: (): Promise<Clube | null> => getClube(getLeelaDb(), slug),
+  });
+}
+
+/** Membros de um clube (página densa por nome; filtro fino é client-side). */
+export function membrosDoClubeQuery(clubeId: string) {
+  return queryOptions({
+    queryKey: queryKeys.membros.doClube(clubeId),
+    queryFn: (): Promise<Membro[]> => listMembros(getLeelaDb(), clubeId, { pageLimit: 200 }),
+  });
+}
+
+/** Comunicados de um clube, mais recentes primeiro. */
+export function comunicadosDoClubeQuery(clubeId: string) {
+  return queryOptions({
+    queryKey: queryKeys.comunicados.doClube(clubeId),
+    queryFn: (): Promise<Comunicado[]> => listComunicados(getLeelaDb(), clubeId),
+  });
+}
+
+/** Um comunicado pelo id (modo edição; null quando não existe). */
+export function comunicadoDetalheQuery(clubeId: string, comunicadoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.comunicados.detalhe(clubeId, comunicadoId),
+    queryFn: (): Promise<Comunicado | null> =>
+      getComunicado(getLeelaDb(), clubeId, comunicadoId),
+  });
+}
+
+/** Desafios de um clube, mais recentes primeiro. */
+export function desafiosDoClubeQuery(clubeId: string) {
+  return queryOptions({
+    queryKey: queryKeys.desafios.doClube(clubeId),
+    queryFn: (): Promise<Desafio[]> => listDesafios(getLeelaDb(), clubeId),
+  });
+}
+
+/** Um desafio pelo id (modo edição; null quando não existe). */
+export function desafioDetalheQuery(clubeId: string, desafioId: string) {
+  return queryOptions({
+    queryKey: queryKeys.desafios.detalhe(clubeId, desafioId),
+    queryFn: (): Promise<Desafio | null> => getDesafio(getLeelaDb(), clubeId, desafioId),
+  });
+}
+
+/** Parcerias de um clube (union evento_afiliado | patrocinador). */
+export function parceriasDoClubeQuery(clubeId: string) {
+  return queryOptions({
+    queryKey: queryKeys.parcerias.doClube(clubeId),
+    queryFn: (): Promise<Parceria[]> => listParcerias(getLeelaDb(), clubeId),
+  });
+}
+
+// =============================================================================
+// Plataforma (E16) — super-admin. Reusam getPlatformRollups/listTenants/
+// getTenant/getCommercialTerms. `reloadKey` na chave é a ponte pragmática do
+// strangler-fig (os containers já incrementam um contador pós-mutação).
+// =============================================================================
+
+/** Rollups macro (`platform/rollups`); null quando a Function ainda não rodou. */
+export function platformRollupsQuery(reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.rollups(reloadKey),
+    queryFn: (): Promise<PlatformRollups | null> => getPlatformRollups(getLeelaDb()),
+  });
+}
+
+/** Todos os tenants da plataforma (filtro de status é client-side). */
+export function tenantsQuery(reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.tenants(reloadKey),
+    queryFn: (): Promise<Tenant[]> => listTenants(getLeelaDb()),
+  });
+}
+
+/** Um tenant pelo id (detalhe; null quando não existe). */
+export function tenantDetalheQuery(tenantId: string, reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.tenant(tenantId, reloadKey),
+    queryFn: (): Promise<Tenant | null> => getTenant(getLeelaDb(), tenantId),
+  });
+}
+
+/** Termos comerciais vigentes de um tenant; null quando ainda não há. */
+export function commercialTermsQuery(tenantId: string, reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.termos(tenantId, reloadKey),
+    queryFn: (): Promise<CommercialTerms | null> =>
+      getCommercialTerms(getLeelaDb(), tenantId),
   });
 }

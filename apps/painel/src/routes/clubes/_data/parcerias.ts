@@ -4,41 +4,40 @@
 // guardado pelas Rules. Agregados ∑ e campos espelhados vêm da Function.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   criarPatrocinador,
   getLeelaDb,
-  listParcerias,
   transicionarParceria,
   type CriarPatrocinadorInput,
 } from '@leela/api-client';
 import type { Parceria, StatusParceria } from '@leela/core';
+import { parceriasDoClubeQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './clubes';
 
-/** Parcerias de um clube (union evento_afiliado | patrocinador). */
+/**
+ * Parcerias de um clube (union evento_afiliado | patrocinador) — TanStack Query
+ * (ADR-010). `reload()` revalida a chave `parcerias.doClube`; preservado no
+ * contrato para o caller atual (ParceriasPage). As mutações de parceria
+ * invalidam essa MESMA chave (read-your-writes declarativo).
+ */
 export function useParcerias(
   clubeId: string | null,
 ): AsyncState<Parceria[]> & { reload: () => void } {
-  const [state, setState] = useState<AsyncState<Parceria[]>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...parceriasDoClubeQuery(clubeId ?? ''),
+    enabled: !!clubeId,
   });
-  const [tick, setTick] = useState(0);
 
-  useEffect(() => {
-    if (!clubeId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listParcerias(getLeelaDb(), clubeId)
-      .then((ps) => ativo && setState({ data: ps, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [clubeId, tick]);
-
-  return { ...state, reload: () => setTick((t) => t + 1) };
+  if (!clubeId) {
+    return { data: null, loading: true, error: null, reload: () => {} };
+  }
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    reload: () => void query.refetch(),
+  };
 }
 
 /** Porta real de transição de status da parceria. */

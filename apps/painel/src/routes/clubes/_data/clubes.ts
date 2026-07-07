@@ -8,22 +8,24 @@
 // backend — estas telas só leem.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   atualizarClube,
   criarClube,
   deletarClube,
   exportarDadosClube,
-  getClube,
   getLeelaDb,
   getLeelaFunctions,
-  listClubesByTenant,
-  listMembros,
   type AtualizarClubeInput,
   type DeletarClubeResult,
   type ExportarDadosClubeResult,
 } from '@leela/api-client';
 import type { Clube, ClubeInput, Membro } from '@leela/core';
+import {
+  clubeDetalheQuery,
+  clubesDoTenantQuery,
+  membrosDoClubeQuery,
+} from '../../../lib/query/queries';
 import { useClubesSession } from './session';
 
 /** Porta real de CRIAÇÃO de clube (fix #14 — rota /clubes/novo). */
@@ -51,94 +53,70 @@ export interface AsyncState<T> {
   error: Error | null;
 }
 
+// -----------------------------------------------------------------------------
+// Hooks de LEITURA migrados para TanStack Query (ADR-010 · lote FID-CLUBES-F0).
+// Consomem o gateway (lib/query), que reusa a leitura provada do api-client.
+// Contrato de retorno {data, loading, error[, reload]} preservado byte-a-byte —
+// consumidores (HubRoute, ClubeLayout, MembrosPage…) intactos (strangler-fig,
+// Fowler). Chaves partilhadas → navegar entre telas do clube reidrata do cache.
+// -----------------------------------------------------------------------------
+
 /** Lista de clubes do tenant do profissional logado (hub — 2 zonas). */
 export function useClubes(): AsyncState<Clube[]> {
   const session = useClubesSession();
-  const [state, setState] = useState<AsyncState<Clube[]>>({
-    data: null,
-    loading: true,
-    error: null,
+  const enabled = session.status === 'authenticated' && !!session.tenantId;
+  const query = useQuery({
+    ...clubesDoTenantQuery(session.tenantId ?? ''),
+    enabled,
   });
 
-  useEffect(() => {
-    if (session.status === 'loading') return;
-    if (session.status === 'anonymous' || !session.tenantId) {
-      setState({ data: null, loading: false, error: new Error('Sessão não autenticada.') });
-      return;
-    }
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listClubesByTenant(getLeelaDb(), session.tenantId)
-      .then((clubes) => ativo && setState({ data: clubes, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [session.status, session.tenantId]);
-
-  return state;
+  // Sessão resolvida sem tenant válido → erro honesto (não dispara a query).
+  if (session.status !== 'loading' && !enabled) {
+    return { data: null, loading: false, error: new Error('Sessão não autenticada.') };
+  }
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
 /** Um clube pelo slug (leitura direta O(1) — docId = slug). */
 export function useClube(slug: string): AsyncState<Clube> {
   const session = useClubesSession();
-  const [state, setState] = useState<AsyncState<Clube>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...clubeDetalheQuery(slug),
+    enabled: session.status !== 'loading' && !!slug,
   });
 
-  useEffect(() => {
-    if (session.status === 'loading') return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    getClube(getLeelaDb(), slug)
-      .then((clube) => {
-        if (!ativo) return;
-        if (!clube) {
-          setState({ data: null, loading: false, error: new Error(`Clube "${slug}" não encontrado.`) });
-          return;
-        }
-        setState({ data: clube, loading: false, error: null });
-      })
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [slug, session.status]);
-
-  return state;
+  if (query.isPending) return { data: null, loading: true, error: null };
+  if (query.error) return { data: null, loading: false, error: query.error };
+  if (!query.data) {
+    return { data: null, loading: false, error: new Error(`Clube "${slug}" não encontrado.`) };
+  }
+  return { data: query.data, loading: false, error: null };
 }
 
 /**
  * Membros de um clube. O filtro fino (status × papel × busca) roda no cliente
  * (ver _lib/membros); aqui buscamos a página densa ordenada por nome.
  *
- * `reload()` re-busca a página — usado após remover membro / transferir
- * propriedade (mutations que recontam agregados no servidor) para refletir o
- * novo estado sem recarregar a rota.
+ * `reload()` revalida a chave `membros.doClube` — preservado no contrato para os
+ * callers atuais (MembrosPage). A partir do lote de mutações, remover/transferir
+ * invalidam essa MESMA chave (read-your-writes declarativo, ADR-010).
  */
 export function useMembros(clubeId: string | null): AsyncState<Membro[]> & {
   reload: () => void;
 } {
-  const [state, setState] = useState<AsyncState<Membro[]>>({
-    data: null,
-    loading: true,
-    error: null,
+  const query = useQuery({
+    ...membrosDoClubeQuery(clubeId ?? ''),
+    enabled: !!clubeId,
   });
-  const [tick, setTick] = useState(0);
 
-  useEffect(() => {
-    if (!clubeId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listMembros(getLeelaDb(), clubeId, { pageLimit: 200 })
-      .then((membros) => ativo && setState({ data: membros, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [clubeId, tick]);
-
-  return { ...state, reload: () => setTick((t) => t + 1) };
+  // Sem clube ainda → segue em loading (não finge vazio), como o hook antigo.
+  if (!clubeId) {
+    return { data: null, loading: true, error: null, reload: () => {} };
+  }
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    reload: () => void query.refetch(),
+  };
 }
