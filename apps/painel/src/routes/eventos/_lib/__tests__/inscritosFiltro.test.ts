@@ -1,11 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   contadorInscritos,
+  contarPendentesAntigos,
+  contarPorStatus,
   filtrarInscritos,
+  inadimplentes,
   normalizarBusca,
   paginar,
 } from '../inscritosFiltro';
-import { mkInscrito } from '../../_test/fixtures';
+import { mkInscrito, ts } from '../../_test/fixtures';
 
 const base = [
   mkInscrito({ id: '1', atletaNome: 'Marina Silva', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado' }),
@@ -47,5 +50,49 @@ describe('paginar', () => {
     const arr = [1, 2, 3, 4, 5];
     expect(paginar(arr, 1, 2)).toEqual([1, 2]);
     expect(paginar(arr, 3, 2)).toEqual([5]);
+  });
+});
+
+describe('contarPorStatus', () => {
+  it('conta por status e total', () => {
+    const c = contarPorStatus(base);
+    expect(c.total).toBe(3);
+    expect(c.confirmado).toBe(1);
+    expect(c.pendente).toBe(1);
+    expect(c.cancelado).toBe(1);
+  });
+
+  it('lista vazia zera tudo', () => {
+    const c = contarPorStatus([]);
+    expect(c).toMatchObject({ total: 0, confirmado: 0, pendente: 0, cancelado: 0 });
+  });
+});
+
+describe('inadimplentes', () => {
+  it('retorna só os pendentes (quem deve)', () => {
+    expect(inadimplentes(base).map((i) => i.id)).toEqual(['2']);
+  });
+});
+
+describe('contarPendentesAntigos', () => {
+  const agora = new Date('2026-03-01T12:00:00Z');
+  it('conta pendentes com criadoEm anterior ao limite de 72h', () => {
+    const antigo = mkInscrito({
+      id: 'a',
+      status: 'pendente',
+      criadoEm: ts(new Date('2026-02-20T00:00:00Z')), // >72h antes
+    });
+    const recente = mkInscrito({
+      id: 'b',
+      status: 'pendente',
+      criadoEm: ts(new Date('2026-03-01T06:00:00Z')), // <72h antes
+    });
+    // confirmado antigo não conta (não é inadimplente)
+    const confirmadoAntigo = mkInscrito({
+      id: 'c',
+      status: 'confirmado',
+      criadoEm: ts(new Date('2026-01-01T00:00:00Z')),
+    });
+    expect(contarPendentesAntigos([antigo, recente, confirmadoAntigo], agora)).toBe(1);
   });
 });

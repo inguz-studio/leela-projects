@@ -43,6 +43,20 @@ export function formatDataEvento(data: Timestamp | null | undefined): string {
 }
 
 /**
+ * Data curta "01 fev 2026" (fuso do evento, pinado). Para a coluna "Inscrito
+ * em" da tabela de inscritos e o CSV de exportação. `—` sem data. @pure
+ */
+export function formatDataCurta(data: Timestamp | null | undefined): string {
+  if (!data || typeof data.toDate !== 'function') return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: FUSO_EVENTO,
+  }).format(data.toDate());
+}
+
+/**
  * Dias CIVIS (calendário em `FUSO_EVENTO`) entre `agora` e a data da prova.
  * 0 = a prova é hoje; negativo se já passou. Alimenta alertas (S202-T2) e a
  * janela do balcão (S204) — "é hoje" bate com o dia que o produtor digitou,

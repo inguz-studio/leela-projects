@@ -1,19 +1,40 @@
 // =============================================================================
-// InscritosView — lista densa de inscritos (S203-T2 · §2.5/§2.7).
+// InscritosView — lista densa de inscritos (S203 · §2.5/§2.7).
+//
+// JOB primeiro (brief FID-EVT-INSCRITOS). Decisões e a que servem:
+//  • Filtros CONSOLIDADOS (chrome mínimo p/ a tabela dominar): Status fica
+//    VISÍVEL como controle segmentado COM CONTAGENS — é a faceta de pagamento
+//    (dor #1: "não sei quem pagou"). Kit e Modalidade colapsam em Selects
+//    compactos (design-principles: 4-15 → Select). De 13 chips (3 linhas) → 4
+//    chips de status + 2 selects numa linha.
+//  • Banner de inadimplência: "N com pagamento pendente" com atalho p/ filtrar
+//    os pendentes — serve a dor #1 sem checar manual (S203 §Pagamento).
+//  • Colunas fiéis ao job: avatar, check-in, "inscrito em" (RN-205/222/§2.5).
+//  • Clique na LINHA abre o slide-in (S203 critério 5) — além do "Detalhe".
+//  • Seleção em massa (checkbox + selecionar todos) + barra de ação
+//    (Enviar mensagem / Exportar CSV) — "gerenciar a operação" (JTBD S203).
+//  • 4 tabs no DOM (§2.7); a aba Pagamento mostra a inadimplência de verdade.
+//
 // Presentational: recebe todos os inscritos e deriva filtro + paginação
-// client-side. 4 tabs internas (Geral/Pagamento/Comunicação/Histórico), todas
-// no DOM (§2.7 — DS Tabs usa forceMount). Slide-in de detalhe ao clicar linha.
+// client-side. Reuso-first: DS (Table, Badge, Avatar, Chip, Select, Checkbox,
+// Pagination, SearchInput, Tabs, Button, useToast) + helpers puros do _lib.
 // =============================================================================
 
 import * as React from 'react';
 import {
+  Avatar,
   Badge,
+  Button,
+  Checkbox,
   Chip,
-  Input,
   Pagination,
+  SearchInput,
+  Select,
   Skeleton,
   Table,
   Tabs,
+  useToast,
+  type SelectOption,
   type TableColumn,
 } from '@leela/design-system';
 import { INSCRITOS_PAGE_SIZE } from '@leela/api-client';
@@ -26,9 +47,14 @@ import {
 } from '@leela/core';
 import { kitInscritoBadge } from '../_lib/kitLabels';
 import { statusInscritoBadge } from '../_lib/statusInscrito';
+import { formatDataCurta } from '../_lib/format';
+import { montarCsvInscritos } from '../_lib/inscritosCsv';
 import {
   contadorInscritos,
+  contarPendentesAntigos,
+  contarPorStatus,
   filtrarInscritos,
+  inadimplentes,
   paginar,
 } from '../_lib/inscritosFiltro';
 import { InscritoSlideIn } from './InscritoSlideIn';
@@ -37,37 +63,48 @@ export interface InscritosViewProps {
   inscritos: Inscrito[];
   loading: boolean;
   error: Error | null;
-  /** Percursos do evento — origem dos filtros de modalidade. */
+  /** Percursos do evento — origem do filtro de modalidade. */
   modalidades: string[];
+  /** "Agora" injetável (determinismo do recorte de inadimplência >72h). */
+  agora?: Date;
 }
 
-const TAB_PLACEHOLDER: Record<string, { titulo: string; texto: string }> = {
-  pagamento: {
-    titulo: 'Pagamento',
-    texto: 'Detalhes de cobrança e reembolso chegam com o módulo financeiro (E04).',
-  },
-  comunicacao: {
-    titulo: 'Comunicação',
-    texto: 'Histórico de e-mails e mensagens ao atleta entra com Comunicados (E05).',
-  },
-  historico: {
-    titulo: 'Histórico',
-    texto: 'Trilha de eventos da inscrição (alterações, check-in) chega com auditoria.',
-  },
-};
+const SEM_KIT_VALUE = '__todos__';
+
+/** Dispara o download de um CSV no navegador (efeito de borda isolado). */
+function baixarCsv(nome: string, conteudo: string): void {
+  const blob = new Blob([`﻿${conteudo}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nome;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export function InscritosView({
   inscritos,
   loading,
   error,
   modalidades,
+  agora = new Date(),
 }: InscritosViewProps): JSX.Element {
+  const { toast } = useToast();
   const [busca, setBusca] = React.useState('');
   const [status, setStatus] = React.useState<StatusInscrito | null>(null);
   const [kit, setKit] = React.useState<KitInscrito | null>(null);
   const [modalidade, setModalidade] = React.useState<string | null>(null);
   const [pagina, setPagina] = React.useState(1);
   const [selecionado, setSelecionado] = React.useState<Inscrito | null>(null);
+  const [marcados, setMarcados] = React.useState<ReadonlySet<string>>(new Set());
+
+  const contagem = React.useMemo(() => contarPorStatus(inscritos), [inscritos]);
+  const pendentes72h = React.useMemo(
+    () => contarPendentesAntigos(inscritos, agora),
+    [inscritos, agora],
+  );
 
   const filtrados = React.useMemo(
     () => filtrarInscritos(inscritos, { busca, status, kit, modalidade }),
@@ -81,8 +118,92 @@ export function InscritosView({
 
   const pageItems = paginar(filtrados, pagina, INSCRITOS_PAGE_SIZE);
 
+  // ── Seleção em massa ──────────────────────────────────────────────────────
+  const marcadosNaPagina = pageItems.filter((i) => marcados.has(i.id)).length;
+  const todosMarcadosNaPagina = pageItems.length > 0 && marcadosNaPagina === pageItems.length;
+  const algunsMarcadosNaPagina = marcadosNaPagina > 0 && !todosMarcadosNaPagina;
+
+  function alternarMarcado(id: string): void {
+    setMarcados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function alternarPagina(): void {
+    setMarcados((prev) => {
+      const next = new Set(prev);
+      if (todosMarcadosNaPagina) pageItems.forEach((i) => next.delete(i.id));
+      else pageItems.forEach((i) => next.add(i.id));
+      return next;
+    });
+  }
+
+  function limparSelecao(): void {
+    setMarcados(new Set());
+  }
+
+  const selecionados = React.useMemo(
+    () => inscritos.filter((i) => marcados.has(i.id)),
+    [inscritos, marcados],
+  );
+
+  function exportarSelecionados(): void {
+    baixarCsv('inscritos-selecionados.csv', montarCsvInscritos(selecionados));
+    toast({ title: `${selecionados.length} inscrito(s) exportado(s) em CSV`, variant: 'success' });
+  }
+
+  function enviarMensagem(): void {
+    // Comunicados é E05 — ainda não há canal; damos feedback honesto.
+    toast({
+      title: 'Envio de mensagem chega com Comunicados (E05)',
+      variant: 'info',
+    });
+  }
+
+  // ── Filtros compactos ─────────────────────────────────────────────────────
+  const kitOptions: SelectOption[] = [
+    { value: SEM_KIT_VALUE, label: 'Todos os kits' },
+    ...KITS_INSCRITO.map((k) => ({ value: k, label: kitInscritoBadge(k).label })),
+  ];
+  const modalidadeOptions: SelectOption[] = [
+    { value: SEM_KIT_VALUE, label: 'Todas as modalidades' },
+    ...modalidades.map((m) => ({ value: m, label: m })),
+  ];
+
+  // ── Colunas da tabela densa ───────────────────────────────────────────────
   const columns: TableColumn<Inscrito>[] = [
-    { key: 'atletaNome', header: 'Atleta' },
+    {
+      key: '__select',
+      width: 'var(--spacing-10)',
+      header: (
+        <Checkbox
+          aria-label="Selecionar todos os inscritos da página"
+          checked={todosMarcadosNaPagina}
+          indeterminate={algunsMarcadosNaPagina}
+          onChange={alternarPagina}
+        />
+      ),
+      render: (r) => (
+        <Checkbox
+          aria-label={`Selecionar ${r.atletaNome}`}
+          checked={marcados.has(r.id)}
+          onChange={() => alternarMarcado(r.id)}
+        />
+      ),
+    },
+    {
+      key: 'atletaNome',
+      header: 'Atleta',
+      render: (r) => (
+        <span className="flex items-center gap-[var(--spacing-3)]">
+          <Avatar size="xs" name={r.atletaNome} />
+          <span className="text-[var(--text-primary)]">{r.atletaNome}</span>
+        </span>
+      ),
+    },
     { key: 'modalidade', header: 'Modalidade', render: (r) => r.modalidade || '—' },
     {
       key: 'kit',
@@ -109,77 +230,40 @@ export function InscritosView({
         return <Badge variant={b.variant}>{b.label}</Badge>;
       },
     },
+    {
+      key: 'checkin',
+      header: 'Check-in',
+      align: 'center',
+      render: (r) =>
+        r.checkinEm ? (
+          <span className="text-[var(--text-success)]" aria-label="Check-in realizado" role="img">
+            ✓
+          </span>
+        ) : (
+          <span className="text-[var(--text-tertiary)]" aria-hidden>
+            —
+          </span>
+        ),
+    },
+    {
+      key: 'criadoEm',
+      header: 'Inscrito em',
+      render: (r) => (
+        <span className="text-[var(--text-secondary)]">{formatDataCurta(r.criadoEm)}</span>
+      ),
+    },
   ];
 
-  const geral = loading ? (
-    <div className="flex flex-col gap-[var(--spacing-2)]" role="status" aria-label="Carregando inscritos">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} variant="rect" className="h-[var(--table-row-height)]" />
-      ))}
-    </div>
-  ) : error ? (
-    <p className="text-[var(--text-danger)]">Não foi possível carregar os inscritos.</p>
-  ) : (
-    <div className="flex flex-col gap-[var(--spacing-4)]">
-      {/* Busca + contador */}
-      <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-3)]">
-        <Input
-          type="search"
-          aria-label="Buscar atleta"
-          placeholder="Buscar atleta pelo nome"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          wrapperClassName="w-[var(--sidebar-width)] max-w-full"
-        />
-        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" role="status">
-          {contadorInscritos(filtrados.length, inscritos.length)}
-        </span>
-      </div>
-
-      {/* Filtros por chip */}
-      <div className="flex flex-col gap-[var(--spacing-2)]">
-        <FiltroLinha rotulo="Status">
-          <Chip active={status === null} onClick={() => setStatus(null)}>
-            Todos
-          </Chip>
-          {STATUS_INSCRITO.map((s) => (
-            <Chip key={s} active={status === s} onClick={() => setStatus(s)}>
-              {statusInscritoBadge(s).label}
-            </Chip>
-          ))}
-        </FiltroLinha>
-        <FiltroLinha rotulo="Kit">
-          <Chip active={kit === null} onClick={() => setKit(null)}>
-            Todos
-          </Chip>
-          {KITS_INSCRITO.map((k) => (
-            <Chip key={k} active={kit === k} onClick={() => setKit(k)}>
-              {kitInscritoBadge(k).label}
-            </Chip>
-          ))}
-        </FiltroLinha>
-        {modalidades.length > 0 && (
-          <FiltroLinha rotulo="Modalidade">
-            <Chip active={modalidade === null} onClick={() => setModalidade(null)}>
-              Todas
-            </Chip>
-            {modalidades.map((m) => (
-              <Chip key={m} active={modalidade === m} onClick={() => setModalidade(m)}>
-                {m}
-              </Chip>
-            ))}
-          </FiltroLinha>
-        )}
-      </div>
-
-      {/* Tabela densa */}
+  function renderTabela(dados: Inscrito[]): JSX.Element {
+    return (
       <Table
         columns={columns}
-        data={pageItems}
+        data={dados}
         keyExtractor={(r) => r.id}
         caption="Inscritos do evento"
         emptyTitle="Nenhum inscrito encontrado"
         emptyDescription="Ajuste a busca ou os filtros para ver resultados."
+        onRowClick={setSelecionado}
         renderActions={(r) => (
           <button
             type="button"
@@ -191,6 +275,84 @@ export function InscritosView({
           </button>
         )}
       />
+    );
+  }
+
+  // ── Aba Geral ─────────────────────────────────────────────────────────────
+  const geral = loading ? (
+    <div className="flex flex-col gap-[var(--spacing-2)]" role="status" aria-label="Carregando inscritos">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} variant="rect" className="h-[var(--table-row-height)]" />
+      ))}
+    </div>
+  ) : error ? (
+    <p className="text-[var(--text-danger)]">Não foi possível carregar os inscritos.</p>
+  ) : (
+    <div className="flex flex-col gap-[var(--spacing-4)]">
+      {/* Banner de inadimplência (dor #1) */}
+      {contagem.pendente > 0 && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-[length:var(--input-border-width)] border-[var(--feedback-warning-fg)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-3)]"
+        >
+          <Badge variant="alerta">{contagem.pendente}</Badge>
+          <span className="flex-1 text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            <strong className="text-[var(--text-primary)]">
+              {contagem.pendente} inscrição(ões) com pagamento pendente
+            </strong>
+            {pendentes72h > 0 ? ` · ${pendentes72h} há mais de 72h` : ''}
+          </span>
+          <Button variant="secondary" size="sm" onClick={() => setStatus('pendente')}>
+            Ver pendentes
+          </Button>
+        </div>
+      )}
+
+      {/* Barra de filtros consolidada */}
+      <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-3)]">
+        <div className="flex flex-wrap items-end gap-[var(--spacing-3)]">
+          <SearchInput
+            aria-label="Buscar atleta"
+            placeholder="Buscar atleta pelo nome"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-[var(--sidebar-width)] max-w-full"
+          />
+          <Select
+            aria-label="Filtrar por kit"
+            options={kitOptions}
+            value={kit ?? SEM_KIT_VALUE}
+            onChange={(e) => setKit(e.target.value === SEM_KIT_VALUE ? null : (e.target.value as KitInscrito))}
+            wrapperClassName="min-w-[var(--spacing-24)]"
+          />
+          {modalidades.length > 0 && (
+            <Select
+              aria-label="Filtrar por modalidade"
+              options={modalidadeOptions}
+              value={modalidade ?? SEM_KIT_VALUE}
+              onChange={(e) => setModalidade(e.target.value === SEM_KIT_VALUE ? null : e.target.value)}
+              wrapperClassName="min-w-[var(--spacing-24)]"
+            />
+          )}
+        </div>
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" role="status">
+          {contadorInscritos(filtrados.length, inscritos.length)}
+        </span>
+      </div>
+
+      {/* Status: controle segmentado VISÍVEL com contagens (faceta de pagamento) */}
+      <div className="flex flex-wrap items-center gap-[var(--spacing-2)]" role="group" aria-label="Filtrar por status">
+        <Chip active={status === null} onClick={() => setStatus(null)}>
+          {`Todos · ${contagem.total}`}
+        </Chip>
+        {STATUS_INSCRITO.map((s) => (
+          <Chip key={s} active={status === s} onClick={() => setStatus(s)}>
+            {`${statusInscritoBadge(s).label} · ${contagem[s]}`}
+          </Chip>
+        ))}
+      </div>
+
+      {renderTabela(pageItems)}
 
       {filtrados.length > INSCRITOS_PAGE_SIZE && (
         <Pagination
@@ -203,40 +365,94 @@ export function InscritosView({
     </div>
   );
 
+  // ── Aba Pagamento (dor #1 servida de verdade, não placeholder) ────────────
+  const listaPendentes = React.useMemo(() => inadimplentes(inscritos), [inscritos]);
+  const pagamento = loading ? (
+    <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">Carregando…</p>
+  ) : (
+    <div className="flex flex-col gap-[var(--spacing-4)]">
+      <div className="flex flex-wrap gap-[var(--spacing-3)]">
+        <ResumoPagamento rotulo="Confirmados" valor={contagem.confirmado} variant="vitoria" />
+        <ResumoPagamento rotulo="Pendentes" valor={contagem.pendente} variant="alerta" />
+        <ResumoPagamento rotulo="Cancelados" valor={contagem.cancelado} variant="vulcao" />
+      </div>
+      <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+        {listaPendentes.length > 0
+          ? `Inscrições aguardando pagamento (${listaPendentes.length}) — quem ainda não pagou.`
+          : 'Nenhuma inscrição com pagamento pendente. Tudo em dia.'}
+      </p>
+      {listaPendentes.length > 0 && renderTabela(listaPendentes)}
+    </div>
+  );
+
   const tabs = [
     { id: 'geral', label: 'Geral', content: geral },
-    ...(['pagamento', 'comunicacao', 'historico'] as const).map((id) => ({
-      id,
-      label: TAB_PLACEHOLDER[id]!.titulo,
+    { id: 'pagamento', label: 'Pagamento', content: pagamento },
+    {
+      id: 'comunicacao',
+      label: 'Comunicação',
       content: (
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          {TAB_PLACEHOLDER[id]!.texto}
+          Histórico de e-mails e mensagens ao atleta entra com Comunicados (E05).
         </p>
       ),
-    })),
+    },
+    {
+      id: 'historico',
+      label: 'Histórico',
+      content: (
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+          Trilha de eventos da inscrição (alterações, check-in) chega com auditoria.
+        </p>
+      ),
+    },
   ];
 
   return (
     <div className="flex flex-col gap-[var(--spacing-4)]">
       <Tabs tabs={tabs} aria-label="Seções de inscritos" />
+
+      {/* Barra de ação em massa — só quando há seleção */}
+      {selecionados.length > 0 && (
+        <div className="flex flex-wrap items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-3)] shadow-elev-1">
+          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            {selecionados.length} selecionado(s)
+          </span>
+          <Button variant="secondary" size="sm" onClick={enviarMensagem}>
+            Enviar mensagem
+          </Button>
+          <Button variant="ghost" size="sm" onClick={exportarSelecionados}>
+            Exportar
+          </Button>
+          <Button variant="ghost" size="sm" onClick={limparSelecao} className="ml-auto">
+            Cancelar seleção
+          </Button>
+        </div>
+      )}
+
       <InscritoSlideIn inscrito={selecionado} onClose={() => setSelecionado(null)} />
     </div>
   );
 }
 
-function FiltroLinha({
+function ResumoPagamento({
   rotulo,
-  children,
+  valor,
+  variant,
 }: {
   rotulo: string;
-  children: React.ReactNode;
+  valor: number;
+  variant: 'vitoria' | 'alerta' | 'vulcao';
 }): JSX.Element {
   return (
-    <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
-      <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)] w-[var(--spacing-12)]">
-        {rotulo}
+    <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-4)] shadow-elev-1">
+      <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">{rotulo}</span>
+      <span className="flex items-center gap-[var(--spacing-2)]">
+        <span className="text-[length:var(--font-size-xl)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
+          {valor}
+        </span>
+        <Badge variant={variant}>{rotulo}</Badge>
       </span>
-      {children}
     </div>
   );
 }

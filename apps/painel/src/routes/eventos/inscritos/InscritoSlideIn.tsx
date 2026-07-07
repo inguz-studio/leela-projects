@@ -9,6 +9,7 @@ import { Badge, Button } from '@leela/design-system';
 import type { Inscrito } from '@leela/core';
 import { kitInscritoBadge } from '../_lib/kitLabels';
 import { statusInscritoBadge } from '../_lib/statusInscrito';
+import { formatDataCurta } from '../_lib/format';
 
 export interface InscritoSlideInProps {
   /** Inscrito em foco; null = painel fechado. */
@@ -61,12 +62,21 @@ export function InscritoSlideIn({ inscrito, onClose }: InscritoSlideInProps): JS
         </div>
 
         <dl className="flex flex-col gap-[var(--spacing-4)]">
+          <Campo
+            termo="Pagamento"
+            valor={<Badge variant={status.variant}>{status.label}</Badge>}
+          />
           <Campo termo="Modalidade" valor={inscrito.modalidade || '—'} />
           <Campo termo="Kit" valor={<Badge variant={kit.variant}>{kit.label}</Badge>} />
           <Campo
             termo="Chip"
             valor={inscrito.chipNumero ?? 'Não vinculado (entrega no balcão)'}
           />
+          <Campo
+            termo="Check-in"
+            valor={inscrito.checkinEm ? formatDataCurta(inscrito.checkinEm) : 'Ainda não realizado'}
+          />
+          <Campo termo="Inscrito em" valor={formatDataCurta(inscrito.criadoEm)} />
         </dl>
 
         <div className="mt-auto">
