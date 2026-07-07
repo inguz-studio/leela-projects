@@ -24,10 +24,9 @@ Todas as 6 telas de evento pousaram com EmptyState honesto onde faltava dado. Es
 **Fazer:** Function transacional de estorno (integra o gateway — Stripe/adquirente Be Hero), idempotente, que estorna e marca a inscrição cancelada, registra motivo/histórico. Rules + guard (só organizador; só inscrição paga). **TLA+/teste de idempotência** (dinheiro — rigor Fable, sem duplicar estorno).
 **Aceite:** estorno idempotente (reexecução não duplica), audit trail, confirmação server-side; o modal do protótipo ("estornado no cartão •••• em até N faturas") reflete o resultado real.
 
-## FRENTE C — Escritas do balcão (entrega/chip/QR)
-**Destrava:** os botões do balcão (S204/S208) que ficaram visíveis mas sem efetivar.
-**Nota:** `registrarEntrega`/`registrarCheckin`/`vincularChip` já existem em `functions/src/eventos/` — o lote firebase-admin (Opus, em curso) pode já destravá-los se a única causa era a API estática. **Verificar após o firebase-admin:** se efetivam no preview, esta frente vira só a **validação de assinatura do QR server-side** (S208 — rejeitar payload adulterado; nunca confiar no cliente — segurança, rigor Fable). Se ainda quebram por outra causa, incluir aqui.
-**Aceite:** retirada de kit seta kitEntregueEm+checkinEm (RN-205); vincular chip com confirmação de sobrescrita (RN-206); QR valida assinatura server-side e rejeita adulterado/duplicado (RN-221/222).
+## FRENTE C — QR server-side (ENCOLHIDA — as demais escritas já destravaram)
+**ATUALIZAÇÃO 2026-07-07:** o lote firebase-admin (Opus, `8e6badd`) DESTRAVOU as escritas — `criarEvento`, `vincularChip` e `registrarEntrega` foram exercitados no emulator e EFETIVAM (timestamps de servidor reais, zero erro de API estática). Então esta frente encolheu: sobra APENAS a **validação de assinatura do `qrToken` server-side** (S208 — rejeitar payload adulterado/QR de outro evento/já-checkado; nunca confiar no cliente). É segurança pura → rigor Fable.
+**Aceite:** QR valida assinatura server-side e rejeita adulterado/duplicado (RN-221/222); os fluxos de escrita já provados seguem funcionando.
 
 ## FRENTE D — Estoque por tamanho + movimentações (kits)
 **Destrava:** o Estoque real dos kits (EstoqueView já mostra EmptyState honesto). É a raiz da dor "kit errado por falha de coleta de tamanho".
