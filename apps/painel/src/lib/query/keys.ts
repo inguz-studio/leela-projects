@@ -36,4 +36,15 @@ export const queryKeys = {
     /** Agregado `financeiro/current` de um evento — partilhado Overview ↔ Financeiro. */
     current: (eventoId: string) => ['financeiro', 'current', eventoId] as const,
   },
+
+  kits: {
+    /**
+     * Kits de um evento — chave partilhada Cadastro ↔ Estoque (navegar entre as
+     * sub-abas reidrata do cache). `reloadKey` entra na chave para preservar o
+     * "refetch pós-save" do Cadastro (que incrementa um contador) sem mudar os
+     * callers — ponte pragmática do strangler-fig (ADR-010).
+     */
+    doEvento: (eventoId: string, reloadKey = 0) =>
+      ['kits', 'do-evento', eventoId, reloadKey] as const,
+  },
 } as const;

@@ -6,10 +6,10 @@
 // =============================================================================
 
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   getLeelaDb,
   listarItensKit,
-  listarKits,
   removerItemKit,
   removerKit,
   salvarItemKit,
@@ -18,24 +18,26 @@ import {
   type SalvarKitInput,
 } from '@leela/api-client';
 import type { ItemKit, Kit } from '@leela/core';
+import { kitsDoEventoQuery } from '../../../lib/query/queries';
 import type { AsyncState } from './eventos';
 import { useEventosSession } from './session';
 
-/** Kits do evento (do mais caro ao "Sem kit"). */
+/**
+ * Kits do evento (do mais caro ao "Sem kit") — migrado para TanStack Query
+ * (ADR-010): último straggler de fetch cru desta seção, consistente com
+ * useEventos/useInscritos/useFinanceiro. A chave é partilhada Cadastro ↔ Estoque
+ * (reidrata do cache ao alternar sub-abas); `reloadKey` preserva o refetch
+ * pós-save do Cadastro sem tocar os callers. Contrato {data,loading,error}
+ * preservado (strangler-fig, Fowler).
+ */
 export function useKits(eventoId: string | null, reloadKey = 0): AsyncState<Kit[]> {
-  const [state, setState] = useState<AsyncState<Kit[]>>({ data: null, loading: true, error: null });
-  useEffect(() => {
-    if (!eventoId) return;
-    let ativo = true;
-    setState({ data: null, loading: true, error: null });
-    listarKits(getLeelaDb(), eventoId)
-      .then((kits) => ativo && setState({ data: kits, loading: false, error: null }))
-      .catch((error: Error) => ativo && setState({ data: null, loading: false, error }));
-    return () => {
-      ativo = false;
-    };
-  }, [eventoId, reloadKey]);
-  return state;
+  const query = useQuery({
+    ...kitsDoEventoQuery(eventoId ?? '', reloadKey),
+    enabled: !!eventoId,
+  });
+  // Sem evento ainda → segue em loading (não finge vazio), como o hook antigo.
+  if (!eventoId) return { data: null, loading: true, error: null };
+  return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
 /** Catálogo de itens do evento (top-level `itensKit`, filtrado por tenant). */

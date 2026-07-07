@@ -23,12 +23,13 @@ import {
   listarEventosDoOrganizador,
   listarInscritos,
   listarInscritosRecentes,
+  listarKits,
   INSCRITOS_PAGE_SIZE,
   type FinanceiroEvento,
   type InscritosCursor,
   type OverviewResult,
 } from '@leela/api-client';
-import type { Evento, Inscrito } from '@leela/core';
+import type { Evento, Inscrito, Kit } from '@leela/core';
 import { queryKeys } from './keys';
 
 /** KPIs + alertas do produtor (contrato único getOverview — 1 round-trip). */
@@ -121,5 +122,18 @@ export function financeiroCurrentQuery(eventoId: string) {
     queryKey: queryKeys.financeiro.current(eventoId),
     queryFn: (): Promise<FinanceiroEvento | null> =>
       getFinanceiroEvento(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Kits de um evento (do mais caro ao "Sem kit") — chave partilhada Cadastro ↔
+ * Estoque. Reusa `listarKits` do api-client (leitura provada, RN-215 `usadoEm`
+ * vem da Function). `reloadKey` propaga o refetch pós-save do Cadastro sem
+ * reimplementar invalidação nos callers (ADR-010).
+ */
+export function kitsDoEventoQuery(eventoId: string, reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.kits.doEvento(eventoId, reloadKey),
+    queryFn: (): Promise<Kit[]> => listarKits(getLeelaDb(), eventoId),
   });
 }
