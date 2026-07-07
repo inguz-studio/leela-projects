@@ -9,6 +9,7 @@
 import { Badge, Button, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import type { PlatformRollups, TenantRollup } from '@leela/core';
+import { KpiCard } from '../_components/KpiCard';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
 import { formatBRL, formatInt, formatPct, formatDataHora } from '../_lib/format';
 
@@ -17,17 +18,6 @@ export interface MacroDashboardProps {
   loading: boolean;
   error: Error | null;
   onOpenTenant: (tenantId: string) => void;
-}
-
-function KpiCard({ label, value }: { label: string; value: string }): JSX.Element {
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
-      <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">{label}</span>
-      <span className="text-[length:var(--font-size-xl)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
-        {value}
-      </span>
-    </div>
-  );
 }
 
 const columns: TableColumn<TenantRollup>[] = [

@@ -51,6 +51,11 @@ describe('TenantDetail', () => {
     expect(screen.getByText(/85\.617/)).toBeInTheDocument();
   });
 
+  it('exibe o owner do tenant (ownerUid)', () => {
+    render(<TenantDetail {...baseProps} tenant={mkTenant({ status: 'ativo', ownerUid: 'uid-castelo' })} />);
+    expect(screen.getByText('uid-castelo')).toBeInTheDocument();
+  });
+
   it('actionError → alerta com mensagem clara de failed-precondition', () => {
     const err = Object.assign(new Error('fp'), { code: 'functions/failed-precondition' });
     render(<TenantDetail {...baseProps} tenant={mkTenant({ status: 'ativo' })} actionError={err} />);

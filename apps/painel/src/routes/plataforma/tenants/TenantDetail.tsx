@@ -10,6 +10,7 @@
 import { Badge, Button, PageHeader, Skeleton } from '@leela/design-system';
 import type { Tenant } from '@leela/core';
 import { deriveTenantHealth } from '@leela/core';
+import { KpiCard } from '../_components/KpiCard';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
 import { formatBRL, formatInt, formatDataHora } from '../_lib/format';
 import { lifecycleActionFor, type LifecycleAction } from '../_lib/lifecycle';
@@ -27,17 +28,6 @@ export interface TenantDetailProps {
   onAction: (action: LifecycleAction) => void;
   onEditarTermos: () => void;
   onVoltar: () => void;
-}
-
-function KpiCell({ label, value }: { label: string; value: string }): JSX.Element {
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)]">
-      <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">{label}</span>
-      <span className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
-        {value}
-      </span>
-    </div>
-  );
 }
 
 export function TenantDetail({
@@ -93,6 +83,14 @@ export function TenantDetail({
             <Badge variant={health.variant}>{health.label}</Badge>
           </>
         }
+        metadata={
+          <span title={`UID do owner: ${tenant.ownerUid}`}>
+            Owner{' '}
+            <span className="font-[var(--font-weight-semibold)] text-[var(--text-secondary)]">
+              {tenant.ownerUid}
+            </span>
+          </span>
+        }
         actions={
           <Button variant="secondary" onClick={onEditarTermos}>
             Editar termos
@@ -131,13 +129,16 @@ export function TenantDetail({
           </div>
         )}
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 gap-[var(--spacing-5)] sm:grid-cols-4">
-          <KpiCell label="Tipo" value={tenant.tipo === 'produtor' ? 'Produtor' : 'Promotor'} />
-          <KpiCell label="Eventos ativos" value={formatInt(tenant.eventosAtivos ?? 0)} />
-          <KpiCell label="GMV acumulado" value={formatBRL(tenant.gmvAcumulado ?? 0)} />
-          <KpiCell label="Criado em" value={formatDataHora(tenant.criadoEm)} />
-        </div>
+        {/* KPIs de saúde — cards flat (§2.16) */}
+        <section
+          aria-label="Saúde do tenant"
+          className="grid grid-cols-2 gap-[var(--spacing-4)] sm:grid-cols-4"
+        >
+          <KpiCard label="Tipo" value={tenant.tipo === 'produtor' ? 'Produtor' : 'Promotor'} />
+          <KpiCard label="Eventos ativos" value={formatInt(tenant.eventosAtivos ?? 0)} />
+          <KpiCard label="GMV acumulado" value={formatBRL(tenant.gmvAcumulado ?? 0)} />
+          <KpiCard label="Criado em" value={formatDataHora(tenant.criadoEm)} />
+        </section>
 
         {/* Ação de ciclo de vida (RN-402 — sempre via Function) */}
         {action && (
