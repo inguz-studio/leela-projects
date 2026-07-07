@@ -1,5 +1,55 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-07
 
+# ▶️ COMECE AQUI — retomada de sessão (fecho 2026-07-07). HEAD = `c327a5f`, tudo em `main`/pushed.
+Este bloco é autossuficiente para uma nova sessão. As seções antigas abaixo são HISTÓRICO (git é a verdade).
+
+## Estado atual (o que está PRONTO — não refazer)
+- **App inteiro no nível de fidelidade, ancorado no JTBD** (não no pixel do mockup): Eventos (6 telas: Visão Geral, Inscritos, Hub, Financeiro, Kits/Estoque, Entrega/Balcão) + Clubes + Plataforma. 0 MAJOR de UI.
+- **Camada de dados = TanStack Query (ADR-010)** nos 3 módulos; navegação com cache; **criar/editar funcionam de verdade** com read-your-writes (invalidação). Gateway em `apps/painel/src/lib/query/{queries,mutations,keys}.ts` (hooks `_data/*` preservam contrato; consumidores intocados). Exceção correta: `*/session.ts` seguem `useEffect` (assinaturas de auth).
+- **Design system**: primitivos de form (Input/Select/Checkbox/SearchInput/Textarea/Radio/RadioGroup/Switch/Field/RadioCard) + charts (BarChart/DonutChart/Sparkline) — nativos, tokenizados, born-responsive, a11y revisada por antagonista. Documentados no showroom.
+- **firebase-admin DESTRAVADO** (45 arquivos migrados p/ imports modulares; escritas provadas no emulator). Botões criar/salvar + balcão funcionam no preview.
+- **Roadmap #1 (DS-Forms+mutations) + #2 (rascunho-ao-fim, Chip-fora-do-Geral) + #3 (Clubes/Plataforma: F0 dados + L1 seletores-card + L2 plataforma + L3 i18n/densidade) CONCLUÍDO** — tudo em Opus (cota Fable esgotada nesta sessão).
+- Decisões fixas: "Clubs" no sidebar FICA (Vitor); tema = 1 eixo brasa/leela; barra do showroom global; hub = linhas híbridas (foto+métricas); ordenação hub = rascunhos ao fim.
+
+## ROADMAP RESTANTE (ordem do Vitor: Fable → outras telas → consolidações)
+
+### A. TRILHA FABLE — backend crítico (aguarda RESET da cota Fable ~03:50 America/Sao_Paulo)
+Doc completo: **`.nirvana/briefs/leela-fable-track-backend.md`** — 6 frentes (A modelo pedido/pagamento no Inscrito; B Function de estorno; C QR server-side — ENCOLHIDA, as demais escritas já destravaram; D estoque por tamanho+movimentações; E chave estável Kit↔enum; F cronograma do Evento+faixa de chip; G logs comunicação/histórico). Campos do slide-in rico já cravados do protótipo em `leela-specs/backlog/LEELA-S203.md`.
+- **ANTES de despachar:** alinhar com o Vitor o OVERLAP com Onda 2 (frentes A/B cruzam E12 checkout / E04 vendas) — abre parte da Onda 2 ou fica como enriquecimento da Onda 1?
+- **Roteamento:** Fable (pagamento/segurança/transacional/rules). Sub-lotes 1-task-1-commit, review antagonista (reusável/sensível/segurança), gate maestro por evidência.
+
+### B. OUTRAS TELAS (pós-Fable, sobre telas estáveis)
+- **RESP-MOBILE** — o passe de responsividade, ADIADO de propósito p/ depois das telas estabilizarem (evita refazer). **Re-dimensionar** (o QA-2/7-MAJOR é anterior às telas novas). Causa-raiz = shell drawer M1 (RootShell/Sidebar). UI nova já nasce responsiva (L-004) → o passe varre só o desktop-only. Fazer como 1 sweep único.
+- **Onda 2** — features novas: E04 (vendas/cupons/equipe/gateway), E06 (comunicação), E08 (promotores) = as abas que faltam na sub-nav do evento. Planos em `.nirvana/plans/onda2-decisoes.md` + briefs `.nirvana/briefs/onda2-*`.
+
+### C. CONSOLIDAÇÕES (baixa urgência)
+- **KpiCard canônico no DS** (G-004: 4 cópias hoje em eventos/clubes/plataforma/estoque) + review.
+- Mutations de plataforma (`useTenantActions`/`useSaveCommercialTerms`) — não são fetch cru, parked.
+- **Teste flaky `EventoLayout.test.tsx`** — timeout de carga na suíte cheia do box 8GB (passa isolado ~1.3s); ajustar timeout/paralelismo. Não é regressão.
+- Backend-dep pequenos: nome do owner do tenant (join `profissionais/{ownerUid}`); nome canônico do evento na parceria (denormalização); 5º segmento de comunicado (Onda 2).
+- Adotar nas DEFINIÇÕES de empresa/squad as 4 lacunas do ledger `~/.claude/skills/harness/references/07-org-scope-gaps.md` (G-001 baseline de primitivos DS; G-002 gate de crítica de design no sf-ux-engineer; G-003 injeção de JTBD como convenção; G-004 KpiCard no DS).
+
+## PADRÕES VIGENTES (invioláveis — herdar em todo lote)
+- **JOB primeiro; mockup = aparência; a story vence quando divergem** (L-004). Injetar persona+JTBD+critérios Given/When/Then + `~/.claude/skills/harness/references/design-principles.md` nos dispatches de UI.
+- **Reuso-first + showroom fonte-de-verdade** (documentar componente/padrão novo no ato). Grep antes de escrever.
+- **Reusável/sensível/segurança → review antagonista** (regra Vitor; achou bug real TODA vez: feed, CSV-injection, useId, nome acessível do RadioCard).
+- **Não inventar dado** — dependência de backend = EmptyState honesto (nunca número/dinheiro falso).
+- **Regra de UI se avalia no AGREGADO da tela, não por componente** (L-005: os 11 chips).
+- **Decisão ratificada sem gate deriva** (L-001: ADR-010 existia, não era aplicado) — gate de conformidade a ADR.
+- Máquina 8GB: SERIAL (preview/suíte/screenshots nunca juntos); higiene de node/java órfãos antes de subir preview/emulator.
+- Roteamento: **Opus** (UI/mecânico/QA), **Fable** (pagamento/segurança/gate/root-cause/fix-loops). Sonnet PROIBIDO.
+- 1 task = 1 commit `[LEELA-*]`; staging cirúrgico; trailers de decisão; **push por aterrissagem**. Gates PROVAM ao vivo. Auditoria JSONL por evento em `~/.harness-logs/`.
+
+## COMO RETOMAR (nova sessão)
+1. `git status` + `git log` = a verdade (não a última mensagem). Briefs enriquecidos em `.nirvana/briefs/`; reports/evidências em `outputs/leela-build-2d6ee98d/` (gitignored, LOCAIS); trilha de auditoria em `~/.harness-logs/<data>/audit.jsonl`.
+2. Preview: `bash preview.sh` (painel :5273, já logado/mockado; rotas `?preview=castelo` eventos, `/clubes?preview=corrida`, `/plataforma?preview=admin`). Showroom: `pnpm --dir packages/design-system showcase`.
+3. Trace: `leela-build-2d6ee98d`. Repo: `inguz-studio/leela-projects`, branch `main`. Personas: `~/businesses/software-forge/employees/sf-*`.
+4. Despachar via harness: persona sf-* + injeção JTBD/design-principles + enriched brief + emitir audit + gate + review nos reusáveis.
+5. **Primeiro passo sugerido ao reabrir:** confirmar reset da cota Fable → alinhar overlap Onda 2 → despachar Frente A da trilha Fable.
+
+---
+## (HISTÓRICO — abaixo é registro das rodadas; git é a fonte)
+
 ## ✅ LOTE firebase-admin: FECHADO (2026-07-07, Opus 4.8) — follow-up "~13 módulos" encerrado
 Migração mecânica `admin.firestore.{FieldValue,Timestamp}` estático → imports modulares de
 `firebase-admin/firestore`. Alvo real medido = **47 arquivos** em `functions/src` (não ~13):
