@@ -11,15 +11,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, Chip, useToast } from '@leela/design-system';
+import { Badge, Button, Checkbox, Chip, Input, Textarea, useToast } from '@leela/design-system';
 import type { ClubeInput, VisibilidadeClube } from '@leela/core';
 import { gerarCodigoConvite, validarClube } from '@leela/core';
 import { criarClubePadrao } from '../_data/clubes';
 import { useClubesSession } from '../_data/session';
 import { MODELOS_ENTRADA, VISIBILIDADES, sanitizeSlug } from '../_lib/configClube';
-
-const inputCls =
-  'rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]';
 
 export function NovoClubePage(): JSX.Element {
   const navigate = useNavigate();
@@ -93,32 +90,45 @@ export function NovoClubePage(): JSX.Element {
         aria-label="Identidade do club"
         className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]"
       >
-        <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do club</span>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} aria-label="Nome do club" className={inputCls} />
+        <div className="flex flex-col gap-[var(--spacing-1)]">
+          <Input
+            id="clube-nome"
+            label="Nome do club"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             {slug
               ? `Endereço público: be-hero.com.br/c/${slug} (definido na criação, não pode ser alterado depois)`
               : 'O endereço público será derivado do nome.'}
           </span>
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Descrição</span>
-          <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} aria-label="Descrição" rows={2} className={inputCls} />
-        </label>
+        </div>
+        <Textarea
+          id="clube-descricao"
+          label="Descrição"
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          rows={2}
+        />
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Categoria</span>
-            <input value={categoria} onChange={(e) => setCategoria(e.target.value)} aria-label="Categoria" className={inputCls} />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Modalidade</span>
-            <input value={modalidade} onChange={(e) => setModalidade(e.target.value)} aria-label="Modalidade" className={inputCls} />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Localização</span>
-            <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} aria-label="Localização" className={inputCls} />
-          </label>
+          <Input
+            id="clube-categoria"
+            label="Categoria"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          />
+          <Input
+            id="clube-modalidade"
+            label="Modalidade"
+            value={modalidade}
+            onChange={(e) => setModalidade(e.target.value)}
+          />
+          <Input
+            id="clube-localizacao"
+            label="Localização"
+            value={localizacao}
+            onChange={(e) => setLocalizacao(e.target.value)}
+          />
         </div>
       </section>
 
@@ -150,7 +160,7 @@ export function NovoClubePage(): JSX.Element {
           </div>
         </div>
         <label className="flex items-center gap-[var(--spacing-2)]">
-          <input type="checkbox" checked={aprovacaoManual} onChange={(e) => setAprovacaoManual(e.target.checked)} />
+          <Checkbox checked={aprovacaoManual} onChange={(e) => setAprovacaoManual(e.target.checked)} />
           <span className="text-[var(--text-primary)]">Exigir aprovação manual de novos membros (RN-141)</span>
         </label>
       </section>
