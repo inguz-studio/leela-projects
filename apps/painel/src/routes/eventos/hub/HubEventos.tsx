@@ -113,7 +113,10 @@ function ListaEventos({
   const [filtro, setFiltro] = useState<HubFiltro>('todos');
   const [menuAberto, setMenuAberto] = useState<string | null>(null);
 
-  const views = useMemo(() => derivarHubEventos(eventos), [eventos]);
+  // Âncora temporal estável na sessão (padrão OverviewPage/countdown): o hub
+  // ordena os eventos do mais próximo ao mais distante a partir de "agora".
+  const agora = useMemo(() => new Date(), []);
+  const views = useMemo(() => derivarHubEventos(eventos, agora), [eventos, agora]);
   const contagem = useMemo(() => contarPorFiltro(views), [views]);
   const visiveis = useMemo(() => filtrarHubEventos(views, filtro), [views, filtro]);
 

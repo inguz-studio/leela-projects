@@ -11,9 +11,11 @@
 // =============================================================================
 
 import {
+  diasCivisAte,
   emEsgotamento,
   vagasRestantesDoEvento,
   type Evento,
+  type Timestamp,
 } from '@leela/core';
 import type { BadgeProps, EventRowMetric, EventThumbVariant } from '@leela/design-system';
 import { thumbVariantDoEvento, quandoDoEvento } from '../../overview/_lib/activeEvents';
@@ -94,9 +96,55 @@ export function toHubEventoView(evento: Evento): HubEventoView {
   };
 }
 
-/** Deriva todas as linhas do hub preservando a ordem recebida. @pure */
-export function derivarHubEventos(eventos: readonly Evento[]): HubEventoView[] {
-  return eventos.map(toHubEventoView);
+/** Instante (ms) da data do evento, ou null sem data (rascunho). @pure */
+function dataMsDoEvento(evento: Evento): number | null {
+  const t = evento.data as Timestamp | null | undefined;
+  if (!t) return null;
+  if (typeof t.toMillis === 'function') return t.toMillis();
+  if (typeof t.toDate === 'function') return t.toDate().getTime();
+  return null;
+}
+
+/**
+ * Ordena os eventos por PROXIMIDADE TEMPORAL do organizador:
+ * 1. FUTUROS (inclui HOJE) primeiro, ASCENDENTE — o próximo a acontecer no topo;
+ * 2. depois PASSADOS/encerrados, do mais RECENTE ao mais antigo;
+ * 3. eventos SEM data (rascunho sem data marcada) ao FIM da lista.
+ *
+ * Futuro × passado é decidido por DIA CIVIL no fuso do produto
+ * (`diasCivisAte` do core, fonte única — DST-safe): `dias >= 0` = hoje/futuro.
+ * `agora` é INJETÁVEL (determinismo em teste; a UI passa `new Date()`). `sort`
+ * é estável (V8) → empates preservam a ordem recebida.
+ * @pure
+ */
+export function ordenarEventosHub(
+  eventos: readonly Evento[],
+  agora: Date,
+): Evento[] {
+  return [...eventos].sort((a, b) => {
+    const ma = dataMsDoEvento(a);
+    const mb = dataMsDoEvento(b);
+    // Sem data vai para o fim (mas mantém ordem relativa entre si).
+    if (ma === null || mb === null) {
+      if (ma === null && mb === null) return 0;
+      return ma === null ? 1 : -1;
+    }
+    const aFuturo = diasCivisAte(new Date(ma), agora) >= 0;
+    const bFuturo = diasCivisAte(new Date(mb), agora) >= 0;
+    if (aFuturo !== bFuturo) return aFuturo ? -1 : 1; // futuros antes dos passados
+    return aFuturo ? ma - mb : mb - ma; // futuros asc; passados desc
+  });
+}
+
+/**
+ * Deriva todas as linhas do hub em ORDEM TEMPORAL (próximo → distante).
+ * `agora` injetável (a UI passa `new Date()`). @pure
+ */
+export function derivarHubEventos(
+  eventos: readonly Evento[],
+  agora: Date,
+): HubEventoView[] {
+  return ordenarEventosHub(eventos, agora).map(toHubEventoView);
 }
 
 /** Contagem por faceta do filtro (para os números dos chips). @pure */

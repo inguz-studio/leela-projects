@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import type { Timestamp } from '@leela/core';
 import {
   contarPorFiltro,
   derivarHubEventos,
   filtrarHubEventos,
+  ordenarEventosHub,
   toHubEventoView,
 } from '../hubRows';
-import { mkEvento } from '../../_test/fixtures';
+import { mkEvento, ts } from '../../_test/fixtures';
 import { formatBRL } from '../../_lib/format';
+
+/** Âncora temporal fixa dos testes de ordenação (determinismo). */
+const AGORA = new Date('2026-07-07T12:00:00Z');
 
 describe('hubRows — derivação pura do hub', () => {
   it('mapeia métricas Inscritos/Receita/Vagas com formatação pt-BR', () => {
@@ -54,11 +59,14 @@ describe('hubRows — derivação pura do hub', () => {
   });
 
   it('conta e filtra por faceta; "todos" não filtra', () => {
-    const views = derivarHubEventos([
-      mkEvento({ slug: 'a', status: 'publicado' }),
-      mkEvento({ slug: 'b', status: 'encerrado' }),
-      mkEvento({ slug: 'c', status: 'rascunho' }),
-    ]);
+    const views = derivarHubEventos(
+      [
+        mkEvento({ slug: 'a', status: 'publicado' }),
+        mkEvento({ slug: 'b', status: 'encerrado' }),
+        mkEvento({ slug: 'c', status: 'rascunho' }),
+      ],
+      AGORA,
+    );
     expect(contarPorFiltro(views)).toEqual({
       todos: 3,
       ativos: 1,
@@ -67,5 +75,55 @@ describe('hubRows — derivação pura do hub', () => {
     });
     expect(filtrarHubEventos(views, 'todos')).toHaveLength(3);
     expect(filtrarHubEventos(views, 'encerrados').map((v) => v.slug)).toEqual(['b']);
+  });
+});
+
+describe('ordenarEventosHub — ordem temporal (próximo → distante)', () => {
+  /** Evento com data (ms) num dia civil; datas ao meio-dia UTC (longe da borda). */
+  const emDias = (slug: string, dias: number) =>
+    mkEvento({
+      slug,
+      data: ts(new Date(AGORA.getTime() + dias * 24 * 60 * 60 * 1000)),
+    });
+
+  it('FUTUROS (incl. hoje) primeiro, ascendente — o próximo a acontecer no topo', () => {
+    const ordenados = ordenarEventosHub(
+      [emDias('d40', 40), emDias('hoje', 0), emDias('d7', 7), emDias('d19', 19)],
+      AGORA,
+    );
+    expect(ordenados.map((e) => e.slug)).toEqual(['hoje', 'd7', 'd19', 'd40']);
+  });
+
+  it('PASSADOS depois dos futuros, do mais RECENTE ao mais antigo', () => {
+    const ordenados = ordenarEventosHub(
+      [emDias('passado-antigo', -400), emDias('futuro', 10), emDias('passado-recente', -5)],
+      AGORA,
+    );
+    expect(ordenados.map((e) => e.slug)).toEqual([
+      'futuro',
+      'passado-recente',
+      'passado-antigo',
+    ]);
+  });
+
+  it('eventos SEM data (rascunho) vão ao FIM da lista', () => {
+    const semData = { ...emDias('rascunho-sem-data', 0), data: null as unknown as Timestamp };
+    const ordenados = ordenarEventosHub(
+      [semData, emDias('passado', -10), emDias('futuro', 5)],
+      AGORA,
+    );
+    expect(ordenados.map((e) => e.slug)).toEqual([
+      'futuro',
+      'passado',
+      'rascunho-sem-data',
+    ]);
+  });
+
+  it('derivarHubEventos entrega as VIEWS já em ordem temporal', () => {
+    const views = derivarHubEventos(
+      [emDias('distante', 40), emDias('proximo', 3), emDias('passado', -30)],
+      AGORA,
+    );
+    expect(views.map((v) => v.slug)).toEqual(['proximo', 'distante', 'passado']);
   });
 });
