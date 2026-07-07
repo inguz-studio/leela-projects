@@ -17,6 +17,7 @@ export function HubRoute(): JSX.Element {
       error={error}
       onNovoEvento={() => navigate('/eventos/novo')}
       onAbrirEvento={(slug) => navigate(`/eventos/${slug}`)}
+      onAbrirSubarea={(slug, subarea) => navigate(`/eventos/${slug}/${subarea}`)}
     />
   );
 }
