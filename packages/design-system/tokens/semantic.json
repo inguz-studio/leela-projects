@@ -66,6 +66,16 @@
     "$description": "Dot do `.date-badge`: verde vitoria com glow `0 0 8px` na MESMA cor (espelha feedback.success do tema — literal porque box-shadow nao aceita compor var na sombra tokenizada).",
     "dot-glow": "0 0 8px #2D9315"
   },
+  "chart": {
+    "$description": "Paleta CATEGÓRICA dos gráficos do DS (BarChart/DonutChart). Ordem FIXA por identidade — nunca ciclar, nunca pintar por rank (skill dataviz). 3 famílias validadas: cat-1 sucesso/verde, cat-2 heroico/rosa, cat-3 marca/brasa (validate_palette.js: CVD ΔE 39.9 > 12, contraste ≥3:1 nos 2 temas). cat-4/5 = reserva (warning/neutro) para a 4ª/5ª série; a 6ª+ vira 'Outros' (regra dataviz). track/grid = trilho e grade recessiva por cima da surface. Encoding secundário obrigatório: rótulo direto sempre presente nos gráficos.",
+    "cat-1": "{success.400}",
+    "cat-2": "{heroico.500}",
+    "cat-3": "{primary.500}",
+    "cat-4": "{warning.500}",
+    "cat-5": "{neutral.400}",
+    "track": "{neutral.850}",
+    "grid": "{neutral.800}"
+  },
   "feedback": {
     "success": "{success.400}",
     "success-fg": "{success.300}",

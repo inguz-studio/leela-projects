@@ -100,5 +100,9 @@ export {
   CardFooter,
 } from './components/Card';
 
+// ── Gráficos (Recharts · ADR-010 · lote FID-EVT-T2) ─────────────────────────
+export { BarChart, DonutChart, chartCategoryVar, formatChartInt, pctOf, CHART_CATEGORY_COUNT } from './components/charts';
+export type { BarChartProps, BarChartDatum, DonutChartProps, DonutChartDatum } from './components/charts';
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';

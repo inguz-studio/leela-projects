@@ -1,4 +1,10 @@
 {
+  "chart": {
+    "$description": "Gráficos do DS (BarChart/DonutChart · Recharts). Legenda do donut: swatch 10px (mockup `.donut-legend .sw`) com radius xs; coluna de % 40px p/ alinhar os tabular-nums à direita. Tamanho do plot (height/size) vem por prop — só o que é fixo no chrome da legenda entra em token.",
+    "swatch-size":   "10px",
+    "swatch-radius": "{radius.xs}",
+    "legend-pct-w":  "{spacing.10}"
+  },
   "layout": {
     "$description": "Moldura da pagina do mockup be-hero (`.main` 32px 40px 48px, grid gap 24) e ritmos internos: colunas/section 16, section-head margin 14, listas de rows 8. Toolbar fecha com padding-bottom 16 sobre hairline.",
     "page-pt":         "{spacing.8}",
@@ -63,10 +69,12 @@
     "thickness":     "1px"
   },
   "header": {
-    "$description": "Page-head do mockup: h1 display italic bold 40px ls -.01em, flat sobre o fundo (`.page-head` nao tem surface raised).",
+    "$description": "Page-head do mockup: h1 display italic bold 40px ls -.01em, flat sobre o fundo (`.page-head` nao tem surface raised). Tile do drill do evento (`.ev-header .thumb` 72px, icone 30px) — gradiente por modalidade.",
     "height":        "96px",
     "title-size":    "{font.size.3xl}",
-    "title-spacing": "-0.01em"
+    "title-spacing": "-0.01em",
+    "tile-size":      "72px",
+    "tile-icon-size": "30px"
   },
   "sidebar": {
     "$description": "Métricas exatas do mockup be-hero: .brand 24/20/20 (mark 22 italic, sub 11 uppercase mt 6) · .nav 16x12 gap 2 · .nav-label 10px/.08em pad 12/12/8 · .nav-item 10x12 gap 12 texto 14 ícone 20 · .nav-badge 10px/700 pad 2x6 · .sidebar-footer 14x16 gap 12 (nome 13, link 11).",

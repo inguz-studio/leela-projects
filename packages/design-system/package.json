@@ -7,75 +7,81 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types":   "./dist/index.d.ts",
-      "import":  "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./tailwind-preset": {
-      "types":   "./dist/tailwind-preset.d.ts",
-      "import":  "./dist/tailwind-preset.mjs",
+      "types": "./dist/tailwind-preset.d.ts",
+      "import": "./dist/tailwind-preset.mjs",
       "require": "./dist/tailwind-preset.js"
     },
     "./rn": {
-      "types":   "./dist/rn.d.ts",
-      "import":  "./dist/rn.mjs",
+      "types": "./dist/rn.d.ts",
+      "import": "./dist/rn.mjs",
       "require": "./dist/rn.js"
     },
     "./themes/brasa.css": "./themes/brasa.css",
     "./themes/leela.css": "./themes/leela.css",
     "./themes/index.css": "./themes/index.css"
   },
-  "sideEffects": ["themes/*.css"],
-  "files": ["dist", "themes"],
+  "sideEffects": [
+    "themes/*.css"
+  ],
+  "files": [
+    "dist",
+    "themes"
+  ],
   "scripts": {
-    "build":           "tsup",
-    "lint":            "eslint src --max-warnings 0",
-    "type-check":      "tsc --noEmit",
-    "test":            "vitest run",
-    "test:watch":      "vitest",
+    "build": "tsup",
+    "lint": "eslint src --max-warnings 0",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "generate-tokens": "tsx src/scripts/generate-tokens.ts",
-    "storybook":       "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "showcase":         "vite --config showcase/vite.config.ts",
-    "showcase:build":   "vite build --config showcase/vite.config.ts",
+    "showcase": "vite --config showcase/vite.config.ts",
+    "showcase:build": "vite build --config showcase/vite.config.ts",
     "showcase:preview": "vite preview --config showcase/vite.config.ts"
   },
   "peerDependencies": {
     "lucide-react": "^0.446.0",
-    "react":     "^18.0.0",
+    "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@radix-ui/react-dialog":    "^1.1.0",
+    "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-separator": "^1.1.11",
-    "@radix-ui/react-slot":      "^1.1.0",
-    "@radix-ui/react-tabs":      "^1.1.0",
-    "@radix-ui/react-tooltip":   "^1.2.11",
-    "class-variance-authority":  "^0.7.0",
-    "clsx":                      "^2.1.1",
-    "tailwind-merge":            "^2.5.2",
-    "tailwindcss-animate":       "^1.0.7"
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.2.11",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "recharts": "^3.9.2",
+    "tailwind-merge": "^2.5.2",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^8.6.0",
-    "@storybook/react":          "^8.6.0",
-    "@storybook/react-vite":     "^8.6.0",
+    "@storybook/react": "^8.6.0",
+    "@storybook/react-vite": "^8.6.0",
     "@testing-library/jest-dom": "^6.6.0",
-    "@testing-library/react":    "^16.0.0",
+    "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.5.0",
-    "@types/node":               "^22.0.0",
-    "@types/react":              "^18.3.12",
-    "@types/react-dom":          "^18.3.1",
-    "autoprefixer":              "^10.4.20",
-    "jsdom":                     "^25.0.0",
-    "lucide-react":              "^0.446.0",
-    "postcss":                   "^8.4.47",
-    "storybook":                 "^8.6.0",
-    "tailwindcss":               "^3.4.14",
-    "tsx":                       "^4.19.0",
-    "tsup":                      "^8.0.0",
-    "typescript":                "^5.7.0",
-    "vite":                      "^5.4.10",
-    "vitest":                    "^2.1.0"
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.0",
+    "lucide-react": "^0.446.0",
+    "postcss": "^8.4.47",
+    "storybook": "^8.6.0",
+    "tailwindcss": "^3.4.14",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.0"
   }
 }

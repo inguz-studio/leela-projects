@@ -196,6 +196,13 @@
   --countdown-border: rgba(122, 21, 32, 0.25);
   --countdown-number-gradient: linear-gradient(135deg, #C42C3A, #7A1520);
   --datebadge-dot-glow: 0 0 8px #15803D;
+  --chart-cat-1: var(--success-600);
+  --chart-cat-2: var(--heroico-500);
+  --chart-cat-3: var(--primary-400);
+  --chart-cat-4: var(--warning-600);
+  --chart-cat-5: var(--neutral-500);
+  --chart-track: var(--neutral-200);
+  --chart-grid: var(--neutral-200);
   --feedback-success: var(--success-700);
   --feedback-success-fg: var(--success-800);
   --feedback-success-surface: var(--success-100);
@@ -211,6 +218,9 @@
   --feedback-info: var(--info-500);
   --feedback-info-fg: var(--info-800);
   --feedback-info-surface: var(--info-100);
+  --chart-swatch-size: 10px;
+  --chart-swatch-radius: var(--radius-xs);
+  --chart-legend-pct-w: var(--spacing-10);
   --layout-page-pt: var(--spacing-8);
   --layout-page-px: var(--spacing-10);
   --layout-page-pb: var(--spacing-12);
@@ -259,6 +269,8 @@
   --header-height: 96px;
   --header-title-size: var(--font-size-3xl);
   --header-title-spacing: -0.01em;
+  --header-tile-size: 72px;
+  --header-tile-icon-size: 30px;
   --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
   --sidebar-active-bar: 2px;

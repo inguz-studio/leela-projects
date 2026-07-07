@@ -52,6 +52,16 @@
   "datebadge": {
     "dot-glow": "0 0 8px #15803D"
   },
+  "chart": {
+    "$description": "Paleta categórica leela (tema claro). Passos escurecidos p/ contraste ≥3:1 sobre surface clara e L dentro da banda (validate_palette.js: cat-1 success.600 / cat-2 heroico.500 / cat-3 primary.400 → PASS, CVD ΔE 24.3 > 12). track/grid claros.",
+    "cat-1": "{success.600}",
+    "cat-2": "{heroico.500}",
+    "cat-3": "{primary.400}",
+    "cat-4": "{warning.600}",
+    "cat-5": "{neutral.500}",
+    "track": "{neutral.200}",
+    "grid": "{neutral.200}"
+  },
   "feedback": {
     "success":         "{success.700}",
     "success-fg":      "{success.800}",

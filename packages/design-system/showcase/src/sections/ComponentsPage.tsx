@@ -7,11 +7,13 @@ import * as React from 'react';
 import {
   Avatar,
   Badge,
+  BarChart,
   Breadcrumb,
   Button,
   CardDesafio,
   CardEvento,
   Chip,
+  DonutChart,
   ConfirmModal,
   Divider,
   DropdownMenu,
@@ -660,6 +662,53 @@ export function ComponentsPage(): JSX.Element {
                   variant: 'danger',
                 });
               }}
+            />
+          </DemoCard>
+        </div>
+      </Section>
+
+      {/* ── Gráficos ──────────────────────────────────────────────────── */}
+      <Section
+        title="Gráficos"
+        description="BarChart e DonutChart (Recharts · ADR-010), tokenizados e acessíveis. Paleta categórica em ordem fixa (skill dataviz): validada para CVD e contraste nos temas brasa e leela; rótulo direto + legenda + tabela equivalente garantem que a identidade nunca é só-cor."
+      >
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="BarChart"
+            description="Barras categóricas horizontais. Magnitude por categoria com trilho recessivo, ponta arredondada 4px, rótulo direto e tooltip no hover. Aceita total por barra (x / total · %)."
+          >
+            <BarChart
+              aria-label="Inscrições por modalidade (exemplo)"
+              height={180}
+              data={[
+                { label: '21km', value: 148, total: 200 },
+                { label: '10km', value: 186, total: 250 },
+                { label: '5km', value: 119, total: 150 },
+              ]}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="DonutChart"
+            description="Rosca de composição (parte-de-um-todo). Valor-âncora no centro, legenda com valor e %, gap de 2px entre fatias e anel na surface. Tooltip por fatia no hover."
+          >
+            <DonutChart
+              aria-label="Receita por modalidade (exemplo)"
+              size={180}
+              centerValue="R$ 85,6k"
+              centerLabel="Receita total"
+              formatValue={(v) =>
+                new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                  maximumFractionDigits: 0,
+                }).format(v)
+              }
+              data={[
+                { label: '21km', value: 41096 },
+                { label: '10km', value: 27397 },
+                { label: '5km', value: 17124 },
+              ]}
             />
           </DemoCard>
         </div>

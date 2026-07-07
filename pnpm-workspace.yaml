@@ -2,6 +2,13 @@ packages:
   - "apps/*"
   - "packages/*"
   - "functions"
+# A stack é React 18 (ADR-010). O recharts (peer react ^16..^19) puxaria
+# react-dom 19 e o pnpm elegeria 19 para todo o workspace — react 18 + react-dom
+# 19 quebra o render (mismatch do "act", telas vazias). Pinamos react/react-dom
+# em 18.3.1: recharts roda em 18 e o pareamento fica íntegro.
+overrides:
+  react: 18.3.1
+  react-dom: 18.3.1
 allowBuilds:
   '@sentry/cli': false
   esbuild: true
