@@ -17,6 +17,9 @@ Linha horizontal densa de evento. Dois modos:
 ## Quando NÃO usar
 Não use para linhas tabulares (Table). CardEvento (card vertical de mídia 16/10) continua válido para vitrines de mídia; o hub de eventos migrou para EventRow híbrido (linha densa) por decisão do produto (JOB de triagem veloz vence a vitrine).
 
+## Responsivo (automático, sem prop)
+Abaixo de `lg` (1024px) a linha reflui sozinha p/ 3 faixas à direita do thumb: nome+meta / métricas (própria linha, nunca cortam) / rodapé status+ação. Alinhamento vertical das métricas entre linhas preservado. Em lg+ o grid denso de 5 colunas é idêntico. NÃO empacote a EventRow em wrappers de scroll horizontal nem replique o refluxo no consumidor — é interno ao componente.
+
 ## Props válidas
 - name: string
 - thumbVariant: 'corrida' | 'ciclismo' | 'yoga' | 'virtual' | 'crossfit'  (fallback do thumb sem foto)

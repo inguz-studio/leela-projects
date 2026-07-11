@@ -160,3 +160,119 @@ describe('EventRow', () => {
     expect(screen.getByRole('button', { name: 'Gerenciar' })).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Responsivo (<lg) — fix M6: em telas estreitas as métricas ganham a própria
+// linha e NUNCA cortam no limite direito; o grid desktop de 5 colunas fica
+// byte-idêntico (todas as classes de refluxo são `max-lg:`). Os asserts travam
+// o CONTRATO de posicionamento por classe (mesmo estilo dos testes de KpiRow/
+// Table): jsdom não resolve media queries, mas prova que o desktop não regride
+// (grid de 5 col intacto) e que o refluxo mobile existe onde deve.
+// ---------------------------------------------------------------------------
+describe('EventRow — responsivo (<lg, fix M6)', () => {
+  it('mantém o grid desktop de 5 colunas e ADICIONA o grid mobile de 3 (<lg)', () => {
+    const { container } = render(<EventRow name="Evento" thumbVariant="corrida" />);
+    const row = container.firstElementChild as HTMLElement;
+    // Desktop INTOCADO: a definição de 5 colunas segue sem prefixo responsivo.
+    expect(row.className).toContain(
+      'grid-cols-[var(--eventrow-thumb-size)_minmax(0,1fr)_auto_auto_auto]',
+    );
+    // <lg: reflui p/ 3 colunas [thumb | 1fr | auto].
+    expect(row.className).toContain(
+      'max-lg:grid-cols-[var(--eventrow-thumb-size)_minmax(0,1fr)_auto]',
+    );
+  });
+
+  it('<lg: o thumb ancora a col1 atravessando as 3 linhas (row-span-3, self-start)', () => {
+    const { container } = render(<EventRow name="Evento" thumbVariant="corrida" />);
+    const thumb = container.querySelector('[class*="max-lg:row-span-3"]');
+    expect(thumb).not.toBeNull();
+    expect(thumb).toHaveAttribute('aria-hidden');
+    expect(thumb!.className).toContain('max-lg:col-start-1');
+    expect(thumb!.className).toContain('max-lg:self-start');
+  });
+
+  it('<lg: nome+meta ocupa a col2 (span) na 1ª linha', () => {
+    render(<EventRow name="Meia Maratona" thumbVariant="corrida" metaItems={['x']} />);
+    const nameCol = screen.getByText('Meia Maratona').parentElement as HTMLElement;
+    expect(nameCol.className).toContain('max-lg:col-start-2');
+    expect(nameCol.className).toContain('max-lg:col-span-2');
+    expect(nameCol.className).toContain('max-lg:row-start-1');
+  });
+
+  it('<lg: métricas caem na 2ª linha, largam divisor/pad e ganham wrap de segurança (sem cortar)', () => {
+    const { container } = render(
+      <EventRow
+        name="E"
+        thumbVariant="corrida"
+        metrics={[
+          { value: '453', label: 'Inscritos' },
+          { value: 'R$ 85.617', label: 'Receita' },
+          { value: '47', label: 'Vagas' },
+        ]}
+      />,
+    );
+    const metricsBox = container.querySelector(
+      '[class*="max-lg:flex-wrap"]',
+    ) as HTMLElement;
+    expect(metricsBox).not.toBeNull();
+    expect(metricsBox.className).toContain('max-lg:col-start-2');
+    expect(metricsBox.className).toContain('max-lg:col-span-2');
+    expect(metricsBox.className).toContain('max-lg:row-start-2');
+    expect(metricsBox.className).toContain('max-lg:border-l-0');
+    expect(metricsBox.className).toContain('max-lg:pl-0');
+  });
+
+  it('<lg: métricas preservam as colunas de min-w fixa + text-right (alinhamento entre linhas mantido)', () => {
+    const { container } = render(
+      <EventRow
+        name="E"
+        thumbVariant="corrida"
+        metrics={[
+          { value: '0', label: 'Inscritos' },
+          { value: 'R$ 167.277', label: 'Receita' },
+          { value: '80', label: 'Vagas' },
+        ]}
+      />,
+    );
+    // O fix de alinhamento anterior (col de min-w + text-right) segue de pé sob
+    // o novo layout de 2ª linha: colunas batem na vertical entre EventRows.
+    const cols = container.querySelectorAll('[class*="--eventrow-metric-col-min-w"]');
+    expect(cols).toHaveLength(3);
+    cols.forEach((c) => expect(c).toHaveClass('text-right'));
+  });
+
+  it('<lg: status e ação descem p/ o rodapé (3ª linha); a ação alinha à direita', () => {
+    render(
+      <EventRow
+        name="E"
+        thumbVariant="corrida"
+        badge={<span>Ativo</span>}
+        action={
+          <button type="button">Gerenciar</button>
+        }
+      />,
+    );
+    const badgeSlot = screen.getByText('Ativo').parentElement as HTMLElement;
+    expect(badgeSlot.className).toContain('max-lg:col-start-2');
+    expect(badgeSlot.className).toContain('max-lg:row-start-3');
+    const actionSlot = screen.getByRole('button', { name: 'Gerenciar' })
+      .parentElement as HTMLElement;
+    expect(actionSlot.className).toContain('max-lg:col-start-3');
+    expect(actionSlot.className).toContain('max-lg:row-start-3');
+    expect(actionSlot.className).toContain('max-lg:justify-end');
+  });
+
+  it('<lg: a contagem única (modo COMPACT, sem metrics) também reflui p/ a 2ª linha', () => {
+    render(
+      <EventRow
+        name="E"
+        thumbVariant="corrida"
+        count={{ value: '90', label: 'Inscrições' }}
+      />,
+    );
+    const countBox = screen.getByText('90').parentElement as HTMLElement;
+    expect(countBox.className).toContain('max-lg:row-start-2');
+    expect(countBox.className).toContain('max-lg:text-left');
+  });
+});

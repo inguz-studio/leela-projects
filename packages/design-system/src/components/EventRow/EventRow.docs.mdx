@@ -23,6 +23,18 @@ Decisão FID-EVT-HUB: no hub de eventos a linha usa `thumbImage` (capa real) e `
 
 <Canvas of={Stories.TodasAsModalidades} />
 
+## Responsivo (&lt;lg, automático — sem prop)
+
+Abaixo de `lg` (1024px, o ponto de colapso do shell) a linha reflui sozinha: o
+thumb ancora a coluna da esquerda atravessando as faixas e o conteúdo empilha à
+direita em três linhas — nome+meta, **métricas na própria linha** (nunca cortam
+no limite direito, fix M6) e um rodapé com status + ação. As colunas das
+métricas seguem alinhadas na vertical entre as linhas (mesma largura mínima +
+valor tabular à direita). Em `lg`+ o grid denso de 5 colunas volta idêntico.
+Nada a configurar no consumidor.
+
+<Canvas of={Stories.HubReflowMobile} />
+
 ## Handoff para IA
 
 <HandoffButton

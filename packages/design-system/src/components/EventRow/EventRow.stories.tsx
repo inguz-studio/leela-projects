@@ -152,3 +152,68 @@ export const SemCapacidade: Story = {
     ),
   },
 };
+
+/**
+ * Refluxo responsivo em <lg (fix M6). No hub em 390×844 a linha híbrida (thumb
+ * de foto + métricas Inscritos/Receita/Vagas + status + ação pesada) não cabia
+ * em uma faixa: as métricas cortavam no limite direito e status/ação saíam de
+ * cena. Abaixo de `lg` (colapso do shell, 1024px) a EventRow reflui p/ 3 linhas
+ * à direita do thumb — [nome+meta] / [métricas, própria linha, nunca cortam] /
+ * [status + ação, rodapé]. As métricas seguem alinhadas na vertical entre as
+ * linhas (mesma col de min-w + valor tabular à direita). Em lg+ o grid de 5
+ * colunas volta byte-idêntico. Use o toolbar de viewport (default: Mobile 390).
+ */
+export const HubReflowMobile: Story = {
+  parameters: {
+    viewport: {
+      viewports: {
+        mobile390: {
+          name: 'Mobile 390×844',
+          styles: { width: '390px', height: '844px' },
+        },
+      },
+      defaultViewport: 'mobile390',
+    },
+  },
+  render: () => (
+    <>
+      {(
+        [
+          ['Meia Maratona Floripa 2026', 'corrida', '461', 'R$ 167.277', '39', 'Publicado'],
+          ['Noturna da Beira-Mar 2026', 'corrida', '60', 'R$ 8.940', '0', 'Esgotado'],
+          ['Desafio MTB Costa da Lagoa', 'ciclismo', '120', 'R$ 34.800', '180', 'Publicado'],
+        ] as const
+      ).map(([name, variant, inscritos, receita, vagas, status]) => (
+        <EventRow
+          key={name}
+          name={name}
+          thumbVariant={variant}
+          thumbImage={{ src: 'https://placehold.co/80x80/FF450C/FFFFFF?text=MF' }}
+          metaItems={[
+            '14 Jul 2026 · Florianópolis/SC',
+            <Badge key="mod" variant="neutro">
+              Corrida
+            </Badge>,
+          ]}
+          metrics={[
+            { value: inscritos, label: 'Inscritos' },
+            { value: receita, label: 'Receita' },
+            { value: vagas, label: 'Vagas' },
+          ]}
+          badge={<Badge variant="vitoria">{status}</Badge>}
+          onClick={() => {}}
+          action={
+            <div className="flex items-center gap-[var(--spacing-1)]">
+              <Button variant="ghost" size="sm" aria-label="Mais ações">
+                ⋯
+              </Button>
+              <Button variant="secondary" size="sm">
+                Gerenciar
+              </Button>
+            </div>
+          }
+        />
+      ))}
+    </>
+  ),
+};

@@ -25,6 +25,12 @@
  *   tabular à direita → as colunas batem na vertical entre TODAS as linhas,
  *   qualquer que seja o tamanho do número (fix FID-EVT-HUB).
  * - Hover: levanta 1px (mockup) + elev-2; motion por token.
+ * - Responsivo (fix M6): em <lg (colapso do shell, 1024px) a linha reflui p/ 3
+ *   faixas à DIREITA do thumb — que ocupa a col1 em `row-span-3` — na ordem
+ *   [nome+meta] / [métricas] / [status + ação]. As métricas ganham a PRÓPRIA
+ *   linha e nunca cortam no limite direito; o alinhamento vertical entre linhas
+ *   segue de graça (mesma `--eventrow-metric-col-min-w` + text-right). Em lg+ o
+ *   grid original de 5 colunas é byte-idêntico (nenhuma classe mobile vaza).
  * - A11y: a navegação acessível é o slot `action` (botão real). `onClick` na
  *   row é atalho de mouse (cursor-pointer), sem role — replica o mockup sem
  *   aninhar interativos.
@@ -151,6 +157,9 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
         className={cn(
           'grid items-center',
           'grid-cols-[var(--eventrow-thumb-size)_minmax(0,1fr)_auto_auto_auto]',
+          // <lg: 3 colunas [thumb | 1fr | auto] + 3 linhas (ver JSDoc). O thumb
+          // ancora a col1 em row-span; nome/métricas/rodapé empilham à direita.
+          'max-lg:grid-cols-[var(--eventrow-thumb-size)_minmax(0,1fr)_auto]',
           'gap-[var(--eventrow-gap)]',
           'px-[var(--eventrow-px)] py-[var(--eventrow-py)]',
           'rounded-[var(--radius-lg)] bg-[var(--surface-raised)] shadow-elev-1',
@@ -165,6 +174,8 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
           aria-hidden
           className={cn(
             'relative flex items-center justify-center shrink-0 overflow-hidden',
+            // <lg: ancora a col1 do topo (self-start) atravessando as 3 linhas.
+            'max-lg:col-start-1 max-lg:row-start-1 max-lg:row-span-3 max-lg:self-start',
             'w-[var(--eventrow-thumb-size)] h-[var(--eventrow-thumb-size)]',
             'rounded-[var(--radius-md)]',
             // Gradiente só sem foto (a foto cobre o box inteiro)
@@ -187,7 +198,7 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
         </span>
 
         {/* Nome + meta */}
-        <div className="min-w-0">
+        <div className="min-w-0 max-lg:col-start-2 max-lg:col-span-2 max-lg:row-start-1">
           <div
             className={cn(
               'truncate',
@@ -240,6 +251,10 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
               'flex items-center',
               'gap-[var(--eventrow-metric-gap)] pl-[var(--spacing-3)]',
               'border-l border-l-[var(--border-subtle)]',
+              // <lg: 2ª linha, à direita do thumb. Larga o divisor/pad (o nome já
+              // fica acima) e ganha flex-wrap de segurança p/ larguras < 390.
+              'max-lg:col-start-2 max-lg:col-span-2 max-lg:row-start-2',
+              'max-lg:border-l-0 max-lg:pl-0 max-lg:flex-wrap',
             )}
           >
             {metrics.map((m) => (
@@ -269,7 +284,7 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
             ))}
           </div>
         ) : count ? (
-          <div className="text-right min-w-[var(--eventrow-count-min-w)]">
+          <div className="text-right min-w-[var(--eventrow-count-min-w)] max-lg:col-start-2 max-lg:col-span-2 max-lg:row-start-2 max-lg:text-left">
             <div
               className={cn(
                 'text-[length:var(--eventrow-count-size)] font-[var(--font-weight-semibold)]',
@@ -295,22 +310,28 @@ const EventRow = React.forwardRef<HTMLDivElement, EventRowProps>(
             </div>
           </div>
         ) : (
-          <span aria-hidden />
+          <span aria-hidden className="max-lg:col-start-2 max-lg:row-start-2" />
         )}
 
         {/* Badge de status */}
-        {badge ? <div className="flex items-center">{badge}</div> : <span aria-hidden />}
+        {badge ? (
+          <div className="flex items-center max-lg:col-start-2 max-lg:row-start-3">
+            {badge}
+          </div>
+        ) : (
+          <span aria-hidden className="max-lg:col-start-2 max-lg:row-start-3" />
+        )}
 
         {/* Ação */}
         {action ? (
           <div
-            className="flex items-center"
+            className="flex items-center max-lg:col-start-3 max-lg:row-start-3 max-lg:justify-end"
             onClick={(e) => e.stopPropagation()}
           >
             {action}
           </div>
         ) : (
-          <span aria-hidden />
+          <span aria-hidden className="max-lg:col-start-3 max-lg:row-start-3" />
         )}
       </div>
     );
