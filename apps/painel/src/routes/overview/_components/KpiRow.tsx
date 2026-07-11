@@ -17,6 +17,13 @@
 // (nunca 0 falso, contrato do próprio kpis.ts), distinto de "esgotado".
 // Trends: a janela real do contrato é 7d vs. 7d anteriores → "vs. 7 dias".
 // Conversão: série vazia até E12 → "—" sem sparkline (nunca inventa curva).
+//
+// Responsivo (Lote RESP-MOBILE M3, JTBD 04.4 "ter dados na mão no celular"):
+// o grid colapsa por breakpoint — 1 coluna abaixo de `sm` (mobile 390: cada
+// card ganha a largura cheia, o valor 34px não trunca), 2 colunas de `sm`
+// (640px) a `lg`, e 4 colunas de `lg` (1024px) para cima. A faixa de fidelidade
+// desktop (≥1024, alvo 1440) fica INTOCADA — `lg:grid-cols-4` é o mesmo de antes;
+// a mudança é aditiva só abaixo de `lg`. Breakpoints em `tailwind-preset.ts`.
 // =============================================================================
 
 import * as React from 'react';
@@ -178,7 +185,7 @@ export function KpiRow({ kpis }: KpiRowProps): JSX.Element {
   return (
     <section
       aria-label="Indicadores consolidados"
-      className="grid grid-cols-2 gap-[var(--layout-grid-gap)] lg:grid-cols-4"
+      className="grid grid-cols-1 gap-[var(--layout-grid-gap)] sm:grid-cols-2 lg:grid-cols-4"
     >
       <KpiCard
         label="Inscrições totais"

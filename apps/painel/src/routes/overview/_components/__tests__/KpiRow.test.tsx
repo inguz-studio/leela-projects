@@ -92,6 +92,17 @@ describe('KpiRow (S600-T3 · recomposto T4 FIDELIDADE)', () => {
     expect(card.className).toContain('hover:shadow-elev-2');
   });
 
+  it('grid responsivo: 1 col <sm, 2 col sm→lg, 4 col ≥lg (RESP-M3, desktop 1440 intocado)', () => {
+    render(<KpiRow kpis={mkKpis()} />);
+    const section = screen.getByRole('region', { name: 'Indicadores consolidados' });
+    // Mobile 390 (<sm): coluna única — card cheio, valor 34px não trunca.
+    expect(section.className).toContain('grid-cols-1');
+    // sm (640) até lg: duas colunas.
+    expect(section.className).toContain('sm:grid-cols-2');
+    // lg (1024+, alvo desktop 1440): quatro colunas — fidelidade intocada.
+    expect(section.className).toContain('lg:grid-cols-4');
+  });
+
   it('sem evento em risco → sem badge Esgotando', () => {
     render(<KpiRow kpis={mkKpis({ eventoEmRisco: null })} />);
     expect(screen.queryByText('Esgotando')).not.toBeInTheDocument();
