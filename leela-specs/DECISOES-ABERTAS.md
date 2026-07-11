@@ -5,7 +5,7 @@
 
 ## 🔴 Aguardando você agora
 
-*(nenhuma — todas as decisões do fix-loop foram tomadas em 2026-07-05: T14 reabrir=owner-only ✅ · T15 reativação unilateral ✅ · T13 sem limite de pontuação ✅)*
+1. **Homepage/catálogo da Leela — está no escopo da V1?** *(levantado por você 2026-07-11)* Hoje o E12 constrói a página **por evento** (`/{evento}`), mas **não há** homepage institucional (o que fica em `leela.com/`) nem catálogo/busca pública de eventos — o `S1200-T1` deixa isso explicitamente fora de escopo. Opções: **(a)** escopar uma homepage simples + catálogo de eventos publicados para a V1 (esforço menor que o painel; entra como stories novas no E12/E07-web); **(b)** adiar para pós-V1 (o site institucional/marketing costuma ser esforço separado — a V1 vive de link direto de evento/organizador). Recomendo (b) para não atrasar o "vender ponta a ponta", com uma home mínima só quando houver marca/posicionamento fechados. **Sua decisão.**
 
 ## 🟡 Quando você tiver os dados (não bloqueiam código)
 
@@ -15,6 +15,7 @@
 
 4. **Conta no gateway Asaas + KYC** — gateway DECIDIDO: **Asaas** (D2, 2026-07-10). A integração roda em sandbox sem depender disso; o **KYC segue pendente como ação externa** — concluí-lo destrava `E04-PAY-T2` (parked até lá) sem custar código.
 5. *(Opcional)* Exceção do Device Guard p/ `turbo.exe` — agentes têm contorno; é conveniência.
+6. **Logos da Leela** *(levantado por você 2026-07-11)* — o DS já tem o slot `SidebarBrand` (hoje renderiza o texto "LEELA" como placeholder); **falta o arquivo**. Como entregar: colocar os arquivos em `C:\dev\LEELA\brand/` (crio a pasta quando chegarem) OU anexar na sessão. Formatos ideais: **SVG** (vetor) do logotipo completo + do símbolo/mark isolado; variantes **claro e escuro** (temos 2 temas); um **PNG 2x** de fallback; e um **favicon** (mark). Onde eu aplico quando chegarem: `SidebarBrand` do painel, header da landing (E12), template de e-mail/ingresso (S1206) e favicon dos apps.
 
 ## ⏸️ Para o final (decisão 2026-07-05)
 

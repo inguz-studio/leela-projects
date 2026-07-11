@@ -14,6 +14,8 @@ Entregar a superfície **web pública** da Leela: as páginas que o atleta anôn
 
 O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois canais (app do atleta e landing pública); este épico constrói **o canal web**. O checkout usa a camada plugável `PaymentProvider` (ADR-006), nunca um gateway concreto: um provider sandbox permite construir e testar o fluxo ponta a ponta antes da escolha do fornecedor.
 
+> **⚠️ Decisão de design (registrada 2026-07-11, Vitor):** ao contrário do painel admin (que tem fidelidade de Figma no `WEB-APPV2`), a landing pública **não tem mockup visual próprio**. A `PaginaVendas-Conteudo.html` citada como "tela de referência" nas stories é o **editor de conteúdo** (lista QUAIS seções existem, canal Web+App / Só-Web) — **não** um desenho de como a página pública fica. Portanto a landing será **desenhada sobre o design system leela + referências de mercado**, não copiada de mockup. **Antes de despachar `S1201`, fazer um passe de UI-SPEC da página pública + checkout**, ancorado em: a lista de seções + o DS + os benchmarks `discovery/benchmark-cheers.md` (fluxo/taxa/cupom) e `discovery/benchmark-shotgun.md` (visual da página de evento + descoberta). Sem esse passe, o S1201 nasce sem direção visual.
+
 ## Personas & JTBD
 
 - **Atleta anônimo (persona primária).** JTBD Transacional: *"Quando descubro um evento, quero me inscrever em poucos cliques, para reduzir a fricção"* e *"Quando compro inscrição, quero acompanhar kit e pagamento no mesmo lugar"* (`jobs-to-be-done.md` 04.1). Não tem conta; a landing não exige login para inscrever e pagar.
