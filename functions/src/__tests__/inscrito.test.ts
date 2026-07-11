@@ -111,11 +111,17 @@ describe('derivações puras de Inscrito', () => {
   });
 
   it('CAMPOS_FUNCTION_INSCRITO espelha as Rules (escrita só por Function)', () => {
+    // FABLE-A-T2 (ADR-011): + pedidoRef/ehResponsavel/dadosPessoais/tamanhos
+    // (escritos pela Function do checkout — S1203-T5)
     expect(CAMPOS_FUNCTION_INSCRITO).toEqual([
       'kitEntregueEm',
       'checkinEm',
       'qrToken',
       'ingressoEmitidoEm',
+      'pedidoRef',
+      'ehResponsavel',
+      'dadosPessoais',
+      'tamanhos',
     ]);
   });
 });

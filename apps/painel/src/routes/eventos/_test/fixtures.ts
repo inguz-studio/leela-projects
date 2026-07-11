@@ -44,6 +44,9 @@ export function mkInscrito(over: Partial<Inscrito> = {}): Inscrito {
     modalidade: over.modalidade ?? '10k',
     criadoEm: ts(new Date('2026-02-01T00:00:00Z')),
     atualizadoEm: ts(new Date('2026-02-01T00:00:00Z')),
+    pedidoRef: over.pedidoRef ?? null,
+    ehResponsavel: over.ehResponsavel ?? false,
+    tamanhos: over.tamanhos ?? {},
     ...over,
   };
 }

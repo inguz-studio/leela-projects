@@ -350,7 +350,8 @@ service cloud.firestore {
         /** Cliente não CRIA doc já carimbado com campos de Function. */
         function semCamposDeFunctionInscrito() {
           return !request.resource.data.keys().hasAny(
-            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm']
+            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos']
           );
         }
 
@@ -360,7 +361,8 @@ service cloud.firestore {
          */
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
-            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero']
+            ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos']
           );
         }
 

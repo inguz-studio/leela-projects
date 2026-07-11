@@ -276,3 +276,13 @@ export { getPlatformRollups } from './platform/rollups';
 // ---------------------------------------------------------------------------
 export { getOverview } from './overview';
 export type { OverviewResult } from './overview';
+
+// ---------------------------------------------------------------------------
+// Slide-in [pag] — join inscrito → pedido → pagamento (ADR-011 · FABLE-A-T2)
+// ---------------------------------------------------------------------------
+export { getPedidoEPagamentoDoInscrito } from './eventos/inscritoPedido';
+export type {
+  InscritoParaJoin,
+  GetPedidoEPagamentoDoInscritoParams,
+  PedidoEPagamentoDoInscrito,
+} from './eventos/inscritoPedido';

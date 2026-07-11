@@ -10,9 +10,26 @@
 // RN-204: status ∈ {confirmado, pendente, cancelado}
 // RN-205/221/222: kitEntregueEm/checkinEm são carimbos distintos, escritos
 //                 SÓ por Function (`registrarEntrega`/`registrarCheckin`).
+//
+// ADR-011 (FABLE-A-T2): o Inscrito ganha o LINK ao pedido (`pedidoRef` +
+// `ehResponsavel`) e o bloco `[reg]` do titular (`dadosPessoais` +
+// `tamanhos`). Decisão denorm×join:
+//   - `[reg]`/`tamanhos` MORAM aqui (cópia canônica, não denormalização:
+//     o pedido NÃO carrega dado pessoal por inscrito — titular próprio é o
+//     próprio ADR-011). Dono da escrita = Function do checkout (S1203-T5).
+//   - `[pag]` NUNCA se denormaliza: dinheiro muda de estado por webhook e
+//     estorno opera POR INSCRITO — espelhar em N docs criaria fan-out de
+//     writes financeiros sem ganho de leitura (o slide-in lê 1 inscrito →
+//     2 point reads O(1): pedidoRef → pedido → pagamentoRef → pagamento).
 // =============================================================================
 
 import type { Timestamp } from '../index';
+import type { Pedido } from '../pedidos/pedido';
+import {
+  parseDadosPessoais,
+  parseTamanhos,
+  type DadosPessoaisInscrito,
+} from './dadosPessoais';
 
 // ---------------------------------------------------------------------------
 // Enums de domínio
@@ -78,6 +95,32 @@ export interface Inscrito {
   status: StatusInscrito;
   /** Percurso escolhido (5k/10k/21k…) */
   modalidade: string;
+  /**
+   * ADR-011 — pedido a que a inscrição pertence (→ pedidos/{pedidoId}).
+   * null = legado pré-ADR-011 ou inscrição ainda sem pedido (o join `[pag]`
+   * cai no fallback `getPedidoDoInscrito` por `inscritoRefs`).
+   * Escrita SÓ pela Function do checkout (S1203-T5).
+   */
+  pedidoRef: string | null;
+  /**
+   * ADR-011 — este inscrito também é o responsável/pagador do pedido
+   * (auto-inscrição = pedido de 1 inscrito com ehResponsavel = true).
+   * Coerência com `pedido.responsavel` verificável por
+   * `pedidoDoInscritoCoerente`. Escrita SÓ pela Function do checkout.
+   */
+  ehResponsavel: boolean;
+  /**
+   * RN-223/S209-T1 — tamanho POR ITEM TAMANHADO do kit (`itemId → tamanho`,
+   * ex.: `{ "camiseta-tecnica": "M" }`). `{}` = kit sem item tamanhado ou
+   * doc legado. Por inscrito, nunca herdado do responsável (ADR-011).
+   */
+  tamanhos: Record<string, string>;
+  /**
+   * `[reg]` — dados pessoais do TITULAR coletados no checkout (S1202).
+   * ⚠️ PII/LGPD (inclui dado sensível): leitura só do organizador (Rules);
+   * escrita SÓ pela Function do checkout; A-T3 mascara CPF/telefone.
+   */
+  dadosPessoais?: DadosPessoaisInscrito;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   // ── Carimbos de operação — escrita SÓ por Function (RN-205/221/222) ──────
@@ -94,12 +137,23 @@ export interface Inscrito {
 /**
  * Campos do inscrito com escrita EXCLUSIVA de Cloud Function
  * (espelhados nas Security Rules — o cliente nunca os escreve).
+ *
+ * FABLE-A-T2 (ADR-011): `pedidoRef`/`ehResponsavel` (link ao pedido) e
+ * `dadosPessoais`/`tamanhos` (bloco `[reg]` + RN-223) são escritos pela
+ * Function do checkout (S1203-T5) no MESMO fluxo que cria o pedido —
+ * cliente não forja vínculo financeiro nem edita PII por escrita direta.
+ * ⚠️ As Rules de `inscritos` ainda NÃO espelham estes 4 campos — mudança
+ * proposta registrada no report FABLE-A-T2 (rules fora da raia desta task).
  */
 export const CAMPOS_FUNCTION_INSCRITO = [
   'kitEntregueEm',
   'checkinEm',
   'qrToken',
   'ingressoEmitidoEm',
+  'pedidoRef',
+  'ehResponsavel',
+  'dadosPessoais',
+  'tamanhos',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -116,6 +170,33 @@ export function inscritoAtivo(inscrito: Pick<Inscrito, 'status'>): boolean {
   return inscrito.status !== 'cancelado';
 }
 
+/** Já pertence a um pedido? (false = legado pré-ADR-011) @pure */
+export function inscritoTemPedido(
+  inscrito: Pick<Inscrito, 'pedidoRef'>
+): boolean {
+  return inscrito.pedidoRef !== null;
+}
+
+/**
+ * O link inscrito↔pedido é COERENTE? (ADR-011 — guarda do join `[pag]`)
+ * Verifica as três pontas da relação denormalizada:
+ *   1. `pedidoRef` aponta para ESTE pedido;
+ *   2. o pedido lista o inscrito em `inscritoRefs` (índice inverso);
+ *   3. `ehResponsavel` bate com `pedido.responsavel.atletaId`.
+ * Falso = dado corrompido → o chamador NÃO renderiza a compra (mostrar o
+ * pedido errado é pior que não mostrar). @pure
+ */
+export function pedidoDoInscritoCoerente(
+  inscrito: Pick<Inscrito, 'id' | 'atletaId' | 'pedidoRef' | 'ehResponsavel'>,
+  pedido: Pick<Pedido, 'id' | 'inscritoRefs' | 'responsavel'>
+): boolean {
+  return (
+    inscrito.pedidoRef === pedido.id &&
+    pedido.inscritoRefs.includes(inscrito.id) &&
+    inscrito.ehResponsavel === (pedido.responsavel.atletaId === inscrito.atletaId)
+  );
+}
+
 /**
  * Parsing defensivo de um doc Firestore em `Inscrito` (fail-fast).
  * @pure
@@ -128,6 +209,8 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   const status = data['status'];
   const modalidade = data['modalidade'];
   const chipNumero = data['chipNumero'];
+  const pedidoRef = data['pedidoRef'];
+  const ehResponsavel = data['ehResponsavel'];
 
   if (typeof tenantId !== 'string' || tenantId.length === 0) {
     throw new Error(`Inscrito ${id}: campo "tenantId" inválido (ADR-009)`);
@@ -148,6 +231,20 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
     throw new Error(`Inscrito ${id}: chipNumero inválido (RN-203)`);
   }
 
+  // ADR-011: pedidoRef ausente normaliza para null (legado pré-pedido);
+  // presente deve ser id não-vazio — link financeiro corrompido lança.
+  if (
+    pedidoRef !== null &&
+    pedidoRef !== undefined &&
+    (typeof pedidoRef !== 'string' || pedidoRef.length === 0)
+  ) {
+    throw new Error(`Inscrito ${id}: "pedidoRef" inválido (string|null — ADR-011)`);
+  }
+  if (ehResponsavel !== undefined && typeof ehResponsavel !== 'boolean') {
+    throw new Error(`Inscrito ${id}: "ehResponsavel" deve ser boolean (ADR-011)`);
+  }
+
+  const contexto = `Inscrito ${id}`;
   const inscrito: Inscrito = {
     id,
     tenantId,
@@ -157,9 +254,26 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
     chipNumero: typeof chipNumero === 'string' ? chipNumero : null,
     status,
     modalidade: typeof modalidade === 'string' ? modalidade : '',
+    pedidoRef: typeof pedidoRef === 'string' ? pedidoRef : null,
+    ehResponsavel: ehResponsavel === true,
+    tamanhos: parseTamanhos(contexto, data['tamanhos']),
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
+
+  // Coerência ADR-011: responsável SEM pedido é impossível — a Function do
+  // checkout escreve pedidoRef e ehResponsavel no MESMO batch que cria o
+  // pedido. Fail-fast: flag órfã indica vínculo financeiro corrompido.
+  if (inscrito.ehResponsavel && inscrito.pedidoRef === null) {
+    throw new Error(
+      `Inscrito ${id}: ehResponsavel true com pedidoRef null — vínculo ` +
+        `ao pedido incoerente (ADR-011: escritos no mesmo batch do checkout)`
+    );
+  }
+
+  if (data['dadosPessoais'] !== undefined) {
+    inscrito.dadosPessoais = parseDadosPessoais(contexto, data['dadosPessoais']);
+  }
 
   if (data['kitEntregueEm'] !== undefined) {
     inscrito.kitEntregueEm = data['kitEntregueEm'] as Timestamp;

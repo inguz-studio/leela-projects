@@ -319,6 +319,24 @@ export {
   parseInscrito,
 } from './eventos/inscrito';
 
+// Bloco [reg] do Inscrito (ADR-011 · FABLE-A-T2)
+export type {
+  DadosPessoaisInscrito,
+  ContatoEmergencia,
+  GeneroInscrito,
+} from './eventos/dadosPessoais';
+export {
+  GENEROS_INSCRITO,
+  isGeneroInscrito,
+  UFS_BRASIL,
+  isUfBrasil,
+  cpfValido,
+  telefoneValido,
+  idadeNaData,
+  parseDadosPessoais,
+  parseTamanhos,
+} from './eventos/dadosPessoais';
+
 export type { Kit, ItemKit, OrigemItem, UsadoEmKit } from './eventos/kit';
 export {
   precoKitValido,
