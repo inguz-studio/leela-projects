@@ -45,6 +45,21 @@ const JANELAS: JanelaEntrega[] = [
 
 const ts = { seconds: 1, nanoseconds: 0 } as unknown as Timestamp;
 
+/**
+ * Timestamp LEGÍVEL (com `toDate`) ancorado no dia civil `iso` no FUSO_EVENTO —
+ * exercita o cruzamento janela × dia-da-prova (F3). `ts` acima não tem `toDate`
+ * de propósito (contrato legado: cruzamento pulado).
+ */
+function tsProva(iso: string): Timestamp {
+  const d = dataEventoParaDate(iso);
+  return {
+    seconds: Math.floor(d.getTime() / 1000),
+    nanoseconds: 0,
+    toDate: () => d,
+    toMillis: () => d.getTime(),
+  };
+}
+
 function docEvento(extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     nome: 'Meia Maratona Floripa 2026',
@@ -345,5 +360,43 @@ describe('parseEvento — fail-fast estendido (FABLE-F-T1)', () => {
 
   it('faixaChips null explícito normaliza para null (não configurada)', () => {
     expect(parseEvento('meia-floripa-2026', docEvento({ faixaChips: null })).faixaChips).toBeNull();
+  });
+});
+
+describe('parseEvento — janela pós-prova (F3 · review r1)', () => {
+  it('janela cujo dia civil é DEPOIS da prova LANÇA apontando o índice', () => {
+    expect(() =>
+      parseEvento(
+        'meia-floripa-2026',
+        docEvento({
+          data: tsProva('2026-04-27'),
+          janelasEntrega: [
+            JANELAS[0],
+            { dia: '2026-04-28', horaInicio: '10:00', horaFim: '12:00', local: ARENA },
+          ],
+        })
+      )
+    ).toThrow(/janelasEntrega\[1\].*depois da prova/);
+  });
+
+  it('janela NO dia da prova é válida (retirada tardia na largada — só `>` barra)', () => {
+    const evento = parseEvento(
+      'meia-floripa-2026',
+      docEvento({ data: tsProva('2026-04-27'), janelasEntrega: JANELAS })
+    );
+    expect(evento.janelasEntrega).toEqual(JANELAS);
+  });
+
+  it('sem `data` Timestamp legível (legado) o cruzamento é PULADO', () => {
+    // `ts` do arquivo não tem `toDate` → nenhuma janela é barrada pela prova.
+    const evento = parseEvento(
+      'meia-floripa-2026',
+      docEvento({
+        janelasEntrega: [
+          { dia: '2099-01-01', horaInicio: '10:00', horaFim: '12:00', local: ARENA },
+        ],
+      })
+    );
+    expect(evento.janelasEntrega).toHaveLength(1);
   });
 });

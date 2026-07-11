@@ -11,6 +11,7 @@
 
 import type { Timestamp } from '../index';
 import { isJanelaEntrega, ordenarJanelasEntrega, type JanelaEntrega } from './cronogramaEntrega';
+import { dataLocalISO } from './dataEvento';
 import { isFaixaChips, type FaixaChips } from './faixaChips';
 
 // ---------------------------------------------------------------------------
@@ -117,6 +118,8 @@ export interface Evento {
    * ordem canônica (dia, horaInicio). Janela MALFORMADA presente lança
    * (fail-fast — janela silenciosamente descartada mostraria "fechada"
    * durante a entrega real; diferente de `percursos`, que descarta item).
+   * Janela cujo dia civil é DEPOIS da prova também lança (não existe entrega
+   * de kit após a corrida — o dia da prova é válido: retirada tardia).
    */
   janelasEntrega?: JanelaEntrega[];
   /**
@@ -215,6 +218,18 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
   // presente e MALFORMADO → lança. Fail-fast deliberado: uma janela inválida
   // descartada em silêncio derrubaria o banner "Entrega ativa · Dia N de M"
   // no dia do evento — corrupção operacional precisa gritar na borda de I/O.
+  // Dia civil da prova (FUSO_EVENTO, DST-safe — mesma semântica de dataEvento.ts):
+  // base do cruzamento que barra janela de entrega DEPOIS da corrida. Só
+  // cruzável quando `data` é um Timestamp legível (docs legados sem data pulam
+  // o cruzamento — o shape-level de cada janela já foi garantido acima).
+  const dataProvaRaw = data['data'];
+  const diaCivilProva =
+    dataProvaRaw !== null &&
+    typeof dataProvaRaw === 'object' &&
+    typeof (dataProvaRaw as Partial<Timestamp>).toDate === 'function'
+      ? dataLocalISO((dataProvaRaw as Timestamp).toDate())
+      : null;
+
   const janelasRaw = data['janelasEntrega'];
   let janelasEntrega: JanelaEntrega[] = [];
   if (janelasRaw !== undefined && janelasRaw !== null) {
@@ -227,6 +242,16 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
           throw new Error(
             `Evento ${id}: janelasEntrega[${i}] inválida ` +
               `(dia yyyy-mm-dd, horas HH:mm com fim > início, local não-vazio)`
+          );
+        }
+        // Fail-fast coerente com o resto do parse (as outras violações lançam):
+        // janela cujo dia civil é DEPOIS da prova é corrupção operacional — o
+        // banner contaria "Dia N de M" após a corrida. O dia da prova em si é
+        // válido (retirada tardia na largada — só o estritamente-`>` é rejeitado).
+        if (diaCivilProva !== null && j.dia > diaCivilProva) {
+          throw new Error(
+            `Evento ${id}: janelasEntrega[${i}] em ${j.dia} é depois da prova ` +
+              `(${diaCivilProva}) — entrega de kit não acontece após o evento`
           );
         }
         return j;

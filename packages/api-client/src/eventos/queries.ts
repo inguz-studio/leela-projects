@@ -23,11 +23,13 @@ import {
 } from 'firebase/firestore';
 import {
   isKitInscrito,
+  isStatusEvento,
   isStatusInscrito,
   parseEvento,
   type Evento,
   type KitInscrito,
   type StatusInscrito,
+  type Timestamp,
 } from '@leela/core';
 
 /**
@@ -80,7 +82,89 @@ export async function listarEventosDoOrganizador(
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map((d) => parseEvento(d.id, d.data()));
+  // F1 (review r1): UM doc envenenado NÃO pode derrubar a lista inteira do
+  // tenant. `parseEvento` é fail-fast (lança em janela/faixa/campo malformado);
+  // na LISTAGEM isolamos cada doc — o que falha vira placeholder degradado +
+  // telemetria (o organizador ainda VÊ que o evento existe — sumir da lista =
+  // pânico — e sabe que precisa de atenção). A leitura O(1) de UM evento
+  // (`getEvento`/`getCronogramaEntrega`) mantém o fail-fast de propósito: é
+  // leitura pontual, o chamador trata o throw.
+  return snap.docs.map((d) => {
+    try {
+      return parseEvento(d.id, d.data());
+    } catch (err) {
+      console.error(
+        `[listarEventosDoOrganizador] evento "${d.id}" corrompido — ` +
+          `exibindo placeholder degradado`,
+        err
+      );
+      return eventoDegradado(d.id, d.data(), tenantId, organizadorId);
+    }
+  });
+}
+
+// Timestamp sentinela p/ o placeholder degradado: um doc ilegível não tem datas
+// confiáveis. Epoch 0 (1970) sinaliza "sem dado" e ordena no início sem inventar
+// um valor plausível — nunca finge uma data real.
+const TIMESTAMP_ZERO: Timestamp = {
+  seconds: 0,
+  nanoseconds: 0,
+  toDate: () => new Date(0),
+  toMillis: () => 0,
+};
+
+/** Passa o Timestamp adiante quando legível; senão devolve o sentinela. */
+function timestampSeguro(v: unknown): Timestamp {
+  return v !== null &&
+    typeof v === 'object' &&
+    typeof (v as Partial<Timestamp>).toDate === 'function'
+    ? (v as Timestamp)
+    : TIMESTAMP_ZERO;
+}
+
+/**
+ * Placeholder degradado para um doc de evento que NÃO parseia (F1 · review r1).
+ * A IDENTIDADE é confiável: `id` é o docId real e `tenantId`/`organizadorId` vêm
+ * do FILTRO da query (todo doc retornado casa com eles — ADR-009). O CONTEÚDO é
+ * best-effort: aproveita o primitivo quando o tipo confere, senão cai num default
+ * neutro; cronograma/faixa (fontes mais prováveis do defeito) degradam para
+ * vazio. NUNCA lança — é o caminho de resgate da listagem.
+ */
+function eventoDegradado(
+  id: string,
+  raw: Record<string, unknown>,
+  tenantId: string,
+  organizadorId: string
+): Evento {
+  const nomeRaw = raw['nome'];
+  const localRaw = raw['local'];
+  const statusRaw = raw['status'];
+  const qtd = raw['qtdInscritos'];
+  const receita = raw['receitaConfirmada'];
+  return {
+    id,
+    tenantId,
+    organizadorId,
+    nome:
+      typeof nomeRaw === 'string' && nomeRaw.length > 0
+        ? nomeRaw
+        : '(evento com dados inválidos)',
+    data: timestampSeguro(raw['data']),
+    local: typeof localRaw === 'string' ? localRaw : '',
+    modalidades: [],
+    percursos: [],
+    slug: id,
+    status: isStatusEvento(statusRaw) ? statusRaw : 'rascunho',
+    usaChip: raw['usaChip'] === true,
+    criadoEm: timestampSeguro(raw['criadoEm']),
+    atualizadoEm: timestampSeguro(raw['atualizadoEm']),
+    qtdInscritos: typeof qtd === 'number' && Number.isFinite(qtd) ? qtd : 0,
+    receitaConfirmada:
+      typeof receita === 'number' && Number.isFinite(receita) ? receita : 0,
+    capacidade: null,
+    janelasEntrega: [],
+    faixaChips: null,
+  };
 }
 
 // ---------------------------------------------------------------------------
