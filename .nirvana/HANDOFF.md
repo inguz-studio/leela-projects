@@ -27,7 +27,9 @@ Planejamento completo em **`leela-specs/next-trail/`** (ROADMAP-next §7 = waves
 
 **Ondas:** Wave A Fable kernel (A→B ∥ C·F ∥ E→D ∥ G) → Wave B RESP-MOBILE (QA2-RECON → M1 → M3·M5·M4 → M2·M6·M7 → GATE) → Wave C Onda 2 (E04-slim · E12 · E09-slim · E07-web · E06 · S821 V1 · S1307/S1308 V1.5) → Wave D Consolidações (CONS-1..6).
 
-**➡️ PRÓXIMO DESPACHO: Fable Frente A** (`LEELA-FABLE-A-T1` — kernel `pedidos` conforme ADR-011 + gate adr-conformance; consultar mind-clone Kleppmann na IMPLEMENTAÇÃO: denorm × join, fronteiras transacionais — o modelo já está decidido). **Pré-condição operacional: re-clone limpo do repo (git local destruído — ver ⚠️ acima).**
+**✅ FABLE-A-T1 ATERRISSADO 2026-07-11** (re-clone limpo = `C:\dev\LEELA`, git OK — o ⚠️ acima vale só p/ o clone antigo *-CORROMPIDA*). Kernel `pedidos/{id}` root (`tenantId`+`eventoId` 🔁) + `Pedido`/`Pagamento`(`Conciliacao` embutida) + api-client + Rules (read=`isTenantWriter`, write=false) · antagonista APPROVE-COM-FIXES → r1 9/9 fixes · unit 45/45 · Rules 19/19 emulator · adr-conformance PASS · report `outputs/leela-build-2d6ee98d/FABLE-A-T1-REPORT.md`. Constraints: JDK 17 → emulator via `npx firebase-tools@13`; índices compostos só validáveis no deploy; falha pré-existente `tenantLifecycle.test.ts` (commit `8e6badd`) = lote próprio futuro.
+
+**➡️ PRÓXIMO DESPACHO: `LEELA-FABLE-A-T2`** — enriquecer projeção `Inscrito` (`pedidoRef`+`ehResponsavel` do ADR-011; denorm `[reg]` OU join; `tamanhos` map por item, S209) + surfaçar campos do slide-in S203 §"Campos" · **Fable** · ⚔ · dep A-T1 ✅. Depois A-T3 (Opus, UI). Frentes C (QR) e F (cronograma) são independentes de A — podem paralelizar.
 
 ## PADRÕES VIGENTES (invioláveis — herdar em todo lote)
 - **JOB primeiro; mockup = aparência; a story vence quando divergem** (L-004). Injetar persona+JTBD+critérios Given/When/Then + `~/.claude/skills/harness/references/design-principles.md` nos dispatches de UI.

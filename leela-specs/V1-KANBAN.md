@@ -27,7 +27,7 @@ tags:
 
 ## 🔨 Fazendo
 
-- [ ] **➡️ PRÓXIMO DESPACHO · Wave A · `LEELA-FABLE-A`** — kernel `pedidos` conforme **ADR-011** (A-T1 modelo `pedidos/{id}` + tipos core + api-client + Rules + **gate adr-conformance** · A-T2 enriquece projeção `Inscrito` c/ `pedidoRef`/`ehResponsavel` · A-T3 wire do slide-in rico `S203-T3`) · rota **Fable** · review antagonista · dep `S203-T1` ✅ + `S1600` ✅ + `ADR-011` ✅ · destrava `S203-T3` (Onda 1 colhe já) + `S207` (por forma de pagamento) + alimenta `E12-L4` · Kleppmann na IMPLEMENTAÇÃO (denorm × join)
+- [ ] **🔨 Wave A · `LEELA-FABLE-A`** — kernel `pedidos` conforme **ADR-011** · rota **Fable** · **A-T1 ✅ GATE PASS 2026-07-11** (kernel `pedidos/{id}` root + tipos core `Pedido`/`Pagamento`/`Conciliacao` + api-client + Rules `isTenantWriter` + adr-conformance provado; antagonista APPROVE-COM-FIXES → r1 9/9 · unit 45/45 · Rules 19/19 · report `FABLE-A-T1-REPORT.md`) · **➡️ PRÓXIMO: A-T2** enriquece projeção `Inscrito` c/ `pedidoRef`/`ehResponsavel` (**Fable** · ⚔) → A-T3 wire do slide-in rico `S203-T3` (Opus) · destrava `S203-T3` (Onda 1 colhe já) + `S207` (por forma de pagamento) + alimenta `E12-L4` · Kleppmann na IMPLEMENTAÇÃO (denorm × join)
 
 
 ## 🔍 Revisão
