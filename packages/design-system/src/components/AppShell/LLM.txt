@@ -19,10 +19,15 @@ Não use aninhado dentro de outro AppShell nem para layouts sem sidebar (nesse c
 - sidebar: React.ReactNode   (obrigatório) — normalmente <Sidebar sections={...} footer={...} />
 - children: React.ReactNode   (obrigatório) — conteúdo principal (PageHeader, SubNav, página)
 - className: string   (default: undefined)
+- menuLabel: string   (default: 'Abrir menu de navegação') — nome acessível do hambúrguer mobile
+- drawerLabel: string   (default: 'Menu de navegação') — nome acessível do drawer mobile
 Nenhuma outra prop existe.
 
+## Responsivo (RESP-M1)
+O rail fixo de 240px só existe a partir de lg (1024px). Abaixo de lg o rail some do fluxo (o conteúdo recupera a largura total — trava o scroll horizontal em mobile 390×844) e a MESMA Sidebar vira drawer off-canvas (via componente Drawer), acionado pelo hambúrguer da barra superior. O AppShell já cuida do estado aberto/fechado e de fechar ao navegar. Desktop 1440 intocado. Você NÃO precisa montar Drawer manualmente — passe a Sidebar em `sidebar` e o AppShell faz o resto.
+
 ## Tokens consumidos (nenhum valor cru permitido)
-- --surface-base
+- --surface-base, --border-subtle, --spacing-3, --spacing-4
 
 ## Proibido (do/don't)
 DON'T: props header, footer, nav — NÃO existem; só sidebar e children.

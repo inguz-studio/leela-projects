@@ -40,3 +40,12 @@ Colar no início de todo projeto/iteração no Claude Design:
 ## 4. Definition of done do intake
 
 Um handoff só está "ingerido" quando: diff de tokens zerado (ou divergências decididas e registradas), requisitos de layout transcritos no épico da tela, mapa de componentes escrito, ícones resolvidos por nome, e baselines do gate visual salvos. Sem esses 5, o pacote é referência, e referência não bloqueia gate — que é exatamente o buraco por onde a Onda 1 derrapou.
+
+## 5. Emenda RESP-M1 (2026-07-11) — alvo passa a responsivo com mobile real
+
+O export WEB-APPV2 nasceu desktop-first (`.app { grid-template-columns: 240px 1fr }`, `min-width: 1280px`, sem referência mobile). O QA-LIVE-2 provou que o shell derivado disso estoura em 390×844 (7 MAJOR de causa-raiz única — o rail fixo de 240px como irmão flex). A partir deste lote o alvo é **responsivo com alvo mobile real 390×844**:
+
+- **Fidelidade ao mockup segue valendo EM DESKTOP 1440.** O layout de duas colunas, o rail de 240px e a densidade do mockup são o contrato acima do breakpoint de colapso do shell (`lg`, 1024px).
+- **Mobile segue os padrões do DS, não o mockup.** O export não tem referência mobile; abaixo de `lg` o comportamento (Sidebar → drawer off-canvas, KpiRow em 1 coluna, tabela com scroll/empilhamento, etc.) é decisão do DS guiada por `references/design-principles.md` e pelo gate Norman, não cópia de um estático que não existe.
+- **O gate visual passa a rodar nos dois viewports** (desktop 1440×900 + mobile 390×844), cumprindo a promessa do §3.5. Projeto `mobile-390` adicionado ao `playwright.config.ts`.
+- **`prefers-reduced-motion` é piso** em qualquer transição nova de shell (drawer, colapsos): sob `reduce`, sem animação.

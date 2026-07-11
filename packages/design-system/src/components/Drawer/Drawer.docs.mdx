@@ -1,0 +1,28 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Drawer.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Drawer
+
+Painel off-canvas ancorado a uma borda, sobre Radix Dialog — mesma receita do Modal (Portal + Overlay + Content), com focus-trap, Esc, retorno de foco e `aria-dialog` de graça. O motion (slide da borda + fade) é gated por `motion-safe:`: sob `prefers-reduced-motion: reduce` o painel aparece/some sem animação.
+
+É a primitiva que o `AppShell` usa abaixo do breakpoint `lg` (1024px) para transformar a Sidebar fixa em menu off-canvas no mobile 390×844. Genérico: serve qualquer painel lateral.
+
+<Canvas of={Stories.Left} />
+
+<Controls />
+
+## Breakpoint do shell
+
+O ponto de colapso do shell é `lg` (1024px), declarado explicitamente em `tailwind-preset.ts` (`screens`). Acima de `lg`, o AppShell mostra o rail fixo de 240px (fidelidade desktop 1440 intocada). Abaixo de `lg`, o rail some do fluxo e a Sidebar vira este Drawer, acionado pelo hambúrguer da barra superior.
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Drawer"
+  snippet={`import { Drawer, Sidebar, DEFAULT_SIDEBAR_SECTIONS } from '@leela/design-system';\n\nconst [open, setOpen] = useState(false);\n\n<Drawer open={open} onOpenChange={setOpen} title="Menu de navegação">\n  <div onClick={() => setOpen(false)} className="contents">\n    <Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />\n  </div>\n</Drawer>`}
+  contract={contract}
+/>

@@ -78,7 +78,7 @@ Fluxo do **produtor** (web), ponta a ponta, sem intervenção técnica:
 
 Fluxo do **atleta** (app simples): descobre evento → compra → recebe comunicado → abre o ingresso (QR).
 
-**Aderência visual:** cada tela web bate com a correspondente em `WEB-APPV2 (1)/` (tema `brasa`, §2.x).
+**Aderência visual:** cada tela web bate com a correspondente em `WEB-APPV2 (1)/` (tema `brasa`, §2.x) **em desktop 1440**. Emenda RESP-M1 (2026-07-11): o alvo deixou de ser desktop-first e passou a **responsivo com alvo mobile real 390×844** (JOB P4: o organizador opera o painel pelo celular no local do evento). A fidelidade ao mockup vale **acima do breakpoint de colapso do shell (`lg`, 1024px)**; abaixo dele o comportamento segue os padrões do DS (o export não tem referência mobile) — Sidebar vira drawer, grids colapsam, tabelas ganham scroll/empilhamento. O gate visual roda nos dois viewports (1440×900 + 390×844). Ver `handoff-claude-design.md` §5.
 
 **Instrumentação (fundo, não gate):** eventos para medir retenção clube-vs-solo (Cloud Function), para acompanhar sem bloquear a entrega.
 

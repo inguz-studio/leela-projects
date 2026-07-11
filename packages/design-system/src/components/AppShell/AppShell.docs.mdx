@@ -9,6 +9,8 @@ import contract from './LLM.txt?raw';
 
 Casca da aplicação: sidebar fixa de 240px + área de conteúdo com scroll próprio, ocupando a altura inteira da viewport.
 
+**Responsivo (RESP-M1).** O rail fixo só existe a partir de `lg` (1024px, ponto de colapso declarado no `tailwind-preset`). Abaixo de `lg` o rail some do fluxo — o conteúdo recupera a largura total (fim do estouro horizontal em mobile 390×844) — e a MESMA Sidebar vira drawer off-canvas, acionado por um hambúrguer visível na barra superior. Desktop 1440 fica intocado. Os nomes acessíveis do hambúrguer e do drawer saem por `menuLabel`/`drawerLabel`.
+
 <Canvas of={Stories.Completo} />
 
 <Controls />

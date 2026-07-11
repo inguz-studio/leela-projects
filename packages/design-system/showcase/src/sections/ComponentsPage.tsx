@@ -14,9 +14,11 @@ import {
   CardEvento,
   Checkbox,
   Chip,
+  DEFAULT_SIDEBAR_SECTIONS,
   DonutChart,
   ConfirmModal,
   Divider,
+  Drawer,
   DropdownMenu,
   EmptyState,
   Field,
@@ -28,6 +30,7 @@ import {
   RadioCard,
   RadioGroup,
   Select,
+  Sidebar,
   Skeleton,
   Stepper,
   SubNav,
@@ -117,6 +120,7 @@ export function ComponentsPage(): JSX.Element {
   const [etapa, setEtapa] = React.useState(2);
   const [modalAberto, setModalAberto] = React.useState(false);
   const [confirmAberto, setConfirmAberto] = React.useState(false);
+  const [drawerAberto, setDrawerAberto] = React.useState(false);
   const [busca, setBusca] = React.useState('');
   const [kitSel, setKitSel] = React.useState('');
   const [check1, setCheck1] = React.useState(false);
@@ -842,6 +846,22 @@ export function ComponentsPage(): JSX.Element {
                 });
               }}
             />
+          </DemoCard>
+
+          <DemoCard
+            title="Drawer"
+            description="Painel off-canvas Radix (RESP-M1): a MESMA Sidebar vira menu mobile abaixo de lg. Fecha por Esc, overlay e ao navegar. Slide gated por motion-safe (reduce = sem animação)."
+          >
+            <div>
+              <Button variant="secondary" onClick={() => setDrawerAberto(true)}>
+                Abrir drawer
+              </Button>
+            </div>
+            <Drawer open={drawerAberto} onOpenChange={setDrawerAberto} title="Menu de navegação">
+              <div onClick={() => setDrawerAberto(false)} className="contents">
+                <Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />
+              </div>
+            </Drawer>
           </DemoCard>
         </div>
       </Section>

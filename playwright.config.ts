@@ -21,6 +21,18 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Alvo mobile real do gate visual (RESP-M1-T0) — fecha a promessa do
+    // handoff §3.5 (desktop 1440×900 + mobile 390×844) nunca implementada.
+    // 390×844 = viewport CSS de referência do lote responsivo; viewport
+    // explícito evita o clamp do host HiDPI que mascarava os defeitos M1–M7.
+    {
+      name: 'mobile-390',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 390, height: 844 },
+        isMobile: false,
+      },
+    },
   ],
   webServer: [
     {

@@ -86,6 +86,10 @@ export type { DropdownMenuProps, DropdownMenuAction } from './components/Dropdow
 export { Modal, ConfirmModal } from './components/Modal';
 export type { ModalProps, ModalSize, ConfirmModalProps, ConfirmModalDetails } from './components/Modal';
 
+// ── Drawer off-canvas (LEELA-RESP-M1-T2) ────────────────────────────────────
+export { Drawer } from './components/Drawer';
+export type { DrawerProps, DrawerSide } from './components/Drawer';
+
 // ── Feedback, cards & fluxo (S001-3-T4) ─────────────────────────────────────
 export { Toast, toastVariants, ToastProvider, useToast, DEFAULT_TOAST_DURATION } from './components/Toast';
 export type { ToastProps, ToastVariant, ToastProviderProps, ToastOptions, ToastContextValue } from './components/Toast';

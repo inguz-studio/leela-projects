@@ -1,0 +1,49 @@
+# Drawer — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Drawer
+version: 0.0.1
+generated_at: "2026-07-11"
+source: src/components/Drawer
+verdict: APPROVE (lote LEELA-RESP-M1-T2 — shell mobile 390×844)
+
+## Import canônico
+import { Drawer, type DrawerProps, type DrawerSide } from '@leela/design-system'
+
+## Quando usar
+Painel off-canvas ancorado a uma borda (menu de navegação mobile, filtros laterais, detalhe deslizante). É a primitiva que o AppShell usa abaixo do breakpoint lg para virar a Sidebar em menu off-canvas no mobile.
+
+## Quando NÃO usar
+Diálogo centrado com ação de confirmar/cancelar (use Modal/ConfirmModal). Conteúdo que não é sobreposição (renderize no fluxo).
+
+## Props válidas
+- open: boolean   (obrigatório)
+- onOpenChange: (open: boolean) => void   (obrigatório)
+- title: string   (obrigatório) — nome acessível do diálogo; renderizado sr-only (o rótulo visual mora no conteúdo)
+- side: 'left' | 'right'   (default 'left')
+- children: React.ReactNode   (obrigatório)
+- className: string   (default undefined) — classe do PAINEL (ex.: largura, quando não vier do conteúdo)
+Nenhuma outra prop existe.
+
+## Comportamento a11y (de graça, via Radix Dialog)
+- role="dialog" com nome acessível (title)
+- focus-trap enquanto aberto + retorno de foco ao fechar
+- Esc fecha; clique no overlay fecha
+- prefers-reduced-motion respeitado: animações gated por motion-safe (reduce = sem slide/fade)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --modal-overlay-bg, --modal-overlay-blur (cortina, reusada do Modal)
+- --surface-base, --border-subtle, --elevation-3
+
+## Proibido (do/don't)
+DON'T: título vazio — Radix exige Dialog.Title; title é obrigatório.
+DON'T: hex, rgb, px, ms em style inline.
+DO: para fechar ao navegar, envolva o conteúdo num wrapper com onClick={() => onOpenChange(false)}.
+DO: a largura vem do conteúdo (ex.: a Sidebar já é 240px) ou de className no painel; o painel é capado em max-w 85vw.
+
+## Exemplo mínimo (válido, copiável)
+<Drawer open={open} onOpenChange={setOpen} title="Menu de navegação">
+  <Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />
+</Drawer>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Drawer apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

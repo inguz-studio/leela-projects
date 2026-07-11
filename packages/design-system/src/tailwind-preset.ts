@@ -44,6 +44,25 @@ const animateAnimationsOnly = createPlugin((api: PluginAPI) => {
 const leelaPreset: Partial<Config> = {
   plugins: [animateAnimationsOnly],
   theme: {
+    // Breakpoints DECLARADOS explicitamente (LEELA-RESP-M1-T1): o DS não herda
+    // os defaults implícitos do Tailwind — a escala responsiva é decisão do
+    // sistema, não do framework. Os valores coincidem com a escala default do
+    // Tailwind (zero regressão nos usos `sm:`/`md:` já existentes), mas agora
+    // são CONTRATO versionado do preset.
+    //
+    // `lg` (1024px) é o PONTO DE COLAPSO DO SHELL: acima dele o AppShell mostra
+    // o rail fixo da Sidebar (fidelidade desktop 1440 intocada, mockup min-width
+    // 1280); abaixo dele o rail some e a Sidebar vira drawer off-canvas acionado
+    // por hambúrguer (alvo mobile real 390×844). Escolhido lg porque com o rail
+    // de 240px um viewport <1024px deixa <784px de conteúdo — abaixo do
+    // min-width 1280 do mockup, portanto fora da faixa de fidelidade desktop.
+    screens: {
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         // Surfaces
