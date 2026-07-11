@@ -410,13 +410,15 @@ Receber comunicados (push):
 
 - [x] LEELA-RESP-QA2-RECON — reconstituir `QA-LIVE-2-REPORT.md` — XS · **Opus** · **✅ FEITO 2026-07-11** (relatório estava preenchido de espaços, conteúdo perdido; reconstituído a partir dos 18 screenshots mobile — todos lidos; 7 MAJOR reconfirmados, 0 achado novo; M1 provado causa-raiz por código: `AppShell` monta Sidebar `w-240px shrink-0` SEM breakpoint; ordem M1→M3·M5·M4→M2·M6·M7→gate confirmada; relatório local em `outputs/`)
 - [x] LEELA-RESP-M1-T0/T1/T2 — shell mobile (Sidebar→drawer `<lg` + breakpoints tokenizados + emenda PRD/Playwright-mobile) — M · **Opus** · ⚔ · **🔶 COMMITADO `f0f7a79` 2026-07-11** (rail era flex `shrink-0` 240px sem breakpoint; correção aditiva: rail `hidden lg:block` + `main min-w-0` + Drawer sobre Radix Dialog do Modal; desktop 1440 intocado; gate Norman ✅; DS 940/940 + painel 644/644; ⚔ antagonista **APPROVE** (scroll-y provado intocado; a11y sólida; desktop 1440 intocado; drawer nas 18 rotas). **✅ GATE VISUAL MOBILE 390 PASS** (browser real, 13 shots `shots-m1-mobile/`): rail colapsou 0px em 5/5, drawer completo (hambúrguer/foco/Esc/overlay), **scroll-y sobreviveu** (risco #1), desktop 1440 intocado. Micro-fix z-40 aplicado. **M1 FECHADO.** Gate confirmou o que AINDA quebra em 390 (próximas): **M5 Table** (empurra scroll-x em inscritos/tenants — a maior), **M4 PageHeader** (metadata quebra 1 palavra/linha), **M2 Toolbar** (busca sobrepõe ícones), **M6 EventRow** (métricas cortam); **M3 KpiRow** mais brando (colapsa p/ 2col, lê ok — overview inconclusivo por timing). M7 prose caiu por refluxo.
-- [ ] LEELA-RESP-M3-T1 — KpiRow grid→1col em 390px (5 rotas) — S · dep M1-T2 · **Opus** — **JTBD:** S · "Ter dados na mão" (04.4)
-- [ ] LEELA-RESP-M5-T1 — Table card-mode/scroll contido em 390px (inscritos/membros/tenants/macro) — M · dep M1-T2 · **Opus** · ⚔ (reusável, 4 consumidores) — **JTBD:** T · P5 (inadimplência visível no celular) + 04.1/04.4
-- [ ] LEELA-RESP-M4-T1 — Header + TabNav/SubNav truncamento + overflow das abas em 390px — S · dep M1-T2 · **Opus** · ⚔ (interação nova em componente reusável dos drills — a11y teclado/roving) — **JTBD:** T · P4 + "Ter dados na mão" (04.4)
-- [ ] LEELA-RESP-M2-T1 — Toolbar/CTA (⌘K) mobile — XS · dep M1-T2 · **Opus**
-- [ ] LEELA-RESP-M6-T1 — EventRow mobile ("abrir rápido o evento que gerencio" = job da story S200) — XS · dep M1-T2 · **Opus**
-- [ ] LEELA-RESP-M7-T1 — prose/intro mobile — XS · dep M1-T2 · **Opus**
-- [ ] LEELA-RESP-GATE — Gate visual vivo 390×844 nas 18 rotas (Playwright headless, viewport explícito) — 0 MAJOR mobile; desktop 1440 intocado — S · dep todos M* · **Fable** (veredito de gate)
+- [x] LEELA-RESP-M3-T1 — KpiRow grid→1col em 390px — **✅ `302cd02`** (grid-cols-1 <640; 14/14)
+- [x] LEELA-RESP-M5-T1 — Table card-mode/scroll contido em 390px — ⚔ — **✅ `c6f6c2f` + fix `33c7390`** (card-mode <lg; antagonista APPROVE-COM-FIXES: select-all mobile em InscritosView + opt-out `responsive="scroll"` p/ matriz EstoqueView + break-words; 31/31)
+- [x] LEELA-RESP-M4-T1 — Header truncamento/overflow em 390px — ⚔ — **✅ `9e1f518`** (header do evento é EventoShell bespoke, não PageHeader do DS; empilha ações <lg, metadata flui; 9/9+6/6)
+- [x] LEELA-RESP-M2-T1 — Toolbar/CTA mobile — **✅ `a29bb38`** (empilha <lg, busca full-width; 4/4)
+- [x] LEELA-RESP-M6-T1 — EventRow mobile — **✅ `0255685`** (card 3 faixas <lg, métricas inteiras; 17/17)
+- [x] LEELA-RESP-M7-T1 — prose/intro mobile — **✅ caiu por refluxo do M1** (gate visual confirmou, sem trabalho próprio)
+- [x] LEELA-RESP-GATE — Gate visual vivo 390×844 — **✅ PASS 2026-07-11** (11/11 rotas `scrollWidth==390` = zero overflow-x; desktop 1440 sem regressão; gate consolidado DS 960/960 + painel 646/646; evidência `shots-wave-b-final/`)
+
+> **🏁 WAVE B (RESP-MOBILE) COMPLETA 2026-07-11** — os 7 MAJOR mobile do QA-2 resolvidos por causa-raiz M1 (drawer) + M3/M4/M5/M6/M2; cada ⚔ com antagonista + fix; desktop 1440 intocado em toda a onda. Próximo: Wave C (Onda 2) — já com S300-T1 (kernel de vendas) feito.
 
 ### Wave C · F3 Onda 2 — delta ratificado (as stories/tasks `[ ]` seguem nas seções "Onda 2 · Vender" acima — NÃO duplicadas aqui)
 

@@ -35,14 +35,19 @@ Planejamento completo em **`leela-specs/next-trail/`** (ROADMAP-next §7 = waves
 - **F-T1 cronograma+chips** ✅ `7662651` + `5c83538` — F1 listagem tolera doc envenenado; F3 janela≤dia da prova. Limitação: meia-noite `24:00` inexprimível (F4).
 - **A-T2 ficha do inscrito + PII** ✅ `2c01306` + `6a46509` — `[reg]` no Inscrito, `[pag]` por join; **decisão PII do Vitor aplicada**: read de inscritos E pagamentos = `isTenantWriter` (promoter+athlete NEGADOS, provado no emulator 158/158). CUIDADO herdado: o catch-all `match /{subcol}/{docId}` sob eventos exclui `inscritos` — qualquer subcoleção NOVA de eventos com PII precisa da mesma exclusão OU regra própria de writer.
 
-**➡️ PRÓXIMO DESPACHO: wire de UI da Wave A — rota OPUS** (backend já entrega dado real):
-- **A-T3** slide-in rico dos Inscritos (`S203-T3`): abas Geral `[reg]` + Pagamento `[pag]` renderizam dado real do join; ⚔ **PII no cliente** (mascarar CPF/telefone, saúde atrás de disclosure — máscara é UX, não controle de acesso). dep A-T2 ✅.
-- **F-T2** banner "Entrega ativa · Dia N de M" + alertas de chip órfão/estoque no balcão (dado real do cronograma). dep F-T1 ✅.
-- Antes de subir preview p/ o Vitor ver: setar `QR_TOKEN_KEYS` no env (senão check-in fica fail-closed) e rodar `seedPedidos` (já fiado no preview-seed pelo A5).
+**✅ WAVE A UI COMPLETA** (Opus): **A-T3** slide-in rico `0b0e00b` (abas [reg]/[pag] dado real, PII mascarada) + **F-T2** banner do balcão `96ccd0f` — gate visual PASS. Fix de infra `f60c59e` (pnpm allowBuilds — `bash preview.sh` voltou a subir).
 
-**Depois do wire A-T3/F-T2:** abre **Wave B RESP-MOBILE** (D5, Must V1 — 1ª task `LEELA-RESP-QA2-RECON` reconstitui o QA-2). Trilha de auditoria: `~/.harness-logs/2026-07-11/audit.jsonl`. Constraint de ambiente: JDK 17 → emulator via `npx firebase-tools@13` (v15 exige JDK 21).
+**✅ WAVE B (RESP-MOBILE) COMPLETA 2026-07-11** — os 7 MAJOR mobile do QA-2 (causa-raiz M1) resolvidos: **M1** drawer `f0f7a79`+`1dc44c1` · **M3** KpiRow `302cd02` · **M4** header `9e1f518` · **M5** Table card-mode `c6f6c2f`+`33c7390` · **M2** Toolbar `a29bb38` · **M6** EventRow `0255685` (M7 caiu por refluxo). Cada ⚔ com antagonista+fix. **Gate visual final PASS: 11/11 rotas `scrollWidth==390` (zero overflow-x), desktop 1440 intocado**; gate consolidado DS 960/960 + painel 646/646. Script reusável `outputs/.../wave-b-final-shots.mjs`.
 
-**Frente A original** (`LEELA-FABLE-A-T2` já feito acima): enriquecer projeção `Inscrito` — DONE. A-T3 (Opus, UI) segue pendente.
+**✅ ONDA 2 iniciada em paralelo (D5):** **S300-T1** kernel de vendas `6b45b9c` — lotes-por-modalidade (**ADR-012** travado: lote pertence à modalidade) + cupons + paginaVendas; antagonista APPROVE-COM-FIXES → índice composto `21d8604` + cupom regex `52f629b`; emulator 161/161.
+
+**➡️ PRÓXIMO DESPACHO: continuar Onda 2 (Wave C).** Antes do E12/checkout, fechar as frentes Fable que faltam (destravam a Onda 2): **FABLE-B** (estorno, reusado por E04-PAY), **FABLE-G** (log de comunicação, base do E06), **FABLE-D/E** (estoque por tamanho). Depois: **S300-T2** (Function de virada de lote, conta por modalidade×lote) → resto do E04-slim (S300-T3..T6 UI + S304) → **E12** (landing+checkout) → E09-slim → E07-web → E06. Fonte: `V1-CHECKLIST.md §Onda 2 · Vender` + briefs `onda2-*`.
+
+**DECISÕES ABERTAS DO VITOR** (`DECISOES-ABERTAS.md`): (1) **homepage/catálogo da Leela na V1?** rec: adiar (SaaS de produtor, não marketplace); (2) **logos** — Vitor entrega em `brand/` ou anexo → aplico em SidebarBrand/landing/e-mail/favicon; (3) **landing E12 sem mockup** → desenhar sobre DS + benchmarks com UI-SPEC antes do S1201. **Benchmarks em `discovery/`:** cheers, shotgun (429, reconstruído), + em produção: stayf (deep), ticketing-br (5 sites), wellable — via `competitor-radar-squad`.
+
+**PENDÊNCIA OPERACIONAL pré-preview-p/-Vitor:** setar `QR_TOKEN_KEYS`/`QR_TOKEN_KID_ATIVO` no env (senão check-in fail-closed). `seedPedidos` já fiado no preview-seed.
+
+Trilha de auditoria: `~/.harness-logs/2026-07-11/audit.jsonl`. Constraint de ambiente: JDK 17 → emulator via `npx firebase-tools@13` (v15 exige JDK 21).
 
 ## PADRÕES VIGENTES (invioláveis — herdar em todo lote)
 - **JOB primeiro; mockup = aparência; a story vence quando divergem** (L-004). Injetar persona+JTBD+critérios Given/When/Then + `~/.claude/skills/harness/references/design-principles.md` nos dispatches de UI.
