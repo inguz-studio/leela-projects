@@ -222,3 +222,89 @@ describe('Table', () => {
     expect(rows.length).toBe(2);
   });
 });
+
+// ── RESP-M5 · card-mode responsivo (<lg): a tabela densa empilha em cards no
+// mobile p/ não empurrar o documento à horizontal no 390. Desktop (lg+) intocado.
+// jsdom ignora CSS, então validamos o CONTRATO de classes/rótulos que o gate
+// visual em 390px exercita de verdade.
+describe('Table — card-mode responsivo (<lg)', () => {
+  function mobileLabels(container: HTMLElement): HTMLElement[] {
+    return Array.from(container.querySelectorAll('tbody td span')).filter((el) =>
+      el.className.includes('max-lg:block'),
+    ) as HTMLElement[];
+  }
+
+  it('wrap larga a moldura única e o scroll-x no mobile (max-lg:overflow-visible)', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    const wrapper = container.firstElementChild!;
+    // desktop preserva o scroll container; mobile o abandona (sem <table> larga)
+    expect(wrapper.className).toContain('overflow-x-auto');
+    expect(wrapper.className).toContain('max-lg:overflow-visible');
+    expect(wrapper.className).toContain('max-lg:bg-transparent');
+  });
+
+  it('thead some no mobile (max-lg:hidden) — rótulo migra p/ a célula', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    expect(container.querySelector('thead')?.className).toContain('max-lg:hidden');
+  });
+
+  it('linha do corpo vira card no mobile (max-lg:block + surface-raised + elev-1)', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    const row = container.querySelector('tbody tr');
+    expect(row?.className).toContain('max-lg:block');
+    expect(row?.className).toContain('max-lg:bg-[var(--surface-raised)]');
+    expect(row?.className).toContain('max-lg:shadow-elev-1');
+  });
+
+  it('célula vira linha rótulo↔valor no mobile (max-lg:flex justify-between)', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    const cell = container.querySelector('tbody td');
+    expect(cell?.className).toContain('max-lg:flex');
+    expect(cell?.className).toContain('max-lg:justify-between');
+  });
+
+  it('injeta o rótulo da coluna (header string) em cada célula do card', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    // 2 colunas string × 2 linhas = 4 rótulos; textos = os headers das colunas
+    const labels = mobileLabels(container);
+    expect(labels.map((l) => l.textContent)).toEqual(['Nome', 'Status', 'Nome', 'Status']);
+    // o rótulo é o header da coluna restilizado (uppercase, text-tertiary)
+    expect(labels[0]!.className).toContain('uppercase');
+    expect(labels[0]!.className).toContain('text-muted-foreground');
+  });
+
+  it('header ReactNode (checkbox "selecionar todos") NÃO vira rótulo — sem duplicar controle', () => {
+    const cols: TableColumn<Row>[] = [
+      {
+        key: 'sel',
+        header: <input type="checkbox" aria-label="Selecionar todos" />,
+        render: () => <input type="checkbox" aria-label="Selecionar linha" />,
+      },
+      { key: 'name', header: 'Nome', render: (r) => r.name },
+    ];
+    const { container } = render(<Table columns={cols} data={data} keyExtractor={(r) => r.id} />);
+    // só a coluna 'Nome' gera rótulo → 1 por linha × 2 linhas = 2
+    const labels = mobileLabels(container);
+    expect(labels).toHaveLength(2);
+    expect(labels.every((l) => l.textContent === 'Nome')).toBe(true);
+    // o checkbox "selecionar todos" continua único (thead), não replicado nos cards
+    expect(screen.getAllByLabelText('Selecionar todos')).toHaveLength(1);
+  });
+
+  it('desktop intocado: role=table e columnheaders seguem presentes', () => {
+    render(<Table columns={columns} data={data} keyExtractor={(r) => r.id} />);
+    // a semântica nativa de tabela permanece (jsdom não aplica display:block)
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(2);
+  });
+});

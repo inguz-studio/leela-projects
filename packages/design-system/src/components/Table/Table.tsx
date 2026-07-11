@@ -27,7 +27,19 @@
  *   - EmptyState integrado quando data=[]; aceita componente externo
  *   - Popover de ações por linha via renderActions
  *
- * A11y: role="table" nativo, th[scope], caption opcional.
+ * Responsivo (RESP-M5): em lg+ é a tabela densa nativa (INTOCADA). Abaixo de lg
+ * — mesmo breakpoint em que o shell troca o rail por drawer (preset L55-58) — a
+ * Table entra em CARD-MODE: cada linha empilha como card e cada célula vira uma
+ * linha "RÓTULO … valor" (o rótulo vem do header textual da coluna). Isso mata o
+ * min-content largo da <table> (~772px) que empurrava o documento à horizontal no
+ * 390 (defeito do gate visual). É a escolha da design-principles §(c) para tabela
+ * densa de leitura/varredura no celular (cards > scroll-x lateral para o job).
+ *
+ * A11y: role="table" nativo, th[scope], caption opcional. Em card-mode (<lg) o
+ * CSS reflui as linhas em cards; a LEITURA é preservada porque cada célula ganha
+ * o rótulo da coluna injetado (ex.: "STATUS Pago"), então cada card lê como um
+ * par rótulo→valor mesmo sem o thead. Headers ReactNode (checkbox "selecionar
+ * todos") NÃO viram rótulo — evita duplicar controle interativo por card.
  * AA: header text-tertiary e célula text-primary sobre surface-raised (wrap) —
  * na matriz; header-bg/row-hover são tints ≤2% provados por composição
  * alpha-sobre-surface no contrast.test.ts (tokens de mesa §).
@@ -53,14 +65,25 @@ const TableRoot = React.forwardRef<HTMLTableElement, TableRootProps>(
     // Wrap card do mockup (`.table-wrap`): a tabela é um card raised com
     // radius-lg + elev-1, não uma <table> nua sobre o fundo. overflow-x-auto
     // preserva o scroll horizontal E recorta os cantos arredondados.
+    //
+    // RESP-M5 (<lg = mesmo breakpoint do shell/drawer, preset L55-58): a Table
+    // densa vira CARD-MODE — cada linha empilha como card (ver Table body). O
+    // wrap perde a moldura única (cada linha ganha a sua) e larga o
+    // overflow-x-auto: sem <table> larga, o min-content de ~772px some e o
+    // documento não é mais empurrado à horizontal (defeito do gate visual).
     <div
       className={cn(
         'w-full overflow-x-auto',
         'bg-[var(--surface-raised)] rounded-[var(--radius-lg)] shadow-elev-1',
+        'max-lg:overflow-visible max-lg:bg-transparent max-lg:rounded-none max-lg:shadow-none',
         containerClassName,
       )}
     >
-      <table ref={ref} className={cn('w-full border-collapse', className)} {...props} />
+      <table
+        ref={ref}
+        className={cn('w-full border-collapse', 'max-lg:block max-lg:w-full', className)}
+        {...props}
+      />
     </div>
   ),
 );
@@ -69,13 +92,19 @@ TableRoot.displayName = 'TableRoot';
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => <thead ref={ref} className={className} {...props} />);
+>(({ className, ...props }, ref) => (
+  // RESP-M5: em card-mode (<lg) o thead some — cada célula do card carrega o
+  // próprio rótulo (ver TableCell), padrão acessível de tabela responsiva.
+  <thead ref={ref} className={cn('max-lg:hidden', className)} {...props} />
+));
 TableHeader.displayName = 'TableHeader';
 
 const TableBody = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => <tbody ref={ref} className={className} {...props} />);
+>(({ className, ...props }, ref) => (
+  <tbody ref={ref} className={cn('max-lg:block', className)} {...props} />
+));
 TableBody.displayName = 'TableBody';
 
 const TableCaption = React.forwardRef<
@@ -139,6 +168,12 @@ const TableCell = React.forwardRef<
       'leading-[var(--table-line-height)]',
       // Alias shadcn→brasa: foreground = text-primary
       'text-foreground',
+      // RESP-M5 card-mode (<lg): a célula vira linha "rótulo … valor" dentro do
+      // card. O rótulo (injetado na composição, só p/ header string) fica à
+      // esquerda; o valor à direita. Fio subtle separa as células; a última do
+      // card perde o fio (regra no <tr>).
+      'max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-[var(--spacing-4)]',
+      'max-lg:border-b max-lg:border-b-[var(--border-subtle)]',
       className,
     )}
     {...props}
@@ -265,6 +300,13 @@ function Table<TRow>({
               'h-[var(--table-row-height)]',
               'hover:bg-[var(--table-row-hover)]',
               clickable && 'cursor-pointer',
+              // RESP-M5 card-mode (<lg): a linha vira um card empilhado (raised +
+              // radius + elev-1, sem o divisor de linha) e a última célula do
+              // card perde o fio subtle. Em lg+ nada disso aplica — tabela densa
+              // intocada.
+              'max-lg:block max-lg:h-auto max-lg:mb-[var(--spacing-3)]',
+              'max-lg:rounded-[var(--radius-lg)] max-lg:bg-[var(--surface-raised)] max-lg:shadow-elev-1',
+              'max-lg:overflow-hidden max-lg:border-b-0 max-lg:[&>*:last-child]:border-b-0',
             )}
             {...(clickable
               ? {
@@ -275,13 +317,24 @@ function Table<TRow>({
                 }
               : {})}
           >
-            {columns.map((col) => (
-              <TableCell key={col.key} className={alignClass(col.align)}>
-                {col.render ? col.render(row) : defaultCell(row, col.key)}
-              </TableCell>
-            ))}
+            {columns.map((col) => {
+              // Rótulo do card só para header textual: um header ReactNode (ex.:
+              // checkbox "selecionar todos") NÃO vira rótulo — evita duplicar
+              // controles interativos em cada card (a11y). Zero mudança de API.
+              const mobileLabel = typeof col.header === 'string' ? col.header : null;
+              return (
+                <TableCell key={col.key} className={alignClass(col.align)}>
+                  {mobileLabel && (
+                    <span className="hidden max-lg:block shrink-0 text-left text-[length:var(--table-header-font-size)] font-[var(--font-weight-semibold)] uppercase tracking-[var(--table-header-spacing)] text-muted-foreground">
+                      {mobileLabel}
+                    </span>
+                  )}
+                  {col.render ? col.render(row) : defaultCell(row, col.key)}
+                </TableCell>
+              );
+            })}
             {hasActions && renderActions && (
-              <TableCell className="text-right">{renderActions(row)}</TableCell>
+              <TableCell className="text-right max-lg:justify-end">{renderActions(row)}</TableCell>
             )}
           </TableRow>
         ))}

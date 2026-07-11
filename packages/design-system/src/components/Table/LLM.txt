@@ -15,6 +15,9 @@ Tabela densa de listagem (linha 64px) com colunas declarativas, EmptyState autom
 ## Quando NÃO usar
 Não use para grids de cards (use CardEvento/CardDesafio em grid) nem para dados hierárquicos em árvore. Os primitivos TableRoot/TableHeader/TableRow etc. são INTERNOS e não exportados — não tente importá-los.
 
+## Responsivo (automático, sem prop)
+Em lg+ (>=1024px) é a tabela densa nativa. Abaixo de lg (mesmo breakpoint do drawer do shell) a Table entra em card-mode sozinha: cada linha empilha como card e cada célula vira "RÓTULO ... valor", com o rótulo herdado do header textual da coluna. Nada a configurar. Implicações ao definir columns: dê headers de texto curto (eles viram os rótulos dos cards no mobile); um header que é nó (ex.: checkbox "selecionar todos") NÃO gera rótulo — o controle não é replicado por card. Ordene as colunas por prioridade de leitura, porque no card elas empilham de cima para baixo na ordem do array.
+
 ## Props válidas
 Table<TRow> (genérico):
 - columns: TableColumn<TRow>[]   (obrigatório) — TableColumn = { key: string; header: string; width?: string | number; align?: 'left' | 'center' | 'right'; render?: (row: TRow) => React.ReactNode }

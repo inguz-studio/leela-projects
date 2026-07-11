@@ -118,3 +118,25 @@ function PaginadaDemo(): React.JSX.Element {
 
 /** Paginação com contador "mostrando X de Y". */
 export const Paginada: Story = { render: () => <PaginadaDemo /> };
+
+/**
+ * Card-mode responsivo (RESP-M5). Abaixo de `lg` (1024px, mesmo breakpoint em
+ * que o shell troca o rail por drawer) a tabela densa empilha: cada linha vira
+ * um card e cada célula uma linha "RÓTULO … valor". Some o min-content largo da
+ * `<table>` que empurrava o documento à horizontal no 390. Esta story abre já
+ * no viewport 390×844 — alterne para desktop no addon Viewport para ver a
+ * tabela densa nativa (intocada). Justificativa: design-principles §(c) —
+ * tabela densa de leitura/varredura no celular serve melhor como cards do que
+ * com scroll-x lateral.
+ */
+export const Responsiva: Story = {
+  parameters: {
+    viewport: {
+      viewports: {
+        mobile390: { name: 'Mobile 390×844', styles: { width: '390px', height: '844px' } },
+      },
+      defaultViewport: 'mobile390',
+    },
+  },
+  render: () => <ComAcoesDemo />,
+};

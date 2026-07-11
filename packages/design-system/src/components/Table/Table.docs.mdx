@@ -11,6 +11,12 @@ Tabela densa com linha de 64px, caption acessível, estado vazio integrado e slo
 
 <Canvas of={Stories.Densa} />
 
+## Responsivo — card-mode (&lt;lg)
+
+Em `lg`+ (≥1024px) a Table é a tabela densa nativa. Abaixo de `lg` — o mesmo breakpoint em que o shell troca o rail por drawer — ela entra em **card-mode**: cada linha empilha como card e cada célula vira uma linha `RÓTULO … valor`, com o rótulo herdado do header textual da coluna. Isso elimina o `min-content` largo da `<table>` que empurrava o documento à horizontal no mobile 390. Headers que são nós (ex.: checkbox "selecionar todos") não viram rótulo, para não duplicar controles nos cards. A story `Responsiva` abre no viewport 390×844.
+
+<Canvas of={Stories.Responsiva} />
+
 <Controls />
 
 ## Handoff para IA
