@@ -6,9 +6,14 @@
 
 import {
   chipVinculado,
+  chipForaDaFaixa,
+  chipOrfao,
+  derivarEstoqueChips,
   derivarPassosBalcao,
   presencaRegistrada,
+  type EstoqueChips,
   type Evento,
+  type FaixaChips,
   type Inscrito,
   type ItemKit,
   type KitInscrito,
@@ -191,6 +196,49 @@ export function ritmoAtendimentos(
     if (idx >= 0 && idx < janelaHoras) porHora[idx] = (porHora[idx] ?? 0) + 1;
   }
   return { porHora, ultimaHora: porHora[janelaHoras - 1] ?? 0, total: millis.length };
+}
+
+/**
+ * Alertas de chip do balcão (S204 · FRENTE F) — DERIVADOS dos vínculos reais
+ * (RN-203/205/207), nunca de contador fabricado. Cruza as regras canônicas do
+ * core (`chipOrfao`, `chipForaDaFaixa`, `derivarEstoqueChips`) para a mesma
+ * verdade que a Function usa. Sem `usaChip` não há alerta de chip; sem faixa
+ * configurada, `foraDaFaixa` e `estoque` ficam vazios (estado honesto).
+ */
+export interface AlertasChipBalcao {
+  /** Nomes: retiraram o kit mas não vincularam chip (chipOrfao · RN-207). */
+  orfaos: string[];
+  /** Nomes: chip vinculado FORA do lote do evento (chipForaDaFaixa). */
+  foraDaFaixa: string[];
+  /** Fotografia do estoque (derivarEstoqueChips) — null sem faixa configurada. */
+  estoque: EstoqueChips | null;
+}
+
+/**
+ * Deriva os alertas de chip a partir do pool de inscritos + faixa do evento.
+ * @pure
+ */
+export function alertasChipBalcao(
+  inscritos: readonly Inscrito[],
+  faixaChips: FaixaChips | null,
+  usaChip: boolean,
+): AlertasChipBalcao {
+  if (!usaChip) return { orfaos: [], foraDaFaixa: [], estoque: null };
+  const orfaos: string[] = [];
+  const foraDaFaixa: string[] = [];
+  for (const i of inscritos) {
+    if (i.status === 'cancelado') continue;
+    if (chipOrfao(i, usaChip)) orfaos.push(i.atletaNome);
+    if (
+      faixaChips !== null &&
+      chipVinculado(i) &&
+      chipForaDaFaixa(i.chipNumero as string, faixaChips)
+    ) {
+      foraDaFaixa.push(i.atletaNome);
+    }
+  }
+  const estoque = faixaChips !== null ? derivarEstoqueChips(inscritos, faixaChips) : null;
+  return { orfaos, foraDaFaixa, estoque };
 }
 
 /**

@@ -23,9 +23,57 @@ export function formatBRL(valor: number): string {
   }).format(valor);
 }
 
+/**
+ * Formata um valor em reais (BRL) COM centavos (2 casas). Para o slide-in
+ * `[pag]` (S203-T3), onde dinheiro é exato: 189 → "R$ 189,00"; 14.18 →
+ * "R$ 14,18". Distinto de `formatBRL` (agregados arredondados do dashboard).
+ * @pure
+ */
+export function formatDinheiro(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(valor);
+}
+
 /** Formata um inteiro com separador de milhar pt-BR (453 → "453"; 1200 → "1.200"). */
 export function formatInt(valor: number): string {
   return new Intl.NumberFormat('pt-BR').format(valor);
+}
+
+/**
+ * Data + hora curtas "01 fev 2026 · 14:30" (fuso do evento, pinado). Para a
+ * data de pagamento do slide-in `[pag]`. `—` sem data. @pure
+ */
+export function formatDataHoraCurta(data: Timestamp | null | undefined): string {
+  if (!data || typeof data.toDate !== 'function') return '—';
+  const d = data.toDate();
+  const dia = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: FUSO_EVENTO,
+  }).format(d);
+  const hora = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: FUSO_EVENTO,
+  }).format(d);
+  return `${dia} · ${hora}`;
+}
+
+/**
+ * Nascimento date-only `yyyy-mm-dd` → `dd/mm/yyyy` por manipulação de STRING
+ * (nunca `new Date`: dia civil não tem fuso — parsear como Date deslocaria
+ * para o dia anterior em UTC-negativo, mesma classe de bug do review #02).
+ * Entrada fora do formato retorna `—`. @pure
+ */
+export function formatNascimento(nascimentoISO: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(nascimentoISO);
+  if (!m) return '—';
+  return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
 /**
@@ -68,6 +116,26 @@ export function diasParaEvento(
 ): number | null {
   if (!data || typeof data.toDate !== 'function') return null;
   return diasCivisAte(data.toDate(), agora);
+}
+
+/**
+ * Dia civil `yyyy-mm-dd` do cronograma de entrega por extenso pt-BR
+ * ("Sábado, 25 de abril"). O dia da semana de uma data CIVIL independe do fuso
+ * (25/04/2026 é sábado em qualquer lugar), então formatamos ao meio-dia UTC e
+ * exibimos em UTC — nunca cruza fronteira de dia nem depende do fuso do runtime
+ * (mesmo espírito DST-safe do review #02). String vazia/ inválida → "—". @pure
+ */
+export function formatDiaCronograma(dia: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return '—';
+  const d = new Date(`${dia}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return '—';
+  const s = new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    timeZone: 'UTC',
+  }).format(d);
+  return `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
 }
 
 /**

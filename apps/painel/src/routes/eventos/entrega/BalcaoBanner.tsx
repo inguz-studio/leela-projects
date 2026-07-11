@@ -1,59 +1,99 @@
 // =============================================================================
-// BalcaoBanner — faixa de contexto do balcão (S204 · gap visual). Dois estados
-// honestos derivados do MESMO dado real do evento (data/local/status):
-//   • janela ABERTA  → "Entrega de kit ativa" (tom brand) + prova/local/contagem
-//   • janela FECHADA → aviso "ainda não abriu" (tom alerta).
-// NÃO fabrica cronograma de entrega (Dia N de M / horário / venue próprio) —
-// o modelo `Evento` não carrega janela de entrega; ver REPORT (dep. de modelo).
+// BalcaoBanner — faixa de contexto do balcão (S204 · FRENTE F). Consome o
+// cronograma de entrega REAL do evento (F-T1: `janelasEntrega`) e as derivações
+// PURAS do core (`janelaEntregaAtiva`, `diaDaEntrega`, `proximaJanelaEntrega`).
+// Quatro estados honestos — nenhum fabrica "Dia N":
+//   • ATIVA agora    → "Entrega ativa · Dia N de M · até HH:mm · <local>" (brand)
+//   • fechada c/ prox → "Próxima janela: <dia> · HH:mm · <local>" (alerta)
+//   • encerrada       → todas as janelas já passaram (neutro)
+//   • sem cronograma  → EmptyState honesto (nenhuma janela configurada)
+// `agora` é injetável (default new Date()) para o gate visual ser determinístico.
 // =============================================================================
 
-import { Badge } from '@leela/design-system';
+import { Badge, EmptyState } from '@leela/design-system';
 import type { Evento } from '@leela/core';
-import { janelaEntregaAberta } from '../_lib/balcao';
-import { diasParaEvento, faltamDiasLabel, formatDataEvento } from '../_lib/format';
+import { janelaEntregaAtiva, diaDaEntrega, proximaJanelaEntrega } from '@leela/core';
+import { formatDiaCronograma } from '../_lib/format';
 
 export interface BalcaoBannerProps {
-  evento: Evento;
+  /** Só o cronograma é lido — Pick estreito facilita showroom e teste. */
+  evento: Pick<Evento, 'janelasEntrega'>;
+  /** "Agora" injetável (determinismo do gate visual). Default: relógio real. */
+  agora?: Date | undefined;
 }
 
-export function BalcaoBanner({ evento }: BalcaoBannerProps): JSX.Element {
-  const aberta = janelaEntregaAberta(evento);
-  const contagem = faltamDiasLabel(diasParaEvento(evento.data));
-  const prova = formatDataEvento(evento.data);
-  const local = evento.local || '—';
+export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps): JSX.Element {
+  const janelas = evento.janelasEntrega ?? [];
 
-  if (!aberta) {
+  // (c) Sem cronograma configurado → estado honesto, nunca "Dia N" fabricado.
+  if (janelas.length === 0) {
+    return (
+      <EmptyState
+        title="Cronograma de entrega não configurado"
+        description="Defina as janelas de entrega do evento (dia, horário e local) para o balcão exibir a contagem de dias e liberar os atendimentos."
+      />
+    );
+  }
+
+  const ativa = janelaEntregaAtiva(janelas, agora);
+  const dia = diaDaEntrega(janelas, agora);
+
+  // (a) Janela ATIVA agora → "Entrega ativa · Dia N de M · até HH:mm · <local>".
+  if (ativa) {
+    const diaLabel = dia ? ` · Dia ${dia.dia} de ${dia.total}` : '';
     return (
       <div
-        role="alert"
-        className="flex items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-4)]"
+        role="status"
+        className="flex items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-brand)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
       >
-        <Badge variant="alerta">Fechada</Badge>
+        <Badge variant="brand">Ativa</Badge>
         <div className="flex flex-col gap-[var(--spacing-1)]">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--feedback-warning-fg)]">
-            A janela de entrega ainda não abriu
+          <span className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Entrega ativa{diaLabel}
           </span>
-          <span className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
-            Prova {prova} · {local} · atendimentos liberam a partir de 2 dias antes do evento.
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            até {ativa.horaFim} · {ativa.local}
           </span>
         </div>
       </div>
     );
   }
 
+  const proxima = proximaJanelaEntrega(janelas, agora);
+
+  // (b) Fora de janela, mas há próxima → aponta quando/onde abre.
+  if (proxima) {
+    return (
+      <div
+        role="status"
+        className="flex items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-4)]"
+      >
+        <Badge variant="alerta">Fechada</Badge>
+        <div className="flex flex-col gap-[var(--spacing-1)]">
+          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--feedback-warning-fg)]">
+            Janela de entrega fechada
+          </span>
+          <span className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
+            Próxima janela: {formatDiaCronograma(proxima.dia)} · {proxima.horaInicio} · {proxima.local}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // (d) Cronograma existe, mas todas as janelas já passaram → encerrada.
   return (
     <div
       role="status"
-      className="flex items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-brand)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
+      className="flex items-center gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-4)]"
     >
-      <Badge variant="brand">Ativa</Badge>
+      <Badge variant="neutro">Encerrada</Badge>
       <div className="flex flex-col gap-[var(--spacing-1)]">
         <span className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Entrega de kit ativa
+          Entrega encerrada
         </span>
         <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          Prova {prova} · {local}
-          {contagem ? ` · ${contagem}` : ''}
+          Todas as janelas de entrega deste evento já passaram.
         </span>
       </div>
     </div>

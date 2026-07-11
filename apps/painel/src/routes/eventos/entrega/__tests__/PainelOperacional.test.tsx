@@ -12,7 +12,7 @@ describe('PainelOperacional', () => {
       mkInscrito({ id: '1', kit: 'kit_ouro', chipNumero: 'C1', kitEntregueEm: h(0.5), checkinEm: h(0.5) }),
       mkInscrito({ id: '2', kit: 'kit_prata', chipNumero: null }),
     ];
-    render(<PainelOperacional inscritos={pool} ultimosAtendidos={[]} usaChip />);
+    render(<PainelOperacional inscritos={pool} ultimosAtendidos={[]} usaChip faixaChips={null} />);
     expect(screen.getByText('Kits entregues')).toBeInTheDocument();
     expect(screen.getByText('Chips vinculados')).toBeInTheDocument();
     expect(screen.getByText('Ritmo')).toBeInTheDocument();
@@ -26,17 +26,59 @@ describe('PainelOperacional', () => {
     const pool = [
       mkInscrito({ id: '1', kit: 'kit_ouro', chipNumero: null, kitEntregueEm: h(0.2), checkinEm: h(0.2) }),
     ];
-    render(<PainelOperacional inscritos={pool} ultimosAtendidos={[]} usaChip />);
+    render(<PainelOperacional inscritos={pool} ultimosAtendidos={[]} usaChip faixaChips={null} />);
     const alertas = screen.getByLabelText('Alertas do balcão');
     expect(within(alertas).getByText('Chips')).toBeInTheDocument();
     expect(within(alertas).getByText('Marina Silva', { exact: false })).toBeInTheDocument();
   });
 
+  it('alerta de estoque esgotado quando o lote está todo vinculado', () => {
+    // Faixa de 1 chip (8001..8001) já ocupada → esgotado.
+    const pool = [
+      mkInscrito({ id: '1', chipNumero: '8001', kitEntregueEm: h(0.2), checkinEm: h(0.2) }),
+    ];
+    render(
+      <PainelOperacional
+        inscritos={pool}
+        ultimosAtendidos={[]}
+        usaChip
+        faixaChips={{ inicio: 8001, fim: 8001 }}
+      />,
+    );
+    const alertas = screen.getByLabelText('Alertas do balcão');
+    expect(within(alertas).getByText('Estoque')).toBeInTheDocument();
+    expect(within(alertas).getByText('Chips esgotados', { exact: false })).toBeInTheDocument();
+  });
+
+  it('alerta de chip fora da faixa do evento (chipForaDaFaixa)', () => {
+    const pool = [
+      mkInscrito({ id: '1', atletaNome: 'João', chipNumero: '9999', kitEntregueEm: h(0.2), checkinEm: h(0.2) }),
+    ];
+    render(
+      <PainelOperacional
+        inscritos={pool}
+        ultimosAtendidos={[]}
+        usaChip
+        faixaChips={{ inicio: 8001, fim: 8600 }}
+      />,
+    );
+    const alertas = screen.getByLabelText('Alertas do balcão');
+    expect(within(alertas).getByText('Fora do lote')).toBeInTheDocument();
+    expect(within(alertas).getByText('João', { exact: false })).toBeInTheDocument();
+  });
+
   it('sem pendências → mensagem honesta', () => {
     const pool = [
-      mkInscrito({ id: '1', kit: 'kit_ouro', chipNumero: 'C1', kitEntregueEm: h(0.2), checkinEm: h(0.2) }),
+      mkInscrito({ id: '1', kit: 'kit_ouro', chipNumero: '8001', kitEntregueEm: h(0.2), checkinEm: h(0.2) }),
     ];
-    render(<PainelOperacional inscritos={pool} ultimosAtendidos={[]} usaChip />);
+    render(
+      <PainelOperacional
+        inscritos={pool}
+        ultimosAtendidos={[]}
+        usaChip
+        faixaChips={{ inicio: 8001, fim: 8600 }}
+      />,
+    );
     expect(screen.getByText('Sem pendências no balcão.')).toBeInTheDocument();
   });
 });

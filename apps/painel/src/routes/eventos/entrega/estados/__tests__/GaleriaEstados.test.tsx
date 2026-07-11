@@ -4,11 +4,26 @@ import userEvent from '@testing-library/user-event';
 import { GaleriaEstados } from '../GaleriaEstados';
 
 describe('GaleriaEstados (§2.9 / RN-208)', () => {
-  it('lista os 5 estados no índice', () => {
+  it('lista os estados de atendimento + banner de entrega no índice', () => {
     render(<GaleriaEstados />);
-    for (const titulo of ['Vazio', 'Sem kit', 'Completo (já atendido)', 'Conflito de chip', 'Fora da janela']) {
+    for (const titulo of [
+      'Vazio',
+      'Sem kit',
+      'Completo (já atendido)',
+      'Conflito de chip',
+      'Fora da janela',
+      'Banner · Entrega ativa (Dia N de M)',
+      'Banner · Próxima janela',
+      'Banner · Sem cronograma',
+    ]) {
       expect(screen.getByRole('button', { name: titulo })).toBeInTheDocument();
     }
+  });
+
+  it('banner ativo mostra "Dia N de M" a partir do cronograma real', async () => {
+    render(<GaleriaEstados />);
+    await userEvent.click(screen.getByRole('button', { name: 'Banner · Entrega ativa (Dia N de M)' }));
+    expect(screen.getByText('Entrega ativa · Dia 2 de 2')).toBeInTheDocument();
   });
 
   it('mostra apenas um estado por vez (nunca empilhados)', async () => {

@@ -27,6 +27,8 @@ export interface BalcaoViewProps {
     sobrescrever?: boolean,
   ) => Promise<VincularChipResult>;
   onRegistrar: (inscritoId: string) => Promise<RegistrarEntregaResult>;
+  /** "Agora" injetável (determinismo do banner p/ o gate visual). */
+  agora?: Date | undefined;
 }
 
 export function BalcaoView({
@@ -37,6 +39,7 @@ export function BalcaoView({
   error,
   onVincular,
   onRegistrar,
+  agora,
 }: BalcaoViewProps): JSX.Element {
   const [ultimos, setUltimos] = React.useState<string[]>([]);
 
@@ -55,7 +58,7 @@ export function BalcaoView({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      <BalcaoBanner evento={evento} />
+      <BalcaoBanner evento={evento} agora={agora} />
 
       <div className="grid grid-cols-1 gap-[var(--spacing-6)] lg:grid-cols-[3fr_2fr]">
         <AtendimentoPanel
@@ -70,6 +73,7 @@ export function BalcaoView({
           inscritos={inscritos}
           ultimosAtendidos={ultimos}
           usaChip={evento.usaChip}
+          faixaChips={evento.faixaChips ?? null}
         />
       </div>
 

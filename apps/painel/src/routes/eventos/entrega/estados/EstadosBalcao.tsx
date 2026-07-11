@@ -6,9 +6,10 @@
 
 import * as React from 'react';
 import { Badge, Button, ConfirmModal, EmptyState, Stepper } from '@leela/design-system';
-import type { Inscrito } from '@leela/core';
+import type { Inscrito, JanelaEntrega } from '@leela/core';
 import { kitInscritoBadge } from '../../_lib/kitLabels';
 import { passosStepper } from '../../_lib/balcao';
+import { BalcaoBanner } from '../BalcaoBanner';
 
 /** Estado de exemplo (amostra) — dados ilustrativos da galeria. */
 const AMOSTRA: Pick<Inscrito, 'atletaNome' | 'modalidade' | 'kit' | 'chipNumero'> = {
@@ -131,6 +132,42 @@ export function EstadoForaJanela(): JSX.Element {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Banner de entrega (FRENTE F) — showroom dos estados do cronograma REAL. Cada
+// tela fixa `agora` para ser determinística (o mesmo eixo do gate visual).
+// FUSO_EVENTO = America/Sao_Paulo (UTC-3): 13:00Z = 10:00 local em 25/04/2026.
+// ---------------------------------------------------------------------------
+
+const BANNER_JANELAS: JanelaEntrega[] = [
+  { dia: '2026-04-24', horaInicio: '10:00', horaFim: '18:00', local: 'Arena da prova — tenda 1' },
+  { dia: '2026-04-25', horaInicio: '08:00', horaFim: '20:00', local: 'Arena da prova — tenda 3' },
+];
+
+/** 6 · Banner ATIVO — "Entrega ativa · Dia N de M · até HH:mm · local". */
+export function EstadoBannerAtivo(): JSX.Element {
+  return (
+    <BalcaoBanner
+      evento={{ janelasEntrega: BANNER_JANELAS }}
+      agora={new Date('2026-04-25T13:00:00Z')}
+    />
+  );
+}
+
+/** 7 · Banner PRÓXIMA janela — fora do horário, mas há abertura à frente. */
+export function EstadoBannerProxima(): JSX.Element {
+  return (
+    <BalcaoBanner
+      evento={{ janelasEntrega: [BANNER_JANELAS[1]!] }}
+      agora={new Date('2026-04-25T09:00:00Z')}
+    />
+  );
+}
+
+/** 8 · Banner SEM cronograma — EmptyState honesto (nunca "Dia N" fabricado). */
+export function EstadoBannerSemCronograma(): JSX.Element {
+  return <BalcaoBanner evento={{ janelasEntrega: [] }} agora={new Date('2026-04-25T13:00:00Z')} />;
+}
+
 /** Estado macro da galeria (índice §2.9). */
 export interface EstadoGaleria {
   id: string;
@@ -138,11 +175,18 @@ export interface EstadoGaleria {
   Componente: React.ComponentType;
 }
 
-/** Registro dos 5 estados dedicados — fonte única do índice da galeria. */
+/** Registro dos estados dedicados — fonte única do índice da galeria. */
 export const ESTADOS_BALCAO: readonly EstadoGaleria[] = [
   { id: 'vazio', titulo: 'Vazio', Componente: EstadoVazio },
   { id: 'sem-kit', titulo: 'Sem kit', Componente: EstadoSemKit },
   { id: 'completo', titulo: 'Completo (já atendido)', Componente: EstadoCompleto },
   { id: 'conflito', titulo: 'Conflito de chip', Componente: EstadoConflito },
   { id: 'fora-janela', titulo: 'Fora da janela', Componente: EstadoForaJanela },
+  { id: 'banner-ativo', titulo: 'Banner · Entrega ativa (Dia N de M)', Componente: EstadoBannerAtivo },
+  { id: 'banner-proxima', titulo: 'Banner · Próxima janela', Componente: EstadoBannerProxima },
+  {
+    id: 'banner-sem-cronograma',
+    titulo: 'Banner · Sem cronograma',
+    Componente: EstadoBannerSemCronograma,
+  },
 ];

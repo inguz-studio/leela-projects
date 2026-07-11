@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  alertasChipBalcao,
   estadoBalcao,
   itensDoKit,
   janelaEntregaAberta,
@@ -150,5 +151,59 @@ describe('kitDocId / itensDoKit (RN-215)', () => {
   });
   it('sem_kit → nenhum item', () => {
     expect(itensDoKit([mkItem({ kits: ['sem-kit'] })], 'sem_kit')).toEqual([]);
+  });
+});
+
+describe('alertasChipBalcao (FRENTE F — chip órfão / estoque / fora da faixa)', () => {
+  const faixa = { inicio: 8001, fim: 8600 };
+
+  it('usaChip=false → nenhum alerta e estoque null', () => {
+    const pool = [mkInscrito({ chipNumero: null, kitEntregueEm: ts(AGORA) })];
+    expect(alertasChipBalcao(pool, faixa, false)).toEqual({
+      orfaos: [],
+      foraDaFaixa: [],
+      estoque: null,
+    });
+  });
+
+  it('chip órfão: retirou kit sem vincular chip (chipOrfao · RN-207)', () => {
+    const pool = [
+      mkInscrito({ id: '1', atletaNome: 'Ana', chipNumero: null, kitEntregueEm: ts(AGORA) }),
+      mkInscrito({ id: '2', atletaNome: 'Bia', chipNumero: '8100', kitEntregueEm: ts(AGORA) }),
+    ];
+    const out = alertasChipBalcao(pool, faixa, true);
+    expect(out.orfaos).toEqual(['Ana']);
+    expect(out.foraDaFaixa).toEqual([]);
+  });
+
+  it('chip fora da faixa é sinalizado (chipForaDaFaixa) e não consome estoque', () => {
+    const pool = [mkInscrito({ atletaNome: 'Caio', chipNumero: '9999', kitEntregueEm: ts(AGORA) })];
+    const out = alertasChipBalcao(pool, faixa, true);
+    expect(out.foraDaFaixa).toEqual(['Caio']);
+    expect(out.estoque?.foraDaFaixa).toBe(1);
+    expect(out.estoque?.vinculados).toBe(0);
+  });
+
+  it('estoque esgotado quando a faixa de 1 chip está ocupada', () => {
+    const pool = [mkInscrito({ chipNumero: '8001', kitEntregueEm: ts(AGORA) })];
+    const out = alertasChipBalcao(pool, { inicio: 8001, fim: 8001 }, true);
+    expect(out.estoque?.esgotado).toBe(true);
+    expect(out.estoque?.disponiveis).toBe(0);
+  });
+
+  it('cancelado não conta como órfão nem consome estoque', () => {
+    const pool = [
+      mkInscrito({ atletaNome: 'Duda', chipNumero: null, kitEntregueEm: ts(AGORA), status: 'cancelado' }),
+    ];
+    const out = alertasChipBalcao(pool, faixa, true);
+    expect(out.orfaos).toEqual([]);
+    expect(out.estoque?.vinculados).toBe(0);
+  });
+
+  it('sem faixa configurada → estoque null, mas órfão ainda alerta', () => {
+    const pool = [mkInscrito({ atletaNome: 'Edu', chipNumero: null, kitEntregueEm: ts(AGORA) })];
+    const out = alertasChipBalcao(pool, null, true);
+    expect(out.orfaos).toEqual(['Edu']);
+    expect(out.estoque).toBeNull();
   });
 });
