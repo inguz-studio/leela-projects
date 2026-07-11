@@ -57,3 +57,6 @@ storybook-static/
 .nirvana/squads/
 .nirvana/businesses/
 .nirvana/mind-clones/
+
+# Config do Obsidian (local)
+.obsidian/
