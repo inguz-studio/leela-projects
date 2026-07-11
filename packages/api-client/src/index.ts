@@ -222,6 +222,21 @@ export {
 export type { SalvarKitInput, SalvarItemKitInput } from './eventos/kits';
 
 // ---------------------------------------------------------------------------
+// Pedidos — kernel `pedidos/{id}` + `pagamentos/{id}` (ADR-011 · FABLE-A-T1)
+// SÓ leitura: escrita de pedido/pagamento é EXCLUSIVA de Function (Rules).
+// ---------------------------------------------------------------------------
+export {
+  getPedido,
+  listarPedidosDoEvento,
+  getPedidoDoInscrito,
+  getPagamento,
+} from './pedidos';
+export type {
+  ListarPedidosDoEventoParams,
+  GetPedidoDoInscritoParams,
+} from './pedidos';
+
+// ---------------------------------------------------------------------------
 // Auth helpers — sessão, login, logout, claims (LEELA-S000-2-T2)
 // ---------------------------------------------------------------------------
 export {

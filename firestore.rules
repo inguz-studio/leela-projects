@@ -848,6 +848,32 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // `pedidos/{pedidoId}` — pedido em grupo (ADR-011 · FABLE-A-T1).
+    //
+    // Coleção ROOT tenant-scoped por campo (`tenantId` + `eventoId`
+    // denormalizados — mesma fronteira de `pagamentos`).
+    //
+    // LEITURA: nesta fase SÓ o organizador — papel de gestão do tenant dono
+    // (tenant_owner/tenant_staff via isTenantWriter) ou platform_admin.
+    // Guarda de PAPEL de propósito (review r1 fix 3): claim.tenantId puro
+    // deixaria um token `role:'athlete'` com tenantId forjado ler, e
+    // promoter (que lê outras coleções do tenant) enxergaria estado
+    // FINANCEIRO — aqui vale a taxonomia do arquivo: owner/staff gerem,
+    // promoter não vê dinheiro pelo cliente nesta fase.
+    // TODO(E12/checkout): o responsável/atleta lê o PRÓPRIO pedido só na
+    // story do checkout, com teste (mesmo gate do TODO de leitura pública
+    // de eventos). NÃO abrir antes.
+    //
+    // ESCRITA: NUNCA pelo cliente — estado financeiro (status, valorTotal,
+    // pagamentoRef, formaPagamento, parcelas — CAMPOS_FUNCTION_PEDIDO no
+    // core) é de escrita EXCLUSIVA de Function (Admin SDK bypassa Rules).
+    // Negado até para platform_admin via client SDK (mesmo padrão de
+    // `pagamentos` e do dashboard) — pedido forjado é fraude financeira.
+    match /pedidos/{pedidoId} {
+      allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
+      allow write: if false;
+    }
+
     // `equipe` — gestão de time do tenant: write restrito ao tenant_owner
     // (staff/promoter não gerenciam a própria equipe pelo cliente).
     match /equipe/{docId} {

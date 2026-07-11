@@ -298,6 +298,46 @@ export {
 } from './eventos/kit';
 
 // ---------------------------------------------------------------------------
+// Módulo Pedidos (ADR-011 · LEELA-FABLE-A-T1)
+// Kernel `pedidos/{id}` — pedido em grupo (1 responsável, N inscritos) +
+// pagamento/conciliação (`pagamentos/{id}`). Estado financeiro: escrita
+// EXCLUSIVA de Function; cliente só lê (Rules).
+// ---------------------------------------------------------------------------
+export type { Pedido, ResponsavelPedido, StatusPedido } from './pedidos/pedido';
+export {
+  STATUS_PEDIDO,
+  isStatusPedido,
+  CAMPOS_FUNCTION_PEDIDO,
+  pedidoDeGrupo,
+  pedidoPago,
+  pedidoContemInscrito,
+  parsePedido,
+} from './pedidos/pedido';
+
+export type {
+  Pagamento,
+  Conciliacao,
+  CupomAplicado,
+  CartaoPagamento,
+  FormaPagamento,
+  StatusPagamento,
+  GatewayPagamento,
+} from './pedidos/pagamento';
+export {
+  FORMAS_PAGAMENTO,
+  isFormaPagamento,
+  STATUS_PAGAMENTO,
+  isStatusPagamento,
+  GATEWAYS_PAGAMENTO,
+  isGatewayPagamento,
+  pagamentoConfirmado,
+  pagamentoConciliado,
+  valorPagoPeloComprador,
+  parseConciliacao,
+  parsePagamento,
+} from './pedidos/pagamento';
+
+// ---------------------------------------------------------------------------
 // Plataforma multi-tenant (ADR-009 · E16-S1600)
 // ---------------------------------------------------------------------------
 export type { TenantStatus, TenantTipo, Tenant, TenantInput } from './platform/tenant';
