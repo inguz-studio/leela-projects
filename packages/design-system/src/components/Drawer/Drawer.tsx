@@ -81,7 +81,7 @@ function Drawer({
         <Dialog.Overlay
           data-testid="drawer-overlay"
           className={cn(
-            'fixed inset-0 z-50',
+            'fixed inset-0 z-40',
             'bg-[var(--modal-overlay-bg)]',
             'backdrop-blur-[var(--modal-overlay-blur)]',
             // Motion: fade da cortina, gated por motion-safe.
@@ -93,7 +93,7 @@ function Drawer({
           // Sem description: desliga o aria-describedby default do Radix.
           aria-describedby={undefined}
           className={cn(
-            'fixed z-50 flex flex-col',
+            'fixed z-40 flex flex-col',
             'h-full max-w-[85vw]',
             // Superfície do painel: base (a Sidebar fecha com a hairline direita).
             'bg-[var(--surface-base)]',
