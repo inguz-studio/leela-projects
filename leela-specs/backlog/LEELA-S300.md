@@ -14,6 +14,8 @@ tags: [leela, story]
 # LEELA-S300 · Página de vendas (seções, lotes, percursos, cupons, SEO)
 **Como** Organizador de Evento, **quero** configurar a página pública de vendas do evento (seções web/app, lotes, percursos, cupons, SEO), **para** maximizar a conversão de visitante em inscrito.
 
+> **DECISÃO DE MODELO (ADR-012, travada 2026-07-11):** o **lote pertence à modalidade** — cada percurso tem sua própria sequência de lotes (Lote 1/2/3), com janela de data/hora, vaga e preço próprios; a virada (RN-300) opera por (modalidade, lote). Ver [[ADR-lotes-por-modalidade]]. Reflete em S300-T1/T2/T4/T6 (o modal de lote é dentro da modalidade; a Function de virada conta por modalidade×lote) e no financeiro S207 (breakdown = matriz modalidade×lote).
+
 ## Critérios de aceite
 - Dado o editor, quando abro, então vejo as seções agrupadas por canal (Essenciais, Só landing, Sistema/Checkout travada).
 - Dado uma seção não travada, quando alterno o toggle, então ativa/desativa; Checkout permanece sempre travada.
