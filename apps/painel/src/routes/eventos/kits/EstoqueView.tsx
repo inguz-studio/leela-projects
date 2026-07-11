@@ -173,11 +173,18 @@ export function EstoqueView({
             modalidade.
           </p>
         </div>
+        {/* responsive="scroll" (revisão r1 A2): esta é a ÚNICA consumidora que é
+            matriz de comparação em grade (kit×modalidade). Virar card no mobile
+            (default) apagaria a leitura "qual modalidade está curta entre os
+            kits". Mantemos a grade densa e rolamos na horizontal DENTRO do wrap
+            (scroll-x contido, nunca no documento). design-principles §(c) reserva
+            TABELA — não cards — justamente p/ comparação em grade. */}
         <Table
           columns={columns}
           data={linhas}
           keyExtractor={(r) => r.id}
           caption="Retiradas e saldo por kit e modalidade"
+          responsive="scroll"
         />
       </section>
 

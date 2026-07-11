@@ -348,6 +348,25 @@ export function InscritosView({
         ))}
       </div>
 
+      {/* A1 (revisão r1) · "selecionar todos" no MOBILE: o checkbox de selecionar
+          a página inteira vive no header da tabela (col.__select), e o thead some
+          no card-mode (<lg). Reexpomos o MESMO controle — ligado ao mesmo estado/
+          handler (todosMarcadosNaPagina / algunsMarcadosNaPagina / alternarPagina)
+          — só no mobile (lg:hidden), preservando o JTBD de seleção em massa (P5
+          inadimplência) no celular. No desktop o header cobre, então não duplica. */}
+      {pageItems.length > 0 && (
+        <label className="flex items-center gap-[var(--spacing-2)] lg:hidden">
+          <Checkbox
+            checked={todosMarcadosNaPagina}
+            indeterminate={algunsMarcadosNaPagina}
+            onChange={alternarPagina}
+          />
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Selecionar todos da página
+          </span>
+        </label>
+      )}
+
       {renderTabela(pageItems)}
 
       {filtrados.length > INSCRITOS_PAGE_SIZE && (

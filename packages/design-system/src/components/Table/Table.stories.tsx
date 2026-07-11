@@ -140,3 +140,53 @@ export const Responsiva: Story = {
   },
   render: () => <ComAcoesDemo />,
 };
+
+interface LinhaMatriz {
+  id: string;
+  kit: string;
+  '5k': string;
+  '10k': string;
+  '21k': string;
+  '42k': string;
+}
+
+const MATRIZ: LinhaMatriz[] = [
+  { id: '1', kit: 'Kit Ouro', '5k': '12 / 20', '10k': '30 / 40', '21k': '8 / 25', '42k': '4 / 10' },
+  { id: '2', kit: 'Kit Prata', '5k': '18 / 18', '10k': '22 / 35', '21k': '15 / 20', '42k': '2 / 8' },
+  { id: '3', kit: 'Kit Bronze', '5k': '9 / 15', '10k': '11 / 30', '21k': '6 / 12', '42k': '1 / 5' },
+];
+
+const MATRIZ_COLUMNS: TableColumn<LinhaMatriz>[] = [
+  { key: 'kit', header: 'Kit', render: (r) => r.kit },
+  { key: '5k', header: '5k', align: 'right', render: (r) => r['5k'] },
+  { key: '10k', header: '10k', align: 'right', render: (r) => r['10k'] },
+  { key: '21k', header: '21k', align: 'right', render: (r) => r['21k'] },
+  { key: '42k', header: '42k', align: 'right', render: (r) => r['42k'] },
+];
+
+/**
+ * Opt-out `responsive="scroll"` (revisão r1). Matriz de comparação em grade
+ * (kit×modalidade): virar card apagaria a leitura "qual modalidade está curta
+ * entre os kits". Aqui a grade densa fica no mobile e rola na horizontal DENTRO
+ * do wrap (scroll-x contido no card, nunca no documento). Abre no viewport
+ * 390×844 — arraste a tabela para o lado para comparar as colunas.
+ */
+export const ScrollContida: Story = {
+  parameters: {
+    viewport: {
+      viewports: {
+        mobile390: { name: 'Mobile 390×844', styles: { width: '390px', height: '844px' } },
+      },
+      defaultViewport: 'mobile390',
+    },
+  },
+  render: () => (
+    <Table
+      caption="Estoque por kit e modalidade"
+      columns={MATRIZ_COLUMNS}
+      data={MATRIZ}
+      keyExtractor={(row) => row.id}
+      responsive="scroll"
+    />
+  ),
+};

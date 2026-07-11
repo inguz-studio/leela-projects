@@ -35,6 +35,14 @@
  * 390 (defeito do gate visual). É a escolha da design-principles §(c) para tabela
  * densa de leitura/varredura no celular (cards > scroll-x lateral para o job).
  *
+ * Opt-out `responsive` (revisão r1): matriz de comparação em grade (ex.: estoque
+ * kit×modalidade) PERDE a leitura "qual coluna está curta entre as linhas" ao
+ * virar card. Para esse caso — o único onde design-principles §(c) reserva TABELA
+ * e não cards — `responsive="scroll"` MANTÉM a grade densa no mobile e rola na
+ * horizontal DENTRO do wrap (overflow-x-auto CONTIDO no card, nunca no body/
+ * documento). Default `responsive="card"` = comportamento acima. Use "scroll" só
+ * em matriz de comparação; para lista de leitura, card serve melhor o job.
+ *
  * A11y: role="table" nativo, th[scope], caption opcional. Em card-mode (<lg) o
  * CSS reflui as linhas em cards; a LEITURA é preservada porque cada célula ganha
  * o rótulo da coluna injetado (ex.: "STATUS Pago"), então cada card lê como um
@@ -58,30 +66,34 @@ import { EmptyState } from '../EmptyState/EmptyState';
 interface TableRootProps extends React.HTMLAttributes<HTMLTableElement> {
   /** Classe do contêiner de scroll (wrapper). */
   containerClassName?: string | undefined;
+  /** card-mode (<lg) ligado? Falso = grade densa + scroll-x contido no wrap. */
+  cardMode?: boolean;
 }
 
 const TableRoot = React.forwardRef<HTMLTableElement, TableRootProps>(
-  ({ className, containerClassName, ...props }, ref) => (
+  ({ className, containerClassName, cardMode = true, ...props }, ref) => (
     // Wrap card do mockup (`.table-wrap`): a tabela é um card raised com
     // radius-lg + elev-1, não uma <table> nua sobre o fundo. overflow-x-auto
     // preserva o scroll horizontal E recorta os cantos arredondados.
     //
-    // RESP-M5 (<lg = mesmo breakpoint do shell/drawer, preset L55-58): a Table
-    // densa vira CARD-MODE — cada linha empilha como card (ver Table body). O
-    // wrap perde a moldura única (cada linha ganha a sua) e larga o
-    // overflow-x-auto: sem <table> larga, o min-content de ~772px some e o
-    // documento não é mais empurrado à horizontal (defeito do gate visual).
+    // RESP-M5 (<lg = mesmo breakpoint do shell/drawer, preset L55-58): em
+    // card-mode a Table densa vira cards — cada linha empilha (ver Table body) e
+    // o wrap larga a moldura única + o overflow-x-auto (sem <table> larga, o
+    // min-content de ~772px some e o documento não é empurrado à horizontal).
+    // Em responsive="scroll" (cardMode=false) o wrap MANTÉM overflow-x-auto em
+    // toda largura: a grade densa fica e o scroll-x é CONTIDO aqui, nunca no body.
     <div
       className={cn(
         'w-full overflow-x-auto',
         'bg-[var(--surface-raised)] rounded-[var(--radius-lg)] shadow-elev-1',
-        'max-lg:overflow-visible max-lg:bg-transparent max-lg:rounded-none max-lg:shadow-none',
+        cardMode &&
+          'max-lg:overflow-visible max-lg:bg-transparent max-lg:rounded-none max-lg:shadow-none',
         containerClassName,
       )}
     >
       <table
         ref={ref}
-        className={cn('w-full border-collapse', 'max-lg:block max-lg:w-full', className)}
+        className={cn('w-full border-collapse', cardMode && 'max-lg:block max-lg:w-full', className)}
         {...props}
       />
     </div>
@@ -91,19 +103,20 @@ TableRoot.displayName = 'TableRoot';
 
 const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLTableSectionElement> & { cardMode?: boolean }
+>(({ className, cardMode = true, ...props }, ref) => (
   // RESP-M5: em card-mode (<lg) o thead some — cada célula do card carrega o
-  // próprio rótulo (ver TableCell), padrão acessível de tabela responsiva.
-  <thead ref={ref} className={cn('max-lg:hidden', className)} {...props} />
+  // próprio rótulo (ver TableCell), padrão acessível de tabela responsiva. Em
+  // responsive="scroll" o thead FICA (a grade densa precisa dos cabeçalhos).
+  <thead ref={ref} className={cn(cardMode && 'max-lg:hidden', className)} {...props} />
 ));
 TableHeader.displayName = 'TableHeader';
 
 const TableBody = React.forwardRef<
   HTMLTableSectionElement,
-  React.HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tbody ref={ref} className={cn('max-lg:block', className)} {...props} />
+  React.HTMLAttributes<HTMLTableSectionElement> & { cardMode?: boolean }
+>(({ className, cardMode = true, ...props }, ref) => (
+  <tbody ref={ref} className={cn(cardMode && 'max-lg:block', className)} {...props} />
 ));
 TableBody.displayName = 'TableBody';
 
@@ -156,8 +169,8 @@ TableHead.displayName = 'TableHead';
 
 const TableCell = React.forwardRef<
   HTMLTableCellElement,
-  React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  React.TdHTMLAttributes<HTMLTableCellElement> & { cardMode?: boolean }
+>(({ className, cardMode = true, ...props }, ref) => (
   <td
     ref={ref}
     className={cn(
@@ -171,9 +184,12 @@ const TableCell = React.forwardRef<
       // RESP-M5 card-mode (<lg): a célula vira linha "rótulo … valor" dentro do
       // card. O rótulo (injetado na composição, só p/ header string) fica à
       // esquerda; o valor à direita. Fio subtle separa as células; a última do
-      // card perde o fio (regra no <tr>).
-      'max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-[var(--spacing-4)]',
-      'max-lg:border-b max-lg:border-b-[var(--border-subtle)]',
+      // card perde o fio (regra no <tr>). `max-lg:min-w-0` (revisão r1 A3) deixa
+      // a célula-flex ENCOLHER abaixo do conteúdo → um token longo (e-mail/URL/
+      // UUID) quebra no valor em vez de estourar e ser cortado pelo overflow do
+      // card. Em responsive="scroll" nada disso aplica (grade densa preservada).
+      cardMode &&
+        'max-lg:flex max-lg:items-center max-lg:justify-between max-lg:gap-[var(--spacing-4)] max-lg:min-w-0 max-lg:border-b max-lg:border-b-[var(--border-subtle)]',
       className,
     )}
     {...props}
@@ -223,6 +239,16 @@ export interface TableProps<TRow> {
    */
   onRowClick?: (row: TRow) => void;
   className?: string;
+  /**
+   * Comportamento abaixo de `lg` (<1024px). Default `'card'`: cada linha empilha
+   * como card e cada célula vira "RÓTULO … valor" (leitura de cima p/ baixo no
+   * celular — design-principles §(c)). `'scroll'` é o opt-out para MATRIZ de
+   * comparação em grade (ex.: estoque kit×modalidade), onde virar card apaga a
+   * leitura "qual coluna está curta entre as linhas": mantém a tabela densa e
+   * rola na horizontal DENTRO do wrap (`overflow-x-auto` contido no card, nunca
+   * no body/documento). Use `'scroll'` só em grade de comparação.
+   */
+  responsive?: 'card' | 'scroll';
 }
 
 /** Um clique nasceu de um controle interativo (não deve abrir o detalhe)? */
@@ -252,9 +278,13 @@ function Table<TRow>({
   renderActions,
   onRowClick,
   className,
+  responsive = 'card',
 }: TableProps<TRow>): JSX.Element {
   const hasActions = Boolean(renderActions);
   const clickable = Boolean(onRowClick);
+  // card-mode (empilhar em cards <lg) é o default; 'scroll' mantém a grade densa
+  // e o scroll-x contido no wrap (matriz de comparação). Um flag só, propagado.
+  const cardMode = responsive === 'card';
 
   if (data.length === 0) {
     return (
@@ -267,11 +297,11 @@ function Table<TRow>({
   }
 
   return (
-    <TableRoot containerClassName={className}>
+    <TableRoot containerClassName={className} cardMode={cardMode}>
       {caption && <TableCaption>{caption}</TableCaption>}
 
       {/* Header */}
-      <TableHeader>
+      <TableHeader cardMode={cardMode}>
         <TableRow>
           {columns.map((col) => (
             <TableHead
@@ -292,7 +322,7 @@ function Table<TRow>({
       </TableHeader>
 
       {/* Body */}
-      <TableBody>
+      <TableBody cardMode={cardMode}>
         {data.map((row) => (
           <TableRow
             key={keyExtractor(row)}
@@ -302,11 +332,10 @@ function Table<TRow>({
               clickable && 'cursor-pointer',
               // RESP-M5 card-mode (<lg): a linha vira um card empilhado (raised +
               // radius + elev-1, sem o divisor de linha) e a última célula do
-              // card perde o fio subtle. Em lg+ nada disso aplica — tabela densa
-              // intocada.
-              'max-lg:block max-lg:h-auto max-lg:mb-[var(--spacing-3)]',
-              'max-lg:rounded-[var(--radius-lg)] max-lg:bg-[var(--surface-raised)] max-lg:shadow-elev-1',
-              'max-lg:overflow-hidden max-lg:border-b-0 max-lg:[&>*:last-child]:border-b-0',
+              // card perde o fio subtle. Em lg+ (e em responsive="scroll") nada
+              // disso aplica — tabela densa intocada.
+              cardMode &&
+                'max-lg:block max-lg:h-auto max-lg:mb-[var(--spacing-3)] max-lg:rounded-[var(--radius-lg)] max-lg:bg-[var(--surface-raised)] max-lg:shadow-elev-1 max-lg:overflow-hidden max-lg:border-b-0 max-lg:[&>*:last-child]:border-b-0',
             )}
             {...(clickable
               ? {
@@ -320,21 +349,37 @@ function Table<TRow>({
             {columns.map((col) => {
               // Rótulo do card só para header textual: um header ReactNode (ex.:
               // checkbox "selecionar todos") NÃO vira rótulo — evita duplicar
-              // controles interativos em cada card (a11y). Zero mudança de API.
-              const mobileLabel = typeof col.header === 'string' ? col.header : null;
+              // controles interativos em cada card (a11y). Só em card-mode. Zero
+              // mudança de API.
+              const mobileLabel =
+                cardMode && typeof col.header === 'string' ? col.header : null;
               return (
-                <TableCell key={col.key} className={alignClass(col.align)}>
+                <TableCell key={col.key} cardMode={cardMode} className={alignClass(col.align)}>
                   {mobileLabel && (
                     <span className="hidden max-lg:block shrink-0 text-left text-[length:var(--table-header-font-size)] font-[var(--font-weight-semibold)] uppercase tracking-[var(--table-header-spacing)] text-muted-foreground">
                       {mobileLabel}
                     </span>
                   )}
-                  {col.render ? col.render(row) : defaultCell(row, col.key)}
+                  {/* Revisão r1 A3: o valor quebra (overflow-wrap) e encolhe
+                      (min-w-0) no card — um token único longo não estoura o flex
+                      p/ ser cortado pelo overflow do card. Escopo max-lg: desktop
+                      e responsive="scroll" ficam byte-idênticos. */}
+                  {cardMode ? (
+                    <span className="max-lg:min-w-0 max-lg:[overflow-wrap:anywhere]">
+                      {col.render ? col.render(row) : defaultCell(row, col.key)}
+                    </span>
+                  ) : col.render ? (
+                    col.render(row)
+                  ) : (
+                    defaultCell(row, col.key)
+                  )}
                 </TableCell>
               );
             })}
             {hasActions && renderActions && (
-              <TableCell className="text-right max-lg:justify-end">{renderActions(row)}</TableCell>
+              <TableCell cardMode={cardMode} className="text-right max-lg:justify-end">
+                {renderActions(row)}
+              </TableCell>
             )}
           </TableRow>
         ))}

@@ -144,6 +144,19 @@ describe('InscritosView', () => {
     expect(screen.getByText('3 selecionado(s)')).toBeInTheDocument();
   });
 
+  // A1 (revisão r1): o "selecionar todos" do desktop vive no thead da Table, que
+  // some no card-mode (<lg). Reexpomos um controle só-mobile (lg:hidden) ligado
+  // ao MESMO handler — a seleção em massa (P5 inadimplência) sobrevive no celular.
+  it('A1 · reexpõe "selecionar todos da página" no mobile (lg:hidden), mesmo handler', async () => {
+    renderView({ inscritos: muitosInscritos(3), loading: false, error: null, modalidades: ['10k'] });
+    const mobileSelectAll = screen.getByRole('checkbox', { name: 'Selecionar todos da página' });
+    // vive num container só-mobile (some no desktop via lg:hidden)
+    expect(mobileSelectAll.closest('label')?.className).toContain('lg:hidden');
+    // opera a MESMA seleção em massa da página que o header do desktop
+    await userEvent.click(mobileSelectAll);
+    expect(screen.getByText('3 selecionado(s)')).toBeInTheDocument();
+  });
+
   it('exportar seleção gera CSV (dispara download) e confirma por toast', async () => {
     // jsdom não implementa URL.createObjectURL / anchor.click — stub determinístico.
     const createUrl = vi.fn().mockReturnValue('blob:mock');

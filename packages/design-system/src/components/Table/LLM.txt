@@ -15,8 +15,9 @@ Tabela densa de listagem (linha 64px) com colunas declarativas, EmptyState autom
 ## Quando NÃO usar
 Não use para grids de cards (use CardEvento/CardDesafio em grid) nem para dados hierárquicos em árvore. Os primitivos TableRoot/TableHeader/TableRow etc. são INTERNOS e não exportados — não tente importá-los.
 
-## Responsivo (automático, sem prop)
-Em lg+ (>=1024px) é a tabela densa nativa. Abaixo de lg (mesmo breakpoint do drawer do shell) a Table entra em card-mode sozinha: cada linha empilha como card e cada célula vira "RÓTULO ... valor", com o rótulo herdado do header textual da coluna. Nada a configurar. Implicações ao definir columns: dê headers de texto curto (eles viram os rótulos dos cards no mobile); um header que é nó (ex.: checkbox "selecionar todos") NÃO gera rótulo — o controle não é replicado por card. Ordene as colunas por prioridade de leitura, porque no card elas empilham de cima para baixo na ordem do array.
+## Responsivo (default automático + opt-out `responsive`)
+Em lg+ (>=1024px) é a tabela densa nativa. Abaixo de lg (mesmo breakpoint do drawer do shell) a Table entra em card-mode sozinha (default `responsive="card"`): cada linha empilha como card e cada célula vira "RÓTULO ... valor", com o rótulo herdado do header textual da coluna. Nada a configurar. Implicações ao definir columns: dê headers de texto curto (eles viram os rótulos dos cards no mobile); um header que é nó (ex.: checkbox "selecionar todos") NÃO gera rótulo — o controle não é replicado por card. Ordene as colunas por prioridade de leitura, porque no card elas empilham de cima para baixo na ordem do array.
+Opt-out `responsive="scroll"`: SÓ para MATRIZ de comparação em grade (ex.: estoque kit×modalidade), onde virar card apaga a leitura "qual coluna está curta entre as linhas". Mantém a tabela densa no mobile e rola na horizontal DENTRO do wrap (overflow-x-auto contido no card, nunca no body/documento). NÃO use "scroll" para lista de leitura (aí card serve melhor o job); é a exceção da design-principles §(c) que reserva TABELA — não cards — para grade de comparação. Valor longo (e-mail/URL/UUID) numa célula quebra no card (não é cortado): a célula encolhe (min-w-0) e o valor faz overflow-wrap.
 
 ## Props válidas
 Table<TRow> (genérico):
@@ -29,6 +30,7 @@ Table<TRow> (genérico):
 - emptyIcon: React.ReactNode   (default: undefined)
 - renderActions: (row: TRow) => React.ReactNode   (default: undefined) — adiciona coluna de ações à direita
 - className: string   (default: undefined) — aplicada no contêiner de scroll
+- responsive: 'card' | 'scroll'   (default: 'card') — comportamento <lg. 'card' = empilha em cards (lista de leitura). 'scroll' = mantém a grade densa e rola na horizontal contida no wrap (SÓ para matriz de comparação, ex.: estoque kit×modalidade)
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --table-row-height

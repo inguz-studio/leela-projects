@@ -308,3 +308,79 @@ describe('Table — card-mode responsivo (<lg)', () => {
     expect(screen.getAllByRole('columnheader')).toHaveLength(2);
   });
 });
+
+// ── Revisão r1 (antagonista) · A2 — opt-out responsive="scroll" p/ matriz de
+// comparação em grade (estoque kit×modalidade): virar card apaga a leitura
+// "qual coluna está curta entre as linhas". "scroll" mantém a grade densa e
+// contém o scroll-x no wrap (nunca no body). Default segue card-mode.
+describe('Table — responsive="scroll" (opt-out de matriz de comparação)', () => {
+  function labelSpans(container: HTMLElement): HTMLElement[] {
+    return Array.from(container.querySelectorAll('tbody td span')).filter((el) =>
+      el.className.includes('max-lg:block'),
+    ) as HTMLElement[];
+  }
+
+  it('mantém a grade densa no mobile: thead fica e o wrap conserva o scroll-x contido', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} responsive="scroll" />,
+    );
+    // thead NÃO some (a grade densa precisa dos cabeçalhos p/ comparar colunas)
+    expect(container.querySelector('thead')?.className ?? '').not.toContain('max-lg:hidden');
+    // o wrap conserva overflow-x-auto em TODA largura → scroll-x CONTIDO no card,
+    // sem largá-lo no mobile (não empurra o documento)
+    const wrapper = container.firstElementChild!;
+    expect(wrapper.className).toContain('overflow-x-auto');
+    expect(wrapper.className).not.toContain('max-lg:overflow-visible');
+  });
+
+  it('não vira card: linha/célula sem overrides max-lg e sem rótulo injetado', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} responsive="scroll" />,
+    );
+    expect(container.querySelector('tbody tr')?.className ?? '').not.toContain('max-lg:block');
+    expect(container.querySelector('tbody td')?.className ?? '').not.toContain('max-lg:flex');
+    // sem thead escondido não há rótulo de card a injetar
+    expect(labelSpans(container)).toHaveLength(0);
+  });
+
+  it('default (sem prop) segue card-mode — regressão do RESP-M5', () => {
+    const { container } = render(
+      <Table columns={columns} data={data} keyExtractor={(r) => r.id} />,
+    );
+    expect(container.querySelector('thead')?.className).toContain('max-lg:hidden');
+    expect(labelSpans(container)).toHaveLength(4);
+  });
+});
+
+// ── Revisão r1 (antagonista) · A3 — valor longo (e-mail/URL/UUID) quebra no card
+// em vez de ser cortado silenciosamente. min-w-0 deixa a célula-flex encolher e
+// overflow-wrap quebra o token; o overflow-hidden do card (documento morto) fica.
+describe('Table — valor longo quebra no card (<lg), não corta (revisão r1 A3)', () => {
+  const longo = 'contato.super.longo.para.teste@exemplo-de-dominio-bem-grande.com.br';
+
+  it('envolve o valor num wrapper que encolhe (min-w-0) e quebra (overflow-wrap)', () => {
+    const cols: TableColumn<Row>[] = [{ key: 'name', header: 'E-mail', render: () => longo }];
+    const { container } = render(
+      <Table columns={cols} data={[data[0]!]} keyExtractor={(r) => r.id} />,
+    );
+    const wrap = Array.from(container.querySelectorAll('tbody td span')).find((el) =>
+      el.className.includes('[overflow-wrap:anywhere]'),
+    ) as HTMLElement | undefined;
+    expect(wrap).toBeTruthy();
+    expect(wrap!.className).toContain('max-lg:min-w-0');
+    expect(wrap!.textContent).toBe(longo);
+    // a própria célula também encolhe (min-w-0) p/ o flex não estourar
+    expect(container.querySelector('tbody td')?.className).toContain('max-lg:min-w-0');
+  });
+
+  it('em responsive="scroll" o valor NÃO é envolvido (grade densa intocada)', () => {
+    const cols: TableColumn<Row>[] = [{ key: 'name', header: 'E-mail', render: () => longo }];
+    const { container } = render(
+      <Table columns={cols} data={[data[0]!]} keyExtractor={(r) => r.id} responsive="scroll" />,
+    );
+    const wrap = Array.from(container.querySelectorAll('tbody td span')).find((el) =>
+      el.className.includes('[overflow-wrap:anywhere]'),
+    );
+    expect(wrap).toBeUndefined();
+  });
+});

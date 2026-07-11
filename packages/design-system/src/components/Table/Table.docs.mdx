@@ -13,9 +13,17 @@ Tabela densa com linha de 64px, caption acessível, estado vazio integrado e slo
 
 ## Responsivo — card-mode (&lt;lg)
 
-Em `lg`+ (≥1024px) a Table é a tabela densa nativa. Abaixo de `lg` — o mesmo breakpoint em que o shell troca o rail por drawer — ela entra em **card-mode**: cada linha empilha como card e cada célula vira uma linha `RÓTULO … valor`, com o rótulo herdado do header textual da coluna. Isso elimina o `min-content` largo da `<table>` que empurrava o documento à horizontal no mobile 390. Headers que são nós (ex.: checkbox "selecionar todos") não viram rótulo, para não duplicar controles nos cards. A story `Responsiva` abre no viewport 390×844.
+Em `lg`+ (≥1024px) a Table é a tabela densa nativa. Abaixo de `lg` — o mesmo breakpoint em que o shell troca o rail por drawer — ela entra em **card-mode** (default `responsive="card"`): cada linha empilha como card e cada célula vira uma linha `RÓTULO … valor`, com o rótulo herdado do header textual da coluna. Isso elimina o `min-content` largo da `<table>` que empurrava o documento à horizontal no mobile 390. Headers que são nós (ex.: checkbox "selecionar todos") não viram rótulo, para não duplicar controles nos cards. A story `Responsiva` abre no viewport 390×844.
+
+Valor longo (e-mail, URL, UUID) numa célula **quebra** dentro do card em vez de ser cortado: a célula encolhe (`min-w-0`) e o valor faz `overflow-wrap`.
 
 <Canvas of={Stories.Responsiva} />
+
+### Opt-out `responsive="scroll"` — matriz de comparação
+
+Para **matriz de comparação em grade** (ex.: estoque kit×modalidade), virar card no mobile apaga a leitura "qual coluna está curta entre as linhas". `responsive="scroll"` mantém a tabela densa e rola na horizontal **dentro do wrap** (`overflow-x-auto` contido no card, nunca no `body`/documento). É a exceção da `design-principles §(c)`, que reserva **tabela** — não cards — para grade de comparação. Não use `scroll` para lista de leitura: aí card serve melhor o job.
+
+<Canvas of={Stories.ScrollContida} />
 
 <Controls />
 
