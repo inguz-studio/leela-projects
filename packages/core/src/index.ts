@@ -351,6 +351,55 @@ export {
 } from './eventos/kit';
 
 // ---------------------------------------------------------------------------
+// Kernel de vendas E04 (LEELA-S300-T1 · ADR-012)
+// Lote (pertence à modalidade), Cupom, PaginaVendas. Estado de venda
+// (`vendidos`/`usos`/`publicada`) = escrita EXCLUSIVA de Function; preço/lote
+// ativo/vigência = derivação pura. Ver S300-T1-REPORT.
+// ---------------------------------------------------------------------------
+export type { Lote } from './eventos/lote';
+export {
+  CAMPOS_FUNCTION_LOTE,
+  loteShapeValido,
+  validarLotesModalidade,
+  loteEsgotado,
+  loteEncerrado,
+  loteVigente,
+  loteAtivo,
+  precoVigente,
+  parseLote,
+} from './eventos/lote';
+
+export type { Cupom, TipoCupom } from './eventos/cupom';
+export {
+  TIPOS_CUPOM,
+  isTipoCupom,
+  CODIGO_CUPOM_RE,
+  normalizarCodigoCupom,
+  isCodigoCupomValido,
+  CAMPOS_FUNCTION_CUPOM,
+  valorCupomValido,
+  cupomNoTeto,
+  cupomNaJanela,
+  cupomVigente,
+  descontoDoCupom,
+  parseCupom,
+} from './eventos/cupom';
+
+export type { PaginaVendas, SecaoVendas, SeoVendas, CanalSecao } from './eventos/paginaVendas';
+export {
+  CANAIS_SECAO,
+  isCanalSecao,
+  PAGINA_VENDAS_DOC_ID,
+  SECAO_CHECKOUT_ID,
+  isSecaoVendas,
+  checkoutTravado,
+  isSeoVendas,
+  CAMPOS_FUNCTION_PAGINA_VENDAS,
+  secoesVendasPadrao,
+  parsePaginaVendas,
+} from './eventos/paginaVendas';
+
+// ---------------------------------------------------------------------------
 // Módulo Pedidos (ADR-011 · LEELA-FABLE-A-T1)
 // Kernel `pedidos/{id}` — pedido em grupo (1 responsável, N inscritos) +
 // pagamento/conciliação (`pagamentos/{id}`). Estado financeiro: escrita

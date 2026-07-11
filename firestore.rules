@@ -449,14 +449,215 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // `lotes/{loteId}` — kernel de vendas (E04 · S300-T1 · ADR-012).
+      //
+      // O LOTE PERTENCE À MODALIDADE (ADR-012): subcoleção flat com
+      // `modalidade` discriminador (idioma de evento.modalidades[]/
+      // inscrito.modalidade); a lista ordenada da modalidade é a query
+      // `where modalidade == X orderBy ordem`. Fronteira Firestore (Kleppmann,
+      // S300-T1-REPORT): doc próprio porque `vendidos` é contador de escrita de
+      // alta frequência (Function de virada, S300-T2) — increment single-object
+      // isolado, não reescrita de doc gordo do evento.
+      //
+      // `vendidos` = ∑ de escrita EXCLUSIVA de Function: create exige 0/ausente,
+      // update não o toca. RN-300/200 (registrado): preço/janela/vaga/ordem/
+      // modalidade CONGELAM após a 1ª venda DO PRÓPRIO LOTE (vendidos > 0) — a
+      // trava é per-lote (granularidade ADR-012 (modalidade, lote)), mais
+      // precisa que o ∑ do evento; espelha a semântica de `percursosEditaveis`.
+      // Leitura PÚBLICA do preço no checkout fica para a story de compra
+      // (E12/S300 checkout), com teste — deny-by-default até lá (precedente do
+      // TODO de leitura pública de eventos). Aqui: membro do tenant lê.
+      match /lotes/{loteId} {
+
+        /** Shape do lote (ADR-012 · RN-300/301) — janela/vaga/preço coerentes. */
+        function shapeLoteValido() {
+          return request.resource.data.modalidade is string
+            && request.resource.data.modalidade.size() > 0
+            && request.resource.data.nome is string
+            && request.resource.data.nome.size() > 0
+            && request.resource.data.ordem is int
+            && request.resource.data.ordem >= 1
+            && request.resource.data.quantidadeLimite is int
+            && request.resource.data.quantidadeLimite >= 1
+            && request.resource.data.preco is number
+            && request.resource.data.preco >= 0
+            && request.resource.data.inicioEm is timestamp
+            && request.resource.data.fimEm is timestamp
+            && request.resource.data.fimEm > request.resource.data.inicioEm;
+        }
+
+        /** `vendidos` (∑ de Function) nasce 0/ausente — cliente nunca inventa venda. */
+        function vendidosZeradoNoCreate() {
+          return request.resource.data.get('vendidos', 0) == 0;
+        }
+
+        /** Update de cliente não TOCA `vendidos` (só a Function de virada). */
+        function vendidosIntocado() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['vendidos']);
+        }
+
+        /**
+         * Lote com venda (vendidos > 0) CONGELA os campos comerciais para o
+         * cliente (RN-200/300 na granularidade (modalidade, lote) — ADR-012).
+         * Sem venda, tudo editável. Ajustes pós-venda = Function/platform_admin.
+         */
+        function loteComercialImutavelSeVendido() {
+          return resource.data.get('vendidos', 0) == 0
+            || !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['preco', 'inicioEm', 'fimEm', 'quantidadeLimite',
+                         'ordem', 'modalidade']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeLoteValido()
+                          && vendidosZeradoNoCreate())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeLoteValido()
+                          && vendidosIntocado()
+                          && loteComercialImutavelSeVendido())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.get('vendidos', 0) == 0)
+                      || isPlatformAdmin();
+      }
+
+      // `cupons/{cupomId}` — kernel de vendas (E04 · S300-T1).
+      //
+      // docId = código NORMALIZADO (unicidade por chave — "código duplicado é
+      // rejeitado" vira colisão de docId; recriar o mesmo código cai no update,
+      // que trava `codigo` imutável). Sem query de duplicidade.
+      //
+      // LEITURA SENSÍVEL: código de cupom é ativo comercial — só o ORGANIZADOR
+      // (writer) lê, NUNCA membro genérico (promoter/athlete). Por isso o
+      // catch-all abaixo EXCLUI `cupons` (mesma lição de `inscritos` em A-T2:
+      // regra específica restrita + catch-all re-concedendo = vazamento). No
+      // checkout o cupom é VALIDADO por Function (aplicar código), não lido por
+      // enumeração da coleção.
+      //
+      // `usos` = ∑ de escrita EXCLUSIVA de Function (checkout): create 0/ausente,
+      // update não o toca.
+      match /cupons/{cupomId} {
+
+        /** Shape do cupom — tipo/valor coerentes; docId == codigo; janela válida. */
+        function shapeCupomValido() {
+          return request.resource.data.codigo is string
+            && request.resource.data.codigo == cupomId
+            && request.resource.data.tipo in ['percentual', 'fixo']
+            && request.resource.data.valor is number
+            && request.resource.data.valor > 0
+            && (request.resource.data.tipo != 'percentual'
+                || request.resource.data.valor <= 100)
+            && (!('tetoUso' in request.resource.data)
+                || request.resource.data.tetoUso == null
+                || (request.resource.data.tetoUso is int
+                    && request.resource.data.tetoUso >= 1))
+            && request.resource.data.inicioEm is timestamp
+            && request.resource.data.fimEm is timestamp
+            && request.resource.data.fimEm > request.resource.data.inicioEm;
+        }
+
+        /** `usos` (∑ de Function) nasce 0/ausente. */
+        function usosZeradoNoCreate() {
+          return request.resource.data.get('usos', 0) == 0;
+        }
+
+        /** Update de cliente não TOCA `usos` nem `codigo` (chave/∑ imutáveis). */
+        function usosECodigoIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['usos'])
+            && request.resource.data.codigo == resource.data.codigo;
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeCupomValido()
+                          && usosZeradoNoCreate())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeCupomValido()
+                          && usosECodigoIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+      }
+
+      // `paginaVendas/{docId}` — config da página de vendas (E04 · S300-T1).
+      //
+      // 1 doc por evento (docId = 'config'). Seções por canal + SEO. Invariante:
+      // seção 'checkout' sempre travada+ativa (validada no core; a Rule trava o
+      // shape-list). PUBLICAÇÃO (`publicada`/`publicadaEm`) = carimbo de escrita
+      // EXCLUSIVA de Function (S300-T3 valida completude server-side, como
+      // publicarEvento): create exige publicada false/ausente, update não a toca.
+      // Cliente edita seções/SEO. Leitura pública da página publicada = story do
+      // checkout/landing (deny-by-default até lá); aqui membro do tenant lê.
+      match /paginaVendas/{docId} {
+
+        /** Shape-list mínimo (o invariante checkout-travado vive no core). */
+        function shapePaginaValida() {
+          return request.resource.data.secoes is list
+            && request.resource.data.seo is map
+            && request.resource.data.seo.titulo is string
+            && request.resource.data.seo.slugAmigavel is string
+            && request.resource.data.eventoId is string
+            && request.resource.data.eventoId == eventoId;
+        }
+
+        /** Publicação nasce desligada — publicar é escrita de Function. */
+        function publicacaoZeradaNoCreate() {
+          return request.resource.data.get('publicada', false) == false
+            && !('publicadaEm' in request.resource.data);
+        }
+
+        /** Update de cliente não TOCA os carimbos de publicação (só Function). */
+        function publicacaoIntocada() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['publicada', 'publicadaEm']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai());
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapePaginaValida()
+                          && publicacaoZeradaNoCreate())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapePaginaValida()
+                          && publicacaoIntocada())
+                      || isPlatformAdmin();
+        // Config da página não é deletada por cliente (trilha da vitrine).
+        allow delete: if isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
-        // `inscritos` carrega PII + saúde (ADR-011 · A-T2 · LGPD art. 5º-II):
-        // leitura SÓ por writer (owner/staff), pela regra específica acima.
-        // Este catch-all de membro serve as demais subcoleções (kits etc.),
-        // mas NÃO pode re-conceder `inscritos` — senão promoter/athlete leem
-        // PII pelo OR de regras (fix r1: A1 só na regra específica vazava aqui).
+        // `inscritos` carrega PII + saúde (ADR-011 · A-T2 · LGPD art. 5º-II) e
+        // `cupons` carrega código comercial (S300-T1): leitura SÓ por writer
+        // pelas regras específicas acima. Este catch-all de membro serve as
+        // demais subcoleções (kits/lotes/paginaVendas etc.), mas NÃO pode
+        // re-conceder `inscritos` NEM `cupons` — senão promoter/athlete leem
+        // PII/descontos pelo OR de regras (fix r1: A1 só na regra específica
+        // vazava aqui; mesma disciplina agora estende a cupons).
         allow read: if isPlatformAdmin()
                     || (subcol != 'inscritos'
+                        && subcol != 'cupons'
                         && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));
         allow write: if isPlatformAdmin();
       }
