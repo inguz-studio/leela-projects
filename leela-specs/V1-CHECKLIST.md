@@ -384,7 +384,7 @@ Receber comunicados (push):
 - [ ] LEELA-FABLE-B-T2 — Ação "Reembolsar" no slide-in + ConfirmModal §2.15 (reflete resultado real "•••• em N faturas" com o valor parcial do inscrito) — S · dep B-T1, A-T3 · **Opus** (UI) · ⚔ (UI de ação de dinheiro)
 
 **`LEELA-FABLE-C`** · QR server-side — validação de assinatura (ENCOLHIDA) — ≙ recorte de `LEELA-S208` — Must · M — **JTBD:** T+S/H1 · **P2 "Faço check-in no balcão" (validar ingresso sem fraude)**.
-- [ ] LEELA-FABLE-C-T1 — Validação server-side de assinatura do `qrToken` (RN-221/222): rejeita adulterado/outro-evento/já-usado (persiste carimbo `checkinEm`, recorte S208-T1) — ≙ `S208-T3`; scanner/estados (S208-T4) NÃO entram — M · dep firebase-admin ✅ · **Fable** · ⚔ (segurança)
+- [ ] LEELA-FABLE-C-T1 — Validação server-side de assinatura do `qrToken` (RN-221/222): rejeita adulterado/outro-evento/já-usado (persiste carimbo `checkinEm`, recorte S208-T1) — ≙ `S208-T3`; scanner/estados (S208-T4) NÃO entram — M · dep firebase-admin ✅ · **Fable** · ⚔ (segurança) · **🔶 IMPLEMENTADO+COMMITADO `bc2bf04` 2026-07-11** (LLQR1 HMAC-SHA256 keyring+kid, fail-closed, 7 códigos p/ balcão, unit 28/28; PENDENTE: gate emulator `qrCheckin.integration` + ⚔ antagonista de segurança + `QR_TOKEN_KEYS` no preview)
 
 **`LEELA-FABLE-E`** · Chave estável Kit↔enum (integridade) — Should · XS — **JTBD:** T/H1 · enabler de P3.
 - [ ] LEELA-FABLE-E-T1 — Alinhar seed `Kit.id` ao enum `inscrito.kit` (chave canônica Kit↔enum) + remover ponte `kitCasa` — XS · dep S205 ✅ · **Opus** (mecânico)
