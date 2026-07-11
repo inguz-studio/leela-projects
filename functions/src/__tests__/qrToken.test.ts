@@ -71,6 +71,15 @@ describe('base64url/utf8 portáveis', () => {
     expect(base64UrlParaBytes('ab=')).toBeNull(); // padding não faz parte
   });
 
+  it('rejeita base64url NÃO-CANÔNICO (bits de padding ≠ 0)', () => {
+    // Grupo final de 2 chars → 1 byte: os 4 bits baixos do 2º char são padding.
+    expect(base64UrlParaBytes('QQ')).toEqual(new Uint8Array([65])); // canônico
+    expect(base64UrlParaBytes('QR')).toBeNull(); // R tem bits de padding ≠ 0
+    // Grupo final de 3 chars → 2 bytes: os 2 bits baixos do 3º char são padding.
+    expect(base64UrlParaBytes('AAA')).toEqual(new Uint8Array([0, 0])); // canônico
+    expect(base64UrlParaBytes('AAB')).toBeNull(); // B tem bits de padding ≠ 0
+  });
+
   it('roundtrip UTF-8 inclusive não-ASCII', () => {
     for (const texto of ['insc-0001', 'São Paulo', 'maratona-🏃-21k', '']) {
       const bytes = textoParaBytesUtf8(texto);
@@ -157,6 +166,34 @@ describe('verificarQrToken — rejeições', () => {
     expect(
       verificarQrToken(`${partes[0]}.${partes[1]}.${partes[2]}.abc`, RING_K1).ok
     ).toBe(false); // 3 bytes ≠ 32 — barrado no parse (formato)
+  });
+
+  it('kid herdado de Object.prototype (prototype pollution) → kid_desconhecido, SEM exceção', () => {
+    // KID_REGEX aceita nomes herdados; o keyring de teste é objeto literal
+    // (tem Object.prototype na cadeia) — o caso vulnerável. Acesso ingênuo
+    // resolveria para a função/objeto herdado → createHmac(secret=<function>)
+    // → ERR_INVALID_ARG_TYPE não tratado → callable devolveria `internal`.
+    const payloadB64 = codificarPayloadQr(PAYLOAD);
+    const sig = bytesParaBase64Url(new Uint8Array(32).fill(1));
+    const herdados = [
+      'constructor',
+      'hasOwnProperty',
+      'toString',
+      'valueOf',
+      '__proto__',
+      'isPrototypeOf',
+    ];
+    for (const kid of herdados) {
+      const token = `${VERSAO_QR_TOKEN}.${kid}.${payloadB64}.${sig}`;
+      let resultado: ReturnType<typeof verificarQrToken> | undefined;
+      expect(() => {
+        resultado = verificarQrToken(token, RING_K1);
+      }, `kid herdado '${kid}' não deve lançar`).not.toThrow();
+      expect(resultado, `kid herdado '${kid}' → código acionável`).toEqual({
+        ok: false,
+        causa: 'kid_desconhecido',
+      });
+    }
   });
 
   it('kid adulterado quebra a assinatura; kid desconhecido → kid_desconhecido', () => {

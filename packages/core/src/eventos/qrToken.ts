@@ -310,11 +310,25 @@ export function base64UrlParaBytes(texto: string): Uint8Array | null {
     if (c0 < 0 || c1 < 0) {
       return null;
     }
-    bytes.push((c0 << 2) | (c1 >> 4));
-    if (c2 >= 0) {
+    if (c2 < 0) {
+      // Grupo final de 2 chars → 1 byte. Os 4 bits baixos de c1 são padding e
+      // DEVEM ser zero (canônico). Rejeitar não-canônico evita múltiplas
+      // strings mapearem para os mesmos bytes (higiene de spec b64url).
+      if ((c1 & 0x0f) !== 0) {
+        return null;
+      }
+      bytes.push((c0 << 2) | (c1 >> 4));
+    } else if (c3 < 0) {
+      // Grupo final de 3 chars → 2 bytes. Os 2 bits baixos de c2 são padding e
+      // DEVEM ser zero (canônico).
+      if ((c2 & 0x03) !== 0) {
+        return null;
+      }
+      bytes.push((c0 << 2) | (c1 >> 4));
       bytes.push(((c1 & 0x0f) << 4) | (c2 >> 2));
-    }
-    if (c3 >= 0) {
+    } else {
+      bytes.push((c0 << 2) | (c1 >> 4));
+      bytes.push(((c1 & 0x0f) << 4) | (c2 >> 2));
       bytes.push(((c2 & 0x03) << 6) | c3);
     }
   }

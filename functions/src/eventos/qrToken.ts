@@ -83,7 +83,10 @@ export function carregarQrKeyring(
     throw new Error('QR_TOKEN_KEYS deve ser um objeto { "<kid>": "<segredo b64url>" }.');
   }
 
-  const chaves: Record<string, Buffer> = {};
+  // Mapa null-proto: um kid literal "__proto__"/"constructor" em QR_TOKEN_KEYS
+  // vira propriedade PRÓPRIA (não polui protótipo) e o acesso por kid nunca
+  // resolve para membros herdados de Object.prototype (hardening barato).
+  const chaves: Record<string, Buffer> = Object.create(null);
   for (const [kid, valor] of Object.entries(parsed as Record<string, unknown>)) {
     if (typeof valor !== 'string') {
       throw new Error(`QR_TOKEN_KEYS: segredo do kid '${kid}' deve ser string base64url.`);
@@ -98,7 +101,7 @@ export function carregarQrKeyring(
     chaves[kid] = Buffer.from(bytes);
   }
 
-  if (chaves[ativo] === undefined) {
+  if (!Object.hasOwn(chaves, ativo)) {
     throw new Error(
       `QR_TOKEN_KID_ATIVO='${ativo}' não existe em QR_TOKEN_KEYS — rotação incompleta.`
     );
@@ -128,6 +131,11 @@ export function assinarQrToken(
   payload: QrTokenPayload,
   keyring: QrKeyring
 ): string {
+  // Mesma blindagem de posse própria: guarda contra keyring montado à mão com
+  // um `ativo` que colidiria com membro herdado de Object.prototype.
+  if (!Object.hasOwn(keyring.chaves, keyring.ativo)) {
+    throw new Error(`Keyring sem o kid ativo '${keyring.ativo}'.`);
+  }
   const chave = keyring.chaves[keyring.ativo];
   if (chave === undefined) {
     // Impossível após carregarQrKeyring; guarda contra keyring montado à mão
@@ -161,6 +169,15 @@ export function verificarQrToken(
   const parsed = parseQrToken(token);
   if (!parsed.ok) {
     return { ok: false, causa: 'formato' };
+  }
+  // Object.hasOwn ANTES de qualquer acesso: `kid` vem do cliente e KID_REGEX
+  // aceita nomes herdados de Object.prototype (constructor, hasOwnProperty,
+  // toString, __proto__…). Acesso direto resolveria para a função/objeto
+  // herdado (não undefined) e cairia em createHmac(secret=<function>) →
+  // ERR_INVALID_ARG_TYPE não tratado → callable devolve `internal` em vez do
+  // código acionável. Checar posse própria fecha o oráculo e a exceção.
+  if (!Object.hasOwn(keyring.chaves, parsed.kid)) {
+    return { ok: false, causa: 'kid_desconhecido' };
   }
   const chave = keyring.chaves[parsed.kid];
   if (chave === undefined) {
