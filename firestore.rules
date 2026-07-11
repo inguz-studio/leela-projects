@@ -551,6 +551,10 @@ service cloud.firestore {
         function shapeCupomValido() {
           return request.resource.data.codigo is string
             && request.resource.data.codigo == cupomId
+            // Espelha CODIGO_CUPOM_RE do core: sem isto o cliente grava um
+            // docId/codigo minúsculo/acentuado que o checkout (lookup UPPER)
+            // nunca acha → cupom morto persistível (review antagonista A4).
+            && request.resource.data.codigo.matches('^[A-Z0-9]{3,20}$')
             && request.resource.data.tipo in ['percentual', 'fixo']
             && request.resource.data.valor is number
             && request.resource.data.valor > 0

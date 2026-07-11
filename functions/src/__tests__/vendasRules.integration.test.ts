@@ -200,6 +200,13 @@ describe('cupons — leitura SÓ writer (catch-all NÃO vaza — lição A-T2)',
     await assertFails(setDoc(cupom(db, 'BIG'), cupomPayload('BIG', { valor: 150 })));
     await assertFails(updateDoc(cupom(db, 'HEROI10'), { usos: 999 }));
   });
+
+  it('código fora do padrão [A-Z0-9]{3,20} é negado (cupom morto — review A4)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(cupom(db, 'heroi'), cupomPayload('heroi'))); // minúsculo
+    await assertFails(setDoc(cupom(db, 'AÇÃO10'), cupomPayload('AÇÃO10'))); // acento
+    await assertFails(setDoc(cupom(db, 'AB'), cupomPayload('AB'))); // curto demais
+  });
 });
 
 describe('paginaVendas — publicação só-Function', () => {
