@@ -123,13 +123,13 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
 
       <header
         aria-label={evento.nome}
-        className="flex items-center gap-[var(--spacing-5)] px-[var(--spacing-6)] py-[var(--spacing-4)] min-h-[var(--header-height)]"
+        className="flex flex-wrap items-center gap-[var(--spacing-5)] px-[var(--spacing-6)] py-[var(--spacing-4)] min-h-[var(--header-height)] lg:flex-nowrap"
       >
         <EventoTile variant={thumbVariant} />
 
         <div className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-1)]">
-          <div className="flex items-center gap-[var(--spacing-3)] flex-wrap">
-            <h1 className="font-display italic font-[var(--font-weight-bold)] text-[length:var(--header-title-size)] tracking-[var(--header-title-spacing)] text-[var(--text-primary)] truncate">
+          <div className="flex min-w-0 items-center gap-[var(--spacing-3)] flex-wrap">
+            <h1 className="font-display italic font-[var(--font-weight-bold)] text-[length:var(--header-title-size)] tracking-[var(--header-title-spacing)] text-[var(--text-primary)] min-w-0 truncate">
               {evento.nome}
             </h1>
             <Badge variant={status.variant}>{status.label}</Badge>
@@ -154,7 +154,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
           </p>
         </div>
 
-        <div className="flex items-center gap-[var(--spacing-2)] shrink-0 ml-auto">
+        <div className="flex items-center gap-[var(--spacing-2)] shrink-0 ml-auto basis-full lg:basis-auto">
           <Button variant="ghost" size="sm" onClick={abrirPaginaPublica}>
             Ver página pública
             <ExternalLink className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />

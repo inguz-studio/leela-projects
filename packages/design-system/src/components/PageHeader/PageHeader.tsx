@@ -41,7 +41,12 @@ function PageHeader({
     <header
       aria-label={title}
       className={cn(
-        'flex items-center gap-[var(--spacing-4)]',
+        // Responsivo (LEELA-RESP-M4): abaixo de `lg` o header quebra e o slot de
+        // ações desce para a própria linha (`basis-full`), devolvendo a largura
+        // à coluna de título/metadata — sem isso, ações `shrink-0` espremem a
+        // coluna e a metadata quebra 1 palavra/linha em 390. Desktop (`lg`) fica
+        // `flex-nowrap`, layout de linha única idêntico ao anterior.
+        'flex flex-wrap items-center gap-[var(--spacing-4)] lg:flex-nowrap',
         'min-h-[var(--header-height)]',
         'px-[var(--spacing-6)]',
         // Congruência mockup `.page-head` (T7, fecha Directive da T6): o
@@ -59,7 +64,7 @@ function PageHeader({
 
       {/* Title + badges + metadata */}
       <div className="flex flex-col justify-center gap-[var(--spacing-1)] min-w-0 flex-1">
-        <div className="flex items-center gap-[var(--spacing-2)] flex-wrap">
+        <div className="flex min-w-0 items-center gap-[var(--spacing-2)] flex-wrap">
           <h1
             className={cn(
               // `.h1` do mockup: display italic bold 40px ls -.01em (T7).
@@ -68,6 +73,7 @@ function PageHeader({
               'tracking-[var(--header-title-spacing)]',
               'font-[var(--font-weight-bold)]',
               'text-[var(--text-primary)]',
+              'min-w-0',
               'truncate',
             )}
           >
@@ -97,7 +103,7 @@ function PageHeader({
 
       {/* Actions slot */}
       {actions && (
-        <div className="flex items-center gap-[var(--spacing-3)] shrink-0 ml-auto">
+        <div className="flex items-center gap-[var(--spacing-3)] shrink-0 ml-auto basis-full lg:basis-auto">
           {actions}
         </div>
       )}

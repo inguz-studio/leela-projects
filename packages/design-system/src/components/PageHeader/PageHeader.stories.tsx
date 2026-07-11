@@ -31,6 +31,28 @@ export const Completo: Story = {
   },
 };
 
+/**
+ * Header pesado de ações + metadata rica (LEELA-RESP-M4). Reproduz o caso que
+ * quebrava em 390: abaixo de `lg` o slot de ações desce para a própria linha
+ * (`basis-full`) e a metadata volta a fluir natural, em vez de quebrar 1
+ * palavra/linha. Redimensione a viewport abaixo de 1024px para ver o wrap.
+ * Em `lg`+ (desktop) o layout é linha única, ações à direita — intocado.
+ */
+export const AcoesLongasResponsivo: Story = {
+  args: {
+    title: 'Meia Maratona de Floripa',
+    avatar: <Avatar name="Meia Maratona de Floripa" size="lg" />,
+    badges: <Badge variant="vitoria">Publicado</Badge>,
+    metadata: <span>19 de julho de 2026 · Florianópolis · Faltam 8 dias para o evento</span>,
+    actions: (
+      <>
+        <Button variant="ghost">Ver página pública</Button>
+        <Button variant="secondary">Editar evento</Button>
+      </>
+    ),
+  },
+};
+
 /** Só título — mínimo válido do componente. */
 export const SoTitulo: Story = {
   args: { title: 'Configurações' },
