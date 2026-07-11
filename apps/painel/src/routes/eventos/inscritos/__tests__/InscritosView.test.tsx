@@ -1,17 +1,36 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@leela/design-system';
 import type { StatusInscrito } from '@leela/core';
 import { InscritosView } from '../InscritosView';
 import { mkInscrito } from '../../_test/fixtures';
 
+// O slide-in (S203-T3) busca o join `[pag]` via TanStack Query. Mock só do que
+// o grafo desta tela usa do api-client: INSCRITOS_PAGE_SIZE (18, §2.5) + o
+// gateway de leitura do join, stubado para "sem pedido" (os demais imports do
+// gateway de queries são lazy e não são chamados aqui).
+vi.mock('@leela/api-client', () => ({
+  INSCRITOS_PAGE_SIZE: 18,
+  getLeelaDb: () => ({}),
+  getPedidoEPagamentoDoInscrito: vi.fn().mockResolvedValue({ pedido: null, pagamento: null }),
+}));
+
 // A view usa useToast() → precisa do provider (como em produção: EventosRoutes).
-function renderView(props: Parameters<typeof InscritosView>[0]) {
+// O slide-in usa useQuery → precisa do QueryClientProvider (raiz em produção).
+function renderView(
+  props: Omit<Parameters<typeof InscritosView>[0], 'eventoId'> & { eventoId?: string },
+) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return render(
-    <ToastProvider>
-      <InscritosView {...props} />
-    </ToastProvider>,
+    <QueryClientProvider client={client}>
+      <ToastProvider>
+        <InscritosView eventoId="meia-floripa-2026" {...props} />
+      </ToastProvider>
+    </QueryClientProvider>,
   );
 }
 

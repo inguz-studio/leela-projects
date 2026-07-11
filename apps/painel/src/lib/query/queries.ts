@@ -24,6 +24,7 @@ import {
   getFinanceiroEvento,
   getLeelaDb,
   getOverview,
+  getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
   getTenant,
   listarEventosDoOrganizador,
@@ -38,8 +39,10 @@ import {
   listTenants,
   INSCRITOS_PAGE_SIZE,
   type FinanceiroEvento,
+  type InscritoParaJoin,
   type InscritosCursor,
   type OverviewResult,
+  type PedidoEPagamentoDoInscrito,
 } from '@leela/api-client';
 import type {
   Clube,
@@ -116,6 +119,29 @@ export function todosInscritosQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.inscritos.todos(eventoId),
     queryFn: (): Promise<Inscrito[]> => carregarTodosInscritos(eventoId),
+  });
+}
+
+/**
+ * Bloco `[pag]` do slide-in do inscrito (S203-T3): join inscrito → pedido →
+ * pagamento. Reusa `getPedidoEPagamentoDoInscrito` do api-client (2 point
+ * reads O(1), guarda de coerência ADR-011) — NÃO reimplementa o join. tenantId
+ * vem do próprio inscrito (projeção tenant-scoped). Dependência ausente
+ * (pedido/pagamento null) é AUSÊNCIA honesta, tratada na tela — nunca fake.
+ */
+export function pedidoEPagamentoDoInscritoQuery(params: {
+  tenantId: string;
+  eventoId: string;
+  inscrito: InscritoParaJoin;
+}) {
+  return queryOptions({
+    queryKey: queryKeys.pedidos.ePagamentoDoInscrito(params.eventoId, params.inscrito.id),
+    queryFn: (): Promise<PedidoEPagamentoDoInscrito> =>
+      getPedidoEPagamentoDoInscrito(getLeelaDb(), {
+        tenantId: params.tenantId,
+        eventoId: params.eventoId,
+        inscrito: params.inscrito,
+      }),
   });
 }
 

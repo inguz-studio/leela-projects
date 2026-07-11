@@ -17,6 +17,7 @@ export function InscritosPage(): JSX.Element {
       inscritos={data ?? []}
       loading={loading}
       error={error}
+      eventoId={evento.id}
       modalidades={evento.modalidades}
     />
   );

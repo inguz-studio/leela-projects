@@ -57,12 +57,14 @@ import {
   inadimplentes,
   paginar,
 } from '../_lib/inscritosFiltro';
-import { InscritoSlideIn } from './InscritoSlideIn';
+import { InscritoSlideInConnected } from './InscritoSlideInConnected';
 
 export interface InscritosViewProps {
   inscritos: Inscrito[];
   loading: boolean;
   error: Error | null;
+  /** Evento dono das inscrições (docId = slug) — chave do join `[pag]` do slide-in. */
+  eventoId: string;
   /** Percursos do evento — origem do filtro de modalidade. */
   modalidades: string[];
   /** "Agora" injetável (determinismo do recorte de inadimplência >72h). */
@@ -90,6 +92,7 @@ export function InscritosView({
   inscritos,
   loading,
   error,
+  eventoId,
   modalidades,
   agora = new Date(),
 }: InscritosViewProps): JSX.Element {
@@ -423,7 +426,11 @@ export function InscritosView({
         </div>
       )}
 
-      <InscritoSlideIn inscrito={selecionado} onClose={() => setSelecionado(null)} />
+      <InscritoSlideInConnected
+        eventoId={eventoId}
+        inscrito={selecionado}
+        onClose={() => setSelecionado(null)}
+      />
     </div>
   );
 }

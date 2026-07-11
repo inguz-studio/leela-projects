@@ -32,6 +32,16 @@ export const queryKeys = {
       ['inscritos', 'recentes', eventoId, limite] as const,
   },
 
+  pedidos: {
+    /**
+     * Bloco `[pag]` do slide-in (S203-T3): join inscrito → pedido → pagamento
+     * (2 point reads O(1), ADR-011). Keyed por inscrito — cada linha abre a
+     * SUA compra; reabrir o mesmo inscrito reidrata do cache (bounded staleness).
+     */
+    ePagamentoDoInscrito: (eventoId: string, inscritoId: string) =>
+      ['pedidos', 'e-pagamento-do-inscrito', eventoId, inscritoId] as const,
+  },
+
   financeiro: {
     /** Agregado `financeiro/current` de um evento — partilhado Overview ↔ Financeiro. */
     current: (eventoId: string) => ['financeiro', 'current', eventoId] as const,
