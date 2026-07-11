@@ -18,6 +18,20 @@ describe('Toolbar', () => {
     expect(bar.className).toContain('gap-[var(--toolbar-gap)]');
   });
 
+  it('empilha abaixo de lg e volta a linha única em lg+ (M2)', () => {
+    render(<Toolbar start={<span>busca</span>} end={<span>ações</span>} />);
+    const bar = screen.getByRole('toolbar');
+    // <lg: coluna (empilhado) — mata o estouro do search fixo + ícones + CTA.
+    expect(bar.className).toContain('flex-col');
+    // lg+: linha única space-between do mockup — desktop 1440 intocado.
+    expect(bar.className).toContain('lg:flex-row');
+    expect(bar.className).toContain('lg:justify-between');
+    // Grupo de ações alinha à direita quando estica no empilhado.
+    const acoes = screen.getByText('ações').parentElement as HTMLElement;
+    expect(acoes.className).toContain('justify-end');
+    expect(acoes.className).toContain('shrink-0');
+  });
+
   it('aria-label customizável', () => {
     render(<Toolbar aria-label="Ferramentas do evento" />);
     expect(screen.getByRole('toolbar', { name: 'Ferramentas do evento' })).toBeInTheDocument();

@@ -84,6 +84,10 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
                 <SearchInput
                   ref={searchRef}
                   placeholder="Buscar atleta, evento, inscrição…"
+                  // <lg a Toolbar empilha: a busca ocupa a linha inteira em vez
+                  // dos 320px fixos que estouravam o main de ~310px (M2). Em lg+
+                  // volta aos 320px do mockup — desktop intocado.
+                  className="w-full lg:w-[var(--search-width)]"
                 />
               }
               end={
