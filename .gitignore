@@ -52,3 +52,8 @@ storybook-static/
 
 # TypeScript
 *.tsbuildinfo
+
+# Junções ao pool global Nirvana (NUNCA commitar)
+.nirvana/squads/
+.nirvana/businesses/
+.nirvana/mind-clones/

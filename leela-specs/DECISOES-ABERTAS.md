@@ -13,17 +13,24 @@
 
 ## 🟠 Ações externas suas
 
-4. **Conta no gateway (rec. Asaas) + KYC** — integração adiada, mas a burocracia corre em paralelo sem custar código.
+4. **Conta no gateway Asaas + KYC** — gateway DECIDIDO: **Asaas** (D2, 2026-07-10). A integração roda em sandbox sem depender disso; o **KYC segue pendente como ação externa** — concluí-lo destrava `E04-PAY-T2` (parked até lá) sem custar código.
 5. *(Opcional)* Exceção do Device Guard p/ `turbo.exe` — agentes têm contorno; é conveniência.
 
 ## ⏸️ Para o final (decisão 2026-07-05)
 
 - **Strava** — inteiro para evolução (registro OAuth deixou de ser urgente); V1.5 já nasce com a seção no perfil em "em desenvolvimento".
 - **Domínio público + e-mails** (transacional e suporte) — pré-go-live.
-- **Ação Comunicar do card Próximo evento — aguarda superfície de comunicação** *(anexo Fidelidade A3, 2026-07-06)*. O mockup WEB-APPV2 do card "Próximo evento" traz as quick-actions `Ver inscritos · Comunicar · Check-in`. Inventário das ~36 telas: existe comunicação SÓ no escopo de clube (`/clubes/:slug/comunicacao` — editor de comunicados), NÃO no escopo de evento (as rotas `/eventos/:slug/*` cobrem inscritos, entrega/check-in, kits, financeiro — sem comunicar). Como o card é de um EVENTO (não de um clube), não há destino próprio para "Comunicar" e apontá-lo para a comunicação de clube seria semanticamente errado. Decisão: NÃO inventar tela — a implementação mantém `Ver inscritos · Check-in · Gerenciar` (impl atual, `Countdown.tsx`). **Quando você definir se V1/V1.5 terá comunicação por evento**, o middle-action vira "Comunicar" apontando para ela e a ordem alinha ao mockup. Até lá, divergência consciente e registrada.
+- ~~**Ação Comunicar do card Próximo evento — aguarda superfície de comunicação**~~ *(anexo Fidelidade A3, 2026-07-06)* — **RESOLVIDA em 2026-07-10 (D3): E06 campanhas confirmado V1**, então o destino vai existir. A impl mantém `Ver inscritos · Check-in · Gerenciar` (divergência consciente, `Countdown.tsx`) **até `E06-L3` aterrissar a aba Comunicação do evento** — aí o middle-action vira "Comunicar" e a ordem alinha ao mockup. Ver Ratificadas abaixo.
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
+- **Trilha next-trail RATIFICADA (Vitor, 2026-07-10/11) — D1-D6, promovida aos canônicos em 2026-07-10** (`leela-specs/next-trail/` → `ROADMAP.md §5` + `V1-CHECKLIST.md §Trilha next-trail` + `jobs-to-be-done.md §04.1`):
+  - **D1 · Kernel `pedidos` na Frente A (Fable):** `pedidos/{id}` implementado UMA vez em `LEELA-FABLE-A` conforme **ADR-011**, com gate adr-conformance; deps `FABLE-A → E12-L4/S1203-T5` e `FABLE-A → S203-T3` valem.
+  - **D2 · Gateway = Asaas:** adapter roda em sandbox; **KYC = ação externa pendente (segue na seção 🟠 acima)** — `E04-PAY-T2` parked até o KYC concluir.
+  - **D3 · E06 (comunicação do evento, campanhas) = V1:** o middle-action do card "Próximo evento" vira "Comunicar" quando `E06-L3` aterrissar a aba Comunicação (fecha a divergência consciente do anexo A3, antes em ⏸️).
+  - **D4 · `ROADMAP.md §5` corrigido:** Onda 2 = superconjunto reconciliado do `V1-CHECKLIST.md §Onda 2 · Vender` (E04-slim + E12 + E09-slim + E07-web + E06 + transversais; E08 adiado).
+  - **D5 · RESP-MOBILE = Must V1**, antes/em paralelo à Onda 2 (mobile real 390×844, 1 sweep, gate Norman).
+  - **D6 · P1-P5 APLICADAS a `jobs-to-be-done.md §04.1`** (P5 inadimplência visível · P1 estorno digno · P2 validar ingresso sem fraude · P3 estoque por tamanho · P4 operar pelo celular no dia da prova).
 - **Parcelamento COM juros (Vitor, 2026-07-05): 3,49% a.m., tabela Price, repassado ao comprador** ("acrescido ao serviço", padrão ticketeira). Coeficiente 12x = 0,103424/parcela → total ≈ +24,11% sobre o valor financiado. Válido para 2x-12x; à vista sem juros.
 - **Modelo de taxa de serviço por transação (Vitor, 2026-07-05): além do percentual puro, opção percentual + fixo (ex.: 8% + R$2,00 por venda), configurável por tenant** no CommercialTerms. Os dois modelos coexistem; admin master escolhe por tenant.
 - Taxa por método: **defaults iniciais 10% cartão / 8% PIX, editáveis pelo admin master** por tenant (CommercialTerms).

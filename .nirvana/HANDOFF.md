@@ -1,7 +1,8 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-07
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-10
 
-# ▶️ COMECE AQUI — retomada de sessão (fecho 2026-07-07). HEAD = `c327a5f`, tudo em `main`/pushed.
-Este bloco é autossuficiente para uma nova sessão. As seções antigas abaixo são HISTÓRICO (git é a verdade).
+# ▶️ COMECE AQUI — retomada de sessão (fecho 2026-07-10). Último push conhecido: `c327a5f` em `main` (o REMOTO é a verdade).
+# ⚠️ GIT LOCAL DESTRUÍDO (corrupção no object store) — NÃO rodar nenhum comando git neste clone. **Re-clonar de `inguz-studio/leela-projects` ANTES de qualquer commit.** Espelho file-level de resgate (next-trail + canônicos promovidos): `C:/Users/Vitor Eduardo/leela-rescue-20260710/`.
+Este bloco é autossuficiente para uma nova sessão. As seções antigas abaixo são HISTÓRICO (o remoto é a verdade; git local destruído).
 
 ## Estado atual (o que está PRONTO — não refazer)
 - **App inteiro no nível de fidelidade, ancorado no JTBD** (não no pixel do mockup): Eventos (6 telas: Visão Geral, Inscritos, Hub, Financeiro, Kits/Estoque, Entrega/Balcão) + Clubes + Plataforma. 0 MAJOR de UI.
@@ -11,23 +12,22 @@ Este bloco é autossuficiente para uma nova sessão. As seções antigas abaixo 
 - **Roadmap #1 (DS-Forms+mutations) + #2 (rascunho-ao-fim, Chip-fora-do-Geral) + #3 (Clubes/Plataforma: F0 dados + L1 seletores-card + L2 plataforma + L3 i18n/densidade) CONCLUÍDO** — tudo em Opus (cota Fable esgotada nesta sessão).
 - Decisões fixas: "Clubs" no sidebar FICA (Vitor); tema = 1 eixo brasa/leela; barra do showroom global; hub = linhas híbridas (foto+métricas); ordenação hub = rascunhos ao fim.
 
-## ROADMAP RESTANTE (ordem do Vitor: Fable → outras telas → consolidações)
+## ROADMAP RESTANTE — TRILHA NEXT-TRAIL RATIFICADA (Vitor, 2026-07-10/11 — D1-D7)
 
-### A. TRILHA FABLE — backend crítico (aguarda RESET da cota Fable ~03:50 America/Sao_Paulo)
-Doc completo: **`.nirvana/briefs/leela-fable-track-backend.md`** — 6 frentes (A modelo pedido/pagamento no Inscrito; B Function de estorno; C QR server-side — ENCOLHIDA, as demais escritas já destravaram; D estoque por tamanho+movimentações; E chave estável Kit↔enum; F cronograma do Evento+faixa de chip; G logs comunicação/histórico). Campos do slide-in rico já cravados do protótipo em `leela-specs/backlog/LEELA-S203.md`.
-- **ANTES de despachar:** alinhar com o Vitor o OVERLAP com Onda 2 (frentes A/B cruzam E12 checkout / E04 vendas) — abre parte da Onda 2 ou fica como enriquecimento da Onda 1?
-- **Roteamento:** Fable (pagamento/segurança/transacional/rules). Sub-lotes 1-task-1-commit, review antagonista (reusável/sensível/segurança), gate maestro por evidência.
+Planejamento completo em **`leela-specs/next-trail/`** (ROADMAP-next §7 = waves A-D · STORIES-next · TASKS-next · JTBD-TRACE · DECISOES-NECESSARIAS), **PROMOVIDO aos canônicos em 2026-07-10**: `ROADMAP.md §5` (Onda 2 reconciliada + waves + grafo delta) · `V1-CHECKLIST.md §Trilha next-trail` (todas as stories/tasks `[ ]`) · `jobs-to-be-done.md §04.1` (P1-P5 aplicadas) · `DECISOES-ABERTAS.md` (D1-D6 em Ratificadas). Brief Fable original: `.nirvana/briefs/leela-fable-track-backend.md` (campos do slide-in em `leela-specs/backlog/LEELA-S203.md`).
 
-### B. OUTRAS TELAS (pós-Fable, sobre telas estáveis)
-- **RESP-MOBILE** — o passe de responsividade, ADIADO de propósito p/ depois das telas estabilizarem (evita refazer). **Re-dimensionar** (o QA-2/7-MAJOR é anterior às telas novas). Causa-raiz = shell drawer M1 (RootShell/Sidebar). UI nova já nasce responsiva (L-004) → o passe varre só o desktop-only. Fazer como 1 sweep único.
-- **Onda 2** — features novas: E04 (vendas/cupons/equipe/gateway), E06 (comunicação), E08 (promotores) = as abas que faltam na sub-nav do evento. Planos em `.nirvana/plans/onda2-decisoes.md` + briefs `.nirvana/briefs/onda2-*`.
+**Decisões D1-D7 RESOLVIDAS (one-liners):**
+- **D1** — kernel `pedidos/{id}` implementado UMA vez na **Fable Frente A** conforme **ADR-011** + gate adr-conformance; deps `FABLE-A → E12-L4/S1203-T5` e `FABLE-A → S203-T3` valem (overlap Onda 1×2 DECIDIDO: kernel compartilhado, nem abre a Onda 2 inteira nem só enriquece a Onda 1).
+- **D2** — gateway = **Asaas**; KYC = ação externa pendente (não bloqueia sandbox; `E04-PAY-T2` parked até KYC).
+- **D3** — **E06 campanhas = V1**; middle-action do card "Próximo evento" vira "Comunicar" quando E06-L3 aterrissar.
+- **D4** — `ROADMAP.md §5` corrigido p/ o superconjunto reconciliado (E04-slim + E12 + E09-slim + E07-web + E06 + transversais; E08 adiado).
+- **D5** — **RESP-MOBILE = Must V1**, antes/em paralelo à Onda 2 (390×844, 1 sweep, gate Norman, ordem M1→M3→M5→M4→M2/M6/M7).
+- **D6** — **P1-P5 aplicadas** a `jobs-to-be-done.md §04.1` (P5 inadimplência visível · P1 estorno digno · P2 QR sem fraude · P3 estoque por tamanho · P4 operar pelo celular).
+- **D7** — reconstituir `QA-LIVE-2-REPORT.md` (corrompido, NUL) = **1ª task da Wave B** (`LEELA-RESP-QA2-RECON` no checklist) — registrado, não executar agora.
 
-### C. CONSOLIDAÇÕES (baixa urgência)
-- **KpiCard canônico no DS** (G-004: 4 cópias hoje em eventos/clubes/plataforma/estoque) + review.
-- Mutations de plataforma (`useTenantActions`/`useSaveCommercialTerms`) — não são fetch cru, parked.
-- **Teste flaky `EventoLayout.test.tsx`** — timeout de carga na suíte cheia do box 8GB (passa isolado ~1.3s); ajustar timeout/paralelismo. Não é regressão.
-- Backend-dep pequenos: nome do owner do tenant (join `profissionais/{ownerUid}`); nome canônico do evento na parceria (denormalização); 5º segmento de comunicado (Onda 2).
-- Adotar nas DEFINIÇÕES de empresa/squad as 4 lacunas do ledger `~/.claude/skills/harness/references/07-org-scope-gaps.md` (G-001 baseline de primitivos DS; G-002 gate de crítica de design no sf-ux-engineer; G-003 injeção de JTBD como convenção; G-004 KpiCard no DS).
+**Ondas:** Wave A Fable kernel (A→B ∥ C·F ∥ E→D ∥ G) → Wave B RESP-MOBILE (QA2-RECON → M1 → M3·M5·M4 → M2·M6·M7 → GATE) → Wave C Onda 2 (E04-slim · E12 · E09-slim · E07-web · E06 · S821 V1 · S1307/S1308 V1.5) → Wave D Consolidações (CONS-1..6).
+
+**➡️ PRÓXIMO DESPACHO: Fable Frente A** (`LEELA-FABLE-A-T1` — kernel `pedidos` conforme ADR-011 + gate adr-conformance; consultar mind-clone Kleppmann na IMPLEMENTAÇÃO: denorm × join, fronteiras transacionais — o modelo já está decidido). **Pré-condição operacional: re-clone limpo do repo (git local destruído — ver ⚠️ acima).**
 
 ## PADRÕES VIGENTES (invioláveis — herdar em todo lote)
 - **JOB primeiro; mockup = aparência; a story vence quando divergem** (L-004). Injetar persona+JTBD+critérios Given/When/Then + `~/.claude/skills/harness/references/design-principles.md` nos dispatches de UI.
@@ -41,11 +41,11 @@ Doc completo: **`.nirvana/briefs/leela-fable-track-backend.md`** — 6 frentes (
 - 1 task = 1 commit `[LEELA-*]`; staging cirúrgico; trailers de decisão; **push por aterrissagem**. Gates PROVAM ao vivo. Auditoria JSONL por evento em `~/.harness-logs/`.
 
 ## COMO RETOMAR (nova sessão)
-1. `git status` + `git log` = a verdade (não a última mensagem). Briefs enriquecidos em `.nirvana/briefs/`; reports/evidências em `outputs/leela-build-2d6ee98d/` (gitignored, LOCAIS); trilha de auditoria em `~/.harness-logs/<data>/audit.jsonl`.
+1. **⚠️ NÃO rodar git neste clone (destruído).** Re-clonar `inguz-studio/leela-projects` e trabalhar no clone limpo; conferir contra o espelho `C:/Users/Vitor Eduardo/leela-rescue-20260710/` (promoted-canonicals/ + next-trail/) se os docs promovidos em 2026-07-10 já estão no remoto — se não, aplicá-los do espelho e commitar. Briefs enriquecidos em `.nirvana/briefs/`; reports/evidências em `outputs/leela-build-2d6ee98d/` (gitignored, LOCAIS); trilha de auditoria em `~/.harness-logs/<data>/audit.jsonl`.
 2. Preview: `bash preview.sh` (painel :5273, já logado/mockado; rotas `?preview=castelo` eventos, `/clubes?preview=corrida`, `/plataforma?preview=admin`). Showroom: `pnpm --dir packages/design-system showcase`.
 3. Trace: `leela-build-2d6ee98d`. Repo: `inguz-studio/leela-projects`, branch `main`. Personas: `~/businesses/software-forge/employees/sf-*`.
 4. Despachar via harness: persona sf-* + injeção JTBD/design-principles + enriched brief + emitir audit + gate + review nos reusáveis.
-5. **Primeiro passo sugerido ao reabrir:** confirmar reset da cota Fable → alinhar overlap Onda 2 → despachar Frente A da trilha Fable.
+5. **Primeiro passo sugerido ao reabrir:** re-clone limpo → confirmar reset da cota Fable → despachar **Fable Frente A** (`LEELA-FABLE-A-T1`, kernel `pedidos` ADR-011 — overlap Onda 1×2 já DECIDIDO em D1, não realinhar).
 
 ---
 ## (HISTÓRICO — abaixo é registro das rodadas; git é a fonte)

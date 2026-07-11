@@ -108,6 +108,8 @@ IDs renomeados para o prefixo `LEELA-` (produto unificado). Coluna "De-para" pre
 
 > Multi-tenancy é fundacional (ADR-009 · `adr/ADR-multitenancy.md`) — o E00 nasce multi-tenant. A fatia de execução (o que fazer primeiro) está em `V1-PRODUTOR-web.md`.
 
+> **Delta ratificado 2026-07-10 (trilha next-trail, D1-D7 — detalhe em `leela-specs/next-trail/` + `V1-CHECKLIST.md §Trilha next-trail`):** **E03** recebe a trilha **Fable A-G** — o kernel `pedidos/{id}` é implementado **UMA vez na Frente A conforme ADR-011** (gate adr-conformance; deps duras `FABLE-A → S203-T3` e `FABLE-A → E12-L4/S1203-T5`) — D1. **RESP-MOBILE** (passe mobile real 390×844 sobre E01/shell) = **Must V1**, antes/em paralelo à Onda 2 — D5. Recortes confirmados na Onda 2: **E06 campanhas = V1** (D3) · E09-slim · E07-web; **E08 adiado (Won't V1)**. Gateway concreto = **Asaas** (D2; KYC = ação externa, sandbox não bloqueia).
+
 Capacidades transversais (referenciadas pelos épicos, não são épicos isolados): **PaymentProvider** (split de afiliação), **Notificações** (push/WhatsApp), **Observabilidade** (Sentry), **Acessibilidade** (WCAG AA), **Copy/i18n** (glossário + tom de voz).
 
 ---
@@ -124,18 +126,43 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 - LEELA-E05 Clubs · LEELA-E03 Operação do Evento · LEELA-E02 Visão Geral.
 - Entram juntos porque compartilham shell + entidades base (Evento, Clube, Inscrição, Membro).
 
-**Onda 2 · Vendas ponta a ponta (H1)**
-- LEELA-E04 Config & Vendas · LEELA-E12 Landing (inscrição + checkout) · PaymentProvider (interface + 1 provider concreto via ADR-006).
+**Onda 2 · Vender ponta a ponta + features que fecham o ciclo do evento (H1)** *(reconciliada 2026-07-10 — D4; definição canônica = `V1-CHECKLIST.md §Onda 2 · Vender`)*
+- **Núcleo de venda (o antigo sentido estreito):** LEELA-E04-slim (S300 vendas/lotes/cupons + S304 equipe + PaymentProvider) · LEELA-E12 Landing (inscrição + checkout público sandbox) · LEELA-E09-slim (repasses do organizador).
+- **Superfície nova (abas que faltam na sub-nav do evento, ordem E04 → E06):** Página de vendas (E04-L3) · Configurações (E04-L5) · Comunicação (E06-L3, campanhas = V1 por D3). **E08 (Promotores) fora — adiado** (dependia de afiliação, cortada).
+- **Robustez + coleta:** LEELA-E07-web (404/500/403) · transversais (rollup diário E11-S821, V1 + backend do desafio S1307/S1308, V1.5).
 - Fecha o ciclo "atleta descobre → inscreve → paga → organizador vê receita".
 
-**Onda 3 · Robustez e alavancas (H1→H2)**
-- LEELA-E07 Estados de Sistema · LEELA-E06 Marketing Unificado · LEELA-E09 Financeiro do Profissional.
+**Onda 3 · Robustez e alavancas (H1→H2)** *(fatias restantes — os recortes-slim subiram p/ Onda 2 em 2026-07-05/10)*
+- LEELA-E07 Estados de Sistema (restante: offline/manutenção + superfície mobile) · LEELA-E06 Marketing Unificado (restante: parceiros/automações) · LEELA-E09 Financeiro do Profissional (restante: painel rico + máquina completa de reembolso S904/RN-341 + política S305).
 
 **Onda 4 · App do Atleta (H1→H2)**
 - LEELA-E13 — reusa `packages/core` + `design-system`; jornada, inscrições, desafios, comunidade.
 
 **Onda 5 · Expansão (H2+)**
 - LEELA-E08 Influenciador · LEELA-E10 Marcas · LEELA-E11 Analytics.
+
+**Trilha next-trail (ratificada 2026-07-10 — D1-D7) · ondas de execução entre a Onda 1 e a Onda 2** *(fonte: `next-trail/ROADMAP-next.md §7`; stories/tasks em `V1-CHECKLIST.md §Trilha next-trail`)*:
+
+```
+Wave A · Fable kernel (reset da cota Fable)            ← backend crítico, ROTA FABLE
+   FABLE-A (pedido/pagamento, kernel `pedidos` ADR-011)  ── linchpin
+        ├─► FABLE-B (estorno)                              (seam gateway ↔ E04-L6)
+        ├─► LEELA-S203-T3 (slide-in rico · Onda 1 colhe já)
+        └─► [alimenta E12-L4 na Wave C]
+   FABLE-C (QR sig) · FABLE-F (cronograma)  ∥ independentes de A (deps: firebase-admin ✅ / S204 ✅)
+   FABLE-E→D (kit/estoque) · FABLE-G (logs)  ∥ após A (D cruza [reg]; G ancora no pedido)
+
+Wave B · RESP-MOBILE (Opus, sobre telas estáveis)     ← 1 sweep, independente de dados
+   1ª task: reconstituir QA-LIVE-2-REPORT (D7) → M1 (shell/drawer) ─► M3 · M5 · M4 ─► M2 · M6 · M7
+
+Wave C · Onda 2 · vender ponta a ponta                ← Opus (UI) + Fable (Functions/rules)
+   E04-slim [L1→L2→L3 ∥ L4→L5 ∥ L6]
+   E12 [L0 ∥ L1 → L2 ∥ (core L4) → L3 → L4(cobrança, consome kernel FABLE-A) → L5]
+   E09-slim [L1→L2→L3→L4]  ·  E07-web  ·  E06 [L1→L2→L3, consome FABLE-G]
+   transversais: S821 (V1) · S1307/S1308 (V1.5)
+
+Wave D · Consolidações (interleave, baixa urgência)   ← CONS-1..6, Should/Could
+```
 
 Grafo textual de dependências:
 
@@ -147,6 +174,21 @@ E00 ──► E01 ──► E05 ─┐
                      ├─► E07
                      └─► E13 (após E00+E01+E05)
 E04 ──► E08 · E01 ──► E10 · (E03+E05) ──► E11
+```
+
+Delta next-trail (ratificado 2026-07-10):
+
+```
+firebase-admin ✅ ─► FABLE-C          S204 ✅ ─► FABLE-F (cronograma/chip)
+S203-T1 ✅ ─► FABLE-A ─┬─► FABLE-B ──► (E04-L6 reusa refund seam)
+   (ADR-011 ✅ = modelo) ├─► S203-T3 (Onda 1 enrichment)
+                       ├─► FABLE-D (tamanhos S209) ◄─ FABLE-E
+                       ├─► FABLE-G ─► E06-L3 (aba Comunicação) · S1206-T2 (log envio)
+                       └─► E12-L4 / S1203-T5 (Onda 2 escreve `pedidos`)
+E01 ─► RESP-M1 ─► {M3,M5,M4,M2,M6,M7}
+E04-L1 + E04-L6 ─► E12 ; E04-L4 (papéis) ─► E07w-T6 (403)
+S207 ✅ + S1602 ✅ ─► E09-slim
+G-004 ─► CONS-1 (KpiCard) ; ledger ─► CONS-5 (org defs)
 ```
 
 ---
@@ -197,4 +239,4 @@ MoSCoW por horizonte: Must bloqueia a fase · Should agrega valor · Could nice-
 
 ---
 
-*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança.*
+*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança. Última atualização: 2026-07-10 — trilha next-trail ratificada (D1-D7): Onda 2 reconciliada (§5), waves A-D e delta de dependências.*

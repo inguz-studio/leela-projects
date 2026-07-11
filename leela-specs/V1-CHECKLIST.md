@@ -197,6 +197,8 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 **Revisada em 2026-07-05** (decisões de escopo 2026-07-04 + `.nirvana/plans/onda2-decisoes.md`). Página de vendas (lotes/cupons simples), equipe/papéis, checkout público ponta a ponta (sandbox), repasses-slim, estados de sistema web, comunicação do evento (só campanhas), coleta E11 + backend do desafio. **Sem afiliados neste início**: S301/S303 removidas, S1204 reduzida a cupom, E08 adiado. Fecha o ciclo descobrir → pagar → receita.
 
+**Ratificada como definição canônica da Onda 2 em 2026-07-10 (D4)** — `ROADMAP.md §5` corrigido para espelhar este superconjunto. Deltas de dependência da trilha next-trail (D1: kernel `pedidos` nasce em `LEELA-FABLE-A`; FABLE-G é a fonte do log de comunicação) anotados nas tasks abaixo e detalhados em `§Trilha next-trail` ao fim deste arquivo.
+
 ### LEELA-E04-slim · Configuração e vendas (sem afiliação; cupons simples) — brief `onda2-E04-lotes.md`
 
 - [ ] LEELA-S300-T1 — Modelo `paginaVendas` + `lotes` + `cupons` simples (sem afiliado) + Rules + seed
@@ -208,8 +210,8 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 - [ ] LEELA-S304-T1 — Modelo `equipe` + 4 papéis (RN-320) + matriz `podeAcessar` + custom claims por evento + Rules
 - [ ] LEELA-S304-T2 — Tela Configurações gerais do evento
 - [ ] LEELA-S304-T3 — Tela Equipe e permissões (4 papéis)
-- [ ] LEELA-E04-PAY-T1 — DI seam de payments + suíte de conformance provider-agnóstica
-- [ ] LEELA-E04-PAY-T2 — Adapter concreto do gateway em sandbox — **gated na escolha do gateway (Vitor)**
+- [ ] LEELA-E04-PAY-T1 — DI seam de payments + suíte de conformance provider-agnóstica *(next-trail: o `refund` do seam REUSA a Function de `LEELA-FABLE-B-T1` — não reimplementar estorno)*
+- [ ] LEELA-E04-PAY-T2 — Adapter concreto do gateway em sandbox — **gateway DECIDIDO: Asaas (D2, 2026-07-10); segue parked até o KYC concluir (ação externa do Vitor — não bloqueia sandbox)**
 
 Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-slim · ~~S303-T1~~ → E06 · S305/S306 → Onda 3.
 
@@ -234,10 +236,10 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 - [ ] LEELA-S1204-T2 — `validateCoupon` server-side (cupom de evento, sem afiliadoRef; consome S300-T1)
 - [ ] LEELA-S1207-T2 — `validateInscrito` core puro (RN-145/148)
 - [ ] LEELA-S1207-T1 — Persistência dos 3 campos de compliance ao criar inscrito
-- [ ] LEELA-S1203-T5 — `createInscricaoCharge` + `pedidos/{id}` (ADR-011) + sandbox provider
+- [ ] LEELA-S1203-T5 — `createInscricaoCharge` + `pedidos/{id}` (ADR-011) + sandbox provider — **dep NOVA (D1, 2026-07-10): `LEELA-FABLE-A-T1`** (o kernel `pedidos` nasce em FABLE-A; aqui só o produtor de escrita do checkout — NÃO redefinir a coleção)
 - [ ] LEELA-S1203-T6 — Webhook idempotente (inscrito→confirmado, ∑ via `agregarFinanceiro` do E03)
 - [ ] LEELA-S1206-T1 — `qrToken` assinado + emissão idempotente do ingresso por inscrito
-- [ ] LEELA-S1206-T2 — Log de notificações (`hasSent`/`markSent`) + Rules
+- [ ] LEELA-S1206-T2 — Log de notificações (`hasSent`/`markSent`) + Rules — **dep NOVA (next-trail): `LEELA-FABLE-G-T1`** (o log de envio do ingresso é o MESMO agregado do log de comunicação — não modelar um 2º)
 - [ ] LEELA-S1206-T3 — Interface `EmailProvider` + sandbox + disparo ao responsável do pedido
 - [ ] LEELA-S1206-T4 — Template de e-mail de marca + `renderTicketPdf` sob demanda
 
@@ -276,7 +278,9 @@ Débito V1.1: offline (S503) + manutenção (S504) web; mobile inteiro na onda E
 
 ### LEELA-E06 · Comunicação do evento (recorte V1 — só Campanhas) — brief `onda2-E06-lotes.md`
 
-- [ ] LEELA-E06-L1-T1 — Extração camadas A/B → `core/comunicacao` + `functions/shared` (re-point do clube, baseline 531 verde)
+**Confirmado V1 (D3, 2026-07-10).** Quando `E06-L3` aterrissar a aba Comunicação na sub-nav, o middle-action do card "Próximo evento" vira "Comunicar" (alinha ao mockup — fecha o anexo A3).
+
+- [ ] LEELA-E06-L1-T1 — Extração camadas A/B → `core/comunicacao` + `functions/shared` (re-point do clube, baseline 531 verde) — **dep NOVA (next-trail): `LEELA-FABLE-G-T1`** (campanhas e aba Comunicação do slide-in partilham o mesmo log de comunicação)
 - [ ] LEELA-S401-T1 — Modelo `campanhas` + taxonomia de segmento do evento + Rules + api-client + seed
 - [ ] LEELA-E06-L2-T1 — `estimarAlcance` (callable `count()` sobre inscritos por segmento)
 - [ ] LEELA-S401-T4 — `enviarCampanha` idempotente + limite push RN-133 (disparo físico mock)
@@ -360,3 +364,77 @@ Receber comunicados (push):
 - **LEELA-E11** — só a **coleta** (rollup diário S821-T1) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3.
 - **LEELA-E14** — Integrações de treino / `TrainingProvider` (Strava/Garmin/Health). Ação externa pendente: registrar o app OAuth na Strava (lead time).
 - **LEELA-E15** — Creator Studio: só a **higiene** (`autorId` + `anexo?` no tipo `Desafio`) entrou na Onda 2; o resto congelado até a V1 validar.
+
+---
+
+## Trilha next-trail (ratificada 2026-07-10)
+
+> Trilha ratificada pelo Vitor (**D1-D7**, 2026-07-10/11) — planejamento-fonte em `leela-specs/next-trail/` (ROADMAP-next §7 = waves A-D · STORIES-next = aceites · TASKS-next = quebra 1-task-1-PR). Roteamento: **Fable** (pagamento/segurança/rules/core) · **Opus** (UI/mecânico) · Sonnet PROIBIDO. `⚔` = review antagonista obrigatório. JTBD: âncoras de `jobs-to-be-done.md §04.1` — **P1-P5 já aplicadas ao doc (D6, 2026-07-10)**.
+> **D1:** kernel `pedidos/{id}` nasce UMA vez em FABLE-A conforme **ADR-011** (gate adr-conformance); deps `FABLE-A → S203-T3` e `FABLE-A → E12-L4/S1203-T5` valem. **D2:** gateway = **Asaas** (KYC = ação externa; `E04-PAY-T2` parked até KYC). **D5:** RESP-MOBILE = **Must V1**, antes/em paralelo à Onda 2.
+
+### Wave A · F1 Trilha Fable — backend crítico (A-G) · ROTA FABLE · review antagonista
+
+**`LEELA-FABLE-A`** · Modelo de pedido/pagamento no Inscrito (implementa **ADR-011** — kernel `pedidos`) — Must · L — **JTBD:** T/H1 · "Compro inscrição → acompanhar kit, pagamento e resultado no mesmo lugar" (04.1) + **P5 "Vendo inscrições chegarem" (inadimplência visível — dor #1)**. Destrava S203-T3, S207 (por forma de pagamento), E12-L4.
+- [ ] LEELA-FABLE-A-T1 — Modelo `pedidos/{id}` conforme ADR-011 (pedido em grupo: `responsavel`, `inscritoRefs[]`, `pagamentoRef`, `valorTotal`; escrita de estado financeiro só por Function) + tipos core `Pedido`/`Pagamento`/`Conciliacao` + api-client + Rules (nesta fase só organizador lê) + **gate adr-conformance ADR-011** — M · dep S203-T1 ✅ · **Fable** · ⚔
+- [ ] LEELA-FABLE-A-T2 — Enriquecer projeção `Inscrito` (`pedidoRef`+`ehResponsavel` do ADR-011; denormalizar `[reg]` OU join; `tamanhos` = map por item, S209) + surfaçar campos do slide-in S203 §"Campos" — M · dep A-T1 · **Fable** · ⚔
+- [ ] LEELA-FABLE-A-T3 — Wire do slide-in rico `LEELA-S203-T3`: abas Geral `[reg]` + Pagamento `[pag]` renderizam dado real (Onda 1 colhe) — S · dep A-T2 · **Opus** (UI) · ⚔ (PII no cliente: CPF/saúde/emergência — mascarar/mínimo necessário)
+
+**`LEELA-FABLE-B`** · Function de estorno idempotente, por inscrito (ADR-011) — ≙ fatia de `E09-S904` — Must · L — **JTBD:** T/H1 · **P1 "Preciso cancelar uma inscrição" (estorno digno)**. Seam de `refund` compartilhado com E04-L6 (ADR-006). Escopo honesto: fatia organizador-inicia (RN-337); máquina completa RN-341 + fila + política S305 seguem na Onda 2/E09.
+- [ ] LEELA-FABLE-B-T1 — Function `estornarInscricao` transacional idempotente por inscrito (estorno PARCIAL dentro do pedido em grupo; RN-337 sem split — afiliação cortada) + guard (só paga, só organizador) + audit trail; testes: reexec não duplica + estorno de 1 inscrito não afeta os demais — M · dep A-T1, PaymentProvider ✅ · **Fable** · ⚔
+- [ ] LEELA-FABLE-B-T2 — Ação "Reembolsar" no slide-in + ConfirmModal §2.15 (reflete resultado real "•••• em N faturas" com o valor parcial do inscrito) — S · dep B-T1, A-T3 · **Opus** (UI) · ⚔ (UI de ação de dinheiro)
+
+**`LEELA-FABLE-C`** · QR server-side — validação de assinatura (ENCOLHIDA) — ≙ recorte de `LEELA-S208` — Must · M — **JTBD:** T+S/H1 · **P2 "Faço check-in no balcão" (validar ingresso sem fraude)**.
+- [ ] LEELA-FABLE-C-T1 — Validação server-side de assinatura do `qrToken` (RN-221/222): rejeita adulterado/outro-evento/já-usado (persiste carimbo `checkinEm`, recorte S208-T1) — ≙ `S208-T3`; scanner/estados (S208-T4) NÃO entram — M · dep firebase-admin ✅ · **Fable** · ⚔ (segurança)
+
+**`LEELA-FABLE-E`** · Chave estável Kit↔enum (integridade) — Should · XS — **JTBD:** T/H1 · enabler de P3.
+- [ ] LEELA-FABLE-E-T1 — Alinhar seed `Kit.id` ao enum `inscrito.kit` (chave canônica Kit↔enum) + remover ponte `kitCasa` — XS · dep S205 ✅ · **Opus** (mecânico)
+
+**`LEELA-FABLE-D`** · Estoque por tamanho + movimentações — ≙ `LEELA-S209` + `LEELA-S210` — Should · L — **JTBD:** T/H1 · **P3 "Preparo a entrega de kits" (estoque por tamanho PP-XG)**. Destrava EstoqueView (S205-T4). Aceites canônicos em `epics/LEELA-E03` §S209/§S210 — herdar, não re-modelar.
+- [ ] LEELA-FABLE-D-T1 — Modelo de estoque por tamanho (lado kit): `modeloEstoque`/`tamanhosDisponiveis[]` em `itensKit` + subcoleção `aprovisionamento/{sku}` + Rules — ≙ `S210-T1/T2` — M · dep E-T1 · **Fable** · ⚔
+- [ ] LEELA-FABLE-D-T2 — Function de agregação Σ de estoque (onWrite de inscrito confirmado, idempotente, lê `inscrito.tamanhos`) + máquina de estados de aprovisionamento + alertas baixa/esgotado derivados — ≙ `S210-T3` — M · dep D-T1, A-T2 · **Fable** · ⚔
+- [ ] LEELA-FABLE-D-T3 — Validação de coleta de tamanho (≙ `S209-T2`, core puro RN-223) + wire EstoqueView (S205-T4) a dado real — S · dep D-T2 · **Opus** (UI)
+
+**`LEELA-FABLE-F`** · Cronograma do evento + faixa de chip — Should · M — **JTBD:** T/H1 · doc 04.1 (janela de retirada é a informação de kit; alimenta seção Retirada E12-L2) · sustenta P4.
+- [ ] LEELA-FABLE-F-T1 — `Evento` ganha cronograma de entrega (janelas dia/local/horário) + faixa/estoque de chips + Rules — M · dep S204 ✅ · **Fable** · ⚔ (Rules novas no `Evento`)
+- [ ] LEELA-FABLE-F-T2 — Banner "Entrega ativa · Dia N de M" + alertas de chip órfão/estoque no balcão (dado real) — S · dep F-T1 · **Opus** (UI)
+
+**`LEELA-FABLE-G`** · Logs de comunicação + histórico do registro — Should · M — **JTBD:** S+T/H1 · "Falo com patrocinador → Ter dados na mão" (04.4). **Agregado ÚNICO** consumido por E06-L1 (campanhas) e `S1206-T2` (log de envio do ingresso).
+- [ ] LEELA-FABLE-G-T1 — Modelo/expor log de comunicações (e-mail/push, status entrega/abertura) + histórico do registro + Rules — agregado único — M · dep A-T1 · **Fable** · ⚔ (PII/reusável)
+- [ ] LEELA-FABLE-G-T2 — Abas Comunicação `[com]` + Histórico `[hist]` do slide-in renderizam o log real (S203) — S · dep G-T1, A-T3 · **Opus** (UI)
+
+### Wave B · F2 RESP-MOBILE — passe mobile real 390×844 · ROTA OPUS · gate Norman (Must V1 — D5)
+
+> Insumo: 7 MAJOR do QA-2, causa-raiz única M1 (shell drawer). Desktop 1440 intocado (0 defeito). UI nova já nasce responsiva (L-004) → varrer só o desktop-only. **Não são regressões.** Ordem: M1→M3→M5→M4→M2/M6/M7. Fidelidade ao mockup segue em desktop; mobile segue o DS.
+
+- [ ] LEELA-RESP-QA2-RECON — **1ª task da wave (D7): reconstituir `QA-LIVE-2-REPORT.md`** (arquivo corrompido no disco — bytes NUL) a partir dos 36 screenshots em `outputs/leela-build-2d6ee98d/shots-qa2/` OU reconfirmar via novo passe Playwright 390×844 — insumo visual do lote, não despachar RESP-MOBILE às cegas — XS · dep — · **Opus**
+- [ ] LEELA-RESP-M1-T0 — Emenda ao PRD-01 + handoff-claude-design (desktop-first → responsivo com alvo mobile) + projeto mobile 390×844 no Playwright nos gates visuais daqui em diante — XS · dep QA2-RECON · **Opus**
+- [ ] LEELA-RESP-M1-T1 — `screens` breakpoints tokenizados no tailwind-preset (DS, decisão explícita) — XS · dep M1-T0 · **Opus**
+- [ ] LEELA-RESP-M1-T2 — RootShell/Sidebar → drawer mobile + remove offset fixo do `main` (destrava refluxo M2-M7); gate Norman: affordance do drawer visível · feedback <100ms · constraint impede scroll-x · `prefers-reduced-motion` — M · dep M1-T1 · **Opus** · ⚔ (DS estrutural, todas as rotas) — **JTBD:** **P4 "Estou no local do evento" (operar o painel pelo celular)**
+- [ ] LEELA-RESP-M3-T1 — KpiRow grid→1col em 390px (5 rotas) — S · dep M1-T2 · **Opus** — **JTBD:** S · "Ter dados na mão" (04.4)
+- [ ] LEELA-RESP-M5-T1 — Table card-mode/scroll contido em 390px (inscritos/membros/tenants/macro) — M · dep M1-T2 · **Opus** · ⚔ (reusável, 4 consumidores) — **JTBD:** T · P5 (inadimplência visível no celular) + 04.1/04.4
+- [ ] LEELA-RESP-M4-T1 — Header + TabNav/SubNav truncamento + overflow das abas em 390px — S · dep M1-T2 · **Opus** · ⚔ (interação nova em componente reusável dos drills — a11y teclado/roving) — **JTBD:** T · P4 + "Ter dados na mão" (04.4)
+- [ ] LEELA-RESP-M2-T1 — Toolbar/CTA (⌘K) mobile — XS · dep M1-T2 · **Opus**
+- [ ] LEELA-RESP-M6-T1 — EventRow mobile ("abrir rápido o evento que gerencio" = job da story S200) — XS · dep M1-T2 · **Opus**
+- [ ] LEELA-RESP-M7-T1 — prose/intro mobile — XS · dep M1-T2 · **Opus**
+- [ ] LEELA-RESP-GATE — Gate visual vivo 390×844 nas 18 rotas (Playwright headless, viewport explícito) — 0 MAJOR mobile; desktop 1440 intocado — S · dep todos M* · **Fable** (veredito de gate)
+
+### Wave C · F3 Onda 2 — delta ratificado (as stories/tasks `[ ]` seguem nas seções "Onda 2 · Vender" acima — NÃO duplicadas aqui)
+
+Registro dos deltas de dependência/rota desta trilha (já anotados in-line nas tasks acima; âncoras JTBD story-a-story em `next-trail/STORIES-next.md §F3`):
+- `LEELA-S1203-T5` — **dep NOVA: `LEELA-FABLE-A-T1`** (kernel `pedidos` nasce em FABLE-A; checkout só adiciona o produtor de escrita) — **Fable** · ⚔
+- `LEELA-E04-PAY-T1` — o `refund` do seam **reusa** `LEELA-FABLE-B-T1` (não reimplementar estorno) — **Fable** · ⚔
+- `LEELA-E06-L1-T1` + `S401-*` — **dep NOVA: `LEELA-FABLE-G-T1`** (mesmo agregado de log) — **Fable**(core) + **Opus**(UI) · ⚔ parcial — E06 campanhas = **V1** (D3)
+- `LEELA-S1206-T2` — **dep NOVA: `LEELA-FABLE-G-T1`** (log de envio = mesmo agregado; idempotência de envio sobre o modelo de G) — **Fable** · ⚔
+- Faseamento: espinha de venda (E04-slim · E12 · E09-slim · E07-web · E06 campanhas · S821) = **V1 (vender)** · backend do desafio (S1307/S1308) = **V1.5 (engajar)**.
+
+### Wave D · F4 Consolidações — dívida técnica/DS · ROTA OPUS · Should/Could (interleave)
+
+- [ ] LEELA-CONS-1-T1 — Promover `KpiCard`/`StatTile` canônico ao DS (flat §2.16) + showroom + testes — S · dep — · **Opus** · ⚔ (reusável) — **JTBD:** S · "ter dados na mão" (04.4) · enabler G-004
+- [ ] LEELA-CONS-1-T2 — Migrar as 4 cópias (eventos/clubes/plataforma/EstoqueView) para o KpiCard do DS — S · dep CONS-1-T1 · **Opus**
+- [ ] LEELA-CONS-2-T1 — Ajustar timeout/paralelismo do `EventoLayout.test.tsx` (passa isolado ~1.3s; falha na suíte cheia 8GB) — XS · dep — · **Opus** — enabler de qualidade (sem JTBD de usuário — honesto)
+- [ ] LEELA-CONS-3-T1 — `useTenantActions`/`useSaveCommercialTerms` → useMutation + invalidação (read-your-writes) — S · dep — · **Opus** — enabler; persona Admin 03.7 (sem linha no doc — honesto)
+- [ ] LEELA-CONS-4-T1 — Backend-dep: nome do owner do tenant (join `profissionais/{ownerUid}`) — XS · dep — · **Fable** (rules/join)
+- [ ] LEELA-CONS-4-T2 — Nome canônico do evento na parceria (denormalização) + 5º segmento de comunicado — XS · dep — · **Fable** — **JTBD:** S · "comunidade com rosto e nome" (mapa Clubs) / "ter dados na mão" (04.4)
+- [ ] LEELA-CONS-5-T1 — Adotar G-001..G-004 nas definições `~/businesses/software-forge/*` + `~/squads/magic-ds/*` (baseline DS, gate UX, injeção JTBD, KpiCard no checklist) — S · dep — · **Opus** (docs/config) — meta-organizacional (sem JTBD de usuário — honesto)
+- [ ] LEELA-CONS-6-T1 — 6 bugs de componente do showroom (Input aria-describedby · DropdownMenu className · Toast duration danger · Card export tipos · comentário Table · CardEvento href+onClick) — S · dep — · **Opus**
+- [ ] LEELA-CONS-6-T2 — UX-DADOS lote 2: financeiro/balcão onSnapshot + kits + Clubes + Plataforma mutations → useQuery/useMutation — M · dep UX-DADOS L1 ✅ · **Opus** — **JTBD:** T/S · "Ter dados na mão" (04.4)
