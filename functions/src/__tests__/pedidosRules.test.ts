@@ -287,6 +287,22 @@ describe('rules de leitura em pedidos (ADR-011 · FABLE-A-T1)', () => {
       getDoc(doc(dbAs(PASSO_OWNER_UID, passoClaims), 'pagamentos', 'pag-castelo-1'))
     );
   });
+
+  // Fix r1 (A2): `pagamentos` read passou de isTenantMember → isTenantWriter,
+  // igual a `pedidos` — promoter não enxerga dinheiro (cartão/valorFinal/
+  // repasse) pelo cliente. Negado tanto no get quanto na query.
+  it('promoter NÃO lê pagamento (get) — dinheiro exige papel de gestão (fix r1)', async () => {
+    await assertFails(
+      getDoc(doc(dbAs('uid-promoter', promoterClaims), 'pagamentos', 'pag-castelo-1'))
+    );
+  });
+
+  it('promoter NÃO lista pagamentos do próprio tenant (query negada — fix r1)', async () => {
+    const db = dbAs('uid-promoter', promoterClaims);
+    await assertFails(
+      getDocs(query(collection(db, 'pagamentos'), where('tenantId', '==', CASTELO_ID)))
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

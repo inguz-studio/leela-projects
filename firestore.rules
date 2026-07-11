@@ -366,8 +366,15 @@ service cloud.firestore {
           );
         }
 
+        // LEITURA restrita a papel de GESTÃO (owner/staff via isTenantWriter),
+        // NÃO a qualquer membro do tenant (fix PII/LGPD — revisão r1). O doc do
+        // inscrito carrega PII + dado SENSÍVEL de saúde (dadosPessoais.{cpf,
+        // telefone, restricoesMedicas} — ADR-011/A-T2). promoter e um token
+        // `role:'athlete'` com tenantId do claim NÃO leem CPF/telefone/saúde —
+        // só organizador (owner/staff) e platform_admin. Espelha a taxonomia de
+        // `pedidos`/`pagamentos`, que já exigem isTenantWriter para o financeiro.
         allow read: if isPlatformAdmin()
-                    || isTenantMember(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai());
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
@@ -443,8 +450,14 @@ service cloud.firestore {
       }
 
       match /{subcol}/{docId} {
+        // `inscritos` carrega PII + saúde (ADR-011 · A-T2 · LGPD art. 5º-II):
+        // leitura SÓ por writer (owner/staff), pela regra específica acima.
+        // Este catch-all de membro serve as demais subcoleções (kits etc.),
+        // mas NÃO pode re-conceder `inscritos` — senão promoter/athlete leem
+        // PII pelo OR de regras (fix r1: A1 só na regra específica vazava aqui).
         allow read: if isPlatformAdmin()
-                    || isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId);
+                    || (subcol != 'inscritos'
+                        && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));
         allow write: if isPlatformAdmin();
       }
     }
@@ -883,7 +896,12 @@ service cloud.firestore {
     }
 
     match /pagamentos/{docId} {
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      // LEITURA restrita a papel de GESTÃO (owner/staff via isTenantWriter),
+      // igual a `pedidos` (fix coerência financeira — revisão r1): o pagamento
+      // expõe cartão mascarado, valorFinal e repasse. promoter é membro do
+      // tenant (lê outras coleções) mas NÃO enxerga dinheiro pelo cliente nesta
+      // fase — dinheiro segue a mesma taxonomia de `pedidos`.
+      allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
       // Escrita de estado financeiro apenas por Function
       allow write: if false;
     }

@@ -279,9 +279,35 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
     );
   });
 
-  it('promoter LÊ inscrito do próprio tenant (é membro)', async () => {
-    const db = dbAs('uid-promoter-castelo', promoterClaims);
+  // ── Leitura de PII: SÓ gestão (owner/staff) — fix r1 (isTenantWriter) ────
+  // O inscrito carrega dadosPessoais (CPF/telefone/restricoesMedicas — PII +
+  // saúde, ADR-011/A-T2). Leitura passou de isTenantMember → isTenantWriter:
+  // promoter e athlete-com-claim NÃO enxergam PII; só organizador/staff.
+
+  it('organizador (owner) LÊ inscrito do próprio tenant (gestão)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(
+      getDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'))
+    );
+  });
+
+  it('staff LÊ inscrito do próprio tenant (writer)', async () => {
+    const db = dbAs('uid-staff-castelo', staffClaims);
+    await assertSucceeds(
+      getDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'))
+    );
+  });
+
+  it('promoter NÃO LÊ inscrito — PII+saúde fora do seu alcance (fix r1)', async () => {
+    const db = dbAs('uid-promoter-castelo', promoterClaims);
+    await assertFails(
+      getDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'))
+    );
+  });
+
+  it('athlete COM claim de tenant NÃO LÊ inscrito (claim não basta p/ PII)', async () => {
+    const db = dbAs('uid-atleta-castelo', { role: 'athlete', tenantId: CASTELO_ID });
+    await assertFails(
       getDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'))
     );
   });

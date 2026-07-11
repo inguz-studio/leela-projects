@@ -12,10 +12,10 @@
  *   - pendente SEM cobrança → pagamento null (ausência honesta)
  *   - inscrito legado (sem pedidoRef) → fallback por query devolve null
  *   - cross-tenant NÃO lê pedido do join (permission-denied)
- *   - [PROPOSTA DE RULES — describe.skip] cliente não escreve os campos
- *     de Function novos (pedidoRef/ehResponsavel/dadosPessoais/tamanhos);
- *     ativar quando o maestro aplicar a mudança de firestore.rules
- *     registrada no report FABLE-A-T2.
+ *   - ref pendurada (pedidoRef → doc inexistente) → VinculoPedidoCorrompido
+ *   - cliente NÃO escreve os campos de Function novos (pedidoRef/
+ *     ehResponsavel/dadosPessoais/tamanhos) — Rules aplicadas (2c01306),
+ *     describe ativo (sem .skip).
  */
 
 import {
@@ -32,7 +32,11 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { parseInscrito, valorPagoPeloComprador } from '@leela/core';
 // Import DIRETO do módulo (precedente qrToken.test.ts): o re-export em
 // packages/api-client/src/index.ts é proposta p/ o maestro (fora da raia A-T2)
-import { getPedidoEPagamentoDoInscrito } from '../../../packages/api-client/src/eventos/inscritoPedido';
+import {
+  getPedidoEPagamentoDoInscrito,
+  VinculoPedidoCorrompidoError,
+  VINCULO_PEDIDO_CORROMPIDO,
+} from '../../../packages/api-client/src/eventos/inscritoPedido';
 import { seedEventos, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import { seedInscritos } from '../seed/inscritos.seed';
 import { seedPedidos } from '../seed/pedidos.seed';
@@ -197,16 +201,38 @@ describe('join [pag] do slide-in (getPedidoEPagamentoDoInscrito)', () => {
       })
     ).rejects.toThrow();
   });
+
+  it('ref pendurada: pedidoRef → doc inexistente vira VinculoPedidoCorrompido', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    // Organizador do PRÓPRIO tenant, mas pedidoRef aponta para um pedido que
+    // não existe (resource == null nas Rules → permission-denied no fio). O
+    // caminho por ref TIPA isso como vínculo corrompido, não como autorização.
+    const promessa = getPedidoEPagamentoDoInscrito(db, {
+      tenantId: CASTELO_ID,
+      eventoId: MEIA_FLORIPA_ID,
+      inscrito: {
+        id: 'insc-dangling',
+        atletaId: 'atleta-9999',
+        pedidoRef: 'ped-inexistente-9999',
+        ehResponsavel: false,
+      },
+    });
+    await expect(promessa).rejects.toBeInstanceOf(VinculoPedidoCorrompidoError);
+    await expect(promessa).rejects.toMatchObject({
+      code: VINCULO_PEDIDO_CORROMPIDO,
+      ref: 'ped-inexistente-9999',
+      tipo: 'pedido',
+    });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// PROPOSTA DE RULES (aguardando aplicação pelo maestro — fora da raia A-T2):
-// espelhar os novos CAMPOS_FUNCTION_INSCRITO nas Rules de `inscritos`
-// (semCamposDeFunctionInscrito / camposDeFunctionIntocados). Hoje um
-// tenant_writer AINDA consegue escrever pedidoRef/dadosPessoais via update
-// direto. Ativar este bloco (remover .skip) junto com a mudança de rules.
+// Os novos CAMPOS_FUNCTION_INSCRITO são espelhados nas Rules de `inscritos`
+// (semCamposDeFunctionInscrito / camposDeFunctionIntocados — aplicado em
+// 2c01306): um tenant_writer NÃO escreve pedidoRef/ehResponsavel/
+// dadosPessoais/tamanhos por update direto. describe ATIVO (sem .skip).
 // ─────────────────────────────────────────────────────────────────────────
-describe('rules propostas: campos do checkout são só-Function (A-T2)', () => {
+describe('rules aplicadas: campos do checkout são só-Function (A-T2)', () => {
   it('update de cliente NÃO toca pedidoRef/ehResponsavel/dadosPessoais/tamanhos', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     const ref = doc(db, 'eventos', MEIA_FLORIPA_ID, 'inscritos', 'insc-0001');

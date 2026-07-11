@@ -35,6 +35,7 @@ import { seedCatalogoAcoes } from '../src/seed/catalogoAcoes.seed';
 import { seedEventos } from '../src/seed/eventos.seed';
 import { seedKits } from '../src/seed/kits.seed';
 import { seedInscritos } from '../src/seed/inscritos.seed';
+import { seedPedidos } from '../src/seed/pedidos.seed';
 import {
   seedClubes,
   CORRIDA_PERFEITA_TENANT_ID,
@@ -126,10 +127,16 @@ async function main(): Promise<void> {
   // 3. Catálogo global (referenciado pelos desafios).
   await seedCatalogoAcoes(db);
 
-  // 4. Eventos do tenant Castelo (+ kits + inscritos).
+  // 4. Eventos do tenant Castelo (+ kits + inscritos + pedidos/pagamentos).
+  //    ORDEM: inscritos ANTES de pedidos — seedPedidos enriquece os inscritos
+  //    da Meia ([reg] + pedidoRef + tamanhos) via merge; se rodasse antes, o
+  //    set integral de seedInscritos apagaria o enriquecimento (A-T3 nasceria
+  //    sem [reg]/[pag]). Escreve em `pedidos`/`pagamentos` (não tocados pelo
+  //    seedPreviewExtra) e faz merge nos inscritos — sem clobber.
   await seedEventos(db);
   await seedKits(db);
   await seedInscritos(db);
+  await seedPedidos(db);
 
   // 5. Clube Corrida Perfeita Sul (+ membros + desafios + comunicados + parcerias).
   await seedClubes(db);

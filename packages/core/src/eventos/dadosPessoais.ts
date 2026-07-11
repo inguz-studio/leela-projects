@@ -113,7 +113,8 @@ export function idadeNaData(
   fuso?: string
 ): number {
   if (!isDataEventoISO(nascimentoISO)) {
-    throw new Error(`idadeNaData: nascimento "${nascimentoISO}" não é yyyy-mm-dd válido`);
+    // Não ecoar a data de nascimento na mensagem (PII em log — LGPD).
+    throw new Error('idadeNaData: nascimento não é data civil yyyy-mm-dd válida');
   }
   const refISO = dataLocalISO(referencia, fuso);
   const anos = Number(refISO.slice(0, 4)) - Number(nascimentoISO.slice(0, 4));

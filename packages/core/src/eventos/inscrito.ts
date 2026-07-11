@@ -142,8 +142,9 @@ export interface Inscrito {
  * `dadosPessoais`/`tamanhos` (bloco `[reg]` + RN-223) são escritos pela
  * Function do checkout (S1203-T5) no MESMO fluxo que cria o pedido —
  * cliente não forja vínculo financeiro nem edita PII por escrita direta.
- * ⚠️ As Rules de `inscritos` ainda NÃO espelham estes 4 campos — mudança
- * proposta registrada no report FABLE-A-T2 (rules fora da raia desta task).
+ * As Rules de `inscritos` ESPELHAM os 4 campos (aplicado em 2c01306):
+ * `semCamposDeFunctionInscrito`/`camposDeFunctionIntocados` os incluem nas
+ * listas `hasAny`, negando escrita direta de cliente no create/update.
  */
 export const CAMPOS_FUNCTION_INSCRITO = [
   'kitEntregueEm',
