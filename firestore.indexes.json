@@ -68,6 +68,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "enviadoEm", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "lotes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "modalidade", "order": "ASCENDING" },
+        { "fieldPath": "ordem", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
