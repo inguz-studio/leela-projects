@@ -200,6 +200,10 @@ export type {
   RegistrarEntregaResult,
 } from './eventos/mutations';
 
+// FABLE-F-T1 — cronograma de entrega + faixa de chips (leitura p/ balcão F-T2)
+export { getCronogramaEntrega } from './eventos/cronograma';
+export type { CronogramaEntregaEvento } from './eventos/cronograma';
+
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)
 export { listarInscritos, listarInscritosRecentes, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
 export type {

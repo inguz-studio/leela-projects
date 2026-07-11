@@ -248,6 +248,40 @@ service cloud.firestore {
             .hasAny(['percursos']);
       }
 
+      /**
+       * FABLE-F-T1: cronograma de entrega — quando presente, é LISTA com no
+       * máximo 30 janelas (JANELAS_ENTREGA_MAX do core — anti doc-bomba).
+       * Shape fino por janela (dia ISO, HH:mm, fim > início) vive no core
+       * (parseEvento fail-fast) — Rules não iteram listas; precedente:
+       * `percursos`/`modalidades` também validam só `is list`.
+       * DECISÃO DE ESCRITA: campo do ORGANIZADOR pelo cliente — segue o
+       * padrão vigente dos campos descritivos do evento (nome/local/data):
+       * não é agregado ∑ nem carimbo de Function.
+       */
+      function janelasEntregaValidas() {
+        return !('janelasEntrega' in request.resource.data)
+          || (request.resource.data.janelasEntrega is list
+              && request.resource.data.janelasEntrega.size() <= 30);
+      }
+
+      /**
+       * FABLE-F-T1: faixa de chips — quando presente, é null (não
+       * configurada) ou map EXATO {inicio, fim} com ints ≥ 0 e fim ≥ início
+       * (faixa aqui é totalmente exprimível em Rules — validada inteira).
+       * Mesma decisão de escrita do cronograma: organizador via cliente.
+       */
+      function faixaChipsValida() {
+        return !('faixaChips' in request.resource.data)
+          || request.resource.data.faixaChips == null
+          || (request.resource.data.faixaChips is map
+              && request.resource.data.faixaChips.keys().hasAll(['inicio', 'fim'])
+              && request.resource.data.faixaChips.keys().hasOnly(['inicio', 'fim'])
+              && request.resource.data.faixaChips.inicio is int
+              && request.resource.data.faixaChips.fim is int
+              && request.resource.data.faixaChips.inicio >= 0
+              && request.resource.data.faixaChips.fim >= request.resource.data.faixaChips.inicio);
+      }
+
       // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
       // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
       // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
@@ -255,14 +289,18 @@ service cloud.firestore {
       allow create: if (isTenantWriter(request.resource.data.tenantId)
                         && tenantAtivo(request.resource.data.tenantId)
                         && eventoAgregadosZerados()
-                        && statusNasceRascunho())
+                        && statusNasceRascunho()
+                        && janelasEntregaValidas()
+                        && faixaChipsValida())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
                         && eventoAgregadosIntocados()
                         && statusIntocado()
-                        && percursosEditaveis())
+                        && percursosEditaveis()
+                        && janelasEntregaValidas()
+                        && faixaChipsValida())
                     || isPlatformAdmin();
       // Delete de evento é EXCLUSIVO de Function/Admin (review #17) — nem
       // platform_admin via client SDK (espelha o delete de clubes, S110-T2).

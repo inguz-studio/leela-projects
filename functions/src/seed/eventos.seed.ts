@@ -18,6 +18,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import type { FaixaChips, JanelaEntrega } from '@leela/core';
 import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID, MARINA_CASTELO_UID } from './tenants.seed';
 
@@ -40,6 +41,10 @@ export interface EventoSeed {
   qtdInscritos: number;
   /** Agregado ∑ — seed via Admin SDK; produção = só Function */
   receitaConfirmada: number;
+  /** Cronograma de entrega (FABLE-F-T1) — preview do banner do balcão */
+  janelasEntrega?: JanelaEntrega[];
+  /** Faixa do lote de chips (FABLE-F-T1) — preview dos alertas de estoque */
+  faixaChips?: FaixaChips;
 }
 
 export const EVENTO_SEEDS: EventoSeed[] = [
@@ -56,6 +61,30 @@ export const EVENTO_SEEDS: EventoSeed[] = [
     usaChip: true,
     qtdInscritos: 453,
     receitaConfirmada: 85617,
+    // FABLE-F-T1 — cronograma de entrega de kits (banner "Dia N de M" do
+    // balcão): 2 dias de arena + retirada tardia na madrugada da prova (27).
+    janelasEntrega: [
+      {
+        dia: '2026-04-25',
+        horaInicio: '10:00',
+        horaFim: '20:00',
+        local: 'Arena Meia Floripa — Beira-Mar Norte',
+      },
+      {
+        dia: '2026-04-26',
+        horaInicio: '10:00',
+        horaFim: '18:00',
+        local: 'Arena Meia Floripa — Beira-Mar Norte',
+      },
+      {
+        dia: '2026-04-27',
+        horaInicio: '05:00',
+        horaFim: '06:30',
+        local: 'Balcão da largada — retirada tardia',
+      },
+    ],
+    // FABLE-F-T1 — lote de chips da cronometragem (600 chips p/ 453 inscritos)
+    faixaChips: { inicio: 8001, fim: 8600 },
   },
   {
     id: MARATONA_2027_ID,
@@ -102,6 +131,15 @@ export async function seedEventos(db: admin.firestore.Firestore): Promise<void> 
       receitaConfirmada: evento.receitaConfirmada,
       atualizadoEm: now,
     };
+
+    // FABLE-F-T1 — cronograma + faixa de chips só quando o seed define
+    // (Maratona 2027 rascunho fica SEM — EmptyState honesto no balcão).
+    if (evento.janelasEntrega !== undefined) {
+      data['janelasEntrega'] = evento.janelasEntrega;
+    }
+    if (evento.faixaChips !== undefined) {
+      data['faixaChips'] = evento.faixaChips;
+    }
 
     // criadoEm só na criação — rerun não regrava (F8)
     if (!snap.exists) {

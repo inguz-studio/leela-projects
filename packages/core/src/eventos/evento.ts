@@ -10,6 +10,8 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+import { isJanelaEntrega, ordenarJanelasEntrega, type JanelaEntrega } from './cronogramaEntrega';
+import { isFaixaChips, type FaixaChips } from './faixaChips';
 
 // ---------------------------------------------------------------------------
 // Status do ciclo de vida
@@ -108,6 +110,22 @@ export interface Evento {
    * apenas a leitura direta do doc, base do ratio 453/500 nas telas E02/E03.
    */
   capacidade?: number | null;
+  /**
+   * Cronograma de entrega de kits (FABLE-F-T1 · S204/FRENTE F): janelas por
+   * dia/horário/local, embutidas no doc. OPCIONAL na entidade (eventos
+   * legados não têm): `parseEvento` SEMPRE normaliza para [] e devolve na
+   * ordem canônica (dia, horaInicio). Janela MALFORMADA presente lança
+   * (fail-fast — janela silenciosamente descartada mostraria "fechada"
+   * durante a entrega real; diferente de `percursos`, que descarta item).
+   */
+  janelasEntrega?: JanelaEntrega[];
+  /**
+   * Faixa numérica do lote de chips (FABLE-F-T1): base dos alertas de
+   * estoque/fora-da-faixa do balcão. OPCIONAL: `parseEvento` normaliza para
+   * `FaixaChips` ou `null` (não configurada); shape malformado presente
+   * lança (fail-fast — mesmo racional do cronograma).
+   */
+  faixaChips?: FaixaChips | null;
 }
 
 /**
@@ -193,6 +211,42 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
       ? capacidadeRaw
       : null;
 
+  // Cronograma de entrega (FABLE-F-T1): ausente → [] (padrão `percursos`);
+  // presente e MALFORMADO → lança. Fail-fast deliberado: uma janela inválida
+  // descartada em silêncio derrubaria o banner "Entrega ativa · Dia N de M"
+  // no dia do evento — corrupção operacional precisa gritar na borda de I/O.
+  const janelasRaw = data['janelasEntrega'];
+  let janelasEntrega: JanelaEntrega[] = [];
+  if (janelasRaw !== undefined && janelasRaw !== null) {
+    if (!Array.isArray(janelasRaw)) {
+      throw new Error(`Evento ${id}: campo "janelasEntrega" não é lista`);
+    }
+    janelasEntrega = ordenarJanelasEntrega(
+      janelasRaw.map((j, i) => {
+        if (!isJanelaEntrega(j)) {
+          throw new Error(
+            `Evento ${id}: janelasEntrega[${i}] inválida ` +
+              `(dia yyyy-mm-dd, horas HH:mm com fim > início, local não-vazio)`
+          );
+        }
+        return j;
+      })
+    );
+  }
+
+  // Faixa de chips (FABLE-F-T1): ausente/null → null (não configurada —
+  // padrão `capacidade`); presente e malformada → lança (mesmo racional).
+  const faixaRaw = data['faixaChips'];
+  let faixaChips: FaixaChips | null = null;
+  if (faixaRaw !== undefined && faixaRaw !== null) {
+    if (!isFaixaChips(faixaRaw)) {
+      throw new Error(
+        `Evento ${id}: campo "faixaChips" inválido (ints ≥ 0 com fim ≥ início)`
+      );
+    }
+    faixaChips = { inicio: faixaRaw.inicio, fim: faixaRaw.fim };
+  }
+
   // Imagem de capa: string não-vazia ou omitida (nunca string vazia → a UI
   // usa presença para escolher entre <img> e o gradiente de fallback).
   const imagemUrlRaw = data['imagemUrl'];
@@ -218,6 +272,8 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     qtdInscritos: typeof qtdInscritos === 'number' ? qtdInscritos : 0,
     receitaConfirmada: typeof receitaConfirmada === 'number' ? receitaConfirmada : 0,
     capacidade,
+    janelasEntrega,
+    faixaChips,
     // Só entra quando presente (exactOptionalPropertyTypes: nunca `undefined`).
     ...(imagemUrl !== undefined ? { imagemUrl } : {}),
   };

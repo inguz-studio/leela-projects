@@ -260,6 +260,37 @@ export {
   diasCivisAte,
 } from './eventos/dataEvento';
 
+// Cronograma de entrega do evento (FABLE-F-T1 · S204/FRENTE F) — janelas por
+// dia/local/horário embutidas no Evento + derivações puras do banner do
+// balcão (janela ativa AGORA com `agora` injetável, "Dia N de M").
+export type { JanelaEntrega, DiaEntrega } from './eventos/cronogramaEntrega';
+export {
+  JANELAS_ENTREGA_MAX,
+  isHoraJanela,
+  isJanelaEntrega,
+  validarJanelasEntrega,
+  ordenarJanelasEntrega,
+  diasDeEntrega,
+  horaLocalHHmm,
+  janelaEntregaAtiva,
+  diaDaEntrega,
+  proximaJanelaEntrega,
+} from './eventos/cronogramaEntrega';
+
+// Faixa/estoque de chips do evento (FABLE-F-T1) — faixa numérica do lote +
+// derivações de chip órfão/fora-da-faixa/esgotamento (cruza inscrito.chipNumero
+// SÓ por leitura de tipo).
+export type { FaixaChips, EstoqueChips } from './eventos/faixaChips';
+export {
+  isFaixaChips,
+  tamanhoFaixaChips,
+  numeroDoChip,
+  chipForaDaFaixa,
+  chipOrfao,
+  LIMIAR_CHIPS_ESGOTANDO,
+  derivarEstoqueChips,
+} from './eventos/faixaChips';
+
 // Balcão de entrega/check-in — regras puras (E03 · S204-T2 · RN-205/206/207)
 export type { PassoBalcao, PlanoAtendimento, ResultadoChip } from './eventos/entrega';
 export {
@@ -281,6 +312,10 @@ export {
   CAMPOS_FUNCTION_INSCRITO,
   chipVinculado,
   inscritoAtivo,
+  // FABLE-A-T2 (ADR-011) — link Inscrito↔Pedido; já constam em inscrito.ts,
+  // exportados aqui pelo dono do index neste lote (F-T1, conforme brief).
+  inscritoTemPedido,
+  pedidoDoInscritoCoerente,
   parseInscrito,
 } from './eventos/inscrito';
 
