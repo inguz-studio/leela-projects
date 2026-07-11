@@ -9,7 +9,12 @@ packages:
 overrides:
   react: 18.3.1
   react-dom: 18.3.1
+# Dependências autorizadas a rodar script de build/postinstall (pnpm 11.x lê
+# isto do workspace, não mais de package.json#pnpm). Preenchido com true (antes
+# eram placeholders "set this to true or false" que travavam o pnpm install →
+# preview). @sentry/cli fica de fora de propósito (não precisa buildar no dev).
 allowBuilds:
-  '@sentry/cli': false
+  '@firebase/util': true
   esbuild: true
+  protobufjs: true
   unrs-resolver: true
