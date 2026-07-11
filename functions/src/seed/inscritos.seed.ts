@@ -21,6 +21,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 import { MEIA_FLORIPA_ID } from './eventos.seed';
+import { assinarQrToken, obterQrKeyring } from '../eventos/qrToken';
 
 export const TOTAL_INSCRITOS_MEIA_FLORIPA = 453;
 
@@ -120,12 +121,24 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
     .doc(MEIA_FLORIPA_ID)
     .collection('inscritos');
 
+  // Emissão do ingresso assinado (S208-T3/S1206): só quando o keyring está
+  // configurado no ambiente (QR_TOKEN_KEYS/QR_TOKEN_KID_ATIVO). Sem keyring
+  // o seed segue idêntico ao anterior (compat) e o check-in fica fail-closed.
+  // Segredo NUNCA hardcoded — nem em seed emulator-only.
+  const keyring = obterQrKeyring();
+  if (keyring === null) {
+    console.warn(
+      '[seed] QR_TOKEN_KEYS ausente — inscritos SEM qrToken assinado ' +
+        '(registrarCheckin fail-closed). Configure o env para testar o QR.'
+    );
+  }
+
   // Batches de 400 (limite Firestore: 500 writes por batch)
   for (let inicio = 0; inicio < inscritos.length; inicio += 400) {
     const batch = db.batch();
     for (const inscrito of inscritos.slice(inicio, inicio + 400)) {
       const ts = Timestamp.fromMillis(inscrito.criadoEmMillis);
-      batch.set(col.doc(inscrito.id), {
+      const doc: Record<string, unknown> = {
         id: inscrito.id,
         tenantId: inscrito.tenantId,
         atletaId: inscrito.atletaId,
@@ -136,7 +149,23 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
         modalidade: inscrito.modalidade,
         criadoEm: ts,
         atualizadoEm: ts,
-      });
+      };
+      // Ingresso emitido para confirmados (RN-218 — emissão pós-pagamento) e
+      // cancelados (foram confirmados um dia — exercita INSCRITO_CANCELADO);
+      // pendente não pagou ⇒ sem ingresso. Determinístico: HMAC de payload
+      // fixo sob chave fixa ⇒ rerun regrava idêntico.
+      if (keyring !== null && inscrito.status !== 'pendente') {
+        doc['qrToken'] = assinarQrToken(
+          {
+            inscritoId: inscrito.id,
+            eventoId: MEIA_FLORIPA_ID,
+            tenantId: inscrito.tenantId,
+          },
+          keyring
+        );
+        doc['ingressoEmitidoEm'] = ts;
+      }
+      batch.set(col.doc(inscrito.id), doc);
     }
     await batch.commit();
   }
