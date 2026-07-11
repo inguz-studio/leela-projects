@@ -395,7 +395,7 @@ Receber comunicados (push):
 - [ ] LEELA-FABLE-D-T3 — Validação de coleta de tamanho (≙ `S209-T2`, core puro RN-223) + wire EstoqueView (S205-T4) a dado real — S · dep D-T2 · **Opus** (UI)
 
 **`LEELA-FABLE-F`** · Cronograma do evento + faixa de chip — Should · M — **JTBD:** T/H1 · doc 04.1 (janela de retirada é a informação de kit; alimenta seção Retirada E12-L2) · sustenta P4.
-- [ ] LEELA-FABLE-F-T1 — `Evento` ganha cronograma de entrega (janelas dia/local/horário) + faixa/estoque de chips + Rules — M · dep S204 ✅ · **Fable** · ⚔ (Rules novas no `Evento`)
+- [ ] LEELA-FABLE-F-T1 — `Evento` ganha cronograma de entrega (janelas dia/local/horário) + faixa/estoque de chips + Rules — M · dep S204 ✅ · **Fable** · ⚔ (Rules novas no `Evento`) · **🔶 IMPLEMENTADO+COMMITADO `7662651` 2026-07-11** (janelasEntrega[] embutido, derivações DST-safe, faixaChips+estoque, seed Meia 3 janelas; unit 99/99; PENDENTE: gate emulator Rules + ⚔ antagonista)
 - [ ] LEELA-FABLE-F-T2 — Banner "Entrega ativa · Dia N de M" + alertas de chip órfão/estoque no balcão (dado real) — S · dep F-T1 · **Opus** (UI)
 
 **`LEELA-FABLE-G`** · Logs de comunicação + histórico do registro — Should · M — **JTBD:** S+T/H1 · "Falo com patrocinador → Ter dados na mão" (04.4). **Agregado ÚNICO** consumido por E06-L1 (campanhas) e `S1206-T2` (log de envio do ingresso).
