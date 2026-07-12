@@ -228,10 +228,10 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 - [ ] LEELA-S1202-T2 — Conteúdo da página do clube (hero, bio, KPIs, desafios públicos, CTA — **sem** bloco de eventos afiliados)
 - [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event
 - [ ] LEELA-S1205-T2 — `sitemap.ts` + `robots.ts` (eventos publicados + clubes indexáveis)
-- [ ] LEELA-S1203-T1 — Rota + máquina de estado do Stepper (5 etapas, sem etapa de entrega)
-- [ ] LEELA-S1203-T2 — Etapa Dados (formulário do atleta anônimo + validação)
-- [ ] LEELA-S1203-T3 — Etapa Modalidade/Kit (preço vigente; "Sem kit" negativo RN-211; RN-216)
-- [ ] LEELA-S1203-T4 — Etapa Resumo (linha de taxa condicional + parcelamento + cupom)
+- [x] LEELA-S1203-T1 — Rota + máquina de estado do Stepper (5 etapas, sem etapa de entrega) — **✅ GATE PASS 2026-07-12** (`c5a7d2a`; CheckoutFlow client, 5 etapas dados→modalidade+kit→resumo→pagamento→confirmação)
+- [x] LEELA-S1203-T2 — Etapa Dados (formulário do atleta anônimo + validação) — **✅ GATE PASS 2026-07-12** (ADR-011 responsável + N inscritos, "+ Adicionar outro atleta", auto-inscrição; validação via core; `loginAnonimo`)
+- [x] LEELA-S1203-T3 — Etapa Modalidade/Kit (preço vigente; "Sem kit" negativo RN-211; RN-216) — **✅ GATE PASS 2026-07-12** (radiocards 5k75/10k100/21k150 do `precoVigente`; "Sem kit"; nota de retirada honesta)
+- [x] LEELA-S1203-T4 — Etapa Resumo (linha de taxa condicional + parcelamento + cupom) — **✅ GATE PASS 2026-07-12** (números 100% de `computeSaleState` via callable read-only; cupom HEROI10; PIX/cartão + parcelamento). **Nota (review Fable `703db9c`): a `taxa` NÃO é exibida ao comprador — expô-la vazava o `platformFeePct` do termo (RN-404); o comprador vê `totalCobrado`, a taxa vive no painel autenticado.**
 - [ ] LEELA-S1207-T3 — Compliance na etapa Dados (contato de emergência + aceite de regulamento ≠ LGPD, por inscrito)
 - [ ] LEELA-S1204-T2 — `validateCoupon` server-side (cupom de evento, sem afiliadoRef; consome S300-T1)
 - [ ] LEELA-S1207-T2 — `validateInscrito` core puro (RN-145/148)
