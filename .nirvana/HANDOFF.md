@@ -1,8 +1,20 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-10
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-11
 
-# ▶️ COMECE AQUI — retomada de sessão (fecho 2026-07-10). Último push conhecido: `c327a5f` em `main` (o REMOTO é a verdade).
-# ⚠️ GIT LOCAL DESTRUÍDO (corrupção no object store) — NÃO rodar nenhum comando git neste clone. **Re-clonar de `inguz-studio/leela-projects` ANTES de qualquer commit.** Espelho file-level de resgate (next-trail + canônicos promovidos): `C:/Users/Vitor Eduardo/leela-rescue-20260710/`.
-Este bloco é autossuficiente para uma nova sessão. As seções antigas abaixo são HISTÓRICO (o remoto é a verdade; git local destruído).
+# ⏸️ PAUSA DE SESSÃO 2026-07-11 (internet do Vitor ia cair). Git SÃO em `C:\dev\LEELA`. Último push: **`9a5a671`** em `main` (o remoto é a verdade). Working tree limpo (nenhum WIP; agente parado mal tinha começado). Emulator(8080)/preview(5273) podem ter ficado de pé — matar `java`/`node` órfãos ao retomar.
+
+## ▶️ COMECE AQUI — retomada
+
+**Feito nesta sessão (tudo pushed):** Wave A UI (A-T3 slide-in `0b0e00b` + F-T2 balcão `96ccd0f`) · fix infra preview `f60c59e` · **Wave B mobile COMPLETA** (M1-M6, gate visual 11/11 sem overflow) · refinamento UI (FilterMenu checkbox p/ 4+ facetas + SubNav plano `9fc4231`) · **Onda 2 iniciada**: S300-T1 kernel de vendas (`6b45b9c`, ADR-012 lote-por-modalidade) + **fundação do checkout sandbox** (`cbd032b` — roda SEM Asaas via MockProvider; core+charge+webhook idempotente; unit 202/202, emulator 10/10) · **re-reviews em FABLE** do backend de pagamento/segurança (acharam gaps reais que o modelo menor perdeu) + fixes: QR hardening `d50584d`, vazamento repasse+precificação `8007f52`, contrato pedido+itens[] `308275f`, saleState janela-morta `9a5a671`. Benchmarks em `discovery/`: cheers, shotgun, stayf, ticketing-br, wellable, **asaas-api-reference** (mapeada p/ PaymentProvider).
+
+**⚠️ 1 BUG ABERTO (re-dispatch ao retomar):** 2 testes de `functions/src/__tests__/vendasRules.integration.test.ts` FALHAM no emulator (passaram no unit; o agente de vendas marcou-os p/ gate consolidado e não rodou emulator antes do commit `8007f52`). Causas (diagnóstico confirmado): (1) helper `moneyCentExato` das Rules rejeita preço legítimo de 2 casas — precisão de float de `preco*100` estoura a tolerância `1e-6` → afrouxar p/ `<0.001`; (2) regra `modalidade in get(evento).data.modalidades` quebra se o evento não tem o campo → tornar defensiva (`'modalidades' in ... && ...`). Também: `beforeAll` do arquivo levou ~9,4s (perto do timeout 10s) → subir p/ 30s. **Ação:** re-despachar 1 agente **FABLE** (raia: firestore.rules + vendasRules.integration.test.ts) p/ corrigir NO EMULATOR até verde; detalhe em `outputs/leela-build-2d6ee98d/S300-T1-REPORT.md`. Depois: re-rodar o gate consolidado emulator SERIAL (máquina livre, senão o beforeAll flaka).
+
+**AGUARDANDO O VITOR:** (1) **sim/não p/ o ADR de orquestração de pagamento** (direção "costuras agora: resolveProvider(contexto)+registry+providerId como chave de roteamento+webhook demux; inteligência de roteamento/failover depois"); (2) **logos** em `brand/` → aplico em SubNav/landing/e-mail/favicon; (3) **chave sandbox Asaas** (`$aact_hmlg_...`, não precisa KYC) → construir AsaasProvider real. Decisões travadas: Leela=marketplace+SaaS (homepage/catálogo NO escopo, eventos numa dobra); checkout via sandbox; landing E12 v1 já.
+
+**FOLLOW-UP registrado (não bloqueia):** webhook deve persistir bloco `cartao` na confirmação de CARTÃO (parse já exige; PIX ok; fix antes do checkout de cartão ir ao ar).
+
+**PRÓXIMO grande passo (pós-bug):** camada visual do E12 (página pública do evento + checkout de 5 etapas na tela contra o sandbox + homepage marketplace com dobra de eventos), rota Opus, sobre o DS refinado. Depois: resto E04 (S300-T2 virada de lote + telas) · E09 repasses · E07 erros · E06 campanhas · frentes Fable restantes (B estorno, G comunicação, D/E estoque). Trilha de auditoria: `~/.harness-logs/2026-07-11/audit.jsonl`. Constraint: JDK 17 → emulator via `npx firebase-tools@13`.
+
+Este bloco é autossuficiente. As seções antigas abaixo são HISTÓRICO (o remoto é a verdade).
 
 ## Estado atual (o que está PRONTO — não refazer)
 - **App inteiro no nível de fidelidade, ancorado no JTBD** (não no pixel do mockup): Eventos (6 telas: Visão Geral, Inscritos, Hub, Financeiro, Kits/Estoque, Entrega/Balcão) + Clubes + Plataforma. 0 MAJOR de UI.
