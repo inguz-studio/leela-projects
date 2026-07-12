@@ -219,11 +219,11 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 
 - [ ] LEELA-E12-L0-T1 — `core/checkout/serviceFee.ts` (taxa incorporada × não incorporada, teste falsificável)
 - [ ] LEELA-E12-L0-T2 — `core/checkout/installments.ts` (parcelamento só cartão, sobre `buildInstallmentOptions`)
-- [ ] LEELA-S1200-T1 — Formalizar `apps/landing` (layout público, ThemeProvider leela, convenção ISR)
-- [ ] LEELA-S1200-T2 — Leitor público server-side + gate publicação/visibilidade + Rules + core-checkout puro (steps/validateDados/saleState)
-- [ ] LEELA-S1201-T1 — Rota SSR/ISR do evento + `SectionRenderer` por configuração
-- [ ] LEELA-S1201-T2 — Componentes de seção (Hero, Modalidades, Kits, Retirada, FAQ, Percurso, Patrocinadores, Depoimentos) + `BannerHero`/`CardKit` no DS
-- [ ] LEELA-S1201-T3 — Estados públicos do evento (rascunho→404, encerrado, esgotado) + ShareBlock URL/QR
+- [x] LEELA-S1200-T1 — Formalizar `apps/landing` (layout público, ThemeProvider leela, convenção ISR) — **✅ GATE PASS 2026-07-12** (`974c8e2`; App Router SSR/ISR, tema `leela` via `data-theme`, tailwind-preset do DS, header/footer públicos)
+- [x] LEELA-S1200-T2 — Leitor público server-side + gate publicação/visibilidade + Rules + core-checkout puro (steps/validateDados/saleState) — **✅ GATE PASS 2026-07-12** (leitor Admin SDK com gate por `status`→404 no código — Admin SDK bypassa Rules; `getEventoPublicado`/`listarEventosPublicados`/`getPaginaVendas`; bundle cliente 0 vazamentos; core-checkout puro já entregue na fundação S1203-T5)
+- [x] LEELA-S1201-T1 — Rota SSR/ISR do evento + `SectionRenderer` por configuração — **✅ GATE PASS 2026-07-12** (renderiza `PaginaVendas.secoes` ativas na ordem)
+- [x] LEELA-S1201-T2 — Componentes de seção (Hero, Modalidades, Kits, Retirada, FAQ, Percurso, Patrocinadores, Depoimentos) + `BannerHero`/`CardKit` no DS — **✅ GATE PASS 2026-07-12** (Hero/Sobre/Modalidades/Lotes/Retirada/CheckoutCta; preço vigente por modalidade ADR-012; seções sem dado não renderizam)
+- [x] LEELA-S1201-T3 — Estados públicos do evento (rascunho→404, encerrado, esgotado) + ShareBlock URL/QR — **✅ GATE PASS 2026-07-12** (404 provado no rascunho maratona-floripa-2027; CTA off em vendas encerradas; ShareBlock com QR). **Follow-up: hero cover = placeholder gradiente quando sem URL (hoje alt quebrado)**
 - [ ] LEELA-S1202-T1 — Rota SSR/ISR do clube com gate de visibilidade (RN-140)
 - [ ] LEELA-S1202-T2 — Conteúdo da página do clube (hero, bio, KPIs, desafios públicos, CTA — **sem** bloco de eventos afiliados)
 - [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event
