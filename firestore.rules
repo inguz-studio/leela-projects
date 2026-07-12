@@ -90,17 +90,23 @@ service cloud.firestore {
      * Valor monetário escrito por CLIENTE: number FINITO e cent-exato (R$,
      * 2 casas) — espelho de parseMoney/roundMoney do core (re-review Fable
      * S300 #6): `preco >= 0` sozinho aceitava Infinity, e sub-centavo
-     * (75.001) entrava em doc financeiro. Int é cent-exato por definição;
-     * no float, a tolerância 1e-6 (em CENTAVOS) absorve só o ruído de ponto
-     * flutuante da multiplicação ×100 — sub-centavo real (≥ 0.001 centavo)
-     * é negado. Ranges (≥ 0, > 0, ≤ 100) seguem nos shapes de cada coleção.
+     * (75.001) entrava em doc financeiro. Int é cent-exato por definição.
+     * FINITUDE por aritmética (fix pós-emulator): o runtime de Rules do
+     * Emulator (firebase-tools 13) NÃO implementa `math.isInfinite`
+     * ("Function not found" → evaluation error → negava até float LEGÍTIMO
+     * de 2 casas). `v * 0.0 == 0.0` é o equivalente portável: NaN e ±Infinity
+     * falham a igualdade (IEEE-754); todo finito passa. No float, a
+     * tolerância 0.001 (em CENTAVOS — 1/1000 de centavo) absorve com folga o
+     * ruído de ponto flutuante da multiplicação ×100 (~1e-12 para preços
+     * reais); sub-centavo REAL fica ≥ 0.1 centavo de distância do inteiro
+     * (99.999 → 0.1; 75.005 → 0.5) e segue negado. Ranges (≥ 0, > 0, ≤ 100)
+     * seguem nos shapes de cada coleção.
      */
     function moneyCentExato(v) {
       return v is int
         || (v is float
-            && !math.isNaN(v)
-            && !math.isInfinite(v)
-            && math.abs(v * 100.0 - math.round(v * 100.0)) < 0.000001);
+            && v * 0.0 == 0.0
+            && math.abs(v * 100.0 - math.round(v * 100.0)) < 0.001);
     }
 
     // ── `tenants/{tenantId}` — coleção de plataforma ──────────────────────

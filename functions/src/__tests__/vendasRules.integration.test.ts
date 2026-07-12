@@ -162,7 +162,7 @@ beforeAll(async () => {
   await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/reembolsos/reemb-1`).set({
     tenantId: CASTELO_ID, valor: 100, atualizadoEm: FieldValue.serverTimestamp(),
   });
-});
+}, 30_000); // seed completo (tenants + eventos + kernel E04) leva ~9,4s — folga sobre o default de 10s
 
 afterAll(async () => {
   await testEnv?.cleanup();
