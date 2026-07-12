@@ -53,8 +53,27 @@ export interface InscritoSeed {
   chipNumero: null;
   status: StatusSeed;
   modalidade: string;
+  /**
+   * RN-223 (S209-T1) — tamanho por item TAMANHADO do kit (`itemId →
+   * tamanho`). Kits com camiseta (prata/básico) carregam o tamanho;
+   * ouro/sem_kit ficam `{}` (nenhum item tamanhado no kit).
+   */
+  tamanhos: Record<string, string>;
   /** millis determinístico (inscrições entre Jan e Abr 2026) */
   criadoEmMillis: number;
+}
+
+/** Ciclo determinístico de tamanhos da camiseta (alinha TAMANHOS_CAMISETA) */
+const TAMANHOS_SEED = ['P', 'M', 'G', 'GG'] as const;
+
+/**
+ * Tamanhos por kit (RN-223): só os kits que INCLUEM a camiseta tamanhada
+ * (`camiseta-tecnica` ∈ kit_prata/kit_basico — ver ITEM_KIT_SEEDS) coletam
+ * tamanho; determinístico pelo índice (rerun idêntico).
+ */
+function tamanhosPorIndice(i: number, kit: KitSeed): Record<string, string> {
+  if (kit !== 'kit_prata' && kit !== 'kit_basico') return {};
+  return { 'camiseta-tecnica': TAMANHOS_SEED[i % TAMANHOS_SEED.length] as string };
 }
 
 /** Kit por posição (1-based) — espelha a distribuição do protótipo */
@@ -101,6 +120,7 @@ export function gerarInscritosSeed(): InscritoSeed[] {
       chipNumero: null,
       status: statusPorIndice(i),
       modalidade: modalidadePorIndice(i, kit),
+      tamanhos: tamanhosPorIndice(i, kit),
       criadoEmMillis: base + i * 5 * 60 * 60 * 1000, // +5h por inscrição
     });
   }
@@ -147,6 +167,7 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
         chipNumero: inscrito.chipNumero,
         status: inscrito.status,
         modalidade: inscrito.modalidade,
+        tamanhos: inscrito.tamanhos,
         criadoEm: ts,
         atualizadoEm: ts,
       };

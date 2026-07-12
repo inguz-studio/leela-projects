@@ -266,11 +266,13 @@ const KITS_INSCRITO_CANONICOS: readonly KitInscrito[] = [
  * checkout de kit (Schneier): sem esta derivação `kit` e `kitId` são inputs
  * INDEPENDENTES, então um cliente escolhe `kitId: 'sem-kit'` (−R$15, desconto)
  * e ainda carimba `kit: 'kit_ouro'` no doc — paga menos e o balcão entrega o
- * kit caro pelo rótulo. Aqui o rótulo passa a espelhar o kit COBRADO: kits
- * canônicos do seed mapeiam id→enum (dash→underscore); id custom (ou ausência
- * de kit) cai em `sem_kit` — degradação honesta, preço sempre do core. Cliente
- * honesto já enviava este mesmo valor (kitEnumFromId no landing): ZERO mudança
- * de comportamento para o fluxo legítimo, só remove a via de abuso. @pure
+ * kit caro pelo rótulo. Aqui o rótulo passa a espelhar o kit COBRADO: com a
+ * CHAVE CANÔNICA Kit↔enum (FABLE-E-T1) o id do seed É o enum (identidade); o
+ * normalize dash→underscore segue aceitando id LEGADO com hífen; id custom
+ * (ou ausência de kit) cai em `sem_kit` — degradação honesta, preço sempre do
+ * core. Cliente honesto já enviava este mesmo valor (kitEnumFromId no
+ * landing): ZERO mudança de comportamento para o fluxo legítimo, só remove a
+ * via de abuso. @pure
  */
 export function kitEnumInscritoFromId(kitId?: string): KitInscrito {
   if (typeof kitId !== 'string' || kitId.length === 0) return 'sem_kit';

@@ -40,7 +40,10 @@ function mkItem(over: Partial<ItemKit> = {}): ItemKit {
     tamanhado: over.tamanhado ?? false,
     origem: over.origem ?? 'organizador',
     exibirLogo: over.exibirLogo ?? false,
-    kits: over.kits ?? ['kit-ouro'],
+    modeloEstoque: over.modeloEstoque ?? 'sob_encomenda',
+    tamanhosDisponiveis: over.tamanhosDisponiveis ?? [],
+    // Chave canônica Kit↔enum (FABLE-E-T1): item referencia o id do enum
+    kits: over.kits ?? ['kit_ouro'],
     criadoEm: mkInscrito().criadoEm,
     atualizadoEm: mkInscrito().atualizadoEm,
     ...over,
@@ -97,15 +100,15 @@ describe('AtendimentoPanel', () => {
       evento: { usaChip: true },
       inscrito: { kit: 'kit_ouro' },
       itensKit: [
-        mkItem({ id: 'camiseta', nome: 'Camiseta técnica', tamanhado: true, kits: ['kit-ouro'] }),
+        mkItem({ id: 'camiseta', nome: 'Camiseta técnica', tamanhado: true, kits: ['kit_ouro'] }),
         mkItem({
           id: 'whey',
           nome: 'Sachê de whey',
           origem: 'patrocinador',
           marca: 'Growth',
-          kits: ['kit-ouro'],
+          kits: ['kit_ouro'],
         }),
-        mkItem({ id: 'outro', nome: 'Item de outro kit', kits: ['kit-basico'] }),
+        mkItem({ id: 'outro', nome: 'Item de outro kit', kits: ['kit_basico'] }),
       ],
     });
     await selecionar('Marina Silva');
@@ -120,7 +123,7 @@ describe('AtendimentoPanel', () => {
     setup({
       evento: { usaChip: false },
       inscrito: { kit: 'sem_kit' },
-      itensKit: [mkItem({ id: 'camiseta', nome: 'Camiseta técnica', kits: ['kit-basico'] })],
+      itensKit: [mkItem({ id: 'camiseta', nome: 'Camiseta técnica', kits: ['kit_basico'] })],
     });
     await selecionar('Marina Silva');
     expect(screen.queryByText('Camiseta técnica')).not.toBeInTheDocument();

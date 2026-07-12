@@ -242,27 +242,21 @@ export function alertasChipBalcao(
 }
 
 /**
- * De-para do `kit` do inscrito (enum, underscore) → docId do Kit (hyphen).
- * `kit_ouro` → `kit-ouro`; espelha os ids canônicos de `eventos/{}/kits`.
- * @pure
- */
-export function kitDocId(kit: KitInscrito): string {
-  return kit.replace(/_/g, '-');
-}
-
-/**
  * Itens que compõem o kit do inscrito (checklist de conferência do balcão).
  * Filtra o catálogo `itensKit` pelos que referenciam o kit do atleta (RN-215).
  * `sem_kit` → nenhum item. Ordena tamanhados primeiro (conferência do tamanho
- * é o passo que trava a fila). @pure
+ * é o passo que trava a fila).
+ *
+ * CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): `Kit.id` canônico É o valor do enum
+ * (`kit_ouro`) — `item.kits[]` referencia direto, sem de-para de delimitador
+ * (`kitDocId` foi removido junto com o seed legado de hífen). @pure
  */
 export function itensDoKit(
   itens: readonly ItemKit[],
   kit: KitInscrito,
 ): ItemKit[] {
   if (kit === 'sem_kit') return [];
-  const docId = kitDocId(kit);
   return itens
-    .filter((it) => it.kits.includes(docId))
+    .filter((it) => it.kits.includes(kit))
     .sort((a, b) => Number(b.tamanhado) - Number(a.tamanhado));
 }

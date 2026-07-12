@@ -788,6 +788,27 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `aprovisionamento/{sku}` — estoque de kit POR SKU (item tamanhado ×
+      // tamanho; docId `itemId__tamanho` — S210-T2 · FABLE-D).
+      //
+      // ∑ (`qtdVendida`/`aEncomendar`/`alerta` — RN-224) recomputados pela
+      // Function `agregarEstoque`; estado da máquina (`estado`/`estoqueFisico`
+      // /`historico` — RN-226) avança SÓ pela callable
+      // `transicaoAprovisionamento` (guard de organizador na Function).
+      //
+      // ESCRITA: NUNCA pelo cliente (Admin SDK bypassa Rules) — estoque
+      // forjado = kit não encomendado = atleta sem camiseta no balcão; e a
+      // matriz de transição (RN-226) só é validada dentro da Function.
+      // LEITURA: taxonomia de GESTÃO (`inscritos`/`financeiro`): owner/staff
+      // do tenant dono e platform_admin; promoter/athlete-com-claim NÃO leem
+      // (o SKU expõe a demanda comercial do evento por tamanho). NÃO entra
+      // na allowlist de membro do catch-all abaixo.
+      match /aprovisionamento/{sku} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
       match /{subcol}/{docId} {
         // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
         // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)
@@ -1329,7 +1350,12 @@ service cloud.firestore {
     // Function itemKitIndex — cliente nunca escreve.
     match /itensKit/{itemId} {
 
-      /** Shape do item (RN-212/213/214) — enums e booleans coerentes. */
+      /**
+       * Shape do item (RN-212/213/214) — enums e booleans coerentes.
+       * `modeloEstoque`/`tamanhosDisponiveis` (RN-225/223 · S210-T1) são
+       * config do ORGANIZADOR (cliente escreve) — validados quando presentes;
+       * ausentes = doc legado (o parse do core normaliza sob_encomenda/[]).
+       */
       function shapeItemKitValido() {
         return request.resource.data.nome is string
           && request.resource.data.nome.size() > 0
@@ -1340,7 +1366,11 @@ service cloud.firestore {
               || request.resource.data.exibirLogo == false)
           && request.resource.data.kits is list
           && request.resource.data.eventoId is string
-          && request.resource.data.eventoId.size() > 0;
+          && request.resource.data.eventoId.size() > 0
+          && (!request.resource.data.keys().hasAny(['modeloEstoque'])
+              || request.resource.data.modeloEstoque in ['sob_encomenda', 'estoque_proprio'])
+          && (!request.resource.data.keys().hasAny(['tamanhosDisponiveis'])
+              || request.resource.data.tamanhosDisponiveis is list);
       }
 
       /**

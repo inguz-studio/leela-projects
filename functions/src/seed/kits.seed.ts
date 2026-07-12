@@ -34,13 +34,20 @@ export interface KitSeedDef {
   modalidades: string[];
 }
 
+// CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): o id do kit canônico É o valor do
+// enum `KitInscrito` (`kit_ouro`, underscore) — o join `inscrito.kit ===
+// Kit.id` casa DIRETO, sem ponte de delimitador (kitCasa/kitDocId removidos).
+// Ids legados com hífen (`kit-ouro`) são apagados por `limparKitsLegados`.
 export const KIT_SEEDS: KitSeedDef[] = [
-  { id: 'kit-ouro', nome: 'Kit Ouro', preco: 89, capacidade: 80, modalidades: ['21k'] },
-  { id: 'kit-prata', nome: 'Kit Prata', preco: 35, capacidade: 260, modalidades: ['10k', '21k'] },
-  { id: 'kit-basico', nome: 'Kit básico', preco: 0, capacidade: 300, modalidades: ['5k', '10k', '21k'] },
+  { id: 'kit_ouro', nome: 'Kit Ouro', preco: 89, capacidade: 80, modalidades: ['21k'] },
+  { id: 'kit_prata', nome: 'Kit Prata', preco: 35, capacidade: 260, modalidades: ['10k', '21k'] },
+  { id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 300, modalidades: ['5k', '10k', '21k'] },
   // RN-211: "Sem kit" é kit válido com preço NEGATIVO (desconto)
-  { id: 'sem-kit', nome: 'Sem kit', preco: -15, capacidade: 60, modalidades: ['5k'] },
+  { id: 'sem_kit', nome: 'Sem kit', preco: -15, capacidade: 60, modalidades: ['5k'] },
 ];
+
+/** Ids legados (hífen) — removidos do Emulator ao ressemear (FABLE-E-T1). */
+const KIT_IDS_LEGADOS = ['kit-ouro', 'kit-prata', 'kit-basico', 'sem-kit'];
 
 export interface ItemKitSeedDef {
   id: string;
@@ -49,9 +56,19 @@ export interface ItemKitSeedDef {
   origem: 'organizador' | 'patrocinador';
   marca?: string;
   exibirLogo: boolean;
+  /** RN-225 (S210-T1) — modelo de estoque do item */
+  modeloEstoque: 'sob_encomenda' | 'estoque_proprio';
+  /** RN-223 (S210-T1) — tamanhos válidos (só item tamanhado) */
+  tamanhosDisponiveis: string[];
   kits: string[];
 }
 
+/** Tamanhos canônicos da camiseta (RN-223 — protótipo Kits-Estoque) */
+export const TAMANHOS_CAMISETA = ['P', 'M', 'G', 'GG'];
+
+// `modeloEstoque` do seed é FIXTURE (não regra): a camiseta tamanhada roda
+// `sob_encomenda` — o caso que exercita RN-224 ("a encomendar" = vendido −
+// estoque); os itens únicos ficam `estoque_proprio`.
 export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
   {
     id: 'camiseta-tecnica',
@@ -59,7 +76,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     tamanhado: true, // RN-212 — único item tamanhado do catálogo canônico
     origem: 'organizador',
     exibirLogo: false,
-    kits: ['kit-prata', 'kit-basico'], // RN-215 — em 2 kits
+    modeloEstoque: 'sob_encomenda',
+    tamanhosDisponiveis: TAMANHOS_CAMISETA,
+    kits: ['kit_prata', 'kit_basico'], // RN-215 — em 2 kits
   },
   {
     id: 'numero-peitoral',
@@ -67,7 +86,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     tamanhado: false,
     origem: 'organizador',
     exibirLogo: false,
-    kits: ['kit-ouro', 'kit-prata', 'kit-basico'],
+    modeloEstoque: 'estoque_proprio',
+    tamanhosDisponiveis: [],
+    kits: ['kit_ouro', 'kit_prata', 'kit_basico'],
   },
   {
     id: 'sacochila-evento',
@@ -76,7 +97,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     origem: 'patrocinador',
     marca: 'Olympikus',
     exibirLogo: true, // RN-214 — toggle ON
-    kits: ['kit-ouro', 'kit-prata'],
+    modeloEstoque: 'estoque_proprio',
+    tamanhosDisponiveis: [],
+    kits: ['kit_ouro', 'kit_prata'],
   },
   {
     id: 'whey-30g',
@@ -85,7 +108,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     origem: 'patrocinador',
     marca: 'Growth Supplements',
     exibirLogo: true,
-    kits: ['kit-ouro', 'kit-prata', 'kit-basico'],
+    modeloEstoque: 'estoque_proprio',
+    tamanhosDisponiveis: [],
+    kits: ['kit_ouro', 'kit_prata', 'kit_basico'],
   },
   {
     id: 'viseira-tecnica',
@@ -94,7 +119,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     origem: 'patrocinador',
     marca: 'Centauro',
     exibirLogo: true,
-    kits: ['kit-ouro', 'kit-prata'],
+    modeloEstoque: 'estoque_proprio',
+    tamanhosDisponiveis: [],
+    kits: ['kit_ouro', 'kit_prata'],
   },
   {
     id: 'gel-carboidrato',
@@ -103,7 +130,9 @@ export const ITEM_KIT_SEEDS: ItemKitSeedDef[] = [
     origem: 'patrocinador',
     marca: 'Probiótica',
     exibirLogo: false, // RN-214 — toggle OFF (visibilidade desativada)
-    kits: ['kit-ouro', 'kit-prata'],
+    modeloEstoque: 'estoque_proprio',
+    tamanhosDisponiveis: [],
+    kits: ['kit_ouro', 'kit_prata'],
   },
 ];
 
@@ -120,6 +149,12 @@ export async function seedKits(db: admin.firestore.Firestore): Promise<void> {
   const itensCol = db.collection('itensKit');
 
   const batch = db.batch();
+
+  // FABLE-E-T1: remove docs legados de id com hífen (Emulator persistido) —
+  // sem isto o rename criaria kit_ouro AO LADO de kit-ouro (duplicata na UI).
+  for (const idLegado of KIT_IDS_LEGADOS) {
+    batch.delete(kitsCol.doc(idLegado));
+  }
 
   for (const kit of KIT_SEEDS) {
     const ref = kitsCol.doc(kit.id);
@@ -148,6 +183,8 @@ export async function seedKits(db: admin.firestore.Firestore): Promise<void> {
       tamanhado: item.tamanhado,
       origem: item.origem,
       exibirLogo: item.exibirLogo,
+      modeloEstoque: item.modeloEstoque,
+      tamanhosDisponiveis: item.tamanhosDisponiveis,
       kits: item.kits,
       atualizadoEm: now,
     };

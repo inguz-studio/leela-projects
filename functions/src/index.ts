@@ -80,6 +80,16 @@ export { onInscritoWrite } from './eventos/agregarFinanceiro';
 // não são endpoints. ⚠️ Fable (PII).
 export { onComunicacaoWrite } from './eventos/agregarComunicacoes';
 
+// Eventos — aprovisionamento de kit POR SKU (item tamanhado × tamanho):
+// Σ qtdVendida/aEncomendar por recontagem idempotente (RN-224) + máquina de
+// estados estimativa→encomendado→em_estoque (RN-226) via callable do
+// organizador (FABLE-D-T2 · S210-T3 · Onda 2). ⚠️ Fable (integridade de
+// estoque/movimentação).
+export {
+  onInscritoWriteEstoque,
+  transicaoAprovisionamento,
+} from './eventos/agregarEstoque';
+
 // Checkout — fundação E12 (sandbox sem chave Asaas — ADR-006/ADR-011):
 // createInscricaoCharge cria pedido/inscritos + emite a cobrança (provider
 // selecionado por selectPaymentProvider — Mock sem chave, fail-safe);

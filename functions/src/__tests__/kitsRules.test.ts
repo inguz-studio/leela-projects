@@ -133,7 +133,7 @@ function itemValido(overrides: Record<string, unknown> = {}) {
   return {
     id: 'item-teste', tenantId: CASTELO_ID, eventoId: MEIA_FLORIPA_ID,
     nome: 'Squeeze do evento', tamanhado: false,
-    origem: 'organizador', exibirLogo: false, kits: ['kit-basico'],
+    origem: 'organizador', exibirLogo: false, kits: ['kit_basico'],
     ...overrides,
   };
 }
@@ -146,7 +146,7 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
     const kits = await listarKits(db, MEIA_FLORIPA_ID);
     expect(kits).toHaveLength(4);
     // orderBy preco desc → Sem kit por último
-    expect(kits.map((k) => k.id)).toEqual(['kit-ouro', 'kit-prata', 'kit-basico', 'sem-kit']);
+    expect(kits.map((k) => k.id)).toEqual(['kit_ouro', 'kit_prata', 'kit_basico', 'sem_kit']);
     expect(kits[3]?.preco).toBe(-15);
   });
 
@@ -154,11 +154,11 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
     // Evento SEM venda — com venda o create é negado pela RN-200 (review #04)
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(
-      setDoc(kitRefSemVenda(db, 'sem-kit-vip'), kitValido({
-        id: 'sem-kit-vip', nome: 'Sem kit VIP', preco: -25, modalidades: ['42k'],
+      setDoc(kitRefSemVenda(db, 'sem_kit-vip'), kitValido({
+        id: 'sem_kit-vip', nome: 'Sem kit VIP', preco: -25, modalidades: ['42k'],
       }))
     );
-    const snap = await getDoc(kitRefSemVenda(db, 'sem-kit-vip'));
+    const snap = await getDoc(kitRefSemVenda(db, 'sem_kit-vip'));
     expect(snap.data()?.['preco']).toBe(-25);
   });
 
@@ -193,22 +193,22 @@ describe('kits — cross-tenant e RBAC (S205-T1)', () => {
 
   it('owner de B NÃO ATUALIZA kit de A', async () => {
     const db = dbAs(PASSO_OWNER_UID, passoClaims);
-    await assertFails(updateDoc(kitRef(db, 'kit-ouro'), { preco: 1 }));
+    await assertFails(updateDoc(kitRef(db, 'kit_ouro'), { preco: 1 }));
   });
 
   it('owner de B NÃO DELETA kit de A', async () => {
     const db = dbAs(PASSO_OWNER_UID, passoClaims);
-    await assertFails(deleteDoc(kitRef(db, 'kit-ouro')));
+    await assertFails(deleteDoc(kitRef(db, 'kit_ouro')));
   });
 
   it('owner de B NÃO LÊ kits de A', async () => {
     const db = dbAs(PASSO_OWNER_UID, passoClaims);
-    await assertFails(getDoc(kitRef(db, 'kit-ouro')));
+    await assertFails(getDoc(kitRef(db, 'kit_ouro')));
   });
 
   it('tenantId de kit é IMUTÁVEL no update', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
-    await assertFails(updateDoc(kitRef(db, 'kit-ouro'), { tenantId: PASSO_ID }));
+    await assertFails(updateDoc(kitRef(db, 'kit_ouro'), { tenantId: PASSO_ID }));
   });
 
   it('staff CRIA/ATUALIZA kit; promoter NÃO (RBAC)', async () => {
@@ -218,14 +218,14 @@ describe('kits — cross-tenant e RBAC (S205-T1)', () => {
       setDoc(kitRefSemVenda(staffDb, 'kit-staff'), kitValido({ id: 'kit-staff' }))
     );
     // Update de campo ≠ preco segue permitido MESMO com venda
-    await assertSucceeds(updateDoc(kitRef(staffDb, 'kit-ouro'), { capacidade: 90 }));
+    await assertSucceeds(updateDoc(kitRef(staffDb, 'kit_ouro'), { capacidade: 90 }));
 
     const promoterDb = dbAs('uid-promoter-castelo', promoterClaims);
     await assertFails(
       setDoc(kitRefSemVenda(promoterDb, 'kit-promoter'), kitValido({ id: 'kit-promoter' }))
     );
     // promoter LÊ (é membro)
-    await assertSucceeds(getDoc(kitRef(promoterDb, 'kit-ouro')));
+    await assertSucceeds(getDoc(kitRef(promoterDb, 'kit_ouro')));
   });
 
   it('SEM venda: owner cria e DELETA kit do próprio evento (RN-210 — 0..N kits)', async () => {
@@ -246,21 +246,21 @@ describe('kits — cross-tenant e RBAC (S205-T1)', () => {
 describe('kits — delete+recreate anulava RN-200 (review #04)', () => {
   it('COM venda: owner NÃO deleta kit (era o greenlight do exploit)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
-    await assertFails(deleteDoc(kitRef(db, 'kit-basico')));
+    await assertFails(deleteDoc(kitRef(db, 'kit_basico')));
   });
 
   it('COM venda: owner NÃO cria kit novo (recreate com preço novo bloqueado)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(
-      setDoc(kitRef(db, 'kit-basico-2'), kitValido({ id: 'kit-basico-2', preco: 1 }))
+      setDoc(kitRef(db, 'kit_basico_2'), kitValido({ id: 'kit_basico_2', preco: 1 }))
     );
   });
 
   it('COM venda: staff também não deleta nem recria (papel de escrita não basta)', async () => {
     const db = dbAs('uid-staff-castelo', staffClaims);
-    await assertFails(deleteDoc(kitRef(db, 'kit-prata')));
+    await assertFails(deleteDoc(kitRef(db, 'kit_prata')));
     await assertFails(
-      setDoc(kitRef(db, 'kit-prata'), kitValido({ id: 'kit-prata', nome: 'Kit Prata', preco: 1 }))
+      setDoc(kitRef(db, 'kit_prata'), kitValido({ id: 'kit_prata', nome: 'Kit Prata', preco: 1 }))
     );
   });
 
@@ -324,7 +324,7 @@ describe('itensKit — shape, RBAC e cross-tenant (S205-T1)', () => {
     await assertFails(
       setDoc(doc(db, 'itensKit', 'item-usadoem'), itemValido({
         id: 'item-usadoem',
-        usadoEm: [{ kitId: 'kit-ouro', nome: 'Kit Ouro' }],
+        usadoEm: [{ kitId: 'kit_ouro', nome: 'Kit Ouro' }],
       }))
     );
   });
@@ -333,7 +333,7 @@ describe('itensKit — shape, RBAC e cross-tenant (S205-T1)', () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(
       updateDoc(doc(db, 'itensKit', 'camiseta-tecnica'), {
-        usadoEm: [{ kitId: 'kit-ouro', nome: 'Hack' }],
+        usadoEm: [{ kitId: 'kit_ouro', nome: 'Hack' }],
       })
     );
   });
@@ -342,7 +342,7 @@ describe('itensKit — shape, RBAC e cross-tenant (S205-T1)', () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(
       updateDoc(doc(db, 'itensKit', 'camiseta-tecnica'), {
-        kits: ['kit-prata', 'kit-basico', 'kit-ouro'],
+        kits: ['kit_prata', 'kit_basico', 'kit_ouro'],
       })
     );
   });
@@ -404,8 +404,8 @@ describe('usadoEm — índice inverso N:N via sync (RN-215)', () => {
   it('item em 2 kits lista "usado em" os 2 (aceite L1)', async () => {
     const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
     expect(snap.data()?.['usadoEm']).toEqual([
-      { kitId: 'kit-prata', nome: 'Kit Prata' },
-      { kitId: 'kit-basico', nome: 'Kit básico' },
+      { kitId: 'kit_prata', nome: 'Kit Prata' },
+      { kitId: 'kit_basico', nome: 'Kit básico' },
     ]);
   });
 
@@ -419,39 +419,39 @@ describe('usadoEm — índice inverso N:N via sync (RN-215)', () => {
 
   it('mudar kits[] do item e ressincronizar recomputa o índice', async () => {
     const ref = adminDb.collection('itensKit').doc('viseira-tecnica');
-    await ref.update({ kits: ['kit-ouro'] });
+    await ref.update({ kits: ['kit_ouro'] });
     const escreveu = await syncItemUsadoEm(adminDb, 'viseira-tecnica');
     expect(escreveu).toBe(true);
     const snap = await ref.get();
-    expect(snap.data()?.['usadoEm']).toEqual([{ kitId: 'kit-ouro', nome: 'Kit Ouro' }]);
+    expect(snap.data()?.['usadoEm']).toEqual([{ kitId: 'kit_ouro', nome: 'Kit Ouro' }]);
   });
 
   it('renomear kit e ressincronizar propaga o novo nome aos itens (gatilho 2)', async () => {
     await adminDb
       .collection('eventos').doc(MEIA_FLORIPA_ID)
-      .collection('kits').doc('kit-prata')
+      .collection('kits').doc('kit_prata')
       .update({ nome: 'Kit Prata Plus' });
 
-    const n = await syncItensDoKit(adminDb, MEIA_FLORIPA_ID, 'kit-prata');
+    const n = await syncItensDoKit(adminDb, MEIA_FLORIPA_ID, 'kit_prata');
     expect(n).toBeGreaterThan(0);
 
     const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
     expect(snap.data()?.['usadoEm']).toEqual([
-      { kitId: 'kit-prata', nome: 'Kit Prata Plus' },
-      { kitId: 'kit-basico', nome: 'Kit básico' },
+      { kitId: 'kit_prata', nome: 'Kit Prata Plus' },
+      { kitId: 'kit_basico', nome: 'Kit básico' },
     ]);
   });
 
   it('kit deletado sai do índice na ressincronização', async () => {
     await adminDb
       .collection('eventos').doc(MEIA_FLORIPA_ID)
-      .collection('kits').doc('kit-basico')
+      .collection('kits').doc('kit_basico')
       .delete();
 
     await syncItemUsadoEm(adminDb, 'camiseta-tecnica');
     const snap = await adminDb.collection('itensKit').doc('camiseta-tecnica').get();
     expect(snap.data()?.['usadoEm']).toEqual([
-      { kitId: 'kit-prata', nome: 'Kit Prata' },
+      { kitId: 'kit_prata', nome: 'Kit Prata' },
     ]);
   });
 

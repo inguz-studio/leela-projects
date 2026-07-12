@@ -19,18 +19,10 @@ export function pct(retirados: number, total: number): number {
   return total > 0 ? Math.round((retirados / total) * 100) : 0;
 }
 
-/**
- * `inscrito.kit` (enum fixo `KitInscrito`, ex.: 'kit_ouro') vs `Kit.id` (id do
- * doc, ex.: 'kit-ouro' no seed): a única divergência é o DELIMITADOR. Reconcilia
- * '-'/'_' e caixa para casar os dois lados sem inventar dado. No-op quando os
- * ids já coincidem. NÃO é um mapeamento de negócio — só normaliza a chave de
- * junção; a ligação estável Kit↔enum é dependência de modelo (ver relatório).
- * @pure
- */
-export function kitCasa(inscritoKit: string, kitId: string): boolean {
-  const norm = (s: string): string => s.toLowerCase().replace(/-/g, '_');
-  return norm(inscritoKit) === norm(kitId);
-}
+// CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): `Kit.id` canônico É o valor do enum
+// `KitInscrito` (`kit_ouro`) — o join `inscrito.kit === kit.id` casa DIRETO.
+// A ponte de delimitador (`kitCasa`, que reconciliava `kit-ouro`↔`kit_ouro`)
+// foi REMOVIDA junto com o seed legado de hífen.
 
 export interface ProgressoKit {
   kit: KitInscrito;
@@ -102,7 +94,7 @@ export function estoquePorKit(
   return kits.map((kit) => {
     let retirados = 0;
     for (const i of inscritos) {
-      if (i.status === 'confirmado' && kitCasa(i.kit, kit.id) && presencaRegistrada(i)) {
+      if (i.status === 'confirmado' && i.kit === kit.id && presencaRegistrada(i)) {
         retirados += 1;
       }
     }
@@ -190,7 +182,7 @@ export function matrizEstoque(
       let confirmados = 0;
       let retirados = 0;
       for (const i of inscritos) {
-        if (i.status === 'confirmado' && kitCasa(i.kit, kit.id) && i.modalidade === modalidade) {
+        if (i.status === 'confirmado' && i.kit === kit.id && i.modalidade === modalidade) {
           confirmados += 1;
           if (presencaRegistrada(i)) retirados += 1;
         }

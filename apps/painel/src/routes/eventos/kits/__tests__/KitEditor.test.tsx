@@ -29,6 +29,8 @@ function mkItem(over: Partial<ItemKit> = {}): ItemKit {
     tamanhado: true,
     origem: 'organizador',
     exibirLogo: false,
+    modeloEstoque: 'sob_encomenda',
+    tamanhosDisponiveis: [],
     kits: [],
     criadoEm: ts(new Date()),
     atualizadoEm: ts(new Date()),

@@ -69,10 +69,16 @@ describe('matrizEstoque', () => {
     expect(linha?.esgotado).toBe(false);
   });
 
-  it('reconcilia id de doc com hífen (kit-ouro) e enum com underscore (kit_ouro)', () => {
-    // regressão do gap seed↔enum: sem a reconciliação, a demanda viria 0/0
-    const [linha] = matrizEstoque([mkKit({ id: 'kit-ouro' })], inscritos, ['21k']);
-    const c21 = linha?.celulas.find((c) => c.modalidade === '21k');
-    expect(c21).toMatchObject({ confirmados: 2, retirados: 1 });
+  it('chave canônica Kit↔enum: id underscore casa direto, hífen legado NÃO (FABLE-E-T1)', () => {
+    // o seed alinhou Kit.id ao enum (kit_ouro) e a ponte kitCasa foi removida:
+    // o join é `inscrito.kit === kit.id`. Doc legado com hífen precisa ser
+    // ressemeado — reconciliar em silêncio mascararia dado desalinhado.
+    const [canonica] = matrizEstoque([mkKit({ id: 'kit_ouro' })], inscritos, ['21k']);
+    expect(canonica?.celulas.find((c) => c.modalidade === '21k'))
+      .toMatchObject({ confirmados: 2, retirados: 1 });
+
+    const [legada] = matrizEstoque([mkKit({ id: 'kit-ouro' })], inscritos, ['21k']);
+    expect(legada?.celulas.find((c) => c.modalidade === '21k'))
+      .toMatchObject({ confirmados: 0, retirados: 0 });
   });
 });

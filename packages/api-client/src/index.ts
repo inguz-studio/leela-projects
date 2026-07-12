@@ -233,6 +233,10 @@ export {
 } from './eventos/kits';
 export type { SalvarKitInput, SalvarItemKitInput } from './eventos/kits';
 
+// S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
+// são de escrita EXCLUSIVA de Function — RN-224/226)
+export { listarAprovisionamento } from './eventos/aprovisionamento';
+
 // ---------------------------------------------------------------------------
 // Pedidos — kernel `pedidos/{id}` + `pagamentos/{id}` (ADR-011 · FABLE-A-T1)
 // SÓ leitura: escrita de pedido/pagamento é EXCLUSIVA de Function (Rules).

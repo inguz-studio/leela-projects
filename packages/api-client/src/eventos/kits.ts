@@ -141,6 +141,13 @@ export interface SalvarItemKitInput {
   marca?: string;
   /** RN-214 — organizador é sempre false (Rule nega incoerência) */
   exibirLogo: boolean;
+  /**
+   * RN-225 (S210-T1) — modelo de estoque; opcional no payload (doc legado
+   * normaliza para `sob_encomenda` no parse do core).
+   */
+  modeloEstoque?: 'sob_encomenda' | 'estoque_proprio';
+  /** RN-223 (S210-T1) — tamanhos válidos do item tamanhado (ex.: P/M/G/GG) */
+  tamanhosDisponiveis?: string[];
   /** N:N — ids dos kits que usam o item (RN-215) */
   kits: string[];
 }
@@ -167,6 +174,12 @@ export async function salvarItemKit(
   };
   if (input.marca !== undefined) {
     payload['marca'] = input.marca;
+  }
+  if (input.modeloEstoque !== undefined) {
+    payload['modeloEstoque'] = input.modeloEstoque;
+  }
+  if (input.tamanhosDisponiveis !== undefined) {
+    payload['tamanhosDisponiveis'] = input.tamanhosDisponiveis;
   }
   await setDoc(doc(db, 'itensKit', itemId), payload, { merge: true });
 }

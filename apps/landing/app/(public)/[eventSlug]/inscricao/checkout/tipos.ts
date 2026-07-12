@@ -34,11 +34,13 @@ const KITS_INSCRITO_ENUM: readonly KitInscritoInput[] = [
 
 /**
  * Deriva o rótulo enum (RN-202, persistido no inscrito) a partir do id do kit
- * real. Os kits canônicos do seed usam ids `kit-ouro`/`kit-prata`/`kit-basico`/
- * `sem-kit` → o enum é o mesmo com `_`. Kit fora do conjunto canônico (ou sem
- * kit) cai em `sem_kit` — o PREÇO nunca depende deste rótulo (vem do core via
- * kitId); é só a etiqueta do inscrito. ⚠️ Fable: persistir o kitId real no
- * inscrito é follow-up (hoje o doc guarda só o enum canônico).
+ * real. CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): o seed usa o PRÓPRIO enum como
+ * id (`kit_ouro`) — para o fluxo canônico a derivação é identidade; o
+ * `replace` segue reconhecendo id legado com hífen (`kit-ouro`) sem quebrar.
+ * Kit fora do conjunto canônico (ou sem kit) cai em `sem_kit` — o PREÇO nunca
+ * depende deste rótulo (vem do core via kitId); é só a etiqueta do inscrito.
+ * ⚠️ Fable: persistir o kitId real no inscrito é follow-up (hoje o doc
+ * guarda só o enum canônico).
  */
 export function kitEnumFromId(kitId: string): KitInscritoInput {
   const norm = kitId.replace(/-/g, '_');

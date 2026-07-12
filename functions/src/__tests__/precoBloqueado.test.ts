@@ -93,7 +93,7 @@ async function seedBase(): Promise<void> {
   });
   await batch.commit();
   await seedEventos(adminDb); // meia-floripa: 453 vendas · maratona-2027: 0
-  await seedKits(adminDb); // kits na meia-floripa (kit-ouro 89 etc.)
+  await seedKits(adminDb); // kits na meia-floripa (kit_ouro 89 etc.)
 
   // Kit no evento SEM venda (maratona-2027) — caminho feliz da edição
   await adminDb
@@ -198,20 +198,20 @@ describe('Rules — kits.preco travado após 1ª venda (RN-200)', () => {
 
   it('owner NÃO altera preço de kit em evento COM venda', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
-    await assertFails(updateDoc(kitMeia(db, 'kit-ouro'), { preco: 99 }));
+    await assertFails(updateDoc(kitMeia(db, 'kit_ouro'), { preco: 99 }));
   });
 
   it('staff também NÃO altera preço com venda (papel de escrita não basta)', async () => {
     const db = dbAs('uid-staff-castelo', staffClaims);
-    await assertFails(updateDoc(kitMeia(db, 'kit-prata'), { preco: 1 }));
+    await assertFails(updateDoc(kitMeia(db, 'kit_prata'), { preco: 1 }));
   });
 
   it('com venda: editar OUTROS campos do kit segue permitido', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(
-      updateDoc(kitMeia(db, 'kit-ouro'), { capacidade: 95 })
+      updateDoc(kitMeia(db, 'kit_ouro'), { capacidade: 95 })
     );
-    const snap = await getDoc(kitMeia(db, 'kit-ouro'));
+    const snap = await getDoc(kitMeia(db, 'kit_ouro'));
     expect(snap.data()?.['preco']).toBe(89); // preço intacto
   });
 
@@ -225,10 +225,10 @@ describe('Rules — kits.preco travado após 1ª venda (RN-200)', () => {
 
   it('SEM venda: "Sem kit" aceita preço ficar MAIS negativo (RN-211 preservada)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
-    const ref = doc(db, 'eventos', MARATONA_2027_ID, 'kits', 'sem-kit-novo');
+    const ref = doc(db, 'eventos', MARATONA_2027_ID, 'kits', 'sem_kit-novo');
     await assertSucceeds(
       setDoc(ref, {
-        id: 'sem-kit-novo', tenantId: CASTELO_ID, nome: 'Sem kit',
+        id: 'sem_kit-novo', tenantId: CASTELO_ID, nome: 'Sem kit',
         preco: -15, capacidade: 60, modalidades: ['42k'],
       })
     );
@@ -237,7 +237,7 @@ describe('Rules — kits.preco travado após 1ª venda (RN-200)', () => {
 
   it('platform_admin corrige preço mesmo com venda (papel de plataforma)', async () => {
     const db = dbAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' });
-    await assertSucceeds(updateDoc(kitMeia(db, 'kit-ouro'), { preco: 90 }));
+    await assertSucceeds(updateDoc(kitMeia(db, 'kit_ouro'), { preco: 90 }));
   });
 });
 

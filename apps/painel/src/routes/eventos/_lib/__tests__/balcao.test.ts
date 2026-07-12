@@ -4,7 +4,6 @@ import {
   estadoBalcao,
   itensDoKit,
   janelaEntregaAberta,
-  kitDocId,
   passoAtual,
   passosStepper,
   resumoBalcao,
@@ -25,7 +24,9 @@ function mkItem(over: Partial<ItemKit> = {}): ItemKit {
     tamanhado: over.tamanhado ?? false,
     origem: over.origem ?? 'organizador',
     exibirLogo: over.exibirLogo ?? false,
-    kits: over.kits ?? ['kit-ouro'],
+    modeloEstoque: over.modeloEstoque ?? 'sob_encomenda',
+    tamanhosDisponiveis: over.tamanhosDisponiveis ?? [],
+    kits: over.kits ?? ['kit_ouro'],
     criadoEm: ts(AGORA),
     atualizadoEm: ts(AGORA),
     ...over,
@@ -135,22 +136,23 @@ describe('ritmoAtendimentos', () => {
   });
 });
 
-describe('kitDocId / itensDoKit (RN-215)', () => {
-  it('mapeia enum → docId (underscore → hyphen)', () => {
-    expect(kitDocId('kit_ouro')).toBe('kit-ouro');
-    expect(kitDocId('sem_kit')).toBe('sem-kit');
-  });
+describe('itensDoKit (RN-215 · chave canônica Kit↔enum FABLE-E-T1)', () => {
   it('filtra itens do kit do atleta e ordena tamanhados primeiro', () => {
     const itens = [
-      mkItem({ id: 'whey', nome: 'Whey', kits: ['kit-ouro', 'kit-prata'] }),
-      mkItem({ id: 'camiseta', nome: 'Camiseta', tamanhado: true, kits: ['kit-ouro'] }),
-      mkItem({ id: 'so-basico', nome: 'Básico', kits: ['kit-basico'] }),
+      mkItem({ id: 'whey', nome: 'Whey', kits: ['kit_ouro', 'kit_prata'] }),
+      mkItem({ id: 'camiseta', nome: 'Camiseta', tamanhado: true, kits: ['kit_ouro'] }),
+      mkItem({ id: 'so-basico', nome: 'Básico', kits: ['kit_basico'] }),
     ];
     const out = itensDoKit(itens, 'kit_ouro');
     expect(out.map((i) => i.id)).toEqual(['camiseta', 'whey']); // tamanhado primeiro
   });
   it('sem_kit → nenhum item', () => {
-    expect(itensDoKit([mkItem({ kits: ['sem-kit'] })], 'sem_kit')).toEqual([]);
+    expect(itensDoKit([mkItem({ kits: ['sem_kit'] })], 'sem_kit')).toEqual([]);
+  });
+  it('id legado com hífen NÃO casa mais (a ponte kitDocId foi removida)', () => {
+    // regressão FABLE-E-T1: o join é `item.kits.includes(enum)` — dado legado
+    // 'kit-ouro' precisa ser ressemeado, não reconciliado em silêncio.
+    expect(itensDoKit([mkItem({ kits: ['kit-ouro'] })], 'kit_ouro')).toEqual([]);
   });
 });
 

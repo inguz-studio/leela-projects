@@ -14,6 +14,17 @@
 //         array de refs `kits[]` no item + índice inverso desnormalizado
 //         `usadoEm` (nomes) mantido pela Function itemKitIndex.
 // RN-216: nomenclatura "kit" SEMPRE — "tier" não existe no produto.
+// RN-225 (S210-T1 · FABLE-D): item tem `modeloEstoque` (`sob_encomenda` |
+//         `estoque_proprio`) — base do aprovisionamento por SKU.
+// RN-223 (S210-T1): item tamanhado carrega `tamanhosDisponiveis[]` (valores
+//         de tamanho válidos, ex.: ['P','M','G','GG']) — fonte da validação
+//         de tamanho do checkout (S209-T2) e da matriz de SKUs (S210-T3).
+//
+// CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): `Kit.id` dos kits canônicos do seed
+// É o próprio valor do enum `KitInscrito` (`kit_ouro`, não `kit-ouro`) — o
+// join `inscrito.kit === Kit.id` casa DIRETO, sem ponte de delimitador
+// (`kitCasa`/`kitDocId` foram removidos). Kit custom de organizador tem id
+// livre e colapsa em `sem_kit` no enum (fulfillment usa `inscrito.kitId`).
 // =============================================================================
 
 import type { Timestamp } from '../index';
@@ -95,6 +106,28 @@ export type OrigemItem = 'organizador' | 'patrocinador';
 /** Lista canônica de origens */
 export const ORIGENS_ITEM: readonly OrigemItem[] = ['organizador', 'patrocinador'];
 
+/**
+ * Modelo de estoque do item (RN-225 · S210-T1):
+ *   - `sob_encomenda`:   vende sem estimativa e encomenda pelo vendido —
+ *     "a encomendar" (RN-224) é o número que resolve a compra;
+ *   - `estoque_proprio`: organizador tem saldo físico próprio.
+ */
+export type ModeloEstoque = 'sob_encomenda' | 'estoque_proprio';
+
+/** Lista canônica de modelos de estoque (RN-225) */
+export const MODELOS_ESTOQUE: readonly ModeloEstoque[] = [
+  'sob_encomenda',
+  'estoque_proprio',
+];
+
+/** Type guard de ModeloEstoque (RN-225) */
+export function isModeloEstoque(value: unknown): value is ModeloEstoque {
+  return (
+    typeof value === 'string' &&
+    (MODELOS_ESTOQUE as readonly string[]).includes(value)
+  );
+}
+
 /** Type guard de OrigemItem (RN-213) */
 export function isOrigemItem(value: unknown): value is OrigemItem {
   return (
@@ -128,6 +161,20 @@ export interface ItemKit {
   marca?: string;
   /** "Exibir logo ao atleta" — só faz sentido patrocinado (RN-214) */
   exibirLogo: boolean;
+  /**
+   * RN-225 (S210-T1) — modelo de estoque do item. Doc legado (pré-FABLE-D)
+   * normaliza para `sob_encomenda`: é o modelo SEM premissa de saldo físico
+   * ("vende sem estimativa, encomenda pelo vendido") — default honesto para
+   * item que nunca declarou estoque.
+   */
+  modeloEstoque: ModeloEstoque;
+  /**
+   * RN-223 (S210-T1) — valores de tamanho VÁLIDOS do item tamanhado
+   * (ex.: ['P','M','G','GG']). `[]` = item único (não tamanhado) ou doc
+   * legado. Fonte da validação do checkout (S209-T2) e da matriz de SKUs
+   * do aprovisionamento (S210-T3 — ver aprovisionamento.ts).
+   */
+  tamanhosDisponiveis: string[];
   /** N:N — ids dos kits que incluem este item (fonte de verdade — RN-215) */
   kits: string[];
   /** ∑ Índice inverso desnormalizado — mantido pela Function itemKitIndex */
@@ -206,6 +253,32 @@ export function parseItemKit(id: string, data: Record<string, unknown>): ItemKit
     throw new Error(`ItemKit ${id}: campo "kits" inválido (RN-215)`);
   }
 
+  // RN-225: presente deve estar no enum; ausente normaliza para
+  // 'sob_encomenda' (doc legado — ver comentário do campo).
+  const modeloEstoque = data['modeloEstoque'];
+  if (modeloEstoque !== undefined && !isModeloEstoque(modeloEstoque)) {
+    throw new Error(
+      `ItemKit ${id}: modeloEstoque "${String(modeloEstoque)}" fora do enum (RN-225)`
+    );
+  }
+
+  // RN-223: presente deve ser lista de tamanhos não-vazios; ausente = []
+  // (legado/item único). "__" é o separador de SKU (S210-T2) — tamanho que o
+  // contenha quebraria o round-trip da chave `itemId__tamanho`.
+  const tamanhosDisponiveis = data['tamanhosDisponiveis'];
+  if (
+    tamanhosDisponiveis !== undefined &&
+    (!Array.isArray(tamanhosDisponiveis) ||
+      !tamanhosDisponiveis.every(
+        (t) => typeof t === 'string' && t.length > 0 && !t.includes('__')
+      ))
+  ) {
+    throw new Error(
+      `ItemKit ${id}: "tamanhosDisponiveis" deve ser lista de tamanhos ` +
+        `não-vazios sem "__" (RN-223/S210-T2)`
+    );
+  }
+
   const item: ItemKit = {
     id,
     tenantId,
@@ -214,6 +287,9 @@ export function parseItemKit(id: string, data: Record<string, unknown>): ItemKit
     tamanhado,
     origem,
     exibirLogo,
+    modeloEstoque: modeloEstoque === undefined ? 'sob_encomenda' : modeloEstoque,
+    tamanhosDisponiveis:
+      tamanhosDisponiveis === undefined ? [] : (tamanhosDisponiveis as string[]),
     kits,
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,

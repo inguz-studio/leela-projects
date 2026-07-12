@@ -350,18 +350,55 @@ export {
   parseTamanhos,
 } from './eventos/dadosPessoais';
 
-export type { Kit, ItemKit, OrigemItem, UsadoEmKit } from './eventos/kit';
+export type {
+  Kit,
+  ItemKit,
+  OrigemItem,
+  UsadoEmKit,
+  ModeloEstoque,
+} from './eventos/kit';
 export {
   precoKitValido,
   kitEhDesconto,
   parseKit,
   ORIGENS_ITEM,
   isOrigemItem,
+  MODELOS_ESTOQUE,
+  isModeloEstoque,
   podeExibirLogo,
   exibirLogoCoerente,
   computeUsadoEm,
   parseItemKit,
 } from './eventos/kit';
+
+// ---------------------------------------------------------------------------
+// Aprovisionamento de kit por SKU (LEELA-S210 · FABLE-D · RN-224/225/226)
+// `eventos/{id}/aprovisionamento/{itemId__tamanho}` — ∑ e estado de escrita
+// EXCLUSIVA de Function (agregarEstoque/transicaoAprovisionamento).
+// ---------------------------------------------------------------------------
+export type {
+  Aprovisionamento,
+  EstadoAprovisionamento,
+  TransicaoAprovisionamento,
+  AlertaEstoqueSku,
+} from './eventos/aprovisionamento';
+export {
+  COLECAO_APROVISIONAMENTO,
+  SEPARADOR_SKU,
+  skuId,
+  parseSkuId,
+  skusDeclaradosDoItem,
+  ESTADOS_APROVISIONAMENTO,
+  isEstadoAprovisionamento,
+  TRANSICOES_APROVISIONAMENTO,
+  podeTransicionarAprovisionamento,
+  computeAEncomendar,
+  saldoFisicoSku,
+  LIMIAR_BAIXA_SKU_DEFAULT,
+  alertaAprovisionamento,
+  qtdEstoqueValida,
+  parseAprovisionamento,
+} from './eventos/aprovisionamento';
 
 // ---------------------------------------------------------------------------
 // Kernel de vendas E04 (LEELA-S300-T1 · ADR-012)
