@@ -14,7 +14,7 @@ describe('ClubeShell', () => {
       </ClubeShell>,
     );
     expect(screen.getByRole('heading', { level: 1, name: /Corrida Perfeita Sul/i })).toBeInTheDocument();
-    expect(screen.getByText('Assessoria')).toBeInTheDocument();
+    expect(screen.getByText('Assessoria esportiva')).toBeInTheDocument();
     expect(screen.getByText(/120 membros/)).toBeInTheDocument();
   });
 

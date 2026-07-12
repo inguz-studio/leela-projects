@@ -1,7 +1,13 @@
 // =============================================================================
 // FinanceiroView — financeiro do evento (S207-T1). Lê o agregado (nunca
-// recalcula receita): cards bruto/taxa/líquido (null-safe RN-406), breakdown
-// por kit/modalidade/status e export CSV das linhas exibidas. Presentational.
+// recalcula receita): visão de REPASSE do organizador (receita total, repassado,
+// disponível, a ser disponibilizado), breakdown por kit/modalidade/status e
+// export CSV. Presentational.
+//
+// A TAXA/MARGEM DA PLATAFORMA NÃO APARECE (RN-404 + decisão do dono,
+// fix-tema-clube): sem card de "Taxa Leela", sem % de taxa, sem nota RN-406. O
+// que exige o módulo de repasses (E09 — transferências reais) fica em estado
+// honesto (repassado R$ 0,00 + hint), NÃO inventamos transferência.
 // =============================================================================
 
 import {
@@ -16,8 +22,9 @@ import {
 import type { FinanceiroEvento } from '@leela/api-client';
 import {
   breakdownFinanceiro,
-  formatTaxaPct,
+  derivarRepasse,
   gerarCsvFinanceiro,
+  RETENCAO_MAX_PCT,
   type LinhaBreakdown,
 } from '../_lib/financeiro';
 import { prepararModalidades } from '../evento/overview/modalidades';
@@ -53,7 +60,7 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
   }
 
   const fin = financeiro;
-  const semTermo = fin.taxaPct === null;
+  const rep = derivarRepasse(fin);
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -84,33 +91,28 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
         </Button>
       </div>
 
-      {/* Resumo bruto/taxa/líquido */}
-      <section aria-label="Resumo financeiro" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
-        <CardValor rotulo="Receita bruta" valor={formatBRL(fin.receitaBruta)} tom="primary" />
+      {/* Resumo — visão de REPASSE do organizador (sem taxa/margem da
+          plataforma, RN-404). "Repassado" depende do módulo de repasses (E09):
+          estado honesto R$ 0,00 + hint, sem inventar transferência. */}
+      <section
+        aria-label="Resumo financeiro"
+        className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <CardValor rotulo="Receita total" valor={formatBRL(rep.receitaTotal)} tom="primary" />
         <CardValor
-          rotulo="Taxa Leela"
-          valor={fin.taxaValor === null ? '—' : formatBRL(fin.taxaValor)}
-          nota={formatTaxaPct(fin.taxaPct)}
+          rotulo="Valor repassado"
+          valor={formatBRL(rep.repassado)}
+          nota="Disponível com o módulo de repasses"
+          tom="primary"
+        />
+        <CardValor rotulo="Valor disponível" valor={formatBRL(rep.disponivel)} tom="success" />
+        <CardValor
+          rotulo="Valor a ser disponibilizado"
+          valor={formatBRL(rep.aSerDisponibilizado)}
+          nota={`Retenção de até ${RETENCAO_MAX_PCT}% do total, liberada pós-evento; negociável por cliente.`}
           tom="warning"
         />
-        <CardValor
-          rotulo="Receita líquida"
-          valor={fin.receitaLiquida === null ? '—' : formatBRL(fin.receitaLiquida)}
-          tom="success"
-        />
       </section>
-
-      {semTermo && (
-        <div
-          role="alert"
-          className="rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-4)]"
-        >
-          <p className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
-            Sem termos comerciais para este tenant — taxa e líquido ficam indisponíveis
-            (RN-406, sem taxa padrão presumida).
-          </p>
-        </div>
-      )}
 
       {/* Gráficos de breakdown por modalidade (reuso dos charts do DS —
           Recharts/ADR-010). Per-evento, sobre o agregado existente. */}

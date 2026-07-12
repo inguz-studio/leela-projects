@@ -5,6 +5,8 @@
 // =============================================================================
 
 import type { VisibilidadeClube, ModeloEntradaClube } from '@leela/core';
+import { CATEGORIAS_CLUBE, MODALIDADES_CLUBE, ESTADOS_BR } from '@leela/core';
+import type { SelectOption } from '@leela/design-system';
 
 // ---------------------------------------------------------------------------
 // Slug - sanitizacao em tempo real (SPEC 2.10)
@@ -63,6 +65,37 @@ export const VISIBILIDADES: { id: VisibilidadeClube; label: string; hint: string
 export const MODELOS_ENTRADA: { id: ModeloEntradaClube; label: string; disabled: boolean }[] = [
   { id: 'gratuito', label: 'Gratuito', disabled: false },
   { id: 'pago_em_breve', label: 'Pago', disabled: true }, // RN-104: promessa
+];
+
+// ---------------------------------------------------------------------------
+// Opcoes de Select — vocabulario fechado do core (fix-tema-clube). Fonte unica
+// reusada pelo form de criacao (NovoClubePage) e pela edicao (ConfiguracoesView)
+// para criar e editar nao divergirem. O placeholder ('') forca escolha
+// explicita e e rejeitado por validarClube (nao pertence ao vocabulario).
+// ---------------------------------------------------------------------------
+
+/** Opcoes do Select "Tipo de clube" (categoria) com placeholder. */
+export const CATEGORIA_OPCOES: SelectOption[] = [
+  { value: '', label: 'Selecione o tipo' },
+  ...CATEGORIAS_CLUBE.map((c) => ({ value: c, label: c })),
+];
+
+/** Opcoes do Select "Modalidade" com placeholder. */
+export const MODALIDADE_OPCOES: SelectOption[] = [
+  { value: '', label: 'Selecione a modalidade' },
+  ...MODALIDADES_CLUBE.map((m) => ({ value: m, label: m })),
+];
+
+/** Opcoes do Select "Estado" (UF) com placeholder — value = sigla. */
+export const ESTADO_OPCOES: SelectOption[] = [
+  { value: '', label: 'UF' },
+  ...ESTADOS_BR.map((e) => ({ value: e.uf, label: `${e.uf} · ${e.nome}` })),
+];
+
+/** Tipo de localizacao (Chip group — espelha o padrao de Visibilidade). */
+export const TIPOS_LOCALIZACAO: { id: 'presencial' | 'online'; label: string }[] = [
+  { id: 'presencial', label: 'Presencial' },
+  { id: 'online', label: 'Online' },
 ];
 
 /** Comportamento dos membros no clube (RN-143 - 3 niveis, UI). */

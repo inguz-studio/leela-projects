@@ -8,6 +8,7 @@
 import { useMemo, useState } from 'react';
 import { Button, EmptyState, Input, PageHeader, Skeleton } from '@leela/design-system';
 import type { Clube } from '@leela/core';
+import { formatarLocalizacaoClube } from '@leela/core';
 import { KpiCard } from '../_components/KpiCard';
 import { ClubeCard } from './ClubeCard';
 import { formatInt } from '../_lib/format';
@@ -81,7 +82,7 @@ export function HubClubes({
     return parceiros.filter(
       (c) =>
         c.nome.toLowerCase().includes(q) ||
-        c.localizacao.toLowerCase().includes(q) ||
+        formatarLocalizacaoClube(c.localizacao).toLowerCase().includes(q) ||
         c.categoria.toLowerCase().includes(q),
     );
   }, [parceiros, busca]);

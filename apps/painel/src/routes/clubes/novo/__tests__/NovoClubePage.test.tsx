@@ -46,6 +46,14 @@ function renderPage(): void {
   );
 }
 
+/** Preenche os campos de vocabulário fechado agora exigidos por validarClube. */
+async function preencherObrigatorios(): Promise<void> {
+  await userEvent.selectOptions(screen.getByLabelText('Tipo de clube'), 'Assessoria esportiva');
+  await userEvent.selectOptions(screen.getByLabelText('Modalidade'), 'Corrida de rua');
+  await userEvent.type(screen.getByLabelText('Cidade'), 'Florianópolis');
+  await userEvent.selectOptions(screen.getByLabelText('Estado'), 'SC');
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.useClubesSession.mockReturnValue({
@@ -80,12 +88,15 @@ describe('NovoClubePage (fix #14)', () => {
     renderPage();
     await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
     await userEvent.type(screen.getByLabelText('Descrição'), 'Grupo de trail running.');
+    await preencherObrigatorios();
     await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
 
     await waitFor(() => expect(mocks.criarClubePadrao).toHaveBeenCalledTimes(1));
     const input = mocks.criarClubePadrao.mock.calls[0]?.[0] as {
       tenantId: string; ownerId: string; slug: string; nome: string;
       codigoConvite: string; modeloEntrada: string;
+      categoria: string; modalidade: string;
+      localizacao: { cidade: string; estado: string; online: boolean };
     };
     expect(input).toMatchObject({
       tenantId: 'castelo',
@@ -93,6 +104,9 @@ describe('NovoClubePage (fix #14)', () => {
       slug: 'trilha-norte',
       nome: 'Trilha Norte',
       modeloEntrada: 'gratuito',
+      categoria: 'Assessoria esportiva',
+      modalidade: 'Corrida de rua',
+      localizacao: { cidade: 'Florianópolis', estado: 'SC', online: false },
     });
     // RN-101: código gerado no submit é válido (5 chars, sem 0/O/1/I/L)
     expect(validarCodigoConvite(input.codigoConvite)).toBe(true);
@@ -106,6 +120,7 @@ describe('NovoClubePage (fix #14)', () => {
     mocks.criarClubePadrao.mockRejectedValue(new Error('permission-denied'));
     renderPage();
     await userEvent.type(screen.getByLabelText('Nome do clube'), 'Trilha Norte');
+    await preencherObrigatorios();
     await userEvent.click(screen.getByRole('button', { name: 'Criar clube' }));
 
     await screen.findByText('Não foi possível criar o clube');

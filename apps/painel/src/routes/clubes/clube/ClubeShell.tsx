@@ -9,6 +9,7 @@
 import * as React from 'react';
 import { Avatar, Badge, PageHeader, SubNav } from '@leela/design-system';
 import type { Clube } from '@leela/core';
+import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 import { clubeSubNavTabs, type ClubeAbaId } from '../_lib/subnav';
 
@@ -56,7 +57,7 @@ function CodigoConvite({
 export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShellProps): JSX.Element {
   const desde = anoDe(clube.criadoEm);
   const subtitleParts = [
-    clube.localizacao,
+    formatarLocalizacaoClube(clube.localizacao),
     `${formatInt(clube.qtdMembrosAtivos)} membros`,
     desde ? `desde ${desde}` : null,
   ].filter(Boolean) as string[];

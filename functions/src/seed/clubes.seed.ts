@@ -89,7 +89,7 @@ export async function seedClubes(db: admin.firestore.Firestore): Promise<void> {
     slug: CLUBE_CPS_SLUG,
     categoria: 'Assessoria esportiva',
     modalidade: 'Corrida de rua',
-    localizacao: 'Lagoa da Conceição, Florianópolis · SC',
+    localizacao: { cidade: 'Florianópolis', estado: 'SC', online: false },
     ownerId: FELIPE_MARTINS_UID,
     codigoConvite: CLUBE_CPS_CODIGO_CONVITE,
     visibilidade: 'publica',

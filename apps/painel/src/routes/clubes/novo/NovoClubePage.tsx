@@ -11,12 +11,20 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge, Button, Checkbox, Chip, Input, Textarea, useToast } from '@leela/design-system';
+import { Badge, Button, Checkbox, Chip, Input, Select, Textarea, useToast } from '@leela/design-system';
 import type { ClubeInput, VisibilidadeClube } from '@leela/core';
 import { gerarCodigoConvite, validarClube } from '@leela/core';
 import { criarClubePadrao } from '../_data/clubes';
 import { useClubesSession } from '../_data/session';
-import { MODELOS_ENTRADA, VISIBILIDADES, sanitizeSlug } from '../_lib/configClube';
+import {
+  CATEGORIA_OPCOES,
+  MODALIDADE_OPCOES,
+  ESTADO_OPCOES,
+  MODELOS_ENTRADA,
+  TIPOS_LOCALIZACAO,
+  VISIBILIDADES,
+  sanitizeSlug,
+} from '../_lib/configClube';
 
 export function NovoClubePage(): JSX.Element {
   const navigate = useNavigate();
@@ -27,7 +35,9 @@ export function NovoClubePage(): JSX.Element {
   const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('');
   const [modalidade, setModalidade] = useState('');
-  const [localizacao, setLocalizacao] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
+  const [online, setOnline] = useState(false);
   const [visibilidade, setVisibilidade] = useState<VisibilidadeClube>('privada');
   const [aprovacaoManual, setAprovacaoManual] = useState(false);
   const [criando, setCriando] = useState(false);
@@ -45,9 +55,11 @@ export function NovoClubePage(): JSX.Element {
       nome: nome.trim(),
       descricao: descricao.trim(),
       slug,
-      categoria: categoria.trim(),
-      modalidade: modalidade.trim(),
-      localizacao: localizacao.trim(),
+      categoria,
+      modalidade,
+      localizacao: online
+        ? { cidade: '', estado: '', online: true }
+        : { cidade: cidade.trim(), estado, online: false },
       ownerId: session.uid,
       codigoConvite: gerarCodigoConvite(),
       visibilidade,
@@ -110,25 +122,59 @@ export function NovoClubePage(): JSX.Element {
           onChange={(e) => setDescricao(e.target.value)}
           rows={2}
         />
-        <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
-          <Input
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+          <Select
             id="clube-categoria"
-            label="Categoria"
+            label="Tipo de clube"
+            options={CATEGORIA_OPCOES}
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
           />
-          <Input
+          <Select
             id="clube-modalidade"
             label="Modalidade"
+            options={MODALIDADE_OPCOES}
             value={modalidade}
             onChange={(e) => setModalidade(e.target.value)}
           />
-          <Input
-            id="clube-localizacao"
-            label="Localização"
-            value={localizacao}
-            onChange={(e) => setLocalizacao(e.target.value)}
-          />
+        </div>
+
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Localização
+          </span>
+          <div role="group" aria-label="Tipo de localização" className="flex flex-wrap gap-[var(--spacing-2)]">
+            {TIPOS_LOCALIZACAO.map((t) => (
+              <Chip
+                key={t.id}
+                active={online === (t.id === 'online')}
+                onClick={() => setOnline(t.id === 'online')}
+              >
+                {t.label}
+              </Chip>
+            ))}
+          </div>
+          {online ? (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Clube online — sem sede física. Cidade e estado ficam opcionais.
+            </span>
+          ) : (
+            <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+              <Input
+                id="clube-cidade"
+                label="Cidade"
+                value={cidade}
+                onChange={(e) => setCidade(e.target.value)}
+              />
+              <Select
+                id="clube-estado"
+                label="Estado"
+                options={ESTADO_OPCOES}
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       </section>
 

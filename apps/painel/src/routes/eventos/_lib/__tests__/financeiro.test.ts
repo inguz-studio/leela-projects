@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   breakdownFinanceiro,
-  formatTaxaPct,
+  derivarRepasse,
   gerarCsvFinanceiro,
+  RETENCAO_MAX_PCT,
 } from '../financeiro';
 import type { FinanceiroEvento } from '@leela/api-client';
 
@@ -23,12 +24,23 @@ function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
   };
 }
 
-describe('formatTaxaPct (RN-406)', () => {
-  it('formata % pt-BR', () => {
-    expect(formatTaxaPct(10.5)).toBe('10,5%');
+describe('derivarRepasse (visão do organizador, sem taxa da plataforma)', () => {
+  it('retenção = 15% do total; disponível = total − retenção − repassado', () => {
+    const rep = derivarRepasse(mkFin());
+    expect(rep.receitaTotal).toBe(85617);
+    expect(rep.aSerDisponibilizado).toBe(85617 * (RETENCAO_MAX_PCT / 100)); // 12842.55
+    expect(rep.disponivel).toBe(85617 - 85617 * (RETENCAO_MAX_PCT / 100)); // 72774.45
   });
-  it('null → "—" (sem termo, sem fallback)', () => {
-    expect(formatTaxaPct(null)).toBe('—');
+
+  it('repassado é 0 e marcado indisponível (E09 ausente — NÃO inventa transferência)', () => {
+    const rep = derivarRepasse(mkFin());
+    expect(rep.repassado).toBe(0);
+    expect(rep.repasseIndisponivel).toBe(true);
+  });
+
+  it('conserva: total = disponível + a ser disponibilizado + repassado', () => {
+    const rep = derivarRepasse(mkFin({ receitaBruta: 100000 }));
+    expect(rep.disponivel + rep.aSerDisponibilizado + rep.repassado).toBe(rep.receitaTotal);
   });
 });
 
@@ -55,18 +67,20 @@ describe('breakdownFinanceiro', () => {
 });
 
 describe('gerarCsvFinanceiro', () => {
-  it('inclui cabeçalho, resumo e breakdown', () => {
+  it('inclui cabeçalho, resumo (repasse) e breakdown', () => {
     const csv = gerarCsvFinanceiro(mkFin());
     const linhas = csv.split('\r\n');
     expect(linhas[0]).toBe('Categoria,Item,Valor');
-    expect(csv).toContain('Resumo,Receita bruta (R$),85617');
-    expect(csv).toContain('Resumo,Taxa (%),10.5');
+    expect(csv).toContain('Resumo,Receita total (R$),85617');
+    expect(csv).toContain('Resumo,Valor repassado (R$),0');
+    expect(csv).toContain('Resumo,Valor disponível (R$),72774.45');
+    expect(csv).toContain('Resumo,Valor a ser disponibilizado (R$),12842.55');
     expect(csv).toContain('Inscritos,Total,453');
   });
-  it('taxa/líquido nulos viram campo vazio (RN-406)', () => {
-    const csv = gerarCsvFinanceiro(mkFin({ taxaPct: null, taxaValor: null, receitaLiquida: null }));
-    expect(csv).toContain('Resumo,Taxa (%),\r\n');
-    expect(csv).toContain('Resumo,Receita líquida (R$),\r\n');
+  it('NÃO expõe taxa/margem da plataforma no CSV (RN-404)', () => {
+    const csv = gerarCsvFinanceiro(mkFin());
+    expect(csv).not.toContain('Taxa');
+    expect(csv).not.toContain('líquida');
   });
 
   describe('injeção de fórmula (CSV/DDE)', () => {

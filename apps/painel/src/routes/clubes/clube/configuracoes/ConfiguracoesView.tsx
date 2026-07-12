@@ -11,14 +11,18 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Chip } from '@leela/design-system';
+import { Badge, Button, Chip, Input, Select } from '@leela/design-system';
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import {
+  CATEGORIA_OPCOES,
   COMPORTAMENTOS,
+  ESTADO_OPCOES,
+  MODALIDADE_OPCOES,
   MODELOS_ENTRADA,
   PERMISSOES_ADMIN,
   SECOES_CONFIG,
+  TIPOS_LOCALIZACAO,
   VISIBILIDADES,
   type ComportamentoMembros,
   type PermissaoAdminId,
@@ -86,6 +90,11 @@ export function ConfiguracoesView({
 }: ConfiguracoesViewProps): JSX.Element {
   const [nome, setNome] = useState(clube.nome);
   const [descricao, setDescricao] = useState(clube.descricao);
+  const [categoria, setCategoria] = useState(clube.categoria);
+  const [modalidade, setModalidade] = useState(clube.modalidade);
+  const [cidade, setCidade] = useState(clube.localizacao.cidade);
+  const [estado, setEstado] = useState(clube.localizacao.estado);
+  const [online, setOnline] = useState(clube.localizacao.online);
   const [visibilidade, setVisibilidade] = useState<VisibilidadeClube>(clube.visibilidade);
   const [aprovacaoManual, setAprovacaoManual] = useState(clube.aprovacaoManual);
   const [modeloEntrada, setModeloEntrada] = useState<ModeloEntradaClube>(clube.modeloEntrada);
@@ -161,7 +170,17 @@ export function ConfiguracoesView({
           id="identidade"
           titulo="Identidade"
           refCb={(el) => { if (el) refs.current.identidade = el; }}
-          onSalvar={() => void onSalvar({ nome: nome.trim(), descricao: descricao.trim() })}
+          onSalvar={() =>
+            void onSalvar({
+              nome: nome.trim(),
+              descricao: descricao.trim(),
+              categoria,
+              modalidade,
+              localizacao: online
+                ? { cidade: '', estado: '', online: true }
+                : { cidade: cidade.trim(), estado, online: false },
+            })
+          }
           salvarDisabled={nome.trim().length === 0}
         >
           <label className="flex flex-col gap-1">
@@ -183,6 +202,60 @@ export function ConfiguracoesView({
               className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
             />
           </label>
+          {/* Mesmos selects do form de criação — criar e editar não divergem. */}
+          <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+            <Select
+              id="config-categoria"
+              label="Tipo de clube"
+              options={CATEGORIA_OPCOES}
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
+            />
+            <Select
+              id="config-modalidade"
+              label="Modalidade"
+              options={MODALIDADE_OPCOES}
+              value={modalidade}
+              onChange={(e) => setModalidade(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              Localização
+            </span>
+            <div role="group" aria-label="Tipo de localização" className="flex flex-wrap gap-[var(--spacing-2)]">
+              {TIPOS_LOCALIZACAO.map((t) => (
+                <Chip
+                  key={t.id}
+                  active={online === (t.id === 'online')}
+                  onClick={() => setOnline(t.id === 'online')}
+                >
+                  {t.label}
+                </Chip>
+              ))}
+            </div>
+            {online ? (
+              <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                Clube online — sem sede física. Cidade e estado ficam opcionais.
+              </span>
+            ) : (
+              <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+                <Input
+                  id="config-cidade"
+                  label="Cidade"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                />
+                <Select
+                  id="config-estado"
+                  label="Estado"
+                  options={ESTADO_OPCOES}
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
         </Secao>
 
         <Secao

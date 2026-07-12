@@ -16,6 +16,17 @@ export {
   validarClube,
 } from './clube';
 
+export type { EstadoBR, LocalizacaoClube } from './clube-opcoes';
+export {
+  CATEGORIAS_CLUBE,
+  MODALIDADES_CLUBE,
+  ESTADOS_BR,
+  isCategoriaClube,
+  isModalidadeClube,
+  localizacaoValida,
+  formatarLocalizacaoClube,
+} from './clube-opcoes';
+
 export {
   ALFABETO_CODIGO_CONVITE,
   TAMANHO_CODIGO_CONVITE,

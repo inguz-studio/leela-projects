@@ -86,7 +86,7 @@ const CLUBE_OK: ClubeInput = {
   slug: 'corrida-perfeita-sul',
   categoria: 'Assessoria esportiva',
   modalidade: 'Corrida de rua',
-  localizacao: 'Lagoa da Conceição, Florianópolis · SC',
+  localizacao: { cidade: 'Florianópolis', estado: 'SC', online: false },
   ownerId: 'uid-felipe-martins',
   codigoConvite: '8A3K9',
   visibilidade: 'publica',
@@ -97,6 +97,38 @@ const CLUBE_OK: ClubeInput = {
 describe('validarClube', () => {
   it('payload canônico é válido (zero erros)', () => {
     expect(validarClube(CLUBE_OK)).toEqual([]);
+  });
+
+  it('rejeita categoria fora do vocabulário fechado', () => {
+    const erros = validarClube({ ...CLUBE_OK, categoria: 'Qualquer coisa' });
+    expect(erros.some((e) => e.includes('categoria'))).toBe(true);
+  });
+
+  it('rejeita modalidade fora do vocabulário fechado', () => {
+    const erros = validarClube({ ...CLUBE_OK, modalidade: 'Xadrez' });
+    expect(erros.some((e) => e.includes('modalidade'))).toBe(true);
+  });
+
+  it('presencial exige cidade + UF válida', () => {
+    const semCidade = validarClube({
+      ...CLUBE_OK,
+      localizacao: { cidade: '', estado: 'SC', online: false },
+    });
+    expect(semCidade.some((e) => e.includes('cidade'))).toBe(true);
+
+    const ufInvalida = validarClube({
+      ...CLUBE_OK,
+      localizacao: { cidade: 'Floripa', estado: 'XX', online: false },
+    });
+    expect(ufInvalida.some((e) => e.includes('estado'))).toBe(true);
+  });
+
+  it('online é válido sem cidade/estado (clube sem sede física)', () => {
+    const online = validarClube({
+      ...CLUBE_OK,
+      localizacao: { cidade: '', estado: '', online: true },
+    });
+    expect(online).toEqual([]);
   });
 
   it(`rejeita nome com mais de ${CLUBE_NOME_MAX} chars`, () => {

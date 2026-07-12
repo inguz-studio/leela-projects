@@ -13,6 +13,12 @@
 
 import type { Timestamp } from '../index';
 import { validarCodigoConvite } from './codigo-convite';
+import { isUfBrasil } from '../eventos/dadosPessoais';
+import {
+  isCategoriaClube,
+  isModalidadeClube,
+  type LocalizacaoClube,
+} from './clube-opcoes';
 
 // ---------------------------------------------------------------------------
 // Literal types
@@ -46,9 +52,12 @@ export interface Clube {
   /** Máx. 280 caracteres */
   descricao: string;
   slug: string;
+  /** Tipo de clube — ∈ CATEGORIAS_CLUBE (vocabulário fechado) */
   categoria: string;
+  /** ∈ MODALIDADES_CLUBE (vocabulário fechado) */
   modalidade: string;
-  localizacao: string;
+  /** Localização estruturada: cidade + UF + online (sem texto livre) */
+  localizacao: LocalizacaoClube;
   /** Referência ao profissional owner */
   ownerId: string;
   /** 5 chars; exclui 0/O/1/I/L (RN-101) */
@@ -124,6 +133,24 @@ export function validarClube(input: ClubeInput): string[] {
 
   if (!validarCodigoConvite(input.codigoConvite)) {
     erros.push('codigoConvite inválido (RN-101: 5 chars maiúsculos sem 0/O/1/I/L)');
+  }
+
+  if (!isCategoriaClube(input.categoria)) {
+    erros.push('categoria inválida (selecione um tipo de clube da lista)');
+  }
+
+  if (!isModalidadeClube(input.modalidade)) {
+    erros.push('modalidade inválida (selecione uma modalidade da lista)');
+  }
+
+  // Localização: presencial exige cidade + UF; online dispensa sede física.
+  if (!input.localizacao?.online) {
+    if (!input.localizacao?.cidade?.trim()) {
+      erros.push('cidade é obrigatória para clube presencial');
+    }
+    if (!isUfBrasil(input.localizacao?.estado)) {
+      erros.push('estado (UF) é obrigatório para clube presencial');
+    }
   }
 
   return erros;

@@ -9,6 +9,7 @@
 import { Avatar, Badge, Button, Popover } from '@leela/design-system';
 import type { PopoverAction } from '@leela/design-system';
 import type { Clube } from '@leela/core';
+import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 
 export interface ClubeCardProps {
@@ -26,7 +27,7 @@ function Meta({ clube }: { clube: Clube }): JSX.Element {
   const desde = anoDe(clube.criadoEm);
   return (
     <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-      {clube.localizacao}
+      {formatarLocalizacaoClube(clube.localizacao)}
       <span aria-hidden> · </span>
       {formatInt(clube.qtdMembrosAtivos)} membros
       {desde ? (

@@ -24,14 +24,19 @@ function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
 const norm = (s: string | null | undefined) => (s ?? '').replace(/\s/g, ' ');
 
 describe('FinanceiroView (S207-T1)', () => {
-  it('mostra bruto R$ 85.617 e líquido presentes', () => {
+  it('mostra receita total e os 4 KPIs de repasse (sem taxa da plataforma)', () => {
     const { container } = render(<FinanceiroView slug="e1" financeiro={mkFin()} loading={false} error={null} />);
     expect(norm(container.textContent)).toContain('R$ 85.617');
-    expect(screen.getByText('Receita líquida')).toBeInTheDocument();
-    expect(screen.getByText('10,5%')).toBeInTheDocument();
+    expect(screen.getByText('Receita total')).toBeInTheDocument();
+    expect(screen.getByText('Valor repassado')).toBeInTheDocument();
+    expect(screen.getByText('Valor disponível')).toBeInTheDocument();
+    expect(screen.getByText('Valor a ser disponibilizado')).toBeInTheDocument();
+    // Taxa/margem da plataforma NUNCA aparece (RN-404).
+    expect(screen.queryByText(/Taxa Leela/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Receita líquida')).not.toBeInTheDocument();
   });
 
-  it('sem termo: taxa/líquido "—" + alerta RN-406', () => {
+  it('não mostra alerta RN-406 de taxa; exibe hint de retenção negociável + estado honesto do repasse', () => {
     render(
       <FinanceiroView
         slug="e1"
@@ -40,8 +45,9 @@ describe('FinanceiroView (S207-T1)', () => {
         error={null}
       />,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('RN-406');
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText(/Retenção de até 15% do total/)).toBeInTheDocument();
+    expect(screen.getByText(/módulo de repasses/)).toBeInTheDocument();
   });
 
   it('financeiro ausente → EmptyState', () => {
