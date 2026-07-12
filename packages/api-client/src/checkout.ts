@@ -48,7 +48,9 @@ export interface CotarInscricaoCheckoutResult {
   desconto: number;
   valorFinal: number;
   cupomAplicado: { codigo: string; tipo: string; valor: number } | null;
-  taxa: number;
+  // Cotação pública/anônima NÃO expõe a `taxa` (repasse do organizador):
+  // revelaria o platformFeePct do termo privado do tenant (RN-330/RN-404).
+  // O comprador paga `totalCobrado`; a taxa vive no painel autenticado.
   opcoesParcelamento: CotarParcelaResult[];
   parcelamento: CotarParcelaResult;
   totalCobrado: number;

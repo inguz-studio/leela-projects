@@ -2,12 +2,13 @@
 // functions/src/checkout/cotarInscricaoCheckout.ts
 //
 // Cotação READ-ONLY do checkout (LEELA-S1203 · UI de 5 etapas). A etapa
-// "Resumo" precisa exibir base → desconto → valorFinal → taxa → opções de
-// parcelamento ANTES do pagamento, mas `computeSaleState` depende dos
+// "Resumo" precisa exibir base → desconto → valorFinal → totalCobrado → opções
+// de parcelamento ANTES do pagamento, mas `computeSaleState` depende dos
 // commercialTerms do tenant (taxa/parcelamento — RN-330/RN-311), que são
 // PRIVADOS (o leitor público não os expõe). Esta cotação roda a MESMA derivação
 // no servidor e devolve só o que o COMPRADOR vê — a UI apenas RENDERIZA o
-// resultado, sem somar um centavo (regra inviolável do brief).
+// resultado, sem somar um centavo (regra inviolável do brief). A `taxa` (repasse
+// do organizador) NÃO sai daqui: é dado do termo privado, não do comprador.
 //
 // REUSO-FIRST: compõe `carregarInsumos` (evento/lotes/cupom/termo — a MESMA
 // carga do produtor de escrita) + `computeSaleState` (fonte única de preço).
@@ -17,6 +18,14 @@
 // mostra no Resumo. O valor AUTORITATIVO da cobrança continua sendo o de
 // `createInscricaoCharge` (que recomputa server-side na criação). A cotação é
 // informativa/idempotente e read-only; conferir que nenhum caminho aqui escreve.
+//
+// CONFIDENCIALIDADE (fix Fable-review S1203): a cotação é PÚBLICA/anônima
+// (loginAnonimo). Ela NÃO devolve a `taxa` da plataforma — `taxa =
+// valorFinal × platformFeePct/100` revelaria o `platformFeePct` do termo do
+// tenant (RN-330), que o firestore.rules restringe a owner/staff/platform_admin
+// (RN-404 · leitura de commercialTerms). O comprador paga `totalCobrado` e nunca
+// vê o repasse do organizador; expor a taxa aqui era um canal-lateral do termo
+// privado para qualquer anônimo. Só sai o que o COMPRADOR enxerga no Resumo.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -80,8 +89,9 @@ export interface CotarInscricaoCheckoutResult {
   /** valorBase − desconto (o total à vista para o organizador). */
   valorFinal: number;
   cupomAplicado: { codigo: string; tipo: string; valor: number } | null;
-  /** Taxa Leela (informativa — organizador; o comprador paga `totalCobrado`). */
-  taxa: number;
+  // NÃO expor `taxa`/`platformFeePct` aqui: cotação pública/anônima nunca
+  // devolve o repasse do organizador (termo privado — RN-330/RN-404). O
+  // comprador paga `totalCobrado`; o organizador vê a taxa no painel (auth).
   /** Opções de parcelamento ofertáveis (termo — RN-311). PIX: só 1x. */
   opcoesParcelamento: CotarParcelaResult[];
   /** Opção escolhida (parcelas do input). */
@@ -208,7 +218,6 @@ export async function cotarInscricaoCheckoutCore(
           valor: sale.cupomAplicado.valor,
         }
       : null,
-    taxa: sale.taxa,
     opcoesParcelamento: sale.opcoesParcelamento.map((o) => ({
       parcelas: o.parcelas,
       valorParcela: o.valorParcela,
