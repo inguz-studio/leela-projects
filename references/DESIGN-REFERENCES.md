@@ -36,6 +36,14 @@ Arquivo único que contém a **fonte de verdade de design** da V1: ícones v1, f
 
 - **Perfil social / link-in-bio:** Feed · Eventos · Clubs, personalizável na identidade de cada organizador (tematização dinâmica por usuário = "mockup de cores"). Clubes e eventos têm **capa**. Benchmark: Cheers. Épico novo a planejar.
 
+## PONTO 3 — escopo ampliado (Vitor 2026-07-12): reorganizar o roadmap no Obsidian
+
+Ao planejar os épicos novos, **entregar uma visão CLARA no Obsidian** (os `leela-specs/` são o vault) com hierarquia consistente e única:
+**Onda → Épico → User Story → Task**, cada nível ancorado ao **Job To Be Done** + persona.
+- **Problema atual:** os cards do kanban/roadmap **misturam "Wave" (A/B/C/D, eixo de EXECUÇÃO da trilha next-trail) com "Onda" (1/2, eixo de RELEASE) com "Épico"** — dois eixos diferentes conflados, mais o épico, sem terminologia única. Fica confuso.
+- **Entregar:** decidir UMA terminologia (ex.: "Onda" = release; "Épico" = agrupamento de valor; "Wave/Frente" = lote de execução, se ainda necessário, claramente subordinado) e **reescrever `V1-KANBAN.md` + `V1-CHECKLIST.md` + `ROADMAP.md`** nessa estrutura, com cada US → JTBD explícito e tasks abaixo. Índice navegável no Obsidian (links `[[...]]`).
+- Incluir os **épicos novos** (social/link-in-bio + assessorias parceiras) já nessa estrutura limpa.
+
 ## Regras de domínio novas (Vitor 2026-07-12 — a aplicar/planejar)
 
 - **Kit ← modalidade (checkout):** o modelo do core JÁ vincula kit a modalidades (`kit.modalidades[]`; Ouro=21k, Prata=10k/21k, básico=todas). FALTA: no **checkout, primeiro seleciona modalidade, depois kit**, e o kit deve ser **filtrado pela modalidade escolhida**; podem existir **vários kits** por modalidade. Ex.: "5km masculino corrida" + "kit prata". Entra no refino do checkout.
