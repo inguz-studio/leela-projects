@@ -29,6 +29,8 @@ const TIPO_POR_STATUS: Record<StatusInscrito, AtividadeTipo> = {
   confirmado: 'confirmado',
   pendente: 'pendente',
   cancelado: 'falhou',
+  // RN-341/FABLE-B: estorno aparece no feed como estado de atenção (falhou)
+  estornado: 'falhou',
 };
 
 /** Iniciais (até 2) a partir do nome completo. @pure */

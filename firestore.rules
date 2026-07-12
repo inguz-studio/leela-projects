@@ -361,7 +361,14 @@ service cloud.firestore {
           return request.resource.data.kit in ['kit_ouro', 'kit_prata', 'kit_basico', 'sem_kit'];
         }
 
-        /** Status dentro do enum canônico (RN-204). */
+        /**
+         * Status dentro do enum de CLIENTE (RN-204). 'estornado' (RN-341 ·
+         * FABLE-B) fica DELIBERADAMENTE fora: é status de escrita EXCLUSIVA
+         * da Function `estornarInscricao` (Admin SDK bypassa Rules) — cliente
+         * não forja estorno sem devolução de dinheiro. Esta função valida o
+         * estado NOVO; o congelamento do doc JÁ estornado (anti-ressurreição)
+         * é de `inscritoNaoEstornado()`, que guarda pelo estado ATUAL.
+         */
         function statusInscritoValido() {
           return request.resource.data.status in ['confirmado', 'pendente', 'cancelado'];
         }
@@ -385,7 +392,8 @@ service cloud.firestore {
         function semCamposDeFunctionInscrito() {
           return !request.resource.data.keys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
-             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId']
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
+             'estornadoEm']
           );
         }
 
@@ -399,8 +407,22 @@ service cloud.firestore {
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
-             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId']
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
+             'estornadoEm']
           );
+        }
+
+        /**
+         * Doc estornado é CONGELADO para cliente (RN-341 · FABLE-B): guarda
+         * pelo estado ATUAL (resource), não pelo novo — sem ela, um update
+         * com `status: 'confirmado'` passaria em statusInscritoValido (que
+         * valida o estado NOVO) e RESSUSCITARIA uma inscrição cujo dinheiro
+         * já foi devolvido (achado do teste adversarial FABLE-B). Vale
+         * também para delete: apagar+recriar limparia a marca do estorno.
+         * Ajuste pós-estorno é superfície de Function/platform_admin.
+         */
+        function inscritoNaoEstornado() {
+          return resource.data.status != 'estornado';
         }
 
         // LEITURA restrita a papel de GESTÃO (owner/staff via isTenantWriter),
@@ -425,10 +447,12 @@ service cloud.firestore {
                           && tenantAtivo(resource.data.tenantId)
                           && kitInscritoValido()
                           && statusInscritoValido()
+                          && inscritoNaoEstornado()
                           && camposDeFunctionIntocados())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)
-                          && tenantAtivo(resource.data.tenantId))
+                          && tenantAtivo(resource.data.tenantId)
+                          && inscritoNaoEstornado())
                       || isPlatformAdmin();
       }
 
@@ -1187,6 +1211,18 @@ service cloud.firestore {
       allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
       // Escrita de estado financeiro apenas por Function
       allow write: if false;
+
+      // `estornos/{inscritoId}` — ledger do estorno POR INSCRITO (RN-337/341
+      // · ADR-011 · FABLE-B). Trilha de auditoria de dinheiro (quem/quando/
+      // quanto/motivo + refundId do gateway + valor CONGELADO): escrita
+      // EXCLUSIVA da Function `estornarInscricao` (Admin SDK) — cliente
+      // forjar/alterar um doc aqui fabricaria/apagaria devolução de dinheiro.
+      // Leitura segue a taxonomia financeira do pai (owner/staff do tenant,
+      // via tenantId denormalizado no próprio doc do ledger).
+      match /estornos/{inscritoId} {
+        allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
+        allow write: if false;
+      }
     }
 
     // `pedidos/{pedidoId}` — pedido em grupo (ADR-011 · FABLE-A-T1).

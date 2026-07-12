@@ -85,3 +85,7 @@ export { cotarInscricaoCheckout } from './checkout/cotarInscricaoCheckout';
 // Disparo do webhook de confirmação no SANDBOX (S1203 — "o Mock dispara o
 // webhook"; fail-closed com chave Asaas real). ⚠️ Fable-review.
 export { confirmarPagamentoSandbox } from './checkout/confirmarPagamentoSandbox';
+// Estorno POR INSCRITO do pedido em grupo (FABLE-B · ADR-011 · RN-337/341):
+// saga idempotente ledger→refund→efeito; só organizador (tenant writer);
+// reverte a receita agregada e audita quem/quando/quanto/motivo. ⚠️ Fable.
+export { estornarInscricao } from './checkout/estornarInscricao';

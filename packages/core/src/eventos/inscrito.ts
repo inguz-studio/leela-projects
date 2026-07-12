@@ -53,14 +53,24 @@ export function isKitInscrito(value: unknown): value is KitInscrito {
   );
 }
 
-/** Status da inscrição (RN-204) */
-export type StatusInscrito = 'confirmado' | 'pendente' | 'cancelado';
+/**
+ * Status da inscrição (RN-204 + RN-337/RN-341 · ADR-011).
+ * `estornado` (FABLE-B): inscrição paga cujo valor foi DEVOLVIDO ao pagador —
+ * o estorno opera POR INSCRITO dentro do pedido em grupo (ADR-011), nunca
+ * sobre o pedido inteiro. É status de escrita EXCLUSIVA da Function
+ * `estornarInscricao` (Admin SDK): as Rules mantêm 'estornado' FORA do enum
+ * de cliente — cliente não cria/atualiza para ele, e um doc estornado fica
+ * CONGELADO para escrita de cliente (o merge preservaria o status fora do
+ * enum permitido). Distinto de 'cancelado' (sem dinheiro devolvido).
+ */
+export type StatusInscrito = 'confirmado' | 'pendente' | 'cancelado' | 'estornado';
 
 /** Lista canônica de status de inscrito */
 export const STATUS_INSCRITO: readonly StatusInscrito[] = [
   'confirmado',
   'pendente',
   'cancelado',
+  'estornado',
 ];
 
 /** Type guard de StatusInscrito (RN-204) */
@@ -68,6 +78,34 @@ export function isStatusInscrito(value: unknown): value is StatusInscrito {
   return (
     typeof value === 'string' && (STATUS_INSCRITO as readonly string[]).includes(value)
   );
+}
+
+/**
+ * Matriz CANÔNICA de transição de status do inscrito (espelha o padrão de
+ * TRANSICOES_STATUS_PEDIDO/PAGAMENTO — re-review A9):
+ *   - `pendente` → confirmado (webhook de pagamento) | cancelado;
+ *   - `confirmado` → cancelado | estornado (SÓ inscrição PAGA estorna —
+ *     RN-341; a Function `estornarInscricao` é o único escritor do flip);
+ *   - `cancelado`/`estornado` são TERMINAIS: inscrição estornada não
+ *     ressuscita (o dinheiro já voltou) nem re-estorna (dupliaria refund).
+ * Functions que mudam status DEVEM consultar esta matriz — nunca re-derivar
+ * transições localmente.
+ */
+export const TRANSICOES_STATUS_INSCRITO: Readonly<
+  Record<StatusInscrito, readonly StatusInscrito[]>
+> = {
+  pendente: ['confirmado', 'cancelado'],
+  confirmado: ['cancelado', 'estornado'],
+  cancelado: [],
+  estornado: [],
+};
+
+/** Transição de status do inscrito permitida? (`estornado` é terminal) @pure */
+export function podeTransicionarStatusInscrito(
+  de: StatusInscrito,
+  para: StatusInscrito
+): boolean {
+  return TRANSICOES_STATUS_INSCRITO[de].includes(para);
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +180,14 @@ export interface Inscrito {
   qrToken?: string;
   /** Emissão do ingresso digital (S1206) */
   ingressoEmitidoEm?: Timestamp;
+  /**
+   * Carimbo do estorno (RN-341/ADR-011 · FABLE-B) — presente SE E SOMENTE SE
+   * `status === 'estornado'` (escritos na MESMA transação pela Function
+   * `estornarInscricao`). A trilha de auditoria completa (quem/quando/
+   * quanto/motivo + refundId do gateway) vive no ledger
+   * `pagamentos/{pagamentoId}/estornos/{inscritoId}` — aqui só o carimbo.
+   */
+  estornadoEm?: Timestamp;
 }
 
 /**
@@ -171,6 +217,10 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   'dadosPessoais',
   'tamanhos',
   'kitId',
+  // FABLE-B (RN-341): carimbo do estorno — escrito SÓ por `estornarInscricao`
+  // na MESMA transação do flip para 'estornado'. Cliente forjá-lo simularia
+  // devolução de dinheiro que não aconteceu.
+  'estornadoEm',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -182,9 +232,12 @@ export function chipVinculado(inscrito: Pick<Inscrito, 'chipNumero'>): boolean {
   return typeof inscrito.chipNumero === 'string' && inscrito.chipNumero.length > 0;
 }
 
-/** Inscrito conta para operação/entrega? (cancelado fica fora) @pure */
+/**
+ * Inscrito conta para operação/entrega? (cancelado E estornado ficam fora —
+ * inscrição estornada teve o valor devolvido: não retira kit, não corre) @pure
+ */
 export function inscritoAtivo(inscrito: Pick<Inscrito, 'status'>): boolean {
-  return inscrito.status !== 'cancelado';
+  return inscrito.status !== 'cancelado' && inscrito.status !== 'estornado';
 }
 
 /** Já pertence a um pedido? (false = legado pré-ADR-011) @pure */
@@ -320,6 +373,34 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   }
   if (data['ingressoEmitidoEm'] !== undefined) {
     inscrito.ingressoEmitidoEm = data['ingressoEmitidoEm'] as Timestamp;
+  }
+  if (data['estornadoEm'] !== undefined) {
+    inscrito.estornadoEm = data['estornadoEm'] as Timestamp;
+  }
+
+  // Coerência do estorno (RN-341/ADR-011 · FABLE-B) — checada no parse porque
+  // é DINHEIRO: `estornado` sem carimbo (ou carimbo sem status) indicaria flip
+  // fora da Function `estornarInscricao`, que escreve os dois na MESMA
+  // transação. E estorno opera POR INSCRITO dentro de um pedido — inscrição
+  // estornada SEM pedido é impossível (não houve pagamento a devolver).
+  if (inscrito.status === 'estornado') {
+    if (inscrito.estornadoEm === undefined) {
+      throw new Error(
+        `Inscrito ${id}: status "estornado" sem estornadoEm — o estorno ` +
+          `carimba estornadoEm no MESMO write (RN-341/FABLE-B)`
+      );
+    }
+    if (inscrito.pedidoRef === null) {
+      throw new Error(
+        `Inscrito ${id}: status "estornado" com pedidoRef null — estorno ` +
+          `opera POR INSCRITO dentro de um pedido (ADR-011/RN-341)`
+      );
+    }
+  } else if (inscrito.estornadoEm !== undefined) {
+    throw new Error(
+      `Inscrito ${id}: estornadoEm presente com status "${inscrito.status}" — ` +
+        `só inscrição estornada carrega o carimbo (RN-341/FABLE-B)`
+    );
   }
 
   return inscrito;

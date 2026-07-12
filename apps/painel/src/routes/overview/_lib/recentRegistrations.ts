@@ -53,6 +53,8 @@ const BADGE_STATUS: Record<StatusInscrito, StatusInscritoBadge> = {
   confirmado: { label: 'Pago', variant: 'vitoria' },
   pendente: { label: 'Pendente', variant: 'alerta' },
   cancelado: { label: 'Recusado', variant: 'vulcao' },
+  // RN-341/FABLE-B: valor devolvido ao pagador (neutro, espelha o [pag])
+  estornado: { label: 'Estornado', variant: 'neutro' },
 };
 
 /** Badge semântico do status da inscrição (RN-204). @pure */

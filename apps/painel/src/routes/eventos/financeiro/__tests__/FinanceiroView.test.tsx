@@ -13,7 +13,7 @@ function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
     receitaLiquida: 76628,
     inscritos: {
       total: 453,
-      porStatus: { confirmado: 450, pendente: 2, cancelado: 1 },
+      porStatus: { confirmado: 450, pendente: 2, cancelado: 1, estornado: 0 },
       porKit: { kit_ouro: 100, kit_prata: 150, kit_basico: 200, sem_kit: 3 },
       porModalidade: { '21k': 453 },
     },
@@ -59,7 +59,7 @@ describe('FinanceiroView (S207-T1)', () => {
     render(
       <FinanceiroView
         slug="e1"
-        financeiro={mkFin({ inscritos: { total: 300, porStatus: { confirmado: 300, pendente: 0, cancelado: 0 }, porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 }, porModalidade: { '5k': 100, '10k': 200 } } })}
+        financeiro={mkFin({ inscritos: { total: 300, porStatus: { confirmado: 300, pendente: 0, cancelado: 0, estornado: 0 }, porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 }, porModalidade: { '5k': 100, '10k': 200 } } })}
         loading={false}
         error={null}
       />,

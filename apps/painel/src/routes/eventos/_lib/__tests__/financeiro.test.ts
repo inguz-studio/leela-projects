@@ -16,7 +16,7 @@ function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
     receitaLiquida: 76627.21,
     inscritos: {
       total: 453,
-      porStatus: { confirmado: 450, pendente: 2, cancelado: 1 },
+      porStatus: { confirmado: 450, pendente: 2, cancelado: 1, estornado: 0 },
       porKit: { kit_ouro: 100, kit_prata: 150, kit_basico: 200, sem_kit: 3 },
       porModalidade: { '5k': 100, '10k': 200, '21k': 153 },
     },
@@ -55,7 +55,7 @@ describe('breakdownFinanceiro', () => {
     const fin = mkFin({
       inscritos: {
         total: 1,
-        porStatus: { confirmado: 1, pendente: 0, cancelado: 0 },
+        porStatus: { confirmado: 1, pendente: 0, cancelado: 0, estornado: 0 },
         porKit: { kit_ouro: 1, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
         porModalidade: { '5k': 1 },
       },
@@ -89,7 +89,7 @@ describe('gerarCsvFinanceiro', () => {
         mkFin({
           inscritos: {
             total: 3,
-            porStatus: { confirmado: 3, pendente: 0, cancelado: 0 },
+            porStatus: { confirmado: 3, pendente: 0, cancelado: 0, estornado: 0 },
             porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
             porModalidade: { '=HYPERLINK("http://evil","x")': 3 },
           },
@@ -110,7 +110,7 @@ describe('gerarCsvFinanceiro', () => {
         mkFin({
           inscritos: {
             total: 1,
-            porStatus: { confirmado: 1, pendente: 0, cancelado: 0 },
+            porStatus: { confirmado: 1, pendente: 0, cancelado: 0, estornado: 0 },
             porKit: { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 },
             porModalidade: { [modalidade]: 1 },
           },

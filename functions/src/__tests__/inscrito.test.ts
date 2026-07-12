@@ -138,6 +138,8 @@ describe('derivações puras de Inscrito', () => {
     // FABLE-A-T2 (ADR-011): + pedidoRef/ehResponsavel/dadosPessoais/tamanhos
     // (escritos pela Function do checkout — S1203-T5).
     // Follow-up review kit (E12): + kitId (id do kit COBRADO — fulfillment).
+    // FABLE-B (RN-341): + estornadoEm (carimbo do estorno — só a Function
+    // `estornarInscricao` escreve, junto do flip para 'estornado').
     expect(CAMPOS_FUNCTION_INSCRITO).toEqual([
       'kitEntregueEm',
       'checkinEm',
@@ -148,6 +150,7 @@ describe('derivações puras de Inscrito', () => {
       'dadosPessoais',
       'tamanhos',
       'kitId',
+      'estornadoEm',
     ]);
   });
 });

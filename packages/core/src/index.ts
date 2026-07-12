@@ -318,6 +318,10 @@ export {
   isKitInscrito,
   STATUS_INSCRITO,
   isStatusInscrito,
+  // FABLE-B (RN-341) — máquina de transição do inscrito ('estornado' é
+  // terminal; consultada por estornarInscricao, nunca re-derivada local)
+  TRANSICOES_STATUS_INSCRITO,
+  podeTransicionarStatusInscrito,
   CAMPOS_FUNCTION_INSCRITO,
   chipVinculado,
   inscritoAtivo,

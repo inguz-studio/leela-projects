@@ -129,7 +129,7 @@ beforeEach(async () => {
 /** Distribuição esperada, derivada do PRÓPRIO seed (sem número mágico). */
 function distribuicaoEsperada() {
   const seeds = gerarInscritosSeed();
-  const porStatus = { confirmado: 0, pendente: 0, cancelado: 0 };
+  const porStatus = { confirmado: 0, pendente: 0, cancelado: 0, estornado: 0 };
   const porKit = { kit_ouro: 0, kit_prata: 0, kit_basico: 0, sem_kit: 0 };
   const porModalidade: Record<string, number> = { '5k': 0, '10k': 0, '21k': 0 };
   for (const s of seeds) {
