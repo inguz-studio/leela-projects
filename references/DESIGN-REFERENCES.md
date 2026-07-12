@@ -34,7 +34,8 @@ Arquivo único que contém a **fonte de verdade de design** da V1: ícones v1, f
 
 ## Visão de produto anexa (a planejar — não implementada)
 
-- **Perfil social / link-in-bio:** Feed · Eventos · Clubs, personalizável na identidade de cada organizador (tematização dinâmica por usuário = "mockup de cores"). Clubes e eventos têm **capa**. Benchmark: Cheers. Épico novo a planejar.
+- **Perfil social / link-in-bio:** Feed · Eventos · Clubs, personalizável na identidade de cada organizador (tematização dinâmica por usuário = "mockup de cores"). Clubes e eventos têm **capa**. Benchmark: Cheers. **→ PLANEJADO: `leela-specs/epics/LEELA-E17-perfil-social.md`** (Onda 3 link-in-bio público / Onda 4 in-app).
+- **Assessorias parceiras (tração B2B):** organizador cadastra assessorias como clubes parceiros com desconto exclusivo; convite por e-mail → provisiona conta Leela automática. **→ PLANEJADO: `leela-specs/epics/LEELA-E18-assessorias-parceiras.md`** (Onda 3).
 
 ## PONTO 3 — escopo ampliado (Vitor 2026-07-12): reorganizar o roadmap no Obsidian
 

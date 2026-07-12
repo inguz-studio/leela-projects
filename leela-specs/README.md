@@ -36,7 +36,8 @@ Ordem de construção: **Onda 0** (E00→E01) → **1** (E05, E03, E02) → **2*
 
 - **Comece por aqui (fatia V1):** [[V1-PRODUTOR-web]] — produtor (web) + app simples + super-admin mínimo. É o que o Fable 5 constrói primeiro.
 - **Arquitetura:** marketplace **multi-tenant** (ADR-009 · `adr/ADR-multitenancy.md`) — fundacional, nasce no E00.
-- **Épicos adicionados** (além dos 14): **E14** Integrações de treino (`TrainingProvider`), **E15** Creator Studio (SaaS estilo MyDose), **E16** Plataforma & Super-Admin. **Total: 17 épicos.**
+- **Épicos adicionados** (além dos 14): **E14** Integrações de treino (`TrainingProvider`), **E15** Creator Studio (SaaS estilo MyDose), **E16** Plataforma & Super-Admin, **E17** Perfil social / link-in-bio, **E18** Assessorias parceiras (tração B2B). **Total: 19 épicos.**
+- **Modelo do roadmap:** terminologia e hierarquia canônica (Onda → Épico → US → Task) em [[MODELO-ROADMAP]] — reconcilia "Wave/Onda/Épico".
 - **Discovery** (benchmarks + validação) em `discovery/` — 7 pilares, relatório, parecer do conselho, nuvem de ~70 features e re-análise de roadmap.
 
 ## Referências de design

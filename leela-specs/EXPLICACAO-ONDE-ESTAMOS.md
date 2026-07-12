@@ -5,7 +5,20 @@ atualizado: 2026-07-11
 
 # Onde estamos — mapa simples do projeto Leela
 
-> Este arquivo é a visão "de helicóptero". O detalhe operacional vive em [[V1-KANBAN]] (colunas), [[V1-CHECKLIST]] (tasks) e [[ROADMAP]] (§4 épicos, §5 ondas).
+> Este arquivo é a visão "de helicóptero". O detalhe operacional vive em [[V1-KANBAN]] (colunas), [[V1-CHECKLIST]] (tasks) e [[ROADMAP]] (§4 épicos, §5 ondas). **A terminologia e a hierarquia oficial estão em [[MODELO-ROADMAP]].**
+
+## Glossário em 6 palavras (para não se perder)
+
+| Palavra | O que significa | Analogia |
+|---|---|---|
+| **Onda** | Uma leva de entregas que vai ao mercado junta (Onda 0 Fundação → 1 Operar → 2 Vender → 3 App → 4 Comunidade). É o "quando entrega". | Os andares de um prédio, construídos de baixo para cima. |
+| **Épico** | Uma capacidade do produto (ex.: E12 = landing + checkout). É o "o quê". | Um cômodo do andar. |
+| **User Story** | Uma fatia de valor para uma pessoa, com um Job To Be Done. | Um móvel do cômodo. |
+| **Task** | Um pedaço técnico = 1 PR. | Um parafuso do móvel. |
+| **Lote de execução** ("Wave A-D") | Um punhado de tasks que o time despachou numa mesma sprint. **Não é uma Onda** — é só agenda. | Uma diária de obra. |
+| **Horizonte (H1-H4)** | Quão longe no futuro (H1 = agora, H4 = visão de 3-5 anos). | O projeto de expansão do bairro. |
+
+> ⚠️ **O que confundia:** os cards misturavam "Wave" (agenda) com "Onda" (release). Agora: **"Wave C" é a mesma coisa que "Onda 2"** — daqui pra frente falamos só de Onda. Detalhe e de-para em [[MODELO-ROADMAP]].
 
 ## A história em 4 linhas
 
@@ -65,6 +78,8 @@ Verde = feito · Laranja = **estamos aqui** · Cinza = próximo.
 | E03 Operação do evento · E05 Clubs · E02 Dashboard · E16-slim Plataforma | núcleo do painel | ✅ feitos (Onda 1) — E03 recebe agora a trilha Fable A-G |
 | E04-slim Vendas · E12 Landing+checkout · E09-slim Repasses · E07-web Erros · E06 Comunicação | vender ponta a ponta | 📋 Wave C (Onda 2), planejada em 23 lotes/71 tasks |
 | E13 App do atleta | mobile do atleta | 🔜 Onda 4 (V1.5: E13-slim + GymRats) |
+| 🆕 E18 Assessorias parceiras | tração B2B (clubes parceiros c/ desconto) | 📋 Onda 3 · planejado 2026-07-12 |
+| 🆕 E17 Perfil social / link-in-bio | perfil `@handle` + Feed·Eventos·Clubs + tema por-conta | 📋 Onda 3 (link público) / Onda 4 (in-app) |
 | E08 Influenciador · E10 Marcas · E11 Analytics · E14 Treino · E15 Creator Studio | expansão | ❄️ fora da V1 / adiados |
 
 ## Ações que só o Vitor pode fazer (não bloqueiam hoje, mas têm fila)

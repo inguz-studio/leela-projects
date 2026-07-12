@@ -7,6 +7,9 @@ aliases: [Leela Specs, Home, MOC]
 
 Ponto de entrada do planejamento do **Leela** — ecossistema que unifica ingressos + comunidade/clubs + comunicação + desafios gameficados + controle de vendas. Abra esta nota no Obsidian e navegue pelos `[[wikilinks]]`.
 
+## 🧭 Modelo do roadmap (leia primeiro)
+- [[MODELO-ROADMAP]] — **terminologia única + hierarquia canônica** (Onda → Épico → User Story → Task). Reconcilia "Wave/Onda/Épico" num modelo só. Se um termo confundir, este doc vence.
+
 ## 🗂️ Acompanhamento (fonte da verdade)
 - [[BACKLOG]] — visão Jira (Épico → Story → Subtarefa) com progresso ao vivo (requer Dataview). 83 stories em `backlog/`.
 
@@ -34,7 +37,8 @@ Ponto de entrada do planejamento do **Leela** — ecossistema que unifica ingres
 - Onda 1 · [[LEELA-E05-clubs]] · [[LEELA-E03-operacao-evento]] · [[LEELA-E02-visao-geral]]
 - Onda 2 · [[LEELA-E04-config-vendas]] · [[LEELA-E12-landing]]
 - Onda 3 · [[LEELA-E07-estados-sistema]] · [[LEELA-E06-marketing]] · [[LEELA-E09-financeiro-profissional]]
-- Onda 4 · [[LEELA-E13-app-atleta]]
+- Onda 3 · 🆕 [[LEELA-E18-assessorias-parceiras]] · 🆕 [[LEELA-E17-perfil-social]] (link-in-bio público)
+- Onda 4 · [[LEELA-E13-app-atleta]] · 🆕 [[LEELA-E17-perfil-social]] (Feed·Eventos·Clubs in-app + tema por-usuário)
 - Onda 5 · [[LEELA-E08-influenciador]] · [[LEELA-E10-marcas]] · [[LEELA-E11-analytics]]
 
 ## Arquitetura & épicos novos

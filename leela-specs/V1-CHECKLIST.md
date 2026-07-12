@@ -1,5 +1,7 @@
 # Checklist executável — V1 Produtor (web) + app simples
 
+> **📐 Terminologia (ver [[MODELO-ROADMAP]]):** hierarquia canônica **Onda → Épico → User Story → Task**. As seções "Trilha next-trail" (Wave A-D) mais abaixo são **lotes de execução** (agenda de sprint), não um eixo de release — "Wave C" = a Onda 2. O estado de execução (✅/📋) está preservado tal como registrado; o de-para Wave→Onda vive no doc canônico. **Épicos novos (2026-07-12):** [[LEELA-E17-perfil-social]] (Onda 3/4) e [[LEELA-E18-assessorias-parceiras]] (Onda 3) — specs completas em `epics/`, tasks entram no checklist quando despachadas.
+
 > Como usar: construir na ordem das ondas; cada item é uma task = 1 PR. Marcar `[x]` ao concluir.
 
 > **Multi-tenancy é pré-requisito transversal (ADR-009).** O Leela é uma ticketeira multi-tenant: `S1600` (modelo `tenants` + claims + isolamento por `tenantId` nas Security Rules) vem **antes de qualquer dado de domínio** e por isso mora na Onda 0, junto do E00. Retrofit de isolamento é proibitivo. Toda coleção de domínio (E03/E04/E05) só é segura depois que as Rules de `S1600-T3` estão no lugar.

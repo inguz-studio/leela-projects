@@ -105,6 +105,10 @@ IDs renomeados para o prefixo `LEELA-` (produto unificado). Coluna "De-para" pre
 | **LEELA-E14** | Integrações de treino (`TrainingProvider`: Health/Strava/agregador) | Todas | Should (H2) | L | 🆕 proposto (ver `discovery/ANALISE-ROADMAP-v2.md`) | E00, E01, E13 | (novo) |
 | **LEELA-E15** | Creator Studio (desafios/programas + ebooks + materiais · SaaS estilo MyDose) | Painel | Could (H2/H3) | XL | 🧊 futuro | E05, E04 | (novo) |
 | **LEELA-E16** | Plataforma & Super-Admin (marketplace multi-tenant) | Painel (back-office) | Must (fundacional) | L | 🆕 spec em produção | E00, E01, E04 | (novo) |
+| **LEELA-E17** | Perfil social / link-in-bio (Feed·Eventos·Clubs, tema por-usuário, capas) | Landing + Mobile | Should/Could (H2) | XL | 🆕 planejado 2026-07-12 | E01, E12, E05, E13 | (novo) |
+| **LEELA-E18** | Assessorias parceiras (tração B2B — clubes parceiros com desconto) | Painel + Landing | Should (H1→H2) | L | 🆕 planejado 2026-07-12 | E05, E04, E16, E00, E12 | reusa E08/E05-S107 |
+
+> **📐 Terminologia (2026-07-12):** a hierarquia canônica é **Onda → Épico → User Story → Task** (cada nível ancorado a JTBD+persona). "Wave A-D"/"Frente F1-F4" da trilha `next-trail` = **lotes de execução** (agenda de sprint), NÃO um eixo de release — de-para completo em `MODELO-ROADMAP.md`. "Wave C" = Onda 2.
 
 > Multi-tenancy é fundacional (ADR-009 · `adr/ADR-multitenancy.md`) — o E00 nasce multi-tenant. A fatia de execução (o que fazer primeiro) está em `V1-PRODUTOR-web.md`.
 
@@ -135,8 +139,13 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 **Onda 3 · Robustez e alavancas (H1→H2)** *(fatias restantes — os recortes-slim subiram p/ Onda 2 em 2026-07-05/10)*
 - LEELA-E07 Estados de Sistema (restante: offline/manutenção + superfície mobile) · LEELA-E06 Marketing Unificado (restante: parceiros/automações) · LEELA-E09 Financeiro do Profissional (restante: painel rico + máquina completa de reembolso S904/RN-341 + política S305).
 
-**Onda 4 · App do Atleta (H1→H2)**
+**Onda 3 · App simples + alavancas de tração (H1→H2)** *(além das fatias-slim já listadas)*
+- **LEELA-E18 Assessorias parceiras** — organizador cadastra assessorias como clubes parceiros com desconto; reusa E05 (clube+convite+parceria) + E04 (cupom) + E16 (termos) + E00 (Auth). Sem split.
+- **LEELA-E17 (fatia link-in-bio público)** — perfil `@handle` SSR/ISR reusando E12; abas Feed·Eventos·Clubs + capas.
+
+**Onda 4 · App do Atleta + social completo (H1→H2)**
 - LEELA-E13 — reusa `packages/core` + `design-system`; jornada, inscrições, desafios, comunidade.
+- **LEELA-E17 (fatia social in-app)** — Feed·Eventos·Clubs no bottom-nav + tematização por-usuário (accent sobre o DS).
 
 **Onda 5 · Expansão (H2+)**
 - LEELA-E08 Influenciador · LEELA-E10 Marcas · LEELA-E11 Analytics.
