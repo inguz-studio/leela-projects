@@ -92,6 +92,32 @@ export function isStatusPagamento(value: unknown): value is StatusPagamento {
   );
 }
 
+/**
+ * Matriz CANÔNICA de transição de status do pagamento (re-review A9).
+ * `pendente` é o único estado inicial mutável; `confirmado` só avança para
+ * `estornado` (estorno INTEGRAL — o parcial por inscrito vive na máquina de
+ * `reembolsos`, S904); `falhou`/`cancelado`/`estornado` são TERMINAIS.
+ * O webhook (functions/checkout) é o único escritor e DEVE consultar esta
+ * matriz — estado final nunca retrocede nem re-aplica efeito.
+ */
+export const TRANSICOES_STATUS_PAGAMENTO: Readonly<
+  Record<StatusPagamento, readonly StatusPagamento[]>
+> = {
+  pendente: ['confirmado', 'falhou', 'cancelado'],
+  confirmado: ['estornado'],
+  falhou: [],
+  estornado: [],
+  cancelado: [],
+};
+
+/** Transição de status do pagamento permitida? (`confirmado ↛ pendente`) @pure */
+export function podeTransicionarStatusPagamento(
+  de: StatusPagamento,
+  para: StatusPagamento
+): boolean {
+  return TRANSICOES_STATUS_PAGAMENTO[de].includes(para);
+}
+
 /** Gateway de pagamento — Asaas decidido (D2, 2026-07-10) */
 export type GatewayPagamento = 'asaas';
 
@@ -184,7 +210,13 @@ export interface Pagamento {
   cupom?: CupomAplicado;
   /** Desconto aplicado em R$ (0 quando sem cupom) */
   desconto: number;
-  /** Valor final em R$ (base − desconto) — o que o organizador enxerga */
+  /**
+   * Valor final em R$ (base − desconto) — o que o organizador enxerga.
+   * EQUAÇÃO CANÔNICA (re-review A1): `valorFinal === pedido.valorTotal ===
+   * Σ pedido.itens[].valorFinal` — provada no par de docs por
+   * `pedidoCoerenteComPagamento` (pedido.ts). Juros de parcelamento NÃO
+   * entram aqui (vivem em `cartao.valorTotalComJuros` — comprador).
+   */
   valorFinal: number;
   /** Só quando forma === 'cartao_credito' */
   cartao?: CartaoPagamento;
@@ -192,6 +224,14 @@ export interface Pagamento {
   pagoEm?: Timestamp;
   /** Presente após a confirmação/liquidação no gateway */
   conciliacao?: Conciliacao;
+  /**
+   * Id do ÚLTIMO evento de webhook do gateway que APLICOU efeito neste
+   * pagamento (re-review A9 — idempotência). Espelha o ledger
+   * `pagamentos/{id}/webhookEventos/{eventId}`; ausente até o primeiro
+   * evento com efeito. O webhook (functions/checkout) escreve na MESMA
+   * transação do efeito.
+   */
+  webhookEventoId?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -388,6 +428,23 @@ export function parsePagamento(
       cupom.descontoPct = pct;
     }
     pagamento.cupom = cupom;
+
+    // Invariante cruzada do cupom percentual (re-review A6): o desconto em
+    // R$ DEVE ser o percentual aplicado sobre a base (mesma aritmética de
+    // descontoDoCupom/computeSaleState). Cupom fixo não carrega descontoPct
+    // — sem cruzamento possível.
+    if (cupom.descontoPct !== undefined) {
+      const descontoEsperado = roundMoney(
+        pagamento.valorBase * (cupom.descontoPct / 100)
+      );
+      if (Math.abs(pagamento.desconto - descontoEsperado) > TOLERANCIA_MEIO_CENTAVO) {
+        throw new Error(
+          `${ctx}: "desconto" (${pagamento.desconto}) ≠ valorBase × ` +
+            `descontoPct/100 (${descontoEsperado}) — cupom percentual ` +
+            `incoerente com o desconto aplicado`
+        );
+      }
+    }
   }
 
   if (data['cartao'] !== undefined) {
@@ -462,19 +519,51 @@ export function parsePagamento(
       pagamento.valorFinal
     );
   }
+  if (data['webhookEventoId'] !== undefined) {
+    const eventoId = data['webhookEventoId'];
+    if (typeof eventoId !== 'string' || eventoId.length === 0) {
+      throw new Error(`${ctx}: "webhookEventoId" inválido (id do evento do gateway)`);
+    }
+    pagamento.webhookEventoId = eventoId;
+  }
 
-  // Coerência de estado (r1 fix 6): pagamento 'pendente' NÃO pode carregar
-  // carimbo de confirmação nem conciliação — só o webhook que confirma
-  // escreve esses campos (mesmo write atômico). Checado no parse porque é
-  // dinheiro: exibir "pendente" com conciliação induz decisão errada.
+  // Matriz de coerência de estado COMPLETA (r1 fix 6 + re-review A3/A5) —
+  // checada no parse porque é dinheiro: exibir estado incoerente induz
+  // decisão financeira errada.
+  //   pendente             ⇒ SEM pagoEm e SEM conciliacao
+  //   confirmado|estornado ⇒ pagoEm PRESENTE (estornado já foi pago)
+  //   falhou|cancelado     ⇒ SEM pagoEm e SEM conciliacao (nunca liquidou)
+  //   confirmado + cartão  ⇒ bloco `cartao` PRESENTE (espelho do slide-in)
   if (
-    pagamento.status === 'pendente' &&
+    (pagamento.status === 'pendente' ||
+      pagamento.status === 'falhou' ||
+      pagamento.status === 'cancelado') &&
     (pagamento.pagoEm !== undefined || pagamento.conciliacao !== undefined)
   ) {
     throw new Error(
-      `${ctx}: status "pendente" com ${
+      `${ctx}: status "${pagamento.status}" com ${
         pagamento.pagoEm !== undefined ? 'pagoEm' : 'conciliacao'
-      } presente — estado financeiro incoerente (só o webhook de confirmação escreve esses campos)`
+      } presente — estado financeiro incoerente (só a confirmação do webhook escreve esses campos)`
+    );
+  }
+  if (
+    (pagamento.status === 'confirmado' || pagamento.status === 'estornado') &&
+    pagamento.pagoEm === undefined
+  ) {
+    throw new Error(
+      `${ctx}: status "${pagamento.status}" sem pagoEm — a confirmação ` +
+        `carimba pagoEm no MESMO write (estornado já foi pago antes)`
+    );
+  }
+  if (
+    pagamento.status === 'confirmado' &&
+    pagamento.forma === 'cartao_credito' &&
+    pagamento.cartao === undefined
+  ) {
+    throw new Error(
+      `${ctx}: status "confirmado" no cartão SEM o bloco "cartao" — o ` +
+        `slide-in exibe bandeira/parcelas do pagamento confirmado (A5); a ` +
+        `confirmação de cartão DEVE persistir o bloco cartao`
     );
   }
 

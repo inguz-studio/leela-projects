@@ -16,7 +16,9 @@ import {
   pagamentoConfirmado,
   parseConciliacao,
   parsePagamento,
+  podeTransicionarStatusPagamento,
   STATUS_PAGAMENTO,
+  TRANSICOES_STATUS_PAGAMENTO,
   valorPagoPeloComprador,
 } from '@leela/core';
 
@@ -252,6 +254,174 @@ describe('coerência de estado (review r1 fix 6) e timestamps (fix 4)', () => {
     const malformado = docPagamento();
     malformado['atualizadoEm'] = '2026-07-11';
     expect(() => parsePagamento('x', malformado)).toThrow(/atualizadoEm/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Matriz de coerência de estado COMPLETA (re-review A3/A5)
+// ---------------------------------------------------------------------------
+
+describe('matriz de coerência de estado (re-review A3/A5)', () => {
+  it('confirmado SEM pagoEm → lança (confirmação carimba pagoEm no mesmo write)', () => {
+    const raw = docPagamento();
+    delete raw['pagoEm'];
+    expect(() => parsePagamento('x', raw)).toThrow(/confirmado.*sem pagoEm/);
+  });
+
+  it('estornado exige pagoEm (já foi pago antes do estorno)', () => {
+    const semPagoEm = docPagamento();
+    semPagoEm['status'] = 'estornado';
+    delete semPagoEm['pagoEm'];
+    expect(() => parsePagamento('x', semPagoEm)).toThrow(/estornado.*sem pagoEm/);
+
+    const coerente = docPagamento();
+    coerente['status'] = 'estornado';
+    expect(() => parsePagamento('x', coerente)).not.toThrow();
+  });
+
+  it('falhou/cancelado NÃO carregam pagoEm nem conciliacao (nunca liquidou)', () => {
+    const falhouComPagoEm = docPagamento();
+    falhouComPagoEm['status'] = 'falhou';
+    delete falhouComPagoEm['conciliacao'];
+    expect(() => parsePagamento('x', falhouComPagoEm)).toThrow(/falhou.*pagoEm/);
+
+    const canceladoComConciliacao = docPagamento();
+    canceladoComConciliacao['status'] = 'cancelado';
+    delete canceladoComConciliacao['pagoEm'];
+    expect(() => parsePagamento('x', canceladoComConciliacao)).toThrow(
+      /cancelado.*conciliacao/
+    );
+  });
+
+  it('confirmado no CARTÃO exige o bloco cartao (espelho do slide-in — A5)', () => {
+    const raw = docPagamento();
+    delete raw['cartao'];
+    expect(() => parsePagamento('x', raw)).toThrow(/SEM o bloco "cartao"/);
+
+    // PIX confirmado sem cartao é coerente (cartao só existe no cartão)
+    const pix = docPagamento();
+    pix['forma'] = 'pix';
+    delete pix['cartao'];
+    expect(() => parsePagamento('x', pix)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cupom percentual × desconto (re-review A6)
+// ---------------------------------------------------------------------------
+
+describe('cupom percentual cruzado com desconto (re-review A6)', () => {
+  it('lança quando desconto ≠ roundMoney(valorBase × descontoPct/100)', () => {
+    const raw: Record<string, unknown> = {
+      tenantId: 'castelo-producoes',
+      eventoId: 'meia-floripa-2026',
+      pedidoRef: 'ped-0002',
+      status: 'pendente',
+      forma: 'pix',
+      valorBase: 189.0,
+      cupom: { codigo: 'CORRE10', descontoPct: 10 },
+      desconto: 15.0, // ≠ 18,90 (10% de 189,00)
+      valorFinal: 174.0, // isola A6: (a) base − desconto segue válida
+      criadoEm: fakeTs,
+      atualizadoEm: fakeTs,
+    };
+    expect(() => parsePagamento('x', raw)).toThrow(/cupom percentual/);
+  });
+
+  it('cupom FIXO (sem descontoPct) não cruza — qualquer desconto coerente passa', () => {
+    const raw: Record<string, unknown> = {
+      tenantId: 'castelo-producoes',
+      eventoId: 'meia-floripa-2026',
+      pedidoRef: 'ped-0002',
+      status: 'pendente',
+      forma: 'pix',
+      valorBase: 189.0,
+      cupom: { codigo: 'CORRA50' },
+      desconto: 50.0,
+      valorFinal: 139.0,
+      criadoEm: fakeTs,
+      atualizadoEm: fakeTs,
+    };
+    expect(() => parsePagamento('x', raw)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Idempotência do webhook no tipo (re-review A9 — forward)
+// ---------------------------------------------------------------------------
+
+describe('webhookEventoId (re-review A9 — espelho do ledger de entregas)', () => {
+  it('parseia quando presente (id do último evento aplicado)', () => {
+    const raw = docPagamento();
+    raw['webhookEventoId'] = 'evt-conf-1';
+    expect(parsePagamento('x', raw).webhookEventoId).toBe('evt-conf-1');
+  });
+
+  it('ausente = opcional honesto (nenhum evento aplicado ainda)', () => {
+    expect(parsePagamento('x', docPagamento()).webhookEventoId).toBeUndefined();
+  });
+
+  it('lança com shape inválido (vazio/não-string)', () => {
+    const vazio = docPagamento();
+    vazio['webhookEventoId'] = '';
+    expect(() => parsePagamento('x', vazio)).toThrow(/webhookEventoId/);
+    const numero = docPagamento();
+    numero['webhookEventoId'] = 42;
+    expect(() => parsePagamento('x', numero)).toThrow(/webhookEventoId/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Matriz de transição de status (re-review A9)
+// ---------------------------------------------------------------------------
+
+describe('matriz de transição de StatusPagamento (re-review A9)', () => {
+  it('pendente transiciona para confirmado/falhou/cancelado', () => {
+    expect(podeTransicionarStatusPagamento('pendente', 'confirmado')).toBe(true);
+    expect(podeTransicionarStatusPagamento('pendente', 'falhou')).toBe(true);
+    expect(podeTransicionarStatusPagamento('pendente', 'cancelado')).toBe(true);
+  });
+
+  it('confirmado só avança para estornado (nunca retrocede a pendente)', () => {
+    expect(podeTransicionarStatusPagamento('confirmado', 'estornado')).toBe(true);
+    expect(podeTransicionarStatusPagamento('confirmado', 'pendente')).toBe(false);
+    expect(podeTransicionarStatusPagamento('confirmado', 'falhou')).toBe(false);
+  });
+
+  it('falhou/cancelado/estornado são TERMINAIS', () => {
+    expect(TRANSICOES_STATUS_PAGAMENTO.falhou).toEqual([]);
+    expect(TRANSICOES_STATUS_PAGAMENTO.cancelado).toEqual([]);
+    expect(TRANSICOES_STATUS_PAGAMENTO.estornado).toEqual([]);
+    expect(podeTransicionarStatusPagamento('estornado', 'confirmado')).toBe(false);
+    expect(podeTransicionarStatusPagamento('falhou', 'pendente')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Teto monetário (re-review A7)
+// ---------------------------------------------------------------------------
+
+describe('MAX_MONEY (re-review A7 — teto sano de R$ 1e9)', () => {
+  it('lança com valorBase acima do teto (cent-exatidão ilusória)', () => {
+    const raw = docPagamento();
+    raw['valorBase'] = 2_000_000_000;
+    expect(() => parsePagamento('x', raw)).toThrow(/MAX_MONEY/);
+  });
+
+  it('aceita exatamente o teto (1e9 é o último valor válido)', () => {
+    const raw: Record<string, unknown> = {
+      tenantId: 'castelo-producoes',
+      eventoId: 'meia-floripa-2026',
+      pedidoRef: 'ped-0002',
+      status: 'pendente',
+      forma: 'pix',
+      valorBase: 1_000_000_000,
+      desconto: 0,
+      valorFinal: 1_000_000_000,
+      criadoEm: fakeTs,
+      atualizadoEm: fakeTs,
+    };
+    expect(() => parsePagamento('x', raw)).not.toThrow();
   });
 });
 

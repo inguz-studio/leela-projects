@@ -42,6 +42,7 @@ import {
   isCodigoCupomValido,
   isFormaPagamento,
   isKitInscrito,
+  montarItensDoPedido,
   normalizarCodigoCupom,
   parseCupom,
   parseLote,
@@ -52,6 +53,7 @@ import {
   type CreateChargeParams,
   type CupomVenda,
   type FormaPagamento,
+  type ItemPedidoInput,
   type ItemVendaInput,
   type KitInscrito,
   type PaymentProvider,
@@ -396,10 +398,30 @@ async function criarDocsDeCheckout(
   const now = FieldValue.serverTimestamp();
 
   // Lote único da venda? → espelha loteId/loteNome no pagamento (slide-in
-  // [pag] sem join). Multi-lote não cabe no campo singular — omite (honesto).
+  // [pag] sem join). Multi-lote não cabe no campo singular — omite (honesto);
+  // a verdade POR LINHA (multi-lote incluído) vive em pedido.itens[].loteId.
   const lotesDistintos = new Set(sale.itens.map((i) => i.loteId));
   const loteUnico =
     lotesDistintos.size === 1 ? (sale.itens[0] ?? null) : null;
+
+  // Decomposição POR INSCRITO (re-review A2): a máquina de reembolso
+  // (S904/RN-341) estorna 1 inscrito lendo a linha dele — o rateio do
+  // desconto é cent-exato (maior resto), então Σ itens.valorFinal ===
+  // valorTotal por construção (invariante de parsePedido). sale.itens é
+  // 1:1 e NA MESMA ORDEM de input.inscritos (carregarInsumos preserva).
+  const itensDoPedido = montarItensDoPedido(
+    sale.itens.map((item, i): ItemPedidoInput => {
+      const inscritoRef = inscritoIds[i];
+      if (inscritoRef === undefined) {
+        throw new https.HttpsError(
+          'internal',
+          'Itens da venda divergem dos inscritos do pedido — estado incoerente.'
+        );
+      }
+      return { inscritoRef, loteId: item.loteId, valorBase: item.preco };
+    }),
+    sale.desconto
+  );
 
   try {
     await db.runTransaction(async (tx) => {
@@ -431,8 +453,10 @@ async function criarDocsDeCheckout(
       });
 
       // Pedido — root `pedidos/{id}` (ADR-011); pagamentoRef JÁ aponta para
-      // o doc criado neste MESMO tx (nunca 'pago' sem cobrança — invariante)
-      tx.create(pedidoRef, {
+      // o doc criado neste MESMO tx (nunca 'pago' sem cobrança — invariante).
+      // `parcelas` espelha cartao.parcelas — SÓ existe no cartão (A5: PIX
+      // com espelho de parcelas violaria parsePedido).
+      const pedidoDoc: Record<string, unknown> = {
         id: pedidoId,
         tenantId,
         eventoId: input.eventoId,
@@ -442,14 +466,18 @@ async function criarDocsDeCheckout(
           email: input.responsavel.email.trim(),
         },
         inscritoRefs: inscritoIds,
+        itens: itensDoPedido,
         pagamentoRef: pagamentoId,
         valorTotal: sale.valorFinal,
         status: 'pendente',
         formaPagamento: sale.forma,
-        parcelas: sale.parcelamento.parcelas,
         criadoEm: now,
         atualizadoEm: now,
-      });
+      };
+      if (sale.forma === 'cartao_credito') {
+        pedidoDoc['parcelas'] = sale.parcelamento.parcelas;
+      }
+      tx.create(pedidoRef, pedidoDoc);
 
       // Pagamento — transação 1:1 do pedido. `gateway*` são campos de BORDA
       // (fora do parse): chargeId nasce null e é gravado quando a cobrança

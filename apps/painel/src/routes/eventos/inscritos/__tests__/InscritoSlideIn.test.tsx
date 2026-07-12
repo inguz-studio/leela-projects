@@ -40,6 +40,8 @@ function pedidoPago(): Pedido {
     eventoId: 'meia-floripa-2026',
     responsavel: { atletaId: 'atl-1', nome: 'Marina Silva', email: 'm@x.com' },
     inscritoRefs: ['ins-1'],
+    // Decomposição por inscrito (re-review A2) — Σ valorFinal = valorTotal
+    itens: [{ inscritoRef: 'ins-1', valorBase: 189, desconto: 0, valorFinal: 189 }],
     pagamentoRef: 'pag-1',
     valorTotal: 189,
     status: 'pago',

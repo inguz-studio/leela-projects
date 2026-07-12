@@ -438,14 +438,24 @@ export {
 // pagamento/conciliação (`pagamentos/{id}`). Estado financeiro: escrita
 // EXCLUSIVA de Function; cliente só lê (Rules).
 // ---------------------------------------------------------------------------
-export type { Pedido, ResponsavelPedido, StatusPedido } from './pedidos/pedido';
+export type {
+  Pedido,
+  ResponsavelPedido,
+  StatusPedido,
+  ItemPedido,
+  ItemPedidoInput,
+} from './pedidos/pedido';
 export {
   STATUS_PEDIDO,
   isStatusPedido,
+  TRANSICOES_STATUS_PEDIDO,
+  podeTransicionarStatusPedido,
   CAMPOS_FUNCTION_PEDIDO,
   pedidoDeGrupo,
   pedidoPago,
   pedidoContemInscrito,
+  pedidoCoerenteComPagamento,
+  montarItensDoPedido,
   parsePedido,
 } from './pedidos/pedido';
 
@@ -463,6 +473,8 @@ export {
   isFormaPagamento,
   STATUS_PAGAMENTO,
   isStatusPagamento,
+  TRANSICOES_STATUS_PAGAMENTO,
+  podeTransicionarStatusPagamento,
   GATEWAYS_PAGAMENTO,
   isGatewayPagamento,
   pagamentoConfirmado,

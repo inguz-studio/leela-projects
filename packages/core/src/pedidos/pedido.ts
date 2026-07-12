@@ -23,8 +23,9 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
-import { isFormaPagamento, type FormaPagamento } from './pagamento';
-import { parseMoney, parseTimestamp } from './validacao';
+import { roundMoney } from '../finance/calc';
+import { isFormaPagamento, type FormaPagamento, type Pagamento } from './pagamento';
+import { parseMoney, parseTimestamp, TOLERANCIA_MEIO_CENTAVO } from './validacao';
 
 // ---------------------------------------------------------------------------
 // Enums de domínio
@@ -52,6 +53,34 @@ export function isStatusPedido(value: unknown): value is StatusPedido {
   );
 }
 
+/**
+ * Matriz CANÔNICA de transição de status do pedido (re-review A9).
+ * Só 'pendente' transiciona; todo estado final é TERMINAL:
+ *   - `pago` não retrocede (estorno opera POR INSCRITO — ADR-011/RN-341,
+ *     nunca devolve o pedido a 'pendente');
+ *   - `falhou`/`cancelado` não ressuscitam (nova tentativa de pagamento =
+ *     NOVO pedido com idempotencyKey nova — mudar isto é decisão de matriz,
+ *     não de chamador).
+ * O webhook (functions/checkout) é o único escritor e DEVE consultar esta
+ * matriz — nunca re-derivar transições localmente.
+ */
+export const TRANSICOES_STATUS_PEDIDO: Readonly<
+  Record<StatusPedido, readonly StatusPedido[]>
+> = {
+  pendente: ['pago', 'falhou', 'cancelado'],
+  pago: [],
+  falhou: [],
+  cancelado: [],
+};
+
+/** Transição de status do pedido permitida? (`pago ↛ pendente`) @pure */
+export function podeTransicionarStatusPedido(
+  de: StatusPedido,
+  para: StatusPedido
+): boolean {
+  return TRANSICOES_STATUS_PEDIDO[de].includes(para);
+}
+
 // ---------------------------------------------------------------------------
 // Entidade
 // ---------------------------------------------------------------------------
@@ -68,6 +97,30 @@ export interface ResponsavelPedido {
   nome: string;
   /** 🔁 Desnormalizado — destino do e-mail do pedido */
   email: string;
+}
+
+/**
+ * Uma LINHA do pedido — a decomposição monetária POR INSCRITO (re-review A2).
+ * O ADR-011 manda reembolso/cancelamento/titularidade operarem por inscrito:
+ * a máquina de reembolso (S904/RN-341) calcula o estorno de 1 inscrito
+ * lendo a linha dele aqui — um pedido de grupo com lotes/preços distintos
+ * é irrepresentável sem esta decomposição.
+ * Invariantes (provadas em parsePedido):
+ *   - 1 item por inscrito (`itens[i].inscritoRef` ↔ `inscritoRefs`, 1:1);
+ *   - `valorFinal === roundMoney(valorBase − desconto)` por item;
+ *   - `Σ itens.valorFinal === pedido.valorTotal`.
+ */
+export interface ItemPedido {
+  /** Id do inscrito da linha (→ eventos/{eventoId}/inscritos/{id}) */
+  inscritoRef: string;
+  /** Lote que precificou a linha — ausente = preço legado (schema evolution) */
+  loteId?: string;
+  /** Preço do inscrito em R$, ANTES de cupom */
+  valorBase: number;
+  /** Fatia do desconto do pedido rateada a esta linha (0 sem cupom) */
+  desconto: number;
+  /** valorBase − desconto — a BASE do estorno por inscrito (S904/RN-341) */
+  valorFinal: number;
 }
 
 /**
@@ -88,16 +141,33 @@ export interface Pedido {
    */
   inscritoRefs: string[];
   /**
+   * Decomposição monetária POR INSCRITO (1 item por entrada de
+   * `inscritoRefs` — ver invariantes em {@link ItemPedido}).
+   */
+  itens: ItemPedido[];
+  /**
    * Id do doc em `pagamentos/{id}` — null até a Function de checkout criar
    * a cobrança (dependência futura = opcional honesto, nunca valor fake).
    */
   pagamentoRef: string | null;
-  /** Valor total do pedido em R$ (2 casas) — pagamento único (ADR-011) */
+  /**
+   * Valor total do pedido em R$ (2 casas) — pagamento único (ADR-011).
+   * EQUAÇÃO CANÔNICA (re-review A1):
+   *   `valorTotal === Σ itens[].valorFinal === pagamento.valorFinal`
+   * ("à vista p/ organizador" — juros de parcelamento vivem SÓ em
+   * `pagamento.cartao.valorTotalComJuros`, nunca aqui). As duas primeiras
+   * igualdades são provadas por `parsePedido` (mesmo doc); a terceira, por
+   * {@link pedidoCoerenteComPagamento} (o par de docs que o slide-in carrega).
+   */
   valorTotal: number;
   status: StatusPedido;
   /** 🔁 Espelho de `pagamentos.forma` p/ listagem sem join — só pós-cobrança */
   formaPagamento?: FormaPagamento;
-  /** 🔁 Espelho de `pagamentos.cartao.parcelas` (1 = à vista) — só pós-cobrança */
+  /**
+   * 🔁 Espelho de `pagamentos.cartao.parcelas` — só pós-cobrança e SÓ quando
+   * `formaPagamento === 'cartao_credito'` (cartao.parcelas não existe no
+   * PIX; espelhar 1 fake violaria o espelho — re-review A5).
+   */
   parcelas?: number;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
@@ -112,6 +182,7 @@ export interface Pedido {
 export const CAMPOS_FUNCTION_PEDIDO = [
   'status',
   'valorTotal',
+  'itens',
   'pagamentoRef',
   'formaPagamento',
   'parcelas',
@@ -137,6 +208,121 @@ export function pedidoContemInscrito(
   inscritoId: string
 ): boolean {
   return pedido.inscritoRefs.includes(inscritoId);
+}
+
+/**
+ * Pedido e pagamento formam um PAR coerente? (equação canônica A1:
+ * `pedido.valorTotal === pagamento.valorFinal` + backlinks 1:1 íntegros).
+ * O slide-in `[pag]` carrega os dois docs — este checker é a guarda do par
+ * (docs individualmente válidos podem ainda divergir ENTRE si). Igualdade
+ * ESTRITA de valor: ambos os campos são cent-exatos por parse (doubles
+ * canônicos por valor de centavo). @pure
+ */
+export function pedidoCoerenteComPagamento(
+  pedido: Pick<Pedido, 'id' | 'pagamentoRef' | 'valorTotal'>,
+  pagamento: Pick<Pagamento, 'id' | 'pedidoRef' | 'valorFinal'>
+): boolean {
+  return (
+    pedido.pagamentoRef === pagamento.id &&
+    pagamento.pedidoRef === pedido.id &&
+    pedido.valorTotal === pagamento.valorFinal
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Montagem dos itens (produtor — Function de checkout)
+// ---------------------------------------------------------------------------
+
+/** Insumo de uma linha na montagem dos itens do pedido. */
+export interface ItemPedidoInput {
+  /** Id do inscrito da linha */
+  inscritoRef: string;
+  /** Lote que precificou (null/ausente = preço legado) */
+  loteId?: string | null;
+  /** Preço do inscrito em R$ (cent-exato), ANTES de cupom */
+  valorBase: number;
+}
+
+/**
+ * Monta os `itens[]` do pedido rateando `descontoTotal` pelas linhas,
+ * PROPORCIONAL ao preço e CENT-EXATO (método do maior resto em centavos
+ * inteiros — determinístico, empate resolve pelo índice menor).
+ * Garante por construção: `Σ itens.desconto === descontoTotal` e
+ * `Σ itens.valorFinal === Σ valorBase − descontoTotal` — a invariante
+ * `Σ itens.valorFinal === valorTotal` de parsePedido nunca quebra por
+ * arredondamento de rateio. Fail-fast em insumo fora do contrato. @pure
+ */
+export function montarItensDoPedido(
+  itens: readonly ItemPedidoInput[],
+  descontoTotal: number
+): ItemPedido[] {
+  if (!Array.isArray(itens) || itens.length === 0) {
+    throw new Error('montarItensDoPedido: pedido exige ≥ 1 item (ADR-011)');
+  }
+  const basesCentavos = itens.map((item, i) => {
+    if (typeof item.inscritoRef !== 'string' || item.inscritoRef.length === 0) {
+      throw new Error(`montarItensDoPedido: itens[${i}].inscritoRef inválido`);
+    }
+    parseMoney('montarItensDoPedido', `itens[${i}].valorBase`, item.valorBase);
+    return Math.round(item.valorBase * 100);
+  });
+  parseMoney('montarItensDoPedido', 'descontoTotal', descontoTotal);
+  const totalBaseCentavos = basesCentavos.reduce((soma, c) => soma + c, 0);
+  const descontoCentavos = Math.round(descontoTotal * 100);
+  if (descontoCentavos > totalBaseCentavos) {
+    throw new Error(
+      `montarItensDoPedido: descontoTotal (${descontoTotal}) excede a soma ` +
+        `dos itens (${roundMoney(totalBaseCentavos / 100)}) — desconto nunca ` +
+        `deixa o pedido negativo`
+    );
+  }
+
+  // Piso proporcional por linha + sobra distribuída pelo MAIOR resto
+  // (1 centavo por vez; linha já saturada em 100% de desconto não recebe).
+  const alocado = basesCentavos.map((base) =>
+    totalBaseCentavos === 0 ? 0 : Math.floor(descontoCentavos * (base / totalBaseCentavos))
+  );
+  let sobra = descontoCentavos - alocado.reduce((soma, c) => soma + c, 0);
+  if (sobra > 0) {
+    const porResto = basesCentavos
+      .map((base, i) => ({
+        i,
+        resto:
+          totalBaseCentavos === 0
+            ? 0
+            : descontoCentavos * (base / totalBaseCentavos) - (alocado[i] ?? 0),
+      }))
+      .sort((a, b) => b.resto - a.resto || a.i - b.i);
+    for (const { i } of porResto) {
+      if (sobra === 0) break;
+      const aloc = alocado[i] ?? 0;
+      const base = basesCentavos[i] ?? 0;
+      if (aloc >= base) continue; // linha saturada — nunca desconto > base
+      alocado[i] = aloc + 1;
+      sobra -= 1;
+    }
+    if (sobra !== 0) {
+      // Inalcançável com descontoCentavos ≤ totalBaseCentavos — guarda de FP
+      throw new Error(
+        'montarItensDoPedido: rateio não fechou cent-exato — insumos corrompidos'
+      );
+    }
+  }
+
+  return itens.map((item, i) => {
+    const baseCentavos = basesCentavos[i] ?? 0;
+    const descontoLinha = alocado[i] ?? 0;
+    const linha: ItemPedido = {
+      inscritoRef: item.inscritoRef,
+      valorBase: roundMoney(baseCentavos / 100),
+      desconto: roundMoney(descontoLinha / 100),
+      valorFinal: roundMoney((baseCentavos - descontoLinha) / 100),
+    };
+    if (typeof item.loteId === 'string' && item.loteId.length > 0) {
+      linha.loteId = item.loteId;
+    }
+    return linha;
+  });
 }
 
 /**
@@ -197,6 +383,77 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
   }
 
   const ctx = `Pedido ${id}`;
+  const valorTotalParsed = parseMoney(ctx, 'valorTotal', valorTotal);
+
+  // Decomposição POR INSCRITO (re-review A2): itens é tão obrigatório
+  // quanto valorTotal — sem a linha do inscrito, o estorno por inscrito
+  // (S904/RN-341) do ADR-011 é incalculável. 1 item por inscritoRef.
+  const itensRaw = data['itens'];
+  if (!Array.isArray(itensRaw) || itensRaw.length === 0) {
+    throw new Error(
+      `${ctx}: "itens" ausente — todo pedido decompõe o valor POR INSCRITO ` +
+        `(estorno por inscrito — ADR-011/S904)`
+    );
+  }
+  if (itensRaw.length !== inscritoRefs.length) {
+    throw new Error(
+      `${ctx}: "itens" tem ${itensRaw.length} linha(s) para ` +
+        `${inscritoRefs.length} inscrito(s) — a decomposição é 1:1 (ADR-011)`
+    );
+  }
+  const refsDosItens = new Set<string>();
+  let somaValorFinal = 0;
+  const itens: ItemPedido[] = itensRaw.map((raw, i) => {
+    if (raw === null || typeof raw !== 'object') {
+      throw new Error(`${ctx}: "itens[${i}]" inválido`);
+    }
+    const item = raw as Record<string, unknown>;
+    const inscritoRef = item['inscritoRef'];
+    if (typeof inscritoRef !== 'string' || inscritoRef.length === 0) {
+      throw new Error(`${ctx}: "itens[${i}].inscritoRef" inválido (ADR-011)`);
+    }
+    if (!(inscritoRefs as string[]).includes(inscritoRef)) {
+      throw new Error(
+        `${ctx}: "itens[${i}].inscritoRef" (${inscritoRef}) não está em ` +
+          `"inscritoRefs" — linha órfã (ADR-011)`
+      );
+    }
+    if (refsDosItens.has(inscritoRef)) {
+      throw new Error(
+        `${ctx}: "itens" tem linha DUPLICADA para o inscrito ${inscritoRef} — ` +
+          `cada inscrito tem exatamente 1 linha (ADR-011)`
+      );
+    }
+    refsDosItens.add(inscritoRef);
+
+    const linha: ItemPedido = {
+      inscritoRef,
+      valorBase: parseMoney(ctx, `itens[${i}].valorBase`, item['valorBase']),
+      desconto: parseMoney(ctx, `itens[${i}].desconto`, item['desconto']),
+      valorFinal: parseMoney(ctx, `itens[${i}].valorFinal`, item['valorFinal']),
+    };
+    // Invariante por linha: valorFinal = valorBase − desconto (cent-exato)
+    const valorFinalEsperado = roundMoney(linha.valorBase - linha.desconto);
+    if (Math.abs(linha.valorFinal - valorFinalEsperado) > TOLERANCIA_MEIO_CENTAVO) {
+      throw new Error(
+        `${ctx}: "itens[${i}].valorFinal" (${linha.valorFinal}) ≠ ` +
+          `valorBase − desconto (${valorFinalEsperado}) — invariante monetária violada`
+      );
+    }
+    if (typeof item['loteId'] === 'string' && item['loteId'].length > 0) {
+      linha.loteId = item['loteId'];
+    }
+    somaValorFinal += linha.valorFinal;
+    return linha;
+  });
+  // Invariante do agregado (equação canônica A1): Σ itens.valorFinal = valorTotal
+  if (Math.abs(roundMoney(somaValorFinal) - valorTotalParsed) > TOLERANCIA_MEIO_CENTAVO) {
+    throw new Error(
+      `${ctx}: Σ itens.valorFinal (${roundMoney(somaValorFinal)}) ≠ valorTotal ` +
+        `(${valorTotalParsed}) — decomposição por inscrito incoerente (ADR-011/S904)`
+    );
+  }
+
   const pedido: Pedido = {
     id,
     tenantId,
@@ -207,8 +464,9 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
       email: resp['email'],
     },
     inscritoRefs: inscritoRefs as string[],
+    itens,
     pagamentoRef: typeof pagamentoRef === 'string' ? pagamentoRef : null,
-    valorTotal: parseMoney(ctx, 'valorTotal', valorTotal),
+    valorTotal: valorTotalParsed,
     status,
     // r1 fix 4: criadoEm é campo MÍNIMO do ADR-011 e chave do orderBy da
     // listagem — blind-cast aceitava undefined e o doc sumia em silêncio.
@@ -240,6 +498,26 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
       throw new Error(`Pedido ${id}: "parcelas" deve ser inteiro ≥ 1`);
     }
     pedido.parcelas = parcelas;
+  }
+
+  // Coerência dos espelhos (re-review A5): espelho é PÓS-cobrança — sem
+  // pagamentoRef não existe pagamento para espelhar; e `parcelas` espelha
+  // `cartao.parcelas`, que só existe no cartão (PIX não tem parcelas).
+  if (
+    (pedido.formaPagamento !== undefined || pedido.parcelas !== undefined) &&
+    pedido.pagamentoRef === null
+  ) {
+    throw new Error(
+      `${ctx}: espelho de pagamento (formaPagamento/parcelas) com ` +
+        `pagamentoRef null — espelho só existe PÓS-cobrança (ADR-011)`
+    );
+  }
+  if (pedido.parcelas !== undefined && pedido.formaPagamento !== 'cartao_credito') {
+    throw new Error(
+      `${ctx}: "parcelas" presente com formaPagamento ` +
+        `"${String(pedido.formaPagamento)}" — parcelas espelha cartao.parcelas ` +
+        `(só cartão de crédito)`
+    );
   }
 
   return pedido;

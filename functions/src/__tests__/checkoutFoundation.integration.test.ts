@@ -30,6 +30,7 @@ import {
   parseInscrito,
   parsePagamento,
   parsePedido,
+  pedidoCoerenteComPagamento,
   pedidoDoInscritoCoerente,
   roundMoney,
 } from '@leela/core';
@@ -185,6 +186,18 @@ describe('E12 · createInscricaoCharge (produtor de escrita do checkout)', () =>
     expect(pedido.inscritoRefs).toEqual(r.inscritoIds);
     expect(pedido.pagamentoRef).toBe(pagamentoId);
     expect(pedido.responsavel.atletaId).toBe(ANA_UID);
+    // Decomposição POR INSCRITO (re-review A2): 2 × 189,90 com −10% rateado
+    // cent-exato (18,99 cada) — a linha que a máquina de reembolso (S904) lê
+    expect(pedido.itens).toEqual([
+      { inscritoRef: r.inscritoIds[0], loteId: '10k-l2', valorBase: 189.9, desconto: 18.99, valorFinal: 170.91 },
+      { inscritoRef: r.inscritoIds[1], loteId: '10k-l2', valorBase: 189.9, desconto: 18.99, valorFinal: 170.91 },
+    ]);
+    expect(roundMoney(pedido.itens.reduce((s, i) => s + i.valorFinal, 0))).toBe(
+      pedido.valorTotal
+    );
+    // Espelho de parcelas NÃO existe no PIX (re-review A5)
+    expect(pedido.formaPagamento).toBe('pix');
+    expect(pedido.parcelas).toBeUndefined();
 
     const pagamentoSnap = await db.doc(`pagamentos/${pagamentoId}`).get();
     const pagamento = parsePagamento(pagamentoSnap.id, pagamentoSnap.data() ?? {});
@@ -196,6 +209,9 @@ describe('E12 · createInscricaoCharge (produtor de escrita do checkout)', () =>
     expect(pagamento.loteId).toBe('10k-l2'); // lote único → espelhado
     expect(pagamentoSnap.get('gatewayChargeId')).toBe(chargeId);
     expect(pagamentoSnap.get('gatewayAmountCentavos')).toBe(AMOUNT_CENTAVOS);
+
+    // Equação canônica A1 provada no PAR de docs (o que o slide-in carrega)
+    expect(pedidoCoerenteComPagamento(pedido, pagamento)).toBe(true);
 
     const inscritosSnap = await db
       .collection(`eventos/${EVENTO_ID}/inscritos`)

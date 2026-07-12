@@ -31,7 +31,7 @@
 
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import { roundMoney } from '@leela/core';
+import { montarItensDoPedido, roundMoney, type ItemPedido } from '@leela/core';
 import {
   GENEROS_INSCRITO,
   type DadosPessoaisInscrito,
@@ -105,6 +105,8 @@ export interface PedidoSeed {
   eventoId: string;
   responsavel: { atletaId: string; nome: string; email: string };
   inscritoRefs: string[];
+  /** Decomposição POR INSCRITO (re-review A2) — Σ valorFinal = valorTotal */
+  itens: ItemPedido[];
   pagamentoRef: string | null;
   valorTotal: number;
   status: 'pago' | 'pendente' | 'cancelado';
@@ -332,9 +334,15 @@ export function gerarPedidosSeed(): PedidosSeedData {
         email: `${responsavel.atletaId}@atleta.leela.dev`,
       },
       inscritoRefs: membros.map((m) => m.id),
+      // Decomposição POR INSCRITO (re-review A2) — mesmo rateio cent-exato
+      // do produtor real (montarItensDoPedido); seed sem lotes → sem loteId
+      itens: montarItensDoPedido(
+        membros.map((m) => ({ inscritoRef: m.id, valorBase: VALOR_INSCRICAO_MEIA })),
+        desconto
+      ),
       pagamentoRef,
-      // Premissa: valorTotal do pedido = valor APÓS cupom (o que o
-      // organizador enxerga — espelha pagamento.valorFinal)
+      // Equação canônica (re-review A1): valorTotal = valor APÓS cupom =
+      // Σ itens.valorFinal = pagamento.valorFinal (o que o organizador vê)
       valorTotal: valorFinal,
       status: def.status,
       criadoEmMillis,

@@ -32,8 +32,17 @@ export const TOLERANCIA_MEIO_CENTAVO = 0.005;
 export const TOLERANCIA_CENTAVO = 0.01;
 
 /**
- * Valida campo monetário (fail-fast): number finito ≥ 0 E cent-exato
- * (`roundMoney(v) === v` — rejeita sub-centavo).
+ * Teto sano de valor monetário: R$ 1 bilhão (re-review A7). Ordens de
+ * grandeza acima de qualquer pedido real de inscrição; e conforme o valor
+ * cresce rumo a 2^53/100 a "cent-exatidão" do double vira ilusão (o ruído
+ * de FP das multiplicações de juros/taxa alcança a casa do centavo).
+ * Valor acima do teto em doc financeiro = corrupção/overflow, nunca venda.
+ */
+export const MAX_MONEY = 1_000_000_000;
+
+/**
+ * Valida campo monetário (fail-fast): number finito, 0 ≤ v ≤ MAX_MONEY,
+ * E cent-exato (`roundMoney(v) === v` — rejeita sub-centavo).
  * `contexto` prefixa a mensagem: "Pagamento pag-1" / "Pedido ped-1".
  */
 export function parseMoney(
@@ -43,6 +52,12 @@ export function parseMoney(
 ): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
     throw new Error(`${contexto}: "${campo}" deve ser number ≥ 0 (R$)`);
+  }
+  if (value > MAX_MONEY) {
+    throw new Error(
+      `${contexto}: "${campo}" (${value}) excede MAX_MONEY (R$ 1e9) — ` +
+        `acima do teto a cent-exatidão do double é ilusória; valor fora do domínio`
+    );
   }
   if (roundMoney(value) !== value) {
     throw new Error(

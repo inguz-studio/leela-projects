@@ -83,6 +83,12 @@ function pedidoValido(overrides: Record<string, unknown> = {}) {
       email: 'marina@example.com',
     },
     inscritoRefs: ['insc-0001', 'insc-0002'],
+    // Decomposição POR INSCRITO (re-review A2) — coerente com pag-castelo-1
+    // (base 420, desconto 42, final 378): 2 × (210 − 21) = 378
+    itens: [
+      { inscritoRef: 'insc-0001', valorBase: 210.0, desconto: 21.0, valorFinal: 189.0 },
+      { inscritoRef: 'insc-0002', valorBase: 210.0, desconto: 21.0, valorFinal: 189.0 },
+    ],
     pagamentoRef: 'pag-castelo-1',
     valorTotal: 378.0,
     status: 'pago',
@@ -129,6 +135,9 @@ beforeAll(async () => {
   batch.set(adminDb.collection('pedidos').doc('ped-castelo-2'), {
     ...pedidoValido({
       inscritoRefs: ['insc-0009'],
+      itens: [
+        { inscritoRef: 'insc-0009', valorBase: 189.0, desconto: 0, valorFinal: 189.0 },
+      ],
       pagamentoRef: null,
       valorTotal: 189.0,
       status: 'pendente',
@@ -141,6 +150,9 @@ beforeAll(async () => {
       tenantId: PASSO_ID,
       eventoId: 'trail-ratones-2026',
       inscritoRefs: ['insc-passo-1'],
+      itens: [
+        { inscritoRef: 'insc-passo-1', valorBase: 378.0, desconto: 0, valorFinal: 378.0 },
+      ],
       pagamentoRef: null,
       status: 'pendente',
     }),
