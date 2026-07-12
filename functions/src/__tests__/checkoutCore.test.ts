@@ -134,13 +134,30 @@ describe('computeSaleState — preço vigente (RN-301/ADR-012)', () => {
     expect(sale.itens).toHaveLength(2);
   });
 
-  it('cai no preço LEGADO quando não há lote vigente (schema evolution)', () => {
+  it('cai no preço LEGADO quando a modalidade NÃO tem lotes configurados (schema evolution)', () => {
     const sale = venda({
       itens: [{ modalidade: '10k', lotesDaModalidade: [], precoLegado: 99.9 }],
     });
     expect(sale.itens[0]).toEqual({
       modalidade: '10k', loteId: null, loteNome: null, preco: 99.9,
     });
+  });
+
+  it('JANELA-MORTA: com lotes todos encerrados/esgotados, precoLegado NÃO reabre a venda (espelho S300 #1)', () => {
+    const encerradoPorData = lote({
+      id: '10k-l1', nome: 'Lote 1', ordem: 1, preco: 149.9,
+      inicioEm: ts('2026-01-01T00:00:00-03:00'), fimEm: ts('2026-02-01T00:00:00-03:00'),
+    });
+    const esgotado = lote({ id: '10k-l2', nome: 'Lote 2', ordem: 2, preco: 189.9, vendidos: 100 });
+    expect(() =>
+      venda({
+        itens: [{
+          modalidade: '10k',
+          lotesDaModalidade: [encerradoPorData, esgotado],
+          precoLegado: 99.9, // presente — e mesmo assim NÃO vende ao preço-base
+        }],
+      })
+    ).toThrow(/venda fechada/);
   });
 
   it('VENDA FECHADA: sem lote vigente e sem legado → lança (RN-300)', () => {

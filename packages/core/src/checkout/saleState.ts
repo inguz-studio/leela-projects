@@ -16,8 +16,9 @@
 // `descontoDoCupom` (eventos/cupom) e `roundMoney`/`computeTaxa`/
 // `computeReceitaLiquida`/`buildInstallmentOptions` (finance/calc).
 //
-// Fail-fast (dinheiro): venda fechada (sem lote vigente e sem preço legado),
-// cupom fora de vigência/teto, parcelas fora das opções do termo, pedido
+// Fail-fast (dinheiro): venda fechada (modalidade com lotes e NENHUM ativo —
+// janela-morta, espelho de `precoVigente`/S300 #1; ou sem lotes e sem preço
+// legado), cupom fora de vigência/teto, parcelas fora das opções do termo, pedido
 // gratuito (valorFinal ≤ 0 — cobrança de R$ 0 não existe; fluxo gratuito é
 // outro lote) — tudo LANÇA com mensagem acionável, nunca degrada em silêncio.
 //
@@ -63,8 +64,10 @@ export interface ItemVendaInput {
   /** Lotes da MODALIDADE (query `where modalidade == X` — ADR-012). */
   lotesDaModalidade: readonly LoteVenda[];
   /**
-   * Preço-base LEGADO (`percurso.preco` — S201) para evento sem lotes
-   * configurados. Fallback do `precoVigente` — schema evolution, nunca 0 fake.
+   * Preço-base LEGADO (`percurso.preco` — S201) para evento SEM lotes
+   * configurados — schema evolution, nunca 0 fake. IGNORADO quando a
+   * modalidade TEM lotes: com todos encerrados/esgotados a venda está
+   * FECHADA e o legado não reabre (espelho de `precoVigente` — S300 #1).
    */
   precoLegado?: number;
 }
@@ -145,7 +148,12 @@ export interface SaleState {
 // Derivação
 // ---------------------------------------------------------------------------
 
-/** Resolve o preço de UM item: lote ativo → preço legado → venda fechada. */
+/**
+ * Resolve o preço de UM item: lote ativo → (modalidade SEM lotes) preço
+ * legado → venda fechada. Espelho do `precoVigente` (re-review S300 #1):
+ * com lotes configurados e NENHUM ativo (janela-morta) o legado NÃO se
+ * aplica — reabriria a venda ao preço-base sem teto de vaga (RN-300).
+ */
 function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
   if (typeof item.modalidade !== 'string' || item.modalidade.length === 0) {
     throw new Error('computeSaleState: item sem "modalidade" (ADR-012)');
@@ -161,7 +169,11 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
     };
   }
 
-  if (item.precoLegado !== undefined) {
+  // Legado SÓ quando a modalidade NÃO tem lotes configurados. Com lotes e
+  // nenhum ativo (janela-morta) a venda está FECHADA — cair no legado
+  // venderia ao preço-base sem teto de vaga (espelho do S300 #1 em
+  // `precoVigente`, que devolve `null` nesse caso).
+  if (item.lotesDaModalidade.length === 0 && item.precoLegado !== undefined) {
     if (
       typeof item.precoLegado !== 'number' ||
       !Number.isFinite(item.precoLegado) ||
@@ -179,11 +191,14 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
     };
   }
 
-  // Sem lote vigente E sem preço legado = venda fechada para a modalidade
-  // (antes do 1º lote, numa lacuna, esgotado, ou depois do último — RN-300).
+  // Venda fechada para a modalidade (RN-300): com lotes e nenhum ativo
+  // (antes do 1º início, esgotado, ou depois do último — o legado NUNCA
+  // reabre) ou sem lotes configurados e sem preço legado.
   throw new Error(
     `computeSaleState: venda fechada para a modalidade "${item.modalidade}" — ` +
-      'nenhum lote vigente e sem preço legado (RN-300/RN-301)'
+      (item.lotesDaModalidade.length > 0
+        ? 'todos os lotes encerraram/esgotaram e o preço legado não reabre a venda (RN-300/RN-301)'
+        : 'sem lotes configurados e sem preço legado (RN-300/RN-301)')
   );
 }
 
