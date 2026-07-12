@@ -77,6 +77,19 @@ interface ErroCheckin {
 }
 
 /**
+ * Charset estrito de doc-id para o `eventoId` vindo do CLIENTE — validado
+ * ANTES de montar qualquer ref (re-review Fable C-T1 A1). Sem isto:
+ *   - `eventoId` com `/` ("x/inscritos/y") monta uma ref VÁLIDA apontando
+ *     para um doc de INSCRITO (que também tem `tenantId`) — o gate RN-400
+ *     passaria a comparar contra o TIPO ERRADO de documento (fail-closed
+ *     hoje, a um refactor de virar bug);
+ *   - segmento par ("a/b"), `.`, `..` ou id gigante fazem `.doc()` lançar
+ *     Error cru → o callable devolveria `internal` em vez de código acionável.
+ * Ids reais de evento (auto-id do Firestore ou slug do criarEvento) casam.
+ */
+const EVENTO_ID_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
  * Mapa causa (decisão pura do core) → erro do callable.
  * `qr_divergente` colapsa em QR_ADULTERADO de propósito: token assinado
  * porém nunca emitido/revogado/re-emitido é, para o operador, um QR que
@@ -132,6 +145,14 @@ export async function registrarCheckinCore(
   const qrToken = input?.qrToken;
   if (typeof eventoId !== 'string' || eventoId.length === 0) {
     throw new https.HttpsError('invalid-argument', '"eventoId" é obrigatório.');
+  }
+  if (!EVENTO_ID_REGEX.test(eventoId)) {
+    // Código acionável (nunca `internal`): input do cliente fora do charset
+    // de doc-id não chega perto de `db.collection(...).doc(eventoId)`.
+    throw new https.HttpsError(
+      'invalid-argument',
+      '"eventoId" inválido — use apenas [A-Za-z0-9_-], máximo 64 caracteres.'
+    );
   }
   if (typeof qrToken !== 'string' || qrToken.length === 0) {
     throw new https.HttpsError('invalid-argument', '"qrToken" é obrigatório.');

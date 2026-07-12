@@ -11,6 +11,10 @@
  *   - rotação: kid antigo continua verificável; kid removido → rejeita
  *   - QR de outro evento/tenant, replay, cancelado → causas DISTINTAS
  *   - config inválida → erro alto (nunca degradar silenciosamente)
+ *   - kid fora do formato do parse → erro alto na carga E na assinatura
+ *     (ingresso natimorto — re-review Fable C-T1 A2)
+ *   - eventoId do cliente fora do charset de doc-id → invalid-argument
+ *     ANTES de montar refs (re-review Fable C-T1 A1)
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -19,6 +23,7 @@ import {
   bytesUtf8ParaTexto,
   classificarCheckinQr,
   codificarPayloadQr,
+  kidQrValido,
   parseQrToken,
   serializarPayloadQr,
   textoParaBytesUtf8,
@@ -31,6 +36,9 @@ import {
   verificarQrToken,
   type QrKeyring,
 } from '../eventos/qrToken';
+import { registrarCheckinCore } from '../eventos/registrarCheckin';
+import { https } from 'firebase-functions/v1';
+import type { EventoCaller } from '../eventos/criarEvento';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -123,6 +131,21 @@ describe('assinarQrToken / verificarQrToken', () => {
     expect(partes[0]).toBe(VERSAO_QR_TOKEN);
     expect(partes[1]).toBe('k1');
     expect(token.length).toBeLessThan(256);
+  });
+
+  it('kid ativo que o parse recusa → assinatura LANÇA (nunca emitir natimorto)', () => {
+    // Keyring montado à mão (seed/teste) driblando carregarQrKeyring: um kid
+    // com espaço ou '.' assinaria tokens que NENHUMA verificação aceita —
+    // descoberto no dia do evento, com atletas na fila. Re-review Fable A2.
+    const natimortos = ['k 1', 'k.1', 'k'.repeat(33)];
+    for (const kid of natimortos) {
+      expect(kidQrValido(kid), `kid '${kid}' deve ser inválido no parse`).toBe(false);
+      const ring: QrKeyring = { ativo: kid, chaves: { [kid]: SEGREDO_K1 } };
+      expect(
+        () => assinarQrToken(PAYLOAD, ring),
+        `kid '${kid}' não pode assinar`
+      ).toThrowError(/[Kk]id/);
+    }
   });
 });
 
@@ -320,6 +343,40 @@ describe('carregarQrKeyring', () => {
       expect(() => carregarQrKeyring(env)).toThrowError();
     }
   });
+
+  it('kid que o parse recusa → Error alto NA CARGA (ingresso natimorto — Fable A2)', () => {
+    // Operador que configure QR_TOKEN_KID_ATIVO="k 1" (ou kid com '.') emitiria
+    // tokens que assinam mas NUNCA verificam (KID_REGEX do parse recusa) —
+    // "config inválida grita" tem que valer também para o formato do kid.
+    const casos: Array<Record<string, string>> = [
+      {
+        // kid ativo com espaço
+        QR_TOKEN_KEYS: JSON.stringify({ 'k 1': SEGREDO_B64 }),
+        QR_TOKEN_KID_ATIVO: 'k 1',
+      },
+      {
+        // kid ativo com '.' — colide com o SEPARADOR do próprio token
+        QR_TOKEN_KEYS: JSON.stringify({ 'k.1': SEGREDO_B64 }),
+        QR_TOKEN_KID_ATIVO: 'k.1',
+      },
+      {
+        // kid ativo acima do teto de 32 chars do parse
+        QR_TOKEN_KEYS: JSON.stringify({ ['k'.repeat(33)]: SEGREDO_B64 }),
+        QR_TOKEN_KID_ATIVO: 'k'.repeat(33),
+      },
+      {
+        // kid NÃO-ativo inválido também grita: rotação futura apontaria p/ ele
+        QR_TOKEN_KEYS: JSON.stringify({ k1: SEGREDO_B64, 'k#2': SEGREDO_B64 }),
+        QR_TOKEN_KID_ATIVO: 'k1',
+      },
+    ];
+    for (const env of casos) {
+      expect(
+        () => carregarQrKeyring(env),
+        `kid inválido em ${env['QR_TOKEN_KID_ATIVO'] ?? '?'} deve gritar na carga`
+      ).toThrowError(/kid/i);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -404,5 +461,95 @@ describe('classificarCheckinQr', () => {
         inscrito: { ...base.inscrito, jaTemCheckin: true },
       })
     ).toEqual({ ok: false, causa: 'qr_ja_utilizado' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// registrarCheckinCore — eventoId como doc-id (re-review Fable C-T1 A1)
+// Unit SEM emulator: os gates de input disparam ANTES de qualquer ref/leitura,
+// então o "db" pode (e DEVE) ser um Proxy que explode em qualquer acesso.
+// ---------------------------------------------------------------------------
+
+describe('registrarCheckinCore — charset do eventoId antes de montar refs', () => {
+  const OPERADOR: EventoCaller = {
+    uid: 'uid-operador',
+    claims: { role: 'tenant_owner', tenantId: PAYLOAD.tenantId },
+  };
+
+  // Prova de que input inválido NÃO encosta no Firestore: nenhuma propriedade
+  // do db pode sequer ser lida (a ref maliciosa jamais é montada).
+  const dbNuncaTocado = new Proxy(
+    {},
+    {
+      get(_alvo, prop) {
+        throw new Error(
+          `Firestore tocado antes da validação de input (prop '${String(prop)}')`
+        );
+      },
+    }
+  ) as Parameters<typeof registrarCheckinCore>[0];
+
+  async function esperarHttpsError(
+    promise: Promise<unknown>,
+    code: string,
+    rotulo: string
+  ): Promise<void> {
+    let lancado: unknown;
+    try {
+      await promise;
+    } catch (err) {
+      lancado = err;
+    }
+    expect(lancado, `${rotulo}: deveria lançar HttpsError`).toBeInstanceOf(
+      https.HttpsError
+    );
+    expect((lancado as https.HttpsError).code, rotulo).toBe(code);
+  }
+
+  it('eventoId com / . .. espaço ou >64 chars → invalid-argument, db INTOCADO', async () => {
+    const invalidos = [
+      'x/inscritos/y', // viraria ref VÁLIDA de doc de INSCRITO (tipo errado p/ RN-400)
+      'evento/x', // segmento par — .doc() lançaria Error cru → `internal`
+      '.', // reservado pelo Firestore
+      '..', // reservado pelo Firestore
+      'ev.1', // '.' fora do charset de doc-id
+      'ev 1', // espaço
+      'a'.repeat(65), // acima do teto de 64 chars
+    ];
+    for (const eventoId of invalidos) {
+      await esperarHttpsError(
+        registrarCheckinCore(
+          dbNuncaTocado,
+          { eventoId, qrToken: 'LLQR1.k1.p.s' },
+          OPERADOR,
+          RING_K1
+        ),
+        'invalid-argument',
+        `eventoId '${eventoId.slice(0, 24)}'`
+      );
+    }
+  });
+
+  it('eventoId válido PASSA o gate de charset (próxima parada: fail-closed do keyring)', async () => {
+    // keyring=null: com eventoId válido o fluxo avança até o fail-closed
+    // (QR_NAO_CONFIGURADO) — prova que o gate de charset não sobrebloqueia
+    // ids reais (slug do criarEvento / auto-id do Firestore) e que o db
+    // continua intocado até ali.
+    let lancado: unknown;
+    try {
+      await registrarCheckinCore(
+        dbNuncaTocado,
+        { eventoId: 'meia-floripa-2026', qrToken: 'LLQR1.k1.p.s' },
+        OPERADOR,
+        null
+      );
+    } catch (err) {
+      lancado = err;
+    }
+    expect(lancado).toBeInstanceOf(https.HttpsError);
+    expect((lancado as https.HttpsError).code).toBe('failed-precondition');
+    expect(
+      ((lancado as https.HttpsError).details as Record<string, unknown>)['codigo']
+    ).toBe('QR_NAO_CONFIGURADO');
   });
 });

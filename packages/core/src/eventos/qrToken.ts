@@ -47,6 +47,17 @@ export const QR_ASSINATURA_BYTES = 32;
 const ID_MAX_CHARS = 200;
 const KID_REGEX = /^[A-Za-z0-9_-]{1,32}$/;
 
+/**
+ * kid bem-formado — o MESMO critério que `parseQrToken` aplica ao verificar.
+ * Exposto para o keyring do servidor validar a config NA CARGA: um kid que
+ * este predicado recusa assina tokens que o parse SEMPRE rejeita (ingresso
+ * natimorto — assinaria, mas nunca verificaria). Re-review Fable C-T1 A2.
+ * @pure
+ */
+export function kidQrValido(valor: string): boolean {
+  return KID_REGEX.test(valor);
+}
+
 // ---------------------------------------------------------------------------
 // Payload
 // ---------------------------------------------------------------------------
@@ -136,7 +147,7 @@ export function parseQrToken(token: unknown): ParseQrTokenResult {
     string,
   ];
 
-  if (versao !== VERSAO_QR_TOKEN || !KID_REGEX.test(kid)) {
+  if (versao !== VERSAO_QR_TOKEN || !kidQrValido(kid)) {
     return { ok: false };
   }
 
