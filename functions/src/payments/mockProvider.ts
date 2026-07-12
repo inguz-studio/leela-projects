@@ -85,6 +85,25 @@ export function signMockWebhook(
     .digest('hex');
 }
 
+/**
+ * Monta um WebhookPayload COMPLETO e assinado como o gateway mock enviaria
+ * (E12 — o fluxo local dispara este payload para fechar o checkout sem
+ * gateway real). `data` deve carregar `chargeId`; para o webhook do checkout
+ * incluir também `orderId` (pedidoId — lookup O(1)), `amount` (centavos) e
+ * `eventId` (idempotência por ENTREGA).
+ */
+export function buildMockWebhookPayload(
+  event: string,
+  data: Record<string, unknown>
+): WebhookPayload {
+  return {
+    event,
+    data,
+    signature: signMockWebhook(event, data),
+    deliveredAt: new Date().toISOString(),
+  };
+}
+
 /** Mapa event do gateway → ChargeStatus normalizado */
 const EVENT_TO_STATUS: Record<string, 'confirmed' | 'failed' | 'refunded'> = {
   'charge.confirmed': 'confirmed',

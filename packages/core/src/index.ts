@@ -400,6 +400,39 @@ export {
 } from './eventos/paginaVendas';
 
 // ---------------------------------------------------------------------------
+// Checkout (LEELA-E12 · fundação) — estado de venda puro
+// preço vigente → cupom → valorFinal → taxa → parcelamento (reusa lote/cupom/
+// finance); validação mínima do inscrito; máquina de etapas. A UI (S1203) e
+// createInscricaoCharge consomem — nunca recalculam no cliente.
+// ---------------------------------------------------------------------------
+export type {
+  LoteVenda,
+  CupomVenda,
+  ItemVendaInput,
+  ComputeSaleStateParams,
+  ItemVendaState,
+  CupomAplicadoVenda,
+  SaleState,
+} from './checkout/saleState';
+export { computeSaleState } from './checkout/saleState';
+
+export type { DadosMinimosInscrito } from './checkout/validarDados';
+export {
+  INSCRITO_NOME_MIN,
+  INSCRITO_NOME_MAX,
+  validarDadosMinimosInscrito,
+} from './checkout/validarDados';
+
+export type { EtapaCheckout } from './checkout/etapas';
+export {
+  ETAPAS_CHECKOUT,
+  isEtapaCheckout,
+  indiceEtapa,
+  proximaEtapa,
+  etapaAnterior,
+} from './checkout/etapas';
+
+// ---------------------------------------------------------------------------
 // Módulo Pedidos (ADR-011 · LEELA-FABLE-A-T1)
 // Kernel `pedidos/{id}` — pedido em grupo (1 responsável, N inscritos) +
 // pagamento/conciliação (`pagamentos/{id}`). Estado financeiro: escrita

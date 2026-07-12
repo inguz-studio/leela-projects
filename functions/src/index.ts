@@ -72,3 +72,10 @@ export { registrarCheckin } from './eventos/registrarCheckin';
 
 // Eventos — agregado financeiro por recontagem idempotente (E03-S207-T2)
 export { onInscritoWrite } from './eventos/agregarFinanceiro';
+
+// Checkout — fundação E12 (sandbox sem chave Asaas — ADR-006/ADR-011):
+// createInscricaoCharge cria pedido/inscritos + emite a cobrança (provider
+// selecionado por selectPaymentProvider — Mock sem chave, fail-safe);
+// pagamentoWebhook é a ÚNICA porta de confirmação (assinado + idempotente).
+export { createInscricaoCharge } from './checkout/createInscricaoCharge';
+export { pagamentoWebhook } from './checkout/webhookPagamento';
