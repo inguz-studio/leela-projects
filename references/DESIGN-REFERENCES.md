@@ -36,6 +36,12 @@ Arquivo único que contém a **fonte de verdade de design** da V1: ícones v1, f
 
 - **Perfil social / link-in-bio:** Feed · Eventos · Clubs, personalizável na identidade de cada organizador (tematização dinâmica por usuário = "mockup de cores"). Clubes e eventos têm **capa**. Benchmark: Cheers. Épico novo a planejar.
 
+## Regras de domínio novas (Vitor 2026-07-12 — a aplicar/planejar)
+
+- **Kit ← modalidade (checkout):** o modelo do core JÁ vincula kit a modalidades (`kit.modalidades[]`; Ouro=21k, Prata=10k/21k, básico=todas). FALTA: no **checkout, primeiro seleciona modalidade, depois kit**, e o kit deve ser **filtrado pela modalidade escolhida**; podem existir **vários kits** por modalidade. Ex.: "5km masculino corrida" + "kit prata". Entra no refino do checkout.
+- **Benchmark TicketSports** (Vitor tem o navegador aberto): jornada = modalidade → kit (vários) → …; e **inscrições só via cupom** (evento fechado/por cupom) é um modo que a TicketSports pratica — considerar como opção de venda. Pedir/revisar prints da TicketSports.
+- **Assessorias parceiras = clubes com desconto exclusivo (estratégia de tração):** só **clubes** podem ter condições especiais de desconto; um organizador de corrida cadastra assessorias parceiras como clubes. Relaciona-se ao que a arquitetura já tem (parcerias/afiliação — E08 foi cortado, mas a mecânica de cupom/club existe). **Fluxo de cadastro de assessoria:** via **CNPJ ou CPF**; se o responsável já tem conta Leela → vincula; se não → o organizador manda **convite por e-mail** → responsável completa o cadastro do convite → **cria a conta Leela automaticamente** e entra como **club parceiro**. Épico a planejar (destrava tração B2B via organizador→parceiros).
+
 ## Como usar (Figma MCP)
 
 Com o link acima, usar `mcp__claude_ai_Figma__get_design_context` / `get_screenshot` / `get_metadata` / `download_assets` sobre o `node-id`. Ex.: screenshot do node `39-872` (wireframes) para refinar a página do evento.
