@@ -125,10 +125,51 @@ describe('Lote — virada RN-300 (data OU quantidade) e preço vigente RN-301', 
     expect(precoVigente({ lotesDaModalidade: [l1, l2], agora })).toBe(90);
   });
 
-  it('precoVigente cai no precoLegado (PercursoEvento.preco) quando não há lote ativo', () => {
-    const agora = new Date('2026-06-01T00:00:00-03:00'); // depois de tudo
-    expect(precoVigente({ lotesDaModalidade: [loteBase], agora, precoLegado: 120 })).toBe(120);
-    expect(precoVigente({ lotesDaModalidade: [loteBase], agora })).toBeNull();
+  it('precoLegado (PercursoEvento.preco) SÓ vale para modalidade SEM lotes configurados', () => {
+    const agora = new Date('2026-06-01T00:00:00-03:00');
+    expect(precoVigente({ lotesDaModalidade: [], agora, precoLegado: 120 })).toBe(120);
+    expect(precoVigente({ lotesDaModalidade: [], agora })).toBeNull();
+  });
+
+  it('JANELA-MORTA não reabre no legado: com lotes e todos encerrados → null (re-review S300 #1)', () => {
+    // Depois do fim do último lote: venda FECHADA mesmo com precoLegado presente.
+    const depoisDeTudo = new Date('2026-06-01T00:00:00-03:00');
+    expect(
+      precoVigente({ lotesDaModalidade: [loteBase], agora: depoisDeTudo, precoLegado: 120 })
+    ).toBeNull();
+    // Esgotado por quantidade DENTRO da janela (e sem sucessor): também fechada.
+    const esgotado = { ...loteBase, vendidos: 300 };
+    expect(
+      precoVigente({
+        lotesDaModalidade: [esgotado],
+        agora: new Date('2026-03-01T00:00:00-03:00'),
+        precoLegado: 120,
+      })
+    ).toBeNull();
+  });
+
+  it('HAND-OFF por quantidade (ADR-012 · re-review S300 #2): L1 esgotado → L2 vigente antes do inicioEm', () => {
+    // Janelas encostadas: L1 fev→abr, L2 abr→jun. L1 esgota em MARÇO —
+    // "esgotou o L1, vira sozinho pro L2", sem janela-morta de venda travada.
+    const l1 = { ...loteBase, ordem: 1, preco: 75, vendidos: 300 }; // esgotado (limite 300)
+    const l2 = {
+      ...loteBase,
+      ordem: 2,
+      preco: 90,
+      inicioEm: ts('2026-04-01T00:00:00-03:00'),
+      fimEm: ts('2026-06-01T00:00:00-03:00'),
+    };
+    const agora = new Date('2026-03-01T00:00:00-03:00'); // antes de L2.inicioEm
+    expect(loteAtivo([l1, l2], agora)?.ordem).toBe(2);
+    expect(precoVigente({ lotesDaModalidade: [l1, l2], agora })).toBe(90);
+  });
+
+  it('sem antecessor não há hand-off: antes do 1º início → null (venda ainda não abriu)', () => {
+    const antesDoPrimeiro = new Date('2026-01-15T00:00:00-03:00');
+    expect(loteAtivo([loteBase], antesDoPrimeiro)).toBeNull();
+    expect(
+      precoVigente({ lotesDaModalidade: [loteBase], agora: antesDoPrimeiro })
+    ).toBeNull();
   });
 });
 

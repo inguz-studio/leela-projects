@@ -8,10 +8,19 @@
  * Cobre:
  *   - LOTES: membro lê preço; cross-tenant não; `vendidos` só-Function
  *     (create 0, update intocado); congelamento comercial após venda do lote
- *     (RN-200/300 per-lote); writer edita lote sem venda; delete só sem venda.
+ *     (RN-200/300 per-lote); writer edita lote sem venda; delete só sem venda;
+ *     preco cent-exato/finito (re-review S300 #6); modalidade EXISTENTE no
+ *     evento pai (re-review S300 #4-rules).
  *   - CUPONS: leitura SÓ writer (promoter/membro NÃO lê — lição do catch-all
- *     A-T2, agora estendida a cupons); docId == codigo; `usos` só-Function.
- *   - PAGINA VENDAS: membro lê; `publicada`/`publicadaEm` só-Function.
+ *     A-T2, agora estendida a cupons); docId == codigo; `usos` só-Function;
+ *     valor cent-exato/finito; delete só com usos == 0 (re-review S300 #3).
+ *   - PAGINA VENDAS: membro lê; `publicada`/`publicadaEm` só-Function;
+ *     create SÓ no docId canônico `config` (re-review S300 #5).
+ *   - FINANCEIRO (re-review A-T2 A1): repasse (`financeiro/current`) é leitura
+ *     de GESTÃO — writer lê; promoter/athlete/cross-tenant NÃO; write nunca.
+ *   - CATCH-ALL ALLOWLIST (re-review A-T2 A2): subcoleção FUTURA de eventos
+ *     nasce ILEGÍVEL (deny-by-default); kits/lotes/paginaVendas seguem
+ *     member-readable.
  */
 
 import {
@@ -43,10 +52,12 @@ const PASSO_ID = 'passo-certo';
 
 const MARINA_UID = 'uid-marina-castelo';
 const PROMOTER_UID = 'uid-promoter-castelo';
+const ATHLETE_UID = 'uid-atleta-castelo';
 const PASSO_OWNER_UID = 'uid-passo-owner';
 
 const marina = { role: 'tenant_owner', tenantId: CASTELO_ID }; // writer
 const promoter = { role: 'promoter', tenantId: CASTELO_ID }; // membro, não-writer
+const athlete = { role: 'athlete', tenantId: CASTELO_ID }; // atleta COM claim de tenant
 const passo = { role: 'tenant_owner', tenantId: PASSO_ID }; // cross-tenant
 
 let testEnv: RulesTestEnvironment;
@@ -137,6 +148,20 @@ beforeAll(async () => {
   await testEnv.clearFirestore();
   await seedTenantsBase();
   await seedEventos(adminDb); // grava eventos + lotes/cupons/paginaVendas
+
+  // Agregado financeiro (repasse) — escrito por Function/Admin SDK na vida
+  // real (agregarFinanceiro); aqui semeado direto para exercitar as Rules
+  // de LEITURA (re-review A-T2 A1).
+  await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/financeiro/current`).set({
+    receitaBruta: 85617, taxaPct: 10.5, taxaValor: 8989.79,
+    receitaLiquida: 76627.21, atualizadoEm: FieldValue.serverTimestamp(),
+  });
+
+  // Subcoleção FUTURA (não modelada nas Rules) — prova o deny-by-default do
+  // catch-all ALLOWLIST (re-review A-T2 A2): nasce ilegível para o cliente.
+  await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/reembolsos/reemb-1`).set({
+    tenantId: CASTELO_ID, valor: 100, atualizadoEm: FieldValue.serverTimestamp(),
+  });
 });
 
 afterAll(async () => {
@@ -179,6 +204,20 @@ describe('lotes — leitura e fronteira de venda (∑ só-Function)', () => {
     await assertFails(deleteDoc(lote(db, '5k-lote-1'))); // vendidos > 0
     await assertSucceeds(deleteDoc(lote(db, '10k-lote-3'))); // vendidos 0
   });
+
+  it('preco com sub-centavo ou Infinity é negado; 2 casas passa (re-review S300 #6)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'lote-subcent'), lotePayload({ preco: 99.999 })));
+    await assertFails(setDoc(lote(db, 'lote-inf'), lotePayload({ preco: Infinity })));
+    await assertSucceeds(setDoc(lote(db, 'lote-centavos'), lotePayload({ preco: 75.25, ordem: 8 })));
+  });
+
+  it('modalidade FANTASMA (fora de evento.modalidades) é negada no create e no update (ADR-012)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'lote-99k'), lotePayload({ modalidade: '99k' })));
+    // bypass em 2 passos: criar válido e renomear p/ fantasma — também negado
+    await assertFails(updateDoc(lote(db, '5k-lote-3'), { modalidade: '99k' }));
+  });
 });
 
 describe('cupons — leitura SÓ writer (catch-all NÃO vaza — lição A-T2)', () => {
@@ -207,6 +246,21 @@ describe('cupons — leitura SÓ writer (catch-all NÃO vaza — lição A-T2)',
     await assertFails(setDoc(cupom(db, 'AÇÃO10'), cupomPayload('AÇÃO10'))); // acento
     await assertFails(setDoc(cupom(db, 'AB'), cupomPayload('AB'))); // curto demais
   });
+
+  it('valor com sub-centavo ou Infinity é negado; 2 casas passa (re-review S300 #6)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(cupom(db, 'SUBCENT1'), cupomPayload('SUBCENT1', { tipo: 'fixo', valor: 10.555 })));
+    await assertFails(setDoc(cupom(db, 'INFINITO1'), cupomPayload('INFINITO1', { tipo: 'fixo', valor: Infinity })));
+    await assertSucceeds(setDoc(cupom(db, 'QUEBRADO1'), cupomPayload('QUEBRADO1', { tipo: 'fixo', valor: 49.99 })));
+  });
+
+  it('delete de cupom USADO é negado (usos > 0 — re-review S300 #3); sem uso deleta', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    const { deleteDoc } = await import('firebase/firestore');
+    await assertFails(deleteDoc(cupom(db, 'HEROI10'))); // usos: 37 no seed
+    await assertSucceeds(setDoc(cupom(db, 'DELETAVEL1'), cupomPayload('DELETAVEL1')));
+    await assertSucceeds(deleteDoc(cupom(db, 'DELETAVEL1'))); // usos 0/ausente
+  });
 });
 
 describe('paginaVendas — publicação só-Function', () => {
@@ -215,15 +269,55 @@ describe('paginaVendas — publicação só-Function', () => {
     await assertFails(getDoc(pagina(dbAs(PASSO_OWNER_UID, passo), 'config')));
   });
 
-  it('create com publicada=true é negado; publicada=false (ausente) passa', async () => {
+  it('create SÓ no docId canônico `config` (re-review S300 #5); publicada=true negado', async () => {
     const db = dbAs(MARINA_UID, marina);
-    await assertFails(setDoc(pagina(db, 'config2'), paginaPayload({ publicada: true })));
-    await assertSucceeds(setDoc(pagina(db, 'config2'), paginaPayload()));
+    // docId ≠ 'config' é negado MESMO com payload válido (página fantasma)
+    await assertFails(setDoc(pagina(db, 'config2'), paginaPayload()));
+    // no docId canônico: recriar do zero exercita o CREATE de cliente
+    await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/paginaVendas/config`).delete();
+    await assertFails(setDoc(pagina(db, 'config'), paginaPayload({ id: 'config', publicada: true })));
+    await assertSucceeds(setDoc(pagina(db, 'config'), paginaPayload({ id: 'config' })));
   });
 
   it('cliente NÃO escreve `publicada`/`publicadaEm` no update', async () => {
     const db = dbAs(MARINA_UID, marina);
     await assertFails(updateDoc(pagina(db, 'config'), { publicada: false }));
     await assertFails(updateDoc(pagina(db, 'config'), { publicadaEm: jan() }));
+  });
+});
+
+describe('financeiro — repasse é leitura de GESTÃO (re-review A-T2 A1)', () => {
+  const fin = (db: Firestore) => doc(db, 'eventos', MEIA_FLORIPA_ID, 'financeiro', 'current');
+
+  it('organizador (writer) lê o agregado com receitaLiquida', async () => {
+    await assertSucceeds(getDoc(fin(dbAs(MARINA_UID, marina))));
+  });
+
+  it('promoter e athlete-com-claim (membros não-writer) NÃO leem o repasse', async () => {
+    await assertFails(getDoc(fin(dbAs(PROMOTER_UID, promoter))));
+    await assertFails(getDoc(fin(dbAs(ATHLETE_UID, athlete))));
+  });
+
+  it('cross-tenant NÃO lê; writer NÃO escreve (∑ exclusivo de Function)', async () => {
+    await assertFails(getDoc(fin(dbAs(PASSO_OWNER_UID, passo))));
+    await assertFails(
+      setDoc(fin(dbAs(MARINA_UID, marina)), { receitaBruta: 1, receitaLiquida: 999999 })
+    );
+  });
+});
+
+describe('catch-all de eventos é ALLOWLIST (re-review A-T2 A2)', () => {
+  it('subcoleção FUTURA (reembolsos) nasce ILEGÍVEL — até para writer', async () => {
+    const reemb = (db: Firestore) =>
+      doc(db, 'eventos', MEIA_FLORIPA_ID, 'reembolsos', 'reemb-1');
+    await assertFails(getDoc(reemb(dbAs(PROMOTER_UID, promoter))));
+    await assertFails(getDoc(reemb(dbAs(MARINA_UID, marina))));
+  });
+
+  it('regressão da allowlist: membro segue lendo lotes e paginaVendas', async () => {
+    // (kits member-read é coberto por kitsRules.test.ts na mesma suíte)
+    const db = dbAs(PROMOTER_UID, promoter);
+    await assertSucceeds(getDoc(lote(db, '5k-lote-1')));
+    await assertSucceeds(getDoc(pagina(db, 'config')));
   });
 });

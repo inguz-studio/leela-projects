@@ -128,9 +128,11 @@ export function loteShapeValido(
  * DECISÃO (registrada): janelas de lotes de uma MESMA modalidade não se
  * sobrepõem — a virada RN-300 é um hand-off (Lote 1 termina → Lote 2 começa) e
  * "preço vigente" (RN-301) precisa do invariante "no máximo um lote ativo por
- * modalidade por instante". Lacunas (pausa de venda) são permitidas; a virada
- * por quantidade (vendidos ≥ limite) só encerra ANTES do fim, nunca cria
- * sobreposição. Sobreposição tornaria o preço vigente ambíguo.
+ * modalidade por instante". Lacunas ENTRE janelas são estruturalmente válidas,
+ * mas NÃO pausam a venda: com o antecessor encerrado o próximo lote assume
+ * (hand-off ADR-012 — ver `loteAtivo`). A virada por quantidade
+ * (vendidos ≥ limite) só encerra ANTES do fim, nunca cria sobreposição.
+ * Sobreposição tornaria o preço vigente ambíguo.
  *
  * Cross-doc por natureza (unicidade/sobreposição olham irmãos) → vive aqui, no
  * editor/Function/seed, não nas Rules (que não iteram coleções).
@@ -205,7 +207,8 @@ export function loteEncerrado(
 
 /**
  * Lote VIGENTE no instante `agora`? (janela começou E ainda não encerrou por
- * data/quantidade). @pure
+ * data/quantidade). NOTA: vigência olha o lote ISOLADO — o hand-off por
+ * antecessor encerrado (ADR-012) vive em `loteAtivo`. @pure
  */
 export function loteVigente(
   lote: Pick<Lote, 'inicioEm' | 'fimEm' | 'vendidos' | 'quantidadeLimite'>,
@@ -215,21 +218,35 @@ export function loteVigente(
 }
 
 /**
- * O lote ATIVO de uma modalidade no instante `agora` — o vigente de menor
- * `ordem` (com janelas não-sobrepostas há no máximo um; o menor-ordem desempata
- * defensivamente). `null` quando nenhum lote está vigente (antes do 1º início,
- * numa lacuna, ou depois do último). @pure
+ * O lote ATIVO de uma modalidade no instante `agora` (RN-300 · ADR-012).
+ *
+ * Derivação do HAND-OFF: o ativo é o PRIMEIRO lote por `ordem` ainda não
+ * encerrado (data/quantidade) cuja janela já começou OU cujo antecessor
+ * imediato está encerrado (esgotado/fim passado) — "esgotou o L1, vira
+ * sozinho pro L2" (ADR-012), mesmo que o `inicioEm` do L2 ainda não tenha
+ * chegado. Sem o hand-off, a virada por QUANTIDADE com janelas encostadas
+ * deixava a modalidade sem lote ativo e travava a venda (re-review S300 #2).
+ *
+ * `null` quando: antes do 1º início (sem antecessor não há hand-off) ou
+ * quando TODOS os lotes encerraram — venda fechada, que NUNCA reabre no
+ * preço legado (ver `precoVigente`). @pure
  */
 export function loteAtivo<
   T extends Pick<Lote, 'ordem' | 'inicioEm' | 'fimEm' | 'vendidos' | 'quantidadeLimite'>,
 >(lotesDaModalidade: readonly T[], agora: Date): T | null {
-  let ativo: T | null = null;
-  for (const lote of lotesDaModalidade) {
-    if (loteVigente(lote, agora) && (ativo === null || lote.ordem < ativo.ordem)) {
-      ativo = lote;
-    }
+  const porOrdem = [...lotesDaModalidade].sort((a, b) => a.ordem - b.ordem);
+  for (let i = 0; i < porOrdem.length; i++) {
+    const lote = porOrdem[i]!;
+    if (loteEncerrado(lote, agora)) continue;
+    // Primeiro não-encerrado da sequência (com janelas não-sobrepostas e
+    // cronologia coerente — validarLotesModalidade — todos os anteriores
+    // estão encerrados): ativo se a própria janela começou OU por hand-off
+    // do antecessor imediato encerrado.
+    const janelaComecou = agora.getTime() >= millis(lote.inicioEm);
+    const antecessorEncerrado = i > 0 && loteEncerrado(porOrdem[i - 1]!, agora);
+    return janelaComecou || antecessorEncerrado ? lote : null;
   }
-  return ativo;
+  return null;
 }
 
 /**
@@ -237,12 +254,17 @@ export function loteAtivo<
  *
  * EVOLUÇÃO DE `PercursoEvento` (registrada): o preço vigente deriva do LOTE
  * ATIVO da modalidade. `PercursoEvento.preco` (S201) permanece como preço-base
- * LEGADO/fallback — eventos sem lotes configurados (legado/seed) continuam
- * lendo `percurso.preco`. Schema evolution backward-compatible (Kleppmann):
- * o campo antigo não é removido e readers antigos não quebram; o novo caminho
- * (lote) tem precedência quando existe.
+ * LEGADO/fallback — mas SÓ para modalidade SEM lotes configurados
+ * (legado/seed). Com lotes configurados e nenhum ativo a venda está FECHADA
+ * (`null`): devolver o preço-base na janela-morta reabriria a venda sem teto
+ * de vaga depois de todos os lotes esgotarem/encerrarem (re-review S300 #1 —
+ * dinheiro entrando por porta que a RN-300 fechou). Schema evolution
+ * backward-compatible (Kleppmann): o campo antigo não é removido e readers
+ * antigos (eventos sem lotes) não quebram; o caminho novo (lote) tem
+ * precedência quando existe.
  *
- * @returns preço do lote ativo; senão `precoLegado` (fallback); senão `null`. @pure
+ * @returns preço do lote ativo; senão `precoLegado` SE a modalidade não tem
+ * lotes configurados; senão `null` (venda fechada). @pure
  */
 export function precoVigente(params: {
   lotesDaModalidade: readonly Pick<
@@ -254,6 +276,8 @@ export function precoVigente(params: {
 }): number | null {
   const ativo = loteAtivo(params.lotesDaModalidade, params.agora);
   if (ativo !== null) return ativo.preco;
+  // Modalidade COM lotes e nenhum ativo = venda fechada — nunca preço legado.
+  if (params.lotesDaModalidade.length > 0) return null;
   return params.precoLegado ?? null;
 }
 

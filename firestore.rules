@@ -86,6 +86,23 @@ service cloud.firestore {
       return status in ['pending', 'ativo', 'suspenso'];
     }
 
+    /**
+     * Valor monetário escrito por CLIENTE: number FINITO e cent-exato (R$,
+     * 2 casas) — espelho de parseMoney/roundMoney do core (re-review Fable
+     * S300 #6): `preco >= 0` sozinho aceitava Infinity, e sub-centavo
+     * (75.001) entrava em doc financeiro. Int é cent-exato por definição;
+     * no float, a tolerância 1e-6 (em CENTAVOS) absorve só o ruído de ponto
+     * flutuante da multiplicação ×100 — sub-centavo real (≥ 0.001 centavo)
+     * é negado. Ranges (≥ 0, > 0, ≤ 100) seguem nos shapes de cada coleção.
+     */
+    function moneyCentExato(v) {
+      return v is int
+        || (v is float
+            && !math.isNaN(v)
+            && !math.isInfinite(v)
+            && math.abs(v * 100.0 - math.round(v * 100.0)) < 0.000001);
+    }
+
     // ── `tenants/{tenantId}` — coleção de plataforma ──────────────────────
     //
     // Leitura: membro do tenant (claim.tenantId bate) OU platform_admin.
@@ -241,11 +258,14 @@ service cloud.firestore {
       /**
        * RN-200 (S201-T3): após a 1ª venda (∑ qtdInscritos > 0) o cliente não
        * toca `percursos` — o preço faz parte do percurso. Sem venda, edita.
+       * `modalidades` incluso (re-review Fable S300 #4-rules): os lotes
+       * referenciam `evento.modalidades` (ADR-012) — renomear/remover uma
+       * modalidade vendida órfãnaria lotes e inscritos dela.
        */
       function percursosEditaveis() {
         return resource.data.get('qtdInscritos', 0) == 0
           || !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['percursos']);
+            .hasAny(['percursos', 'modalidades']);
       }
 
       /**
@@ -469,7 +489,8 @@ service cloud.firestore {
       // TODO de leitura pública de eventos). Aqui: membro do tenant lê.
       match /lotes/{loteId} {
 
-        /** Shape do lote (ADR-012 · RN-300/301) — janela/vaga/preço coerentes. */
+        /** Shape do lote (ADR-012 · RN-300/301) — janela/vaga/preço coerentes.
+            `preco` cent-exato e finito (re-review S300 #6 — espelha o core). */
         function shapeLoteValido() {
           return request.resource.data.modalidade is string
             && request.resource.data.modalidade.size() > 0
@@ -479,11 +500,22 @@ service cloud.firestore {
             && request.resource.data.ordem >= 1
             && request.resource.data.quantidadeLimite is int
             && request.resource.data.quantidadeLimite >= 1
-            && request.resource.data.preco is number
+            && moneyCentExato(request.resource.data.preco)
             && request.resource.data.preco >= 0
             && request.resource.data.inicioEm is timestamp
             && request.resource.data.fimEm is timestamp
             && request.resource.data.fimEm > request.resource.data.inicioEm;
+        }
+
+        /**
+         * ADR-012 (re-review S300 #4-rules): o lote referencia uma modalidade
+         * EXISTENTE de `evento.modalidades` — sem isto o cliente criaria um
+         * degrau de preço para modalidade fantasma ('99k') que nenhum
+         * percurso/inscrito conhece.
+         */
+        function modalidadeExisteNoEventoPai() {
+          return request.resource.data.modalidade
+            in get(/databases/$(database)/documents/eventos/$(eventoId)).data.get('modalidades', []);
         }
 
         /** `vendidos` (∑ de Function) nasce 0/ausente — cliente nunca inventa venda. */
@@ -515,12 +547,14 @@ service cloud.firestore {
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapeLoteValido()
+                          && modalidadeExisteNoEventoPai()
                           && vendidosZeradoNoCreate())
                       || isPlatformAdmin();
         allow update: if (isTenantWriter(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
                           && shapeLoteValido()
+                          && modalidadeExisteNoEventoPai()
                           && vendidosIntocado()
                           && loteComercialImutavelSeVendido())
                       || isPlatformAdmin();
@@ -556,7 +590,9 @@ service cloud.firestore {
             // nunca acha → cupom morto persistível (review antagonista A4).
             && request.resource.data.codigo.matches('^[A-Z0-9]{3,20}$')
             && request.resource.data.tipo in ['percentual', 'fixo']
-            && request.resource.data.valor is number
+            // cent-exato e finito (re-review S300 #6): `valor > 0` sozinho
+            // aceitava Infinity no tipo fixo e sub-centavo em desconto.
+            && moneyCentExato(request.resource.data.valor)
             && request.resource.data.valor > 0
             && (request.resource.data.tipo != 'percentual'
                 || request.resource.data.valor <= 100)
@@ -595,8 +631,12 @@ service cloud.firestore {
                           && shapeCupomValido()
                           && usosECodigoIntocados())
                       || isPlatformAdmin();
+        // Delete SÓ sem uso (re-review S300 #3 — espelha o delete de lote):
+        // cupom com `usos > 0` é trilha comercial de desconto aplicado; sumir
+        // com ele órfãnaria a auditoria do checkout. Remoção real = Function.
         allow delete: if (isTenantWriter(resource.data.tenantId)
-                          && tenantAtivo(resource.data.tenantId))
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.get('usos', 0) == 0)
                       || isPlatformAdmin();
       }
 
@@ -635,7 +675,11 @@ service cloud.firestore {
 
         allow read: if isPlatformAdmin()
                     || isTenantMember(tenantDoEventoPai());
+        // Create SÓ no docId canônico `config` (re-review S300 #5): "1 doc
+        // por evento" era só comentário — um segundo doc ('config2') criaria
+        // página fantasma fora do caminho que a vitrine/Function leem.
         allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && docId == 'config'
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapePaginaValida()
@@ -651,17 +695,34 @@ service cloud.firestore {
         allow delete: if isPlatformAdmin();
       }
 
-      match /{subcol}/{docId} {
-        // `inscritos` carrega PII + saúde (ADR-011 · A-T2 · LGPD art. 5º-II) e
-        // `cupons` carrega código comercial (S300-T1): leitura SÓ por writer
-        // pelas regras específicas acima. Este catch-all de membro serve as
-        // demais subcoleções (kits/lotes/paginaVendas etc.), mas NÃO pode
-        // re-conceder `inscritos` NEM `cupons` — senão promoter/athlete leem
-        // PII/descontos pelo OR de regras (fix r1: A1 só na regra específica
-        // vazava aqui; mesma disciplina agora estende a cupons).
+      // `financeiro/{docId}` — agregado financeiro do evento (E03 · S207-T2).
+      //
+      // `current` carrega receitaBruta/taxaValor/receitaLiquida — o REPASSE
+      // do organizador. Dinheiro segue a taxonomia de `pedidos`/`pagamentos`
+      // (papel de GESTÃO): leitura SÓ writer (owner/staff) e platform_admin;
+      // promoter e athlete-com-claim NÃO leem (re-review Fable A-T2 A1: sem
+      // este match o doc caía no catch-all de MEMBRO e vazava o repasse).
+      // Escrita: NUNCA pelo cliente — o doc é recomputado exclusivamente pela
+      // Function `agregarFinanceiro` (Admin SDK bypassa Rules).
+      match /financeiro/{docId} {
         allow read: if isPlatformAdmin()
-                    || (subcol != 'inscritos'
-                        && subcol != 'cupons'
+                    || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
+      match /{subcol}/{docId} {
+        // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
+        // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)
+        // são legíveis por membro genérico do tenant. A forma anterior era
+        // BLOCKLIST (subcol != inscritos/cupons) — qualquer subcoleção FUTURA
+        // de eventos (reembolsos/transferencias/ledger/equipe/…) nasceria
+        // member-readable sem tocar as Rules. Agora nasce no deny-by-default:
+        // abrir leitura exige entrar nesta lista (ou ganhar match próprio)
+        // + teste. `inscritos` (PII/LGPD), `cupons` (ativo comercial) e
+        // `financeiro` (repasse) têm match próprio writer-only acima e NÃO
+        // entram na lista — o OR de regras não os re-concede.
+        allow read: if isPlatformAdmin()
+                    || (subcol in ['kits', 'lotes', 'paginaVendas']
                         && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));
         allow write: if isPlatformAdmin();
       }
