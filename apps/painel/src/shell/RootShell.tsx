@@ -17,7 +17,6 @@ import {
   IconButton,
   SearchInput,
   Sidebar,
-  SidebarBrand,
   SidebarFooter,
   Toolbar,
 } from '@leela/design-system';
@@ -56,10 +55,26 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, [produtor]);
 
-  // Bloco de marca (T2): a ESTRUTURA (anatomia .brand do mockup) é do DS; o
-  // texto "LEELA / Painel do Organizador" é do consumidor — a marca final do
-  // painel é decisão pendente do Vitor.
-  const brand = <SidebarBrand mark="LEELA" sub="Painel do Organizador" />;
+  // Bloco de marca (T2): a ANATOMIA `.brand` (padding, hairline, sub) é do DS —
+  // reusamos os MESMOS tokens do SidebarBrand para não haver drift. O mark deixa
+  // de ser texto e passa a ser o wordmark oficial da Leela (variante brasa /
+  // verde-limão, o MESMO `/leela-logo-brasa.svg` do header da landing), que casa
+  // com o fundo escuro `--surface-base` da sidebar. `alt` textual garante a11y;
+  // altura = `--sidebar-brand-mark-size` (22px), o mesmo espaço vertical que o
+  // texto ocupava. Sub "Painel do Organizador" segue como descritor de contexto.
+  const brand = (
+    <div className="border-b border-b-[var(--border-subtle)] pt-[var(--sidebar-brand-pt)] px-[var(--sidebar-brand-px)] pb-[var(--sidebar-brand-pb)]">
+      <img
+        src="/leela-logo-brasa.svg"
+        alt="Leela"
+        data-slot="brand-logo"
+        className="h-[var(--sidebar-brand-mark-size)] w-auto"
+      />
+      <p className="mt-[var(--sidebar-brand-sub-mt)] text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+        Painel do Organizador
+      </p>
+    </div>
+  );
 
   // Rodapé só com sessão nomeada — sem usuário hardcoded (B4).
   const footer = nome ? (

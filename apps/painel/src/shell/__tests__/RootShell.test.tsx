@@ -107,10 +107,11 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     expect(within(sidebar).getByText('Ver perfil')).toBeInTheDocument();
   });
 
-  it('brand slot do consumidor: "LEELA" + "Painel do Organizador" (T2)', () => {
+  it('brand slot do consumidor: wordmark Leela + "Painel do Organizador" (T2)', () => {
     renderAt('/');
     const sidebar = nav();
-    expect(within(sidebar).getByText('LEELA')).toBeInTheDocument();
+    const logo = within(sidebar).getByRole('img', { name: 'Leela' });
+    expect(logo).toHaveAttribute('src', '/leela-logo-brasa.svg');
     expect(within(sidebar).getByText('Painel do Organizador')).toBeInTheDocument();
   });
 
