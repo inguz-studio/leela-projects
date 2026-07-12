@@ -1,8 +1,19 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-12
 
-# ▶️ SESSÃO ATIVA 2026-07-12. Git SÃO em `C:\dev\LEELA`. Último push: **`7ce033f`** em `main` (o remoto é a verdade). ⚠️ Working tree TEM WIP: o agente Opus da **E12 superfícies públicas** está rodando em `apps/landing` (ainda NÃO commitado — commit vem após o gate). Emulator(8080)/preview podem ter ficado de pé — matar `java`/`node` órfãos se retomar do zero.
+# ▶️ SESSÃO ATIVA 2026-07-12 (longa). Git SÃO em `C:\dev\LEELA`. Último push: **`a7ffe94`** em `main`. Working tree limpo (commits incrementais). **FABLE-G será o próximo dispatch.** Matar `java`/`node` órfãos se retomar do zero. Modo atual: **"pode rodar tudo" + paralelizar quando memória livre** (8GB: ~1 emulator por vez; 1 emulator Fable + 1 leve Opus juntos = ok).
 
 ## ▶️ COMECE AQUI — retomada
+
+**🧭 ESTADO 2026-07-12 (tarde) — o mais recente primeiro:**
+- **`/harness` pontos 1-3 FECHADOS:** (1) KPIs da Visão Geral eram **operacionais** (getOverview sempre funcionou; caixas vazias = emulator morria a 512m + cold-start) → fix heap `preview.sh` 512→**1024m** (`c7d39f9`). (2) **Refino evento+checkout ao Figma** (`112-4622`, dark) + **kit-por-modalidade** (checkout filtra kits pela modalidade) + **logos** (`dc57504`); Fable-review pegou 2 bugs de dinheiro (exploit fulfillment kitId↔rótulo ~R$104 + crash valor negativo) → `c59dc28`. (3) **`MODELO-ROADMAP.md`** = terminologia única **Onda→Épico→US→Task** (fim da mistura Wave/Onda; "Wave"=lote de execução) + épicos **E17** (perfil social/link-in-bio) e **E18** (assessorias parceiras) planejados (`d1fb2a6`).
+- **Follow-ups fechados:** logo LEELA no sidebar do painel (`5539ece`); **`kitId` persistido + travado nas Rules** (fulfillment exato, 177/177, `2aa1f90`); hero cover sem capa já ok.
+- **FABLE-B estorno** por-inscrito (ADR-011) ATERRISSADA (`a7ffe94`): saga 2-TX idempotente, reverte receita, guard organizador, RN-337 sem split; agente Fable pegou exploit de ressurreição; emulator 38/38 + regressão 213/213. **Directive: review antagonista Fable na ativação do E04-refund (hoje inerte).**
+- **FILA backend Onda 2 (encadear):** **FABLE-G** (log de comunicação → destrava E06) → **FABLE-D/E** (estoque por tamanho). Depois: **telas do organizador E04** (config de evento capa/regulamento/seções + lotes/modalidades UI — o que o Vitor sentiu falta de VER).
+- **Referências de design (LER):** `references/DESIGN-REFERENCES.md` (Figma `112-4622` wireframes + regras novas: cupom-only, repasse D+2 ajustável, retenção 15%, assessorias). Identidade = DARK (brasa), logos em `brand/`.
+- **Chave Asaas:** PRODUÇÃO em `functions/.env` (`ASAAS_PROD_API_KEY`, autentica — conta "FAROL SOLUCOES"; **recomendei ao Vitor rotacionar**, apareceu no chat). Mock ativo; sandbox indisponível; AsaasProvider inerte.
+- **6 decisões do planejamento seguindo os defaults** (E17/E18, JTBD, Onda 3, de-para, RNs, @handle) — Vitor pode ratificar/ajustar.
+
+---
 
 **✅ RODADA DE RE-REVIEW FABLE FECHADA E VERDE (gate consolidado 181/181, 5 arquivos emulator, 2026-07-12).** Sem bug aberto. A Frente A (Fable) + fundação do checkout sandbox foram re-revisadas em **Fable EXPLÍCITO** (correção de rota: inheritance NÃO alcança Fable — passar `model:"fable"` sempre) e todos os gaps reais de dinheiro foram fechados. Commits da rodada: `d50584d` (QR) · `8007f52` (vazamento repasse via catch-all → Rules writer-only + allowlist) · `308275f` (contrato pedido `valorTotal` fixo + `itens[]` por-inscrito) · `9a5a671` (saleState janela-morta) · **`7ce033f` (moneyCentExato portável — causa real: `math.isInfinite` NÃO existe no runtime de Rules do emulator@13; helper reescrito `v*0.0==0.0`, `beforeAll`→30s)**. **Diretriz herdada: nunca usar `math.isInfinite`/`math.isNaN` em `firestore.rules` (não existem no runtime do emulator).**
 
