@@ -222,6 +222,9 @@ describe('E12 · createInscricaoCharge (produtor de escrita do checkout)', () =>
       const inscrito = parseInscrito(docSnap.id, docSnap.data());
       expect(inscrito.status).toBe('pendente');
       expect(pedidoDoInscritoCoerente(inscrito, pedido)).toBe(true);
+      // Fulfillment (follow-up c59dc28): sem kitId no input → kitId null
+      // EXPLÍCITO no doc (não ausente — distingue do legado pré-persistência).
+      expect(inscrito.kitId).toBeNull();
     }
     const responsavel = inscritosSnap.docs
       .map((d) => parseInscrito(d.id, d.data()))

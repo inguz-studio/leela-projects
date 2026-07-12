@@ -12,6 +12,8 @@
  *     status ∈ enum (RN-204), chipNumero string|null (RN-203)
  *   - Carimbos de Function (kitEntregueEm/checkinEm/qrToken/ingressoEmitidoEm)
  *     NUNCA escritos pelo cliente (RN-205/221/222)
+ *   - kitId (id do kit COBRADO — fulfillment E12): writer-only de Function e
+ *     IMUTÁVEL — owner/promoter/athlete não criam nem alteram; balcão lê
  *   - tenantId imutável + coerente com o evento pai (ADR-009/S1600)
  *
  * Pré-requisito: Firestore Emulator na porta 8080 (via emulators:exec).
@@ -237,6 +239,9 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
         atletaId: 'atleta-0001', atletaNome: 'Marina Silva',
         kit: 'kit_ouro', chipNumero: null,
         status: 'pendente', modalidade: '21k',
+        // kitId como a Function do checkout grava (Admin SDK ignora Rules):
+        // alvo dos ataques de adulteração + prova de leitura do balcão (E12).
+        kitId: 'kit-ouro',
       }
     );
     batch.set(
@@ -483,6 +488,73 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
     await assertFails(
       updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
         checkinEm: new Date(),
+      })
+    );
+  });
+
+  // ── kitId: writer-only (Function) + imutável (follow-up review kit E12) ──
+  // ATAQUES (Schneier): adulterar kitId trocaria o kit a entregar no balcão
+  // sem mudar o valor pago. Cliente NENHUM escreve/altera — nem o owner.
+
+  it('ATAQUE: owner NÃO CRIA inscrito já carimbado com kitId (writer-only)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(
+        refInscrito(db, MEIA_FLORIPA_ID, 'insc-kitid-create'),
+        inscritoValido({ kitId: 'kit-ouro' })
+      )
+    );
+  });
+
+  it('ATAQUE: owner NÃO ALTERA kitId de inscrito existente (imutável)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        kitId: 'kit-basico', // downgrade do kit a entregar
+      })
+    );
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        kitId: null, // nem limpar (sumir com a obrigação de entrega)
+      })
+    );
+  });
+
+  it('ATAQUE: promoter NÃO escreve/altera kitId (nem é writer, nem o campo)', async () => {
+    const db = dbAs('uid-promoter-castelo', promoterClaims);
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        kitId: 'kit-ouro',
+      })
+    );
+    await assertFails(
+      setDoc(
+        refInscrito(db, MEIA_FLORIPA_ID, 'insc-kitid-promoter'),
+        inscritoValido({ kitId: 'kit-ouro' })
+      )
+    );
+  });
+
+  it('ATAQUE: athlete com claim do tenant NÃO altera o próprio kitId (upgrade grátis)', async () => {
+    const db = dbAs('atleta-0001', { role: 'athlete', tenantId: CASTELO_ID });
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        kitId: 'kit-premium-vip', // pagou kit-ouro, tenta kit maior
+      })
+    );
+  });
+
+  it('balcão (owner) LÊ o kitId EXATO para fulfillment (E12)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    const snap = await getDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'));
+    expect(snap.get('kitId')).toBe('kit-ouro');
+  });
+
+  it('update legítimo (status) segue OK em doc COM kitId — trava não engessa', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        status: 'confirmado',
       })
     );
   });

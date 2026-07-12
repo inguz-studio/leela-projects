@@ -233,12 +233,14 @@ describe('join [pag] do slide-in (getPedidoEPagamentoDoInscrito)', () => {
 // dadosPessoais/tamanhos por update direto. describe ATIVO (sem .skip).
 // ─────────────────────────────────────────────────────────────────────────
 describe('rules aplicadas: campos do checkout são só-Function (A-T2)', () => {
-  it('update de cliente NÃO toca pedidoRef/ehResponsavel/dadosPessoais/tamanhos', async () => {
+  it('update de cliente NÃO toca pedidoRef/ehResponsavel/dadosPessoais/tamanhos/kitId', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     const ref = doc(db, 'eventos', MEIA_FLORIPA_ID, 'inscritos', 'insc-0001');
     await assertFails(updateDoc(ref, { pedidoRef: 'ped-forjado' }));
     await assertFails(updateDoc(ref, { ehResponsavel: false }));
     await assertFails(updateDoc(ref, { 'dadosPessoais.cpf': '111.111.111-11' }));
     await assertFails(updateDoc(ref, { tamanhos: { 'camiseta-tecnica': 'XG' } }));
+    // Follow-up review kit (E12): kitId (kit COBRADO) é só-Function também.
+    await assertFails(updateDoc(ref, { kitId: 'kit-forjado' }));
   });
 });

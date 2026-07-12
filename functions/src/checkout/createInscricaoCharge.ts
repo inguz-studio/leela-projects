@@ -85,7 +85,8 @@ export interface CheckoutInscritoInput {
   /**
    * Id do kit real do evento (`eventos/{id}/kits/{kitId}`) — precifica o delta
    * via o core (RN-210/211). Opcional; ausente = sem kit, sem delta. O servidor
-   * valida a oferta por modalidade (kit não ofertado → invalid-argument).
+   * valida a oferta por modalidade (kit não ofertado → invalid-argument) e
+   * PERSISTE este id no inscrito (fulfillment — ver criarDocsDeCheckout).
    */
   kitId?: string;
 }
@@ -528,6 +529,18 @@ async function criarDocsDeCheckout(
           // ver kitEnumInscritoFromId): impede pagar barato e carimbar o kit
           // caro no doc de retirada.
           kit: kitEnumInscritoFromId(inscrito.kitId),
+          // kitId EXATO cobrado — fulfillment (follow-up review c59dc28).
+          // NÃO é input livre: criarDocsDeCheckout só roda depois de
+          // carregarInsumos validar ESTE id contra eventos/{id}/kits (id sem
+          // doc → invalid-argument, nada é escrito) e precificar a linha pelo
+          // kit.preco DO DOC — logo o id persistido é sempre o do kit cuja
+          // cobrança entrou no pedido. Kits custom do organizador deixam de
+          // colapsar em 'sem_kit' no balcão: o rótulo enum segue derivado
+          // (acima), mas a entrega lê o id real. null = inscrição sem kit.
+          kitId:
+            typeof inscrito.kitId === 'string' && inscrito.kitId.length > 0
+              ? inscrito.kitId
+              : null,
           chipNumero: null,
           status: 'pendente',
           modalidade: inscrito.modalidade,

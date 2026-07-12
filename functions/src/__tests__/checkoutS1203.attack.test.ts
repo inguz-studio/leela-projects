@@ -24,6 +24,7 @@ import { processarWebhookPagamento, WebhookRejeitadoError } from '../checkout/we
 import { agoraCheckout } from '../checkout/relogioCheckout';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 import { buildMockWebhookPayload, MockPaymentProvider } from '../payments/mockProvider';
+import { parseInscrito } from '@leela/core';
 
 const PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
 const HOST = 'localhost';
@@ -74,6 +75,16 @@ async function seed(): Promise<void> {
     id: 'HEROI10', tenantId: TENANT_ID, codigo: 'HEROI10', tipo: 'percentual', valor: 10,
     tetoUso: 100, inicioEm: tsRel(-1), fimEm: tsRel(30), usos: 0, criadoEm: now, atualizadoEm: now,
   });
+  // Kits do evento (H7 — fulfillment): um canônico (id→enum) e um CUSTOM do
+  // organizador (fora do enum RN-202 — o caso que o kitId persistido resolve).
+  batch.set(eventoRef.collection('kits').doc('kit-prata'), {
+    id: 'kit-prata', tenantId: TENANT_ID, nome: 'Kit Prata', preco: 35,
+    capacidade: 500, modalidades: ['10k'], criadoEm: now, atualizadoEm: now,
+  });
+  batch.set(eventoRef.collection('kits').doc('kit-vip-trail'), {
+    id: 'kit-vip-trail', tenantId: TENANT_ID, nome: 'Kit VIP Trail', preco: 50,
+    capacidade: 100, modalidades: ['10k'], criadoEm: now, atualizadoEm: now,
+  });
   await batch.commit();
 }
 
@@ -106,7 +117,9 @@ beforeAll(async () => {
   // Fronteira: nenhum teste roda com chave Asaas herdada do ambiente.
   delete process.env['ASAAS_API_KEY'];
   await seed();
-});
+// gRPC init do Emulator + seed excede o hookTimeout default (10s) sob carga
+// (máquina 8GB — memória do Vitor): 60s dá folga sem mascarar bug real.
+}, 60_000);
 
 afterAll(async () => {
   await testEnv?.cleanup();
@@ -121,7 +134,7 @@ describe('ATAQUE H1 · confirmar pedido de OUTRO pagador', () => {
   beforeAll(async () => {
     const charge = await createInscricaoChargeCore(db, provider, baseInput('chk-h1-ana-0001'), { uid: ANA_UID });
     pedidoId = charge.pedidoId;
-  });
+  }, 60_000);
 
   it('intruso (uid diferente) NÃO confirma o pedido da Ana → permission-denied, estado intacto', async () => {
     const receitaAntes = await receita();
@@ -318,7 +331,7 @@ describe('ATAQUE H6 · forjar webhook direto (superfície pública)', () => {
     const charge = await createInscricaoChargeCore(db, provider, baseInput('chk-h6-webhook-0001'), { uid: ANA_UID });
     pedidoId = charge.pedidoId;
     chargeId = charge.chargeId;
-  });
+  }, 60_000);
 
   it('webhook ASSINADO com VALOR inflado é rejeitado (integridade cruzada 409)', async () => {
     const rAntes = await receita();
@@ -352,5 +365,84 @@ describe('ATAQUE H6 · forjar webhook direto (superfície pública)', () => {
     await expect(processarWebhookPagamento(db, provider, semAssinatura)).rejects.toThrow(WebhookRejeitadoError);
     expect(await receita()).toBe(rAntes);
     expect(await statusPedido(pedidoId)).toBe('pendente');
+  });
+});
+
+// =============================================================================
+// H7 — Fulfillment do kit: kitId persistido == kit COBRADO (follow-up c59dc28)
+// =============================================================================
+describe('ATAQUE H7 · forjar kit da entrega (rótulo × kitId persistido)', () => {
+  const inscritoDoc = async (inscritoId: string) => {
+    const snap = await db.doc(`eventos/${EVENTO_ID}/inscritos/${inscritoId}`).get();
+    expect(snap.exists).toBe(true);
+    return snap.data() as Record<string, unknown>;
+  };
+
+  it('ATAQUE: rótulo kit_ouro forjado + kitId barato → doc carimba o kit COBRADO (id e rótulo)', async () => {
+    const input: CreateInscricaoChargeInput = {
+      ...baseInput('chk-h7-forja-0001'),
+      inscritos: [{
+        nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25',
+        modalidade: '10k',
+        kit: 'kit_ouro', // rótulo FORJADO (kit que ela NÃO pagou)
+        kitId: 'kit-prata', // o que ela realmente paga (+35)
+      }],
+    };
+    const r = await createInscricaoChargeCore(db, provider, input, { uid: ANA_UID });
+
+    // Cobrança = lote 189.90 + kit-prata 35 = 224.90 (o preço vem do DOC do kit)
+    expect(r.valores.valorFinal).toBe(224.9);
+    const pag = await db.collection('pagamentos').doc(r.pagamentoId).get();
+    expect(pag.get('gatewayAmountCentavos')).toBe(22490);
+
+    // Doc do inscrito: kitId EXATO cobrado + rótulo DERIVADO dele — o forjado
+    // 'kit_ouro' não deixa rastro em lugar NENHUM do doc.
+    const doc = await inscritoDoc(r.inscritoIds[0]!);
+    expect(doc['kitId']).toBe('kit-prata');
+    expect(doc['kit']).toBe('kit_prata');
+    expect(JSON.stringify(doc)).not.toContain('kit_ouro');
+  });
+
+  it('kit CUSTOM do organizador: rótulo degrada p/ sem_kit MAS o balcão tem o id exato', async () => {
+    const input: CreateInscricaoChargeInput = {
+      ...baseInput('chk-h7-custom-0001'),
+      inscritos: [{
+        nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25',
+        modalidade: '10k', kitId: 'kit-vip-trail', // fora do enum RN-202
+      }],
+    };
+    const r = await createInscricaoChargeCore(db, provider, input, { uid: ANA_UID });
+    expect(r.valores.valorFinal).toBe(239.9); // 189.90 + 50 do kit custom
+
+    // ANTES deste follow-up o doc só tinha kit='sem_kit' — o balcão não sabia
+    // QUAL kit entregar. Agora o id real persiste e o parse do core o expõe.
+    const raw = await inscritoDoc(r.inscritoIds[0]!);
+    const inscrito = parseInscrito(r.inscritoIds[0]!, raw);
+    expect(inscrito.kitId).toBe('kit-vip-trail');
+    expect(inscrito.kit).toBe('sem_kit'); // degradação honesta do ENUM, só do rótulo
+  });
+
+  it('sem kit escolhido → kitId null EXPLÍCITO (não confunde com legado ausente)', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider, baseInput('chk-h7-semkit-0001'), { uid: ANA_UID });
+    const doc = await inscritoDoc(r.inscritoIds[0]!);
+    expect(doc['kitId']).toBeNull();
+    expect(doc['kit']).toBe('sem_kit');
+  });
+
+  it('ATAQUE: kitId fantasma (sem doc no evento) → invalid-argument e NADA é escrito', async () => {
+    const input: CreateInscricaoChargeInput = {
+      ...baseInput('chk-h7-fantasma-0001'),
+      inscritos: [{
+        nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25',
+        modalidade: '10k', kitId: 'kit-fantasma-9999',
+      }],
+    };
+    await expect(
+      createInscricaoChargeCore(db, provider, input, { uid: ANA_UID })
+    ).rejects.toThrow(/não existe/);
+    const pedido = await db.collection('pedidos')
+      .doc(`ped-${ANA_UID}-chk-h7-fantasma-0001`).get();
+    expect(pedido.exists).toBe(false); // id fantasma nunca vira pedido/inscrito
   });
 });

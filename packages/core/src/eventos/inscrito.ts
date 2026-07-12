@@ -96,6 +96,16 @@ export interface Inscrito {
   /** Percurso escolhido (5k/10k/21k…) */
   modalidade: string;
   /**
+   * Id EXATO do kit COBRADO no checkout (→ `eventos/{eventoId}/kits/{kitId}`)
+   * — fulfillment do balcão (follow-up da review do kit c59dc28 · E12).
+   * O enum `kit` (RN-202) colapsa kits custom do organizador em `sem_kit`;
+   * este campo preserva o id real para o balcão entregar o kit certo.
+   * null = inscrição SEM kit; ausente = doc legado pré-persistência.
+   * Escrita SÓ pela Function do checkout (server-side, derivado do id que
+   * precificou a linha) — cliente nunca escreve/altera (Rules).
+   */
+  kitId?: string | null;
+  /**
    * ADR-011 — pedido a que a inscrição pertence (→ pedidos/{pedidoId}).
    * null = legado pré-ADR-011 ou inscrição ainda sem pedido (o join `[pag]`
    * cai no fallback `getPedidoDoInscrito` por `inscritoRefs`).
@@ -145,6 +155,11 @@ export interface Inscrito {
  * As Rules de `inscritos` ESPELHAM os 4 campos (aplicado em 2c01306):
  * `semCamposDeFunctionInscrito`/`camposDeFunctionIntocados` os incluem nas
  * listas `hasAny`, negando escrita direta de cliente no create/update.
+ *
+ * Follow-up review kit (E12): `kitId` entra na lista — é o id do kit
+ * COBRADO (fulfillment), escrito pela Function do checkout junto com o
+ * rótulo derivado; adulterá-lo trocaria o kit a entregar sem mudar o
+ * valor pago (fraude de balcão). Imutável para cliente após a criação.
  */
 export const CAMPOS_FUNCTION_INSCRITO = [
   'kitEntregueEm',
@@ -155,6 +170,7 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   'ehResponsavel',
   'dadosPessoais',
   'tamanhos',
+  'kitId',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -245,6 +261,17 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
     throw new Error(`Inscrito ${id}: "ehResponsavel" deve ser boolean (ADR-011)`);
   }
 
+  // Fulfillment (E12): kitId presente deve ser id não-vazio ou null (sem
+  // kit); ausente = legado. Link de entrega corrompido lança fail-fast.
+  const kitId = data['kitId'];
+  if (
+    kitId !== null &&
+    kitId !== undefined &&
+    (typeof kitId !== 'string' || kitId.length === 0)
+  ) {
+    throw new Error(`Inscrito ${id}: "kitId" inválido (string|null — E12)`);
+  }
+
   const contexto = `Inscrito ${id}`;
   const inscrito: Inscrito = {
     id,
@@ -270,6 +297,12 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
       `Inscrito ${id}: ehResponsavel true com pedidoRef null — vínculo ` +
         `ao pedido incoerente (ADR-011: escritos no mesmo batch do checkout)`
     );
+  }
+
+  // kitId só entra quando o doc o carrega (ausente = legado, semântica
+  // distinta de null = "cobrado sem kit") — exactOptionalPropertyTypes.
+  if (kitId !== undefined) {
+    inscrito.kitId = typeof kitId === 'string' ? kitId : null;
   }
 
   if (data['dadosPessoais'] !== undefined) {

@@ -95,6 +95,30 @@ describe('parseInscrito (S203-T1)', () => {
     expect(inscrito.kitEntregueEm).toEqual(fakeTs);
     expect(inscrito.qrToken).toBe('tok-opaco');
   });
+
+  it('kitId (fulfillment E12): string preserva, null preserva, ausente NÃO inventa', () => {
+    // O balcão distingue: string = id exato do kit cobrado; null = comprado
+    // sem kit; ausente = doc legado pré-persistência (não vira null forjado).
+    const comKit = docInscrito();
+    comKit['kitId'] = 'kit-vip-do-organizador';
+    expect(parseInscrito('x', comKit).kitId).toBe('kit-vip-do-organizador');
+
+    const semKit = docInscrito();
+    semKit['kitId'] = null;
+    expect(parseInscrito('x', semKit).kitId).toBeNull();
+
+    expect('kitId' in parseInscrito('x', docInscrito())).toBe(false);
+  });
+
+  it('lança com kitId vazio ou não-string (link de entrega corrompido — E12)', () => {
+    const vazio = docInscrito();
+    vazio['kitId'] = '';
+    expect(() => parseInscrito('x', vazio)).toThrow(/kitId/);
+
+    const numerico = docInscrito();
+    numerico['kitId'] = 7;
+    expect(() => parseInscrito('x', numerico)).toThrow(/kitId/);
+  });
 });
 
 describe('derivações puras de Inscrito', () => {
@@ -112,7 +136,8 @@ describe('derivações puras de Inscrito', () => {
 
   it('CAMPOS_FUNCTION_INSCRITO espelha as Rules (escrita só por Function)', () => {
     // FABLE-A-T2 (ADR-011): + pedidoRef/ehResponsavel/dadosPessoais/tamanhos
-    // (escritos pela Function do checkout — S1203-T5)
+    // (escritos pela Function do checkout — S1203-T5).
+    // Follow-up review kit (E12): + kitId (id do kit COBRADO — fulfillment).
     expect(CAMPOS_FUNCTION_INSCRITO).toEqual([
       'kitEntregueEm',
       'checkinEm',
@@ -122,6 +147,7 @@ describe('derivações puras de Inscrito', () => {
       'ehResponsavel',
       'dadosPessoais',
       'tamanhos',
+      'kitId',
     ]);
   });
 });

@@ -120,7 +120,7 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
     ).toThrow(/ehResponsavel/);
   });
 
-  it('CAMPOS_FUNCTION_INSCRITO ganhou os 4 campos do checkout (A-T2)', () => {
+  it('CAMPOS_FUNCTION_INSCRITO ganhou os 4 campos do checkout (A-T2) + kitId (E12)', () => {
     expect(CAMPOS_FUNCTION_INSCRITO).toEqual([
       'kitEntregueEm',
       'checkinEm',
@@ -130,6 +130,7 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       'ehResponsavel',
       'dadosPessoais',
       'tamanhos',
+      'kitId',
     ]);
   });
 });

@@ -349,6 +349,9 @@ service cloud.firestore {
       // string|null (null até a entrega). Carimbos de operação
       // (kitEntregueEm/checkinEm/qrToken/ingressoEmitidoEm) são de escrita
       // EXCLUSIVA de Function (RN-205/221/222) — cliente nunca escreve.
+      // `kitId` (id EXATO do kit cobrado — fulfillment E12) idem: escrito SÓ
+      // pela Function do checkout e imutável depois (cliente nem cria nem
+      // atualiza — ver semCamposDeFunctionInscrito/camposDeFunctionIntocados).
       // TODO(E04/E12): atleta dono lê a própria inscrição só na story do
       // checkout, com teste (mesmo gate do TODO de leitura pública acima).
       match /inscritos/{inscritoId} {
@@ -373,22 +376,30 @@ service cloud.firestore {
             || request.resource.data.chipNumero == null;
         }
 
-        /** Cliente não CRIA doc já carimbado com campos de Function. */
+        /**
+         * Cliente não CRIA doc já carimbado com campos de Function.
+         * `kitId` incluso (follow-up review kit E12): é o id do kit COBRADO,
+         * gravado pela Function do checkout junto com o rótulo derivado —
+         * espelha o padrão dos campos financeiros `[pag]` (pedidoRef etc.).
+         */
         function semCamposDeFunctionInscrito() {
           return !request.resource.data.keys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
-             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos']
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId']
           );
         }
 
         /**
          * Update de cliente não TOCA campos de Function (RN-205/206/221/222).
          * `chipNumero` incluso (S204-T2): nem para setar, nem para limpar.
+         * `kitId` incluso (follow-up review kit E12): IMUTÁVEL após a criação
+         * pela Function — adulterá-lo trocaria o kit a entregar no balcão sem
+         * mudar o valor pago (fraude de fulfillment). Nem setar, nem limpar.
          */
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
-             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos']
+             'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId']
           );
         }
 
