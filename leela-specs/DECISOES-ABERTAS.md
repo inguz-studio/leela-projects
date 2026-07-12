@@ -3,9 +3,15 @@
 > Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança.
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md`.
 
+## ✅ Decididas 2026-07-11 (turno atual)
+
+1. **Homepage/catálogo = NO ESCOPO da V1 (Vitor decidiu 2026-07-11): Leela é MARKETPLACE + SaaS.** Reverte a recomendação anterior de adiar. A home tem hero (não necessariamente sobre eventos de bem-estar) + **uma dobra com os eventos publicados** (padrão Cheers: marketplace de descoberta acima do SaaS de produtor). Vira stories novas no E12 (superfície pública): homepage (`/`) + catálogo/listagem de eventos publicados + busca. Some do S1200-T1 a exclusão "catálogo fora de escopo". Direção visual: primeira versão sobre o DS atual, refinar com referências depois (ver item 3).
+2. **Checkout SEM Asaas/KYC = SIM, via `PaymentProvider` sandbox (ADR-006).** Constrói-se o fluxo inteiro (5 etapas → cobrança simulada → webhook → inscrito confirmado) com um provider sandbox; `AsaasProvider` entra atrás da mesma interface quando o KYC sair, sem tocar no fluxo. Desbloqueia o E12 hoje.
+3. **Landing E12 (público): primeira versão AGORA sobre o DS atual; Vitor passa referências depois e decide o refino.** Não esperar o UI-SPEC completo — construir uma v1 renderizando o evento seedado + checkout sandbox, iterar com referências.
+
 ## 🔴 Aguardando você agora
 
-1. **Homepage/catálogo da Leela — está no escopo da V1?** *(levantado por você 2026-07-11)* Hoje o E12 constrói a página **por evento** (`/{evento}`), mas **não há** homepage institucional (o que fica em `leela.com/`) nem catálogo/busca pública de eventos — o `S1200-T1` deixa isso explicitamente fora de escopo. Opções: **(a)** escopar uma homepage simples + catálogo de eventos publicados para a V1 (esforço menor que o painel; entra como stories novas no E12/E07-web); **(b)** adiar para pós-V1 (o site institucional/marketing costuma ser esforço separado — a V1 vive de link direto de evento/organizador). Recomendo (b) para não atrasar o "vender ponta a ponta", com uma home mínima só quando houver marca/posicionamento fechados. **Sua decisão.**
+*(nenhuma pendência bloqueante — homepage, checkout e landing decididos acima)*
 
 ## 🟡 Quando você tiver os dados (não bloqueiam código)
 
