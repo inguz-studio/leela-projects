@@ -27,8 +27,9 @@ export JAVA_HOME="$HOME/.jdks/jdk-21.0.11+10"
 export PATH="$JAVA_HOME/bin:$PATH"
 # Teto de heap da JVM do Emulator: por padrão a JVM reserva ~25% da RAM, o que
 # pode estourar a memória em máquina modesta (ou junto do Emulator dos agentes).
-# 512m é folgado para o volume de seed. Override via JAVA_TOOL_OPTIONS.
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:--Xmx512m}"
+# 1024m: 512m derrubava o Functions Emulator no meio do seed nesta máquina de 8GB
+# (Java morre → callables como getOverview pendem eternamente). Override via env.
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:--Xmx1024m}"
 
 # --- Raiz do repo ------------------------------------------------------------
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
