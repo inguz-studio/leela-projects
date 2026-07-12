@@ -201,7 +201,7 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 
 ### LEELA-E04-slim · Configuração e vendas (sem afiliação; cupons simples) — brief `onda2-E04-lotes.md`
 
-- [ ] LEELA-S300-T1 — Modelo `paginaVendas` + `lotes` + `cupons` simples (sem afiliado) + Rules + seed
+- [x] LEELA-S300-T1 — Modelo `paginaVendas` + `lotes` + `cupons` simples (sem afiliado) + Rules + seed — **✅ GATE PASS 2026-07-11/12** (`6b45b9c` kernel; **ADR-012 lote-por-modalidade travado** — lote pertence à modalidade; `precoVigente`/`loteAtivo` derivados, cupom regex, `paginaVendas` com seções por config; re-review em **Fable** achou e fechou: janela-morta vendia a preço legado + sem hand-off de quantidade (`9a5a671`+`308275f`), `financeiro/current` vazava repasse via catch-all → Rules writer-only + allowlist (`8007f52`), `moneyCentExato` negava 2 casas legítimas → helper portável `v*0.0==0.0` (`7ce033f`; `math.isInfinite` não existe no runtime de Rules@13); gate consolidado emulator **181/181** serial)
 - [ ] LEELA-S300-T2 — Function de virada de lote (RN-300) + preço vigente por percurso + guard RN-200
 - [ ] LEELA-S300-T3 — Tela editor de conteúdo da página (seções web/app + SEO + publicar)
 - [ ] LEELA-S300-T4 — Modal de lote (virada por data/quantidade, preços por percurso)
@@ -236,7 +236,7 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 - [ ] LEELA-S1204-T2 — `validateCoupon` server-side (cupom de evento, sem afiliadoRef; consome S300-T1)
 - [ ] LEELA-S1207-T2 — `validateInscrito` core puro (RN-145/148)
 - [ ] LEELA-S1207-T1 — Persistência dos 3 campos de compliance ao criar inscrito
-- [ ] LEELA-S1203-T5 — `createInscricaoCharge` + `pedidos/{id}` (ADR-011) + sandbox provider — **dep NOVA (D1, 2026-07-10): `LEELA-FABLE-A-T1`** (o kernel `pedidos` nasce em FABLE-A; aqui só o produtor de escrita do checkout — NÃO redefinir a coleção)
+- [x] LEELA-S1203-T5 — `createInscricaoCharge` + `pedidos/{id}` (ADR-011) + sandbox provider — **dep NOVA (D1, 2026-07-10): `LEELA-FABLE-A-T1`** (o kernel `pedidos` nasce em FABLE-A; aqui só o produtor de escrita do checkout — NÃO redefinir a coleção) — **✅ FUNDAÇÃO PASS 2026-07-12** (checkout de ponta a ponta **SEM Asaas/KYC** via `MockPaymentProvider` sandbox + `selectProvider` fail-safe (sandbox nunca roda se houver chave real); `computeSaleState` puro (base→desconto→taxa→parcelamento), `validarDadosMinimosInscrito`, `createInscricaoCharge` (ids determinísticos, 3 camadas de idempotência, popula `itens[]`), webhook idempotente (flip pendente→confirmado + agrega receita); re-fundação em **Fable**; gate consolidado emulator 181/181. **Falta a UI de 5 etapas (S1203-T1..T4) = próximo lote.** AsaasProvider real = parked até chave sandbox)
 - [ ] LEELA-S1203-T6 — Webhook idempotente (inscrito→confirmado, ∑ via `agregarFinanceiro` do E03)
 - [ ] LEELA-S1206-T1 — `qrToken` assinado + emissão idempotente do ingresso por inscrito
 - [ ] LEELA-S1206-T2 — Log de notificações (`hasSent`/`markSent`) + Rules — **dep NOVA (next-trail): `LEELA-FABLE-G-T1`** (o log de envio do ingresso é o MESMO agregado do log de comunicação — não modelar um 2º)
