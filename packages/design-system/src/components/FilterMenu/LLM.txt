@@ -1,0 +1,45 @@
+# FilterMenu — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FilterMenu
+version: 0.0.1
+generated_at: "2026-07-11"
+source: src/components/FilterMenu
+verdict: APPROVE (showroom leela-build-2d6ee98d — refino filtros/subnav)
+
+## Import canônico
+import { FilterMenu, type FilterMenuProps, type FilterMenuOption } from '@leela/design-system'
+
+## Quando usar
+Filtrar uma listagem/tabela por uma FACETA de 4+ valores em MULTI-seleção (marcar Ativos + Encerrados de uma vez). Limiar Polaris: <4 valores → Chips; 4+ → este dropdown. Compõe DropdownMenu + itens menuitemcheckbox; vazio = sem filtro ("Todos"); o gatilho resume a seleção ("Status: 2").
+
+## Quando NÃO usar
+- Seleção ÚNICA exclusiva (radio-like): com 4+ valores use Select; com <4 use Chips/Radio.
+- Faceta de <4 valores: use Chip em fileira (o próprio limiar manda).
+- Menu de AÇÕES (editar/excluir): use DropdownMenu direto (itens menuitem, fecham ao clicar).
+
+## Props válidas
+- label: string   (obrigatório) — rótulo da faceta; aparece no gatilho e nomeia o menu.
+- options: FilterMenuOption[]   (obrigatório) — FilterMenuOption = { id: string; label: string; count?: number }
+- selected: string[]   (obrigatório) — ids marcados; [] = sem filtro.
+- onChange: (next: string[]) => void   (obrigatório)
+- allLabel: string   (default: 'Todos')
+- align: 'left' | 'right'   (default: 'left')
+- className: string   (default: undefined)
+Nenhuma outra prop existe.
+
+## Comportamento
+- Multi-seleção: marcar uma opção não desmarca as outras (checkbox, não radio).
+- Clicar num item NÃO fecha o menu (marca vários); Esc/click-fora/Tab fecham.
+- Teclado herdado do DropdownMenu: setas, Home, End, Esc; foco no 1º item ao abrir.
+
+## Proibido (do/don't)
+DON'T: usar para seleção única exclusiva (isso é Select/Radio/Chip).
+DON'T: aninhar o componente Checkbox real dentro do item (o indicador é visual/aria-hidden; a semântica é aria-checked no menuitemcheckbox).
+DON'T: hex, rgb, px, rem em style inline.
+DO: mantenha selected como fonte única (controlado); [] = "Todos".
+
+## Exemplo mínimo (válido, copiável)
+<FilterMenu label="Status" options={[{ id: 'ativos', label: 'Ativos' }, { id: 'encerrados', label: 'Encerrados' }, { id: 'rascunhos', label: 'Rascunhos' }]} selected={selected} onChange={setSelected} />
+
+## Instrução para o modelo (colar no system prompt)
+Use FilterMenu apenas para filtro de faceta MULTI-seleção com 4+ valores. Para seleção única, use Select. Só as props acima existem. Nunca aplique cor/espaço via literal; use tokens do design system.

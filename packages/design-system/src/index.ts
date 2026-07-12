@@ -81,6 +81,8 @@ export { Popover } from './components/Popover'; // @deprecated alias de Dropdown
 export type { PopoverProps, PopoverAction } from './components/Popover';
 export { DropdownMenu } from './components/DropdownMenu';
 export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
+export { FilterMenu } from './components/FilterMenu';
+export type { FilterMenuProps, FilterMenuOption } from './components/FilterMenu';
 
 // ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
 export { Modal, ConfirmModal } from './components/Modal';

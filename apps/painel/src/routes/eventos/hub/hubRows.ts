@@ -192,3 +192,22 @@ export function filtrarHubEventos(
   if (filtro === 'todos') return [...views];
   return views.filter((v) => v.categoria === filtro);
 }
+
+/** Categoria concreta de status (o filtro MULTI opera sobre estas 3). */
+export type Categoria = Exclude<HubFiltro, 'todos'>;
+
+/**
+ * Aplica o filtro de status em MULTI-seleção (migração single→multi, direção
+ * Vitor 2026-07-11): conjunto VAZIO = sem filtro (mostra tudo, "Todos"); com
+ * categorias marcadas, mantém as views cuja categoria está no conjunto (OR
+ * entre categorias — serve à varredura, "ver Ativos + Encerrados de uma vez").
+ * @pure
+ */
+export function filtrarHubEventosMulti(
+  views: readonly HubEventoView[],
+  categorias: readonly Categoria[],
+): HubEventoView[] {
+  if (categorias.length === 0) return [...views];
+  const set = new Set(categorias);
+  return views.filter((v) => set.has(v.categoria));
+}

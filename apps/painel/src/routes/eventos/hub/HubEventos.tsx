@@ -18,10 +18,10 @@ import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
-  Chip,
   DropdownMenu,
   EmptyState,
   EventRow,
+  FilterMenu,
   IconButton,
   PageHeader,
   Skeleton,
@@ -34,7 +34,8 @@ import { formatBRL, formatInt } from '../_lib/format';
 import {
   contarPorFiltro,
   derivarHubEventos,
-  filtrarHubEventos,
+  filtrarHubEventosMulti,
+  type Categoria,
   type HubFiltro,
 } from './hubRows';
 
@@ -48,8 +49,11 @@ export interface HubEventosProps {
   onAbrirSubarea: (slug: string, subarea: 'inscritos' | 'financeiro' | 'kits') => void;
 }
 
-const FILTROS: ReadonlyArray<{ id: HubFiltro; label: string }> = [
-  { id: 'todos', label: 'Todos' },
+// Faceta de status como MULTI-seleção: as 3 categorias concretas são as opções
+// (checkbox); "Todos" deixa de ser um chip e passa a ser o estado SEM seleção
+// (conjunto vazio) — evitar "Todos" + independentes juntos respeita a regra de
+// não misturar exclusivo com multi (design-principles §b).
+const CATEGORIAS: ReadonlyArray<{ id: Categoria; label: string }> = [
   { id: 'ativos', label: 'Ativos' },
   { id: 'encerrados', label: 'Encerrados' },
   { id: 'rascunhos', label: 'Rascunhos' },
@@ -70,33 +74,38 @@ function KpisGlobais({ eventos }: { eventos: Evento[] }): JSX.Element {
   );
 }
 
-/** Filtro de status compacto (uma linha; L-005 — o chrome não empilha). */
+/**
+ * Filtro de status como dropdown de checkboxes MULTI-seleção (migração
+ * single→multi; direção Vitor 2026-07-11). A faceta tem 4 valores (Todos + 3
+ * status) → passa do chip para o dropdown (limiar Polaris 4+). O gatilho resume
+ * a seleção ("Status: 2" | "Status: Todos") e cada categoria mostra a contagem.
+ */
 function FiltroStatus({
-  filtro,
+  selected,
   onChange,
   contagem,
 }: {
-  filtro: HubFiltro;
-  onChange: (f: HubFiltro) => void;
+  selected: Categoria[];
+  onChange: (next: Categoria[]) => void;
   contagem: Record<HubFiltro, number>;
 }): JSX.Element {
+  const options = CATEGORIAS.map((c) => ({
+    id: c.id,
+    label: c.label,
+    count: contagem[c.id],
+  }));
   return (
     <div
       role="group"
       aria-label="Filtrar eventos por status"
-      className="flex items-center gap-[var(--spacing-2)] flex-wrap"
+      className="flex items-center"
     >
-      {FILTROS.map((f) => (
-        <Chip
-          key={f.id}
-          active={filtro === f.id}
-          aria-label={`${f.label} (${contagem[f.id]})`}
-          onClick={() => onChange(f.id)}
-        >
-          {f.label}
-          <span className="tabular-nums opacity-70">{contagem[f.id]}</span>
-        </Chip>
-      ))}
+      <FilterMenu
+        label="Status"
+        options={options}
+        selected={selected}
+        onChange={(next) => onChange(next as Categoria[])}
+      />
     </div>
   );
 }
@@ -110,7 +119,8 @@ function ListaEventos({
   onAbrirEvento: (slug: string) => void;
   onAbrirSubarea: HubEventosProps['onAbrirSubarea'];
 }): JSX.Element {
-  const [filtro, setFiltro] = useState<HubFiltro>('todos');
+  // MULTI-seleção: conjunto vazio = "Todos" (sem filtro).
+  const [selected, setSelected] = useState<Categoria[]>([]);
   const [menuAberto, setMenuAberto] = useState<string | null>(null);
 
   // Âncora temporal estável na sessão (padrão OverviewPage/countdown): o hub
@@ -118,11 +128,11 @@ function ListaEventos({
   const agora = useMemo(() => new Date(), []);
   const views = useMemo(() => derivarHubEventos(eventos, agora), [eventos, agora]);
   const contagem = useMemo(() => contarPorFiltro(views), [views]);
-  const visiveis = useMemo(() => filtrarHubEventos(views, filtro), [views, filtro]);
+  const visiveis = useMemo(() => filtrarHubEventosMulti(views, selected), [views, selected]);
 
   return (
     <>
-      <FiltroStatus filtro={filtro} onChange={setFiltro} contagem={contagem} />
+      <FiltroStatus selected={selected} onChange={setSelected} contagem={contagem} />
 
       {visiveis.length === 0 ? (
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)] py-[var(--spacing-4)]">

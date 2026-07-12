@@ -28,7 +28,17 @@
  * Trigger: elemento único (ex.: <Button/>) — recebe onClick, aria-haspopup,
  * aria-expanded e aria-controls via Radix Slot (sem wrapper div clicável).
  *
- * A11y: role="menu" + role="menuitem" + foco no primeiro item ao abrir.
+ * Itens de checkbox (multi-seleção, WAI-APG menuitemcheckbox): quando uma ação
+ * traz `checked` (boolean), o item vira `role="menuitemcheckbox"` com
+ * `aria-checked` e NÃO fecha o menu ao clicar — o foco fica no item para marcar
+ * vários (base do FilterMenu). O indicador visual reusa a linguagem do Checkbox
+ * do DS (mesmos tokens), decorativo/aria-hidden: um <input> real aninhado num
+ * <button> é interativo-dentro-de-interativo (ARIA inválida, mesma regra
+ * documentada no Chip) — a semântica de marcado vive no aria-checked do item.
+ * `count` opcional afixa um número à direita (ex.: contagem por categoria).
+ *
+ * A11y: role="menu" + role="menuitem"/"menuitemcheckbox" + foco no primeiro
+ * item ao abrir.
  *
  * AA (matriz de contraste): item default = popover-foreground sobre popover
  * (text-primary/surface-overlay ✓); hover/focus = accent-foreground sobre
@@ -53,6 +63,14 @@ export interface DropdownMenuAction {
   onClick: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  /**
+   * Quando definido (boolean), o item vira `menuitemcheckbox` (multi-seleção):
+   * mostra indicador de marcado, expõe `aria-checked` e NÃO fecha o menu ao
+   * clicar. `undefined` = item de ação comum (`menuitem`, fecha ao clicar).
+   */
+  checked?: boolean;
+  /** Número afixado à direita do item (ex.: contagem da categoria no filtro). */
+  count?: number;
 }
 
 export interface DropdownMenuProps {
@@ -62,7 +80,50 @@ export interface DropdownMenuProps {
   /** Elemento único que dispara o menu (recebe props via Slot). */
   trigger: React.ReactElement;
   align?: 'left' | 'right';
+  /** Rótulo do landmark do menu (nome acessível). Default: "Ações". */
+  menuLabel?: string;
   className?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Indicador visual de marcado (menuitemcheckbox)
+// ---------------------------------------------------------------------------
+
+/**
+ * Caixa de marcação DECORATIVA (aria-hidden) — reusa a linguagem visual do
+ * Checkbox do DS (tokens de borda/ação + o mesmo check SVG). A semântica de
+ * marcado é do `aria-checked` no item; aqui é só afeto visual, sem <input>
+ * aninhado (que seria interativo dentro de <button> = ARIA inválida).
+ */
+function CheckIndicator({ checked }: { checked: boolean }): JSX.Element {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'relative inline-flex h-[var(--spacing-4)] w-[var(--spacing-4)] shrink-0 items-center justify-center',
+        'rounded-[var(--radius-sm)] border-[length:var(--input-border-width)]',
+        'transition-[background-color,border-color] duration-[var(--motion-duration-fast)]',
+        checked
+          ? 'bg-[var(--action-primary)] border-[color:var(--action-primary)]'
+          : 'bg-[var(--surface-raised)] border-input',
+      )}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn(
+          'h-[var(--spacing-3)] w-[var(--spacing-3)] text-[var(--action-primary-fg)]',
+          checked ? 'block' : 'hidden',
+        )}
+      >
+        <path d="m5 12 5 5L20 7" />
+      </svg>
+    </span>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +136,7 @@ function DropdownMenu({
   onOpenChange,
   trigger,
   align = 'right',
+  menuLabel = 'Ações',
   className,
 }: DropdownMenuProps): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -149,7 +211,7 @@ function DropdownMenu({
   React.useEffect(() => {
     if (open && menuRef.current) {
       const first = menuRef.current.querySelector<HTMLButtonElement>(
-        '[role="menuitem"]:not([disabled])',
+        '[role="menuitem"]:not([disabled]),[role="menuitemcheckbox"]:not([disabled])',
       );
       first?.focus();
     }
@@ -175,7 +237,7 @@ function DropdownMenu({
     const items = menuRef.current
       ? Array.from(
           menuRef.current.querySelectorAll<HTMLButtonElement>(
-            '[role="menuitem"]:not([disabled])',
+            '[role="menuitem"]:not([disabled]),[role="menuitemcheckbox"]:not([disabled])',
           ),
         )
       : [];
@@ -221,7 +283,7 @@ function DropdownMenu({
           ref={menuRef}
           id={menuId}
           role="menu"
-          aria-label="Ações"
+          aria-label={menuLabel}
           onKeyDown={handleMenuKeyDown}
           style={{
             top: position.top,
@@ -238,34 +300,48 @@ function DropdownMenu({
             'animate-in fade-in-0 zoom-in-95',
           )}
         >
-          {actions.map((action) => (
-            <button
-              key={action.id}
-              type="button"
-              role="menuitem"
-              disabled={action.disabled}
-              onClick={(e) => {
-                e.stopPropagation();
-                action.onClick();
-                onOpenChange(false);
-                triggerRef.current?.focus();
-              }}
-              className={cn(
-                'flex items-center w-full rounded-sm',
-                'h-[var(--btn-height-sm)] px-[var(--spacing-3)]',
-                'text-[length:var(--font-size-base)] text-left whitespace-nowrap',
-                'transition-colors duration-[var(--motion-duration-fast)]',
-                'focus-visible:outline-none focus-visible:ring-inset',
-                'focus-visible:ring-2 focus-visible:ring-ring',
-                action.destructive
-                  ? 'text-[var(--text-danger)] hover:bg-[var(--feedback-danger-surface)] focus:bg-[var(--feedback-danger-surface)]'
-                  : 'text-[var(--text-primary)] hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-                action.disabled && 'opacity-40 pointer-events-none',
-              )}
-            >
-              {action.label}
-            </button>
-          ))}
+          {actions.map((action) => {
+            const isCheckbox = action.checked !== undefined;
+            return (
+              <button
+                key={action.id}
+                type="button"
+                role={isCheckbox ? 'menuitemcheckbox' : 'menuitem'}
+                aria-checked={isCheckbox ? action.checked : undefined}
+                disabled={action.disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  action.onClick();
+                  // Checkbox (multi-seleção): mantém o menu aberto e o foco no
+                  // item para marcar várias. Ação comum: seleciona e fecha.
+                  if (!isCheckbox) {
+                    onOpenChange(false);
+                    triggerRef.current?.focus();
+                  }
+                }}
+                className={cn(
+                  'flex items-center w-full rounded-sm gap-[var(--spacing-2)]',
+                  'h-[var(--btn-height-sm)] px-[var(--spacing-3)]',
+                  'text-[length:var(--font-size-base)] text-left whitespace-nowrap',
+                  'transition-colors duration-[var(--motion-duration-fast)]',
+                  'focus-visible:outline-none focus-visible:ring-inset',
+                  'focus-visible:ring-2 focus-visible:ring-ring',
+                  action.destructive
+                    ? 'text-[var(--text-danger)] hover:bg-[var(--feedback-danger-surface)] focus:bg-[var(--feedback-danger-surface)]'
+                    : 'text-[var(--text-primary)] hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
+                  action.disabled && 'opacity-40 pointer-events-none',
+                )}
+              >
+                {isCheckbox && <CheckIndicator checked={action.checked ?? false} />}
+                <span className="flex-1">{action.label}</span>
+                {action.count !== undefined && (
+                  <span className="shrink-0 tabular-nums text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                    {action.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>,
         document.body,
       )}

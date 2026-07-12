@@ -50,25 +50,37 @@ describe('HubEventos', () => {
     expect(screen.getByText('Evento B')).toBeInTheDocument();
   });
 
-  it('filtro de status é compacto (uma linha, 4 chips) e filtra a lista', async () => {
+  it('filtro de status é um dropdown de checkboxes MULTI-seleção e filtra a lista', async () => {
     render(
       <HubEventos
         {...baseProps}
         eventos={[
           mkEvento({ id: 'a', slug: 'a', nome: 'Ativo A', status: 'publicado' }),
           mkEvento({ id: 'b', slug: 'b', nome: 'Rascunho B', status: 'rascunho' }),
+          mkEvento({ id: 'c', slug: 'c', nome: 'Encerrado C', status: 'encerrado' }),
         ]}
         loading={false}
         error={null}
       />,
     );
+    // Migração single→multi (Vitor 2026-07-11): a faceta de 4 categorias virou
+    // dropdown; "Todos" = estado sem seleção; o gatilho resume a seleção.
     const grupo = screen.getByRole('group', { name: 'Filtrar eventos por status' });
-    const chips = within(grupo).getAllByRole('button');
-    expect(chips).toHaveLength(4); // Todos/Ativos/Encerrados/Rascunhos — L-005: 1 linha
+    const gatilho = within(grupo).getByRole('button', { name: /Status: Todos/ });
+    await userEvent.click(gatilho);
 
-    await userEvent.click(within(grupo).getByRole('button', { name: /^Rascunhos/ }));
+    // 3 categorias concretas como checkbox (Todos é o vazio, não uma opção).
+    const menu = screen.getByRole('menu', { name: 'Status' });
+    expect(within(menu).getAllByRole('menuitemcheckbox')).toHaveLength(3);
+
+    // Multi: marcar Rascunhos + Encerrados mostra os dois (varredura), menu fica aberto.
+    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: /Rascunhos/ }));
+    await userEvent.click(within(menu).getByRole('menuitemcheckbox', { name: /Encerrados/ }));
     expect(screen.getByText('Rascunho B')).toBeInTheDocument();
+    expect(screen.getByText('Encerrado C')).toBeInTheDocument();
     expect(screen.queryByText('Ativo A')).toBeNull();
+    // gatilho reflete "Status: 2"
+    expect(within(grupo).getByRole('button', { name: /Status: 2/ })).toBeInTheDocument();
   });
 
   it('clicar na linha navega ao Overview do evento (S200 crit 2)', async () => {

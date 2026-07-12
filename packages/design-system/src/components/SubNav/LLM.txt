@@ -22,8 +22,8 @@ Não use para troca de conteúdo dentro da mesma página — isso é o Tabs (tab
 Nenhuma outra prop existe.
 
 ## Tokens consumidos (nenhum valor cru permitido)
-- --surface-raised / --surface-base
-- --border-subtle / --border-brand / --border-focus
+- --surface-base (fundo plano do container) / --surface-raised (pill do contador)
+- --border-brand / --border-focus  (SubNav plano — sem border-bottom desde 2026-07-11)
 - --subnav-px / --subnav-height / --subnav-underline
 - --subnav-pill-height / --subnav-pill-min-width / --subnav-pill-radius / --subnav-pill-font-size
 - --spacing-1 / --spacing-2 / --spacing-3

@@ -1,16 +1,25 @@
 /**
  * SubNav — barra de sub-navegação (§2.14).
  *
- * Container: bg-surface-raised, padding 0 40px (--subnav-px), border-bottom.
+ * Container: bg-surface-base (= fundo da página, plano), padding 0 40px
+ * (--subnav-px), SEM border-bottom. O único indicador é o sublinhado Brasa 2px
+ * da aba ativa (::after).
  * Tab inativa: font-weight 400, text-secondary.
  * Tab ativa: font-weight 600, text-primary, underline Brasa 2px via ::after.
- * Contador: pill radius 10px, min-width 28px, height 20px, bg-surface-base,
- * font-size 11px (tokens --subnav-pill-*).
+ * Contador: pill radius 10px, min-width 28px, height 20px, bg-surface-raised
+ * (um passo ACIMA do fundo plano p/ o pill não sumir), font-size 11px.
+ *
+ * Decisão (Vitor 2026-07-11): SubNav plano — fundo igual ao da página e sem
+ * divisor. Sobrepõe o "§2.16 flat: border-bottom é divider permitido": aqui a
+ * palavra do Vitor vence, o sublinhado da aba ativa carrega a orientação
+ * sozinho. O pill do contador inverte a relação de elevação (era base sobre
+ * raised; agora raised sobre base) para preservar exatamente o mesmo delta de
+ * luminância — o contraste do texto das abas sobre o novo fundo MELHORA
+ * (text-secondary #BFBFBF sobre #0C0C0C ≈ 10.6:1; text-primary ≈ 18:1).
  *
  * Semântica: navegação entre rotas — nav landmark + lista de links com
  * aria-current="page" na ativa (não é tablist; Tabs §2.7 cobre troca in-page).
  * Teclado: Tab percorre os links normalmente; ← → como atalho opcional.
- * §2.16 flat — border-bottom é divider permitido.
  */
 
 import * as React from 'react';
@@ -61,8 +70,7 @@ function SubNav({
     <nav
       aria-label={ariaLabel}
       className={cn(
-        'bg-[var(--surface-raised)]',
-        'border-b border-b-[var(--border-subtle)]',
+        'bg-[var(--surface-base)]',
         'px-[var(--subnav-px)]',
         className,
       )}
@@ -102,7 +110,7 @@ function SubNav({
                     'px-[var(--spacing-2)]',
                     'rounded-[var(--subnav-pill-radius)]',
                     'text-[length:var(--subnav-pill-font-size)] font-[var(--font-weight-semibold)]',
-                    'bg-[var(--surface-base)]',
+                    'bg-[var(--surface-raised)]',
                     isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
                   )}
                 >

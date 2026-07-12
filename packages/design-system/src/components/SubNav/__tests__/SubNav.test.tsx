@@ -40,10 +40,11 @@ describe('SubNav', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('count pill uses §2.14 pill tokens (bg-surface-base)', () => {
+  it('count pill uses pill tokens (bg-surface-raised sobre o fundo plano)', () => {
     render(<SubNav tabs={tabs} />);
     const pill = screen.getByText('42');
-    expect(pill.className).toContain('bg-[var(--surface-base)]');
+    // Pill inverte a elevação (raised sobre base) p/ não sumir no fundo plano.
+    expect(pill.className).toContain('bg-[var(--surface-raised)]');
     expect(pill.className).toContain('h-[var(--subnav-pill-height)]');
   });
 
@@ -106,11 +107,12 @@ describe('SubNav', () => {
     expect(screen.getByRole('button', { name: 'B' })).toHaveFocus();
   });
 
-  it('container applies §2.14 (bg-surface-raised + px token + border-b)', () => {
+  it('container é plano (bg-surface-base + px token, SEM border-b) — Vitor 2026-07-11', () => {
     render(<SubNav tabs={tabs} />);
     const nav = screen.getByRole('navigation');
-    expect(nav.className).toContain('bg-[var(--surface-raised)]');
+    expect(nav.className).toContain('bg-[var(--surface-base)]');
     expect(nav.className).toContain('px-[var(--subnav-px)]');
-    expect(nav.className).toContain('border-b');
+    // Plano: sem divisor inferior; o sublinhado da aba ativa é o único indicador.
+    expect(nav.className).not.toContain('border-b');
   });
 });

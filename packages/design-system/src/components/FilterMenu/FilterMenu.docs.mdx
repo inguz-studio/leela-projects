@@ -1,0 +1,22 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './FilterMenu.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# FilterMenu
+
+Filtro de faceta multi-seleção (checkbox em lista) num dropdown. É o par do Chip para o outro lado do limiar Polaris: faceta com menos de 4 valores segue como fileira de Chips; com 4+ valores vira este dropdown de checkboxes. Compõe o DropdownMenu (motor WAI-APG) com itens menuitemcheckbox e reusa a linguagem visual do Checkbox.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="FilterMenu"
+  snippet={`import { FilterMenu } from '@leela/design-system';\n\n<FilterMenu\n  label="Status"\n  options={[{ id: 'ativos', label: 'Ativos', count: 4 }]}\n  selected={selected}\n  onChange={setSelected}\n/>`}
+  contract={contract}
+/>

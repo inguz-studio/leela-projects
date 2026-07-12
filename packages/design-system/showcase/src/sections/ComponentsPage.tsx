@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   EmptyState,
   Field,
+  FilterMenu,
   Input,
   Modal,
   PageHeader,
@@ -114,6 +115,7 @@ export function ComponentsPage(): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [rowMenuOpen, setRowMenuOpen] = React.useState<string | null>(null);
   const [filtros, setFiltros] = React.useState<string[]>(['5k']);
+  const [filtroStatus, setFiltroStatus] = React.useState<string[]>([]);
   const [chipRemovido, setChipRemovido] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [subnavAtiva, setSubnavAtiva] = React.useState('inscritos');
@@ -296,6 +298,29 @@ export function ComponentsPage(): JSX.Element {
                   Restaurar chip
                 </Button>
               )}
+            </div>
+          </DemoCard>
+
+          <DemoCard
+            title="FilterMenu"
+            description="Par do Chip para o outro lado do limiar Polaris: faceta com menos de 4 valores segue como fileira de Chips; com 4+ vira este dropdown de checkboxes MULTI-seleção. Compõe o DropdownMenu (motor WAI-APG) com itens menuitemcheckbox e reusa a linguagem visual do Checkbox. Vazio = 'Todos'; o gatilho resume a seleção ('Status: 2') e cada opção mostra a contagem."
+          >
+            <div className="flex flex-wrap items-center gap-[var(--spacing-3)]">
+              <FilterMenu
+                label="Status"
+                options={[
+                  { id: 'ativos', label: 'Ativos', count: 4 },
+                  { id: 'encerrados', label: 'Encerrados', count: 2 },
+                  { id: 'rascunhos', label: 'Rascunhos', count: 1 },
+                ]}
+                selected={filtroStatus}
+                onChange={setFiltroStatus}
+              />
+              <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                {filtroStatus.length === 0
+                  ? 'Nenhum filtro (mostra tudo)'
+                  : `Marcados: ${filtroStatus.join(', ')}`}
+              </span>
             </div>
           </DemoCard>
 
