@@ -4,10 +4,10 @@ import Link from 'next/link';
  * Header público (S1200-T1). Server Component. Sem navegação de painel
  * (sidebar/breadcrumb ficam no app do organizador).
  *
- * MARCA: a logo da Leela ainda não chegou. Usamos um wordmark textual "LEELA"
- * (fonte display do tema) como placeholder. O <span data-slot="brand-logo"> é
- * o ponto exato de troca: substituir o texto por <Image src="/logo-leela.svg">
- * quando o ativo existir, sem tocar em mais nada.
+ * MARCA: wordmark oficial da Leela — variante verde-limão sobre transparente
+ * (exportada do Figma `112:51`/`112:5`), que casa com o tema `brasa` (dark) do
+ * header. SVG em `/leela-logo-brasa.svg` (public). `<img>` puro (não next/image)
+ * porque é asset estático local sem allowlist de domínio.
  */
 export function PublicHeader(): React.JSX.Element {
   return (
@@ -18,13 +18,12 @@ export function PublicHeader(): React.JSX.Element {
           className="flex items-center gap-2 rounded-ds-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
           aria-label="Leela — página inicial"
         >
-          {/* slot de troca da logo — ver docstring */}
-          <span
+          <img
+            src="/leela-logo-brasa.svg"
+            alt="Leela"
             data-slot="brand-logo"
-            className="font-display text-2xl font-extrabold tracking-tight text-text-brand"
-          >
-            LEELA
-          </span>
+            className="h-7 w-auto"
+          />
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2" aria-label="Ações">

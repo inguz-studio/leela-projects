@@ -47,9 +47,11 @@ type Db = admin.firestore.Firestore;
 // Contratos
 // ---------------------------------------------------------------------------
 
-/** Uma inscrição para cotar — só a modalidade importa para o preço (ADR-012). */
+/** Uma inscrição para cotar — modalidade (ADR-012) + kit opcional (RN-210/211). */
 export interface CotarItemInput {
   modalidade: string;
+  /** Id do kit real (`eventos/{id}/kits/{kitId}`) — soma o delta via o core. */
+  kitId?: string;
 }
 
 /** Input da cotação read-only (validado no servidor — nunca confiar na UI). */
@@ -68,7 +70,11 @@ export interface CotarItemResult {
   modalidade: string;
   /** Rótulo do lote vigente (ex.: "Lote 2") — nunca "tier". `null` = legado. */
   loteNome: string | null;
-  /** Preço da inscrição em R$ (2 casas). */
+  /** Nome do kit escolhido (rótulo do Resumo) — `null` quando sem kit. */
+  kitNome: string | null;
+  /** Delta do kit já embutido em `preco` (0 sem kit; NEGATIVO = desconto). */
+  kitPreco: number;
+  /** Preço da inscrição em R$ (2 casas) — lote vigente + delta do kit. */
   preco: number;
 }
 
@@ -125,6 +131,12 @@ export function validarCotarInput(raw: unknown): string[] {
       const obj = (item ?? {}) as Record<string, unknown>;
       if (typeof obj['modalidade'] !== 'string' || obj['modalidade'].length === 0) {
         erros.push(`itens[${i}]: "modalidade" é obrigatória.`);
+      }
+      if (
+        obj['kitId'] !== undefined &&
+        (typeof obj['kitId'] !== 'string' || obj['kitId'].length === 0)
+      ) {
+        erros.push(`itens[${i}]: "kitId" deve ser string não vazia.`);
       }
     });
   }
@@ -206,6 +218,8 @@ export async function cotarInscricaoCheckoutCore(
     itens: sale.itens.map((i) => ({
       modalidade: i.modalidade,
       loteNome: i.loteNome,
+      kitNome: i.kitNome,
+      kitPreco: i.kitPreco,
       preco: i.preco,
     })),
     valorBase: sale.valorBase,

@@ -15,7 +15,14 @@ import { Button, Stepper } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
 import type { EventoPublico } from '@/lib/tipos';
-import { KIT_OPCOES, inscritoVazio, type FormaUI, type InscritoForm } from './tipos';
+import {
+  inscritoVazio,
+  kitEnumFromId,
+  kitNomeFromId,
+  kitsDaModalidade,
+  type FormaUI,
+  type InscritoForm,
+} from './tipos';
 import {
   validarInscrito,
   validarResponsavel,
@@ -29,9 +36,13 @@ import { StepResumo, type LinhaResumo } from './StepResumo';
 import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 
+// Ordem do mockup/TicketSports (o dono): modalidade → kit → dados → resumo →
+// pagamento → confirmação. Modalidade e kit ficam juntos na etapa 1 (o kit é
+// filtrado pela modalidade); os dados vêm depois. Registrado como decisão
+// (job vence o pixel: o wireframe do Figma põe dados antes do kit).
 const PASSOS = [
-  { id: 'dados', label: 'Dados' },
   { id: 'modalidade', label: 'Modalidade e kit' },
+  { id: 'dados', label: 'Dados' },
   { id: 'resumo', label: 'Resumo' },
   { id: 'pagamento', label: 'Pagamento' },
   { id: 'confirmacao', label: 'Confirmação' },
@@ -54,10 +65,6 @@ function mensagemErro(err: unknown, fallback: string): string {
   return fallback;
 }
 
-function kitLabel(kit: InscritoForm['kit']): string {
-  return KIT_OPCOES.find((k) => k.value === kit)?.label ?? 'Sem kit';
-}
-
 interface Atribuicao {
   cupom?: string;
 }
@@ -78,6 +85,7 @@ export function CheckoutFlow({
   const [errosResponsavel, setErrosResponsavel] = useState<ErrosResponsavel>({});
   const [errosInscritos, setErrosInscritos] = useState<ErrosInscrito[]>([]);
   const [errosModalidade, setErrosModalidade] = useState<(string | undefined)[]>([]);
+  const [errosKit, setErrosKit] = useState<(string | undefined)[]>([]);
 
   // Pagamento / cotação
   const [forma, setForma] = useState<FormaUI>('pix');
@@ -124,7 +132,8 @@ export function CheckoutFlow({
   }, []);
 
   const parcelasEfetivas = forma === 'pix' ? 1 : parcelas;
-  const modalidadesSig = inscritos.map((i) => i.modalidade).join('|');
+  // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
+  const selecaoSig = inscritos.map((i) => `${i.modalidade}:${i.kitId}`).join('|');
   const todasModalidades = inscritos.every((i) => i.modalidade.length > 0);
   const precisaCotar = step >= 2;
 
@@ -135,10 +144,7 @@ export function CheckoutFlow({
 
   const handleResponsavel = useCallback(
     (patch: { nome?: string; email?: string }) => {
-      setResponsavel((prev) => {
-        const next = { ...prev, ...patch };
-        return next;
-      });
+      setResponsavel((prev) => ({ ...prev, ...patch }));
       setEuCorro((corro) => {
         if (corro) {
           setInscritos((prev) =>
@@ -189,7 +195,10 @@ export function CheckoutFlow({
       try {
         const data = await cotarInscricaoCheckout({
           eventoId: evento.slug,
-          itens: inscritos.map((i) => ({ modalidade: i.modalidade })),
+          itens: inscritos.map((i) => ({
+            modalidade: i.modalidade,
+            ...(i.kitId.length > 0 ? { kitId: i.kitId } : {}),
+          })),
           forma,
           parcelas: forma === 'pix' ? 1 : parcelas,
           ...(cupom ? { cupomCodigo: cupom } : {}),
@@ -202,7 +211,7 @@ export function CheckoutFlow({
     [evento.slug, inscritos, forma, parcelas],
   );
 
-  // Recalcula o total ao entrar no Resumo e quando preço/forma/parcelas mudam.
+  // Recalcula o total ao entrar no Resumo e quando seleção/forma/parcelas mudam.
   useEffect(() => {
     if (!precisaCotar || !authPronto || !todasModalidades) return;
     let vivo = true;
@@ -221,7 +230,7 @@ export function CheckoutFlow({
     return () => {
       vivo = false;
     };
-  }, [precisaCotar, authPronto, cupomAplicado, forma, parcelasEfetivas, modalidadesSig, todasModalidades, cotarCom]);
+  }, [precisaCotar, authPronto, cupomAplicado, forma, parcelasEfetivas, selecaoSig, todasModalidades, cotarCom]);
 
   // Qualquer mudança de preço invalida a cobrança já criada (evita replay com
   // valores antigos — a UI reflete sempre a seleção atual).
@@ -231,7 +240,7 @@ export function CheckoutFlow({
     setConfirmacao(null);
     setErroCharge(null);
     setErroConfirmar(null);
-  }, [cupomAplicado, forma, parcelasEfetivas, modalidadesSig]);
+  }, [cupomAplicado, forma, parcelasEfetivas, selecaoSig]);
 
   const aplicarCupom = useCallback(async () => {
     const code = cupomInput.trim().toUpperCase();
@@ -271,7 +280,8 @@ export function CheckoutFlow({
           email: ins.email.trim(),
           cpf: ins.cpf,
           modalidade: ins.modalidade,
-          kit: ins.kit,
+          kit: kitEnumFromId(ins.kitId),
+          ...(ins.kitId.length > 0 ? { kitId: ins.kitId } : {}),
         })),
         ...(euCorro ? { responsavelIndex: 0 } : {}),
         responsavel: { nome: responsavel.nome.trim(), email: responsavel.email.trim() },
@@ -290,22 +300,19 @@ export function CheckoutFlow({
     }
   }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, forma, parcelas, cupomAplicado]);
 
-  const confirmar = useCallback(
-    async (pedidoId: string) => {
-      setConfirmando(true);
-      setErroConfirmar(null);
-      try {
-        const data = await confirmarPagamentoSandbox({ pedidoId });
-        setConfirmacao(data);
-        setStep(4);
-      } catch (err) {
-        setErroConfirmar(mensagemErro(err, 'Não foi possível confirmar o pagamento.'));
-      } finally {
-        setConfirmando(false);
-      }
-    },
-    [],
-  );
+  const confirmar = useCallback(async (pedidoId: string) => {
+    setConfirmando(true);
+    setErroConfirmar(null);
+    try {
+      const data = await confirmarPagamentoSandbox({ pedidoId });
+      setConfirmacao(data);
+      setStep(4);
+    } catch (err) {
+      setErroConfirmar(mensagemErro(err, 'Não foi possível confirmar o pagamento.'));
+    } finally {
+      setConfirmando(false);
+    }
+  }, []);
 
   const pagarCartao = useCallback(async () => {
     const c = await gerarCobranca();
@@ -315,6 +322,23 @@ export function CheckoutFlow({
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
     if (step === 0) {
+      // Modalidade e kit: modalidade obrigatória; kit obrigatório SE a
+      // modalidade ofertar kits (RN-210). Modalidade sem kits segue sem kit.
+      const eMod = inscritos.map((ins) =>
+        ins.modalidade.length === 0 ? 'Escolha uma modalidade.' : undefined,
+      );
+      const eKit = inscritos.map((ins) => {
+        if (ins.modalidade.length === 0) return undefined;
+        const ofertados = kitsDaModalidade(evento.kits, ins.modalidade);
+        return ofertados.length > 0 && ins.kitId.length === 0 ? 'Escolha um kit.' : undefined;
+      });
+      setErrosModalidade(eMod);
+      setErrosKit(eKit);
+      if (eMod.some((e) => e !== undefined) || eKit.some((e) => e !== undefined)) return;
+      setStep(1);
+      return;
+    }
+    if (step === 1) {
       const eResp = validarResponsavel(responsavel.nome, responsavel.email);
       const eIns = inscritos.map((ins, i) =>
         validarInscrito(
@@ -326,15 +350,6 @@ export function CheckoutFlow({
       setErrosResponsavel(eResp);
       setErrosInscritos(eIns);
       if (temErro(eResp) || eIns.some((e) => temErro(e))) return;
-      setStep(1);
-      return;
-    }
-    if (step === 1) {
-      const eMod = inscritos.map((ins) =>
-        ins.modalidade.length === 0 ? 'Escolha uma modalidade.' : undefined,
-      );
-      setErrosModalidade(eMod);
-      if (eMod.some((e) => e !== undefined)) return;
       setStep(2);
       return;
     }
@@ -343,7 +358,7 @@ export function CheckoutFlow({
       setStep(3);
       return;
     }
-  }, [step, responsavel, inscritos, euCorro, cotacao, erroCotacao]);
+  }, [step, evento.kits, responsavel, inscritos, euCorro, cotacao, erroCotacao]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -356,9 +371,9 @@ export function CheckoutFlow({
         titulo:
           (euCorro && i === 0 ? 'Você' : `Atleta ${euCorro ? i : i + 1}`) +
           (ins.nome.trim() ? ` · ${ins.nome.trim()}` : ''),
-        kitLabel: kitLabel(ins.kit),
+        kitLabel: kitNomeFromId(evento.kits, ins.kitId),
       })),
-    [inscritos, euCorro],
+    [inscritos, euCorro, evento.kits],
   );
 
   const linhasConfirmacao: LinhaConfirmacao[] = useMemo(
@@ -366,9 +381,9 @@ export function CheckoutFlow({
       inscritos.map((ins, i) => ({
         titulo: euCorro && i === 0 ? `Você${ins.nome.trim() ? ` · ${ins.nome.trim()}` : ''}` : ins.nome.trim() || `Atleta ${i + 1}`,
         modalidade: ins.modalidade || '—',
-        kitLabel: kitLabel(ins.kit),
+        kitLabel: kitNomeFromId(evento.kits, ins.kitId),
       })),
-    [inscritos, euCorro],
+    [inscritos, euCorro, evento.kits],
   );
 
   const mostraNav = step <= 2;
@@ -404,6 +419,20 @@ export function CheckoutFlow({
 
       <div className="mt-8">
         {step === 0 ? (
+          <StepModalidadeKit
+            modalidades={evento.modalidades}
+            kits={evento.kits}
+            inscritos={inscritos}
+            euCorro={euCorro}
+            onInscrito={patchInscrito}
+            onAddInscrito={addInscrito}
+            onRemoveInscrito={removeInscrito}
+            errosModalidade={errosModalidade}
+            errosKit={errosKit}
+          />
+        ) : null}
+
+        {step === 1 ? (
           <StepDados
             responsavelNome={responsavel.nome}
             responsavelEmail={responsavel.email}
@@ -412,20 +441,8 @@ export function CheckoutFlow({
             onEuCorro={handleEuCorro}
             inscritos={inscritos}
             onInscrito={patchInscrito}
-            onAddInscrito={addInscrito}
-            onRemoveInscrito={removeInscrito}
             errosResponsavel={errosResponsavel}
             errosInscritos={errosInscritos}
-          />
-        ) : null}
-
-        {step === 1 ? (
-          <StepModalidadeKit
-            modalidades={evento.modalidades}
-            inscritos={inscritos}
-            euCorro={euCorro}
-            onInscrito={patchInscrito}
-            errosModalidade={errosModalidade}
           />
         ) : null}
 

@@ -20,6 +20,7 @@
 // =============================================================================
 
 import {
+  parseKit,
   parseLote,
   parsePaginaVendas,
   precoVigente,
@@ -39,6 +40,7 @@ import type {
   EventoPublico,
   EventoResumo,
   JanelaRetiradaPublica,
+  KitPublico,
   ModalidadePublica,
   SecaoPublica,
 } from './tipos';
@@ -98,6 +100,27 @@ async function lerLotesPorModalidade(db: Firestore, eventoId: string): Promise<M
     porModalidade.set(lote.modalidade, arr);
   }
   return porModalidade;
+}
+
+/**
+ * Kits do evento (`eventos/{id}/kits`) — projeção pública para o checkout
+ * filtrar por modalidade (RN-210). Parse fail-fast do core; ordena do mais
+ * caro ao desconto ("Sem kit" por último), igual ao painel (listarKits).
+ */
+async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
+  const snap = await db.collection('eventos').doc(eventoId).collection('kits').get();
+  return snap.docs
+    .map((doc) => {
+      const kit = parseKit(doc.id, doc.data());
+      return {
+        id: kit.id,
+        nome: kit.nome,
+        preco: kit.preco,
+        modalidades: kit.modalidades,
+        capacidade: kit.capacidade,
+      };
+    })
+    .sort((a, b) => b.preco - a.preco);
 }
 
 function precoMinimo(modalidades: readonly ModalidadePublica[]): number | null {
@@ -164,7 +187,10 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
       : [];
 
-    const lotesPorModalidade = await lerLotesPorModalidade(db, slug);
+    const [lotesPorModalidade, kits] = await Promise.all([
+      lerLotesPorModalidade(db, slug),
+      lerKits(db, slug),
+    ]);
 
     const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
       nome,
@@ -209,6 +235,7 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       usaChip: data['usaChip'] === true,
       qtdInscritos: inteiro(data['qtdInscritos']),
       modalidades,
+      kits,
       precoMinimo: precoMinimo(modalidades),
       janelasRetirada,
       secoes,

@@ -288,6 +288,8 @@ export async function seedEventos(db: admin.firestore.Firestore): Promise<void> 
       { id: 'sobre', canal: 'essenciais', ativa: true, travada: false },
       { id: 'percursos', canal: 'essenciais', ativa: true, travada: false },
       { id: 'lotes', canal: 'essenciais', ativa: true, travada: false },
+      { id: 'kits', canal: 'essenciais', ativa: true, travada: false },
+      { id: 'retirada', canal: 'essenciais', ativa: true, travada: false },
       { id: 'depoimentos', canal: 'landing', ativa: false, travada: false },
       { id: 'patrocinadores', canal: 'landing', ativa: true, travada: false },
       { id: 'checkout', canal: 'sistema', ativa: true, travada: true },

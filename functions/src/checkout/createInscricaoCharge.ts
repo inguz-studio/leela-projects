@@ -45,6 +45,7 @@ import {
   montarItensDoPedido,
   normalizarCodigoCupom,
   parseCupom,
+  parseKit,
   parseLote,
   TermsNotFoundError,
   validarDadosMinimosInscrito,
@@ -55,6 +56,7 @@ import {
   type FormaPagamento,
   type ItemPedidoInput,
   type ItemVendaInput,
+  type Kit,
   type KitInscrito,
   type PaymentProvider,
   type SaleState,
@@ -78,8 +80,14 @@ export interface CheckoutInscritoInput {
   cpf: string;
   /** Modalidade/percurso escolhido — deve existir em `evento.modalidades`. */
   modalidade: string;
-  /** Kit escolhido (RN-202) — default 'sem_kit'. */
+  /** Kit escolhido (RN-202) — default 'sem_kit'. Rótulo persistido no inscrito. */
   kit?: KitInscrito;
+  /**
+   * Id do kit real do evento (`eventos/{id}/kits/{kitId}`) — precifica o delta
+   * via o core (RN-210/211). Opcional; ausente = sem kit, sem delta. O servidor
+   * valida a oferta por modalidade (kit não ofertado → invalid-argument).
+   */
+  kitId?: string;
 }
 
 /** Input do checkout (validado NO SERVIDOR — nunca confiar na UI). */
@@ -174,6 +182,12 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
       }
       if (obj['kit'] !== undefined && !isKitInscrito(obj['kit'])) {
         erros.push(`inscritos[${i}]: kit fora do enum (RN-202).`);
+      }
+      if (
+        obj['kitId'] !== undefined &&
+        (typeof obj['kitId'] !== 'string' || obj['kitId'].length === 0)
+      ) {
+        erros.push(`inscritos[${i}]: "kitId" deve ser string não vazia.`);
       }
     });
   }
@@ -270,7 +284,7 @@ export interface InsumosVenda {
  */
 export interface CarregarInsumosInput {
   eventoId: string;
-  inscritos: readonly { modalidade: string }[];
+  inscritos: readonly { modalidade: string; kitId?: string }[];
   cupomCodigo?: string;
 }
 
@@ -330,6 +344,17 @@ export async function carregarInsumos(
     );
   }
 
+  // Kits do evento (subcoleção `eventos/{id}/kits` — RN-210/211): carregados
+  // SÓ quando alguma inscrição escolheu um kit, e mapeados por id para o core
+  // somar o delta. O kit é a fonte da verdade do preço (nada no cliente).
+  const kitsPorId = new Map<string, Kit>();
+  if (input.inscritos.some((i) => typeof i.kitId === 'string' && i.kitId.length > 0)) {
+    const kitsSnap = await eventoRef.collection('kits').get();
+    for (const d of kitsSnap.docs) {
+      kitsPorId.set(d.id, parseKit(d.id, d.data()));
+    }
+  }
+
   const itens: ItemVendaInput[] = input.inscritos.map((inscrito) => {
     const percursoLegado = percursos.find((p) => p?.nome === inscrito.modalidade);
     const precoLegado =
@@ -339,6 +364,24 @@ export async function carregarInsumos(
       lotesDaModalidade: lotesPorModalidade.get(inscrito.modalidade) ?? [],
     };
     if (precoLegado !== undefined) item.precoLegado = precoLegado;
+    if (typeof inscrito.kitId === 'string' && inscrito.kitId.length > 0) {
+      const kit = kitsPorId.get(inscrito.kitId);
+      if (kit === undefined) {
+        throw new https.HttpsError(
+          'invalid-argument',
+          `Kit '${inscrito.kitId}' não existe no evento '${input.eventoId}'.`
+        );
+      }
+      if (kit.tenantId !== tenantId) {
+        throw new https.HttpsError(
+          'internal',
+          `Kit '${inscrito.kitId}' com tenantId divergente do evento — dado corrompido.`
+        );
+      }
+      // O core valida a oferta por modalidade (kit.modalidades ∋ modalidade) e
+      // soma kit.preco (negativo = desconto, RN-211). Só o subconjunto de venda.
+      item.kit = { nome: kit.nome, preco: kit.preco, modalidades: kit.modalidades };
+    }
     return item;
   });
 

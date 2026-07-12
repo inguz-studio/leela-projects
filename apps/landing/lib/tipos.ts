@@ -24,6 +24,19 @@ export interface ModalidadePublica {
   precoVigente: number | null;
 }
 
+/**
+ * Kit público do evento (RN-210/211) — projeção do doc `eventos/{id}/kits`.
+ * `preco` é o DELTA sobre a inscrição (NEGATIVO = desconto). `modalidades` é a
+ * chave da FILTRAGEM do checkout: o kit só aparece nas modalidades que oferta.
+ */
+export interface KitPublico {
+  id: string;
+  nome: string;
+  preco: number;
+  modalidades: string[];
+  capacidade: number;
+}
+
 /** Uma janela de retirada de kit (espelho público do cronograma). */
 export interface JanelaRetiradaPublica {
   diaLabel: string;
@@ -56,6 +69,8 @@ export interface EventoPublico {
   qtdInscritos: number;
   imagemUrl?: string;
   modalidades: ModalidadePublica[];
+  /** Kits do evento (RN-210) — o checkout filtra por modalidade. `[]` se nenhum. */
+  kits: KitPublico[];
   /** Menor preço vigente entre as modalidades ("a partir de"), ou null. */
   precoMinimo: number | null;
   janelasRetirada: JanelaRetiradaPublica[];

@@ -417,6 +417,7 @@ export {
 export type {
   LoteVenda,
   CupomVenda,
+  KitVenda,
   ItemVendaInput,
   ComputeSaleStateParams,
   ItemVendaState,

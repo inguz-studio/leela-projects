@@ -1,89 +1,153 @@
 'use client';
 
-import { Badge, RadioCard, RadioGroup, Select } from '@/app/_ds/ds';
+import { Badge, Button, RadioCard, RadioGroup } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
-import { KIT_OPCOES, type InscritoForm } from './tipos';
+import type { KitPublico } from '@/lib/tipos';
+import { kitsDaModalidade, type InscritoForm } from './tipos';
+
+/** Rótulo do delta do kit (RN-211: negativo = desconto; 0 = incluso). */
+function labelDeltaKit(preco: number): string {
+  if (preco === 0) return 'Incluso';
+  if (preco < 0) return `Desconto ${formatarPreco(Math.abs(preco))}`;
+  return `+ ${formatarPreco(preco)}`;
+}
 
 /**
- * Etapa 2 — Modalidade + kit, por inscrito. Preço vigente vem do leitor
- * (derivado do core — precoVigente/lote); modalidade sem lote ativo aparece
- * indisponível (estado honesto), nunca some fabricando preço. O rótulo é o da
- * modalidade ("10k"), NUNCA "tier".
+ * Etapa 1 — Modalidade e kit, por inscrito (ordem do mockup: modalidade → kit →
+ * dados). O atleta escolhe a modalidade e SÓ ENTÃO vê os kits ofertados PARA
+ * ela (RN-210: `kit.modalidades ∋ modalidade`). É a correção central do lote —
+ * 5k nunca mostra Kit Ouro; 21k mostra Ouro/Prata/básico. Nada de preço somado
+ * aqui: o total sai do core (cotação). O rótulo é o da modalidade ("10k") e o
+ * NOME do kit ("Kit Prata"), NUNCA "tier" (RN-216).
  */
 export function StepModalidadeKit({
   modalidades,
+  kits,
   inscritos,
   euCorro,
   onInscrito,
+  onAddInscrito,
+  onRemoveInscrito,
   errosModalidade,
+  errosKit,
 }: {
   modalidades: { nome: string; precoVigente: number | null }[];
+  kits: KitPublico[];
   inscritos: InscritoForm[];
   euCorro: boolean;
   onInscrito: (index: number, patch: Partial<InscritoForm>) => void;
+  onAddInscrito: () => void;
+  onRemoveInscrito: (index: number) => void;
   errosModalidade: (string | undefined)[];
+  errosKit: (string | undefined)[];
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       {inscritos.map((inscrito, i) => {
-        const titulo = euCorro && i === 0 ? 'Você' : `Atleta ${euCorro ? i : i + 1}`;
-        const nome = inscrito.nome.trim();
+        const ehVoce = euCorro && i === 0;
+        const titulo = ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`;
+        const podeRemover = !ehVoce && inscritos.length > 1;
+        const kitsOfertados = kitsDaModalidade(kits, inscrito.modalidade);
+        const modalidadeEscolhida = inscrito.modalidade.length > 0;
+
         return (
           <div
             key={i}
             className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
           >
-            <h3 className="text-sm font-semibold text-text-primary">
-              {titulo}
-              {nome ? <span className="font-normal text-text-secondary"> · {nome}</span> : null}
-            </h3>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-text-primary">{titulo}</h3>
+              {podeRemover ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveInscrito(i)}
+                  aria-label={`Remover atleta ${i + 1}`}
+                >
+                  Remover
+                </Button>
+              ) : null}
+            </div>
 
-            <div className="mt-4">
-              <RadioGroup
-                name={`modalidade-${i}`}
-                label="Modalidade"
-                value={inscrito.modalidade}
-                onValueChange={(v) => onInscrito(i, { modalidade: v })}
-                errorMessage={errosModalidade[i] ?? ''}
-              >
-                {modalidades.map((m) => {
-                  const indisponivel = m.precoVigente === null;
-                  return (
+            {/* Modalidade — trocar a modalidade zera o kit (a oferta muda). */}
+            <RadioGroup
+              name={`modalidade-${i}`}
+              label="Modalidade"
+              value={inscrito.modalidade}
+              onValueChange={(v) => onInscrito(i, { modalidade: v, kitId: '' })}
+              errorMessage={errosModalidade[i] ?? ''}
+            >
+              {modalidades.map((m) => {
+                const indisponivel = m.precoVigente === null;
+                return (
+                  <RadioCard
+                    key={m.nome}
+                    value={m.nome}
+                    disabled={indisponivel}
+                    title={m.nome}
+                    description={indisponivel ? 'Sem lote disponível no momento' : 'Percurso oficial'}
+                    badge={
+                      <Badge variant={indisponivel ? 'neutro' : 'brand'}>
+                        {indisponivel ? 'Indisponível' : formatarPreco(m.precoVigente)}
+                      </Badge>
+                    }
+                  />
+                );
+              })}
+            </RadioGroup>
+
+            {/* Kit — filtrado pela modalidade escolhida (RN-210). */}
+            <div className="mt-5">
+              {!modalidadeEscolhida ? (
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Kit</p>
+                  <p className="mt-1 text-sm text-text-tertiary">
+                    Escolha a modalidade para ver os kits disponíveis.
+                  </p>
+                </div>
+              ) : kitsOfertados.length === 0 ? (
+                <div>
+                  <p className="text-sm font-medium text-text-primary">Kit</p>
+                  <p className="mt-1 text-sm text-text-tertiary">
+                    Nenhum kit para a modalidade {inscrito.modalidade} — a inscrição vai sem kit.
+                  </p>
+                </div>
+              ) : (
+                <RadioGroup
+                  name={`kit-${i}`}
+                  label="Kit"
+                  value={inscrito.kitId}
+                  onValueChange={(v) => onInscrito(i, { kitId: v })}
+                  errorMessage={errosKit[i] ?? ''}
+                >
+                  {kitsOfertados.map((k) => (
                     <RadioCard
-                      key={m.nome}
-                      value={m.nome}
-                      disabled={indisponivel}
-                      title={m.nome}
-                      description={
-                        indisponivel ? 'Sem lote disponível no momento' : 'Percurso oficial'
-                      }
+                      key={k.id}
+                      value={k.id}
+                      title={k.nome}
+                      description="Retirado nas janelas do evento, mediante documento."
                       badge={
-                        <Badge variant={indisponivel ? 'neutro' : 'brand'}>
-                          {indisponivel ? 'Indisponível' : formatarPreco(m.precoVigente)}
+                        <Badge variant={k.preco < 0 ? 'vitoria' : k.preco === 0 ? 'neutro' : 'brand'}>
+                          {labelDeltaKit(k.preco)}
                         </Badge>
                       }
                     />
-                  );
-                })}
-              </RadioGroup>
-            </div>
-
-            <div className="mt-4 max-w-xs">
-              <Select
-                label="Kit"
-                options={KIT_OPCOES}
-                value={inscrito.kit}
-                onChange={(e) =>
-                  onInscrito(i, { kit: e.target.value as InscritoForm['kit'] })
-                }
-              />
-              <p className="mt-1 text-xs text-text-tertiary">
+                  ))}
+                </RadioGroup>
+              )}
+              <p className="mt-2 text-xs text-text-tertiary">
                 O tamanho do kit é confirmado na retirada, nas janelas do evento.
               </p>
             </div>
           </div>
         );
       })}
+
+      <div>
+        <Button variant="secondary" size="sm" onClick={onAddInscrito}>
+          + Adicionar outro atleta
+        </Button>
+      </div>
     </div>
   );
 }

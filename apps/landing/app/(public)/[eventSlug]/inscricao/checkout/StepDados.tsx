@@ -1,13 +1,14 @@
 'use client';
 
-import { Button, Checkbox, Field, Input } from '@/app/_ds/ds';
+import { Checkbox, Field, Input } from '@/app/_ds/ds';
 import type { InscritoForm } from './tipos';
 import type { ErrosInscrito, ErrosResponsavel } from './validacao';
 
 /**
- * Etapa 1 — Dados (ADR-011: 1 responsável/pagador + N inscritos). O responsável
+ * Etapa 2 — Dados (ADR-011: 1 responsável/pagador + N inscritos). O responsável
  * é sempre o pagador; o checkbox "Eu vou correr" faz dele o 1º inscrito
- * (auto-inscrição). Inscritos extras são adicionados para o pedido em grupo.
+ * (auto-inscrição). A modalidade e o kit de cada atleta já foram escolhidos na
+ * etapa anterior (Modalidade e kit) — aqui é só a identificação.
  */
 export function StepDados({
   responsavelNome,
@@ -17,8 +18,6 @@ export function StepDados({
   onEuCorro,
   inscritos,
   onInscrito,
-  onAddInscrito,
-  onRemoveInscrito,
   errosResponsavel,
   errosInscritos,
 }: {
@@ -29,8 +28,6 @@ export function StepDados({
   onEuCorro: (v: boolean) => void;
   inscritos: InscritoForm[];
   onInscrito: (index: number, patch: Partial<InscritoForm>) => void;
-  onAddInscrito: () => void;
-  onRemoveInscrito: (index: number) => void;
   errosResponsavel: ErrosResponsavel;
   errosInscritos: ErrosInscrito[];
 }): React.JSX.Element {
@@ -82,14 +79,14 @@ export function StepDados({
             {inscritos.length > 1 ? 'Quem vai correr' : 'Inscrição'}
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
-            Cada atleta tem os próprios dados. A modalidade e o kit você escolhe na próxima etapa.
+            Cada atleta tem os próprios dados. A modalidade e o kit já foram escolhidos na etapa
+            anterior.
           </p>
         </div>
 
         {inscritos.map((inscrito, i) => {
           const erros = errosInscritos[i] ?? {};
           const ehVoce = euCorro && i === 0;
-          const podeRemover = !ehVoce && inscritos.length > 1;
           return (
             <div
               key={i}
@@ -99,16 +96,6 @@ export function StepDados({
                 <h3 className="text-sm font-semibold text-text-primary">
                   {ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`}
                 </h3>
-                {podeRemover ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemoveInscrito(i)}
-                    aria-label={`Remover atleta ${i + 1}`}
-                  >
-                    Remover
-                  </Button>
-                ) : null}
               </div>
 
               {ehVoce ? (
@@ -148,12 +135,6 @@ export function StepDados({
             </div>
           );
         })}
-
-        <div>
-          <Button variant="secondary" size="sm" onClick={onAddInscrito}>
-            + Adicionar outro atleta
-          </Button>
-        </div>
       </section>
     </div>
   );

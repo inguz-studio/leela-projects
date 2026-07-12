@@ -13,10 +13,6 @@ import type { EventoPublico } from '@/lib/tipos';
 // regra); `depoimentos` está inativa → nem chega ao renderizador.
 // =============================================================================
 
-export function KitsSection(_props: { evento: EventoPublico }): null {
-  return null;
-}
-
 export function PatrocinadoresSection(_props: { evento: EventoPublico }): null {
   return null;
 }

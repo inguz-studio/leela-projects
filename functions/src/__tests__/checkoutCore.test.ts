@@ -113,7 +113,7 @@ describe('computeSaleState — preço vigente (RN-301/ADR-012)', () => {
   it('deriva o preço do lote ATIVO da modalidade (PIX à vista)', () => {
     const sale = venda();
     expect(sale.itens).toEqual([
-      { modalidade: '10k', loteId: '10k-l2', loteNome: 'Lote 2', preco: 189.9 },
+      { modalidade: '10k', loteId: '10k-l2', loteNome: 'Lote 2', kitNome: null, kitPreco: 0, preco: 189.9 },
     ]);
     expect(sale.valorBase).toBe(189.9);
     expect(sale.desconto).toBe(0);
@@ -139,7 +139,7 @@ describe('computeSaleState — preço vigente (RN-301/ADR-012)', () => {
       itens: [{ modalidade: '10k', lotesDaModalidade: [], precoLegado: 99.9 }],
     });
     expect(sale.itens[0]).toEqual({
-      modalidade: '10k', loteId: null, loteNome: null, preco: 99.9,
+      modalidade: '10k', loteId: null, loteNome: null, kitNome: null, kitPreco: 0, preco: 99.9,
     });
   });
 

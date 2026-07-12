@@ -28,10 +28,12 @@
 // =============================================================================
 
 import type { Lote } from '../eventos/lote';
+import type { Kit } from '../eventos/kit';
 import type { Cupom, TipoCupom } from '../eventos/cupom';
 import type { FormaPagamento } from '../pedidos/pagamento';
 import type { InstallmentRules } from '../platform/commercialTerms';
 import { loteAtivo } from '../eventos/lote';
+import { precoKitValido } from '../eventos/kit';
 import { cupomNaJanela, cupomNoTeto, descontoDoCupom } from '../eventos/cupom';
 import {
   buildInstallmentOptions,
@@ -57,12 +59,26 @@ export type CupomVenda = Pick<
   'codigo' | 'tipo' | 'valor' | 'tetoUso' | 'usos' | 'inicioEm' | 'fimEm'
 >;
 
+/**
+ * Subconjunto do Kit necessário para precificar e validar a oferta por
+ * modalidade (RN-210/211). `preco` é o DELTA sobre o lote (negativo = desconto).
+ */
+export type KitVenda = Pick<Kit, 'nome' | 'preco' | 'modalidades'>;
+
 /** Uma inscrição da venda: a modalidade e os lotes DELA (ADR-012). */
 export interface ItemVendaInput {
   /** Modalidade/percurso escolhido pelo inscrito (ex.: '10k'). */
   modalidade: string;
   /** Lotes da MODALIDADE (query `where modalidade == X` — ADR-012). */
   lotesDaModalidade: readonly LoteVenda[];
+  /**
+   * Kit escolhido para ESTA inscrição (RN-210/211) — OPCIONAL. Quando presente,
+   * o `preco` do kit (delta; NEGATIVO = desconto, RN-211) soma ao preço do lote,
+   * e a modalidade DEVE constar de `kit.modalidades` (fail-fast — kit não
+   * ofertado para a modalidade nunca precifica; espelha o filtro da UI, defesa
+   * em profundidade). Ausente = sem kit, sem delta.
+   */
+  kit?: KitVenda;
   /**
    * Preço-base LEGADO (`percurso.preco` — S201) para evento SEM lotes
    * configurados — schema evolution, nunca 0 fake. IGNORADO quando a
@@ -101,7 +117,11 @@ export interface ItemVendaState {
   loteId: string | null;
   /** 🔁 Rótulo do lote p/ o slide-in `[pag]` sem join (ex.: "Lote 2"). */
   loteNome: string | null;
-  /** Preço da inscrição em R$ (2 casas). */
+  /** Nome do kit escolhido (rótulo p/ o resumo) — `null` quando sem kit. */
+  kitNome: string | null;
+  /** Delta do kit já somado ao `preco` (0 sem kit; NEGATIVO = desconto). */
+  kitPreco: number;
+  /** Preço da inscrição em R$ (2 casas) — lote vigente + delta do kit. */
   preco: number;
 }
 
@@ -159,13 +179,38 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
     throw new Error('computeSaleState: item sem "modalidade" (ADR-012)');
   }
 
+  // Kit da inscrição (RN-210/211): valida a oferta por modalidade e resolve o
+  // DELTA antes de precificar. Ausente = sem delta (kitPreco 0, kitNome null).
+  // O kit indisponível para a modalidade LANÇA (espelha o filtro da UI — kit
+  // que não serve à modalidade nunca deveria chegar aqui; se chegar, é venda
+  // incoerente, e dinheiro errado é pior que erro explícito).
+  let kitPreco = 0;
+  let kitNome: string | null = null;
+  if (item.kit !== undefined) {
+    if (!precoKitValido(item.kit.preco)) {
+      throw new Error(
+        `computeSaleState: kit "${item.kit.nome}" com preço inválido (RN-211)`
+      );
+    }
+    if (!item.kit.modalidades.includes(item.modalidade)) {
+      throw new Error(
+        `computeSaleState: kit "${item.kit.nome}" não é ofertado para a ` +
+          `modalidade "${item.modalidade}" (RN-210) — seleção inconsistente`
+      );
+    }
+    kitPreco = roundMoney(item.kit.preco);
+    kitNome = item.kit.nome;
+  }
+
   const ativo = loteAtivo(item.lotesDaModalidade, agora);
   if (ativo !== null) {
     return {
       modalidade: item.modalidade,
       loteId: ativo.id,
       loteNome: ativo.nome,
-      preco: roundMoney(ativo.preco),
+      kitNome,
+      kitPreco,
+      preco: roundMoney(ativo.preco + kitPreco),
     };
   }
 
@@ -187,7 +232,9 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
       modalidade: item.modalidade,
       loteId: null,
       loteNome: null,
-      preco: roundMoney(item.precoLegado),
+      kitNome,
+      kitPreco,
+      preco: roundMoney(item.precoLegado + kitPreco),
     };
   }
 

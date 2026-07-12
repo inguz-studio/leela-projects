@@ -4,11 +4,11 @@ import { SobreSection } from './SobreSection';
 import { ModalidadesSection } from './ModalidadesSection';
 import { LotesSection } from './LotesSection';
 import { RetiradaSection } from './RetiradaSection';
+import { KitsSection } from './KitsSection';
 import { CheckoutCtaSection } from './CheckoutCtaSection';
 import {
   DepoimentosSection,
   InfoSection,
-  KitsSection,
   PatrocinadoresSection,
   PercursoSection,
 } from './dormant';

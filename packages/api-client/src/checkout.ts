@@ -20,6 +20,8 @@ import { getLeelaFunctions } from './firebase';
 
 export interface CotarItemInput {
   modalidade: string;
+  /** Id do kit real do evento (`eventos/{id}/kits/{kitId}`) — soma o delta. */
+  kitId?: string;
 }
 
 export interface CotarInscricaoCheckoutInput {
@@ -33,6 +35,10 @@ export interface CotarInscricaoCheckoutInput {
 export interface CotarItemResult {
   modalidade: string;
   loteNome: string | null;
+  /** Nome do kit escolhido (rótulo do Resumo) — `null` quando sem kit. */
+  kitNome: string | null;
+  /** Delta do kit já embutido em `preco` (0 sem kit; NEGATIVO = desconto). */
+  kitPreco: number;
   preco: number;
 }
 
@@ -81,7 +87,10 @@ export interface CheckoutInscritoInput {
   email: string;
   cpf: string;
   modalidade: string;
+  /** Rótulo do kit persistido no inscrito (RN-202) — default 'sem_kit'. */
   kit?: KitInscritoInput;
+  /** Id do kit real do evento — precifica o delta via o core (RN-210/211). */
+  kitId?: string;
 }
 
 export interface CreateInscricaoChargeInput {
