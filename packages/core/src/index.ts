@@ -580,3 +580,46 @@ export {
   formatarRelativo,
   derivarAlertas,
 } from './overview/alerts';
+
+// ---------------------------------------------------------------------------
+// Comms — LOG DE COMUNICAÇÃO, agregado único (FABLE-G-T1 · Onda 2)
+// Fonte de E06-L3 (aba Comunicação/campanhas) e S1206-T2 (log de envio do
+// ingresso — RN-219). Log flat `eventos/{id}/comunicacoes` com docId
+// determinístico + resumo ∑ `comunicacoesResumo/current` por Function.
+// ---------------------------------------------------------------------------
+export type {
+  CanalLogComunicacao,
+  TipoLogComunicacao,
+  StatusLogComunicacao,
+  TipoDestinatarioComunicacao,
+  DestinatarioComunicacao,
+  LogComunicacao,
+  ResumoComunicacoes,
+  TipoEventoProvedor,
+  EventoProvedor,
+  MudancasLogComunicacao,
+} from './comms/logComunicacao';
+export {
+  CANAIS_LOG_COMUNICACAO,
+  TIPOS_LOG_COMUNICACAO,
+  STATUS_LOG_COMUNICACAO,
+  TIPOS_DESTINATARIO_COMUNICACAO,
+  TIPOS_EVENTO_PROVEDOR,
+  TRANSICOES_STATUS_LOG_COMUNICACAO,
+  CHAVE_LOG_COMUNICACAO_RE,
+  CAMPOS_PROIBIDOS_LOG_COMUNICACAO,
+  COLECAO_LOG_COMUNICACAO,
+  COLECAO_RESUMO_COMUNICACOES,
+  DOC_RESUMO_COMUNICACOES,
+  isCanalLogComunicacao,
+  isTipoLogComunicacao,
+  isStatusLogComunicacao,
+  isTipoDestinatarioComunicacao,
+  isTipoEventoProvedor,
+  podeTransicionarStatusLogComunicacao,
+  chaveLogComunicacao,
+  logComunicacaoDocId,
+  aplicarEventoProvedor,
+  parseLogComunicacao,
+  parseResumoComunicacoes,
+} from './comms/logComunicacao';

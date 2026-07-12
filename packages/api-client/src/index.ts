@@ -204,6 +204,14 @@ export type {
 export { getCronogramaEntrega } from './eventos/cronograma';
 export type { CronogramaEntregaEvento } from './eventos/cronograma';
 
+// FABLE-G-T1 — log de comunicação (agregado único): visão por inscrito
+// (S1206-T2 / aba Comunicação do slide-in) + resumo ∑ por evento (E06-L3).
+// Só leitura — escrita é EXCLUSIVA de Function (Rules: write false).
+export {
+  listarComunicacoesDoInscrito,
+  getResumoComunicacoes,
+} from './eventos/comunicacoes';
+
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)
 export { listarInscritos, listarInscritosRecentes, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
 export type {

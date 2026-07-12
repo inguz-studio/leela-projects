@@ -73,6 +73,13 @@ export { registrarCheckin } from './eventos/registrarCheckin';
 // Eventos — agregado financeiro por recontagem idempotente (E03-S207-T2)
 export { onInscritoWrite } from './eventos/agregarFinanceiro';
 
+// Eventos — LOG DE COMUNICAÇÃO, agregado único (FABLE-G-T1 · Onda 2):
+// resumo ∑ `comunicacoesResumo/current` por recontagem idempotente. Os
+// helpers de escrita (registrarComunicacao/aplicarEventoProvedorNoLog) são
+// consumidos por S1206-T3 (e-mail do ingresso) e E06-L2 (enviarCampanha) —
+// não são endpoints. ⚠️ Fable (PII).
+export { onComunicacaoWrite } from './eventos/agregarComunicacoes';
+
 // Checkout — fundação E12 (sandbox sem chave Asaas — ADR-006/ADR-011):
 // createInscricaoCharge cria pedido/inscritos + emite a cobrança (provider
 // selecionado por selectPaymentProvider — Mock sem chave, fail-safe);

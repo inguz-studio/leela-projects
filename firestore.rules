@@ -751,6 +751,43 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `comunicacoes/{comunicacaoId}` — LOG DE COMUNICAÇÃO (FABLE-G-T1).
+      //
+      // Agregado ÚNICO: fonte de E06-L3 (aba Comunicação/campanhas) e de
+      // S1206-T2 (log de envio do ingresso — RN-219). Cada doc registra UM
+      // envio (e-mail/push) a UM destinatário, com status de entrega/
+      // abertura e carimbos.
+      //
+      // PII (LGPD): o log revela A QUEM se comunicou e SE abriu — leitura
+      // segue a taxonomia de `inscritos`/`pedidos`/`financeiro` (papel de
+      // GESTÃO): SÓ owner/staff do tenant dono e platform_admin; promoter e
+      // athlete-com-claim NÃO leem. O doc NÃO carrega corpo de mensagem
+      // (parseLogComunicacao rejeita — PII mínima).
+      //
+      // ESCRITA: NUNCA pelo cliente — o envio é server-side e o status vem
+      // de webhook de provider; escreve SÓ a Function (Admin SDK bypassa
+      // Rules). O docId é DETERMINÍSTICO ({destinatario}_{chave}_{canal}):
+      // a idempotência de envio (RN-219) mora na colisão de docId — por
+      // isso nenhum cliente cria/atualiza/deleta (forjar um doc suprimiria
+      // um envio devido; alterar status fabricaria abertura que não houve).
+      match /comunicacoes/{comunicacaoId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
+      // `comunicacoesResumo/{docId}` — agregado ∑ do log (FABLE-G-T1).
+      // `current` = contagens por status/canal/tipo recomputadas
+      // INTEGRALMENTE pela Function `agregarComunicacoes` (padrão
+      // `financeiro/current`). Mesma taxonomia de leitura do log; escrita
+      // de cliente NUNCA (contagem forjada = histórico de comunicação
+      // fraudado na aba do evento).
+      match /comunicacoesResumo/{docId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
       match /{subcol}/{docId} {
         // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
         // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)
@@ -759,9 +796,10 @@ service cloud.firestore {
         // de eventos (reembolsos/transferencias/ledger/equipe/…) nasceria
         // member-readable sem tocar as Rules. Agora nasce no deny-by-default:
         // abrir leitura exige entrar nesta lista (ou ganhar match próprio)
-        // + teste. `inscritos` (PII/LGPD), `cupons` (ativo comercial) e
-        // `financeiro` (repasse) têm match próprio writer-only acima e NÃO
-        // entram na lista — o OR de regras não os re-concede.
+        // + teste. `inscritos` (PII/LGPD), `cupons` (ativo comercial),
+        // `financeiro` (repasse) e `comunicacoes`/`comunicacoesResumo`
+        // (log de comunicação — PII, FABLE-G) têm match próprio writer-only
+        // acima e NÃO entram na lista — o OR de regras não os re-concede.
         allow read: if isPlatformAdmin()
                     || (subcol in ['kits', 'lotes', 'paginaVendas']
                         && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));
