@@ -251,6 +251,34 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
 // IDs determinísticos (idempotência por chave — ver cabeçalho)
 // ---------------------------------------------------------------------------
 
+/** Enum canônico de kit persistido no inscrito (RN-202). */
+const KITS_INSCRITO_CANONICOS: readonly KitInscrito[] = [
+  'kit_ouro',
+  'kit_prata',
+  'kit_basico',
+  'sem_kit',
+];
+
+/**
+ * Rótulo enum do inscrito (RN-202) DERIVADO do `kitId` que precificou a linha
+ * — NUNCA do campo `kit` que o cliente manda. Fecha o canal de fraude do
+ * checkout de kit (Schneier): sem esta derivação `kit` e `kitId` são inputs
+ * INDEPENDENTES, então um cliente escolhe `kitId: 'sem-kit'` (−R$15, desconto)
+ * e ainda carimba `kit: 'kit_ouro'` no doc — paga menos e o balcão entrega o
+ * kit caro pelo rótulo. Aqui o rótulo passa a espelhar o kit COBRADO: kits
+ * canônicos do seed mapeiam id→enum (dash→underscore); id custom (ou ausência
+ * de kit) cai em `sem_kit` — degradação honesta, preço sempre do core. Cliente
+ * honesto já enviava este mesmo valor (kitEnumFromId no landing): ZERO mudança
+ * de comportamento para o fluxo legítimo, só remove a via de abuso. @pure
+ */
+export function kitEnumInscritoFromId(kitId?: string): KitInscrito {
+  if (typeof kitId !== 'string' || kitId.length === 0) return 'sem_kit';
+  const norm = kitId.replace(/-/g, '_');
+  return (KITS_INSCRITO_CANONICOS as readonly string[]).includes(norm)
+    ? (norm as KitInscrito)
+    : 'sem_kit';
+}
+
 /** Ids do pedido/pagamento derivados de (uid, key) — replay-safe. @pure */
 export function idsDoCheckout(
   uid: string,
@@ -496,7 +524,10 @@ async function criarDocsDeCheckout(
           // pedido (conta/convite de atleta é lote futuro — premissa P3).
           atletaId: ehResponsavel ? caller.uid : `${inscritoId}-convidado`,
           atletaNome: inscrito.nome.trim(),
-          kit: inscrito.kit ?? 'sem_kit',
+          // Rótulo do kit DERIVADO do kitId cobrado (não do `kit` do cliente —
+          // ver kitEnumInscritoFromId): impede pagar barato e carimbar o kit
+          // caro no doc de retirada.
+          kit: kitEnumInscritoFromId(inscrito.kitId),
           chipNumero: null,
           status: 'pendente',
           modalidade: inscrito.modalidade,

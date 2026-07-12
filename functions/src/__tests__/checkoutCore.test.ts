@@ -18,17 +18,21 @@ import {
   etapaAnterior,
   indiceEtapa,
   isEtapaCheckout,
+  montarItensDoPedido,
   proximaEtapa,
   roundMoney,
   validarDadosMinimosInscrito,
   type CupomVenda,
+  type KitVenda,
   type LoteVenda,
   type Timestamp,
 } from '@leela/core';
 import {
   idsDoCheckout,
+  kitEnumInscritoFromId,
   validarCreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
+import type { CotarInscricaoCheckoutResult } from '../checkout/cotarInscricaoCheckout';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -417,5 +421,203 @@ describe('idsDoCheckout — determinismo da idempotência (RN-333)', () => {
     expect(idsDoCheckout('uid-ana', 'chk-0001-aaaa-bbbb', 1).pedidoId).not.toBe(
       idsDoCheckout('uid-bruno', 'chk-0001-aaaa-bbbb', 1).pedidoId
     );
+  });
+});
+
+// ===========================================================================
+// 5. REFINO KIT — revisão antagonista (Fable · Schneier). Refuta a integridade
+//    do dinheiro na fiação de kit que entrou no checkout (commit dc57504).
+// ===========================================================================
+
+// Kits canônicos do seed (kits.seed.ts) — a fonte de verdade do preço é o DOC.
+const KIT_OURO: KitVenda = { nome: 'Kit Ouro', preco: 89, modalidades: ['21k'] };
+const KIT_PRATA: KitVenda = { nome: 'Kit Prata', preco: 35, modalidades: ['10k', '21k'] };
+const SEM_KIT: KitVenda = { nome: 'Sem kit', preco: -15, modalidades: ['5k'] };
+
+describe('H1 — preço do kit NUNCA vem do cliente (só kitId; doc é a verdade)', () => {
+  it('o input do checkout não tem campo de preço de kit — só kitId (string) + kit (enum)', () => {
+    // O cliente injeta um "preço" fingindo ser o kit → o guard de enum recusa
+    // (kit deve ser string do enum, nunca objeto com preço arbitrário).
+    const erros = validarCreateInscricaoChargeInput({
+      eventoId: 'meia-floripa-2026',
+      inscritos: [
+        {
+          nome: 'Ana Souza',
+          email: 'ana@exemplo.com',
+          cpf: '52998224725',
+          modalidade: '21k',
+          kit: { preco: -9999 } as unknown, // tentativa de injeção de preço
+          kitId: 'kit-ouro',
+        },
+      ],
+      responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+      forma: 'pix',
+      parcelas: 1,
+      idempotencyKey: 'chk-0001-aaaa-bbbb',
+    });
+    expect(erros.join(' ')).toMatch(/kit fora do enum/);
+  });
+
+  it('kitId válido (string) é aceito — o preço será resolvido do doc no servidor', () => {
+    const erros = validarCreateInscricaoChargeInput({
+      eventoId: 'meia-floripa-2026',
+      inscritos: [
+        { nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '52998224725', modalidade: '21k', kitId: 'kit-ouro' },
+      ],
+      responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+      forma: 'pix',
+      parcelas: 1,
+      idempotencyKey: 'chk-0001-aaaa-bbbb',
+    });
+    expect(erros).toEqual([]);
+  });
+});
+
+describe('H2 — kit de outra modalidade NÃO precifica (RN-210, defesa no core)', () => {
+  it('Kit Ouro (só 21k) numa inscrição 10k → LANÇA (não ganha o preço/benefício)', () => {
+    expect(() =>
+      venda({ itens: [{ modalidade: '10k', lotesDaModalidade: LOTES_10K, kit: KIT_OURO }] })
+    ).toThrow(/não é ofertado para a modalidade|RN-210/);
+  });
+
+  it('Sem kit (desconto só-5k) aplicado numa 10k → LANÇA (desconto não vaza p/ outra modalidade)', () => {
+    expect(() =>
+      venda({ itens: [{ modalidade: '10k', lotesDaModalidade: LOTES_10K, kit: SEM_KIT }] })
+    ).toThrow(/não é ofertado para a modalidade|RN-210/);
+  });
+
+  it('kit na modalidade CERTA precifica normalmente (prova que o guard não é falso-positivo)', () => {
+    const sale = venda({ itens: [{ modalidade: '10k', lotesDaModalidade: LOTES_10K, kit: KIT_PRATA }] });
+    expect(sale.itens[0]?.kitNome).toBe('Kit Prata');
+    expect(sale.itens[0]?.kitPreco).toBe(35);
+    expect(sale.itens[0]?.preco).toBe(224.9); // 189.90 + 35
+  });
+});
+
+describe('H3 — kit-desconto não zera/negativa a venda (piso do item + guard global)', () => {
+  it('EXPLOIT antes do fix: item negativo (kit-desconto > lote) num GRUPO escapava do guard global e detonava 500 no rateio — agora LANÇA limpo', () => {
+    // 5k lote R$ 10 + Sem kit −R$15 = −R$5. Sozinho, o guard global valorFinal≤0
+    // pegaria; em GRUPO (com um 10k positivo) o TOTAL fica > 0 e a linha negativa
+    // passava por computeSaleState, explodindo só lá no parseMoney (500).
+    const semKit5k: KitVenda = { nome: 'Sem kit', preco: -15, modalidades: ['5k'] };
+    expect(() =>
+      venda({
+        itens: [
+          { modalidade: '10k', lotesDaModalidade: LOTES_10K },
+          {
+            modalidade: '5k',
+            lotesDaModalidade: [lote({ id: '5k-barato', nome: 'Lote 2', preco: 10 })],
+            kit: semKit5k,
+          },
+        ],
+      })
+    ).toThrow(/NEGATIVO|negativo/);
+  });
+
+  it('valorFinal ≤ 0 (kit-desconto + cupom levam a venda a zero) → LANÇA (sem cobrança de R$ 0)', () => {
+    // 5k R$ 20 + Sem kit −15 = 5; cupom fixo R$ 5 → valorFinal 0 → bloqueado.
+    const semKit5k: KitVenda = { nome: 'Sem kit', preco: -15, modalidades: ['5k'] };
+    expect(() =>
+      venda({
+        itens: [
+          {
+            modalidade: '5k',
+            lotesDaModalidade: [lote({ id: '5k-20', nome: 'Lote 2', preco: 20 })],
+            kit: semKit5k,
+          },
+        ],
+        cupom: cupom({ codigo: 'ZERA', tipo: 'fixo', valor: 5 }),
+      })
+    ).toThrow(/gratuito|valorFinal/);
+  });
+
+  it('não dá para EMPILHAR desconto: adicionar um inscrito com kit-desconto AUMENTA o total (lote ≫ desconto)', () => {
+    const soloUm = venda({ itens: [{ modalidade: '10k', lotesDaModalidade: LOTES_10K }] });
+    const comMais = venda({
+      itens: [
+        { modalidade: '10k', lotesDaModalidade: LOTES_10K },
+        { modalidade: '5k', lotesDaModalidade: LOTES_5K, kit: SEM_KIT }, // 129.90 − 15
+      ],
+    });
+    expect(comMais.valorBase).toBe(304.8); // 189.90 + 114.90
+    expect(comMais.valorBase).toBeGreaterThan(soloUm.valorBase);
+  });
+});
+
+describe('H4 — arredondamento com o delta do kit mantém a invariante Σ==total', () => {
+  it('Σ itens.preco == valorBase e Σ itens.valorFinal == valorFinal (cent-exato) com kits + cupom', () => {
+    const sale = venda({
+      itens: [
+        { modalidade: '10k', lotesDaModalidade: LOTES_10K, kit: KIT_PRATA }, // 224.90
+        { modalidade: '5k', lotesDaModalidade: LOTES_5K, kit: SEM_KIT }, // 114.90
+      ],
+      cupom: cupom({ codigo: 'GRUPO10' }), // 10%
+    });
+    // valorBase = Σ dos preços por item (cada um já cent-exato)
+    const somaItens = roundMoney(sale.itens.reduce((s, i) => s + i.preco, 0));
+    expect(somaItens).toBe(sale.valorBase);
+    expect(sale.valorBase).toBe(339.8);
+    expect(sale.desconto).toBe(33.98); // 10% de 339.80
+    expect(sale.valorFinal).toBe(305.82);
+
+    // O rateio do desconto (produtor de escrita) fecha cent-exato sobre as
+    // MESMAS bases (lote + kit) — nenhum centavo criado/perdido pelo delta.
+    const linhas = montarItensDoPedido(
+      sale.itens.map((i, n): { inscritoRef: string; loteId: string | null; valorBase: number } => ({
+        inscritoRef: `i${n + 1}`,
+        loteId: i.loteId,
+        valorBase: i.preco,
+      })),
+      sale.desconto
+    );
+    const somaFinal = roundMoney(linhas.reduce((s, l) => s + l.valorFinal, 0));
+    const somaDesc = roundMoney(linhas.reduce((s, l) => s + l.desconto, 0));
+    expect(somaFinal).toBe(sale.valorFinal);
+    expect(somaDesc).toBe(sale.desconto);
+    for (const l of linhas) {
+      expect(roundMoney(l.valorBase - l.desconto)).toBe(l.valorFinal);
+    }
+  });
+
+  it('kit com preço em sub-centavo é normalizado (roundMoney) antes de somar', () => {
+    const kitSubcentavo: KitVenda = { nome: 'Kit X', preco: 35.004, modalidades: ['10k'] };
+    const sale = venda({ itens: [{ modalidade: '10k', lotesDaModalidade: LOTES_10K, kit: kitSubcentavo }] });
+    expect(sale.itens[0]?.kitPreco).toBe(35); // 35.004 → 35.00
+    expect(sale.itens[0]?.preco).toBe(224.9);
+  });
+});
+
+describe('H5 — a cotação read-only NÃO expõe a taxa (canal-lateral do termo privado)', () => {
+  it('o contrato da cotação não tem campo `taxa` (prova de tipo — trava no gate tsc)', () => {
+    const amostra = {} as CotarInscricaoCheckoutResult;
+    // @ts-expect-error `taxa` não faz parte do contrato da cotação pública (RN-330/RN-404)
+    const _taxa = amostra.taxa;
+    void _taxa;
+    expect(true).toBe(true);
+  });
+});
+
+describe('H1/fulfillment — rótulo do kit DERIVA do kitId cobrado, não do cliente', () => {
+  it('kitEnumInscritoFromId mapeia os ids canônicos do seed (id→enum)', () => {
+    expect(kitEnumInscritoFromId('kit-ouro')).toBe('kit_ouro');
+    expect(kitEnumInscritoFromId('kit-prata')).toBe('kit_prata');
+    expect(kitEnumInscritoFromId('kit-basico')).toBe('kit_basico');
+    expect(kitEnumInscritoFromId('sem-kit')).toBe('sem_kit');
+  });
+
+  it('sem kit / kitId custom → sem_kit (degradação honesta; preço vem do core)', () => {
+    expect(kitEnumInscritoFromId(undefined)).toBe('sem_kit');
+    expect(kitEnumInscritoFromId('')).toBe('sem_kit');
+    expect(kitEnumInscritoFromId('kit-personalizado-do-organizador')).toBe('sem_kit');
+  });
+
+  it('EXPLOIT fechado: pagar Sem kit (−R$15) e carimbar kit_ouro no doc é impossível — o rótulo espelha o kitId cobrado', () => {
+    // Antes: `kit` (rótulo) e `kitId` (preço) eram inputs independentes.
+    // Agora o rótulo persistido deriva do kitId → não há como pagar barato
+    // (kitId 'sem-kit') e receber o kit caro pelo rótulo ('kit_ouro').
+    const kitIdCobrado = 'sem-kit';
+    const rotuloForjadoPeloCliente = 'kit_ouro';
+    expect(kitEnumInscritoFromId(kitIdCobrado)).toBe('sem_kit');
+    expect(kitEnumInscritoFromId(kitIdCobrado)).not.toBe(rotuloForjadoPeloCliente);
   });
 });

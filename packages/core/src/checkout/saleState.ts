@@ -169,6 +169,30 @@ export interface SaleState {
 // ---------------------------------------------------------------------------
 
 /**
+ * Piso monetário do item (RN-211): o preço da inscrição (lote + delta do kit)
+ * NUNCA é negativo. Um kit-desconto que excede o preço do lote é config
+ * incoerente — LANÇA (fail-fast, invalid-argument no chamador) em vez de
+ * deixar um item negativo escapar do guard GLOBAL `valorFinal ≤ 0` (que só
+ * enxerga o total do pedido) e detonar 'internal' 500 no rateio (parseMoney).
+ */
+function guardPrecoNaoNegativo(
+  preco: number,
+  modalidade: string,
+  loteNome: string | null,
+  precoBase: number,
+  kitPreco: number
+): void {
+  if (preco < 0) {
+    const origem = loteNome !== null ? `lote "${loteNome}"` : 'preço legado';
+    throw new Error(
+      `computeSaleState: preço da inscrição "${modalidade}" ficou NEGATIVO ` +
+        `(${origem} R$ ${precoBase} + kit R$ ${kitPreco} = R$ ${preco}) — ` +
+        `kit-desconto não pode exceder o preço da inscrição (RN-211)`
+    );
+  }
+}
+
+/**
  * Resolve o preço de UM item: lote ativo → (modalidade SEM lotes) preço
  * legado → venda fechada. Espelho do `precoVigente` (re-review S300 #1):
  * com lotes configurados e NENHUM ativo (janela-morta) o legado NÃO se
@@ -204,13 +228,19 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
 
   const ativo = loteAtivo(item.lotesDaModalidade, agora);
   if (ativo !== null) {
+    const preco = roundMoney(ativo.preco + kitPreco);
+    // Piso do item (RN-211): kit-desconto NUNCA excede o lote. Sem este guard
+    // um item negativo passa despercebido em pedido de GRUPO (o guard global
+    // `valorFinal ≤ 0` só olha o TOTAL) e explode como 'internal' 500 lá no
+    // parseMoney do rateio — fail-fast aqui, com mensagem acionável.
+    guardPrecoNaoNegativo(preco, item.modalidade, ativo.nome, ativo.preco, kitPreco);
     return {
       modalidade: item.modalidade,
       loteId: ativo.id,
       loteNome: ativo.nome,
       kitNome,
       kitPreco,
-      preco: roundMoney(ativo.preco + kitPreco),
+      preco,
     };
   }
 
@@ -228,13 +258,15 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
         `computeSaleState: "precoLegado" inválido para a modalidade "${item.modalidade}"`
       );
     }
+    const preco = roundMoney(item.precoLegado + kitPreco);
+    guardPrecoNaoNegativo(preco, item.modalidade, null, item.precoLegado, kitPreco);
     return {
       modalidade: item.modalidade,
       loteId: null,
       loteNome: null,
       kitNome,
       kitPreco,
-      preco: roundMoney(item.precoLegado + kitPreco),
+      preco,
     };
   }
 
