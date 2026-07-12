@@ -19,6 +19,7 @@
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   GoogleAuthProvider,
@@ -99,6 +100,31 @@ export async function criarContaComEmail(
   senha: string
 ): Promise<UserCredential> {
   return createUserWithEmailAndPassword(getLeelaAuth(), email, senha);
+}
+
+// ---------------------------------------------------------------------------
+// Anônimo (checkout público sem login — LEELA-S1203)
+// ---------------------------------------------------------------------------
+
+/**
+ * Login ANÔNIMO — dá ao atleta uma identidade Firebase (uid) SEM criar conta
+ * nem coletar credencial. É o que permite o checkout público invocar as Cloud
+ * Functions (que exigem `context.auth`) mantendo a UX "sem login": o uid anônimo
+ * alimenta os ids determinísticos de idempotência do pedido (`ped-{uid}-{key}`).
+ *
+ * Idempotente na prática: se já há sessão (anônima ou não), devolve o usuário
+ * atual sem reautenticar — a sessão anônima persiste no navegador entre reloads,
+ * então o retry do checkout reusa o MESMO uid (idempotência preservada).
+ *
+ * PREMISSA DE PRODUÇÃO: exige o provedor "Anonymous" habilitado no Firebase
+ * Auth (Console). No Emulator já vem ligado. Sem ele, lança
+ * `auth/operation-not-allowed`.
+ */
+export async function loginAnonimo(): Promise<User> {
+  const auth = getLeelaAuth();
+  if (auth.currentUser) return auth.currentUser;
+  const cred = await signInAnonymously(auth);
+  return cred.user;
 }
 
 // ---------------------------------------------------------------------------

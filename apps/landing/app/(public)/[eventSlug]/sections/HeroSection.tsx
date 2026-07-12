@@ -3,12 +3,14 @@ import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
+import { HeroCover } from './HeroCover';
 
 /**
  * Hero da página de evento (S1201-T2): nome, data, local, chip, CTA "Garantir
- * inscrição" e o "a partir de" derivado do preço vigente. Imagem de capa quando
- * houver (única exceção de placeholder permitida pelo brief: gradiente de
- * capa); sem imagem, cai no gradiente de tokens.
+ * inscrição" e o "a partir de" derivado do preço vigente. A capa usa o
+ * `HeroCover`: gradiente de tokens (igual aos cards da home) quando não há URL
+ * de capa, e fallback resiliente para o MESMO gradiente se a imagem falhar —
+ * nunca um `<img>` quebrado com alt à mostra.
  */
 export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.Element {
   const aberta = evento.estadoVenda === 'aberto';
@@ -87,21 +89,7 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
         {/* Media 16/10 — imagem de capa ou gradiente de tokens */}
         <div className="order-1 lg:order-2">
           <div className="relative aspect-[16/10] overflow-hidden rounded-ds-lg shadow-elev-2">
-            {evento.imagemUrl !== undefined ? (
-              // Capa remota do organizador via <img> puro: next/image exige
-              // allowlist de domínio (remotePatterns), fora do escopo V1. Sem
-              // imagem no seed, este ramo não renderiza — cai no gradiente.
-              <img
-                src={evento.imagemUrl}
-                alt={`Capa de ${evento.nome}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div
-                aria-hidden
-                className="h-full w-full bg-[image:linear-gradient(135deg,var(--action-primary),var(--surface-high))]"
-              />
-            )}
+            <HeroCover imagemUrl={evento.imagemUrl} nome={evento.nome} />
             <div className="absolute left-4 top-4 flex flex-col items-center rounded-ds-md bg-surface-overlay px-4 py-2 text-center leading-none shadow-elev-1">
               <span className="font-display text-2xl font-extrabold text-text-primary">
                 {evento.dataLabel.split(' ')[0]}

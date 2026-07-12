@@ -29,4 +29,14 @@ export {
   DateBadge,
   Divider,
   EmptyState,
+  // Primitivos de formulário do checkout (S1203) — consumidos por Client
+  // Components; passam por este boundary 'use client' para manter o padrão.
+  Input,
+  Select,
+  Checkbox,
+  Field,
+  Radio,
+  RadioGroup,
+  RadioCard,
+  Stepper,
 } from '@leela/design-system';

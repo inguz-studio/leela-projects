@@ -62,6 +62,7 @@ import {
 } from '@leela/core';
 import { assertTenantAtivo } from '../eventos/criarEvento';
 import { selectPaymentProvider } from '../payments/selectProvider';
+import { agoraCheckout } from './relogioCheckout';
 
 type Db = admin.firestore.Firestore;
 
@@ -254,16 +255,28 @@ export function idsDoCheckout(
 // Carregamento dos insumos da venda (evento, lotes, cupom, termo)
 // ---------------------------------------------------------------------------
 
-interface InsumosVenda {
+export interface InsumosVenda {
   tenantId: string;
   itens: ItemVendaInput[];
   cupom: CupomVenda | null;
   terms: CommercialTerms;
 }
 
-async function carregarInsumos(
+/**
+ * Subconjunto ESTRUTURAL do input que `carregarInsumos` realmente lê —
+ * `CreateInscricaoChargeInput` o satisfaz, e a COTAÇÃO read-only
+ * (`cotarInscricaoCheckout`) reusa a MESMA carga (evento/lotes/cupom/termo)
+ * sem duplicar a leitura nem tocar o produtor de escrita.
+ */
+export interface CarregarInsumosInput {
+  eventoId: string;
+  inscritos: readonly { modalidade: string }[];
+  cupomCodigo?: string;
+}
+
+export async function carregarInsumos(
   db: Db,
-  input: CreateInscricaoChargeInput
+  input: CarregarInsumosInput
 ): Promise<InsumosVenda> {
   const eventoRef = db.collection('eventos').doc(input.eventoId);
   const eventoSnap = await eventoRef.get();
@@ -722,6 +735,9 @@ export const createInscricaoCharge = https.onCall(async (data: unknown, context)
     admin.firestore(),
     selectPaymentProvider(),
     data,
-    { uid: context.auth.uid }
+    { uid: context.auth.uid },
+    // Relógio da venda: real em produção; honra LEELA_CLOCK SÓ no emulator
+    // (demo contra o seed de datas fixas — ver relogioCheckout.ts). ⚠️ Fable.
+    agoraCheckout
   );
 });

@@ -79,3 +79,9 @@ export { onInscritoWrite } from './eventos/agregarFinanceiro';
 // pagamentoWebhook é a ÚNICA porta de confirmação (assinado + idempotente).
 export { createInscricaoCharge } from './checkout/createInscricaoCharge';
 export { pagamentoWebhook } from './checkout/webhookPagamento';
+// Cotação READ-ONLY do Resumo (S1203 — consome computeSaleState com os termos
+// PRIVADOS do tenant; não escreve nada).
+export { cotarInscricaoCheckout } from './checkout/cotarInscricaoCheckout';
+// Disparo do webhook de confirmação no SANDBOX (S1203 — "o Mock dispara o
+// webhook"; fail-closed com chave Asaas real). ⚠️ Fable-review.
+export { confirmarPagamentoSandbox } from './checkout/confirmarPagamentoSandbox';

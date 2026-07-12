@@ -1,0 +1,237 @@
+// =============================================================================
+// functions/src/checkout/cotarInscricaoCheckout.ts
+//
+// Cotação READ-ONLY do checkout (LEELA-S1203 · UI de 5 etapas). A etapa
+// "Resumo" precisa exibir base → desconto → valorFinal → taxa → opções de
+// parcelamento ANTES do pagamento, mas `computeSaleState` depende dos
+// commercialTerms do tenant (taxa/parcelamento — RN-330/RN-311), que são
+// PRIVADOS (o leitor público não os expõe). Esta cotação roda a MESMA derivação
+// no servidor e devolve só o que o COMPRADOR vê — a UI apenas RENDERIZA o
+// resultado, sem somar um centavo (regra inviolável do brief).
+//
+// REUSO-FIRST: compõe `carregarInsumos` (evento/lotes/cupom/termo — a MESMA
+// carga do produtor de escrita) + `computeSaleState` (fonte única de preço).
+// NÃO escreve NADA — nenhum pedido, nenhuma cobrança. É o "preço na vitrine".
+//
+// ⚠️ FABLE-REVIEW (fiação de dinheiro): esta é a fonte dos números que a UI
+// mostra no Resumo. O valor AUTORITATIVO da cobrança continua sendo o de
+// `createInscricaoCharge` (que recomputa server-side na criação). A cotação é
+// informativa/idempotente e read-only; conferir que nenhum caminho aqui escreve.
+// =============================================================================
+
+import * as admin from 'firebase-admin';
+import { https } from 'firebase-functions/v1';
+import {
+  computeSaleState,
+  isCodigoCupomValido,
+  isFormaPagamento,
+  normalizarCodigoCupom,
+  type FormaPagamento,
+  type SaleState,
+} from '@leela/core';
+import { carregarInsumos } from './createInscricaoCharge';
+import { agoraCheckout } from './relogioCheckout';
+
+type Db = admin.firestore.Firestore;
+
+// ---------------------------------------------------------------------------
+// Contratos
+// ---------------------------------------------------------------------------
+
+/** Uma inscrição para cotar — só a modalidade importa para o preço (ADR-012). */
+export interface CotarItemInput {
+  modalidade: string;
+}
+
+/** Input da cotação read-only (validado no servidor — nunca confiar na UI). */
+export interface CotarInscricaoCheckoutInput {
+  eventoId: string;
+  /** ≥ 1 inscrição (ADR-011 — auto-inscrição = 1). */
+  itens: CotarItemInput[];
+  forma: FormaPagamento;
+  /** Parcelas escolhidas (1 = à vista; PIX exige 1). */
+  parcelas: number;
+  cupomCodigo?: string;
+}
+
+/** Uma linha resolvida da cotação (o que o Resumo lista por inscrito). */
+export interface CotarItemResult {
+  modalidade: string;
+  /** Rótulo do lote vigente (ex.: "Lote 2") — nunca "tier". `null` = legado. */
+  loteNome: string | null;
+  /** Preço da inscrição em R$ (2 casas). */
+  preco: number;
+}
+
+/** Opção de parcelamento serializável (espelho de InstallmentOption). */
+export interface CotarParcelaResult {
+  parcelas: number;
+  valorParcela: number;
+  valorTotal: number;
+}
+
+/** Resultado da cotação — o CONTRATO que o Resumo (S1203) consome. */
+export interface CotarInscricaoCheckoutResult {
+  itens: CotarItemResult[];
+  /** Σ preços das inscrições, ANTES de cupom. */
+  valorBase: number;
+  /** Desconto do cupom (0 quando sem cupom). */
+  desconto: number;
+  /** valorBase − desconto (o total à vista para o organizador). */
+  valorFinal: number;
+  cupomAplicado: { codigo: string; tipo: string; valor: number } | null;
+  /** Taxa Leela (informativa — organizador; o comprador paga `totalCobrado`). */
+  taxa: number;
+  /** Opções de parcelamento ofertáveis (termo — RN-311). PIX: só 1x. */
+  opcoesParcelamento: CotarParcelaResult[];
+  /** Opção escolhida (parcelas do input). */
+  parcelamento: CotarParcelaResult;
+  /** O que o COMPRADOR paga na forma/parcelas escolhidas. */
+  totalCobrado: number;
+  forma: FormaPagamento;
+}
+
+// ---------------------------------------------------------------------------
+// Validação pura do input
+// ---------------------------------------------------------------------------
+
+/** Valida o input bruto da cotação. Retorna lista de erros (vazia = válido). */
+export function validarCotarInput(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return ['Input é obrigatório.'];
+  }
+  const input = raw as Record<string, unknown>;
+  const erros: string[] = [];
+
+  if (typeof input['eventoId'] !== 'string' || input['eventoId'].length === 0) {
+    erros.push('"eventoId" é obrigatório.');
+  }
+
+  const itens = input['itens'];
+  if (!Array.isArray(itens) || itens.length === 0) {
+    erros.push('"itens" deve ter ≥ 1 inscrição (ADR-011).');
+  } else {
+    itens.forEach((item, i) => {
+      const obj = (item ?? {}) as Record<string, unknown>;
+      if (typeof obj['modalidade'] !== 'string' || obj['modalidade'].length === 0) {
+        erros.push(`itens[${i}]: "modalidade" é obrigatória.`);
+      }
+    });
+  }
+
+  if (!isFormaPagamento(input['forma'])) {
+    erros.push('"forma" deve ser cartao_credito ou pix.');
+  }
+
+  const parcelas = input['parcelas'];
+  if (!Number.isInteger(parcelas) || (parcelas as number) < 1) {
+    erros.push('"parcelas" deve ser inteiro ≥ 1.');
+  } else if (input['forma'] === 'pix' && (parcelas as number) > 1) {
+    erros.push('PIX é à vista — "parcelas" deve ser 1.');
+  }
+
+  const cupomCodigo = input['cupomCodigo'];
+  if (cupomCodigo !== undefined) {
+    if (
+      typeof cupomCodigo !== 'string' ||
+      !isCodigoCupomValido(normalizarCodigoCupom(cupomCodigo))
+    ) {
+      erros.push('"cupomCodigo" fora do padrão A-Z0-9 (3–20).');
+    }
+  }
+
+  return erros;
+}
+
+// ---------------------------------------------------------------------------
+// Núcleo (testável com Admin SDK contra o Emulator; callable é wrapper fino)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cota a venda sem escrever nada. Fail-fast: erros de venda (fechada, cupom
+ * fora de vigência, parcelas inválidas) viram `invalid-argument` com mensagem
+ * acionável — o mesmo idioma de `computeSaleState`.
+ *
+ * @param agora relógio injetável (vigência de lote/cupom nos testes/demo)
+ */
+export async function cotarInscricaoCheckoutCore(
+  db: Db,
+  rawInput: unknown,
+  agora: () => Date = () => new Date()
+): Promise<CotarInscricaoCheckoutResult> {
+  const erros = validarCotarInput(rawInput);
+  if (erros.length > 0) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      `Cotação inválida: ${erros.join(' ')}`
+    );
+  }
+  const input = rawInput as unknown as CotarInscricaoCheckoutInput;
+
+  const insumos = await carregarInsumos(db, {
+    eventoId: input.eventoId,
+    inscritos: input.itens,
+    ...(input.cupomCodigo !== undefined ? { cupomCodigo: input.cupomCodigo } : {}),
+  });
+
+  let sale: SaleState;
+  try {
+    sale = computeSaleState({
+      itens: insumos.itens,
+      cupom: insumos.cupom,
+      forma: input.forma,
+      parcelas: input.parcelas,
+      installmentRules: insumos.terms.installmentRules,
+      platformFeePct: insumos.terms.platformFeePct,
+      agora: agora(),
+    });
+  } catch (err) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      err instanceof Error ? err.message : 'Estado de venda inválido.'
+    );
+  }
+
+  return {
+    itens: sale.itens.map((i) => ({
+      modalidade: i.modalidade,
+      loteNome: i.loteNome,
+      preco: i.preco,
+    })),
+    valorBase: sale.valorBase,
+    desconto: sale.desconto,
+    valorFinal: sale.valorFinal,
+    cupomAplicado: sale.cupomAplicado
+      ? {
+          codigo: sale.cupomAplicado.codigo,
+          tipo: sale.cupomAplicado.tipo,
+          valor: sale.cupomAplicado.valor,
+        }
+      : null,
+    taxa: sale.taxa,
+    opcoesParcelamento: sale.opcoesParcelamento.map((o) => ({
+      parcelas: o.parcelas,
+      valorParcela: o.valorParcela,
+      valorTotal: o.valorTotal,
+    })),
+    parcelamento: {
+      parcelas: sale.parcelamento.parcelas,
+      valorParcela: sale.parcelamento.valorParcela,
+      valorTotal: sale.parcelamento.valorTotal,
+    },
+    totalCobrado: sale.totalCobrado,
+    forma: sale.forma,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Callable
+// ---------------------------------------------------------------------------
+
+/** `cotarInscricaoCheckout` — cotação read-only do checkout público (S1203). */
+export const cotarInscricaoCheckout = https.onCall(async (data: unknown, context) => {
+  if (!context.auth) {
+    throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
+  }
+  return cotarInscricaoCheckoutCore(admin.firestore(), data, agoraCheckout);
+});

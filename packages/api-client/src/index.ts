@@ -248,11 +248,34 @@ export {
   getCurrentUser,
   loginComEmail,
   criarContaComEmail,
+  loginAnonimo,
   loginComGoogle,
   loginComApple,
   logout,
   getClaims,
 } from './auth';
+
+// ---------------------------------------------------------------------------
+// Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
+// ---------------------------------------------------------------------------
+export {
+  cotarInscricaoCheckout,
+  createInscricaoCharge,
+  confirmarPagamentoSandbox,
+} from './checkout';
+export type {
+  CotarItemInput,
+  CotarInscricaoCheckoutInput,
+  CotarItemResult,
+  CotarParcelaResult,
+  CotarInscricaoCheckoutResult,
+  KitInscritoInput,
+  CheckoutInscritoInput,
+  CreateInscricaoChargeInput,
+  CreateInscricaoChargeResult,
+  ConfirmarPagamentoSandboxInput,
+  ConfirmarPagamentoSandboxResult,
+} from './checkout';
 
 // ---------------------------------------------------------------------------
 // Plataforma — tenants, mutações, termos e rollups (LEELA-E16 · S1601/S1602/S1605)

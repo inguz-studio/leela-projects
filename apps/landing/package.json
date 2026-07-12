@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@leela/api-client": "workspace:*",
     "@leela/core": "workspace:*",
     "@leela/design-system": "workspace:*",
     "@sentry/nextjs": "^10.63.0",
