@@ -18,41 +18,94 @@
 //     `evento.usaChip`, esta escrita só o persiste.
 // =============================================================================
 
-import { doc, serverTimestamp, setDoc, type Firestore } from 'firebase/firestore';
+import {
+  deleteField,
+  doc,
+  serverTimestamp,
+  setDoc,
+  type Firestore,
+} from 'firebase/firestore';
+import { isUrlCapaValida, REGULAMENTO_MAX, type ModoTaxa } from '@leela/core';
 
 /**
- * Campos gerais editáveis do evento (LEELA-S304-T2). `capacidade` aceita `null`
- * (desconhecida — limpa o campo); `parseEvento` normaliza para `number > 0` ou
- * `null` na leitura (RN-210). Campos travados/agregados/de-Function ficam FORA
- * deste contrato de propósito (ver fronteira no cabeçalho).
+ * Campos gerais editáveis do evento (LEELA-S304-T2 + EVENTO-CAMPOS).
+ * `capacidade` aceita `null` (desconhecida — limpa o campo); `parseEvento`
+ * normaliza para `number > 0` ou `null` na leitura (RN-210). Campos
+ * travados/agregados/de-Function ficam FORA deste contrato de propósito
+ * (ver fronteira no cabeçalho).
+ *
+ * EVENTO-CAMPOS (RN-153/RN-347) — os 3 campos novos são OPCIONAIS no input
+ * (`undefined` = não toca; chamadas existentes do painel seguem compilando):
+ *   - `imagemUrl`: URL http(s) da capa; `null` REMOVE a capa (deleteField).
+ *     RN-200 não congela — editável mesmo com venda.
+ *   - `regulamento`: texto (≤ REGULAMENTO_MAX); `null` REMOVE. Versionamento
+ *     RN-149 (`regulamentoVersao` + novo aceite) é do S306/Onda 3.
+ *   - `taxaModo`: modo da taxa POR EVENTO. Com venda feita a Rule NEGA a
+ *     troca (congela junto dos campos comerciais — RN-347); o
+ *     `permission-denied` sobe INTACTO para a UI (§2.12).
  */
 export interface AtualizarConfiguracoesEventoInput {
   nome: string;
   local: string;
   usaChip: boolean;
   capacidade: number | null;
+  imagemUrl?: string | null;
+  regulamento?: string | null;
+  taxaModo?: ModoTaxa;
 }
 
 /**
  * Persiste as configurações gerais do evento (merge). Só toca campos gerais —
- * a Rule congela ∑/status/tenantId/percursos e nega o update se algum for
- * incluído. `atualizadoEm` carimba a edição (trilha). Erro `permission-denied`
- * (não é writer do tenant / tenant inativo) sobe INTACTO para a UI (§2.12).
+ * a Rule congela ∑/status/tenantId/percursos (e `taxaModo` após a 1ª venda)
+ * e nega o update se algum for tocado indevidamente. `atualizadoEm` carimba a
+ * edição (trilha). Erro `permission-denied` (não é writer do tenant / tenant
+ * inativo / taxaModo congelado) sobe INTACTO para a UI (§2.12).
+ *
+ * Validação local dos campos novos é UX/fail-fast com mensagem acionável —
+ * a fronteira REAL é a Rule (capa http(s) ≤ 2048; regulamento ≤ 50k).
  */
 export async function atualizarConfiguracoesEvento(
   db: Firestore,
   eventoId: string,
   input: AtualizarConfiguracoesEventoInput
 ): Promise<void> {
-  await setDoc(
-    doc(db, 'eventos', eventoId),
-    {
-      nome: input.nome,
-      local: input.local,
-      usaChip: input.usaChip,
-      capacidade: input.capacidade,
-      atualizadoEm: serverTimestamp(),
-    },
-    { merge: true }
-  );
+  const payload: Record<string, unknown> = {
+    nome: input.nome,
+    local: input.local,
+    usaChip: input.usaChip,
+    capacidade: input.capacidade,
+    atualizadoEm: serverTimestamp(),
+  };
+
+  if (input.imagemUrl !== undefined) {
+    if (input.imagemUrl === null) {
+      payload['imagemUrl'] = deleteField(); // sem capa → hero volta ao gradiente
+    } else {
+      if (!isUrlCapaValida(input.imagemUrl)) {
+        throw new Error(
+          'Capa inválida: use uma URL http(s) de até 2048 caracteres (RN-153).'
+        );
+      }
+      payload['imagemUrl'] = input.imagemUrl.trim();
+    }
+  }
+
+  if (input.regulamento !== undefined) {
+    if (input.regulamento === null || input.regulamento.trim().length === 0) {
+      payload['regulamento'] = deleteField();
+    } else {
+      if (input.regulamento.length > REGULAMENTO_MAX) {
+        throw new Error(
+          `Regulamento excede ${REGULAMENTO_MAX} caracteres (RN-153).`
+        );
+      }
+      payload['regulamento'] = input.regulamento;
+    }
+  }
+
+  if (input.taxaModo !== undefined) {
+    payload['taxaModo'] = input.taxaModo;
+  }
+
+  await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });
 }

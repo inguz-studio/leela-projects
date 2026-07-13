@@ -20,6 +20,7 @@
 // =============================================================================
 
 import {
+  isUrlCapaValida,
   parseKit,
   parseLote,
   parsePaginaVendas,
@@ -222,7 +223,12 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       descricao: `${modalidadesNomes.join(', ')} em ${texto(data['local'])}.`,
     };
 
-    const imagemUrl = texto(data['imagemUrl']);
+    // Capa (RN-153): SÓ URL http(s) válida chega à página pública — a capa
+    // vira `src` de <img> (HeroCover); esquema fora de http(s) (javascript:,
+    // data:) cai no MESMO gradiente de fallback (defesa em profundidade com
+    // Rules/criarEvento — este leitor usa Admin SDK e bypassa as Rules).
+    const imagemUrlRaw = texto(data['imagemUrl']);
+    const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : '';
 
     const evento: EventoPublico = {
       slug,
@@ -289,7 +295,9 @@ export async function listarEventosPublicados(): Promise<EventoResumo[]> {
         lotes: lotesPorModalidade.get(nome) ?? [],
       }));
 
-      const imagemUrl = texto(data['imagemUrl']);
+      // Mesma guarda de capa http(s) da página do evento (RN-153)
+      const imagemUrlRaw = texto(data['imagemUrl']);
+      const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : '';
       resumos.push({
         slug: texto(data['slug']) || doc.id,
         nome: texto(data['nome']),
