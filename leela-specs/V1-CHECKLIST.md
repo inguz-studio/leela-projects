@@ -286,7 +286,7 @@ Débito V1.1: offline (S503) + manutenção (S504) web; mobile inteiro na onda E
 - [ ] LEELA-S401-T1 — Modelo `campanhas` + taxonomia de segmento do evento + Rules + api-client + seed
 - [ ] LEELA-E06-L2-T1 — `estimarAlcance` (callable `count()` sobre inscritos por segmento)
 - [ ] LEELA-S401-T4 — `enviarCampanha` idempotente + limite push RN-133 (disparo físico mock)
-- [ ] LEELA-E06-L3-T1 — Aba "Comunicação" aditiva na sub-nav + rota + shell fino + teste-guarda
+- [x] LEELA-E06-L3-T1 — Aba "Comunicação" aditiva na sub-nav + rota + shell — **✅ GATE PASS `bba54aa` 2026-07-12/13** (contadores 100% do agregado ∑ `comunicacoesResumo/current` — a aba NUNCA conta no cliente; timeline desc do log FABLE-G com badges de status; **PII: `destinatario.ref` mascarada `••••NNNN`, ref crua ausente do DOM (teste)**; CTA "Enviar comunicação" desabilitado honesto com hint até E06-L2 existir; sub-nav ordem canônica E04→E06; 16/16 testes; gate visual maestro desktop+mobile com 4 logs demo semeados) · follow-up D3 registrado: middle-action do card "Próximo evento" → "Comunicar" (task à parte, card de outro épico)
 - [ ] LEELA-S401-T2 — Lista de campanhas por estado (RN-130) + filtros + popover
 - [ ] LEELA-S401-T3 — Editor "Nova campanha" (canal, capa só-email, segmento, estimativa ao vivo, truncamento 160)
 
