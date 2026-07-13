@@ -254,6 +254,20 @@ export interface TransicaoAprovisionamentoResult {
 }
 
 /**
+ * Teto SANITÁRIO da quantidade da transição (S210-T4 review antagonista Fable).
+ * `qtdEstoqueValida` só exige inteiro ≥ 0 — sem limite superior, a UI (que só
+ * valida `Number.isInteger(x) && x >= 0`) deixa passar `1e9`/`1e21`, que o
+ * servidor carimbava direto no `estoqueFisico`/`historico`. É dado do próprio
+ * tenant (sem impacto cross-tenant ou de dinheiro), mas um saldo de 1 bilhão de
+ * unidades por (item×tamanho) é erro de digitação, não estoque real: mascara o
+ * alerta `esgotado`/`baixa` do SKU e polui o `historico[]` append-only. 1 milhão
+ * de unidades de UM tamanho já é ordem de grandeza absurda para um evento —
+ * acima disso é entrada inválida, rejeitada como `invalid-argument`. NÃO é regra
+ * de negócio congelada; é guarda contra input sem sentido físico.
+ */
+export const MAX_QTD_TRANSICAO_APROVISIONAMENTO = 1_000_000;
+
+/**
  * Valida o input bruto de `transicaoAprovisionamento`. Retorna a lista de
  * erros (vazia = válido). Pura — reutilizada pelos testes sem Emulator. @pure
  */
@@ -284,6 +298,11 @@ export function validarTransicaoAprovisionamentoInput(raw: unknown): string[] {
   }
   if (!qtdEstoqueValida(input['qtd'])) {
     erros.push('"qtd" deve ser inteiro ≥ 0 (quantidade da transição — RN-226).');
+  } else if ((input['qtd'] as number) > MAX_QTD_TRANSICAO_APROVISIONAMENTO) {
+    erros.push(
+      `"qtd" acima do teto sanitário (${MAX_QTD_TRANSICAO_APROVISIONAMENTO}) — ` +
+        'provável erro de digitação, não estoque real (S210-T4 review).'
+    );
   }
 
   return erros;
