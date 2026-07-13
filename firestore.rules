@@ -1402,6 +1402,34 @@ service cloud.firestore {
                               || callerParticipa()));
           allow write: if false;
         }
+
+        // `board/{docId}` — BOARD DE CONSISTÊNCIA materializado
+        // (S1308-T3 · decisão 2: anti-streak ético — ordena por dias
+        // ativos, NUNCA por volume bruto). Top-N em `board/current`,
+        // recomputado pela Function no fan-out de onRegistroWrite.
+        // ESCRITA: NUNCA pelo cliente (board forjado = fraude de
+        // reconhecimento social). LEITURA: espelha participantes —
+        // tenant do clube, participante do desafio, ou desafio 'publico'.
+        match /board/{docId} {
+
+          /** Visibilidade do desafio pai (helpers têm escopo por match). */
+          function visibilidadeDesafioPaiBoard() {
+            return get(/databases/$(database)/documents/clubes/$(clubeId)/desafios/$(desafioId))
+              .data.visibilidade;
+          }
+
+          /** Caller participa deste desafio? */
+          function callerParticipaBoard() {
+            return exists(/databases/$(database)/documents/clubes/$(clubeId)/desafios/$(desafioId)/participantes/$(request.auth.uid));
+          }
+
+          allow read: if isPlatformAdmin()
+                      || isTenantMember(tenantDoClubePai())
+                      || (isSignedIn()
+                          && (visibilidadeDesafioPaiBoard() == 'publico'
+                              || callerParticipaBoard()));
+          allow write: if false;
+        }
       }
 
       // `parcerias/{parceriaId}` — captura de valor do clube (E05 · S107-T1).

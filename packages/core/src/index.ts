@@ -841,3 +841,13 @@ export type {
   DecisaoParticipacao,
 } from './clubs/participacao';
 export { podeParticipar } from './clubs/participacao';
+
+// Clubs — board de consistência (LEELA-S1308-T3 · decisão 2): ordena por
+// dias ativos DESC (anti-streak ético), pontos só desempatam; top-N
+// materializado em board/current pela Function (fan-out onRegistroWrite).
+export type { ParticipanteBoard, EntradaBoard } from './clubs/consistencia';
+export {
+  BOARD_TOP_N,
+  ordenarPorConsistencia,
+  montarBoardConsistencia,
+} from './clubs/consistencia';

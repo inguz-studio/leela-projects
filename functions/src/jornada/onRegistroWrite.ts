@@ -48,6 +48,7 @@ import {
   type Pilar,
   type RegistroAcao,
 } from '@leela/core';
+import { recomputarBoardConsistencia } from './boardConsistencia';
 
 type Db = admin.firestore.Firestore;
 
@@ -182,6 +183,9 @@ export async function recomputarParticipacao(
   });
 
   await recomputarAgregadosDesafio(db, clubeId, desafioId);
+  // Board de consistência (S1308-T3 · decisão 2): registrar ação nova
+  // recomputa board/current no MESMO ciclo do fan-out.
+  await recomputarBoardConsistencia(db, clubeId, desafioId);
 
   return {
     agregado: true,
