@@ -31,9 +31,10 @@ describe('shellSidebarSections', () => {
     const items = sections.flatMap((s) => s.items);
     items.find((i) => i.id === 'clubs')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/clubes');
-    // Financeiro passou a navegar (E09-slim: painel de repasses do organizador).
+    // Financeiro navega para a ANÁLISE de vendas (RN-820: rota índice; a SubNav
+    // interna alcança os repasses do organizador — RN-349).
     items.find((i) => i.id === 'financeiro')?.onClick?.();
-    expect(navigate).toHaveBeenCalledWith('/financeiro/repasses');
+    expect(navigate).toHaveBeenCalledWith('/financeiro');
     // Itens ainda inertes (sem rota) permanecem sem onClick — estado honesto.
     expect(items.find((i) => i.id === 'comunicacao')?.onClick).toBeUndefined();
   });

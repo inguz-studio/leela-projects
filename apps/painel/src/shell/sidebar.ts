@@ -22,8 +22,9 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   'visao-geral': '/',
   eventos: '/eventos',
   clubs: '/clubes',
-  // E09-slim: o item Financeiro leva ao painel de repasses do organizador.
-  financeiro: '/financeiro/repasses',
+  // RN-820: o item Financeiro leva à ANÁLISE de vendas (rota índice); a SubNav
+  // interna (Análise | Repasses) alcança os repasses do organizador (RN-349).
+  financeiro: '/financeiro',
   comunicacao: undefined,
   marcas: undefined,
   analytics: undefined,
