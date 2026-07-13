@@ -251,9 +251,9 @@ Removidas (sem afiliados): ~~S1204-T1~~, ~~S1204-T3~~. Deferida V1.1: S1208 (por
 
 Vendido/disponível/retido + dados bancários LGPD + solicitação validada + retenção 15% (editável platform_admin) + comprovante numerado + histórico. "Pago" é registro manual mock (RN-356).
 
-- [ ] LEELA-E09s-L1-T1 — Modelo de dados tenant-scoped (dadosBancarios/secret, repasses, saldo, retenção) + doc
-- [ ] LEELA-E09s-L1-T2 — Security Rules (cross-tenant nega, secret read:false, escrita só Function)
-- [ ] LEELA-E09s-L1-T3 — Core puro (computeRetido/computeSaldoRepasse/validarSolicitacao/transitionRepasse/comprovante)
+- [x] LEELA-E09s-L1-T1 — Modelo de dados tenant-scoped (dadosBancarios/secret, repasses, saldo, retenção) + doc (`d7deb66` — repasse-types.ts + campos opcionais RN-348/350 no CommercialTerms + seção E09-slim no modelo-de-dados)
+- [x] LEELA-E09s-L1-T2 — Security Rules (cross-tenant nega, secret read:false, escrita só Function) (`4c534c4` — 4 blocos sob tenants/{tid}; secret ilegível até p/ owner e admin via client SDK; 30 testes adversariais + 23 regressão commercialTerms, emulator exit 0)
+- [x] LEELA-E09s-L1-T3 — Core puro (computeRetido/computeSaldoRepasse/validarSolicitacao/transitionRepasse/comprovante) (`e5a8abf` — + computeLiquidoProdutor RN-347 e janela D+N dias úteis RN-348; 47 testes unit)
 - [ ] LEELA-E09s-L2-T1 — `updateSaldoRepasse` (trigger idempotente sobre financeiro/current + repasses)
 - [ ] LEELA-E09s-L2-T2 — `saveDadosBancarios` (cifra AES-256-GCM server-side, retorna só mascarado)
 - [ ] LEELA-E09s-L2-T3 — `requestRepasse` (validação transacional RN-352) + `cancelRepasse` (owner)
