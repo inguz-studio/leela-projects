@@ -138,3 +138,9 @@ export {
   onFinanceiroEventoWrite,
   onRepasseWrite,
 } from './finance/updateSaldoRepasse';
+
+// Finance — DADOS BANCÁRIOS do organizador (E09s-L2-T2 · RN-354/357 ·
+// ADR-014 PROPOSTA): cifra AES-256-GCM (AAD=tenantId, chave Secret Manager)
+// no `dadosBancariosSecret` + persistência SÓ mascarada no `dadosBancarios`.
+// tenant_owner-only; fail-closed sem BANK_DATA_KEY. ⚠️ Fable (LGPD).
+export { saveDadosBancarios } from './finance/saveDadosBancarios';

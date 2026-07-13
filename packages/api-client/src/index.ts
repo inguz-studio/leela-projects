@@ -386,3 +386,11 @@ export type {
 // ---------------------------------------------------------------------------
 export { estornarInscricao } from './checkout';
 export type { EstornarInscricaoInput, EstornarInscricaoResult } from './checkout';
+
+// ---------------------------------------------------------------------------
+// Repasse do organizador — callables E09-slim (LEELA-E09s-L2 · RN-350..357)
+// Wrappers e tipos vivem em ./finance (dados bancários LGPD, solicitação,
+// transições admin, comprovante). Wildcard deliberado: o módulo é novo e
+// cresce por task do L2 sem reeditar este barrel (coordenação de território).
+// ---------------------------------------------------------------------------
+export * from './finance';
