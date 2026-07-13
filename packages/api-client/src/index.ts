@@ -174,11 +174,13 @@ export {
   listarEventosDoOrganizador,
   getEvento,
   getFinanceiroEvento,
+  observarFinanceiroEvento,
 } from './eventos/queries';
 export type {
   ListarEventosDoOrganizadorParams,
   FinanceiroEvento,
   ContagemInscritos,
+  ObservarHandlers,
 } from './eventos/queries';
 
 // S201-T2 — mutations via Cloud Function (criar/publicar — ADR-005, RN-201)
@@ -219,11 +221,19 @@ export {
 } from './eventos/comunicacoes';
 
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)
-export { listarInscritos, listarInscritosRecentes, INSCRITOS_PAGE_SIZE } from './eventos/inscritos';
+// S204 — balcão: observador realtime do pool inteiro (onSnapshot, UX-DADOS)
+export {
+  listarInscritos,
+  listarInscritosRecentes,
+  observarInscritos,
+  INSCRITOS_PAGE_SIZE,
+  INSCRITOS_BALCAO_CAP,
+} from './eventos/inscritos';
 export type {
   InscritosCursor,
   ListarInscritosOptions,
   ListarInscritosResult,
+  ObservarInscritosHandlers,
 } from './eventos/inscritos';
 
 // S205-T1 — kits do evento + catálogo de itens (N:N — RN-215)

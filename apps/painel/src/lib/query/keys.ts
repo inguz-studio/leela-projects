@@ -78,6 +78,12 @@ export const queryKeys = {
      */
     doEvento: (eventoId: string, reloadKey = 0) =>
       ['kits', 'do-evento', eventoId, reloadKey] as const,
+    /**
+     * Catálogo de ITENS do kit do evento (top-level `itensKit`, tenant-scoped).
+     * Partilhado Cadastro ↔ balcão (o checklist de entrega lê os itens). Salvar/
+     * remover um item invalida esta chave → read-your-writes (ADR-010).
+     */
+    itensDoEvento: (eventoId: string) => ['kits', 'itens-do-evento', eventoId] as const,
   },
 
   aprovisionamento: {

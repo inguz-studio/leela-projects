@@ -14,17 +14,26 @@ import {
   collection,
   getDocs,
   limit as firestoreLimit,
+  onSnapshot,
   orderBy,
   query,
   startAfter,
   type Firestore,
   type QueryConstraint,
   type QueryDocumentSnapshot,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { parseInscrito, type Inscrito } from '@leela/core';
 
 /** Page size canônico da tabela densa de inscritos (§2.5 — ~18 linhas) */
 export const INSCRITOS_PAGE_SIZE = 18;
+
+/**
+ * Teto do listener realtime do balcão (S204). O mock canônico tem 453 inscritos
+ * (HANDOFF-05); 1000 dá folga sem virar listener ilimitado. O balcão precisa do
+ * POOL inteiro em memória para buscar por nome/dorsal (não pagina).
+ */
+export const INSCRITOS_BALCAO_CAP = 1000;
 
 /**
  * Cursor opaco de paginação — snapshot do último doc da página anterior.
@@ -108,4 +117,35 @@ export async function listarInscritosRecentes(
   );
 
   return snap.docs.map((d) => parseInscrito(d.id, d.data()));
+}
+
+/** Handlers do observador realtime (onSnapshot) — next a cada mudança, error 1x. */
+export interface ObservarInscritosHandlers {
+  next: (itens: Inscrito[]) => void;
+  error?: (err: Error) => void;
+}
+
+/**
+ * OBSERVA o POOL de inscritos do evento em TEMPO REAL (`inscritos`, ordenado por
+ * `atletaNome`, teto `INSCRITOS_BALCAO_CAP`). Superfície VIVA do balcão (S204,
+ * UX-DADOS): dois operadores no balcão veem o check-in/vínculo de chip um do
+ * outro sem recarregar. Reusa `parseInscrito` (fonte única de parsing). Um
+ * ÚNICO listener sobre a coleção ordenada — vivo só enquanto o balcão está
+ * montado (o custo de listener é pago onde ele importa). Devolve o
+ * `Unsubscribe` para o cleanup do caller.
+ */
+export function observarInscritos(
+  db: Firestore,
+  eventoId: string,
+  handlers: ObservarInscritosHandlers
+): Unsubscribe {
+  return onSnapshot(
+    query(
+      collection(db, 'eventos', eventoId, 'inscritos'),
+      orderBy('atletaNome', 'asc'),
+      firestoreLimit(INSCRITOS_BALCAO_CAP)
+    ),
+    (snap) => handlers.next(snap.docs.map((d) => parseInscrito(d.id, d.data()))),
+    (err) => handlers.error?.(err)
+  );
 }

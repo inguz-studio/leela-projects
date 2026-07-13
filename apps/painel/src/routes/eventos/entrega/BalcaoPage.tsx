@@ -12,7 +12,7 @@
 import * as React from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { BalcaoView } from './BalcaoView';
-import { useTodosInscritos } from '../_data/inscritos';
+import { useInscritosRealtime } from '../../../lib/query/realtime';
 import { useItensKit } from '../_data/kits';
 import { useBalcaoMutations } from '../_data/balcao';
 import type { EventoOutletContext } from '../evento/EventoLayout';
@@ -27,7 +27,10 @@ export function BalcaoPage(): JSX.Element {
     return Number.isNaN(d.getTime()) ? undefined : d;
   }, [agoraParam]);
 
-  const { data, loading, error } = useTodosInscritos(evento.id);
+  // Superfície VIVA (UX-DADOS): pool de inscritos AO VIVO (onSnapshot) — o
+  // check-in/vínculo de chip de OUTRO operador aparece sem recarregar. O
+  // listener escreve na chave partilhada com a tabela densa (reidrata na volta).
+  const { data, loading, error } = useInscritosRealtime(evento.id);
   // Catálogo de itens do kit (checklist de conferência). Não bloqueia o balcão:
   // a busca/atendimento dependem só dos inscritos; sem itens o checklist some.
   const { data: itens } = useItensKit(evento.id);

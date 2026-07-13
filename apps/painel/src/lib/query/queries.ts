@@ -41,6 +41,7 @@ import {
   listarEquipe,
   listarInscritos,
   listarInscritosRecentes,
+  listarItensKit,
   listarKits,
   listarLotes,
   listClubesByTenant,
@@ -69,6 +70,7 @@ import type {
   EstadoRepasse,
   Evento,
   Inscrito,
+  ItemKit,
   Kit,
   LogComunicacao,
   Lote,
@@ -211,6 +213,20 @@ export function kitsDoEventoQuery(eventoId: string, reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.kits.doEvento(eventoId, reloadKey),
     queryFn: (): Promise<Kit[]> => listarKits(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Catálogo de itens do kit do evento (top-level `itensKit`, filtrado por tenant
+ * — ADR-009). Reusa `listarItensKit` do api-client (leitura provada). Último
+ * straggler de fetch cru desta seção → useQuery, consistente com useKits.
+ * A chave é partilhada Cadastro ↔ balcão; salvar/remover item invalida (ADR-010).
+ */
+export function itensKitDoEventoQuery(tenantId: string, eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.kits.itensDoEvento(eventoId),
+    queryFn: (): Promise<ItemKit[]> =>
+      listarItensKit(getLeelaDb(), { tenantId, eventoId }),
   });
 }
 

@@ -16,10 +16,13 @@ import {
   getDoc,
   getDocs,
   limit as firestoreLimit,
+  onSnapshot,
   orderBy,
   query,
   where,
+  type DocumentData,
   type Firestore,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import {
   isKitInscrito,
@@ -242,18 +245,11 @@ function parseContagem(raw: unknown): ContagemInscritos {
 }
 
 /**
- * Lê o agregado financeiro do evento (`financeiro/current`). Retorna null
- * quando ainda não foi computado (evento sem inscritos / gatilho não rodou).
- * Só o tenant dono (ou platform_admin) lê — cross-tenant vira permission-denied.
+ * Parse defensivo do doc `financeiro/current` → FinanceiroEvento. Fonte ÚNICA de
+ * parsing (reusada pelo get one-shot e pelo observe realtime): NUNCA recalcula
+ * receita — só LÊ os campos ∑ que a Function computou (RN-2xx).
  */
-export async function getFinanceiroEvento(
-  db: Firestore,
-  eventoId: string
-): Promise<FinanceiroEvento | null> {
-  const snap = await getDoc(doc(db, 'eventos', eventoId, 'financeiro', 'current'));
-  if (!snap.exists()) return null;
-  const data = snap.data();
-
+function parseFinanceiroDoc(data: DocumentData): FinanceiroEvento {
   // Analytics opcionais (preview/E12): só entram se presentes no doc.
   const sparkRaw = data['ticketSparkline'];
   const ticketSparkline = Array.isArray(sparkRaw)
@@ -284,4 +280,44 @@ export async function getFinanceiroEvento(
     ...(ticketSparkline ? { ticketSparkline } : {}),
     ...(receitaPorModalidade ? { receitaPorModalidade } : {}),
   };
+}
+
+/**
+ * Lê o agregado financeiro do evento (`financeiro/current`). Retorna null
+ * quando ainda não foi computado (evento sem inscritos / gatilho não rodou).
+ * Só o tenant dono (ou platform_admin) lê — cross-tenant vira permission-denied.
+ */
+export async function getFinanceiroEvento(
+  db: Firestore,
+  eventoId: string
+): Promise<FinanceiroEvento | null> {
+  const snap = await getDoc(doc(db, 'eventos', eventoId, 'financeiro', 'current'));
+  if (!snap.exists()) return null;
+  return parseFinanceiroDoc(snap.data());
+}
+
+/** Handlers do observador realtime (onSnapshot) — next a cada mudança, error 1x. */
+export interface ObservarHandlers<T> {
+  next: (value: T) => void;
+  error?: (err: Error) => void;
+}
+
+/**
+ * OBSERVA o agregado financeiro do evento em TEMPO REAL (`financeiro/current`).
+ * Superfície VIVA (S207, UX-DADOS): o painel financeiro reflete cada recomputo
+ * do gatilho sem revisitar a tela. Reusa `parseFinanceiroDoc` (mesmo parsing do
+ * get one-shot). `next(null)` quando o doc ainda não existe (ausência honesta,
+ * nunca zero fake). Devolve o `Unsubscribe` — o caller o chama no cleanup.
+ * Listener de UM doc (O(1)): barato, ao contrário de superfícies densas.
+ */
+export function observarFinanceiroEvento(
+  db: Firestore,
+  eventoId: string,
+  handlers: ObservarHandlers<FinanceiroEvento | null>
+): Unsubscribe {
+  return onSnapshot(
+    doc(db, 'eventos', eventoId, 'financeiro', 'current'),
+    (snap) => handlers.next(snap.exists() ? parseFinanceiroDoc(snap.data()) : null),
+    (err) => handlers.error?.(err)
+  );
 }
