@@ -17,6 +17,11 @@ import { platformErrorMessage } from '../_lib/errors';
 
 export interface TenantDetailProps {
   tenant: Tenant | null;
+  /**
+   * Nome real do owner (join `profissionais/{ownerUid}` — CONS-4-T1). null
+   * quando o perfil não existe → cai no uid (fallback honesto).
+   */
+  ownerNome?: string | null;
   loading: boolean;
   error: Error | null;
   /** Mutation em andamento (aprovar/suspender/reativar). */
@@ -31,6 +36,7 @@ export interface TenantDetailProps {
 
 export function TenantDetail({
   tenant,
+  ownerNome,
   loading,
   error,
   running,
@@ -86,7 +92,7 @@ export function TenantDetail({
           <span title={`UID do owner: ${tenant.ownerUid}`}>
             Owner{' '}
             <span className="font-[var(--font-weight-semibold)] text-[var(--text-secondary)]">
-              {tenant.ownerUid}
+              {ownerNome ?? tenant.ownerUid}
             </span>
           </span>
         }

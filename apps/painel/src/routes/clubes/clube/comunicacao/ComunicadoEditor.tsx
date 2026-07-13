@@ -14,7 +14,7 @@ import type {
   CanalComunicado,
   TipoSegmento,
 } from '@leela/core';
-import { PUSH_MAX_CHARS } from '@leela/core';
+import { PUSH_MAX_CHARS, segmentoDispensaReferencia } from '@leela/core';
 import { canalLabel } from '../../_lib/comunicados';
 import { formatInt } from '../../_lib/format';
 import {
@@ -43,10 +43,25 @@ const CANAIS: CanalComunicado[] = ['push', 'email'];
 // (referência) só quando marcado — espelha o mockup Club-Comunicacao-Nova.
 const SEGMENTOS: { id: TipoSegmento; label: string; descricao: string }[] = [
   { id: 'todos', label: 'Todos os membros', descricao: 'Toda a base ativa do clube recebe o comunicado.' },
+  { id: 'novos_membros', label: 'Novos membros', descricao: 'Quem entrou nos últimos 7 dias (automação de boas-vindas).' },
   { id: 'por_desafio', label: 'Por desafio', descricao: 'Só os membros participantes de um desafio específico.' },
   { id: 'por_pilar', label: 'Por pilar', descricao: 'Membros cujo pilar mais praticado é o escolhido.' },
   { id: 'por_engajamento', label: 'Por engajamento', descricao: 'Membros ativos numa janela recente (7, 14 ou 30 dias).' },
 ];
+
+/**
+ * Rótulo do badge de contagem do card de segmento — só para os segmentos que
+ * têm ∑ pronto: 'todos' (base ativa) e 'novos_membros' quando o agregado
+ * `membrosNovos` já foi computado (senão o badge some e o alcance mostra "—",
+ * ausência honesta — CONS-4-T2). null = sem badge.
+ */
+function badgeSegmento(id: TipoSegmento, agregados: AgregadosSegmentacao): string | null {
+  if (id === 'todos') return `${formatInt(agregados.totalMembrosAtivos)} membros`;
+  if (id === 'novos_membros' && agregados.membrosNovos !== undefined) {
+    return `${formatInt(agregados.membrosNovos)} novos`;
+  }
+  return null;
+}
 
 function CardSecao({ titulo, children }: { titulo: string; children: React.ReactNode }): JSX.Element {
   return (
@@ -181,30 +196,29 @@ export function ComunicadoEditor({
               value={values.segmentoTipo}
               onValueChange={(v) => patch({ segmentoTipo: v as TipoSegmento })}
             >
-              {SEGMENTOS.map((s) => (
-                <RadioCard
-                  key={s.id}
-                  value={s.id}
-                  aria-label={s.label}
-                  title={s.label}
-                  description={s.descricao}
-                  badge={
-                    s.id === 'todos' ? (
-                      <Badge variant="vitoria">{`${formatInt(agregados.totalMembrosAtivos)} membros`}</Badge>
-                    ) : undefined
-                  }
-                >
-                  {s.id !== 'todos' ? (
-                    <Input
-                      id="comunicado-segmento-ref"
-                      label="Referência do segmento"
-                      value={values.segmentoRef}
-                      onChange={(e) => patch({ segmentoRef: e.target.value })}
-                      placeholder="id do desafio, pilar ou janela (7d/14d/30d)"
-                    />
-                  ) : null}
-                </RadioCard>
-              ))}
+              {SEGMENTOS.map((s) => {
+                const badge = badgeSegmento(s.id, agregados);
+                return (
+                  <RadioCard
+                    key={s.id}
+                    value={s.id}
+                    aria-label={s.label}
+                    title={s.label}
+                    description={s.descricao}
+                    badge={badge ? <Badge variant="vitoria">{badge}</Badge> : undefined}
+                  >
+                    {!segmentoDispensaReferencia(s.id) ? (
+                      <Input
+                        id="comunicado-segmento-ref"
+                        label="Referência do segmento"
+                        value={values.segmentoRef}
+                        onChange={(e) => patch({ segmentoRef: e.target.value })}
+                        placeholder="id do desafio, pilar ou janela (7d/14d/30d)"
+                      />
+                    ) : null}
+                  </RadioCard>
+                );
+              })}
             </RadioGroup>
             <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" aria-live="polite">
               Alcance estimado: {estimativa !== null ? `${formatInt(estimativa)} membros` : '—'}

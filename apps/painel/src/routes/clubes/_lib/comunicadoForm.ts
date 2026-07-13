@@ -16,6 +16,7 @@ import type {
 import {
   estimarAlcance,
   PUSH_MAX_CHARS,
+  segmentoDispensaReferencia,
   truncarPush,
   validarComunicado,
 } from '@leela/core';
@@ -63,9 +64,13 @@ export function toggleCanalForm(
 // Ponte com o core
 // ---------------------------------------------------------------------------
 
-/** Monta o segmento a partir do form (referência só quando não é 'todos'). */
+/**
+ * Monta o segmento a partir do form. `todos` e `novos_membros` DISPENSAM
+ * referência (fonte única do predicado no core: `segmentoDispensaReferencia`,
+ * CONS-4-T2) — os demais a incluem quando informada.
+ */
 export function buildSegmento(values: ComunicadoFormValues): Segmento {
-  if (values.segmentoTipo === 'todos') return { tipo: 'todos' };
+  if (segmentoDispensaReferencia(values.segmentoTipo)) return { tipo: values.segmentoTipo };
   return values.segmentoRef.trim()
     ? { tipo: values.segmentoTipo, referencia: values.segmentoRef.trim() }
     : { tipo: values.segmentoTipo };

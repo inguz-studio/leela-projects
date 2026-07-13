@@ -211,6 +211,14 @@ export const queryKeys = {
     /** Um tenant pelo id (detalhe). */
     tenant: (tenantId: string, reloadKey = 0) =>
       ['plataforma', 'tenant', tenantId, reloadKey] as const,
+    /**
+     * Tenant + perfil do owner (join `profissionais/{ownerUid}` — CONS-4-T1).
+     * Aninhado no prefixo `['plataforma','tenant',id]` de propósito: a
+     * invalidação de transição (que usa esse prefixo) revalida também o join,
+     * sem chave nova a invalidar à parte.
+     */
+    tenantComOwner: (tenantId: string) =>
+      ['plataforma', 'tenant', tenantId, 'com-owner'] as const,
     /** Termos comerciais vigentes de um tenant. */
     termos: (tenantId: string, reloadKey = 0) =>
       ['plataforma', 'termos', tenantId, reloadKey] as const,

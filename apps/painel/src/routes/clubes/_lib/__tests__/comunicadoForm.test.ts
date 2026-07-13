@@ -70,6 +70,21 @@ describe('estimativaSegmento', () => {
   });
 });
 
+describe('novos_membros (CONS-4-T2 — 5º segmento)', () => {
+  it('dispensa referência: monta { tipo: novos_membros } mesmo com segmentoRef preenchido', () => {
+    const seg = buildComunicadoInput(base({ segmentoTipo: 'novos_membros', segmentoRef: 'ignorado' })).segmento;
+    expect(seg).toEqual({ tipo: 'novos_membros' });
+  });
+  it('estimativa usa membrosNovos quando o agregado existe', () => {
+    expect(
+      estimativaSegmento(base({ segmentoTipo: 'novos_membros' }), { ...AGREGADOS, membrosNovos: 12 }),
+    ).toBe(12);
+  });
+  it('sem membrosNovos no agregado → null (a tela mostra "—")', () => {
+    expect(estimativaSegmento(base({ segmentoTipo: 'novos_membros' }), AGREGADOS)).toBeNull();
+  });
+});
+
 describe('comunicadoToForm (fix S2 — round-trip da edição)', () => {
   it('preserva agendadoPara em data/hora locais quando status é agendado', () => {
     // Date por componentes locais — determinística em qualquer timezone.

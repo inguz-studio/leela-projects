@@ -8,8 +8,8 @@
 // =============================================================================
 
 import { useQuery } from '@tanstack/react-query';
-import type { Tenant } from '@leela/core';
-import { tenantDetalheQuery, tenantsQuery } from '../../../lib/query/queries';
+import type { Profissional, Tenant } from '@leela/core';
+import { tenantComOwnerQuery, tenantsQuery } from '../../../lib/query/queries';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -28,17 +28,31 @@ export function useTenants(): AsyncState<Tenant[]> {
   return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
-/** Um tenant pelo id (detalhe). TanStack Query (ADR-010). */
-export function useTenant(tenantId: string): AsyncState<Tenant> {
+/** Estado do detalhe do tenant com o perfil do owner (CONS-4-T1). */
+export interface TenantComOwnerState {
+  tenant: Tenant | null;
+  /** Perfil do dono — null quando o doc não existe (a UI cai no uid). */
+  owner: Profissional | null;
+  loading: boolean;
+  error: Error | null;
+}
+
+/**
+ * Tenant pelo id + perfil do OWNER (join `profissionais/{ownerUid}` — CONS-4-T1).
+ * TanStack Query (ADR-010): a transição invalida o prefixo `['plataforma',
+ * 'tenant',id]`, que casa este join → status e nome do owner ficam consistentes.
+ * `owner: null` é fallback honesto (a tela mostra o uid), não erro.
+ */
+export function useTenantComOwner(tenantId: string): TenantComOwnerState {
   const query = useQuery({
-    ...tenantDetalheQuery(tenantId),
+    ...tenantComOwnerQuery(tenantId),
     enabled: !!tenantId,
   });
 
-  if (!tenantId || query.isPending) return { data: null, loading: true, error: null };
-  if (query.error) return { data: null, loading: false, error: query.error };
+  if (!tenantId || query.isPending) return { tenant: null, owner: null, loading: true, error: null };
+  if (query.error) return { tenant: null, owner: null, loading: false, error: query.error };
   if (!query.data) {
-    return { data: null, loading: false, error: new Error('Tenant não encontrado.') };
+    return { tenant: null, owner: null, loading: false, error: new Error('Tenant não encontrado.') };
   }
-  return { data: query.data, loading: false, error: null };
+  return { tenant: query.data.tenant, owner: query.data.owner, loading: false, error: null };
 }

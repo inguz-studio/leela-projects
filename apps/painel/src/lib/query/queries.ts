@@ -35,6 +35,7 @@ import {
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
   getTenant,
+  getTenantComOwner,
   listarEventosDoOrganizador,
   listarAprovisionamento,
   listarCupons,
@@ -57,6 +58,7 @@ import {
   type InscritosCursor,
   type OverviewResult,
   type PedidoEPagamentoDoInscrito,
+  type TenantComOwner,
 } from '@leela/api-client';
 import type {
   Aprovisionamento,
@@ -448,6 +450,20 @@ export function tenantDetalheQuery(tenantId: string, reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.plataforma.tenant(tenantId, reloadKey),
     queryFn: (): Promise<Tenant | null> => getTenant(getLeelaDb(), tenantId),
+  });
+}
+
+/**
+ * Tenant + perfil do owner (join `profissionais/{ownerUid}` — CONS-4-T1). Reusa
+ * `getTenantComOwner` do api-client (as Rules já autorizam a leitura do owner
+ * para os mesmos leitores do tenant; join de 1 salto, nenhuma denormalização).
+ * `owner: null` quando o perfil não existe → a UI cai no uid (fallback honesto).
+ * `null` total = tenant inexistente.
+ */
+export function tenantComOwnerQuery(tenantId: string) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.tenantComOwner(tenantId),
+    queryFn: (): Promise<TenantComOwner | null> => getTenantComOwner(getLeelaDb(), tenantId),
   });
 }
 

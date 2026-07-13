@@ -51,9 +51,22 @@ describe('TenantDetail', () => {
     expect(screen.getByText(/85\.617/)).toBeInTheDocument();
   });
 
-  it('exibe o owner do tenant (ownerUid)', () => {
+  it('exibe o owner do tenant (ownerUid como fallback quando não há nome)', () => {
     render(<TenantDetail {...baseProps} tenant={mkTenant({ status: 'ativo', ownerUid: 'uid-castelo' })} />);
     expect(screen.getByText('uid-castelo')).toBeInTheDocument();
+  });
+
+  it('exibe o NOME real do owner quando o join traz o perfil (CONS-4-T1)', () => {
+    render(
+      <TenantDetail
+        {...baseProps}
+        tenant={mkTenant({ status: 'ativo', ownerUid: 'uid-castelo' })}
+        ownerNome="Marina Duarte"
+      />,
+    );
+    expect(screen.getByText('Marina Duarte')).toBeInTheDocument();
+    // O uid deixa de aparecer como rótulo (fica só no title do hover).
+    expect(screen.queryByText('uid-castelo')).not.toBeInTheDocument();
   });
 
   it('actionError → alerta com mensagem clara de failed-precondition', () => {

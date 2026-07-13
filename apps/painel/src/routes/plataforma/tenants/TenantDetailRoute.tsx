@@ -11,7 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmModal, useToast } from '@leela/design-system';
 import type { TenantStatus } from '@leela/core';
 import { TenantDetail } from './TenantDetail';
-import { useTenant } from '../_data/tenants';
+import { useTenantComOwner } from '../_data/tenants';
 import { useTransitionTenant } from '../../../lib/query/mutations';
 import { SUSPEND_PREVIEW, type LifecycleAction } from '../_lib/lifecycle';
 import { platformErrorMessage } from '../_lib/errors';
@@ -34,7 +34,7 @@ export function TenantDetailRoute(): JSX.Element {
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const { data: tenant, loading, error } = useTenant(tenantId);
+  const { tenant, owner, loading, error } = useTenantComOwner(tenantId);
   const transitionMutation = useTransitionTenant(tenantId);
 
   const runTransition = useCallback(
@@ -67,6 +67,7 @@ export function TenantDetailRoute(): JSX.Element {
     <>
       <TenantDetail
         tenant={tenant}
+        ownerNome={owner?.nome ?? null}
         loading={loading}
         error={error}
         running={transitionMutation.isPending}

@@ -56,7 +56,7 @@ function ConviteCard({
       <div className="flex items-start justify-between gap-[var(--spacing-3)]">
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            {eventoNomeLegivel(p.eventoId)}
+            {p.eventoNome ?? eventoNomeLegivel(p.eventoId)}
           </h3>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             Comissão {p.comissaoPct}% · cupom {p.cupom ?? '—'} · janela {p.janelaAtribuicaoDias} dias
@@ -149,7 +149,7 @@ export function ParceriasView({
     convitesPendentes.length === 0 && eventosPromovidos.length === 0 && patrocinadores.length === 0;
 
   const colunas: TableColumn<ParceriaEventoAfiliado>[] = [
-    { key: 'evento', header: 'Evento', render: (p) => eventoNomeLegivel(p.eventoId) },
+    { key: 'evento', header: 'Evento', render: (p) => p.eventoNome ?? eventoNomeLegivel(p.eventoId) },
     { key: 'comissao', header: 'Comissão', render: (p) => `${p.comissaoPct}%` },
     { key: 'cupom', header: 'Cupom', render: (p) => p.cupom ?? '—' },
     { key: 'conversoes', header: 'Conversões', render: (p) => formatInt(p.conversoes) },
