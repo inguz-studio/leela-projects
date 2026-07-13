@@ -1366,6 +1366,42 @@ service cloud.firestore {
                             && tenantAtivo(tenantDoClubePai()))
                         || isPlatformAdmin();
         }
+
+        // `participantes/{participanteId}` — participação do atleta no
+        // desafio (S1307-T1/S1308-T1 · E13 adiantado · Onda 2 T2-L2).
+        // ESCRITA: NUNCA pelo cliente — pontos/pontosPorPilar/diasAtivos
+        // são ∑ de Function (onRegistroWrite, recompute idempotente) e a
+        // criação passa pelo callable entrarNoDesafio (valida RN-117 no
+        // servidor). Cliente escrevendo participação = pontuação forjada.
+        // LEITURA conforme visibilidade (RN-117):
+        //   - tenant do clube (owner/staff/promoter) + platform_admin;
+        //   - o PRÓPRIO atleta participante (uid == docId);
+        //   - desafio 'publico': qualquer autenticado;
+        //   - 'membros'/'convite': atleta que JÁ participa lê os demais
+        //     (board social) — não-participante não enxerga nada (o check
+        //     de membro por uid é impossível em Rules: membros/{docId} não
+        //     é keyed por uid; a fronteira REAL do join é entrarNoDesafio).
+        match /participantes/{participanteId} {
+
+          /** Visibilidade do desafio pai (get — 1 leitura). */
+          function visibilidadeDesafioPai() {
+            return get(/databases/$(database)/documents/clubes/$(clubeId)/desafios/$(desafioId))
+              .data.visibilidade;
+          }
+
+          /** Caller já participa deste desafio? */
+          function callerParticipa() {
+            return exists(/databases/$(database)/documents/clubes/$(clubeId)/desafios/$(desafioId)/participantes/$(request.auth.uid));
+          }
+
+          allow read: if isPlatformAdmin()
+                      || isTenantMember(tenantDoClubePai())
+                      || (isSignedIn()
+                          && (request.auth.uid == participanteId
+                              || visibilidadeDesafioPai() == 'publico'
+                              || callerParticipa()));
+          allow write: if false;
+        }
       }
 
       // `parcerias/{parceriaId}` — captura de valor do clube (E05 · S107-T1).
@@ -1731,6 +1767,46 @@ service cloud.firestore {
       allow read: if (isSignedIn() && request.auth.uid == atletaId)
                   || isPlatformAdmin();
       allow write: if isSignedIn() && request.auth.uid == atletaId;
+
+      // `registros/{registroId}` — log de ação da jornada (S1307-T1 · E13
+      // adiantado · Onda 2 T2-L2). ESCRITA SÓ DO DONO, com shape espelhado
+      // de validarRegistro (core): quantidade finita > 0 (sem
+      // math.isInfinite — runtime do Emulator não implementa; `v*0.0==0.0`
+      // reprova NaN/±Infinity), pilar/origem nos enums, par clubeId+
+      // desafioId ambos-ou-nenhum (path aninhado ADR-009). O campo `pontos`
+      // NUNCA entra pelo cliente — pontuação (bônus RN-115) é ∑ da Function
+      // onRegistroWrite em participantes/{uid}.
+      // LEITURA: só o próprio atleta + platform_admin (jornada é pessoal).
+      match /registros/{registroId} {
+
+        /** Shape do registro — espelho server-side de validarRegistro. */
+        function shapeRegistroValido() {
+          return request.resource.data.acaoRef is string
+            && request.resource.data.acaoRef.size() > 0
+            && request.resource.data.pilar in ['fisico', 'mental', 'espiritual']
+            && request.resource.data.quantidade is number
+            && request.resource.data.quantidade * 0.0 == 0.0
+            && request.resource.data.quantidade > 0
+            && request.resource.data.unidade is string
+            && request.resource.data.data is timestamp
+            && request.resource.data.origem in ['manual', 'assessoria']
+            && (('clubeId' in request.resource.data)
+                  == ('desafioId' in request.resource.data))
+            && (!('clubeId' in request.resource.data)
+                || (request.resource.data.clubeId is string
+                    && request.resource.data.clubeId.size() > 0
+                    && request.resource.data.desafioId is string
+                    && request.resource.data.desafioId.size() > 0))
+            && !request.resource.data.keys().hasAny(['pontos']);
+        }
+
+        allow read: if (isSignedIn() && request.auth.uid == atletaId)
+                    || isPlatformAdmin();
+        allow create, update: if isSignedIn()
+                              && request.auth.uid == atletaId
+                              && shapeRegistroValido();
+        allow delete: if isSignedIn() && request.auth.uid == atletaId;
+      }
     }
 
     match /catalogoAcoes/{docId} {

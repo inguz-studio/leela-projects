@@ -808,3 +808,27 @@ export {
   isDataSnapshotValida,
   montarSnapshot,
 } from './analytics/snapshot';
+
+// ---------------------------------------------------------------------------
+// Atleta — registro de ação da jornada (LEELA-S1307-T1 · E13 adiantado ·
+// Onda 2 T2-L2). Pontos NÃO moram no registro: ∑ com bônus RN-115 é da
+// Function (onRegistroWrite) em participantes/{uid}. Validação sempre
+// contra o catálogo (RN-114); path do desafio = aninhado ADR-009.
+// ---------------------------------------------------------------------------
+export type {
+  OrigemRegistro,
+  Registro,
+  RegistroInput,
+  ParticipanteAgregado,
+} from './atleta/registro';
+export {
+  ORIGENS_REGISTRO,
+  isOrigemRegistro,
+  validarRegistro,
+  paraRegistroAcao,
+  dentroDaJanelaDesafio,
+  agregarParticipante,
+  metaTotalEmPontos,
+  derivarProgressoDesafio,
+  derivarProgressoPorPilar,
+} from './atleta/registro';

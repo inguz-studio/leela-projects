@@ -197,3 +197,12 @@ export { enviarCampanha } from './eventos/enviarCampanha';
 // BigQuery atrás de flag DESLIGADA (LEELA_BQ_EXPORT). ⚠️ Fable (histórico
 // não-backfillável).
 export { coletaDiaria } from './analytics/coletaDiaria';
+
+// Jornada — REGISTRO DE AÇÃO do atleta (S1307-T1 · E13 adiantado · T2-L2):
+// onWrite de atletas/{uid}/registros recomputa a participação
+// (calcularPontos + bônus RN-115 acumuláveis) em participantes/{uid} e os
+// ∑ do desafio (qtdParticipantes por recontagem, progressoPct). Recompute
+// total idempotente; SÓ agrega quem já participa (gate RN-117 =
+// entrarNoDesafio). Path do desafio = aninhado ADR-009. ⚠️ Fable
+// (integridade de pontuação/board).
+export { onRegistroWrite } from './jornada/onRegistroWrite';
