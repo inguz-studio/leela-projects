@@ -16,6 +16,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
+  atualizarConfiguracoesEvento,
   criarEvento,
   criarPatrocinador,
   despublicarPaginaVendas,
@@ -33,6 +34,7 @@ import {
   transferirPropriedade,
   transicaoAprovisionamento,
   transicionarParceria,
+  type AtualizarConfiguracoesEventoInput,
   type CriarEventoInput,
   type CriarEventoResult,
   type CriarPatrocinadorInput,
@@ -71,6 +73,35 @@ export function useCriarEvento(params: {
         queryKey: queryKeys.eventos.doOrganizador(params.tenantId, params.organizadorId),
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.overview });
+    },
+  });
+}
+
+/**
+ * Salva as CONFIGURAÇÕES GERAIS do evento (S304-T2 · E04-L5) via escrita direta
+ * `atualizarConfiguracoesEvento` (Rules-guarded por `isTenantWriter`; nunca toca
+ * ∑/status/percursos). No onSuccess invalida a chave partilhada da lista do
+ * organizador (Hub ↔ Visão Geral — de onde `useEvento` serve o evento) E o
+ * detalhe por slug → o form reflete `usaChip`/nome/local salvos sem reload
+ * (read-your-writes, ADR-010). O erro `permission-denied` sobe intacto (§2.12).
+ */
+export function useAtualizarConfiguracoesEvento(params: {
+  slug: string;
+  eventoId: string;
+  tenantId: string;
+  organizadorId: string;
+}): UseMutationResult<void, Error, AtualizarConfiguracoesEventoInput> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, AtualizarConfiguracoesEventoInput>({
+    mutationFn: (input) =>
+      atualizarConfiguracoesEvento(getLeelaDb(), params.eventoId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.eventos.doOrganizador(params.tenantId, params.organizadorId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.eventos.detalhe(params.slug),
+      });
     },
   });
 }

@@ -200,6 +200,10 @@ export type {
   RegistrarEntregaResult,
 } from './eventos/mutations';
 
+// LEELA-S304-T2 — configurações gerais do evento (escrita direta, Rules-guarded)
+export { atualizarConfiguracoesEvento } from './eventos/configuracoesEvento';
+export type { AtualizarConfiguracoesEventoInput } from './eventos/configuracoesEvento';
+
 // FABLE-F-T1 — cronograma de entrega + faixa de chips (leitura p/ balcão F-T2)
 export { getCronogramaEntrega } from './eventos/cronograma';
 export type { CronogramaEntregaEvento } from './eventos/cronograma';

@@ -29,6 +29,8 @@ import { LotesPage } from './lotes/LotesPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
+import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
+import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -56,6 +58,10 @@ export function EventosRoutes(): JSX.Element {
           {/* Aba Comunicação — log FABLE-G + envio futuro (E06 · L3) */}
           <Route path="comunicacao" element={<ComunicacaoPage />} />
           <Route path="financeiro" element={<FinanceiroPage />} />
+          {/* Configurações gerais + Equipe & permissões (E04 · S304-T2/T3) */}
+          <Route path="configuracoes" element={<ConfiguracoesLayout />}>
+            <Route index element={<ConfigGeraisPage />} />
+          </Route>
         </Route>
       </Routes>
     </ToastProvider>

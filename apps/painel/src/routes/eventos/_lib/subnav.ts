@@ -18,7 +18,8 @@ export type EventoAbaId =
   | 'pagina-vendas'
   | 'comunicacao'
   | 'entrega'
-  | 'financeiro';
+  | 'financeiro'
+  | 'configuracoes';
 
 interface AbaDef {
   id: EventoAbaId;
@@ -37,6 +38,9 @@ const ABAS: readonly AbaDef[] = [
   { id: 'comunicacao', label: 'Comunicação', segmento: 'comunicacao' },
   { id: 'entrega', label: 'Entrega', segmento: 'entrega' },
   { id: 'financeiro', label: 'Financeiro', segmento: 'financeiro' },
+  // Configurações (E04 · S304-T2/T3) segue o financeiro — acrescentada por
+  // último, sem reordenar as existentes (ordem canônica do consolidador).
+  { id: 'configuracoes', label: 'Configurações', segmento: 'configuracoes' },
 ];
 
 /** Contadores pill opcionais por aba (ex.: inscritos = 453). */
