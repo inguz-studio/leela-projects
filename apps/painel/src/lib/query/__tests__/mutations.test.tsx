@@ -15,6 +15,7 @@ import {
   useRemoverMembro,
   useSalvarKit,
   useTransferirPropriedade,
+  useTransicaoAprovisionamento,
   useTransicionarParceria,
 } from '../mutations';
 import { queryKeys } from '../keys';
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   salvarKit: vi.fn(),
   removerMembro: vi.fn(),
   transferirPropriedade: vi.fn(),
+  transicaoAprovisionamento: vi.fn(),
   transicionarParceria: vi.fn(),
   criarPatrocinador: vi.fn(),
 }));
@@ -33,6 +35,7 @@ vi.mock('@leela/api-client', () => ({
   salvarKit: mocks.salvarKit,
   removerMembro: mocks.removerMembro,
   transferirPropriedade: mocks.transferirPropriedade,
+  transicaoAprovisionamento: mocks.transicaoAprovisionamento,
   transicionarParceria: mocks.transicionarParceria,
   criarPatrocinador: mocks.criarPatrocinador,
   getLeelaFunctions: () => ({}),
@@ -94,6 +97,36 @@ describe('useSalvarKit', () => {
     expect(mocks.salvarKit).toHaveBeenCalledTimes(1);
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['kits', 'do-evento', 'e1'] }),
+    );
+  });
+});
+
+describe('useTransicaoAprovisionamento (RN-226 · read-your-writes)', () => {
+  it('reusa a callable transicaoAprovisionamento e invalida o aprovisionamento do evento', async () => {
+    mocks.transicaoAprovisionamento.mockResolvedValue({
+      sku: 'camiseta__M',
+      estado: 'encomendado',
+      estoqueFisico: 0,
+      aEncomendar: 7,
+      alerta: null,
+    });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTransicaoAprovisionamento('e1'), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync({ sku: 'camiseta__M', novoEstado: 'encomendado', qtd: 7 });
+
+    // eventoId injetado pelo hook — o caller só conhece SKU/estado/qtd.
+    expect(mocks.transicaoAprovisionamento).toHaveBeenCalledWith(
+      {},
+      { eventoId: 'e1', sku: 'camiseta__M', novoEstado: 'encomendado', qtd: 7 },
+    );
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: queryKeys.aprovisionamento.doEvento('e1'),
+      }),
     );
   });
 });

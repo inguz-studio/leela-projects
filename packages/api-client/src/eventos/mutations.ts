@@ -14,6 +14,7 @@
 // =============================================================================
 
 import { httpsCallable, type Functions } from 'firebase/functions';
+import type { AlertaEstoqueSku, EstadoAprovisionamento } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Contratos (espelham functions/src/eventos — fonte única no servidor)
@@ -158,5 +159,56 @@ export async function registrarEntrega(
     functions,
     'registrarEntrega'
   );
+  return (await call(input)).data;
+}
+
+// ---------------------------------------------------------------------------
+// Aprovisionamento por SKU — transição da máquina de estados (S210-T2 · FABLE-D)
+// Espelha `functions/src/eventos/agregarEstoque.ts` (callable
+// `transicaoAprovisionamento`). O estado do SKU avança SÓ por esta Function — as
+// Rules negam TODA escrita de cliente na subcoleção `aprovisionamento`; ∑ e
+// `alerta` são recomputados no servidor e devolvidos. A máquina é LINEAR
+// (RN-226): estimativa → encomendado → em_estoque (terminal), sem atalho/volta.
+// ---------------------------------------------------------------------------
+
+/** Input de `transicaoAprovisionamento` (RN-226). */
+export interface TransicaoAprovisionamentoInput {
+  eventoId: string;
+  /** docId do SKU — `itemId__tamanho` (S210-T2) */
+  sku: string;
+  /** Estado ALVO — validado na matriz canônica NO SERVIDOR (RN-226) */
+  novoEstado: EstadoAprovisionamento;
+  /**
+   * Quantidade da transição (encomendada / recebida), inteiro ≥ 0. Em
+   * `em_estoque` DECLARA o `estoqueFisico` — única porta de entrada do saldo
+   * físico (edição manual fora do escopo, E03 §kits).
+   */
+  qtd: number;
+}
+
+/** Resultado de `transicaoAprovisionamento` (∑ recomputados no servidor). */
+export interface TransicaoAprovisionamentoResult {
+  sku: string;
+  estado: EstadoAprovisionamento;
+  estoqueFisico: number;
+  aEncomendar: number;
+  alerta: AlertaEstoqueSku | null;
+}
+
+/**
+ * Avança o estado de aprovisionamento de um SKU via Cloud Function
+ * `transicaoAprovisionamento` (RN-226). O servidor valida papel de escrita
+ * (owner/staff do tenant dono), tenant ativo, evento do PRÓPRIO tenant e a
+ * transição na matriz; transição inválida/replay volta `failed-precondition`,
+ * cross-tenant `permission-denied` — o erro sobe intacto para a UI (Toast).
+ */
+export async function transicaoAprovisionamento(
+  functions: Functions,
+  input: TransicaoAprovisionamentoInput
+): Promise<TransicaoAprovisionamentoResult> {
+  const call = httpsCallable<
+    TransicaoAprovisionamentoInput,
+    TransicaoAprovisionamentoResult
+  >(functions, 'transicaoAprovisionamento');
   return (await call(input)).data;
 }

@@ -28,6 +28,7 @@ import {
   salvarKit,
   salvarLote,
   transferirPropriedade,
+  transicaoAprovisionamento,
   transicionarParceria,
   type CriarEventoInput,
   type CriarEventoResult,
@@ -38,8 +39,9 @@ import {
   type SalvarConteudoPaginaVendasInput,
   type SalvarKitInput,
   type TransferirPropriedadeResult,
+  type TransicaoAprovisionamentoResult,
 } from '@leela/api-client';
-import type { StatusParceria } from '@leela/core';
+import type { EstadoAprovisionamento, StatusParceria } from '@leela/core';
 import { queryKeys } from './keys';
 
 /**
@@ -143,6 +145,46 @@ export function useRemoverLote(
     mutationFn: (loteId) => removerLote(getLeelaDb(), eventoId, loteId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutation de APROVISIONAMENTO (E03 · S210-T2 · FABLE-D) — transição da máquina
+// de estados do SKU (estimativa → encomendado → em_estoque, RN-226). Escrita
+// EXCLUSIVA de Cloud Function (`transicaoAprovisionamento`); as Rules negam TODA
+// escrita de cliente na subcoleção. No onSuccess invalida
+// `aprovisionamento.doEvento` — a tela de Estoque reflete o novo estado/∑ sem
+// reload (read-your-writes, ADR-010). O erro (failed-precondition = transição
+// inválida/replay; permission-denied = cross-tenant) sobe intacto para a UI.
+// =============================================================================
+
+/** Variáveis de `useTransicaoAprovisionamento`: SKU, estado alvo e quantidade. */
+export interface TransicaoAprovisionamentoVars {
+  /** docId do SKU — `itemId__tamanho` (S210-T2) */
+  sku: string;
+  novoEstado: EstadoAprovisionamento;
+  /** Quantidade da transição (encomendada / recebida) — inteiro ≥ 0. */
+  qtd: number;
+}
+
+/**
+ * Avança o estado de aprovisionamento de um SKU (callable — RN-226) e invalida a
+ * chave de aprovisionamento do evento: a tela de Estoque reflete o novo estado e
+ * os ∑ recomputados sem reload manual. Reusa `transicaoAprovisionamento` do
+ * api-client (write EXCLUSIVA de Function — nunca escrita direta do cliente).
+ */
+export function useTransicaoAprovisionamento(
+  eventoId: string,
+): UseMutationResult<TransicaoAprovisionamentoResult, Error, TransicaoAprovisionamentoVars> {
+  const queryClient = useQueryClient();
+  return useMutation<TransicaoAprovisionamentoResult, Error, TransicaoAprovisionamentoVars>({
+    mutationFn: ({ sku, novoEstado, qtd }) =>
+      transicaoAprovisionamento(getLeelaFunctions(), { eventoId, sku, novoEstado, qtd }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.aprovisionamento.doEvento(eventoId),
+      });
     },
   });
 }

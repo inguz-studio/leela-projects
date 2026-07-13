@@ -258,6 +258,13 @@ export type {
 // S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
 // são de escrita EXCLUSIVA de Function — RN-224/226)
 export { listarAprovisionamento } from './eventos/aprovisionamento';
+// S210-T2 (FABLE-D) — transição da máquina de estados do SKU (callable; write
+// EXCLUSIVA de Function — Rules negam escrita de cliente na subcoleção — RN-226)
+export { transicaoAprovisionamento } from './eventos/mutations';
+export type {
+  TransicaoAprovisionamentoInput,
+  TransicaoAprovisionamentoResult,
+} from './eventos/mutations';
 
 // ---------------------------------------------------------------------------
 // Pedidos — kernel `pedidos/{id}` + `pagamentos/{id}` (ADR-011 · FABLE-A-T1)

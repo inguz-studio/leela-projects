@@ -1,21 +1,49 @@
 // =============================================================================
-// EstoqueView — controle de estoque dos kits (S205-T4 · gap FID-EVT).
+// EstoqueView — controle de estoque dos kits (S205-T4 · S210-T4 · gap FID-EVT).
 //
 // Sobe da tabela plana para a visão que serve a dor "kit errado na entrega":
-//   · Banner de alerta   — kits sem saldo (esgotados), dado real (presença).
+//   · Banners de alerta  — kits sem saldo (esgotados) + SKUs em alerta (dado
+//     REAL derivado pela Function — RN-224).
 //   · KPIs               — total (Σ capacidade), retirados, disponíveis, risco.
 //   · Matriz kit×modalidade — demanda (confirmados) e retirado por célula: a
 //     visão densa de "não errar o kit". Reusa o DS `Table` (colunas dinâmicas
 //     por modalidade) — sem componente de matriz novo.
-//   · Backend-dep HONESTO — estoque por TAMANHO (PP–XG) e MOVIMENTAÇÕES não são
-//     modelados (Inscrito não coleta tamanho; não há livro-razão de estoque):
+//   · Estoque por SKU (item×tamanho) — WIRE FABLE-D (S210-T4): lê a subcoleção
+//     REAL `eventos/{id}/aprovisionamento/{sku}`. `qtdVendida`/`aEncomendar`/
+//     `alerta` são ∑ DERIVADOS pela Function `agregarEstoque` — esta tela SÓ
+//     RENDERIZA os campos do doc, NUNCA recomputa agregado no cliente (RN-224).
+//     Estado da máquina (RN-226) como Badge; transição via callable
+//     `transicaoAprovisionamento` (escrita EXCLUSIVA de Function — Rules negam
+//     write de cliente). EmptyState honesto p/ evento sem SKU tamanhado.
+//   · Movimentações — backend-dep HONESTO: livro-razão de entradas/saídas não
+//     existe (o `historico[]` do SKU registra só transições da máquina):
 //     EmptyState, nunca número fabricado (mesmo padrão do Financeiro).
 //
 // Capacidade ausente no modelo → "—" (degradação graciosa). Presentational.
 // =============================================================================
 
-import { Badge, EmptyState, Skeleton, Table, type TableColumn } from '@leela/design-system';
-import type { Inscrito, Kit } from '@leela/core';
+import * as React from 'react';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  Modal,
+  Skeleton,
+  Table,
+  useToast,
+  type BadgeProps,
+  type TableColumn,
+} from '@leela/design-system';
+import {
+  LIMIAR_BAIXA_SKU_DEFAULT,
+  TRANSICOES_APROVISIONAMENTO,
+  type Aprovisionamento,
+  type EstadoAprovisionamento,
+  type Inscrito,
+  type ItemKit,
+  type Kit,
+} from '@leela/core';
 import {
   estoquePorKit,
   matrizEstoque,
@@ -28,17 +56,100 @@ export interface EstoqueViewProps {
   kits: Kit[];
   inscritos: Inscrito[];
   modalidades: string[];
+  /** Docs REAIS da subcoleção `aprovisionamento` (∑ da Function — RN-224). */
+  aprovisionamento: Aprovisionamento[];
+  /** Catálogo de itens — SÓ para exibir nome/ordem de tamanhos (join visual). */
+  itens: ItemKit[];
+  /**
+   * Transição da máquina de estados do SKU (RN-226) via callable — escrita
+   * EXCLUSIVA de Function. Rejeição do servidor (replay/atalho) sobe como erro.
+   */
+  onTransicao: (
+    sku: string,
+    novoEstado: EstadoAprovisionamento,
+    qtd: number
+  ) => Promise<void>;
   loading: boolean;
   error: Error | null;
+}
+
+// Rótulo/variante do Badge por estado da máquina (RN-226 — 3 estados lineares).
+const BADGE_ESTADO: Record<
+  EstadoAprovisionamento,
+  { variant: BadgeProps['variant']; rotulo: string }
+> = {
+  estimativa: { variant: 'neutro', rotulo: 'Estimativa' },
+  encomendado: { variant: 'alerta', rotulo: 'Encomendado' },
+  em_estoque: { variant: 'vitoria', rotulo: 'Em estoque' },
+};
+
+// Rótulo da AÇÃO que leva ao estado alvo (a matriz canônica do core decide o
+// alvo — aqui só se nomeia o botão; `em_estoque` é terminal → sem ação).
+const ROTULO_ACAO: Partial<Record<EstadoAprovisionamento, string>> = {
+  encomendado: 'Encomendar',
+  em_estoque: 'Receber',
+};
+
+/** Próximo estado da máquina LINEAR (RN-226) — null quando terminal. */
+function proximoEstado(
+  estado: EstadoAprovisionamento
+): EstadoAprovisionamento | null {
+  return TRANSICOES_APROVISIONAMENTO[estado][0] ?? null;
+}
+
+/**
+ * Ordena SKUs por item e, dentro do item, pela ordem CANÔNICA de
+ * `tamanhosDisponiveis` do catálogo (P antes de M antes de G — não alfabética).
+ * Ordenação de EXIBIÇÃO apenas — nenhum agregado é recalculado aqui.
+ */
+function ordenarSkus(
+  aprovisionamento: Aprovisionamento[],
+  itensPorId: ReadonlyMap<string, ItemKit>
+): Aprovisionamento[] {
+  return [...aprovisionamento].sort((a, b) => {
+    if (a.itemId !== b.itemId) return a.itemId.localeCompare(b.itemId);
+    const tamanhos = itensPorId.get(a.itemId)?.tamanhosDisponiveis ?? [];
+    const ia = tamanhos.indexOf(a.tamanho);
+    const ib = tamanhos.indexOf(b.tamanho);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1; // tamanho fora do catálogo (∪ existentes) vai ao fim
+    return a.tamanho.localeCompare(b.tamanho);
+  });
+}
+
+/** Quantidade sugerida no modal — lida do DOC (nunca ∑ recalculado):
+ *  encomendar → `aEncomendar` (o número que resolve a compra — RN-224);
+ *  receber    → qtd da última encomenda registrada no `historico` (RN-226). */
+function qtdSugerida(
+  row: Aprovisionamento,
+  alvo: EstadoAprovisionamento
+): number {
+  if (alvo === 'em_estoque') {
+    for (let i = row.historico.length - 1; i >= 0; i -= 1) {
+      if (row.historico[i]!.estado === 'encomendado') return row.historico[i]!.qtd;
+    }
+  }
+  return row.aEncomendar;
 }
 
 export function EstoqueView({
   kits,
   inscritos,
   modalidades,
+  aprovisionamento,
+  itens,
+  onTransicao,
   loading,
   error,
 }: EstoqueViewProps): JSX.Element {
+  const { toast } = useToast();
+  // SKU em transição (modal aberto) — null = fechado.
+  const [transicao, setTransicao] = React.useState<{
+    row: Aprovisionamento;
+    alvo: EstadoAprovisionamento;
+  } | null>(null);
+
   if (loading) {
     return (
       <div role="status" aria-label="Carregando estoque" className="flex flex-col gap-[var(--spacing-3)]">
@@ -63,6 +174,14 @@ export function EstoqueView({
   const resumo = resumoEstoque(kits, inscritos);
   const linhas = matrizEstoque(kits, inscritos, modalidades);
   const esgotados = estoquePorKit(kits, inscritos).filter((l) => l.esgotado);
+
+  const itensPorId = new Map(itens.map((i) => [i.id, i]));
+  const nomeDoItem = (itemId: string): string =>
+    itensPorId.get(itemId)?.nome ?? itemId;
+  const skus = ordenarSkus(aprovisionamento, itensPorId);
+  // `alerta` vem CARIMBADO no doc pela Function (limiar baixa = 10 default) —
+  // filtro de exibição, não derivação.
+  const skusEmAlerta = skus.filter((s) => s.alerta !== null);
 
   const columns: TableColumn<LinhaMatriz>[] = [
     { key: 'nome', header: 'Kit', render: (r) => r.nome },
@@ -121,6 +240,103 @@ export function EstoqueView({
     },
   ];
 
+  // Colunas do aceite S210-T4: vendido · físico · a encomendar · estado ·
+  // alerta — TODOS lidos do doc (∑ da Function), zero recálculo no cliente.
+  const columnsSku: TableColumn<Aprovisionamento>[] = [
+    { key: 'item', header: 'Item', render: (r) => nomeDoItem(r.itemId) },
+    { key: 'tamanho', header: 'Tamanho', render: (r) => r.tamanho },
+    {
+      key: 'vendido',
+      header: 'Vendido',
+      align: 'right',
+      render: (r) => (
+        <span className="[font-variant-numeric:tabular-nums]">{formatInt(r.qtdVendida)}</span>
+      ),
+    },
+    {
+      key: 'fisico',
+      header: 'Físico',
+      align: 'right',
+      render: (r) => (
+        <span className="[font-variant-numeric:tabular-nums]">{formatInt(r.estoqueFisico)}</span>
+      ),
+    },
+    {
+      key: 'a-encomendar',
+      header: 'A encomendar',
+      align: 'right',
+      render: (r) => (
+        <span
+          className={`[font-variant-numeric:tabular-nums] ${
+            r.aEncomendar > 0 ? 'font-[var(--font-weight-semibold)] text-[var(--text-primary)]' : ''
+          }`}
+        >
+          {formatInt(r.aEncomendar)}
+        </span>
+      ),
+    },
+    {
+      key: 'estado',
+      header: 'Estado',
+      render: (r) => (
+        <Badge variant={BADGE_ESTADO[r.estado].variant}>{BADGE_ESTADO[r.estado].rotulo}</Badge>
+      ),
+    },
+    {
+      key: 'alerta',
+      header: 'Alerta',
+      render: (r) =>
+        r.alerta === 'esgotado' ? (
+          <Badge variant="vulcao">Esgotado</Badge>
+        ) : r.alerta === 'baixa' ? (
+          <Badge variant="alerta">Baixa</Badge>
+        ) : (
+          <span className="text-[var(--text-tertiary)]">—</span>
+        ),
+    },
+    {
+      key: 'acao',
+      header: 'Ação',
+      render: (r) => {
+        const alvo = proximoEstado(r.estado);
+        if (alvo === null) {
+          // `em_estoque` é terminal (RN-226) — nada a fazer.
+          return <span className="text-[var(--text-tertiary)]">—</span>;
+        }
+        return (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setTransicao({ row: r, alvo })}
+          >
+            {ROTULO_ACAO[alvo]}
+          </Button>
+        );
+      },
+    },
+  ];
+
+  async function confirmarTransicao(qtd: number): Promise<void> {
+    if (!transicao) return;
+    const { row, alvo } = transicao;
+    try {
+      await onTransicao(row.id, alvo, qtd);
+      toast({
+        title: alvo === 'em_estoque' ? 'Estoque recebido' : 'Encomenda registrada',
+        variant: 'success',
+      });
+      setTransicao(null);
+    } catch (e) {
+      // failed-precondition (transição inválida/replay) e permission-denied
+      // sobem do servidor com mensagem descritiva — exibida sem tradução.
+      toast({
+        title: 'Falha na transição do SKU',
+        ...(e instanceof Error && e.message ? { description: e.message } : {}),
+        variant: 'danger',
+      });
+    }
+  }
+
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       {esgotados.length > 0 && (
@@ -134,6 +350,28 @@ export function EstoqueView({
             </strong>{' '}
             {esgotados.map((e) => e.nome).join(', ')}. Reponha antes da entrega para não errar o
             kit na retirada.
+          </p>
+        </div>
+      )}
+
+      {/* Alerta por SKU — `alerta` derivado pela Function (baixa ≤ limiar 10
+          default / esgotado), lido do doc: visível sem caçar linha na tabela. */}
+      {skusEmAlerta.length > 0 && (
+        <div
+          role="alert"
+          className="flex items-start gap-[var(--spacing-3)] rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-danger-surface)] p-[var(--spacing-4)]"
+        >
+          <p className="text-[length:var(--font-size-sm)] text-[var(--feedback-danger-fg)]">
+            <strong className="font-[var(--font-weight-bold)]">
+              {skusEmAlerta.length} SKU(s) em alerta de estoque:
+            </strong>{' '}
+            {skusEmAlerta
+              .map(
+                (s) =>
+                  `${nomeDoItem(s.itemId)} ${s.tamanho} (${s.alerta === 'esgotado' ? 'esgotado' : 'baixa'})`,
+              )
+              .join(', ')}
+            . Estoque baixo = saldo até {LIMIAR_BAIXA_SKU_DEFAULT} unidades.
           </p>
         </div>
       )}
@@ -188,22 +426,145 @@ export function EstoqueView({
         />
       </section>
 
-      {/* Backend-dependency HONESTO: NÃO inventamos estoque por tamanho. A coleta
-          de tamanho na inscrição — origem da dor "kit errado por falha de coleta
-          de tamanho" — não está no modelo (Inscrito não tem tamanho; ItemKit só
-          marca `tamanhado`, sem quantidades por tamanho). */}
-      <EmptyState
-        title="Estoque por tamanho ainda não disponível"
-        description="A matriz tamanho × modalidade (PP–XG) e os itens de tamanho único dependem da coleta de tamanho na inscrição e de um estoque por item — ainda não modelados. É o que fecharia a dor de 'kit errado por falha de coleta de tamanho'."
-      />
+      {/* Estoque por SKU (S210-T4) — dado REAL da subcoleção `aprovisionamento`.
+          Responde o JTBD da Marina: quanto tenho de cada tamanho e o que falta
+          encomendar, sem planilha. Lista de leitura → card-mode default no
+          mobile (não é matriz de comparação — design-principles §(c)). */}
+      <section aria-label="Estoque por tamanho" className="flex flex-col gap-[var(--spacing-3)]">
+        <div className="flex flex-col gap-[var(--spacing-1)]">
+          <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Estoque por tamanho
+          </h3>
+          <p className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+            Um SKU por (item tamanhado × tamanho). Vendido, físico e "a encomendar" são
+            agregados pelo servidor a cada venda confirmada; o estado avança em
+            estimativa → encomendado → em estoque.
+          </p>
+        </div>
+        {skus.length === 0 ? (
+          // EmptyState HONESTO: evento sem SKU tamanhado. Item único (sacochila)
+          // não gera SKU por definição (S210-T3); os docs materializam com a
+          // agregação da primeira venda confirmada.
+          <EmptyState
+            title="Nenhum SKU de tamanho neste evento"
+            description="Só itens tamanhados (ex.: camiseta com P/M/G/GG) geram estoque por tamanho — itens únicos, como sacochila, não entram aqui. Os SKUs aparecem com a primeira venda confirmada após o item tamanhado ter tamanhos disponíveis cadastrados."
+          />
+        ) : (
+          <Table
+            columns={columnsSku}
+            data={skus}
+            keyExtractor={(r) => r.id}
+            caption="Aprovisionamento por SKU (item × tamanho)"
+          />
+        )}
+      </section>
 
       {/* Backend-dependency HONESTO: movimentações exigem um livro-razão de
-          estoque (entradas/saídas/ajustes) inexistente no agregado atual. */}
+          estoque (entradas/saídas/ajustes) inexistente no agregado atual — o
+          `historico[]` do SKU registra apenas transições da máquina (RN-226). */}
       <EmptyState
         title="Movimentações ainda não disponíveis"
         description="Entradas, saídas e ajustes de estoque dependem de um livro-razão de movimentações — ainda não computado neste evento."
       />
+
+      <TransicaoSkuModal
+        transicao={transicao}
+        nomeDoItem={nomeDoItem}
+        onFechar={() => setTransicao(null)}
+        onConfirmar={confirmarTransicao}
+      />
     </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Modal de transição de SKU (RN-226) — coleta a QUANTIDADE da transição
+// (encomendada/recebida). Reusa DS Modal/Input/Button (4 vias de fechamento).
+// A validação REAL é do servidor (matriz canônica + guards); aqui só o básico
+// de forma (inteiro ≥ 0) para não pagar round-trip por typo.
+// -----------------------------------------------------------------------------
+
+function TransicaoSkuModal({
+  transicao,
+  nomeDoItem,
+  onFechar,
+  onConfirmar,
+}: {
+  transicao: { row: Aprovisionamento; alvo: EstadoAprovisionamento } | null;
+  nomeDoItem: (itemId: string) => string;
+  onFechar: () => void;
+  onConfirmar: (qtd: number) => Promise<void>;
+}): JSX.Element {
+  const [qtd, setQtd] = React.useState('');
+  const [erro, setErro] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  const aberto = transicao !== null;
+  const receber = transicao?.alvo === 'em_estoque';
+
+  // Pré-preenche ao abrir: a sugestão vem do DOC (aEncomendar / última
+  // encomenda do historico) — nunca um ∑ recalculado aqui.
+  React.useEffect(() => {
+    if (!transicao) return;
+    setQtd(String(qtdSugerida(transicao.row, transicao.alvo)));
+    setErro(null);
+  }, [transicao]);
+
+  async function confirmar(): Promise<void> {
+    const valor = Number(qtd);
+    if (qtd.trim().length === 0 || !Number.isInteger(valor) || valor < 0) {
+      setErro('Informe um número inteiro maior ou igual a zero.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await onConfirmar(valor);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={aberto}
+      onOpenChange={(open) => {
+        if (!open) onFechar();
+      }}
+      title={receber ? 'Receber em estoque' : 'Registrar encomenda'}
+      footer={
+        <div className="flex justify-end gap-[var(--spacing-3)]">
+          <Button variant="secondary" onClick={onFechar} disabled={busy}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={() => void confirmar()} disabled={busy}>
+            Confirmar
+          </Button>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-[var(--spacing-4)]">
+        {transicao && (
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            {nomeDoItem(transicao.row.itemId)} · tamanho {transicao.row.tamanho}
+          </p>
+        )}
+        <Input
+          id="transicao-sku-qtd"
+          label={receber ? 'Quantidade recebida' : 'Quantidade a encomendar'}
+          type="number"
+          min={0}
+          step={1}
+          value={qtd}
+          onChange={(e) => setQtd(e.target.value)}
+          {...(erro ? { errorMessage: erro } : {})}
+        />
+        <p className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+          {receber
+            ? 'A quantidade recebida declara o estoque físico do SKU — o "a encomendar" e os alertas são recalculados pelo servidor.'
+            : 'Sugestão pré-preenchida com o "a encomendar" atual (vendido − físico, calculado pelo servidor).'}
+        </p>
+      </div>
+    </Modal>
   );
 }
 

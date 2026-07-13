@@ -29,6 +29,7 @@ import {
   getPlatformRollups,
   getTenant,
   listarEventosDoOrganizador,
+  listarAprovisionamento,
   listarInscritos,
   listarInscritosRecentes,
   listarKits,
@@ -47,6 +48,7 @@ import {
   type PedidoEPagamentoDoInscrito,
 } from '@leela/api-client';
 import type {
+  Aprovisionamento,
   Clube,
   CommercialTerms,
   Comunicado,
@@ -189,6 +191,22 @@ export function kitsDoEventoQuery(eventoId: string, reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.kits.doEvento(eventoId, reloadKey),
     queryFn: (): Promise<Kit[]> => listarKits(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Aprovisionamento por SKU de um evento (subcoleção — FABLE-D · S210-T2). Reusa
+ * `listarAprovisionamento` do api-client (leitura provada; `parseAprovisionamento`
+ * fail-fast por doc). Os ∑ (qtdVendida/aEncomendar) e o `alerta` são DERIVADOS
+ * pela Function `agregarEstoque` — a tela de Estoque só LÊ os campos ∑ do doc
+ * (RN-224), NUNCA os recomputa no cliente. A transição (callable) invalida esta
+ * chave → read-your-writes (ADR-010). Lista vazia = evento sem SKU tamanhado.
+ */
+export function aprovisionamentoDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.aprovisionamento.doEvento(eventoId),
+    queryFn: (): Promise<Aprovisionamento[]> =>
+      listarAprovisionamento(getLeelaDb(), eventoId),
   });
 }
 

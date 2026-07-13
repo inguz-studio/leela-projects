@@ -58,6 +58,17 @@ export const queryKeys = {
       ['kits', 'do-evento', eventoId, reloadKey] as const,
   },
 
+  aprovisionamento: {
+    /**
+     * Aprovisionamento por SKU de um evento (subcoleção
+     * `eventos/{id}/aprovisionamento` — FABLE-D · S210-T2). A tela de Estoque lê
+     * esta chave; a transição de estado (callable `transicaoAprovisionamento`) a
+     * invalida no onSuccess → read-your-writes (ADR-010): estado/∑ do SKU
+     * refletem sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['aprovisionamento', 'do-evento', eventoId] as const,
+  },
+
   lotes: {
     /**
      * Lotes de um evento (todas as modalidades — ADR-012). A tela de config
