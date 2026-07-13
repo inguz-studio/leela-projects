@@ -44,4 +44,13 @@ describe('Textarea', () => {
     await userEvent.tab();
     expect(screen.getByRole('textbox')).toHaveFocus();
   });
+
+  it('flat variant drops the resting border and fills with surface-sunken', () => {
+    render(<Textarea aria-label="Descrição" variant="flat" />);
+    const box = screen.getByRole('textbox');
+    expect(box).not.toHaveClass('border-input');
+    expect(box).toHaveClass('border-transparent');
+    expect(box).toHaveClass('bg-[var(--surface-sunken)]');
+    expect(box).toHaveClass('focus:ring-2');
+  });
 });

@@ -26,10 +26,20 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   label?: string;
   /** Classe do wrapper (label + campo). */
   wrapperClassName?: string;
+  /**
+   * Aparência (experimento LEELA-DS-FLAT-INPUTS): `default` = fill raised +
+   * borda `border-input`; `flat` = sem borda em repouso, fill `surface-sunken`
+   * como identificador, foco por ring. Opt-in — não muda o default global.
+   */
+  variant?: 'default' | 'flat';
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, errorMessage, label, wrapperClassName, id, disabled, rows = 3, ...props }, ref) => {
+  (
+    { className, errorMessage, label, wrapperClassName, variant = 'default', id, disabled, rows = 3, ...props },
+    ref,
+  ) => {
+    const flat = variant === 'flat';
     const reactId = React.useId();
     const controlId = id ?? reactId;
     const hasError = Boolean(errorMessage);
@@ -59,9 +69,12 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             'min-h-[var(--input-height)] px-[var(--input-px)] py-[var(--spacing-2)]',
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
-            // Cores & borda (exceção ao flat §2.16, igual ao Input).
-            'bg-[var(--surface-raised)] text-[var(--text-primary)]',
-            'border-[length:var(--input-border-width)] border-input',
+            // Cores & borda. Default (§2.16, igual ao Input) vs flat
+            // (experimento): fill sunken sem borda em repouso, foco por ring.
+            'text-[var(--text-primary)]',
+            flat
+              ? 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent'
+              : 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input',
             // Placeholder — alias muted-foreground = text-tertiary
             'placeholder:text-muted-foreground',
             // Foco — glow ring via alias ring (border-focus).

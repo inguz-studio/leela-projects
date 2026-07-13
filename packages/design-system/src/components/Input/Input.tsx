@@ -32,6 +32,16 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   label?: string;
   /** Extra wrapper class. */
   wrapperClassName?: string;
+  /**
+   * Aparência do campo (experimento do Vitor — LEELA-DS-FLAT-INPUTS):
+   *   - `default` (§2.16) — fill `surface-raised` + borda `border-input`, o
+   *     identificador visual atual (WCAG 1.4.11 ≥3:1);
+   *   - `flat` — SEM borda em repouso; o identificador passa a ser o FILL
+   *     `surface-sunken` (inset, contrasta com a página) e o foco segue por
+   *     glow ring. Estado inválido reacende a borda-danger (a11y do erro nunca
+   *     depende só da cor). NÃO é o default global — variante opt-in.
+   */
+  variant?: 'default' | 'flat';
 }
 
 // ---------------------------------------------------------------------------
@@ -45,6 +55,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       errorMessage,
       label,
       wrapperClassName,
+      variant = 'default',
       id,
       disabled,
       'aria-describedby': ariaDescribedBy,
@@ -52,6 +63,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref,
   ) => {
+    const flat = variant === 'flat';
     // id ESTÁVEL mesmo sem `id` do consumidor: a mensagem de erro precisa de um
     // alvo real senão o aria-describedby fica sem id e o erro não é associado
     // (bug do showroom: aria-describedby s/ id). useId dá um id determinístico.
@@ -87,11 +99,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             'h-[var(--input-height)] px-[var(--input-px)]',
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
-            // Colors & border (input is an exception to flat §2.16).
-            // bg raised ≈ bg da página → a borda (border-input = border-strong) é
-            // o único identificador visual e cumpre WCAG 1.4.11 (≥3:1).
-            'bg-[var(--surface-raised)] text-[var(--text-primary)]',
-            'border-[length:var(--input-border-width)] border-input',
+            // Colors & border. Default (§2.16): bg raised ≈ bg da página → a
+            // borda (border-input = border-strong) é o identificador visual
+            // (WCAG 1.4.11 ≥3:1). Flat (experimento): sem borda em repouso, o
+            // fill sunken passa a ser o identificador; borda transparente
+            // preserva a caixa (mesma altura/reflow) e o foco segue por ring.
+            'text-[var(--text-primary)]',
+            flat
+              ? 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent'
+              : 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input',
             // Placeholder — alias muted-foreground = text-tertiary
             'placeholder:text-muted-foreground',
             // Focus — glow ring via alias ring (border-focus), não border

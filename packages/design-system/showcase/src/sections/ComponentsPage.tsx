@@ -347,6 +347,63 @@ export function ComponentsPage(): JSX.Element {
           </DemoCard>
 
           <DemoCard
+            title="Flat inputs — experimento (variant='flat')"
+            description="Pedido do Vitor: campos SEM linha de borda em repouso. O identificador visual deixa de ser a borda e passa a ser o fill inset (surface-sunken); o foco continua por glow ring e o erro reacende a borda-danger (a11y do erro nunca depende só da cor). É opt-in por `variant='flat'` — o default global (§2.16, com borda) NÃO muda. Comparação lado a lado abaixo."
+          >
+            <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+              <div className="flex flex-col gap-[var(--spacing-3)]">
+                <span className="text-[length:var(--font-size-xs)] uppercase tracking-wide text-[var(--text-tertiary)]">
+                  Default (§2.16 — com borda)
+                </span>
+                <Input id="flat-cmp-nome-default" label="Nome do evento" placeholder="Meia Maratona Floripa" />
+                <Select
+                  id="flat-cmp-kit-default"
+                  label="Kit"
+                  options={[
+                    { value: 'ouro', label: 'Kit Ouro' },
+                    { value: 'prata', label: 'Kit Prata' },
+                  ]}
+                />
+                <Textarea id="flat-cmp-desc-default" label="Descrição" rows={2} placeholder="Sobre a prova…" />
+              </div>
+              <div className="flex flex-col gap-[var(--spacing-3)]">
+                <span className="text-[length:var(--font-size-xs)] uppercase tracking-wide text-[var(--text-tertiary)]">
+                  Flat (sem borda em repouso)
+                </span>
+                <Input
+                  id="flat-cmp-nome-flat"
+                  variant="flat"
+                  label="Nome do evento"
+                  placeholder="Meia Maratona Floripa"
+                />
+                <Select
+                  id="flat-cmp-kit-flat"
+                  variant="flat"
+                  label="Kit"
+                  options={[
+                    { value: 'ouro', label: 'Kit Ouro' },
+                    { value: 'prata', label: 'Kit Prata' },
+                  ]}
+                />
+                <Textarea
+                  id="flat-cmp-desc-flat"
+                  variant="flat"
+                  label="Descrição"
+                  rows={2}
+                  placeholder="Sobre a prova…"
+                />
+                <Input
+                  id="flat-cmp-erro-flat"
+                  variant="flat"
+                  label="Com erro (borda-danger reacende)"
+                  defaultValue="x"
+                  errorMessage="Campo obrigatório."
+                />
+              </div>
+            </div>
+          </DemoCard>
+
+          <DemoCard
             title="Radio / RadioGroup"
             description="Seleção única exclusiva (2 a ~5 opções visíveis p/ comparar). Radio nativo — navegação por seta e role de fábrica. O grupo é fieldset+legend; injeta name/checked/onChange por contexto."
           >

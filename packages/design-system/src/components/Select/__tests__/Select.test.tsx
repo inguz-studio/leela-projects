@@ -42,4 +42,13 @@ describe('Select', () => {
     await userEvent.tab();
     expect(screen.getByRole('combobox')).toHaveFocus();
   });
+
+  it('flat variant drops the resting border and fills with surface-sunken', () => {
+    render(<Select aria-label="Kit" options={options} variant="flat" />);
+    const select = screen.getByRole('combobox');
+    expect(select).not.toHaveClass('border-input');
+    expect(select).toHaveClass('border-transparent');
+    expect(select).toHaveClass('bg-[var(--surface-sunken)]');
+    expect(select).toHaveClass('focus:ring-2');
+  });
 });

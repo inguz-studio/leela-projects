@@ -103,4 +103,23 @@ describe('Input', () => {
     render(<Input aria-label="CPF" aria-describedby="cpf-hint" />);
     expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'cpf-hint');
   });
+
+  // ── Variante flat (experimento LEELA-DS-FLAT-INPUTS) ────────────────────
+  it('default variant keeps the border (§2.16 identifier)', () => {
+    render(<Input aria-label="Nome" />);
+    expect(screen.getByRole('textbox')).toHaveClass('border-input');
+  });
+
+  it('flat variant drops the resting border and fills with surface-sunken', () => {
+    render(<Input aria-label="Nome" variant="flat" />);
+    const input = screen.getByRole('textbox');
+    expect(input).not.toHaveClass('border-input');
+    expect(input).toHaveClass('border-transparent');
+    expect(input).toHaveClass('bg-[var(--surface-sunken)]');
+  });
+
+  it('flat variant preserves the focus ring (a11y não regride)', () => {
+    render(<Input aria-label="Nome" variant="flat" />);
+    expect(screen.getByRole('textbox')).toHaveClass('focus:ring-2');
+  });
 });
