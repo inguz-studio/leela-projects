@@ -10,14 +10,16 @@ function base(over: Partial<NovoEventoFormValues> = {}): NovoEventoFormValues {
     nome: 'Meia Floripa 2026',
     descricao: '',
     data: '2026-04-27',
+    hora: '',
     local: 'Florianópolis',
     modalidades: ['10k'],
-    percursos: [{ nome: '10k', preco: '120' }],
+    capa: '',
+    regulamento: '',
     ...over,
   };
 }
 
-describe('validaNovoEvento', () => {
+describe('validaNovoEvento (REVISÃO RN-153 — sem preço no cadastro)', () => {
   it('aceita um formulário completo', () => {
     expect(validaNovoEvento(base(), HOJE).valido).toBe(true);
   });
@@ -26,6 +28,12 @@ describe('validaNovoEvento', () => {
     const r = validaNovoEvento(base({ nome: '  ' }), HOJE);
     expect(r.valido).toBe(false);
     expect(r.erros.nome).toBeTruthy();
+  });
+
+  it('exige local/endereço', () => {
+    const r = validaNovoEvento(base({ local: '' }), HOJE);
+    expect(r.valido).toBe(false);
+    expect(r.erros.local).toBeTruthy();
   });
 
   it('rejeita data no passado', () => {
@@ -48,27 +56,15 @@ describe('validaNovoEvento', () => {
 
   it('exige ao menos uma modalidade', () => {
     const r = validaNovoEvento(base({ modalidades: [] }), HOJE);
+    expect(r.valido).toBe(false);
     expect(r.erros.modalidades).toBeTruthy();
   });
 
-  it('rejeita percurso sem preço numérico', () => {
-    const r = validaNovoEvento(base({ percursos: [{ nome: '10k', preco: 'abc' }] }), HOJE);
-    expect(r.erros.percursos).toBeTruthy();
-  });
-
-  it('rejeita preço de percurso NEGATIVO — espelho do servidor (review #35)', () => {
-    const r = validaNovoEvento(base({ percursos: [{ nome: '10k', preco: '-10' }] }), HOJE);
-    expect(r.valido).toBe(false);
-    expect(r.erros.percursos).toBeTruthy();
-  });
-
-  it('aceita preço 0 (gratuito é válido; negativo é dos KITS — RN-211)', () => {
-    const r = validaNovoEvento(base({ percursos: [{ nome: '10k', preco: '0' }] }), HOJE);
+  it('horário/capa/regulamento são opcionais — não bloqueiam o submit', () => {
+    const r = validaNovoEvento(
+      base({ hora: '07:00', capa: 'https://x/y.jpg', regulamento: 'Regras…' }),
+      HOJE,
+    );
     expect(r.valido).toBe(true);
-  });
-
-  it('rejeita percurso sem nome', () => {
-    const r = validaNovoEvento(base({ percursos: [{ nome: '', preco: '120' }] }), HOJE);
-    expect(r.erros.percursos).toBeTruthy();
   });
 });

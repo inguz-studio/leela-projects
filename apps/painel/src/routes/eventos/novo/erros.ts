@@ -52,7 +52,7 @@ export function toastErroCriarEvento(err: unknown): ToastErro {
       title: 'O servidor rejeitou os dados do evento',
       description:
         detalheDoServidor(err) ??
-        'Revise a data e os preços dos percursos e envie de novo.',
+        'Revise a data e as modalidades e envie de novo.',
     };
   }
   return {

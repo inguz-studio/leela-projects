@@ -1,20 +1,31 @@
 // =============================================================================
-// EventoForm — formulário "Novo evento" (S201-T1). Presentational + controlado.
-// Validação inline pura (validaNovoEvento); submit via porta injetada
-// (CriarEventoFn) → cria rascunho + Toast de sucesso. Campo obrigatório vazio
-// bloqueia o submit e mostra erro inline (§2.12).
+// EventoForm — formulário "Novo evento" (S201-T1 · REVISÃO RN-153).
+//
+// Coleta o que a página pública mobile precisa (wireframe Figma 112-4622, tela
+// "Corrida do Campeche"): capa, nome, data + horário, endereço/local, descrição,
+// regulamento e a lista ESTRUTURADA de modalidades (sugestões 5k/10k/21k/42k +
+// entrada livre). Layout em COLUNA CENTRAL (não full-width). Campos no
+// experimento `variant="flat"` (LEELA-DS-FLAT-INPUTS) p/ o Vitor avaliar.
+//
+// LOTES/PREÇOS NÃO entram no cadastro (RN-153): os `percursos` que o servidor
+// exige (min 1, RN-200) são DERIVADOS das modalidades com preço 0 (a definir na
+// aba Lotes). Presentational + controlado; submit via porta injetada.
+//
+// LACUNAS registradas (o callable `criarEvento` — functions/, fora de escopo —
+// não aceita estes campos hoje; ver REPORT):
+//   - CAPA: só URL (sem upload/Storage no repo); e `imagemUrl` não é persistido
+//     por `criarEvento` — coletada p/ fidelidade + preview.
+//   - REGULAMENTO: o modelo do evento (core) não tem campo — não persiste.
+//   - TAXA (RN-347): não há campo por-evento no modelo — toggle DESABILITADO
+//     (honesto) com hint; hoje vale o default do tenant (incorporada).
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Chip, Input, Textarea, useToast } from '@leela/design-system';
+import { Button, Chip, Input, Switch, Textarea, useToast } from '@leela/design-system';
+import { dataHoraLocalParaDate, isDataHoraLocalISO } from '@leela/core';
 import type { CriarEventoFn, CriarEventoInput, CriarEventoResult } from '../_data/contracts';
 import { toastErroCriarEvento } from './erros';
-import {
-  validaNovoEvento,
-  type ErrosNovoEvento,
-  type NovoEventoFormValues,
-  type PercursoInput,
-} from './validacao';
+import { validaNovoEvento, type ErrosNovoEvento, type NovoEventoFormValues } from './validacao';
 
 export interface EventoFormProps {
   onCriarEvento: CriarEventoFn;
@@ -25,10 +36,43 @@ const VALORES_INICIAIS: NovoEventoFormValues = {
   nome: '',
   descricao: '',
   data: '',
+  hora: '',
   local: '',
   modalidades: [],
-  percursos: [{ nome: '', preco: '' }],
+  capa: '',
+  regulamento: '',
 };
+
+// Vocabulário fechado de distâncias (RN-153) — clique adiciona/remove; o
+// organizador também digita modalidades livres (ex.: "Kids 1k", "Trail 15k").
+const SUGESTOES_MODALIDADE = ['5k', '10k', '21k', '42k'] as const;
+
+/**
+ * Monta o campo `data` do input do servidor a partir da data (obrigatória) +
+ * horário (opcional). Sem horário → date-only `yyyy-mm-dd` (o servidor ancora
+ * na meia-noite civil do FUSO_EVENTO). Com horário → INSTANTE ISO calculado por
+ * `dataHoraLocalParaDate` (parede lida no fuso do produto, DST-safe) — nunca
+ * `new Date(parede)` cru, que deslocaria o instante pelo fuso do runtime. Os
+ * dois shapes são aceitos pelo callable `criarEvento`.
+ */
+function montarDataEnvio(data: string, hora: string): string {
+  if (!hora) return data;
+  const parede = `${data}T${hora}`;
+  if (!isDataHoraLocalISO(parede)) return data; // fallback seguro (date-only)
+  return dataHoraLocalParaDate(parede).toISOString();
+}
+
+/** URL http(s) válida? Só p/ decidir se mostra a prévia da capa. @pure */
+function urlDeImagemValida(valor: string): boolean {
+  const v = valor.trim();
+  if (v.length === 0) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.Element {
   const { toast } = useToast();
@@ -41,31 +85,24 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
     setValues((v) => ({ ...v, [campo]: valor }));
   }
 
-  function addModalidade() {
-    const m = modalidadeDraft.trim();
-    if (m.length === 0 || values.modalidades.includes(m)) return;
-    set('modalidades', [...values.modalidades, m]);
-    setModalidadeDraft('');
+  function addModalidade(m: string) {
+    const nome = m.trim();
+    if (nome.length === 0 || values.modalidades.includes(nome)) return;
+    set('modalidades', [...values.modalidades, nome]);
   }
 
   function removeModalidade(m: string) {
     set('modalidades', values.modalidades.filter((x) => x !== m));
   }
 
-  function setPercurso(i: number, patch: Partial<PercursoInput>) {
-    set(
-      'percursos',
-      values.percursos.map((p, idx) => (idx === i ? { ...p, ...patch } : p)),
-    );
+  function toggleModalidade(m: string) {
+    if (values.modalidades.includes(m)) removeModalidade(m);
+    else addModalidade(m);
   }
 
-  function addPercurso() {
-    set('percursos', [...values.percursos, { nome: '', preco: '' }]);
-  }
-
-  function removePercurso(i: number) {
-    if (values.percursos.length === 1) return;
-    set('percursos', values.percursos.filter((_, idx) => idx !== i));
+  function addModalidadeDraft() {
+    addModalidade(modalidadeDraft);
+    setModalidadeDraft('');
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -85,13 +122,12 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
     try {
       const input: CriarEventoInput = {
         nome: values.nome.trim(),
-        data: values.data,
+        data: montarDataEnvio(values.data, values.hora),
         local: values.local.trim(),
         modalidades: values.modalidades,
-        percursos: values.percursos.map((p) => ({
-          nome: p.nome.trim(),
-          preco: Number(p.preco),
-        })),
+        // Percursos DERIVADOS das modalidades (RN-153): sem preço no cadastro —
+        // preços/lotes ficam na aba Lotes. preco 0 = "a definir" (RN-200 ≥ 0).
+        percursos: values.modalidades.map((m) => ({ nome: m, preco: 0 })),
       };
       const descricao = values.descricao.trim();
       if (descricao) input.descricao = descricao;
@@ -111,37 +147,67 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
     }
   }
 
+  const mostrarPrevia = urlDeImagemValida(values.capa);
+
   return (
     <form
       noValidate
       onSubmit={handleSubmit}
       aria-label="Novo evento"
-      className="flex max-w-3xl flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)] py-[var(--spacing-4)]"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-[var(--spacing-6)] px-[var(--spacing-6)] py-[var(--spacing-4)]"
     >
-      <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
-        Novo evento
-      </h1>
+      <header className="flex flex-col gap-[var(--spacing-1)]">
+        <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
+          Novo evento
+        </h1>
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Preencha o que a página pública do evento exibe. Preços e lotes são configurados
+          depois, na aba Lotes.
+        </p>
+      </header>
+
+      {/* Capa (hero) — URL + preview. Upload é lacuna (ver REPORT). */}
+      <div className="flex flex-col gap-[var(--spacing-2)]">
+        <Input
+          id="capa"
+          variant="flat"
+          type="url"
+          inputMode="url"
+          label="Imagem de capa (URL)"
+          value={values.capa}
+          onChange={(e) => set('capa', e.target.value)}
+          placeholder="https://…/capa.jpg"
+          aria-describedby="capa-hint"
+        />
+        <span id="capa-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Cole a URL da imagem. Upload de arquivo ainda não está disponível.
+        </span>
+        {mostrarPrevia ? (
+          <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-sunken)]">
+            <img
+              src={values.capa.trim()}
+              alt="Prévia da capa do evento"
+              className="aspect-[16/10] w-full object-cover"
+            />
+          </div>
+        ) : null}
+      </div>
 
       <Input
         id="nome"
+        variant="flat"
         label="Nome do evento"
         value={values.nome}
         onChange={(e) => set('nome', e.target.value)}
         errorMessage={erros.nome ?? ''}
-        placeholder="Meia Maratona Floripa 2026"
+        placeholder="Corrida do Campeche 2026"
       />
 
-      <Textarea
-        id="descricao"
-        label="Descrição"
-        value={values.descricao}
-        onChange={(e) => set('descricao', e.target.value)}
-        rows={3}
-      />
-
+      {/* Data + horário. Horário é opcional (o servidor aceita ISO com hora). */}
       <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
         <Input
           id="data"
+          variant="flat"
           type="date"
           label="Data da prova"
           value={values.data}
@@ -149,36 +215,83 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
           errorMessage={erros.data ?? ''}
         />
         <Input
-          id="local"
-          label="Local"
-          value={values.local}
-          onChange={(e) => set('local', e.target.value)}
-          errorMessage={erros.local ?? ''}
-          placeholder="Florianópolis, SC"
+          id="hora"
+          variant="flat"
+          type="time"
+          label="Horário (opcional)"
+          value={values.hora}
+          onChange={(e) => set('hora', e.target.value)}
         />
       </div>
 
-      {/* Modalidades */}
+      <Input
+        id="local"
+        variant="flat"
+        label="Endereço / local"
+        value={values.local}
+        onChange={(e) => set('local', e.target.value)}
+        errorMessage={erros.local ?? ''}
+        placeholder="Av. Campeche, 1000 — Florianópolis, SC"
+      />
+
+      <Textarea
+        id="descricao"
+        variant="flat"
+        label="Descrição / informações"
+        value={values.descricao}
+        onChange={(e) => set('descricao', e.target.value)}
+        placeholder="Conte o que torna esta prova especial, largada, retirada de kit…"
+        rows={4}
+      />
+
+      {/* Regulamento — texto longo. NÃO persiste hoje (ver REPORT). */}
+      <div className="flex flex-col gap-[var(--spacing-1)]">
+        <Textarea
+          id="regulamento"
+          variant="flat"
+          label="Regulamento"
+          value={values.regulamento}
+          onChange={(e) => set('regulamento', e.target.value)}
+          placeholder="Regras da prova, categorias, premiação, política de reembolso…"
+          rows={6}
+        />
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Ainda não é salvo no cadastro (o modelo do evento não tem campo de regulamento).
+        </span>
+      </div>
+
+      {/* Modalidades estruturadas — sugestões + entrada livre (RN-153). */}
       <fieldset className="flex flex-col gap-[var(--spacing-2)]">
         <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
           Modalidades
         </legend>
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Distâncias/percursos do evento. Clique numa sugestão ou digite uma modalidade livre.
+        </p>
+        <div className="flex flex-wrap gap-[var(--spacing-2)]" aria-label="Sugestões de modalidade">
+          {SUGESTOES_MODALIDADE.map((s) => (
+            <Chip key={s} active={values.modalidades.includes(s)} onClick={() => toggleModalidade(s)}>
+              {s}
+            </Chip>
+          ))}
+        </div>
         <div className="flex items-end gap-[var(--spacing-2)]">
           <Input
             id="modalidade-draft"
+            variant="flat"
             aria-label="Adicionar modalidade"
             value={modalidadeDraft}
             onChange={(e) => setModalidadeDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                addModalidade();
+                addModalidadeDraft();
               }
             }}
-            placeholder="5k, 10k, 21k…"
+            placeholder="Ex.: Kids 1k, Trail 15k"
             wrapperClassName="flex-1"
           />
-          <Button variant="secondary" onClick={addModalidade}>
+          <Button variant="secondary" onClick={addModalidadeDraft}>
             Adicionar
           </Button>
         </div>
@@ -198,50 +311,23 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         ) : null}
       </fieldset>
 
-      {/* Percursos com preço independente */}
-      <fieldset className="flex flex-col gap-[var(--spacing-3)]">
-        <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Percursos e preços
+      {/* Taxa de serviço (RN-347) — sem campo por-evento no modelo hoje:
+          toggle DESABILITADO honesto + hint + lacuna registrada. */}
+      <fieldset className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--card-radius)] bg-[var(--surface-sunken)] p-[var(--spacing-4)]">
+        <legend className="px-[var(--spacing-1)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+          Taxa de serviço
         </legend>
-        {values.percursos.map((p, i) => (
-          <div key={i} className="flex items-end gap-[var(--spacing-2)]">
-            <Input
-              aria-label={`Nome do percurso ${i + 1}`}
-              value={p.nome}
-              onChange={(e) => setPercurso(i, { nome: e.target.value })}
-              placeholder="Percurso 10k"
-              wrapperClassName="flex-1"
-            />
-            <Input
-              aria-label={`Preço do percurso ${i + 1}`}
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              value={p.preco}
-              onChange={(e) => setPercurso(i, { preco: e.target.value })}
-              placeholder="120.00"
-              wrapperClassName="w-36"
-            />
-            <Button
-              variant="ghost"
-              onClick={() => removePercurso(i)}
-              disabled={values.percursos.length === 1}
-              aria-label={`Remover percurso ${i + 1}`}
-            >
-              Remover
-            </Button>
-          </div>
-        ))}
-        <div>
-          <Button variant="secondary" onClick={addPercurso}>
-            + Adicionar percurso
-          </Button>
-        </div>
-        {erros.percursos ? (
-          <span role="alert" className="text-[length:var(--font-size-sm)] text-[var(--text-danger)]">
-            {erros.percursos}
-          </span>
-        ) : null}
+        <Switch
+          label="Repassar a taxa de serviço ao comprador"
+          description="Desligado (padrão): taxa incorporada — você absorve e o comprador paga o preço de face. Ligado: repassada — o comprador paga face + taxa."
+          checked={false}
+          disabled
+          readOnly
+        />
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Hoje segue o padrão da sua produtora (incorporada). A escolha por evento chega em breve
+          (RN-347).
+        </span>
       </fieldset>
 
       <div className="flex items-center gap-[var(--spacing-3)]">
