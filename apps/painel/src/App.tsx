@@ -11,6 +11,7 @@ import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
+import { CadastrarPage } from './routes/conta/auth/CadastrarPage';
 import { RecuperarSenhaPage } from './routes/conta/auth/RecuperarSenhaPage';
 import { RedefinirSenhaPage } from './routes/conta/auth/RedefinirSenhaPage';
 import { createQueryClient } from './lib/query/client';
@@ -30,6 +31,7 @@ export function App() {
               continua caindo em `/` (branch com shell) intacto. */}
           <Route element={<AuthLayout />}>
             <Route path="/entrar" element={<EntrarPage />} />
+            <Route path="/cadastrar" element={<CadastrarPage />} />
             <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
             <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           </Route>

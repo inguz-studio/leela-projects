@@ -325,6 +325,9 @@ export {
   confirmarResetSenha,
 } from './auth';
 
+// Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações).
+export { atualizarNomeExibicao } from './auth';
+
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
 // ---------------------------------------------------------------------------

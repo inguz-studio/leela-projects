@@ -25,6 +25,7 @@ import {
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
+  updateProfile,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
@@ -222,4 +223,19 @@ export async function verificarCodigoResetSenha(oobCode: string): Promise<string
 /** Efetiva a nova senha para um `oobCode` válido. */
 export async function confirmarResetSenha(oobCode: string, novaSenha: string): Promise<void> {
   return confirmPasswordReset(getLeelaAuth(), oobCode, novaSenha);
+}
+
+// ---------------------------------------------------------------------------
+// Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações)
+// ---------------------------------------------------------------------------
+
+/**
+ * Atualiza o nome de exibição (displayName) do usuário AUTENTICADO. Usado no
+ * cadastro (logo após criar a conta) e nas configurações da conta. Lança se não
+ * houver sessão ativa (o chamador só deve invocar autenticado).
+ */
+export async function atualizarNomeExibicao(displayName: string): Promise<void> {
+  const user = getLeelaAuth().currentUser;
+  if (!user) throw new Error('Sem sessão ativa para atualizar o perfil.');
+  return updateProfile(user, { displayName });
 }
