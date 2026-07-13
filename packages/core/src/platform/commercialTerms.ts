@@ -57,6 +57,20 @@ export interface CommercialTerms {
   communityMonthlyEnabled: boolean;
   /** Mensalidade SaaS em R$ — 0 é VÁLIDO (produtor-sócio isento, RN-405) */
   saasMonthlyFee: number;
+  /**
+   * RN-350/RN-348 (E09s-L1 · decisão #4): retenção % de repasse POR TENANT
+   * sobre o LÍQUIDO do produtor até o evento encerrar. OPCIONAL: ausente ⇒
+   * vale o default global (RETENCAO_REPASSE_PCT_DEFAULT = 15, em
+   * finance/repasse.ts; doc default em `platform/config`). Escrita segue
+   * RN-404 — só platform_admin (via setRetencaoRepasse, L2-T4).
+   */
+  retencaoRepassePct?: number;
+  /**
+   * RN-348 (E09s-L1): janela D+N em DIAS ÚTEIS antes de o valor entrar em
+   * `disponivel`. OPCIONAL: ausente ⇒ default global
+   * (DISPONIBILIZACAO_DIAS_UTEIS_DEFAULT = 2). Mesma disciplina RN-404.
+   */
+  disponibilizacaoDiasUteis?: number;
   /** Versão do termo (int ≥ 1); snapshots v{versao} são imutáveis */
   versao: number;
   /** uid do platform_admin que gravou esta versão */
@@ -151,6 +165,26 @@ export function validateCommercialTerms(
 
   if (typeof input.communityMonthlyEnabled !== 'boolean') {
     errors.push('communityMonthlyEnabled é obrigatório (boolean).');
+  }
+
+  // E09s-L1 (RN-348/350 · decisão #4): campos de repasse OPCIONAIS — quando
+  // presentes, validam range; ausentes valem os defaults globais do core.
+  if (input.retencaoRepassePct !== undefined) {
+    if (
+      !isFiniteNumber(input.retencaoRepassePct) ||
+      input.retencaoRepassePct < 0 ||
+      input.retencaoRepassePct > 100
+    ) {
+      errors.push('retencaoRepassePct deve estar entre 0 e 100 (RN-350).');
+    }
+  }
+  if (input.disponibilizacaoDiasUteis !== undefined) {
+    if (
+      !Number.isInteger(input.disponibilizacaoDiasUteis) ||
+      input.disponibilizacaoDiasUteis < 0
+    ) {
+      errors.push('disponibilizacaoDiasUteis deve ser inteiro ≥ 0 (RN-348).');
+    }
   }
 
   return errors;

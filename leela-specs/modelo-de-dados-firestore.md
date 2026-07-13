@@ -180,7 +180,7 @@ Estas coleções/campos foram introduzidos pelos specs por épico e devem ser co
 | ➕ `tenants/{id}/portal`, `newsletterLeads` | E12 (S1208) | portal público sob a plataforma (não domínio próprio); newsletter com consentimento LGPD |
 | ➕ `clubes/{id}/convites/{emailKey}` | E05 (S104-T1) | convite por email, docId = email lowercase; RN-106 (1–50, dedupe, reenvio idempotente); escrita só via Function `enviarConvites` |
 
-**Registro de RNs novas:** E09 introduziu regras financeiras renumeradas para **RN-330–337** (taxa da plataforma, liberação de repasse, split, idempotência, saldo consolidado, estados de valor, ticket médio, reembolso) para não colidir com RN-320 (papéis de equipe, E04). E04 propôs a definição canônica dos 4 papéis de RN-320 — validar com product owner.
+**Registro de RNs novas:** E09 introduziu regras financeiras renumeradas para **RN-330–337** (taxa da plataforma, liberação de repasse, split, idempotência, saldo consolidado, estados de valor, ticket médio, reembolso) para não colidir com RN-320 (papéis de equipe, E04). E04 propôs a definição canônica dos 4 papéis de RN-320 — validar com product owner. **E09-slim (Onda 2)** canonizou **RN-347/348** e **RN-350–357** — ver seção "Repasse do organizador (E09-slim)" abaixo.
 
 ---
 
@@ -189,12 +189,33 @@ Estas coleções/campos foram introduzidos pelos specs por épico e devem ser co
 O modelo é **multi-tenant**: cada produtor/promotor é um `tenant`. Isolamento por `tenantId` + Security Rules; retrofit proibitivo.
 
 - `tenants/{tenantId}` — perfil do produtor (nome, slug, status: pending/ativo/suspenso), `ownerUid`.
-- `tenants/{tenantId}/commercialTerms/current` — `platformFeePct`, `installmentRules`, `anticipation`, `communityMonthlyEnabled`, `saasMonthlyFee` (pode 0). Escrita só por `platform_admin`.
+- `tenants/{tenantId}/commercialTerms/current` — `platformFeePct`, `installmentRules`, `anticipation`, `communityMonthlyEnabled`, `saasMonthlyFee` (pode 0) ➕ opcionais E09s (RN-348/350, decisão #4): `retencaoRepassePct` (0–100; ausente ⇒ default 15) e `disponibilizacaoDiasUteis` (int ≥ 0; ausente ⇒ default 2). Escrita só por `platform_admin`.
 - ➕ `tenants/{tenantId}/portal` (S1208) — portal público **sob a plataforma** (não domínio próprio / white-label): blocos ativáveis e ordenáveis (`eventos`+`agenda`, `links de fotos`, `blog`, `patrocinadores`, `newsletter` — RN-152), `status`/`visibilidade` (gate de publicação; 404 se não publicado, reusa S1200 — RN-150), tema `theme="leela"`. Leitura pública SSR/ISR; escrita só pelo tenant owner.
 - ➕ `tenants/{tenantId}/newsletterLeads/{leadId}` (S1208) — captura de newsletter: `email`, `consentimentoLgpd{ aceitoEm, finalidade }` (RN-151), `criadoEm`. Escopo por tenant.
 - **Escopo por tenant** (todo agregado carrega `tenantId`): `eventos`, `clubes`, `inscritos`, `comunicados`, `parcerias`, `programaAfiliacao`, `pagamentos`, `equipe`, `promotores`, `subscriptions`.
 - **Global:** `atletas` (identidade cross-tenant), `catalogoAcoes`, `config/system`.
 - **Plataforma (super-admin):** agregados macro em `platform/rollups/*` (∑ por Function, cross-tenant: GMV total, receita Leela por tenant, nº tenants ativos).
+
+### Repasse do organizador (E09-slim · E09s-L1, tipos em `packages/core/src/finance/repasse-types.ts`)
+
+Fluxo de saque do produtor SEM afiliação, SEM reembolso (S904 vive em E04-S305) e SEM painel rico. Coleções **tenant-scoped** (decisão #1 do consolidador — isolamento cross-tenant herda `isTenantMember`; diverge do `profissionais/{profId}/saldo` da spec E09 completa, reconciliar antes da Onda 3). Fonte do vendido/líquido = `eventos/{id}/financeiro/current` (E03-S207, shape `FinanceiroEvento` — E09s **lê**, nunca reconstrói).
+
+- ➕ `tenants/{tid}/dadosBancarios/current` — versão **MASCARADA**, a única legível pelo cliente (RN-354): `banco`, `agencia`, `contaMascarada` (`****1234`), `tipo` (corrente|poupanca), `pixMascarado|null`, `titular`, `cpfCnpjMascarado`, `criadoEm`, `atualizadoEm`. Leitura: `tenant_owner` do próprio tenant + `platform_admin`. Escrita: **só Function** `saveDadosBancarios` (RN-357), que mascara server-side e preserva `criadoEm` em reenvio.
+- ➕ `tenants/{tid}/dadosBancariosSecret/current` — blob **CIFRADO** do número de conta/PIX em claro (RN-354): `algoritmo: 'aes-256-gcm'`, `ciphertext`, `iv`, `authTag`, `keyVersion`, `atualizadoEm`. **`read: false` e `write: false` para TODO cliente — inclusive `tenant_owner` e `platform_admin` via client SDK; escrita só Admin SDK (Function).** Leitura admin passa pelo callable auditado `getBankDetailsForPayout` (L2-T5, decisão #8 — acesso registrado: quem/quando/qual repasse). Cifra: AES-256-GCM com chave no Secret Manager (decisão #5; ADR curto antes de L2-T2; KMS pós-V1).
+- ➕ `tenants/{tid}/repasses/{repasseId}` — solicitação de saque: `valor`, `estado` ∈ {`solicitado`,`aprovado`,`recusado`,`pago`,`cancelado`} (union fechada `EstadoRepasse` — RN-353; `cancelado` = decisão #11, só owner e só enquanto `solicitado`), `dadosBancariosSnapshot` (mascarado, congelado na solicitação), `comprovanteNumero?` (só `pago` — RN-355), `transicoes[]` **append-only** (de→para/quando/quem/papel — auditoria), `criadoEm`, `atualizadoEm`. Escrita **só Function** (RN-357). Máquina: `solicitado→{aprovado,recusado,cancelado}`, `aprovado→pago`, resto rejeita; recusa **e** cancelamento devolvem o valor ao disponível no recompute.
+- ➕ `tenants/{tid}/saldo/current` — ∑ **consolidado** do tenant (decisão #2), recomputado integralmente pela Function `updateSaldoRepasse` (L2-T1) via `computeSaldoRepasse` (core): `vendidoBruto`, `retido`, `disponivel` (**nunca negativo** — RN-351), `comprometido` (Σ repasses em {solicitado,aprovado,pago}), `dentroJanelaDN` (RN-348), `eventosSemTermo`, `atualizadoEm`. Cliente lê os 3 cards SÓ daqui; escrita de cliente **NEGADA** (RN-357).
+
+**Regras canonizadas (consolidador 2026-07-05):**
+- **RN-347** — modo da taxa no líquido do produtor: `incorporada` (líquido = face − taxa, reusa `computeReceitaLiquida` — RN-406) | `repassada` (líquido = face). Parâmetro **explícito** do core (`computeLiquidoProdutor`); default `incorporada` até o toggle E04 existir.
+- **RN-348** — disponibilização **D+N dias úteis** (default **2**) + retenção % (default **15**) **por tenant** em `commercialTerms/current` (campos opcionais `disponibilizacaoDiasUteis`/`retencaoRepassePct`; defaults globais em `platform/config` + constantes do core). Fundos com < N dias úteis desde a transação **não** entram em `disponivel` (`saldo.dentroJanelaDN`). ⚠️ Pendência L2-T1: a fonte agregada por evento não tem granularidade por transação — até integrá-la, a Function grava `dentroJanelaDN: 0` (a derivação pura `computeDentroJanelaDN` já existe; **não fabricar dado**). Dias úteis = seg–sex no fuso do produto (`FUSO_EVENTO`); feriados fora da V1.
+- **RN-350** — retenção pós-evento: **15% default** (config por tenant) sobre o **líquido** do produtor (decisão #3), liberada quando `evento.status === 'encerrado'` (cron `encerrarEventos` L2-T6 — encerramento automático por data; o organizador **não** encerra o próprio evento: a retenção é contingência anti-fraude).
+- **RN-351** — `disponivel = Σ liberadoPorEvento − Σ comprometido − dentroJanelaDN`, clamp em 0; `liberadoPorEvento = encerrado ? líquido : líquido×(1−pct)`. Evento com `receitaLiquida === null` (tenant sem termo — decisão #7) não contribui e **bloqueia** solicitação de repasse até existir termo.
+- **RN-352** — solicitação válida: `0 < valor ≤ disponivel` (cent-exato); o servidor relê `disponivel` e valida transacionalmente (L2-T3).
+- **RN-353** — máquina do repasse (acima) com `transicoes[]` append-only.
+- **RN-354** — dados bancários LGPD: número cifrado Function-only + `read:false` até para o owner; cliente lê **só** o mascarado; **nunca** cross-tenant.
+- **RN-355** — comprovante numerado: sequência **gapless por tenant** (contador transacional L2-T4); formato determinístico `REP-{ano}-{seq:0000}` (`formatarNumeroComprovante`); PDF = V1.1 (decisão #9).
+- **RN-356** — "pago" é **registro manual mock** (sem transferência bancária real); UI explícita.
+- **RN-357** — escrita de repasse/saldo/dados bancários **exclusiva de Function** — write de cliente NEGADO nas Rules para as 4 coleções.
 
 ### Recorrência / assinaturas
 - `tenants/{id}/subscriptions/{subId}` — mensalidade da **comunidade** (tenant → membro; destrava clube pago, RN-104). Campos: `atletaId`, `clubeId`, `valor`, `status`(ativa/inadimplente/cancelada), `proximaCobranca`.

@@ -584,6 +584,36 @@ export {
   buildInstallmentOptions,
 } from './finance/calc';
 
+// ---------------------------------------------------------------------------
+// Repasse do organizador — E09-slim (LEELA-E09s-L1 · RN-347/348/350..357)
+// Shapes das coleções tenant-scoped `dadosBancarios[Secret]`, `repasses`,
+// `saldo` (escrita SÓ por Function — RN-357). dadosBancariosSecret é
+// read:false nas Rules até para o owner (RN-354).
+// ---------------------------------------------------------------------------
+export type {
+  EstadoRepasse,
+  ModoTaxa,
+  TipoContaBancaria,
+  DadosBancarios,
+  DadosBancariosSecret,
+  DadosBancariosSnapshot,
+  AtorRepasse,
+  TransicaoRepasse,
+  Repasse,
+  SaldoRepasse,
+  EventoSaldoInput,
+  RepasseSaldoInput,
+  TransacaoJanelaInput,
+} from './finance/repasse-types';
+export {
+  ESTADOS_REPASSE,
+  isEstadoRepasse,
+  MODOS_TAXA,
+  isModoTaxa,
+  TIPOS_CONTA_BANCARIA,
+  isTipoContaBancaria,
+} from './finance/repasse-types';
+
 // Rollups macro da plataforma (E16-S1605-T1/T2 · RN-409)
 export type { TenantHealth, TenantRollup, PlatformRollups } from './platform/rollups';
 export { PLATFORM_ROLLUPS_DOC_PATH, deriveTenantHealth } from './platform/rollups';
