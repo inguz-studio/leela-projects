@@ -7,8 +7,8 @@
 // =============================================================================
 
 import { useQuery } from '@tanstack/react-query';
-import type { SaldoRepasse } from '@leela/core';
-import { saldoRepasseQuery } from '../../../../lib/query/queries';
+import type { DadosBancarios, SaldoRepasse } from '@leela/core';
+import { dadosBancariosQuery, saldoRepasseQuery } from '../../../../lib/query/queries';
 
 export interface AsyncQuery<T> {
   data: T;
@@ -26,6 +26,26 @@ export interface AsyncQuery<T> {
 export function useSaldoRepasse(tenantId: string | null): AsyncQuery<SaldoRepasse | null> {
   const query = useQuery({
     ...saldoRepasseQuery(tenantId ?? ''),
+    enabled: !!tenantId,
+  });
+  return {
+    data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    refetch: () => {
+      void query.refetch();
+    },
+  };
+}
+
+/**
+ * `dadosBancarios/current` MASCARADO do tenant (RN-354) — a única versão que o
+ * cliente vê (nunca o número em claro). `null` quando o organizador ainda não
+ * cadastrou (a tela abre no form).
+ */
+export function useDadosBancarios(tenantId: string | null): AsyncQuery<DadosBancarios | null> {
+  const query = useQuery({
+    ...dadosBancariosQuery(tenantId ?? ''),
     enabled: !!tenantId,
   });
   return {

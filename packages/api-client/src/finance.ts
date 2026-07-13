@@ -13,7 +13,13 @@
 
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import type { SaldoRepasse, Timestamp } from '@leela/core';
+import {
+  isTipoContaBancaria,
+  type DadosBancarios,
+  type SaldoRepasse,
+  type Timestamp,
+  type TipoContaBancaria,
+} from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
 // ---------------------------------------------------------------------------
@@ -286,6 +292,10 @@ function repasseStr(v: unknown, fallback = ''): string {
   return typeof v === 'string' ? v : fallback;
 }
 
+function repasseTipoConta(v: unknown): TipoContaBancaria {
+  return isTipoContaBancaria(v) ? v : 'corrente';
+}
+
 /**
  * Lê o saldo consolidado do tenant (`tenants/{tid}/saldo/current`) — a ÚNICA
  * fonte dos 3 cards (vendido/disponível/retido). ∑ do servidor (RN-350/351):
@@ -309,6 +319,34 @@ export async function getSaldoRepasse(
     comprometido: repasseNum(data['comprometido']),
     dentroJanelaDN: repasseNum(data['dentroJanelaDN']),
     eventosSemTermo: repasseNum(data['eventosSemTermo']),
+    atualizadoEm: asRepasseTimestamp(data['atualizadoEm']),
+  };
+}
+
+/**
+ * Lê os dados bancários MASCARADOS do tenant (`dadosBancarios/current`) — a
+ * única versão legível pelo cliente (RN-354): nunca o número de conta/PIX em
+ * claro (esse vive cifrado em `dadosBancariosSecret`, read:false até para o
+ * owner). `null` quando o organizador ainda não cadastrou (a tela abre no form).
+ */
+export async function getDadosBancarios(
+  db: Firestore,
+  tenantId: string
+): Promise<DadosBancarios | null> {
+  const snap = await getDoc(doc(db, 'tenants', tenantId, 'dadosBancarios', 'current'));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const pix = data['pixMascarado'];
+  return {
+    tenantId: repasseStr(data['tenantId'], tenantId),
+    banco: repasseStr(data['banco']),
+    agencia: repasseStr(data['agencia']),
+    contaMascarada: repasseStr(data['contaMascarada']),
+    tipo: repasseTipoConta(data['tipo']),
+    pixMascarado: typeof pix === 'string' ? pix : null,
+    titular: repasseStr(data['titular']),
+    cpfCnpjMascarado: repasseStr(data['cpfCnpjMascarado']),
+    criadoEm: asRepasseTimestamp(data['criadoEm']),
     atualizadoEm: asRepasseTimestamp(data['atualizadoEm']),
   };
 }

@@ -56,6 +56,8 @@ export const queryKeys = {
   repasse: {
     /** `saldo/current` do tenant — a ÚNICA fonte dos 3 cards (∑ do servidor). */
     saldo: (tenantId: string) => ['repasse', tenantId, 'saldo'] as const,
+    /** `dadosBancarios/current` mascarado (RN-354). */
+    dadosBancarios: (tenantId: string) => ['repasse', tenantId, 'dados-bancarios'] as const,
   },
 
   kits: {

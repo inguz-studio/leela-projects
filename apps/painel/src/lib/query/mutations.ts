@@ -33,6 +33,7 @@ import {
   salvarCupom,
   salvarKit,
   salvarLote,
+  saveDadosBancarios,
   setClaimsEquipe,
   transferirPropriedade,
   transicaoAprovisionamento,
@@ -46,6 +47,8 @@ import {
   type EstornarInscricaoResult,
   type PublicarPaginaVendasResult,
   type RemoverMembroResult,
+  type SaveDadosBancariosInput,
+  type SaveDadosBancariosResult,
   type EscritaLoteInput,
   type SalvarConteudoPaginaVendasInput,
   type SalvarCupomInput,
@@ -548,6 +551,34 @@ export function useRemoverMembroEquipe(
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.equipe.doEvento(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations do REPASSE do organizador (E09-slim · E09s-L3). Escrita EXCLUSIVA
+// de Cloud Function (RN-357): o cliente nunca escreve saldo/dados bancários/
+// repasse direto. `saveDadosBancarios` cifra+mascara server-side e devolve SÓ o
+// mascarado (RN-354) → a UI mostra apenas `****1234`. No onSuccess invalida
+// `repasse.dadosBancarios` → read-your-writes (ADR-010). O erro do callable
+// sobe INTACTO para a UI (§2.12 — Toast/inline honesto do gate).
+// =============================================================================
+
+/**
+ * Cadastra/atualiza os dados bancários (callable `saveDadosBancarios`,
+ * tenant_owner). O número em claro trafega SÓ no callable (TLS) e nunca volta
+ * ao cliente (RN-354); a tela reflete o mascarado salvo sem reload.
+ */
+export function useSaveDadosBancarios(
+  tenantId: string,
+): UseMutationResult<SaveDadosBancariosResult, Error, SaveDadosBancariosInput> {
+  const queryClient = useQueryClient();
+  return useMutation<SaveDadosBancariosResult, Error, SaveDadosBancariosInput>({
+    mutationFn: (input) => saveDadosBancarios(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.repasse.dadosBancarios(tenantId),
+      });
     },
   });
 }

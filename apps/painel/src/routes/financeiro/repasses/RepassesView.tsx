@@ -10,8 +10,10 @@
 // =============================================================================
 
 import { PageHeader } from '@leela/design-system';
-import type { SaldoRepasse } from '@leela/core';
+import type { DadosBancarios, SaldoRepasse } from '@leela/core';
+import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { SaldoCards } from './_components/SaldoCards';
+import { DadosBancariosSection } from './_components/DadosBancariosSection';
 import { RepasseErro } from './_components/RepasseErro';
 
 export interface RepassesViewProps {
@@ -19,6 +21,15 @@ export interface RepassesViewProps {
   saldoLoading: boolean;
   saldoError: Error | null;
   onRetrySaldo: () => void;
+
+  // Dados bancários (T2)
+  dadosBancarios: DadosBancarios | null;
+  dbLoading: boolean;
+  dbError: Error | null;
+  onRetryDb: () => void;
+  dbSaving: boolean;
+  dbSaveError?: string | undefined;
+  onSubmitDados: (input: SaveDadosBancariosInput) => Promise<boolean>;
 }
 
 export function RepassesView({
@@ -26,6 +37,13 @@ export function RepassesView({
   saldoLoading,
   saldoError,
   onRetrySaldo,
+  dadosBancarios,
+  dbLoading,
+  dbError,
+  onRetryDb,
+  dbSaving,
+  dbSaveError,
+  onSubmitDados,
 }: RepassesViewProps): JSX.Element {
   return (
     <div className="flex flex-col gap-[var(--spacing-6)] pb-[var(--spacing-8)]">
@@ -44,6 +62,17 @@ export function RepassesView({
         ) : (
           <SaldoCards saldo={saldo} loading={saldoLoading} />
         )}
+
+        {/* Dados bancários (T2) — resumo mascarado ↔ form (RN-354). */}
+        <DadosBancariosSection
+          dados={dadosBancarios}
+          loading={dbLoading}
+          error={dbError}
+          onRetry={onRetryDb}
+          saving={dbSaving}
+          saveError={dbSaveError}
+          onSubmit={onSubmitDados}
+        />
       </div>
     </div>
   );

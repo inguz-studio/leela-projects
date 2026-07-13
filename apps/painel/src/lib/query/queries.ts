@@ -20,6 +20,7 @@ import {
   getCommercialTerms,
   getComunicado,
   getDesafio,
+  getDadosBancarios,
   getEvento,
   getFinanceiroEvento,
   getLeelaDb,
@@ -58,6 +59,7 @@ import type {
   CommercialTerms,
   Comunicado,
   Cupom,
+  DadosBancarios,
   Desafio,
   Evento,
   Inscrito,
@@ -428,5 +430,16 @@ export function saldoRepasseQuery(tenantId: string) {
   return queryOptions({
     queryKey: queryKeys.repasse.saldo(tenantId),
     queryFn: (): Promise<SaldoRepasse | null> => getSaldoRepasse(getLeelaDb(), tenantId),
+  });
+}
+
+/**
+ * `dadosBancarios/current` MASCARADO do tenant (RN-354) — nunca o número em
+ * claro. `null` quando o organizador ainda não cadastrou (a tela abre no form).
+ */
+export function dadosBancariosQuery(tenantId: string) {
+  return queryOptions({
+    queryKey: queryKeys.repasse.dadosBancarios(tenantId),
+    queryFn: (): Promise<DadosBancarios | null> => getDadosBancarios(getLeelaDb(), tenantId),
   });
 }
