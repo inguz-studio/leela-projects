@@ -11,6 +11,7 @@ import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { useFinanceiroSession } from '../_data/session';
 import { useRequestRepasse, useSaveDadosBancarios } from '../../../lib/query/mutations';
 import { useDadosBancarios, useHistoricoRepasses, useSaldoRepasse } from './_data/repasses';
+import { useRepassesPorEvento } from './_data/repassesPorEvento';
 import { repasseErrorMessage } from './_lib/erros';
 import { RepassesView } from './RepassesView';
 
@@ -21,6 +22,7 @@ export function RepassesPage(): JSX.Element {
   const { toast } = useToast();
 
   const saldo = useSaldoRepasse(tenantId);
+  const porEvento = useRepassesPorEvento(tenantId, session.uid);
   const dados = useDadosBancarios(tenantId);
   const historico = useHistoricoRepasses(tenantId);
   const salvarDados = useSaveDadosBancarios(tenantId ?? '');
@@ -78,6 +80,10 @@ export function RepassesPage(): JSX.Element {
       saldoLoading={carregandoSessao || saldo.loading}
       saldoError={saldo.error}
       onRetrySaldo={saldo.refetch}
+      porEvento={porEvento.data}
+      porEventoLoading={carregandoSessao || porEvento.loading}
+      porEventoError={porEvento.error}
+      onRetryPorEvento={porEvento.refetch}
       dadosBancarios={dados.data}
       dbLoading={carregandoSessao || dados.loading}
       dbError={dados.error}

@@ -14,16 +14,24 @@ import { Button, PageHeader } from '@leela/design-system';
 import type { DadosBancarios, Repasse, SaldoRepasse } from '@leela/core';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { SaldoCards } from './_components/SaldoCards';
+import { RepassesPorEvento } from './_components/RepassesPorEvento';
 import { DadosBancariosSection } from './_components/DadosBancariosSection';
 import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
 import { HistoricoRepasses } from './_components/HistoricoRepasses';
 import { RepasseErro } from './_components/RepasseErro';
+import type { LinhaRepasseEvento } from './_lib/repassesPorEvento';
 
 export interface RepassesViewProps {
   saldo: SaldoRepasse | null;
   saldoLoading: boolean;
   saldoError: Error | null;
   onRetrySaldo: () => void;
+
+  // Por evento (RN-349)
+  porEvento: LinhaRepasseEvento[];
+  porEventoLoading: boolean;
+  porEventoError: Error | null;
+  onRetryPorEvento: () => void;
 
   // Dados bancários (T2)
   dadosBancarios: DadosBancarios | null;
@@ -51,6 +59,10 @@ export function RepassesView({
   saldoLoading,
   saldoError,
   onRetrySaldo,
+  porEvento,
+  porEventoLoading,
+  porEventoError,
+  onRetryPorEvento,
   dadosBancarios,
   dbLoading,
   dbError,
@@ -98,6 +110,15 @@ export function RepassesView({
         ) : (
           <SaldoCards saldo={saldo} loading={saldoLoading} />
         )}
+
+        {/* Por evento (RN-349) — quebra vendido/retido/disponível estimado por
+            evento. Os cards acima seguem como saldo autoritativo (∑ do servidor). */}
+        <RepassesPorEvento
+          linhas={porEvento}
+          loading={porEventoLoading}
+          error={porEventoError}
+          onRetry={onRetryPorEvento}
+        />
 
         {/* Dados bancários (T2) — resumo mascarado ↔ form (RN-354). */}
         <DadosBancariosSection

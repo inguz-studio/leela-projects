@@ -205,6 +205,46 @@ export function financeiroCurrentQuery(eventoId: string) {
   });
 }
 
+/** Uma linha do fan-out por evento: metadados do evento + agregado financeiro. */
+export interface EventoFinanceiroRow {
+  evento: Pick<Evento, 'id' | 'nome' | 'slug' | 'status'>;
+  /** `financeiro/current` do evento — null quando o gatilho ainda não computou. */
+  financeiro: FinanceiroEvento | null;
+}
+
+/**
+ * Fan-out do `financeiro/current` de TODOS os eventos do organizador (RN-349 ·
+ * repasses POR EVENTO; RN-820 · modalidades da análise). Reusa as leituras
+ * PROVADAS do api-client — `listarEventosDoOrganizador` + `getFinanceiroEvento`
+ * — exatamente como `repassesFilaAdminQuery` compõe `listRepasses` por tenant.
+ * É O(eventos) leituras de AGREGADO (nunca varre inscritos — RN-820/§2.12): o
+ * organizador tem poucos eventos e cada `financeiro/current` é um point read
+ * O(1). NUNCA soma dinheiro aqui — a derivação (retido/disponível estimado por
+ * evento) é pura, feita a jusante com os helpers do core. Chave partilhada pelas
+ * telas de Repasses (por evento) e Análise (modalidades) → um fan-out, um cache.
+ */
+export function financeiroPorEventoDoOrganizadorQuery(params: {
+  tenantId: string;
+  organizadorId: string;
+}) {
+  return queryOptions({
+    queryKey: queryKeys.financeiro.porOrganizador(params.tenantId, params.organizadorId),
+    queryFn: async (): Promise<EventoFinanceiroRow[]> => {
+      const db = getLeelaDb();
+      const eventos = await listarEventosDoOrganizador(db, {
+        tenantId: params.tenantId,
+        organizadorId: params.organizadorId,
+      });
+      return Promise.all(
+        eventos.map(async (ev): Promise<EventoFinanceiroRow> => ({
+          evento: { id: ev.id, nome: ev.nome, slug: ev.slug, status: ev.status },
+          financeiro: await getFinanceiroEvento(db, ev.id),
+        })),
+      );
+    },
+  });
+}
+
 /**
  * Kits de um evento (do mais caro ao "Sem kit") — chave partilhada Cadastro ↔
  * Estoque. Reusa `listarKits` do api-client (leitura provada, RN-215 `usadoEm`
@@ -245,6 +285,35 @@ export function aprovisionamentoDoEventoQuery(eventoId: string) {
     queryKey: queryKeys.aprovisionamento.doEvento(eventoId),
     queryFn: (): Promise<Aprovisionamento[]> =>
       listarAprovisionamento(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Fan-out do aprovisionamento por SKU de TODOS os eventos do organizador
+ * (RN-820 · tamanhos mais pedidos da análise). Reusa `listarEventosDoOrganizador`
+ * + `listarAprovisionamento` (leituras provadas do api-client) e achata os SKUs
+ * de todos os eventos. `qtdVendida` por tamanho já vem pronta do agregado
+ * (FABLE-D · `agregarEstoque`) — a tela NUNCA varre inscritos (RN-224/RN-820).
+ * O(eventos) leituras; o organizador tem poucos eventos. A agregação por tamanho
+ * é pura, feita a jusante.
+ */
+export function aprovisionamentoDoOrganizadorQuery(params: {
+  tenantId: string;
+  organizadorId: string;
+}) {
+  return queryOptions({
+    queryKey: queryKeys.aprovisionamento.porOrganizador(params.tenantId, params.organizadorId),
+    queryFn: async (): Promise<Aprovisionamento[]> => {
+      const db = getLeelaDb();
+      const eventos = await listarEventosDoOrganizador(db, {
+        tenantId: params.tenantId,
+        organizadorId: params.organizadorId,
+      });
+      const porEvento = await Promise.all(
+        eventos.map((ev) => listarAprovisionamento(db, ev.id)),
+      );
+      return porEvento.flat();
+    },
   });
 }
 

@@ -45,6 +45,15 @@ export const queryKeys = {
   financeiro: {
     /** Agregado `financeiro/current` de um evento — partilhado Overview ↔ Financeiro. */
     current: (eventoId: string) => ['financeiro', 'current', eventoId] as const,
+    /**
+     * Fan-out do `financeiro/current` de TODOS os eventos do organizador
+     * (RN-349 · repasses POR EVENTO; RN-820 · modalidades da análise). Lê a
+     * lista de eventos do organizador e, por evento, o agregado financeiro —
+     * O(eventos) leituras de AGREGADO (nunca varre inscritos). Chave partilhada
+     * pelas telas de Repasses (por evento) e Análise (modalidades).
+     */
+    porOrganizador: (tenantId: string, organizadorId: string) =>
+      ['financeiro', 'por-organizador', tenantId, organizadorId] as const,
   },
 
   // ---------------------------------------------------------------------------
@@ -95,6 +104,14 @@ export const queryKeys = {
      * refletem sem reload manual.
      */
     doEvento: (eventoId: string) => ['aprovisionamento', 'do-evento', eventoId] as const,
+    /**
+     * Fan-out do aprovisionamento por SKU de TODOS os eventos do organizador
+     * (RN-820 · tamanhos mais pedidos da análise). Lê a lista de eventos e, por
+     * evento, os SKUs (agregados FABLE-D) — O(eventos) leituras de AGREGADO,
+     * nunca varre inscritos. `qtdVendida` por tamanho vem pronta do doc.
+     */
+    porOrganizador: (tenantId: string, organizadorId: string) =>
+      ['aprovisionamento', 'por-organizador', tenantId, organizadorId] as const,
   },
 
   lotes: {
