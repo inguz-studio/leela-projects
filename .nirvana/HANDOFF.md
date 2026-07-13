@@ -7,7 +7,29 @@
 
 Preview do Vitor de pé: painel 5273 + Firestore 8180 + Auth 9198 (⚠️ dados demo do maestro no emulator somem no próximo `bash preview.sh`; 3 zumbis java/node de agentes foram limpos — higiene ok). Próximo: decisões do Vitor (`DECISOES-ABERTAS.md`, 16 itens) → Onda 3. Sessão em /effort ultracode (xhigh).
 
-## ▶️ COMECE AQUI — retomada
+## ▶️ COMECE AQUI — retomada (sessão encerrada em 2026-07-13, handoff limpo)
+
+**Estado em uma linha:** Onda 0/1/2 CONCLUÍDAS + rodada de refinos do Vitor executada; **nada em voo, working tree limpa, tudo pushed até `d7868f9`**; tsc 0 em todos os pacotes; sem bug aberto conhecido.
+
+**Como retomar (nova sessão, nesta ordem):**
+1. Ler este bloco + `leela-specs/DECISOES-ABERTAS.md` (painel do Vitor, 16 itens com defaults em vigor) + `leela-specs/MODELO-ROADMAP.md` §3 (mapa Onda→Épico, Onda 2 toda ✅) + `references/DESIGN-REFERENCES.md`.
+2. Git são em `C:\dev\LEELA` (main == origin). Higiene 8GB: matar `java`/`node` órfãos ANTES de subir emulator (`tasklist`; preservar o do preview se estiver de pé) — esta sessão limpou 3 zumbis que travavam 8080/9099/4400.
+3. Preview p/ o Vitor: `bash preview.sh` (painel 5273 + Firestore 8180 seedado + Auth 9198); stack completo com landing+Functions = comandos na seção "PREVIEW CLICÁVEL" abaixo (relógio `LEELA_CLOCK=2026-03-15` obrigatório). ⚠️ O emulator atual tem dados demo do maestro (SKUs, logs, repasses, campanhas, plano, GATE10, receitaBruta 99123.45) — o ressemeio do preview.sh limpa tudo.
+4. Trace: `leela-build-2d6ee98d` · auditoria `~/.harness-logs/2026-07-1{1,2,3}/audit.jsonl` · reports locais em `outputs/leela-build-2d6ee98d/` (gitignored).
+5. Despachar via harness com os PADRÕES VIGENTES abaixo (inalterados). Roteamento: Fable EXPLÍCITO p/ dinheiro/segurança/review; Opus p/ UI/mecânico; Sonnet proibido.
+
+**Fila sugerida da próxima sessão (nada bloqueia, ordem por valor):**
+- **(a) Colher decisões do Vitor** em `DECISOES-ABERTAS.md` e aplicar as que ele ratificar/mudar (itens 1-7 são 1 sim/não cada; item 3d "validação de tamanho na origem" vira código S209-T2 quando ratificado).
+- **(b) Pendências backend registradas nos épicos (curtas):** agregado DEMOGRÁFICO (substitui o mock idade/sexo da Análise — E11 §RN-820) · `eventoId` no doc de repasse (associação repasse↔evento exata — E09 §RN-349) · espelhar `taxaModo?/imagemUrl?/regulamento?` nos tipos do wrapper api-client (higiene) · RN-149 regulamento×versionamento (junto de S306/Onda 3).
+- **(c) Decisão de design pendente do Vitor:** flat inputs viram default global? (experimento no showroom, lado a lado; hoje só o form de Novo Evento usa).
+- **(d) Onda 3** (E13-slim app atleta · E18 assessorias parceiras · E17 link-in-bio — épicos escritos, decisões #7 do painel) + SEO fino E12 + S305/S306 + scheduler de campanhas.
+- **(e) Com chave SANDBOX Asaas:** ativação do adapter (checklist `ASAAS-ADAPTER-REPORT.md`, review Fable obrigatória).
+
+**Lições operacionais DESTA sessão (herdar em todo dispatch):** preview consome `packages/*/dist` → `pnpm --dir packages/<pkg> build` antes de gate visual quando um agente adiciona export · agentes em árvore compartilhada = `git add`+`git commit --only` NUMA invocação (3 incidentes de staging varrido, todos recuperados) · 1 emulator por vez e checar portas 8080/9099/4400 por zumbis · NUNCA `math.isInfinite/isNaN` em rules · rota Fable é explícita (`model:"fable"`) · telas do painel em paralelo só com territórios disjuntos declarados no brief.
+
+---
+
+## (HISTÓRICO do turno 2026-07-12/13 — detalhe das aterrissagens; o remoto é a verdade)
 
 **🧭 ESTADO 2026-07-12 (tarde) — o mais recente primeiro:**
 - **`/harness` pontos 1-3 FECHADOS:** (1) KPIs da Visão Geral eram **operacionais** (getOverview sempre funcionou; caixas vazias = emulator morria a 512m + cold-start) → fix heap `preview.sh` 512→**1024m** (`c7d39f9`). (2) **Refino evento+checkout ao Figma** (`112-4622`, dark) + **kit-por-modalidade** (checkout filtra kits pela modalidade) + **logos** (`dc57504`); Fable-review pegou 2 bugs de dinheiro (exploit fulfillment kitId↔rótulo ~R$104 + crash valor negativo) → `c59dc28`. (3) **`MODELO-ROADMAP.md`** = terminologia única **Onda→Épico→US→Task** (fim da mistura Wave/Onda; "Wave"=lote de execução) + épicos **E17** (perfil social/link-in-bio) e **E18** (assessorias parceiras) planejados (`d1fb2a6`).
