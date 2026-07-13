@@ -114,3 +114,98 @@ export async function cancelRepasse(
   const { data } = await fn(input);
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// Transições ADMIN + comprovante + retenção (L2-T4 · RN-353/355/356 · RN-404)
+// Todas exigem claim platform_admin — o servidor nega o resto.
+// ---------------------------------------------------------------------------
+
+export type EstadoRepasseView =
+  | 'solicitado'
+  | 'aprovado'
+  | 'recusado'
+  | 'pago'
+  | 'cancelado';
+
+export interface TransicaoRepasseAdminInput {
+  tenantId: string;
+  repasseId: string;
+}
+
+export interface TransicaoRepasseAdminResult {
+  repasseId: string;
+  estado: EstadoRepasseView;
+  /** true = já estava no estado-destino (retry idempotente). */
+  replay: boolean;
+}
+
+export interface MarkRepassePagoResult extends TransicaoRepasseAdminResult {
+  estado: 'pago';
+  /** Comprovante GAPLESS por tenant (RN-355) — ex.: REP-2026-0007. */
+  comprovanteNumero: string;
+}
+
+/** solicitado → aprovado (platform_admin). */
+export async function approveRepasse(
+  input: TransicaoRepasseAdminInput
+): Promise<TransicaoRepasseAdminResult> {
+  const fn = httpsCallable<TransicaoRepasseAdminInput, TransicaoRepasseAdminResult>(
+    getLeelaFunctions(),
+    'approveRepasse'
+  );
+  const { data } = await fn(input);
+  return data;
+}
+
+/** solicitado → recusado (platform_admin) — devolve o valor ao disponível. */
+export async function rejectRepasse(
+  input: TransicaoRepasseAdminInput
+): Promise<TransicaoRepasseAdminResult> {
+  const fn = httpsCallable<TransicaoRepasseAdminInput, TransicaoRepasseAdminResult>(
+    getLeelaFunctions(),
+    'rejectRepasse'
+  );
+  const { data } = await fn(input);
+  return data;
+}
+
+/**
+ * aprovado → pago (platform_admin). Gera comprovante numerado gapless.
+ * REGISTRO MANUAL (RN-356): nenhuma transferência bancária real é feita —
+ * a UI deve avisar explicitamente.
+ */
+export async function markRepassePago(
+  input: TransicaoRepasseAdminInput
+): Promise<MarkRepassePagoResult> {
+  const fn = httpsCallable<TransicaoRepasseAdminInput, MarkRepassePagoResult>(
+    getLeelaFunctions(),
+    'markRepassePago'
+  );
+  const { data } = await fn(input);
+  return data;
+}
+
+export interface SetRetencaoRepasseInput {
+  tenantId: string;
+  /** % de retenção pós-evento (0..100 — RN-350). */
+  retencaoRepassePct: number;
+}
+
+export interface SetRetencaoRepasseResult {
+  tenantId: string;
+  retencaoRepassePct: number;
+  /** Versão nova do termo comercial (RN-404 — bump + snapshot). */
+  versao: number;
+}
+
+/** Configura a retenção % do tenant no termo comercial (platform_admin). */
+export async function setRetencaoRepasse(
+  input: SetRetencaoRepasseInput
+): Promise<SetRetencaoRepasseResult> {
+  const fn = httpsCallable<SetRetencaoRepasseInput, SetRetencaoRepasseResult>(
+    getLeelaFunctions(),
+    'setRetencaoRepasse'
+  );
+  const { data } = await fn(input);
+  return data;
+}

@@ -151,3 +151,15 @@ export { saveDadosBancarios } from './finance/saveDadosBancarios';
 // bancário mascarado congelado; cancelamento devolve ao disponível.
 // ⚠️ Fable (dinheiro).
 export { requestRepasse, cancelRepasse } from './finance/requestRepasse';
+
+// Finance — TRANSIÇÕES ADMIN + comprovante gapless + retenção (E09s-L2-T4 ·
+// RN-353/355/356 · RN-404): approve/reject/markPago via matriz do core;
+// contador transacional por tenant (2 pagos concorrentes ⇒ 0007/0008 sem
+// buraco); "pago" = registro manual mock, SEM transferência real;
+// setRetencaoRepasse bumpa versao do termo + snapshot v{n}. ⚠️ Fable.
+export {
+  approveRepasse,
+  rejectRepasse,
+  markRepassePago,
+  setRetencaoRepasse,
+} from './finance/transicoesRepasse';
