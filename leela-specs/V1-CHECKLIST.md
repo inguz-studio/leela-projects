@@ -269,12 +269,12 @@ Vendido/disponível/retido + dados bancários LGPD + solicitação validada + re
 
 ### LEELA-E07-web · Estados de sistema web (404 · 500 · 403) — brief `onda2-E07web-lotes.md`
 
-- [ ] LEELA-E07w-T1 — `SystemStateScreen` (web) no Design System (5 variants, 3 ligadas)
-- [ ] LEELA-E07w-T2 — 404 no Painel (catch-all React Router, com shell)
-- [ ] LEELA-E07w-T3 — 404 na Landing + guarda SEO rascunho→HTTP 404
-- [ ] LEELA-E07w-T4 — 500 no Painel (ErrorBoundary raiz + segmento + Sentry eventId)
-- [ ] LEELA-E07w-T5 — 500 na Landing (`error.tsx` + upgrade `global-error.tsx`)
-- [ ] LEELA-E07w-T6 — 403 no Painel (guarda por papel via `podeAcessar` de E04-S304)
+- [x] LEELA-E07w-T1 — `SystemStateScreen` no DS — **✅ `3267e7c` 2026-07-13** (componente único, 5 variantes declaradas / 3 ligadas, tokens puros, 9/9)
+- [x] LEELA-E07w-T2 — 404 no Painel — **✅ `33e8fda`** (catch-all nos 4 sub-routers, com shell; gate visual: "Evento não encontrado" contextual + CTA, rotas normais intactas)
+- [x] LEELA-E07w-T3 — 404 na Landing — **✅ `a08f9e8`** (SEO-safe; guarda rascunho→404 já vivia no loader S1201-T3)
+- [x] LEELA-E07w-T4 — 500 no Painel — **✅ `7ded6ba`** (ErrorBoundary raiz + segmento; eventId real depende de DSN staging — decisão #8)
+- [x] LEELA-E07w-T5 — 500 na Landing — **✅ `1e08b15`** (`error.tsx` + upgrade `global-error`)
+- [x] LEELA-E07w-T6 — 403 por papel — **✅ `7ded6ba`** (`RequirePapel` + `avaliarAcesso` → `podeAcessar` de @leela/core — MESMA matriz que as Rules espelham; anônimo→/entrar, sem permissão→Forbidden; fiado nas 6 áreas da matriz; 21/21 unit; E16-L2 reusa a tela) · **E07-web COMPLETO** · lacunas nomeadas: e2e/emulator = staging; ROTA_LOGIN/SUPORTE placeholders (E00/decisão #7)
 
 Débito V1.1: offline (S503) + manutenção (S504) web; mobile inteiro na onda E13.
 
