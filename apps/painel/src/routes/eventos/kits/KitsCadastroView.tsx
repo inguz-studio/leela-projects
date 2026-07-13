@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { Link } from 'react-router-dom';
-import { Badge, Button, EmptyState, Skeleton } from '@leela/design-system';
+import { Badge, Button, EmptyState, KpiCard, Skeleton } from '@leela/design-system';
 import type { ItemKit, Kit } from '@leela/core';
 import {
   formatPrecoKit,
@@ -53,6 +53,13 @@ export function KitsCadastroView({
 
   return (
     <div className="flex flex-col gap-[var(--spacing-8)]">
+      {/* Resumo ao TOPO — padrão das outras telas, KpiCard canônico do DS. */}
+      <section aria-label="Resumo dos kits" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
+        <KpiCard label="Kits configurados" value={formatInt(resumo.kits)} />
+        <KpiCard label="Itens no catálogo" value={formatInt(resumo.itens)} />
+        <KpiCard label="Marcas ativadas" value={formatInt(resumo.marcasAtivadas)} />
+      </section>
+
       {/* Seção A — Kits */}
       <section aria-label="Kits do evento" className="flex flex-col gap-[var(--spacing-4)]">
         <div className="flex items-center justify-between gap-[var(--spacing-3)]">
@@ -101,13 +108,6 @@ export function KitsCadastroView({
             ))}
           </div>
         )}
-      </section>
-
-      {/* Rodapé — resumo */}
-      <section aria-label="Resumo dos kits" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
-        <ResumoCard rotulo="Kits configurados" valor={resumo.kits} />
-        <ResumoCard rotulo="Itens no catálogo" valor={resumo.itens} />
-        <ResumoCard rotulo="Marcas ativadas" valor={resumo.marcasAtivadas} />
       </section>
     </div>
   );
@@ -178,17 +178,6 @@ function ItemCard({ item, onEditar }: { item: ItemKit; onEditar?: () => void }):
       )}
       <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">{usadoEmTexto(item)}</p>
     </article>
-  );
-}
-
-function ResumoCard({ rotulo, valor }: { rotulo: string; valor: number }): JSX.Element {
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-md)] bg-[var(--surface-high)] p-[var(--spacing-4)]">
-      <span className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
-        {formatInt(valor)}
-      </span>
-      <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">{rotulo}</span>
-    </div>
   );
 }
 

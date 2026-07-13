@@ -80,10 +80,14 @@ describe('KitsCadastroView (RN-211/213/215/216)', () => {
     expect(container.textContent?.toLowerCase()).not.toContain('tier');
   });
 
-  it('rodapé resume kits/itens/marcas', () => {
+  it('KPIs de resumo ficam no TOPO (antes da seção de kits), com KpiCard canônico', () => {
     view();
-    expect(screen.getByText('Kits configurados')).toBeInTheDocument();
+    const resumo = screen.getByText('Kits configurados');
+    expect(resumo).toBeInTheDocument();
     expect(screen.getByText('Marcas ativadas')).toBeInTheDocument();
+    // Ordem no DOM: o resumo precede o cabeçalho "Kits" (KPIs ao topo).
+    const heading = screen.getByRole('heading', { name: 'Kits' });
+    expect(resumo.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('sem callback de item, não mostra "+ Adicionar item" (T2 read-only)', () => {
