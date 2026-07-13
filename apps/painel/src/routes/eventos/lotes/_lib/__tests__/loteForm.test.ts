@@ -54,12 +54,34 @@ describe('parsePrecoReais + arredondarCentavos (money-config cent-exato)', () =>
   });
 });
 
-describe('datetime-local ↔ Date/Timestamp (round-trip)', () => {
-  it('formata e reparte o mesmo instante local', () => {
-    const d = new Date(2026, 1, 1, 14, 30); // 01/fev/2026 14:30 local
-    const s = dateParaInputLocal(d);
-    expect(s).toBe('2026-02-01T14:30');
-    expect(inputLocalParaDate(s)!.getTime()).toBe(d.getTime());
+describe('datetime-local ↔ Date/Timestamp (PINADO em FUSO_EVENTO — review S300-T4 #2)', () => {
+  it('interpreta a parede em America/Sao_Paulo, independente do fuso do runtime', () => {
+    // 10:00 na parede de SP = 13:00Z (UTC-3, sem DST desde 2019).
+    expect(inputLocalParaDate('2026-07-12T10:00')!.toISOString()).toBe(
+      '2026-07-12T13:00:00.000Z',
+    );
+    // Inversa: 13:00Z exibe 10:00 no input, seja o navegador de onde for.
+    expect(dateParaInputLocal(new Date('2026-07-12T13:00:00Z'))).toBe('2026-07-12T10:00');
+  });
+
+  it('rollover: 23:59 BRT cruza para o dia seguinte em UTC sem deslocar a parede', () => {
+    const d = inputLocalParaDate('2026-04-26T23:59')!;
+    expect(d.toISOString()).toBe('2026-04-27T02:59:00.000Z');
+    expect(dateParaInputLocal(d)).toBe('2026-04-26T23:59');
+  });
+
+  it('formata e reparte o mesmo instante (round-trip sem perda de minuto)', () => {
+    const s = '2026-02-01T14:30';
+    const d = inputLocalParaDate(s)!;
+    expect(dateParaInputLocal(d)).toBe(s);
+    expect(inputLocalParaDate(dateParaInputLocal(d))!.getTime()).toBe(d.getTime());
+  });
+
+  it('rejeita shape/calendário inválido', () => {
+    expect(inputLocalParaDate('')).toBeNull();
+    expect(inputLocalParaDate('2026-02-30T10:00')).toBeNull();
+    expect(inputLocalParaDate('2026-02-01T24:00')).toBeNull();
+    expect(inputLocalParaDate('2026-02-01 10:00')).toBeNull();
   });
 
   it('timestampParaInputLocal devolve vazio quando ausente', () => {

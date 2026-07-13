@@ -3,10 +3,12 @@
 // 100% testável. É a FIAÇÃO DE MONEY-CONFIG que a Fable-review deve olhar:
 //   - preço em R$ → cent-exato (arredondarCentavos) para passar `moneyCentExato`
 //     na Rule; a UI nunca inventa sub-centavo;
-//   - janela `inicioEm`/`fimEm` via datetime-local (hora local do runtime →
-//     Date → Timestamp no api-client). LIMITAÇÃO CONHECIDA: o fuso é o do
-//     navegador; o seed/produto pina `FUSO_EVENTO` (America/Sao_Paulo). Para a
-//     virada real (S300-T2) o instante absoluto importa — ver report/flags;
+//   - janela `inicioEm`/`fimEm` via datetime-local PINADO em `FUSO_EVENTO`
+//     (America/Sao_Paulo — S300-T4 review · achado #2): a parede digitada é
+//     lida/exibida SEMPRE no fuso do produto (dataHoraLocalParaDate/
+//     dataHoraLocalISO do core), nunca no fuso do navegador — organizador em
+//     Manaus e tabela pinada veem a MESMA hora, e a virada (S300-T2) recebe o
+//     instante absoluto certo;
 //   - validação = KERNEL (`loteShapeValido` + `validarLotesModalidade`), nunca
 //     regra de lote reinventada aqui. A Rule é a autoridade final; isto é o
 //     pré-check read-your-writes (a Rule não itera irmãos, por isso a
@@ -17,6 +19,9 @@
 // =============================================================================
 
 import {
+  dataHoraLocalISO,
+  dataHoraLocalParaDate,
+  isDataHoraLocalISO,
   loteAtivo,
   loteEncerrado,
   loteEsgotado,
@@ -83,16 +88,9 @@ export function parsePrecoReais(s: string): number | null {
 // Datas ↔ datetime-local
 // ---------------------------------------------------------------------------
 
-function pad(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-/** Date → valor de `<input type="datetime-local">` (hora local). @pure */
+/** Date → valor de `<input type="datetime-local">` PINADO em FUSO_EVENTO. @pure */
 export function dateParaInputLocal(d: Date): string {
-  return (
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
-    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  );
+  return dataHoraLocalISO(d);
 }
 
 /** Timestamp → valor de datetime-local (vazio quando ausente/ilegível). @pure */
@@ -101,11 +99,14 @@ export function timestampParaInputLocal(ts: Timestamp | null | undefined): strin
   return dateParaInputLocal(ts.toDate());
 }
 
-/** Valor de datetime-local → Date (local); `null` quando vazio/inválido. @pure */
+/**
+ * Valor de datetime-local → instante, com a parede interpretada em
+ * FUSO_EVENTO (nunca no fuso do navegador); `null` quando vazio/inválido.
+ * @pure
+ */
 export function inputLocalParaDate(s: string): Date | null {
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+  if (!isDataHoraLocalISO(s)) return null;
+  return dataHoraLocalParaDate(s);
 }
 
 // ---------------------------------------------------------------------------

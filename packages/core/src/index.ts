@@ -267,6 +267,9 @@ export {
   dataEventoNoFuturo,
   dataEventoParaDate,
   diasCivisAte,
+  isDataHoraLocalISO,
+  dataHoraLocalParaDate,
+  dataHoraLocalISO,
 } from './eventos/dataEvento';
 
 // Cronograma de entrega do evento (FABLE-F-T1 · S204/FRENTE F) — janelas por

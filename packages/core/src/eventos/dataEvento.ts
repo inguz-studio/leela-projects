@@ -127,6 +127,64 @@ export function dataEventoParaDate(iso: string, fuso: string = FUSO_EVENTO): Dat
   return instante;
 }
 
+// ---------------------------------------------------------------------------
+// Data+hora civil (`yyyy-mm-ddTHH:mm`, o shape do input datetime-local) —
+// mesma decisão V1 do date-only: a PAREDE é sempre lida/escrita no fuso do
+// produto (FUSO_EVENTO), nunca no fuso do runtime. Fonte única para janelas
+// de lote (S300-T4 review · achado #2): antes o form parseava com `new Date`
+// local e um organizador fora de UTC-3 gravava um instante deslocado —
+// tabela (pinada) e modal (local) mostravam horas diferentes do MESMO campo.
+// ---------------------------------------------------------------------------
+
+const RE_DATA_HORA_LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * O valor é um datetime-local `yyyy-mm-ddTHH:mm` de calendário e hora
+ * válidos? (`2026-02-30T10:00` e `...T24:00` não passam.) @pure
+ */
+export function isDataHoraLocalISO(valor: unknown): valor is string {
+  if (typeof valor !== 'string' || !RE_DATA_HORA_LOCAL.test(valor)) return false;
+  const [data, hora] = valor.split('T') as [string, string];
+  if (!isDataEventoISO(data)) return false;
+  const [h, m] = hora.split(':').map(Number) as [number, number];
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
+/**
+ * Converte uma parede `yyyy-mm-ddTHH:mm` para o INSTANTE correspondente no
+ * fuso do produto ('2026-07-12T10:00' → 2026-07-12T13:00:00Z em SP). Mesma
+ * reancoragem dupla de `dataEventoParaDate` para transição de offset (DST).
+ * Lança em shape inválido (borda de validação — chamar após validar). @pure
+ */
+export function dataHoraLocalParaDate(isoLocal: string, fuso: string = FUSO_EVENTO): Date {
+  if (!isDataHoraLocalISO(isoLocal)) {
+    throw new Error(`data-hora local inválida: "${isoLocal}" (esperado yyyy-mm-ddTHH:mm)`);
+  }
+  const comoUTC = new Date(`${isoLocal}:00Z`);
+  const offset1 = offsetNoInstante(fuso, comoUTC);
+  let instante = new Date(comoUTC.getTime() - offset1);
+  const offset2 = offsetNoInstante(fuso, instante);
+  if (offset2 !== offset1) {
+    instante = new Date(comoUTC.getTime() - offset2);
+  }
+  return instante;
+}
+
+/**
+ * Parede `yyyy-mm-ddTHH:mm` de um instante no fuso do produto — inversa de
+ * `dataHoraLocalParaDate` e o valor que um `<input type="datetime-local">`
+ * pinado deve exibir. h23: meia-noite é `00:xx`, nunca `24:xx`. @pure
+ */
+export function dataHoraLocalISO(instante: Date, fuso: string = FUSO_EVENTO): string {
+  const hora = new Intl.DateTimeFormat('en-GB', {
+    timeZone: fuso,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(instante);
+  return `${dataLocalISO(instante, fuso)}T${hora}`;
+}
+
 /**
  * Diferença em DIAS CIVIS (calendário do fuso) entre a data do evento e
  * `agora`. 0 = o evento é HOJE no fuso do produto; negativo = já passou.
