@@ -127,3 +127,14 @@ export { confirmarPagamentoSandbox } from './checkout/confirmarPagamentoSandbox'
 // saga idempotente ledger→refund→efeito; só organizador (tenant writer);
 // reverte a receita agregada e audita quem/quando/quanto/motivo. ⚠️ Fable.
 export { estornarInscricao } from './checkout/estornarInscricao';
+
+// Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
+// full recompute idempotente de `tenants/{tid}/saldo/current` via
+// computeSaldoRepasse (@leela/core). Gatilhos: financeiro/current (E03
+// escreve, E09s reage) e repasses (comprometido/devolução). Janela D+N
+// derivada dos pagamentos confirmados (fonte real por transação).
+// ⚠️ Fable (dinheiro — payout do organizador).
+export {
+  onFinanceiroEventoWrite,
+  onRepasseWrite,
+} from './finance/updateSaldoRepasse';
