@@ -120,7 +120,7 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
     ).toThrow(/ehResponsavel/);
   });
 
-  it('CAMPOS_FUNCTION_INSCRITO ganhou os 4 campos do checkout (A-T2) + kitId (E12)', () => {
+  it('CAMPOS_FUNCTION_INSCRITO ganhou os 4 campos do checkout (A-T2) + kitId (E12) + estornadoEm (FABLE-B)', () => {
     expect(CAMPOS_FUNCTION_INSCRITO).toEqual([
       'kitEntregueEm',
       'checkinEm',
@@ -131,6 +131,9 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       'dadosPessoais',
       'tamanhos',
       'kitId',
+      // FABLE-B (RN-341): carimbo do estorno — Function-only (espelho da
+      // lista canônica em eventos/inscrito.ts; drift pego por este teste)
+      'estornadoEm',
     ]);
   });
 });
