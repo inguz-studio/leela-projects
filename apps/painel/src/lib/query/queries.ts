@@ -24,6 +24,7 @@ import {
   getFinanceiroEvento,
   getLeelaDb,
   getOverview,
+  getPaginaVendas,
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
   getTenant,
@@ -55,6 +56,7 @@ import type {
   Kit,
   Lote,
   Membro,
+  PaginaVendas,
   Parceria,
   PlatformRollups,
   Tenant,
@@ -200,6 +202,19 @@ export function lotesDoEventoQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.lotes.doEvento(eventoId),
     queryFn: (): Promise<Lote[]> => listarLotes(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Página de vendas (config) de um evento — S300-T3. Reusa `getPaginaVendas` do
+ * api-client (leitura direta O(1); parse fail-fast). `null` quando ainda não
+ * configurada — o editor parte das seções padrão do kernel (AUSÊNCIA honesta,
+ * nunca dado fake). Salvar/publicar invalida esta chave (read-your-writes).
+ */
+export function paginaVendasDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.paginaVendas.doEvento(eventoId),
+    queryFn: (): Promise<PaginaVendas | null> => getPaginaVendas(getLeelaDb(), eventoId),
   });
 }
 

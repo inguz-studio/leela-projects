@@ -67,6 +67,15 @@ export const queryKeys = {
     doEvento: (eventoId: string) => ['lotes', 'do-evento', eventoId] as const,
   },
 
+  paginaVendas: {
+    /**
+     * Página de vendas (config) de um evento — S300-T3. O editor lê esta chave;
+     * salvar conteúdo (seções/SEO) e publicar/despublicar a invalidam →
+     * read-your-writes (ADR-010): o toggle/save reflete sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['pagina-vendas', 'do-evento', eventoId] as const,
+  },
+
   // ---------------------------------------------------------------------------
   // Clubes (E05) — mesma convenção de eventos. Lista por tenant + detalhe por
   // slug partilham prefixo `['clubes']`; recursos-filhos (membros, comunicados,

@@ -242,6 +242,19 @@ export type {
   EscritaLoteInput,
 } from './eventos/lotes';
 
+// S300-T3 (E04) — página de vendas do evento: conteúdo (seções + SEO) por
+// escrita direta do organizador; publicação por Cloud Function (seam).
+export {
+  getPaginaVendas,
+  salvarConteudoPaginaVendas,
+  publicarPaginaVendas,
+  despublicarPaginaVendas,
+} from './eventos/paginaVendas';
+export type {
+  SalvarConteudoPaginaVendasInput,
+  PublicarPaginaVendasResult,
+} from './eventos/paginaVendas';
+
 // S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
 // são de escrita EXCLUSIVA de Function — RN-224/226)
 export { listarAprovisionamento } from './eventos/aprovisionamento';

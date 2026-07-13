@@ -26,6 +26,7 @@ import { DistribuicaoPage } from './kits/DistribuicaoPage';
 import { EstoquePage } from './kits/EstoquePage';
 import { KitEditorPage } from './kits/KitEditorPage';
 import { LotesPage } from './lotes/LotesPage';
+import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 
 export function EventosRoutes(): JSX.Element {
@@ -49,6 +50,8 @@ export function EventosRoutes(): JSX.Element {
           <Route path="kits/editar/:kitId" element={<KitEditorPage />} />
           {/* Config de lotes por modalidade (E04 · S300 · ADR-012) */}
           <Route path="lotes" element={<LotesPage />} />
+          {/* Editor de conteúdo da página de vendas (E04 · S300-T3) */}
+          <Route path="pagina-vendas" element={<PaginaVendasPage />} />
           <Route path="financeiro" element={<FinanceiroPage />} />
         </Route>
       </Routes>

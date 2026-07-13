@@ -18,10 +18,13 @@ import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/r
 import {
   criarEvento,
   criarPatrocinador,
+  despublicarPaginaVendas,
   getLeelaDb,
   getLeelaFunctions,
+  publicarPaginaVendas,
   removerLote,
   removerMembro,
+  salvarConteudoPaginaVendas,
   salvarKit,
   salvarLote,
   transferirPropriedade,
@@ -29,8 +32,10 @@ import {
   type CriarEventoInput,
   type CriarEventoResult,
   type CriarPatrocinadorInput,
+  type PublicarPaginaVendasResult,
   type RemoverMembroResult,
   type EscritaLoteInput,
+  type SalvarConteudoPaginaVendasInput,
   type SalvarKitInput,
   type TransferirPropriedadeResult,
 } from '@leela/api-client';
@@ -138,6 +143,72 @@ export function useRemoverLote(
     mutationFn: (loteId) => removerLote(getLeelaDb(), eventoId, loteId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations da PÁGINA DE VENDAS (E04 · S300-T3) — editor de conteúdo do evento.
+// CONTEÚDO (seções + SEO) é escrita DIRETA (Rules-guarded como lotes/kits):
+// `salvarConteudoPaginaVendas`. PUBLICAÇÃO é escrita EXCLUSIVA de Function:
+// `publicar/despublicarPaginaVendas` (seam callable — a Function ainda não
+// existe em `functions/`; enquanto não subir, o erro sobe e a UI mostra Toast).
+// Todas invalidam `['pagina-vendas','do-evento',eventoId]` → read-your-writes.
+// =============================================================================
+
+/** Variáveis de `useSalvarConteudoPaginaVendas`: payload e se é criação. */
+export interface SalvarConteudoPaginaVendasVars {
+  input: SalvarConteudoPaginaVendasInput;
+  criar: boolean;
+}
+
+/**
+ * Salva o conteúdo (seções + SEO) da página e invalida a chave da página — o
+ * toggle/SEO reflete sem reload (read-your-writes, ADR-010). Nunca toca a flag
+ * de publicação (escrita de Function).
+ */
+export function useSalvarConteudoPaginaVendas(
+  eventoId: string,
+): UseMutationResult<void, Error, SalvarConteudoPaginaVendasVars> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, SalvarConteudoPaginaVendasVars>({
+    mutationFn: ({ input, criar }) =>
+      salvarConteudoPaginaVendas(getLeelaDb(), eventoId, input, criar),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.paginaVendas.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Publica a página via Function `publicarPaginaVendas` (valida completude
+ * server-side) e invalida a chave da página — o estado publicado reflete sem
+ * reload. Erro (inclui Function ainda não deployada) sobe para a UI (Toast).
+ */
+export function usePublicarPaginaVendas(
+  eventoId: string,
+): UseMutationResult<PublicarPaginaVendasResult, Error, void> {
+  const queryClient = useQueryClient();
+  return useMutation<PublicarPaginaVendasResult, Error, void>({
+    mutationFn: () => publicarPaginaVendas(getLeelaFunctions(), eventoId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.paginaVendas.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Despublica a página (volta a rascunho) via Function `despublicarPaginaVendas`
+ * e invalida a chave da página. Mesmo seam/observação de `usePublicarPaginaVendas`.
+ */
+export function useDespublicarPaginaVendas(
+  eventoId: string,
+): UseMutationResult<PublicarPaginaVendasResult, Error, void> {
+  const queryClient = useQueryClient();
+  return useMutation<PublicarPaginaVendasResult, Error, void>({
+    mutationFn: () => despublicarPaginaVendas(getLeelaFunctions(), eventoId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.paginaVendas.doEvento(eventoId) });
     },
   });
 }
