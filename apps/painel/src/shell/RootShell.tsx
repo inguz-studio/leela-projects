@@ -76,12 +76,15 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
     </div>
   );
 
-  // Rodapé só com sessão nomeada — sem usuário hardcoded (B4).
+  // Rodapé só com sessão nomeada — sem usuário hardcoded (B4). "Ver perfil"
+  // agora navega para as configurações da conta (S020-T4); antes era um rótulo
+  // morto.
   const footer = nome ? (
     <SidebarFooter
       avatar={<Avatar size="sm" name={nome} />}
       name={nome}
       subtitle="Ver perfil"
+      onClick={() => navigate('/conta')}
     />
   ) : undefined;
 

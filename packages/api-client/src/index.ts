@@ -328,6 +328,9 @@ export {
 // Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações).
 export { atualizarNomeExibicao } from './auth';
 
+// Troca de senha autenticada (LEELA-S020-T4) — reauth OBRIGATÓRIA embutida.
+export { trocarSenha } from './auth';
+
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
 // ---------------------------------------------------------------------------

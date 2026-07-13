@@ -27,6 +27,14 @@ Monorepo + Firebase + Auth + CI; Design System (tema `brasa`) + shell; multi-ten
 - [x] LEELA-S000-4-T1 — Documento de convenções de código
 - [x] LEELA-S000-4-T2 — Interface `PaymentProvider` + adapter mock/sandbox
 
+### LEELA-S020 · Jornadas de conta do painel (novo 2026-07-13 · lote `leela-build-2d6ee98d` · review antagonista Fable pendente)
+
+- [x] LEELA-S020-T1 — Login `/entrar` (e-mail+senha, erro único sem enumeração, redirect state.from fecha o ciclo do E07·RequirePapel) (`23a835b`)
+- [x] LEELA-S020-T2 — Recuperação `/recuperar-senha` (confirmação neutra) + `/redefinir-senha` (oobCode) (`d8c478b`)
+- [x] LEELA-S020-T3 — Cadastro `/cadastrar` (cria conta Firebase; NÃO cria tenant; pós-cadastro honesto) (`9783fe7`)
+- [x] LEELA-S020-T4 — Configurações da conta `/conta` (nome + troca de senha com reauth obrigatória; "Ver perfil" do rodapé fiado) (este commit)
+- Gates por task: tsc 0 · eslint 0 (no-hardcoded-tokens) · vitest painel 59/59 (32 testes dos arquivos S020 + RequirePapel/RootShell intactos). Helpers finos novos no api-client: enviarResetSenha / verificar+confirmarResetSenha / atualizarNomeExibicao / trocarSenha (reauth embutida). Lacunas: foto de perfil (sem seam de upload) · Action URL do reset + provedores Google/Apple = config de produção (Firebase Console).
+
 ### LEELA-E01 · Design System temável & Shell (completo, tema `brasa`)
 
 - [x] LEELA-S001-1-T1 — `tokens.json` (3 tiers) + gerador CSS vars / tema RN

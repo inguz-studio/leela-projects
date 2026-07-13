@@ -26,6 +26,9 @@ import {
   verifyPasswordResetCode,
   confirmPasswordReset,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
@@ -238,4 +241,21 @@ export async function atualizarNomeExibicao(displayName: string): Promise<void> 
   const user = getLeelaAuth().currentUser;
   if (!user) throw new Error('Sem sessão ativa para atualizar o perfil.');
   return updateProfile(user, { displayName });
+}
+
+/**
+ * Troca a senha do usuário AUTENTICADO (LEELA-S020-T4).
+ *
+ * SEGURANÇA: REAUTENTICA obrigatoriamente com a senha atual antes de gravar a
+ * nova. A reauth não é opcional nem separável (evita troca por sessão
+ * sequestrada e satisfaz o `requires-recent-login` do Firebase) — por isso o
+ * fluxo é um único helper, e não duas chamadas que a UI poderia desacoplar.
+ * Nem a senha atual nem a nova são logadas ou retidas aqui.
+ */
+export async function trocarSenha(senhaAtual: string, novaSenha: string): Promise<void> {
+  const user = getLeelaAuth().currentUser;
+  if (!user?.email) throw new Error('Sem sessão com e-mail para trocar a senha.');
+  const credencial = EmailAuthProvider.credential(user.email, senhaAtual);
+  await reauthenticateWithCredential(user, credencial);
+  await updatePassword(user, novaSenha);
 }

@@ -9,6 +9,7 @@ import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
 import { FinanceiroRoutes } from './routes/financeiro/FinanceiroRoutes';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
+import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
 import { CadastrarPage } from './routes/conta/auth/CadastrarPage';
@@ -54,6 +55,8 @@ export function App() {
                   <Route path="/financeiro/*" element={<FinanceiroRoutes />} />
                   {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
                   <Route path="/plataforma/*" element={<PlataformaRoutes />} />
+                  {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
+                  <Route path="/conta/*" element={<ContaRoutes />} />
                 </Routes>
               </RootShell>
             }
