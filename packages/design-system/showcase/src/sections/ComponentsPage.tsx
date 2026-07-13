@@ -24,6 +24,7 @@ import {
   Field,
   FilterMenu,
   Input,
+  KpiCard,
   Modal,
   PageHeader,
   Pagination,
@@ -578,6 +579,22 @@ export function ComponentsPage(): JSX.Element {
             description="Contador, página atual e controles anterior/próximo funcionais."
           >
             <Pagination total={96} page={page} pageSize={8} onPageChange={setPage} />
+          </DemoCard>
+
+          <DemoCard
+            title="KpiCard"
+            description="Card flat (§2.16) de indicador — label + valor + hint. Fonte única que substituiu as 4 cópias do painel (eventos/clubes/plataforma/EstoqueView). tone='danger' pinta o valor; emphasis='critico' acende a borda Vulcão. Fluido: o consumidor monta o grid responsivo."
+            className="xl:col-span-2"
+          >
+            <section
+              aria-label="Indicadores consolidados"
+              className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <KpiCard label="Inscritos" value="1.284" hint="vs. 7 dias" />
+              <KpiCard label="Receita confirmada" value="R$ 42.180" hint="vs. 7 dias" />
+              <KpiCard label="Vagas restantes" value="—" hint="capacidade desconhecida" />
+              <KpiCard label="Em risco" value="3" hint="kit(s) esgotado(s)" tone="danger" />
+            </section>
           </DemoCard>
         </div>
       </Section>

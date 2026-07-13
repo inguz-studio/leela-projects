@@ -1,0 +1,51 @@
+# KpiCard — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: KpiCard
+version: 0.1.0
+generated_at: "2026-07-13"
+source: src/components/KpiCard
+verdict: APPROVE (consolidação CONS-1 — promoção das 4 cópias do painel ao DS)
+
+## Import canônico
+import { KpiCard, type KpiCardProps } from '@leela/design-system'
+
+## Quando usar
+Indicador numérico (KPI) num card flat: label + valor + hint opcional. Para a fileira de KPIs de um hub/overview/resumo. O consumidor monta o grid responsivo (ex.: grid-cols-1 sm:grid-cols-2 lg:grid-cols-4) e põe o aria-label no agrupamento <section>.
+
+## Quando NÃO usar
+Não use para o KPI-herói rico da Visão Geral (valor 34px display italic + trend chip + sparkline) — esse é o KpiRow local de overview, com anatomia própria do mockup. Não use como contêiner genérico (use Card). Não use para card de evento/desafio (CardEvento/CardDesafio).
+
+## Props válidas
+- label: string — rótulo do indicador (obrigatório)
+- value: string — valor JÁ formatado (obrigatório; ex.: "1.284", "R$ 42.180,00", "—")
+- hint?: string — legenda abaixo do valor
+- emphasis?: 'default' | 'critico' — 'critico' acende a borda-esquerda Vulcão (única exceção ao flat §2.16). Default 'default'.
+- tone?: 'default' | 'danger' — 'danger' pinta o valor com --text-danger (ex.: "Em risco" > 0). Default 'default'.
+- className?: string — vai só na raiz (ex.: col-span no grid).
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --spacing-1 / --spacing-4 / --spacing-5
+- --card-radius / --surface-raised
+- --font-size-sm / --font-size-xl / --font-weight-bold
+- --text-secondary / --text-primary / --text-tertiary / --text-danger / --border-danger
+Valor sempre com [font-variant-numeric:tabular-nums] (números de KPI não pulam ao atualizar).
+
+## Proibido (do/don't)
+DON'T: passar value/label não-string (formate no consumidor; "—" para dado ausente honesto, nunca 0 falso).
+DON'T: recriar cópias locais de KpiCard/CardKpi — esta é a fonte única (CONS-1 matou as 4 cópias).
+DON'T: hex, rgb, px, rem em style inline; sobrescreva só via className com token.
+DO: dar o aria-label no <section> do agrupamento; usar tone='danger' para valor em alerta e emphasis='critico' para realce de card.
+
+## Exemplo mínimo (válido, copiável)
+<KpiCard label="Inscritos" value="1.284" />
+
+## Exemplo completo (válido, copiável)
+<section aria-label="Indicadores consolidados" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4">
+  <KpiCard label="Inscritos" value="1.284" hint="vs. 7 dias" />
+  <KpiCard label="Receita confirmada" value="R$ 42.180,00" hint="vs. 7 dias" />
+  <KpiCard label="Vagas restantes" value="—" hint="capacidade desconhecida" />
+  <KpiCard label="Em risco" value="3" hint="kit(s) esgotado(s)" tone="danger" />
+</section>
+
+## Instrução para o modelo (colar no system prompt)
+Use KpiCard apenas com as props acima. value e label são strings JÁ formatadas. Para dado ausente use "—", nunca um 0 falso. Nunca aplique cor/espaço por literal; use só tokens do design system. Não recrie cópias locais — importe do @leela/design-system.

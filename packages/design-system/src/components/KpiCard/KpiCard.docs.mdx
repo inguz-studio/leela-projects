@@ -1,0 +1,29 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './KpiCard.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# KpiCard
+
+Card flat (§2.16) de indicador: label, valor e hint opcional. Componente canônico que substitui as 4 cópias que haviam divergido no painel (eventos, clubes, plataforma e o CardKpi do EstoqueView). Presentational puro — o consumidor monta a fileira num grid responsivo e dá o `aria-label` no agrupamento.
+
+<Canvas of={Stories.FileiraResponsiva} />
+
+## Variações semânticas
+
+`emphasis="critico"` acende a borda-esquerda Vulcão (única exceção ao flat §2.16). `tone="danger"` pinta o valor (ex.: KPI "Em risco").
+
+<Canvas of={Stories.ValorEmRisco} />
+<Canvas of={Stories.Critico} />
+
+<Controls />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="KpiCard"
+  snippet={`import { KpiCard } from '@leela/design-system';\n\n<section aria-label="Indicadores" className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4">\n  <KpiCard label="Inscritos" value="1.284" hint="vs. 7 dias" />\n  <KpiCard label="Em risco" value="3" tone="danger" />\n</section>`}
+  contract={contract}
+/>

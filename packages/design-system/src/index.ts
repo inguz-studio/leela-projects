@@ -55,6 +55,8 @@ export { Divider, type DividerProps } from './components/Divider';
 export { IconButton, type IconButtonProps } from './components/IconButton';
 export { Sparkline, type SparklineProps } from './components/Sparkline';
 export { DateBadge, type DateBadgeProps } from './components/DateBadge';
+// KpiCard canônico (CONS-1) — substitui as 4 cópias do painel.
+export { KpiCard, type KpiCardProps } from './components/KpiCard';
 
 // ── Toolbar global (Lote FIDELIDADE T3) ─────────────────────────────────────
 export { Toolbar, type ToolbarProps } from './components/Toolbar';
