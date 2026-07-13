@@ -87,11 +87,14 @@ export function LoteModal({
   }
 
   async function salvar(): Promise<void> {
+    // `congelado` → validarFormLote devolve payload SÓ-NOME (review S300-T4
+    // #1): os campos comerciais nunca tocam o wire de um lote vendido.
     const resultado = validarFormLote({
       values,
       modalidade,
       loteId: lote?.id ?? null,
       lotesDoEvento,
+      congelado,
     });
     if (!resultado.ok) {
       setErro(resultado.erro);
@@ -100,7 +103,11 @@ export function LoteModal({
     setBusy(true);
     try {
       const criar = lote === null;
-      const loteId = lote?.id ?? novoLoteId(modalidade, resultado.input.ordem);
+      // Criação nunca é congelada (lote === null ⇒ congelado false), então o
+      // payload de create é sempre o completo — o guard é só narrowing de tipo.
+      const loteId =
+        lote?.id ??
+        novoLoteId(modalidade, 'ordem' in resultado.input ? resultado.input.ordem : 1);
       await onSalvar(loteId, resultado.input, criar);
       toast({ title: criar ? 'Lote criado' : 'Lote atualizado', variant: 'success' });
       onSaved?.();

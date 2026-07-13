@@ -148,10 +148,12 @@ describe('validarFormLote (shape do core + invariante cross-lote)', () => {
   it('aceita um lote seguinte sem sobreposição', () => {
     const r = validarFormLote({ values: base, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
     expect(r.ok).toBe(true);
-    if (r.ok) {
+    if (r.ok && 'preco' in r.input) {
       expect(r.input.preco).toBe(75);
       expect(r.input.ordem).toBe(2);
       expect(r.input.modalidade).toBe('5k');
+    } else {
+      expect.fail('esperava payload completo (lote sem venda)');
     }
   });
 
@@ -187,5 +189,56 @@ describe('validarFormLote (shape do core + invariante cross-lote)', () => {
     const values = { ...base, ordem: '1', inicioEm: '2025-12-01T00:00', fimEm: '2026-02-01T00:00' };
     const r = validarFormLote({ values, modalidade: '5k', loteId: l1.id, lotesDoEvento: [l1] });
     expect(r.ok).toBe(true);
+  });
+});
+
+describe('lote VENDIDO — payload SÓ-NOME (RN-200/300 · review S300-T4 #1)', () => {
+  const vendido = mkLote({ modalidade: '5k', ordem: 1, vendidos: 42 });
+  const values: LoteFormValues = {
+    nome: 'Lote 1 renomeado',
+    ordem: String(vendido.ordem),
+    inicioEm: timestampParaInputLocal(vendido.inicioEm),
+    fimEm: timestampParaInputLocal(vendido.fimEm),
+    quantidadeLimite: String(vendido.quantidadeLimite),
+    preco: '60,00',
+  };
+
+  it('payload de edição de lote vendido contém SÓ `nome` — nada de preco/janela/vaga/ordem', () => {
+    const r = validarFormLote({
+      values,
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.input).toEqual({ nome: 'Lote 1 renomeado' });
+      expect(Object.keys(r.input)).toEqual(['nome']);
+    }
+  });
+
+  it('rename não é refém dos campos congelados: janela/preço ilegíveis não bloqueiam', () => {
+    // Campos comerciais corrompidos/ilegíveis no form (disabled na UI) — o
+    // caminho congelado nem os olha; só o nome importa.
+    const r = validarFormLote({
+      values: { ...values, preco: 'abc', inicioEm: '', fimEm: '', ordem: '0' },
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('nome vazio segue rejeitado mesmo congelado', () => {
+    const r = validarFormLote({
+      values: { ...values, nome: '   ' },
+      modalidade: '5k',
+      loteId: vendido.id,
+      lotesDoEvento: [vendido],
+      congelado: true,
+    });
+    expect(r.ok).toBe(false);
   });
 });

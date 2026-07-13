@@ -30,8 +30,8 @@ import {
   type CriarEventoResult,
   type CriarPatrocinadorInput,
   type RemoverMembroResult,
+  type EscritaLoteInput,
   type SalvarKitInput,
-  type SalvarLoteInput,
   type TransferirPropriedadeResult,
 } from '@leela/api-client';
 import type { StatusParceria } from '@leela/core';
@@ -98,10 +98,11 @@ export function useSalvarKit(
 // Function — aqui só se fia escrita → invalidação.
 // =============================================================================
 
-/** Variáveis de `useSalvarLote`: id do lote, payload e se é criação (criadoEm). */
+/** Variáveis de `useSalvarLote`: id do lote, payload (completo ou SÓ-NOME
+ *  para lote vendido — RN-200/300) e se é criação (criadoEm). */
 export interface SalvarLoteVars {
   loteId: string;
-  input: SalvarLoteInput;
+  input: EscritaLoteInput;
   criar: boolean;
 }
 

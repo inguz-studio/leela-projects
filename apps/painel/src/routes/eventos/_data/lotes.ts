@@ -8,7 +8,7 @@
 
 import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { SalvarLoteInput } from '@leela/api-client';
+import type { EscritaLoteInput, SalvarLoteInput } from '@leela/api-client';
 import type { Lote } from '@leela/core';
 import { lotesDoEventoQuery } from '../../../lib/query/queries';
 import { useRemoverLote, useSalvarLote } from '../../../lib/query/mutations';
@@ -29,14 +29,18 @@ export function useLotes(eventoId: string | null): AsyncState<Lote[]> {
   return { data: query.data ?? null, loading: query.isPending, error: query.error ?? null };
 }
 
+/**
+ * Payload da tela SEM tenantId (injetado da sessão): completo (lote sem
+ * venda) ou SÓ-NOME (lote vendido — RN-200/300, review S300-T4 #1).
+ */
+export type LotePayloadSemTenant =
+  | Omit<SalvarLoteInput, 'tenantId'>
+  | { nome: string };
+
 export interface LoteMutations {
   tenantId: string | null;
   /** Cria/edita um lote. `criar` inclui `criadoEm` só na criação. */
-  salvar: (
-    loteId: string,
-    input: Omit<SalvarLoteInput, 'tenantId'>,
-    criar: boolean,
-  ) => Promise<void>;
+  salvar: (loteId: string, input: LotePayloadSemTenant, criar: boolean) => Promise<void>;
   remover: (loteId: string) => Promise<void>;
 }
 
@@ -48,10 +52,11 @@ export function useLoteMutations(eventoId: string): LoteMutations {
   const removerLoteMutation = useRemoverLote(eventoId);
 
   const salvar = useCallback(
-    (loteId: string, input: Omit<SalvarLoteInput, 'tenantId'>, criar: boolean) => {
+    (loteId: string, input: LotePayloadSemTenant, criar: boolean) => {
       if (!tenantId) return Promise.reject(new Error('Sessão sem tenant.'));
+      const comTenant: EscritaLoteInput = { ...input, tenantId };
       return salvarLoteMutation
-        .mutateAsync({ loteId, input: { ...input, tenantId }, criar })
+        .mutateAsync({ loteId, input: comTenant, criar })
         .then(() => undefined);
     },
     [salvarLoteMutation, tenantId],

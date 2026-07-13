@@ -58,7 +58,17 @@ export interface LoteFormValues {
   preco: string;
 }
 
-export type LotePayload = Omit<SalvarLoteInput, 'tenantId'>;
+/** Payload completo (criação/edição de lote SEM venda). */
+export type LotePayloadCompleto = Omit<SalvarLoteInput, 'tenantId'>;
+
+/**
+ * Payload de edição de lote VENDIDO (review S300-T4 #1): a Rule congela os
+ * campos comerciais, então SÓ `nome` viaja — nada de re-enviar janela/preço
+ * "iguais" e depender de alinhamento de minuto para o diff dar vazio.
+ */
+export type LotePayloadVendido = Pick<LotePayloadCompleto, 'nome'>;
+
+export type LotePayload = LotePayloadCompleto | LotePayloadVendido;
 
 export type ResultadoValidacao =
   | { ok: true; input: LotePayload }
@@ -176,6 +186,11 @@ export interface ValidarFormParams {
   loteId: string | null;
   /** Todos os lotes do evento (para checar sobreposição na modalidade). */
   lotesDoEvento: readonly Lote[];
+  /**
+   * Lote em edição já vendeu (loteImutavel)? Então SÓ o nome é validado e SÓ
+   * o nome entra no payload (RN-200/300 — review S300-T4 #1). Default false.
+   */
+  congelado?: boolean;
 }
 
 /**
@@ -185,10 +200,19 @@ export interface ValidarFormParams {
  * inventada aqui — só se aplica o kernel. @pure
  */
 export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
-  const { values, modalidade, loteId, lotesDoEvento } = params;
+  const { values, modalidade, loteId, lotesDoEvento, congelado = false } = params;
 
   const nome = values.nome.trim();
   if (nome.length === 0) return { ok: false, erro: 'Informe o nome do lote.' };
+
+  // Lote VENDIDO: payload mínimo — só o nome (review S300-T4 #1). Os campos
+  // comerciais estão desabilitados na UI e congelados na Rule; validar/enviar
+  // os valores carregados seria (a) depender de minuto-alinhamento para o
+  // diff dar vazio e (b) bloquear um rename por problema pré-existente nos
+  // irmãos (sobreposição legada travaria até a troca de nome).
+  if (congelado) {
+    return { ok: true, input: { nome } };
+  }
 
   const ordem = Number.parseInt(values.ordem, 10);
   if (!Number.isInteger(ordem) || ordem < 1) {

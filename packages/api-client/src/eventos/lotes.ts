@@ -81,20 +81,47 @@ export interface SalvarLoteInput {
 }
 
 /**
+ * Payload de edição de lote VENDIDO (RN-200/300 · review S300-T4 #1): quando
+ * `vendidos > 0` a Rule congela preco/inicioEm/fimEm/quantidadeLimite/ordem/
+ * modalidade — então SÓ o nome viaja. Re-enviar a janela "igual" dependia de
+ * ela ser minuto-alinhada (o form trunca segundos): um lote com timestamps de
+ * Function/seed teria o rename NEGADO pela Rule por diff fantasma na janela.
+ */
+export interface RenomearLoteVendidoInput {
+  /** Isolamento multi-tenant (ADR-009). */
+  tenantId: string;
+  nome: string;
+}
+
+/** União dos payloads de escrita de lote: completo (sem venda) ou só-nome (vendido). */
+export type EscritaLoteInput = SalvarLoteInput | RenomearLoteVendidoInput;
+
+/**
  * Cria/atualiza um lote (merge). `criar` inclui `criadoEm` só na criação —
  * merge nunca reescreve o carimbo original numa edição.
  *
- * NUNCA envia `vendidos`: é ∑ de Cloud Function (virada). A Rule congela os
- * campos comerciais quando o lote já vendeu (RN-200/300); esta função apenas
- * transmite o que a UI montou (que já desabilita esses campos no caso vendido).
+ * NUNCA envia `vendidos`: é ∑ de Cloud Function (virada). Payload só-nome
+ * (lote vendido) grava apenas `nome` + `atualizadoEm` — nenhum campo
+ * comercial toca o wire, então a Rule de congelamento nunca vê diff neles.
  */
 export async function salvarLote(
   db: Firestore,
   eventoId: string,
   loteId: string,
-  input: SalvarLoteInput,
+  input: EscritaLoteInput,
   criar: boolean
 ): Promise<void> {
+  if (!('preco' in input)) {
+    if (criar) {
+      throw new Error('payload só-nome é exclusivo de EDIÇÃO de lote vendido (RN-200/300)');
+    }
+    await setDoc(
+      doc(db, 'eventos', eventoId, 'lotes', loteId),
+      { nome: input.nome, atualizadoEm: serverTimestamp() },
+      { merge: true }
+    );
+    return;
+  }
   const data: Record<string, unknown> = {
     id: loteId,
     tenantId: input.tenantId,
