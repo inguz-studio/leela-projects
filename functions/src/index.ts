@@ -170,3 +170,10 @@ export {
 // concedido, negado, erro de decifra — vira registro em
 // `auditoriaAcessos` (deny-by-default p/ cliente). ⚠️ Fable (LGPD).
 export { getBankDetailsForPayout } from './finance/getBankDetailsForPayout';
+
+// Eventos — ENCERRAMENTO AUTOMÁTICO por data (E09s-L2-T6 · RN-350 ·
+// decisão #6): cron 03:10 (ADR-007, slot após 03:00/03:05) transiciona
+// publicado/ao_vivo→encerrado no dia seguinte à prova e dispara o
+// recompute de saldo (retido→0). O organizador NÃO encerra o próprio
+// evento (anti-fraude — Rules já negam status de cliente). ⚠️ Fable.
+export { encerrarEventos } from './eventos/encerrarEventos';
