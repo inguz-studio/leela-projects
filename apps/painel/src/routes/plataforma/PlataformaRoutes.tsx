@@ -19,10 +19,13 @@ import { TenantDetailRoute } from './tenants/TenantDetailRoute';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { NotFound } from '../_system/NotFound';
+import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 
 export function PlataformaRoutes(): JSX.Element {
   return (
     <ToastProvider>
+      {/* Boundary de segmento (mantém o PlatformShell) — 500 no shell. E07 · S502-T1. */}
+      <AppErrorBoundary layout="shell">
       <Routes>
         <Route element={<PlatformShell />}>
           <Route index element={<Navigate to="tenants" replace />} />
@@ -34,6 +37,7 @@ export function PlataformaRoutes(): JSX.Element {
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
+      </AppErrorBoundary>
     </ToastProvider>
   );
 }

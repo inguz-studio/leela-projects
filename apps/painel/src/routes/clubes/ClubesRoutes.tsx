@@ -26,10 +26,13 @@ import { ComunicadosPage } from './clube/comunicacao/ComunicadosPage';
 import { ComunicadoEditorPage } from './clube/comunicacao/ComunicadoEditorPage';
 import { ConfiguracoesPage } from './clube/configuracoes/ConfiguracoesPage';
 import { NotFound } from '../_system/NotFound';
+import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 
 export function ClubesRoutes(): JSX.Element {
   return (
     <ToastProvider>
+      {/* Boundary de segmento (mantém o RootShell) — 500 no shell. E07 · S502-T1. */}
+      <AppErrorBoundary layout="shell">
       <Routes>
         <Route index element={<HubRoute />} />
         {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
@@ -50,6 +53,7 @@ export function ClubesRoutes(): JSX.Element {
         {/* Caminho de clubes sem rota (fora de :slug) → 404 no shell. S500-T2. */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </AppErrorBoundary>
     </ToastProvider>
   );
 }

@@ -4,6 +4,7 @@ import '@leela/design-system/themes/index.css';
 import './globals.css';
 import { ThemeProvider } from '@leela/design-system';
 import { App } from './App';
+import { AppErrorBoundary } from './routes/_system/AppErrorBoundary';
 import { initFirebase } from './lib/firebase';
 import { initSentry } from './lib/sentry';
 import { initPreviewAutologin } from './lib/preview-autologin';
@@ -28,7 +29,11 @@ if (rootElement === null) {
 createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider theme="brasa">
-      <App />
+      {/* Boundary RAIZ (fullscreen): erro fora de qualquer rota / no RootShell.
+          Dentro do ThemeProvider p/ os tokens pintarem a tela de erro. E07·T4. */}
+      <AppErrorBoundary layout="fullscreen">
+        <App />
+      </AppErrorBoundary>
     </ThemeProvider>
   </StrictMode>,
 );

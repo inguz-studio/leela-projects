@@ -9,16 +9,20 @@ import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { OverviewPage } from './OverviewPage';
 import { NotFound } from '../_system/NotFound';
+import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 
 export function OverviewRoutes(): JSX.Element {
   return (
     <ToastProvider>
-      <Routes>
-        <Route index element={<OverviewPage />} />
-        {/* 404 dentro do shell — captura qualquer caminho raiz sem rota
-            (App.tsx monta OverviewRoutes em `/*`, greedy). LEELA-E07 · S500-T2. */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      {/* Boundary de segmento (mantém o RootShell) — 500 no shell. E07 · S502-T1. */}
+      <AppErrorBoundary layout="shell">
+        <Routes>
+          <Route index element={<OverviewPage />} />
+          {/* 404 dentro do shell — captura qualquer caminho raiz sem rota
+              (App.tsx monta OverviewRoutes em `/*`, greedy). LEELA-E07 · S500-T2. */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AppErrorBoundary>
     </ToastProvider>
   );
 }
