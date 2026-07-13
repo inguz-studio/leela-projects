@@ -172,3 +172,50 @@ export async function confirmarPagamentoSandbox(
   const res = await fn(input);
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// Estorno por inscrito (organizador — LEELA-E04 · FABLE-B · ADR-011 · RN-337/341)
+// ---------------------------------------------------------------------------
+
+/**
+ * Input do estorno por inscrito — SEM canal de valor: o QUANTO estornar é
+ * decisão EXCLUSIVA do servidor (lê `pedido.itens[].valorFinal`, RN-337).
+ * Espelho do contrato de `functions/src/checkout/estornarInscricao.ts`.
+ */
+export interface EstornarInscricaoInput {
+  pedidoId: string;
+  inscritoId: string;
+  /** Motivo do estorno (auditoria — obrigatório, 3–500 caracteres). */
+  motivo: string;
+}
+
+/** Resultado do estorno — os valores VÊM do servidor, nunca calculados aqui. */
+export interface EstornarInscricaoResult {
+  pedidoId: string;
+  pagamentoId: string;
+  inscritoId: string;
+  /** Id do refund no gateway (prova da devolução). */
+  refundId: string;
+  /** Valor estornado em R$ — a LINHA do inscrito, decidida pelo servidor. */
+  valorEstornado: number;
+  /** true = estorno já aplicado antes (replay idempotente) — sem efeito novo. */
+  duplicado: boolean;
+  /** true = com este estorno o pagamento ficou INTEGRALMENTE estornado. */
+  pagamentoEstornadoIntegral: boolean;
+}
+
+/**
+ * Estorna UM inscrito do pedido em grupo (ADR-011/RN-341). Só transporte:
+ * envia (pedido, inscrito, motivo) e devolve o resultado do servidor.
+ * Idempotente por (pedidoId, inscritoId) NO servidor — reenviar não re-estorna.
+ */
+export async function estornarInscricao(
+  input: EstornarInscricaoInput
+): Promise<EstornarInscricaoResult> {
+  const fn = httpsCallable<EstornarInscricaoInput, EstornarInscricaoResult>(
+    getLeelaFunctions(),
+    'estornarInscricao'
+  );
+  const res = await fn(input);
+  return res.data;
+}

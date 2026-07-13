@@ -4,7 +4,7 @@
 // e EmptyStates honestos. Sem QueryClient (dados chegam por props).
 // =============================================================================
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Inscrito, Pagamento, Pedido } from '@leela/core';
@@ -158,17 +158,84 @@ describe('InscritoSlideIn — Aba Pagamento [pag]', () => {
     expect(screen.queryByText(/permission-denied/)).not.toBeInTheDocument();
   });
 
-  it('pedido pago + cartão → valores, forma, parcelamento e estorno desabilitado', async () => {
+  it('pedido pago + cartão → valores, forma e parcelamento', async () => {
     const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
     renderSlide({ pedidoEPagamento: dados });
     await abrirPagamento();
     expect(screen.getByText('ped-abc123')).toBeInTheDocument();
     expect(screen.getByText('R$ 189,00 · Lote 2 — Regular')).toBeInTheDocument();
     expect(screen.getByText('Visa •••• 4821 · 12× de R$ 16,99')).toBeInTheDocument();
-    // Estorno é B-T2: presente mas desabilitado, com aviso honesto.
-    const estorno = screen.getByRole('button', { name: 'Reembolsar inscrição' });
-    expect(estorno).toBeDisabled();
-    expect(screen.getByText(/próximo lote \(B-T2\)/)).toBeInTheDocument();
+  });
+});
+
+describe('InscritoSlideIn — Estorno por inscrito (E04 · FABLE-B)', () => {
+  function abrirPagamento() {
+    return userEvent.click(screen.getByRole('tab', { name: 'Pagamento' }));
+  }
+
+  it('inscrito confirmado + pedido pago → oferece a ação (não é mais placeholder desabilitado)', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    renderSlide({ pedidoEPagamento: dados, onEstornar: vi.fn().mockResolvedValue(undefined) });
+    await abrirPagamento();
+    const abrir = screen.getByRole('button', { name: 'Estornar inscrição' });
+    expect(abrir).toBeEnabled();
+  });
+
+  it('o valor do estorno vem do pedido (itens[].valorFinal), nunca recalculado no cliente', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    renderSlide({ pedidoEPagamento: dados, onEstornar: vi.fn().mockResolvedValue(undefined) });
+    await abrirPagamento();
+    await userEvent.click(screen.getByRole('button', { name: 'Estornar inscrição' }));
+    // O valor no ConfirmModal (target + botão) é o R$ 189,00 do pedido.
+    expect(screen.getByRole('button', { name: /Estornar\s+R\$\s*189,00/ })).toBeInTheDocument();
+    expect(screen.getByText(/Valor a devolver/)).toBeInTheDocument();
+  });
+
+  it('confirmar chama onEstornar com o motivo digitado (sem canal de valor)', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    const onEstornar = vi.fn().mockResolvedValue(undefined);
+    renderSlide({ pedidoEPagamento: dados, onEstornar });
+    await abrirPagamento();
+    await userEvent.click(screen.getByRole('button', { name: 'Estornar inscrição' }));
+    await userEvent.type(screen.getByLabelText(/Motivo do estorno/), 'Pediu reembolso');
+    await userEvent.click(screen.getByRole('button', { name: /Estornar\s+R\$\s*189,00/ }));
+    expect(onEstornar).toHaveBeenCalledTimes(1);
+    expect(onEstornar).toHaveBeenCalledWith('Pediu reembolso');
+  });
+
+  it('inscrito já estornado → nota honesta, sem botão de estorno (estado terminal)', async () => {
+    const dados: PedidoEPagamentoDoInscrito = {
+      pedido: pedidoPago(),
+      pagamento: { ...pagamentoCartao(), status: 'estornado' },
+    };
+    renderSlide({
+      inscrito: inscritoComDados({ status: 'estornado' }),
+      pedidoEPagamento: dados,
+      onEstornar: vi.fn(),
+    });
+    await abrirPagamento();
+    expect(screen.queryByRole('button', { name: 'Estornar inscrição' })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Inscrição estornada — valor devolvido ao pagador.'),
+    ).toBeInTheDocument();
+  });
+
+  it('inscrito pendente → sem ação de estorno (só inscrição paga estorna — RN-341)', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    renderSlide({
+      inscrito: inscritoComDados({ status: 'pendente' }),
+      pedidoEPagamento: dados,
+      onEstornar: vi.fn(),
+    });
+    await abrirPagamento();
+    expect(screen.queryByRole('button', { name: 'Estornar inscrição' })).not.toBeInTheDocument();
+  });
+
+  it('sem onEstornar (render isolado) → não oferece a ação', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    renderSlide({ pedidoEPagamento: dados });
+    await abrirPagamento();
+    expect(screen.queryByRole('button', { name: 'Estornar inscrição' })).not.toBeInTheDocument();
   });
 });
 

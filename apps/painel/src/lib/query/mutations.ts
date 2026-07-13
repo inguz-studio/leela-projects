@@ -19,6 +19,7 @@ import {
   criarEvento,
   criarPatrocinador,
   despublicarPaginaVendas,
+  estornarInscricao,
   getLeelaDb,
   getLeelaFunctions,
   publicarPaginaVendas,
@@ -33,6 +34,8 @@ import {
   type CriarEventoInput,
   type CriarEventoResult,
   type CriarPatrocinadorInput,
+  type EstornarInscricaoInput,
+  type EstornarInscricaoResult,
   type PublicarPaginaVendasResult,
   type RemoverMembroResult,
   type EscritaLoteInput,
@@ -334,6 +337,37 @@ export function useCriarPatrocinador(
     mutationFn: (input) => criarPatrocinador(getLeelaDb(), clubeId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.parcerias.doClube(clubeId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutation de ESTORNO por inscrito (E04 · FABLE-B · ADR-011/RN-341). Escrita
+// EXCLUSIVA de Cloud Function (`estornarInscricao`) — o VALOR é decisão do
+// servidor (RN-337): o cliente nunca o envia nem o calcula. No onSuccess
+// invalida (a) o join [pag] do inscrito — o status do pagamento reflete; (b) a
+// lista de inscritos do evento — o badge do inscrito flipa p/ Estornado; (c) o
+// financeiro do evento — a receita revertida reflete. Read-your-writes (ADR-010).
+// O erro do callable sobe INTACTO para a UI (§2.12 — mensagem honesta do gate).
+// =============================================================================
+
+/**
+ * Estorna um inscrito do pedido (callable — saga idempotente do FABLE-B) e
+ * invalida as chaves de leitura afetadas. `eventoId` fixa o alvo das
+ * invalidações; `inscritoId` vem das variáveis (chave do join [pag]).
+ */
+export function useEstornarInscrito(
+  eventoId: string,
+): UseMutationResult<EstornarInscricaoResult, Error, EstornarInscricaoInput> {
+  const queryClient = useQueryClient();
+  return useMutation<EstornarInscricaoResult, Error, EstornarInscricaoInput>({
+    mutationFn: (input) => estornarInscricao(input),
+    onSuccess: (_res, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.pedidos.ePagamentoDoInscrito(eventoId, input.inscritoId),
+      });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.inscritos.todos(eventoId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.financeiro.current(eventoId) });
     },
   });
 }

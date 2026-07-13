@@ -352,3 +352,10 @@ export type {
   GetPedidoEPagamentoDoInscritoParams,
   PedidoEPagamentoDoInscrito,
 } from './eventos/inscritoPedido';
+
+// ---------------------------------------------------------------------------
+// Estorno por inscrito — callable do organizador (LEELA-E04 · FABLE-B · ADR-011)
+// Só transporte: o VALOR do estorno é decisão EXCLUSIVA do servidor (RN-337).
+// ---------------------------------------------------------------------------
+export { estornarInscricao } from './checkout';
+export type { EstornarInscricaoInput, EstornarInscricaoResult } from './checkout';

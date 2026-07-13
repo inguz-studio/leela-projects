@@ -27,6 +27,7 @@ import {
   Avatar,
   Badge,
   Button,
+  ConfirmModal,
   Divider,
   EmptyState,
   IconButton,
@@ -42,6 +43,7 @@ import {
   type GeneroInscrito,
   type Inscrito,
   type Pagamento,
+  type Pedido,
   type StatusPagamento,
   type StatusPedido,
 } from '@leela/core';
@@ -69,6 +71,15 @@ export interface InscritoSlideInProps {
   loadingPagamento: boolean;
   erroPagamento: Error | null;
   onClose: () => void;
+  /**
+   * Dispara o estorno do inscrito em foco (mutation do backend) — injetado
+   * pelo container. Recebe SÓ o motivo: o valor é decisão do servidor (RN-337).
+   * Ausente = ação de estorno não é oferecida (ex.: render isolado em teste).
+   * Rejeita quando o callable falha (o container mostra o Toast honesto).
+   */
+  onEstornar?: (motivo: string) => Promise<void>;
+  /** Estorno em andamento — desabilita a confirmação (spinner do container). */
+  estornando?: boolean;
   /** "Agora" injetável (determinismo do cálculo de idade). */
   agora?: Date;
 }
@@ -116,6 +127,8 @@ export function InscritoSlideIn({
   loadingPagamento,
   erroPagamento,
   onClose,
+  onEstornar,
+  estornando = false,
   agora = new Date(),
 }: InscritoSlideInProps): JSX.Element | null {
   const tituloRef = React.useRef<HTMLHeadingElement>(null);
@@ -149,6 +162,8 @@ export function InscritoSlideIn({
           dados={pedidoEPagamento}
           loading={loadingPagamento}
           erro={erroPagamento}
+          onEstornar={onEstornar}
+          estornando={estornando}
         />
       ),
     },
@@ -296,11 +311,17 @@ function AbaPagamento({
   dados,
   loading,
   erro,
+  onEstornar,
+  estornando,
 }: {
   inscrito: Inscrito;
   dados: PedidoEPagamentoDoInscrito | null;
   loading: boolean;
   erro: Error | null;
+  // `| undefined` explícito (exactOptionalPropertyTypes): o valor destructurado
+  // do prop público opcional pode chegar undefined.
+  onEstornar: ((motivo: string) => Promise<void>) | undefined;
+  estornando: boolean;
 }): JSX.Element {
   if (loading) {
     return (
@@ -355,16 +376,116 @@ function AbaPagamento({
         </p>
       )}
 
-      {pedido.status === 'pago' && (
-        <div className="flex flex-col gap-[var(--spacing-1)]">
-          <Button variant="secondary" disabled>
-            Reembolsar inscrição
-          </Button>
-          <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-            Reembolso com confirmação e histórico chega no próximo lote (B-T2).
-          </span>
-        </div>
-      )}
+      <AcaoEstorno
+        inscrito={inscrito}
+        pedido={pedido}
+        pagamento={pagamento}
+        onEstornar={onEstornar}
+        estornando={estornando}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Ação de estorno por inscrito (E04 · FABLE-B · ADR-011/RN-341)
+//
+// DINHEIRO: o valor exibido é `pedido.itens[].valorFinal` — a LINHA deste
+// inscrito, escrita pelo servidor (a MESMA fonte que a Function usa, RN-337).
+// NENHUMA aritmética de valor aqui: só leitura do campo do backend. O callable
+// (via onEstornar) recebe SÓ o motivo; o quanto estornar é decisão do servidor.
+// ---------------------------------------------------------------------------
+
+function AcaoEstorno({
+  inscrito,
+  pedido,
+  pagamento,
+  onEstornar,
+  estornando,
+}: {
+  inscrito: Inscrito;
+  pedido: Pedido;
+  pagamento: Pagamento | null;
+  onEstornar: ((motivo: string) => Promise<void>) | undefined;
+  estornando: boolean;
+}): JSX.Element | null {
+  const [aberto, setAberto] = React.useState(false);
+
+  // Estado terminal (matriz canônica): já estornado — sem ação. O Badge do
+  // estado vive no cabeçalho (status do inscrito) e no bloco de pagamento
+  // (ambos 'estornado' → neutro); aqui fica só a nota honesta do que aconteceu.
+  if (inscrito.status === 'estornado') {
+    return (
+      <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+        Inscrição estornada — valor devolvido ao pagador.
+      </p>
+    );
+  }
+
+  // A linha do inscrito no pedido — o VALOR vem do backend (itens[].valorFinal),
+  // nunca recalculado no cliente. Sem linha ou valor 0 ⇒ nada a devolver (o
+  // caminho certo é cancelamento; a Function também nega, mas não oferecemos).
+  const item = pedido.itens.find((i) => i.inscritoRef === inscrito.id);
+  const podeEstornar =
+    !!onEstornar &&
+    inscrito.status === 'confirmado' &&
+    pedido.status === 'pago' &&
+    pagamento?.status === 'confirmado' &&
+    !!item &&
+    item.valorFinal > 0;
+
+  if (!podeEstornar || !item) return null;
+
+  const valorLabel = formatDinheiro(item.valorFinal);
+
+  async function confirmar(motivo: string): Promise<void> {
+    try {
+      await onEstornar?.(motivo);
+      setAberto(false); // fecha só no sucesso
+    } catch {
+      // Erro já sinalizado pelo container (Toast honesto do gate) — mantém o
+      // modal aberto para nova tentativa com o mesmo motivo.
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-[var(--spacing-1)]">
+      <Button variant="secondary" onClick={() => setAberto(true)} disabled={estornando}>
+        Estornar inscrição
+      </Button>
+      <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+        Devolve {valorLabel} ao pagador. Os demais inscritos do pedido não são afetados.
+      </span>
+
+      <ConfirmModal
+        open={aberto}
+        onOpenChange={(o) => !o && setAberto(false)}
+        title="Estornar inscrição"
+        description="O valor da linha deste inscrito volta ao pagador. Os demais inscritos do pedido não são afetados (estorno por inscrito, ADR-011)."
+        target={
+          <div className="flex flex-col gap-[var(--spacing-1)]">
+            <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              {inscrito.atletaNome}
+            </span>
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+              Valor a devolver:{' '}
+              <strong className="text-[var(--text-primary)]">{valorLabel}</strong>
+            </span>
+          </div>
+        }
+        loses={[
+          `Devolução de ${valorLabel} ao pagador`,
+          'A inscrição do atleta (deixa de correr e de receber o kit)',
+        ]}
+        keeps={[
+          'Os demais inscritos do mesmo pedido',
+          'O cadastro do atleta na Be Hero',
+        ]}
+        reasonLabel="Motivo do estorno (obrigatório — registrado na auditoria)"
+        confirmLabel={`Estornar ${valorLabel}`}
+        loading={estornando}
+        onConfirm={(d) => void confirmar(d.reason)}
+      />
     </div>
   );
 }
