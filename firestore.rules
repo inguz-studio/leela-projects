@@ -167,7 +167,18 @@ service cloud.firestore {
             && request.resource.data.communityMonthlyEnabled is bool
             && request.resource.data.versao is int
             && request.resource.data.versao >= 1
-            && request.resource.data.atualizadoPor is string;
+            && request.resource.data.atualizadoPor is string
+            // E09s-L1 (RN-348/350 · decisão #4): campos de repasse OPCIONAIS
+            // — quando presentes, range travado (NaN/Infinity falham as
+            // comparações — fail-closed; sem math.isInfinite: o runtime do
+            // Emulator não a implementa, ver moneyCentExato).
+            && (!('retencaoRepassePct' in request.resource.data)
+                || (request.resource.data.retencaoRepassePct is number
+                    && request.resource.data.retencaoRepassePct >= 0
+                    && request.resource.data.retencaoRepassePct <= 100))
+            && (!('disponibilizacaoDiasUteis' in request.resource.data)
+                || (request.resource.data.disponibilizacaoDiasUteis is int
+                    && request.resource.data.disponibilizacaoDiasUteis >= 0));
         }
 
         allow read: if isTenantMember(tenantId) || isPlatformAdmin();
@@ -193,6 +204,60 @@ service cloud.firestore {
                     || isPlatformAdmin()
                     || (isSignedIn() && request.auth.uid == resource.data.atletaId);
         // Cliente não escreve status/proximaCobranca — só Function (Admin SDK)
+        allow write: if false;
+      }
+
+      // ── Repasse do organizador — E09-slim (E09s-L1-T2 · RN-354/357) ─────
+      //
+      // As 4 coleções do repasse são TENANT-SCOPED POR CAMINHO: o isolamento
+      // cross-tenant (RN-354/400) sai do próprio match — o tenantId do path
+      // é o único escopo consultado, sem depender de campo no doc.
+      // ESCRITA DE CLIENTE: NEGADA NAS QUATRO (RN-357) — repasse/saldo/dados
+      // bancários só mudam por Function (Admin SDK bypassa Rules). Vale até
+      // para platform_admin via client SDK (mesmo padrão de `pedidos`/
+      // `pagamentos`/`financeiro`: dinheiro forjado no cliente é fraude).
+
+      // `dadosBancarios/{docId}` — versão MASCARADA (RN-354): `****1234`,
+      // PIX/CPF-CNPJ mascarados. Mesmo mascarado é dado bancário PESSOAL
+      // (LGPD): leitura SÓ tenant_owner (não staff/promoter — minimização;
+      // o fluxo de saque L3 é do dono) e platform_admin (back-office L4
+      // confere o favorecido). Escrita: só a Function `saveDadosBancarios`
+      // (L2-T2), que mascara server-side.
+      match /dadosBancarios/{docId} {
+        allow read: if isTenantOwner(tenantId) || isPlatformAdmin();
+        allow write: if false;
+      }
+
+      // `dadosBancariosSecret/{docId}` — blob CIFRADO do número/PIX em
+      // claro (RN-354): ILEGÍVEL por TODO cliente, INCLUSIVE o próprio
+      // tenant_owner e platform_admin via client SDK. Leitura admin é
+      // superfície EXCLUSIVA do callable auditado `getBankDetailsForPayout`
+      // (L2-T5 — registra quem/quando/qual repasse, LGPD). NÃO abrir read
+      // aqui NUNCA — o doc em claro decifrado não transita pelo Firestore.
+      match /dadosBancariosSecret/{docId} {
+        allow read, write: if false;
+      }
+
+      // `repasses/{repasseId}` — solicitações de saque (RN-352/353/355/356).
+      // LEITURA: taxonomia FINANCEIRA do arquivo (owner/staff gerem dinheiro;
+      // promoter/athlete-com-claim NÃO) + platform_admin cross-tenant (fila
+      // de aprovação L4). ESCRITA: NEGADA — estado/valor/transicoes[]/
+      // comprovanteNumero são de Function (requestRepasse, cancelRepasse,
+      // approveRepasse, rejectRepasse, markRepassePago — RN-353/357); um
+      // cliente que escrevesse `estado:'pago'` fabricaria comprovante sem
+      // pagamento, e um `valor` editado após aprovação fraudaria o saque.
+      match /repasses/{repasseId} {
+        allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
+        allow write: if false;
+      }
+
+      // `saldo/{docId}` — ∑ consolidado do tenant (`current` — RN-350/351).
+      // Recomputado INTEGRALMENTE pela Function `updateSaldoRepasse` (L2-T1)
+      // via computeSaldoRepasse do core; os 3 cards do painel-slim leem SÓ
+      // este doc (nunca somam eventos no cliente). Mesma taxonomia de
+      // leitura financeira; escrita de cliente = saldo forjado (RN-357).
+      match /saldo/{docId} {
+        allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
         allow write: if false;
       }
     }
