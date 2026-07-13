@@ -25,6 +25,7 @@ import { ParceriasPage } from './clube/parcerias/ParceriasPage';
 import { ComunicadosPage } from './clube/comunicacao/ComunicadosPage';
 import { ComunicadoEditorPage } from './clube/comunicacao/ComunicadoEditorPage';
 import { ConfiguracoesPage } from './clube/configuracoes/ConfiguracoesPage';
+import { NotFound } from '../_system/NotFound';
 
 export function ClubesRoutes(): JSX.Element {
   return (
@@ -43,7 +44,11 @@ export function ClubesRoutes(): JSX.Element {
           <Route path="comunicacao" element={<ComunicadosPage />} />
           <Route path="comunicacao/nova" element={<ComunicadoEditorPage />} />
           <Route path="configuracoes" element={<ConfiguracoesPage />} />
+          {/* Aba inexistente sob um clube válido → 404 dentro do shell do clube. */}
+          <Route path="*" element={<NotFound />} />
         </Route>
+        {/* Caminho de clubes sem rota (fora de :slug) → 404 no shell. S500-T2. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ToastProvider>
   );

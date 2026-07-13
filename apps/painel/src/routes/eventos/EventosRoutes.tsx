@@ -32,6 +32,7 @@ import { FinanceiroPage } from './financeiro/FinanceiroPage';
 import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
 import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
 import { EquipePage } from './configuracoes/equipe/EquipePage';
+import { NotFound } from '../_system/NotFound';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -64,7 +65,11 @@ export function EventosRoutes(): JSX.Element {
             <Route index element={<ConfigGeraisPage />} />
             <Route path="equipe" element={<EquipePage />} />
           </Route>
+          {/* Aba inexistente sob um evento válido → 404 dentro do shell do evento. */}
+          <Route path="*" element={<NotFound />} />
         </Route>
+        {/* Caminho de eventos sem rota (fora de :slug) → 404 no shell. S500-T2. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </ToastProvider>
   );
