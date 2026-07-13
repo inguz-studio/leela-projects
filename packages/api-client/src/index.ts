@@ -394,3 +394,20 @@ export type { EstornarInscricaoInput, EstornarInscricaoResult } from './checkout
 // cresce por task do L2 sem reeditar este barrel (coordenação de território).
 // ---------------------------------------------------------------------------
 export * from './finance';
+
+// ---------------------------------------------------------------------------
+// Campanhas do evento (LEELA-S401-T1 · E06) — CRUD rascunho/agendado +
+// query por estado. Envio ('enviado' + ∑) é EXCLUSIVO da Function
+// `enviarCampanha` (S401-T4); estimativa ao vivo = callable `estimarAlcance`.
+// ---------------------------------------------------------------------------
+export {
+  listarCampanhas,
+  getCampanha,
+  criarCampanha,
+  atualizarCampanha,
+  excluirCampanha,
+} from './eventos/campanhas';
+export type {
+  CriarCampanhaInput,
+  AtualizarCampanhaInput,
+} from './eventos/campanhas';

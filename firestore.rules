@@ -943,6 +943,101 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `campanhas/{campanhaId}` — comunicação segmentada do EVENTO
+      // (E06 · S401-T1). Espelha o bloco `comunicados` do clube (L1365) com
+      // a taxonomia do evento e os MESMOS códigos de status compartilhados
+      // (decisão item 9 do brief E06: rascunho/agendado/enviado — um literal
+      // nos dois lados; "Enviada/Agendada" é rótulo de UI).
+      //
+      // RN-130: cliente cria/edita APENAS rascunho/agendado — o carimbo
+      // 'enviado' (+ enviadoEm/alcance) é EXCLUSIVO da Function
+      // `enviarCampanha` (S401-T4, que também valida o limite RN-133).
+      // Campanha enviada é imutável e indeletável para o cliente (trilha).
+      // RN-131/132: canal 1..2 dentro do enum; origem no enum.
+      // RN-135: imagem de capa só existe quando o canal inclui email.
+      // Corte 5 (brief E06): SEM 'por_engajamento' no enum de segmento —
+      // taxonomia V1 = todos_inscritos|por_modalidade|por_kit|por_status.
+      // Corte 4: `aberturasPct` fora do modelo V1, mas SEGUE na deny-list
+      // (cliente que tentar gravá-lo é negado hoje e pós-provider).
+      // Leitura: matriz S304 área `comunicacao` — tenant member + equipe
+      // organizador/administrador (operador/financeiro = célula false).
+      match /campanhas/{campanhaId} {
+
+        /** Shape básico (RN-131/132 + segmento do evento + RN-135) + espelho
+            mínimo de título/conteúdo (SPEC-02: ≥5/≥10 após trim). Segmento
+            fora de 'todos_inscritos' exige `referencia` (o enum fino de
+            kit/status é validado no core — validarSegmentoCampanha). */
+        function shapeCampanhaValida() {
+          return request.resource.data.canal is list
+            && request.resource.data.canal.size() >= 1
+            && request.resource.data.canal.size() <= 2
+            && request.resource.data.canal.hasOnly(['push', 'email'])
+            && request.resource.data.origem in ['manual', 'automatizada']
+            && request.resource.data.segmento.tipo in
+                ['todos_inscritos', 'por_modalidade', 'por_kit', 'por_status']
+            && (request.resource.data.segmento.tipo == 'todos_inscritos'
+                || (('referencia' in request.resource.data.segmento)
+                    && request.resource.data.segmento.referencia is string
+                    && request.resource.data.segmento.referencia.size() > 0))
+            && (!('capaUrl' in request.resource.data)
+                || 'email' in request.resource.data.canal)
+            && request.resource.data.titulo is string
+            && request.resource.data.titulo.trim().size() >= 5
+            && request.resource.data.conteudo is string
+            && request.resource.data.conteudo.trim().size() >= 10;
+        }
+
+        /** 'agendado' exige `agendadoPara` timestamp (o cron é Onda 3, mas
+            o invariante nasce garantido — espelho do clube S6a). */
+        function agendamentoCampanhaCoerente() {
+          return request.resource.data.status != 'agendado'
+            || (('agendadoPara' in request.resource.data)
+                && request.resource.data.agendadoPara is timestamp);
+        }
+
+        /** Cliente nunca escreve status 'enviado' (RN-130). */
+        function statusCampanhaEditavelPeloCliente() {
+          return request.resource.data.status in ['rascunho', 'agendado'];
+        }
+
+        /** Cliente não CRIA doc carimbado com campos da Function de envio. */
+        function semCamposDeEnvioCampanha() {
+          return !request.resource.data.keys().hasAny(['enviadoEm', 'aberturasPct'])
+            && request.resource.data.get('alcance', 0) == 0;
+        }
+
+        /** Update de cliente não TOCA campos da Function de envio. */
+        function camposDeEnvioCampanhaIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['alcance', 'aberturasPct', 'enviadoEm']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeCampanhaValida()
+                          && agendamentoCampanhaCoerente()
+                          && statusCampanhaEditavelPeloCliente()
+                          && semCamposDeEnvioCampanha())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.status != 'enviado'
+                          && shapeCampanhaValida()
+                          && agendamentoCampanhaCoerente()
+                          && statusCampanhaEditavelPeloCliente()
+                          && camposDeEnvioCampanhaIntocados())
+                      || isPlatformAdmin();
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.status != 'enviado')
+                      || isPlatformAdmin();
+      }
+
       // `aprovisionamento/{sku}` — estoque de kit POR SKU (item tamanhado ×
       // tamanho; docId `itemId__tamanho` — S210-T2 · FABLE-D).
       //

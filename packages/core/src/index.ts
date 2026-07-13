@@ -770,3 +770,28 @@ export {
   COMUNICACAO_CONTEUDO_MIN,
   validarComunicacaoBase,
 } from './comunicacao';
+
+// ---------------------------------------------------------------------------
+// Campanha do evento (LEELA-S401-T1 · E06) — Camada C sobre core/comunicacao.
+// Taxonomia de segmento V1 = todos_inscritos|por_modalidade|por_kit|por_status
+// (corte 5: sem por_engajamento); SEM aberturasPct (corte 4). Status usa os
+// códigos masculinos compartilhados (item 9) — label feminino é da UI.
+// ---------------------------------------------------------------------------
+export type {
+  CanalCampanha,
+  StatusCampanha,
+  OrigemCampanha,
+  TipoSegmentoCampanha,
+  SegmentoCampanha,
+  Campanha,
+  CampanhaInput,
+} from './eventos/campanha';
+export {
+  COLECAO_CAMPANHAS,
+  TIPOS_SEGMENTO_CAMPANHA,
+  isTipoSegmentoCampanha,
+  validarSegmentoCampanha,
+  CAMPOS_FUNCTION_CAMPANHA,
+  validarCampanha,
+  parseCampanha,
+} from './eventos/campanha';
