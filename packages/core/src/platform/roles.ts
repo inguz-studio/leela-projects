@@ -8,6 +8,8 @@
 // Guards puros aqui são reutilizados por UI e por testes de Rules.
 // =============================================================================
 
+import type { PapelEvento } from '../eventos/equipe';
+
 /**
  * Papéis de plataforma via Firebase custom claims (ADR-009, RN-401).
  *
@@ -43,6 +45,13 @@ export interface AuthClaims {
    * AUSENTE. Promoção a qualquer papel não-athlete remove o marcador.
    */
   demotedFromRole?: Role;
+  /**
+   * Papéis POR EVENTO (RN-320 · E04-L4): mapa `eventoId → papel`, mantido
+   * EXCLUSIVAMENTE pela Function `setClaimsEquipe` via merge preservador —
+   * nunca sobrescreve `role`/`tenantId` nem papéis de outros eventos.
+   * Ausente quando o usuário não integra equipe de evento algum.
+   */
+  eventos?: Record<string, PapelEvento>;
 }
 
 // ---------------------------------------------------------------------------

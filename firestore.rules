@@ -311,7 +311,12 @@ service cloud.firestore {
       // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
       // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
       // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
-      allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
+      // S304-T1: MEMBRO DE EQUIPE (qualquer dos 4 papéis — RN-320) lê o doc
+      // do evento em que atua: toda área depende dele (nome/status/percursos).
+      // A matriz 4×7 restringe as ÁREAS (subcoleções abaixo), não este doc.
+      allow read: if isTenantMember(resource.data.tenantId)
+                  || isPlatformAdmin()
+                  || papelEventoAtivo(['organizador', 'administrador', 'operador', 'financeiro']);
       allow create: if (isTenantWriter(request.resource.data.tenantId)
                         && tenantAtivo(request.resource.data.tenantId)
                         && eventoAgregadosZerados()
@@ -341,6 +346,39 @@ service cloud.firestore {
       function eventoPaiTemVenda() {
         return get(/databases/$(database)/documents/eventos/$(eventoId))
           .data.get('qtdInscritos', 0) > 0;
+      }
+
+      /**
+       * S304-T1 (RN-320 · ADR-008): o caller tem papel de EQUIPE neste
+       * evento, dentro da lista `papeis`, E o vínculo está VIVO.
+       *
+       * DUAS camadas, ambas obrigatórias:
+       *   1. TOKEN — custom claim `eventos: { [eventoId]: papel }`, gravado
+       *      SÓ pela Function `setClaimsEquipe` (merge preservador; cliente
+       *      nunca escreve claim — RN-401). Claim de OUTRO evento/tenant não
+       *      entra: a chave consultada é o eventoId DESTE match.
+       *   2. ÂNCORA — doc `equipe/{uid}` (docId = uid, convenção da Function)
+       *      precisa estar `status == 'ativo'` e com o MESMO papel do claim.
+       *      Fecha a janela do token velho (~1h até expirar): remoção/troca
+       *      de papel atualiza o doc na MESMA operação que revoga as claims,
+       *      então o token antigo morre AQUI, não na expiração. Doc ausente
+       *      (ou convite 'convidado' forjado no docId do uid — que nasce sem
+       *      poder de âncora porque create de cliente exige status
+       *      'convidado') ⇒ get() falha/compara falso ⇒ DENY. Erros são
+       *      absorvidos pelo || externo — fail-closed.
+       *
+       * A lista `papeis` de cada coleção ESPELHA a matriz 4×7 `podeAcessar`
+       * de @leela/core (fonte única) — mudar célula lá exige mudar aqui + teste.
+       */
+      function papelEventoAtivo(papeis) {
+        return isSignedIn()
+          && ('eventos' in request.auth.token)
+          && (eventoId in request.auth.token.eventos)
+          && (request.auth.token.eventos[eventoId] in papeis)
+          && get(/databases/$(database)/documents/eventos/$(eventoId)/equipe/$(request.auth.uid))
+              .data.status == 'ativo'
+          && get(/databases/$(database)/documents/eventos/$(eventoId)/equipe/$(request.auth.uid))
+              .data.papel == request.auth.token.eventos[eventoId];
       }
 
       // `inscritos/{inscritoId}` — join Atleta↔Evento (E03 · S203-T1).
@@ -432,8 +470,15 @@ service cloud.firestore {
         // `role:'athlete'` com tenantId do claim NÃO leem CPF/telefone/saúde —
         // só organizador (owner/staff) e platform_admin. Espelha a taxonomia de
         // `pedidos`/`pagamentos`, que já exigem isTenantWriter para o financeiro.
+        // S304-T1 (matriz `inscritos`): equipe do evento com papel organizador/
+        // administrador/operador TAMBÉM lê — o operador de balcão atende o
+        // atleta pelo doc do inscrito (E03-S204). `financeiro` NÃO (célula
+        // false — dinheiro sim, PII de inscrito não). ESCRITA de cliente segue
+        // isTenantWriter (disciplina herdada — papel de evento não escreve PII;
+        // entrega/chip/check-in do operador passam pelas Functions do balcão).
         allow read: if isPlatformAdmin()
-                    || isTenantWriter(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador', 'operador']);
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
@@ -490,8 +535,12 @@ service cloud.firestore {
             || !eventoPaiTemVenda();
         }
 
+        // S304-T1 (matriz `entrega`/`pagina_vendas`): equipe organizador/
+        // administrador/operador lê kits — o operador precisa do kit p/
+        // entregar no balcão; `financeiro` não (células false).
         allow read: if isPlatformAdmin()
-                    || isTenantMember(tenantDoEventoPai());
+                    || isTenantMember(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador', 'operador']);
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
@@ -599,8 +648,11 @@ service cloud.firestore {
                          'ordem', 'modalidade']);
         }
 
+        // S304-T1 (matriz `pagina_vendas`): equipe organizador/administrador
+        // lê lotes; operador/financeiro não (células false).
         allow read: if isPlatformAdmin()
-                    || isTenantMember(tenantDoEventoPai());
+                    || isTenantMember(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
@@ -677,8 +729,13 @@ service cloud.firestore {
             && request.resource.data.codigo == resource.data.codigo;
         }
 
+        // S304-T1 (matriz `pagina_vendas`): equipe organizador/administrador
+        // lê cupons (administrador gere a página de vendas — épico E04);
+        // operador/financeiro NÃO (célula false — código de cupom é ativo
+        // comercial, mesma lição do catch-all).
         allow read: if isPlatformAdmin()
-                    || isTenantWriter(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
         allow create: if (isTenantWriter(request.resource.data.tenantId)
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
@@ -733,8 +790,12 @@ service cloud.firestore {
             .hasAny(['publicada', 'publicadaEm']);
         }
 
+        // S304-T1 (matriz `pagina_vendas`): equipe organizador/administrador
+        // lê; operador/financeiro NÃO (aceite E04-L4: financeiro em página
+        // de vendas → nega — e a ESCRITA segue isTenantWriter p/ todos).
         allow read: if isPlatformAdmin()
-                    || isTenantMember(tenantDoEventoPai());
+                    || isTenantMember(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
         // Create SÓ no docId canônico `config` (re-review S300 #5): "1 doc
         // por evento" era só comentário — um segundo doc ('config2') criaria
         // página fantasma fora do caminho que a vitrine/Function leem.
@@ -764,9 +825,14 @@ service cloud.firestore {
       // este match o doc caía no catch-all de MEMBRO e vazava o repasse).
       // Escrita: NUNCA pelo cliente — o doc é recomputado exclusivamente pela
       // Function `agregarFinanceiro` (Admin SDK bypassa Rules).
+      // S304-T1 (matriz `financeiro` — aceite E04-L4): equipe com papel
+      // organizador/financeiro lê o repasse; administrador e OPERADOR são
+      // célula FALSE (operador lendo financeiro → Rule NEGA). Escrita de
+      // cliente segue NUNCA — papel de evento não muda isso (regressão).
       match /financeiro/{docId} {
         allow read: if isPlatformAdmin()
-                    || isTenantWriter(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'financeiro']);
         allow write: if false;
       }
 
@@ -789,9 +855,13 @@ service cloud.firestore {
       // a idempotência de envio (RN-219) mora na colisão de docId — por
       // isso nenhum cliente cria/atualiza/deleta (forjar um doc suprimiria
       // um envio devido; alterar status fabricaria abertura que não houve).
+      // S304-T1 (matriz `comunicacao`): equipe organizador/administrador lê
+      // o log (a aba Comunicação é gestão de conteúdo — E06); operador/
+      // financeiro NÃO (células false — o log é PII de destinatário).
       match /comunicacoes/{comunicacaoId} {
         allow read: if isPlatformAdmin()
-                    || isTenantWriter(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
         allow write: if false;
       }
 
@@ -803,7 +873,8 @@ service cloud.firestore {
       // fraudado na aba do evento).
       match /comunicacoesResumo/{docId} {
         allow read: if isPlatformAdmin()
-                    || isTenantWriter(tenantDoEventoPai());
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
         allow write: if false;
       }
 
@@ -828,18 +899,74 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `equipe/{membroId}` — equipe do evento: 4 papéis (S304-T1 · RN-320).
+      //
+      // O PAPEL VIVE NO TOKEN (ADR-008); o doc é a ÂNCORA VIVA que
+      // `papelEventoAtivo()` confere via get() (docId = uid do membro ATIVO,
+      // convenção da Function `setClaimsEquipe`). Por isso:
+      //
+      //   UPDATE de cliente: NEGADO POR INTEIRO — `papel`/`status`/`uid`
+      //   mutáveis pelo cliente seriam vetor direto de AUTO-PROMOÇÃO (mudar
+      //   o próprio papel no doc) ou de fraude da âncora (forjar
+      //   status 'ativo' re-viveria um token velho já revogado). Troca de
+      //   papel/remoção = SÓ a Function (claims + doc na MESMA operação).
+      //
+      //   CREATE de cliente = SÓ CONVITE (E04-L5): nasce status 'convidado',
+      //   SEM `uid` (sem uid não vira âncora de ninguém) e NUNCA com papel
+      //   'organizador' (nasce com o evento; transferência é superfície de
+      //   Function). Quem convida: tenant writer OU equipe organizador/
+      //   administrador (célula `equipe` da matriz 4×7 de @leela/core).
+      //
+      //   DELETE: só convite ('convidado'). Membro ATIVO sai SÓ pela Function
+      //   — delete direto do doc deixaria claims órfãs no token (o acesso já
+      //   morreria, âncora ausente = deny, mas a trilha 'removido' se perderia).
+      //
+      //   LEITURA: fora do catch-all (mesma disciplina de inscritos/cupons —
+      //   e-mail de convite é PII leve; papel×pessoa é dado de gestão).
+      match /equipe/{membroId} {
+
+        /** Shape do CONVITE (única escrita de cliente aqui — ver bloco). */
+        function shapeConviteValido() {
+          return request.resource.data.eventoId == eventoId
+            && request.resource.data.papel in ['administrador', 'operador', 'financeiro']
+            && request.resource.data.status == 'convidado'
+            && !request.resource.data.keys().hasAny(['uid'])
+            && request.resource.data.nome is string
+            && request.resource.data.nome.size() > 0;
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
+        allow create: if ((isTenantWriter(request.resource.data.tenantId)
+                           || papelEventoAtivo(['organizador', 'administrador']))
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeConviteValido())
+                      || isPlatformAdmin();
+        allow update: if isPlatformAdmin();
+        allow delete: if ((isTenantWriter(resource.data.tenantId)
+                           || papelEventoAtivo(['organizador', 'administrador']))
+                          && tenantAtivo(resource.data.tenantId)
+                          && resource.data.status == 'convidado')
+                      || isPlatformAdmin();
+      }
+
       match /{subcol}/{docId} {
         // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
         // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)
         // são legíveis por membro genérico do tenant. A forma anterior era
         // BLOCKLIST (subcol != inscritos/cupons) — qualquer subcoleção FUTURA
-        // de eventos (reembolsos/transferencias/ledger/equipe/…) nasceria
+        // de eventos (reembolsos/transferencias/ledger/…) nasceria
         // member-readable sem tocar as Rules. Agora nasce no deny-by-default:
         // abrir leitura exige entrar nesta lista (ou ganhar match próprio)
         // + teste. `inscritos` (PII/LGPD), `cupons` (ativo comercial),
-        // `financeiro` (repasse) e `comunicacoes`/`comunicacoesResumo`
-        // (log de comunicação — PII, FABLE-G) têm match próprio writer-only
-        // acima e NÃO entram na lista — o OR de regras não os re-concede.
+        // `financeiro` (repasse), `comunicacoes`/`comunicacoesResumo`
+        // (log de comunicação — PII, FABLE-G) e `equipe` (S304-T1 — papel ×
+        // pessoa + e-mail de convite) têm match próprio restrito acima e NÃO
+        // entram na lista — o OR de regras não os re-concede. As concessões
+        // POR PAPEL DE EVENTO (S304-T1) vivem SÓ nos matches específicos,
+        // nunca aqui: papel novo/área nova exige regra explícita + teste.
         allow read: if isPlatformAdmin()
                     || (subcol in ['kits', 'lotes', 'paginaVendas']
                         && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));

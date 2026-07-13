@@ -354,6 +354,16 @@ export type {
 } from './eventos/inscritoPedido';
 
 // ---------------------------------------------------------------------------
+// Equipe do evento — 4 papéis + claims por evento (LEELA-S304-T1 · E04-L4)
+// Papel muda SÓ via Function `setClaimsEquipe` (merge preservador — ADR-008).
+// ---------------------------------------------------------------------------
+export { listarEquipe, setClaimsEquipe } from './eventos/equipe';
+export type {
+  SetClaimsEquipeInput,
+  SetClaimsEquipeResult,
+} from './eventos/equipe';
+
+// ---------------------------------------------------------------------------
 // Estorno por inscrito — callable do organizador (LEELA-E04 · FABLE-B · ADR-011)
 // Só transporte: o VALOR do estorno é decisão EXCLUSIVA do servidor (RN-337).
 // ---------------------------------------------------------------------------

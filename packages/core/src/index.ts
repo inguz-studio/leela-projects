@@ -665,3 +665,29 @@ export {
   parseLogComunicacao,
   parseResumoComunicacoes,
 } from './comms/logComunicacao';
+
+// ---------------------------------------------------------------------------
+// Equipe do evento — 4 papéis + matriz de acesso 4×7 (RN-320 · S304-T1 · E04-L4)
+// `podeAcessar` é API PÚBLICA: E07-web (403 por papel) e E05 importam daqui.
+// ---------------------------------------------------------------------------
+export type {
+  PapelEvento,
+  AreaEvento,
+  ClaimsEquipeEventos,
+  StatusMembroEquipe,
+  MembroEquipe,
+} from './eventos/equipe';
+export {
+  PAPEIS_EVENTO,
+  AREAS_EVENTO,
+  MATRIZ_ACESSO_EVENTO,
+  STATUS_MEMBRO_EQUIPE,
+  CAMPOS_FUNCTION_MEMBRO_EQUIPE,
+  isPapelEvento,
+  isAreaEvento,
+  isStatusMembroEquipe,
+  podeAcessar,
+  papeisComAcesso,
+  papelNoEvento,
+  parseMembroEquipe,
+} from './eventos/equipe';

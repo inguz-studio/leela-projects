@@ -105,6 +105,12 @@ export {
   transicaoAprovisionamento,
 } from './eventos/agregarEstoque';
 
+// Eventos — EQUIPE: 4 papéis por evento em custom claims (S304-T1 · RN-320 ·
+// ADR-008): merge PRESERVADOR (padrão mergeTenantClaims — nunca apaga claims
+// de tenant/outros eventos) + âncora `equipe/{uid}` p/ token velho (RN-401).
+// ⚠️ Fable (autorização/escalada de papel).
+export { setClaimsEquipe } from './eventos/setClaimsEquipe';
+
 // Checkout — fundação E12 (sandbox sem chave Asaas — ADR-006/ADR-011):
 // createInscricaoCharge cria pedido/inscritos + emite a cobrança (provider
 // selecionado por selectPaymentProvider — Mock sem chave, fail-safe);
