@@ -7,8 +7,12 @@
 // =============================================================================
 
 import { useQuery } from '@tanstack/react-query';
-import type { DadosBancarios, SaldoRepasse } from '@leela/core';
-import { dadosBancariosQuery, saldoRepasseQuery } from '../../../../lib/query/queries';
+import type { DadosBancarios, Repasse, SaldoRepasse } from '@leela/core';
+import {
+  dadosBancariosQuery,
+  repassesHistoricoQuery,
+  saldoRepasseQuery,
+} from '../../../../lib/query/queries';
 
 export interface AsyncQuery<T> {
   data: T;
@@ -50,6 +54,25 @@ export function useDadosBancarios(tenantId: string | null): AsyncQuery<DadosBanc
   });
   return {
     data: query.data ?? null,
+    loading: query.isPending,
+    error: query.error ?? null,
+    refetch: () => {
+      void query.refetch();
+    },
+  };
+}
+
+/**
+ * Histórico de repasses do tenant (mais recentes primeiro) — a tabela do T4.
+ * Lista vazia = organizador ainda não solicitou nenhum saque (EmptyState honesto).
+ */
+export function useHistoricoRepasses(tenantId: string | null): AsyncQuery<Repasse[]> {
+  const query = useQuery({
+    ...repassesHistoricoQuery(tenantId ?? ''),
+    enabled: !!tenantId,
+  });
+  return {
+    data: query.data ?? [],
     loading: query.isPending,
     error: query.error ?? null,
     refetch: () => {

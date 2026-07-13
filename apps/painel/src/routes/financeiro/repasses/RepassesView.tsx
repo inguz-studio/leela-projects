@@ -11,11 +11,12 @@
 
 import * as React from 'react';
 import { Button, PageHeader } from '@leela/design-system';
-import type { DadosBancarios, SaldoRepasse } from '@leela/core';
+import type { DadosBancarios, Repasse, SaldoRepasse } from '@leela/core';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { SaldoCards } from './_components/SaldoCards';
 import { DadosBancariosSection } from './_components/DadosBancariosSection';
 import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
+import { HistoricoRepasses } from './_components/HistoricoRepasses';
 import { RepasseErro } from './_components/RepasseErro';
 
 export interface RepassesViewProps {
@@ -37,6 +38,12 @@ export interface RepassesViewProps {
   solicitarRunning: boolean;
   /** Solicita o repasse; resolve `true` em sucesso (o view fecha o modal). */
   onSolicitar: (valor: number) => Promise<boolean>;
+
+  // Histórico (T4)
+  historico: Repasse[];
+  histLoading: boolean;
+  histError: Error | null;
+  onRetryHist: () => void;
 }
 
 export function RepassesView({
@@ -53,6 +60,10 @@ export function RepassesView({
   onSubmitDados,
   solicitarRunning,
   onSolicitar,
+  historico,
+  histLoading,
+  histError,
+  onRetryHist,
 }: RepassesViewProps): JSX.Element {
   const [solicitarAberto, setSolicitarAberto] = React.useState(false);
 
@@ -97,6 +108,14 @@ export function RepassesView({
           saving={dbSaving}
           saveError={dbSaveError}
           onSubmit={onSubmitDados}
+        />
+
+        {/* Histórico (T4) — tabela densa + comprovante do pago (RN-355/356). */}
+        <HistoricoRepasses
+          repasses={historico}
+          loading={histLoading}
+          error={histError}
+          onRetry={onRetryHist}
         />
       </div>
 

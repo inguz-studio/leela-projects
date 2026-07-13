@@ -26,6 +26,7 @@ import {
   getLeelaDb,
   getOverview,
   getSaldoRepasse,
+  listRepasses,
   getResumoComunicacoes,
   listarComunicacoesDoEvento,
   getPaginaVendas,
@@ -71,6 +72,7 @@ import type {
   PaginaVendas,
   Parceria,
   PlatformRollups,
+  Repasse,
   ResumoComunicacoes,
   SaldoRepasse,
   Tenant,
@@ -441,5 +443,13 @@ export function dadosBancariosQuery(tenantId: string) {
   return queryOptions({
     queryKey: queryKeys.repasse.dadosBancarios(tenantId),
     queryFn: (): Promise<DadosBancarios | null> => getDadosBancarios(getLeelaDb(), tenantId),
+  });
+}
+
+/** Histórico de repasses do tenant (mais recentes primeiro) — a tabela do T4. */
+export function repassesHistoricoQuery(tenantId: string) {
+  return queryOptions({
+    queryKey: queryKeys.repasse.historico(tenantId),
+    queryFn: (): Promise<Repasse[]> => listRepasses(getLeelaDb(), tenantId),
   });
 }

@@ -12,13 +12,26 @@
 // =============================================================================
 
 import { httpsCallable } from 'firebase/functions';
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  type Firestore,
+} from 'firebase/firestore';
+import {
+  isEstadoRepasse,
   isTipoContaBancaria,
   type DadosBancarios,
+  type DadosBancariosSnapshot,
+  type EstadoRepasse,
+  type Repasse,
   type SaldoRepasse,
   type Timestamp,
   type TipoContaBancaria,
+  type TransicaoRepasse,
 } from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
@@ -349,4 +362,87 @@ export async function getDadosBancarios(
     criadoEm: asRepasseTimestamp(data['criadoEm']),
     atualizadoEm: asRepasseTimestamp(data['atualizadoEm']),
   };
+}
+
+/** Projeção MASCARADA congelada no repasse (RN-354 — nunca o número em claro). */
+function parseSnapshotMascarado(raw: unknown): DadosBancariosSnapshot {
+  const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const pix = d['pixMascarado'];
+  return {
+    tenantId: repasseStr(d['tenantId']),
+    banco: repasseStr(d['banco']),
+    agencia: repasseStr(d['agencia']),
+    contaMascarada: repasseStr(d['contaMascarada']),
+    tipo: repasseTipoConta(d['tipo']),
+    pixMascarado: typeof pix === 'string' ? pix : null,
+    titular: repasseStr(d['titular']),
+    cpfCnpjMascarado: repasseStr(d['cpfCnpjMascarado']),
+  };
+}
+
+/** Trilha append-only de transições (de→para/quando/quem) — auditoria RN-353. */
+function parseTransicoes(raw: unknown): TransicaoRepasse[] {
+  if (!Array.isArray(raw)) return [];
+  const out: TransicaoRepasse[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+    const t = item as Record<string, unknown>;
+    const para = t['para'];
+    if (!isEstadoRepasse(para)) continue;
+    const de = t['de'];
+    out.push({
+      de: isEstadoRepasse(de) ? de : null,
+      para,
+      em: asRepasseTimestamp(t['em']),
+      por: repasseStr(t['por']),
+      papel: t['papel'] === 'platform_admin' ? 'platform_admin' : 'tenant_owner',
+    });
+  }
+  return out;
+}
+
+/** Um repasse do histórico já parseado (id + snapshot mascarado + transições). */
+function parseRepasse(id: string, raw: Record<string, unknown>): Repasse | null {
+  const estado = raw['estado'];
+  if (!isEstadoRepasse(estado)) return null; // doc corrompido — não mascara dinheiro
+  const numero = raw['comprovanteNumero'];
+  const base: Repasse = {
+    id,
+    tenantId: repasseStr(raw['tenantId']),
+    valor: repasseNum(raw['valor']),
+    estado: estado as EstadoRepasse,
+    dadosBancariosSnapshot: parseSnapshotMascarado(raw['dadosBancariosSnapshot']),
+    transicoes: parseTransicoes(raw['transicoes']),
+    criadoEm: asRepasseTimestamp(raw['criadoEm']),
+    atualizadoEm: asRepasseTimestamp(raw['atualizadoEm']),
+  };
+  if (typeof numero === 'string' && numero.length > 0) base.comprovanteNumero = numero;
+  return base;
+}
+
+/**
+ * Lista os repasses do tenant (`tenants/{tid}/repasses`), mais recentes
+ * primeiro — o histórico da tela (T4). Um doc corrompido (estado fora da união)
+ * é isolado + logado, não derruba a lista inteira (mesma disciplina de
+ * `listarEventosDoOrganizador`). Só o tenant_owner (ou platform_admin) lê.
+ */
+export async function listRepasses(
+  db: Firestore,
+  tenantId: string
+): Promise<Repasse[]> {
+  const q = query(
+    collection(db, 'tenants', tenantId, 'repasses'),
+    orderBy('criadoEm', 'desc')
+  );
+  const snap = await getDocs(q);
+  const out: Repasse[] = [];
+  for (const d of snap.docs) {
+    const repasse = parseRepasse(d.id, d.data());
+    if (repasse) {
+      out.push(repasse);
+    } else {
+      console.error(`[listRepasses] repasse "${d.id}" corrompido — omitido do histórico`);
+    }
+  }
+  return out;
 }
