@@ -48,6 +48,7 @@ import {
   listDesafios,
   listMembros,
   listParcerias,
+  listPlanosCobranca,
   listTenants,
   INSCRITOS_PAGE_SIZE,
   type FinanceiroEvento,
@@ -75,6 +76,7 @@ import type {
   MembroEquipe,
   PaginaVendas,
   Parceria,
+  PlanoCobranca,
   PlatformRollups,
   Repasse,
   ResumoComunicacoes,
@@ -439,6 +441,19 @@ export function commercialTermsQuery(tenantId: string, reloadKey = 0) {
     queryKey: queryKeys.plataforma.termos(tenantId, reloadKey),
     queryFn: (): Promise<CommercialTerms | null> =>
       getCommercialTerms(getLeelaDb(), tenantId),
+  });
+}
+
+/**
+ * Catálogo de planos de cobrança nomeados (`planosCobranca` — T2-L4 · CB-T3).
+ * Reusa `listPlanosCobranca` do api-client (Rules liberam a leitura só ao
+ * platform_admin; ordenado por nome). Lista vazia = catálogo ainda sem plano
+ * (EmptyState honesto). `reloadKey` revalida após salvar/aplicar.
+ */
+export function planosCobrancaQuery(reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.plataforma.planos(reloadKey),
+    queryFn: (): Promise<PlanoCobranca[]> => listPlanosCobranca(getLeelaDb()),
   });
 }
 

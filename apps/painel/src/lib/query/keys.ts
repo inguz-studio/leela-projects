@@ -208,5 +208,11 @@ export const queryKeys = {
     /** Termos comerciais vigentes de um tenant. */
     termos: (tenantId: string, reloadKey = 0) =>
       ['plataforma', 'termos', tenantId, reloadKey] as const,
+    /**
+     * Catálogo de planos de cobrança nomeados (`planosCobranca` — T2-L4). Read
+     * SÓ platform_admin (Rules). `reloadKey` preserva o refetch pós-save/aplicar
+     * sem tocar a tela (mesma ponte do resto de `plataforma`).
+     */
+    planos: (reloadKey = 0) => ['plataforma', 'planos', reloadKey] as const,
   },
 } as const;

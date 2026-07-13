@@ -53,13 +53,23 @@ describe('shellSidebarSections', () => {
     }
   });
 
-  it('/plataforma: nav própria com 4 itens, ícones e ativo por sub-rota', () => {
+  it('/plataforma: nav própria com 6 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
-    expect(items.map((i) => i.id)).toEqual(['tenants', 'termos', 'billing', 'macro']);
+    expect(items.map((i) => i.id)).toEqual(['tenants', 'termos', 'planos', 'repasses', 'billing', 'macro']);
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'macro')?.active).toBe(true);
     expect(items.find((i) => i.id === 'billing')?.badge).toBe('em breve');
+  });
+
+  it('/plataforma/planos: item Planos ativo e navegável (CB-T3)', () => {
+    const navigate = vi.fn();
+    const sections = shellSidebarSections('/plataforma/planos', navigate);
+    const items = sections[0]?.items ?? [];
+    const planos = items.find((i) => i.id === 'planos');
+    expect(planos?.active).toBe(true);
+    planos?.onClick?.();
+    expect(navigate).toHaveBeenCalledWith('/plataforma/planos');
   });
 });
