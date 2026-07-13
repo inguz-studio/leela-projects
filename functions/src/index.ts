@@ -177,3 +177,8 @@ export { getBankDetailsForPayout } from './finance/getBankDetailsForPayout';
 // recompute de saldo (retido→0). O organizador NÃO encerra o próprio
 // evento (anti-fraude — Rules já negam status de cliente). ⚠️ Fable.
 export { encerrarEventos } from './eventos/encerrarEventos';
+
+// Eventos — CAMPANHAS (E06 · S401): estimativa de alcance por segmento
+// (count() on-demand sobre inscritos — E06-L2-T1; o evento NÃO tem
+// agregados por-modalidade/por-kit, diferença deliberada vs. o clube puro).
+export { estimarAlcance } from './eventos/estimarAlcance';
