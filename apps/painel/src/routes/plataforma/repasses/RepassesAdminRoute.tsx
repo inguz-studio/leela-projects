@@ -13,9 +13,11 @@
 
 import { useMemo, useState } from 'react';
 import { ConfirmModal, useToast } from '@leela/design-system';
+import { getBankDetailsForPayout } from '@leela/api-client';
 import { formatBRL } from '../../financeiro/repasses/_lib/format';
 import { RepassesFilaView } from './RepassesFilaView';
 import { RetencaoEditor } from './_components/RetencaoEditor';
+import { RegistrarPagamentoModal } from './_components/RegistrarPagamentoModal';
 import {
   useFilaRepasses,
   useRepasseAdminActions,
@@ -38,6 +40,7 @@ export function RepassesAdminRoute(): JSX.Element {
   const [estadoFilter, setEstadoFilter] = useState<EstadoFilaFilter>('todos');
   const [tenantFilter, setTenantFilter] = useState<TenantFilaFilter>('todos');
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [pagamento, setPagamento] = useState<RepasseFilaItem | null>(null);
   const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const fila = useFilaRepasses(reloadKey);
@@ -95,6 +98,28 @@ export function RepassesAdminRoute(): JSX.Element {
     }
   }
 
+  async function handleConfirmPagamento() {
+    if (!pagamento) return;
+    const { tenantId, id } = pagamento.repasse;
+    const alvo = pagamento;
+    const result = await filaActions.markPago(tenantId, id);
+    if (result) {
+      setPagamento(null); // fecha o modal → o dado bancário em claro é LIMPO (LGPD)
+      revalidar(); // a fila remove o item pago no próximo recompute
+      toast({
+        variant: 'success',
+        title: 'Pagamento registrado',
+        description: `Comprovante ${result.comprovanteNumero} · ${alvo.tenantNome}`,
+      });
+    } else {
+      toast({
+        variant: 'danger',
+        title: 'Não foi possível registrar o pagamento',
+        description: platformErrorMessage(filaActions.error),
+      });
+    }
+  }
+
   return (
     <>
       <div className="flex flex-col gap-[var(--spacing-8)] pb-[var(--spacing-8)]">
@@ -109,6 +134,7 @@ export function RepassesAdminRoute(): JSX.Element {
           onRetry={fila.refetch}
           onAprovar={(item) => setConfirm({ kind: 'aprovar', item })}
           onRecusar={(item) => setConfirm({ kind: 'recusar', item })}
+          onRegistrarPagamento={(item) => setPagamento(item)}
         />
 
         <RetencaoEditor
@@ -160,6 +186,17 @@ export function RepassesAdminRoute(): JSX.Element {
           onConfirm={handleConfirm}
         />
       )}
+
+      <RegistrarPagamentoModal
+        open={pagamento !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setPagamento(null);
+        }}
+        item={pagamento}
+        fetchBankDetails={getBankDetailsForPayout}
+        onConfirm={handleConfirmPagamento}
+        confirming={filaActions.running}
+      />
     </>
   );
 }
