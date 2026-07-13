@@ -73,8 +73,10 @@ export interface ComunicacaoViewProps {
   timeline: LogComunicacao[] | null;
   loading: boolean;
   error: Error | null;
-  /** Há callable de envio? (false até E06 campanhas — CTA desabilitado honesto). */
+  /** Há callable de envio? (agora true — E06 campanhas: CTA leva ao editor). */
   podeEnviar: boolean;
+  /** Ação do CTA "Enviar comunicação" (abre o editor de campanha). */
+  onEnviar?: () => void;
 }
 
 export function ComunicacaoView({
@@ -83,6 +85,7 @@ export function ComunicacaoView({
   loading,
   error,
   podeEnviar,
+  onEnviar,
 }: ComunicacaoViewProps): JSX.Element {
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
@@ -95,7 +98,7 @@ export function ComunicacaoView({
             Histórico do que foi enviado aos inscritos, com status de entrega.
           </span>
         </div>
-        <CtaEnviar podeEnviar={podeEnviar} />
+        <CtaEnviar podeEnviar={podeEnviar} {...(onEnviar ? { onEnviar } : {})} />
       </div>
 
       <Corpo resumo={resumo} timeline={timeline} loading={loading} error={error} />
@@ -109,7 +112,13 @@ export function ComunicacaoView({
  * (botão desabilitado + hint), mais acessível que tooltip só-no-hover de um
  * controle desabilitado. `title` cobre o hover; o hint cobre teclado/leitor.
  */
-function CtaEnviar({ podeEnviar }: { podeEnviar: boolean }): JSX.Element {
+function CtaEnviar({
+  podeEnviar,
+  onEnviar,
+}: {
+  podeEnviar: boolean;
+  onEnviar?: () => void;
+}): JSX.Element {
   const motivo = 'Envio de comunicação entra com as campanhas do evento (E06).';
   return (
     <div className="flex flex-col items-end gap-[var(--spacing-1)]">
@@ -117,6 +126,7 @@ function CtaEnviar({ podeEnviar }: { podeEnviar: boolean }): JSX.Element {
         variant="primary"
         disabled={!podeEnviar}
         title={podeEnviar ? undefined : motivo}
+        {...(podeEnviar && onEnviar ? { onClick: onEnviar } : {})}
       >
         <Send aria-hidden className="size-4" />
         Enviar comunicação

@@ -28,8 +28,8 @@ import type { AcaoCampanhaId } from '../_lib/campanhas';
 import { queryKeys } from '../../../lib/query/keys';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
-/** O envio de comunicação/campanha entra pelo editor (flip em E06-D3). */
-const PODE_ENVIAR = false;
+/** Envio de comunicação já existe (E06 campanhas) — o CTA leva ao editor. */
+const PODE_ENVIAR = true;
 
 /** Segmento sem o `tamanhoEstimado` (fotografia do envio) — cópia/edição limpa. */
 function segmentoLimpo(segmento: SegmentoCampanha): SegmentoCampanha {
@@ -154,6 +154,7 @@ export function ComunicacaoPage(): JSX.Element {
           loading={resumo.loading || timeline.loading}
           error={resumo.error ?? timeline.error}
           podeEnviar={PODE_ENVIAR}
+          onEnviar={() => navigate(`${base}/nova`)}
         />
       ),
     },

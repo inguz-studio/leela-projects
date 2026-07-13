@@ -49,6 +49,8 @@ export interface CountdownView {
   checkinHref: string;
   /** /eventos/:slug/inscritos (quick-action "Ver inscritos") */
   inscritosHref: string;
+  /** /eventos/:slug/comunicacao — aba Comunicação (quick-action "Comunicar", D3) */
+  comunicacaoHref: string;
 }
 
 function toMillis(t: Timestamp): number | null {
@@ -122,5 +124,6 @@ export function derivarCountdown(
     gerenciarHref: `/eventos/${evento.slug}`,
     checkinHref: `/eventos/${evento.slug}/entrega`,
     inscritosHref: `/eventos/${evento.slug}/inscritos`,
+    comunicacaoHref: `/eventos/${evento.slug}/comunicacao`,
   };
 }

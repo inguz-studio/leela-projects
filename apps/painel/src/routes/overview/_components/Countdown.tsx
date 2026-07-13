@@ -5,14 +5,15 @@
 // honesta (data · local — SEM hora: o doc não tem horário de largada), stats
 // 2-col (Inscritos / Vagas livres) entre hairlines e quick-actions em grade 3.
 //
-// Divergências honestas vs mockup (registradas no commit):
-//  - quick-action "Comunicar" → "Gerenciar" (não existe rota de comunicação);
-//  - o bloco "Ações rápidas" geral saiu (Novo evento vive na Toolbar T3 e
-//    "Ver todos" no section-link dos eventos T5).
+// D3 (2026-07-13): com a aba Comunicação aterrissada (E06-L3), a quick-action
+// central volta a ser "Comunicar" (fiel ao mockup: Ver inscritos · Comunicar ·
+// Check-in) — resolve a divergência antiga "Comunicar → Gerenciar" (a rota
+// agora existe). O bloco "Ações rápidas" geral segue fora (Novo evento na
+// Toolbar T3; "Ver todos" no section-link dos eventos T5).
 // =============================================================================
 
 import { Skeleton, cn } from '@leela/design-system';
-import { Clock, MapPin, QrCode, Settings2, Users } from 'lucide-react';
+import { Clock, MapPin, Megaphone, QrCode, Users } from 'lucide-react';
 import type { CountdownView } from '../_lib/countdown';
 import { formatInt } from '../_lib/format';
 import { PanelError } from './PanelError';
@@ -32,12 +33,12 @@ interface QuickAction {
   icon: typeof Users;
 }
 
-// Mockup tem Ver inscritos · Comunicar · Check-in; "Comunicar" não tem rota —
-// entra "Gerenciar" (real) no lugar.
+// Fiel ao mockup: Ver inscritos · Comunicar · Check-in (D3 — a rota de
+// comunicação existe desde E06-L3).
 const QUICK_ACTIONS: QuickAction[] = [
   { label: 'Ver inscritos', href: (c) => c.inscritosHref, icon: Users },
+  { label: 'Comunicar', href: (c) => c.comunicacaoHref, icon: Megaphone },
   { label: 'Check-in', href: (c) => c.checkinHref, icon: QrCode },
-  { label: 'Gerenciar', href: (c) => c.gerenciarHref, icon: Settings2 },
 ];
 
 const LABEL_UPPER = 'uppercase tracking-[var(--countdown-label-spacing)]';

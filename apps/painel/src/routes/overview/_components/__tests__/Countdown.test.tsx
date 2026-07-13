@@ -40,15 +40,15 @@ describe('Countdown (S602-T1 · T6 card fiel)', () => {
     expect(screen.getByText('27 Abr · Florianópolis/SC')).toBeInTheDocument();
   });
 
-  it('quick-actions navegam: Ver inscritos, Check-in (E03) e Gerenciar', async () => {
+  it('quick-actions navegam: Ver inscritos, Comunicar (E06 · D3) e Check-in (E03)', async () => {
     const onNavigate = vi.fn();
     render(<Countdown countdown={view()} loading={false} onNavigate={onNavigate} />);
     await userEvent.click(screen.getByRole('button', { name: 'Ver inscritos' }));
     expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/inscritos');
+    await userEvent.click(screen.getByRole('button', { name: 'Comunicar' }));
+    expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/comunicacao');
     await userEvent.click(screen.getByRole('button', { name: 'Check-in' }));
     expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/entrega');
-    await userEvent.click(screen.getByRole('button', { name: 'Gerenciar' }));
-    expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026');
   });
 
   it('bloco "Ações rápidas" geral saiu (Novo evento vive na Toolbar)', () => {
