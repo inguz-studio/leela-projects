@@ -317,6 +317,14 @@ export {
   getClaims,
 } from './auth';
 
+// Recuperação de senha (LEELA-S020-T2): disparo do e-mail (confirmação neutra
+// no chamador) + verificação/efetivação do oobCode na tela de redefinição.
+export {
+  enviarResetSenha,
+  verificarCodigoResetSenha,
+  confirmarResetSenha,
+} from './auth';
+
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
 // ---------------------------------------------------------------------------

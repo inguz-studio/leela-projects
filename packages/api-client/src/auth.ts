@@ -22,6 +22,9 @@ import {
   signInAnonymously,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  verifyPasswordResetCode,
+  confirmPasswordReset,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup,
@@ -184,4 +187,39 @@ export async function getClaims(
   if (!user) return null;
   const token = await user.getIdTokenResult(forceRefresh);
   return token.claims as Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// Recuperação de senha (LEELA-S020-T2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispara o e-mail de redefinição de senha.
+ *
+ * SEGURANÇA (anti-enumeração): o CHAMADOR deve tratar o resultado como neutro —
+ * mostrar sempre a MESMA confirmação, exista ou não a conta. Com a "Email
+ * Enumeration Protection" ligada no Firebase, esta chamada nem lança
+ * `auth/user-not-found`; sem ela, o chamador engole esse erro específico e
+ * ainda assim confirma de forma neutra (ver RecuperarSenhaPage).
+ *
+ * PRODUÇÃO: para a redefinição cair na tela do painel (`/redefinir-senha`) em
+ * vez da página hospedada do Firebase, configure o "Action URL" do template de
+ * e-mail no Firebase Console apontando para essa rota.
+ */
+export async function enviarResetSenha(email: string): Promise<void> {
+  return sendPasswordResetEmail(getLeelaAuth(), email);
+}
+
+/**
+ * Valida um `oobCode` de redefinição (link do e-mail) e devolve o e-mail
+ * associado. Lança `auth/expired-action-code` / `auth/invalid-action-code`
+ * quando o código não presta — o chamador traduz para copy honesta.
+ */
+export async function verificarCodigoResetSenha(oobCode: string): Promise<string> {
+  return verifyPasswordResetCode(getLeelaAuth(), oobCode);
+}
+
+/** Efetiva a nova senha para um `oobCode` válido. */
+export async function confirmarResetSenha(oobCode: string, novaSenha: string): Promise<void> {
+  return confirmPasswordReset(getLeelaAuth(), oobCode, novaSenha);
 }

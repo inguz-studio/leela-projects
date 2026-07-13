@@ -11,6 +11,8 @@ import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
+import { RecuperarSenhaPage } from './routes/conta/auth/RecuperarSenhaPage';
+import { RedefinirSenhaPage } from './routes/conta/auth/RedefinirSenhaPage';
 import { createQueryClient } from './lib/query/client';
 
 export function App() {
@@ -28,6 +30,8 @@ export function App() {
               continua caindo em `/` (branch com shell) intacto. */}
           <Route element={<AuthLayout />}>
             <Route path="/entrar" element={<EntrarPage />} />
+            <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
+            <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
           </Route>
           {/* App autenticado — moldura padrão (Lote B3): sidebar fixa em TODAS
               as rotas (item 18 do DoD). Descendant Routes (pathnameBase `/`)
