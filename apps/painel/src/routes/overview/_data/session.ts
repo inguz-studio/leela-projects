@@ -23,6 +23,59 @@ export interface OverviewSession {
   role: Role | null;
 }
 
+/** Lê os claims do token; `force` refaz o ID token (pega claim recém-setado). */
+async function lerClaims(force: boolean): Promise<AuthClaims | null> {
+  return (await getClaims(force)) as AuthClaims | null;
+}
+
+/**
+ * Resolve a sessão de forma RESILIENTE, sem NUNCA travar em 'loading'
+ * (hardening irmão do LEELA-CLUBES-FIX `711af42`).
+ *
+ * Embora `getOverview` seja callable server-side (deriva o tenant de
+ * context.auth, e por isso a Visão Geral escapava do bug de clubes), este hook
+ * ainda expõe `tenantId`/`role` do claim para a UI (distingue staff sem eventos
+ * de produtor sem eventos — E02-L1). A versão antiga fazia `getClaims().then()`
+ * SEM forceRefresh e SEM catch: sob o preview-seed (que seta o claim e logo
+ * REVOGA os refresh tokens), uma REJEIÇÃO deixaria a sessão presa em 'loading'
+ * para sempre. Blindamos aqui pela MESMA razão que clubes — um ponto de falha
+ * latente a menos.
+ *
+ * `nome` sai do Firebase `user.displayName` (não do claim) e é preservado em
+ * todos os desfechos; `tenantId`/`role` vêm do claim recuperado (cache → refresh
+ * forçado → terminal sem tenant). A sessão sempre sai de 'loading'.
+ */
+async function resolverSessao(uid: string, nome: string | null): Promise<OverviewSession> {
+  try {
+    let claims = await lerClaims(false);
+    if (!claims?.tenantId) claims = await lerClaims(true);
+    return {
+      status: 'authenticated',
+      uid,
+      tenantId: claims?.tenantId ?? null,
+      nome,
+      role: claims?.role ?? null,
+    };
+  } catch {
+    // Cache falhou (ex.: token defasado pós-revoke) → uma última tentativa forçada.
+    try {
+      const claims = await lerClaims(true);
+      return {
+        status: 'authenticated',
+        uid,
+        tenantId: claims?.tenantId ?? null,
+        nome,
+        role: claims?.role ?? null,
+      };
+    } catch {
+      // Token irrecuperável (refresh token revogado). NÃO trava em loading:
+      // autenticado sem tenant/role → a UI degrada honestamente (saudação
+      // genérica, sem distinção de papel), nunca skeleton eterno.
+      return { status: 'authenticated', uid, tenantId: null, nome, role: null };
+    }
+  }
+}
+
 /** Observa a sessão Firebase e extrai uid + tenantId (claim) + nome (displayName). */
 export function useOverviewSession(): OverviewSession {
   const [session, setSession] = useState<OverviewSession>({
@@ -42,16 +95,8 @@ export function useOverviewSession(): OverviewSession {
         }
         return;
       }
-      void getClaims().then((claims) => {
-        if (!ativo) return;
-        const parsed = claims as AuthClaims | null;
-        setSession({
-          status: 'authenticated',
-          uid: user.uid,
-          tenantId: parsed?.tenantId ?? null,
-          nome: user.displayName ?? null,
-          role: parsed?.role ?? null,
-        });
+      void resolverSessao(user.uid, user.displayName ?? null).then((next) => {
+        if (ativo) setSession(next);
       });
     });
     return () => {
