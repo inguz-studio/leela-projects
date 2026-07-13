@@ -433,3 +433,11 @@ export type {
   AplicarPlanoInput,
   AplicarPlanoResult,
 } from './platform/planosCobranca';
+
+// ---------------------------------------------------------------------------
+// Plataforma — profissionais + join tenant → owner (LEELA-CONS-4-T1)
+// Nome real do dono do tenant: reader com join (Rules já autorizam a
+// leitura para os mesmos leitores do tenant — sem denormalização).
+// ---------------------------------------------------------------------------
+export { getProfissional, getTenantComOwner } from './platform/profissionais';
+export type { TenantComOwner } from './platform/profissionais';
