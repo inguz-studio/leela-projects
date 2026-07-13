@@ -417,3 +417,19 @@ export type {
   EnviarCampanhaInput,
   EnviarCampanhaResult,
 } from './eventos/campanhas';
+
+// ---------------------------------------------------------------------------
+// Plataforma — planos de cobrança (LEELA-T2-L4 · CB-T1/CB-T2 · decisão #15)
+// CRUD do plano (Rules: platform_admin em read E write) + aplicarPlano
+// (callable — estampa versionada nos commercialTerms; SEM vínculo vivo).
+// ---------------------------------------------------------------------------
+export {
+  listPlanosCobranca,
+  getPlanoCobranca,
+  savePlanoCobranca,
+  aplicarPlano,
+} from './platform/planosCobranca';
+export type {
+  AplicarPlanoInput,
+  AplicarPlanoResult,
+} from './platform/planosCobranca';

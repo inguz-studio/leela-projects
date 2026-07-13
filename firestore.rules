@@ -178,7 +178,27 @@ service cloud.firestore {
                     && request.resource.data.retencaoRepassePct <= 100))
             && (!('disponibilizacaoDiasUteis' in request.resource.data)
                 || (request.resource.data.disponibilizacaoDiasUteis is int
-                    && request.resource.data.disponibilizacaoDiasUteis >= 0));
+                    && request.resource.data.disponibilizacaoDiasUteis >= 0))
+            // Onda 2 (T2-L4 · decisão #15): taxa por método + tabela por
+            // parcela OPCIONAIS — quando presentes, ranges travados
+            // (NaN/Infinity falham comparação — fail-closed, como acima).
+            // Estampados pelo aplicarPlano (Admin SDK) e reeditáveis
+            // campo-a-campo pelo editor S1602-T2 (client, ESTA rule).
+            && (!('taxaPorMetodo' in request.resource.data)
+                || (request.resource.data.taxaPorMetodo is map
+                    && request.resource.data.taxaPorMetodo.credit_card is number
+                    && request.resource.data.taxaPorMetodo.credit_card >= 0
+                    && request.resource.data.taxaPorMetodo.credit_card <= 100
+                    && request.resource.data.taxaPorMetodo.pix is number
+                    && request.resource.data.taxaPorMetodo.pix >= 0
+                    && request.resource.data.taxaPorMetodo.pix <= 100))
+            && (!('tabelaTaxasParcela' in request.resource.data)
+                || request.resource.data.tabelaTaxasParcela is map)
+            // Rastro de plano aplicado (CB-T2) — referência MORTA, tipada
+            && (!('planoAplicadoId' in request.resource.data)
+                || request.resource.data.planoAplicadoId is string)
+            && (!('planoAplicadoEm' in request.resource.data)
+                || request.resource.data.planoAplicadoEm is timestamp);
         }
 
         allow read: if isTenantMember(tenantId) || isPlatformAdmin();
@@ -268,6 +288,41 @@ service cloud.firestore {
     match /platform/{doc=**} {
       allow read: if isPlatformAdmin();
       allow write: if false;
+    }
+
+    // ── `planosCobranca/{planoId}` — planos de cobrança da PLATAFORMA ─────
+    // (Onda 2 T2-L4 · CB-T1 · decisão #15). Catálogo PRIVADO do
+    // platform_admin: read E write só dele — tenant NUNCA enxerga os
+    // planos (só o resultado estampado nos próprios commercialTerms).
+    // Aplicar plano NÃO passa por aqui: é o callable `aplicarPlano`
+    // (Admin SDK) que estampa a versão nos termos do tenant.
+    // Nota de path: o brief grafou `platform/planosCobranca/{planoId}`
+    // (caminho de doc inválido — segmentos ímpares); normalizado para
+    // coleção top-level com a MESMA semântica platform-scoped.
+    match /planosCobranca/{planoId} {
+
+      /** Shape do plano — espelho de validarPlanoCobranca (core).
+          Finitude sem math.isInfinite: NaN/±Infinity falham as
+          comparações de range (fail-closed). */
+      function shapePlanoValido() {
+        return request.resource.data.nome is string
+          && request.resource.data.nome.trim().size() > 0
+          && request.resource.data.nome.size() <= 60
+          && request.resource.data.taxaPix is number
+          && request.resource.data.taxaPix >= 0
+          && request.resource.data.taxaPix <= 100
+          && request.resource.data.taxaCartaoAVista is number
+          && request.resource.data.taxaCartaoAVista >= 0
+          && request.resource.data.taxaCartaoAVista <= 100
+          && request.resource.data.saasMonthlyFee is number
+          && request.resource.data.saasMonthlyFee >= 0
+          && request.resource.data.saasMonthlyFee * 0.0 == 0.0
+          && request.resource.data.tabelaTaxasParcela is map;
+      }
+
+      allow read: if isPlatformAdmin();
+      allow create, update: if isPlatformAdmin() && shapePlanoValido();
+      allow delete: if isPlatformAdmin();
     }
 
     // ── Coleções tenant-scoped ────────────────────────────────────────────

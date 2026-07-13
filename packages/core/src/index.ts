@@ -852,3 +852,30 @@ export {
   ordenarPorConsistencia,
   montarBoardConsistencia,
 } from './clubs/consistencia';
+
+// ---------------------------------------------------------------------------
+// Plataforma — plano de cobrança nomeado (LEELA-T2-L4 · CB-T1 · decisão #15)
+// Aplicar = ESTAMPAR snapshot versionado nos commercialTerms do tenant
+// (mecanismo S1602-T1) — SEM vínculo vivo. Coleção top-level
+// planosCobranca/{planoId}, read+write SÓ platform_admin.
+// ---------------------------------------------------------------------------
+export type {
+  TaxaPorMetodo,
+  TabelaTaxasParcela,
+} from './platform/commercialTerms';
+export {
+  CHAVES_TABELA_PARCELAS,
+  isTabelaTaxasParcelaValida,
+} from './platform/commercialTerms';
+export type {
+  PlanoCobranca,
+  PlanoCobrancaInput,
+  TermosDoPlanoCobranca,
+} from './platform/planoCobranca';
+export {
+  PLANOS_COBRANCA_COLLECTION,
+  PLANO_PADRAO_ID,
+  PLANO_PADRAO,
+  validarPlanoCobranca,
+  planoParaTerms,
+} from './platform/planoCobranca';

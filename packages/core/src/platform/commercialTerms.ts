@@ -45,6 +45,46 @@ export interface Anticipation {
 }
 
 /**
+ * Taxa % por método de pagamento (Onda 2 — decisão Vitor 2026-07-05):
+ * comissão da plataforma DEDUZIDA da receita do produtor, por método.
+ * Métodos V1 = cartão de crédito + PIX (sem boleto). 10/8 são DEFAULTS
+ * (nascem do plano "Padrão"), não valores fixos — configurável pelo
+ * platform_admin (editor S1602-T2) e estampado por plano (T2-L4).
+ */
+export interface TaxaPorMetodo {
+  credit_card: number;
+  pix: number;
+}
+
+/**
+ * Tabela de taxas por nº de parcelas (2x-12x) — chaves '2'..'12', valor em
+ * % sobre o parcelamento (0 = sem taxa). 1x à vista NÃO entra na tabela
+ * (sem taxa de parcela por definição); só cartão parcela.
+ */
+export type TabelaTaxasParcela = Record<string, number>;
+
+/** Chaves canônicas da tabela por parcela (2x..12x). */
+export const CHAVES_TABELA_PARCELAS: readonly string[] = [
+  '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12',
+];
+
+/**
+ * Tabela estruturalmente válida? Toda chave deve ser 2..12 e toda taxa
+ * finita em [0, 100]. NÃO exige completude — a edição fina por tenant
+ * pode ajustar chaves isoladas (o PLANO exige completude na própria
+ * validação, ver planoCobranca.ts). @pure
+ */
+export function isTabelaTaxasParcelaValida(tabela: unknown): tabela is TabelaTaxasParcela {
+  if (!tabela || typeof tabela !== 'object' || Array.isArray(tabela)) return false;
+  for (const [chave, valor] of Object.entries(tabela)) {
+    if (!CHAVES_TABELA_PARCELAS.includes(chave)) return false;
+    if (typeof valor !== 'number' || !Number.isFinite(valor)) return false;
+    if (valor < 0 || valor > 100) return false;
+  }
+  return true;
+}
+
+/**
  * Termos comerciais do tenant — doc `commercialTerms/current`.
  * Escrita exclusiva do platform_admin (RN-404).
  */
@@ -71,6 +111,27 @@ export interface CommercialTerms {
    * (DISPONIBILIZACAO_DIAS_UTEIS_DEFAULT = 2). Mesma disciplina RN-404.
    */
   disponibilizacaoDiasUteis?: number;
+  /**
+   * Onda 2 (T2-L4/E12/E04 · decisão 2026-07-05): taxa % POR MÉTODO
+   * (credit_card/pix). OPCIONAL: ausente ⇒ consumo a jusante cai no
+   * `platformFeePct` legado. Chega ao tenant via PLANO (aplicarPlano
+   * estampa) e segue ajustável campo-a-campo (editor S1602-T2, RN-404).
+   */
+  taxaPorMetodo?: TaxaPorMetodo;
+  /**
+   * Onda 2: tabela de taxas por parcela 2x-12x. OPCIONAL (mesma
+   * disciplina do taxaPorMetodo) — `finance/calc` a consome quando
+   * presente. Estampada por plano; ajustável campo-a-campo.
+   */
+  tabelaTaxasParcela?: TabelaTaxasParcela;
+  /**
+   * Auditoria de origem (T2-L4 · CB-T2): id do plano aplicado que estampou
+   * esta versão — REFERÊNCIA MORTA (rastro; SEM vínculo vivo: editar o
+   * plano depois NÃO retroage; só reaplicar re-estampa).
+   */
+  planoAplicadoId?: string;
+  /** Quando o plano foi aplicado (par do planoAplicadoId — rastro). */
+  planoAplicadoEm?: Timestamp;
   /** Versão do termo (int ≥ 1); snapshots v{versao} são imutáveis */
   versao: number;
   /** uid do platform_admin que gravou esta versão */
@@ -184,6 +245,26 @@ export function validateCommercialTerms(
       input.disponibilizacaoDiasUteis < 0
     ) {
       errors.push('disponibilizacaoDiasUteis deve ser inteiro ≥ 0 (RN-348).');
+    }
+  }
+
+  // Onda 2 (T2-L4): campos por método/parcela OPCIONAIS — quando presentes,
+  // ranges travados (mesma disciplina dos campos de repasse acima).
+  if (input.taxaPorMetodo !== undefined) {
+    const t = input.taxaPorMetodo;
+    if (
+      !t || typeof t !== 'object' ||
+      !isFiniteNumber(t.credit_card) || t.credit_card < 0 || t.credit_card > 100 ||
+      !isFiniteNumber(t.pix) || t.pix < 0 || t.pix > 100
+    ) {
+      errors.push('taxaPorMetodo deve ter credit_card e pix entre 0 e 100.');
+    }
+  }
+  if (input.tabelaTaxasParcela !== undefined) {
+    if (!isTabelaTaxasParcelaValida(input.tabelaTaxasParcela)) {
+      errors.push(
+        'tabelaTaxasParcela inválida (chaves 2..12; taxas entre 0 e 100).'
+      );
     }
   }
 
