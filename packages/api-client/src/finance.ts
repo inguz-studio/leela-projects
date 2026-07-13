@@ -61,3 +61,56 @@ export async function saveDadosBancarios(
   const { data } = await fn(input);
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// Solicitação e cancelamento de repasse (L2-T3 · RN-351/352/353 · decisão #11)
+// ---------------------------------------------------------------------------
+
+export interface RequestRepasseInput {
+  /** Valor solicitado (R$, 2 casas). O ESPELHO client de RN-352 é só UX —
+   *  o servidor relê o disponível e é autoritativo (failed-precondition). */
+  valor: number;
+}
+
+export interface RequestRepasseResult {
+  repasseId: string;
+  estado: 'solicitado';
+  valor: number;
+  /** Disponível APÓS comprometer esta solicitação (RN-351). */
+  disponivel: number;
+}
+
+/** Solicita um repasse (tenant_owner). Servidor valida contra o saldo. */
+export async function requestRepasse(
+  input: RequestRepasseInput
+): Promise<RequestRepasseResult> {
+  const fn = httpsCallable<RequestRepasseInput, RequestRepasseResult>(
+    getLeelaFunctions(),
+    'requestRepasse'
+  );
+  const { data } = await fn(input);
+  return data;
+}
+
+export interface CancelRepasseInput {
+  repasseId: string;
+}
+
+export interface CancelRepasseResult {
+  repasseId: string;
+  estado: 'cancelado';
+  /** true = já estava cancelado (retry idempotente). */
+  replay: boolean;
+}
+
+/** Cancela uma solicitação AINDA em 'solicitado' (só o tenant_owner). */
+export async function cancelRepasse(
+  input: CancelRepasseInput
+): Promise<CancelRepasseResult> {
+  const fn = httpsCallable<CancelRepasseInput, CancelRepasseResult>(
+    getLeelaFunctions(),
+    'cancelRepasse'
+  );
+  const { data } = await fn(input);
+  return data;
+}

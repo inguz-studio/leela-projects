@@ -77,10 +77,15 @@ type Tx = admin.firestore.Transaction;
 // transacional da corrida usa EXATAMENTE esta leitura dentro da MESMA tx)
 // ---------------------------------------------------------------------------
 
+/** Projeção de repasse COM id (o cancel/reject substitui o estado do alvo). */
+export interface RepasseSaldoInputComId extends RepasseSaldoInput {
+  id: string;
+}
+
 /** Inputs do recompute lidos num snapshot transacional único. */
 export interface SaldoRepasseInputs {
   eventos: EventoSaldoInput[];
-  repasses: RepasseSaldoInput[];
+  repasses: RepasseSaldoInputComId[];
   /** % de retenção do termo — undefined ⇒ default 15 do core (RN-350) */
   retencaoPct: number | undefined;
   /** Σ fundos ainda na janela D+N (RN-348) — derivado dos pagamentos */
@@ -144,7 +149,7 @@ export async function lerInputsSaldoRepasse(
   const repassesSnap = await tx.get(
     db.collection('tenants').doc(tenantId).collection('repasses')
   );
-  const repasses: RepasseSaldoInput[] = repassesSnap.docs.map((doc) => {
+  const repasses: RepasseSaldoInputComId[] = repassesSnap.docs.map((doc) => {
     const estado = doc.get('estado');
     const valor = doc.get('valor');
     if (!isEstadoRepasse(estado)) {
@@ -157,7 +162,7 @@ export async function lerInputsSaldoRepasse(
         `repasse '${doc.id}' com valor inválido — dado corrompido.`
       );
     }
-    return { estado, valor };
+    return { id: doc.id, estado, valor };
   });
 
   // 4. Termo comercial do tenant (decisão #4 — % retenção e D+N por tenant)

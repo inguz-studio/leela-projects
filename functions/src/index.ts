@@ -144,3 +144,10 @@ export {
 // no `dadosBancariosSecret` + persistência SÓ mascarada no `dadosBancarios`.
 // tenant_owner-only; fail-closed sem BANK_DATA_KEY. ⚠️ Fable (LGPD).
 export { saveDadosBancarios } from './finance/saveDadosBancarios';
+
+// Finance — SOLICITAÇÃO/CANCELAMENTO de repasse (E09s-L2-T3 · RN-351/352/
+// 353 · decisão #11): validação transacional contra o disponível RELIDO no
+// servidor (corrida de 2 solicitações > disponível ⇒ a 2ª falha); snapshot
+// bancário mascarado congelado; cancelamento devolve ao disponível.
+// ⚠️ Fable (dinheiro).
+export { requestRepasse, cancelRepasse } from './finance/requestRepasse';
