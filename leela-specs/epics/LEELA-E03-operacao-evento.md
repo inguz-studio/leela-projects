@@ -1679,3 +1679,8 @@ Ajuste manual de saldo físico (fora desta fase).
 `S200-T1 → S200-T2` (dados + hub) → `S201` (criar/publicar) → `S202-T1` (layout/shell do evento, desbloqueia o resto) → `S203` (inscritos) → `S205` (kits) → `S204` (balcão, depende de inscritos+kits) → `S206` (editar kit) → `S207` (financeiro). Ao fim, o épico é demonstrável ponta a ponta com os mocks de HANDOFF-05.
 
 Stories de lacuna (gap) encaixam após o núcleo: `S209` (tamanho por inscrito · Must; carimba `inscritos.tamanhos`, base do aprovisionamento) → `S210` (aprovisionamento por SKU · depende dura de S209) → `S208` (check-in por QR no balcão · estende S204-T2 e a galeria de estados). `S208` também depende do `qrToken` emitido na confirmação (S1206/E12).
+
+## Regras de negócio novas (Vitor 2026-07-13 — cadastro de evento enriquecido)
+
+- **RN-160 (proposta) · Cadastro de evento completo (S201 revisão):** o form de Novo Evento coleta o que a página pública mobile (wireframe Figma `112-4622`, tela "Corrida do Campeche") precisa: **capa (foto)**, nome, data + horário, endereço/local completo, descrição/informações, **regulamento**, e **lista de modalidades estruturada** (nome/distância — vocabulário fechado + entrada livre). **Lotes NÃO entram no cadastro inicial** (configurados depois, na aba Lotes do painel — decisão reafirmada 2026-07-13). Layout do form: **informações centralizadas** (coluna central, não full-width).
+- **RN-347 no cadastro:** o toggle **taxa incorporada vs. repassada** aparece já no cadastro do evento (default do tenant; editável depois em Configurações).

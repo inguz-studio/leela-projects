@@ -264,3 +264,7 @@ Exibir as métricas de comunidade (novos atletas por clube/mês, churn de clube,
 ## Ordem sugerida
 
 `S821-T1 (Function de rollup + nota BigQuery) → S821-T2 (dashboard) → S822 (conversão) → S823 (comunidade)`. Todas as telas leem o snapshot mantido pela Function; nenhum cálculo pesado roda no cliente. O export BigQuery entra como hook atrás de flag, com a modelagem do dataset deixada para fase posterior.
+
+## Regras de negócio novas (Vitor 2026-07-13 — análise de vendas antecipada)
+
+- **RN-820 (proposta) · Aba "Financeiro" do menu → análise de vendas (antecipa E11 ao nível do profissional):** desempenho de vendas, perfil de compradores (distribuição por idade e sexo), modalidades com mais inscritos e **tamanhos de camiseta mais pedidos** (entrega pré-preparada — quase toda corrida tem camiseta no kit; a fonte já existe: agregado de aprovisionamento por SKU do FABLE-D). Dados derivados dos agregados existentes (dashboard/current, financeiro/current, aprovisionamento) — nunca varredura no cliente.
