@@ -813,3 +813,8 @@ UI de transferência no app (LEELA-S1316); cobrança da diferença (fluxo de che
 - **De-para:** BH-800 (Financeiro do profissional, `Financeiro.html`, L) → LEELA-E09 · stories LEELA-S900…S903.
 - **Consolida** conceitos de BH-207/BH-302 (financeiro do evento) na visão do profissional, sem duplicar a tela por-evento (que fica em E03/E04).
 - **Depende** de `PaymentProvider` (ADR-006), agregados por Function (ADR-005, `modelo-de-dados-firestore.md`) e DS (E01).
+
+## Regras de negócio novas (Vitor 2026-07-12 — ratificadas em conversa, números propostos)
+
+- **RN-347 (proposta) · Modo da taxa afeta o "a receber".** O cálculo de repasse respeita o modo configurado no evento (E04/`commercialTerms`): **incorporada** → "valor a receber" = face − taxa (a taxa é débito no fluxo do organizador); **repassada** → "valor a receber" = face (a taxa nunca foi dinheiro dele e NÃO aparece no seu fluxo de caixa). O FIX 3 atual assume um único modo — corrigir quando a máquina de repasses aterrissar.
+- **RN-348 (proposta) · Disponibilização D+N (default D+2 úteis) + retenção % — ajustáveis por cliente.** "Valor disponível" = só fundos que já passaram da janela D+N; "Valor a ser disponibilizado" = retenção (default 15%) + fundos ainda dentro da janela. Config por-tenant em `commercialTerms` (D+N e % de retenção). Hoje o FIX 3 mostra aproximação estática (disponível = total − retenção); a janela D+N entra com a máquina de repasses (S902).

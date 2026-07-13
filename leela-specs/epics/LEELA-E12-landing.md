@@ -1402,3 +1402,8 @@ Fecha a Onda 2 junto com E04 (config de vendas) e o `PaymentProvider` sandbox: a
 - **Fornecedor de e-mail transacional (ADR de e-mail, S1206)** — pendente. A interface `EmailProvider` (`packages/core`) espelha o padrão plugável de `PaymentProvider` (ADR-006): o épico depende só da interface + implementação sandbox; o fornecedor concreto (Resend/SendGrid) fica atrás da interface e deve ser fixado em ADR de e-mail própria (fecha `integracoes.md §6`). Sem a ADR, o envio real e a entregabilidade ficam bloqueados; o fluxo é construído/testado com o provider sandbox.
 - **Design do portal público do organizador (S1208, greenfield)** — sem HTML/Figma de referência; layout do portal e dos blocos (hub eventos/agenda, fotos, blog, patrocinadores, newsletter) e do editor no painel (E04) precisam de rodada de design antes do plano de execução.
 - **Template de e-mail de marca (S1206, greenfield)** — sem referência visual; depende de rodada de design do template transacional (identidade Leela) antes de finalizar T4.
+
+## Regras de negócio novas (Vitor 2026-07-12 — impacto no checkout)
+
+- **RN-347 (proposta, dona = E04/E09):** o total do comprador exibe a taxa de serviço SÓ quando o evento está em modo **repassada** (face + taxa); em modo **incorporada** o comprador vê o preço de face. `computeSaleState` já calcula a taxa — o modo decide quem paga. Nunca vazar `platformFeePct`/termos comerciais ao comprador (fix de confidencialidade `703db9c` continua valendo).
+- **RN-303 (proposta, dona = E04):** evento em modo "somente via cupom" → o checkout público exige cupom válido antes da seleção de modalidade/kit e comunica claramente que as vendas são fechadas.
