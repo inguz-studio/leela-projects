@@ -24,6 +24,7 @@ import {
   estornarInscricao,
   getLeelaDb,
   getLeelaFunctions,
+  provisionTenant,
   publicarPaginaVendas,
   removerConviteEquipe,
   removerCupom,
@@ -34,11 +35,13 @@ import {
   salvarCupom,
   salvarKit,
   salvarLote,
+  saveCommercialTerms,
   saveDadosBancarios,
   setClaimsEquipe,
   transferirPropriedade,
   transicaoAprovisionamento,
   transicionarParceria,
+  transitionTenant,
   type AtualizarConfiguracoesEventoInput,
   type ConvidarMembroEquipeInput,
   type CriarEventoInput,
@@ -46,6 +49,7 @@ import {
   type CriarPatrocinadorInput,
   type EstornarInscricaoInput,
   type EstornarInscricaoResult,
+  type ProvisionResult,
   type PublicarPaginaVendasResult,
   type RemoverMembroResult,
   type RequestRepasseInput,
@@ -59,12 +63,16 @@ import {
   type SetClaimsEquipeResult,
   type TransferirPropriedadeResult,
   type TransicaoAprovisionamentoResult,
+  type TransitionResult,
 } from '@leela/api-client';
 import type {
+  CommercialTermsInput,
   EstadoAprovisionamento,
   MembroEquipe,
   PapelEvento,
+  ProvisionInput,
   StatusParceria,
+  TenantStatus,
 } from '@leela/core';
 import { queryKeys } from './keys';
 
@@ -602,6 +610,73 @@ export function useRequestRepasse(
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.repasse.saldo(tenantId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.repasse.historico(tenantId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations de PLATAFORMA (E16 · S1601/S1602 — super-admin). Escrita EXCLUSIVA
+// de Cloud Function (ADR-005 · RN-402/403): o cliente NUNCA grava status/tenant/
+// termos direto. Aposentam o `reloadKey` (contador de refetch dos containers):
+// no onSuccess cada mutation INVALIDA por PREFIXO a família de leitura afetada
+// (`['plataforma', ...]`) — a chave dos readers embute o reloadKey, então o
+// prefixo casa qualquer valor. Read-your-writes declarativo (ADR-010): provisionar
+// mostra o tenant na lista, transitar reflete o status na lista+detalhe, salvar
+// termos reflete a versão vigente — tudo sem tocar as telas. Erro do callable
+// sobe INTACTO para a UI (§2.12 — mensagem clara em failed-precondition).
+// =============================================================================
+
+/**
+ * Provisiona/aprova um tenant (callable `provisionTenant` — atômico, RN-403) e
+ * invalida a família de tenants (a lista revalida com o novo tenant) + os
+ * rollups macro (contagem/GMV recontados). Idempotente por slug no servidor.
+ */
+export function useProvisionTenant(): UseMutationResult<ProvisionResult, Error, ProvisionInput> {
+  const queryClient = useQueryClient();
+  return useMutation<ProvisionResult, Error, ProvisionInput>({
+    mutationFn: (input) => provisionTenant(getLeelaFunctions(), input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'tenants'] });
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'rollups'] });
+    },
+  });
+}
+
+/**
+ * Transita o status de um tenant (callable `transitionTenant` — valida a máquina
+ * RN-402 no servidor) e invalida o DETALHE do tenant (badge de status) + a LISTA
+ * (o filtro por status muda de bucket) + os rollups. `tenantId` fixa o alvo; a
+ * variável é só o status de destino.
+ */
+export function useTransitionTenant(
+  tenantId: string,
+): UseMutationResult<TransitionResult, Error, TenantStatus> {
+  const queryClient = useQueryClient();
+  return useMutation<TransitionResult, Error, TenantStatus>({
+    mutationFn: (to) => transitionTenant(getLeelaFunctions(), { tenantId, to }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'tenant', tenantId] });
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'tenants'] });
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'rollups'] });
+    },
+  });
+}
+
+/**
+ * Salva os termos comerciais vigentes de um tenant (batch atômico current +
+ * snapshot v{n} — SÓ platform_admin, RN-404) e invalida a família de termos do
+ * tenant: o editor reflete a versão gravada sem reload. Devolve a versão nova
+ * (bump anterior + 1). `adminUid` carimba a autoria server-side.
+ */
+export function useSaveCommercialTerms(
+  tenantId: string,
+  adminUid: string,
+): UseMutationResult<number, Error, CommercialTermsInput> {
+  const queryClient = useQueryClient();
+  return useMutation<number, Error, CommercialTermsInput>({
+    mutationFn: (input) => saveCommercialTerms(getLeelaDb(), tenantId, input, adminUid),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['plataforma', 'termos', tenantId] });
     },
   });
 }

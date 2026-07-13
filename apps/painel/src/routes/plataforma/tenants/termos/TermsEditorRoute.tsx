@@ -1,16 +1,18 @@
 // =============================================================================
 // TermsEditorRoute — container de `/plataforma/tenants/:tenantId/termos`
-// (S1602-T2). Liga dados (useCommercialTerms) + save (useSaveCommercialTerms) +
-// Toast. readOnly deriva do papel (RN-404): só platform_admin edita. Sucesso
-// mostra a versão gravada e recarrega os termos vigentes.
+// (S1602-T2). Liga dados (useCommercialTerms) + save (useSaveCommercialTerms do
+// gateway) + Toast. readOnly deriva do papel (RN-404): só platform_admin edita.
+// No sucesso mostra a versão gravada; os termos vigentes revalidam sozinhos
+// (invalidação de chave, ADR-010), sem contador de reload.
 // =============================================================================
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useToast } from '@leela/design-system';
 import type { CommercialTermsInput } from '@leela/core';
 import { TermsEditor } from './TermsEditor';
-import { useCommercialTerms, useSaveCommercialTerms } from '../../_data/terms';
+import { useCommercialTerms } from '../../_data/terms';
+import { useSaveCommercialTerms } from '../../../../lib/query/mutations';
 import type { PlatformOutletContext } from '../../_components/PlatformShell';
 
 export function TermsEditorRoute(): JSX.Element {
@@ -18,18 +20,17 @@ export function TermsEditorRoute(): JSX.Element {
   const { isAdmin, uid } = useOutletContext<PlatformOutletContext>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [reloadKey, setReloadKey] = useState(0);
 
-  const { data: terms, loading, error } = useCommercialTerms(tenantId, reloadKey);
+  const { data: terms, loading, error } = useCommercialTerms(tenantId);
   const saver = useSaveCommercialTerms(tenantId, uid ?? '');
 
   const handleSave = useCallback(
     async (input: CommercialTermsInput) => {
-      const versao = await saver.save(input);
-      if (versao !== null) {
-        setReloadKey((k) => k + 1);
+      try {
+        const versao = await saver.mutateAsync(input);
+        // read-your-writes: `['plataforma','termos',id]` revalida no gateway.
         toast({ variant: 'success', title: 'Termos salvos', description: `Versão ${versao} vigente` });
-      } else {
+      } catch {
         toast({ variant: 'danger', title: 'Não foi possível salvar', description: 'Verifique os dados e tente novamente.' });
       }
     },
@@ -42,7 +43,7 @@ export function TermsEditorRoute(): JSX.Element {
       loading={loading}
       error={error}
       readOnly={!isAdmin}
-      saving={saver.saving}
+      saving={saver.isPending}
       saveError={saver.error}
       onSave={handleSave}
       onVoltar={() => navigate(`/plataforma/tenants/${tenantId}`)}

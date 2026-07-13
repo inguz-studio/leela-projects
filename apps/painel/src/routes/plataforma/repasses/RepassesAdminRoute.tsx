@@ -44,7 +44,7 @@ export function RepassesAdminRoute(): JSX.Element {
   const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const fila = useFilaRepasses(reloadKey);
-  const { data: tenants, loading: tenantsLoading } = useTenants(reloadKey);
+  const { data: tenants, loading: tenantsLoading } = useTenants();
   const filaActions = useRepasseAdminActions();
   const retencaoActions = useRepasseAdminActions();
   const retencao = useRetencaoTenant(selectedTenantId || null, reloadKey);

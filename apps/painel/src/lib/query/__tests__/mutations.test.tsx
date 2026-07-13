@@ -12,11 +12,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   useCriarEvento,
   useCriarPatrocinador,
+  useProvisionTenant,
   useRemoverMembro,
   useSalvarKit,
+  useSaveCommercialTerms,
   useTransferirPropriedade,
   useTransicaoAprovisionamento,
   useTransicionarParceria,
+  useTransitionTenant,
 } from '../mutations';
 import { queryKeys } from '../keys';
 
@@ -28,6 +31,9 @@ const mocks = vi.hoisted(() => ({
   transicaoAprovisionamento: vi.fn(),
   transicionarParceria: vi.fn(),
   criarPatrocinador: vi.fn(),
+  provisionTenant: vi.fn(),
+  transitionTenant: vi.fn(),
+  saveCommercialTerms: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', () => ({
@@ -38,6 +44,9 @@ vi.mock('@leela/api-client', () => ({
   transicaoAprovisionamento: mocks.transicaoAprovisionamento,
   transicionarParceria: mocks.transicionarParceria,
   criarPatrocinador: mocks.criarPatrocinador,
+  provisionTenant: mocks.provisionTenant,
+  transitionTenant: mocks.transitionTenant,
+  saveCommercialTerms: mocks.saveCommercialTerms,
   getLeelaFunctions: () => ({}),
   getLeelaDb: () => ({}),
 }));
@@ -206,6 +215,63 @@ describe('mutações de clube (read-your-writes · FID-CLUBES-F0)', () => {
       expect(invalidate).toHaveBeenCalledWith({
         queryKey: queryKeys.parcerias.doClube('clube-corrida'),
       }),
+    );
+  });
+});
+
+describe('mutações de PLATAFORMA (read-your-writes · CONS-3-T1)', () => {
+  it('useProvisionTenant reusa provisionTenant e invalida a família de tenants + rollups', async () => {
+    mocks.provisionTenant.mockResolvedValue({ tenantId: 't1', ownerUid: 'u1', replay: false });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useProvisionTenant(), { wrapper: makeWrapper(client) });
+    await result.current.mutateAsync({
+      nome: 'Corrida XYZ',
+      slug: 'corrida-xyz',
+      tipo: 'produtor',
+      ownerEmail: 'dono@x.com',
+    } as never);
+
+    expect(mocks.provisionTenant).toHaveBeenCalledTimes(1);
+    // Invalidação por PREFIXO (a chave dos readers embute reloadKey).
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'tenants'] }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'rollups'] });
+  });
+
+  it('useTransitionTenant injeta o tenantId e invalida detalhe + lista + rollups', async () => {
+    mocks.transitionTenant.mockResolvedValue({ success: true, tenantId: 't1', status: 'suspenso' });
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useTransitionTenant('t1'), { wrapper: makeWrapper(client) });
+    await result.current.mutateAsync('suspenso');
+
+    // eventoId... digo, tenantId injetado pelo hook; a variável é só o status.
+    expect(mocks.transitionTenant).toHaveBeenCalledWith({}, { tenantId: 't1', to: 'suspenso' });
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'tenant', 't1'] }),
+    );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'tenants'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'rollups'] });
+  });
+
+  it('useSaveCommercialTerms reusa saveCommercialTerms (com adminUid) e invalida os termos do tenant', async () => {
+    mocks.saveCommercialTerms.mockResolvedValue(3);
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+
+    const { result } = renderHook(() => useSaveCommercialTerms('t1', 'admin-uid'), {
+      wrapper: makeWrapper(client),
+    });
+    const versao = await result.current.mutateAsync({ taxaPct: 5 } as never);
+
+    expect(versao).toBe(3);
+    expect(mocks.saveCommercialTerms).toHaveBeenCalledWith({}, 't1', { taxaPct: 5 }, 'admin-uid');
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'termos', 't1'] }),
     );
   });
 });

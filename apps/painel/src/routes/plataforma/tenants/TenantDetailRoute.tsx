@@ -1,8 +1,9 @@
 // =============================================================================
 // TenantDetailRoute — container de `/plataforma/tenants/:tenantId` (S1601-T4).
-// Liga dados (useTenant) + ações de ciclo de vida (useTenantActions) + Toast +
-// ConfirmModal. Suspender confirma com preview (§2.15); aprovar/reativar são
-// diretos. Toda escrita passa por Cloud Function; sucesso recarrega o tenant.
+// Liga dados (useTenant) + transição de ciclo de vida (useTransitionTenant do
+// gateway) + Toast + ConfirmModal. Suspender confirma com preview (§2.15);
+// aprovar/reativar são diretos. Toda escrita passa por Cloud Function; no
+// sucesso a lista+detalhe revalidam sozinhos (invalidação de chave, ADR-010).
 // =============================================================================
 
 import { useCallback, useState } from 'react';
@@ -10,7 +11,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ConfirmModal, useToast } from '@leela/design-system';
 import type { TenantStatus } from '@leela/core';
 import { TenantDetail } from './TenantDetail';
-import { useTenant, useTenantActions } from '../_data/tenants';
+import { useTenant } from '../_data/tenants';
+import { useTransitionTenant } from '../../../lib/query/mutations';
 import { SUSPEND_PREVIEW, type LifecycleAction } from '../_lib/lifecycle';
 import { platformErrorMessage } from '../_lib/errors';
 
@@ -30,25 +32,24 @@ export function TenantDetailRoute(): JSX.Element {
   const { tenantId = '' } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [reloadKey, setReloadKey] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const { data: tenant, loading, error } = useTenant(tenantId, reloadKey);
-  const actions = useTenantActions();
+  const { data: tenant, loading, error } = useTenant(tenantId);
+  const transitionMutation = useTransitionTenant(tenantId);
 
   const runTransition = useCallback(
     async (to: TenantStatus) => {
-      const result = await actions.transition(tenantId, to);
-      if (result) {
+      try {
+        await transitionMutation.mutateAsync(to);
+        // read-your-writes: `['plataforma','tenant',id]` + a lista revalidam.
         setConfirmOpen(false);
-        setReloadKey((k) => k + 1);
         toast({ variant: 'success', title: successMessage(to), ...(tenant?.nome ? { description: tenant.nome } : {}) });
-      } else {
+      } catch (err) {
         setConfirmOpen(false);
-        toast({ variant: 'danger', title: 'Ação não concluída', description: platformErrorMessage(actions.error) });
+        toast({ variant: 'danger', title: 'Ação não concluída', description: platformErrorMessage(err as Error) });
       }
     },
-    [actions, tenantId, tenant?.nome, toast],
+    [transitionMutation, tenant?.nome, toast],
   );
 
   const handleAction = useCallback(
@@ -68,8 +69,8 @@ export function TenantDetailRoute(): JSX.Element {
         tenant={tenant}
         loading={loading}
         error={error}
-        running={actions.running}
-        actionError={actions.error}
+        running={transitionMutation.isPending}
+        actionError={transitionMutation.error}
         onAction={handleAction}
         onEditarTermos={() => navigate(`/plataforma/tenants/${tenantId}/termos`)}
         onVoltar={() => navigate('/plataforma/tenants')}
@@ -91,7 +92,7 @@ export function TenantDetailRoute(): JSX.Element {
         loses={[...SUSPEND_PREVIEW.loses]}
         keeps={[...SUSPEND_PREVIEW.keeps]}
         confirmLabel="Suspender tenant"
-        loading={actions.running}
+        loading={transitionMutation.isPending}
         onConfirm={() => void runTransition('suspenso')}
       />
     </>

@@ -28,7 +28,7 @@ export function PlanosRoute(): JSX.Element {
   const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const planos = usePlanosCobranca(reloadKey);
-  const { data: tenants, loading: tenantsLoading } = useTenants(reloadKey);
+  const { data: tenants, loading: tenantsLoading } = useTenants();
   const actions = usePlanoActions();
 
   function revalidar() {
