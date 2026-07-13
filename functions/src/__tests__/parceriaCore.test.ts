@@ -26,6 +26,7 @@ const eventoAfiliado: Parceria = {
   tipo: 'evento_afiliado',
   status: 'ativa',
   eventoId: 'meia-floripa-2026',
+  eventoNome: 'Meia Maratona Floripa 2026',
   organizadorId: 'uid-marina',
   programaAfiliacaoRef: 'eventos/meia-floripa-2026/programaAfiliacao/atual',
   comissaoPct: 10,
@@ -95,6 +96,8 @@ describe('guards do union Parceria', () => {
     expect(CAMPOS_ESPELHO_PARCERIA).toContain('comissaoPct');
     expect(CAMPOS_ESPELHO_PARCERIA).toContain('linkMaster');
     expect(CAMPOS_ESPELHO_PARCERIA).toContain('termosEspelho');
+    // CONS-4-T2: nome canônico denormalizado é espelho — cliente nunca escreve
+    expect(CAMPOS_ESPELHO_PARCERIA).toContain('eventoNome');
   });
 });
 

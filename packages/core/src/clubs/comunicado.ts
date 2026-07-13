@@ -58,22 +58,44 @@ export {
 // Taxonomia de segmento do CLUBE (Camada C — específica deste domínio)
 // ---------------------------------------------------------------------------
 
-/** Tipo de segmentação do público-alvo (clube) */
+/**
+ * Tipo de segmentação do público-alvo (clube).
+ * `novos_membros` (CONS-4-T2 — 5º segmento do mockup S109, "Novos membros
+ * (Automação)"): membros com status 'novo' (RN-140 — primeiros 7 dias).
+ * O DISPARO automatizado (trigger de boas-vindas) é feature Onda-2/E13;
+ * aqui entra a taxonomia + alcance para o comunicado poder mirá-los.
+ */
 export type TipoSegmento =
   | 'todos'
   | 'por_desafio'
   | 'por_pilar'
-  | 'por_engajamento';
+  | 'por_engajamento'
+  | 'novos_membros';
 
 export const TIPOS_SEGMENTO: readonly TipoSegmento[] = [
   'todos',
   'por_desafio',
   'por_pilar',
   'por_engajamento',
+  'novos_membros',
+];
+
+/**
+ * Segmentos que NÃO exigem `referencia` (o público é o próprio tipo).
+ * Fonte única do predicado usado por validarComunicado e pelo editor.
+ */
+export const TIPOS_SEGMENTO_SEM_REFERENCIA: readonly TipoSegmento[] = [
+  'todos',
+  'novos_membros',
 ];
 
 export function isTipoSegmento(v: unknown): v is TipoSegmento {
   return TIPOS_SEGMENTO.includes(v as TipoSegmento);
+}
+
+/** true quando o tipo de segmento dispensa `referencia`. */
+export function segmentoDispensaReferencia(tipo: TipoSegmento): boolean {
+  return TIPOS_SEGMENTO_SEM_REFERENCIA.includes(tipo);
 }
 
 // ---------------------------------------------------------------------------

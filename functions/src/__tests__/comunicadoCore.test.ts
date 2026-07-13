@@ -13,7 +13,10 @@ import {
   isTipoSegmento,
   PUSH_MAX_CHARS,
   PUSH_SEMANA_MAX,
+  segmentoDispensaReferencia,
   temCanalPush,
+  TIPOS_SEGMENTO,
+  TIPOS_SEGMENTO_SEM_REFERENCIA,
 } from '@leela/core';
 
 describe('guards do comunicado (RN-130/131/132)', () => {
@@ -37,12 +40,28 @@ describe('guards do comunicado (RN-130/131/132)', () => {
     expect(isOrigemComunicado('bot')).toBe(false);
   });
 
-  it('tipos de segmento: todos/por_desafio/por_pilar/por_engajamento', () => {
+  it('tipos de segmento: todos/por_desafio/por_pilar/por_engajamento/novos_membros', () => {
     expect(isTipoSegmento('todos')).toBe(true);
     expect(isTipoSegmento('por_desafio')).toBe(true);
     expect(isTipoSegmento('por_pilar')).toBe(true);
     expect(isTipoSegmento('por_engajamento')).toBe(true);
+    // 5º segmento (CONS-4-T2 — mockup S109 "Novos membros (Automação)")
+    expect(isTipoSegmento('novos_membros')).toBe(true);
     expect(isTipoSegmento('por_cidade')).toBe(false);
+  });
+
+  it('taxonomia V1 do clube é exatamente os 5 tipos (CONS-4-T2)', () => {
+    expect(TIPOS_SEGMENTO).toEqual([
+      'todos',
+      'por_desafio',
+      'por_pilar',
+      'por_engajamento',
+      'novos_membros',
+    ]);
+    // 'todos' e 'novos_membros' dispensam referência — fonte única do form
+    expect(TIPOS_SEGMENTO_SEM_REFERENCIA).toEqual(['todos', 'novos_membros']);
+    expect(segmentoDispensaReferencia('novos_membros')).toBe(true);
+    expect(segmentoDispensaReferencia('por_desafio')).toBe(false);
   });
 
   it('temCanalPush detecta push em qualquer combinação', () => {

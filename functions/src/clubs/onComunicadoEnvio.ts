@@ -89,7 +89,9 @@ export async function contarPushNaJanela(
 
 /**
  * Alcance do envio: 'todos' → recontagem real de membros não-inativos;
- * segmentos específicos → fotografia `segmento.tamanhoEstimado` (S109-T1).
+ * 'novos_membros' (CONS-4-T2 — 5º segmento) → recontagem real de membros
+ * com status 'novo' (RN-140); demais segmentos específicos → fotografia
+ * `segmento.tamanhoEstimado` (S109-T1).
  * Roda DENTRO da transação de envio (fix #05) — o count agregado participa
  * do snapshot da tx.
  */
@@ -109,6 +111,13 @@ async function calcularAlcance(
         .collection('membros')
         .where('status', 'in', ['ativo', 'novo'])
         .count()
+    );
+    return countSnap.data().count;
+  }
+
+  if (segmento.tipo === 'novos_membros') {
+    const countSnap = await tx.get(
+      clubeRef.collection('membros').where('status', '==', 'novo').count()
     );
     return countSnap.data().count;
   }

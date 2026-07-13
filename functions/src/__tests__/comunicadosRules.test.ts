@@ -252,6 +252,19 @@ describe.skipIf(!hasEmulator)('comunicados — Rules (S108-T1)', () => {
       );
     });
 
+    it("segmento 'novos_membros' (5º — CONS-4-T2) é aceito; tipo fora do enum NEGADO", async () => {
+      await assertSucceeds(
+        setDoc(comunicadoDoc(castelo(), 'novos-membros-ok'), {
+          ...comunicadoValido, segmento: { tipo: 'novos_membros' },
+        })
+      );
+      await assertFails(
+        setDoc(comunicadoDoc(castelo(), 'segmento-x'), {
+          ...comunicadoValido, segmento: { tipo: 'por_cidade' },
+        })
+      );
+    });
+
     it('capa em comunicado SÓ PUSH é NEGADA (RN-135)', async () => {
       await assertFails(
         setDoc(comunicadoDoc(castelo(), 'capa-push'), {

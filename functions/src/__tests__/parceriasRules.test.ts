@@ -112,7 +112,8 @@ describe.skipIf(!hasEmulator)('parcerias — Rules (S107-T1)', () => {
     batch.set(parceriaAdminRef(EVENTO_PARCERIA_ID), {
       id: EVENTO_PARCERIA_ID, tenantId: CASTELO_ID,
       tipo: 'evento_afiliado', status: 'convite_pendente',
-      eventoId: 'meia-floripa-2026', organizadorId: 'uid-organizador',
+      eventoId: 'meia-floripa-2026', eventoNome: 'Meia Maratona Floripa 2026',
+      organizadorId: 'uid-organizador',
       programaAfiliacaoRef: 'eventos/meia-floripa-2026/programaAfiliacao/atual',
       comissaoPct: 10, cupom: 'CORRIDAPERFEITA10',
       linkMaster: 'beh.ro/mfl26?c=cps', janelaAtribuicaoDias: 7,
@@ -257,6 +258,20 @@ describe.skipIf(!hasEmulator)('parcerias — Rules (S107-T1)', () => {
       );
     });
 
+    it('clube tenta reescrever eventoNome denormalizado → NEGADO (CONS-4-T2)', async () => {
+      await assertFails(
+        updateDoc(parceriaDoc(castelo(), EVENTO_PARCERIA_ID), {
+          eventoNome: 'Evento Renomeado Pelo Clube',
+        })
+      );
+      // nem junto com a transição legítima de status
+      await assertFails(
+        updateDoc(parceriaDoc(castelo(), EVENTO_PARCERIA_ID), {
+          status: 'ativa', eventoNome: 'Evento Renomeado Pelo Clube',
+        })
+      );
+    });
+
     it('clube tenta inflar ∑ conversoes/valorAReceber → NEGADO', async () => {
       await assertFails(
         updateDoc(parceriaDoc(castelo(), EVENTO_PARCERIA_ID), {
@@ -348,6 +363,12 @@ describe.skipIf(!hasEmulator)('parcerias — Rules (S107-T1)', () => {
       await assertFails(
         setDoc(parceriaDoc(castelo(), 'parceria-hibrida'), {
           ...patrocinadorValido, comissaoPct: 10, valorAReceber: 1000,
+        })
+      );
+      // eventoNome é espelho (CONS-4-T2) — patrocinador também não o carrega
+      await assertFails(
+        setDoc(parceriaDoc(castelo(), 'parceria-hibrida-nome'), {
+          ...patrocinadorValido, eventoNome: 'Evento Forjado 2026',
         })
       );
     });

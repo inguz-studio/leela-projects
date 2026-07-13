@@ -215,6 +215,24 @@ describe.skipIf(!hasEmulator)('comunicados — Function de envio (S108-T1)', () 
       expect(doc.get('alcance')).toBe(2); // ativo + novo; inativo fora
     });
 
+    it("segmento 'novos_membros' (5º — CONS-4-T2) reconta membros status 'novo', ignorando fotografia", async () => {
+      const membros = adminDb
+        .collection('clubes').doc(CLUBE_ID).collection('membros');
+      await membros.doc('m1').set({ tenantId: TENANT_ID, status: 'ativo' });
+      await membros.doc('m2').set({ tenantId: TENANT_ID, status: 'novo' });
+      await membros.doc('m3').set({ tenantId: TENANT_ID, status: 'novo' });
+      await membros.doc('m4').set({ tenantId: TENANT_ID, status: 'inativo' });
+
+      await criarComunicado('para-novos', {
+        // fotografia forjada de 999 — a recontagem real deve prevalecer
+        segmento: { tipo: 'novos_membros', tamanhoEstimado: 999 },
+      });
+      await enviarComunicado(adminDb, CLUBE_ID, 'para-novos', AGORA);
+
+      const doc = await comunicadoRef('para-novos').get();
+      expect(doc.get('alcance')).toBe(2); // só os 2 'novo'
+    });
+
     it('segmento específico usa a fotografia tamanhoEstimado', async () => {
       await criarComunicado('segmentado', {
         segmento: {

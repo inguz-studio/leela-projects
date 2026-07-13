@@ -93,6 +93,13 @@ export interface ParceriaEventoAfiliado extends ParceriaBase {
   tipo: 'evento_afiliado';
   /** Evento promovido (docId = slug — E03) */
   eventoId: string;
+  /**
+   * 🔁 Nome canônico (de marketing) do evento — denormalizado de
+   * `eventos/{eventoId}.nome` por Function (CONS-4-T2; sincronizador em
+   * functions/clubs/parceriasEspelho.ts). Opcional: docs anteriores ao
+   * backfill não o têm — a UI cai no nome derivado do slug.
+   */
+  eventoNome?: string;
   organizadorId: string;
   /** Path do programa de origem: eventos/{id}/programaAfiliacao/{doc} */
   programaAfiliacaoRef: string;
@@ -160,6 +167,7 @@ export const CAMPOS_ESPELHO_PARCERIA = [
   'janelaAtribuicaoDias',
   'termosEspelho',
   'programaAfiliacaoRef',
+  'eventoNome',
 ] as const;
 
 // ---------------------------------------------------------------------------

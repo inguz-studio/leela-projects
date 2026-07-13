@@ -1498,10 +1498,12 @@ service cloud.firestore {
       // com shape (RN-123 + SPEC-02).
       match /parcerias/{parceriaId} {
 
-        /** Campos espelhados do programa (RN-120/122) + ∑ — intocáveis. */
+        /** Campos espelhados do programa (RN-120/122) + ∑ — intocáveis.
+            `eventoNome` (CONS-4-T2): nome canônico denormalizado de
+            eventos/{eventoId}.nome por Function — cliente nunca escreve. */
         function camposProtegidosParceria() {
           return ['comissaoPct', 'cupom', 'linkMaster', 'janelaAtribuicaoDias',
-                  'termosEspelho', 'programaAfiliacaoRef',
+                  'termosEspelho', 'programaAfiliacaoRef', 'eventoNome',
                   'conversoes', 'valorAReceber'];
         }
 
@@ -1588,7 +1590,8 @@ service cloud.firestore {
             && request.resource.data.canal.hasOnly(['push', 'email'])
             && request.resource.data.origem in ['manual', 'automatizada']
             && request.resource.data.segmento.tipo in
-                ['todos', 'por_desafio', 'por_pilar', 'por_engajamento']
+                ['todos', 'por_desafio', 'por_pilar', 'por_engajamento',
+                 'novos_membros']
             && (!('capaUrl' in request.resource.data)
                 || 'email' in request.resource.data.canal)
             && request.resource.data.titulo is string

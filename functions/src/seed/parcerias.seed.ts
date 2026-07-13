@@ -64,6 +64,8 @@ interface EventoAfiliadoSeedSpec {
   id: string;
   status: StatusParceria;
   eventoId: string;
+  /** 🔁 Nome canônico do evento (CONS-4-T2 — HANDOFF-05 §Eventos promovidos) */
+  eventoNome: string;
   organizadorId: string;
   comissaoPct: number;
   cupom: string | null;
@@ -88,6 +90,7 @@ const EVENTOS_AFILIADOS_SEED: readonly EventoAfiliadoSeedSpec[] = [
     id: 'parceria-meia-floripa-2026',
     status: 'ativa',
     eventoId: 'meia-floripa-2026',
+    eventoNome: 'Meia Maratona Floripa 2026',
     organizadorId: 'uid-marina-castelo',
     comissaoPct: 10,
     cupom: 'CORRIDAPERFEITA10',
@@ -105,6 +108,7 @@ const EVENTOS_AFILIADOS_SEED: readonly EventoAfiliadoSeedSpec[] = [
     id: 'parceria-trail-ratones-2026',
     status: 'ativa',
     eventoId: 'trail-ratones-2026',
+    eventoNome: 'Trail Run Ratones 2026',
     organizadorId: 'uid-ricardo-haro',
     comissaoPct: 8,
     cupom: 'CORRIDAPS15',
@@ -122,6 +126,7 @@ const EVENTOS_AFILIADOS_SEED: readonly EventoAfiliadoSeedSpec[] = [
     id: 'parceria-corrida-ponte-2026',
     status: 'ativa',
     eventoId: 'corrida-ponte-2026',
+    eventoNome: 'Corrida da Ponte 2026',
     organizadorId: 'uid-ligia-souza',
     comissaoPct: 6,
     cupom: null, // sem cupom exclusivo
@@ -139,6 +144,7 @@ const EVENTOS_AFILIADOS_SEED: readonly EventoAfiliadoSeedSpec[] = [
     id: 'parceria-maratona-floripa-2027',
     status: 'convite_pendente',
     eventoId: 'maratona-floripa-2027',
+    eventoNome: 'Maratona Floripa 2027',
     organizadorId: 'uid-marina-castelo',
     comissaoPct: 12,
     cupom: 'CORRIDAPERFEITA42',
@@ -156,6 +162,7 @@ const EVENTOS_AFILIADOS_SEED: readonly EventoAfiliadoSeedSpec[] = [
     id: 'parceria-acate-corporativo-2026',
     status: 'convite_pendente',
     eventoId: 'acate-corporativo-2026',
+    eventoNome: 'Desafio Corporativo ACATE 2026',
     organizadorId: 'uid-comite-acate',
     comissaoPct: 5,
     cupom: 'CPSACATE',
@@ -228,6 +235,7 @@ export async function seedParcerias(
       tipo: 'evento_afiliado',
       status: spec.status,
       eventoId: spec.eventoId,
+      eventoNome: spec.eventoNome,
       organizadorId: spec.organizadorId,
       programaAfiliacaoRef: `eventos/${spec.eventoId}/programaAfiliacao/atual`,
       comissaoPct: spec.comissaoPct,

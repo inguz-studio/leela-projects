@@ -30,6 +30,7 @@ const AGREGADOS_CPS: AgregadosSegmentacao = {
   },
   ativosPorJanela: { '7d': 85, '14d': 98, '30d': 115 },
   membrosPorPilar: { fisico: 67, mental: 38, espiritual: 15 },
+  membrosNovos: 12, // KPI canônico "+12 este mês" (HANDOFF-05)
 };
 
 describe('estimarAlcance (S109-T1)', () => {
@@ -77,6 +78,15 @@ describe('estimarAlcance (S109-T1)', () => {
     expect(
       estimarAlcance({ tipo: 'por_engajamento', referencia: '30d' }, AGREGADOS_CPS)
     ).toBe(115);
+  });
+
+  it("'novos_membros' (5º segmento — CONS-4-T2) → agregado membrosNovos", () => {
+    expect(estimarAlcance({ tipo: 'novos_membros' }, AGREGADOS_CPS)).toBe(12);
+  });
+
+  it("'novos_membros' sem agregado → null (caller ainda não agrega novos)", () => {
+    const { membrosNovos: _omitido, ...semNovos } = AGREGADOS_CPS;
+    expect(estimarAlcance({ tipo: 'novos_membros' }, semNovos)).toBeNull();
   });
 
   it('referência desconhecida ou ausente → null (tela mostra "—")', () => {
@@ -142,6 +152,12 @@ describe('validarComunicado (SPEC-02 + RN-134/135)', () => {
         segmento: { tipo: 'por_desafio' },
       }).some((e) => e.includes('referência'))
     ).toBe(true);
+  });
+
+  it("'novos_membros' dispensa referência (CONS-4-T2 — como 'todos')", () => {
+    expect(
+      validarComunicado({ ...valido, segmento: { tipo: 'novos_membros' } })
+    ).toEqual([]);
   });
 
   it('push com corpo > 160 chars é inválido (RN-134)', () => {

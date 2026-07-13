@@ -21,7 +21,7 @@ import {
   validarComunicacaoBase,
 } from '../comunicacao/validacao-base';
 import type { Segmento } from './comunicado';
-import { isTipoSegmento } from './comunicado';
+import { isTipoSegmento, segmentoDispensaReferencia } from './comunicado';
 
 // ---------------------------------------------------------------------------
 // Limites de formulário (SPEC-02) — aliases estáveis da fonte única
@@ -66,7 +66,10 @@ export function validarComunicado(input: ComunicadoInput): string[] {
 
   if (!input.segmento || !isTipoSegmento(input.segmento.tipo)) {
     erros.push('segmento é obrigatório');
-  } else if (input.segmento.tipo !== 'todos' && !input.segmento.referencia) {
+  } else if (
+    !segmentoDispensaReferencia(input.segmento.tipo) &&
+    !input.segmento.referencia
+  ) {
     erros.push('segmento requer referência (desafio, pilar ou janela)');
   }
 

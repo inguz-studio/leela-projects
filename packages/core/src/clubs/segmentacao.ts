@@ -33,6 +33,12 @@ export interface AgregadosSegmentacao {
   ativosPorJanela: Record<string, number>;
   /** Membros por pilar predominante */
   membrosPorPilar: Partial<Record<Pilar, number>>;
+  /**
+   * Membros com status 'novo' (RN-140 — primeiros 7 dias). Alimenta o 5º
+   * segmento `novos_membros` (CONS-4-T2). Opcional: caller que ainda não
+   * agrega novos envia undefined e a tela mostra "—" (estimativa null).
+   */
+  membrosNovos?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +74,9 @@ export function estimarAlcance(
       if (!segmento.referencia) return null;
       return agregados.ativosPorJanela[segmento.referencia] ?? null;
     }
+
+    case 'novos_membros':
+      return agregados.membrosNovos ?? null;
 
     default:
       return null;
