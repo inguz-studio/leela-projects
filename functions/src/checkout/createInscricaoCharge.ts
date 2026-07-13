@@ -42,6 +42,8 @@ import {
   isCodigoCupomValido,
   isFormaPagamento,
   isKitInscrito,
+  isModoTaxa,
+  modoTaxaDoEvento,
   montarItensDoPedido,
   normalizarCodigoCupom,
   parseCupom,
@@ -58,6 +60,7 @@ import {
   type ItemVendaInput,
   type Kit,
   type KitInscrito,
+  type ModoTaxa,
   type PaymentProvider,
   type SaleState,
   type StatusPedido,
@@ -131,6 +134,12 @@ export interface CreateInscricaoChargeResult {
     valorBase: number;
     desconto: number;
     valorFinal: number;
+    /**
+     * Taxa de serviço paga pelo COMPRADOR (RN-347): 0 = evento 'incorporada';
+     * > 0 = 'repassada' (já embutida em `totalCobrado`). Sempre VALOR em R$ —
+     * nunca o `platformFeePct` do termo (fix 703db9c).
+     */
+    taxaServico: number;
     /** O que o comprador paga (com juros no cartão parcelado). */
     totalCobrado: number;
     parcelas: number;
@@ -305,6 +314,13 @@ export interface InsumosVenda {
   itens: ItemVendaInput[];
   cupom: CupomVenda | null;
   terms: CommercialTerms;
+  /**
+   * Modo da taxa do EVENTO (RN-347) — lido do DOC (`evento.taxaModo` via
+   * `modoTaxaDoEvento`), NUNCA do request: `taxaModo` forjado no payload do
+   * cliente é ignorado por construção (o input do checkout nem tem o campo,
+   * e mesmo que tivesse, este valor vem daqui).
+   */
+  modoTaxa: ModoTaxa;
 }
 
 /**
@@ -345,6 +361,20 @@ export async function carregarInsumos(
     );
   }
   await assertTenantAtivo(db, tenantId);
+
+  // Modo da taxa (RN-347) — do DOC do evento, nunca do request. Presente e
+  // FORA do enum = doc corrompido (fail-fast: mudar quem paga a taxa por
+  // lixo de dado é anomalia de dinheiro); ausente = 'incorporada' (legado).
+  const taxaModoRaw = eventoSnap.get('taxaModo') as unknown;
+  if (taxaModoRaw !== undefined && taxaModoRaw !== null && !isModoTaxa(taxaModoRaw)) {
+    throw new https.HttpsError(
+      'internal',
+      `Evento '${input.eventoId}' com taxaModo fora do enum (RN-347) — dado corrompido.`
+    );
+  }
+  const modoTaxa = modoTaxaDoEvento({
+    ...(isModoTaxa(taxaModoRaw) ? { taxaModo: taxaModoRaw } : {}),
+  });
 
   const modalidadesEvento: string[] = Array.isArray(eventoSnap.get('modalidades'))
     ? (eventoSnap.get('modalidades') as unknown[]).filter(
@@ -455,7 +485,7 @@ export async function carregarInsumos(
     throw err;
   }
 
-  return { tenantId, itens, cupom, terms };
+  return { tenantId, itens, cupom, terms, modoTaxa };
 }
 
 // ---------------------------------------------------------------------------
@@ -496,6 +526,8 @@ async function criarDocsDeCheckout(
   // desconto é cent-exato (maior resto), então Σ itens.valorFinal ===
   // valorTotal por construção (invariante de parsePedido). sale.itens é
   // 1:1 e NA MESMA ORDEM de input.inscritos (carregarInsumos preserva).
+  // RN-347: a taxa REPASSADA (0 em 'incorporada') é rateada por linha —
+  // o estorno por inscrito devolve valorFinal + taxaRepassada da linha.
   const itensDoPedido = montarItensDoPedido(
     sale.itens.map((item, i): ItemPedidoInput => {
       const inscritoRef = inscritoIds[i];
@@ -507,7 +539,8 @@ async function criarDocsDeCheckout(
       }
       return { inscritoRef, loteId: item.loteId, valorBase: item.preco };
     }),
-    sale.desconto
+    sale.desconto,
+    sale.taxaRepassada
   );
 
   try {
@@ -596,10 +629,18 @@ async function criarDocsDeCheckout(
         desconto: sale.desconto,
         valorFinal: sale.valorFinal,
         gatewayChargeId: null,
+        // RN-347: totalCobrado JÁ inclui a taxa repassada quando o evento é
+        // 'repassada' (computeSaleState) — o valor congelado da cobrança é o
+        // que o COMPRADOR paga, nos dois modos.
         gatewayAmountCentavos: centavosDaBorda(sale.totalCobrado),
         criadoEm: now,
         atualizadoEm: now,
       };
+      // Campo SÓ em modo 'repassada' — docs 'incorporada' idênticos aos
+      // vigentes (schema evolution; parsePagamento aceita ausente).
+      if (sale.taxaRepassada > 0) {
+        pagamentoDoc['taxaRepassada'] = sale.taxaRepassada;
+      }
       if (loteUnico !== null && loteUnico.loteId !== null) {
         pagamentoDoc['loteId'] = loteUnico.loteId;
         if (loteUnico.loteNome !== null) pagamentoDoc['loteNome'] = loteUnico.loteNome;
@@ -726,6 +767,9 @@ async function garantirCobrancaEMontarResultado(
       valorBase: pagamentoSnap.get('valorBase') as number,
       desconto: pagamentoSnap.get('desconto') as number,
       valorFinal: pagamentoSnap.get('valorFinal') as number,
+      // RN-347 — do doc PERSISTIDO (replay nunca recomputa): ausente = 0
+      // (evento 'incorporada' e docs pré-RN347).
+      taxaServico: (pagamentoSnap.get('taxaRepassada') as number | undefined) ?? 0,
       totalCobrado,
       parcelas,
       valorParcela,
@@ -778,7 +822,7 @@ export async function createInscricaoChargeCore(
       );
     }
   } else {
-    const { tenantId, itens, cupom, terms } = await carregarInsumos(db, input);
+    const { tenantId, itens, cupom, terms, modoTaxa } = await carregarInsumos(db, input);
     let sale: SaleState;
     try {
       sale = computeSaleState({
@@ -788,6 +832,8 @@ export async function createInscricaoChargeCore(
         parcelas: input.parcelas,
         installmentRules: terms.installmentRules,
         platformFeePct: terms.platformFeePct,
+        // RN-347: modo do DOC do evento (carregarInsumos) — nunca do input
+        modoTaxa,
         agora: agora(),
       });
     } catch (err) {

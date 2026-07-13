@@ -79,6 +79,14 @@ export function StepConfirmacao({
               <dd className="text-feedback-success-fg">− {formatarPreco(valores.desconto)}</dd>
             </div>
           ) : null}
+          {/* RN-347: linha SÓ em evento com taxa repassada (taxaServico > 0);
+              sempre VALOR em R$, nunca percentual (703db9c). */}
+          {(valores.taxaServico ?? 0) > 0 ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-text-secondary">Taxa de serviço</dt>
+              <dd className="text-text-primary">{formatarPreco(valores.taxaServico)}</dd>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between border-t border-border-subtle pt-2">
             <dt className="font-semibold text-text-primary">
               {valores.parcelas > 1 ? `Total em ${valores.parcelas}x` : 'Total pago'}

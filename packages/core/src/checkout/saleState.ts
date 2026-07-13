@@ -8,7 +8,10 @@
 //   → desconto (cupom vigente — E04)
 //   → valorFinal (o que o organizador enxerga — "à vista p/ organizador")
 //   → taxa/líquido (termo do tenant — RN-330/RN-406)
-//   → parcelamento (Price do termo — RN-311; juros repassados ao comprador)
+//   → modo da taxa (RN-347: 'repassada' soma a taxa ao total do comprador;
+//     'incorporada' mantém o face — o modo vem do DOC do evento, nunca do request)
+//   → parcelamento (Price do termo sobre o total do COMPRADOR — RN-311;
+//     juros repassados ao comprador)
 //   → totalCobrado (o que o COMPRADOR paga na forma/parcelas escolhidas).
 //
 // REUSO-FIRST (regra do brief): nada de aritmética própria — compõe
@@ -32,12 +35,14 @@ import type { Kit } from '../eventos/kit';
 import type { Cupom, TipoCupom } from '../eventos/cupom';
 import type { FormaPagamento } from '../pedidos/pagamento';
 import type { InstallmentRules } from '../platform/commercialTerms';
+import type { ModoTaxa } from '../finance/repasse-types';
+import { isModoTaxa } from '../finance/repasse-types';
+import { computeLiquidoProdutor } from '../finance/repasse';
 import { loteAtivo } from '../eventos/lote';
 import { precoKitValido } from '../eventos/kit';
 import { cupomNaJanela, cupomNoTeto, descontoDoCupom } from '../eventos/cupom';
 import {
   buildInstallmentOptions,
-  computeReceitaLiquida,
   computeTaxa,
   roundMoney,
   type InstallmentOption,
@@ -102,6 +107,15 @@ export interface ComputeSaleStateParams {
   installmentRules: InstallmentRules;
   /** Taxa da plataforma do TERMO do tenant (RN-330/RN-406) — nunca constante. */
   platformFeePct: number;
+  /**
+   * Modo da taxa do EVENTO (RN-347) — decide QUEM paga a taxa da plataforma:
+   *   'incorporada' — comprador paga o face; a taxa sai do repasse (vigente);
+   *   'repassada'   — comprador paga face + taxa; líquido do produtor = face.
+   * Vem SEMPRE do doc do evento via `modoTaxaDoEvento` (nunca do request do
+   * cliente — forjar o modo no payload não pode mudar quem paga). Ausente =
+   * 'incorporada' (comportamento vigente/eventos legados).
+   */
+  modoTaxa?: ModoTaxa;
   /** Instante da venda — injetado (testável; vigência de lote/cupom). */
   agora: Date;
 }
@@ -149,8 +163,24 @@ export interface SaleState {
   cupomAplicado: CupomAplicadoVenda | null;
   /** Taxa Leela sobre o valorFinal (RN-330) — informativa (organizador). */
   taxa: number;
-  /** Líquido do organizador (valorFinal − taxa). */
+  /**
+   * Líquido do organizador — MODE-AWARE (RN-347, via `computeLiquidoProdutor`):
+   * 'incorporada' ⇒ valorFinal − taxa; 'repassada' ⇒ valorFinal (a taxa é
+   * cobrada por fora, do comprador). Coerente com o saldo E09.
+   */
   receitaLiquidaOrganizador: number;
+  /**
+   * Taxa de serviço paga pelo COMPRADOR (RN-347): 0 em 'incorporada';
+   * = `taxa` em 'repassada'. É o ÚNICO valor de taxa que pode chegar ao
+   * comprador (a linha "Taxa de serviço" do Resumo) — sempre VALOR em R$,
+   * nunca o `platformFeePct` do termo (fix de confidencialidade 703db9c).
+   */
+  taxaRepassada: number;
+  /**
+   * Total À VISTA do comprador (base do parcelamento): valorFinal +
+   * taxaRepassada. Em 'incorporada' == valorFinal (comportamento vigente).
+   */
+  totalComprador: number;
   /** Opções de parcelamento ofertáveis (termo — RN-311). PIX: só 1x. */
   opcoesParcelamento: readonly InstallmentOption[];
   /** A opção ESCOLHIDA (parcelas do input, validada contra as opções). */
@@ -289,6 +319,16 @@ function resolverItem(item: ItemVendaInput, agora: Date): ItemVendaState {
 export function computeSaleState(params: ComputeSaleStateParams): SaleState {
   const { itens, cupom, forma, parcelas, installmentRules, platformFeePct, agora } = params;
 
+  // Modo da taxa (RN-347): default 'incorporada' (vigente/legado). Valor
+  // presente e FORA do enum lança — chamador JS passando lixo é doc/fiação
+  // corrompida, e dinheiro errado é pior que erro explícito.
+  const modoTaxa: ModoTaxa = params.modoTaxa ?? 'incorporada';
+  if (!isModoTaxa(modoTaxa)) {
+    throw new Error(
+      `computeSaleState: "modoTaxa" fora do enum (incorporada|repassada — RN-347)`
+    );
+  }
+
   if (!Array.isArray(itens) || itens.length === 0) {
     throw new Error('computeSaleState: a venda exige ≥ 1 inscrição (ADR-011)');
   }
@@ -337,21 +377,33 @@ export function computeSaleState(params: ComputeSaleStateParams): SaleState {
     );
   }
 
-  // 4. Taxa/líquido do organizador — % do TERMO (RN-330/RN-406)
+  // 4. Taxa/líquido do organizador — % do TERMO (RN-330/RN-406), modo do
+  //    EVENTO (RN-347). A taxa é SEMPRE calculada server-side sobre o
+  //    valorFinal; o modo só decide QUEM a paga:
+  //      incorporada ⇒ líquido = final − taxa; comprador paga o face;
+  //      repassada   ⇒ líquido = face; comprador paga face + taxa.
   const taxa = computeTaxa(valorFinal, platformFeePct);
-  const receitaLiquidaOrganizador = computeReceitaLiquida(valorFinal, platformFeePct);
+  const receitaLiquidaOrganizador = computeLiquidoProdutor(
+    valorFinal,
+    platformFeePct,
+    modoTaxa
+  );
+  const taxaRepassada = modoTaxa === 'repassada' ? taxa : 0;
+  const totalComprador = roundMoney(valorFinal + taxaRepassada);
 
-  // 5. Parcelamento — opções do TERMO (RN-311); PIX é sempre 1x sem juros
+  // 5. Parcelamento — opções do TERMO (RN-311) sobre o TOTAL DO COMPRADOR
+  //    (RN-347: Price incide sobre face + taxa quando repassada — o juro é
+  //    sobre o que o comprador financia); PIX é sempre 1x sem juros.
   const opcoesParcelamento: readonly InstallmentOption[] =
     forma === 'cartao_credito'
-      ? buildInstallmentOptions(valorFinal, installmentRules)
-      : [{ parcelas: 1, valorParcela: valorFinal, valorTotal: valorFinal }];
+      ? buildInstallmentOptions(totalComprador, installmentRules)
+      : [{ parcelas: 1, valorParcela: totalComprador, valorTotal: totalComprador }];
 
   const parcelamento = opcoesParcelamento.find((o) => o.parcelas === parcelas);
   if (parcelamento === undefined) {
     throw new Error(
       `computeSaleState: ${parcelas}x não é uma opção válida para ` +
-        `R$ ${valorFinal.toFixed(2)} — termo oferta até ` +
+        `R$ ${totalComprador.toFixed(2)} — termo oferta até ` +
         `${opcoesParcelamento[opcoesParcelamento.length - 1]?.parcelas ?? 1}x ` +
         '(RN-311: parcela mínima/máximo do termo)'
     );
@@ -365,6 +417,8 @@ export function computeSaleState(params: ComputeSaleStateParams): SaleState {
     cupomAplicado,
     taxa,
     receitaLiquidaOrganizador,
+    taxaRepassada,
+    totalComprador,
     opcoesParcelamento,
     parcelamento,
     totalCobrado: parcelamento.valorTotal,

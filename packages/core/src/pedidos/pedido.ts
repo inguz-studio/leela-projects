@@ -121,6 +121,17 @@ export interface ItemPedido {
   desconto: number;
   /** valorBase − desconto — a BASE do estorno por inscrito (S904/RN-341) */
   valorFinal: number;
+  /**
+   * Fatia da taxa de serviço REPASSADA ao comprador rateada a esta linha
+   * (RN-347 — evento em modo 'repassada'; rateio cent-exato proporcional ao
+   * valorFinal, maior resto). AUSENTE em 'incorporada' (docs vigentes ficam
+   * intocados — schema evolution). O estorno por inscrito devolve
+   * `valorFinal + taxaRepassada` (o que o inscrito PAGOU), mas a reversão de
+   * `receitaConfirmada` usa SÓ `valorFinal` (a taxa nunca foi receita do
+   * organizador). Σ itens.taxaRepassada === pagamento.taxaRepassada por
+   * construção (montarItensDoPedido).
+   */
+  taxaRepassada?: number;
 }
 
 /**
@@ -250,11 +261,22 @@ export interface ItemPedidoInput {
  * Garante por construção: `Σ itens.desconto === descontoTotal` e
  * `Σ itens.valorFinal === Σ valorBase − descontoTotal` — a invariante
  * `Σ itens.valorFinal === valorTotal` de parsePedido nunca quebra por
- * arredondamento de rateio. Fail-fast em insumo fora do contrato. @pure
+ * arredondamento de rateio. Fail-fast em insumo fora do contrato.
+ *
+ * `taxaRepassadaTotal` (RN-347 — evento em modo 'repassada'): a taxa de
+ * serviço paga pelo COMPRADOR é rateada pelas linhas com o MESMO método
+ * (maior resto, cent-exato), proporcional ao `valorFinal` da linha (a taxa
+ * incide sobre o valor pós-desconto — computeTaxa(valorFinal)). Linha 100%
+ * descontada (valorFinal 0) nunca recebe taxa. `Σ itens.taxaRepassada ===
+ * taxaRepassadaTotal` por construção — o estorno por inscrito (RN-341)
+ * devolve a linha COM a fatia de taxa dela sem quebrar centavo. 0/ausente =
+ * modo 'incorporada': nenhuma linha ganha o campo (docs vigentes idênticos).
+ * @pure
  */
 export function montarItensDoPedido(
   itens: readonly ItemPedidoInput[],
-  descontoTotal: number
+  descontoTotal: number,
+  taxaRepassadaTotal: number = 0
 ): ItemPedido[] {
   if (!Array.isArray(itens) || itens.length === 0) {
     throw new Error('montarItensDoPedido: pedido exige ≥ 1 item (ADR-011)');
@@ -309,6 +331,48 @@ export function montarItensDoPedido(
     }
   }
 
+  // ── Rateio da taxa REPASSADA (RN-347) — proporcional ao valorFinal ──────
+  // Mesmo método do desconto (piso proporcional + maior resto, centavos
+  // inteiros, determinístico). Linha com valorFinal 0 NUNCA recebe taxa
+  // (taxa sobre linha gratuita não existe — e o estorno dela é cancelamento).
+  parseMoney('montarItensDoPedido', 'taxaRepassadaTotal', taxaRepassadaTotal);
+  const finaisCentavos = basesCentavos.map((base, i) => base - (alocado[i] ?? 0));
+  const totalFinalCentavos = finaisCentavos.reduce((soma, c) => soma + c, 0);
+  const taxaCentavos = Math.round(taxaRepassadaTotal * 100);
+  if (taxaCentavos > 0 && totalFinalCentavos === 0) {
+    throw new Error(
+      'montarItensDoPedido: taxaRepassadaTotal > 0 com pedido 100% descontado — ' +
+        'taxa sem base de rateio (RN-347; venda gratuita não cobra taxa)'
+    );
+  }
+  const taxaAlocada = finaisCentavos.map((fin) =>
+    totalFinalCentavos === 0 ? 0 : Math.floor(taxaCentavos * (fin / totalFinalCentavos))
+  );
+  let sobraTaxa = taxaCentavos - taxaAlocada.reduce((soma, c) => soma + c, 0);
+  if (sobraTaxa > 0) {
+    const porResto = finaisCentavos
+      .map((fin, i) => ({
+        i,
+        resto:
+          totalFinalCentavos === 0
+            ? 0
+            : taxaCentavos * (fin / totalFinalCentavos) - (taxaAlocada[i] ?? 0),
+      }))
+      .sort((a, b) => b.resto - a.resto || a.i - b.i);
+    for (const { i } of porResto) {
+      if (sobraTaxa === 0) break;
+      if ((finaisCentavos[i] ?? 0) === 0) continue; // linha gratuita: sem taxa
+      taxaAlocada[i] = (taxaAlocada[i] ?? 0) + 1;
+      sobraTaxa -= 1;
+    }
+    if (sobraTaxa !== 0) {
+      throw new Error(
+        'montarItensDoPedido: rateio da taxa repassada não fechou cent-exato — ' +
+          'insumos corrompidos (RN-347)'
+      );
+    }
+  }
+
   return itens.map((item, i) => {
     const baseCentavos = basesCentavos[i] ?? 0;
     const descontoLinha = alocado[i] ?? 0;
@@ -320,6 +384,11 @@ export function montarItensDoPedido(
     };
     if (typeof item.loteId === 'string' && item.loteId.length > 0) {
       linha.loteId = item.loteId;
+    }
+    // Campo SÓ no modo 'repassada' (taxa > 0) — docs 'incorporada' idênticos
+    // aos vigentes (schema evolution, zero migração).
+    if (taxaCentavos > 0) {
+      linha.taxaRepassada = roundMoney((taxaAlocada[i] ?? 0) / 100);
     }
     return linha;
   });
@@ -442,6 +511,15 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
     }
     if (typeof item['loteId'] === 'string' && item['loteId'].length > 0) {
       linha.loteId = item['loteId'];
+    }
+    // RN-347 — fatia da taxa repassada (opcional; só existe em evento modo
+    // 'repassada'). parseMoney já nega negativo/não-finito/sub-centavo.
+    if (item['taxaRepassada'] !== undefined) {
+      linha.taxaRepassada = parseMoney(
+        ctx,
+        `itens[${i}].taxaRepassada`,
+        item['taxaRepassada']
+      );
     }
     somaValorFinal += linha.valorFinal;
     return linha;

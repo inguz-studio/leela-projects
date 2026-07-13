@@ -161,6 +161,16 @@ export function StepResumo({
                 <dd className="text-feedback-success-fg">− {formatarPreco(cotacao.desconto)}</dd>
               </div>
             ) : null}
+            {/* RN-347: linha SÓ quando o evento repassa a taxa ao comprador
+                (taxaServico > 0). Sempre VALOR em R$ — nunca percentual do
+                termo (confidencialidade 703db9c). Cotação de servidor antigo
+                sem o campo (undefined) cai no ramo sem linha. */}
+            {(cotacao.taxaServico ?? 0) > 0 ? (
+              <div className="flex items-center justify-between">
+                <dt className="text-text-secondary">Taxa de serviço</dt>
+                <dd className="text-text-primary">{formatarPreco(cotacao.taxaServico)}</dd>
+              </div>
+            ) : null}
             <div className="mt-1 flex items-center justify-between border-t border-border-subtle pt-2">
               <dt className="font-semibold text-text-primary">
                 {parcelado ? 'Total parcelado' : 'Total'}
@@ -172,7 +182,13 @@ export function StepResumo({
             {parcelado ? (
               <p className="text-right text-xs text-text-tertiary">
                 {cotacao.parcelamento.parcelas}x de {formatarPreco(cotacao.parcelamento.valorParcela)} ·
-                à vista sai por {formatarPreco(cotacao.valorFinal)}
+                à vista sai por{' '}
+                {formatarPreco(
+                  // Total à vista do COMPRADOR sem juros (RN-347: inclui a
+                  // taxa de serviço quando repassada). Fallback valorFinal =
+                  // servidor antigo sem o campo (== comportamento anterior).
+                  cotacao.totalAVista ?? cotacao.valorFinal
+                )}
               </p>
             ) : null}
           </dl>

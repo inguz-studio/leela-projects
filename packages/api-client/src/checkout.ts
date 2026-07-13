@@ -57,6 +57,17 @@ export interface CotarInscricaoCheckoutResult {
   // Cotação pública/anônima NÃO expõe a `taxa` (repasse do organizador):
   // revelaria o platformFeePct do termo privado do tenant (RN-330/RN-404).
   // O comprador paga `totalCobrado`; a taxa vive no painel autenticado.
+  /**
+   * Taxa de serviço paga pelo COMPRADOR (RN-347): 0 = evento 'incorporada'
+   * (sem linha no Resumo); > 0 = 'repassada' — a UI mostra "Taxa de serviço
+   * R$ X,XX" (VALOR já embutido em `totalCobrado`; nunca percentual).
+   */
+  taxaServico: number;
+  /**
+   * Total à vista do comprador SEM juros (valorFinal + taxaServico) — o
+   * "à vista sai por" do Resumo. Em 'incorporada' == valorFinal.
+   */
+  totalAVista: number;
   opcoesParcelamento: CotarParcelaResult[];
   parcelamento: CotarParcelaResult;
   totalCobrado: number;
@@ -117,6 +128,8 @@ export interface CreateInscricaoChargeResult {
     valorBase: number;
     desconto: number;
     valorFinal: number;
+    /** Taxa de serviço do COMPRADOR (RN-347): 0 em 'incorporada'; valor em R$. */
+    taxaServico: number;
     totalCobrado: number;
     parcelas: number;
     valorParcela: number;

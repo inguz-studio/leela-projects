@@ -12,6 +12,13 @@
 // RN-337: SEM split de afiliação (afiliação foi cortada) — o estorno é do
 // valor CHEIO da linha, sem clawback de comissão.
 //
+// RN-347 (taxa repassada): o refund devolve o que o inscrito PAGOU — a linha
+// (`itens[].valorFinal`) + a fatia de taxa dele (`itens[].taxaRepassada`,
+// só em evento 'repassada'). A contabilidade do ORGANIZADOR (reversão de
+// `receitaConfirmada`, `estornadoTotal`, flip integral) usa SÓ o face
+// (`valorFace` no ledger): a taxa nunca foi receita dele. Em 'incorporada'
+// os dois valores coincidem — zero mudança de comportamento.
+//
 // SAGA EM 2 TRANSAÇÕES + REFUND IDEMPOTENTE (mesmo desenho at-least-once do
 // createInscricaoCharge — Kleppmann "idempotency tokens em toda mutation"):
 //   TX1 (COMPROMISSO): guards (papel/tenant/estado) + cria o ledger
@@ -88,7 +95,11 @@ export interface EstornarInscricaoResult {
   inscritoId: string;
   /** Id do refund no gateway (prova da devolução). */
   refundId: string;
-  /** Valor estornado em R$ — a LINHA do inscrito no pedido (itens[]). */
+  /**
+   * Valor estornado em R$ — o que o inscrito PAGOU: a LINHA dele no pedido
+   * (`itens[].valorFinal`) + a fatia da taxa repassada (`itens[].taxaRepassada`)
+   * quando o evento é 'repassada' (RN-347). Em 'incorporada' == valorFinal.
+   */
   valorEstornado: number;
   /** true = estorno JÁ aplicado antes (replay idempotente) — zero efeito novo. */
   duplicado: boolean;
@@ -148,10 +159,23 @@ interface CompromissoEstorno {
   pagamentoId: string;
   eventoId: string;
   chargeId: string;
-  /** Valor da linha do inscrito em R$ (congelado no ledger). */
+  /**
+   * Valor DEVOLVIDO AO COMPRADOR em R$ (congelado no ledger). DECISÃO RN-347:
+   * o estorno devolve o que o inscrito PAGOU — `itens[].valorFinal` + a fatia
+   * `itens[].taxaRepassada` dele quando o evento é 'repassada' (a taxa que o
+   * comprador pagou volta com a linha; a Leela não retém taxa de venda
+   * desfeita). Em 'incorporada' == valorFinal (comportamento vigente).
+   */
   valor: number;
   /** O MESMO valor em centavos (borda do gateway — congelado no ledger). */
   valorCentavos: number;
+  /**
+   * Porção FACE da linha (itens[].valorFinal) em R$ — a contabilidade do
+   * ORGANIZADOR: reversão de `receitaConfirmada` e acumulado
+   * `estornadoTotal` usam SÓ ela (a taxa repassada nunca foi receita do
+   * organizador — RN-347). Em 'incorporada' == valor.
+   */
+  valorFace: number;
   /** true = ledger já 'aprovado' (replay integral — nenhum efeito novo). */
   jaAprovado: boolean;
   /** Presentes só quando jaAprovado (dados de auditoria do replay). */
@@ -180,12 +204,17 @@ function lerCompromissoDoLedger(
       `Ledger de estorno '${ledger.id}' corrompido — intervenção manual.`
     );
   }
+  // RN-347: ledger PRÉ-RN347 não tem valorFace — era sempre 'incorporada',
+  // onde o pago pelo inscrito == face da linha (fallback exato, não chute).
+  const valorFaceRaw = ledger.get('valorFace') as number | undefined;
+  const valorFace = typeof valorFaceRaw === 'number' ? valorFaceRaw : valor;
   return {
     pagamentoId,
     eventoId,
     chargeId,
     valor,
     valorCentavos,
+    valorFace,
     jaAprovado: ledger.get('status') === 'aprovado',
     refundId: (ledger.get('refundId') as string | undefined) ?? null,
     pagamentoEstornadoIntegral: ledger.get('pagamentoEstornadoIntegral') === true,
@@ -310,7 +339,26 @@ async function comprometerEstorno(
           `decomposição por inscrito corrompida (ADR-011).`
       );
     }
-    const valor = roundMoney(item.valorFinal);
+    // RN-347 (DECISÃO documentada): o estorno devolve o que o inscrito PAGOU
+    // — face da linha + fatia da taxa repassada (0/ausente em 'incorporada' e
+    // em pedidos pré-RN347). A contabilidade do ORGANIZADOR (reversão de
+    // receita, estornadoTotal, flip integral) usa SÓ o face — a taxa nunca
+    // foi receita dele. Campo presente mas fora do contrato = doc corrompido.
+    const taxaLinhaRaw = item.taxaRepassada;
+    if (
+      taxaLinhaRaw !== undefined &&
+      (typeof taxaLinhaRaw !== 'number' ||
+        !Number.isFinite(taxaLinhaRaw) ||
+        taxaLinhaRaw < 0)
+    ) {
+      throw new https.HttpsError(
+        'internal',
+        `Pedido '${input.pedidoId}' com itens[].taxaRepassada inválida — ` +
+          `decomposição RN-347 corrompida.`
+      );
+    }
+    const valorFace = roundMoney(item.valorFinal);
+    const valor = roundMoney(valorFace + (taxaLinhaRaw ?? 0));
     const valorCentavos = Math.round(valor * 100);
     if (valorCentavos <= 0) {
       // Linha 100% descontada: não há dinheiro a devolver — o fluxo certo é
@@ -330,6 +378,8 @@ async function comprometerEstorno(
       chargeId,
       valor,
       valorCentavos,
+      // Porção FACE (organizador) — ver CompromissoEstorno (RN-347)
+      valorFace,
       motivo: input.motivo.trim(),
       solicitadoPor,
       status: 'pendente',
@@ -342,6 +392,7 @@ async function comprometerEstorno(
       chargeId,
       valor,
       valorCentavos,
+      valorFace,
       jaAprovado: false,
       refundId: null,
       pagamentoEstornadoIntegral: false,
@@ -404,7 +455,11 @@ async function aplicarEfeitoEstorno(
     }
 
     const agora = FieldValue.serverTimestamp();
-    const valor = compromisso.valor;
+    // RN-347: a contabilidade do ORGANIZADOR usa a porção FACE da linha —
+    // `compromisso.valor` (face + taxa repassada) é o que voltou ao COMPRADOR
+    // no gateway; a taxa nunca entrou em receitaConfirmada/valorFinal, então
+    // nunca sai deles. Em 'incorporada' valorFace == valor (inalterado).
+    const valorFace = compromisso.valorFace;
 
     // ── ESCRITAS (todas na MESMA transação — Kleppmann) ────────────────────
     // 1. Flip do inscrito → 'estornado' + carimbo. O refund no gateway JÁ
@@ -428,12 +483,15 @@ async function aplicarEfeitoEstorno(
     // 2. Acumulado do pagamento (read-modify-write + roundMoney — nunca
     //    FieldValue.increment de float) + flip 'estornado' quando INTEGRAL
     //    (Σ estornos == valorFinal — matriz canônica: confirmado→estornado).
+    //    `estornadoTotal` acumula a porção FACE (RN-347) — comparável com
+    //    `valorFinal` nos dois modos; o devolvido ao comprador (com taxa)
+    //    vive nas linhas do ledger.
     const valorFinal = pagamentoSnap.get('valorFinal') as number;
     const estornadoAtual =
       typeof pagamentoSnap.get('estornadoTotal') === 'number'
         ? (pagamentoSnap.get('estornadoTotal') as number)
         : 0;
-    const estornadoNovo = roundMoney(estornadoAtual + valor);
+    const estornadoNovo = roundMoney(estornadoAtual + valorFace);
     if (estornadoNovo > valorFinal + TOL) {
       throw new https.HttpsError(
         'internal',
@@ -463,11 +521,13 @@ async function aplicarEfeitoEstorno(
       typeof eventoSnap.get('receitaConfirmada') === 'number'
         ? (eventoSnap.get('receitaConfirmada') as number)
         : 0;
-    const receitaNova = roundMoney(receitaAtual - valor);
+    // FACE (RN-347): o webhook somou `valorFinal` (face) à receita — a
+    // reversão espelha exatamente; a taxa repassada nunca passou por aqui.
+    const receitaNova = roundMoney(receitaAtual - valorFace);
     if (receitaNova < -TOL) {
       throw new https.HttpsError(
         'internal',
-        `Reversão (${valor}) excede a receita confirmada (${receitaAtual}) — ` +
+        `Reversão (${valorFace}) excede a receita confirmada (${receitaAtual}) — ` +
           `dado corrompido, intervenção manual.`
       );
     }

@@ -218,6 +218,15 @@ export interface Pagamento {
    * entram aqui (vivem em `cartao.valorTotalComJuros` — comprador).
    */
   valorFinal: number;
+  /**
+   * Taxa de serviço REPASSADA ao comprador em R$ (RN-347 — evento em modo
+   * 'repassada'). AUSENTE em 'incorporada' (docs vigentes intocados). O
+   * comprador paga `valorFinal + taxaRepassada` (+ juros no cartão parcelado);
+   * o organizador segue enxergando `valorFinal` — a equação canônica A1
+   * (`valorFinal === pedido.valorTotal === Σ itens.valorFinal`) NÃO muda.
+   * É sempre o VALOR em R$, nunca o `platformFeePct` do termo (fix 703db9c).
+   */
+  taxaRepassada?: number;
   /** Só quando forma === 'cartao_credito' */
   cartao?: CartaoPagamento;
   /** Data/hora da confirmação — ausente até o webhook confirmar */
@@ -255,13 +264,19 @@ export function pagamentoConciliado(
 }
 
 /**
- * Valor que o COMPRADOR paga: com juros no cartão parcelado, `valorFinal`
- * no PIX/à vista ("à vista p/ organizador · parcelado p/ atleta"). @pure
+ * Valor que o COMPRADOR paga: com juros no cartão parcelado (o bloco
+ * `cartao.valorTotalComJuros` já parte do total com a taxa repassada quando
+ * RN-347 'repassada'); no PIX/à vista é `valorFinal + taxaRepassada` (a taxa
+ * repassada soma ao que o comprador desembolsa; 0/ausente em 'incorporada' —
+ * comportamento vigente). @pure
  */
 export function valorPagoPeloComprador(
-  pagamento: Pick<Pagamento, 'valorFinal' | 'cartao'>
+  pagamento: Pick<Pagamento, 'valorFinal' | 'cartao' | 'taxaRepassada'>
 ): number {
-  return pagamento.cartao?.valorTotalComJuros ?? pagamento.valorFinal;
+  return (
+    pagamento.cartao?.valorTotalComJuros ??
+    roundMoney(pagamento.valorFinal + (pagamento.taxaRepassada ?? 0))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -409,6 +424,11 @@ export function parsePagamento(
   if (typeof data['loteNome'] === 'string' && data['loteNome'].length > 0) {
     pagamento.loteNome = data['loteNome'];
   }
+  // RN-347 — taxa de serviço repassada ao comprador (opcional; só existe em
+  // evento modo 'repassada'). parseMoney nega negativo/sub-centavo.
+  if (data['taxaRepassada'] !== undefined) {
+    pagamento.taxaRepassada = parseMoney(ctx, 'taxaRepassada', data['taxaRepassada']);
+  }
 
   if (data['cupom'] !== undefined) {
     const cupomRaw = data['cupom'];
@@ -480,15 +500,21 @@ export function parsePagamento(
       ),
     };
 
-    // Invariante (r1 fix 2b): juros são REPASSADOS ao comprador — o total
-    // com juros nunca fica ABAIXO do valorFinal (à vista p/ organizador).
+    // Invariante (r1 fix 2b, endurecida p/ RN-347): juros são REPASSADOS ao
+    // comprador — o total com juros nunca fica ABAIXO do total à vista do
+    // COMPRADOR (valorFinal + taxaRepassada; em 'incorporada' == valorFinal,
+    // o mesmo piso de antes).
+    const pisoComprador = roundMoney(
+      pagamento.valorFinal + (pagamento.taxaRepassada ?? 0)
+    );
     if (
       pagamento.cartao.valorTotalComJuros <
-      pagamento.valorFinal - TOLERANCIA_MEIO_CENTAVO
+      pisoComprador - TOLERANCIA_MEIO_CENTAVO
     ) {
       throw new Error(
         `${ctx}: "cartao.valorTotalComJuros" (${pagamento.cartao.valorTotalComJuros}) ` +
-          `< valorFinal (${pagamento.valorFinal}) — juros repassados nunca reduzem o total`
+          `< valorFinal + taxaRepassada (${pisoComprador}) — juros repassados ` +
+          `nunca reduzem o total do comprador (RN-347)`
       );
     }
 

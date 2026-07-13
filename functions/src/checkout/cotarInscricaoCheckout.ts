@@ -26,6 +26,12 @@
 // (RN-404 · leitura de commercialTerms). O comprador paga `totalCobrado` e nunca
 // vê o repasse do organizador; expor a taxa aqui era um canal-lateral do termo
 // privado para qualquer anônimo. Só sai o que o COMPRADOR enxerga no Resumo.
+//
+// RN-347 (taxa repassada): quando o EVENTO está em modo 'repassada', o
+// comprador PAGA a taxa — o VALOR dela (`taxaServico`, R$) é público por
+// necessidade (linha "Taxa de serviço" do Resumo) e já está embutido no
+// `totalCobrado`. O `platformFeePct` do termo segue privado: sai só o valor,
+// nunca o percentual (o fix 703db9c continua lei).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -98,6 +104,22 @@ export interface CotarInscricaoCheckoutResult {
   // NÃO expor `taxa`/`platformFeePct` aqui: cotação pública/anônima nunca
   // devolve o repasse do organizador (termo privado — RN-330/RN-404). O
   // comprador paga `totalCobrado`; o organizador vê a taxa no painel (auth).
+  /**
+   * Taxa de serviço paga pelo COMPRADOR (RN-347): 0 = evento 'incorporada'
+   * (nenhuma linha no Resumo); > 0 = 'repassada' (a UI exibe "Taxa de
+   * serviço R$ X,XX"). É o VALOR que o comprador desembolsa — já embutido em
+   * `totalCobrado`/opções de parcelamento. NUNCA o `platformFeePct` (fix
+   * 703db9c): em 'repassada' o valor é público por necessidade (o comprador
+   * o paga); o percentual do termo segue privado.
+   */
+  taxaServico: number;
+  /**
+   * Total À VISTA do comprador SEM juros de parcelamento (RN-347):
+   * valorFinal + taxaServico. É o "à vista sai por" do Resumo — a opção 1x
+   * do CARTÃO carrega 1 mês de juros Price (modelo do termo) e não serve de
+   * referência à vista. Em 'incorporada' == valorFinal.
+   */
+  totalAVista: number;
   /** Opções de parcelamento ofertáveis (termo — RN-311). PIX: só 1x. */
   opcoesParcelamento: CotarParcelaResult[];
   /** Opção escolhida (parcelas do input). */
@@ -205,6 +227,10 @@ export async function cotarInscricaoCheckoutCore(
       parcelas: input.parcelas,
       installmentRules: insumos.terms.installmentRules,
       platformFeePct: insumos.terms.platformFeePct,
+      // RN-347: modo do DOC do evento (carregarInsumos) — nunca do input.
+      // A cotação e a cobrança derivam do MESMO modo: o preço da vitrine é
+      // o preço da cobrança.
+      modoTaxa: insumos.modoTaxa,
       agora: agora(),
     });
   } catch (err) {
@@ -232,6 +258,10 @@ export async function cotarInscricaoCheckoutCore(
           valor: sale.cupomAplicado.valor,
         }
       : null,
+    // RN-347: SÓ o valor pago pelo comprador (0 em 'incorporada') — nunca
+    // `taxa` (repasse do organizador) nem `platformFeePct` (fix 703db9c).
+    taxaServico: sale.taxaRepassada,
+    totalAVista: sale.totalComprador,
     opcoesParcelamento: sale.opcoesParcelamento.map((o) => ({
       parcelas: o.parcelas,
       valorParcela: o.valorParcela,
