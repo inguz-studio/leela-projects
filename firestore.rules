@@ -1767,6 +1767,25 @@ service cloud.firestore {
                     || isPlatformAdmin();
         allow write: if false;
       }
+
+      // `analyticsSnapshots/{dia}` — histórico DIÁRIO IMUTÁVEL de KPIs
+      // (E11 · S821-T1a · Onda 2 T2-L1). Cópia fiel de `dashboard/current`
+      // persistida pelo cron `coletaDiaria` (03:05 — ADR-007); docId =
+      // YYYY-MM-DD. SEM `alerts` (UI transitória fica fora do histórico).
+      //
+      // ESCRITA: NUNCA pelo cliente (nem platform_admin via client SDK) —
+      // só a Function escreve (Admin SDK bypassa Rules). Sem write de
+      // cliente, o PASSADO é imutável por construção: a coleta grava só o
+      // doc do dia pedido e o rerun substitui o MESMO dia (nunca anterior).
+      //
+      // LEITURA: só o PRÓPRIO profissional (uid == profId) e platform_admin
+      // — mesma taxonomia do `dashboard` (o histórico é do indivíduo, não
+      // do tenant; staff não lê série alheia).
+      match /analyticsSnapshots/{dia} {
+        allow read: if (isSignedIn() && request.auth.uid == profId)
+                    || isPlatformAdmin();
+        allow write: if false;
+      }
     }
 
     // ── Bloqueia qualquer coleção não modelada acima ─────────────────────

@@ -795,3 +795,16 @@ export {
   validarCampanha,
   parseCampanha,
 } from './eventos/campanha';
+
+// ---------------------------------------------------------------------------
+// Analytics — snapshot diário de KPIs (LEELA-S821-T1a · E11 · Onda 2 T2-L1)
+// Cópia campo a campo de OverviewKPIs (zero recálculo, sem alerts); doc
+// `profissionais/{profId}/analyticsSnapshots/{YYYY-MM-DD}` — só Function
+// escreve; passado imutável. Coletado pelo cron coletaDiaria (ADR-007).
+// ---------------------------------------------------------------------------
+export type { AnalyticsSnapshot } from './analytics/snapshot';
+export {
+  CAMPOS_KPI_SNAPSHOT,
+  isDataSnapshotValida,
+  montarSnapshot,
+} from './analytics/snapshot';
