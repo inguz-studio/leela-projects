@@ -9,11 +9,13 @@
 // "Tentar novamente", sem venda mostra "Nenhuma movimentação".
 // =============================================================================
 
-import { PageHeader } from '@leela/design-system';
+import * as React from 'react';
+import { Button, PageHeader } from '@leela/design-system';
 import type { DadosBancarios, SaldoRepasse } from '@leela/core';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { SaldoCards } from './_components/SaldoCards';
 import { DadosBancariosSection } from './_components/DadosBancariosSection';
+import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
 import { RepasseErro } from './_components/RepasseErro';
 
 export interface RepassesViewProps {
@@ -30,6 +32,11 @@ export interface RepassesViewProps {
   dbSaving: boolean;
   dbSaveError?: string | undefined;
   onSubmitDados: (input: SaveDadosBancariosInput) => Promise<boolean>;
+
+  // Solicitar repasse (T3)
+  solicitarRunning: boolean;
+  /** Solicita o repasse; resolve `true` em sucesso (o view fecha o modal). */
+  onSolicitar: (valor: number) => Promise<boolean>;
 }
 
 export function RepassesView({
@@ -44,12 +51,30 @@ export function RepassesView({
   dbSaving,
   dbSaveError,
   onSubmitDados,
+  solicitarRunning,
+  onSolicitar,
 }: RepassesViewProps): JSX.Element {
+  const [solicitarAberto, setSolicitarAberto] = React.useState(false);
+
+  const disponivel = saldo?.disponivel ?? 0;
+  // Só solicita com dados bancários cadastrados E saldo disponível > 0 (o
+  // servidor reconfere — RN-352). Botão desabilitado é o estado honesto.
+  const podeSolicitar = dadosBancarios !== null && disponivel > 0;
+
   return (
     <div className="flex flex-col gap-[var(--spacing-6)] pb-[var(--spacing-8)]">
       <PageHeader
         title="Repasses"
         subtitle="Seu saldo de vendas, dados bancários e histórico de saques"
+        actions={
+          <Button
+            variant="primary"
+            disabled={!podeSolicitar}
+            onClick={() => setSolicitarAberto(true)}
+          >
+            Solicitar repasse
+          </Button>
+        }
       />
 
       <div className="flex flex-col gap-[var(--spacing-8)] px-[var(--spacing-6)]">
@@ -74,6 +99,22 @@ export function RepassesView({
           onSubmit={onSubmitDados}
         />
       </div>
+
+      {/* Modal de solicitação (T3) — só com dados bancários salvos. */}
+      {dadosBancarios !== null && (
+        <SolicitarRepasseModal
+          open={solicitarAberto}
+          onOpenChange={setSolicitarAberto}
+          dados={dadosBancarios}
+          disponivel={disponivel}
+          running={solicitarRunning}
+          onConfirmar={async (valor) => {
+            const ok = await onSolicitar(valor);
+            if (ok) setSolicitarAberto(false);
+            return ok;
+          }}
+        />
+      )}
     </div>
   );
 }

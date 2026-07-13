@@ -29,6 +29,7 @@ import {
   removerCupom,
   removerLote,
   removerMembro,
+  requestRepasse,
   salvarConteudoPaginaVendas,
   salvarCupom,
   salvarKit,
@@ -47,6 +48,8 @@ import {
   type EstornarInscricaoResult,
   type PublicarPaginaVendasResult,
   type RemoverMembroResult,
+  type RequestRepasseInput,
+  type RequestRepasseResult,
   type SaveDadosBancariosInput,
   type SaveDadosBancariosResult,
   type EscritaLoteInput,
@@ -579,6 +582,26 @@ export function useSaveDadosBancarios(
       void queryClient.invalidateQueries({
         queryKey: queryKeys.repasse.dadosBancarios(tenantId),
       });
+    },
+  });
+}
+
+/**
+ * Solicita um repasse (callable `requestRepasse`, tenant_owner). O servidor relê
+ * `saldo.disponivel` e valida (RN-352) — `valor > disponivel` ⇒ failed-precondition
+ * (o cliente nunca cria; o espelho client é só UX). No onSuccess invalida o
+ * saldo (comprometido↑/disponível↓) E o histórico (novo item em `solicitado`) →
+ * ambos refletem sem reload (read-your-writes, ADR-010).
+ */
+export function useRequestRepasse(
+  tenantId: string,
+): UseMutationResult<RequestRepasseResult, Error, RequestRepasseInput> {
+  const queryClient = useQueryClient();
+  return useMutation<RequestRepasseResult, Error, RequestRepasseInput>({
+    mutationFn: (input) => requestRepasse(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.repasse.saldo(tenantId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.repasse.historico(tenantId) });
     },
   });
 }

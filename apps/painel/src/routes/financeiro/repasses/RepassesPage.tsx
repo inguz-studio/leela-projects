@@ -9,7 +9,7 @@ import { useCallback } from 'react';
 import { useToast } from '@leela/design-system';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { useFinanceiroSession } from '../_data/session';
-import { useSaveDadosBancarios } from '../../../lib/query/mutations';
+import { useRequestRepasse, useSaveDadosBancarios } from '../../../lib/query/mutations';
 import { useDadosBancarios, useSaldoRepasse } from './_data/repasses';
 import { repasseErrorMessage } from './_lib/erros';
 import { RepassesView } from './RepassesView';
@@ -23,6 +23,7 @@ export function RepassesPage(): JSX.Element {
   const saldo = useSaldoRepasse(tenantId);
   const dados = useDadosBancarios(tenantId);
   const salvarDados = useSaveDadosBancarios(tenantId ?? '');
+  const solicitar = useRequestRepasse(tenantId ?? '');
 
   // Salva os dados bancários; resolve `true` em sucesso (a section sai do modo
   // edição). Sucesso → Toast + read-your-writes (a query invalidada traz o
@@ -45,6 +46,31 @@ export function RepassesPage(): JSX.Element {
     [salvarDados, toast],
   );
 
+  // Solicita o repasse. O servidor relê o disponível e é autoritativo (RN-352):
+  // failed-precondition ⇒ Toast danger (a UI não adivinha o motivo). Sucesso ⇒
+  // Toast + o histórico ganha o item em `solicitado` (query invalidada).
+  const onSolicitar = useCallback(
+    async (valor: number): Promise<boolean> => {
+      try {
+        await solicitar.mutateAsync({ valor });
+        toast({
+          variant: 'success',
+          title: 'Repasse solicitado',
+          description: 'Acompanhe o status no histórico abaixo.',
+        });
+        return true;
+      } catch (err) {
+        toast({
+          variant: 'danger',
+          title: 'Não foi possível solicitar',
+          description: repasseErrorMessage(err, 'solicitacao'),
+        });
+        return false;
+      }
+    },
+    [solicitar, toast],
+  );
+
   return (
     <RepassesView
       saldo={saldo.data}
@@ -58,6 +84,8 @@ export function RepassesPage(): JSX.Element {
       dbSaving={salvarDados.isPending}
       dbSaveError={repasseErrorMessage(salvarDados.error, 'dados') || undefined}
       onSubmitDados={onSubmitDados}
+      solicitarRunning={solicitar.isPending}
+      onSolicitar={onSolicitar}
     />
   );
 }

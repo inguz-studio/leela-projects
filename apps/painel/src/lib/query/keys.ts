@@ -58,6 +58,8 @@ export const queryKeys = {
     saldo: (tenantId: string) => ['repasse', tenantId, 'saldo'] as const,
     /** `dadosBancarios/current` mascarado (RN-354). */
     dadosBancarios: (tenantId: string) => ['repasse', tenantId, 'dados-bancarios'] as const,
+    /** `repasses` do tenant — histórico (mais recentes primeiro). */
+    historico: (tenantId: string) => ['repasse', tenantId, 'historico'] as const,
   },
 
   kits: {
