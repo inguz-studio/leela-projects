@@ -201,4 +201,20 @@ describe('DropdownMenu', () => {
     expect(menu.className).toContain('border-border');
     expect(menu.className).toContain('rounded-md');
   });
+
+  it('className vai para o PAINEL do menu, não para o trigger (bug do showroom)', () => {
+    render(
+      <DropdownMenu
+        actions={makeActions()}
+        open
+        onOpenChange={() => undefined}
+        trigger={<button type="button">Abrir ações</button>}
+        className="painel-custom"
+      />,
+    );
+    const menu = screen.getByRole('menu', { name: 'Ações' });
+    expect(menu.className).toContain('painel-custom');
+    const trigger = screen.getByRole('button', { name: 'Abrir ações' });
+    expect(trigger.parentElement?.className ?? '').not.toContain('painel-custom');
+  });
 });

@@ -82,6 +82,7 @@ export interface DropdownMenuProps {
   align?: 'left' | 'right';
   /** Rótulo do landmark do menu (nome acessível). Default: "Ações". */
   menuLabel?: string;
+  /** Classe extra do PAINEL do menu (o popover em portal), não do trigger. */
   className?: string;
 }
 
@@ -261,7 +262,7 @@ function DropdownMenu({
   }
 
   return (
-    <div ref={containerRef} className={cn('relative inline-flex', className)}>
+    <div ref={containerRef} className="relative inline-flex">
       {/* Trigger — recebe props direto no elemento, sem wrapper clicável */}
       <Slot
         ref={triggerRef}
@@ -298,6 +299,7 @@ function DropdownMenu({
             'shadow-elev-2',
             'p-[var(--spacing-1)]',
             'animate-in fade-in-0 zoom-in-95',
+            className,
           )}
         >
           {actions.map((action) => {

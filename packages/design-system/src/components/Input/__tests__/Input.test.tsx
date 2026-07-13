@@ -82,4 +82,25 @@ describe('Input', () => {
     render(<Input aria-label="X" className="test-custom" />);
     expect(screen.getByRole('textbox')).toHaveClass('test-custom');
   });
+
+  // ── aria-describedby estável (bug do showroom: s/ id) ───────────────────
+  it('associates the error via aria-describedby even WITHOUT an explicit id', () => {
+    render(<Input aria-label="Email" errorMessage="Inválido" />);
+    const input = screen.getByRole('textbox');
+    const describedBy = input.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(screen.getByRole('alert')).toHaveAttribute('id', describedBy as string);
+  });
+
+  it('preserves a caller aria-describedby and APPENDS the error id', () => {
+    render(
+      <Input id="cpf" aria-label="CPF" aria-describedby="cpf-hint" errorMessage="Inválido" />,
+    );
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'cpf-hint cpf-error');
+  });
+
+  it('keeps only the caller aria-describedby when there is no error', () => {
+    render(<Input aria-label="CPF" aria-describedby="cpf-hint" />);
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'cpf-hint');
+  });
 });

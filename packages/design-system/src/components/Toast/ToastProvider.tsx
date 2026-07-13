@@ -3,7 +3,7 @@
  *
  * - `toast({...})` adiciona e devolve o id.
  * - Auto-dismiss em 4s (DEFAULT_TOAST_DURATION); danger persiste até
- *   dismiss manual (regra T4).
+ *   dismiss manual (regra T4), salvo `duration` explícito (opt-in).
  * - Viewport fixo no canto inferior direito; cada toast tem botão fechar.
  */
 
@@ -22,7 +22,7 @@ export interface ToastOptions {
   title: string;
   description?: string;
   variant?: ToastVariant;
-  /** Sobrescreve os 4s padrão (ignorado em danger, que persiste). */
+  /** Sobrescreve os 4s padrão. Em danger, defini-lo liga o auto-dismiss (senão persiste). */
   duration?: number;
 }
 
@@ -74,8 +74,11 @@ function ToastProvider({ children, viewportClassName }: ToastProviderProps): JSX
       const id = `toast-${counterRef.current}`;
       setItems((prev) => [...prev, { ...options, id }]);
 
-      // danger persiste (T4); demais somem em 4s
-      if (options.variant !== 'danger') {
+      // danger persiste por PADRÃO (T4); demais somem em 4s. Um `duration`
+      // EXPLÍCITO liga o auto-dismiss inclusive em danger (opt-in) — antes o
+      // duration era ignorado em danger (bug do showroom).
+      const autoDismiss = options.variant !== 'danger' || options.duration !== undefined;
+      if (autoDismiss) {
         const timer = setTimeout(
           () => dismiss(id),
           options.duration ?? DEFAULT_TOAST_DURATION,

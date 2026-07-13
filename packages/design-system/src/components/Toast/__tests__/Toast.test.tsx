@@ -112,6 +112,21 @@ describe('ToastProvider', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('danger com duration explícito AUTO-dispensa (opt-in, bug do showroom)', () => {
+    render(
+      <ToastProvider>
+        <Trigger options={{ title: 'Erro temporário', variant: 'danger', duration: 2000 }} />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Disparar' }));
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('respects custom duration', () => {
     render(
       <ToastProvider>

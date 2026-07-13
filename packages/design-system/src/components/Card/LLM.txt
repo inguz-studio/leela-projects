@@ -23,7 +23,7 @@ Todos os subcomponentes aceitam somente props nativas HTML (nenhuma prop própri
 - CardDescription: React.HTMLAttributes<HTMLParagraphElement> (p)
 - CardContent: React.HTMLAttributes<HTMLDivElement> (div)
 - CardFooter: React.HTMLAttributes<HTMLDivElement> (div)
-Observação: o barrel não exporta tipos de props para Card (não existe CardProps).
+Tipos exportados no barrel (aliases das props nativas, sem prop própria): CardProps, CardHeaderProps, CardTitleProps, CardDescriptionProps, CardContentProps, CardFooterProps.
 
 ## Tokens consumidos (nenhum valor cru permitido)
 - --spacing-1 / --spacing-6

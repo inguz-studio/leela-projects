@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import * as React from 'react';
 import { CardEvento } from '../CardEvento';
 
 describe('CardEvento', () => {
@@ -67,5 +68,30 @@ describe('CardEvento', () => {
     const root = screen.getByRole('link');
     expect(root.className).toContain('hover:-translate-y-[var(--spacing-1)]');
     expect(root.className).toContain('hover:shadow-[var(--elevation-2)]');
+  });
+
+  it('forwards the DOM event to onClick (so it can preventDefault)', async () => {
+    let hasEvent = false;
+    const onClick = vi.fn((event: React.MouseEvent) => {
+      hasEvent = typeof event.preventDefault === 'function';
+    });
+    render(<CardEvento title="Evento" onClick={onClick} />);
+    await userEvent.click(screen.getByRole('button'));
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(hasEvent).toBe(true);
+  });
+
+  it('href + onClick: fires onClick with the event and keeps the link', async () => {
+    let hasEvent = false;
+    const onClick = vi.fn((event: React.MouseEvent) => {
+      event.preventDefault();
+      hasEvent = typeof event.preventDefault === 'function';
+    });
+    render(<CardEvento title="Evento" href="/eventos/1" onClick={onClick} />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/eventos/1');
+    await userEvent.click(link);
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(hasEvent).toBe(true);
   });
 });

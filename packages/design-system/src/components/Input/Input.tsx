@@ -47,18 +47,28 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       wrapperClassName,
       id,
       disabled,
+      'aria-describedby': ariaDescribedBy,
       ...props
     },
     ref,
   ) => {
-    const errorId = id ? `${id}-error` : undefined;
+    // id ESTÁVEL mesmo sem `id` do consumidor: a mensagem de erro precisa de um
+    // alvo real senão o aria-describedby fica sem id e o erro não é associado
+    // (bug do showroom: aria-describedby s/ id). useId dá um id determinístico.
+    const reactId = React.useId();
+    const fieldId = id ?? reactId;
+    const errorId = `${fieldId}-error`;
     const hasError = Boolean(errorMessage);
+    // Preserva o aria-describedby do consumidor (ex.: uma dica) e ANEXA o erro,
+    // em vez de um sobrescrever o outro.
+    const describedBy =
+      [ariaDescribedBy, hasError ? errorId : null].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className={cn('flex flex-col gap-1', wrapperClassName)}>
         {label ? (
           <label
-            htmlFor={id}
+            htmlFor={fieldId}
             className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
           >
             {label}
@@ -67,10 +77,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
         <input
           ref={ref}
-          id={id}
+          id={fieldId}
           disabled={disabled}
           aria-invalid={hasError ? true : undefined}
-          aria-describedby={hasError && errorId ? errorId : undefined}
+          aria-describedby={describedBy}
           className={cn(
             // Base layout
             'block w-full',

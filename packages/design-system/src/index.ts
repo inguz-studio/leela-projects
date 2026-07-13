@@ -133,6 +133,14 @@ export {
   CardContent,
   CardFooter,
 } from './components/Card';
+export type {
+  CardProps,
+  CardHeaderProps,
+  CardTitleProps,
+  CardDescriptionProps,
+  CardContentProps,
+  CardFooterProps,
+} from './components/Card';
 
 // ── Gráficos (Recharts · ADR-010 · lote FID-EVT-T2) ─────────────────────────
 export { BarChart, DonutChart, chartCategoryVar, formatChartInt, pctOf, CHART_CATEGORY_COUNT } from './components/charts';

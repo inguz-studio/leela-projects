@@ -8,7 +8,8 @@
  * - §2.16 flat — sem borda; diferencia-se por surface-raised.
  *
  * Interativo: com `href` vira <a>; com só `onClick` vira <button>;
- * sem ambos, <article> estático.
+ * sem ambos, <article> estático. Com href+onClick, o onClick recebe o evento
+ * (pode `preventDefault()` — ex.: navegação SPA sem recarregar a página).
  */
 
 import * as React from 'react';
@@ -28,7 +29,8 @@ export interface CardEventoProps {
   meta?: React.ReactNode;
   footer?: React.ReactNode;
   href?: string;
-  onClick?: () => void;
+  /** Recebe o evento — em href+onClick, permite `preventDefault()` (nav SPA). */
+  onClick?: (event: React.MouseEvent) => void;
   className?: string;
 }
 

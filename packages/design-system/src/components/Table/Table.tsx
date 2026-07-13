@@ -25,7 +25,7 @@
  *     (--table-header-font-size = font.size.xs), uppercase, ls 0.08em,
  *     text-tertiary, font-semibold, fio de fundo --table-header-bg
  *   - EmptyState integrado quando data=[]; aceita componente externo
- *   - Popover de ações por linha via renderActions
+ *   - DropdownMenu de ações por linha via renderActions
  *
  * Responsivo (RESP-M5): em lg+ é a tabela densa nativa (INTOCADA). Abaixo de lg
  * — mesmo breakpoint em que o shell troca o rail por drawer (preset L55-58) — a
