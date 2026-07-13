@@ -7,6 +7,7 @@
 // criação/lotes) — exibidos read-only na tela.
 // =============================================================================
 
+import { modoTaxaDoEvento, type ModoTaxa } from '@leela/core';
 import { DOMINIO_LEELA } from '../../pagina-vendas/_lib/paginaVendasView';
 
 /** Estado controlado do form (capacidade como string do input; converte no submit). */
@@ -15,6 +16,13 @@ export interface ConfigGeraisValues {
   local: string;
   usaChip: boolean;
   capacidade: string;
+  /**
+   * RN-347 — repassar a taxa da plataforma ao comprador? `true` ⇔ `taxaModo`
+   * 'repassada'; `false` ⇔ 'incorporada'. Deriva de `modoTaxaDoEvento` na
+   * leitura e vira `taxaModo` no submit (só quando o modo ainda é editável —
+   * a 1ª venda congela o campo nas Rules; ver ConfigGeraisForm).
+   */
+  repassarTaxa: boolean;
 }
 
 /** Erros por campo — chave ausente = campo válido. */
@@ -50,6 +58,7 @@ export function valoresDoEvento(evento: {
   local: string;
   usaChip: boolean;
   capacidade?: number | null;
+  taxaModo?: ModoTaxa;
 }): ConfigGeraisValues {
   return {
     nome: evento.nome,
@@ -59,7 +68,16 @@ export function valoresDoEvento(evento: {
       typeof evento.capacidade === 'number' && evento.capacidade > 0
         ? String(evento.capacidade)
         : '',
+    // Fonte única do modo vigente (ausente ⇒ 'incorporada', RN-347).
+    repassarTaxa: modoTaxaDoEvento(evento) === 'repassada',
   };
+}
+
+/**
+ * Converte o toggle de repasse no `taxaModo` do contrato (RN-347). @pure
+ */
+export function taxaModoDoForm(repassarTaxa: boolean): ModoTaxa {
+  return repassarTaxa ? 'repassada' : 'incorporada';
 }
 
 /**

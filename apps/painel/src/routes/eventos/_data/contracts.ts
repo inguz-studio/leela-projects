@@ -6,11 +6,15 @@
 // a interface esperada (spec S201-T2: `criarEvento(input) -> {eventoId, slug}`)
 // para o form submeter contra ela; em teste injeta-se um mock desta porta.
 //
-// ⚠ BLOQUEIO/CONTRATO p/ L2: a spec S201-T2 define a SAÍDA
-// (`{eventoId, slug}`) mas não a forma da ENTRADA. O shape de `CriarEventoInput`
-// abaixo é a proposta do L3 — o L2 deve confirmar/implementar exatamente estes
-// campos em `mutations.ts` (ou avisar divergência). Ver SUMMARY §Bloqueios.
+// ⚠ CONTRATO CONFIRMADO com L2 (EVENTO-CAMPOS, RN-347): a spec S201-T2 definia a
+// SAÍDA (`{eventoId, slug}`); a ENTRADA abaixo era a proposta do L3. O servidor
+// (`functions/src/eventos/criarEvento.ts`) já ACEITA e persiste `taxaModo` (modo
+// da taxa por evento — RN-347), resolvendo `input explícito > default do tenant >
+// 'incorporada'`. Esta porta espelha só o subconjunto que a tela `/eventos/novo`
+// envia. Ver EVENTO-CAMPOS-REPORT §3.
 // =============================================================================
+
+import type { ModoTaxa } from '@leela/core';
 
 /** Percurso com preço independente (S201-T1). Preço em reais. */
 export interface CriarEventoPercurso {
@@ -26,6 +30,13 @@ export interface CriarEventoInput {
   local: string;
   modalidades: string[];
   percursos: CriarEventoPercurso[];
+  /**
+   * Modo da taxa da plataforma POR EVENTO (RN-347) — OPCIONAL. Ausente ⇒ o
+   * servidor aplica o default do tenant (`commercialTerms.modoTaxaDefault`) e,
+   * na falta, 'incorporada'. A tela `/eventos/novo` sempre envia a escolha do
+   * organizador (WYSIWYG). Após a 1ª venda a troca CONGELA nas Rules.
+   */
+  taxaModo?: ModoTaxa;
 }
 
 /** Contrato de saída definido pela spec S201-T2. */

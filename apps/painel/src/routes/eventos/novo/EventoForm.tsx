@@ -11,13 +11,15 @@
 // exige (min 1, RN-200) são DERIVADOS das modalidades com preço 0 (a definir na
 // aba Lotes). Presentational + controlado; submit via porta injetada.
 //
-// LACUNAS registradas (o callable `criarEvento` — functions/, fora de escopo —
-// não aceita estes campos hoje; ver REPORT):
-//   - CAPA: só URL (sem upload/Storage no repo); e `imagemUrl` não é persistido
-//     por `criarEvento` — coletada p/ fidelidade + preview.
-//   - REGULAMENTO: o modelo do evento (core) não tem campo — não persiste.
-//   - TAXA (RN-347): não há campo por-evento no modelo — toggle DESABILITADO
-//     (honesto) com hint; hoje vale o default do tenant (incorporada).
+// TAXA (RN-347 · ATIVADO): o callable `criarEvento` já aceita e persiste
+// `taxaModo` por evento (input > default do tenant > 'incorporada'); o toggle
+// abaixo é REAL e sempre envia a escolha do organizador (WYSIWYG). Após a 1ª
+// venda a troca congela (Rules) — isso é tratado na aba Configurações.
+//
+// LACUNAS ainda registradas (fora de escopo desta task):
+//   - CAPA: só URL (sem upload/Storage no repo); `imagemUrl` não é enviado por
+//     esta tela — coletada p/ fidelidade + preview.
+//   - REGULAMENTO: coletado p/ fidelidade, não enviado por esta tela. Ver REPORT.
 // =============================================================================
 
 import * as React from 'react';
@@ -41,6 +43,7 @@ const VALORES_INICIAIS: NovoEventoFormValues = {
   modalidades: [],
   capa: '',
   regulamento: '',
+  repassarTaxa: false,
 };
 
 // Vocabulário fechado de distâncias (RN-153) — clique adiciona/remove; o
@@ -128,6 +131,9 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         // Percursos DERIVADOS das modalidades (RN-153): sem preço no cadastro —
         // preços/lotes ficam na aba Lotes. preco 0 = "a definir" (RN-200 ≥ 0).
         percursos: values.modalidades.map((m) => ({ nome: m, preco: 0 })),
+        // RN-347: sempre envia a escolha do organizador (WYSIWYG). O servidor
+        // aceita e persiste; input explícito prevalece sobre o default do tenant.
+        taxaModo: values.repassarTaxa ? 'repassada' : 'incorporada',
       };
       const descricao = values.descricao.trim();
       if (descricao) input.descricao = descricao;
@@ -311,22 +317,21 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         ) : null}
       </fieldset>
 
-      {/* Taxa de serviço (RN-347) — sem campo por-evento no modelo hoje:
-          toggle DESABILITADO honesto + hint + lacuna registrada. */}
+      {/* Taxa de serviço (RN-347) — toggle REAL: persiste `taxaModo` no cadastro. */}
       <fieldset className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--card-radius)] bg-[var(--surface-sunken)] p-[var(--spacing-4)]">
         <legend className="px-[var(--spacing-1)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
           Taxa de serviço
         </legend>
         <Switch
+          id="repassar-taxa"
           label="Repassar a taxa de serviço ao comprador"
-          description="Desligado (padrão): taxa incorporada — você absorve e o comprador paga o preço de face. Ligado: repassada — o comprador paga face + taxa."
-          checked={false}
-          disabled
-          readOnly
+          description="Desligado (padrão): taxa incorporada — o comprador paga o preço de face e a taxa sai do seu repasse. Ligado: taxa repassada — o comprador paga o preço de face + a taxa."
+          checked={values.repassarTaxa}
+          onCheckedChange={(checked) => set('repassarTaxa', checked)}
         />
         <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Hoje segue o padrão da sua produtora (incorporada). A escolha por evento chega em breve
-          (RN-347).
+          Você pode mudar isto nas Configurações do evento — até a primeira venda. Depois o modo
+          fica travado (mexe em dinheiro de inscrições confirmadas).
         </span>
       </fieldset>
 

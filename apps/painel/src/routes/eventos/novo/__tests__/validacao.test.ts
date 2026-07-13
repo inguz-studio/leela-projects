@@ -15,6 +15,7 @@ function base(over: Partial<NovoEventoFormValues> = {}): NovoEventoFormValues {
     modalidades: ['10k'],
     capa: '',
     regulamento: '',
+    repassarTaxa: false,
     ...over,
   };
 }

@@ -89,4 +89,39 @@ describe('ConfigGeraisForm (S304-T2)', () => {
     expect(await screen.findByText('Informe o nome do evento.')).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
   });
+
+  it('sem venda: ligar a taxa persiste taxaModo=repassada (RN-347)', async () => {
+    const { onSalvar } = setup({ evento: fakeEvento({ qtdInscritos: 0 }) });
+    const taxa = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
+    expect(taxa).toBeEnabled();
+    await userEvent.click(taxa);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ taxaModo: 'repassada' }));
+  });
+
+  it('sem venda + toggle desligado: persiste taxaModo=incorporada', async () => {
+    const { onSalvar } = setup({ evento: fakeEvento({ qtdInscritos: 0, taxaModo: 'incorporada' }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ taxaModo: 'incorporada' }));
+  });
+
+  it('com venda: o modo da taxa CONGELA — switch desabilitado, hint, e não envia taxaModo', async () => {
+    const { onSalvar } = setup({
+      evento: fakeEvento({ qtdInscritos: 5, taxaModo: 'repassada' }),
+    });
+    const taxa = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
+    expect(taxa).toBeDisabled();
+    // Reflete o modo vigente do evento (repassada → ligado).
+    expect(taxa).toBeChecked();
+    expect(screen.getByText(/Travado: este evento já tem inscrições/)).toBeInTheDocument();
+
+    // Salvar os demais campos ainda funciona; taxaModo é OMITIDO (a Rule congela).
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    const [payload] = onSalvar.mock.calls[0] ?? [];
+    expect(payload).toBeDefined();
+    expect(payload).not.toHaveProperty('taxaModo');
+  });
 });

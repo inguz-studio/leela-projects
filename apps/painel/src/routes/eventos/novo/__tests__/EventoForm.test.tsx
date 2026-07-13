@@ -84,10 +84,39 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     );
   });
 
-  it('a taxa (RN-347) aparece como toggle DESABILITADO honesto', () => {
-    renderForm();
+  it('a taxa (RN-347) é um toggle ATIVO; por padrão persiste taxaModo=incorporada', async () => {
+    const { onCriarEvento } = renderForm();
     const toggle = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
-    expect(toggle).toBeDisabled();
+    expect(toggle).toBeEnabled();
+
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Taxa');
+    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: '10k' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+
+    await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
+    expect(onCriarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({ taxaModo: 'incorporada' }),
+    );
+  });
+
+  it('ligar o toggle persiste taxaModo=repassada (RN-347)', async () => {
+    const { onCriarEvento } = renderForm();
+
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Repassada');
+    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: '10k' }));
+    await userEvent.click(
+      screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+
+    await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
+    expect(onCriarEvento).toHaveBeenCalledWith(
+      expect.objectContaining({ taxaModo: 'repassada' }),
+    );
   });
 
   it('mostra Toast de erro quando a criação falha', async () => {

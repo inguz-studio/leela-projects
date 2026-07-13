@@ -1,9 +1,10 @@
 // =============================================================================
 // ConfigGeraisForm — form das Configurações gerais do evento (S304-T2 · E04-L5).
-// Presentational + controlado (padrão EventoForm). Edita só os campos gerais
-// que o model suporta (nome/local/usaChip/capacidade); exibe read-only a URL
-// pública ({DOMINIO_LEELA}), a data, as modalidades e o status (editados no
-// fluxo de criação/lotes — travados após a 1ª venda). O gate de papel
+// Presentational + controlado (padrão EventoForm). Edita os campos gerais que o
+// model suporta (nome/local/usaChip/capacidade) + o modo da taxa (RN-347 —
+// `taxaModo`, editável até a 1ª venda; depois CONGELA como os percursos/lotes
+// vendidos); exibe read-only a URL pública ({DOMINIO_LEELA}), a data, as
+// modalidades e o status (editados no fluxo de criação/lotes). O gate de papel
 // (`podeEditar`) desabilita todos os controles + o Salvar; a Rule é a
 // autoridade final (defesa em profundidade). Submit → porta injetada `onSalvar`
 // → Toast (§2.12).
@@ -12,10 +13,11 @@
 import * as React from 'react';
 import { Badge, Button, Input, Switch, useToast } from '@leela/design-system';
 import type { AtualizarConfiguracoesEventoInput } from '@leela/api-client';
-import type { Evento } from '@leela/core';
+import { temVenda, type Evento } from '@leela/core';
 import { formatDataEvento } from '../../_lib/format';
 import {
   capacidadeParaNumero,
+  taxaModoDoForm,
   urlPublicaEvento,
   valoresDoEvento,
   validaConfigGerais,
@@ -62,12 +64,19 @@ export function ConfigGeraisForm({
     }
     setSalvando(true);
     try {
-      await onSalvar({
+      const payload: AtualizarConfiguracoesEventoInput = {
         nome: values.nome.trim(),
         local: values.local.trim(),
         usaChip: values.usaChip,
         capacidade: capacidadeParaNumero(values.capacidade),
-      });
+      };
+      // RN-347: só envia `taxaModo` enquanto o modo é editável. Com venda feita
+      // o campo fica travado (Rule nega a troca) — omitir evita que o modo
+      // entre no `affectedKeys` e derrube o update inteiro por permission-denied.
+      if (!taxaCongelada) {
+        payload.taxaModo = taxaModoDoForm(values.repassarTaxa);
+      }
+      await onSalvar(payload);
       toast({ variant: 'success', title: 'Configurações salvas' });
     } catch {
       toast({
@@ -81,6 +90,10 @@ export function ConfigGeraisForm({
   }
 
   const disabled = !podeEditar || salvando;
+  // RN-347: o modo da taxa congela na 1ª venda (mesma cerca dos percursos/lotes
+  // vendidos — a Rule nega a troca). Espelha o congelamento na UI.
+  const vendaFeita = temVenda(evento);
+  const taxaCongelada = disabled || vendaFeita;
 
   return (
     <form
@@ -141,6 +154,24 @@ export function ConfigGeraisForm({
         disabled={disabled}
         onCheckedChange={(checked) => set('usaChip', checked)}
       />
+
+      {/* Taxa de serviço (RN-347): editável até a 1ª venda; depois congela. */}
+      <div className="flex flex-col gap-[var(--spacing-1)]">
+        <Switch
+          id="config-repassar-taxa"
+          label="Repassar a taxa de serviço ao comprador"
+          description="Desligado: taxa incorporada — o comprador paga o preço de face e a taxa sai do seu repasse. Ligado: taxa repassada — o comprador paga o preço de face + a taxa."
+          checked={values.repassarTaxa}
+          disabled={taxaCongelada}
+          onCheckedChange={(checked) => set('repassarTaxa', checked)}
+        />
+        {vendaFeita ? (
+          <span className="pl-[calc(var(--spacing-8)+var(--spacing-3))] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Travado: este evento já tem inscrições. Mudar quem paga a taxa mexeria no repasse de
+            vendas confirmadas.
+          </span>
+        ) : null}
+      </div>
 
       {/* Read-only: URL pública + contexto travado (editado na criação/lotes). */}
       <div className="flex flex-col gap-[var(--spacing-4)] border-t-[length:var(--border-width-thin)] border-t-[color:var(--border-subtle)] pt-[var(--spacing-5)]">

@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   capacidadeParaNumero,
+  taxaModoDoForm,
   urlPublicaEvento,
   valoresDoEvento,
   validaConfigGerais,
@@ -41,15 +42,32 @@ describe('valoresDoEvento', () => {
   it('preenche a partir do evento; capacidade null → campo vazio', () => {
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: null }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '' });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false });
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: 500 }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500' });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500', repassarTaxa: false });
+  });
+
+  it('deriva repassarTaxa do taxaModo (RN-347): ausente ⇒ false, repassada ⇒ true', () => {
+    expect(valoresDoEvento({ nome: 'E', local: 'L', usaChip: true }).repassarTaxa).toBe(false);
+    expect(
+      valoresDoEvento({ nome: 'E', local: 'L', usaChip: true, taxaModo: 'incorporada' }).repassarTaxa,
+    ).toBe(false);
+    expect(
+      valoresDoEvento({ nome: 'E', local: 'L', usaChip: true, taxaModo: 'repassada' }).repassarTaxa,
+    ).toBe(true);
+  });
+});
+
+describe('taxaModoDoForm', () => {
+  it('mapeia o toggle para o enum ModoTaxa (RN-347)', () => {
+    expect(taxaModoDoForm(false)).toBe('incorporada');
+    expect(taxaModoDoForm(true)).toBe('repassada');
   });
 });
 
 describe('validaConfigGerais', () => {
-  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '' };
+  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false };
 
   it('form válido passa', () => {
     expect(validaConfigGerais(base).valido).toBe(true);

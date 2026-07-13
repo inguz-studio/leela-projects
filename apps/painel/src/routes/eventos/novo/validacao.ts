@@ -37,6 +37,13 @@ export interface NovoEventoFormValues {
    * coletado p/ fidelidade, NÃO persiste. Ver lacuna no REPORT.
    */
   regulamento: string;
+  /**
+   * RN-347 — repassar a taxa da plataforma ao comprador? `false` (padrão) =
+   * taxa INCORPORADA (o comprador paga o preço de face; a taxa sai do repasse);
+   * `true` = REPASSADA (o comprador paga face + taxa). No submit vira
+   * `taxaModo: 'incorporada' | 'repassada'` (o servidor persiste — RN-347).
+   */
+  repassarTaxa: boolean;
 }
 
 export type CampoNovoEvento = 'nome' | 'data' | 'local' | 'modalidades';
