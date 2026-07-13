@@ -12,7 +12,7 @@
 // =============================================================================
 
 import type { ReactNode } from 'react';
-import { Navigate, useOutletContext } from 'react-router-dom';
+import { Navigate, useLocation, useOutletContext } from 'react-router-dom';
 import { Skeleton } from '@leela/design-system';
 import { podeAcessar, type AreaEvento, type PapelEvento } from '@leela/core';
 import { usePapelEvento } from '../eventos/_data/papelEvento';
@@ -50,6 +50,7 @@ export function RequirePapel({ area, children }: RequirePapelProps): JSX.Element
   const { evento } = useOutletContext<EventoOutletContext>();
   const session = useEventosSession();
   const { papel, loading } = usePapelEvento(evento);
+  const location = useLocation();
 
   const decisao = avaliarAcesso({ status: session.status, papel, loading }, area);
 
@@ -61,8 +62,12 @@ export function RequirePapel({ area, children }: RequirePapelProps): JSX.Element
     );
   }
   if (decisao === 'login') {
-    // Não logado → fluxo de login (E00), NÃO 403.
-    return <Navigate to={ROTA_LOGIN} replace />;
+    // Não logado → fluxo de login (E00), NÃO 403. Fecha o ciclo do redirect
+    // (S020-T1): guarda a rota de origem em `state.from` para o EntrarPage
+    // devolver o usuário exatamente onde ele tentou entrar após autenticar.
+    return (
+      <Navigate to={ROTA_LOGIN} replace state={{ from: location.pathname + location.search }} />
+    );
   }
   if (decisao === 'forbidden') {
     return <Forbidden />;
