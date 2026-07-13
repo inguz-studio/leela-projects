@@ -134,9 +134,11 @@ Especificação completa nos arquivos de épico; resumo do encaixe:
 
 | Regra nova | Épico / US | Como encaixa | RN (proposta) |
 |---|---|---|---|
-| **Cupom-only** (evento fechado, estilo TicketSports) | **E04 / S300** (modo de venda) | Novo modo `vendaSomentePorCupom` no evento: o checkout público só libera inscrição com cupom válido. Também consumido por E18 (cupom exclusivo do club parceiro). | RN-345 |
-| **Repasse D+2 ajustável** | **E09-slim** + **E16** `commercialTerms` | `commercialTerms.anticipation.repasseDiasUteis` (default 2) por tenant. "Valor disponível" = fundos fora da janela D+N; "a ser disponibilizado" = retenção **+** fundos ainda na janela. Hoje o FIX financeiro mostra aproximação estática; a janela real entra com a máquina de repasses. | RN-338 |
-| **Retenção 15% negociável** | **E09-slim** + **E16** `commercialTerms` | `commercialTerms.retencaoPct` (default 15) editável por `platform_admin` por tenant. Já parcialmente na UI (card financeiro); formaliza no E09. | RN-339 |
+| **Cupom-only** (evento fechado, estilo TicketSports) | **E04 / S300** (modo de venda) | Novo modo `vendaSomentePorCupom` no evento: o checkout público só libera inscrição com cupom válido. Também consumido por E18 (cupom exclusivo do club parceiro). | RN-303 |
+| **Taxa incorporada vs. repassada** (config do organizador por evento) | **E04 / S304-S305** `commercialTerms` · cálculo em **E09** · exibição em **E12** | **Incorporada:** comprador paga o preço de face, taxa descontada do repasse (débito no fluxo do organizador). **Repassada:** comprador paga face + taxa; a taxa vai à Leela e não entra no "a receber" do organizador. `computeSaleState` já calcula a taxa — o modo decide quem paga. | RN-347 |
+| **Repasse D+N (default D+2 úteis) + retenção % ajustáveis** | **E09-slim** + **E16** `commercialTerms` | `commercialTerms.anticipation.repasseDiasUteis` (default 2) e `retencaoPct` (default 15) por tenant. "Valor disponível" = fundos fora da janela D+N; "a ser disponibilizado" = retenção **+** fundos ainda na janela. Hoje o FIX financeiro mostra aproximação estática; a janela real entra com a máquina de repasses. | RN-348 |
+
+> ⚠️ Correção 2026-07-12: a versão anterior desta tabela propunha RN-345/338/339, que **já existem** (RN-345 = kit/chip na transferência S904-T4; RN-338/339 = política de reembolso S305). Números válidos: **RN-303, RN-347, RN-348** (blocos livres, registrados nos épicos E04/E09/E12).
 
 Estas três são pequenas e ficam **na Onda 2** (E04/E09 já estão lá). Só a *aplicação* delas ao E18 (desconto exclusivo do parceiro) vive na Onda 3.
 
