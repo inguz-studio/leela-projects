@@ -8,7 +8,10 @@ import { describe, expect, it } from 'vitest';
 import {
   CAMPOS_AGREGADOS_EVENTO,
   eventoPublico,
+  IMAGEM_URL_MAX,
   isStatusEvento,
+  isUrlCapaValida,
+  modoTaxaDoEvento,
   parseEvento,
   STATUS_EVENTO,
   temVenda,
@@ -146,5 +149,81 @@ describe('derivações puras (S200-T1)', () => {
 
   it('CAMPOS_AGREGADOS_EVENTO espelha os campos ∑ das Rules', () => {
     expect(CAMPOS_AGREGADOS_EVENTO).toEqual(['qtdInscritos', 'receitaConfirmada']);
+  });
+});
+
+// ── EVENTO-CAMPOS (RN-153/RN-347): capa http(s), regulamento, taxaModo ─────
+
+describe('isUrlCapaValida (RN-153 — capa é src de <img> público)', () => {
+  it('aceita http(s) com host', () => {
+    expect(isUrlCapaValida('https://cdn.leela.run/capa.jpg')).toBe(true);
+    expect(isUrlCapaValida('http://exemplo.com.br/foto.png?w=1600')).toBe(true);
+  });
+
+  it('rejeita javascript:/data:/file:/esquema relativo (ataque de capa)', () => {
+    expect(isUrlCapaValida('javascript:alert(document.cookie)')).toBe(false);
+    expect(isUrlCapaValida('data:text/html;base64,PHNjcmlwdD4=')).toBe(false);
+    expect(isUrlCapaValida('file:///etc/passwd')).toBe(false);
+    expect(isUrlCapaValida('//cdn.evil.com/x.png')).toBe(false);
+    expect(isUrlCapaValida('/uploads/x.png')).toBe(false);
+  });
+
+  it('rejeita vazio, não-string, espaço embutido e URL acima do teto', () => {
+    expect(isUrlCapaValida('')).toBe(false);
+    expect(isUrlCapaValida(42)).toBe(false);
+    expect(isUrlCapaValida(null)).toBe(false);
+    expect(isUrlCapaValida('https://a.com/um espaço.png')).toBe(false);
+    expect(isUrlCapaValida(`https://a.com/${'x'.repeat(IMAGEM_URL_MAX)}`)).toBe(false);
+  });
+});
+
+describe('parseEvento — capa/regulamento/taxaModo (EVENTO-CAMPOS)', () => {
+  it('capa http(s) válida passa; esquema fora de http(s) é DESCARTADO (fallback gradiente)', () => {
+    const raw = docMeiaFloripa();
+    raw['imagemUrl'] = 'https://cdn.leela.run/meia-floripa.jpg';
+    expect(parseEvento('x', raw).imagemUrl).toBe('https://cdn.leela.run/meia-floripa.jpg');
+
+    raw['imagemUrl'] = 'javascript:alert(1)';
+    expect(parseEvento('x', raw).imagemUrl).toBeUndefined();
+
+    raw['imagemUrl'] = '';
+    expect(parseEvento('x', raw).imagemUrl).toBeUndefined();
+  });
+
+  it('regulamento: texto não-vazio passa; vazio/não-string → undefined', () => {
+    const raw = docMeiaFloripa();
+    raw['regulamento'] = 'Art. 1º — A prova acontece com chuva ou sol.';
+    expect(parseEvento('x', raw).regulamento).toMatch(/Art\. 1º/);
+
+    raw['regulamento'] = '';
+    expect(parseEvento('x', raw).regulamento).toBeUndefined();
+    raw['regulamento'] = 42;
+    expect(parseEvento('x', raw).regulamento).toBeUndefined();
+  });
+
+  it('taxaModo: os dois modos do enum passam; ausente/null → undefined (legado)', () => {
+    const raw = docMeiaFloripa();
+    raw['taxaModo'] = 'repassada';
+    expect(parseEvento('x', raw).taxaModo).toBe('repassada');
+    raw['taxaModo'] = 'incorporada';
+    expect(parseEvento('x', raw).taxaModo).toBe('incorporada');
+
+    expect(parseEvento('x', docMeiaFloripa()).taxaModo).toBeUndefined();
+    raw['taxaModo'] = null;
+    expect(parseEvento('x', raw).taxaModo).toBeUndefined();
+  });
+
+  it('taxaModo fora do enum LANÇA (campo de dinheiro — fail-fast na borda de I/O)', () => {
+    const raw = docMeiaFloripa();
+    raw['taxaModo'] = 'gratis';
+    expect(() => parseEvento('x', raw)).toThrow(/taxaModo/);
+    raw['taxaModo'] = 42;
+    expect(() => parseEvento('x', raw)).toThrow(/RN-347/);
+  });
+
+  it('modoTaxaDoEvento: campo presente vence; ausente → incorporada (vigente)', () => {
+    expect(modoTaxaDoEvento({ taxaModo: 'repassada' })).toBe('repassada');
+    expect(modoTaxaDoEvento({ taxaModo: 'incorporada' })).toBe('incorporada');
+    expect(modoTaxaDoEvento({})).toBe('incorporada');
   });
 });

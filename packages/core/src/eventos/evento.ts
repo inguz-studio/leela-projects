@@ -10,9 +10,47 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+// Import de tipo + guard puro — repasse-types não tem dependência de runtime
+// (só type-imports), então não há ciclo de módulos eventos↔finance.
+import { isModoTaxa, type ModoTaxa } from '../finance/repasse-types';
 import { isJanelaEntrega, ordenarJanelasEntrega, type JanelaEntrega } from './cronogramaEntrega';
 import { dataLocalISO } from './dataEvento';
 import { isFaixaChips, type FaixaChips } from './faixaChips';
+
+// ---------------------------------------------------------------------------
+// Capa e regulamento (RN-153 · cadastro completo) — limites e guarda de URL
+// ---------------------------------------------------------------------------
+
+/** Teto da URL de capa (anti doc-bomba; URLs reais ficam bem abaixo). */
+export const IMAGEM_URL_MAX = 2048;
+
+/** Teto do texto do regulamento (anti doc-bomba; doc Firestore é 1 MiB). */
+export const REGULAMENTO_MAX = 50_000;
+
+/**
+ * URL de capa VÁLIDA: string http(s) parseável, host presente, ≤ 2048 chars.
+ * Rejeita `javascript:`, `data:`, `file:` e afins — a capa vira `src` de
+ * `<img>` na landing pública; esquema fora de http(s) nunca passa desta
+ * fronteira (defesa em profundidade com as Rules e com `criarEvento`).
+ * @pure
+ */
+export function isUrlCapaValida(url: unknown): url is string {
+  if (typeof url !== 'string' || url.length === 0 || url.length > IMAGEM_URL_MAX) {
+    return false;
+  }
+  // Prefiltro: espaço/controle dentro da URL não passa (URL() aceitaria
+  // alguns e "consertaria" outros — aqui a política é estrita).
+  if (/\s/.test(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return (
+      (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+      parsed.hostname.length > 0
+    );
+  } catch {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Status do ciclo de vida
@@ -93,12 +131,34 @@ export interface Evento {
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   /**
-   * URL da imagem de capa do evento (media 16/10 do card). OPCIONAL:
-   * eventos sem imagem caem no gradiente semantic do CardEvento (fallback).
-   * `parseEvento` normaliza para `string` não-vazia ou `undefined` (nunca
-   * string vazia) — a UI decide entre `<img>` e gradiente por presença.
+   * URL da imagem de capa do evento (media 16/10 do card e hero da landing).
+   * OPCIONAL: eventos sem imagem caem no gradiente semantic do CardEvento/
+   * HeroCover (fallback). `parseEvento` normaliza para URL http(s) VÁLIDA
+   * (`isUrlCapaValida`) ou `undefined` (nunca string vazia, nunca esquema
+   * fora de http(s) — a capa vira `src` de `<img>` público) — a UI decide
+   * entre `<img>` e gradiente por presença. RN-153.
    */
   imagemUrl?: string;
+  /**
+   * Texto do regulamento da prova (RN-153 · cadastro completo). OPCIONAL —
+   * eventos legados não têm; `parseEvento` normaliza para string não-vazia
+   * ou `undefined`. Teto de escrita = REGULAMENTO_MAX (Rules + criarEvento).
+   * VERSIONAMENTO (RN-149: nova versão ⇒ novo aceite, `regulamentoVersao`)
+   * é do S306/Onda 3 — aqui vive SÓ a persistência do texto; a integração
+   * pendente está registrada no épico E04 §LEELA-S306.
+   */
+  regulamento?: string;
+  /**
+   * RN-347 — modo da taxa da plataforma POR EVENTO:
+   *   'incorporada' — comprador paga o face; a taxa sai do repasse;
+   *   'repassada'   — comprador paga face + taxa; líquido do produtor = face.
+   * OPCIONAL na entidade (eventos legados não têm) — consumidores leem via
+   * `modoTaxaDoEvento` (ausente ⇒ 'incorporada', comportamento vigente).
+   * Nasce do default do tenant (`commercialTerms.modoTaxaDefault`) em
+   * `criarEvento` e CONGELA junto dos campos comerciais após a 1ª venda
+   * (Rules — mudar quem paga a taxa com venda feita mexe em dinheiro).
+   */
+  taxaModo?: ModoTaxa;
   /** Agregado ∑ — mantido por Cloud Function */
   qtdInscritos: number;
   /** Agregado ∑ financeiro confirmado — mantido por Cloud Function */
@@ -156,6 +216,17 @@ export function temVenda(evento: Pick<Evento, 'qtdInscritos'>): boolean {
  */
 export function eventoPublico(status: StatusEvento): boolean {
   return status === 'publicado' || status === 'ao_vivo';
+}
+
+/**
+ * Modo da taxa EFETIVO do evento (RN-347): campo do doc quando presente,
+ * senão 'incorporada' (MODO_TAXA_DEFAULT — comportamento vigente pré-toggle).
+ * Acessor canônico dos consumidores (E09 saldo, agregado financeiro,
+ * checkout E12) — nunca leia `taxaModo` cru com fallback próprio.
+ * @pure
+ */
+export function modoTaxaDoEvento(evento: Pick<Evento, 'taxaModo'>): ModoTaxa {
+  return evento.taxaModo ?? 'incorporada';
 }
 
 /**
@@ -272,13 +343,37 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     faixaChips = { inicio: faixaRaw.inicio, fim: faixaRaw.fim };
   }
 
-  // Imagem de capa: string não-vazia ou omitida (nunca string vazia → a UI
+  // Imagem de capa: URL http(s) VÁLIDA ou omitida (nunca string vazia — a UI
   // usa presença para escolher entre <img> e o gradiente de fallback).
+  // Esquema fora de http(s) (javascript:, data:, …) é DESCARTADO na leitura
+  // (fallback gradiente), não lançado: capa ruim não pode derrubar a página
+  // pública inteira — as fronteiras de ESCRITA (Rules + criarEvento) barram.
   const imagemUrlRaw = data['imagemUrl'];
-  const imagemUrl =
-    typeof imagemUrlRaw === 'string' && imagemUrlRaw.length > 0
-      ? imagemUrlRaw
+  const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : undefined;
+
+  // Regulamento (RN-153): texto não-vazio ou omitido. Leitura tolerante —
+  // o teto REGULAMENTO_MAX é aplicado nas fronteiras de escrita.
+  const regulamentoRaw = data['regulamento'];
+  const regulamento =
+    typeof regulamentoRaw === 'string' && regulamentoRaw.length > 0
+      ? regulamentoRaw
       : undefined;
+
+  // Modo da taxa (RN-347): ausente/null → undefined (legado — consumidores
+  // usam modoTaxaDoEvento, default 'incorporada'); presente e FORA do enum
+  // lança (fail-fast — campo de dinheiro corrompido precisa gritar na borda
+  // de I/O, mesmo racional de faixaChips; Rules/Functions impedem lixo).
+  const taxaModoRaw = data['taxaModo'];
+  let taxaModo: ModoTaxa | undefined;
+  if (taxaModoRaw !== undefined && taxaModoRaw !== null) {
+    if (!isModoTaxa(taxaModoRaw)) {
+      throw new Error(
+        `Evento ${id}: campo "taxaModo" fora do enum ` +
+          `('incorporada' | 'repassada' — RN-347)`
+      );
+    }
+    taxaModo = taxaModoRaw;
+  }
 
   return {
     id,
@@ -299,7 +394,9 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     capacidade,
     janelasEntrega,
     faixaChips,
-    // Só entra quando presente (exactOptionalPropertyTypes: nunca `undefined`).
+    // Só entram quando presentes (exactOptionalPropertyTypes: nunca `undefined`).
     ...(imagemUrl !== undefined ? { imagemUrl } : {}),
+    ...(regulamento !== undefined ? { regulamento } : {}),
+    ...(taxaModo !== undefined ? { taxaModo } : {}),
   };
 }

@@ -19,6 +19,9 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+// Guard puro + tipo do modo da taxa (RN-347) — sem dependência de runtime
+// além do próprio guard (repasse-types não importa nada em runtime).
+import { isModoTaxa, type ModoTaxa } from '../finance/repasse-types';
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -124,6 +127,15 @@ export interface CommercialTerms {
    * presente. Estampada por plano; ajustável campo-a-campo.
    */
   tabelaTaxasParcela?: TabelaTaxasParcela;
+  /**
+   * RN-347 (E03/E04): modo DEFAULT da taxa para eventos NOVOS do tenant
+   * ('incorporada' | 'repassada'). OPCIONAL: ausente ⇒ 'incorporada'
+   * (MODO_TAXA_DEFAULT do core). `criarEvento` estampa este default no
+   * evento quando o input não traz `taxaModo`; dali em diante o modo é
+   * POR EVENTO (editável até a 1ª venda — Rules congelam depois).
+   * Escrita segue RN-404 — só platform_admin.
+   */
+  modoTaxaDefault?: ModoTaxa;
   /**
    * Auditoria de origem (T2-L4 · CB-T2): id do plano aplicado que estampou
    * esta versão — REFERÊNCIA MORTA (rastro; SEM vínculo vivo: editar o
@@ -266,6 +278,13 @@ export function validateCommercialTerms(
         'tabelaTaxasParcela inválida (chaves 2..12; taxas entre 0 e 100).'
       );
     }
+  }
+
+  // RN-347: modo default da taxa OPCIONAL — quando presente, enum fechado.
+  if (input.modoTaxaDefault !== undefined && !isModoTaxa(input.modoTaxaDefault)) {
+    errors.push(
+      "modoTaxaDefault deve ser 'incorporada' ou 'repassada' (RN-347)."
+    );
   }
 
   return errors;

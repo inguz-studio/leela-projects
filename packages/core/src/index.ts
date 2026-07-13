@@ -251,6 +251,11 @@ export {
   temVenda,
   eventoPublico,
   parseEvento,
+  // RN-153/RN-347 (EVENTO-CAMPOS): capa http(s), regulamento e modo da taxa
+  IMAGEM_URL_MAX,
+  REGULAMENTO_MAX,
+  isUrlCapaValida,
+  modoTaxaDoEvento,
 } from './eventos/evento';
 
 // RN-200 — preço bloqueado após 1ª venda (E03 · S201-T3)
