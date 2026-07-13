@@ -14,12 +14,14 @@ const mocks = vi.hoisted(() => ({
   onSessionChange: vi.fn(),
   atualizarNomeExibicao: vi.fn(),
   trocarSenha: vi.fn(),
+  logout: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', () => ({
   onSessionChange: mocks.onSessionChange,
   atualizarNomeExibicao: mocks.atualizarNomeExibicao,
   trocarSenha: mocks.trocarSenha,
+  logout: mocks.logout,
 }));
 
 type FakeUser = { uid: string; displayName: string | null; email: string | null };
@@ -46,6 +48,7 @@ beforeEach(() => {
   comSessao({ uid: 'u1', displayName: 'Marina Castelo', email: 'marina@demo.dev' });
   mocks.atualizarNomeExibicao.mockResolvedValue(undefined);
   mocks.trocarSenha.mockResolvedValue(undefined);
+  mocks.logout.mockResolvedValue(undefined);
 });
 
 describe('ContaPage — perfil', () => {
@@ -124,6 +127,44 @@ describe('ContaPage — troca de senha (reauth obrigatória)', () => {
     await userEvent.type(screen.getByLabelText('Confirmar nova senha'), '999');
     expect(screen.getByText('As senhas não conferem.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trocar senha' })).toBeDisabled();
+  });
+});
+
+describe('ContaPage — sessão (logout)', () => {
+  it('sair encerra a sessão (logout) e leva ao login', async () => {
+    render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/conta']}>
+          <Routes>
+            <Route path="/conta" element={<ContaPage />} />
+            <Route path="/entrar" element={<div>Tela de login</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+    await screen.findByRole('heading', { name: 'Sua conta' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair da conta' }));
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+  });
+
+  it('mesmo se o logout falhar, encaminha para o login (fail-safe)', async () => {
+    mocks.logout.mockRejectedValue(new Error('rede'));
+    render(
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/conta']}>
+          <Routes>
+            <Route path="/conta" element={<ContaPage />} />
+            <Route path="/entrar" element={<div>Tela de login</div>} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+    await screen.findByRole('heading', { name: 'Sua conta' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair da conta' }));
+    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
   });
 });
 

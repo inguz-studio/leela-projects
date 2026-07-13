@@ -19,7 +19,7 @@ import { loginComEmail } from '@leela/api-client';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroLogin } from './_lib/authErrors';
-import { emailValido } from './_lib/authValidation';
+import { caminhoInternoSeguro, emailValido } from './_lib/authValidation';
 
 interface EntrarLocationState {
   from?: string;
@@ -31,7 +31,10 @@ const LINK_CLASSE =
 export function EntrarPage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
-  const destino = (location.state as EntrarLocationState | null)?.from ?? '/';
+  // Redirect pós-login: sanitiza o `from` para um caminho interno seguro
+  // (anti open-redirect defensivo; hoje o RequirePapel só grava pathname
+  // confiável, mas o sink não deve confiar cegamente na origem).
+  const destino = caminhoInternoSeguro((location.state as EntrarLocationState | null)?.from);
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');

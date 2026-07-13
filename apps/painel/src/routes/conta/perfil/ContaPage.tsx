@@ -15,9 +15,9 @@
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, useToast } from '@leela/design-system';
-import { atualizarNomeExibicao, trocarSenha } from '@leela/api-client';
+import { atualizarNomeExibicao, logout, trocarSenha } from '@leela/api-client';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
 import { SENHA_MIN, senhaAtendeMinimo } from '../auth/_lib/authValidation';
@@ -29,6 +29,24 @@ const SECAO_TITULO = 'text-[length:var(--font-size-base)] font-[var(--font-weigh
 export function ContaPage(): JSX.Element {
   const { user, loading } = useContaUsuario();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [saindo, setSaindo] = useState(false);
+
+  // Encerrar a sessão: única saída de logout do painel (o rodapé só levava até
+  // aqui). signOut limpa a sessão persistida do Firebase no navegador; em
+  // seguida mandamos o usuário para o login. Fail-safe: mesmo se o signOut
+  // lançar, seguimos para /entrar (a intenção do usuário é sair).
+  async function sair(): Promise<void> {
+    setSaindo(true);
+    try {
+      await logout();
+    } catch {
+      // Ignorado de propósito: navegar para o login é a saída correta de todo
+      // jeito; não retemos o usuário numa sessão que ele pediu para encerrar.
+    } finally {
+      navigate('/entrar', { replace: true });
+    }
+  }
 
   // Nome: null enquanto não editado → cai no displayName atual (lida com o load
   // assíncrono da sessão sem useEffect de sincronização).
@@ -180,6 +198,19 @@ export function ContaPage(): JSX.Element {
           </Button>
         </div>
       </form>
+
+      {/* Sessão — encerrar o acesso neste dispositivo (única saída de logout) */}
+      <section className={SECAO} aria-label="Sessão">
+        <span className={SECAO_TITULO}>Sessão</span>
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Encerra o acesso neste dispositivo. Você precisará entrar de novo.
+        </p>
+        <div>
+          <Button type="button" variant="secondary" disabled={saindo} onClick={() => void sair()}>
+            {saindo ? 'Saindo…' : 'Sair da conta'}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

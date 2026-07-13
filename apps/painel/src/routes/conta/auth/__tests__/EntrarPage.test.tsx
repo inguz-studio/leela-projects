@@ -83,6 +83,17 @@ describe('EntrarPage', () => {
     expect(screen.queryByText('Visão Geral')).not.toBeInTheDocument();
   });
 
+  it('from externo/protocol-relative é neutralizado → cai na raiz `/` (anti open-redirect)', async () => {
+    mocks.loginComEmail.mockResolvedValue({ user: { uid: 'u1' } });
+    // `//evil.com` navegaria para origem externa se confiado cegamente.
+    renderEntrar('//evil.com');
+    await userEvent.type(screen.getByLabelText('E-mail'), 'marina@demo.dev');
+    await userEvent.type(screen.getByLabelText('Senha'), 'segredo123');
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    // Redireciona para a raiz interna, NÃO para o destino externo.
+    expect(await screen.findByText('Visão Geral')).toBeInTheDocument();
+  });
+
   it('oferece caminhos de recuperação e cadastro', () => {
     renderEntrar();
     expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '/recuperar-senha');

@@ -20,3 +20,23 @@ export function emailValido(email: string): boolean {
 export function senhaAtendeMinimo(senha: string): boolean {
   return senha.length >= SENHA_MIN;
 }
+
+/**
+ * Sanitiza um destino de redirect pós-login (`state.from`) para um caminho
+ * INTERNO seguro. Hoje o `from` só é gravado pelo RequirePapel a partir de
+ * `location.pathname + location.search` (confiável), mas o redirect é o sink
+ * clássico de open-redirect: qualquer origem futura de `state.from` (query
+ * param, deep-link) tornaria `navigate(destino)` explorável. Esta guarda
+ * fail-closed rejeita URL absoluta/protocol-relative e volta ao fallback.
+ *
+ * Aceita só caminho que começa com um único `/` (rota interna). Rejeita:
+ *   - vazio / não-string → fallback
+ *   - `//host`, `/\host` (protocol-relative → origem externa)
+ *   - `http://`, `https://`, `javascript:` etc. (esquema absoluto)
+ */
+export function caminhoInternoSeguro(destino: unknown, fallback = '/'): string {
+  if (typeof destino !== 'string' || destino.length === 0) return fallback;
+  if (destino[0] !== '/') return fallback; // relativo/esquema absoluto → rejeita
+  if (destino[1] === '/' || destino[1] === '\\') return fallback; // //host, /\host
+  return destino;
+}
