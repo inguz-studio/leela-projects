@@ -182,3 +182,9 @@ export { encerrarEventos } from './eventos/encerrarEventos';
 // (count() on-demand sobre inscritos — E06-L2-T1; o evento NÃO tem
 // agregados por-modalidade/por-kit, diferença deliberada vs. o clube puro).
 export { estimarAlcance } from './eventos/estimarAlcance';
+
+// Eventos — CAMPANHAS (E06 · S401-T4): disparo idempotente com limite push
+// RN-133 (envelope compartilhado Camada B) + fan-out MOCK no LOG de
+// comunicação FABLE-G (docId determinístico {ref}_{campanhaId}_{canal} —
+// RN-219; o agregado comunicacoesResumo recomputa via onComunicacaoWrite).
+export { enviarCampanha } from './eventos/enviarCampanha';
