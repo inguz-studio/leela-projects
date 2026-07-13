@@ -24,6 +24,7 @@ import {
   getFinanceiroEvento,
   getLeelaDb,
   getOverview,
+  getSaldoRepasse,
   getResumoComunicacoes,
   listarComunicacoesDoEvento,
   getPaginaVendas,
@@ -69,6 +70,7 @@ import type {
   Parceria,
   PlatformRollups,
   ResumoComunicacoes,
+  SaldoRepasse,
   Tenant,
 } from '@leela/core';
 import { queryKeys } from './keys';
@@ -407,5 +409,24 @@ export function commercialTermsQuery(tenantId: string, reloadKey = 0) {
     queryKey: queryKeys.plataforma.termos(tenantId, reloadKey),
     queryFn: (): Promise<CommercialTerms | null> =>
       getCommercialTerms(getLeelaDb(), tenantId),
+  });
+}
+
+// =============================================================================
+// Repasse do organizador (E09-slim · E09s-L3). Reusam as leituras tenant-scoped
+// do api-client (getSaldoRepasse/getDadosBancarios/listRepasses); NUNCA somam
+// dinheiro no cliente — o saldo é ∑ do servidor (RN-350/351). Bounded staleness
+// (cache-then-revalidate basta; solicitar/salvar invalidam via mutations).
+// =============================================================================
+
+/**
+ * `saldo/current` do tenant — a ÚNICA fonte dos 3 cards (vendido/disponível/
+ * retido). `null` quando a Function ainda não computou (tenant sem venda) → a
+ * tela mostra "Nenhuma movimentação", não zeros ambíguos (§2.12).
+ */
+export function saldoRepasseQuery(tenantId: string) {
+  return queryOptions({
+    queryKey: queryKeys.repasse.saldo(tenantId),
+    queryFn: (): Promise<SaldoRepasse | null> => getSaldoRepasse(getLeelaDb(), tenantId),
   });
 }

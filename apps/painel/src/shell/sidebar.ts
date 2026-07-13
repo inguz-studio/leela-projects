@@ -22,7 +22,8 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   'visao-geral': '/',
   eventos: '/eventos',
   clubs: '/clubes',
-  financeiro: undefined,
+  // E09-slim: o item Financeiro leva ao painel de repasses do organizador.
+  financeiro: '/financeiro/repasses',
   comunicacao: undefined,
   marcas: undefined,
   analytics: undefined,
@@ -43,6 +44,7 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname === '/') return 'visao-geral';
   if (pathname.startsWith('/eventos')) return 'eventos';
   if (pathname.startsWith('/clubes')) return 'clubs';
+  if (pathname.startsWith('/financeiro')) return 'financeiro';
   return null;
 }
 

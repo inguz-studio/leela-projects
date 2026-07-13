@@ -47,6 +47,17 @@ export const queryKeys = {
     current: (eventoId: string) => ['financeiro', 'current', eventoId] as const,
   },
 
+  // ---------------------------------------------------------------------------
+  // Repasse do organizador (E09-slim · E09s-L3). Coleções tenant-scoped
+  // (`tenants/{tid}/saldo|dadosBancarios|repasses`). Prefixo `['repasse', tid]`
+  // permite invalidar a família inteira do tenant pós-mutação: solicitar um
+  // repasse invalida saldo (comprometido↑/disponível↓) E histórico numa tacada.
+  // ---------------------------------------------------------------------------
+  repasse: {
+    /** `saldo/current` do tenant — a ÚNICA fonte dos 3 cards (∑ do servidor). */
+    saldo: (tenantId: string) => ['repasse', tenantId, 'saldo'] as const,
+  },
+
   kits: {
     /**
      * Kits de um evento — chave partilhada Cadastro ↔ Estoque (navegar entre as

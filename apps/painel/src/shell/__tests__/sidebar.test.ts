@@ -8,6 +8,8 @@ describe('painelActiveId', () => {
     ['/eventos/corrida/kits/novo', 'eventos'],
     ['/clubes', 'clubs'],
     ['/clubes/trail/desafios', 'clubs'],
+    ['/financeiro', 'financeiro'],
+    ['/financeiro/repasses', 'financeiro'],
     ['/health', null],
   ])('%s → %s', (pathname, esperado) => {
     expect(painelActiveId(pathname)).toBe(esperado);
@@ -29,7 +31,11 @@ describe('shellSidebarSections', () => {
     const items = sections.flatMap((s) => s.items);
     items.find((i) => i.id === 'clubs')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/clubes');
-    expect(items.find((i) => i.id === 'financeiro')?.onClick).toBeUndefined();
+    // Financeiro passou a navegar (E09-slim: painel de repasses do organizador).
+    items.find((i) => i.id === 'financeiro')?.onClick?.();
+    expect(navigate).toHaveBeenCalledWith('/financeiro/repasses');
+    // Itens ainda inertes (sem rota) permanecem sem onClick — estado honesto.
+    expect(items.find((i) => i.id === 'comunicacao')?.onClick).toBeUndefined();
   });
 
   it('nav-badge de Eventos: contagem > 0 vira badge neutro (mockup)', () => {

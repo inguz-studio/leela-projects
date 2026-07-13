@@ -12,6 +12,8 @@
 // =============================================================================
 
 import { httpsCallable } from 'firebase/functions';
+import { doc, getDoc, type Firestore } from 'firebase/firestore';
+import type { SaldoRepasse, Timestamp } from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
 // ---------------------------------------------------------------------------
@@ -248,4 +250,65 @@ export async function getBankDetailsForPayout(
   );
   const { data } = await fn(input);
   return data;
+}
+
+// =============================================================================
+// LEITURAS do repasse (E09s-L3) — o painel do organizador LÊ os agregados que
+// as Functions do L2 escrevem (RN-357: escrita SÓ por Function; a leitura do
+// tenant_owner é liberada nas Rules do L1-T2). São reads tenant-scoped diretos
+// (ADR-009): os 3 cards leem SÓ `saldo/current` (∑ do servidor — o cliente
+// NUNCA soma eventos). Dados bancários (T2) e histórico (T4) crescem nesta
+// seção. Nenhum cálculo de dinheiro aqui.
+// =============================================================================
+
+/** Timestamp sentinela p/ campo de data ilegível (nunca finge uma data real). */
+const REPASSE_TS_ZERO: Timestamp = {
+  seconds: 0,
+  nanoseconds: 0,
+  toDate: () => new Date(0),
+  toMillis: () => 0,
+};
+
+/** Passa o Timestamp adiante quando legível (structural — Firestore Timestamp). */
+function asRepasseTimestamp(v: unknown): Timestamp {
+  return v !== null &&
+    typeof v === 'object' &&
+    typeof (v as Partial<Timestamp>).toDate === 'function'
+    ? (v as Timestamp)
+    : REPASSE_TS_ZERO;
+}
+
+function repasseNum(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+function repasseStr(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
+
+/**
+ * Lê o saldo consolidado do tenant (`tenants/{tid}/saldo/current`) — a ÚNICA
+ * fonte dos 3 cards (vendido/disponível/retido). ∑ do servidor (RN-350/351):
+ * o cliente nunca varre eventos nem soma. `null` quando a Function ainda não
+ * computou (tenant sem venda) — a tela mostra "Nenhuma movimentação" (§2.12),
+ * não zeros ambíguos. Só o tenant_owner (ou platform_admin) lê — cross-tenant
+ * vira permission-denied (RN-354).
+ */
+export async function getSaldoRepasse(
+  db: Firestore,
+  tenantId: string
+): Promise<SaldoRepasse | null> {
+  const snap = await getDoc(doc(db, 'tenants', tenantId, 'saldo', 'current'));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    tenantId: repasseStr(data['tenantId'], tenantId),
+    vendidoBruto: repasseNum(data['vendidoBruto']),
+    retido: repasseNum(data['retido']),
+    disponivel: repasseNum(data['disponivel']),
+    comprometido: repasseNum(data['comprometido']),
+    dentroJanelaDN: repasseNum(data['dentroJanelaDN']),
+    eventosSemTermo: repasseNum(data['eventosSemTermo']),
+    atualizadoEm: asRepasseTimestamp(data['atualizadoEm']),
+  };
 }

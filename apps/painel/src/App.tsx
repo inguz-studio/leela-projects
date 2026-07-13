@@ -6,6 +6,7 @@ import { HealthRoute } from './routes/health';
 import { OverviewRoutes } from './routes/overview/OverviewRoutes';
 import { EventosRoutes } from './routes/eventos/EventosRoutes';
 import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
+import { FinanceiroRoutes } from './routes/financeiro/FinanceiroRoutes';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { createQueryClient } from './lib/query/client';
@@ -30,6 +31,8 @@ export function App() {
             <Route path="/eventos/*" element={<EventosRoutes />} />
             {/* E05 · Clubs (hub, shell + overview + membros) */}
             <Route path="/clubes/*" element={<ClubesRoutes />} />
+            {/* E09-slim · Repasses do organizador (saldo, dados bancários, saque) */}
+            <Route path="/financeiro/*" element={<FinanceiroRoutes />} />
             {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
             <Route path="/plataforma/*" element={<PlataformaRoutes />} />
           </Routes>
