@@ -62,6 +62,19 @@ Ao planejar os épicos novos, **entregar uma visão CLARA no Obsidian** (os `lee
 **Status — JÁ APLICADO no painel:** `App.tsx` monta `RootShell` (sidebar+header) UMA vez envolvendo `<Routes>`; ao navegar, só o conteúdo do `<Routes>` troca (shell não re-monta, só re-renderiza p/ o active-state, barato). Cache **TanStack Query (ADR-010)** evita refetch cego entre rotas. A landing (Next App Router) persiste o layout público via `app/(public)/layout.tsx` (equivalente). **O "carregando como site novo" era o emulator de Functions travado (getOverview) + cold-start — resolvido no ponto 1 (heap 1024m).**
 **Follow-ups de PERF (não-bloqueantes, lote de consolidação/CONS):** (1) memoizar `shellSidebarSections` no `RootShell` (recomputa a cada nav por `useLocation`); (2) confirmar por medição que navegar ENTRE seções (eventos↔clubes) reidrata do cache sem refetch/flash; (3) checar `React.memo`/`key` estáveis nos containers de conteúdo p/ não desmontar à toa. **Mapeado; não é bug de arquitetura.**
 
+## Decisões pendentes de ratificação do Vitor (defaults defensáveis — não bloqueiam)
+
+- **4 decisões de estoque (FABLE-D):** (1) `estoqueFisico` nasce da transição `em_estoque` (=qtd recebida); (2) limiar de "baixa" = **10 unidades** por SKU (E03 não fixou); (3) máquina de estados linear estrita (estimativa→encomendado→em_estoque, RN-226); (4) validação de tamanho na origem (checkout S209-T2).
+- **2 flags da tela de lotes (E04):** (a) `salvarLote` deveria enviar só `nome` quando `vendidos>0` (hoje re-envia janela em precisão de minuto — seguro só porque os dados são minuto-alinhados); (b) janela usa fuso do navegador → produção deve pinar `FUSO_EVENTO`.
+- **6 decisões do planejamento (ponto 3):** numeração E17/E18 · ratificar as 2 linhas de JTBD · Onda do link-in-bio público · reescrever KANBAN/CHECKLIST no modelo único vs. manter de-para · números das RNs propostas · política de reserva de `@handle`. Defaults em `outputs/leela-build-2d6ee98d/PONTO3-ROADMAP-EPICOS-REPORT.md`.
+
+## Lições operacionais (herdar nos dispatches — evita repetir erros desta sessão)
+
+- **Agente NÃO roda a suíte inteira (~80 arq) num único emulator:** nos 8GB isso flaka (2 falhas fantasmas) E os agentes ficavam **travados num wait-loop** esperando a notificação da regressão. Regra p/ todo brief de backend: **"rode SÓ os seus testes + os de Rules relevantes via `emulators:exec 'vitest run <arquivos>'` e COLHA o exit code você mesmo; NÃO rode a suíte inteira nem pare esperando notificação externa."** Se um agente travar assim, o maestro faz `TaskStop` + verifica ele mesmo (rebuild core se tocou + `tsc` + roda os testes do lote).
+- **8GB — memória:** ~1 emulator pesado por vez; dá p/ 1 emulator (Fable) + 1 leve (Opus, sem emulator) em paralelo; telas do painel são o MESMO app → uma por vez (conflito de arquivo). Heap do `preview.sh` = **1024m** (512m mata o Functions Emulator no seed). JDK 17 → emulator via `npx firebase-tools@13` (v15 exige JDK 21; preview.sh usa o JDK 21 dele).
+- **Verificação de cada tela do organizador:** o maestro faz o **gate visual** (sobe `preview.sh`, captura a rota `?preview=castelo`, julga o PNG, derruba) + **Fable-review da fiação de dinheiro** em contexto fresco. Commit incremental por lote.
+- **Rota Fable é EXPLÍCITA** (`model:"fable"` no dispatch — inheritance não alcança Fable). Money/segurança → Fable + review antagonista (achou bug real toda vez). UI/mecânico → Opus. Sonnet PROIBIDO no Leela.
+
 ## Como usar (Figma MCP)
 
 Com o link acima, usar `mcp__claude_ai_Figma__get_design_context` / `get_screenshot` / `get_metadata` / `download_assets` sobre o `node-id`. Ex.: screenshot do node `39-872` (wireframes) para refinar a página do evento.
