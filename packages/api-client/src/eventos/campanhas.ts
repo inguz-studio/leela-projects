@@ -26,10 +26,12 @@ import {
   where,
   type Firestore,
 } from 'firebase/firestore';
+import { httpsCallable, type Functions } from 'firebase/functions';
 import {
   COLECAO_CAMPANHAS,
   parseCampanha,
   type Campanha,
+  type SegmentoCampanha,
   type StatusCampanha,
 } from '@leela/core';
 
@@ -165,4 +167,75 @@ export async function excluirCampanha(
   campanhaId: string
 ): Promise<void> {
   await deleteDoc(doc(db, 'eventos', eventoId, COLECAO_CAMPANHAS, campanhaId));
+}
+
+// ---------------------------------------------------------------------------
+// Callables (estimativa ao vivo + envio) — contrato espelha functions/src/eventos
+// ---------------------------------------------------------------------------
+//
+// Wrappers finos das Cloud Functions de campanha (S401-T4 · E06-L2). O count()
+// do alcance e o carimbo de envio (RN-133/idempotência) são EXCLUSIVOS do
+// servidor — o cliente só tipa o contrato. Erros (`permission-denied`,
+// `invalid-argument`) sobem INTACTOS para a UI (§2.12).
+
+/** Entrada do count() de alcance — o mesmo shape que a Function valida. */
+export interface EstimarAlcanceCampanhaInput {
+  eventoId: string;
+  segmento: Pick<SegmentoCampanha, 'tipo' | 'referencia'>;
+}
+
+export interface EstimarAlcanceCampanhaResult {
+  /** Contagem de inscritos do segmento (count() no servidor — nunca no cliente). */
+  tamanho: number;
+}
+
+/**
+ * Estima o alcance de um segmento (callable `estimarAlcance` · E06-L2-T1).
+ * count() agregado on-demand sobre `inscritos` — nenhum doc/PII trafega, só o
+ * número. O editor S401-T3 chama debounced a cada troca de segmento.
+ */
+export async function estimarAlcanceCampanha(
+  functions: Functions,
+  input: EstimarAlcanceCampanhaInput
+): Promise<EstimarAlcanceCampanhaResult> {
+  const callable = httpsCallable<
+    EstimarAlcanceCampanhaInput,
+    EstimarAlcanceCampanhaResult
+  >(functions, 'estimarAlcance');
+  const { data } = await callable(input);
+  return data;
+}
+
+export interface EnviarCampanhaInput {
+  eventoId: string;
+  campanhaId: string;
+}
+
+/**
+ * Resultado do envio (callable `enviarCampanha` · S401-T4) — discriminado:
+ *   - `ok`: carimbou `enviado` + `alcance` (idempotente; `jaEnviada` = reenvio);
+ *   - `limite_push`: cota RN-133 estourada (4 push/janela de 7d) — NÃO carimba;
+ *   - `segmento_vazio`: 0 destinatários — NÃO dispara/carimba/consome cota.
+ */
+export type EnviarCampanhaResult =
+  | { ok: true; alcance: number; jaEnviada: boolean }
+  | { bloqueado: 'limite_push'; pushNaJanela: number }
+  | { bloqueado: 'segmento_vazio' };
+
+/**
+ * Dispara uma campanha (callable `enviarCampanha`). Idempotente por design
+ * (reenvio de campanha já enviada = no-op, `jaEnviada: true`); o disparo físico
+ * é MOCK (registro no log de comunicação — ADR-006). Autorização e cota são do
+ * servidor.
+ */
+export async function enviarCampanha(
+  functions: Functions,
+  input: EnviarCampanhaInput
+): Promise<EnviarCampanhaResult> {
+  const callable = httpsCallable<EnviarCampanhaInput, EnviarCampanhaResult>(
+    functions,
+    'enviarCampanha'
+  );
+  const { data } = await callable(input);
+  return data;
 }

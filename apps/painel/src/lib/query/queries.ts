@@ -29,6 +29,8 @@ import {
   listRepasses,
   getResumoComunicacoes,
   listarComunicacoesDoEvento,
+  listarCampanhas,
+  getCampanha,
   getPaginaVendas,
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
@@ -56,6 +58,7 @@ import {
 } from '@leela/api-client';
 import type {
   Aprovisionamento,
+  Campanha,
   Clube,
   CommercialTerms,
   Comunicado,
@@ -303,6 +306,28 @@ export function comunicacoesDoEventoQuery(eventoId: string, limite: number) {
     queryKey: queryKeys.comunicacoes.doEvento(eventoId, limite),
     queryFn: (): Promise<LogComunicacao[]> =>
       listarComunicacoesDoEvento(getLeelaDb(), eventoId, { limite }),
+  });
+}
+
+/**
+ * Campanhas do evento (`eventos/{id}/campanhas` — S401-T2). Reusa
+ * `listarCampanhas` do api-client (single-field query + sort em memória, sem
+ * índice composto); `parseCampanha` é fail-fast por doc. A lista agrupa por
+ * estado no cliente (`_lib/campanhas`). Bounded staleness (ADR-010).
+ */
+export function campanhasDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.campanhas.doEvento(eventoId),
+    queryFn: (): Promise<Campanha[]> => listarCampanhas(getLeelaDb(), eventoId),
+  });
+}
+
+/** Uma campanha pelo id — modo edição do editor (S401-T3). `null` = inexistente. */
+export function campanhaDetalheQuery(eventoId: string, campanhaId: string) {
+  return queryOptions({
+    queryKey: queryKeys.campanhas.detalhe(eventoId, campanhaId),
+    queryFn: (): Promise<Campanha | null> =>
+      getCampanha(getLeelaDb(), eventoId, campanhaId),
   });
 }
 

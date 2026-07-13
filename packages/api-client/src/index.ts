@@ -406,8 +406,14 @@ export {
   criarCampanha,
   atualizarCampanha,
   excluirCampanha,
+  estimarAlcanceCampanha,
+  enviarCampanha,
 } from './eventos/campanhas';
 export type {
   CriarCampanhaInput,
   AtualizarCampanhaInput,
+  EstimarAlcanceCampanhaInput,
+  EstimarAlcanceCampanhaResult,
+  EnviarCampanhaInput,
+  EnviarCampanhaResult,
 } from './eventos/campanhas';

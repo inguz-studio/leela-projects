@@ -125,6 +125,18 @@ export const queryKeys = {
       ['comunicacoes', 'do-evento', eventoId, limite] as const,
   },
 
+  campanhas: {
+    /**
+     * Campanhas do evento (`eventos/{id}/campanhas` — S401-T2). A lista lê esta
+     * chave; criar/editar/duplicar/excluir/enviar a invalidam → read-your-writes
+     * (ADR-010): a lista reflete a escrita sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['campanhas', 'do-evento', eventoId] as const,
+    /** Uma campanha pelo id — modo edição do editor (S401-T3). */
+    detalhe: (eventoId: string, campanhaId: string) =>
+      ['campanhas', 'detalhe', eventoId, campanhaId] as const,
+  },
+
   equipe: {
     /**
      * Equipe (membros) de um evento — S304-T3 (tela Equipe & permissões). A tela
