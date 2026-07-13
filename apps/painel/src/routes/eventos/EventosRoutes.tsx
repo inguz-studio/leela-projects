@@ -28,6 +28,7 @@ import { KitEditorPage } from './kits/KitEditorPage';
 import { LotesPage } from './lotes/LotesPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
+import { CampanhaEditorPage } from './comunicacao/CampanhaEditorPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
 import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
@@ -91,12 +92,21 @@ export function EventosRoutes(): JSX.Element {
               </RequirePapel>
             }
           />
-          {/* Aba Comunicação — log FABLE-G + envio futuro (E06 · L3) */}
+          {/* Aba Comunicação — campanhas (S401-T2) + histórico FABLE-G (E06 · L3) */}
           <Route
             path="comunicacao"
             element={
               <RequirePapel area="comunicacao">
                 <ComunicacaoPage />
+              </RequirePapel>
+            }
+          />
+          {/* Editor "Nova campanha" em tela cheia (S401-T3) — entra pela lista */}
+          <Route
+            path="comunicacao/nova"
+            element={
+              <RequirePapel area="comunicacao">
+                <CampanhaEditorPage />
               </RequirePapel>
             }
           />
