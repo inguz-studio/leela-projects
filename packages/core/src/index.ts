@@ -832,3 +832,12 @@ export {
   derivarProgressoDesafio,
   derivarProgressoPorPilar,
 } from './atleta/registro';
+
+// Clubs — participação em desafio (LEELA-S1308-T1 · RN-117): decisão PURA
+// de entrada (publico/membros/convite); a fronteira real é o callable
+// entrarNoDesafio (Rules não checam membro por uid).
+export type {
+  ContextoParticipacao,
+  DecisaoParticipacao,
+} from './clubs/participacao';
+export { podeParticipar } from './clubs/participacao';

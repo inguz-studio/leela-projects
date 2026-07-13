@@ -206,3 +206,10 @@ export { coletaDiaria } from './analytics/coletaDiaria';
 // entrarNoDesafio). Path do desafio = aninhado ADR-009. ⚠️ Fable
 // (integridade de pontuação/board).
 export { onRegistroWrite } from './jornada/onRegistroWrite';
+
+// Jornada — ENTRADA NO DESAFIO (S1308-T1 · RN-117): fronteira REAL da
+// visibilidade para atletas (membro por atletaId + convite explícito,
+// relidos no servidor). Criação idempotente de participantes/{uid} +
+// recompute (absorve registros pré-join) + ∑ por recontagem. ⚠️ Fable
+// (autorização de participação).
+export { entrarNoDesafio } from './jornada/entrarNoDesafio';
