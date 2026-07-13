@@ -41,6 +41,7 @@ import { recontarDesafiosAtivos } from '../clubs/desafiosAggregates';
 import {
   CLUBE_CPS_SLUG,
   CORRIDA_PERFEITA_TENANT_ID,
+  FELIPE_MARTINS_UID,
   seedClubes,
 } from './clubes.seed';
 import { seedCatalogoAcoes } from './catalogoAcoes.seed';
@@ -257,6 +258,9 @@ export async function seedDesafios(
     const data: Record<string, unknown> = {
       id: spec.id,
       tenantId: CORRIDA_PERFEITA_TENANT_ID,
+      // E15 higiene (S105-hig · decisão 7): autor = dono do clube pai
+      // (generaliza o dono hoje implícito no path; Creator Studio futuro).
+      autorId: FELIPE_MARTINS_UID,
       nome: spec.nome,
       descricao: spec.descricao,
       modelo: spec.modelo,

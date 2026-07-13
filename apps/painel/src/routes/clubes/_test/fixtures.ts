@@ -50,6 +50,8 @@ export function mkDesafio(over: Partial<Desafio> = {}): Desafio {
   return {
     id: over.id ?? `des-${dseq}`,
     tenantId: 'castelo',
+    // E15 higiene (S105-hig): autorId obrigatório no tipo — autor = dono do clube
+    autorId: over.autorId ?? 'felipe',
     nome: over.nome ?? 'Desafio 21 dias',
     descricao: over.descricao ?? 'Constância nos 3 pilares.',
     modelo: over.modelo ?? 'B',

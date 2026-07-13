@@ -288,9 +288,25 @@ export async function criarDesafio(
   clubeId: string,
   input: CriarDesafioInput
 ): Promise<CriarDesafioResult> {
+  // E15 higiene (S105-hig · decisão 7): `autorId` = dono do clube pai —
+  // mesma semântica do seed (generaliza o dono hoje implícito no path;
+  // Creator Studio futuro muda QUEM assina, não o shape). Derivado no
+  // cliente a partir do doc do clube (1 read, permitido ao tenant) —
+  // nunca do formulário.
+  const clubeSnap = await getDoc(doc(db, 'clubes', clubeId));
+  const ownerId = clubeSnap.exists()
+    ? (clubeSnap.data() as { ownerId?: string }).ownerId
+    : undefined;
+  if (!ownerId) {
+    throw new Error(
+      `Clube '${clubeId}' sem ownerId — impossível carimbar autorId do desafio.`
+    );
+  }
+
   const ref = doc(collection(db, 'clubes', clubeId, 'desafios'));
   const data: Record<string, unknown> = {
     tenantId: input.tenantId,
+    autorId: ownerId,
     nome: input.nome,
     descricao: input.descricao,
     modelo: input.modelo,

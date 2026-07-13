@@ -122,6 +122,7 @@ export type {
   RecompensaTipo,
   VisibilidadeDesafio,
   ProgressoPilar,
+  DesafioAnexo,
   Desafio,
   AcaoDesafio,
   ResultadoConvite,

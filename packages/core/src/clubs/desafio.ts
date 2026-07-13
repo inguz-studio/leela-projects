@@ -92,6 +92,20 @@ export interface ProgressoPilar {
 }
 
 /**
+ * Anexo do desafio (E15 higiene · S105-hig · Onda 2 T2-L3 — decisão 7).
+ * Tipo PREVISTO, não implementado: nenhum fluxo de upload/render existe na
+ * V1 — o campo reserva o shape para o Creator Studio (biblioteca de
+ * materiais gated, congelada até a V1 validar) SEM migração futura.
+ */
+export interface DesafioAnexo {
+  /** Tipo do material (ex.: 'pdf', 'video', 'link') — enum nasce com o Creator Studio. */
+  tipo: string;
+  url: string;
+  /** Rótulo de exibição opcional. */
+  titulo?: string;
+}
+
+/**
  * Desafio — subcoleção `clubes/{clubId}/desafios/{desafioId}`.
  * Herda tenantId do clube pai (ADR-009).
  */
@@ -99,6 +113,13 @@ export interface Desafio {
   id: string;
   /** Propagado do clube pai (ADR-009) */
   tenantId: string;
+  /**
+   * Autor/dono do desafio (E15 higiene — decisão 7): generaliza o dono,
+   * hoje implícito no path `clubes/{clubId}/desafios` (= ownerId do clube).
+   * Prepara o Creator Studio sem migração cara. OBRIGATÓRIO: literal sem
+   * autorId falha o type-check (aceite S105-hig).
+   */
+  autorId: string;
   nome: string;
   descricao: string;
   modelo: ModeloDesafio;
@@ -115,6 +136,8 @@ export interface Desafio {
   minimoPorPilar?: Partial<Record<Pilar, number>>;
   recompensaTipo: RecompensaTipo;
   visibilidade: VisibilidadeDesafio;
+  /** Material anexo (E15 — PREVISTO, sem fluxo na V1; ver DesafioAnexo). */
+  anexo?: DesafioAnexo;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   /** ∑ Nº de membros participando — mantido por Cloud Function */

@@ -63,6 +63,7 @@ export type {
   RecompensaTipo,
   VisibilidadeDesafio,
   ProgressoPilar,
+  DesafioAnexo,
   Desafio,
   AcaoDesafio,
 } from './desafio';
