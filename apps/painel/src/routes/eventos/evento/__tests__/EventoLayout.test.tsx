@@ -8,6 +8,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Evento } from '@leela/core';
 import { mkEvento } from '../../_test/fixtures';
+// Import ESTÁTICO (não dinâmico) — ver nota de root-cause em renderLayoutEm.
+import { EventoLayout } from '../EventoLayout';
 
 const STAFF_UID = 'uid-staff-castelo';
 const TENANT_ID = 'castelo';
@@ -29,22 +31,29 @@ vi.mock('@leela/api-client', () => ({
   getClaims: () => Promise.resolve({ role: 'tenant_staff', tenantId: TENANT_ID }),
 }));
 
+// ROOT-CAUSE do flaky (CONS-2): a versão anterior fazia `await import('../EventoLayout')`
+// DENTRO de cada caso. Esse import dinâmico força a transformação/instanciação do
+// grafo de módulos de EventoLayout NO caminho crítico do teste; sob a suíte cheia
+// em 8GB (workers em paralelo + pressão de GC) essa latência empurra a cadeia de
+// 2 queries do react-query além do timeout padrão de 1000ms do `findBy` → falha
+// intermitente. Isolado (~1.3s) sobra folga; na suíte cheia, não. Correção do
+// PADRÃO: import ESTÁTICO no topo (o `vi.mock` é içado acima dos imports, então o
+// api-client mockado continua valendo) — a carga do módulo sai do caminho crítico
+// e vai pro load do arquivo, pago uma vez. Sem timeout inflado, sem retry.
 function renderLayoutEm(slug: string) {
   // Client de teste: retry off (rejeição determinística, sem 3 tentativas —
   // permission-denied resolve na hora) e gcTime 0 (sem vazamento entre casos).
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  return import('../EventoLayout').then(({ EventoLayout }) =>
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={[`/eventos/${slug}`]}>
-          <Routes>
-            <Route path="/eventos/:slug/*" element={<EventoLayout />} />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    ),
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[`/eventos/${slug}`]}>
+        <Routes>
+          <Route path="/eventos/:slug/*" element={<EventoLayout />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -61,7 +70,7 @@ beforeEach(() => {
 describe('EventoLayout — escopo vs inexistência (review #16)', () => {
   it('evento de OUTRO organizador do tenant → mensagem de escopo, não 404', async () => {
     mocks.getEvento.mockResolvedValue(eventoDeOutroOrganizador());
-    await renderLayoutEm('meia-floripa-2026');
+    renderLayoutEm('meia-floripa-2026');
 
     expect(
       await screen.findByText('Este evento é de outro organizador'),
@@ -72,14 +81,14 @@ describe('EventoLayout — escopo vs inexistência (review #16)', () => {
 
   it('evento inexistente → segue "Evento não encontrado"', async () => {
     mocks.getEvento.mockResolvedValue(null);
-    await renderLayoutEm('nao-existe');
+    renderLayoutEm('nao-existe');
 
     expect(await screen.findByText('Evento não encontrado')).toBeInTheDocument();
   });
 
   it('cross-tenant (Rules negam a leitura) → também "não encontrado", sem vazar existência', async () => {
     mocks.getEvento.mockRejectedValue({ code: 'permission-denied' });
-    await renderLayoutEm('evento-do-tenant-b');
+    renderLayoutEm('evento-do-tenant-b');
 
     expect(await screen.findByText('Evento não encontrado')).toBeInTheDocument();
   });
@@ -88,7 +97,7 @@ describe('EventoLayout — escopo vs inexistência (review #16)', () => {
     mocks.getEvento.mockResolvedValue(
       mkEvento({ organizadorId: STAFF_UID, tenantId: TENANT_ID }),
     );
-    await renderLayoutEm('meia-floripa-2026');
+    renderLayoutEm('meia-floripa-2026');
 
     expect(
       await screen.findByRole('heading', { level: 1, name: /Meia Maratona Floripa 2026/i }),
