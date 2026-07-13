@@ -295,13 +295,16 @@ Cortadas: S400 (parceiros/afiliação), S402 (automações → Onda 3), `abertur
 
 ### Transversais Onda 2 (coleta E11 · backend do desafio · higienes) — brief `onda2-transversais-lotes.md`
 
-- [ ] LEELA-S821-T1a — Tipo `AnalyticsSnapshot` (estende `OverviewKPIs`) + Rules (owner-only, imutável)
-- [ ] LEELA-S821-T1b — Cron coleta diária 03:05 + Core idempotente + seed + hook BigQuery atrás de flag
-- [ ] LEELA-S1307-T1 — `registros` do atleta + `onRegistroWrite` (pontos via `calcularPontos`, bônus RN-115) + Rules
-- [ ] LEELA-S1308-T1 — `participacao` + `entrarNoDesafio` (RN-117, idempotente) + Rules
-- [ ] LEELA-S1308-T3 — Board de consistência (dias ativos distintos, desempate por pontos) + Rules
-- [ ] LEELA-S105-hig — E15 higiene: `autorId` + `anexo?` no tipo `Desafio` (XS)
-- [ ] LEELA-S1601-hig — Fix `consistent-type-imports` em PlatformShell.tsx (XS)
+- [x] LEELA-S821-T1a — Tipo `AnalyticsSnapshot` (estende `OverviewKPIs`) + Rules (owner-only, imutável) ✅ `7ebd377` (14 testes)
+- [x] LEELA-S821-T1b — Cron coleta diária 03:05 + Core idempotente + seed + hook BigQuery atrás de flag ✅ `4db4550` (ADR-007 formalizado + convenções §12; 32 testes)
+- [x] LEELA-S1307-T1 — `registros` do atleta + `onRegistroWrite` (pontos via `calcularPontos`, bônus RN-115) + Rules ✅ `a023a56` (43 testes; gate anti-spoof: só agrega quem participa)
+- [x] LEELA-S1308-T1 — `participacao` + `entrarNoDesafio` (RN-117, idempotente) + Rules ✅ `f0a41c6` (10 testes; convite explícito via `convites/{uid}`)
+- [x] LEELA-S1308-T3 — Board de consistência (dias ativos distintos, desempate por pontos) + Rules ✅ `ea5c1ab` (top-50 em `board/current`; 10 testes)
+- [x] LEELA-S105-hig — E15 higiene: `autorId` + `anexo?` no tipo `Desafio` (XS) ✅ `97af827` (obrigatório no tipo; seed+api-client+fixture do painel acompanharam — regressão E05 114/114)
+- [ ] LEELA-S1601-hig — Fix `consistent-type-imports` em PlatformShell.tsx (XS · **Opus**)
+- [x] LEELA-CB-T1 — Modelo `PlanoCobranca` + `planoParaTerms` + Rules platform-only + seed "Padrão" (10% cartão/8% PIX) ✅ `7f65047` (`CommercialTerms` ganha `taxaPorMetodo?`/`tabelaTaxasParcela?` aditivos; path normalizado p/ coleção top-level `planosCobranca/{id}`; 53 testes)
+- [x] LEELA-CB-T2 — Callable `aplicarPlano` = estampa versionada (bump+snapshot v{n}, mecanismo S1602-T1) SEM vínculo vivo; reaplicar idêntico = no-op ✅ `32f6549` (41 testes; cross-tenant e dupla aplicação provados)
+- [ ] LEELA-CB-T3 — Tela do admin: CRUD de plano + "Aplicar plano" no detalhe do tenant (estende S1602-T2 · **Opus**; api-client `savePlanoCobranca`/`aplicarPlano` prontos no barrel)
 
 ### LEELA-E08 · Painel do influenciador — **ADIADO** (dependia de afiliação; sem afiliados neste início)
 
