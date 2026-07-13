@@ -110,6 +110,15 @@ export const queryKeys = {
       ['comunicacoes', 'do-evento', eventoId, limite] as const,
   },
 
+  equipe: {
+    /**
+     * Equipe (membros) de um evento — S304-T3 (tela Equipe & permissões). A tela
+     * lê esta chave; convidar/trocar papel/remover a invalidam → read-your-writes
+     * (ADR-010): a lista reflete a escrita sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['equipe', 'do-evento', eventoId] as const,
+  },
+
   // ---------------------------------------------------------------------------
   // Clubes (E05) — mesma convenção de eventos. Lista por tenant + detalhe por
   // slug partilham prefixo `['clubes']`; recursos-filhos (membros, comunicados,

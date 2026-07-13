@@ -15,13 +15,20 @@
 
 import {
   collection,
+  deleteDoc,
+  doc,
   getDocs,
   orderBy,
   query,
+  serverTimestamp,
+  setDoc,
   type Firestore,
 } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { parseMembroEquipe, type MembroEquipe, type PapelEvento } from '@leela/core';
+
+/** Papel convidável — o organizador NUNCA é convidado (é o dono; RN-320 + Rule). */
+export type PapelConvite = Exclude<PapelEvento, 'organizador'>;
 
 // ---------------------------------------------------------------------------
 // Readers
@@ -82,4 +89,65 @@ export async function setClaimsEquipe(
   );
   const { data } = await callable(input);
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Convite (LEELA-S304-T3 · E04-L5) — escrita DIRETA de cliente, ÚNICA permitida
+// nesta coleção. A Rule (`shapeConviteValido`) só aceita create com:
+//   papel ∈ {administrador, operador, financeiro} (NUNCA organizador),
+//   status == 'convidado', SEM `uid`, `nome` não-vazio, tenant do evento pai.
+// A ATIVAÇÃO (uid + claims + doc âncora em `equipe/{uid}`) é EXCLUSIVA da
+// Function `setClaimsEquipe` — o convite é só o registro pendente. Trocar o
+// papel de um convite NÃO existe pelo cliente (Rule `update` = platform_admin):
+// a UI mantém o papel do convite read-only até a ativação.
+// ---------------------------------------------------------------------------
+
+/** Dados do convite — `nome` obrigatório (exigido pela Rule); `email` opcional. */
+export interface ConvidarMembroEquipeInput {
+  nome: string;
+  email?: string | null;
+  papel: PapelConvite;
+}
+
+/**
+ * Cria um convite de membro (docId auto — a ativação grava o doc definitivo em
+ * `equipe/{uid}`). Devolve o id do convite. NUNCA inclui `uid` (a Rule nega o
+ * create com `uid`). Erro `permission-denied` (não é gestor / papel inválido)
+ * sobe INTACTO para a UI (§2.12).
+ */
+export async function convidarMembroEquipe(
+  db: Firestore,
+  eventoId: string,
+  tenantId: string,
+  input: ConvidarMembroEquipeInput
+): Promise<string> {
+  const ref = doc(collection(db, 'eventos', eventoId, 'equipe'));
+  const data: Record<string, unknown> = {
+    tenantId,
+    eventoId,
+    nome: input.nome,
+    papel: input.papel,
+    status: 'convidado',
+    convidadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  };
+  if (typeof input.email === 'string' && input.email.length > 0) {
+    data['email'] = input.email;
+  }
+  await setDoc(ref, data);
+  return ref.id;
+}
+
+/**
+ * Remove um CONVITE pendente (a Rule só permite `delete` de docs com
+ * `status == 'convidado'`). Membro ATIVO é revogado pela Function
+ * `setClaimsEquipe` com `papel: null` (revoga claims + marca o doc), nunca por
+ * delete direto — este caminho é só para o convite que ainda não ativou.
+ */
+export async function removerConviteEquipe(
+  db: Firestore,
+  eventoId: string,
+  membroId: string
+): Promise<void> {
+  await deleteDoc(doc(db, 'eventos', eventoId, 'equipe', membroId));
 }

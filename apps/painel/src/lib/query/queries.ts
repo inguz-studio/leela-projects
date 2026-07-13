@@ -33,6 +33,7 @@ import {
   listarEventosDoOrganizador,
   listarAprovisionamento,
   listarCupons,
+  listarEquipe,
   listarInscritos,
   listarInscritosRecentes,
   listarKits,
@@ -63,6 +64,7 @@ import type {
   LogComunicacao,
   Lote,
   Membro,
+  MembroEquipe,
   PaginaVendas,
   Parceria,
   PlatformRollups,
@@ -239,6 +241,19 @@ export function paginaVendasDoEventoQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.paginaVendas.doEvento(eventoId),
     queryFn: (): Promise<PaginaVendas | null> => getPaginaVendas(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Equipe (membros) de um evento — S304-T3 (tela Equipe & permissões). Reusa
+ * `listarEquipe` do api-client (ordena por nome; `parseMembroEquipe` fail-fast).
+ * Traz convidados + ativos + removidos — a tela filtra. Convidar/trocar papel/
+ * remover invalida esta chave (read-your-writes, ADR-010).
+ */
+export function equipeDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.equipe.doEvento(eventoId),
+    queryFn: (): Promise<MembroEquipe[]> => listarEquipe(getLeelaDb(), eventoId),
   });
 }
 

@@ -366,10 +366,18 @@ export type {
 // Equipe do evento — 4 papéis + claims por evento (LEELA-S304-T1 · E04-L4)
 // Papel muda SÓ via Function `setClaimsEquipe` (merge preservador — ADR-008).
 // ---------------------------------------------------------------------------
-export { listarEquipe, setClaimsEquipe } from './eventos/equipe';
+// S304-T3 — convite de membro (escrita direta Rules-guarded; ativação = Function)
+export {
+  listarEquipe,
+  setClaimsEquipe,
+  convidarMembroEquipe,
+  removerConviteEquipe,
+} from './eventos/equipe';
 export type {
   SetClaimsEquipeInput,
   SetClaimsEquipeResult,
+  ConvidarMembroEquipeInput,
+  PapelConvite,
 } from './eventos/equipe';
 
 // ---------------------------------------------------------------------------

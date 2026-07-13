@@ -17,6 +17,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   atualizarConfiguracoesEvento,
+  convidarMembroEquipe,
   criarEvento,
   criarPatrocinador,
   despublicarPaginaVendas,
@@ -24,6 +25,7 @@ import {
   getLeelaDb,
   getLeelaFunctions,
   publicarPaginaVendas,
+  removerConviteEquipe,
   removerCupom,
   removerLote,
   removerMembro,
@@ -31,10 +33,12 @@ import {
   salvarCupom,
   salvarKit,
   salvarLote,
+  setClaimsEquipe,
   transferirPropriedade,
   transicaoAprovisionamento,
   transicionarParceria,
   type AtualizarConfiguracoesEventoInput,
+  type ConvidarMembroEquipeInput,
   type CriarEventoInput,
   type CriarEventoResult,
   type CriarPatrocinadorInput,
@@ -46,10 +50,16 @@ import {
   type SalvarConteudoPaginaVendasInput,
   type SalvarCupomInput,
   type SalvarKitInput,
+  type SetClaimsEquipeResult,
   type TransferirPropriedadeResult,
   type TransicaoAprovisionamentoResult,
 } from '@leela/api-client';
-import type { EstadoAprovisionamento, StatusParceria } from '@leela/core';
+import type {
+  EstadoAprovisionamento,
+  MembroEquipe,
+  PapelEvento,
+  StatusParceria,
+} from '@leela/core';
 import { queryKeys } from './keys';
 
 /**
@@ -454,6 +464,90 @@ export function useEstornarInscrito(
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.inscritos.todos(eventoId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.financeiro.current(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations de EQUIPE (E04 · S304-T3 · E04-L5). Duas naturezas (ADR-008/RN-401):
+//   - TROCA DE PAPEL (`setClaimsEquipe`, callable) e REMOÇÃO de membro ATIVO
+//     (mesma callable com `papel: null`) — merge preservador de claims + âncora
+//     no doc; o cliente NUNCA escreve claim direto.
+//   - CONVITE (`convidarMembroEquipe`, escrita direta Rules-guarded) e remoção
+//     de convite pendente (`removerConviteEquipe`, delete direto — só status
+//     'convidado'). A ativação do convite (uid + claims) é da Function.
+// Todas invalidam `['equipe','do-evento',eventoId]` → a lista reflete sem reload
+// (read-your-writes, ADR-010). Erro (permission-denied / invalid-argument /
+// failed-precondition da anti-escalada) sobe INTACTO para a UI (§2.12).
+// =============================================================================
+
+/** Variáveis de `useSetPapelEquipe`: uid do membro ATIVO e o novo papel. */
+export interface SetPapelEquipeVars {
+  uid: string;
+  papel: PapelEvento;
+}
+
+/**
+ * Troca o papel de um membro ATIVO (callable — anti-escalada no servidor) e
+ * invalida a equipe do evento. Só para membro com `uid` (convite não tem papel
+ * trocável pelo cliente).
+ */
+export function useSetPapelEquipe(
+  eventoId: string,
+): UseMutationResult<SetClaimsEquipeResult, Error, SetPapelEquipeVars> {
+  const queryClient = useQueryClient();
+  return useMutation<SetClaimsEquipeResult, Error, SetPapelEquipeVars>({
+    mutationFn: ({ uid, papel }) =>
+      setClaimsEquipe(getLeelaFunctions(), { eventoId, uid, papel }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.equipe.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Convida um membro (escrita direta Rules-guarded) e invalida a equipe do
+ * evento — o convite pendente aparece na lista sem reload. `tenantId` casa com
+ * o do evento pai (ADR-009); a Rule nega papel 'organizador' e create com uid.
+ */
+export function useConvidarMembroEquipe(params: {
+  eventoId: string;
+  tenantId: string;
+}): UseMutationResult<string, Error, ConvidarMembroEquipeInput> {
+  const queryClient = useQueryClient();
+  return useMutation<string, Error, ConvidarMembroEquipeInput>({
+    mutationFn: (input) =>
+      convidarMembroEquipe(getLeelaDb(), params.eventoId, params.tenantId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.equipe.doEvento(params.eventoId) });
+    },
+  });
+}
+
+/**
+ * Remove um membro e invalida a equipe. Ramifica pela natureza do vínculo:
+ * ATIVO (com uid) → revoga via Function `setClaimsEquipe` com `papel: null`
+ * (claims + âncora no doc, na MESMA operação — token velho morre na hora);
+ * CONVITE pendente → delete direto (a Rule só permite delete de 'convidado').
+ */
+export function useRemoverMembroEquipe(
+  eventoId: string,
+): UseMutationResult<void, Error, MembroEquipe> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, MembroEquipe>({
+    mutationFn: async (membro) => {
+      if (membro.status === 'ativo' && membro.uid !== null) {
+        await setClaimsEquipe(getLeelaFunctions(), {
+          eventoId,
+          uid: membro.uid,
+          papel: null,
+        });
+        return;
+      }
+      await removerConviteEquipe(getLeelaDb(), eventoId, membro.id);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.equipe.doEvento(eventoId) });
     },
   });
 }

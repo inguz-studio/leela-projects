@@ -31,6 +31,7 @@ import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
 import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
+import { EquipePage } from './configuracoes/equipe/EquipePage';
 
 export function EventosRoutes(): JSX.Element {
   return (
@@ -61,6 +62,7 @@ export function EventosRoutes(): JSX.Element {
           {/* Configurações gerais + Equipe & permissões (E04 · S304-T2/T3) */}
           <Route path="configuracoes" element={<ConfiguracoesLayout />}>
             <Route index element={<ConfigGeraisPage />} />
+            <Route path="equipe" element={<EquipePage />} />
           </Route>
         </Route>
       </Routes>
