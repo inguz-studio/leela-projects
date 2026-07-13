@@ -213,3 +213,10 @@ export { onRegistroWrite } from './jornada/onRegistroWrite';
 // recompute (absorve registros pré-join) + ∑ por recontagem. ⚠️ Fable
 // (autorização de participação).
 export { entrarNoDesafio } from './jornada/entrarNoDesafio';
+
+// Plataforma — APLICAR PLANO DE COBRANÇA (CB-T2 · T2-L4 · decisão #15):
+// estampa versionada nos commercialTerms/current do tenant REUSANDO o
+// mecanismo S1602-T1 (bump + snapshot v{n}); SEM vínculo vivo (editar o
+// plano depois não retroage; reaplicar idêntico = no-op sem bump). Só
+// platform_admin (RN-404). ⚠️ Fable (economia do tenant).
+export { aplicarPlano } from './platform/aplicarPlano';
