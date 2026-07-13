@@ -43,14 +43,15 @@ import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
-  computeReceitaLiquida,
+  computeLiquidoProdutor,
   computeTaxa,
   createTermsProvider,
+  isModoTaxa,
   KITS_INSCRITO,
   STATUS_INSCRITO,
   TermsNotFoundError,
 } from '@leela/core';
-import type { CommercialTerms, KitInscrito, StatusInscrito } from '@leela/core';
+import type { CommercialTerms, KitInscrito, ModoTaxa, StatusInscrito } from '@leela/core';
 
 type Db = admin.firestore.Firestore;
 
@@ -83,11 +84,19 @@ export interface FinanceiroEvento {
 
 /**
  * Deriva taxa e líquido a partir do bruto + % do termo (null-safe, RN-406).
+ *
+ * RN-347 (EVENTO-CAMPOS): o líquido respeita o MODO da taxa do evento —
+ * 'incorporada' (default/vigente): líquido = bruto − taxa;
+ * 'repassada': a taxa é cobrada por fora do comprador ⇒ líquido = bruto
+ * (a taxa nunca foi dinheiro do produtor). Reusa `computeLiquidoProdutor`
+ * do core (E09s-L1) — NUNCA reimplementa a matemática. `taxaValor` segue
+ * informativo nos DOIS modos (é a fatia Leela; o modo decide QUEM paga).
  * @pure
  */
 export function computeFinanceiro(
   receitaBruta: number,
-  taxaPct: number | null
+  taxaPct: number | null,
+  modo: ModoTaxa = 'incorporada'
 ): Pick<FinanceiroEvento, 'taxaPct' | 'taxaValor' | 'receitaLiquida'> {
   if (taxaPct === null) {
     return { taxaPct: null, taxaValor: null, receitaLiquida: null };
@@ -95,7 +104,7 @@ export function computeFinanceiro(
   return {
     taxaPct,
     taxaValor: computeTaxa(receitaBruta, taxaPct),
-    receitaLiquida: computeReceitaLiquida(receitaBruta, taxaPct),
+    receitaLiquida: computeLiquidoProdutor(receitaBruta, taxaPct, modo),
   };
 }
 
@@ -194,10 +203,16 @@ export async function recomputarFinanceiroEvento(
       if (!(err instanceof TermsNotFoundError)) throw err;
     }
 
+    // RN-347: modo da taxa do PRÓPRIO evento (mesmo snapshot da tx) — ausente
+    // ou lixo ⇒ 'incorporada' (comportamento vigente; guard, nunca lança aqui
+    // para não travar o pipeline de agregação por doc legado).
+    const taxaModoRaw = eventoSnap.get('taxaModo');
+    const modoTaxa: ModoTaxa = isModoTaxa(taxaModoRaw) ? taxaModoRaw : 'incorporada';
+
     const financeiro: FinanceiroEvento = {
       tenantId,
       receitaBruta,
-      ...computeFinanceiro(receitaBruta, taxaPct),
+      ...computeFinanceiro(receitaBruta, taxaPct, modoTaxa),
       inscritos,
     };
 

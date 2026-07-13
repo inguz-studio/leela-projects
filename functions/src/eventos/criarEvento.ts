@@ -32,8 +32,13 @@ import {
   dataEventoNoFuturo,
   dataEventoParaDate,
   isDataEventoISO,
+  isModoTaxa,
   isPercursoEvento,
+  isUrlCapaValida,
+  MODO_TAXA_DEFAULT,
+  REGULAMENTO_MAX,
   type AuthClaims,
+  type ModoTaxa,
   type PercursoEvento,
 } from '@leela/core';
 import { MAX_TENTATIVAS_SLUG, slugCandidato, slugify } from './slug';
@@ -67,6 +72,20 @@ export interface CriarEventoInput {
   /** Usa chip de cronometragem (RN-207) — default false */
   usaChip?: boolean;
   descricao?: string;
+  /**
+   * URL da capa (RN-153) — http(s) válida, ≤ 2048 (isUrlCapaValida; a capa
+   * vira `src` de `<img>` público na landing). OPCIONAL — sem capa o hero
+   * cai no gradiente de tokens.
+   */
+  imagemUrl?: string;
+  /** Texto do regulamento (RN-153) — ≤ REGULAMENTO_MAX. OPCIONAL. */
+  regulamento?: string;
+  /**
+   * Modo da taxa POR EVENTO (RN-347) — OPCIONAL: ausente ⇒ default do tenant
+   * (`commercialTerms.modoTaxaDefault`, senão 'incorporada'). O evento nasce
+   * SEMPRE com o campo estampado (explícito no doc).
+   */
+  taxaModo?: ModoTaxa;
 }
 
 export interface CriarEventoResult {
@@ -180,6 +199,29 @@ export function validarCriarEventoInput(
     }
   }
 
+  // RN-153: capa — quando presente, URL http(s) VÁLIDA (a capa vira `src`
+  // de <img> na landing pública; javascript:/data: nunca passam daqui).
+  const imagemUrl = input['imagemUrl'];
+  if (imagemUrl !== undefined && !isUrlCapaValida(imagemUrl)) {
+    erros.push('"imagemUrl" deve ser URL http(s) válida (máx. 2048 caracteres).');
+  }
+
+  // RN-153: regulamento — texto com teto são (anti doc-bomba).
+  const regulamento = input['regulamento'];
+  if (regulamento !== undefined) {
+    if (typeof regulamento !== 'string') {
+      erros.push('"regulamento" deve ser string.');
+    } else if (regulamento.length > REGULAMENTO_MAX) {
+      erros.push(`"regulamento" excede ${REGULAMENTO_MAX} caracteres.`);
+    }
+  }
+
+  // RN-347: modo da taxa — enum fechado quando presente.
+  const taxaModo = input['taxaModo'];
+  if (taxaModo !== undefined && !isModoTaxa(taxaModo)) {
+    erros.push('"taxaModo" deve ser \'incorporada\' ou \'repassada\' (RN-347).');
+  }
+
   return erros;
 }
 
@@ -245,6 +287,21 @@ export async function criarEventoCore(
 
   await assertTenantAtivo(db, tenantId);
 
+  // RN-347: modo da taxa do evento — input explícito vence; senão o default
+  // do TENANT (commercialTerms.modoTaxaDefault); senão o default global
+  // ('incorporada' — comportamento vigente). O evento nasce SEMPRE com o
+  // campo estampado: consumidor nunca adivinha o modo de evento novo.
+  let taxaModo: ModoTaxa | undefined = input.taxaModo;
+  if (taxaModo === undefined) {
+    const termoSnap = await db
+      .doc(`tenants/${tenantId}/commercialTerms/current`)
+      .get();
+    const defaultTenant = termoSnap.exists
+      ? termoSnap.get('modoTaxaDefault')
+      : undefined;
+    taxaModo = isModoTaxa(defaultTenant) ? defaultTenant : MODO_TAXA_DEFAULT;
+  }
+
   const base = slugify(input.nome);
   const now = FieldValue.serverTimestamp();
 
@@ -277,6 +334,8 @@ export async function criarEventoCore(
         slug: candidato,
         status: 'rascunho',
         usaChip: input.usaChip === true,
+        // RN-347: modo estampado no nascimento (input > default tenant > global)
+        taxaModo,
         qtdInscritos: 0,
         receitaConfirmada: 0,
         criadoEm: now,
@@ -284,6 +343,14 @@ export async function criarEventoCore(
       };
       if (typeof input.descricao === 'string' && input.descricao.length > 0) {
         doc['descricao'] = input.descricao;
+      }
+      // RN-153: capa/regulamento só entram quando presentes (nunca string
+      // vazia no doc — presença decide <img> vs gradiente na leitura).
+      if (typeof input.imagemUrl === 'string' && input.imagemUrl.length > 0) {
+        doc['imagemUrl'] = input.imagemUrl.trim();
+      }
+      if (typeof input.regulamento === 'string' && input.regulamento.trim().length > 0) {
+        doc['regulamento'] = input.regulamento;
       }
       tx.set(ref, doc);
       return candidato;

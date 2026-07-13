@@ -63,7 +63,9 @@ import {
   computeLiquidoProdutor,
   computeSaldoRepasse,
   isEstadoRepasse,
+  isModoTaxa,
   type EventoSaldoInput,
+  type ModoTaxa,
   type RepasseSaldoInput,
   type SaldoRepasseComputado,
   type TransacaoJanelaInput,
@@ -118,6 +120,17 @@ export async function lerInputsSaldoRepasse(
   );
   const financeiroSnaps =
     financeiroRefs.length > 0 ? await tx.getAll(...financeiroRefs) : [];
+
+  // RN-347 (EVENTO-CAMPOS): modo da taxa POR EVENTO — mapa eventoId→modo do
+  // MESMO snapshot (inclui eventos ainda sem financeiro/current: um pagamento
+  // pode confirmar antes do 1º recompute do agregado). Ausente/lixo ⇒
+  // 'incorporada' (comportamento vigente — guard defensivo, não lança para
+  // não travar o recompute do tenant inteiro por um doc legado).
+  const modoPorEvento = new Map<string, ModoTaxa>();
+  for (const eventoDoc of eventosSnap.docs) {
+    const raw = eventoDoc.get('taxaModo');
+    modoPorEvento.set(eventoDoc.id, isModoTaxa(raw) ? raw : 'incorporada');
+  }
 
   const eventos: EventoSaldoInput[] = [];
   eventosSnap.docs.forEach((eventoDoc, i) => {
@@ -206,8 +219,16 @@ export async function lerInputsSaldoRepasse(
       if (typeof valorFinal !== 'number' || !Number.isFinite(valorFinal) || valorFinal <= 0) {
         continue; // pagamento zero/corrompido não segura fundos
       }
+      // RN-347: o líquido da transação respeita o modo do EVENTO da venda
+      // (pagamento denormaliza eventoId). Evento desconhecido/sem modo ⇒
+      // 'incorporada' (conservador: líquido menor, nunca segura a menos).
+      const eventoIdPagamento = doc.get('eventoId');
+      const modo: ModoTaxa =
+        typeof eventoIdPagamento === 'string'
+          ? (modoPorEvento.get(eventoIdPagamento) ?? 'incorporada')
+          : 'incorporada';
       transacoes.push({
-        valorLiquido: computeLiquidoProdutor(valorFinal, feePct),
+        valorLiquido: computeLiquidoProdutor(valorFinal, feePct, modo),
         confirmadaEm: pagoEm.toDate(),
       });
     }
