@@ -428,6 +428,57 @@ service cloud.firestore {
               && request.resource.data.faixaChips.fim >= request.resource.data.faixaChips.inicio);
       }
 
+      /**
+       * EVENTO-CAMPOS (RN-153): capa — quando presente, é null (sem capa) ou
+       * URL http(s) curta. A capa vira `src` de <img> na landing PÚBLICA:
+       * `javascript:`/`data:` nunca entram no doc (espelho de isUrlCapaValida
+       * no core e da validação do criarEvento — defesa em profundidade).
+       * RN-200 NÃO congela capa: editável mesmo após a 1ª venda.
+       */
+      function capaValida() {
+        return !('imagemUrl' in request.resource.data)
+          || request.resource.data.imagemUrl == null
+          || (request.resource.data.imagemUrl is string
+              && request.resource.data.imagemUrl.size() <= 2048
+              && request.resource.data.imagemUrl.matches('https?://.*'));
+      }
+
+      /**
+       * EVENTO-CAMPOS (RN-153): regulamento — texto com teto são (50k,
+       * REGULAMENTO_MAX do core — anti doc-bomba; doc Firestore é 1 MiB).
+       * RN-200 NÃO congela regulamento; o VERSIONAMENTO (RN-149,
+       * regulamentoVersao + novo aceite) é do S306/Onda 3.
+       */
+      function regulamentoValido() {
+        return !('regulamento' in request.resource.data)
+          || request.resource.data.regulamento == null
+          || (request.resource.data.regulamento is string
+              && request.resource.data.regulamento.size() <= 50000);
+      }
+
+      /**
+       * EVENTO-CAMPOS (RN-347): modo da taxa — enum FECHADO quando presente
+       * (null NÃO é válido: o modo se troca, nunca se "anula"; ausência só
+       * existe em doc legado, que os consumidores leem como 'incorporada').
+       */
+      function taxaModoValido() {
+        return !('taxaModo' in request.resource.data)
+          || request.resource.data.taxaModo in ['incorporada', 'repassada'];
+      }
+
+      /**
+       * RN-347: taxaModo CONGELA junto dos campos comerciais após a 1ª venda
+       * (∑ qtdInscritos > 0) — trocar quem paga a taxa com venda feita mexe
+       * em dinheiro já vendido (repasse E09 + total do comprador E12).
+       * Mesmo padrão de percursosEditaveis (RN-200); remover o campo
+       * (deleteField) também conta como toque — `affectedKeys` cobre.
+       */
+      function taxaModoEditavel() {
+        return resource.data.get('qtdInscritos', 0) == 0
+          || !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['taxaModo']);
+      }
+
       // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
       // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
       // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
@@ -442,7 +493,10 @@ service cloud.firestore {
                         && eventoAgregadosZerados()
                         && statusNasceRascunho()
                         && janelasEntregaValidas()
-                        && faixaChipsValida())
+                        && faixaChipsValida()
+                        && capaValida()
+                        && regulamentoValido()
+                        && taxaModoValido())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
@@ -451,7 +505,11 @@ service cloud.firestore {
                         && statusIntocado()
                         && percursosEditaveis()
                         && janelasEntregaValidas()
-                        && faixaChipsValida())
+                        && faixaChipsValida()
+                        && capaValida()
+                        && regulamentoValido()
+                        && taxaModoValido()
+                        && taxaModoEditavel())
                     || isPlatformAdmin();
       // Delete de evento é EXCLUSIVO de Function/Admin (review #17) — nem
       // platform_admin via client SDK (espelha o delete de clubes, S110-T2).
