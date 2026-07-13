@@ -4,6 +4,14 @@
 // Entidade Comunicado — comunicação segmentada do clube (LEELA-E05 ·
 // S108-T1). Subcoleção: `clubes/{clubId}/comunicados/{comunicadoId}`.
 //
+// E06-L1-T1 (extração Camada A): as primitivas AGNÓSTICAS de comunicação
+// (canal/status/origem, PUSH_MAX_CHARS/PUSH_SEMANA_MAX, temCanalPush,
+// truncarPush) moram em `core/comunicacao/` — fonte ÚNICA compartilhada com
+// a campanha do evento (E06). Este arquivo RE-EXPORTA os símbolos (API
+// pública do clube 100% estável — nenhum import de caller muda) e mantém
+// APENAS o que é do domínio do clube: a taxonomia de segmento
+// (por_desafio/por_pilar/por_engajamento) e a entidade Comunicado.
+//
 // RNs: RN-130 (3 estados: enviado/agendado/rascunho),
 //      RN-131 (2 canais: push/email, ou ambos),
 //      RN-132 (2 origens: manual/automatizada),
@@ -17,55 +25,52 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+import type {
+  CanalComunicado,
+  OrigemComunicado,
+  StatusComunicado,
+} from '../comunicacao/canal';
 
 // ---------------------------------------------------------------------------
-// Literal types
+// Camada A — re-export da fonte única (E06-L1-T1). NUNCA redeclarar aqui:
+// um segundo literal de 160/4 reabriria a classe de drift que a extração
+// eliminou (5 push/semana ou 161 chars numa superfície = bug de segurança).
 // ---------------------------------------------------------------------------
 
-/** Estado do comunicado (RN-130) */
-export type StatusComunicado = 'rascunho' | 'agendado' | 'enviado';
+export type {
+  StatusComunicado,
+  CanalComunicado,
+  OrigemComunicado,
+} from '../comunicacao/canal';
+export {
+  STATUS_COMUNICADO,
+  CANAIS_COMUNICADO,
+  ORIGENS_COMUNICADO,
+  isStatusComunicado,
+  isCanalComunicado,
+  isOrigemComunicado,
+  PUSH_MAX_CHARS,
+  PUSH_SEMANA_MAX,
+  temCanalPush,
+} from '../comunicacao/canal';
 
-/** Canal de disparo (RN-131) — `canal[]` aceita um ou ambos */
-export type CanalComunicado = 'push' | 'email';
+// ---------------------------------------------------------------------------
+// Taxonomia de segmento do CLUBE (Camada C — específica deste domínio)
+// ---------------------------------------------------------------------------
 
-/** Origem do disparo (RN-132) */
-export type OrigemComunicado = 'manual' | 'automatizada';
-
-/** Tipo de segmentação do público-alvo */
+/** Tipo de segmentação do público-alvo (clube) */
 export type TipoSegmento =
   | 'todos'
   | 'por_desafio'
   | 'por_pilar'
   | 'por_engajamento';
 
-export const STATUS_COMUNICADO: readonly StatusComunicado[] = [
-  'rascunho',
-  'agendado',
-  'enviado',
-];
-export const CANAIS_COMUNICADO: readonly CanalComunicado[] = ['push', 'email'];
-export const ORIGENS_COMUNICADO: readonly OrigemComunicado[] = [
-  'manual',
-  'automatizada',
-];
 export const TIPOS_SEGMENTO: readonly TipoSegmento[] = [
   'todos',
   'por_desafio',
   'por_pilar',
   'por_engajamento',
 ];
-
-export function isStatusComunicado(v: unknown): v is StatusComunicado {
-  return STATUS_COMUNICADO.includes(v as StatusComunicado);
-}
-
-export function isCanalComunicado(v: unknown): v is CanalComunicado {
-  return CANAIS_COMUNICADO.includes(v as CanalComunicado);
-}
-
-export function isOrigemComunicado(v: unknown): v is OrigemComunicado {
-  return ORIGENS_COMUNICADO.includes(v as OrigemComunicado);
-}
 
 export function isTipoSegmento(v: unknown): v is TipoSegmento {
   return TIPOS_SEGMENTO.includes(v as TipoSegmento);
@@ -125,18 +130,3 @@ export const CAMPOS_FUNCTION_COMUNICADO = [
   'aberturasPct',
   'enviadoEm',
 ] as const;
-
-// ---------------------------------------------------------------------------
-// Limites (RN-133/134) — fonte única; Function e validação importam daqui
-// ---------------------------------------------------------------------------
-
-/** Máximo de caracteres do corpo de um push (RN-134) */
-export const PUSH_MAX_CHARS = 160;
-
-/** Máximo de comunicados push por clube por semana (RN-133) */
-export const PUSH_SEMANA_MAX = 4;
-
-/** O comunicado dispara push? (o limite RN-133 só se aplica a estes) */
-export function temCanalPush(canal: readonly CanalComunicado[]): boolean {
-  return canal.includes('push');
-}

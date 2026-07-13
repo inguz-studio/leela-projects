@@ -755,3 +755,18 @@ export {
   papelNoEvento,
   parseMembroEquipe,
 } from './eventos/equipe';
+
+// ---------------------------------------------------------------------------
+// Comunicação — primitivas agnósticas compartilhadas clube/evento
+// (E06-L1-T1 · Camada A). Canal/status/origem + PUSH_MAX_CHARS/
+// PUSH_SEMANA_MAX + truncarPush JÁ são exportados acima via './clubs'
+// (re-export estável — mesma fonte). Aqui entram SÓ os símbolos NOVOS da
+// extração; NÃO duplicar os nomes já exportados (conflito de barrel).
+// ---------------------------------------------------------------------------
+export type { ComunicacaoBaseInput } from './comunicacao';
+export {
+  contarChars,
+  COMUNICACAO_TITULO_MIN,
+  COMUNICACAO_CONTEUDO_MIN,
+  validarComunicacaoBase,
+} from './comunicacao';

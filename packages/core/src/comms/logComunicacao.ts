@@ -46,14 +46,14 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
-// Reuso-first: canal (push/email) é a MESMA primitiva agnóstica do clube
-// (Camada A do plano E06-L1 — quando a extração p/ core/comunicacao
-// acontecer, o re-export do clube mantém este import válido).
+// Reuso-first: canal (push/email) é a MESMA primitiva agnóstica do clube e
+// do evento — extração Camada A concluída (E06-L1-T1): importa da fonte
+// única `core/comunicacao` (o clube re-exporta os mesmos símbolos).
 import {
   CANAIS_COMUNICADO,
   isCanalComunicado,
   type CanalComunicado,
-} from '../clubs/comunicado';
+} from '../comunicacao/canal';
 
 // ---------------------------------------------------------------------------
 // Literais de domínio

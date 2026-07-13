@@ -1,27 +1,16 @@
 // =============================================================================
 // functions/src/clubs/onComunicadoEnvio.ts
 //
-// Envio de comunicado (LEELA-E05 · S108-T1). Valida o limite de push do
-// clube (RN-133: ≤ 4 push/semana) e mantém o agregado ∑ `alcance` +
-// carimbo de envio (status='enviado', enviadoEm) — escrita exclusiva
-// Admin SDK (Rules negam cliente).
+// Envio de comunicado do CLUBE (LEELA-E05 · S108-T1) — CASCA FINA sobre o
+// envelope genérico `shared/comunicacaoEnvio.ts` (E06-L1-T1 · Camada B).
+// O envelope carrega os contratos (RN-133 janela deslizante 7d, idempotência
+// de reenvio, transação única, carimbo status/enviadoEm/alcance); aqui fica
+// SÓ o que é do clube: o caminho `clubes/{id}/comunicados` e o alcance
+// (segmento 'todos' → recontagem real de membros não-inativos; demais →
+// fotografia `segmento.tamanhoEstimado` — S109-T1, até registros reais E13).
 //
-// Contratos:
-//   - LIMITE RN-133: janela DESLIZANTE de 7 dias contada de `agora` —
-//     mais estrita e determinística que semana-calendário (não há burst de
-//     8 push na virada de domingo). Só comunicados com canal push contam;
-//     email-only não consome cota.
-//   - IDEMPOTENTE: reenviar um comunicado já 'enviado' é no-op (não
-//     duplica alcance nem consome cota de novo) — retry-safe.
-//   - TRANSACIONAL (fix #05 do review Onda1): get do doc + contagem da
-//     cota + update rodam numa runTransaction — o check-then-act antigo
-//     permitia dois envios concorrentes furarem a cota RN-133 e o carimbo
-//     duplo. Escrita concorrente na janela invalida a tx (retry do SDK
-//     re-conta com dados frescos). Mesmo padrão de publicarEvento.
-//   - ALCANCE: segmento 'todos' → recontagem real de membros não-inativos
-//     (mesma definição de qtdMembrosAtivos); demais segmentos → fotografia
-//     `segmento.tamanhoEstimado` (estimarAlcance — S109-T1), até registros
-//     reais existirem (E13).
+// API pública 100% estável (enviarComunicado, contarPushNaJanela,
+// JANELA_PUSH_DIAS, EnvioResultado) — nenhum caller/teste E05 muda.
 //
 // O disparo físico de push/email é integração futura (fora de escopo da
 // story); esta rotina é a máquina de estados testável, chamada por Admin
@@ -29,95 +18,48 @@
 // =============================================================================
 
 import type { firestore } from 'firebase-admin';
-import { PUSH_SEMANA_MAX, temCanalPush } from '@leela/core';
+import {
+  contarPushNaJanelaColecao,
+  executarEnvioComunicacao,
+} from '../shared/comunicacaoEnvio';
 
-const DIA_MS = 24 * 60 * 60 * 1000;
-
-/** Janela deslizante do limite RN-133 (7 dias) */
-export const JANELA_PUSH_DIAS = 7;
-
-// ---------------------------------------------------------------------------
-// Tipos
-// ---------------------------------------------------------------------------
-
-export interface EnvioResultado {
-  enviado: boolean;
-  motivo:
-    | 'ok'
-    | 'ja_enviado'
-    | 'limite_push_semana'
-    | 'comunicado_invalido';
-  /** Push enviados na janela (para copy de erro na tela) */
-  pushNaJanela?: number;
-}
+// Re-export estável: constantes/tipos do envelope fazem parte da API deste
+// módulo desde S108-T1 (testes e consumidores importam daqui).
+export { JANELA_PUSH_DIAS } from '../shared/comunicacaoEnvio';
+export type { EnvioResultado } from '../shared/comunicacaoEnvio';
 
 // ---------------------------------------------------------------------------
 // Envio
 // ---------------------------------------------------------------------------
 
+/** Coleção canônica dos comunicados do clube. */
+function comunicadosDoClube(
+  db: firestore.Firestore,
+  clubId: string
+): firestore.CollectionReference {
+  return db.collection('clubes').doc(clubId).collection('comunicados');
+}
+
 /**
  * Envia um comunicado: valida RN-133, calcula alcance e carimba
  * status='enviado' + enviadoEm. Idempotente para retry e TRANSACIONAL
- * (fix #05): cota e carimbo são serializados pela runTransaction — dois
- * envios concorrentes não furam mais o limite nem carimbam duas vezes.
+ * (fix #05) — comportamento integral no envelope compartilhado.
  */
 export async function enviarComunicado(
   db: firestore.Firestore,
   clubId: string,
   comunicadoId: string,
   agora: Date = new Date()
-): Promise<EnvioResultado> {
+) {
   const clubeRef = db.collection('clubes').doc(clubId);
-  const comunicadoRef = clubeRef.collection('comunicados').doc(comunicadoId);
 
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(comunicadoRef);
-    if (!snap.exists) {
-      return { enviado: false, motivo: 'comunicado_invalido' as const };
-    }
-
-    // Idempotência: reenvio de doc já enviado é no-op (retry-safe)
-    if (snap.get('status') === 'enviado') {
-      return { enviado: false, motivo: 'ja_enviado' as const };
-    }
-
-    const canal = (snap.get('canal') ?? []) as string[];
-
-    // RN-133: o 5º push da janela é bloqueado (email-only não conta).
-    // Query DENTRO da tx: commit concorrente na janela invalida e re-conta.
-    if (temCanalPush(canal as never)) {
-      const inicioJanela = new Date(
-        agora.getTime() - JANELA_PUSH_DIAS * DIA_MS
-      );
-      const enviados = await tx.get(
-        clubeRef
-          .collection('comunicados')
-          .where('status', '==', 'enviado')
-          .where('canal', 'array-contains', 'push')
-          .where('enviadoEm', '>=', inicioJanela)
-      );
-      const pushNaJanela = enviados.docs.filter(
-        (d) => d.id !== comunicadoId
-      ).length;
-      if (pushNaJanela >= PUSH_SEMANA_MAX) {
-        return {
-          enviado: false,
-          motivo: 'limite_push_semana' as const,
-          pushNaJanela,
-        };
-      }
-    }
-
-    const alcance = await calcularAlcance(tx, clubeRef, snap);
-
-    tx.update(comunicadoRef, {
-      status: 'enviado',
-      enviadoEm: agora,
-      alcance,
-    });
-
-    return { enviado: true, motivo: 'ok' as const };
-  });
+  return executarEnvioComunicacao(
+    db,
+    comunicadosDoClube(db, clubId),
+    comunicadoId,
+    (tx, snap) => calcularAlcance(tx, clubeRef, snap),
+    agora
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -134,22 +76,15 @@ export async function contarPushNaJanela(
   agora: Date,
   exceto?: string
 ): Promise<number> {
-  const inicioJanela = new Date(agora.getTime() - JANELA_PUSH_DIAS * DIA_MS);
-
-  const enviados = await db
-    .collection('clubes')
-    .doc(clubId)
-    .collection('comunicados')
-    .where('status', '==', 'enviado')
-    .where('canal', 'array-contains', 'push')
-    .where('enviadoEm', '>=', inicioJanela)
-    .get();
-
-  return enviados.docs.filter((d) => d.id !== exceto).length;
+  return contarPushNaJanelaColecao(
+    comunicadosDoClube(db, clubId),
+    agora,
+    exceto
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Alcance (∑)
+// Alcance (∑) — Camada C do clube
 // ---------------------------------------------------------------------------
 
 /**
