@@ -58,6 +58,15 @@ export const queryKeys = {
       ['kits', 'do-evento', eventoId, reloadKey] as const,
   },
 
+  lotes: {
+    /**
+     * Lotes de um evento (todas as modalidades — ADR-012). A tela de config
+     * lê esta chave e a agrupa por modalidade; salvar/remover um lote invalida
+     * o prefixo `['lotes','do-evento',eventoId]` → read-your-writes (ADR-010).
+     */
+    doEvento: (eventoId: string) => ['lotes', 'do-evento', eventoId] as const,
+  },
+
   // ---------------------------------------------------------------------------
   // Clubes (E05) — mesma convenção de eventos. Lista por tenant + detalhe por
   // slug partilham prefixo `['clubes']`; recursos-filhos (membros, comunicados,

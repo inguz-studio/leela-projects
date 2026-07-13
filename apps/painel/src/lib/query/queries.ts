@@ -31,6 +31,7 @@ import {
   listarInscritos,
   listarInscritosRecentes,
   listarKits,
+  listarLotes,
   listClubesByTenant,
   listComunicados,
   listDesafios,
@@ -52,6 +53,7 @@ import type {
   Evento,
   Inscrito,
   Kit,
+  Lote,
   Membro,
   Parceria,
   PlatformRollups,
@@ -185,6 +187,19 @@ export function kitsDoEventoQuery(eventoId: string, reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.kits.doEvento(eventoId, reloadKey),
     queryFn: (): Promise<Kit[]> => listarKits(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Lotes de um evento (todas as modalidades — ADR-012). Reusa `listarLotes` do
+ * api-client (leitura provada; `parseLote` fail-fast por doc). A tela agrupa por
+ * modalidade e deriva preço vigente/lote ativo pelo core — nunca recalcula
+ * preço. Salvar/remover invalida esta chave (read-your-writes, ADR-010).
+ */
+export function lotesDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.lotes.doEvento(eventoId),
+    queryFn: (): Promise<Lote[]> => listarLotes(getLeelaDb(), eventoId),
   });
 }
 

@@ -233,6 +233,11 @@ export {
 } from './eventos/kits';
 export type { SalvarKitInput, SalvarItemKitInput } from './eventos/kits';
 
+// S300 (E04 · ADR-012) — lotes por modalidade (kernel de vendas). CRUD direto
+// do organizador; `vendidos` é ∑ de Function (nunca enviado pelo cliente).
+export { listarLotes, salvarLote, removerLote } from './eventos/lotes';
+export type { SalvarLoteInput } from './eventos/lotes';
+
 // S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
 // são de escrita EXCLUSIVA de Function — RN-224/226)
 export { listarAprovisionamento } from './eventos/aprovisionamento';

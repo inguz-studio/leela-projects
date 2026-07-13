@@ -20,8 +20,10 @@ import {
   criarPatrocinador,
   getLeelaDb,
   getLeelaFunctions,
+  removerLote,
   removerMembro,
   salvarKit,
+  salvarLote,
   transferirPropriedade,
   transicionarParceria,
   type CriarEventoInput,
@@ -29,6 +31,7 @@ import {
   type CriarPatrocinadorInput,
   type RemoverMembroResult,
   type SalvarKitInput,
+  type SalvarLoteInput,
   type TransferirPropriedadeResult,
 } from '@leela/api-client';
 import type { StatusParceria } from '@leela/core';
@@ -81,6 +84,59 @@ export function useSalvarKit(
     onSuccess: () => {
       // Prefixo da família (sem reloadKey) — casa todas as entradas do evento.
       void queryClient.invalidateQueries({ queryKey: ['kits', 'do-evento', eventoId] });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations de LOTE (E04 · S300 · ADR-012) — money-config do organizador.
+// Escrita DIRETA (Rules-guarded como kits): `salvarLote`/`removerLote`. No
+// onSuccess invalida `['lotes','do-evento',eventoId]` (a chave que a tela de
+// config lê) → o lote salvo/removido reflete sem reload manual. `vendidos` é ∑
+// de Function (a UI nunca o envia); a Rule congela os campos comerciais do lote
+// vendido (RN-200/300). A regra de negócio (virada, preço vigente) vive no core/
+// Function — aqui só se fia escrita → invalidação.
+// =============================================================================
+
+/** Variáveis de `useSalvarLote`: id do lote, payload e se é criação (criadoEm). */
+export interface SalvarLoteVars {
+  loteId: string;
+  input: SalvarLoteInput;
+  criar: boolean;
+}
+
+/**
+ * Salva (cria/edita) um lote de uma modalidade e invalida os lotes do evento —
+ * a tela de config reflete a escrita (read-your-writes, ADR-010). Reusa
+ * `salvarLote` do api-client (write direto guardado por Rules; nunca toca
+ * `vendidos`).
+ */
+export function useSalvarLote(
+  eventoId: string,
+): UseMutationResult<void, Error, SalvarLoteVars> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, SalvarLoteVars>({
+    mutationFn: ({ loteId, input, criar }) =>
+      salvarLote(getLeelaDb(), eventoId, loteId, input, criar),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Remove um lote (a Rule só permite quando `vendidos == 0`) e invalida os lotes
+ * do evento. O erro `permission-denied` (lote com venda) sobe intacto para a UI
+ * — mas a tela já bloqueia o botão de remover quando `vendidos > 0`.
+ */
+export function useRemoverLote(
+  eventoId: string,
+): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (loteId) => removerLote(getLeelaDb(), eventoId, loteId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
     },
   });
 }

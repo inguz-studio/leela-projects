@@ -14,6 +14,7 @@ export type EventoAbaId =
   | 'overview'
   | 'inscritos'
   | 'kits'
+  | 'lotes'
   | 'entrega'
   | 'financeiro';
 
@@ -28,6 +29,7 @@ const ABAS: readonly AbaDef[] = [
   { id: 'overview', label: 'Visão geral', segmento: '' },
   { id: 'inscritos', label: 'Inscritos', segmento: 'inscritos' },
   { id: 'kits', label: 'Kits', segmento: 'kits' },
+  { id: 'lotes', label: 'Lotes', segmento: 'lotes' },
   { id: 'entrega', label: 'Entrega', segmento: 'entrega' },
   { id: 'financeiro', label: 'Financeiro', segmento: 'financeiro' },
 ];
