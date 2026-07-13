@@ -35,6 +35,7 @@ import { afterAll, beforeAll, describe, it } from 'vitest';
 import {
   doc,
   getDoc,
+  serverTimestamp,
   setDoc,
   updateDoc,
   Timestamp,
@@ -319,5 +320,76 @@ describe('catch-all de eventos é ALLOWLIST (re-review A-T2 A2)', () => {
     const db = dbAs(PROMOTER_UID, promoter);
     await assertSucceeds(getDoc(lote(db, '5k-lote-1')));
     await assertSucceeds(getDoc(pagina(db, 'config')));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Ataques antagonistas de payload DIRETO no write path de lotes (review
+// S300-T4 — a Rule precisa segurar SOZINHA, sem o modal). Seed: 5k-lote-1
+// vendido (150/150, dez–fev, R$60), 5k-lote-3 sem venda (após teste anterior,
+// preco 95). Sobreposição de janela entre irmãos NÃO é testável em Rule (não
+// itera coleção) — invariante fica no kernel (validarLotesModalidade) +
+// Function; risco residual registrado no report do review.
+// ---------------------------------------------------------------------------
+describe('lotes — ataques antagonistas de payload direto (review S300-T4)', () => {
+  it('lote VENDIDO: janela, vaga e ordem TAMBÉM congelam (não só preço)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    // Valores shape-VÁLIDOS e diferentes do seed — o deny isola o congelamento.
+    await assertFails(
+      updateDoc(lote(db, '5k-lote-1'), {
+        fimEm: Timestamp.fromDate(new Date('2026-03-15T00:00:00-03:00')),
+      })
+    );
+    await assertFails(
+      updateDoc(lote(db, '5k-lote-1'), {
+        inicioEm: Timestamp.fromDate(new Date('2025-11-01T00:00:00-03:00')),
+      })
+    );
+    await assertFails(updateDoc(lote(db, '5k-lote-1'), { quantidadeLimite: 5000 }));
+    await assertFails(updateDoc(lote(db, '5k-lote-1'), { ordem: 7 }));
+  });
+
+  it('lote VENDIDO: payload SÓ-NOME (espelho exato do api-client pós-fix #1) passa', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertSucceeds(
+      setDoc(
+        lote(db, '5k-lote-1'),
+        { nome: 'Lote Promocional (encerrado)', atualizadoEm: serverTimestamp() },
+        { merge: true }
+      )
+    );
+  });
+
+  it('smuggling de `vendidos` junto do rename é negado', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(
+      setDoc(lote(db, '5k-lote-3'), { nome: 'x', vendidos: 999999 }, { merge: true })
+    );
+  });
+
+  it('preço NaN e negativo são negados no create (moneyCentExato sem math.isNaN)', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'atk-nan'), lotePayload({ preco: Number.NaN })));
+    await assertFails(setDoc(lote(db, 'atk-neg'), lotePayload({ preco: -1 })));
+  });
+
+  it('shape hostil: ordem 0, vaga 0 e janela invertida são negados', async () => {
+    const db = dbAs(MARINA_UID, marina);
+    await assertFails(setDoc(lote(db, 'atk-ordem0'), lotePayload({ ordem: 0 })));
+    await assertFails(setDoc(lote(db, 'atk-vaga0'), lotePayload({ quantidadeLimite: 0 })));
+    await assertFails(
+      setDoc(lote(db, 'atk-janela'), lotePayload({ inicioEm: fev(), fimEm: jan() }))
+    );
+  });
+
+  it('cross-tenant: writer de OUTRO tenant não edita; troca de tenantId é negada', async () => {
+    // Passo Certo (tenant B) tentando editar lote do Castelo (tenant A).
+    await assertFails(
+      updateDoc(lote(dbAs(PASSO_OWNER_UID, passo), '5k-lote-3'), { nome: 'hack' })
+    );
+    // Sequestro de tenant: mover o lote para outro tenant via update.
+    await assertFails(
+      updateDoc(lote(dbAs(MARINA_UID, marina), '5k-lote-3'), { tenantId: PASSO_ID })
+    );
   });
 });
