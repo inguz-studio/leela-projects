@@ -222,4 +222,14 @@ rmdir .forge-mutex
 
 ---
 
+## 12. Tarefas agendadas (cron/scheduler) — ADR-007
+
+- **Wrapper v1 fino:** `pubsub.schedule('…').timeZone('America/Sao_Paulo').onRun()`; log via `firebase-functions/logger`. Precedente: `recalcularStatusMembros`.
+- **Núcleo puro separado:** toda a lógica em `*Core(db, agora, …)` exportada e testável no Emulator **sem** o scheduler (o Emulator `--only firestore,auth` não sobe pubsub — o teste chama o Core direto).
+- **Horários escalonados por dependência** (a ordem é aceite): `03:00` recalcularStatusMembros (RN-102) → `03:05` coletaDiaria (E11 — lê status já envelhecidos) → `03:10` encerrarEventos (RN-350). Cron novo = próximo múltiplo de 5 min, sempre depois das dependências; registrar o slot no ADR-007.
+- **Idempotente sempre:** rerun do mesmo dia/estado produz o mesmo resultado (substituição total/recontagem — nunca increment cego).
+- Sem registry de crons por ora (reavaliar com ~6 tarefas). Detalhe completo: `leela-specs/adr/ADR-007-scheduler-cron.md`.
+
+---
+
 *Dúvida não coberta aqui → abrir issue no backlog antes de inventar padrão novo.*

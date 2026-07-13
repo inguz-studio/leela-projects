@@ -188,3 +188,12 @@ export { estimarAlcance } from './eventos/estimarAlcance';
 // comunicação FABLE-G (docId determinístico {ref}_{campanhaId}_{canal} —
 // RN-219; o agregado comunicacoesResumo recomputa via onComunicacaoWrite).
 export { enviarCampanha } from './eventos/enviarCampanha';
+
+// Analytics — COLETA DIÁRIA de snapshots de KPIs (S821-T1b · E11 · T2-L1):
+// cron 03:05 (ADR-007 — slot entre o 03:00 do RN-102 e o 03:10 do
+// encerramento; lê membros.status JÁ envelhecidos). Copia dashboard/current
+// (subset OverviewKPIs, sem alerts) para analyticsSnapshots/{YYYY-MM-DD}
+// por substituição total idempotente; nunca toca dias passados. Hook
+// BigQuery atrás de flag DESLIGADA (LEELA_BQ_EXPORT). ⚠️ Fable (histórico
+// não-backfillável).
+export { coletaDiaria } from './analytics/coletaDiaria';
