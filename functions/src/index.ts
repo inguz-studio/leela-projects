@@ -163,3 +163,10 @@ export {
   markRepassePago,
   setRetencaoRepasse,
 } from './finance/transicoesRepasse';
+
+// Finance — LEITURA AUDITADA do dado bancário completo (E09s-L2-T5 ·
+// RN-354 · decisão #8): único ponto onde conta/PIX voltam em claro
+// (just-in-time, platform_admin, repasse aprovado); TODO desfecho —
+// concedido, negado, erro de decifra — vira registro em
+// `auditoriaAcessos` (deny-by-default p/ cliente). ⚠️ Fable (LGPD).
+export { getBankDetailsForPayout } from './finance/getBankDetailsForPayout';

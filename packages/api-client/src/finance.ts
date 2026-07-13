@@ -209,3 +209,43 @@ export async function setRetencaoRepasse(
   const { data } = await fn(input);
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// Leitura auditada do dado bancário completo (L2-T5 · RN-354 · decisão #8)
+// ---------------------------------------------------------------------------
+
+export interface GetBankDetailsInput {
+  tenantId: string;
+  repasseId: string;
+}
+
+export interface GetBankDetailsResult {
+  tenantId: string;
+  repasseId: string;
+  /** Número COMPLETO — só existe neste retorno; o acesso É auditado. */
+  conta: string;
+  pix: string | null;
+  banco: string;
+  agencia: string;
+  tipo: string;
+  titular: string;
+  cpfCnpjMascarado: string;
+  /** Texto fixo para a UI exibir (L4-T2): acesso registrado. */
+  avisoAuditoria: string;
+}
+
+/**
+ * Retorna o dado bancário COMPLETO de um repasse 'aprovado' — SÓ
+ * platform_admin; todo acesso (inclusive negado) é registrado (LGPD).
+ * A UI DEVE exibir `avisoAuditoria` ao mostrar o número.
+ */
+export async function getBankDetailsForPayout(
+  input: GetBankDetailsInput
+): Promise<GetBankDetailsResult> {
+  const fn = httpsCallable<GetBankDetailsInput, GetBankDetailsResult>(
+    getLeelaFunctions(),
+    'getBankDetailsForPayout'
+  );
+  const { data } = await fn(input);
+  return data;
+}
