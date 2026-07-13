@@ -1,6 +1,6 @@
 # HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-12
 
-# ▶️ SESSÃO ATIVA 2026-07-12 (noite). Git SÃO em `C:\dev\LEELA`. Working tree limpo (commits incrementais + push por aterrissagem). **Em voo: S300-T2 (Fable, backend) ∥ wire EstoqueView (Opus, UI).** Preview do Vitor de pé: painel 5273 + Firestore 8180 + Auth 9198 (NÃO derrubar). Matar `java`/`node` órfãos se retomar do zero. Modo: **"pode rodar tudo" + paralelizar quando memória livre** (8GB: ~1 emulator por vez; 1 emulator Fable + 1 leve Opus juntos = ok). Sessão em /effort **ultracode (xhigh)**.
+# 🏁 ONDA 2 · VENDER — EXECUTADA POR INTEIRO (2026-07-13, madrugada). Git SÃO em `C:\dev\LEELA`, tudo PUSHED até `3445f29`+canônicos. tsc 0 nos 5 pacotes. **Nada em voo.** Preview do Vitor de pé: painel 5273 + Firestore 8180 + Auth 9198 (⚠️ dados demo do maestro no emulator: SKUs estoque, logs comunicação, saldo/repasses, campanhas, plano "Padrão Leela 10/8", lote L4, cupom GATE10, `financeiro/current` com receitaBruta de teste 99123.45 do E2E realtime — TUDO some no próximo `bash preview.sh`). Próximo: decisões do Vitor (ADR-013/014, estoque, E17/E18) → Onda 3. Sessão em /effort ultracode (xhigh).
 
 ## ▶️ COMECE AQUI — retomada
 

@@ -1,6 +1,6 @@
 ---
 tags: [leela, explicacao, roadmap]
-atualizado: 2026-07-11
+atualizado: 2026-07-13
 ---
 
 # Onde estamos — mapa simples do projeto Leela
@@ -24,8 +24,8 @@ atualizado: 2026-07-11
 
 1. **Já construímos** a fundação (monorepo, Firebase, Design System) e o **núcleo do painel do organizador**: operação de eventos, clubes, dashboard e multi-tenant. Isso foi a Onda 0 + Onda 1 — **fechadas com gate PASS**.
 2. Depois veio um bloco grande de **acabamento**: fidelidade visual das 6 telas de evento, showroom do Design System, cache de dados (TanStack Query) e destrave do firebase-admin. **Tudo concluído.**
-3. **Agora** estamos na trilha ratificada em 2026-07-10 (next-trail), que fica **entre a Onda 1 e a Onda 2**. Ela tem 4 waves: A (backend crítico em Fable) → B (mobile real) → C (Onda 2: vender ponta a ponta) → D (consolidações).
-4. **Neste exato momento**: a **Wave A** começou. A primeira task (`LEELA-FABLE-A-T1`, o kernel de pedidos) **está em execução** por um agente Fable, despachada em 2026-07-11.
+3. A trilha next-trail (2026-07-10/11) **terminou**: Wave A (backend crítico em Fable) e Wave B (mobile real 390×844) fechadas com gates.
+4. **A Onda 2 · Vender foi EXECUTADA por inteiro em 2026-07-12/13**: página de vendas com lotes por modalidade e cupons, checkout público de 5 etapas, estorno digno por inscrito, estoque por tamanho, comunicação/campanhas, equipe com 4 papéis, repasses ponta a ponta (organizador solicita, admin aprova/paga com auditoria LGPD), telas de sistema 404/403/500, e a dívida técnica (ex-Wave D) junto — inclusive dados ao vivo (onSnapshot) no Financeiro e no balcão, provados de ponta a ponta. **Próximo: decisões do Vitor + Onda 3** (app do atleta, assessorias parceiras E18, link-in-bio E17).
 
 ## Você está aqui
 
@@ -41,15 +41,15 @@ flowchart LR
     style O0 fill:#2d6a4f,color:#fff
     style O1 fill:#2d6a4f,color:#fff
     style HIG fill:#2d6a4f,color:#fff
-    style WA fill:#e76f51,color:#fff
-    style WB fill:#495057,color:#fff
-    style WC fill:#495057,color:#fff
-    style WD fill:#495057,color:#fff
+    style WA fill:#2d6a4f,color:#fff
+    style WB fill:#2d6a4f,color:#fff
+    style WC fill:#2d6a4f,color:#fff
+    style WD fill:#2d6a4f,color:#fff
 ```
 
-Verde = feito · Laranja = **estamos aqui** · Cinza = próximo.
+Verde = feito. **Tudo acima está verde (2026-07-13): a Onda 2 fechou.** O que vem agora é a **Onda 3** (app do atleta E13-slim, assessorias parceiras E18, link-in-bio E17) — mais as decisões abertas do Vitor listadas no [[V1-KANBAN]] e no HANDOFF.
 
-## O que é a Wave A (a atual) e por que ela vem primeiro
+## O que foi a Wave A e por que ela veio primeiro
 
 É o backend que faltava por trás das telas que já existem. As telas pousaram honestas (EmptyState onde não havia dado); a Wave A cria o dado real. Roda em **Fable** porque é dinheiro e segurança.
 

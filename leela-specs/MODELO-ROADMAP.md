@@ -84,17 +84,19 @@ Núcleo do painel do organizador: operar evento, clube, dashboard, super-admin m
 | [[LEELA-E02-visao-geral]] | 04.4 "ter dados na mão" (Organizador) | H1 | ✅ |
 | [[LEELA-E16-plataforma-superadmin]] · slim | "onboard de tenant + termos comerciais" (Admin) | H1 | ✅ |
 
-### Onda 2 · Vender — 📋 próxima (= a antiga "Wave C")
-Vender ponta a ponta + as abas que fecham o ciclo do evento. Fecha: *atleta descobre → inscreve → paga → organizador vê receita.*
+### Onda 2 · Vender — ✅ concluída (2026-07-13)
+Vender ponta a ponta + as abas que fecham o ciclo do evento. Fechou: *atleta descobre → inscreve → paga → organizador vê receita, estorna com dignidade e solicita repasse.*
 
 | Épico | JTBD-âncora (persona) | Horizonte | Estado |
 |---|---|---|---|
-| [[LEELA-E04-config-vendas]] -slim | 04.1 "configurar lotes e preços automáticos" (Organizador) | H1 | 🔄 S300-T1 ✅; resto 📋 |
-| [[LEELA-E12-landing]] | 04.1 "descubro evento → me inscrever em poucos cliques" (Atleta) | H1 | 🔄 superfícies públicas + checkout ✅; SEO/afiliação 📋 |
-| [[LEELA-E09-financeiro-profissional]] -slim | 04.1 "processo repasse → ver saldo e disparar em lote" (Admin/Organizador) | H1 | 📋 |
-| [[LEELA-E07-estados-sistema]] -web | 04.4 "parecer tão profissional quanto SP" (Organizador) | H1 | 📋 |
-| [[LEELA-E06-marketing]] (só campanhas) | 04.2 "receber no app → eliminar WhatsApp" (Organizador/Atleta) | H1 | 📋 |
-| Transversais: E11 coleta (S821) · backend desafio (S1307/S1308) | 04.4 "ter dados na mão" · 04.2 "meditação conta" | H1 / H2 | 📋 (S821 V1 · S1307/8 V1.5) |
+| [[LEELA-E04-config-vendas]] -slim | 04.1 "configurar lotes e preços automáticos" (Organizador) | H1 | ✅ S300 T1-T5 + S304 T1-T3 + PAY-T1 (T6 superseded ADR-012; PAY-T2 parked KYC) |
+| [[LEELA-E12-landing]] | 04.1 "descubro evento → me inscrever em poucos cliques" (Atleta) | H1 | ✅ superfícies públicas + checkout 5 etapas + refino Figma (SEO fino/afiliação = Onda 3) |
+| [[LEELA-E09-financeiro-profissional]] -slim | 04.1 "processo repasse → ver saldo e disparar em lote" (Admin/Organizador) | H1 | ✅ L1-L4 (modelo+Rules+core, 6 Functions, telas org + fila admin auditada) |
+| [[LEELA-E07-estados-sistema]] -web | 04.4 "parecer tão profissional quanto SP" (Organizador) | H1 | ✅ 404/500/403 (403 = matriz S304) |
+| [[LEELA-E06-marketing]] (só campanhas) | 04.2 "receber no app → eliminar WhatsApp" (Organizador/Atleta) | H1 | ✅ backend + aba Comunicação + lista/editor + flip envio (scheduler = Onda 3) |
+| Transversais: E11 coleta (S821) · backend desafio (S1307/S1308) · plano de cobrança (CB) | 04.4 "ter dados na mão" · 04.2 "meditação conta" | H1 / H2 | ✅ backend completo (+CB-T3 tela); telas do desafio = Onda 3 (E13) |
+
+> Dívida técnica ex-"Wave D" (CONS-1..6): ✅ concluída junto (KpiCard canônico, showroom, flaky root-caused, mutations/useMutation, realtime onSnapshot provado E2E, G-001..004 nos pools).
 
 ### Onda 3 · App simples + alavancas — 🔜
 App do atleta mínimo + robustez restante. **Recebe os 2 épicos novos** (ver §4).
