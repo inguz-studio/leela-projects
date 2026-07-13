@@ -76,6 +76,13 @@ export type { AppShellProps } from './components/AppShell';
 export { Table } from './components/Table';
 export type { TableProps, TableColumn } from './components/Table';
 export { EmptyState, type EmptyStateProps } from './components/EmptyState';
+// Estados de sistema (404/403/500/offline/manutenção) — LEELA-E07 · S500-T1.
+export { SystemStateScreen } from './components/SystemStateScreen';
+export type {
+  SystemStateScreenProps,
+  SystemStateAction,
+  SystemStateVariant,
+} from './components/SystemStateScreen';
 export { Pagination, type PaginationProps } from './components/Pagination';
 export { Popover } from './components/Popover'; // @deprecated alias de DropdownMenu
 export type { PopoverProps, PopoverAction } from './components/Popover';
