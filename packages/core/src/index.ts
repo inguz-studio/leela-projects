@@ -614,6 +614,40 @@ export {
   isTipoContaBancaria,
 } from './finance/repasse-types';
 
+// Núcleo puro do repasse (E09s-L1-T3): retenção RN-350, saldo RN-351,
+// solicitação RN-352, máquina RN-353, comprovante RN-355, líquido com modo
+// de taxa RN-347 e janela D+N em dias úteis RN-348.
+export type {
+  ComputeSaldoRepasseParams,
+  SaldoRepasseComputado,
+  ResultadoValidacaoSolicitacao,
+  EventoRepasseMaquina,
+  ResultadoTransicaoRepasse,
+} from './finance/repasse';
+export {
+  RETENCAO_REPASSE_PCT_DEFAULT,
+  DISPONIBILIZACAO_DIAS_UTEIS_DEFAULT,
+  MODO_TAXA_DEFAULT,
+  COMPROVANTE_PREFIXO,
+  computeLiquidoProdutor,
+  computeRetido,
+  computeLiberadoPorEvento,
+  ESTADOS_REPASSE_COMPROMETIDOS,
+  comprometeSaldo,
+  computeSaldoRepasse,
+  validarSolicitacao,
+  TRANSICOES_REPASSE,
+  podeTransicionarRepasse,
+  EVENTOS_REPASSE_MAQUINA,
+  ATOR_DO_EVENTO_REPASSE,
+  transitionRepasse,
+  formatarNumeroComprovante,
+  isDiaUtil,
+  diasUteisDecorridos,
+  transacaoDentroJanelaDN,
+  computeDentroJanelaDN,
+} from './finance/repasse';
+
 // Rollups macro da plataforma (E16-S1605-T1/T2 · RN-409)
 export type { TenantHealth, TenantRollup, PlatformRollups } from './platform/rollups';
 export { PLATFORM_ROLLUPS_DOC_PATH, deriveTenantHealth } from './platform/rollups';
