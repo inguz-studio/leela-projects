@@ -17,6 +17,7 @@ import {
   type SeoVendas,
 } from '@leela/core';
 import { PaginaVendasView, type SeoEditavel } from './PaginaVendasView';
+import { CuponsSection } from './_components/CuponsSection';
 import { DOMINIO_LEELA } from './_lib/paginaVendasView';
 import { usePaginaVendas, usePaginaVendasMutations } from '../_data/paginaVendas';
 import type { EventoOutletContext } from '../evento/EventoLayout';
@@ -105,22 +106,27 @@ export function PaginaVendasPage(): JSX.Element {
 
   return (
     <>
-      <PaginaVendasView
-        evento={evento}
-        loading={loading}
-        error={error}
-        secoes={secoes}
-        seo={seo}
-        publicada={publicada}
-        isNovo={isNovo}
-        onToggleSecao={(id, ativa) => void onToggleSecao(id, ativa)}
-        onSalvarSeo={(edit) => void onSalvarSeo(edit)}
-        onPublicar={() => setAcao('publicar')}
-        onDespublicar={() => setAcao('despublicar')}
-        secaoSalvandoId={secaoSalvandoId}
-        salvandoSeo={salvandoSeo}
-        publicando={publicando}
-      />
+      <div className="flex flex-col gap-[var(--spacing-6)]">
+        <PaginaVendasView
+          evento={evento}
+          loading={loading}
+          error={error}
+          secoes={secoes}
+          seo={seo}
+          publicada={publicada}
+          isNovo={isNovo}
+          onToggleSecao={(id, ativa) => void onToggleSecao(id, ativa)}
+          onSalvarSeo={(edit) => void onSalvarSeo(edit)}
+          onPublicar={() => setAcao('publicar')}
+          onDespublicar={() => setAcao('despublicar')}
+          secaoSalvandoId={secaoSalvandoId}
+          salvandoSeo={salvandoSeo}
+          publicando={publicando}
+        />
+
+        {/* Cupons: bloco auto-contido (S300-T5) empilhado na mesma tela. */}
+        <CuponsSection eventoId={evento.id} />
+      </div>
 
       <ConfirmModal
         open={acao !== null}

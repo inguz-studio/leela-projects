@@ -32,6 +32,7 @@ import {
   getTenant,
   listarEventosDoOrganizador,
   listarAprovisionamento,
+  listarCupons,
   listarInscritos,
   listarInscritosRecentes,
   listarKits,
@@ -54,6 +55,7 @@ import type {
   Clube,
   CommercialTerms,
   Comunicado,
+  Cupom,
   Desafio,
   Evento,
   Inscrito,
@@ -237,6 +239,20 @@ export function paginaVendasDoEventoQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.paginaVendas.doEvento(eventoId),
     queryFn: (): Promise<PaginaVendas | null> => getPaginaVendas(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Cupons simples de um evento — S300-T5 (seção na tela da página de vendas).
+ * Reusa `listarCupons` do api-client (leitura provada; `parseCupom` fail-fast por
+ * doc). A vigência (cupomVigente) e o desconto (descontoDoCupom) são DERIVADOS
+ * pelo core — a seção nunca recalcula desconto (isso é do checkout, E12).
+ * Salvar/remover invalida esta chave (read-your-writes, ADR-010).
+ */
+export function cuponsDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.cupons.doEvento(eventoId),
+    queryFn: (): Promise<Cupom[]> => listarCupons(getLeelaDb(), eventoId),
   });
 }
 

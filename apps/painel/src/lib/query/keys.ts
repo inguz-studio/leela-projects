@@ -87,6 +87,15 @@ export const queryKeys = {
     doEvento: (eventoId: string) => ['pagina-vendas', 'do-evento', eventoId] as const,
   },
 
+  cupons: {
+    /**
+     * Cupons simples de um evento — S300-T5 (seção na tela da página de vendas).
+     * A seção lê esta chave; salvar/remover um cupom a invalida →
+     * read-your-writes (ADR-010): a lista reflete a escrita sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['cupons', 'do-evento', eventoId] as const,
+  },
+
   comunicacoes: {
     /**
      * Agregado ∑ de comunicações do evento (`comunicacoesResumo/current` —

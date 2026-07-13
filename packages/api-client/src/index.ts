@@ -257,6 +257,11 @@ export type {
   PublicarPaginaVendasResult,
 } from './eventos/paginaVendas';
 
+// S300-T5 (E04) — cupons simples do evento (kernel S300-T1): CRUD direto do
+// organizador; `usos` (∑ de Function/checkout) nunca é enviado pelo cliente.
+export { listarCupons, salvarCupom, removerCupom } from './eventos/cupons';
+export type { SalvarCupomInput } from './eventos/cupons';
+
 // S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
 // são de escrita EXCLUSIVA de Function — RN-224/226)
 export { listarAprovisionamento } from './eventos/aprovisionamento';

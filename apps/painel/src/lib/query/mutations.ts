@@ -23,9 +23,11 @@ import {
   getLeelaDb,
   getLeelaFunctions,
   publicarPaginaVendas,
+  removerCupom,
   removerLote,
   removerMembro,
   salvarConteudoPaginaVendas,
+  salvarCupom,
   salvarKit,
   salvarLote,
   transferirPropriedade,
@@ -40,6 +42,7 @@ import {
   type RemoverMembroResult,
   type EscritaLoteInput,
   type SalvarConteudoPaginaVendasInput,
+  type SalvarCupomInput,
   type SalvarKitInput,
   type TransferirPropriedadeResult,
   type TransicaoAprovisionamentoResult,
@@ -188,6 +191,58 @@ export function useTransicaoAprovisionamento(
       void queryClient.invalidateQueries({
         queryKey: queryKeys.aprovisionamento.doEvento(eventoId),
       });
+    },
+  });
+}
+
+// =============================================================================
+// Mutations de CUPOM (E04 · S300-T5) — cupom simples do organizador. Escrita
+// DIRETA (Rules-guarded como lotes/kits): `salvarCupom`/`removerCupom`. No
+// onSuccess invalida `['cupons','do-evento',eventoId]` (a chave que a seção lê)
+// → o cupom salvo/removido reflete sem reload manual. `usos` (≡ usosFeitos) é ∑
+// de Function (checkout, E12) — a UI nunca o envia; `codigo` é imutável (docId).
+// A remoção só é permitida com `usos == 0` (a Rule é a autoridade).
+// =============================================================================
+
+/** Variáveis de `useSalvarCupom`: id do cupom (≡ código normalizado), payload
+ *  (com tenantId) e se é criação (criadoEm). */
+export interface SalvarCupomVars {
+  cupomId: string;
+  input: SalvarCupomInput;
+  criar: boolean;
+}
+
+/**
+ * Salva (cria/edita) um cupom e invalida os cupons do evento — a seção reflete a
+ * escrita (read-your-writes, ADR-010). Reusa `salvarCupom` do api-client (write
+ * direto guardado por Rules; nunca toca `usos`).
+ */
+export function useSalvarCupom(
+  eventoId: string,
+): UseMutationResult<void, Error, SalvarCupomVars> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, SalvarCupomVars>({
+    mutationFn: ({ cupomId, input, criar }) =>
+      salvarCupom(getLeelaDb(), eventoId, cupomId, input, criar),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cupons.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Remove um cupom (a Rule só permite quando `usos == 0`) e invalida os cupons do
+ * evento. O erro `permission-denied` (cupom já usado) sobe intacto para a UI —
+ * mas a seção já bloqueia o botão de remover quando `usos > 0`.
+ */
+export function useRemoverCupom(
+  eventoId: string,
+): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (cupomId) => removerCupom(getLeelaDb(), eventoId, cupomId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.cupons.doEvento(eventoId) });
     },
   });
 }
