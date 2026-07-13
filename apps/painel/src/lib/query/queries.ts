@@ -65,6 +65,7 @@ import type {
   Cupom,
   DadosBancarios,
   Desafio,
+  EstadoRepasse,
   Evento,
   Inscrito,
   Kit,
@@ -476,5 +477,53 @@ export function repassesHistoricoQuery(tenantId: string) {
   return queryOptions({
     queryKey: queryKeys.repasse.historico(tenantId),
     queryFn: (): Promise<Repasse[]> => listRepasses(getLeelaDb(), tenantId),
+  });
+}
+
+// =============================================================================
+// Fila de aprovação do platform_admin (E09s-L4). A back-office lista os
+// repasses `solicitado`/`aprovado` de TODOS os tenants. As Rules só liberam a
+// LEITURA no caminho tenant-scoped (`tenants/{tid}/repasses`, isPlatformAdmin) —
+// NÃO há regra de collectionGroup —, então o cross-tenant é um FAN-OUT de
+// leituras já provadas do api-client (listTenants + listRepasses por tenant),
+// composto aqui como carregarTodosInscritos compõe listarInscritos. Zero índice
+// novo, zero mudança de Rules, zero soma de dinheiro no cliente (valor/estado
+// vêm dos docs; a máquina é do servidor — RN-353/357).
+// =============================================================================
+
+/** Um item da fila cross-tenant: o repasse + o NOME do tenant (para exibição). */
+export interface RepasseFilaItem {
+  repasse: Repasse;
+  tenantNome: string;
+}
+
+/** Estados que entram na fila de aprovação/pagamento (§ Lote E09s-L4). */
+const ESTADOS_FILA_ADMIN: readonly EstadoRepasse[] = ['solicitado', 'aprovado'];
+
+/**
+ * Fila de repasses `solicitado`/`aprovado` de todos os tenants, mais recentes
+ * primeiro. Fan-out: lê os tenants e, por tenant, seus repasses (leituras
+ * tenant-scoped que as Rules liberam a platform_admin). O filtro por estado é
+ * client-side (a fila é pequena; back-office com bounded staleness). `reloadKey`
+ * força o refetch pós-ação sem tocar a tela.
+ */
+export function repassesFilaAdminQuery(reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.repasse.filaAdmin(reloadKey),
+    queryFn: async (): Promise<RepasseFilaItem[]> => {
+      const db = getLeelaDb();
+      const tenants = await listTenants(db);
+      const porTenant = await Promise.all(
+        tenants.map(async (t): Promise<RepasseFilaItem[]> => {
+          const repasses = await listRepasses(db, t.id);
+          return repasses
+            .filter((r) => ESTADOS_FILA_ADMIN.includes(r.estado))
+            .map((repasse) => ({ repasse, tenantNome: t.nome }));
+        }),
+      );
+      const itens = porTenant.flat();
+      itens.sort((a, b) => b.repasse.criadoEm.toMillis() - a.repasse.criadoEm.toMillis());
+      return itens;
+    },
   });
 }

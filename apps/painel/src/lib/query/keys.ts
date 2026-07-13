@@ -60,6 +60,13 @@ export const queryKeys = {
     dadosBancarios: (tenantId: string) => ['repasse', tenantId, 'dados-bancarios'] as const,
     /** `repasses` do tenant — histórico (mais recentes primeiro). */
     historico: (tenantId: string) => ['repasse', tenantId, 'historico'] as const,
+    /**
+     * Fila de aprovação cross-tenant do platform_admin (E09s-L4). NÃO é
+     * tenant-scoped: agrega os repasses `solicitado`/`aprovado` de TODOS os
+     * tenants (fan-out de leitura no gateway). `reloadKey` na chave preserva o
+     * refetch pós-ação (aprovar/recusar/pagar/retenção) sem tocar a tela.
+     */
+    filaAdmin: (reloadKey = 0) => ['repasse', 'fila-admin', reloadKey] as const,
   },
 
   kits: {

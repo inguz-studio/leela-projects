@@ -18,6 +18,7 @@ import { TenantsListRoute } from './tenants/TenantsListRoute';
 import { TenantDetailRoute } from './tenants/TenantDetailRoute';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
+import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 
@@ -32,6 +33,7 @@ export function PlataformaRoutes(): JSX.Element {
           <Route path="tenants" element={<TenantsListRoute />} />
           <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
           <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
+          <Route path="repasses" element={<RepassesAdminRoute />} />
           <Route path="macro" element={<MacroDashboardRoute />} />
           {/* 404 dentro do PlatformShell (sidebar de plataforma preservada). S500-T2. */}
           <Route path="*" element={<NotFound />} />

@@ -14,7 +14,7 @@ import {
   type SidebarItem,
   type SidebarSection,
 } from '@leela/design-system';
-import { Building2, CreditCard, FileText, Gauge, type LucideIcon } from 'lucide-react';
+import { Banknote, Building2, CreditCard, FileText, Gauge, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 
 /** id do item do produtor → rota conhecida do painel (undefined = inerte por ora). */
@@ -35,6 +35,7 @@ const HREF_POR_ID: Record<string, string | undefined> = {
 const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   tenants: Building2,
   termos: FileText,
+  repasses: Banknote,
   billing: CreditCard,
   macro: Gauge,
 };
