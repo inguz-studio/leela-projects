@@ -571,6 +571,23 @@ service cloud.firestore {
         }
 
         /**
+         * Carimbos de VIRADA (`encerradoEm`/`encerradoMotivo` — S300-T2)
+         * nascem AUSENTES: cliente não cria lote pré-encerrado (forjaria a
+         * trilha RN-300 e a UI de status).
+         */
+        function viradaZeradaNoCreate() {
+          return !('encerradoEm' in request.resource.data)
+            && !('encerradoMotivo' in request.resource.data);
+        }
+
+        /** Update de cliente não TOCA os carimbos de virada (só a Function
+            de S300-T2 encerra/carimba — espelha CAMPOS_FUNCTION_LOTE). */
+        function viradaIntocada() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['encerradoEm', 'encerradoMotivo']);
+        }
+
+        /**
          * Lote com venda (vendidos > 0) CONGELA os campos comerciais para o
          * cliente (RN-200/300 na granularidade (modalidade, lote) — ADR-012).
          * Sem venda, tudo editável. Ajustes pós-venda = Function/platform_admin.
@@ -589,7 +606,8 @@ service cloud.firestore {
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapeLoteValido()
                           && modalidadeExisteNoEventoPai()
-                          && vendidosZeradoNoCreate())
+                          && vendidosZeradoNoCreate()
+                          && viradaZeradaNoCreate())
                       || isPlatformAdmin();
         allow update: if (isTenantWriter(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
@@ -597,6 +615,7 @@ service cloud.firestore {
                           && shapeLoteValido()
                           && modalidadeExisteNoEventoPai()
                           && vendidosIntocado()
+                          && viradaIntocada()
                           && loteComercialImutavelSeVendido())
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)

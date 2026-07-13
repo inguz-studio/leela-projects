@@ -39,6 +39,18 @@ import type { Timestamp } from '../index';
 // ---------------------------------------------------------------------------
 
 /**
+ * Motivo do encerramento de um lote (RN-300 — "data OU quantidade, o que
+ * ocorrer primeiro"). Carimbo materializado pela Function de virada (S300-T2).
+ */
+export type MotivoEncerramentoLote = 'data' | 'quantidade';
+
+/** Lista canônica de motivos — única fonte para validação/UI. */
+export const MOTIVOS_ENCERRAMENTO_LOTE: readonly MotivoEncerramentoLote[] = [
+  'data',
+  'quantidade',
+];
+
+/**
  * Lote de venda — pertence a uma modalidade (ADR-012).
  * Subcoleção: `eventos/{eventoId}/lotes/{loteId}`.
  */
@@ -70,16 +82,31 @@ export interface Lote {
    * (S300-T2). Base da virada por quantidade (RN-300). Cliente nunca escreve.
    */
   vendidos: number;
+  /**
+   * CARIMBO de virada (S300-T2 · ADR-012): quando a Function OBSERVOU o
+   * encerramento do lote (auditoria/UI). Ausente = nunca encerrado. O estado
+   * ativo/encerrado que o checkout consome segue DERIVADO
+   * (`loteEncerrado`/`loteAtivo`) — o carimbo é trilha, não fonte de verdade.
+   * MONOTÔNICO: uma vez carimbado, a Function nunca apaga nem reescreve.
+   */
+  encerradoEm?: Timestamp;
+  /** Por que encerrou (RN-300): 'quantidade' (esgotou) ou 'data' (fimEm). */
+  encerradoMotivo?: MotivoEncerramentoLote;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
 
 /**
  * Campos do lote com escrita EXCLUSIVA de Cloud Function — o contador de
- * venda (`vendidos`) é mantido pela Function de virada (S300-T2). As Security
- * Rules espelham esta lista: create exige 0/ausente, update não pode tocá-lo.
+ * venda (`vendidos`) e os carimbos de virada (`encerradoEm`/`encerradoMotivo`)
+ * são mantidos pela Function de virada (S300-T2). As Security Rules espelham
+ * esta lista: create exige 0/ausente, update não pode tocá-los.
  */
-export const CAMPOS_FUNCTION_LOTE = ['vendidos'] as const;
+export const CAMPOS_FUNCTION_LOTE = [
+  'vendidos',
+  'encerradoEm',
+  'encerradoMotivo',
+] as const;
 
 // ---------------------------------------------------------------------------
 // Validações puras (shape de um lote isolado)
@@ -206,6 +233,25 @@ export function loteEncerrado(
 }
 
 /**
+ * MOTIVO do encerramento no instante `agora` (RN-300 — "o que ocorrer
+ * primeiro"), ou `null` quando o lote NÃO está encerrado. Derivação pura que a
+ * Function de virada (S300-T2) materializa no carimbo `encerradoMotivo`.
+ *
+ * Quando data E quantidade estão ambos satisfeitos no instante observado, a
+ * atribuição é DETERMINÍSTICA: 'quantidade' tem precedência — o esgotamento é
+ * um fato de contagem (aconteceu numa venda concreta), enquanto a data só
+ * marca que a janela expirou em algum momento até `agora`. @pure
+ */
+export function motivoEncerramento(
+  lote: Pick<Lote, 'fimEm' | 'vendidos' | 'quantidadeLimite'>,
+  agora: Date
+): MotivoEncerramentoLote | null {
+  if (loteEsgotado(lote)) return 'quantidade';
+  if (agora.getTime() >= millis(lote.fimEm)) return 'data';
+  return null;
+}
+
+/**
  * Lote VIGENTE no instante `agora`? (janela começou E ainda não encerrou por
  * data/quantidade). NOTA: vigência olha o lote ISOLADO — o hand-off por
  * antecessor encerrado (ADR-012) vive em `loteAtivo`. @pure
@@ -327,7 +373,23 @@ export function parseLote(id: string, data: Record<string, unknown>): Lote {
     throw new Error(`Lote ${id}: "vendidos" deve ser inteiro ≥ 0 (∑ de Function)`);
   }
 
-  return {
+  // Carimbos de virada (S300-T2) — opcionais; presentes e inválidos lançam
+  // (trilha de auditoria corrompida em dado comercial é fail-fast).
+  const encerradoEm = data['encerradoEm'];
+  const encerradoMotivo = data['encerradoMotivo'];
+  if (encerradoEm !== undefined && !isTimestampLike(encerradoEm)) {
+    throw new Error(`Lote ${id}: "encerradoEm" deve ser Timestamp (carimbo S300-T2)`);
+  }
+  if (
+    encerradoMotivo !== undefined &&
+    !(MOTIVOS_ENCERRAMENTO_LOTE as readonly unknown[]).includes(encerradoMotivo)
+  ) {
+    throw new Error(
+      `Lote ${id}: "encerradoMotivo" deve ser 'data'|'quantidade' (RN-300)`
+    );
+  }
+
+  const lote: Lote = {
     id,
     tenantId,
     modalidade,
@@ -341,6 +403,12 @@ export function parseLote(id: string, data: Record<string, unknown>): Lote {
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
+  // exactOptionalPropertyTypes: carimbos só entram quando presentes.
+  if (encerradoEm !== undefined) lote.encerradoEm = encerradoEm;
+  if (encerradoMotivo !== undefined) {
+    lote.encerradoMotivo = encerradoMotivo as MotivoEncerramentoLote;
+  }
+  return lote;
 }
 
 /** Guard estrutural mínimo de Timestamp (tem toMillis()). @pure */

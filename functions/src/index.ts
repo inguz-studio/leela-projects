@@ -73,6 +73,21 @@ export { registrarCheckin } from './eventos/registrarCheckin';
 // Eventos — agregado financeiro por recontagem idempotente (E03-S207-T2)
 export { onInscritoWrite } from './eventos/agregarFinanceiro';
 
+// Eventos — VIRADA DE LOTE (S300-T2 · RN-300 · ADR-012): ∑ `vendidos` por
+// (modalidade, lote) + carimbos `encerradoEm`/`encerradoMotivo`, escrita
+// EXCLUSIVA de Function. Quantidade via onWrite de inscrito; data via cron.
+// Estado ativo/preço vigente seguem DERIVADOS no kernel (@leela/core).
+// ⚠️ Fable (dinheiro — degrau de preço).
+export { onInscritoWriteVirada, virarLoteCron } from './eventos/virarLote';
+
+// Eventos — publicação da página de vendas (S300-T2, lacuna #1 do S300-T3):
+// flag `publicada`/`publicadaEm` = escrita EXCLUSIVA de Function; valida
+// completude server-side (parse do kernel + SEO). Seam do api-client.
+export {
+  publicarPaginaVendas,
+  despublicarPaginaVendas,
+} from './eventos/publicarPaginaVendas';
+
 // Eventos — LOG DE COMUNICAÇÃO, agregado único (FABLE-G-T1 · Onda 2):
 // resumo ∑ `comunicacoesResumo/current` por recontagem idempotente. Os
 // helpers de escrita (registrarComunicacao/aplicarEventoProvedorNoLog) são

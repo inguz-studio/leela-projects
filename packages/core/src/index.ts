@@ -409,15 +409,17 @@ export {
 // (`vendidos`/`usos`/`publicada`) = escrita EXCLUSIVA de Function; preço/lote
 // ativo/vigência = derivação pura. Ver S300-T1-REPORT.
 // ---------------------------------------------------------------------------
-export type { Lote } from './eventos/lote';
+export type { Lote, MotivoEncerramentoLote } from './eventos/lote';
 export {
   CAMPOS_FUNCTION_LOTE,
+  MOTIVOS_ENCERRAMENTO_LOTE,
   loteShapeValido,
   validarLotesModalidade,
   loteEsgotado,
   loteEncerrado,
   loteVigente,
   loteAtivo,
+  motivoEncerramento,
   precoVigente,
   parseLote,
 } from './eventos/lote';
