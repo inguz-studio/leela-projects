@@ -265,3 +265,14 @@ Login funcional com os provedores exigidos (Apple obrigatório p/ App Store) e c
 ## Ordem sugerida de execução do épico
 
 `S000-1-T1 → T2/T3/T4 (paralelizáveis) → S000-2-T1 → T2 → S000-3 → S000-4`. Ao fim, a Onda 1 (E01 design system, depois E05/E03/E02) pode começar.
+
+## US novas (Vitor 2026-07-13 — jornadas de conta do painel, lacuna apontada)
+
+> O backend de Auth (S000-2-T2) existe desde a Onda 0, mas as TELAS ficaram "fora de escopo (E01/E12)" e nenhum épico as assumiu. O E07 já roteia anônimo→`/entrar` (placeholder). Bloco novo:
+
+### LEELA-S020 · Jornadas de conta do painel (Organizador/staff) — proposta 2026-07-13
+- **S020-T1 · Login `/entrar`** — e-mail+senha (Firebase Auth já configurado; Google/Apple ficam num segundo passo), erros honestos (credencial inválida sem enumerar contas), redirect pós-login p/ a rota de origem (o `RequirePapel` do E07 já manda anônimo pra cá), identidade DARK brasa sobre o DS.
+- **S020-T2 · Recuperação de senha** — fluxo `sendPasswordResetEmail` + tela de confirmação neutra (sem revelar se o e-mail existe); página de redefinição.
+- **S020-T3 · Cadastro de conta** — cria a conta Firebase do profissional; o ACESSO a tenant continua vindo por provisionamento (E16) ou convite de equipe (S304)/parceria (E18) — cadastro NÃO cria tenant (default defensável; mudar = decisão de produto).
+- **S020-T4 · Configurações da conta** — perfil do usuário logado (nome, e-mail, troca de senha com reauth, foto se houver padrão de upload), separada das Configurações do TENANT (E16) e do EVENTO (S304-T2).
+- Segurança: review antagonista Fable obrigatória no lote (fluxos de auth: enumeração, reset, session fixation, reauth na troca de senha).
