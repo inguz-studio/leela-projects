@@ -6,10 +6,9 @@
 // (RN-409 — nunca varrido no cliente). Estados §2.12; flat §2.16.
 // =============================================================================
 
-import { Badge, Button, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
+import { KpiCard, Badge, Button, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import type { PlatformRollups, TenantRollup } from '@leela/core';
-import { KpiCard } from '../_components/KpiCard';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
 import { formatBRL, formatInt, formatPct, formatDataHora } from '../_lib/format';
 import { sortTenantsByGmvDesc } from '../_lib/sort';

@@ -24,6 +24,7 @@
 
 import * as React from 'react';
 import {
+  KpiCard,
   Badge,
   Button,
   EmptyState,
@@ -381,22 +382,22 @@ export function EstoqueView({
         aria-label="Resumo de estoque"
         className="grid grid-cols-2 gap-[var(--spacing-4)] lg:grid-cols-4"
       >
-        <CardKpi
-          rotulo="Total"
-          valor={resumo.totalCapacidade === null ? '—' : formatInt(resumo.totalCapacidade)}
-          nota="capacidade dos kits"
+        <KpiCard
+          label="Total"
+          value={resumo.totalCapacidade === null ? '—' : formatInt(resumo.totalCapacidade)}
+          hint="capacidade dos kits"
         />
-        <CardKpi rotulo="Retirados" valor={formatInt(resumo.retirados)} nota="presença registrada" />
-        <CardKpi
-          rotulo="Disponíveis"
-          valor={resumo.disponiveis === null ? '—' : formatInt(resumo.disponiveis)}
-          nota="saldo por capacidade"
+        <KpiCard label="Retirados" value={formatInt(resumo.retirados)} hint="presença registrada" />
+        <KpiCard
+          label="Disponíveis"
+          value={resumo.disponiveis === null ? '—' : formatInt(resumo.disponiveis)}
+          hint="saldo por capacidade"
         />
-        <CardKpi
-          rotulo="Em risco"
-          valor={formatInt(resumo.emRisco)}
-          nota="kit(s) esgotado(s)"
-          tom={resumo.emRisco > 0 ? 'danger' : 'primary'}
+        <KpiCard
+          label="Em risco"
+          value={formatInt(resumo.emRisco)}
+          hint="kit(s) esgotado(s)"
+          tone={resumo.emRisco > 0 ? 'danger' : 'default'}
         />
       </section>
 
@@ -565,33 +566,6 @@ function TransicaoSkuModal({
         </p>
       </div>
     </Modal>
-  );
-}
-
-function CardKpi({
-  rotulo,
-  valor,
-  nota,
-  tom = 'primary',
-}: {
-  rotulo: string;
-  valor: string;
-  nota: string;
-  tom?: 'primary' | 'danger';
-}): JSX.Element {
-  const cor = tom === 'danger' ? 'text-[var(--text-danger)]' : 'text-[var(--text-primary)]';
-  return (
-    <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
-      <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-        {rotulo}
-      </span>
-      <span
-        className={`text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] [font-variant-numeric:tabular-nums] ${cor}`}
-      >
-        {valor}
-      </span>
-      <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">{nota}</span>
-    </div>
   );
 }
 

@@ -16,6 +16,7 @@
 
 import { useMemo, useState } from 'react';
 import {
+  KpiCard,
   Badge,
   Button,
   DropdownMenu,
@@ -28,7 +29,6 @@ import {
 } from '@leela/design-system';
 import { MoreVertical } from 'lucide-react';
 import type { Evento } from '@leela/core';
-import { KpiCard } from '../_components/KpiCard';
 import { agregaKpisGlobais } from '../_lib/kpis';
 import { formatBRL, formatInt } from '../_lib/format';
 import {

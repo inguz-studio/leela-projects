@@ -7,10 +7,9 @@
 // da guarda de papel) vira alerta inline com mensagem clara.
 // =============================================================================
 
-import { Badge, Button, PageHeader, Skeleton } from '@leela/design-system';
+import { KpiCard, Badge, Button, PageHeader, Skeleton } from '@leela/design-system';
 import type { Tenant } from '@leela/core';
 import { deriveTenantHealth } from '@leela/core';
-import { KpiCard } from '../_components/KpiCard';
 import { statusTenantBadge, healthTenantBadge } from '../_lib/health';
 import { formatBRL, formatInt, formatDataHora } from '../_lib/format';
 import { lifecycleActionFor, type LifecycleAction } from '../_lib/lifecycle';

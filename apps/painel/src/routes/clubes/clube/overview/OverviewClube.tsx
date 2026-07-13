@@ -10,9 +10,8 @@
 //     Renderizado como "—" até o contrato existir. Ver SUMMARY §Bloqueios.
 // =============================================================================
 
-import { Skeleton } from '@leela/design-system';
+import { KpiCard, Skeleton } from '@leela/design-system';
 import type { Clube, Membro } from '@leela/core';
-import { KpiCard } from '../../_components/KpiCard';
 import { MembrosTable } from '../../_components/MembrosTable';
 import { formatInt } from '../../_lib/format';
 

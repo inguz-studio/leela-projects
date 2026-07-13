@@ -6,14 +6,13 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
+import { KpiCard, Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
 import type {
   CanalComunicado,
   Comunicado,
   OrigemComunicado,
   StatusComunicado,
 } from '@leela/core';
-import { KpiCard } from '../../_components/KpiCard';
 import { formatInt } from '../../_lib/format';
 import {
   acoesComunicado,

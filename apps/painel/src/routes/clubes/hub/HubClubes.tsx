@@ -6,10 +6,9 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, EmptyState, Input, PageHeader, Skeleton } from '@leela/design-system';
+import { KpiCard, Button, EmptyState, Input, PageHeader, Skeleton } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
-import { KpiCard } from '../_components/KpiCard';
 import { ClubeCard } from './ClubeCard';
 import { formatInt } from '../_lib/format';
 

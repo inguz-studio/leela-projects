@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from 'react';
 import {
+  KpiCard,
   Badge,
   Button,
   CardDesafio,
@@ -18,7 +19,6 @@ import {
 } from '@leela/design-system';
 import type { Desafio, ModeloDesafio, StatusDesafio } from '@leela/core';
 import { copyPreparacao } from '@leela/core';
-import { KpiCard } from '../../_components/KpiCard';
 import { formatInt } from '../../_lib/format';
 import {
   agruparDesafios,

@@ -8,6 +8,7 @@
 
 import { useMemo, useState } from 'react';
 import {
+  KpiCard,
   Button,
   Chip,
   ConfirmModal,
@@ -16,7 +17,6 @@ import {
   Skeleton,
 } from '@leela/design-system';
 import type { PapelMembro, StatusMembro, Membro } from '@leela/core';
-import { KpiCard } from '../../_components/KpiCard';
 import { MembrosTable } from '../../_components/MembrosTable';
 import {
   filtrarMembros,

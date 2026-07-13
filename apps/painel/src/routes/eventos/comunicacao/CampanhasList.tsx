@@ -13,9 +13,8 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
+import { KpiCard, Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
 import type { Campanha, CanalCampanha, StatusCampanha } from '@leela/core';
-import { KpiCard } from '../_components/KpiCard';
 import { formatDataCurta, formatInt } from '../_lib/format';
 import {
   acoesCampanha,

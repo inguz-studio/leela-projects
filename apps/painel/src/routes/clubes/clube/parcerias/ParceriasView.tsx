@@ -6,6 +6,7 @@
 // =============================================================================
 
 import {
+  KpiCard,
   Badge,
   Button,
   EmptyState,
@@ -18,7 +19,6 @@ import type {
   ParceriaEventoAfiliado,
   ParceriaPatrocinador,
 } from '@leela/core';
-import { KpiCard } from '../../_components/KpiCard';
 import { formatInt } from '../../_lib/format';
 import {
   eventoNomeLegivel,
