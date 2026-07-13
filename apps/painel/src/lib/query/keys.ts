@@ -87,6 +87,20 @@ export const queryKeys = {
     doEvento: (eventoId: string) => ['pagina-vendas', 'do-evento', eventoId] as const,
   },
 
+  comunicacoes: {
+    /**
+     * Agregado ∑ de comunicações do evento (`comunicacoesResumo/current` —
+     * FABLE-G) — os contadores da aba Comunicação (E06-L3). Point read O(1).
+     */
+    resumo: (eventoId: string) => ['comunicacoes', 'resumo', eventoId] as const,
+    /**
+     * Timeline do log de comunicação (recentes primeiro, `limite` docs). O
+     * limite entra na chave — trocá-lo é uma leitura distinta (mais/menos itens).
+     */
+    doEvento: (eventoId: string, limite: number) =>
+      ['comunicacoes', 'do-evento', eventoId, limite] as const,
+  },
+
   // ---------------------------------------------------------------------------
   // Clubes (E05) — mesma convenção de eventos. Lista por tenant + detalhe por
   // slug partilham prefixo `['clubes']`; recursos-filhos (membros, comunicados,

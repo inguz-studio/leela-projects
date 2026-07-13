@@ -24,6 +24,8 @@ import {
   getFinanceiroEvento,
   getLeelaDb,
   getOverview,
+  getResumoComunicacoes,
+  listarComunicacoesDoEvento,
   getPaginaVendas,
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
@@ -56,11 +58,13 @@ import type {
   Evento,
   Inscrito,
   Kit,
+  LogComunicacao,
   Lote,
   Membro,
   PaginaVendas,
   Parceria,
   PlatformRollups,
+  ResumoComunicacoes,
   Tenant,
 } from '@leela/core';
 import { queryKeys } from './keys';
@@ -233,6 +237,35 @@ export function paginaVendasDoEventoQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.paginaVendas.doEvento(eventoId),
     queryFn: (): Promise<PaginaVendas | null> => getPaginaVendas(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Agregado ∑ de comunicações do evento (`comunicacoesResumo/current`) — os
+ * CONTADORES da aba Comunicação (E06-L3). Point read O(1) mantido pela Function
+ * (FABLE-G): a aba NUNCA conta logs no cliente. `null` quando ainda não há
+ * comunicação (AUSÊNCIA honesta → EmptyState). Bounded staleness (ADR-010).
+ */
+export function resumoComunicacoesQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.comunicacoes.resumo(eventoId),
+    queryFn: (): Promise<ResumoComunicacoes | null> =>
+      getResumoComunicacoes(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Timeline do log de comunicação do evento (E06-L3) — recentes primeiro,
+ * `limite` docs. Reusa `listarComunicacoesDoEvento` (orderBy single-field +
+ * limit, sem índice composto). PII do log é MÍNIMA por construção (FABLE-G:
+ * sem corpo/nome/e-mail — só assunto/canal/tipo/status + ref opaca); a tela
+ * mascara a ref na superfície densa (LGPD). Bounded staleness (ADR-010).
+ */
+export function comunicacoesDoEventoQuery(eventoId: string, limite: number) {
+  return queryOptions({
+    queryKey: queryKeys.comunicacoes.doEvento(eventoId, limite),
+    queryFn: (): Promise<LogComunicacao[]> =>
+      listarComunicacoesDoEvento(getLeelaDb(), eventoId, { limite }),
   });
 }
 

@@ -14,6 +14,20 @@
 const BULLET = '•';
 
 /**
+ * Mascara uma referência OPACA (inscritoId/membroId) para exibição em lista
+ * densa: `••••{4 últimos}` (mesma gramática do telefone). O docId não é dado
+ * pessoal DIRETO, mas é um identificador LINKÁVEL ao inscrito — na superfície
+ * densa da aba Comunicação (E06-L3) ele nunca aparece por inteiro (LGPD; brief:
+ * "PII nunca em claro em lista densa"). Serve só de âncora de desambiguação; o
+ * valor cru mora na camada de dados, NUNCA no DOM/console. @pure
+ */
+export function mascararRef(ref: string): string {
+  const limpo = ref.trim();
+  if (limpo.length <= 4) return BULLET.repeat(4);
+  return `${BULLET.repeat(4)}${limpo.slice(-4)}`;
+}
+
+/**
  * Mascara um CPF para `•••.•••.###-##` (brief S203-T3): os 6 primeiros
  * dígitos viram bullets, os 5 últimos (3º grupo + verificador) ficam
  * visíveis — o suficiente para o organizador CONFERIR sem expor o documento

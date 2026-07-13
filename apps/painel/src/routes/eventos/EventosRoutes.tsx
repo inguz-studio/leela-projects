@@ -27,6 +27,7 @@ import { EstoquePage } from './kits/EstoquePage';
 import { KitEditorPage } from './kits/KitEditorPage';
 import { LotesPage } from './lotes/LotesPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
+import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 
 export function EventosRoutes(): JSX.Element {
@@ -52,6 +53,8 @@ export function EventosRoutes(): JSX.Element {
           <Route path="lotes" element={<LotesPage />} />
           {/* Editor de conteúdo da página de vendas (E04 · S300-T3) */}
           <Route path="pagina-vendas" element={<PaginaVendasPage />} />
+          {/* Aba Comunicação — log FABLE-G + envio futuro (E06 · L3) */}
+          <Route path="comunicacao" element={<ComunicacaoPage />} />
           <Route path="financeiro" element={<FinanceiroPage />} />
         </Route>
       </Routes>

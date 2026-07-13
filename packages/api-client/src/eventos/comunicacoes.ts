@@ -21,6 +21,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
   where,
   type Firestore,
@@ -81,4 +83,36 @@ export async function getResumoComunicacoes(
   );
   if (!snap.exists()) return null;
   return parseResumoComunicacoes(snap.data() as Record<string, unknown>);
+}
+
+/** Teto default da timeline por evento (E06-L3) — recentes, não a coleção toda. */
+export const COMUNICACOES_TIMELINE_LIMITE = 100;
+
+/**
+ * Lista as comunicações do EVENTO (todos os destinatários), mais recentes
+ * primeiro — a TIMELINE da aba Comunicação (E06-L3). Ordena por
+ * `enfileiradoEm` desc com LIMIT: usa o índice single-field AUTOMÁTICO do
+ * Firestore (nenhum filtro `where` combinado com o orderBy → zero índice
+ * composto; `firestore.indexes.json` intocado).
+ *
+ * O teto (`limite`) impede ler a coleção inteira de um evento grande — os
+ * CONTADORES da aba vêm SEMPRE do agregado (`getResumoComunicacoes`), NUNCA
+ * de contagem client-side desta lista (doutrina FABLE-G: "a aba nunca conta
+ * logs no cliente"). Reusa `parseLogComunicacao` (parsing fail-fast, fonte
+ * única). Leitura protegida pelas Rules via tenant do EVENTO PAI (gestão).
+ */
+export async function listarComunicacoesDoEvento(
+  db: Firestore,
+  eventoId: string,
+  opcoes: { limite?: number } = {}
+): Promise<LogComunicacao[]> {
+  const teto = opcoes.limite ?? COMUNICACOES_TIMELINE_LIMITE;
+  const snap = await getDocs(
+    query(
+      collection(db, 'eventos', eventoId, COLECAO_LOG_COMUNICACAO),
+      orderBy('enfileiradoEm', 'desc'),
+      limit(teto)
+    )
+  );
+  return snap.docs.map((d) => parseLogComunicacao(d.id, d.data()));
 }

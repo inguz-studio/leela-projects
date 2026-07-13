@@ -7,6 +7,7 @@ import {
   formatarCpf,
   formatarTelefone,
   mascararCpf,
+  mascararRef,
   mascararTelefone,
 } from '../pii';
 
@@ -41,5 +42,19 @@ describe('formatarTelefone', () => {
   it('formata com DDI (12/13)', () => {
     expect(formatarTelefone('554899990001')).toBe('+55 (48) 9999-0001');
     expect(formatarTelefone('5548999990001')).toBe('+55 (48) 99999-0001');
+  });
+});
+
+describe('mascararRef', () => {
+  it('mascara a ref opaca revelando só os 4 últimos caracteres', () => {
+    expect(mascararRef('abcdef123456')).toBe('••••3456');
+  });
+  it('ref curta (≤4) → máscara total (nunca vaza o id inteiro)', () => {
+    expect(mascararRef('ab')).toBe('••••');
+    expect(mascararRef('abcd')).toBe('••••');
+  });
+  it('nunca contém a ref crua completa', () => {
+    const ref = 'inscritoXYZ01';
+    expect(mascararRef(ref)).not.toContain(ref);
   });
 });

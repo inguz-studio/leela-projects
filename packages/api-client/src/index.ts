@@ -210,6 +210,8 @@ export type { CronogramaEntregaEvento } from './eventos/cronograma';
 export {
   listarComunicacoesDoInscrito,
   getResumoComunicacoes,
+  listarComunicacoesDoEvento,
+  COMUNICACOES_TIMELINE_LIMITE,
 } from './eventos/comunicacoes';
 
 // S203-T1 — inscritos paginados por cursor (18/página — §2.5)

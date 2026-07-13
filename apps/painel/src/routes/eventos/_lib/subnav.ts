@@ -16,6 +16,7 @@ export type EventoAbaId =
   | 'kits'
   | 'lotes'
   | 'pagina-vendas'
+  | 'comunicacao'
   | 'entrega'
   | 'financeiro';
 
@@ -32,6 +33,8 @@ const ABAS: readonly AbaDef[] = [
   { id: 'kits', label: 'Kits', segmento: 'kits' },
   { id: 'lotes', label: 'Lotes', segmento: 'lotes' },
   { id: 'pagina-vendas', label: 'Página de vendas', segmento: 'pagina-vendas' },
+  // E06 (Comunicação) segue E04 (Página de vendas) — ordem canônica, sem reordenar.
+  { id: 'comunicacao', label: 'Comunicação', segmento: 'comunicacao' },
   { id: 'entrega', label: 'Entrega', segmento: 'entrega' },
   { id: 'financeiro', label: 'Financeiro', segmento: 'financeiro' },
 ];
