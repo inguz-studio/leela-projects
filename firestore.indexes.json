@@ -177,6 +177,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "automacoes",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "ativa",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "gatilho",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

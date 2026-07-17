@@ -1294,6 +1294,68 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // `automacoes/{automacaoId}` — comunicação por GATILHO (E06 · S402-T1
+      // · RN-132). O cliente configura gatilho/template/canal/ativa/offset;
+      // o DISPARO é exclusivo das Functions (trigger novo_inscrito + cron),
+      // que reusam executarDisparoCampanha (DIRECTIVE — pipeline único).
+      // ∑ `disparos` = recontagem por Function: create exige 0/ausente,
+      // update não o toca (postura pós-19c8afe).
+      // Leitura: mesma taxonomia de campanhas (matriz S304 área comunicacao).
+      match /automacoes/{automacaoId} {
+
+        /** Shape (enum de gatilho + template + canal RN-131 + offset). */
+        function shapeAutomacaoValida() {
+          return request.resource.data.gatilho in
+              ['novo_inscrito', 'kit_disponivel', 'vespera_evento', 'pos_evento']
+            && request.resource.data.templateRef is string
+            && request.resource.data.templateRef.size() > 0
+            && request.resource.data.canal is list
+            && request.resource.data.canal.size() >= 1
+            && request.resource.data.canal.size() <= 2
+            && request.resource.data.canal.hasOnly(['push', 'email'])
+            && request.resource.data.ativa is bool
+            // offset SÓ nos gatilhos de relógio; teto de sanidade 720h (30d)
+            && (!('offsetHoras' in request.resource.data)
+                || (request.resource.data.gatilho in
+                      ['vespera_evento', 'pos_evento']
+                    && request.resource.data.offsetHoras is int
+                    && request.resource.data.offsetHoras >= 1
+                    && request.resource.data.offsetHoras <= 720));
+        }
+
+        /** ∑ `disparos` (recontagem de Function) nasce 0/ausente. */
+        function disparosZeradoNoCreate() {
+          return request.resource.data.get('disparos', 0) == 0;
+        }
+
+        /** Update de cliente não TOCA o ∑. */
+        function disparosIntocado() {
+          return !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['disparos']);
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantMember(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
+        allow create: if (isTenantWriter(request.resource.data.tenantId)
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeAutomacaoValida()
+                          && disparosZeradoNoCreate())
+                      || isPlatformAdmin();
+        allow update: if (isTenantWriter(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeAutomacaoValida()
+                          && disparosIntocado())
+                      || isPlatformAdmin();
+        // Delete: permitido ao writer — a trilha REAL do que foi enviado
+        // vive no log de comunicação (RN-219), que nunca some.
+        allow delete: if (isTenantWriter(resource.data.tenantId)
+                          && tenantAtivo(resource.data.tenantId))
+                      || isPlatformAdmin();
+      }
+
       // `aprovisionamento/{sku}` — estoque de kit POR SKU (item tamanhado ×
       // tamanho; docId `itemId__tamanho` — S210-T2 · FABLE-D).
       //
