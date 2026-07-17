@@ -25,7 +25,6 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 
 15. Teto sanitário de quantidade por transição de estoque (hoje 1M/SKU hardcoded no callable) e o limiar de "baixa" (item 3b) migrarem p/ config de produto.
 16. Fontes embarcadas (Exo 2 + JetBrains Mono self-host woff2) vs fallback de sistema — hoje CDN.
-17. **Idade máxima para campanha agendada VENCIDA disparar** (identificado no O3-L4, scheduler de campanhas). **Default em vigor:** campanha `agendado` com `agendadoPara` no passado dispara na **primeira rodada do cron** que a encontrar, não importa há quanto tempo venceu (sem produção hoje, o backlog é zero — mas num deploy/pausa longa, campanhas velhas disparariam de uma vez). Decidir: dispara sempre (default atual) OU expira após N horas/dias vencida (viraria estado "expirada" sem envio). Vale também para os gatilhos de relógio das automações (S402-T1, mesma mecânica de vencimento).
 
 ## ✅ Resolvidas desde a última versão deste painel (2026-07-11 → 13)
 
@@ -33,6 +32,7 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
+- **Item 17 · Campanha agendada VENCIDA não dispara (Vitor, 2026-07-17, verbatim):** "Se for agendada vencida, não dispara. Fica vencida, a priori, depois posso revisar isso se ver que é um problema." → registrada como **RN-136** no épico E06 e APLICADA (`9c10a8d`): campanha `agendado` com `agendadoPara` além da **tolerância de 2 ciclos do cron (10 min)** vira estado TERMINAL `vencido` (+ carimbo `vencidoEm`) sem envio; o atraso normal entre rodadas do cron NÃO é vencimento. Mesma mecânica nos gatilhos pontuais de relógio das automações (`vespera_evento`/`pos_evento` → automação desativada com `vencidoEm`); `kit_disponivel` NÃO vence (estado contínuo — janela de entrega aberta). Reagendar/reviver vencida = decisão futura sua (hoje as Rules congelam o estado). Pendência de painel (lote Opus): grupo/label "Vencida" na listagem de campanhas + automações.
 - **Flat inputs = DEFAULT GLOBAL do design system (Vitor, 2026-07-17).** O experimento do showroom foi aprovado: `Input`/`Select`/`Textarea` nascem flat; opt-out explícito via `bordered`. Aplicado em `5bb08a1` (AA verde, 1006/1006). Pendência registrada: varredura do painel para remover 8 `variant="flat"` redundantes no EventoForm.
 - **DN-1 ratificada (Vitor, 2026-07-17): link-in-bio na Onda 3 = ORGANIZADOR-ONLY** (editor de perfil mínimo no painel, `DN-1-T1`; perfil/tema do atleta = Onda 4 junto do app E13). Trilha da decisão em `next-trail-onda3/DECISOES-NECESSARIAS-onda3.md` §DN-1.
 - **Rodada de decisões do Vitor (2026-07-17) — os 7 itens do painel ratificados:**
