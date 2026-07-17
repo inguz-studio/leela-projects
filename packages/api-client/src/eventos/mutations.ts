@@ -14,7 +14,7 @@
 // =============================================================================
 
 import { httpsCallable, type Functions } from 'firebase/functions';
-import type { AlertaEstoqueSku, EstadoAprovisionamento } from '@leela/core';
+import type { AlertaEstoqueSku, EstadoAprovisionamento, ModoTaxa } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Contratos (espelham functions/src/eventos — fonte única no servidor)
@@ -42,6 +42,21 @@ export interface CriarEventoInput {
   /** Usa chip de cronometragem (RN-207) — default false */
   usaChip?: boolean;
   descricao?: string;
+  /**
+   * URL da capa (RN-153) — http(s) válida, ≤ 2048 (o SERVIDOR valida com
+   * `isUrlCapaValida`; a capa vira `src` público na landing). OPCIONAL —
+   * sem capa o hero cai no gradiente de tokens.
+   * (LEELA-BEPEND-T3: espelho do contrato do servidor — já aceito/persistido.)
+   */
+  imagemUrl?: string;
+  /** Texto do regulamento (RN-153) — ≤ 50k no servidor. OPCIONAL. */
+  regulamento?: string;
+  /**
+   * Modo da taxa POR EVENTO (RN-347) — OPCIONAL: ausente ⇒ default do tenant
+   * (`commercialTerms.modoTaxaDefault`, senão 'incorporada'). Congelado pela
+   * Rule após a 1ª venda.
+   */
+  taxaModo?: ModoTaxa;
 }
 
 export interface CriarEventoResult {
