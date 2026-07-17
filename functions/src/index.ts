@@ -158,6 +158,24 @@ export { saveDadosBancarios } from './finance/saveDadosBancarios';
 // ⚠️ Fable (dinheiro).
 export { requestRepasse, cancelRepasse } from './finance/requestRepasse';
 
+// Finance — MÁQUINA DE REEMBOLSO do organizador (E09 · S904-T1+T2 · RN-338/
+// 339/340/341/337). requestRefund abre por-inscrito (ADR-011), roteia pela
+// política (S305): aprovado_auto executa na hora (CDC Art.49), em_analise
+// aguarda decideRefund (aprovar→executa→estornado | recusar→terminal). A
+// execução REUSA o primitivo idempotente estornarInscricao (FABLE-B). ⚠️ Fable
+// (dinheiro real). Notificações (T3) registradas idempotentes via log FABLE-G.
+// Clawback de afiliação (RN-346) = N/A: split de afiliação foi CORTADO do
+// produto (RN-337 vigente — ver estornarInscricao.ts); reativar afiliação
+// reabre a RN-346.
+export { requestRefund, decideRefund } from './finance/requestRefund';
+
+// Finance — TRANSFERÊNCIA de titularidade / troca de ingresso (E09 ·
+// S904-T4 · RN-343/344/345). Titularidade executa (kit/chip/check-in
+// guardados, trilha titularHistorico[]); troca de ingresso SÓ REGISTRA
+// (aplicação+cobrança são do checkout — vendidos/capacidade por lote).
+// ⚠️ Fable (política de vendas).
+export { requestTransfer } from './finance/requestTransfer';
+
 // Finance — TRANSIÇÕES ADMIN + comprovante gapless + retenção (E09s-L2-T4 ·
 // RN-353/355/356 · RN-404): approve/reject/markPago via matriz do core;
 // contador transacional por tenant (2 pagos concorrentes ⇒ 0007/0008 sem

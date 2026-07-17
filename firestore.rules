@@ -609,7 +609,7 @@ service cloud.firestore {
           return !request.resource.data.keys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
-             'estornadoEm']
+             'estornadoEm', 'titularHistorico']
           );
         }
 
@@ -620,11 +620,20 @@ service cloud.firestore {
          * pela Function — adulterá-lo trocaria o kit a entregar no balcão sem
          * mudar o valor pago (fraude de fulfillment). Nem setar, nem limpar.
          */
+        /**
+         * S904-T4 (review antagonista H1): `atletaNome`/`atletaId`/`modalidade`
+         * IMUTÁVEIS para cliente após a criação — sem isso, escrita direta de
+         * owner burlaria a máquina de transferência inteira (renomear titular
+         * pós-chip corrompe resultado — objeção A5; trilha titularHistorico
+         * mentiria; taxa RN-343 evadida) e trocar `modalidade` fora do
+         * checkout corromperia vendidos/capacidade por lote (RN-300/304).
+         * Mudança de titular = SÓ requestTransfer; de percurso = SÓ checkout.
+         */
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
-             'estornadoEm']
+             'estornadoEm', 'titularHistorico', 'atletaNome', 'atletaId', 'modalidade']
           );
         }
 
@@ -1027,6 +1036,36 @@ service cloud.firestore {
       match /demografia/{docId} {
         allow read: if isPlatformAdmin()
                     || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
+      // `reembolsos/{inscritoId}` — máquina de reembolso (E09 · S904-T1/T2 ·
+      // RN-341). docId = inscritoId (um reembolso ativo por inscrito, ADR-011).
+      // O doc revela movimento de DINHEIRO e a fila de análise do organizador —
+      // leitura de GESTÃO: owner/staff, platform_admin e papel de evento
+      // organizador/financeiro (a fila vive na aba financeira). ESCRITA de
+      // estado/dinheiro: NUNCA pelo cliente — exclusiva das Functions
+      // requestRefund/decideRefund (Admin SDK bypassa Rules). Athlete dono da
+      // inscrição só lê o próprio reembolso quando o app do atleta aterrissar
+      // (E13-S1315 — self-service); até lá deny-by-default para athlete.
+      match /reembolsos/{inscritoId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'financeiro']);
+        allow write: if false;
+      }
+
+      // `transferencias/{transferenciaId}` — transferência de titularidade /
+      // troca de ingresso (E09 · S904-T4 · RN-343/344/345). O doc carrega PII
+      // do novo titular (`novoTitular.dadosPessoais`) e valor a cobrar —
+      // MESMA superfície de leitura dos reembolsos (gestão). ESCRITA: NUNCA
+      // pelo cliente — exclusiva da Function `requestTransfer` (Admin SDK);
+      // forjar transferência trocaria quem corre/retira kit sem as guardas
+      // de kit/chip/janela. Self-service do atleta é E13-S1316 (deny até lá).
+      match /transferencias/{transferenciaId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'financeiro']);
         allow write: if false;
       }
 

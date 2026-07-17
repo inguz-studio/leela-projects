@@ -188,6 +188,31 @@ export interface Inscrito {
    * `pagamentos/{pagamentoId}/estornos/{inscritoId}` — aqui só o carimbo.
    */
   estornadoEm?: Timestamp;
+  /**
+   * Trilha APPEND-ONLY de transferências de titularidade (RN-345 · S904-T4).
+   * Cada entrada registra de-quem→para-quem/quando/por-quem; o pagamento
+   * permanece na MESMA inscrição (ADR-011). Escrita EXCLUSIVA da Function
+   * `requestTransfer` — cliente forjá-la reescreveria a história do titular.
+   * Ausente = inscrição nunca transferida.
+   */
+  titularHistorico?: TitularHistoricoEntry[];
+}
+
+/**
+ * Entrada da trilha de titularidade (RN-345 — append-only, nunca editada).
+ * O detalhe completo (dados do novo titular, taxa, tipo) vive no doc de
+ * `eventos/{eventoId}/transferencias/{transferenciaId}` referenciado.
+ */
+export interface TitularHistoricoEntry {
+  /** Nome do titular ANTERIOR (antes desta transferência). */
+  nomeAnterior: string;
+  /** Nome do NOVO titular (após esta transferência). */
+  nomeNovo: string;
+  /** Referência ao doc de transferência (auditoria completa). */
+  transferenciaRef: string;
+  em: Timestamp;
+  /** uid de quem executou (organizador — RN-343). */
+  por: string;
 }
 
 /**
@@ -221,6 +246,10 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   // na MESMA transação do flip para 'estornado'. Cliente forjá-lo simularia
   // devolução de dinheiro que não aconteceu.
   'estornadoEm',
+  // S904-T4 (RN-345): trilha de titularidade — escrita SÓ por
+  // `requestTransfer`. Cliente forjá-la reescreveria quem é o titular
+  // (e quem corre/retira kit) sem passar pelas guardas de kit/chip/janela.
+  'titularHistorico',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -376,6 +405,16 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   }
   if (data['estornadoEm'] !== undefined) {
     inscrito.estornadoEm = data['estornadoEm'] as Timestamp;
+  }
+  // S904-T4: trilha de titularidade — quando presente, deve ser lista
+  // (fail-fast: trilha corrompida é pior que ausente).
+  if (data['titularHistorico'] !== undefined) {
+    if (!Array.isArray(data['titularHistorico'])) {
+      throw new Error(
+        `Inscrito ${id}: "titularHistorico" deve ser lista (RN-345)`
+      );
+    }
+    inscrito.titularHistorico = data['titularHistorico'] as TitularHistoricoEntry[];
   }
 
   // Coerência do estorno (RN-341/ADR-011 · FABLE-B) — checada no parse porque

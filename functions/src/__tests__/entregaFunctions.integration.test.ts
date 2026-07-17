@@ -499,8 +499,15 @@ describe('Rules — chipNumero fora do alcance do cliente (S204-T2)', () => {
         chipNumero: null,
       })
     );
-    // outros campos seguem editáveis
+    // campos de CLIENTE seguem editáveis (`modalidade` foi congelada no
+    // S904 review-H1 — troca de percurso é exclusiva do checkout/transfer;
+    // `status` dentro do enum prova que a trava não engessa)
     await assertSucceeds(
+      updateDoc(doc(db, 'eventos', EVENTO_CHIP, 'inscritos', 'insc-ana'), {
+        status: 'confirmado',
+      })
+    );
+    await assertFails(
       updateDoc(doc(db, 'eventos', EVENTO_CHIP, 'inscritos', 'insc-ana'), {
         modalidade: '21k',
       })

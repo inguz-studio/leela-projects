@@ -447,9 +447,11 @@ describe('Rules — status/campos de estorno são writer-only (Function)', () =>
     doc(fs, 'pagamentos', pagamentoId, ESTORNOS_SUBCOL, id);
 
   it('CONTROLE: organizador ainda atualiza status DENTRO do enum de cliente', async () => {
-    // Prova que os denies abaixo vêm da TRAVA do estorno, não de quebra geral
+    // Prova que os denies abaixo vêm da TRAVA do estorno, não de quebra geral.
+    // (Era `atletaNome`, congelado no S904 review-H1: mudança de titular é
+    // EXCLUSIVA de requestTransfer — `status` segue campo de cliente.)
     const fs = dbAs(MARINA_UID, marinaClaims);
-    await assertSucceeds(updateDoc(inscritoDoc(fs, confirmadoId), { atletaNome: 'Atleta Renomeado' }));
+    await assertSucceeds(updateDoc(inscritoDoc(fs, confirmadoId), { status: 'confirmado' }));
   });
 
   it('ATAQUE: forjar status "estornado" via cliente → NEGADO (fora do enum)', async () => {

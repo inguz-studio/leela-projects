@@ -334,7 +334,13 @@ export {
   classificarVinculoChip,
 } from './eventos/entrega';
 
-export type { Inscrito, KitInscrito, StatusInscrito } from './eventos/inscrito';
+export type {
+  Inscrito,
+  KitInscrito,
+  StatusInscrito,
+  // S904-T4 (RN-345) — trilha append-only de titularidade
+  TitularHistoricoEntry,
+} from './eventos/inscrito';
 export {
   KITS_INSCRITO,
   isKitInscrito,
@@ -700,6 +706,52 @@ export {
   transacaoDentroJanelaDN,
   computeDentroJanelaDN,
 } from './finance/repasse';
+
+// Reembolso — máquina de estados pura (E09 · LEELA-S904-T1 · RN-341).
+// A execução (estorno via PaymentProvider) é da S904-T2 e REUSA FABLE-B.
+export type {
+  EstadoReembolso,
+  OrigemReembolso,
+  Reembolso,
+  TransicaoReembolso,
+  ResultadoTransicaoReembolso,
+} from './finance/refund-machine';
+export {
+  ESTADOS_REEMBOLSO,
+  ESTADOS_REEMBOLSO_TERMINAIS,
+  ESTADOS_REEMBOLSO_EXECUTAVEIS,
+  isEstadoReembolso,
+  transicaoReembolsoValida,
+  transitionReembolso,
+} from './finance/refund-machine';
+
+// Notificações da máquina de reembolso (E09 · LEELA-S904-T3 · RN-342) —
+// mapeamento puro estado→destinatários; registro idempotente via log de
+// comunicação (FABLE-G).
+export type { NotificacaoReembolso } from './finance/refund-notifications';
+export {
+  chaveTransicaoReembolso,
+  notificacoesAberturaReembolso,
+  notificacoesTransicaoReembolso,
+} from './finance/refund-notifications';
+
+// Transferência de titularidade / troca de ingresso (E09 · LEELA-S904-T4 ·
+// RN-343/344/345) — guardas puras; execução no requestTransfer (Function).
+export type {
+  TipoTransferencia,
+  EstadoTransferencia,
+  NovoTitularDados,
+  Transferencia,
+  ResultadoGuardaTransferencia,
+} from './finance/transfer';
+export {
+  TIPOS_TRANSFERENCIA,
+  isTipoTransferencia,
+  podeTransferirTitularidade,
+  podeTrocarIngresso,
+  exigeRecoletaTamanhos,
+  diffTrocaIngresso,
+} from './finance/transfer';
 
 // Rollups macro da plataforma (E16-S1605-T1/T2 · RN-409)
 export type { TenantHealth, TenantRollup, PlatformRollups } from './platform/rollups';
