@@ -29,12 +29,18 @@ export interface ConfigGeraisFormProps {
   evento: Evento;
   /** Papel pode editar Configurações? (esconde/desabilita quando false). */
   podeEditar: boolean;
+  /**
+   * Papel pode FLIPAR o modo cupom-only? (RN-303 — OWNER-only). `false` mantém
+   * o toggle visível mas em leitura, com copy honesta (a Rule também nega staff).
+   */
+  podeFlipCupomOnly?: boolean;
   onSalvar: (input: AtualizarConfiguracoesEventoInput) => Promise<void>;
 }
 
 export function ConfigGeraisForm({
   evento,
   podeEditar,
+  podeFlipCupomOnly = false,
   onSalvar,
 }: ConfigGeraisFormProps): JSX.Element {
   const { toast } = useToast();
@@ -75,6 +81,11 @@ export function ConfigGeraisForm({
       // entre no `affectedKeys` e derrube o update inteiro por permission-denied.
       if (!taxaCongelada) {
         payload.taxaModo = taxaModoDoForm(values.repassarTaxa);
+      }
+      // RN-303: só o OWNER envia `vendaSomentePorCupom`. Omitir para staff evita
+      // que o campo entre no `affectedKeys` e a Rule owner-only derrube o update.
+      if (podeFlipCupomOnly) {
+        payload.vendaSomentePorCupom = values.vendaSomentePorCupom;
       }
       await onSalvar(payload);
       toast({ variant: 'success', title: 'Configurações salvas' });
@@ -169,6 +180,25 @@ export function ConfigGeraisForm({
           <span className="pl-[calc(var(--spacing-8)+var(--spacing-3))] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
             Travado: este evento já tem inscrições. Mudar quem paga a taxa mexeria no repasse de
             vendas confirmadas.
+          </span>
+        ) : null}
+      </div>
+
+      {/* Modo cupom-only (RN-303 · S1804) — OWNER-only. Fecha o evento a vendas
+          sem cupom válido (eventos por convênio/fechados). O gate real é a
+          Rule (staff é negado); a UI mostra permissão honesta, não esconde. */}
+      <div className="flex flex-col gap-[var(--spacing-1)]">
+        <Switch
+          id="config-cupom-only"
+          label="Evento fechado — venda só por cupom"
+          description="Ligado: só quem tem um cupom válido consegue se inscrever (eventos por convênio/fechados). Desligado: venda aberta normal."
+          checked={values.vendaSomentePorCupom}
+          disabled={disabled || !podeFlipCupomOnly}
+          onCheckedChange={(checked) => set('vendaSomentePorCupom', checked)}
+        />
+        {podeEditar && !podeFlipCupomOnly ? (
+          <span className="pl-[calc(var(--spacing-8)+var(--spacing-3))] text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Só o organizador dono do evento pode abrir ou fechar a venda por cupom.
           </span>
         ) : null}
       </div>

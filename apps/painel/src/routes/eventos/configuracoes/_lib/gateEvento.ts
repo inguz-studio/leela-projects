@@ -33,3 +33,13 @@ export function podeEditarConfiguracoes(papel: PapelEvento | null): boolean {
 export function podeGerirEquipe(papel: PapelEvento | null): boolean {
   return papel !== null && podeAcessar(papel, 'equipe');
 }
+
+/**
+ * O papel pode FLIPAR o modo cupom-only do evento? (RN-303 · S1804). É
+ * OWNER-only: abrir/fechar o evento a vendas sem cupom é controle de venda do
+ * dono — a Rule `vendaSomentePorCupomProtegida` nega staff (mesma postura de
+ * politicaVendas/S305). Só o `organizador` (dono do evento) passa. @pure
+ */
+export function podeFlipCupomOnly(papel: PapelEvento | null): boolean {
+  return papel === 'organizador';
+}

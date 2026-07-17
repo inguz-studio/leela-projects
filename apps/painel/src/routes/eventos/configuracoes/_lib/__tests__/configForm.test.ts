@@ -42,10 +42,10 @@ describe('valoresDoEvento', () => {
   it('preenche a partir do evento; capacidade null → campo vazio', () => {
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: null }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false });
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: 500 }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500', repassarTaxa: false });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500', repassarTaxa: false, vendaSomentePorCupom: false });
   });
 
   it('deriva repassarTaxa do taxaModo (RN-347): ausente ⇒ false, repassada ⇒ true', () => {
@@ -67,7 +67,7 @@ describe('taxaModoDoForm', () => {
 });
 
 describe('validaConfigGerais', () => {
-  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false };
+  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false };
 
   it('form válido passa', () => {
     expect(validaConfigGerais(base).valido).toBe(true);

@@ -29,6 +29,7 @@ import { LotesPage } from './lotes/LotesPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { CampanhaEditorPage } from './comunicacao/CampanhaEditorPage';
+import { AutomacoesPage } from './comunicacao/AutomacoesPage';
 import { FinanceiroLayout } from './financeiro/FinanceiroLayout';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 import { ReembolsosPage } from './financeiro/ReembolsosPage';
@@ -111,6 +112,15 @@ export function EventosRoutes(): JSX.Element {
             element={
               <RequirePapel area="comunicacao">
                 <CampanhaEditorPage />
+              </RequirePapel>
+            }
+          />
+          {/* Automações por gatilho (S402 · E06) — CRUD/toggle */}
+          <Route
+            path="comunicacao/automacoes"
+            element={
+              <RequirePapel area="comunicacao">
+                <AutomacoesPage />
               </RequirePapel>
             }
           />

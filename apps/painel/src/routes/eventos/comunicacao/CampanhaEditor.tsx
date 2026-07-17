@@ -413,8 +413,9 @@ export function CampanhaEditor({
                       onCheckedChange={() => {}}
                     />
                     <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-                      A automação de envio (S402) entra com o backend de gatilhos. Por ora, a campanha fica
-                      agendada e o disparo real é decidido pelo servidor — a tela não promete envio automático.
+                      O disparo automático NESTE horário agendado ainda é decidido pelo servidor — a tela
+                      não promete envio automático. Para automação por GATILHO (novo inscrito, véspera,
+                      pós-evento), use a aba Comunicação › Automações.
                     </span>
                   </fieldset>
                 </>

@@ -13,7 +13,7 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ConfirmModal, Tabs, useToast, type TabItem } from '@leela/design-system';
+import { Button, ConfirmModal, EmptyState, Tabs, useToast, type TabItem } from '@leela/design-system';
 import type { Campanha, SegmentoCampanha } from '@leela/core';
 import { ComunicacaoView } from './ComunicacaoView';
 import { CampanhasList } from './CampanhasList';
@@ -48,7 +48,7 @@ export function ComunicacaoPage(): JSX.Element {
   const timeline = useComunicacoesDoEvento(evento.id);
   const campanhas = useCampanhas(evento.id);
 
-  const [aba, setAba] = useState<'campanhas' | 'historico'>('campanhas');
+  const [aba, setAba] = useState<'campanhas' | 'historico' | 'automacoes'>('campanhas');
   const [alvoExclusao, setAlvoExclusao] = useState<Campanha | null>(null);
   const [excluindo, setExcluindo] = useState(false);
 
@@ -158,6 +158,21 @@ export function ComunicacaoPage(): JSX.Element {
         />
       ),
     },
+    {
+      id: 'automacoes',
+      label: 'Automações',
+      content: (
+        <EmptyState
+          title="Automações por gatilho"
+          description="Dispare uma campanha-modelo automaticamente por gatilho (novo inscrito, véspera, pós-evento…). Pausar interrompe sem apagar; o envio real é decidido pelo servidor."
+          action={
+            <Button variant="primary" onClick={() => navigate(`${base}/automacoes`)}>
+              Gerenciar automações
+            </Button>
+          }
+        />
+      ),
+    },
   ];
 
   return (
@@ -165,7 +180,7 @@ export function ComunicacaoPage(): JSX.Element {
       <Tabs
         tabs={tabs}
         value={aba}
-        onValueChange={(id) => setAba(id as 'campanhas' | 'historico')}
+        onValueChange={(id) => setAba(id as 'campanhas' | 'historico' | 'automacoes')}
         aria-label="Comunicação do evento"
       />
 

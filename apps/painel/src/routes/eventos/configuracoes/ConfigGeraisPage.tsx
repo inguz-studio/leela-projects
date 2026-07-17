@@ -11,7 +11,7 @@ import type { AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { useAtualizarConfiguracoesEvento } from '../../../lib/query/mutations';
 import { useEventosSession } from '../_data/session';
 import { ConfigGeraisForm } from './_components/ConfigGeraisForm';
-import { podeEditarConfiguracoes } from './_lib/gateEvento';
+import { podeEditarConfiguracoes, podeFlipCupomOnly } from './_lib/gateEvento';
 import type { ConfiguracoesOutletContext } from './ConfiguracoesLayout';
 
 export function ConfigGeraisPage(): JSX.Element {
@@ -32,6 +32,7 @@ export function ConfigGeraisPage(): JSX.Element {
     <ConfigGeraisForm
       evento={evento}
       podeEditar={podeEditarConfiguracoes(papel)}
+      podeFlipCupomOnly={podeFlipCupomOnly(papel)}
       onSalvar={onSalvar}
     />
   );

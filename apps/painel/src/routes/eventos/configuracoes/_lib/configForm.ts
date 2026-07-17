@@ -23,6 +23,12 @@ export interface ConfigGeraisValues {
    * a 1ª venda congela o campo nas Rules; ver ConfigGeraisForm).
    */
   repassarTaxa: boolean;
+  /**
+   * RN-303 (S1804) — modo cupom-only: `true` fecha o evento a vendas sem cupom
+   * válido. Flip é OWNER-only (Rule `vendaSomentePorCupomProtegida`); a UI só
+   * envia o campo quando o papel é organizador dono (ver ConfigGeraisForm).
+   */
+  vendaSomentePorCupom: boolean;
 }
 
 /** Erros por campo — chave ausente = campo válido. */
@@ -59,6 +65,7 @@ export function valoresDoEvento(evento: {
   usaChip: boolean;
   capacidade?: number | null;
   taxaModo?: ModoTaxa;
+  vendaSomentePorCupom?: boolean;
 }): ConfigGeraisValues {
   return {
     nome: evento.nome,
@@ -70,6 +77,8 @@ export function valoresDoEvento(evento: {
         : '',
     // Fonte única do modo vigente (ausente ⇒ 'incorporada', RN-347).
     repassarTaxa: modoTaxaDoEvento(evento) === 'repassada',
+    // Cupom-only (RN-303): só `true` literal liga o modo (default fechado=false).
+    vendaSomentePorCupom: evento.vendaSomentePorCupom === true,
   };
 }
 
