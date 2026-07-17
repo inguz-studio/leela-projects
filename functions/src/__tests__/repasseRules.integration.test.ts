@@ -322,6 +322,14 @@ describe('RN-357 — write:false para TODO cliente', () => {
     await assertFails(deleteDoc(doc(ownerA().firestore(), ...pRepasse(CASTELO_ID))));
   });
 
+  it('ATAQUE (RN-349): owner forja/troca `eventoId` do repasse via update → NEGA (campo congelado)', async () => {
+    await assertFails(
+      updateDoc(doc(ownerA().firestore(), ...pRepasse(CASTELO_ID)), {
+        eventoId: 'evento-que-vende-mais',
+      })
+    );
+  });
+
   it('ATAQUE: owner infla o próprio saldo.disponivel → NEGA (create e update)', async () => {
     await assertFails(
       setDoc(doc(ownerA().firestore(), ...pSaldo(CASTELO_ID)), {

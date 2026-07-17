@@ -64,6 +64,13 @@ type Db = admin.firestore.Firestore;
 export interface RequestRepasseInput {
   /** Valor solicitado (R$, 2 casas) — o servidor valida contra RN-352. */
   valor: number;
+  /**
+   * RN-349 (LEELA-BEPEND-T2) — associação EXATA repasse↔evento. OPCIONAL:
+   * ausente = repasse do saldo geral (sem associação). Presente, o SERVIDOR
+   * valida (fail-closed): evento inexistente ou de OUTRO tenant ⇒ rejeita
+   * sem criar nada — associação forjada nunca entra no doc.
+   */
+  eventoId?: string;
 }
 
 export interface RequestRepasseResult {
@@ -72,6 +79,8 @@ export interface RequestRepasseResult {
   valor: number;
   /** Disponível APÓS comprometer esta solicitação (RN-351). */
   disponivel: number;
+  /** Evento associado (RN-349) — null quando o repasse é do saldo geral. */
+  eventoId: string | null;
 }
 
 export interface CancelRepasseInput {
@@ -147,6 +156,19 @@ export async function requestRepasseCore(
   if (typeof valor !== 'number') {
     throw new https.HttpsError('invalid-argument', '"valor" (número) é obrigatório.');
   }
+  // RN-349 — eventoId OPCIONAL, mas quando presente precisa ser string não
+  // vazia (payload malformado é rejeitado, nunca silenciosamente descartado:
+  // o organizador que PEDIU associação não pode receber um repasse "geral").
+  const eventoId = input?.eventoId;
+  if (
+    eventoId !== undefined &&
+    (typeof eventoId !== 'string' || eventoId.length === 0)
+  ) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      '"eventoId" deve ser string não vazia quando presente (RN-349).'
+    );
+  }
 
   await assertTenantAtivo(db, tenantId);
 
@@ -160,6 +182,26 @@ export async function requestRepasseCore(
         'failed-precondition',
         'Cadastre os dados bancários antes de solicitar repasse (RN-354).'
       );
+    }
+
+    // RN-349 — associação exata repasse↔evento, validada FAIL-CLOSED dentro
+    // da transação: evento inexistente ou de OUTRO tenant ⇒ rejeita sem
+    // criar NADA (cross-tenant não vira associação; o claim decide o tenant,
+    // nunca o payload).
+    if (eventoId !== undefined) {
+      const eventoSnap = await tx.get(db.doc(`eventos/${eventoId}`));
+      if (!eventoSnap.exists) {
+        throw new https.HttpsError(
+          'failed-precondition',
+          `Evento '${eventoId}' não existe — associação de repasse rejeitada (RN-349).`
+        );
+      }
+      if (eventoSnap.get('tenantId') !== tenantId) {
+        throw new https.HttpsError(
+          'permission-denied',
+          'Evento pertence a outro tenant — associação de repasse rejeitada (RN-349/RN-400).'
+        );
+      }
     }
 
     const inputs = await lerInputsSaldoRepasse(tx, db, tenantId, agora);
@@ -207,6 +249,10 @@ export async function requestRepasseCore(
     tx.create(repasseRef, {
       id: repasseRef.id,
       tenantId,
+      // RN-349: eventoId SÓ quando validado acima (docs sem associação ficam
+      // idênticos ao vigente — schema evolution; a listagem trata ausência
+      // como "sem associação", honesto).
+      ...(eventoId !== undefined ? { eventoId } : {}),
       valor,
       estado: 'solicitado',
       dadosBancariosSnapshot: snapshotDadosBancarios(tenantId, dadosSnap),
@@ -227,6 +273,7 @@ export async function requestRepasseCore(
       tenantId,
       repasseId: repasseRef.id,
       valor,
+      eventoId: eventoId ?? null,
       disponivelRestante: saldo.disponivel,
     });
 
@@ -235,6 +282,7 @@ export async function requestRepasseCore(
       estado: 'solicitado' as const,
       valor,
       disponivel: saldo.disponivel,
+      eventoId: eventoId ?? null,
     };
   });
 }

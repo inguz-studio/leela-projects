@@ -255,6 +255,63 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
   });
 });
 
+describe('requestRepasse — eventoId (RN-349 · LEELA-BEPEND-T2)', () => {
+  it('com eventoId do PRÓPRIO tenant: doc nasce com a associação exata', async () => {
+    await seedCenario();
+    const resultado = await requestRepasseCore(
+      db,
+      { valor: 1000, eventoId: EVENTO_ID },
+      owner
+    );
+    expect(resultado.eventoId).toBe(EVENTO_ID);
+    const repasse = (
+      await db.doc(`tenants/${CASTELO_ID}/repasses/${resultado.repasseId}`).get()
+    ).data()!;
+    expect(repasse['eventoId']).toBe(EVENTO_ID);
+  });
+
+  it('sem eventoId: doc NÃO tem o campo (sem associação — retrocompat honesta)', async () => {
+    await seedCenario();
+    const resultado = await requestRepasseCore(db, { valor: 1000 }, owner);
+    expect(resultado.eventoId).toBeNull();
+    const repasse = (
+      await db.doc(`tenants/${CASTELO_ID}/repasses/${resultado.repasseId}`).get()
+    ).data()!;
+    expect('eventoId' in repasse).toBe(false);
+  });
+
+  it('ATAQUE — eventoId inexistente ⇒ rejeita FAIL-CLOSED, nada criado', async () => {
+    await seedCenario();
+    await expect(
+      requestRepasseCore(db, { valor: 100, eventoId: 'evento-fantasma' }, owner)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(await contarRepasses()).toBe(0);
+  });
+
+  it('ATAQUE — eventoId de OUTRO tenant ⇒ permission-denied, nada criado', async () => {
+    await seedCenario();
+    await db.collection('eventos').doc('evento-do-rival').set({
+      id: 'evento-do-rival', tenantId: 'passo-certo', organizadorId: 'uid-rival',
+      nome: 'Evento do Rival', status: 'publicado',
+      criadoEm: new Date(), atualizadoEm: new Date(),
+    });
+    await expect(
+      requestRepasseCore(db, { valor: 100, eventoId: 'evento-do-rival' }, owner)
+    ).rejects.toMatchObject({ code: 'permission-denied' });
+    expect(await contarRepasses()).toBe(0);
+  });
+
+  it('ATAQUE — eventoId malformado (vazio/não-string) ⇒ invalid-argument, nada criado', async () => {
+    await seedCenario();
+    for (const eventoId of ['', 42, { forjado: true }]) {
+      await expect(
+        requestRepasseCore(db, { valor: 100, eventoId }, owner)
+      ).rejects.toMatchObject({ code: 'invalid-argument' });
+    }
+    expect(await contarRepasses()).toBe(0);
+  });
+});
+
 describe('cancelRepasse — decisão #11 + RN-351/353', () => {
   it('owner cancela solicitado: devolve ao disponível, trilha com 2 entradas; retry = replay sem duplicar', async () => {
     await seedCenario();

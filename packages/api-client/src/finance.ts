@@ -91,6 +91,13 @@ export interface RequestRepasseInput {
   /** Valor solicitado (R$, 2 casas). O ESPELHO client de RN-352 é só UX —
    *  o servidor relê o disponível e é autoritativo (failed-precondition). */
   valor: number;
+  /**
+   * RN-349 (LEELA-BEPEND-T2) — associa o repasse a UM evento do tenant.
+   * OPCIONAL: ausente = repasse do saldo geral. O SERVIDOR valida (evento
+   * inexistente/de outro tenant ⇒ rejeita); o campo gravado é congelado
+   * pelas Rules — o cliente nunca escreve o doc.
+   */
+  eventoId?: string;
 }
 
 export interface RequestRepasseResult {
@@ -99,6 +106,8 @@ export interface RequestRepasseResult {
   valor: number;
   /** Disponível APÓS comprometer esta solicitação (RN-351). */
   disponivel: number;
+  /** Evento associado (RN-349) — null quando o repasse é do saldo geral. */
+  eventoId: string | null;
 }
 
 /** Solicita um repasse (tenant_owner). Servidor valida contra o saldo. */
@@ -417,6 +426,10 @@ function parseRepasse(id: string, raw: Record<string, unknown>): Repasse | null 
     atualizadoEm: asRepasseTimestamp(raw['atualizadoEm']),
   };
   if (typeof numero === 'string' && numero.length > 0) base.comprovanteNumero = numero;
+  // RN-349 — associação exata repasse↔evento (docs antigos sem o campo
+  // seguem válidos: ausência = "sem associação", a UI declara honesto).
+  const eventoId = raw['eventoId'];
+  if (typeof eventoId === 'string' && eventoId.length > 0) base.eventoId = eventoId;
   return base;
 }
 

@@ -19,7 +19,10 @@ import { DadosBancariosSection } from './_components/DadosBancariosSection';
 import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
 import { HistoricoRepasses } from './_components/HistoricoRepasses';
 import { RepasseErro } from './_components/RepasseErro';
-import type { LinhaRepasseEvento } from './_lib/repassesPorEvento';
+import {
+  associarRepassesPorEvento,
+  type LinhaRepasseEvento,
+} from './_lib/repassesPorEvento';
 
 export interface RepassesViewProps {
   saldo: SaldoRepasse | null;
@@ -42,10 +45,10 @@ export interface RepassesViewProps {
   dbSaveError?: string | undefined;
   onSubmitDados: (input: SaveDadosBancariosInput) => Promise<boolean>;
 
-  // Solicitar repasse (T3)
+  // Solicitar repasse (T3) — eventoId opcional (RN-349 · associação exata)
   solicitarRunning: boolean;
   /** Solicita o repasse; resolve `true` em sucesso (o view fecha o modal). */
-  onSolicitar: (valor: number) => Promise<boolean>;
+  onSolicitar: (valor: number, eventoId?: string) => Promise<boolean>;
 
   // Histórico (T4)
   historico: Repasse[];
@@ -84,6 +87,18 @@ export function RepassesView({
   // servidor reconfere — RN-352). Botão desabilitado é o estado honesto.
   const podeSolicitar = dadosBancarios !== null && disponivel > 0;
 
+  // RN-349 — associação exata repasse↔evento: agrupamento PURO do histórico
+  // pelo campo `eventoId` (fim de heurística); docs legados sem o campo caem
+  // na nota "sem associação" da seção Por evento.
+  const associacao = React.useMemo(
+    () => associarRepassesPorEvento(historico),
+    [historico],
+  );
+  const eventosAssociaveis = React.useMemo(
+    () => porEvento.map((l) => ({ id: l.eventoId, nome: l.nome })),
+    [porEvento],
+  );
+
   return (
     <div className="flex flex-col gap-[var(--spacing-6)] pb-[var(--spacing-8)]">
       <PageHeader
@@ -115,6 +130,7 @@ export function RepassesView({
             evento. Os cards acima seguem como saldo autoritativo (∑ do servidor). */}
         <RepassesPorEvento
           linhas={porEvento}
+          associacao={associacao}
           loading={porEventoLoading}
           error={porEventoError}
           onRetry={onRetryPorEvento}
@@ -147,9 +163,10 @@ export function RepassesView({
           onOpenChange={setSolicitarAberto}
           dados={dadosBancarios}
           disponivel={disponivel}
+          eventos={eventosAssociaveis}
           running={solicitarRunning}
-          onConfirmar={async (valor) => {
-            const ok = await onSolicitar(valor);
+          onConfirmar={async (valor, eventoId) => {
+            const ok = await onSolicitar(valor, eventoId);
             if (ok) setSolicitarAberto(false);
             return ok;
           }}

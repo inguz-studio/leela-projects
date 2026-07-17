@@ -1,6 +1,9 @@
 // =============================================================================
 // SolicitarRepasseModal — modal "Solicitar repasse" (E09s-L3-T3). Lista os
-// dados bancários salvos (MASCARADOS — RN-354) como destino + campo de valor.
+// dados bancários salvos (MASCARADOS — RN-354) como destino + campo de valor
+// + associação OPCIONAL a um evento (RN-349 · LEELA-BEPEND-T2): o organizador
+// escolhe de qual evento este saque "veio"; o servidor valida o evento e
+// grava `eventoId` no doc (Rules congelam — a UI só sugere).
 //
 // Espelho CLIENT de RN-352 (avaliarSolicitacao): valor > disponível (ou <= 0)
 // ⇒ botão bloqueado + hint. Mas o SERVIDOR é autoritativo: `requestRepasse`
@@ -10,11 +13,17 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal } from '@leela/design-system';
+import { Button, Input, Modal, Select } from '@leela/design-system';
 import type { DadosBancarios } from '@leela/core';
 import { formatBRL } from '../_lib/format';
 import { rotuloTipoConta } from '../_lib/dadosBancariosForm';
 import { avaliarSolicitacao } from '../_lib/solicitarForm';
+
+/** Opção de associação do repasse (RN-349) — eventos com movimento. */
+export interface EventoAssociavel {
+  id: string;
+  nome: string;
+}
 
 export interface SolicitarRepasseModalProps {
   open: boolean;
@@ -23,24 +32,34 @@ export interface SolicitarRepasseModalProps {
   dados: DadosBancarios;
   /** Disponível do saldo (espelho de RN-352; o servidor reconfere). */
   disponivel: number;
+  /** Eventos associáveis (RN-349) — vazio esconde o seletor. */
+  eventos: EventoAssociavel[];
   running: boolean;
   /** Confirma; resolve `true` em sucesso (o container fecha o modal). */
-  onConfirmar: (valor: number) => Promise<boolean>;
+  onConfirmar: (valor: number, eventoId?: string) => Promise<boolean>;
 }
+
+/** Valor sentinela do "sem associação" no Select (nunca vai ao servidor). */
+const SEM_EVENTO = '';
 
 export function SolicitarRepasseModal({
   open,
   onOpenChange,
   dados,
   disponivel,
+  eventos,
   running,
   onConfirmar,
 }: SolicitarRepasseModalProps): JSX.Element {
   const [texto, setTexto] = React.useState('');
+  const [eventoId, setEventoId] = React.useState<string>(SEM_EVENTO);
 
-  // Zera o campo a cada abertura.
+  // Zera os campos a cada abertura.
   React.useEffect(() => {
-    if (open) setTexto('');
+    if (open) {
+      setTexto('');
+      setEventoId(SEM_EVENTO);
+    }
   }, [open]);
 
   const avaliacao = avaliarSolicitacao(texto, disponivel);
@@ -48,7 +67,10 @@ export function SolicitarRepasseModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!avaliacao.podeEnviar || avaliacao.valor === null || running) return;
-    void onConfirmar(avaliacao.valor);
+    void onConfirmar(
+      avaliacao.valor,
+      eventoId === SEM_EVENTO ? undefined : eventoId,
+    );
   }
 
   return (
@@ -101,6 +123,23 @@ export function SolicitarRepasseModal({
           disabled={running}
           {...(avaliacao.hint ? { 'aria-describedby': 'repasse-valor-hint' } : {})}
         />
+
+        {/* Associação a evento (RN-349) — OPCIONAL: o saque continua saindo
+            do saldo consolidado; a associação só rotula de qual evento veio.
+            O servidor valida o evento (fail-closed) e grava o campo. */}
+        {eventos.length > 0 && (
+          <Select
+            id="repasse-evento"
+            label="Associar a um evento (opcional)"
+            value={eventoId}
+            onChange={(e) => setEventoId(e.target.value)}
+            disabled={running}
+            options={[
+              { value: SEM_EVENTO, label: 'Sem associação (saldo geral)' },
+              ...eventos.map((ev) => ({ value: ev.id, label: ev.nome })),
+            ]}
+          />
+        )}
         {avaliacao.hint && (
           <p id="repasse-valor-hint" role="note" className="text-[length:var(--font-size-sm)] text-[var(--text-danger)]">
             {avaliacao.hint}

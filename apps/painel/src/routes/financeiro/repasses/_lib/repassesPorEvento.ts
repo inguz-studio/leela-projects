@@ -19,6 +19,7 @@
 // =============================================================================
 
 import { computeLiberadoPorEvento, computeRetido, RETENCAO_REPASSE_PCT_DEFAULT } from '@leela/core';
+import type { Repasse } from '@leela/core';
 import type { EventoFinanceiroRow } from '../../../../lib/query/queries';
 
 /** Uma linha da tabela "Por evento" (RN-349). */
@@ -95,6 +96,54 @@ export function derivarRepassesPorEvento(
   // Maior vendido primeiro — o evento que mais movimenta lidera a leitura.
   linhas.sort((a, b) => b.vendido - a.vendido);
   return linhas;
+}
+
+// ---------------------------------------------------------------------------
+// Associação EXATA repasse↔evento (RN-349 · LEELA-BEPEND-T2)
+// ---------------------------------------------------------------------------
+
+/** Σ dos repasses associados a um eixo (evento ou "sem associação"). */
+export interface RepassesAssociados {
+  /** Nº de repasses vivos ({solicitado, aprovado, pago}) */
+  qtd: number;
+  /** Σ valor desses repasses (R$) */
+  total: number;
+}
+
+/** Resultado da associação por CAMPO EXATO `eventoId` (fim de heurística). */
+export interface AssociacaoRepasses {
+  /** eventoId → Σ dos repasses associados àquele evento */
+  porEvento: ReadonlyMap<string, RepassesAssociados>;
+  /** Docs SEM `eventoId` (legado pré-RN-349 / saldo geral) — declarados, nunca adivinhados */
+  semAssociacao: RepassesAssociados;
+}
+
+/**
+ * Agrupa o histórico de repasses pelo campo EXATO `eventoId` (RN-349 —
+ * nenhuma heurística de período/valor). Conta só os estados VIVOS
+ * ({solicitado, aprovado, pago} — o mesmo conjunto do `comprometido`+pago de
+ * RN-351): cancelado/recusado devolveram o valor e não representam saque.
+ * Doc sem `eventoId` (legado) cai em `semAssociacao` — a UI o declara,
+ * honesto, em vez de atribuí-lo a um evento por adivinhação. @pure
+ */
+export function associarRepassesPorEvento(
+  historico: readonly Repasse[],
+): AssociacaoRepasses {
+  const porEvento = new Map<string, RepassesAssociados>();
+  const semAssociacao: RepassesAssociados = { qtd: 0, total: 0 };
+
+  for (const r of historico) {
+    if (r.estado === 'cancelado' || r.estado === 'recusado') continue;
+    if (r.eventoId === undefined) {
+      semAssociacao.qtd += 1;
+      semAssociacao.total += r.valor;
+      continue;
+    }
+    const atual = porEvento.get(r.eventoId) ?? { qtd: 0, total: 0 };
+    porEvento.set(r.eventoId, { qtd: atual.qtd + 1, total: atual.total + r.valor });
+  }
+
+  return { porEvento, semAssociacao };
 }
 
 /** Soma as linhas (eventos sem termo entram só no vendido). @pure */

@@ -52,10 +52,15 @@ export function RepassesPage(): JSX.Element {
   // Solicita o repasse. O servidor relê o disponível e é autoritativo (RN-352):
   // failed-precondition ⇒ Toast danger (a UI não adivinha o motivo). Sucesso ⇒
   // Toast + o histórico ganha o item em `solicitado` (query invalidada).
+  // RN-349: `eventoId` opcional associa o repasse a um evento — o servidor
+  // valida (evento do próprio tenant) e grava; a UI só sugere.
   const onSolicitar = useCallback(
-    async (valor: number): Promise<boolean> => {
+    async (valor: number, eventoId?: string): Promise<boolean> => {
       try {
-        await solicitar.mutateAsync({ valor });
+        await solicitar.mutateAsync({
+          valor,
+          ...(eventoId !== undefined ? { eventoId } : {}),
+        });
         toast({
           variant: 'success',
           title: 'Repasse solicitado',

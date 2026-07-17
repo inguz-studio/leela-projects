@@ -194,6 +194,15 @@ export interface TransicaoRepasse {
 export interface Repasse {
   id: string;
   tenantId: string;
+  /**
+   * RN-349 (LEELA-BEPEND-T2) — associação EXATA repasse↔evento. Escrito SÓ
+   * pela Function `requestRepasse` (valida que o evento existe e pertence ao
+   * tenant do caller; Rules congelam — cliente nunca escreve). OPCIONAL:
+   * ausente = repasse do saldo geral do tenant, sem associação a evento
+   * (docs legados pré-RN-349 incluídos) — a tela "Repasses por evento"
+   * declara "sem associação", nunca adivinha por período/valor.
+   */
+  eventoId?: string;
   /** Valor solicitado (R$, 2 casas — validado por RN-352 no servidor) */
   valor: number;
   estado: EstadoRepasse;
