@@ -80,6 +80,12 @@ export { onInscritoWrite } from './eventos/agregarFinanceiro';
 // ⚠️ Fable (dinheiro — degrau de preço).
 export { onInscritoWriteVirada, virarLoteCron } from './eventos/virarLote';
 
+// Eventos — AJUSTE DE CAPACIDADE do lote (S307-T1 · RN-304): reabrir vagas
+// subindo `quantidadeLimite` (owner-only; reduzir abaixo do vendido é
+// fail-closed; auditoria em `auditoriaAcessos`; `vendidos` intocado — o
+// ratchet RN-300 permanece). ⚠️ Fable (integridade de venda).
+export { ajustarCapacidadeLote } from './eventos/ajustarCapacidadeLote';
+
 // Eventos — publicação da página de vendas (S300-T2, lacuna #1 do S300-T3):
 // flag `publicada`/`publicadaEm` = escrita EXCLUSIVA de Function; valida
 // completude server-side (parse do kernel + SEO). Seam do api-client.

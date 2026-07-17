@@ -261,6 +261,14 @@ export {
   MSG_EVENTO_FECHADO_SEM_CUPOM,
 } from './eventos/evento';
 
+// RN-304 (S307) — capacidade de lote editável (reabrir vagas)
+export type { CapacidadeLote } from './eventos/capacidadeLote';
+export {
+  CAPACIDADE_LOTE_MAX,
+  capacidadeDoLote,
+  validarAjusteCapacidade,
+} from './eventos/capacidadeLote';
+
 // RN-200 — preço bloqueado após 1ª venda (E03 · S201-T3)
 export {
   MSG_PRECO_BLOQUEADO,
