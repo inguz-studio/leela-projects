@@ -18,6 +18,7 @@ import {
   RadioCard,
   RadioGroup,
   Select,
+  Switch,
   Tabs,
   useToast,
   type SelectOption,
@@ -388,10 +389,35 @@ export function CampanhaEditor({
                 </Chip>
               </div>
               {values.quando === 'agendar' ? (
-                <div className="grid grid-cols-1 gap-[var(--spacing-3)] sm:grid-cols-2">
-                  <Input id="campanha-data" type="date" label="Data" value={values.agendadoData} onChange={(e) => patch({ agendadoData: e.target.value })} />
-                  <Input id="campanha-hora" type="time" label="Hora" value={values.agendadoHora} onChange={(e) => patch({ agendadoHora: e.target.value })} />
-                </div>
+                <>
+                  <div className="grid grid-cols-1 gap-[var(--spacing-3)] sm:grid-cols-2">
+                    <Input id="campanha-data" type="date" label="Data" value={values.agendadoData} onChange={(e) => patch({ agendadoData: e.target.value })} />
+                    <Input id="campanha-hora" type="time" label="Hora" value={values.agendadoHora} onChange={(e) => patch({ agendadoHora: e.target.value })} />
+                  </div>
+                  {/* S402-T2 · automação de disparo. Estado HONESTO: o gate real
+                      do envio é o envelope transacional do backend (S402-T1
+                      ainda não landou a subcoleção `automacoes`/flag PODE_ENVIAR)
+                      — a UI NÃO promete envio automático. Toggle desabilitado +
+                      "Em breve", mesmo padrão das seções sem persistência V1. */}
+                  <fieldset className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-4)]">
+                    <legend className="flex items-center gap-[var(--spacing-2)] px-[var(--spacing-1)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+                      Automação de disparo
+                      <Badge variant="neutro">Em breve</Badge>
+                    </legend>
+                    <Switch
+                      id="campanha-automacao"
+                      label="Disparar automaticamente no horário agendado"
+                      description="Quando ligar, o sistema envia a campanha no horário — sem clique manual."
+                      checked={false}
+                      disabled
+                      onCheckedChange={() => {}}
+                    />
+                    <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+                      A automação de envio (S402) entra com o backend de gatilhos. Por ora, a campanha fica
+                      agendada e o disparo real é decidido pelo servidor — a tela não promete envio automático.
+                    </span>
+                  </fieldset>
+                </>
               ) : null}
             </div>
           </CardSecao>

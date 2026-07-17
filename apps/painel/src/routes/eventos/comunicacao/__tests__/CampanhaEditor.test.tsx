@@ -84,6 +84,18 @@ describe('CampanhaEditor', () => {
     expect(await screen.findByText(/Limite de 4 pushes por semana atingido/)).toBeInTheDocument();
   });
 
+  it('toggle de automação (S402-T2) só aparece ao agendar e é honesto (Em breve, desabilitado)', async () => {
+    renderEditor();
+    // Não aparece no default ("Agora").
+    expect(screen.queryByLabelText(/Disparar automaticamente/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+    const toggle = screen.getByLabelText(/Disparar automaticamente/);
+    expect(toggle).toBeDisabled();
+    // Estado honesto: badge "Em breve" + copy que NÃO promete envio automático.
+    expect(screen.getByText('Em breve')).toBeInTheDocument();
+    expect(screen.getByText(/não promete envio automático/i)).toBeInTheDocument();
+  });
+
   it('"Salvar rascunho" persiste como rascunho', async () => {
     const onSalvar = vi.fn().mockResolvedValue(undefined);
     renderEditor({ onSalvar });
