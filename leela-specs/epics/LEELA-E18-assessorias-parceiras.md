@@ -37,7 +37,7 @@ Nada aqui é afiliação com split de comissão (E08, cortado da V1): o parceiro
 
 ## Regras de negócio aplicáveis
 
-Reaproveitadas de E05/E04/E16 + bloco novo RN-360..375 (propostas):
+Reaproveitadas de E05/E04/E16 + bloco novo RN-360..365 (ratificado 2026-07-17):
 
 - **RN-101 / RN-140 / RN-104** (E05) — clube tem `codigoConvite`, `visibilidade`, `modeloEntrada`; a assessoria parceira reusa o modelo `clubes/{clubId}`.
 - **RN-106** (E05, S104) — convite por e-mail: 1..50 e-mails por envio, dedupe case-insensitive, reenvio idempotente. A máquina de convite da assessoria **reusa** essa mecânica (`convites/{emailKey}`).
