@@ -43,6 +43,15 @@ seguiu o padrão por antecipação.
    - **03:10** `encerrarEventos` — encerramento por data (RN-350) + recompute
      de saldo de repasse.
    Slot novo = próximo múltiplo de 5 min, SEMPRE depois das dependências.
+   Cadência CONTÍNUA (`every 5 minutes`, sem dependência de ordem diária):
+   - `virarLoteCron` — metade DATA da RN-300 (carimbo de lote expirado);
+   - `dispatchCampanhasAgendadas` (Onda 3 · SCHED-T1) — varre `campanhas`
+     `status='agendado'` vencidas (collection group `status+agendadoPara`,
+     índice em firestore.indexes.json) e dispara REUSANDO o pipeline de
+     envio/log do E06 (`executarDisparoCampanha` — envelope transacional
+     RN-133 + fan-out idempotente RN-219); replay não duplica. Limite de
+     push estourado / segmento vazio / tenant não-ativo ficam `agendado`
+     (retry natural na próxima varredura).
 4. **Sem registry/índice de crons** por ora — 3 tarefas não justificam
    abstração. Reavaliar se passar de ~6.
 

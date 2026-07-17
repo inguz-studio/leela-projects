@@ -143,6 +143,32 @@ export async function enviarCampanhaCore(
     );
   }
 
+  return executarDisparoCampanha(db, eventoRef, campanhaId, tenantId, agora);
+}
+
+// ---------------------------------------------------------------------------
+// DISPARO compartilhado (callable + scheduler ADR-015 · SCHED-T1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Miolo do disparo — TUDO após a autorização: leitura da campanha, resolução
+ * de destinatários, envelope transacional (idempotência + RN-133 + carimbo)
+ * e fan-out no log. Extraído para o cron `dispatchCampanhasAgendadas`
+ * (SCHED-T1) reusar o MESMO pipeline do disparo manual — nunca um segundo
+ * mecanismo de envio. Pré-condições do caller:
+ *   - callable: claims de tenant writer + tenant ativo + evento do tenant
+ *     (enviarCampanhaCore acima);
+ *   - cron: evento/tenant relidos e tenant ATIVO verificado por varredura
+ *     (Admin SDK — a autoridade é o sistema, não um usuário).
+ */
+export async function executarDisparoCampanha(
+  db: admin.firestore.Firestore,
+  eventoRef: admin.firestore.DocumentReference,
+  campanhaId: string,
+  tenantId: string,
+  agora: Date
+): Promise<EnviarCampanhaResult> {
+  const eventoId = eventoRef.id;
   const campanhasCol = eventoRef.collection(COLECAO_CAMPANHAS);
   const campanhaSnap = await campanhasCol.doc(campanhaId).get();
   if (!campanhaSnap.exists) {

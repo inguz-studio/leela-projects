@@ -4,86 +4,178 @@
       "collectionGroup": "eventos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tenantId", "order": "ASCENDING" },
-        { "fieldPath": "organizadorId", "order": "ASCENDING" },
-        { "fieldPath": "data", "order": "ASCENDING" }
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "organizadorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "data",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "membros",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "atletaNome",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "membros",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "papel", "order": "ASCENDING" },
-        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+        {
+          "fieldPath": "papel",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "atletaNome",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "membros",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "papel", "order": "ASCENDING" },
-        { "fieldPath": "atletaNome", "order": "ASCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "papel",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "atletaNome",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "inscritos",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "tenantId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tenantId", "order": "ASCENDING" },
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "criadoEm", "order": "DESCENDING" }
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "pedidos",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "tenantId", "order": "ASCENDING" },
-        { "fieldPath": "eventoId", "order": "ASCENDING" },
-        { "fieldPath": "inscritoRefs", "arrayConfig": "CONTAINS" }
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "inscritoRefs",
+          "arrayConfig": "CONTAINS"
+        }
       ]
     },
     {
       "collectionGroup": "comunicados",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "canal", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "enviadoEm", "order": "ASCENDING" }
+        {
+          "fieldPath": "canal",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "enviadoEm",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "campanhas",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "canal", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "enviadoEm", "order": "ASCENDING" }
+        {
+          "fieldPath": "canal",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "enviadoEm",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "lotes",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "modalidade", "order": "ASCENDING" },
-        { "fieldPath": "ordem", "order": "ASCENDING" }
+        {
+          "fieldPath": "modalidade",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ordem",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "campanhas",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "agendadoPara",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],
@@ -92,9 +184,18 @@
       "collectionGroup": "lotes",
       "fieldPath": "fimEm",
       "indexes": [
-        { "queryScope": "COLLECTION", "order": "ASCENDING" },
-        { "queryScope": "COLLECTION", "order": "DESCENDING" },
-        { "queryScope": "COLLECTION_GROUP", "order": "ASCENDING" }
+        {
+          "queryScope": "COLLECTION",
+          "order": "ASCENDING"
+        },
+        {
+          "queryScope": "COLLECTION",
+          "order": "DESCENDING"
+        },
+        {
+          "queryScope": "COLLECTION_GROUP",
+          "order": "ASCENDING"
+        }
       ]
     }
   ]

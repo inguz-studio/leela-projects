@@ -276,3 +276,10 @@ export { aplicarPlano } from './platform/aplicarPlano';
 // por docId normalizado, handle IMUTÁVEL, lista de reservados, 1 perfil por
 // tenant nesta onda. ⚠️ Fable (identidade pública/PII na fronteira).
 export { salvarPerfil } from './perfil/salvarPerfil';
+
+// Eventos — SCHEDULER de campanhas agendadas (E06 · SCHED-T1 · ADR-015):
+// cron 5min varre campanhas status='agendado' vencidas (agendadoPara<=now)
+// e dispara REUSANDO o pipeline de envio/log (executarDisparoCampanha —
+// envelope transacional RN-133 + fan-out RN-219). Replay não duplica
+// (idempotência por campanha+janela). ⚠️ Fable (envio em massa).
+export { dispatchCampanhasAgendadas } from './eventos/dispatchCampanhasAgendadas';
