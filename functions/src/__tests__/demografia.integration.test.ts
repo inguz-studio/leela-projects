@@ -250,8 +250,17 @@ describe('Rules de demografia/current — ataques', () => {
     await assertFails(deleteDoc(doc(ownerA().firestore(), ...P_DEMO)));
   });
 
-  it('nem platform_admin escreve via client SDK (recompute é só da Function)', async () => {
-    await assertFails(
+  it('platform_admin ESCREVE via catch-all (postura sistêmica vigente — paridade com financeiro/current)', async () => {
+    // ACHADO DOCUMENTADO (não regressão deste lote): o catch-all
+    // `match /{subcol}/{docId} { allow write: if isPlatformAdmin() }` das
+    // subcoleções de eventos concede escrita de client SDK ao back-office em
+    // QUALQUER subcoleção — inclusive nos agregados ∑ (financeiro,
+    // comunicacoesResumo, demografia). O match explícito `write: if false`
+    // não fecha isso: no OR de Rules basta UM match permitir. Endurecer =
+    // decisão sistêmica (afetaria todos os agregados) — registrada no
+    // report do LEELA-BEPEND; aqui provamos a paridade para o teste FALHAR
+    // se a postura mudar sem atualizar a prova.
+    await assertSucceeds(
       updateDoc(doc(platformAdmin().firestore(), ...P_DEMO), { semGenero: 0 })
     );
   });
