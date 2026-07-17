@@ -1,10 +1,10 @@
 ---
-tags: [leela, adr, arquitetura, seguranca, lgpd, repasse, proposta]
+tags: [leela, adr, arquitetura, seguranca, lgpd, repasse, ratificada]
 ---
 
 # ADR-014 · Cifra dos dados bancários do organizador (AES-256-GCM + Secret Manager)
 
-**Status.** 🟡 **PROPOSTA — aguarda sim/não do Vitor.** Resolve a decisão #5 do brief E09-slim (consolidador 2026-07-05: "AES-256-GCM com chave no Secret Manager; ADR curto antes de L2-T2; KMS pós-V1"). Implementada em `saveDadosBancarios`/`getBankDetailsForPayout` (E09s-L2-T2/T5) conforme o desenho abaixo — ajuste do Vitor ⇒ ajuste no código, o envelope persistido carrega `keyVersion` justamente para isso.
+**Status.** ✅ **RATIFICADA (Vitor, 2026-07-17)** como está: AES-256-GCM, chave no Secret Manager (`BANK_DATA_KEY`), rotação por `keyVersion`, AAD por tenant, **sem KMS na V1**. Resolve a decisão #5 do brief E09-slim (consolidador 2026-07-05: "AES-256-GCM com chave no Secret Manager; ADR curto antes de L2-T2; KMS pós-V1"). Implementada em `saveDadosBancarios`/`getBankDetailsForPayout` (E09s-L2-T2/T5) conforme o desenho abaixo — ajuste futuro ⇒ ajuste no código, o envelope persistido carrega `keyVersion` justamente para isso.
 
 **Contexto.** RN-354 (LGPD): o número da conta e a chave PIX do organizador são dado bancário sensível. O modelo L1 já separa `tenants/{tid}/dadosBancarios/current` (MASCARADO — `****1234`, único legível por cliente) de `tenants/{tid}/dadosBancariosSecret/current` (blob cifrado, `read:false`/`write:false` para TODO cliente nas Rules — só Function via Admin SDK). Falta fixar o MECANISMO da cifra. A ameaça-modelo da V1: (a) vazamento de um dump do Firestore (backup, export, acesso indevido ao console) não pode expor conta/PIX em claro; (b) um blob copiado de um tenant para outro não pode decifrar; (c) o acesso legítimo do admin ao número completo é raro (payout manual mock — RN-356) e SEMPRE auditado (L2-T5). NÃO está na ameaça-modelo da V1: comprometimento do runtime das Functions (quem controla o runtime lê a chave — isso só KMS/HSM com política de acesso resolve, e mesmo assim parcialmente).
 

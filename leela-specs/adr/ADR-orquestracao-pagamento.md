@@ -1,10 +1,10 @@
 ---
-tags: [leela, adr, arquitetura, pagamento, checkout, gateway, proposta]
+tags: [leela, adr, arquitetura, pagamento, checkout, gateway, aceita]
 ---
 
 # ADR-013 · Orquestração de pagamento (provedores plugáveis + roteamento por providerId)
 
-**Status.** 🟡 **PROPOSTA — aguarda sim/não do Vitor.** Estende [[ADR-006]] (PaymentProvider) sem quebrar o fluxo atual. Motivada pela pergunta do Vitor (2026-07-11): "é comum termos que rotear para outro gateway; como construir a integração de forma que seja só plugar outros provedores no futuro, ou orquestrar internamente?".
+**Status.** ✅ **ACEITA (Vitor, 2026-07-17).** Implementação em **lote próprio** — nesta rodada só o status muda de proposta para aceita (registry + `resolveProvider(contexto)` + `providerId` de roteamento + webhook demux; **failover fica para depois**). Estende [[ADR-006]] (PaymentProvider) sem quebrar o fluxo atual. Motivada pela pergunta do Vitor (2026-07-11): "é comum termos que rotear para outro gateway; como construir a integração de forma que seja só plugar outros provedores no futuro, ou orquestrar internamente?".
 
 **Contexto.** Hoje o gateway é decidido (Asaas, ADR-006/D2) e a seleção é `selectPaymentProvider(env)`: sem chave → Mock; com chave → adapter real (fail-safe). Isso resolve UM provedor. Mas o negócio prevê cenários reais de **múltiplos gateways**: um provedor cai (failover), um método fica mais barato noutro gateway (custo), um tenant exige um adquirente específico (contrato), ou uma migração gradual entre provedores. Se cada um desses vira um `if` espalhado no checkout e no webhook, o código de dinheiro apodrece. A questão não é *qual* gateway, é *como plugar N deles sem tocar no fluxo*.
 

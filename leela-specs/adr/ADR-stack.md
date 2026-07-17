@@ -68,6 +68,21 @@
 
 ---
 
+## ADRs estendidos (arquivos próprios em `adr/`)
+
+Decisões posteriores à consolidação inicial vivem em arquivos próprios nesta pasta:
+
+- **ADR-009 · Multi-tenant marketplace** (`ADR-multitenancy.md`) — isolamento por `tenantId`, claims, Rules; pré-requisito transversal.
+- **ADR-011 · Pedido em grupo** (`ADR-pedido-em-grupo.md`) — reembolso/cancelamento/titularidade **por inscrito** dentro do pedido.
+- **ADR-012 · Lote por modalidade** (`ADR-lotes-por-modalidade.md`) — o lote pertence à modalidade; preço vigente derivado.
+- **ADR-013 · Orquestração de pagamento** (`ADR-orquestracao-pagamento.md`) — ✅ **aceita (2026-07-17)**; registry + `resolveProvider(contexto)` + `providerId` + webhook demux; implementação em lote próprio.
+- **ADR-014 · Cifra dos dados bancários** (`ADR-014-cifra-dados-bancarios.md`) — ✅ **ratificada (2026-07-17)**; AES-256-GCM + Secret Manager + `keyVersion` + AAD por tenant, sem KMS na V1.
+- **ADR-015 · Tarefas agendadas (cron/scheduler)** (`ADR-015-scheduler-cron.md`) — **renumerada de ADR-007 em 2026-07-17** (o Turborepo mantém ADR-007, seção acima); wrapper v1 + Core puro + horários escalonados.
+
+> Nota de numeração: **ADR-007 = Turborepo** (seção acima). O padrão de cron, antes numerado ADR-007 por engano no corpus da Onda 2, é o **ADR-015**.
+
+---
+
 ## Pendências ainda abertas (não bloqueiam Onda 0/1)
 
 | Item | Quando decidir |
