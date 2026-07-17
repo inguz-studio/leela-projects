@@ -1,6 +1,46 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA 2 A PEDIDO DO VITOR)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA 3 — FIM DE SESSÃO PARA REVISÃO DO VITOR)
 
-## ⏸️ PAUSA 2 · 2026-07-17 (a mais recente) — COMECE AQUI
+## ⏸️ PAUSA 3 · 2026-07-17 noite (a mais recente) — COMECE AQUI
+
+**Pausa DELIBERADA a pedido do Vitor para revisão do trabalho. Nada em voo, working tree limpa, main == origin == `7d58f0e`. 14 gates PASS no dia, zero gate_failed.**
+
+### O que aterrissou nesta sessão (2026-07-17, ordem cronológica)
+1. **LEELA-DECIS** `ae76eee..c7c28be` — decisões 1-7 ratificadas; cron→ADR-015; ADR-013 aceita; ADR-014 ratificada; RN-304+S307 registrados.
+2. **LEELA-BEPEND** `53571ec..866a838` — demográfico real RN-820 · eventoId no repasse RN-349 · api-client · S209-T2 validação de tamanho no checkout.
+3. **LEELA-SHOWROOM-LOGO** `edd7f52` + **LEELA-BRAND-WINE** `8cabc09..7ac4e91` — logo no showroom; 5 SVGs wordmark por COR (`brand/leela-wordmark-{lime,cream,wine,plum,ember}.svg`); tema claro renomeado **Wine** (rename pleno + retrocompat).
+4. **LEELA-ONDA3-PLAN** `31f750b..ec9770c` — Onda 3: 22 stories/48 tasks/5 lotes (`leela-specs/next-trail-onda3/`).
+5. **LEELA-O3-L2W** `7d24bea..7f46d6b` — landing: SEO fino (metadata/OG/JSON-LD/sitemap/robots) + CoverImage.
+6. **LEELA-FLAT-DEFAULT** `5bb08a1` — flat = default global dos form primitives (opt-out `bordered`); varredura painel em `dbbe1e0`.
+7. **LEELA-O3-L1 COMPLETO (backend+telas)** — S305 política `5296c2f`+`83d97ab` · S1804 cupom-only `d5e0fe5` · S307 capacidade RN-304 `73395ed`+`b615559`+`c3dab20` · S904 reembolso/transferência `bebbc0a`+`901e3a7` · S306 saúde/regulamento `800f0d6`+`ffafbb7` · hardening catch-all `19c8afe` · **review frente B `7d58f0e` (RN-303 owner-only)**.
+8. **LEELA-O3-L2SEC-L4** `c345834..496016b` — perfil público @handle (registry+reader sem PII+rota landing) · capa de clube (canônico=`imagemUrl`) · scheduler campanhas ADR-015 (TOCTOU fechado).
+9. **LEELA-O3-PDER** `487d108..5d1466c` — editor de perfil @handle no painel · capa de clube UI · wrapper getPublicPerfil · toggle honesto S402-T2.
+10. **LEELA-O3-L3B** `30cb9f2..e777a70` — **E18 assessorias backend completo** (cadastro CNPJ/CPF, provisionamento atômico no aceite, desconto via kernel de cupons ADR-012, encerramento) + **S402-T1 gatilhos**.
+
+### ⚠️ Evento operacional do dia (registrado; lições L-007/L-008 no harness)
+O watchdog deu FALSO morto no Fable do O3-L1; o escopo foi redespachado e as DUAS lanes co-executaram ~7h na mesma árvore. Reconciliado sem perda. Colaterais documentados: `63bcf7c` tem mensagem errada (conteúdo real = exports S402-T1); 2 crashes de suíte por disputa da porta 8080. **Protocolo novo: provar óbito por mtime antes de redespachar; mutex de emulator ENTRE lanes.**
+
+### Estado da Onda 3 (mapa Lote→status)
+- **Lote 1 · Robustez financeira: ✅ COMPLETO** (backend + 5 telas, gates pagos).
+- **Lote 2 · Web discovery + link-in-bio: ✅ ~95%** — SEO ✅ · capas ✅ · perfil @handle backend+rota+editor ✅. Falta: upload REAL de arquivo (hoje URL+prévia; sem Storage no repo — lacuna registrada).
+- **Lote 3 · Assessorias E18: backend ✅ / TELAS ❌** — faltam: S1800-T1 form cadastro · S1801-T2 página de aceite na landing (gated pelo EmailProvider) · S1802-T1 editor da condição de desconto · S1803-T1 lista/encerrar · wrappers api-client das 4 callables · CRUD/toggle de automacoes (ligar `29dd3ac`).
+- **Lote 4 · Scheduler: ✅ backend completo** (agendadas + gatilhos). Falta só o toggle ligado à flag (junto das telas E18).
+- **Lote 5 · App do atleta E13-slim: 📋 NÃO INICIADO** — gated pelo enrollment das lojas (ação externa Vitor, lead time; começar já).
+
+### Fila da retomada (ordem por valor)
+1. **Telas E18 + amarrações** (Opus, painel+landing+api-client): as 6 pendências do Lote 3 acima + toggle cupom-only (frente Opus, achado da review) + slide-in [pag] exibir cupom.clubeRef.
+2. **Lote de Rules próprio:** catch-all de CLUBES ainda `isPlatformAdmin` (~L1990 — mesmo achado sistêmico do de eventos) + rate-limit na callable pública de aceite (infra).
+3. Nit documental: STORIES-onda3 rotula RN-345 onde é RN-303.
+4. **Lote 5** quando enrollment sair · **/aegis pente-fino de segurança** antes do deploy real (Vitor sinalizou interesse) · índices deploy-only acumulados em `firestore.indexes.json` (eventos, clubes, campanhas CG, automacoes CG, saude CG).
+
+### Decisões abertas do Vitor (painel `DECISOES-ABERTAS.md`)
+Item **17 NOVO**: idade máxima p/ campanha agendada VENCIDA disparar (default atual: dispara na 1ª rodada do cron). + Ações externas: enrollment lojas · domínio · EmailProvider (destrava convite E18 em prod) · sandbox Asaas · KYC · rotação da chave prod.
+
+### Regras do Vitor herdadas hoje (invioláveis)
+Navegador/screenshot SÓ com validação prévia dele · variantes de logo = recolor do wordmark (nunca box) · tema claro = **Wine** · flat = default global.
+
+---
+
+## ⏸️ PAUSA 2 · 2026-07-17 (histórico) — superada pela Pausa 3
 
 **Como cheguei aqui:** internet do Vitor voltou → retomei o LEELA-O3-L1 que o Fable tinha deixado (o Fable travou por INFRA, watchdog de stream 600s — não erro de código). Vitor decidiu rodar o restante em **Opus 4.8** (trava de dinheiro = review antagonista obrigatória, não o tier). Rodou um tempo e o Vitor pediu pause de novo; PAREI o agente Opus (`a266c54d0212b439a`).
 
