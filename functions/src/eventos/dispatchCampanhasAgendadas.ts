@@ -27,6 +27,17 @@
 // FORA DA JANELA: `agendadoPara > agora` simplesmente não entra na query —
 // não dispara antes da hora. Rascunho/enviado idem (status != 'agendado').
 //
+// VENCIDA (RN-136 · decisão 17 do Vitor, 2026-07-17 — "Se for agendada
+// vencida, não dispara. Fica vencida"): `agendadoPara` além da TOLERÂNCIA
+// de 2 ciclos do cron (10 min — `DISPARO_VENCIMENTO_TOLERANCIA_MS`, fonte
+// única no core) NÃO dispara: transaciona agendado→'vencido' + carimbo
+// `vencidoEm`, estado TERMINAL (Rules congelam p/ cliente; reagendar =
+// decisão futura). A marca roda ANTES dos gates de tenant/evento — vencer é
+// fato de RELÓGIO: campanha de tenant suspenso ou evento órfão também vence
+// (elimina o hazard de reativação disparar backlog velho). Replay é inócuo:
+// 'vencido' some da varredura (status != 'agendado') e a tx re-checa o snap
+// fresco (anti-TOCTOU: adiada/retirada entre a query e a tx não é marcada).
+//
 // CASOS QUE FICAM 'agendado' (retry natural na próxima varredura — decisão
 // registrada no report):
 //   - limite RN-133 estourado (4 push na janela de 7d): NÃO carimba, NÃO
@@ -55,7 +66,12 @@ import * as admin from 'firebase-admin';
 import { runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { Timestamp } from 'firebase-admin/firestore';
-import { CHAVE_LOG_COMUNICACAO_RE, COLECAO_CAMPANHAS } from '@leela/core';
+import {
+  CHAVE_LOG_COMUNICACAO_RE,
+  COLECAO_CAMPANHAS,
+  STATUS_CAMPANHA_VENCIDO,
+  disparoVencido,
+} from '@leela/core';
 import { executarDisparoCampanha } from './enviarCampanha';
 
 // ---------------------------------------------------------------------------
@@ -69,6 +85,8 @@ export interface DispatchCampanhasResultado {
   disparadas: number;
   /** Já estavam 'enviado' quando o disparo serializou (replay/corrida) */
   jaEnviadas: number;
+  /** Vencidas além da tolerância (RN-136): agendado→'vencido', SEM envio */
+  vencidas: number;
   /** Bloqueadas pelo limite RN-133 (ficam agendadas — retry natural) */
   bloqueadasLimite: number;
   /** Segmento vazio (ficam agendadas — não inventar alcance) */
@@ -100,6 +118,7 @@ export async function dispatchCampanhasAgendadasCore(
     encontradas: 0,
     disparadas: 0,
     jaEnviadas: 0,
+    vencidas: 0,
     bloqueadasLimite: 0,
     segmentoVazio: 0,
     tenantInativo: 0,
@@ -159,6 +178,47 @@ export async function dispatchCampanhasAgendadasCore(
         resultado.erros += 1;
         logger.error('dispatch_campanha_sem_evento_pai', { campanhaId });
         continue;
+      }
+
+      // ── RN-136 (decisão 17): vencida além da tolerância NÃO dispara ─────
+      // Classificação por RELÓGIO puro, ANTES de id/evento/tenant: vencer
+      // independe do estado do tenant (suspenso não segura campanha viva
+      // p/ disparar na reativação) e drena da varredura até docs
+      // envenenados (id inválido/órfãos) que já venceram. A tx re-checa o
+      // snap FRESCO (status ainda 'agendado' + ainda vencida) — adiamento/
+      // retirada entre a query e a tx aborta a marca (anti-TOCTOU); replay
+      // é no-op ('vencido' sai da query).
+      const agendadoRaw = campanhaDoc.get('agendadoPara') as
+        | { toMillis?: () => number }
+        | null
+        | undefined;
+      if (
+        typeof agendadoRaw?.toMillis === 'function' &&
+        disparoVencido(agendadoRaw.toMillis(), agora.getTime())
+      ) {
+        const marcada = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(campanhaDoc.ref);
+          if (!snap.exists || snap.get('status') !== 'agendado') return false;
+          const quando = snap.get('agendadoPara') as
+            | { toMillis?: () => number }
+            | null
+            | undefined;
+          if (
+            typeof quando?.toMillis !== 'function' ||
+            !disparoVencido(quando.toMillis(), agora.getTime())
+          ) {
+            return false;
+          }
+          tx.update(campanhaDoc.ref, {
+            status: STATUS_CAMPANHA_VENCIDO,
+            vencidoEm: agora,
+            atualizadoEm: agora,
+          });
+          return true;
+        });
+        if (marcada) resultado.vencidas += 1;
+        else resultado.naoElegiveis += 1;
+        continue; // NUNCA envia — terminal (reagendar = decisão futura)
       }
 
       // Espelho do fail-fast do disparo manual: id incompatível com a chave

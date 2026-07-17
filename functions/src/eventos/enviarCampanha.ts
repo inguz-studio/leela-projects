@@ -55,6 +55,7 @@ import {
   CHAVE_LOG_COMUNICACAO_RE,
   COLECAO_CAMPANHAS,
   STATUS_INSCRITO,
+  disparoVencido,
   inscritoAtivo,
   truncarPush,
   type AuthClaims,
@@ -222,8 +223,11 @@ export async function executarDisparoCampanha(
     // Guarda anti-TOCTOU do CRON (review O3-L4 #1), avaliada no snap FRESCO
     // dentro da tx: entre a varredura e o disparo o organizador pode ter
     // voltado a campanha p/ rascunho ou ADIADO o agendamento — nesse caso
-    // NÃO envia, NÃO carimba, NÃO consome cota. O disparo manual (callable)
-    // não passa a guarda (enviar rascunho agora é o job do botão "Enviar").
+    // NÃO envia, NÃO carimba, NÃO consome cota. Decisão 17 (RN-136): a
+    // janela válida é (agora − tolerância, agora] — `agendadoPara` reeditado
+    // p/ um passado além da tolerância entre a query e a tx também NÃO envia
+    // (o cron marca 'vencido' na varredura seguinte). O disparo manual
+    // (callable) não passa a guarda (enviar rascunho é o job do botão).
     opts.exigirAgendadoVencido === true
       ? (snap) => {
           if (snap.get('status') !== 'agendado') return false;
@@ -231,9 +235,11 @@ export async function executarDisparoCampanha(
             | { toMillis?: () => number }
             | null
             | undefined;
+          if (typeof quando?.toMillis !== 'function') return false;
+          const momentoMs = quando.toMillis();
           return (
-            typeof quando?.toMillis === 'function' &&
-            quando.toMillis() <= agora.getTime()
+            momentoMs <= agora.getTime() &&
+            !disparoVencido(momentoMs, agora.getTime())
           );
         }
       : undefined

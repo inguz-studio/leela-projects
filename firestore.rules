@@ -1284,21 +1284,24 @@ service cloud.firestore {
                 && request.resource.data.agendadoPara is timestamp);
         }
 
-        /** Cliente nunca escreve status 'enviado' (RN-130). */
+        /** Cliente nunca escreve status 'enviado' (RN-130) nem 'vencido'
+            (RN-136 — decisão 17: estado TERMINAL, exclusivo do cron). */
         function statusCampanhaEditavelPeloCliente() {
           return request.resource.data.status in ['rascunho', 'agendado'];
         }
 
-        /** Cliente não CRIA doc carimbado com campos da Function de envio. */
+        /** Cliente não CRIA doc carimbado com campos da Function de envio
+            nem com o carimbo de vencimento (RN-136). */
         function semCamposDeEnvioCampanha() {
-          return !request.resource.data.keys().hasAny(['enviadoEm', 'aberturasPct'])
+          return !request.resource.data.keys()
+              .hasAny(['enviadoEm', 'aberturasPct', 'vencidoEm'])
             && request.resource.data.get('alcance', 0) == 0;
         }
 
-        /** Update de cliente não TOCA campos da Function de envio. */
+        /** Update de cliente não TOCA campos de Function (envio/vencimento). */
         function camposDeEnvioCampanhaIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['alcance', 'aberturasPct', 'enviadoEm']);
+            .hasAny(['alcance', 'aberturasPct', 'enviadoEm', 'vencidoEm']);
         }
 
         allow read: if isPlatformAdmin()
@@ -1312,10 +1315,15 @@ service cloud.firestore {
                           && statusCampanhaEditavelPeloCliente()
                           && semCamposDeEnvioCampanha())
                       || isPlatformAdmin();
+        // 'enviado' é trilha imutável; 'vencido' (RN-136 — decisão 17) é
+        // TERMINAL: cliente não edita (reviver/reagendar = decisão futura
+        // do Vitor) nem deleta (o doc é a trilha de que um agendamento NÃO
+        // saiu — valor de suporte).
         allow update: if (isTenantWriter(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
                           && resource.data.status != 'enviado'
+                          && resource.data.status != 'vencido'
                           && shapeCampanhaValida()
                           && agendamentoCampanhaCoerente()
                           && statusCampanhaEditavelPeloCliente()
@@ -1323,7 +1331,8 @@ service cloud.firestore {
                       || isPlatformAdmin();
         allow delete: if (isTenantWriter(resource.data.tenantId)
                           && tenantAtivo(resource.data.tenantId)
-                          && resource.data.status != 'enviado')
+                          && resource.data.status != 'enviado'
+                          && resource.data.status != 'vencido')
                       || isPlatformAdmin();
       }
 
@@ -1356,15 +1365,20 @@ service cloud.firestore {
                     && request.resource.data.offsetHoras <= 720));
         }
 
-        /** ∑ `disparos` (recontagem de Function) nasce 0/ausente. */
+        /** ∑ `disparos` (recontagem de Function) nasce 0/ausente; o carimbo
+            `vencidoEm` (RN-136 — cron desativa gatilho pontual vencido)
+            NUNCA nasce do cliente. */
         function disparosZeradoNoCreate() {
-          return request.resource.data.get('disparos', 0) == 0;
+          return request.resource.data.get('disparos', 0) == 0
+            && !request.resource.data.keys().hasAny(['vencidoEm']);
         }
 
-        /** Update de cliente não TOCA o ∑. */
+        /** Update de cliente não TOCA o ∑ nem o carimbo de vencimento.
+            (Reativar `ativa=true` é permitido — o cron re-desativa sem
+            disparar enquanto o momento seguir vencido; decisão 17.) */
         function disparosIntocado() {
           return !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['disparos']);
+            .hasAny(['disparos', 'vencidoEm']);
         }
 
         allow read: if isPlatformAdmin()

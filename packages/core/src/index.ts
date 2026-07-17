@@ -907,6 +907,7 @@ export {
 export type {
   CanalCampanha,
   StatusCampanha,
+  StatusCampanhaPersistido,
   OrigemCampanha,
   TipoSegmentoCampanha,
   SegmentoCampanha,
@@ -921,6 +922,13 @@ export {
   CAMPOS_FUNCTION_CAMPANHA,
   validarCampanha,
   parseCampanha,
+  // RN-136 · decisão 17 (agendada vencida NÃO dispara — estado terminal)
+  STATUS_CAMPANHA_VENCIDO,
+  isStatusCampanhaPersistido,
+  DISPARO_CRON_INTERVALO_MIN,
+  DISPARO_VENCIMENTO_CICLOS,
+  DISPARO_VENCIMENTO_TOLERANCIA_MS,
+  disparoVencido,
 } from './eventos/campanha';
 
 // ---------------------------------------------------------------------------

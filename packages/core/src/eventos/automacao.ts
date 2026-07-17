@@ -86,12 +86,19 @@ export interface Automacao {
   offsetHoras?: number;
   /** ∑ Disparos registrados — recontagem por Function (cliente nunca) */
   disparos: number;
+  /**
+   * ∑ Carimbo de vencimento (RN-136 · decisão 17): gatilho pontual
+   * (vespera/pos) vencido além da tolerância do cron foi DESATIVADO sem
+   * disparo. Escrita exclusiva do cron `dispatchAutomacoes`; "Vencida" na
+   * UI é pendência do lote de painel.
+   */
+  vencidoEm?: Timestamp;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
 
 /** Campos de escrita exclusiva de Function (Rules negam cliente). */
-export const CAMPOS_FUNCTION_AUTOMACAO = ['disparos'] as const;
+export const CAMPOS_FUNCTION_AUTOMACAO = ['disparos', 'vencidoEm'] as const;
 
 // ---------------------------------------------------------------------------
 // Validação pura (form do painel + fronteira da Function)
@@ -230,5 +237,9 @@ export function parseAutomacao(
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
   if (typeof offsetHoras === 'number') automacao.offsetHoras = offsetHoras;
+  const vencidoEm = data['vencidoEm'];
+  if (vencidoEm !== undefined && vencidoEm !== null) {
+    automacao.vencidoEm = vencidoEm as Timestamp;
+  }
   return automacao;
 }

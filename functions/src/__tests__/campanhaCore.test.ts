@@ -15,6 +15,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  DISPARO_VENCIMENTO_TOLERANCIA_MS,
+  disparoVencido,
   parseCampanha,
   TIPOS_SEGMENTO_CAMPANHA,
   validarCampanha,
@@ -204,5 +206,64 @@ describe('parseCampanha — fail-fast', () => {
     expect(() =>
       parseCampanha('camp-x', { ...docValido, status: 'enviada' })
     ).toThrow(/status/); // código feminino NÃO é código de dado (item 9)
+  });
+
+  // ── RN-136 (decisão 17): estado terminal 'vencido' ──────────────────────
+
+  it('vencido válido: round-trip com agendadoPara + vencidoEm, alcance 0', () => {
+    const c = parseCampanha('camp-v', {
+      ...docValido,
+      status: 'vencido',
+      agendadoPara: ts,
+      vencidoEm: ts,
+    });
+    expect(c.status).toBe('vencido');
+    expect(c.vencidoEm).toBe(ts);
+    expect(c.alcance).toBe(0);
+    expect(c.enviadoEm).toBeUndefined();
+  });
+
+  it('REJEITA vencido sem vencidoEm, sem agendadoPara, e vencidoEm fora do estado', () => {
+    expect(() =>
+      parseCampanha('camp-x', { ...docValido, status: 'vencido', agendadoPara: ts })
+    ).toThrow(/vencidoEm/);
+    expect(() =>
+      parseCampanha('camp-x', { ...docValido, status: 'vencido', vencidoEm: ts })
+    ).toThrow(/agendadoPara/);
+    // Carimbo é exclusivo do cron — presente em rascunho é escrita forjada
+    expect(() =>
+      parseCampanha('camp-x', { ...docValido, vencidoEm: ts })
+    ).toThrow(/vencidoEm/);
+    // vencida NUNCA carrega envio (o vencimento é exatamente o não-envio)
+    expect(() =>
+      parseCampanha('camp-x', {
+        ...docValido,
+        status: 'vencido',
+        agendadoPara: ts,
+        vencidoEm: ts,
+        enviadoEm: ts,
+      })
+    ).toThrow(/enviadoEm/);
+    expect(() =>
+      parseCampanha('camp-x', {
+        ...docValido,
+        status: 'vencido',
+        agendadoPara: ts,
+        vencidoEm: ts,
+        alcance: 10,
+      })
+    ).toThrow(/alcance/);
+  });
+});
+
+describe('disparoVencido — tolerância RN-136 (decisão 17)', () => {
+  it('tolerância = 2 ciclos de 5 min (10 min); fronteira EXATA já é vencida', () => {
+    expect(DISPARO_VENCIMENTO_TOLERANCIA_MS).toBe(10 * 60 * 1000);
+    const agora = Date.UTC(2026, 6, 17, 12, 0, 0);
+    const limite = agora - DISPARO_VENCIMENTO_TOLERANCIA_MS;
+    expect(disparoVencido(limite, agora)).toBe(true); // == limite ⇒ vencida
+    expect(disparoVencido(limite + 1, agora)).toBe(false); // 1ms dentro
+    expect(disparoVencido(agora, agora)).toBe(false); // devida agora
+    expect(disparoVencido(limite - 1, agora)).toBe(true); // além
   });
 });

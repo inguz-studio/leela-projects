@@ -6,9 +6,15 @@
  * `*Core` direto, o Emulator não sobe pubsub): varredura de campanhas
  * `agendado` vencidas + disparo REUSANDO o pipeline E06.
  *
- * Cobre (aceites do brief O3-L4):
- *   - agendada VENCIDA dispara na janela: agendado→enviado + enviadoEm +
- *     alcance + logs deterministicos (RN-219), SEM corpo (PII);
+ * Cobre (aceites do brief O3-L4 + decisão 17 · RN-136):
+ *   - agendada devida DENTRO DA TOLERÂNCIA (2 ciclos do cron) dispara:
+ *     agendado→enviado + enviadoEm + alcance + logs determinísticos
+ *     (RN-219), SEM corpo (PII);
+ *   - decisão 17: agendada vencida ALÉM da tolerância NÃO dispara — vira
+ *     estado TERMINAL 'vencido' + vencidoEm, zero envio; fronteira EXATA
+ *     (== agora−tolerância já é vencida; 1s dentro dispara); replay da
+ *     vencida é no-op (sai da varredura); guarda anti-TOCTOU também barra
+ *     agendadoPara reeditado p/ além da tolerância;
  *   - agendada NO FUTURO não dispara (fora da janela);
  *   - rascunho/enviado não entram na varredura;
  *   - REPLAY do cron não duplica (logs/alcance/carimbo intactos);
@@ -31,7 +37,11 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { logComunicacaoDocId, type AuthClaims } from '@leela/core';
+import {
+  DISPARO_VENCIMENTO_TOLERANCIA_MS,
+  logComunicacaoDocId,
+  type AuthClaims,
+} from '@leela/core';
 import { dispatchCampanhasAgendadasCore } from '../eventos/dispatchCampanhasAgendadas';
 import { enviarCampanhaCore } from '../eventos/enviarCampanha';
 
@@ -39,9 +49,12 @@ const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 const hasEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
+const MIN_MS = 60 * 1000;
 const DIA_MS = 24 * 60 * 60 * 1000;
 const HORA_MS = 60 * 60 * 1000;
 const AGORA = new Date('2026-07-10T12:00:00Z');
+/** Devida DENTRO da tolerância de 2 ciclos (10 min): 4 min de atraso. */
+const DEVIDA_DENTRO = new Date(AGORA.getTime() - 4 * MIN_MS);
 
 const CASTELO_ID = 'castelo-producoes';
 const MARINA_UID = 'uid-marina-castelo';
@@ -136,7 +149,8 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
       canal: ['push', 'email'],
       origem: 'manual',
       status: 'agendado',
-      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+      // Default: devida DENTRO da tolerância (decisão 17 — além vira vencida)
+      agendadoPara: Timestamp.fromDate(DEVIDA_DENTRO),
       segmento: { tipo: 'todos_inscritos' },
       alcance: 0,
       criadoEm: now, atualizadoEm: now,
@@ -146,9 +160,9 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
 
   const rodarCron = () => dispatchCampanhasAgendadasCore(adminDb, AGORA);
 
-  // ── Janela: vencida dispara, futura não ─────────────────────────────────
+  // ── Janela: devida dentro da tolerância dispara, futura não ─────────────
 
-  it('agendada VENCIDA dispara: agendado→enviado + alcance + logs RN-219 sem corpo', async () => {
+  it('agendada devida DENTRO da tolerância dispara: agendado→enviado + alcance + logs RN-219 sem corpo', async () => {
     await criarCampanha('camp-vencida');
 
     const r = await rodarCron();
@@ -196,6 +210,107 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
 
     const r = await rodarCron();
     expect(r).toMatchObject({ encontradas: 0, disparadas: 0 });
+    expect((await logsCol().get()).size).toBe(0);
+  });
+
+  // ── Decisão 17 (RN-136): vencida além da tolerância NÃO dispara ─────────
+
+  it('decisão 17: vencida além da tolerância vira estado TERMINAL vencido — zero envio', async () => {
+    await criarCampanha('camp-expirada', {
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+    });
+
+    const r = await rodarCron();
+    expect(r).toMatchObject({
+      encontradas: 1, vencidas: 1, disparadas: 0, erros: 0,
+    });
+
+    const doc = await campanhasCol().doc('camp-expirada').get();
+    expect(doc.get('status')).toBe('vencido');
+    expect(doc.get('vencidoEm')).toBeTruthy();
+    expect(doc.get('enviadoEm')).toBeUndefined(); // NUNCA carimbou envio
+    expect(doc.get('alcance')).toBe(0);           // NUNCA calculou alcance
+    expect((await logsCol().get()).size).toBe(0); // NADA saiu (nem cota)
+  });
+
+  it('decisão 17: fronteira EXATA — na tolerância já é vencida; 1s dentro dispara', async () => {
+    const limite = AGORA.getTime() - DISPARO_VENCIMENTO_TOLERANCIA_MS;
+    await criarCampanha('camp-limite', {
+      agendadoPara: Timestamp.fromMillis(limite), // == agora − 10min
+    });
+    await criarCampanha('camp-um-seg-dentro', {
+      agendadoPara: Timestamp.fromMillis(limite + 1000),
+    });
+
+    const r = await rodarCron();
+    expect(r).toMatchObject({
+      encontradas: 2, vencidas: 1, disparadas: 1, erros: 0,
+    });
+    expect(
+      (await campanhasCol().doc('camp-limite').get()).get('status')
+    ).toBe('vencido');
+    expect(
+      (await campanhasCol().doc('camp-um-seg-dentro').get()).get('status')
+    ).toBe('enviado');
+    // Só a de dentro da janela gerou logs
+    expect((await logsCol().get()).size).toBe(INSCRITOS * 2);
+  });
+
+  it('decisão 17: REPLAY pós-vencida é no-op — sai da varredura, carimbo intacto', async () => {
+    await criarCampanha('camp-expirada-replay', {
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - DIA_MS)),
+    });
+
+    const r1 = await rodarCron();
+    expect(r1).toMatchObject({ vencidas: 1 });
+    const carimbo = (
+      await campanhasCol().doc('camp-expirada-replay').get()
+    ).get('vencidoEm');
+
+    const r2 = await rodarCron();
+    expect(r2).toMatchObject({ encontradas: 0, vencidas: 0, disparadas: 0 });
+
+    const doc = await campanhasCol().doc('camp-expirada-replay').get();
+    expect(doc.get('status')).toBe('vencido');
+    expect(doc.get('vencidoEm')).toEqual(carimbo); // não re-marcou
+    expect((await logsCol().get()).size).toBe(0);
+  });
+
+  it('decisão 17: guarda anti-TOCTOU do disparo barra agendadoPara além da tolerância', async () => {
+    // Simula corrida marca×dispara: uma rodada varreu a campanha DENTRO da
+    // janela, mas antes da tx o doc foi reeditado p/ um passado além da
+    // tolerância — a guarda no snap FRESCO nega o envio (a rodada seguinte
+    // marca 'vencido').
+    await criarCampanha('camp-corrida-vencida', {
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+    });
+    const { executarDisparoCampanha } = await import('../eventos/enviarCampanha');
+
+    const r = await executarDisparoCampanha(
+      adminDb,
+      adminDb.collection('eventos').doc(EVENTO_ID),
+      'camp-corrida-vencida',
+      CASTELO_ID,
+      AGORA,
+      { exigirAgendadoVencido: true }
+    );
+    expect(r).toEqual({ bloqueado: 'nao_elegivel' });
+    const doc = await campanhasCol().doc('camp-corrida-vencida').get();
+    expect(doc.get('status')).toBe('agendado'); // NÃO carimbou envio
+    expect((await logsCol().get()).size).toBe(0);
+  });
+
+  it('decisão 17: vencida de tenant SUSPENSO também é marcada (relógio puro — sem burst na reativação)', async () => {
+    await criarCampanha('camp-susp-expirada', {
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+    });
+    await adminDb.collection('tenants').doc(CASTELO_ID).update({ status: 'suspenso' });
+
+    const r = await rodarCron();
+    expect(r).toMatchObject({ vencidas: 1, disparadas: 0, tenantInativo: 0 });
+    expect(
+      (await campanhasCol().doc('camp-susp-expirada').get()).get('status')
+    ).toBe('vencido');
     expect((await logsCol().get()).size).toBe(0);
   });
 
@@ -340,7 +455,9 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
       id: 'camp-orfa', tenantId: CASTELO_ID,
       titulo: 'Campanha órfã', conteudo: 'Conteúdo com dez+ caracteres.',
       canal: ['email'], origem: 'manual', status: 'agendado',
-      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+      // DENTRO da tolerância — além dela a vencida drena antes do check de
+      // órfã (decisão 17) e este teste quer exercitar o caminho de órfã.
+      agendadoPara: Timestamp.fromDate(DEVIDA_DENTRO),
       segmento: { tipo: 'todos_inscritos' }, alcance: 0,
       criadoEm: FieldValue.serverTimestamp(),
       atualizadoEm: FieldValue.serverTimestamp(),

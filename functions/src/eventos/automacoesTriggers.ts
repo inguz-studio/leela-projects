@@ -29,6 +29,20 @@
 //      One-shot: o carimbo 'enviado' do template segura o replay do cron
 //      (ja_enviado ⇒ nada duplica — mesma disciplina do scheduler).
 //
+// VENCIMENTO (RN-136 · decisão 17 do Vitor, 2026-07-17 — "agendada vencida
+// não dispara; fica vencida"): gatilho PONTUAL de relógio (vespera_evento/
+// pos_evento) cujo momento passou além da tolerância de 2 ciclos do cron
+// (`DISPARO_VENCIMENTO_TOLERANCIA_MS` — fonte única no core) NÃO dispara:
+// a automação é DESATIVADA (`ativa=false` + carimbo `vencidoEm`) numa tx
+// (replay-safe: sai da varredura). PREMISSAS registradas: (a) kit_disponivel
+// NÃO vence — "kit disponível" é ESTADO contínuo (janela aberta), não
+// momento pontual; dispara mesmo que a janela tenha aberto horas atrás;
+// (b) o vencimento roda ANTES do gate de tenant (relógio puro — suspensão
+// não segura gatilho velho p/ disparar na reativação); (c) reativar
+// (`ativa=true`) uma automação vencida é permitido pelas Rules, mas o cron
+// re-desativa sem disparar enquanto o momento seguir vencido — terminal de
+// fato; reagendamento real = decisão futura do Vitor.
+//
 // TENANT (RN-402): fonte da verdade = EVENTO PAI (nunca o doc da automação);
 // tenant não-ativo não dispara (fica para quando reativar) — mesma
 // disciplina do dispatchCampanhasAgendadas.
@@ -49,6 +63,7 @@ import {
   CHAVE_LOG_COMUNICACAO_RE,
   COLECAO_AUTOMACOES,
   dataHoraLocalParaDate,
+  disparoVencido,
   isDataHoraLocalISO,
   ordenarJanelasEntrega,
   momentoDoGatilho,
@@ -70,6 +85,8 @@ export interface DispatchAutomacoesResultado {
   jaEnviadas: number;
   /** Momento do gatilho ainda no futuro (ou cronograma ausente) */
   foraDaJanela: number;
+  /** Vencidas além da tolerância (RN-136): desativadas SEM disparo */
+  vencidas: number;
   /** Bloqueadas pelo limite RN-133 (retry natural na próxima rodada) */
   bloqueadasLimite: number;
   /** Segmento vazio (não dispara, não carimba) */
@@ -270,6 +287,7 @@ export async function dispatchAutomacoesCore(
     disparadas: 0,
     jaEnviadas: 0,
     foraDaJanela: 0,
+    vencidas: 0,
     bloqueadasLimite: 0,
     segmentoVazio: 0,
     tenantInativo: 0,
@@ -327,17 +345,10 @@ export async function dispatchAutomacoesCore(
         continue;
       }
 
-      let ativo = tenantCache.get(tenantId);
-      if (ativo === undefined) {
-        ativo = await tenantAtivo(db, tenantId);
-        tenantCache.set(tenantId, ativo);
-      }
-      if (!ativo) {
-        resultado.tenantInativo += 1;
-        continue;
-      }
-
-      // Momento devido do gatilho (data do evento / cronograma / offset)
+      // Momento devido do gatilho (data do evento / cronograma / offset) —
+      // calculado ANTES do gate de tenant: vencimento (RN-136) é fato de
+      // relógio e vale até para tenant suspenso.
+      const gatilho = doc.get('gatilho') as GatilhoAutomacao;
       const dataRaw = eventoSnap.get('data') as
         | { toDate?: () => Date }
         | undefined;
@@ -346,13 +357,50 @@ export async function dispatchAutomacoesCore(
       const janelas = (eventoSnap.get('janelasEntrega') ?? []) as JanelaEntrega[];
       const offset = doc.get('offsetHoras') as number | undefined;
       const momento = momentoDaAutomacao(
-        doc.get('gatilho') as GatilhoAutomacao,
+        gatilho,
         dataEvento,
         Array.isArray(janelas) ? janelas : [],
         typeof offset === 'number' ? offset : AUTOMACAO_OFFSET_HORAS_DEFAULT
       );
       if (momento === null || momento.getTime() > agora.getTime()) {
         resultado.foraDaJanela += 1;
+        continue;
+      }
+
+      // ── RN-136 (decisão 17): gatilho PONTUAL vencido além da tolerância
+      // NÃO dispara — desativa (`ativa=false` + vencidoEm) numa tx. Só
+      // vespera/pos: kit_disponivel é estado contínuo (premissa no header).
+      // A tx re-checa ativa/gatilho/offset no snap fresco (config alterada
+      // entre a query e a tx aborta a marca; a rodada seguinte reavalia).
+      if (
+        (gatilho === 'vespera_evento' || gatilho === 'pos_evento') &&
+        disparoVencido(momento.getTime(), agora.getTime())
+      ) {
+        const marcada = await db.runTransaction(async (tx) => {
+          const snap = await tx.get(doc.ref);
+          if (!snap.exists || snap.get('ativa') !== true) return false;
+          if (snap.get('gatilho') !== gatilho) return false;
+          if ((snap.get('offsetHoras') ?? null) !== (offset ?? null)) {
+            return false;
+          }
+          tx.update(doc.ref, {
+            ativa: false,
+            vencidoEm: agora,
+            atualizadoEm: agora,
+          });
+          return true;
+        });
+        if (marcada) resultado.vencidas += 1;
+        continue; // NUNCA dispara — decisão 17
+      }
+
+      let ativo = tenantCache.get(tenantId);
+      if (ativo === undefined) {
+        ativo = await tenantAtivo(db, tenantId);
+        tenantCache.set(tenantId, ativo);
+      }
+      if (!ativo) {
+        resultado.tenantInativo += 1;
         continue;
       }
 

@@ -317,6 +317,71 @@ describe.skipIf(!hasEmulator)('campanhas — Rules + api-client (S401-T1)', () =
     });
   });
 
+  // ── Decisão 17 (RN-136): 'vencido' é TERMINAL e exclusivo do cron ───────
+
+  describe('vencida (RN-136 — decisão 17): terminal, exclusiva de Function', () => {
+    async function seedVencida(): Promise<void> {
+      const now = FieldValue.serverTimestamp();
+      await campanhaAdminRef('vencida-base').set({
+        id: 'vencida-base', tenantId: CASTELO_ID,
+        titulo: 'Vencida base', conteudo: 'Agendamento que passou do prazo.',
+        canal: ['email'], origem: 'manual', status: 'vencido',
+        segmento: { tipo: 'todos_inscritos' }, alcance: 0,
+        agendadoPara: new Date(Date.now() - 86_400_000),
+        vencidoEm: now, criadoEm: now, atualizadoEm: now,
+      });
+    }
+
+    it('ATAQUE: criar direto com status vencido OU com vencidoEm → NEGADO', async () => {
+      await assertFails(
+        setDoc(campanhaDoc(castelo(), 'forja-vencida'), {
+          ...campanhaValida,
+          status: 'vencido',
+          agendadoPara: new Date(Date.now() - 86_400_000),
+          vencidoEm: new Date(),
+        })
+      );
+      await assertFails(
+        setDoc(campanhaDoc(castelo(), 'forja-vencido-em'), {
+          ...campanhaValida,
+          vencidoEm: new Date(),
+        })
+      );
+    });
+
+    it('ATAQUE: update tocando vencidoEm em rascunho → NEGADO', async () => {
+      await assertFails(
+        updateDoc(campanhaDoc(castelo(), 'rascunho-base'), {
+          vencidoEm: new Date(),
+        })
+      );
+    });
+
+    it('vencida é TERMINAL: reviver (update p/ agendado/rascunho) e delete NEGADOS até para o owner; leitura de membro OK', async () => {
+      await seedVencida();
+      await assertSucceeds(getDoc(campanhaDoc(castelo(), 'vencida-base')));
+      // Reviver para agendado com data nova — NEGADO (reagendar = decisão
+      // futura do Vitor; hoje o estado congela)
+      await assertFails(
+        updateDoc(campanhaDoc(castelo(), 'vencida-base'), {
+          status: 'agendado',
+          agendadoPara: new Date(Date.now() + 86_400_000),
+        })
+      );
+      await assertFails(
+        updateDoc(campanhaDoc(castelo(), 'vencida-base'), {
+          status: 'rascunho',
+        })
+      );
+      await assertFails(
+        updateDoc(campanhaDoc(castelo(), 'vencida-base'), {
+          titulo: 'Título novo em vencida',
+        })
+      );
+      await assertFails(deleteDoc(campanhaDoc(castelo(), 'vencida-base')));
+    });
+  });
+
   // ── api-client + seed ────────────────────────────────────────────────────
 
   describe('api-client listarCampanhas + seed canônico', () => {

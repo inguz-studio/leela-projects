@@ -61,6 +61,67 @@ export type StatusCampanha = StatusComunicado;
 export type OrigemCampanha = OrigemComunicado;
 
 // ---------------------------------------------------------------------------
+// Vencimento de disparo agendado (RN-136 · decisão 17 do Vitor, 2026-07-17)
+// ---------------------------------------------------------------------------
+//
+// Verbatim: "Se for agendada vencida, não dispara. Fica vencida, a priori,
+// depois posso revisar isso se ver que é um problema."
+//
+// Campanha `agendado` cujo `agendadoPara` passou além da TOLERÂNCIA de ciclo
+// do cron NÃO dispara — vira o estado TERMINAL 'vencido' (sem reagendamento
+// por ora; reagendar = decisão futura). O atraso NORMAL entre rodadas do
+// cron não é vencimento: a tolerância cobre 2 ciclos (jitter + rodada morta
+// no meio recuperada pela seguinte). Só a Function escreve 'vencido'.
+//
+// Código MASCULINO como os demais (item 9): o dado é `vencido`; "Vencida"
+// é rótulo de UI (pendência do lote de painel).
+//
+// ⚠️ DIRECTIVE (raio de tipo): 'vencido' NÃO entra em `StatusCampanha` — o
+// painel tem `Record<StatusCampanha, ...>` que quebraria o typecheck da lane
+// de UI (território paralelo). O union persistido completo é
+// `StatusCampanhaPersistido`; a adoção no painel (grupo/label/badge
+// "Vencida") é pendência registrada do lote Opus. Runtime do painel degrada
+// gracioso até lá (fallback de badge + grupos omitem o estado).
+
+/** Estado terminal da decisão 17 — escrita EXCLUSIVA de Function. */
+export const STATUS_CAMPANHA_VENCIDO = 'vencido' as const;
+
+/** União REAL persistida no Firestore (RN-130 + RN-136). */
+export type StatusCampanhaPersistido =
+  | StatusCampanha
+  | typeof STATUS_CAMPANHA_VENCIDO;
+
+export function isStatusCampanhaPersistido(
+  v: unknown
+): v is StatusCampanhaPersistido {
+  return v === STATUS_CAMPANHA_VENCIDO || isStatusComunicado(v);
+}
+
+/** Cadência do cron de disparo (ADR-015 — `every 5 minutes`). */
+export const DISPARO_CRON_INTERVALO_MIN = 5;
+
+/**
+ * Tolerância de vencimento = 2 ciclos do cron (premissa da decisão 17):
+ * 1 ciclo é o atraso NORMAL (agendou para t ⇒ dispara até t+5min); o 2º é
+ * margem para jitter do Scheduler e rodada morta no meio (timeout/crash)
+ * curada pela seguinte. Além disso = vencido.
+ */
+export const DISPARO_VENCIMENTO_CICLOS = 2;
+
+export const DISPARO_VENCIMENTO_TOLERANCIA_MS =
+  DISPARO_CRON_INTERVALO_MIN * DISPARO_VENCIMENTO_CICLOS * 60 * 1000;
+
+/**
+ * O momento devido `momentoMs` está VENCIDO além da tolerância em `agoraMs`?
+ * Fronteira: exatamente na tolerância (agora − 10min) já é vencido; a janela
+ * de disparo válida é (agora − tolerância, agora]. Comparação em epoch ms —
+ * imune a fuso (Timestamp é UTC; fuso só existe na formatação de UI). @pure
+ */
+export function disparoVencido(momentoMs: number, agoraMs: number): boolean {
+  return momentoMs <= agoraMs - DISPARO_VENCIMENTO_TOLERANCIA_MS;
+}
+
+// ---------------------------------------------------------------------------
 // Taxonomia de segmento do EVENTO (Camada C — deriva do Inscrito)
 // ---------------------------------------------------------------------------
 
@@ -168,13 +229,21 @@ export interface Campanha {
   /** 1..2 canais (RN-131) */
   canal: CanalCampanha[];
   origem: OrigemCampanha;
-  /** Código compartilhado rascunho/agendado/enviado — UI rotula no feminino */
+  /**
+   * Código compartilhado rascunho/agendado/enviado — UI rotula no feminino.
+   * ⚠️ O dado persistido pode ainda carregar 'vencido' (RN-136 — decisão
+   * 17); o tipo fica no subconjunto ATÉ o painel adotar
+   * `StatusCampanhaPersistido` (pendência do lote Opus — ver DIRECTIVE
+   * acima). `parseCampanha` ACEITA 'vencido'.
+   */
   status: StatusCampanha;
   segmento: SegmentoCampanha;
-  /** Obrigatório quando status == 'agendado' (scheduler = Onda 3) */
+  /** Obrigatório quando status ∈ {'agendado','vencido'} (era um agendamento) */
   agendadoPara?: Timestamp;
   /** ∑ Carimbo do envio — escrito APENAS pela Function `enviarCampanha` */
   enviadoEm?: Timestamp;
+  /** ∑ Carimbo do vencimento (RN-136) — escrito APENAS pelo cron ADR-015 */
+  vencidoEm?: Timestamp;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   /** ∑ Destinatários alcançados no envio — mantido por Function */
@@ -190,6 +259,7 @@ export const CAMPOS_FUNCTION_CAMPANHA = [
   'alcance',
   'aberturasPct',
   'enviadoEm',
+  'vencidoEm',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -277,8 +347,10 @@ export function parseCampanha(
     throw new Error(`${ctx}: origem "${String(origem)}" fora do enum (RN-132)`);
   }
   const status = data['status'];
-  if (!isStatusComunicado(status)) {
-    throw new Error(`${ctx}: status "${String(status)}" fora do enum (RN-130)`);
+  if (!isStatusCampanhaPersistido(status)) {
+    throw new Error(
+      `${ctx}: status "${String(status)}" fora do enum (RN-130/136)`
+    );
   }
 
   const segBruto = data['segmento'];
@@ -354,10 +426,27 @@ export function parseCampanha(
 
   const agendadoPara = data['agendadoPara'];
   if (
-    status === 'agendado' &&
+    (status === 'agendado' || status === STATUS_CAMPANHA_VENCIDO) &&
     (agendadoPara === undefined || agendadoPara === null)
   ) {
-    throw new Error(`${ctx}: status "agendado" exige "agendadoPara"`);
+    throw new Error(
+      `${ctx}: status "${status}" exige "agendadoPara" (foi um agendamento)`
+    );
+  }
+
+  // RN-136 (decisão 17): 'vencido' exige o carimbo `vencidoEm` do cron;
+  // carimbo presente fora do estado = escrita fora da Function (espelho da
+  // disciplina de `enviadoEm`).
+  const vencidoEm = data['vencidoEm'];
+  if (status === STATUS_CAMPANHA_VENCIDO) {
+    if (vencidoEm === undefined || vencidoEm === null) {
+      throw new Error(`${ctx}: status "vencido" exige carimbo "vencidoEm"`);
+    }
+  } else if (vencidoEm !== undefined && vencidoEm !== null) {
+    throw new Error(
+      `${ctx}: "vencidoEm" presente com status "${status}" — carimbo é ` +
+        `exclusivo do cron de disparo (RN-136)`
+    );
   }
 
   const segmento: SegmentoCampanha = {
@@ -377,7 +466,10 @@ export function parseCampanha(
     conteudo,
     canal: canal as CanalCampanha[],
     origem,
-    status,
+    // Cast deliberado (DIRECTIVE acima): o dado real é o union persistido
+    // (inclui 'vencido'); o campo estreita p/ StatusCampanha até o painel
+    // adotar StatusCampanhaPersistido (pendência do lote Opus).
+    status: status as StatusCampanha,
     segmento,
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
@@ -390,6 +482,9 @@ export function parseCampanha(
   }
   if (enviadoEm !== undefined && enviadoEm !== null) {
     campanha.enviadoEm = enviadoEm as Timestamp;
+  }
+  if (vencidoEm !== undefined && vencidoEm !== null) {
+    campanha.vencidoEm = vencidoEm as Timestamp;
   }
 
   return campanha;

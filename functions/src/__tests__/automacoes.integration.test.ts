@@ -12,11 +12,16 @@
  *   A4. Cota RN-133: 4 push na janela ⇒ bloqueia (template NÃO carimba,
  *       cota não fura — mesma disciplina do scheduler).
  *   A5. Tenant suspenso (RN-402) não dispara.
- *   A6. Cron de relógio: vespera_evento vencida dispara; pos_evento no
- *       futuro fica fora da janela; kit_disponivel dispara quando a 1ª
- *       janela de entrega abre; REPLAY do cron = jaEnviadas, nada duplica.
+ *   A6. Cron de relógio: vespera_evento devida DENTRO da tolerância (2
+ *       ciclos — decisão 17) dispara; pos_evento no futuro fica fora da
+ *       janela; kit_disponivel dispara quando a 1ª janela de entrega abre;
+ *       REPLAY do cron = jaEnviadas, nada duplica.
  *   A7. Rules: writer configura; ∑ disparos é intocável (create>0 e update
- *       negados); gatilho fora do enum negado; promoter não escreve.
+ *       negados); gatilho fora do enum negado; promoter não escreve;
+ *       carimbo `vencidoEm` é exclusivo de Function (RN-136).
+ *   A8. Decisão 17 (RN-136): vespera/pos vencidos ALÉM da tolerância NÃO
+ *       disparam — automação desativada (ativa=false + vencidoEm), template
+ *       intacto; kit_disponivel NÃO vence (estado contínuo); replay no-op.
  *
  * Comando (8GB — SÓ este arquivo):
  *   JAVA_HOME=$HOME/.jdks/jdk-21.0.11+10 npx firebase-tools@13 emulators:exec \
@@ -70,7 +75,9 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
       admin.initializeApp({ projectId: PROJECT_ID });
     }
     db = admin.firestore();
-  });
+    // 30s: initializeTestEnvironment contra JVM fria do Emulator flakeia no
+    // default de 10s desta máquina (observado em runs alternados D17).
+  }, 30_000);
 
   beforeEach(async () => {
     await testEnv.clearFirestore();
@@ -244,11 +251,16 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
 
   // ── A6 · cron de relógio ────────────────────────────────────────────────
 
-  it('A6: vespera vencida dispara; pos futuro fica fora; kit_disponivel segue a 1ª janela; replay não duplica', async () => {
-    // Evento em 10 dias → véspera 24h NÃO devida; com offset 720h... usar
-    // relógio: evento AMANHÃ → vespera_evento (24h antes) já venceu.
+  it('A6: vespera devida DENTRO da tolerância dispara; pos futuro fica fora; kit_disponivel segue a 1ª janela; replay não duplica', async () => {
+    // Decisão 17: a janela de disparo pontual é (agora−10min, agora].
+    // Evento em 24h−4min ⇒ vespera (offset 24h) ficou devida há 4 min —
+    // DENTRO da tolerância ⇒ dispara. Kit: janela abriu 08:00 local de hoje
+    // (estado contínuo — sem vencimento). Pós fica no futuro.
+    const MIN_MS = 60 * 1000;
     await eventoRef().update({
-      data: Timestamp.fromDate(new Date(AGORA.getTime() + 20 * HORA_MS)),
+      data: Timestamp.fromDate(
+        new Date(AGORA.getTime() + 24 * HORA_MS - 4 * MIN_MS)
+      ),
       janelasEntrega: [
         { dia: '2026-07-17', horaInicio: '08:00', horaFim: '18:00', local: 'Arena' },
       ],
@@ -261,10 +273,8 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
     await criarAutomacao('auto-kit', 'kit_disponivel', 'tpl-kit');
 
     const r1 = await dispatchAutomacoesCore(db, AGORA);
-    // véspera (20h antes do evento ⇒ momento = evento−24h já passou) + kit
-    // (janela abriu 08:00 local de hoje) disparam; pós fica fora da janela.
     expect(r1).toMatchObject({
-      encontradas: 3, disparadas: 2, foraDaJanela: 1, erros: 0,
+      encontradas: 3, disparadas: 2, foraDaJanela: 1, vencidas: 0, erros: 0,
     });
     expect(
       (await eventoRef().collection('campanhas').doc('tpl-vespera').get()).get('status')
@@ -280,13 +290,63 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
     expect(r2).toMatchObject({ disparadas: 0, jaEnviadas: 2, erros: 0 });
     expect((await logs()).size).toBe(logsAntes);
 
-    // Pós-evento vence com o relógio adiante (evento +20h, offset 24h)
-    const depois = new Date(AGORA.getTime() + 45 * HORA_MS);
+    // Pós-evento fica devido com o relógio adiante: momento = evento+24h =
+    // AGORA+48h−4min; em AGORA+48h está 4 min devido (dentro da tolerância).
+    const depois = new Date(AGORA.getTime() + 48 * HORA_MS);
     const r3 = await dispatchAutomacoesCore(db, depois);
     expect(r3.disparadas).toBe(1);
     expect(
       (await eventoRef().collection('campanhas').doc('tpl-pos').get()).get('status')
     ).toBe('enviado');
+  });
+
+  // ── A8 · decisão 17 (RN-136): relógio pontual vencido não dispara ───────
+
+  it('A8: vespera vencida ALÉM da tolerância NÃO dispara — desativa com vencidoEm; kit não vence; replay no-op', async () => {
+    // Evento amanhã (+20h) ⇒ vespera (24h antes) venceu há 4 HORAS — muito
+    // além dos 10 min de tolerância. Kit: janela aberta desde 08:00 local
+    // (horas atrás) — dispara mesmo assim (estado contínuo, premissa).
+    await eventoRef().update({
+      data: Timestamp.fromDate(new Date(AGORA.getTime() + 20 * HORA_MS)),
+      janelasEntrega: [
+        { dia: '2026-07-17', horaInicio: '08:00', horaFim: '18:00', local: 'Arena' },
+      ],
+    });
+    await criarTemplate('tpl-vespera-venc');
+    await criarTemplate('tpl-kit-tarde');
+    await criarTemplate('tpl-pos-futuro');
+    await criarAutomacao('auto-vespera-venc', 'vespera_evento', 'tpl-vespera-venc');
+    await criarAutomacao('auto-kit-tarde', 'kit_disponivel', 'tpl-kit-tarde');
+    await criarAutomacao('auto-pos-futuro', 'pos_evento', 'tpl-pos-futuro');
+
+    const r1 = await dispatchAutomacoesCore(db, AGORA);
+    expect(r1).toMatchObject({
+      encontradas: 3, vencidas: 1, disparadas: 1, foraDaJanela: 1, erros: 0,
+    });
+
+    // Automação vencida: DESATIVADA com carimbo; template intacto; zero envio
+    const auto = await eventoRef()
+      .collection('automacoes').doc('auto-vespera-venc').get();
+    expect(auto.get('ativa')).toBe(false);
+    expect(auto.get('vencidoEm')).toBeTruthy();
+    const tpl = await eventoRef()
+      .collection('campanhas').doc('tpl-vespera-venc').get();
+    expect(tpl.get('status')).toBe('rascunho'); // NUNCA carimbou
+    expect(tpl.get('alcance')).toBe(0);
+
+    // Kit (sem vencimento) foi o ÚNICO a disparar
+    expect(
+      (await eventoRef().collection('campanhas').doc('tpl-kit-tarde').get()).get('status')
+    ).toBe('enviado');
+    expect((await logs()).size).toBe(6); // só o kit: 3 inscritos × 2 canais
+
+    // REPLAY: a desativada saiu da varredura (ativa=false); nada muda
+    const r2 = await dispatchAutomacoesCore(db, AGORA);
+    expect(r2).toMatchObject({ encontradas: 2, vencidas: 0, disparadas: 0 });
+    expect((await logs()).size).toBe(6);
+    expect(
+      (await eventoRef().collection('automacoes').doc('auto-vespera-venc').get()).get('vencidoEm')
+    ).toEqual(auto.get('vencidoEm')); // carimbo intacto
   });
 
   it('momentoDaAutomacao (puro): véspera/pós por offset; kit pela 1ª janela; null sem insumo', () => {
@@ -344,6 +404,21 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
     // Gatilho fora do enum — NEGADO
     await assertFails(
       setDoc(clientDoc(owner, path('a3')), { ...base, gatilho: 'custom_hack' })
+    );
+    // Carimbo `vencidoEm` forjado no create — NEGADO (RN-136, só o cron)
+    await assertFails(
+      setDoc(clientDoc(owner, path('a6')), {
+        ...base,
+        vencidoEm: new Date(),
+      })
+    );
+    // Update tocando `vencidoEm` — NEGADO
+    await assertFails(
+      updateDoc(clientDoc(owner, path('a1')), {
+        tenantId: CASTELO_ID, gatilho: 'novo_inscrito',
+        templateRef: 'tpl-rules', canal: ['push'], ativa: true,
+        vencidoEm: new Date(),
+      })
     );
     // Offset em gatilho não-relógio — NEGADO
     await assertFails(
