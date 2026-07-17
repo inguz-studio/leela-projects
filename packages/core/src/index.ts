@@ -1087,3 +1087,25 @@ export {
   podeTransicionarParceria,
   parseParceriaAssessoria,
 } from './assessoria';
+
+// ---------------------------------------------------------------------------
+// Automações do evento (E06 · S402-T1 · Onda 3 Lote 3 · RN-132)
+// Gatilho → template (campanha origem='automatizada'); disparo reusa o
+// pipeline único de envio (executarDisparoCampanha — DIRECTIVE dos boards).
+// ---------------------------------------------------------------------------
+export type {
+  GatilhoAutomacao,
+  Automacao,
+  AutomacaoInput,
+} from './eventos/automacao';
+export {
+  COLECAO_AUTOMACOES,
+  GATILHOS_AUTOMACAO,
+  isGatilhoAutomacao,
+  AUTOMACAO_OFFSET_HORAS_DEFAULT,
+  AUTOMACAO_OFFSET_HORAS_MAX,
+  CAMPOS_FUNCTION_AUTOMACAO,
+  validarAutomacao,
+  momentoDoGatilho,
+  parseAutomacao,
+} from './eventos/automacao';

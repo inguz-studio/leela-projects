@@ -308,3 +308,14 @@ export { encerrarParceriaAssessoria } from './assessorias/encerrarParceria';
 // cliente de gravar cupom escopado). Sem split; RN-365 opera no pós-desconto
 // sem tocar a máquina de repasse. ⚠️ Fable (dinheiro).
 export { definirCondicaoDesconto } from './assessorias/definirCondicaoDesconto';
+
+// Eventos — GATILHOS DE AUTOMAÇÃO (E06 · S402-T1 · Onda 3 Lote 3):
+// novo_inscrito (trigger onWrite de inscritos, fan-out curador incremental)
+// + cron 5min p/ kit_disponivel/vespera_evento/pos_evento — TODOS reusando
+// executarDisparoCampanha (DIRECTIVE dos boards; cota RN-133/tenant RN-402/
+// log RN-219 herdados). ∑ disparos por recontagem idempotente. ⚠️ Fable
+// (envio em massa por gatilho).
+export {
+  onInscritoWriteAutomacao,
+  dispatchAutomacoes,
+} from './eventos/automacoesTriggers';
