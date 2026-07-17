@@ -1,4 +1,28 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-12
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA A PEDIDO DO VITOR)
+
+## ⏸️ PAUSA 2026-07-17 — COMECE AQUI na retomada
+
+**Estado:** sessão de 2026-07-17 executou a retomada pós-Onda 2: decisões 1-7 do painel RATIFICADAS (uma a uma; item 4 = ratchet fica + organizador pode reabrir/aumentar vagas do lote pelo painel → RN-304/S307) · DN-1 ratificada (link-in-bio Onda 3 = organizador-only) · flat inputs APROVADOS como default global.
+
+**Aterrissado HOJE com gate PASS (tudo pushed até `5bb08a1`):**
+- LEELA-DECIS (`ae76eee..c7c28be`): cron→ADR-015, ADR-013 aceita, ADR-014 ratificada, RN-304+S307 no E04, painel de decisões + boards.
+- LEELA-BEPEND (`53571ec..866a838`): demográfico real RN-820 (sem PII), eventoId no repasse RN-349, api-client, S209-T2 validação de tamanho no checkout. Reviews antagonistas APPROVE.
+- LEELA-SHOWROOM-LOGO (`edd7f52`) + LEELA-BRAND-WINE (`8cabc09..7ac4e91`): logo no showroom; 5 SVGs wordmark por cor em `brand/` (lime/wine/plum/ember/cream); tema **"leela" renomeado pra "wine"** (rename pleno + retrocompat).
+- LEELA-ONDA3-PLAN (`31f750b..ec9770c`): Onda 3 planejada — 22 stories/48 tasks/5 lotes em `leela-specs/next-trail-onda3/` + canônicos.
+- LEELA-O3-L2W (`7d24bea..7f46d6b`): landing SEO fino (metadata/OG/JSON-LD/sitemap/robots) + CoverImage com fallback. Pendências L2-sec listadas no audit.
+- LEELA-FLAT-DEFAULT (`5bb08a1`): Input/Select/Textarea default flat, opt-out `bordered`, AA verde, 1006/1006.
+
+**⚠️ EM VOO NO MOMENTO DA PAUSA (morto pelo desligamento): LEELA-O3-L1 (Fable).** Já aterrissou e PUSHOU: catch-all fechado (`19c8afe`), relabel ADR-015 (`6c892cf`), S305-T1 modelo politicaVendas (`5296c2f`). **WIP não-commitado no disco: `functions/src/index.ts` + `packages/core/src/index.ts` (M)** — inventariar com `git status`/`git diff` na retomada; na dúvida, descartar e redespachar a frente. **FALTA do L1:** resto do S305 → S904 (máquina reembolso/transferência, review antagonista obrigatória) · S306 (RN-149) · S307 (RN-304) · S1804 (cupom-only) · boards (incl. delta do L2W: S1205-T1/T2 ✅ + S1702-T2 ✅; e decisão flat no painel de decisões).
+
+**Como retomar:** `/harness` + "retome a Leela" → ler ESTE bloco → conferir `git status` (WIP acima) → redespachar **LEELA-O3-L1 restante** (brief `.nirvana/briefs/leela-onda3-lote1-enriched.md`, rota Fable, contexto fresco) → depois: varredura painel do flat (EventoForm 8 `variant="flat"` redundantes) + L2-sec (S1702-T1 capa painel/core + reconciliar `imagemUrl`×`capaUrl`; S1700 perfil @handle) → Lote 3 ∥ Lote 4 → Lote 5 (app atleta, gated pelo enrollment das lojas).
+
+**Regras novas do Vitor (2026-07-17, herdar SEMPRE):** NUNCA abrir navegador/screenshot sem validação prévia dele (tokens caros) — aterrissar apontando ONDE ele confere · variantes de logo = recolor do wordmark (nunca box/print) · tema claro chama-se **Wine**.
+
+**Ações externas pendentes do Vitor:** enrollment lojas (Apple/Google/EAS — lead time do Lote 5) · domínio (`NEXT_PUBLIC_LEELA_URL`) · e-mail transacional · chave sandbox Asaas · KYC · rotacionar chave prod Asaas.
+
+Auditoria de hoje: `~/.harness-logs/2026-07-17/audit.jsonl`. Showroom estava em :5173 (morre com o desligamento; `pnpm --dir packages/design-system showcase` sobe de novo).
+
+---
 
 # 🏁 ONDA 2 CONCLUÍDA + RODADA DE REFINOS DO VITOR EXECUTADA (2026-07-13). Git SÃO em `C:\dev\LEELA`, tudo PUSHED até `175a449`. tsc 0 (core/functions/painel/api-client/landing/DS). **Nada em voo.**
 
