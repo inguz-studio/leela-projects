@@ -365,11 +365,20 @@ export interface InsumosVenda {
   cupom: CupomVenda | null;
   /**
    * Amarração do cupom `club_parceiro` (RN-364 · E18) — presente SÓ quando o
-   * cupom carregado é escopado. `parceriaPath` é RE-LIDO dentro da tx de
-   * venda (criarDocsDeCheckout) exigindo status 'ativa' — revogação da
-   * parceria entre a cotação e a cobrança NÃO deixa o desconto passar.
+   * cupom carregado é escopado. `parceriaPath` E o PRÓPRIO CUPOM são
+   * RE-LIDOS dentro da tx de venda (criarDocsDeCheckout): parceria exige
+   * status 'ativa' e o cupom precisa estar BYTE-COERENTE com a base do sale
+   * (tipo/valor/fimEm — fix review antagonista O3-L3B-S1802 #1: redefinição
+   * da condição em voo não deixa desconto STALE entrar em doc de dinheiro).
    */
-  cupomParceria: { parceriaPath: string; clubeRef: string } | null;
+  cupomParceria: {
+    parceriaPath: string;
+    clubeRef: string;
+    cupomPath: string;
+    tipo: string;
+    valor: number;
+    fimEmMillis: number;
+  } | null;
   terms: CommercialTerms;
   /**
    * Modo da taxa do EVENTO (RN-347) — lido do DOC (`evento.taxaModo` via
@@ -546,7 +555,14 @@ export async function carregarInsumos(
     if (cupomDoc.escopo === 'club_parceiro') {
       const prefixoDoTenant = `tenants/${tenantId}/parceirosAssessoria/`;
       const parceriaPath = cupomDoc.parceriaRef ?? '';
-      if (!parceriaPath.startsWith(prefixoDoTenant)) {
+      // Profundidade EXATA de doc de parceria (fix review S1802 #3 —
+      // defense-in-depth): `startsWith` sozinho aceitaria path ANINHADO
+      // (tenants/T/parceirosAssessoria/Y/x/z) apontando doc que não é
+      // parceria. 4 segmentos ou nada.
+      if (
+        !parceriaPath.startsWith(prefixoDoTenant) ||
+        parceriaPath.split('/').length !== 4
+      ) {
         throw new https.HttpsError(
           'internal',
           `Cupom '${codigo}' com parceriaRef fora do tenant do evento — dado corrompido.`
@@ -554,14 +570,21 @@ export async function carregarInsumos(
       }
       const parceriaSnap = await db.doc(parceriaPath).get();
       if (!parceriaSnap.exists || parceriaSnap.get('status') !== 'ativa') {
+        // Mensagem OPACA (fix review S1802 #2): a cotação roda anônima —
+        // não confirmar a um sondador que o código é de club parceiro nem
+        // o estado da parceria; mesmo shape do cupom inexistente.
         throw new https.HttpsError(
-          'failed-precondition',
-          `Cupom '${codigo}' é de club parceiro sem parceria ATIVA — desconto indisponível.`
+          'invalid-argument',
+          `Cupom '${codigo}' indisponível.`
         );
       }
       cupomParceria = {
         parceriaPath,
         clubeRef: cupomDoc.clubeRef ?? '',
+        cupomPath: cupomSnap.ref.path,
+        tipo: cupomDoc.tipo,
+        valor: cupomDoc.valor,
+        fimEmMillis: cupomDoc.fimEm.toMillis(),
       };
     }
     cupom = cupomDoc;
@@ -719,17 +742,39 @@ async function criarDocsDeCheckout(
       const jaExiste = await tx.get(pedidoRef);
       if (jaExiste.exists) return; // corrida do MESMO key — replay resolve
 
-      // RE-CHECK da parceria do cupom club_parceiro DENTRO da tx (RN-364 ·
-      // S1803 "revogação com corrida"): entre carregarInsumos e este commit
-      // o organizador pode ter ENCERRADO a parceria — o snap fresco decide;
-      // desconto de parceria morta nunca entra em doc de dinheiro.
+      // RE-CHECK do cupom club_parceiro DENTRO da tx (RN-364 · S1803
+      // "revogação com corrida" + fix review S1802 #1 "freshness"):
+      //   - parceria FRESCA precisa seguir 'ativa' (encerrar mata o
+      //     desconto — nada de parceria morta em doc de dinheiro);
+      //   - o CUPOM fresco precisa estar coerente com a base do sale
+      //     (escopo/vínculo/tipo/valor/fimEm) — redefinição da condição
+      //     entre a cotação e este commit NÃO deixa desconto STALE passar.
       if (cupomParceria !== null) {
-        const parceriaFresca = await tx.get(db.doc(cupomParceria.parceriaPath));
+        const [parceriaFresca, cupomFresco] = await Promise.all([
+          tx.get(db.doc(cupomParceria.parceriaPath)),
+          tx.get(db.doc(cupomParceria.cupomPath)),
+        ]);
         if (!parceriaFresca.exists || parceriaFresca.get('status') !== 'ativa') {
           throw new https.HttpsError(
             'failed-precondition',
-            'Parceria do cupom deixou de estar ativa durante o checkout — ' +
-              'refaça a cotação sem o cupom.'
+            'Condição do cupom deixou de valer durante o checkout — refaça a cotação.'
+          );
+        }
+        const fimFresco = cupomFresco.get('fimEm') as
+          | { toMillis?: () => number }
+          | undefined;
+        const coerente =
+          cupomFresco.exists &&
+          cupomFresco.get('escopo') === 'club_parceiro' &&
+          cupomFresco.get('parceriaRef') === cupomParceria.parceriaPath &&
+          cupomFresco.get('tipo') === cupomParceria.tipo &&
+          cupomFresco.get('valor') === cupomParceria.valor &&
+          typeof fimFresco?.toMillis === 'function' &&
+          fimFresco.toMillis() === cupomParceria.fimEmMillis;
+        if (!coerente) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            'Condição do cupom deixou de valer durante o checkout — refaça a cotação.'
           );
         }
       }

@@ -252,19 +252,24 @@ describe.skipIf(!hasEmulator)('cupom de club parceiro — S1802 (O3-L3B)', () =>
     await definirCondicaoDescontoCore(db, condicaoInput(), marina, AGORA);
     await encerrarParceriaCore(db, { parceriaId: CNPJ_KEY }, marina);
 
+    // Mensagem OPACA (fix review #2): mesmo código de erro do cupom
+    // inexistente — sondador anônimo não descobre que é de club parceiro.
     await expect(
       cotarInscricaoCheckoutCore(
         db,
         { eventoId: EVENTO_ID, itens: [{ modalidade: '10k' }], forma: 'pix', parcelas: 1, cupomCodigo: 'PARCEIRO15' },
         relogio
       )
-    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: expect.stringContaining('indisponível'),
+    });
 
     await expect(
       createInscricaoChargeCore(
         db, provider, chargeInput('key-d3-000001', 'PARCEIRO15'), caller, relogio
       )
-    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
 
     // NADA foi escrito (fail-closed antes de qualquer doc)
     const pedidos = await db.collection('pedidos').get();
