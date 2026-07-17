@@ -968,7 +968,7 @@ export function ComponentsPage(): JSX.Element {
       {/* ── Gráficos ──────────────────────────────────────────────────── */}
       <Section
         title="Gráficos"
-        description="BarChart e DonutChart (Recharts · ADR-010), tokenizados e acessíveis. Paleta categórica em ordem fixa (skill dataviz): validada para CVD e contraste nos temas brasa e leela; rótulo direto + legenda + tabela equivalente garantem que a identidade nunca é só-cor."
+        description="BarChart e DonutChart (Recharts · ADR-010), tokenizados e acessíveis. Paleta categórica em ordem fixa (skill dataviz): validada para CVD e contraste nos temas brasa e wine; rótulo direto + legenda + tabela equivalente garantem que a identidade nunca é só-cor."
       >
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard

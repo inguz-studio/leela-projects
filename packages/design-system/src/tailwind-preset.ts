@@ -108,7 +108,7 @@ const leelaPreset: Partial<Config> = {
         // shadcn/ui bridge — aliases gerados pelo pipeline (tokens/shadcn.json).
         // Valores são var() diretos (nossas vars resolvem a hex), NUNCA hsl(var()).
         // Componentes shadcn stock (bg-popover, text-muted-foreground, ring-ring…)
-        // nascem brasa/leela por estas entradas. Modificadores de alpha (bg-x/80)
+        // nascem brasa/wine por estas entradas. Modificadores de alpha (bg-x/80)
         // não funcionam com var() hex — adaptar para token dedicado.
         border:     'var(--border)',
         input:      'var(--input)',
@@ -137,7 +137,7 @@ const leelaPreset: Partial<Config> = {
         'feedback-heroico-fg':      'var(--feedback-heroico-fg)',
         'feedback-heroico-surface': 'var(--feedback-heroico-surface)',
         // info: alias de compatibilidade (Toast variant 'info') — no brasa
-        // resolve para a família heroico (rosa); azul só existe no tema leela.
+        // resolve para a família heroico (rosa); azul só existe no tema wine.
         'feedback-info':            'var(--feedback-info)',
         'feedback-info-fg':         'var(--feedback-info-fg)',
         'feedback-info-surface':    'var(--feedback-info-surface)',

@@ -44,7 +44,7 @@ function ThemeDisplay() {
       <button
         type="button"
         data-testid="toggle"
-        onClick={() => setTheme(theme === 'brasa' ? 'leela' : 'brasa')}
+        onClick={() => setTheme(theme === 'brasa' ? 'wine' : 'brasa')}
       >
         Toggle
       </button>
@@ -74,6 +74,18 @@ describe('ThemeProviderRN', () => {
   });
 
   it('restaura preferência do storage no mount (sem prop theme)', async () => {
+    const storage = makeStorage('wine');
+    const { getByTestId } = render(
+      <ThemeProviderRN storage={storage}>
+        <ThemeDisplay />
+      </ThemeProviderRN>,
+    );
+    await waitFor(() =>
+      expect(getByTestId('theme-value').textContent).toBe('wine'),
+    );
+  });
+
+  it('retrocompat: valor "leela" no storage migra p/ "wine"', async () => {
     const storage = makeStorage('leela');
     const { getByTestId } = render(
       <ThemeProviderRN storage={storage}>
@@ -81,7 +93,7 @@ describe('ThemeProviderRN', () => {
       </ThemeProviderRN>,
     );
     await waitFor(() =>
-      expect(getByTestId('theme-value').textContent).toBe('leela'),
+      expect(getByTestId('theme-value').textContent).toBe('wine'),
     );
   });
 
@@ -99,13 +111,13 @@ describe('ThemeProviderRN', () => {
   it('B1: prop theme explícita vence a preferência persistida (F04 espelhado)', async () => {
     const storage = makeStorage('brasa');
     const { getByTestId } = render(
-      <ThemeProviderRN theme="leela" storage={storage}>
+      <ThemeProviderRN theme="wine" storage={storage}>
         <ThemeDisplay />
       </ThemeProviderRN>,
     );
     await flushStorage();
-    // storage dizia brasa; prop leela manda — mesmo depois de o getItem resolver
-    expect(getByTestId('theme-value').textContent).toBe('leela');
+    // storage dizia brasa; prop wine manda — mesmo depois de o getItem resolver
+    expect(getByTestId('theme-value').textContent).toBe('wine');
     // com prop presente, o storage nem é consultado
     expect(storage.getItem).not.toHaveBeenCalled();
   });
@@ -120,12 +132,12 @@ describe('ThemeProviderRN', () => {
     expect(getByTestId('theme-value').textContent).toBe('brasa');
 
     rerender(
-      <ThemeProviderRN theme="leela" storage={storage}>
+      <ThemeProviderRN theme="wine" storage={storage}>
         <ThemeDisplay />
       </ThemeProviderRN>,
     );
     await flushStorage();
-    expect(getByTestId('theme-value').textContent).toBe('leela');
+    expect(getByTestId('theme-value').textContent).toBe('wine');
   });
 
   it('B1: getItem que resolve tarde não sobrescreve prop que apareceu depois', async () => {
@@ -150,7 +162,7 @@ describe('ThemeProviderRN', () => {
 
     // prop aparece antes de o storage resolver
     rerender(
-      <ThemeProviderRN theme="leela" storage={storage}>
+      <ThemeProviderRN theme="wine" storage={storage}>
         <ThemeDisplay />
       </ThemeProviderRN>,
     );
@@ -160,7 +172,7 @@ describe('ThemeProviderRN', () => {
       resolveGet('brasa');
       await Promise.resolve();
     });
-    expect(getByTestId('theme-value').textContent).toBe('leela');
+    expect(getByTestId('theme-value').textContent).toBe('wine');
   });
 
   it('setTheme troca o tema e persiste no storage', async () => {
@@ -176,11 +188,11 @@ describe('ThemeProviderRN', () => {
       getByTestId('toggle').click();
     });
 
-    expect(getByTestId('theme-value').textContent).toBe('leela');
+    expect(getByTestId('theme-value').textContent).toBe('wine');
     await waitFor(() =>
       expect(storage.setItem).toHaveBeenCalledWith(
         'leela-theme-preference',
-        'leela',
+        'wine',
       ),
     );
   });
@@ -188,7 +200,7 @@ describe('ThemeProviderRN', () => {
   it('não persiste o tema no mount — só em setTheme (escolha do usuário)', async () => {
     const storage = makeStorage(null);
     render(
-      <ThemeProviderRN theme="leela" storage={storage}>
+      <ThemeProviderRN theme="wine" storage={storage}>
         <ThemeDisplay />
       </ThemeProviderRN>,
     );
@@ -210,7 +222,7 @@ describe('ThemeProviderRN', () => {
     );
     const brasaSurface = getByTestId('surface').textContent;
     rerender(
-      <ThemeProviderRN theme="leela">
+      <ThemeProviderRN theme="wine">
         <TokenProbe />
       </ThemeProviderRN>,
     );

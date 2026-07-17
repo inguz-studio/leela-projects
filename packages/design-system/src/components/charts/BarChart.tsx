@@ -1,7 +1,7 @@
 // =============================================================================
 // BarChart — barras categóricas horizontais (Recharts · ADR-010). Componente do
 // DESIGN SYSTEM, tokenizado (cores `--chart-cat-*`, trilho `--chart-track`),
-// tema brasa/leela, WCAG AA. Segue a skill `dataviz`:
+// tema brasa/wine, WCAG AA. Segue a skill `dataviz`:
 //   • forma: magnitude por categoria → barras;
 //   • cor: categórica em ordem FIXA (chartCategoryVar), rótulo direto sempre
 //     presente (encoding secundário — a cor nunca é a única pista);

@@ -4,7 +4,7 @@
 // Regra dataviz (não-negociável): cores categóricas em ORDEM FIXA, nunca
 // cicladas por rank. A cor segue a ENTIDADE (índice estável), não a posição no
 // ranking. A 6ª série+ não gera cor nova: cai em "Outros" (cat-5). As 5 famílias
-// saem de token semântico (`--chart-cat-1..5`), tematizadas brasa/leela e
+// saem de token semântico (`--chart-cat-1..5`), tematizadas brasa/wine e
 // validadas (validate_palette.js: CVD ΔE > 12, contraste ≥3:1 nos 2 temas).
 // =============================================================================
 

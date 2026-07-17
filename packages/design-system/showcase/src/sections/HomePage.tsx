@@ -17,18 +17,18 @@ import {
   type Theme,
 } from '@leela/design-system';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
-import primitivesLeela from '../../../tokens/primitives.leela.json';
+import primitivesWine from '../../../tokens/primitives.wine.json';
 import { Section, TokenLabel } from '../ui';
 import { BrandLogo } from '../BrandLogo';
 
-// Info por tema — a home reage ao tema ativo (o showroom alterna brasa↔leela),
+// Info por tema — a home reage ao tema ativo (o showroom alterna brasa↔wine),
 // então nome, fonte display e hex primário nunca podem ficar cravados em brasa.
 type PrimitiveMap = Record<string, Record<string, string>>;
 const primary500 = (p: unknown): string => (p as PrimitiveMap).primary?.['500'] ?? '';
 
 const THEME_INFO: Record<Theme, { name: string; displayFont: string; primaryHex: string }> = {
   brasa: { name: 'Brasa', displayFont: 'Exo 2', primaryHex: primary500(primitivesBrasa) },
-  leela: { name: 'Leela', displayFont: 'Syne', primaryHex: primary500(primitivesLeela) },
+  wine: { name: 'Wine', displayFont: 'Syne', primaryHex: primary500(primitivesWine) },
 };
 
 // Colorways do wordmark (recolor do mesmo escrito). Hex = valor da própria
@@ -43,7 +43,7 @@ const COLORWAYS = [
 
 const STATS = [
   { value: '25', label: 'componentes' },
-  { value: '2', label: 'temas (brasa e leela)' },
+  { value: '2', label: 'temas (brasa e wine)' },
   { value: '49', label: 'pares AA validados' },
 ];
 
@@ -66,7 +66,7 @@ const LINKS = [
   {
     href: '#/temas',
     title: 'Temas',
-    description: 'brasa e leela lado a lado, mais a troca ao vivo persistida no navegador.',
+    description: 'brasa e wine lado a lado, mais a troca ao vivo persistida no navegador.',
   },
 ];
 
@@ -131,7 +131,7 @@ export function HomePage(): JSX.Element {
               O mesmo asset da sidebar do painel e do header da landing, agora
               também no shell do showroom (topo da barra lateral) e no favicon. A
               variante troca por tema para ler nos dois fundos: no {THEME_INFO.brasa.name} (escuro)
-              o wordmark limão sobre transparente; no {THEME_INFO.leela.name} (claro) o wordmark
+              o wordmark limão sobre transparente; no {THEME_INFO.wine.name} (claro) o wordmark
               vinho sobre transparente. Cada variante é um recolor do mesmo escrito — só muda o
               fill, sem caixa. Abaixo, as cinco colorways disponíveis.
             </CardDescription>

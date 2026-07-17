@@ -412,7 +412,7 @@ export const brasaTheme: FlatTokens = {
   "skeleton-radius": "4px"
 };
 
-export const leelaTheme: FlatTokens = {
+export const wineTheme: FlatTokens = {
   "primary-50": "#FFF0F0",
   "primary-100": "#FFD5D8",
   "primary-200": "#FF9EA6",

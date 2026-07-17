@@ -34,7 +34,7 @@ const preview: Preview = {
         icon: 'paintbrush',
         items: [
           { value: 'brasa', title: 'Brasa (#FF450C · Exo 2)' },
-          { value: 'leela', title: 'Leela (Oxblood/Lima)' },
+          { value: 'wine', title: 'Wine (Oxblood/Lima)' },
         ],
         dynamicTitle: true,
       },

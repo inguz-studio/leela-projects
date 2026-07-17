@@ -2,7 +2,7 @@
  * Tooltip (PoC shadcn+brasa) — prova o pipeline de tokens de ponta a ponta:
  * componente shadcn stock renderiza com classes de ALIAS (bg-popover,
  * text-popover-foreground, border-border) que o preset resolve para os
- * tokens brasa/leela gerados. Padrão de porte de teste para o Lote A.
+ * tokens brasa/wine gerados. Padrão de porte de teste para o Lote A.
  */
 
 import * as React from 'react';

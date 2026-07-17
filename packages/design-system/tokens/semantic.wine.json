@@ -44,7 +44,7 @@
     "header-bg": "rgba(0, 0, 0, 0.015)"
   },
   "countdown": {
-    "$description": "Equivalentes leela dos tints do countdown: marca Oxblood (primary.500 #7A1520) + heroico (#ED3585) em alphas menores (fundo claro); numero em gradient primary.400→500 (o 300 reprovava 3:1 sobre o canto mais tingido — prova na matriz, Countdown §).",
+    "$description": "Equivalentes wine dos tints do countdown: marca Oxblood (primary.500 #7A1520) + heroico (#ED3585) em alphas menores (fundo claro); numero em gradient primary.400→500 (o 300 reprovava 3:1 sobre o canto mais tingido — prova na matriz, Countdown §).",
     "bg": "radial-gradient(120% 80% at 100% 0%, rgba(122,21,32,.18), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(237,53,133,.12), transparent 60%)",
     "border": "rgba(122, 21, 32, 0.25)",
     "number-gradient": "linear-gradient(135deg, #C42C3A, #7A1520)"
@@ -53,7 +53,7 @@
     "dot-glow": "0 0 8px #15803D"
   },
   "chart": {
-    "$description": "Paleta categórica leela (tema claro). Passos escurecidos p/ contraste ≥3:1 sobre surface clara e L dentro da banda (validate_palette.js: cat-1 success.600 / cat-2 heroico.500 / cat-3 primary.400 → PASS, CVD ΔE 24.3 > 12). track/grid claros.",
+    "$description": "Paleta categórica wine (tema claro). Passos escurecidos p/ contraste ≥3:1 sobre surface clara e L dentro da banda (validate_palette.js: cat-1 success.600 / cat-2 heroico.500 / cat-3 primary.400 → PASS, CVD ΔE 24.3 > 12). track/grid claros.",
     "cat-1": "{success.600}",
     "cat-2": "{heroico.500}",
     "cat-3": "{primary.400}",

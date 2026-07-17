@@ -1,6 +1,6 @@
 // =============================================================================
 // DonutChart — rosca categórica (Recharts Pie · ADR-010). Componente do DESIGN
-// SYSTEM, tokenizado (`--chart-cat-*`, anel na surface), tema brasa/leela, AA.
+// SYSTEM, tokenizado (`--chart-cat-*`, anel na surface), tema brasa/wine, AA.
 // Segue a skill `dataviz`:
 //   • forma: composição de um todo → rosca (parte-de-um-todo, poucas fatias);
 //   • cor categórica em ordem FIXA; LEGENDA sempre presente p/ ≥2 séries, com

@@ -1,6 +1,6 @@
 /* Showroom — importa os temas do DS e as camadas do Tailwind (preset do DS). */
-/* Fontes de AMBOS os temas (o showroom alterna brasa↔leela): brasa=Exo 2,
-   leela=Syne (display)+Figtree (ui), mono comum=JetBrains Mono. O painel só
+/* Fontes de AMBOS os temas (o showroom alterna brasa↔wine): brasa=Exo 2,
+   wine=Syne (display)+Figtree (ui), mono comum=JetBrains Mono. O painel só
    carrega Exo 2 porque roda só em brasa; aqui precisamos das quatro famílias. */
 @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;600;700;800&display=swap');
 @import '../../themes/index.css';

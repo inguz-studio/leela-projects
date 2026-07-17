@@ -12,7 +12,7 @@
  * (surface-base = neutral-950, escuro), mas some no tema claro; o vinho (#7A1520,
  * Oxblood) lê no claro (surface-base = neutral-50) e some no escuro. Então:
  *   - brasa → `leela-logo-brasa.svg`     (wordmark limão sobre transparente)
- *   - leela → `leela-wordmark-wine.svg`  (wordmark vinho sobre transparente)
+ *   - wine  → `leela-wordmark-wine.svg`  (wordmark vinho sobre transparente)
  * Ambas transparentes: cada colorway carrega o próprio contraste contra o
  * surface do tema, sem caixa (a versão em caixa foi rejeitada — "parece um print").
  *
@@ -26,7 +26,7 @@ import { cn, useTheme, type Theme } from '@leela/design-system';
 
 const VARIANT_BY_THEME: Record<Theme, string> = {
   brasa: 'leela-logo-brasa.svg',
-  leela: 'leela-wordmark-wine.svg',
+  wine: 'leela-wordmark-wine.svg',
 };
 
 export interface BrandLogoProps {

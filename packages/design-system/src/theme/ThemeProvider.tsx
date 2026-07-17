@@ -34,7 +34,7 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
-export type Theme = 'brasa' | 'leela';
+export type Theme = 'brasa' | 'wine';
 
 export interface ThemeContextValue {
   /** The active theme name. */
@@ -53,13 +53,19 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 // Storage key (localStorage — user preference only, not domain data)
 // ---------------------------------------------------------------------------
 
+// A chave de storage mantém o prefixo do produto ('leela-*'); só o VALOR do
+// tema foi renomeado (leela → wine). Não renomear a chave preserva a sessão de
+// quem já tem preferência salva.
 const STORAGE_KEY = 'leela-theme-preference';
 
 function readStoredTheme(defaultTheme: Theme): Theme {
   if (typeof window === 'undefined') return defaultTheme;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'brasa' || stored === 'leela') return stored;
+    if (stored === 'brasa' || stored === 'wine') return stored;
+    // Retrocompat: o tema 'leela' foi renomeado para 'wine'. Um valor antigo
+    // persistido continua válido e migra na leitura, sem quebrar a sessão.
+    if (stored === 'leela') return 'wine';
   } catch {
     // storage blocked (private browsing, etc.) — fall through
   }
@@ -83,7 +89,9 @@ export function getThemeInitScript(defaultTheme: Theme = 'brasa'): string {
   return (
     '(function(){try{' +
     `var t=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});` +
-    'if(t!=="brasa"&&t!=="leela")' +
+    // Retrocompat: valor antigo 'leela' migra p/ 'wine' antes de validar.
+    'if(t==="leela")t="wine";' +
+    'if(t!=="brasa"&&t!=="wine")' +
     `t=${JSON.stringify(defaultTheme)};` +
     'document.documentElement.setAttribute("data-theme",t);' +
     '}catch(e){' +

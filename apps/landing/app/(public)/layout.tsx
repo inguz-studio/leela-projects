@@ -4,7 +4,7 @@ import { PublicFooter } from '../components/PublicFooter';
 
 /**
  * Layout público (S1200-T1): header + conteúdo + footer, sem shell de painel.
- * Server Component. O tema `leela` já vem do <html data-theme> no root layout.
+ * Server Component. O tema `brasa` já vem do <html data-theme> no root layout.
  */
 export default function PublicLayout({ children }: { children: ReactNode }): React.JSX.Element {
   return (

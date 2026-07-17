@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
-import primitivesLeela from '../../../tokens/primitives.leela.json';
+import primitivesWine from '../../../tokens/primitives.wine.json';
 import semantic from '../../../tokens/semantic.json';
-import semanticLeelaOverrides from '../../../tokens/semantic.leela.json';
+import semanticWineOverrides from '../../../tokens/semantic.wine.json';
 import component from '../../../tokens/component.json';
 import {
   collectRefs,
@@ -18,15 +18,15 @@ import {
 // ---------------------------------------------------------------------------
 
 const brasa = primitivesBrasa as TokenRecord;
-const leela = primitivesLeela as TokenRecord;
+const wine = primitivesWine as TokenRecord;
 const sem   = semantic as TokenRecord;
-// Semantic efetiva do tema leela = base + overrides (mesmo pipeline do gerador)
-const semLeela = mergeTokens(sem, semanticLeelaOverrides as TokenRecord);
+// Semantic efetiva do tema wine = base + overrides (mesmo pipeline do gerador)
+const semWine = mergeTokens(sem, semanticWineOverrides as TokenRecord);
 const comp  = component as TokenRecord;
 
 const componentRefs = collectRefs(comp);
 const brasaRefs = [...collectRefs(sem), ...componentRefs];
-const leelaRefs = [...collectRefs(semLeela), ...componentRefs];
+const wineRefs = [...collectRefs(semWine), ...componentRefs];
 
 // ---------------------------------------------------------------------------
 // RULE: every {ref} in semantic (per-theme) + component resolves in its theme
@@ -42,10 +42,10 @@ describe('Semantic tokens resolve to existing primitives', () => {
     });
   }
 
-  for (const ref of leelaRefs) {
-    it(`"${ref}" → leela`, () => {
+  for (const ref of wineRefs) {
+    it(`"${ref}" → wine`, () => {
       const path = ref.slice(1, -1).split('.');
-      const value = resolvePath(leela, path);
+      const value = resolvePath(wine, path);
       expect(value).toBeDefined();
       expect(typeof value).toBe('string');
     });
@@ -73,8 +73,8 @@ describe('mergeTokens', () => {
     expect(over.nested.x).toBe('2');
   });
 
-  it('leela herda text.brand da base e sobrescreve text.primary', () => {
-    const text = semLeela['text'] as Record<string, string>;
+  it('wine herda text.brand da base e sobrescreve text.primary', () => {
+    const text = semWine['text'] as Record<string, string>;
     expect(text['brand']).toBe('{primary.500}');
     expect(text['primary']).toBe('{neutral.900}');
   });
@@ -95,18 +95,18 @@ describe('generateCSS', () => {
     expect(css).toContain('#FF450C');
   });
 
-  it('leela CSS contains [data-theme="leela"] block', () => {
-    const css = generateCSS('leela', leela, semLeela, comp);
-    expect(css).toContain('[data-theme="leela"]');
+  it('wine CSS contains [data-theme="wine"] block', () => {
+    const css = generateCSS('wine', wine, semWine, comp);
+    expect(css).toContain('[data-theme="wine"]');
   });
 
-  it('leela CSS contains Oxblood #7A1520', () => {
-    const css = generateCSS('leela', leela, semLeela, comp);
+  it('wine CSS contains Oxblood #7A1520', () => {
+    const css = generateCSS('wine', wine, semWine, comp);
     expect(css).toContain('#7A1520');
   });
 
-  it('leela CSS: surface-base referencia o neutro claro (papel invertido)', () => {
-    const css = generateCSS('leela', leela, semLeela, comp);
+  it('wine CSS: surface-base referencia o neutro claro (papel invertido)', () => {
+    const css = generateCSS('wine', wine, semWine, comp);
     expect(css).toMatch(/--surface-base:\s*var\(--neutral-50\)/);
   });
 
@@ -129,7 +129,7 @@ describe('generateCSS', () => {
   });
 
   it('sem rootFallback o seletor fica restrito ao data-theme', () => {
-    const css = generateCSS('leela', leela, semLeela, comp);
+    const css = generateCSS('wine', wine, semWine, comp);
     expect(css).not.toContain(':root');
   });
 });
@@ -146,8 +146,8 @@ describe('generateRNTheme', () => {
     }
   });
 
-  it('leela RN theme has no unresolved {refs}', () => {
-    const tokens = generateRNTheme(leela, semLeela, comp);
+  it('wine RN theme has no unresolved {refs}', () => {
+    const tokens = generateRNTheme(wine, semWine, comp);
     for (const [, value] of Object.entries(tokens)) {
       expect(value).not.toMatch(/^\{.+\}$/);
     }
@@ -158,9 +158,9 @@ describe('generateRNTheme', () => {
     expect(tokens['surface-base']).toBe('#0C0C0C');
   });
 
-  it('leela surface-base resolves to light background', () => {
-    const tokens = generateRNTheme(leela, semLeela, comp);
-    // leela surface.base = {neutral.50} = #FDFAF7 (tema claro)
+  it('wine surface-base resolves to light background', () => {
+    const tokens = generateRNTheme(wine, semWine, comp);
+    // wine surface.base = {neutral.50} = #FDFAF7 (tema claro)
     expect(tokens['surface-base']).toBe('#FDFAF7');
   });
 
@@ -190,7 +190,7 @@ describe('Chaves $doc não vazam para o output', () => {
   });
 
   it('meio-passos do mockup existem nos 2 temas (2/6/10/14px)', () => {
-    for (const prims of [brasa, leela]) {
+    for (const prims of [brasa, wine]) {
       expect(resolvePath(prims, ['spacing', '0-5'])).toBe('2px');
       expect(resolvePath(prims, ['spacing', '1-5'])).toBe('6px');
       expect(resolvePath(prims, ['spacing', '2-5'])).toBe('10px');

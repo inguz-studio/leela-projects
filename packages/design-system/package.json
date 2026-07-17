@@ -22,7 +22,7 @@
       "require": "./dist/rn.js"
     },
     "./themes/brasa.css": "./themes/brasa.css",
-    "./themes/leela.css": "./themes/leela.css",
+    "./themes/wine.css": "./themes/wine.css",
     "./themes/index.css": "./themes/index.css"
   },
   "sideEffects": [

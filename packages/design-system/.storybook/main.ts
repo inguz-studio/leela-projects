@@ -19,7 +19,7 @@ function getAbsolutePath(value: string): string {
  *
  * Stories vivem ao lado de cada componente (src/components/X/X.stories.tsx) e
  * a doc viva com handoff Copy-to-Clipboard em X.docs.mdx.
- * O toggle de tema (brasa/leela) fica na toolbar — ver preview.tsx.
+ * O toggle de tema (brasa/wine) fica na toolbar — ver preview.tsx.
  */
 const config: StorybookConfig = {
   framework: getAbsolutePath('@storybook/react-vite'),

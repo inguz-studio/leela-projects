@@ -1,7 +1,7 @@
 /**
  * Camada de aliases shadcn→brasa (tokens/shadcn.json) — prova por número.
  *
- * Três garantias, nos 2 temas (brasa escuro, leela claro):
+ * Três garantias, nos 2 temas (brasa escuro, wine claro):
  *   1. Todo alias resolve para um token SEMÂNTICO existente (nunca dangle).
  *   2. O CSS gerado emite `--<alias>: var(--<semantic>)` exatamente como
  *      mapeado — a ponte é gerada pelo pipeline, nunca escrita à mão.
@@ -17,9 +17,9 @@
 
 import { describe, it, expect } from 'vitest';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
-import primitivesLeela from '../../../tokens/primitives.leela.json';
+import primitivesWine from '../../../tokens/primitives.wine.json';
 import semanticBase from '../../../tokens/semantic.json';
-import semanticLeela from '../../../tokens/semantic.leela.json';
+import semanticWine from '../../../tokens/semantic.wine.json';
 import component from '../../../tokens/component.json';
 import shadcnAliases from '../../../tokens/shadcn.json';
 import {
@@ -111,15 +111,15 @@ const brasa: FlatTokens = generateRNTheme(
   component as TokenRecord,
 );
 
-const leela: FlatTokens = generateRNTheme(
-  primitivesLeela as TokenRecord,
-  mergeTokens(semanticBase as TokenRecord, semanticLeela as TokenRecord),
+const wine: FlatTokens = generateRNTheme(
+  primitivesWine as TokenRecord,
+  mergeTokens(semanticBase as TokenRecord, semanticWine as TokenRecord),
   component as TokenRecord,
 );
 
 const themes: Array<[string, FlatTokens]> = [
   ['brasa', brasa],
-  ['leela', leela],
+  ['wine', wine],
 ];
 
 function resolveAlias(tokens: FlatTokens, alias: string): string {
@@ -159,17 +159,17 @@ describe('Aliases shadcn — integridade do mapa', () => {
       component as TokenRecord,
       { aliases: shadcnAliases as TokenRecord },
     );
-    const leelaCSS = generateCSS(
-      'leela',
-      primitivesLeela as TokenRecord,
-      mergeTokens(semanticBase as TokenRecord, semanticLeela as TokenRecord),
+    const wineCSS = generateCSS(
+      'wine',
+      primitivesWine as TokenRecord,
+      mergeTokens(semanticBase as TokenRecord, semanticWine as TokenRecord),
       component as TokenRecord,
       { aliases: shadcnAliases as TokenRecord },
     );
     for (const [alias, semantic] of Object.entries(ALIAS_TO_SEMANTIC)) {
       const expected = `  --${alias}: var(--${semantic});`;
       expect(brasaCSS, `brasa sem ${expected}`).toContain(expected);
-      expect(leelaCSS, `leela sem ${expected}`).toContain(expected);
+      expect(wineCSS, `wine sem ${expected}`).toContain(expected);
     }
   });
 });

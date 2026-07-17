@@ -2,7 +2,7 @@
  * Matriz de contraste WCAG AA — prova por número, não a olho (FIX-E01).
  *
  * Percorre TODOS os pares fg/bg semânticos dos 2 temas (brasa escuro,
- * leela claro) resolvidos a hex via generateRNTheme e exige:
+ * wine claro) resolvidos a hex via generateRNTheme e exige:
  *   - texto normal:        ≥ 4.5:1  (WCAG 1.4.3 AA)
  *   - não-texto (bordas
  *     funcionais, focus,
@@ -15,9 +15,9 @@
 
 import { describe, it, expect } from 'vitest';
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
-import primitivesLeela from '../../../tokens/primitives.leela.json';
+import primitivesWine from '../../../tokens/primitives.wine.json';
 import semanticBase from '../../../tokens/semantic.json';
-import semanticLeela from '../../../tokens/semantic.leela.json';
+import semanticWine from '../../../tokens/semantic.wine.json';
 import component from '../../../tokens/component.json';
 import {
   generateRNTheme,
@@ -67,15 +67,15 @@ const brasa: FlatTokens = generateRNTheme(
   component as TokenRecord,
 );
 
-const leela: FlatTokens = generateRNTheme(
-  primitivesLeela as TokenRecord,
-  mergeTokens(semanticBase as TokenRecord, semanticLeela as TokenRecord),
+const wine: FlatTokens = generateRNTheme(
+  primitivesWine as TokenRecord,
+  mergeTokens(semanticBase as TokenRecord, semanticWine as TokenRecord),
   component as TokenRecord,
 );
 
 const themes: Array<[string, FlatTokens]> = [
   ['brasa', brasa],
-  ['leela', leela],
+  ['wine', wine],
 ];
 
 // ---------------------------------------------------------------------------
@@ -226,13 +226,13 @@ for (const [themeName, tokens] of themes) {
 // ---------------------------------------------------------------------------
 
 describe('Regressões do REVIEW-E01', () => {
-  it('F01: leela text-primary sobre surface-base é legível (era 1.04:1)', () => {
-    expect(contrastRatio(leela['text-primary']!, leela['surface-base']!)).toBeGreaterThanOrEqual(4.5);
+  it('F01: wine text-primary sobre surface-base é legível (era 1.04:1)', () => {
+    expect(contrastRatio(wine['text-primary']!, wine['surface-base']!)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('F02: Badge alerta — warning-fg difere de warning-surface e contrasta', () => {
     expect(brasa['feedback-warning-fg']).not.toBe(brasa['feedback-warning-surface']);
-    expect(leela['feedback-warning-fg']).not.toBe(leela['feedback-warning-surface']);
+    expect(wine['feedback-warning-fg']).not.toBe(wine['feedback-warning-surface']);
   });
 
   it('F03: Button primary brasa passa AA (era 3.27:1)', () => {
@@ -241,7 +241,7 @@ describe('Regressões do REVIEW-E01', () => {
 
   it('M1: ConfirmModal textarea — border-strong sobre surface-base ≥ 3:1 (era border-default 1.67/1.46)', () => {
     expect(contrastRatio(brasa['border-strong']!, brasa['surface-base']!)).toBeGreaterThanOrEqual(3.0);
-    expect(contrastRatio(leela['border-strong']!, leela['surface-base']!)).toBeGreaterThanOrEqual(3.0);
+    expect(contrastRatio(wine['border-strong']!, wine['surface-base']!)).toBeGreaterThanOrEqual(3.0);
   });
 });
 
@@ -397,7 +397,7 @@ describe('EventThumb — ícone ≥ 3:1 sobre a região do gradiente que ocupa',
 // endpoints e meio do gradiente do TEXTO contra (a) surface-raised puro e
 // (b) surface-raised composto com o tint MAIS FORTE do card (primeiro rgba
 // de countdown-bg, o pico dos radiais — em todo o resto do card o tint é
-// mais fraco). O gradiente leela usa primary.400→500: o 300 reprovava aqui.
+// mais fraco). O gradiente wine usa primary.400→500: o 300 reprovava aqui.
 // ---------------------------------------------------------------------------
 
 describe('Countdown — número gradient-text ≥ 3:1 (texto grande)', () => {

@@ -16,6 +16,6 @@ export {
   type RNThemeContextValue,
 } from './theme/ThemeProviderRN';
 
-export { brasaTheme, leelaTheme } from './theme/rn-themes';
+export { brasaTheme, wineTheme } from './theme/rn-themes';
 
 export type { FlatTokens, TokenRecord } from './theme/generate';

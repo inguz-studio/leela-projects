@@ -65,7 +65,7 @@ const ROUTE_META: Record<RouteId, RouteMeta> = {
   temas: {
     label: 'Temas',
     title: 'Temas',
-    subtitle: 'brasa e leela lado a lado, com troca ao vivo',
+    subtitle: 'brasa e wine lado a lado, com troca ao vivo',
     icon: sidebarNavIcon(SwatchBook),
   },
 };

@@ -1,5 +1,5 @@
 /**
- * Temas — comparação lado a lado brasa × leela.
+ * Temas — comparação lado a lado brasa × wine.
  *
  * Cada painel fixa data-theme no wrapper: as CSS vars resolvem no escopo do
  * próprio wrapper, então os MESMOS componentes renderizam nos dois temas ao
@@ -29,7 +29,7 @@ const SWATCHES = [
   '--feedback-warning',
 ] as const;
 
-function ThemeSample({ theme, label }: { theme: 'brasa' | 'leela'; label: string }): JSX.Element {
+function ThemeSample({ theme, label }: { theme: 'brasa' | 'wine'; label: string }): JSX.Element {
   return (
     <div
       data-theme={theme}
@@ -117,7 +117,7 @@ export function ThemesPage(): JSX.Element {
       >
         <div className="grid grid-cols-1 gap-[var(--spacing-6)] xl:grid-cols-2">
           <ThemeSample theme="brasa" label="Brasa — dark, Exo 2" />
-          <ThemeSample theme="leela" label="Leela — light, Syne/Figtree" />
+          <ThemeSample theme="wine" label="Wine — light, Syne/Figtree" />
         </div>
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           Nota: as famílias tipográficas (Exo 2, Syne, Figtree, JetBrains Mono) são declaradas por

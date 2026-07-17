@@ -30,7 +30,7 @@ export {
   type FlatTokens,
 } from './theme/generate';
 
-export { brasaTheme, leelaTheme } from './theme/rn-themes';
+export { brasaTheme, wineTheme } from './theme/rn-themes';
 
 // ── Atoms ──────────────────────────────────────────────────────────────────
 export { Button, buttonVariants, type ButtonProps } from './components/Button';

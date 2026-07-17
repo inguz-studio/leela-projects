@@ -57,7 +57,7 @@ function refToValue(ref: string, primitives: TokenRecord): string {
 
 /**
  * Deep-merges `overrides` over `base` without mutating either.
- * Used to apply per-theme semantic overrides (e.g. semantic.leela.json)
+ * Used to apply per-theme semantic overrides (e.g. semantic.wine.json)
  * on top of the shared semantic.json before generating CSS/RN outputs.
  */
 export function mergeTokens(base: TokenRecord, overrides: TokenRecord): TokenRecord {
