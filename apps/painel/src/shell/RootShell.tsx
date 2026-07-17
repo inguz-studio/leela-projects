@@ -31,7 +31,7 @@ export interface RootShellProps {
 export function RootShell({ children }: RootShellProps): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
-  const { nome } = useShellSession();
+  const { nome, fotoUrl } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
 
   const sections = shellSidebarSections(location.pathname, (href) => navigate(href), eventosAtivos);
@@ -81,7 +81,7 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   // morto.
   const footer = nome ? (
     <SidebarFooter
-      avatar={<Avatar size="sm" name={nome} />}
+      avatar={<Avatar size="sm" name={nome} {...(fotoUrl ? { src: fotoUrl } : {})} />}
       name={nome}
       subtitle="Ver perfil"
       onClick={() => navigate('/conta')}

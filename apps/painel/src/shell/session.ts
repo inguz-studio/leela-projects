@@ -11,20 +11,26 @@ import { onSessionChange } from '@leela/api-client';
 export interface ShellSession {
   /** displayName do usuário logado; null = anônimo/carregando. */
   nome: string | null;
+  /** photoURL do usuário logado (S020-T5 — foto por URL); null = sem foto. */
+  fotoUrl: string | null;
 }
 
-/** Observa a sessão Firebase e expõe o nome de exibição para o rodapé. */
+/** Observa a sessão Firebase e expõe nome + foto para o rodapé da sidebar. */
 export function useShellSession(): ShellSession {
   const [nome, setNome] = useState<string | null>(null);
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onSessionChange((user) => {
       setNome(user?.displayName ?? null);
+      // photoURL vazio ('') = sem foto → cai no avatar por iniciais.
+      const foto = user?.photoURL ?? null;
+      setFotoUrl(foto && foto.length > 0 ? foto : null);
     });
     return () => {
       unsub();
     };
   }, []);
 
-  return { nome };
+  return { nome, fotoUrl };
 }

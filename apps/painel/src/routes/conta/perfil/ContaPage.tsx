@@ -9,15 +9,22 @@
 // Senhas ficam só no estado controlado dos inputs enquanto a tela existe e são
 // limpas após o sucesso; nunca são logadas.
 //
-// LACUNA: foto de perfil não entra — não há padrão de upload (Storage) no repo
-// (firebase.ts do painel só inicializa db/auth/functions). Fica registrada para
-// quando existir um seam de upload.
+// FOTO DE PERFIL (S020-T5): padrão URL+prévia (o MESMO do avatar do perfil
+// público / capa de evento) — o usuário cola uma URL http(s), vê a prévia e
+// salva; reflete no Avatar do rodapé da sidebar (via shell/session.ts). UPLOAD
+// de arquivo segue lacuna: não há Storage no repo (firebase.ts do painel só
+// inicializa db/auth/functions) — registrado, não improvisado.
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, useToast } from '@leela/design-system';
-import { atualizarNomeExibicao, logout, trocarSenha } from '@leela/api-client';
+import { Avatar, Button, Input, useToast } from '@leela/design-system';
+import {
+  atualizarFotoPerfil,
+  atualizarNomeExibicao,
+  logout,
+  trocarSenha,
+} from '@leela/api-client';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
 import { SENHA_MIN, senhaAtendeMinimo } from '../auth/_lib/authValidation';
@@ -25,6 +32,18 @@ import { useContaUsuario } from './useContaUsuario';
 
 const SECAO = 'flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]';
 const SECAO_TITULO = 'text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]';
+
+/** URL http(s) válida? Só decide se mostra a prévia da imagem (mesma do perfil público). @pure */
+function urlDeImagemValida(valor: string): boolean {
+  const v = valor.trim();
+  if (v.length === 0) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 export function ContaPage(): JSX.Element {
   const { user, loading } = useContaUsuario();
@@ -54,6 +73,12 @@ export function ContaPage(): JSX.Element {
   const [nomeEditado, setNomeEditado] = useState<string | null>(null);
   const nome = nomeEditado ?? nomeOriginal;
   const [salvandoNome, setSalvandoNome] = useState(false);
+
+  // Foto de perfil (URL+prévia). null = não editada → cai no photoURL atual.
+  const fotoOriginal = user?.photoURL ?? '';
+  const [fotoEditada, setFotoEditada] = useState<string | null>(null);
+  const fotoUrl = fotoEditada ?? fotoOriginal;
+  const [salvandoFoto, setSalvandoFoto] = useState(false);
 
   // Troca de senha.
   const [senhaAtual, setSenhaAtual] = useState('');
@@ -103,6 +128,32 @@ export function ContaPage(): JSX.Element {
       toast({ variant: 'danger', title: 'Não foi possível salvar o nome', description: 'Tente novamente.' });
     } finally {
       setSalvandoNome(false);
+    }
+  }
+
+  const fotoValida = fotoUrl.trim().length === 0 || urlDeImagemValida(fotoUrl);
+  const fotoMudou = fotoUrl.trim() !== fotoOriginal.trim();
+  const podeSalvarFoto = fotoValida && fotoMudou && !salvandoFoto;
+  const fotoUrlErro =
+    fotoUrl.trim().length > 0 && !urlDeImagemValida(fotoUrl)
+      ? 'Use uma URL http(s) de imagem.'
+      : undefined;
+
+  async function salvarFoto(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    if (!podeSalvarFoto) return;
+    setSalvandoFoto(true);
+    try {
+      await atualizarFotoPerfil(fotoUrl.trim());
+      setFotoEditada(fotoUrl.trim());
+      toast({
+        variant: 'success',
+        title: fotoUrl.trim().length === 0 ? 'Foto removida' : 'Foto atualizada',
+      });
+    } catch {
+      toast({ variant: 'danger', title: 'Não foi possível salvar a foto', description: 'Tente novamente.' });
+    } finally {
+      setSalvandoFoto(false);
     }
   }
 
@@ -158,6 +209,35 @@ export function ContaPage(): JSX.Element {
         <div>
           <Button type="submit" variant="primary" disabled={!podeSalvarNome}>
             {salvandoNome ? 'Salvando…' : 'Salvar'}
+          </Button>
+        </div>
+      </form>
+
+      {/* Foto de perfil (S020-T5) — URL + prévia; reflete no Avatar do rodapé. */}
+      <form className={SECAO} onSubmit={(e) => void salvarFoto(e)} aria-label="Foto de perfil">
+        <span className={SECAO_TITULO}>Foto de perfil</span>
+        <div className="flex items-center gap-[var(--spacing-4)]">
+          <Avatar size="lg" name={nome || (user.email ?? 'Você')} {...(urlDeImagemValida(fotoUrl) ? { src: fotoUrl.trim() } : {})} />
+          <div className="flex flex-1 flex-col gap-[var(--spacing-1)]">
+            <Input
+              id="conta-foto-url"
+              type="url"
+              inputMode="url"
+              label="Foto (URL)"
+              value={fotoUrl}
+              onChange={(e) => setFotoEditada(e.target.value)}
+              placeholder="https://…/foto.jpg"
+              {...(fotoUrlErro ? { errorMessage: fotoUrlErro } : {})}
+            />
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Cole a URL de uma imagem. Upload de arquivo ainda não está disponível. Deixe vazio para
+              voltar ao avatar com suas iniciais.
+            </span>
+          </div>
+        </div>
+        <div>
+          <Button type="submit" variant="primary" disabled={!podeSalvarFoto}>
+            {salvandoFoto ? 'Salvando…' : 'Salvar foto'}
           </Button>
         </div>
       </form>
