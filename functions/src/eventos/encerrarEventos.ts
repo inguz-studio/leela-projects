@@ -9,7 +9,7 @@
 // o organizador NÃO PODE encerrar o próprio evento para liberar o próprio
 // retido. Por isso:
 //   - o encerramento é AUTOMÁTICO POR DATA (cron diário 03:10, padrão
-//     ADR-007: wrapper v1 pubsub.schedule + core puro testável);
+//     ADR-015: wrapper v1 pubsub.schedule + core puro testável);
 //   - não existe botão de self-close no painel nesta onda;
 //   - a trincheira nas Rules JÁ existe e é anterior a este arquivo:
 //     `statusIntocado()` (ADR-005, review #18) — cliente NUNCA grava
@@ -148,7 +148,7 @@ export async function encerrarEventosCore(
 }
 
 // ---------------------------------------------------------------------------
-// Cron (ADR-007 — wrapper v1 fino; 03:10 escalonado após 03:00/03:05)
+// Cron (ADR-015 — wrapper v1 fino; 03:10 escalonado após 03:00/03:05)
 // ---------------------------------------------------------------------------
 
 export const encerrarEventos = pubsub

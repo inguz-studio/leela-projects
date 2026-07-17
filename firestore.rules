@@ -2017,7 +2017,7 @@ service cloud.firestore {
 
       // `analyticsSnapshots/{dia}` — histórico DIÁRIO IMUTÁVEL de KPIs
       // (E11 · S821-T1a · Onda 2 T2-L1). Cópia fiel de `dashboard/current`
-      // persistida pelo cron `coletaDiaria` (03:05 — ADR-007); docId =
+      // persistida pelo cron `coletaDiaria` (03:05 — ADR-015); docId =
       // YYYY-MM-DD. SEM `alerts` (UI transitória fica fora do histórico).
       //
       // ESCRITA: NUNCA pelo cliente (nem platform_admin via client SDK) —

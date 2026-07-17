@@ -172,7 +172,7 @@ export {
 export { getBankDetailsForPayout } from './finance/getBankDetailsForPayout';
 
 // Eventos — ENCERRAMENTO AUTOMÁTICO por data (E09s-L2-T6 · RN-350 ·
-// decisão #6): cron 03:10 (ADR-007, slot após 03:00/03:05) transiciona
+// decisão #6): cron 03:10 (ADR-015, slot após 03:00/03:05) transiciona
 // publicado/ao_vivo→encerrado no dia seguinte à prova e dispara o
 // recompute de saldo (retido→0). O organizador NÃO encerra o próprio
 // evento (anti-fraude — Rules já negam status de cliente). ⚠️ Fable.
@@ -190,7 +190,7 @@ export { estimarAlcance } from './eventos/estimarAlcance';
 export { enviarCampanha } from './eventos/enviarCampanha';
 
 // Analytics — COLETA DIÁRIA de snapshots de KPIs (S821-T1b · E11 · T2-L1):
-// cron 03:05 (ADR-007 — slot entre o 03:00 do RN-102 e o 03:10 do
+// cron 03:05 (ADR-015 — slot entre o 03:00 do RN-102 e o 03:10 do
 // encerramento; lê membros.status JÁ envelhecidos). Copia dashboard/current
 // (subset OverviewKPIs, sem alerts) para analyticsSnapshots/{YYYY-MM-DD}
 // por substituição total idempotente; nunca toca dias passados. Hook

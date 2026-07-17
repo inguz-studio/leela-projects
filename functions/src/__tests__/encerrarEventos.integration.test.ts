@@ -1,7 +1,7 @@
 /**
  * encerrarEventos.integration.test.ts — LEELA-E09s-L2-T6
  *
- * Cron de encerramento automático (core chamado direto, padrão ADR-007)
+ * Cron de encerramento automático (core chamado direto, padrão ADR-015)
  * contra o Emulator. Prova os aceites falsificáveis do brief:
  *   - publicado/ao_vivo com data ANTERIOR a agora ⇒ 'encerrado' + carimbo;
  *   - evento FUTURO ⇒ intocado; dia DA PROVA ⇒ intocado; rascunho ⇒

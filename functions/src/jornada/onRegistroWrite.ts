@@ -74,7 +74,7 @@ export interface ResultadoRecomputeParticipacao {
 }
 
 // ---------------------------------------------------------------------------
-// Núcleo (testável no Emulator via Admin SDK — padrão ADR-007/triggers v1)
+// Núcleo (testável no Emulator via Admin SDK — padrão ADR-015/triggers v1)
 // ---------------------------------------------------------------------------
 
 function toDate(v: unknown): Date | null {

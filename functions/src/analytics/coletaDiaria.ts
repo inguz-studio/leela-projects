@@ -5,7 +5,7 @@
 // Onda 2 T2-L1 · decisão 6: histórico não é backfillável — coleta primeiro,
 // telas na Onda 3).
 //
-// PADRÃO ADR-007 (formalizado neste lote — precedente recalcularStatusMembros):
+// PADRÃO ADR-015 (formalizado neste lote — precedente recalcularStatusMembros):
 //   - wrapper v1 `pubsub.schedule(...).timeZone('America/Sao_Paulo').onRun()`;
 //   - núcleo `*Core(db, …)` separado e testável no Emulator SEM o scheduler
 //     (o Emulator --only firestore,auth NÃO sobe pubsub — o cron nunca
@@ -85,7 +85,7 @@ export async function exportSnapshotBigQuery(
 export type ExportadorSnapshot = (snapshot: AnalyticsSnapshot) => Promise<void>;
 
 // ---------------------------------------------------------------------------
-// Núcleo (ADR-007 — testável no Emulator via Admin SDK, sem scheduler)
+// Núcleo (ADR-015 — testável no Emulator via Admin SDK, sem scheduler)
 // ---------------------------------------------------------------------------
 
 /** Resultado da coleta (observabilidade + asserções de teste). */
@@ -216,7 +216,7 @@ export async function coletarSnapshotsDiariosCore(
 }
 
 // ---------------------------------------------------------------------------
-// Cron (ADR-007 — wrapper v1 fino; 03:05, escalonado após o 03:00 do RN-102)
+// Cron (ADR-015 — wrapper v1 fino; 03:05, escalonado após o 03:00 do RN-102)
 // ---------------------------------------------------------------------------
 
 export const coletaDiaria = pubsub

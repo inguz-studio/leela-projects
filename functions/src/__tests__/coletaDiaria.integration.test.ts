@@ -1,7 +1,7 @@
 /**
  * coletaDiaria.integration.test.ts — LEELA-S821-T1b (E11 · Onda 2 T2-L1)
  *
- * Integração (Firestore Emulator, Admin SDK direto — padrão ADR-007):
+ * Integração (Firestore Emulator, Admin SDK direto — padrão ADR-015):
  * chama coletarSnapshotsDiariosCore SEM o scheduler (o Emulator não sobe
  * pubsub; o cron nunca dispara sozinho no CI).
  *
