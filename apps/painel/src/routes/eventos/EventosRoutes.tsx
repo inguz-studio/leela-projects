@@ -32,6 +32,7 @@ import { CampanhaEditorPage } from './comunicacao/CampanhaEditorPage';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
 import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
 import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
+import { PoliticaVendasPage } from './configuracoes/PoliticaVendasPage';
 import { EquipePage } from './configuracoes/equipe/EquipePage';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
@@ -130,6 +131,7 @@ export function EventosRoutes(): JSX.Element {
             }
           >
             <Route index element={<ConfigGeraisPage />} />
+            <Route path="politica" element={<PoliticaVendasPage />} />
             <Route path="equipe" element={<EquipePage />} />
           </Route>
           {/* Aba inexistente sob um evento válido → 404 dentro do shell do evento. */}

@@ -48,6 +48,12 @@ export function ConfiguracoesLayout(): JSX.Element {
 
   const abas: SubAba[] = [
     { id: 'geral', label: 'Geral', segmento: '', visivel: podeEditarConfiguracoes(papel) },
+    {
+      id: 'politica',
+      label: 'Política de vendas',
+      segmento: 'politica',
+      visivel: podeEditarConfiguracoes(papel),
+    },
     { id: 'equipe', label: 'Equipe e permissões', segmento: 'equipe', visivel: podeGerirEquipe(papel) },
   ];
   const visiveis = abas.filter((a) => a.visivel);

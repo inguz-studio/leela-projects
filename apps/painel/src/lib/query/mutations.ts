@@ -35,6 +35,7 @@ import {
   salvarCupom,
   salvarKit,
   salvarLote,
+  salvarPoliticaVendas,
   saveCommercialTerms,
   saveDadosBancarios,
   setClaimsEquipe,
@@ -60,6 +61,7 @@ import {
   type SalvarConteudoPaginaVendasInput,
   type SalvarCupomInput,
   type SalvarKitInput,
+  type SalvarPoliticaVendasInput,
   type SetClaimsEquipeResult,
   type TransferirPropriedadeResult,
   type TransicaoAprovisionamentoResult,
@@ -298,6 +300,41 @@ export function useRemoverCupom(
     mutationFn: (cupomId) => removerCupom(getLeelaDb(), eventoId, cupomId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.cupons.doEvento(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutation da POLÍTICA DE VENDAS (E04 · S305-T2/T3) — reembolso/transferência/
+// troca. Escrita DIRETA guardada pelas Rules, MAS só o OWNER do tenant grava
+// (política de reembolso é contrato legal do organizador; staff/papéis de evento
+// são negados). `salvarPoliticaVendas` re-valida o shape no kernel ANTES de
+// escrever (fail-fast espelhado nas Rules). No onSuccess invalida a chave da
+// política → read-your-writes (ADR-010). O `permission-denied` (não é owner)
+// sobe INTACTO para a UI (§2.12). A EXECUÇÃO da política (máquina de reembolso/
+// estorno/transferência) é de E09-S904 — nunca por aqui.
+// =============================================================================
+
+/**
+ * Salva a política de vendas do evento (os 3 blocos, sempre completos) e invalida
+ * a chave da política. `tenantId` é injetado dos params (casa com o evento pai —
+ * ADR-009); as variáveis carregam só reembolso/transferencia/trocaIngresso.
+ */
+export function useSalvarPoliticaVendas(params: {
+  eventoId: string;
+  tenantId: string;
+}): UseMutationResult<void, Error, Omit<SalvarPoliticaVendasInput, 'tenantId'>> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, Omit<SalvarPoliticaVendasInput, 'tenantId'>>({
+    mutationFn: (input) =>
+      salvarPoliticaVendas(getLeelaDb(), params.eventoId, {
+        tenantId: params.tenantId,
+        ...input,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.politicaVendas.doEvento(params.eventoId),
+      });
     },
   });
 }

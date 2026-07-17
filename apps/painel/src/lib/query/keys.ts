@@ -153,6 +153,15 @@ export const queryKeys = {
     doEvento: (eventoId: string) => ['cupons', 'do-evento', eventoId] as const,
   },
 
+  politicaVendas: {
+    /**
+     * Política de reembolso/transferência/troca do evento (`politicaVendas/config`
+     * — S305-T2/T3). A aba lê esta chave; salvar a política a invalida →
+     * read-your-writes (ADR-010): o form reflete a escrita sem reload manual.
+     */
+    doEvento: (eventoId: string) => ['politica-vendas', 'do-evento', eventoId] as const,
+  },
+
   comunicacoes: {
     /**
      * Agregado ∑ de comunicações do evento (`comunicacoesResumo/current` —

@@ -33,6 +33,7 @@ import {
   listarCampanhas,
   getCampanha,
   getPaginaVendas,
+  getPoliticaVendas,
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
   getTenant,
@@ -83,6 +84,7 @@ import type {
   PaginaVendas,
   Parceria,
   PlanoCobranca,
+  PoliticaVendas,
   PlatformRollups,
   Repasse,
   ResumoComunicacoes,
@@ -371,6 +373,20 @@ export function paginaVendasDoEventoQuery(eventoId: string) {
   return queryOptions({
     queryKey: queryKeys.paginaVendas.doEvento(eventoId),
     queryFn: (): Promise<PaginaVendas | null> => getPaginaVendas(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Política de vendas do evento (`politicaVendas/config` — S305-T2/T3). Reusa
+ * `getPoliticaVendas` do api-client (leitura direta O(1); parse fail-fast).
+ * `null` quando o organizador ainda não configurou — o form parte dos defaults
+ * legais do kernel (AUSÊNCIA honesta, nunca número inventado). Salvar invalida
+ * esta chave (read-your-writes, ADR-010).
+ */
+export function politicaVendasDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.politicaVendas.doEvento(eventoId),
+    queryFn: (): Promise<PoliticaVendas | null> => getPoliticaVendas(getLeelaDb(), eventoId),
   });
 }
 
