@@ -8,7 +8,11 @@
  * caminho honesto (tamanho ∈ tamanhosDisponiveis do item do kit) passa.
  */
 import { describe, expect, it } from 'vitest';
-import { validarTamanhosInscrito, type ItemKitParaTamanhos } from '@leela/core';
+import {
+  TAMANHOS_MAX_ENTRADAS,
+  validarTamanhosInscrito,
+  type ItemKitParaTamanhos,
+} from '@leela/core';
 
 const CAMISETA: ItemKitParaTamanhos = {
   id: 'camiseta-tecnica',
@@ -104,6 +108,26 @@ describe('validarTamanhosInscrito — forjas (fail-closed)', () => {
       });
       expect(erros[0]).toMatch(/sem "__"/);
     }
+  });
+
+  it('map acima do teto sanitário → rejeita cedo + eco de chave forjada é TRUNCADO (review T4)', () => {
+    const gigante: Record<string, string> = {};
+    for (let n = 0; n <= TAMANHOS_MAX_ENTRADAS; n += 1) gigante[`item-${n}`] = 'M';
+    const errosCap = validarTamanhosInscrito({
+      tamanhos: gigante,
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS,
+    });
+    expect(errosCap).toHaveLength(1);
+    expect(errosCap[0]).toMatch(/excede/);
+
+    const chaveGigante = 'x'.repeat(500);
+    const errosEco = validarTamanhosInscrito({
+      tamanhos: { [chaveGigante]: 'M' },
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS,
+    });
+    expect(errosEco[0]!.length).toBeLessThan(200); // eco truncado, nunca 500 chars de volta
   });
 
   it('múltiplas forjas → um erro POR item (nada é engolido)', () => {

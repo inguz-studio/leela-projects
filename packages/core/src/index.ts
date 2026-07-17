@@ -494,7 +494,10 @@ export type {
   ItemKitParaTamanhos,
   ValidarTamanhosParams,
 } from './checkout/validarTamanhos';
-export { validarTamanhosInscrito } from './checkout/validarTamanhos';
+export {
+  TAMANHOS_MAX_ENTRADAS,
+  validarTamanhosInscrito,
+} from './checkout/validarTamanhos';
 
 export type { EtapaCheckout } from './checkout/etapas';
 export {

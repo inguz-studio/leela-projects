@@ -30,6 +30,20 @@ export type ItemKitParaTamanhos = Pick<
   'id' | 'tamanhado' | 'tamanhosDisponiveis' | 'kits'
 >;
 
+/**
+ * Teto SANITÁRIO de entradas no map `tamanhos` (review antagonista T4):
+ * nenhum kit real tem dezenas de itens tamanhados — acima disso é payload
+ * sem sentido físico (loop O(n) + eco de erro gigante), rejeitado cedo.
+ * Espelha a postura do MAX_QTD_TRANSICAO_APROVISIONAMENTO (guarda, não RN).
+ */
+export const TAMANHOS_MAX_ENTRADAS = 30;
+
+/** Eco SEGURO de id/valor vindo do payload nas mensagens de erro (review
+ *  antagonista T4): trunca — nunca devolver strings arbitrárias inteiras. */
+function eco(valor: string): string {
+  return valor.length > 40 ? `${valor.slice(0, 40)}…` : valor;
+}
+
 /** Parâmetros da validação — por INSCRITO (ADR-011: tamanho é por inscrito). */
 export interface ValidarTamanhosParams {
   /** Map `itemId → tamanho` informado no checkout (RN-223) */
@@ -56,6 +70,13 @@ export function validarTamanhosInscrito(params: ValidarTamanhosParams): string[]
   const erros: string[] = [];
   const entradas = Object.entries(tamanhos);
 
+  if (entradas.length > TAMANHOS_MAX_ENTRADAS) {
+    // Teto sanitário — rejeita cedo, sem iterar o payload inteiro.
+    return [
+      `tamanhos excede ${TAMANHOS_MAX_ENTRADAS} entradas — payload sem sentido físico (review T4).`,
+    ];
+  }
+
   if (entradas.length > 0 && (kitId === undefined || kitId.length === 0)) {
     // Tamanho sem kit não referencia SKU nenhum — payload incoerente.
     return ['tamanhos informados sem kit escolhido (RN-223 — tamanho é por item do kit).'];
@@ -74,26 +95,26 @@ export function validarTamanhosInscrito(params: ValidarTamanhosParams): string[]
     ) {
       // "__" quebraria o round-trip da chave de SKU `itemId__tamanho` (S210-T2)
       erros.push(
-        `tamanhos["${itemId}"]: item/tamanho devem ser não-vazios sem "${SEPARADOR_SKU}" (RN-223/S210-T2).`
+        `tamanhos["${eco(itemId)}"]: item/tamanho devem ser não-vazios sem "${SEPARADOR_SKU}" (RN-223/S210-T2).`
       );
       continue;
     }
     const item = porId.get(itemId);
     if (item === undefined) {
-      erros.push(`tamanhos["${itemId}"]: item não existe no evento (RN-223).`);
+      erros.push(`tamanhos["${eco(itemId)}"]: item não existe no evento (RN-223).`);
       continue;
     }
     if (kitId !== undefined && !item.kits.includes(kitId)) {
-      erros.push(`tamanhos["${itemId}"]: item não pertence ao kit '${kitId}' (RN-215/223).`);
+      erros.push(`tamanhos["${eco(itemId)}"]: item não pertence ao kit '${eco(kitId)}' (RN-215/223).`);
       continue;
     }
     if (!item.tamanhado) {
-      erros.push(`tamanhos["${itemId}"]: item não é tamanhado (RN-212).`);
+      erros.push(`tamanhos["${eco(itemId)}"]: item não é tamanhado (RN-212).`);
       continue;
     }
     if (!item.tamanhosDisponiveis.includes(tamanho)) {
       erros.push(
-        `tamanhos["${itemId}"]: tamanho '${tamanho}' fora dos disponíveis ` +
+        `tamanhos["${eco(itemId)}"]: tamanho '${eco(tamanho)}' fora dos disponíveis ` +
           `[${item.tamanhosDisponiveis.join(', ')}] (RN-223).`
       );
     }

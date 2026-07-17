@@ -49,6 +49,7 @@ import {
   parseCupom,
   parseKit,
   parseLote,
+  TAMANHOS_MAX_ENTRADAS,
   TermsNotFoundError,
   validarDadosMinimosInscrito,
   validarEmail,
@@ -212,6 +213,8 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
       }
       // RN-223 (T4) — SHAPE do map de tamanhos; a validação SEMÂNTICA
       // (contra itensKit/tamanhosDisponiveis) roda depois, com o catálogo.
+      // Review antagonista T4: teto sanitário de entradas + eco TRUNCADO de
+      // chave forjada (nunca devolver string arbitrária inteira ao cliente).
       const tamanhosRaw = obj['tamanhos'];
       if (tamanhosRaw !== undefined) {
         if (
@@ -223,17 +226,23 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
             `inscritos[${i}]: "tamanhos" deve ser map itemId → tamanho (RN-223).`
           );
         } else {
-          for (const [itemId, tamanho] of Object.entries(
-            tamanhosRaw as Record<string, unknown>
-          )) {
-            if (
-              itemId.length === 0 ||
-              typeof tamanho !== 'string' ||
-              tamanho.length === 0
-            ) {
-              erros.push(
-                `inscritos[${i}]: tamanhos["${itemId}"] deve ser string não vazia (RN-223).`
-              );
+          const entradas = Object.entries(tamanhosRaw as Record<string, unknown>);
+          if (entradas.length > TAMANHOS_MAX_ENTRADAS) {
+            erros.push(
+              `inscritos[${i}]: "tamanhos" excede ${TAMANHOS_MAX_ENTRADAS} entradas (review T4).`
+            );
+          } else {
+            for (const [itemId, tamanho] of entradas) {
+              if (
+                itemId.length === 0 ||
+                typeof tamanho !== 'string' ||
+                tamanho.length === 0
+              ) {
+                const idEco = itemId.length > 40 ? `${itemId.slice(0, 40)}…` : itemId;
+                erros.push(
+                  `inscritos[${i}]: tamanhos["${idEco}"] deve ser string não vazia (RN-223).`
+                );
+              }
             }
           }
         }
