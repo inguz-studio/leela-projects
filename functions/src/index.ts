@@ -202,6 +202,22 @@ export { getBankDetailsForPayout } from './finance/getBankDetailsForPayout';
 // evento (anti-fraude — Rules já negam status de cliente). ⚠️ Fable.
 export { encerrarEventos } from './eventos/encerrarEventos';
 
+// Eventos — VERSIONAMENTO DE REGULAMENTO (S306-T1/T3 · E04 · RN-149):
+// trigger onWrite deriva o bump MONOTÔNICO de `regulamentoVersao` quando o
+// TEXTO muda (publicar onde não havia = v1; apagar não bumpa); Rules
+// congelam a versão para cliente. Inscritos antigos mantêm o aceite da
+// versão que assinaram (E12-S1207); `precisaNovoAceite` (core) deriva quem
+// re-aceita. ⚠️ Fable (contrato legal).
+export { versionarRegulamento } from './eventos/versionarRegulamento';
+
+// Eventos — EXPURGO DO DADO DE SAÚDE (S306-T3 · E04 · RN-147 · LGPD
+// Art. 11): cron 03:20 (ADR-015, slot após 03:00/03:05/03:10) apaga
+// `inscritos/*/saude/current` de eventos ENCERRADOS além da retenção
+// (90d pós-evento — premissa alinhada à RN-144) e carimba
+// `saudeExpurgadaEm`. ⚠️ Fable (dado sensível). Pendência de deploy:
+// índices (composite status+data; collection group `saude.eventoId`).
+export { expurgarSaude } from './eventos/expurgarSaude';
+
 // Eventos — CAMPANHAS (E06 · S401): estimativa de alcance por segmento
 // (count() on-demand sobre inscritos — E06-L2-T1; o evento NÃO tem
 // agregados por-modalidade/por-kit, diferença deliberada vs. o clube puro).

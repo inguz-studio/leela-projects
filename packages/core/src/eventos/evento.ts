@@ -15,6 +15,7 @@ import type { Timestamp } from '../index';
 import { isModoTaxa, type ModoTaxa } from '../finance/repasse-types';
 import { isJanelaEntrega, ordenarJanelasEntrega, type JanelaEntrega } from './cronogramaEntrega';
 import { dataLocalISO } from './dataEvento';
+import { isExigenciasSaude, type ExigenciasSaude } from './exigenciasSaude';
 import { isFaixaChips, type FaixaChips } from './faixaChips';
 
 // ---------------------------------------------------------------------------
@@ -148,6 +149,21 @@ export interface Evento {
    * pendente está registrada no épico E04 §LEELA-S306.
    */
   regulamento?: string;
+  /**
+   * S306-T1 (RN-149) — versão VIGENTE do regulamento. MONOTÔNICA, escrita
+   * EXCLUSIVA server-side (versionarRegulamento bumpa quando o texto muda;
+   * Rules congelam para cliente). Ausente/0 = sem regulamento publicado.
+   * Aceite por inscrito vive em `inscritos/{id}.regulamentoAceite` (E12-S1207).
+   */
+  regulamentoVersao?: number;
+  /** Carimbo da última publicação de versão (S306-T1 · RN-149). */
+  regulamentoAtualizadoEm?: Timestamp;
+  /**
+   * S306-T1 (RN-146) — flags de exigência de saúde (atestado/PAR-Q), ambas
+   * default OFF (minimização LGPD). Ausente = nada exigido. O dado coletado
+   * vive ISOLADO em `inscritos/{id}/saude/{current}` (RN-147 · Art. 11).
+   */
+  exigenciasSaude?: ExigenciasSaude;
   /**
    * RN-347 — modo da taxa da plataforma POR EVENTO:
    *   'incorporada' — comprador paga o face; a taxa sai do repasse;
@@ -409,6 +425,20 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     // Só entram quando presentes (exactOptionalPropertyTypes: nunca `undefined`).
     ...(imagemUrl !== undefined ? { imagemUrl } : {}),
     ...(regulamento !== undefined ? { regulamento } : {}),
+    // S306 (RN-149/146): versão de regulamento (int > 0 ou omitida) +
+    // exigências de saúde (shape exato ou omitida — lixo NUNCA liga coleta
+    // de dado sensível: mesma direção defensiva do vendaSomentePorCupom).
+    ...(typeof data['regulamentoVersao'] === 'number' &&
+    Number.isInteger(data['regulamentoVersao']) &&
+    (data['regulamentoVersao'] as number) > 0
+      ? { regulamentoVersao: data['regulamentoVersao'] as number }
+      : {}),
+    ...(data['regulamentoAtualizadoEm'] != null
+      ? { regulamentoAtualizadoEm: data['regulamentoAtualizadoEm'] as Timestamp }
+      : {}),
+    ...(isExigenciasSaude(data['exigenciasSaude'])
+      ? { exigenciasSaude: data['exigenciasSaude'] }
+      : {}),
     ...(taxaModo !== undefined ? { taxaModo } : {}),
     // Cupom-only (RN-303): só `true` LITERAL liga o modo (ver doc do campo).
     ...(data['vendaSomentePorCupom'] === true ? { vendaSomentePorCupom: true } : {}),

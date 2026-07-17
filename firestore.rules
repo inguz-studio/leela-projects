@@ -457,6 +457,41 @@ service cloud.firestore {
       }
 
       /**
+       * S306-T1 (RN-146): exigências de saúde — quando presente, map EXATO
+       * {atestado, parq} com booleans (lixo NUNCA liga coleta de dado
+       * sensível). Flags nascem OFF por default no produto (minimização
+       * LGPD) — a Rule valida o shape; o default é da UI/core.
+       */
+      function exigenciasSaudeValidas() {
+        return !('exigenciasSaude' in request.resource.data)
+          || (request.resource.data.exigenciasSaude is map
+              && request.resource.data.exigenciasSaude.keys().hasAll(['atestado', 'parq'])
+              && request.resource.data.exigenciasSaude.keys().hasOnly(['atestado', 'parq'])
+              && request.resource.data.exigenciasSaude.atestado is bool
+              && request.resource.data.exigenciasSaude.parq is bool);
+      }
+
+      /**
+       * S306 (RN-149/147): campos de escrita EXCLUSIVA de Function no doc do
+       * evento — `regulamentoVersao`/`regulamentoAtualizadoEm` (versão é
+       * contrato legal MONOTÔNICO, bump só pelo trigger versionarRegulamento)
+       * e `saudeExpurgadaEm` (prova do expurgo LGPD — forjá-lo simularia
+       * expurgo que não houve). Cliente nem cria nem toca.
+       */
+      function camposS306NaoNascem() {
+        return !request.resource.data.keys().hasAny(
+          ['regulamentoVersao', 'regulamentoAtualizadoEm', 'regulamentoTextoHash',
+           'saudeExpurgadaEm']
+        );
+      }
+      function camposS306Intocados() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+          ['regulamentoVersao', 'regulamentoAtualizadoEm', 'regulamentoTextoHash',
+           'saudeExpurgadaEm']
+        );
+      }
+
+      /**
        * EVENTO-CAMPOS (RN-347): modo da taxa — enum FECHADO quando presente
        * (null NÃO é válido: o modo se troca, nunca se "anula"; ausência só
        * existe em doc legado, que os consumidores leem como 'incorporada').
@@ -496,6 +531,8 @@ service cloud.firestore {
                         && faixaChipsValida()
                         && capaValida()
                         && regulamentoValido()
+                        && exigenciasSaudeValidas()
+                        && camposS306NaoNascem()
                         && taxaModoValido())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
@@ -508,6 +545,8 @@ service cloud.firestore {
                         && faixaChipsValida()
                         && capaValida()
                         && regulamentoValido()
+                        && exigenciasSaudeValidas()
+                        && camposS306Intocados()
                         && taxaModoValido()
                         && taxaModoEditavel())
                     || isPlatformAdmin();
@@ -686,6 +725,25 @@ service cloud.firestore {
                           && tenantAtivo(resource.data.tenantId)
                           && inscritoNaoEstornado())
                       || isPlatformAdmin();
+
+        // `saude/{current}` — dado de SAÚDE do inscrito (S306 · RN-147 ·
+        // LGPD Art. 11). Subcoleção SENSÍVEL isolada: base legal
+        // (consentimento destacado), acesso e retenção próprios.
+        // LEITURA: owner/staff do tenant + papel de evento organizador/
+        // administrador + platform_admin — OPERADOR fica FORA (o balcão não
+        // precisa de PAR-Q/atestado; a superfície é MENOR que a do doc do
+        // inscrito), e afiliado/patrocinador/promoter/athlete/financeiro
+        // NEGADOS (RN-147). ESCRITA de cliente: NUNCA — a coleta é da
+        // Function do checkout (E12-S1207/E13) e o EXPURGO é do cron
+        // expurgarSaude (ambos Admin SDK). Sem match de subcoleções de
+        // inscritos = deny-by-default; este match EXISTE para abrir a
+        // leitura de gestão e documentar a negação.
+        match /saude/{saudeDocId} {
+          allow read: if isPlatformAdmin()
+                      || isTenantWriter(tenantDoEventoPai())
+                      || papelEventoAtivo(['organizador', 'administrador']);
+          allow write: if false;
+        }
       }
 
       // `kits/{kitId}` — kits do evento (E03 · S205-T1).

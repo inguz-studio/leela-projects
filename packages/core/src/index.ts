@@ -360,6 +360,26 @@ export {
   parseInscrito,
 } from './eventos/inscrito';
 
+// Exigências de saúde + regulamento (E04 · LEELA-S306 · RN-146/147/149)
+export type { ExigenciasSaude } from './eventos/exigenciasSaude';
+export {
+  exigenciasSaudePadrao,
+  isExigenciasSaude,
+  exigeDadoDeSaude,
+} from './eventos/exigenciasSaude';
+export type { SaudeInscrito, BaseLegalSaude } from './eventos/saudeInscrito';
+export {
+  SAUDE_DOC_ID,
+  SAUDE_SUBCOL,
+  RETENCAO_SAUDE_DIAS_POS_EVENTO,
+  parseSaudeInscrito,
+} from './eventos/saudeInscrito';
+export {
+  versaoRegulamento,
+  precisaNovoAceite,
+  regulamentoMudou,
+} from './eventos/regulamento';
+
 // Bloco [reg] do Inscrito (ADR-011 · FABLE-A-T2)
 export type {
   DadosPessoaisInscrito,
