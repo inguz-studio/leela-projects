@@ -487,6 +487,15 @@ export {
   validarDadosMinimosInscrito,
 } from './checkout/validarDados';
 
+// Validação de TAMANHOS do kit na ORIGEM (S209-T2 · RN-223/212 · ratificação
+// 3d — LEELA-BEPEND-T4): fecha o vetor "tamanho forjado no payload" no
+// produtor de escrita do checkout; reutilizável web (E12) + mobile (E13).
+export type {
+  ItemKitParaTamanhos,
+  ValidarTamanhosParams,
+} from './checkout/validarTamanhos';
+export { validarTamanhosInscrito } from './checkout/validarTamanhos';
+
 export type { EtapaCheckout } from './checkout/etapas';
 export {
   ETAPAS_CHECKOUT,

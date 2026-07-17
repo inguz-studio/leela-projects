@@ -52,10 +52,12 @@ import {
   TermsNotFoundError,
   validarDadosMinimosInscrito,
   validarEmail,
+  validarTamanhosInscrito,
   type CommercialTerms,
   type CreateChargeParams,
   type CupomVenda,
   type FormaPagamento,
+  type ItemKitParaTamanhos,
   type ItemPedidoInput,
   type ItemVendaInput,
   type Kit,
@@ -92,6 +94,15 @@ export interface CheckoutInscritoInput {
    * PERSISTE este id no inscrito (fulfillment — ver criarDocsDeCheckout).
    */
   kitId?: string;
+  /**
+   * Map `itemId → tamanho` do kit (RN-223 · S209 · LEELA-BEPEND-T4). Opcional
+   * enquanto a UI não coleta (S209-T3); quando presente, o servidor valida
+   * FAIL-CLOSED contra os SKUs configurados do evento (`itensKit` ×
+   * `tamanhosDisponiveis` — validarTamanhosInscrito, core): item inexistente,
+   * fora do kit escolhido, não tamanhado ou tamanho forjado ⇒ invalid-argument,
+   * NADA é escrito. O que passa é persistido no inscrito (fulfillment).
+   */
+  tamanhos?: Record<string, string>;
 }
 
 /** Input do checkout (validado NO SERVIDOR — nunca confiar na UI). */
@@ -198,6 +209,34 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
         (typeof obj['kitId'] !== 'string' || obj['kitId'].length === 0)
       ) {
         erros.push(`inscritos[${i}]: "kitId" deve ser string não vazia.`);
+      }
+      // RN-223 (T4) — SHAPE do map de tamanhos; a validação SEMÂNTICA
+      // (contra itensKit/tamanhosDisponiveis) roda depois, com o catálogo.
+      const tamanhosRaw = obj['tamanhos'];
+      if (tamanhosRaw !== undefined) {
+        if (
+          tamanhosRaw === null ||
+          typeof tamanhosRaw !== 'object' ||
+          Array.isArray(tamanhosRaw)
+        ) {
+          erros.push(
+            `inscritos[${i}]: "tamanhos" deve ser map itemId → tamanho (RN-223).`
+          );
+        } else {
+          for (const [itemId, tamanho] of Object.entries(
+            tamanhosRaw as Record<string, unknown>
+          )) {
+            if (
+              itemId.length === 0 ||
+              typeof tamanho !== 'string' ||
+              tamanho.length === 0
+            ) {
+              erros.push(
+                `inscritos[${i}]: tamanhos["${itemId}"] deve ser string não vazia (RN-223).`
+              );
+            }
+          }
+        }
       }
     });
   }
@@ -489,6 +528,73 @@ export async function carregarInsumos(
 }
 
 // ---------------------------------------------------------------------------
+// Validação de TAMANHOS na origem (RN-223 · S209-T2 · ratificação 3d — T4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Valida os `tamanhos` de cada inscrito contra os SKUs CONFIGURADOS do evento
+ * (`itensKit` × `tamanhosDisponiveis`) — fail-closed: qualquer tamanho/item
+ * forjado ⇒ invalid-argument, NADA é escrito (o vetor que antes só aparecia
+ * na agregação de estoque FABLE-D morre aqui, na origem).
+ *
+ * O catálogo só é carregado quando alguma inscrição INFORMOU tamanho (zero
+ * leitura extra no fluxo vigente, que ainda não coleta — S209-T3).
+ */
+export async function validarTamanhosDoCheckout(
+  db: Db,
+  input: Pick<CreateInscricaoChargeInput, 'eventoId' | 'inscritos'>,
+  tenantId: string
+): Promise<void> {
+  const temTamanhos = input.inscritos.some(
+    (i) => i.tamanhos !== undefined && Object.keys(i.tamanhos).length > 0
+  );
+  if (!temTamanhos) return;
+
+  const itensSnap = await db
+    .collection('itensKit')
+    .where('eventoId', '==', input.eventoId)
+    .get();
+  const itensDoEvento: ItemKitParaTamanhos[] = [];
+  for (const itemDoc of itensSnap.docs) {
+    // Isolamento (ADR-009): item com tenantId divergente do evento é dado
+    // corrompido — fora do catálogo de validação (nunca legitima um SKU).
+    if (itemDoc.get('tenantId') !== tenantId) continue;
+    itensDoEvento.push({
+      id: itemDoc.id,
+      tamanhado: itemDoc.get('tamanhado') === true,
+      tamanhosDisponiveis: Array.isArray(itemDoc.get('tamanhosDisponiveis'))
+        ? (itemDoc.get('tamanhosDisponiveis') as unknown[]).filter(
+            (t): t is string => typeof t === 'string' && t.length > 0
+          )
+        : [],
+      kits: Array.isArray(itemDoc.get('kits'))
+        ? (itemDoc.get('kits') as unknown[]).filter(
+            (k): k is string => typeof k === 'string'
+          )
+        : [],
+    });
+  }
+
+  const erros: string[] = [];
+  input.inscritos.forEach((inscrito, i) => {
+    if (inscrito.tamanhos === undefined) return;
+    const errosInscrito = validarTamanhosInscrito({
+      tamanhos: inscrito.tamanhos,
+      kitId:
+        typeof inscrito.kitId === 'string' && inscrito.kitId.length > 0
+          ? inscrito.kitId
+          : undefined,
+      itensDoEvento,
+    });
+    erros.push(...errosInscrito.map((e) => `inscritos[${i}]: ${e}`));
+  });
+
+  if (erros.length > 0) {
+    throw new https.HttpsError('invalid-argument', erros.join(' '));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Criação transacional dos docs (pedido + pagamento + inscritos)
 // ---------------------------------------------------------------------------
 
@@ -581,7 +687,10 @@ async function criarDocsDeCheckout(
           modalidade: inscrito.modalidade,
           pedidoRef: pedidoId,
           ehResponsavel,
-          tamanhos: {},
+          // RN-223 (T4): só entra aqui o que validarTamanhosDoCheckout
+          // aprovou contra os SKUs configurados (fail-closed ANTES de
+          // qualquer escrita) — o balcão/estoque leem tamanho legítimo.
+          tamanhos: inscrito.tamanhos ?? {},
           criadoEm: now,
           atualizadoEm: now,
         });
@@ -823,6 +932,9 @@ export async function createInscricaoChargeCore(
     }
   } else {
     const { tenantId, itens, cupom, terms, modoTaxa } = await carregarInsumos(db, input);
+    // RN-223 (T4) — validação de tamanho NA ORIGEM, antes de qualquer escrita:
+    // tamanho/SKU forjado ⇒ invalid-argument fail-closed (nada criado).
+    await validarTamanhosDoCheckout(db, input, tenantId);
     let sale: SaleState;
     try {
       sale = computeSaleState({
