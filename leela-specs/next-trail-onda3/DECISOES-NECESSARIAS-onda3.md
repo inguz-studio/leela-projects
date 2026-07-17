@@ -5,7 +5,11 @@
 
 ---
 
-## 🔴 DN-1 · Link-in-bio na Onda 3 serve o organizador (perfil no painel) ou também o atleta? (decisão real)
+## ✅ DN-1 · RATIFICADA pelo Vitor (2026-07-17): link-in-bio na Onda 3 = ORGANIZADOR-ONLY
+
+**Decisão.** A recomendação abaixo foi ratificada: Onda 3 entrega o link-in-bio do **organizador** com editor de perfil mínimo no painel (`DN-1-T1`); perfil/tema do atleta sobe na Onda 4 com o app E13. Premissa P6 vira decisão. Registrada também em `leela-specs/DECISOES-ABERTAS.md` §Ratificadas.
+
+### (histórico da decisão — contexto e recomendação originais)
 
 **Contexto.** O E17 tem duas fatias: a pública (S1700, `@handle` SSR/ISR na landing) entra na Onda 3; a in-app (tema por-usuário, feed-write) entra na Onda 4 com o app E13. Mas o **editor de perfil** (escolher `@handle`, bio, visibilidade — RN-160/161) só está especificado como **tela in-app** (S1701, Onda 4). Ou seja: `S1700` renderiza o perfil público, mas **quem cria/edita o `perfis/{handle}` na Onda 3?** O organizador vive no **painel** (web); o atleta só ganha superfície de edição com o **app** (Onda 4). Sem um editor na Onda 3, `S1700` não tem `perfis` com dado real para renderizar.
 

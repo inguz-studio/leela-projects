@@ -32,6 +32,8 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
+- **Flat inputs = DEFAULT GLOBAL do design system (Vitor, 2026-07-17).** O experimento do showroom foi aprovado: `Input`/`Select`/`Textarea` nascem flat; opt-out explícito via `bordered`. Aplicado em `5bb08a1` (AA verde, 1006/1006). Pendência registrada: varredura do painel para remover 8 `variant="flat"` redundantes no EventoForm.
+- **DN-1 ratificada (Vitor, 2026-07-17): link-in-bio na Onda 3 = ORGANIZADOR-ONLY** (editor de perfil mínimo no painel, `DN-1-T1`; perfil/tema do atleta = Onda 4 junto do app E13). Trilha da decisão em `next-trail-onda3/DECISOES-NECESSARIAS-onda3.md` §DN-1.
 - **Rodada de decisões do Vitor (2026-07-17) — os 7 itens do painel ratificados:**
   1. **ADR-013 · Orquestração de pagamento = APROVADA.** Registry + `resolveProvider(contexto)` + `providerId` de roteamento + webhook demux; **failover fica para depois**. Status da ADR: proposta → **aceita** (`leela-specs/adr/ADR-orquestracao-pagamento.md`); implementação é lote próprio (aqui só muda o status).
   2. **ADR-014 · Cifra dos dados bancários = RATIFICADA como está.** AES-256-GCM, chave no Secret Manager (`BANK_DATA_KEY`), rotação por `keyVersion`, AAD por tenant, sem KMS na V1. A implementação do E09 já segue a proposta.

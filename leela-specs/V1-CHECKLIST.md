@@ -222,7 +222,7 @@ Membros, convites, parcerias, comunicação, configurações + desafio em versã
 - [x] LEELA-S304-T3 — Tela Equipe e permissões (4 papéis) — **✅ GATE PASS `4644752` 2026-07-13** (lista real `listarEquipe`; trocar papel → `setClaimsEquipe`+Toast; **convite funcional por escrita Rules-guarded** (`shapeConviteValido`: papel≠organizador, sem uid); remover → ConfirmModal §2.15 com preview da matriz; anti-escalada espelhada do servidor; **ciclo provado no preview**: convite criado→listado convidado→removido→EmptyState de volta; 57 testes) · lacunas honestas: papel do convite read-only até ativar · sem e-mail de convite (ativação = exclusiva da Function)
 - [x] LEELA-E04-PAY-T1 — ✅ (fundação do checkout: MockProvider + selectProvider fail-safe + conformance; ver kanban E12/checkout 2026-07-12) — DI seam de payments + suíte de conformance provider-agnóstica *(next-trail: o `refund` do seam REUSA a Function de `LEELA-FABLE-B-T1` — não reimplementar estorno)*
 - [ ] LEELA-E04-PAY-T2 — Adapter concreto do gateway em sandbox — **gateway DECIDIDO: Asaas (D2, 2026-07-10); segue parked até o KYC concluir (ação externa do Vitor — não bloqueia sandbox)**
-- [ ] LEELA-S307 — Capacidade de lote editável (RN-304, Vitor 2026-07-17): painel mostra `configurado`/`vendido`/`disponível` por lote; organizador AUMENTA a capacidade (reabre vagas) e salva; reduzir abaixo do vendido = negado (fail-closed); ratchet automático mantido; escrita só via Function + trilha de auditoria. **Backlog aprovado — implementação pós-LEELA-BEPEND** (T1 backend guard + T2 tela; spec em `epics/LEELA-E04` §S307)
+- [x] LEELA-S307 (backend) — Capacidade de lote editável (RN-304): **T1 ✅ `73395ed` + gate devido `b615559`** (callable `ajustarCapacidadeLote` owner-only; reduzir < vendido fail-closed; `vendidos` intocado; auditoria; emulator 10/10 + review antagonista APPROVE-COM-FIXES). **Resta T2 (tela Opus)** — painel mostra `configurado`/`vendido`/`disponível` e edita (spec em `epics/LEELA-E04` §S307)
 
 Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-slim · ~~S303-T1~~ → E06 · S305/S306 → Onda 3.
 
@@ -248,8 +248,8 @@ Removidas (sem afiliados): ~~S301-T1..T7~~. Realocadas: ~~S302-T1/T2~~ → E09-s
 - [x] LEELA-S1201-T3 — Estados públicos do evento (rascunho→404, encerrado, esgotado) + ShareBlock URL/QR — **✅ GATE PASS 2026-07-12** (404 provado no rascunho maratona-floripa-2027; CTA off em vendas encerradas; ShareBlock com QR). **Follow-up: hero cover = placeholder gradiente quando sem URL (hoje alt quebrado)**
 - [ ] LEELA-S1202-T1 — Rota SSR/ISR do clube com gate de visibilidade (RN-140)
 - [ ] LEELA-S1202-T2 — Conteúdo da página do clube (hero, bio, KPIs, desafios públicos, CTA — **sem** bloco de eventos afiliados)
-- [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event
-- [ ] LEELA-S1205-T2 — `sitemap.ts` + `robots.ts` (eventos publicados + clubes indexáveis)
+- [x] LEELA-S1205-T1 — `generateMetadata` dinâmica + OpenGraph/Twitter + JSON-LD Event — **✅ `0fd7f00` (L2W 2026-07-17)**
+- [x] LEELA-S1205-T2 — `sitemap.ts` + `robots.ts` (eventos publicados + clubes indexáveis) — **✅ `7f46d6b` (L2W 2026-07-17)**
 - [x] LEELA-S1203-T1 — Rota + máquina de estado do Stepper (5 etapas, sem etapa de entrega) — **✅ GATE PASS 2026-07-12** (`c5a7d2a`; CheckoutFlow client, 5 etapas dados→modalidade+kit→resumo→pagamento→confirmação)
 - [x] LEELA-S1203-T2 — Etapa Dados (formulário do atleta anônimo + validação) — **✅ GATE PASS 2026-07-12** (ADR-011 responsável + N inscritos, "+ Adicionar outro atleta", auto-inscrição; validação via core; `loginAnonimo`)
 - [x] LEELA-S1203-T3 — Etapa Modalidade/Kit (preço vigente; "Sem kit" negativo RN-211; RN-216) — **✅ GATE PASS 2026-07-12** (radiocards 5k75/10k100/21k150 do `precoVigente`; "Sem kit"; nota de retirada honesta)
@@ -340,20 +340,20 @@ Cortadas: S400 (parceiros/afiliação), S402 (automações → Onda 3), `abertur
 
 Política de reembolso/transferência (E04-S305) → máquina completa (E09-S904); saúde/regulamento (S306); capacidade de lote (S307); cupom-only (S1804).
 
-- [ ] LEELA-S305-T1 — Modelo `politicaVendas` + tipos + Rules (só owner) + seed — **Fable** ⚔ · *core+rules*
+- [x] LEELA-S305-T1 — Modelo `politicaVendas` + tipos + Rules (só owner) + seed — **Fable** ⚔ · *core+rules* · **✅ `5296c2f`**
 - [ ] LEELA-S305-T2 — Aba "Política de vendas" (reembolso: janela 7d, corte 48h, SLA) — **Opus** · *painel/configuracoes*
 - [ ] LEELA-S305-T3 — Transferência de titularidade (72h/taxa) + troca de ingresso (48h) — **Opus** · *painel/configuracoes*
-- [ ] LEELA-S306-T1 — Flags `exigenciasSaude` + `regulamentoVersao` (RN-149) + subcoleção `saude` isolada (LGPD Art. 11) — **Fable** ⚔ · *core+rules*
-- [ ] LEELA-S306-T2 — Aba "Exigências e regulamento" + versionamento (novo aceite RN-149) — **Opus** · *painel*
-- [ ] LEELA-S306-T3 — Consentimento destacado + retenção/expurgo do dado de saúde — **Fable** ⚔ · *functions+core*
-- [ ] LEELA-S307-T1 — Function `reabrirCapacidadeLote` + auditoria + Rules (reduzir<vendido negado; RN-304) — **Fable** ⚔ · *functions+rules* · **dep `LEELA-BEPEND` (S209-T2)**
+- [x] LEELA-S306-T1 — Flags `exigenciasSaude` + `regulamentoVersao` (RN-149) + subcoleção `saude` isolada (LGPD Art. 11) — **Fable** ⚔ · *core+rules* · **✅ `800f0d6`** (review LGPD APPROVE-COM-FIXES aplicados)
+- [ ] LEELA-S306-T2 — Aba "Exigências e regulamento" + versionamento (novo aceite RN-149) — **Opus** · *painel* (backend do versionamento JÁ PRONTO: trigger `versionarRegulamento` + `precisaNovoAceite`)
+- [x] LEELA-S306-T3 — Consentimento destacado + retenção/expurgo do dado de saúde — **Fable** ⚔ · *functions+core* · **✅ `800f0d6`** (expurgo cron 03:20 ADR-015, retenção 90d premissa; pendência deploy: índices composite+collection-group)
+- [x] LEELA-S307-T1 — Function `reabrirCapacidadeLote` + auditoria + Rules (reduzir<vendido negado; RN-304) — **Fable** ⚔ · *functions+rules* · **✅ `73395ed` + gate devido `b615559`** (emulator 10/10 + review antagonista APPROVE-COM-FIXES)
 - [ ] LEELA-S307-T2 — Editor de capacidade no painel (vendido/disponível/configurado) — **Opus** · *painel*
-- [ ] LEELA-S904-T1 — Subcoleção `reembolsos` + máquina de estados por inscrito (RN-341) + fila do organizador — **Fable** ⚔ · *functions/finance*
-- [ ] LEELA-S904-T2 — Execução de estorno via Function (reusa FABLE-B `refund`) + clawback (RN-346) — **Fable** ⚔ · *functions/finance*
-- [ ] LEELA-S904-T3 — Notificações (organizador na abertura, atleta em cada transição — RN-342) — **Fable** · *functions*
-- [ ] LEELA-S904-T4 — Subcoleção `transferencias` + `titularHistorico[]` + kit/chip (RN-345) — **Fable** ⚔ · *functions/finance*
-- [ ] LEELA-S904-T5 — Fila de reembolso/transferência no painel financeiro (auditada) — **Opus** · *painel/financeiro*
-- [ ] LEELA-S1804-T1 — Flag `vendaSomentePorCupom` + guard no checkout (RN-345, encaixe E04/S300) — **Fable** ⚔ · *core+checkout*
+- [x] LEELA-S904-T1 — Subcoleção `reembolsos` + máquina de estados por inscrito (RN-341) + fila do organizador — **Fable** ⚔ · *functions/finance* · **✅ `bebbc0a`**
+- [x] LEELA-S904-T2 — Execução de estorno via Function (reusa FABLE-B `refund`) + clawback (RN-346) — **Fable** ⚔ · *functions/finance* · **✅ `bebbc0a`** · ⚠️ clawback RN-346 = **N/A** (split de afiliação CORTADO — RN-337 vigente; reativar afiliação reabre a RN)
+- [x] LEELA-S904-T3 — Notificações (organizador na abertura, atleta em cada transição — RN-342) — **Fable** · *functions* · **✅ `bebbc0a`** (registro idempotente no log FABLE-G; envio físico depende do e-mail transacional — ação externa)
+- [x] LEELA-S904-T4 — Subcoleção `transferencias` + `titularHistorico[]` + kit/chip (RN-345) — **Fable** ⚔ · *functions/finance* · **✅ `bebbc0a`** (titularidade EXECUTA; troca de ingresso SÓ REGISTRA — aplicação+cobrança são do checkout; review H1: atletaNome/atletaId/modalidade congelados p/ cliente)
+- [ ] LEELA-S904-T5 — Fila de reembolso/transferência no painel financeiro (auditada) — **Opus** · *painel/financeiro* (dados prontos: `reembolsos`/`transferencias` legíveis por gestão)
+- [x] LEELA-S1804-T1 — Flag `vendaSomentePorCupom` + guard no checkout (RN-345, encaixe E04/S300) — **Fable** ⚔ · *core+checkout* · **✅ `d5e0fe5`**
 
 > Gate do lote: adr-conformance **ADR-011** (por inscrito) + **ADR-014** (cifra onde tocar repasse).
 
@@ -361,10 +361,10 @@ Política de reembolso/transferência (E04-S305) → máquina completa (E09-S904
 
 SEO fino (E12-S1205); capas (E17-S1702); perfil público `@handle` (E17-S1700); editor de perfil no painel (DN-1).
 
-- [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OG/Twitter + JSON-LD Event — **Opus** · *landing*
-- [ ] LEELA-S1205-T2 — sitemap + robots (`publica`⇒noindex / `indexavel`⇒index — RN-140) — **Opus** · *landing*
-- [ ] LEELA-S1702-T1 — Campo `capaUrl` + upload no painel (clube; evento já persiste) — **Opus** · *painel+core*
-- [ ] LEELA-S1702-T2 — Render da capa nos cards/hero + fallback gradiente (RN-166) — **Opus** · *design-system+landing*
+- [x] LEELA-S1205-T1 — `generateMetadata` dinâmica + OG/Twitter + JSON-LD Event — **Opus** · *landing* · **✅ `0fd7f00` (L2W)**
+- [x] LEELA-S1205-T2 — sitemap + robots (`publica`⇒noindex / `indexavel`⇒index — RN-140) — **Opus** · *landing* · **✅ `7f46d6b` (L2W)**
+- [ ] LEELA-S1702-T1 — Campo `capaUrl` + upload no painel (clube; evento já persiste) — **Opus** · *painel+core* · **pendência L2-sec** (reconciliar `imagemUrl`×`capaUrl`)
+- [x] LEELA-S1702-T2 — Render da capa nos cards/hero + fallback gradiente (RN-166) — **Opus** · *design-system+landing* · **✅ `7d24bea` (L2W — CoverImage reusável)**
 - [ ] LEELA-S1700-T1 — Rota SSR/ISR `/@{handle}` + `getPublicPerfil` (gate RN-161) + Rules leitura pública — **Fable** ⚔ (reader+Rules) · *landing+api-client+core+rules*
 - [ ] LEELA-S1700-T2 — Componentes das 3 abas (Feed leitura · Eventos · Clubs) + filtro por visibilidade — **Opus** · *landing*
 - [ ] LEELA-S1700-T3 — Estados públicos + bloco compartilhar (URL+QR, reusa `ShareBlock`) — **Opus** · *landing*

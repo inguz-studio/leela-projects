@@ -1185,6 +1185,8 @@ Execução da transferência/troca no app do atleta (E13-S1316); estorno e cobra
 
 ### LEELA-S306 · Configuração de exigências de saúde e versionamento de regulamento (organizador) · (greenfield · sem de-para BH)
 
+> **Status 2026-07-17 (O3-L1, backend Fable `800f0d6`):** T1+T3 ATERRISSADOS com review antagonista LGPD (APPROVE-COM-FIXES aplicados: idempotência de redelivery no bump por hash do texto; expurgo com probe — nunca retenção eterna em ciclo reaberto). Notas de implementação: o "upload de regulamento" da spec virou o campo TEXTO `regulamento` já vigente (EVENTO-CAMPOS) — a versão (`regulamentoVersao`) bumpa via trigger `versionarRegulamento` quando o texto muda; retenção do dado de saúde = **90 dias pós-evento** (premissa jurídica ajustável, `RETENCAO_SAUDE_DIAS_POS_EVENTO`); pendência de DEPLOY: índice composto `eventos(status,data)` + collection-group `saude.eventoId`. Resta **T2** (aba no painel, Opus — backend do versionamento pronto).
+
 **Como** Organizador de Evento, **quero** ativar exigências de saúde por evento e versionar o regulamento, **para** cumprir requisitos regulatórios sem coletar dado sensível desnecessário nem invalidar aceites antigos.
 
 - **MoSCoW:** Should · **Estimativa:** L · **Superfície:** Painel
@@ -1339,7 +1341,7 @@ Coleta do aceite no checkout/app (E12-S1207/E13); conteúdo/armazenamento do PDF
 
 ### LEELA-S307 · Capacidade de lote editável — reabrir vagas pelo organizador · (greenfield · decisão Vitor 2026-07-17)
 
-> **Status: backlog aprovado — NÃO implementar nesta fase.** Decisão ratificada pelo Vitor em 2026-07-17 (painel `DECISOES-ABERTAS.md`, item 4). Reusa o kernel de lotes já entregue (S300-T1 modelo, S300-T2 virada/ratchet). A implementação é **lote futuro, pós-LEELA-BEPEND** — as tasks abaixo são o recorte aprovado, ainda sem código.
+> **Status 2026-07-17 (O3-L1): T1 IMPLEMENTADA** — `73395ed` + gate devido `b615559` (callable `ajustarCapacidadeLote` owner-only; A1-A4 provados no emulator 10/10; review antagonista em contexto fresco APPROVE-COM-FIXES — ids com `/` rejeitados, ataques NaN/Infinity/string/negativo/papel-de-evento cobertos; riscos residuais registrados no commit). **Resta T2 (tela, Opus).** Decisão original ratificada pelo Vitor em 2026-07-17 (painel `DECISOES-ABERTAS.md`, item 4); reusa o kernel de lotes (S300-T1/T2).
 
 **Como** Organizador de Evento, **quero** ver e ajustar a capacidade de cada lote (quanto foi configurado, vendido e está disponível) e reabrir vagas aumentando a capacidade, **para** voltar um lote à venda pelo painel, sem suporte nem planilha.
 

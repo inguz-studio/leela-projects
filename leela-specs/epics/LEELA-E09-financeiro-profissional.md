@@ -609,6 +609,8 @@ Nota fiscal / conciliação bancária.
 
 ### LEELA-S904 · Máquina de estados de reembolso/cancelamento + execução de estorno + notificações (clawback RN-346)
 
+> **Status 2026-07-17 (O3-L1, backend Fable `bebbc0a`):** T1-T4 ATERRISSADOS com review antagonista (APPROVE-COM-FIXES aplicados). Desvios/premissas registrados: (a) execução e notificações são SÍNCRONAS a partir das transições (não trigger onWrite) — testável no emulator, idempotência explícita; (b) **clawback RN-346 = N/A** enquanto o split de afiliação estiver CORTADO do produto (RN-337 vigente em `estornarInscricao.ts`) — reativar afiliação REABRE esta RN; (c) notificações = registro idempotente no log FABLE-G (envio físico depende do provider de e-mail transacional — ação externa); (d) troca de ingresso (T4 tipo `ingresso`) SÓ REGISTRA com `diffCobrada` do lote vigente — aplicação+cobrança são do fluxo de checkout (mudar `modalidade` fora dele corromperia vendidos/capacidade por lote); (e) Rules congelam `atletaNome`/`atletaId`/`modalidade` para cliente (review H1) — mudança de titular SÓ via `requestTransfer`. Resta **T5** (fila no painel, Opus).
+
 **Como** Organizador de Evento (profissional), **quero** uma máquina de estados que processe solicitações de reembolso e cancelamento, execute o estorno e notifique as partes, **para** resolver o pós-venda com regra clara, rastro auditável e sem risco financeiro no split de afiliação.
 
 - **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Painel (fila do organizador) + backend
