@@ -86,6 +86,12 @@ export interface CriarEventoInput {
    * SEMPRE com o campo estampado (explícito no doc).
    */
   taxaModo?: ModoTaxa;
+  /**
+   * Modo cupom-only (RN-303 · S1804) — evento FECHADO: inscrição só com
+   * cupom válido (guard server-side no checkout). OPCIONAL — ausente/false
+   * ⇒ venda aberta (comportamento vigente).
+   */
+  vendaSomentePorCupom?: boolean;
 }
 
 export interface CriarEventoResult {
@@ -222,6 +228,12 @@ export function validarCriarEventoInput(
     erros.push('"taxaModo" deve ser \'incorporada\' ou \'repassada\' (RN-347).');
   }
 
+  // RN-303: cupom-only — boolean estrito quando presente.
+  const cupomOnly = input['vendaSomentePorCupom'];
+  if (cupomOnly !== undefined && typeof cupomOnly !== 'boolean') {
+    erros.push('"vendaSomentePorCupom" deve ser boolean (RN-303).');
+  }
+
   return erros;
 }
 
@@ -343,6 +355,11 @@ export async function criarEventoCore(
       };
       if (typeof input.descricao === 'string' && input.descricao.length > 0) {
         doc['descricao'] = input.descricao;
+      }
+      // RN-303: cupom-only só entra quando `true` (presença = modo ligado;
+      // espelho da leitura tolerante do parseEvento).
+      if (input.vendaSomentePorCupom === true) {
+        doc['vendaSomentePorCupom'] = true;
       }
       // RN-153: capa/regulamento só entram quando presentes (nunca string
       // vazia no doc — presença decide <img> vs gradiente na leitura).

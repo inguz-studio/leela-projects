@@ -44,6 +44,7 @@ import {
   isKitInscrito,
   isModoTaxa,
   modoTaxaDoEvento,
+  MSG_EVENTO_FECHADO_SEM_CUPOM,
   montarItensDoPedido,
   normalizarCodigoCupom,
   parseCupom,
@@ -54,6 +55,7 @@ import {
   validarDadosMinimosInscrito,
   validarEmail,
   validarTamanhosInscrito,
+  vendaSomentePorCupomAtiva,
   type CommercialTerms,
   type CreateChargeParams,
   type CupomVenda,
@@ -493,6 +495,23 @@ export async function carregarInsumos(
     }
     return item;
   });
+
+  // GATE CUPOM-ONLY (RN-303 · S1804): evento FECHADO só vende COM cupom.
+  // O flag vem do DOC do evento (nunca do request — payload direto não abre
+  // evento fechado); `true` LITERAL liga (acessor canônico do core). Sem
+  // código de cupom ⇒ failed-precondition ANTES de qualquer leitura de
+  // cupom/termo. Cupom informado mas inexistente/vencido/esgotado continua
+  // morrendo nos guards vigentes (invalid-argument aqui embaixo /
+  // computeSaleState) — o gate exige PRESENÇA; a VALIDADE já é fail-fast na
+  // cadeia. Vale para cotação E cobrança (ambas passam por carregarInsumos).
+  const cupomOnly = vendaSomentePorCupomAtiva({
+    ...(eventoSnap.get('vendaSomentePorCupom') === true
+      ? { vendaSomentePorCupom: true }
+      : {}),
+  });
+  if (cupomOnly && input.cupomCodigo === undefined) {
+    throw new https.HttpsError('failed-precondition', MSG_EVENTO_FECHADO_SEM_CUPOM);
+  }
 
   // Cupom — docId = código normalizado (unicidade por chave — E04)
   let cupom: CupomVenda | null = null;

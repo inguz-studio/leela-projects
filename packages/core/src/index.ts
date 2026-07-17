@@ -256,6 +256,9 @@ export {
   REGULAMENTO_MAX,
   isUrlCapaValida,
   modoTaxaDoEvento,
+  // RN-303 (S1804): modo cupom-only (evento fechado)
+  vendaSomentePorCupomAtiva,
+  MSG_EVENTO_FECHADO_SEM_CUPOM,
 } from './eventos/evento';
 
 // RN-200 — preço bloqueado após 1ª venda (E03 · S201-T3)

@@ -189,6 +189,18 @@ export interface Evento {
    * lança (fail-fast — mesmo racional do cronograma).
    */
   faixaChips?: FaixaChips | null;
+  /**
+   * Modo de venda "somente via cupom" — evento FECHADO (RN-303 · S1804 ·
+   * benchmark TicketSports): quando `true`, o checkout público só aceita
+   * inscrição COM cupom válido (o guard vive em `carregarInsumos` — servidor,
+   * nunca só UI). OPCIONAL na entidade (eventos legados não têm):
+   * `parseEvento` só materializa quando o doc traz `true` LITERAL — ausente/
+   * false/lixo ⇒ campo omitido = venda aberta (comportamento vigente). A
+   * direção do default é deliberada: lixo no flag NUNCA fecha um evento à
+   * venda nem abre um evento fechado por engano do lado do servidor — quem
+   * fecha é o organizador escrevendo `true` (Rules gated).
+   */
+  vendaSomentePorCupom?: boolean;
 }
 
 /**
@@ -398,5 +410,23 @@ export function parseEvento(id: string, data: Record<string, unknown>): Evento {
     ...(imagemUrl !== undefined ? { imagemUrl } : {}),
     ...(regulamento !== undefined ? { regulamento } : {}),
     ...(taxaModo !== undefined ? { taxaModo } : {}),
+    // Cupom-only (RN-303): só `true` LITERAL liga o modo (ver doc do campo).
+    ...(data['vendaSomentePorCupom'] === true ? { vendaSomentePorCupom: true } : {}),
   };
 }
+
+/**
+ * Modo cupom-only EFETIVO do evento (RN-303 · S1804): `true` só quando o
+ * organizador ligou o flag. Acessor canônico — o guard do checkout
+ * (`carregarInsumos`) e a UI usam ESTE, nunca o campo cru.
+ * @pure
+ */
+export function vendaSomentePorCupomAtiva(
+  evento: Pick<Evento, 'vendaSomentePorCupom'>
+): boolean {
+  return evento.vendaSomentePorCupom === true;
+}
+
+/** Mensagem canônica do checkout fechado sem cupom (RN-303 — copy honesta). */
+export const MSG_EVENTO_FECHADO_SEM_CUPOM =
+  'Evento fechado — informe seu cupom para se inscrever.';
