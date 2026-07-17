@@ -497,6 +497,15 @@ export type {
 export { salvarPerfil, getMeuPerfil } from './perfil';
 export type { SalvarPerfilResult } from './perfil';
 
+// Leitor client-side do perfil público (espelha o reader server-side da landing;
+// Rules liberam a leitura a membros do tenant → serve o preview do organizador).
+export { getPublicPerfil } from './public/getPublicPerfil';
+export type {
+  PerfilPublicoCompleto,
+  ClubeResumoPublico,
+  EventoResumoPublico,
+} from './public/getPublicPerfil';
+
 // ---------------------------------------------------------------------------
 // Plataforma — profissionais + join tenant → owner (LEELA-CONS-4-T1)
 // Nome real do dono do tenant: reader com join (Rules já autorizam a
