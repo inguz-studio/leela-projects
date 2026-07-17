@@ -8,6 +8,7 @@
 
 import { useFinanceiroSession } from '../_data/session';
 import {
+  useDemografiaTenant,
   useDesempenhoVendas,
   useModalidadesTenant,
   useTamanhosTenant,
@@ -19,6 +20,7 @@ export function AnaliseVendasPage(): JSX.Element {
   const carregandoSessao = session.status === 'loading';
 
   const desempenho = useDesempenhoVendas();
+  const demografia = useDemografiaTenant(session.tenantId, session.uid);
   const modalidades = useModalidadesTenant(session.tenantId, session.uid);
   const tamanhos = useTamanhosTenant(session.tenantId, session.uid);
 
@@ -28,6 +30,10 @@ export function AnaliseVendasPage(): JSX.Element {
       desempenhoLoading={desempenho.loading}
       desempenhoError={desempenho.error}
       onRetryDesempenho={desempenho.refetch}
+      demografia={demografia.data}
+      demografiaLoading={carregandoSessao || demografia.loading}
+      demografiaError={demografia.error}
+      onRetryDemografia={demografia.refetch}
       modalidades={modalidades.data}
       modalidadesLoading={carregandoSessao || modalidades.loading}
       modalidadesError={modalidades.error}

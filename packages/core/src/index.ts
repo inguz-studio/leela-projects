@@ -818,6 +818,27 @@ export {
 } from './analytics/snapshot';
 
 // ---------------------------------------------------------------------------
+// Analytics — demografia AGREGADA do evento (LEELA-BEPEND-T1 · E11 §RN-820).
+// Doc `eventos/{id}/demografia/current` = SÓ buckets (faixa etária × idade na
+// prova + gênero); nenhum dado individual sai do servidor (LGPD). Recontagem
+// determinística (referência = data civil do evento); escrita exclusiva da
+// Function `agregarDemografia`.
+// ---------------------------------------------------------------------------
+export type {
+  DemografiaContagens,
+  FaixaEtaria,
+  InscritoDemografiaInput,
+} from './analytics/demografia';
+export {
+  FAIXAS_ETARIAS,
+  computeDemografia,
+  demografiaInalterada,
+  demografiaVazia,
+  faixaEtariaDaIdade,
+  idadeCivil,
+} from './analytics/demografia';
+
+// ---------------------------------------------------------------------------
 // Atleta — registro de ação da jornada (LEELA-S1307-T1 · E13 adiantado ·
 // Onda 2 T2-L2). Pontos NÃO moram no registro: ∑ com bônus RN-115 é da
 // Function (onRegistroWrite) em participantes/{uid}. Validação sempre

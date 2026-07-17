@@ -1014,6 +1014,22 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `demografia/{docId}` — agregado DEMOGRÁFICO do evento (E11 §RN-820 ·
+      // LEELA-BEPEND-T1). `current` = SÓ contagens por bucket (faixa etária ×
+      // gênero) — nenhum dado individual (a fronteira LGPD é a Function
+      // `agregarDemografia`, que lê o [reg] server-side e materializa buckets).
+      // Mesmo assim o perfil agregado dos compradores é inteligência de
+      // GESTÃO: leitura SÓ writer (owner/staff) e platform_admin — promoter,
+      // athlete-com-claim e papel de evento NÃO leem (match explícito: a
+      // subcoleção NÃO entra na allowlist do catch-all — herança Wave A).
+      // Escrita: NUNCA pelo cliente — recompute exclusivo da Function
+      // (contagem forjada = perfil de público fraudado na análise).
+      match /demografia/{docId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai());
+        allow write: if false;
+      }
+
       // `comunicacoes/{comunicacaoId}` — LOG DE COMUNICAÇÃO (FABLE-G-T1).
       //
       // Agregado ÚNICO: fonte de E06-L3 (aba Comunicação/campanhas) e de

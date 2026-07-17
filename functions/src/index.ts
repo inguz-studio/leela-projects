@@ -198,6 +198,15 @@ export { enviarCampanha } from './eventos/enviarCampanha';
 // não-backfillável).
 export { coletaDiaria } from './analytics/coletaDiaria';
 
+// Analytics — DEMOGRAFIA AGREGADA do evento (LEELA-BEPEND-T1 · E11 §RN-820):
+// onWrite de inscritos recomputa `demografia/current` (buckets de faixa
+// etária — idade NA PROVA, determinístico — e gênero) via computeDemografia
+// (@leela/core). Fonte = [reg] lido server-side com select() restrito a
+// nascimento/genero; o doc materializado NÃO tem dado individual — o painel
+// só enxerga contagens (a tela de Análise substitui o mock de idade/sexo).
+// ⚠️ Fable (PII na fonte — a fronteira LGPD é esta Function).
+export { onInscritoWriteDemografia } from './analytics/agregarDemografia';
+
 // Jornada — REGISTRO DE AÇÃO do atleta (S1307-T1 · E13 adiantado · T2-L2):
 // onWrite de atletas/{uid}/registros recomputa a participação
 // (calcularPontos + bônus RN-115 acumuláveis) em participantes/{uid} e os

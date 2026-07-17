@@ -2,12 +2,13 @@
 // AnaliseVendasView — análise de vendas do profissional (RN-820). A entrada
 // "Financeiro" do menu vira ANÁLISE (semente do E11 ao nível do profissional):
 //   (a) desempenho de vendas (getOverview · dashboard/current);
-//   (b) perfil de compradores — idade e sexo (dados de EXEMPLO, marcados);
+//   (b) perfil de compradores — idade e sexo REAIS (∑ demografia/current ·
+//       LEELA-BEPEND-T1; EmptyState honesto enquanto não há agregado);
 //   (c) modalidades com mais inscritos (∑ financeiro/current);
 //   (d) tamanhos mais pedidos — camiseta (∑ aprovisionamento · FABLE-D).
 // Presentational puro: dados chegam por props do container. Estados honestos
 // (§2.12): erro mostra "Tentar novamente"; ausência mostra EmptyState; a
-// demografia de exemplo carrega a nota de proveniência obrigatória.
+// demografia declara a COBERTURA quando parte dos inscritos não tem dado.
 // =============================================================================
 
 import * as React from 'react';
@@ -23,11 +24,7 @@ import {
   type BarChartDatum,
 } from '@leela/design-system';
 import type { OverviewResult } from '@leela/api-client';
-import {
-  NOTA_DADOS_EXEMPLO,
-  distribuicaoSexoExemplo,
-  faixasEtariasExemplo,
-} from './_lib/demografiaMock';
+import { notaCobertura, type DemografiaTenant } from './_lib/demografia';
 
 export interface AnaliseVendasViewProps {
   // (a) desempenho de vendas
@@ -35,6 +32,12 @@ export interface AnaliseVendasViewProps {
   desempenhoLoading: boolean;
   desempenhoError: Error | null;
   onRetryDesempenho: () => void;
+
+  // (b) perfil de compradores — agregado real (RN-820)
+  demografia: DemografiaTenant;
+  demografiaLoading: boolean;
+  demografiaError: Error | null;
+  onRetryDemografia: () => void;
 
   // (c) modalidades com mais inscritos
   modalidades: BarChartDatum[];
@@ -68,6 +71,10 @@ export function AnaliseVendasView({
   desempenhoLoading,
   desempenhoError,
   onRetryDesempenho,
+  demografia,
+  demografiaLoading,
+  demografiaError,
+  onRetryDemografia,
   modalidades,
   modalidadesLoading,
   modalidadesError,
@@ -77,9 +84,9 @@ export function AnaliseVendasView({
   tamanhosError,
   onRetryTamanhos,
 }: AnaliseVendasViewProps): JSX.Element {
-  const faixas = faixasEtariasExemplo();
-  const sexo = distribuicaoSexoExemplo();
-  const totalSexo = sexo.reduce((acc, s) => acc + s.value, 0);
+  const cobertura = notaCobertura(demografia);
+  const totalSexo = demografia.sexo.reduce((acc, s) => acc + s.value, 0);
+  const demografiaVazia = demografia.faixas.length === 0 && demografia.sexo.length === 0;
 
   return (
     <div className="flex flex-col gap-[var(--spacing-6)] pb-[var(--spacing-8)]">
@@ -112,24 +119,67 @@ export function AnaliseVendasView({
           )}
         </section>
 
-        {/* (b) Perfil de compradores — idade e sexo (dados de EXEMPLO). */}
+        {/* (b) Perfil de compradores — idade e sexo REAIS (∑ demografia/current
+            · RN-820). Sem agregado ainda → EmptyState honesto; cobertura
+            parcial → nota declarada (§2.12 — nunca número inventado). */}
         <section aria-label="Perfil de compradores" className="flex flex-col gap-[var(--spacing-4)]">
           <SectionTitle>Perfil de compradores</SectionTitle>
-          <NotaExemplo>{NOTA_DADOS_EXEMPLO}</NotaExemplo>
-          <div className="grid grid-cols-1 gap-[var(--spacing-4)] lg:grid-cols-2">
-            <CardGrafico titulo="Faixa etária" nota="exemplo">
-              <BarChart aria-label="Compradores por faixa etária (exemplo)" data={faixas} height={200} />
-            </CardGrafico>
-            <CardGrafico titulo="Sexo" nota="exemplo">
-              <DonutChart
-                aria-label="Compradores por sexo (exemplo)"
-                data={sexo}
-                centerValue={formatInt(totalSexo)}
-                centerLabel="compradores"
-                size={180}
-              />
-            </CardGrafico>
-          </div>
+          {demografiaError ? (
+            <ErroBloco
+              message="Não foi possível carregar o perfil de compradores."
+              onRetry={onRetryDemografia}
+            />
+          ) : demografiaLoading ? (
+            <div
+              role="status"
+              aria-label="Carregando perfil de compradores"
+              className="grid grid-cols-1 gap-[var(--spacing-4)] lg:grid-cols-2"
+            >
+              <Skeleton variant="rect" className="h-52" />
+              <Skeleton variant="rect" className="h-52" />
+            </div>
+          ) : demografiaVazia ? (
+            <EmptyState
+              title="Sem dados demográficos ainda"
+              description="O perfil de idade e sexo aparece quando houver inscrições confirmadas com dados demográficos coletados no checkout."
+            />
+          ) : (
+            <>
+              {cobertura !== null && <NotaCobertura>{cobertura}</NotaCobertura>}
+              <div className="grid grid-cols-1 gap-[var(--spacing-4)] lg:grid-cols-2">
+                <CardGrafico titulo="Faixa etária" nota="idade na data da prova">
+                  {demografia.faixas.length === 0 ? (
+                    <EmptyState
+                      title="Sem idades registradas"
+                      description="Nenhuma inscrição confirmada tem data de nascimento registrada."
+                    />
+                  ) : (
+                    <BarChart
+                      aria-label="Compradores por faixa etária"
+                      data={demografia.faixas}
+                      height={200}
+                    />
+                  )}
+                </CardGrafico>
+                <CardGrafico titulo="Sexo" nota="declarado no checkout">
+                  {demografia.sexo.length === 0 ? (
+                    <EmptyState
+                      title="Sem sexo registrado"
+                      description="Nenhuma inscrição confirmada tem sexo declarado."
+                    />
+                  ) : (
+                    <DonutChart
+                      aria-label="Compradores por sexo"
+                      data={demografia.sexo}
+                      centerValue={formatInt(totalSexo)}
+                      centerLabel="compradores"
+                      size={180}
+                    />
+                  )}
+                </CardGrafico>
+              </div>
+            </>
+          )}
         </section>
 
         {/* (c) Modalidades com mais inscritos (∑ financeiro/current). */}
@@ -270,8 +320,8 @@ function CardGrafico({
   );
 }
 
-/** Nota honesta de dados de exemplo (proveniência — §2.12). */
-function NotaExemplo({ children }: { children: React.ReactNode }): JSX.Element {
+/** Nota honesta de COBERTURA da demografia (proveniência — §2.12). */
+function NotaCobertura({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <p
       role="note"

@@ -114,6 +114,18 @@ export const queryKeys = {
       ['aprovisionamento', 'por-organizador', tenantId, organizadorId] as const,
   },
 
+  demografia: {
+    /**
+     * Fan-out do agregado demográfico (`eventos/{id}/demografia/current` —
+     * E11 §RN-820 · LEELA-BEPEND-T1) de TODOS os eventos do organizador. A
+     * análise de vendas lê esta chave — O(eventos) point reads de AGREGADO
+     * (buckets de idade/gênero mantidos pela Function agregarDemografia);
+     * NUNCA varre inscritos nem recebe dado individual.
+     */
+    porOrganizador: (tenantId: string, organizadorId: string) =>
+      ['demografia', 'por-organizador', tenantId, organizadorId] as const,
+  },
+
   lotes: {
     /**
      * Lotes de um evento (todas as modalidades — ADR-012). A tela de config

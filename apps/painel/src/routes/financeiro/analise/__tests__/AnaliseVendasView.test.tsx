@@ -1,12 +1,14 @@
 // =============================================================================
-// AnaliseVendasView (RN-820) — prova o desempenho (KPIs), a nota honesta de
-// dados de exemplo na demografia, e os estados §2.12 de modalidades/tamanhos.
+// AnaliseVendasView (RN-820) — prova o desempenho (KPIs), a demografia REAL
+// (agregado ∑ · LEELA-BEPEND-T1: gráficos, EmptyState honesto e nota de
+// cobertura), e os estados §2.12 de modalidades/tamanhos.
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { OverviewResult } from '@leela/api-client';
 import { AnaliseVendasView, type AnaliseVendasViewProps } from '../AnaliseVendasView';
+import type { DemografiaTenant } from '../_lib/demografia';
 
 const OVERVIEW: OverviewResult = {
   inscricoesTotais: 1284,
@@ -23,12 +25,38 @@ const OVERVIEW: OverviewResult = {
   atualizadoEm: 0,
 };
 
+const DEMOGRAFIA: DemografiaTenant = {
+  faixas: [
+    { label: '18–24', value: 84 },
+    { label: '25–34', value: 210 },
+  ],
+  sexo: [
+    { label: 'Feminino', value: 150 },
+    { label: 'Masculino', value: 144 },
+  ],
+  comIdade: 294,
+  comGenero: 294,
+  totalConfirmados: 294,
+};
+
+const DEMOGRAFIA_VAZIA: DemografiaTenant = {
+  faixas: [],
+  sexo: [],
+  comIdade: 0,
+  comGenero: 0,
+  totalConfirmados: 0,
+};
+
 function props(over: Partial<AnaliseVendasViewProps> = {}): AnaliseVendasViewProps {
   return {
     desempenho: OVERVIEW,
     desempenhoLoading: false,
     desempenhoError: null,
     onRetryDesempenho: vi.fn(),
+    demografia: DEMOGRAFIA,
+    demografiaLoading: false,
+    demografiaError: null,
+    onRetryDemografia: vi.fn(),
     modalidades: [
       { label: '10k', value: 700 },
       { label: '5k', value: 500 },
@@ -53,9 +81,44 @@ describe('AnaliseVendasView', () => {
     expect(screen.getByText('37%')).toBeInTheDocument(); // conversão
   });
 
-  it('demografia SEMPRE carrega a nota honesta de dados de exemplo', () => {
+  it('demografia com agregado real → gráficos de faixa etária e sexo', () => {
     render(<AnaliseVendasView {...props()} />);
-    expect(screen.getByRole('note')).toHaveTextContent(/dados de exemplo/i);
+    expect(screen.getByText('Faixa etária')).toBeInTheDocument();
+    expect(screen.getByText('Sexo')).toBeInTheDocument();
+    // Cobertura total ⇒ SEM nota de cobertura (nada a declarar).
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  it('demografia sem agregado → EmptyState honesto (nunca número inventado)', () => {
+    render(<AnaliseVendasView {...props({ demografia: DEMOGRAFIA_VAZIA })} />);
+    expect(screen.getByText('Sem dados demográficos ainda')).toBeInTheDocument();
+    expect(screen.queryByText('Faixa etária')).not.toBeInTheDocument();
+  });
+
+  it('demografia com cobertura PARCIAL → nota declarada (§2.12)', () => {
+    const parcial: DemografiaTenant = {
+      ...DEMOGRAFIA,
+      comIdade: 294,
+      comGenero: 294,
+      totalConfirmados: 300, // 6 confirmados sem dado demográfico
+    };
+    render(<AnaliseVendasView {...props({ demografia: parcial })} />);
+    expect(screen.getByRole('note')).toHaveTextContent(/294 de 300/);
+  });
+
+  it('erro na demografia → "Tentar novamente" chama o retry', () => {
+    const onRetryDemografia = vi.fn();
+    render(
+      <AnaliseVendasView
+        {...props({
+          demografia: DEMOGRAFIA_VAZIA,
+          demografiaError: new Error('x'),
+          onRetryDemografia,
+        })}
+      />,
+    );
+    screen.getByRole('button', { name: /tentar novamente/i }).click();
+    expect(onRetryDemografia).toHaveBeenCalledOnce();
   });
 
   it('conversão null → "—" honesto (nunca 0 falso)', () => {

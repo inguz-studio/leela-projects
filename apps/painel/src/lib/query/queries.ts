@@ -21,6 +21,7 @@ import {
   getComunicado,
   getDesafio,
   getDadosBancarios,
+  getDemografiaEvento,
   getEvento,
   getFinanceiroEvento,
   getLeelaDb,
@@ -53,6 +54,7 @@ import {
   listPlanosCobranca,
   listTenants,
   INSCRITOS_PAGE_SIZE,
+  type DemografiaEvento,
   type FinanceiroEvento,
   type InscritoParaJoin,
   type InscritosCursor,
@@ -313,6 +315,35 @@ export function aprovisionamentoDoOrganizadorQuery(params: {
         eventos.map((ev) => listarAprovisionamento(db, ev.id)),
       );
       return porEvento.flat();
+    },
+  });
+}
+
+/**
+ * Fan-out do agregado DEMOGRÁFICO (`demografia/current` — E11 §RN-820 ·
+ * LEELA-BEPEND-T1) de TODOS os eventos do organizador. Reusa
+ * `listarEventosDoOrganizador` + `getDemografiaEvento` (leituras provadas do
+ * api-client) — O(eventos) point reads de AGREGADO mantido pela Function
+ * `agregarDemografia`; NUNCA varre inscritos nem toca dado individual (LGPD).
+ * Evento sem agregado (sem confirmado/gatilho não rodou) é omitido — a soma a
+ * jusante é pura e a tela mostra EmptyState quando nada existe (§2.12).
+ */
+export function demografiaDoOrganizadorQuery(params: {
+  tenantId: string;
+  organizadorId: string;
+}) {
+  return queryOptions({
+    queryKey: queryKeys.demografia.porOrganizador(params.tenantId, params.organizadorId),
+    queryFn: async (): Promise<DemografiaEvento[]> => {
+      const db = getLeelaDb();
+      const eventos = await listarEventosDoOrganizador(db, {
+        tenantId: params.tenantId,
+        organizadorId: params.organizadorId,
+      });
+      const porEvento = await Promise.all(
+        eventos.map((ev) => getDemografiaEvento(db, ev.id)),
+      );
+      return porEvento.filter((d): d is DemografiaEvento => d !== null);
     },
   });
 }

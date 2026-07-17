@@ -279,6 +279,12 @@ export type { SalvarCupomInput } from './eventos/cupons';
 // S210-T2 (FABLE-D) — aprovisionamento de kit por SKU (leitura; ∑ e estado
 // são de escrita EXCLUSIVA de Function — RN-224/226)
 export { listarAprovisionamento } from './eventos/aprovisionamento';
+
+// LEELA-BEPEND-T1 (E11 §RN-820) — demografia AGREGADA do evento (leitura;
+// buckets recomputados EXCLUSIVAMENTE pela Function `agregarDemografia` —
+// nenhum dado individual passa por aqui, LGPD)
+export { getDemografiaEvento } from './eventos/demografia';
+export type { DemografiaEvento } from './eventos/demografia';
 // S210-T2 (FABLE-D) — transição da máquina de estados do SKU (callable; write
 // EXCLUSIVA de Function — Rules negam escrita de cliente na subcoleção — RN-226)
 export { transicaoAprovisionamento } from './eventos/mutations';
