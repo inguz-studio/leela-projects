@@ -25,7 +25,13 @@ import {
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
-import { isUrlCapaValida, REGULAMENTO_MAX, type ModoTaxa } from '@leela/core';
+import {
+  isExigenciasSaude,
+  isUrlCapaValida,
+  REGULAMENTO_MAX,
+  type ExigenciasSaude,
+  type ModoTaxa,
+} from '@leela/core';
 
 /**
  * Campos gerais editáveis do evento (LEELA-S304-T2 + EVENTO-CAMPOS).
@@ -105,6 +111,61 @@ export async function atualizarConfiguracoesEvento(
 
   if (input.taxaModo !== undefined) {
     payload['taxaModo'] = input.taxaModo;
+  }
+
+  await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });
+}
+
+// ---------------------------------------------------------------------------
+// Exigências de saúde + regulamento (LEELA-S306-T2 · E04 · RN-146/147/149)
+// ---------------------------------------------------------------------------
+
+/**
+ * Payload da aba "Exigências e regulamento". `exigenciasSaude` são as 2 flags
+ * (atestado/PAR-Q, default OFF — minimização LGPD RN-146); `regulamento` é o
+ * texto (`null`/vazio REMOVE — deleteField). O DADO de saúde em si NUNCA trafega
+ * por aqui: vive isolado em `inscritos/{id}/saude` (RN-147 · Art. 11), escrito
+ * só no checkout do inscrito.
+ */
+export interface AtualizarExigenciasRegulamentoInput {
+  exigenciasSaude: ExigenciasSaude;
+  regulamento?: string | null;
+}
+
+/**
+ * Grava SÓ as flags de saúde + o texto do regulamento (merge cirúrgico —
+ * `nome`/`local`/∑/status ficam intocados; a Rule nega o update se qualquer
+ * campo ∑/status/tenantId for tocado). O VERSIONAMENTO (RN-149) é derivado
+ * server-side: o trigger `versionarRegulamento` bumpa `regulamentoVersao`
+ * quando o TEXTO muda (Rules congelam a versão para o cliente) — a UI só lê a
+ * versão vigente, nunca a escreve. `permission-denied` (não é writer do tenant)
+ * sobe INTACTO para a UI (§2.12).
+ */
+export async function atualizarExigenciasRegulamento(
+  db: Firestore,
+  eventoId: string,
+  input: AtualizarExigenciasRegulamentoInput
+): Promise<void> {
+  if (!isExigenciasSaude(input.exigenciasSaude)) {
+    throw new Error(
+      'Exigências de saúde inválidas: envie { atestado: bool, parq: bool } (RN-146).'
+    );
+  }
+
+  const payload: Record<string, unknown> = {
+    exigenciasSaude: input.exigenciasSaude,
+    atualizadoEm: serverTimestamp(),
+  };
+
+  if (input.regulamento !== undefined) {
+    if (input.regulamento === null || input.regulamento.trim().length === 0) {
+      payload['regulamento'] = deleteField();
+    } else {
+      if (input.regulamento.length > REGULAMENTO_MAX) {
+        throw new Error(`Regulamento excede ${REGULAMENTO_MAX} caracteres (RN-153).`);
+      }
+      payload['regulamento'] = input.regulamento;
+    }
   }
 
   await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });

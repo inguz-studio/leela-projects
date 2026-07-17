@@ -54,6 +54,12 @@ export function ConfiguracoesLayout(): JSX.Element {
       segmento: 'politica',
       visivel: podeEditarConfiguracoes(papel),
     },
+    {
+      id: 'saude',
+      label: 'Exigências e regulamento',
+      segmento: 'saude',
+      visivel: podeEditarConfiguracoes(papel),
+    },
     { id: 'equipe', label: 'Equipe e permissões', segmento: 'equipe', visivel: podeGerirEquipe(papel) },
   ];
   const visiveis = abas.filter((a) => a.visivel);

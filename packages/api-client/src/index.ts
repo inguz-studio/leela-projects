@@ -206,6 +206,10 @@ export type {
 export { atualizarConfiguracoesEvento } from './eventos/configuracoesEvento';
 export type { AtualizarConfiguracoesEventoInput } from './eventos/configuracoesEvento';
 
+// LEELA-S306-T2 — exigências de saúde + regulamento (escrita direta, Rules-guarded)
+export { atualizarExigenciasRegulamento } from './eventos/configuracoesEvento';
+export type { AtualizarExigenciasRegulamentoInput } from './eventos/configuracoesEvento';
+
 // FABLE-F-T1 — cronograma de entrega + faixa de chips (leitura p/ balcão F-T2)
 export { getCronogramaEntrega } from './eventos/cronograma';
 export type { CronogramaEntregaEvento } from './eventos/cronograma';

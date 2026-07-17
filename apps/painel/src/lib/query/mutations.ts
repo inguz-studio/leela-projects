@@ -17,6 +17,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
   atualizarConfiguracoesEvento,
+  atualizarExigenciasRegulamento,
   convidarMembroEquipe,
   criarEvento,
   criarPatrocinador,
@@ -44,6 +45,7 @@ import {
   transicionarParceria,
   transitionTenant,
   type AtualizarConfiguracoesEventoInput,
+  type AtualizarExigenciasRegulamentoInput,
   type ConvidarMembroEquipeInput,
   type CriarEventoInput,
   type CriarEventoResult,
@@ -121,6 +123,36 @@ export function useAtualizarConfiguracoesEvento(params: {
   return useMutation<void, Error, AtualizarConfiguracoesEventoInput>({
     mutationFn: (input) =>
       atualizarConfiguracoesEvento(getLeelaDb(), params.eventoId, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.eventos.doOrganizador(params.tenantId, params.organizadorId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.eventos.detalhe(params.slug),
+      });
+    },
+  });
+}
+
+/**
+ * Salva as EXIGÊNCIAS DE SAÚDE + o texto do REGULAMENTO (S306-T2 · E04) via
+ * merge cirúrgico `atualizarExigenciasRegulamento` (Rules-guarded; nunca toca
+ * ∑/status/nome). O VERSIONAMENTO (RN-149) é derivado server-side pelo trigger
+ * `versionarRegulamento` — a UI só lê a versão vigente. No onSuccess invalida a
+ * chave partilhada da lista do organizador + o detalhe por slug → o form (e a
+ * versão) refletem sem reload (read-your-writes, ADR-010). O `permission-denied`
+ * sobe INTACTO (§2.12). NENHUM dado de saúde trafega — só as flags.
+ */
+export function useAtualizarExigenciasRegulamento(params: {
+  slug: string;
+  eventoId: string;
+  tenantId: string;
+  organizadorId: string;
+}): UseMutationResult<void, Error, AtualizarExigenciasRegulamentoInput> {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, AtualizarExigenciasRegulamentoInput>({
+    mutationFn: (input) =>
+      atualizarExigenciasRegulamento(getLeelaDb(), params.eventoId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.eventos.doOrganizador(params.tenantId, params.organizadorId),
