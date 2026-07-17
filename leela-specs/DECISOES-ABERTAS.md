@@ -25,6 +25,7 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 
 15. Teto sanitário de quantidade por transição de estoque (hoje 1M/SKU hardcoded no callable) e o limiar de "baixa" (item 3b) migrarem p/ config de produto.
 16. Fontes embarcadas (Exo 2 + JetBrains Mono self-host woff2) vs fallback de sistema — hoje CDN.
+17. **Idade máxima para campanha agendada VENCIDA disparar** (identificado no O3-L4, scheduler de campanhas). **Default em vigor:** campanha `agendado` com `agendadoPara` no passado dispara na **primeira rodada do cron** que a encontrar, não importa há quanto tempo venceu (sem produção hoje, o backlog é zero — mas num deploy/pausa longa, campanhas velhas disparariam de uma vez). Decidir: dispara sempre (default atual) OU expira após N horas/dias vencida (viraria estado "expirada" sem envio). Vale também para os gatilhos de relógio das automações (S402-T1, mesma mecânica de vencimento).
 
 ## ✅ Resolvidas desde a última versão deste painel (2026-07-11 → 13)
 

@@ -4,7 +4,7 @@
 - **Horizonte:** H1→H2 (alavanca de tração B2B)
 - **MoSCoW:** Should
 - **Estimativa:** L
-- **Status:** 📋 novo (planejado 2026-07-12)
+- **Status:** ⚙️ backend COMPLETO (O3-L3B, 2026-07-17 — S1800/S1801/S1802/S1803 server-side + 2 reviews antagonistas aplicadas; resta painel/landing — ver §Execução O3-L3B)
 - **Depende de:** LEELA-E05 (clubes + convite por e-mail S104 + parcerias S107), LEELA-E04 (cupom S300), LEELA-E16 (`commercialTerms` por tenant), LEELA-E00 (Firebase Auth — provisionamento de conta), LEELA-E12 (checkout aplica cupom/desconto)
 - **De-para:** reaproveita a mecânica de **E08** (afiliação — adiado) e **E05-S107** (parcerias de clube). Benchmark: [[benchmark-cheers]] (clube/benefício ancorado ao ingresso) · [[benchmark-ticketing-br]] (isenção de grupos/assessorias da TicketSports).
 - **Onda:** **Onda 3** (depende do cupom/termos que fecham na Onda 2)
@@ -178,3 +178,22 @@ Stories: **S1800** (cadastro de assessoria por CNPJ/CPF + vínculo se já tem co
 **Onda 3 (o épico em si):** `S1800 (cadastro + vínculo)` → `S1801 (convite + provisionamento)` → `S1802 (condição de desconto)` → `S1803 (gestão)`.
 
 Dependências: `E05 ✅ (clube+convite+parceria)`, `E04-S300 (cupom)`, `E16-S1602 ✅ (termos)`, `E00 Auth ✅ (provisionamento)`, `E12 (checkout aplica cupom)`. **Sem split, sem entidade financeira nova** — o risco fica todo em idempotência do provisionamento (S1801-T3), com cobertura no emulador.
+
+---
+
+## Execução O3-L3B (backend · 2026-07-17) — o que landou e as premissas registradas
+
+Commits: `30cb9f2` (S1800) · `8e9c8e5` (S1801-T3) · `482ed54` (S1803 + suíte) · `9e7e017` (fixes review provisionamento) · `da9a70b` (S1802) · `6eecc2b` (fixes review desconto). Suítes emulator: `assessoriaParceira` 19/19 · `cupomClubParceiro` 6/6.
+
+**Reconciliações/premissas (vinculam a implementação — divergem do texto original do épico onde indicado):**
+
+1. **O clube nasce no CADASTRO, não no aceite** (reconcilia RN-363): o convite E05 é subcoleção de clube e exige o doc pai — o aceite (`provisionAssessoriaAccount`) cria a CONTA e ATIVA clube (`ownerId`) + parceria, atômico e idempotente. A essência de RN-363 (reabrir não duplica conta nem clube) está provada por teste.
+2. **Uma callable única `cadastrarAssessoriaParceira`** cobre S1800-T2 + S1801-T1 (vínculo imediato OU convite — RN-362 decide pelo Auth). O nome `vincularAssessoriaExistente` do plano virou o ramo interno.
+3. **PII (fix review #2):** CPF/CNPJ completo vive SÓ em `tenants/{t}/parceirosAssessoria` (Rules read writer-only, write:false). O doc do clube carrega `documentoMascarado` (***4 últimos); `ehAssessoriaParceira`/`parceiroDeTenant`/`documentoMascarado` são trust-anchor congelado nas Rules de clube.
+4. **Segurança do convite (fix review #1):** token de aceite 256 bits, só o SHA-256 persiste, comparação em tempo constante, negação OPACA, validade 14d. **Em produção o ramo convite é FAIL-CLOSED até existir EmailProvider** (o token não pode voltar ao organizador — pre-hijack); sandbox/emulator liberam via `LEELA_CONVITE_EXPOR_TOKEN`. Conta criada entre convite e aceite ⇒ recadastro VINCULA sem novo token.
+5. **Papel do responsável no aceite = `athlete` default** (via onCreateUser); nenhuma claim de tenant é concedida — superfície de painel da assessoria é story futura.
+6. **`inativa` é TERMINAL** (RN-144, retenção): recadastro do mesmo documento após encerramento é `failed-precondition` — reativação de parceria encerrada é decisão de produto em aberto.
+7. **Desconto 100% pelo kernel (ADR-012):** cupom `escopo='club_parceiro'`+`clubeRef`+`parceriaRef` nasce SÓ por `definirCondicaoDesconto` (cliente não grava/edita/deleta cupom escopado — Rules); checkout exige parceria ATIVA e re-checa parceria+cupom FRESCOS na tx de venda (revogação/redefinição em voo aborta). Atribuição no `pagamento.cupom.clubeRef`; sem split (RN-360); RN-365 intocada.
+8. **Risco aceito (review, MÉDIO):** o retorno de cadastro distingue vínculo-imediato de convite ⇒ oráculo de existência de conta para tenant writer — exigido pelos aceites de RN-362; mitigado por auditoria estruturada.
+
+**Pendências (fora do território O3-L3B):** S1800-T1 form (painel) · S1801-T2 página de aceite (landing; gated pelo EmailProvider) · S1802-T1 editor da condição (painel) · S1803-T1 lista/encerrar (painel) · wrappers api-client das 4 callables.

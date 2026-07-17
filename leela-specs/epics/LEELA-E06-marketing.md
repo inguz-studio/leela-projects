@@ -498,6 +498,8 @@ Canal WhatsApp concreto; A/B testing.
 
 #### LEELA-S402-T1 · Modelo `automacoes` + Functions de gatilho + Rules
 
+> **✅ FEITO `f708e99` (O3-L3B, 2026-07-17, Fable ⚔).** DIRECTIVE cumprida: todo disparo reusa `executarDisparoCampanha` (nunca um segundo mecanismo). Desvios registrados vs. o texto abaixo: (a) `kit_disponivel` NÃO é onWrite de entrega — a entrega individual é o kit JÁ retirado; o gatilho é a **abertura da 1ª janela do cronograma** (S204, FUSO_EVENTO), servida pelo cron; (b) `vespera_evento`/`pos_evento` = cron 5min (ADR-015) com `offsetHoras` (default 24, teto 720) sobre `evento.data`; (c) `novo_inscrito` = onWrite de inscritos (transição p/ confirmado) com fan-out CURADOR — idempotência por (automação, alvo) via docId do log RN-219; (d) ∑ `disparos` = recontagem writer-only (não increment); (e) `packages/api-client` (CRUD/toggle) NÃO acompanhou — pendência de painel (S402-T2).
+
 - **Tipo:** api/function · **Depende de:** S401-T1 (Campanha/template), S401-T4 (disparo), E03-S203-T1 (Inscrito), E03-S204-T2 (entrega) · **Bloqueia:** S402-T2 · **Estimativa:** M
 
 **Objetivo**
