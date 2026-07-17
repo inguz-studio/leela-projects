@@ -490,6 +490,14 @@ export type {
 } from './platform/planosCobranca';
 
 // ---------------------------------------------------------------------------
+// Perfil público / link-in-bio do organizador (E17 · DN-1 · S1700)
+// `salvarPerfil` = wrapper da Function registry (escrita EXCLUSIVA de Function);
+// `getMeuPerfil` = leitura do perfil do próprio tenant (editor do painel).
+// ---------------------------------------------------------------------------
+export { salvarPerfil, getMeuPerfil } from './perfil';
+export type { SalvarPerfilResult } from './perfil';
+
+// ---------------------------------------------------------------------------
 // Plataforma — profissionais + join tenant → owner (LEELA-CONS-4-T1)
 // Nome real do dono do tenant: reader com join (Rules já autorizam a
 // leitura para os mesmos leitores do tenant — sem denormalização).

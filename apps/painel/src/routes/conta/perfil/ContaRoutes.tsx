@@ -8,6 +8,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { ContaPage } from './ContaPage';
+import { PerfilPublicoEditorPage } from '../perfil-publico/PerfilPublicoEditorPage';
 import { NotFound } from '../../_system/NotFound';
 import { AppErrorBoundary } from '../../_system/AppErrorBoundary';
 
@@ -17,6 +18,8 @@ export function ContaRoutes(): JSX.Element {
       <AppErrorBoundary layout="shell">
         <Routes>
           <Route index element={<ContaPage />} />
+          {/* DN-1-T1 · editor de perfil público / link-in-bio do organizador */}
+          <Route path="perfil-publico" element={<PerfilPublicoEditorPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AppErrorBoundary>

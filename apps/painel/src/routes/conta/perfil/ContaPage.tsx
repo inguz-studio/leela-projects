@@ -162,6 +162,19 @@ export function ContaPage(): JSX.Element {
         </div>
       </form>
 
+      {/* Perfil público / link-in-bio (DN-1-T1 · E17) — editor separado */}
+      <section className={SECAO} aria-label="Perfil público">
+        <span className={SECAO_TITULO}>Perfil público</span>
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          Seu link-in-bio (@handle) reúne seus eventos e clubs num endereço único e compartilhável.
+        </p>
+        <div>
+          <Button asChild variant="secondary">
+            <Link to="/conta/perfil-publico">Editar perfil público</Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Troca de senha (reauth obrigatória) */}
       <form className={SECAO} onSubmit={(e) => void trocarSenhaSubmit(e)} aria-label="Trocar senha">
         <span className={SECAO_TITULO}>Trocar senha</span>
