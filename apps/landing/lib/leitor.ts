@@ -261,6 +261,52 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
 // ---------------------------------------------------------------------------
 
 /**
+ * Monta o `EventoResumo` público de UM doc de evento (já filtrado por status
+ * público na query). `null` para doc envenenado (sem `data` timestamp) —
+ * listagem tolera doc ruim sem derrubar a página (padrão F-T1).
+ */
+async function montarResumoEvento(
+  db: Firestore,
+  doc: FirebaseFirestore.QueryDocumentSnapshot,
+  agora: Date,
+): Promise<EventoResumo | null> {
+  const data = doc.data();
+  const dataRaw = data['data'];
+  if (!ehTimestamp(dataRaw)) return null;
+  const dataEvento = dataRaw.toDate();
+
+  const modalidadesNomes = Array.isArray(data['modalidades'])
+    ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
+    : [];
+
+  const lotesPorModalidade = await lerLotesPorModalidade(db, doc.id);
+  const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
+    nome,
+    precoVigente: precoVigente({ lotesDaModalidade: lotesPorModalidade.get(nome) ?? [], agora }),
+  }));
+  const modalidadeLotes: ModalidadeLotes[] = modalidadesNomes.map((nome) => ({
+    modalidade: nome,
+    lotes: lotesPorModalidade.get(nome) ?? [],
+  }));
+
+  // Mesma guarda de capa http(s) da página do evento (RN-153)
+  const imagemUrlRaw = texto(data['imagemUrl']);
+  const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : '';
+  return {
+    slug: texto(data['slug']) || doc.id,
+    nome: texto(data['nome']),
+    dataLabel: fmtDataLonga.format(dataEvento),
+    diaLabel: fmtDia2.format(dataEvento),
+    mesLabel: fmtMesCurto.format(dataEvento).replace('.', ''),
+    local: texto(data['local']),
+    modalidades: modalidadesNomes,
+    precoMinimo: precoMinimo(modalidades),
+    estadoVenda: deriveEstadoVenda(modalidadeLotes, dataEvento, agora),
+    ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
+  };
+}
+
+/**
  * Todos os eventos publicados (home marketplace). Só `publicado`/`ao_vivo`;
  * `[]` honesto quando não há evento OU quando a leitura falha (build sem
  * emulator). Cada resumo carrega o "a partir de" derivado de `precoVigente`.
@@ -276,46 +322,45 @@ export async function listarEventosPublicados(): Promise<EventoResumo[]> {
 
     const resumos: EventoResumo[] = [];
     for (const doc of snap.docs) {
-      const data = doc.data();
-      const dataRaw = data['data'];
-      if (!ehTimestamp(dataRaw)) continue;
-      const dataEvento = dataRaw.toDate();
-
-      const modalidadesNomes = Array.isArray(data['modalidades'])
-        ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
-        : [];
-
-      const lotesPorModalidade = await lerLotesPorModalidade(db, doc.id);
-      const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
-        nome,
-        precoVigente: precoVigente({ lotesDaModalidade: lotesPorModalidade.get(nome) ?? [], agora }),
-      }));
-      const modalidadeLotes: ModalidadeLotes[] = modalidadesNomes.map((nome) => ({
-        modalidade: nome,
-        lotes: lotesPorModalidade.get(nome) ?? [],
-      }));
-
-      // Mesma guarda de capa http(s) da página do evento (RN-153)
-      const imagemUrlRaw = texto(data['imagemUrl']);
-      const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : '';
-      resumos.push({
-        slug: texto(data['slug']) || doc.id,
-        nome: texto(data['nome']),
-        dataLabel: fmtDataLonga.format(dataEvento),
-        diaLabel: fmtDia2.format(dataEvento),
-        mesLabel: fmtMesCurto.format(dataEvento).replace('.', ''),
-        local: texto(data['local']),
-        modalidades: modalidadesNomes,
-        precoMinimo: precoMinimo(modalidades),
-        estadoVenda: deriveEstadoVenda(modalidadeLotes, dataEvento, agora),
-        ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
-      });
+      const resumo = await montarResumoEvento(db, doc, agora);
+      if (resumo !== null) resumos.push(resumo);
     }
     // Mais próximos primeiro seria ideal; ordenamos por nome estável por ora.
     resumos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     return resumos;
   } catch (err) {
     console.error('[leitor] listarEventosPublicados falhou', err);
+    return [];
+  }
+}
+
+/**
+ * Eventos publicados de UM tenant (aba Eventos do perfil público — S1700).
+ * Mesmo gate de publicação da home (`publicado`/`ao_vivo`); `[]` honesto.
+ * ⚠️ Deploy real exige índice composto `eventos(tenantId, status)` — o
+ * emulator cria automático; registrado como pendência operacional.
+ */
+export async function listarEventosPublicadosDoTenant(
+  tenantId: string,
+): Promise<EventoResumo[]> {
+  try {
+    const db = getDb();
+    const agora = agoraDoServidor();
+    const snap = await db
+      .collection('eventos')
+      .where('tenantId', '==', tenantId)
+      .where('status', 'in', ['publicado', 'ao_vivo'])
+      .get();
+
+    const resumos: EventoResumo[] = [];
+    for (const doc of snap.docs) {
+      const resumo = await montarResumoEvento(db, doc, agora);
+      if (resumo !== null) resumos.push(resumo);
+    }
+    resumos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    return resumos;
+  } catch (err) {
+    console.error(`[leitor] listarEventosPublicadosDoTenant falhou`, err);
     return [];
   }
 }

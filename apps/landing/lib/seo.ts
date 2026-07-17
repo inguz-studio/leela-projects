@@ -26,6 +26,11 @@ export function urlEvento(slug: string): string {
   return `${baseUrl()}/${slug}`;
 }
 
+/** URL pública absoluta de um perfil (`{base}/@{handle}` — S1700/RN-160). */
+export function urlPerfil(handle: string): string {
+  return `${baseUrl()}/@${handle}`;
+}
+
 /**
  * JSON-LD `Event` (schema.org) da página de evento. Presencial, agendado. O
  * bloco `offers` só é emitido quando há preço vigente (venda aberta) — jamais

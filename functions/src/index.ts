@@ -269,3 +269,10 @@ export { entrarNoDesafio } from './jornada/entrarNoDesafio';
 // plano depois não retroage; reaplicar idêntico = no-op sem bump). Só
 // platform_admin (RN-404). ⚠️ Fable (economia do tenant).
 export { aplicarPlano } from './platform/aplicarPlano';
+
+// Perfil — REGISTRY do perfil público / link-in-bio (E17 · S1700-T1 + DN-1
+// organizador-only · Onda 3): escrita EXCLUSIVA desta callable (Rules de
+// `perfis/{handle}` congelam o cliente). Unicidade global case-insensitive
+// por docId normalizado, handle IMUTÁVEL, lista de reservados, 1 perfil por
+// tenant nesta onda. ⚠️ Fable (identidade pública/PII na fronteira).
+export { salvarPerfil } from './perfil/salvarPerfil';

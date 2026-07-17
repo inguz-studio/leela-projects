@@ -1935,6 +1935,30 @@ service cloud.firestore {
     // Removidas: os caminhos top-level caem no deny-by-default do final do
     // arquivo. NÃO reintroduzir sem rule endurecida + teste adversarial.
 
+    // ── `perfis/{handle}` — perfil público / link-in-bio (E17 · S1700) ────
+    //
+    // Registry: docId = handle NORMALIZADO minúsculo (RN-160 — unicidade
+    // global case-insensitive é estrutural: dois casings colidem no MESMO
+    // docId). ESCRITA: EXCLUSIVA da Function `salvarPerfil` (Admin SDK) —
+    // unicidade, imutabilidade do handle e lista de reservados são
+    // invariantes de registro que Rules não serializam; cliente NUNCA
+    // escreve (nem platform_admin via client SDK — padrão pós-19c8afe).
+    // LEITURA: pública gated por `visibilidade` (RN-161 — espelha RN-140 do
+    // clube); o tenant dono lê o próprio perfil mesmo `privada` (editor do
+    // painel); platform_admin lê tudo. `ownerUid`/`tenantId` ficam legíveis
+    // no doc público (identificadores de marca, mesmo precedente do
+    // `clubes.ownerId` público) — a projeção da LANDING os omite.
+    //
+    // Subcoleção `posts` (Feed, RN-163) é Onda 4 — SEM match aqui: cai no
+    // deny-by-default (catch-all: subcoleção nova com dado de pessoa exige
+    // regra própria + teste antes de existir).
+    match /perfis/{handle} {
+      allow read: if resource.data.visibilidade in ['publica', 'indexavel']
+                  || isTenantMember(resource.data.tenantId)
+                  || isPlatformAdmin();
+      allow write: if false;
+    }
+
     match /programaAfiliacao/{docId} {
       allow read: if isTenantMember(resource.data.tenantId) || isPlatformAdmin();
       allow create: if (isTenantWriter(request.resource.data.tenantId)

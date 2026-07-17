@@ -1024,3 +1024,35 @@ export {
   validarPlanoCobranca,
   planoParaTerms,
 } from './platform/planoCobranca';
+
+// ---------------------------------------------------------------------------
+// Perfil público / link-in-bio (E17 · S1700 · Onda 3, DN-1 organizador-only)
+// Registry `perfis/{handle}` — docId = handle normalizado (unicidade global
+// case-insensitive RN-160); escrita EXCLUSIVA da Function `salvarPerfil`.
+// ---------------------------------------------------------------------------
+export type {
+  TipoPerfil,
+  VisibilidadePerfil,
+  LinkExternoPerfil,
+  Perfil,
+  PerfilInput,
+  PerfilPublico,
+} from './perfil/perfil';
+export {
+  COLECAO_PERFIS,
+  HANDLE_MIN,
+  HANDLE_MAX,
+  HANDLE_RE,
+  HANDLES_RESERVADOS,
+  VISIBILIDADES_PERFIL,
+  CAMPOS_PRIVADOS_PERFIL,
+  PERFIL_NOME_MAX,
+  PERFIL_BIO_MAX,
+  PERFIL_LINKS_MAX,
+  PERFIL_LINK_LABEL_MAX,
+  normalizarHandle,
+  validarHandle,
+  handleProblema,
+  validarPerfilInput,
+  projetarPerfilPublico,
+} from './perfil/perfil';

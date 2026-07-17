@@ -4,12 +4,14 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import QRCode from 'qrcode';
 import { getEventoPublicado } from '../../../lib/leitor';
-import { eventoJsonLd, urlEvento } from '../../../lib/seo';
+import { getPublicPerfil } from '../../../lib/leitorPerfil';
+import { eventoJsonLd, urlEvento, urlPerfil } from '../../../lib/seo';
 import { JsonLd } from '../../components/JsonLd';
 import { SectionRenderer } from './SectionRenderer';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
 import { ShareBlock } from './ShareBlock';
+import { PerfilView } from '../_perfil/PerfilView';
 
 // ISR: o conteúdo do evento muda pouco (republicação do organizador). Cacheia
 // no servidor e revalida periodicamente. A rota é dinâmica por slug e NÃO é
@@ -29,8 +31,69 @@ interface PageProps {
 
 /** Leitura memoizada por requisição (dedup metadata + render). */
 const carregarEvento = cache((slug: string) => getEventoPublicado(slug));
+const carregarPerfil = cache((handle: string) => getPublicPerfil(handle));
+
+// ── Rota do PERFIL `/@{handle}` (S1700) ──────────────────────────────────
+// O App Router NÃO permite segmentos dinâmicos irmãos com nomes diferentes
+// (`[handle]` colidiria com `[eventSlug]`), então a rota do perfil vive NESTE
+// segmento e é desambiguada pelo prefixo `@` — que nunca ocorre em slug de
+// evento (kebab `a-z0-9-`). PREMISSA registrada no report do lote.
+// Convenção de revalidação (par do `event:{slug}`): tag `perfil:{handle}`.
+
+/** Handle (sem `@`) quando o segmento é uma rota de perfil; senão null. */
+function handleDoSegmento(segmento: string): string | null {
+  let decodificado = segmento;
+  try {
+    decodificado = decodeURIComponent(segmento);
+  } catch {
+    return null;
+  }
+  return decodificado.startsWith('@') ? decodificado.slice(1) : null;
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  // Perfil `/@{handle}`: metadata própria (RN-161 — `indexavel` ⇒ index;
+  // `publica` ⇒ noindex, mesmo contrato RN-140 do S1205-T2).
+  const handle = handleDoSegmento(params.eventSlug);
+  if (handle !== null) {
+    const dados = await carregarPerfil(handle);
+    if (dados === null) {
+      return { title: 'Perfil não encontrado', robots: { index: false, follow: false } };
+    }
+    const { perfil } = dados;
+    const titulo = `${perfil.nome} (@${perfil.handle}) · Leela`;
+    const descricao =
+      perfil.bio ?? `Eventos e clubs de ${perfil.nome} na Leela.`;
+    const imagens =
+      perfil.imagemUrl !== undefined
+        ? [perfil.imagemUrl]
+        : perfil.avatarUrl !== undefined
+          ? [perfil.avatarUrl]
+          : undefined;
+    const canonical = `/@${perfil.handle}`;
+    return {
+      title: titulo,
+      description: descricao,
+      alternates: { canonical },
+      openGraph: {
+        title: titulo,
+        description: descricao,
+        type: 'profile',
+        url: canonical,
+        siteName: 'Leela',
+        locale: 'pt_BR',
+        ...(imagens !== undefined ? { images: imagens } : {}),
+      },
+      twitter: {
+        card: imagens !== undefined ? 'summary_large_image' : 'summary',
+        title: titulo,
+        description: descricao,
+        ...(imagens !== undefined ? { images: imagens } : {}),
+      },
+      robots: { index: perfil.indexavel, follow: true },
+    };
+  }
+
   const evento = await carregarEvento(params.eventSlug);
   // Rascunho/inexistente (→ 404): não indexar a rota-fantasma.
   if (evento === null) {
@@ -67,6 +130,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function EventoPage({ params }: PageProps): Promise<React.JSX.Element> {
+  // Perfil `/@{handle}` (S1700): gate RN-161 no leitor — privada/inexistente
+  // ⇒ 404 público honesto, idêntico ao gate de publicação do evento.
+  const handle = handleDoSegmento(params.eventSlug);
+  if (handle !== null) {
+    const dados = await carregarPerfil(handle);
+    if (dados === null) {
+      notFound();
+    }
+    const perfilUrl = urlPerfil(dados.perfil.handle);
+    const perfilQr = await QRCode.toString(perfilUrl, {
+      type: 'svg',
+      margin: 1,
+      errorCorrectionLevel: 'M',
+    });
+    return <PerfilView dados={dados} shareUrl={perfilUrl} qrSvg={perfilQr} />;
+  }
+
   const evento = await carregarEvento(params.eventSlug);
 
   // GATE de publicação: rascunho/inexistente → 404 público (S1201-T3).
