@@ -31,6 +31,16 @@ const THEME_INFO: Record<Theme, { name: string; displayFont: string; primaryHex:
   leela: { name: 'Leela', displayFont: 'Syne', primaryHex: primary500(primitivesLeela) },
 };
 
+// Colorways do wordmark (recolor do mesmo escrito). Hex = valor da própria
+// colorway (asset de marca); bg = cor pareada p/ contraste no relance.
+const COLORWAYS = [
+  { name: 'lime',  file: 'leela-wordmark-lime.svg',  hex: '#C8E84A', bg: '#2A1018' },
+  { name: 'wine',  file: 'leela-wordmark-wine.svg',  hex: '#7A1520', bg: '#F0ECD8' },
+  { name: 'plum',  file: 'leela-wordmark-plum.svg',  hex: '#2A1018', bg: '#C8E84A' },
+  { name: 'ember', file: 'leela-wordmark-ember.svg', hex: '#F35606', bg: '#F0ECD8' },
+  { name: 'cream', file: 'leela-wordmark-cream.svg', hex: '#F0ECD8', bg: '#7A1520' },
+] as const;
+
 const STATS = [
   { value: '25', label: 'componentes' },
   { value: '2', label: 'temas (brasa e leela)' },
@@ -121,14 +131,36 @@ export function HomePage(): JSX.Element {
               O mesmo asset da sidebar do painel e do header da landing, agora
               também no shell do showroom (topo da barra lateral) e no favicon. A
               variante troca por tema para ler nos dois fundos: no {THEME_INFO.brasa.name} (escuro)
-              o wordmark limão sobre transparente; no {THEME_INFO.leela.name} (claro) a variante em
-              caixa ameixa, que carrega o próprio contraste.
+              o wordmark limão sobre transparente; no {THEME_INFO.leela.name} (claro) o wordmark
+              vinho sobre transparente. Cada variante é um recolor do mesmo escrito — só muda o
+              fill, sem caixa. Abaixo, as cinco colorways disponíveis.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-[var(--spacing-4)]">
             <div className="flex items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-base)] p-[var(--spacing-6)]">
               <BrandLogo className="h-[var(--spacing-8)]" />
             </div>
+            {/* Relance das colorways do wordmark. Os hex inline são o PRÓPRIO
+                assunto (asset de marca em exibição, como uma rampa de cor mostra
+                seus valores), não tokens de tema. Cada wordmark vai sobre a cor
+                pareada da colorway para carregar contraste. */}
+            <ul className="grid grid-cols-2 gap-[var(--spacing-2)] sm:grid-cols-5">
+              {COLORWAYS.map((c) => (
+                <li key={c.name} className="flex flex-col gap-[var(--spacing-1)]">
+                  <span
+                    className="flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-subtle)] p-[var(--spacing-3)]"
+                    style={{ background: c.bg }}
+                  >
+                    <img
+                      src={`${import.meta.env.BASE_URL}${c.file}`}
+                      alt={`Wordmark Leela ${c.name}`}
+                      className="h-[var(--spacing-5)] w-auto"
+                    />
+                  </span>
+                  <TokenLabel>{`${c.name} ${c.hex}`}</TokenLabel>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
 

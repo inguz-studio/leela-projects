@@ -7,13 +7,14 @@
  * Aqui basta o asset, mas com uma decisão que o painel não precisa: variante por
  * TEMA.
  *
- * Por que trocar por tema: o wordmark oficial é verde-limão (#C8E84A) sobre
- * transparente. Ele lê no `brasa` (surface-base = neutral-950, escuro), mas some
- * no `leela` (surface-base = neutral-50, claro). Então:
+ * Por que trocar por tema: a variante do wordmark é um RECOLOR do escrito (mesma
+ * geometria, só muda o fill — sem caixa/fundo). O limão (#C8E84A) lê no `brasa`
+ * (surface-base = neutral-950, escuro), mas some no tema claro; o vinho (#7A1520,
+ * Oxblood) lê no claro (surface-base = neutral-50) e some no escuro. Então:
  *   - brasa → `leela-logo-brasa.svg`     (wordmark limão sobre transparente)
- *   - leela → `leela-logo-brasa-box.svg` (wordmark limão em caixa ameixa #2A1018,
- *                                          que carrega o próprio contraste)
- * Assim a marca lê bem nos DOIS temas sem valor cru nem CSS frágil.
+ *   - leela → `leela-wordmark-wine.svg`  (wordmark vinho sobre transparente)
+ * Ambas transparentes: cada colorway carrega o próprio contraste contra o
+ * surface do tema, sem caixa (a versão em caixa foi rejeitada — "parece um print").
  *
  * Assets vêm de `brand/` copiados para `showcase/public/` (caminho idiomático do
  * vite; `import.meta.env.BASE_URL` respeita o `base: './'` do build por duplo
@@ -25,7 +26,7 @@ import { cn, useTheme, type Theme } from '@leela/design-system';
 
 const VARIANT_BY_THEME: Record<Theme, string> = {
   brasa: 'leela-logo-brasa.svg',
-  leela: 'leela-logo-brasa-box.svg',
+  leela: 'leela-wordmark-wine.svg',
 };
 
 export interface BrandLogoProps {
