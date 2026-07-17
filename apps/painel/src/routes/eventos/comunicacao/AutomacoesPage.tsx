@@ -67,6 +67,17 @@ function mensagemErro(err: unknown): string {
   return 'Não foi possível concluir a operação. Tente novamente.';
 }
 
+/**
+ * Estado exibido do card (RN-136 · decisão 17). `vencido` = gatilho PONTUAL de
+ * relógio (véspera/pós) que perdeu a janela: o cron DESATIVOU (`ativa=false` +
+ * `vencidoEm`) — terminal, não dispara. "Vencida" é rótulo de UI. @pure
+ */
+function estadoAutomacao(a: Automacao): { label: string; variant: 'vitoria' | 'neutro' | 'vulcao' } {
+  if (a.ativa) return { label: 'Ativa', variant: 'vitoria' };
+  if (a.vencidoEm) return { label: 'Vencida', variant: 'vulcao' };
+  return { label: 'Pausada', variant: 'neutro' };
+}
+
 export function AutomacoesPage(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
   const navigate = useNavigate();
@@ -222,7 +233,10 @@ export function AutomacoesPage(): JSX.Element {
                         <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
                           {gatilhoLabel(a.gatilho)}
                         </span>
-                        <Badge variant={a.ativa ? 'vitoria' : 'neutro'}>{a.ativa ? 'Ativa' : 'Pausada'}</Badge>
+                        {(() => {
+                          const e = estadoAutomacao(a);
+                          return <Badge variant={e.variant}>{e.label}</Badge>;
+                        })()}
                         {gatilhoUsaOffset(a.gatilho) && a.offsetHoras ? (
                           <Badge variant="neutro">{`${a.offsetHoras}h`}</Badge>
                         ) : null}
@@ -237,7 +251,7 @@ export function AutomacoesPage(): JSX.Element {
                     <div className="flex items-center gap-[var(--spacing-2)]">
                       <Switch
                         id={`auto-toggle-${a.id}`}
-                        label={a.ativa ? 'Ativa' : 'Pausada'}
+                        label={estadoAutomacao(a).label}
                         checked={a.ativa}
                         onCheckedChange={() => void toggle(a)}
                       />

@@ -14,7 +14,7 @@ import type {
   Campanha,
   CanalCampanha,
   SegmentoCampanha,
-  StatusCampanha,
+  StatusCampanhaPersistido,
 } from '@leela/core';
 import type { BadgeProps } from '@leela/design-system';
 import { kitInscritoLabel } from './kitLabels';
@@ -31,14 +31,17 @@ export interface StatusCampanhaBadgeInfo {
   borderVar: string;
 }
 
-const STATUS_MAPA: Record<StatusCampanha, StatusCampanhaBadgeInfo> = {
+const STATUS_MAPA: Record<StatusCampanhaPersistido, StatusCampanhaBadgeInfo> = {
   rascunho: { label: 'Rascunho', variant: 'neutro', borderVar: '--border-subtle' },
   agendado: { label: 'Agendada', variant: 'heroico', borderVar: '--feedback-info' },
   enviado: { label: 'Enviada', variant: 'vitoria', borderVar: '--feedback-success' },
+  // 'vencido' (RN-136 · decisão 17): agendamento que perdeu a janela do cron —
+  // terminal, não dispara. "Vencida" é rótulo de UI; o dado é `vencido`.
+  vencido: { label: 'Vencida', variant: 'vulcao', borderVar: '--feedback-danger' },
 };
 
-/** Rótulo + variante + borda para o estado da campanha (RN-130). */
-export function statusCampanhaBadge(status: StatusCampanha): StatusCampanhaBadgeInfo {
+/** Rótulo + variante + borda para o estado da campanha (RN-130/136). */
+export function statusCampanhaBadge(status: StatusCampanhaPersistido): StatusCampanhaBadgeInfo {
   return STATUS_MAPA[status] ?? STATUS_MAPA.rascunho;
 }
 
@@ -104,15 +107,16 @@ export function filtrarCampanhas(
 // Agrupamento por estado (RN-130) — 3 grupos: enviadas, agendadas, rascunhos
 // ---------------------------------------------------------------------------
 
-/** Ordem canônica dos grupos da lista (brief L3-T2). */
-export const ORDEM_GRUPOS_CAMPANHA: readonly StatusCampanha[] = [
+/** Ordem canônica dos grupos da lista (brief L3-T2 + decisão 17: vencidas). */
+export const ORDEM_GRUPOS_CAMPANHA: readonly StatusCampanhaPersistido[] = [
   'enviado',
   'agendado',
+  'vencido',
   'rascunho',
 ];
 
 export interface GrupoCampanhas {
-  status: StatusCampanha;
+  status: StatusCampanhaPersistido;
   campanhas: Campanha[];
 }
 
@@ -171,8 +175,8 @@ export interface AcaoCampanhaDef {
   destructive?: boolean;
 }
 
-/** Ações disponíveis para uma campanha conforme seu estado (RN-130). */
-export function acoesCampanha(status: StatusCampanha): AcaoCampanhaDef[] {
+/** Ações disponíveis para uma campanha conforme seu estado (RN-130/136). */
+export function acoesCampanha(status: StatusCampanhaPersistido): AcaoCampanhaDef[] {
   switch (status) {
     case 'rascunho':
       return [
@@ -190,6 +194,13 @@ export function acoesCampanha(status: StatusCampanha): AcaoCampanhaDef[] {
       return [
         { id: 'relatorio', label: 'Ver relatório de envios' },
         { id: 'duplicar', label: 'Duplicar' },
+      ];
+    // 'vencido' é terminal (RN-136): não reenvia nem reagenda — só duplica
+    // (recria como rascunho editável) ou exclui o registro morto.
+    case 'vencido':
+      return [
+        { id: 'duplicar', label: 'Duplicar' },
+        { id: 'excluir', label: 'Excluir', destructive: true },
       ];
     default:
       return [];

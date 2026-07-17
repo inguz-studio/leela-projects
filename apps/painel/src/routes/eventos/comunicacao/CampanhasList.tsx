@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from 'react';
 import { KpiCard, Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
-import type { Campanha, CanalCampanha, StatusCampanha } from '@leela/core';
+import type { Campanha, CanalCampanha, StatusCampanhaPersistido } from '@leela/core';
 import { formatDataCurta, formatInt } from '../_lib/format';
 import {
   acoesCampanha,
@@ -38,9 +38,10 @@ export interface CampanhasListProps {
 const CANAL_OPCOES: CanalCampanha[] = ['push', 'email'];
 
 /** Título de cada grupo por estado (plural feminino da UI). */
-const GRUPO_TITULO: Record<StatusCampanha, string> = {
+const GRUPO_TITULO: Record<StatusCampanhaPersistido, string> = {
   enviado: 'Enviadas',
   agendado: 'Agendadas',
+  vencido: 'Vencidas',
   rascunho: 'Rascunhos',
 };
 
@@ -51,6 +52,8 @@ function metadadoEstado(c: Campanha): string {
       return `${formatInt(c.alcance)} alcançados`;
     case 'agendado':
       return `disparo em ${formatDataCurta(c.agendadoPara)}`;
+    case 'vencido':
+      return `venceu em ${formatDataCurta(c.vencidoEm)}`;
     case 'rascunho':
       return `criado em ${formatDataCurta(c.criadoEm)}`;
     default:

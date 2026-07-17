@@ -230,13 +230,13 @@ export interface Campanha {
   canal: CanalCampanha[];
   origem: OrigemCampanha;
   /**
-   * Código compartilhado rascunho/agendado/enviado — UI rotula no feminino.
-   * ⚠️ O dado persistido pode ainda carregar 'vencido' (RN-136 — decisão
-   * 17); o tipo fica no subconjunto ATÉ o painel adotar
-   * `StatusCampanhaPersistido` (pendência do lote Opus — ver DIRECTIVE
-   * acima). `parseCampanha` ACEITA 'vencido'.
+   * Código persistido: rascunho/agendado/enviado/vencido — a UI rotula no
+   * feminino ("Vencida" é rótulo; o dado é `vencido`, masculino — item 9).
+   * 'vencido' (RN-136 · decisão 17) é o terminal do agendamento que perdeu a
+   * janela do cron; `parseCampanha` o aceita e o painel já o trata (grupo/
+   * label/badge/ações). Carimbo `vencidoEm` acompanha (ver abaixo).
    */
-  status: StatusCampanha;
+  status: StatusCampanhaPersistido;
   segmento: SegmentoCampanha;
   /** Obrigatório quando status ∈ {'agendado','vencido'} (era um agendamento) */
   agendadoPara?: Timestamp;
@@ -466,10 +466,9 @@ export function parseCampanha(
     conteudo,
     canal: canal as CanalCampanha[],
     origem,
-    // Cast deliberado (DIRECTIVE acima): o dado real é o union persistido
-    // (inclui 'vencido'); o campo estreita p/ StatusCampanha até o painel
-    // adotar StatusCampanhaPersistido (pendência do lote Opus).
-    status: status as StatusCampanha,
+    // `status` já é o union persistido validado por `isStatusCampanhaPersistido`
+    // (inclui 'vencido' — RN-136); o painel adotou o tipo, sem cast estreitador.
+    status,
     segmento,
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
