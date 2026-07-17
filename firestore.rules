@@ -280,6 +280,23 @@ service cloud.firestore {
         allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
         allow write: if false;
       }
+
+      // `parceirosAssessoria/{parceriaId}` — vínculo organizador↔assessoria
+      // (E18 · S1800/S1801/S1803 · RN-360..365). Subcoleção NOVA com PII
+      // (documento CNPJ/CPF + e-mail do responsável) ⇒ REGRA PRÓPRIA
+      // (diretriz O3-L3B; nunca catch-all). docId = documento normalizado
+      // (dedupe por chave — RN-361).
+      // LEITURA: papel de ESCRITA do tenant (owner/staff gerem parceiros;
+      // promoter/athlete-com-claim NÃO leem CPF/CNPJ de terceiros — LGPD,
+      // minimização) + platform_admin. ESCRITA: NEGADA para TODO client SDK
+      // (postura pós-19c8afe) — cadastro/aceite/encerramento passam pelas
+      // Functions cadastrarAssessoriaParceira / provisionAssessoriaAccount /
+      // encerrarParceriaAssessoria (máquina de estados + convite + token
+      // só são invariantes lá).
+      match /parceirosAssessoria/{parceriaId} {
+        allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
+        allow write: if false;
+      }
     }
 
     // ── `platform/{doc}` — dados macro da plataforma ──────────────────────

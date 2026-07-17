@@ -1056,3 +1056,32 @@ export {
   validarPerfilInput,
   projetarPerfilPublico,
 } from './perfil/perfil';
+
+// ---------------------------------------------------------------------------
+// Assessorias parceiras (E18 · Onda 3 Lote 3 · RN-360..365)
+// Documento CNPJ/CPF (RN-361) + vínculo organizador↔club parceiro. A
+// assessoria é um CLUBE (E05); o desconto é CUPOM escopado (E04, ADR-012).
+// ---------------------------------------------------------------------------
+export type {
+  TipoDocumento,
+  DocumentoAssessoria,
+  ResultadoDocumento,
+  StatusParceriaAssessoria,
+  CondicaoDesconto,
+  ParceriaAssessoria,
+} from './assessoria';
+export {
+  TIPOS_DOCUMENTO,
+  isTipoDocumento,
+  normalizarDocumento,
+  tipoDoDocumento,
+  isCpfValido,
+  isCnpjValido,
+  validarDocumento,
+  formatarDocumento,
+  COLECAO_PARCEIROS_ASSESSORIA,
+  STATUS_PARCERIA_ASSESSORIA,
+  isStatusParceriaAssessoria,
+  podeTransicionarParceria,
+  parseParceriaAssessoria,
+} from './assessoria';
