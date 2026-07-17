@@ -56,6 +56,23 @@ export const queryKeys = {
       ['financeiro', 'por-organizador', tenantId, organizadorId] as const,
   },
 
+  reembolsos: {
+    /**
+     * Fila de reembolsos do evento (`eventos/{id}/reembolsos` — S904-T5). A aba
+     * financeira lê esta chave e destaca os `em_analise`; decidir (aprovar/
+     * recusar via callable) a invalida → read-your-writes (ADR-010).
+     */
+    doEvento: (eventoId: string) => ['reembolsos', 'do-evento', eventoId] as const,
+  },
+
+  transferencias: {
+    /**
+     * Registro de transferências do evento (`eventos/{id}/transferencias` —
+     * S904-T5). Leitura de gestão (titularidade/troca + diff cobrada do backend).
+     */
+    doEvento: (eventoId: string) => ['transferencias', 'do-evento', eventoId] as const,
+  },
+
   // ---------------------------------------------------------------------------
   // Repasse do organizador (E09-slim · E09s-L3). Coleções tenant-scoped
   // (`tenants/{tid}/saldo|dadosBancarios|repasses`). Prefixo `['repasse', tid]`

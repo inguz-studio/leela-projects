@@ -22,6 +22,7 @@ import {
   convidarMembroEquipe,
   criarEvento,
   criarPatrocinador,
+  decideRefund,
   despublicarPaginaVendas,
   estornarInscricao,
   getLeelaDb,
@@ -53,6 +54,8 @@ import {
   type CriarEventoInput,
   type CriarEventoResult,
   type CriarPatrocinadorInput,
+  type DecideRefundInput,
+  type DecideRefundResult,
   type EstornarInscricaoInput,
   type EstornarInscricaoResult,
   type ProvisionResult,
@@ -570,6 +573,34 @@ export function useEstornarInscrito(
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.inscritos.todos(eventoId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.financeiro.current(eventoId) });
+    },
+  });
+}
+
+// =============================================================================
+// Mutation de DECISÃO de reembolso (E09 · S904-T5 · RN-341/337). Escrita
+// EXCLUSIVA de Cloud Function (`decideRefund`): 'aprovar' dispara a execução do
+// estorno (reusa FABLE-B), 'recusar' é terminal sem dinheiro. O VALOR estornado
+// é decisão do servidor (RN-337) — o cliente nunca o envia. No onSuccess invalida
+// (a) a fila de reembolsos do evento — o estado flipa; (b) o financeiro/current —
+// a receita revertida reflete; (c) a lista de inscritos — o badge do inscrito vira
+// Estornado. Read-your-writes (ADR-010). Erro do callable sobe INTACTO (§2.12).
+// =============================================================================
+
+/**
+ * Decide um reembolso em análise (aprovar/recusar — callable) e invalida as
+ * chaves de leitura afetadas. `eventoId` fixa o alvo das invalidações.
+ */
+export function useDecideRefund(
+  eventoId: string,
+): UseMutationResult<DecideRefundResult, Error, DecideRefundInput> {
+  const queryClient = useQueryClient();
+  return useMutation<DecideRefundResult, Error, DecideRefundInput>({
+    mutationFn: (input) => decideRefund(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reembolsos.doEvento(eventoId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.financeiro.current(eventoId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.inscritos.todos(eventoId) });
     },
   });
 }

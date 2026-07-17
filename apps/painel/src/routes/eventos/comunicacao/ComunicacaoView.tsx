@@ -64,6 +64,9 @@ const CANAL_LABEL: Record<CanalLogComunicacao, string> = {
 const DESTINATARIO_LABEL: Record<TipoDestinatarioComunicacao, string> = {
   inscrito: 'Inscrito',
   membro: 'Membro',
+  // S904-T3 (RN-342): notificação transacional ao organizador (abertura de
+  // reembolso). O tipo entrou no kernel com o backend do Lote 1 (0ff90ee).
+  organizador: 'Organizador',
 };
 
 export interface ComunicacaoViewProps {

@@ -47,6 +47,8 @@ import {
   listarItensKit,
   listarKits,
   listarLotes,
+  listReembolsos,
+  listTransferencias,
   listClubesByTenant,
   listComunicados,
   listDesafios,
@@ -86,10 +88,12 @@ import type {
   PlanoCobranca,
   PoliticaVendas,
   PlatformRollups,
+  Reembolso,
   Repasse,
   ResumoComunicacoes,
   SaldoRepasse,
   Tenant,
+  Transferencia,
 } from '@leela/core';
 import { queryKeys } from './keys';
 
@@ -206,6 +210,33 @@ export function financeiroCurrentQuery(eventoId: string) {
     queryKey: queryKeys.financeiro.current(eventoId),
     queryFn: (): Promise<FinanceiroEvento | null> =>
       getFinanceiroEvento(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Fila de reembolsos do evento (`eventos/{id}/reembolsos` — S904-T5). Reusa
+ * `listReembolsos` do api-client (parse defensivo por doc; estado corrompido é
+ * omitido). A tela destaca os `em_analise` (fila de decisão) e mostra os demais
+ * estados com valores do backend (RN-337 — nunca recalcula). Decidir invalida
+ * esta chave (read-your-writes, ADR-010). Lista vazia = sem reembolso ainda.
+ */
+export function reembolsosDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.reembolsos.doEvento(eventoId),
+    queryFn: (): Promise<Reembolso[]> => listReembolsos(getLeelaDb(), eventoId),
+  });
+}
+
+/**
+ * Registro de transferências do evento (`eventos/{id}/transferencias` — S904-T5).
+ * Reusa `listTransferencias` do api-client. Leitura de gestão: tipo (titularidade/
+ * troca), estado, titular anterior→novo e a `diffCobrada` que o backend registrou
+ * (o valor da troca é do servidor). Lista vazia = sem transferência ainda.
+ */
+export function transferenciasDoEventoQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.transferencias.doEvento(eventoId),
+    queryFn: (): Promise<Transferencia[]> => listTransferencias(getLeelaDb(), eventoId),
   });
 }
 

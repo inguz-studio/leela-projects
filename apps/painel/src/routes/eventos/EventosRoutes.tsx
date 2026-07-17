@@ -29,7 +29,9 @@ import { LotesPage } from './lotes/LotesPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { CampanhaEditorPage } from './comunicacao/CampanhaEditorPage';
+import { FinanceiroLayout } from './financeiro/FinanceiroLayout';
 import { FinanceiroPage } from './financeiro/FinanceiroPage';
+import { ReembolsosPage } from './financeiro/ReembolsosPage';
 import { ConfiguracoesLayout } from './configuracoes/ConfiguracoesLayout';
 import { ConfigGeraisPage } from './configuracoes/ConfigGeraisPage';
 import { PoliticaVendasPage } from './configuracoes/PoliticaVendasPage';
@@ -116,10 +118,13 @@ export function EventosRoutes(): JSX.Element {
             path="financeiro"
             element={
               <RequirePapel area="financeiro">
-                <FinanceiroPage />
+                <FinanceiroLayout />
               </RequirePapel>
             }
-          />
+          >
+            <Route index element={<FinanceiroPage />} />
+            <Route path="reembolsos" element={<ReembolsosPage />} />
+          </Route>
           {/* Configurações gerais + Equipe & permissões (E04 · S304-T2/T3).
               area="configuracoes" cobre o subtree (equipe tem o MESMO veredito
               na matriz p/ os 4 papéis). */}
