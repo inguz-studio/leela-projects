@@ -88,7 +88,7 @@
 - [ ] Aceite em `epics/LEELA-E18-assessorias-parceiras.md §S1803` (T1): lista densa §2.5 com status/documento/condição + busca/filtro/EmptyState; encerrar = ConfirmModal §2.15 + disclaimer + retenção 90d (RN-144).
 - **Território:** `apps/painel` (Opus). **Dep:** S1800.
 
-### `S1804` · Modo cupom-only (evento fechado) → encaixe E04/S300 (RN-345) · Could
+### `S1804` · Modo cupom-only (evento fechado) → encaixe E04/S300 (RN-303) · Could
 **Como** organizador, **quero** um modo em que inscrições só acontecem via cupom, **para** rodar eventos fechados/por convênio (padrão TicketSports), inclusive amarrados a assessorias.
 - **JTBD servido:** T · doc: *"Configurar lotes e preços"* (04.1 — modo de venda). Dimensão **Transacional H1**.
 - [ ] Aceite em `epics/LEELA-E18-assessorias-parceiras.md §S1804` (T1): flag `vendaSomentePorCupom` no evento + guard no checkout E12; sem cupom válido ⇒ inscrição bloqueada ("evento fechado — informe seu cupom"); modo desligado ⇒ comportamento atual preservado.

@@ -91,7 +91,7 @@ Tração B2B sem split (o parceiro recebe **desconto**, não dinheiro). É "club
 | **S1801** convite + provisionamento atômico da conta | reusa `enviarConvites` (E05-S104 ✅) + Function `provisionAssessoriaAccount` atômica/idempotente (RN-363) + página pública de aceite | E18 | **Should** | M | S1800, E00 Auth ✅, EmailProvider (ação externa) | Fable(Function/Auth/Rules) + Opus(landing aceite) | ⚔ (provisiona conta — idempotência) |
 | **S1802** condição de desconto do club parceiro (cupom, sem split) | cupom `escopo='club_parceiro'` (RN-364) + checkout resolve (reusa `validateCoupon`) respeitando `commercialTerms` (RN-365) | E18 | **Should** | S | S1800, E04-S300 ✅ (cupom), E16-S1602 ✅ (termos) | Fable(core cupom/checkout) + Opus(editor painel) | ⚔ (pricing/cupom) |
 | **S1803** gestão da parceria (lista/status/encerrar) | lista densa §2.5 + encerrar = ConfirmModal §2.15 + retenção 90d (RN-144) | E18 | **Should** | S | S1800 | Opus (painel) | — |
-| **S1804** modo cupom-only (evento fechado) → encaixe E04 | flag `vendaSomentePorCupom` (RN-345) + guard no checkout | E04/S300 | **Could** | S | E04-S300 ✅, E12 checkout ✅ | Fable (core do gate) | ⚔ (gate de venda) |
+| **S1804** modo cupom-only (evento fechado) → encaixe E04 | flag `vendaSomentePorCupom` (RN-303) + guard no checkout | E04/S300 | **Could** | S | E04-S300 ✅, E12 checkout ✅ | Fable (core do gate) | ⚔ (gate de venda) |
 
 **Nota de encaixe:** `S1804` **pertence a E04/S300** (modo de venda), documentada no E18 por ser o caso de uso principal. Executa junto do B1 (é do E04) ou do B3 (consumidor) — território `packages/core` + guard do checkout; sem tela nova além do toggle.
 

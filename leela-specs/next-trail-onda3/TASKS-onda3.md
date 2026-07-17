@@ -22,7 +22,7 @@
 | `S904-T3` | Notificações (organizador na abertura, atleta em cada transição — RN-342) | S | `functions/` | S904-T1 | **Fable** | — |
 | `S904-T4` | Subcoleção `transferencias` + `titularHistorico[]` + kit/chip (RN-345) + fila | M | `functions/finance` + Rules · `packages/core` | S305-T3, RN-203 | **Fable** | ⚔ |
 | `S904-T5` | Fila de reembolso/transferência no painel financeiro (aprovar/recusar, auditada) | M | `apps/painel/.../financeiro` | S904-T1..T4 | **Opus** | — |
-| `S1804-T1` | Flag `vendaSomentePorCupom` no evento + guard no checkout (core puro do gate) — RN-345 | S | `packages/core` + guard checkout (`apps/landing` checkout) | E04-S300 ✅ | **Fable** | ⚔ |
+| `S1804-T1` | Flag `vendaSomentePorCupom` no evento + guard no checkout (core puro do gate) — RN-303 | S | `packages/core` + guard checkout (`apps/landing` checkout) | E04-S300 ✅ | **Fable** | ⚔ |
 
 **Gate do lote:** adr-conformance **ADR-011** (política/máquina por inscrito) + **ADR-014** (cifra onde o estorno tocar dados de repasse). Kleppmann revisa a fronteira transacional da máquina de estados (`transicoes[]` append-only, idempotência do estorno).
 

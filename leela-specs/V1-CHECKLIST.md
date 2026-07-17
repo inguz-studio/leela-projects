@@ -352,7 +352,7 @@ Política de reembolso/transferência (E04-S305) → máquina completa (E09-S904
 - [x] LEELA-S904-T3 — Notificações (organizador na abertura, atleta em cada transição — RN-342) — **Fable** · *functions* · **✅ `bebbc0a`** (registro idempotente no log FABLE-G; envio físico depende do e-mail transacional — ação externa)
 - [x] LEELA-S904-T4 — Subcoleção `transferencias` + `titularHistorico[]` + kit/chip (RN-345) — **Fable** ⚔ · *functions/finance* · **✅ `bebbc0a`** (titularidade EXECUTA; troca de ingresso SÓ REGISTRA — aplicação+cobrança são do checkout; review H1: atletaNome/atletaId/modalidade congelados p/ cliente)
 - [x] LEELA-S904-T5 — Fila de reembolso/transferência no painel financeiro (auditada) — **Opus** · *painel/financeiro/reembolsos* · **✅ `901e3a7`** (sub-nav Resumo|Reembolsos; fila destaca `em_analise` → Aprovar/Recusar via ConfirmModal+motivo → callable `decideRefund`; valores SEMPRE do backend RN-337; transferências em leitura com diff; a ABERTURA de reembolso/transferência é self-service do atleta E13-S1315/S1316 Onda 4, fora desta fatia; pendências: fila mostra `inscritoId` curto — nome exige join fora do doc; caminho de erro do callable não testado nesta lane)
-- [x] LEELA-S1804-T1 — Flag `vendaSomentePorCupom` + guard no checkout (RN-345, encaixe E04/S300) — **Fable** ⚔ · *core+checkout* · **✅ `d5e0fe5`**
+- [x] LEELA-S1804-T1 — Flag `vendaSomentePorCupom` + guard no checkout (RN-303, encaixe E04/S300) — **Fable** ⚔ · *core+checkout* · **✅ `d5e0fe5`**
 
 > Gate do lote: adr-conformance **ADR-011** (por inscrito) + **ADR-014** (cifra onde tocar repasse).
 

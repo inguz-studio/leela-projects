@@ -161,7 +161,7 @@ Stories: **S1800** (cadastro de assessoria por CNPJ/CPF + vínculo se já tem co
 - **MoSCoW:** Could · **Estimativa:** S · **Superfície:** Painel (E04) + checkout (E12) · **Onda:** 2 (encaixa em E04/S300); consumido por E18
 
 **Critérios de aceite (Given/When/Then):**
-- **Dado** um evento com `vendaSomentePorCupom=true` (RN-345), **quando** um atleta abre o checkout público **sem** cupom válido, **então** a inscrição fica bloqueada com mensagem "evento fechado — informe seu cupom".
+- **Dado** um evento com `vendaSomentePorCupom=true` (RN-303), **quando** um atleta abre o checkout público **sem** cupom válido, **então** a inscrição fica bloqueada com mensagem "evento fechado — informe seu cupom".
 - **Dado** um cupom válido (inclusive de club parceiro), **quando** aplico, **então** o checkout libera a inscrição.
 - **Dado** o modo desligado, **quando** o atleta entra, **então** o checkout funciona normalmente (comportamento atual preservado).
 
