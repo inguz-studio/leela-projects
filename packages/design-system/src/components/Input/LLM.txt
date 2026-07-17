@@ -19,6 +19,7 @@ Não use para texto longo multilinha (não há Textarea no DS; ConfirmModal embu
 - errorMessage: string   (default: undefined) — mostra erro abaixo do campo e seta aria-invalid
 - label: string   (default: undefined) — label visível acima do campo
 - wrapperClassName: string   (default: undefined) — classe extra do wrapper flex
+- variant: 'flat' | 'bordered'   (default: 'flat') — 'flat' (default global, LEELA-FLAT-DEFAULT): campo sem borda em repouso, identificado pelo fill inset surface-sunken, foco por glow ring; 'bordered' (opt-out §2.16): fill surface-raised + borda border-input. Em ambos, o erro reacende a borda-danger.
 - id: string   (default: undefined) — necessário para htmlFor do label e para o aria-describedby do erro
 - disabled: boolean   (default: undefined)
 - ...todas as props nativas de React.InputHTMLAttributes<HTMLInputElement> (value, onChange, placeholder, type, etc.)
@@ -29,7 +30,8 @@ Não use para texto longo multilinha (não há Textarea no DS; ConfirmModal embu
 - --input-radius
 - --input-font-size
 - --input-border-width
-- --surface-raised
+- --surface-sunken   (fill do default flat em repouso)
+- --surface-raised   (fill do opt-out `variant='bordered'`)
 - --text-primary
 - --text-danger
 - --border-danger
@@ -39,7 +41,8 @@ Não use para texto longo multilinha (não há Textarea no DS; ConfirmModal embu
 Aliases shadcn->brasa usados: border-input (= border-strong), placeholder:text-muted-foreground (= text-tertiary), ring-ring (= border-focus).
 
 ## Proibido (do/don't)
-DON'T: props variant, size, error (boolean), helperText — NÃO existem; o erro é via errorMessage (string).
+DON'T: props size, error (boolean), helperText — NÃO existem; o erro é via errorMessage (string).
+DON'T: variant='default' | 'outline' — o enum é 'flat' (default) | 'bordered'; 'outline' é nome do shadcn stock e não existe aqui.
 DON'T: hex, rgb, px, rem em style inline.
 DO: passe sempre id junto com errorMessage — sem id o erro não é associado via aria-describedby; para uso inline compacto sem label visível, use aria-label.
 

@@ -45,12 +45,28 @@ describe('Textarea', () => {
     expect(screen.getByRole('textbox')).toHaveFocus();
   });
 
-  it('flat variant drops the resting border and fills with surface-sunken', () => {
-    render(<Textarea aria-label="Descrição" variant="flat" />);
+  it('default (no variant) is flat: drops the resting border and fills with surface-sunken', () => {
+    render(<Textarea aria-label="Descrição" />);
     const box = screen.getByRole('textbox');
     expect(box).not.toHaveClass('border-input');
     expect(box).toHaveClass('border-transparent');
     expect(box).toHaveClass('bg-[var(--surface-sunken)]');
     expect(box).toHaveClass('focus:ring-2');
+  });
+
+  it('explicit variant="flat" is a no-op (same as default)', () => {
+    render(<Textarea aria-label="Descrição" variant="flat" />);
+    const box = screen.getByRole('textbox');
+    expect(box).not.toHaveClass('border-input');
+    expect(box).toHaveClass('border-transparent');
+    expect(box).toHaveClass('bg-[var(--surface-sunken)]');
+  });
+
+  it('variant="bordered" opts back into the §2.16 border + surface-raised', () => {
+    render(<Textarea aria-label="Descrição" variant="bordered" />);
+    const box = screen.getByRole('textbox');
+    expect(box).toHaveClass('border-input');
+    expect(box).toHaveClass('bg-[var(--surface-raised)]');
+    expect(box).not.toHaveClass('border-transparent');
   });
 });

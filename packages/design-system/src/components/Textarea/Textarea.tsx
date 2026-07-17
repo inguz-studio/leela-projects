@@ -7,9 +7,11 @@
 //
 // ENGINE: `<textarea>` nativo restilizado ao brasa. A11y de teclado/foco/leitor
 // de tela de fábrica; a casca (label + mensagem de erro + aria-describedby) é o
-// valor da NOSSA API por cima do nativo — idêntica ao Input (§2.16 borda
-// permitida: bg raised ≈ bg da página, a borda border-input é o único
-// identificador visual e cumpre WCAG 1.4.11 ≥3:1).
+// valor da NOSSA API por cima do nativo — idêntica ao Input. Flat por DEFAULT
+// (LEELA-FLAT-DEFAULT): em repouso sem borda, o fill inset surface-sunken é o
+// identificador e o foco segue por ring; o opt-out `bordered` (§2.16) traz de
+// volta bg raised + borda border-input (única identificação quando o fill ≈ bg
+// da página, WCAG 1.4.11 ≥3:1).
 //
 // NASCE RESPONSIVO (L-004): `w-full` mobile-first, sem largura fixa, sem
 // overflow em 390px; a altura cresce por `rows` e `resize-y` (nunca `resize-x`,
@@ -27,19 +29,20 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   /** Classe do wrapper (label + campo). */
   wrapperClassName?: string;
   /**
-   * Aparência (experimento LEELA-DS-FLAT-INPUTS): `default` = fill raised +
-   * borda `border-input`; `flat` = sem borda em repouso, fill `surface-sunken`
-   * como identificador, foco por ring. Opt-in — não muda o default global.
+   * Aparência (LEELA-FLAT-DEFAULT): `flat` (DEFAULT global) = sem borda em
+   * repouso, fill `surface-sunken` como identificador, foco por ring;
+   * `bordered` (opt-out §2.16) = fill `surface-raised` + borda `border-input`.
+   * `variant='flat'` explícito continua válido (no-op, é o default).
    */
-  variant?: 'default' | 'flat';
+  variant?: 'flat' | 'bordered';
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
-    { className, errorMessage, label, wrapperClassName, variant = 'default', id, disabled, rows = 3, ...props },
+    { className, errorMessage, label, wrapperClassName, variant = 'flat', id, disabled, rows = 3, ...props },
     ref,
   ) => {
-    const flat = variant === 'flat';
+    const bordered = variant === 'bordered';
     const reactId = React.useId();
     const controlId = id ?? reactId;
     const hasError = Boolean(errorMessage);
@@ -69,12 +72,13 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             'min-h-[var(--input-height)] px-[var(--input-px)] py-[var(--spacing-2)]',
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
-            // Cores & borda. Default (§2.16, igual ao Input) vs flat
-            // (experimento): fill sunken sem borda em repouso, foco por ring.
+            // Cores & borda. Default flat (igual ao Input): fill sunken sem
+            // borda em repouso, foco por ring. Opt-out bordered (§2.16): fill
+            // raised + borda funcional.
             'text-[var(--text-primary)]',
-            flat
-              ? 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent'
-              : 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input',
+            bordered
+              ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
+              : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent',
             // Placeholder — alias muted-foreground = text-tertiary
             'placeholder:text-muted-foreground',
             // Foco — glow ring via alias ring (border-focus).

@@ -88,12 +88,14 @@ const TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['text-primary',   'surface-raised'],
   ['text-primary',   'surface-overlay'],
   ['text-primary',   'surface-high'],
+  ['text-primary',   'surface-sunken'], // LEELA-FLAT-DEFAULT: valor digitado no campo flat em repouso (fill inset)
   ['text-secondary', 'surface-base'],
   ['text-secondary', 'surface-raised'],
   ['text-secondary', 'surface-overlay'], // também cobre Badge neutro / Chip inativo
   ['text-tertiary',  'surface-base'],
   ['text-tertiary',  'surface-raised'],
   ['text-tertiary',  'surface-overlay'],
+  ['text-tertiary',  'surface-sunken'], // LEELA-FLAT-DEFAULT: placeholder (muted-foreground) do campo flat em repouso
   ['text-brand',     'surface-base'],
   ['text-brand',     'surface-raised'],
   ['text-danger',    'surface-base'],
@@ -164,14 +166,18 @@ describe('Higiene da matriz', () => {
     expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
   });
 
-  it('contagem declarada bate com o disco: 33 texto + 20 não-texto = 53 pares', () => {
+  it('contagem declarada bate com o disco: 35 texto + 20 não-texto = 55 pares', () => {
     // Lote A restante (shadcn): +1 par texto — text-danger/surface-overlay
     // (DropdownMenu, bg-popover). Toast/Dialog/Tabs/Card/Table/Avatar shadcn
     // resolvem por alias em pares pré-existentes (ver PROVENIÊNCIA de cada um);
     // border-border dos frames é decorativa, fora do gate 1.4.11.
     // D-PATCH (paleta Be Hero + heroico): +1 texto (feedback-heroico-fg/surface)
     // e +3 não-texto (feedback-heroico sobre base/raised/overlay).
-    expect(TEXT_PAIRS.length).toBe(33);
+    // LEELA-FLAT-DEFAULT: +2 texto (text-primary e text-tertiary sobre
+    // surface-sunken) — o campo de form flat em repouso mostra valor digitado e
+    // placeholder sobre o fill inset; agora é o default global, então a
+    // legibilidade em repouso vira garantia de primeira classe.
+    expect(TEXT_PAIRS.length).toBe(35);
     expect(NON_TEXT_PAIRS.length).toBe(20);
   });
 });

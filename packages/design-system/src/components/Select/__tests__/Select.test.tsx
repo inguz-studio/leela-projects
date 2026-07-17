@@ -43,12 +43,28 @@ describe('Select', () => {
     expect(screen.getByRole('combobox')).toHaveFocus();
   });
 
-  it('flat variant drops the resting border and fills with surface-sunken', () => {
-    render(<Select aria-label="Kit" options={options} variant="flat" />);
+  it('default (no variant) is flat: drops the resting border and fills with surface-sunken', () => {
+    render(<Select aria-label="Kit" options={options} />);
     const select = screen.getByRole('combobox');
     expect(select).not.toHaveClass('border-input');
     expect(select).toHaveClass('border-transparent');
     expect(select).toHaveClass('bg-[var(--surface-sunken)]');
     expect(select).toHaveClass('focus:ring-2');
+  });
+
+  it('explicit variant="flat" is a no-op (same as default)', () => {
+    render(<Select aria-label="Kit" options={options} variant="flat" />);
+    const select = screen.getByRole('combobox');
+    expect(select).not.toHaveClass('border-input');
+    expect(select).toHaveClass('border-transparent');
+    expect(select).toHaveClass('bg-[var(--surface-sunken)]');
+  });
+
+  it('variant="bordered" opts back into the §2.16 border + surface-raised', () => {
+    render(<Select aria-label="Kit" options={options} variant="bordered" />);
+    const select = screen.getByRole('combobox');
+    expect(select).toHaveClass('border-input');
+    expect(select).toHaveClass('bg-[var(--surface-raised)]');
+    expect(select).not.toHaveClass('border-transparent');
   });
 });

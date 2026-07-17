@@ -13,9 +13,11 @@
 // "test behavior not implementation" (Kent C. Dodds). O chevron é decorativo
 // (pointer-events-none) sobre o campo; `appearance-none` remove a seta do OS.
 //
-// §2.16 borda permitida (mesma exceção do Input): bg raised ≈ bg da página, a
-// borda `border-input` (= border-strong) é o único identificador visual e
-// cumpre WCAG 1.4.11 (≥3:1). Dimensões por token de componente (--input-*).
+// Flat por DEFAULT (LEELA-FLAT-DEFAULT, mesma virada do Input): em repouso sem
+// borda, o fill inset `surface-sunken` é o identificador e o foco segue por
+// ring. O opt-out `bordered` (§2.16) traz de volta bg `surface-raised` + borda
+// `border-input` (= border-strong), único identificador visual quando o fill ≈
+// bg da página (WCAG 1.4.11 ≥3:1). Dimensões por token de componente (--input-*).
 // =============================================================================
 
 import * as React from 'react';
@@ -35,16 +37,17 @@ export interface SelectProps
   /** Classe do wrapper (label + campo). */
   wrapperClassName?: string;
   /**
-   * Aparência (experimento LEELA-DS-FLAT-INPUTS): `default` = fill raised +
-   * borda `border-input`; `flat` = sem borda em repouso, fill `surface-sunken`
-   * como identificador, foco por ring. Opt-in — não muda o default global.
+   * Aparência (LEELA-FLAT-DEFAULT): `flat` (DEFAULT global) = sem borda em
+   * repouso, fill `surface-sunken` como identificador, foco por ring;
+   * `bordered` (opt-out §2.16) = fill `surface-raised` + borda `border-input`.
+   * `variant='flat'` explícito continua válido (no-op, é o default).
    */
-  variant?: 'default' | 'flat';
+  variant?: 'flat' | 'bordered';
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, options, label, wrapperClassName, variant = 'default', id, disabled, ...props }, ref) => {
-    const flat = variant === 'flat';
+  ({ className, options, label, wrapperClassName, variant = 'flat', id, disabled, ...props }, ref) => {
+    const bordered = variant === 'bordered';
     return (
       <div className={cn('flex flex-col gap-1', wrapperClassName)}>
         {label ? (
@@ -67,12 +70,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               'h-[var(--input-height)] pl-[var(--input-px)] pr-[var(--spacing-8)]',
               'rounded-[var(--input-radius)]',
               'text-[length:var(--input-font-size)]',
-              // Cores & borda. Default (§2.16, igual ao Input) vs flat
-              // (experimento): fill sunken sem borda em repouso, foco por ring.
+              // Cores & borda. Default flat (igual ao Input): fill sunken sem
+              // borda em repouso, foco por ring. Opt-out bordered (§2.16):
+              // fill raised + borda funcional.
               'text-[var(--text-primary)]',
-              flat
-                ? 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent'
-                : 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input',
+              bordered
+                ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
+                : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent',
               // Foco — glow ring via alias ring (border-focus).
               'focus:outline-none',
               'focus:ring-2 focus:ring-ring focus:ring-offset-0',

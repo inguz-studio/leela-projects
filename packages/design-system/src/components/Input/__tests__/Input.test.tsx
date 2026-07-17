@@ -104,13 +104,16 @@ describe('Input', () => {
     expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'cpf-hint');
   });
 
-  // ── Variante flat (experimento LEELA-DS-FLAT-INPUTS) ────────────────────
-  it('default variant keeps the border (§2.16 identifier)', () => {
+  // ── Flat por DEFAULT (LEELA-FLAT-DEFAULT) ───────────────────────────────
+  it('default (no variant) is flat: drops the resting border and fills with surface-sunken', () => {
     render(<Input aria-label="Nome" />);
-    expect(screen.getByRole('textbox')).toHaveClass('border-input');
+    const input = screen.getByRole('textbox');
+    expect(input).not.toHaveClass('border-input');
+    expect(input).toHaveClass('border-transparent');
+    expect(input).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
-  it('flat variant drops the resting border and fills with surface-sunken', () => {
+  it('explicit variant="flat" is a no-op (same as default)', () => {
     render(<Input aria-label="Nome" variant="flat" />);
     const input = screen.getByRole('textbox');
     expect(input).not.toHaveClass('border-input');
@@ -118,8 +121,21 @@ describe('Input', () => {
     expect(input).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
-  it('flat variant preserves the focus ring (a11y não regride)', () => {
-    render(<Input aria-label="Nome" variant="flat" />);
+  it('variant="bordered" opts back into the §2.16 border + surface-raised', () => {
+    render(<Input aria-label="Nome" variant="bordered" />);
+    const input = screen.getByRole('textbox');
+    expect(input).toHaveClass('border-input');
+    expect(input).toHaveClass('bg-[var(--surface-raised)]');
+    expect(input).not.toHaveClass('border-transparent');
+  });
+
+  it('flat default preserves the focus ring (a11y não regride)', () => {
+    render(<Input aria-label="Nome" />);
     expect(screen.getByRole('textbox')).toHaveClass('focus:ring-2');
+  });
+
+  it('flat default reignites the danger border on error (erro não depende só do fill)', () => {
+    render(<Input aria-label="Nome" errorMessage="Obrigatório" />);
+    expect(screen.getByRole('textbox')).toHaveClass('border-[var(--border-danger)]');
   });
 });
