@@ -1943,18 +1943,19 @@ service cloud.firestore {
     // unicidade, imutabilidade do handle e lista de reservados são
     // invariantes de registro que Rules não serializam; cliente NUNCA
     // escreve (nem platform_admin via client SDK — padrão pós-19c8afe).
-    // LEITURA: pública gated por `visibilidade` (RN-161 — espelha RN-140 do
-    // clube); o tenant dono lê o próprio perfil mesmo `privada` (editor do
-    // painel); platform_admin lê tudo. `ownerUid`/`tenantId` ficam legíveis
-    // no doc público (identificadores de marca, mesmo precedente do
-    // `clubes.ownerId` público) — a projeção da LANDING os omite.
+    // LEITURA: a superfície PÚBLICA do perfil é EXCLUSIVAMENTE o leitor da
+    // landing (Admin SDK + projeção allowlist `projetarPerfilPublico`) — o
+    // client SDK NÃO lê perfil de terceiros, nem `publica` (review
+    // antagonista O3-L2SEC #1: liberar o doc inteiro exporia `ownerUid` =
+    // Auth UID + `tenantId` a qualquer anônimo; fail-closed até existir
+    // consumidor client-side com projeção própria). O tenant dono lê o
+    // PRÓPRIO perfil (editor do painel); platform_admin lê tudo.
     //
     // Subcoleção `posts` (Feed, RN-163) é Onda 4 — SEM match aqui: cai no
     // deny-by-default (catch-all: subcoleção nova com dado de pessoa exige
     // regra própria + teste antes de existir).
     match /perfis/{handle} {
-      allow read: if resource.data.visibilidade in ['publica', 'indexavel']
-                  || isTenantMember(resource.data.tenantId)
+      allow read: if isTenantMember(resource.data.tenantId)
                   || isPlatformAdmin();
       allow write: if false;
     }

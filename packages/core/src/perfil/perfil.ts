@@ -102,9 +102,23 @@ export function normalizarHandle(raw: unknown): string | null {
   return semArroba.toLowerCase();
 }
 
+/**
+ * Padrões de docId RESERVADOS do Firestore (`__nome__`) e handles sem nenhum
+ * caractere alfanumérico (ex.: `___`) — barrados além da RE (review
+ * antagonista O3-L2SEC #2: `__id__` passava a RE e explodia como `internal`
+ * no writer em vez de erro de validação limpo).
+ */
+const DOCID_RESERVADO_RE = /^__.*__$/;
+const TEM_ALFANUMERICO_RE = /[a-z0-9]/;
+
 /** Handle NORMALIZADO válido: formato RN-160 + fora da lista de reservados. */
 export function validarHandle(handle: string): boolean {
-  return HANDLE_RE.test(handle) && !HANDLES_RESERVADOS.includes(handle);
+  return (
+    HANDLE_RE.test(handle) &&
+    TEM_ALFANUMERICO_RE.test(handle) &&
+    !DOCID_RESERVADO_RE.test(handle) &&
+    !HANDLES_RESERVADOS.includes(handle)
+  );
 }
 
 /**
@@ -114,10 +128,10 @@ export function validarHandle(handle: string): boolean {
 export function handleProblema(raw: unknown): string | null {
   const handle = normalizarHandle(raw);
   if (handle === null) return 'handle é obrigatório';
-  if (!HANDLE_RE.test(handle)) {
-    return `handle inválido — use ${HANDLE_MIN} a ${HANDLE_MAX} caracteres: letras minúsculas, números e _ (RN-160)`;
+  if (!HANDLE_RE.test(handle) || !TEM_ALFANUMERICO_RE.test(handle)) {
+    return `handle inválido — use ${HANDLE_MIN} a ${HANDLE_MAX} caracteres: letras minúsculas, números e _ (com ao menos uma letra ou número — RN-160)`;
   }
-  if (HANDLES_RESERVADOS.includes(handle)) {
+  if (DOCID_RESERVADO_RE.test(handle) || HANDLES_RESERVADOS.includes(handle)) {
     return `handle "@${handle}" é reservado (RN-160)`;
   }
   return null;

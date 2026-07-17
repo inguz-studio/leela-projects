@@ -20,7 +20,6 @@
 import {
   HANDLE_RE,
   isUrlCapaValida,
-  normalizarHandle,
   projetarPerfilPublico,
   COLECAO_PERFIS,
   type PerfilPublico,
@@ -99,10 +98,13 @@ export async function getPublicPerfil(
   rawHandle: string,
 ): Promise<PerfilPublicoCompleto | null> {
   try {
-    const handle = normalizarHandle(rawHandle);
-    // Formato inválido nem consulta o banco (fail-fast barato; reservados
-    // simplesmente não existem como doc — 404 natural).
-    if (handle === null || !HANDLE_RE.test(handle)) return null;
+    // A rota já removeu o `@` do segmento — aqui SÓ minúsculas + formato
+    // (sem re-strip de `@`: re-normalizar faria `/@@handle` servir o mesmo
+    // conteúdo de `/@handle` — review antagonista O3-L2SEC #3; agora
+    // `@@handle` reprova na RE e vira 404). Formato inválido nem consulta o
+    // banco; reservados não existem como doc — 404 natural.
+    const handle = rawHandle.trim().toLowerCase();
+    if (!HANDLE_RE.test(handle)) return null;
 
     const db = getDb();
     const snap = await db.collection(COLECAO_PERFIS).doc(handle).get();

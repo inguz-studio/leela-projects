@@ -253,20 +253,16 @@ describe.skipIf(!hasEmulator)('perfis — registry + Rules (S1700-T1 · DN-1)', 
       );
     });
 
-    it('anônimo LÊ perfil publica (página /@handle)', async () => {
-      const ctx = testEnv.unauthenticatedContext();
-      await assertSucceeds(
-        getDoc(doc(ctx.firestore(), 'perfis', 'castelo_producoes'))
-      );
-    });
-
-    it('ATAQUE ler PII: perfil privada é ilegível p/ anônimo e p/ outro tenant', async () => {
+    it('ATAQUE ler PII: client SDK NÃO lê perfil de terceiros — nem publica (fix review #1: ownerUid=Auth UID não vaza; superfície pública = leitor Admin SDK)', async () => {
       const anon = testEnv.unauthenticatedContext();
-      await assertFails(getDoc(doc(anon.firestore(), 'perfis', 'passo_certo')));
-
-      const outroTenant = ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
       await assertFails(
-        getDoc(doc(outroTenant.firestore(), 'perfis', 'passo_certo'))
+        getDoc(doc(anon.firestore(), 'perfis', 'castelo_producoes')) // publica
+      );
+      await assertFails(getDoc(doc(anon.firestore(), 'perfis', 'passo_certo'))); // privada
+
+      const outroTenant = ctxAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID });
+      await assertFails(
+        getDoc(doc(outroTenant.firestore(), 'perfis', 'castelo_producoes'))
       );
     });
 

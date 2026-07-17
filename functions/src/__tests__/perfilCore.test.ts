@@ -66,6 +66,19 @@ describe('validarHandle (RN-160)', () => {
     expect(validarHandle(h)).toBe(false);
   });
 
+  it.each(['__id__', '__proto__', '__x__'])(
+    'rejeita padrão de docId reservado do Firestore: %s (review #2)',
+    (h) => {
+      expect(validarHandle(h)).toBe(false);
+      expect(handleProblema(h)).toContain('reservado');
+    }
+  );
+
+  it('rejeita handle sem nenhum alfanumérico (___)', () => {
+    expect(validarHandle('___')).toBe(false);
+    expect(handleProblema('___')).toContain('inválido');
+  });
+
   it('rejeita TODOS os reservados (e a lista é minúscula/normalizada)', () => {
     for (const reservado of HANDLES_RESERVADOS) {
       expect(validarHandle(reservado)).toBe(false);
