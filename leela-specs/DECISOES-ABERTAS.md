@@ -1,18 +1,12 @@
 # Decisões em aberto — painel do Vitor
 
-> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-13, fechamento da Onda 2**).
+> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-17, rodada de decisões do Vitor — itens 1-7 ratificados**).
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md` + seção Ratificadas no fim.
 > **Nada abaixo bloqueia código**: tudo roda com default defensável em vigor. Ratificar = confirmar o default; mudar = eu ajusto no próximo lote.
 
-## 🔴 Ratificações rápidas (1 sim/não cada — defaults em vigor)
+## 🟢 Ratificações rápidas — RESOLVIDAS em 2026-07-17
 
-1. **ADR-013 · Orquestração de pagamento** — registry + `resolveProvider(contexto)` + `providerId` de roteamento + webhook demux (failover fica pra depois). Proposta escrita em `leela-specs/adr/ADR-orquestracao-pagamento.md`. *Default em vigor: factory simples por `providerId`, Mock ativo.*
-2. **ADR-014 · Cifra dos dados bancários** — AES-256-GCM com chave no Secret Manager (`BANK_DATA_KEY`), rotação por `keyVersion`, AAD por tenant (blob copiado entre tenants não decifra), sem KMS na V1. Proposta em `leela-specs/adr/ADR-014-cifra-dados-bancarios.md`; a implementação do E09 já segue a proposta — mudanças são absorvidas por `keyVersion`.
-3. **Estoque (FABLE-D) — 4 defaults:** (a) `estoqueFisico` nasce na transição `em_estoque` (= qtd recebida); (b) limiar de alerta "baixa" = **10 unidades** por SKU; (c) máquina de estados linear estrita (estimativa→encomendado→em_estoque, RN-226); (d) **validação de tamanho na origem (checkout)** — este último ainda vira código quando ratificado (S209-T2).
-4. **Vaga de lote em cancelamento sem estorno** — hoje `confirmado→cancelado` (transição permitida, sem produtor no fluxo) sai da base de contagem, mas o ratchet impede a vaga de "voltar". Decidir a política quando existir cancelamento administrativo: vaga volta ou não volta? *Default em vigor: não volta (ratchet).*
-5. **Numeração das RNs novas** — RN-303 (cupom-only), RN-347 (taxa incorporada/repassada), RN-348 (D+N + retenção) já nos épicos E04/E09/E12; e blocos RN-160-167/360-365 propostos p/ E17/E18. Ratificar os números (colisões antigas do MODELO-ROADMAP já corrigidas em `ace0237`).
-6. **Renumerar a ADR de cron** — "ADR-007 · cron/scheduler" (formalizada nos transversais) colide com "ADR-007 · Turborepo" do ADR-stack. Escolher número novo pra uma delas; referências são poucas e mecânicas.
-7. **E17/E18 (planejamento, defaults do PONTO3-ROADMAP-EPICOS-REPORT):** numeração E17/E18 confirmada · as 2 linhas de JTBD como escritas · link-in-bio público na **Onda 3** (in-app na 4) · política de `@handle`: `@[a-z0-9_]{3,30}`, imutável, com lista de reservados. *(A decisão "modelo único vs de-para" morreu: o MODELO-ROADMAP já é o canônico.)*
+Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As respostas estão consolidadas na seção **✅ Ratificadas** abaixo — incluindo o **verbatim** do Vitor sobre reabertura de lote (item 4), agora registrado como **RN-304 + story S307** no épico E04.
 
 ## 🟠 Ações externas suas (destravam código pronto)
 
@@ -38,6 +32,14 @@
 
 ## ✅ Ratificadas recentemente (referência rápida)
 
+- **Rodada de decisões do Vitor (2026-07-17) — os 7 itens do painel ratificados:**
+  1. **ADR-013 · Orquestração de pagamento = APROVADA.** Registry + `resolveProvider(contexto)` + `providerId` de roteamento + webhook demux; **failover fica para depois**. Status da ADR: proposta → **aceita** (`leela-specs/adr/ADR-orquestracao-pagamento.md`); implementação é lote próprio (aqui só muda o status).
+  2. **ADR-014 · Cifra dos dados bancários = RATIFICADA como está.** AES-256-GCM, chave no Secret Manager (`BANK_DATA_KEY`), rotação por `keyVersion`, AAD por tenant, sem KMS na V1. A implementação do E09 já segue a proposta.
+  3. **Estoque — 4 defaults ratificados.** (a) `estoqueFisico` nasce na transição `em_estoque`; (b) limiar de alerta "baixa" = **10 unidades** por SKU; (c) máquina de estados linear estrita (RN-226); (d) **validação de tamanho na origem (checkout) ratificada** → vira código (S209-T2) no lote paralelo **LEELA-BEPEND** (em andamento).
+  4. **Vaga de lote em cancelamento sem estorno.** O **ratchet automático é MANTIDO** — a vaga não volta sozinha. **Regra nova do Vitor (verbatim):** "o usuário organizador pode decidir voltar um lote à venda, essa reabertura pode acontecer pelo painel admin, aumentando o numero de vagas naquele lote, por exemplo. E mostraremos quanto foi vendido, quanto está disponivel e quanto foi configurado, de maneira que pode ser editado, e salvo." → registrada como **RN-304 + story S307** no épico E04 (backlog aprovado; escrita só via Function + auditoria; reduzir abaixo do vendido negado).
+  5. **Numeração das RNs ratificada.** RN-303 (cupom-only), RN-347 (taxa incorporada/repassada), RN-348 (D+N + retenção) nos épicos E04/E09/E12; blocos RN-160-167/360-365 para E17/E18.
+  6. **Colisão de numeração ADR-007 resolvida.** A ADR de **cron/scheduler vira ADR-015**; o **Turborepo mantém ADR-007**. Renumeração aplicada nos docs (arquivo + convenções §12 + boards); referências em código-fonte ficam para um lote de backend.
+  7. **E17/E18 (planejamento) — defaults ratificados.** Numeração E17/E18 confirmada · as 2 linhas de JTBD como escritas · link-in-bio público na **Onda 3** (in-app na Onda 4) · política de `@handle`: `@[a-z0-9_]{3,30}`, imutável, com lista de reservados.
 - **Trilha next-trail RATIFICADA (Vitor, 2026-07-10/11) — D1-D6, promovida aos canônicos em 2026-07-10** (`leela-specs/next-trail/` → `ROADMAP.md §5` + `V1-CHECKLIST.md §Trilha next-trail` + `jobs-to-be-done.md §04.1`):
   - **D1 · Kernel `pedidos` na Frente A (Fable):** `pedidos/{id}` implementado UMA vez em `LEELA-FABLE-A` conforme **ADR-011**, com gate adr-conformance; deps `FABLE-A → E12-L4/S1203-T5` e `FABLE-A → S203-T3` valem.
   - **D2 · Gateway = Asaas:** adapter roda em sandbox; **KYC = ação externa pendente (seção 🟠)** — `E04-PAY-T2` parked até o KYC concluir.
