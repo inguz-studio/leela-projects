@@ -196,7 +196,17 @@ describe('RN-304 · aceites do épico', () => {
 
 describe('RN-304 · ataques', () => {
   it('papel: staff, promoter, athlete e papel-de-evento NÃO ajustam (owner-only)', async () => {
-    for (const caller of [STAFF, PROMOTER, ATHLETE]) {
+    // Papel de EVENTO (organizador via claims.eventos) sem role tenant_owner
+    // também é negado — papel de evento restringe ÁREAS, não vira owner
+    // (review S307 — lacuna de fidelidade do teste).
+    const PAPEL_EVENTO = {
+      uid: 'uid-org-evento',
+      claims: {
+        role: 'athlete',
+        eventos: { [EVENTO_ID]: 'organizador' },
+      } as unknown as AuthClaims,
+    };
+    for (const caller of [STAFF, PROMOTER, ATHLETE, PAPEL_EVENTO]) {
       await expect(
         ajustarCapacidadeLoteCore(adminDb, input(LOTE_ESGOTADO, 150), caller)
       ).rejects.toMatchObject({ code: 'permission-denied' });
@@ -234,6 +244,29 @@ describe('RN-304 · ataques', () => {
     ).rejects.toMatchObject({ code: 'failed-precondition' });
     await expect(
       ajustarCapacidadeLoteCore(adminDb, { ...input(LOTE_FOLGADO, 50), motivo: 'x' }, OWNER)
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    // Review S307: NaN/Infinity/string/negativo — todos barrados ANTES de IO.
+    for (const cap of [Number.NaN, Number.POSITIVE_INFINITY, '80' as unknown as number, -5]) {
+      await expect(
+        ajustarCapacidadeLoteCore(adminDb, input(LOTE_FOLGADO, cap), OWNER)
+      ).rejects.toMatchObject({
+        code: expect.stringMatching(/invalid-argument|failed-precondition/),
+      });
+    }
+    // Ids com '/' ⇒ invalid-argument honesto (achado #4 — nunca 'internal').
+    await expect(
+      ajustarCapacidadeLoteCore(
+        adminDb,
+        { ...input(LOTE_FOLGADO, 50), eventoId: 'eventos/hack' },
+        OWNER
+      )
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(
+      ajustarCapacidadeLoteCore(
+        adminDb,
+        { ...input(LOTE_FOLGADO, 50), loteId: 'a/b' },
+        OWNER
+      )
     ).rejects.toMatchObject({ code: 'invalid-argument' });
   });
 

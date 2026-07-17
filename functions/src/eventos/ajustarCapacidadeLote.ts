@@ -92,11 +92,22 @@ export function validarAjustarCapacidadeInput(raw: unknown): string[] {
   }
   const input = raw as Record<string, unknown>;
   const erros: string[] = [];
-  if (typeof input['eventoId'] !== 'string' || input['eventoId'].length === 0) {
-    erros.push('"eventoId" é obrigatório.');
+  // Ids com '/' fariam `.doc()` lançar (vira 'internal' opaco) — não é path
+  // traversal (Firestore não escapa da coleção), mas rejeitar aqui devolve
+  // 'invalid-argument' honesto (review S307 achado #4).
+  if (
+    typeof input['eventoId'] !== 'string' ||
+    input['eventoId'].length === 0 ||
+    input['eventoId'].includes('/')
+  ) {
+    erros.push('"eventoId" é obrigatório (sem "/").');
   }
-  if (typeof input['loteId'] !== 'string' || input['loteId'].length === 0) {
-    erros.push('"loteId" é obrigatório.');
+  if (
+    typeof input['loteId'] !== 'string' ||
+    input['loteId'].length === 0 ||
+    input['loteId'].includes('/')
+  ) {
+    erros.push('"loteId" é obrigatório (sem "/").');
   }
   const cap = input['novaCapacidade'];
   if (typeof cap !== 'number' || !Number.isInteger(cap)) {
