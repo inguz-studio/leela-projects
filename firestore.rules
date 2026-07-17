@@ -1482,20 +1482,38 @@ service cloud.firestore {
               in ['gratuito', 'pago_em_breve'];
       }
 
+      /**
+       * S1702-T1 (RN-166): capa do clube — quando presente, é null (sem capa)
+       * ou URL http(s) curta. Nome CANÔNICO = `imagemUrl` (o MESMO do evento,
+       * RN-153 — reconciliação O3-L2SEC; `capaUrl` fica só na capa de email
+       * de campanha/comunicado, RN-135). A capa vira `src` de <img> em
+       * superfície PÚBLICA: `javascript:`/`data:` nunca entram no doc
+       * (espelho de isUrlCapaValida no core — defesa em profundidade).
+       */
+      function clubeCapaValida() {
+        return !('imagemUrl' in request.resource.data)
+          || request.resource.data.imagemUrl == null
+          || (request.resource.data.imagemUrl is string
+              && request.resource.data.imagemUrl.size() <= 2048
+              && request.resource.data.imagemUrl.matches('https?://.*'));
+      }
+
       allow read: if isTenantMember(resource.data.tenantId)
                   || isPlatformAdmin()
                   || resource.data.visibilidade in ['publica', 'indexavel'];
       allow create: if (isTenantWriter(request.resource.data.tenantId)
                         && tenantAtivo(request.resource.data.tenantId)
                         && clubeAgregadosZerados()
-                        && clubeShapeValido())
+                        && clubeShapeValido()
+                        && clubeCapaValida())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
                         && tenantAtivo(resource.data.tenantId)
                         && clubeAgregadosIntocados()
                         && clubeIdentidadeIntocada()
-                        && clubeShapeValido())
+                        && clubeShapeValido()
+                        && clubeCapaValida())
                     || isPlatformAdmin();
       allow delete: if false;
 

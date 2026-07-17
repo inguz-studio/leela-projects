@@ -157,6 +157,35 @@ describe('validarClube', () => {
     const erros = validarClube({ ...CLUBE_OK, tenantId: '' });
     expect(erros.some((e) => e.includes('tenantId'))).toBe(true);
   });
+
+  // ── Capa do clube (RN-166 · S1702-T1 — nome canônico imagemUrl) ─────────
+
+  it('capa ausente é válida (campo opcional)', () => {
+    expect(validarClube(CLUBE_OK)).toEqual([]);
+  });
+
+  it('aceita imagemUrl http(s) válida', () => {
+    expect(
+      validarClube({ ...CLUBE_OK, imagemUrl: 'https://cdn.leela.dev/capas/cps.jpg' })
+    ).toEqual([]);
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:image/png;base64,AAAA',
+    'file:///etc/passwd',
+    '',
+    'não-é-url',
+  ])('rejeita imagemUrl perigosa/inválida: %s', (url) => {
+    const erros = validarClube({ ...CLUBE_OK, imagemUrl: url });
+    expect(erros.some((e) => e.includes('imagemUrl'))).toBe(true);
+  });
+
+  it('rejeita imagemUrl acima de 2048 chars (anti doc-bomba)', () => {
+    const url = `https://cdn.leela.dev/${'x'.repeat(2100)}`;
+    const erros = validarClube({ ...CLUBE_OK, imagemUrl: url });
+    expect(erros.some((e) => e.includes('imagemUrl'))).toBe(true);
+  });
 });
 
 describe('validarSlugClube', () => {

@@ -422,6 +422,73 @@ describe.skipIf(!hasEmulator)('clubes — Rules + seed (S101-T1)', () => {
     });
   });
 
+  // ── Capa do clube (RN-166 · S1702-T1 — nome canônico imagemUrl) ──────────
+
+  describe('capa do clube (RN-166 · S1702-T1)', () => {
+    const ownerCtx = () =>
+      ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID });
+
+    it('create com imagemUrl http(s) válida é PERMITIDO', async () => {
+      await assertSucceeds(
+        setDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-com-capa'), {
+          id: 'clube-com-capa', tenantId: CASTELO_ID,
+          nome: 'Clube Com Capa', visibilidade: 'publica',
+          imagemUrl: 'https://cdn.leela.dev/capas/clube.jpg',
+        })
+      );
+    });
+
+    it('update setando imagemUrl válida é PERMITIDO (nova capa)', async () => {
+      await assertSucceeds(
+        updateDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-privado-castelo'), {
+          imagemUrl: 'http://fotos.exemplo.com.br/capa.png',
+        })
+      );
+    });
+
+    it('update com imagemUrl null é PERMITIDO (remover capa)', async () => {
+      await assertSucceeds(
+        updateDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-privado-castelo'), {
+          imagemUrl: null,
+        })
+      );
+    });
+
+    it('ATAQUE: imagemUrl javascript: é NEGADA (vira src de <img> público)', async () => {
+      await assertFails(
+        updateDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-publico-castelo'), {
+          imagemUrl: 'javascript:alert(document.cookie)',
+        })
+      );
+    });
+
+    it('ATAQUE: imagemUrl data: é NEGADA', async () => {
+      await assertFails(
+        setDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-capa-data'), {
+          id: 'clube-capa-data', tenantId: CASTELO_ID,
+          nome: 'Clube Capa Data', visibilidade: 'publica',
+          imagemUrl: 'data:text/html,<script>1</script>',
+        })
+      );
+    });
+
+    it('ATAQUE: imagemUrl > 2048 chars é NEGADA (doc-bomba)', async () => {
+      await assertFails(
+        updateDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-publico-castelo'), {
+          imagemUrl: `https://cdn.leela.dev/${'x'.repeat(2100)}`,
+        })
+      );
+    });
+
+    it('ATAQUE: imagemUrl não-string (map) é NEGADA', async () => {
+      await assertFails(
+        updateDoc(doc(ownerCtx().firestore(), 'clubes', 'clube-publico-castelo'), {
+          imagemUrl: { url: 'https://x.dev' },
+        })
+      );
+    });
+  });
+
   // ── Seed canônico ────────────────────────────────────────────────────────
 
   describe('seedClubes (Emulator-only)', () => {

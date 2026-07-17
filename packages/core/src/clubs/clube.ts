@@ -13,6 +13,7 @@
 
 import type { Timestamp } from '../index';
 import { validarCodigoConvite } from './codigo-convite';
+import { isUrlCapaValida } from '../eventos/evento';
 import { isUfBrasil } from '../eventos/dadosPessoais';
 import {
   isCategoriaClube,
@@ -66,6 +67,17 @@ export interface Clube {
   /** Exige aprovação manual de novos membros (RN-141) */
   aprovacaoManual: boolean;
   modeloEntrada: ModeloEntradaClube;
+  /**
+   * Capa do clube (RN-166 · S1702-T1). Nome CANÔNICO do campo de capa de
+   * entidade = `imagemUrl` — o MESMO do evento (RN-153), decisão da
+   * reconciliação O3-L2SEC (o épico E17 nascera nomeando `capaUrl`; o core
+   * já persistia `imagemUrl` no evento e a landing lê a projeção). `capaUrl`
+   * segue existindo APENAS na campanha/comunicado (capa de email — RN-135),
+   * que é outro conceito. Quando presente: URL http(s) validada
+   * (`isUrlCapaValida`) ou `undefined` — nunca string vazia, nunca esquema
+   * perigoso (a capa vira `src` de <img> em superfície pública).
+   */
+  imagemUrl?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   /** Agregado ∑ — mantido por Cloud Function */
@@ -141,6 +153,12 @@ export function validarClube(input: ClubeInput): string[] {
 
   if (!isModalidadeClube(input.modalidade)) {
     erros.push('modalidade inválida (selecione uma modalidade da lista)');
+  }
+
+  // Capa (RN-166): opcional; quando presente, http(s) válida — espelho do
+  // evento (isUrlCapaValida barra javascript:/data: e URLs > 2048 chars).
+  if (input.imagemUrl !== undefined && !isUrlCapaValida(input.imagemUrl)) {
+    erros.push('imagemUrl inválida (use uma URL http(s) de até 2048 caracteres)');
   }
 
   // Localização: presencial exige cidade + UF; online dispensa sede física.
