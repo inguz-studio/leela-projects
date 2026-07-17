@@ -363,6 +363,13 @@ export interface InsumosVenda {
   tenantId: string;
   itens: ItemVendaInput[];
   cupom: CupomVenda | null;
+  /**
+   * Amarração do cupom `club_parceiro` (RN-364 · E18) — presente SÓ quando o
+   * cupom carregado é escopado. `parceriaPath` é RE-LIDO dentro da tx de
+   * venda (criarDocsDeCheckout) exigindo status 'ativa' — revogação da
+   * parceria entre a cotação e a cobrança NÃO deixa o desconto passar.
+   */
+  cupomParceria: { parceriaPath: string; clubeRef: string } | null;
   terms: CommercialTerms;
   /**
    * Modo da taxa do EVENTO (RN-347) — lido do DOC (`evento.taxaModo` via
@@ -515,6 +522,7 @@ export async function carregarInsumos(
 
   // Cupom — docId = código normalizado (unicidade por chave — E04)
   let cupom: CupomVenda | null = null;
+  let cupomParceria: InsumosVenda['cupomParceria'] = null;
   if (input.cupomCodigo !== undefined) {
     const codigo = normalizarCodigoCupom(input.cupomCodigo);
     const cupomSnap = await eventoRef.collection('cupons').doc(codigo).get();
@@ -527,6 +535,34 @@ export async function carregarInsumos(
         'internal',
         `Cupom '${codigo}' com tenantId divergente do evento — dado corrompido.`
       );
+    }
+    // Cupom de CLUB PARCEIRO (RN-364 · E18): só resolve com a parceria
+    // ATIVA. Guardas fail-closed:
+    //   - parceriaRef DENTRO do tenant do evento (path forjado apontando
+    //     parceria de outro tenant nunca valida — RN-400);
+    //   - parceria inexistente/pendente/encerrada ⇒ failed-precondition
+    //     (encerrar a parceria MATA o desconto — S1803, ADR-012: nenhum
+    //     caminho de desconto fora do kernel + guarda).
+    if (cupomDoc.escopo === 'club_parceiro') {
+      const prefixoDoTenant = `tenants/${tenantId}/parceirosAssessoria/`;
+      const parceriaPath = cupomDoc.parceriaRef ?? '';
+      if (!parceriaPath.startsWith(prefixoDoTenant)) {
+        throw new https.HttpsError(
+          'internal',
+          `Cupom '${codigo}' com parceriaRef fora do tenant do evento — dado corrompido.`
+        );
+      }
+      const parceriaSnap = await db.doc(parceriaPath).get();
+      if (!parceriaSnap.exists || parceriaSnap.get('status') !== 'ativa') {
+        throw new https.HttpsError(
+          'failed-precondition',
+          `Cupom '${codigo}' é de club parceiro sem parceria ATIVA — desconto indisponível.`
+        );
+      }
+      cupomParceria = {
+        parceriaPath,
+        clubeRef: cupomDoc.clubeRef ?? '',
+      };
     }
     cupom = cupomDoc;
   }
@@ -552,7 +588,7 @@ export async function carregarInsumos(
     throw err;
   }
 
-  return { tenantId, itens, cupom, terms, modoTaxa };
+  return { tenantId, itens, cupom, cupomParceria, terms, modoTaxa };
 }
 
 // ---------------------------------------------------------------------------
@@ -636,7 +672,8 @@ async function criarDocsDeCheckout(
   input: CreateInscricaoChargeInput,
   caller: CheckoutCaller,
   sale: SaleState,
-  tenantId: string
+  tenantId: string,
+  cupomParceria: InsumosVenda['cupomParceria'] = null
 ): Promise<void> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -681,6 +718,21 @@ async function criarDocsDeCheckout(
     await db.runTransaction(async (tx) => {
       const jaExiste = await tx.get(pedidoRef);
       if (jaExiste.exists) return; // corrida do MESMO key — replay resolve
+
+      // RE-CHECK da parceria do cupom club_parceiro DENTRO da tx (RN-364 ·
+      // S1803 "revogação com corrida"): entre carregarInsumos e este commit
+      // o organizador pode ter ENCERRADO a parceria — o snap fresco decide;
+      // desconto de parceria morta nunca entra em doc de dinheiro.
+      if (cupomParceria !== null) {
+        const parceriaFresca = await tx.get(db.doc(cupomParceria.parceriaPath));
+        if (!parceriaFresca.exists || parceriaFresca.get('status') !== 'ativa') {
+          throw new https.HttpsError(
+            'failed-precondition',
+            'Parceria do cupom deixou de estar ativa durante o checkout — ' +
+              'refaça a cotação sem o cupom.'
+          );
+        }
+      }
 
       // Inscritos — subcoleção do evento (ADR-011); nascem 'pendente'
       input.inscritos.forEach((inscrito, i) => {
@@ -786,6 +838,12 @@ async function criarDocsDeCheckout(
         const cupom: Record<string, unknown> = { codigo: sale.cupomAplicado.codigo };
         if (sale.cupomAplicado.tipo === 'percentual') {
           cupom['descontoPct'] = sale.cupomAplicado.valor;
+        }
+        // Atribuição ao CLUB PARCEIRO (RN-364 · E18): o desconto entra no
+        // bruto e fica ATRIBUÍDO ao clube no doc de pagamento (sem split —
+        // RN-360; a máquina de repasse RN-365 segue intocada).
+        if (cupomParceria !== null && cupomParceria.clubeRef.length > 0) {
+          cupom['clubeRef'] = cupomParceria.clubeRef;
         }
         pagamentoDoc['cupom'] = cupom;
       }
@@ -959,7 +1017,8 @@ export async function createInscricaoChargeCore(
       );
     }
   } else {
-    const { tenantId, itens, cupom, terms, modoTaxa } = await carregarInsumos(db, input);
+    const { tenantId, itens, cupom, cupomParceria, terms, modoTaxa } =
+      await carregarInsumos(db, input);
     // RN-223 (T4) — validação de tamanho NA ORIGEM, antes de qualquer escrita:
     // tamanho/SKU forjado ⇒ invalid-argument fail-closed (nada criado).
     await validarTamanhosDoCheckout(db, input, tenantId);
@@ -982,7 +1041,7 @@ export async function createInscricaoChargeCore(
         err instanceof Error ? err.message : 'Estado de venda inválido.'
       );
     }
-    await criarDocsDeCheckout(db, input, caller, sale, tenantId);
+    await criarDocsDeCheckout(db, input, caller, sale, tenantId, cupomParceria);
   }
 
   const resultado = await garantirCobrancaEMontarResultado(db, provider, input, caller);

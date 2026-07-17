@@ -141,6 +141,12 @@ export interface CupomAplicado {
   codigo: string;
   /** Percentual do cupom (0–100) — o valor em R$ fica em `desconto` */
   descontoPct?: number;
+  /**
+   * Atribuição ao CLUB PARCEIRO (RN-364 · E18) — presente quando o cupom
+   * era `escopo='club_parceiro'`: o desconto fica atribuído ao clube no
+   * doc de pagamento (sem split — RN-360).
+   */
+  clubeRef?: string;
 }
 
 /**
@@ -440,6 +446,17 @@ export function parsePagamento(
       throw new Error(`Pagamento ${id}: "cupom.codigo" inválido`);
     }
     const cupom: CupomAplicado = { codigo: cupomData['codigo'] };
+    // Atribuição ao club parceiro (RN-364 · E18) — opcional; quando
+    // presente, string não-vazia (docId do clube).
+    if (cupomData['clubeRef'] !== undefined) {
+      if (
+        typeof cupomData['clubeRef'] !== 'string' ||
+        cupomData['clubeRef'].length === 0
+      ) {
+        throw new Error(`Pagamento ${id}: "cupom.clubeRef" inválido`);
+      }
+      cupom.clubeRef = cupomData['clubeRef'];
+    }
     if (cupomData['descontoPct'] !== undefined) {
       const pct = cupomData['descontoPct'];
       if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100) {

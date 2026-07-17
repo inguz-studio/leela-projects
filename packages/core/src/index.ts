@@ -469,10 +469,12 @@ export {
   parseLote,
 } from './eventos/lote';
 
-export type { Cupom, TipoCupom } from './eventos/cupom';
+export type { Cupom, TipoCupom, EscopoCupom } from './eventos/cupom';
 export {
   TIPOS_CUPOM,
   isTipoCupom,
+  ESCOPOS_CUPOM,
+  isEscopoCupom,
   CODIGO_CUPOM_RE,
   normalizarCodigoCupom,
   isCodigoCupomValido,

@@ -43,6 +43,25 @@ export function isTipoCupom(value: unknown): value is TipoCupom {
   return typeof value === 'string' && (TIPOS_CUPOM as readonly string[]).includes(value);
 }
 
+/**
+ * Escopo do cupom (RN-364 · E18): 'geral' = cupom comum do evento;
+ * 'club_parceiro' = condição de desconto EXCLUSIVA de um club parceiro
+ * (RN-360) — criado SOMENTE pela Function `definirCondicaoDesconto`
+ * (Rules negam cliente) e resolvido no checkout exigindo parceria ATIVA.
+ * Ausente == 'geral' (schema evolution — cupons vigentes intocados).
+ */
+export type EscopoCupom = 'geral' | 'club_parceiro';
+
+export const ESCOPOS_CUPOM: readonly EscopoCupom[] = ['geral', 'club_parceiro'];
+
+/** Type guard de EscopoCupom. @pure */
+export function isEscopoCupom(value: unknown): value is EscopoCupom {
+  return (
+    typeof value === 'string' &&
+    (ESCOPOS_CUPOM as readonly string[]).includes(value)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Código
 // ---------------------------------------------------------------------------
@@ -90,6 +109,20 @@ export interface Cupom {
    * Base do teto de uso. Cliente nunca escreve.
    */
   usos: number;
+  /**
+   * Escopo (RN-364 · E18) — ausente == 'geral'. Cupom 'club_parceiro' é
+   * criado SÓ pela Function `definirCondicaoDesconto` (Rules barram
+   * cliente) e o checkout exige a parceria referida ATIVA.
+   */
+  escopo?: EscopoCupom;
+  /** docId do club parceiro — obrigatório quando escopo='club_parceiro'. */
+  clubeRef?: string;
+  /**
+   * Path da parceria (`tenants/{t}/parceirosAssessoria/{docId}`) —
+   * obrigatório quando escopo='club_parceiro'; o checkout re-lê este doc
+   * (inclusive DENTRO da tx de venda) exigindo status 'ativa'.
+   */
+  parceriaRef?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -209,7 +242,25 @@ export function parseCupom(id: string, data: Record<string, unknown>): Cupom {
     throw new Error(`Cupom ${id}: "usos" deve ser inteiro ≥ 0 (∑ de Function)`);
   }
 
-  return {
+  // Escopo (RN-364 · E18): ausente == 'geral'; 'club_parceiro' exige a
+  // amarração completa (clubeRef + parceriaRef) — cupom escopado sem
+  // parceria referenciável não tem como ser resolvido no checkout.
+  const escopo = data['escopo'];
+  if (escopo !== undefined && !isEscopoCupom(escopo)) {
+    throw new Error(`Cupom ${id}: "escopo" fora do enum geral|club_parceiro (RN-364)`);
+  }
+  const clubeRef = data['clubeRef'];
+  const parceriaRef = data['parceriaRef'];
+  if (escopo === 'club_parceiro') {
+    if (typeof clubeRef !== 'string' || clubeRef.length === 0) {
+      throw new Error(`Cupom ${id}: escopo club_parceiro exige "clubeRef" (RN-364)`);
+    }
+    if (typeof parceriaRef !== 'string' || parceriaRef.length === 0) {
+      throw new Error(`Cupom ${id}: escopo club_parceiro exige "parceriaRef" (RN-364)`);
+    }
+  }
+
+  const cupom: Cupom = {
     id,
     tenantId,
     codigo,
@@ -222,6 +273,14 @@ export function parseCupom(id: string, data: Record<string, unknown>): Cupom {
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
+  if (escopo !== undefined) cupom.escopo = escopo as EscopoCupom;
+  if (typeof clubeRef === 'string' && clubeRef.length > 0) {
+    cupom.clubeRef = clubeRef;
+  }
+  if (typeof parceriaRef === 'string' && parceriaRef.length > 0) {
+    cupom.parceriaRef = parceriaRef;
+  }
+  return cupom;
 }
 
 /** Guard estrutural mínimo de Timestamp (tem toMillis()). @pure */

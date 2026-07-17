@@ -301,3 +301,10 @@ export { provisionAssessoriaAccount } from './assessorias/provisionAssessoria';
 // do core, convite pendente cancelado junto, doc retido (90d). O desconto
 // morre por consequência (checkout exige parceria ATIVA — ADR-012).
 export { encerrarParceriaAssessoria } from './assessorias/encerrarParceria';
+
+// Assessorias — CONDIÇÃO DE DESCONTO do club parceiro (E18 · S1802-T1 ·
+// RN-364/365 · ADR-012): cria o cupom escopo='club_parceiro' + carimba
+// condicaoDesconto na parceria NA MESMA tx — única porta (Rules barram
+// cliente de gravar cupom escopado). Sem split; RN-365 opera no pós-desconto
+// sem tocar a máquina de repasse. ⚠️ Fable (dinheiro).
+export { definirCondicaoDesconto } from './assessorias/definirCondicaoDesconto';
