@@ -250,18 +250,46 @@ describe('Rules de demografia/current — ataques', () => {
     await assertFails(deleteDoc(doc(ownerA().firestore(), ...P_DEMO)));
   });
 
-  it('platform_admin ESCREVE via catch-all (postura sistêmica vigente — paridade com financeiro/current)', async () => {
-    // ACHADO DOCUMENTADO (não regressão deste lote): o catch-all
-    // `match /{subcol}/{docId} { allow write: if isPlatformAdmin() }` das
-    // subcoleções de eventos concede escrita de client SDK ao back-office em
-    // QUALQUER subcoleção — inclusive nos agregados ∑ (financeiro,
-    // comunicacoesResumo, demografia). O match explícito `write: if false`
-    // não fecha isso: no OR de Rules basta UM match permitir. Endurecer =
-    // decisão sistêmica (afetaria todos os agregados) — registrada no
-    // report do LEELA-BEPEND; aqui provamos a paridade para o teste FALHAR
-    // se a postura mudar sem atualizar a prova.
-    await assertSucceeds(
+  it('platform_admin NÃO escreve via catch-all (hardening O3-L1 — canário INVERTIDO)', async () => {
+    // CANÁRIO (invertido no LEELA-O3-L1): o catch-all das subcoleções de
+    // eventos era `allow write: if isPlatformAdmin()` — no OR de Rules isso
+    // re-concedia escrita de client SDK ao back-office em QUALQUER
+    // subcoleção, inclusive nos agregados ∑ (financeiro, comunicacoesResumo,
+    // demografia) cujos matches dedicados dizem `write: if false`. O
+    // hardening fechou o catch-all (`allow write: if false`): agregado é
+    // writer-only por Function DE FATO — platform_admin incluso. Tooling de
+    // back-office usa Admin SDK (bypassa Rules). Este teste agora prova a
+    // NEGAÇÃO em todos os verbos e FALHA se a postura regredir.
+    await assertFails(
       updateDoc(doc(platformAdmin().firestore(), ...P_DEMO), { semGenero: 0 })
+    );
+    await assertFails(
+      setDoc(doc(platformAdmin().firestore(), ...P_DEMO), {
+        tenantId: CASTELO_ID,
+        totalConfirmados: 9999,
+      })
+    );
+    await assertFails(deleteDoc(doc(platformAdmin().firestore(), ...P_DEMO)));
+    // Paridade nos IRMÃOS ∑ (financeiro/current + comunicacoesResumo/current
+    // caem no mesmo OR catch-all × match dedicado): forja de client negada.
+    await assertFails(
+      setDoc(
+        doc(platformAdmin().firestore(), 'eventos', EVENTO_ID, 'financeiro', 'current'),
+        { tenantId: CASTELO_ID, receitaBruta: 1, receitaLiquida: 999999 }
+      )
+    );
+    await assertFails(
+      setDoc(
+        doc(platformAdmin().firestore(), 'eventos', EVENTO_ID, 'comunicacoesResumo', 'current'),
+        { tenantId: CASTELO_ID, total: 9999 }
+      )
+    );
+    // Subcoleção SEM match próprio (futura): também negada — deny-by-default.
+    await assertFails(
+      setDoc(
+        doc(platformAdmin().firestore(), 'eventos', EVENTO_ID, 'subcolFutura', 'doc-1'),
+        { tenantId: CASTELO_ID, forjado: true }
+      )
     );
   });
 });

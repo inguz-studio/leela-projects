@@ -1259,7 +1259,18 @@ service cloud.firestore {
         allow read: if isPlatformAdmin()
                     || (subcol in ['kits', 'lotes', 'paginaVendas']
                         && isTenantMember(get(/databases/$(database)/documents/eventos/$(eventoId)).data.tenantId));
-        allow write: if isPlatformAdmin();
+        // WRITE: NEGADO para TODO client SDK — platform_admin INCLUSO
+        // (hardening O3-L1, achado sistêmico do LEELA-BEPEND). A forma
+        // anterior (`if isPlatformAdmin()`) re-concedia, via OR de matches,
+        // escrita de client nos agregados ∑ (`financeiro/current`,
+        // `comunicacoesResumo`, `demografia`) cujos matches dedicados dizem
+        // `write: if false` — no OR de Rules basta UM match permitir. Agora
+        // os agregados são writer-only por Function DE FATO (Admin SDK
+        // bypassa Rules — tooling de back-office usa Admin SDK, nunca client
+        // SDK). Escrita de cliente em subcoleção de evento exige match
+        // próprio + teste adversarial (deny-by-default, par do read acima).
+        // Canário: demografia.integration prova a NEGAÇÃO (flipado neste lote).
+        allow write: if false;
       }
     }
 
