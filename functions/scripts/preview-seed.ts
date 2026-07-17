@@ -36,6 +36,7 @@ import { seedEventos } from '../src/seed/eventos.seed';
 import { seedKits } from '../src/seed/kits.seed';
 import { seedInscritos } from '../src/seed/inscritos.seed';
 import { seedPedidos } from '../src/seed/pedidos.seed';
+import { seedPoliticaVendas } from '../src/seed/politicaVendas.seed';
 import {
   seedClubes,
   CORRIDA_PERFEITA_TENANT_ID,
@@ -137,6 +138,7 @@ async function main(): Promise<void> {
   await seedKits(db);
   await seedInscritos(db);
   await seedPedidos(db);
+  await seedPoliticaVendas(db);
 
   // 5. Clube Corrida Perfeita Sul (+ membros + desafios + comunicados + parcerias).
   await seedClubes(db);

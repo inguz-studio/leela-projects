@@ -271,6 +271,11 @@ export type {
   PublicarPaginaVendasResult,
 } from './eventos/paginaVendas';
 
+// S305-T1 (E04) — política de reembolso/transferência/troca do evento
+// (kernel politicaVendas): leitura direta + escrita OWNER-only (Rules).
+export { getPoliticaVendas, salvarPoliticaVendas } from './eventos/politicaVendas';
+export type { SalvarPoliticaVendasInput } from './eventos/politicaVendas';
+
 // S300-T5 (E04) — cupons simples do evento (kernel S300-T1): CRUD direto do
 // organizador; `usos` (∑ de Function/checkout) nunca é enviado pelo cliente.
 export { listarCupons, salvarCupom, removerCupom } from './eventos/cupons';

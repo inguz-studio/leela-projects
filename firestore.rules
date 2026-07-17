@@ -1241,6 +1241,66 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // `politicaVendas/{config}` — política de reembolso/transferência/troca
+      // (E04 · S305-T1 · RN-338/339/340/343/344). Doc ÚNICO por evento
+      // (docId canônico `config` — truque do paginaVendas: 1-por-evento na
+      // CHAVE). É CONFIG (parâmetros/janelas/flags) — a EXECUÇÃO (máquina de
+      // reembolso, estorno, fila) é E09-S904 e escreve SÓ por Function.
+      //
+      // ESCRITA: SÓ o OWNER do tenant do evento (staff e papéis de evento
+      // NEGADOS — política de reembolso é contrato legal do organizador;
+      // aceite S305-T1 "não-owner ⇒ Rule nega"). Shape espelha
+      // `validarPoliticaVendas` do kernel (ints com teto sanitário; taxa
+      // 0..10000; booleans). NUNCA math.isInfinite/isNaN aqui (não existem no
+      // runtime do emulator@13); NaN/Infinity falham as comparações de faixa
+      // → deny (fail-closed por construção).
+      // LEITURA: gestão (writer) + equipe organizador/administrador/
+      // financeiro (config de dinheiro — matriz S304). Fora do catch-all.
+      // DELETE: nunca por cliente (trilha de política; corrigir = sobrescrever).
+      match /politicaVendas/{docId} {
+
+        function shapePoliticaValida() {
+          return request.resource.data.tenantId is string
+            && request.resource.data.reembolso.janelaArrependimentoDias is int
+            && request.resource.data.reembolso.janelaArrependimentoDias >= 0
+            && request.resource.data.reembolso.janelaArrependimentoDias <= 90
+            && request.resource.data.reembolso.corteHoras is int
+            && request.resource.data.reembolso.corteHoras >= 0
+            && request.resource.data.reembolso.corteHoras <= 720
+            && request.resource.data.reembolso.slaAnaliseDias is int
+            && request.resource.data.reembolso.slaAnaliseDias >= 0
+            && request.resource.data.reembolso.slaAnaliseDias <= 30
+            && request.resource.data.transferencia.habilitada is bool
+            && request.resource.data.transferencia.janelaHoras is int
+            && request.resource.data.transferencia.janelaHoras >= 1
+            && request.resource.data.transferencia.janelaHoras <= 2160
+            && request.resource.data.transferencia.taxa is number
+            && request.resource.data.transferencia.taxa >= 0
+            && request.resource.data.transferencia.taxa <= 10000
+            && request.resource.data.trocaIngresso.habilitada is bool
+            && request.resource.data.trocaIngresso.janelaHoras is int
+            && request.resource.data.trocaIngresso.janelaHoras >= 1
+            && request.resource.data.trocaIngresso.janelaHoras <= 2160
+            && request.resource.data.trocaIngresso.permiteReembolsoDowngrade is bool;
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador', 'financeiro']);
+        allow create: if (isTenantOwner(request.resource.data.tenantId)
+                          && docId == 'config'
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapePoliticaValida())
+                      || isPlatformAdmin();
+        allow update: if (isTenantOwner(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapePoliticaValida())
+                      || isPlatformAdmin();
+        allow delete: if false;
+      }
+
       match /{subcol}/{docId} {
         // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
         // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)

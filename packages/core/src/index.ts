@@ -462,6 +462,28 @@ export {
   parsePaginaVendas,
 } from './eventos/paginaVendas';
 
+export type {
+  PoliticaVendas,
+  PoliticaReembolso,
+  PoliticaTransferencia,
+  PoliticaTrocaIngresso,
+  RoteamentoReembolso,
+} from './eventos/politicaVendas';
+export {
+  POLITICA_VENDAS_DOC_ID,
+  JANELA_ARREPENDIMENTO_DIAS_DEFAULT,
+  CORTE_HORAS_DEFAULT,
+  SLA_ANALISE_DIAS_DEFAULT,
+  TRANSFERENCIA_JANELA_HORAS_DEFAULT,
+  TROCA_JANELA_HORAS_DEFAULT,
+  politicaVendasPadrao,
+  validarPoliticaVendas,
+  parsePoliticaVendas,
+  rotearReembolso,
+  transferenciaAberta,
+  trocaIngressoAberta,
+} from './eventos/politicaVendas';
+
 // ---------------------------------------------------------------------------
 // Checkout (LEELA-E12 · fundação) — estado de venda puro
 // preço vigente → cupom → valorFinal → taxa → parcelamento (reusa lote/cupom/
