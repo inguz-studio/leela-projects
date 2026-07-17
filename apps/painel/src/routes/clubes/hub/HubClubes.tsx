@@ -20,6 +20,8 @@ export interface HubClubesProps {
   ownUserId: string | null;
   onCriarClube: () => void;
   onAbrirClube: (slug: string) => void;
+  /** Abre a gestão de assessorias parceiras (E18). */
+  onAbrirAssessorias?: () => void;
 }
 
 interface KpisGlobais {
@@ -61,6 +63,7 @@ export function HubClubes({
   error,
   ownUserId,
   onCriarClube,
+  onAbrirAssessorias,
   onAbrirClube,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
@@ -92,9 +95,14 @@ export function HubClubes({
         title="Clubes"
         subtitle="Comunidades em torno dos seus eventos"
         actions={
-          <Button variant="primary" onClick={onCriarClube}>
-            + Criar clube
-          </Button>
+          <div className="flex items-center gap-[var(--spacing-2)]">
+            <Button variant="secondary" onClick={() => onAbrirAssessorias?.()}>
+              Assessorias parceiras
+            </Button>
+            <Button variant="primary" onClick={onCriarClube}>
+              + Criar clube
+            </Button>
+          </div>
         }
       />
 

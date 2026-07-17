@@ -348,8 +348,8 @@ export {
   confirmarResetSenha,
 } from './auth';
 
-// Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações).
-export { atualizarNomeExibicao } from './auth';
+// Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações · T5 foto).
+export { atualizarNomeExibicao, atualizarFotoPerfil } from './auth';
 
 // Troca de senha autenticada (LEELA-S020-T4) — reauth OBRIGATÓRIA embutida.
 export { trocarSenha } from './auth';
@@ -496,6 +496,45 @@ export type {
 // ---------------------------------------------------------------------------
 export { salvarPerfil, getMeuPerfil } from './perfil';
 export type { SalvarPerfilResult } from './perfil';
+
+// ---------------------------------------------------------------------------
+// Assessorias parceiras (E18 · S1800/S1801/S1802/S1803) — 4 callables + leitor
+// tenant-scoped da subcoleção `parceirosAssessoria`. Escrita EXCLUSIVA de
+// Function (Rules write:false); a callable pública `provisionAssessoriaAccount`
+// serve a página de aceite da landing (token = credencial).
+// ---------------------------------------------------------------------------
+export {
+  cadastrarAssessoriaParceira,
+  provisionAssessoriaAccount,
+  definirCondicaoDesconto,
+  encerrarParceriaAssessoria,
+  listParceriasAssessoria,
+  SENHA_MIN_ASSESSORIA,
+} from './assessorias';
+export type {
+  CadastrarAssessoriaInput,
+  CadastrarAssessoriaResult,
+  ProvisionAssessoriaInput,
+  ProvisionAssessoriaResult,
+  DefinirCondicaoDescontoInput,
+  DefinirCondicaoDescontoResult,
+  EncerrarParceriaInput,
+  EncerrarParceriaResult,
+} from './assessorias';
+
+// ---------------------------------------------------------------------------
+// Automações do evento (E06 · S402-T1) — comunicação por GATILHO. CRUD/toggle
+// por escrita direta Rules-guarded (padrão campanhas); o DISPARO é EXCLUSIVO de
+// Function (trigger novo_inscrito + cron), que reusa o pipeline único de envio.
+// ∑ `disparos` nunca é enviado pelo cliente.
+// ---------------------------------------------------------------------------
+export {
+  listarAutomacoes,
+  salvarAutomacao,
+  removerAutomacao,
+  alternarAutomacao,
+} from './eventos/automacoes';
+export type { SalvarAutomacaoInput } from './eventos/automacoes';
 
 // Leitor client-side do perfil público (espelha o reader server-side da landing;
 // Rules liberam a leitura a membros do tenant → serve o preview do organizador).

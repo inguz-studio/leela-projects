@@ -502,9 +502,17 @@ function BlocoPagamento({ pagamento }: { pagamento: Pagamento }): JSX.Element {
         {pagamento.cupom && (
           <Campo
             termo="Cupom aplicado"
-            valor={`${pagamento.cupom.codigo}${
-              pagamento.cupom.descontoPct !== undefined ? ` · ${pagamento.cupom.descontoPct}%` : ''
-            } · Aplicado`}
+            valor={
+              <span className="flex flex-wrap items-center gap-[var(--spacing-2)]">
+                <span>{`${pagamento.cupom.codigo}${
+                  pagamento.cupom.descontoPct !== undefined ? ` · ${pagamento.cupom.descontoPct}%` : ''
+                } · Aplicado`}</span>
+                {/* Cupom de club parceiro (E18 · RN-364): atribuição ao clube. */}
+                {pagamento.cupom.clubeRef ? (
+                  <Badge variant="neutro">{`Club parceiro · ${pagamento.cupom.clubeRef}`}</Badge>
+                ) : null}
+              </span>
+            }
           />
         )}
         {pagamento.desconto > 0 && (

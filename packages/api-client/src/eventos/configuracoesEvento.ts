@@ -58,6 +58,14 @@ export interface AtualizarConfiguracoesEventoInput {
   imagemUrl?: string | null;
   regulamento?: string | null;
   taxaModo?: ModoTaxa;
+  /**
+   * Modo cupom-only do evento (RN-303 · S1804): `true` fecha o evento a vendas
+   * sem cupom válido. TOCAR este campo é OWNER-ONLY (a Rule
+   * `vendaSomentePorCupomProtegida` nega staff — `permission-denied` sobe
+   * intacto). `undefined` = não toca (o caller staff NUNCA o envia, para não
+   * derrubar o update inteiro). Boolean estrito na Rule.
+   */
+  vendaSomentePorCupom?: boolean;
 }
 
 /**
@@ -111,6 +119,13 @@ export async function atualizarConfiguracoesEvento(
 
   if (input.taxaModo !== undefined) {
     payload['taxaModo'] = input.taxaModo;
+  }
+
+  // RN-303: só entra no payload quando o caller (owner) explicitamente o define.
+  // Omitir para staff evita que o campo caia no `affectedKeys` e a Rule
+  // owner-only (`vendaSomentePorCupomProtegida`) derrube o update inteiro.
+  if (input.vendaSomentePorCupom !== undefined) {
+    payload['vendaSomentePorCupom'] = input.vendaSomentePorCupom;
   }
 
   await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });

@@ -244,6 +244,21 @@ export async function atualizarNomeExibicao(displayName: string): Promise<void> 
 }
 
 /**
+ * Atualiza a foto de perfil (photoURL) do usuário AUTENTICADO (LEELA-S020-T5).
+ * Padrão URL+prévia (mesmo do avatar do perfil público / capa de evento): a UI
+ * envia uma URL http(s); UPLOAD de arquivo segue lacuna (sem Storage no repo).
+ *
+ * String vazia LIMPA a foto (volta ao avatar por iniciais no shell). O
+ * `onSessionChange` reemite o `User` com o `photoURL` novo — o Avatar do
+ * sidebar/rodapé reflete sem reload. Lança se não houver sessão ativa.
+ */
+export async function atualizarFotoPerfil(photoURL: string): Promise<void> {
+  const user = getLeelaAuth().currentUser;
+  if (!user) throw new Error('Sem sessão ativa para atualizar a foto.');
+  return updateProfile(user, { photoURL: photoURL.trim() });
+}
+
+/**
  * Troca a senha do usuário AUTENTICADO (LEELA-S020-T4).
  *
  * SEGURANÇA: REAUTENTICA obrigatoriamente com a senha atual antes de gravar a

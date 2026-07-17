@@ -16,6 +16,9 @@ import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { HubRoute } from './hub/HubRoute';
 import { NovoClubePage } from './novo/NovoClubePage';
+import { AssessoriasPage } from './assessorias/AssessoriasPage';
+import { CadastrarAssessoriaPage } from './assessorias/CadastrarAssessoriaPage';
+import { ParceriaDetailPage } from './assessorias/ParceriaDetailPage';
 import { ClubeLayout } from './clube/ClubeLayout';
 import { OverviewPage } from './clube/overview/OverviewPage';
 import { MembrosPage } from './clube/membros/MembrosPage';
@@ -38,6 +41,10 @@ export function ClubesRoutes(): JSX.Element {
         {/* Rota estática ANTES do coringa :slug (fix #14 — o CTA do hub caía
             no :slug e renderizava "Club não encontrado"). */}
         <Route path="novo" element={<NovoClubePage />} />
+        {/* Assessorias parceiras (E18) — rotas estáticas ANTES do coringa :slug. */}
+        <Route path="assessorias" element={<AssessoriasPage />} />
+        <Route path="assessorias/nova" element={<CadastrarAssessoriaPage />} />
+        <Route path="assessorias/:parceriaId" element={<ParceriaDetailPage />} />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="membros" element={<MembrosPage />} />

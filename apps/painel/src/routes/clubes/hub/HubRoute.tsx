@@ -21,6 +21,7 @@ export function HubRoute(): JSX.Element {
       ownUserId={session.uid}
       onCriarClube={() => navigate('/clubes/novo')}
       onAbrirClube={(slug) => navigate(`/clubes/${slug}`)}
+      onAbrirAssessorias={() => navigate('/clubes/assessorias')}
     />
   );
 }
