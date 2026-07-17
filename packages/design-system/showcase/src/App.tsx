@@ -16,6 +16,7 @@ import {
 } from '@leela/design-system';
 import { Component, Home, Palette, Shapes, SwatchBook } from 'lucide-react';
 import { ShowroomBar } from './ShowroomBar';
+import { BrandLogo } from './BrandLogo';
 import { HomePage } from './sections/HomePage';
 import { TokensPage } from './sections/TokensPage';
 import { ComponentsPage } from './sections/ComponentsPage';
@@ -110,6 +111,19 @@ export function App(): JSX.Element {
     <AppShell
       sidebar={
         <Sidebar
+          brand={
+            // Bloco de marca do topo da sidebar. Reusa a MESMA anatomia
+            // (padding, hairline, sub) que o RootShell do painel monta com os
+            // tokens `--sidebar-brand-*` — sem drift. O mark é o wordmark
+            // oficial (BrandLogo troca a variante por tema); a sub descreve o
+            // contexto do shell. O footer segue como chip de versão.
+            <div className="border-b border-b-[var(--border-subtle)] pt-[var(--sidebar-brand-pt)] px-[var(--sidebar-brand-px)] pb-[var(--sidebar-brand-pb)]">
+              <BrandLogo className="h-[var(--sidebar-brand-mark-size)]" />
+              <p className="mt-[var(--sidebar-brand-sub-mt)] text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
+                Design System
+              </p>
+            </div>
+          }
           sections={sections}
           footer={
             <SidebarFooter

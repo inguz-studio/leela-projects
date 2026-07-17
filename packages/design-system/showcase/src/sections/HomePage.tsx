@@ -19,6 +19,7 @@ import {
 import primitivesBrasa from '../../../tokens/primitives.brasa.json';
 import primitivesLeela from '../../../tokens/primitives.leela.json';
 import { Section, TokenLabel } from '../ui';
+import { BrandLogo } from '../BrandLogo';
 
 // Info por tema — a home reage ao tema ativo (o showroom alterna brasa↔leela),
 // então nome, fonte display e hex primário nunca podem ficar cravados em brasa.
@@ -113,6 +114,24 @@ export function HomePage(): JSX.Element {
         title="Marca em um relance"
         description={`A cor primária e a tipografia display do tema ativo (${info.name}), pintadas por var(), nunca por valor cru.`}
       >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[length:var(--font-size-md)]">Wordmark oficial</CardTitle>
+            <CardDescription>
+              O mesmo asset da sidebar do painel e do header da landing, agora
+              também no shell do showroom (topo da barra lateral) e no favicon. A
+              variante troca por tema para ler nos dois fundos: no {THEME_INFO.brasa.name} (escuro)
+              o wordmark limão sobre transparente; no {THEME_INFO.leela.name} (claro) a variante em
+              caixa ameixa, que carrega o próprio contraste.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-base)] p-[var(--spacing-6)]">
+              <BrandLogo className="h-[var(--spacing-8)]" />
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] md:grid-cols-2">
           <Card>
             <CardHeader>
