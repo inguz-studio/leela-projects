@@ -1,6 +1,29 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA 3 — FIM DE SESSÃO PARA REVISÃO DO VITOR)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (🌙 ENCERRAMENTO DO DIA — Vitor descansando)
 
-## ⏸️ PAUSA 3 · 2026-07-17 noite (a mais recente) — COMECE AQUI
+## 🌙 ENCERRAMENTO · 2026-07-17 fim de noite (o mais recente) — COMECE AQUI
+
+**Sessão encerrada a pedido do Vitor. Nada em voo, servidores derrubados (todas as portas livres, 0 java), working tree limpa, main == origin == `bf48bc3`. Dia completo: 17 gates PASS, 0 gate_failed.**
+
+### Delta pós-PAUSA-3 (a rodada noturna, tudo pushed)
+1. **LEELA-D17** `9c10a8d..8b0d4cd` — decisão 17 do Vitor aplicada: campanha agendada vencida (tolerância 2 ciclos = 10min, fonte única no core) NÃO dispara → estado terminal **`vencido`** (persistido no masculino; "Vencida" = rótulo UI). Vale p/ gatilhos de relógio (véspera vence; kit não). Item 17 ratificado c/ verbatim; nit RN-345→RN-303 corrigido em 5 arquivos. Review APPROVE.
+2. **LEELA-O3-UIC** `bd97369+8688d11+f4f5b29+1e201d6+bf48bc3` — UI consolidada: **telas E18** (lista/cadastro/detalhe+condição de desconto/encerrar + página de aceite na landing + wrappers api-client) · **toggles** (cupom-only owner-only honesto; automações por gatilho CRUD/toggle) · **conta gap-fill** (foto de perfil URL+prévia → avatar do rodapé; trocar senha/editar nome JÁ existiam do S020 — inventariado, não refeito) · **UI da decisão 17** (grupo/badge "Vencida" + `StatusCampanhaPersistido` sem cast). Suíte painel 1110/1110 → bloco campanhas 41/41. Boards sincronizados.
+3. **AEGIS CANCELADO** — Vitor rejeitou 2×: skills de marketplace da sessão NÃO entram no /harness (memória permanente gravada). Auditoria de segurança dedicada, se um dia: estender a forge ou criar squad — decisão do Vitor.
+
+### Fila da retomada (ordem por valor — NADA em voo)
+1. **Seed demo + fallback mínimo da página de evento** (achado do Vitor na revisão): 2 dos 3 eventos do seed não têm seções/lotes → página renderiza SÓ share/QR. (a) seedar lotes+seções p/ `corrida-inverno-floripa-2026` e `desafio-mtb-costa-lagoa-2026`; (b) melhoria de UX: evento publicado SEM seções deve sempre mostrar nome/data/status (hero mínimo) — story vence o comportamento atual. Registrado ANTES do achado como follow-up de 2026-07-12, nunca pago.
+2. **Lote de Rules próprio:** catch-all de CLUBES ainda `isPlatformAdmin` (~L1990) + rate-limit na callable pública de aceite. ("Ponto 3" que o Vitor pediu ficou AMBÍGUO — confirmar com ele se era isto; a pergunta ficou sem resposta.)
+3. Upload de ARQUIVO real (foto/capa/avatar) = decidir Storage. · RN-132 origem='automatizada' na UI de automações · E2E emulator do aceite/gatilhos · flaky `ComunicadoEditorPage` hardening · join do nome na fila de reembolsos.
+4. **Lote 5 app do atleta** — gated pelo enrollment (ação externa Vitor) · índices deploy-only acumulados em `firestore.indexes.json`.
+
+### Aguardando o Vitor
+Revisão do dia (roteiros tela-a-tela nos reports `outputs/leela-build-2d6ee98d/O3-*-REPORT.md`) · confirmação do "ponto 3" · ações externas: enrollment lojas, domínio, EmailProvider, sandbox Asaas, KYC, rotação da chave prod · decisão futura: reagendar campanha `vencido`? (hoje terminal).
+
+### Para subir o ambiente de revisão de novo
+`bash preview.sh` (painel 5273 + emulators 8180/9198/5201/4001) → landing: `cd apps/landing && NEXT_PUBLIC_USE_EMULATOR=true NEXT_PUBLIC_EMULATOR_FIRESTORE_PORT=8180 NEXT_PUBLIC_EMULATOR_FUNCTIONS_PORT=5201 NEXT_PUBLIC_EMULATOR_AUTH_PORT=9198 FIRESTORE_EMULATOR_HOST=127.0.0.1:8180 npx next build && FIRESTORE_EMULATOR_HOST=127.0.0.1:8180 LEELA_CLOCK=2026-03-15T12:00:00-03:00 npx next start -p 3000` (relógio OBRIGATÓRIO). Showroom: `pnpm --dir packages/design-system showcase`. Evento completo do demo = `meia-floripa-2026`; perfil @handle = criar em `/conta/perfil-publico` e abrir `/@handle` na landing.
+
+---
+
+## ⏸️ PAUSA 3 · 2026-07-17 noite (histórico — superada pelo ENCERRAMENTO)
 
 **Pausa DELIBERADA a pedido do Vitor para revisão do trabalho. Nada em voo, working tree limpa, main == origin == `7d58f0e`. 14 gates PASS no dia, zero gate_failed.**
 
