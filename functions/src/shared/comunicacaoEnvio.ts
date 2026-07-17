@@ -48,10 +48,23 @@ export interface EnvioResultado {
     | 'ok'
     | 'ja_enviado'
     | 'limite_push_semana'
-    | 'comunicado_invalido';
+    | 'comunicado_invalido'
+    | 'nao_elegivel';
   /** Push enviados na janela (para copy de erro na tela) */
   pushNaJanela?: number;
 }
+
+/**
+ * Guarda de elegibilidade do CALLER, avaliada DENTRO da transação sobre o
+ * snap fresco (fix TOCTOU — review antagonista O3-L4 #1): o cron varre e
+ * SÓ depois dispara; entre a query e a tx o organizador pode ter voltado a
+ * campanha para rascunho ou adiado o agendamento. `false` ⇒ aborta com
+ * 'nao_elegivel' SEM carimbar e SEM consumir cota. Omitida ⇒ comportamento
+ * original (o disparo manual não exige estado 'agendado').
+ */
+export type ElegivelParaEnvio = (
+  snap: firestore.DocumentSnapshot
+) => boolean;
 
 /** Callback de alcance do domínio — roda DENTRO da transação de envio. */
 export type CalcularAlcance = (
@@ -105,7 +118,8 @@ export async function executarEnvioComunicacao(
   colecao: firestore.CollectionReference,
   docId: string,
   calcularAlcance: CalcularAlcance,
-  agora: Date = new Date()
+  agora: Date = new Date(),
+  elegivel?: ElegivelParaEnvio
 ): Promise<EnvioResultado> {
   const docRef = colecao.doc(docId);
 
@@ -118,6 +132,13 @@ export async function executarEnvioComunicacao(
     // Idempotência: reenvio de doc já enviado é no-op (retry-safe)
     if (snap.get('status') === 'enviado') {
       return { enviado: false, motivo: 'ja_enviado' as const };
+    }
+
+    // Guarda do caller sobre o snap FRESCO (anti-TOCTOU — só o cron usa):
+    // roda APÓS o guard de 'enviado' (ja_enviado continua vencendo, p/ o
+    // retry curar fan-out) e ANTES de cota/carimbo.
+    if (elegivel !== undefined && !elegivel(snap)) {
+      return { enviado: false, motivo: 'nao_elegivel' as const };
     }
 
     const canal = (snap.get('canal') ?? []) as string[];

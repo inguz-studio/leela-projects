@@ -274,6 +274,83 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
     expect((await logsCol().get()).size).toBe(0);
   });
 
+  // ── Anti-TOCTOU (fix review O3-L4 #1) ───────────────────────────────────
+
+  it('TOCTOU: campanha revertida p/ rascunho entre a query e a tx NÃO envia', async () => {
+    // Simula a janela: o guarda roda no snap FRESCO dentro da tx — chamamos
+    // o disparo do cron (exigirAgendadoVencido) contra um doc que já não
+    // está 'agendado' (equivale ao organizador ter retirado a campanha
+    // depois da varredura).
+    await criarCampanha('camp-retirada', { status: 'rascunho' });
+    const { executarDisparoCampanha } = await import('../eventos/enviarCampanha');
+
+    const r = await executarDisparoCampanha(
+      adminDb,
+      adminDb.collection('eventos').doc(EVENTO_ID),
+      'camp-retirada',
+      CASTELO_ID,
+      AGORA,
+      { exigirAgendadoVencido: true }
+    );
+    expect(r).toEqual({ bloqueado: 'nao_elegivel' });
+
+    const doc = await campanhasCol().doc('camp-retirada').get();
+    expect(doc.get('status')).toBe('rascunho'); // NÃO carimbou
+    expect(doc.get('enviadoEm')).toBeUndefined();
+    expect((await logsCol().get()).size).toBe(0); // NADA enviado
+  });
+
+  it('TOCTOU: campanha ADIADA (agendadoPara empurrado) entre a query e a tx NÃO envia', async () => {
+    await criarCampanha('camp-adiada', {
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() + 7 * DIA_MS)),
+    });
+    const { executarDisparoCampanha } = await import('../eventos/enviarCampanha');
+
+    const r = await executarDisparoCampanha(
+      adminDb,
+      adminDb.collection('eventos').doc(EVENTO_ID),
+      'camp-adiada',
+      CASTELO_ID,
+      AGORA,
+      { exigirAgendadoVencido: true }
+    );
+    expect(r).toEqual({ bloqueado: 'nao_elegivel' });
+    expect((await campanhasCol().doc('camp-adiada').get()).get('status')).toBe('agendado');
+    expect((await logsCol().get()).size).toBe(0);
+  });
+
+  it('disparo MANUAL (callable) segue sem a guarda: rascunho envia pelo botão', async () => {
+    await criarCampanha('camp-manual', { status: 'rascunho' });
+    const r = await enviarCampanhaCore(
+      adminDb,
+      { eventoId: EVENTO_ID, campanhaId: 'camp-manual' },
+      marina,
+      AGORA
+    );
+    expect(r).toMatchObject({ ok: true, jaEnviada: false });
+  });
+
+  // ── Evento órfão (fix review O3-L4 #5/#6) ───────────────────────────────
+
+  it('campanha sob evento INEXISTENTE não dispara nem carimba (órfã de delete)', async () => {
+    const orfa = adminDb
+      .collection('eventos').doc('evento-deletado')
+      .collection('campanhas').doc('camp-orfa');
+    await orfa.set({
+      id: 'camp-orfa', tenantId: CASTELO_ID,
+      titulo: 'Campanha órfã', conteudo: 'Conteúdo com dez+ caracteres.',
+      canal: ['email'], origem: 'manual', status: 'agendado',
+      agendadoPara: Timestamp.fromDate(new Date(AGORA.getTime() - HORA_MS)),
+      segmento: { tipo: 'todos_inscritos' }, alcance: 0,
+      criadoEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const r = await rodarCron();
+    expect(r).toMatchObject({ encontradas: 1, disparadas: 0, erros: 1 });
+    expect((await orfa.get()).get('status')).toBe('agendado'); // NÃO virou 'enviado' mentiroso
+  });
+
   // ── Isolamento de erro ──────────────────────────────────────────────────
 
   it('campanha com id incompatível com a chave do log não derruba o lote', async () => {

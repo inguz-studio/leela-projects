@@ -85,7 +85,10 @@ export interface EnviarCampanhaInput {
 export type EnviarCampanhaResult =
   | { ok: true; alcance: number; jaEnviada: boolean }
   | { bloqueado: 'limite_push'; pushNaJanela: number }
-  | { bloqueado: 'segmento_vazio' };
+  | { bloqueado: 'segmento_vazio' }
+  /** Só no caminho do CRON (exigirAgendadoVencido): a campanha deixou de
+      estar 'agendado'/vencida entre a varredura e a tx (fix TOCTOU) */
+  | { bloqueado: 'nao_elegivel' };
 
 /** Status ativos — derivados de `inscritoAtivo` (fonte única, RN-204). */
 const STATUS_ATIVOS: readonly StatusInscrito[] = STATUS_INSCRITO.filter(
@@ -166,7 +169,8 @@ export async function executarDisparoCampanha(
   eventoRef: admin.firestore.DocumentReference,
   campanhaId: string,
   tenantId: string,
-  agora: Date
+  agora: Date,
+  opts: { exigirAgendadoVencido?: boolean } = {}
 ): Promise<EnviarCampanhaResult> {
   const eventoId = eventoRef.id;
   const campanhasCol = eventoRef.collection(COLECAO_CAMPANHAS);
@@ -214,9 +218,30 @@ export async function executarDisparoCampanha(
       // Segmento específico: fotografia da estimativa (mesmo contrato do clube)
       return seg.tamanhoEstimado ?? 0;
     },
-    agora
+    agora,
+    // Guarda anti-TOCTOU do CRON (review O3-L4 #1), avaliada no snap FRESCO
+    // dentro da tx: entre a varredura e o disparo o organizador pode ter
+    // voltado a campanha p/ rascunho ou ADIADO o agendamento — nesse caso
+    // NÃO envia, NÃO carimba, NÃO consome cota. O disparo manual (callable)
+    // não passa a guarda (enviar rascunho agora é o job do botão "Enviar").
+    opts.exigirAgendadoVencido === true
+      ? (snap) => {
+          if (snap.get('status') !== 'agendado') return false;
+          const quando = snap.get('agendadoPara') as
+            | { toMillis?: () => number }
+            | null
+            | undefined;
+          return (
+            typeof quando?.toMillis === 'function' &&
+            quando.toMillis() <= agora.getTime()
+          );
+        }
+      : undefined
   );
 
+  if (resultado.motivo === 'nao_elegivel') {
+    return { bloqueado: 'nao_elegivel' };
+  }
   if (resultado.motivo === 'comunicado_invalido') {
     throw new https.HttpsError(
       'not-found',

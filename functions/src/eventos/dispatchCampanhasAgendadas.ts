@@ -43,10 +43,16 @@
 // `campanhas(status ASC, agendadoPara ASC)` — declarado em
 // firestore.indexes.json (o Emulator cria automático; validação real só no
 // deploy — pendência operacional do lote).
+//
+// ⚠️ DIRECTIVE (review O3-L4 #9): a varredura é collection GROUP — qualquer
+// subcoleção FUTURA chamada `campanhas` fora de `eventos/*` entraria aqui e
+// seria tratada como campanha de evento. Hoje só `eventos/*/campanhas`
+// existe (clube usa `comunicados`); criar outro path `campanhas` exige
+// revisitar este cron.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { pubsub } from 'firebase-functions/v1';
+import { runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { Timestamp } from 'firebase-admin/firestore';
 import { CHAVE_LOG_COMUNICACAO_RE, COLECAO_CAMPANHAS } from '@leela/core';
@@ -69,9 +75,18 @@ export interface DispatchCampanhasResultado {
   segmentoVazio: number;
   /** Puladas por tenant não-ativo (RN-402) */
   tenantInativo: number;
+  /** Deixaram de estar 'agendado'/vencidas entre a query e a tx (TOCTOU) */
+  naoElegiveis: number;
   /** Erros por campanha (isoladas — não derrubam o lote) */
   erros: number;
 }
+
+/**
+ * Teto de campanhas por rodada (review O3-L4 #2/#3): varredura BOUNDED —
+ * backlog maior drena nas rodadas seguintes (5 min). Mantém a execução
+ * dentro do timeout e limita o raio de uma rajada.
+ */
+export const DISPATCH_LOTE_MAX = 50;
 
 // ---------------------------------------------------------------------------
 // Núcleo (ADR-015 — testável no Emulator via Admin SDK, sem scheduler)
@@ -88,21 +103,40 @@ export async function dispatchCampanhasAgendadasCore(
     bloqueadasLimite: 0,
     segmentoVazio: 0,
     tenantInativo: 0,
+    naoElegiveis: 0,
     erros: 0,
   };
 
-  // Só campanhas VENCIDAS (agendadoPara <= agora). O guarda fino de status/
-  // idempotência é do envelope transacional — a query é o filtro barato.
+  // Só campanhas VENCIDAS (agendadoPara <= agora), BOUNDED por rodada. A
+  // ordenação implícita da range query (agendadoPara ASC) prioriza as mais
+  // antigas; o guarda fino de status/vencimento roda DE NOVO dentro da tx
+  // do envelope (anti-TOCTOU — review O3-L4 #1).
   const vencidas = await db
     .collectionGroup(COLECAO_CAMPANHAS)
     .where('status', '==', 'agendado')
     .where('agendadoPara', '<=', Timestamp.fromDate(agora))
+    .limit(DISPATCH_LOTE_MAX)
     .get();
 
   resultado.encontradas = vencidas.size;
   if (vencidas.empty) return resultado;
 
-  // Cache de status de tenant por rodada (RN-402 — 1 leitura por tenant)
+  // Caches por rodada: evento pai (fonte da VERDADE do tenantId — review
+  // O3-L4 #5: não confiar no tenantId do doc da campanha p/ o gate RN-402)
+  // e status de tenant (1 leitura por tenant).
+  const eventoTenantCache = new Map<string, string | null>();
+  async function tenantDoEvento(
+    eventoRef: admin.firestore.DocumentReference
+  ): Promise<string | null> {
+    const cache = eventoTenantCache.get(eventoRef.path);
+    if (cache !== undefined) return cache;
+    const snap = await eventoRef.get();
+    const tenantId = snap.exists ? ((snap.get('tenantId') ?? '') as string) : '';
+    const valor = tenantId.length > 0 ? tenantId : null;
+    eventoTenantCache.set(eventoRef.path, valor);
+    return valor;
+  }
+
   const tenantAtivoCache = new Map<string, boolean>();
   async function tenantEstaAtivo(tenantId: string): Promise<boolean> {
     const cache = tenantAtivoCache.get(tenantId);
@@ -138,8 +172,20 @@ export async function dispatchCampanhasAgendadasCore(
         continue;
       }
 
-      const tenantId = (campanhaDoc.get('tenantId') ?? '') as string;
-      if (tenantId.length === 0 || !(await tenantEstaAtivo(tenantId))) {
+      // Fonte da verdade do tenant = EVENTO PAI (ADR-009), não o campo do
+      // doc da campanha (defesa em profundidade — review O3-L4 #5). Evento
+      // inexistente (subcoleção órfã de delete sem cascata) NÃO dispara —
+      // sem isso a campanha viraria 'enviado' com zero logs (#6).
+      const tenantId = await tenantDoEvento(eventoRef);
+      if (tenantId === null) {
+        resultado.erros += 1;
+        logger.error('dispatch_campanha_evento_orfao', {
+          eventoId: eventoRef.id,
+          campanhaId,
+        });
+        continue;
+      }
+      if (!(await tenantEstaAtivo(tenantId))) {
         // RN-402: tenant suspenso/pending não dispara comunicação; a
         // campanha FICA agendada e dispara se o tenant reativar.
         resultado.tenantInativo += 1;
@@ -151,7 +197,11 @@ export async function dispatchCampanhasAgendadasCore(
         eventoRef,
         campanhaId,
         tenantId,
-        agora
+        agora,
+        // Anti-TOCTOU (review O3-L4 #1): re-checa 'agendado' + vencimento
+        // no snap FRESCO dentro da tx — campanha revertida p/ rascunho ou
+        // adiada entre a query e o disparo NÃO envia.
+        { exigirAgendadoVencido: true }
       );
 
       if ('ok' in r) {
@@ -159,6 +209,8 @@ export async function dispatchCampanhasAgendadasCore(
         else resultado.disparadas += 1;
       } else if (r.bloqueado === 'limite_push') {
         resultado.bloqueadasLimite += 1;
+      } else if (r.bloqueado === 'nao_elegivel') {
+        resultado.naoElegiveis += 1;
       } else {
         resultado.segmentoVazio += 1;
       }
@@ -184,9 +236,16 @@ export async function dispatchCampanhasAgendadasCore(
 /**
  * Cron a cada 5 minutos: dispara campanhas `agendado` vencidas. At-least-once
  * safe — rerun/replay não duplica (envelope transacional + docId de log).
+ * `runWith` explícito (review O3-L4 #2): envio em massa (fan-out por
+ * destinatário×canal) não cabe no timeout default de 60s do v1 — 540s é o
+ * teto de pubsub v1; rodada morta no meio é curada pela seguinte
+ * (crash-safety do pipeline) e o lote é bounded (DISPATCH_LOTE_MAX).
  */
-export const dispatchCampanhasAgendadas = pubsub
-  .schedule('every 5 minutes')
+export const dispatchCampanhasAgendadas = runWith({
+  timeoutSeconds: 540,
+  memory: '256MB',
+})
+  .pubsub.schedule('every 5 minutes')
   .onRun(async () => {
     await dispatchCampanhasAgendadasCore(admin.firestore());
     return null;
