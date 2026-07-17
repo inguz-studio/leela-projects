@@ -308,11 +308,21 @@ describe('financeiro — repasse é leitura de GESTÃO (re-review A-T2 A1)', () 
 });
 
 describe('catch-all de eventos é ALLOWLIST (re-review A-T2 A2)', () => {
-  it('subcoleção FUTURA (reembolsos) nasce ILEGÍVEL — até para writer', async () => {
+  // NOTA (O3-L1): `reembolsos` DEIXOU de ser o exemplo de "subcoleção futura"
+  // — o S904 lhe deu match próprio (leitura de gestão pelo owner, spec E09).
+  // O invariante do catch-all segue provado com uma subcoleção SEM match.
+  it('subcoleção FUTURA (ledgerFuturo) nasce ILEGÍVEL — até para writer', async () => {
+    const futuro = (db: Firestore) =>
+      doc(db, 'eventos', MEIA_FLORIPA_ID, 'ledgerFuturo', 'doc-1');
+    await assertFails(getDoc(futuro(dbAs(PROMOTER_UID, promoter))));
+    await assertFails(getDoc(futuro(dbAs(MARINA_UID, marina))));
+  });
+
+  it('reembolsos (match próprio S904): promoter NÃO lê; writer lê (gestão)', async () => {
     const reemb = (db: Firestore) =>
       doc(db, 'eventos', MEIA_FLORIPA_ID, 'reembolsos', 'reemb-1');
     await assertFails(getDoc(reemb(dbAs(PROMOTER_UID, promoter))));
-    await assertFails(getDoc(reemb(dbAs(MARINA_UID, marina))));
+    await assertSucceeds(getDoc(reemb(dbAs(MARINA_UID, marina))));
   });
 
   it('regressão da allowlist: membro segue lendo lotes e paginaVendas', async () => {
