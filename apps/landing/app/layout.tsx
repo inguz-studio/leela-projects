@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { baseUrl } from '../lib/seo';
 import './globals.css';
 
 export const metadata: Metadata = {
+  // Origem canônica para resolver URLs relativas de canonical/OG (S1205-T1).
+  // Placeholder por env até o domínio real ser fixado (ação externa).
+  metadataBase: new URL(baseUrl()),
   title: {
     default: 'Leela — inscrições para corridas',
     template: '%s · Leela',

@@ -1,6 +1,10 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { listarEventosPublicados, formatarPreco } from '../../lib/leitor';
 import { rotuloEstadoVenda } from '../../lib/estadoVenda';
+import { marketplaceJsonLd } from '../../lib/seo';
+import { JsonLd } from '../components/JsonLd';
+import { CoverImage } from '../components/CoverImage';
 import { CardEvento, EmptyState } from '../_ds/ds';
 
 // Home marketplace: listagem viva dos eventos publicados. Renderização
@@ -9,11 +13,35 @@ import { CardEvento, EmptyState } from '../_ds/ds';
 // Component: a leitura (Admin SDK) fica 100% no servidor.
 export const dynamic = 'force-dynamic';
 
+// SEO da home (S1205-T1): canonical na raiz + preview social. Título/descrição
+// herdam o default do root layout; aqui fixamos canonical e OG/Twitter.
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'Leela',
+    locale: 'pt_BR',
+    title: 'Leela — inscrições para corridas',
+    description:
+      'Encontre corridas de rua, escolha seu percurso e garanta sua inscrição em minutos.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Leela — inscrições para corridas',
+    description:
+      'Encontre corridas de rua, escolha seu percurso e garanta sua inscrição em minutos.',
+  },
+  robots: { index: true, follow: true },
+};
+
 export default async function HomePage(): Promise<React.JSX.Element> {
   const eventos = await listarEventosPublicados();
 
   return (
     <>
+      {/* Dados estruturados schema.org/ItemList dos eventos publicados */}
+      <JsonLd data={marketplaceJsonLd(eventos)} />
       {/* ── Hero da marca ─────────────────────────────────────────────── */}
       <section className="border-b border-border-subtle bg-surface-sunken">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
@@ -67,6 +95,11 @@ export default async function HomePage(): Promise<React.JSX.Element> {
                 <CardEvento
                   title={ev.nome}
                   href={`/${ev.slug}`}
+                  media={
+                    ev.imagemUrl !== undefined ? (
+                      <CoverImage src={ev.imagemUrl} alt={`Capa de ${ev.nome}`} />
+                    ) : undefined
+                  }
                   modality={
                     <span className="inline-flex flex-col items-center rounded-ds-md bg-surface-overlay px-3 py-1.5 text-center leading-none shadow-elev-1">
                       <span className="font-display text-lg font-bold text-text-primary">

@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import QRCode from 'qrcode';
 import { getEventoPublicado } from '../../../lib/leitor';
+import { eventoJsonLd, urlEvento } from '../../../lib/seo';
+import { JsonLd } from '../../components/JsonLd';
 import { SectionRenderer } from './SectionRenderer';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
@@ -30,22 +32,38 @@ const carregarEvento = cache((slug: string) => getEventoPublicado(slug));
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const evento = await carregarEvento(params.eventSlug);
+  // Rascunho/inexistente (→ 404): não indexar a rota-fantasma.
   if (evento === null) {
-    return { title: 'Evento não encontrado' };
+    return { title: 'Evento não encontrado', robots: { index: false, follow: false } };
   }
+
+  const canonical = `/${evento.slug}`;
+  // Capa só entra em OG/Twitter quando é URL válida (RN-153/RN-166); sem ela,
+  // o card social cai para `summary` — nunca fabricamos imagem.
+  const imagens =
+    evento.imagemUrl !== undefined && evento.imagemUrl.length > 0 ? [evento.imagemUrl] : undefined;
+
   return {
     title: evento.seo.titulo,
     description: evento.seo.descricao,
+    alternates: { canonical },
     openGraph: {
       title: evento.seo.titulo,
       description: evento.seo.descricao,
       type: 'website',
+      url: canonical,
+      siteName: 'Leela',
+      locale: 'pt_BR',
+      ...(imagens !== undefined ? { images: imagens } : {}),
     },
+    twitter: {
+      card: imagens !== undefined ? 'summary_large_image' : 'summary',
+      title: evento.seo.titulo,
+      description: evento.seo.descricao,
+      ...(imagens !== undefined ? { images: imagens } : {}),
+    },
+    robots: { index: true, follow: true },
   };
-}
-
-function baseUrl(): string {
-  return process.env['NEXT_PUBLIC_LEELA_URL'] ?? 'http://localhost:3000';
 }
 
 export default async function EventoPage({ params }: PageProps): Promise<React.JSX.Element> {
@@ -56,7 +74,7 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
     notFound();
   }
 
-  const shareUrl = `${baseUrl()}/${evento.slug}`;
+  const shareUrl = urlEvento(evento.slug);
   const qrSvg = await QRCode.toString(shareUrl, {
     type: 'svg',
     margin: 1,
@@ -67,6 +85,9 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
 
   return (
     <div className="pb-24">
+      {/* Dados estruturados schema.org/Event (S1205-T1) — no HTML inicial */}
+      <JsonLd data={eventoJsonLd(evento)} />
+
       {/* Seções orientadas por configuração (ativas, na ordem publicada) */}
       <SectionRenderer evento={evento} />
 
