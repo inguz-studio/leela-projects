@@ -37,6 +37,7 @@ O valor entregue é fechar o ciclo "atleta descobre → inscreve → paga → or
 - **RN-300** — Lote vira automaticamente por data **ou** por quantidade vendida (o que ocorrer primeiro).
 - **RN-301** — Cada percurso (modalidade) tem preço independente.
 - **RN-302** — Seção "Promovido por" descartada (decisão registrada) — não implementar.
+- **RN-304** (Vitor 2026-07-17) — **Capacidade de lote editável pelo organizador.** O painel mostra, por lote, `configurado` (capacidade), `vendido` (∑) e `disponível` (= `configurado` − `vendido`). O organizador pode **AUMENTAR** a capacidade (reabre vagas) e salvar; **DIMINUIR abaixo do já vendido é proibido** (fail-closed). O **ratchet automático permanece** — cancelamento não devolve vaga sozinho (par de RN-300 / S300-T2); só o organizador reabre subindo a capacidade. Escrita da capacidade **apenas via Function** (nunca write direto do cliente), com **trilha de auditoria** (quem alterou, quando, de/para).
 - **RN-310** — **O organizador define a comissão** de afiliação (espelha, do outro lado, RN-120 do clube).
 - **RN-311** — O programa de afiliação define %, janela de atribuição, teto (mensal) e cupom.
 - **RN-312** — Clube e promotor individual são os dois tipos de afiliado.
@@ -73,7 +74,7 @@ Ver `modelo-de-dados-firestore.md`. Coleções afetadas (E04 cria as marcadas co
 - `eventos/{eventoId}` — lido (slug, status, `usaChip`, agregados ∑ `qtdInscritos`, `receitaConfirmada`); estende com bloqueio de preço (RN-200) e URL/QR (RN-201) de E03.
 - `eventos/{eventoId}/kits/{kitId}` — lido para a seção "Kit do atleta" da página (E03/S205).
 - ➕ `eventos/{eventoId}/paginaVendas/{unico}` — configuração de conteúdo da página: `secoes[]` (id, tipo, `canal` web|app|ambos, `ativo`, `ordem`, conteúdo), `seo` (`titulo`, `metaDescricao`, `urlAmigavel`, `ogImageUrl`), `status` (rascunho/publicada), `atualizadoEm`.
-- ➕ `eventos/{eventoId}/lotes/{loteId}` — `nome`, `ordem`, `criterioVirada` (data|quantidade), `dataVirada?`, `qtdLimite?`, `qtdVendida` (∑), `precosPorPercurso` (map `modalidade→preco`), `status` (agendado/ativo/encerrado). Virada mantida por Function (RN-300).
+- ➕ `eventos/{eventoId}/lotes/{loteId}` — `nome`, `ordem`, `criterioVirada` (data|quantidade), `dataVirada?`, `qtdLimite?`, `qtdVendida` (∑), `precosPorPercurso` (map `modalidade→preco`), `status` (agendado/ativo/encerrado). Virada mantida por Function (RN-300). `qtdLimite` (capacidade) é **ajustável só-para-cima** via Function (RN-304, S307 — reabre vagas; reduzir abaixo de `qtdVendida` é negado).
 - ➕ `eventos/{eventoId}/cupons/{cupomId}` — `codigo` (único no evento), `tipoDesconto` (percentual|valor), `valor`, `usosMax?`, `usosFeitos` (∑), `validadeAte?`, `status` (ativo/inativo).
 - ➕ `eventos/{eventoId}/programaAfiliacao/{unico}` — `comissaoPct`, `janelaAtribuicaoDias`, `tetoMensal?`, `cupomPadrao?`, `criterioLiberacao`, `prazoRepasseDiasUteis` (RN-310/311). Termos espelhados read-only para clubes (RN-121/122).
 - ➕ `eventos/{eventoId}/afiliados/{afiliadoId}` — `tipo` (clube|promotor — RN-312), `nome` 🔁, `status` (convidado/ativo/inativo), `linkMaster`, `cupom?`, ∑`cliquesUnicos`, ∑`conversoes`, ∑`valorAReceber`, `janelaAtribuicaoDias` 🔁. Espelha `clubes/{id}/parcerias` do lado do organizador.
@@ -1336,6 +1337,81 @@ Coleta do aceite no checkout/app (E12-S1207/E13); conteúdo/armazenamento do PDF
 
 ---
 
+### LEELA-S307 · Capacidade de lote editável — reabrir vagas pelo organizador · (greenfield · decisão Vitor 2026-07-17)
+
+> **Status: backlog aprovado — NÃO implementar nesta fase.** Decisão ratificada pelo Vitor em 2026-07-17 (painel `DECISOES-ABERTAS.md`, item 4). Reusa o kernel de lotes já entregue (S300-T1 modelo, S300-T2 virada/ratchet). A implementação é **lote futuro, pós-LEELA-BEPEND** — as tasks abaixo são o recorte aprovado, ainda sem código.
+
+**Como** Organizador de Evento, **quero** ver e ajustar a capacidade de cada lote (quanto foi configurado, vendido e está disponível) e reabrir vagas aumentando a capacidade, **para** voltar um lote à venda pelo painel, sem suporte nem planilha.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel
+- **Tela(s) de referência:** aba "Lotes" da Página de Vendas (S300-T4) — painel de capacidade por lote (sem mockup dedicado; segue o DS)
+- **RNs:** RN-304, RN-300 (ratchet mantido), RN-200 (bloqueia preço, não capacidade), §2.5, §2.12, §2.15
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um lote, **quando** abro o painel de capacidade, **então** vejo `configurado`, `vendido` e `disponível` (= `configurado` − `vendido`) por lote.
+- **Dado** um lote esgotado (capacidade 100 / 100 vendidos), **quando** aumento a capacidade para 150 e salvo, **então** reabrem 50 vagas e o lote pode voltar a vender (RN-304).
+- **Dado** um lote com 100 vendidos, **quando** tento definir capacidade abaixo de 100, **então** a operação é rejeitada (fail-closed) com mensagem honesta e nada é gravado.
+- **Dado** um cancelamento sem estorno, **quando** ocorre, **então** a vaga NÃO volta sozinha (ratchet automático de RN-300 permanece); só o organizador reabre subindo a capacidade (RN-304).
+- **Dado** qualquer alteração de capacidade, **quando** salvo, **então** a escrita passa por Function (nunca write direto do cliente) e fica registrada na trilha de auditoria (quem, quando, de/para).
+
+**Tasks:** LEELA-S307-T1 (backend guard), LEELA-S307-T2 (tela) — backlog aprovado, implementação pós-LEELA-BEPEND.
+
+#### LEELA-S307-T1 · Function `ajustarCapacidadeLote` (aumentar capacidade, fail-closed ao reduzir, auditoria) · [backlog — não implementar]
+
+- **Tipo:** api/function · **Depende de:** S300-T1 (modelo `lotes`), S300-T2 (kernel de virada/ratchet) · **Bloqueia:** S307-T2 · **Estimativa:** S
+
+**Objetivo**
+Guardar a edição de capacidade do lote no servidor: só o organizador (owner do evento) ajusta `qtdLimite`; aumentar reabre vagas; reduzir abaixo de `qtdVendida` é negado (fail-closed); cada alteração grava trilha de auditoria.
+
+**Contexto & referências**
+- RNs: RN-304, RN-300 (ratchet), RN-200 (bloqueio de PREÇO — capacidade não é preço, permanece editável com venda).
+- Modelo: `lotes/{loteId}` (`qtdLimite`, `qtdVendida`, `status`). O `qtdVendida` (∑) segue mantido só por Function (S300-T2); `ajustarCapacidadeLote` nunca o altera.
+
+**Arquivos (previstos — criar no lote futuro)**
+- `functions/src/eventos/ajustarCapacidadeLote.ts` — callable owner-only.
+- `packages/core/src/eventos/capacidadeLote.ts` — `podeReduzirCapacidade(lote, novaCapacidade)` puro (novaCapacidade ≥ qtdVendida).
+- `functions/firestore.rules` — `qtdLimite` write:false para cliente (já é o padrão de agregado; capacidade escreve só por Function).
+- trilha de auditoria: subdoc/coleção de auditoria do evento (quem/quando/de/para) — reusar o padrão de trilha existente (ex.: `auditoriaAcessos` do E09).
+
+**Regras de negócio a respeitar**
+- RN-304 (aumentar reabre; reduzir < vendido negado; escrita só por Function; auditoria); ratchet de RN-300 intacto.
+
+**Critérios de aceite (testáveis)**
+- **Dado** capacidade 100 e 100 vendidos, **quando** subo para 150, **então** persiste 150 e o disponível vira 50.
+- **Dado** 100 vendidos, **quando** tento 80, **então** `failed-precondition` e nada muda.
+- **Dado** um cliente tentando escrever `qtdLimite` direto, **quando** persiste, **então** a Rule nega.
+- **Dado** um ajuste válido, **quando** confirma, **então** a auditoria registra ator, timestamp e de/para.
+
+**Fora de escopo**
+Devolução automática de vaga em cancelamento (proibida por RN-300 — ratchet); UI (T2).
+
+#### LEELA-S307-T2 · Tela de capacidade por lote (configurado / vendido / disponível + editar e salvar) · [backlog — não implementar]
+
+- **Tipo:** screen · **Depende de:** S307-T1, S300-T4 (tela de Lotes) · **Estimativa:** S
+
+**Objetivo**
+Na aba Lotes, mostrar por lote `configurado` / `vendido` / `disponível` e permitir editar a capacidade (aumentar) com confirmação, refletindo a reabertura de vagas.
+
+**Contexto & referências**
+- Tela: aba Lotes da Página de Vendas (S300-T4), sem mockup dedicado — segue o DS (Table densa §2.5, ConfirmModal §2.15, estados §2.12).
+- RNs: RN-304, §2.5, §2.12, §2.15.
+
+**Arquivos (previstos — criar no lote futuro)**
+- `apps/painel/app/eventos/[slug]/pagina-vendas/_components/CapacidadeLote.tsx` (ou extensão do `LoteModal`/tabela de lotes existente).
+
+**Regras de negócio a respeitar**
+- RN-304 (só aumentar habilitado; reduzir abaixo do vendido bloqueado no cliente com hint, servidor autoritativo); §2.15 na confirmação; §2.12 nos estados.
+
+**Critérios de aceite (testáveis)**
+- **Dado** os lotes, **quando** abro, **então** vejo `configurado`/`vendido`/`disponível` por lote.
+- **Dado** um lote esgotado, **quando** aumento a capacidade e confirmo, **então** Toast de sucesso e o disponível reflete a reabertura.
+- **Dado** uma tentativa de reduzir abaixo do vendido, **quando** informo o valor, **então** o botão bloqueia com hint; se o servidor recusar, Toast honesto.
+
+**Fora de escopo**
+Backend guard/auditoria (T1); qualquer devolução automática de vaga.
+
+---
+
 ## Rastreabilidade (de-para BH-###)
 
 | Story | De-para | Tela(s) de referência | Observação |
@@ -1347,6 +1423,7 @@ Coleta do aceite no checkout/app (E12-S1207/E13); conteúdo/armazenamento do PDF
 | LEELA-S304 | BH-304 | Configuracoes-Evento.html, Config-Equipe.html | 4 papéis de permissão (RN-320) |
 | LEELA-S305 | — (greenfield) | Configuracoes-Evento.html (nova aba "Política de vendas") | Política de reembolso/transferência/troca (RN-338/339/340/343/344); execução em E09-S904; por inscrito (ADR-011) |
 | LEELA-S306 | — (greenfield) | Configuracoes-Evento.html (nova aba "Exigências e regulamento") | Exigências de saúde opt-in (RN-146), dado sensível LGPD Art. 11 isolado (RN-147), versionamento de regulamento (RN-149) |
+| LEELA-S307 | — (greenfield · Vitor 2026-07-17) | aba Lotes da Página de Vendas (painel de capacidade, sem mockup) | Capacidade de lote editável (RN-304): reabre vagas, ratchet mantido, escrita via Function + auditoria · **backlog aprovado, pós-LEELA-BEPEND** |
 
 ## Capacidades transversais tocadas
 
