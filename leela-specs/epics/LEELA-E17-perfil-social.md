@@ -47,7 +47,7 @@ Benchmark **Cheers**: a Cheers dá a cada entidade "sua página oficial" e um pe
 - **RN-163 (proposta)** — o Feed público é **leitura**; composição de post é in-app e restrita ao dono do perfil (V1.5+). Posts respeitam a visibilidade do perfil.
 - **RN-164 (proposta)** — a aba Eventos do perfil lista (a) eventos que a conta **organiza** (se organizador) e (b) eventos em que **participa** (se atleta, e se o atleta permitir exibir — opt-in LGPD); só eventos publicados/públicos aparecem.
 - **RN-165 (proposta)** — a aba Clubs do perfil lista clubes que a conta administra ou dos quais é membro, respeitando `visibilidade` de cada clube (RN-140); clube `privada` não aparece no perfil público.
-- **RN-166 (proposta)** — **capa** é atributo de clube e de evento (`capaUrl`), com fallback para o gradiente por categoria (padrão já usado no DS/landing quando não há URL).
+- **RN-166 (reconciliada 2026-07-17 · O3-L2SEC)** — **capa** é atributo de clube e de evento, com fallback para o gradiente por categoria (padrão já usado no DS/landing quando não há URL). **Nome canônico do campo = `imagemUrl`** (o mesmo que o evento já persiste desde RN-153 e que a landing lê): este épico nascera nomeando `capaUrl`, mas renomear o campo vivo do evento não paga o custo. `capaUrl` permanece EXCLUSIVO da capa de email de campanha/comunicado (RN-135) — conceito distinto. Decisão registrada no commit `c345834`.
 - **RN-167 (proposta)** — exibição de participação de atleta em eventos/clubs no perfil público é **opt-in** por parte do atleta (consentimento LGPD; default = não exibir dados de participação de terceiros).
 
 ## Modelo de dados tocado
@@ -56,8 +56,8 @@ Ver `modelo-de-dados-firestore.md` (coleções a acrescentar). Leitura pública 
 
 - ➕ **`perfis/{handle}`** (nova coleção top-level, docId = handle) — `handle` (único, imutável — RN-160), `tipo`(`organizador`|`atleta`), `ownerUid→(profissionais|atletas)`, `nome`, `bio?`(≤280), `avatarUrl?`, `visibilidade`(publica/indexavel/privada — RN-161), `perfilTema { accent, capaUrl?, base }` (RN-162), `linksExternos?[]`, `criadoEm`. Escrita só pelo dono; leitura pública gated por `visibilidade`.
 - ➕ **`perfis/{handle}/posts/{postId}`** (Feed) — `autorUid`(=dono), `texto`, `midiaUrl?`, `tipo`(texto/conquista/evento_ref/clube_ref), `visibilidade`, `criadoEm`. Escrita só pelo dono (RN-163); leitura conforme visibilidade. Agregados (∑ curtidas/comentários) por Function, se/quando houver interação social.
-- **`eventos/{eventoId}`** — ➕ `capaUrl?` (RN-166; já há gradiente por categoria como fallback). Leitura pública só publicado.
-- **`clubes/{clubId}`** — ➕ `capaUrl?` (RN-166). Leitura pública gated por `visibilidade` (RN-140), já existente.
+- **`eventos/{eventoId}`** — `imagemUrl?` (RN-166/RN-153 — nome canônico reconciliado; já persiste e há gradiente por categoria como fallback). Leitura pública só publicado.
+- **`clubes/{clubId}`** — ➕ `imagemUrl?` (RN-166 — ✅ core+Rules em `c345834`, O3-L2SEC). Leitura pública gated por `visibilidade` (RN-140), já existente. Upload no painel = pendência do lote de painel.
 - **Projeção de "Eventos/Clubs do perfil":** derivada por Function/consulta a partir de `eventos` (por `organizadorId`), `membros` (por `atletaId`) e `inscritos` (por `atletaId`, opt-in RN-167) — nunca escrita à mão; o perfil só lê a projeção pública.
 - **Tokens (E01):** o `perfilTema.accent` gera um override de CSS vars **escopado ao nó do perfil** (`[data-perfil-accent]`), consumindo o pipeline de `tokens.json`/`generate.ts` — sem novo token de componente.
 
@@ -101,6 +101,20 @@ Stories: **S1700** (perfil público link-in-bio) · **S1701** (tematização por
 - **Dado** a aba Clubs, **quando** renderizo, **então** só aparecem clubes com `visibilidade` compatível (RN-165); clube `privada` não aparece.
 
 **Tasks:** S1700-T1, S1700-T2, S1700-T3
+
+> **Status O3-L2SEC (2026-07-17, `36cb756`+`afcf639`):** T1 ✅ COMPLETO no
+> recorte backend+rota — registry `salvarPerfil` (unicidade global
+> case-insensitive por docId normalizado, handle imutável, reservados, 1
+> perfil/tenant DN-1), Rules `perfis/{handle}` (write:false; leitura
+> client-SDK só dono/admin — review antagonista fechou a leitura pública do
+> doc para não expor `ownerUid`), leitor Admin SDK sem PII
+> (`apps/landing/lib/leitorPerfil.ts` — o wrapper em `packages/api-client`
+> NÃO foi criado: território de outro lote) e rota `/@{handle}` DENTRO do
+> segmento `[eventSlug]` (App Router não aceita segmento dinâmico irmão com
+> outro nome; `@` desambigua). T2 parcialmente coberto pela própria página
+> (3 seções com estados vazios honestos; Feed = EmptyState até a Onda 4);
+> T3 ✅ (ShareBlock+QR reusados). **Pendências de painel:** editor de
+> perfil do organizador (DN-1-T1 form) + wrapper api-client.
 
 #### LEELA-S1700-T1 · Rota SSR/ISR `/@{handle}` + leitor público `getPublicPerfil`
 - **Tipo:** screen + api/function · **Depende de:** E12-S1200-T2 (leitor público) · **Bloqueia:** S1700-T2/T3 · **Estimativa:** M

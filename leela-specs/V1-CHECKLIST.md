@@ -362,12 +362,12 @@ SEO fino (E12-S1205); capas (E17-S1702); perfil público `@handle` (E17-S1700); 
 
 - [x] LEELA-S1205-T1 — `generateMetadata` dinâmica + OG/Twitter + JSON-LD Event — **Opus** · *landing* · **✅ `0fd7f00` (L2W)**
 - [x] LEELA-S1205-T2 — sitemap + robots (`publica`⇒noindex / `indexavel`⇒index — RN-140) — **Opus** · *landing* · **✅ `7f46d6b` (L2W)**
-- [ ] LEELA-S1702-T1 — Campo `capaUrl` + upload no painel (clube; evento já persiste) — **Opus** · *painel+core* · **pendência L2-sec** (reconciliar `imagemUrl`×`capaUrl`)
+- [x] LEELA-S1702-T1 — Capa de CLUBE no core + Rules — **✅ `c345834` (O3-L2SEC, Fable)** — RECONCILIAÇÃO decidida: nome canônico de capa de entidade = **`imagemUrl`** (mesmo do evento RN-153; `capaUrl` fica só na capa de email RN-135); épico E17 atualizado. Ataques javascript:/data:/doc-bomba negados no emulator (38/38 clubesRules). **Upload no painel = pendência do lote de painel**
 - [x] LEELA-S1702-T2 — Render da capa nos cards/hero + fallback gradiente (RN-166) — **Opus** · *design-system+landing* · **✅ `7d24bea` (L2W — CoverImage reusável)**
-- [ ] LEELA-S1700-T1 — Rota SSR/ISR `/@{handle}` + `getPublicPerfil` (gate RN-161) + Rules leitura pública — **Fable** ⚔ (reader+Rules) · *landing+api-client+core+rules*
-- [ ] LEELA-S1700-T2 — Componentes das 3 abas (Feed leitura · Eventos · Clubs) + filtro por visibilidade — **Opus** · *landing*
-- [ ] LEELA-S1700-T3 — Estados públicos + bloco compartilhar (URL+QR, reusa `ShareBlock`) — **Opus** · *landing*
-- [ ] LEELA-DN-1-T1 — Editor de perfil do organizador no painel (`@handle` imutável RN-160 + bio/visibilidade RN-161) + Rules — **Fable** ⚔ (handle/unicidade) + Opus (form) · *painel+core+rules* · **gated por DN-1 (ver decisões)**
+- [x] LEELA-S1700-T1 — Rota SSR/ISR `/@{handle}` + reader público sem PII + Rules + REGISTRY de handle — **✅ `36cb756`+fix review `afcf639` (O3-L2SEC, Fable ⚔)** — registry `salvarPerfil` (unicidade global case-insensitive por docId normalizado, handle IMUTÁVEL, 44 reservados+`__x__`, 1 perfil/tenant DN-1); Rules write:false p/ TODO cliente e leitura client-SDK SÓ dono/admin (review fechou a leitura pública do doc — `ownerUid` não vaza); reader Admin SDK allowlist em `apps/landing/lib/leitorPerfil.ts` (⚠️ wrapper api-client = pendência, território de outro lote); rota `/@{handle}` no segmento `[eventSlug]` (restrição do App Router; `@` desambigua). Emulator 14/14 ataques + smoke SSR 200/404/404
+- [x] LEELA-S1700-T2 — Seções Feed·Eventos·Clubs na página com filtro por visibilidade — **✅ coberto em `36cb756`** — eventos só publicado/ao_vivo; clubes só publica/indexavel; Feed = EmptyState honesto (posts = Onda 4 RN-163); estados vazios por seção
+- [x] LEELA-S1700-T3 — Estados públicos + bloco compartilhar (URL+QR, reusa `ShareBlock`) — **✅ coberto em `36cb756`** (QR server-side + ShareBlock E12)
+- [ ] LEELA-DN-1-T1 — Editor de perfil do organizador no painel (form sobre o registry `salvarPerfil` já pronto) — **Opus (form)** · *painel* · **PENDÊNCIA DE PAINEL do O3-L2SEC** (backend/Rules/unicidade JÁ entregues em `36cb756` — sem o editor, perfis só nascem via seed/console)
 
 > Data-layer: SSR/ISR, revalidação por tag `perfil:{handle}`. Fatia Onda 3 = **organizador-only** (P6); tema por-usuário (S1701) + feed in-app = Onda 4.
 
@@ -384,11 +384,11 @@ SEO fino (E12-S1205); capas (E17-S1702); perfil público `@handle` (E17-S1700); 
 
 ### Lote 4 · Scheduler de campanhas (B4) — ROTA FABLE cron · `⚔`
 
-- [ ] LEELA-S402-T1 — `automacoes/{id}` por gatilho + Function de disparo idempotente + Rules — **Fable** ⚔ · *functions+rules*
-- [ ] LEELA-S402-T2 — Toggle "automação por gatilho" no painel de Marketing — **Opus** · *painel/comunicacao*
-- [ ] LEELA-SCHED-T1 — Cloud Scheduler cron → dispara `campanhas.status='agendada'` idempotente (marca `enviadaEm`, reusa log FABLE-G; ADR-015) — **Fable** ⚔ · *functions/scheduler*
+- [ ] LEELA-S402-T1 — `automacoes/{id}` por gatilho + Function de disparo idempotente + Rules — **Fable** ⚔ · *functions+rules* · (fora do recorte O3-L2SEC/L4 — o disparo de gatilho DEVE reusar `executarDisparoCampanha`, directive `21a5638`)
+- [ ] LEELA-S402-T2 — Toggle "automação por gatilho" no painel de Marketing — **Opus** · *painel/comunicacao* · **pendência de painel**
+- [x] LEELA-SCHED-T1 — Cron `dispatchCampanhasAgendadas` (every 5 min, ADR-015) dispara `status='agendado'` vencidas — **✅ `21a5638` + fix review `23bc077` (O3-L4, Fable ⚔, APPROVE-COM-FIXES aplicado)** — reusa o pipeline E06 (`executarDisparoCampanha` extraído da callable; zero segundo mecanismo); idempotência por campanha+janela provada (replay/corrida cron×manual sem duplicar log/alcance/cota); **anti-TOCTOU**: campanha revertida/adiada entre a varredura e a tx NÃO envia (guarda no snap fresco dentro da tx); gate RN-402 pelo tenant do EVENTO PAI + órfã não carimba; runWith 540s + varredura bounded 50/rodada; RN-133/segmento vazio/tenant suspenso ficam `agendado` (retry natural); índice collection-group `campanhas(status,agendadoPara)` declarado (valida no deploy). Emulator 12/12 + regressão do bloco manual verde. ⚠️ Decisão de produto pendente (Vitor): política de idade máxima p/ campanha agendada vencida há muito tempo (hoje: vencida sempre dispara na 1ª rodada)
 
-> Gate: adr-conformance **ADR-015** (cron). Idempotência = não enviar a mesma campanha duas vezes.
+> Gate: adr-conformance **ADR-015** (cron). Idempotência = não enviar a mesma campanha duas vezes. ✅ SCHED-T1 conformante (wrapper v1 fino + `*Core` testável + ADR editada com o slot).
 
 ### Lote 5 · App do atleta E13-slim (B5) — ROTA OPUS mobile + Fable Functions · alvo 390×844
 
