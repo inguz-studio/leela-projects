@@ -262,6 +262,14 @@ export type {
   EscritaLoteInput,
 } from './eventos/lotes';
 
+// S307 (E04 · RN-304) — ajuste de capacidade de lote (reabrir vagas). Escrita
+// EXCLUSIVA de Cloud Function (guard + auditoria); o cliente só transporta.
+export { ajustarCapacidadeLote } from './eventos/lotes';
+export type {
+  AjustarCapacidadeLoteInput,
+  AjustarCapacidadeLoteResult,
+} from './eventos/lotes';
+
 // S300-T3 (E04) — página de vendas do evento: conteúdo (seções + SEO) por
 // escrita direta do organizador; publicação por Cloud Function (seam).
 export {

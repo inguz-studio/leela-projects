@@ -11,7 +11,9 @@ import { ConfirmModal, useToast } from '@leela/design-system';
 import type { Lote } from '@leela/core';
 import { LotesView } from './LotesView';
 import { LoteModal } from './LoteModal';
+import { CapacidadeModal } from './CapacidadeModal';
 import { useLoteMutations, useLotes } from '../_data/lotes';
+import { useAjustarCapacidadeLote } from '../../../lib/query/mutations';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
 export function LotesPage(): JSX.Element {
@@ -19,17 +21,29 @@ export function LotesPage(): JSX.Element {
   const { toast } = useToast();
   const { data: lotes, loading, error } = useLotes(evento.id);
   const { salvar, remover } = useLoteMutations(evento.id);
+  const ajustarCapacidade = useAjustarCapacidadeLote(evento.id);
 
   // Estado do modal de criar/editar.
   const [modalAberto, setModalAberto] = React.useState(false);
   const [modalidadeCtx, setModalidadeCtx] = React.useState<string>('');
   const [loteEmEdicao, setLoteEmEdicao] = React.useState<Lote | null>(null);
 
+  // Estado do modal de capacidade (S307-T2 · reabrir vagas).
+  const [loteCapacidade, setLoteCapacidade] = React.useState<Lote | null>(null);
+
   // Estado do ConfirmModal de remoção.
   const [loteParaRemover, setLoteParaRemover] = React.useState<Lote | null>(null);
   const [removendo, setRemovendo] = React.useState(false);
 
   const todosLotes = lotes ?? [];
+
+  async function aplicarCapacidade(
+    loteId: string,
+    novaCapacidade: number,
+    motivo: string,
+  ): Promise<void> {
+    await ajustarCapacidade.mutateAsync({ eventoId: evento.id, loteId, novaCapacidade, motivo });
+  }
 
   function abrirNovo(modalidade: string): void {
     setModalidadeCtx(modalidade);
@@ -67,6 +81,16 @@ export function LotesPage(): JSX.Element {
         onNovoLote={abrirNovo}
         onEditarLote={abrirEdicao}
         onRemoverLote={setLoteParaRemover}
+        onAjustarCapacidade={setLoteCapacidade}
+      />
+
+      <CapacidadeModal
+        open={loteCapacidade !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setLoteCapacidade(null);
+        }}
+        lote={loteCapacidade}
+        onAjustar={aplicarCapacidade}
       />
 
       <LoteModal

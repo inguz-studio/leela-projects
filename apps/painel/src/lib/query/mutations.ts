@@ -16,6 +16,7 @@
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 import {
+  ajustarCapacidadeLote,
   atualizarConfiguracoesEvento,
   atualizarExigenciasRegulamento,
   convidarMembroEquipe,
@@ -44,6 +45,8 @@ import {
   transicaoAprovisionamento,
   transicionarParceria,
   transitionTenant,
+  type AjustarCapacidadeLoteInput,
+  type AjustarCapacidadeLoteResult,
   type AtualizarConfiguracoesEventoInput,
   type AtualizarExigenciasRegulamentoInput,
   type ConvidarMembroEquipeInput,
@@ -238,6 +241,26 @@ export function useRemoverLote(
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
     mutationFn: (loteId) => removerLote(getLeelaDb(), eventoId, loteId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
+    },
+  });
+}
+
+/**
+ * Ajusta a capacidade de um lote (reabrir vagas — S307 · RN-304) via callable
+ * `ajustarCapacidadeLote` e invalida os lotes do evento → a tabela reflete o novo
+ * `configurado`/`disponível` sem reload (read-your-writes, ADR-010). A escrita de
+ * `quantidadeLimite` de lote com venda é EXCLUSIVA de Function (guard + auditoria);
+ * o erro (`failed-precondition` = reduzir < vendido; `permission-denied` =
+ * não-owner) sobe INTACTO para a UI (§2.12).
+ */
+export function useAjustarCapacidadeLote(
+  eventoId: string,
+): UseMutationResult<AjustarCapacidadeLoteResult, Error, AjustarCapacidadeLoteInput> {
+  const queryClient = useQueryClient();
+  return useMutation<AjustarCapacidadeLoteResult, Error, AjustarCapacidadeLoteInput>({
+    mutationFn: (input) => ajustarCapacidadeLote(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.lotes.doEvento(eventoId) });
     },

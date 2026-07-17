@@ -35,7 +35,9 @@ import {
   setDoc,
   type Firestore,
 } from 'firebase/firestore';
-import { parseLote, type Lote } from '@leela/core';
+import { httpsCallable } from 'firebase/functions';
+import { parseLote, type CapacidadeLote, type Lote } from '@leela/core';
+import { getLeelaFunctions } from '../firebase';
 
 /**
  * Lista os lotes de um evento, ordenados por `modalidade` e depois por `ordem`
@@ -151,4 +153,51 @@ export async function removerLote(
   loteId: string
 ): Promise<void> {
   await deleteDoc(doc(db, 'eventos', eventoId, 'lotes', loteId));
+}
+
+// ---------------------------------------------------------------------------
+// Ajuste de capacidade de lote — reabrir vagas (LEELA-S307 · E04 · RN-304)
+//
+// ESCRITA EXCLUSIVA de Cloud Function (`ajustarCapacidadeLote`): a Rule congela
+// `quantidadeLimite` de lote COM venda; a Function é a única porta (guard +
+// auditoria). O cliente NUNCA escreve capacidade direto — este wrapper só
+// transporta o input; o painel de retorno (configurado/vendido/disponível) e o
+// veredito (reduzir < vendido NEGADO) são do servidor. Contrato = espelho de
+// functions/src/eventos/ajustarCapacidadeLote.ts.
+// ---------------------------------------------------------------------------
+
+export interface AjustarCapacidadeLoteInput {
+  eventoId: string;
+  loteId: string;
+  novaCapacidade: number;
+  /** Motivo do ajuste (auditoria — obrigatório, 3–500 caracteres). */
+  motivo: string;
+}
+
+export interface AjustarCapacidadeLoteResult {
+  eventoId: string;
+  loteId: string;
+  /** false = no-op (capacidade já era a pedida) — nada gravado. */
+  alterado: boolean;
+  capacidadeAnterior: number;
+  /** Painel pós-ajuste (aceite S307: configurado/vendido/disponível). */
+  capacidade: CapacidadeLote;
+}
+
+/**
+ * Ajusta a capacidade de um lote (reabrir vagas — RN-304) via callable. O
+ * servidor valida (inteiro ≥ 1; NUNCA abaixo do vendido — fail-closed) e grava
+ * a auditoria; o cliente só transporta o input e recebe o painel autoritativo.
+ * O erro (`failed-precondition` = reduzir < vendido; `permission-denied` =
+ * não-owner/cross-tenant) sobe INTACTO para a UI (§2.12).
+ */
+export async function ajustarCapacidadeLote(
+  input: AjustarCapacidadeLoteInput
+): Promise<AjustarCapacidadeLoteResult> {
+  const fn = httpsCallable<AjustarCapacidadeLoteInput, AjustarCapacidadeLoteResult>(
+    getLeelaFunctions(),
+    'ajustarCapacidadeLote'
+  );
+  const res = await fn(input);
+  return res.data;
 }

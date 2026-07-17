@@ -45,6 +45,7 @@ function renderView(over: Partial<Parameters<typeof LotesView>[0]> = {}) {
       onNovoLote={vi.fn()}
       onEditarLote={vi.fn()}
       onRemoverLote={vi.fn()}
+      onAjustarCapacidade={vi.fn()}
       agora={AGORA}
       {...over}
     />,

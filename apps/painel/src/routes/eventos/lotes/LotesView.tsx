@@ -26,6 +26,8 @@ export interface LotesViewProps {
   onNovoLote: (modalidade: string) => void;
   onEditarLote: (lote: Lote) => void;
   onRemoverLote: (lote: Lote) => void;
+  /** Abre o ajuste de capacidade (reabrir vagas — S307-T2). */
+  onAjustarCapacidade: (lote: Lote) => void;
   /** Instante de referência (default `new Date()`) — injetável para teste. */
   agora?: Date;
 }
@@ -38,6 +40,7 @@ export function LotesView({
   onNovoLote,
   onEditarLote,
   onRemoverLote,
+  onAjustarCapacidade,
   agora = new Date(),
 }: LotesViewProps): JSX.Element {
   if (loading) {
@@ -86,6 +89,7 @@ export function LotesView({
             onNovoLote={onNovoLote}
             onEditarLote={onEditarLote}
             onRemoverLote={onRemoverLote}
+            onAjustarCapacidade={onAjustarCapacidade}
           />
         ))
       )}
@@ -100,6 +104,7 @@ interface ModalidadeBlocoProps {
   onNovoLote: (modalidade: string) => void;
   onEditarLote: (lote: Lote) => void;
   onRemoverLote: (lote: Lote) => void;
+  onAjustarCapacidade: (lote: Lote) => void;
 }
 
 function ModalidadeBloco({
@@ -109,6 +114,7 @@ function ModalidadeBloco({
   onNovoLote,
   onEditarLote,
   onRemoverLote,
+  onAjustarCapacidade,
 }: ModalidadeBlocoProps): JSX.Element {
   const ordenados = [...lotes].sort((a, b) => a.ordem - b.ordem);
   // Preço vigente e lote ativo: DERIVAÇÃO do kernel (RN-300/301) — sem
@@ -190,6 +196,9 @@ function ModalidadeBloco({
           <div className="flex items-center gap-[var(--spacing-2)]">
             <Button variant="ghost" size="sm" onClick={() => onEditarLote(lote)}>
               Editar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onAjustarCapacidade(lote)}>
+              Capacidade
             </Button>
             <Button
               variant="ghost"
