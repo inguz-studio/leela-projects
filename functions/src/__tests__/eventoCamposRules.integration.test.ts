@@ -324,3 +324,51 @@ describe('campos novos — cross-tenant negado', () => {
     );
   });
 });
+
+// ── vendaSomentePorCupom (RN-303 · S1804 · review antagonista O3-L1 #1) ────
+
+describe('vendaSomentePorCupom — owner-only + boolean estrito', () => {
+  it('OWNER liga e desliga o modo cupom-only', async () => {
+    const db = marinaDb();
+    await assertSucceeds(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { vendaSomentePorCupom: true })
+    );
+    await assertSucceeds(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { vendaSomentePorCupom: false })
+    );
+  });
+
+  it('STAFF NÃO toca o flag (abriria evento fechado — MAJOR da review)', async () => {
+    await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}`).update({ vendaSomentePorCupom: true });
+    const staff = ctxAs('uid-castelo-staff', {
+      role: 'tenant_staff',
+      tenantId: CASTELO_ID,
+    }).firestore() as unknown as Firestore;
+    await assertFails(
+      updateDoc(doc(staff, 'eventos', MEIA_FLORIPA_ID), { vendaSomentePorCupom: false })
+    );
+    // Staff segue editando campo NÃO-protegido (regressão: guarda é só do flag)
+    await assertSucceeds(
+      updateDoc(doc(staff, 'eventos', MEIA_FLORIPA_ID), { imagemUrl: CAPA_OK })
+    );
+  });
+
+  it('lixo no flag (string/número) NEGADO no create e no update', async () => {
+    const db = marinaDb();
+    await assertFails(
+      updateDoc(doc(db, 'eventos', MARATONA_2027_ID), { vendaSomentePorCupom: 'true' })
+    );
+    await assertFails(
+      setDoc(doc(db, 'eventos', 'evento-cupom-lixo'), {
+        ...novoEventoBase('evento-cupom-lixo'),
+        vendaSomentePorCupom: 1,
+      })
+    );
+  });
+
+  it('cross-tenant: owner de B não toca o flag em evento de A', async () => {
+    await assertFails(
+      updateDoc(doc(passoDb(), 'eventos', MARATONA_2027_ID), { vendaSomentePorCupom: true })
+    );
+  });
+});

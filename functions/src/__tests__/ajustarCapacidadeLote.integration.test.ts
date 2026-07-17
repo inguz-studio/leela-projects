@@ -23,7 +23,7 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { loteAtivo, parseLote, type AuthClaims } from '@leela/core';
@@ -172,6 +172,18 @@ describe('RN-304 · aceites do épico', () => {
     await assertFails(
       updateDoc(doc(db, 'eventos', EVENTO_ID, 'lotes', LOTE_ESGOTADO), {
         quantidadeLimite: 150,
+      })
+    );
+  });
+
+  it('A3b (Rules · review O3-L1 #2): cliente NÃO forja o carimbo capacidadeAjustadaEm', async () => {
+    const db = testEnv
+      .authenticatedContext(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID })
+      .firestore();
+    // Update em lote SEM venda (campos comerciais livres) — o carimbo segue negado
+    await assertFails(
+      updateDoc(doc(db, 'eventos', EVENTO_ID, 'lotes', LOTE_FOLGADO), {
+        capacidadeAjustadaEm: serverTimestamp(),
       })
     );
   });

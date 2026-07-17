@@ -531,6 +531,29 @@ service cloud.firestore {
             .hasAny(['taxaModo']);
       }
 
+      /**
+       * RN-303 (S1804 · review antagonista O3-L1 #1): `vendaSomentePorCupom`
+       * — boolean ESTRITO quando presente (lixo nunca entra no doc; o parse
+       * tolerante do core é a 2ª camada, não a 1ª).
+       */
+      function vendaSomentePorCupomValida() {
+        return !('vendaSomentePorCupom' in request.resource.data)
+          || request.resource.data.vendaSomentePorCupom is bool;
+      }
+
+      /**
+       * RN-303: TOCAR o flag no update é OWNER-ONLY — abrir/fechar o evento
+       * a vendas sem cupom é controle de venda do organizador (mesma postura
+       * de politicaVendas/S305: staff NÃO). Sem isso, qualquer tenant_staff
+       * flipava o modo por client SDK e abria evento fechado (achado MAJOR
+       * da review antagonista O3-L1).
+       */
+      function vendaSomentePorCupomProtegida() {
+        return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['vendaSomentePorCupom'])
+          || isTenantOwner(resource.data.tenantId);
+      }
+
       // TODO(E04/compra): quando o fluxo de compra entrar, abrir leitura
       // PÚBLICA apenas de eventos com status 'publicado' (athlete/anônimo).
       // NÃO abrir antes — deny-by-default até a story do checkout, com teste.
@@ -550,7 +573,8 @@ service cloud.firestore {
                         && regulamentoValido()
                         && exigenciasSaudeValidas()
                         && camposS306NaoNascem()
-                        && taxaModoValido())
+                        && taxaModoValido()
+                        && vendaSomentePorCupomValida())
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId
@@ -565,7 +589,9 @@ service cloud.firestore {
                         && exigenciasSaudeValidas()
                         && camposS306Intocados()
                         && taxaModoValido()
-                        && taxaModoEditavel())
+                        && taxaModoEditavel()
+                        && vendaSomentePorCupomValida()
+                        && vendaSomentePorCupomProtegida())
                     || isPlatformAdmin();
       // Delete de evento é EXCLUSIVO de Function/Admin (review #17) — nem
       // platform_admin via client SDK (espelha o delete de clubes, S110-T2).
@@ -888,14 +914,21 @@ service cloud.firestore {
          */
         function viradaZeradaNoCreate() {
           return !('encerradoEm' in request.resource.data)
-            && !('encerradoMotivo' in request.resource.data);
+            && !('encerradoMotivo' in request.resource.data)
+            // Carimbo do ajuste de capacidade (S307) também não nasce de
+            // cliente (review antagonista O3-L1 #2).
+            && !('capacidadeAjustadaEm' in request.resource.data);
         }
 
         /** Update de cliente não TOCA os carimbos de virada (só a Function
             de S300-T2 encerra/carimba — espelha CAMPOS_FUNCTION_LOTE). */
         function viradaIntocada() {
+          // `capacidadeAjustadaEm` incluso (review antagonista O3-L1 #2):
+          // carimbo do ajuste de capacidade (S307) é escrita EXCLUSIVA da
+          // Function `ajustarCapacidadeLote` — cliente forjando o carimbo
+          // fabricaria trilha de ajuste que não houve.
           return !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['encerradoEm', 'encerradoMotivo']);
+            .hasAny(['encerradoEm', 'encerradoMotivo', 'capacidadeAjustadaEm']);
         }
 
         /**
