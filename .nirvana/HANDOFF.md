@@ -1,6 +1,23 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA A PEDIDO DO VITOR)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (PAUSA 2 A PEDIDO DO VITOR)
 
-## ⏸️ PAUSA 2026-07-17 — COMECE AQUI na retomada
+## ⏸️ PAUSA 2 · 2026-07-17 (a mais recente) — COMECE AQUI
+
+**Como cheguei aqui:** internet do Vitor voltou → retomei o LEELA-O3-L1 que o Fable tinha deixado (o Fable travou por INFRA, watchdog de stream 600s — não erro de código). Vitor decidiu rodar o restante em **Opus 4.8** (trava de dinheiro = review antagonista obrigatória, não o tier). Rodou um tempo e o Vitor pediu pause de novo; PAREI o agente Opus (`a266c54d0212b439a`).
+
+**L1 progrediu desde a Pausa 1 (pushed):** `d5e0fe5` S1804-T1 cupom-only · `73395ed` **S307-T1 capacidade de lote** (RN-304, callable owner-only, reabrir vagas, fail-closed abaixo do vendido) — ✅ landed, mas o GATE (emulator + review antagonista) foi interrompido; **conferir se o teste de integração do S307 rodou verde antes de confiar** (na dúvida, rodar o bloco antes de seguir).
+
+**⚠️ WIP NO DISCO agora (S904 PARCIAL, não commitado, NÃO gateado, SEM review antagonista):**
+- NOVOS untracked: `packages/core/src/finance/refund-machine.ts` · `functions/src/finance/requestRefund.ts`
+- M: `firestore.rules` (+16) · `functions/src/index.ts` (+8 barrel) · `packages/core/src/index.ts` (+18 barrel)
+- O agente parou em: "update `AberturaReembolso.estado` type + branch `requestRefundCore` para os estados ampliados" — ou seja, a máquina de reembolso está NO MEIO. **É dinheiro real e NÃO passou por review antagonista.** Na retomada: inventariar (`git diff` + ler os 2 arquivos novos), decidir aproveitar-e-completar vs refazer, e SÓ commitar após emulator verde + review antagonista em contexto fresco. NÃO commitar S904 como está.
+
+**FALTA do L1:** completar **S904** (reembolso/transferência) · **S306** (RN-149 saúde+regulamento) · **boards** (S305/S1804/S307/S904/S306 + delta L2W S1205-T1/T2✅ S1702-T2✅ + registrar decisão flat default `5bb08a1` no painel de decisões).
+
+**Retomar:** `/harness` + "retome a Leela" → ler este bloco → `git status` (WIP S904 acima) → redespachar **LEELA-O3-L1 restante** em Opus com brief `.nirvana/briefs/leela-onda3-lote1-RETOMADA-enriched.md` (já reflete o estado; só atualizar o "já feito" com o S307 `73395ed`). Depois do L1: varredura painel do flat (EventoForm 8 `variant="flat"` redundantes) + L2-sec (S1702-T1 capa painel/core, reconciliar `imagemUrl`×`capaUrl`; S1700 perfil @handle) → Lote 3 ∥ Lote 4 → Lote 5.
+
+---
+
+## ⏸️ PAUSA 1 · 2026-07-17 (histórico)
 
 **Estado:** sessão de 2026-07-17 executou a retomada pós-Onda 2: decisões 1-7 do painel RATIFICADAS (uma a uma; item 4 = ratchet fica + organizador pode reabrir/aumentar vagas do lote pelo painel → RN-304/S307) · DN-1 ratificada (link-in-bio Onda 3 = organizador-only) · flat inputs APROVADOS como default global.
 
