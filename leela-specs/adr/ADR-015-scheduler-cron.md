@@ -2,15 +2,17 @@
 tags: [leela, adr, arquitetura, scheduler, cron, functions]
 ---
 
-# ADR-007 · Padrão de tarefas agendadas (cron/scheduler)
+# ADR-015 · Padrão de tarefas agendadas (cron/scheduler)
 
-> Autor: sf-backend-lead (Software Forge) · DNA Kleppmann/Schneier · Trace: leela-build-2d6ee98d · Data: 2026-07-13
+> Autor: sf-backend-lead (Software Forge) · DNA Kleppmann/Schneier · Trace: leela-build-2d6ee98d · Data: 2026-07-13 · Renumerada: 2026-07-17
 > Formato herda ADR-stack.md: contexto → decisão → status → consequência.
-> ⚠️ Nota de numeração: `ADR-stack.md` usa "ADR-007" internamente para
-> "Monorepo = Turborepo" (seção antiga). O corpus da Onda 2 (briefs,
-> `encerrarEventos.ts`, kanban) já referencia **ADR-007 = padrão de cron** —
-> este arquivo formaliza esse uso. Colisão registrada para o consolidador
-> renumerar a seção do stack se quiser unicidade estrita.
+> Nota de numeração (resolvida 2026-07-17): esta ADR de cron nasceu numerada
+> "ADR-007", em colisão com "Monorepo = Turborepo" do `ADR-stack.md`. O Vitor
+> decidiu: **cron/scheduler = ADR-015** (este arquivo); **Turborepo mantém
+> ADR-007**. As referências em docs já apontam para ADR-015. ⚠️ O código-fonte
+> (`functions/`, `packages/core`, `firestore.rules`) ainda cita "ADR-007" para o
+> cron em comentários — renumeração pendente para um lote de backend (troca só
+> de rótulo em comentário, não altera comportamento).
 
 **Contexto.** Correção factual ao que a WIKI afirmava: o cron **já existia**
 no repo desde a Onda 1 — `functions/src/clubs/recalcularStatusMembros.ts`
@@ -44,8 +46,10 @@ seguiu o padrão por antecipação.
 4. **Sem registry/índice de crons** por ora — 3 tarefas não justificam
    abstração. Reavaliar se passar de ~6.
 
-**Status.** ✅ Formalizado na Onda 2 (T2-L1). E12/E09 e ondas futuras REUSAM
-este padrão — não inventar segundo mecanismo de agendamento.
+**Status.** ✅ Formalizado na Onda 2 (T2-L1); renumerado de ADR-007 para
+ADR-015 em 2026-07-17 (decisão do Vitor — Turborepo fica com ADR-007). E12/E09
+e ondas futuras REUSAM este padrão — não inventar segundo mecanismo de
+agendamento.
 
 **Consequência.**
 - Todo cron novo entrega: wrapper fino + `*Core` puro + teste de integração
