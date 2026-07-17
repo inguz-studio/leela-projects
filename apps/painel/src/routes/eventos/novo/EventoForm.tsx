@@ -4,8 +4,8 @@
 // Coleta o que a página pública mobile precisa (wireframe Figma 112-4622, tela
 // "Corrida do Campeche"): capa, nome, data + horário, endereço/local, descrição,
 // regulamento e a lista ESTRUTURADA de modalidades (sugestões 5k/10k/21k/42k +
-// entrada livre). Layout em COLUNA CENTRAL (não full-width). Campos no
-// experimento `variant="flat"` (LEELA-DS-FLAT-INPUTS) p/ o Vitor avaliar.
+// entrada livre). Layout em COLUNA CENTRAL (não full-width). Os campos usam o
+// primitivo de form no padrão flat (default global do DS — LEELA-FLAT-DEFAULT).
 //
 // LOTES/PREÇOS NÃO entram no cadastro (RN-153): os `percursos` que o servidor
 // exige (min 1, RN-200) são DERIVADOS das modalidades com preço 0 (a definir na
@@ -176,7 +176,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
       <div className="flex flex-col gap-[var(--spacing-2)]">
         <Input
           id="capa"
-          variant="flat"
           type="url"
           inputMode="url"
           label="Imagem de capa (URL)"
@@ -201,7 +200,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
 
       <Input
         id="nome"
-        variant="flat"
         label="Nome do evento"
         value={values.nome}
         onChange={(e) => set('nome', e.target.value)}
@@ -213,7 +211,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
       <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
         <Input
           id="data"
-          variant="flat"
           type="date"
           label="Data da prova"
           value={values.data}
@@ -222,7 +219,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         />
         <Input
           id="hora"
-          variant="flat"
           type="time"
           label="Horário (opcional)"
           value={values.hora}
@@ -232,7 +228,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
 
       <Input
         id="local"
-        variant="flat"
         label="Endereço / local"
         value={values.local}
         onChange={(e) => set('local', e.target.value)}
@@ -242,7 +237,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
 
       <Textarea
         id="descricao"
-        variant="flat"
         label="Descrição / informações"
         value={values.descricao}
         onChange={(e) => set('descricao', e.target.value)}
@@ -254,7 +248,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
       <div className="flex flex-col gap-[var(--spacing-1)]">
         <Textarea
           id="regulamento"
-          variant="flat"
           label="Regulamento"
           value={values.regulamento}
           onChange={(e) => set('regulamento', e.target.value)}
@@ -284,7 +277,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         <div className="flex items-end gap-[var(--spacing-2)]">
           <Input
             id="modalidade-draft"
-            variant="flat"
             aria-label="Adicionar modalidade"
             value={modalidadeDraft}
             onChange={(e) => setModalidadeDraft(e.target.value)}
