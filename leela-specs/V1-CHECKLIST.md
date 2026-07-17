@@ -325,7 +325,66 @@ Cortadas: S400 (parceiros/afiliação), S402 (automações → Onda 3), `abertur
 
 ## Onda 3 · App simples
 
-App do atleta mínimo (recorte de E13): descobrir evento, comprar/checkout, meus ingressos (QR), receber comunicado (push), entrar/ler clube.
+> **Plano executável ratificável (2026-07-17):** `leela-specs/next-trail-onda3/` — 5 lotes (B1 robustez financeira/legal · B2 web discovery+link-in-bio · B3 assessorias · B4 scheduler · B5 app do atleta) · 22 stories · 48 tasks · rota **Fable**(dinheiro/PII)/**Opus**(UI), Sonnet proibido. Ordem: Lote 1 ∥ Lote 2 → Lote 3 ∥ Lote 4 → Lote 5. Aceites Given/When/Then nos `epics/`.
+
+### Lote 1 · Robustez financeira/legal (B1) — ROTA FABLE + Opus UI · `⚔`
+
+Política de reembolso/transferência (E04-S305) → máquina completa (E09-S904); saúde/regulamento (S306); capacidade de lote (S307); cupom-only (S1804).
+
+- [ ] LEELA-S305-T1 — Modelo `politicaVendas` + tipos + Rules (só owner) + seed — **Fable** ⚔ · *core+rules*
+- [ ] LEELA-S305-T2 — Aba "Política de vendas" (reembolso: janela 7d, corte 48h, SLA) — **Opus** · *painel/configuracoes*
+- [ ] LEELA-S305-T3 — Transferência de titularidade (72h/taxa) + troca de ingresso (48h) — **Opus** · *painel/configuracoes*
+- [ ] LEELA-S306-T1 — Flags `exigenciasSaude` + `regulamentoVersao` (RN-149) + subcoleção `saude` isolada (LGPD Art. 11) — **Fable** ⚔ · *core+rules*
+- [ ] LEELA-S306-T2 — Aba "Exigências e regulamento" + versionamento (novo aceite RN-149) — **Opus** · *painel*
+- [ ] LEELA-S306-T3 — Consentimento destacado + retenção/expurgo do dado de saúde — **Fable** ⚔ · *functions+core*
+- [ ] LEELA-S307-T1 — Function `reabrirCapacidadeLote` + auditoria + Rules (reduzir<vendido negado; RN-304) — **Fable** ⚔ · *functions+rules* · **dep `LEELA-BEPEND` (S209-T2)**
+- [ ] LEELA-S307-T2 — Editor de capacidade no painel (vendido/disponível/configurado) — **Opus** · *painel*
+- [ ] LEELA-S904-T1 — Subcoleção `reembolsos` + máquina de estados por inscrito (RN-341) + fila do organizador — **Fable** ⚔ · *functions/finance*
+- [ ] LEELA-S904-T2 — Execução de estorno via Function (reusa FABLE-B `refund`) + clawback (RN-346) — **Fable** ⚔ · *functions/finance*
+- [ ] LEELA-S904-T3 — Notificações (organizador na abertura, atleta em cada transição — RN-342) — **Fable** · *functions*
+- [ ] LEELA-S904-T4 — Subcoleção `transferencias` + `titularHistorico[]` + kit/chip (RN-345) — **Fable** ⚔ · *functions/finance*
+- [ ] LEELA-S904-T5 — Fila de reembolso/transferência no painel financeiro (auditada) — **Opus** · *painel/financeiro*
+- [ ] LEELA-S1804-T1 — Flag `vendaSomentePorCupom` + guard no checkout (RN-345, encaixe E04/S300) — **Fable** ⚔ · *core+checkout*
+
+> Gate do lote: adr-conformance **ADR-011** (por inscrito) + **ADR-014** (cifra onde tocar repasse).
+
+### Lote 2 · Web discovery + link-in-bio (B2) — ROTA OPUS + Fable reader
+
+SEO fino (E12-S1205); capas (E17-S1702); perfil público `@handle` (E17-S1700); editor de perfil no painel (DN-1).
+
+- [ ] LEELA-S1205-T1 — `generateMetadata` dinâmica + OG/Twitter + JSON-LD Event — **Opus** · *landing*
+- [ ] LEELA-S1205-T2 — sitemap + robots (`publica`⇒noindex / `indexavel`⇒index — RN-140) — **Opus** · *landing*
+- [ ] LEELA-S1702-T1 — Campo `capaUrl` + upload no painel (clube; evento já persiste) — **Opus** · *painel+core*
+- [ ] LEELA-S1702-T2 — Render da capa nos cards/hero + fallback gradiente (RN-166) — **Opus** · *design-system+landing*
+- [ ] LEELA-S1700-T1 — Rota SSR/ISR `/@{handle}` + `getPublicPerfil` (gate RN-161) + Rules leitura pública — **Fable** ⚔ (reader+Rules) · *landing+api-client+core+rules*
+- [ ] LEELA-S1700-T2 — Componentes das 3 abas (Feed leitura · Eventos · Clubs) + filtro por visibilidade — **Opus** · *landing*
+- [ ] LEELA-S1700-T3 — Estados públicos + bloco compartilhar (URL+QR, reusa `ShareBlock`) — **Opus** · *landing*
+- [ ] LEELA-DN-1-T1 — Editor de perfil do organizador no painel (`@handle` imutável RN-160 + bio/visibilidade RN-161) + Rules — **Fable** ⚔ (handle/unicidade) + Opus (form) · *painel+core+rules* · **gated por DN-1 (ver decisões)**
+
+> Data-layer: SSR/ISR, revalidação por tag `perfil:{handle}`. Fatia Onda 3 = **organizador-only** (P6); tema por-usuário (S1701) + feed in-app = Onda 4.
+
+### Lote 3 · Assessorias parceiras (B3) — ROTA FABLE provisionamento + Opus painel
+
+- [ ] LEELA-S1800-T1 — Form de cadastro no painel + validação CNPJ/CPF no core — **Fable** (core doc) + Opus (form) · *painel+core*
+- [ ] LEELA-S1800-T2 — Function `vincularAssessoriaExistente` idempotente por documento (RN-361/362) + Rules — **Fable** ⚔ · *functions+rules*
+- [ ] LEELA-S1801-T1 — Dispara convite reusando `enviarConvites` + `origem`/`parceriaRef` — **Fable** · *functions*
+- [ ] LEELA-S1801-T2 — Página pública de aceite do convite — **Opus** · *landing/convite*
+- [ ] LEELA-S1801-T3 — Function `provisionAssessoriaAccount` (Auth+clube+parceria atômico/idempotente RN-363) + testes emulador — **Fable** ⚔ · *functions+rules*
+- [ ] LEELA-S1802-T1 — Editor da condição → cupom `escopo='club_parceiro'` (RN-364) — **Fable** ⚔ (cupom) + Opus (editor) · *painel+core*
+- [ ] LEELA-S1802-T2 — Checkout resolve cupom de club parceiro (reusa `validateCoupon`, sem split, RN-365) — **Fable** ⚔ · *core+checkout*
+- [ ] LEELA-S1803-T1 — Lista densa de parceiros + encerrar (ConfirmModal §2.15 + retenção 90d RN-144) — **Opus** · *painel*
+
+### Lote 4 · Scheduler de campanhas (B4) — ROTA FABLE cron · `⚔`
+
+- [ ] LEELA-S402-T1 — `automacoes/{id}` por gatilho + Function de disparo idempotente + Rules — **Fable** ⚔ · *functions+rules*
+- [ ] LEELA-S402-T2 — Toggle "automação por gatilho" no painel de Marketing — **Opus** · *painel/comunicacao*
+- [ ] LEELA-SCHED-T1 — Cloud Scheduler cron → dispara `campanhas.status='agendada'` idempotente (marca `enviadaEm`, reusa log FABLE-G; ADR-015) — **Fable** ⚔ · *functions/scheduler*
+
+> Gate: adr-conformance **ADR-015** (cron). Idempotência = não enviar a mesma campanha duas vezes.
+
+### Lote 5 · App do atleta E13-slim (B5) — ROTA OPUS mobile + Fable Functions · alvo 390×844
+
+App do atleta nativo (Expo) recorte: descobrir → checkout → meus ingressos/QR → clube (leitura) → push. **Enrollment das lojas (A1) = pré-requisito de S1300-T2.** Jornada heroica (Arena/desafios/medalhas/perfil completo) = Onda 4.
 
 ### LEELA-E13 · App do atleta (recorte V1 — E13-slim)
 

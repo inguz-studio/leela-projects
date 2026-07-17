@@ -136,12 +136,28 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 - **Robustez + coleta:** LEELA-E07-web (404/500/403) · transversais (rollup diário E11-S821, V1 + backend do desafio S1307/S1308, V1.5).
 - Fecha o ciclo "atleta descobre → inscreve → paga → organizador vê receita".
 
-**Onda 3 · Robustez e alavancas (H1→H2)** *(fatias restantes — os recortes-slim subiram p/ Onda 2 em 2026-07-05/10)*
-- LEELA-E07 Estados de Sistema (restante: offline/manutenção + superfície mobile) · LEELA-E06 Marketing Unificado (restante: parceiros/automações) · LEELA-E09 Financeiro do Profissional (restante: painel rico + máquina completa de reembolso S904/RN-341 + política S305).
+**Onda 3 · App simples + alavancas (H1→H2)** *(plano executável ratificável em `leela-specs/next-trail-onda3/` — 2026-07-17; 5 lotes, 22 stories, 48 tasks)*
 
-**Onda 3 · App simples + alavancas de tração (H1→H2)** *(além das fatias-slim já listadas)*
+Trilha própria (padrão next-trail): `ROADMAP-onda3` (lotes+grafo) · `STORIES-onda3` (JTBD por story) · `TASKS-onda3` (1-task-1-PR, rota Fable/Opus) · `JTBD-TRACE-onda3` (P6/P7 propostos) · `DECISOES-NECESSARIAS-onda3` (só DN-1 é decisão real; resto = ações externas/premissas). Ordem de despacho: `Lote 1` ∥ `Lote 2` → `Lote 3` ∥ `Lote 4` → `Lote 5` (por último, gated pelo enrollment das lojas). Sonnet proibido.
+
+```
+Lote 1 · Robustez financeira/legal    ROTA FABLE+Opus  · functions/+core + painel/{eventos,financeiro}
+   E04-S305 (política) ─► E09-S904 (máquina completa reembolso/transferência)
+   E04-S306 (saúde+regulamento RN-149) · E04-S307 (capacidade de lote RN-304, pós-BEPEND) · S1804 (cupom-only)
+Lote 2 · Web discovery + link-in-bio  ROTA OPUS+Fable reader · apps/landing + core/reader + painel(perfil)
+   E12-S1205 (SEO) · E17-S1702 (capas) ─► E17-S1700 (perfil público @handle) ; DN-1 (editor de perfil no painel)
+Lote 3 · Assessorias parceiras        ROTA FABLE+Opus · functions/+core + painel + landing(aceite)
+   E18-S1800 ─► S1801 (provisionamento) ─► S1802 (desconto) ─► S1803 (gestão)
+Lote 4 · Scheduler de campanhas       ROTA FABLE · functions/ + painel(toggle)
+   E06-S402 (automações) ∥ dispatch `agendada` (ADR-015)
+Lote 5 · App do atleta E13-slim       ROTA OPUS mobile + Fable · apps/mobile + functions/
+   S1300 ─► S1302 ─► S1301 ─► S1304 ─► S1305 ─► S1306 ─► S1310 ─► S1311 ─► S1312 (jornada heroica = Onda 4)
+```
+
+- **Robustez** (fatias-slim restantes): E09 (máquina completa reembolso S904/RN-341 + política S305) · E04 (S306 saúde/regulamento RN-149 · S307 capacidade de lote RN-304) · E12 (SEO fino S1205) · E06 (automações S402 + scheduler ADR-015).
 - **LEELA-E18 Assessorias parceiras** — organizador cadastra assessorias como clubes parceiros com desconto; reusa E05 (clube+convite+parceria) + E04 (cupom) + E16 (termos) + E00 (Auth). Sem split.
 - **LEELA-E17 (fatia link-in-bio público)** — perfil `@handle` SSR/ISR reusando E12; abas Feed·Eventos·Clubs + capas.
+- **LEELA-E13-slim** — app do atleta nativo (Expo) recorte: descobrir→checkout→meus ingressos/QR→clube (leitura)→push. Detalhe em `V1-CHECKLIST §Onda 3 · App simples`.
 
 **Onda 4 · App do Atleta + social completo (H1→H2)**
 - LEELA-E13 — reusa `packages/core` + `design-system`; jornada, inscrições, desafios, comunidade.
@@ -248,4 +264,4 @@ MoSCoW por horizonte: Must bloqueia a fase · Should agrega valor · Could nice-
 
 ---
 
-*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança. Última atualização: 2026-07-10 — trilha next-trail ratificada (D1-D7): Onda 2 reconciliada (§5), waves A-D e delta de dependências.*
+*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança. Última atualização: 2026-07-17 — Onda 3 planejada (§5): trilha `next-trail-onda3/` executável (5 lotes, 22 stories, 48 tasks), E13-slim nativo, E17/E18 encaixados.*
