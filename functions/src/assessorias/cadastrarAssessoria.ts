@@ -173,6 +173,26 @@ export async function cadastrarAssessoriaCore(
     responsavelUid = null;
   }
 
+  // GATE DE PRODUÇÃO do ramo convite (fix review antagonista O3-L3B #1 —
+  // pre-hijack): enquanto o token de aceite RETORNA ao organizador (mock de
+  // e-mail), quem emite o convite consegue aceitá-lo — inclusive criar conta
+  // com senha própria para e-mail de TERCEIRO. Fail-closed (padrão
+  // permitirProducao do AsaasProvider): o ramo convite SÓ roda no emulator
+  // ou com a flag explícita de sandbox; em produção, sem EmailProvider
+  // real, o cadastro sem conta é bloqueado com erro acionável. O vínculo
+  // IMEDIATO (conta já existe) segue liberado — não cria credencial nova.
+  const conviteLiberado =
+    process.env['FUNCTIONS_EMULATOR'] === 'true' ||
+    process.env['LEELA_CONVITE_EXPOR_TOKEN'] === 'true';
+  if (responsavelUid === null && !conviteLiberado) {
+    throw new https.HttpsError(
+      'failed-precondition',
+      'Convite de assessoria exige EmailProvider (entrega do link ao ' +
+        'responsável) — ação externa pendente. O responsável pode criar a ' +
+        'conta Leela primeiro e você refaz o cadastro com vínculo imediato.'
+    );
+  }
+
   const parceriaId = documento.valor;
   const parceriaRef = db
     .collection('tenants')
@@ -212,8 +232,6 @@ export async function cadastrarAssessoriaCore(
           };
         }
         if (statusAtual === 'convite_pendente') {
-          // REENVIO idempotente (RN-106): re-emite token + janela no MESMO
-          // convite; nada duplica. Cobre também "convite expirado → reenvio".
           const emailAnterior = (parceriaSnap.get('responsavelEmail') ?? '') as string;
           if (emailAnterior !== emailKey) {
             throw new https.HttpsError(
@@ -227,6 +245,38 @@ export async function cadastrarAssessoriaCore(
             .doc(clubeExistente)
             .collection('convites')
             .doc(emailKey);
+
+          // Conta do responsável passou a existir DEPOIS do convite →
+          // VINCULA (RN-362) em vez de reenviar: ativa a parceria, fecha a
+          // ownership do clube e supera o convite. Também fecha o corner do
+          // fix #1: reenvio nunca devolve token quando a conta já existe.
+          if (responsavelUid !== null) {
+            tx.update(parceriaRef, {
+              status: 'ativa',
+              responsavelUid,
+              aceitoEm: now,
+              atualizadoEm: now,
+            });
+            tx.update(db.collection('clubes').doc(clubeExistente), {
+              ownerId: responsavelUid,
+              atualizadoEm: now,
+            });
+            tx.set(
+              conviteRef,
+              { status: 'cancelado', canceladoEm: now },
+              { merge: true }
+            );
+            return {
+              parceriaId,
+              clubeId: clubeExistente,
+              status: 'ativa' as const,
+              vinculoImediato: true,
+              jaExistia: true,
+            };
+          }
+
+          // REENVIO idempotente (RN-106): re-emite token + janela no MESMO
+          // convite; nada duplica. Cobre também "convite expirado → reenvio".
           tx.set(
             conviteRef,
             {
@@ -288,6 +338,10 @@ export async function cadastrarAssessoriaCore(
       // Clube parceiro (E05 reuso — RN-360): a assessoria É um clube.
       // Ownership: responsável quando a conta existe; PROVISÓRIA do
       // organizador no ramo convite (transferida no aceite — premissa).
+      // PII (fix review antagonista O3-L3B #2): o doc do clube carrega SÓ o
+      // documento MASCARADO — o clube é legível por membro do tenant
+      // (promoter incluso) e a visibilidade pode virar pública; o CPF/CNPJ
+      // completo vive APENAS na parceria (Rules writer-only).
       tx.set(clubeRef, {
         id: clubeId,
         tenantId,
@@ -303,7 +357,7 @@ export async function cadastrarAssessoriaCore(
         aprovacaoManual: false,
         modeloEntrada: 'gratuito',
         ehAssessoriaParceira: true,
-        documento,
+        documentoMascarado: mascararDocumento(documento.valor),
         parceiroDeTenant: tenantId,
         qtdMembrosAtivos: 0,
         qtdDesafiosAtivos: 0,

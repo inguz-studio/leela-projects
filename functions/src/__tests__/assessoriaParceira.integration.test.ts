@@ -93,6 +93,9 @@ describe.skipIf(!hasEmulator)('assessorias parceiras — E18 backend (O3-L3B)', 
     }
     db = admin.firestore();
     auth = admin.auth();
+    // Ramo convite exige sandbox explícito (fix review #1 — em produção o
+    // token não pode voltar ao organizador; gate fail-closed).
+    process.env['LEELA_CONVITE_EXPOR_TOKEN'] = 'true';
   });
 
   beforeEach(async () => {
@@ -157,6 +160,10 @@ describe.skipIf(!hasEmulator)('assessorias parceiras — E18 backend (O3-L3B)', 
     expect(clube.get('tenantId')).toBe(CASTELO_ID);
     expect(clube.get('ownerId')).toBe(user.uid);
     expect(clube.get('categoria')).toBe('Assessoria esportiva');
+    // PII (fix review #2): o clube (legível por membro/publicável) carrega
+    // SÓ o documento MASCARADO; o completo vive na parceria writer-only.
+    expect(clube.get('documento')).toBeUndefined();
+    expect(clube.get('documentoMascarado')).toBe('***0181');
 
     // Sem convite no ramo imediato
     const convites = await db
@@ -258,6 +265,75 @@ describe.skipIf(!hasEmulator)('assessorias parceiras — E18 backend (O3-L3B)', 
         marina, AGORA
       )
     ).rejects.toMatchObject({ code: 'failed-precondition' });
+  });
+
+  it('GATE de produção (fix #1): sem sandbox, ramo convite é failed-precondition; vínculo imediato segue', async () => {
+    delete process.env['LEELA_CONVITE_EXPOR_TOKEN'];
+    try {
+      // Sem conta → convite bloqueado (token não pode voltar ao organizador)
+      await expect(
+        cadastrarAssessoriaCore(db, auth, inputBase(), marina, AGORA)
+      ).rejects.toMatchObject({ code: 'failed-precondition' });
+      expect((await db.collection('clubes').get()).size).toBe(0);
+
+      // Com conta → vínculo imediato NÃO depende do gate
+      await auth.createUser({ email: 'rodrigo@correrbem.dev' });
+      const r = await cadastrarAssessoriaCore(db, auth, inputBase(), marina, AGORA);
+      expect(r.status).toBe('ativa');
+    } finally {
+      process.env['LEELA_CONVITE_EXPOR_TOKEN'] = 'true';
+    }
+  });
+
+  it('conta criada DEPOIS do convite: recadastro VINCULA (ativa, sem novo token) — fix #1 corner', async () => {
+    const r1 = await cadastrarAssessoriaCore(db, auth, inputBase(), marina, AGORA);
+    expect(r1.status).toBe('convite_pendente');
+
+    const user = await auth.createUser({ email: 'rodrigo@correrbem.dev' });
+    const r2 = await cadastrarAssessoriaCore(db, auth, inputBase(), marina, AGORA);
+    expect(r2).toMatchObject({
+      status: 'ativa', vinculoImediato: true, jaExistia: true,
+    });
+    expect(r2.tokenAceite).toBeUndefined();
+
+    const p = await parceriaRef().get();
+    expect(p.get('responsavelUid')).toBe(user.uid);
+    const clube = await db.doc(`clubes/${r1.clubeId}`).get();
+    expect(clube.get('ownerId')).toBe(user.uid);
+    const convite = await db
+      .doc(`clubes/${r1.clubeId}/convites/rodrigo@correrbem.dev`).get();
+    expect(convite.get('status')).toBe('cancelado');
+  });
+
+  it('Rules (fix #2/#5): cliente não planta nem adultera campos de assessoria no clube', async () => {
+    const { clubeId } = await cadastrarPendente();
+    const owner = testEnv
+      .authenticatedContext(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID })
+      .firestore();
+
+    // Adulterar trust anchor do clube parceiro — NEGADO
+    await assertFails(
+      updateDoc(clientDoc(owner, `clubes/${clubeId}`), {
+        documentoMascarado: '***9999',
+      })
+    );
+    await assertFails(
+      updateDoc(clientDoc(owner, `clubes/${clubeId}`), {
+        ehAssessoriaParceira: false,
+      })
+    );
+    // Plantar clube "parceiro" forjado pelo cliente — NEGADO
+    await assertFails(
+      setDoc(clientDoc(owner, 'clubes/forjado-parceiro'), {
+        id: 'forjado-parceiro', tenantId: CASTELO_ID, nome: 'Forjado',
+        descricao: '', slug: 'forjado-parceiro', categoria: 'Assessoria esportiva',
+        modalidade: 'Corrida de rua',
+        localizacao: { cidade: '', estado: '', online: true },
+        ownerId: MARINA_UID, codigoConvite: 'AB2C3', visibilidade: 'privada',
+        aprovacaoManual: false, modeloEntrada: 'gratuito',
+        ehAssessoriaParceira: true, parceiroDeTenant: CASTELO_ID,
+      })
+    );
   });
 
   // ── Rules: parceirosAssessoria (PII — regra própria) ────────────────────

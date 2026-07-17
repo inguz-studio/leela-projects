@@ -976,7 +976,14 @@ service cloud.firestore {
                     && request.resource.data.tetoUso >= 1))
             && request.resource.data.inicioEm is timestamp
             && request.resource.data.fimEm is timestamp
-            && request.resource.data.fimEm > request.resource.data.inicioEm;
+            && request.resource.data.fimEm > request.resource.data.inicioEm
+            // Escopo (RN-364 · E18): o canal de CLIENTE só grava cupom
+            // 'geral' (ausente == geral). Cupom 'club_parceiro' + a
+            // amarração clubeRef/parceriaRef nascem SÓ pela Function
+            // `definirCondicaoDesconto` (kernel + carimbo na parceria na
+            // MESMA tx — ADR-012: nenhum segundo caminho de desconto).
+            && request.resource.data.get('escopo', 'geral') == 'geral'
+            && !request.resource.data.keys().hasAny(['clubeRef', 'parceriaRef']);
         }
 
         /** `usos` (∑ de Function) nasce 0/ausente. */
@@ -984,10 +991,13 @@ service cloud.firestore {
           return request.resource.data.get('usos', 0) == 0;
         }
 
-        /** Update de cliente não TOCA `usos` nem `codigo` (chave/∑ imutáveis). */
+        /** Update de cliente não TOCA `usos` nem `codigo` (chave/∑ imutáveis).
+            Nem o escopo/amarração E18 (RN-364): de-escopar um cupom
+            'club_parceiro' pelo cliente reviveria o desconto sem a guarda
+            de parceria ATIVA e órfãnaria a condicaoDesconto. */
         function usosECodigoIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['usos'])
+              .hasAny(['usos', 'escopo', 'clubeRef', 'parceriaRef'])
             && request.resource.data.codigo == resource.data.codigo;
         }
 
@@ -1013,9 +1023,12 @@ service cloud.firestore {
         // Delete SÓ sem uso (re-review S300 #3 — espelha o delete de lote):
         // cupom com `usos > 0` é trilha comercial de desconto aplicado; sumir
         // com ele órfãnaria a auditoria do checkout. Remoção real = Function.
+        // Cupom 'club_parceiro' NUNCA some pelo cliente (órfãnaria a
+        // condicaoDesconto da parceria — o ciclo dele é da Function E18).
         allow delete: if (isTenantWriter(resource.data.tenantId)
                           && tenantAtivo(resource.data.tenantId)
-                          && resource.data.get('usos', 0) == 0)
+                          && resource.data.get('usos', 0) == 0
+                          && resource.data.get('escopo', 'geral') == 'geral')
                       || isPlatformAdmin();
       }
 
@@ -1483,8 +1496,14 @@ service cloud.firestore {
           sequestro/colisão do código); `slug` espelha o docId (mudar slug é
           recriar o doc); `criadoEm` é trilha. */
       function clubeIdentidadeIntocada() {
+        // ➕ E18 (fix review antagonista O3-L3B #2/#5): os campos de
+        // assessoria parceira são TRUST ANCHOR de Function — cliente não
+        // planta `ehAssessoriaParceira`/`parceiroDeTenant` em clube comum
+        // nem adultera o `documentoMascarado` do parceiro.
         return !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['ownerId', 'codigoConvite', 'slug', 'criadoEm']);
+          .hasAny(['ownerId', 'codigoConvite', 'slug', 'criadoEm',
+                   'ehAssessoriaParceira', 'documentoMascarado',
+                   'parceiroDeTenant']);
       }
 
       /** Espelho server-side do shape mínimo (review suplementar S6e/S6f):
@@ -1522,7 +1541,12 @@ service cloud.firestore {
                         && tenantAtivo(request.resource.data.tenantId)
                         && clubeAgregadosZerados()
                         && clubeShapeValido()
-                        && clubeCapaValida())
+                        && clubeCapaValida()
+                        // E18 (fix #5): clube de assessoria parceira nasce
+                        // SÓ pela Function — cliente não planta os campos.
+                        && !request.resource.data.keys().hasAny(
+                             ['ehAssessoriaParceira', 'documentoMascarado',
+                              'parceiroDeTenant']))
                     || isPlatformAdmin();
       allow update: if (isTenantWriter(resource.data.tenantId)
                         && request.resource.data.tenantId == resource.data.tenantId

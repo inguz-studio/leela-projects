@@ -203,21 +203,33 @@ export async function provisionAssessoriaCore(
       typeof input?.nome === 'string' && input.nome.trim().length > 0
         ? input.nome.trim()
         : ((parceriaSnap.get('nome') ?? emailKey) as string);
-    const created = await auth.createUser({
-      email: emailKey,
-      password: senha,
-      emailVerified: false,
-      displayName,
-    });
-    uid = created.uid;
-    contaCriadaNesteRun = true;
+    try {
+      const created = await auth.createUser({
+        email: emailKey,
+        password: senha,
+        emailVerified: false,
+        displayName,
+      });
+      uid = created.uid;
+      contaCriadaNesteRun = true;
+    } catch (err) {
+      // Corrida de dois aceites concorrentes (fix review antagonista
+      // O3-L3B #4): o perdedor do createUser cai no ramo "conta existe"
+      // (vincula sem tocar credencial) em vez de subir 'internal'.
+      if ((err as { code?: unknown }).code === 'auth/email-already-exists') {
+        uid = (await auth.getUserByEmail(emailKey)).uid;
+      } else {
+        throw err;
+      }
+    }
     // Papel: default 'athlete' nasce do trigger onCreateUser (premissa —
     // nenhuma claim de tenant é concedida pelo aceite).
   }
 
   // ── Transação: ativa parceria + fecha ownership + carimba convite ────────
+  let replayConcorrente = false;
   try {
-    await db.runTransaction(async (tx) => {
+    replayConcorrente = await db.runTransaction<boolean>(async (tx) => {
       const [pFresco, cFresco, clubeFresco] = await Promise.all([
         tx.get(parceriaRef),
         tx.get(conviteRef),
@@ -225,8 +237,18 @@ export async function provisionAssessoriaCore(
       ]);
 
       // Anti-TOCTOU: revogação/encerramento concorrente vence — o aceite
-      // NUNCA ressuscita parceria que deixou de estar pendente.
+      // NUNCA ressuscita parceria que deixou de estar pendente. Exceção
+      // (fix review antagonista O3-L3B #4): dois aceites CONCORRENTES do
+      // MESMO responsável — o perdedor enxerga 'ativa' com o PRÓPRIO uid e
+      // devolve replay, não erro (idempotência vale sob concorrência).
       if (!pFresco.exists || pFresco.get('status') !== 'convite_pendente') {
+        if (
+          pFresco.exists &&
+          pFresco.get('status') === 'ativa' &&
+          pFresco.get('responsavelUid') === uid
+        ) {
+          return true; // replay concorrente — commit vazio, estado já correto
+        }
         throw new https.HttpsError(
           'failed-precondition',
           'Parceria deixou de estar pendente durante o aceite (operação ' +
@@ -256,6 +278,7 @@ export async function provisionAssessoriaCore(
       // Ownership provisória (cadastro) → responsável (RN-363)
       tx.update(clubeRef, { ownerId: uid, atualizadoEm: now });
       tx.update(conviteRef, { status: 'aceito', aceitoEm: now });
+      return false;
     });
   } catch (err) {
     // Compensação: conta criada NESTE run sem vínculo efetivado → remove
@@ -273,7 +296,7 @@ export async function provisionAssessoriaCore(
     contaCriada: contaCriadaNesteRun,
   });
 
-  return { ok: true, clubeId, replay: false };
+  return { ok: true, clubeId, replay: replayConcorrente };
 }
 
 // ---------------------------------------------------------------------------
