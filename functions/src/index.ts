@@ -283,3 +283,21 @@ export { salvarPerfil } from './perfil/salvarPerfil';
 // envelope transacional RN-133 + fan-out RN-219). Replay não duplica
 // (idempotência por campanha+janela). ⚠️ Fable (envio em massa).
 export { dispatchCampanhasAgendadas } from './eventos/dispatchCampanhasAgendadas';
+
+// Assessorias — CADASTRO/VÍNCULO do club parceiro (E18 · S1800-T2 + S1801-T1
+// · RN-361/362 · Onda 3 Lote 3): documento CNPJ/CPF com DV no servidor,
+// dedupe POR CHAVE (docId = documento), clube E05 + parceria; sem conta →
+// convite reusando a máquina E05-S104 (origem='assessoria_parceira' + token
+// hasheado). ⚠️ Fable (cria clube/parceria — cross-tenant).
+export { cadastrarAssessoriaParceira } from './assessorias/cadastrarAssessoria';
+
+// Assessorias — ACEITE/PROVISIONAMENTO da conta do responsável (E18 ·
+// S1801-T3 · RN-363): callable PÚBLICA com token em tempo constante;
+// conta Auth (quando não existe) + ownership do clube + parceria 'ativa'
+// atômico/idempotente; compensação de conta órfã. ⚠️ Fable (provisiona conta).
+export { provisionAssessoriaAccount } from './assessorias/provisionAssessoria';
+
+// Assessorias — ENCERRAR parceria (E18 · S1803 · RN-144): máquina de estados
+// do core, convite pendente cancelado junto, doc retido (90d). O desconto
+// morre por consequência (checkout exige parceria ATIVA — ADR-012).
+export { encerrarParceriaAssessoria } from './assessorias/encerrarParceria';
