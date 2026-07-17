@@ -79,6 +79,23 @@ describe('ConfiguracoesView', () => {
     expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ nome: expect.any(String) }));
   });
 
+  it('capa (imagemUrl) entra no patch da Identidade; nova URL mostra prévia (RN-166)', async () => {
+    const onSalvar = vi.fn();
+    renderView({ onSalvar });
+    const secao = screen.getByRole('region', { name: 'Identidade' });
+    const capa = within(secao).getByLabelText('Imagem de capa (URL)');
+    await userEvent.clear(capa);
+    await userEvent.type(capa, 'https://cdn.exemplo.com/capa.jpg');
+    expect(within(secao).getByAltText('Prévia da capa do clube')).toHaveAttribute(
+      'src',
+      'https://cdn.exemplo.com/capa.jpg',
+    );
+    await userEvent.click(within(secao).getByRole('button', { name: 'Salvar alterações' }));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ imagemUrl: 'https://cdn.exemplo.com/capa.jpg' }),
+    );
+  });
+
   it('card crítico "Deletar clube" dispara onDeletar', async () => {
     const onDeletar = vi.fn();
     renderView({ onDeletar });

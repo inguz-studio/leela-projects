@@ -37,6 +37,18 @@ export interface ConfiguracoesViewProps {
   onDeletar: () => void;
 }
 
+/** URL http(s) válida? Só decide se mostra a prévia da capa. @pure */
+function urlDeImagemValida(valor: string): boolean {
+  const v = valor.trim();
+  if (v.length === 0) return false;
+  try {
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function Secao({
   id,
   titulo,
@@ -90,6 +102,8 @@ export function ConfiguracoesView({
 }: ConfiguracoesViewProps): JSX.Element {
   const [nome, setNome] = useState(clube.nome);
   const [descricao, setDescricao] = useState(clube.descricao);
+  // Capa `imagemUrl` (RN-166) — string vazia = sem capa (fallback gradiente).
+  const [imagemUrl, setImagemUrl] = useState(clube.imagemUrl ?? '');
   const [categoria, setCategoria] = useState(clube.categoria);
   const [modalidade, setModalidade] = useState(clube.modalidade);
   const [cidade, setCidade] = useState(clube.localizacao.cidade);
@@ -176,6 +190,9 @@ export function ConfiguracoesView({
               descricao: descricao.trim(),
               categoria,
               modalidade,
+              // Capa vazia é enviada como '' de propósito (api-client mapeia
+              // para deleteField → sem capa, a página cai no gradiente do DS).
+              imagemUrl: imagemUrl.trim(),
               localizacao: online
                 ? { cidade: '', estado: '', online: true }
                 : { cidade: cidade.trim(), estado, online: false },
@@ -202,6 +219,33 @@ export function ConfiguracoesView({
               className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
             />
           </label>
+          {/* Capa do clube (RN-166 · S1702-T1) — URL + prévia; sem capa a
+              página pública usa o gradiente do DS. Upload de arquivo é lacuna
+              (sem Storage no repo — mesmo estado do evento). */}
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <Input
+              id="config-capa"
+              type="url"
+              inputMode="url"
+              label="Imagem de capa (URL)"
+              value={imagemUrl}
+              onChange={(e) => setImagemUrl(e.target.value)}
+              placeholder="https://…/capa.jpg"
+              aria-describedby="config-capa-hint"
+            />
+            <span id="config-capa-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Sem capa, a página do clube usa um gradiente. Upload de arquivo ainda não está disponível — cole uma URL.
+            </span>
+            {urlDeImagemValida(imagemUrl) ? (
+              <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-base)]">
+                <img
+                  src={imagemUrl.trim()}
+                  alt="Prévia da capa do clube"
+                  className="aspect-[16/10] w-full object-cover"
+                />
+              </div>
+            ) : null}
+          </div>
           {/* Mesmos selects do form de criação — criar e editar não divergem. */}
           <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
             <Select

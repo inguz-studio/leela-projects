@@ -190,6 +190,10 @@ export type AtualizarClubeInput = Partial<
     | 'visibilidade'
     | 'aprovacaoManual'
     | 'modeloEntrada'
+    // Capa do clube (RN-166 · S1702-T1): nome canônico `imagemUrl`, mesmo do
+    // evento. `validarClube` (core) e as Rules validam o http(s); a UI manda
+    // string vazia para LIMPAR (vira deleteField → fallback gradiente do DS).
+    | 'imagemUrl'
   >
 >;
 
@@ -199,10 +203,16 @@ export async function atualizarClube(
   slug: string,
   patch: AtualizarClubeInput
 ): Promise<void> {
-  await updateDoc(doc(db, 'clubes', slug), {
-    ...patch,
-    atualizadoEm: serverTimestamp(),
-  });
+  // Capa vazia = REMOVER o campo (honesto: sem capa a página cai no gradiente).
+  // Firestore recusa `undefined`; string vazia não é URL válida (Rules
+  // reprovariam) — por isso `''` mapeia para deleteField, espelho do capaUrl
+  // das campanhas.
+  const { imagemUrl, ...rest } = patch;
+  const data: Record<string, unknown> = { ...rest, atualizadoEm: serverTimestamp() };
+  if (imagemUrl !== undefined) {
+    data['imagemUrl'] = imagemUrl === '' ? deleteField() : imagemUrl;
+  }
+  await updateDoc(doc(db, 'clubes', slug), data);
 }
 
 // ---------------------------------------------------------------------------
