@@ -507,6 +507,58 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(doc.get('tokenAceiteHash')).toBeUndefined();
   });
 
+  it('C7 (fix review): reenvio com e-mail CORRIGIDO persiste o e-mail no doc e mata o token antigo', async () => {
+    const tokenAntigo = await convitePF();
+    // Organizadora corrige o e-mail do convite (typo) — reenvio
+    const r = await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney Galharte',
+      refCodigo: 'DIONEY10', responsavelEmail: 'dioney.certo@exemplo.com',
+    }, marina);
+    expect(r.jaExistia).toBe(true);
+    const doc = await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get();
+    // Doc converge para o endereço que REALMENTE recebeu o convite
+    expect(doc.get('responsavelEmail')).toBe('dioney.certo@exemplo.com');
+    // Link antigo (entregue ao endereço errado) morreu
+    await expect(
+      provisionAfiliadoCore(db, auth, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: tokenAntigo,
+        senha: 'senha-forte-123',
+      })
+    ).rejects.toThrow(/Convite inválido/);
+    // Token novo aceita e cria a conta NO E-MAIL CORRIGIDO
+    const rAceite = await provisionAfiliadoCore(db, auth, {
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10',
+      token: r.tokenAceite as string, senha: 'senha-forte-123',
+    });
+    expect(rAceite.ok).toBe(true);
+    const user = await auth.getUserByEmail('dioney.certo@exemplo.com');
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get()).get('responsavelUid')
+    ).toBe(user.uid);
+  });
+
+  it('C8 (fix review): reenvio quando o e-mail vigente JÁ tem conta = vínculo imediato no update (token morto)', async () => {
+    const tokenAntigo = await convitePF();
+    const user = await auth.createUser({ email: 'dioney@exemplo.com' });
+    const r = await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney Galharte',
+      refCodigo: 'DIONEY10', responsavelEmail: 'dioney@exemplo.com',
+    }, marina);
+    expect(r.status).toBe('ativo');
+    expect(r.tokenAceite).toBeUndefined();
+    const doc = await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get();
+    expect(doc.get('responsavelUid')).toBe(user.uid);
+    expect(doc.get('tokenAceiteHash')).toBeUndefined();
+    expect(doc.get('expiraEm')).toBeUndefined();
+    // Token antigo não ressuscita o convite
+    await expect(
+      provisionAfiliadoCore(db, auth, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: tokenAntigo,
+        senha: 'senha-forte-123',
+      })
+    ).rejects.toThrow(/já foi aceito|Convite inválido/);
+  });
+
   // ── D · Atribuição no checkout + conversão + gate RN-315 ─────────────────
 
   it('D1: ?ref válido carimba pagamento.afiliado; confirmação registra conversão + ∑; replay não duplica', async () => {

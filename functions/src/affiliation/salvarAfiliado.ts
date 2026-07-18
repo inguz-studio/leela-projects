@@ -296,8 +296,20 @@ export async function salvarAfiliadoCore(
         if (!anteriorSnap.exists) cupomRefAnterior = null;
       }
 
+      // FIX pós-review antagonista (R9-E-ret): re-salvar um PF ainda
+      // convite_pendente cujo e-mail JÁ tem conta = vínculo imediato no
+      // UPDATE (espelho do create) — sem isso o doc ficava pendente com
+      // token vivo apontando para um e-mail que já não é o canal do aceite.
+      const vinculoImediatoNoUpdate =
+        jaExistia &&
+        input.tipo === 'pessoa_fisica' &&
+        snap.get('status') === 'convite_pendente' &&
+        responsavelUid !== null;
+
       const statusFinal: StatusAfiliado = jaExistia
-        ? (input.status ?? (snap.get('status') as StatusAfiliado))
+        ? vinculoImediatoNoUpdate
+          ? (input.status ?? 'ativo')
+          : (input.status ?? (snap.get('status') as StatusAfiliado))
         : conviteSeraNecessario
           ? 'convite_pendente'
           : (input.status ?? 'ativo');
@@ -367,15 +379,30 @@ export async function salvarAfiliadoCore(
         };
         patch['canal'] = canal;
         if (cupomCodigo !== undefined) patch['cupomCodigo'] = cupomCodigo;
-        // Reenvio de convite PF ainda pendente: re-emite token + janela
-        // (idempotente — RN-106 espelhada; nada duplica).
+        // Reenvio de convite PF ainda pendente (FIX pós-review antagonista
+        // R9-E-ret): o aceite lê o e-mail DO DOC (provisionAfiliado), então
+        // o reenvio PERSISTE responsavelEmail/documentoMascarado vigentes —
+        // convite reenviado com e-mail corrigido converge doc ↔ destinatário
+        // — e SEMPRE re-emite token (o link antigo, entregue ao endereço
+        // antigo, morre: anti-sequestro de convite re-endereçado).
         if (
           input.tipo === 'pessoa_fisica' &&
-          snap.get('status') === 'convite_pendente' &&
-          responsavelUid === null
+          snap.get('status') === 'convite_pendente'
         ) {
-          patch['tokenAceiteHash'] = tokenHash;
-          patch['expiraEm'] = expiraEm;
+          patch['responsavelEmail'] = emailKey;
+          if (documentoMascarado !== null) {
+            patch['documentoMascarado'] = documentoMascarado;
+          }
+          if (vinculoImediatoNoUpdate) {
+            // Conta já existe para o e-mail vigente: vincula e mata o
+            // convite (token nunca mais aceita — estado é o anchor).
+            patch['responsavelUid'] = responsavelUid;
+            patch['tokenAceiteHash'] = FieldValue.delete();
+            patch['expiraEm'] = FieldValue.delete();
+          } else {
+            patch['tokenAceiteHash'] = tokenHash;
+            patch['expiraEm'] = expiraEm;
+          }
         }
         tx.update(afiliadoRef, patch);
       }
