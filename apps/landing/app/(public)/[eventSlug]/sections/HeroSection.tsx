@@ -4,20 +4,39 @@ import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
 import { HeroCover } from './HeroCover';
+import { resolverCapa } from './cover';
 
 /**
- * Hero da página de evento (S1201-T2): nome, data, local, chip, CTA "Garantir
- * inscrição" e o "a partir de" derivado do preço vigente. A capa usa o
- * `HeroCover`: gradiente de tokens (igual aos cards da home) quando não há URL
- * de capa, e fallback resiliente para o MESMO gradiente se a imagem falhar —
- * nunca um `<img>` quebrado com alt à mostra.
+ * Hero da página de evento (S1201-T2 · LEELA-R7): nome, data, local, chip, CTA
+ * "Garantir inscrição" e o "a partir de" derivado do preço vigente.
+ *
+ * A MESMA capa aparece duas vezes (pedido do brief): NÍTIDA no painel de mídia
+ * (`HeroCover`) e BORRADA como plano de fundo do hero inteiro (`filter: blur`
+ * em camada própria + overlay de escurecimento p/ contraste AA do texto). Sem
+ * capa do organizador, ambas caem na capa mock local (`resolverCapa`). A camada
+ * de fundo é `absolute` (fora do fluxo) e o painel de mídia reserva `aspect`
+ * fixo — zero CLS. Sem borda e sem troca de fundo: o hero funde na próxima dobra
+ * por um gradiente do MESMO eixo dark (zero linha na divisória).
  */
 export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.Element {
   const aberta = evento.estadoVenda === 'aberto';
+  const capa = resolverCapa(evento.imagemUrl);
 
   return (
-    <section className="border-b border-border-subtle bg-surface-sunken">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-16">
+    <section className="relative isolate overflow-hidden">
+      {/* Plano de fundo: MESMA capa, borrada + escurecida p/ AA. aria-hidden e
+          alt vazio — é decoração; o conteúdo abaixo carrega a informação. */}
+      <div aria-hidden className="absolute inset-0 -z-10">
+        <img src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
+        {/* Escurecimento base — garante contraste AA do texto sobre a imagem */}
+        <div className="absolute inset-0 bg-surface-base/80" />
+        {/* Reforço lateral no lado do texto (esquerda) */}
+        <div className="absolute inset-0 bg-gradient-to-r from-surface-base/80 via-surface-base/40 to-transparent" />
+        {/* Fade inferior: funde no surface-base da próxima dobra, sem linha */}
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-surface-base" />
+      </div>
+
+      <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
         {/* Conteúdo */}
         <div className="order-2 lg:order-1">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-text-brand">
@@ -86,10 +105,10 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
           ) : null}
         </div>
 
-        {/* Media 16/10 — imagem de capa ou gradiente de tokens */}
+        {/* Media 16/10 — capa NÍTIDA (mesma imagem do fundo borrado) */}
         <div className="order-1 lg:order-2">
           <div className="relative aspect-[16/10] overflow-hidden rounded-ds-lg shadow-elev-2">
-            <HeroCover imagemUrl={evento.imagemUrl} nome={evento.nome} />
+            <HeroCover src={capa} nome={evento.nome} />
             <div className="absolute left-4 top-4 flex flex-col items-center rounded-ds-md bg-surface-overlay px-4 py-2 text-center leading-none shadow-elev-1">
               <span className="font-display text-2xl font-extrabold text-text-primary">
                 {evento.dataLabel.split(' ')[0]}

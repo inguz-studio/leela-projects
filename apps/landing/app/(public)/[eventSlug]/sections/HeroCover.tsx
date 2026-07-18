@@ -1,17 +1,11 @@
 import { CoverImage } from '@/app/components/CoverImage';
 
 /**
- * Capa do hero da página de evento (S1201-T2 · S1702-T2). Delega ao leaf
- * compartilhado `CoverImage` — fonte única do gradiente de fallback, reusada
- * também pelos cards da home. Sem URL (seed/maioria) → gradiente de tokens; com
- * URL, imagem com fallback resiliente ao MESMO gradiente se o link falhar.
+ * Capa NÍTIDA do hero da página de evento (S1201-T2 · LEELA-R7). Recebe a fonte
+ * já resolvida (`resolverCapa` no HeroSection): capa http(s) do organizador ou a
+ * capa mock local. Delega ao leaf `CoverImage`, que mantém o fallback resiliente
+ * ao gradiente de tokens caso o `src` falhe em runtime (link morto).
  */
-export function HeroCover({
-  imagemUrl,
-  nome,
-}: {
-  imagemUrl: string | undefined;
-  nome: string;
-}): React.JSX.Element {
-  return <CoverImage src={imagemUrl} alt={`Capa de ${nome}`} />;
+export function HeroCover({ src, nome }: { src: string; nome: string }): React.JSX.Element {
+  return <CoverImage src={src} alt={`Capa de ${nome}`} />;
 }

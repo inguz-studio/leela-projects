@@ -19,8 +19,8 @@ export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Ele
   const aberta = evento.estadoVenda === 'aberto';
 
   return (
-    <section className="border-b border-border-subtle bg-surface-sunken">
-      <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:py-20">
+    <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <div className="mx-auto max-w-3xl">
         <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl">
           {evento.nome}
         </h1>

@@ -116,7 +116,17 @@ interface EventoExtra {
   capacidade: number;
   receitaConfirmada: number;
   qtdInscritos: number;
-  /** Capa 16/10 do card (path local em apps/painel/public/seed-images/). */
+  /**
+   * Capa 16/10 do card, path local de `apps/painel/public/seed-images/`. Este
+   * campo serve o PAINEL (que resolve o path relativo no próprio public). A
+   * LANDING pública NÃO reusa este valor: a guarda RN-153 (`isUrlCapaValida`,
+   * @leela/core) só aceita URL http(s), então caminho relativo é descartado e a
+   * página do evento cai na CAPA MOCK local da landing
+   * (`apps/landing/public/covers/leela-evento-brasa.svg`, resolvida por
+   * `resolverCapa` — LEELA-R7). Manter relativo aqui é proposital: seedar URL
+   * absoluta de localhost regrediria as miniaturas do painel e seria frágil a
+   * porta. Ver outputs/leela-build-2d6ee98d/R7-DOBRAS-HERO-REPORT.md.
+   */
   imagemUrl: string;
 }
 
