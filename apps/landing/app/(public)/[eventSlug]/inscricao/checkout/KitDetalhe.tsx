@@ -11,7 +11,7 @@
 
 import { Check, PackageOpen } from 'lucide-react';
 import type { KitPublico } from '@/lib/tipos';
-import { detalheDoKit } from './kitDetalhe';
+import { detalheDoKit } from './kitDetalheDados';
 
 /** Slot de imagem 1:1 do kit — imagem real quando existir, senão mock digno. */
 function ImagemKit({ nome, imagemUrl }: { nome: string; imagemUrl: string | null }): React.JSX.Element {
