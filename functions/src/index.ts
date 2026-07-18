@@ -324,3 +324,23 @@ export {
   onInscritoWriteAutomacao,
   dispatchAutomacoes,
 } from './eventos/automacoesTriggers';
+
+// Afiliados/influenciadores — SALVAR (E08 antecipado · R9-E · S-R9-11 ·
+// RN-313..317): cria/atualiza afiliado do evento (docId = refCodigo,
+// unicidade por chave), amarra cupom do kernel (afiliadoRef) na MESMA tx,
+// convite PF com token hasheado (padrão E18) e gate fail-closed sem
+// EmailProvider. Rules negam TODA escrita de cliente na subcoleção.
+// ⚠️ Fable (atribuição/dinheiro-adjacente).
+export { salvarAfiliado } from './affiliation/salvarAfiliado';
+
+// Afiliados — ACEITE do convite PF (E08 antecipado · R9-E · RN-316):
+// callable PÚBLICA, token em tempo constante (hash), conta Auth criada/
+// vinculada sem tocar credencial existente, tx anti-TOCTOU + compensação,
+// rate-limit R2 failures-only keyed no alvo. ⚠️ Fable (provisiona conta).
+export { provisionAfiliadoAccount } from './affiliation/provisionAfiliado';
+
+// Afiliados — READERS de projeção fechada (R9-E · RN-318/319): influenciador
+// vê SÓ as próprias conversões (qtd/valor/status — zero dado de terceiros);
+// organizador vê os afiliados do PRÓPRIO tenant (escopo da claim, nunca do
+// input). ⚠️ Fable (escopo de leitura/PII).
+export { getMinhasAfiliacoes, getAfiliadosDoTenant } from './affiliation/readers';

@@ -1016,7 +1016,10 @@ service cloud.firestore {
             // `definirCondicaoDesconto` (kernel + carimbo na parceria na
             // MESMA tx — ADR-012: nenhum segundo caminho de desconto).
             && request.resource.data.get('escopo', 'geral') == 'geral'
-            && !request.resource.data.keys().hasAny(['clubeRef', 'parceriaRef']);
+            // `afiliadoRef` (R9-E · RN-315/316): amarração cupom↔afiliado é
+            // de Function (`salvarAfiliado`, tx dupla) — cliente nunca a
+            // cria (senão inventaria gate de desconto sem dono real).
+            && !request.resource.data.keys().hasAny(['clubeRef', 'parceriaRef', 'afiliadoRef']);
         }
 
         /** `usos` (∑ de Function) nasce 0/ausente. */
@@ -1027,10 +1030,12 @@ service cloud.firestore {
         /** Update de cliente não TOCA `usos` nem `codigo` (chave/∑ imutáveis).
             Nem o escopo/amarração E18 (RN-364): de-escopar um cupom
             'club_parceiro' pelo cliente reviveria o desconto sem a guarda
-            de parceria ATIVA e órfãnaria a condicaoDesconto. */
+            de parceria ATIVA e órfãnaria a condicaoDesconto. Nem o
+            `afiliadoRef` (R9-E · RN-315): des-amarrar pelo cliente
+            destravaria o desconto ANTES do mínimo de inscrições. */
         function usosECodigoIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['usos', 'escopo', 'clubeRef', 'parceriaRef'])
+              .hasAny(['usos', 'escopo', 'clubeRef', 'parceriaRef', 'afiliadoRef'])
             && request.resource.data.codigo == resource.data.codigo;
         }
 
@@ -1058,10 +1063,13 @@ service cloud.firestore {
         // com ele órfãnaria a auditoria do checkout. Remoção real = Function.
         // Cupom 'club_parceiro' NUNCA some pelo cliente (órfãnaria a
         // condicaoDesconto da parceria — o ciclo dele é da Function E18).
+        // Cupom AMARRADO a afiliado (R9-E) também não some pelo cliente —
+        // órfãnaria `afiliado.cupomCodigo` (desamarrar = Function).
         allow delete: if (isTenantWriter(resource.data.tenantId)
                           && tenantAtivo(resource.data.tenantId)
                           && resource.data.get('usos', 0) == 0
-                          && resource.data.get('escopo', 'geral') == 'geral')
+                          && resource.data.get('escopo', 'geral') == 'geral'
+                          && resource.data.get('afiliadoRef', '') == '')
                       || isPlatformAdmin();
       }
 
@@ -1537,6 +1545,45 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // `afiliados/{afiliadoId}` — afiliados/influenciadores do evento
+      // (E08 antecipado · R9-E · S-R9-11 · RN-313..319). docId == refCodigo
+      // (unicidade por chave, como cupons).
+      //
+      // ESCRITA: NEGADA para TODO client SDK — o ciclo inteiro é de
+      // Function (`salvarAfiliado` / aceite PF / ∑ de conversão do webhook):
+      // refCodigo é CHAVE, `conversoes`/`valorAtribuido` são ∑ RN-314,
+      // `responsavelUid`/`tokenAceiteHash` são trust anchors RN-316/318 e a
+      // amarração cupom↔afiliado exige transação dupla — nenhum pedaço é
+      // seguro pelo cliente. (Postura pós-19c8afe: nem platform_admin via
+      // client SDK; Admin SDK segue para tooling.)
+      //
+      // LEITURA (RN-318/319 — fail-closed): organizador (tenant writer) vê
+      // os afiliados do PRÓPRIO evento; o PRÓPRIO influenciador
+      // (responsavelUid — estampado por Function) vê SÓ o seu doc. O shape
+      // não carrega dado de terceiros (documento SÓ mascarado; nenhum dado
+      // de comprador). Membro genérico do tenant NÃO lê (e-mail do PF é
+      // PII; refCodigo alheio é ativo de atribuição).
+      match /afiliados/{afiliadoId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || (isSignedIn()
+                        && resource.data.get('responsavelUid', '') == request.auth.uid);
+        allow write: if false;
+
+        // `conversoes/{conversaoId}` — 1 doc por PEDIDO confirmado
+        // (RN-314): escrita EXCLUSIVA da Function do webhook (mesma tx da
+        // confirmação — idempotente por chave). Shape SEM PII de comprador
+        // (valor/instantes/pedidoRef). Leitura espelha o doc pai.
+        match /conversoes/{conversaoId} {
+          allow read: if isPlatformAdmin()
+                      || isTenantWriter(tenantDoEventoPai())
+                      || (isSignedIn()
+                          && get(/databases/$(database)/documents/eventos/$(eventoId)/afiliados/$(afiliadoId))
+                              .data.get('responsavelUid', '') == request.auth.uid);
+          allow write: if false;
+        }
+      }
+
       match /{subcol}/{docId} {
         // ALLOWLIST de leitura de membro (re-review Fable A-T2 A2): SÓ as
         // subcoleções explicitamente não-sensíveis (kits/lotes/paginaVendas)
@@ -1935,6 +1982,13 @@ service cloud.firestore {
             && (request.resource.data.modeloComercial != 'financeiro'
                 || (request.resource.data.get('valorAnual', 0) is number
                     && request.resource.data.get('valorAnual', 0) > 0))
+            // Logo 1:1 do patrocinador (R9-E · adendo S-R9-12): quando
+            // presente, URL http(s) curta — vira <img> em página pública
+            // (javascript:/data: nunca entram; espelho de capaValida).
+            && (!('logoUrl' in request.resource.data)
+                || (request.resource.data.logoUrl is string
+                    && request.resource.data.logoUrl.size() <= 2048
+                    && request.resource.data.logoUrl.matches('https?://.*')))
             && !request.resource.data.keys().hasAny(camposProtegidosParceria());
         }
 
@@ -2401,6 +2455,50 @@ service cloud.firestore {
         allow read: if (isSignedIn() && request.auth.uid == profId)
                     || isPlatformAdmin();
         allow write: if false;
+      }
+
+      // `marcas/{marcaId}` — registro REUTILIZÁVEL de patrocinador
+      // (R9-E · S-R9-12 · RN-171 — seed do E10-S811).
+      //
+      // OWNER-ONLY (decisão do épico E10): a marca é ativo comercial do
+      // PRÓPRIO profissional — nem staff do mesmo tenant lê a lista alheia
+      // (valores de patrocínio são dado sensível de negociação); nem
+      // platform_admin via client SDK escreve (postura pós-19c8afe).
+      //
+      // SHAPE (RN-123 — espelho de validarMarcaInput do core): modelo
+      // financeiro exige valorAnual > 0 cent-exato; permuta exige
+      // contrapartida ≥ 20 chars; URLs http(s) com teto; status no enum.
+      match /marcas/{marcaId} {
+
+        function shapeMarcaValida() {
+          return request.resource.data.nome is string
+            && request.resource.data.nome.size() >= 1
+            && request.resource.data.nome.size() <= 80
+            && request.resource.data.modeloComercial in ['financeiro', 'permuta']
+            && (request.resource.data.modeloComercial != 'financeiro'
+                || (request.resource.data.get('valorAnual', 0) is number
+                    && moneyCentExato(request.resource.data.get('valorAnual', 0))
+                    && request.resource.data.get('valorAnual', 0) > 0))
+            && (request.resource.data.modeloComercial != 'permuta'
+                || (request.resource.data.get('contrapartida', '') is string
+                    && request.resource.data.get('contrapartida', '').size() >= 20
+                    && request.resource.data.get('contrapartida', '').size() <= 2000))
+            && (!('logoUrl' in request.resource.data)
+                || (request.resource.data.logoUrl is string
+                    && request.resource.data.logoUrl.size() <= 2048
+                    && request.resource.data.logoUrl.matches('https?://.*')))
+            && (!('contratoUrl' in request.resource.data)
+                || (request.resource.data.contratoUrl is string
+                    && request.resource.data.contratoUrl.size() <= 2048
+                    && request.resource.data.contratoUrl.matches('https?://.*')))
+            && request.resource.data.get('status', 'ativa') in ['ativa', 'inativa'];
+        }
+
+        allow read: if isSignedIn() && request.auth.uid == profId;
+        allow create, update: if isSignedIn()
+                              && request.auth.uid == profId
+                              && shapeMarcaValida();
+        allow delete: if isSignedIn() && request.auth.uid == profId;
       }
     }
 
