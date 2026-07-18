@@ -95,7 +95,7 @@ describe('ContaPage — perfil', () => {
 describe('ContaPage — foto de perfil por UPLOAD (LEELA-R5)', () => {
   const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
 
-  it('upload feliz: sobe o arquivo, persiste a downloadURL e preenche o campo', async () => {
+  it('upload feliz: sobe o arquivo, persiste a downloadURL e reflete no avatar', async () => {
     renderPage();
     await screen.findByRole('heading', { name: 'Sua conta' });
     await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
@@ -106,9 +106,19 @@ describe('ContaPage — foto de perfil por UPLOAD (LEELA-R5)', () => {
       ),
     );
     expect(await screen.findByText('Foto atualizada')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ou cole uma URL')).toHaveValue(
-      'https://storage.leela.dev/users/u1/foto-perfil',
+    // RN-168 (S-R9-07): upload-only — o avatar mostra a foto enviada e NÃO há
+    // mais campo "Ou cole uma URL".
+    const preview = document.querySelector(
+      'img[src="https://storage.leela.dev/users/u1/foto-perfil"]',
     );
+    expect(preview).not.toBeNull();
+  });
+
+  it('upload-only (RN-168 · S-R9-07): sem "cole uma URL" nem botão Salvar foto', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    expect(screen.queryByLabelText('Ou cole uma URL')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salvar foto' })).not.toBeInTheDocument();
   });
 
   it('arquivo inválido: erro inline SEM roundtrip de upload', async () => {

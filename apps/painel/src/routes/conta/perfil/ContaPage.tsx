@@ -9,13 +9,14 @@
 // Senhas ficam só no estado controlado dos inputs enquanto a tela existe e são
 // limpas após o sucesso; nunca são logadas.
 //
-// FOTO DE PERFIL (S020-T5 + LEELA-R5): dois caminhos para o MESMO campo
-// (Auth.photoURL → Avatar do rodapé via shell/session.ts):
-//   1. UPLOAD de arquivo (FileInput → `uploadFotoPerfilConta` → Storage
-//      `users/{uid}/foto-perfil` → downloadURL) — persiste na hora;
-//   2. URL externa colada + prévia (fallback aceito, fluxo original).
-// Validação de tipo/tamanho no cliente é UX (`problemaDoArquivoImagem`);
-// a fronteira real são as storage.rules (ADR-016).
+// FOTO DE PERFIL (S020-T5 + LEELA-R5 + RN-168 · S-R9-07): UPLOAD-ONLY.
+// Caminho único para o campo Auth.photoURL (→ Avatar do rodapé via
+// shell/session.ts): FileInput → `uploadFotoPerfilConta` → Storage
+// `users/{uid}/foto-perfil` → downloadURL, persistido na hora. O "cole uma
+// URL" (fallback da ADR-016 item 5) foi REMOVIDO — a decisão supersede aquele
+// item no escopo da foto da conta (S-R9-07 / DECISOES-ABERTAS). Validação de
+// tipo/tamanho no cliente é UX (`problemaDoArquivoImagem`); a fronteira real
+// são as storage.rules (ADR-016).
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';
@@ -78,11 +79,11 @@ export function ContaPage(): JSX.Element {
   const nome = nomeEditado ?? nomeOriginal;
   const [salvandoNome, setSalvandoNome] = useState(false);
 
-  // Foto de perfil (URL+prévia). null = não editada → cai no photoURL atual.
+  // Foto de perfil. null = não editada → cai no photoURL atual. Só o upload
+  // altera este estado (RN-168: upload-only, sem "cole uma URL").
   const fotoOriginal = user?.photoURL ?? '';
   const [fotoEditada, setFotoEditada] = useState<string | null>(null);
   const fotoUrl = fotoEditada ?? fotoOriginal;
-  const [salvandoFoto, setSalvandoFoto] = useState(false);
 
   // Upload de ARQUIVO (LEELA-R5): sobe pro Storage e persiste na hora.
   const [enviandoFoto, setEnviandoFoto] = useState(false);
@@ -139,14 +140,6 @@ export function ContaPage(): JSX.Element {
     }
   }
 
-  const fotoValida = fotoUrl.trim().length === 0 || urlDeImagemValida(fotoUrl);
-  const fotoMudou = fotoUrl.trim() !== fotoOriginal.trim();
-  const podeSalvarFoto = fotoValida && fotoMudou && !salvandoFoto;
-  const fotoUrlErro =
-    fotoUrl.trim().length > 0 && !urlDeImagemValida(fotoUrl)
-      ? 'Use uma URL http(s) de imagem.'
-      : undefined;
-
   // Upload de arquivo → Storage → grava a downloadURL no MESMO campo de hoje.
   // Valida tipo/tamanho ANTES do roundtrip (erro inline no FileInput); a
   // fronteira real são as storage.rules — aqui é UX.
@@ -171,24 +164,6 @@ export function ContaPage(): JSX.Element {
       });
     } finally {
       setEnviandoFoto(false);
-    }
-  }
-
-  async function salvarFoto(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!podeSalvarFoto) return;
-    setSalvandoFoto(true);
-    try {
-      await atualizarFotoPerfil(fotoUrl.trim());
-      setFotoEditada(fotoUrl.trim());
-      toast({
-        variant: 'success',
-        title: fotoUrl.trim().length === 0 ? 'Foto removida' : 'Foto atualizada',
-      });
-    } catch {
-      toast({ variant: 'danger', title: 'Não foi possível salvar a foto', description: 'Tente novamente.' });
-    } finally {
-      setSalvandoFoto(false);
     }
   }
 
@@ -248,9 +223,10 @@ export function ContaPage(): JSX.Element {
         </div>
       </form>
 
-      {/* Foto de perfil (S020-T5 + LEELA-R5) — upload de arquivo OU URL
-          externa (fallback); reflete no Avatar do rodapé. */}
-      <form className={SECAO} onSubmit={(e) => void salvarFoto(e)} aria-label="Foto de perfil">
+      {/* Foto de perfil (S020-T5 + LEELA-R5 + RN-168) — upload-only via Storage;
+          persiste na hora e reflete no Avatar do rodapé. O "cole uma URL" foi
+          removido (S-R9-07; supersede ADR-016 item 5 na conta). */}
+      <section className={SECAO} aria-label="Foto de perfil">
         <span className={SECAO_TITULO}>Foto de perfil</span>
         <div className="flex items-center gap-[var(--spacing-4)]">
           <Avatar size="lg" name={nome || (user.email ?? 'Você')} {...(urlDeImagemValida(fotoUrl) ? { src: fotoUrl.trim() } : {})} />
@@ -264,30 +240,9 @@ export function ContaPage(): JSX.Element {
               {...(erroUploadFoto ? { errorMessage: erroUploadFoto } : {})}
               onFileSelected={(file) => void enviarFoto(file)}
             />
-            <div className="flex flex-col gap-[var(--spacing-1)]">
-              <Input
-                id="conta-foto-url"
-                type="url"
-                inputMode="url"
-                label="Ou cole uma URL"
-                value={fotoUrl}
-                onChange={(e) => setFotoEditada(e.target.value)}
-                placeholder="https://…/foto.jpg"
-                {...(fotoUrlErro ? { errorMessage: fotoUrlErro } : {})}
-              />
-              <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                URL http(s) de uma imagem já hospedada. Deixe vazio para voltar ao avatar com suas
-                iniciais.
-              </span>
-            </div>
           </div>
         </div>
-        <div>
-          <Button type="submit" variant="primary" disabled={!podeSalvarFoto}>
-            {salvandoFoto ? 'Salvando…' : 'Salvar foto'}
-          </Button>
-        </div>
-      </form>
+      </section>
 
       {/* Perfil público / link-in-bio (DN-1-T1 · E17) — editor separado */}
       <section className={SECAO} aria-label="Perfil público">
