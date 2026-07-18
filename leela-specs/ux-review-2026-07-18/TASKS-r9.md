@@ -51,8 +51,8 @@
 | `S-R9-08-T3` | Upload 1:1 no `KitEditor` (painel) + thumb na gestão (`KitsCadastroView`) | S | `apps/painel/src/routes/eventos/kits/**` | S-R9-08-T2 | **Opus** | — |
 | `S-R9-08-T4` | Thumb 1:1 no card de kit da landing (dobra de kits) | XS | `apps/landing/app/(public)/[eventSlug]/sections/KitsSection.tsx` | S-R9-08-T1 | **Opus** | — |
 | `S-R9-09-T1` | Storage path `eventos/{eventoId}/capa` + regra (padrão clube) — se optar por upload; senão reusa `imagemUrl` já suportado | S | `packages/api-client/src/storage.ts` + `storage.rules` | LEELA-R5 ✅ | **Fable** | ⚔ (cross-tenant) |
-| `S-R9-09-T2` | Ligar edição da capa (thumb horizontal 16/10) na página de vendas → persiste `Evento.imagemUrl` via `atualizarConfiguracoesEvento`; RN-228; render no card+hero | M | `apps/painel/src/routes/eventos/pagina-vendas/**` (ou `configuracoes`) | S-R9-09-T1 | **Opus** | — |
-| `S-R9-09-T3` | **Pesquisa web** da dimensão de capa da cheers (discovery não tem — `benchmark-cheers.md` sem pixel/aspect); confirmar/ajustar RN-228 (default 16/10 até lá) | XS | `leela-specs/discovery/**` (nota) | — | **Opus** | — |
+| `S-R9-09-T2` | Ligar edição da capa/banner (horizontal **1600×838, 1.9:1**, ≤2MB, JPEG/GIF/PNG — RN-228 ratificada) na página de vendas → persiste `Evento.imagemUrl` via `atualizarConfiguracoesEvento`; validação de upload app-level; ajustar `aspect-[16/10]`→1.9:1 no `HeroSection`/`EventoForm`; render no card+hero | M | `apps/painel/src/routes/eventos/pagina-vendas/**` (ou `configuracoes`) | S-R9-09-T1 | **Opus** | — |
+| ~~`S-R9-09-T3`~~ | ~~Pesquisa web da dimensão de capa da cheers~~ **RESOLVIDA (removida)** — dimensão fornecida pelo Vitor (adendo 6, fonte spec da Cheers): 1600×838, 1.9:1, ≤2MB, JPEG/GIF/PNG | — | — | — | — | — |
 
 **Gate do lote:** review antagonista nas Rules de Storage (S-R9-08-T2 / S-R9-09-T1 — cross-tenant, SVG banido) · emulator storage.rules (padrão dos 25/25 do R5) · AA.
 
@@ -114,11 +114,11 @@
 |---|---|---|---|
 | **R9-A** Conformidade DS/UI | S-R9-04, 05, 07, 10 | 7 | Opus/DS |
 | **R9-B** Análise financeira unificada | S-R9-01, 02, 03 | 6 | Opus + Fable (agregado) |
-| **R9-C** Imagens de evento | S-R9-08, 09 | 7 | Opus + Fable (Storage rules) |
+| **R9-C** Imagens de evento | S-R9-08, 09 | 6 | Opus + Fable (Storage rules) |
 | **R9-D** Fluidez | S-R9-06 | 4 | Opus (data-layer) |
 | **R9-E** Marketing/marcas | S-R9-11, 12 | 10 | Fable (atribuição) + Opus |
 | **R9-F** CRM + Comunicação | S-R9-13 | 5 | Fable (PII) + Opus |
-| **Total** | **13 stories** | **39 tasks** | Fable + Opus (Sonnet proibido) |
+| **Total** | **13 stories** | **38 tasks** | Fable + Opus (Sonnet proibido) |
 
 **Antagonista (⚔):** S-R9-02-T1 (PII agregado) · S-R9-08-T1/T2 + S-R9-09-T1 (Storage rules cross-tenant) · S-R9-11-T1/T2/T3/T5/T6/T7/T8 (atribuição/dinheiro/idempotência/provisiona conta/PII/escopo de leitura) · S-R9-12-T1 (Rules owner) · S-R9-13-T1/T2/T5 (PII/LGPD). **Deliberadamente SEM ⚔** (não inflar): telas de leitura/config sobre dado já gateado, DS/UI de conformidade, viz. **Hipótese HIP-R9-01 (pré-compra)** = pendente validação com organizador; NÃO gera task até ratificar (dinheiro ⇒ Fable + review antagonista quando entrar).
 
