@@ -359,7 +359,7 @@ function AnaliseFiltros({
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             Evento
           </span>
-          <div className="w-[16rem] max-w-full">
+          <div className="w-[var(--sidebar-width)] max-w-full">
             <Combobox
               options={options}
               value={eventoSelecionado ?? TODOS_OS_EVENTOS}
@@ -378,7 +378,7 @@ function AnaliseFiltros({
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             Período
           </span>
-          <div className="w-[18rem] max-w-full">
+          <div className="w-[var(--sidebar-width)] max-w-full">
             <DateRangePicker
               value={intervalo}
               onValueChange={onIntervaloChange}
