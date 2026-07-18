@@ -112,6 +112,12 @@ export interface CreateInscricaoChargeInput {
   forma: FormaPagamento;
   parcelas: number;
   cupomCodigo?: string;
+  /**
+   * Atribuição de afiliado (R9-E · RN-313): refCodigo do `?ref=` +
+   * instante do PRIMEIRO clique (localStorage). Ref desconhecido/fora da
+   * janela NUNCA bloqueia a compra — o servidor só descarta a atribuição.
+   */
+  ref?: { codigo: string; clicadoEmMillis?: number };
   /** Chave de idempotência do cliente (8–64 A-Za-z0-9_- — RN-333). */
   idempotencyKey: string;
 }

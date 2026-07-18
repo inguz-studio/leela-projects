@@ -29,10 +29,15 @@ export default async function InscricaoPage({ params, searchParams }: Props): Pr
 
   const aberta = evento.estadoVenda === 'aberto';
 
-  // Atribuição preservada pelo CTA (cupom pré-preenche o campo; c/ref/utm
-  // seguem para a resolução de afiliado — S1204, fora deste lote).
+  // Atribuição preservada pelo CTA: cupom pré-preenche o campo; `ref`
+  // (R9-E · RN-313) segue para o checkout — o clique original (localStorage,
+  // RefTracker) tem precedência de instante; utm_* ficam informativos.
   const cupom = primeiro(searchParams['cupom']);
-  const atribuicao = cupom !== undefined && cupom.length > 0 ? { cupom } : {};
+  const ref = primeiro(searchParams['ref']);
+  const atribuicao = {
+    ...(cupom !== undefined && cupom.length > 0 ? { cupom } : {}),
+    ...(ref !== undefined && ref.length > 0 ? { ref } : {}),
+  };
 
   if (!aberta) {
     return (

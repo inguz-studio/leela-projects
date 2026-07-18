@@ -9,8 +9,11 @@ import { eventoJsonLd, urlEvento, urlPerfil } from '../../../lib/seo';
 import { JsonLd } from '../../components/JsonLd';
 import { SectionRenderer } from './SectionRenderer';
 import { HeroMinimo } from './sections/HeroMinimo';
+import { GaleriaSection } from './sections/GaleriaSection';
+import { OrganizadorSection } from './sections/OrganizadorSection';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
+import { RefTracker } from './RefTracker';
 import { ShareBlock } from './ShareBlock';
 import { PerfilView } from '../_perfil/PerfilView';
 
@@ -169,6 +172,14 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
       {/* Dados estruturados schema.org/Event (S1205-T1) — no HTML inicial */}
       <JsonLd data={eventoJsonLd(evento)} />
 
+      {/* Captura do `?ref=` do link de afiliado (R9-E · RN-313): registra o
+          PRIMEIRO clique em localStorage p/ a janela de atribuição do
+          checkout. Client-only + useSearchParams → atrás de Suspense (mesmo
+          padrão do CtaInscricao); zero efeito no HTML cacheado. */}
+      <Suspense fallback={null}>
+        <RefTracker slug={evento.slug} />
+      </Suspense>
+
       {/* Seções orientadas por configuração (ativas, na ordem publicada).
           Evento PUBLICADO sem nenhuma seção montada (sem paginaVendas ou tudo
           inativo) cai no HERO MÍNIMO — nome + data + status de vendas, nunca só
@@ -178,6 +189,16 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
       ) : (
         <HeroMinimo evento={evento} />
       )}
+
+      {/* Galeria de imagens de EXEMPLO (LEELA-R12 · Frente 2.4) — só na página
+          completa (evento com seções). Assets locais brasa, app-side (RN-153). */}
+      {evento.secoes.length > 0 ? <GaleriaSection /> : null}
+
+      {/* "Organizado por" (LEELA-R12 · Frente 3.1) — some sem costura quando não
+          há organizador público resolvido. */}
+      {evento.organizador !== null ? (
+        <OrganizadorSection organizador={evento.organizador} />
+      ) : null}
 
       {/* Bloco de compartilhamento (URL + QR) — S1201-T3 / RN-201. Mesma calha
           (max-w-5xl) e ritmo vertical das demais dobras — sem borda/costura. */}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import {
   cotarInscricaoCheckout,
   createInscricaoCharge,
@@ -11,7 +12,7 @@ import {
   type CotarInscricaoCheckoutResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
-import { Button, Stepper } from '@/app/_ds/ds';
+import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
 import type { EventoPublico } from '@/lib/tipos';
@@ -35,18 +36,15 @@ import { StepModalidadeKit } from './StepModalidadeKit';
 import { StepResumo, type LinhaResumo } from './StepResumo';
 import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
+import { CheckoutStepper } from './CheckoutStepper';
 
-// Ordem do mockup/TicketSports (o dono): modalidade → kit → dados → resumo →
-// pagamento → confirmação. Modalidade e kit ficam juntos na etapa 1 (o kit é
-// filtrado pela modalidade); os dados vêm depois. Registrado como decisão
-// (job vence o pixel: o wireframe do Figma põe dados antes do kit).
-const PASSOS = [
-  { id: 'modalidade', label: 'Modalidade e kit' },
-  { id: 'dados', label: 'Dados' },
-  { id: 'resumo', label: 'Resumo' },
-  { id: 'pagamento', label: 'Pagamento' },
-  { id: 'confirmacao', label: 'Confirmação' },
-];
+// Etapas INTERNAS (5), na ordem do mockup/TicketSports (o dono):
+//   [0] modalidade+kit · [1] dados · [2] resumo · [3] pagamento · [4] confirmação
+// Modalidade e kit ficam juntos na etapa 0 (o kit é filtrado pela modalidade);
+// os dados vêm depois (job vence o pixel: o wireframe do Figma põe dados antes
+// do kit). O comprador VÊ só 3 macro-etapas — o agrupamento 5→3 mora em
+// `CheckoutStepper`/`macroDaEtapa` (LEELA-R13 · adendo 10). As validações e o
+// fluxo abaixo seguem por índice interno 0-4, intactos.
 
 /** Chave de idempotência do cliente (RN-333): [A-Za-z0-9_-]{8,64}. */
 function novaChaveIdempotencia(): string {
@@ -67,6 +65,49 @@ function mensagemErro(err: unknown, fallback: string): string {
 
 interface Atribuicao {
   cupom?: string;
+  /** refCodigo do link de afiliado (R9-E · RN-313) — vindo da URL. */
+  ref?: string;
+}
+
+const REF_RE = /^[A-Z0-9]{4,20}$/;
+
+/**
+ * Resolve a atribuição de afiliado (RN-313): o refCodigo da URL do checkout
+ * OU o capturado na landing (RefTracker); o instante do PRIMEIRO clique vem
+ * do localStorage — sem captura, o servidor assume o instante da compra.
+ */
+function refDaCompra(
+  slug: string,
+  refDaUrl: string | undefined
+): { codigo: string; clicadoEmMillis?: number } | undefined {
+  interface RefStorage {
+    codigo?: unknown;
+    clicadoEmMillis?: unknown;
+  }
+  let capturado: RefStorage | null = null;
+  try {
+    const raw = window.localStorage.getItem(`leela:ref:${slug}`);
+    capturado = raw !== null ? (JSON.parse(raw) as RefStorage) : null;
+  } catch {
+    capturado = null;
+  }
+  const codigoUrl =
+    refDaUrl !== undefined ? refDaUrl.trim().toUpperCase() : undefined;
+  const codigoStorage =
+    capturado !== null && typeof capturado.codigo === 'string'
+      ? capturado.codigo
+      : undefined;
+  const codigo = codigoUrl ?? codigoStorage;
+  if (codigo === undefined || !REF_RE.test(codigo)) return undefined;
+  const clicadoEmMillis =
+    codigoStorage === codigo &&
+    capturado !== null &&
+    typeof capturado.clicadoEmMillis === 'number' &&
+    Number.isInteger(capturado.clicadoEmMillis) &&
+    capturado.clicadoEmMillis > 0
+      ? capturado.clicadoEmMillis
+      : undefined;
+  return { codigo, ...(clicadoEmMillis !== undefined ? { clicadoEmMillis } : {}) };
 }
 
 export function CheckoutFlow({
@@ -288,6 +329,12 @@ export function CheckoutFlow({
         forma,
         parcelas: forma === 'pix' ? 1 : parcelas,
         ...(cupomAplicado ? { cupomCodigo: cupomAplicado } : {}),
+        ...((): { ref?: { codigo: string; clicadoEmMillis?: number } } => {
+          // Atribuição de afiliado (RN-313) — nunca bloqueia a compra: o
+          // servidor descarta ref inválido/fora da janela em silêncio.
+          const ref = refDaCompra(evento.slug, atribuicao.ref);
+          return ref !== undefined ? { ref } : {};
+        })(),
         idempotencyKey: chaveRef.current,
       });
       setCharge(data);
@@ -298,7 +345,7 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, forma, parcelas, cupomAplicado]);
+  }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, forma, parcelas, cupomAplicado, atribuicao.ref]);
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
@@ -390,25 +437,25 @@ export function CheckoutFlow({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
-      <Link
-        href={`/${evento.slug}`}
-        className="text-sm font-medium text-text-secondary hover:text-text-primary"
-      >
-        ← Voltar para {evento.nome}
-      </Link>
+      {/* Frente 3: voltar em ghost, rótulo curto (sem "excesso de textos"). */}
+      <Button asChild variant="ghost" size="sm">
+        <Link href={`/${evento.slug}`} aria-label={`Voltar para ${evento.nome}`}>
+          <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
+          Voltar
+        </Link>
+      </Button>
 
-      <h1 className="mt-4 font-display text-2xl font-extrabold tracking-tight text-text-primary sm:text-3xl">
+      <h1 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-text-primary sm:text-3xl">
         Inscrição · {evento.nome}
       </h1>
 
-      <div className="mt-6 overflow-x-auto pb-2">
-        <div className="min-w-max">
-          <Stepper steps={PASSOS} current={step} aria-label="Etapas do checkout" />
-        </div>
+      {/* Frentes 5+6: 3 macro-etapas visíveis, com ícone por etapa. */}
+      <div className="mt-8">
+        <CheckoutStepper step={step} />
       </div>
 
       {erroAuth ? (
-        <div className="mt-6 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
+        <div className="mt-8 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
           <p className="text-sm font-medium text-feedback-warning-fg">{erroAuth}</p>
           <p className="mt-1 text-sm text-text-secondary">
             O checkout precisa de uma sessão anônima (Firebase Anonymous Auth). Verifique se o
@@ -417,7 +464,7 @@ export function CheckoutFlow({
         </div>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-10">
         {step === 0 ? (
           <StepModalidadeKit
             modalidades={evento.modalidades}
@@ -496,8 +543,9 @@ export function CheckoutFlow({
       </div>
 
       {mostraNav ? (
-        <div className="mt-8 flex items-center justify-between gap-3 border-t border-border-subtle pt-5">
+        <div className="mt-10 flex items-center justify-between gap-3 border-t border-border-subtle pt-6">
           <Button variant="ghost" onClick={voltar} disabled={step === 0}>
+            <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
             Voltar
           </Button>
           <Button
@@ -508,8 +556,9 @@ export function CheckoutFlow({
           </Button>
         </div>
       ) : step === 3 ? (
-        <div className="mt-8 flex items-center justify-between gap-3 border-t border-border-subtle pt-5">
+        <div className="mt-10 flex items-center justify-between gap-3 border-t border-border-subtle pt-6">
           <Button variant="ghost" onClick={voltar} disabled={confirmando}>
+            <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
             Voltar
           </Button>
           {cotacao ? (

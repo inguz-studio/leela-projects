@@ -37,9 +37,14 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
+  COLECAO_AFILIADOS,
   computeSaleState,
   createTermsProvider,
+  dentroDaJanelaAtribuicao,
+  descontoAfiliadoAtivo,
   isCodigoCupomValido,
+  isRefCodigoValido,
+  normalizarRefCodigo,
   isFormaPagamento,
   isKitInscrito,
   isModoTaxa,
@@ -125,6 +130,16 @@ export interface CreateInscricaoChargeInput {
   parcelas: number;
   /** Código de cupom (normalizado no servidor — E04). */
   cupomCodigo?: string;
+  /**
+   * Atribuição de afiliado (R9-E · RN-313): `codigo` = refCodigo capturado
+   * do `?ref=` na landing; `clicadoEmMillis` = instante do PRIMEIRO clique
+   * (localStorage do atleta — claim do cliente, clampado no servidor).
+   * SEMÂNTICA FAIL-OPEN PARA A VENDA: ref com SHAPE inválido é
+   * invalid-argument (bug de cliente), mas ref DESCONHECIDO/inativo/fora da
+   * janela só DESCARTA a atribuição — parâmetro de marketing nunca bloqueia
+   * dinheiro (RN-313: fora da janela não conta; a compra segue).
+   */
+  ref?: { codigo: string; clicadoEmMillis?: number };
   /**
    * Chave de idempotência do CLIENTE (RN-333) — uma por tentativa de
    * checkout. Retry com a mesma chave devolve o MESMO pedido/cobrança.
@@ -304,6 +319,29 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
     );
   }
 
+  // Atribuição de afiliado (R9-E · RN-313) — SHAPE estrito (semântica é
+  // fail-open lá na frente; shape torto é bug/forja de cliente).
+  const ref = input['ref'];
+  if (ref !== undefined) {
+    if (ref === null || typeof ref !== 'object' || Array.isArray(ref)) {
+      erros.push('"ref" deve ser objeto { codigo, clicadoEmMillis? } (RN-313).');
+    } else {
+      const r = ref as Record<string, unknown>;
+      const codigo =
+        typeof r['codigo'] === 'string' ? normalizarRefCodigo(r['codigo']) : r['codigo'];
+      if (!isRefCodigoValido(codigo)) {
+        erros.push('"ref.codigo" fora do padrão A-Z0-9 (4–20).');
+      }
+      const clicadoEm = r['clicadoEmMillis'];
+      if (
+        clicadoEm !== undefined &&
+        (!Number.isInteger(clicadoEm) || (clicadoEm as number) <= 0)
+      ) {
+        erros.push('"ref.clicadoEmMillis" deve ser epoch-ms inteiro > 0.');
+      }
+    }
+  }
+
   return erros;
 }
 
@@ -379,6 +417,28 @@ export interface InsumosVenda {
     valor: number;
     fimEmMillis: number;
   } | null;
+  /**
+   * Amarração cupom↔AFILIADO (R9-E · RN-315/316) — presente SÓ quando o
+   * cupom carregado tem `afiliadoRef`. O gate de mínimo de inscrições
+   * (`descontoAfiliadoAtivo`) já foi checado na carga; o path é RE-LIDO na
+   * tx de venda (freshness — desconto não entra se o gate fechou em voo).
+   */
+  cupomAfiliado: {
+    afiliadoPath: string;
+    afiliadoId: string;
+    cupomPath: string;
+  } | null;
+  /**
+   * Atribuição de afiliado da venda (R9-E · RN-313) — resolvida do `?ref=`
+   * (ou do cupom de afiliado, que é sinal mais forte). null = sem atribuição
+   * (ref ausente/desconhecido/inativo/fora da janela — venda segue).
+   */
+  afiliadoAtribuicao: {
+    afiliadoId: string;
+    refCodigo: string;
+    clicadoEmMillis: number;
+    origem: 'ref' | 'cupom';
+  } | null;
   terms: CommercialTerms;
   /**
    * Modo da taxa do EVENTO (RN-347) — lido do DOC (`evento.taxaModo` via
@@ -399,11 +459,14 @@ export interface CarregarInsumosInput {
   eventoId: string;
   inscritos: readonly { modalidade: string; kitId?: string }[];
   cupomCodigo?: string;
+  /** Atribuição de afiliado (RN-313) — só o produtor de escrita a envia. */
+  ref?: { codigo: string; clicadoEmMillis?: number };
 }
 
 export async function carregarInsumos(
   db: Db,
-  input: CarregarInsumosInput
+  input: CarregarInsumosInput,
+  agora: Date = new Date()
 ): Promise<InsumosVenda> {
   const eventoRef = db.collection('eventos').doc(input.eventoId);
   const eventoSnap = await eventoRef.get();
@@ -532,6 +595,7 @@ export async function carregarInsumos(
   // Cupom — docId = código normalizado (unicidade por chave — E04)
   let cupom: CupomVenda | null = null;
   let cupomParceria: InsumosVenda['cupomParceria'] = null;
+  let cupomAfiliado: InsumosVenda['cupomAfiliado'] = null;
   if (input.cupomCodigo !== undefined) {
     const codigo = normalizarCodigoCupom(input.cupomCodigo);
     const cupomSnap = await eventoRef.collection('cupons').doc(codigo).get();
@@ -587,7 +651,100 @@ export async function carregarInsumos(
         fimEmMillis: cupomDoc.fimEm.toMillis(),
       };
     }
+
+    // GATE do cupom de AFILIADO (R9-E · RN-315): cupom com `afiliadoRef`
+    // (amarração escrita SÓ pela Function salvarAfiliado) só aplica com o
+    // desconto ATIVO — afiliado 'ativo' E (sem mínimo OU ∑ inscrições
+    // atribuídas >= minimoInscricoes). Antes do mínimo o link RASTREIA a
+    // conversão mas o desconto NÃO aplica (sem retroativo — a venda que
+    // cruza o mínimo não ganha; as seguintes sim). Mensagem OPACA (mesma
+    // lição S1802 #2): não confirmar a um sondador anônimo o estado do gate.
+    const afiliadoRefDoCupom = (cupomSnap.get('afiliadoRef') ?? '') as string;
+    if (afiliadoRefDoCupom.length > 0) {
+      const afiliadoSnap = await eventoRef
+        .collection(COLECAO_AFILIADOS)
+        .doc(afiliadoRefDoCupom)
+        .get();
+      const dados = afiliadoSnap.data() ?? {};
+      const gateAberto =
+        afiliadoSnap.exists &&
+        dados['tenantId'] === tenantId &&
+        descontoAfiliadoAtivo({
+          status: dados['status'] as never,
+          minimoInscricoes:
+            typeof dados['minimoInscricoes'] === 'number'
+              ? (dados['minimoInscricoes'] as number)
+              : null,
+          conversoes:
+            typeof dados['conversoes'] === 'number'
+              ? (dados['conversoes'] as number)
+              : 0,
+        });
+      if (!gateAberto) {
+        throw new https.HttpsError(
+          'invalid-argument',
+          `Cupom '${codigo}' indisponível.`
+        );
+      }
+      cupomAfiliado = {
+        afiliadoPath: afiliadoSnap.ref.path,
+        afiliadoId: afiliadoRefDoCupom,
+        cupomPath: cupomSnap.ref.path,
+      };
+    }
     cupom = cupomDoc;
+  }
+
+  // ── Atribuição de afiliado (R9-E · RN-313) — NUNCA bloqueia a venda ──────
+  // Prioridade: cupom de afiliado (sinal mais forte — desconto exclusivo do
+  // link) > `?ref=`. Ref desconhecido/inativo/fora da janela = descarta.
+  let afiliadoAtribuicao: InsumosVenda['afiliadoAtribuicao'] = null;
+  const refCodigoInput =
+    typeof input.ref?.codigo === 'string'
+      ? normalizarRefCodigo(input.ref.codigo)
+      : null;
+  // clicadoEm é CLAIM do cliente: clampado a [agora - 10 anos, agora] — um
+  // clique "no futuro" ou lixo epoch vira `agora` (janela sempre satisfeita
+  // no instante da criação; a checagem AUTORITATIVA re-roda na CONFIRMAÇÃO).
+  const clicadoEmMillis = (() => {
+    const raw = input.ref?.clicadoEmMillis;
+    const t = agora.getTime();
+    if (!Number.isInteger(raw) || (raw as number) <= 0) return t;
+    return Math.min(Math.max(raw as number, t - 10 * 365 * 24 * 60 * 60 * 1000), t);
+  })();
+  if (cupomAfiliado !== null) {
+    afiliadoAtribuicao = {
+      afiliadoId: cupomAfiliado.afiliadoId,
+      refCodigo: cupomAfiliado.afiliadoId,
+      clicadoEmMillis:
+        refCodigoInput === cupomAfiliado.afiliadoId
+          ? clicadoEmMillis
+          : agora.getTime(),
+      origem: 'cupom',
+    };
+  } else if (refCodigoInput !== null) {
+    const afiliadoSnap = await eventoRef
+      .collection(COLECAO_AFILIADOS)
+      .doc(refCodigoInput)
+      .get();
+    const dados = afiliadoSnap.data() ?? {};
+    const janelaDias =
+      typeof dados['janelaAtribuicaoDias'] === 'number'
+        ? (dados['janelaAtribuicaoDias'] as number)
+        : 0;
+    if (
+      afiliadoSnap.exists &&
+      dados['tenantId'] === tenantId &&
+      dados['status'] === 'ativo' &&
+      dentroDaJanelaAtribuicao(new Date(clicadoEmMillis), agora, janelaDias)
+    ) {
+      afiliadoAtribuicao = {
+        afiliadoId: refCodigoInput,
+        refCodigo: refCodigoInput,
+        clicadoEmMillis,
+        origem: 'ref',
+      };
+    }
   }
 
   // Termo do tenant (RN-406) — SEM termo, SEM venda (nunca taxa default)
@@ -611,7 +768,16 @@ export async function carregarInsumos(
     throw err;
   }
 
-  return { tenantId, itens, cupom, cupomParceria, terms, modoTaxa };
+  return {
+    tenantId,
+    itens,
+    cupom,
+    cupomParceria,
+    cupomAfiliado,
+    afiliadoAtribuicao,
+    terms,
+    modoTaxa,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -696,7 +862,9 @@ async function criarDocsDeCheckout(
   caller: CheckoutCaller,
   sale: SaleState,
   tenantId: string,
-  cupomParceria: InsumosVenda['cupomParceria'] = null
+  cupomParceria: InsumosVenda['cupomParceria'] = null,
+  cupomAfiliado: InsumosVenda['cupomAfiliado'] = null,
+  afiliadoAtribuicao: InsumosVenda['afiliadoAtribuicao'] = null
 ): Promise<void> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -772,6 +940,40 @@ async function criarDocsDeCheckout(
           typeof fimFresco?.toMillis === 'function' &&
           fimFresco.toMillis() === cupomParceria.fimEmMillis;
         if (!coerente) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            'Condição do cupom deixou de valer durante o checkout — refaça a cotação.'
+          );
+        }
+      }
+
+      // RE-CHECK do gate de cupom de AFILIADO DENTRO da tx (R9-E · RN-315
+      // — mesma disciplina de freshness do cupomParceria): o gate que
+      // abriu na cotação precisa seguir aberto no commit — organizador
+      // subiu o mínimo / inativou o afiliado / desamarrou o cupom em voo
+      // ⇒ desconto NÃO entra em doc de dinheiro.
+      if (cupomAfiliado !== null) {
+        const [afiliadoFresco, cupomFrescoAf] = await Promise.all([
+          tx.get(db.doc(cupomAfiliado.afiliadoPath)),
+          tx.get(db.doc(cupomAfiliado.cupomPath)),
+        ]);
+        const dadosAf = afiliadoFresco.data() ?? {};
+        const gateSegueAberto =
+          afiliadoFresco.exists &&
+          cupomFrescoAf.exists &&
+          cupomFrescoAf.get('afiliadoRef') === cupomAfiliado.afiliadoId &&
+          descontoAfiliadoAtivo({
+            status: dadosAf['status'] as never,
+            minimoInscricoes:
+              typeof dadosAf['minimoInscricoes'] === 'number'
+                ? (dadosAf['minimoInscricoes'] as number)
+                : null,
+            conversoes:
+              typeof dadosAf['conversoes'] === 'number'
+                ? (dadosAf['conversoes'] as number)
+                : 0,
+          });
+        if (!gateSegueAberto) {
           throw new https.HttpsError(
             'failed-precondition',
             'Condição do cupom deixou de valer durante o checkout — refaça a cotação.'
@@ -891,6 +1093,18 @@ async function criarDocsDeCheckout(
           cupom['clubeRef'] = cupomParceria.clubeRef;
         }
         pagamentoDoc['cupom'] = cupom;
+      }
+      // Atribuição de AFILIADO (R9-E · RN-313/314): carimbo informativo no
+      // doc de pagamento (sem split — RN-313). A conversão em si só REGISTRA
+      // na CONFIRMAÇÃO (webhook — porta única de estado financeiro), com a
+      // janela re-checada contra `clicadoEmMillis` no instante convertido.
+      if (afiliadoAtribuicao !== null) {
+        pagamentoDoc['afiliado'] = {
+          afiliadoId: afiliadoAtribuicao.afiliadoId,
+          refCodigo: afiliadoAtribuicao.refCodigo,
+          clicadoEmMillis: afiliadoAtribuicao.clicadoEmMillis,
+          origem: afiliadoAtribuicao.origem,
+        };
       }
       tx.create(pagamentoRef, pagamentoDoc);
     });
@@ -1062,8 +1276,16 @@ export async function createInscricaoChargeCore(
       );
     }
   } else {
-    const { tenantId, itens, cupom, cupomParceria, terms, modoTaxa } =
-      await carregarInsumos(db, input);
+    const {
+      tenantId,
+      itens,
+      cupom,
+      cupomParceria,
+      cupomAfiliado,
+      afiliadoAtribuicao,
+      terms,
+      modoTaxa,
+    } = await carregarInsumos(db, input, agora());
     // RN-223 (T4) — validação de tamanho NA ORIGEM, antes de qualquer escrita:
     // tamanho/SKU forjado ⇒ invalid-argument fail-closed (nada criado).
     await validarTamanhosDoCheckout(db, input, tenantId);
@@ -1086,7 +1308,16 @@ export async function createInscricaoChargeCore(
         err instanceof Error ? err.message : 'Estado de venda inválido.'
       );
     }
-    await criarDocsDeCheckout(db, input, caller, sale, tenantId, cupomParceria);
+    await criarDocsDeCheckout(
+      db,
+      input,
+      caller,
+      sale,
+      tenantId,
+      cupomParceria,
+      cupomAfiliado,
+      afiliadoAtribuicao
+    );
   }
 
   const resultado = await garantirCobrancaEMontarResultado(db, provider, input, caller);
