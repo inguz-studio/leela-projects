@@ -1186,3 +1186,31 @@ export {
   validarMarcaInput,
   parseMarca,
 } from './brands/marca';
+
+// ---------------------------------------------------------------------------
+// CRM do organizador (E19 · S-R9-13-T1 · RN-172): cliente consolidado
+// cross-evento com LTV — identidade INDIVIDUAL (PII, categoria distinta do
+// RN-820). Doc mantido por Function; leitura só isTenantWriter; o valor da
+// chave (CPF/e-mail) NUNCA é persistido (docId por hash — minimização).
+// ---------------------------------------------------------------------------
+export type {
+  TipoChaveCliente,
+  IdentidadeCliente,
+  IdentidadeClienteInput,
+  StatusInscricaoCrm,
+  CrmInscricaoEntry,
+  CrmEventoResumo,
+  CrmClienteAgregado,
+  CrmClienteDoc,
+} from './crm/cliente';
+export {
+  SUBCOLECAO_CRM_CLIENTES,
+  TIPOS_CHAVE_CLIENTE,
+  isTipoChaveCliente,
+  STATUS_INSCRICAO_CRM,
+  isStatusInscricaoCrm,
+  derivarIdentidadeCliente,
+  computeCrmCliente,
+  crmClienteInalterado,
+  parseCrmCliente,
+} from './crm/cliente';
