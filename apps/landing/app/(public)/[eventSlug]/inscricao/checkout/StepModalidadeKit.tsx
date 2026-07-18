@@ -1,9 +1,12 @@
 'use client';
 
+import { PackageOpen } from 'lucide-react';
 import { Badge, Button, RadioCard, RadioGroup } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { KitPublico } from '@/lib/tipos';
 import { kitsDaModalidade, type InscritoForm } from './tipos';
+import { KitDetalhe } from './KitDetalhe';
+import { TituloEtapa, ApoioEtapa } from './tipografia';
 
 /** Rótulo do delta do kit (RN-211: negativo = desconto; 0 = incluso). */
 function labelDeltaKit(preco: number): string {
@@ -43,12 +46,23 @@ export function StepModalidadeKit({
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <TituloEtapa icone={PackageOpen}>Modalidade e kit</TituloEtapa>
+        <ApoioEtapa>
+          Escolha o percurso e o kit de cada atleta. O total aparece no resumo.
+        </ApoioEtapa>
+      </div>
+
       {inscritos.map((inscrito, i) => {
         const ehVoce = euCorro && i === 0;
         const titulo = ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`;
         const podeRemover = !ehVoce && inscritos.length > 1;
         const kitsOfertados = kitsDaModalidade(kits, inscrito.modalidade);
         const modalidadeEscolhida = inscrito.modalidade.length > 0;
+        const kitSelecionado =
+          inscrito.kitId.length > 0
+            ? (kitsOfertados.find((k) => k.id === inscrito.kitId) ?? null)
+            : null;
 
         return (
           <div
@@ -138,6 +152,10 @@ export function StepModalidadeKit({
               <p className="mt-2 text-xs text-text-tertiary">
                 O tamanho do kit é confirmado na retirada, nas janelas do evento.
               </p>
+
+              {/* Frente 7: visão do kit escolhido — imagem 1:1, descrição e o
+                  que está incluso, com hierarquia de H's/textos do DS. */}
+              {kitSelecionado ? <KitDetalhe kit={kitSelecionado} /> : null}
             </div>
           </div>
         );

@@ -37,6 +37,7 @@ import { StepResumo, type LinhaResumo } from './StepResumo';
 import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 import { CheckoutStepper } from './CheckoutStepper';
+import { LeelaWordmark } from './LeelaWordmark';
 
 // Etapas INTERNAS (5), na ordem do mockup/TicketSports (o dono):
 //   [0] modalidade+kit · [1] dados · [2] resumo · [3] pagamento · [4] confirmação
@@ -445,7 +446,8 @@ export function CheckoutFlow({
         </Link>
       </Button>
 
-      <h1 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-text-primary sm:text-3xl">
+      {/* Frente 1: título em escala tipográfica do DS (tokens `--font-size-*`). */}
+      <h1 className="mt-5 font-display text-[length:var(--font-size-2xl)] font-[var(--font-weight-extrabold)] tracking-tight text-text-primary sm:text-[length:var(--font-size-3xl)]">
         Inscrição · {evento.nome}
       </h1>
 
@@ -456,8 +458,8 @@ export function CheckoutFlow({
 
       {erroAuth ? (
         <div className="mt-8 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
-          <p className="text-sm font-medium text-feedback-warning-fg">{erroAuth}</p>
-          <p className="mt-1 text-sm text-text-secondary">
+          <p className="text-[length:var(--font-size-base)] font-[var(--font-weight-medium)] text-feedback-warning-fg">{erroAuth}</p>
+          <p className="mt-1 text-[length:var(--font-size-base)] text-text-secondary">
             O checkout precisa de uma sessão anônima (Firebase Anonymous Auth). Verifique se o
             provedor está habilitado no ambiente.
           </p>
@@ -562,12 +564,21 @@ export function CheckoutFlow({
             Voltar
           </Button>
           {cotacao ? (
-            <p className="text-sm text-text-secondary">
-              Total: <span className="font-semibold text-text-primary">{formatarPreco(cotacao.totalCobrado)}</span>
+            <p className="text-[length:var(--font-size-base)] text-text-secondary">
+              Total: <span className="font-[var(--font-weight-semibold)] text-text-primary">{formatarPreco(cotacao.totalCobrado)}</span>
             </p>
           ) : null}
         </div>
       ) : null}
+
+      {/* Frente 2: logo (wordmark) no rodapé do checkout — recolor por token,
+          nunca a variante box. */}
+      <footer className="mt-16 flex flex-col items-center gap-2 border-t border-border-subtle pt-8">
+        <LeelaWordmark className="h-5 w-auto text-text-brand" />
+        <p className="text-[length:var(--font-size-sm)] text-text-tertiary">
+          Inscrição segura · pagamento processado no ambiente Leela
+        </p>
+      </footer>
     </div>
   );
 }
