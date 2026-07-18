@@ -7,8 +7,8 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, Chip, Input, Modal } from '@leela/design-system';
-import type { ModeloComercial } from '@leela/core';
+import { Button, Chip, FileInput, Input, Modal } from '@leela/design-system';
+import type { Marca, ModeloComercial } from '@leela/core';
 import {
   CONTRAPARTIDA_MIN,
   modeloComercialLabel,
@@ -21,6 +21,18 @@ export interface AddPatrocinadorModalProps {
   onOpenChange: (open: boolean) => void;
   /** Cria o patrocinador (mutation do backend) — injetada pelo container. */
   onCriar: (input: PatrocinadorInput) => void | Promise<void>;
+  /**
+   * RN-171 (R9-E · S-R9-12-T2): registro reutilizável de marcas do tenant —
+   * quem já cadastrou um patrocinador PARTE da listagem, não do zero.
+   * null/[] = sem registro (a seção de seleção some).
+   */
+  marcasDoRegistro?: Marca[] | null;
+  /**
+   * Upload da logo 1:1 (adendo RN-171) — o container injeta o caminho de
+   * Storage (validação de tipo/tamanho/proporção no seam do api-client).
+   * Devolve a downloadURL.
+   */
+  onUploadLogo?: (file: File, nomePatrocinador: string) => Promise<string>;
 }
 
 const MODELOS: ModeloComercial[] = ['financeiro', 'permuta'];
@@ -29,13 +41,38 @@ export function AddPatrocinadorModal({
   open,
   onOpenChange,
   onCriar,
+  marcasDoRegistro,
+  onUploadLogo,
 }: AddPatrocinadorModalProps): JSX.Element {
   const [nome, setNome] = useState('');
   const [modeloComercial, setModelo] = useState<ModeloComercial>('financeiro');
   const [valorAnual, setValorAnual] = useState('');
   const [contrapartida, setContrapartida] = useState('');
   const [contratoUrl, setContratoUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoErro, setLogoErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+
+  // RN-171: autocomplete/seleção do registro — filtra pelo que se digita no
+  // nome; escolher preenche o form (parte da listagem, não do zero).
+  const sugestoes = useMemo(() => {
+    const lista = (marcasDoRegistro ?? []).filter((m) => m.status === 'ativa');
+    const q = nome.trim().toLowerCase();
+    const casadas = q === ''
+      ? lista
+      : lista.filter((m) => m.nome.toLowerCase().includes(q));
+    return casadas.filter((m) => m.nome.toLowerCase() !== q).slice(0, 5);
+  }, [marcasDoRegistro, nome]);
+
+  function preencherDaMarca(m: Marca): void {
+    setNome(m.nome);
+    setModelo(m.modeloComercial);
+    setValorAnual(m.valorAnual !== undefined ? String(m.valorAnual) : '');
+    setContrapartida(m.contrapartida ?? '');
+    setContratoUrl(m.contratoUrl ?? '');
+    setLogoUrl(m.logoUrl ?? '');
+  }
 
   const input: PatrocinadorInput = useMemo(() => {
     const base: PatrocinadorInput = {
@@ -46,11 +83,26 @@ export function AddPatrocinadorModal({
     const v = Number(valorAnual);
     if (valorAnual.trim() !== '' && Number.isFinite(v)) base.valorAnual = v;
     if (contratoUrl.trim()) base.contratoUrl = contratoUrl.trim();
+    if (logoUrl.trim()) base.logoUrl = logoUrl.trim();
     return base;
-  }, [nome, modeloComercial, valorAnual, contrapartida, contratoUrl]);
+  }, [nome, modeloComercial, valorAnual, contrapartida, contratoUrl, logoUrl]);
 
   const erros = useMemo(() => validarPatrocinador(input), [input]);
   const valido = erros.length === 0;
+
+  async function enviarLogo(file: File): Promise<void> {
+    if (onUploadLogo === undefined) return;
+    setLogoBusy(true);
+    setLogoErro(null);
+    try {
+      setLogoUrl(await onUploadLogo(file, nome.trim()));
+    } catch (err) {
+      const msg = (err as { message?: string })?.message;
+      setLogoErro(msg && msg.length > 0 ? msg : 'Não foi possível enviar a logo.');
+    } finally {
+      setLogoBusy(false);
+    }
+  }
 
   function reset(): void {
     setNome('');
@@ -58,6 +110,8 @@ export function AddPatrocinadorModal({
     setValorAnual('');
     setContrapartida('');
     setContratoUrl('');
+    setLogoUrl('');
+    setLogoErro(null);
   }
 
   async function criar(): Promise<void> {
@@ -99,6 +153,21 @@ export function AddPatrocinadorModal({
           onChange={(e) => setNome(e.target.value)}
           placeholder="Loja do Corredor"
         />
+
+        {sugestoes.length > 0 ? (
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Do seu registro de patrocinadores (RN-171) — selecionar preenche o cadastro:
+            </span>
+            <div role="group" aria-label="Patrocinadores já cadastrados" className="flex flex-wrap gap-[var(--spacing-2)]">
+              {sugestoes.map((m) => (
+                <Chip key={m.id} onClick={() => preencherDaMarca(m)}>
+                  {m.nome}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-[var(--spacing-2)]">
           <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
@@ -149,6 +218,27 @@ export function AddPatrocinadorModal({
           onChange={(e) => setContratoUrl(e.target.value)}
           placeholder="https://…"
         />
+
+        {onUploadLogo !== undefined ? (
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <FileInput
+              id="patrocinador-logo"
+              label="Logo do patrocinador (quadrada 1:1 — opcional)"
+              buttonLabel={logoUrl ? 'Trocar logo' : 'Enviar logo'}
+              busy={logoBusy}
+              onFileSelected={(file) => void enviarLogo(file)}
+              {...(logoErro !== null ? { errorMessage: logoErro } : {})}
+              hint="JPG/PNG/WebP/GIF/AVIF até 5MB, proporção 1:1 — aparece na página do evento."
+            />
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`Logo de ${nome.trim() || 'patrocinador'}`}
+                className="h-16 w-16 rounded-[var(--radius-md)] object-cover"
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         {!valido && (nome || contrapartida) ? (
           <p role="alert" className="text-[length:var(--font-size-sm)] text-[var(--feedback-danger-fg)]">

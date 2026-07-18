@@ -429,6 +429,8 @@ export interface CriarPatrocinadorInput {
   valorAnual?: number;
   contrapartida: string;
   contratoUrl?: string;
+  /** Logo 1:1 (R9-E · adendo RN-171) — URL do Storage R5/URL http(s). */
+  logoUrl?: string;
 }
 
 /**
@@ -454,6 +456,7 @@ export async function criarPatrocinador(
   };
   if (input.valorAnual !== undefined) data.valorAnual = input.valorAnual;
   if (input.contratoUrl) data.contratoUrl = input.contratoUrl;
+  if (input.logoUrl) data.logoUrl = input.logoUrl;
   await setDoc(ref, data);
   return { parceriaId: ref.id };
 }

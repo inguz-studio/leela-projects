@@ -5,10 +5,18 @@
 // ligados nos commits S107-T3/T4/T5.
 // =============================================================================
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useToast } from '@leela/design-system';
-import type { ParceriaEventoAfiliado } from '@leela/core';
+import type { Marca, ParceriaEventoAfiliado } from '@leela/core';
+import {
+  getLeelaAuth,
+  getLeelaDb,
+  listarMarcas,
+  marcaIdDoNome,
+  upsertMarcaDoPatrocinio,
+  uploadLogoPatrocinadorClube,
+} from '@leela/api-client';
 import { ParceriasView } from './ParceriasView';
 import { AddPatrocinadorModal } from './AddPatrocinadorModal';
 import {
@@ -38,6 +46,25 @@ export function ParceriasPage(): JSX.Element {
   const [addAberto, setAddAberto] = useState(false);
   const [destrutiva, setDestrutiva] = useState<AlvoDestrutivo | null>(null);
   const [termos, setTermos] = useState<ParceriaEventoAfiliado | null>(null);
+  // RN-171 (R9-E): registro reutilizável de patrocinadores do profissional —
+  // alimenta o autocomplete do modal; falha de carga só desliga a seção.
+  const [marcas, setMarcas] = useState<Marca[] | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    const uid = getLeelaAuth().currentUser?.uid;
+    if (uid === undefined) return;
+    listarMarcas(getLeelaDb(), uid)
+      .then((lista) => {
+        if (vivo) setMarcas(lista);
+      })
+      .catch(() => {
+        if (vivo) setMarcas(null);
+      });
+    return () => {
+      vivo = false;
+    };
+  }, [addAberto]);
 
   async function transicionar(
     p: ParceriaEventoAfiliado,
@@ -63,9 +90,30 @@ export function ParceriasPage(): JSX.Element {
     try {
       await criarPatrocinadorMutation.mutateAsync({ tenantId: clube.tenantId, ...input });
       toast({ variant: 'success', title: `${input.nome} adicionado como patrocinador` });
+      // RN-171: o patrocinador cadastrado ENTRA no registro reutilizável do
+      // profissional — o próximo cadastro parte da listagem. Best-effort
+      // (nunca derruba o fluxo principal).
+      const uid = getLeelaAuth().currentUser?.uid;
+      if (uid !== undefined) {
+        void upsertMarcaDoPatrocinio(getLeelaDb(), uid, {
+          nome: input.nome,
+          modeloComercial: input.modeloComercial,
+          ...(input.valorAnual !== undefined ? { valorAnual: input.valorAnual } : {}),
+          ...(input.contrapartida ? { contrapartida: input.contrapartida } : {}),
+          ...(input.contratoUrl !== undefined ? { contratoUrl: input.contratoUrl } : {}),
+          ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+        });
+      }
     } catch {
       toast({ variant: 'danger', title: 'Não foi possível adicionar o patrocinador' });
     }
+  }
+
+  async function uploadLogo(file: File, nomePatrocinador: string): Promise<string> {
+    // Objeto keyed pelo id derivado do nome (kebab) — o mesmo id do registro
+    // de marcas; re-upload sobrescreve (padrão R5, sem órfãos).
+    const id = marcaIdDoNome(nomePatrocinador || 'patrocinador');
+    return uploadLogoPatrocinadorClube(clube.id, id.length > 0 ? id : 'patrocinador', file);
   }
 
   async function confirmarDestrutiva(): Promise<void> {
@@ -106,6 +154,8 @@ export function ParceriasPage(): JSX.Element {
         open={addAberto}
         onOpenChange={setAddAberto}
         onCriar={criarPatrocinador}
+        marcasDoRegistro={marcas}
+        onUploadLogo={uploadLogo}
       />
       {destrutiva ? (
         <ParceriaDestrutivaModal

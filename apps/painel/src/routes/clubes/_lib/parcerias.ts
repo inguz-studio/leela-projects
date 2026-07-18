@@ -143,6 +143,8 @@ export interface PatrocinadorInput {
   valorAnual?: number;
   contrapartida: string;
   contratoUrl?: string;
+  /** Logo 1:1 do patrocinador (R9-E · adendo RN-171) — URL do Storage R5. */
+  logoUrl?: string;
 }
 
 /**
