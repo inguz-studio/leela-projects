@@ -32,6 +32,7 @@ import {
   type StatusEvento,
 } from '@leela/core';
 import { esporteDoEvento } from './esporte';
+import { ehPreview, ORGANIZADOR_MOCK } from './mockImagem';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDb } from './firebaseAdmin';
 import {
@@ -181,29 +182,36 @@ async function resolverOrganizadorPublico(
   db: Firestore,
   tenantId: string,
 ): Promise<OrganizadorPublico | null> {
-  if (tenantId.length === 0) return null;
-  try {
-    const snap = await db
-      .collection(COLECAO_PERFIS)
-      .where('tenantId', '==', tenantId)
-      .where('visibilidade', 'in', ['publica', 'indexavel'])
-      .limit(1)
-      .get();
-    const doc = snap.docs[0];
-    if (doc === undefined) return null;
-    // Gate de PII: a projeção do core é a fronteira (allowlist) — nada de
-    // ownerUid/tenantId cruza. `handle` é o docId.
-    const perfil = projetarPerfilPublico(doc.id, doc.data());
-    if (perfil === null) return null;
-    return {
-      handle: perfil.handle,
-      nome: perfil.nome,
-      ...(perfil.avatarUrl !== undefined ? { avatarUrl: perfil.avatarUrl } : {}),
-    };
-  } catch (err) {
-    console.error('[leitor] resolverOrganizadorPublico falhou', err);
-    return null;
-  }
+  const real = await (async (): Promise<OrganizadorPublico | null> => {
+    if (tenantId.length === 0) return null;
+    try {
+      const snap = await db
+        .collection(COLECAO_PERFIS)
+        .where('tenantId', '==', tenantId)
+        .where('visibilidade', 'in', ['publica', 'indexavel'])
+        .limit(1)
+        .get();
+      const doc = snap.docs[0];
+      if (doc === undefined) return null;
+      // Gate de PII: a projeção do core é a fronteira (allowlist) — nada de
+      // ownerUid/tenantId cruza. `handle` é o docId.
+      const perfil = projetarPerfilPublico(doc.id, doc.data());
+      if (perfil === null) return null;
+      return {
+        handle: perfil.handle,
+        nome: perfil.nome,
+        ...(perfil.avatarUrl !== undefined ? { avatarUrl: perfil.avatarUrl } : {}),
+      };
+    } catch (err) {
+      console.error('[leitor] resolverOrganizadorPublico falhou', err);
+      return null;
+    }
+  })();
+  if (real !== null) return real;
+  // Adendo 13 (R12-FIX2): no PREVIEW, o bloco "Organizado por" não some por falta
+  // de perfil seedado — cai num organizador de EXEMPLO (avatar mock + link p/ a
+  // página de exemplo). Em produção (sem emulator) segue null = bloco oculto.
+  return ehPreview() ? { ...ORGANIZADOR_MOCK } : null;
 }
 
 /**

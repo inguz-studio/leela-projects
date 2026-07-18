@@ -26,6 +26,7 @@ import {
 } from '@leela/core';
 import { getDb } from './firebaseAdmin';
 import { listarEventosPublicadosDoTenant } from './leitor';
+import { ehPreview, PREVIEW_ORG_HANDLE, PATROCINADORES_MOCK_NOMES } from './mockImagem';
 import type { EventoResumo } from './tipos';
 
 /** Resumo público de clube na aba Clubs do perfil (RN-165). */
@@ -140,11 +141,42 @@ async function listarPatrocinadoresPublicosDoTenant(
         ...(isUrlCapaValida(logoUrlRaw) ? { logoUrl: logoUrlRaw } : {}),
       });
     }
-    return patrocinadores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const ordenados = patrocinadores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    // Adendo 13 (R12-FIX2): no PREVIEW a faixa não some por falta de parceria
+    // seedada — cai em patrocinadores de EXEMPLO (logo 1:1 mock por nome). Em
+    // produção sem emulator, `[]` = faixa oculta (honesto).
+    if (ordenados.length === 0 && ehPreview()) return patrocinadoresMock();
+    return ordenados;
   } catch (err) {
     console.error('[leitorPerfil] listarPatrocinadoresPublicosDoTenant falhou', err);
-    return [];
+    return ehPreview() ? patrocinadoresMock() : [];
   }
+}
+
+/** Patrocinadores de EXEMPLO (preview) — sem logoUrl ⇒ a UI usa o logo 1:1 mock. */
+function patrocinadoresMock(): PatrocinadorPublico[] {
+  return PATROCINADORES_MOCK_NOMES.map((nome) => ({ nome }));
+}
+
+/**
+ * Perfil de organizador de EXEMPLO (preview) — página do handle mock para onde o
+ * bloco "Organizado por" aponta quando não há perfil seedado. Sem avatarUrl/
+ * imagemUrl (⇒ a UI usa os mocks brasa); timeline vazia (EmptyState) + faixa de
+ * patrocinadores mock. É clean de PII (dado inventado, sem tenant real).
+ */
+function perfilMockPreview(): PerfilPublicoCompleto {
+  return {
+    perfil: {
+      handle: PREVIEW_ORG_HANDLE,
+      nome: 'Organização Exemplo',
+      bio: 'Organizador de exemplo (preview) — os eventos e patrocinadores reais aparecem aqui.',
+      indexavel: false,
+      linksExternos: [],
+    },
+    eventos: [],
+    clubes: [],
+    patrocinadores: patrocinadoresMock(),
+  };
 }
 
 /**
@@ -165,7 +197,14 @@ export async function getPublicPerfil(
 
     const db = getDb();
     const snap = await db.collection(COLECAO_PERFIS).doc(handle).get();
-    if (!snap.exists) return null;
+    if (!snap.exists) {
+      // Adendo 13 (R12-FIX2): no PREVIEW, o handle de EXEMPLO (para onde o bloco
+      // "Organizado por" aponta quando não há perfil seedado) resolve numa página
+      // de organizador de exemplo — timeline vazia + faixa de patrocinadores mock.
+      // Qualquer OUTRO handle inexistente segue 404 honesto. Prod: sempre 404.
+      if (ehPreview() && handle === PREVIEW_ORG_HANDLE) return perfilMockPreview();
+      return null;
+    }
 
     const data = snap.data() ?? {};
     // GATE RN-161: privada/lixo ⇒ null (404 honesto). A projeção é a
