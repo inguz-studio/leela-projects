@@ -34,7 +34,7 @@ export function FinanceiroLayout(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      <SubNav tabs={tabs} aria-label="Seções do financeiro" />
+      <SubNav tabs={tabs} aria-label="Seções do financeiro" divider />
       <Outlet context={context} />
     </div>
   );

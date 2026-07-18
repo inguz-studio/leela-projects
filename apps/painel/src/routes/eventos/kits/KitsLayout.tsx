@@ -26,7 +26,7 @@ export function KitsLayout(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      <SubNav tabs={tabs} aria-label="Seções de kits" />
+      <SubNav tabs={tabs} aria-label="Seções de kits" divider />
       <Outlet context={ctx} />
     </div>
   );

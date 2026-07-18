@@ -42,6 +42,13 @@ export interface SubNavProps {
   tabs: SubNavTab[];
   /** Rótulo do landmark de navegação. */
   'aria-label'?: string;
+  /**
+   * Divisória inferior (RN-229 · S-R9-10). Default `false` = plano (decisão do
+   * Vitor 2026-07-11, preservado em TODOS os consumidores existentes). `true`
+   * alinha ao padrão de Comunicação (Tabs §2.7): `border-b` em `--border-subtle`
+   * — usado nas sub-navs TERCIÁRIAS dentro de eventos (Financeiro/Kits/Config).
+   */
+  divider?: boolean;
   className?: string;
 }
 
@@ -52,6 +59,7 @@ export interface SubNavProps {
 function SubNav({
   tabs,
   'aria-label': ariaLabel = 'Navegação de seções',
+  divider = false,
   className,
 }: SubNavProps): JSX.Element {
   const tabRefs = React.useRef<(HTMLAnchorElement | HTMLButtonElement | null)[]>([]);
@@ -72,6 +80,8 @@ function SubNav({
       className={cn(
         'bg-[var(--surface-base)]',
         'px-[var(--subnav-px)]',
+        // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
+        divider && 'border-b border-b-[var(--border-subtle)]',
         className,
       )}
     >

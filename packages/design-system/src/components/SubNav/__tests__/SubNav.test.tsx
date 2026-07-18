@@ -23,6 +23,18 @@ describe('SubNav', () => {
     expect(screen.getAllByRole('listitem').length).toBe(3);
   });
 
+  it('is flat by default — sem divisória (decisão Vitor 2026-07-11)', () => {
+    render(<SubNav tabs={tabs} />);
+    expect(screen.getByRole('navigation')).not.toHaveClass('border-b');
+  });
+
+  it('divider opts into a divisória (RN-229 · S-R9-10, padrão Comunicação)', () => {
+    render(<SubNav tabs={tabs} divider />);
+    const nav = screen.getByRole('navigation');
+    expect(nav).toHaveClass('border-b');
+    expect(nav).toHaveClass('border-b-[var(--border-subtle)]');
+  });
+
   it('active tab has aria-current="page"', () => {
     render(<SubNav tabs={tabs} />);
     const active = screen.getByRole('button', { name: /Visão Geral/i });

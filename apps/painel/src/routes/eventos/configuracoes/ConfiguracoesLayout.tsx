@@ -87,7 +87,7 @@ export function ConfiguracoesLayout(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
-      {tabs.length > 1 ? <SubNav tabs={tabs} aria-label="Seções de configurações" /> : null}
+      {tabs.length > 1 ? <SubNav tabs={tabs} aria-label="Seções de configurações" divider /> : null}
       <Outlet context={context} />
     </div>
   );

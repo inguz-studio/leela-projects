@@ -22,6 +22,15 @@ type Story = StoryObj<typeof SubNav>;
 /** Tab ativa com underline Brasa 2px + contadores em pill (§2.14). */
 export const Default: Story = {};
 
+/**
+ * Com divisória (RN-229 · S-R9-10): padrão das sub-navs TERCIÁRIAS dentro de
+ * eventos (Financeiro/Kits/Configurações), alinhado a Comunicação. Default
+ * segue plano (Vitor 2026-07-11); `divider` é opt-in.
+ */
+export const ComDivisoria: Story = {
+  args: { divider: true },
+};
+
 /** Sem contadores — só navegação. */
 export const SemContadores: Story = {
   args: {
