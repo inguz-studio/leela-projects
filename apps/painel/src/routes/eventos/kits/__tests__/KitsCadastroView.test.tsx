@@ -14,6 +14,7 @@ function mkKit(over: Partial<Kit>): Kit {
     preco: 0,
     capacidade: 0,
     modalidades: [],
+    itens: [],
     criadoEm: ts(new Date()),
     atualizadoEm: ts(new Date()),
     ...over,
