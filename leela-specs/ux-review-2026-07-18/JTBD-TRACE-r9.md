@@ -22,7 +22,7 @@
 | `S-R9-11` afiliado/influenciador antecipado | doc 04.1 *"Vendo com promotor → link rastreável"* + candidato P6 | T+M | E08 (antecipado) | RN-313, RN-314 |
 | `S-R9-12` patrocinadores reutilizáveis | doc 04.4 *"gerenciar num lugar só onde cada marca aparece"* | S | E10 (seed) | RN-171 |
 | `S-R9-13` CRM + hub Comunicação | doc 04.4 *"dados na mão"* + candidato **P8** (CRM do organizador) | S+T | **E19** (novo) | RN-172 |
-| `S-R9-14` adapter EmailProvider (Resend) | *enabler de infra (honesto)* — destrava convite E18/E08, campanhas E06 | — | E06 | RN-137 |
+| `S-R9-14` adapter EmailProvider (impl Brevo) | *enabler de infra (honesto)* — destrava convite E18/E08, campanhas E06 | — | E06 | RN-137 |
 
 **Cobertura:** 100% das stories com superfície de usuário citam ao menos uma âncora **doc** (aproximações marcadas). Exceções honestas (enablers de infra/UI sem linha direta): `S-R9-04`, `S-R9-05`, `S-R9-06`, `S-R9-10` — marcadas em vez de forjar job (L-004).
 
