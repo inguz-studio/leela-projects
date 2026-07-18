@@ -106,6 +106,8 @@ export {
   CommandGroup,
   CommandItem,
 } from './components/Command';
+export { Combobox } from './components/Combobox';
+export type { ComboboxProps, ComboboxOption } from './components/Combobox';
 export { DropdownMenu } from './components/DropdownMenu';
 export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
 export { FilterMenu } from './components/FilterMenu';
