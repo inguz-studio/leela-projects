@@ -104,3 +104,37 @@ describe('ConfiguracoesView', () => {
     expect(onDeletar).toHaveBeenCalledOnce();
   });
 });
+
+describe('ConfiguracoesView — upload de capa (LEELA-R5)', () => {
+  const arquivo = new File(['x'], 'capa.png', { type: 'image/png' });
+
+  it('sem onUploadCapa: só o caminho de URL (comportamento anterior intacto)', () => {
+    renderView();
+    expect(screen.queryByLabelText('Enviar imagem de capa')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Imagem de capa (URL)')).toBeInTheDocument();
+  });
+
+  it('upload resolve → downloadURL preenche o campo e mostra a prévia', async () => {
+    const onUploadCapa = vi.fn().mockResolvedValue('https://storage.leela.dev/clubes/c1/capa');
+    renderView({ onUploadCapa });
+    const secao = screen.getByRole('region', { name: 'Identidade' });
+    await userEvent.upload(within(secao).getByLabelText('Enviar imagem de capa'), arquivo);
+    expect(onUploadCapa).toHaveBeenCalledWith(arquivo);
+    const url = await within(secao).findByLabelText('Ou cole uma URL');
+    expect(url).toHaveValue('https://storage.leela.dev/clubes/c1/capa');
+    expect(within(secao).getByAltText('Prévia da capa do clube')).toHaveAttribute(
+      'src',
+      'https://storage.leela.dev/clubes/c1/capa',
+    );
+  });
+
+  it('upload que falha → erro inline (mensagem do Error), campo intacto', async () => {
+    const onUploadCapa = vi.fn().mockRejectedValue(new Error('A imagem deve ter no máximo 5MB.'));
+    renderView({ onUploadCapa });
+    const secao = screen.getByRole('region', { name: 'Identidade' });
+    await userEvent.upload(within(secao).getByLabelText('Enviar imagem de capa'), arquivo);
+    const alerta = await within(secao).findByRole('alert');
+    expect(alerta).toHaveTextContent('A imagem deve ter no máximo 5MB.');
+    expect(within(secao).getByLabelText('Ou cole uma URL')).toHaveValue('');
+  });
+});

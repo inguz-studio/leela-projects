@@ -13,15 +13,21 @@ import { ContaRoutes } from '../ContaRoutes';
 const mocks = vi.hoisted(() => ({
   onSessionChange: vi.fn(),
   atualizarNomeExibicao: vi.fn(),
+  atualizarFotoPerfil: vi.fn(),
   trocarSenha: vi.fn(),
   logout: vi.fn(),
+  uploadFotoPerfilConta: vi.fn(),
+  problemaDoArquivoImagem: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', () => ({
   onSessionChange: mocks.onSessionChange,
   atualizarNomeExibicao: mocks.atualizarNomeExibicao,
+  atualizarFotoPerfil: mocks.atualizarFotoPerfil,
   trocarSenha: mocks.trocarSenha,
   logout: mocks.logout,
+  uploadFotoPerfilConta: mocks.uploadFotoPerfilConta,
+  problemaDoArquivoImagem: mocks.problemaDoArquivoImagem,
 }));
 
 type FakeUser = { uid: string; displayName: string | null; email: string | null };
@@ -47,8 +53,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   comSessao({ uid: 'u1', displayName: 'Marina Castelo', email: 'marina@demo.dev' });
   mocks.atualizarNomeExibicao.mockResolvedValue(undefined);
+  mocks.atualizarFotoPerfil.mockResolvedValue(undefined);
   mocks.trocarSenha.mockResolvedValue(undefined);
   mocks.logout.mockResolvedValue(undefined);
+  mocks.uploadFotoPerfilConta.mockResolvedValue('https://storage.leela.dev/users/u1/foto-perfil');
+  mocks.problemaDoArquivoImagem.mockReturnValue(null);
 });
 
 describe('ContaPage — perfil', () => {
@@ -80,6 +89,46 @@ describe('ContaPage — perfil', () => {
     renderPage();
     expect(await screen.findByText(/não está autenticado/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ir para o login' })).toHaveAttribute('href', '/entrar');
+  });
+});
+
+describe('ContaPage — foto de perfil por UPLOAD (LEELA-R5)', () => {
+  const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+
+  it('upload feliz: sobe o arquivo, persiste a downloadURL e preenche o campo', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    await waitFor(() => expect(mocks.uploadFotoPerfilConta).toHaveBeenCalledWith(arquivo));
+    await waitFor(() =>
+      expect(mocks.atualizarFotoPerfil).toHaveBeenCalledWith(
+        'https://storage.leela.dev/users/u1/foto-perfil',
+      ),
+    );
+    expect(await screen.findByText('Foto atualizada')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ou cole uma URL')).toHaveValue(
+      'https://storage.leela.dev/users/u1/foto-perfil',
+    );
+  });
+
+  it('arquivo inválido: erro inline SEM roundtrip de upload', async () => {
+    mocks.problemaDoArquivoImagem.mockReturnValue('A imagem deve ter no máximo 5MB.');
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('A imagem deve ter no máximo 5MB.');
+    expect(mocks.uploadFotoPerfilConta).not.toHaveBeenCalled();
+    expect(mocks.atualizarFotoPerfil).not.toHaveBeenCalled();
+  });
+
+  it('falha no upload: toast honesto, sem persistir URL', async () => {
+    mocks.uploadFotoPerfilConta.mockRejectedValue(new Error('storage/unauthorized'));
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    expect(await screen.findByText('Não foi possível enviar a foto')).toBeInTheDocument();
+    expect(mocks.atualizarFotoPerfil).not.toHaveBeenCalled();
   });
 });
 

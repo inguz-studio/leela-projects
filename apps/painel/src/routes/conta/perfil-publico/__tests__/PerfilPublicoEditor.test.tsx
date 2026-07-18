@@ -69,3 +69,49 @@ describe('PerfilPublicoEditor', () => {
     expect(onSalvar).not.toHaveBeenCalled();
   });
 });
+
+describe('PerfilPublicoEditor — upload de avatar/capa (LEELA-R5)', () => {
+  const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
+
+  it('sem onUpload*: só o caminho de URL (comportamento anterior intacto)', () => {
+    renderEditor({ modo: 'edit', inicial: inicialEdit });
+    expect(screen.queryByLabelText('Enviar foto')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Enviar imagem de capa')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Foto (URL)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Imagem de capa (URL)')).toBeInTheDocument();
+  });
+
+  it('upload do avatar resolve → downloadURL preenche avatarUrl e mostra prévia', async () => {
+    const onUploadAvatar = vi.fn().mockResolvedValue('https://storage.leela.dev/users/u1/perfil-avatar');
+    renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadAvatar });
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    expect(onUploadAvatar).toHaveBeenCalledWith(arquivo);
+    const campo = await screen.findByLabelText('Ou cole uma URL');
+    expect(campo).toHaveValue('https://storage.leela.dev/users/u1/perfil-avatar');
+    expect(screen.getByAltText('Prévia da foto do perfil')).toHaveAttribute(
+      'src',
+      'https://storage.leela.dev/users/u1/perfil-avatar'
+    );
+  });
+
+  it('upload da capa resolve → downloadURL preenche imagemUrl e mostra prévia', async () => {
+    const onUploadCapa = vi.fn().mockResolvedValue('https://storage.leela.dev/users/u1/perfil-capa');
+    renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadCapa });
+    await userEvent.upload(screen.getByLabelText('Enviar imagem de capa'), arquivo);
+    expect(onUploadCapa).toHaveBeenCalledWith(arquivo);
+    await waitFor(() =>
+      expect(screen.getByAltText('Prévia da capa do perfil')).toHaveAttribute(
+        'src',
+        'https://storage.leela.dev/users/u1/perfil-capa'
+      )
+    );
+  });
+
+  it('upload que falha → erro inline com a mensagem do Error', async () => {
+    const onUploadAvatar = vi.fn().mockRejectedValue(new Error('Use uma imagem JPG, PNG, WebP, GIF ou AVIF.'));
+    renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadAvatar });
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent('Use uma imagem JPG, PNG, WebP, GIF ou AVIF.');
+  });
+});

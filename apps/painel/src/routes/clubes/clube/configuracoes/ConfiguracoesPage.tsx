@@ -9,7 +9,11 @@
 import { useState } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useToast } from '@leela/design-system';
-import type { AtualizarClubeInput } from '@leela/api-client';
+import {
+  problemaDoArquivoImagem,
+  uploadCapaClube,
+  type AtualizarClubeInput,
+} from '@leela/api-client';
 import { ConfiguracoesView } from './ConfiguracoesView';
 import { DeletarClubeModal } from './DeletarClubeModal';
 import {
@@ -24,6 +28,15 @@ export function ConfiguracoesPage(): JSX.Element {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [deletarAberto, setDeletarAberto] = useState(false);
+
+  // Upload da capa (LEELA-R5): valida tipo/tamanho ANTES do roundtrip (a
+  // mensagem do Error vira erro inline do FileInput na view); a fronteira real
+  // são as storage.rules (ownership por firestore.get do tenant do clube).
+  async function uploadCapa(file: File): Promise<string> {
+    const problema = problemaDoArquivoImagem(file);
+    if (problema) throw new Error(problema);
+    return uploadCapaClube(clube.id, file);
+  }
 
   async function salvar(patch: AtualizarClubeInput): Promise<void> {
     try {
@@ -60,6 +73,7 @@ export function ConfiguracoesPage(): JSX.Element {
         clube={clube}
         onSalvar={salvar}
         onDeletar={() => setDeletarAberto(true)}
+        onUploadCapa={uploadCapa}
       />
       <DeletarClubeModal
         open={deletarAberto}

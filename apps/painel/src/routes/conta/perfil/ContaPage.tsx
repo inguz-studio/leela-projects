@@ -9,21 +9,25 @@
 // Senhas ficam só no estado controlado dos inputs enquanto a tela existe e são
 // limpas após o sucesso; nunca são logadas.
 //
-// FOTO DE PERFIL (S020-T5): padrão URL+prévia (o MESMO do avatar do perfil
-// público / capa de evento) — o usuário cola uma URL http(s), vê a prévia e
-// salva; reflete no Avatar do rodapé da sidebar (via shell/session.ts). UPLOAD
-// de arquivo segue lacuna: não há Storage no repo (firebase.ts do painel só
-// inicializa db/auth/functions) — registrado, não improvisado.
+// FOTO DE PERFIL (S020-T5 + LEELA-R5): dois caminhos para o MESMO campo
+// (Auth.photoURL → Avatar do rodapé via shell/session.ts):
+//   1. UPLOAD de arquivo (FileInput → `uploadFotoPerfilConta` → Storage
+//      `users/{uid}/foto-perfil` → downloadURL) — persiste na hora;
+//   2. URL externa colada + prévia (fallback aceito, fluxo original).
+// Validação de tipo/tamanho no cliente é UX (`problemaDoArquivoImagem`);
+// a fronteira real são as storage.rules (ADR-016).
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Avatar, Button, Input, useToast } from '@leela/design-system';
+import { Avatar, Button, FileInput, Input, useToast } from '@leela/design-system';
 import {
   atualizarFotoPerfil,
   atualizarNomeExibicao,
   logout,
+  problemaDoArquivoImagem,
   trocarSenha,
+  uploadFotoPerfilConta,
 } from '@leela/api-client';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
@@ -79,6 +83,10 @@ export function ContaPage(): JSX.Element {
   const [fotoEditada, setFotoEditada] = useState<string | null>(null);
   const fotoUrl = fotoEditada ?? fotoOriginal;
   const [salvandoFoto, setSalvandoFoto] = useState(false);
+
+  // Upload de ARQUIVO (LEELA-R5): sobe pro Storage e persiste na hora.
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [erroUploadFoto, setErroUploadFoto] = useState<string | null>(null);
 
   // Troca de senha.
   const [senhaAtual, setSenhaAtual] = useState('');
@@ -138,6 +146,33 @@ export function ContaPage(): JSX.Element {
     fotoUrl.trim().length > 0 && !urlDeImagemValida(fotoUrl)
       ? 'Use uma URL http(s) de imagem.'
       : undefined;
+
+  // Upload de arquivo → Storage → grava a downloadURL no MESMO campo de hoje.
+  // Valida tipo/tamanho ANTES do roundtrip (erro inline no FileInput); a
+  // fronteira real são as storage.rules — aqui é UX.
+  async function enviarFoto(file: File): Promise<void> {
+    const problema = problemaDoArquivoImagem(file);
+    if (problema) {
+      setErroUploadFoto(problema);
+      return;
+    }
+    setErroUploadFoto(null);
+    setEnviandoFoto(true);
+    try {
+      const url = await uploadFotoPerfilConta(file);
+      await atualizarFotoPerfil(url);
+      setFotoEditada(url);
+      toast({ variant: 'success', title: 'Foto atualizada' });
+    } catch {
+      toast({
+        variant: 'danger',
+        title: 'Não foi possível enviar a foto',
+        description: 'Tente novamente.',
+      });
+    } finally {
+      setEnviandoFoto(false);
+    }
+  }
 
   async function salvarFoto(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -213,26 +248,38 @@ export function ContaPage(): JSX.Element {
         </div>
       </form>
 
-      {/* Foto de perfil (S020-T5) — URL + prévia; reflete no Avatar do rodapé. */}
+      {/* Foto de perfil (S020-T5 + LEELA-R5) — upload de arquivo OU URL
+          externa (fallback); reflete no Avatar do rodapé. */}
       <form className={SECAO} onSubmit={(e) => void salvarFoto(e)} aria-label="Foto de perfil">
         <span className={SECAO_TITULO}>Foto de perfil</span>
         <div className="flex items-center gap-[var(--spacing-4)]">
           <Avatar size="lg" name={nome || (user.email ?? 'Você')} {...(urlDeImagemValida(fotoUrl) ? { src: fotoUrl.trim() } : {})} />
-          <div className="flex flex-1 flex-col gap-[var(--spacing-1)]">
-            <Input
-              id="conta-foto-url"
-              type="url"
-              inputMode="url"
-              label="Foto (URL)"
-              value={fotoUrl}
-              onChange={(e) => setFotoEditada(e.target.value)}
-              placeholder="https://…/foto.jpg"
-              {...(fotoUrlErro ? { errorMessage: fotoUrlErro } : {})}
+          <div className="flex flex-1 flex-col gap-[var(--spacing-3)]">
+            <FileInput
+              id="conta-foto-arquivo"
+              label="Enviar foto"
+              buttonLabel="Escolher arquivo"
+              busy={enviandoFoto}
+              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. A foto é atualizada na hora."
+              {...(erroUploadFoto ? { errorMessage: erroUploadFoto } : {})}
+              onFileSelected={(file) => void enviarFoto(file)}
             />
-            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-              Cole a URL de uma imagem. Upload de arquivo ainda não está disponível. Deixe vazio para
-              voltar ao avatar com suas iniciais.
-            </span>
+            <div className="flex flex-col gap-[var(--spacing-1)]">
+              <Input
+                id="conta-foto-url"
+                type="url"
+                inputMode="url"
+                label="Ou cole uma URL"
+                value={fotoUrl}
+                onChange={(e) => setFotoEditada(e.target.value)}
+                placeholder="https://…/foto.jpg"
+                {...(fotoUrlErro ? { errorMessage: fotoUrlErro } : {})}
+              />
+              <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                URL http(s) de uma imagem já hospedada. Deixe vazio para voltar ao avatar com suas
+                iniciais.
+              </span>
+            </div>
           </div>
         </div>
         <div>

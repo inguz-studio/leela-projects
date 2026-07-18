@@ -17,7 +17,10 @@ import {
   getLeelaFunctions,
   getMeuPerfil,
   onSessionChange,
+  problemaDoArquivoImagem,
   salvarPerfil,
+  uploadAvatarPerfilPublico,
+  uploadCapaPerfilPublico,
 } from '@leela/api-client';
 import type { AuthClaims } from '@leela/core';
 import { PerfilPublicoEditor } from './PerfilPublicoEditor';
@@ -92,6 +95,20 @@ export function PerfilPublicoEditorPage(): JSX.Element {
     };
   }, []);
 
+  // Upload (LEELA-R5): valida tipo/tamanho ANTES do roundtrip (a mensagem do
+  // Error vira erro inline do FileInput no editor); a fronteira real são as
+  // storage.rules. A URL resultante preenche o campo — persistir segue no
+  // "Salvar alterações" (salvarPerfil, caminho único de escrita do doc).
+  function comValidacao(
+    upload: (file: File) => Promise<string>
+  ): (file: File) => Promise<string> {
+    return async (file: File) => {
+      const problema = problemaDoArquivoImagem(file);
+      if (problema) throw new Error(problema);
+      return upload(file);
+    };
+  }
+
   async function onSalvar(values: PerfilFormValues): Promise<{ handle: string; criado: boolean }> {
     try {
       const res = await salvarPerfil(getLeelaFunctions(), paraPerfilInput(values));
@@ -132,6 +149,8 @@ export function PerfilPublicoEditorPage(): JSX.Element {
       inicial={estado.inicial}
       linkPublicoBase={LINK_PUBLICO_BASE}
       onSalvar={onSalvar}
+      onUploadAvatar={comValidacao(uploadAvatarPerfilPublico)}
+      onUploadCapa={comValidacao(uploadCapaPerfilPublico)}
     />
   );
 }
