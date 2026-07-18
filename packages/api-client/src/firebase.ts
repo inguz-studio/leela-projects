@@ -36,6 +36,11 @@ import {
   connectFunctionsEmulator,
   type Functions,
 } from 'firebase/functions';
+import {
+  getStorage,
+  connectStorageEmulator,
+  type FirebaseStorage,
+} from 'firebase/storage';
 
 // ---------------------------------------------------------------------------
 // Configuração padrão (projeto Emulator "demo-leela")
@@ -57,6 +62,7 @@ let _app: FirebaseApp | undefined;
 let _db: Firestore | undefined;
 let _auth: Auth | undefined;
 let _functions: Functions | undefined;
+let _storage: FirebaseStorage | undefined;
 let _emulatorsConnected = false;
 
 // ---------------------------------------------------------------------------
@@ -84,6 +90,7 @@ export interface LeelaEmulatorPorts {
   firestore?: number;
   auth?: number;
   functions?: number;
+  storage?: number;
 }
 
 /** Portas padrão do Emulator Suite — NUNCA alterar (contrato de testes/CI). */
@@ -91,6 +98,7 @@ const DEFAULT_EMULATOR_PORTS: Required<LeelaEmulatorPorts> = {
   firestore: 8080,
   auth: 9099,
   functions: 5001,
+  storage: 9199,
 };
 
 /** Opções de inicialização passadas pelo app no entry-point */
@@ -140,6 +148,7 @@ export function initLeela(config: LeelaFirebaseConfig = {}): void {
     firestore: emulatorPorts?.firestore ?? DEFAULT_EMULATOR_PORTS.firestore,
     auth: emulatorPorts?.auth ?? DEFAULT_EMULATOR_PORTS.auth,
     functions: emulatorPorts?.functions ?? DEFAULT_EMULATOR_PORTS.functions,
+    storage: emulatorPorts?.storage ?? DEFAULT_EMULATOR_PORTS.storage,
   };
 
   // Fail-closed: DEMO_CONFIG é Emulator-only. Sem emulador, o app DEVE
@@ -159,6 +168,7 @@ export function initLeela(config: LeelaFirebaseConfig = {}): void {
   if (!_db) _db = getFirestore(_app);
   if (!_auth) _auth = getAuth(_app);
   if (!_functions) _functions = getFunctions(_app, 'us-central1');
+  if (!_storage) _storage = getStorage(_app);
 
   if (useEmulator && !_emulatorsConnected) {
     connectFirestoreEmulator(_db, emulatorHost, ports.firestore);
@@ -166,6 +176,7 @@ export function initLeela(config: LeelaFirebaseConfig = {}): void {
       disableWarnings: true,
     });
     connectFunctionsEmulator(_functions, emulatorHost, ports.functions);
+    connectStorageEmulator(_storage, emulatorHost, ports.storage);
     _emulatorsConnected = true;
   }
 }
@@ -202,4 +213,14 @@ export function getLeelaFunctions(): Functions {
     );
   }
   return _functions;
+}
+
+/** @internal */
+export function getLeelaStorage(): FirebaseStorage {
+  if (!_storage) {
+    throw new Error(
+      '[leela/api-client] Storage não inicializado. Chame initLeela() no entry-point.'
+    );
+  }
+  return _storage;
 }

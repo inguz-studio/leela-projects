@@ -39,10 +39,11 @@ cd "$ROOT"
 FS_PORT=8180
 AUTH_PORT=9198
 FN_PORT=5201
+SG_PORT=9299
 UI_PORT=4001
 HUB_PORT=4401
 LOG_PORT=4501
-EMU_PORTS=("$FS_PORT" "$AUTH_PORT" "$FN_PORT" "$UI_PORT" "$HUB_PORT" "$LOG_PORT")
+EMU_PORTS=("$FS_PORT" "$AUTH_PORT" "$FN_PORT" "$SG_PORT" "$UI_PORT" "$HUB_PORT" "$LOG_PORT")
 
 # --- Logs (fora do repo, temporário) -----------------------------------------
 LOG_DIR="$(mktemp -d 2>/dev/null || echo "${TEMP:-/tmp}/leela-preview-$$")"
@@ -155,6 +156,7 @@ start_vite() {
         VITE_EMULATOR_FIRESTORE_PORT="$FS_PORT" \
         VITE_EMULATOR_AUTH_PORT="$AUTH_PORT" \
         VITE_EMULATOR_FUNCTIONS_PORT="$FN_PORT" \
+        VITE_EMULATOR_STORAGE_PORT="$SG_PORT" \
         pnpm exec vite --host 127.0.0.1 --port "$p" --strictPort >"$VITE_LOG" 2>&1
     ) &
     VITE_PID=$!
@@ -197,9 +199,9 @@ c_green "    Painel no ar em :$VITE_PORT (aguardando o Emulator para os dados)."
 # =============================================================================
 # 3. Emulator Suite (portas alt) — isolado dos agentes
 # =============================================================================
-c_yellow "==> Subindo Firebase Emulator (Firestore :$FS_PORT · Auth :$AUTH_PORT · Functions :$FN_PORT · UI :$UI_PORT)..."
+c_yellow "==> Subindo Firebase Emulator (Firestore :$FS_PORT · Auth :$AUTH_PORT · Functions :$FN_PORT · Storage :$SG_PORT · UI :$UI_PORT)..."
 firebase emulators:start \
-  --only firestore,auth,functions \
+  --only firestore,auth,functions,storage \
   --project demo-leela \
   --config firebase.preview.json \
   >"$EMU_LOG" 2>&1 &
@@ -207,6 +209,7 @@ EMU_PID=$!
 wait_http "http://127.0.0.1:$FS_PORT/" "Firestore Emulator" "$EMU_PID" "$EMU_LOG"
 wait_http "http://127.0.0.1:$AUTH_PORT/" "Auth Emulator" "$EMU_PID" "$EMU_LOG"
 wait_http "http://127.0.0.1:$FN_PORT/" "Functions Emulator" "$EMU_PID" "$EMU_LOG"
+wait_http "http://127.0.0.1:$SG_PORT/" "Storage Emulator" "$EMU_PID" "$EMU_LOG"
 c_green "    Emulator no ar."
 
 # =============================================================================

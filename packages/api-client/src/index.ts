@@ -98,12 +98,27 @@ export type CreateLeelaCoreClient = () => LeelaCoreClient;
 // ---------------------------------------------------------------------------
 // Firebase SDK — inicialização e acessores (LEELA-S000-2-T1)
 // ---------------------------------------------------------------------------
-export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions } from './firebase';
+export { initLeela, getLeelaDb, getLeelaAuth, getLeelaFunctions, getLeelaStorage } from './firebase';
 export type {
   FirebaseClientConfig,
   LeelaFirebaseConfig,
   LeelaEmulatorPorts,
 } from './firebase';
+
+// ---------------------------------------------------------------------------
+// Storage — upload de imagens de perfil/capa (LEELA-R5 · ADR-016).
+// Helpers com path CONTRATADO nas storage.rules; devolvem downloadURL que
+// alimenta os MESMOS campos de hoje (photoURL/avatarUrl/imagemUrl).
+// ---------------------------------------------------------------------------
+export {
+  IMAGEM_UPLOAD_TIPOS,
+  IMAGEM_UPLOAD_MAX_BYTES,
+  problemaDoArquivoImagem,
+  uploadFotoPerfilConta,
+  uploadAvatarPerfilPublico,
+  uploadCapaPerfilPublico,
+  uploadCapaClube,
+} from './storage';
 
 // ---------------------------------------------------------------------------
 // Clubs — leitura tipada de `clubes` (S101-T1) + `membros` (S103-T1)

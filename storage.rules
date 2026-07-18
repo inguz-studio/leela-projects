@@ -1,0 +1,151 @@
+// storage.rules — LEELA · Onda 3 · LEELA-R5 (upload real de imagem)
+//
+// DENY-BY-DEFAULT: todo path fora dos matches explícitos cai no catch-all
+// `read, write: if false` (mesma disciplina do firestore.rules — 19c8afe /
+// 964cae2). O Storage guarda APENAS imagens intrinsecamente públicas
+// (avatar/foto de perfil e capas); nada privado vive aqui — PII e dados de
+// domínio ficam no Firestore, atrás das Rules próprias.
+//
+// Superfícies (ADR-016):
+//   users/{uid}/{objeto}    — foto-perfil | perfil-avatar | perfil-capa
+//                             (dono = o próprio uid; alimenta Auth.photoURL e
+//                             o perfil público @handle)
+//   clubes/{clubeId}/capa   — capa do clube (RN-166, campo `imagemUrl`);
+//                             dono = tenant writer do tenant do clube,
+//                             verificado por CROSS-SERVICE firestore.get no
+//                             doc clubes/{clubeId} (o claim sozinho não prova
+//                             que o clube é do MEU tenant).
+//
+// Decisões de segurança:
+//   - Nomes de objeto ALLOWLISTED (não aceitamos filename livre): mata path
+//     probing, upload de lixo arbitrário e o problema de órfãos — cada
+//     propósito tem UM path estável, re-upload SOBRESCREVE.
+//   - Wildcards de UM segmento ({objeto}) — `a/b` não casa, então não existe
+//     "subpasta" fora do contrato; o catch-all nega o resto.
+//   - contentType allowlist de IMAGEM + tamanho 1B..5MB. LIMITE HONESTO: o
+//     contentType é DECLARADO pelo cliente (não há sniffing de bytes em Rules);
+//     validação de conteúdo real (magic bytes / re-encode / resize) é
+//     processamento server-side — follow-up registrado, fora deste lote.
+//   - Read público SÓ nesses objetos (são exibidos na landing/@handle sem
+//     sessão). Nenhum outro path é legível.
+//   - Delete: só o dono (higiene; a UI de hoje sobrescreve em vez de deletar).
+//   - Nada de `math.isInfinite`/`math.isNaN` (não existem no runtime do
+//     emulator@13 — diretriz herdada do firestore.rules).
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    /** Usuário autenticado. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Upload de imagem válido: payload presente, 1 byte..5MB e contentType
+     * declarado dentro da allowlist de imagem. `contentType` ausente → null →
+     * matches() erra → NEGA (fail-closed por construção).
+     */
+    function imagemValida() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        // Regex ANCORADA (^…$): full-match do contentType inteiro. Sem as
+        // âncoras, um tipo com token de imagem EMBUTIDO ('text/html; image/png'
+        // ou 'image/png,text/html') poderia casar por substring e ser servido
+        // como text/html → stored XSS. O `;`/`,` não existem na classe → tipos
+        // com parâmetro (image/png; charset=…) também são negados. Provado por
+        // teste adversarial (storageRules.integration).
+        && request.resource.contentType.matches('^image/(jpeg|png|webp|gif|avif)$');
+    }
+
+    /** Objeto de imagem de usuário dentro da allowlist de nomes. */
+    function objetoUsuarioValido(objeto) {
+      return objeto in ['foto-perfil', 'perfil-avatar', 'perfil-capa'];
+    }
+
+    /**
+     * Papel de ESCRITA do tenant (espelho do isTenantWriter do Firestore).
+     * Exige `tenantId is string` para fechar o edge null==null (review
+     * antagonista R5): sem isso, um token com role=tenant_owner mas SEM
+     * tenantId (claim malformado) casaria um clube cujo tenantId também fosse
+     * ausente. Owner nasce sempre com tenantId (RN-401), mas a Rule não
+     * depende dessa premissa.
+     */
+    function isTenantWriterRole() {
+      return isSignedIn()
+        && request.auth.token.tenantId is string
+        && (request.auth.token.role == 'tenant_owner'
+            || request.auth.token.role == 'tenant_staff');
+    }
+
+    /**
+     * O clube {clubeId} pertence ao tenant do caller (cross-service lookup no
+     * Firestore). Clube inexistente → get() erra → NEGA (fail-closed): não é
+     * possível "reservar" capa de clube que ainda não existe. `tenantId is
+     * string` no writer role acima já garante que a comparação nunca é
+     * null==null.
+     */
+    function clubeDoMeuTenant(clubeId) {
+      return firestore.get(/databases/(default)/documents/clubes/$(clubeId))
+        .data.tenantId == request.auth.token.tenantId;
+    }
+
+    // ── users/{uid} — imagens de perfil do usuário ────────────────────────
+    // Objetos fixos: foto-perfil (avatar da conta → Auth.photoURL),
+    // perfil-avatar e perfil-capa (perfil público @handle). Todos exibidos em
+    // superfície pública → read aberto (ver DECISÃO abaixo). Write só o PRÓPRIO
+    // uid. read/delete alinhados à MESMA allowlist do create/update (menor
+    // superfície — review antagonista R5 BAIXO-4): objeto fora do contrato
+    // (bug futuro, Admin SDK, import manual) nunca nasce world-readable/
+    // deletável pelo client.
+    //
+    // DECISÃO CONSCIENTE (review antagonista R5 MÉDIO-2 · ADR-016): o read é
+    // público mesmo quando o PERFIL público está `privada`. As imagens de
+    // perfil são intrinsecamente públicas (avatar da conta aparece no app;
+    // avatar/capa alimentam a página @handle). O estado `privada` do perfil
+    // faz o DOC responder 404 no reader da landing; NÃO promete confidencial-
+    // idade dos bytes da imagem em URL de media determinística. Condicionar o
+    // read à visibilidade exigiria cross-service get na coleção `perfis`
+    // (keyed por handle, não por uid) — custo/latência sem ganho real, já que
+    // a imagem não é PII e o path exige conhecer o uid. Documentado, não
+    // acidental.
+    match /users/{uid}/{objeto} {
+      allow read: if objetoUsuarioValido(objeto);
+      allow create, update: if isSignedIn()
+        && request.auth.uid == uid
+        && objetoUsuarioValido(objeto)
+        && imagemValida();
+      allow delete: if isSignedIn()
+        && request.auth.uid == uid
+        && objetoUsuarioValido(objeto);
+    }
+
+    // ── clubes/{clubeId}/capa — capa pública do clube (RN-166) ────────────
+    // Write: tenant writer E o clube é do meu tenant (firestore.get). read/
+    // delete restritos a `capa` (única allowlist do path — BAIXO-4).
+    match /clubes/{clubeId}/{objeto} {
+      allow read: if objeto == 'capa';
+      allow create, update: if isTenantWriterRole()
+        && objeto == 'capa'
+        && clubeDoMeuTenant(clubeId)
+        && imagemValida();
+      allow delete: if isTenantWriterRole()
+        && objeto == 'capa'
+        && clubeDoMeuTenant(clubeId);
+    }
+
+    // ── Catch-all: DENY-BY-DEFAULT ────────────────────────────────────────
+    // NOTA de semântica (review antagonista R5): o deny REAL de todo path não
+    // contratado vem da AUSÊNCIA de `allow` (deny-by-default do Storage), não
+    // deste bloco. Grants são OR-ados e um `if false` NÃO revoga o grant de um
+    // match específico — este `{allPaths=**}` casa TUDO (inclusive
+    // users/**/clubes/**), mas como só nega, não altera nada. Fica como
+    // documentação explícita da intenção (belt-and-suspenders), não como
+    // bloqueio ativo.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,54 @@
+# FileInput — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: FileInput
+version: 0.0.1
+generated_at: "2026-07-18"
+source: src/components/FileInput
+verdict: APPROVE (lote LEELA-R5, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { FileInput, type FileInputProps } from '@leela/design-system'
+
+## Quando usar
+Seleção de ARQUIVO local (upload de imagem de perfil/capa). Gatilho = Button secondary do DS; o input file real fica sr-only com nome acessível. Par natural do seam de upload do api-client (`uploadFotoPerfilConta`, `uploadCapaClube`, …).
+
+## Quando NÃO usar
+Não use para URL colada (Input type=url). Não use para múltiplos arquivos (fora do contrato V1). Não valide tipo/tamanho dentro do componente — validação vive no api-client (`problemaDoArquivoImagem`) e nas storage.rules.
+
+## Props válidas
+- onFileSelected: (file: File) => void   (obrigatória; recebe o File cru)
+- label?: string          (visível + nome acessível do input)
+- accept?: string         (default = allowlist de imagem do upload)
+- buttonLabel?: string    (default 'Escolher arquivo')
+- busy?: boolean          (desabilita + busyLabel)
+- busyLabel?: string      (default 'Enviando…')
+- disabled?: boolean
+- errorMessage?: string   (inline, role=alert, aria-describedby)
+- hint?: string           (aria-describedby)
+- id? / wrapperClassName?
+- ref → encaminhada ao <input type=file>
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --font-size-sm / --font-weight-semibold / --text-primary / --text-tertiary / --text-danger
+- (gatilho herda TODOS os tokens do Button secondary)
+
+## Proibido (do/don't)
+DON'T: subir o arquivo dentro do componente — ele só ENTREGA o File.
+DON'T: esconder o erro só por cor — errorMessage já renderiza role=alert.
+DO: limpar estado de erro do consumidor ao selecionar novo arquivo.
+DO: mostrar busy=true durante o upload (o value é limpo a cada seleção — re-tentar o MESMO arquivo funciona).
+
+## Exemplo mínimo (válido, copiável)
+<FileInput label="Enviar foto" onFileSelected={(f) => void enviar(f)} />
+
+## Exemplo completo (válido, copiável)
+<FileInput
+  label="Enviar capa"
+  hint="JPG, PNG, WebP, GIF ou AVIF até 5MB."
+  busy={enviando}
+  errorMessage={erro ?? undefined}
+  onFileSelected={(file) => void enviarCapa(file)}
+/>
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente FileInput apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

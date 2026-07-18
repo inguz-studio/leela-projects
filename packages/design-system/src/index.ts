@@ -35,6 +35,7 @@ export { brasaTheme, wineTheme } from './theme/rn-themes';
 // ── Atoms ──────────────────────────────────────────────────────────────────
 export { Button, buttonVariants, type ButtonProps } from './components/Button';
 export { Input, type InputProps } from './components/Input';
+export { FileInput, type FileInputProps } from './components/FileInput';
 export { Select, type SelectProps, type SelectOption } from './components/Select';
 export { Checkbox, type CheckboxProps } from './components/Checkbox';
 export { Textarea, type TextareaProps } from './components/Textarea';

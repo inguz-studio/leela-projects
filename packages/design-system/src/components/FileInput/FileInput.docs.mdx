@@ -1,0 +1,31 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './FileInput.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# FileInput
+
+Seletor de arquivo do DS (upload de imagem de perfil/capa): input file real sr-only com nome acessível + gatilho Button secondary. Burro de propósito — entrega o `File` via `onFileSelected`; validação e upload vivem no api-client e nas storage.rules.
+
+<Canvas of={Stories.Default} />
+
+<Controls />
+
+## Estados
+
+- **busy** — desabilita e troca o texto do gatilho por `busyLabel` ("Enviando…").
+- **erro** — `errorMessage` inline com `role=alert`, associada por `aria-describedby` (nunca só cor).
+- O value é limpo a cada seleção: re-selecionar o MESMO arquivo dispara `change` de novo (re-tentativa após falha não fica muda).
+
+<Canvas of={Stories.Busy} />
+<Canvas of={Stories.ComErro} />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="FileInput"
+  snippet={`import { FileInput } from '@leela/design-system';\n\n<FileInput label="Enviar foto" hint="JPG, PNG, WebP, GIF ou AVIF até 5MB." onFileSelected={(file) => void enviar(file)} />`}
+  contract={contract}
+/>

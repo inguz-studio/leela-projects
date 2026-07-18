@@ -42,9 +42,9 @@ function readFirebaseConfig(): FirebaseClientConfig | undefined {
 
 /**
  * Lê portas alternativas do Emulator a partir de VITE_EMULATOR_*_PORT.
- * Ausentes → retorna undefined e o api-client usa os defaults 8080/9099/5001
- * (comportamento inalterado). Usado pelo preview local (portas alt) — ver
- * preview.sh / PREVIEW.md.
+ * Ausentes → retorna undefined e o api-client usa os defaults
+ * 8080/9099/5001/9199 (comportamento inalterado). Usado pelo preview local
+ * (portas alt) — ver preview.sh / PREVIEW.md.
  */
 function readEmulatorPorts(): LeelaEmulatorPorts | undefined {
   const env = import.meta.env;
@@ -56,7 +56,13 @@ function readEmulatorPorts(): LeelaEmulatorPorts | undefined {
   const firestore = parse(env.VITE_EMULATOR_FIRESTORE_PORT);
   const auth = parse(env.VITE_EMULATOR_AUTH_PORT);
   const functions = parse(env.VITE_EMULATOR_FUNCTIONS_PORT);
-  if (firestore === undefined && auth === undefined && functions === undefined) {
+  const storage = parse(env.VITE_EMULATOR_STORAGE_PORT);
+  if (
+    firestore === undefined &&
+    auth === undefined &&
+    functions === undefined &&
+    storage === undefined
+  ) {
     return undefined;
   }
   // exactOptionalPropertyTypes: montar só as chaves definidas
@@ -64,6 +70,7 @@ function readEmulatorPorts(): LeelaEmulatorPorts | undefined {
     ...(firestore !== undefined ? { firestore } : {}),
     ...(auth !== undefined ? { auth } : {}),
     ...(functions !== undefined ? { functions } : {}),
+    ...(storage !== undefined ? { storage } : {}),
   };
 }
 

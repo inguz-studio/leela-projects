@@ -22,6 +22,7 @@ import {
   DropdownMenu,
   EmptyState,
   Field,
+  FileInput,
   FilterMenu,
   Input,
   KpiCard,
@@ -265,6 +266,25 @@ export function ComponentsPage(): JSX.Element {
               errorMessage="Informe um e-mail válido."
             />
             <Input id="demo-bloqueado" label="Campo desabilitado" placeholder="Indisponível" disabled />
+          </DemoCard>
+
+          <DemoCard
+            title="FileInput"
+            description="Seleção de arquivo local (upload de imagem de perfil/capa). Input file real sr-only com nome acessível + gatilho Button; estados busy ('Enviando…') e erro inline. Burro de propósito: entrega o File — validação e upload vivem no api-client + storage.rules (LEELA-R5)."
+          >
+            <FileInput
+              id="demo-file"
+              label="Enviar foto"
+              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB."
+              onFileSelected={() => {}}
+            />
+            <FileInput id="demo-file-busy" label="Durante o upload" busy onFileSelected={() => {}} />
+            <FileInput
+              id="demo-file-erro"
+              label="Com erro"
+              errorMessage="A imagem deve ter no máximo 5MB."
+              onFileSelected={() => {}}
+            />
           </DemoCard>
 
           <DemoCard
