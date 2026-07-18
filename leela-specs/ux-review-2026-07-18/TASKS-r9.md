@@ -84,6 +84,7 @@
 | `S-R9-11-T5` | **Clube como influenciador** (RN-315): `minimoInscricoes` na parceria/afiliado + gate do desconto (ativa só ao cruzar o mínimo; sem retroativo — default) + Rules | M | `packages/core/src/affiliation/**` + `functions`/Rules | S-R9-11-T1 | **Fable** | ⚔ (gate de desconto) |
 | `S-R9-11-T6` | **Influenciador PF por convite de e-mail** (RN-316): reusa `provisionAssessoriaAccount` (E18) + rate-limit R2; PII documento mascarado + trust anchors nas Rules | M | `functions/src/assessorias/provisionAssessoria.ts` (reuso) + `functions`/Rules · `apps/landing` (aceite) | S-R9-11-T1, E18 ✅ | **Fable** | ⚔ (provisiona conta/PII) |
 | `S-R9-11-T7` | **Dashboard do influenciador PF** (RN-318): vê SÓ as próprias conversões (projeção fechada — qtd/valor/status; nunca dado de terceiros); reader server-side + Rules fail-closed | M | `apps/painel` (ou área do influenciador) + `functions`/Rules | S-R9-11-T3, S-R9-11-T6 | **Fable** (Rules) + **Opus** (tela) | ⚔ (escopo de leitura/PII) |
+| `S-R9-11-T8` | **Acompanhamento na aba Clubs, dois lados** (RN-319): organizador vê vendas/conversões de clube-influenciador e PF na aba Clubs dele; clube/influenciador vê as próprias na aba Clubs da própria conta (escopo RN-318) | M | `apps/painel/src/routes/clubes/**` (+ área do influenciador) + `functions`/Rules | S-R9-11-T3 | **Opus** (telas) + **Fable** (Rules) | ⚔ (escopo de leitura) |
 | `S-R9-12-T1` | Registro reutilizável de marca/patrocinador (seed E10-S811): `profissionais/{profId}/marcas` + `packages/core/src/brands/marca.ts` + api-client + Rules owner-only | M | `packages/core/src/brands/marca.ts` + `packages/api-client/src/brands.ts` + Rules | shape `ParceriaPatrocinador` ✅ | **Fable** | ⚔ (Rules owner) |
 | `S-R9-12-T2` | Autocomplete/seleção da listagem do tenant ao cadastrar patrocínio no evento (RN-171) + lista densa | S | `apps/painel` (Combobox de S-R9-05) | S-R9-12-T1, S-R9-05-T2 | **Opus** | — |
 
@@ -115,10 +116,10 @@
 | **R9-B** Análise financeira unificada | S-R9-01, 02, 03 | 6 | Opus + Fable (agregado) |
 | **R9-C** Imagens de evento | S-R9-08, 09 | 7 | Opus + Fable (Storage rules) |
 | **R9-D** Fluidez | S-R9-06 | 4 | Opus (data-layer) |
-| **R9-E** Marketing/marcas | S-R9-11, 12 | 9 | Fable (atribuição) + Opus |
+| **R9-E** Marketing/marcas | S-R9-11, 12 | 10 | Fable (atribuição) + Opus |
 | **R9-F** CRM + Comunicação | S-R9-13 | 5 | Fable (PII) + Opus |
-| **Total** | **13 stories** | **38 tasks** | Fable + Opus (Sonnet proibido) |
+| **Total** | **13 stories** | **39 tasks** | Fable + Opus (Sonnet proibido) |
 
-**Antagonista (⚔):** S-R9-02-T1 (PII agregado) · S-R9-08-T1/T2 + S-R9-09-T1 (Storage rules cross-tenant) · S-R9-11-T1/T2/T3/T5/T6/T7 (atribuição/dinheiro/idempotência/provisiona conta/PII/escopo de leitura) · S-R9-12-T1 (Rules owner) · S-R9-13-T1/T2/T5 (PII/LGPD). **Deliberadamente SEM ⚔** (não inflar): telas de leitura/config sobre dado já gateado, DS/UI de conformidade, viz.
+**Antagonista (⚔):** S-R9-02-T1 (PII agregado) · S-R9-08-T1/T2 + S-R9-09-T1 (Storage rules cross-tenant) · S-R9-11-T1/T2/T3/T5/T6/T7/T8 (atribuição/dinheiro/idempotência/provisiona conta/PII/escopo de leitura) · S-R9-12-T1 (Rules owner) · S-R9-13-T1/T2/T5 (PII/LGPD). **Deliberadamente SEM ⚔** (não inflar): telas de leitura/config sobre dado já gateado, DS/UI de conformidade, viz. **Hipótese HIP-R9-01 (pré-compra)** = pendente validação com organizador; NÃO gera task até ratificar (dinheiro ⇒ Fable + review antagonista quando entrar).
 
 **Ordem de despacho recomendada (por JTBD + dependência):** **R9-A** (abre com S-R9-05, destrava R9-B) ∥ **R9-C** ∥ **R9-D** → **R9-B** (após Combobox/Calendar) ∥ **R9-E** → **R9-F** (por último; gated por decisão do Vitor). Quick-wins de percepção primeiro: S-R9-04 (contraste), S-R9-03 (repasses copy), S-R9-07 (upload-only), S-R9-10 (divisórias).

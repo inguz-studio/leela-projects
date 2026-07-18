@@ -18,6 +18,13 @@
 | **RN-316** | **Influenciador pessoa física convidado por e-mail** a criar conta; dashboard das próprias vendas. **Reusa** `provisionAssessoriaAccount` (E18) + rate-limit R2 + kernel de atribuição. Produção depende do EmailProvider (fail-closed) — eleva a urgência do EmailProvider. | E08 (antecipado) | S-R9-11 |
 | **RN-317** | **Config de novo influenciador (clube ou PF) via MODAL** no painel (padrão shadcn), não página dedicada. | E08 (antecipado) | S-R9-11 |
 | **RN-318** | **Escopo de leitura do influenciador:** vê SÓ as próprias conversões (projeção fechada — qtd/valor/status); **nunca** dado de outros compradores além do agregado da própria atribuição. Rules fail-closed; PII PF com documento mascarado + trust anchors (padrão E18). | E08 (antecipado) | S-R9-11 |
+| **RN-319** | **Acompanhamento de vendas na aba Clubs (dois lados):** o **organizador** vê as vendas/conversões do clube-influenciador e do influenciador PF na sua aba Clubs; o **clube/influenciador** vê as próprias vendas na aba Clubs da própria conta. Escopo de leitura coerente com RN-318 (cada influenciador só as próprias; organizador só as do próprio tenant). | E08 (antecipado) | S-R9-11 |
+
+## Hipóteses (NÃO ratificadas — pendente validação)
+
+| ID | Hipótese | Estado | Story |
+|---|---|---|---|
+| **HIP-R9-01** | **Modelo "pré-compra" do clube-influenciador (group-buy):** inscrições pelo link do clube entram em estado "pré-compra"; ao atingir o mínimo X do organizador, dispara a cobrança no cartão de todas. **PENDENTE VALIDAÇÃO COM ORGANIZADOR** (verbatim do Vitor: "quero validar isso depois"). 4 questões de dinheiro a responder — ver `DECISOES-ABERTAS` (HIP-R9-01). Default conservador enquanto não valida = RN-315 (gate de desconto, sem cobrança em lote). Quando/se implementar: dinheiro ⇒ Fable + review antagonista. | Hipótese | S-R9-11 |
 | **RN-358** | A tela de **Repasses** é a **visão consolidada de todos os eventos** do organizador — declarado explicitamente em título/subtítulo/EmptyState. Os 3 cards de saldo seguem como saldo autoritativo (∑ do servidor). | E09 | S-R9-03 |
 | **RN-821** | `/financeiro` é a **superfície única de análise de vendas (desempenho + analytics)** — a entrada "Analytics" do sidebar deixa de ser placeholder divergente. A Análise aceita **filtro por evento** e **seleção temporal** (intervalo de datas), lendo agregados `…/current` por evento (nunca varredura no cliente). | E11 | S-R9-01 |
 | **RN-822** | Buckets etários da demografia passam a **bandas de 5 anos** (padrão corrida de rua): default `ate_17, 18_24, 25_29, 30_34, 35_39, 40_44, 45_49, 50_54, 55_59, 60_mais`. Idade na data civil da prova, determinística; mesma disciplina de PII do RN-820 (só contagens no agregado). | E11 | S-R9-02 |
