@@ -7,7 +7,8 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, Chip, FileInput, Input, Modal } from '@leela/design-system';
+import { Button, Chip, Combobox, FileInput, Input, Modal } from '@leela/design-system';
+import type { ComboboxOption } from '@leela/design-system';
 import type { Marca, ModeloComercial } from '@leela/core';
 import {
   CONTRAPARTIDA_MIN,
@@ -54,24 +55,35 @@ export function AddPatrocinadorModal({
   const [logoErro, setLogoErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
-  // RN-171: autocomplete/seleção do registro — filtra pelo que se digita no
-  // nome; escolher preenche o form (parte da listagem, não do zero).
-  const sugestoes = useMemo(() => {
-    const lista = (marcasDoRegistro ?? []).filter((m) => m.status === 'ativa');
-    const q = nome.trim().toLowerCase();
-    const casadas = q === ''
-      ? lista
-      : lista.filter((m) => m.nome.toLowerCase().includes(q));
-    return casadas.filter((m) => m.nome.toLowerCase() !== q).slice(0, 5);
-  }, [marcasDoRegistro, nome]);
+  const [marcaSelecionadaId, setMarcaSelecionadaId] = useState('');
+
+  // RN-171: registro reutilizável de marcas ativas do tenant. A seleção é um
+  // Combobox do DS (shadcn §8 · S-R9-12-T2) — busca embutida no painel do DS,
+  // não a "caixa do SO". Escolher preenche o form (parte da listagem, não do
+  // zero); a lista cresce, então busca > chips fixos.
+  const marcasAtivas = useMemo(
+    () => (marcasDoRegistro ?? []).filter((m) => m.status === 'ativa'),
+    [marcasDoRegistro],
+  );
+  const opcoesMarca: ComboboxOption[] = useMemo(
+    () => marcasAtivas.map((m) => ({ value: m.id, label: m.nome })),
+    [marcasAtivas],
+  );
 
   function preencherDaMarca(m: Marca): void {
+    setMarcaSelecionadaId(m.id);
     setNome(m.nome);
     setModelo(m.modeloComercial);
     setValorAnual(m.valorAnual !== undefined ? String(m.valorAnual) : '');
     setContrapartida(m.contrapartida ?? '');
     setContratoUrl(m.contratoUrl ?? '');
     setLogoUrl(m.logoUrl ?? '');
+  }
+
+  function selecionarMarca(value: string | string[]): void {
+    const id = Array.isArray(value) ? value[0] : value;
+    const m = marcasAtivas.find((x) => x.id === id);
+    if (m !== undefined) preencherDaMarca(m);
   }
 
   const input: PatrocinadorInput = useMemo(() => {
@@ -105,6 +117,7 @@ export function AddPatrocinadorModal({
   }
 
   function reset(): void {
+    setMarcaSelecionadaId('');
     setNome('');
     setModelo('financeiro');
     setValorAnual('');
@@ -154,18 +167,24 @@ export function AddPatrocinadorModal({
           placeholder="Loja do Corredor"
         />
 
-        {sugestoes.length > 0 ? (
+        {opcoesMarca.length > 0 ? (
           <div className="flex flex-col gap-[var(--spacing-2)]">
-            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            <label
+              htmlFor="patrocinador-registro"
+              className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+            >
               Do seu registro de patrocinadores (RN-171) — selecionar preenche o cadastro:
-            </span>
-            <div role="group" aria-label="Patrocinadores já cadastrados" className="flex flex-wrap gap-[var(--spacing-2)]">
-              {sugestoes.map((m) => (
-                <Chip key={m.id} onClick={() => preencherDaMarca(m)}>
-                  {m.nome}
-                </Chip>
-              ))}
-            </div>
+            </label>
+            <Combobox
+              id="patrocinador-registro"
+              aria-label="Partir de um patrocinador salvo"
+              options={opcoesMarca}
+              value={marcaSelecionadaId}
+              onValueChange={selecionarMarca}
+              placeholder="Partir de um patrocinador salvo…"
+              searchPlaceholder="Buscar patrocinador…"
+              emptyText="Nenhum patrocinador no registro."
+            />
           </div>
         ) : null}
 
