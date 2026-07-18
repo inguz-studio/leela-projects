@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { Table, type TableColumn } from './Table';
 import { Pagination } from '../Pagination';
-import { Popover } from '../Popover';
+import { DropdownMenu } from '../DropdownMenu';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
 
@@ -81,7 +81,7 @@ function ComAcoesDemo(): React.JSX.Element {
       data={DATA}
       keyExtractor={(row) => row.id}
       renderActions={(row) => (
-        <Popover
+        <DropdownMenu
           open={openRow === row.id}
           onOpenChange={(open) => setOpenRow(open ? row.id : null)}
           trigger={<Button variant="ghost" size="sm">⋯</Button>}
@@ -96,7 +96,7 @@ function ComAcoesDemo(): React.JSX.Element {
   );
 }
 
-/** Popover de linha — só um aberto por vez. */
+/** DropdownMenu de linha — só um aberto por vez. */
 export const ComPopoverDeLinha: Story = { render: () => <ComAcoesDemo /> };
 
 function PaginadaDemo(): React.JSX.Element {
