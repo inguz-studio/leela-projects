@@ -25,10 +25,13 @@ import {
   parseLote,
   parsePaginaVendas,
   precoVigente,
+  projetarPerfilPublico,
+  COLECAO_PERFIS,
   PAGINA_VENDAS_DOC_ID,
   type Lote,
   type StatusEvento,
 } from '@leela/core';
+import { esporteDoEvento } from './esporte';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDb } from './firebaseAdmin';
 import {
@@ -43,6 +46,7 @@ import type {
   JanelaRetiradaPublica,
   KitPublico,
   ModalidadePublica,
+  OrganizadorPublico,
   SecaoPublica,
 } from './tipos';
 
@@ -165,6 +169,44 @@ export async function getPaginaVendas(
 // ---------------------------------------------------------------------------
 
 /**
+ * Organizador PÚBLICO de um tenant — para o bloco "Organizado por" (LEELA-R12).
+ * Resolve o perfil público do tenant (mesma coleção/gate do leitor de perfil)
+ * e devolve SÓ o shape público (handle/nome/avatar via `projetarPerfilPublico`,
+ * a allowlist do core). `null` honesto quando não há perfil público, o tenant
+ * é vazio, ou a leitura falha (build sem emulator). O `tenantId` é lido no
+ * servidor só para achar o handle — não atravessa para a árvore de render.
+ * ⚠️ Deploy real exige índice `perfis(tenantId, visibilidade)` — emulator cria.
+ */
+async function resolverOrganizadorPublico(
+  db: Firestore,
+  tenantId: string,
+): Promise<OrganizadorPublico | null> {
+  if (tenantId.length === 0) return null;
+  try {
+    const snap = await db
+      .collection(COLECAO_PERFIS)
+      .where('tenantId', '==', tenantId)
+      .where('visibilidade', 'in', ['publica', 'indexavel'])
+      .limit(1)
+      .get();
+    const doc = snap.docs[0];
+    if (doc === undefined) return null;
+    // Gate de PII: a projeção do core é a fronteira (allowlist) — nada de
+    // ownerUid/tenantId cruza. `handle` é o docId.
+    const perfil = projetarPerfilPublico(doc.id, doc.data());
+    if (perfil === null) return null;
+    return {
+      handle: perfil.handle,
+      nome: perfil.nome,
+      ...(perfil.avatarUrl !== undefined ? { avatarUrl: perfil.avatarUrl } : {}),
+    };
+  } catch (err) {
+    console.error('[leitor] resolverOrganizadorPublico falhou', err);
+    return null;
+  }
+}
+
+/**
  * Evento publicado por slug — projeção pública completa, ou `null` (→ 404)
  * quando não existe ou não passa no gate de publicação.
  */
@@ -188,9 +230,10 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
       : [];
 
-    const [lotesPorModalidade, kits] = await Promise.all([
+    const [lotesPorModalidade, kits, organizador] = await Promise.all([
       lerLotesPorModalidade(db, slug),
       lerKits(db, slug),
+      resolverOrganizadorPublico(db, texto(data['tenantId'])),
     ]);
 
     const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
@@ -230,16 +273,24 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
     const imagemUrlRaw = texto(data['imagemUrl']);
     const imagemUrl = isUrlCapaValida(imagemUrlRaw) ? imagemUrlRaw : '';
 
+    const nome = texto(data['nome']);
+    // MODALIDADE ESPORTIVA (R12): campo do doc quando o organizador preenche;
+    // senão, derivada de nome + distâncias. Nunca vazia.
+    const modalidadeEsporte =
+      texto(data['modalidadeEsporte']).trim() || esporteDoEvento(nome, modalidadesNomes);
+
     const evento: EventoPublico = {
       slug,
-      nome: texto(data['nome']),
+      nome,
       dataISO: dataEvento.toISOString(),
       dataLabel: fmtDataLonga.format(dataEvento),
       diaSemanaLabel: fmtDiaSemana.format(dataEvento),
       horaLabel: fmtHora.format(dataEvento),
       local: texto(data['local']),
+      modalidadeEsporte,
       usaChip: data['usaChip'] === true,
       qtdInscritos: inteiro(data['qtdInscritos']),
+      organizador,
       modalidades,
       kits,
       precoMinimo: precoMinimo(modalidades),
@@ -295,6 +346,8 @@ async function montarResumoEvento(
   return {
     slug: texto(data['slug']) || doc.id,
     nome: texto(data['nome']),
+    dataISO: dataEvento.toISOString(),
+    futuro: dataEvento.getTime() >= agora.getTime(),
     dataLabel: fmtDataLonga.format(dataEvento),
     diaLabel: fmtDia2.format(dataEvento),
     mesLabel: fmtMesCurto.format(dataEvento).replace('.', ''),

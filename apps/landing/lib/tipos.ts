@@ -51,6 +51,19 @@ export interface SecaoPublica {
   canal: CanalSecao;
 }
 
+/**
+ * Resumo PÚBLICO do organizador para o bloco "Organizado por" (LEELA-R12 ·
+ * Frente 3). Só campos já expostos pela projeção pública do perfil (E17 ·
+ * `projetarPerfilPublico`) — `handle`/`nome`/`avatarUrl`. NUNCA `ownerUid`/
+ * `tenantId`/`organizadorId` (a fronteira de PII de `tipos.ts` continua de pé;
+ * o `tenantId` é lido no servidor só para RESOLVER o handle e não atravessa).
+ */
+export interface OrganizadorPublico {
+  handle: string;
+  nome: string;
+  avatarUrl?: string;
+}
+
 /** Evento publicado — projeção pública completa para a página `/{slug}`. */
 export interface EventoPublico {
   slug: string;
@@ -64,10 +77,20 @@ export interface EventoPublico {
   /** Ex.: "07:00". */
   horaLabel: string;
   local: string;
+  /**
+   * MODALIDADE ESPORTIVA do evento (corrida/MTB/trail/bem-estar) — o QUE se
+   * pratica, distinto do PERCURSO (a distância). LEELA-R12 · Frente 2. Vem de
+   * `modalidadeEsporte` no doc quando presente; senão é derivada do nome +
+   * distâncias (`esporteDoEvento`). Nunca vazio (default "Corrida de rua").
+   */
+  modalidadeEsporte: string;
   usaChip: boolean;
-  /** ∑ mantido por Function — prova social honesta ("453 inscritos"). */
+  /** ∑ mantido por Function — prova social honesta ("453 inscritos").
+   *  LEELA-R12: o DADO permanece; a EXIBIÇÃO foi suprimida (plataforma jovem). */
   qtdInscritos: number;
   imagemUrl?: string;
+  /** Organizador público (bloco "Organizado por" → `/@handle`), ou `null`. */
+  organizador: OrganizadorPublico | null;
   modalidades: ModalidadePublica[];
   /** Kits do evento (RN-210) — o checkout filtra por modalidade. `[]` se nenhum. */
   kits: KitPublico[];
@@ -84,6 +107,10 @@ export interface EventoPublico {
 export interface EventoResumo {
   slug: string;
   nome: string;
+  /** Data da prova em ISO — ordenação e split próximos/passados (timeline R12). */
+  dataISO: string;
+  /** `true` = prova ainda por vir (relógio do servidor) — split da timeline R12. */
+  futuro: boolean;
   dataLabel: string;
   diaLabel: string;
   mesLabel: string;

@@ -38,11 +38,23 @@ export interface ClubeResumoPublico {
   imagemUrl?: string;
 }
 
+/**
+ * Patrocinador PÚBLICO exibido na faixa de patrocinadores da página do
+ * organizador (LEELA-R12 · adendo do Vitor). Só o mínimo público — `nome` +
+ * `logoUrl` 1:1 (RN-123/RN-171). NUNCA campos comerciais (valorAnual,
+ * contrapartida, contratoUrl). `logoUrl` opcional ⇒ a UI cai no monograma.
+ */
+export interface PatrocinadorPublico {
+  nome: string;
+  logoUrl?: string;
+}
+
 /** Perfil público completo — projeção + listas derivadas (S1700). */
 export interface PerfilPublicoCompleto {
   perfil: PerfilPublico;
   eventos: EventoResumo[];
   clubes: ClubeResumoPublico[];
+  patrocinadores: PatrocinadorPublico[];
 }
 
 function texto(v: unknown): string {
@@ -91,6 +103,51 @@ async function listarClubesPublicosDoTenant(
 }
 
 /**
+ * Patrocinadores PÚBLICOS ativos do tenant (faixa de logos da página do
+ * organizador — R12 adendo). Fonte: `parcerias` (subcoleção dos clubes,
+ * `tipo=patrocinador`, `status=ativa`), via collectionGroup filtrado por
+ * `tenantId` (propagado ADR-009). Projeta SÓ `{nome, logoUrl?}` — allowlist
+ * explícita, nada comercial cruza. Dedup por nome (case-insensitive). `[]`
+ * honesto em falha ⇒ a faixa some sem estado vazio. `logoUrl` passa pela mesma
+ * guarda http(s) (RN-153) — logo inválida cai no monograma na UI.
+ * ⚠️ Deploy real exige índice collectionGroup `parcerias(tenantId, tipo,
+ * status)` — emulator cria automático; registrado como pendência operacional.
+ */
+async function listarPatrocinadoresPublicosDoTenant(
+  tenantId: string,
+): Promise<PatrocinadorPublico[]> {
+  try {
+    const db = getDb();
+    const snap = await db
+      .collectionGroup('parcerias')
+      .where('tenantId', '==', tenantId)
+      .where('tipo', '==', 'patrocinador')
+      .where('status', '==', 'ativa')
+      .get();
+
+    const vistos = new Set<string>();
+    const patrocinadores: PatrocinadorPublico[] = [];
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const nome = texto(data['nome']).trim();
+      if (nome.length === 0) continue;
+      const chave = nome.toLowerCase();
+      if (vistos.has(chave)) continue;
+      vistos.add(chave);
+      const logoUrlRaw = data['logoUrl'];
+      patrocinadores.push({
+        nome,
+        ...(isUrlCapaValida(logoUrlRaw) ? { logoUrl: logoUrlRaw } : {}),
+      });
+    }
+    return patrocinadores.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  } catch (err) {
+    console.error('[leitorPerfil] listarPatrocinadoresPublicosDoTenant falhou', err);
+    return [];
+  }
+}
+
+/**
  * Perfil público por handle — projeção sem PII + abas derivadas, ou `null`
  * (⇒ 404) quando o handle é inválido/inexistente ou o perfil é `privada`.
  */
@@ -117,16 +174,19 @@ export async function getPublicPerfil(
     if (perfil === null) return null;
 
     const tenantId = texto(data['tenantId']);
-    const [eventos, clubes] = await Promise.all([
+    const [eventos, clubes, patrocinadores] = await Promise.all([
       tenantId.length > 0
         ? listarEventosPublicadosDoTenant(tenantId)
         : Promise.resolve([]),
       tenantId.length > 0
         ? listarClubesPublicosDoTenant(tenantId)
         : Promise.resolve([]),
+      tenantId.length > 0
+        ? listarPatrocinadoresPublicosDoTenant(tenantId)
+        : Promise.resolve([]),
     ]);
 
-    return { perfil, eventos, clubes };
+    return { perfil, eventos, clubes, patrocinadores };
   } catch (err) {
     console.error('[leitorPerfil] getPublicPerfil falhou', err);
     return null;
