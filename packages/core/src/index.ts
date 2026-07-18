@@ -1117,3 +1117,67 @@ export {
   momentoDoGatilho,
   parseAutomacao,
 } from './eventos/automacao';
+
+// ---------------------------------------------------------------------------
+// Afiliados/influenciadores do evento (E08 recorte antecipado · R9-E ·
+// RN-313..319). Organizador dono; docId == refCodigo (unicidade por chave);
+// atribuição reusa dentroDaJanelaAtribuicao (E05) + costura do checkout.
+// ---------------------------------------------------------------------------
+export type {
+  TipoAfiliado,
+  StatusAfiliado,
+  Afiliado,
+  SalvarAfiliadoInput,
+} from './affiliation/afiliado';
+export {
+  COLECAO_AFILIADOS,
+  SUBCOLECAO_CONVERSOES_AFILIADO,
+  TIPOS_AFILIADO,
+  isTipoAfiliado,
+  STATUS_AFILIADO,
+  isStatusAfiliado,
+  REF_CODIGO_RE,
+  normalizarRefCodigo,
+  isRefCodigoValido,
+  ALFABETO_REF_CODIGO,
+  REF_CODIGO_TAMANHO,
+  gerarRefCodigo,
+  montarLinkAfiliado,
+  JANELA_ATRIBUICAO_AFILIADO_DEFAULT_DIAS,
+  JANELA_ATRIBUICAO_AFILIADO_MAX_DIAS,
+  isJanelaAtribuicaoValida,
+  AFILIADO_NOME_MAX,
+  AFILIADO_CANAL_MAX,
+  CAMPOS_FUNCTION_AFILIADO,
+  descontoAfiliadoAtivo,
+  validarSalvarAfiliadoInput,
+  parseAfiliado,
+} from './affiliation/afiliado';
+
+// ---------------------------------------------------------------------------
+// E-mail transacional (S-R9-14 · RN-137 · padrão ADR-006): port plugável;
+// impl de referência BrevoProvider em functions/src/email/. Fail-closed sem
+// BREVO_API_KEY (selectEmailProvider → null).
+// ---------------------------------------------------------------------------
+export type {
+  EmailDestinatario,
+  SendTransactionalParams,
+  SendTransactionalResult,
+  EmailProvider,
+} from './email/EmailProvider';
+
+// ---------------------------------------------------------------------------
+// Marcas/patrocinadores reutilizáveis (S-R9-12 · RN-171 — seed E10-S811):
+// registro owner-only do profissional; reusa o modelo comercial RN-123.
+// ---------------------------------------------------------------------------
+export type { StatusMarca, Marca, MarcaInput } from './brands/marca';
+export {
+  SUBCOLECAO_MARCAS,
+  STATUS_MARCA,
+  isStatusMarca,
+  MARCA_NOME_MAX,
+  MARCA_CONTRAPARTIDA_MIN,
+  MARCA_CONTRAPARTIDA_MAX,
+  validarMarcaInput,
+  parseMarca,
+} from './brands/marca';
