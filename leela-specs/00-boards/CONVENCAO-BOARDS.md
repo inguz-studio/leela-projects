@@ -60,6 +60,23 @@ O acompanhamento tem três alturas de zoom, cada uma num arquivo:
 
 A hierarquia canônica dos nomes (Onda → Épico → História → Tarefa) mora em [[MODELO-ROADMAP]].
 
+## Como nasce uma rodada nova (convenção de pastas)
+
+Reorganização de 2026-07-18: `leela-specs/` tem só `HOME.md` e `README.md` na raiz; o resto vive em pastas numeradas por função (mapa completo em [[HOME]]). Duas regras valem para toda rodada de trabalho daqui em diante:
+
+1. **Toda rodada nasce em `02-rodadas/<data>-<slug>/`** (ex.: `2026-07-18-ux-review/`), com os arquivos **numerados 00-05**:
+
+   | Arquivo | O que guarda |
+   |---|---|
+   | `00-review.md` | a ata — o pedido do cliente/Vitor na íntegra (verbatim), reconstruída do audit |
+   | `01-planning.md` | os lotes, quem executou, modelo, gates e o placar final |
+   | `02-jtbd.md` | matriz story → JTBD |
+   | `03-stories.md` | user stories com ACs |
+   | `04-tasks.md` | quebra 1-task-1-PR |
+   | `05-rns-delta.md` | **só o delta** de RNs da rodada |
+
+2. **RN nova SEMPRE consolida no épico na aterrissagem.** A regra de negócio canônica mora em `03-canon/epics/` (a seção "Regras de negócio novas" do épico); a rodada guarda apenas o **delta** em `05-rns-delta.md`, apontando para o épico. Ponta solta de RN vira atualização do épico na MESMA aterrissagem — nunca fica só no delta da rodada. (Par da regra de boards: o épico é atualizado junto do kanban.)
+
 ## Onde foi parar o detalhe antigo
 
 Cada entrega já concluída tem seu relatório completo em `outputs/leela-build-2d6ee98d/*-REPORT.md`. O texto integral dos cards antigos (antes desta convenção) está preservado, sem cortes, em [[BOARD-HISTORICO]]. Nada foi apagado; foi realocado.
