@@ -1,8 +1,9 @@
 /* ── Fontes do tema brasa ────────────────────────────────────────────────
    O tema brasa declara --font-family-display: Exo 2, --font-family-ui: Exo 2,
-   --font-family-mono: JetBrains Mono. Import idêntico ao de apps/painel (que já
-   roda no brasa) — mesma fonte, mesma superfície pública/privada. */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600&display=swap');
+   --font-family-mono: JetBrains Mono. A CARGA da webfont (Exo 2 + JetBrains
+   Mono) é feita por <link> no <head> de app/layout.tsx — o `@import url(google)`
+   AQUI era DERRUBADO pelo pipeline de CSS do Next (não virava request), então a
+   LP caía no sans-serif do sistema. Não reintroduzir o @import remoto aqui. */
 
 /* ── Tokens do design system (tema brasa — DARK) ─────────────────────────
    Fonte ÚNICA dos tokens semânticos (sem redefinir token local). O

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "eslint app lib --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "verify:brand": "node scripts/verify-brand-fonts.mjs"
   },
   "dependencies": {
     "@leela/api-client": "workspace:*",
