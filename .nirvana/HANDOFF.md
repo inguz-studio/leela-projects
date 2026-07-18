@@ -1,6 +1,28 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R9 SPEC UX + DECISÕES DO DIA)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (EXECUÇÃO DO DIA: R9-A/E + R10-R13 + 4 retomadas + R12-fix)
 
-## 📋 LEELA-R9 · Pacote de spec da revisão UX + decisões do Vitor · 2026-07-18 tarde (o mais recente) — COMECE AQUI
+## 🏁 APÊNDICE DO DIA · 2026-07-18 noite — EXECUÇÃO DA REVISÃO UX (o mais recente) — COMECE AQUI
+
+Depois do pacote de spec R9 (seção logo abaixo), o Vitor liberou a execução. A onda do dia rodou multi-lane sobre uma árvore de trabalho única; uma queda de terminal às ~11:10 exigiu **4 retomadas** (R9-A-ret, R9-E-ret, R12-ret, R13-ret). Todas fecharam com gate verde. Incidente **L-009** registrado (autostash/`git stash -u` concorrente é destrutivo para untracked de outra lane na mesma árvore — serializar lanes que compartilham árvore).
+
+**Lotes fechados e no ar (commits + gates):**
+- **R9-A · Conformidade de DS/UI** (Opus, sf-frontend-lead) — `9d597c7`..`717ead6` + retomada `45e8b36`+`f949ec2`+`f356788`+`1181cd0`: contraste AA por estado (Switch thumb-OFF / borda flat, tokens novos, prova numérica 1.09→4.18), Popover/Command/Combobox shadcn, `Calendar`/`DateRangePicker` (destrava o R9-B), divisórias RN-229, foto de perfil upload-only RN-168, **adendo 12** (SubNav com `overflow-x-auto` + header do evento sem busca/novo-evento). Gate: DS **1037/1037** · painel **1132/1132** · matriz AA verde.
+- **R9-E · Marketing/marcas antecipado** (Fable backend + Opus UI) — backend `6203e0a`..`7919c3c` + fixes `5ca4f5a`/`a81035b`/`3227306` + UI `04154f4`..`bd86ba7`: afiliados E08 (RN-313..319), aba Afiliados, aba Clubs dos dois lados, aceite PF na landing, patrocinador reutilizável + logo 1:1 (RN-171), `BrevoProvider` fail-closed (RN-137). Gate: 22 integ + 38 unit + regressão verde · 2 rodadas de review antagonista (2 fixes de segurança: reenvio de convite PF, estorno decrementa o gate RN-315).
+- **R10 · Ver página pública** (Opus) — `6a29180`: `linkPublico.ts` + `VITE_LEELA_URL` + botão desabilitado em rascunho. Gate: curl 200/404 + 10/10 testes.
+- **R11 · Convenção dos boards** (Opus, sf-ux-engineer) — `78dd0a8` (+`6a29180`): `CONVENCAO-BOARDS` + BOARD-EPICOS + BOARD-HISTORICO + V1-KANBAN reescrito em cards de 1 linha; verbatim antigo preservado no histórico.
+- **R12 · Landing identidade + conteúdo + organizador** (Opus) — `9a52640`/`be4f4ba`/`7c6fd95` + `534d38a`/`029b76f`/`6fceaa4`: identidade DS (tipografia/bordas/ícones/botões), evento sem chip/prova social + modalidade + galeria, página-calendário do organizador (ref Luma) + faixa de patrocinadores, footer wordmark, RN-169/S1706. Gate: tsc/lint/build 0 + smoke SSR 200/404 + aws-reviewer 8.5.
+- **R13 · Checkout identidade** (Opus) — `f617a32`/`448abb4`/`6e03230`/`27d2b7a`: stepper de 3 etapas macro visíveis (5 internas), form vertical, footer wordmark, kits com hierarquia/descrição/imagem, ritmo vertical. Gate: tsc 0 + eslint 0 + next build 9/9. Gap de modelo do kit em `leela-specs/gaps/R13-kit-model-gap.md`.
+- **R12-fix · Bug "ver página pública" + adendo 13** (Opus) — veredito `stale_server` (NÃO é bug no código: chunks JS órfãos servidos por processo antigo → hidratação quebrada; instrução ao Vitor = reiniciar o dev server `:3200`) + fix `91c697a` (mock em todos os slots de imagem sem dado: avatar do organizador + logos 1:1 do patrocinador). Gate: tsc 0 · lint 0 · build 10/10 · rota 200 com 0 console errors.
+
+**Pendências abertas (herdar na próxima sessão):**
+- **`BREVO_API_KEY`** — única externa do e-mail; ação do Vitor (conta Brevo + domínio). Ligar destrava os 3 consumidores (convite E18, convite influenciador PF, campanhas E06); e2e `BREVO_E2E=1` fica skip documentado até a chave existir.
+- **HIP-R9-01 (pré-compra do clube-influenciador)** — hipótese, pendente validação com o organizador (4 questões de dinheiro registradas). Default conservador enquanto isso = RN-315.
+- **UI do painel R9-B (análise financeira unificada)** — lote despachado (Calendar/DateRangePicker + filtro por evento + cohort 5-em-5 + repasses consolidados); telas ainda **sem gate** — retomar sobre o Calendar do R9-A já pronto.
+- **Página `/convite/afiliado`** — aceite PF landou (`eccfbd0`); o smoke live de click-through (firebase habilitado) fica para o Vitor, conforme a regra de não abrir navegador por iniciativa própria.
+- Rotação da chave prod do Asaas (MANDATÓRIA, ver R6) — ação do Vitor.
+
+---
+
+## 📋 LEELA-R9 · Pacote de spec da revisão UX + decisões do Vitor · 2026-07-18 tarde
 
 **sf-cto (Opus). Revisão UX do Vitor virou pacote executável em `leela-specs/ux-review-2026-07-18/` (base `95b1c52` + adendos 5-8: `a69996b`→`deeb2b7`): 14 stories / 41 tasks / 6 lotes (R9-A..F), 17 RNs novas (168-822) + HIP-R9-01, épico novo E19-CRM, diretriz shadcn PERMANENTE (`governanca-design.md §8`), lição L-006 (gate AA por estado — thumb do Switch OFF ≈1.1:1 confirmado).** Gate quality PASS 0.94. Report local `outputs/leela-build-2d6ee98d/R9-UX-SPEC-REPORT.md`.
 
