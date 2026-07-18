@@ -32,7 +32,7 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
-import { derivarStatus } from '@leela/core';
+import { derivarStatus, COLECAO_PERFIS } from '@leela/core';
 
 import { assertEmulatorOnly } from '../src/seed/emulator-guard';
 import { CASTELO_TENANT_ID, MARINA_CASTELO_UID } from '../src/seed/tenants.seed';
@@ -111,6 +111,12 @@ interface EventoExtra {
   dataDiasRelativos?: number;
   local: string;
   modalidades: string[];
+  /**
+   * MODALIDADE ESPORTIVA (corrida/MTB/trail/bem-estar) — o QUE se pratica,
+   * distinto do PERCURSO (distância em `modalidades`). LEELA-R12 · Frente 2:
+   * a landing lê este campo do doc; ausente, ela deriva do nome + distâncias.
+   */
+  modalidadeEsporte: string;
   status: 'rascunho' | 'publicado' | 'ao_vivo' | 'encerrado';
   usaChip: boolean;
   capacidade: number;
@@ -138,6 +144,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataDiasRelativos: 55,
     local: 'Parque de Coqueiros, Florianópolis/SC',
     modalidades: ['5k', '10k'],
+    modalidadeEsporte: 'Corrida de rua',
     status: 'publicado',
     usaChip: false,
     capacidade: 400,
@@ -153,6 +160,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataDiasRelativos: 19,
     local: 'Av. Beira-Mar Norte, Florianópolis/SC',
     modalidades: ['5k', '10k'],
+    modalidadeEsporte: 'Corrida de rua',
     status: 'publicado',
     usaChip: true,
     capacidade: 60,
@@ -167,6 +175,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataDiasRelativos: 10,
     local: 'Pântano do Sul, Florianópolis/SC',
     modalidades: ['11k'],
+    modalidadeEsporte: 'Trail run',
     status: 'rascunho',
     usaChip: false,
     capacidade: 80,
@@ -181,6 +190,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataISO: '2025-12-31T17:00:00-03:00',
     local: 'Centro Histórico, Florianópolis/SC',
     modalidades: ['10k'],
+    modalidadeEsporte: 'Corrida de rua',
     status: 'encerrado',
     usaChip: true,
     capacidade: 120,
@@ -196,6 +206,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataDiasRelativos: 40,
     local: 'Costa da Lagoa, Florianópolis/SC',
     modalidades: ['MTB 45km', 'MTB 90km'],
+    modalidadeEsporte: 'Mountain bike',
     status: 'publicado',
     usaChip: true,
     capacidade: 300,
@@ -211,6 +222,7 @@ const EVENTOS_EXTRA: readonly EventoExtra[] = [
     dataDiasRelativos: 25,
     local: 'Praia do Moçambique, Florianópolis/SC',
     modalidades: ['Yoga', 'Bem-estar'],
+    modalidadeEsporte: 'Bem-estar',
     status: 'publicado',
     usaChip: false,
     capacidade: 60,
@@ -233,6 +245,7 @@ async function seedEventosExtra(db: Db, agora: Date): Promise<void> {
       data: ts(dataProva),
       local: e.local,
       modalidades: e.modalidades,
+      modalidadeEsporte: e.modalidadeEsporte,
       slug: e.id,
       status: e.status,
       usaChip: e.usaChip,
@@ -1281,6 +1294,32 @@ async function seedOverviewAnalytics(db: Db): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /** Aplica todos os dados extras do preview (aditivo e idempotente). */
+/**
+ * Perfil público do organizador (LEELA-R12 · Frente 3) — `perfis/{handle}`.
+ * Sem ele, a página `/@{handle}` (calendário/timeline do organizador) só existe
+ * após criação manual no painel; aqui damos ao preview um handle REAL do tenant
+ * Castelo (Marina) para a review da timeline + patrocinadores ponta a ponta.
+ * `indexavel` (RN-161) para render + metadata. `ownerUid`/`tenantId` são
+ * privados (nunca saem na projeção — o leitor os usa só server-side). Additivo
+ * e idempotente (docId fixo = handle). @handle público = `castelo`.
+ */
+async function seedPerfilOrganizador(db: Db): Promise<void> {
+  await upsert(db.collection(COLECAO_PERFIS).doc('castelo'), {
+    handle: 'castelo',
+    tipo: 'organizador',
+    ownerUid: MARINA_CASTELO_UID,
+    tenantId: CASTELO_TENANT_ID,
+    nome: 'Castelo Produções',
+    bio: 'Corridas, MTB, trail e bem-estar em Florianópolis. Calendário da temporada logo abaixo.',
+    visibilidade: 'indexavel',
+    linksExternos: [
+      { label: 'Instagram', url: 'https://instagram.com/casteloproducoes' },
+      { label: 'Site oficial', url: 'https://castelo-producoes.example.com' },
+    ],
+  });
+  console.log('[seed-extra] perfil público: +1 (@castelo — organizador Castelo Produções)');
+}
+
 export async function seedPreviewExtra(
   db: Db,
   agora: Date = new Date()
@@ -1288,6 +1327,7 @@ export async function seedPreviewExtra(
   assertEmulatorOnly('seedPreviewExtra');
 
   await seedEventosExtra(db, agora);
+  await seedPerfilOrganizador(db);
   await seedKernelVendasExtra(db);
   await seedCapasCanonicas(db);
   await seedMeiaFloripaFidelidade(db, agora);
