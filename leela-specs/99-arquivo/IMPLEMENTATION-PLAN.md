@@ -111,7 +111,7 @@ Execute a ONDA 0 (23 tasks), 1 task = 1 PR, na ordem:
 3. E01: tokens do Design System v3 (tema brasa) → tailwind.config + tema shadcn; componentes base (Button, Input, Table densa §2.5, Modal/ConfirmModal §2.15, Sidebar/SubNav, Toast, Badge, Card).
 4. E16-S1600: multi-tenancy fundacional — coleção tenants/{id}, custom claims role+tenantId, Security Rules de isolamento (dado de um tenant nunca vaza; platform_admin cruza), testes de regra no Emulator.
 
-Respeite o DoD (leela-specs/definition-of-done.md). Ao terminar cada task, atualize a subtarefa correspondente em leela-specs/backlog/. Pare ao fim da Onda 0 e me mostre o que rodou.
+Respeite o DoD (leela-specs/definition-of-done.md). Ao terminar cada task, atualize a subtarefa correspondente em leela-specs/06-backlog/backlog/. Pare ao fim da Onda 0 e me mostre o que rodou.
 ```
 
 ---

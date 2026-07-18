@@ -57,7 +57,7 @@ tags:
 - [x] **[R6] Gateway Asaas em sandbox** — cobrança PIX, cartão e boleto de ponta a ponta ✅ [[BOARD-HISTORICO]]
 - [x] **[R7] Página do evento** — sem linhas entre dobras, ritmo único e hero em blur ✅ [[BOARD-HISTORICO]]
 - [x] **[R8] Dados de demonstração** — clubes da Marina e sistema web preenchidos ✅ [[BOARD-HISTORICO]]
-- [x] **[R9] Spec da revisão UX** — 13 itens do Vitor virados em histórias prontas ✅ [[STORIES-r9]]
+- [x] **[R9] Spec da revisão UX** — 13 itens do Vitor virados em histórias prontas ✅ [[03-stories]]
 - [x] **[R10] Ver página pública** — botão do evento abre a landing na URL certa (env), rascunho desabilitado ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-A] Conformidade de UI** — contraste por estado, divisórias iguais, foto só por upload, filtros no padrão do DS, sub-nav com rolagem própria e header do evento sem busca ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-A] Calendar no DS** — date-picker e seletor de intervalo shadcn para o filtro temporal ✅ [[BOARD-HISTORICO]]

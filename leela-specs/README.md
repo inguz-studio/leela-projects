@@ -4,12 +4,12 @@ Plano executável por IA (Fable 5) para construir o ecossistema **Leela** — in
 
 ## Como o Fable 5 deve ler
 
-1. `ROADMAP.md` — visão, stack, horizontes, mapa de épicos, ondas de execução.
-2. `00-TEMPLATE-spec.md` — o formato de cada spec.
-3. `adr/ADR-stack.md` — decisões de stack (Next.js, Firestore, Firebase Auth, Turborepo, pagamento plugável).
-4. `modelo-de-dados-firestore.md` — entidades, N:N, agregados por Function, coleções por épico.
-5. `definition-of-done.md` + `estrategia-testes.md` — qualidade transversal.
-6. `epics/` — na ordem das ondas.
+1. `01-produto/ROADMAP.md` — visão, stack, horizontes, mapa de épicos, ondas de execução.
+2. `04-engenharia/00-TEMPLATE-spec.md` — o formato de cada spec.
+3. `03-canon/adr/ADR-stack.md` — decisões de stack (Next.js, Firestore, Firebase Auth, Turborepo, pagamento plugável).
+4. `04-engenharia/modelo-de-dados-firestore.md` — entidades, N:N, agregados por Function, coleções por épico.
+5. `04-engenharia/definition-of-done.md` + `04-engenharia/estrategia-testes.md` — qualidade transversal.
+6. `03-canon/epics/` — na ordem das ondas.
 
 ## Épicos (14 · 77 stories · 172 tasks)
 
@@ -35,10 +35,10 @@ Ordem de construção: **Onda 0** (E00→E01) → **1** (E05, E03, E02) → **2*
 ## Atualizações pós-discovery
 
 - **Comece por aqui (fatia V1):** [[V1-PRODUTOR-web]] — produtor (web) + app simples + super-admin mínimo. É o que o Fable 5 constrói primeiro.
-- **Arquitetura:** marketplace **multi-tenant** (ADR-009 · `adr/ADR-multitenancy.md`) — fundacional, nasce no E00.
+- **Arquitetura:** marketplace **multi-tenant** (ADR-009 · `03-canon/adr/ADR-multitenancy.md`) — fundacional, nasce no E00.
 - **Épicos adicionados** (além dos 14): **E14** Integrações de treino (`TrainingProvider`), **E15** Creator Studio (SaaS estilo MyDose), **E16** Plataforma & Super-Admin, **E17** Perfil social / link-in-bio, **E18** Assessorias parceiras (tração B2B). **Total: 19 épicos.**
 - **Modelo do roadmap:** terminologia e hierarquia canônica (Onda → Épico → US → Task) em [[MODELO-ROADMAP]] — reconcilia "Wave/Onda/Épico".
-- **Discovery** (benchmarks + validação) em `discovery/` — 7 pilares, relatório, parecer do conselho, nuvem de ~70 features e re-análise de roadmap.
+- **Discovery** (benchmarks + validação) em `05-discovery/` — 7 pilares, relatório, parecer do conselho, nuvem de ~70 features e re-análise de roadmap.
 
 ## Referências de design
 

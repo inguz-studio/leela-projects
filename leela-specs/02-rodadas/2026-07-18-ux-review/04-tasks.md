@@ -1,7 +1,7 @@
-# TASKS-r9 · Quebra AI-ready da revisão UX (1 task = 1 PR = 1 commit `[LEELA-R9-*]`)
+# 04-tasks · Quebra AI-ready da revisão UX (1 task = 1 PR = 1 commit `[LEELA-R9-*]`) · 2026-07-18 (era TASKS-r9)
 
 > PROPOSTA revisável. Cada task = 1 commit atômico, staging cirúrgico, trailers de decisão. Roteamento: **Fable** (pagamento/segurança/gate/rules/core-negócio/PII/atribuição) · **Opus** (UI/mecânico/QA). **Sonnet proibido.** `⚔` = review antagonista obrigatório. Estimativa T-shirt (XS<0.5d · S 0.5-1d · M 1-2d · L 2-4d · XL módulo).
-> **Território declarado por task** (paralelização segura). Âncoras conferidas por leitura em `STORIES-r9.md`.
+> **Território declarado por task** (paralelização segura). Âncoras conferidas por leitura em `03-stories.md`.
 
 ---
 
@@ -16,7 +16,7 @@
 | `S-R9-05-T3` | Diretriz shadcn PERMANENTE em `governanca-design.md` (nova §8) + item de gate de UI + sweep dos `<select>`/filtros fora do padrão | S | `leela-specs/governanca-design.md` + `apps/painel` (sweep) | S-R9-05-T2 | **Opus** | — |
 | `S-R9-04-T1` | Medição AA real (thumb-OFF×track-OFF do Switch + borda flat×página, 2 temas) + par novo em `NON_TEXT_PAIRS` (20→21) — o teste FALHA com o token atual (prova) | S | `packages/design-system/src/theme/__tests__/contrast.test.ts` | — | **Opus/DS** | — |
 | `S-R9-04-T2` | Fix de tokens: `--switch-thumb-off` ≥3:1 sobre track + borda perceptível do flat (component-token, processo §5) + matriz AA verde + showroom 2 temas | S | `packages/design-system/src/components/Switch` + `Input/Select/Textarea` + `tokens/*.json` | S-R9-04-T1 | **Opus/DS** | — |
-| `S-R9-10-T1` | Padronizar divisória das sub-navs terciárias dentro de eventos no padrão Comunicação (Tabs `border-b`) — decisão (a) trocar SubNav→Tabs nas terciárias ou (b) variante de SubNav com divisória; inventário já em `STORIES-r9.md §S-R9-10` | S | `packages/design-system/src/components/{SubNav,Tabs}` + layouts `apps/painel/src/routes/eventos/**` | — | **Opus/DS** | — |
+| `S-R9-10-T1` | Padronizar divisória das sub-navs terciárias dentro de eventos no padrão Comunicação (Tabs `border-b`) — decisão (a) trocar SubNav→Tabs nas terciárias ou (b) variante de SubNav com divisória; inventário já em `03-stories.md §S-R9-10` | S | `packages/design-system/src/components/{SubNav,Tabs}` + layouts `apps/painel/src/routes/eventos/**` | — | **Opus/DS** | — |
 | `S-R9-07-T1` | Foto de perfil da conta = upload-only: remover `Input` "Ou cole uma URL" + estado/validação/botão de URL; atualizar teste `ContaPage.test.tsx:109` | S | `apps/painel/src/routes/conta/perfil/**` | LEELA-R5 ✅ | **Opus** | — |
 
 **Gate do lote:** matriz AA (prova numérica S-R9-04) · showroom nos 2 temas · a11y de teclado no Combobox/Calendar · suíte DS + painel verdes. **Decisões que este lote abre:** upload-only morre em todo lugar? (S-R9-07) · divisória supersede SubNav-plano de 2026-07-11? (S-R9-10) — ambas em `DECISOES-ABERTAS`.

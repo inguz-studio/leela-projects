@@ -7,6 +7,23 @@ aliases: [Leela Specs, Home, MOC]
 
 Ponto de entrada do planejamento do **Leela** — ecossistema que unifica ingressos + comunidade/clubs + comunicação + desafios gameficados + controle de vendas. Abra esta nota no Obsidian e navegue pelos `[[wikilinks]]`.
 
+## 🗃️ Estrutura de pastas (reorganizada 2026-07-18)
+
+Só `HOME.md` e `README.md` moram na raiz. O resto está em pastas numeradas por função. Wikilinks resolvem por nome — a pasta é só organização.
+
+| Pasta | O que guarda |
+|---|---|
+| `00-boards/` | Acompanhamento vivo: [[V1-KANBAN]], [[BOARD-EPICOS]], [[BOARD-HISTORICO]], [[V1-CHECKLIST]], [[CONVENCAO-BOARDS]] |
+| `01-produto/` | Visão e decisões: [[ROADMAP]], [[ROADMAP-VISUAL]], `roadmap.html`, [[V1-PRODUTOR-web]], [[DECISOES-ABERTAS]], [[EXPLICACAO-ONDE-ESTAMOS]] |
+| `02-rodadas/` | Uma pasta por rodada de trabalho (`<data>-<slug>/`), arquivos numerados `00-review` → `05-rns-delta`. Mais recente: `2026-07-18-ux-review/` |
+| `03-canon/` | Fonte da verdade durável: `epics/` (um por épico) + `adr/` (decisões de arquitetura) |
+| `04-engenharia/` | Qualidade transversal: [[convencoes-codigo]], [[definition-of-done]], [[estrategia-testes]], [[modelo-de-dados-firestore]], [[governanca-design]], [[00-TEMPLATE-spec]] |
+| `05-discovery/` | Pesquisa e validação: benchmarks, parecer do conselho, gaps |
+| `06-backlog/` | [[BACKLOG]] (visão Jira Dataview) + `backlog/` (uma nota por story) |
+| `99-arquivo/` | Histórico congelado: [[MODELO-ROADMAP]], planos `next-trail/` e `next-trail-onda3/`, [[KICKOFF-BUILD]], [[IMPLEMENTATION-PLAN]], [[SETUP]], [[handoff-claude-design]] |
+
+> Como nasce uma rodada nova: sempre em `02-rodadas/<data>-<slug>/` com arquivos `00-review` (ata) · `01-planning` (lotes/execução) · `02-jtbd` · `03-stories` · `04-tasks` · `05-rns-delta`. **RN nova consolida no épico (`03-canon/epics/`) na aterrissagem; a rodada guarda só o delta.** Detalhe em [[CONVENCAO-BOARDS]].
+
 ## 🧭 Modelo do roadmap (leia primeiro)
 - [[MODELO-ROADMAP]] — **terminologia única + hierarquia canônica** (Onda → Épico → User Story → Task). Reconcilia "Wave/Onda/Épico" num modelo só. Se um termo confundir, este doc vence.
 
@@ -22,7 +39,7 @@ Ponto de entrada do planejamento do **Leela** — ecossistema que unifica ingres
 ## Visual
 - [[ROADMAP-VISUAL]] — Gantt das ondas, grafo de dependências e timeline por horizonte (Mermaid)
 - [[V1-KANBAN]] — board Kanban da V1 (requer plugin Kanban)
-- `roadmap.html` — infográfico operacional (abrir no navegador)
+- `01-produto/roadmap.html` — infográfico operacional (abrir no navegador)
 
 ## Fundamentos do plano
 - [[README]] — índice + estado + decisões em aberto

@@ -47,7 +47,7 @@ Conclusão: as telas de Eventos e Clubes foram entregues violando o DoD. Bug de 
 - Busca por AppShell/Sidebar em `routes/eventos` e `routes/clubes`: zero resultados. `EventoShell.tsx:26-37` é só um contêiner simples sem menu.
 - `be-hero-docs/be-hero-ia-painel (2).md:20-34, 517` — "240px fixo", "permanece fixo", "visível e imutável".
 - `be-hero-docs/definition-of-done.md:18` — shell padrão obrigatório em toda tela.
-- `leela-specs/epics/LEELA-E01-design-system.md:25, 112-114` — spec omissa sobre fixação e sobre obrigatoriedade por rota.
+- `leela-specs/03-canon/epics/LEELA-E01-design-system.md:25, 112-114` — spec omissa sobre fixação e sobre obrigatoriedade por rota.
 
 ## 2. Por que não tem ícones
 

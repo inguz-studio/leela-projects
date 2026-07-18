@@ -1,4 +1,4 @@
-# RN-r9 · Regras de negócio novas/atualizadas da revisão UX (2026-07-18)
+# 05-rns-delta · Regras de negócio novas/atualizadas da revisão UX · 2026-07-18 (era RN-r9)
 
 > Registro das RNs do LOTE R9. Numeração após grep da maior RN vigente por série (E11=800s, E09/E08/E17=300s/160s, E03=200s, E10=100s). **Estas RNs foram promovidas aos épicos correspondentes** (seção "Regras de negócio novas · R9" em cada épico). Aqui é o índice consolidado do pacote.
 

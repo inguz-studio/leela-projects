@@ -298,7 +298,7 @@ Exibir o financeiro do promotor lendo os agregados de `valorAReceber`/liberado/p
 - **RN-314 · Registro de conversões por afiliado.** Subcoleção `eventos/{eventoId}/afiliados/{afiliadoId}` (organizador dono — decisão justificada em `DECISOES-ABERTAS`: coleção própria, não 3º ramo do union `parcerias`; reusa o kernel de janela + atribuição). ∑ conversões por Function idempotente, escrita exclusiva; organizador vê conversões + valor atribuído (informativo, sem comissão).
 - **Fase 2 (pergunta de decisão, NÃO neste recorte):** comissionamento/repasse ao influenciador (dinheiro → review Fable; absorve/antecipa split do E08). Registrado em `DECISOES-ABERTAS`.
 
-Story `S-R9-11`. Spec: `ux-review-2026-07-18/`.
+Story `S-R9-11`. Spec: `02-rodadas/2026-07-18-ux-review/`.
 
 ### Mecânica do influenciador (adendo 3 do Vitor · 2026-07-18)
 
@@ -307,9 +307,9 @@ Story `S-R9-11`. Spec: `ux-review-2026-07-18/`.
 - **RN-317 · Config via modal.** Cadastro de novo influenciador (clube ou PF) é modal no painel (shadcn), não página dedicada.
 - **RN-318 · Escopo de leitura do influenciador.** Vê SÓ as próprias conversões (projeção fechada: qtd/valor/status); nunca dado de terceiros além do agregado da própria atribuição. Rules fail-closed; PII PF com documento mascarado + trust anchors (padrão E18).
 
-Story `S-R9-11` (tasks T5/T6/T7). Spec: `ux-review-2026-07-18/`.
+Story `S-R9-11` (tasks T5/T6/T7). Spec: `02-rodadas/2026-07-18-ux-review/`.
 
 ### Adendo 5 (Vitor · 2026-07-18)
 
 - **RN-319 · Acompanhamento de vendas na aba Clubs (dois lados) — RATIFICADA.** O **organizador** vê as vendas/conversões do clube-influenciador e do influenciador PF na **sua aba Clubs**; o **clube/influenciador** vê as próprias vendas na **aba Clubs da própria conta**. Escopo de leitura coerente com RN-318 (cada influenciador só as próprias; organizador só as do próprio tenant). Story `S-R9-11` (task T8).
-- **HIP-R9-01 · Modelo "pré-compra" do clube-influenciador (HIPÓTESE, NÃO ratificada).** Proposta group-buy: inscrições pelo link do clube entram em estado "pré-compra"; ao atingir o mínimo X do organizador, dispara a cobrança no cartão de todas. **Pendente validação com um organizador de eventos** (verbatim do Vitor). Não é RN — a spec entrega a proposta + 4 questões de dinheiro (pré-auth expira; X nunca atingido; recusas parciais no lote; reserva de vaga/estoque). Default conservador enquanto não valida = RN-315. Quando/se implementar: dinheiro ⇒ **rota Fable + review antagonista** (DoD). Detalhe em `DECISOES-ABERTAS` (HIP-R9-01) + `ux-review-2026-07-18/STORIES-r9.md §S-R9-11`.
+- **HIP-R9-01 · Modelo "pré-compra" do clube-influenciador (HIPÓTESE, NÃO ratificada).** Proposta group-buy: inscrições pelo link do clube entram em estado "pré-compra"; ao atingir o mínimo X do organizador, dispara a cobrança no cartão de todas. **Pendente validação com um organizador de eventos** (verbatim do Vitor). Não é RN — a spec entrega a proposta + 4 questões de dinheiro (pré-auth expira; X nunca atingido; recusas parciais no lote; reserva de vaga/estoque). Default conservador enquanto não valida = RN-315. Quando/se implementar: dinheiro ⇒ **rota Fable + review antagonista** (DoD). Detalhe em `DECISOES-ABERTAS` (HIP-R9-01) + `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-11`.

@@ -64,7 +64,7 @@ QUALITY GATE (antes de dar qualquer coisa como pronta)
 - Verifique em disco que os arquivos existem e os testes passam; rode o DoD (definition-of-done.md) item a item. "Done" é binário. Se falhar, re-despache revisão. Emita gate_passed/gate_failed no audit.
 
 ENTREGA POR ONDA
-- A cada onda (ou lote), reporte: o que foi construído, saída dos testes, pendências e a próxima fatia. Ao concluir cada task, marque a subtarefa em leela-specs/backlog/ e mova o status. Pare e pergunte quando precisar de uma chave real (Firebase Blaze, gateway, Apple/Google); o resto roda no Emulator.
+- A cada onda (ou lote), reporte: o que foi construído, saída dos testes, pendências e a próxima fatia. Ao concluir cada task, marque a subtarefa em leela-specs/06-backlog/backlog/ e mova o status. Pare e pergunte quando precisar de uma chave real (Firebase Blaze, gateway, Apple/Google); o resto roda no Emulator.
 
 Comece pela fase de leitura e me traga o plano de ondas + a primeira leva de tasks que vai despachar (Onda 0 primeiro se o repo não estiver scaffoldado), antes de escrever código.
 ```

@@ -77,4 +77,4 @@ Proibido desabilitar a regra inline (`eslint-disable`) em tela. Se um caso parec
 - **O `<select>` nativo fica proibido para filtros e seleções ricas.** A lista de opções do `<select>` nativo é renderizada pelo sistema operacional e **não** é estilizável pelos tokens do DS — é a "caixa fora do padrão" que o Vitor apontou. É aceitável só em formulário simples de baixa cardinalidade onde o listbox estilizado não agrega.
 - **Calendários/date pickers** usam `react-day-picker` ancorado em Popover (padrão shadcn), com tokens do DS.
 - **Gate de UI (item novo):** "o seletor/filtro/calendário abre um painel do DS (não do SO)?" — junto de "consultou/reusou o existente?" e "documentou no showroom?".
-- Primitivos-alvo no DS: `Popover`, `Command`, `Combobox`, `Calendar`/`DateRangePicker` (a criar — hoje o E01 renomeou Popover→DropdownMenu e não há Command/Combobox/Calendar). Ver `ux-review-2026-07-18/STORIES-r9.md §S-R9-05`.
+- Primitivos-alvo no DS: `Popover`, `Command`, `Combobox`, `Calendar`/`DateRangePicker` (a criar — hoje o E01 renomeou Popover→DropdownMenu e não há Command/Combobox/Calendar). Ver `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-05`.

@@ -130,8 +130,8 @@ export function RepassesPorEvento({
             data={linhas}
             keyExtractor={(l) => l.eventoId}
             caption="Vendido, retido, disponível estimado e repassado por evento"
-            emptyTitle="Nenhum evento com movimento"
-            emptyDescription="Os valores por evento aparecem após a primeira inscrição confirmada em um evento seu."
+            emptyTitle="Sem repasse consolidado ainda"
+            emptyDescription="Quando seus eventos gerarem saldo, o repasse consolidado de todos eles aparece aqui."
           />
           {semAssociacao.qtd > 0 && (
             <p

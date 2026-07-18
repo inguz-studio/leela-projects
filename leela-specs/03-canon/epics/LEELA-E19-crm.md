@@ -6,7 +6,7 @@
 - **Estimativa:** XL
 - **Status:** 📋 Novo (proposto no LOTE R9)
 - **Depende de:** LEELA-E00 (fundação), LEELA-E01 (DS & Shell), identidade transacional (inscrições/pedidos ✅), LEELA-E11 (demografia RN-820, para idade/sexo)
-- **Origem:** verbatim do Vitor 2026-07-18 (adendo 2). Spec: `ux-review-2026-07-18/`.
+- **Origem:** verbatim do Vitor 2026-07-18 (adendo 2). Spec: `02-rodadas/2026-07-18-ux-review/`.
 
 ## Objetivo
 
@@ -17,7 +17,7 @@ Dar ao **organizador** uma visão única dos seus clientes (atletas que comprara
 ## Personas & JTBD
 
 - **Persona primária:** Organizador (Marina Castelo).
-- **JTBD (candidato P8, `JTBD-TRACE-r9.md §2`):** *"Quero conhecer meus clientes → ver todos os atletas que compraram, com LTV e histórico cross-evento → reter e ativar a própria base sem depender de planilha."* Doc mais próximo hoje: 04.4 *"Falo com patrocinador → ter dados na mão"*.
+- **JTBD (candidato P8, `02-jtbd.md §2`):** *"Quero conhecer meus clientes → ver todos os atletas que compraram, com LTV e histórico cross-evento → reter e ativar a própria base sem depender de planilha."* Doc mais próximo hoje: 04.4 *"Falo com patrocinador → ter dados na mão"*.
 
 ## Critérios de sucesso do épico
 
@@ -59,7 +59,7 @@ Dar ao **organizador** uma visão única dos seus clientes (atletas que comprara
 - **Dado** um cliente, **quando** abro o detalhe, **então** vejo o histórico consolidado (eventos, valor), montado server-side por identidade.
 - **Dado** um usuário não-`isTenantWriter`, **quando** tenta ler o CRM, **então** as Rules negam (fail-closed).
 
-**Tasks:** `S-R9-13-T1` (modelo/cross-join + RN-172), `S-R9-13-T2` (Rules/PII), `S-R9-13-T3` (aba + lista + detalhe). Detalhe em `ux-review-2026-07-18/TASKS-r9.md`.
+**Tasks:** `S-R9-13-T1` (modelo/cross-join + RN-172), `S-R9-13-T2` (Rules/PII), `S-R9-13-T3` (aba + lista + detalhe). Detalhe em `02-rodadas/2026-07-18-ux-review/04-tasks.md`.
 
 ### LEELA-S1901 · Hub central de Comunicação (possível unificação com CRM)
 

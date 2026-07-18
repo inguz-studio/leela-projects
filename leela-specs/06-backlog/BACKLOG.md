@@ -7,12 +7,12 @@ aliases: [Backlog, Jira, Fonte da verdade]
 
 > Visão estilo Jira: **Épico → User Story → Subtarefa**, com progresso ao vivo. Cada user story é uma nota em `backlog/` com frontmatter (`status`, `epic`, `onda`, `v1`) e subtarefas em checkbox. **Atualize o `status` da nota da story** (`backlog` → `doing` → `review` → `done`) **e marque as subtarefas** — todas as visões abaixo recalculam sozinhas.
 
-> **Requer o plugin Dataview** (ative também *Enable JavaScript Queries* nas opções do Dataview, para os blocos de resumo/progresso). Se você abriu o vault na pasta `leela-specs` (e não `LEELA`), troque `"leela-specs/backlog"` por `"backlog"` nas queries.
+> **Requer o plugin Dataview** (ative também *Enable JavaScript Queries* nas opções do Dataview, para os blocos de resumo/progresso). Se você abriu o vault na pasta `leela-specs` (e não `LEELA`), troque `"leela-specs/06-backlog/backlog"` por `"06-backlog/backlog"` nas queries.
 
 ## 📊 Progresso
 
 ```dataviewjs
-const all = dv.pages('"leela-specs/backlog"').where(p => p.type == "story");
+const all = dv.pages('"leela-specs/06-backlog/backlog"').where(p => p.type == "story");
 function rollup(pages){ let tT=0,tD=0; for(const s of pages){ const ts=s.file.tasks; tT+=ts.length; tD+=ts.where(t=>t.completed).length; } return {tT,tD}; }
 const total=all.length, done=all.where(s=>s.status=="done").length;
 const r=rollup(all);
@@ -25,7 +25,7 @@ dv.paragraph(`**V1 (produtor + app simples)** — Stories: ${v1done}/${v1.length
 
 ```dataview
 TABLE length(rows) AS "Stories", length(filter(rows, (r) => r.status = "done")) AS "Done", sum(rows.tasks_total) AS "Subtarefas", rows.onda[0] AS "Onda"
-FROM "leela-specs/backlog"
+FROM "leela-specs/06-backlog/backlog"
 WHERE type = "story"
 GROUP BY epic AS "Épico"
 SORT epic ASC
@@ -34,7 +34,7 @@ SORT epic ASC
 ## 🏃 V1 · por onda (com progresso de subtarefas)
 
 ```dataviewjs
-const ss = dv.pages('"leela-specs/backlog"').where(p=>p.type=="story" && p.v1==true);
+const ss = dv.pages('"leela-specs/06-backlog/backlog"').where(p=>p.type=="story" && p.v1==true);
 for (const onda of [0,1,2,3]) {
   const g = ss.where(s=>s.onda==onda).sort(s=>s.id);
   if(!g.length) continue;
@@ -51,7 +51,7 @@ for (const onda of [0,1,2,3]) {
 
 ```dataview
 TABLE WITHOUT ID rows.file.link AS "Stories"
-FROM "leela-specs/backlog"
+FROM "leela-specs/06-backlog/backlog"
 WHERE type = "story" AND v1 = true
 GROUP BY status AS "Status"
 ```
@@ -60,7 +60,7 @@ GROUP BY status AS "Status"
 
 ```dataview
 TABLE epic AS "Épico", moscow AS "MoSCoW", tasks_total AS "Subtarefas"
-FROM "leela-specs/backlog"
+FROM "leela-specs/06-backlog/backlog"
 WHERE type = "story" AND v1 = false
 SORT epic ASC, id ASC
 ```

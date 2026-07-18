@@ -826,4 +826,4 @@ UI de transferência no app (LEELA-S1316); cobrança da diferença (fluxo de che
 
 ## Regras de negócio novas (R9 · revisão UX do Vitor 2026-07-18)
 
-- **RN-358 · Repasses = visão consolidada de todos os eventos (explícito na UI).** A rota `/financeiro/repasses` declara em título/subtítulo/EmptyState que é o consolidado de todos os eventos do organizador; os 3 cards de saldo seguem como saldo autoritativo (∑ do servidor, `saldo/current`). Story `S-R9-03`. Spec: `ux-review-2026-07-18/`.
+- **RN-358 · Repasses = visão consolidada de todos os eventos (explícito na UI).** A rota `/financeiro/repasses` declara em título/subtítulo/EmptyState que é o consolidado de todos os eventos do organizador; os 3 cards de saldo seguem como saldo autoritativo (∑ do servidor, `saldo/current`). Story `S-R9-03`. Spec: `02-rodadas/2026-07-18-ux-review/`.

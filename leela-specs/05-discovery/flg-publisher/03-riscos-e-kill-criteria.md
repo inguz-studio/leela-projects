@@ -162,7 +162,7 @@ Todas acessadas em 05/07/2026.
 7. Arvid Kahl, "Building in Public: Risks and Strategies for Founders" (03/04/2026; threshold de transparência "caiu a zero" com código agêntico; não publicar números nem arquitetura) — https://thebootstrappedfounder.com/the-increasing-risk-of-building-in-public/
 8. Tubefilter, "In sweeping study, 89% of creators claim to lack access to specialized mental health resources" (12/11/2025; estudo Creators 4 Mental Health: 62% reportam burnout) — https://www.tubefilter.com/2025/11/12/creators-4-mental-health-burnout-study-results/
 
-Fontes internas: `leela-specs/discovery/PARECER-CONSELHO.md` (kill-criteria da mesa, calibração por bandas, barbell Taleb) · `leela-specs/discovery/flg-publisher/01-benchmark-flg.md` (base rates de tração, efeito lemlist, casos cautionary) · `leela-specs/discovery/flg-publisher/02-mapa-publishers-wellness.md` (buraco editorial, tensão praticante vs. produtor) · `leela-specs/V1-PRODUTOR-web.md` (V1 em build, sócio produtor esperando).
+Fontes internas: `leela-specs/05-discovery/PARECER-CONSELHO.md` (kill-criteria da mesa, calibração por bandas, barbell Taleb) · `leela-specs/05-discovery/flg-publisher/01-benchmark-flg.md` (base rates de tração, efeito lemlist, casos cautionary) · `leela-specs/05-discovery/flg-publisher/02-mapa-publishers-wellness.md` (buraco editorial, tensão praticante vs. produtor) · `leela-specs/V1-PRODUTOR-web.md` (V1 em build, sócio produtor esperando).
 
 ---
 

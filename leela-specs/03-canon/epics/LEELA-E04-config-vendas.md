@@ -839,7 +839,7 @@ Registrar formalmente o redirecionamento de BH-303 para LEELA-E06 e garantir que
 - RNs: RN-130..135 (em E06); RN-002 (sub-nav 9→8 em E06).
 
 **Arquivos (criar/editar)**
-- `leela-specs/epics/LEELA-E06-marketing.md` — anotar a herança de BH-303 (quando E06 for especificado).
+- `leela-specs/03-canon/epics/LEELA-E06-marketing.md` — anotar a herança de BH-303 (quando E06 for especificado).
 - `apps/painel/app/eventos/[slug]/comunicacao/page.tsx` — placeholder/redirect para o módulo Marketing (quando disponível).
 
 **Passos de implementação**

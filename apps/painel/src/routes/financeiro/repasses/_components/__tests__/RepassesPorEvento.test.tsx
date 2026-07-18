@@ -62,11 +62,12 @@ describe('RepassesPorEvento', () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it('vazio → EmptyState honesto (nenhum evento com movimento)', () => {
+  it('vazio → EmptyState honesto que reforça o escopo consolidado (RN-358)', () => {
     render(
       <RepassesPorEvento linhas={[]} associacao={SEM_ASSOCIACAO} loading={false} error={null} onRetry={vi.fn()} />,
     );
-    expect(screen.getByText('Nenhum evento com movimento')).toBeInTheDocument();
+    expect(screen.getByText('Sem repasse consolidado ainda')).toBeInTheDocument();
+    expect(screen.getByText(/consolidado de todos eles aparece aqui/i)).toBeInTheDocument();
   });
 
   it('linhas → nomes, valores e "—" no evento sem termo; badge Encerrado', () => {

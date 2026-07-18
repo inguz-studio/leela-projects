@@ -160,7 +160,7 @@ Operações que modificam estado compartilhado em execuções paralelas:
 
 - `pnpm install` na raiz (modifica `node_modules` e `pnpm-lock.yaml`)
 - `git add` + `git commit` (modifica o índice e o histórico)
-- Atualização de `V1-CHECKLIST.md` e `leela-specs/backlog/LEELA-S***.md`
+- Atualização de `V1-CHECKLIST.md` e `leela-specs/06-backlog/backlog/LEELA-S***.md`
 
 ### Como adquirir/liberar
 
@@ -228,7 +228,7 @@ rmdir .forge-mutex
 - **Núcleo puro separado:** toda a lógica em `*Core(db, agora, …)` exportada e testável no Emulator **sem** o scheduler (o Emulator `--only firestore,auth` não sobe pubsub — o teste chama o Core direto).
 - **Horários escalonados por dependência** (a ordem é aceite): `03:00` recalcularStatusMembros (RN-102) → `03:05` coletaDiaria (E11 — lê status já envelhecidos) → `03:10` encerrarEventos (RN-350). Cron novo = próximo múltiplo de 5 min, sempre depois das dependências; registrar o slot no ADR-015.
 - **Idempotente sempre:** rerun do mesmo dia/estado produz o mesmo resultado (substituição total/recontagem — nunca increment cego).
-- Sem registry de crons por ora (reavaliar com ~6 tarefas). Detalhe completo: `leela-specs/adr/ADR-015-scheduler-cron.md`.
+- Sem registry de crons por ora (reavaliar com ~6 tarefas). Detalhe completo: `leela-specs/03-canon/adr/ADR-015-scheduler-cron.md`.
 
 ---
 

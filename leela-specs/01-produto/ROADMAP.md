@@ -112,7 +112,7 @@ IDs renomeados para o prefixo `LEELA-` (produto unificado). Coluna "De-para" pre
 
 > Multi-tenancy é fundacional (ADR-009 · `adr/ADR-multitenancy.md`) — o E00 nasce multi-tenant. A fatia de execução (o que fazer primeiro) está em `V1-PRODUTOR-web.md`.
 
-> **Delta ratificado 2026-07-10 (trilha next-trail, D1-D7 — detalhe em `leela-specs/next-trail/` + `V1-CHECKLIST.md §Trilha next-trail`):** **E03** recebe a trilha **Fable A-G** — o kernel `pedidos/{id}` é implementado **UMA vez na Frente A conforme ADR-011** (gate adr-conformance; deps duras `FABLE-A → S203-T3` e `FABLE-A → E12-L4/S1203-T5`) — D1. **RESP-MOBILE** (passe mobile real 390×844 sobre E01/shell) = **Must V1**, antes/em paralelo à Onda 2 — D5. Recortes confirmados na Onda 2: **E06 campanhas = V1** (D3) · E09-slim · E07-web; **E08 adiado (Won't V1)**. Gateway concreto = **Asaas** (D2; KYC = ação externa, sandbox não bloqueia).
+> **Delta ratificado 2026-07-10 (trilha next-trail, D1-D7 — detalhe em `leela-specs/99-arquivo/next-trail/` + `V1-CHECKLIST.md §Trilha next-trail`):** **E03** recebe a trilha **Fable A-G** — o kernel `pedidos/{id}` é implementado **UMA vez na Frente A conforme ADR-011** (gate adr-conformance; deps duras `FABLE-A → S203-T3` e `FABLE-A → E12-L4/S1203-T5`) — D1. **RESP-MOBILE** (passe mobile real 390×844 sobre E01/shell) = **Must V1**, antes/em paralelo à Onda 2 — D5. Recortes confirmados na Onda 2: **E06 campanhas = V1** (D3) · E09-slim · E07-web; **E08 adiado (Won't V1)**. Gateway concreto = **Asaas** (D2; KYC = ação externa, sandbox não bloqueia).
 
 Capacidades transversais (referenciadas pelos épicos, não são épicos isolados): **PaymentProvider** (split de afiliação), **Notificações** (push/WhatsApp), **Observabilidade** (Sentry), **Acessibilidade** (WCAG AA), **Copy/i18n** (glossário + tom de voz).
 
@@ -136,7 +136,7 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 - **Robustez + coleta:** LEELA-E07-web (404/500/403) · transversais (rollup diário E11-S821, V1 + backend do desafio S1307/S1308, V1.5).
 - Fecha o ciclo "atleta descobre → inscreve → paga → organizador vê receita".
 
-**Onda 3 · App simples + alavancas (H1→H2)** *(plano executável ratificável em `leela-specs/next-trail-onda3/` — 2026-07-17; 5 lotes, 22 stories, 48 tasks)*
+**Onda 3 · App simples + alavancas (H1→H2)** *(plano executável ratificável em `leela-specs/99-arquivo/next-trail-onda3/` — 2026-07-17; 5 lotes, 22 stories, 48 tasks)*
 
 Trilha própria (padrão next-trail): `ROADMAP-onda3` (lotes+grafo) · `STORIES-onda3` (JTBD por story) · `TASKS-onda3` (1-task-1-PR, rota Fable/Opus) · `JTBD-TRACE-onda3` (P6/P7 propostos) · `DECISOES-NECESSARIAS-onda3` (só DN-1 é decisão real; resto = ações externas/premissas). Ordem de despacho: `Lote 1` ∥ `Lote 2` → `Lote 3` ∥ `Lote 4` → `Lote 5` (por último, gated pelo enrollment das lojas). Sonnet proibido.
 

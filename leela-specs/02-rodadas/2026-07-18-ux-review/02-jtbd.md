@@ -1,4 +1,4 @@
-# JTBD-TRACE-r9 · Matriz story → JTBD → dimensão · revisão UX 2026-07-18
+# 02-jtbd · Matriz story → JTBD → dimensão · revisão UX 2026-07-18 (era JTBD-TRACE-r9)
 
 > PROPOSTA revisável. Cada story do LOTE R9 rastreia a uma linha de `jobs-to-be-done.md` (rotulada **doc:**), a uma dor/ganho de `personas.md` (**persona:**), ou marca a aproximação/enabler honestamente. Um **candidato novo** (P8 · CRM do organizador) segue o precedente P1-P7 — proposto, não aplicado.
 > Dimensões: **T** Transacional H1 · **H** Heroica H2 · **M** Marketplace H2-H3 · **S** Social/identitária transversal.

@@ -103,7 +103,9 @@ export function RepassesView({
     <div className="flex flex-col gap-[var(--spacing-6)] pb-[var(--spacing-8)]">
       <PageHeader
         title="Repasses"
-        subtitle="Seu saldo de vendas, dados bancários e histórico de saques"
+        // RN-358: declara explicitamente que Repasses é a visão CONSOLIDADA de
+        // todos os eventos — não o financeiro de um evento específico.
+        subtitle="Saldo e repasses consolidados de todos os seus eventos"
         actions={
           <Button
             variant="primary"

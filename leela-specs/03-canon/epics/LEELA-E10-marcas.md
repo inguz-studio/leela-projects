@@ -185,4 +185,4 @@ Consolidar as ativações de cada marca via índice inverso mantido por Function
 
 - **RN-171 · Registro de patrocinador reutilizável no tenant + autocomplete.** O patrocinador cadastrado fica salvo no registro reutilizável (`profissionais/{profId}/marcas`, o alvo de S811) e alimenta o cadastro futuro de patrocínio em outro evento por **autocomplete/seleção** — não se recomeça do zero. Reusa o shape `ParceriaPatrocinador` (`packages/core/src/clubs/parceria.ts:122-132`: nome/modeloComercial/valorAnual/contrapartida) promovido a registro reutilizável. RN-123 ✅ (modelo comercial).
 
-Story `S-R9-12`. Spec: `ux-review-2026-07-18/`.
+Story `S-R9-12`. Spec: `02-rodadas/2026-07-18-ux-review/`.

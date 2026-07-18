@@ -334,7 +334,7 @@ Cortadas: S400 (parceiros/afiliação), S402 (automações → Onda 3), `abertur
 
 ## Onda 3 · App simples
 
-> **Plano executável ratificável (2026-07-17):** `leela-specs/next-trail-onda3/` — 5 lotes (B1 robustez financeira/legal · B2 web discovery+link-in-bio · B3 assessorias · B4 scheduler · B5 app do atleta) · 22 stories · 48 tasks · rota **Fable**(dinheiro/PII)/**Opus**(UI), Sonnet proibido. Ordem: Lote 1 ∥ Lote 2 → Lote 3 ∥ Lote 4 → Lote 5. Aceites Given/When/Then nos `epics/`.
+> **Plano executável ratificável (2026-07-17):** `leela-specs/99-arquivo/next-trail-onda3/` — 5 lotes (B1 robustez financeira/legal · B2 web discovery+link-in-bio · B3 assessorias · B4 scheduler · B5 app do atleta) · 22 stories · 48 tasks · rota **Fable**(dinheiro/PII)/**Opus**(UI), Sonnet proibido. Ordem: Lote 1 ∥ Lote 2 → Lote 3 ∥ Lote 4 → Lote 5. Aceites Given/When/Then nos `epics/`.
 
 ### Lote 1 · Robustez financeira/legal (B1) — ROTA FABLE + Opus UI · `⚔`
 
@@ -453,7 +453,7 @@ Receber comunicados (push):
 
 ## Trilha next-trail (ratificada 2026-07-10)
 
-> Trilha ratificada pelo Vitor (**D1-D7**, 2026-07-10/11) — planejamento-fonte em `leela-specs/next-trail/` (ROADMAP-next §7 = waves A-D · STORIES-next = aceites · TASKS-next = quebra 1-task-1-PR). Roteamento: **Fable** (pagamento/segurança/rules/core) · **Opus** (UI/mecânico) · Sonnet PROIBIDO. `⚔` = review antagonista obrigatório. JTBD: âncoras de `jobs-to-be-done.md §04.1` — **P1-P5 já aplicadas ao doc (D6, 2026-07-10)**.
+> Trilha ratificada pelo Vitor (**D1-D7**, 2026-07-10/11) — planejamento-fonte em `leela-specs/99-arquivo/next-trail/` (ROADMAP-next §7 = waves A-D · STORIES-next = aceites · TASKS-next = quebra 1-task-1-PR). Roteamento: **Fable** (pagamento/segurança/rules/core) · **Opus** (UI/mecânico) · Sonnet PROIBIDO. `⚔` = review antagonista obrigatório. JTBD: âncoras de `jobs-to-be-done.md §04.1` — **P1-P5 já aplicadas ao doc (D6, 2026-07-10)**.
 > **D1:** kernel `pedidos/{id}` nasce UMA vez em FABLE-A conforme **ADR-011** (gate adr-conformance); deps `FABLE-A → S203-T3` e `FABLE-A → E12-L4/S1203-T5` valem. **D2:** gateway = **Asaas** (KYC = ação externa; `E04-PAY-T2` parked até KYC). **D5:** RESP-MOBILE = **Must V1**, antes/em paralelo à Onda 2.
 
 ### Wave A · F1 Trilha Fable — backend crítico (A-G) · ROTA FABLE · review antagonista
