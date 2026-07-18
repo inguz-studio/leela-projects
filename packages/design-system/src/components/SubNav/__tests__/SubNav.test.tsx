@@ -35,6 +35,18 @@ describe('SubNav', () => {
     expect(nav).toHaveClass('border-b-[var(--border-subtle)]');
   });
 
+  it('rola horizontalmente por dentro em telas estreitas (Adendo 12 — tablet/mobile)', () => {
+    // As terciárias de evento têm N abas que estouravam a largura em
+    // tablet/mobile; a barra rola por dentro (overflow-x-auto) em vez de
+    // quebrar, sem arrastar o scroll da página (overscroll-x-contain).
+    render(<SubNav tabs={tabs} />);
+    const nav = screen.getByRole('navigation');
+    expect(nav).toHaveClass('overflow-x-auto');
+    expect(nav).toHaveClass('overscroll-x-contain');
+    // A lista mantém a largura do conteúdo (w-max) para as abas não comprimirem.
+    expect(screen.getByRole('list')).toHaveClass('w-max');
+  });
+
   it('active tab has aria-current="page"', () => {
     render(<SubNav tabs={tabs} />);
     const active = screen.getByRole('button', { name: /Visão Geral/i });

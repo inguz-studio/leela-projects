@@ -80,12 +80,19 @@ function SubNav({
       className={cn(
         'bg-[var(--surface-base)]',
         'px-[var(--subnav-px)]',
+        // Adendo 12 (R9-A · tablet/mobile): a barra de sub-navegação de eventos
+        // tem N abas (Visão/Inscritos/Kits/…/Financeiro/Config) que estouravam a
+        // largura em tablet/mobile ("slider horizontal quebrando"). Scroll
+        // horizontal INTERNO: em telas estreitas a barra rola em vez de quebrar;
+        // no desktop o conteúdo cabe e nenhuma scrollbar aparece (overflow-x auto).
+        // `overscroll-x-contain` evita que o gesto de scroll da barra role a página.
+        'overflow-x-auto overscroll-x-contain',
         // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
         divider && 'border-b border-b-[var(--border-subtle)]',
         className,
       )}
     >
-      <ul role="list" className="flex items-end gap-[var(--spacing-1)] h-[var(--subnav-height)]">
+      <ul role="list" className="flex w-max items-end gap-[var(--spacing-1)] h-[var(--subnav-height)]">
         {tabs.map((tab, index) => {
           const isActive = tab.active ?? false;
           const sharedClass = cn(
