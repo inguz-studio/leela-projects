@@ -1,6 +1,28 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-17 (🌙 ENCERRAMENTO DO DIA — Vitor descansando)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (🏁 FILA DA RETOMADA EXECUTADA)
 
-## 🌙 ENCERRAMENTO · 2026-07-17 fim de noite (o mais recente) — COMECE AQUI
+## 🏁 RODADA AUTÔNOMA · 2026-07-18 madrugada (o mais recente) — COMECE AQUI
+
+**Ordem do Vitor: "siga o roadmap até acabar". Fila da retomada do ENCERRAMENTO executada POR INTEIRO (R1-R5, 8 commits `2a673de..5599d23`, tudo pushed, main == origin). 5 gates PASS, 0 falho; 4 reviews antagonistas Fable (R2×2, R5×2), todas com fixes reais aplicados e re-provados. Working tree limpa, 0 emulator zumbi, portas livres. Reports por lote em `outputs/leela-build-2d6ee98d/R{1,2,3,4,5}-*-REPORT.md`.**
+
+### O que aterrissou (por lote)
+1. **R1 · Seed + hero mínimo** `2a673de` — lotes+páginas seedados p/ corrida-inverno e desafio-mtb (L2 vigente no clock canônico); evento PUBLICADO sem seções agora mostra hero mínimo (nome/data/status) na landing — smoke SSR por curl provou 200/404.
+2. **R3 · Miudezas do painel** `bc97e83..433664f` — badge "Automática" (RN-132) nas campanhas automatizadas; fila de reembolsos com NOME do inscrito (join via query canônica, zero PII nova); flaky ComunicadoEditorPage resolvido na CAUSA (delay:null), provado 10×. Painel 1117/1117.
+3. **R2 · Segurança** `964cae2` — catch-all de subcoleções de CLUBES fechado `read/write: false` (mais estrito que eventos: admin lia e-mail+tokenAceiteHash de convite via client); rate-limit FAILURES-ONLY por convite no aceite público (30 falhas/15min, 31ª = resource-exhausted opaco; token válido NUNCA bloqueado — design pós-antagonista, F2-01 crítico de XFF eliminado). 117/117 + 134/134.
+4. **R4 · E2E de emulator** `d9501d0` — 2 jornadas: aceite E18 ponta a ponta (cadastro→convite→brute-force→aceite atômico→replay idempotente→desconto no checkout→encerrar) + gatilhos/scheduler sob relógio único (incl. cota RN-133 compartilhada provada). 7/7 novas + 111/111 regressão; ZERO bug real encontrado.
+5. **R5 · Storage + upload real** `9fd7e9f..5599d23` — **ADR-016**: Firebase Storage (default aplicado, aguarda ratificação = **decisão aberta 18**); storage.rules fail-closed (33/33 no emulator, anti path-traversal/spoof/SVG-XSS); FileInput no DS + showroom; upload real nas 3 telas (foto da conta, capa de clube, avatar/capa do @handle), URL colada segue como fallback, zero mudança de shape. Painel 1127/1127. Storage emulator na 9299 via preview.
+
+### O que RESTA (tudo gated externo ou decisão do Vitor — nada executável sobrou)
+- **Lote 5 · App do atleta E13-slim** — gated pelo enrollment das lojas (ação externa).
+- Deploy-only: índices `firestore.indexes.json` acumulados · TTL policy de `rateLimits` · App Check/Cloud Armor (throttle volumétrico de borda).
+- Decisões do Vitor: item 17 já aplicado; **item 18 NOVO (ADR-016 Storage)** · reagendar campanha `vencido`? · confirmação do "ponto 3" (segue ambíguo; R2 NÃO assumiu quitá-lo) · ações externas de sempre (enrollment, domínio, EmailProvider, sandbox Asaas, KYC, rotação de chave).
+- Follow-ups registrados nos reports/ADR: validação de bytes server-side no upload · varredura LGPD do Storage na exclusão · getter point-read `getInscrito` no api-client · autoria de template automatizado na UI (RN-132 só visibilidade).
+
+### Como conferir (Vitor)
+`bash preview.sh` → painel :5273 (Financeiro→Reembolsos com nome; Comunicação→badge Automática; /conta e clube com upload real; Storage emulator 9299) · landing com stack completo → `/noturna-beira-mar-2026` (hero mínimo) e os 2 eventos seedados cheios · roteiros nos reports R1-R5.
+
+---
+
+## 🌙 ENCERRAMENTO · 2026-07-17 fim de noite (histórico — superado pela rodada acima)
 
 **Sessão encerrada a pedido do Vitor. Nada em voo, servidores derrubados (todas as portas livres, 0 java), working tree limpa, main == origin == `bf48bc3`. Dia completo: 17 gates PASS, 0 gate_failed.**
 
