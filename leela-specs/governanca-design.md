@@ -68,3 +68,13 @@ Proibido desabilitar a regra inline (`eslint-disable`) em tela. Se um caso parec
 ## 7. Catálogo
 
 `pnpm storybook` no package sobe o catálogo em `localhost:6006`; `pnpm build-storybook` gera o estático. Toda alteração visual de componente deve ser conferida nos dois temas pelo toggle antes do merge. Nenhuma tela redefine token ou componente localmente; se a tela precisa de algo que o DS não tem, o componente nasce no DS, não na tela.
+
+## 8. Diretriz shadcn para seleção, filtro, popover e calendário (PERMANENTE)
+
+> Diretriz vinculante do Vitor (pedida mais de uma vez; gravada aqui para todo lote de UI a herdar — R9, 2026-07-18). Complementa a §3 (regras visuais) e o DoD de Tela.
+
+- **Selects, dropdowns, popovers, comboboxes e calendários do painel seguem a anatomia shadcn/Radix:** Popover (âncora) + Command (lista filtrável WAI-APG) para seleção rica; focus ring de 2px (`--border-focus`); densidade e tokens do DS (semantic-only); teclado completo e ARIA correto.
+- **O `<select>` nativo fica proibido para filtros e seleções ricas.** A lista de opções do `<select>` nativo é renderizada pelo sistema operacional e **não** é estilizável pelos tokens do DS — é a "caixa fora do padrão" que o Vitor apontou. É aceitável só em formulário simples de baixa cardinalidade onde o listbox estilizado não agrega.
+- **Calendários/date pickers** usam `react-day-picker` ancorado em Popover (padrão shadcn), com tokens do DS.
+- **Gate de UI (item novo):** "o seletor/filtro/calendário abre um painel do DS (não do SO)?" — junto de "consultou/reusou o existente?" e "documentou no showroom?".
+- Primitivos-alvo no DS: `Popover`, `Command`, `Combobox`, `Calendar`/`DateRangePicker` (a criar — hoje o E01 renomeou Popover→DropdownMenu e não há Command/Combobox/Calendar). Ver `ux-review-2026-07-18/STORIES-r9.md §S-R9-05`.

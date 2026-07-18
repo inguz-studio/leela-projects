@@ -63,6 +63,13 @@ A trilha `next-trail` (2026-07-10) organizou o trabalho em **Wave A-D** (também
 
 ## 3 · Mapa Onda → Épico (a fonte de verdade navegável)
 
+> ### ⚖️ Decisão de reordenação (Vitor, 2026-07-18 — ratificada · LOTE R9)
+> **O Horizonte 3 antecipa e vem ANTES do Horizonte 2.** Estratégia "finalizar por projeto": **completar o produto WEB inteiro** — E08 Influenciador, E10 Marcas, E11 Analytics completo — **antes do APP** (E13 jornada heroica, E17 in-app, E14 integrações de treino). **Exceção:** E15 Creator Studio permanece **depois** (não antecipa).
+> **Efeito nas Ondas abaixo:** os épicos web da antiga Onda 5 (E08/E10/E11) sobem para a próxima Onda após a Onda 3 (a **Onda web-complete / H3**); a Onda do app/heroica (E13 completo, E17 in-app, E14) passa para DEPOIS; E15 fica por último. **Não apaguei a história** — as tabelas de Onda 4/5 abaixo trazem a anotação de reordenação em vez de serem reescritas.
+> **Dependência atualizada (adendo 4, 2026-07-18):** o **E13-slim (app v1) = PWA** (decisão do Vitor). O *enrollment das lojas* **deixa de bloquear** o E13-slim (PWA não passa por loja) — passa a ser pré-requisito só de um eventual **E13 nativo v2** (H2 tardio), ação externa de **prioridade baixa**. Antecipar o web não bloqueia o app; e o app v1 nem depende mais das lojas.
+> Recortes já antecipados pelo LOTE R9 (2026-07-18), coerentes com esta decisão: E08 afiliados (`S-R9-11`), E10 patrocinadores reutilizáveis (`S-R9-12`), E11 análise unificada + cohort (`S-R9-01/02`), e o novo **E19-CRM** (`S-R9-13`). Registro em `DECISOES-ABERTAS` (Ratificadas).
+
+
 Cada linha: o épico, sua persona/JTBD-âncora, o horizonte e o estado. Detalhe de tasks vive em [[V1-CHECKLIST]]; o board em [[V1-KANBAN]].
 
 ### Onda 0 · Fundação — ✅ concluída
@@ -107,7 +114,17 @@ App do atleta mínimo + robustez restante. **Recebe os 2 épicos novos** (ver §
 | **[[LEELA-E18-assessorias-parceiras]]** 🆕 | 04.1 "tração trazendo parceiros" (Organizador) + "condição+presença" (Assessoria) | H1→H2 | 📋 novo |
 | **[[LEELA-E17-perfil-social]]** 🆕 (link-in-bio público) | 04.4 "identidade" + 04.3 "aparecer na vitrine" (Organizador/Atleta) | H2 | 📋 novo |
 
-### Onda 4 · Comunidade heroica + social completo — 🔜 (H2)
+### Onda web-complete (H3) · Produto web inteiro — 🔜 (ANTECIPADA por decisão de 2026-07-18)
+Entra ANTES da Onda heroica (reorder §3). Fecha o produto web para o profissional antes do app.
+
+| Épico | JTBD-âncora (persona) | Horizonte | Estado |
+|---|---|---|---|
+| [[LEELA-E08-influenciador]] (completo; recorte afiliados já antecipado em R9) | 04.1/04.3 "link rastreável / promotor" (Promotor/Influenciador) | H3→antecipado | 🔜 |
+| [[LEELA-E10-marcas]] (completo; listagem reutilizável já antecipada em R9) | 04.4 "gerenciar marcas num lugar só" (Organizador/Coordenador) | H3→antecipado | 🔜 |
+| [[LEELA-E11-analytics]] (completo; análise unificada + cohort já antecipados em R9) | 04.4 "dados na mão" (Organizador) | H3→antecipado | 🔜 |
+| **[[LEELA-E19-crm]]** 🆕 (CRM do organizador + hub de Comunicação) | 04.4 "conhecer/reter a base" (Organizador) · candidato P8 | H3 | 📋 novo (R9) |
+
+### Onda heroica (ex-Onda 4) · Comunidade heroica + social completo — 🔜 (H2, agora DEPOIS do web por decisão de 2026-07-18)
 Camada de engajamento diário e identidade social.
 
 | Épico | JTBD-âncora (persona) | Horizonte | Estado |
@@ -116,10 +133,13 @@ Camada de engajamento diário e identidade social.
 | **[[LEELA-E17-perfil-social]]** 🆕 (Feed·Eventos·Clubs in-app + tematização por-usuário) | 04.4 "identidade, não consumo" (Atleta/Organizador) | H2 | 📋 novo |
 | E14 Integrações de treino · E09 completo | 04.2 "meditação/sono contam" (Atleta) | H2 | 🧊 |
 
-### Onda 5 · Expansão / Marketplace — 🧊 (H2-H3)
+### Onda 5 · Expansão / Marketplace — 🧊 (reordenada 2026-07-18)
+> **Reorder 2026-07-18:** E08/E10/E11 **saíram** desta Onda e subiram para a "Onda web-complete" (antes da Onda heroica). Só **E15 Creator Studio** permanece por último (exceção explícita da decisão). Linha original preservada abaixo tachada para história.
+
 | Épico | JTBD-âncora (persona) | Horizonte | Estado |
 |---|---|---|---|
-| [[LEELA-E08-influenciador]] · E10 Marcas · E11 Analytics · E15 Creator Studio | 04.3 Marketplace (Prestador/Marca/Promotor) | H3 | 🧊 |
+| [[LEELA-E15-creator-studio]] (permanece por último — exceção da decisão de 2026-07-18) | 04.3 Marketplace (Prestador/Marca) | H3 | 🧊 |
+| ~~E08 Influenciador · E10 Marcas · E11 Analytics~~ → movidos p/ Onda web-complete (2026-07-18) | — | H3 | ➡️ antecipados |
 
 > **Backlog transversal (dívida técnica, ex-"Wave D"):** CONS-1..6 (KpiCard canônico, teste flaky, mutations→useMutation, backend-deps, bugs do showroom). Entra interleaved em qualquer Onda; não é um degrau de release. Detalhe em [[V1-CHECKLIST]] §"Wave D".
 

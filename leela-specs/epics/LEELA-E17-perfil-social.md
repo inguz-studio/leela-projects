@@ -211,3 +211,7 @@ Stories: **S1700** (perfil público link-in-bio) · **S1701** (tematização por
 **Onda 4 (com E13/app):** `S1701 (tematização por-usuário)` ∥ `S1703 (feed leitura)` → `S1705 (abas in-app)` → `S1704 (composição, V1.5+)`.
 
 Dependências: `E12-S1200 ✅→ S1700`; `E01 ThemeProvider ✅→ S1701`; `E13 (app) → S1703/S1704/S1705`. Nenhum termo comercial é definido aqui.
+
+## Regras de negócio novas (R9 · revisão UX do Vitor 2026-07-18)
+
+- **RN-168 · Inputs de imagem do painel são upload-only.** O campo "cole uma URL" é removido dos inputs de imagem. Começa pela foto de perfil da conta (`ContaPage.tsx:251-290` — remove o `Input` "Ou cole uma URL" l.272 + estado/validação/botão). **Supersede** o fallback de URL da ADR-016 (item 5). Decisão de escopo (default recomendado = morre em TODAS as superfícies: perfil público avatar/capa, capa de clube, capa de evento) registrada em `DECISOES-ABERTAS`. Story `S-R9-07`. Spec: `ux-review-2026-07-18/`.

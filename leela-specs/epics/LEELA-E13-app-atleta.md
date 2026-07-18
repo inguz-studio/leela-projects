@@ -1675,3 +1675,12 @@ Fluxos críticos para e2e (Detox/Maestro), alinhados a `estrategia-testes.md`: (
 ---
 
 *Fim do épico LEELA-E13.*
+
+## Decisão de plataforma (Vitor 2026-07-18 · adendo 4)
+
+**O app v1 (E13-slim) é um PWA.** Ratificado pelo Vitor: *"o app v1 pode ser um PWA, não tem problema."*
+
+- **Gate de lojas destravado:** o enrollment das lojas (App Store/Play) **deixa de ser pré-requisito do E13-slim** — PWA não passa por loja. Passa a ser pré-requisito só de um eventual **E13 nativo v2** (H2 tardio); vira ação externa de **prioridade baixa**.
+- **Ordem no roadmap:** o E13 segue **DEPOIS do web completo** (reorder de 2026-07-18, ver `MODELO-ROADMAP.md §3`). A decisão de PWA muda a plataforma, não a posição na fila.
+- **Implicações técnicas mínimas (sem especificar stories agora — spec do E13 detalha depois):** a stack web existente (Next/React + DS temável) serve de base; **installable + service worker**; **push em iOS** suportado via web push moderno, com **limitações vs. nativo** (ressalva honesta); **offline** = escopo a decidir na spec futura do E13. A antiga fatia Expo/EAS (S1300-T2 enrollment) é reavaliada quando/se o nativo v2 entrar.
+- Registro em `DECISOES-ABERTAS` (Ratificadas, 2026-07-18) junto da reordenação H3→antes→H2.

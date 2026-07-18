@@ -289,3 +289,22 @@ Exibir o financeiro do promotor lendo os agregados de `valorAReceber`/liberado/p
 ## Ordem sugerida
 
 `S701 (hub) → S702 (eventos + aceitar) → S703 (conversões) → S704 (financeiro)`. Reusa integralmente a mecânica de afiliação do E04/E05 e o `PaymentProvider`; nenhum termo comercial é definido aqui (RN-310).
+
+## Recorte ANTECIPADO (R9 · decisão do Vitor 2026-07-18)
+
+> O Vitor decidiu em 2026-07-18: *"a parte de influenciadores pode ser antecipada para agora."* O recorte **afiliados** (link ref → atribuição → conversões, visão do organizador, **sem comissionamento**) foi ANTECIPADO no LOTE R9. O **resto do E08** (painel do promotor S701-S704, financeiro/split) segue **H3**.
+
+- **RN-313 · Link de afiliado `?ref=<código>` capturado na inscrição.** Atribuído na venda dentro da janela (`dentroDaJanelaAtribuicao`, `packages/core/src/clubs/parceria.ts:184`), preservando a disciplina de atribuição do CTA (E12), reusando a costura `cupomParceria` do `createInscricaoCharge` (`functions/src/checkout/createInscricaoCharge.ts:365-401`) — **sem split**. Atribuição fora da janela não conta.
+- **RN-314 · Registro de conversões por afiliado.** Subcoleção `eventos/{eventoId}/afiliados/{afiliadoId}` (organizador dono — decisão justificada em `DECISOES-ABERTAS`: coleção própria, não 3º ramo do union `parcerias`; reusa o kernel de janela + atribuição). ∑ conversões por Function idempotente, escrita exclusiva; organizador vê conversões + valor atribuído (informativo, sem comissão).
+- **Fase 2 (pergunta de decisão, NÃO neste recorte):** comissionamento/repasse ao influenciador (dinheiro → review Fable; absorve/antecipa split do E08). Registrado em `DECISOES-ABERTAS`.
+
+Story `S-R9-11`. Spec: `ux-review-2026-07-18/`.
+
+### Mecânica do influenciador (adendo 3 do Vitor · 2026-07-18)
+
+- **RN-315 · Clube como influenciador com threshold.** Clube pode ter link de desconto próprio condicionado a `minimoInscricoes` (definível pelo organizador por parceria/evento). Antes do mínimo (default recomendado): o link rastreia conversão, mas o desconto só ativa ao cruzar o mínimo — **sem desconto retroativo** (retroatividade abriria reprocessamento de vendas pagas). Onde vive: `minimoInscricoes` na parceria/afiliado.
+- **RN-316 · Influenciador PF por convite de e-mail.** Convidado por e-mail a criar conta; dashboard das próprias vendas. **Reuso obrigatório (provado por leitura):** `functions/src/assessorias/provisionAssessoria.ts` (`provisionAssessoriaAccount` — convite hasheado, cria/vincula Auth, transação anti-TOCTOU) + rate-limit R2 (failures-only por alvo) + kernel de atribuição (`cupom.clubeRef`/`dentroDaJanelaAtribuicao`). Produção depende do EmailProvider (fail-closed hoje) — **a antecipação eleva a urgência do EmailProvider** nas ações externas.
+- **RN-317 · Config via modal.** Cadastro de novo influenciador (clube ou PF) é modal no painel (shadcn), não página dedicada.
+- **RN-318 · Escopo de leitura do influenciador.** Vê SÓ as próprias conversões (projeção fechada: qtd/valor/status); nunca dado de terceiros além do agregado da própria atribuição. Rules fail-closed; PII PF com documento mascarado + trust anchors (padrão E18).
+
+Story `S-R9-11` (tasks T5/T6/T7). Spec: `ux-review-2026-07-18/`.
