@@ -7,6 +7,19 @@
 //   - criar não é chamado no modo edit (não duplica);
 //   - agendadoPara original sobrevive ao round-trip comunicadoToForm→submit;
 //   - create (sem ?id) segue criando com tenantId.
+//
+// ── Hardening do flaky (LEELA-R3-FLAKY, classe CONS-2) ──────────────────────
+// Root-cause (mesma classe do EventoLayout de CONS-2-T1): trabalho lento no
+// CAMINHO CRÍTICO racha o poller de 1000ms do `waitFor` sob a suíte cheia (8GB,
+// workers paralelos + pressão de GC). Aqui o custo era o `userEvent.type` de ~57
+// chars com TIMERS REAIS — cada tecla cedia um macrotask (`setTimeout`), o teste
+// "create" beirava ~1s (colado no limite do poller) e sob carga estourava.
+// Correção da RAIZ, SEM afrouxar asserção e SEM inflar timeout: `userEvent.setup
+// ({ delay: null })` despacha as teclas de forma síncrona (zero timer entre
+// teclas) → o typing sai do caminho crítico, o teste colapsa p/ ~100ms e o
+// poller ganha folga de sobra. Espelha o fix de CONS-2 ("tirar o trabalho lento
+// do caminho crítico, sem timeout inflado"). Um setup POR teste (sem estado
+// compartilhado entre casos).
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -65,7 +78,8 @@ describe('ComunicadoEditorPage — fluxo edit (fix S2)', () => {
     );
     renderPage('/clubes/cps/comunicacao/nova?id=com-edit');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar comunicado' }));
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole('button', { name: 'Salvar comunicado' }));
 
     await waitFor(() => expect(mocks.atualizarComunicadoPadrao).toHaveBeenCalledTimes(1));
     expect(mocks.atualizarComunicadoPadrao).toHaveBeenCalledWith(
@@ -98,7 +112,8 @@ describe('ComunicadoEditorPage — fluxo edit (fix S2)', () => {
     expect(screen.getByLabelText('Data')).toHaveValue('2026-08-15');
     expect(screen.getByLabelText('Hora')).toHaveValue('13:30');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Agendar comunicado' }));
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole('button', { name: 'Agendar comunicado' }));
 
     await waitFor(() => expect(mocks.atualizarComunicadoPadrao).toHaveBeenCalledTimes(1));
     expect(mocks.atualizarComunicadoPadrao).toHaveBeenCalledWith(
@@ -116,9 +131,10 @@ describe('ComunicadoEditorPage — fluxo edit (fix S2)', () => {
     mockComunicado(null);
     renderPage('/clubes/cps/comunicacao/nova');
 
-    await userEvent.type(screen.getByLabelText('Título'), 'Nova campanha de push');
-    await userEvent.type(screen.getByLabelText('Conteúdo'), 'Conteúdo com mais de dez caracteres.');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar comunicado' }));
+    const user = userEvent.setup({ delay: null });
+    await user.type(screen.getByLabelText('Título'), 'Nova campanha de push');
+    await user.type(screen.getByLabelText('Conteúdo'), 'Conteúdo com mais de dez caracteres.');
+    await user.click(screen.getByRole('button', { name: 'Salvar comunicado' }));
 
     await waitFor(() => expect(mocks.criarComunicadoPadrao).toHaveBeenCalledTimes(1));
     expect(mocks.criarComunicadoPadrao).toHaveBeenCalledWith(
