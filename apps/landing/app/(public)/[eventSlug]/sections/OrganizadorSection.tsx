@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Dobra } from './Dobra';
 import { TituloSecao } from './marca';
+import { AVATAR_MOCK } from '@/lib/mockImagem';
 import type { OrganizadorPublico } from '@/lib/tipos';
 
 /**
@@ -25,7 +26,7 @@ export function OrganizadorSection({
           href={`/@${organizador.handle}`}
           className="group inline-flex items-center gap-4 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 pr-6 transition-colors hover:border-border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
         >
-          <span className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-border-subtle bg-surface-overlay">
+          <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-border-subtle bg-surface-overlay">
             {organizador.avatarUrl !== undefined ? (
               <img
                 src={organizador.avatarUrl}
@@ -33,12 +34,17 @@ export function OrganizadorSection({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span
-                aria-hidden
-                className="flex h-full w-full items-center justify-center font-display text-xl font-bold text-text-secondary"
-              >
-                {inicial}
-              </span>
+              // Sem avatarUrl: fundo de marca brasa (mock) + inicial real por
+              // cima — slot preenchido, sem placeholder cinza (R12-FIX-MOCKIMG).
+              <>
+                <img src={AVATAR_MOCK} alt="" aria-hidden className="h-full w-full object-cover" />
+                <span
+                  aria-hidden
+                  className="absolute inset-0 flex items-center justify-center font-display text-xl font-bold text-text-primary"
+                >
+                  {inicial}
+                </span>
+              </>
             )}
           </span>
           <span className="min-w-0">

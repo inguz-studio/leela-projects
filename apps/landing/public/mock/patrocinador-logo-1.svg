@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Logo de exemplo de patrocinador Leela — marca brasa">
+  <!--
+    Logo 1:1 MOCK (LEELA-R12-FIX-MOCKIMG) — faixa de patrocinadores da página do
+    organizador, quando a parceria não tem logoUrl. Marca abstrata BRASA sobre
+    fundo transparente (object-contain no tile do DS). Variante 1: anel + chama.
+  -->
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF7A2E"/>
+      <stop offset="1" stop-color="#FF3D0A"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="66" fill="none" stroke="url(#g1)" stroke-width="14"/>
+  <path d="M120 78 C142 100 150 122 132 146 C150 140 156 118 150 104 C168 122 168 152 146 168 C126 182 100 176 88 156 C76 136 84 112 104 100 C98 116 104 130 118 132 C104 116 108 96 120 78 Z" fill="url(#g1)"/>
+</svg>

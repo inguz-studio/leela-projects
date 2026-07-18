@@ -24,6 +24,7 @@ import { CoverImage } from '../../components/CoverImage';
 import { ShareBlock } from '../[eventSlug]/ShareBlock';
 import { formatarPreco } from '../../../lib/formato';
 import { rotuloEstadoVenda } from '../../../lib/estadoVenda';
+import { AVATAR_MOCK, mockLogoPara } from '../../../lib/mockImagem';
 import type {
   PerfilPublicoCompleto,
   ClubeResumoPublico,
@@ -150,7 +151,7 @@ function FaixaPatrocinadores({
       <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {patrocinadores.map((p) => (
           <li key={p.nome}>
-            <div className="flex aspect-square items-center justify-center overflow-hidden rounded-ds-md border border-border-subtle bg-surface-raised p-2">
+            <div className="flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-ds-md border border-border-subtle bg-surface-raised p-3">
               {p.logoUrl !== undefined ? (
                 <img
                   src={p.logoUrl}
@@ -158,21 +159,18 @@ function FaixaPatrocinadores({
                   className="h-full w-full object-contain"
                 />
               ) : (
-                // Fallback digno: monograma da marca (slot pronto p/ a logo).
-                <span
-                  className="flex h-full w-full flex-col items-center justify-center gap-1 text-center"
-                  title={p.nome}
-                >
-                  <span
-                    aria-hidden
-                    className="font-display text-2xl font-extrabold text-text-brand"
-                  >
-                    {p.nome.trim().charAt(0).toUpperCase() || '?'}
-                  </span>
-                  <span className="line-clamp-1 px-1 text-xs font-semibold text-text-tertiary">
+                // Sem logoUrl: logo 1:1 brasa (mock) + nome — slot preenchido
+                // com imagem, sem monograma solto (R12-FIX-MOCKIMG).
+                <>
+                  <img
+                    src={mockLogoPara(p.nome)}
+                    alt={`Logo de exemplo de ${p.nome}`}
+                    className="min-h-0 w-full flex-1 object-contain"
+                  />
+                  <span className="line-clamp-1 w-full px-1 text-center text-xs font-semibold text-text-tertiary">
                     {p.nome}
                   </span>
-                </span>
+                </>
               )}
             </div>
           </li>
@@ -237,7 +235,7 @@ export function PerfilView({
         </div>
         <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-6">
           <div className="-mt-10 mb-4 flex items-end gap-4 sm:-mt-12">
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-surface-sunken bg-surface-overlay shadow-elev-1 sm:h-24 sm:w-24">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-4 border-surface-sunken bg-surface-overlay shadow-elev-1 sm:h-24 sm:w-24">
               {perfil.avatarUrl !== undefined ? (
                 <img
                   src={perfil.avatarUrl}
@@ -245,12 +243,17 @@ export function PerfilView({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <span
-                  aria-hidden
-                  className="flex h-full w-full items-center justify-center font-display text-3xl font-bold text-text-secondary"
-                >
-                  {inicial}
-                </span>
+                // Sem avatarUrl: fundo de marca brasa (mock) + inicial real por
+                // cima — slot preenchido, sem placeholder cinza (R12-FIX-MOCKIMG).
+                <>
+                  <img src={AVATAR_MOCK} alt="" aria-hidden className="h-full w-full object-cover" />
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 flex items-center justify-center font-display text-3xl font-bold text-text-primary"
+                  >
+                    {inicial}
+                  </span>
+                </>
               )}
             </div>
           </div>
