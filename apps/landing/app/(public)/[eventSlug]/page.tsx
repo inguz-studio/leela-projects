@@ -179,13 +179,18 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
         <HeroMinimo evento={evento} />
       )}
 
-      {/* Bloco de compartilhamento (URL + QR) — S1201-T3 / RN-201 */}
-      <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-        <ShareBlock shareUrl={shareUrl} qrSvg={qrSvg} nome={evento.nome} />
+      {/* Bloco de compartilhamento (URL + QR) — S1201-T3 / RN-201. Mesma calha
+          (max-w-5xl) e ritmo vertical das demais dobras — sem borda/costura. */}
+      <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-5xl">
+          <ShareBlock shareUrl={shareUrl} qrSvg={qrSvg} nome={evento.nome} />
+        </div>
       </section>
 
-      {/* CTA persistente colado ao rodapé (Shotgun: CTA amarrado ao lote) */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border-subtle bg-surface-raised/95 backdrop-blur">
+      {/* CTA persistente colado ao rodapé (Shotgun: CTA amarrado ao lote). Sem
+          hairline no topo: uma sombra suave para cima levanta a barra do
+          conteúdo (elevação, não linha). */}
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-surface-raised/95 shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-text-primary">{evento.nome}</p>

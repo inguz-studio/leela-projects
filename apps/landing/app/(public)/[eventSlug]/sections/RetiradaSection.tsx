@@ -1,4 +1,5 @@
 import type { EventoPublico } from '@/lib/tipos';
+import { Dobra } from './Dobra';
 
 /**
  * Seção de retirada de kit (S1201-T2): as janelas de retirada (dia/horário/
@@ -11,7 +12,7 @@ export function RetiradaSection({ evento }: { evento: EventoPublico }): React.JS
   if (evento.janelasRetirada.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <Dobra>
       <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
         Retirada do kit
       </h2>
@@ -32,6 +33,6 @@ export function RetiradaSection({ evento }: { evento: EventoPublico }): React.JS
           </li>
         ))}
       </ul>
-    </section>
+    </Dobra>
   );
 }

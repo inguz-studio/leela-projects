@@ -1,4 +1,5 @@
 import type { EventoPublico } from '@/lib/tipos';
+import { Dobra } from './Dobra';
 
 /**
  * Seção "Sobre" (S1201-T2): a descrição publicada + os fatos-chave do evento
@@ -16,11 +17,13 @@ export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.E
   ];
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <Dobra>
       <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
         Sobre o evento
       </h2>
-      <p className="mt-3 text-lg leading-relaxed text-text-secondary">{evento.seo.descricao}</p>
+      <p className="mt-3 max-w-2xl text-lg leading-relaxed text-text-secondary">
+        {evento.seo.descricao}
+      </p>
 
       <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {fatos.map((f) => (
@@ -41,6 +44,6 @@ export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.E
           Prova cronometrada por chip — seu tempo oficial sai automaticamente.
         </p>
       ) : null}
-    </section>
+    </Dobra>
   );
 }

@@ -3,6 +3,7 @@ import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
+import { Dobra } from './Dobra';
 
 /**
  * Seção de lotes (S1201-T2): banda de urgência + CTA colado ao preço vigente
@@ -13,8 +14,8 @@ export function LotesSection({ evento }: { evento: EventoPublico }): React.JSX.E
   const aberta = evento.estadoVenda === 'aberto';
 
   return (
-    <section className="border-t border-border-subtle bg-surface-sunken">
-      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:items-center">
+    <Dobra>
+      <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
         <div className="max-w-xl">
           <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
             {aberta ? 'Garanta o preço do lote atual' : 'Lotes encerrados'}
@@ -37,6 +38,6 @@ export function LotesSection({ evento }: { evento: EventoPublico }): React.JSX.E
           <CtaInscricao slug={evento.slug} disabled={!aberta} estado={evento.estadoVenda} />
         </Suspense>
       </div>
-    </section>
+    </Dobra>
   );
 }
