@@ -16,6 +16,7 @@ import { ConfirmModal, useToast } from '@leela/design-system';
 import type { Reembolso } from '@leela/core';
 import {
   reembolsosDoEventoQuery,
+  todosInscritosQuery,
   transferenciasDoEventoQuery,
 } from '../../../lib/query/queries';
 import { useDecideRefund } from '../../../lib/query/mutations';
@@ -32,7 +33,24 @@ export function ReembolsosPage(): JSX.Element {
   const { toast } = useToast();
   const reembolsos = useQuery(reembolsosDoEventoQuery(evento.id));
   const transferencias = useQuery(transferenciasDoEventoQuery(evento.id));
+  // Join do NOME: reusa a query da tabela densa de inscritos (mesma chave de
+  // cache → quente se o organizador já abriu Inscritos). Lê `atletaNome` da
+  // subcoleção canônica que o tenant writer JÁ pode ler — nenhuma superfície
+  // nova de PII, nada denormalizado. Enriquece a fila SEM bloqueá-la: os nomes
+  // chegam por cima; enquanto isso a coluna cai na ref opaca (fallback digno).
+  const inscritos = useQuery(todosInscritosQuery(evento.id));
   const decidir = useDecideRefund(evento.id);
+
+  const nomePorInscrito = React.useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const i of inscritos.data ?? []) mapa.set(i.id, i.atletaNome);
+    return mapa;
+  }, [inscritos.data]);
+
+  const nomeInscrito = React.useCallback(
+    (inscritoId: string): string | null => nomePorInscrito.get(inscritoId) ?? null,
+    [nomePorInscrito],
+  );
 
   const [pendente, setPendente] = React.useState<Pendente | null>(null);
 
@@ -80,6 +98,7 @@ export function ReembolsosPage(): JSX.Element {
         error={reembolsos.error ?? transferencias.error ?? null}
         onDecidir={abrirDecisao}
         decidindo={decidir.isPending}
+        nomeInscrito={nomeInscrito}
       />
 
       <ConfirmModal
@@ -89,7 +108,11 @@ export function ReembolsosPage(): JSX.Element {
         }}
         title={aprovar ? 'Aprovar reembolso' : 'Recusar reembolso'}
         {...(pendente
-          ? { description: `Inscrição ${pendente.reembolso.inscritoId} · valor definido pelo sistema` }
+          ? {
+              description: `Inscrito ${
+                nomeInscrito(pendente.reembolso.inscritoId) ?? pendente.reembolso.inscritoId
+              } · valor definido pelo sistema`,
+            }
           : {})}
         loses={
           aprovar

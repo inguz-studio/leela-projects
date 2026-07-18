@@ -46,6 +46,12 @@ export interface ReembolsosViewProps {
   onDecidir: (reembolso: Reembolso, decisao: 'aprovar' | 'recusar') => void;
   /** true enquanto uma decisão roda (desabilita as ações). */
   decidindo: boolean;
+  /**
+   * Resolve o NOME do inscrito (join da subcoleção canônica `inscritos` —
+   * `atletaNome`; nunca PII sensível). null = ainda não resolveu (fila carrega
+   * antes dos nomes) → a coluna cai na ref opaca, fallback digno e honesto.
+   */
+  nomeInscrito?: (inscritoId: string) => string | null;
 }
 
 export function ReembolsosView({
@@ -55,6 +61,7 @@ export function ReembolsosView({
   error,
   onDecidir,
   decidindo,
+  nomeInscrito,
 }: ReembolsosViewProps): JSX.Element {
   if (loading) {
     return (
@@ -75,8 +82,12 @@ export function ReembolsosView({
 
   const emAnalise = reembolsos.filter((r) => r.estado === 'em_analise').length;
 
+  /** Nome do inscrito quando o join resolveu; senão a ref opaca (fallback digno). */
+  const rotuloInscrito = (inscritoId: string): string =>
+    nomeInscrito?.(inscritoId) ?? refCurta(inscritoId);
+
   const colunasReembolso: TableColumn<Reembolso>[] = [
-    { key: 'inscrito', header: 'Inscrito', render: (r) => refCurta(r.inscritoId) },
+    { key: 'inscrito', header: 'Inscrito', render: (r) => rotuloInscrito(r.inscritoId) },
     {
       key: 'estado',
       header: 'Estado',
@@ -119,8 +130,8 @@ export function ReembolsosView({
       header: 'Mudança',
       render: (t) =>
         t.tipo === 'titularidade'
-          ? `${t.titularAnterior.nome || refCurta(t.inscritoId)} → ${t.novoTitular?.nome ?? '—'}`
-          : `${t.titularAnterior.nome || refCurta(t.inscritoId)} → ${t.novaModalidade ?? '—'}`,
+          ? `${t.titularAnterior.nome || rotuloInscrito(t.inscritoId)} → ${t.novoTitular?.nome ?? '—'}`
+          : `${t.titularAnterior.nome || rotuloInscrito(t.inscritoId)} → ${t.novaModalidade ?? '—'}`,
     },
     {
       key: 'diff',
