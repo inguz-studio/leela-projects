@@ -122,18 +122,46 @@ service firebase.storage {
         && objetoUsuarioValido(objeto);
     }
 
-    // ── clubes/{clubeId}/capa — capa pública do clube (RN-166) ────────────
-    // Write: tenant writer E o clube é do meu tenant (firestore.get). read/
-    // delete restritos a `capa` (única allowlist do path — BAIXO-4).
+    // ── clubes/{clubeId}/{objeto} — capa + logos de patrocinador ──────────
+    // `capa` (RN-166) + `patrocinador-{parceriaId}` (R9-E · adendo S-R9-12:
+    // logo 1:1 do patrocinador do clube — exibida na página pública, lane
+    // R12). Write: tenant writer E o clube é do meu tenant (firestore.get).
+    // A allowlist segue por PADRÃO de nome (segmento único, kebab curto) —
+    // sem filename livre; validação 1:1 é app-level (Rules não decodificam
+    // imagem — limitação honesta registrada).
+    function objetoClubeValido(objeto) {
+      return objeto == 'capa'
+        || objeto.matches('^patrocinador-[a-z0-9][a-z0-9-]{0,79}$');
+    }
+
     match /clubes/{clubeId}/{objeto} {
-      allow read: if objeto == 'capa';
+      allow read: if objetoClubeValido(objeto);
       allow create, update: if isTenantWriterRole()
-        && objeto == 'capa'
+        && objetoClubeValido(objeto)
         && clubeDoMeuTenant(clubeId)
         && imagemValida();
       allow delete: if isTenantWriterRole()
-        && objeto == 'capa'
+        && objetoClubeValido(objeto)
         && clubeDoMeuTenant(clubeId);
+    }
+
+    // ── marcas/{uid}/{marcaId} — logo 1:1 do registro reutilizável ────────
+    // (R9-E · S-R9-12 · RN-171 + adendo): logo da marca/patrocinador do
+    // PROFISSIONAL (registro owner-only `profissionais/{uid}/marcas`).
+    // Write: SÓ o próprio uid (espelho das Rules do Firestore). Read
+    // público: a logo aparece na página pública do evento (lane R12) — a
+    // imagem é intrinsecamente pública, mesma decisão ADR-016 dos avatares.
+    // marcaId no padrão kebab derivado do nome (marcaIdDoNome) — sem
+    // filename livre.
+    match /marcas/{uid}/{marcaId} {
+      allow read: if marcaId.matches('^[a-z0-9][a-z0-9-]{0,59}$');
+      allow create, update: if isSignedIn()
+        && request.auth.uid == uid
+        && marcaId.matches('^[a-z0-9][a-z0-9-]{0,59}$')
+        && imagemValida();
+      allow delete: if isSignedIn()
+        && request.auth.uid == uid
+        && marcaId.matches('^[a-z0-9][a-z0-9-]{0,59}$');
     }
 
     // ── Catch-all: DENY-BY-DEFAULT ────────────────────────────────────────

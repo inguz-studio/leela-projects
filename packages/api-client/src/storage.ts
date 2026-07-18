@@ -104,3 +104,77 @@ export async function uploadCapaClube(clubeId: string, file: File): Promise<stri
   }
   return uploadImagem(`clubes/${clubeId}/capa`, file);
 }
+
+// ---------------------------------------------------------------------------
+// Logos de patrocinador 1:1 (R9-E · S-R9-12 · RN-171 + adendo do Vitor)
+// ---------------------------------------------------------------------------
+
+/** Tolerância da proporção 1:1 (2% — corta ruído de export, barra retângulo). */
+export const LOGO_QUADRADA_TOLERANCIA = 0.02;
+
+/**
+ * Valida que a imagem é QUADRADA (1:1) — validação APP-LEVEL (as Rules não
+ * decodificam imagem; mesma divisão de responsabilidade da capa 1.9:1).
+ * Retorna mensagem do problema ou null. Async: decodifica via
+ * createImageBitmap (fallback: aceita quando o browser não suporta —
+ * degradação honesta, o servidor não re-checa).
+ */
+export async function problemaProporcaoQuadrada(file: File): Promise<string | null> {
+  // Acesso via globalThis: o tsconfig do pacote não carrega lib DOM completa
+  // (File vem estrutural); em runtime sem suporte, degrada aceitando.
+  const criarBitmap = (
+    globalThis as {
+      createImageBitmap?: (
+        f: File
+      ) => Promise<{ width: number; height: number; close(): void }>;
+    }
+  ).createImageBitmap;
+  if (typeof criarBitmap !== 'function') return null;
+  try {
+    const bitmap = await criarBitmap(file);
+    const { width, height } = bitmap;
+    bitmap.close();
+    if (width === 0 || height === 0) return 'Imagem inválida.';
+    const desvio = Math.abs(width / height - 1);
+    if (desvio > LOGO_QUADRADA_TOLERANCIA) {
+      return `A logo deve ser quadrada (1:1) — a imagem tem ${width}×${height}.`;
+    }
+    return null;
+  } catch {
+    return 'Não foi possível ler a imagem — use JPG, PNG, WebP, GIF ou AVIF.';
+  }
+}
+
+/**
+ * Logo 1:1 da MARCA do registro reutilizável (`profissionais/{uid}/marcas`).
+ * Path: `marcas/{uid}/{marcaId}` (Rules: só o próprio uid escreve). Valida
+ * tipo/tamanho + proporção 1:1 antes do upload.
+ */
+export async function uploadLogoMarca(marcaId: string, file: File): Promise<string> {
+  const id = marcaId.trim();
+  if (!/^[a-z0-9][a-z0-9-]{0,59}$/.test(id)) {
+    throw new Error('Marca inválida para enviar a logo.');
+  }
+  const problema1a1 = await problemaProporcaoQuadrada(file);
+  if (problema1a1) throw new Error(problema1a1);
+  return uploadImagem(`marcas/${uidAtual()}/${id}`, file);
+}
+
+/**
+ * Logo 1:1 do PATROCINADOR do clube (parceria tipo 'patrocinador').
+ * Path: `clubes/{clubeId}/patrocinador-{parceriaId}` — Rules provam o
+ * tenant por firestore.get (mesma guarda da capa).
+ */
+export async function uploadLogoPatrocinadorClube(
+  clubeId: string,
+  parceriaId: string,
+  file: File
+): Promise<string> {
+  const pid = parceriaId.trim().toLowerCase();
+  if (clubeId.trim().length === 0 || !/^[a-z0-9][a-z0-9-]{0,79}$/.test(pid)) {
+    throw new Error('Patrocinador inválido para enviar a logo.');
+  }
+  const problema1a1 = await problemaProporcaoQuadrada(file);
+  if (problema1a1) throw new Error(problema1a1);
+  return uploadImagem(`clubes/${clubeId}/patrocinador-${pid}`, file);
+}

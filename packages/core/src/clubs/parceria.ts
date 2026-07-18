@@ -129,6 +129,12 @@ export interface ParceriaPatrocinador extends ParceriaBase {
   /** O que o patrocinador recebe/entrega (≥ 20 chars — SPEC-02) */
   contrapartida: string;
   contratoUrl?: string;
+  /**
+   * Logo 1:1 do patrocinador (R9-E · adendo do Vitor a S-R9-12/RN-171):
+   * URL http(s) — upload via Storage R5 (`clubes/{id}/patrocinador-{pid}`)
+   * ou URL colada. Exibição na página pública = lane R12.
+   */
+  logoUrl?: string;
 }
 
 /** Union discriminada por `tipo`. */
