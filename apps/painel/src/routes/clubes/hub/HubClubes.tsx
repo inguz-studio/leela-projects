@@ -22,6 +22,10 @@ export interface HubClubesProps {
   onAbrirClube: (slug: string) => void;
   /** Abre a gestão de assessorias parceiras (E18). */
   onAbrirAssessorias?: () => void;
+  /** Abre os influenciadores do tenant (R9-E · RN-319 — lado organizador). */
+  onAbrirInfluenciadores?: () => void;
+  /** Abre "minhas afiliações" (R9-E · RN-318/319 — lado clube/influenciador). */
+  onAbrirMinhasAfiliacoes?: () => void;
 }
 
 interface KpisGlobais {
@@ -64,6 +68,8 @@ export function HubClubes({
   ownUserId,
   onCriarClube,
   onAbrirAssessorias,
+  onAbrirInfluenciadores,
+  onAbrirMinhasAfiliacoes,
   onAbrirClube,
 }: HubClubesProps): JSX.Element {
   const [busca, setBusca] = useState('');
@@ -96,6 +102,12 @@ export function HubClubes({
         subtitle="Comunidades em torno dos seus eventos"
         actions={
           <div className="flex items-center gap-[var(--spacing-2)]">
+            <Button variant="secondary" onClick={() => onAbrirMinhasAfiliacoes?.()}>
+              Minhas afiliações
+            </Button>
+            <Button variant="secondary" onClick={() => onAbrirInfluenciadores?.()}>
+              Influenciadores
+            </Button>
             <Button variant="secondary" onClick={() => onAbrirAssessorias?.()}>
               Assessorias parceiras
             </Button>

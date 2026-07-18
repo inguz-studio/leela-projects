@@ -19,6 +19,8 @@ import { NovoClubePage } from './novo/NovoClubePage';
 import { AssessoriasPage } from './assessorias/AssessoriasPage';
 import { CadastrarAssessoriaPage } from './assessorias/CadastrarAssessoriaPage';
 import { ParceriaDetailPage } from './assessorias/ParceriaDetailPage';
+import { InfluenciadoresPage } from './influenciadores/InfluenciadoresPage';
+import { MinhasAfiliacoesPage } from './influenciadores/MinhasAfiliacoesPage';
 import { ClubeLayout } from './clube/ClubeLayout';
 import { OverviewPage } from './clube/overview/OverviewPage';
 import { MembrosPage } from './clube/membros/MembrosPage';
@@ -45,6 +47,11 @@ export function ClubesRoutes(): JSX.Element {
         <Route path="assessorias" element={<AssessoriasPage />} />
         <Route path="assessorias/nova" element={<CadastrarAssessoriaPage />} />
         <Route path="assessorias/:parceriaId" element={<ParceriaDetailPage />} />
+        {/* Aba Clubs, DOIS lados (R9-E · S-R9-11-T8 · RN-319): organizador vê
+            os influenciadores do tenant; clube/influenciador vê SÓ as
+            próprias conversões (RN-318). Rotas estáticas ANTES do :slug. */}
+        <Route path="influenciadores" element={<InfluenciadoresPage />} />
+        <Route path="minhas-afiliacoes" element={<MinhasAfiliacoesPage />} />
         <Route path=":slug" element={<ClubeLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="membros" element={<MembrosPage />} />
