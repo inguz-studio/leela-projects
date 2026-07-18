@@ -43,7 +43,7 @@ import {
   type WebhookPayload,
   type WebhookResult,
 } from '@leela/core';
-import { selectPaymentProvider } from '../payments/selectProvider';
+import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 
 type Db = admin.firestore.Firestore;
 
@@ -78,6 +78,29 @@ export class WebhookRejeitadoError extends Error {
 
 /** Nome da subcoleção-ledger de entregas de webhook (deny-by-default). */
 export const WEBHOOK_EVENTOS_SUBCOL = 'webhookEventos';
+
+/**
+ * Efeitos EXTRAS que a camada de gateway extraiu da entrega e o core
+ * persiste na MESMA transação da confirmação (LEELA-R6 · checklist §4).
+ * O fluxo mock não os usa — ausência = comportamento vigente byte a byte.
+ */
+export interface EfeitosExtrasWebhook {
+  /**
+   * Marca a origem da entrega quando ela vem de um gateway REAL (hoje só
+   * 'asaas'). Controla o warn de "cartão confirmado sem dados de cartão" —
+   * o fluxo mock nunca envia extras e segue SEM log novo (fix review
+   * antagonista R6 #4).
+   */
+  origem?: 'asaas';
+  /**
+   * Bloco de cartão da confirmação (`payment.creditCard` do Asaas —
+   * bandeira + últimos 4; o PAN/token nunca chega aqui). `valorParcela` e
+   * `valorTotalComJuros` do CartaoPagamento são derivados do VALOR
+   * CONGELADO do doc (`gatewayAmountCentavos`) e das parcelas do pedido —
+   * nunca do payload do gateway (integridade: o gateway não dita valores).
+   */
+  cartao?: { bandeira: string; ultimos4: string; parcelas?: number };
+}
 
 // ---------------------------------------------------------------------------
 // Validação de shape do payload (antes de tocar o provider)
@@ -120,7 +143,8 @@ function validarShapePayload(raw: unknown): WebhookPayload {
 export async function processarWebhookPagamento(
   db: Db,
   provider: PaymentProvider,
-  rawPayload: unknown
+  rawPayload: unknown,
+  extras: EfeitosExtrasWebhook = {}
 ): Promise<ResultadoWebhookPagamento> {
   const payload = validarShapePayload(rawPayload);
 
@@ -266,6 +290,54 @@ export async function processarWebhookPagamento(
         : null;
     const cupomSnap = cupomRef ? await tx.get(cupomRef) : null;
 
+    // Bloco `pagamento.cartao` (LEELA-R6 · checklist §4): confirmação de
+    // CARTÃO com dados do gateway → persiste bandeira/últimos4 + derivados
+    // do VALOR CONGELADO do doc (nunca do payload): totalCobrado =
+    // gatewayAmountCentavos/100; valorParcela na MESMA fórmula do resultado
+    // do checkout (round(total/n)) — satisfaz o invariante de parse
+    // `parcelas × valorParcela ≈ valorTotalComJuros`.
+    const formaPagamento = pagamentoSnap.get('forma') as string;
+    // Higiene dos campos de EXIBIÇÃO vindos do payload (fix review R6 #3):
+    // ultimos4 precisa ser exatamente 4 dígitos (invariante do parse do
+    // domínio) e bandeira vira texto curto sem controle — fora disso o
+    // bloco é tratado como "sem dados" (nunca persistir lixo em doc de
+    // dinheiro; dinheiro/valores NÃO dependem destes campos).
+    const bandeiraLimpa = extras.cartao?.bandeira
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+      .trim()
+      .slice(0, 40);
+    const cartaoValido =
+      extras.cartao !== undefined &&
+      /^\d{4}$/.test(extras.cartao.ultimos4) &&
+      bandeiraLimpa !== undefined &&
+      bandeiraLimpa.length > 0;
+    let blocoCartao: Record<string, unknown> | undefined;
+    if (formaPagamento === 'cartao_credito' && extras.cartao !== undefined && cartaoValido) {
+      const parcelasPedido = pedidoSnap.get('parcelas') as number | undefined;
+      const parcelas =
+        typeof parcelasPedido === 'number' && Number.isInteger(parcelasPedido) && parcelasPedido >= 1
+          ? parcelasPedido
+          : (extras.cartao.parcelas ?? 1);
+      const totalCobrado = roundMoney(amountPersistido / 100);
+      blocoCartao = {
+        bandeira: bandeiraLimpa,
+        ultimos4: extras.cartao.ultimos4,
+        parcelas,
+        // round(total/n) half-up: erro máx. de 0,005 POR parcela ⇒ sempre
+        // dentro da tolerância do parse (parcelas × meio centavo) — provado
+        // em teste com total não divisível (fix review R6 #2).
+        valorParcela: Math.round((totalCobrado / parcelas) * 100) / 100,
+        valorTotalComJuros: totalCobrado,
+      };
+    } else if (formaPagamento === 'cartao_credito' && extras.origem !== undefined) {
+      // Gateway REAL confirmou cartão SEM dados de cartão utilizáveis — a
+      // confirmação financeira NÃO é bloqueada (a verdade do dinheiro é o
+      // gateway), mas a lacuna fica registrada (parse-coerência do slide-in
+      // exige o bloco; fato a monitorar — R6). Fluxo mock nunca chega aqui
+      // (sem `origem` — fix review R6 #4, comportamento vigente intocado).
+      logger.warn('webhook_cartao_sem_dados', { pagamentoId, chargeId: resultado.chargeId });
+    }
+
     // ── ESCRITAS (efeito financeiro — exactly-once sob a+b+c) ─────────────
     gravarLedger('confirmado');
 
@@ -273,6 +345,7 @@ export async function processarWebhookPagamento(
       status: 'confirmado',
       pagoEm: agora,
       atualizadoEm: agora,
+      ...(blocoCartao !== undefined ? { cartao: blocoCartao } : {}),
     });
     tx.update(pedidoRef, { status: 'pago', atualizadoEm: agora });
 
@@ -328,6 +401,19 @@ export async function processarWebhookPagamento(
 export const pagamentoWebhook = https.onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Método não suportado.' });
+    return;
+  }
+
+  // Fix review antagonista R6 #1 (fail-closed): com chave Asaas presente,
+  // ESTA porta fecha — o gateway real entrega SÓ pelo `asaasWebhook`
+  // (header em tempo constante + orderId DERIVADO do externalReference).
+  // Mantê-la aberta seria uma 2ª superfície token-in-body onde o remetente
+  // controla orderId/eventId diretamente. Sem chave (mock), segue como era.
+  if (hasAsaasKey(process.env)) {
+    res.status(410).json({
+      ok: false,
+      error: 'Porta de webhook desativada — o gateway usa o endpoint próprio.',
+    });
     return;
   }
 

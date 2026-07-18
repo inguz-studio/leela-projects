@@ -1,37 +1,56 @@
 /**
- * selectProvider.test.ts — LEELA-E12 (fundação do checkout)
+ * selectProvider.test.ts — LEELA-E12 → LEELA-R6 (ativação do Asaas)
  *
- * Unit (sem I/O): seleção FAIL-SAFE do PaymentProvider + payload de webhook
- * mock assinado (o caminho que fecha o checkout sem gateway real).
+ * Unit (sem I/O): seleção do PaymentProvider pós-ativação.
  *
- * Invariante inviolável (brief): o sandbox NUNCA roda se houver chave real
- * configurada — chave presente sem adapter = parada dura, jamais fallback.
+ * Invariantes invioláveis:
+ *   - SEM chave → Mock (sandbox local).
+ *   - COM chave sandbox ($aact_hmlg_) + token → AsaasProvider REAL apontado
+ *     para a api-sandbox (ambiente derivado do prefixo).
+ *   - COM chave e config INVÁLIDA → LANÇA. NUNCA degrada para Mock com
+ *     chave presente (downgrade silencioso = o pior modo de falha).
+ *   - Chave de PRODUÇÃO NUNCA ativa por este seletor (permitirProducao
+ *     não é passado — construção falha).
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
-  AsaasNaoImplementadoError,
   ASAAS_API_KEY_ENV,
   hasAsaasKey,
+  resetAsaasProviderCache,
   selectPaymentProvider,
 } from '../payments/selectProvider';
+import {
+  AsaasConfigError,
+  AsaasProvider,
+  ASAAS_SANDBOX_BASE_URL,
+  ASAAS_WEBHOOK_TOKEN_ENV,
+} from '../payments/asaasProvider';
 import {
   MockPaymentProvider,
   buildMockWebhookPayload,
   mockPaymentProvider,
 } from '../payments/mockProvider';
 
-describe('selectPaymentProvider — fail-safe (E12)', () => {
-  it('SEM chave Asaas → devolve o MockPaymentProvider (sandbox)', () => {
+/** Chaves SINTÉTICAS (formato válido, valor inventado — nunca a real). */
+const CHAVE_SANDBOX = `$aact_hmlg_${'s'.repeat(120)}`;
+const CHAVE_PROD = `$aact_prod_${'p'.repeat(120)}`;
+const TOKEN_WEBHOOK = 'token-webhook-de-teste-com-40-caracteres!';
+
+const envSandbox = (): Record<string, string | undefined> => ({
+  [ASAAS_API_KEY_ENV]: CHAVE_SANDBOX,
+  [ASAAS_WEBHOOK_TOKEN_ENV]: TOKEN_WEBHOOK,
+});
+
+afterEach(() => {
+  resetAsaasProviderCache();
+});
+
+describe('selectPaymentProvider — pós-ativação R6', () => {
+  it('SEM chave Asaas → devolve o MockPaymentProvider (sandbox local)', () => {
     const provider = selectPaymentProvider({});
     expect(provider).toBe(mockPaymentProvider);
     expect(provider).toBeInstanceOf(MockPaymentProvider);
-  });
-
-  it('COM chave Asaas → LANÇA (sandbox nunca roda com chave real)', () => {
-    expect(() =>
-      selectPaymentProvider({ [ASAAS_API_KEY_ENV]: 'asaas_live_key_123' })
-    ).toThrow(AsaasNaoImplementadoError);
   });
 
   it('chave vazia/whitespace conta como AUSENTE (env var zumbi não ativa gateway)', () => {
@@ -43,6 +62,62 @@ describe('selectPaymentProvider — fail-safe (E12)', () => {
   it('hasAsaasKey detecta chave real', () => {
     expect(hasAsaasKey({ [ASAAS_API_KEY_ENV]: 'k'.repeat(32) })).toBe(true);
     expect(hasAsaasKey({})).toBe(false);
+  });
+
+  it('chave SANDBOX + token → AsaasProvider real apontado para a api-sandbox', () => {
+    const provider = selectPaymentProvider(envSandbox());
+    expect(provider).toBeInstanceOf(AsaasProvider);
+    const asaas = provider as AsaasProvider;
+    expect(asaas.environment).toBe('sandbox');
+    expect(asaas.baseUrl).toBe(ASAAS_SANDBOX_BASE_URL);
+  });
+
+  it('mesma config → MESMA instância (dedup em memória sobrevive entre requests)', () => {
+    const a = selectPaymentProvider(envSandbox());
+    const b = selectPaymentProvider(envSandbox());
+    expect(a).toBe(b);
+  });
+
+  it('config mudou (rotação de token) → instância NOVA', () => {
+    const a = selectPaymentProvider(envSandbox());
+    const b = selectPaymentProvider({
+      ...envSandbox(),
+      [ASAAS_WEBHOOK_TOKEN_ENV]: 'outro-token-de-webhook-com-40-caracteres',
+    });
+    expect(a).not.toBe(b);
+  });
+
+  it('chave presente SEM token de webhook → LANÇA (nunca Mock)', () => {
+    expect(() =>
+      selectPaymentProvider({ [ASAAS_API_KEY_ENV]: CHAVE_SANDBOX })
+    ).toThrow(AsaasConfigError);
+  });
+
+  it('token de webhook FRACO (< 32 chars) → LANÇA (nunca Mock)', () => {
+    expect(() =>
+      selectPaymentProvider({
+        [ASAAS_API_KEY_ENV]: CHAVE_SANDBOX,
+        [ASAAS_WEBHOOK_TOKEN_ENV]: 'curto',
+      })
+    ).toThrow(AsaasConfigError);
+  });
+
+  it('chave de PRODUÇÃO → LANÇA (seletor nunca passa permitirProducao)', () => {
+    expect(() =>
+      selectPaymentProvider({
+        [ASAAS_API_KEY_ENV]: CHAVE_PROD,
+        [ASAAS_WEBHOOK_TOKEN_ENV]: TOKEN_WEBHOOK,
+      })
+    ).toThrow(AsaasConfigError);
+  });
+
+  it('chave com prefixo irreconhecível → LANÇA (ambiente indeterminável)', () => {
+    expect(() =>
+      selectPaymentProvider({
+        [ASAAS_API_KEY_ENV]: 'chave-sem-prefixo-asaas-qualquer',
+        [ASAAS_WEBHOOK_TOKEN_ENV]: TOKEN_WEBHOOK,
+      })
+    ).toThrow(AsaasConfigError);
   });
 });
 

@@ -123,6 +123,11 @@ export { setClaimsEquipe } from './eventos/setClaimsEquipe';
 // pagamentoWebhook é a ÚNICA porta de confirmação (assinado + idempotente).
 export { createInscricaoCharge } from './checkout/createInscricaoCharge';
 export { pagamentoWebhook } from './checkout/webhookPagamento';
+// Webhook REAL do Asaas (LEELA-R6 · ativação sandbox): header
+// `asaas-access-token` → signature (comparação em tempo constante no
+// adapter), corpo → data, orderId derivado do externalReference — e entra
+// pela MESMA porta única (processarWebhookPagamento). ⚠️ Fable (dinheiro).
+export { asaasWebhook } from './checkout/webhookAsaas';
 // Cotação READ-ONLY do Resumo (S1203 — consome computeSaleState com os termos
 // PRIVADOS do tenant; não escreve nada).
 export { cotarInscricaoCheckout } from './checkout/cotarInscricaoCheckout';

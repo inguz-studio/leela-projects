@@ -187,8 +187,9 @@ export const confirmarPagamentoSandbox = https.onCall(async (data: unknown, cont
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
-  // selectPaymentProvider já LANÇA com chave real (fail-safe do selector); o
-  // core reforça com uma mensagem própria antes de qualquer efeito.
+  // Pós-ativação R6 o selector devolve o AsaasProvider com chave presente —
+  // o fail-safe DESTE callable é a guarda hasAsaasKey do core (recusa antes
+  // de qualquer efeito: com gateway real, quem confirma é o webhook do Asaas).
   return confirmarPagamentoSandboxCore(
     admin.firestore(),
     selectPaymentProvider(),

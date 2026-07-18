@@ -36,11 +36,11 @@ const tsRel = (d: number): Timestamp => Timestamp.fromDate(new Date(Date.now() +
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
-    firestore: { host: 'localhost', port: 8080 },
+    firestore: { host: 'localhost', port: Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080) },
   });
   await testEnv.clearFirestore();
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   db = admin.firestore();
