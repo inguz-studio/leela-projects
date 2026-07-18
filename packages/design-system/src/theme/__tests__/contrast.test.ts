@@ -150,17 +150,16 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-warning', 'surface-overlay'],
   ['feedback-heroico', 'surface-overlay'],
   ['feedback-info',    'surface-overlay'],
-  // S-R9-04-T1 (L-006) · pares NÃO-TEXTO de COMPONENTE que o gate original não
-  // cobriu — o contraste passado só media pares de texto. Estes DOIS pares
-  // provam o buraco relatado pelo Vitor e FALHAM com os tokens atuais:
-  //   Switch OFF: thumb (surface-raised #161616) × trilho (surface-sunken
-  //   #0A0A0A) = 1.09:1 — o polegar some no escuro (mín. 1.4.11 = 3:1).
-  //   Campo flat: a borda em repouso (fill surface-sunken #0A0A0A) × página
-  //   (surface-base #0C0C0C) = 1.01:1 — o campo não tem limite perceptível.
-  // O fix de tokens (S-R9-04-T2) repõe ambos por tokens de componente ≥3:1 e
-  // troca estes pares surrogate pelos pares dos tokens de componente.
-  ['surface-raised', 'surface-sunken'], // Switch thumb-OFF × trilho-OFF (proof)
-  ['surface-sunken', 'surface-base'],   // borda do campo flat × página (proof)
+  // S-R9-04 (L-006) · pares NÃO-TEXTO de COMPONENTE que o gate original não
+  // cobriu — o contraste passado só media pares de texto. Em T1 estes pares
+  // eram os surrogate surface-raised×sunken (1.09:1) e sunken×base (1.01:1),
+  // que FALHAVAM e provaram o buraco. T2 repôs os tokens por --switch-thumb-off
+  // e --input-border-flat (ambos = neutral.500/border-strong) e agora a matriz
+  // referencia os tokens de componente reais:
+  //   Switch thumb-OFF × trilho-OFF (surface-sunken): brasa 4.18:1 / wine 3.33:1
+  //   borda do campo flat × página (surface-base):    brasa 4.13:1 / wine 3.60:1
+  ['switch-thumb-off',  'surface-sunken'], // Switch thumb-OFF × trilho-OFF
+  ['input-border-flat', 'surface-base'],   // borda do campo flat × página
 ];
 
 // ---------------------------------------------------------------------------

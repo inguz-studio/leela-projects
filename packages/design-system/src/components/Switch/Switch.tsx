@@ -76,7 +76,9 @@ const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
           aria-hidden="true"
           className={cn(
             'pointer-events-none absolute left-[var(--spacing-0-5)] h-[var(--spacing-3-5)] w-[var(--spacing-3-5)]',
-            'rounded-[var(--radius-pill)] bg-[var(--surface-raised)]',
+            // OFF: --switch-thumb-off (= border-strong/neutral.500) garante ≥3:1
+            // sobre o trilho surface-sunken (S-R9-04-T2/L-006). ON: primary-fg.
+            'rounded-[var(--radius-pill)] bg-[var(--switch-thumb-off)]',
             'peer-checked:bg-[var(--action-primary-fg)]',
             'translate-x-0 peer-checked:translate-x-[var(--spacing-3)]',
             'transition-transform duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',

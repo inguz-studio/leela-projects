@@ -49,7 +49,7 @@ describe('Textarea', () => {
     render(<Textarea aria-label="Descrição" />);
     const box = screen.getByRole('textbox');
     expect(box).not.toHaveClass('border-input');
-    expect(box).toHaveClass('border-transparent');
+    expect(box).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(box).toHaveClass('bg-[var(--surface-sunken)]');
     expect(box).toHaveClass('focus:ring-2');
   });
@@ -58,7 +58,7 @@ describe('Textarea', () => {
     render(<Textarea aria-label="Descrição" variant="flat" />);
     const box = screen.getByRole('textbox');
     expect(box).not.toHaveClass('border-input');
-    expect(box).toHaveClass('border-transparent');
+    expect(box).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(box).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
@@ -67,6 +67,6 @@ describe('Textarea', () => {
     const box = screen.getByRole('textbox');
     expect(box).toHaveClass('border-input');
     expect(box).toHaveClass('bg-[var(--surface-raised)]');
-    expect(box).not.toHaveClass('border-transparent');
+    expect(box).not.toHaveClass('border-[color:var(--input-border-flat)]');
   });
 });

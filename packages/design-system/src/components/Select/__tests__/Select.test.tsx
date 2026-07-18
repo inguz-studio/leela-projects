@@ -47,7 +47,7 @@ describe('Select', () => {
     render(<Select aria-label="Kit" options={options} />);
     const select = screen.getByRole('combobox');
     expect(select).not.toHaveClass('border-input');
-    expect(select).toHaveClass('border-transparent');
+    expect(select).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(select).toHaveClass('bg-[var(--surface-sunken)]');
     expect(select).toHaveClass('focus:ring-2');
   });
@@ -56,7 +56,7 @@ describe('Select', () => {
     render(<Select aria-label="Kit" options={options} variant="flat" />);
     const select = screen.getByRole('combobox');
     expect(select).not.toHaveClass('border-input');
-    expect(select).toHaveClass('border-transparent');
+    expect(select).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(select).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
@@ -65,6 +65,6 @@ describe('Select', () => {
     const select = screen.getByRole('combobox');
     expect(select).toHaveClass('border-input');
     expect(select).toHaveClass('bg-[var(--surface-raised)]');
-    expect(select).not.toHaveClass('border-transparent');
+    expect(select).not.toHaveClass('border-[color:var(--input-border-flat)]');
   });
 });

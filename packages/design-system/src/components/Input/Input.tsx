@@ -109,15 +109,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             'h-[var(--input-height)] px-[var(--input-px)]',
             'rounded-[var(--input-radius)]',
             'text-[length:var(--input-font-size)]',
-            // Colors & border. Default (flat): sem borda em repouso, o fill
-            // sunken é o identificador; borda transparente preserva a caixa
-            // (mesma altura/reflow) e o foco segue por ring. Opt-out (bordered,
-            // §2.16): bg raised ≈ bg da página → a borda (border-input =
-            // border-strong) é o identificador visual (WCAG 1.4.11 ≥3:1).
+            // Colors & border. Default (flat): fill sunken + borda
+            // --input-border-flat (= border-strong, ≥3:1 vs página — S-R9-04-T2/
+            // L-006; o fill sozinho dava ~1.01:1 e o campo não tinha limite
+            // perceptível). Opt-out (bordered, §2.16): bg raised + border-input.
+            // Ambos ≥3:1 (WCAG 1.4.11); o foco segue por ring nos dois.
             'text-[var(--text-primary)]',
             bordered
               ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
-              : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent',
+              : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)]',
             // Placeholder — alias muted-foreground = text-tertiary
             'placeholder:text-muted-foreground',
             // Focus — glow ring via alias ring (border-focus), não border

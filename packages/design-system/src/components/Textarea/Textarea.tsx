@@ -78,7 +78,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             'text-[var(--text-primary)]',
             bordered
               ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
-              : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent',
+              : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)]',
             // Placeholder — alias muted-foreground = text-tertiary
             'placeholder:text-muted-foreground',
             // Foco — glow ring via alias ring (border-focus).

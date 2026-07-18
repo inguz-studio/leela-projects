@@ -76,7 +76,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               'text-[var(--text-primary)]',
               bordered
                 ? 'bg-[var(--surface-raised)] border-[length:var(--input-border-width)] border-input'
-                : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-transparent',
+                : 'bg-[var(--surface-sunken)] border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)]',
               // Foco — glow ring via alias ring (border-focus).
               'focus:outline-none',
               'focus:ring-2 focus:ring-ring focus:ring-offset-0',

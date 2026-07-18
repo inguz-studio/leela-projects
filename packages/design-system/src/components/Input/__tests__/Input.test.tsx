@@ -109,7 +109,7 @@ describe('Input', () => {
     render(<Input aria-label="Nome" />);
     const input = screen.getByRole('textbox');
     expect(input).not.toHaveClass('border-input');
-    expect(input).toHaveClass('border-transparent');
+    expect(input).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(input).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
@@ -117,7 +117,7 @@ describe('Input', () => {
     render(<Input aria-label="Nome" variant="flat" />);
     const input = screen.getByRole('textbox');
     expect(input).not.toHaveClass('border-input');
-    expect(input).toHaveClass('border-transparent');
+    expect(input).toHaveClass('border-[color:var(--input-border-flat)]');
     expect(input).toHaveClass('bg-[var(--surface-sunken)]');
   });
 
@@ -126,7 +126,7 @@ describe('Input', () => {
     const input = screen.getByRole('textbox');
     expect(input).toHaveClass('border-input');
     expect(input).toHaveClass('bg-[var(--surface-raised)]');
-    expect(input).not.toHaveClass('border-transparent');
+    expect(input).not.toHaveClass('border-[color:var(--input-border-flat)]');
   });
 
   it('flat default preserves the focus ring (a11y não regride)', () => {
