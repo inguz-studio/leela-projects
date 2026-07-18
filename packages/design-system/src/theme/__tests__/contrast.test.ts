@@ -150,6 +150,17 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   ['feedback-warning', 'surface-overlay'],
   ['feedback-heroico', 'surface-overlay'],
   ['feedback-info',    'surface-overlay'],
+  // S-R9-04-T1 (L-006) · pares NÃO-TEXTO de COMPONENTE que o gate original não
+  // cobriu — o contraste passado só media pares de texto. Estes DOIS pares
+  // provam o buraco relatado pelo Vitor e FALHAM com os tokens atuais:
+  //   Switch OFF: thumb (surface-raised #161616) × trilho (surface-sunken
+  //   #0A0A0A) = 1.09:1 — o polegar some no escuro (mín. 1.4.11 = 3:1).
+  //   Campo flat: a borda em repouso (fill surface-sunken #0A0A0A) × página
+  //   (surface-base #0C0C0C) = 1.01:1 — o campo não tem limite perceptível.
+  // O fix de tokens (S-R9-04-T2) repõe ambos por tokens de componente ≥3:1 e
+  // troca estes pares surrogate pelos pares dos tokens de componente.
+  ['surface-raised', 'surface-sunken'], // Switch thumb-OFF × trilho-OFF (proof)
+  ['surface-sunken', 'surface-base'],   // borda do campo flat × página (proof)
 ];
 
 // ---------------------------------------------------------------------------
@@ -166,7 +177,7 @@ describe('Higiene da matriz', () => {
     expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
   });
 
-  it('contagem declarada bate com o disco: 35 texto + 20 não-texto = 55 pares', () => {
+  it('contagem declarada bate com o disco: 35 texto + 22 não-texto = 57 pares', () => {
     // Lote A restante (shadcn): +1 par texto — text-danger/surface-overlay
     // (DropdownMenu, bg-popover). Toast/Dialog/Tabs/Card/Table/Avatar shadcn
     // resolvem por alias em pares pré-existentes (ver PROVENIÊNCIA de cada um);
@@ -177,8 +188,10 @@ describe('Higiene da matriz', () => {
     // surface-sunken) — o campo de form flat em repouso mostra valor digitado e
     // placeholder sobre o fill inset; agora é o default global, então a
     // legibilidade em repouso vira garantia de primeira classe.
+    // S-R9-04-T1 (L-006): +2 não-texto (Switch thumb-OFF × trilho e borda do
+    // campo flat × página) — pares de COMPONENTE que faltavam na matriz.
     expect(TEXT_PAIRS.length).toBe(35);
-    expect(NON_TEXT_PAIRS.length).toBe(20);
+    expect(NON_TEXT_PAIRS.length).toBe(22);
   });
 });
 
