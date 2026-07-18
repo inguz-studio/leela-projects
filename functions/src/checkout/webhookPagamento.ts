@@ -38,6 +38,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
+  COLECAO_AFILIADOS,
+  SUBCOLECAO_CONVERSOES_AFILIADO,
+  dentroDaJanelaAtribuicao,
   roundMoney,
   type PaymentProvider,
   type WebhookPayload,
@@ -290,6 +293,85 @@ export async function processarWebhookPagamento(
         : null;
     const cupomSnap = cupomRef ? await tx.get(cupomRef) : null;
 
+    // Atribuição de AFILIADO (R9-E · RN-313/314) — leituras na FASE DE
+    // LEITURA: o carimbo `pagamento.afiliado` foi estampado na criação do
+    // pedido (createInscricaoCharge, afiliado ATIVO na época); aqui a
+    // conversão REGISTRA na mesma tx da confirmação (exactly-once sob as
+    // guardas a+b — ledger + transição única), com a janela AUTORITATIVA
+    // re-checada no instante convertido (`dentroDaJanelaAtribuicao`, E05).
+    // Afiliado sumiu/fora da janela ⇒ SÓ a atribuição cai (dinheiro segue).
+    const afiliadoBloco = pagamentoSnap.get('afiliado') as
+      | { afiliadoId?: string; clicadoEmMillis?: number }
+      | undefined;
+    const afiliadoId =
+      afiliadoBloco !== undefined &&
+      typeof afiliadoBloco.afiliadoId === 'string' &&
+      afiliadoBloco.afiliadoId.length > 0
+        ? afiliadoBloco.afiliadoId
+        : null;
+    let registrarConversaoAfiliado: {
+      afiliadoRef: admin.firestore.DocumentReference;
+      conversaoRef: admin.firestore.DocumentReference;
+      conversoesAtual: number;
+      valorAtribuidoAtual: number;
+      clicadoEmMillis: number;
+      qtdInscricoes: number;
+    } | null = null;
+    if (afiliadoId !== null) {
+      const afiliadoRef = eventoRef.collection(COLECAO_AFILIADOS).doc(afiliadoId);
+      const conversaoRef = afiliadoRef
+        .collection(SUBCOLECAO_CONVERSOES_AFILIADO)
+        .doc(orderId);
+      const [afiliadoSnap, conversaoSnap] = await Promise.all([
+        tx.get(afiliadoRef),
+        tx.get(conversaoRef),
+      ]);
+      const clicadoEmMillis =
+        typeof afiliadoBloco?.clicadoEmMillis === 'number'
+          ? afiliadoBloco.clicadoEmMillis
+          : 0;
+      const janelaDias =
+        typeof afiliadoSnap.get('janelaAtribuicaoDias') === 'number'
+          ? (afiliadoSnap.get('janelaAtribuicaoDias') as number)
+          : 0;
+      const convertidoEm = new Date();
+      if (
+        afiliadoSnap.exists &&
+        !conversaoSnap.exists && // dedup defensivo (chave = pedidoId)
+        clicadoEmMillis > 0 &&
+        dentroDaJanelaAtribuicao(
+          new Date(clicadoEmMillis),
+          convertidoEm,
+          janelaDias
+        )
+      ) {
+        registrarConversaoAfiliado = {
+          afiliadoRef,
+          conversaoRef,
+          conversoesAtual:
+            typeof afiliadoSnap.get('conversoes') === 'number'
+              ? (afiliadoSnap.get('conversoes') as number)
+              : 0,
+          valorAtribuidoAtual:
+            typeof afiliadoSnap.get('valorAtribuido') === 'number'
+              ? (afiliadoSnap.get('valorAtribuido') as number)
+              : 0,
+          clicadoEmMillis,
+          qtdInscricoes: inscritoRefs.length,
+        };
+      } else if (afiliadoId !== null) {
+        logger.info('webhook_afiliado_atribuicao_descartada', {
+          pagamentoId,
+          afiliadoId,
+          motivo: !afiliadoSnap.exists
+            ? 'afiliado_inexistente'
+            : conversaoSnap.exists
+              ? 'conversao_ja_registrada'
+              : 'fora_da_janela',
+        });
+      }
+    }
+
     // Bloco `pagamento.cartao` (LEELA-R6 · checklist §4): confirmação de
     // CARTÃO com dados do gateway → persiste bandeira/últimos4 + derivados
     // do VALOR CONGELADO do doc (nunca do payload): totalCobrado =
@@ -382,6 +464,32 @@ export async function processarWebhookPagamento(
           ? (cupomSnap.get('usos') as number)
           : 0;
       tx.update(cupomRef, { usos: usosAtual + 1, atualizadoEm: agora });
+    }
+
+    // Conversão de AFILIADO (R9-E · RN-314): 1 doc por PEDIDO confirmado
+    // (chave = pedidoId — replay colide) + ∑ read-modify-write na MESMA tx
+    // (mesma disciplina cent-exata da receitaConfirmada — nunca increment
+    // de float). `conversoes` conta INSCRIÇÕES (base do gate RN-315:
+    // minimoInscricoes compara inscrições, não pedidos). Shape SEM PII de
+    // comprador. Estorno NÃO decrementa nesta fase (registrado — fase 2).
+    if (registrarConversaoAfiliado !== null) {
+      const r = registrarConversaoAfiliado;
+      tx.create(r.conversaoRef, {
+        id: orderId,
+        pedidoRef: orderId,
+        valor: pagamentoSnap.get('valorFinal') as number,
+        qtdInscricoes: r.qtdInscricoes,
+        clicadoEm: admin.firestore.Timestamp.fromMillis(r.clicadoEmMillis),
+        convertidoEm: agora,
+        criadoEm: agora,
+      });
+      tx.update(r.afiliadoRef, {
+        conversoes: r.conversoesAtual + r.qtdInscricoes,
+        valorAtribuido: roundMoney(
+          r.valorAtribuidoAtual + (pagamentoSnap.get('valorFinal') as number)
+        ),
+        atualizadoEm: agora,
+      });
     }
 
     return { ...base, duplicado: false, ignorado: false };
