@@ -38,7 +38,7 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 ## 🟡 Go-live / quando tiver os dados
 
 12. **Domínio público** — `{DOMINIO_LEELA}` segue placeholder em todo slug/URL; bloqueia só SEO/links de produção.
-13. **E-mail transacional** — fornecedor (Resend/SendGrid…) + ADR própria; o fluxo roda com `EmailProvider` sandbox. E-mail de suporte e `ROTA_LOGIN` reais entram junto. **⬆️ URGÊNCIA ELEVADA (R9, 2026-07-18):** a antecipação do E08 (influenciador PF convidado por e-mail, RN-316) e a assessoria E18 dependem do convite físico — em produção o aceite fica fail-closed sem EmailProvider. Sobe na prioridade das ações externas.
+13. **E-mail transacional — ✅ RATIFICADA (Vitor, 2026-07-18, adendo 7): fornecedor = Resend** (resend.com). Destrava o ramo fail-closed do convite E18 (`9e7e017`) + convite de influenciador PF (RN-316) + campanhas por e-mail (E06) + futuro gatilho aniversário (E19). Spec do adapter = story **S-R9-14** (port `EmailProvider` no padrão do `PaymentProvider`/ADR-006, fail-closed sem `RESEND_API_KEY`). **Parte EXTERNA que resta ao Vitor (ação externa):** criar conta Resend, **verificar o domínio de envio** e gerar a API key. **Atenção — dependência:** a verificação de domínio **depende da decisão de domínio ainda aberta** (item 12, `{DOMINIO_LEELA}`); **sem domínio verificado, o Resend só envia de `onboarding@resend.dev` para o próprio dono da conta** — suficiente para TESTE, não para produção com destinatários reais. `RESEND_API_KEY` entra como secret (Secret Manager, nunca no cliente/commit).
 14. **Valores restantes do plano de cobrança** — mensalidades (Leela+ e SaaS) e ajuste fino das taxas por parcela quando houver custos reais do gateway.
 
 ## ⚪ Menores (viram config quando você quiser)

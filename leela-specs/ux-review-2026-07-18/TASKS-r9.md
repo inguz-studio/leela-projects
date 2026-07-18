@@ -88,7 +88,11 @@
 | `S-R9-12-T1` | Registro reutilizável de marca/patrocinador (seed E10-S811): `profissionais/{profId}/marcas` + `packages/core/src/brands/marca.ts` + api-client + Rules owner-only | M | `packages/core/src/brands/marca.ts` + `packages/api-client/src/brands.ts` + Rules | shape `ParceriaPatrocinador` ✅ | **Fable** | ⚔ (Rules owner) |
 | `S-R9-12-T2` | Autocomplete/seleção da listagem do tenant ao cadastrar patrocínio no evento (RN-171) + lista densa | S | `apps/painel` (Combobox de S-R9-05) | S-R9-12-T1, S-R9-05-T2 | **Opus** | — |
 
-**Gate do lote:** review antagonista no S-R9-11-T2/T3 (atribuição não conta duas vezes, não vaza entre eventos; idempotência) + S-R9-12-T1 (Rules owner). **Fase 2 (fora deste lote):** comissionamento/repasse ao influenciador (dinheiro → review Fable; decisão em `DECISOES-ABERTAS`).
+| `S-R9-14-T1` | Port `EmailProvider` (padrão ADR-006) + impl `ResendProvider` + `selectEmailProvider` (fail-closed sem `RESEND_API_KEY`; secret no Secret Manager) | M | `packages/core/src/email/**` + `functions/src/email/**` | conta Resend + key (externa) | **Fable** | ⚔ (secret) |
+| `S-R9-14-T2` | Fiar consumidores: convite E18 (`9e7e017` deixa de fail-closed com key), convite influenciador PF (RN-316), canal e-mail do `executarDisparoCampanha` (E06); cada um segue fail-closed sem key | M | `functions/src/assessorias/**` + `functions/src/email/**` + `functions` (E06) | S-R9-14-T1 | **Fable** | ⚔ |
+| `S-R9-14-T3` | Template transacional mínimo + **sanitização** dos campos do organizador (anti-phishing/injeção) + testes HTTP mockado + 1 E2E opt-in (padrão `ASAAS_E2E`) | S | `functions/src/email/**` | S-R9-14-T1 | **Fable** | ⚔ (injeção de conteúdo) |
+
+**Gate do lote:** review antagonista no S-R9-11-T2/T3 (atribuição não conta duas vezes, não vaza entre eventos; idempotência) + S-R9-12-T1 (Rules owner) + **S-R9-14-T1/T3 (secret nunca vazado + sanitização de conteúdo do organizador nos templates)**. **Fase 2 (fora deste lote):** comissionamento/repasse ao influenciador (dinheiro → review Fable; decisão em `DECISOES-ABERTAS`).
 
 ---
 
@@ -116,10 +120,10 @@
 | **R9-B** Análise financeira unificada | S-R9-01, 02, 03 | 6 | Opus + Fable (agregado) |
 | **R9-C** Imagens de evento | S-R9-08, 09 | 6 | Opus + Fable (Storage rules) |
 | **R9-D** Fluidez | S-R9-06 | 4 | Opus (data-layer) |
-| **R9-E** Marketing/marcas | S-R9-11, 12 | 10 | Fable (atribuição) + Opus |
+| **R9-E** Marketing/marcas + e-mail | S-R9-11, 12, 14 | 13 | Fable (atribuição/e-mail) + Opus |
 | **R9-F** CRM + Comunicação | S-R9-13 | 5 | Fable (PII) + Opus |
-| **Total** | **13 stories** | **38 tasks** | Fable + Opus (Sonnet proibido) |
+| **Total** | **14 stories** | **41 tasks** | Fable + Opus (Sonnet proibido) |
 
-**Antagonista (⚔):** S-R9-02-T1 (PII agregado) · S-R9-08-T1/T2 + S-R9-09-T1 (Storage rules cross-tenant) · S-R9-11-T1/T2/T3/T5/T6/T7/T8 (atribuição/dinheiro/idempotência/provisiona conta/PII/escopo de leitura) · S-R9-12-T1 (Rules owner) · S-R9-13-T1/T2/T5 (PII/LGPD). **Deliberadamente SEM ⚔** (não inflar): telas de leitura/config sobre dado já gateado, DS/UI de conformidade, viz. **Hipótese HIP-R9-01 (pré-compra)** = pendente validação com organizador; NÃO gera task até ratificar (dinheiro ⇒ Fable + review antagonista quando entrar).
+**Antagonista (⚔):** S-R9-02-T1 (PII agregado) · S-R9-08-T1/T2 + S-R9-09-T1 (Storage rules cross-tenant) · S-R9-11-T1/T2/T3/T5/T6/T7/T8 (atribuição/dinheiro/idempotência/provisiona conta/PII/escopo de leitura) · S-R9-12-T1 (Rules owner) · S-R9-13-T1/T2/T5 (PII/LGPD) · S-R9-14-T1/T2/T3 (secret + injeção de conteúdo de e-mail). **Deliberadamente SEM ⚔** (não inflar): telas de leitura/config sobre dado já gateado, DS/UI de conformidade, viz. **Hipótese HIP-R9-01 (pré-compra)** = pendente validação com organizador; NÃO gera task até ratificar (dinheiro ⇒ Fable + review antagonista quando entrar).
 
 **Ordem de despacho recomendada (por JTBD + dependência):** **R9-A** (abre com S-R9-05, destrava R9-B) ∥ **R9-C** ∥ **R9-D** → **R9-B** (após Combobox/Calendar) ∥ **R9-E** → **R9-F** (por último; gated por decisão do Vitor). Quick-wins de percepção primeiro: S-R9-04 (contraste), S-R9-03 (repasses copy), S-R9-07 (upload-only), S-R9-10 (divisórias).

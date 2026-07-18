@@ -229,6 +229,19 @@ A releitura REAL do código mudou a natureza de vários itens — registro aqui 
 
 ---
 
+## S-R9-14 · Adapter EmailProvider com implementação Resend · E06 (infra transversal)
+
+**Como** plataforma, **quero** um provedor de e-mail transacional plugável (Resend), **para** entregar convites e comunicados de verdade — destravando o convite de assessoria/influenciador e as campanhas por e-mail.
+
+- **JTBD servido:** enabler de infra (sem linha de usuário direta — honesto; sustenta convite E18/E08, campanhas E06, aniversário E19).
+- **Verbatim (adendo 7, 2026-07-18):** *"EmailProvider = Resend (resend.com)."* Ratificado.
+- **Âncoras (conferidas):** hoje **não existe** port concreto — só referência conceitual "EmailProvider é mock/pendente" que faz o convite **lançar em produção** (`functions/src/assessorias/cadastrarAssessoria.ts:41,181-190`: *"Convite de assessoria exige EmailProvider"*). Padrão a seguir = `PaymentProvider` (ADR-006: interface + impl plugável + fail-closed), como o `AsaasProvider` (R6).
+- [ ] **Port + impl (padrão ADR-006):** criar a interface `EmailProvider` (ex.: `sendTransactional({ to, subject, template, data })`) + a impl **`ResendProvider`** (SDK/HTTP do Resend) + o seletor (`selectEmailProvider`) espelhando `selectProvider` do pagamento. **Given** `RESEND_API_KEY` **ausente** no env, **when** um consumidor tenta enviar, **then** o comportamento **fail-closed atual permanece intacto** (o convite segue lançando/sandbox — nada muda). **Given** a key **presente**, **when** envia, **then** o envio é **real** via Resend.
+- [ ] **Consumidores destravados:** (a) convite E18 (`9e7e017` — o ramo fail-closed passa a enviar); (b) convite de influenciador PF (RN-316); (c) campanhas por e-mail (E06 — o pipeline `executarDisparoCampanha` ganha o canal e-mail real); (d) futuro gatilho aniversário (E19). Cada um continua **fail-closed sem key**.
+- [ ] **Template mínimo transacional:** template transacional enxuto (convite/comunicado) com os campos necessários; **sanitização dos campos do organizador** nos templates (nome de evento/clube/mensagem) — superfície de e-mail é vetor de **phishing/injeção de conteúdo**; escapar/limitar HTML, nunca interpolar cru.
+- [ ] **Segredo:** `RESEND_API_KEY` como secret (Secret Manager), **nunca logado nem commitado** (mesma disciplina da chave Asaas, R6). Domínio de envio depende da decisão de domínio (`{DOMINIO_LEELA}`); até verificar, Resend só envia de `onboarding@resend.dev` ao dono da conta (teste).
+- **RNs:** **RN-137** (nova — e-mail transacional via `EmailProvider` plugável, impl Resend, fail-closed sem `RESEND_API_KEY`). **Épico:** E06-marketing (infra transversal; referenciada por E18/E08/E19). **Território:** `packages/core/src/email/**` (port) + `functions/src/email/**` (ResendProvider + seletor) + consumidores (E18/E08/E06) — **Fable ⚔** (superfície de e-mail = phishing/injeção; secret). **Dep:** conta Resend + API key (ação externa do Vitor); decisão de domínio (item 12) para produção. **Gate:** review antagonista (sanitização de conteúdo do organizador + secret nunca vazado) + testes HTTP mockado + 1 E2E opt-in (padrão `ASAAS_E2E` do R6). **Lote:** R9-E (junto dos afiliados/convite que dependem dele).
+
 ## Nota de honestidade (L-004 · zero órfã)
 
 Todas as stories com superfície de usuário citam uma linha de `jobs-to-be-done.md` (rotulada "doc:") ou marcam a aproximação. Exceções honestas (enablers sem linha direta): **S-R9-04** (contraste/AA), **S-R9-05** (diretriz shadcn), **S-R9-06** (fluidez) e **S-R9-10** (divisórias) — infra/consistência de UI, marcadas em vez de forjar um job. Candidato novo **P8** (CRM do organizador) proposto em `JTBD-TRACE-r9.md §2`, **não** aplicado a `jobs-to-be-done.md` até ratificação. RNs novas (RN-168/171/172/227/228/229/313/314/358/821/822) numeradas após grep da maior RN vigente por série; nenhuma inventada fora de série.
