@@ -8,6 +8,7 @@ import { getPublicPerfil } from '../../../lib/leitorPerfil';
 import { eventoJsonLd, urlEvento, urlPerfil } from '../../../lib/seo';
 import { JsonLd } from '../../components/JsonLd';
 import { SectionRenderer } from './SectionRenderer';
+import { HeroMinimo } from './sections/HeroMinimo';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
 import { ShareBlock } from './ShareBlock';
@@ -168,8 +169,15 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
       {/* Dados estruturados schema.org/Event (S1205-T1) — no HTML inicial */}
       <JsonLd data={eventoJsonLd(evento)} />
 
-      {/* Seções orientadas por configuração (ativas, na ordem publicada) */}
-      <SectionRenderer evento={evento} />
+      {/* Seções orientadas por configuração (ativas, na ordem publicada).
+          Evento PUBLICADO sem nenhuma seção montada (sem paginaVendas ou tudo
+          inativo) cai no HERO MÍNIMO — nome + data + status de vendas, nunca só
+          share/QR (LEELA-R1 · JTBD do atleta que recebe o link). */}
+      {evento.secoes.length > 0 ? (
+        <SectionRenderer evento={evento} />
+      ) : (
+        <HeroMinimo evento={evento} />
+      )}
 
       {/* Bloco de compartilhamento (URL + QR) — S1201-T3 / RN-201 */}
       <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6">

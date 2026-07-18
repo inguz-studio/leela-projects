@@ -239,6 +239,132 @@ async function seedEventosExtra(db: Db, agora: Date): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 1c. Kernel de vendas E04 dos eventos extras PUBLICADOS (lotes + paginaVendas)
+//
+// Follow-up de 2026-07-12 (LEELA-R1): 2 dos eventos publicados do preview
+// (Corrida de Inverno + Desafio MTB) nasceram SEM lotes e SEM página de vendas,
+// então a landing pública deles renderizava só share/QR e o estado de venda
+// derivava 'encerrado' (sem lote ativo). Aqui damos a eles o MESMO shape do
+// evento canônico Meia Floripa (functions/src/seed/eventos.seed.ts):
+//   - lotes POR MODALIDADE (ADR-012), 3 janelas fixas não-sobrepostas —
+//     L1 Promocional ENCERRADO (janela passada + esgotado), L2 VIGENTE
+//     (fev–abr/2026, cobre o relógio canônico do preview 2026-03-15), L3 Final
+//     FUTURO (abr, até a véspera). Datas FIXAS de 2026 (iguais à Meia) para
+//     ficarem coerentes com LEELA_CLOCK=2026-03-15 → pelo menos 1 lote vigente.
+//   - paginaVendas/config publicada com as seções que têm dado real neste seed
+//     (hero/sobre/percursos/lotes/kits/checkout) → página pública completa.
+// `vendidos` entra via Admin SDK (∑ de Function em produção). Preview-only,
+// idempotente (docIds fixos + merge). Os demais eventos publicados sem página
+// (Noturna/Retiro) seguem SEM seções de propósito: exercitam o hero mínimo (b).
+// ---------------------------------------------------------------------------
+
+/** Janelas compartilhadas — MESMAS datas fixas da Meia (vigente em 2026-03-15). */
+const JANELAS_LOTES_EXTRA: readonly {
+  ordem: number;
+  nome: string;
+  inicioEm: string;
+  fimEm: string;
+  fator: number;
+  quantidadeLimite: number;
+  vendidos: number;
+}[] = [
+  { ordem: 1, nome: 'Lote Promocional', inicioEm: '2025-12-01T00:00:00-03:00', fimEm: '2026-02-01T00:00:00-03:00', fator: 1, quantidadeLimite: 100, vendidos: 100 },
+  { ordem: 2, nome: 'Lote 2', inicioEm: '2026-02-01T00:00:00-03:00', fimEm: '2026-04-01T00:00:00-03:00', fator: 1.25, quantidadeLimite: 200, vendidos: 60 },
+  { ordem: 3, nome: 'Lote Final', inicioEm: '2026-04-01T00:00:00-03:00', fimEm: '2026-04-26T23:59:00-03:00', fator: 1.5, quantidadeLimite: 200, vendidos: 0 },
+];
+
+interface KernelVendasExtra {
+  eventoId: string;
+  /** Preço-base (Lote 1) por modalidade — chave = evento.modalidades[] exato. */
+  precosBase: Record<string, number>;
+  seo: { titulo: string; descricao: string };
+}
+
+const KERNEIS_VENDAS_EXTRA: readonly KernelVendasExtra[] = [
+  {
+    eventoId: INVERNO_ID,
+    precosBase: { '5k': 50, '10k': 70 },
+    seo: {
+      titulo: 'Corrida de Inverno Floripa 2026 — inscrições abertas',
+      descricao: '5k e 10k no Parque de Coqueiros. Lotes promocionais por distância.',
+    },
+  },
+  {
+    eventoId: MTB_ID,
+    precosBase: { 'MTB 45km': 90, 'MTB 90km': 140 },
+    seo: {
+      titulo: 'Desafio MTB Costa da Lagoa 2026 — inscrições abertas',
+      descricao: 'MTB 45km e 90km pela Costa da Lagoa. Lotes por percurso, vagas limitadas.',
+    },
+  },
+];
+
+/** loteId determinístico e seguro p/ docId (modalidade com espaço → hífen). */
+function loteIdExtra(modalidade: string, ordem: number): string {
+  const slug = modalidade.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return `${slug}-lote-${ordem}`;
+}
+
+/** Seções da paginaVendas dos eventos extras (só as com dado real neste seed). */
+const SECOES_EXTRA: readonly { id: string; canal: 'essenciais' | 'landing' | 'sistema'; ativa: boolean; travada: boolean }[] = [
+  { id: 'hero', canal: 'essenciais', ativa: true, travada: false },
+  { id: 'sobre', canal: 'essenciais', ativa: true, travada: false },
+  { id: 'percursos', canal: 'essenciais', ativa: true, travada: false },
+  { id: 'lotes', canal: 'essenciais', ativa: true, travada: false },
+  { id: 'kits', canal: 'essenciais', ativa: true, travada: false },
+  { id: 'checkout', canal: 'sistema', ativa: true, travada: true },
+];
+
+const PAGINA_VENDAS_DOC_ID_EXTRA = 'config';
+
+async function seedKernelVendasExtra(db: Db): Promise<void> {
+  for (const kernel of KERNEIS_VENDAS_EXTRA) {
+    const eventoRef = db.collection('eventos').doc(kernel.eventoId);
+
+    // Lotes por modalidade × 3 janelas fixas
+    for (const [modalidade, base] of Object.entries(kernel.precosBase)) {
+      for (const j of JANELAS_LOTES_EXTRA) {
+        const id = loteIdExtra(modalidade, j.ordem);
+        await upsert(eventoRef.collection('lotes').doc(id), {
+          id,
+          tenantId: CASTELO_TENANT_ID,
+          modalidade,
+          ordem: j.ordem,
+          nome: j.nome,
+          inicioEm: ts(new Date(j.inicioEm)),
+          fimEm: ts(new Date(j.fimEm)),
+          quantidadeLimite: j.quantidadeLimite,
+          preco: Math.round(base * j.fator),
+          vendidos: j.vendidos,
+        });
+      }
+    }
+
+    // paginaVendas/config publicada (mesmo shape do seed canônico da Meia)
+    await upsert(
+      eventoRef.collection('paginaVendas').doc(PAGINA_VENDAS_DOC_ID_EXTRA),
+      {
+        id: PAGINA_VENDAS_DOC_ID_EXTRA,
+        tenantId: CASTELO_TENANT_ID,
+        eventoId: kernel.eventoId,
+        secoes: SECOES_EXTRA.map((s) => ({ ...s })),
+        seo: {
+          titulo: kernel.seo.titulo,
+          descricao: kernel.seo.descricao,
+          slugAmigavel: `{DOMINIO_LEELA}/${kernel.eventoId}`,
+        },
+        publicada: true,
+        publicadaEm: admin.firestore.FieldValue.serverTimestamp(),
+      }
+    );
+  }
+  console.log(
+    `[seed-extra] kernel de vendas: lotes (3 janelas × modalidade) + paginaVendas ` +
+      `em ${KERNEIS_VENDAS_EXTRA.map((k) => k.eventoId).join(', ')} — L2 vigente em 2026-03-15`
+  );
+}
+
+// ---------------------------------------------------------------------------
 // 1b. Capas dos eventos CANÔNICOS (Meia/Maratona) — merge aditivo por cima
 //     do seed read-only (functions/src/seed/eventos.seed.ts não muda). Só o
 //     campo `imagemUrl` entra; nada mais é tocado. Preview-only.
@@ -1152,6 +1278,7 @@ export async function seedPreviewExtra(
   assertEmulatorOnly('seedPreviewExtra');
 
   await seedEventosExtra(db, agora);
+  await seedKernelVendasExtra(db);
   await seedCapasCanonicas(db);
   await seedMeiaFloripaFidelidade(db, agora);
   await seedKitsExtra(db);

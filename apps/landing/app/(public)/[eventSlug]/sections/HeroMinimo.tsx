@@ -1,0 +1,83 @@
+import { Suspense } from 'react';
+import type { EventoPublico } from '@/lib/tipos';
+import { formatarPreco } from '@/lib/formato';
+import { CtaInscricao } from '../CtaInscricao';
+import { CtaFallback } from '../CtaFallback';
+
+/**
+ * Hero MÍNIMO (LEELA-R1 · fallback JTBD) — mostrado quando um evento PUBLICADO
+ * ainda não tem página de vendas montada (nenhuma seção ativa). O atleta que
+ * recebe o link precisa saber, no mínimo, O QUE é, QUANDO é e SE dá pra se
+ * inscrever — nunca uma página só com share/QR.
+ *
+ * Genérico de propósito (sem rótulo de categoria fixo como o HeroSection full,
+ * que assume "Corrida de rua"): serve corrida, MTB ou retiro igual. Só dado
+ * real do leitor; estado de venda é o `estadoVenda` derivado (aberto/esgotado/
+ * encerrado), com CTA honesto. Server Component.
+ */
+export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Element {
+  const aberta = evento.estadoVenda === 'aberto';
+
+  return (
+    <section className="border-b border-border-subtle bg-surface-sunken">
+      <div className="mx-auto max-w-3xl px-4 py-14 sm:px-6 lg:py-20">
+        <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl">
+          {evento.nome}
+        </h1>
+
+        <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+          <div className="flex items-center gap-2">
+            <dt className="font-semibold text-text-secondary">Quando</dt>
+            <dd className="text-text-primary">
+              <time dateTime={evento.dataISO}>
+                {evento.diaSemanaLabel} · {evento.dataLabel} · {evento.horaLabel}
+              </time>
+            </dd>
+          </div>
+          {evento.local.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <dt className="font-semibold text-text-secondary">Onde</dt>
+              <dd className="text-text-primary">{evento.local}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {evento.modalidades.length > 0 ? (
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {evento.modalidades.map((m) => (
+              <span
+                key={m.nome}
+                className="rounded-ds-pill border border-border-default px-3 py-1 text-sm font-semibold text-text-primary"
+              >
+                {m.nome}
+              </span>
+            ))}
+            {evento.usaChip ? (
+              <span className="rounded-ds-pill bg-feedback-info-surface px-3 py-1 text-sm font-medium text-feedback-info-fg">
+                Cronometragem por chip
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Suspense fallback={<CtaFallback slug={evento.slug} disabled={!aberta} estado={evento.estadoVenda} />}>
+            <CtaInscricao slug={evento.slug} disabled={!aberta} estado={evento.estadoVenda} />
+          </Suspense>
+          {aberta && evento.precoMinimo !== null ? (
+            <p className="text-sm text-text-secondary">
+              a partir de{' '}
+              <span className="font-semibold text-text-primary">
+                {formatarPreco(evento.precoMinimo)}
+              </span>
+            </p>
+          ) : (
+            <p className="text-sm font-medium text-text-tertiary">
+              {evento.estadoVenda === 'esgotado' ? 'Vagas esgotadas' : 'Inscrições encerradas'}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
