@@ -20,7 +20,7 @@ tags:
 - [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 📋 [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
-- [ ] **[Higiene] Formulários no DS** — Select, Switch, Calendar e charts onde melhoram a UX 📋 [[BOARD-HISTORICO]]
+- [ ] **[Higiene] Calendar no DS** — date-picker/range shadcn para o filtro temporal 📋 [[BOARD-HISTORICO]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
 
 
@@ -60,6 +60,7 @@ tags:
 - [x] **[R8] Dados de demonstração** — clubes da Marina e sistema web preenchidos ✅ [[BOARD-HISTORICO]]
 - [x] **[R9] Spec da revisão UX** — 13 itens do Vitor virados em histórias prontas ✅ [[STORIES-r9]]
 - [x] **[R10] Ver página pública** — botão do evento abre a landing na URL certa (env), rascunho desabilitado ✅ [[BOARD-HISTORICO]]
+- [x] **[R9-A] Conformidade de UI** — toggle e campos com contraste, divisórias iguais, foto só por upload, filtros no padrão do DS ✅ [[BOARD-HISTORICO]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 
