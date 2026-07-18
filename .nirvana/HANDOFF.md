@@ -1,6 +1,12 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R6 ASAAS SANDBOX ATIVADO)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R8 SEED CLUBES + SISTEMA)
 
-## 💰 LEELA-R6 · Ativação SANDBOX do Asaas · 2026-07-18 (o mais recente) — COMECE AQUI
+## 🌱 LEELA-R8-SEED · Dados mockados de CLUBES + sistema web · 2026-07-18 (o mais recente)
+
+**sf-backend-engineer (Opus). Pedido do Vitor: "clubes e sistema web com dados mockados".** Causa: preview loga como Marina (tenant `castelo-producoes`), mas o único clube semeado era do Felipe → /clubes da Marina vazia + satélites (campanhas, reembolsos, repasses, log de comunicação, estoque, assessorias E18) sem dado. **Novo `functions/scripts/preview-seed-clubes.ts`** (aditivo/idempotente, wired no `preview-seed.ts` passo 6b): **2 clubes no Castelo** (Floripa Run Coletivo da Marina — 14 membros/2 desafios/3 comunicados/afiliada c/ 12 conversões/patrocinador — + Ritmo Forte Assessoria E18) · assessoria E18 ativa + cupom `RITMOFORTE10` atribuído · campanhas da Meia nos 4 estados **incl. 'vencido' (dec. 17)** · 2 automações · 6 logs de comunicação + resumo · fila de reembolsos 3 decidíveis + estornado + recusado · repasses 3 + `saldo/current` real (disponível R$ 111.254,07) + banco mascarado · estoque 2 SKUs em alerta. **Aplicado AO VIVO no emulator 8180 sem reiniciar/limpar nada.** Gate: seed exit 0 (2×) · todos os docs validados pelos parsers reais do `@leela/core` (ALL PASS) · ESLint 0 · idempotência provada (2ª rodada byte-idêntica) · lanes R6/R7 (extra/landing/payments/rules) intactas. Report + roteiro tela-a-tela: `outputs/leela-build-2d6ee98d/R8-SEED-CLUBES-REPORT.md`.
+
+---
+
+## 💰 LEELA-R6 · Ativação SANDBOX do Asaas · 2026-07-18 — COMECE AQUI (gateway)
 
 **Gateway Asaas ATIVADO em sandbox (sf-backend-lead, rota Fable, review antagonista em contexto fresco).** `selectProvider` roteia chave presente → `AsaasProvider` real (config inválida LANÇA — nunca Mock com chave presente); **`asaasWebhook`** novo (header `asaas-access-token` → verify em tempo constante → porta única) exportado no index; bloco `pagamento.cartao` persistido na confirmação de cartão. **E2E REAL na api-sandbox provado (R$ 5,00):** PIX `pay_muh2dy7y3ff81lba` checkout→confirm→webhook→pedido `pago` + replay `duplicado` · CARTÃO `pay_gbv6x1g60099bkf9` pago com cartão de teste→`cartao` MASTERCARD ••••8829 persistido→**estorno `approved`** · BOLETO `pay_7rcqauljvchwklqn` `pending`+`bankSlipUrl`. Card completo no V1-KANBAN; report `outputs/leela-build-2d6ee98d/R6-ASAAS-SANDBOX-REPORT.md` + `r6-e2e-evidencia.json`.
 

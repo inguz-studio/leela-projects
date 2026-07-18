@@ -51,6 +51,7 @@ import {
   DEFAULT_PLATFORM_ADMIN_EMAIL,
 } from '../src/seed/platformAdmin.seed';
 import { seedPreviewExtra } from './preview-seed-extra';
+import { seedPreviewClubes } from './preview-seed-clubes';
 
 /** Senha única dos usuários de preview (só existe no Emulator Auth). */
 const PREVIEW_PASSWORD = 'demo1234';
@@ -153,6 +154,13 @@ async function main(): Promise<void> {
   //    canônicos de propósito — os canônicos regravam alguns campos e o
   //    extra completa em cima (ver preview-seed-extra.ts).
   await seedPreviewExtra(db);
+
+  // 6b. Clubes da Marina (tenant Castelo) + satélites do sistema web que
+  //     nasciam vazios: campanhas do evento (incl. 'vencido' — decisão 17),
+  //     assessoria E18 ativa com cupom atribuído, fila de reembolsos, repasses,
+  //     log de comunicação e estoque em alerta. Roda DEPOIS do extra (usa os
+  //     eventos/inscritos do Castelo já semeados). Aditivo e idempotente.
+  await seedPreviewClubes(db);
 
   // 7. Usuários de login do preview (uid casa com os seeds → dados aparecem).
   await ensurePreviewUser(auth, MARINA_CASTELO_UID, MARINA_EMAIL, 'Marina Castelo', {
