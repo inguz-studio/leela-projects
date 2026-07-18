@@ -1,6 +1,17 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (🏁 FILA DA RETOMADA EXECUTADA)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R6 ASAAS SANDBOX ATIVADO)
 
-## 🏁 RODADA AUTÔNOMA · 2026-07-18 madrugada (o mais recente) — COMECE AQUI
+## 💰 LEELA-R6 · Ativação SANDBOX do Asaas · 2026-07-18 (o mais recente) — COMECE AQUI
+
+**Gateway Asaas ATIVADO em sandbox (sf-backend-lead, rota Fable, review antagonista em contexto fresco).** `selectProvider` roteia chave presente → `AsaasProvider` real (config inválida LANÇA — nunca Mock com chave presente); **`asaasWebhook`** novo (header `asaas-access-token` → verify em tempo constante → porta única) exportado no index; bloco `pagamento.cartao` persistido na confirmação de cartão. **E2E REAL na api-sandbox provado (R$ 5,00):** PIX `pay_muh2dy7y3ff81lba` checkout→confirm→webhook→pedido `pago` + replay `duplicado` · CARTÃO `pay_gbv6x1g60099bkf9` pago com cartão de teste→`cartao` MASTERCARD ••••8829 persistido→**estorno `approved`** · BOLETO `pay_7rcqauljvchwklqn` `pending`+`bankSlipUrl`. Card completo no V1-KANBAN; report `outputs/leela-build-2d6ee98d/R6-ASAAS-SANDBOX-REPORT.md` + `r6-e2e-evidencia.json`.
+
+**⚠️ 3 avisos ao retomar:**
+1. **Preview:** no próximo restart do stack, o checkout do emulator passa a criar cobrança na SANDBOX REAL e `confirmarPagamentoSandbox` (botão da demo) RECUSA (fail-safe correto). Demo 100% offline = comentar `ASAAS_API_KEY` no `functions/.env`.
+2. **Segurança:** rotação da chave PROD agora é MANDATÓRIA (vive num comentário do `.env`; vazou em log de sessão local durante inspeção — nada commitado/pushado). Tirar segredo de comentário ao rotacionar.
+3. **Produção ainda NÃO:** falta rotação da prod + KYC + deploy/URL pública do `asaasWebhook` + cadastro do webhook + `permitirProducao:true` deliberado + taxId de pagador não-inscrito + reconciliação parcelado×cross-check (lista completa no report §"O que falta para PRODUÇÃO").
+
+---
+
+## 🏁 RODADA AUTÔNOMA · 2026-07-18 madrugada (histórico — superado pelo R6 acima)
 
 **Ordem do Vitor: "siga o roadmap até acabar". Fila da retomada do ENCERRAMENTO executada POR INTEIRO (R1-R5, 8 commits `2a673de..5599d23`, tudo pushed, main == origin). 5 gates PASS, 0 falho; 4 reviews antagonistas Fable (R2×2, R5×2), todas com fixes reais aplicados e re-provados. Working tree limpa, 0 emulator zumbi, portas livres. Reports por lote em `outputs/leela-build-2d6ee98d/R{1,2,3,4,5}-*-REPORT.md`.**
 
