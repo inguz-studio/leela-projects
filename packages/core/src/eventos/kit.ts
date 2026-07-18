@@ -28,14 +28,28 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+import { isUrlCapaValida } from './evento';
 
 // ---------------------------------------------------------------------------
 // Kit
 // ---------------------------------------------------------------------------
 
+// Limites da VISÃO do kit (R9-C · RN-227/RN-229 — anti doc-bomba; a visão é
+// decorativa, nunca pode virar vetor de payload gigante no checkout público).
+/** Teto da descrição do kit (mesma ordem do `descricao` de clube). */
+export const KIT_DESCRICAO_MAX = 280;
+/** Máximo de itens exibíveis em "o que está incluso". */
+export const KIT_ITENS_MAX = 30;
+/** Teto de cada item da lista. */
+export const KIT_ITEM_MAX = 140;
+
 /**
  * Kit do evento (RN-210/211).
  * Subcoleção: `eventos/{eventoId}/kits/{kitId}`.
+ *
+ * VISÃO DE COMPRA (R9-C · gap R13 · RN-227/RN-229): `descricao`, `itens[]` e
+ * `imagemUrl` alimentam o detalhe do kit no checkout. Todos OPCIONAIS — doc
+ * legado continua parseando; a UI cai no fallback mock (nunca vazio).
  */
 export interface Kit {
   id: string;
@@ -49,6 +63,20 @@ export interface Kit {
   capacidade: number;
   /** Modalidades onde o kit é oferecido (ex.: ['21k']) */
   modalidades: string[];
+  /** Frase que posiciona o kit no checkout (≤280 — RN-229). Ausente = fallback. */
+  descricao?: string;
+  /**
+   * "O que está incluso" — itens em linguagem de produto (RN-229).
+   * `[]` = doc legado/sem preenchimento → a UI usa o fallback.
+   */
+  itens: string[];
+  /**
+   * Imagem 1:1 do kit (RN-227): URL http(s) válida (upload em
+   * `eventos/{eventoId}/kits/{kitId}` no Storage) ou ausente. NUNCA
+   * fabricada; esquema fora de http(s) não passa do parse (a URL vira
+   * `src` de <img> no checkout público).
+   */
+  imagemUrl?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -61,6 +89,33 @@ export function precoKitValido(preco: unknown): preco is number {
 /** Kit é desconto? ("Sem kit" com preço negativo — RN-211) @pure */
 export function kitEhDesconto(kit: Pick<Kit, 'preco'>): boolean {
   return kit.preco < 0;
+}
+
+/**
+ * Normaliza a lista "o que está incluso" de um doc (RN-229). Postel para
+ * campo DECORATIVO: entrada que não é lista → `[]`; elementos que não são
+ * string não-vazia são descartados; corta em KIT_ITENS_MAX e cada item em
+ * KIT_ITEM_MAX. Um doc envenenado nunca derruba o checkout público. @pure
+ */
+export function normalizarItensKit(itens: unknown): string[] {
+  if (!Array.isArray(itens)) return [];
+  const resultado: string[] = [];
+  for (const item of itens) {
+    if (typeof item === 'string' && item.trim().length > 0) {
+      resultado.push(item.slice(0, KIT_ITEM_MAX));
+      if (resultado.length >= KIT_ITENS_MAX) break;
+    }
+  }
+  return resultado;
+}
+
+/**
+ * Imagem 1:1 do kit VÁLIDA para exibição (RN-227): reusa a fronteira da capa
+ * (http(s) parseável, host presente, ≤2048 — `javascript:`/`data:` nunca
+ * passam; a URL vira `src` de <img> público). @pure
+ */
+export function isUrlImagemKitValida(url: unknown): url is string {
+  return isUrlCapaValida(url);
 }
 
 /** Parsing defensivo de um doc Firestore em `Kit` (fail-fast). @pure */
@@ -84,16 +139,31 @@ export function parseKit(id: string, data: Record<string, unknown>): Kit {
     throw new Error(`Kit ${id}: campo "modalidades" inválido`);
   }
 
-  return {
+  const kit: Kit = {
     id,
     tenantId,
     nome,
     preco,
     capacidade: typeof capacidade === 'number' ? capacidade : 0,
     modalidades,
+    // RN-229: campos de visão são DECORATIVOS — normalização Postel (nunca
+    // derrubam o parse; segurança da URL via isUrlImagemKitValida abaixo).
+    itens: normalizarItensKit(data['itens']),
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
+
+  const descricao = data['descricao'];
+  if (typeof descricao === 'string' && descricao.trim().length > 0) {
+    kit.descricao = descricao.slice(0, KIT_DESCRICAO_MAX);
+  }
+  // RN-227: URL inválida/esquema perigoso é OMITIDA (fallback mock), não
+  // propagada — o campo alimenta <img src> na landing pública.
+  if (isUrlImagemKitValida(data['imagemUrl'])) {
+    kit.imagemUrl = data['imagemUrl'] as string;
+  }
+
+  return kit;
 }
 
 // ---------------------------------------------------------------------------

@@ -10,8 +10,13 @@ import {
   computeUsadoEm,
   exibirLogoCoerente,
   isOrigemItem,
+  isUrlImagemKitValida,
   kitEhDesconto,
+  KIT_DESCRICAO_MAX,
+  KIT_ITEM_MAX,
+  KIT_ITENS_MAX,
   KITS_INSCRITO,
+  normalizarItensKit,
   parseItemKit,
   parseKit,
   podeExibirLogo,
@@ -45,6 +50,61 @@ describe('Kit — preço e desconto (RN-210/211)', () => {
     expect(parseKit('sem-kit', base).preco).toBe(-15);
     expect(() => parseKit('x', { ...base, preco: '89' })).toThrow(/RN-211/);
     expect(() => parseKit('x', { ...base, nome: '' })).toThrow(/nome/);
+  });
+});
+
+describe('Kit — visão de compra (R9-C · RN-227/RN-229)', () => {
+  const base = {
+    tenantId: 'castelo-producoes', nome: 'Kit Ouro', preco: 89,
+    capacidade: 80, modalidades: ['21k'], criadoEm: fakeTs, atualizadoEm: fakeTs,
+  };
+
+  it('doc legado (sem os campos) parseia: itens=[], descricao/imagemUrl ausentes', () => {
+    const kit = parseKit('kit_ouro', base);
+    expect(kit.itens).toEqual([]);
+    expect(kit.descricao).toBeUndefined();
+    expect(kit.imagemUrl).toBeUndefined();
+  });
+
+  it('campos presentes e válidos são preservados', () => {
+    const kit = parseKit('kit_ouro', {
+      ...base,
+      descricao: 'O kit mais completo do evento.',
+      itens: ['Camiseta técnica', 'Medalha de finisher'],
+      imagemUrl: 'https://cdn.leela.com.br/kits/kit_ouro.webp',
+    });
+    expect(kit.descricao).toBe('O kit mais completo do evento.');
+    expect(kit.itens).toEqual(['Camiseta técnica', 'Medalha de finisher']);
+    expect(kit.imagemUrl).toBe('https://cdn.leela.com.br/kits/kit_ouro.webp');
+  });
+
+  it('normalizarItensKit é Postel: não-lista → []; lixo descartado; caps aplicados', () => {
+    expect(normalizarItensKit(undefined)).toEqual([]);
+    expect(normalizarItensKit('camiseta')).toEqual([]);
+    expect(normalizarItensKit([1, null, 'Camiseta', '  ', { x: 1 }, 'Medalha'])).toEqual([
+      'Camiseta',
+      'Medalha',
+    ]);
+    // Cap de quantidade (KIT_ITENS_MAX) e de tamanho por item (KIT_ITEM_MAX)
+    const muitos = Array.from({ length: KIT_ITENS_MAX + 10 }, (_, i) => `Item ${i}`);
+    expect(normalizarItensKit(muitos)).toHaveLength(KIT_ITENS_MAX);
+    const gigante = 'x'.repeat(KIT_ITEM_MAX + 50);
+    expect(normalizarItensKit([gigante])[0]).toHaveLength(KIT_ITEM_MAX);
+  });
+
+  it('descricao gigante é truncada; descricao vazia/não-string é omitida', () => {
+    const kit = parseKit('kit_ouro', { ...base, descricao: 'y'.repeat(KIT_DESCRICAO_MAX + 99) });
+    expect(kit.descricao).toHaveLength(KIT_DESCRICAO_MAX);
+    expect(parseKit('k', { ...base, descricao: '   ' }).descricao).toBeUndefined();
+    expect(parseKit('k', { ...base, descricao: 42 }).descricao).toBeUndefined();
+  });
+
+  it('imagemUrl com esquema perigoso/inválido é OMITIDA (vira src de <img> público)', () => {
+    for (const url of ['javascript:alert(1)', 'data:text/html,x', '/covers/kit.svg', '']) {
+      expect(parseKit('k', { ...base, imagemUrl: url }).imagemUrl).toBeUndefined();
+    }
+    expect(isUrlImagemKitValida('https://ok.com/a.png')).toBe(true);
+    expect(isUrlImagemKitValida('javascript:alert(1)')).toBe(false);
   });
 });
 
