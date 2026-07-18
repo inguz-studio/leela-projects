@@ -51,6 +51,7 @@ import {
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
 import { cotarInscricaoCheckoutCore } from '../checkout/cotarInscricaoCheckout';
+import { estornarInscricaoCore } from '../checkout/estornarInscricao';
 import { processarWebhookPagamento } from '../checkout/webhookPagamento';
 import { MockPaymentProvider, buildMockWebhookPayload } from '../payments/mockProvider';
 
@@ -494,8 +495,9 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(doc.get('status')).toBe('ativo');
   });
 
-  it('C6: PF com conta JÁ existente no cadastro = vínculo imediato (sem convite/token)', async () => {
-    const user = await auth.createUser({ email: 'dioney@exemplo.com' });
+  it('C6: PF com conta VERIFICADA no cadastro = vínculo imediato (sem convite/token)', async () => {
+    // Fix Finding 2: vínculo imediato SÓ com emailVerified.
+    const user = await auth.createUser({ email: 'dioney@exemplo.com', emailVerified: true });
     const r = await salvarAfiliadoCore(db, {
       eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney',
       refCodigo: 'DIONEY10', responsavelEmail: 'dioney@exemplo.com',
@@ -505,6 +507,22 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     const doc = await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get();
     expect(doc.get('responsavelUid')).toBe(user.uid);
     expect(doc.get('tokenAceiteHash')).toBeUndefined();
+  });
+
+  it('C6b (fix Finding 2 — anti pre-hijack): conta NÃO-verificada NÃO vincula; cai no convite', async () => {
+    // Atacante "squata" o e-mail da vítima (conta não-verificada). O cadastro
+    // do organizador NÃO deve dar papel de influenciador à conta do atacante —
+    // cai no ramo CONVITE (token = prova de posse da caixa).
+    await auth.createUser({ email: 'dioney@exemplo.com', emailVerified: false });
+    const r = await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney',
+      refCodigo: 'DIONEY10', responsavelEmail: 'dioney@exemplo.com',
+    }, marina);
+    expect(r.status).toBe('convite_pendente');
+    expect(r.tokenAceite).toHaveLength(64);
+    const doc = await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get();
+    expect(doc.get('responsavelUid')).toBeUndefined();
+    expect(doc.get('tokenAceiteHash')).toHaveLength(64);
   });
 
   it('C7 (fix review): reenvio com e-mail CORRIGIDO persiste o e-mail no doc e mata o token antigo', async () => {
@@ -537,9 +555,9 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     ).toBe(user.uid);
   });
 
-  it('C8 (fix review): reenvio quando o e-mail vigente JÁ tem conta = vínculo imediato no update (token morto)', async () => {
+  it('C8 (fix review): reenvio quando o e-mail vigente JÁ tem conta VERIFICADA = vínculo imediato no update (token morto)', async () => {
     const tokenAntigo = await convitePF();
-    const user = await auth.createUser({ email: 'dioney@exemplo.com' });
+    const user = await auth.createUser({ email: 'dioney@exemplo.com', emailVerified: true });
     const r = await salvarAfiliadoCore(db, {
       eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney Galharte',
       refCodigo: 'DIONEY10', responsavelEmail: 'dioney@exemplo.com',
@@ -678,6 +696,59 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     const pag = await db.doc(`pagamentos/${rCom.pagamentoId}`).get();
     expect(pag.get('cupom.codigo')).toBe('FLORIPA10OFF');
     expect(pag.get('afiliado')).toMatchObject({ afiliadoId: 'FLORIPA10', origem: 'cupom' });
+  });
+
+  it('D5 (fix Finding 1b): estorno DECREMENTA a conversão do afiliado — o gate RN-315 volta a fechar', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run',
+      refCodigo: 'FLORIPA10', cupomCodigo: 'FLORIPA10OFF', minimoInscricoes: 1,
+    }, marina);
+
+    // 1 conversão pelo link → cruza o mínimo (gate abre)
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-refund-0000001', { ref: { codigo: 'FLORIPA10' } }),
+      caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-refund-1');
+    const afAntes = await db.doc(`eventos/${EVENTO_ID}/afiliados/FLORIPA10`).get();
+    expect(afAntes.get('conversoes')).toBe(1);
+    // gate aberto: cupom aplica
+    const rCom = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-refund-0000002', { cupomCodigo: 'FLORIPA10OFF' }),
+      caller
+    );
+    expect(rCom.valores.desconto).toBeGreaterThan(0);
+
+    // Estorna a inscrição atribuída → conversão decrementa, conversão some
+    const est = await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[0]!, motivo: 'Estorno de teste do gate',
+    }, marina);
+    expect(est.duplicado).toBe(false);
+    const afDepois = await db.doc(`eventos/${EVENTO_ID}/afiliados/FLORIPA10`).get();
+    expect(afDepois.get('conversoes')).toBe(0);
+    expect(afDepois.get('valorAtribuido')).toBe(0);
+    const conv = await db
+      .doc(`eventos/${EVENTO_ID}/afiliados/FLORIPA10/conversoes/${r.pedidoId}`)
+      .get();
+    expect(conv.exists).toBe(false);
+
+    // Gate voltou a FECHAR: cupom indisponível de novo (opaco)
+    await expect(
+      createInscricaoChargeCore(
+        db, provider,
+        chargeInput('chave-refund-0000003', { cupomCodigo: 'FLORIPA10OFF' }),
+        caller
+      )
+    ).rejects.toThrow(/indisponível/);
+
+    // Idempotência: reexecutar o estorno não re-decrementa (∑ intacto)
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[0]!, motivo: 'Estorno de teste do gate',
+    }, marina);
+    const afReplay = await db.doc(`eventos/${EVENTO_ID}/afiliados/FLORIPA10`).get();
+    expect(afReplay.get('conversoes')).toBe(0);
   });
 
   // ── E · Readers (RN-318/319) ─────────────────────────────────────────────

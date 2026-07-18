@@ -159,10 +159,18 @@ export async function salvarAfiliadoCore(
   }
 
   // ── Conta PF já existente? (vínculo imediato — espelha RN-362) ───────────
+  // FIX review antagonista R9-E (Finding 2 — pre-hijack): o vínculo imediato
+  // SÓ acontece quando a conta existente tem `emailVerified === true`. Contas
+  // nascem com emailVerified:false e o cadastro é público, então um atacante
+  // poderia "squatar" o e-mail de uma vítima e receber o papel de
+  // influenciador (+ visibilidade de conversões) sem NUNCA provar posse da
+  // caixa. Sem verificação de e-mail, cai no ramo CONVITE (token = prova de
+  // posse). Não regride o caso legítimo (conta verificada = vínculo direto).
   let responsavelUid: string | null = null;
   if (input.tipo === 'pessoa_fisica') {
     try {
-      responsavelUid = (await admin.auth().getUserByEmail(emailKey)).uid;
+      const user = await admin.auth().getUserByEmail(emailKey);
+      responsavelUid = user.emailVerified ? user.uid : null;
     } catch {
       responsavelUid = null;
     }

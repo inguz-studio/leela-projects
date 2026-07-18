@@ -58,6 +58,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
+  COLECAO_AFILIADOS,
+  SUBCOLECAO_CONVERSOES_AFILIADO,
   podeTransicionarStatusInscrito,
   podeTransicionarStatusPagamento,
   roundMoney,
@@ -432,6 +434,37 @@ async function aplicarEfeitoEstorno(
       tx.get(inscritoRef),
       tx.get(eventoRef),
     ]);
+
+    // FIX review antagonista R9-E (Finding 1b — o gate RN-315 ficava aberto
+    // para sempre): o estorno DECREMENTA a conversão do afiliado. Sem isso, um
+    // afiliado auto-comprava até cruzar `minimoInscricoes`, estornava, e o
+    // cupom vinculado ficava permanentemente ativo (desconto para todos sem a
+    // condição real). Lê o carimbo `pagamento.afiliado` e o doc de conversão
+    // (chave = pedidoId) na FASE DE LEITURA. Idempotente: TX2 roda uma única
+    // vez por estorno (guarda do ledger pendente→aprovado).
+    const afiliadoBloco = pagamentoSnap.exists
+      ? (pagamentoSnap.get('afiliado') as { afiliadoId?: string } | undefined)
+      : undefined;
+    const afiliadoIdEstorno =
+      afiliadoBloco !== undefined &&
+      typeof afiliadoBloco.afiliadoId === 'string' &&
+      afiliadoBloco.afiliadoId.length > 0
+        ? afiliadoBloco.afiliadoId
+        : null;
+    const afiliadoRefEstorno =
+      afiliadoIdEstorno !== null
+        ? eventoRef.collection(COLECAO_AFILIADOS).doc(afiliadoIdEstorno)
+        : null;
+    const conversaoRefEstorno =
+      afiliadoRefEstorno !== null
+        ? afiliadoRefEstorno
+            .collection(SUBCOLECAO_CONVERSOES_AFILIADO)
+            .doc(input.pedidoId)
+        : null;
+    const [afiliadoSnapEstorno, conversaoSnapEstorno] = await Promise.all([
+      afiliadoRefEstorno !== null ? tx.get(afiliadoRefEstorno) : Promise.resolve(null),
+      conversaoRefEstorno !== null ? tx.get(conversaoRefEstorno) : Promise.resolve(null),
+    ]);
     if (!ledgerSnap.exists) {
       throw new https.HttpsError(
         'internal',
@@ -544,6 +577,54 @@ async function aplicarEfeitoEstorno(
       pagamentoEstornadoIntegral: integral,
       processadoEm: agora,
     });
+
+    // 5. DECREMENTO da conversão do afiliado (Finding 1b): 1 inscrição a
+    //    menos + o valor FACE da linha estornada. `conversoes` conta
+    //    inscrições (base do gate RN-315), então cai 1 por estorno de
+    //    inscrito. A conversão do PEDIDO reduz `qtdInscricoes`/`valor`; ao
+    //    zerar as inscrições, o doc some (trilha encerrada). Read-modify-write
+    //    cent-exato, clampado a 0 (nunca negativo). Só quando ambos os docs
+    //    existem (afiliado pode ter sido removido; conversão pode nunca ter
+    //    sido registrada — fora da janela na confirmação).
+    if (
+      afiliadoRefEstorno !== null &&
+      conversaoRefEstorno !== null &&
+      afiliadoSnapEstorno !== null &&
+      afiliadoSnapEstorno.exists &&
+      conversaoSnapEstorno !== null &&
+      conversaoSnapEstorno.exists
+    ) {
+      const conversoesAtual =
+        typeof afiliadoSnapEstorno.get('conversoes') === 'number'
+          ? (afiliadoSnapEstorno.get('conversoes') as number)
+          : 0;
+      const valorAtribuidoAtual =
+        typeof afiliadoSnapEstorno.get('valorAtribuido') === 'number'
+          ? (afiliadoSnapEstorno.get('valorAtribuido') as number)
+          : 0;
+      tx.update(afiliadoRefEstorno, {
+        conversoes: Math.max(0, conversoesAtual - 1),
+        valorAtribuido: Math.max(0, roundMoney(valorAtribuidoAtual - valorFace)),
+        atualizadoEm: agora,
+      });
+
+      const qtdConv =
+        typeof conversaoSnapEstorno.get('qtdInscricoes') === 'number'
+          ? (conversaoSnapEstorno.get('qtdInscricoes') as number)
+          : 1;
+      const valorConv =
+        typeof conversaoSnapEstorno.get('valor') === 'number'
+          ? (conversaoSnapEstorno.get('valor') as number)
+          : 0;
+      if (qtdConv <= 1) {
+        tx.delete(conversaoRefEstorno);
+      } else {
+        tx.update(conversaoRefEstorno, {
+          qtdInscricoes: qtdConv - 1,
+          valor: Math.max(0, roundMoney(valorConv - valorFace)),
+        });
+      }
+    }
 
     return { duplicado: false, refundId, pagamentoEstornadoIntegral: integral };
   });
