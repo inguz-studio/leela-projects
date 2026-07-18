@@ -94,10 +94,11 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
-  it('todos os 8 itens do produtor renderizam com ícone', () => {
+  it('os 7 itens do produtor renderizam com ícone (Analytics suprimido — RN-821)', () => {
     renderAt('/');
     const svgs = nav().querySelectorAll('svg[aria-hidden="true"]');
-    expect(svgs.length).toBe(8);
+    // 8 do DS − "analytics" (a Análise de vendas já é a superfície única).
+    expect(svgs.length).toBe(7);
   });
 
   it('rodapé mostra avatar + nome da sessão (B4 — dados do consumidor)', () => {

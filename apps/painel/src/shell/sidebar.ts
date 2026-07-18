@@ -27,9 +27,19 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   financeiro: '/financeiro',
   comunicacao: undefined,
   marcas: undefined,
-  analytics: undefined,
   configuracoes: undefined,
 };
+
+/**
+ * Itens do produtor suprimidos da nav renderizada (RN-821). "Analytics" era um
+ * placeholder INERTE e DIVERGENTE: a Análise de vendas já é a superfície única
+ * de desempenho + analytics, alcançada pelo item "Financeiro" (→ /financeiro).
+ * Manter uma segunda entrada morta (ou apontá-la ao mesmo destino) confundiria
+ * o organizador com duas portas para a mesma tela. O item vive no DS
+ * (DEFAULT_SIDEBAR_SECTIONS, compartilhado) — filtramos aqui, no consumidor,
+ * sem tocar o design system.
+ */
+const IDS_SUPRIMIDOS: ReadonlySet<string> = new Set(['analytics']);
 
 /** Ícone Lucide por item da nav de plataforma (nav do super-admin é própria —
  *  fora da tabela do doc de IA, que cobre só os 8 itens do produtor). */
@@ -58,7 +68,9 @@ function producerSections(
 ): SidebarSection[] {
   return DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
     label: section.label,
-    items: section.items.map((item) => {
+    items: section.items
+      .filter((item) => !IDS_SUPRIMIDOS.has(item.id))
+      .map((item) => {
       const href = HREF_POR_ID[item.id];
       // nav-badge com dado REAL (mockup: Eventos = badge neutro com contagem).
       // Sem contagem (null/0) não há badge — estado honesto, nunca 0 decorativo.

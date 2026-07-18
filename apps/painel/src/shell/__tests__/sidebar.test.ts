@@ -17,12 +17,21 @@ describe('painelActiveId', () => {
 });
 
 describe('shellSidebarSections', () => {
-  it('rotas do produtor: 8 itens, todos com ícone, ativo marcado', () => {
+  it('rotas do produtor: 7 itens (Analytics suprimido), todos com ícone, ativo marcado', () => {
     const sections = shellSidebarSections('/eventos', vi.fn());
     const items = sections.flatMap((s) => s.items);
-    expect(items).toHaveLength(8);
+    // 8 itens do DS − "analytics" (RN-821: a Análise já é a superfície única).
+    expect(items).toHaveLength(7);
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'eventos')?.active).toBe(true);
+  });
+
+  it('RN-821: "Analytics" some da nav do produtor (placeholder divergente eliminado)', () => {
+    const sections = shellSidebarSections('/', vi.fn());
+    const items = sections.flatMap((s) => s.items);
+    expect(items.find((i) => i.id === 'analytics')).toBeUndefined();
+    // Financeiro segue como a porta única da Análise de vendas.
+    expect(items.find((i) => i.id === 'financeiro')).toBeDefined();
   });
 
   it('itens com rota conhecida navegam; inertes não têm onClick', () => {
