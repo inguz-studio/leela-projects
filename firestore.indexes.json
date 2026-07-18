@@ -191,6 +191,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "afiliados",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "eventoId",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [
@@ -206,6 +220,26 @@
           "queryScope": "COLLECTION",
           "order": "DESCENDING"
         },
+        {
+          "queryScope": "COLLECTION_GROUP",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "afiliados",
+      "fieldPath": "responsavelUid",
+      "indexes": [
+        {
+          "queryScope": "COLLECTION_GROUP",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "afiliados",
+      "fieldPath": "tenantId",
+      "indexes": [
         {
           "queryScope": "COLLECTION_GROUP",
           "order": "ASCENDING"

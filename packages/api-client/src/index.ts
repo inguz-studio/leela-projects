@@ -118,7 +118,33 @@ export {
   uploadAvatarPerfilPublico,
   uploadCapaPerfilPublico,
   uploadCapaClube,
+  // Logos 1:1 de patrocinador (R9-E · S-R9-12 + adendo do Vitor)
+  LOGO_QUADRADA_TOLERANCIA,
+  problemaProporcaoQuadrada,
+  uploadLogoMarca,
+  uploadLogoPatrocinadorClube,
 } from './storage';
+
+// ---------------------------------------------------------------------------
+// Afiliados/influenciadores (R9-E · S-R9-11 · RN-313..319 — E08 antecipado):
+// salvar (modal do organizador), aceite público PF, readers RN-318/319.
+// ---------------------------------------------------------------------------
+export {
+  salvarAfiliado,
+  provisionAfiliadoAccount,
+  getMinhasAfiliacoes,
+  getAfiliadosDoTenant,
+  SENHA_MIN_AFILIADO,
+} from './affiliation';
+export type {
+  SalvarAfiliadoClientInput,
+  SalvarAfiliadoClientResult,
+  ProvisionAfiliadoClientInput,
+  ProvisionAfiliadoClientResult,
+  MinhaAfiliacao,
+  AfiliadoDoTenant,
+  ConversaoProjetada,
+} from './affiliation';
 
 // ---------------------------------------------------------------------------
 // Clubs — leitura tipada de `clubes` (S101-T1) + `membros` (S103-T1)
@@ -567,3 +593,14 @@ export type {
 // ---------------------------------------------------------------------------
 export { getProfissional, getTenantComOwner } from './platform/profissionais';
 export type { TenantComOwner } from './platform/profissionais';
+
+// Marcas/patrocinadores reutilizáveis (R9-E · S-R9-12 · RN-171 — seed
+// E10-S811): CRUD owner-only + upsert a partir do cadastro de patrocínio.
+export {
+  listarMarcas,
+  salvarMarca,
+  inativarMarca,
+  excluirMarca,
+  upsertMarcaDoPatrocinio,
+  marcaIdDoNome,
+} from './brands';
