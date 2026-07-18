@@ -8,6 +8,10 @@
 
 Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As respostas estão consolidadas na seção **✅ Ratificadas** abaixo — incluindo o **verbatim** do Vitor sobre reabertura de lote (item 4), agora registrado como **RN-304 + story S307** no épico E04.
 
+## 🔵 Para ratificar (default defensável em vigor)
+
+18. **ADR-016 · Firebase Storage para upload de imagens (LEELA-R5, 2026-07-18)** — upload REAL de arquivo entrou nas 3 superfícies (foto de perfil da conta, capa de clube, avatar/capa do perfil público), mantendo URL colada como fallback. Default aplicado: **Firebase Storage** (nativo do stack, Rules fail-closed, emulator-testável) com paths contratados `users/{uid}/…` e `clubes/{clubeId}/capa`, imagem ≤5MB, SVG banido, read público só do que é intrinsecamente público. Ratificar = confirmar o provedor; trocar depois = mexer só no seam do api-client (os docs guardam URL simples). **Follow-ups já registrados na ADR (não bloqueiam):** processamento server-side (magic bytes/re-encode/resize — o contentType hoje é declarado pelo cliente), varredura LGPD do Storage na exclusão de conta/clube, App Check na borda. Detalhe: `leela-specs/adr/ADR-016-firebase-storage-upload.md`.
+
 ## 🟠 Ações externas suas (destravam código pronto)
 
 8. **Chave SANDBOX do Asaas** — destrava o teste ponta a ponta de cobrança real sem risco e a **ativação do adapter** (`AsaasProvider` está pronto e inerte; checklist de ativação em `outputs/leela-build-2d6ee98d/ASAAS-ADAPTER-REPORT.md`, com review Fable obrigatória na virada).
