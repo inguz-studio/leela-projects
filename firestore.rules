@@ -297,6 +297,25 @@ service cloud.firestore {
         allow read: if isTenantWriter(tenantId) || isPlatformAdmin();
         allow write: if false;
       }
+
+      // `crmClientes/{clienteKey}` — CRM do organizador (E19 · S-R9-13-T2 ·
+      // RN-172): cliente consolidado cross-evento com LTV + histórico.
+      // PII INDIVIDUAL (nome, nascimento, gênero, valores) — categoria
+      // DISTINTA do agregado RN-820. Regra própria (diretriz O3-L3B).
+      //
+      // LEITURA: SÓ papel de ESCRITA do tenant (owner/staff) — o épico manda
+      // "leitura só isTenantWriter": promoter/afiliado/patrocinador/
+      // coordenador/atleta NUNCA leem, e NEM platform_admin via client SDK
+      // (mais restrito que parceirosAssessoria de propósito — perfil
+      // comportamental individual; back-office usa Admin SDK auditável).
+      // ESCRITA: NEGADA para TODO cliente — o doc é projeção EXCLUSIVA da
+      // Function onInscritoWriteCrm (ledger + recompute transacional);
+      // um cliente que escrevesse aqui forjaria LTV/histórico ou plantaria
+      // PII fora da finalidade declarada (RN-172).
+      match /crmClientes/{clienteKey} {
+        allow read: if isTenantWriter(tenantId);
+        allow write: if false;
+      }
     }
 
     // ── `platform/{doc}` — dados macro da plataforma ──────────────────────
