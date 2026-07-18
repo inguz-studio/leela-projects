@@ -108,6 +108,14 @@ export {
 } from './components/Command';
 export { Combobox } from './components/Combobox';
 export type { ComboboxProps, ComboboxOption } from './components/Combobox';
+// Calendar / DatePicker / DateRangePicker (react-day-picker v9, shadcn) — S-R9-05.
+export { Calendar, DatePicker, DateRangePicker } from './components/Calendar';
+export type {
+  CalendarProps,
+  DatePickerProps,
+  DateRangePickerProps,
+  DateRange,
+} from './components/Calendar';
 export { DropdownMenu } from './components/DropdownMenu';
 export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
 export { FilterMenu } from './components/FilterMenu';
