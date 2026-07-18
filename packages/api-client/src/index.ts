@@ -604,3 +604,23 @@ export {
   upsertMarcaDoPatrocinio,
   marcaIdDoNome,
 } from './brands';
+
+// ---------------------------------------------------------------------------
+// CRM do organizador (E19 · S-R9-13 · RN-172): readers da projeção
+// `tenants/{tid}/crmClientes` mantida pela Function onInscritoWriteCrm.
+// SÓ leitura (Rules negam escrita; leitura só owner/staff do tenant) —
+// lista paginada por cursor + busca por prefixo de nome + detalhe 1 read.
+// ---------------------------------------------------------------------------
+export {
+  CRM_CLIENTES_PAGE_SIZE,
+  listarCrmClientes,
+  buscarCrmClientesPorNome,
+  getCrmCliente,
+} from './crm';
+export type {
+  CrmCliente,
+  CrmClientesCursor,
+  CrmClientesOrdem,
+  ListarCrmClientesOptions,
+  ListarCrmClientesResult,
+} from './crm';
