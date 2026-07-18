@@ -61,6 +61,7 @@ tags:
 - [x] **[R9] Spec da revisão UX** — 13 itens do Vitor virados em histórias prontas ✅ [[STORIES-r9]]
 - [x] **[R10] Ver página pública** — botão do evento abre a landing na URL certa (env), rascunho desabilitado ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-A] Conformidade de UI** — toggle e campos com contraste, divisórias iguais, foto só por upload, filtros no padrão do DS ✅ [[BOARD-HISTORICO]]
+- [x] **[R9-E] Afiliados, marcas e e-mail (backend)** — influenciador com link rastreado na venda, patrocinador reutilizável com logo 1:1, e-mail transacional pronto para ligar a chave ✅ [[BOARD-HISTORICO]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 

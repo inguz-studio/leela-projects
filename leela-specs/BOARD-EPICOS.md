@@ -55,8 +55,8 @@ Antecipada por decisão de 2026-07-18: fecha o produto web antes do app.
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 📋 |
-| [[LEELA-E10-marcas]] | Gerenciar patrocinadores e marcas num lugar só | 📋 |
+| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 🔄 backend do recorte antecipado pronto (R9-E); faltam telas |
+| [[LEELA-E10-marcas]] | Gerenciar patrocinadores e marcas num lugar só | 🔄 registro reutilizável + logo 1:1 prontos (R9-E); falta autocomplete no painel |
 | [[LEELA-E11-analytics]] | Análise de vendas e público unificada | 📋 |
 | [[LEELA-E19-crm]] | Conhecer e reter a base de contatos do organizador | 📋 |
 
