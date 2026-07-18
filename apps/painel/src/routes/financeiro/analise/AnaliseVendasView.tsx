@@ -16,6 +16,7 @@ import {
   BarChart,
   Button,
   Combobox,
+  DateRangePicker,
   DonutChart,
   EmptyState,
   KpiCard,
@@ -24,6 +25,7 @@ import {
   Sparkline,
   type BarChartDatum,
   type ComboboxOption,
+  type DateRange,
 } from '@leela/design-system';
 import type { OverviewResult } from '@leela/api-client';
 import { notaCobertura, type DemografiaTenant } from './_lib/demografia';
@@ -37,6 +39,10 @@ export interface AnaliseVendasViewProps {
   eventosLoading: boolean;
   eventoSelecionado: string | null;
   onEventoChange: (eventoId: string | null) => void;
+
+  // Seleção temporal (RN-821) — intervalo de datas; `undefined` = sem recorte.
+  intervalo: DateRange | undefined;
+  onIntervaloChange: (intervalo: DateRange | undefined) => void;
 
   // (a) desempenho de vendas
   desempenho: OverviewResult | null;
@@ -82,6 +88,8 @@ export function AnaliseVendasView({
   eventosLoading,
   eventoSelecionado,
   onEventoChange,
+  intervalo,
+  onIntervaloChange,
   desempenho,
   desempenhoLoading,
   desempenhoError,
@@ -116,6 +124,8 @@ export function AnaliseVendasView({
           eventosLoading={eventosLoading}
           eventoSelecionado={eventoSelecionado}
           onEventoChange={onEventoChange}
+          intervalo={intervalo}
+          onIntervaloChange={onIntervaloChange}
         />
         {/* (a) Desempenho de vendas — KPIs + série de conversão (getOverview). */}
         <section aria-label="Desempenho de vendas" className="flex flex-col gap-[var(--spacing-4)]">
@@ -311,46 +321,88 @@ function BlocoGrafico({
 }
 
 /**
- * Barra de filtros da Análise (RN-821): recorte por evento (Combobox shadcn).
- * A opção "Todos os eventos" (sentinela) volta ao agregado do tenant. O
- * Combobox é single-select; mapeamos a sentinela ↔ `null` na borda.
+ * Barra de filtros da Análise (RN-821): recorte por evento (Combobox shadcn) +
+ * seleção temporal (DateRangePicker shadcn). "Todos os eventos" (sentinela)
+ * volta ao agregado do tenant. O Combobox é single-select; mapeamos a sentinela
+ * ↔ `null` na borda.
+ *
+ * HONESTIDADE TEMPORAL (§2.12): os agregados que a Análise lê (`…/current`) são
+ * SNAPSHOTS acumulados, não série temporal datada — o cliente não tem dado por
+ * data para recortar. Enquanto não existir série datada, escolher um intervalo
+ * NÃO fabrica recorte: os números seguem o agregado completo e uma nota declara
+ * a lacuna (a spec S-R9-01-T3 pede exatamente isto — nunca inventar série).
  */
 function AnaliseFiltros({
   eventos,
   eventosLoading,
   eventoSelecionado,
   onEventoChange,
+  intervalo,
+  onIntervaloChange,
 }: {
   eventos: ComboboxOption[];
   eventosLoading: boolean;
   eventoSelecionado: string | null;
   onEventoChange: (eventoId: string | null) => void;
+  intervalo: DateRange | undefined;
+  onIntervaloChange: (intervalo: DateRange | undefined) => void;
 }): JSX.Element {
   const options: ComboboxOption[] = [
     { value: TODOS_OS_EVENTOS, label: 'Todos os eventos' },
     ...eventos,
   ];
+  const temIntervalo = intervalo?.from !== undefined;
   return (
-    <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
-      <label className="flex flex-col gap-[var(--spacing-1)]">
-        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          Evento
-        </span>
-        <div className="w-[16rem] max-w-full">
-          <Combobox
-            options={options}
-            value={eventoSelecionado ?? TODOS_OS_EVENTOS}
-            onValueChange={(v) => {
-              const val = Array.isArray(v) ? v[0] : v;
-              onEventoChange(val && val !== TODOS_OS_EVENTOS ? val : null);
-            }}
-            disabled={eventosLoading}
-            aria-label="Filtrar a análise por evento"
-            searchPlaceholder="Buscar evento…"
-            emptyText="Nenhum evento encontrado"
-          />
-        </div>
-      </label>
+    <div className="flex flex-col gap-[var(--spacing-3)]">
+      <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
+        <label className="flex flex-col gap-[var(--spacing-1)]">
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Evento
+          </span>
+          <div className="w-[16rem] max-w-full">
+            <Combobox
+              options={options}
+              value={eventoSelecionado ?? TODOS_OS_EVENTOS}
+              onValueChange={(v) => {
+                const val = Array.isArray(v) ? v[0] : v;
+                onEventoChange(val && val !== TODOS_OS_EVENTOS ? val : null);
+              }}
+              disabled={eventosLoading}
+              aria-label="Filtrar a análise por evento"
+              searchPlaceholder="Buscar evento…"
+              emptyText="Nenhum evento encontrado"
+            />
+          </div>
+        </label>
+        <label className="flex flex-col gap-[var(--spacing-1)]">
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Período
+          </span>
+          <div className="w-[18rem] max-w-full">
+            <DateRangePicker
+              value={intervalo}
+              onValueChange={onIntervaloChange}
+              placeholder="Todo o período"
+              aria-label="Recortar a análise por intervalo de datas"
+            />
+          </div>
+        </label>
+        {temIntervalo && (
+          <Button variant="ghost" size="sm" onClick={() => onIntervaloChange(undefined)}>
+            Limpar período
+          </Button>
+        )}
+      </div>
+      {temIntervalo && (
+        <p
+          role="note"
+          className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--feedback-warning)] bg-[var(--surface-raised)] p-[var(--spacing-3)] text-[length:var(--font-size-sm)] text-[var(--text-secondary)]"
+        >
+          Os blocos abaixo somam agregados acumulados (não uma série por data). O
+          recorte por período passa a valer quando houver histórico datado; por
+          ora os números refletem o total acumulado — nada é recortado por data.
+        </p>
+      )}
     </div>
   );
 }

@@ -57,6 +57,8 @@ function props(over: Partial<AnaliseVendasViewProps> = {}): AnaliseVendasViewPro
     eventosLoading: false,
     eventoSelecionado: null,
     onEventoChange: vi.fn(),
+    intervalo: undefined,
+    onIntervaloChange: vi.fn(),
     desempenho: OVERVIEW,
     desempenhoLoading: false,
     desempenhoError: null,
@@ -179,5 +181,30 @@ describe('AnaliseVendasView', () => {
     await user.click(screen.getByRole('button', { name: /filtrar a análise por evento/i }));
     await user.click(await screen.findByText('Todos os eventos'));
     expect(onEventoChange).toHaveBeenCalledWith(null);
+  });
+
+  // Seleção temporal (RN-821 · S-R9-01-T3) --------------------------------
+  it('temporal: sem intervalo → sem nota de período (nada a declarar)', () => {
+    render(<AnaliseVendasView {...props()} />);
+    expect(screen.queryByText(/série por data/i)).not.toBeInTheDocument();
+  });
+
+  it('temporal: com intervalo → nota honesta de que agregados são snapshots (não recorta)', () => {
+    render(<AnaliseVendasView {...props({ intervalo: { from: new Date('2026-01-01') } })} />);
+    // Declara a lacuna: os números seguem o total acumulado, nada recortado por data.
+    expect(screen.getByText(/não uma série por data/i)).toBeInTheDocument();
+    expect(screen.getByText(/total acumulado/i)).toBeInTheDocument();
+  });
+
+  it('temporal: "Limpar período" chama onIntervaloChange(undefined)', async () => {
+    const onIntervaloChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AnaliseVendasView
+        {...props({ intervalo: { from: new Date('2026-01-01') }, onIntervaloChange })}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /limpar período/i }));
+    expect(onIntervaloChange).toHaveBeenCalledWith(undefined);
   });
 });

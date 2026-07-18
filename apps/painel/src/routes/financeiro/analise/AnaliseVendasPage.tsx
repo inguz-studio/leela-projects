@@ -8,6 +8,7 @@
 // =============================================================================
 
 import * as React from 'react';
+import type { DateRange } from '@leela/design-system';
 import { useFinanceiroSession } from '../_data/session';
 import {
   useDemografiaAnalise,
@@ -24,6 +25,10 @@ export function AnaliseVendasPage(): JSX.Element {
 
   // Filtro por evento (RN-821): null = todos os eventos (agregado do tenant).
   const [eventoId, setEventoId] = React.useState<string | null>(null);
+  // Seleção temporal (RN-821): undefined = todo o período. Os agregados são
+  // snapshots (não série datada) — o recorte por data é honesto-inerte por ora
+  // (a View declara a lacuna); o estado fica pronto p/ quando houver histórico.
+  const [intervalo, setIntervalo] = React.useState<DateRange | undefined>(undefined);
 
   const eventos = useEventosParaFiltro(session.tenantId, session.uid);
   const desempenho = useDesempenhoAnalise(eventoId);
@@ -37,6 +42,8 @@ export function AnaliseVendasPage(): JSX.Element {
       eventosLoading={carregandoSessao || eventos.loading}
       eventoSelecionado={eventoId}
       onEventoChange={setEventoId}
+      intervalo={intervalo}
+      onIntervaloChange={setIntervalo}
       desempenho={desempenho.data}
       desempenhoLoading={desempenho.loading}
       desempenhoError={desempenho.error}
