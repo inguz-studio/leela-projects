@@ -1,21 +1,23 @@
+import { Route } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { Dobra } from './Dobra';
+import { TituloSecao } from './marca';
 
 /**
- * Seção de percursos/modalidades (S1201-T2 · RN-301): as distâncias lado a
- * lado, cada uma com o PREÇO VIGENTE derivado do lote ativo (`precoVigente`).
- * Preço `null` (venda fechada) vira texto honesto, nunca valor fabricado.
- * Cards (descoberta/comparação), não tabela — heurística design-principles (c).
+ * Seção de percursos/modalidades (S1201-T2 · RN-301 · LEELA-R12): as distâncias
+ * lado a lado, cada uma com o PREÇO VIGENTE derivado do lote ativo
+ * (`precoVigente`). Preço `null` (venda fechada) vira texto honesto, nunca
+ * valor fabricado. Cards (descoberta/comparação), não tabela — heurística
+ * design-principles (c). R12: título com ícone de apoio; subtítulo do card
+ * carrega a modalidade esportiva (não mais "cronometrado por chip").
  */
 export function ModalidadesSection({ evento }: { evento: EventoPublico }): React.JSX.Element | null {
   if (evento.modalidades.length === 0) return null;
 
   return (
     <Dobra id="percursos">
-      <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
-        Escolha seu percurso
-      </h2>
+      <TituloSecao icone={Route}>Escolha seu percurso</TituloSecao>
       <p className="mt-2 text-text-secondary">
         {evento.modalidades.length} distâncias, cada uma com preço próprio por lote.
       </p>
@@ -32,7 +34,7 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
                 <p className="font-display text-3xl font-extrabold uppercase tracking-tight text-text-primary">
                   {m.nome}
                 </p>
-                <p className="mt-1 text-sm text-text-tertiary">Percurso cronometrado</p>
+                <p className="mt-1 text-sm text-text-tertiary">{evento.modalidadeEsporte}</p>
               </div>
               <div className="mt-6">
                 <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">

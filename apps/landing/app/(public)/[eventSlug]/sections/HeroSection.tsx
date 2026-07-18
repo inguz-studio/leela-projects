@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { CalendarDays, MapPin } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
@@ -6,10 +7,18 @@ import { CtaFallback } from '../CtaFallback';
 import { CoverImage } from '@/app/components/CoverImage';
 import { HeroCover } from './HeroCover';
 import { resolverCapa } from './cover';
+import { SeloModalidade } from './marca';
 
 /**
- * Hero da página de evento (S1201-T2 · LEELA-R7): nome, data, local, chip, CTA
- * "Garantir inscrição" e o "a partir de" derivado do preço vigente.
+ * Hero da página de evento (S1201-T2 · LEELA-R7 · R12): nome, MODALIDADE
+ * esportiva em destaque, data, local, percursos, CTA "Garantir inscrição" e o
+ * "a partir de" derivado do preço vigente.
+ *
+ * LEELA-R12 (Frente 1/2): eyebrow de categoria hardcoded ("Corrida de rua")
+ * virou o SELO da modalidade real do evento (com ícone de apoio); os fatos
+ * Quando/Onde ganham ícones Lucide; o badge "Cronometragem por chip" e a prova
+ * social "N pessoas garantiram presença" foram removidos (pedidos do Vitor —
+ * dado de inscritos preservado no tipo, só não exibido).
  *
  * A MESMA capa aparece duas vezes (pedido do brief): NÍTIDA no painel de mídia
  * (`HeroCover`) e BORRADA como plano de fundo do hero inteiro (`filter: blur`
@@ -42,16 +51,17 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
       <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
         {/* Conteúdo */}
         <div className="order-2 lg:order-1">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-text-brand">
-            Corrida de rua
-          </p>
+          <div className="mb-3">
+            <SeloModalidade esporte={evento.modalidadeEsporte} />
+          </div>
           <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl">
             {evento.nome}
           </h1>
 
           <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-base">
             <div className="flex items-center gap-2">
-              <dt className="font-semibold text-text-secondary">Quando</dt>
+              <CalendarDays size={18} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+              <dt className="sr-only">Quando</dt>
               <dd className="text-text-primary">
                 <time dateTime={evento.dataISO}>
                   {evento.diaSemanaLabel} · {evento.dataLabel} · {evento.horaLabel}
@@ -59,7 +69,8 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
               </dd>
             </div>
             <div className="flex items-center gap-2">
-              <dt className="font-semibold text-text-secondary">Onde</dt>
+              <MapPin size={18} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+              <dt className="sr-only">Onde</dt>
               <dd className="text-text-primary">{evento.local}</dd>
             </div>
           </dl>
@@ -73,11 +84,6 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
                 {m.nome}
               </span>
             ))}
-            {evento.usaChip ? (
-              <span className="rounded-ds-pill bg-feedback-info-surface px-3 py-1 text-sm font-medium text-feedback-info-fg">
-                Cronometragem por chip
-              </span>
-            ) : null}
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -97,15 +103,6 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
               </p>
             )}
           </div>
-
-          {evento.qtdInscritos > 0 ? (
-            <p className="mt-4 text-sm text-text-secondary">
-              <span className="font-semibold text-text-primary">
-                {evento.qtdInscritos.toLocaleString('pt-BR')}
-              </span>{' '}
-              pessoas já garantiram presença.
-            </p>
-          ) : null}
         </div>
 
         {/* Media 16/10 — capa NÍTIDA (mesma imagem do fundo borrado) */}

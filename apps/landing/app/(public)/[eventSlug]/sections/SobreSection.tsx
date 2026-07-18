@@ -1,49 +1,50 @@
+import { CalendarDays, Clock, MapPin, Route, Info, type LucideIcon } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { Dobra } from './Dobra';
+import { TituloSecao, iconeDoEsporte } from './marca';
 
 /**
- * Seção "Sobre" (S1201-T2): a descrição publicada + os fatos-chave do evento
- * (data, local, nº de percursos, chip). Tudo dado real do leitor.
+ * Seção "Sobre" (S1201-T2 · LEELA-R12): a descrição publicada + os fatos-chave
+ * do evento. R12 (Frente 1/2): a MODALIDADE esportiva entra como PRIMEIRO fato
+ * (destaque igual ao percurso), cada tile ganha ícone Lucide de apoio, e a
+ * prosa "cronometrada por chip" foi removida (pedido do Vitor). Dado real do
+ * leitor.
  */
 export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.Element {
-  const fatos: { rotulo: string; valor: string }[] = [
-    { rotulo: 'Data', valor: evento.dataLabel },
-    { rotulo: 'Largada', valor: evento.horaLabel },
-    { rotulo: 'Local', valor: evento.local },
+  const IconeEsporte: LucideIcon = iconeDoEsporte(evento.modalidadeEsporte);
+  const fatos: { rotulo: string; valor: string; icone: LucideIcon }[] = [
+    { rotulo: 'Modalidade', valor: evento.modalidadeEsporte, icone: IconeEsporte },
+    { rotulo: 'Data', valor: evento.dataLabel, icone: CalendarDays },
+    { rotulo: 'Largada', valor: evento.horaLabel, icone: Clock },
+    { rotulo: 'Local', valor: evento.local, icone: MapPin },
     {
       rotulo: 'Percursos',
       valor: `${evento.modalidades.length} ${evento.modalidades.length === 1 ? 'distância' : 'distâncias'}`,
+      icone: Route,
     },
   ];
 
   return (
     <Dobra>
-      <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
-        Sobre o evento
-      </h2>
+      <TituloSecao icone={Info}>Sobre o evento</TituloSecao>
       <p className="mt-3 max-w-2xl text-lg leading-relaxed text-text-secondary">
         {evento.seo.descricao}
       </p>
 
-      <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {fatos.map((f) => (
           <div
             key={f.rotulo}
             className="rounded-ds-md border border-border-subtle bg-surface-raised p-4"
           >
-            <dt className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+            <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              <f.icone size={14} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
               {f.rotulo}
             </dt>
             <dd className="mt-1 text-sm font-semibold text-text-primary">{f.valor}</dd>
           </div>
         ))}
       </dl>
-
-      {evento.usaChip ? (
-        <p className="mt-4 text-sm text-text-secondary">
-          Prova cronometrada por chip — seu tempo oficial sai automaticamente.
-        </p>
-      ) : null}
     </Dobra>
   );
 }

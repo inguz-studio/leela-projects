@@ -1,8 +1,10 @@
 import { Suspense } from 'react';
+import { CalendarDays, MapPin } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
+import { SeloModalidade } from './marca';
 
 /**
  * Hero MÍNIMO (LEELA-R1 · fallback JTBD) — mostrado quando um evento PUBLICADO
@@ -21,13 +23,17 @@ export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Ele
   return (
     <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
       <div className="mx-auto max-w-3xl">
+        <div className="mb-3">
+          <SeloModalidade esporte={evento.modalidadeEsporte} />
+        </div>
         <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tight text-text-primary sm:text-5xl">
           {evento.nome}
         </h1>
 
         <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
           <div className="flex items-center gap-2">
-            <dt className="font-semibold text-text-secondary">Quando</dt>
+            <CalendarDays size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+            <dt className="sr-only">Quando</dt>
             <dd className="text-text-primary">
               <time dateTime={evento.dataISO}>
                 {evento.diaSemanaLabel} · {evento.dataLabel} · {evento.horaLabel}
@@ -36,7 +42,8 @@ export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Ele
           </div>
           {evento.local.length > 0 ? (
             <div className="flex items-center gap-2">
-              <dt className="font-semibold text-text-secondary">Onde</dt>
+              <MapPin size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+              <dt className="sr-only">Onde</dt>
               <dd className="text-text-primary">{evento.local}</dd>
             </div>
           ) : null}
@@ -52,11 +59,6 @@ export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Ele
                 {m.nome}
               </span>
             ))}
-            {evento.usaChip ? (
-              <span className="rounded-ds-pill bg-feedback-info-surface px-3 py-1 text-sm font-medium text-feedback-info-fg">
-                Cronometragem por chip
-              </span>
-            ) : null}
           </div>
         ) : null}
 

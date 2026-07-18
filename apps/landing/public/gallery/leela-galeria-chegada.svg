@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Imagem de exemplo Leela — chegada, identidade brasa">
+  <!--
+    Imagem de exemplo MOCK (LEELA-R12) — galeria da página de evento.
+    Identidade "brasa" (DARK). Event-agnostic. Motivo: CHEGADA — explosão de
+    brasa central + arcos de calor.
+  -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#120704"/>
+      <stop offset="0.55" stop-color="#0C0503"/>
+      <stop offset="1" stop-color="#0A0A0A"/>
+    </linearGradient>
+    <radialGradient id="ember" cx="0.62" cy="0.62" r="0.7">
+      <stop offset="0" stop-color="#FF7A34" stop-opacity="0.95"/>
+      <stop offset="0.3" stop-color="#FF450C" stop-opacity="0.6"/>
+      <stop offset="0.65" stop-color="#8C2100" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#5C1600" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="heroico" cx="0.1" cy="0.12" r="0.65">
+      <stop offset="0" stop-color="#ED3585" stop-opacity="0.3"/>
+      <stop offset="0.6" stop-color="#77103E" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#4E0928" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="grao" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" fill="url(#base)"/>
+  <rect width="1200" height="900" fill="url(#heroico)"/>
+  <rect width="1200" height="900" fill="url(#ember)"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M760 540 A 300 300 0 0 1 460 840" stroke="#FF450C" stroke-opacity="0.25" stroke-width="2.5"/>
+    <path d="M820 540 A 360 360 0 0 1 460 900" stroke="#FF8244" stroke-opacity="0.16" stroke-width="1.5"/>
+    <path d="M700 540 A 240 240 0 0 1 460 780" stroke="#FFC9A8" stroke-opacity="0.14" stroke-width="1"/>
+  </g>
+  <radialGradient id="vinheta" cx="0.5" cy="0.5" r="0.75">
+    <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0.5"/>
+  </radialGradient>
+  <rect width="1200" height="900" fill="url(#vinheta)"/>
+  <rect width="1200" height="900" filter="url(#grao)" opacity="0.05"/>
+</svg>
