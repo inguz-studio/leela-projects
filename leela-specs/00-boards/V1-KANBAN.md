@@ -62,6 +62,7 @@ tags:
 - [x] **[R9-A] Conformidade de UI** — contraste por estado, divisórias iguais, foto só por upload, filtros no padrão do DS, sub-nav com rolagem própria e header do evento sem busca ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-A] Calendar no DS** — date-picker e seletor de intervalo shadcn para o filtro temporal ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-E] Afiliados, marcas e e-mail (completo)** — influenciador com link rastreado na venda (aba Afiliados + aba Clubs dos dois lados + aceite por e-mail), patrocinador reutilizável com logo 1:1, e-mail transacional pronto para ligar a chave ✅ [[BOARD-HISTORICO]]
+- [x] **[UIAF] Conformidade das telas de afiliados** — seleção de patrocinador salvo passa a usar o Combobox do DS (shadcn §8) e as telas de influenciador da aba Clubs ganham testes de integração ✅ [[BOARD-HISTORICO]]
 - [x] **[R12] Landing com identidade** — tipografia, bordas e ícones do DS, evento com modalidade, página-calendário do organizador e imagens mockadas em todo slot ✅ [[BOARD-HISTORICO]]
 - [x] **[R13] Checkout com identidade** — etapas visíveis, formulário na vertical e kits com hierarquia e imagem ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-B] Análise financeira unificada** — filtro por evento na Análise, Análise vira a porta única (Analytics some) e Repasses declara o saldo consolidado de todos os eventos ✅ [[BOARD-HISTORICO]]
