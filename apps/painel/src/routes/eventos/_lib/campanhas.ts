@@ -13,6 +13,7 @@
 import type {
   Campanha,
   CanalCampanha,
+  OrigemCampanha,
   SegmentoCampanha,
   StatusCampanhaPersistido,
 } from '@leela/core';
@@ -52,6 +53,17 @@ const CANAL_MAPA: Record<CanalCampanha, string> = {
 
 export function canalCampanhaLabel(canal: CanalCampanha): string {
   return CANAL_MAPA[canal] ?? canal;
+}
+
+/**
+ * Rótulo da ORIGEM da campanha para a UI (RN-132). Campanha origem
+ * 'automatizada' é o template disparado por um gatilho de automação (S402-T1):
+ * a lista mistura essas com as manuais, então ela ganha a etiqueta "Automática"
+ * para o organizador saber que aquela entrada é gerada por automação. 'manual'
+ * é o caso comum e NÃO recebe etiqueta (ruído zero). null = sem etiqueta. @pure
+ */
+export function origemCampanhaLabel(origem: OrigemCampanha): string | null {
+  return origem === 'automatizada' ? 'Automática' : null;
 }
 
 /**

@@ -89,6 +89,22 @@ describe('CampanhasList', () => {
     expect(onNova).toHaveBeenCalledOnce();
   });
 
+  it('etiqueta "Automática" só nas campanhas origem=automatizada (RN-132)', () => {
+    render(
+      <CampanhasList
+        campanhas={[
+          mk({ id: 'auto', titulo: 'Boas-vindas ao inscrito', origem: 'automatizada' }),
+          mk({ id: 'man', titulo: 'Aviso manual', origem: 'manual' }),
+        ]}
+        loading={false}
+        error={null}
+        onNova={noop}
+      />,
+    );
+    // 1 etiqueta no total (a manual não recebe) — sem ruído no caso comum.
+    expect(screen.getAllByText('Automática')).toHaveLength(1);
+  });
+
   it('lista vazia → EmptyState de primeira campanha (não "com filtros")', () => {
     render(<CampanhasList campanhas={[]} loading={false} error={null} onNova={noop} />);
     expect(screen.getByText(/crie a primeira campanha/i)).toBeInTheDocument();

@@ -22,6 +22,7 @@ import {
   canalCampanhaLabel,
   filtrarCampanhas,
   kpisCampanhas,
+  origemCampanhaLabel,
   segmentoCampanhaLabel,
   statusCampanhaBadge,
   type AcaoCampanhaId,
@@ -73,6 +74,7 @@ function CampanhaCard({
   onAcao: ((c: Campanha, a: AcaoCampanhaId) => void) | undefined;
 }): JSX.Element {
   const badge = statusCampanhaBadge(c.status);
+  const origemLabel = origemCampanhaLabel(c.origem);
   const acoes = acoesCampanha(c.status);
   return (
     <article
@@ -85,6 +87,7 @@ function CampanhaCard({
             {c.titulo}
           </h4>
           <Badge variant={badge.variant}>{badge.label}</Badge>
+          {origemLabel ? <Badge variant="brand">{origemLabel}</Badge> : null}
         </div>
         <p className="line-clamp-2 text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
           {c.conteudo}

@@ -13,6 +13,7 @@ import {
   canalCampanhaLabel,
   filtrarCampanhas,
   kpisCampanhas,
+  origemCampanhaLabel,
   segmentoCampanhaLabel,
   statusCampanhaBadge,
 } from '../campanhas';
@@ -45,6 +46,15 @@ describe('statusCampanhaBadge — rótulo feminino na UI, dado masculino', () =>
   });
   it('borda por token (nunca hex)', () => {
     expect(statusCampanhaBadge('enviado').borderVar.startsWith('--')).toBe(true);
+  });
+});
+
+describe('origemCampanhaLabel — etiqueta só para automatizada (RN-132)', () => {
+  it('automatizada → "Automática"', () => {
+    expect(origemCampanhaLabel('automatizada')).toBe('Automática');
+  });
+  it('manual → null (sem etiqueta, ruído zero no caso comum)', () => {
+    expect(origemCampanhaLabel('manual')).toBeNull();
   });
 });
 
