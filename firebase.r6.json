@@ -5,10 +5,12 @@
   },
   "emulators": {
     "auth": {
-      "port": 9598
+      "port": 9598,
+      "host": "::"
     },
     "firestore": {
-      "port": 8480
+      "port": 8480,
+      "host": "::"
     },
     "ui": {
       "enabled": false

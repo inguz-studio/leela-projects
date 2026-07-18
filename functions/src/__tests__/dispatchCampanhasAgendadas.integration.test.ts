@@ -76,12 +76,12 @@ describe.skipIf(!hasEmulator)('dispatchCampanhasAgendadas — cron ADR-015 (SCHE
       firestore: {
         rules: readFileSync(RULES_PATH, 'utf8'),
         host: 'localhost',
-        port: 8080,
+        port: Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080),
       },
     });
 
     if (!admin.apps.length) {
-      process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+      process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
       admin.initializeApp({ projectId: PROJECT_ID });
     }
     adminDb = admin.firestore();
