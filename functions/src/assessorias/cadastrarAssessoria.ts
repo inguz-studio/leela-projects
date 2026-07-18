@@ -70,6 +70,8 @@ import {
   type EventoCaller,
 } from '../eventos/criarEvento';
 import { slugify, slugCandidato, MAX_TENTATIVAS_SLUG } from '../eventos/slug';
+import { selectEmailProvider } from '../email/selectEmailProvider';
+import { renderConviteAssessoriaEmail } from '../email/templates';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -96,9 +98,12 @@ export interface CadastrarAssessoriaResult {
   jaExistia: boolean;
   /**
    * Token de aceite (SÓ no ramo convite) — compõe o link da landing.
-   * O doc guarda apenas o hash; reenvio re-emite.
+   * O doc guarda apenas o hash; reenvio re-emite. Com EmailProvider REAL
+   * (S-R9-14-T2) o token NUNCA retorna: é entregue por e-mail.
    */
   tokenAceite?: string;
+  /** S-R9-14-T2: true = convite entregue por e-mail (EmailProvider real). */
+  conviteEnviado?: boolean;
 }
 
 /** Validade do convite de assessoria (premissa registrada — 14 dias). */
@@ -174,14 +179,19 @@ export async function cadastrarAssessoriaCore(
   }
 
   // GATE DE PRODUÇÃO do ramo convite (fix review antagonista O3-L3B #1 —
-  // pre-hijack): enquanto o token de aceite RETORNA ao organizador (mock de
-  // e-mail), quem emite o convite consegue aceitá-lo — inclusive criar conta
-  // com senha própria para e-mail de TERCEIRO. Fail-closed (padrão
-  // permitirProducao do AsaasProvider): o ramo convite SÓ roda no emulator
-  // ou com a flag explícita de sandbox; em produção, sem EmailProvider
-  // real, o cadastro sem conta é bloqueado com erro acionável. O vínculo
-  // IMEDIATO (conta já existe) segue liberado — não cria credencial nova.
+  // pre-hijack): enquanto o token de aceite RETORNA ao organizador (sem
+  // e-mail real), quem emite o convite consegue aceitá-lo — inclusive criar
+  // conta com senha própria para e-mail de TERCEIRO. Fail-closed (padrão
+  // permitirProducao do AsaasProvider).
+  //
+  // S-R9-14-T2 (RN-137): com EmailProvider REAL (`BREVO_API_KEY` presente),
+  // o ramo convite DESTRAVA — o link é ENTREGUE POR E-MAIL ao responsável e
+  // o token DEIXA de retornar ao organizador (o pre-hijack morre pela raiz).
+  // Sem provider: emulator/flag apenas — produção segue fail-closed, byte a
+  // byte o comportamento vigente (`9e7e017`).
+  const emailProvider = selectEmailProvider();
   const conviteLiberado =
+    emailProvider !== null ||
     process.env['FUNCTIONS_EMULATOR'] === 'true' ||
     process.env['LEELA_CONVITE_EXPOR_TOKEN'] === 'true';
   if (responsavelUid === null && !conviteLiberado) {
@@ -411,6 +421,53 @@ export async function cadastrarAssessoriaCore(
         : { ...base, status: 'convite_pendente' as const, tokenAceite };
     }
   );
+
+  // ── Convite por e-mail REAL (S-R9-14-T2 · RN-137) — fora da tx ──────────
+  // Best-effort: falha de envio NÃO desfaz o cadastro (o organizador reenvia
+  // — o reenvio re-emite token). Com provider real o token SAI do resultado:
+  // o organizador nunca o vê (pre-hijack fechado pela raiz). Token e e-mail
+  // NUNCA logados.
+  if (
+    resultado.status === 'convite_pendente' &&
+    resultado.tokenAceite !== undefined &&
+    emailProvider !== null
+  ) {
+    const baseUrl = (
+      process.env['NEXT_PUBLIC_LEELA_URL'] ?? 'http://localhost:3000'
+    ).replace(/\/+$/, '');
+    const linkAceite =
+      `${baseUrl}/convite` +
+      `?tenantId=${encodeURIComponent(tenantId)}` +
+      `&parceriaId=${encodeURIComponent(resultado.parceriaId)}` +
+      `&token=${encodeURIComponent(resultado.tokenAceite)}`;
+    let conviteEnviado = false;
+    try {
+      const email = renderConviteAssessoriaEmail({
+        nomeAssessoria: nome,
+        linkAceite,
+        expiraEmDias: CONVITE_ASSESSORIA_VALIDADE_DIAS,
+      });
+      await emailProvider.sendTransactional({
+        to: { email: emailKey, nome },
+        assunto: email.assunto,
+        html: email.html,
+        texto: email.texto,
+        tag: 'convite-assessoria',
+      });
+      conviteEnviado = true;
+    } catch (err) {
+      logger.error('assessoria_convite_envio_falhou', {
+        tenantId,
+        parceriaId: resultado.parceriaId,
+        err: err instanceof Error ? err.name : 'erro',
+      });
+    }
+    // Com provider real o token NUNCA volta ao organizador — nem quando o
+    // envio falha (senão a falha viraria canal de pre-hijack). O caminho de
+    // recuperação é REENVIAR (re-cadastro re-emite token e tenta de novo).
+    delete resultado.tokenAceite;
+    resultado.conviteEnviado = conviteEnviado;
+  }
 
   // Sem PII no log (LGPD): documento mascarado, nunca e-mail.
   logger.info('assessoria_cadastrada', {

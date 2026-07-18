@@ -68,6 +68,8 @@ import {
   type EnvioResultado,
 } from '../shared/comunicacaoEnvio';
 import { registrarComunicacao } from './logComunicacao';
+import { selectEmailProvider } from '../email/selectEmailProvider';
+import { renderCampanhaEmail } from '../email/templates';
 import {
   assertTenantAtivo,
   assertTenantWriter,
@@ -269,12 +271,20 @@ export async function executarDisparoCampanha(
   // corpo — PII mínima).
   const assunto = truncarPush(titulo);
   let novosRegistros = 0;
+  // Canal E-MAIL real (S-R9-14-T2 · RN-137): inscritos cujo log de canal
+  // 'email' foi registrado AGORA (não em retry anterior) recebem o disparo
+  // físico. O log É o hasSent (mesma semântica do mock): crash entre o log
+  // e o envio físico = e-mail perdido daquele lote, NUNCA duplicado — o
+  // trade-off é deliberado (duplicar comunicação em massa é pior que perder;
+  // registrado no report). Sem BREVO_API_KEY: comportamento vigente byte a
+  // byte (só log).
+  const paraEmailFisico: string[] = [];
   for (let i = 0; i < destinatarios.length; i += FANOUT_LOTE) {
     const lote = destinatarios.slice(i, i + FANOUT_LOTE);
     const resultados = await Promise.all(
       lote.flatMap((inscritoId) =>
-        canal.map((c) =>
-          registrarComunicacao(
+        canal.map(async (c) => {
+          const r = await registrarComunicacao(
             db,
             eventoId,
             {
@@ -286,12 +296,22 @@ export async function executarDisparoCampanha(
               templateRef: campanhaId,
             },
             agora
-          )
-        )
+          );
+          if (c === 'email' && r.registrada) paraEmailFisico.push(inscritoId);
+          return r;
+        })
       )
     );
     novosRegistros += resultados.filter((r) => r.registrada).length;
   }
+
+  const enviosEmail = await dispararEmailsDaCampanha(
+    db,
+    eventoRef,
+    campanhaSnap.get('conteudo') as string | undefined,
+    titulo,
+    paraEmailFisico
+  );
 
   const alcanceFinal = (await campanhasCol.doc(campanhaId).get()).get(
     'alcance'
@@ -307,6 +327,8 @@ export async function executarDisparoCampanha(
     destinatarios: destinatarios.length,
     canais: canal.length,
     novosRegistros,
+    emailsFisicos: enviosEmail.enviados,
+    emailsFalhos: enviosEmail.falhos,
   });
 
   return {
@@ -314,6 +336,80 @@ export async function executarDisparoCampanha(
     alcance: alcanceFinal,
     jaEnviada: resultado.motivo === 'ja_enviado',
   };
+}
+
+// ---------------------------------------------------------------------------
+// Disparo FÍSICO por e-mail (S-R9-14-T2 · RN-137) — best-effort pós-log
+// ---------------------------------------------------------------------------
+
+/**
+ * Envia a campanha por e-mail REAL aos inscritos recém-registrados no log
+ * de canal 'email'. Fail-closed: sem EmailProvider (BREVO_API_KEY ausente)
+ * é NO-OP — o comportamento vigente (só log) fica byte a byte.
+ *
+ * ENDEREÇO: o inscrito NÃO carrega e-mail (PII mínima — decisão E12); o
+ * endereço vem do RESPONSÁVEL do pedido (`pedidos/{pedidoRef}.responsavel
+ * .email`) — compra para terceiros recebe no e-mail do responsável
+ * (limitação honesta, registrada). Dedupe por endereço: N inscritos do
+ * mesmo responsável = 1 e-mail.
+ *
+ * CONTEÚDO: título/conteúdo do ORGANIZADOR passam pelo template SANITIZADO
+ * (renderCampanhaEmail — escapado, control chars fora, caps). Falha de
+ * envio individual NÃO derruba o disparo (contabilizada; sem PII no log).
+ */
+async function dispararEmailsDaCampanha(
+  db: admin.firestore.Firestore,
+  eventoRef: admin.firestore.DocumentReference,
+  conteudo: string | undefined,
+  titulo: string,
+  inscritoIds: string[]
+): Promise<{ enviados: number; falhos: number }> {
+  const provider = selectEmailProvider();
+  if (provider === null || inscritoIds.length === 0) {
+    return { enviados: 0, falhos: 0 };
+  }
+
+  const eventoNome = ((await eventoRef.get()).get('nome') ?? eventoRef.id) as string;
+  const email = renderCampanhaEmail({
+    assunto: titulo,
+    corpo: typeof conteudo === 'string' ? conteudo : '',
+    nomeEvento: eventoNome,
+  });
+
+  // Resolve endereços via pedido do inscrito (leituras server-side; nenhum
+  // endereço vai para log). Dedupe por e-mail normalizado.
+  const enderecos = new Set<string>();
+  for (const inscritoId of inscritoIds) {
+    const inscritoSnap = await eventoRef
+      .collection('inscritos')
+      .doc(inscritoId)
+      .get();
+    const pedidoRef = inscritoSnap.get('pedidoRef') as string | undefined;
+    if (typeof pedidoRef !== 'string' || pedidoRef.length === 0) continue;
+    const pedidoSnap = await db.collection('pedidos').doc(pedidoRef).get();
+    const endereco = pedidoSnap.get('responsavel.email') as string | undefined;
+    if (typeof endereco === 'string' && endereco.includes('@')) {
+      enderecos.add(endereco.trim().toLowerCase());
+    }
+  }
+
+  let enviados = 0;
+  let falhos = 0;
+  for (const endereco of enderecos) {
+    try {
+      await provider.sendTransactional({
+        to: { email: endereco },
+        assunto: email.assunto,
+        html: email.html,
+        texto: email.texto,
+        tag: 'campanha-evento',
+      });
+      enviados++;
+    } catch {
+      falhos++; // sem PII — total agregado sobe no log do chamador
+    }
+  }
+  return { enviados, falhos };
 }
 
 // ---------------------------------------------------------------------------
