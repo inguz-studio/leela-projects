@@ -1,6 +1,18 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R8 SEED CLUBES + SISTEMA)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (R9 SPEC UX + DECISÕES DO DIA)
 
-## 🌱 LEELA-R8-SEED · Dados mockados de CLUBES + sistema web · 2026-07-18 (o mais recente)
+## 📋 LEELA-R9 · Pacote de spec da revisão UX + decisões do Vitor · 2026-07-18 tarde (o mais recente) — COMECE AQUI
+
+**sf-cto (Opus). Revisão UX do Vitor virou pacote executável em `leela-specs/ux-review-2026-07-18/` (base `95b1c52` + adendos 5-8: `a69996b`→`deeb2b7`): 14 stories / 41 tasks / 6 lotes (R9-A..F), 17 RNs novas (168-822) + HIP-R9-01, épico novo E19-CRM, diretriz shadcn PERMANENTE (`governanca-design.md §8`), lição L-006 (gate AA por estado — thumb do Switch OFF ≈1.1:1 confirmado).** Gate quality PASS 0.94. Report local `outputs/leela-build-2d6ee98d/R9-UX-SPEC-REPORT.md`.
+
+**Decisões do Vitor RATIFICADAS hoje (aplicadas nos canônicos):** roadmap REORDENADO H3-antes-H2 ("finalizar por projeto"; E15 por último) · **app v1 = PWA** (E13-slim destravado das lojas; enrollment = só nativo v2) · E08 afiliados/influenciador ANTECIPADO (RN-313..319: clube-influencer com mínimo de inscrições, PF por convite e-mail, modal, aba Clubs dos 2 lados) · capa/banner 1600×838 1.9:1 ≤2MB (RN-228) · **EmailProvider = BREVO** (superseded Resend no mesmo dia por custo; story S-R9-14 `BrevoProvider`, env `BREVO_API_KEY`). **HIP-R9-01 pré-compra do clube-influencer = hipótese, pendente validação com organizador** (4 questões de dinheiro registradas).
+
+**Também no dia (histórico logo abaixo): R7 landing** `9789760..b5197a4` — dobras sem hairlines + ritmo unificado (primitiva `Dobra`) + capa mock `/covers/leela-evento-brasa.svg` + hero com capa em blur; aws-reviewer 8.15 honorable mention; preview rebuildado e servindo.
+
+**Fila de retomada:** (1) Vitor revisa o pacote e libera execução dos lotes R9-A..E (R9-F/E19-CRM BLOQUEADO por 3 decisões: base legal LGPD, unificação CRM×Comunicação, chave CPF-vs-email — defaults propostos no painel) · (2) ações externas do Vitor: conta Brevo + domínio + `BREVO_API_KEY`, rotação chave prod Asaas (MANDATÓRIA, ver R6 abaixo), KYC, validar HIP-R9-01 · (3) revisão web completa do Vitor antes do app (PWA).
+
+---
+
+## 🌱 LEELA-R8-SEED · Dados mockados de CLUBES + sistema web · 2026-07-18 (histórico)
 
 **sf-backend-engineer (Opus). Pedido do Vitor: "clubes e sistema web com dados mockados".** Causa: preview loga como Marina (tenant `castelo-producoes`), mas o único clube semeado era do Felipe → /clubes da Marina vazia + satélites (campanhas, reembolsos, repasses, log de comunicação, estoque, assessorias E18) sem dado. **Novo `functions/scripts/preview-seed-clubes.ts`** (aditivo/idempotente, wired no `preview-seed.ts` passo 6b): **2 clubes no Castelo** (Floripa Run Coletivo da Marina — 14 membros/2 desafios/3 comunicados/afiliada c/ 12 conversões/patrocinador — + Ritmo Forte Assessoria E18) · assessoria E18 ativa + cupom `RITMOFORTE10` atribuído · campanhas da Meia nos 4 estados **incl. 'vencido' (dec. 17)** · 2 automações · 6 logs de comunicação + resumo · fila de reembolsos 3 decidíveis + estornado + recusado · repasses 3 + `saldo/current` real (disponível R$ 111.254,07) + banco mascarado · estoque 2 SKUs em alerta. **Aplicado AO VIVO no emulator 8180 sem reiniciar/limpar nada.** Gate: seed exit 0 (2×) · todos os docs validados pelos parsers reais do `@leela/core` (ALL PASS) · ESLint 0 · idempotência provada (2ª rodada byte-idêntica) · lanes R6/R7 (extra/landing/payments/rules) intactas. Report + roteiro tela-a-tela: `outputs/leela-build-2d6ee98d/R8-SEED-CLUBES-REPORT.md`.
 
