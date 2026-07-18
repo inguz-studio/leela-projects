@@ -48,6 +48,7 @@ const hasEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 const CASTELO_ID = 'castelo-producoes';
 const PASSO_ID = 'passo-certo';
 const CLUBE_CASTELO = 'clube-do-castelo'; // clube do tenant castelo
+const EVENTO_CASTELO = 'meia-floripa-2026'; // evento do tenant castelo (R9-C)
 const MARINA_UID = 'uid-marina-castelo'; // tenant_owner de castelo
 const STAFF_UID = 'uid-staff-castelo'; // tenant_staff de castelo
 const PROMOTER_UID = 'uid-promoter-castelo'; // promoter (NÃO escreve)
@@ -101,6 +102,12 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
       tenantId: CASTELO_ID,
       nome: 'Clube do Castelo',
       slug: CLUBE_CASTELO,
+    });
+    // R9-C: evento do castelo — alvo do firestore.get do path de imagem de kit
+    batch.set(adminDb.doc(`eventos/${EVENTO_CASTELO}`), {
+      tenantId: CASTELO_ID,
+      nome: 'Meia Maratona Floripa 2026',
+      slug: EVENTO_CASTELO,
     });
     await batch.commit();
   }, 30_000);
@@ -360,6 +367,95 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
         contentType: 'image/png',
       })
     );
+  });
+
+  // ── eventos/{eventoId}/kits/{kitId} — imagem 1:1 do kit (R9-C · RN-227) ──
+
+  it('tenant_owner do tenant DONO do evento escreve a imagem do kit (fluxo SDK completo)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    const destino = ref(storage, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`);
+    await assertSucceeds(uploadBytes(destino, PNG_1KB, { contentType: 'image/png' }));
+    const url = await getDownloadURL(destino);
+    expect(url).toContain(`eventos%2F${EVENTO_CASTELO}%2Fkits%2Fkit_ouro`);
+  });
+
+  it('tenant_staff também escreve; kitId com underscore (chave Kit↔enum) casa o padrão', async () => {
+    const storage = storageDe(STAFF_UID, staffClaims);
+    await assertSucceeds(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/kits/sem_kit`), PNG_1KB, {
+        contentType: 'image/webp',
+      })
+    );
+  });
+
+  it('tenant_owner de OUTRO tenant NÃO escreve imagem de kit (cross-tenant NEGADO)', async () => {
+    const storage = storageDe(PASSO_OWNER_UID, passoClaims);
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  it('promoter/platform_admin NÃO escrevem imagem de kit pelo client', async () => {
+    await assertFails(
+      uploadBytes(
+        ref(storageDe(PROMOTER_UID, promoterClaims), `eventos/${EVENTO_CASTELO}/kits/kit_ouro`),
+        PNG_1KB,
+        { contentType: 'image/png' }
+      )
+    );
+    await assertFails(
+      uploadBytes(
+        ref(
+          storageDe(PLATFORM_ADMIN_UID, { role: 'platform_admin' }),
+          `eventos/${EVENTO_CASTELO}/kits/kit_ouro`
+        ),
+        PNG_1KB,
+        { contentType: 'image/png' }
+      )
+    );
+  });
+
+  it('evento INEXISTENTE NEGADO (firestore.get fail-closed — sem "reservar" imagem)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    await assertFails(
+      uploadBytes(ref(storage, 'eventos/evento-fantasma/kits/kit_ouro'), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  it('contentType perigoso NEGADO no path de kit (SVG/HTML — stored XSS)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    for (const contentType of ['image/svg+xml', 'text/html']) {
+      await assertFails(
+        uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`), PNG_1KB, {
+          contentType,
+        })
+      );
+    }
+  });
+
+  it('kitId fora do padrão NEGADO (maiúscula, path traversal por nome)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    for (const kitId of ['Kit_Ouro', '-comeca-com-hifen', 'a'.repeat(81)]) {
+      await assertFails(
+        uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/kits/${kitId}`), PNG_1KB, {
+          contentType: 'image/png',
+        })
+      );
+    }
+  });
+
+  it('anônimo LÊ a imagem do kit (superfície pública do checkout)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), `eventos/${EVENTO_CASTELO}/kits/kit_ouro`), PNG_1KB, {
+        contentType: 'image/png',
+      });
+    });
+    const anon = storageDe(null);
+    await assertSucceeds(getBytes(ref(anon, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`)));
   });
 
   // ── delete: só o dono ───────────────────────────────────────────────────

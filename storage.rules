@@ -164,6 +164,36 @@ service firebase.storage {
         && marcaId.matches('^[a-z0-9][a-z0-9-]{0,59}$');
     }
 
+    // ── eventos/{eventoId}/kits/{kitId} — imagem 1:1 do kit (R9-C · RN-227) ─
+    // Path RATIFICADO na RN-227: `eventos/{eventoId}/kits/{kitId}` — docId do
+    // kit é o nome do objeto (re-upload SOBRESCREVE, sem órfãos; sem filename
+    // livre). Ids canônicos usam UNDERSCORE (`kit_ouro` — chave Kit↔enum
+    // FABLE-E-T1), por isso o padrão aceita `_` além de kebab. Write: tenant
+    // writer E o EVENTO é do meu tenant (cross-service firestore.get — mesma
+    // guarda da capa de clube; evento inexistente → get() erra → NEGA,
+    // fail-closed). Read público: a imagem aparece no checkout/landing sem
+    // sessão (mesma decisão ADR-016 dos avatares). Validação 1:1 é app-level
+    // (Rules não decodificam imagem — limitação honesta registrada na R9-E).
+    function kitObjetoValido(kitId) {
+      return kitId.matches('^[a-z0-9][a-z0-9_-]{0,79}$');
+    }
+
+    function eventoDoMeuTenant(eventoId) {
+      return firestore.get(/databases/(default)/documents/eventos/$(eventoId))
+        .data.tenantId == request.auth.token.tenantId;
+    }
+
+    match /eventos/{eventoId}/kits/{kitId} {
+      allow read: if kitObjetoValido(kitId);
+      allow create, update: if isTenantWriterRole()
+        && kitObjetoValido(kitId)
+        && eventoDoMeuTenant(eventoId)
+        && imagemValida();
+      allow delete: if isTenantWriterRole()
+        && kitObjetoValido(kitId)
+        && eventoDoMeuTenant(eventoId);
+    }
+
     // ── Catch-all: DENY-BY-DEFAULT ────────────────────────────────────────
     // NOTA de semântica (review antagonista R5): o deny REAL de todo path não
     // contratado vem da AUSÊNCIA de `allow` (deny-by-default do Storage), não

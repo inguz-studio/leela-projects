@@ -161,6 +161,28 @@ export async function uploadLogoMarca(marcaId: string, file: File): Promise<stri
 }
 
 /**
+ * Imagem 1:1 do KIT do evento (R9-C · RN-227 · gap R13). Path RATIFICADO:
+ * `eventos/{eventoId}/kits/{kitId}` — as Rules provam por firestore.get que
+ * o EVENTO pertence ao tenant do caller (mesma guarda da capa de clube).
+ * Valida tipo/tamanho + proporção 1:1 antes do upload; a downloadURL
+ * alimenta `Kit.imagemUrl` via `salvarKit`. Ids canônicos usam underscore
+ * (`kit_ouro` — chave Kit↔enum), por isso o padrão aceita `_`.
+ */
+export async function uploadImagemKit(
+  eventoId: string,
+  kitId: string,
+  file: File
+): Promise<string> {
+  const id = kitId.trim();
+  if (eventoId.trim().length === 0 || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id)) {
+    throw new Error('Kit inválido para enviar a imagem.');
+  }
+  const problema1a1 = await problemaProporcaoQuadrada(file);
+  if (problema1a1) throw new Error(problema1a1);
+  return uploadImagem(`eventos/${eventoId}/kits/${id}`, file);
+}
+
+/**
  * Logo 1:1 do PATROCINADOR do clube (parceria tipo 'patrocinador').
  * Path: `clubes/{clubeId}/patrocinador-{parceriaId}` — Rules provam o
  * tenant por firestore.get (mesma guarda da capa).
