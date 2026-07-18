@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de evento Leela — mountain bike, ciclista em silhueta sobre colinas ao pôr do sol">
+  <!--
+    Capa MOCK de EVENTO (LEELA-R14) — MOUNTAIN BIKE. Cena reconhecível:
+    ciclista em silhueta sobre colinas, poeira/velocidade, pôr do sol brasa.
+    Autocontida, sem serviço externo.
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#150804"/>
+      <stop offset="0.44" stop-color="#2E1206"/>
+      <stop offset="0.62" stop-color="#63220A"/>
+      <stop offset="0.74" stop-color="#160A04"/>
+      <stop offset="1" stop-color="#080605"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.74" cy="0.56" r="0.5">
+      <stop offset="0" stop-color="#FFDCA6" stop-opacity="0.95"/>
+      <stop offset="0.18" stop-color="#FF8A3C" stop-opacity="0.85"/>
+      <stop offset="0.48" stop-color="#FF450C" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#5C1600" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="dust" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF8244" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FFB070" stop-opacity="0.6"/>
+      <stop offset="1" stop-color="#FF8244" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="grao" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    </filter>
+    <radialGradient id="vinheta" cx="0.5" cy="0.5" r="0.78">
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.5"/>
+    </radialGradient>
+    <!-- Ciclista de MTB (perfil) -->
+    <g id="biker">
+      <g fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round">
+        <circle cx="120" cy="300" r="86"/>
+        <circle cx="410" cy="300" r="86"/>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M120 300 L270 300 L215 190 L120 300"/>
+        <path d="M270 300 L340 190 L410 300"/>
+        <path d="M340 190 L360 150"/>
+        <path d="M215 190 L150 150"/>
+      </g>
+      <!-- ciclista inclinado -->
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M255 250 L232 150"/>
+        <path d="M232 150 L300 120 L360 150"/>
+        <path d="M232 150 L170 140"/>
+        <path d="M255 250 L275 300"/>
+        <path d="M255 250 L230 300"/>
+      </g>
+      <circle cx="222" cy="108" r="26" fill="currentColor"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#sun)"/>
+
+  <!-- Colinas em camadas -->
+  <path d="M0 700 L300 560 L640 700 L1000 540 L1360 700 L1600 620 L1600 1000 L0 1000 Z" fill="#170A05"/>
+  <path d="M0 820 L380 660 L760 830 L1160 640 L1600 820 L1600 1000 L0 1000 Z" fill="#0C0704"/>
+
+  <!-- Poeira/velocidade atrás do ciclista -->
+  <g opacity="0.65">
+    <rect x="120" y="560" width="520" height="7" rx="3.5" fill="url(#dust)" transform="rotate(-8 380 563)"/>
+    <rect x="80" y="620" width="420" height="6" rx="3" fill="url(#dust)" opacity="0.7" transform="rotate(-8 290 623)"/>
+  </g>
+
+  <!-- Ciclista em 1º plano sobre a crista -->
+  <use href="#biker" color="#040302" transform="translate(760 470) scale(1.05)"/>
+
+  <rect width="1600" height="1000" fill="url(#vinheta)"/>
+  <rect width="1600" height="1000" filter="url(#grao)" opacity="0.05"/>
+</svg>

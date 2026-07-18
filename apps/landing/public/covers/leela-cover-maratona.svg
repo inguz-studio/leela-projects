@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de evento Leela — maratona, pelotão de corredores rumo ao pórtico de chegada">
+  <!--
+    Capa MOCK de EVENTO (LEELA-R14) — MARATONA / MEIA. Cena reconhecível:
+    pórtico de chegada + pelotão de corredores em perspectiva. Paleta brasa,
+    autocontida, sem serviço externo.
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#130704"/>
+      <stop offset="0.45" stop-color="#241005"/>
+      <stop offset="0.64" stop-color="#4A1806"/>
+      <stop offset="0.72" stop-color="#0E0603"/>
+      <stop offset="1" stop-color="#070706"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.64" r="0.55">
+      <stop offset="0" stop-color="#FFE0B0" stop-opacity="0.95"/>
+      <stop offset="0.16" stop-color="#FF8A3C" stop-opacity="0.85"/>
+      <stop offset="0.46" stop-color="#FF450C" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#5C1600" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A1208" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#050403"/>
+    </linearGradient>
+    <filter id="grao" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    </filter>
+    <radialGradient id="vinheta" cx="0.5" cy="0.48" r="0.75">
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.5"/>
+    </radialGradient>
+    <g id="runner" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <circle cx="150" cy="55" r="32" fill="currentColor" stroke="none"/>
+      <path d="M150 90 L128 235" stroke="currentColor" stroke-width="34"/>
+      <path d="M128 235 L190 298 L236 252" stroke="currentColor" stroke-width="34"/>
+      <path d="M128 235 L102 322 L152 374" stroke="currentColor" stroke-width="34"/>
+      <path d="M142 120 L200 150 L220 108" stroke="currentColor" stroke-width="30"/>
+      <path d="M142 120 L92 170 L62 150" stroke="currentColor" stroke-width="30"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#sun)"/>
+
+  <!-- Pórtico de chegada -->
+  <g fill="#0A0503">
+    <rect x="470" y="360" width="26" height="330"/>
+    <rect x="1104" y="360" width="26" height="330"/>
+    <rect x="470" y="356" width="660" height="60" rx="6"/>
+  </g>
+  <rect x="486" y="366" width="628" height="40" rx="4" fill="#FF450C" opacity="0.5"/>
+  <!-- bandeirolas -->
+  <g fill="#FF8244" opacity="0.7">
+    <path d="M470 416 L510 416 L490 452 Z"/>
+    <path d="M540 416 L580 416 L560 452 Z"/>
+    <path d="M610 416 L650 416 L630 452 Z"/>
+    <path d="M990 416 L1030 416 L1010 452 Z"/>
+    <path d="M1060 416 L1100 416 L1080 452 Z"/>
+  </g>
+
+  <path d="M0 1000 L560 690 L1040 690 L1600 1000 Z" fill="url(#road)"/>
+
+  <!-- Pelotão: muitos corredores em perspectiva -->
+  <use href="#runner" color="#180B06" transform="translate(720 560) scale(0.34)"/>
+  <use href="#runner" color="#160A06" transform="translate(830 566) scale(0.36)"/>
+  <use href="#runner" color="#120806" transform="translate(640 590) scale(0.46)"/>
+  <use href="#runner" color="#0E0705" transform="translate(900 600) scale(0.5)"/>
+  <use href="#runner" color="#0A0605" transform="translate(500 640) scale(0.68)"/>
+  <use href="#runner" color="#080504" transform="translate(1020 650) scale(0.72)"/>
+  <use href="#runner" color="#040302" transform="translate(700 660) scale(0.92)"/>
+
+  <rect width="1600" height="1000" fill="url(#vinheta)"/>
+  <rect width="1600" height="1000" filter="url(#grao)" opacity="0.05"/>
+</svg>

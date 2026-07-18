@@ -2,10 +2,33 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { listarEventosPublicados, formatarPreco } from '../../lib/leitor';
 import { rotuloEstadoVenda } from '../../lib/estadoVenda';
+import { capaDoEvento } from '../../lib/coverEvento';
+import type { EstadoVenda } from '../../lib/tipos';
 import { marketplaceJsonLd } from '../../lib/seo';
 import { JsonLd } from '../components/JsonLd';
 import { CoverImage } from '../components/CoverImage';
-import { CardEvento, EmptyState } from '../_ds/ds';
+import { Badge, CardEvento, EmptyState } from '../_ds/ds';
+
+// Badge de ESTADO na capa (⛔ R14: estado visível por card). Variantes semânticas
+// do DS — vitória (verde/aberto), alerta (âmbar/esgotado), neutro (encerrado).
+function badgeEstado(estado: EstadoVenda): {
+  variant: 'vitoria' | 'alerta' | 'neutro';
+  label: string;
+} {
+  switch (estado) {
+    case 'aberto':
+      return { variant: 'vitoria', label: 'Inscrições abertas' };
+    case 'esgotado':
+      return { variant: 'alerta', label: 'Esgotado' };
+    case 'encerrado':
+      return { variant: 'neutro', label: 'Inscrições encerradas' };
+  }
+}
+
+/** CTA coerente por estado: convida quando aberto, senão leva ao detalhe. */
+function ctaEstado(estado: EstadoVenda): string {
+  return estado === 'aberto' ? 'Inscreva-se' : 'Ver detalhes';
+}
 
 // Home marketplace: listagem viva dos eventos publicados. Renderização
 // dinâmica por requisição (SSR) — um evento recém-publicado aparece na hora,
@@ -96,9 +119,17 @@ export default async function HomePage(): Promise<React.JSX.Element> {
                   title={ev.nome}
                   href={`/${ev.slug}`}
                   media={
-                    ev.imagemUrl !== undefined ? (
-                      <CoverImage src={ev.imagemUrl} alt={`Capa de ${ev.nome}`} />
-                    ) : undefined
+                    <>
+                      {/* ⛔ R14: capa SEMPRE renderiza uma imagem mock rica —
+                          nunca o gradiente liso do CardEvento (resolução app-side,
+                          RN-153 descarta o path relativo do doc). */}
+                      <CoverImage src={capaDoEvento(ev)} alt={`Capa de ${ev.nome}`} />
+                      <div className="absolute right-[var(--spacing-3)] top-[var(--spacing-3)]">
+                        <Badge variant={badgeEstado(ev.estadoVenda).variant}>
+                          {badgeEstado(ev.estadoVenda).label}
+                        </Badge>
+                      </div>
+                    </>
                   }
                   modality={
                     <span className="inline-flex flex-col items-center rounded-ds-md bg-surface-overlay px-3 py-1.5 text-center leading-none shadow-elev-1">
@@ -139,7 +170,7 @@ export default async function HomePage(): Promise<React.JSX.Element> {
                         aria-hidden
                         className="text-sm font-semibold text-text-brand"
                       >
-                        Ver →
+                        {ctaEstado(ev.estadoVenda)} →
                       </span>
                     </span>
                   }

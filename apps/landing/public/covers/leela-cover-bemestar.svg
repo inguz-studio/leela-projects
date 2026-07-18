@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de evento Leela — bem-estar, silhueta em meditação diante do amanhecer sobre o mar">
+  <!--
+    Capa MOCK de EVENTO (LEELA-R14) — BEM-ESTAR / YOGA. Cena reconhecível:
+    figura em lótus diante do amanhecer sobre o mar. Chave mais suave (rosa
+    heroico + brasa quente), mantendo a identidade. Autocontida, sem serviço externo.
+  -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#180A10"/>
+      <stop offset="0.4" stop-color="#3A1220"/>
+      <stop offset="0.6" stop-color="#7A2A18"/>
+      <stop offset="0.68" stop-color="#B85018" stop-opacity="0.7"/>
+      <stop offset="0.72" stop-color="#180A08"/>
+      <stop offset="1" stop-color="#0A0708"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.66" r="0.42">
+      <stop offset="0" stop-color="#FFE6C0" stop-opacity="0.98"/>
+      <stop offset="0.24" stop-color="#FFA85C" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="#ED3585" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4E0928" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3A1414" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#070506"/>
+    </linearGradient>
+    <filter id="grao" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    </filter>
+    <radialGradient id="vinheta" cx="0.5" cy="0.5" r="0.8">
+      <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.48"/>
+    </radialGradient>
+    <!-- Figura em lótus -->
+    <g id="lotus" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="150" cy="70" r="34" fill="currentColor" stroke="none"/>
+      <path d="M150 104 L150 250" stroke-width="46"/>
+      <path d="M150 160 C 96 200 84 250 96 262" stroke-width="26"/>
+      <path d="M150 160 C 204 200 216 250 204 262" stroke-width="26"/>
+      <path d="M150 250 C 70 268 70 300 150 300 C 230 300 230 268 150 250 Z" fill="currentColor" stroke="none"/>
+      <path d="M96 262 L150 288 L204 262" stroke-width="30"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#sun)"/>
+  <!-- disco do sol -->
+  <circle cx="800" cy="660" r="120" fill="#FFCE96" opacity="0.5"/>
+
+  <!-- Mar com reflexo -->
+  <rect x="0" y="700" width="1600" height="300" fill="url(#mar)"/>
+  <g fill="#FFB878" opacity="0.4">
+    <rect x="740" y="720" width="120" height="6" rx="3"/>
+    <rect x="720" y="756" width="160" height="6" rx="3"/>
+    <rect x="700" y="800" width="200" height="7" rx="3.5"/>
+    <rect x="676" y="856" width="248" height="7" rx="3.5"/>
+  </g>
+
+  <!-- Figura meditando em 1º plano -->
+  <use href="#lotus" color="#050304" transform="translate(650 400) scale(1.0)"/>
+
+  <rect width="1600" height="1000" fill="url(#vinheta)"/>
+  <rect width="1600" height="1000" filter="url(#grao)" opacity="0.05"/>
+</svg>
