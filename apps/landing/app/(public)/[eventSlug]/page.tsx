@@ -191,7 +191,7 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
           hairline no topo: uma sombra suave para cima levanta a barra do
           conteúdo (elevação, não linha). */}
       <div className="fixed inset-x-0 bottom-0 z-40 bg-surface-raised/95 shadow-[0_-6px_24px_-8px_rgba(0,0,0,0.6)] backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-text-primary">{evento.nome}</p>
             <p className="text-xs text-text-secondary">

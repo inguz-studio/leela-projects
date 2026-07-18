@@ -3,6 +3,7 @@ import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
 import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
+import { CoverImage } from '@/app/components/CoverImage';
 import { HeroCover } from './HeroCover';
 import { resolverCapa } from './cover';
 
@@ -27,7 +28,9 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
       {/* Plano de fundo: MESMA capa, borrada + escurecida p/ AA. aria-hidden e
           alt vazio — é decoração; o conteúdo abaixo carrega a informação. */}
       <div aria-hidden className="absolute inset-0 -z-10">
-        <img src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
+        {/* Via CoverImage: se a capa REAL do organizador falhar em runtime, cai
+            no gradiente de tokens (nunca `<img>` quebrado atrás do overlay). */}
+        <CoverImage src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
         {/* Escurecimento base — garante contraste AA do texto sobre a imagem */}
         <div className="absolute inset-0 bg-surface-base/80" />
         {/* Reforço lateral no lado do texto (esquerda) */}
@@ -46,7 +49,7 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
             {evento.nome}
           </h1>
 
-          <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+          <dl className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-base">
             <div className="flex items-center gap-2">
               <dt className="font-semibold text-text-secondary">Quando</dt>
               <dd className="text-text-primary">
