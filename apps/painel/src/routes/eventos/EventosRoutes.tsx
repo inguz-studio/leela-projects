@@ -26,6 +26,7 @@ import { DistribuicaoPage } from './kits/DistribuicaoPage';
 import { EstoquePage } from './kits/EstoquePage';
 import { KitEditorPage } from './kits/KitEditorPage';
 import { LotesPage } from './lotes/LotesPage';
+import { AfiliadosPage } from './afiliados/AfiliadosPage';
 import { PaginaVendasPage } from './pagina-vendas/PaginaVendasPage';
 import { ComunicacaoPage } from './comunicacao/ComunicacaoPage';
 import { CampanhaEditorPage } from './comunicacao/CampanhaEditorPage';
@@ -124,6 +125,11 @@ export function EventosRoutes(): JSX.Element {
               </RequirePapel>
             }
           />
+          {/* Afiliados/influenciadores do evento (R9-E · S-R9-11-T4 · E08
+              antecipado): lista + modal RN-317. Reader server-side exige
+              tenant writer (RN-319) — sem célula própria na matriz de papéis
+              de evento; papel sem claim de escrita recebe erro do reader. */}
+          <Route path="afiliados" element={<AfiliadosPage />} />
           <Route
             path="financeiro"
             element={

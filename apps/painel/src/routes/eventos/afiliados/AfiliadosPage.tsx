@@ -1,0 +1,261 @@
+// =============================================================================
+// AfiliadosPage — `/eventos/:slug/afiliados` (R9-E · S-R9-11-T4 · RN-314/317).
+// Visão do ORGANIZADOR: lista de afiliados/influenciadores do evento com
+// conversões e valor atribuído (BRUTO informativo — sem comissão nesta fase),
+// busca/filtro por tipo, EmptyState, link copiável e config via MODAL.
+// Dados via reader server-side (getAfiliadosDoTenant — RN-319).
+// =============================================================================
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import {
+  Badge,
+  Button,
+  Chip,
+  EmptyState,
+  Input,
+  Skeleton,
+  Table,
+  useToast,
+} from '@leela/design-system';
+import type { TableColumn } from '@leela/design-system';
+import {
+  getAfiliadosDoTenant,
+  salvarAfiliado,
+  type AfiliadoDoTenant,
+  type SalvarAfiliadoClientInput,
+} from '@leela/api-client';
+import { PUBLIC_BASE } from '../../../lib/linkPublico';
+import type { EventoOutletContext } from '../evento/EventoLayout';
+import { AfiliadoModal } from './AfiliadoModal';
+
+type FiltroTipo = 'todos' | 'clube' | 'pessoa_fisica';
+
+function formatBRL(v: number): string {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function statusBadge(status: string): { label: string; variant: 'vitoria' | 'heroico' | 'neutro' } {
+  if (status === 'ativo') return { label: 'Ativo', variant: 'vitoria' };
+  if (status === 'convite_pendente') return { label: 'Convite pendente', variant: 'heroico' };
+  return { label: 'Inativo', variant: 'neutro' };
+}
+
+export function AfiliadosPage(): JSX.Element {
+  const { evento } = useOutletContext<EventoOutletContext>();
+  const { toast } = useToast();
+  const [afiliados, setAfiliados] = useState<AfiliadoDoTenant[] | null>(null);
+  const [erro, setErro] = useState<Error | null>(null);
+  const [busca, setBusca] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
+  const [modalAberto, setModalAberto] = useState(false);
+  const [emEdicao, setEmEdicao] = useState<AfiliadoDoTenant | null>(null);
+
+  const carregar = useCallback(async () => {
+    try {
+      setErro(null);
+      const r = await getAfiliadosDoTenant({ eventoId: evento.id });
+      setAfiliados(r.afiliados);
+    } catch (e) {
+      setErro(e instanceof Error ? e : new Error('falha'));
+    }
+  }, [evento.id]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  const filtrados = useMemo(() => {
+    const lista = afiliados ?? [];
+    const q = busca.trim().toLowerCase();
+    return lista.filter(
+      (a) =>
+        (filtroTipo === 'todos' || a.tipo === filtroTipo) &&
+        (q === '' ||
+          a.nome.toLowerCase().includes(q) ||
+          a.refCodigo.toLowerCase().includes(q) ||
+          (a.canal ?? '').toLowerCase().includes(q)),
+    );
+  }, [afiliados, busca, filtroTipo]);
+
+  function copiarLink(a: AfiliadoDoTenant): void {
+    const link = `${PUBLIC_BASE}/${evento.slug}?ref=${encodeURIComponent(a.refCodigo)}`;
+    void navigator.clipboard
+      .writeText(link)
+      .then(() => toast({ variant: 'success', title: 'Link copiado', description: link }))
+      .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar' }));
+  }
+
+  async function salvar(input: SalvarAfiliadoClientInput) {
+    const r = await salvarAfiliado(input);
+    toast({
+      variant: 'success',
+      title: r.jaExistia ? 'Afiliado atualizado' : 'Afiliado criado',
+      ...(r.conviteEnviado === true
+        ? { description: 'Convite enviado por e-mail.' }
+        : {}),
+    });
+    void carregar();
+    return r;
+  }
+
+  const colunas: TableColumn<AfiliadoDoTenant>[] = [
+    {
+      key: 'nome',
+      header: 'Afiliado',
+      render: (a) => (
+        <div className="flex flex-col">
+          <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">{a.nome}</span>
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            {a.tipo === 'clube' ? 'Clube' : 'Pessoa física'}
+            {a.canal ? ` · ${a.canal}` : ''}
+          </span>
+        </div>
+      ),
+    },
+    { key: 'ref', header: 'Código', render: (a) => <code>{a.refCodigo}</code> },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (a) => {
+        const b = statusBadge(a.status);
+        return <Badge variant={b.variant}>{b.label}</Badge>;
+      },
+    },
+    {
+      key: 'conversoes',
+      header: 'Inscrições atribuídas',
+      render: (a) => (
+        <span>
+          {a.conversoes.toLocaleString('pt-BR')}
+          {a.minimoInscricoes !== null ? (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              {' '}/ mín. {a.minimoInscricoes}
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+    { key: 'valor', header: 'Valor atribuído', render: (a) => formatBRL(a.valorAtribuido) },
+    { key: 'cupom', header: 'Cupom', render: (a) => a.cupomCodigo ?? '—' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-[var(--spacing-6)] p-[var(--spacing-6)]">
+      <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-4)]">
+        <div>
+          <h1 className="text-[length:var(--font-size-xl)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
+            Afiliados e influenciadores
+          </h1>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Links rastreáveis com atribuição por janela — valor bruto informativo,
+            sem comissão nesta fase.
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          onClick={() => {
+            setEmEdicao(null);
+            setModalAberto(true);
+          }}
+        >
+          + Novo influenciador
+        </Button>
+      </div>
+
+      {afiliados === null && erro === null ? (
+        <div role="status" aria-label="Carregando afiliados" className="flex flex-col gap-[var(--spacing-3)]">
+          <Skeleton variant="rect" className="h-10 max-w-md" />
+          <Skeleton variant="rect" className="h-48" />
+        </div>
+      ) : erro !== null ? (
+        <div
+          role="alert"
+          className="rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-5)] text-[var(--text-primary)]"
+        >
+          Não foi possível carregar os afiliados. Tente novamente.
+        </div>
+      ) : (afiliados ?? []).length === 0 ? (
+        <EmptyState
+          title="Nenhum afiliado ainda"
+          description="Crie um link rastreável para um influenciador ou clube divulgar este evento."
+          action={
+            <Button variant="primary" onClick={() => setModalAberto(true)}>
+              Criar primeiro afiliado
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-[var(--spacing-3)]">
+            <Input
+              type="search"
+              aria-label="Buscar afiliado"
+              placeholder="Buscar por nome, código ou canal"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              wrapperClassName="max-w-md"
+            />
+            <div role="group" aria-label="Filtrar por tipo" className="flex gap-[var(--spacing-2)]">
+              {(
+                [
+                  ['todos', 'Todos'],
+                  ['clube', 'Clubes'],
+                  ['pessoa_fisica', 'Pessoas físicas'],
+                ] as const
+              ).map(([id, label]) => (
+                <Chip key={id} active={filtroTipo === id} onClick={() => setFiltroTipo(id)}>
+                  {label}
+                </Chip>
+              ))}
+            </div>
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
+              mostrando {filtrados.length} de {(afiliados ?? []).length}
+            </span>
+          </div>
+
+          {filtrados.length === 0 ? (
+            <EmptyState
+              title="Nenhum afiliado encontrado"
+              description="Nenhum afiliado casa com a busca/filtro atual."
+            />
+          ) : (
+            <Table
+              columns={colunas}
+              data={filtrados}
+              keyExtractor={(a) => a.refCodigo}
+              caption="Afiliados do evento"
+              renderActions={(a) => (
+                <div className="flex items-center gap-[var(--spacing-2)]">
+                  <Button variant="ghost" onClick={() => copiarLink(a)}>
+                    Copiar link
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEmEdicao(a);
+                      setModalAberto(true);
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </div>
+              )}
+            />
+          )}
+        </>
+      )}
+
+      <AfiliadoModal
+        key={emEdicao?.refCodigo ?? 'novo'}
+        open={modalAberto}
+        onOpenChange={setModalAberto}
+        eventoId={evento.id}
+        afiliado={emEdicao}
+        onSalvar={salvar}
+      />
+    </div>
+  );
+}
+
+AfiliadosPage.displayName = 'AfiliadosPage';

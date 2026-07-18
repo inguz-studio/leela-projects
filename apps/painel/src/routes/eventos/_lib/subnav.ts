@@ -17,6 +17,7 @@ export type EventoAbaId =
   | 'lotes'
   | 'pagina-vendas'
   | 'comunicacao'
+  | 'afiliados'
   | 'entrega'
   | 'financeiro'
   | 'configuracoes';
@@ -36,6 +37,9 @@ const ABAS: readonly AbaDef[] = [
   { id: 'pagina-vendas', label: 'Página de vendas', segmento: 'pagina-vendas' },
   // E06 (Comunicação) segue E04 (Página de vendas) — ordem canônica, sem reordenar.
   { id: 'comunicacao', label: 'Comunicação', segmento: 'comunicacao' },
+  // R9-E (E08 antecipado · S-R9-11-T4): afiliados/influenciadores do evento —
+  // acrescentada após Comunicação, sem reordenar as existentes.
+  { id: 'afiliados', label: 'Afiliados', segmento: 'afiliados' },
   { id: 'entrega', label: 'Entrega', segmento: 'entrega' },
   { id: 'financeiro', label: 'Financeiro', segmento: 'financeiro' },
   // Configurações (E04 · S304-T2/T3) segue o financeiro — acrescentada por
