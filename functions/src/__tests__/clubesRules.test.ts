@@ -22,7 +22,7 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { validarCodigoConvite } from '@leela/core';
@@ -526,6 +526,90 @@ describe.skipIf(!hasEmulator)('clubes — Rules + seed (S101-T1)', () => {
       const depois = await adminDb.collection('clubes').doc(CLUBE_CPS_SLUG).get();
       expect(depois.get('qtdMembrosAtivos')).toBe(11); // Function continua dona
       expect(depois.get('criadoEm')).toEqual(criadoEmAntes);
+    });
+  });
+
+  // ── Catch-all de subcoleções (LEELA-R2 — deny-by-default TOTAL) ──────────
+  //
+  // Mais estrito que o de eventos (fix F1-01 das revisões antagonistas):
+  // subcoleção de clube SEM match próprio NÃO é legível por NINGUÉM pelo
+  // client SDK — nem membro, nem platform_admin (e-mail + tokenAceiteHash de
+  // convite E18 não chegam a browser; back-office usa Admin SDK). E NUNCA é
+  // gravável por client SDK, platform_admin incluso.
+
+  describe('catch-all de subcoleções de clubes (LEELA-R2)', () => {
+    const CLUBE = 'clube-privado-castelo';
+    const CONVITE_PATH = `clubes/${CLUBE}/convites/rodrigo@correrbem.dev`;
+    const PERM_PATH = `clubes/${CLUBE}/permissoesAdmin/perm-1`;
+    const FUTURA_PATH = `clubes/${CLUBE}/agregadosFuturos/doc-1`;
+
+    const ownerDb = () =>
+      ctxAs(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID }).firestore();
+    const promoterDb = () =>
+      ctxAs('uid-promoter-castelo', { role: 'promoter', tenantId: CASTELO_ID }).firestore();
+    const outroDb = () =>
+      ctxAs(PASSO_OWNER_UID, { role: 'tenant_owner', tenantId: PASSO_ID }).firestore();
+    const adminClientDb = () =>
+      ctxAs(PLATFORM_ADMIN_UID, { role: 'platform_admin' }).firestore();
+
+    beforeEach(async () => {
+      const now = FieldValue.serverTimestamp();
+      const batch = adminDb.batch();
+      batch.set(adminDb.doc(CONVITE_PATH), {
+        status: 'pendente',
+        origem: 'assessoria_parceira',
+        tokenAceiteHash: 'a'.repeat(64),
+        parceriaRef: `tenants/${CASTELO_ID}/parceirosAssessoria/11222333000181`,
+        criadoEm: now,
+      });
+      batch.set(adminDb.doc(PERM_PATH), { uid: 'uid-bia', papel: 'admin', criadoEm: now });
+      batch.set(adminDb.doc(FUTURA_PATH), { qualquer: 'dado-futuro', criadoEm: now });
+      await batch.commit();
+    });
+
+    it('tenant_owner NÃO lê convites (hash do token E18 — flanco do pre-hijack 9e7e017 fechado)', async () => {
+      await assertFails(getDoc(doc(ownerDb(), CONVITE_PATH)));
+    });
+
+    it('membro genérico (promoter) NÃO lê convites nem permissoesAdmin', async () => {
+      await assertFails(getDoc(doc(promoterDb(), CONVITE_PATH)));
+      await assertFails(getDoc(doc(promoterDb(), PERM_PATH)));
+    });
+
+    it('subcoleção FUTURA sem match nasce ilegível para membro (lição A-T2)', async () => {
+      await assertFails(getDoc(doc(promoterDb(), FUTURA_PATH)));
+      await assertFails(getDoc(doc(ownerDb(), FUTURA_PATH)));
+    });
+
+    it('cross-tenant segue NEGADO no catch-all', async () => {
+      await assertFails(getDoc(doc(outroDb(), CONVITE_PATH)));
+      await assertFails(getDoc(doc(outroDb(), FUTURA_PATH)));
+    });
+
+    it('platform_admin pelo client SDK NÃO lê nem escreve (fix F1-01: PII não vai a browser)', async () => {
+      await assertFails(getDoc(doc(adminClientDb(), CONVITE_PATH)));
+      await assertFails(getDoc(doc(adminClientDb(), PERM_PATH)));
+      await assertFails(
+        updateDoc(doc(adminClientDb(), CONVITE_PATH), { status: 'aceito' })
+      );
+      await assertFails(
+        setDoc(doc(adminClientDb(), `clubes/${CLUBE}/agregadosFuturos/forjado`), {
+          forjado: true,
+        })
+      );
+      await assertFails(deleteDoc(doc(adminClientDb(), CONVITE_PATH)));
+    });
+
+    it('ATAQUE: owner não adultera convite nem forja doc em subcol sem match', async () => {
+      await assertFails(
+        updateDoc(doc(ownerDb(), CONVITE_PATH), { tokenAceiteHash: 'b'.repeat(64) })
+      );
+      await assertFails(
+        setDoc(doc(ownerDb(), `clubes/${CLUBE}/agregadosFuturos/forjado`), {
+          forjado: true,
+        })
+      );
+      await assertFails(deleteDoc(doc(ownerDb(), CONVITE_PATH)));
     });
   });
 });

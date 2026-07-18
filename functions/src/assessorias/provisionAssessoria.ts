@@ -45,6 +45,11 @@ import { COLECAO_PARCEIROS_ASSESSORIA } from '@leela/core';
 import {
   ORIGEM_CONVITE_ASSESSORIA,
 } from './cadastrarAssessoria';
+import {
+  consumirRateLimit,
+  hashChave,
+  type JanelaRateLimit,
+} from '../shared/rateLimit';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -300,11 +305,85 @@ export async function provisionAssessoriaCore(
 }
 
 // ---------------------------------------------------------------------------
+// Rate-limit (LEELA-R2-RATELIMIT · endurecido pós-review antagonista)
+//
+// A callable é PÚBLICA (token = credencial) → superfície de brute-force do
+// token de convite. Desenho FAILURES-ONLY, keyed no ALVO REAL:
+//
+//   - Chave = o CONVITE real (`tenantId/parceriaId`). Para atacar um convite
+//     de verdade o adversário É OBRIGADO a endereçá-lo (o core resolve
+//     parceria+convite a partir desse par e valida o token contra AQUELE
+//     convite) — não dá para "trocar de balde" para escapar. Rotação de IP
+//     não isenta (não há chave por IP; ver rateLimit.ts).
+//   - Só a FALHA de validação de TOKEN (`permission-denied` opaco) alimenta o
+//     contador, e SÓ DEPOIS de o core rodar. Aceite legítimo (token válido →
+//     sucesso/replay) NUNCA toca o balde → zero DoS da vítima: vizinho de
+//     NAT/CGNAT, alvo enumerável e contenção de transação não bloqueiam quem
+//     tem o token certo (removido o vetor F2-02/#1 das duas revisões).
+//   - Erro de usuário (senha curta = `invalid-argument`; estado = `failed-
+//     precondition`) NÃO conta — não é brute-force, não pune quem digita
+//     errado a senha.
+//   - Bounded: as 30 primeiras falhas contra um convite devolvem
+//     `permission-denied` opaco; a 31ª acha o balde no teto e vira
+//     `resource-exhausted` genérico. 30 chutes / 15 min contra um token de
+//     alta entropia = brute-force desprezível.
+//   - NÃO toca as proteções de 9e7e017 (pre-hijack) nem 6eecc2b (oráculo
+//     opaco): o core permanece intacto; o rate-limit é uma camada externa.
+//
+// Throttle volumétrico por IP (spam de chamadas com alvos aleatórios) fica na
+// BORDA (App Check / Cloud Armor) — ver pendências do report. Criação de conta
+// já exige token VÁLIDO no core, então não há "spam de criação de conta" sem
+// convite legítimo.
+// ---------------------------------------------------------------------------
+
+export const ACEITE_LIMITE_POR_ALVO = 30;
+export const ACEITE_JANELA_MS = 15 * 60_000;
+
+/** Janela por ALVO (o convite REAL) — chave hasheada, sem dado cru. */
+export function janelaDoAlvo(rawInput: unknown): JanelaRateLimit {
+  const input = rawInput as Partial<ProvisionAssessoriaInput> | null;
+  const tenantId = typeof input?.tenantId === 'string' ? input.tenantId : '';
+  const parceriaId =
+    typeof input?.parceriaId === 'string' ? input.parceriaId : '';
+  return {
+    chave: `aceite-alvo:${hashChave(`${tenantId}/${parceriaId}`)}`,
+    limite: ACEITE_LIMITE_POR_ALVO,
+    janelaMs: ACEITE_JANELA_MS,
+  };
+}
+
+/** Núcleo COM rate-limit (testável no emulator; a callable é wrapper fino). */
+export async function provisionAssessoriaComRateLimit(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  rawInput: unknown,
+  agora: Date = new Date()
+): Promise<ProvisionAssessoriaResult> {
+  try {
+    // Token VÁLIDO passa direto (o balde nunca gate um aceite legítimo).
+    return await provisionAssessoriaCore(db, auth, rawInput, agora);
+  } catch (err) {
+    // Só a FALHA de token (permission-denied) conta. `consumirRateLimit`
+    // apende quando abaixo do teto (então re-lança o erro opaco original) e
+    // lança `resource-exhausted` quando no teto (a 31ª falha) — inclusive
+    // fail-closed em erro de infra (nega mais duro um atacante que já falhou).
+    if (err instanceof https.HttpsError && err.code === 'permission-denied') {
+      await consumirRateLimit(db, [janelaDoAlvo(rawInput)], agora);
+    }
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Callable (PÚBLICA — o responsável ainda não tem conta; token é a credencial)
 // ---------------------------------------------------------------------------
 
 export const provisionAssessoriaAccount = https.onCall(
   async (data: unknown) => {
-    return provisionAssessoriaCore(admin.firestore(), admin.auth(), data);
+    return provisionAssessoriaComRateLimit(
+      admin.firestore(),
+      admin.auth(),
+      data
+    );
   }
 );

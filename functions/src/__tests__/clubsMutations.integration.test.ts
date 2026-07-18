@@ -19,7 +19,6 @@
  */
 import {
   assertFails,
-  assertSucceeds,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
@@ -413,7 +412,13 @@ describe.skipIf(!hasEmulator)('clubs — mutations de membros e convites', () =>
       );
     });
 
-    it('Rules: cliente NÃO escreve na subcoleção convites; tenant lê', async () => {
+    it('Rules: cliente NÃO escreve NEM lê a subcoleção convites (canário flipado LEELA-R2)', async () => {
+      // CANÁRIO FLIPADO (LEELA-R2, par do flip de demografia em 19c8afe):
+      // o catch-all de clubes fechou — `convites` carrega hash do token de
+      // aceite (E18) + e-mail, e a leitura de membro minava o fail-closed
+      // do pre-hijack (9e7e017). Nenhuma superfície de client lê convites
+      // (painel usa mutations/Functions); listar convites um dia = Function
+      // com projeção ou match próprio SEM tokenAceiteHash + teste.
       await enviarConvitesCore(
         db, { clubeId: CLUBE_ID, emails: ['ana@ex.com'] }, marina
       );
@@ -425,7 +430,7 @@ describe.skipIf(!hasEmulator)('clubs — mutations de membros e convites', () =>
         })
         .firestore() as unknown as Firestore;
 
-      await assertSucceeds(
+      await assertFails(
         getDoc(doc(clienteCastelo, 'clubes', CLUBE_ID, 'convites', 'ana@ex.com'))
       );
       await assertFails(

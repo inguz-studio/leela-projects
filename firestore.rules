@@ -2061,10 +2061,29 @@ service cloud.firestore {
                       || isPlatformAdmin();
       }
 
+      // Catch-all de subcoleções de CLUBES — deny-by-default TOTAL para client
+      // SDK (LEELA-R2, achado sistêmico dos EVENTOS em 19c8afe + lição A-T2 +
+      // fix F1-01 das revisões antagonistas: mais estrito que o de eventos).
+      //
+      // READ = if false (nem platform_admin pelo client). A forma anterior
+      // (`isTenantMember(tenantDoClubePai())` para QUALQUER subcol) expunha a
+      // membro genérico as subcoleções SEM match próprio — hoje `convites`
+      // (hash do token de aceite E18 + e-mail = PII; ler o doc minava o
+      // fail-closed do pre-hijack 9e7e017 e dava estado/expiração ao atacante)
+      // e `permissoesAdmin` (interna da cascata LGPD do deleteClube). Manter
+      // `isPlatformAdmin()` no read (paridade com eventos) deixaria e-mail +
+      // tokenAceiteHash de TODO convite legíveis por um claim admin via
+      // browser, cross-tenant (F1-01). Fechado: NENHUMA subcol de clube tem
+      // leitura de cliente legítima sem match próprio — tudo que o cliente lê
+      // (membros/desafios+acoes/participantes/board/parcerias+conversoes/
+      // comunicados) tem match dedicado acima; back-office usa Admin SDK
+      // (bypassa Rules). Abrir leitura nova exige match próprio + teste.
+      //
+      // WRITE = if false para TODO client SDK — platform_admin incluso
+      // (padrão pós-19c8afe: o OR de matches não re-concede onde os matches
+      // dedicados dizem write:false). NUNCA reabrir.
       match /{subcol}/{docId} {
-        allow read: if isPlatformAdmin()
-                    || isTenantMember(tenantDoClubePai());
-        allow write: if isPlatformAdmin();
+        allow read, write: if false;
       }
     }
 
@@ -2384,6 +2403,14 @@ service cloud.firestore {
         allow write: if false;
       }
     }
+
+    // ── `rateLimits/{chave}` — contadores de rate-limit (LEELA-R2) ───────
+    // Escrita/leitura EXCLUSIVAS de Function (Admin SDK — consumirRateLimit
+    // em functions/src/shared/rateLimit.ts). Chave = hash SHA-256 truncado
+    // de origem/alvo (nunca IP em claro — LGPD). SEM match DE PROPÓSITO:
+    // cai no deny-by-default abaixo. NÃO abrir para client SDK — ler os
+    // contadores daria oráculo de janela ao atacante; escrever permitiria
+    // zerar o próprio limite.
 
     // ── Bloqueia qualquer coleção não modelada acima ─────────────────────
     // Deny-by-default — não inverta sem rule explícita e testada.
