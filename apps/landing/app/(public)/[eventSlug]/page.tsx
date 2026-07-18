@@ -65,7 +65,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       return { title: 'Perfil não encontrado', robots: { index: false, follow: false } };
     }
     const { perfil } = dados;
-    const titulo = `${perfil.nome} (@${perfil.handle}) · Leela`;
+    // O sufixo de marca vem do template do layout (`%s · Leela`) para o <title>
+    // e do `siteName: 'Leela'` no OpenGraph/Twitter — nunca embutido aqui, senão
+    // o <title> duplica ("… · Leela · Leela"). Mesmo contrato da rota de evento
+    // (usa `evento.seo.titulo` puro). Bug do reviewer R12 fechado no R14.
+    const titulo = `${perfil.nome} (@${perfil.handle})`;
     const descricao =
       perfil.bio ?? `Eventos e clubs de ${perfil.nome} na Leela.`;
     const imagens =
