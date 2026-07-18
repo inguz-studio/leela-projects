@@ -382,6 +382,22 @@ export function demografiaDoOrganizadorQuery(params: {
 }
 
 /**
+ * Agregado demográfico (`demografia/current`) de UM evento — o recorte por
+ * evento da Análise (S-R9-01-T2 · RN-821). Reusa `getDemografiaEvento` (leitura
+ * provada do api-client), point read O(1) do MESMO doc do fan-out; a chave
+ * por-evento reidrata do cache ao trocar o filtro. `null` quando o evento ainda
+ * não tem agregado (gatilho não rodou) — a soma a jusante é pura e a tela mostra
+ * EmptyState (§2.12). NUNCA varre inscritos nem toca dado individual (LGPD).
+ */
+export function demografiaCurrentQuery(eventoId: string) {
+  return queryOptions({
+    queryKey: queryKeys.demografia.current(eventoId),
+    queryFn: (): Promise<DemografiaEvento | null> =>
+      getDemografiaEvento(getLeelaDb(), eventoId),
+  });
+}
+
+/**
  * Lotes de um evento (todas as modalidades — ADR-012). Reusa `listarLotes` do
  * api-client (leitura provada; `parseLote` fail-fast por doc). A tela agrupa por
  * modalidade e deriva preço vigente/lote ativo pelo core — nunca recalcula

@@ -6,6 +6,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { OverviewResult } from '@leela/api-client';
 import { AnaliseVendasView, type AnaliseVendasViewProps } from '../AnaliseVendasView';
 import type { DemografiaTenant } from '../_lib/demografia';
@@ -49,6 +50,13 @@ const DEMOGRAFIA_VAZIA: DemografiaTenant = {
 
 function props(over: Partial<AnaliseVendasViewProps> = {}): AnaliseVendasViewProps {
   return {
+    eventos: [
+      { value: 'ev-1', label: 'Corrida da Serra' },
+      { value: 'ev-2', label: 'Trail do Vale' },
+    ],
+    eventosLoading: false,
+    eventoSelecionado: null,
+    onEventoChange: vi.fn(),
     desempenho: OVERVIEW,
     desempenhoLoading: false,
     desempenhoError: null,
@@ -145,5 +153,31 @@ describe('AnaliseVendasView', () => {
     // Só o bloco de tamanhos está em erro → um único botão de retry.
     screen.getByRole('button', { name: /tentar novamente/i }).click();
     expect(onRetryTamanhos).toHaveBeenCalledOnce();
+  });
+
+  // Filtro por evento (RN-821 · S-R9-01-T2) --------------------------------
+  it('filtro por evento: Combobox com "Todos os eventos" default (agregado do tenant)', () => {
+    render(<AnaliseVendasView {...props()} />);
+    expect(
+      screen.getByRole('button', { name: /filtrar a análise por evento/i }),
+    ).toHaveTextContent('Todos os eventos');
+  });
+
+  it('filtro por evento: selecionar um evento chama onEventoChange com o id', async () => {
+    const onEventoChange = vi.fn();
+    const user = userEvent.setup();
+    render(<AnaliseVendasView {...props({ onEventoChange })} />);
+    await user.click(screen.getByRole('button', { name: /filtrar a análise por evento/i }));
+    await user.click(await screen.findByText('Trail do Vale'));
+    expect(onEventoChange).toHaveBeenCalledWith('ev-2');
+  });
+
+  it('filtro por evento: voltar a "Todos os eventos" chama onEventoChange com null', async () => {
+    const onEventoChange = vi.fn();
+    const user = userEvent.setup();
+    render(<AnaliseVendasView {...props({ eventoSelecionado: 'ev-1', onEventoChange })} />);
+    await user.click(screen.getByRole('button', { name: /filtrar a análise por evento/i }));
+    await user.click(await screen.findByText('Todos os eventos'));
+    expect(onEventoChange).toHaveBeenCalledWith(null);
   });
 });

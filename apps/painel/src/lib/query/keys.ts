@@ -141,6 +141,13 @@ export const queryKeys = {
      */
     porOrganizador: (tenantId: string, organizadorId: string) =>
       ['demografia', 'por-organizador', tenantId, organizadorId] as const,
+    /**
+     * Agregado demográfico (`eventos/{id}/demografia/current`) de UM evento —
+     * o recorte por evento da Análise (S-R9-01-T2 · RN-821). Point read O(1)
+     * do MESMO doc do fan-out; a chave por-evento reidrata do cache quando o
+     * organizador troca o filtro. Sem PII (só contagens — RN-820).
+     */
+    current: (eventoId: string) => ['demografia', 'current', eventoId] as const,
   },
 
   lotes: {

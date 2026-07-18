@@ -15,6 +15,7 @@ import * as React from 'react';
 import {
   BarChart,
   Button,
+  Combobox,
   DonutChart,
   EmptyState,
   KpiCard,
@@ -22,11 +23,21 @@ import {
   Skeleton,
   Sparkline,
   type BarChartDatum,
+  type ComboboxOption,
 } from '@leela/design-system';
 import type { OverviewResult } from '@leela/api-client';
 import { notaCobertura, type DemografiaTenant } from './_lib/demografia';
 
+/** Sentinela do filtro: "Todos os eventos" (agregado do tenant, RN-821). */
+const TODOS_OS_EVENTOS = '__todos__';
+
 export interface AnaliseVendasViewProps {
+  // Filtro por evento (RN-821) — recorta os 4 blocos; `null` = todos os eventos.
+  eventos: ComboboxOption[];
+  eventosLoading: boolean;
+  eventoSelecionado: string | null;
+  onEventoChange: (eventoId: string | null) => void;
+
   // (a) desempenho de vendas
   desempenho: OverviewResult | null;
   desempenhoLoading: boolean;
@@ -67,6 +78,10 @@ function formatInt(valor: number): string {
 }
 
 export function AnaliseVendasView({
+  eventos,
+  eventosLoading,
+  eventoSelecionado,
+  onEventoChange,
   desempenho,
   desempenhoLoading,
   desempenhoError,
@@ -96,6 +111,12 @@ export function AnaliseVendasView({
       />
 
       <div className="flex flex-col gap-[var(--spacing-8)] px-[var(--spacing-6)]">
+        <AnaliseFiltros
+          eventos={eventos}
+          eventosLoading={eventosLoading}
+          eventoSelecionado={eventoSelecionado}
+          onEventoChange={onEventoChange}
+        />
         {/* (a) Desempenho de vendas — KPIs + série de conversão (getOverview). */}
         <section aria-label="Desempenho de vendas" className="flex flex-col gap-[var(--spacing-4)]">
           <SectionTitle>Desempenho de vendas</SectionTitle>
@@ -287,6 +308,51 @@ function BlocoGrafico({
   }
   if (vazio) return <EmptyState title={emptyTitle} description={emptyDescription} />;
   return <>{children}</>;
+}
+
+/**
+ * Barra de filtros da Análise (RN-821): recorte por evento (Combobox shadcn).
+ * A opção "Todos os eventos" (sentinela) volta ao agregado do tenant. O
+ * Combobox é single-select; mapeamos a sentinela ↔ `null` na borda.
+ */
+function AnaliseFiltros({
+  eventos,
+  eventosLoading,
+  eventoSelecionado,
+  onEventoChange,
+}: {
+  eventos: ComboboxOption[];
+  eventosLoading: boolean;
+  eventoSelecionado: string | null;
+  onEventoChange: (eventoId: string | null) => void;
+}): JSX.Element {
+  const options: ComboboxOption[] = [
+    { value: TODOS_OS_EVENTOS, label: 'Todos os eventos' },
+    ...eventos,
+  ];
+  return (
+    <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
+      <label className="flex flex-col gap-[var(--spacing-1)]">
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+          Evento
+        </span>
+        <div className="w-[16rem] max-w-full">
+          <Combobox
+            options={options}
+            value={eventoSelecionado ?? TODOS_OS_EVENTOS}
+            onValueChange={(v) => {
+              const val = Array.isArray(v) ? v[0] : v;
+              onEventoChange(val && val !== TODOS_OS_EVENTOS ? val : null);
+            }}
+            disabled={eventosLoading}
+            aria-label="Filtrar a análise por evento"
+            searchPlaceholder="Buscar evento…"
+            emptyText="Nenhum evento encontrado"
+          />
+        </div>
+      </label>
+    </div>
+  );
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }): JSX.Element {
