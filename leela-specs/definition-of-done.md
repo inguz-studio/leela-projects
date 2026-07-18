@@ -29,6 +29,7 @@
 - [ ] Shell padrão (sidebar 8 itens, breadcrumb, header 96px §2.1) quando aplicável.
 - [ ] Sub-nav §2.14 (underline Brasa 2px na ativa + contador pill) quando aplicável.
 - [ ] Interativa, não estática (§2.12): navegação, toggles, filtros funcionais.
+- [ ] Seletor/filtro/calendário abre um painel DO DS (Combobox/Popover/Calendar), não a caixa do SO — `<select>` nativo só em formulário simples de baixa cardinalidade (governança §8 · S-R9-05).
 - [ ] Estado vazio em toda lista filtrável + contador "mostrando X de Y".
 - [ ] Estados de carregando (skeleton, nunca spinner solto em lista) e erro cobertos.
 - [ ] Ações destrutivas com `ConfirmModal` + preview de consequências (§2.15).

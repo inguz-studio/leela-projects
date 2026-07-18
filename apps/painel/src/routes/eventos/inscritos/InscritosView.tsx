@@ -27,14 +27,14 @@ import {
   Button,
   Checkbox,
   Chip,
+  Combobox,
   Pagination,
   SearchInput,
-  Select,
   Skeleton,
   Table,
   Tabs,
   useToast,
-  type SelectOption,
+  type ComboboxOption,
   type TableColumn,
 } from '@leela/design-system';
 import { INSCRITOS_PAGE_SIZE } from '@leela/api-client';
@@ -169,11 +169,11 @@ export function InscritosView({
   }
 
   // ── Filtros compactos ─────────────────────────────────────────────────────
-  const kitOptions: SelectOption[] = [
+  const kitOptions: ComboboxOption[] = [
     { value: TODOS_VALUE, label: 'Todos os kits' },
     ...KITS_INSCRITO.map((k) => ({ value: k, label: kitInscritoBadge(k).label })),
   ];
-  const modalidadeOptions: SelectOption[] = [
+  const modalidadeOptions: ComboboxOption[] = [
     { value: TODOS_VALUE, label: 'Todas as modalidades' },
     ...modalidades.map((m) => ({ value: m, label: m })),
   ];
@@ -314,21 +314,27 @@ export function InscritosView({
             onChange={(e) => setBusca(e.target.value)}
             className="w-[var(--sidebar-width)] max-w-full"
           />
-          <Select
-            aria-label="Filtrar por kit"
-            options={kitOptions}
-            value={kit ?? TODOS_VALUE}
-            onChange={(e) => setKit(e.target.value === TODOS_VALUE ? null : (e.target.value as KitInscrito))}
-            wrapperClassName="min-w-[var(--spacing-24)]"
-          />
-          {modalidades.length > 0 && (
-            <Select
-              aria-label="Filtrar por modalidade"
-              options={modalidadeOptions}
-              value={modalidade ?? TODOS_VALUE}
-              onChange={(e) => setModalidade(e.target.value === TODOS_VALUE ? null : e.target.value)}
-              wrapperClassName="min-w-[var(--spacing-24)]"
+          <div className="min-w-[var(--spacing-24)]">
+            <Combobox
+              aria-label="Filtrar por kit"
+              options={kitOptions}
+              value={kit ?? TODOS_VALUE}
+              onValueChange={(v) =>
+                setKit((v as string) === TODOS_VALUE ? null : (v as KitInscrito))
+              }
             />
+          </div>
+          {modalidades.length > 0 && (
+            <div className="min-w-[var(--spacing-24)]">
+              <Combobox
+                aria-label="Filtrar por modalidade"
+                options={modalidadeOptions}
+                value={modalidade ?? TODOS_VALUE}
+                onValueChange={(v) =>
+                  setModalidade((v as string) === TODOS_VALUE ? null : (v as string))
+                }
+              />
+            </div>
           )}
         </div>
         <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]" role="status">
