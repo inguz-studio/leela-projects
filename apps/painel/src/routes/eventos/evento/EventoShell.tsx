@@ -33,6 +33,7 @@ import { statusEventoBadge } from '../_lib/status';
 import { formatDataEvento, formatInt, diasParaEvento, faltamDiasLabel } from '../_lib/format';
 import { eventoSubNavTabs, type EventoAbaId } from '../_lib/subnav';
 import { thumbVariantDoEvento } from '../../overview/_lib/activeEvents';
+import { linkEventoPublico } from '../../../lib/linkPublico';
 import type { EventThumbVariant } from '@leela/design-system';
 
 export interface EventoShellProps {
@@ -88,15 +89,26 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
   const contagem = faltamDiasLabel(dias);
   const metaParts = [formatDataEvento(evento.data), evento.local].filter(Boolean);
 
+  // A landing só serve o evento quando publicado/ao_vivo (gate `statusEhPublico`
+  // em apps/landing/lib/estadoVenda.ts); rascunho/encerrado → 404. Espelhamos o
+  // gate aqui para não oferecer um link que quebra (comportamento honesto).
+  const publico = evento.status === 'publicado' || evento.status === 'ao_vivo';
+  const motivoIndisponivel =
+    evento.status === 'rascunho'
+      ? 'Publique o evento para ver a página pública.'
+      : 'Evento encerrado — a página pública não está mais no ar.';
+  const urlPublica = linkEventoPublico(evento.slug);
+
   const abrirPaginaPublica = (): void => {
+    if (!publico) return;
     if (typeof window !== 'undefined') {
-      window.open(`${window.location.origin}/e/${evento.slug}`, '_blank', 'noopener');
+      window.open(urlPublica, '_blank', 'noopener');
     }
   };
 
   const copiarLink = (): void => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      void navigator.clipboard.writeText(`${window.location.origin}/e/${evento.slug}`);
+      void navigator.clipboard.writeText(urlPublica);
     }
     setMenuOpen(false);
   };
@@ -106,6 +118,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
     {
       id: 'publica',
       label: 'Ver página pública',
+      disabled: !publico,
       onClick: () => {
         abrirPaginaPublica();
         setMenuOpen(false);
@@ -155,10 +168,17 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
         </div>
 
         <div className="flex items-center gap-[var(--spacing-2)] shrink-0 ml-auto basis-full lg:basis-auto">
-          <Button variant="ghost" size="sm" onClick={abrirPaginaPublica}>
-            Ver página pública
-            <ExternalLink className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
-          </Button>
+          <span title={publico ? undefined : motivoIndisponivel} className="inline-flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={abrirPaginaPublica}
+              disabled={!publico}
+            >
+              Ver página pública
+              <ExternalLink className="h-[var(--icon-size)] w-[var(--icon-size)] [stroke-width:var(--icon-stroke)]" />
+            </Button>
+          </span>
           <DropdownMenu
             open={menuOpen}
             onOpenChange={setMenuOpen}

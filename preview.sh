@@ -157,6 +157,7 @@ start_vite() {
         VITE_EMULATOR_AUTH_PORT="$AUTH_PORT" \
         VITE_EMULATOR_FUNCTIONS_PORT="$FN_PORT" \
         VITE_EMULATOR_STORAGE_PORT="$SG_PORT" \
+        VITE_LEELA_URL="${VITE_LEELA_URL:-http://127.0.0.1:3000}" \
         pnpm exec vite --host 127.0.0.1 --port "$p" --strictPort >"$VITE_LOG" 2>&1
     ) &
     VITE_PID=$!

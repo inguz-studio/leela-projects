@@ -25,11 +25,7 @@ import {
 import type { AuthClaims } from '@leela/core';
 import { PerfilPublicoEditor } from './PerfilPublicoEditor';
 import { paraPerfilInput, valoresDePerfil, type PerfilFormValues } from './perfilForm';
-
-/** Base do link público (landing). Fallback = domínio de produção do produto. */
-const LINK_PUBLICO_BASE =
-  (import.meta.env.VITE_LEELA_URL as string | undefined)?.replace(/\/$/, '') ??
-  'https://be-hero.com.br';
+import { PUBLIC_BASE } from '../../../lib/linkPublico';
 
 type Estado =
   | { fase: 'carregando' }
@@ -147,7 +143,7 @@ export function PerfilPublicoEditorPage(): JSX.Element {
     <PerfilPublicoEditor
       modo={estado.modo}
       inicial={estado.inicial}
-      linkPublicoBase={LINK_PUBLICO_BASE}
+      linkPublicoBase={PUBLIC_BASE}
       onSalvar={onSalvar}
       onUploadAvatar={comValidacao(uploadAvatarPerfilPublico)}
       onUploadCapa={comValidacao(uploadCapaPerfilPublico)}

@@ -25,11 +25,7 @@ import {
   validarCadastro,
   type CadastroAssessoriaValues,
 } from './_lib/assessoriaForm';
-
-/** Base do link público (landing) para compor o link de aceite do convite. */
-const LINK_PUBLICO_BASE =
-  (import.meta.env.VITE_LEELA_URL as string | undefined)?.replace(/\/$/, '') ??
-  'https://be-hero.com.br';
+import { PUBLIC_BASE } from '../../../lib/linkPublico';
 
 const SECAO =
   'flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]';
@@ -74,7 +70,7 @@ export function CadastrarAssessoriaPage(): JSX.Element {
       parceriaId: resultado.parceriaId,
       token: resultado.tokenAceite,
     });
-    return `${LINK_PUBLICO_BASE}/convite?${params.toString()}`;
+    return `${PUBLIC_BASE}/convite?${params.toString()}`;
   }, [resultado, session.tenantId]);
 
   async function onSubmit(event: FormEvent): Promise<void> {

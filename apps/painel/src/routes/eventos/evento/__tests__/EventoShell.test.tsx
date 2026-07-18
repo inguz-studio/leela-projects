@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { EventoShell } from '../EventoShell';
+import { linkEventoPublico } from '../../../../lib/linkPublico';
 import { mkEvento } from '../../_test/fixtures';
 
 describe('EventoShell', () => {
@@ -66,5 +67,41 @@ describe('EventoShell', () => {
     );
     expect(screen.getByRole('button', { name: /ver página pública/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /mais ações do evento/i })).toBeInTheDocument();
+  });
+
+  describe('"Ver página pública" — link e honestidade por status', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('evento publicado: abre a landing na RAIZ (sem /e/), _blank + noopener', () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      render(
+        <EventoShell evento={mkEvento({ status: 'publicado' })} ativa="overview">
+          <p>c</p>
+        </EventoShell>,
+      );
+      const botao = screen.getByRole('button', { name: /ver página pública/i });
+      expect(botao).not.toBeDisabled();
+      fireEvent.click(botao);
+      const urlAberta = linkEventoPublico('meia-floripa-2026');
+      expect(open).toHaveBeenCalledWith(urlAberta, '_blank', 'noopener');
+      expect(urlAberta).not.toContain('/e/');
+    });
+
+    it('evento rascunho: botão desabilitado, com tooltip explicando (a landing daria 404)', () => {
+      const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+      render(
+        <EventoShell evento={mkEvento({ status: 'rascunho' })} ativa="overview">
+          <p>c</p>
+        </EventoShell>,
+      );
+      const botao = screen.getByRole('button', { name: /ver página pública/i });
+      expect(botao).toBeDisabled();
+      expect(botao.closest('[title]')).toHaveAttribute(
+        'title',
+        'Publique o evento para ver a página pública.',
+      );
+      fireEvent.click(botao);
+      expect(open).not.toHaveBeenCalled();
+    });
   });
 });
