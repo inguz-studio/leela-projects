@@ -87,8 +87,25 @@ export type {
   SystemStateVariant,
 } from './components/SystemStateScreen';
 export { Pagination, type PaginationProps } from './components/Pagination';
-export { Popover } from './components/Popover'; // @deprecated alias de DropdownMenu
-export type { PopoverProps, PopoverAction } from './components/Popover';
+// Popover — primitivo de ÂNCORA shadcn/Radix (S-R9-05). O antigo Popover do E01
+// (menu de ações) virou DropdownMenu; consumidores migrados no mesmo lote.
+export {
+  Popover,
+  PopoverTrigger,
+  PopoverAnchor,
+  PopoverClose,
+  PopoverContent,
+} from './components/Popover';
+export type { PopoverContentProps } from './components/Popover';
+// Command (cmdk) — lista filtrável do DS; base do Combobox (S-R9-05).
+export {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from './components/Command';
 export { DropdownMenu } from './components/DropdownMenu';
 export type { DropdownMenuProps, DropdownMenuAction } from './components/DropdownMenu';
 export { FilterMenu } from './components/FilterMenu';

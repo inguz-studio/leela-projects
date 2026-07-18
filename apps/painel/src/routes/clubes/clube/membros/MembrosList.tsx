@@ -1,7 +1,7 @@
 // =============================================================================
 // MembrosList — tela de membros do club (S103-T2). KPIs + filtros combináveis
 // (busca × status × papel = INTERSEÇÃO) + tabela densa com popover por linha.
-// Remover / transferir abrem ConfirmModal (§2.15). Popover exclusivo (C3): um
+// Remover / transferir abrem ConfirmModal (§2.15). DropdownMenu exclusivo (C3): um
 // único aberto por vez. Stateful de UI (filtros/popover/confirm); os dados e a
 // ação de convidar vêm por props.
 // =============================================================================
@@ -13,7 +13,7 @@ import {
   Chip,
   ConfirmModal,
   Input,
-  Popover,
+  DropdownMenu,
   Skeleton,
 } from '@leela/design-system';
 import type { PapelMembro, StatusMembro, Membro } from '@leela/core';
@@ -164,7 +164,7 @@ export function MembrosList({
         emptyDescription="Nenhum membro casa com os filtros aplicados."
         agora={agora}
         renderActions={(m) => (
-          <Popover
+          <DropdownMenu
             open={popoverAberto === m.id}
             onOpenChange={(open) => setPopoverAberto(open ? m.id : null)}
             align="right"

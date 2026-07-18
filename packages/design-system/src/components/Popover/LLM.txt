@@ -1,56 +1,42 @@
 # Popover — Contrato de reuso para IA
 schema: llm-txt/1.0
 component: Popover
-version: 0.0.1
-generated_at: "2026-07-05"
+version: 1.0.0
+generated_at: "2026-07-18"
 source: src/components/Popover
-verdict: APPROVE (gate interno mds-ux-heuristics, showroom leela-build-2d6ee98d)
-status: @deprecated — alias de DropdownMenu
+verdict: APPROVE (S-R9-05 · governança §8)
+status: primitivo de âncora (shadcn/Radix)
 
 ## Import canônico
-import { Popover, type PopoverProps, type PopoverAction } from '@leela/design-system'
+import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverClose } from '@leela/design-system'
 
 ## Quando usar
-Apenas em código legado que já importa Popover: é um re-export 1:1 do DropdownMenu (Popover = DropdownMenu, PopoverProps = DropdownMenuProps, PopoverAction = DropdownMenuAction). Não há implementação própria neste diretório.
+Painel flutuante ancorado a um trigger (conteúdo arbitrário do DS): base do Combobox, do Calendar/DateRangePicker e de qualquer overlay posicionado. O painel que abre é DO DS (bg-popover, borda, shadow), nunca a caixa do sistema operacional. Wrapper fino sobre @radix-ui/react-popover — a11y (foco, Esc, click-fora, colisão/flip) vem da lib.
 
 ## Quando NÃO usar
-Em código NOVO: use DropdownMenu — Popover é @deprecated e existe só para estabilidade da API das telas do painel. Não use para conteúdo flutuante arbitrário; a API é um menu de ações.
+Menu de AÇÕES (ver/editar/excluir) — use DropdownMenu (o antigo Popover de menu do E01). Seleção rica filtrável — use Combobox. Tooltip — use Tooltip.
 
-## Props válidas
-Idênticas a DropdownMenuProps (ver src/components/DropdownMenu/LLM.txt):
-- actions: PopoverAction[]   (obrigatório) — PopoverAction = { id: string; label: string; onClick: () => void; destructive?: boolean; disabled?: boolean }
-- open: boolean   (obrigatório)
-- onOpenChange: (open: boolean) => void   (obrigatório)
-- trigger: React.ReactElement   (obrigatório)
-- align: 'left' | 'right'   (default: 'right')
-- className: string   (default: undefined)
+## Composição (compound)
+- Popover (Root): open?/onOpenChange? (controlado) ou não-controlado.
+- PopoverTrigger: o gatilho. Use asChild para passar um <Button/> próprio.
+- PopoverContent: o painel. align (default 'start'), sideOffset (default 4), className.
+- PopoverAnchor / PopoverClose: âncora alternativa e botão de fechar.
 
 ## Tokens consumidos (nenhum valor cru permitido)
-Os mesmos do DropdownMenu (fonte única src/components/DropdownMenu/DropdownMenu.tsx):
-- --spacing-1 / --spacing-3
 - --popover-min-width
-- --btn-height-sm
-- --font-size-base
-- --text-primary / --text-danger
-- --feedback-danger-surface
-- --motion-duration-fast
+- --spacing-1 / --spacing-4
+- bg-popover / text-popover-foreground / border-border (aliases shadcn→brasa)
+- shadow-elev-2, rounded-md
 
 ## Proibido (do/don't)
-DON'T: PopoverTrigger/PopoverContent/PopoverAnchor do Radix ou shadcn stock — NÃO existem neste DS.
-DON'T: usar Popover em código novo — prefira DropdownMenu.
 DON'T: hex, rgb, px, rem em style inline.
-DO: migre imports de Popover para DropdownMenu quando tocar no arquivo.
+DO: use asChild no PopoverTrigger para reusar Button do DS.
 
 ## Exemplo mínimo (válido, copiável)
-<Popover
-  actions={[{ id: 'editar', label: 'Editar', onClick: editar }]}
-  open={aberto}
-  onOpenChange={setAberto}
-  trigger={<Button variant="ghost" size="sm">Ações</Button>}
-/>
-
-## Exemplo completo (válido, copiável)
-Ver exemplo completo em src/components/DropdownMenu/LLM.txt — a API é idêntica.
+<Popover>
+  <PopoverTrigger asChild><Button variant="secondary">Abrir</Button></PopoverTrigger>
+  <PopoverContent>Conteúdo do DS</PopoverContent>
+</Popover>
 
 ## Instrução para o modelo (colar no system prompt)
-Use o componente Popover apenas com as props e valores listados acima (API idêntica ao DropdownMenu). Em código novo prefira DropdownMenu. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor ou espaço via literal; use somente tokens do design system.
+Use Popover apenas com a composição acima. Menu de ações = DropdownMenu; seleção filtrável = Combobox. Nunca aplique cor ou espaço via literal; use somente tokens do design system.

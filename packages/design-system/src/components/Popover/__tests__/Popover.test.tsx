@@ -1,30 +1,55 @@
 /**
- * O comportamento completo (13 testes WAI-APG de foco/teclado) foi PORTADO
- * para DropdownMenu/__tests__/DropdownMenu.test.tsx (decisão bd31974). Aqui
- * fica só o contrato do alias: `Popover` continua exportado e é o MESMO
- * componente — consumidores do painel não quebram.
+ * Popover — primitivo de âncora (S-R9-05). Cobre o contrato do wrapper: o
+ * trigger controla a visibilidade do painel do DS; abre por click e fecha por
+ * Esc (dismiss a11y do Radix). O posicionamento/portal é responsabilidade da
+ * lib, não re-testado aqui.
  */
 
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { Popover } from '../index';
-import { DropdownMenu } from '../../DropdownMenu';
+import userEvent from '@testing-library/user-event';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '../index';
 
-describe('Popover (alias de DropdownMenu)', () => {
-  it('Popover é o mesmo componente que DropdownMenu', () => {
-    expect(Popover).toBe(DropdownMenu);
+function renderPopover() {
+  return render(
+    <Popover>
+      <PopoverTrigger>Abrir</PopoverTrigger>
+      <PopoverContent>
+        <span>Conteúdo do painel</span>
+      </PopoverContent>
+    </Popover>,
+  );
+}
+
+describe('Popover (primitivo de âncora)', () => {
+  it('painel fechado por padrão', () => {
+    renderPopover();
+    expect(screen.queryByText('Conteúdo do painel')).not.toBeInTheDocument();
   });
 
-  it('renderiza menu com a mesma API do E01 (actions/open/trigger)', () => {
-    render(
-      <Popover
-        actions={[{ id: 'a', label: 'Ver', onClick: () => {} }]}
-        open
-        onOpenChange={() => {}}
-        trigger={<button type="button">Abrir</button>}
-      />,
-    );
-    expect(screen.getByRole('menu', { name: 'Ações' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Ver' })).toBeInTheDocument();
+  it('abre ao clicar no trigger', async () => {
+    renderPopover();
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    expect(await screen.findByText('Conteúdo do painel')).toBeInTheDocument();
+  });
+
+  it('trigger expõe aria-expanded', async () => {
+    renderPopover();
+    const trigger = screen.getByRole('button', { name: 'Abrir' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('fecha com Esc', async () => {
+    renderPopover();
+    await userEvent.click(screen.getByRole('button', { name: 'Abrir' }));
+    expect(await screen.findByText('Conteúdo do painel')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Conteúdo do painel')).not.toBeInTheDocument();
   });
 });

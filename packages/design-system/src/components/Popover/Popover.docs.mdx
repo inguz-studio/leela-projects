@@ -5,11 +5,11 @@ import contract from './LLM.txt?raw';
 
 <Meta of={Stories} />
 
-# Popover (descontinuado)
+# Popover
 
-Alias @deprecated de DropdownMenu, mantido só para compatibilidade da API pública do E01 — mesma API, mesmo comportamento. Em código novo, use DropdownMenu.
+Primitivo de ÂNCORA shadcn/Radix (S-R9-05 · governança §8): posiciona um painel do DS junto a um trigger, em portal, com colisão/flip e dismiss a11y (Esc, click-fora). É a base do `Combobox` e do `Calendar`/`DateRangePicker` — o painel que abre é DO DS, nunca a caixa do sistema operacional. O antigo Popover de menu do E01 virou `DropdownMenu`.
 
-<Canvas of={Stories.Deprecado} />
+<Canvas of={Stories.Basico} />
 
 <Controls />
 
@@ -17,6 +17,6 @@ Alias @deprecated de DropdownMenu, mantido só para compatibilidade da API públ
 
 <HandoffButton
   componentName="Popover"
-  snippet={`// @deprecated — prefira DropdownMenu (mesma API)\nimport { DropdownMenu, Button } from '@leela/design-system';\n\n<DropdownMenu\n  open={open}\n  onOpenChange={setOpen}\n  trigger={<Button variant="secondary">Ações</Button>}\n  actions={[{ id: 'ver', label: 'Ver detalhes', onClick: verDetalhes }]}\n/>`}
+  snippet={`import { Popover, PopoverTrigger, PopoverContent, Button } from '@leela/design-system';\n\n<Popover>\n  <PopoverTrigger asChild>\n    <Button variant="secondary">Abrir painel</Button>\n  </PopoverTrigger>\n  <PopoverContent>Conteúdo do DS</PopoverContent>\n</Popover>`}
   contract={contract}
 />

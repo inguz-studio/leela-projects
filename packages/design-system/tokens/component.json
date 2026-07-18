@@ -46,6 +46,10 @@
     "$description": "S-R9-04-T2 (L-006): thumb do Switch DESLIGADO. Era surface-raised (#161616) sobre o trilho surface-sunken (#0A0A0A) = 1.09:1 — o polegar sumia no escuro. neutral.500 (= border-strong) cruza 3:1 nos 2 temas: brasa 4.18:1, wine 3.33:1. Ligado segue action-primary-fg.",
     "thumb-off":    "{neutral.500}"
   },
+  "command": {
+    "$description": "S-R9-05: lista filtrável do Command/Combobox. Altura máxima da listbox antes do scroll (padrão shadcn ~300px).",
+    "list-max-height": "288px"
+  },
   "badge": {
     "$description": "Tipografia do mockup `.badge` (QA m5): 10px/700 uppercase ls .04em, padding 3x7 (altura ~21px nasce do padding — sem height fixa), radius xs, gap 4, svg 10.",
     "radius":        "{radius.xs}",

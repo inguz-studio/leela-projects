@@ -7,13 +7,13 @@
 // X de Y" (aria-live) + popover contextual por linha (ações por estado). Filtro
 // que zera → EmptyState honesto. Stateful de UI; dados/ações vêm por props.
 //
-// Reuso-first: DS (Badge, Button, Chip, EmptyState, Popover, Skeleton) + KpiCard
+// Reuso-first: DS (Badge, Button, Chip, EmptyState, DropdownMenu, Skeleton) + KpiCard
 // do evento + helpers PUROS de `_lib/campanhas` (labels feminino/estado, filtro,
 // agrupamento, KPIs, ações). Zero hardcode de token; cor de borda por token.
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { KpiCard, Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
+import { KpiCard, Badge, Button, Chip, EmptyState, DropdownMenu, Skeleton } from '@leela/design-system';
 import type { Campanha, CanalCampanha, StatusCampanhaPersistido } from '@leela/core';
 import { formatDataCurta, formatInt } from '../_lib/format';
 import {
@@ -100,7 +100,7 @@ function CampanhaCard({
           <span className="[font-variant-numeric:tabular-nums]">{metadadoEstado(c)}</span>
         </p>
       </div>
-      <Popover
+      <DropdownMenu
         open={aberto}
         onOpenChange={onAbrir}
         align="right"

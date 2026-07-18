@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { KpiCard, Badge, Button, Chip, EmptyState, Popover, Skeleton } from '@leela/design-system';
+import { KpiCard, Badge, Button, Chip, EmptyState, DropdownMenu, Skeleton } from '@leela/design-system';
 import type {
   CanalComunicado,
   Comunicado,
@@ -78,7 +78,7 @@ function ComunicadoCard({
           ) : null}
         </p>
       </div>
-      <Popover
+      <DropdownMenu
         open={aberto}
         onOpenChange={onAbrir}
         align="right"

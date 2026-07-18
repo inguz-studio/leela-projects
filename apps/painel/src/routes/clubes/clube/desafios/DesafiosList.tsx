@@ -14,7 +14,7 @@ import {
   CardDesafio,
   Chip,
   EmptyState,
-  Popover,
+  DropdownMenu,
   Skeleton,
 } from '@leela/design-system';
 import type { Desafio, ModeloDesafio, StatusDesafio } from '@leela/core';
@@ -111,7 +111,7 @@ function DesafioCardComActions({
         meta={<DesafioMeta desafio={desafio} />}
       />
       <div className="absolute right-[var(--spacing-3)] top-[var(--spacing-3)]">
-        <Popover
+        <DropdownMenu
           open={aberto}
           onOpenChange={onAbrir}
           align="right"

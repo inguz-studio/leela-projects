@@ -1,15 +1,20 @@
 import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { Popover } from './index';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from './index';
 import { Button } from '../Button';
 
 /**
- * `Popover` é alias @deprecated de `DropdownMenu` (decisão bd31974): mesma
- * API, mesmo comportamento. Esta story existe só para cobrir o alias no
- * catálogo — código novo deve usar `DropdownMenu` (Organismos/DropdownMenu).
+ * `Popover` — primitivo de ÂNCORA shadcn/Radix (S-R9-05). Posiciona um painel do
+ * DS junto a um trigger, em portal, com colisão/flip e dismiss a11y. Base do
+ * `Combobox` e do `Calendar`. (O antigo Popover de menu do E01 virou
+ * `DropdownMenu`.)
  */
 const meta: Meta<typeof Popover> = {
-  title: 'Organismos/Popover (descontinuado)',
+  title: 'Primitivos/Popover',
   component: Popover,
 };
 
@@ -17,19 +22,18 @@ export default meta;
 type Story = StoryObj<typeof Popover>;
 
 function PopoverDemo(): React.JSX.Element {
-  const [open, setOpen] = React.useState(false);
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      trigger={<Button variant="secondary">Ações (alias)</Button>}
-      actions={[
-        { id: 'ver', label: 'Ver detalhes', onClick: () => undefined },
-        { id: 'cancelar', label: 'Cancelar inscrição', destructive: true, onClick: () => undefined },
-      ]}
-    />
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="secondary">Abrir painel</Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-[var(--spacing-4)]">
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
+          Painel do DS (bg-popover, borda, shadow). Esc ou click fora fecha.
+        </p>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-/** Alias descontinuado — prefira DropdownMenu em código novo. */
-export const Deprecado: Story = { render: () => <PopoverDemo /> };
+export const Basico: Story = { render: () => <PopoverDemo /> };

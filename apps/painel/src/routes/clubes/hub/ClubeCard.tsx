@@ -6,8 +6,8 @@
 // exclusividade C3 é gerida pelo hub, que mantém um único popover aberto).
 // =============================================================================
 
-import { Avatar, Badge, Button, Popover } from '@leela/design-system';
-import type { PopoverAction } from '@leela/design-system';
+import { Avatar, Badge, Button, DropdownMenu } from '@leela/design-system';
+import type { DropdownMenuAction } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
@@ -18,7 +18,7 @@ export interface ClubeCardProps {
   /** Abre o painel interno do club (SPA). */
   onAbrir: (slug: string) => void;
   /** Ações do popover contextual (só variante parceiro). */
-  popoverActions?: PopoverAction[];
+  popoverActions?: DropdownMenuAction[];
   popoverOpen?: boolean;
   onPopoverOpenChange?: (open: boolean) => void;
 }
@@ -86,7 +86,7 @@ export function ClubeCard({
           </div>
         </div>
         {variant === 'parceiro' && popoverActions && popoverActions.length > 0 ? (
-          <Popover
+          <DropdownMenu
             actions={popoverActions}
             open={popoverOpen}
             onOpenChange={onPopoverOpenChange ?? (() => {})}
