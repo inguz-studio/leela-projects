@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 
-// Gradiente de capa — fonte ÚNICA do "placeholder de capa" da superfície
-// pública. Idêntico ao fallback embutido do CardEvento (DS) e ao antigo
-// HeroCover: linear-gradient(135deg, --action-primary, --surface-high). Com um
-// campo `categoria` no doc público (hoje inexistente na projeção) este poderia
-// variar por categoria (RN-166); até lá, o gradiente padronizado é o fallback.
-const GRADIENTE =
-  'h-full w-full bg-[image:linear-gradient(135deg,var(--action-primary),var(--surface-high))]';
+// Capa de exemplo — fonte ÚNICA do fallback de capa da superfície pública.
+// LEELA-R12-FIX2-CAPA: antes era um gradiente liso (lido como placeholder); agora
+// é a ARTE DE CAPA rica (pelotão de corredores ao amanhecer, mesmo asset do hero)
+// para que TODO slot sem capa real (cards da home, timeline do organizador,
+// clubes, perfil) exiba uma imagem que parece capa de evento — nunca área vazia.
+// `bg-cover`/`bg-center` cobrem o slot em qualquer proporção.
+const FALLBACK_CAPA =
+  'h-full w-full bg-[url(/covers/leela-evento-brasa.svg)] bg-cover bg-center';
 
 /**
  * Capa resiliente de clube/evento (RN-166 · S1702-T2). Sem URL → gradiente de
@@ -30,7 +31,7 @@ export function CoverImage({
   const [falhou, setFalhou] = useState(false);
 
   if (url === undefined || url.length === 0 || falhou) {
-    return <div aria-hidden className={GRADIENTE} />;
+    return <div aria-hidden className={FALLBACK_CAPA} />;
   }
 
   return (

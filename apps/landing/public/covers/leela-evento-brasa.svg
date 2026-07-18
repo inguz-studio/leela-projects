@@ -1,77 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de evento Leela — identidade brasa">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Capa de evento Leela — pelotão de corredores contra o nascer do sol, identidade brasa">
   <!--
-    Capa de evento MOCK (LEELA-R7) — identidade "brasa" (DARK).
-    Asset local, autocontido, sem serviço externo. Deriva das cores dos tokens
-    do DS (primary/brasa + heroico). Event-agnostic de propósito: sem nome de
-    evento nem logo (não personifica marca). Serve de capa nítida no hero e,
-    borrada, de plano de fundo do mesmo hero.
+    Capa de evento MOCK RICA (LEELA-R12-FIX2-CAPA) — cena de corrida ao amanhecer:
+    pelotão de corredores em SILHUETA (backlit) contra o nascer do sol, com
+    colinas de Floripa ao fundo, névoa de horizonte e traços de movimento. Paleta
+    BRASA (tokens do DS). Autocontido (sem serviço externo). Lê como CAPA DE
+    EVENTO ESPORTIVO, não placeholder abstrato. Serve nítida no hero e borrada de
+    fundo. Event-agnostic (sem nome/logo).
   -->
   <defs>
-    <!-- Base escura com leve tinta ember (nunca cinza frio) -->
-    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#120704"/>
-      <stop offset="0.55" stop-color="#0C0503"/>
-      <stop offset="1" stop-color="#0A0A0A"/>
+    <!-- Céu do amanhecer: topo maroon profundo → laranja quente no horizonte -->
+    <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1A0A05"/>
+      <stop offset="0.34" stop-color="#3A1206"/>
+      <stop offset="0.58" stop-color="#8C2E06"/>
+      <stop offset="0.72" stop-color="#FF5E1E"/>
+      <stop offset="0.82" stop-color="#FFB061"/>
+      <stop offset="0.9" stop-color="#7A2A0C"/>
+      <stop offset="1" stop-color="#0C0503"/>
     </linearGradient>
-    <!-- Brasa: glow superior-direito (nascente sobre o mar) -->
-    <radialGradient id="ember" cx="0.78" cy="0.16" r="0.9">
-      <stop offset="0" stop-color="#FF6520" stop-opacity="0.95"/>
-      <stop offset="0.28" stop-color="#FF450C" stop-opacity="0.72"/>
-      <stop offset="0.6" stop-color="#8C2100" stop-opacity="0.35"/>
+    <!-- Sol nascente: brasa intensa baixa no horizonte -->
+    <radialGradient id="sol" cx="0.62" cy="0.76" r="0.42">
+      <stop offset="0" stop-color="#FFF1D8" stop-opacity="0.98"/>
+      <stop offset="0.18" stop-color="#FFD07A" stop-opacity="0.95"/>
+      <stop offset="0.42" stop-color="#FF7A2C" stop-opacity="0.7"/>
+      <stop offset="0.72" stop-color="#D23C06" stop-opacity="0.28"/>
       <stop offset="1" stop-color="#5C1600" stop-opacity="0"/>
     </radialGradient>
-    <!-- Sopro heroico (rosa) na quina inferior-esquerda, discreto -->
-    <radialGradient id="heroico" cx="0.08" cy="0.95" r="0.7">
-      <stop offset="0" stop-color="#ED3585" stop-opacity="0.35"/>
-      <stop offset="0.6" stop-color="#77103E" stop-opacity="0.12"/>
-      <stop offset="1" stop-color="#4E0928" stop-opacity="0"/>
-    </radialGradient>
-    <!-- Faixa de horizonte -->
-    <linearGradient id="horizonte" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FF8244" stop-opacity="0"/>
-      <stop offset="0.5" stop-color="#FF450C" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#B82D00" stop-opacity="0"/>
+    <!-- Névoa de horizonte (separa os corredores do fundo, efeito backlit) -->
+    <linearGradient id="nevoa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC98A" stop-opacity="0"/>
+      <stop offset="0.55" stop-color="#FFB877" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#FF7A34" stop-opacity="0"/>
     </linearGradient>
-    <!-- Grão fino p/ eliminar flatness digital (baixa opacidade) -->
+    <!-- Chão: escurece p/ a base, com reflexo quente -->
+    <linearGradient id="chao" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A1206" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#160804"/>
+      <stop offset="1" stop-color="#080402"/>
+    </linearGradient>
+    <linearGradient id="streak" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFE0C2" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FFA560" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FFE0C2" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="9"/></filter>
     <filter id="grao" x="0" y="0" width="100%" height="100%">
       <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" result="n"/>
       <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
     </filter>
-    <linearGradient id="streak" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#FFC9A8" stop-opacity="0"/>
-      <stop offset="0.5" stop-color="#FF8244" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#FFC9A8" stop-opacity="0"/>
-    </linearGradient>
+
+    <!-- Corredor em passada — silhueta ATLÉTICA backlit (tronco/coxas grossos,
+         canelas/antebraços finos, cabeça menor, leve inclinação à frente).
+         Ordem de desenho = profundidade: membros de trás → tronco → membros da
+         frente → cabeça. -->
+    <g id="runner" fill="#070301" stroke="#070301" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M62 104 L41 131" stroke-width="21" fill="none"/>
+      <path d="M41 131 L21 158" stroke-width="12" fill="none"/>
+      <path d="M80 57 L57 51" stroke-width="13" fill="none"/>
+      <path d="M57 51 L44 38" stroke-width="10" fill="none"/>
+      <path d="M84 49 L61 106" stroke-width="31" fill="none"/>
+      <path d="M61 106 L87 120" stroke-width="22" fill="none"/>
+      <path d="M87 120 L97 151" stroke-width="13" fill="none"/>
+      <path d="M83 57 L104 66" stroke-width="14" fill="none"/>
+      <path d="M104 66 L113 87" stroke-width="11" fill="none"/>
+      <circle cx="87" cy="33" r="13" stroke="none"/>
+    </g>
   </defs>
 
-  <rect width="1600" height="1000" fill="url(#base)"/>
-  <rect width="1600" height="1000" fill="url(#ember)"/>
-  <rect width="1600" height="1000" fill="url(#heroico)"/>
+  <!-- Céu + sol -->
+  <rect width="1600" height="1000" fill="url(#ceu)"/>
+  <rect width="1600" height="1000" fill="url(#sol)"/>
 
-  <!-- Horizonte difuso, levemente inclinado (movimento) -->
-  <g transform="rotate(-4 800 500)">
-    <rect x="-200" y="470" width="2000" height="70" fill="url(#horizonte)"/>
+  <!-- Raios difusos do sol -->
+  <g opacity="0.16" fill="#FFD9A0">
+    <path d="M992 760 L560 120 L720 90 Z"/>
+    <path d="M992 760 L980 60 L1120 110 Z"/>
+    <path d="M992 760 L1400 140 L1500 300 Z"/>
+    <path d="M992 760 L200 300 L120 470 Z"/>
   </g>
 
-  <!-- Traços de energia diagonais (passada/velocidade) -->
-  <g opacity="0.85" stroke-linecap="round">
-    <rect x="240" y="250" width="640" height="4" rx="2" fill="url(#streak)" transform="rotate(-18 560 252)"/>
-    <rect x="620" y="360" width="820" height="5" rx="2.5" fill="url(#streak)" transform="rotate(-18 1030 362)"/>
-    <rect x="120" y="620" width="520" height="3" rx="1.5" fill="url(#streak)" opacity="0.7" transform="rotate(-18 380 621)"/>
-    <rect x="700" y="700" width="900" height="4" rx="2" fill="url(#streak)" opacity="0.6" transform="rotate(-18 1150 702)"/>
+  <!-- Colinas distantes (Floripa) — camadas p/ profundidade -->
+  <path d="M0 700 C 220 640, 380 690, 560 656 C 760 618, 900 672, 1080 640 C 1280 604, 1440 664, 1600 636 L1600 1000 L0 1000 Z" fill="#3A1608" opacity="0.7"/>
+  <path d="M0 742 C 260 706, 470 742, 720 716 C 980 688, 1180 736, 1380 712 C 1490 700, 1550 720, 1600 712 L1600 1000 L0 1000 Z" fill="#20100A" opacity="0.85"/>
+
+  <!-- Névoa quente sobre o horizonte (backlit) -->
+  <rect x="0" y="690" width="1600" height="150" fill="url(#nevoa)"/>
+
+  <!-- Chão -->
+  <rect x="0" y="760" width="1600" height="240" fill="url(#chao)"/>
+  <!-- Reflexo do sol no chão -->
+  <ellipse cx="992" cy="792" rx="360" ry="26" fill="#FF7A2C" opacity="0.22" filter="url(#glow)"/>
+
+  <!-- Halo de brasa atrás do pelotão (separação backlit) -->
+  <ellipse cx="900" cy="742" rx="620" ry="80" fill="#FF8B3C" opacity="0.28" filter="url(#glow)"/>
+
+  <!-- Pelotão de corredores — do maior (frente) ao menor (fundo) -->
+  <g>
+    <use href="#runner" transform="translate(150 470) scale(2.05)"/>
+    <use href="#runner" transform="translate(540 512) scale(1.55)"/>
+    <use href="#runner" transform="translate(830 498) scale(1.68)" opacity="0.96"/>
+    <use href="#runner" transform="translate(1120 536) scale(1.08)" opacity="0.9"/>
+    <use href="#runner" transform="translate(1305 542) scale(0.94)" opacity="0.82"/>
+    <use href="#runner" transform="translate(1435 548) scale(0.78)" opacity="0.7"/>
   </g>
 
-  <!-- Arco de brasa (marca de calor, canto superior-direito) -->
-  <path d="M1600 60 A 620 620 0 0 1 980 680" fill="none" stroke="#FF450C" stroke-opacity="0.25" stroke-width="2"/>
-  <path d="M1600 180 A 500 500 0 0 1 1100 680" fill="none" stroke="#FF8244" stroke-opacity="0.18" stroke-width="1.5"/>
+  <!-- Traços de energia (velocidade) na frente -->
+  <g stroke-linecap="round">
+    <rect x="120" y="852" width="520" height="6" rx="3" fill="url(#streak)" transform="rotate(-3 380 855)"/>
+    <rect x="560" y="892" width="760" height="7" rx="3.5" fill="url(#streak)" opacity="0.8" transform="rotate(-3 940 895)"/>
+    <rect x="300" y="930" width="900" height="5" rx="2.5" fill="url(#streak)" opacity="0.6" transform="rotate(-3 750 932)"/>
+  </g>
 
-  <!-- Vinheta p/ garantir legibilidade de texto sobreposto -->
-  <radialGradient id="vinheta" cx="0.5" cy="0.5" r="0.75">
-    <stop offset="0.55" stop-color="#000000" stop-opacity="0"/>
-    <stop offset="1" stop-color="#000000" stop-opacity="0.45"/>
+  <!-- Vinheta p/ legibilidade de texto sobreposto -->
+  <radialGradient id="vinheta" cx="0.5" cy="0.46" r="0.78">
+    <stop offset="0.5" stop-color="#000000" stop-opacity="0"/>
+    <stop offset="1" stop-color="#000000" stop-opacity="0.5"/>
   </radialGradient>
   <rect width="1600" height="1000" fill="url(#vinheta)"/>
 
-  <!-- Grão por cima de tudo -->
-  <rect width="1600" height="1000" filter="url(#grao)" opacity="0.05"/>
+  <!-- Grão fino -->
+  <rect width="1600" height="1000" filter="url(#grao)" opacity="0.045"/>
 </svg>
