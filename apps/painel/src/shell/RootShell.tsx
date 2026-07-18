@@ -9,13 +9,11 @@
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, CircleHelp, Plus } from 'lucide-react';
+import { Bell, CircleHelp } from 'lucide-react';
 import {
   AppShell,
   Avatar,
-  Button,
   IconButton,
-  SearchInput,
   Sidebar,
   SidebarFooter,
   Toolbar,
@@ -39,21 +37,6 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   // Toolbar global (T3) — só nas rotas do PRODUTOR (a /plataforma tem nav
   // própria e nenhuma busca de operação). Mesma condição do sidebar.ts.
   const produtor = !location.pathname.startsWith('/plataforma');
-  const searchRef = React.useRef<HTMLInputElement>(null);
-
-  // ⌘K / Ctrl+K foca a busca (visual + foco do mockup). A BUSCA REAL é stub:
-  // não existe rota/índice de busca no cliente — Enter não navega (honesto).
-  React.useEffect(() => {
-    if (!produtor) return undefined;
-    const onKey = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [produtor]);
 
   // Bloco de marca (T2): a ANATOMIA `.brand` (padding, hairline, sub) é do DS —
   // reusamos os MESMOS tokens do SidebarBrand para não haver drift. O mark deixa
@@ -97,17 +80,14 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           // 32px 40px) — o conteúdo abaixo mantém o padding próprio de cada
           // tela (a recomposição da Visão Geral é T4–T6).
           <div className="px-[var(--layout-page-px)] pt-[var(--layout-page-pt)]">
+            {/*
+              Adendo 12 (revisão UX do Vitor, 2026-07-18): a busca do header
+              (stub sem índice real) e o botão "Novo evento" (fixo em todas as
+              telas) foram SUPRIMIDOS por ora. Criar evento segue disponível na
+              própria página /eventos (HubEventos tem o "+ Novo evento" primário).
+              A toolbar permanece só com Ajuda + Notificações (stubs T3).
+            */}
             <Toolbar
-              start={
-                <SearchInput
-                  ref={searchRef}
-                  placeholder="Buscar atleta, evento, inscrição…"
-                  // <lg a Toolbar empilha: a busca ocupa a linha inteira em vez
-                  // dos 320px fixos que estouravam o main de ~310px (M2). Em lg+
-                  // volta aos 320px do mockup — desktop intocado.
-                  className="w-full lg:w-[var(--search-width)]"
-                />
-              }
               end={
                 <>
                   {/* Ajuda: sem destino real ainda — stub registrado (T3). */}
@@ -119,10 +99,6 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
                   <IconButton aria-label="Notificações">
                     <Bell />
                   </IconButton>
-                  <Button variant="primary" size="sm" onClick={() => navigate('/eventos/novo')}>
-                    <Plus aria-hidden className="w-[var(--search-icon-size)] h-[var(--search-icon-size)]" />
-                    Novo evento
-                  </Button>
                 </>
               }
             />
