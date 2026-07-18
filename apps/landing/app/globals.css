@@ -1,9 +1,11 @@
 /* ── Fontes do tema brasa ────────────────────────────────────────────────
-   O tema brasa declara --font-family-display: Exo 2, --font-family-ui: Exo 2,
-   --font-family-mono: JetBrains Mono. A CARGA da webfont (Exo 2 + JetBrains
-   Mono) é feita por <link> no <head> de app/layout.tsx — o `@import url(google)`
-   AQUI era DERRUBADO pelo pipeline de CSS do Next (não virava request), então a
-   LP caía no sans-serif do sistema. Não reintroduzir o @import remoto aqui. */
+   O tema brasa declara --font-family-display/ui: "Exo 2", --font-family-mono:
+   "JetBrains Mono". A CARGA da webfont é feita por next/font em app/layout.tsx
+   (auto-hospedada), que expõe as variáveis --leela-font-exo2 / --leela-font-mono
+   no <html>. O `@import url(google)` AQUI era DERRUBADO pelo pipeline de CSS do
+   Next (document.fonts vazio ⇒ sans-serif do sistema) — não reintroduzir. O
+   mapeamento dos tokens do DS para as variáveis carregadas fica no fim deste
+   arquivo (@layer base override). */
 
 /* ── Tokens do design system (tema brasa — DARK) ─────────────────────────
    Fonte ÚNICA dos tokens semânticos (sem redefinir token local). O
@@ -14,6 +16,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mapeia os tokens de FONTE do DS para as webfonts carregadas por next/font
+   (layout.tsx). UNLAYERED + :root[data-theme] (especificidade maior + ordem
+   posterior) para vencer a definição de brasa.css, que é unlayered. Assim
+   `font-display`/`font-mono` (que resolvem para var(--font-family-*)) usam a
+   Exo 2 / JetBrains Mono REAIS, com a família nomeada como fallback. */
+:root[data-theme='brasa'] {
+  --font-family-display: var(--leela-font-exo2), 'Exo 2', sans-serif;
+  --font-family-ui: var(--leela-font-exo2), 'Exo 2', sans-serif;
+  --font-family-mono: var(--leela-font-mono), 'JetBrains Mono', monospace;
+}
 
 @layer base {
   html {

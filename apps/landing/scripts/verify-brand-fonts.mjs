@@ -33,10 +33,21 @@ let failures = 0;
 
 // ── (A1) layout carrega Exo 2 ────────────────────────────────────────────────
 const layout = readFileSync(join(ROOT, 'app/layout.tsx'), 'utf8');
-if (/fonts\.googleapis\.com\/css2\?family=Exo\+2/.test(layout)) {
-  pass('app/layout.tsx carrega a webfont Exo 2 (<link> no <head>)');
+const carregaViaNextFont = /next\/font\/google/.test(layout) && /\bExo_2\b/.test(layout);
+const carregaViaLink = /fonts\.googleapis\.com\/css2\?family=Exo\+2/.test(layout);
+if (carregaViaNextFont || carregaViaLink) {
+  pass(`app/layout.tsx carrega a webfont Exo 2 (${carregaViaNextFont ? 'next/font' : '<link>'})`);
 } else {
   fail('app/layout.tsx NÃO carrega Exo 2 — a LP cairia no sans-serif do sistema');
+}
+// O mapeamento token→next/font tem que existir para font-display/font-ui resolverem.
+if (carregaViaNextFont) {
+  const globals = readFileSync(join(ROOT, 'app/globals.css'), 'utf8');
+  if (/--font-family-(display|ui)\s*:\s*var\(--leela-font-exo2/.test(globals)) {
+    pass('globals.css mapeia os tokens de fonte do DS para a Exo 2 carregada');
+  } else {
+    fail('globals.css NÃO mapeia --font-family-* para a webfont — headings/UI cairiam no fallback');
+  }
 }
 
 // ── (A2) nenhum font-family LITERAL fora de var(--font-*) ─────────────────────
@@ -86,16 +97,21 @@ if (url) {
     await p.waitForTimeout(4000);
   }
   await p.waitForTimeout(1200);
-  const d = await p.evaluate(() => ({
-    body: getComputedStyle(document.body).fontFamily,
-    exoLoaded: [...document.fonts].some((f) => /Exo 2/i.test(f.family) && f.status === 'loaded'),
-    fontsN: document.fonts.size,
-  }));
+  // next/font nomeia a família como "Exo_2" (com _); aceitar espaço OU underscore.
+  const EXO = /Exo[_ ]?2/i;
+  const d = await p.evaluate((src) => {
+    const re = new RegExp(src, 'i');
+    return {
+      body: getComputedStyle(document.body).fontFamily,
+      exoLoaded: [...document.fonts].some((f) => re.test(f.family) && f.status === 'loaded'),
+      fontsN: document.fonts.size,
+    };
+  }, EXO.source);
   await b.close();
   if (!resolved) fail(`rota não resolveu (flicker do emulator): ${url}`);
-  if (/Exo 2/i.test(d.body)) pass(`font-family computada em body é Exo 2 (${d.body})`);
+  if (EXO.test(d.body)) pass(`font-family computada em body é Exo 2 (${d.body})`);
   else fail(`font-family computada NÃO é Exo 2: ${d.body}`);
-  if (d.exoLoaded) pass(`FontFace "Exo 2" LOADED (document.fonts=${d.fontsN})`);
+  if (d.exoLoaded) pass(`FontFace Exo 2 LOADED (document.fonts=${d.fontsN})`);
   else fail(`Exo 2 declarada mas NÃO carregada (document.fonts=${d.fontsN}) — regressão da webfont`);
 }
 

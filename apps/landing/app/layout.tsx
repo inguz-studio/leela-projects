@@ -1,7 +1,28 @@
 import type { ReactNode } from 'react';
 import type { Metadata } from 'next';
+import { Exo_2, JetBrains_Mono } from 'next/font/google';
 import { baseUrl } from '../lib/seo';
 import './globals.css';
+
+// Tipografia oficial do DS (tema brasa) carregada e AUTO-HOSPEDADA por next/font
+// — o `@import url(google)` em globals.css era DERRUBADO pelo pipeline de CSS do
+// Next (document.fonts vazio ⇒ a LP/checkout caíam no sans-serif do sistema).
+// next/font expõe variáveis CSS que os tokens --font-* passam a apontar
+// (globals.css), então a família "Exo 2" dos tokens resolve DE FATO, sem <head>
+// manual (que suprimia a injeção de CSS do Next). Pesos batem com os tokens.
+const exo2 = Exo_2({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--leela-font-exo2',
+});
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  display: 'swap',
+  variable: '--leela-font-mono',
+});
 
 export const metadata: Metadata = {
   // Origem canônica para resolver URLs relativas de canonical/OG (S1205-T1).
@@ -30,22 +51,11 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: { children: ReactNode }): React.JSX.Element {
   return (
-    <html lang="pt-BR" data-theme="brasa">
-      <head>
-        {/* Tipografia oficial do DS (tema brasa): Exo 2 (display/ui) + JetBrains
-            Mono. Carregada por <link> no <head> porque o `@import url(google)`
-            em globals.css é DERRUBADO pelo pipeline de CSS do Next (não vira
-            request, document.fonts fica vazio) — a LP caía no sans-serif do
-            sistema. O <link> garante que a família "Exo 2" dos tokens
-            (--font-family-display/ui) resolva de fato, na LP E no checkout.
-            Pesos batem com os tokens: 400/500/600/700/800 + itálico. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&family=JetBrains+Mono:wght@400;600&display=swap"
-        />
-      </head>
+    <html
+      lang="pt-BR"
+      data-theme="brasa"
+      className={`${exo2.variable} ${jetBrainsMono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
