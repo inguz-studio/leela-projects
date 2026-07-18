@@ -112,6 +112,11 @@ async function lerLotesPorModalidade(db: Firestore, eventoId: string): Promise<M
  * Kits do evento (`eventos/{id}/kits`) — projeção pública para o checkout
  * filtrar por modalidade (RN-210). Parse fail-fast do core; ordena do mais
  * caro ao desconto ("Sem kit" por último), igual ao painel (listarKits).
+ *
+ * R9-C (RN-227/RN-229): a visão de compra (descricao/itens/imagemUrl) vem do
+ * doc real — `parseKit` já é a fronteira de segurança (imagemUrl só http(s)
+ * válida; itens normalizados). Sem dado → null/[] e o checkout cai no
+ * fallback mock rico (nunca fabricamos aqui).
  */
 async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
   const snap = await db.collection('eventos').doc(eventoId).collection('kits').get();
@@ -124,6 +129,9 @@ async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
         preco: kit.preco,
         modalidades: kit.modalidades,
         capacidade: kit.capacidade,
+        descricao: kit.descricao ?? null,
+        itens: kit.itens,
+        imagemUrl: kit.imagemUrl ?? null,
       };
     })
     .sort((a, b) => b.preco - a.preco);

@@ -28,6 +28,11 @@ export interface ModalidadePublica {
  * Kit público do evento (RN-210/211) — projeção do doc `eventos/{id}/kits`.
  * `preco` é o DELTA sobre a inscrição (NEGATIVO = desconto). `modalidades` é a
  * chave da FILTRAGEM do checkout: o kit só aparece nas modalidades que oferta.
+ *
+ * VISÃO DE COMPRA (R9-C · RN-227/RN-229): `descricao`/`itens`/`imagemUrl`
+ * vêm do doc real quando preenchidos; `null`/`[]` = sem dado → o checkout
+ * cai no fallback mock rico (`kitDetalheDados`), nunca vazio. `imagemUrl`
+ * já passou pela fronteira http(s) do core (`parseKit`) — seguro p/ <img>.
  */
 export interface KitPublico {
   id: string;
@@ -35,6 +40,9 @@ export interface KitPublico {
   preco: number;
   modalidades: string[];
   capacidade: number;
+  descricao: string | null;
+  itens: string[];
+  imagemUrl: string | null;
 }
 
 /** Uma janela de retirada de kit (espelho público do cronograma). */
