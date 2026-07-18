@@ -57,6 +57,18 @@ export interface SalvarKitInput {
   preco: number;
   capacidade: number;
   modalidades: string[];
+  /**
+   * R9-C (RN-229) — frase que posiciona o kit no checkout (≤280).
+   * `null` limpa o campo; ausente não toca.
+   */
+  descricao?: string | null;
+  /** R9-C (RN-229) — "o que está incluso" (≤30 itens). Ausente não toca. */
+  itens?: string[];
+  /**
+   * R9-C (RN-227) — URL http(s) da imagem 1:1 (vinda de `uploadImagemKit`
+   * ou colada). `null` limpa; ausente não toca. Rules validam http(s) ≤2048.
+   */
+  imagemUrl?: string | null;
 }
 
 /**
@@ -69,19 +81,21 @@ export async function salvarKit(
   kitId: string,
   input: SalvarKitInput
 ): Promise<void> {
-  await setDoc(
-    doc(db, 'eventos', eventoId, 'kits', kitId),
-    {
-      id: kitId,
-      tenantId: input.tenantId,
-      nome: input.nome,
-      preco: input.preco,
-      capacidade: input.capacidade,
-      modalidades: input.modalidades,
-      atualizadoEm: serverTimestamp(),
-    },
-    { merge: true }
-  );
+  const payload: Record<string, unknown> = {
+    id: kitId,
+    tenantId: input.tenantId,
+    nome: input.nome,
+    preco: input.preco,
+    capacidade: input.capacidade,
+    modalidades: input.modalidades,
+    atualizadoEm: serverTimestamp(),
+  };
+  // Visão de compra (R9-C): só entram no payload quando fornecidos —
+  // merge não apaga o que o organizador já preencheu.
+  if (input.descricao !== undefined) payload['descricao'] = input.descricao;
+  if (input.itens !== undefined) payload['itens'] = input.itens;
+  if (input.imagemUrl !== undefined) payload['imagemUrl'] = input.imagemUrl;
+  await setDoc(doc(db, 'eventos', eventoId, 'kits', kitId), payload, { merge: true });
 }
 
 /** Remove um kit do evento. */

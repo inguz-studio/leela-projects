@@ -809,7 +809,34 @@ service cloud.firestore {
             && request.resource.data.nome.size() > 0
             && request.resource.data.preco is number
             && request.resource.data.capacidade is number
-            && request.resource.data.modalidades is list;
+            && request.resource.data.modalidades is list
+            && camposVisaoKitValidos();
+        }
+
+        /**
+         * R9-C (RN-227/RN-229) — visão de compra do kit, TODOS opcionais
+         * (doc legado segue válido):
+         *   - `descricao` ≤ 280 (teto KIT_DESCRICAO_MAX do core);
+         *   - `itens` lista ≤ 30 entradas (tipo dos ELEMENTOS não é
+         *     verificável em Rules sem iteração — o parse do core descarta
+         *     não-string; limitação honesta, mesma do resto do arquivo);
+         *   - `imagemUrl` null ou http(s) ≤ 2048 (ESPELHO de capaValida do
+         *     evento — a URL vira `src` de <img> na landing pública;
+         *     javascript:/data: nunca entram no doc).
+         */
+        function camposVisaoKitValidos() {
+          return (!('descricao' in request.resource.data)
+              || request.resource.data.descricao == null
+              || (request.resource.data.descricao is string
+                  && request.resource.data.descricao.size() <= 280))
+            && (!('itens' in request.resource.data)
+              || (request.resource.data.itens is list
+                  && request.resource.data.itens.size() <= 30))
+            && (!('imagemUrl' in request.resource.data)
+              || request.resource.data.imagemUrl == null
+              || (request.resource.data.imagemUrl is string
+                  && request.resource.data.imagemUrl.size() <= 2048
+                  && request.resource.data.imagemUrl.matches('https?://.*')));
         }
 
         /**

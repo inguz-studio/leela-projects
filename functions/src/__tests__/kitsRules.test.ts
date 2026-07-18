@@ -38,7 +38,7 @@ import {
 } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { listarKits, listarItensKit } from '@leela/api-client';
+import { listarKits, listarItensKit, salvarKit } from '@leela/api-client';
 import { seedEventos, MARATONA_2027_ID, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import { seedKits, KIT_SEEDS, ITEM_KIT_SEEDS } from '../seed/kits.seed';
 import { syncItemUsadoEm, syncItensDoKit } from '../eventos/itemKitIndex';
@@ -173,6 +173,80 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(
       setDoc(kitRefSemVenda(db, 'kit-sem-nome'), kitValido({ id: 'kit-sem-nome', nome: '' }))
+    );
+  });
+});
+
+// ── R9-C: visão de compra do kit (RN-227/RN-229) ──────────────────────────
+
+describe('kits — visão de compra: descricao/itens/imagemUrl (R9-C)', () => {
+  it('owner salva kit COMPLETO via salvarKit (api-client) e o dado persiste', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      salvarKit(db, MARATONA_2027_ID, 'kit-visao', {
+        tenantId: CASTELO_ID, nome: 'Kit Visão', preco: 30, capacidade: 100,
+        modalidades: ['42k'],
+        descricao: 'O kit completo da maratona.',
+        itens: ['Camiseta técnica', 'Medalha de finisher'],
+        imagemUrl: 'https://cdn.leela.com.br/kits/kit-visao.webp',
+      })
+    );
+    const snap = await getDoc(kitRefSemVenda(db, 'kit-visao'));
+    expect(snap.data()?.['descricao']).toBe('O kit completo da maratona.');
+    expect(snap.data()?.['itens']).toEqual(['Camiseta técnica', 'Medalha de finisher']);
+    expect(snap.data()?.['imagemUrl']).toBe('https://cdn.leela.com.br/kits/kit-visao.webp');
+  });
+
+  it('COM venda: update da VISÃO segue permitido (RN-200 congela só preco)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertSucceeds(
+      updateDoc(kitRef(db, 'kit_ouro'), {
+        descricao: 'Atualizada pós-venda.', itens: ['Camiseta'], imagemUrl: null,
+      })
+    );
+  });
+
+  it('descricao > 280 é NEGADA; descricao null (limpar) é permitida', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(kitRefSemVenda(db, 'kit-desc'), kitValido({
+        id: 'kit-desc', descricao: 'x'.repeat(281),
+      }))
+    );
+    await assertSucceeds(
+      setDoc(kitRefSemVenda(db, 'kit-desc'), kitValido({ id: 'kit-desc', descricao: null }))
+    );
+  });
+
+  it('itens fora de shape é NEGADO (não-lista; > 30 entradas)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(kitRefSemVenda(db, 'kit-itens'), kitValido({ id: 'kit-itens', itens: 'Camiseta' }))
+    );
+    await assertFails(
+      setDoc(kitRefSemVenda(db, 'kit-itens'), kitValido({
+        id: 'kit-itens', itens: Array.from({ length: 31 }, (_, i) => `Item ${i}`),
+      }))
+    );
+  });
+
+  it('imagemUrl fora de http(s) é NEGADA (javascript:/data:/relativa) — vira <img> público', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    for (const url of ['javascript:alert(1)', 'data:text/html,x', '/covers/kit.svg']) {
+      await assertFails(
+        setDoc(kitRefSemVenda(db, 'kit-img'), kitValido({ id: 'kit-img', imagemUrl: url }))
+      );
+    }
+    // > 2048 também nega (anti doc-bomba, espelho da capa)
+    await assertFails(
+      setDoc(kitRefSemVenda(db, 'kit-img'), kitValido({
+        id: 'kit-img', imagemUrl: `https://x.com/${'a'.repeat(2049)}`,
+      }))
+    );
+    await assertSucceeds(
+      setDoc(kitRefSemVenda(db, 'kit-img'), kitValido({
+        id: 'kit-img', imagemUrl: 'https://cdn.leela.com.br/kits/ok.png',
+      }))
     );
   });
 });
