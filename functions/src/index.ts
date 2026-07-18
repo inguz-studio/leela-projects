@@ -344,3 +344,12 @@ export { provisionAfiliadoAccount } from './affiliation/provisionAfiliado';
 // organizador vê os afiliados do PRÓPRIO tenant (escopo da claim, nunca do
 // input). ⚠️ Fable (escopo de leitura/PII).
 export { getMinhasAfiliacoes, getAfiliadosDoTenant } from './affiliation/readers';
+
+// CRM do organizador (E19 · S-R9-13-T1 · RN-172): cliente consolidado
+// cross-evento com LTV em `tenants/{tid}/crmClientes/{key}` — ledger fechado
+// por inscrição + recompute transacional idempotente (computeCrmCliente do
+// core). Identidade CPF→email→atletaId (defaults E19); docId por hash com
+// salt de tenant — CPF/e-mail NUNCA persistidos (minimização). Pendente/
+// cancelada não entra; estornada fica no histórico fora do LTV. ⚠️ Fable
+// (PII individual — categoria distinta do RN-820).
+export { onInscritoWriteCrm } from './crm/agregarClientes';
