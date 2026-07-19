@@ -21,6 +21,7 @@ tags:
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
+- [ ] **[E01] Varredura §8 no painel (W2 do gate de DS)** — telas antigas trocam datas/seleções/campos feitos à mão pelos componentes oficiais 📋 [[BOARD-HISTORICO]]
 
 
 ## 🔄 Em execução
@@ -32,6 +33,7 @@ tags:
 
 - [x] **[E00] Fundação técnica** — monorepo, Firebase, login e CI ✅ [[LEELA-E00-fundacao-tecnica]]
 - [x] **[E01] Design System** — temas brasa/leela, showroom e telas-base ✅ [[LEELA-E01-design-system]]
+- [x] **[E01] Gate de consistência do DS (W1)** — auditoria completa painel+DS: núcleo do DS provado são, showroom passa a documentar seleção rica e datas, rota de correção das telas antigas mapeada ✅ [[BOARD-HISTORICO]]
 - [x] **[E16] Multi-tenant** — isolamento e permissões da plataforma ✅ [[LEELA-E16-plataforma-superadmin]]
 - [x] **[E02] Visão geral** — painel de abertura com os números do evento ✅ [[LEELA-E02-visao-geral]]
 - [x] **[E03] Operação do evento** — inscritos, balcão, kits e financeiro ✅ [[LEELA-E03-operacao-evento]]
