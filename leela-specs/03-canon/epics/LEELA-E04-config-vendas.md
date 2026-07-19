@@ -940,6 +940,8 @@ UI de configurações/equipe (T2/T3).
 
 - **Tipo:** screen · **Depende de:** S304-T1, E03-S202-T1 · **Estimativa:** M
 
+> **Atualização 2026-07-19 (lote CAPA-EVENTO-UPLOAD · `[LEELA-CEV-*]`):** a capa desta tela deixou de ser "em breve"/URL — é **upload real** (RN-228: jpeg/png/gif ≤2MB, crop 1.9:1/1600×838) via `ImageUploadField` + seam `uploadCapaEvento`; `imagemUrl` persiste no fluxo canônico `atualizarConfiguracoesEvento` (read-only = só prévia). Backend: match `eventos/{eventoId}/capa` nas storage.rules, fail-closed com cross-service `firestore.get` + teto 2MB na Rule.
+
 **Objetivo**
 Renderizar as configurações gerais do evento: identidade (nome, descrição, capa), `usaChip`, visibilidade/URL pública, com salvamento e feedback via Toast.
 
