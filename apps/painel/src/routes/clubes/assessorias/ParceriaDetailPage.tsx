@@ -20,6 +20,7 @@ import {
   useToast,
   type SelectOption,
 } from '@leela/design-system';
+import { DateTimeField } from '@/components/fields/DateTimeField';
 import { definirCondicaoDesconto } from '@leela/api-client';
 import { AuthAlert } from '../../conta/auth/AuthAlert';
 import { useAssessoriasSession } from './_data/session';
@@ -245,19 +246,17 @@ export function ParceriaDetailPage(): JSX.Element {
             placeholder="Deixe vazio para ilimitado"
           />
           <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-            <Input
+            <DateTimeField
               id="condicao-inicio"
               label="Início da validade"
-              type="datetime-local"
               value={values.inicio}
-              onChange={(e) => set('inicio', e.target.value)}
+              onChange={(inicio) => set('inicio', inicio)}
             />
-            <Input
+            <DateTimeField
               id="condicao-fim"
               label="Fim da validade"
-              type="datetime-local"
               value={values.fim}
-              onChange={(e) => set('fim', e.target.value)}
+              onChange={(fim) => set('fim', fim)}
             />
           </div>
 

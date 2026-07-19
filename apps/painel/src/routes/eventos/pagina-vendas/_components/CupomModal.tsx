@@ -18,6 +18,7 @@
 
 import * as React from 'react';
 import { Button, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
+import { DateTimeField } from '@/components/fields/DateTimeField';
 import type { Cupom, TipoCupom } from '@leela/core';
 import {
   dateParaInputLocal,
@@ -195,19 +196,17 @@ export function CupomModal({
         </div>
 
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-          <Input
+          <DateTimeField
             id="cupom-inicio"
             label="Válido a partir de"
-            type="datetime-local"
             value={values.inicioEm}
-            onChange={(e) => set('inicioEm', e.target.value)}
+            onChange={(inicioEm) => set('inicioEm', inicioEm)}
           />
-          <Input
+          <DateTimeField
             id="cupom-fim"
             label="Válido até"
-            type="datetime-local"
             value={values.fimEm}
-            onChange={(e) => set('fimEm', e.target.value)}
+            onChange={(fimEm) => set('fimEm', fimEm)}
           />
         </div>
         {erro?.campo === 'janela' && (

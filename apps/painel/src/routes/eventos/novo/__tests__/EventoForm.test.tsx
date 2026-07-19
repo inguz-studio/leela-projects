@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
@@ -14,7 +14,24 @@ function renderForm(onCriarEvento = vi.fn().mockResolvedValue({ eventoId: 'e1', 
   return { onCriarEvento, onSuccess };
 }
 
+// A "Data da prova" agora é o DatePicker do DS (§8/F-01) — não há mais input
+// nativo p/ setar valor via fireEvent. O relógio é congelado em abr/2099
+// (beforeEach) para o calendário abrir nesse mês; clicar o dia 27 reproduz o
+// mesmo '2099-04-27' que as asserções já esperavam — asserções intocadas.
+async function escolherDataDaProva(): Promise<void> {
+  await userEvent.click(screen.getByRole('button', { name: 'Data da prova' }));
+  await userEvent.click(screen.getByRole('button', { name: /27 de abril de 2099/ }));
+}
+
 describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2099, 3, 15, 12, 0, 0));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('bloqueia o submit e mostra erro inline quando falta campo obrigatório', async () => {
     const { onCriarEvento } = renderForm();
     await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
@@ -26,7 +43,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     const { onCriarEvento, onSuccess } = renderForm();
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida do Campeche');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'Av. Campeche, 1000');
 
     // Modalidade por entrada livre (sem preço no cadastro).
@@ -53,7 +70,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     const { onCriarEvento } = renderForm();
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Z');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.click(screen.getByRole('button', { name: '5k' }));
 
@@ -69,7 +86,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     const { onCriarEvento } = renderForm();
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida 7h');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     fireEvent.change(screen.getByLabelText('Horário (opcional)'), { target: { value: '07:00' } });
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
@@ -90,7 +107,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     expect(toggle).toBeEnabled();
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Taxa');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.click(screen.getByRole('button', { name: '10k' }));
     await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
@@ -105,7 +122,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     const { onCriarEvento } = renderForm();
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Repassada');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.click(screen.getByRole('button', { name: '10k' }));
     await userEvent.click(
@@ -123,7 +140,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     renderForm(vi.fn().mockRejectedValue(new Error('backend off')));
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento X');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
@@ -141,7 +158,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     );
 
     await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Y');
-    fireEvent.change(screen.getByLabelText('Data da prova'), { target: { value: '2099-04-27' } });
+    await escolherDataDaProva();
     await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
     await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
     await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));

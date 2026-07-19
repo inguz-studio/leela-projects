@@ -13,6 +13,7 @@
 
 import * as React from 'react';
 import { Button, Input, Modal, useToast } from '@leela/design-system';
+import { DateTimeField } from '@/components/fields/DateTimeField';
 import type { Lote } from '@leela/core';
 import {
   MSG_LOTE_VENDIDO,
@@ -175,20 +176,18 @@ export function LoteModal({
         </div>
 
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-          <Input
+          <DateTimeField
             id="lote-inicio"
             label="Início da venda"
-            type="datetime-local"
             value={values.inicioEm}
-            onChange={(e) => set('inicioEm', e.target.value)}
+            onChange={(inicioEm) => set('inicioEm', inicioEm)}
             disabled={congelado}
           />
-          <Input
+          <DateTimeField
             id="lote-fim"
             label="Fim da venda"
-            type="datetime-local"
             value={values.fimEm}
-            onChange={(e) => set('fimEm', e.target.value)}
+            onChange={(fimEm) => set('fimEm', fimEm)}
             disabled={congelado}
           />
         </div>

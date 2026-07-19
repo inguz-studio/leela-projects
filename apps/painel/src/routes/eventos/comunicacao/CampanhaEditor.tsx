@@ -24,6 +24,7 @@ import {
   type SelectOption,
   type TabItem,
 } from '@leela/design-system';
+import { DateField } from '@/components/fields/DateField';
 import type {
   CanalCampanha,
   SegmentoCampanha,
@@ -391,7 +392,7 @@ export function CampanhaEditor({
               {values.quando === 'agendar' ? (
                 <>
                   <div className="grid grid-cols-1 gap-[var(--spacing-3)] sm:grid-cols-2">
-                    <Input id="campanha-data" type="date" label="Data" value={values.agendadoData} onChange={(e) => patch({ agendadoData: e.target.value })} />
+                    <DateField id="campanha-data" label="Data" value={values.agendadoData} onChange={(agendadoData) => patch({ agendadoData })} />
                     <Input id="campanha-hora" type="time" label="Hora" value={values.agendadoHora} onChange={(e) => patch({ agendadoHora: e.target.value })} />
                   </div>
                   {/* S402-T2 · automação de disparo. Estado HONESTO: o gate real

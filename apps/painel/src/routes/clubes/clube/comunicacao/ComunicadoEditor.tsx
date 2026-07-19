@@ -9,6 +9,7 @@
 import { useMemo, useState } from 'react';
 import { Badge, Button, Chip, Input, RadioCard, RadioGroup, Tabs, useToast } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
+import { DateField } from '@/components/fields/DateField';
 import type {
   AgregadosSegmentacao,
   CanalComunicado,
@@ -257,7 +258,7 @@ export function ComunicadoEditor({
               </div>
               {values.agendamento === 'agendar' ? (
                 <div className="grid grid-cols-1 gap-[var(--spacing-3)] sm:grid-cols-2">
-                  <Input id="comunicado-data" type="date" label="Data" value={values.agendadoData} onChange={(e) => patch({ agendadoData: e.target.value })} />
+                  <DateField id="comunicado-data" label="Data" value={values.agendadoData} onChange={(agendadoData) => patch({ agendadoData })} />
                   <Input id="comunicado-hora" type="time" label="Hora" value={values.agendadoHora} onChange={(e) => patch({ agendadoHora: e.target.value })} />
                 </div>
               ) : null}

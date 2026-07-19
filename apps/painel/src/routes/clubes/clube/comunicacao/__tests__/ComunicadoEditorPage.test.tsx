@@ -109,7 +109,8 @@ describe('ComunicadoEditorPage — fluxo edit (fix S2)', () => {
     renderPage('/clubes/cps/comunicacao/nova?id=com-agendado');
 
     // O form nasce pré-preenchido com a data/hora originais (antes: '').
-    expect(screen.getByLabelText('Data')).toHaveValue('2026-08-15');
+    // A data agora é o DatePicker do DS (§8): o trigger resume dd/MM/yyyy.
+    expect(screen.getByRole('button', { name: 'Data' })).toHaveTextContent('15/08/2026');
     expect(screen.getByLabelText('Hora')).toHaveValue('13:30');
 
     const user = userEvent.setup({ delay: null });

@@ -20,6 +20,7 @@ import {
   useToast,
 } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
+import { DateField } from '@/components/fields/DateField';
 import type {
   CatalogoAcao,
   ModeloDesafio,
@@ -259,8 +260,8 @@ export function DesafioEditor({
               />
             </div>
             <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-              <Input id="desafio-inicio" type="date" label="Início" value={values.dataInicio} onChange={(e) => patch({ dataInicio: e.target.value })} />
-              <Input id="desafio-fim" type="date" label="Término" value={values.dataFim} onChange={(e) => patch({ dataFim: e.target.value })} />
+              <DateField id="desafio-inicio" label="Início" value={values.dataInicio} onChange={(dataInicio) => patch({ dataInicio })} />
+              <DateField id="desafio-fim" label="Término" value={values.dataFim} onChange={(dataFim) => patch({ dataFim })} />
             </div>
             <Input
               id="desafio-evento"

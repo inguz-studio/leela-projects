@@ -24,6 +24,7 @@
 
 import * as React from 'react';
 import { Button, Chip, Input, Switch, Textarea, useToast } from '@leela/design-system';
+import { DateField } from '@/components/fields/DateField';
 import { dataHoraLocalParaDate, isDataHoraLocalISO } from '@leela/core';
 import type { CriarEventoFn, CriarEventoInput, CriarEventoResult } from '../_data/contracts';
 import { toastErroCriarEvento } from './erros';
@@ -209,12 +210,11 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
 
       {/* Data + horário. Horário é opcional (o servidor aceita ISO com hora). */}
       <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
-        <Input
+        <DateField
           id="data"
-          type="date"
           label="Data da prova"
           value={values.data}
-          onChange={(e) => set('data', e.target.value)}
+          onChange={(data) => set('data', data)}
           errorMessage={erros.data ?? ''}
         />
         <Input
