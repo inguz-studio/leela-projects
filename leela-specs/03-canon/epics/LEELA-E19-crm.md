@@ -81,6 +81,39 @@ Dar ao **organizador** uma visão única dos seus clientes (atletas que comprara
 
 ---
 
+> Histórias novas das rodadas de 2026-07-19 (DEC-0719-ret). Detalhe/verbatim em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`; regras em §Regras de negócio aplicáveis (RN-174/RN-177). Molde igual ao de S1900.
+
+### LEELA-S1902 · Posse de identidade por CPF — claim condicionado a pagamento + e-mail confirmado (CLAIM-FIX) · ✅ ENTREGUE
+
+**Como** plataforma, **quero** que o vínculo de uma conta à ficha de uma pessoa só ocorra com pagamento confirmado e e-mail correspondente + confirmado, **para** fechar o vazamento F1 (reivindicar o CPF de terceiro) e o abuso F2.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Checkout/Auth (efeito em E12) · **RNs:** RN-174 (regra-mãe aqui), efeito em RN-154/RN-155/RN-173
+- **Origem:** rodada DEC-0719-ret (Vitor, 2026-07-19) — Direção B endurecida do report CHECKOUT2-MODELO. Fila `03-fila-codigo (h)`; report `outputs/leela-build-2d6ee98d/CLAIM-FIX-REPORT.md`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um pedido não pago, **quando** ele é criado, **então** nenhum `contaUid` é vinculado (o claim saiu da criação do pedido).
+- **Dado** um pagamento confirmado, **quando** a conta é resolvida pelo e-mail da compra, **então** o vínculo nasce com o carimbo `contaEmail` (escritor único = confirmação).
+- **Dado** um `getCheckoutPrefill`, **quando** o token não tem e-mail verificado **ou** o e-mail difere do `contaEmail`, **então** devolve `prefill: null` no mesmo shape de "sem ficha" (anti-oráculo de CPF).
+- **Dado** a ordem "vítima anônima compra primeiro → atacante autenticado tenta reivindicar", **quando** o atacante chama o prefill, **então** é negado (F1 fechado).
+
+**Tasks:** `S1902-T1` (first-claim removido da criação do pedido e movido para escritor único na confirmação de pagamento + carimbo `contaEmail` + auto-cura blindada — `ca9ec6a`) ✅, `S1902-T2` (gate de leitura no `getCheckoutPrefill`: `email_verified` + e-mail igual ao `contaEmail`, deny = `prefill: null` — `222dc3b`) ✅, `S1902-T3` (suíte `claimFix.integration`: negativos F1/F2, corridas, replay, auto-cura legítima + hostil — `71c32d1`+`18d4fbb`) ✅. **Status:** ✅ ENTREGUE 2026-07-19 (review antagonista Fable APROVADO COM FIXES; detalhe em §Estado de implementação). Residual: prova de posse do CPF (Direção A) = reforço pré-go-live no backlog.
+
+### LEELA-S1903 · Documento tipado no registry de pessoas (CPF | passaporte) — "documento único" · GATED · (DEC-0719-ret)
+
+**Como** plataforma, **quero** que o registry de pessoas chaveie por documento tipado (CPF de 11 dígitos ou passaporte + país), **para** sustentar o checkout de estrangeiro sem quebrar a integridade "documento do pagador = inscrito".
+
+- **MoSCoW:** Could · **Estimativa:** S · **Superfície:** Modelo/registry (base de E04/E12 estrangeiro) · **RNs:** RN-177 (documento único generaliza RN-173)
+- **Origem:** rodada DEC-0719-ret (Vitor, 2026-07-19). **Especificar SEM implementar** — a migração `cpf-unico`→`documento-unico` é lote GATED pela liberação Asaas. Fila `03-fila-codigo (i)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o registry `pessoas/{…}`, **quando** especifico a chave, **então** ela suporta `cpf` (11 dígitos) **ou** `passaporte` + país emissor, com docId derivado por tipo (HMAC com pepper, sem PII em claro).
+- **Dado** duas inscrições com o mesmo documento tipado, **quando** colidem, **então** são a **mesma pessoa** (linka, não duplica); documentos de tipos diferentes nunca colidem.
+- **Dado** a RN-173 (CPF único) vigente, **quando** RN-177 entra, **então** ela **generaliza** (não revoga) — o caso `cpf` segue pago e o `passaporte` é a extensão.
+
+**Tasks:** `S1903-T1` (modelo do registry de documento tipado + derivação de docId por tipo + spec da migração `cpf-unico`→`documento-unico` — SEM implementar; código só após liberação Asaas). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md` §DEC-0719-ret. **Não despachar antes da liberação externa (ver E04/RN-175).**
+
+---
+
 ## Decisões — RESOLVIDAS por defaults autorizados (Vitor, 2026-07-18 10:24)
 
 As 3 decisões abertas foram fechadas pelos defaults P-E19-1..3; P-E19-4..6 são premissas
@@ -117,6 +150,8 @@ de minimização assumidas na implementação (registradas no handoff do trace):
 **✅ RN-173 CPF único global PAGO (lote CHECKOUT2-MODELO, 2026-07-19, `872e100`):** o `cpf-unico` saiu de fila para código. Registry de unicidade em **`pessoas/{cpf_<hmac32>}`** (coleção RAIZ, distinta do `crmClientes` por tenant): docId = `HMAC-SHA256(CRM_ID_PEPPER, "pessoa:cpf:{cpf11}")[0:32]` — MESMO pepper do CRM (A3), domínio de mensagem próprio (`pessoa:cpf:`) para a chave de pessoa e a do CRM nunca correlacionarem por igualdade. Unicidade **à prova de corrida**: o upsert roda DENTRO da transação do checkout (leitura na fase de leitura + escrita na fase de escrita; retry otimista serializa duas compras simultâneas do mesmo CPF — nunca nascem 2 docs). Escrita SÓ por Function; **Rules `pessoas` deny-all** (get/list/create/update/delete). CPF em claro FICA no doc (Function-only, necessário p/ prefill/gateway); o CRM (`crmClientes`) NUNCA lê este doc em claro — minimização RN-172 intacta. O inscrito ganhou `pessoaRef` (O(1) inscrito→pessoa). Prova: `checkout2Modelo.integration` (corrida concorrente real) + `pessoaCore` + `ck2Rules`.
 
 **✅ DECISÃO F1/F2 (identidade) — RESOLVIDA por Vitor (2026-07-19) ⇒ RN-174.** O first-claim que a review antagonista Fable apontou (vínculo de `contaUid` na CRIAÇÃO do pedido não-pago, sem prova de posse do CPF, com a ordem "vítima compra anônima 1º → atacante reivindica o CPF dela → herda o PII via `getCheckoutPrefill`") **deixa de existir**: o claim passa a exigir **pagamento confirmado + e-mail da conta igual ao e-mail da compra + e-mail confirmado no Firebase** (RN-174 · Direção B endurecida). Verbatim do Vitor: *"pode ser e-mail confirmado + pagamento, mas acredito que seria importante enviarmos um e-mail de confirmação para a pessoa, quando ela fizer o primeiro login, ou receber os ingressos pela primeira vez."* **F2** (conta/e-mail para terceiro) fica mitigado pelo mesmo desenho (a conta só acessa dado após confirmar o e-mail) — **premissa registrada** em RN-174. **Direção A** (prova de posse de CPF por verificação externa) segue como **REFORÇO pré-go-live** (backlog com gatilho "antes de produção com dado real"), não como bloqueador agora. O fix é executável já: **lote de código `CLAIM-FIX`** (checkout/auth), que move o first-claim para a confirmação e adiciona o gate de e-mail correspondente + confirmado na leitura de prefill; testes negativos ("não reivindico CPF que não é meu"; "e-mail do responsável ≠ caller") entram junto. Detalhe do achado em `outputs/leela-build-2d6ee98d/CHECKOUT2-MODELO-REPORT.md` §Review; consolidação em `02-rodadas/2026-07-19-decisoes/`.
+
+**✅ RN-174 IMPLEMENTADA (lote CLAIM-FIX, 2026-07-19, `ca9ec6a`+`222dc3b`+`71c32d1`+`18d4fbb`):** o claim de `contaUid` saiu da criação do pedido e virou **escritor único na confirmação de pagamento** (`garantirContaSemFriccao`): pedido PAGO + conta resolvida PELO e-mail da compra (condições a+b por construção) + carimbo novo **`contaEmail`** gravado junto do vínculo. O leitor (`getCheckoutPrefill`) exige as três condições: vínculo (que já implica pago + e-mail da compra) + **`email_verified` do token (Firebase nativo)** + e-mail do token IGUAL ao `contaEmail`; qualquer deny devolve `{prefill: null}` no MESMO shape de "sem ficha" (anti-oráculo de CPF). `pessoaRegistry` mantém só o merge de `dadosConhecidos` com anti-hijack (`callerUid` — dono atualiza os próprios dados; criação NUNCA reivindica). Auto-cura: claim legado da MESMA conta sem carimbo ganha `contaEmail` na próxima compra confirmada (blindada: conta distinta NUNCA carimba — teste hostil dedicado). **Review antagonista Fable (contexto fresco): APROVADO COM FIXES** — escritor único confirmado por varredura (nenhum outro write de `contaUid`), superfície de leitura confinada ao prefill, sem oráculo/PII em log; único fix requerido (teste da auto-cura hostil) aplicado e re-provado. Residuais documentados: squat pago pré-claim (aceito — fecha na Direção A pré-go-live), envenenamento de `dadosConhecidos` de pessoa não-reivindicada (herdado, integridade leve), lockout de prefill p/ conta que troca de e-mail (fail-closed). Prova: `claimFix.integration` (8 testes: negativos 1-4, corridas 5a/5b, auto-cura legítima+hostil) + `checkout2Modelo`/`pessoaCore` realinhadas. E-mail de verificação: nativo do Firebase no 1º login (client-side); hook de "1ª entrega de ingressos" entra no lote que criar esse fluxo de e-mail (inexistente hoje). Report `outputs/leela-build-2d6ee98d/CLAIM-FIX-REPORT.md`.
 
 **Reconciliação E06 (adendo do Vitor 09:14):** NADA mudou em enviarCampanha/estimarAlcance/automações — audiência por EVENTO segue dona do fluxo. O CRM vira a FONTE DE AUDIÊNCIA do hub central (S-R9-13-T4, lote de UI): o mapa `eventos` por cliente segmenta "participou do evento X" e o disparo REUSARÁ o pipeline único `executarDisparoCampanha` por evento.
 

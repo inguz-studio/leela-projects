@@ -73,6 +73,7 @@ O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois
 ### RNs novas · rodada DEC-0719-ret (Vitor, 2026-07-19) — claim + estrangeiro
 
 - **RN-174 (nova · efeito no checkout; regra-mãe em E19)** — o pré-preenchimento (RN-154) e a conta sem fricção (RN-155) só vinculam uma conta à ficha da pessoa quando há **pagamento confirmado + e-mail da conta igual ao da compra + e-mail confirmado (Firebase nativo)**. Alinha a RN-155: o **e-mail de confirmação** dispara no **primeiro login OU na primeira entrega de ingressos** (o que vier primeiro), **não** no ato da compra; o consumidor do `EmailProvider` é fail-closed (pendente `BREVO_API_KEY` só para o template próprio da marca — a verificação de e-mail em si é nativa do Firebase). Regra-mãe e detalhe de identidade/PII em E19. Lote `CLAIM-FIX`.
+  - **✅ STATUS IMPLEMENTADA (CLAIM-FIX · 2026-07-19, `ca9ec6a`+`222dc3b`+`71c32d1`+`18d4fbb`):** no checkout, a criação do pedido NÃO vincula mais nada (`contaUid` nunca nasce ali); o vínculo é escrito SÓ na confirmação de pagamento (escritor único = conta sem fricção, que resolve a conta pelo e-mail da compra e carimba `contaEmail`). O `getCheckoutPrefill` só responde com token de e-mail **verificado** e **igual** ao da compra — qualquer outro caso devolve `prefill: null` no mesmo shape (a UI abre o form vazio; sem canal para sondar CPF de terceiro). Contrato do api-client inalterado (só doc). Review antagonista Fable: APROVADO COM FIXES (fix = teste da auto-cura hostil, aplicado). Detalhe completo e residuais em E19; report `outputs/leela-build-2d6ee98d/CLAIM-FIX-REPORT.md`.
 - **RN-176 (nova · checkout de estrangeiro sem CPF; modelo Doity/Sympla sobre o Asaas)** — quando o organizador liga o toggle "aceitar inscrição de estrangeiros" (RN-175, E04), o checkout **pergunta a nacionalidade**; para estrangeiro, o **documento é PASSAPORTE** (formato/validação próprios), o **CPF fica oculto**, e o **pagamento é restrito a CARTÃO internacional À VISTA** — sem PIX, sem boleto, sem parcelamento (restrição do caminho Asaas de cobrança avulsa liberada). Verbatim do Vitor: *"pesquisei na sympla, o produtor pode habilitar a compra para estrangeiros, mas somente mediante passaporte, nesse caso a compra pode passar via cartao internacional, Mas o asaas permite isso. acredito que seja no modelo doity"*. O registry de pessoas passa a chave por **documento tipado** (RN-177, E19). **GATED por ação externa**: liberação da conta Asaas para pagador estrangeiro (contato com gerente de contas, ~6 dias úteis — ver DECISOES-ABERTAS); implementação de código só depois da liberação + sandbox provada. Fonte de fatos: `outputs/leela-build-2d6ee98d/ESTRANGEIRO-PAGAMENTO-REPORT.md` (Doity roda esse fluxo em produção sobre o mesmo Asaas; Sympla replica com processador próprio). **Paliativo já válido enquanto a liberação não sai:** um **comprador brasileiro paga pelo estrangeiro** (inscrito com passaporte), que funciona sem tocar na RN-173 — a spec do inscrito-estrangeiro é cobrada quando existir. Lote `ESTRANGEIRO-CHECKOUT` (gated).
 
 ### RNs novas · rodada TAXA-FLEX (Vitor, 2026-07-19) — taxa por meio de pagamento
@@ -1424,6 +1425,55 @@ Capturar o e-mail de newsletter do visitante, gravando o lead sob o tenant com r
 
 **Fora de escopo**
 Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel (E04).
+
+---
+
+> Histórias novas das rodadas de 2026-07-19 (DEC-0719, TAXA-FLEX, DEC-0719-ret). O detalhe/verbatim vive em `02-rodadas/2026-07-19-decisoes/`, `-taxa-flex/`; a fila de código em `03-fila-codigo`. Molde igual ao de S1900 (E19).
+
+### LEELA-S1209 · Camada de tela do checkout novo (cupom no início, Pix/Cartão em botões, QR com timer, gênero, cards por atleta) · (de-para novo · DEC-0719 (c))
+
+**Como** atleta anônimo, **quero** um checkout com cupom logo no começo, escolha de pagamento em botões claros, PIX com QR e contagem regressiva, e um card por atleta com botão de adicionar outro, **para** comprar com menos fricção e entender cada passo.
+
+- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** Landing · **RNs:** RN-154 (gênero), RN-157 (PIX 30 min + retomada)
+- **Origem:** rodada DEC-0719 (Vitor, 2026-07-19), decisões D-2/D-4/D-5/D-6. É a **camada de tela** do checkout — o backend/modelo das 5 RNs já foi pago no CHECKOUT2-MODELO (ver §STATUS BACKEND acima). Fila `03-fila-codigo (c)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o step 0 do checkout, **quando** abro o fluxo, **então** o campo de cupom aparece já no início (D-4), além do auto-apply do cupom vindo por URL.
+- **Dado** a etapa de pagamento, **quando** escolho a forma, **então** Pix e Cartão são **botões** (sem toggle), coerentes com D-5.
+- **Dado** um PIX pendente, **quando** vejo a tela de pagamento **e** a tela do pedido pendente, **então** o QR e o copia-e-cola aparecem enquanto a cobrança está válida, com **timer de 30 min**, e o botão copia automaticamente disparando o toast *"a chave para pagamento foi copiada"* (RN-157).
+- **Dado** o formulário de inscrito, **quando** preencho, **então** há campo de **gênero** por inscrito (enum `GENEROS_INSCRITO`, opção "não informado"), pré-preenchido quando a pessoa já é conhecida (RN-154 via CPF único RN-173).
+- **Dado** uma compra para vários atletas, **quando** monto o pedido, **então** vejo **um card por atleta** e um botão **"+ adicionar atleta"** (D-2).
+
+**Tasks:** `S1209-T1` (cupom no step 0 + Pix/Cartão em botões sem toggle — D-4/D-5), `S1209-T2` (QR PIX na tela + timer 30 min + auto-copy com toast — RN-157 UI, tela de pagamento e tela do pedido pendente), `S1209-T3` (campo de gênero por inscrito + pré-preenchimento — RN-154 UI), `S1209-T4` (cards por atleta + botão "+ adicionar atleta" — D-2). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`.
+
+### LEELA-S1210 · Exibição da taxa por meio de pagamento no checkout (total por opção) · (de-para novo · TAXA-FLEX)
+
+**Como** comprador, **quero** ver o total de cada meio de pagamento antes de pagar quando a taxa é repassada, **para** escolher com clareza (ex.: PIX mais barato que cartão).
+
+- **MoSCoW:** Should · **Estimativa:** S · **Superfície:** Landing · **RNs:** RN-180 (exibição por meio; cálculo em E09), RN-179 (efeito do carimbo)
+- **Origem:** rodada TAXA-FLEX (Vitor, 2026-07-19). A taxa da plataforma passa a ser percentual + fixo por meio (dona E04/RN-178; cálculo E09/RN-179..183); aqui fica a **exibição**. Fila `03-fila-codigo (j)` — executável junto do lote TAXA-FLEX.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um evento em modo **repassada** (RN-347), **quando** chego ao pagamento, **então** o total é exibido **por opção de meio** — ex.: **PIX R$ 108,00 · Cartão R$ 110,30** — com `taxa(meio) = round(face × percentual) + fixoCentavos`.
+- **Dado** um evento em modo **incorporada**, **quando** vejo o preço, **então** ele **não varia** por meio (o comprador vê o face).
+- **Dado** a nota de transparência de taxa (badge A-5 "+ taxa de serviço"), **quando** a taxa varia por meio, **então** a nota reflete que **o valor varia por meio de pagamento** (P-TAXAFLEX-6).
+- **Dado** qualquer meio, **quando** renderizo o checkout, **então** `platformFeePct`/termos comerciais **nunca** vazam ao comprador (só o total).
+
+**Tasks:** `S1210-T1` (exibir total por opção de meio em repassada + atualizar a nota A-5 para variação por meio — consome `computeSaleState` estendido do lote E09). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+
+### LEELA-S1211 · Checkout de estrangeiro sem CPF (passaporte, cartão internacional à vista) · GATED · (de-para novo · DEC-0719-ret)
+
+**Como** organizador que aceita estrangeiros, **quero** que o atleta sem CPF compre com passaporte pagando no cartão internacional, **para** vender para público internacional sem quebrar a integridade de identidade.
+
+- **MoSCoW:** Could · **Estimativa:** M · **Superfície:** Landing · **RNs:** RN-176 (checkout de estrangeiro), RN-175 (toggle, E04), RN-177 (documento tipado, E19)
+- **Origem:** rodada DEC-0719-ret (Vitor, 2026-07-19), modelo Doity/Sympla sobre o Asaas. **GATED** pela liberação da conta Asaas para pagador estrangeiro (ação externa, ~6 dias úteis) + sandbox provada. Fila `03-fila-codigo (i)`; report `outputs/leela-build-2d6ee98d/ESTRANGEIRO-PAGAMENTO-REPORT.md`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o toggle `aceitaEstrangeiros` **desligado** (default), **quando** abro o checkout, **então** nada muda: CPF segue exigido (RN-173).
+- **Dado** o toggle **ligado**, **quando** compro, **então** o checkout pergunta a **nacionalidade**; para estrangeiro o documento é **PASSAPORTE** (formato/validação), o **CPF fica oculto** e o pagamento é restrito a **CARTÃO internacional À VISTA** (sem PIX/boleto/parcelamento).
+- **Dado** a liberação Asaas ainda pendente, **quando** um brasileiro compra pelo estrangeiro (inscrito com passaporte), **então** o paliativo funciona sem tocar na RN-173.
+
+**Tasks:** `S1211-T1` (fluxo de checkout de estrangeiro: nacionalidade → passaporte, CPF oculto, cartão internacional à vista — RN-176), `S1211-T2` (adapter Asaas de cobrança avulsa para pagador estrangeiro — GATED pela liberação externa + sandbox). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md` §DEC-0719-ret. **Não despachar antes da liberação Asaas + reconfirmação L1/L6 do report.**
 
 ---
 
