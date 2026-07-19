@@ -161,6 +161,13 @@ export function CheckoutFlow({
   const [cupomUrlPendente, setCupomUrlPendente] = useState<boolean>(Boolean(atribuicao.cupom));
   const [erroCupomUrl, setErroCupomUrl] = useState<string | null>(null);
 
+  // CKFORM §5.3 — os DOIS aceites do pagar (termos da compra + termo de
+  // saúde). Gateiam Gerar PIX/Pagar; entram no input do createInscricaoCharge
+  // como booleans (versão/timestamp/hash carimbados pelo servidor — CKMOD).
+  const [aceiteTermos, setAceiteTermos] = useState(false);
+  const [aceiteSaude, setAceiteSaude] = useState(false);
+  const aceitesOk = aceiteTermos && aceiteSaude;
+
   // Cobrança / confirmação
   const chaveRef = useRef<string | undefined>(undefined);
   const [charge, setCharge] = useState<CreateInscricaoChargeResult | null>(null);
@@ -411,6 +418,13 @@ export function CheckoutFlow({
       setErroCharge('Sessão de pagamento ainda não pronta. Aguarde um instante.');
       return null;
     }
+    // §5.3: defesa em profundidade — a UI já desabilita os botões, e o
+    // SERVIDOR rejeita pedido sem aceites (flip F-4a). Nunca cria cobrança
+    // sem os dois confirmados.
+    if (!aceitesOk) {
+      setErroCharge('Confirme os dois aceites para concluir o pagamento.');
+      return null;
+    }
     if (chaveRef.current === undefined) chaveRef.current = novaChaveIdempotencia();
     setCriandoCharge(true);
     setErroCharge(null);
@@ -454,6 +468,9 @@ export function CheckoutFlow({
         forma,
         parcelas: forma === 'pix' ? 1 : parcelas,
         ...(cupomAplicado ? { cupomCodigo: cupomAplicado } : {}),
+        // CKFORM §5.3: SÓ os booleans confirmados cruzam — versão vigente,
+        // timestamp e hash do material são carimbados pelo servidor (in-tx).
+        aceites: { termos: true, saude: true },
         ...((): { ref?: { codigo: string; clicadoEmMillis?: number } } => {
           // Atribuição de afiliado (RN-313) — nunca bloqueia a compra: o
           // servidor descarta ref inválido/fora da janela em silêncio.
@@ -470,7 +487,7 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [charge, authPronto, aceitesOk, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
@@ -491,21 +508,23 @@ export function CheckoutFlow({
     if (c) await confirmar(c.pedidoId);
   }, [gerarCobranca, confirmar]);
 
-  // A-3 · PIX gera a cobrança automaticamente ao entrar no Pagamento — o QR/
-  // copia-e-cola já aparece sem clique extra. O botão "Gerar código PIX" fica
-  // como fallback se der erro (idempotência RN-333 protege duplicidade).
+  // A-3 · PIX gera a cobrança automaticamente — o QR/copia-e-cola aparece sem
+  // clique extra. CKFORM §5.3: SÓ depois dos 2 aceites (a cobrança nasce com a
+  // prova de aceite no servidor — não existe cobrança sem aceite). O botão
+  // "Gerar código PIX" fica como fallback se der erro (idempotência RN-333).
   useEffect(() => {
     if (
       step === 3 &&
       forma === 'pix' &&
       authPronto &&
+      aceitesOk &&
       charge === null &&
       !criandoCharge &&
       erroCharge === null
     ) {
       void gerarCobranca();
     }
-  }, [step, forma, authPronto, charge, criandoCharge, erroCharge, gerarCobranca]);
+  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gerarCobranca]);
 
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
@@ -683,6 +702,14 @@ export function CheckoutFlow({
             }}
             cartao={cartao}
             onCartao={(patch) => setCartao((c) => ({ ...c, ...patch }))}
+            politica={evento.politicaVendas}
+            termoSaudeVersao={evento.termoSaudeVersao}
+            eventoNome={evento.nome}
+            organizadorNome={evento.organizador?.nome ?? null}
+            aceiteTermos={aceiteTermos}
+            aceiteSaude={aceiteSaude}
+            onAceiteTermos={setAceiteTermos}
+            onAceiteSaude={setAceiteSaude}
           />
         ) : null}
 

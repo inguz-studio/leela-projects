@@ -6,7 +6,9 @@ import QRCode from 'qrcode';
 import { Button, Field, Input } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
+import type { PoliticaVendasPublica } from '@/lib/tipos';
 import type { FormaUI } from './tipos';
+import { AceitesCompra } from './AceitesCompra';
 
 export interface CartaoForm {
   nome: string;
@@ -90,6 +92,12 @@ function CopiarCodigoPix({ codigo }: { codigo: string }): React.JSX.Element {
  * reusada — reenviar "pagar" devolve o MESMO pedido (o servidor não duplica).
  * Os campos de cartão são cosméticos no sandbox (o Mock não os processa) e NÃO
  * são enviados — sinalizado ao usuário.
+ *
+ * LEELA-CKFORM (spec §5.3): os DOIS aceites (termos da compra + termo de
+ * saúde) gateiam o botão de pagar — sem os 2 checks, Gerar PIX/Pagar ficam
+ * desabilitados (constraint, Norman princípio 3). A cobrança é criada JÁ com
+ * os aceites no input (o servidor carimba versão+timestamp in-tx — CKMOD);
+ * depois de criada, os checkboxes travam (prova registrada).
  */
 export function StepPagamento({
   forma,
@@ -104,6 +112,14 @@ export function StepPagamento({
   onConfirmar,
   cartao,
   onCartao,
+  politica,
+  termoSaudeVersao,
+  eventoNome,
+  organizadorNome,
+  aceiteTermos,
+  aceiteSaude,
+  onAceiteTermos,
+  onAceiteSaude,
 }: {
   forma: FormaUI;
   total: number | null;
@@ -117,8 +133,32 @@ export function StepPagamento({
   onConfirmar: () => void;
   cartao: CartaoForm;
   onCartao: (patch: Partial<CartaoForm>) => void;
+  politica: PoliticaVendasPublica;
+  termoSaudeVersao: number;
+  eventoNome: string;
+  organizadorNome: string | null;
+  aceiteTermos: boolean;
+  aceiteSaude: boolean;
+  onAceiteTermos: (v: boolean) => void;
+  onAceiteSaude: (v: boolean) => void;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
+  const aceitesOk = aceiteTermos && aceiteSaude;
+
+  const blocoAceites = (
+    <AceitesCompra
+      politica={politica}
+      termoSaudeVersao={termoSaudeVersao}
+      eventoNome={eventoNome}
+      organizadorNome={organizadorNome}
+      aceiteTermos={aceiteTermos}
+      aceiteSaude={aceiteSaude}
+      onAceiteTermos={onAceiteTermos}
+      onAceiteSaude={onAceiteSaude}
+      // Cobrança criada = prova de aceite já carimbada no servidor.
+      desabilitado={charge !== null}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,14 +169,31 @@ export function StepPagamento({
           {charge === null ? (
             <>
               <p className="text-sm text-text-secondary">
-                Estamos preparando o código PIX para pagar{' '}
-                {totalLabel ? <strong>{totalLabel}</strong> : null} à vista. Sua vaga fica reservada
-                como pendente até a confirmação.
+                {aceitesOk ? (
+                  <>
+                    Estamos preparando o código PIX para pagar{' '}
+                    {totalLabel ? <strong>{totalLabel}</strong> : null} à vista. Sua vaga fica
+                    reservada como pendente até a confirmação.
+                  </>
+                ) : (
+                  <>
+                    Confirme os dois aceites abaixo para gerar o código PIX
+                    {totalLabel ? (
+                      <>
+                        {' '}
+                        de <strong>{totalLabel}</strong>
+                      </>
+                    ) : null}{' '}
+                    à vista.
+                  </>
+                )}
               </p>
-              {/* Auto-gerado ao entrar na etapa (A-3); o botão fica como fallback
-                  se a geração automática falhar. */}
+              {/* §5.3: aceites ACIMA do botão de pagar. */}
+              {blocoAceites}
+              {/* Auto-gerado quando os aceites confirmam (A-3 + §5.3); o botão
+                  fica como fallback se a geração automática falhar. */}
               <div>
-                <Button onClick={onGerarCobranca} disabled={criandoCharge}>
+                <Button onClick={onGerarCobranca} disabled={criandoCharge || !aceitesOk}>
                   {criandoCharge ? 'Preparando código PIX…' : 'Gerar código PIX'}
                 </Button>
               </div>
@@ -159,6 +216,9 @@ export function StepPagamento({
                   confirmação do pagamento (o gateway dispara o webhook).
                 </p>
               </div>
+              {/* Prova registrada com a cobrança — os checks ficam visíveis
+                  (e travados) enquanto a pessoa paga. */}
+              {blocoAceites}
               <div>
                 <Button onClick={onConfirmar} disabled={confirmando}>
                   {confirmando ? 'Confirmando…' : 'Já paguei — confirmar'}
@@ -211,8 +271,10 @@ export function StepPagamento({
             Ambiente de simulação: os dados do cartão não são enviados nem cobrados. O
             MockPaymentProvider confirma a cobrança e dispara o webhook.
           </p>
+          {/* §5.3: aceites ACIMA do botão de pagar. */}
+          {blocoAceites}
           <div>
-            <Button onClick={onPagarCartao} disabled={criandoCharge || confirmando}>
+            <Button onClick={onPagarCartao} disabled={criandoCharge || confirmando || !aceitesOk}>
               {criandoCharge || confirmando
                 ? 'Processando…'
                 : `Pagar ${totalLabel}`.trim()}

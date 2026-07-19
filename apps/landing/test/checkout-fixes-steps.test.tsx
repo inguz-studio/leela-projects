@@ -86,6 +86,14 @@ function chargeFixture(over: Partial<CreateInscricaoChargeResult> = {}): CreateI
   };
 }
 
+/** Política pública mínima (defaults legais CDC — mesma shape do leitor). */
+const politicaFixture = {
+  versao: 1,
+  reembolso: { janelaArrependimentoDias: 7, corteHoras: 48, slaAnaliseDias: 3 },
+  transferencia: { habilitada: false, janelaHoras: 72, taxa: 0 },
+  trocaIngresso: { habilitada: false, janelaHoras: 48, permiteReembolsoDowngrade: false },
+};
+
 function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]> = {}): void {
   render(
     <StepPagamento
@@ -101,6 +109,14 @@ function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]>
       onConfirmar={noop}
       cartao={{ nome: '', numero: '', validade: '', cvv: '' }}
       onCartao={noop}
+      politica={politicaFixture}
+      termoSaudeVersao={1}
+      eventoNome="Corrida Teste"
+      organizadorNome={null}
+      aceiteTermos
+      aceiteSaude
+      onAceiteTermos={noop}
+      onAceiteSaude={noop}
       {...overrides}
     />,
   );
