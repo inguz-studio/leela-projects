@@ -77,7 +77,9 @@ function BlocoEndereco({
           numeroRef.current?.focus();
         } else {
           // Não encontrado OU API fora ⇒ fallback manual honesto (fail-open:
-          // a compra NUNCA fica refém do lookup — spec §5.2).
+          // a compra NUNCA fica refém do lookup — spec §5.2). Libera o CEP
+          // para re-tentar num blur futuro (rede pode ter voltado).
+          cepBuscadoRef.current = '';
           setLookup('falha');
         }
       });
