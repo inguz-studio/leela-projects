@@ -66,17 +66,20 @@ export async function buscarEnderecoPorCep(
     const timer = setTimeout(() => controller.abort(), VIACEP_TIMEOUT_MS);
     const onAbort = (): void => controller.abort();
     signal?.addEventListener('abort', onAbort, { once: true });
-    let res: Response;
+    let data: Record<string, unknown>;
+    // O timeout cobre headers E corpo (review antagonista CKFORM: ViaCEP
+    // hostil servindo o body a conta-gotas não pode pendurar o lookup e
+    // soft-lockar o form em "carregando" — abortar rejeita o res.json()).
     try {
-      res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`, {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`, {
         signal: controller.signal,
       });
+      if (!res.ok) return { status: 'indisponivel' };
+      data = (await res.json()) as Record<string, unknown>;
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
     }
-    if (!res.ok) return { status: 'indisponivel' };
-    const data = (await res.json()) as Record<string, unknown>;
     if (data['erro'] === true || data['erro'] === 'true') {
       return { status: 'nao_encontrado' };
     }

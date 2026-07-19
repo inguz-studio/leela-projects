@@ -16,7 +16,11 @@ import {
   inscritoVazio,
   type EnderecoForm,
 } from '../app/(public)/[eventSlug]/inscricao/checkout/tipos';
-import { mascaraCep, mascaraTelefone } from '../app/(public)/[eventSlug]/inscricao/checkout/cep';
+import {
+  buscarEnderecoPorCep,
+  mascaraCep,
+  mascaraTelefone,
+} from '../app/(public)/[eventSlug]/inscricao/checkout/cep';
 
 afterEach(cleanup);
 
@@ -146,6 +150,33 @@ describe('StepDados — lookup de CEP (4 estados, fail-open)', () => {
     await act(async () => {
       resolver({ ok: true, json: async () => ({ erro: true }) });
     });
+  });
+
+  it('ViaCEP hostil: corpo pendurado após os headers cai no timeout ⇒ indisponivel (fail-open, sem soft-lock)', async () => {
+    // Review antagonista CKFORM (ressalva C): antes do fix, o clearTimeout
+    // rodava assim que os headers chegavam e o res.json() ficava SEM timeout —
+    // um ViaCEP servindo o corpo a conta-gotas pendurava o lookup e soft-lockava
+    // o form em "carregando". O json() do mock só rejeita quando o
+    // AbortController interno dispara (comportamento do fetch real no abort).
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation((_url: unknown, init?: RequestInit) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            new Promise((_res, rej) => {
+              init?.signal?.addEventListener('abort', () =>
+                rej(new DOMException('Aborted', 'AbortError'))
+              );
+            }),
+        })
+      );
+      const pendente = buscarEnderecoPorCep('01310-100');
+      await vi.advanceTimersByTimeAsync(6001);
+      await expect(pendente).resolves.toEqual({ status: 'indisponivel' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('CEP não encontrado / API fora: fallback manual honesto — campos abertos, compra não bloqueia', async () => {
