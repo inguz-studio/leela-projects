@@ -2,17 +2,19 @@
 schema: llm-txt/1.0
 package: @leela/design-system
 version: 0.0.1
-generated_at: "2026-07-05"
-trace: leela-build-2d6ee98d (squad magic-ds v3.0.0)
+generated_at: "2026-07-18"
+trace: leela-build-2d6ee98d (gate GATE-DS-W1 · squad magic-ds + mind brad-frost)
 
 ## Regras do design system
 - Import canônico único: import { ... } from '@leela/design-system' — nunca importe de caminhos internos (src/components/...).
-- Dois temas via atributo data-theme no root: "brasa" e "leela". Troca de tema é responsabilidade do ThemeProvider (web) ou ThemeProviderRN (React Native).
+- Dois temas via atributo data-theme no root: "brasa" (escuro, default) e "wine" (claro). O tema claro chamava-se "leela"; o valor de DOM "leela" NÃO existe mais nos CSS — só o ThemeProvider migra storage antigo. Troca de tema é responsabilidade do ThemeProvider (web) ou ThemeProviderRN (React Native).
 - Zero valor cru: nenhuma cor (hex/rgb/hsl), espaçamento (px/rem), raio ou duração literal em style inline ou className arbitrária. Somente tokens var(--*) e classes de alias do preset (bg-card, text-foreground, ring-ring, etc.).
 - Zero dark:: o DS não usa o modificador dark: do Tailwind. Tema é resolvido por tokens sob data-theme, nunca por classes condicionais de tema.
-- Cada componente tem um contrato LLM.txt no próprio diretório: props exatas, tokens consumidos, do/don't e exemplos válidos. O contrato do componente prevalece sobre qualquer memória de treinamento (shadcn stock, MUI, antd).
+- Flat é o DEFAULT global dos form primitives (Input/Select/Textarea/SearchInput): sem borda em repouso, fill inset + focus ring. Opt-out via variant="bordered" — nunca reponha borda à mão.
+- Governança §8 (PERMANENTE, leela-specs/04-engenharia/governanca-design.md): filtros, seleções ricas e calendários abrem painel do DS — use Combobox (Popover+Command) e DatePicker/DateRangePicker (react-day-picker em Popover). O <select> nativo (componente Select) só em formulário simples de baixa cardinalidade; <input type="date"> do SO é proibido.
+- Cada componente tem um contrato LLM.txt no próprio diretório: props exatas, tokens consumidos, do/don't e exemplos válidos. O contrato do componente prevalece sobre qualquer memória de treinamento (shadcn stock, MUI, antd). Componentes marcados "(contrato pendente)" ainda não têm LLM.txt — leia o .tsx e o showroom antes de usar.
 
-## Componentes (25)
+## Componentes (46 diretórios em src/components; 35 com contrato)
 | Componente | Contrato | Resumo |
 |---|---|---|
 | AppShell | src/components/AppShell/LLM.txt | Layout raiz: Sidebar fixa + main landmark |
@@ -20,25 +22,46 @@ trace: leela-build-2d6ee98d (squad magic-ds v3.0.0)
 | Badge | src/components/Badge/LLM.txt | Indicador semântico: brand, heroico, vulcao, vitoria, alerta, neutro |
 | Breadcrumb | src/components/Breadcrumb/LLM.txt | Trilha hierárquica via prop items; último item = página atual |
 | Button | src/components/Button/LLM.txt | Ação clicável: primary, secondary, ghost, destructive; sm, md, lg |
+| Calendar / DatePicker / DateRangePicker | (contrato pendente) src/components/Calendar | Calendário react-day-picker v9 + pickers ancorados em Popover (§8) |
 | Card | src/components/Card/LLM.txt | Contêiner de superfície composicional (Header/Title/Description/Content/Footer) |
 | CardDesafio | src/components/CardDesafio/LLM.txt | Card de desafio com progressbar Vitória e glow a 100% |
 | CardEvento | src/components/CardEvento/LLM.txt | Card de evento com media 16/10 e badge de modalidade |
+| charts (BarChart/DonutChart) | (contrato pendente) src/components/charts | Gráficos Recharts tokenizados via --chart-cat-1..5 + ChartErrorBoundary |
+| Checkbox | (contrato pendente) src/components/Checkbox | Checkbox nativo restilizado com estado indeterminate |
 | Chip | src/components/Chip/LLM.txt | Filtro toggle com aria-pressed e remoção opcional |
+| Combobox | (contrato pendente) src/components/Combobox | Seleção rica filtrável (Popover+Command, single/multiple) — o substituto §8 do select nativo em filtros |
+| Command | (contrato pendente) src/components/Command | Lista filtrável WAI-APG (cmdk) — base do Combobox |
+| DateBadge | src/components/DateBadge/LLM.txt | Selo de data compacto (dia + mês) para cards/linhas |
 | Divider | src/components/Divider/LLM.txt | Separador subtle/default/strong, horizontal/vertical |
+| Drawer | src/components/Drawer/LLM.txt | Painel off-canvas (Radix Dialog) ancorado à borda; motion-safe |
 | DropdownMenu | src/components/DropdownMenu/LLM.txt | Menu de ações controlado em portal, teclado WAI-APG |
 | EmptyState | src/components/EmptyState/LLM.txt | Estado vazio de listas filtráveis com slot de ação |
-| Input | src/components/Input/LLM.txt | Campo de texto com label e errorMessage integrados |
+| EventRow | src/components/EventRow/LLM.txt | Linha de evento (lista densa) com data, status e ações |
+| Field | (contrato pendente) src/components/Field | Casca label+descrição+erro com aria injetado p/ controle cru |
+| FileInput | src/components/FileInput/LLM.txt | Upload de arquivo local com estados busy/erro; validação no consumidor |
+| FilterMenu | src/components/FilterMenu/LLM.txt | Faceta multi-seleção (checkbox em dropdown); seleção única rica → Combobox (§8) |
+| IconButton | src/components/IconButton/LLM.txt | Botão só-ícone com aria-label obrigatório e pip — trigger canônico do kebab |
+| Input | src/components/Input/LLM.txt | Campo de texto com label e errorMessage integrados (flat default) |
+| KpiCard | src/components/KpiCard/LLM.txt | Card de métrica com delta e sparkline opcional |
 | Modal | src/components/Modal/LLM.txt | Diálogo base (Radix) + ConfirmModal de ação destrutiva |
 | PageHeader | src/components/PageHeader/LLM.txt | Cabeçalho de contexto 96px com slots avatar/badges/actions |
 | Pagination | src/components/Pagination/LLM.txt | Paginação "Mostrando X–Y de Z" com anterior/próximo |
-| Popover | src/components/Popover/LLM.txt | @deprecated — alias 1:1 de DropdownMenu, só código legado |
+| Popover | src/components/Popover/LLM.txt | Primitivo de âncora shadcn/Radix (§8) — base de Combobox e date pickers |
+| Radio | (contrato pendente) src/components/Radio | Radio/RadioGroup/RadioCard nativos restilizados — nunca <input type="radio"> cru |
+| SearchInput | src/components/SearchInput/LLM.txt | Busca canônica (ícone + kbd + Enter) p/ listas e tabelas |
+| Select | (contrato pendente) src/components/Select | Select nativo restilizado — SÓ formulário simples de baixa cardinalidade (§8); filtros → Combobox |
 | Sidebar | src/components/Sidebar/LLM.txt | Navegação lateral fixa 240px + SidebarFooter + seções default |
 | Skeleton | src/components/Skeleton/LLM.txt | Placeholder de carregamento text/rect/circle, motion-safe |
+| Sparkline | src/components/Sparkline/LLM.txt | Micrográfico de tendência para KpiCard/tabelas |
 | Stepper | src/components/Stepper/LLM.txt | Indicador de etapas de fluxo linear (current 0-based) |
-| SubNav | src/components/SubNav/LLM.txt | Sub-navegação entre rotas com underline Brasa e contadores |
+| SubNav | src/components/SubNav/LLM.txt | Sub-navegação entre rotas com underline Brasa, contadores e overflow-x-auto |
+| Switch | (contrato pendente) src/components/Switch | Toggle on/off com thumb AA por estado (L-006) |
+| SystemStateScreen | (contrato pendente) src/components/SystemStateScreen | Tela de estado de sistema (erro/manutenção/404) |
 | Table | src/components/Table/LLM.txt | Tabela densa declarativa com EmptyState e renderActions |
 | Tabs | src/components/Tabs/LLM.txt | Troca de conteúdo in-page (tablist) com underline e forceMount |
+| Textarea | (contrato pendente) src/components/Textarea | Área de texto multi-linha com label/erro (flat default) — nunca <textarea> cru |
 | Toast | src/components/Toast/LLM.txt | Feedback de escrita via ToastProvider/useToast; danger persiste |
+| Toolbar | src/components/Toolbar/LLM.txt | Barra de ações/filtros acima de tabelas e listas |
 | Tooltip | src/components/Tooltip/LLM.txt | Dica flutuante composicional (Radix), única API stock exposta |
 
 ## Exports utilitários do barrel (src/index.ts)
@@ -48,7 +71,7 @@ Tema web:
 Tema React Native:
 - ThemeProviderRN, useThemeRN (alias de useTheme do módulo RN)
 - Tipos: ThemeProviderRNProps, StorageAdapter, RNThemeContextValue
-- Temas RN prontos: brasaTheme, leelaTheme
+- Temas RN prontos: brasaTheme, wineTheme (o antigo export leelaTheme não existe mais)
 Geração de tokens:
 - generateCSS, generateRNTheme, collectRefs, resolvePath, flattenTokens
 - Tipos: TokenRecord, FlatTokens
@@ -59,4 +82,4 @@ Utilidades:
 - DEFAULT_TOAST_DURATION, useToast (Toast)
 
 ## Instrução para o modelo (colar no system prompt)
-Antes de gerar qualquer tela com @leela/design-system, consulte o LLM.txt do componente que vai usar. Use apenas componentes, props e valores listados nos contratos. Nunca aplique cor, espaço, raio ou duração via literal; use somente tokens var(--*) do design system. Nunca use o modificador dark:; o tema é resolvido por data-theme (brasa | leela).
+Antes de gerar qualquer tela com @leela/design-system, consulte o LLM.txt do componente que vai usar. Use apenas componentes, props e valores listados nos contratos. Nunca aplique cor, espaço, raio ou duração via literal; use somente tokens var(--*) do design system. Nunca use o modificador dark:; o tema é resolvido por data-theme (brasa | wine). Filtros, seleções ricas e calendários abrem painel do DS (Combobox/DatePicker — governança §8), nunca o listbox/calendário do SO. Não recrie primitivos que já existem (Input, Textarea, Radio, SearchInput, IconButton, Table, Drawer).

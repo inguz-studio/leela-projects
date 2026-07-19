@@ -14,7 +14,9 @@
  *
  * Semântica: multi-seleção. Marcar uma opção não afeta as outras (checkbox, não
  * radio) — serve à varredura ("ver Ativos + Encerrados de uma vez"). Para
- * seleção ÚNICA exclusiva com 4+ valores, use Select; com <4, use Chips.
+ * seleção ÚNICA exclusiva com 4+ valores, use Combobox (governança §8 — o
+ * Select nativo ficou restrito a formulário simples de baixa cardinalidade);
+ * com <4, use Chips.
  */
 
 import * as React from 'react';

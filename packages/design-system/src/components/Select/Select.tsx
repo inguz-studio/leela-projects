@@ -1,11 +1,20 @@
 // =============================================================================
-// Select — filtro compacto de faceta (1 controle por faceta).
+// Select — select nativo restilizado para FORMULÁRIO simples de baixa
+// cardinalidade.
 //
-// MOTIVAÇÃO (brief FID-EVT-INSCRITOS): em tabela/dashboard densa a INFORMAÇÃO
-// domina, não uma fileira de botões. Facetas de cardinalidade 4-15
-// (design-principles: 4-15 → Select) colapsam num único controle em vez de
-// N chips sempre visíveis. Reusável — Financeiro/Kits/Plataforma têm as mesmas
-// facetas.
+// ⚠️ GOVERNANÇA §8 (leela-specs/04-engenharia/governanca-design.md, PERMANENTE,
+// R9 2026-07-18 — posterior ao brief original deste componente): para FILTROS
+// e SELEÇÕES RICAS o `<select>` nativo é PROIBIDO — o painel de opções é
+// renderizado pelo SO e não é estilizável pelos tokens do DS. Nesses casos use
+// `Combobox` (Popover + Command, anatomia shadcn). Este Select segue aceitável
+// apenas em formulário simples de baixa cardinalidade onde o listbox
+// estilizado não agrega (ex.: 2-5 opções estáveis num modal de cadastro).
+// O texto histórico abaixo ("filtro compacto de faceta", brief
+// FID-EVT-INSCRITOS) foi SUPERSEDED pela §8 — não o siga para filtros novos.
+//
+// MOTIVAÇÃO histórica (brief FID-EVT-INSCRITOS): em tabela/dashboard densa a
+// INFORMAÇÃO domina, não uma fileira de botões. Facetas de cardinalidade 4-15
+// colapsavam num único controle. Hoje esse caso é do Combobox (§8).
 //
 // ENGINE: `<select>` nativo restilizado ao brasa (NÃO um listbox Radix). O
 // nativo é a11y-completo de fábrica (teclado, foco, leitor de tela, mobile),
