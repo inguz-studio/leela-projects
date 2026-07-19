@@ -447,7 +447,7 @@ Receber comunicados (push):
 - **LEELA-E08** — Painel do influenciador: **adiado por inteiro** (dependia de afiliação).
 - **LEELA-E09** — só o recorte **E09-slim (repasses do organizador)** entrou na Onda 2; painel financeiro rico (KPIs/donut/CSV), split de afiliação e reembolso (S904 + S305/S306) ficam na Onda 3.
 - **LEELA-E10** — Marcas (patrocinadores/ativações).
-- **LEELA-E11** — só a **coleta** (snapshot diário `coletaDiaria`) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3. Triage E11-COHORT (2026-07-19): RN-822 (cohort 5-em-5) + rollup `analytics/{periodo}` + telas S821-T2/S822/S823 são todos backend-gated (`functions/**` bloqueado pela lane CHECKOUT-FORM); RN-821/RN-820 (superfície única, filtro por evento, demografia real) já entregues (R9-B/BEPEND-T1). Detalhe no épico E11 §"Estado de implementação e triage".
+- **LEELA-E11** — só a **coleta** (snapshot diário `coletaDiaria`) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3. RN-821/RN-820 (superfície única, filtro por evento, demografia real) entregues (R9-B/BEPEND-T1). **RN-822 ENTREGUE (E11-COHORT-BACKEND, 2026-07-19):** bandas 5-em-5 + cohort idade×sexo com k-anonimato k=5 + reprocesso idempotente (`aa0afac`/`fcfeda4`/`ba2f53c`; deploy da Function e reprocesso andam juntos). Restam backend-gated: rollup `analytics/{periodo}` + telas S821-T2/S822/S823 + seletor temporal funcional. Detalhe no épico E11 §"RN-822 ENTREGUE".
 - **LEELA-E14** — Integrações de treino / `TrainingProvider` (Strava/Garmin/Health). Ação externa pendente: registrar o app OAuth na Strava (lead time).
 - **LEELA-E15** — Creator Studio: só a **higiene** (`autorId` + `anexo?` no tipo `Desafio`) entrou na Onda 2; o resto congelado até a V1 validar.
 

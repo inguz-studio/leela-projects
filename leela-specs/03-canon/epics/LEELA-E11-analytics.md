@@ -313,3 +313,17 @@ Nenhuma tela de S821-T2/S822/S823 existe em `apps/painel/src/routes/financeiro` 
 ### Achado de gate (fora de escopo E11, corrigido para destravar)
 
 O `tsc` do painel estava RED no baseline (4 erros em `apps/painel/src/routes/marcas/__tests__/MarcasPage.test.tsx`, lote MARCAS `d2e7126`: `valorAnual: undefined` sob `exactOptionalPropertyTypes` + destructure de `mock.calls[0]`). Corrigido em `[LEELA-E11-GATE]` (fix type-only, runtime intocado, MarcasPage 7/7) para destravar o gate compartilhado `tsc painel 0`.
+
+## RN-822 ENTREGUE — lote E11-COHORT-BACKEND (trace leela-build-2d6ee98d · 2026-07-19)
+
+Vertical coordenada completa (sf-backend-lead · Fable), commits `aa0afac` (core+functions) → `fcfeda4` (api-client) → `ba2f53c` (painel), tags `[LEELA-RN822-T*]`:
+
+- **Core:** `FAIXAS_ETARIAS` agora são as 10 bandas RN-822 (`ate_17, 18_24, 25_29, 30_34, 35_39, 40_44, 45_49, 50_54, 55_59, 60_mais`); `computeDemografia` soma a matriz `faixaXGenero` (célula exige idade E sexo válidos — Σ matriz ≤ marginais); `demografiaInalterada` compara a matriz (doc antigo nunca "iguala").
+- **Salvaguarda LGPD (k-anonimato, `cohortPrivacidade.ts`):** exposição do cruzamento passa por `suprimirCohortPorK` (k=5, reader-side, PÓS-soma): célula 1..4 retém o detalhamento da faixa inteira (R2, anti-subtração) e uma única linha suprimida arrasta a exposta de menor total (R3, anti-diferença contra o marginal `porGenero`). Reader-side porque supressão no write quebraria a soma tenant (células <k de N eventos somam ≥k) — decisão e residual documentados no cabeçalho do módulo.
+- **Functions:** `agregarDemografia` persiste a matriz; doc no shape antigo (6 faixas, sem matriz) é reescrito no próximo recompute (chave ausente ⇒ -1); `reprocessarDemografiaTodosEventos` (novo) varre todos os eventos — **premissa de deploy: redeploy + reprocesso são UMA operação**.
+- **api-client:** `DemografiaEvento.faixaXGenero`; doc pré-RN822 → `null` (EmptyState honesto até o reprocesso — nunca gráfico zerado fingindo dado).
+- **Painel (`financeiro/analise/**` apenas):** card "Idade × sexo (cohort)" na seção Perfil de compradores — `CohortIdadeSexo` (stacked por sexo, tokens do DS + `chartCategoryVar`, tabela sr-only, linha retida mostra só o total + nota do k=5). Nota de cobertura honesta preservada. Rótulos das 10 bandas no 1D.
+- **Gates (finais, pós-review):** tsc/eslint 0 (core/functions/api-client/painel) · unit demografia 22/22 · integração 12/12 no emulator de TESTE 8480 (`emulators:exec` + `firebase.r6.json`), incluindo migração de shape antigo, reader na janela de reprocesso e reprocesso idempotente (2ª rodada zero write) · suíte completa do painel 1212/1212 (163 files) · RTL da viz (vazio/sem-nascimento/dados/suprimidas/reprocesso + prova de não-vazamento no DOM).
+- **Review antagonista (Fable, contexto fresco): APROVADO COM RESSALVAS → 6 fixes aplicados e re-provados** (`[LEELA-RN822-T4]`): F4 janela deploy→reprocesso agora é DECLARADA (`aguardandoReprocesso` excluído das somas + nota/EmptyState com a causa real — nunca subcontagem muda), F6 guarda de idade fracionária (24.5 geraria chave fora do union), F1/F2/F3 residuais de diferenciação (entre visões RN-821, decomposição mono-sexo, marginal=linha em faixa única) REGISTRADOS em `cohortPrivacidade.ts` com lastro RN-172 e gatilho de bloqueio para exposição futura a papel sem acesso individual. Detalhe no handoff `leela-build-2d6ee98d-RN822.md`.
+
+Seguem backend-gated (inalterados): S821-T1 (rollup), S821-T2, S822, S823, seletor temporal funcional.
