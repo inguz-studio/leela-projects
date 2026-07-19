@@ -24,11 +24,10 @@ tags:
 
 ## 🔄 Em execução
 
-- [ ] **[E04/E12] Formulário novo do checkout** — comprador preenche endereço pelo CEP, telefone e nascimento, e aceita os termos da compra e o termo de saúde ao pagar 🔄 [[LEELA-E12-landing]]
-
 
 ## ✅ Feito
 
+- [x] **[E04/E12] Formulário novo do checkout (CHECKOUT-FORM)** — comprador preenche telefone, nascimento e endereço pelo CEP (digita o CEP, completa só o número; se o serviço de CEP cair ou demorar, preenche à mão e a compra nunca trava) e aceita os termos da compra e o termo de saúde antes de pagar; o servidor passou a EXIGIR os dois aceites (comprar por fora da tela não fura o aceite legal, e pedido antigo re-tentado completa a prova sem reescrever nada); o aviso "+ taxa de serviço" só aparece quando o evento repassa a taxa ✅ [[BOARD-HISTORICO]]
 - [x] **[E00] Telas de conta** — login, cadastro, recuperação e configurações ✅ (entregue e aprovado em review 2026-07-13, lote S020; card estava defasado) [[LEELA-E00-fundacao-tecnica]]
 - [x] **[E01] Varredura §8 no painel (W2 do gate de DS)** — as telas antigas trocaram as datas, as buscas, os campos de texto, os radinhos, os "⋯" e os filtros feitos à mão pelos componentes oficiais do DS; a divisória fantasma (que aparecia 3× mais grossa) foi corrigida e o modal de regulamento da landing agora tem conteúdo em 3 eventos do preview ✅ [[BOARD-HISTORICO]]
 - [x] **[E01] shadcn-first para todo componente (SHADCN-SWEEP)** — o Vitor ampliou a regra §8: agora vale para TODO componente, não só seleção e data. Os últimos checkboxes feitos à mão (4 telas) e as buscas cruas (7 telas) viraram os `Checkbox` e `SearchInput` oficiais do DS, e a governança passou a exigir justificativa documentada (no padrão do ADR-017) para qualquer peça fora do DS ✅ [[BOARD-HISTORICO]]
