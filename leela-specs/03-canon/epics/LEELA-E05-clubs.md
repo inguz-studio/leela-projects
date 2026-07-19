@@ -86,9 +86,9 @@ Ver `modelo-de-dados-firestore.md`. Coleções/subcoleções desta fase:
 
 Todas as coleções novas são criadas **com Security Rules na mesma task**. Agregados ∑ e campos financeiros: escrita **apenas via Cloud Function** (Admin SDK), nunca do cliente.
 
-## Análise futura (capturado, NÃO-DECIDIDO)
+## Análise futura — RESOLVIDA (rodada FORMBUILDER, 2026-07-19)
 
-- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER, 2026-07-19).** O Vitor pediu, ao analisar concorrentes, para **registrar e analisar depois** a ideia de o organizador montar perguntas próprias exibidas **na inscrição/entrada de clubes** (e na compra de eventos, ver E12): seleção múltipla/única, sim-não e anexo de arquivo. **Escopo NÃO-DECIDIDO** (onde a resposta vive, quem lê, export, obrigatoriedade por pergunta, limite de perguntas) e riscos a estudar na análise (anexo de arquivo = Storage + LGPD, dado sensível de saúde Art. 11; resposta ligada ao membro/inscrito; benchmark Sympla/TicketSports). **Não gera RN nem entra na fila executável.** Registro canônico: `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
+- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER → FORMBUILDER).** O Vitor destravou o construtor em 2026-07-19; a análise rodou em `02-rodadas/2026-07-19-formbuilder-analise/` e o item virou **executável**. Corte de v1 = **só perguntas** (seleção única/múltipla, sim/não); **anexo = fase 2 GATED** (uma linha de backlog). O builder no clube e o render na inscrição/entrada são a **história S112** deste épico (resposta gravada no **membro** — RN-185; obrigatória bloqueia a entrada — RN-186; carimbo de versão — RN-188), reusando o modelo/core único de E04/S310. RNs em §Regras de negócio novas (FORMBUILDER). Captura original preservada em `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
 
 ## Fora de escopo (Won't nesta fase)
 
@@ -1417,6 +1417,23 @@ Toda a lógica de sub-afiliação (RN-105): sub-link, rastreamento, atribuição
 
 ---
 
+### LEELA-S112 · Construtor de formulário no clube + resposta do membro na inscrição · (de-para novo · FORMBUILDER)
+
+**Como** Coordenador de Assessoria, **quero** montar perguntas próprias e coletá-las na inscrição do clube, **para** conhecer o membro que entra sem planilha paralela.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel (config do clube) + inscrição/entrada de clube · **RNs:** RN-184 (tipos v1), RN-185 (resposta no membro), RN-186 (obrigatória bloqueia a entrada), RN-188 (versão), RN-187/189; reusa modelo/core de E04/S310
+- **Origem:** rodada FORMBUILDER (Vitor, 2026-07-19). O modelo e o core são únicos (donos em E04/S310); aqui o clube **reusa** para o builder e o render na inscrição. Fila `03-fila-codigo (k)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** a config do clube, **quando** abro o construtor, **então** monto perguntas dos tipos do v1 (seleção única/múltipla, sim-não) reusando o mesmo core do evento (anexo **não** existe no v1 — fase 2).
+- **Dado** uma pergunta obrigatória sem resposta, **quando** o membro tenta concluir a inscrição/entrada, **então** o fence server-side bloqueia (RN-186).
+- **Dado** que o membro responde e entra, **quando** a inscrição é gravada, **então** a resposta vive **no membro** (`clubes/{id}/membros/{membroId}`, nunca no pedido — RN-185), carimbando a versão da pergunta (RN-188).
+- **Dado** o organizador/equipe, **quando** vê os membros, **então** a resposta viaja com o membro na leitura/export existente (RN-189).
+
+**Tasks:** `S112-T1` (builder na config do clube reusando `packages/core/src/forms/` de S310-T1 + modelo da subcoleção de formulário sob o clube + Rules server-only), `S112-T2` (render na inscrição/entrada de clube + grava resposta no membro na tx + gate de obrigatoriedade — RN-185/186/188). Detalhe em `02-rodadas/2026-07-19-formbuilder-analise/01-decisoes.md`.
+
+---
+
 ## Mapa de tarefas (resumo)
 
 | Story | De-para | Tasks | Tela(s) |
@@ -1432,12 +1449,23 @@ Toda a lógica de sub-afiliação (RN-105): sub-link, rastreamento, atribuição
 | S109 Comunicado editor | BH-109 | T1 (core validação), T2 (screen) | Club-Comunicacao-Nova.html |
 | S110 Configurações | BH-110 | T1 (screen), T2 (Function delete/LGPD) | Club-Configuracoes.html |
 | S111 Sub-afiliação | BH-111 | T1 (placeholder) | Club-Membros-Modal-SubLink.html |
+| S112 Formulário do clube | — (FORMBUILDER) | T1 (builder, reusa core E04/S310), T2 (render na inscrição + resposta no membro) | greenfield |
 
-**Total:** 11 stories · 23 tasks.
+**Total:** 12 stories · 25 tasks.
+
+## Regras de negócio novas (FORMBUILDER · Vitor 2026-07-19 — clube)
+
+Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário virou executável; o builder e o render na inscrição de clube são a história **S112**. Modelo/core únicos vivem em E04/S310 (o clube reusa). Delta completo em `02-rns-delta.md`.
+
+- **RN-184 (reuso no clube):** tipos do v1 = seleção única/múltipla, sim/não; enum fonte única no core (`packages/core/src/forms/`, dono E04). Anexo = fase 2 GATED.
+- **RN-185 (dona = E05 no clube):** a resposta vive **no membro** (`clubes/{id}/membros/{membroId}`, nunca no pedido), gravada na tx da inscrição/entrada, server-only.
+- **RN-186 (efeito no clube):** pergunta obrigatória bloqueia a conclusão da inscrição/entrada no fence server-side (não confia no cliente).
+- **RN-188 (efeito no render):** a resposta carimba a versão da pergunta; editar nunca reescreve resposta antiga (padrão RN-149 / regulamento versionado).
+- **RN-187/RN-189 (reuso):** tetos (20 perguntas / 10 opções, fonte única no core); leitura/export do organizador reusa a lista de membros/inscritos existente.
 
 ## Ordem sugerida de execução
 
-`S101-T1 (clubes) → S103-T1 (membros) · S105-T1 (desafios) · S107-T1 (parcerias) · S108-T1 (comunicados)` (modelos de dados em paralelo) → `S102-T1 (shell)` → telas em paralelo por tab → S106-T1/S109-T1 (core) antes dos editores → S110-T2 e S111 por último (dependem das telas base). Ao fim, E13 (App do Atleta) reusa `packages/core` (desafios, pontuação, membros) e os agregados desta fase.
+`S101-T1 (clubes) → S103-T1 (membros) · S105-T1 (desafios) · S107-T1 (parcerias) · S108-T1 (comunicados)` (modelos de dados em paralelo) → `S102-T1 (shell)` → telas em paralelo por tab → S106-T1/S109-T1 (core) antes dos editores → S110-T2 e S111 por último (dependem das telas base). **S112 (formulário do clube)** reusa o core de E04/S310 — pode entrar após S103 (membros) existir, sem depender das telas base. Ao fim, E13 (App do Atleta) reusa `packages/core` (desafios, pontuação, membros) e os agregados desta fase.
 
 ---
 

@@ -27,7 +27,7 @@ O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clube
 | Épico | O que entrega | Estado |
 |---|---|---|
 | [[LEELA-E03-operacao-evento]] | Operar o evento: inscritos, balcão, kits, financeiro | ✅ +TAMANHOS-GRADE: camiseta agora separa corte feminino/masculino e o organizador controla o ciclo encomenda→estoque→entrega por corte e tamanho (RN-231/232 — grade no item, comprador escolhe corte antes do tamanho, encerrar encomendas com a contagem do momento sem travar vendas, entregas acompanhadas no balcão); +R9-C: kit com imagem 1:1 e visão de compra (falta só a edição na tela de kits) |
-| [[LEELA-E05-clubs]] | Clubes: membros, desafios, parcerias, comunicados | ✅ |
+| [[LEELA-E05-clubs]] | Clubes: membros, desafios, parcerias, comunicados | ✅ +história 2026-07-19: **S112** construtor de formulário de perguntas no clube + resposta gravada no membro na inscrição (FORMBUILDER, 📋 executável) |
 | [[LEELA-E02-visao-geral]] | Painel de abertura com os números do evento | ✅ |
 | [[LEELA-E16-plataforma-superadmin]] · slim | Onboarding de tenant e termos comerciais | ✅ +história 2026-07-19: **S1606** config da taxa da plataforma no super-admin (tabela global por meio + override por organizador, TAXA-FLEX · 📋 executável) |
 
@@ -35,8 +35,8 @@ O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clube
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E04-config-vendas]] · slim | Configurar lotes, preços automáticos, cupons, equipe | ✅ +histórias 2026-07-19: **S308** tabela de taxa por meio percentual+fixo (TAXA-FLEX, 📋 executável) · **S309** toggle "aceitar estrangeiros" por evento (🧊 GATED Asaas) |
-| [[LEELA-E12-landing]] | Atleta descobre o evento e se inscreve em poucos cliques | ✅ +KIT-IMG (2026-07-19): imagem do kit visível na seção de kits da LP e no checkout, clicável p/ ampliar (lightbox do DS); cascata real→foto mock (preview)→placeholder padrão Leela; SEO-first, 55/55, prova visual :3200. +histórias 2026-07-19: **S1209** camada de tela do checkout novo (cupom no início, Pix/Cartão em botões, QR+timer, gênero, +atleta — 📋) · **S1210** exibição da taxa por meio (TAXA-FLEX, 📋) · **S1211** checkout de estrangeiro (🧊 GATED) |
+| [[LEELA-E04-config-vendas]] · slim | Configurar lotes, preços automáticos, cupons, equipe | ✅ +histórias 2026-07-19: **S308** tabela de taxa por meio percentual+fixo (TAXA-FLEX, 📋 executável) · **S309** toggle "aceitar estrangeiros" por evento (🧊 GATED Asaas) · **S310** construtor de formulário de perguntas no evento (FORMBUILDER, 📋 executável — dono do modelo/core) |
+| [[LEELA-E12-landing]] | Atleta descobre o evento e se inscreve em poucos cliques | ✅ +KIT-IMG (2026-07-19): imagem do kit visível na seção de kits da LP e no checkout, clicável p/ ampliar (lightbox do DS); cascata real→foto mock (preview)→placeholder padrão Leela; SEO-first, 55/55, prova visual :3200. +histórias 2026-07-19: **S1209** camada de tela do checkout novo (cupom no início, Pix/Cartão em botões, QR+timer, gênero, +atleta — 📋) · **S1210** exibição da taxa por meio (TAXA-FLEX, 📋) · **S1211** checkout de estrangeiro (🧊 GATED) · **S1212** render do formulário de perguntas na compra + resposta no inscrito (FORMBUILDER, 📋 executável) |
 | [[LEELA-E09-financeiro-profissional]] · slim | Ver saldo, dados bancários e pedir repasse | ✅ +história 2026-07-19: **S905** cálculo/congelamento/estorno da taxa por meio percentual+fixo (TAXA-FLEX, 📋 executável) |
 | [[LEELA-E07-estados-sistema]] · web | Telas de erro com cara profissional (404/500/403) | ✅ |
 | [[LEELA-E06-marketing]] | Falar com o público por campanhas e automações | ✅ |

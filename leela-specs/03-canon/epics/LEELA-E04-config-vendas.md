@@ -1451,6 +1451,22 @@ Backend guard/auditoria (T1); qualquer devolução automática de vaga.
 
 **Tasks:** `S309-T1` (flag `aceitaEstrangeiros` no modelo do evento + UI do toggle na config — default OFF; RN-175). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md` §DEC-0719-ret. **Não despachar antes da liberação Asaas.**
 
+### LEELA-S310 · Construtor de formulário de perguntas na config do evento · (de-para novo · FORMBUILDER)
+
+**Como** organizador, **quero** montar perguntas personalizadas na config do evento, **para** coletar do inscrito, no momento da compra, os dados extras que o meu evento precisa.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel/config de evento (dona do modelo e do core) · **RNs:** RN-184 (tipos v1), RN-187 (limites), RN-188 (versionamento), ref RN-185/186/189
+- **JTBD servido:** T · "coletar do participante o que o meu evento precisa, sem planilha paralela". Dimensão **Transacional**.
+- **Origem:** rodada FORMBUILDER (Vitor, 2026-07-19). Destravou o construtor; corte de v1 = **só perguntas** (seleção única, múltipla, sim/não). Modelo e core são a **fonte única** — E05 e E12 reusam. Fila `03-fila-codigo (k)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** a config do evento, **quando** abro o construtor, **então** posso criar perguntas dos tipos **seleção única, seleção múltipla e sim/não** (anexo **não** existe no v1 — fase 2), com opções por pergunta.
+- **Dado** uma pergunta, **quando** a marco como **obrigatória**, **então** o flag persiste e valerá no render (RN-186, efeito em E12/E05).
+- **Dado** o teto do formulário, **quando** passo de **20 perguntas** ou de **10 opções** por pergunta (defaults propostos, fonte única no core), **então** a validação bloqueia (RN-187).
+- **Dado** que já há respostas, **quando** edito uma pergunta, **então** ela **versiona** (a versão antiga fica intacta; a edição vale para respostas futuras — RN-188). Nunca reescreve resposta antiga.
+
+**Tasks:** `S310-T1` (modelo/core único em `packages/core/src/forms/` — `Formulario`/`Pergunta`, tipos `unica|multipla|sim_nao`, `obrigatoria`, `opcoes`, `versao`; tetos como constante única RN-187; helper de versionamento RN-188; modelo Firestore da subcoleção de formulário sob o evento + Rules server-only fail-closed), `S310-T2` (tela do construtor na config do evento — criar/editar/ordenar perguntas, marcar obrigatória, editar versiona). **Backlog:** fase 2: anexo de arquivo — detalhar quando for priorizado. Detalhe em `02-rodadas/2026-07-19-formbuilder-analise/01-decisoes.md`.
+
 ---
 
 ## Rastreabilidade (de-para BH-###)
@@ -1491,3 +1507,12 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **pe
 - **RN-178 · Tabela de taxa-flex por meio de pagamento (dona = E04).** A taxa da plataforma deixa de ser um `platformFeePct` único e vira uma **tabela por meio** (`pix | cartao | boleto`) de `{percentual, fixoCentavos}`. **Tabela GLOBAL** (default de todos os tenants) em `platform/config` + **exceção/override por organizador** em `commercialTerms/current` do tenant (precedência **organizador > global**). **Sem nível por-evento no v1** (decisão ratificada por AskUserQuestion 2026-07-19). Escrita **exclusiva de `platform_admin`** nos dois níveis (RN-404); um ator "comercial" que edite o override negociado por contrato é **futuro** (registrado, não aberto no v1). Generaliza RN-330 (taxa sobre receita bruta) e RN-406 (fonte da taxa), que passam a ler a linha do meio do pagamento em vez de um percentual único. Impacto: config global (E16/`platform/config`) + override (este épico/`commercialTerms`) · cálculo (E09) · exibição por meio (E12).
   - *Boleto (P-TAXAFLEX-2):* a linha `boleto` existe na tabela por completude do enum, mas fica **inerte** enquanto o checkout público não oferecer boleto (`pagamentos.forma ∈ {cartao_credito, pix}`). Especificada, não ativada.
   - *Componente fixo (P-TAXAFLEX-4):* `fixoCentavos` é inteiro (centavos), nunca reais fracionários — casa com o rateio de maior resto (RN-181) e o half-up (RN-183).
+
+## Regras de negócio novas (FORMBUILDER · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário de perguntas saiu de análise-futura (captura `00-captura.md`) para executável; corte de v1 = **só perguntas** (seleção única, múltipla, sim/não). Anexo de arquivo = **fase 2 GATED** (uma linha de backlog, sem elaboração). Este épico é **dono do modelo e do core** (fonte única); E05 e E12 reusam. Delta completo em `02-rns-delta.md`.
+
+- **RN-184 · Construtor de formulário + tipos de pergunta v1 (dono do modelo = E04).** O organizador monta perguntas personalizadas exibidas na compra do evento (E12) e na inscrição de clube (E05). Tipos do v1: **seleção única** (radio), **seleção múltipla** (checkbox), **sim/não**. **Anexo NÃO entra no v1** (fase 2). O **enum de tipos é fonte única no core** (`packages/core/src/forms/`), sem duplicar por superfície.
+- **RN-187 · Limites com fonte única no core.** Teto de **perguntas por formulário** e de **opções por pergunta** como constante única no core (default proposto: **20 perguntas / 10 opções**), no padrão do `PIX_EXPIRACAO_SEGUNDOS` (RN-157). O Vitor ajusta os números num lugar só.
+- **RN-188 · Versionamento da pergunta.** Editar uma pergunta com respostas existentes **versiona**: a resposta carimba a versão no ato, a versão antiga fica intacta, a edição vale para o futuro. **Nunca reescreve resposta antiga.** Mesmo desenho do termo de saúde (RN-149) e do regulamento versionado (S306-T3).
+- *Efeito (RN-185/186/189 — donas em E05/E12):* a resposta vive no **inscrito/membro** (nunca no pedido — RN-185); pergunta obrigatória **bloqueia o pagar/inscrever no fence dos aceites** (RN-186); leitura/export pelo organizador/equipe do tenant **reusa a lista de inscritos existente** (RN-189).

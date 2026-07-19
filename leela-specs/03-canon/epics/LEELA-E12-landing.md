@@ -112,9 +112,9 @@ Ver `modelo-de-dados-firestore.md`. Leitura pública (server-side) e escrita tra
 
 Todo agregado (∑) e campo financeiro é escrito **apenas por Cloud Function** (Admin SDK); a landing nunca escreve receita/conversão a partir do cliente. Security Rules na task que cria coleção.
 
-## Análise futura (capturado, NÃO-DECIDIDO)
+## Análise futura — RESOLVIDA (rodada FORMBUILDER, 2026-07-19)
 
-- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER, 2026-07-19).** O Vitor pediu, ao analisar concorrentes, para **registrar e analisar depois** a ideia de o organizador montar perguntas próprias exibidas **no momento da compra do evento** (e na inscrição em clubes, ver E05): seleção múltipla/única, sim-não e anexo de arquivo. **Escopo NÃO-DECIDIDO** (onde a resposta vive, quem lê, export, obrigatoriedade por pergunta, limite de perguntas) e riscos a estudar na análise (anexo de arquivo = Storage + LGPD, atestado médico é dado sensível Art. 11 — interage com RN-149/RN-146/147 e a minimização RN-172; resposta no pedido ou no inscrito — interage com RN-173/RN-174; benchmark Sympla campos personalizados / TicketSports ficha de inscrição). **Não gera RN nem entra na fila executável.** Registro canônico: `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
+- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER → FORMBUILDER).** O Vitor destravou o construtor em 2026-07-19 (*"o construtor pode ser construido agora"*); a análise rodou em `02-rodadas/2026-07-19-formbuilder-analise/` e o item saiu de análise-futura para **executável**. Corte de v1 = **só perguntas** (seleção única/múltipla, sim/não); **anexo de arquivo = fase 2 GATED** (uma linha de backlog, sem elaboração). O render na compra é a **história S1212** deste épico (resposta gravada no inscrito — RN-185; obrigatória bloqueia o pagar no fence dos aceites — RN-186; carimbo de versão — RN-188). O modelo/core é único, dono em E04/S310; a inscrição de clube é E05/S112. RNs em §Regras de negócio novas (FORMBUILDER). Captura original preservada em `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
 
 ## Fora de escopo (Won't nesta fase)
 
@@ -1475,6 +1475,21 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 
 **Tasks:** `S1211-T1` (fluxo de checkout de estrangeiro: nacionalidade → passaporte, CPF oculto, cartão internacional à vista — RN-176), `S1211-T2` (adapter Asaas de cobrança avulsa para pagador estrangeiro — GATED pela liberação externa + sandbox). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md` §DEC-0719-ret. **Não despachar antes da liberação Asaas + reconfirmação L1/L6 do report.**
 
+### LEELA-S1212 · Render do formulário de perguntas na compra + resposta no inscrito · (de-para novo · FORMBUILDER)
+
+**Como** atleta que compra, **quero** responder as perguntas que o organizador montou, **para** concluir a inscrição com os dados que aquele evento pede.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Landing/checkout · **RNs:** RN-185 (resposta no inscrito), RN-186 (obrigatória bloqueia o pagar), RN-188 (carimbo de versão), RN-189 (leitura/export), reusa modelo/core RN-184/187 (dono E04/S310)
+- **Origem:** rodada FORMBUILDER (Vitor, 2026-07-19). O modelo e o core vivem em E04/S310 (fonte única); aqui fica o **render na compra** e a **gravação da resposta no inscrito**. Fila `03-fila-codigo (k)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um evento com formulário publicado, **quando** chego ao checkout, **então** as perguntas aparecem nos tipos do v1 (seleção única/múltipla/sim-não), com as opções configuradas.
+- **Dado** uma pergunta obrigatória sem resposta, **quando** tento pagar, **então** o **mesmo fence server-side dos aceites** (S1207) bloqueia — não é validação só de cliente (RN-186).
+- **Dado** que respondo e confirmo, **quando** a inscrição é gravada, **então** a resposta vive **no inscrito** (nunca no pedido — RN-185), na mesma tx, carimbando a **versão** da pergunta (RN-188).
+- **Dado** o organizador/equipe do tenant, **quando** exporto a lista de inscritos existente, **então** a resposta viaja como coluna do inscrito (RN-189 — sem relatório novo).
+
+**Tasks:** `S1212-T1` (gravação da resposta no inscrito na tx da confirmação + carimbo de versão — RN-185/188; reusa modelo/core de S310-T1), `S1212-T2` (camada de tela: render das perguntas no checkout + gate de obrigatoriedade no fence dos aceites — RN-186; **serializa após S1210** na tela de checkout, ver `03-fila-codigo`). Detalhe em `02-rodadas/2026-07-19-formbuilder-analise/01-decisoes.md`.
+
 ---
 
 ## Ordem sugerida
@@ -1500,3 +1515,12 @@ Fecha a Onda 2 junto com E04 (config de vendas) e o `PaymentProvider` sandbox: a
   - *Status 2026-07-13 (EVENTO-CAMPOS, backend):* `evento.taxaModo` já PERSISTE por evento (E03) e o saldo E09 já lê o modo.
   - *Status 2026-07-13 (RN347-CHECKOUT, backend):* ✅ **FIO DO CHECKOUT FECHADO.** `computeSaleState` ganhou `modoTaxa` (lido do DOC do evento em `carregarInsumos` via `modoTaxaDoEvento` — NUNCA do request; forja no payload é inerte): `repassada` ⇒ `totalComprador = valorFinal + taxa`, parcelamento Price sobre o total do COMPRADOR, `receitaLiquidaOrganizador` mode-aware (= face em repassada, coerente com E09). Cotação/charge expõem só `taxaServico`/`totalAVista` (VALORES em R$ — `platformFeePct` nunca sai, fix `703db9c` mantido); `gatewayAmountCentavos` congela face+taxa; `pagamento.taxaRepassada` + rateio por linha `itens[].taxaRepassada` (maior resto, cent-exato, proporcional ao `valorFinal`). **Decisão do estorno (documentada):** devolve o que o inscrito PAGOU (`valorFinal + taxaRepassada` da linha — ledger `valor`/`valorCentavos`); a contabilidade do ORGANIZADOR (reversão de `receitaConfirmada`, `estornadoTotal`, flip integral) usa SÓ o face (ledger `valorFace` — a taxa nunca foi receita dele). Landing: linha "Taxa de serviço R$ X,XX" no Resumo/Confirmação SÓ quando repassada; "à vista sai por" usa `totalAVista`. Modo `incorporada`/docs legados ficam byte-idênticos (campos ausentes — zero migração). Unit 24/24 + regressão 263/263; suíte de emulator `rn347Checkout.integration.test.ts` escrita (run pendente por memória <1GB no lote — comando pronto no report). Report `outputs/leela-build-2d6ee98d/RN347-CHECKOUT-REPORT.md`.
 - **RN-303 (proposta, dona = E04):** evento em modo "somente via cupom" → o checkout público exige cupom válido antes da seleção de modalidade/kit e comunica claramente que as vendas são fechadas.
+
+## Regras de negócio novas (FORMBUILDER · Vitor 2026-07-19 — render na compra)
+
+Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário virou executável; o render na compra é a história **S1212** deste épico. Modelo/core únicos vivem em E04/S310 (E12 reusa). Delta completo em `02-rns-delta.md`.
+
+- **RN-185 (dona = E12 no evento):** a resposta do formulário vive **no inscrito** (nunca no pedido), gravada na **mesma tx da confirmação**, server-only. Alinha com o registry `pessoas` (RN-173) e a posse por CPF (RN-174) **sem acoplar no claim** — a resposta viaja com o inscrito mesmo sem conta reivindicada.
+- **RN-186 (efeito no checkout):** pergunta obrigatória sem resposta **bloqueia o pagar no MESMO fence server-side dos aceites** (S1207) — reuso do fence, não gate novo.
+- **RN-188 (efeito no render):** a resposta **carimba a versão** da pergunta no ato (padrão do termo de saúde RN-149 / regulamento S306-T3); editar a pergunta nunca reescreve resposta antiga.
+- **RN-189 (leitura/export):** a resposta é coluna do inscrito na **lista/export já existente** — sem relatório novo. Minimização: o CRM (RN-172) não agrega respostas por default (P-FB-4).
