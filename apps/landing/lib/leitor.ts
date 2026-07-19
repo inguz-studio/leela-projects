@@ -20,15 +20,24 @@
 // =============================================================================
 
 import {
+  exigenciasSaudePadrao,
+  isExigenciasSaude,
+  isModoTaxa,
   isUrlCapaValida,
+  modoTaxaDoEvento,
   REGULAMENTO_MAX,
   parseKit,
   parseLote,
   parsePaginaVendas,
+  politicaVendasPadrao,
   precoVigente,
   projetarPerfilPublico,
+  validarPoliticaVendas,
+  versaoPoliticaVendas,
   COLECAO_PERFIS,
   PAGINA_VENDAS_DOC_ID,
+  POLITICA_VENDAS_DOC_ID,
+  TERMO_SAUDE_VERSAO_VIGENTE,
   type Lote,
   type StatusEvento,
 } from '@leela/core';
@@ -49,6 +58,7 @@ import type {
   KitPublico,
   ModalidadePublica,
   OrganizadorPublico,
+  PoliticaVendasPublica,
   SecaoPublica,
 } from './tipos';
 
@@ -136,6 +146,63 @@ async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
       };
     })
     .sort((a, b) => b.preco - a.preco);
+}
+
+/**
+ * Política de vendas PÚBLICA do evento (CKMOD §5.3a — fecha o A-1): projeta
+ * SÓ os parâmetros que o modal dos termos renderiza + a versão vigente do
+ * aceite. Sem doc, doc inválido ou leitura falha ⇒ DEFAULTS LEGAIS (CDC
+ * Art. 49) com versão 1 — a política sempre vige; o comprador nunca vê modal
+ * vazio. NUNCA projeta tenantId/carimbos (projeção fechada, sem PII).
+ */
+async function lerPoliticaVendasPublica(
+  db: Firestore,
+  eventoId: string,
+): Promise<PoliticaVendasPublica> {
+  const padrao: PoliticaVendasPublica = { versao: 1, ...politicaVendasPadrao() };
+  try {
+    const snap = await db
+      .collection('eventos')
+      .doc(eventoId)
+      .collection('politicaVendas')
+      .doc(POLITICA_VENDAS_DOC_ID)
+      .get();
+    if (!snap.exists) return padrao;
+    const data = snap.data() ?? {};
+    if (validarPoliticaVendas(data).length > 0) {
+      // Doc corrompido não parametriza o modal — defaults honestos (o
+      // kernel de dinheiro segue fail-fast; aqui é superfície de leitura).
+      console.error(`[leitor] politicaVendas de ${eventoId} inválida — defaults`);
+      return padrao;
+    }
+    const d = data as {
+      reembolso: PoliticaVendasPublica['reembolso'];
+      transferencia: PoliticaVendasPublica['transferencia'];
+      trocaIngresso: PoliticaVendasPublica['trocaIngresso'];
+      versao?: number;
+    };
+    return {
+      versao: versaoPoliticaVendas(d.versao),
+      reembolso: {
+        janelaArrependimentoDias: d.reembolso.janelaArrependimentoDias,
+        corteHoras: d.reembolso.corteHoras,
+        slaAnaliseDias: d.reembolso.slaAnaliseDias,
+      },
+      transferencia: {
+        habilitada: d.transferencia.habilitada,
+        janelaHoras: d.transferencia.janelaHoras,
+        taxa: d.transferencia.taxa,
+      },
+      trocaIngresso: {
+        habilitada: d.trocaIngresso.habilitada,
+        janelaHoras: d.trocaIngresso.janelaHoras,
+        permiteReembolsoDowngrade: d.trocaIngresso.permiteReembolsoDowngrade,
+      },
+    };
+  } catch (err) {
+    console.error(`[leitor] lerPoliticaVendasPublica(${eventoId}) falhou`, err);
+    return padrao;
+  }
 }
 
 function precoMinimo(modalidades: readonly ModalidadePublica[]): number | null {
@@ -247,10 +314,11 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
       : [];
 
-    const [lotesPorModalidade, kits, organizador] = await Promise.all([
+    const [lotesPorModalidade, kits, organizador, politicaVendas] = await Promise.all([
       lerLotesPorModalidade(db, slug),
       lerKits(db, slug),
       resolverOrganizadorPublico(db, texto(data['tenantId'])),
+      lerPoliticaVendasPublica(db, slug),
     ]);
 
     const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
@@ -312,6 +380,21 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
         ? regulamentoVersaoRaw
         : undefined;
 
+    // CKMOD — flags p/ o checkout novo (spec §5.3/§5.4 + RN-347/T5-CKFIX):
+    // exigências de saúde (map exato ou default OFF — lixo nunca liga coleta
+    // de dado sensível), versão do termo de saúde e o FLAG do modo de taxa
+    // ('repassada' ⇒ badge "+ taxa"; o doc corrompido cai em 'incorporada'
+    // via acessor canônico — nunca lança na página pública).
+    const exigenciasRaw = data['exigenciasSaude'];
+    const exigenciasSaude = isExigenciasSaude(exigenciasRaw)
+      ? { atestado: exigenciasRaw.atestado, parq: exigenciasRaw.parq }
+      : exigenciasSaudePadrao();
+    const taxaModoRaw = data['taxaModo'];
+    const taxaRepassada =
+      modoTaxaDoEvento({
+        ...(isModoTaxa(taxaModoRaw) ? { taxaModo: taxaModoRaw } : {}),
+      }) === 'repassada';
+
     const evento: EventoPublico = {
       slug,
       nome,
@@ -331,6 +414,10 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       secoes,
       seo,
       estadoVenda,
+      exigenciasSaude,
+      politicaVendas,
+      termoSaudeVersao: TERMO_SAUDE_VERSAO_VIGENTE,
+      taxaRepassada,
       ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
       ...(regulamento !== undefined ? { regulamento } : {}),
       ...(regulamentoVersao !== undefined ? { regulamentoVersao } : {}),

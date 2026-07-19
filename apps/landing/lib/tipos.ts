@@ -72,6 +72,29 @@ export interface OrganizadorPublico {
   avatarUrl?: string;
 }
 
+/**
+ * Política de vendas PÚBLICA (CKMOD · spec §5.3a — resolve o A-1): os
+ * PARÂMETROS que o modal "termos da compra + política de cancelamento"
+ * renderiza em linguagem humana (RN-338/339/340/343/344) + a versão vigente
+ * que o aceite carimba. SEM PII e SEM tenantId — projeção fechada; defaults
+ * legais (CDC Art. 49) quando o organizador não configurou.
+ */
+export interface PoliticaVendasPublica {
+  /** Versão VIGENTE (RN-149 pattern) — 1 = defaults legais/doc legado. */
+  versao: number;
+  reembolso: {
+    janelaArrependimentoDias: number;
+    corteHoras: number;
+    slaAnaliseDias: number;
+  };
+  transferencia: { habilitada: boolean; janelaHoras: number; taxa: number };
+  trocaIngresso: {
+    habilitada: boolean;
+    janelaHoras: number;
+    permiteReembolsoDowngrade: boolean;
+  };
+}
+
 /** Evento publicado — projeção pública completa para a página `/{slug}`. */
 export interface EventoPublico {
   slug: string;
@@ -117,6 +140,29 @@ export interface EventoPublico {
   regulamento?: string;
   /** Versão vigente do regulamento (RN-149) — referência de exibição. */
   regulamentoVersao?: number;
+  /**
+   * Flags de exigência de saúde do evento (RN-146 · CKMOD): dirigem a
+   * SUPERFÍCIE do bloco de saúde no checkout (PAR-Q/atestado — D-7). São
+   * FLAGS de config, nunca dado de saúde. Default {false,false}.
+   */
+  exigenciasSaude: { atestado: boolean; parq: boolean };
+  /**
+   * Política de vendas pública (CKMOD §5.3a) — alimenta o modal dos termos
+   * da compra e a versão que o aceite carimba. SEMPRE presente (defaults
+   * legais quando não há doc).
+   */
+  politicaVendas: PoliticaVendasPublica;
+  /**
+   * Versão VIGENTE do termo de responsabilidade de saúde (template do
+   * produto — TERMO_SAUDE_VERSAO_VIGENTE do core).
+   */
+  termoSaudeVersao: number;
+  /**
+   * RN-347 (CKMOD · pendência T5 do CKFIX): `true` = evento em modo
+   * 'repassada' — o checkout mostra o badge condicional "+ taxa" ANTES do
+   * Resumo. Só o FLAG cruza (nunca percentual/termo do tenant — RN-330/404).
+   */
+  taxaRepassada: boolean;
 }
 
 /** Resumo de evento para o card da home marketplace. */

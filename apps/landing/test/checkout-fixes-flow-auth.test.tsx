@@ -52,6 +52,16 @@ const evento: EventoPublico = {
   secoes: [],
   seo: { titulo: 'Corrida Teste', descricao: 'desc' },
   estadoVenda: 'aberto',
+  // CKMOD — projeção nova do leitor (defaults legais/flags OFF)
+  exigenciasSaude: { atestado: false, parq: false },
+  politicaVendas: {
+    versao: 1,
+    reembolso: { janelaArrependimentoDias: 7, corteHoras: 48, slaAnaliseDias: 3 },
+    transferencia: { habilitada: false, janelaHoras: 72, taxa: 0 },
+    trocaIngresso: { habilitada: false, janelaHoras: 48, permiteReembolsoDowngrade: false },
+  },
+  termoSaudeVersao: 1,
+  taxaRepassada: false,
 };
 
 beforeEach(() => {

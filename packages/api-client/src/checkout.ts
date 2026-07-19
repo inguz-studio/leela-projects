@@ -102,13 +102,41 @@ export interface CheckoutInscritoInput {
   kit?: KitInscritoInput;
   /** Id do kit real do evento — precifica o delta via o core (RN-210/211). */
   kitId?: string;
+  /**
+   * Nascimento date-only `yyyy-mm-dd` POR ATLETA (CKMOD · spec §5.1).
+   * Opcional; o servidor valida (data civil, ≥ 1900, no passado) e persiste
+   * no bloco `[reg]` do inscrito.
+   */
+  nascimento?: string;
+}
+
+/** Endereço do COMPRADOR (CKMOD · spec §5.1 item 3) — 1× por pedido. */
+export interface CheckoutEnderecoInput {
+  /** CEP com ou sem máscara (o servidor canoniza p/ 8 dígitos). */
+  cep: string;
+  logradouro: string;
+  /** Pode ser vazio (CEP rural/novo — lookup não devolve). */
+  bairro: string;
+  cidade: string;
+  uf: string;
+  numero: string;
+  complemento?: string;
 }
 
 export interface CreateInscricaoChargeInput {
   eventoId: string;
   inscritos: CheckoutInscritoInput[];
   responsavelIndex?: number;
-  responsavel: { nome: string; email: string };
+  /** `telefone` (CKMOD §5.1): canal de contato do pedido — opcional. */
+  responsavel: { nome: string; email: string; telefone?: string };
+  /** Endereço do comprador (CKMOD §5.1) — validado/persistido no servidor. */
+  endereco?: CheckoutEnderecoInput;
+  /**
+   * Aceites do pagar (CKMOD §5.3): a UI envia SÓ os booleans confirmados
+   * ({termos: true, saude: true}); versão vigente + timestamp são carimbados
+   * pelo SERVIDOR (RN-149 pattern — nunca enviar/aceitar versão daqui).
+   */
+  aceites?: { termos: boolean; saude: boolean };
   forma: FormaPagamento;
   parcelas: number;
   cupomCodigo?: string;

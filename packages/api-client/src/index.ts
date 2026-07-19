@@ -418,6 +418,7 @@ export type {
   CotarInscricaoCheckoutResult,
   KitInscritoInput,
   CheckoutInscritoInput,
+  CheckoutEnderecoInput,
   CreateInscricaoChargeInput,
   CreateInscricaoChargeResult,
   ConfirmarPagamentoSandboxInput,
