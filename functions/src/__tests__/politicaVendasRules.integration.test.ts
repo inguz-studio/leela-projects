@@ -22,7 +22,15 @@ import {
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
-import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  deleteDoc,
+  deleteField,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
@@ -60,16 +68,19 @@ function politicaValida(overrides: Record<string, unknown> = {}) {
 }
 
 beforeAll(async () => {
+  // Porta da LANE (CKMOD = 8480 via firebase.r6.json; honra LEELA_FS_EMU_PORT;
+  // NUNCA :8180 do preview) — fallback 8080 preserva o gate consolidado.
+  const FS_PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: 8080,
+      port: FS_PORT,
     },
   });
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${FS_PORT}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();
@@ -246,6 +257,46 @@ describe('politicaVendas — payload direto (a Rule segura SOZINHA)', () => {
     await seedPoliticaViaAdmin();
     await assertFails(deleteDoc(doc(ownerA().firestore(), ...P_POL)));
     await assertFails(deleteDoc(doc(platformAdmin().firestore(), ...P_POL)));
+  });
+});
+
+describe('politicaVendas — versão CONGELADA p/ cliente (CKMOD · RN-149 pattern)', () => {
+  it('OWNER criando o doc JÁ carimbado com versao/hash/carimbo ⇒ NEGA (forja de versão)', async () => {
+    const db = ownerA().firestore();
+    await assertFails(
+      setDoc(doc(db, ...P_POL), politicaValida({ versao: 99 }))
+    );
+    await assertFails(
+      setDoc(doc(db, ...P_POL), politicaValida({ politicaTextoHash: 'hash-forjado' }))
+    );
+    await assertFails(
+      setDoc(doc(db, ...P_POL), politicaValida({ versaoAtualizadaEm: serverTimestamp() }))
+    );
+  });
+
+  it('OWNER tocando versao/hash no update ⇒ NEGA (setar, trocar E limpar)', async () => {
+    await adminDb.doc(P_POL.join('/')).set({
+      ...politicaValida(),
+      atualizadoEm: Timestamp.now(),
+      versao: 2, politicaTextoHash: 'hash-legitimo', versaoAtualizadaEm: Timestamp.now(),
+    });
+    const db = ownerA().firestore();
+    await assertFails(updateDoc(doc(db, ...P_POL), { versao: 99 }));
+    await assertFails(updateDoc(doc(db, ...P_POL), { politicaTextoHash: 'outro' }));
+    await assertFails(updateDoc(doc(db, ...P_POL), { versao: deleteField() }));
+  });
+
+  it('OWNER edita o MATERIAL sem tocar a versão ⇒ PERMITE (o bump é do trigger)', async () => {
+    await adminDb.doc(P_POL.join('/')).set({
+      ...politicaValida(),
+      atualizadoEm: Timestamp.now(),
+      versao: 2, politicaTextoHash: 'hash-legitimo', versaoAtualizadaEm: Timestamp.now(),
+    });
+    await assertSucceeds(
+      updateDoc(doc(ownerA().firestore(), ...P_POL), {
+        reembolso: { janelaArrependimentoDias: 14, corteHoras: 24, slaAnaliseDias: 5 },
+      })
+    );
   });
 });
 

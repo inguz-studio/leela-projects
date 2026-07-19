@@ -1578,6 +1578,24 @@ service cloud.firestore {
             && request.resource.data.trocaIngresso.permiteReembolsoDowngrade is bool;
         }
 
+        /**
+         * CKMOD (paralelo RN-149): campos de VERSÃO da política — escrita
+         * EXCLUSIVA do trigger versionarPoliticaVendas (Admin SDK). Versão
+         * forjada invalidaria a prova de aceite do pedido (`aceites.termos`
+         * carimba a versão vigente). Cliente nem cria nem toca — espelho de
+         * CAMPOS_FUNCTION_POLITICA_VENDAS do core.
+         */
+        function camposVersaoPoliticaNaoNascem() {
+          return !request.resource.data.keys().hasAny(
+            ['versao', 'versaoAtualizadaEm', 'politicaTextoHash']
+          );
+        }
+        function camposVersaoPoliticaIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+            ['versao', 'versaoAtualizadaEm', 'politicaTextoHash']
+          );
+        }
+
         allow read: if isPlatformAdmin()
                     || isTenantWriter(tenantDoEventoPai())
                     || papelEventoAtivo(['organizador', 'administrador', 'financeiro']);
@@ -1585,12 +1603,14 @@ service cloud.firestore {
                           && docId == 'config'
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
-                          && shapePoliticaValida())
+                          && shapePoliticaValida()
+                          && camposVersaoPoliticaNaoNascem())
                       || isPlatformAdmin();
         allow update: if (isTenantOwner(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
-                          && shapePoliticaValida())
+                          && shapePoliticaValida()
+                          && camposVersaoPoliticaIntocados())
                       || isPlatformAdmin();
         allow delete: if false;
       }
@@ -2309,6 +2329,10 @@ service cloud.firestore {
     // core) é de escrita EXCLUSIVA de Function (Admin SDK bypassa Rules).
     // Negado até para platform_admin via client SDK (mesmo padrão de
     // `pagamentos` e do dashboard) — pedido forjado é fraude financeira.
+    // CKMOD: `endereco` (PII do comprador) e `aceites` (prova versionada
+    // RN-149 pattern) moram AQUI e herdam o write:false — inforjáveis e
+    // irretocáveis por cliente por construção (escrita só na Function do
+    // checkout, na MESMA tx que cria o pedido).
     match /pedidos/{pedidoId} {
       allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
       allow write: if false;
