@@ -131,6 +131,34 @@ export async function atualizarConfiguracoesEvento(
   await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });
 }
 
+/**
+ * Persiste SÓ a capa do evento (merge cirúrgico — CEV · RN-228). Caminho do
+ * "Novo evento": o upload da capa só acontece APÓS o criarEvento (as Rules do
+ * Storage exigem o doc existir — fail-closed), e neste momento a tela não tem
+ * o resto do payload de configurações (usaChip/capacidade nascem de default do
+ * servidor — reenviá-los sobrescreveria). Mesmo padrão de merge cirúrgico de
+ * `atualizarExigenciasRegulamento`; validação canônica RN-153 (isUrlCapaValida
+ * — mesma cadeia de 3 camadas: core + Rule `capaValida` + esta UX). `null`
+ * REMOVE (deleteField → hero volta ao gradiente). ConfigGerais NÃO usa isto:
+ * lá a capa entra no payload do `atualizarConfiguracoesEvento` (Salvar único).
+ */
+export async function salvarCapaEvento(
+  db: Firestore,
+  eventoId: string,
+  imagemUrl: string | null
+): Promise<void> {
+  const payload: Record<string, unknown> = { atualizadoEm: serverTimestamp() };
+  if (imagemUrl === null) {
+    payload['imagemUrl'] = deleteField();
+  } else {
+    if (!isUrlCapaValida(imagemUrl)) {
+      throw new Error('Capa inválida: use uma URL http(s) de até 2048 caracteres (RN-153).');
+    }
+    payload['imagemUrl'] = imagemUrl.trim();
+  }
+  await setDoc(doc(db, 'eventos', eventoId), payload, { merge: true });
+}
+
 // ---------------------------------------------------------------------------
 // Exigências de saúde + regulamento (LEELA-S306-T2 · E04 · RN-146/147/149)
 // ---------------------------------------------------------------------------

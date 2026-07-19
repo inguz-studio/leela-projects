@@ -182,6 +182,58 @@ export async function uploadImagemKit(
   return uploadImagem(`eventos/${eventoId}/kits/${id}`, file);
 }
 
+// ---------------------------------------------------------------------------
+// Capa do EVENTO (CEV · RN-228 — fecha a pendência UPSW / DEC-0719 item 19)
+// ---------------------------------------------------------------------------
+
+/**
+ * Allowlist de contentType da CAPA DE EVENTO (RN-228, ratificada DEC-0719):
+ * SÓ JPEG/PNG/GIF — mais estrita que `IMAGEM_UPLOAD_TIPOS` (webp/avif ficam
+ * de fora NESTA superfície). ESPELHO da regex `capaEventoFormatoValido` das
+ * storage.rules (a Rule é a fronteira; aqui é UX/fail-fast).
+ */
+export const CAPA_EVENTO_UPLOAD_TIPOS = ['image/jpeg', 'image/png', 'image/gif'] as const;
+
+/** Teto da capa de evento — 2MB (RN-228; app-level — as Rules ficam em 5MB). */
+export const CAPA_EVENTO_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Valida o arquivo da capa de evento ANTES do upload (RN-228: jpeg/png/gif,
+ * 1B..2MB). Retorna a mensagem do problema ou null. A chamada acontece no
+ * arquivo FINAL (pós-crop 1.9:1 do ImageUploadField) — um PNG/JPEG que o crop
+ * não conseguiu reduzir a ≤2MB é rejeitado aqui com mensagem honesta. @pure
+ */
+export function problemaDoArquivoCapaEvento(file: File): string | null {
+  if (!(CAPA_EVENTO_UPLOAD_TIPOS as readonly string[]).includes(file.type)) {
+    return 'A capa deve ser JPG, PNG ou GIF (RN-228).';
+  }
+  if (file.size === 0) {
+    return 'O arquivo está vazio.';
+  }
+  if (file.size > CAPA_EVENTO_MAX_BYTES) {
+    return 'A capa deve ter no máximo 2MB.';
+  }
+  return null;
+}
+
+/**
+ * Capa/hero do EVENTO (campo canônico `Evento.imagemUrl`, RN-153/RN-228).
+ * Path CONTRATADO: `eventos/{eventoId}/capa` — as Rules provam por
+ * firestore.get que o EVENTO pertence ao tenant do caller (mesma guarda dos
+ * kits/capa de clube; evento inexistente NEGA — por isso o "Novo evento" só
+ * sobe a capa APÓS o criarEvento devolver o id). Valida RN-228 (formato +
+ * 2MB) antes do roundtrip; a proporção 1.9:1/1600×838 é ajustada pelo crop
+ * client-side do ImageUploadField (Rules não decodificam imagem).
+ */
+export async function uploadCapaEvento(eventoId: string, file: File): Promise<string> {
+  if (eventoId.trim().length === 0) {
+    throw new Error('Evento inválido para enviar a capa.');
+  }
+  const problema = problemaDoArquivoCapaEvento(file);
+  if (problema) throw new Error(problema);
+  return uploadImagem(`eventos/${eventoId}/capa`, file);
+}
+
 /**
  * Logo 1:1 do PATROCINADOR do clube (parceria tipo 'patrocinador').
  * Path: `clubes/{clubeId}/patrocinador-{parceriaId}` — Rules provam o

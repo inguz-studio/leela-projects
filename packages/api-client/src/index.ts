@@ -125,6 +125,11 @@ export {
   uploadLogoPatrocinadorClube,
   // Imagem 1:1 do kit (R9-C · RN-227 · gap R13)
   uploadImagemKit,
+  // Capa do evento (CEV · RN-228 — fecha a pendência UPSW)
+  CAPA_EVENTO_UPLOAD_TIPOS,
+  CAPA_EVENTO_MAX_BYTES,
+  problemaDoArquivoCapaEvento,
+  uploadCapaEvento,
 } from './storage';
 
 // ---------------------------------------------------------------------------
@@ -253,6 +258,9 @@ export type {
 // LEELA-S304-T2 — configurações gerais do evento (escrita direta, Rules-guarded)
 export { atualizarConfiguracoesEvento } from './eventos/configuracoesEvento';
 export type { AtualizarConfiguracoesEventoInput } from './eventos/configuracoesEvento';
+
+// CEV — capa do evento pós-create (merge cirúrgico de `imagemUrl`, RN-228)
+export { salvarCapaEvento } from './eventos/configuracoesEvento';
 
 // LEELA-S306-T2 — exigências de saúde + regulamento (escrita direta, Rules-guarded)
 export { atualizarExigenciasRegulamento } from './eventos/configuracoesEvento';
