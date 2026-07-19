@@ -58,6 +58,21 @@ O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois
 - **RN-151** (S1208) — captura de newsletter grava lead sob o tenant com registro de consentimento LGPD e finalidade declarada.
 - **RN-152** (S1208) — blocos do portal são ativáveis e ordenáveis; blocos desativados não aparecem.
 
+### RNs novas · rodada DEC-0719 (Vitor, 2026-07-19) — checkout
+
+- **RN-154 (nova · gênero no checkout)** — o **gênero** é coletado no checkout **por inscrito** (enum `GENEROS_INSCRITO` com opção "não informado", que respeita quem não declara) e **pré-preenchido automaticamente** quando a pessoa já comprou antes (reconhecida via CPF único, RN-173). Alimenta a demografia do organizador (RN-820/822). Entra junto dos campos novos já ratificados do checkout (telefone/nascimento/endereço) — lote `CHECKOUT-FORM-2`.
+- **RN-155 (nova · conta sem fricção)** — na **1ª compra**, o sistema **cria a conta automaticamente sem fricção** e **envia um link por e-mail** avisando que a conta foi criada, para a pessoa **definir senha e visualizar a compra**. Nas compras seguintes (CPF já conhecido, RN-173), os dados pré-preenchem. **Dependência dura:** o envio do link depende do **EmailProvider** (RN-137, `BREVO_API_KEY`) — fail-closed sem a chave (a conta é criada; o e-mail fica pendente até a chave existir). Lote `conta-sem-fricção`.
+- **RN-156 (nova · termo de saúde base obrigatório)** — o **termo de saúde BASE da plataforma** é **sempre presente e obrigatório** no checkout (deixa de ser condicional a flag). A flag `exigenciasSaude` do organizador (RN-146) passa a **ADICIONAR** um termo/exigência custom dele, não a habilitar o termo base. Verbatim do Vitor: *"é um termo base que teremos, mas deixamos também o organizador ter os seus, para personalizar."* Os **dados plenos de saúde** (atestado/PAR-Q, RN-146/147, dado sensível LGPD Art. 11) **seguem condicionais** à flag do evento e isolados em `inscritos/{id}/saude`. O aceite do termo base segue o versionamento RN-149 (carimbo `versao`/`aceiteEm` em `pedidos/{id}.aceites.saude` — já landed no CHECKOUT-MODELO). Lote `saúde-termo-base`.
+- **RN-157 (nova · PIX 30 min + retomada)** — a **cobrança PIX expira em 30 minutos** — validade da **charge** no `PaymentProvider`/Asaas (`expiresIn`), **não** só um relógio de UI. O **QR + copia-e-cola** ficam disponíveis **enquanto o PIX estiver pendente**, tanto na **tela de pagamento** quanto na **tela do pedido pendente** (`/pedido/{id}`, retomada do comprador anônimo). O botão de copiar **copia automaticamente** e dispara toast *"a chave para pagamento foi copiada"*. Lote `CHECKOUT-FORM-2` (implicação de `expiresIn=1800s` no `createCharge`).
+- **RN-170 (nova · troca + proporção; política de imagem em E17)** — toda **superfície de imagem** ganha ação **TROCAR** imagem + **ajuste automático de proporção** (fit/crop client-side para a proporção da superfície — capa 1.9:1, logo 1:1). Na landing, aplica-se às imagens editáveis que a superfície pública consome (capa do evento, logos). Complementa **RN-168** (upload-only — a URL colada morre em todas as superfícies). Casa da política = E17 (onde vive RN-168); aqui fica a nota de consumo. Lote `upload-sweep`.
+- **RN-173 (nova · CPF único; regra-mãe em E19)** — **CPF é único no sistema**; no checkout, informar um CPF já existente **associa à mesma pessoa** (linka, não duplica) e habilita o pré-preenchimento (RN-154) e a conta sem fricção (RN-155). Regra e disciplina de PII definidas no épico E19 (RN-173/RN-172); aqui fica o efeito no fluxo de checkout. Lote `cpf-unico`.
+
+### Decisões de UI/fluxo do checkout · DEC-0719 (sem RN — mecânica de tela)
+
+- **D-2 · Cards por atleta + botão "+ adicionar atleta"** (ratificado). Supersede a tela 2 do wireframe 112-4622 (stepper de quantidade agregada). Coerente com ADR-011 (titular por inscrito).
+- **D-4 · Campo de código/cupom no INÍCIO do fluxo** (step 0), em paridade com a referência — além do auto-apply do cupom vindo por URL.
+- **D-5 · Pix|Cartão na etapa de pagamento como BOTÕES, sem toggle.** Verbatim: *"pix e cartao na etapa de pagamento, mas em botões, sem toggle."*
+
 ## Modelo de dados tocado
 
 Ver `modelo-de-dados-firestore.md`. Leitura pública (server-side) e escrita transacional:

@@ -31,6 +31,7 @@ Dar ao **organizador** uma visão única dos seus clientes (atletas que comprara
 - **RN-172 (nova) · CRM individual do organizador (PII).** Cruza identidade do cliente cross-evento por chave (CPF quando presente, e-mail fallback — a ratificar). Base legal/finalidade declaradas (legítimo interesse sobre a base transacional própria / execução de contrato), finalidade limitada (gestão + comunicação), minimização (só nome, nº eventos, valor/LTV, sexo, idade, aniversário — **sem dado sensível**). Leitura só `isTenantWriter`; nunca afiliado/patrocinador/coordenador. **Categoria DISTINTA do RN-820** (agregado sem PII).
 - **RN-144** — export de dados 90d + disclaimer em ações irreversíveis.
 - **RN-820** ✅ — fonte de idade/sexo (agregado); o CRM individual é a camada de identidade, não o agregado.
+- **RN-173 (nova · DEC-0719, Vitor 2026-07-19, item 24d)** — **CPF é ÚNICO no sistema (unicidade global de pessoa por CPF).** Verbatim: *"só podemos ter CPF's únicos no sistema, importante isso."* Colisão no checkout/cadastro = **mesma pessoa: linka, não duplica**. É a garantia que sustenta a **chave de linking do CRM** (RN-172, CPF→e-mail): com CPF único, a agregação cross-evento por CPF é determinística e não cria perfis-fantasma. Implica **constraint de unicidade** (índice/guard no cadastro de pessoa) + **fluxo de colisão** (checkout que reconhece CPF existente e associa, em vez de criar duplicata). Constraint + fluxo são **lote de código** (fila `cpf-unico`); aqui fica a regra. A disciplina de PII da RN-172 permanece: o CPF nunca em claro em path/doc/log (docId por HMAC com pepper).
 
 ## Modelo de dados tocado
 
@@ -90,6 +91,13 @@ de minimização assumidas na implementação (registradas no handoff do trace):
 5. **P-E19-5 · Dinheiro** = `valorGasto` = Σ(valorFinal+taxaRepassada) das confirmadas; `ltv` = Σ valorFinal (consistente com `receitaConfirmada`). Estornada fica no histórico fora dos dois números.
 6. **P-E19-6 · Só quem comprou** = apenas inscrição confirmada/estornada entra no CRM; pendente/cancelada não constrói perfil.
 7. **P-CKMOD-1 (2026-07-19) · Endereço NUNCA entra no CRM** — o checkout novo (lote CHECKOUT-MODELO) passou a coletar endereço do comprador em `pedidos/{id}.endereco`; por minimização RN-172, a allowlist do doc de cliente **não ganha endereço** (nem cidade/UF derivadas dele). A agregação do CRM segue lendo INSCRITOS (nunca o pedido). Incluir endereço no CRM exige decisão explícita do Vitor registrada aqui.
+
+### Confirmações da rodada DEC-0719 (Vitor, 2026-07-19, item 24)
+
+- **(a) Base legal LGPD — "pode relevar agora".** Segue sem bloqueio com o default de **legítimo interesse** (RN-172, P-E19-2), MAS com **nota explícita de REVISITAR antes do go-live**: a pendência de PII não é apagada, só teve a severidade rebaixada de bloqueadora para revisão pré-produção. O gate antagonista PII/LGPD do lote de UI (T3/T4) permanece obrigatório.
+- **(b) Hub unificado "Clientes & Comunicação" = CONFIRMADO** (ratifica P-E19-3). O item `comunicacao` do sidebar deixa de ser placeholder; a comunicação por evento (E06) e por clube (E05) seguem intactas.
+- **(c) Chave de linking CPF→e-mail = CONFIRMADA** (ratifica P-E19-1). Reforçada pela **RN-173** (CPF único global): a chave CPF torna-se determinística sem risco de duplicata.
+- **(d) RN-173 (nova): CPF único no sistema** — ver §Regras de negócio aplicáveis. Vira lote de código `cpf-unico` (constraint + fluxo de colisão).
 
 ## Estado de implementação (backend — trace leela-build-2d6ee98d, 2026-07-18)
 
