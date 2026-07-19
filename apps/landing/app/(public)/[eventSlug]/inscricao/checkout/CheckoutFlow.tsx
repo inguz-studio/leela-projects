@@ -39,6 +39,15 @@ import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 import { CheckoutStepper } from './CheckoutStepper';
 import { LeelaWordmark } from './LeelaWordmark';
 
+// Copy humana do erro de sessão (BC-2): o comprador NUNCA vê jargão de infra
+// ("Firebase Anonymous Auth", erro cru do SDK) — o detalhe técnico fica só no
+// console. Uma frase, ação clara, sem beco sem saída.
+const COPY_ERRO_AUTH =
+  'Não conseguimos preparar seu pagamento. Verifique sua conexão e tente de novo.';
+// Quantas vezes a sessão anônima re-tenta sozinha (backoff curto) antes de
+// pedir ação manual ao comprador. Mantém erro transitório invisível.
+const MAX_AUTH_RETRY_AUTO = 1;
+
 // Etapas INTERNAS (5), na ordem do mockup/TicketSports (o dono):
 //   [0] modalidade+kit · [1] dados · [2] resumo · [3] pagamento · [4] confirmação
 // Modalidade e kit ficam juntos na etapa 0 (o kit é filtrado pela modalidade);
@@ -138,6 +147,13 @@ export function CheckoutFlow({
   const [cotando, setCotando] = useState(false);
   const [erroCotacao, setErroCotacao] = useState<string | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
+  // Retry manual da cotação (BC-1): incrementar re-dispara o efeito de cotação
+  // com a MESMA lógica (mesmo guard de cancelamento) — nada de caminho paralelo.
+  const [recotarNonce, setRecotarNonce] = useState(0);
+  // Auto-aplicar cupom da URL (A-2): pendente até a 1ª cotação possível tentar
+  // o cupom do link; `erroCupomUrl` é o banner honesto quando ele não cola.
+  const [cupomUrlPendente, setCupomUrlPendente] = useState<boolean>(Boolean(atribuicao.cupom));
+  const [erroCupomUrl, setErroCupomUrl] = useState<string | null>(null);
 
   // Cobrança / confirmação
   const chaveRef = useRef<string | undefined>(undefined);
@@ -152,26 +168,60 @@ export function CheckoutFlow({
   // Auth anônima (checkout sem login)
   const [authPronto, setAuthPronto] = useState(false);
   const [erroAuth, setErroAuth] = useState<string | null>(null);
+  const [tentandoAuth, setTentandoAuth] = useState(true);
 
-  useEffect(() => {
-    let vivo = true;
+  // BC-2: a sessão anônima é RECUPERÁVEL. Uma tentativa no mount + 1 retry
+  // automático com backoff curto (erro transitório fica invisível); se ainda
+  // falhar, banner com copy humana + botão "Tentar novamente". O erro cru do
+  // SDK só vai ao console — nunca ao comprador.
+  const montadoRef = useRef(true);
+  const authTentativaRef = useRef(0);
+  const authTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const iniciarAuth = useCallback(() => {
+    setErroAuth(null);
+    setTentandoAuth(true);
     try {
       ensureLeela();
     } catch (err) {
-      setErroAuth(mensagemErro(err, 'Falha ao inicializar o pagamento.'));
+      if (typeof console !== 'undefined') console.error('[checkout] Falha ao inicializar o cliente Leela.', err);
+      if (montadoRef.current) {
+        setErroAuth(COPY_ERRO_AUTH);
+        setTentandoAuth(false);
+      }
       return;
     }
     loginAnonimo()
       .then(() => {
-        if (vivo) setAuthPronto(true);
+        if (!montadoRef.current) return;
+        authTentativaRef.current = 0;
+        setAuthPronto(true);
+        setTentandoAuth(false);
       })
       .catch((err) => {
-        if (vivo) setErroAuth(mensagemErro(err, 'Não foi possível iniciar a sessão de pagamento.'));
+        if (typeof console !== 'undefined') console.error('[checkout] Falha na sessão anônima do checkout.', err);
+        if (!montadoRef.current) return;
+        authTentativaRef.current += 1;
+        if (authTentativaRef.current <= MAX_AUTH_RETRY_AUTO) {
+          // Backoff curto e crescente; o comprador segue vendo "preparando".
+          authTimerRef.current = setTimeout(() => {
+            if (montadoRef.current) iniciarAuth();
+          }, 1200 * authTentativaRef.current);
+        } else {
+          setErroAuth(COPY_ERRO_AUTH);
+          setTentandoAuth(false);
+        }
       });
-    return () => {
-      vivo = false;
-    };
   }, []);
+
+  useEffect(() => {
+    montadoRef.current = true;
+    iniciarAuth();
+    return () => {
+      montadoRef.current = false;
+      if (authTimerRef.current) clearTimeout(authTimerRef.current);
+    };
+  }, [iniciarAuth]);
 
   const parcelasEfetivas = forma === 'pix' ? 1 : parcelas;
   // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
@@ -254,8 +304,10 @@ export function CheckoutFlow({
   );
 
   // Recalcula o total ao entrar no Resumo e quando seleção/forma/parcelas mudam.
+  // Enquanto o cupom da URL ainda não resolveu (A-2), o efeito de auto-aplicação
+  // faz a 1ª cotação — este espera para não disparar duas cotações concorrentes.
   useEffect(() => {
-    if (!precisaCotar || !authPronto || !todasModalidades) return;
+    if (!precisaCotar || !authPronto || !todasModalidades || cupomUrlPendente) return;
     let vivo = true;
     setCotando(true);
     cotarCom(cupomAplicado).then((r) => {
@@ -272,7 +324,36 @@ export function CheckoutFlow({
     return () => {
       vivo = false;
     };
-  }, [precisaCotar, authPronto, cupomAplicado, forma, parcelasEfetivas, selecaoSig, todasModalidades, cotarCom]);
+  }, [precisaCotar, authPronto, cupomAplicado, forma, parcelasEfetivas, selecaoSig, todasModalidades, cupomUrlPendente, recotarNonce, cotarCom]);
+
+  // A-2 · auto-aplica o cupom vindo da URL. Na 1ª cotação possível, tenta o
+  // cupom do link: sucesso ⇒ vira `cupomAplicado` (o efeito acima recota e
+  // exibe o desconto); falha ⇒ banner honesto e segue sem cupom (o servidor
+  // revalida tudo — risco zero de preço no cliente). Roda no máximo 1×.
+  useEffect(() => {
+    if (!cupomUrlPendente || !precisaCotar || !authPronto || !todasModalidades) return;
+    const codigo = (atribuicao.cupom ?? '').trim().toUpperCase();
+    if (codigo.length === 0) {
+      setCupomUrlPendente(false);
+      return;
+    }
+    let vivo = true;
+    setCotando(true);
+    cotarCom(codigo).then((r) => {
+      if (!vivo) return;
+      if (r.ok) {
+        setCupomAplicado(codigo);
+        setErroCupomUrl(null);
+      } else {
+        setCotando(false);
+        setErroCupomUrl(`O cupom ${codigo} não pôde ser aplicado (${r.error})`);
+      }
+      setCupomUrlPendente(false);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [cupomUrlPendente, precisaCotar, authPronto, todasModalidades, atribuicao.cupom, cotarCom]);
 
   // Qualquer mudança de preço invalida a cobrança já criada (evita replay com
   // valores antigos — a UI reflete sempre a seleção atual).
@@ -287,6 +368,7 @@ export function CheckoutFlow({
   const aplicarCupom = useCallback(async () => {
     const code = cupomInput.trim().toUpperCase();
     if (code.length === 0) return;
+    setErroCupomUrl(null);
     setAplicandoCupom(true);
     const r = await cotarCom(code);
     setAplicandoCupom(false);
@@ -300,8 +382,16 @@ export function CheckoutFlow({
   }, [cupomInput, cotarCom]);
 
   const removerCupom = useCallback(() => {
+    setErroCupomUrl(null);
     setCupomAplicado(null);
     setCupomInput('');
+  }, []);
+
+  // BC-1 · retry manual da cotação: bump do nonce → o efeito de cotação re-roda
+  // (re-dispara `cotarCom(cupomAplicado)`) com o mesmo guard de cancelamento.
+  const tentarCotarNovamente = useCallback(() => {
+    setErroCotacao(null);
+    setRecotarNonce((n) => n + 1);
   }, []);
 
   // ── Cobrança + confirmação (produtor de escrita + webhook sandbox) ─────────
@@ -367,8 +457,27 @@ export function CheckoutFlow({
     if (c) await confirmar(c.pedidoId);
   }, [gerarCobranca, confirmar]);
 
+  // A-3 · PIX gera a cobrança automaticamente ao entrar no Pagamento — o QR/
+  // copia-e-cola já aparece sem clique extra. O botão "Gerar código PIX" fica
+  // como fallback se der erro (idempotência RN-333 protege duplicidade).
+  useEffect(() => {
+    if (
+      step === 3 &&
+      forma === 'pix' &&
+      authPronto &&
+      charge === null &&
+      !criandoCharge &&
+      erroCharge === null
+    ) {
+      void gerarCobranca();
+    }
+  }, [step, forma, authPronto, charge, criandoCharge, erroCharge, gerarCobranca]);
+
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
+    // BC-2: sessão anônima falha travada ⇒ não deixa a pessoa investir esforço
+    // preenchendo tudo para só descobrir o beco no Resumo. Barra já no step 0.
+    if (erroAuth !== null) return;
     if (step === 0) {
       // Modalidade e kit: modalidade obrigatória; kit obrigatório SE a
       // modalidade ofertar kits (RN-210). Modalidade sem kits segue sem kit.
@@ -406,7 +515,7 @@ export function CheckoutFlow({
       setStep(3);
       return;
     }
-  }, [step, evento.kits, responsavel, inscritos, euCorro, cotacao, erroCotacao]);
+  }, [step, evento.kits, responsavel, inscritos, euCorro, cotacao, erroCotacao, erroAuth]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -457,12 +566,13 @@ export function CheckoutFlow({
       </div>
 
       {erroAuth ? (
-        <div className="mt-8 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
+        <div role="alert" className="mt-8 rounded-ds-md border border-border-default bg-feedback-warning-surface p-4">
           <p className="text-[length:var(--font-size-base)] font-[var(--font-weight-medium)] text-feedback-warning-fg">{erroAuth}</p>
-          <p className="mt-1 text-[length:var(--font-size-base)] text-text-secondary">
-            O checkout precisa de uma sessão anônima (Firebase Anonymous Auth). Verifique se o
-            provedor está habilitado no ambiente.
-          </p>
+          <div className="mt-3">
+            <Button variant="secondary" size="sm" onClick={iniciarAuth} disabled={tentandoAuth}>
+              {tentandoAuth ? 'Tentando…' : 'Tentar novamente'}
+            </Button>
+          </div>
         </div>
       ) : null}
 
@@ -500,12 +610,14 @@ export function CheckoutFlow({
             cotacao={cotacao}
             cotando={cotando}
             erroCotacao={erroCotacao}
+            onTentarCotacao={tentarCotarNovamente}
             linhas={linhasResumo}
             cupomInput={cupomInput}
             onCupomInput={setCupomInput}
             onAplicarCupom={aplicarCupom}
             onRemoverCupom={removerCupom}
             aplicandoCupom={aplicandoCupom}
+            erroCupomUrl={erroCupomUrl}
             forma={forma}
             onForma={setForma}
             parcelas={parcelas}
@@ -552,7 +664,7 @@ export function CheckoutFlow({
           </Button>
           <Button
             onClick={avancar}
-            disabled={step === 2 && (cotacao === null || erroCotacao !== null)}
+            disabled={erroAuth !== null || (step === 2 && (cotacao === null || erroCotacao !== null))}
           >
             {step === 2 ? 'Ir para pagamento' : 'Continuar'}
           </Button>
