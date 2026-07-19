@@ -61,7 +61,6 @@
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-popover": "^1.1.19",
     "@radix-ui/react-separator": "^1.1.11",
     "@radix-ui/react-slot": "^1.1.0",

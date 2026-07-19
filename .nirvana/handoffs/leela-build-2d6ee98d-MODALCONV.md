@@ -54,5 +54,30 @@ Gates:
 
 Commit: [LEELA-MODALCONV-T1]
 
-## T2 — remoção da dep — status: pendente (próximo)
-## T3 — showcase do Dialog — status: pendente
+## T2 — remoção da dep — status: FEITO
+
+Contexto que refina o alvo: os ÚNICOS importadores de `@radix-ui/react-dialog`
+no DS eram `Modal` e `Drawer` (a landing já é Radix-free). Com T1, ambos saíram.
+Removida a declaração DIRETA de `@radix-ui/react-dialog` do
+`packages/design-system/package.json`; `pnpm install` atualizou o lockfile.
+
+Prova (grep dist + lockfile):
+- **dist/bundle:** ZERO `require('@radix-ui/react-dialog')` / `import ... from
+  '@radix-ui/react-dialog'` nos bundles de runtime (`dist/index.{js,mjs}`,
+  `dist/dialog.{js,mjs}`). Era exatamente esse `require` que quebrava o bundle
+  público da landing (500 da lane LPVK) — some. Os únicos resquícios de
+  "react-dialog" no dist são PROSA de JSDoc (provenance) embutida em `.map` e
+  `.d.ts`, não código.
+- **lockfile:** o bloco importer `packages/design-system:` NÃO declara mais
+  `@radix-ui/react-dialog`. Ele permanece no lockfile APENAS como dep TRANSITIVA
+  de `cmdk` (Command/Combobox usam) e de `vaul` — fora do grafo do dist público
+  do DS e fora do caminho da landing. Remoção total do pacote não é possível sem
+  trocar cmdk/vaul (fora do escopo do lote e sem ganho para o bundle público).
+
+Reuso vs criado: nenhum arquivo novo; só remoção de 1 linha de dep + lockfile.
+
+Gates: DS 1046/1046 · tsc DS 0 (cmdk resolve react-dialog transitivamente, intacto).
+
+Commit: [LEELA-MODALCONV-T2]
+
+## T3 — showcase do Dialog — status: pendente (próximo)
