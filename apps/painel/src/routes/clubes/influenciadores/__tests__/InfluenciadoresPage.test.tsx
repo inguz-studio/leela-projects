@@ -26,6 +26,7 @@ function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
   return {
     eventoId: 'evt-1',
     eventoNome: 'Meia de Floripa',
+    eventoSlug: 'meia-floripa-2026',
     refCodigo: 'DIONEY10',
     tipo: 'pessoa_fisica',
     status: 'ativo',

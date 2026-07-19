@@ -65,7 +65,14 @@ brief retomada: `.nirvana/briefs/leela-tamanhos-grade-RETOMADA-enriched.md`
       obrigatoriedade no avançar do step 0; payload envia `tamanhos` por inscrito
       (o servidor revalida fail-closed). Kit sem grade mantém a nota antiga.
       Gates: tsc/eslint landing 0 · RTL nova 5/5 · suíte landing completa 60/60.
-- [ ] T-extra — eventoSlug no reader do promotor (commit separado)
+- [x] T-extra — eventoSlug no reader do promotor (commit separado):
+      `getMinhasAfiliacoes`/`getAfiliadosDoTenant` projetam `eventoSlug` (fallback
+      docId — convenção slug≡id do seed); api-client tipa; MinhasAfiliacoesPage
+      troca "Copiar código" por "Copiar link" `{PUBLIC_BASE}/{slug}?ref=` (mesmo
+      formato da AfiliadosPage; doc sem slug degrada p/ código). Gates: tsc/eslint 0
+      (functions+api-client+painel) · afiliados.integration 28/28 no emulator
+      firestore+auth 8480/9598 (firebase.r6.json, config da lane R9-E) com assert
+      novo de eventoSlug · RTL painel influenciadores 16/16.
 - [ ] Gates: tsc/eslint 0 · unit core · integração emulator teste (portas próprias, NUNCA 8180) · suíte painel · suíte landing · RTL UIs novas
 - [ ] Review antagonista Fable contexto fresco + fixes re-provados
 - [ ] Aterrissagem: boards + épicos E03/E08 + report outputs/leela-build-2d6ee98d/

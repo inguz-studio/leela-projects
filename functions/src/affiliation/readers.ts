@@ -56,6 +56,9 @@ export interface RepasseProjetado {
 export interface MinhaAfiliacao {
   eventoId: string;
   eventoNome: string;
+  /** Slug público do evento (E08-PROMOTOR · TAMANHOS-GRADE T-extra) — o
+   *  painel monta o LINK completo `{landing}/{slug}?ref=` sem query extra. */
+  eventoSlug: string;
   refCodigo: string;
   tipo: TipoAfiliado;
   status: StatusAfiliado | string;
@@ -144,15 +147,27 @@ async function repassesDoAfiliado(
   });
 }
 
-async function nomeDoEvento(db: Db, eventoId: string): Promise<string> {
+/** Nome + slug públicos do evento (1 leitura). Slug ausente ⇒ o docId (a
+ *  convenção do seed é slug ≡ id — fallback honesto, nunca link quebrado). */
+async function dadosDoEvento(
+  db: Db,
+  eventoId: string
+): Promise<{ nome: string; slug: string }> {
   const snap = await db.collection('eventos').doc(eventoId).get();
   const nome = snap.get('nome');
-  return typeof nome === 'string' && nome.length > 0 ? nome : eventoId;
+  const slug = snap.get('slug');
+  return {
+    nome: typeof nome === 'string' && nome.length > 0 ? nome : eventoId,
+    slug: typeof slug === 'string' && slug.length > 0 ? slug : eventoId,
+  };
 }
 
 function baseDaAfiliacao(
   d: admin.firestore.QueryDocumentSnapshot
-): Omit<MinhaAfiliacao, 'eventoNome' | 'ultimasConversoes' | 'ultimosRepasses'> {
+): Omit<
+  MinhaAfiliacao,
+  'eventoNome' | 'eventoSlug' | 'ultimasConversoes' | 'ultimosRepasses'
+> {
   const comissaoRaw = d.get('comissao');
   const comissaoAcumulada =
     typeof d.get('comissaoAcumulada') === 'number'
@@ -211,9 +226,11 @@ export async function getMinhasAfiliacoesCore(
   const afiliacoes: MinhaAfiliacao[] = [];
   for (const d of snap.docs) {
     const base = baseDaAfiliacao(d);
+    const evento = await dadosDoEvento(db, base.eventoId);
     afiliacoes.push({
       ...base,
-      eventoNome: await nomeDoEvento(db, base.eventoId),
+      eventoNome: evento.nome,
+      eventoSlug: evento.slug,
       ultimasConversoes: await conversoesDoAfiliado(d.ref),
       ultimosRepasses: await repassesDoAfiliado(d.ref),
     });
@@ -258,9 +275,11 @@ export async function getAfiliadosDoTenantCore(
   const afiliados: AfiliadoDoTenant[] = [];
   for (const d of snap.docs) {
     const base = baseDaAfiliacao(d);
+    const evento = await dadosDoEvento(db, base.eventoId);
     afiliados.push({
       ...base,
-      eventoNome: await nomeDoEvento(db, base.eventoId),
+      eventoNome: evento.nome,
+      eventoSlug: evento.slug,
       ultimasConversoes: await conversoesDoAfiliado(d.ref),
       ultimosRepasses: await repassesDoAfiliado(d.ref),
       nome: (d.get('nome') ?? '') as string,

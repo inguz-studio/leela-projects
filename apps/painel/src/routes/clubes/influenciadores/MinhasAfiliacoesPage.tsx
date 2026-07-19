@@ -19,6 +19,7 @@ import {
   useToast,
 } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
+import { PUBLIC_BASE } from '../../../lib/linkPublico';
 import {
   getMinhasAfiliacoes,
   type ConversaoProjetada,
@@ -51,7 +52,7 @@ function CartaoAfiliacao({
   onCopiar,
 }: {
   a: MinhaAfiliacao;
-  onCopiar: (refCodigo: string) => void;
+  onCopiar: (a: MinhaAfiliacao) => void;
 }): JSX.Element {
   const gateFechado =
     a.minimoInscricoes !== null && a.conversoes < a.minimoInscricoes;
@@ -80,10 +81,10 @@ function CartaoAfiliacao({
             </span>
             <Button
               variant="ghost"
-              onClick={() => onCopiar(a.refCodigo)}
-              aria-label={`Copiar código de indicação de ${a.eventoNome}`}
+              onClick={() => onCopiar(a)}
+              aria-label={`Copiar link de indicação de ${a.eventoNome}`}
             >
-              Copiar código
+              Copiar link
             </Button>
           </div>
         </div>
@@ -196,19 +197,25 @@ export function MinhasAfiliacoesPage(): JSX.Element {
     [afiliacoes],
   );
 
-  // "Qual link uso": o código de indicação é o que o influenciador anexa como
-  // `?ref=` ao link do evento. Copiar o CÓDIGO é o que dá pra entregar sem o
-  // slug do evento (o reader getMinhasAfiliacoes não o projeta — follow-up
-  // registrado no handoff: expor eventoSlug → copiar a URL completa como faz a
-  // AfiliadosPage do organizador).
-  function copiarCodigo(refCodigo: string): void {
+  // "Qual link uso": com o eventoSlug projetado pelo reader (E08-PROMOTOR ·
+  // T-extra TAMANHOS-GRADE), copia a URL COMPLETA `{landing}/{slug}?ref=` —
+  // o MESMO formato da AfiliadosPage do organizador (fonte única PUBLIC_BASE).
+  // Doc sem slug (função antiga em cache) degrada para copiar só o código.
+  function copiarLink(a: MinhaAfiliacao): void {
+    const slug = (a as { eventoSlug?: string }).eventoSlug ?? '';
+    const completo = slug.length > 0;
+    const valor = completo
+      ? `${PUBLIC_BASE}/${slug}?ref=${encodeURIComponent(a.refCodigo)}`
+      : a.refCodigo;
     void navigator.clipboard
-      .writeText(refCodigo)
+      .writeText(valor)
       .then(() =>
         toast({
           variant: 'success',
-          title: 'Código copiado',
-          description: `Use ?ref=${refCodigo} no link do evento`,
+          title: completo ? 'Link copiado' : 'Código copiado',
+          description: completo
+            ? 'Divulgue este link — as inscrições ficam atribuídas a você.'
+            : `Use ?ref=${a.refCodigo} no link do evento`,
         }),
       )
       .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar' }));
@@ -270,7 +277,7 @@ export function MinhasAfiliacoesPage(): JSX.Element {
             <CartaoAfiliacao
               key={`${a.eventoId}:${a.refCodigo}`}
               a={a}
-              onCopiar={copiarCodigo}
+              onCopiar={copiarLink}
             />
           ))
         )}

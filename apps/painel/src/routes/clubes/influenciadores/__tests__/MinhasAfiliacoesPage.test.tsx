@@ -21,6 +21,7 @@ function afiliacao(over: Partial<MinhaAfiliacao> = {}): MinhaAfiliacao {
   return {
     eventoId: 'evt-1',
     eventoNome: 'Meia de Floripa',
+    eventoSlug: 'meia-floripa-2026',
     refCodigo: 'DIONEY10',
     tipo: 'pessoa_fisica',
     status: 'ativo',
@@ -140,15 +141,17 @@ describe('MinhasAfiliacoesPage', () => {
     expect(within(resumo).getByText('R$ 200,00')).toBeInTheDocument();
   });
 
-  it('copiar código: escreve o refCodigo no clipboard e confirma por toast (JTBD "qual link uso")', async () => {
+  it('copiar link: escreve a URL completa {landing}/{slug}?ref= no clipboard (T-extra TAMANHOS-GRADE)', async () => {
     mocks.getMinhasAfiliacoes.mockResolvedValue({ afiliacoes: [afiliacao({ refCodigo: 'DIONEY10' })] });
     renderPage();
     const cartao = await primeiroCartao();
     fireEvent.click(
-      within(cartao).getByRole('button', { name: /copiar código de indicação/i }),
+      within(cartao).getByRole('button', { name: /copiar link de indicação/i }),
     );
-    expect(writeText).toHaveBeenCalledWith('DIONEY10');
-    expect(await screen.findByText('Código copiado')).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringMatching(/\/meia-floripa-2026\?ref=DIONEY10$/),
+    );
+    expect(await screen.findByText('Link copiado')).toBeInTheDocument();
   });
 
   it('gate de desconto RN-315: abaixo do mínimo mostra progresso e nota "sem retroativo"', async () => {

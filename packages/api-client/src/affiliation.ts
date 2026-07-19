@@ -122,6 +122,8 @@ export interface RepasseProjetado {
 export interface MinhaAfiliacao {
   eventoId: string;
   eventoNome: string;
+  /** Slug público do evento — monta `{landing}/{slug}?ref=` no painel. */
+  eventoSlug: string;
   refCodigo: string;
   tipo: 'clube' | 'pessoa_fisica';
   status: string;

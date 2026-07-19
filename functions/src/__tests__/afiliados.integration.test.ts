@@ -778,6 +778,9 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(minhas.afiliacoes).toHaveLength(1);
     expect(minhas.afiliacoes[0]).toMatchObject({
       refCodigo: 'DIONEY10', conversoes: 1, eventoNome: 'Meia dos Afiliados',
+      // T-extra TAMANHOS-GRADE (E08-PROMOTOR): slug projetado → o painel do
+      // promotor copia o LINK completo `{landing}/{slug}?ref=`.
+      eventoSlug: EVENTO_ID,
     });
     expect(minhas.afiliacoes[0]?.ultimasConversoes).toHaveLength(1);
     expect(JSON.stringify(minhas)).not.toContain('ana@exemplo.com');
