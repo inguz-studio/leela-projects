@@ -45,6 +45,11 @@ import {
   momentoDaAutomacao,
   processarNovoInscritoCore,
 } from '../eventos/automacoesTriggers';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -79,10 +84,21 @@ describe.skipIf(!hasEmulator)('automações por gatilho — S402-T1 (O3-L3B)', (
     // default de 10s desta máquina (observado em runs alternados D17).
   }, 30_000);
 
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados —
+  // full5: contadores de automações fora por 1 (template/automação criados
+  // in-test engolidos por varredura tardia do clear sob backlog de triggers).
+  const SEED_CANARIES = [
+    `tenants/${CASTELO_ID}`,
+    `eventos/${EVENTO_ID}`,
+    `eventos/${EVENTO_ID}/inscritos/insc-0003`,
+  ];
+
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seed();
-  });
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(db, testEnv, () => seed(), SEED_CANARIES);
+    });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();

@@ -37,6 +37,11 @@ import { papeisComAcesso, type AreaEvento, type PapelEvento } from '@leela/core'
 import { seedTenants, CASTELO_TENANT_ID, MARINA_CASTELO_UID } from '../seed/tenants.seed';
 import { seedEventos, MEIA_FLORIPA_ID, MARATONA_2027_ID } from '../seed/eventos.seed';
 import { seedEquipeDocs, EQUIPE_SEEDS } from '../seed/equipe.seed';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -95,8 +100,8 @@ afterAll(async () => {
   await testEnv.cleanup();
 });
 
-beforeEach(async () => {
-  await testEnv.clearFirestore();
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados.
+async function seedTudo(): Promise<void> {
   await seedTenants(adminDb);
   await seedEventos(adminDb);
   await seedEquipeDocs(adminDb);
@@ -162,7 +167,20 @@ beforeEach(async () => {
     seo: { titulo: 'Meia Floripa', slugAmigavel: 'meia-floripa-2026' },
     publicada: false,
   });
-});
+}
+
+beforeEach(async () => {
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedTudo, [
+      `tenants/${CASTELO_TENANT_ID}`,
+      `eventos/${EV}`,
+      `eventos/${EV}/equipe/uid-equipe-organizador`,
+      `eventos/${EV}/paginaVendas/config`,
+      `eventos/${EV}/financeiro/current`,
+    ]);
+  });
+}, 30_000);
 
 // ---------------------------------------------------------------------------
 // Varredura matriz-driven — 6 áreas com probe de leitura × 4 papéis

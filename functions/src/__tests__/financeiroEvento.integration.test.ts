@@ -34,6 +34,11 @@ import {
 } from '../eventos/agregarFinanceiro';
 import { seedEventos, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import { gerarInscritosSeed, seedInscritos } from '../seed/inscritos.seed';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -121,10 +126,25 @@ async function seedBase(): Promise<void> {
   await seedInscritos(adminDb); // 453 canônicos na meia-floripa
 }
 
+// SUITE-STAB: 453 inscritos por beforeEach = fonte pesada do storm de
+// triggers; pausa no clear+seed + canários verificados (full5: evento sumia
+// no meio — "expected undefined to be 452/1200"). Os testes chamam o core
+// recomputarFinanceiroEvento DIRETO — nenhum depende de trigger do seed.
+const SEED_CANARIES = [
+  `tenants/${CASTELO_ID}`,
+  `tenants/${CASTELO_ID}/commercialTerms/current`,
+  `eventos/${MEIA_FLORIPA_ID}`,
+  `eventos/${MEIA_FLORIPA_ID}/inscritos/insc-0453`,
+  `eventos/${EVENTO_SEM_TERMOS}`,
+  `eventos/${EVENTO_SEM_TERMOS}/inscritos/insc-trail-1`,
+];
+
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedBase();
-}, 60_000);
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedBase, SEED_CANARIES);
+  });
+}, 120_000);
 
 /** Distribuição esperada, derivada do PRÓPRIO seed (sem número mágico). */
 function distribuicaoEsperada() {

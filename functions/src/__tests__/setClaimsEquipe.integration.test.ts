@@ -32,6 +32,12 @@ import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import type { AuthClaims } from '@leela/core';
+import {
+  clearFirestoreDrained,
+  ensureUserWithClaims,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { setClaimsEquipeCore } from '../eventos/setClaimsEquipe';
 import type { EventoCaller } from '../eventos/criarEvento';
 import { seedTenants, CASTELO_TENANT_ID, MARINA_CASTELO_UID } from '../seed/tenants.seed';
@@ -78,14 +84,18 @@ async function expectHttpsError(promise: Promise<unknown>, code: string): Promis
   }
 }
 
-/** Cria (idempotente) usuário no Auth Emulator e aplica claims EXATAS. */
+/**
+ * Cria (idempotente) usuário no Auth Emulator e aplica claims EXATAS.
+ * SUITE-STAB: via ensureUserWithClaims — a janela do onCreateUser clobberava
+ * claims setadas no meio (full5: `athlete` vs `tenant_owner`).
+ */
 async function comUsuario(uid: string, claims: object | null): Promise<void> {
-  try {
-    await adminAuth.getUser(uid);
-  } catch {
-    await adminAuth.createUser({ uid, email: `${uid}@demo-leela.dev` });
-  }
-  await adminAuth.setCustomUserClaims(uid, claims);
+  await ensureUserWithClaims(
+    adminAuth,
+    uid,
+    `${uid}@demo-leela.dev`,
+    claims as Record<string, unknown> | null
+  );
 }
 
 beforeAll(async () => {
@@ -110,12 +120,30 @@ afterAll(async () => {
   await testEnv.cleanup();
 });
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados.
+const SEED_CANARIES = [
+  `tenants/${CASTELO_TENANT_ID}`,
+  `tenants/${PASSO_ID}`,
+  `eventos/${MEIA_FLORIPA_ID}`,
+  `eventos/${MARATONA_2027_ID}`,
+  `eventos/${MEIA_FLORIPA_ID}/equipe/uid-equipe-organizador`,
+];
+
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedTenants(adminDb);
-  await seedEventos(adminDb);
-  await seedEquipeDocs(adminDb);
-});
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(
+      adminDb,
+      testEnv,
+      async () => {
+        await seedTenants(adminDb);
+        await seedEventos(adminDb);
+        await seedEquipeDocs(adminDb);
+      },
+      SEED_CANARIES
+    );
+  });
+}, 30_000);
 
 // ---------------------------------------------------------------------------
 // Merge preservador + sincronia doc↔claims

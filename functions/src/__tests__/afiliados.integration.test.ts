@@ -34,6 +34,12 @@ import {
 } from 'firebase/firestore';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { AuthClaims } from '@leela/core';
+import {
+  clearFirestoreDrained,
+  deleteAllUsersDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { salvarAfiliadoCore } from '../affiliation/salvarAfiliado';
 import {
   provisionAfiliadoComRateLimit,
@@ -110,11 +116,25 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     process.env['LEELA_CONVITE_EXPOR_TOKEN'] = 'true';
   }, 30_000);
 
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados —
+  // o backlog de onInscritoWrite* de arquivos vizinhos engolia o seed
+  // (full5: "Evento 'meia-afiliados' não existe neste tenant").
+  const SEED_CANARIES = [
+    `tenants/${CASTELO_ID}`,
+    `tenants/${OUTRO_ID}`,
+    `tenants/${CASTELO_ID}/commercialTerms/current`,
+    `eventos/${EVENTO_ID}`,
+    `eventos/${EVENTO_ID}/lotes/l1`,
+    `eventos/${EVENTO_ID}/cupons/FLORIPA10OFF`,
+    'clubes/floripa-run',
+  ];
+
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    const users = await auth.listUsers(1000);
-    await Promise.all(users.users.map((u) => auth.deleteUser(u.uid)));
-    await seed();
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await deleteAllUsersDrained(auth);
+      await seedVerified(db, testEnv, seed, SEED_CANARIES);
+    });
   }, 30_000);
 
   afterAll(async () => {

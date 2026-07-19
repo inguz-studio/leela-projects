@@ -30,6 +30,11 @@ import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
+import {
   recomputarDemografiaEvento,
   reprocessarDemografiaTodosEventos,
 } from '../analytics/agregarDemografia';
@@ -104,8 +109,9 @@ beforeAll(async () => {
   // 30s: carga de rules na JVM fria do emulator estoura os 10s default do hook.
 }, 30_000);
 
-beforeEach(async () => {
-  await testEnv.clearFirestore();
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados (os
+// testes chamam recomputarDemografiaEvento DIRETO — sem trigger de seed).
+async function seedDemografia(): Promise<void> {
   const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
@@ -138,7 +144,18 @@ beforeEach(async () => {
   batch.set(inscritosCol.doc('i5'), inscrito('i5', 'pendente', reg('1990-01-01', 'masculino')));
   batch.set(inscritosCol.doc('i6'), inscrito('i6', 'cancelado', reg('1995-01-01', 'outro')));
   await batch.commit();
-});
+}
+
+beforeEach(async () => {
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedDemografia, [
+      `tenants/${CASTELO_ID}`,
+      `eventos/${EVENTO_ID}`,
+      `eventos/${EVENTO_ID}/inscritos/i6`,
+    ]);
+  });
+}, 30_000);
 
 afterAll(async () => {
   await testEnv?.cleanup();

@@ -43,6 +43,11 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { listarInscritos, INSCRITOS_PAGE_SIZE } from '@leela/api-client';
 import { seedEventos, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
+import {
   seedInscritos,
   TOTAL_INSCRITOS_MEIA_FLORIPA,
 } from '../seed/inscritos.seed';
@@ -122,12 +127,28 @@ async function seedTenantsBase(): Promise<void> {
 // Seed pesado UMA vez para o bloco (testes read-only).
 // ─────────────────────────────────────────────────────────────────────────
 describe('paginação de inscritos por cursor (S203-T1)', () => {
+  // SUITE-STAB: o seed de 453 inscritos era a MAIOR fonte do storm de
+  // triggers da suíte (~2700 execuções onInscritoWrite* transbordando p/ os
+  // arquivos seguintes). Pausa + verificação de canários.
   beforeAll(async () => {
-    await testEnv.clearFirestore();
-    await seedTenantsBase();
-    await seedEventos(adminDb);
-    await seedInscritos(adminDb);
-  });
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(
+        adminDb,
+        testEnv,
+        async () => {
+          await seedTenantsBase();
+          await seedEventos(adminDb);
+          await seedInscritos(adminDb);
+        },
+        [
+          `tenants/${CASTELO_ID}`,
+          `eventos/${MEIA_FLORIPA_ID}`,
+          `eventos/${MEIA_FLORIPA_ID}/inscritos/insc-0453`,
+        ]
+      );
+    });
+  }, 120_000);
 
   it('varre as 26 páginas: 25×18 + 3, total 453, cursor estável sem duplicata', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
@@ -211,8 +232,8 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
     };
   }
 
-  beforeEach(async () => {
-    await testEnv.clearFirestore();
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados.
+  async function seedRbac(): Promise<void> {
     await seedTenantsBase();
 
     const batch = adminDb.batch();
@@ -255,7 +276,19 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
       }
     );
     await batch.commit();
-  });
+  }
+
+  beforeEach(async () => {
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(adminDb, testEnv, seedRbac, [
+        `tenants/${CASTELO_ID}`,
+        `eventos/${MEIA_FLORIPA_ID}`,
+        `eventos/${MEIA_FLORIPA_ID}/inscritos/insc-castelo-1`,
+        `eventos/${EVENTO_PASSO}/inscritos/insc-passo-1`,
+      ]);
+    });
+  }, 30_000);
 
   function refInscrito(db: Firestore, eventoId: string, inscritoId: string) {
     return doc(db, 'eventos', eventoId, 'inscritos', inscritoId);

@@ -42,6 +42,11 @@ import { listarKits, listarItensKit, salvarKit } from '@leela/api-client';
 import { seedEventos, MARATONA_2027_ID, MEIA_FLORIPA_ID } from '../seed/eventos.seed';
 import { seedKits, KIT_SEEDS, ITEM_KIT_SEEDS } from '../seed/kits.seed';
 import { syncItemUsadoEm, syncItensDoKit } from '../eventos/itemKitIndex';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -106,10 +111,24 @@ async function seedBase(): Promise<void> {
   await seedKits(adminDb);
 }
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados —
+// full5 mostrava kit seedado sumindo (NOT_FOUND no update) e Service call
+// error em get() de Rules sob o backlog de triggers de arquivos vizinhos.
+const SEED_CANARIES = [
+  `tenants/${CASTELO_ID}`,
+  `tenants/${PASSO_ID}`,
+  `eventos/${MEIA_FLORIPA_ID}`,
+  `eventos/${MARATONA_2027_ID}`,
+  `eventos/${MEIA_FLORIPA_ID}/kits/kit_ouro`,
+  'itensKit/camiseta-tecnica',
+];
+
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedBase();
-});
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedBase, SEED_CANARIES);
+  });
+}, 30_000);
 
 /** Kit no evento COM venda (meia-floripa: 453) — estrutura CONGELADA (RN-200). */
 function kitRef(db: Firestore, kitId: string) {
