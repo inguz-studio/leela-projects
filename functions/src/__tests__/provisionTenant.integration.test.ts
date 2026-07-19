@@ -31,6 +31,7 @@ import {
   provisionTenant,
   type ProvisionDeps,
 } from '../platform/provisionTenant';
+import { deleteAllUsersDrained, withTriggersPaused } from './helpers/stability';
 import { onCreateUser } from '../auth/onCreateUser';
 import { setTenantClaims } from '../platform/setTenantClaims';
 import type { ProvisionInput } from '@leela/core';
@@ -63,8 +64,24 @@ async function clearAll(): Promise<void> {
       await db.recursiveDelete(ref);
     }
   }
-  const users = await auth.listUsers(1000);
-  await Promise.all(users.users.map((u) => auth.deleteUser(u.uid)));
+  await deleteAllUsersDrained(auth);
+}
+
+// SUITE-STAB: clear com triggers pausados + verificação de VAZIO — full5:
+// "Slug 'castelo-producoes' já está em uso por outro tenant ativo" (leftover
+// de arquivo vizinho sobrevivendo/ressuscitando sob o backlog de triggers).
+async function clearAllVerified(): Promise<void> {
+  await withTriggersPaused(async () => {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      await clearAll();
+      const snaps = await db.getAll(
+        db.doc('tenants/castelo-producoes'),
+        db.doc('tenants/passo-certo')
+      );
+      if (snaps.every((s) => !s.exists)) return;
+    }
+    throw new Error('clearAllVerified: tenants residuais persistem após 4 varreduras');
+  });
 }
 
 beforeAll(() => {
@@ -78,8 +95,8 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
-  await clearAll();
-});
+  await clearAllVerified();
+}, 30_000);
 
 // ── Happy path (RN-403) ────────────────────────────────────────────────────
 describe('provisionTenantCore — happy path', () => {

@@ -24,6 +24,11 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { sincronizarEventoNomeParcerias } from '../clubs/parceriasEspelho';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { seedParcerias } from '../seed/parcerias.seed';
 import { CLUBE_CPS_SLUG } from '../seed/clubes.seed';
 
@@ -55,17 +60,27 @@ describe.skipIf(!hasEmulator)('parcerias — espelho eventoNome (CONS-4-T2)', ()
     adminDb = admin.firestore();
   });
 
+  // SUITE-STAB: clear+seed com triggers pausados + canário verificado.
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await adminDb.collection('clubes').doc(CLUBE_ID).set({
-      id: CLUBE_ID,
-      tenantId: TENANT_ID,
-      nome: 'Clube Espelho',
-      visibilidade: 'privada',
-      qtdMembrosAtivos: 0,
-      qtdDesafiosAtivos: 0,
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(
+        adminDb,
+        testEnv,
+        async () => {
+          await adminDb.collection('clubes').doc(CLUBE_ID).set({
+            id: CLUBE_ID,
+            tenantId: TENANT_ID,
+            nome: 'Clube Espelho',
+            visibilidade: 'privada',
+            qtdMembrosAtivos: 0,
+            qtdDesafiosAtivos: 0,
+          });
+        },
+        [`clubes/${CLUBE_ID}`]
+      );
     });
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();

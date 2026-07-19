@@ -34,6 +34,7 @@ import {
   urlPublicaDoEvento,
 } from '../eventos/publicarEvento';
 import { slugCandidato, slugify } from '../eventos/slug';
+import { seedVerifiedWith, withTriggersPaused } from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 
@@ -140,10 +141,18 @@ beforeAll(() => {
   db = admin.firestore();
 });
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados
+// (suite sem RulesTestEnvironment — re-clear injetado).
 beforeEach(async () => {
-  await clearFirestore();
-  await seedTenants();
-});
+  await withTriggersPaused(async () => {
+    await clearFirestore();
+    await seedVerifiedWith(db, clearFirestore, seedTenants, [
+      `tenants/${CASTELO_ID}`,
+      `tenants/${PASSO_ID}`,
+      `tenants/${SUSPENSO_ID}`,
+    ]);
+  });
+}, 30_000);
 
 // ── Puras: slug e validação ────────────────────────────────────────────────
 

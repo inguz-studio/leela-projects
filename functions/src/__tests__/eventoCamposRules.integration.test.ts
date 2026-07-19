@@ -41,6 +41,11 @@ import {
   MEIA_FLORIPA_ID,
   seedEventos,
 } from '../seed/eventos.seed';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -74,10 +79,18 @@ beforeAll(async () => {
   adminDb = admin.firestore();
 });
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados.
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedFixtures();
-});
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, () => seedFixtures(), [
+      `tenants/${CASTELO_ID}`,
+      `tenants/${PASSO_ID}`,
+      `eventos/${MEIA_FLORIPA_ID}`,
+      `eventos/${MARATONA_2027_ID}`,
+    ]);
+  });
+}, 30_000);
 
 afterAll(async () => {
   await testEnv?.cleanup();

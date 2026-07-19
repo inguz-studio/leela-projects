@@ -54,6 +54,11 @@ import {
   registrarComunicacao,
 } from '../eventos/logComunicacao';
 import { recomputarResumoComunicacoes } from '../eventos/agregarComunicacoes';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -127,6 +132,20 @@ async function seedBase(): Promise<void> {
   await batch.commit();
 }
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados —
+// full5: idempotência RN-219 falhava (log/seed engolidos) e get() de Rules
+// dava Service call error sob o backlog de triggers vizinho.
+async function resetBase(): Promise<void> {
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedBase, [
+      `tenants/${CASTELO_ID}`,
+      `eventos/${MEIA_FLORIPA_ID}`,
+      `eventos/${EVENTO_PASSO}`,
+    ]);
+  });
+}
+
 function paramsIngresso(inscritoId: string) {
   return {
     destinatario: { tipo: 'inscrito' as const, ref: inscritoId },
@@ -148,8 +167,7 @@ function logRefAdmin(eventoId: string, comunicacaoId: string) {
 // ─────────────────────────────────────────────────────────────────────────
 describe('registrarComunicacao (RN-219 — idempotência por docId)', () => {
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedBase();
+    await resetBase();
   });
 
   it('cria o log `enfileirado` com tenantId do EVENTO PAI e shape canônico', async () => {
@@ -253,8 +271,7 @@ describe('aplicarEventoProvedorNoLog (merge monotônico)', () => {
   let comunicacaoId: string;
 
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedBase();
+    await resetBase();
     const res = await registrarComunicacao(adminDb, MEIA_FLORIPA_ID, paramsIngresso(INSC_A));
     comunicacaoId = res.comunicacaoId;
   });
@@ -360,8 +377,7 @@ describe('aplicarEventoProvedorNoLog (merge monotônico)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 describe('recomputarResumoComunicacoes (∑ idempotente)', () => {
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedBase();
+    await resetBase();
   });
 
   it('conta por status/canal/tipo a partir da fonte', async () => {
@@ -422,8 +438,7 @@ describe('rules do log de comunicação (PII — FABLE-G)', () => {
   let comunicacaoId: string;
 
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedBase();
+    await resetBase();
     const res = await registrarComunicacao(adminDb, MEIA_FLORIPA_ID, paramsIngresso(INSC_A));
     comunicacaoId = res.comunicacaoId;
     await recomputarResumoComunicacoes(adminDb, MEIA_FLORIPA_ID);
@@ -549,8 +564,7 @@ describe('rules do log de comunicação (PII — FABLE-G)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 describe('api-client: visão por inscrito + resumo por evento', () => {
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedBase();
+    await resetBase();
 
     // INSC_A: ingresso email (t0) + campanha push (t1, aberta)
     await registrarComunicacao(

@@ -24,6 +24,11 @@ import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import * as admin from 'firebase-admin';
 import { provisionTenantCore } from '../platform/provisionTenant';
 import { onCreateUser } from '../auth/onCreateUser';
+import {
+  deleteAllUsersDrained,
+  sleep,
+  withTriggersPaused,
+} from './helpers/stability';
 import type { ProvisionInput } from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
@@ -59,8 +64,32 @@ async function clearAll(): Promise<void> {
       await db.recursiveDelete(ref);
     }
   }
-  const users = await auth.listUsers(1000);
-  await Promise.all(users.users.map((u) => auth.deleteUser(u.uid)));
+  await deleteAllUsersDrained(auth);
+}
+
+/**
+ * SUITE-STAB: o createUser do provisionamento dispara o onCreateUser REAL de
+ * BACKGROUND no Functions Emulator — que competia com o `runTrigger` manual
+ * destes testes (full5: doc atletas residual da entrega atrasada). Provisiona
+ * e ESPERA a entrega de background convergir (role != athlete + doc atletas
+ * removido pelo reparo) antes de simular a entrega manual. Sem Functions
+ * Emulator o estado já nasce convergido — o poll fecha em 2 leituras.
+ */
+async function provisionarDrenado(): ReturnType<typeof provisionTenantCore> {
+  const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+  const deadline = Date.now() + 8_000;
+  let stable = 0;
+  while (Date.now() < deadline && stable < 2) {
+    const u = await auth.getUser(res.ownerUid);
+    const atleta = await db.doc(`atletas/${res.ownerUid}`).get();
+    if ((u.customClaims ?? {})['role'] === 'tenant_owner' && !atleta.exists) {
+      stable++;
+    } else {
+      stable = 0;
+    }
+    await sleep(75);
+  }
+  return res;
 }
 
 beforeAll(() => {
@@ -74,13 +103,13 @@ beforeAll(() => {
 });
 
 beforeEach(async () => {
-  await clearAll();
-});
+  await withTriggersPaused(() => clearAll());
+}, 30_000);
 
 describe('onCreateUser — reparo pós-escrita da corrida residual (fix Onda1-L2 #11)', () => {
   it('ordem ADVERSA (escrita do trigger por ÚLTIMO): owner clobberado é REPARADO para tenant_owner', async () => {
     // 1. Provisionamento completo — provisionTenant retornou SUCESSO.
-    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const res = await provisionarDrenado();
     const owner = await auth.getUser(res.ownerUid);
 
     // 2. Simular a leitura STALE da janela do achado: o getUser do trigger
@@ -108,7 +137,7 @@ describe('onCreateUser — reparo pós-escrita da corrida residual (fix Onda1-L2
   });
 
   it('entrega tardia com role tenant_owner já presente → NÃO cria doc atletas (fix #28)', async () => {
-    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const res = await provisionarDrenado();
     const owner = await auth.getUser(res.ownerUid);
 
     await runTrigger({ uid: owner.uid, email: owner.email, displayName: owner.displayName });
@@ -121,7 +150,7 @@ describe('onCreateUser — reparo pós-escrita da corrida residual (fix Onda1-L2
 
   it('redelivery em owner JÁ rebaixado (athlete sem marcador) → repara sem nova demoção', async () => {
     // Estado pós-corrida persistido (crash antes do check): athlete cru.
-    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const res = await provisionarDrenado();
     await auth.setCustomUserClaims(res.ownerUid, { role: 'athlete' });
 
     const owner = await auth.getUser(res.ownerUid);
@@ -137,7 +166,7 @@ describe('onCreateUser — reparo pós-escrita da corrida residual (fix Onda1-L2
   it('demoção DELIBERADA (athlete + demotedFromRole, doc intacto) → trigger NÃO re-eleva', async () => {
     // Contrato com o fix #12: a demoção via superfície admin carrega o
     // marcador demotedFromRole — byte-distinguível do artefato da corrida.
-    const res = await provisionTenantCore(db, auth, input(), ADMIN_UID);
+    const res = await provisionarDrenado();
     await auth.setCustomUserClaims(res.ownerUid, {
       role: 'athlete',
       demotedFromRole: 'tenant_owner',

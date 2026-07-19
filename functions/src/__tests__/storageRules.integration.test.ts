@@ -41,6 +41,11 @@ import { resolve } from 'path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { getBytes, getDownloadURL, ref, uploadBytes, deleteObject } from 'firebase/storage';
 import * as admin from 'firebase-admin';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 const STORAGE_RULES_PATH = resolve(__dirname, '../../../storage.rules');
@@ -93,9 +98,10 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
     adminDb = admin.firestore();
   }, 30_000);
 
-  beforeEach(async () => {
-    await testEnv.clearStorage();
-    await testEnv.clearFirestore();
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados —
+  // full5: firestore.get cross-service das storage.rules falhava porque o
+  // doc-alvo sumia sob o backlog de triggers vizinho.
+  async function seedCrossService(): Promise<void> {
     // Seed Firestore (Admin SDK, bypass de Rules): tenants + clube do castelo.
     // O cross-service firestore.get das storage.rules lê ESTES docs.
     const batch = adminDb.batch();
@@ -113,6 +119,18 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
       slug: EVENTO_CASTELO,
     });
     await batch.commit();
+  }
+
+  beforeEach(async () => {
+    await testEnv.clearStorage();
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(adminDb, testEnv, seedCrossService, [
+        `tenants/${CASTELO_ID}`,
+        `clubes/${CLUBE_CASTELO}`,
+        `eventos/${EVENTO_CASTELO}`,
+      ]);
+    });
   }, 30_000);
 
   afterAll(async () => {

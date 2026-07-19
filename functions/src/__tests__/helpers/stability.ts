@@ -184,6 +184,16 @@ export async function seedVerified(
   seedFn: () => Promise<void>,
   canaries: readonly string[]
 ): Promise<void> {
+  await seedVerifiedWith(db, () => clearFirestoreDrained(testEnv), seedFn, canaries);
+}
+
+/** Variante para suites SEM RulesTestEnvironment: re-clear injetável. */
+export async function seedVerifiedWith(
+  db: admin.firestore.Firestore,
+  reclear: () => Promise<void>,
+  seedFn: () => Promise<void>,
+  canaries: readonly string[]
+): Promise<void> {
   if (canaries.length === 0) {
     throw new Error('seedVerified: informe ao menos 1 canário do seed.');
   }
@@ -195,7 +205,7 @@ export async function seedVerified(
     missing = snaps.filter((s) => !s.exists).map((s) => s.ref.path);
     if (missing.length === 0) return;
     // Estado indeterminado — limpa TUDO e re-semeia do zero.
-    await clearFirestoreDrained(testEnv);
+    await reclear();
   }
   throw new Error(
     `seedVerified: canários ausentes após ${SEED_VERIFY_ATTEMPTS} tentativas ` +

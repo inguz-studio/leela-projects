@@ -39,6 +39,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { AuthClaims } from '@leela/core';
+import {
+  clearFirestoreDrained,
+  deleteAllUsersDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { cadastrarAssessoriaCore } from '../assessorias/cadastrarAssessoria';
 import {
   ACEITE_LIMITE_POR_ALVO,
@@ -104,12 +110,19 @@ describe.skipIf(!hasEmulator)('J1 · Aceite E18 ponta a ponta (LEELA-R4-E2E)', (
     process.env['LEELA_CONVITE_EXPOR_TOKEN'] = 'true';
   }, 30_000);
 
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados.
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    const users = await auth.listUsers(1000);
-    await Promise.all(users.users.map((u) => auth.deleteUser(u.uid)));
-    await seed();
-  });
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await deleteAllUsersDrained(auth);
+      await seedVerified(db, testEnv, () => seed(), [
+        `tenants/${CASTELO_ID}`,
+        `tenants/${CASTELO_ID}/commercialTerms/current`,
+        `eventos/${EVENTO_ID}`,
+        `eventos/${EVENTO_ID}/lotes/${EVENTO_ID}-10k-l1`,
+      ]);
+    });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();
