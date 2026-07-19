@@ -96,7 +96,7 @@ describe('MarcasPage', () => {
     setSession('u1');
     mocks.listarMarcas.mockResolvedValue([
       marca(),
-      marca({ id: 'acate', nome: 'ACATE Run Club', modeloComercial: 'permuta', valorAnual: undefined, contrapartida: 'Camisetas e brindes para 200 atletas do evento anual.' }),
+      marca({ id: 'acate', nome: 'ACATE Run Club', modeloComercial: 'permuta', contrapartida: 'Camisetas e brindes para 200 atletas do evento anual.' }),
     ]);
     renderPage();
     expect(await screen.findByText('CDL Wellness')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('MarcasPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Criar marca' }));
 
     await waitFor(() => expect(mocks.salvarMarca).toHaveBeenCalled());
-    const [, uid, input, marcaId] = mocks.salvarMarca.mock.calls[0];
+    const [, uid, input, marcaId] = mocks.salvarMarca.mock.calls[0]!;
     expect(uid).toBe('u1');
     expect(input).toMatchObject({ nome: 'Nova Marca', modeloComercial: 'financeiro', valorAnual: 5000 });
     expect(marcaId).toBeUndefined();
@@ -138,7 +138,7 @@ describe('MarcasPage', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar alterações' }));
 
     await waitFor(() => expect(mocks.salvarMarca).toHaveBeenCalled());
-    const [, , , marcaId] = mocks.salvarMarca.mock.calls[0];
+    const [, , , marcaId] = mocks.salvarMarca.mock.calls[0]!;
     expect(marcaId).toBe('cdl-wellness');
   });
 
@@ -158,7 +158,7 @@ describe('MarcasPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Excluir marca' }));
     await waitFor(() => expect(mocks.excluirMarca).toHaveBeenCalled());
-    const [, uid, marcaId] = mocks.excluirMarca.mock.calls[0];
+    const [, uid, marcaId] = mocks.excluirMarca.mock.calls[0]!;
     expect(uid).toBe('u1');
     expect(marcaId).toBe('cdl-wellness');
   });
