@@ -26,9 +26,15 @@ function afiliacao(over: Partial<MinhaAfiliacao> = {}): MinhaAfiliacao {
     cupomCodigo: null,
     conversoes: 12,
     valorAtribuido: 3600,
+    // FASE 2 (COMF2): campos de comissão agora obrigatórios no tipo do reader.
+    comissao: null,
+    comissaoAcumulada: 0,
+    comissaoRepassada: 0,
+    saldoComissao: 0,
     ultimasConversoes: [
-      { valor: 300, qtdInscricoes: 1, convertidoEmMillis: 1_700_000_000_000 },
+      { valor: 300, qtdInscricoes: 1, comissao: 0, convertidoEmMillis: 1_700_000_000_000 },
     ],
+    ultimosRepasses: [],
     ...over,
   };
 }

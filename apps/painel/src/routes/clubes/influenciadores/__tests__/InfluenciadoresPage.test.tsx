@@ -28,7 +28,13 @@ function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
     cupomCodigo: null,
     conversoes: 10,
     valorAtribuido: 3000,
+    // FASE 2 (COMF2): campos de comissão agora obrigatórios no tipo do reader.
+    comissao: null,
+    comissaoAcumulada: 0,
+    comissaoRepassada: 0,
+    saldoComissao: 0,
     ultimasConversoes: [],
+    ultimosRepasses: [],
     nome: 'Dioney Galharte',
     canal: 'instagram',
     clubeRef: null,
