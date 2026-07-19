@@ -989,6 +989,7 @@ export type {
   DemografiaContagens,
   FaixaEtaria,
   InscritoDemografiaInput,
+  MatrizFaixaGenero,
 } from './analytics/demografia';
 export {
   FAIXAS_ETARIAS,
@@ -997,7 +998,18 @@ export {
   demografiaVazia,
   faixaEtariaDaIdade,
   idadeCivil,
+  matrizFaixaGeneroVazia,
 } from './analytics/demografia';
+
+// Salvaguarda de k-anonimato do cohort idade×sexo (RN-822 · minimização
+// LGPD): a matriz bruta vive no doc; a EXPOSIÇÃO passa por suprimirCohortPorK
+// (reader-side, pós-soma). Ver cabeçalho de cohortPrivacidade.ts.
+export type { CohortFaixaVisivel } from './analytics/cohortPrivacidade';
+export {
+  K_MIN_COHORT,
+  somarMatrizes,
+  suprimirCohortPorK,
+} from './analytics/cohortPrivacidade';
 
 // ---------------------------------------------------------------------------
 // Atleta — registro de ação da jornada (LEELA-S1307-T1 · E13 adiantado ·

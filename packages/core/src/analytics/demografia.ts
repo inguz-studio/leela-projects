@@ -33,16 +33,27 @@ import {
 // ---------------------------------------------------------------------------
 
 /**
- * Chaves canônicas dos buckets etários (padrão corrida de rua). Chaves
- * ASCII-safe para campo de map no Firestore; o rótulo de exibição é da UI.
+ * Chaves canônicas dos buckets etários em BANDAS DE 5 ANOS (RN-822 — padrão
+ * corrida de rua: 18-24 é a banda jovem "open"; 5 em 5 de 25 em diante; bordas
+ * `ate_17`/`60_mais` preservadas). Chaves ASCII-safe para campo de map no
+ * Firestore; o rótulo de exibição é da UI.
+ *
+ * MIGRAÇÃO (RN-822): o shape anterior tinha 6 faixas grossas
+ * (`25_34/35_44/45_54/55_mais`). Docs `demografia/current` no shape antigo são
+ * detectados (não têm `faixaXGenero`) e reescritos pelo full-recompute — o
+ * reader (api-client) trata o shape antigo como "ainda não computado".
  */
 export const FAIXAS_ETARIAS = [
   'ate_17',
   '18_24',
-  '25_34',
-  '35_44',
-  '45_54',
-  '55_mais',
+  '25_29',
+  '30_34',
+  '35_39',
+  '40_44',
+  '45_49',
+  '50_54',
+  '55_59',
+  '60_mais',
 ] as const;
 
 export type FaixaEtaria = (typeof FAIXAS_ETARIAS)[number];
@@ -53,10 +64,10 @@ export function faixaEtariaDaIdade(idade: number): FaixaEtaria | null {
   if (!Number.isFinite(idade) || idade < 0) return null;
   if (idade <= 17) return 'ate_17';
   if (idade <= 24) return '18_24';
-  if (idade <= 34) return '25_34';
-  if (idade <= 44) return '35_44';
-  if (idade <= 54) return '45_54';
-  return '55_mais';
+  if (idade >= 60) return '60_mais';
+  // Bandas de 5 em 5 (25_29 … 55_59): piso = múltiplo de 5 ≤ idade.
+  const piso = Math.floor(idade / 5) * 5;
+  return `${piso}_${piso + 4}` as FaixaEtaria;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +105,29 @@ export interface InscritoDemografiaInput {
 }
 
 /**
+ * Matriz idade × sexo (RN-822 — cohort): contagem por (faixa etária, gênero).
+ * SÓ contagens agregadas — a célula exige AMBOS os dados válidos; quem tem só
+ * um deles entra apenas no marginal 1D correspondente. A EXPOSIÇÃO desta
+ * matriz na UI passa pela salvaguarda de k-anonimato (`cohortPrivacidade.ts`)
+ * — o doc carrega contagens brutas, o reader suprime células pequenas.
+ */
+export type MatrizFaixaGenero = Record<
+  FaixaEtaria,
+  Record<GeneroInscrito, number>
+>;
+
+/** Matriz zerada (todas as chaves canônicas — shape estável). @pure */
+export function matrizFaixaGeneroVazia(): MatrizFaixaGenero {
+  const m = {} as MatrizFaixaGenero;
+  for (const f of FAIXAS_ETARIAS) {
+    const linha = {} as Record<GeneroInscrito, number>;
+    for (const g of GENEROS_INSCRITO) linha[g] = 0;
+    m[f] = linha;
+  }
+  return m;
+}
+
+/**
  * Contagens agregadas de demografia do evento (shape do doc
  * `demografia/current`, sem tenantId/carimbos). SÓ buckets — nenhum dado
  * individual (RN-820/LGPD).
@@ -109,6 +143,8 @@ export interface DemografiaContagens {
   porGenero: Record<GeneroInscrito, number>;
   /** Confirmados sem gênero válido — honesto */
   semGenero: number;
+  /** Cohort idade × sexo (RN-822) — célula exige idade E gênero válidos */
+  faixaXGenero: MatrizFaixaGenero;
   /** Data civil de referência da idade (= data do evento) — determinismo */
   referencia: string;
 }
@@ -125,6 +161,7 @@ export function demografiaVazia(referenciaISO: string): DemografiaContagens {
     semNascimento: 0,
     porGenero,
     semGenero: 0,
+    faixaXGenero: matrizFaixaGeneroVazia(),
     referencia: referenciaISO,
   };
 }
@@ -152,10 +189,17 @@ export function computeDemografia(
       out.faixasEtarias[faixa] += 1;
     }
 
-    if (isGeneroInscrito(inscrito.genero)) {
-      out.porGenero[inscrito.genero] += 1;
+    const generoValido = isGeneroInscrito(inscrito.genero);
+    if (generoValido) {
+      out.porGenero[inscrito.genero as GeneroInscrito] += 1;
     } else {
       out.semGenero += 1;
+    }
+
+    // Cohort (RN-822): a célula da matriz exige AMBOS válidos — quem tem só
+    // idade ou só gênero fica nos marginais 1D (Σ matriz ≤ marginais).
+    if (faixa !== null && generoValido) {
+      out.faixaXGenero[faixa][inscrito.genero as GeneroInscrito] += 1;
     }
   }
 
@@ -181,6 +225,9 @@ export function demografiaInalterada(
   }
   for (const f of FAIXAS_ETARIAS) {
     if (a.faixasEtarias[f] !== b.faixasEtarias[f]) return false;
+    for (const g of GENEROS_INSCRITO) {
+      if (a.faixaXGenero[f][g] !== b.faixaXGenero[f][g]) return false;
+    }
   }
   for (const g of GENEROS_INSCRITO) {
     if (a.porGenero[g] !== b.porGenero[g]) return false;

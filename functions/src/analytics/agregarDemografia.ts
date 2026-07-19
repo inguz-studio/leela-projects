@@ -48,6 +48,7 @@ import {
   type FaixaEtaria,
   type GeneroInscrito,
   type InscritoDemografiaInput,
+  type MatrizFaixaGenero,
 } from '@leela/core';
 
 type Db = admin.firestore.Firestore;
@@ -66,7 +67,9 @@ function toCount(v: unknown): number {
 /**
  * Reconstrói `DemografiaContagens` do doc persistido (campo faltante/lixo ⇒
  * contagem -1, que NUNCA iguala um recompute válido — doc corrompido é
- * reescrito, não preservado).
+ * reescrito, não preservado). Doc no shape PRÉ-RN822 (6 faixas grossas, sem
+ * `faixaXGenero`) cai exatamente aqui: as chaves novas faltam ⇒ -1 ⇒ o
+ * full-recompute REESCREVE no shape novo (migração por recompute).
  */
 function contagensDoDoc(
   snap: FirebaseFirestore.DocumentSnapshot
@@ -77,12 +80,21 @@ function contagensDoDoc(
   const generoRaw = (snap.get('porGenero') ?? {}) as Record<string, unknown>;
   const porGenero = {} as Record<GeneroInscrito, number>;
   for (const g of GENEROS_INSCRITO) porGenero[g] = toCount(generoRaw[g]);
+  const matrizRaw = (snap.get('faixaXGenero') ?? {}) as Record<string, unknown>;
+  const faixaXGenero = {} as MatrizFaixaGenero;
+  for (const f of FAIXAS_ETARIAS) {
+    const linhaRaw = (matrizRaw[f] ?? {}) as Record<string, unknown>;
+    const linha = {} as Record<GeneroInscrito, number>;
+    for (const g of GENEROS_INSCRITO) linha[g] = toCount(linhaRaw[g]);
+    faixaXGenero[f] = linha;
+  }
   return {
     totalConfirmados: toCount(snap.get('totalConfirmados')),
     faixasEtarias,
     semNascimento: toCount(snap.get('semNascimento')),
     porGenero,
     semGenero: toCount(snap.get('semGenero')),
+    faixaXGenero,
     referencia: typeof snap.get('referencia') === 'string' ? (snap.get('referencia') as string) : '',
   };
 }
@@ -154,6 +166,48 @@ export async function recomputarDemografiaEvento(
     });
     return computado;
   });
+}
+
+// ---------------------------------------------------------------------------
+// REPROCESSO (RN-822): full-recompute de TODOS os `demografia/current`
+// ---------------------------------------------------------------------------
+
+/**
+ * Reprocessa a demografia agregada de TODOS os eventos — a operação que anda
+ * JUNTO com o redeploy do RN-822 (premissa de deploy: Function nova + este
+ * reprocesso são UMA operação; docs no shape antigo — 6 faixas grossas, sem
+ * `faixaXGenero` — só migram aqui ou no próximo write de inscrito).
+ *
+ * IDEMPOTENTE por construção: cada evento passa por
+ * `recomputarDemografiaEvento` (full recompute + no-op quando nada mudou) —
+ * rodar N vezes produz o mesmo estado e a 2ª rodada não escreve nada.
+ * Sequencial de propósito (operação administrativa pontual — sem rajada de
+ * transações concorrentes contra a base).
+ *
+ * Execução (runbook): Admin SDK com credencial do projeto, após o deploy:
+ *   const { reprocessarDemografiaTodosEventos } =
+ *     require('./lib/functions/src/analytics/agregarDemografia');
+ *   await reprocessarDemografiaTodosEventos(admin.firestore());
+ */
+export async function reprocessarDemografiaTodosEventos(
+  db: Db
+): Promise<{ eventos: number; falhas: string[] }> {
+  // Só ids saem do storage (select vazio = nenhum campo) — zero PII aqui.
+  const eventosSnap = await db.collection('eventos').select().get();
+  const falhas: string[] = [];
+  for (const docSnap of eventosSnap.docs) {
+    try {
+      await recomputarDemografiaEvento(db, docSnap.id);
+    } catch (err) {
+      falhas.push(docSnap.id);
+      logger.error('demografia_reprocesso_falha', { eventoId: docSnap.id, err });
+    }
+  }
+  logger.info('demografia_reprocesso_concluido', {
+    eventos: eventosSnap.size,
+    falhas: falhas.length,
+  });
+  return { eventos: eventosSnap.size, falhas };
 }
 
 // ---------------------------------------------------------------------------

@@ -29,7 +29,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { recomputarDemografiaEvento } from '../analytics/agregarDemografia';
+import {
+  recomputarDemografiaEvento,
+  reprocessarDemografiaTodosEventos,
+} from '../analytics/agregarDemografia';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -98,7 +101,8 @@ beforeAll(async () => {
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();
-});
+  // 30s: carga de rules na JVM fria do emulator estoura os 10s default do hook.
+}, 30_000);
 
 beforeEach(async () => {
   await testEnv.clearFirestore();
@@ -154,22 +158,28 @@ const athlete = () => ctxAs(ATHLETE_UID, { role: 'athlete' });
 const P_DEMO = ['eventos', EVENTO_ID, 'demografia', 'current'] as const;
 
 describe('recomputarDemografiaEvento — agregação real', () => {
-  it('conta SÓ confirmados, bucketiza idade NA PROVA e gênero; sem [reg] → semDado', async () => {
+  it('conta SÓ confirmados, bucketiza idade NA PROVA (bandas RN-822) e gênero; sem [reg] → semDado', async () => {
     const contagens = await recomputarDemografiaEvento(adminDb, EVENTO_ID);
     expect(contagens).not.toBeNull();
     expect(contagens!.totalConfirmados).toBe(4); // i1..i4 (i5/i6 fora)
-    expect(contagens!.faixasEtarias['25_34']).toBe(1);
-    expect(contagens!.faixasEtarias['18_24']).toBe(1);
-    expect(contagens!.faixasEtarias['45_54']).toBe(1);
+    expect(contagens!.faixasEtarias['25_29']).toBe(1); // i1 (26)
+    expect(contagens!.faixasEtarias['18_24']).toBe(1); // i2 (21)
+    expect(contagens!.faixasEtarias['45_49']).toBe(1); // i3 (46)
     expect(contagens!.semNascimento).toBe(1); // i4
     expect(contagens!.porGenero.feminino).toBe(2);
     expect(contagens!.porGenero.masculino).toBe(1);
     expect(contagens!.semGenero).toBe(1); // i4
     expect(contagens!.referencia).toBe('2026-04-25');
+    // Matriz idade×sexo (RN-822): célula exige AMBOS os dados válidos.
+    expect(contagens!.faixaXGenero['25_29'].feminino).toBe(1);
+    expect(contagens!.faixaXGenero['18_24'].masculino).toBe(1);
+    expect(contagens!.faixaXGenero['45_49'].feminino).toBe(1);
 
     const snap = await adminDb.doc(P_DEMO.join('/')).get();
     expect(snap.exists).toBe(true);
     expect(snap.get('tenantId')).toBe(CASTELO_ID);
+    // A matriz PERSISTE no doc (map aninhado de contagens — sem PII).
+    expect(snap.get('faixaXGenero.25_29.feminino')).toBe(1);
   });
 
   it('PII NUNCA no doc agregado: só buckets — nenhuma data/CPF/nome/id de inscrito', async () => {
@@ -179,6 +189,7 @@ describe('recomputarDemografiaEvento — agregação real', () => {
     // Shape FECHADO: qualquer campo além destes é vazamento
     expect(Object.keys(data).sort()).toEqual([
       'atualizadoEm',
+      'faixaXGenero',
       'faixasEtarias',
       'porGenero',
       'referencia',
@@ -211,11 +222,78 @@ describe('recomputarDemografiaEvento — agregação real', () => {
       .update({ status: 'cancelado' });
     const contagens = await recomputarDemografiaEvento(adminDb, EVENTO_ID);
     expect(contagens!.totalConfirmados).toBe(3);
-    expect(contagens!.faixasEtarias['25_34']).toBe(0); // i1 saiu
+    expect(contagens!.faixasEtarias['25_29']).toBe(0); // i1 saiu
+    expect(contagens!.faixaXGenero['25_29'].feminino).toBe(0); // matriz também
   });
 
   it('evento inexistente → null (nada materializado)', async () => {
     expect(await recomputarDemografiaEvento(adminDb, 'evento-fantasma')).toBeNull();
+  });
+
+  it('MIGRAÇÃO RN-822: doc no shape ANTIGO (6 faixas, sem matriz) é REESCRITO no shape novo', async () => {
+    // Seed do doc como a Function PRÉ-RN822 gravava (faixas grossas, sem
+    // faixaXGenero) — o agregado antigo "no ar" durante o deploy.
+    await adminDb.doc(P_DEMO.join('/')).set({
+      tenantId: CASTELO_ID,
+      totalConfirmados: 4,
+      faixasEtarias: { ate_17: 0, '18_24': 1, '25_34': 1, '35_44': 0, '45_54': 1, '55_mais': 0 },
+      semNascimento: 1,
+      porGenero: { feminino: 2, masculino: 1, outro: 0, nao_informado: 0 },
+      semGenero: 1,
+      referencia: '2026-04-25',
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    const antes = await adminDb.doc(P_DEMO.join('/')).get();
+    const carimboAntigo = (antes.get('atualizadoEm') as Timestamp).toMillis();
+
+    // Mesmos inscritos, mesmas contagens 1D — ainda assim o shape antigo
+    // NUNCA "iguala" o recompute (chaves novas ausentes ⇒ -1) e é reescrito.
+    await recomputarDemografiaEvento(adminDb, EVENTO_ID);
+    const depois = await adminDb.doc(P_DEMO.join('/')).get();
+    expect((depois.get('atualizadoEm') as Timestamp).toMillis()).not.toBe(carimboAntigo);
+    expect(depois.get('faixasEtarias.25_29')).toBe(1); // bandas novas
+    expect(depois.get('faixasEtarias.25_34')).toBeUndefined(); // chave velha morreu
+    expect(depois.get('faixaXGenero.45_49.feminino')).toBe(1); // matriz nasceu
+  });
+});
+
+describe('reprocessarDemografiaTodosEventos — reprocesso RN-822 (deploy casado)', () => {
+  it('reprocessa todos os eventos e é IDEMPOTENTE (2ª rodada = zero write)', async () => {
+    // 2º evento no tenant B para provar a varredura multi-evento.
+    const now = FieldValue.serverTimestamp();
+    await adminDb.collection('eventos').doc('trilha-passo-2026').set({
+      id: 'trilha-passo-2026', tenantId: PASSO_ID, organizadorId: PASSO_OWNER_UID,
+      nome: 'Trilha do Passo 2026', slug: 'trilha-passo-2026', status: 'publicado',
+      data: DATA_EVENTO, local: 'Passo Fundo', modalidades: ['5k'],
+      percursos: [{ nome: '5k', preco: 80 }], usaChip: false,
+      qtdInscritos: 0, receitaConfirmada: 0, criadoEm: now, atualizadoEm: now,
+    });
+    await adminDb
+      .collection('eventos').doc('trilha-passo-2026')
+      .collection('inscritos').doc('p1')
+      .set({ ...inscrito('p1', 'confirmado', reg('1991-02-10', 'masculino')), tenantId: PASSO_ID });
+
+    const r1 = await reprocessarDemografiaTodosEventos(adminDb);
+    expect(r1.eventos).toBe(2);
+    expect(r1.falhas).toEqual([]);
+
+    const docA = await adminDb.doc(P_DEMO.join('/')).get();
+    const docB = await adminDb
+      .doc('eventos/trilha-passo-2026/demografia/current').get();
+    expect(docA.exists).toBe(true);
+    expect(docB.get('faixaXGenero.35_39.masculino')).toBe(1); // 35 na prova
+    const carimboA = (docA.get('atualizadoEm') as Timestamp).toMillis();
+    const carimboB = (docB.get('atualizadoEm') as Timestamp).toMillis();
+
+    // 2ª rodada: full-recompute idempotente ⇒ NENHUMA escrita (carimbos intocados).
+    const r2 = await reprocessarDemografiaTodosEventos(adminDb);
+    expect(r2.eventos).toBe(2);
+    expect(r2.falhas).toEqual([]);
+    const docA2 = await adminDb.doc(P_DEMO.join('/')).get();
+    const docB2 = await adminDb
+      .doc('eventos/trilha-passo-2026/demografia/current').get();
+    expect((docA2.get('atualizadoEm') as Timestamp).toMillis()).toBe(carimboA);
+    expect((docB2.get('atualizadoEm') as Timestamp).toMillis()).toBe(carimboB);
   });
 });
 
