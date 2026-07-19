@@ -15,7 +15,7 @@
 // domínio; a back-office não redefine a semântica de estado/moeda.
 // =============================================================================
 
-import { Badge, Button, PageHeader, Select, Skeleton, Table } from '@leela/design-system';
+import { Badge, Button, Combobox, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { SelectOption, TableColumn } from '@leela/design-system';
 import { badgeEstado } from '../../financeiro/repasses/_lib/estadoRepasse';
 import { formatBRL, formatData } from '../../financeiro/repasses/_lib/format';
@@ -165,14 +165,20 @@ export function RepassesFilaView({
             <div className="flex items-end justify-between gap-[var(--spacing-4)] flex-wrap">
               <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
                 <EstadoChips filter={estadoFilter} counts={counts} onChange={onEstadoFilterChange} />
-                <Select
-                  id="fila-tenant-filter"
-                  label="Tenant"
-                  options={tenantOptions}
-                  value={tenantFilter}
-                  onChange={(e) => onTenantFilterChange(e.target.value)}
-                  wrapperClassName="min-w-56"
-                />
+                <label className="flex min-w-56 flex-col gap-[var(--spacing-1)]">
+                  <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+                    Tenant
+                  </span>
+                  <Combobox
+                    id="fila-tenant-filter"
+                    options={tenantOptions}
+                    value={tenantFilter}
+                    onValueChange={(v) => onTenantFilterChange(Array.isArray(v) ? (v[0] ?? '') : v)}
+                    aria-label="Tenant"
+                    searchPlaceholder="Buscar tenant…"
+                    emptyText="Nenhum tenant encontrado"
+                  />
+                </label>
               </div>
               <p aria-live="polite" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
                 Mostrando {visiveis.length} de {itens.length} repasses

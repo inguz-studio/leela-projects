@@ -8,7 +8,7 @@
 // O gate real é a Rule/Function; aqui é só o que a UI expõe.
 // =============================================================================
 
-import { Badge, Button, EmptyState, Select } from '@leela/design-system';
+import { Badge, Button, Combobox, EmptyState } from '@leela/design-system';
 import type { MembroEquipe, PapelEvento } from '@leela/core';
 import { LABEL_PAPEL } from '../_lib/equipeLabels';
 import { papeisAtribuiveis, podeGerirMembro } from '../_lib/opcoesPapel';
@@ -107,14 +107,17 @@ export function EquipeLista({
                 <Badge variant={statusVariant(membro.status)}>{statusLabel(membro.status)}</Badge>
 
                 {papelEditavel ? (
-                  <Select
-                    aria-label={`Papel de ${membro.nome}`}
-                    options={opcoesGestor}
-                    value={membro.papel}
-                    disabled={trocandoUid === membro.uid}
-                    onChange={(e) => onTrocarPapel(membro, e.target.value as PapelEvento)}
-                    wrapperClassName="w-44"
-                  />
+                  <div className="w-44">
+                    <Combobox
+                      aria-label={`Papel de ${membro.nome}`}
+                      options={opcoesGestor}
+                      value={membro.papel}
+                      disabled={trocandoUid === membro.uid}
+                      onValueChange={(v) =>
+                        onTrocarPapel(membro, (Array.isArray(v) ? v[0] : v) as PapelEvento)
+                      }
+                    />
+                  </div>
                 ) : (
                   <Badge variant="neutro">{LABEL_PAPEL[membro.papel]}</Badge>
                 )}

@@ -11,7 +11,7 @@ origem: GATE-DS-W1 (findings ABERTOS de app) + pendência LP-VENDAS-KIT
 ## Estado das tasks
 - [x] T1 — date pickers nativos → DatePicker/DateTimeField do DS (10 campos / 8 arquivos)
 - [x] T2 — forks de primitivo → DS (Radio/Textarea/SearchInput/Input + kebab)
-- [ ] T3 — token fantasma da divisória + varredura Select-como-filtro → Combobox/FilterMenu
+- [x] T3 — token fantasma da divisória + varredura Select-como-filtro → Combobox
 - [ ] T4 — seed aditivo de regulamento (2-3 eventos, idempotente)
 
 ## T1 — FEITO (F-01: §8 date pickers) · gates: tsc 0 · eslint 0 · afetados 160/160
@@ -80,6 +80,19 @@ PARKED (fora do brief T2, registrado): checkboxes nativos (ConfiguracoesView apr
 permissões, DesafioEditor ações, ItemKitModal exibirLogo, TermsEditor 2×) — checkbox não
 está na lista de primitivos do T2 nem foi citado no F-03; DS tem `Checkbox`, migração é
 candidata de W2 se o Vitor quiser.
+
+## T3 — FEITO (F-04 + F-02 apps) · gates: tsc(meus arquivos) 0 · eslint 0 · afetados 21/21
+- **F-04 (1 linha):** ConfigGeraisForm.tsx — `var(--border-width-thin)` (fantasma, IACVT →
+  divisória ~3px) → `var(--divider-thickness)` (1px, token real consumido pelo Divider/Stepper do DS).
+- **F-02 varredura Select-como-FILTRO → Combobox do DS** (só filtros; forms ficam com Select):
+  - `RepassesFilaView.tsx` — filtro de Tenant sobre a Table (facet) → Combobox (com busca).
+  - `EquipeLista.tsx` — seletor de papel por linha (o report nomeou como contexto de filtro) → Combobox.
+  - Os outros 18 `<Select>` (14 arquivos) são seleção simples de FORMULÁRIO (categoria/modalidade/
+    estado/tipo/papel de convite/kit/status/gatilho/banco/plano/retenção) — §8 permite Select nativo
+    aí; NÃO convertidos (a diretriz é "Select fica só em form simples de baixa cardinalidade").
+  - Testes atualizados p/ o contrato do Combobox (abre painel + clica option; antes
+    `selectOptions`/`getAllByRole('option')` no listbox nativo): EquipeLista.test (2 casos),
+    RepassesFilaView.test (1 caso). CommandItem: nome acessível=label, seleção dispara value.
 
 ## ⚠️ Cross-lane (NÃO é do meu lote): 2 erros de tsc pré-existentes em
 `InfluenciadoresPage.test.tsx` e `MinhasAfiliacoesPage.test.tsx` — a COMF2 (`aedc9f9`)

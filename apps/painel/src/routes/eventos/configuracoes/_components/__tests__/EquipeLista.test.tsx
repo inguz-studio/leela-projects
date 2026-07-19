@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { MembroEquipe, PapelEvento, Timestamp } from '@leela/core';
 import { EquipeLista } from '../EquipeLista';
@@ -59,18 +59,19 @@ describe('EquipeLista (S304-T3)', () => {
     expect(onConvidar).toHaveBeenCalledTimes(1);
   });
 
-  it('membro ativo gerível tem Select de papel; trocar chama o handler', async () => {
+  it('membro ativo gerível tem Combobox de papel; trocar chama o handler', async () => {
     const bruno = membro({ id: 'bruno', uid: 'bruno', nome: 'Bruno', papel: 'administrador' });
     const { onTrocarPapel } = setup({ membros: [organizador, bruno], gestor: 'organizador' });
-    const select = screen.getByLabelText('Papel de Bruno');
-    await userEvent.selectOptions(select, 'financeiro');
+    // §8: papel abre o painel do DS (Combobox), não o listbox do SO.
+    await userEvent.click(screen.getByLabelText('Papel de Bruno'));
+    await userEvent.click(screen.getByRole('option', { name: 'Financeiro' }));
     expect(onTrocarPapel).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bruno' }),
       'financeiro',
     );
   });
 
-  it('administrador não mexe no Organizador (sem Select, sem Remover) e não oferece papel organizador', () => {
+  it('administrador não mexe no Organizador (sem Combobox, sem Remover) e não oferece papel organizador', async () => {
     const carla = membro({ id: 'carla', uid: 'carla', nome: 'Carla', papel: 'operador' });
     setup({ membros: [organizador, carla], gestor: 'administrador', gestorUid: 'adm' });
 
@@ -78,9 +79,9 @@ describe('EquipeLista (S304-T3)', () => {
     expect(screen.queryByLabelText('Papel de Dona')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Remover Dona' })).toBeNull();
 
-    // Linha da Carla: gerível pelo admin, mas o Select nunca oferece "Organizador".
-    const select = screen.getByLabelText('Papel de Carla');
-    const opcoes = within(select).getAllByRole('option').map((o) => o.textContent);
+    // Linha da Carla: gerível pelo admin, mas o painel nunca oferece "Organizador".
+    await userEvent.click(screen.getByLabelText('Papel de Carla'));
+    const opcoes = screen.getAllByRole('option').map((o) => o.textContent);
     expect(opcoes).not.toContain('Organizador');
     expect(screen.getByRole('button', { name: 'Remover Carla' })).toBeInTheDocument();
   });

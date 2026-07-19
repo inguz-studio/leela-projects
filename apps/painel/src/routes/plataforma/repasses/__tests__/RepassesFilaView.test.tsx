@@ -62,8 +62,9 @@ describe('RepassesFilaView', () => {
     render(
       <RepassesFilaView {...base} itens={itens} loading={false} error={null} onTenantFilterChange={onTenantFilterChange} />,
     );
-    const select = screen.getByLabelText('Tenant');
-    await userEvent.selectOptions(select, 't2');
+    // §8: o filtro de tenant abre o painel do DS (Combobox), não o listbox do SO.
+    await userEvent.click(screen.getByLabelText('Tenant'));
+    await userEvent.click(screen.getByRole('option', { name: 'Alfa Runs' }));
     expect(onTenantFilterChange).toHaveBeenCalledWith('t2');
   });
 

@@ -204,7 +204,7 @@ export function ConfigGeraisForm({
       </div>
 
       {/* Read-only: URL pública + contexto travado (editado na criação/lotes). */}
-      <div className="flex flex-col gap-[var(--spacing-4)] border-t-[length:var(--border-width-thin)] border-t-[color:var(--border-subtle)] pt-[var(--spacing-5)]">
+      <div className="flex flex-col gap-[var(--spacing-4)] border-t-[length:var(--divider-thickness)] border-t-[color:var(--border-subtle)] pt-[var(--spacing-5)]">
         <Input
           id="config-url-publica"
           label="URL pública"
