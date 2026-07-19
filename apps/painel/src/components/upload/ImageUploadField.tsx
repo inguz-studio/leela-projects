@@ -61,13 +61,18 @@ export interface ImageUploadFieldProps {
   removerLabel?: string;
 }
 
-/** URL http(s) válida? Só decide se mostra a prévia. @pure */
+/**
+ * URL exibível na prévia? http(s) (downloadURL) ou `blob:` (object URL do modo
+ * DEFERRED — CEV: no "Novo evento" o doc ainda não existe e as Rules negariam o
+ * upload, então a tela guarda o arquivo cropado e mostra a prévia local; o
+ * upload real acontece após o criarEvento). Só decide se mostra a prévia. @pure
+ */
 function urlDeImagemValida(valor: string): boolean {
   const v = valor.trim();
   if (v.length === 0) return false;
   try {
     const u = new URL(v);
-    return u.protocol === 'http:' || u.protocol === 'https:';
+    return u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'blob:';
   } catch {
     return false;
   }

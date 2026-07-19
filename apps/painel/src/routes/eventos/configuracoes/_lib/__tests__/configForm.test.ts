@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   capacidadeParaNumero,
+  imagemUrlDoForm,
   taxaModoDoForm,
   urlPublicaEvento,
   valoresDoEvento,
@@ -42,10 +43,18 @@ describe('valoresDoEvento', () => {
   it('preenche a partir do evento; capacidade null → campo vazio', () => {
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: null }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false, imagemUrl: '' });
     expect(
       valoresDoEvento({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: 500 }),
-    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500', repassarTaxa: false, vendaSomentePorCupom: false });
+    ).toEqual({ nome: 'Meia', local: 'Floripa', usaChip: false, capacidade: '500', repassarTaxa: false, vendaSomentePorCupom: false, imagemUrl: '' });
+  });
+
+  it('capa (CEV · RN-228): imagemUrl do evento preenche; ausente ⇒ vazio', () => {
+    expect(
+      valoresDoEvento({ nome: 'E', local: 'L', usaChip: true, imagemUrl: 'https://cdn.x/capa.jpg' })
+        .imagemUrl,
+    ).toBe('https://cdn.x/capa.jpg');
+    expect(valoresDoEvento({ nome: 'E', local: 'L', usaChip: true }).imagemUrl).toBe('');
   });
 
   it('deriva repassarTaxa do taxaModo (RN-347): ausente ⇒ false, repassada ⇒ true', () => {
@@ -66,8 +75,18 @@ describe('taxaModoDoForm', () => {
   });
 });
 
+describe('imagemUrlDoForm (CEV · RN-228)', () => {
+  it("'' e espaços ⇒ null (REMOVE — deleteField no fluxo canônico)", () => {
+    expect(imagemUrlDoForm('')).toBeNull();
+    expect(imagemUrlDoForm('   ')).toBeNull();
+  });
+  it('URL ⇒ trim preservado', () => {
+    expect(imagemUrlDoForm('  https://cdn.x/capa.jpg ')).toBe('https://cdn.x/capa.jpg');
+  });
+});
+
 describe('validaConfigGerais', () => {
-  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false };
+  const base = { nome: 'Meia Floripa', local: 'Floripa', usaChip: true, capacidade: '', repassarTaxa: false, vendaSomentePorCupom: false, imagemUrl: '' };
 
   it('form válido passa', () => {
     expect(validaConfigGerais(base).valido).toBe(true);

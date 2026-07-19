@@ -149,6 +149,115 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     expect(await screen.findByText('Não foi possível criar o evento')).toBeInTheDocument();
   });
 
+  // ── Capa DEFERRED (CEV · RN-228): sobe APÓS o criarEvento ─────────────────
+
+  function renderFormComCapa(over: {
+    onCriarEvento?: ReturnType<typeof vi.fn>;
+    onUploadCapa?: ReturnType<typeof vi.fn>;
+    onSalvarCapa?: ReturnType<typeof vi.fn>;
+  } = {}) {
+    const onCriarEvento =
+      over.onCriarEvento ?? vi.fn().mockResolvedValue({ eventoId: 'e1', slug: 'e1' });
+    const onUploadCapa =
+      over.onUploadCapa ?? vi.fn().mockResolvedValue('https://storage.leela.dev/eventos/e1/capa');
+    const onSalvarCapa = over.onSalvarCapa ?? vi.fn().mockResolvedValue(undefined);
+    const onSuccess = vi.fn();
+    render(
+      <ToastProvider>
+        <EventoForm
+          onCriarEvento={onCriarEvento}
+          onSuccess={onSuccess}
+          onUploadCapa={onUploadCapa}
+          onSalvarCapa={onSalvarCapa}
+        />
+      </ToastProvider>,
+    );
+    return { onCriarEvento, onUploadCapa, onSalvarCapa, onSuccess };
+  }
+
+  async function preencherObrigatorios(): Promise<void> {
+    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida com Capa');
+    await escolherDataDaProva();
+    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await userEvent.click(screen.getByRole('button', { name: '10k' }));
+  }
+
+  it('sem as portas de capa o bloco não renderiza (degradação honesta, sem nota falsa)', () => {
+    renderForm();
+    expect(screen.queryByLabelText('Imagem de capa')).not.toBeInTheDocument();
+    expect(screen.queryByText(/chega em breve/)).not.toBeInTheDocument();
+  });
+
+  it('capa selecionada NÃO sobe na hora (evento não existe); sobe APÓS criar, com o eventoId, e persiste', async () => {
+    const { onCriarEvento, onUploadCapa, onSalvarCapa, onSuccess } = renderFormComCapa();
+    const png = new File(['x'], 'capa.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+    // Deferred: nenhuma porta de upload chamada na seleção.
+    expect(onUploadCapa).not.toHaveBeenCalled();
+
+    await preencherObrigatorios();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+
+    await waitFor(() => expect(onSalvarCapa).toHaveBeenCalledTimes(1));
+    expect(onCriarEvento).toHaveBeenCalledTimes(1);
+    // Upload com o id devolvido pelo criarEvento + o File cropado (jsdom degrada
+    // o crop → File); persistência com a downloadURL resolvida.
+    expect(onUploadCapa).toHaveBeenCalledWith('e1', expect.any(File));
+    expect(onSalvarCapa).toHaveBeenCalledWith('e1', 'https://storage.leela.dev/eventos/e1/capa');
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({ eventoId: 'e1', slug: 'e1' }));
+  });
+
+  it('capa webp REJEITADA inline (RN-228 jpeg/png/gif) e nada sobe no submit', async () => {
+    const { onUploadCapa } = renderFormComCapa();
+    const webp = new File(['x'], 'capa.webp', { type: 'image/webp' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), webp);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent(/JPG, PNG ou GIF/);
+
+    await preencherObrigatorios();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await waitFor(() => expect(screen.getByText('Rascunho criado')).toBeInTheDocument());
+    expect(onUploadCapa).not.toHaveBeenCalled();
+  });
+
+  it('capa acima de 2MB REJEITADA inline (teto RN-228 pós-crop; jsdom não reduz)', async () => {
+    const { onUploadCapa } = renderFormComCapa();
+    const grande = new File([new Uint8Array(3 * 1024 * 1024)], 'capa.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), grande);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent(/no máximo 2MB/);
+    expect(onUploadCapa).not.toHaveBeenCalled();
+  });
+
+  it('"Remover capa" esquece o arquivo pendente — criar não sobe nada', async () => {
+    const { onUploadCapa, onSalvarCapa, onSuccess } = renderFormComCapa();
+    const png = new File(['x'], 'capa.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+    await userEvent.click(await screen.findByRole('button', { name: 'Remover capa' }));
+
+    await preencherObrigatorios();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1)); // evento criado normal
+    expect(onUploadCapa).not.toHaveBeenCalled();
+    expect(onSalvarCapa).not.toHaveBeenCalled();
+  });
+
+  it('falha no upload da capa NÃO desfaz o evento: toast honesto + onSuccess mesmo assim', async () => {
+    const { onSalvarCapa, onSuccess } = renderFormComCapa({
+      onUploadCapa: vi.fn().mockRejectedValue(new Error('permission-denied')),
+    });
+    const png = new File(['x'], 'capa.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+
+    await preencherObrigatorios();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+
+    expect(await screen.findByText('A capa não foi enviada')).toBeInTheDocument();
+    expect(screen.getByText('Rascunho criado')).toBeInTheDocument();
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(onSalvarCapa).not.toHaveBeenCalled();
+  });
+
   it('failed-precondition (RN-402) mostra toast ESPECÍFICO, não o genérico (review #34)', async () => {
     renderForm(
       vi.fn().mockRejectedValue({

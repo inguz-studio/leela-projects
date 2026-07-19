@@ -16,20 +16,30 @@
 // abaixo é REAL e sempre envia a escolha do organizador (WYSIWYG). Após a 1ª
 // venda a troca congela (Rules) — isso é tratado na aba Configurações.
 //
-// LACUNAS ainda registradas (fora de escopo desta task):
-//   - CAPA: UPLOAD-ONLY (RN-168) — o input de URL foi REMOVIDO. O upload real
-//     está BLOQUEADO por backend: não existe path `eventos/{id}/capa` nas
-//     storage.rules nem seam, e o cadastro não persiste `imagemUrl` (nem esta
-//     tela nem ConfigGerais). Pendência de lote backend registrada no
-//     checkpoint UPSW; até lá, nota honesta no lugar do campo (o campo `capa`
-//     do form fica reservado, sem UI).
+// CAPA (CEV · RN-228 — pendência UPSW PAGA): upload-only (RN-168) em modo
+// DEFERRED — o doc do evento ainda NÃO existe no submit e as storage.rules
+// negam upload p/ evento inexistente (fail-closed do firestore.get). Então:
+// selecionar → valida RN-228 (jpeg/png/gif ≤2MB) → crop 1.9:1 client-side →
+// arquivo fica em memória + prévia local (blob:); após o criarEvento devolver
+// o eventoId, a capa sobe (`onUploadCapa`) e persiste (`onSalvarCapa`, merge
+// cirúrgico de `imagemUrl`). Falha na capa NÃO desfaz o evento: toast honesto
+// e a capa fica para a aba Configurações.
+//
+// LACUNA ainda registrada (fora de escopo desta task):
 //   - REGULAMENTO: coletado p/ fidelidade, não enviado por esta tela. Ver REPORT.
 // =============================================================================
 
 import * as React from 'react';
 import { Button, Chip, Input, Switch, Textarea, useToast } from '@leela/design-system';
 import { DateField } from '@/components/fields/DateField';
+import { ImageUploadField } from '@/components/upload';
+import { problemaDoArquivoCapaEvento, CAPA_EVENTO_MAX_BYTES } from '@leela/api-client';
 import { dataHoraLocalParaDate, isDataHoraLocalISO } from '@leela/core';
+import {
+  CAPA_EVENTO_ASPECTO,
+  CAPA_EVENTO_HINT,
+  CAPA_EVENTO_MAX_LADO_PX,
+} from '../_lib/capaEvento';
 import type { CriarEventoFn, CriarEventoInput, CriarEventoResult } from '../_data/contracts';
 import { toastErroCriarEvento } from './erros';
 import { validaNovoEvento, type ErrosNovoEvento, type NovoEventoFormValues } from './validacao';
@@ -37,6 +47,14 @@ import { validaNovoEvento, type ErrosNovoEvento, type NovoEventoFormValues } fro
 export interface EventoFormProps {
   onCriarEvento: CriarEventoFn;
   onSuccess?: (result: CriarEventoResult) => void;
+  /**
+   * Sobe a capa APÓS a criação (CEV · RN-228): seam `uploadCapaEvento`
+   * injetado pelo container. Opcional: sem as duas portas de capa, o bloco
+   * de capa não renderiza (tela degrada para o cadastro sem capa).
+   */
+  onUploadCapa?: (eventoId: string, file: File) => Promise<string>;
+  /** Persiste `imagemUrl` pós-create (merge cirúrgico `salvarCapaEvento`). */
+  onSalvarCapa?: (eventoId: string, imagemUrl: string) => Promise<void>;
 }
 
 const VALORES_INICIAIS: NovoEventoFormValues = {
@@ -70,15 +88,64 @@ function montarDataEnvio(data: string, hora: string): string {
   return dataHoraLocalParaDate(parede).toISOString();
 }
 
-export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.Element {
+export function EventoForm({
+  onCriarEvento,
+  onSuccess,
+  onUploadCapa,
+  onSalvarCapa,
+}: EventoFormProps): JSX.Element {
   const { toast } = useToast();
   const [values, setValues] = React.useState<NovoEventoFormValues>(VALORES_INICIAIS);
   const [erros, setErros] = React.useState<ErrosNovoEvento>({});
   const [modalidadeDraft, setModalidadeDraft] = React.useState('');
   const [enviando, setEnviando] = React.useState(false);
+  // Capa em modo DEFERRED (CEV): o arquivo CROPADO fica aqui até o criarEvento
+  // devolver o eventoId (as Rules negam upload p/ evento inexistente). O
+  // `values.capa` guarda a object URL da prévia (blob:) — revogada na troca.
+  const capaFileRef = React.useRef<File | null>(null);
 
   function set<K extends keyof NovoEventoFormValues>(campo: K, valor: NovoEventoFormValues[K]) {
     setValues((v) => ({ ...v, [campo]: valor }));
+  }
+
+  /** Solta a prévia anterior (blob:) antes de trocar/limpar — sem vazamento. */
+  function revogarPreviaCapa(atual: string) {
+    if (atual.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(atual);
+      } catch {
+        /* jsdom sem createObjectURL — inofensivo */
+      }
+    }
+  }
+
+  /**
+   * "Upload" deferred da capa: valida RN-228 no arquivo JÁ cropado (o
+   * ImageUploadField valida genérico + cropa antes de chamar isto), guarda o
+   * File em memória e devolve uma object URL para a prévia WYSIWYG. O upload
+   * REAL acontece no submit, após o criarEvento. Throw vira erro inline.
+   */
+  async function guardarCapa(file: File): Promise<string> {
+    const problema = problemaDoArquivoCapaEvento(file);
+    if (problema) throw new Error(problema);
+    revogarPreviaCapa(values.capa);
+    capaFileRef.current = file;
+    try {
+      return URL.createObjectURL(file);
+    } catch {
+      // Runtime sem createObjectURL (jsdom): sem prévia, mas o arquivo segue
+      // pendente — sentinela `blob:` para o campo indicar "tem imagem".
+      return 'blob:capa-pendente';
+    }
+  }
+
+  function onCapaChange(url: string) {
+    if (url === '') {
+      // Remover: solta a prévia e esquece o arquivo pendente.
+      revogarPreviaCapa(values.capa);
+      capaFileRef.current = null;
+    }
+    set('capa', url);
   }
 
   function addModalidade(m: string) {
@@ -131,11 +198,32 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
       const descricao = values.descricao.trim();
       if (descricao) input.descricao = descricao;
       const result = await onCriarEvento(input);
+      // Capa deferred (CEV · RN-228): agora o doc existe — sobe e persiste.
+      // Falha aqui NÃO desfaz o evento criado: toast honesto e a capa fica
+      // para a aba Configurações (mesmo campo, mesmo fluxo canônico).
+      const capaFile = capaFileRef.current;
+      let capaFalhou = false;
+      if (capaFile && onUploadCapa && onSalvarCapa) {
+        try {
+          const imagemUrl = await onUploadCapa(result.eventoId, capaFile);
+          await onSalvarCapa(result.eventoId, imagemUrl);
+        } catch {
+          capaFalhou = true;
+        }
+      }
       toast({
         variant: 'success',
         title: 'Rascunho criado',
         description: `"${values.nome.trim()}" foi salvo como rascunho.`,
       });
+      if (capaFalhou) {
+        toast({
+          variant: 'danger',
+          title: 'A capa não foi enviada',
+          description:
+            'O evento foi criado sem capa. Envie a imagem de novo em Configurações do evento.',
+        });
+      }
       onSuccess?.(result);
     } catch (err) {
       // Traduz error.codes do servidor (RN-402, slug esgotado, validação)
@@ -163,23 +251,33 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         </p>
       </header>
 
-      {/* Capa (hero) — UPLOAD-ONLY (RN-168): o input de URL foi REMOVIDO. O
-          upload real depende de backend ainda não disponível (Storage path
-          `eventos/{id}/capa` + seam + persistência de `imagemUrl` no cadastro —
-          pendência de lote backend registrada no checkpoint UPSW). Nota honesta
-          no lugar do campo, sem prometer o que ainda não funciona. */}
-      <div
-        className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--card-radius)] bg-[var(--surface-sunken)] p-[var(--spacing-4)]"
-        aria-label="Imagem de capa"
-      >
-        <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Imagem de capa
-        </span>
-        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          O upload da capa (1600×838, 1.9:1) chega em breve. Até lá, o evento usa o gradiente do
-          tema na página pública — você pode publicar sem capa.
-        </span>
-      </div>
+      {/* Capa (hero) — UPLOAD-ONLY (RN-168) em modo DEFERRED (CEV · RN-228):
+          o arquivo é validado (jpeg/png/gif ≤2MB) + cropado 1.9:1 na seleção;
+          a prévia é local (blob:) e o upload real acontece após o criarEvento
+          (as Rules exigem o doc existir). Sem as portas de capa, degrada para
+          o cadastro sem capa (a aba Configurações cobre). */}
+      {onUploadCapa && onSalvarCapa ? (
+        <div className="flex flex-col gap-[var(--spacing-1)]">
+          <ImageUploadField
+            id="capa-evento"
+            label="Imagem de capa"
+            hint={CAPA_EVENTO_HINT}
+            value={values.capa}
+            onChange={onCapaChange}
+            onUpload={guardarCapa}
+            aspecto={CAPA_EVENTO_ASPECTO}
+            maxLadoPx={CAPA_EVENTO_MAX_LADO_PX}
+            maxBytes={CAPA_EVENTO_MAX_BYTES}
+            previewAlt="Prévia da capa do evento"
+            permiteRemover
+            removerLabel="Remover capa"
+          />
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            A capa sobe junto com a criação do rascunho. Sem capa, a página pública usa o
+            gradiente do tema — você pode publicar sem capa.
+          </span>
+        </div>
+      ) : null}
 
       <Input
         id="nome"

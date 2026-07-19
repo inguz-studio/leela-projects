@@ -46,16 +46,20 @@ function fakeEvento(over: Partial<Evento> = {}): Evento {
 
 function setup(opts: { evento?: Evento; podeEditar?: boolean } = {}) {
   const onSalvar = vi.fn().mockResolvedValue(undefined);
+  const onUploadCapa = vi
+    .fn()
+    .mockResolvedValue('https://storage.leela.dev/eventos/meia-floripa-2026/capa');
   render(
     <ToastProvider>
       <ConfigGeraisForm
         evento={opts.evento ?? fakeEvento()}
         podeEditar={opts.podeEditar ?? true}
         onSalvar={onSalvar}
+        onUploadCapa={onUploadCapa}
       />
     </ToastProvider>,
   );
-  return { onSalvar };
+  return { onSalvar, onUploadCapa };
 }
 
 describe('ConfigGeraisForm (S304-T2)', () => {
@@ -123,5 +127,80 @@ describe('ConfigGeraisForm (S304-T2)', () => {
     const [payload] = onSalvar.mock.calls[0] ?? [];
     expect(payload).toBeDefined();
     expect(payload).not.toHaveProperty('taxaModo');
+  });
+
+  // ── Capa do evento (CEV · RN-228 · RN-168 upload-only) ────────────────────
+
+  it('capa: NÃO há input de URL; upload → onUploadCapa → Salvar persiste a downloadURL', async () => {
+    const { onSalvar, onUploadCapa } = setup();
+    // Upload-only (RN-168): nenhum textbox de URL de imagem na tela de capa.
+    expect(screen.queryByRole('textbox', { name: /capa|imagem/i })).not.toBeInTheDocument();
+    const arquivo = new File(['x'], 'capa.png', { type: 'image/png' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), arquivo);
+    await waitFor(() => expect(onUploadCapa).toHaveBeenCalledTimes(1));
+    // jsdom degrada o crop 1.9:1 → sobe um File (o seam re-valida RN-228).
+    expect(onUploadCapa.mock.calls[0]?.[0]).toBeInstanceOf(File);
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imagemUrl: 'https://storage.leela.dev/eventos/meia-floripa-2026/capa',
+      }),
+    );
+  });
+
+  it('capa existente: gatilho vira "Trocar imagem" e prévia aparece; sem mudar, Salvar re-envia a URL vigente', async () => {
+    const { onSalvar } = setup({
+      evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }),
+    });
+    expect(screen.getByRole('button', { name: 'Trocar imagem' })).toBeInTheDocument();
+    expect(screen.getByAltText('Prévia da capa do evento')).toHaveAttribute(
+      'src',
+      'https://cdn.x/capa-atual.jpg',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }),
+    );
+  });
+
+  it('capa: "Remover capa" limpa e o Salvar envia null (deleteField → gradiente)', async () => {
+    const { onSalvar } = setup({
+      evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }),
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Remover capa' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar configurações' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ imagemUrl: null }));
+  });
+
+  it('capa: falha do upload vira erro inline (role=alert) e nada persiste', async () => {
+    const onSalvar = vi.fn().mockResolvedValue(undefined);
+    const onUploadCapa = vi.fn().mockRejectedValue(new Error('A capa deve ser JPG, PNG ou GIF (RN-228).'));
+    render(
+      <ToastProvider>
+        <ConfigGeraisForm
+          evento={fakeEvento()}
+          podeEditar
+          onSalvar={onSalvar}
+          onUploadCapa={onUploadCapa}
+        />
+      </ToastProvider>,
+    );
+    const arquivo = new File(['x'], 'capa.webp', { type: 'image/webp' });
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), arquivo);
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent(/JPG, PNG ou GIF/);
+    expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('capa: papel sem edição NÃO vê o seletor de arquivo — só a prévia', () => {
+    setup({
+      podeEditar: false,
+      evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }),
+    });
+    expect(screen.queryByLabelText('Imagem de capa')).not.toBeInTheDocument();
+    expect(screen.getByAltText('Prévia da capa do evento')).toBeInTheDocument();
   });
 });

@@ -6,6 +6,7 @@
 // =============================================================================
 
 import { useNavigate } from 'react-router-dom';
+import { getLeelaDb, salvarCapaEvento, uploadCapaEvento } from '@leela/api-client';
 import { EventoForm } from './EventoForm';
 import { useCriarEvento } from '../../../lib/query/mutations';
 import { useEventosSession } from '../_data/session';
@@ -23,6 +24,10 @@ export function NovoEventoRoute(): JSX.Element {
     <EventoForm
       onCriarEvento={(input: CriarEventoInput) => criar.mutateAsync(input)}
       onSuccess={(result) => navigate(`/eventos/${result.slug}`)}
+      // Capa deferred (CEV · RN-228): sobe APÓS o criarEvento (Rules exigem o
+      // doc existir) e persiste `imagemUrl` por merge cirúrgico (RN-153).
+      onUploadCapa={(eventoId, file) => uploadCapaEvento(eventoId, file)}
+      onSalvarCapa={(eventoId, imagemUrl) => salvarCapaEvento(getLeelaDb(), eventoId, imagemUrl)}
     />
   );
 }

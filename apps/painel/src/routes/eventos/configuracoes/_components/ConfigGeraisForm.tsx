@@ -12,11 +12,18 @@
 
 import * as React from 'react';
 import { Badge, Button, Input, Switch, useToast } from '@leela/design-system';
-import type { AtualizarConfiguracoesEventoInput } from '@leela/api-client';
+import { CAPA_EVENTO_MAX_BYTES, type AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { temVenda, type Evento } from '@leela/core';
+import { ImageUploadField } from '@/components/upload';
 import { formatDataEvento } from '../../_lib/format';
 import {
+  CAPA_EVENTO_ASPECTO,
+  CAPA_EVENTO_HINT,
+  CAPA_EVENTO_MAX_LADO_PX,
+} from '../../_lib/capaEvento';
+import {
   capacidadeParaNumero,
+  imagemUrlDoForm,
   taxaModoDoForm,
   urlPublicaEvento,
   valoresDoEvento,
@@ -35,6 +42,12 @@ export interface ConfigGeraisFormProps {
    */
   podeFlipCupomOnly?: boolean;
   onSalvar: (input: AtualizarConfiguracoesEventoInput) => Promise<void>;
+  /**
+   * Sobe a capa (CEV · RN-228): seam `uploadCapaEvento` injetado pelo container
+   * (padrão ConfiguracoesPage do clube). A downloadURL preenche o form; a
+   * PERSISTÊNCIA segue no Salvar (fluxo canônico `atualizarConfiguracoesEvento`).
+   */
+  onUploadCapa: (file: File) => Promise<string>;
 }
 
 export function ConfigGeraisForm({
@@ -42,6 +55,7 @@ export function ConfigGeraisForm({
   podeEditar,
   podeFlipCupomOnly = false,
   onSalvar,
+  onUploadCapa,
 }: ConfigGeraisFormProps): JSX.Element {
   const { toast } = useToast();
   const [values, setValues] = React.useState<ConfigGeraisValues>(() =>
@@ -75,6 +89,9 @@ export function ConfigGeraisForm({
         local: values.local.trim(),
         usaChip: values.usaChip,
         capacidade: capacidadeParaNumero(values.capacidade),
+        // Capa (CEV · RN-228): '' ⇒ null (REMOVE — deleteField); URL ⇒ persiste.
+        // Fluxo canônico RN-153 (validação 3 camadas core/Rule/seam — reuso).
+        imagemUrl: imagemUrlDoForm(values.imagemUrl),
       };
       // RN-347: só envia `taxaModo` enquanto o modo é editável. Com venda feita
       // o campo fica travado (Rule nega a troca) — omitir evita que o modo
@@ -154,6 +171,50 @@ export function ConfigGeraisForm({
           disabled={disabled}
           placeholder="Deixe vazio se usa a soma dos kits"
         />
+      </div>
+
+      {/* Capa do evento (CEV · RN-228 · RN-168 upload-only): arquivo → crop
+          1.9:1/1600×838 (RN-170) → seam uploadCapaEvento → preenche
+          `imagemUrl`; persiste no Salvar (fluxo canônico). Sem capa a landing
+          usa o gradiente (RN-166). Papel sem edição vê SÓ a prévia (o
+          ImageUploadField não tem modo disabled — leitura honesta, e a Rule
+          nega o write de qualquer forma). */}
+      <div className="flex flex-col gap-[var(--spacing-1)]">
+        {podeEditar ? (
+          <ImageUploadField
+            id="config-capa-evento"
+            label="Imagem de capa"
+            hint={CAPA_EVENTO_HINT}
+            value={values.imagemUrl}
+            onChange={(url) => set('imagemUrl', url)}
+            onUpload={onUploadCapa}
+            aspecto={CAPA_EVENTO_ASPECTO}
+            maxLadoPx={CAPA_EVENTO_MAX_LADO_PX}
+            maxBytes={CAPA_EVENTO_MAX_BYTES}
+            previewAlt="Prévia da capa do evento"
+            permiteRemover
+            removerLabel="Remover capa"
+          />
+        ) : values.imagemUrl.trim().length > 0 ? (
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              Imagem de capa
+            </span>
+            <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-sunken)]">
+              <img
+                src={values.imagemUrl.trim()}
+                alt="Prévia da capa do evento"
+                className="h-full w-full object-cover"
+                style={{ aspectRatio: `${CAPA_EVENTO_ASPECTO.w}/${CAPA_EVENTO_ASPECTO.h}` }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {podeEditar ? (
+          <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Sem capa, a página pública do evento usa um gradiente.
+          </span>
+        ) : null}
       </div>
 
       {/* usaChip (RN-207): false faz o balcão suprimir o passo de chip. */}

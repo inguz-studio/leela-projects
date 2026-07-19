@@ -115,6 +115,16 @@ describe('ImageUploadField — upload-only (RN-168)', () => {
     expect(screen.getByAltText('Prévia da capa')).toHaveAttribute('src', 'https://storage.leela.dev/img');
   });
 
+  it('preview aceita object URL blob: (modo DEFERRED da capa de evento — CEV)', () => {
+    renderField({ value: 'blob:https://painel.leela.dev/abc-123', previewAlt: 'Prévia da capa' });
+    expect(screen.getByAltText('Prévia da capa')).toHaveAttribute(
+      'src',
+      'blob:https://painel.leela.dev/abc-123'
+    );
+    // Com prévia local o gatilho já oferece a troca.
+    expect(screen.getByRole('button', { name: 'Trocar imagem' })).toBeInTheDocument();
+  });
+
   it('sem permiteRemover: não mostra botão Remover', () => {
     renderField({ value: 'https://storage.leela.dev/img' });
     expect(screen.queryByRole('button', { name: 'Remover imagem' })).not.toBeInTheDocument();

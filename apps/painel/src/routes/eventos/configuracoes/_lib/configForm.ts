@@ -29,6 +29,13 @@ export interface ConfigGeraisValues {
    * envia o campo quando o papel é organizador dono (ver ConfigGeraisForm).
    */
   vendaSomentePorCupom: boolean;
+  /**
+   * CEV · RN-228 — capa/hero do evento (campo canônico `Evento.imagemUrl`,
+   * RN-153). Upload-only (RN-168): a downloadURL do ImageUploadField preenche
+   * este valor; '' = sem capa (no submit vira `null` → deleteField → hero
+   * volta ao gradiente). RN-200 NÃO congela capa (editável com venda).
+   */
+  imagemUrl: string;
 }
 
 /** Erros por campo — chave ausente = campo válido. */
@@ -66,6 +73,7 @@ export function valoresDoEvento(evento: {
   capacidade?: number | null;
   taxaModo?: ModoTaxa;
   vendaSomentePorCupom?: boolean;
+  imagemUrl?: string;
 }): ConfigGeraisValues {
   return {
     nome: evento.nome,
@@ -79,7 +87,18 @@ export function valoresDoEvento(evento: {
     repassarTaxa: modoTaxaDoEvento(evento) === 'repassada',
     // Cupom-only (RN-303): só `true` literal liga o modo (default fechado=false).
     vendaSomentePorCupom: evento.vendaSomentePorCupom === true,
+    // Capa (CEV · RN-228): ausente ⇒ '' (sem capa — gradiente na landing).
+    imagemUrl: evento.imagemUrl ?? '',
   };
+}
+
+/**
+ * Converte o valor da capa do form no campo do contrato (CEV · RN-228):
+ * '' ⇒ `null` (REMOVE — deleteField no fluxo canônico); URL ⇒ trim. @pure
+ */
+export function imagemUrlDoForm(imagemUrl: string): string | null {
+  const v = imagemUrl.trim();
+  return v.length === 0 ? null : v;
 }
 
 /**

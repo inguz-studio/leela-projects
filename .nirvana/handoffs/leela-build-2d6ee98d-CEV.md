@@ -48,10 +48,18 @@ CRIADO (novo):
 - [x] T0 checkpoint criado.
 - [x] T1 storage.rules match `eventos/{eventoId}/capa` + 31 testes novos de
       ataque/fluxo — emulator 64/64 VERDE (8080/9199 livres, JDK 21).
-- [ ] T2 seam uploadCapaEvento + salvarCapaEvento + exports.
-- [ ] T3 telas (ConfigGerais + Novo evento) + RTL.
-- [ ] Gates: tsc/eslint 0 · Rules verdes · suíte painel verde · review antagonista.
-- [ ] Aterrissagem: épico E12/E04 + boards (pendência UPSW → paga).
+- [x] T2 seam uploadCapaEvento (RN-228 app-level jpeg/png/gif ≤2MB) +
+      salvarCapaEvento (merge cirúrgico) + exports; type-check+lint 0.
+- [x] T3 telas: ConfigGerais (campo capa + payload imagemUrl no fluxo canônico,
+      read-only = só prévia) + Novo evento (modo DEFERRED: valida→crop→arquivo em
+      memória→sobe após criarEvento; falha de capa não desfaz o evento) + blob:
+      preview no ImageUploadField (P4). RTL: +16 testes (EventoForm 6, ConfigGerais
+      5, configForm 4, ImageUploadField 1). Suíte painel 1274/1274 VERDE.
+- [x] Gates: tsc/eslint 0 · Rules 64/64 · suíte painel 1274/1274.
+- [ ] Review antagonista em contexto fresco (vetores do brief) + fixes re-provados.
+- [ ] Aterrissagem: épico E12/E04 + boards (pendência UPSW → paga) + audit.
 
 ## Commits
-(preenchido a cada task)
+- T1 `259a8e5` feat(storage): match eventos/{id}/capa fail-closed + 31 testes [LEELA-CEV-T1]
+- T2 `efa12de` feat(api-client): uploadCapaEvento + salvarCapaEvento (RN-228) [LEELA-CEV-T2]
+- T3 `<T3>` feat(painel): capa de evento upload-only nas 2 telas [LEELA-CEV-T3]

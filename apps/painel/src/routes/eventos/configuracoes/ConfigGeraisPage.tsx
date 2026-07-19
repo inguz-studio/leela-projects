@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useOutletContext } from 'react-router-dom';
-import type { AtualizarConfiguracoesEventoInput } from '@leela/api-client';
+import { uploadCapaEvento, type AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { useAtualizarConfiguracoesEvento } from '../../../lib/query/mutations';
 import { useEventosSession } from '../_data/session';
 import { ConfigGeraisForm } from './_components/ConfigGeraisForm';
@@ -28,12 +28,20 @@ export function ConfigGeraisPage(): JSX.Element {
     return mutation.mutateAsync(input);
   }
 
+  // Upload da capa (CEV · RN-228): o seam valida jpeg/png/gif + ≤2MB antes do
+  // roundtrip (a mensagem do Error vira erro inline do campo); a fronteira real
+  // são as storage.rules (firestore.get do tenant do evento, fail-closed).
+  function onUploadCapa(file: File): Promise<string> {
+    return uploadCapaEvento(evento.id, file);
+  }
+
   return (
     <ConfigGeraisForm
       evento={evento}
       podeEditar={podeEditarConfiguracoes(papel)}
       podeFlipCupomOnly={podeFlipCupomOnly(papel)}
       onSalvar={onSalvar}
+      onUploadCapa={onUploadCapa}
     />
   );
 }

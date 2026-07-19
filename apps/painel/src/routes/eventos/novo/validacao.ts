@@ -27,9 +27,10 @@ export interface NovoEventoFormValues {
   local: string;
   modalidades: string[];
   /**
-   * URL da imagem de capa — OPCIONAL. Não persiste no cadastro atual (o
-   * callable `criarEvento` ainda não aceita `imagemUrl`); coletada aqui p/
-   * fidelidade ao wireframe + preview. Ver lacuna no REPORT.
+   * Prévia da capa — OPCIONAL (CEV · RN-228). Guarda a object URL (`blob:`)
+   * da prévia local do modo DEFERRED: o arquivo cropado fica em memória na
+   * tela e sobe APÓS o criarEvento devolver o eventoId (as storage.rules
+   * negam upload p/ evento inexistente). '' = sem capa.
    */
   capa: string;
   /**
