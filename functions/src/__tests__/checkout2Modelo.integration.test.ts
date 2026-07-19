@@ -27,6 +27,7 @@ import {
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
 import { pessoaDocIdDoCpf } from '../checkout/pessoaRegistry';
+import { getCheckoutPrefillCore } from '../checkout/prefillCheckout';
 import { MockPaymentProvider } from '../payments/mockProvider';
 
 const PROJECT_ID = 'demo-leela-ck2';
@@ -310,5 +311,90 @@ describe('CK2-T1 — RN-173: registry global de pessoa por CPF', () => {
     const pessoa = parsePessoa(idPessoa, (await db.doc(`pessoas/${idPessoa}`).get()).data() ?? {});
     expect(pessoa.contaUid).toBeNull();
     expect(pessoa.dadosConhecidos?.nome).toBe('Nome Atualizado');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T2 — RN-154 · gênero no [reg] + pré-preenchimento sem vazar PII
+// ---------------------------------------------------------------------------
+
+describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
+  it('gênero persiste no [reg] do inscrito (enum reusado RN-820/822) e nos dados da pessoa', async () => {
+    const input = inputCk2('ck2-t2-gen-01');
+    (input.inscritos[0] as { genero?: string }).genero = 'feminino';
+    (input.inscritos[1] as { genero?: string }).genero = 'nao_informado';
+    const r = await createInscricaoChargeCore(db, provider, input, {
+      uid: 'uid-t2-gen', ehAnonimo: true,
+    });
+    const resp = parseInscrito(
+      String(r.inscritoIds[0]),
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/${r.inscritoIds[0]}`).get()).data() ?? {}
+    );
+    expect(resp.dadosPessoais?.genero).toBe('feminino');
+    const conv = parseInscrito(
+      String(r.inscritoIds[1]),
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/${r.inscritoIds[1]}`).get()).data() ?? {}
+    );
+    expect(conv.dadosPessoais?.genero).toBe('nao_informado');
+    const pessoaAna = parsePessoa(
+      pessoaDocIdDoCpf(CPF_ANA),
+      (await db.doc(`pessoas/${pessoaDocIdDoCpf(CPF_ANA)}`).get()).data() ?? {}
+    );
+    expect(pessoaAna.dadosConhecidos?.genero).toBe('feminino');
+  });
+
+  it('gênero fora do enum ⇒ invalid-argument, NADA escrito (fail-closed)', async () => {
+    const input = inputCk2('ck2-t2-gen-bad');
+    (input.inscritos[0] as { genero?: string }).genero = 'forjado';
+    await expect(
+      createInscricaoChargeCore(db, provider, input, { uid: 'uid-t2-bad', ehAnonimo: true })
+    ).rejects.toThrow(/genero/);
+    expect(
+      (await db.collection('pedidos').doc('ped-uid-t2-bad-ck2-t2-gen-bad').get()).exists
+    ).toBe(false);
+  });
+
+  it('prefill: conta vinculada recebe SÓ os próprios dados; anônimo/terceiro recebem null', async () => {
+    // Compra AUTENTICADA da própria pessoa (first-claim já provado no T1) —
+    // aqui garantimos o vínculo para esta conta.
+    const cpf = '418.529.630-42';
+    const input = inputCk2('ck2-t2-prefill-01', {
+      inscritos: [{
+        nome: 'Clara Compradora', email: 'clara@exemplo.com.br', cpf,
+        modalidade: '10k', nascimento: '1993-03-03', genero: 'feminino',
+      }],
+      responsavelIndex: 0,
+      responsavel: {
+        nome: 'Clara Compradora', email: 'clara@exemplo.com.br',
+        telefone: '(48) 97777-0001',
+      },
+    });
+    await createInscricaoChargeCore(db, provider, input, {
+      uid: 'conta-clara', ehAnonimo: false,
+    });
+
+    // A PRÓPRIA conta → prefill completo (CPF canônico + [reg] + endereço)
+    const meu = await getCheckoutPrefillCore(db, {
+      uid: 'conta-clara', ehAnonimo: false,
+    });
+    expect(meu.prefill).not.toBeNull();
+    expect(meu.prefill?.cpf).toBe('41852963042');
+    expect(meu.prefill?.genero).toBe('feminino');
+    expect(meu.prefill?.nascimento).toBe('1993-03-03');
+    expect(meu.prefill?.telefone).toBe('48977770001');
+    expect(meu.prefill?.endereco?.cep).toBe('88015600');
+
+    // Sessão ANÔNIMA (mesmo uid!) → null (anônimo não tem identidade)
+    const anon = await getCheckoutPrefillCore(db, {
+      uid: 'conta-clara', ehAnonimo: true,
+    });
+    expect(anon.prefill).toBeNull();
+
+    // OUTRA conta autenticada → null (PII de terceiro inalcançável — não
+    // existe canal de input para pedir por CPF/e-mail alheio)
+    const terceiro = await getCheckoutPrefillCore(db, {
+      uid: 'conta-outra', ehAnonimo: false,
+    });
+    expect(terceiro.prefill).toBeNull();
   });
 });

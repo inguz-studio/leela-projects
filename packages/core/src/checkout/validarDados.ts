@@ -21,11 +21,16 @@
 // `validateCommercialTerms`/`validarCriarEventoInput`.
 // =============================================================================
 
-import { cpfValido, telefoneValido } from '../eventos/dadosPessoais';
+import {
+  cpfValido,
+  isGeneroInscrito,
+  telefoneValido,
+  type GeneroInscrito,
+} from '../eventos/dadosPessoais';
 import { isDataEventoISO } from '../eventos/dataEvento';
 import { validarEmail } from '../clubs/convite';
 
-/** Dados de UM inscrito no checkout (fundação E12 + CKMOD §5.1). */
+/** Dados de UM inscrito no checkout (fundação E12 + CKMOD §5.1 + CK2). */
 export interface DadosMinimosInscrito {
   nome: string;
   email: string;
@@ -35,6 +40,13 @@ export interface DadosMinimosInscrito {
   telefone?: string;
   /** Nascimento date-only `yyyy-mm-dd`, no passado — opcional (CKMOD). */
   nascimento?: string;
+  /**
+   * Gênero POR INSCRITO (CK2 · RN-154) — enum canônico GENEROS_INSCRITO
+   * (REUSO do vocabulário do agregado demográfico RN-820/822; nunca enum
+   * paralelo). Opcional (compat UI antiga); presente deve estar no enum —
+   * `'nao_informado'` é valor legítimo (respeita quem não declara).
+   */
+  genero?: GeneroInscrito;
 }
 
 /** Limites de shape (alinhados a validarCriarEventoInput). */
@@ -102,6 +114,12 @@ export function validarDadosMinimosInscrito(
     } else if (hojeISO !== undefined && nascimento >= hojeISO) {
       erros.push('"nascimento" deve ser data no passado.');
     }
+  }
+
+  // CK2 (RN-154) — gênero: opcional; presente deve estar no enum canônico
+  // (fonte única GENEROS_INSCRITO — o mesmo que a demografia RN-820/822 lê).
+  if (dados['genero'] !== undefined && !isGeneroInscrito(dados['genero'])) {
+    erros.push('"genero" fora do enum canônico (RN-154).');
   }
 
   return erros;

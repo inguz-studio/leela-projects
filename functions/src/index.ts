@@ -139,6 +139,10 @@ export { confirmarPagamentoSandbox } from './checkout/confirmarPagamentoSandbox'
 // saga idempotente ledger→refund→efeito; só organizador (tenant writer);
 // reverte a receita agregada e audita quem/quando/quanto/motivo. ⚠️ Fable.
 export { estornarInscricao } from './checkout/estornarInscricao';
+// Prefill do checkout (CK2 · RN-154): dados conhecidos do PRÓPRIO comprador
+// autenticado, via pessoa vinculada à conta (RN-173). PII de terceiro é
+// inalcançável por construção (query pelo uid do token; sem canal de input).
+export { getCheckoutPrefill } from './checkout/prefillCheckout';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via

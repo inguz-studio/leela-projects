@@ -78,6 +78,7 @@ import {
   type CreateChargeParams,
   type CupomVenda,
   type FormaPagamento,
+  type GeneroInscrito,
   type ItemKitParaTamanhos,
   type ItemPedidoInput,
   type ItemVendaInput,
@@ -142,6 +143,14 @@ export interface CheckoutInscritoInput {
    * inscrito junto do CPF (leitura Postel — demografia/CRM tratam ausência).
    */
   nascimento?: string;
+  /**
+   * Gênero POR INSCRITO (CK2 · RN-154 · DEC-0719): enum canônico
+   * GENEROS_INSCRITO (REUSO do vocabulário da demografia RN-820/822).
+   * Opcional (compat UI vigente); presente = validado contra o enum e
+   * persistido no bloco `[reg]` (a demografia e o CRM já o leem de lá) +
+   * nos `dadosConhecidos` da pessoa (insumo do prefill RN-154).
+   */
+  genero?: GeneroInscrito;
 }
 
 /** Input do checkout (validado NO SERVIDOR — nunca confiar na UI). */
@@ -1151,12 +1160,19 @@ async function criarDocsDeCheckout(
           ehResponsavel && typeof input.responsavel.telefone === 'string'
             ? normalizarTelefone(input.responsavel.telefone)
             : undefined;
+        // CK2 (RN-154): gênero entra no MESMO bloco [reg] que a demografia
+        // (RN-820/822) e o CRM (RN-172) já consomem — reuso, não paralelo.
         const dadosPessoais =
-          inscrito.nascimento !== undefined || telefoneResp !== undefined
+          inscrito.nascimento !== undefined ||
+          inscrito.genero !== undefined ||
+          telefoneResp !== undefined
             ? {
                 cpf: normalizarCpf(inscrito.cpf),
                 ...(inscrito.nascimento !== undefined
                   ? { nascimento: inscrito.nascimento }
+                  : {}),
+                ...(inscrito.genero !== undefined
+                  ? { genero: inscrito.genero }
                   : {}),
                 ...(telefoneResp !== undefined ? { telefone: telefoneResp } : {}),
               }

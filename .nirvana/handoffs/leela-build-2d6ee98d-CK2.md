@@ -4,8 +4,11 @@ employee: sf-backend-lead (software-forge) · modelo: Fable · 2026-07-19
 
 ## Estado por task
 
-- [ ] T1 — RN-173 CPF único global (registry `pessoas` transacional + pessoaRef no inscrito + Rules deny-all) — EM ANDAMENTO
-- [ ] T2 — RN-154 gênero no [reg] + prefill sem vazar PII (callable getCheckoutPrefill)
+- [x] T1 — RN-173 CPF único global: registry `pessoas/{cpf_hmac32}` transacional (upsert na tx do
+      checkout, corrida serializa por retry otimista), `pessoaRef` no inscrito (CAMPOS_FUNCTION +
+      Rules + espelhos), first-claim de conta + anti-hijack, Rules `pessoas` deny-all.
+      Integração 5/5 (incl. corrida concorrente) + unit 13 novas + espelhos 55.
+- [ ] T2 — RN-154 gênero no [reg] + prefill sem vazar PII (callable getCheckoutPrefill) — código pronto, integração 3/3
 - [ ] T3 — RN-155 conta sem fricção (Firebase Auth + link de senha oficial + EmailProvider fail-closed)
 - [ ] T4 — RN-156 termo de saúde base sempre + custom aditivo versionado (fence server-side F-4a pattern)
 - [ ] T5 — RN-157 PIX expira 30 min (contrato provider + pixExpiraEm + expirarPixPendente)

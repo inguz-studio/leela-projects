@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { httpsCallable } from 'firebase/functions';
-import type { FormaPagamento } from '@leela/core';
+import type { FormaPagamento, GeneroInscrito } from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
 // ---------------------------------------------------------------------------
@@ -115,6 +115,12 @@ export interface CheckoutInscritoInput {
    * no bloco `[reg]` do inscrito.
    */
   nascimento?: string;
+  /**
+   * Gênero POR INSCRITO (CK2 · RN-154) — enum canônico GENEROS_INSCRITO do
+   * core (o mesmo da demografia RN-820/822). Opcional; o servidor valida
+   * contra o enum e persiste no `[reg]` + nos dados conhecidos da pessoa.
+   */
+  genero?: GeneroInscrito;
 }
 
 /** Endereço do COMPRADOR (CKMOD · spec §5.1 item 3) — 1× por pedido. */
@@ -192,6 +198,51 @@ export async function createInscricaoCharge(
     'createInscricaoCharge'
   );
   const res = await fn(input);
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Prefill do checkout (CK2 · RN-154 — dados conhecidos do PRÓPRIO comprador)
+// ---------------------------------------------------------------------------
+
+/** Endereço pré-preenchível (espelho de EnderecoPedido — CEP canônico). */
+export interface CheckoutPrefillEndereco {
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  numero: string;
+  complemento?: string;
+}
+
+/** Dados conhecidos da PRÓPRIA pessoa ('' = não conhecido). */
+export interface CheckoutPrefill {
+  nome: string;
+  /** CPF canônico (11 dígitos) — o PRÓPRIO, da pessoa vinculada à conta. */
+  cpf: string;
+  genero: GeneroInscrito;
+  nascimento: string;
+  telefone: string;
+  endereco?: CheckoutPrefillEndereco;
+}
+
+export interface GetCheckoutPrefillResult {
+  /** null = sem prefill (sessão anônima, sem vínculo ou sem dados). */
+  prefill: CheckoutPrefill | null;
+}
+
+/**
+ * Dados conhecidos do comprador AUTENTICADO para pré-preencher o checkout
+ * (RN-154). O servidor resolve pela pessoa VINCULADA à conta (RN-173) —
+ * nunca há canal para pedir dados de terceiro; sessão anônima recebe null.
+ */
+export async function getCheckoutPrefill(): Promise<GetCheckoutPrefillResult> {
+  const fn = httpsCallable<Record<string, never>, GetCheckoutPrefillResult>(
+    getLeelaFunctions(),
+    'getCheckoutPrefill'
+  );
+  const res = await fn({});
   return res.data;
 }
 

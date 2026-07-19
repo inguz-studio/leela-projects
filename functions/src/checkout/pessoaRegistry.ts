@@ -114,6 +114,9 @@ export function planejarPessoasDoCheckout(
       ...(inscrito.nascimento !== undefined
         ? { nascimento: inscrito.nascimento }
         : {}),
+      // RN-154 (CK2-T2): gênero declarado alimenta o prefill da própria
+      // pessoa ('nao_informado' não apaga declaração anterior — merge core).
+      ...(inscrito.genero !== undefined ? { genero: inscrito.genero } : {}),
     };
     if (ehResponsavel) {
       if (typeof input.responsavel.telefone === 'string') {

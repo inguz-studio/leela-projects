@@ -417,6 +417,7 @@ export {
   cotarInscricaoCheckout,
   createInscricaoCharge,
   confirmarPagamentoSandbox,
+  getCheckoutPrefill,
 } from './checkout';
 export type {
   CotarItemInput,
@@ -427,10 +428,13 @@ export type {
   KitInscritoInput,
   CheckoutInscritoInput,
   CheckoutEnderecoInput,
+  CheckoutPrefill,
+  CheckoutPrefillEndereco,
   CreateInscricaoChargeInput,
   CreateInscricaoChargeResult,
   ConfirmarPagamentoSandboxInput,
   ConfirmarPagamentoSandboxResult,
+  GetCheckoutPrefillResult,
 } from './checkout';
 
 // ---------------------------------------------------------------------------
