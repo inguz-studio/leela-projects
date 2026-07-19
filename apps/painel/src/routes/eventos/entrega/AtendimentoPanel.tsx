@@ -22,6 +22,7 @@ import type { VincularChipResult, RegistrarEntregaResult } from '@leela/api-clie
 import { filtrarInscritos } from '../_lib/inscritosFiltro';
 import { kitInscritoBadge } from '../_lib/kitLabels';
 import { itensDoKit, passoAtual, passosStepper } from '../_lib/balcao';
+import { rotuloSufixo } from '../_lib/gradeTamanhos';
 
 export interface AtendimentoPanelProps {
   evento: Evento;
@@ -196,7 +197,7 @@ export function AtendimentoPanel({
       />
 
       {!concluido && itens.length > 0 && (
-        <ChecklistKit itens={itens} kitLabel={kit.label} />
+        <ChecklistKit itens={itens} kitLabel={kit.label} tamanhos={atual.tamanhos} />
       )}
 
       {concluido ? (
@@ -297,9 +298,12 @@ function BuscaAtleta({
 function ChecklistKit({
   itens,
   kitLabel,
+  tamanhos,
 }: {
   itens: ItemKit[];
   kitLabel: string;
+  /** Escolhas do inscrito (`tamanhos[itemId]` = sufixo de SKU — RN-223/231). */
+  tamanhos: Record<string, string>;
 }): JSX.Element {
   return (
     <section
@@ -321,9 +325,16 @@ function ChecklistKit({
             />
             <span className="flex-1 text-[var(--text-primary)]">
               {item.nome}
-              {item.tamanhado && (
-                <span className="text-[var(--text-tertiary)]"> · tamanho a conferir</span>
-              )}
+              {/* RN-231: mostra o corte+tamanho ESCOLHIDOS pelo atleta (entrega
+                  por corte×tamanho); sem escolha registrada, conferir à mão. */}
+              {item.tamanhado &&
+                (tamanhos[item.id] !== undefined ? (
+                  <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+                    {' '}· {rotuloSufixo(tamanhos[item.id]!)}
+                  </span>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]"> · tamanho a conferir</span>
+                ))}
             </span>
             {item.origem === 'patrocinador' && item.marca && (
               <Badge variant="neutro">{item.marca}</Badge>

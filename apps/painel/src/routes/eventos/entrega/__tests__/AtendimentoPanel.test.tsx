@@ -143,3 +143,36 @@ describe('AtendimentoPanel', () => {
     await waitFor(() => expect(vincular).toHaveBeenLastCalledWith('ins-1', 'ABC123', true));
   });
 });
+
+describe('AtendimentoPanel — entrega por corte x tamanho (RN-231 · TAMANHOS-GRADE)', () => {
+  it('checklist mostra o corte+tamanho ESCOLHIDOS pelo atleta', async () => {
+    setup({
+      evento: { usaChip: false },
+      inscrito: { kit: 'kit_ouro', tamanhos: { 'item-1': 'feminina__M' } },
+      itensKit: [mkItem({ id: 'item-1', tamanhado: true })],
+    });
+    await selecionar('Marina Silva');
+    expect(screen.getByText(/· Feminina M/)).toBeInTheDocument();
+    expect(screen.queryByText('· tamanho a conferir')).not.toBeInTheDocument();
+  });
+
+  it('sufixo bare (unissex/legado) mostra so o tamanho', async () => {
+    setup({
+      evento: { usaChip: false },
+      inscrito: { kit: 'kit_ouro', tamanhos: { 'item-1': 'GG' } },
+      itensKit: [mkItem({ id: 'item-1', tamanhado: true })],
+    });
+    await selecionar('Marina Silva');
+    expect(screen.getByText(/· GG/)).toBeInTheDocument();
+  });
+
+  it('sem escolha registrada degrada para "tamanho a conferir"', async () => {
+    setup({
+      evento: { usaChip: false },
+      inscrito: { kit: 'kit_ouro', tamanhos: {} },
+      itensKit: [mkItem({ id: 'item-1', tamanhado: true })],
+    });
+    await selecionar('Marina Silva');
+    expect(screen.getByText('· tamanho a conferir')).toBeInTheDocument();
+  });
+});

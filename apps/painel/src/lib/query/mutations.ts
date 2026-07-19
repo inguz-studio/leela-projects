@@ -23,6 +23,7 @@ import {
   criarEvento,
   criarPatrocinador,
   decideRefund,
+  encerrarEncomendasItem,
   despublicarPaginaVendas,
   estornarInscricao,
   getLeelaDb,
@@ -73,6 +74,7 @@ import {
   type SetClaimsEquipeResult,
   type TransferirPropriedadeResult,
   type TransicaoAprovisionamentoResult,
+  type EncerrarEncomendasItemResult,
   type TransitionResult,
 } from '@leela/api-client';
 import type {
@@ -302,6 +304,28 @@ export function useTransicaoAprovisionamento(
   return useMutation<TransicaoAprovisionamentoResult, Error, TransicaoAprovisionamentoVars>({
     mutationFn: ({ sku, novoEstado, qtd }) =>
       transicaoAprovisionamento(getLeelaFunctions(), { eventoId, sku, novoEstado, qtd }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.aprovisionamento.doEvento(eventoId),
+      });
+    },
+  });
+}
+
+/**
+ * Encerra as ENCOMENDAS de um item (RN-232 · TAMANHOS-GRADE): todos os SKUs do
+ * item em `estimativa` viram `encomendado` com a foto vendida do instante,
+ * numa transação do SERVIDOR (callable `encerrarEncomendasItem`). NÃO fecha as
+ * vendas do kit. Idempotente (SKU já encerrado é pulado). Invalida a chave de
+ * aprovisionamento — a tela de Estoque reflete os novos estados sem reload.
+ */
+export function useEncerrarEncomendasItem(
+  eventoId: string,
+): UseMutationResult<EncerrarEncomendasItemResult, Error, { itemId: string }> {
+  const queryClient = useQueryClient();
+  return useMutation<EncerrarEncomendasItemResult, Error, { itemId: string }>({
+    mutationFn: ({ itemId }) =>
+      encerrarEncomendasItem(getLeelaFunctions(), { eventoId, itemId }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.aprovisionamento.doEvento(eventoId),

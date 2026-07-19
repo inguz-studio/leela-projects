@@ -44,7 +44,19 @@ brief retomada: `.nirvana/briefs/leela-tamanhos-grade-RETOMADA-enriched.md`
       15.22.4 recusa o Java 17 do PATH): estoque 21/21 (grade 2D, retrocompat, estorno 2D,
       encerrar RN-232 foto/idempotência/guards, rules grade) · checkout 12/12 (honesto grade,
       5 ataques). Fixtures do painel ganharam `corte: 'unissex'`.
-- [ ] T2 — ciclo do organizador no painel (encomenda/encerrar/estoque 2D/entregas)
+- [x] T2 — ciclo do organizador no painel: (a) ItemKitModal ganha GRADE por corte
+      (checkbox por corte + tamanhos CSV; legado carrega como unissex; salvar grava
+      grade + união em tamanhosDisponiveis; item que vira "único" REMOVE a grade —
+      api-client aceita grade:null→deleteField); (b) encomenda = coluna Vendido por
+      corte×tamanho (coluna Corte só quando há separação); (c) botão "Encerrar
+      encomendas · item" + ConfirmModal com semântica explícita → callable RN-232
+      (hook useEncerrarEncomendasItem); (d) ajuste de estoque 2D = fluxo em_estoque
+      existente por SKU 3-seg (modal mostra o corte); (e) coluna Entregues
+      (entregues/escolhidos por SKU, derivação pura do fulfillment do balcão
+      presencaRegistrada) + checklist do balcão mostra corte+tamanho escolhidos.
+      Lib pura nova: apps/painel/src/routes/eventos/_lib/gradeTamanhos.ts.
+      Gates: tsc/eslint painel 0 · RTL novas verdes · suíte painel COMPLETA
+      1232/1232 (baseline 1167 + novas).
 - [ ] T3 — checkout corte-primeiro na landing
 - [ ] T-extra — eventoSlug no reader do promotor (commit separado)
 - [ ] Gates: tsc/eslint 0 · unit core · integração emulator teste (portas próprias, NUNCA 8180) · suíte painel · suíte landing · RTL UIs novas

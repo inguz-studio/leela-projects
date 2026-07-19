@@ -12,6 +12,7 @@
 // =============================================================================
 
 import {
+  deleteField,
   collection,
   deleteDoc,
   doc,
@@ -165,9 +166,10 @@ export interface SalvarItemKitInput {
   /**
    * RN-231 (TAMANHOS-GRADE) — grade por corte do item tamanhado. Quando a UI
    * envia grade, DEVE espelhar `tamanhosDisponiveis` com a UNIÃO dos tamanhos
-   * (superfícies legadas de exibição); toda validação/SKU lê a grade efetiva.
+   * `null` REMOVE a grade do doc (item que deixa de ser tamanhado — grade
+   * órfã em item não tamanhado é rejeitada pelas Rules e pelo parse).
    */
-  grade?: GradeCorte[];
+  grade?: GradeCorte[] | null;
   /** N:N — ids dos kits que usam o item (RN-215) */
   kits: string[];
 }
@@ -202,7 +204,7 @@ export async function salvarItemKit(
     payload['tamanhosDisponiveis'] = input.tamanhosDisponiveis;
   }
   if (input.grade !== undefined) {
-    payload['grade'] = input.grade;
+    payload['grade'] = input.grade === null ? deleteField() : input.grade;
   }
   await setDoc(doc(db, 'itensKit', itemId), payload, { merge: true });
 }

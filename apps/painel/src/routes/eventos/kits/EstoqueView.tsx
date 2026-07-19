@@ -27,6 +27,7 @@ import {
   KpiCard,
   Badge,
   Button,
+  ConfirmModal,
   EmptyState,
   Input,
   Modal,
@@ -39,6 +40,8 @@ import {
 import {
   LIMIAR_BAIXA_SKU_DEFAULT,
   TRANSICOES_APROVISIONAMENTO,
+  gradeEfetivaDoItem,
+  tamanhosDoCorte,
   type Aprovisionamento,
   type EstadoAprovisionamento,
   type Inscrito,
@@ -52,6 +55,7 @@ import {
   type LinhaMatriz,
 } from '../_lib/distribuicao';
 import { formatInt } from '../_lib/format';
+import { CORTE_LABEL, ORDEM_CORTES, entregasPorSku } from '../_lib/gradeTamanhos';
 
 export interface EstoqueViewProps {
   kits: Kit[];
@@ -70,6 +74,14 @@ export interface EstoqueViewProps {
     novoEstado: EstadoAprovisionamento,
     qtd: number
   ) => Promise<void>;
+  /**
+   * Encerra as ENCOMENDAS do item (RN-232 · TAMANHOS-GRADE) via callable —
+   * todos os SKUs em `estimativa` viram `encomendado` com a foto vendida do
+   * instante, numa transação do servidor. NÃO fecha as vendas do kit.
+   */
+  onEncerrarEncomendas: (
+    itemId: string
+  ) => Promise<{ encerrados: string[]; jaEncerrados: string[] }>;
   loading: boolean;
   error: Error | null;
 }
@@ -99,8 +111,10 @@ function proximoEstado(
 }
 
 /**
- * Ordena SKUs por item e, dentro do item, pela ordem CANÔNICA de
- * `tamanhosDisponiveis` do catálogo (P antes de M antes de G — não alfabética).
+ * Ordena SKUs por item; dentro do item por CORTE (feminina → masculina →
+ * unissex — RN-231) e, dentro do corte, pela ordem CANÔNICA da grade do
+ * catálogo (P antes de M antes de G — não alfabética; legado usa
+ * `tamanhosDisponiveis` ≡ grade unissex via gradeEfetivaDoItem).
  * Ordenação de EXIBIÇÃO apenas — nenhum agregado é recalculado aqui.
  */
 function ordenarSkus(
@@ -109,7 +123,11 @@ function ordenarSkus(
 ): Aprovisionamento[] {
   return [...aprovisionamento].sort((a, b) => {
     if (a.itemId !== b.itemId) return a.itemId.localeCompare(b.itemId);
-    const tamanhos = itensPorId.get(a.itemId)?.tamanhosDisponiveis ?? [];
+    if (a.corte !== b.corte) {
+      return ORDEM_CORTES.indexOf(a.corte) - ORDEM_CORTES.indexOf(b.corte);
+    }
+    const item = itensPorId.get(a.itemId);
+    const tamanhos = item ? tamanhosDoCorte(gradeEfetivaDoItem(item), a.corte) : [];
     const ia = tamanhos.indexOf(a.tamanho);
     const ib = tamanhos.indexOf(b.tamanho);
     if (ia !== -1 && ib !== -1) return ia - ib;
@@ -141,6 +159,7 @@ export function EstoqueView({
   aprovisionamento,
   itens,
   onTransicao,
+  onEncerrarEncomendas,
   loading,
   error,
 }: EstoqueViewProps): JSX.Element {
@@ -150,6 +169,9 @@ export function EstoqueView({
     row: Aprovisionamento;
     alvo: EstadoAprovisionamento;
   } | null>(null);
+  // Item com encerramento de encomendas pedido (ConfirmModal) — null = fechado.
+  const [encerrando, setEncerrando] = React.useState<string | null>(null);
+  const [busyEncerrar, setBusyEncerrar] = React.useState(false);
 
   if (loading) {
     return (
@@ -183,6 +205,17 @@ export function EstoqueView({
   // `alerta` vem CARIMBADO no doc pela Function (limiar baixa = 10 default) —
   // filtro de exibição, não derivação.
   const skusEmAlerta = skus.filter((s) => s.alerta !== null);
+  // Grade em uso? (algum SKU com corte explícito) — a coluna Corte só aparece
+  // quando existe separação; evento 100% legado/unissex mantém a tabela enxuta.
+  const temCorte = skus.some((s) => s.corte !== 'unissex');
+  // ENTREGAS por corte×tamanho (RN-232·e): derivação PURA dos inscritos —
+  // entregue = presença registrada (kit retirado no balcão, RN-205).
+  const entregas = entregasPorSku(inscritos);
+  // Itens com encomenda aberta (algum SKU em `estimativa`) — alvo da ação
+  // "Encerrar encomendas" (RN-232). Ordem estável por nome.
+  const itensComEncomendaAberta = [...new Set(
+    skus.filter((s) => s.estado === 'estimativa').map((s) => s.itemId)
+  )].sort((a, b) => nomeDoItem(a).localeCompare(nomeDoItem(b)));
 
   const columns: TableColumn<LinhaMatriz>[] = [
     { key: 'nome', header: 'Kit', render: (r) => r.nome },
@@ -245,6 +278,17 @@ export function EstoqueView({
   // alerta — TODOS lidos do doc (∑ da Function), zero recálculo no cliente.
   const columnsSku: TableColumn<Aprovisionamento>[] = [
     { key: 'item', header: 'Item', render: (r) => nomeDoItem(r.itemId) },
+    // Corte (RN-231) — só quando o evento separa por corte; dado da CHAVE do
+    // doc (parse do core), nunca derivado aqui.
+    ...(temCorte
+      ? [
+          {
+            key: 'corte',
+            header: 'Corte',
+            render: (r) => CORTE_LABEL[r.corte],
+          } satisfies TableColumn<Aprovisionamento>,
+        ]
+      : []),
     { key: 'tamanho', header: 'Tamanho', render: (r) => r.tamanho },
     {
       key: 'vendido',
@@ -275,6 +319,26 @@ export function EstoqueView({
           {formatInt(r.aEncomendar)}
         </span>
       ),
+    },
+    {
+      key: 'entregues',
+      header: 'Entregues',
+      align: 'right',
+      // RN-232·e: acompanhamento de ENTREGAS por corte×tamanho no
+      // credenciamento — entregues / escolhidos (pendentes = diferença),
+      // derivado do fulfillment do balcão (presença registrada, RN-205).
+      render: (r) => {
+        const e = entregas.get(r.id);
+        if (!e) return <span className="text-[var(--text-tertiary)]">—</span>;
+        return (
+          <span className="[font-variant-numeric:tabular-nums]">
+            <span className="text-[var(--text-primary)]">{formatInt(e.entregues)}</span>
+            <span className="text-[var(--text-tertiary)]">
+              {' '}/ {formatInt(e.entregues + e.pendentes)}
+            </span>
+          </span>
+        );
+      },
     },
     {
       key: 'estado',
@@ -316,6 +380,30 @@ export function EstoqueView({
       },
     },
   ];
+
+  async function confirmarEncerramento(): Promise<void> {
+    if (encerrando === null) return;
+    setBusyEncerrar(true);
+    try {
+      const r = await onEncerrarEncomendas(encerrando);
+      toast({
+        title: 'Encomendas encerradas',
+        description:
+          `${formatInt(r.encerrados.length)} SKU(s) foram para "Encomendado" com a contagem ` +
+          `vendida de agora${r.jaEncerrados.length > 0 ? `; ${formatInt(r.jaEncerrados.length)} já estavam além de estimativa` : ''}. As vendas continuam abertas.`,
+        variant: 'success',
+      });
+      setEncerrando(null);
+    } catch (e) {
+      toast({
+        title: 'Falha ao encerrar encomendas',
+        ...(e instanceof Error && e.message ? { description: e.message } : {}),
+        variant: 'danger',
+      });
+    } finally {
+      setBusyEncerrar(false);
+    }
+  }
 
   async function confirmarTransicao(qtd: number): Promise<void> {
     if (!transicao) return;
@@ -437,11 +525,30 @@ export function EstoqueView({
             Estoque por tamanho
           </h3>
           <p className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-            Um SKU por (item tamanhado × tamanho). Vendido, físico e "a encomendar" são
-            agregados pelo servidor a cada venda confirmada; o estado avança em
-            estimativa → encomendado → em estoque.
+            Um SKU por (item tamanhado × corte × tamanho). Vendido, físico e "a
+            encomendar" são agregados pelo servidor a cada venda confirmada; o estado
+            avança em estimativa → encomendado → em estoque. "Entregues" acompanha a
+            retirada no credenciamento.
           </p>
         </div>
+        {/* ENCERRAR ENCOMENDAS (RN-232): a contagem vendida de AGORA vira a foto
+            da produção (todos os SKUs do item em estimativa → encomendado, numa
+            transação do servidor). NÃO fecha as vendas — quem comprar depois
+            aparece em "a encomendar". */}
+        {itensComEncomendaAberta.length > 0 && (
+          <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
+            {itensComEncomendaAberta.map((itemId) => (
+              <Button
+                key={itemId}
+                variant="secondary"
+                size="sm"
+                onClick={() => setEncerrando(itemId)}
+              >
+                Encerrar encomendas · {nomeDoItem(itemId)}
+              </Button>
+            ))}
+          </div>
+        )}
         {skus.length === 0 ? (
           // EmptyState HONESTO: evento sem SKU tamanhado. Item único (sacochila)
           // não gera SKU por definição (S210-T3); os docs materializam com a
@@ -473,6 +580,27 @@ export function EstoqueView({
         nomeDoItem={nomeDoItem}
         onFechar={() => setTransicao(null)}
         onConfirmar={confirmarTransicao}
+      />
+
+      {/* Confirmação do encerramento (RN-232) — semântica explícita: foto da
+          produção, vendas seguem abertas. */}
+      <ConfirmModal
+        open={encerrando !== null}
+        onOpenChange={(open) => {
+          if (!open) setEncerrando(null);
+        }}
+        title="Encerrar encomendas do item?"
+        {...(encerrando !== null ? { target: nomeDoItem(encerrando) } : {})}
+        description="A contagem vendida de agora vira a encomenda de produção, por corte e tamanho."
+        loses={['Os SKUs em estimativa passam a "Encomendado" com a contagem atual (a foto não muda depois)']}
+        keeps={[
+          'As vendas do kit continuam abertas — encerrar encomenda não trava a compra',
+          'Quem comprar depois aparece em "a encomendar" quando o estoque chegar',
+        ]}
+        confirmLabel="Encerrar encomendas"
+        cancelLabel="Cancelar"
+        loading={busyEncerrar}
+        onConfirm={() => void confirmarEncerramento()}
       />
     </div>
   );
@@ -546,7 +674,11 @@ function TransicaoSkuModal({
       <div className="flex flex-col gap-[var(--spacing-4)]">
         {transicao && (
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            {nomeDoItem(transicao.row.itemId)} · tamanho {transicao.row.tamanho}
+            {nomeDoItem(transicao.row.itemId)}
+            {transicao.row.corte !== 'unissex' && (
+              <> · corte {CORTE_LABEL[transicao.row.corte].toLowerCase()}</>
+            )}{' '}
+            · tamanho {transicao.row.tamanho}
           </p>
         )}
         <Input

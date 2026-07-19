@@ -68,6 +68,9 @@ function mkItem(over: Partial<ItemKit>): ItemKit {
 
 function renderEstoque(over: Partial<EstoqueViewProps> = {}) {
   const onTransicao = over.onTransicao ?? vi.fn().mockResolvedValue(undefined);
+  const onEncerrarEncomendas =
+    over.onEncerrarEncomendas ??
+    vi.fn().mockResolvedValue({ encerrados: [], jaEncerrados: [] });
   render(
     <ToastProvider>
       <EstoqueView
@@ -80,10 +83,11 @@ function renderEstoque(over: Partial<EstoqueViewProps> = {}) {
         error={null}
         {...over}
         onTransicao={onTransicao}
+        onEncerrarEncomendas={onEncerrarEncomendas}
       />
     </ToastProvider>,
   );
-  return { onTransicao };
+  return { onTransicao, onEncerrarEncomendas };
 }
 
 describe('DistribuicaoView', () => {
@@ -280,6 +284,84 @@ describe('EstoqueView', () => {
 
     await waitFor(() =>
       expect(screen.getByText('Falha na transição do SKU')).toBeInTheDocument(),
+    );
+  });
+});
+
+describe('EstoqueView — grade por corte (RN-231/232 · TAMANHOS-GRADE)', () => {
+  const aprovGrade = [
+    mkAprov({ id: 'camiseta__feminina__M', corte: 'feminina', tamanho: 'M', qtdVendida: 3, aEncomendar: 3 }),
+    mkAprov({ id: 'camiseta__masculina__G', corte: 'masculina', tamanho: 'G', qtdVendida: 1, aEncomendar: 1 }),
+  ];
+
+  it('SKU com corte mostra a coluna Corte com o rotulo pt-BR', () => {
+    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})] });
+    expect(screen.getAllByText('Corte').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Feminina').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Masculina').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('evento 100% unissex/legado NAO mostra a coluna Corte (tabela enxuta)', () => {
+    renderEstoque({ aprovisionamento: [mkAprov({})], itens: [mkItem({})] });
+    expect(screen.queryAllByText('Corte')).toHaveLength(0);
+  });
+
+  it('coluna Entregues acompanha a retirada por corte x tamanho (fulfillment do balcao)', () => {
+    const inscritos = [
+      // entregue (presenca registrada) — SKU feminina M
+      mkInscrito({ id: 'e1', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado', checkinEm: AGORA, tamanhos: { camiseta: 'feminina__M' } }),
+      // pendente — mesmo SKU
+      mkInscrito({ id: 'e2', kit: 'kit_ouro', modalidade: '21k', status: 'confirmado', tamanhos: { camiseta: 'feminina__M' } }),
+    ];
+    renderEstoque({ inscritos, aprovisionamento: aprovGrade, itens: [mkItem({})] });
+    expect(screen.getAllByText('Entregues').length).toBeGreaterThanOrEqual(1);
+    // 1 entregue de 2 escolhidos no SKU feminina M
+    expect(screen.getAllByText('/ 2').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('ENCERRAR ENCOMENDAS: confirma no modal e chama a callable com o itemId', async () => {
+    const onEncerrarEncomendas = vi.fn().mockResolvedValue({
+      encerrados: ['camiseta__feminina__M', 'camiseta__masculina__G'],
+      jaEncerrados: [],
+    });
+    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /Encerrar encomendas · Camiseta oficial/ }),
+    );
+    // Semantica explicita no modal: vendas continuam abertas
+    expect(await screen.findByText(/continuam abertas/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Encerrar encomendas' }));
+
+    await waitFor(() => expect(onEncerrarEncomendas).toHaveBeenCalledWith('camiseta'));
+    await waitFor(() =>
+      expect(screen.getByText('Encomendas encerradas')).toBeInTheDocument(),
+    );
+  });
+
+  it('item sem SKU em estimativa NAO oferece encerrar encomendas', () => {
+    renderEstoque({
+      aprovisionamento: [
+        mkAprov({ id: 'camiseta__feminina__M', corte: 'feminina', estado: 'encomendado' }),
+      ],
+      itens: [mkItem({})],
+    });
+    expect(
+      screen.queryByRole('button', { name: /Encerrar encomendas/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('falha do servidor no encerramento vira Toast (mensagem intacta)', async () => {
+    const onEncerrarEncomendas = vi
+      .fn()
+      .mockRejectedValue(new Error('Evento pertence a outro tenant (RN-400).'));
+    renderEstoque({ aprovisionamento: aprovGrade, itens: [mkItem({})], onEncerrarEncomendas });
+    await userEvent.click(
+      screen.getByRole('button', { name: /Encerrar encomendas · Camiseta oficial/ }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Encerrar encomendas' }));
+    await waitFor(() =>
+      expect(screen.getByText('Falha ao encerrar encomendas')).toBeInTheDocument(),
     );
   });
 });

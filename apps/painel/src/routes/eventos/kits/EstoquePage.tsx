@@ -15,7 +15,10 @@ import { EstoqueView } from './EstoqueView';
 import { useKits, useItensKit } from '../_data/kits';
 import { useTodosInscritos } from '../_data/inscritos';
 import { useAprovisionamento } from '../_data/estoque';
-import { useTransicaoAprovisionamento } from '../../../lib/query/mutations';
+import {
+  useEncerrarEncomendasItem,
+  useTransicaoAprovisionamento,
+} from '../../../lib/query/mutations';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
 export function EstoquePage(): JSX.Element {
@@ -25,6 +28,7 @@ export function EstoquePage(): JSX.Element {
   const aprovisionamento = useAprovisionamento(evento.id);
   const itens = useItensKit(evento.id);
   const transicao = useTransicaoAprovisionamento(evento.id);
+  const encerrar = useEncerrarEncomendasItem(evento.id);
 
   return (
     <EstoqueView
@@ -38,6 +42,7 @@ export function EstoquePage(): JSX.Element {
       onTransicao={(sku: string, novoEstado: EstadoAprovisionamento, qtd: number) =>
         transicao.mutateAsync({ sku, novoEstado, qtd }).then(() => undefined)
       }
+      onEncerrarEncomendas={(itemId: string) => encerrar.mutateAsync({ itemId })}
       loading={kits.loading || inscritos.loading || aprovisionamento.loading || itens.loading}
       error={kits.error ?? inscritos.error ?? aprovisionamento.error}
     />
