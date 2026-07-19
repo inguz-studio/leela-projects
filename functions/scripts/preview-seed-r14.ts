@@ -43,7 +43,7 @@ async function upsert(
   data: Record<string, unknown>,
 ): Promise<void> {
   const snap = await ref.get();
-  const payload = {
+  const payload: Record<string, unknown> = {
     ...data,
     atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
   };

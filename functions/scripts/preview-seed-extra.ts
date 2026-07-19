@@ -63,7 +63,10 @@ async function upsert(
   criadoEm?: admin.firestore.Timestamp
 ): Promise<void> {
   const snap = await ref.get();
-  const payload = { ...data, atualizadoEm: admin.firestore.FieldValue.serverTimestamp() };
+  const payload: Record<string, unknown> = {
+    ...data,
+    atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+  };
   if (!snap.exists) {
     payload['criadoEm'] = criadoEm ?? admin.firestore.FieldValue.serverTimestamp();
   }
@@ -425,22 +428,49 @@ interface KitExtra {
   preco: number;
   capacidade: number;
   modalidades: string[];
+  /** R9-C (RN-229) — visão de compra no checkout do preview. */
+  descricao: string;
+  itens: string[];
 }
 
+// R9-C: descricao/itens coerentes com o tema de cada evento (imagem NÃO é
+// semeada — mock rico é app-side no checkout; imagem real = upload RN-227).
 const KITS_EXTRA: readonly KitExtra[] = [
-  { eventoId: INVERNO_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 250, modalidades: ['5k', '10k'] },
-  { eventoId: INVERNO_ID, id: 'kit_prata', nome: 'Kit Prata', preco: 45, capacidade: 150, modalidades: ['10k'] },
-  { eventoId: NOTURNA_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 40, modalidades: ['5k', '10k'] },
-  { eventoId: NOTURNA_ID, id: 'kit_ouro', nome: 'Kit Ouro Neon', preco: 79, capacidade: 20, modalidades: ['10k'] },
-  { eventoId: TRILHA_ID, id: 'kit_basico', nome: 'Kit trilha', preco: 0, capacidade: 80, modalidades: ['11k'] },
-  { eventoId: SAO_SILVESTRE_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 100, modalidades: ['10k'] },
-  { eventoId: SAO_SILVESTRE_ID, id: 'sem_kit', nome: 'Sem kit', preco: -10, capacidade: 20, modalidades: ['10k'] },
+  { eventoId: INVERNO_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 250, modalidades: ['5k', '10k'],
+    descricao: 'O essencial para encarar o frio: camiseta manga longa e número de peitoral.',
+    itens: ['Camiseta manga longa Inverno', 'Número de peitoral com chip'] },
+  { eventoId: INVERNO_ID, id: 'kit_prata', nome: 'Kit Prata', preco: 45, capacidade: 150, modalidades: ['10k'],
+    descricao: 'Para os 10k com conforto térmico completo no amanhecer gelado.',
+    itens: ['Camiseta manga longa Inverno', 'Gorro térmico (Decathlon)', 'Número de peitoral com chip'] },
+  { eventoId: NOTURNA_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 40, modalidades: ['5k', '10k'],
+    descricao: 'O necessário para correr à noite com segurança.',
+    itens: ['Pulseira LED de segurança (Track&Field)', 'Número de peitoral com chip'] },
+  { eventoId: NOTURNA_ID, id: 'kit_ouro', nome: 'Kit Ouro Neon', preco: 79, capacidade: 20, modalidades: ['10k'],
+    descricao: 'A experiência neon completa da prova noturna, com itens exclusivos.',
+    itens: ['Camiseta neon exclusiva', 'Pulseira LED de segurança (Track&Field)', 'Medalha de finisher', 'Número de peitoral com chip'] },
+  { eventoId: TRILHA_ID, id: 'kit_basico', nome: 'Kit trilha', preco: 0, capacidade: 80, modalidades: ['11k'],
+    descricao: 'Kit enxuto para os 11k de trilha: número, mapa e hidratação nos postos.',
+    itens: ['Número de peitoral', 'Mapa do percurso', 'Hidratação nos postos'] },
+  { eventoId: SAO_SILVESTRE_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 100, modalidades: ['10k'],
+    descricao: 'O kit da virada: camiseta comemorativa e medalha de finisher.',
+    itens: ['Camiseta comemorativa', 'Medalha de finisher', 'Número de peitoral com chip'] },
+  { eventoId: SAO_SILVESTRE_ID, id: 'sem_kit', nome: 'Sem kit', preco: -10, capacidade: 20, modalidades: ['10k'],
+    descricao: 'Inscrição sem kit, com desconto — vaga garantida e resultado oficial.',
+    itens: ['Número de peitoral com chip', 'Cronometragem e resultado oficiais'] },
   // A2 — ciclismo (MTB)
-  { eventoId: MTB_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 200, modalidades: ['MTB 45km', 'MTB 90km'] },
-  { eventoId: MTB_ID, id: 'kit_prata', nome: 'Kit Prata MTB', preco: 55, capacidade: 100, modalidades: ['MTB 90km'] },
+  { eventoId: MTB_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 200, modalidades: ['MTB 45km', 'MTB 90km'],
+    descricao: 'O essencial para pedalar: placa de guidão com chip e hidratação.',
+    itens: ['Placa de guidão com chip', 'Hidratação nos postos'] },
+  { eventoId: MTB_ID, id: 'kit_prata', nome: 'Kit Prata MTB', preco: 55, capacidade: 100, modalidades: ['MTB 90km'],
+    descricao: 'Para os 90km: camisa de ciclismo e apoio mecânico no percurso.',
+    itens: ['Camisa de ciclismo do evento', 'Placa de guidão com chip', 'Apoio mecânico no percurso'] },
   // A2 — wellness (retiro)
-  { eventoId: RETIRO_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 40, modalidades: ['Yoga', 'Bem-estar'] },
-  { eventoId: RETIRO_ID, id: 'kit_ouro', nome: 'Kit Bem-Estar Plus', preco: 89, capacidade: 20, modalidades: ['Bem-estar'] },
+  { eventoId: RETIRO_ID, id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 40, modalidades: ['Yoga', 'Bem-estar'],
+    descricao: 'O necessário para as práticas do fim de semana.',
+    itens: ['Credencial de acesso', 'Squeeze do retiro'] },
+  { eventoId: RETIRO_ID, id: 'kit_ouro', nome: 'Kit Bem-Estar Plus', preco: 89, capacidade: 20, modalidades: ['Bem-estar'],
+    descricao: 'A imersão completa: tapete próprio, kit chá e acesso às sessões guiadas.',
+    itens: ['Tapete de yoga do evento', 'Kit chá artesanal', 'Credencial de acesso', 'Sessões guiadas extras'] },
 ];
 
 interface ItemKitExtra {
@@ -486,7 +516,9 @@ const ITENS_KIT_EXTRA: readonly ItemKitExtra[] = [
   },
 ];
 
-async function seedKitsExtra(db: Db): Promise<void> {
+// Exportada (R9-C) para rodada targeted/aditiva do modelo do kit no preview
+// sem reexecutar o seed-extra inteiro (financeiro/rollups etc. intactos).
+export async function seedKitsExtra(db: Db): Promise<void> {
   for (const kit of KITS_EXTRA) {
     await upsert(
       db.collection('eventos').doc(kit.eventoId).collection('kits').doc(kit.id),
@@ -497,6 +529,9 @@ async function seedKitsExtra(db: Db): Promise<void> {
         preco: kit.preco,
         capacidade: kit.capacidade,
         modalidades: kit.modalidades,
+        // R9-C (RN-229) — visão de compra do checkout
+        descricao: kit.descricao,
+        itens: kit.itens,
       }
     );
   }

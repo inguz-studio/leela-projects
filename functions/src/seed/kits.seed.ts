@@ -32,6 +32,14 @@ export interface KitSeedDef {
   preco: number;
   capacidade: number;
   modalidades: string[];
+  /** R9-C (RN-229) — frase que posiciona o kit na visão do checkout. */
+  descricao: string;
+  /**
+   * R9-C (RN-229) — "o que está incluso". Quando ausente, o seed DERIVA do
+   * catálogo canônico (`ITEM_KIT_SEEDS` cujo `kits[]` contém o kit) — uma
+   * fonte só, sem texto duplicado. `sem_kit` (fora do catálogo) declara.
+   */
+  itens?: string[];
 }
 
 // CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): o id do kit canônico É o valor do
@@ -39,12 +47,40 @@ export interface KitSeedDef {
 // Kit.id` casa DIRETO, sem ponte de delimitador (kitCasa/kitDocId removidos).
 // Ids legados com hífen (`kit-ouro`) são apagados por `limparKitsLegados`.
 export const KIT_SEEDS: KitSeedDef[] = [
-  { id: 'kit_ouro', nome: 'Kit Ouro', preco: 89, capacidade: 80, modalidades: ['21k'] },
-  { id: 'kit_prata', nome: 'Kit Prata', preco: 35, capacidade: 260, modalidades: ['10k', '21k'] },
-  { id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 300, modalidades: ['5k', '10k', '21k'] },
+  {
+    id: 'kit_ouro', nome: 'Kit Ouro', preco: 89, capacidade: 80, modalidades: ['21k'],
+    descricao: 'O kit mais completo da Meia Floripa — para quem quer levar a experiência inteira dos 21k.',
+  },
+  {
+    id: 'kit_prata', nome: 'Kit Prata', preco: 35, capacidade: 260, modalidades: ['10k', '21k'],
+    descricao: 'O equilíbrio entre custo e experiência, com os itens que mais importam no dia da prova.',
+  },
+  {
+    id: 'kit_basico', nome: 'Kit básico', preco: 0, capacidade: 300, modalidades: ['5k', '10k', '21k'],
+    descricao: 'O essencial para largar: camiseta, número de peitoral e hidratação na chegada.',
+  },
   // RN-211: "Sem kit" é kit válido com preço NEGATIVO (desconto)
-  { id: 'sem_kit', nome: 'Sem kit', preco: -15, capacidade: 60, modalidades: ['5k'] },
+  {
+    id: 'sem_kit', nome: 'Sem kit', preco: -15, capacidade: 60, modalidades: ['5k'],
+    descricao: 'Inscrição sem kit, com desconto — você garante a vaga e o número de peitoral.',
+    // Fora do catálogo de itens (nenhum ItemKit referencia sem_kit) — declara.
+    itens: ['Número de peitoral com chip', 'Cronometragem e resultado oficiais'],
+  },
 ];
+
+/**
+ * Itens exibíveis de um kit — DERIVADOS do catálogo canônico (uma fonte só):
+ * nome do item + marca quando o patrocinador exibe logo (RN-214). @pure
+ */
+export function itensDoKitSeed(kitId: string): string[] {
+  const declarado = KIT_SEEDS.find((k) => k.id === kitId)?.itens;
+  if (declarado !== undefined) return declarado;
+  return ITEM_KIT_SEEDS.filter((i) => i.kits.includes(kitId)).map((i) =>
+    i.origem === 'patrocinador' && i.exibirLogo && i.marca !== undefined
+      ? `${i.nome} (${i.marca})`
+      : i.nome
+  );
+}
 
 /** Ids legados (hífen) — removidos do Emulator ao ressemear (FABLE-E-T1). */
 const KIT_IDS_LEGADOS = ['kit-ouro', 'kit-prata', 'kit-basico', 'sem-kit'];
@@ -166,6 +202,11 @@ export async function seedKits(db: admin.firestore.Firestore): Promise<void> {
       preco: kit.preco,
       capacidade: kit.capacidade,
       modalidades: kit.modalidades,
+      // R9-C (RN-229): visão de compra — itens derivados do catálogo.
+      // Imagem NÃO é semeada (lição R14: URL relativa não passa da fronteira
+      // http(s); mock rico é app-side no checkout; imagem real = upload).
+      descricao: kit.descricao,
+      itens: itensDoKitSeed(kit.id),
       atualizadoEm: now,
     };
     if (!snap.exists) data['criadoEm'] = now;
