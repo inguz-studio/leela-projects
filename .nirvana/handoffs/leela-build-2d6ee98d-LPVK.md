@@ -8,6 +8,23 @@ brief: .nirvana/briefs/leela-lp-vendas-kit-enriched.md
 - [x] T2 — Modal de regulamento na página do evento (Dialog/Modal do DS)
 - [x] T3 — KitEditor no painel (descrição/itens/upload 1:1) + exibição no KitDetalhe
 
+## FIX + SEO (adendo Vitor mid-flight) — gates: tsc 0 · eslint 0 · brand PASS
+- BUG achado no gate: o Modal do DS é Radix Dialog e o dist do DS EXTERNALIZA
+  `@radix-ui/react-dialog`; a landing é Radix-free → a rota do evento dava 500
+  (MODULE_NOT_FOUND) só onde o Modal era puxado (home ok pois não puxa Modal).
+  FIX: modal LOCAL da landing (`RegulamentoModal`, client leaf) com tokens do DS,
+  a11y completa (role=dialog/aria-modal, 4 vias de fechar, foco entra/retorna,
+  scroll-lock); `RegulamentoSection` virou server shell. Modal removido do _ds/ds.
+- SEO/perf: CoverImage ganhou priority(eager LCP)/width/height/decoding; hero=priority
+  1600×838; galeria width/height 1200×900 + lazy + alt temático; trail recomprimido
+  409→235KB; avatar mock revertido p/ SVG (foto sob inicial leria mal).
+- DECISÃO SEO: capas mock são placeholders app-side — NÃO viram og:image/JSON-LD
+  (seria representar o evento com foto de banco). OG/JSON-LD/sitemap/robots intactos.
+
+## AMBIENTE (gate visual): dev :3200 do Vitor SATUROU (1.37GB, todas as rotas
+   penduram, inclusive a home não-tocada) durante os recompiles — NÃO derrubei.
+   Painel :5273 (saudável) capturado. Landing: ver REPORT p/ estado do gate.
+
 ## T2 FEITO (gates: tsc 0 · eslint 0 · verify:brand PASS)
 - `regulamento` (+ regulamentoVersao) projetado p/ EventoPublico (tipos + leitor,
   ≤50k REGULAMENTO_MAX, só string não-vazia; texto puro, sem dangerouslySetInnerHTML).

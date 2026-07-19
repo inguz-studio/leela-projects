@@ -16,9 +16,21 @@ import { TituloSecao } from './marca';
  * evento. Server Component; `<img>` de asset local estático.
  */
 const IMAGENS_EXEMPLO: readonly { src: string; alt: string; rotulo: string }[] = [
-  { src: '/gallery/leela-galeria-largada.jpg', alt: 'Imagem de exemplo: largada', rotulo: 'Largada' },
-  { src: '/gallery/leela-galeria-percurso.jpg', alt: 'Imagem de exemplo: percurso', rotulo: 'No percurso' },
-  { src: '/gallery/leela-galeria-chegada.jpg', alt: 'Imagem de exemplo: chegada', rotulo: 'Chegada' },
+  {
+    src: '/gallery/leela-galeria-largada.jpg',
+    alt: 'Grupo de corredores na largada de uma corrida de rua',
+    rotulo: 'Largada',
+  },
+  {
+    src: '/gallery/leela-galeria-percurso.jpg',
+    alt: 'Corredores durante o percurso de uma corrida de rua ao amanhecer',
+    rotulo: 'No percurso',
+  },
+  {
+    src: '/gallery/leela-galeria-chegada.jpg',
+    alt: 'Corredora comemorando a chegada da prova ao pôr do sol',
+    rotulo: 'Chegada',
+  },
 ];
 
 export function GaleriaSection(): React.JSX.Element {
@@ -34,7 +46,16 @@ export function GaleriaSection(): React.JSX.Element {
           <li key={img.src}>
             <figure className="overflow-hidden rounded-ds-lg border border-border-subtle bg-surface-raised shadow-elev-1">
               <div className="relative aspect-[4/3] w-full overflow-hidden">
-                <img src={img.src} alt={img.alt} className="h-full w-full object-cover" />
+                {/* Abaixo da dobra → lazy; dimensão intrínseca 4:3 (zero CLS). */}
+                <img
+                  src={img.src}
+                  alt={img.alt}
+                  width={1200}
+                  height={900}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover"
+                />
               </div>
               <figcaption className="px-4 py-3 text-sm font-semibold text-text-secondary">
                 {img.rotulo}

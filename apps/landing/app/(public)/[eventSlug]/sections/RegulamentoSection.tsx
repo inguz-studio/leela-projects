@@ -1,33 +1,27 @@
-'use client';
-
 // =============================================================================
 // RegulamentoSection — regulamento da prova em MODAL (LP-VENDAS-KIT/T2).
 //
 // Pedido do Vitor: a página do evento expõe o regulamento da competição num
-// componente visível na página inicial do evento; o clique abre um MODAL
-// (Dialog do DS — governança §8) com o conteúdo REAL do campo `regulamento`
-// (RN-153, ≤50k; `regulamentoVersao` da RN-149 como referência de exibição).
+// componente visível na página inicial do evento; o clique abre um MODAL com o
+// conteúdo REAL do campo `regulamento` (RN-153, ≤50k; `regulamentoVersao` da
+// RN-149 como referência de exibição).
 //
-// HONESTIDADE (sem estado vazio fake): evento SEM regulamento ⇒ o componente
-// não renderiza (retorna null). O leitor server-side só projeta `regulamento`
-// quando é string não-vazia, então o gate aqui é redundante e barato.
+// SERVER COMPONENT puro (Dobra + título + descrição são server-safe, como o
+// resto das seções). Só o gatilho + o modal são client (`RegulamentoModal`) —
+// mesma disciplina de manter o SSR puro e isolar o cliente no leaf.
 //
-// SEGURANÇA: o regulamento é TEXTO puro — renderizado com `whitespace-pre-wrap`
-// (preserva quebras de linha do organizador), NUNCA `dangerouslySetInnerHTML`.
-// Client Component (o Modal do DS controla `open` por estado); o texto vem
-// server-rendered via prop serializável.
+// HONESTIDADE (sem estado vazio fake): evento SEM regulamento ⇒ a seção não
+// renderiza (retorna null). O leitor server-side só projeta `regulamento`
+// quando é string não-vazia; o gate aqui é redundante e barato.
 // =============================================================================
 
-import { useState } from 'react';
 import { FileText } from 'lucide-react';
 import type { EventoPublico } from '@/lib/tipos';
-import { Button, Modal } from '@/app/_ds/ds';
 import { Dobra } from './Dobra';
 import { TituloSecao } from './marca';
+import { RegulamentoModal } from './RegulamentoModal';
 
 export function RegulamentoSection({ evento }: { evento: EventoPublico }): React.JSX.Element | null {
-  const [aberto, setAberto] = useState(false);
-
   const regulamento = evento.regulamento;
   if (regulamento === undefined || regulamento.trim().length === 0) return null;
 
@@ -39,27 +33,10 @@ export function RegulamentoSection({ evento }: { evento: EventoPublico }): React
         participação, categorias, premiação e política de cancelamento.
       </p>
 
-      <div className="mt-6">
-        <Button variant="secondary" onClick={() => setAberto(true)}>
-          Ler regulamento completo
-        </Button>
-      </div>
-
-      <Modal
-        open={aberto}
-        onOpenChange={setAberto}
-        title="Regulamento da prova"
-        size="lg"
-        {...(evento.regulamentoVersao !== undefined
-          ? { description: `Versão ${evento.regulamentoVersao} — vigente para as inscrições atuais.` }
-          : {})}
-      >
-        {/* Texto puro, quebras preservadas; o Modal do DS já dá o scroll interno
-            (max-h + overflow-y-auto) — ritmo vertical e tipografia (Exo 2) do DS. */}
-        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">
-          {regulamento}
-        </div>
-      </Modal>
+      <RegulamentoModal
+        regulamento={regulamento}
+        {...(evento.regulamentoVersao !== undefined ? { versao: evento.regulamentoVersao } : {})}
+      />
     </Dobra>
   );
 }

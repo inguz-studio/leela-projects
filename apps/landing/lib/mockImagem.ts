@@ -8,10 +8,11 @@
 // UI usa ele; estes só entram no lugar do placeholder cinza/monograma solto.
 // =============================================================================
 
-/** Avatar de exemplo (T1) — FOTO de retrato royalty-free (Unsplash License),
- *  substitui o monograma/SVG para o bloco "Organizado por" ler como pessoa real
- *  no preview. Só entra no lugar do placeholder; dado real (avatarUrl) vence. */
-export const AVATAR_MOCK = '/mock/organizador-avatar.jpg';
+/** Avatar brasa de exemplo — fundo de marca SOB a inicial real do organizador.
+ *  Mantido em SVG (não-foto): o slot sobrepõe a INICIAL do organizador; uma
+ *  foto de rosto sob uma letra leria mal. O realismo fotográfico do T1 fica nas
+ *  capas/galeria, onde a foto é a superfície inteira. */
+export const AVATAR_MOCK = '/mock/organizador-avatar.svg';
 
 /** Logos 1:1 de exemplo para a faixa de patrocinadores (fundo transparente). */
 const LOGOS_MOCK = [

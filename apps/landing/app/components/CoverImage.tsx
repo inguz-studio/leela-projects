@@ -23,10 +23,18 @@ export function CoverImage({
   src,
   alt,
   className,
+  priority = false,
+  width,
+  height,
 }: {
   src: string | undefined;
   alt: string;
   className?: string;
+  /** Capa acima da dobra (hero/LCP) → carrega eager; o resto fica lazy. */
+  priority?: boolean;
+  /** Dimensão intrínseca (evita CLS mesmo fora de contêiner com aspect fixo). */
+  width?: number;
+  height?: number;
 }): React.JSX.Element {
   const url = src?.trim();
   const [falhou, setFalhou] = useState(false);
@@ -36,11 +44,17 @@ export function CoverImage({
   }
 
   return (
-    // next/image exige allowlist de domínio (remotePatterns), fora do escopo
-    // V1; <img> puro com fallback resiliente cobre o caso do organizador.
+    // next/image exige allowlist de domínio (remotePatterns) p/ a capa http(s)
+    // arbitrária do organizador — fora do escopo V1; <img> puro com fallback
+    // resiliente cobre o caso. SEO/perf (adendo T1): dimensão intrínseca (sem
+    // CLS), `loading` lazy por padrão e `eager` só na capa do hero (LCP).
     <img
       src={url}
       alt={alt}
+      {...(width !== undefined ? { width } : {})}
+      {...(height !== undefined ? { height } : {})}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
       className={className ?? 'h-full w-full object-cover'}
       onError={() => setFalhou(true)}
     />

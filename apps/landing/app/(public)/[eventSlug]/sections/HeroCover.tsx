@@ -7,5 +7,9 @@ import { CoverImage } from '@/app/components/CoverImage';
  * ao gradiente de tokens caso o `src` falhe em runtime (link morto).
  */
 export function HeroCover({ src, nome }: { src: string; nome: string }): React.JSX.Element {
-  return <CoverImage src={src} alt={`Capa de ${nome}`} />;
+  // Capa NÍTIDA acima da dobra = LCP: eager + dimensão intrínseca 1.9:1 (RN-228)
+  // para zero CLS. Alt descritivo com o nome do evento.
+  return (
+    <CoverImage src={src} alt={`Capa do evento ${nome}`} priority width={1600} height={838} />
+  );
 }
