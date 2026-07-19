@@ -55,10 +55,10 @@ Antecipada por decisão de 2026-07-18: fecha o produto web antes do app.
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 🔄 recorte antecipado entregue (R9-E: backend + abas Afiliados e Clubs dos dois lados + aceite PF); falta o restante do épico |
+| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 🔄 recorte antecipado (R9-E) + **fase 2 comissão entregue** (COMF2: % ou valor fixo, acúmulo na venda, estorno devolve, saldo/extrato, repasse manual registrado); falta painel do promotor + UI de comissão + split (fase 3, decisão aberta) |
 | [[LEELA-E10-marcas]] | Gerenciar patrocinadores e marcas num lugar só | 🔄 registro reutilizável + logo 1:1 + autocomplete no painel prontos (R9-E); falta a tela dedicada de marcas |
 | [[LEELA-E11-analytics]] | Análise de vendas e público unificada | 🔄 recorte antecipado entregue (R9-B: Análise vira a porta única — Analytics divergente removido —, filtro por evento com Combobox do DS recorta os 4 blocos, RN-821/RN-820 com nota de cobertura honesta); falta cohort 5-em-5 (RN-822) e o restante do épico |
-| [[LEELA-E19-crm]] | Conhecer e reter a base de contatos do organizador | 🔄 backend entregue (cliente consolidado cross-evento com LTV, Rules PII fail-closed, readers tipados, gate antagonista LGPD); falta a aba CRM + hub Clientes & Comunicação (UI) |
+| [[LEELA-E19-crm]] | Conhecer e reter a base de contatos do organizador | 🔄 backend entregue (cliente consolidado cross-evento com LTV, Rules PII fail-closed, readers tipados, gate antagonista LGPD) + **A3 pago** (chave HMAC com pepper secreto, fail-closed — resta só o secret no deploy); falta a aba CRM + hub Clientes & Comunicação (UI) |
 
 ## Onda heroica (H2) · Comunidade e social no app — 🧊
 

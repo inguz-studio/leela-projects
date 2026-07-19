@@ -14,7 +14,7 @@ tags:
 ## 📋 Backlog
 
 - [ ] **[E13] App do atleta** — descobrir, inscrever, ingresso com QR e clube no celular 📋 [[LEELA-E13-app-atleta]]
-- [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 📋 [[LEELA-E08-influenciador]]
+- [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend completo (atribuição + comissão + saldo); falta o painel do promotor e a UI de comissão [[LEELA-E08-influenciador]]
 - [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 📋 [[LEELA-E10-marcas]]
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 [[LEELA-E11-analytics]]
 - [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto (clientes consolidados com LTV + privacidade provada); falta a tela [[LEELA-E19-crm]]
@@ -74,6 +74,8 @@ tags:
 - [x] **[R9-C] Kit de verdade no checkout** — cada kit tem imagem 1:1 (upload seguro), descrição e "o que está incluso"; o checkout mostra o dado real e os eventos de demonstração vêm preenchidos ✅ (falta só a edição na tela de kits — lote de UI) [[LEELA-E03-operacao-evento]]
 - [x] **[E12] Revisão UX do checkout (mind Don Norman)** — fluxo de compra auditado ponta a ponta contra os wireframes: 18 fricções priorizadas (2 travam a compra quando ocorrem, 5 altas), 6 divergências para decisão, e a spec ratificada dos novos campos (telefone, nascimento, endereço via CEP) + aceites no pagar (política de cancelamento e termo de saúde) ✅ report em `outputs/leela-build-2d6ee98d/CHECKOUT-UX-REPORT.md` — os fixes viram o próximo lote
 - [x] **[E12] Fixes não-controversos do checkout (CHECKOUT-FIXES)** — pagos os 5 fixes de fricção UI-pura do report: erro de cotação ganha "Tentar novamente" (BC-1); sessão anônima é recuperável com copy humana, sem jargão de infra (BC-2); cupom vindo do link auto-aplica com aviso honesto se falhar (A-2); PIX gera sozinho e mostra QR escaneável + "copiar código" (A-3); nota de transparência de taxa no primeiro passo (A-5) ✅ tsc/eslint 0, 19 testes verdes (9 novos), verify:brand PASS · handoff `.nirvana/handoffs/leela-build-2d6ee98d-CKFIX.md` — pendências de modelo/backend (endereço, aceites versionados, saúde) seguem para lote Fable
+- [x] **[E08] Comissão do influenciador (fase 2)** — organizador define % ou valor fixo, a comissão acumula sozinha a cada venda confirmada, estorno devolve certinho e o afiliado vê saldo e extrato; repasse manual registrado no sistema (split automático fica para decisão) ✅ [[BOARD-HISTORICO]]
+- [x] **[E19] CRM blindado (A3)** — a chave que identifica cada cliente ganhou segredo criptográfico: mesmo com um vazamento do banco, o CPF não é recuperável ✅ [[BOARD-HISTORICO]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 

@@ -296,7 +296,7 @@ Exibir o financeiro do promotor lendo os agregados de `valorAReceber`/liberado/p
 
 - **RN-313 · Link de afiliado `?ref=<código>` capturado na inscrição.** Atribuído na venda dentro da janela (`dentroDaJanelaAtribuicao`, `packages/core/src/clubs/parceria.ts:184`), preservando a disciplina de atribuição do CTA (E12), reusando a costura `cupomParceria` do `createInscricaoCharge` (`functions/src/checkout/createInscricaoCharge.ts:365-401`) — **sem split**. Atribuição fora da janela não conta.
 - **RN-314 · Registro de conversões por afiliado.** Subcoleção `eventos/{eventoId}/afiliados/{afiliadoId}` (organizador dono — decisão justificada em `DECISOES-ABERTAS`: coleção própria, não 3º ramo do union `parcerias`; reusa o kernel de janela + atribuição). ∑ conversões por Function idempotente, escrita exclusiva; organizador vê conversões + valor atribuído (informativo, sem comissão).
-- **Fase 2 (pergunta de decisão, NÃO neste recorte):** comissionamento/repasse ao influenciador (dinheiro → review Fable; absorve/antecipa split do E08). Registrado em `DECISOES-ABERTAS`.
+- **Fase 2 — ✅ ENTREGUE (lote COMISSIONAMENTO-F2, 2026-07-18, rota Fable + review antagonista):** comissionamento implementado SOBRE o kernel R9-E (zero contabilidade paralela). Ver §"Fase 2 entregue" abaixo. Desembolso = repasse manual registrado (default em vigor); split do `PaymentProvider` = fase 3, pendente ratificação (`DECISOES-ABERTAS` item 23).
 
 Story `S-R9-11`. Spec: `02-rodadas/2026-07-18-ux-review/`.
 
@@ -308,6 +308,19 @@ Story `S-R9-11`. Spec: `02-rodadas/2026-07-18-ux-review/`.
 - **RN-318 · Escopo de leitura do influenciador.** Vê SÓ as próprias conversões (projeção fechada: qtd/valor/status); nunca dado de terceiros além do agregado da própria atribuição. Rules fail-closed; PII PF com documento mascarado + trust anchors (padrão E18).
 
 Story `S-R9-11` (tasks T5/T6/T7). Spec: `02-rodadas/2026-07-18-ux-review/`.
+
+### Fase 2 entregue — comissionamento/repasse (lote COMISSIONAMENTO-F2 · 2026-07-18)
+
+Onda 3 liberada pelo Vitor (audit 14:06). Rota **Fable** + review antagonista (DoD de dinheiro). Tudo ESTENDE o kernel R9-E — nenhuma contabilidade paralela:
+
+- **Modelo de comissão (RN-310 — organizador define):** campo `comissao` no afiliado (`salvarAfiliado`): `percentual` (0,01..100, passo 0,01, sobre o valor FACE) OU `valor_fixo` (R$ por INSCRIÇÃO — base coerente com `conversoes`). `null` = sem comissão (recorte R9-E intacto).
+- **Acúmulo cent-exato idempotente:** na CONFIRMAÇÃO (webhook, mesma tx da conversão RN-314), a config vigente é **CONGELADA no doc da conversão** (`comissaoConfig` + `comissao` computada em centavos×basis-points inteiros) e `comissaoAcumulada` acumula por read-modify-write. Replay não duplica (ledger + chave pedidoId). **Anti-forja:** mudar a config depois só afeta conversões futuras.
+- **Estorno decrementa (mesma TX do Finding 1b):** recomputa a comissão restante pela config CONGELADA e debita o delta; parcial/integral/replay provados. Comissão nunca negativa (clamp 0).
+- **Saldo/extrato (RN-318, projeção fechada):** readers devolvem termos read-only + `comissaoAcumulada`/`comissaoRepassada`/`saldoComissao` + extrato (conversões com comissão, repasses). Saldo PODE ser negativo (estorno pós-repasse = dívida honesta). api-client tipado.
+- **Desembolso (default em vigor, ratificação pendente — `DECISOES-ABERTAS` item 23):** `registrarRepasseComissao` = repasse MANUAL off-platform registrado (idempotente por `repasseId`, limitado ao saldo, Rules write:false). **Split do PaymentProvider = FASE 3** — não integrar sem ratificação. **DIRECTIVE (herdada do R9-E, inviolável):** nenhuma rota automática de dinheiro a `responsavelUid` sem `emailVerified === true`.
+- **Rules:** `repasses` subcoleção write:false, leitura organizador do tenant + o PRÓPRIO afiliado; ∑ e config intocáveis por cliente (suíte de ataques F6).
+
+Report: `outputs/leela-build-2d6ee98d/COMF2-REPORT.md`. O que segue H3: painel do promotor (S701-S704) e split automático (fase 3).
 
 ### Adendo 5 (Vitor · 2026-07-18)
 
