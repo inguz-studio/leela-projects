@@ -385,6 +385,59 @@ describe('CLAIM-FIX — RN-174: claim só na confirmação (escritor único)', (
     expect(pessoa.dadosConhecidos?.nascimento).toBe('1995-05-05'); // preservado
   });
 
+  it('AUTO-CURA HOSTIL · pagamento de conta DISTINTA sobre claim legado sem carimbo NÃO grava contaEmail do atacante', async () => {
+    // Fix do finding #1 da review antagonista: prova executável do guard
+    // `atual === contaUid` do escritor único (contaSemFriccao) no pior
+    // cenário — pessoa reivindicada SEM carimbo (claim pré-RN-174) e um
+    // pagamento CONFIRMADO cuja conta resolvida pelo e-mail é OUTRA.
+    const CPF_LEG2 = '123.456.789-09';
+    const idPessoa = pessoaDocIdDoCpf(CPF_LEG2);
+    await criarContaAuth('conta-vitima-legada', 'vitima-legada@exemplo.com.br');
+
+    // 1. Ficha nasce de compra anônima da vítima (dados dela) + claim
+    //    LEGADO simulado (contaUid sem contaEmail — estado CK2 original)
+    await createInscricaoChargeCore(
+      db, provider,
+      inputSolo('cf-heal-hostil-vitima', {
+        nome: 'Vítima Legada', email: 'vitima-legada@exemplo.com.br',
+        cpf: CPF_LEG2, telefone: '(48) 92222-0002',
+      }),
+      { uid: 'anon-vitima-leg', ehAnonimo: true }
+    );
+    await db.doc(`pessoas/${idPessoa}`).update({ contaUid: 'conta-vitima-legada' });
+
+    // 2. ATACANTE PAGA um pedido com o CPF dela e o e-mail DELE — a conta
+    //    resolvida pelo e-mail da compra é a do atacante (≠ contaUid)
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      inputSolo('cf-heal-hostil-atk', {
+        nome: 'Atacante Curandeiro', email: 'atacante-heal@exemplo.com.br',
+        cpf: CPF_LEG2,
+      }),
+      { uid: 'anon-atk-heal', ehAnonimo: true }
+    );
+    await confirmarPagamentoSandboxCore(db, provider, { pedidoId: r.pedidoId }, {
+      uid: 'anon-atk-heal',
+    });
+
+    // 3. O guard NEGA: vínculo intocado, carimbo NÃO nasce do atacante,
+    //    dados da vítima intocados (pessoa reivindicada + caller ≠ dona)
+    const pessoa = await pessoaDoCpf(CPF_LEG2);
+    expect(pessoa.contaUid).toBe('conta-vitima-legada');
+    expect(pessoa.contaEmail).toBeUndefined(); // auto-cura hostil negada
+    expect(pessoa.dadosConhecidos?.nome).toBe('Vítima Legada');
+    expect(pessoa.dadosConhecidos?.telefone).toBe('48922220002');
+
+    // 4. E o atacante (conta criada p/ o e-mail dele, até verificado) não lê
+    const uidAtk = (await admin.auth().getUserByEmail('atacante-heal@exemplo.com.br')).uid;
+    expect(
+      (await getCheckoutPrefillCore(db, {
+        uid: uidAtk, ehAnonimo: false,
+        email: 'atacante-heal@exemplo.com.br', emailVerificado: true,
+      })).prefill
+    ).toBeNull();
+  });
+
   it('AUTO-CURA · claim legado (contaUid sem contaEmail) ganha o carimbo na próxima compra confirmada da MESMA conta', async () => {
     const CPF_LEG = '529.982.247-25'; // pessoa do NEGATIVO 1 (não reivindicada)
     const idPessoa = pessoaDocIdDoCpf(CPF_LEG);
