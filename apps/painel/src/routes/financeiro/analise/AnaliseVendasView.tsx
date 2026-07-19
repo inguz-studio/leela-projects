@@ -29,6 +29,7 @@ import {
 } from '@leela/design-system';
 import type { OverviewResult } from '@leela/api-client';
 import { notaCobertura, type DemografiaTenant } from './_lib/demografia';
+import { CohortIdadeSexo } from './CohortIdadeSexo';
 
 /** Sentinela do filtro: "Todos os eventos" (agregado do tenant, RN-821). */
 const TODOS_OS_EVENTOS = '__todos__';
@@ -209,6 +210,16 @@ export function AnaliseVendasView({
                   )}
                 </CardGrafico>
               </div>
+              {/* Cohort idade × sexo (RN-822 · S-R9-02): bandas de 5 anos
+                  empilhadas por sexo. As linhas já chegam pós-salvaguarda de
+                  k-anonimato (suprimirCohortPorK — célula pequena NUNCA chega
+                  aqui); a supressão é declarada dentro da viz. */}
+              <CardGrafico titulo="Idade × sexo (cohort)" nota="faixas de 5 anos · idade na data da prova">
+                <CohortIdadeSexo
+                  cohort={demografia.cohort}
+                  temSupressao={demografia.cohortTemSupressao}
+                />
+              </CardGrafico>
             </>
           )}
         </section>

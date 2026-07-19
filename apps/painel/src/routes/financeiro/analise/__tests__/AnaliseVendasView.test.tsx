@@ -29,12 +29,31 @@ const OVERVIEW: OverviewResult = {
 const DEMOGRAFIA: DemografiaTenant = {
   faixas: [
     { label: '18–24', value: 84 },
-    { label: '25–34', value: 210 },
+    { label: '25–29', value: 210 },
   ],
   sexo: [
     { label: 'Feminino', value: 150 },
     { label: 'Masculino', value: 144 },
   ],
+  cohort: [
+    {
+      faixa: '18–24',
+      total: 84,
+      segmentos: [
+        { label: 'Feminino', value: 40, colorIndex: 0 },
+        { label: 'Masculino', value: 44, colorIndex: 1 },
+      ],
+    },
+    {
+      faixa: '25–29',
+      total: 210,
+      segmentos: [
+        { label: 'Feminino', value: 110, colorIndex: 0 },
+        { label: 'Masculino', value: 100, colorIndex: 1 },
+      ],
+    },
+  ],
+  cohortTemSupressao: false,
   comIdade: 294,
   comGenero: 294,
   totalConfirmados: 294,
@@ -43,6 +62,8 @@ const DEMOGRAFIA: DemografiaTenant = {
 const DEMOGRAFIA_VAZIA: DemografiaTenant = {
   faixas: [],
   sexo: [],
+  cohort: [],
+  cohortTemSupressao: false,
   comIdade: 0,
   comGenero: 0,
   totalConfirmados: 0,
@@ -114,6 +135,49 @@ describe('AnaliseVendasView', () => {
     };
     render(<AnaliseVendasView {...props({ demografia: parcial })} />);
     expect(screen.getByRole('note')).toHaveTextContent(/294 de 300/);
+  });
+
+  // Cohort idade×sexo (RN-822 · S-R9-02) ----------------------------------
+  it('cohort com dados → card presente com faixas e tabela acessível', () => {
+    render(<AnaliseVendasView {...props()} />);
+    expect(screen.getByText('Idade × sexo (cohort)')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: /cohort de compradores por faixa etária e sexo/i }),
+    ).toBeInTheDocument();
+    // Tabela equivalente carrega a semântica (valores por sexo). Escopo por
+    // nome acessível — os charts do DS também têm tabelas sr-only.
+    expect(
+      screen.getByRole('table', { name: /cohort de compradores/i }),
+    ).toHaveTextContent('Feminino: 110');
+  });
+
+  it('cohort sem nascimento (só sexo conhecido) → EmptyState do cohort, donut de sexo segue', () => {
+    const soSexo: DemografiaTenant = {
+      ...DEMOGRAFIA,
+      faixas: [],
+      cohort: [],
+      comIdade: 0,
+    };
+    render(<AnaliseVendasView {...props({ demografia: soSexo })} />);
+    expect(screen.getByText('Sem dados para o cohort')).toBeInTheDocument();
+    expect(screen.getByText('Sexo')).toBeInTheDocument(); // donut 1D permanece
+  });
+
+  it('cohort com linha SUPRIMIDA → nota de privacidade (k mínimo) e detalhe retido', () => {
+    const suprimido: DemografiaTenant = {
+      ...DEMOGRAFIA,
+      cohort: [
+        { faixa: '18–24', total: 3, segmentos: null },
+        { faixa: '25–29', total: 4, segmentos: null },
+      ],
+      cohortTemSupressao: true,
+    };
+    render(<AnaliseVendasView {...props({ demografia: suprimido })} />);
+    expect(screen.getByText(/k-anonimato, mínimo 5 por grupo/i)).toBeInTheDocument();
+    // Nenhum valor por sexo vaza — a tabela do cohort declara a retenção.
+    const tabela = screen.getByRole('table', { name: /cohort de compradores/i });
+    expect(tabela).not.toHaveTextContent('Feminino:');
+    expect(tabela).toHaveTextContent('Detalhamento retido para proteger a privacidade');
   });
 
   it('erro na demografia → "Tentar novamente" chama o retry', () => {
