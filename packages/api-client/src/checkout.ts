@@ -181,6 +181,11 @@ export interface CreateInscricaoChargeResult {
   chargeId: string;
   paymentUrl?: string;
   qrCode?: string;
+  /**
+   * Expiração da cobrança PIX em epoch-ms (CK2 · RN-157) — presente só no
+   * PIX. Base do TIMER de 30 min da UI; replay devolve a MESMA expiração.
+   */
+  pixExpiraEmMillis?: number;
   statusPedido: string;
   valores: {
     valorBase: number;
@@ -284,6 +289,44 @@ export async function confirmarPagamentoSandbox(
   const fn = httpsCallable<ConfirmarPagamentoSandboxInput, ConfirmarPagamentoSandboxResult>(
     getLeelaFunctions(),
     'confirmarPagamentoSandbox'
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Expiração do PIX (CK2 · RN-157 — timer de 30 min)
+// ---------------------------------------------------------------------------
+
+export interface ExpirarPixPendenteInput {
+  pedidoId: string;
+}
+
+export interface ExpirarPixPendenteResult {
+  pedidoId: string;
+  /** Estado do pedido APÓS a chamada ('cancelado' quando expirou). */
+  statusPedido: string;
+  /** true = esta chamada aplicou pendente → cancelado (pix_expirado). */
+  expirado: boolean;
+  /** true = pedido já estava em estado final (resposta idempotente). */
+  jaFinal: boolean;
+}
+
+/**
+ * Materializa a expiração do PIX quando o timer da UI zera (RN-157): o
+ * SERVIDOR confere o próprio relógio (chamar antes da hora ⇒
+ * failed-precondition) e transiciona pendente → cancelado (pix_expirado).
+ * O retry do comprador é NOVA cotação (novo pedido, idempotencyKey nova).
+ * NOTA (CK2): o re-export raiz do pacote fica para o lote CHECKOUT2-FORM
+ * (arquivo index.ts em edição por outra lane) — importar de
+ * '@leela/api-client/src/checkout' ou adicionar o re-export na fiação da UI.
+ */
+export async function expirarPixPendente(
+  input: ExpirarPixPendenteInput
+): Promise<ExpirarPixPendenteResult> {
+  const fn = httpsCallable<ExpirarPixPendenteInput, ExpirarPixPendenteResult>(
+    getLeelaFunctions(),
+    'expirarPixPendente'
   );
   const res = await fn(input);
   return res.data;

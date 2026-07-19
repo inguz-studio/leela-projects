@@ -17,8 +17,23 @@ employee: sf-backend-lead (software-forge) · modelo: Fable · 2026-07-19
       falha_envio|nao_aplicavel, pessoaVinculada}); disparo best-effort pós-confirmação nos 3
       confirmadores (sandbox/pagamentoWebhook/asaasWebhook) — falha NUNCA quebra compra; template
       renderContaCriadaEmail (escape+link-servidor). Integração 5/5 (auth emulator real) + unit 3.
-- [ ] T4 — RN-156 termo de saúde base sempre + custom aditivo versionado (fence server-side F-4a pattern)
-- [ ] T5 — RN-157 PIX expira 30 min (contrato provider + pixExpiraEm + expirarPixPendente)
+- [x] T4 — RN-156: base já incondicional (F-4a); NOVO termo CUSTOM aditivo em
+      `eventos/{e}/termoSaude/config` (core termoSaude.ts; ''=inativo) + trigger
+      `versionarTermoSaude` (bump material por hash) + fence in-tx no charge
+      (`aceites.saudeCustom` obrigatório com termo ativo; prova versão+hash carimbada;
+      inativo ignora flag) + Rules (owner-only, versão congelada, delete nunca) +
+      leitor público `termoSaudeCustom {texto, versao}|null` + fixtures landing.
+      Integração 5/5 + Rules 8/8 (ck2Rules).
+- [x] T5 — RN-157: `PIX_EXPIRACAO_SEGUNDOS=1800` (fonte única core) →
+      `pagamento.pixExpiraEm` carimbado do relógio injetado (parse exige forma pix) +
+      `CreateChargeParams.pixExpiraEmSegundos` (Mock devolve/replay estável; Asaas:
+      expirationDate do pixQrCode vence, fallback relógio+30min — premissa CK2-4b:
+      dueDate do Asaas é DIA, enforcement fino é da plataforma) + resultado
+      `pixExpiraEmMillis` + callable `expirarPixPendente` (dono-only, relógio do
+      SERVIDOR decide, pendente→cancelado motivo pix_expirado nos 2 docs, webhook em
+      corrida vence, idempotente). api-client: wrapper em checkout.ts (re-export raiz
+      fica p/ lane FORM — index.ts em edição pela lane UPSW). Integração 6/6 + Asaas
+      unit 3 novas + Mock contrato.
 - [ ] T6 — review antagonista Fable contexto fresco + fixes re-provados
 - [ ] T7 — boards/épicos E12/E19/E04 + report
 

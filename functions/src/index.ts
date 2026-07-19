@@ -146,6 +146,10 @@ export { versionarTermoSaude } from './eventos/versionarTermoSaude';
 // autenticado, via pessoa vinculada à conta (RN-173). PII de terceiro é
 // inalcançável por construção (query pelo uid do token; sem canal de input).
 export { getCheckoutPrefill } from './checkout/prefillCheckout';
+// Expiração do PIX (CK2-T5 · RN-157): o dono materializa o timer de 30 min —
+// servidor confere o PRÓPRIO relógio e transiciona pendente→cancelado
+// (pix_expirado); webhook em corrida vence (dinheiro pago nunca cancela).
+export { expirarPixPendente } from './checkout/expirarPixPendente';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via

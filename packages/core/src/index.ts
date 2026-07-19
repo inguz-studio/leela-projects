@@ -680,6 +680,7 @@ export type {
 export {
   FORMAS_PAGAMENTO,
   isFormaPagamento,
+  PIX_EXPIRACAO_SEGUNDOS,
   STATUS_PAGAMENTO,
   isStatusPagamento,
   TRANSICOES_STATUS_PAGAMENTO,

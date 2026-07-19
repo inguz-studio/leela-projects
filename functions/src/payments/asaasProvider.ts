@@ -639,7 +639,27 @@ export class AsaasProvider implements PaymentProvider {
       await this.request('POST', '/payments', { body }),
       'resposta de POST /payments'
     );
-    return this.montarChargeResult(criado);
+    const resultado = await this.montarChargeResult(criado);
+    // RN-157 (CK2-T5) — contrato do provider: PIX com validade SEMPRE devolve
+    // `expiresAt`. Preferência: `expirationDate` do pixQrCode do gateway
+    // (montarChargeResult); fallback: relógio injetado + pixExpiraEmSegundos.
+    // ⚠️ PREMISSA (documentada no report CK2): POST /payments do Asaas não
+    // aceita expiração por minuto (dueDate é DIA); o enforcement fino dos 30
+    // minutos é da PLATAFORMA (`pagamento.pixExpiraEm` + expirarPixPendente).
+    // Pagamento que o gateway aceitar após o cancelamento cai em
+    // 'ignorado_estado_final' no webhook — reconciliação manual (raro).
+    if (
+      params.pixExpiraEmSegundos !== undefined &&
+      resultado.expiresAt === undefined
+    ) {
+      return {
+        ...resultado,
+        expiresAt: timestampDe(
+          new Date(this.now().getTime() + params.pixExpiraEmSegundos * 1000)
+        ),
+      };
+    }
+    return resultado;
   }
 
   private validarCreateCharge(params: CreateChargeParams): void {
@@ -669,6 +689,20 @@ export class AsaasProvider implements PaymentProvider {
       if (parcelas > 1 && params.paymentMethod !== 'credit_card') {
         throw new AsaasValidationError(
           '[asaas] Parcelamento só existe no cartão de crédito (ADR-006)'
+        );
+      }
+    }
+    // RN-157 (CK2-T5): validade de PIX — inteiro > 0, exclusiva do PIX.
+    const pixExp = params.pixExpiraEmSegundos;
+    if (pixExp !== undefined) {
+      if (!Number.isInteger(pixExp) || pixExp <= 0) {
+        throw new AsaasValidationError(
+          `[asaas] pixExpiraEmSegundos inválido: ${pixExp}`
+        );
+      }
+      if (params.paymentMethod !== 'pix') {
+        throw new AsaasValidationError(
+          '[asaas] pixExpiraEmSegundos só existe no PIX (RN-157)'
         );
       }
     }

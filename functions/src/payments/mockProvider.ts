@@ -56,6 +56,18 @@ interface StoredCharge {
   idempotencyKey: string;
   /** Total já estornado em centavos (soma de refunds aprovados) */
   refundedAmount: number;
+  /** RN-157 (CK2-T5): expiração do PIX em epoch-ms — replay devolve a MESMA */
+  expiresAtMillis?: number;
+}
+
+/** Timestamp fixo a partir de epoch-ms (expiresAt de replay determinístico) */
+function timestampDeMillis(millis: number) {
+  return {
+    seconds: Math.floor(millis / 1000),
+    nanoseconds: (millis % 1000) * 1_000_000,
+    toDate: () => new Date(millis),
+    toMillis: () => millis,
+  };
 }
 
 interface StoredWebhookResult {
@@ -243,8 +255,32 @@ export class MockPaymentProvider implements PaymentProvider {
         chargeId: existing.chargeId,
         status: existing.status,
         paymentUrl: `https://mock.leela.app/pay/${existing.chargeId}`,
+        // RN-157: replay devolve a MESMA expiração (nunca re-estende o timer)
+        ...(existing.expiresAtMillis !== undefined
+          ? { expiresAt: timestampDeMillis(existing.expiresAtMillis) }
+          : {}),
       };
     }
+
+    // RN-157 (CK2-T5): PIX com validade — contrato do provider (prova no
+    // Mock; o Asaas fica coberto pelo mesmo contrato + premissa documentada).
+    if (params.pixExpiraEmSegundos !== undefined) {
+      if (
+        !Number.isInteger(params.pixExpiraEmSegundos) ||
+        params.pixExpiraEmSegundos <= 0
+      ) {
+        throw new Error(
+          `[mock] pixExpiraEmSegundos inválido: ${params.pixExpiraEmSegundos}`
+        );
+      }
+      if (params.paymentMethod !== 'pix') {
+        throw new Error('[mock] pixExpiraEmSegundos só existe no PIX (RN-157)');
+      }
+    }
+    const expiresAtMillis =
+      params.pixExpiraEmSegundos !== undefined
+        ? Date.now() + params.pixExpiraEmSegundos * 1000
+        : undefined;
 
     this.chargeCounter++;
     const chargeId = `mock_charge_${this.chargeCounter}_${params.orderId}`;
@@ -258,6 +294,7 @@ export class MockPaymentProvider implements PaymentProvider {
       status: 'confirmed',
       idempotencyKey: params.idempotencyKey,
       refundedAmount: 0,
+      ...(expiresAtMillis !== undefined ? { expiresAtMillis } : {}),
     };
 
     this.charges.set(chargeId, stored);
@@ -267,6 +304,9 @@ export class MockPaymentProvider implements PaymentProvider {
       status: 'confirmed',
       paymentUrl: `https://mock.leela.app/pay/${chargeId}`,
       qrCode: `mock_qr_${chargeId}`,
+      ...(expiresAtMillis !== undefined
+        ? { expiresAt: timestampDeMillis(expiresAtMillis) }
+        : {}),
     };
   }
 

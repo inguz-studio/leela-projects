@@ -63,6 +63,14 @@ export function isFormaPagamento(value: unknown): value is FormaPagamento {
 }
 
 /**
+ * Validade da cobrança PIX em segundos (CK2-T5 · RN-157 · DEC-0719 D-6):
+ * 30 minutos — validade da CHARGE (dinheiro/lifecycle), não só relógio de
+ * UI. Fonte ÚNICA: a Function do checkout carimba `pixExpiraEm` com ela e o
+ * provider recebe o mesmo valor (`CreateChargeParams.pixExpiraEmSegundos`).
+ */
+export const PIX_EXPIRACAO_SEGUNDOS = 30 * 60;
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),
@@ -235,6 +243,15 @@ export interface Pagamento {
   taxaRepassada?: number;
   /** Só quando forma === 'cartao_credito' */
   cartao?: CartaoPagamento;
+  /**
+   * Expiração da cobrança PIX (CK2-T5 · RN-157 · DEC-0719 D-6): 30 minutos
+   * a partir da CRIAÇÃO do pedido (PIX_EXPIRACAO_SEGUNDOS), carimbada pela
+   * Function do checkout com o relógio injetado. SÓ forma 'pix' (coerência
+   * no parse); ausente = doc pré-RN157 (sem timer — leitura Postel). A UI
+   * mostra o timer; expirar sem pagar ⇒ `expirarPixPendente` transiciona
+   * pendente → cancelado (motivo pix_expirado) e o retry é NOVA cotação.
+   */
+  pixExpiraEm?: Timestamp;
   /** Data/hora da confirmação — ausente até o webhook confirmar */
   pagoEm?: Timestamp;
   /** Presente após a confirmação/liquidação no gateway */
@@ -550,6 +567,18 @@ export function parsePagamento(
           `meio centavo por parcela`
       );
     }
+  }
+
+  // RN-157 (CK2-T5): expiração do PIX — presente EXIGE forma 'pix' (timer
+  // em cobrança de cartão é estado incoerente; dinheiro = fail-fast).
+  if (data['pixExpiraEm'] !== undefined) {
+    if (pagamento.forma !== 'pix') {
+      throw new Error(
+        `${ctx}: "pixExpiraEm" presente com forma "${pagamento.forma}" — ` +
+          `expiração é exclusiva de PIX (RN-157)`
+      );
+    }
+    pagamento.pixExpiraEm = parseTimestamp(ctx, 'pixExpiraEm', data['pixExpiraEm']);
   }
 
   if (data['pagoEm'] !== undefined) {

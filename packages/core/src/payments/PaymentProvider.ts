@@ -77,6 +77,14 @@ export interface CreateChargeParams {
    * sem criar cobrança duplicada (RN-333).
    */
   idempotencyKey: string;
+  /**
+   * Validade da cobrança PIX em segundos (CK2-T5 · RN-157) — SÓ
+   * `paymentMethod: 'pix'`. O adapter propaga ao gateway no que ele
+   * suportar e SEMPRE devolve `expiresAt` no ChargeResult (contrato — a
+   * autoridade do timer é a plataforma via `pagamento.pixExpiraEm`;
+   * enforcement fino no gateway varia por adapter e fica documentado nele).
+   */
+  pixExpiraEmSegundos?: number;
 }
 
 /** Resultado da criação de cobrança */

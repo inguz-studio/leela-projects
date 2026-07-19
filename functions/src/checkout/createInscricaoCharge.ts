@@ -33,7 +33,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -53,6 +53,7 @@ import {
   modoTaxaDoEvento,
   MSG_EVENTO_FECHADO_SEM_CUPOM,
   montarItensDoPedido,
+  PIX_EXPIRACAO_SEGUNDOS,
   normalizarCodigoCupom,
   normalizarCpf,
   normalizarTelefone,
@@ -250,6 +251,12 @@ export interface CreateInscricaoChargeResult {
   qrCode?: string;
   /** Estado ATUAL do pedido (replay pode devolver 'pago'). */
   statusPedido: StatusPedido;
+  /**
+   * Expiração da cobrança PIX em epoch-ms (CK2-T5 · RN-157) — presente SÓ
+   * na forma 'pix'. A UI monta o timer de 30 min a partir daqui; replay
+   * devolve a MESMA expiração (o retry nunca re-estende o prazo).
+   */
+  pixExpiraEmMillis?: number;
   valores: {
     valorBase: number;
     desconto: number;
@@ -999,7 +1006,9 @@ async function criarDocsDeCheckout(
   tenantId: string,
   cupomParceria: InsumosVenda['cupomParceria'] = null,
   cupomAfiliado: InsumosVenda['cupomAfiliado'] = null,
-  afiliadoAtribuicao: InsumosVenda['afiliadoAtribuicao'] = null
+  afiliadoAtribuicao: InsumosVenda['afiliadoAtribuicao'] = null,
+  /** Relógio INJETADO da venda (epoch-ms) — base do pixExpiraEm (RN-157). */
+  agoraMs: number = Date.now()
 ): Promise<void> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -1375,6 +1384,14 @@ async function criarDocsDeCheckout(
       if (sale.taxaRepassada > 0) {
         pagamentoDoc['taxaRepassada'] = sale.taxaRepassada;
       }
+      // RN-157 (CK2-T5): PIX expira em 30 min da CRIAÇÃO do pedido —
+      // carimbo do relógio INJETADO (não do gateway): a autoridade do timer
+      // é a plataforma; replay lê este doc e nunca re-estende o prazo.
+      if (sale.forma === 'pix') {
+        pagamentoDoc['pixExpiraEm'] = Timestamp.fromMillis(
+          agoraMs + PIX_EXPIRACAO_SEGUNDOS * 1000
+        );
+      }
       if (loteUnico !== null && loteUnico.loteId !== null) {
         pagamentoDoc['loteId'] = loteUnico.loteId;
         if (loteUnico.loteNome !== null) pagamentoDoc['loteNome'] = loteUnico.loteNome;
@@ -1484,6 +1501,11 @@ async function garantirCobrancaEMontarResultado(
       // Idempotente por pedido: retry NUNCA duplica a cobrança (RN-333)
       idempotencyKey: `charge-${pedidoId}`,
       ...(input.parcelas > 1 ? { installments: input.parcelas } : {}),
+      // RN-157 (CK2-T5): validade da cobrança PIX — mesmo valor canônico do
+      // pixExpiraEm persistido (fonte única PIX_EXPIRACAO_SEGUNDOS).
+      ...(input.forma === 'pix'
+        ? { pixExpiraEmSegundos: PIX_EXPIRACAO_SEGUNDOS }
+        : {}),
     };
     const charge = await provider.createCharge(chargeParams);
 
@@ -1511,6 +1533,16 @@ async function garantirCobrancaEMontarResultado(
   // Mesma fórmula de buildInstallmentOptions (valorParcela = round(total/n))
   const valorParcela = Math.round((totalCobrado / parcelas) * 100) / 100;
 
+  // RN-157: expiração do PIX — do doc PERSISTIDO (replay devolve a MESMA;
+  // o retry nunca re-estende o prazo).
+  const pixExpiraEm = pagamentoSnap.get('pixExpiraEm') as
+    | { toMillis?: () => number }
+    | undefined;
+  const pixExpiraEmMillis =
+    pixExpiraEm !== undefined && typeof pixExpiraEm.toMillis === 'function'
+      ? pixExpiraEm.toMillis()
+      : undefined;
+
   return {
     pedidoId,
     pagamentoId,
@@ -1518,6 +1550,7 @@ async function garantirCobrancaEMontarResultado(
     chargeId,
     ...(paymentUrl !== undefined ? { paymentUrl } : {}),
     ...(qrCode !== undefined ? { qrCode } : {}),
+    ...(pixExpiraEmMillis !== undefined ? { pixExpiraEmMillis } : {}),
     statusPedido: pedidoSnap.get('status') as StatusPedido,
     valores: {
       valorBase: pagamentoSnap.get('valorBase') as number,
@@ -1700,7 +1733,8 @@ export async function createInscricaoChargeCore(
       tenantId,
       cupomParceria,
       cupomAfiliado,
-      afiliadoAtribuicao
+      afiliadoAtribuicao,
+      agora().getTime()
     );
   }
 

@@ -42,7 +42,12 @@ import {
   garantirContaSemFriccao,
 } from '../checkout/contaSemFriccao';
 import { confirmarPagamentoSandboxCore } from '../checkout/confirmarPagamentoSandbox';
-import { MockPaymentProvider } from '../payments/mockProvider';
+import { expirarPixPendenteCore } from '../checkout/expirarPixPendente';
+import { processarWebhookPagamento } from '../checkout/webhookPagamento';
+import {
+  buildMockWebhookPayload,
+  MockPaymentProvider,
+} from '../payments/mockProvider';
 
 const PROJECT_ID = 'demo-leela-ck2';
 
@@ -651,5 +656,174 @@ describe('CK2-T4 — RN-156: termo custom aditivo do organizador', () => {
     r = await versionarTermoSaudeCore(db, eventoId, hashTermoSaude('Termo v1.'));
     expect(r).toEqual({ bumpado: true, versao: 2 });
     expect((await ref.get()).get('versao')).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T5 — RN-157 · PIX expira em 30 minutos (charge + estado de expiração)
+// ---------------------------------------------------------------------------
+
+describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
+  // T0 dentro da vigência do lote do seed (inicioEm=now-1d, fimEm=now+30d):
+  // relógio injetado — a aritmética do timer é exata sobre T0.
+  const T0 = new Date(Date.now() + 60_000);
+  const MEIA_HORA_MS = 30 * 60 * 1000;
+  const relogio = (d: Date) => () => d;
+
+  it('cobrança PIX nasce com pixExpiraEm = criação + 30min (relógio injetado); resultado expõe o timer; replay não re-estende', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-exp-01'),
+      { uid: 'uid-t5-a', ehAnonimo: true }, relogio(T0)
+    );
+    expect(r.pixExpiraEmMillis).toBe(T0.getTime() + MEIA_HORA_MS);
+
+    // Doc persistido (parse do core prova a coerência forma pix + Timestamp)
+    const pag = (await db.collection('pagamentos').doc(r.pagamentoId).get()).data() ?? {};
+    expect(
+      (pag['pixExpiraEm'] as { toMillis: () => number }).toMillis()
+    ).toBe(T0.getTime() + MEIA_HORA_MS);
+
+    // Replay 10 min depois: MESMA expiração (retry nunca re-estende o prazo)
+    const replay = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-exp-01'),
+      { uid: 'uid-t5-a', ehAnonimo: true },
+      relogio(new Date(T0.getTime() + 10 * 60 * 1000))
+    );
+    expect(replay.pixExpiraEmMillis).toBe(T0.getTime() + MEIA_HORA_MS);
+  });
+
+  it('cartão NÃO ganha pixExpiraEm (timer é exclusivo do PIX)', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      inputCk2('ck2-t5-card-01', { forma: 'cartao_credito', parcelas: 2 }),
+      { uid: 'uid-t5-b', ehAnonimo: true }, relogio(T0)
+    );
+    expect(r.pixExpiraEmMillis).toBeUndefined();
+    const pag = (await db.collection('pagamentos').doc(r.pagamentoId).get()).data() ?? {};
+    expect(pag['pixExpiraEm']).toBeUndefined();
+  });
+
+  it('expirar ANTES da hora ⇒ failed-precondition (relógio do SERVIDOR decide, não o cliente)', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-cedo-01'),
+      { uid: 'uid-t5-c', ehAnonimo: true }, relogio(T0)
+    );
+    await expect(
+      expirarPixPendenteCore(db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-c' },
+        relogio(new Date(T0.getTime() + MEIA_HORA_MS - 1000)))
+    ).rejects.toThrow(/ainda não expirou/);
+    expect(
+      (await db.collection('pedidos').doc(r.pedidoId).get()).get('status')
+    ).toBe('pendente');
+  });
+
+  it('expirado sem pagar ⇒ pendente → cancelado (pix_expirado) nos DOIS docs; idempotente; dono-only', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-venc-01'),
+      { uid: 'uid-t5-d', ehAnonimo: true }, relogio(T0)
+    );
+    const depois = relogio(new Date(T0.getTime() + MEIA_HORA_MS + 1000));
+
+    // OUTRO uid nunca expira pedido alheio
+    await expect(
+      expirarPixPendenteCore(db, { pedidoId: r.pedidoId }, { uid: 'intruso' }, depois)
+    ).rejects.toThrow(/outro pagador/);
+
+    const res = await expirarPixPendenteCore(
+      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
+    );
+    expect(res).toEqual({
+      pedidoId: r.pedidoId, statusPedido: 'cancelado', expirado: true, jaFinal: false,
+    });
+    const pedidoSnap = await db.collection('pedidos').doc(r.pedidoId).get();
+    expect(pedidoSnap.get('status')).toBe('cancelado');
+    expect(pedidoSnap.get('canceladoMotivo')).toBe('pix_expirado');
+    const pagSnap = await db.collection('pagamentos').doc(r.pagamentoId).get();
+    expect(pagSnap.get('status')).toBe('cancelado');
+
+    // Idempotente: segunda chamada = jaFinal, sem efeito novo
+    const res2 = await expirarPixPendenteCore(
+      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
+    );
+    expect(res2.jaFinal).toBe(true);
+    expect(res2.expirado).toBe(false);
+
+    // Webhook de confirmação chegando APÓS o cancelamento: registrado no
+    // ledger SEM efeito (estado final não retrocede — guarda vigente).
+    const chargeId = pagSnap.get('gatewayChargeId') as string;
+    const amount = pagSnap.get('gatewayAmountCentavos') as number;
+    const tardio = await processarWebhookPagamento(
+      db, provider,
+      buildMockWebhookPayload('charge.confirmed', {
+        chargeId, orderId: r.pedidoId, amount, eventId: `tardio-${r.pedidoId}`,
+      })
+    );
+    expect(tardio.ignorado).toBe(true);
+    expect(tardio.motivo).toBe('estado_ja_final');
+    expect(
+      (await db.collection('pedidos').doc(r.pedidoId).get()).get('status')
+    ).toBe('cancelado');
+
+    // Retry do comprador = NOVA cotação/pedido (idempotencyKey nova) — a
+    // máquina existente já cobre (novo pedido nasce limpo).
+    const retry = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-venc-01-retry'),
+      { uid: 'uid-t5-d', ehAnonimo: true }, depois
+    );
+    expect(retry.statusPedido).toBe('pendente');
+    expect(retry.pedidoId).not.toBe(r.pedidoId);
+  });
+
+  it('PIX já PAGO nunca é cancelado pelo timer (webhook vence a corrida)', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider, inputCk2('ck2-t5-pago-01'),
+      { uid: 'uid-t5-e', ehAnonimo: true }, relogio(T0)
+    );
+    await confirmarPagamentoSandboxCore(db, provider, { pedidoId: r.pedidoId }, {
+      uid: 'uid-t5-e',
+    });
+    const res = await expirarPixPendenteCore(
+      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-e' },
+      relogio(new Date(T0.getTime() + MEIA_HORA_MS + 1000))
+    );
+    expect(res.jaFinal).toBe(true);
+    expect(res.statusPedido).toBe('pago');
+  });
+
+  it('MockProvider honra o contrato: expiresAt no resultado da cobrança PIX', async () => {
+    const mock = new MockPaymentProvider();
+    const antes = Date.now();
+    const charge = await mock.createCharge({
+      orderId: 'ped-contrato', tenantId: TENANT_ID, amount: 18990,
+      paymentMethod: 'pix',
+      customer: { name: 'X', email: 'x@exemplo.com.br' },
+      items: [{ id: 'i', description: 'd', amount: 18990, quantity: 1 }],
+      idempotencyKey: 'contrato-pix-1',
+      pixExpiraEmSegundos: 1800,
+    });
+    const exp = charge.expiresAt?.toMillis() ?? 0;
+    expect(exp).toBeGreaterThanOrEqual(antes + 1800 * 1000 - 5000);
+    expect(exp).toBeLessThanOrEqual(Date.now() + 1800 * 1000 + 5000);
+    // Replay: MESMA expiração
+    const replay = await mock.createCharge({
+      orderId: 'ped-contrato', tenantId: TENANT_ID, amount: 18990,
+      paymentMethod: 'pix',
+      customer: { name: 'X', email: 'x@exemplo.com.br' },
+      items: [{ id: 'i', description: 'd', amount: 18990, quantity: 1 }],
+      idempotencyKey: 'contrato-pix-1',
+      pixExpiraEmSegundos: 1800,
+    });
+    expect(replay.expiresAt?.toMillis()).toBe(exp);
+    // Cartão com o parâmetro é bug de chamador — contrato lança
+    await expect(
+      mock.createCharge({
+        orderId: 'ped-contrato-2', tenantId: TENANT_ID, amount: 100,
+        paymentMethod: 'credit_card',
+        customer: { name: 'X', email: 'x@exemplo.com.br' },
+        items: [{ id: 'i', description: 'd', amount: 100, quantity: 1 }],
+        idempotencyKey: 'contrato-card-1',
+        pixExpiraEmSegundos: 1800,
+      })
+    ).rejects.toThrow(/só existe no PIX/);
   });
 });

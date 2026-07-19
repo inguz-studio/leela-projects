@@ -1063,3 +1063,78 @@ describe.skip('integração read-only (maestro-only — GET /myAccount)', () => 
     expect(conta).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// CK2-T5 (RN-157) — contrato de expiração do PIX no adapter real
+// ---------------------------------------------------------------------------
+
+describe('createCharge PIX — pixExpiraEmSegundos (RN-157 · CK2-T5)', () => {
+  it('sem expirationDate do gateway: expiresAt cai no fallback relógio+30min (contrato SEMPRE devolve)', async () => {
+    const { provider, pendentes } = novoProvider([
+      {
+        method: 'GET',
+        url: '/payments?externalReference=',
+        json: { data: [] },
+      },
+      {
+        method: 'GET',
+        url: '/customers?cpfCnpj=52998224725',
+        json: { data: [{ id: 'cus_reuso' }] },
+      },
+      {
+        method: 'POST',
+        url: '/payments',
+        json: {
+          id: 'pay_pix_exp',
+          status: 'PENDING',
+          billingType: 'PIX',
+          value: 99.99,
+          invoiceUrl: 'https://sandbox.asaas.com/i/pay_pix_exp',
+        },
+      },
+      // pixQrCode SEM expirationDate — o fallback do contrato assume
+      { method: 'GET', url: '/payments/pay_pix_exp/pixQrCode', json: { payload: 'copia-cola' } },
+    ]);
+
+    const result = await provider.createCharge(
+      paramsPix({ pixExpiraEmSegundos: 1800 })
+    );
+    expect(result.expiresAt?.toMillis()).toBe(AGORA.getTime() + 1800 * 1000);
+    expect(pendentes()).toBe(0);
+  });
+
+  it('expirationDate do gateway VENCE o fallback (a verdade do QR é do gateway)', async () => {
+    const { provider } = novoProvider([
+      { method: 'GET', url: '/payments?externalReference=', json: { data: [] } },
+      { method: 'GET', url: '/customers?cpfCnpj=52998224725', json: { data: [{ id: 'cus_r' }] } },
+      {
+        method: 'POST',
+        url: '/payments',
+        json: { id: 'pay_pix_gw', status: 'PENDING', billingType: 'PIX', value: 99.99 },
+      },
+      {
+        method: 'GET',
+        url: '/payments/pay_pix_gw/pixQrCode',
+        json: { payload: 'copia-cola', expirationDate: '2026-07-12 12:30:00' },
+      },
+    ]);
+    const result = await provider.createCharge(
+      paramsPix({ pixExpiraEmSegundos: 1800 })
+    );
+    expect(result.expiresAt?.toDate().toISOString()).toBe(
+      new Date('2026-07-12T12:30:00').toISOString()
+    );
+  });
+
+  it('validação: inteiro > 0 e exclusivo do PIX (cartão com o campo = bug de chamador)', async () => {
+    const { provider } = novoProvider([]);
+    await expect(
+      provider.createCharge(paramsPix({ pixExpiraEmSegundos: 0 }))
+    ).rejects.toThrow(/pixExpiraEmSegundos/);
+    await expect(
+      provider.createCharge(
+        paramsPix({ paymentMethod: 'credit_card', pixExpiraEmSegundos: 1800 })
+      )
+    ).rejects.toThrow(/só existe no PIX/);
+  });
+});
