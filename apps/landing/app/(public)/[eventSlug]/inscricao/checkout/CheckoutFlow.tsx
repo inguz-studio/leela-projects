@@ -17,17 +17,21 @@ import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
 import type { EventoPublico } from '@/lib/tipos';
 import {
+  enderecoVazio,
   inscritoVazio,
   kitEnumFromId,
   kitNomeFromId,
   kitsDaModalidade,
+  type EnderecoForm,
   type FormaUI,
   type InscritoForm,
 } from './tipos';
 import {
+  validarEndereco,
   validarInscrito,
   validarResponsavel,
   temErro,
+  type ErrosEndereco,
   type ErrosInscrito,
   type ErrosResponsavel,
 } from './validacao';
@@ -129,12 +133,14 @@ export function CheckoutFlow({
 }): React.JSX.Element {
   const [step, setStep] = useState(0);
 
-  // Dados (ADR-011)
-  const [responsavel, setResponsavel] = useState({ nome: '', email: '' });
+  // Dados (ADR-011 + CKFORM §5.1: telefone do responsável + endereço 1×/pedido)
+  const [responsavel, setResponsavel] = useState({ nome: '', email: '', telefone: '' });
   const [euCorro, setEuCorro] = useState(true);
   const [inscritos, setInscritos] = useState<InscritoForm[]>([inscritoVazio()]);
+  const [endereco, setEndereco] = useState<EnderecoForm>(enderecoVazio());
   const [errosResponsavel, setErrosResponsavel] = useState<ErrosResponsavel>({});
   const [errosInscritos, setErrosInscritos] = useState<ErrosInscrito[]>([]);
+  const [errosEndereco, setErrosEndereco] = useState<ErrosEndereco>({});
   const [errosModalidade, setErrosModalidade] = useState<(string | undefined)[]>([]);
   const [errosKit, setErrosKit] = useState<(string | undefined)[]>([]);
 
@@ -234,8 +240,12 @@ export function CheckoutFlow({
     setInscritos((prev) => prev.map((ins, i) => (i === index ? { ...ins, ...patch } : ins)));
   }, []);
 
+  const patchEndereco = useCallback((patch: Partial<EnderecoForm>) => {
+    setEndereco((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const handleResponsavel = useCallback(
-    (patch: { nome?: string; email?: string }) => {
+    (patch: { nome?: string; email?: string; telefone?: string }) => {
       setResponsavel((prev) => ({ ...prev, ...patch }));
       setEuCorro((corro) => {
         if (corro) {
@@ -411,12 +421,36 @@ export function CheckoutFlow({
           nome: ins.nome.trim(),
           email: ins.email.trim(),
           cpf: ins.cpf,
+          // CKFORM §5.1 item 2: nascimento por atleta (yyyy-mm-dd do input
+          // date — o servidor valida civil/passado e persiste no [reg]).
+          ...(ins.nascimento.length > 0 ? { nascimento: ins.nascimento } : {}),
           modalidade: ins.modalidade,
           kit: kitEnumFromId(ins.kitId),
           ...(ins.kitId.length > 0 ? { kitId: ins.kitId } : {}),
         })),
         ...(euCorro ? { responsavelIndex: 0 } : {}),
-        responsavel: { nome: responsavel.nome.trim(), email: responsavel.email.trim() },
+        responsavel: {
+          nome: responsavel.nome.trim(),
+          email: responsavel.email.trim(),
+          // CKFORM §5.1 item 1: canal de contato do pedido (máscara é UX;
+          // o servidor persiste canônico só-dígitos — F-3 CKMOD).
+          ...(responsavel.telefone.trim().length > 0
+            ? { telefone: responsavel.telefone.trim() }
+            : {}),
+        },
+        // CKFORM §5.1 item 3: endereço do comprador — 1× por pedido; o
+        // servidor valida o shape (core) e canoniza o CEP p/ 8 dígitos.
+        endereco: {
+          cep: endereco.cep,
+          logradouro: endereco.logradouro.trim(),
+          bairro: endereco.bairro.trim(),
+          cidade: endereco.cidade.trim(),
+          uf: endereco.uf,
+          numero: endereco.numero.trim(),
+          ...(endereco.complemento.trim().length > 0
+            ? { complemento: endereco.complemento.trim() }
+            : {}),
+        },
         forma,
         parcelas: forma === 'pix' ? 1 : parcelas,
         ...(cupomAplicado ? { cupomCodigo: cupomAplicado } : {}),
@@ -436,7 +470,7 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [charge, authPronto, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
@@ -496,7 +530,7 @@ export function CheckoutFlow({
       return;
     }
     if (step === 1) {
-      const eResp = validarResponsavel(responsavel.nome, responsavel.email);
+      const eResp = validarResponsavel(responsavel.nome, responsavel.email, responsavel.telefone);
       const eIns = inscritos.map((ins, i) =>
         validarInscrito(
           euCorro && i === 0
@@ -504,9 +538,13 @@ export function CheckoutFlow({
             : ins,
         ),
       );
+      // CKFORM §5.1 item 3: endereço gateia o avanço junto com os demais
+      // (o lookup de CEP é fail-open, mas o ENDEREÇO em si é coletado).
+      const eEnd = validarEndereco(endereco);
       setErrosResponsavel(eResp);
       setErrosInscritos(eIns);
-      if (temErro(eResp) || eIns.some((e) => temErro(e))) return;
+      setErrosEndereco(eEnd);
+      if (temErro(eResp) || eIns.some((e) => temErro(e)) || temErro(eEnd)) return;
       setStep(2);
       return;
     }
@@ -515,7 +553,7 @@ export function CheckoutFlow({
       setStep(3);
       return;
     }
-  }, [step, evento.kits, responsavel, inscritos, euCorro, cotacao, erroCotacao, erroAuth]);
+  }, [step, evento.kits, responsavel, inscritos, euCorro, endereco, cotacao, erroCotacao, erroAuth]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -595,13 +633,17 @@ export function CheckoutFlow({
           <StepDados
             responsavelNome={responsavel.nome}
             responsavelEmail={responsavel.email}
+            responsavelTelefone={responsavel.telefone}
             onResponsavel={handleResponsavel}
             euCorro={euCorro}
             onEuCorro={handleEuCorro}
             inscritos={inscritos}
             onInscrito={patchInscrito}
+            endereco={endereco}
+            onEndereco={patchEndereco}
             errosResponsavel={errosResponsavel}
             errosInscritos={errosInscritos}
+            errosEndereco={errosEndereco}
           />
         ) : null}
 

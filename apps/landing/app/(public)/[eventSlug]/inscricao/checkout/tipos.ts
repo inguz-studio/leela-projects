@@ -11,6 +11,11 @@ export interface InscritoForm {
   nome: string;
   email: string;
   cpf: string;
+  /**
+   * Nascimento `yyyy-mm-dd` POR ATLETA (CKFORM · spec §5.1 item 2 — categoria
+   * de prova + demografia são do titular, ADR-011). '' = ainda não preenchido.
+   */
+  nascimento: string;
   /** '' até a etapa Modalidade e kit. */
   modalidade: string;
   /**
@@ -66,5 +71,26 @@ export function kitsDaModalidade(
 
 /** Inscrito em branco (sem modalidade nem kit escolhidos ainda). */
 export function inscritoVazio(): InscritoForm {
-  return { nome: '', email: '', cpf: '', modalidade: '', kitId: '' };
+  return { nome: '', email: '', cpf: '', nascimento: '', modalidade: '', kitId: '' };
+}
+
+/**
+ * Endereço do COMPRADOR em edição (CKFORM · spec §5.1 item 3): 1× por pedido,
+ * do responsável — vira `CheckoutEnderecoInput` no submit (o servidor
+ * canoniza o CEP). Todos os campos como string de UI ('' = vazio).
+ */
+export interface EnderecoForm {
+  /** CEP com máscara de UI `00000-000`. */
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  numero: string;
+  complemento: string;
+}
+
+/** Endereço em branco. */
+export function enderecoVazio(): EnderecoForm {
+  return { cep: '', logradouro: '', bairro: '', cidade: '', uf: '', numero: '', complemento: '' };
 }
