@@ -20,12 +20,14 @@ export function StepResumo({
   cotacao,
   cotando,
   erroCotacao,
+  onTentarCotacao,
   linhas,
   cupomInput,
   onCupomInput,
   onAplicarCupom,
   onRemoverCupom,
   aplicandoCupom,
+  erroCupomUrl,
   forma,
   onForma,
   parcelas,
@@ -34,12 +36,16 @@ export function StepResumo({
   cotacao: CotarInscricaoCheckoutResult | null;
   cotando: boolean;
   erroCotacao: string | null;
+  /** BC-1 · re-dispara a cotação a partir do bloco de erro (sem beco). */
+  onTentarCotacao: () => void;
   linhas: LinhaResumo[];
   cupomInput: string;
   onCupomInput: (v: string) => void;
   onAplicarCupom: () => void;
   onRemoverCupom: () => void;
   aplicandoCupom: boolean;
+  /** A-2 · aviso honesto quando o cupom do link não pôde ser aplicado. */
+  erroCupomUrl: string | null;
   forma: FormaUI;
   onForma: (f: FormaUI) => void;
   parcelas: number;
@@ -108,6 +114,11 @@ export function StepResumo({
             </Button>
           </div>
         )}
+        {erroCupomUrl && !cupomAtivo ? (
+          <p role="alert" className="text-sm text-feedback-warning-fg">
+            {erroCupomUrl}
+          </p>
+        ) : null}
       </section>
 
       {/* Forma de pagamento */}
@@ -144,7 +155,14 @@ export function StepResumo({
       {/* Totais — renderizados da cotação, sem cálculo local */}
       <section className="rounded-ds-lg border border-border-default bg-surface-sunken p-4 sm:p-5">
         {erroCotacao ? (
-          <p className="text-sm font-medium text-feedback-danger-fg">{erroCotacao}</p>
+          <div role="alert" className="flex flex-col gap-3">
+            <p className="text-sm font-medium text-feedback-danger-fg">{erroCotacao}</p>
+            <div>
+              <Button variant="secondary" size="sm" onClick={onTentarCotacao} disabled={cotando}>
+                {cotando ? 'Calculando…' : 'Tentar novamente'}
+              </Button>
+            </div>
+          </div>
         ) : cotacao === null ? (
           <p className="text-sm text-text-secondary">
             {cotando ? 'Calculando o total…' : 'Escolha a modalidade para ver o total.'}
