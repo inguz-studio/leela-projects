@@ -71,6 +71,7 @@ tags:
 - [x] **[R13] Checkout com identidade** — etapas visíveis, formulário na vertical e kits com hierarquia e imagem ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-B] Análise financeira unificada** — filtro por evento na Análise, Análise vira a porta única (Analytics some) e Repasses declara o saldo consolidado de todos os eventos ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-C] Kit de verdade no checkout** — cada kit tem imagem 1:1 (upload seguro), descrição e "o que está incluso"; o checkout mostra o dado real e os eventos de demonstração vêm preenchidos ✅ (falta só a edição na tela de kits — lote de UI) [[LEELA-E03-operacao-evento]]
+- [x] **[E12] Revisão UX do checkout (mind Don Norman)** — fluxo de compra auditado ponta a ponta contra os wireframes: 18 fricções priorizadas (2 travam a compra quando ocorrem, 5 altas), 6 divergências para decisão, e a spec ratificada dos novos campos (telefone, nascimento, endereço via CEP) + aceites no pagar (política de cancelamento e termo de saúde) ✅ report em `outputs/leela-build-2d6ee98d/CHECKOUT-UX-REPORT.md` — os fixes viram o próximo lote
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 
