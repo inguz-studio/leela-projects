@@ -182,6 +182,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     ],
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     idempotencyKey: key,

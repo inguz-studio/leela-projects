@@ -209,6 +209,7 @@ describe.skipIf(!E2E_ATIVO)('E2E sandbox Asaas (opt-in ASAAS_E2E=1)', () => {
       ],
       responsavelIndex: 0,
       responsavel: { nome: 'Ana E2E Leela', email: 'ana.e2e@example.com' },
+      aceites: { termos: true, saude: true },
       forma,
       parcelas: 1,
       idempotencyKey: key,

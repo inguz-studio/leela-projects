@@ -168,6 +168,7 @@ describe.skipIf(!hasEmulator)('J1 · Aceite E18 ponta a ponta (LEELA-R4-E2E)', (
     }],
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     idempotencyKey: key,

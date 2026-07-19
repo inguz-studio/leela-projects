@@ -134,6 +134,7 @@ describe('S1203 · confirmarPagamentoSandbox (fecha charge→webhook→confirmad
     inscritos: [{ nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25', modalidade: '10k' }],
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix', parcelas: 1, idempotencyKey: KEY,
   };
   let pedidoId = '';

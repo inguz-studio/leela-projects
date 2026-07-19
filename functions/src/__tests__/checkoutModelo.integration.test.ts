@@ -240,11 +240,16 @@ describe('CKMOD — persistência do modelo novo no fluxo do checkout', () => {
 
   it('F-4b: replay trazendo aceites sobre pedido SEM o bloco COMPLETA a prova (e nunca a reescreve)', async () => {
     const key = 'ckmod-f4b-0001';
-    // Tentativa 1: UI antiga (sem aceites) cria o pedido
-    const semAceites = inputCkmod(EVENTO_ID, key);
-    delete semAceites.aceites;
-    await createInscricaoChargeCore(db, provider, semAceites, { uid: ANA_UID });
+    // Pedido LEGADO (criado ANTES do flip F-4a, sem o bloco de aceites):
+    // desde o CKFORM-T3 a callable rejeita input sem aceites, então o legado
+    // é SIMULADO — cria com aceites e remove o bloco via Admin (o que um doc
+    // pré-flip é no banco). O replay do cliente novo (sempre COM aceites)
+    // precisa completar a prova — compat do flip.
+    await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
     const pedidoRef = db.collection('pedidos').doc(`ped-${ANA_UID}-${key}`);
+    await pedidoRef.update({ aceites: FieldValue.delete() });
     expect((await pedidoRef.get()).get('aceites')).toBeUndefined();
 
     // Retry (mesma chave) COM aceites: prova é completada com o vigente
@@ -291,10 +296,12 @@ describe('CKMOD — persistência do modelo novo no fluxo do checkout', () => {
     await db.doc(`eventos/${EVENTO_ID}/politicaVendas/config`).update({ versao: 3 });
   });
 
-  it('COMPAT: input da UI antiga (sem campos novos) ⇒ docs sem endereco/aceites/[reg]', async () => {
+  it('COMPAT: input sem endereco/nascimento/telefone (mas COM aceites) segue válido ⇒ docs sem endereco/[reg]', async () => {
+    // Pós-flip F-4a: aceites são o ÚNICO campo novo obrigatório — o resto
+    // (endereço/nascimento/telefone) continua opcional-estrito no servidor
+    // (obrigatoriedade deles é gate de UX na UI).
     const input = inputCkmod(EVENTO_ID, 'ckmod-compat-01');
     delete input.endereco;
-    delete input.aceites;
     input.responsavel = { nome: 'Ana Atleta', email: 'ana@exemplo.com.br' };
     input.inscritos = input.inscritos.map((i) => {
       const { nascimento: _n, ...resto } = i;
@@ -303,14 +310,26 @@ describe('CKMOD — persistência do modelo novo no fluxo do checkout', () => {
     const r = await createInscricaoChargeCore(db, provider, input, { uid: ANA_UID });
     const pedidoSnap = await db.collection('pedidos').doc(r.pedidoId).get();
     expect(pedidoSnap.get('endereco')).toBeUndefined();
-    expect(pedidoSnap.get('aceites')).toBeUndefined();
     expect(pedidoSnap.get('responsavel.telefone')).toBeUndefined();
+    // Aceites SEMPRE presentes num pedido novo (flip CKFORM-T3).
+    expect(pedidoSnap.get('aceites.termos.versao')).toBe(3);
     const inscritoSnap = await db
       .doc(`eventos/${EVENTO_ID}/inscritos/${r.inscritoIds[0]}`).get();
     expect(inscritoSnap.get('dadosPessoais')).toBeUndefined();
     // E os parses seguem aceitando (regressão de modelo)
     parsePedido(pedidoSnap.id, pedidoSnap.data() ?? {});
     parseInscrito(inscritoSnap.id, inscritoSnap.data() ?? {});
+  });
+
+  it('FLIP F-4a (CKFORM-T3): pedido SEM aceites é REJEITADO server-side e NADA é escrito', async () => {
+    const key = 'ckform-flip-0001';
+    const semAceites = inputCkmod(EVENTO_ID, key) as unknown as Record<string, unknown>;
+    delete semAceites['aceites'];
+    await expect(
+      createInscricaoChargeCore(db, provider, semAceites, { uid: ANA_UID })
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    const pedidoSnap = await db.collection('pedidos').doc(`ped-${ANA_UID}-${key}`).get();
+    expect(pedidoSnap.exists).toBe(false); // fail-closed: nada criado
   });
 
   it('ATAQUES: aceite parcial/CEP torto/nascimento inválido ⇒ invalid-argument, NADA escrito', async () => {

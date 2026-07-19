@@ -174,6 +174,7 @@ async function criarPedido(
     })),
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     ...(cupomCodigo !== undefined ? { cupomCodigo } : {}),

@@ -135,8 +135,10 @@ export interface CreateInscricaoChargeInput {
    * Aceites do pagar (CKMOD §5.3): a UI envia SÓ os booleans confirmados
    * ({termos: true, saude: true}); versão vigente + timestamp são carimbados
    * pelo SERVIDOR (RN-149 pattern — nunca enviar/aceitar versão daqui).
+   * OBRIGATÓRIO (CKFORM-T3 · flip F-4a): pedido sem os 2 aceites é
+   * REJEITADO server-side.
    */
-  aceites?: { termos: boolean; saude: boolean };
+  aceites: { termos: boolean; saude: boolean };
   forma: FormaPagamento;
   parcelas: number;
   cupomCodigo?: string;

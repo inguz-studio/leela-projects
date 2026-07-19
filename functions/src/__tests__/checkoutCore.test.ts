@@ -350,6 +350,8 @@ describe('validarCreateInscricaoChargeInput — fronteira de segurança', () => 
     ],
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    // CKFORM-T3 (flip F-4a): aceites obrigatórios em TODO pedido novo.
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     idempotencyKey: 'chk-0001-aaaa-bbbb',
@@ -357,6 +359,11 @@ describe('validarCreateInscricaoChargeInput — fronteira de segurança', () => 
 
   it('input válido → sem erros', () => {
     expect(validarCreateInscricaoChargeInput(INPUT_VALIDO)).toEqual([]);
+  });
+
+  it('sem aceites → erro (flip F-4a · CKFORM-T3 — gate só na UI não é gate)', () => {
+    const { aceites: _a, ...sem } = INPUT_VALIDO;
+    expect(validarCreateInscricaoChargeInput(sem).join(' ')).toMatch(/aceites.*obrigatório/);
   });
 
   it('sem idempotencyKey → erro (RN-333 — dinheiro exige chave)', () => {
@@ -465,6 +472,7 @@ describe('H1 — preço do kit NUNCA vem do cliente (só kitId; doc é a verdade
         { nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '52998224725', modalidade: '21k', kitId: 'kit-ouro' },
       ],
       responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+      aceites: { termos: true, saude: true },
       forma: 'pix',
       parcelas: 1,
       idempotencyKey: 'chk-0001-aaaa-bbbb',

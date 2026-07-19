@@ -452,10 +452,10 @@ describe('parsePedido (CKMOD — endereco/aceites/telefone)', () => {
     };
     expect(validarCreateInscricaoChargeInput(base, '2026-07-19')).toEqual([]);
 
-    // Sem os campos novos (UI antiga) segue válido — compat/regressão.
+    // Sem endereco/nascimento/telefone segue válido (opcionais no servidor);
+    // ACEITES são obrigatórios pós-flip F-4a (CKFORM-T3) — compat/regressão.
     const antigo = { ...base } as Record<string, unknown>;
     delete antigo['endereco'];
-    delete antigo['aceites'];
     antigo['responsavel'] = { nome: 'Maria Atleta', email: 'maria@exemplo.com.br' };
     antigo['inscritos'] = [
       {
@@ -466,6 +466,13 @@ describe('parsePedido (CKMOD — endereco/aceites/telefone)', () => {
       },
     ];
     expect(validarCreateInscricaoChargeInput(antigo, '2026-07-19')).toEqual([]);
+
+    // FLIP F-4a (CKFORM-T3): input SEM aceites é rejeitado server-side.
+    const semAceites = { ...antigo };
+    delete semAceites['aceites'];
+    expect(
+      validarCreateInscricaoChargeInput(semAceites, '2026-07-19').join(' ')
+    ).toMatch(/aceites.*obrigatório/);
 
     // Forjas: aceite parcial, nascimento futuro, telefone torto, CEP torto.
     expect(

@@ -432,6 +432,7 @@ describe('RN-347 · contrato — forja de taxaModo é inerte; pct nunca sai', ()
     ],
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Silva', email: 'ana@ex.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     idempotencyKey: 'k-rn347-0001',

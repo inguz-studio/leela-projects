@@ -112,6 +112,7 @@ const baseInput = (eventoId: string, key: string): CreateInscricaoChargeInput =>
   inscritos: [inscritoAna],
   responsavelIndex: 0,
   responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+  aceites: { termos: true, saude: true },
   forma: 'pix', parcelas: 1, idempotencyKey: key,
 });
 
@@ -324,6 +325,7 @@ describe('RN-347 · estorno devolve o que o inscrito PAGOU (I2)', () => {
         inscritos: [inscritoAna, inscritoBia],
         responsavelIndex: 0,
         responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+        aceites: { termos: true, saude: true },
         forma: 'pix', parcelas: 1, cupomCodigo: 'HEROI10',
         idempotencyKey: 'rn347-grupo-0001',
       },

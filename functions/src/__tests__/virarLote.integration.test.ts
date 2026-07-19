@@ -378,6 +378,7 @@ describe('checkout real → contagem por linha do pedido; estorno NÃO devolve v
       ],
       responsavelIndex: 0,
       responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+      aceites: { termos: true, saude: true },
       forma: 'pix',
       parcelas: 1,
       idempotencyKey: 'virada-ck-0001',

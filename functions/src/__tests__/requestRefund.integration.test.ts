@@ -137,6 +137,7 @@ async function criarPedidoPago(
     })),
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     ...(cupomCodigo !== undefined ? { cupomCodigo } : {}),
@@ -437,6 +438,7 @@ describe('guards e ataques', () => {
       inscritos: [{ nome: 'Pend Ente', email: 'p@e.com', cpf: '529.982.247-25', modalidade: '10k' }],
       responsavelIndex: 0,
       responsavel: { nome: 'Pend Ente', email: 'p@e.com' },
+      aceites: { termos: true, saude: true },
       forma: 'pix', parcelas: 1, idempotencyKey: 'refund-pend-0001',
     }, { uid: ANA_UID });
     await expect(

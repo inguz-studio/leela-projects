@@ -172,13 +172,17 @@ export interface CreateInscricaoChargeInput {
    * `{termos: true, saude: true}` — versão e timestamp são carimbados pelo
    * SERVIDOR (versão vigente da politicaVendas lida DENTRO da tx +
    * TERMO_SAUDE_VERSAO_VIGENTE + serverTimestamp). Aceite parcial ⇒
-   * invalid-argument. Opcional NESTA camada (a UI vigente ainda não coleta).
-   * ⚠️ PENDÊNCIA DURA (F-4a review CKMOD): quando o lote de UI coletar os
-   * aceites, o flip de obrigatoriedade é AQUI, SERVER-SIDE (este campo vira
-   * obrigatório em validarCreateInscricaoChargeInput) — gate só na UI não é
-   * gate: a callable direta compraria sem aceite nenhum.
+   * invalid-argument.
+   *
+   * OBRIGATÓRIO (CKFORM-T3 — flip F-4a EXECUTADO, deploy conjunto com a UI
+   * que coleta): pedido NOVO sem os dois aceites é REJEITADO em
+   * `validarCreateInscricaoChargeInput` — gate só na UI não é gate (a
+   * callable direta compraria sem aceite nenhum). REPLAY de pedido LEGADO
+   * (criado antes do flip, sem o bloco): o retry — que agora sempre traz
+   * aceites — COMPLETA a prova via `garantirAceitesNoReplay` (F-4b); prova
+   * existente nunca é reescrita.
    */
-  aceites?: { termos: boolean; saude: boolean };
+  aceites: { termos: boolean; saude: boolean };
   forma: FormaPagamento;
   /** Parcelas escolhidas (1 = à vista; > 1 só cartão). */
   parcelas: number;
@@ -368,9 +372,13 @@ export function validarCreateInscricaoChargeInput(
     erros.push(...validarEnderecoPedido(input['endereco']));
   }
 
-  // CKMOD (spec §5.3): aceites — opcionais NESTA camada; presentes devem ser
-  // {termos: true, saude: true} LITERAIS (aceite parcial/forjado morre aqui).
-  if (input['aceites'] !== undefined) {
+  // CKFORM-T3 (flip F-4a · spec §5.3): aceites OBRIGATÓRIOS server-side —
+  // pedido sem os dois é rejeitado AQUI, antes de qualquer escrita (gate só
+  // na UI não é gate). Presentes devem ser {termos: true, saude: true}
+  // LITERAIS (aceite parcial/forjado morre aqui).
+  if (input['aceites'] === undefined) {
+    erros.push('"aceites" é obrigatório: {termos: true, saude: true} (spec §5.3 — F-4a).');
+  } else {
     erros.push(...validarAceitesCheckoutInput(input['aceites']));
   }
 

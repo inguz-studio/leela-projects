@@ -122,6 +122,7 @@ async function criarPedidoPago(
     })),
     responsavelIndex: 0,
     responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+    aceites: { termos: true, saude: true },
     forma: 'pix',
     parcelas: 1,
     ...(cupomCodigo !== undefined ? { cupomCodigo } : {}),
@@ -378,6 +379,7 @@ describe('guards do estorno — quem NÃO pode e o que NÃO estorna', () => {
       inscritos: [{ nome: 'Beto Pendente', email: 'beto@exemplo.com', cpf: '529.982.247-25', modalidade: '10k' }],
       responsavelIndex: 0,
       responsavel: { nome: 'Beto Pendente', email: 'beto@exemplo.com' },
+      aceites: { termos: true, saude: true },
       forma: 'pix', parcelas: 1, idempotencyKey: 'estorno-pendente-0001',
     };
     const charge = await createInscricaoChargeCore(db, provider, input, { uid: ANA_UID });
