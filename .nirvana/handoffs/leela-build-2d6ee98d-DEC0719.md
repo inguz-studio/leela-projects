@@ -39,13 +39,23 @@ RN em vigor mantida: RN-315 (clube-influenciador sem retroativo) SEGUE até revi
 
 ## Progresso por tema
 - [x] T0 · Checkpoint criado
-- [ ] T1 · ADR-016 status RATIFICADA + item 18
-- [ ] T2 · DECISOES-ABERTAS (painel curto)
-- [ ] T3 · DECISOES-EM-ABERTO (versão longa)
-- [ ] T4 · Rodada 2026-07-19-decisoes (verbatim integral + rns-delta + fila)
-- [ ] T5 · Épicos E19 / E12 / E04 (RNs registradas)
-- [ ] T6 · Cards de fila no V1-KANBAN
-- [ ] T7 · Push final
+- [x] T1 · ADR-016 status RATIFICADA + item 18
+- [x] T2 · DECISOES-ABERTAS (painel curto)
+- [x] T3 · DECISOES-EM-ABERTO (versão longa)
+- [x] T4 · Rodada 2026-07-19-decisoes (verbatim integral + rns-delta + fila)
+- [x] T5 · Épicos E19 / E12 / E04 (RNs registradas)
+- [x] T6 · Cards de fila no V1-KANBAN
+- [ ] T7 · Push final (após atualizar este checkpoint)
+
+## GATE
+- Nenhum arquivo de código tocado pelos commits [LEELA-DEC-0719] (`git log --grep --name-only` só lista `leela-specs/`). PASS.
+- `.nirvana/HANDOFF.md` e `produto/00-MOC-produto.md` NÃO commitados/revertidos (seguem modificados pelo maestro).
 
 ## Commits
-(atualizados a cada tema)
+- T0 checkpoint: 00bd918
+- T1 ADR-016 + item 18: d46f6b4
+- T2 painel curto: ef5ae52
+- T3 versão longa: e708f4c
+- T4 rodada (01/02/03): 1bf3192
+- T5 épicos E19/E12/E04: b140abe
+- T6 kanban: aaaec59 (co-commit da lane TAMANHOS-GRADE no mesmo board — preservado, sem stash/revert)
