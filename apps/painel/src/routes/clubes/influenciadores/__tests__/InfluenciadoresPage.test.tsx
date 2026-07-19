@@ -155,7 +155,7 @@ describe('InfluenciadoresPage', () => {
     expect(await screen.findByText(/Repasse de R\$\s*500,00/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
     await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(1));
-    const arg = mocks.registrarRepasseComissao.mock.calls[0][0];
+    const arg = mocks.registrarRepasseComissao.mock.calls[0]![0];
     expect(arg).toMatchObject({ eventoId: 'evt-1', afiliadoId: 'DIONEY10', valor: 500 });
     expect(typeof arg.repasseId).toBe('string');
     expect(arg.repasseId.length).toBeGreaterThanOrEqual(8);
