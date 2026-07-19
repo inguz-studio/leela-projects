@@ -19,15 +19,18 @@
 //     gênero, contagens e valores — NUNCA CPF, telefone, cidade/UF, contato
 //     de emergência ou restrição médica;
 //   - o VALOR da chave de linking (CPF/e-mail) não é persistido: docId =
-//     `{tipo}_{sha256(tenantId:tipo:valor)[0:32]}`. O tenant no input impede
-//     correlacionar a MESMA pessoa entre tenants pela igualdade do docId.
-//     RESSALVA (review antagonista E19 · A3): para chave CPF (~10^9 valores,
-//     baixa entropia) o hash é força-brutável offline por quem tenha um dump
-//     da coleção + o tenantId (que está no path) — a proteção real é contra
-//     exposição casual e correlação, NÃO contra reversão offline. Hardening
-//     planejado ANTES de produção: HMAC-SHA256 com pepper secreto (Secret
-//     Manager) — decisão de ops pendente com o Vitor, registrada no épico
-//     E19 (§Estado de implementação).
+//     `{tipo}_{HMAC-SHA256(pepper, tenantId:tipo:valor)[0:32]}`. O tenant no
+//     input impede correlacionar a MESMA pessoa entre tenants pela igualdade
+//     do docId.
+//     HARDENING A3 APLICADO (COMF2 · fecha a ressalva do review E19): o
+//     sha256 puro era força-brutável offline para chave CPF (~10^9 valores,
+//     baixa entropia) por quem tivesse um dump + o tenantId do path. Agora a
+//     chave é HMAC-SHA256 com pepper secreto (`CRM_ID_PEPPER`) — sem o
+//     pepper, o espaço de busca é o da chave do HMAC, não o do CPF.
+//     FAIL-CLOSED: pepper ausente/vazio LANÇA em QUALQUER ambiente (em
+//     emulator/teste a env é setada explicitamente; produção = Secret
+//     Manager no deploy — ÚNICA pendência de ops, registrada no épico E19).
+//     Trocado ANTES de produção — sem dado real, nenhuma migração de chave.
 //
 // LEDGER FECHADO + TRANSAÇÃO (race-safe): cada cliente carrega o mapa
 // `inscricoes` (uma entrada por inscrição confirmada/estornada, chave
@@ -61,7 +64,7 @@
 // no épico E19, sem tocar no que roda.
 // =============================================================================
 
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import * as functions from 'firebase-functions/v1';
@@ -84,17 +87,41 @@ type Db = admin.firestore.Firestore;
 type DocData = Record<string, unknown>;
 
 // ---------------------------------------------------------------------------
-// Chave do cliente (docId) — hash com salt por tenant, nada reversível
+// Chave do cliente (docId) — HMAC com pepper secreto (hardening A3 · COMF2)
 // ---------------------------------------------------------------------------
 
 /**
- * DocId do cliente CRM: `{tipo}_{sha256(tenantId:tipo:valor)[0:32]}`.
- * Determinístico por (tenant, identidade); o valor em claro (CPF/e-mail)
- * NUNCA aparece em path, doc ou log (minimização RN-172). O tenantId no
- * hash impede correlação cross-tenant da mesma pessoa por igualdade de id.
+ * Pepper do HMAC da chave de cliente. FAIL-CLOSED (review E19 · A3): ausente
+ * ou vazio ⇒ LANÇA — em QUALQUER ambiente. Emulator/teste setam
+ * `CRM_ID_PEPPER` explicitamente (env de teste, sem valor de produção);
+ * produção recebe o secret real via Secret Manager no deploy. NUNCA logar
+ * nem ecoar o valor. Checagem em TEMPO DE CHAMADA (não no load do módulo) —
+ * o deploy não quebra, o gatilho quebra alto se mal provisionado.
+ */
+function crmIdPepper(): string {
+  const pepper = process.env['CRM_ID_PEPPER'];
+  if (typeof pepper !== 'string' || pepper.length === 0) {
+    throw new Error(
+      'CRM_ID_PEPPER ausente — a chave de cliente do CRM é HMAC com pepper ' +
+        'secreto (hardening A3, fail-closed). Produção: provisionar no ' +
+        'Secret Manager; emulator/teste: setar env explícita de teste.'
+    );
+  }
+  return pepper;
+}
+
+/**
+ * DocId do cliente CRM: `{tipo}_{HMAC-SHA256(pepper, tenantId:tipo:valor)[0:32]}`.
+ * Determinístico por (tenant, identidade) SOB O MESMO pepper; o valor em
+ * claro (CPF/e-mail) NUNCA aparece em path, doc ou log (minimização RN-172).
+ * O tenantId na mensagem impede correlação cross-tenant da mesma pessoa por
+ * igualdade de id; o pepper secreto mata a força bruta offline do CPF
+ * (~10^9 valores) que o sha256 puro permitia (A3). Trocar o pepper TROCA
+ * TODAS as chaves — só é seguro enquanto não há dado real (por isso o
+ * hardening foi pago AGORA).
  */
 export function clienteDocId(tenantId: string, id: IdentidadeCliente): string {
-  const digest = createHash('sha256')
+  const digest = createHmac('sha256', crmIdPepper())
     .update(`${tenantId}:${id.tipo}:${id.valor}`)
     .digest('hex')
     .slice(0, 32);

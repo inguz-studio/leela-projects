@@ -36,6 +36,11 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { derivarIdentidadeCliente, SUBCOLECAO_CRM_CLIENTES } from '@leela/core';
 import { aplicarWriteInscritoNoCrm, clienteDocId } from '../crm/agregarClientes';
 
+// Hardening A3 (COMF2): a chave do cliente é HMAC com pepper FAIL-CLOSED —
+// os testes proveem a env EXPLÍCITA de teste (nunca valor de produção).
+const PEPPER_TESTE = 'pepper-de-teste-crm-a3';
+process.env['CRM_ID_PEPPER'] = PEPPER_TESTE;
+
 const PROJECT_ID = 'demo-leela-crm';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 
@@ -144,11 +149,22 @@ beforeAll(async () => {
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080),
+      // Porta da LANE: honra LEELA_FS_EMU_PORT e cai no host injetado pelo
+      // próprio emulators:exec (no Windows o prefixo VAR=x não existe no
+      // cmd — sem o fallback a suíte mirava 8080 com o emulator em 8480).
+      port: Number(
+        process.env['LEELA_FS_EMU_PORT'] ??
+          process.env['FIRESTORE_EMULATOR_HOST']?.split(':').pop() ??
+          8080
+      ),
     },
   });
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
+    // Mesmo fallback do initializeTestEnvironment acima (Windows-safe):
+    // preserva o FIRESTORE_EMULATOR_HOST que o emulators:exec injetou.
+    process.env['FIRESTORE_EMULATOR_HOST'] =
+      process.env['FIRESTORE_EMULATOR_HOST'] ??
+      `localhost:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();
@@ -458,5 +474,43 @@ describe('Rules de crmClientes — ataques (PII individual)', () => {
         tenantId: CASTELO_ID, chaveTipo: 'cpf', nome: 'Forjado', ltv: 1,
       })
     );
+  });
+});
+
+describe('Hardening A3 — chave HMAC com CRM_ID_PEPPER (fail-closed)', () => {
+  const identidade = () =>
+    derivarIdentidadeCliente({ cpf: CPF_BRUNA_DIGITOS, atletaId: 'x' });
+
+  it('FAIL-CLOSED: sem pepper (ausente OU vazio) a chave LANÇA — em qualquer ambiente', () => {
+    const original = process.env['CRM_ID_PEPPER'];
+    try {
+      delete process.env['CRM_ID_PEPPER'];
+      expect(() => clienteDocId(CASTELO_ID, identidade())).toThrow(/CRM_ID_PEPPER/);
+      process.env['CRM_ID_PEPPER'] = '';
+      expect(() => clienteDocId(CASTELO_ID, identidade())).toThrow(/CRM_ID_PEPPER/);
+    } finally {
+      process.env['CRM_ID_PEPPER'] = original;
+    }
+  });
+
+  it('pepper DIFERENTE ⇒ chave DIFERENTE (sha256 puro está morto: sem pepper não há chave)', () => {
+    const comPepperDeTeste = clienteDocId(CASTELO_ID, identidade());
+    const original = process.env['CRM_ID_PEPPER'];
+    try {
+      process.env['CRM_ID_PEPPER'] = 'outro-pepper-qualquer';
+      const comOutroPepper = clienteDocId(CASTELO_ID, identidade());
+      expect(comOutroPepper).not.toBe(comPepperDeTeste);
+      // shape preservado: `{tipo}_{32 hex}` — nada do CPF vaza no id
+      expect(comOutroPepper).toMatch(/^cpf_[0-9a-f]{32}$/);
+      expect(comOutroPepper).not.toContain(CPF_BRUNA_DIGITOS);
+    } finally {
+      process.env['CRM_ID_PEPPER'] = original;
+    }
+  });
+
+  it('determinístico SOB o mesmo pepper; tenant distinto NÃO correlaciona', () => {
+    const a = clienteDocId(CASTELO_ID, identidade());
+    expect(clienteDocId(CASTELO_ID, identidade())).toBe(a);
+    expect(clienteDocId(PASSO_ID, identidade())).not.toBe(a);
   });
 });
