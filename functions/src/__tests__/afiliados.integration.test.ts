@@ -46,6 +46,7 @@ import {
   getAfiliadosDoTenantCore,
   getMinhasAfiliacoesCore,
 } from '../affiliation/readers';
+import { registrarRepasseComissaoCore } from '../affiliation/registrarRepasse';
 import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
@@ -794,5 +795,282 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
       {}
     );
     expect(outroTenant.afiliados).toHaveLength(0);
+  });
+
+  // ── F · Comissão FASE 2 (COMF2 — dinheiro) ───────────────────────────────
+
+  const afPath = `eventos/${EVENTO_ID}/afiliados/FLORIPA10`;
+
+  async function converterViaRef(
+    key: string,
+    eventId: string,
+    extra: Partial<CreateInscricaoChargeInput> = {}
+  ) {
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput(key, { ref: { codigo: 'FLORIPA10' }, ...extra }),
+      caller
+    );
+    await confirmarPedido(r.pedidoId, eventId);
+    return r;
+  }
+
+  it('F1: comissão PERCENTUAL acumula cent-exato na confirmação; config congelada na conversão; replay não duplica', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run', refCodigo: 'FLORIPA10',
+      comissao: { tipo: 'percentual', percentual: 10.25 },
+    }, marina);
+
+    const r = await converterViaRef('chave-com-00000001', 'evt-com-1');
+    // 10,25% de R$ 200,00 = 2050 centavos exatos = R$ 20,50
+    const esperada = Math.round(Math.round(r.valores.valorFinal * 100) * 1025 / 10_000) / 100;
+    const af = await db.doc(afPath).get();
+    expect(af.get('comissaoAcumulada')).toBe(esperada);
+    expect(af.get('comissaoRepassada') ?? 0).toBe(0);
+
+    const conv = await db.doc(`${afPath}/conversoes/${r.pedidoId}`).get();
+    expect(conv.get('comissao')).toBe(esperada);
+    expect(conv.get('comissaoConfig')).toEqual({ tipo: 'percentual', percentual: 10.25 });
+
+    // Replay (mesma entrega + entrega nova): ∑ de dinheiro INTACTO
+    await confirmarPedido(r.pedidoId, 'evt-com-1');
+    await confirmarPedido(r.pedidoId, 'evt-com-1b');
+    const af2 = await db.doc(afPath).get();
+    expect(af2.get('comissaoAcumulada')).toBe(esperada);
+  });
+
+  it('F2: comissão VALOR_FIXO conta POR INSCRIÇÃO (pedido de 2 = 2×); afiliado sem comissão acumula 0', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run', refCodigo: 'FLORIPA10',
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 15.5 },
+    }, marina);
+    const r = await converterViaRef('chave-com-00000002', 'evt-com-2', {
+      inscritos: [
+        { nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25', modalidade: '10k' },
+        { nome: 'Beto Lima', email: 'beto@exemplo.com', cpf: '111.444.777-35', modalidade: '10k' },
+      ],
+    });
+    const af = await db.doc(afPath).get();
+    expect(af.get('conversoes')).toBe(2);
+    expect(af.get('comissaoAcumulada')).toBe(31);
+    const conv = await db.doc(`${afPath}/conversoes/${r.pedidoId}`).get();
+    expect(conv.get('comissao')).toBe(31);
+
+    // Afiliado SEM comissão (R9-E intacto): conversão registra, comissão 0
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Sem Comissão', refCodigo: 'SEMCOM01',
+    }, marina);
+    const r2 = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-com-00000003', { ref: { codigo: 'SEMCOM01' } }),
+      caller
+    );
+    await confirmarPedido(r2.pedidoId, 'evt-com-3');
+    const af2 = await db.doc(`eventos/${EVENTO_ID}/afiliados/SEMCOM01`).get();
+    expect(af2.get('conversoes')).toBe(1);
+    expect(af2.get('comissaoAcumulada')).toBe(0);
+  });
+
+  it('F3 (anti-forja de percentual pós-venda): mudar a config NÃO recalcula o acumulado; estorno decrementa pela config CONGELADA', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run', refCodigo: 'FLORIPA10',
+      comissao: { tipo: 'percentual', percentual: 10 },
+    }, marina);
+    const r1 = await converterViaRef('chave-forja-0000001', 'evt-forja-1');
+    const comissao1 = Math.round(Math.round(r1.valores.valorFinal * 100) * 1000 / 10_000) / 100;
+    expect((await db.doc(afPath).get()).get('comissaoAcumulada')).toBe(comissao1);
+
+    // Organizador sobe para 50% DEPOIS da venda
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run', refCodigo: 'FLORIPA10',
+      comissao: { tipo: 'percentual', percentual: 50 },
+    }, marina);
+    // Acumulado da venda antiga INTACTO
+    expect((await db.doc(afPath).get()).get('comissaoAcumulada')).toBe(comissao1);
+
+    // Venda NOVA usa 50%; a antiga segue congelada em 10%
+    const r2 = await converterViaRef('chave-forja-0000002', 'evt-forja-2');
+    const comissao2 = Math.round(Math.round(r2.valores.valorFinal * 100) * 5000 / 10_000) / 100;
+    expect((await db.doc(afPath).get()).get('comissaoAcumulada')).toBe(
+      Math.round((comissao1 + comissao2) * 100) / 100
+    );
+
+    // Estorno da venda ANTIGA devolve os 10% congelados (não 50%)
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r1.pedidoId, inscritoId: r1.inscritoIds[0]!, motivo: 'Estorno anti-forja',
+    }, marina);
+    const af = await db.doc(afPath).get();
+    expect(af.get('comissaoAcumulada')).toBe(comissao2);
+  });
+
+  it('F4: estorno PARCIAL decrementa a fatia exata; integral zera e apaga a conversão; replay não re-decrementa', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run', refCodigo: 'FLORIPA10',
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 15.5 },
+    }, marina);
+    const r = await converterViaRef('chave-est-00000001', 'evt-est-1', {
+      inscritos: [
+        { nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25', modalidade: '10k' },
+        { nome: 'Beto Lima', email: 'beto@exemplo.com', cpf: '111.444.777-35', modalidade: '10k' },
+      ],
+    });
+    expect((await db.doc(afPath).get()).get('comissaoAcumulada')).toBe(31);
+
+    // Estorno do 1º inscrito: conversão restante recomputada pela config congelada
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[0]!, motivo: 'Estorno parcial',
+    }, marina);
+    const afParcial = await db.doc(afPath).get();
+    expect(afParcial.get('comissaoAcumulada')).toBe(15.5);
+    const convParcial = await db.doc(`${afPath}/conversoes/${r.pedidoId}`).get();
+    expect(convParcial.get('qtdInscricoes')).toBe(1);
+    expect(convParcial.get('comissao')).toBe(15.5);
+
+    // Estorno do 2º: doc some, ∑ zera
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[1]!, motivo: 'Estorno integral',
+    }, marina);
+    const afTotal = await db.doc(afPath).get();
+    expect(afTotal.get('comissaoAcumulada')).toBe(0);
+    expect((await db.doc(`${afPath}/conversoes/${r.pedidoId}`).get()).exists).toBe(false);
+
+    // Replay dos DOIS estornos: nada re-decrementa (guarda do ledger)
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[0]!, motivo: 'replay',
+    }, marina);
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[1]!, motivo: 'replay',
+    }, marina);
+    expect((await db.doc(afPath).get()).get('comissaoAcumulada')).toBe(0);
+  });
+
+  it('F5: repasse manual — guarda de saldo, idempotência por repasseId, extrato no reader e saldo NEGATIVO honesto pós-estorno', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney', refCodigo: 'DIONEY10',
+      responsavelEmail: 'dioney@exemplo.com',
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 15.5 },
+    }, marina);
+    await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).update({
+      responsavelUid: 'uid-dioney', status: 'ativo',
+    });
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-rep-00000001', { ref: { codigo: 'DIONEY10' } }),
+      caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-rep-1');
+
+    // valor > saldo nega; não cent-exato nega; ≤ 0 nega
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000001', valor: 100,
+      }, marina)
+    ).rejects.toThrow(/excede o saldo/);
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000001', valor: 10.005,
+      }, marina)
+    ).rejects.toThrow(/cent-exato/);
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000001', valor: -5,
+      }, marina)
+    ).rejects.toThrow(/cent-exato/);
+
+    // Registro feliz + replay do MESMO repasseId (double-click) = 1 débito só
+    const ok = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000001',
+      valor: 10, observacao: 'Pix 18/07',
+    }, marina);
+    expect(ok.duplicado).toBe(false);
+    expect(ok.saldoComissao).toBe(5.5);
+    const replay = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000001', valor: 10,
+    }, marina);
+    expect(replay.duplicado).toBe(true);
+    expect(replay.saldoComissao).toBe(5.5);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/DIONEY10`).get()).get('comissaoRepassada')
+    ).toBe(10);
+
+    // Sem papel de escrita / tenant errado: nega
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000002', valor: 1,
+      }, { uid: 'uid-intruso', claims: {} as AuthClaims })
+    ).rejects.toThrow();
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', repasseId: 'rep-000000003', valor: 1,
+      }, { uid: 'uid-outro', claims: { role: 'tenant_owner', tenantId: OUTRO_ID } as AuthClaims })
+    ).rejects.toThrow(/não existe neste tenant/);
+
+    // Reader do PRÓPRIO afiliado: saldo + extrato (conversão com comissão, repasse)
+    const minhas = await getMinhasAfiliacoesCore(db, 'uid-dioney');
+    expect(minhas.afiliacoes[0]).toMatchObject({
+      comissaoAcumulada: 15.5, comissaoRepassada: 10, saldoComissao: 5.5,
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 15.5 },
+    });
+    expect(minhas.afiliacoes[0]?.ultimasConversoes[0]?.comissao).toBe(15.5);
+    expect(minhas.afiliacoes[0]?.ultimosRepasses).toHaveLength(1);
+    expect(minhas.afiliacoes[0]?.ultimosRepasses[0]).toMatchObject({
+      valor: 10, observacao: 'Pix 18/07',
+    });
+    expect(JSON.stringify(minhas)).not.toContain('ana@exemplo.com');
+
+    // Estorno DEPOIS do repasse: saldo fica NEGATIVO (dívida honesta, sem clamp)
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: r.pedidoId, inscritoId: r.inscritoIds[0]!, motivo: 'Estorno pós-repasse',
+    }, marina);
+    const depois = await getMinhasAfiliacoesCore(db, 'uid-dioney');
+    expect(depois.afiliacoes[0]?.comissaoAcumulada).toBe(0);
+    expect(depois.afiliacoes[0]?.saldoComissao).toBe(-10);
+  });
+
+  it('F6: Rules — repasses/∑ de comissão Function-only; leitura só organizador do tenant + o PRÓPRIO afiliado', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney', refCodigo: 'DIONEY10',
+      responsavelEmail: 'dioney@exemplo.com',
+      comissao: { tipo: 'percentual', percentual: 10 },
+    }, marina);
+    const path = `eventos/${EVENTO_ID}/afiliados/DIONEY10`;
+    await db.doc(path).update({ responsavelUid: 'uid-dioney', status: 'ativo' });
+    await db.doc(`${path}/repasses/rep-000000001`).set({
+      id: 'rep-000000001', valor: 10, observacao: null,
+      registradoPorUid: MARINA_UID, criadoEm: FieldValue.serverTimestamp(),
+    });
+
+    const owner = testEnv
+      .authenticatedContext(MARINA_UID, { role: 'tenant_owner', tenantId: CASTELO_ID })
+      .firestore();
+    const dioney = testEnv.authenticatedContext('uid-dioney', {}).firestore();
+    const intruso = testEnv.authenticatedContext('uid-intruso', {}).firestore();
+    const outroTenant = testEnv
+      .authenticatedContext('uid-outro', { role: 'tenant_owner', tenantId: OUTRO_ID })
+      .firestore();
+    const repassePath = `${path}/repasses/rep-000000001`;
+
+    // Leitura: organizador ✔ · o PRÓPRIO ✔ · intruso/cross-tenant ✘
+    await assertSucceeds(getDoc(clientDoc(owner, repassePath)));
+    await assertSucceeds(getDoc(clientDoc(dioney, repassePath)));
+    await assertFails(getDoc(clientDoc(intruso, repassePath)));
+    await assertFails(getDoc(clientDoc(outroTenant, repassePath)));
+
+    // Escrita: NEGADA para todos (forjar repasse zeraria dívida real)
+    await assertFails(
+      setDoc(clientDoc(owner, `${path}/repasses/forjado-01`), { valor: 999 })
+    );
+    await assertFails(updateDoc(clientDoc(owner, repassePath), { valor: 0.01 }));
+    await assertFails(deleteDoc(clientDoc(owner, repassePath)));
+    await assertFails(
+      setDoc(clientDoc(dioney, `${path}/repasses/forjado-02`), { valor: 999 })
+    );
+
+    // ∑ de comissão e config: intocáveis por cliente (writer incluso)
+    await assertFails(updateDoc(clientDoc(owner, path), { comissaoAcumulada: 9999 }));
+    await assertFails(updateDoc(clientDoc(dioney, path), { comissaoRepassada: 0 }));
+    await assertFails(
+      updateDoc(clientDoc(dioney, path), { comissao: { tipo: 'percentual', percentual: 90 } })
+    );
   });
 });
