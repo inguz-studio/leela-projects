@@ -52,8 +52,16 @@ export function sleep(ms: number): Promise<void> {
 /** Caches dos probes do Hub (1× por worker — o ambiente não muda no run). */
 let hubTriggersAvailable: boolean | undefined;
 let functionsEmulatorAvailable: boolean | undefined;
-/** Profundidade da pausa — dentro de withTriggersPaused não há trigger p/ drenar. */
-let pausedDepth = 0;
+/**
+ * Pausa STICKY por arquivo: o RE-ENABLE de background triggers dispara um
+ * RELOAD completo das function definitions no Functions Emulator (~segundos;
+ * provado no smoke T3: 105 reloads = hook timeouts + "Failed to load function
+ * definition ... Timeout after 10000" + cascata de fetch failed). Por isso a
+ * pausa NÃO é re-habilitada por beforeEach — ela fica ativa até o FIM do
+ * arquivo (resumeTriggersSticky no afterAll global do vitest.setup.ts):
+ * 1 reload por arquivo wired, não 1 por teste.
+ */
+let stickyPaused = false;
 
 function hubHost(): string | undefined {
   const hub = process.env['FIREBASE_EMULATOR_HUB'];
@@ -121,20 +129,34 @@ async function setBackgroundTriggers(enabled: boolean): Promise<void> {
 
 /**
  * Executa `fn` com background triggers PAUSADOS (clear+seed sem fan-out de
- * onWrite/onCreate). Re-habilita SEMPRE (finally) — teste seguinte depende
- * dos triggers reais. Writes feitos durante a pausa nunca disparam (semântica
- * de import do firebase-tools) — exatamente o que seed quer.
+ * onWrite/onCreate) e DEIXA a pausa ativa (sticky) até o fim do arquivo —
+ * o afterAll global do vitest.setup.ts re-habilita. Os arquivos wired testam
+ * os cores DIRETO (padrão do repo: "Function REAL in-process"); nenhum
+ * depende de entrega de background durante o corpo do teste. Writes feitos
+ * durante a pausa nunca disparam (semântica de import do firebase-tools).
  */
 export async function withTriggersPaused<T>(fn: () => Promise<T>): Promise<T> {
-  if (!(await hubCanPauseTriggers())) return fn();
+  await pauseTriggersSticky();
+  return fn();
+}
+
+/** Pausa background triggers (idempotente; no-op sem Hub/Functions). */
+export async function pauseTriggersSticky(): Promise<void> {
+  if (stickyPaused) return;
+  if (!(await hubCanPauseTriggers())) return;
   await setBackgroundTriggers(false);
-  pausedDepth++;
-  try {
-    return await fn();
-  } finally {
-    pausedDepth--;
-    if (pausedDepth === 0) await setBackgroundTriggers(true);
-  }
+  stickyPaused = true;
+}
+
+/**
+ * Re-habilita background triggers SE este arquivo pausou (chamado pelo
+ * afterAll global do vitest.setup.ts — roda por último, com o emulator
+ * ocioso, minimizando o risco do reload de definitions estourar timeout).
+ */
+export async function resumeTriggersSticky(): Promise<void> {
+  if (!stickyPaused) return;
+  stickyPaused = false;
+  await setBackgroundTriggers(true);
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +189,32 @@ export async function clearFirestoreDrained(
   await clearWithRetry(testEnv);
   await sleep(SETTLE_MS);
   await clearWithRetry(testEnv);
+}
+
+/**
+ * Clear BULK via endpoint REST do próprio emulator (o mesmo que o
+ * rules-unit-testing usa) — para suites SEM RulesTestEnvironment que antes
+ * limpavam com listCollections+recursiveDelete doc-a-doc (lento a ponto de
+ * estourar hook timeout com dataset residual grande; smoke T3).
+ */
+export async function clearFirestoreRest(projectId: string): Promise<void> {
+  const host = process.env['FIRESTORE_EMULATOR_HOST'];
+  if (host === undefined || host.length === 0) return;
+  const url =
+    `http://${host}/emulator/v1/projects/${projectId}` +
+    `/databases/(default)/documents`;
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= CLEAR_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, { method: 'DELETE' });
+      if (res.ok) return;
+      lastStatus = res.status;
+    } catch {
+      lastStatus = -1;
+    }
+    await sleep(SETTLE_MS * attempt * 2);
+  }
+  throw new Error(`clearFirestoreRest: falhou após ${CLEAR_ATTEMPTS} tentativas (status ${lastStatus})`);
 }
 
 /**
@@ -247,7 +295,7 @@ async function drainOnCreateUser(
   auth: admin.auth.Auth,
   uid: string
 ): Promise<void> {
-  if (pausedDepth > 0) return; // pausado: o trigger nunca dispara p/ este create
+  if (stickyPaused) return; // pausado: o trigger nunca dispara p/ este create
   if (!(await functionsEmulatorUp())) return;
   const deadline = Date.now() + ONCREATE_DRAIN_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -285,11 +333,11 @@ export async function ensureUserWithClaims(
   if (created) await drainOnCreateUser(auth, uid);
 
   await auth.setCustomUserClaims(uid, claims);
-  // Dentro de withTriggersPaused não há onCreateUser p/ clobberar — o set é
+  // Com a pausa sticky ativa não há onCreateUser p/ clobberar — o set é
   // definitivo. Fora da pausa, estabiliza: relê até 2 leituras consecutivas
   // iguais às claims pedidas; clobber detectado ⇒ re-aplica (o onCreateUser
   // nunca sobrescreve role não-athlete já presente — convergência garantida).
-  if (pausedDepth > 0 || !(await functionsEmulatorUp())) return;
+  if (stickyPaused || !(await functionsEmulatorUp())) return;
   let stable = 0;
   for (let i = 0; i < 20 && stable < 2; i++) {
     const fresh = await auth.getUser(uid);

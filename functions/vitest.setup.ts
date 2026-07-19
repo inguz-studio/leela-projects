@@ -12,6 +12,7 @@
 // =============================================================================
 
 import { afterAll } from 'vitest';
+import { resumeTriggersSticky } from './src/__tests__/helpers/stability';
 
 if (
   process.env['CRM_ID_PEPPER'] === undefined ||
@@ -20,16 +21,19 @@ if (
   process.env['CRM_ID_PEPPER'] = 'pepper-de-teste-vitest';
 }
 
-// ─── Drain global de fim-de-arquivo (lane SUITE-STAB · leela-build-2d6ee98d) ──
-// A suíte roda sequencial por arquivo (fileParallelism: false), mas o Functions
-// Emulator executa triggers de forma ASSÍNCRONA — execuções em voo do arquivo
-// que TERMINA transbordam para o clear+seed do arquivo seguinte (fonte das
-// assinaturas do full5: seeds engolidos, leftovers, 409 por contenção).
-// Janela de assentamento no afterAll de TODO arquivo que rodou contra o
-// emulator: barata (300ms × arquivos) e protege inclusive arquivos que ainda
-// usam clear/seed cru — ver src/__tests__/helpers/stability.ts.
+// ─── Fim-de-arquivo (lane SUITE-STAB · leela-build-2d6ee98d) ─────────────────
+// 1. resumeTriggersSticky: arquivos wired pausam background triggers p/ o
+//    arquivo INTEIRO (o re-enable dispara reload de function definitions —
+//    caro; 1× por arquivo, aqui, com o emulator ocioso). No-op p/ arquivos
+//    que não pausaram.
+// 2. Janela de assentamento: execuções de trigger em voo do arquivo que
+//    TERMINA transbordavam p/ o clear+seed do arquivo seguinte (assinaturas
+//    do full5: seeds engolidos, leftovers, 409 por contenção). 300ms baratos
+//    que protegem inclusive arquivos que ainda usam clear/seed cru.
+// Este afterAll é registrado ANTES dos hooks do arquivo ⇒ roda por ÚLTIMO.
 afterAll(async () => {
   if (process.env['FIRESTORE_EMULATOR_HOST'] !== undefined) {
+    await resumeTriggersSticky();
     await new Promise((resolve) => setTimeout(resolve, 300));
   }
 });

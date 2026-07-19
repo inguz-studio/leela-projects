@@ -25,6 +25,7 @@ import * as admin from 'firebase-admin';
 import { provisionTenantCore } from '../platform/provisionTenant';
 import { onCreateUser } from '../auth/onCreateUser';
 import {
+  clearFirestoreRest,
   deleteAllUsersDrained,
   sleep,
   withTriggersPaused,
@@ -57,13 +58,9 @@ function runTrigger(user: AnyRec): Promise<unknown> {
 }
 
 async function clearAll(): Promise<void> {
-  const collections = await db.listCollections();
-  for (const col of collections) {
-    const docs = await col.listDocuments();
-    for (const ref of docs) {
-      await db.recursiveDelete(ref);
-    }
-  }
+  // Clear BULK via REST (o recursiveDelete doc-a-doc estourava hook timeout
+  // com dataset residual grande — smoke T3 da lane SUITE-STAB).
+  await clearFirestoreRest(PROJECT_ID);
   await deleteAllUsersDrained(auth);
 }
 

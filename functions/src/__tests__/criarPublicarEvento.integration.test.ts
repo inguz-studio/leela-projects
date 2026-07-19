@@ -34,7 +34,11 @@ import {
   urlPublicaDoEvento,
 } from '../eventos/publicarEvento';
 import { slugCandidato, slugify } from '../eventos/slug';
-import { seedVerifiedWith, withTriggersPaused } from './helpers/stability';
+import {
+  clearFirestoreRest,
+  seedVerifiedWith,
+  withTriggersPaused,
+} from './helpers/stability';
 
 const PROJECT_ID = 'demo-leela';
 
@@ -87,13 +91,9 @@ function inputValido(overrides: Partial<CriarEventoInput> = {}): CriarEventoInpu
 }
 
 async function clearFirestore(): Promise<void> {
-  const collections = await db.listCollections();
-  for (const col of collections) {
-    const docs = await col.listDocuments();
-    for (const ref of docs) {
-      await db.recursiveDelete(ref);
-    }
-  }
+  // Clear BULK via REST (o recursiveDelete doc-a-doc estourava hook timeout
+  // com dataset residual grande — smoke T3 da lane SUITE-STAB).
+  await clearFirestoreRest(PROJECT_ID);
 }
 
 async function seedTenants(): Promise<void> {

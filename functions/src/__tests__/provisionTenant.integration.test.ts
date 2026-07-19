@@ -31,7 +31,11 @@ import {
   provisionTenant,
   type ProvisionDeps,
 } from '../platform/provisionTenant';
-import { deleteAllUsersDrained, withTriggersPaused } from './helpers/stability';
+import {
+  clearFirestoreRest,
+  deleteAllUsersDrained,
+  withTriggersPaused,
+} from './helpers/stability';
 import { onCreateUser } from '../auth/onCreateUser';
 import { setTenantClaims } from '../platform/setTenantClaims';
 import type { ProvisionInput } from '@leela/core';
@@ -56,14 +60,9 @@ function input(overrides: Partial<ProvisionInput> = {}): ProvisionInput {
 }
 
 async function clearAll(): Promise<void> {
-  // Limpa Firestore (coleções usadas) e usuários Auth do Emulator
-  const collections = await db.listCollections();
-  for (const col of collections) {
-    const docs = await col.listDocuments();
-    for (const ref of docs) {
-      await db.recursiveDelete(ref);
-    }
-  }
+  // Limpa Firestore (clear BULK via REST — o recursiveDelete doc-a-doc
+  // estourava hook timeout com dataset residual grande) e usuários do Auth.
+  await clearFirestoreRest(PROJECT_ID);
   await deleteAllUsersDrained(auth);
 }
 

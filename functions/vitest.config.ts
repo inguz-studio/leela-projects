@@ -14,6 +14,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30_000,
+    // SUITE-STAB: hooks de clear+seed estabilizados (drain + verificação de
+    // canários) podem passar dos 10s default na máquina lenta — o hook
+    // timeout curto derrubava o beforeEach ANTES do retry agir (smoke T3).
+    hookTimeout: 60_000,
     // CK2-T6: CRM_ID_PEPPER de TESTE global — o checkout (RN-173) passou a
     // exigir o pepper (fail-closed); ver vitest.setup.ts.
     setupFiles: ['./vitest.setup.ts'],
