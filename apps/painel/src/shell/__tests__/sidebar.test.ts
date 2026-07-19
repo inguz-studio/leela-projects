@@ -10,6 +10,9 @@ describe('painelActiveId', () => {
     ['/clubes/trail/desafios', 'clubs'],
     ['/financeiro', 'financeiro'],
     ['/financeiro/repasses', 'financeiro'],
+    // E19 · S-R9-13: o hub CRM ativa o item Comunicação da sidebar.
+    ['/crm', 'comunicacao'],
+    ['/crm/tipo_abc123', 'comunicacao'],
     ['/health', null],
   ])('%s → %s', (pathname, esperado) => {
     expect(painelActiveId(pathname)).toBe(esperado);
@@ -44,8 +47,12 @@ describe('shellSidebarSections', () => {
     // interna alcança os repasses do organizador — RN-349).
     items.find((i) => i.id === 'financeiro')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/financeiro');
+    // E19 · S-R9-13: Comunicação agora leva ao hub CRM "Clientes & Comunicação".
+    items.find((i) => i.id === 'comunicacao')?.onClick?.();
+    expect(navigate).toHaveBeenCalledWith('/crm');
     // Itens ainda inertes (sem rota) permanecem sem onClick — estado honesto.
-    expect(items.find((i) => i.id === 'comunicacao')?.onClick).toBeUndefined();
+    expect(items.find((i) => i.id === 'marcas')?.onClick).toBeUndefined();
+    expect(items.find((i) => i.id === 'configuracoes')?.onClick).toBeUndefined();
   });
 
   it('nav-badge de Eventos: contagem > 0 vira badge neutro (mockup)', () => {

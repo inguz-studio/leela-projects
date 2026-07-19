@@ -25,7 +25,10 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // RN-820: o item Financeiro leva à ANÁLISE de vendas (rota índice); a SubNav
   // interna (Análise | Repasses) alcança os repasses do organizador (RN-349).
   financeiro: '/financeiro',
-  comunicacao: undefined,
+  // E19 · S-R9-13: o item Comunicação leva ao hub "Clientes & Comunicação"
+  // (CRM). Deixa de ser placeholder inerte; a comunicação por evento/clube
+  // (E06/E05) segue nas próprias telas — o hub é a superfície nova.
+  comunicacao: '/crm',
   marcas: undefined,
   configuracoes: undefined,
 };
@@ -58,6 +61,7 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname.startsWith('/eventos')) return 'eventos';
   if (pathname.startsWith('/clubes')) return 'clubs';
   if (pathname.startsWith('/financeiro')) return 'financeiro';
+  if (pathname.startsWith('/crm')) return 'comunicacao';
   return null;
 }
 
