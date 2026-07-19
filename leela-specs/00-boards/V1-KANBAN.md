@@ -1,4 +1,5 @@
 ---
+
 kanban-plugin: board
 tags:
   - leela
@@ -6,9 +7,6 @@ tags:
   - kanban
 
 ---
-
-> **Board de histórias.** Cada card é uma linha em linguagem de produto: `[E##] Título — o que a pessoa ganha` + estado + link para o detalhe. Hash de commit, teste, lote e review moram no arquivo linkado, nunca no card. Convenção: [[CONVENCAO-BOARDS]] · Visão de épicos: [[BOARD-EPICOS]] · Detalhe verbatim das entregas: [[BOARD-HISTORICO]].
-> Estados: ✅ feito · 🔄 em execução · 📋 backlog · 🧊 gelado.
 
 ## 📋 Backlog
 
@@ -20,13 +18,23 @@ tags:
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
+- [ ] **[DEC-0719 · a] upload-sweep** — tira o "colar URL" de toda imagem e põe TROCAR + ajuste automático de proporção (a imagem em proporção diferente é recortada sozinha para caber) 📋 RN-168/RN-170 [[01-decisoes|DEC-0719]]
+- [ ] **[DEC-0719 · b] subnav-divisórias** — divisória em todo SubNav (não só nas abas dentro de eventos) 📋 RN-229 [[01-decisoes|DEC-0719]]
+- [ ] **[DEC-0719 · c] CHECKOUT-FORM-2** — cupom no início + Pix/Cartão em botões (sem toggle) + QR PIX com timer de 30 min e cópia automática com aviso + gênero por atleta + botão "+ adicionar atleta" 📋 RN-154/RN-157 [[01-decisoes|DEC-0719]]
+- [ ] **[DEC-0719 · d] conta-sem-fricção** — cria a conta sozinha na 1ª compra e manda link por e-mail para definir senha e ver a compra 📋 RN-155 · depende da chave Brevo [[01-decisoes|DEC-0719]]
+- [ ] **[DEC-0719 · e] saúde-termo-base** — termo de saúde base obrigatório sempre + termo custom do organizador por cima 📋 RN-156 [[01-decisoes|DEC-0719]]
+- [ ] **[DEC-0719 · f] cpf-unico** — CPF único no sistema: no checkout, CPF repetido é a mesma pessoa (linka, não duplica) 📋 RN-173 [[01-decisoes|DEC-0719]]
+
+- [ ] **[DEC-0719 · g · PARKED] clube-retroativo** — desconto retroativo do clube-influenciador ao bater o mínimo; aguarda o Vitor revisar como funciona na Ticketsports; é dinheiro (rota Fable + antagonista) 🧊 RN-315 [[01-decisoes|DEC-0719]]
 
 
 ## 🔄 Em execução
 
 
+
 ## ✅ Feito
 
+- [x] **[E03] Tamanhos por corte + ciclo de encomenda (TAMANHOS-GRADE)** — a camiseta separa corte feminino/masculino (quem compra escolhe o corte e depois o tamanho); o organizador configura a grade, encerra encomendas com a contagem do momento (sem travar vendas), ajusta o estoque quando as camisas chegam e acompanha as entregas por corte e tamanho no balcão; promotor copia o link de indicação pronto ✅ [[BOARD-HISTORICO]]
 - [x] **[E04/E12] Formulário novo do checkout (CHECKOUT-FORM)** — comprador preenche telefone, nascimento e endereço pelo CEP (digita o CEP, completa só o número; se o serviço de CEP cair ou demorar, preenche à mão e a compra nunca trava) e aceita os termos da compra e o termo de saúde antes de pagar; o servidor passou a EXIGIR os dois aceites (comprar por fora da tela não fura o aceite legal, e pedido antigo re-tentado completa a prova sem reescrever nada); o aviso "+ taxa de serviço" só aparece quando o evento repassa a taxa ✅ [[BOARD-HISTORICO]]
 - [x] **[E00] Telas de conta** — login, cadastro, recuperação e configurações ✅ (entregue e aprovado em review 2026-07-13, lote S020; card estava defasado) [[LEELA-E00-fundacao-tecnica]]
 - [x] **[E01] Varredura §8 no painel (W2 do gate de DS)** — as telas antigas trocaram as datas, as buscas, os campos de texto, os radinhos, os "⋯" e os filtros feitos à mão pelos componentes oficiais do DS; a divisória fantasma (que aparecia 3× mais grossa) foi corrigida e o modal de regulamento da landing agora tem conteúdo em 3 eventos do preview ✅ [[BOARD-HISTORICO]]
@@ -97,6 +105,6 @@ tags:
 
 %% kanban:settings
 ```
-{"kanban-plugin":"board","list-collapse":[false,false,true,false]}
+{"kanban-plugin":"board","list-collapse":[true,false,true,false]}
 ```
 %%
