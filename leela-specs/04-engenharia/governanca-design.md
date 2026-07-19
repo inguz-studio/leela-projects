@@ -69,12 +69,37 @@ Proibido desabilitar a regra inline (`eslint-disable`) em tela. Se um caso parec
 
 `pnpm storybook` no package sobe o catálogo em `localhost:6006`; `pnpm build-storybook` gera o estático. Toda alteração visual de componente deve ser conferida nos dois temas pelo toggle antes do merge. Nenhuma tela redefine token ou componente localmente; se a tela precisa de algo que o DS não tem, o componente nasce no DS, não na tela.
 
-## 8. Diretriz shadcn para seleção, filtro, popover e calendário (PERMANENTE)
+## 8. shadcn-first para todo componente de UI (PERMANENTE)
 
-> Diretriz vinculante do Vitor (pedida mais de uma vez; gravada aqui para todo lote de UI a herdar — R9, 2026-07-18). Complementa a §3 (regras visuais) e o DoD de Tela.
+> Diretriz vinculante do Vitor. Pedida mais de uma vez para seleção, filtro e calendário (R9, 2026-07-18) e **ampliada em 2026-07-19 para todo e qualquer componente de UI**. Complementa a §3 (regras visuais) e o DoD de Tela. Herança obrigatória de todo lote de UI.
 
-- **Selects, dropdowns, popovers, comboboxes e calendários do painel seguem a anatomia shadcn/Radix:** Popover (âncora) + Command (lista filtrável WAI-APG) para seleção rica; focus ring de 2px (`--border-focus`); densidade e tokens do DS (semantic-only); teclado completo e ARIA correto.
-- **O `<select>` nativo fica proibido para filtros e seleções ricas.** A lista de opções do `<select>` nativo é renderizada pelo sistema operacional e **não** é estilizável pelos tokens do DS — é a "caixa fora do padrão" que o Vitor apontou. É aceitável só em formulário simples de baixa cardinalidade onde o listbox estilizado não agrega.
-- **Calendários/date pickers** usam `react-day-picker` ancorado em Popover (padrão shadcn), com tokens do DS.
-- **Gate de UI (item novo):** "o seletor/filtro/calendário abre um painel do DS (não do SO)?" — junto de "consultou/reusou o existente?" e "documentou no showroom?".
-- Primitivos-alvo no DS: `Popover`, `Command`, `Combobox`, `Calendar`/`DateRangePicker` (a criar — hoje o E01 renomeou Popover→DropdownMenu e não há Command/Combobox/Calendar). Ver `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-05`.
+### Regra
+
+**Todo componente de UI do painel usa o primitivo do DS, sempre.** O DS segue a anatomia shadcn/Radix; se o `@leela/design-system` já publica o componente, o painel consome esse. Não recria um equivalente à mão, não usa o controle nativo do sistema operacional, não estiliza um `<input>`, `<select>`, `<textarea>` ou `<input type="checkbox">` cru.
+
+A regra não se limita a seleção rica. Ela cobre a lista **não-exaustiva**: seleção, datas, checkbox, radio, input, textarea, dialog e modal, tooltip, tabs, popover, combobox, dropdown, switch, badge, e qualquer outro controle que o DS exporte.
+
+Checkbox nativo é violação da **mesma severidade** que `<select>` nativo. A marca e os estados de um `<input type="checkbox">` cru não respeitam os tokens nem o AA por estado do DS. Use o `Checkbox` do DS.
+
+### Exceção (porta única)
+
+Um componente custom, fora do DS, só é aceitável quando:
+
+- **(a)** não existe equivalente shadcn nem no DS para o padrão; ou
+- **(b)** há necessidade técnica forte que o primitivo do DS não atende.
+
+Nos **dois** casos a exceção exige **justificativa documentada**: um ADR ou nota de decisão equivalente com contexto, critérios de decisão explícitos e a a11y provada. O padrão correto de exceção é o **ADR-017** (modal e primitivos Radix-free para a superfície pública da landing). A landing não pode carregar Radix por peso de bundle público, então o DS ganhou uma entrada Radix-free e a duplicação foi ratificada com critérios ordenados e 10/10 testes de comportamento. Desviar do primitivo do DS sem esse registro é violação, não exceção.
+
+### Seleção rica, filtro, popover e calendário
+
+- Selects, dropdowns, popovers, comboboxes e calendários seguem a anatomia shadcn/Radix: Popover (âncora) + Command (lista filtrável WAI-APG) para seleção rica; focus ring de 2px (`--border-focus`); densidade e tokens do DS (semantic-only); teclado completo e ARIA correto.
+- **O `<select>` nativo fica proibido para filtros e seleções ricas.** A lista de opções do `<select>` nativo é renderizada pelo sistema operacional e **não** é estilizável pelos tokens do DS: é a "caixa fora do padrão" que o Vitor apontou. É aceitável só em formulário simples de baixa cardinalidade onde o listbox estilizado não agrega, e mesmo aí o `Select` do DS é preferível.
+- **Calendários e date pickers** usam `react-day-picker` ancorado em Popover (padrão shadcn), com tokens do DS. O calendário do sistema operacional (`<input type="date">` e `datetime-local`) fica proibido.
+
+### Gate de UI
+
+Todo lote de UI responde, por componente: "o controle é o primitivo do DS, não o nativo do SO nem um fork à mão?" — junto de "consultou e reusou o existente?" e "documentou no showroom?". Componente custom sem o ADR ou nota de exceção reprova o gate.
+
+### Primitivos no DS
+
+`Popover`/`DropdownMenu`, `Command`, `Combobox`, `Calendar`, `Checkbox`, `Radio`/`RadioGroup`, `Input`, `Textarea`, `SearchInput`, `Switch`, `Modal`/`Dialog`, `Tooltip`, `Tabs`, `Select`, `FilterMenu` já existem no DS (R9-A criou os de seleção rica e datas; GATE-DS-W1 confirmou 46 componentes publicados). Antes de escrever qualquer controle, confira o barrel `@leela/design-system` e o showroom (`packages/design-system` → `#/componentes`). Ver `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-05`.
