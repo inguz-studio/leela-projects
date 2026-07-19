@@ -12,7 +12,7 @@ origem: GATE-DS-W1 (findings ABERTOS de app) + pendência LP-VENDAS-KIT
 - [x] T1 — date pickers nativos → DatePicker/DateTimeField do DS (10 campos / 8 arquivos)
 - [x] T2 — forks de primitivo → DS (Radio/Textarea/SearchInput/Input + kebab)
 - [x] T3 — token fantasma da divisória + varredura Select-como-filtro → Combobox
-- [ ] T4 — seed aditivo de regulamento (2-3 eventos, idempotente)
+- [x] T4 — seed aditivo de regulamento (3 eventos, idempotente, aplicado no :8180)
 
 ## T1 — FEITO (F-01: §8 date pickers) · gates: tsc 0 · eslint 0 · afetados 160/160
 Regra §8: calendário abre painel DO DS (Popover+react-day-picker), nunca o do SO.
@@ -93,6 +93,22 @@ candidata de W2 se o Vitor quiser.
   - Testes atualizados p/ o contrato do Combobox (abre painel + clica option; antes
     `selectOptions`/`getAllByRole('option')` no listbox nativo): EquipeLista.test (2 casos),
     RepassesFilaView.test (1 caso). CommandItem: nome acessível=label, seleção dispara value.
+
+## T4 — FEITO (pendência LPVK: modal de regulamento nunca aparecia) · aplicado no :8180
+Causa: NENHUM evento do preview tinha `regulamento` → a `RegulamentoSection` da landing
+(renderiza só quando `evento.regulamento` é string não-vazia) nunca montava.
+- Novo script `functions/scripts/preview-seed-regulamento.ts` (padrão r14: emulator-guard +
+  `require.main`, roda via tsx). Publica regulamento REAL (texto puro, 9 seções, ~3k chars,
+  ≤50k) + `regulamentoVersao=1` + `regulamentoAtualizadoEm` FIXO em 3 eventos JÁ semeados:
+  meia-floripa-2026, corrida-inverno-floripa-2026, noturna-beira-mar-2026.
+- ADITIVO (set merge só dos campos de regulamento; não cria/limpa nada; não toca functions/src
+  — só LÊ os docIds canônicos de lá) + IDEMPOTENTE: antes de escrever compara com o doc; se
+  já bate, NO-OP (não mexe em atualizadoEm).
+- APLICADO no :8180 vivo. Prova (readback admin-SDK, bypassa Rules):
+  - 1ª passada: `escritos=3 · já-atualizados=0 · ausentes=0`
+  - 2ª passada: `escritos=0 · já-atualizados=3 · ausentes=0` → byte-idêntico (R9-C OK).
+  - (curl REST anônimo dá 403 por Rules — esperado; a landing lê server-side por admin SDK.)
+  - projectId `demo-leela` = o mesmo do .firebaserc/landing → a landing enxerga o campo.
 
 ## ⚠️ Cross-lane (NÃO é do meu lote): 2 erros de tsc pré-existentes em
 `InfluenciadoresPage.test.tsx` e `MinhasAfiliacoesPage.test.tsx` — a COMF2 (`aedc9f9`)
