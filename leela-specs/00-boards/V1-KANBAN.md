@@ -21,7 +21,6 @@ tags:
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
-- [ ] **[E01] Varredura §8 no painel (W2 do gate de DS)** — telas antigas trocam datas/seleções/campos feitos à mão pelos componentes oficiais 📋 [[BOARD-HISTORICO]]
 
 
 ## 🔄 Em execução
@@ -31,6 +30,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **[E01] Varredura §8 no painel (W2 do gate de DS)** — as telas antigas trocaram as datas, as buscas, os campos de texto, os radinhos, os "⋯" e os filtros feitos à mão pelos componentes oficiais do DS; a divisória fantasma (que aparecia 3× mais grossa) foi corrigida e o modal de regulamento da landing agora tem conteúdo em 3 eventos do preview ✅ [[BOARD-HISTORICO]]
 - [x] **[E01/E12] Modal e primitivos do design system na página pública** — o modal acessível vira peça oficial do DS e a home carrega menos código para o mesmo visual ✅ [[BOARD-HISTORICO]]
 - [x] **[E12] Blindagem da página pública (SECFIX)** — dado do organizador não vira código na página do evento, convites com token ficam fora do Google e o modal de regulamento prende o teclado dentro dele ✅ [[BOARD-HISTORICO]]
 - [x] **[E03/E12] LP-VENDAS-KIT** — LPs com fotos semi-realistas por tema, regulamento em modal na página do evento e kit com descrição/itens/imagem 1:1 editáveis no painel (refletindo no checkout) ✅ [[BOARD-HISTORICO]]

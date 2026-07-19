@@ -116,6 +116,12 @@ tornou `comissao` OBRIGATÓRIO em `packages/api-client` e os fixtures do E08 nã
 atualizados. Meus arquivos são type-clean; a suíte vitest (sem typecheck) não é afetada.
 Passar p/ a lane E08/COMF2.
 
+## Gate final (fecho)
+- Suíte painel COMPLETA: **1167 passed / 159 files · 0 failed** (baseline 1159 + 8 testes novos
+  do date-fields.test; +1 file). DoD "suíte do painel inteira verde" ✅.
+- Suíte DS: intocada (não toquei packages/design-system/**), segue 1033 (não "consertei" p/ 1037).
+- Commits (todos em origin/main): T1 `a72a9ca` · T2 `bd29c7d` · T3 `700dae2` · T4 `375eab9`.
+
 ## Restrições respeitadas
 - Sem stash; staging por path; commit-per-task `[LEELA-S8FIX-T*]`.
 - Não toquei packages/design-system/**, apps/landing/**, functions/src/**.
