@@ -77,9 +77,35 @@ Gênero coletado no checkout; se a pessoa JÁ comprou antes, pré-preenche sozin
 
 **Dependência registrada:** o envio do link depende do **EmailProvider** (`BREVO_API_KEY`, ação externa pendente — RN-137).
 
+## Retomada DEC-0719-ret (2026-07-19) — fecha F1/F2 + estrangeiro
+
+### Claim da ficha de CPF = RESOLVIDO (fecha F1/F2 do CHECKOUT2-MODELO) (**RN-174 nova**)
+O claim do registry `pessoas/{cpf}` (vínculo `contaUid`) só ocorre com **(a) pagamento CONFIRMADO**, **(b) e-mail da conta == e-mail registrado na compra daquele CPF** e **(c) e-mail da conta CONFIRMADO** (verificação nativa do Firebase Auth — sem Brevo). Enquanto as três não valem, `dadosConhecidos`/prefill nunca são lidos por aquela conta ⇒ fecha o vazamento **F1** ("vítima anônima primeiro"). **F2** mitigado pelo mesmo desenho (conta só acessa dado após confirmar e-mail) — premissa registrada.
+
+> Verbatim: *"pode ser e-mail confirmado + pagamento, mas acredito que seria importante enviarmos um e-mail de confirmação para a pessoa, quando ela fizer o primeiro login, ou receber os ingressos pela primeira vez."*
+
+- É a **Direção B** (claim segue o pagamento) do report CHECKOUT2-MODELO, endurecida com o gate de e-mail correspondente + confirmado.
+- Alinha a **RN-155**: o e-mail de confirmação dispara no **primeiro login OU na primeira entrega de ingressos** (o que vier primeiro), não no ato da compra. Consumidor do EmailProvider fail-closed (pendente `BREVO_API_KEY` só para o template próprio da marca; a verificação de e-mail em si é Firebase nativo).
+- **Direção A** (prova de posse de CPF/código) = **REFORÇO pré-go-live**, backlog com gatilho "antes de produção com dado real" (recomendação do lead mantida).
+- ⇒ Vira lote de código **executável já**: fila `CLAIM-FIX` (checkout/auth). Consolidado no épico **E19** (§Decisão F1/F2) + efeito no **E12**.
+
+### Estrangeiro sem CPF = DECIDIDO / GATED-EXTERNO (modelo Doity/Sympla sobre o Asaas) (**RN-175 + RN-176 + RN-177 novas**)
+
+> Verbatim: *"pesquisei na sympla, o produtor pode habilitar a compra para estrangeiros, mas somente mediante passaporte, nesse caso a compra pode passar via cartao internacional, Mas o asaas permite isso. acredito que seja no modelo doity"*
+
+- **RN-175 (E04):** toggle POR EVENTO "aceitar inscrição de estrangeiros" (default OFF).
+- **RN-176 (E12):** com o toggle ligado, o checkout pergunta nacionalidade; estrangeiro → **documento = PASSAPORTE** (formato/validação), **CPF oculto**, **pagamento restrito a CARTÃO internacional À VISTA** (sem PIX/boleto/parcelamento — restrição do caminho Asaas de cobrança avulsa liberada).
+- **RN-177 (E19):** registry de pessoas com **documento tipado** (cpf | passaporte+país); a RN-173 "CPF único" **generaliza para "documento único"** — especificar SEM implementar.
+- **GATED por ação externa:** liberação da conta Asaas para pagador estrangeiro (gerente de contas, ~6 dias úteis) — registrada como **ação do Vitor** (DECISOES-ABERTAS item 12b). Código só depois da liberação + sandbox provada ⇒ fila `ESTRANGEIRO-CHECKOUT` (gated).
+- **Paliativo já válido (documentado):** brasileiro compra para estrangeiro inscrito com passaporte — cobrado quando a spec do inscrito-estrangeiro existir.
+- Fonte de fatos: `outputs/leela-build-2d6ee98d/ESTRANGEIRO-PAGAMENTO-REPORT.md` (Doity roda esse fluxo em produção sobre o mesmo Asaas; Sympla replica com processador próprio; lacunas L1/L6 a reconfirmar com o gerente de contas antes do código).
+
 ## Premissas assumidas nesta consolidação
 - **P-DEC0719-1** · RN-170 fica alojada na política de imagem (E17, casa da RN-168) + referência nas superfícies consumidoras (E12). Não editei o épico E03 (kit/capa) para não colidir com a lane TAMANHOS-GRADE ativa; a capa 1.9:1 (RN-228) e o kit 1:1 (RN-227) apenas ganham a semântica "troca + fit/crop" por referência à RN-170.
 - **P-DEC0719-2** · D-2, D-4 e D-5 tratados como decisões de UI/fluxo (supersessão de wireframe registrada), sem RN formal — são mecânica de tela, não regra de negócio. Entram nos cards de fila.
 - **P-DEC0719-3** · D-6 virou RN-157 porque o timer de 30 min é validade da CHARGE (money/lifecycle), não só UI.
 - **P-DEC0719-4** · Reembolso (não devolve taxa) = pendente-de-confirmação (aguarda BENCHMARK-REEMBOLSO), não RN fechada.
 - **P-DEC0719-5** · LGPD do CRM (item 24a) rebaixada de bloqueadora a nota "REVISITAR antes do go-live" — não apagada.
+- **P-DEC0719-6** (ret) · RN-174 alocada em E19 (identidade/pessoas, casa da RN-172/173), com efeito referenciado no E12 (checkout). É a Direção B do report endurecida com o gate de e-mail; a Direção A (verificação externa) não foi adotada agora, só registrada como reforço pré-go-live.
+- **P-DEC0719-7** (ret) · Cluster estrangeiro numerado contíguo (RN-175/176/177) na banda de identidade/pessoas (estende RN-172/173), apesar de a RN-175 morar em E04 — a coerência do cluster "documento/estrangeiro" pesou mais que a série por épico (a série é hint temático, não regra rígida; RN-156 já é E04/E12 na banda 150s, RN-173 é E19/E12 na banda 170s). Toggle default OFF ⇒ com o padrão, nada muda no checkout atual.
+- **P-DEC0719-8** (ret) · Registry de documento tipado (RN-177) especificado SEM implementar; a migração `cpf-unico`→`documento-unico` e a UI do toggle são lote GATED (Asaas), não executável já. Só o `CLAIM-FIX` (RN-174) é executável imediato.

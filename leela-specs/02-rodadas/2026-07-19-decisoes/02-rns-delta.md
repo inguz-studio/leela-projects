@@ -8,6 +8,8 @@ data: 2026-07-19
 # 02-rns-delta · RNs novas/atualizadas da rodada DEC-0719
 
 > Numeração atribuída **após grep de colisão** por série (checagem: 0 hits em `leela-specs/` e no código para RN-154/155/156/157/170/173). Séries: 140s = dados/consentimento do inscrito no checkout; 160s = política de imagem; 170s = identidade/CRM. Colisão RN-229/230 (histórica) evitada — nenhuma RN nova reusa número vigente.
+>
+> **Retomada DEC-0719-ret (2026-07-19):** RN-174/175/176/177 (cluster claim + estrangeiro) atribuídas na banda **170s = identidade/pessoas/documento** (estende RN-172/173). Prova de não-colisão: `grep -rn 'RN-17[4-7]'` no repo inteiro (`.md`/`.ts`/`.tsx`/`.json`) = **0 hits** antes desta rodada; a lista distinta de RNs salta de 173 direto para 200. RN-175 mora em E04 mas é numerada no cluster de identidade por coerência temática (série é hint, não regra rígida).
 
 ## Novas
 
@@ -19,6 +21,10 @@ data: 2026-07-19
 | **RN-157** | **Cobrança PIX expira em 30 minutos** — validade da **charge** no PaymentProvider/Asaas (`expiresIn`), não só relógio de UI. QR + copia-e-cola disponíveis **enquanto o PIX estiver pendente**, na tela de pagamento **E** na tela do pedido pendente. Botão **copia automaticamente** + toast *"a chave para pagamento foi copiada"*. | E12 | (c) CHECKOUT-FORM-2 |
 | **RN-170** | **Toda superfície de imagem tem ação TROCAR imagem + ajuste automático de proporção** (fit/crop client-side para a proporção da superfície — capa 1.9:1, logo 1:1, kit 1:1 etc.). Complementa **RN-168** (upload-only): removida a URL colada, entra a troca com reenquadramento automático. Imagem em proporção diferente é ajustada "para caber" sem o usuário recortar na mão. | E17 (política de imagem) · consumidoras E03/E05/E12 | (a) upload-sweep |
 | **RN-173** | **CPF é ÚNICO no sistema (unicidade global de pessoa por CPF).** Colisão no checkout = **mesma pessoa: linka, não duplica**. Base da chave de linking do CRM (RN-172, CPF→e-mail) e do pré-preenchimento (RN-154). Implica constraint de unicidade + fluxo de colisão no cadastro/checkout. | E19/E12 | (f) cpf-unico |
+| **RN-174** (ret) | **Claim da ficha de pessoa condicionado a pagamento CONFIRMADO + e-mail da conta == e-mail da compra + e-mail CONFIRMADO (Firebase nativo).** Enquanto as três não valem, `dadosConhecidos`/prefill (RN-154) nunca são lidos pela conta ⇒ fecha F1. F2 mitigado pelo mesmo desenho (premissa). E-mail de confirmação dispara no 1º login ou 1ª entrega de ingressos (o que vier primeiro), não na compra (alinha RN-155). Direção B endurecida; Direção A (prova de posse) = reforço pré-go-live. | E19 (regra-mãe) / E12 (efeito) | (h) CLAIM-FIX (executável já) |
+| **RN-175** (ret) | **Toggle POR EVENTO "aceitar inscrição de estrangeiros" (default OFF).** OFF = checkout segue exigindo CPF (RN-173, nada muda). ON = habilita o checkout de estrangeiro (RN-176) + documento tipado (RN-177). Flag `aceitaEstrangeiros` default `false`. | E04 | (i) ESTRANGEIRO-CHECKOUT (gated Asaas) |
+| **RN-176** (ret) | **Checkout de estrangeiro (toggle ON):** pergunta nacionalidade; estrangeiro → documento = **PASSAPORTE** (formato/validação), **CPF oculto**, pagamento restrito a **CARTÃO internacional À VISTA** (sem PIX/boleto/parcelamento — restrição do caminho Asaas de cobrança avulsa liberada). Modelo Doity/Sympla. Paliativo: BR paga pelo estrangeiro (passaporte) sem tocar RN-173. | E12 | (i) ESTRANGEIRO-CHECKOUT (gated Asaas) |
+| **RN-177** (ret) | **Documento tipado no registry de pessoas (cpf \| passaporte+país); RN-173 "CPF único" generaliza para "documento único".** Especificar SEM implementar. Migração `cpf-unico`→`documento-unico` é lote GATED. | E19 | (i) ESTRANGEIRO-CHECKOUT (gated Asaas) |
 
 ## Ampliadas (sem novo número)
 
