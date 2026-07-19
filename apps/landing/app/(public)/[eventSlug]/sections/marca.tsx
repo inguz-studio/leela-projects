@@ -16,9 +16,13 @@
 //     border-0, tracking, `rounded-ds-*`), sem reimportar o componente;
 //   - título de seção com ícone de apoio + escala `font-display` consistente.
 //
-// Story de arquitetura (registrada em leela-specs, NÃO executada aqui):
-// extrair Button/Badge/Card ESTÁTICOS server-safe no DS, consumíveis pelos dois
-// mundos, + gate de conformidade da landing contra o showroom.
+// ADR-017 (lote MODAL-ADR) — status desta réplica: o constraint que a originou
+// MORREU (o DS agora expõe `@leela/design-system/server`, estáticos server-safe
+// consumidos direto pela home/perfil). SeloModalidade e TituloSecao PERMANECEM
+// locais DE PROPÓSITO: são escala própria da landing (selo hero text-sm/pill ≠
+// Badge 10px uppercase do DS) — forçá-los nos átomos mudaria o visual aprovado.
+// Seção NOVA da landing deve consumir o subpath server do DS, não crescer este
+// arquivo. Gate de conformidade landing×showroom segue pendente (S1706 c).
 //
 // Lucide-react é seguro em Server Component (SVG puro, sem hooks/contexto).
 // =============================================================================

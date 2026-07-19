@@ -7,7 +7,10 @@ import type { EstadoVenda } from '../../lib/tipos';
 import { marketplaceJsonLd } from '../../lib/seo';
 import { JsonLd } from '../components/JsonLd';
 import { CoverImage } from '../components/CoverImage';
-import { Badge, CardEvento, EmptyState } from '../_ds/ds';
+// ADR-017: estáticos vêm do subpath SERVER-SAFE do DS — renderizam como
+// Server Component puro, sem passar pelo boundary 'use client' de `_ds/ds.ts`
+// (zero hydration JS para conteúdo sem interatividade).
+import { Badge, CardEvento, EmptyState } from '@leela/design-system/server';
 
 // Badge de ESTADO na capa (⛔ R14: estado visível por card). Variantes semânticas
 // do DS — vitória (verde/aberto), alerta (âmbar/esgotado), neutro (encerrado).

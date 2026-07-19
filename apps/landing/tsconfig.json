@@ -10,6 +10,8 @@
     "paths": {
       "@leela/core": ["../../packages/core/src/index.ts"],
       "@leela/design-system": ["../../packages/design-system/src/index.ts"],
+      "@leela/design-system/server": ["../../packages/design-system/src/server.ts"],
+      "@leela/design-system/dialog": ["../../packages/design-system/src/dialog.ts"],
       "@leela/api-client": ["../../packages/api-client/src/index.ts"],
       "@/*": ["./*"]
     }

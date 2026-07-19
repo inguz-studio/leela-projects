@@ -1,5 +1,10 @@
 // Classes compartilhadas do CTA de inscrição (server + client). Puro, sem
 // React e sem 'use client' — importável dos dois lados. Só token utilities.
+//
+// ADR-017: o CTA é variante de MARKETING da landing (pill px-6/py-3) — não é o
+// Button do DS (dimensiona por --btn-*). Permanece local; rebasear sobre
+// `buttonVariants` (exposto em `@leela/design-system/server`) é pendência com
+// o designer, porque muda visual (ADR-017 · pendência 4).
 
 export const CTA_BASE =
   'inline-flex shrink-0 items-center justify-center gap-2 rounded-ds-pill px-6 py-3 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus';

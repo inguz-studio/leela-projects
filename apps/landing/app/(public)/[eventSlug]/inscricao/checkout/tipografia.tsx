@@ -15,6 +15,10 @@
 //
 // Server-safe por herança: os Steps são Client Components; `lucide-react` é SVG
 // puro. Sem importar o barrel do DS (createContext) — só tokens + Lucide.
+//
+// ADR-017: escala PRÓPRIA do checkout dirigida por token — permanece local de
+// propósito (promover padrão de consumidor único ao DS viola a regra de
+// promoção). Componente novo de UI deve vir do DS (`.../server` p/ estático).
 // =============================================================================
 
 import type { ReactNode } from 'react';

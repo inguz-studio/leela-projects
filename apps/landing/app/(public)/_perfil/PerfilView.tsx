@@ -19,7 +19,8 @@
 // =============================================================================
 
 import { CalendarDays, Handshake, MapPin, Rss, Users } from 'lucide-react';
-import { EmptyState } from '../../_ds/ds';
+// ADR-017: estático via subpath server-safe do DS (sem boundary de cliente).
+import { EmptyState } from '@leela/design-system/server';
 import { CoverImage } from '../../components/CoverImage';
 import { ShareBlock } from '../[eventSlug]/ShareBlock';
 import { formatarPreco } from '../../../lib/formato';

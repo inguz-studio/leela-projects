@@ -3,34 +3,27 @@
 // =============================================================================
 // RegulamentoModal — leaf CLIENTE do botão + modal do regulamento (T2).
 //
-// Por que NÃO o Modal do DS: o Modal do DS é Radix Dialog, e o dist do DS
-// EXTERNALIZA `@radix-ui/react-dialog`. A landing é deliberadamente Radix-free
-// (os componentes do DS que ela consome são nativos/custom, não Radix — ver
-// `marca.tsx`, que replica valores do DS para manter SSR puro). Importar o
-// Modal do DS aqui puxa `@radix-ui/react-dialog` para o bundle público da
-// landing, que NÃO o resolve (MODULE_NOT_FOUND) → 500 na rota do evento.
-// Solução consistente com a arquitetura: modal LOCAL, acessível, com os MESMOS
-// tokens do DS (surface/overlay/foco), sem nova dependência no bundle público.
-// (Follow-up registrado: se o Vitor quiser o componente literal do DS, adicionar
-// `@radix-ui/react-dialog` como dep da landing — decisão de stack do lead.)
+// ADR-017 (lote MODAL-ADR): o dialog local que esta seção carregava (overlay,
+// painel, focus trap, Esc, retorno de foco — provado por 10/10 testes da lane
+// SECFIX) foi PROMOVIDO ao DS como primitivo `Dialog` Radix-free, servido pelo
+// subpath `@leela/design-system/dialog` (grafo sem `@radix-ui/react-dialog`,
+// que o dist externaliza e o bundle público não resolve — o 500 da LPVK).
+// Este arquivo vira consumidor fino: gatilho + conteúdo; comportamento e skin
+// (bottom-sheet mobile → centrado sm+, 100% tokens) vêm do DS.
 //
-// A11y (DoD Modal): role=dialog + aria-modal + aria-labelledby; 4 vias de
-// fechamento (X, Esc, clique no overlay, botão Fechar); foco entra no fechar ao
-// abrir e RETORNA ao gatilho ao fechar; scroll do body travado enquanto aberto;
-// FOCUS TRAP de Tab (W2-F-05 · GATE-DS-W2): aria-modal sinaliza AT mas NÃO
-// bloqueia teclado — o mini-trap abaixo mantém Tab/Shift+Tab cíclico dentro do
-// painel (Radix-free, constraint vigente da landing).
+// A11y (DoD Modal) — agora garantida pelo primitivo e coberta TAMBÉM na suíte
+// do DS: role=dialog + aria-modal + aria-labelledby/describedby; 4 vias de
+// fechamento (X, Esc, overlay, botão Fechar); foco entra no X ao abrir e
+// RETORNA ao gatilho ao fechar (returnFocusRef); scroll do body travado;
+// focus trap cíclico de Tab (W2-F-05). Os testes da landing
+// (test/regulamento-modal-focus-trap.test.tsx) seguem valendo, sem mudança
+// de asserção — comportamento adquirido.
 // =============================================================================
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { FileText, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { FileText } from 'lucide-react';
+import { Dialog } from '@leela/design-system/dialog';
 import { Button } from '@/app/_ds/ds';
-
-// Seletor dos elementos focáveis do painel (suficiente para o conteúdo do
-// modal: botões + eventuais links no texto). Mantido simples de propósito —
-// não é um focus-trap genérico de biblioteca.
-const FOCAVEIS =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function RegulamentoModal({
   regulamento,
@@ -40,54 +33,7 @@ export function RegulamentoModal({
   versao?: number;
 }): React.JSX.Element {
   const [aberto, setAberto] = useState(false);
-  const tituloId = useId();
   const gatilhoRef = useRef<HTMLButtonElement | null>(null);
-  const fecharRef = useRef<HTMLButtonElement | null>(null);
-  const painelRef = useRef<HTMLDivElement | null>(null);
-
-  const fechar = useCallback(() => setAberto(false), []);
-
-  // Esc fecha; foco entra no botão fechar ao abrir; scroll do body travado;
-  // Tab/Shift+Tab ficam CÍCLICOS dentro do painel (focus trap · W2-F-05).
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        fechar();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const painel = painelRef.current;
-      if (painel === null) return;
-      const focaveis = Array.from(painel.querySelectorAll<HTMLElement>(FOCAVEIS));
-      if (focaveis.length === 0) return;
-      const primeiro = focaveis[0]!;
-      const ultimo = focaveis[focaveis.length - 1]!;
-      const ativo = document.activeElement;
-      const dentroDoPainel = ativo instanceof HTMLElement && painel.contains(ativo);
-      if (e.shiftKey) {
-        // Shift+Tab no primeiro (ou com foco fora do painel) → cicla p/ último.
-        if (!dentroDoPainel || ativo === primeiro) {
-          e.preventDefault();
-          ultimo.focus();
-        }
-      } else if (!dentroDoPainel || ativo === ultimo) {
-        // Tab no último (ou com foco fora do painel) → cicla p/ primeiro.
-        e.preventDefault();
-        primeiro.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    const overflowAntes = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    fecharRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflowAntes;
-      // Retorna o foco ao gatilho ao fechar (retorno de foco do DoD Modal).
-      gatilhoRef.current?.focus();
-    };
-  }, [aberto, fechar]);
 
   return (
     <div className="mt-6">
@@ -95,67 +41,31 @@ export function RegulamentoModal({
         Ler regulamento completo
       </Button>
 
-      {aberto ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={tituloId}
-        >
-          {/* Overlay — escurece + fecha ao clicar (via 1..4). Token com alpha. */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-surface-base/80 backdrop-blur-sm"
-            onClick={fechar}
-          />
-
-          {/* Painel — surface-raised, radius e elevação do DS; scroll interno. */}
-          <div
-            ref={painelRef}
-            className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-t-ds-lg bg-surface-raised shadow-elev-3 sm:rounded-ds-lg"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
-              <div className="min-w-0">
-                <h3
-                  id={tituloId}
-                  className="flex items-center gap-2 font-display text-lg font-bold tracking-tight text-text-primary"
-                >
-                  <FileText size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
-                  Regulamento da prova
-                </h3>
-                {versao !== undefined ? (
-                  <p className="mt-1 text-sm text-text-secondary">
-                    Versão {versao} — vigente para as inscrições atuais.
-                  </p>
-                ) : null}
-              </div>
-              <button
-                ref={fecharRef}
-                type="button"
-                aria-label="Fechar"
-                onClick={fechar}
-                className="shrink-0 rounded-ds-sm p-1.5 text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-              >
-                <X size={20} aria-hidden />
-              </button>
-            </div>
-
-            {/* Corpo com scroll interno (ritmo vertical + tipografia do DS).
-                Texto PURO com quebras preservadas — nunca HTML cru. */}
-            <div className="overflow-y-auto px-5 py-4 sm:px-6">
-              <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">
-                {regulamento}
-              </div>
-            </div>
-
-            <div className="flex justify-end border-t border-border-subtle px-5 py-3 sm:px-6">
-              <Button variant="secondary" onClick={fechar}>
-                Fechar
-              </Button>
-            </div>
-          </div>
+      <Dialog
+        open={aberto}
+        onOpenChange={setAberto}
+        title="Regulamento da prova"
+        titleIcon={
+          <FileText size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+        }
+        // h3: o modal vive sob o h2 da seção — não quebra a hierarquia da rota
+        // (aceite do AUDIT-SEO · GATE-DS-W2).
+        titleAs="h3"
+        description={
+          versao !== undefined ? `Versão ${versao} — vigente para as inscrições atuais.` : undefined
+        }
+        returnFocusRef={gatilhoRef}
+        footer={
+          <Button variant="secondary" onClick={() => setAberto(false)}>
+            Fechar
+          </Button>
+        }
+      >
+        {/* Texto PURO com quebras preservadas — nunca HTML cru. */}
+        <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-text-secondary">
+          {regulamento}
         </div>
-      ) : null}
+      </Dialog>
     </div>
   );
 }

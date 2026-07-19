@@ -11,6 +11,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./', import.meta.url)),
+      // Subpaths ANTES da base — o alias do Vite casa por prefixo e o
+      // primeiro match vence (ADR-017: entradas server/dialog Radix-free).
+      '@leela/design-system/server': fileURLToPath(
+        new URL('../../packages/design-system/src/server.ts', import.meta.url),
+      ),
+      '@leela/design-system/dialog': fileURLToPath(
+        new URL('../../packages/design-system/src/dialog.ts', import.meta.url),
+      ),
       '@leela/design-system': fileURLToPath(
         new URL('../../packages/design-system/src/index.ts', import.meta.url),
       ),
