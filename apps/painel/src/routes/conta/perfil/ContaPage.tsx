@@ -30,6 +30,7 @@ import {
   trocarSenha,
   uploadFotoPerfilConta,
 } from '@leela/api-client';
+import { ajustarProporcaoImagem } from '@/components/upload';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
 import { SENHA_MIN, senhaAtendeMinimo } from '../auth/_lib/authValidation';
@@ -152,7 +153,10 @@ export function ContaPage(): JSX.Element {
     setErroUploadFoto(null);
     setEnviandoFoto(true);
     try {
-      const url = await uploadFotoPerfilConta(file);
+      // RN-170: ajusta para 1:1 (avatar) antes de subir; degrada para o
+      // original em runtime sem canvas.
+      const ajustada = await ajustarProporcaoImagem(file, 1, 1);
+      const url = await uploadFotoPerfilConta(ajustada);
       await atualizarFotoPerfil(url);
       setFotoEditada(url);
       toast({ variant: 'success', title: 'Foto atualizada' });
@@ -234,9 +238,9 @@ export function ContaPage(): JSX.Element {
             <FileInput
               id="conta-foto-arquivo"
               label="Enviar foto"
-              buttonLabel="Escolher arquivo"
+              buttonLabel={urlDeImagemValida(fotoUrl) ? 'Trocar foto' : 'Escolher arquivo'}
               busy={enviandoFoto}
-              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. A foto é atualizada na hora."
+              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 1:1 e atualizada na hora."
               {...(erroUploadFoto ? { errorMessage: erroUploadFoto } : {})}
               onFileSelected={(file) => void enviarFoto(file)}
             />

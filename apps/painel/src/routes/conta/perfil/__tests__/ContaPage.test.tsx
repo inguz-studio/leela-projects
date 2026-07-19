@@ -121,6 +121,17 @@ describe('ContaPage — foto de perfil por UPLOAD (LEELA-R5)', () => {
     expect(screen.queryByRole('button', { name: 'Salvar foto' })).not.toBeInTheDocument();
   });
 
+  it('T2 (RN-170): o gatilho vira "Trocar foto" depois que há foto', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    // Sem foto ainda → "Escolher arquivo".
+    expect(screen.getByRole('button', { name: 'Escolher arquivo' })).toBeInTheDocument();
+    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Trocar foto' })).toBeInTheDocument(),
+    );
+  });
+
   it('arquivo inválido: erro inline SEM roundtrip de upload', async () => {
     mocks.problemaDoArquivoImagem.mockReturnValue('A imagem deve ter no máximo 5MB.');
     renderPage();

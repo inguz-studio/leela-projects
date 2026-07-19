@@ -20,7 +20,12 @@
 // como estava (comportamento pré-RN-170), não um erro.
 // =============================================================================
 
-import { IMAGEM_UPLOAD_MAX_BYTES } from '@leela/api-client';
+// Teto de bytes padrão da saída — ESPELHO de `IMAGEM_UPLOAD_MAX_BYTES` do
+// api-client (5MB, limite das storage.rules). Duplicado como literal DE
+// PROPÓSITO: manter esta util sem dependência do api-client a deixa auto-contida
+// e testável sem mock (o consumidor `ImageUploadField` passa o teto real via
+// `opts.maxBytes`, então este default só vale em chamadas diretas).
+const MAX_BYTES_DEFAULT = 5 * 1024 * 1024;
 
 /** Tipos que o canvas re-encoda com fidelidade (raster estático, sem animação). */
 const TIPOS_REENCODAVEIS = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -125,7 +130,7 @@ export async function ajustarProporcaoImagem(
   opts: AjustarOpts = {}
 ): Promise<File> {
   const maxLadoPx = opts.maxLadoPx ?? 1600;
-  const maxBytes = opts.maxBytes ?? IMAGEM_UPLOAD_MAX_BYTES;
+  const maxBytes = opts.maxBytes ?? MAX_BYTES_DEFAULT;
   const qualidadeInicial = opts.qualidade ?? 0.9;
 
   // Tipos não re-encodáveis (GIF animado / AVIF): sobe original — nunca quebra
@@ -161,18 +166,39 @@ export async function ajustarProporcaoImagem(
     ctx.drawImage(bitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, saida.w, saida.h);
 
     // Encode; se estourar o teto, reduz qualidade (jpeg/webp). PNG não tem
-    // qualidade — se estourar, o guard de tamanho do consumidor pega (raro
-    // depois de cortar+reduzir para <=1600px).
+    // qualidade: se o PNG cortado ainda estourar (raro depois de <=1600px), cai
+    // para JPEG com matte branco (compressão com perda) antes de desistir —
+    // assim o ajuste efetivamente REDUZ o tamanho em vez de deixar o consumidor
+    // rejeitar com "5MB" logo após "recortar" (review antagonista, BAIXO-1).
     let blob: Blob | null = null;
+    let tipoSaida = tipoAlvo;
     const passos = tipoAlvo === 'image/png' ? [1] : [qualidadeInicial, 0.8, 0.7, 0.6];
     for (const q of passos) {
       blob = await canvasParaBlob(canvas, tipoAlvo, q);
       if (blob && blob.size <= maxBytes) break;
     }
-    if (!blob) return file;
+    if ((!blob || blob.size > maxBytes) && tipoAlvo === 'image/png') {
+      // Fallback PNG→JPEG (perde alpha; o matte já foi pintado só p/ jpeg, então
+      // pinta agora antes de reencodar).
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, saida.w, saida.h);
+      ctx.globalCompositeOperation = 'source-over';
+      for (const q of [qualidadeInicial, 0.8, 0.7, 0.6]) {
+        const jpg = await canvasParaBlob(canvas, 'image/jpeg', q);
+        if (jpg && jpg.size <= maxBytes) {
+          blob = jpg;
+          tipoSaida = 'image/jpeg';
+          break;
+        }
+      }
+    }
+    // Sem blob, ou ainda acima do teto: devolve o ORIGINAL (o consumidor/Rules
+    // decidem) — nunca sobe um blob transformado que segue estourando.
+    if (!blob || blob.size > maxBytes) return file;
 
-    const nome = renomear(file.name, tipoAlvo);
-    return new File([blob], nome, { type: tipoAlvo, lastModified: Date.now() });
+    const nome = renomear(file.name, tipoSaida);
+    return new File([blob], nome, { type: tipoSaida, lastModified: Date.now() });
   } catch {
     return file;
   } finally {

@@ -45,15 +45,38 @@ Capa de evento upload-only exige, num lote da forge (backend):
 Sem isso, a capa de evento não tem como subir arquivo real. EventoForm: input de URL REMOVIDO
 (RN-168 "URL morre em todas") e nota de "em breve por upload" no lugar.
 
-## Progresso (atualizar a cada task)
-- [x] T0 checkpoint criado.
-- [ ] T-CROP util + testes
-- [ ] T-FIELD componente + testes
-- [ ] T1/T2/T3 perfil público (avatar+capa)
-- [ ] T1/T2/T3 clube capa
-- [ ] Evento capa (remove URL + pendência)
-- [ ] Gates (tsc/eslint/suite/RTL/AA) + review antagonista fresca
-- [ ] Boards E17/E12 + épicos
+## Progresso
+- [x] T0 checkpoint · T-CROP util (+ testes) · T-FIELD `ImageUploadField` (+Remover, testes).
+- [x] T1/T2/T3 perfil público (avatar 1:1 + capa 16/9) + clube capa (16/9) — URL removida.
+- [x] T2/T3 ContaPage (foto da conta já upload-only): +crop 1:1 +label "Trocar foto".
+- [x] Evento capa: input URL removido + nota + pendência backend registrada.
+- [x] Grep-proof: zero input type=url de imagem nas 4 superfícies (só link-in-bio restou, não-imagem).
+- [x] tsc 0 · eslint 0 · suíte painel 1258/1258 (T1) → re-rodada após fixes.
+- [x] Boards E17/E12 + BOARD-HISTORICO + V1-KANBAN (`b2d690c`).
+- [x] Review antagonista contexto fresco: **APPROVE** (0 CRÍTICO/ALTO). 3 achados → fixes:
+      - BAIXO-1 (PNG estoura teto pós-crop): fallback PNG→JPEG + devolve original se ainda estoura.
+      - MÉDIO-2 (input de URL da imagem OG de SEO em PaginaVendasView): decisão de escopo — NÃO é
+        superfície de imagem RN-168 (é campo meta/`og:image`, não identidade visual do produto;
+        sem path de upload). EXCLUÍDO conscientemente (ver abaixo).
+      - BAIXO-3 (nota do evento diz 1.9:1 e não 16/9): correto — capa de evento é 1.9:1 por RN-228
+        (contrato próprio), distinto do 16/9 (premissa de perfil/clube). Mantido; comentário aponta RN-228.
+
+## Fora de escopo (conscientemente, com razão)
+- **Imagem OG/compartilhamento de SEO** (`eventos/pagina-vendas/PaginaVendasView.tsx` — "Imagem de
+  compartilhamento (URL)"): campo meta `og:image`, não superfície de imagem do produto (RN-168). Fica
+  URL até existir um upload de OG dedicado. Confirmado pela review.
+- **Capa de email de campanha/comunicado** (`capaUrl`, RN-135): superfície distinta (email), fora do sweep.
+- **Logo 1:1 de patrocinador/marca** (R9-E): já é upload, mas com validação de REJEIÇÃO (não crop);
+  território fora deste lote — candidata a migrar para o crop COVER num próximo.
+- **Imagem de KIT**: território TAM (fora por regra do brief).
+
+## Reaproveitado vs criado
+REAPROVEITADO: FileInput (DS), problemaDoArquivoImagem/IMAGEM_UPLOAD_MAX_BYTES + 3 seams de upload
+(api-client), padrão ContaPage. CRIADO: `ajustarProporcao.ts` (crop COVER, auto-contido — sem dep de
+api-client p/ não quebrar mocks), `ImageUploadField.tsx`. Consolidou 3 near-duplicates num só componente.
 
 ## Commits
-(preencher com hashes)
+- T0 `8b19dec` feat(upload): campo compartilhado + crop [LEELA-UPSW-T0]
+- T1 `0e51045` feat(upload): upload-only+trocar+crop 3 superfícies; evento nota [LEELA-UPSW-T1]
+- T2 `b2d690c` docs(e17,e12,boards): aterrissa UPLOAD-SWEEP [LEELA-UPSW-T2]
+- T3 `<T3>` fix(upload): ContaPage crop 1:1+trocar; decoupla util; PNG→JPEG fallback [LEELA-UPSW-T3]
