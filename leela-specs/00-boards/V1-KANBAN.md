@@ -80,6 +80,7 @@ tags:
 - [x] **[E08] Comissão do influenciador (fase 2)** — organizador define % ou valor fixo, a comissão acumula sozinha a cada venda confirmada, estorno devolve certinho e o afiliado vê saldo e extrato; repasse manual registrado no sistema (split automático fica para decisão) ✅ [[BOARD-HISTORICO]]
 - [x] **[E19] CRM blindado (A3)** — a chave que identifica cada cliente ganhou segredo criptográfico: mesmo com um vazamento do banco, o CPF não é recuperável ✅ [[BOARD-HISTORICO]]
 - [x] **[E19/E08] Tela do CRM + UI de comissão (CRM-COMISSAO-UI)** — o organizador abre "Clientes & Comunicação" no menu e vê seus clientes cross-evento com LTV, valor gasto e histórico, com aniversário e idade ao vivo no detalhe; configura a comissão do influenciador (% ou valor fixo, sem retroatividade), acompanha saldo/extrato dos dois lados e registra o repasse manual ✅ [[BOARD-HISTORICO]]
+- [x] **[E08] Hub do promotor (PROMOTOR)** — o influenciador abre "Minhas afiliações" e vê, além dos cartões por evento, um resumo consolidado do seu negócio (afiliações ativas, inscrições no total, valor total e comissão a receber somando todos os eventos dele) e copia o código de indicação de cada evento com um clique; tudo só o dele (nunca dado de terceiro). Entregue evoluindo a tela que já existia, sem rota nova ✅ [[BOARD-HISTORICO]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 
