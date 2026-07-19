@@ -194,6 +194,38 @@ service firebase.storage {
         && eventoDoMeuTenant(eventoId);
     }
 
+    // ── eventos/{eventoId}/capa — capa/hero do evento (CEV · RN-228) ──────
+    // Fecha a ÚLTIMA superfície de imagem sem upload real (pendência UPSW ·
+    // DEC-0719 item 19). Nome de objeto FIXO `capa` (segmento literal — sem
+    // wildcard, sem filename livre; re-upload SOBRESCREVE, mesma decisão
+    // ADR-016 das demais capas). Write: tenant writer E o EVENTO é do meu
+    // tenant (cross-service firestore.get, MESMA guarda dos kits acima —
+    // evento inexistente → get() erra → NEGA, fail-closed: não se "reserva"
+    // capa de evento que não existe). Read público: a capa é o hero da
+    // landing pública do evento (intrinsecamente pública — ADR-016).
+    //
+    // FORMATO (RN-228, ratificado DEC-0719): a capa aceita SÓ JPEG/PNG/GIF —
+    // allowlist MAIS ESTRITA que `imagemValida()` (webp/avif ficam de fora
+    // NESTE path; SVG já era banido em todos). Regex ANCORADA como a base
+    // (full-match; token embutido tipo 'text/html; image/png' NÃO casa).
+    // Teto: 5MB nas Rules (padrão das entradas — brief CEV); o teto fino de
+    // 2MB da RN-228 é APP-LEVEL (seam `uploadCapaEvento` + crop client-side),
+    // mesma divisão de responsabilidade da proporção 1.9:1 (Rules não
+    // decodificam imagem — limitação honesta registrada).
+    function capaEventoFormatoValido() {
+      return request.resource.contentType.matches('^image/(jpeg|png|gif)$');
+    }
+
+    match /eventos/{eventoId}/capa {
+      allow read: if true;
+      allow create, update: if isTenantWriterRole()
+        && eventoDoMeuTenant(eventoId)
+        && imagemValida()
+        && capaEventoFormatoValido();
+      allow delete: if isTenantWriterRole()
+        && eventoDoMeuTenant(eventoId);
+    }
+
     // ── Catch-all: DENY-BY-DEFAULT ────────────────────────────────────────
     // NOTA de semântica (review antagonista R5): o deny REAL de todo path não
     // contratado vem da AUSÊNCIA de `allow` (deny-by-default do Storage), não

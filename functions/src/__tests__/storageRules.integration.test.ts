@@ -18,7 +18,10 @@
  *     clubes/{clubeId}/capa); path fora do contrato ILEGÍVEL até autenticado;
  *   - capa de clube: tenant writer do tenant DONO escreve; cross-tenant
  *     NEGADO; papel não-writer (promoter) NEGADO; clube INEXISTENTE NEGADO
- *     (fail-closed do firestore.get cross-service).
+ *     (fail-closed do firestore.get cross-service);
+ *   - capa de EVENTO (CEV · RN-228): mesma guarda cross-service dos kits +
+ *     allowlist estrita jpeg/png/gif (webp/avif NEGADOS neste path), path
+ *     traversal/probing NEGADO, evento inexistente NEGADO, read público.
  *
  * Comando (1 emulator por vez, portas 8080/9199 conferidas por zumbis antes):
  *   cd functions && JAVA_HOME=$HOME/.jdks/jdk-21.0.11+10 \
@@ -456,6 +459,154 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
     });
     const anon = storageDe(null);
     await assertSucceeds(getBytes(ref(anon, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`)));
+  });
+
+  // ── eventos/{eventoId}/capa — capa/hero do evento (CEV · RN-228) ────────
+
+  it('tenant_owner do tenant DONO do evento escreve a capa (fluxo SDK completo)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    const destino = ref(storage, `eventos/${EVENTO_CASTELO}/capa`);
+    await assertSucceeds(uploadBytes(destino, PNG_1KB, { contentType: 'image/png' }));
+    const url = await getDownloadURL(destino);
+    expect(url).toContain(`eventos%2F${EVENTO_CASTELO}%2Fcapa`);
+  });
+
+  it('tenant_staff do tenant dono também escreve a capa (papel writer)', async () => {
+    const storage = storageDe(STAFF_UID, staffClaims);
+    await assertSucceeds(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/jpeg',
+      })
+    );
+  });
+
+  it('re-upload SOBRESCREVE a capa (update permitido — sem órfãos)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    const destino = ref(storage, `eventos/${EVENTO_CASTELO}/capa`);
+    await assertSucceeds(uploadBytes(destino, PNG_1KB, { contentType: 'image/png' }));
+    await assertSucceeds(
+      uploadBytes(destino, new Uint8Array(2048).fill(3), { contentType: 'image/gif' })
+    );
+  });
+
+  it('tenant_owner de OUTRO tenant NÃO escreve a capa do evento (cross-tenant NEGADO)', async () => {
+    const storage = storageDe(PASSO_OWNER_UID, passoClaims);
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  it('promoter / platform_admin / anônimo NÃO escrevem a capa pelo client', async () => {
+    await assertFails(
+      uploadBytes(
+        ref(storageDe(PROMOTER_UID, promoterClaims), `eventos/${EVENTO_CASTELO}/capa`),
+        PNG_1KB,
+        { contentType: 'image/png' }
+      )
+    );
+    await assertFails(
+      uploadBytes(
+        ref(storageDe(PLATFORM_ADMIN_UID, { role: 'platform_admin' }), `eventos/${EVENTO_CASTELO}/capa`),
+        PNG_1KB,
+        { contentType: 'image/png' }
+      )
+    );
+    await assertFails(
+      uploadBytes(ref(storageDe(null), `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  // Bypass de papel via caminho forjado (vetor do brief CEV): claim writer de
+  // OUTRO tenant apontando o caminho de um evento que não é seu já está coberto
+  // acima (cross-tenant); aqui, evento INEXISTENTE — o firestore.get erra e
+  // NEGA (fail-closed): não se "reserva" capa de evento que ainda não existe.
+  it('evento INEXISTENTE NEGADO (firestore.get fail-closed — sem "reservar" capa)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    await assertFails(
+      uploadBytes(ref(storage, 'eventos/evento-fantasma/capa'), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  // RN-228: allowlist da capa de evento é SÓ jpeg/png/gif — webp/avif (válidos
+  // nas demais superfícies) NÃO entram neste path; SVG/HTML seguem banidos.
+  it.each(['image/webp', 'image/avif', 'image/svg+xml', 'text/html', 'application/octet-stream'])(
+    'contentType %s NEGADO na capa de evento (allowlist RN-228 jpeg/png/gif)',
+    async (contentType) => {
+      const storage = storageDe(MARINA_UID, marinaClaims);
+      await assertFails(
+        uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, { contentType })
+      );
+    }
+  );
+
+  // Spoof por token EMBUTIDO (vetor do brief CEV): regex ancorada ^…$ — se
+  // qualquer um passasse, o bucket serviria text/html → stored XSS.
+  it.each(['text/html; image/png', 'image/png,text/html', 'image/gifx', 'ximage/jpeg'])(
+    'contentType com token embutido "%s" NEGADO na capa de evento (full-match)',
+    async (contentType) => {
+      const storage = storageDe(MARINA_UID, marinaClaims);
+      await assertFails(
+        uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, { contentType })
+      );
+    }
+  );
+
+  it('acima de 5MB NEGADO e arquivo VAZIO NEGADO na capa de evento', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(CINCO_MB + 1), {
+        contentType: 'image/jpeg',
+      })
+    );
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(0), {
+        contentType: 'image/png',
+      })
+    );
+  }, 30_000);
+
+  // Path traversal / probing (vetor do brief CEV): só o segmento LITERAL
+  // `capa` casa — path aninhado, nome próximo e objeto solto sob eventos/
+  // caem no deny-by-default (nenhum match concede).
+  it.each([
+    `eventos/${EVENTO_CASTELO}/capa/extra`, // aninhado sob capa
+    `eventos/${EVENTO_CASTELO}/Capa`, // case-sensitive probing
+    `eventos/${EVENTO_CASTELO}/capa2`, // nome próximo
+    `eventos/${EVENTO_CASTELO}/qualquer.png`, // objeto fora do contrato
+    'eventos/capa', // sem eventoId (vira {eventoId}='capa' sem objeto → nada casa)
+  ])('path forjado "%s" NEGADO em write (deny-by-default)', async (path) => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    await assertFails(uploadBytes(ref(storage, path), PNG_1KB, { contentType: 'image/png' }));
+  });
+
+  it('anônimo LÊ a capa do evento (hero da landing pública)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/png',
+      });
+    });
+    const anon = storageDe(null);
+    await assertSucceeds(getBytes(ref(anon, `eventos/${EVENTO_CASTELO}/capa`)));
+  });
+
+  it('delete da capa: writer do tenant dono SIM; outro tenant NÃO', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(ref(ctx.storage(), `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/png',
+      });
+    });
+    await assertFails(
+      deleteObject(ref(storageDe(PASSO_OWNER_UID, passoClaims), `eventos/${EVENTO_CASTELO}/capa`))
+    );
+    await assertSucceeds(
+      deleteObject(ref(storageDe(MARINA_UID, marinaClaims), `eventos/${EVENTO_CASTELO}/capa`))
+    );
   });
 
   // ── delete: só o dono ───────────────────────────────────────────────────
