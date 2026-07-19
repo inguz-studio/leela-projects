@@ -6,7 +6,7 @@ import { CtaInscricao } from '../CtaInscricao';
 import { CtaFallback } from '../CtaFallback';
 import { CoverImage } from '@/app/components/CoverImage';
 import { HeroCover } from './HeroCover';
-import { resolverCapa } from './cover';
+import { capaDoEvento } from '@/lib/coverEvento';
 import { SeloModalidade } from './marca';
 
 /**
@@ -30,7 +30,14 @@ import { SeloModalidade } from './marca';
  */
 export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.Element {
   const aberta = evento.estadoVenda === 'aberto';
-  const capa = resolverCapa(evento.imagemUrl);
+  // Capa do hero: FOTO temática por evento (T1) — mesma resolução dos cards da
+  // home (`capaDoEvento`), unificada. Capa http(s) do organizador tem precedência;
+  // sem ela, a foto mock do tema (nome + percursos). Nunca gradiente liso.
+  const capa = capaDoEvento({
+    nome: evento.nome,
+    modalidades: evento.modalidades.map((m) => m.nome),
+    ...(evento.imagemUrl !== undefined ? { imagemUrl: evento.imagemUrl } : {}),
+  });
 
   return (
     <section className="relative isolate overflow-hidden">

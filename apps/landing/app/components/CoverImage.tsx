@@ -3,13 +3,14 @@
 import { useState } from 'react';
 
 // Capa de exemplo — fonte ÚNICA do fallback de capa da superfície pública.
-// LEELA-R12-FIX2-CAPA: antes era um gradiente liso (lido como placeholder); agora
-// é a ARTE DE CAPA rica (pelotão de corredores ao amanhecer, mesmo asset do hero)
-// para que TODO slot sem capa real (cards da home, timeline do organizador,
-// clubes, perfil) exiba uma imagem que parece capa de evento — nunca área vazia.
-// `bg-cover`/`bg-center` cobrem o slot em qualquer proporção.
+// LEELA-R12-FIX2-CAPA: antes era um gradiente liso (lido como placeholder). T1
+// (LP-VENDAS-KIT): agora é uma FOTO semi-realista de corrida (Unsplash License,
+// asset local) para que TODO slot sem capa real (cards da home, timeline do
+// organizador, clubes, perfil) exiba uma imagem que parece capa de evento —
+// nunca área vazia nem arte abstrata. `bg-cover`/`bg-center` cobrem o slot em
+// qualquer proporção.
 const FALLBACK_CAPA =
-  'h-full w-full bg-[url(/covers/leela-evento-brasa.svg)] bg-cover bg-center';
+  'h-full w-full bg-[url(/covers/leela-cover-corrida-rua.jpg)] bg-cover bg-center';
 
 /**
  * Capa resiliente de clube/evento (RN-166 · S1702-T2). Sem URL → gradiente de

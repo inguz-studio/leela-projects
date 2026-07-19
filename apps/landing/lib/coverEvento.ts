@@ -11,9 +11,12 @@
 // para a página do evento (`resolverCapa`/`mockImagem`): dado real (URL http(s))
 // tem precedência; sem ele, uma CAPA MOCK RICA por tema — nunca um gradiente.
 //
-// As capas mock são assets locais em `apps/landing/public/covers/` (SVG brasa,
-// autocontido, sem serviço externo). A escolha é DETERMINÍSTICA pelo tema do
-// evento (nome + distâncias), então o mesmo evento sempre mostra a mesma capa.
+// As capas mock são assets locais em `apps/landing/public/covers/` (FOTOS
+// royalty-free de banco de imagens — Unsplash License, sem hotlink, baixadas no
+// próprio public; LP-VENDAS-KIT/T1: o Vitor pediu imagens semi-realistas em vez
+// de arte abstrata). A escolha é DETERMINÍSTICA pelo tema do evento (nome +
+// distâncias), então o mesmo evento sempre mostra a mesma capa. Créditos das
+// fotos: ver outputs/leela-build-2d6ee98d/LP-VENDAS-KIT-REPORT.md.
 //
 // Puro (sem React/estado): testável e reusável server+client.
 // =============================================================================
@@ -21,15 +24,15 @@
 /** Diretório dos assets de capa mock. */
 const BASE = '/covers';
 
-/** Capas mock por tema — arte rica que lê como "capa de evento", não placeholder. */
+/** Capas mock por tema — FOTO semi-realista que lê como "capa de evento". */
 export const CAPAS_MOCK = {
-  corridaRua: `${BASE}/leela-cover-corrida-rua.svg`,
-  noturna: `${BASE}/leela-cover-noturna.svg`,
-  maratona: `${BASE}/leela-cover-maratona.svg`,
-  largada: `${BASE}/leela-cover-largada.svg`,
-  trail: `${BASE}/leela-cover-trail.svg`,
-  mtb: `${BASE}/leela-cover-mtb.svg`,
-  bemEstar: `${BASE}/leela-cover-bemestar.svg`,
+  corridaRua: `${BASE}/leela-cover-corrida-rua.jpg`,
+  noturna: `${BASE}/leela-cover-noturna.jpg`,
+  maratona: `${BASE}/leela-cover-maratona.jpg`,
+  largada: `${BASE}/leela-cover-largada.jpg`,
+  trail: `${BASE}/leela-cover-trail.jpg`,
+  mtb: `${BASE}/leela-cover-mtb.jpg`,
+  bemEstar: `${BASE}/leela-cover-bemestar.jpg`,
 } as const;
 
 /** Tema visual da capa a partir do nome + distâncias do evento (determinístico). */

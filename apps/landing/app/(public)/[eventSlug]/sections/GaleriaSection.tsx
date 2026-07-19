@@ -16,9 +16,9 @@ import { TituloSecao } from './marca';
  * evento. Server Component; `<img>` de asset local estático.
  */
 const IMAGENS_EXEMPLO: readonly { src: string; alt: string; rotulo: string }[] = [
-  { src: '/gallery/leela-galeria-largada.svg', alt: 'Imagem de exemplo: largada', rotulo: 'Largada' },
-  { src: '/gallery/leela-galeria-percurso.svg', alt: 'Imagem de exemplo: percurso', rotulo: 'No percurso' },
-  { src: '/gallery/leela-galeria-chegada.svg', alt: 'Imagem de exemplo: chegada', rotulo: 'Chegada' },
+  { src: '/gallery/leela-galeria-largada.jpg', alt: 'Imagem de exemplo: largada', rotulo: 'Largada' },
+  { src: '/gallery/leela-galeria-percurso.jpg', alt: 'Imagem de exemplo: percurso', rotulo: 'No percurso' },
+  { src: '/gallery/leela-galeria-chegada.jpg', alt: 'Imagem de exemplo: chegada', rotulo: 'Chegada' },
 ];
 
 export function GaleriaSection(): React.JSX.Element {
