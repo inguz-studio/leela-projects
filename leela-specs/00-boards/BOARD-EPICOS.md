@@ -36,7 +36,7 @@ O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clube
 | Épico | O que entrega | Estado |
 |---|---|---|
 | [[LEELA-E04-config-vendas]] · slim | Configurar lotes, preços automáticos, cupons, equipe | ✅ |
-| [[LEELA-E12-landing]] | Atleta descobre o evento e se inscreve em poucos cliques | ✅ |
+| [[LEELA-E12-landing]] | Atleta descobre o evento e se inscreve em poucos cliques | ✅ +KIT-IMG (2026-07-19): imagem do kit visível na seção de kits da LP e no checkout, clicável p/ ampliar (lightbox do DS); cascata real→foto mock (preview)→placeholder padrão Leela; SEO-first, 55/55, prova visual :3200 |
 | [[LEELA-E09-financeiro-profissional]] · slim | Ver saldo, dados bancários e pedir repasse | ✅ |
 | [[LEELA-E07-estados-sistema]] · web | Telas de erro com cara profissional (404/500/403) | ✅ |
 | [[LEELA-E06-marketing]] | Falar com o público por campanhas e automações | ✅ |

@@ -14,6 +14,8 @@ Dar ao Organizador de Evento controle operacional completo de um evento ao vivo:
 
 > **Atualização 2026-07-18 (LP-VENDAS-KIT · `1134da4`):** kit ganhou **visão de compra editável** no `KitEditor` — descrição (≤280), "o que está incluso" (itens[], ≤30) e **imagem 1:1 upload-only** (`uploadImagemKit`, path `eventos/{id}/kits/{kitId}`; padrão R5 do DS, sem URL colada). Reflete no checkout (`KitDetalhe` já consumia `imagemUrl` real). RN-227/RN-230. Fecha a pendência R9-C/gap-R13.
 
+> **Atualização 2026-07-19 (KIT-IMG-LANDING · `[LEELA-KITIMG-T3]`):** definido o **default de PRODUÇÃO do kit sem imagem anexada**: quando o organizador **não** subiu a imagem 1:1 (RN-230), a superfície pública (LP + checkout) usa o **placeholder padrão Leela** — asset estático brandado (`apps/landing/public/covers/kits/leela-kit-placeholder.svg`: wordmark verde-limão do header sobre fundo brasa, **não** foto). Foto mock temática só aparece no **preview** (Emulator); em produção real o placeholder é o piso. Isso reforça o incentivo do `KitEditor` a subir a imagem real (o upload sempre vence o placeholder).
+
 O valor entregue é operar a Meia Maratona Floripa 2026 (453 inscritos, R$ 85.617) da criação da página até a retirada do kit no balcão, sem planilha e sem suporte técnico. Este épico materializa em código (Next.js + Firestore) o protótipo parcial de EP-02a e fecha as três pendências herdadas: balcão de entrega com estados (BH-204), edição de kit em tela cheia (BH-206) e financeiro do evento (BH-207).
 
 ## Personas & JTBD
