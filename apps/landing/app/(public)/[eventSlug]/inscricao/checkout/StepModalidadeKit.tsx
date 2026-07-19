@@ -51,6 +51,13 @@ export function StepModalidadeKit({
         <ApoioEtapa>
           Escolha o percurso e o kit de cada atleta. O total aparece no resumo.
         </ApoioEtapa>
+        {/* A-5 · transparência de preço: sinaliza a possível taxa ANTES do
+            resumo, sem revelar percentual nem mudar a matemática (o valor real
+            sai da cotação do servidor — RN-347). */}
+        <p className="mt-2 text-xs text-text-tertiary">
+          Eventuais taxas de serviço, quando houver, entram no total exibido no resumo, antes do
+          pagamento.
+        </p>
       </div>
 
       {inscritos.map((inscrito, i) => {
