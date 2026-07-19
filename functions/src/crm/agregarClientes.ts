@@ -19,9 +19,15 @@
 //     gênero, contagens e valores — NUNCA CPF, telefone, cidade/UF, contato
 //     de emergência ou restrição médica;
 //   - o VALOR da chave de linking (CPF/e-mail) não é persistido: docId =
-//     `{tipo}_{sha256(tenantId:tipo:valor)[0:32]}`. O salt por tenant impede
-//     correlacionar a MESMA pessoa entre tenants pela igualdade do docId
-//     (review antagonista E19) e nada reversível fica em path/log.
+//     `{tipo}_{sha256(tenantId:tipo:valor)[0:32]}`. O tenant no input impede
+//     correlacionar a MESMA pessoa entre tenants pela igualdade do docId.
+//     RESSALVA (review antagonista E19 · A3): para chave CPF (~10^9 valores,
+//     baixa entropia) o hash é força-brutável offline por quem tenha um dump
+//     da coleção + o tenantId (que está no path) — a proteção real é contra
+//     exposição casual e correlação, NÃO contra reversão offline. Hardening
+//     planejado ANTES de produção: HMAC-SHA256 com pepper secreto (Secret
+//     Manager) — decisão de ops pendente com o Vitor, registrada no épico
+//     E19 (§Estado de implementação).
 //
 // LEDGER FECHADO + TRANSAÇÃO (race-safe): cada cliente carrega o mapa
 // `inscricoes` (uma entrada por inscrição confirmada/estornada, chave
@@ -339,7 +345,20 @@ export async function aplicarWriteInscritoNoCrm(
       const inscricoes: Record<string, CrmInscricaoEntry> = clienteAfterSnap.exists
         ? { ...parseCrmCliente(keyAfter, clienteAfterSnap.data() as DocData).inscricoes }
         : {};
-      inscricoes[entryKey] = entryAfter;
+      // Fence de monotonicidade (review antagonista E19 · A2): gatilhos v1
+      // são at-least-once SEM ordem garantida — um snapshot ANTIGO reentregue
+      // (ex.: `confirmado` redelivered depois do estorno já processado) não
+      // pode regredir a entrada, senão o LTV volta a contar dinheiro
+      // devolvido. Só sobrescreve se o carimbo do after não é mais velho que
+      // o da entrada existente; carimbo 0 = doc sem `atualizadoEm` (legado)
+      // ⇒ sem fence (não rejeita write legítimo). Entrada preservada ⇒
+      // recompute idêntico ⇒ no-op (atualizadoEm intocado).
+      const existente = inscricoes[entryKey];
+      const snapshotVelho =
+        existente !== undefined &&
+        entryAfter.atualizadoEmMs > 0 &&
+        existente.atualizadoEmMs > entryAfter.atualizadoEmMs;
+      if (!snapshotVelho) inscricoes[entryKey] = entryAfter;
       const novo: CrmClienteDoc = {
         tenantId: viewAfter.tenantId,
         chaveTipo: identidadeAfter.tipo,

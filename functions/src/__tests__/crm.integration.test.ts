@@ -381,6 +381,31 @@ describe('aplicarWriteInscritoNoCrm — linking e agregação real', () => {
     expect(colCastelo.size).toBe(0);
   });
 
+  it('A2 fence: redelivery FORA DE ORDEM do confirmado não regride o estorno (LTV não ressuscita)', async () => {
+    // at-least-once sem ordem: E1 (null→confirmado, t=1000) processa, depois
+    // E2 (confirmado→estornado, t=3000); então E1 é REENTREGUE (snapshot velho).
+    await aplicar(EV1, 'i1', null, bruna1());
+    const estornada = {
+      ...bruna1(),
+      status: 'estornado',
+      atualizadoEm: Timestamp.fromMillis(3_000),
+    };
+    await aplicar(EV1, 'i1', bruna1(), estornada);
+    const key = KEY_BRUNA();
+    const aposEstorno = await adminDb.doc(crmPath(key)).get();
+    const carimbo = (aposEstorno.get('atualizadoEm') as Timestamp).toMillis();
+
+    // Redelivery do evento ANTIGO (confirmado, t=1000 < 3000): fence segura
+    const acoes = await aplicar(EV1, 'i1', null, bruna1());
+    expect(acoes[key]).toBe('noop');
+    const depois = await adminDb.doc(crmPath(key)).get();
+    const inscricoes = depois.get('inscricoes') as Record<string, DocData>;
+    expect(inscricoes[`${EV1}_i1`]?.['status']).toBe('estornado'); // não regrediu
+    expect(depois.get('ltv')).toBe(0); // dinheiro devolvido NÃO ressuscita
+    expect(depois.get('qtdEventos')).toBe(0);
+    expect((depois.get('atualizadoEm') as Timestamp).toMillis()).toBe(carimbo);
+  });
+
   it('CROSS-TENANT fail-closed: pedido de OUTRO tenant não dá valor nem chave', async () => {
     const i5 = inscrito('i5', 'confirmado', {
       atletaId: 'atleta-i5', pedidoRef: 'ped-intruso', ehResponsavel: true,

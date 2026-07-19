@@ -40,6 +40,10 @@ import {
 /** Page size da tabela densa do CRM (§2.5 — mesma régua dos inscritos). */
 export const CRM_CLIENTES_PAGE_SIZE = 18;
 
+/** Teto do pageSize (review antagonista E19 · A4): sem clamp, um chamador
+ *  adulterado varre a coleção de PII inteira num único request. */
+export const CRM_CLIENTES_PAGE_SIZE_MAX = 100;
+
 /** Ordenações suportadas pela lista (campos do doc — índice single-field). */
 export type CrmClientesOrdem = 'ltv' | 'valorGasto' | 'qtdEventos' | 'nome';
 
@@ -84,7 +88,12 @@ export async function listarCrmClientes(
   tenantId: string,
   options: ListarCrmClientesOptions = {}
 ): Promise<ListarCrmClientesResult> {
-  const { ordem = 'ltv', cursor, pageSize = CRM_CLIENTES_PAGE_SIZE } = options;
+  const { ordem = 'ltv', cursor } = options;
+  // Clamp [1, MAX] — A4: pageSize hostil não vira varredura da coleção
+  const pageSize = Math.min(
+    Math.max(1, options.pageSize ?? CRM_CLIENTES_PAGE_SIZE),
+    CRM_CLIENTES_PAGE_SIZE_MAX
+  );
   const constraints: QueryConstraint[] = [
     orderBy(ordem, ordem === 'nome' ? 'asc' : 'desc'),
     firestoreLimit(pageSize),

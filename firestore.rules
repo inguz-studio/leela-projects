@@ -312,6 +312,10 @@ service cloud.firestore {
       // Function onInscritoWriteCrm (ledger + recompute transacional);
       // um cliente que escrevesse aqui forjaria LTV/histórico ou plantaria
       // PII fora da finalidade declarada (RN-172).
+      // TRAVA DE REGRESSÃO (review antagonista E19 · A5): esta regra é
+      // path-scoped; hoje NENHUMA query usa collectionGroup('crmClientes').
+      // Se um dia criarem índice/consulta de collection-group aqui, REVALIDAR
+      // no emulator que a leitura cross-tenant segue negada.
       match /crmClientes/{clienteKey} {
         allow read: if isTenantWriter(tenantId);
         allow write: if false;
