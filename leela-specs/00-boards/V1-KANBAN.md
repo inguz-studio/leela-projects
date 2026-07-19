@@ -31,6 +31,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **[E03/E12] LP-VENDAS-KIT** — LPs com fotos semi-realistas por tema, regulamento em modal na página do evento e kit com descrição/itens/imagem 1:1 editáveis no painel (refletindo no checkout) ✅ [[BOARD-HISTORICO]]
 - [x] **[E00] Fundação técnica** — monorepo, Firebase, login e CI ✅ [[LEELA-E00-fundacao-tecnica]]
 - [x] **[E01] Design System** — temas brasa/leela, showroom e telas-base ✅ [[LEELA-E01-design-system]]
 - [x] **[E01] Gate de consistência do DS (W1)** — auditoria completa painel+DS: núcleo do DS provado são, showroom passa a documentar seleção rica e datas, rota de correção das telas antigas mapeada ✅ [[BOARD-HISTORICO]]

@@ -162,6 +162,9 @@ atualizado: 2026-07-18
 
 
 
+- [x] **LP-VENDAS-KIT** · E03+E12+E01 · trace `leela-build-2d6ee98d` — 3 frentes:
+  **T1** (`0841891`) 7 fotos royalty-free (Unsplash License) por tema nas capas/hero/galeria (antes SVG "abstrato"); resolvedor único `capaDoEvento`; SEO/perf (adendo Vitor): width/height, hero=priority/LCP, resto lazy, alt 100%, pesos ≤300KB, og:image/JSON-LD intactos (capa mock ≠ mídia real). **T3** (`1134da4`) KitEditor ganha descrição(≤280)+itens[](≤30)+upload 1:1 upload-only (uploadImagemKit, FileInput DS); checkout `KitDetalhe` já consumia `imagemUrl` real; painel tsc/eslint 0 + KitEditor 8/8. **T2** (`b3fe713`+fix `beedca9`) regulamento em modal na página do evento (projeção `regulamento`/`versao` no leitor, ≤50k, texto puro). **Bug do gate**: Modal do DS=Radix Dialog e o dist do DS externaliza `@radix-ui/react-dialog`; landing é Radix-free → 500 na rota do evento → **modal local** da landing (tokens DS, a11y 4-vias). Gates landing tsc/eslint 0 + brand PASS. **Gate visual**: T3 capturado (:5273, `outputs/leela-build-2d6ee98d/painel-kiteditor-t3.jpg`); T1/T2 ao vivo **bloqueados** — dev :3200 do Vitor saturou (8GB, não subi 2º server nem derrubei o dele); T1 provado por curl da home pré-saturação. Pendências: reiniciar :3200 p/ conferir LPs; nenhum evento do seed tem `regulamento` (modal só aparece com o campo).
+
 ## ❄️ Fora da V1
 
 - [ ] Épicos adiados: E07 Estados · E09 Financeiro · E10 Marcas · E11 Analytics · E14 Integrações de treino · E15 Creator Studio (MyDose)

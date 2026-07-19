@@ -12,6 +12,8 @@
 
 Dar ao Organizador de Evento controle operacional completo de um evento ao vivo: descobrir e abrir um evento, criar e publicar a página, acompanhar inscritos em tempo real, configurar e distribuir kits, operar o balcão de entrega (retirada = presença) e ler o financeiro do evento. É o núcleo transacional do Painel do Profissional — sem ele não há operação no dia da prova.
 
+> **Atualização 2026-07-18 (LP-VENDAS-KIT · `1134da4`):** kit ganhou **visão de compra editável** no `KitEditor` — descrição (≤280), "o que está incluso" (itens[], ≤30) e **imagem 1:1 upload-only** (`uploadImagemKit`, path `eventos/{id}/kits/{kitId}`; padrão R5 do DS, sem URL colada). Reflete no checkout (`KitDetalhe` já consumia `imagemUrl` real). RN-227/RN-230. Fecha a pendência R9-C/gap-R13.
+
 O valor entregue é operar a Meia Maratona Floripa 2026 (453 inscritos, R$ 85.617) da criação da página até a retirada do kit no balcão, sem planilha e sem suporte técnico. Este épico materializa em código (Next.js + Firestore) o protótipo parcial de EP-02a e fecha as três pendências herdadas: balcão de entrega com estados (BH-204), edição de kit em tela cheia (BH-206) e financeiro do evento (BH-207).
 
 ## Personas & JTBD
