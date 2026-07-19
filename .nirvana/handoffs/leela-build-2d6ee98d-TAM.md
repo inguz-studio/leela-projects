@@ -73,9 +73,30 @@ brief retomada: `.nirvana/briefs/leela-tamanhos-grade-RETOMADA-enriched.md`
       (functions+api-client+painel) · afiliados.integration 28/28 no emulator
       firestore+auth 8480/9598 (firebase.r6.json, config da lane R9-E) com assert
       novo de eventoSlug · RTL painel influenciadores 16/16.
-- [ ] Gates: tsc/eslint 0 · unit core · integração emulator teste (portas próprias, NUNCA 8180) · suíte painel · suíte landing · RTL UIs novas
-- [ ] Review antagonista Fable contexto fresco + fixes re-provados
-- [ ] Aterrissagem: boards + épicos E03/E08 + report outputs/leela-build-2d6ee98d/
+- [x] Gates: tsc/eslint 0 (5 pacotes) · unit 67/67 · emulator estoque 21/21 + checkout 12/12
+      (:8080) + afiliados 28/28 (:8480/:9598 r6) · painel 1232/1232 · landing 60/60 · RTL novas
+      (re-run final do painel completo em andamento pós T-extra)
+- [x] Review antagonista Fable contexto fresco: **REQUEST_CHANGES → fixes aplicados e
+      re-provados** (`87d5dd9`). 5 vetores do brief MORTOS com prova (fuzz 200k no
+      round-trip, 0 colisões). A1 ALTO (recoleta da transferência aceitava sufixo
+      forjado — 2º produtor de escrita de inscrito.tamanhos) CORRIGIDO + teste;
+      A3 (item envenenado derrubava agregação) CORRIGIDO + teste; A5 (sufixo cru no
+      detalhe do inscrito) CORRIGIDO; A7 (eco sem truncar) CORRIGIDO; A2 MÉDIO =
+      decisão REGISTRADA no report (flip exigirTamanhado OFF durante deploy casado —
+      ligar é decisão do Vitor); A4/A6 registrados como follow-ups.
+      Re-prova: requestTransfer 14/14 · checkout 12/12 · estoque 22/22 · RTL inscritos
+      32/32 · tsc/eslint 0 nos arquivos da lane (lint painel-inteiro falha em arquivo
+      UNTRACKED de outra lane ativa — apps/painel/src/components/upload/ — fora do escopo).
+- [x] Aterrissagem: épicos E03 (RN-231/232 + entrega) e E08 (follow-up eventoSlug PAGO) +
+      BOARD-EPICOS + V1-KANBAN (card novo) + BOARD-HISTORICO (verbatim) + report
+      `outputs/leela-build-2d6ee98d/TAMANHOS-GRADE-REPORT.md` (com veredito da review).
 
 ## Commits
-(nenhum ainda)
+- `09be9e7` [LEELA-TAM-T1] · `9270083` [LEELA-TAM-T2] · `b1d7e82` [LEELA-TAM-T3] ·
+  `2cc75bb` [LEELA-TAM-TX] · `87d5dd9` [LEELA-TAM-TFIX] · + commit de docs [LEELA-TAM-TD].
+  Push incremental; main == origin ao fechar.
+
+## Estado final
+Lane CONCLUÍDA. Escopo T1→T2→T3→T-extra entregue com gates verdes e review antagonista
+fechada com fixes re-provados. Pendências/follow-ups no report (deploy casado, flip
+exigirTamanhado, seed de exemplo com grade, A4/A6, borda `_` no docId).
