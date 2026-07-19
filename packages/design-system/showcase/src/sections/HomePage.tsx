@@ -41,11 +41,12 @@ const COLORWAYS = [
   { name: 'cream', file: 'leela-wordmark-cream.svg', hex: '#F0ECD8', bg: '#7A1520' },
 ] as const;
 
-// 46 = diretórios reais em src/components (charts conta 1) — recontado no GATE-DS-W1.
+// 46 = diretórios reais em src/components (charts conta 1); 56 = pares da matriz
+// de contraste (35 texto + 21 não-texto, contrast.test.ts) — recontados no GATE-DS-W1.
 const STATS = [
   { value: '46', label: 'componentes' },
   { value: '2', label: 'temas (brasa e wine)' },
-  { value: '49', label: 'pares AA validados' },
+  { value: '56', label: 'pares AA validados' },
 ];
 
 const LINKS = [
