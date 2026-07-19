@@ -149,6 +149,7 @@ export function ComponentsPage(): JSX.Element {
   const [dataEvento, setDataEvento] = React.useState<Date | undefined>(undefined);
   const [periodoVendas, setPeriodoVendas] = React.useState<DateRange | undefined>(undefined);
   const [buscaGlobal, setBuscaGlobal] = React.useState('');
+  const [flatKit, setFlatKit] = React.useState<string | string[]>('');
 
   function toggleFiltro(id: string): void {
     setFiltros((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -405,9 +406,16 @@ export function ComponentsPage(): JSX.Element {
                   Default (flat — sem borda em repouso)
                 </span>
                 <Input id="flat-cmp-nome-flat" label="Nome do evento" placeholder="Meia Maratona Floripa" />
-                <Select
+                {/* GATE-DS-W1: no flat, campo que abre LISTA é o Combobox (§8) —
+                    abre painel do DS (Popover+Command), nunca o listbox do SO. */}
+                <Combobox
                   id="flat-cmp-kit-flat"
-                  label="Kit"
+                  aria-label="Kit"
+                  placeholder="Kit"
+                  searchPlaceholder="Buscar kit…"
+                  emptyText="Nenhum kit encontrado."
+                  value={flatKit}
+                  onValueChange={setFlatKit}
                   options={[
                     { value: 'ouro', label: 'Kit Ouro' },
                     { value: 'prata', label: 'Kit Prata' },
@@ -537,10 +545,13 @@ export function ComponentsPage(): JSX.Element {
               required
               {...(fieldNome.trim().length === 0 ? { errorMessage: 'Informe o nome.' } : {})}
             >
+              {/* GATE-DS-W1: controle cru do demo segue o FLAT default (fill sunken,
+                  sem linha de borda) — antes estava bordered, contradizendo a
+                  própria decisão documentada no card ao lado. */}
               <input
                 value={fieldNome}
                 onChange={(e) => setFieldNome(e.target.value)}
-                className="h-[var(--input-height)] w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-input bg-[var(--surface-raised)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-[var(--input-height)] w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[color:var(--input-border-flat)] bg-[var(--surface-sunken)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </Field>
           </DemoCard>

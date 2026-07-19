@@ -92,7 +92,15 @@ function FilterMenu({
       menuLabel={label}
       {...(className !== undefined ? { className } : {})}
       trigger={
-        <Button variant="secondary" size="sm">
+        // GATE-DS-W1 (diretriz flat do Vitor, 2026-07-18): o gatilho de filtro é um
+        // CAMPO flat (fill sunken, sem linha de borda — anatomia do Combobox/Input),
+        // não um botão outline. ghost tira a borda do secondary; o fill sunken +
+        // texto + chevron identificam o controle; foco segue pelo ring do Button.
+        <Button
+          variant="ghost"
+          size="sm"
+          className="bg-[var(--surface-sunken)] text-[var(--text-primary)]"
+        >
           <span>{`${label}: ${summary}`}</span>
           <ChevronDown
             aria-hidden
