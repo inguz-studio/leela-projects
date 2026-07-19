@@ -7,8 +7,10 @@
  *
  *   T1 · RN-173 — registry `pessoas` (CPF único global): criação, corrida
  *        concorrente do MESMO CPF (1 doc), pessoaRef nos inscritos,
- *        first-claim de conta + anti-hijack, replay idempotente.
- *   T2 · RN-154 — gênero no [reg] + prefill do PRÓPRIO (sem PII de terceiro).
+ *        anti-hijack de dados, replay idempotente. Claim: RN-174 (lote
+ *        CLAIM-FIX) — escritor único na CONFIRMAÇÃO, nunca na criação.
+ *   T2 · RN-154 — gênero no [reg] + prefill do PRÓPRIO (sem PII de
+ *        terceiro), gated pela RN-174 (pago + e-mail verificado + match).
  *   T3 · RN-155 — conta sem fricção (fail-closed sem chave Brevo).
  *   T4 · RN-156 — termo base sempre + termo custom aditivo com fence.
  *   T5 · RN-157 — PIX expira em 30 min + transição de expiração.
@@ -276,7 +278,7 @@ describe('CK2-T1 — RN-173: registry global de pessoa por CPF', () => {
     expect(depois).toEqual(antes); // byte-idêntico — replay não escreve
   });
 
-  it('FIRST-CLAIM + ANTI-HIJACK: conta autenticada reivindica; terceiro nunca troca vínculo nem dados', async () => {
+  it('RN-174: criação NÃO reivindica; claim nasce na CONFIRMAÇÃO (escritor único) + anti-hijack preservado', async () => {
     const cpf = '390.533.447-05';
     const idPessoa = pessoaDocIdDoCpf(cpf);
     const inputDe = (nome: string, key: string, nascimento?: string) =>
@@ -289,15 +291,29 @@ describe('CK2-T1 — RN-173: registry global de pessoa por CPF', () => {
         responsavel: { nome, email: 'dona@exemplo.com.br', telefone: '(48) 98888-0001' },
       });
 
-    // 1. Dona compra AUTENTICADA (não-anônima) → first-claim
-    await createInscricaoChargeCore(db, provider, inputDe('Dona Original', 'ck2-t1-claim-01', '1991-01-01'), {
+    // 0. A dona TEM conta real no Auth (a conta do e-mail da compra)
+    await admin.auth().createUser({
+      uid: 'conta-dona', email: 'dona@exemplo.com.br',
+    });
+
+    // 1. Dona compra AUTENTICADA → a CRIAÇÃO não vincula NADA (RN-174)
+    const r1 = await createInscricaoChargeCore(db, provider, inputDe('Dona Original', 'ck2-t1-claim-01', '1991-01-01'), {
       uid: 'conta-dona', ehAnonimo: false,
     });
     let pessoa = parsePessoa(idPessoa, (await db.doc(`pessoas/${idPessoa}`).get()).data() ?? {});
-    expect(pessoa.contaUid).toBe('conta-dona');
+    expect(pessoa.contaUid).toBeNull(); // pedido não-pago NUNCA reivindica
     expect(pessoa.dadosConhecidos?.nome).toBe('Dona Original');
 
-    // 2. ATACANTE autenticado compra com o CPF da dona → NADA muda no vínculo
+    // 2. CONFIRMAÇÃO do pagamento → claim pelo escritor único, para a conta
+    //    DO E-MAIL da compra, com o carimbo contaEmail (RN-174 a+b)
+    await confirmarPagamentoSandboxCore(db, provider, { pedidoId: r1.pedidoId }, {
+      uid: 'conta-dona',
+    });
+    pessoa = parsePessoa(idPessoa, (await db.doc(`pessoas/${idPessoa}`).get()).data() ?? {});
+    expect(pessoa.contaUid).toBe('conta-dona');
+    expect(pessoa.contaEmail).toBe('dona@exemplo.com.br');
+
+    // 3. ATACANTE autenticado compra com o CPF da dona → NADA muda no vínculo
     //    nem nos dados conhecidos (anti-hijack)
     await createInscricaoChargeCore(db, provider, inputDe('Atacante Forjado', 'ck2-t1-claim-02', '1970-12-31'), {
       uid: 'conta-atacante', ehAnonimo: false,
@@ -307,7 +323,7 @@ describe('CK2-T1 — RN-173: registry global de pessoa por CPF', () => {
     expect(pessoa.dadosConhecidos?.nome).toBe('Dona Original'); // dados intocados
     expect(pessoa.dadosConhecidos?.nascimento).toBe('1991-01-01');
 
-    // 3. A PRÓPRIA dona compra de novo → dados atualizam (correção vence)
+    // 4. A PRÓPRIA dona compra de novo → dados atualizam (correção vence)
     await createInscricaoChargeCore(db, provider, inputDe('Dona Corrigida', 'ck2-t1-claim-03'), {
       uid: 'conta-dona', ehAnonimo: false,
     });
@@ -378,10 +394,11 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
     ).toBe(false);
   });
 
-  it('prefill: conta vinculada recebe SÓ os próprios dados; anônimo/terceiro recebem null', async () => {
-    // Compra AUTENTICADA da própria pessoa (first-claim já provado no T1) —
-    // aqui garantimos o vínculo para esta conta.
+  it('prefill (gate RN-174): só claim confirmado + e-mail verificado E correspondente; anônimo/terceiro null', async () => {
     const cpf = '418.529.630-42';
+    await admin.auth().createUser({
+      uid: 'conta-clara', email: 'clara@exemplo.com.br',
+    });
     const input = inputCk2('ck2-t2-prefill-01', {
       inscritos: [{
         nome: 'Clara Compradora', email: 'clara@exemplo.com.br', cpf,
@@ -393,14 +410,37 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
         telefone: '(48) 97777-0001',
       },
     });
-    await createInscricaoChargeCore(db, provider, input, {
+    const r = await createInscricaoChargeCore(db, provider, input, {
       uid: 'conta-clara', ehAnonimo: false,
     });
 
-    // A PRÓPRIA conta → prefill completo (CPF canônico + [reg] + endereço)
-    const meu = await getCheckoutPrefillCore(db, {
+    const claraVerificada = {
       uid: 'conta-clara', ehAnonimo: false,
+      email: 'clara@exemplo.com.br', emailVerificado: true,
+    };
+
+    // ANTES da confirmação: pedido não-pago não vincula — null (RN-174 a)
+    expect((await getCheckoutPrefillCore(db, claraVerificada)).prefill).toBeNull();
+
+    await confirmarPagamentoSandboxCore(db, provider, { pedidoId: r.pedidoId }, {
+      uid: 'conta-clara',
     });
+
+    // E-mail NÃO verificado → null (RN-174 c)
+    expect(
+      (await getCheckoutPrefillCore(db, { ...claraVerificada, emailVerificado: false }))
+        .prefill
+    ).toBeNull();
+
+    // E-mail divergente do da compra (conta trocou de e-mail) → null (RN-174 b)
+    expect(
+      (await getCheckoutPrefillCore(db, {
+        ...claraVerificada, email: 'outra@exemplo.com.br',
+      })).prefill
+    ).toBeNull();
+
+    // As TRÊS condições valem → prefill completo (CPF + [reg] + endereço)
+    const meu = await getCheckoutPrefillCore(db, claraVerificada);
     expect(meu.prefill).not.toBeNull();
     expect(meu.prefill?.cpf).toBe('41852963042');
     expect(meu.prefill?.genero).toBe('feminino');
@@ -410,7 +450,7 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
 
     // Sessão ANÔNIMA (mesmo uid!) → null (anônimo não tem identidade)
     const anon = await getCheckoutPrefillCore(db, {
-      uid: 'conta-clara', ehAnonimo: true,
+      ...claraVerificada, ehAnonimo: true,
     });
     expect(anon.prefill).toBeNull();
 
@@ -418,6 +458,7 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
     // existe canal de input para pedir por CPF/e-mail alheio)
     const terceiro = await getCheckoutPrefillCore(db, {
       uid: 'conta-outra', ehAnonimo: false,
+      email: 'conta-outra@exemplo.com.br', emailVerificado: true,
     });
     expect(terceiro.prefill).toBeNull();
   });
@@ -467,16 +508,27 @@ describe('CK2-T3 — RN-155: conta sem fricção', () => {
     const user = await admin.auth().getUserByEmail('davi@exemplo.com.br');
     expect(user.uid).toBe(contaUid);
 
-    // Pessoa do CPF do responsável vinculada à conta nova (first-claim)
+    // Pessoa do CPF do responsável vinculada à conta nova (escritor único
+    // RN-174) — com o carimbo contaEmail minúsculo da compra confirmada
     const pessoa = parsePessoa(
       pessoaDocIdDoCpf(CPF_DAVI),
       (await db.doc(`pessoas/${pessoaDocIdDoCpf(CPF_DAVI)}`).get()).data() ?? {}
     );
     expect(pessoa.contaUid).toBe(contaUid);
+    expect(pessoa.contaEmail).toBe('davi@exemplo.com.br');
 
-    // Prefill agora funciona para a conta criada (ponte anon→conta — RN-154)
+    // SEM e-mail verificado a conta criada NÃO lê nada (RN-174 c — a conta
+    // sem fricção nasce emailVerified=false; acesso só após confirmar)
+    const semVerificar = await getCheckoutPrefillCore(db, {
+      uid: contaUid, ehAnonimo: false,
+      email: 'davi@exemplo.com.br', emailVerificado: false,
+    });
+    expect(semVerificar.prefill).toBeNull();
+
+    // Com e-mail verificado + correspondente → ponte anon→conta (RN-154)
     const prefill = await getCheckoutPrefillCore(db, {
       uid: contaUid, ehAnonimo: false,
+      email: 'davi@exemplo.com.br', emailVerificado: true,
     });
     expect(prefill.prefill?.cpf).toBe('96307418575');
     expect(prefill.prefill?.genero).toBe('masculino');

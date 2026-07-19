@@ -2,9 +2,10 @@
  * pessoaCore.test.ts — LEELA-CK2-T1 (RN-173 · registro global de pessoa)
  *
  * Unidade pura: derivação do docId (HMAC com pepper — determinismo, máscara,
- * fail-closed sem pepper), plano de upsert do checkout (claim de conta,
- * colapso de CPF repetido, endereço só no responsável) e o merge/parse do
- * core (`mesclarDadosConhecidosPessoa`/`parsePessoa`).
+ * fail-closed sem pepper), plano de upsert do checkout (SEM claim na criação
+ * — RN-174/CLAIM-FIX; callerUid só p/ anti-hijack de dados; colapso de CPF
+ * repetido, endereço só no responsável) e o merge/parse do core
+ * (`mesclarDadosConhecidosPessoa`/`parsePessoa`, incl. contaEmail RN-174).
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -111,36 +112,40 @@ describe('planejarPessoasDoCheckout (CK2-T1)', () => {
     // Convidado: NUNCA telefone/endereço do responsável (PII do pagador)
     expect(planoBruno?.dados.telefone).toBeUndefined();
     expect(planoBruno?.dados.endereco).toBeUndefined();
-    // Anônimo NUNCA reivindica conta
-    expect(planoAna?.claimContaUid).toBeUndefined();
+    // Anônimo: sem callerUid (nunca conta como dono no anti-hijack)
+    expect(planoAna?.callerUid).toBeUndefined();
     expect(pessoaIdPorInscrito[0]).toBe(planoAna?.pessoaId);
     expect(pessoaIdPorInscrito[1]).toBe(planoBruno?.pessoaId);
   });
 
-  it('caller autenticado NÃO-anônimo reivindica conta SÓ na própria inscrição de responsável', () => {
+  it('RN-174: criação NUNCA reivindica — plano só carrega callerUid (anti-hijack de dados)', () => {
     const { planos } = planejarPessoasDoCheckout(inputBase(), {
       uid: 'conta-ana',
       ehAnonimo: false,
     });
-    const planoAna = planos.find((p) => p.cpf === '52998224725');
-    const planoBruno = planos.find((p) => p.cpf === '16899535009');
-    expect(planoAna?.claimContaUid).toBe('conta-ana');
-    expect(planoBruno?.claimContaUid).toBeUndefined();
+    // O plano NÃO tem canal de claim (o tipo nem possui claimContaUid);
+    // callerUid presente em TODOS os planos do caller autenticado — usado
+    // exclusivamente para "dono atualiza os próprios dados".
+    expect(planos.every((p) => p.callerUid === 'conta-ana')).toBe(true);
+    expect(
+      planos.every(
+        (p) => !('claimContaUid' in (p as unknown as Record<string, unknown>))
+      )
+    ).toBe(true);
   });
 
-  it('ehAnonimo ausente (chamador legado) = fail-safe: sem claim', () => {
+  it('ehAnonimo ausente (chamador legado) = fail-safe: sem callerUid', () => {
     const { planos } = planejarPessoasDoCheckout(inputBase(), { uid: 'x' });
-    expect(planos.every((p) => p.claimContaUid === undefined)).toBe(true);
+    expect(planos.every((p) => p.callerUid === undefined)).toBe(true);
   });
 
-  it('compra para terceiros (sem responsavelIndex): nenhum claim, endereço em ninguém', () => {
+  it('compra para terceiros (sem responsavelIndex): endereço em ninguém', () => {
     const input = inputBase();
     delete input.responsavelIndex;
     const { planos } = planejarPessoasDoCheckout(input, {
       uid: 'conta-ana',
       ehAnonimo: false,
     });
-    expect(planos.every((p) => p.claimContaUid === undefined)).toBe(true);
     expect(planos.every((p) => p.dados.endereco === undefined)).toBe(true);
   });
 
@@ -229,5 +234,25 @@ describe('parsePessoa (core — fail-fast)', () => {
         dadosConhecidos: { nome: 'A', genero: 'alien', nascimento: '', telefone: '' },
       })
     ).toThrow(/genero/);
+  });
+
+  it('contaEmail (RN-174): ausente/null/e-mail válido aceitos; lixo lança', () => {
+    expect(parsePessoa('cpf_x', docOk()).contaEmail).toBeUndefined();
+    expect(
+      parsePessoa('cpf_x', { ...docOk(), contaEmail: null }).contaEmail
+    ).toBeNull();
+    expect(
+      parsePessoa('cpf_x', {
+        ...docOk(),
+        contaUid: 'uid-1',
+        contaEmail: 'ana@exemplo.com.br',
+      }).contaEmail
+    ).toBe('ana@exemplo.com.br');
+    expect(() =>
+      parsePessoa('cpf_x', { ...docOk(), contaEmail: 'nao-e-email' })
+    ).toThrow(/contaEmail/);
+    expect(() => parsePessoa('cpf_x', { ...docOk(), contaEmail: 42 })).toThrow(
+      /contaEmail/
+    );
   });
 });
