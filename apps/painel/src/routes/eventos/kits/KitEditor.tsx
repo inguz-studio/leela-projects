@@ -7,9 +7,28 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Breadcrumb, Button, Checkbox, Chip, Input, Select, useToast } from '@leela/design-system';
-import { MSG_PRECO_BLOQUEADO, precoBloqueado, type Evento, type ItemKit, type Kit } from '@leela/core';
-import type { SalvarKitInput } from '@leela/api-client';
+import {
+  Breadcrumb,
+  Button,
+  Checkbox,
+  Chip,
+  FileInput,
+  Input,
+  Select,
+  Textarea,
+  useToast,
+} from '@leela/design-system';
+import {
+  KIT_DESCRICAO_MAX,
+  KIT_ITEM_MAX,
+  KIT_ITENS_MAX,
+  MSG_PRECO_BLOQUEADO,
+  precoBloqueado,
+  type Evento,
+  type ItemKit,
+  type Kit,
+} from '@leela/core';
+import { uploadImagemKit, type SalvarKitInput } from '@leela/api-client';
 import type { ItemKitPayload } from './ItemKitModal';
 
 export type KitPayload = Omit<SalvarKitInput, 'tenantId'>;
@@ -51,6 +70,15 @@ export function KitEditor({
   const [capacidadeStr, setCapacidadeStr] = React.useState(String(kit?.capacidade ?? 0));
   const [modalidades, setModalidades] = React.useState<string[]>(kit?.modalidades ?? []);
   const [novaModalidade, setNovaModalidade] = React.useState('');
+  // Visão de compra (R9-C · RN-227/RN-230): descrição, itens[] e imagem 1:1.
+  const [descricao, setDescricao] = React.useState(kit?.descricao ?? '');
+  const [itensKit, setItensKit] = React.useState<string[]>(kit?.itens ?? []);
+  const [novoItem, setNovoItem] = React.useState('');
+  // `undefined` = campo não tocado (não mexe no doc no merge); `null` = imagem
+  // removida (limpa o campo); string = URL http(s) do upload (RN-227).
+  const [imagemUrl, setImagemUrl] = React.useState<string | null | undefined>(kit?.imagemUrl);
+  const [imgBusy, setImgBusy] = React.useState(false);
+  const [imgErro, setImgErro] = React.useState<string | null>(null);
   const [itensSel, setItensSel] = React.useState<Set<string>>(
     () => new Set(kit ? itens.filter((i) => i.kits.includes(kit.id)).map((i) => i.id) : []),
   );
@@ -77,6 +105,45 @@ export function KitEditor({
     });
   }
 
+  // "O que está incluso" (RN-230): linha de produto, ≤30 itens, ≤140 chars cada
+  // (o core normaliza de novo no parse — aqui é UX).
+  function addItemIncluso(valor: string): void {
+    const t = valor.trim().slice(0, KIT_ITEM_MAX);
+    if (t.length === 0 || itensKit.length >= KIT_ITENS_MAX) return;
+    setItensKit((prev) => [...prev, t]);
+    setNovoItem('');
+  }
+  function removeItemIncluso(idx: number): void {
+    setItensKit((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // Upload 1:1 da imagem do kit (RN-227) — upload-only (sem URL colada, padrão
+  // R5): o seam valida tipo/tamanho + proporção 1:1 antes de subir e devolve a
+  // downloadURL, que vira `Kit.imagemUrl`. Path `eventos/{id}/kits/{kitId}`; para
+  // kit novo, o kitId é o slug do nome (mesmo id do save).
+  async function onImagemSelecionada(file: File): Promise<void> {
+    const kitId = kit?.id ?? slugify(nome);
+    if (kit === null && nome.trim().length === 0) {
+      setImgErro('Informe o nome do kit antes de enviar a imagem.');
+      return;
+    }
+    setImgBusy(true);
+    setImgErro(null);
+    try {
+      const url = await uploadImagemKit(evento.id, kitId, file);
+      setImagemUrl(url);
+      toast({ title: 'Imagem do kit enviada', variant: 'success' });
+    } catch (e) {
+      setImgErro(e instanceof Error ? e.message : 'Falha ao enviar a imagem.');
+    } finally {
+      setImgBusy(false);
+    }
+  }
+  function removerImagem(): void {
+    setImagemUrl(null);
+    setImgErro(null);
+  }
+
   async function salvar(): Promise<void> {
     if (nome.trim().length === 0) {
       setErro('Informe o nome do kit.');
@@ -91,12 +158,19 @@ export function KitEditor({
     setBusy(true);
     try {
       const kitId = kit?.id ?? slugify(nome);
-      await onSalvarKit(kitId, {
+      // Visão de compra (R9-C): descrição (string vazia → null limpa o campo),
+      // itens[] e imagem. `imagemUrl` só entra no payload quando tocado
+      // (undefined = não mexe no merge), respeitando o contrato de `salvarKit`.
+      const payload: KitPayload = {
         nome: nome.trim(),
         preco,
         capacidade: Number.isFinite(capacidade) ? capacidade : 0,
         modalidades,
-      });
+        descricao: descricao.trim().slice(0, KIT_DESCRICAO_MAX) || null,
+        itens: itensKit,
+      };
+      if (imagemUrl !== undefined) payload.imagemUrl = imagemUrl;
+      await onSalvarKit(kitId, payload);
       // Sincroniza a pertinência N:N (RN-215): item.kits inclui/exclui este kit.
       await Promise.all(
         itens
@@ -152,6 +226,14 @@ export function KitEditor({
           value={nome}
           onChange={(e) => setNome(e.target.value)}
           {...(erro && nome.trim().length === 0 ? { errorMessage: erro } : {})}
+        />
+        <Textarea
+          id="kit-descricao"
+          label={`Descrição — aparece na página de vendas (${descricao.length}/${KIT_DESCRICAO_MAX})`}
+          value={descricao}
+          maxLength={KIT_DESCRICAO_MAX}
+          rows={3}
+          onChange={(e) => setDescricao(e.target.value)}
         />
       </section>
 
@@ -244,6 +326,93 @@ export function KitEditor({
             ))}
           </ul>
         )}
+      </section>
+
+      {/* Imagem 1:1 do kit (RN-227) — upload-only (sem URL colada, padrão R5) */}
+      <section aria-label="Imagem do kit" className="flex flex-col gap-[var(--spacing-3)]">
+        <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+          Imagem do kit (quadrada 1:1)
+        </span>
+        <div className="flex items-start gap-[var(--spacing-4)]">
+          {imagemUrl !== null && imagemUrl !== undefined ? (
+            <img
+              src={imagemUrl}
+              alt={`Prévia da imagem do kit ${nome || ''}`.trim()}
+              className="aspect-square w-24 shrink-0 rounded-[var(--radius-md)] object-cover"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className="flex aspect-square w-24 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-sunken)] text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]"
+            >
+              Sem imagem
+            </div>
+          )}
+          <div className="flex flex-col gap-[var(--spacing-2)]">
+            <FileInput
+              id="kit-imagem"
+              label="Enviar imagem (JPG, PNG, WebP, GIF ou AVIF · até 5MB)"
+              buttonLabel={imagemUrl ? 'Trocar imagem' : 'Escolher imagem'}
+              busy={imgBusy}
+              onFileSelected={(file) => void onImagemSelecionada(file)}
+              {...(imgErro ? { errorMessage: imgErro } : {})}
+              hint="A imagem deve ser quadrada (1:1). Aparece na página de vendas."
+            />
+            {imagemUrl !== null && imagemUrl !== undefined ? (
+              <Button variant="ghost" onClick={removerImagem} disabled={imgBusy}>
+                Remover imagem
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      {/* "O que está incluso" (RN-230) — linha de produto exibida no checkout */}
+      <section aria-label="O que está incluso" className="flex flex-col gap-[var(--spacing-3)]">
+        <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
+          O que está incluso ({itensKit.length}/{KIT_ITENS_MAX})
+        </span>
+        {itensKit.length === 0 ? (
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            Nenhum item listado. Descreva o que o atleta recebe (ex.: camiseta, medalha).
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-[var(--spacing-2)]">
+            {itensKit.map((item, idx) => (
+              <li
+                key={`${item}-${idx}`}
+                className="flex items-center justify-between gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]"
+              >
+                <span className="min-w-0 truncate">{item}</span>
+                <Button variant="ghost" onClick={() => removeItemIncluso(idx)}>
+                  Remover
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="flex items-end gap-[var(--spacing-2)]">
+          <Input
+            id="kit-novo-item"
+            label="Adicionar item"
+            value={novoItem}
+            maxLength={KIT_ITEM_MAX}
+            onChange={(e) => setNovoItem(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addItemIncluso(novoItem);
+              }
+            }}
+          />
+          <Button
+            variant="secondary"
+            disabled={novoItem.trim().length === 0 || itensKit.length >= KIT_ITENS_MAX}
+            onClick={() => addItemIncluso(novoItem)}
+          >
+            Adicionar item
+          </Button>
+        </div>
       </section>
 
       <div className="flex justify-end gap-[var(--spacing-3)]">

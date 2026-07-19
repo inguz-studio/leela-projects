@@ -124,6 +124,29 @@ describe('KitEditor (RN-200/211/216/217)', () => {
     expect(input.kits).toContain('kit_ouro');
   });
 
+  it('salva descrição e itens da visão de compra (RN-230)', async () => {
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 100 }) });
+    const desc = screen.getByLabelText(/Descrição/);
+    await userEvent.type(desc, 'Kit completo do finisher');
+    const novoItem = screen.getByLabelText('Adicionar item');
+    await userEvent.type(novoItem, 'Medalha de finisher');
+    await userEvent.click(screen.getByRole('button', { name: 'Adicionar item' }));
+    expect(screen.getByText('Medalha de finisher')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.descricao).toBe('Kit completo do finisher');
+    expect(input.itens).toContain('Medalha de finisher');
+  });
+
+  it('descrição vazia salva como null (limpa o campo)', async () => {
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 100 }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.descricao).toBeNull();
+  });
+
   it('bloqueia salvar sem nome', async () => {
     const { onSalvarKit } = setup({ kit: mkKit({ nome: '' }) });
     await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));

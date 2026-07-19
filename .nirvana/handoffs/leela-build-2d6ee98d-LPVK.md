@@ -6,7 +6,18 @@ brief: .nirvana/briefs/leela-lp-vendas-kit-enriched.md
 ## Estado das tasks
 - [x] T1 — Imagens mock semi-realistas (fotos royalty-free) nas superfícies públicas
 - [ ] T2 — Modal de regulamento na página do evento (Dialog/Modal do DS)
-- [ ] T3 — KitEditor no painel (descrição/itens/upload 1:1) + exibição no KitDetalhe
+- [x] T3 — KitEditor no painel (descrição/itens/upload 1:1) + exibição no KitDetalhe
+
+## T3 FEITO (gates: tsc 0 · eslint 0 · KitEditor 8/8 verde)
+- KitEditor ganhou: Textarea de descrição (≤280 c/ contador), editor de "o que está
+  incluso" (itens[] add/remove, ≤30), upload 1:1 via `uploadImagemKit` (upload-only,
+  padrão R5 — FileInput do DS, sem URL colada) + prévia 1:1 + remover.
+- `salvarKit` já aceitava os campos; payload agora os inclui (descrição vazia→null;
+  imagemUrl só entra quando tocado — merge não apaga).
+- Exportado `uploadImagemKit` no barrel do api-client (faltava) + `pnpm build` (dist
+  gitignored, rebuild p/ runtime do preview).
+- Checkout `KitDetalhe` já consumia imagemUrl real (nada a mudar; fallback SVG mantido).
+- 2 testes novos (descrição+itens salvos; descrição vazia→null).
 
 ## T1 FEITO (gates: tsc 0 · eslint 0 · verify:brand PASS)
 - 7 fotos de capa por tema (Unsplash License) → public/covers/*.jpg; CAPAS_MOCK repontado.

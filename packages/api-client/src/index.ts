@@ -123,6 +123,8 @@ export {
   problemaProporcaoQuadrada,
   uploadLogoMarca,
   uploadLogoPatrocinadorClube,
+  // Imagem 1:1 do kit (R9-C · RN-227 · gap R13)
+  uploadImagemKit,
 } from './storage';
 
 // ---------------------------------------------------------------------------
