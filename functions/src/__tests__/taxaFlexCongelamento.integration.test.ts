@@ -35,6 +35,7 @@ import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
+import { cotarInscricaoCheckoutCore } from '../checkout/cotarInscricaoCheckout';
 import { estornarInscricaoCore, ESTORNOS_SUBCOL } from '../checkout/estornarInscricao';
 import { processarWebhookPagamento } from '../checkout/webhookPagamento';
 import { buildMockWebhookPayload, MockPaymentProvider } from '../payments/mockProvider';
@@ -322,6 +323,34 @@ describe('TAXAFLEX · C4 — financeiro/current híbrido por fatos', () => {
       await eventoRef.update({ receitaConfirmada: receitaAtual });
       await recomputarFinanceiroEvento(db, EVENTO_INC);
     }
+  });
+});
+
+// =============================================================================
+// T5 · RN-180 — cotação: total por OPÇÃO de meio; zero vazamento de %
+// =============================================================================
+describe('TAXAFLEX · RN-180 — cotação com totaisPorMeio (S1210)', () => {
+  it('repassada: PIX e cartão com totais distintos por opção; sem % no shape', async () => {
+    const r = await cotarInscricaoCheckoutCore(db, {
+      eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'pix', parcelas: 1,
+    });
+    // PIX global {6%, R$2} = 203,29 · cartão OVERRIDE {7%, R$1} = 204,19
+    expect(r.totaisPorMeio).toEqual({
+      pix: TOTAL_PIX_V1,
+      cartao_credito: roundMoney(FACE + TAXA_CARTAO_OVERRIDE),
+    });
+    expect(r.totalCobrado).toBe(TOTAL_PIX_V1);
+    // Confidencialidade 703db9c: NUNCA percentual/linha da tabela no shape
+    const json = JSON.stringify(r);
+    expect(json).not.toMatch(/percentual|fixoCentavos|taxaMeio|platformFeePct/);
+  });
+
+  it('incorporada: totais por meio iguais ao face (sem linha de taxa)', async () => {
+    const r = await cotarInscricaoCheckoutCore(db, {
+      eventoId: EVENTO_INC, itens: [{ modalidade: '10k' }], forma: 'cartao_credito', parcelas: 1,
+    });
+    expect(r.taxaServico).toBe(0);
+    expect(r.totaisPorMeio).toEqual({ pix: FACE, cartao_credito: FACE });
   });
 });
 

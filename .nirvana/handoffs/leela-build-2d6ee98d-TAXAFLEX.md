@@ -10,12 +10,12 @@
 
 | Task | Escopo | Status | Commit |
 |------|--------|--------|--------|
-| T0 | Contexto + inventário de reuso + desenho + checkpoint + card (j) → Em execução | FEITO | (este commit) |
-| T1 | Modelo + Rules: core `taxaPlataforma.ts`, `platform/config.taxaPlataforma` global, `commercialTerms.taxaTabela` override, callable `setTaxaPlataformaGlobal` + api-client, Rules fail-closed (RN-178/404) | FEITO — tsc 0 · eslint 0 · unit 26/26 · Rules r6 11/11 | (T1) |
-| T2 | Core: extensão `computeSaleState` (param `taxaMeio` resolvido + saída `taxaMeioAplicada` congelável) e `computeLiquidoProdutor` (união `number \| TaxaMeio`) + unit (RN-180/182/183) | FEITO — tsc 0 · eslint 0 · 160/160 (incl. regressão rn347/checkoutCore/repasseCore) | (T2) |
-| T3 | Congelamento: carimbo `taxaCongelada` na criação (SEMPRE, incl. legado) + `conciliacao` na tx da confirmação (porta única `processarWebhookPagamento`) + `parseConciliacao` mode-aware + `agregarFinanceiro` híbrido + janela D+N do carimbo + cotação com a MESMA resolução (RN-179/182) | FEITO — tsc 0 · eslint 0 · congelamento r6 8/8 · regressão r6 exit 0 (rn347Checkout+financeiroEvento+repasseSaldo) | (T3) |
-| T4 | Estorno: fixo no rateio via `sale.taxaRepassada` (mecânica `montarItensDoPedido` REUSADA) + testes ∑=carimbo/fixo indivisível (RN-181) | — | — |
-| T5 | Checkout E12/S1210: cotação `totaisPorMeio` + StepResumo total por opção + nota A-5 varia por meio (RN-180) | — | — |
+| T0 | Contexto + inventário de reuso + desenho + checkpoint + card (j) → Em execução | FEITO | `8686585` |
+| T1 | Modelo + Rules: core `taxaPlataforma.ts`, `platform/config.taxaPlataforma` global, `commercialTerms.taxaTabela` override, callable `setTaxaPlataformaGlobal` + api-client, Rules fail-closed (RN-178/404) | FEITO — tsc 0 · eslint 0 · unit 26/26 · Rules r6 11/11 | `ec9b248` |
+| T2 | Core: extensão `computeSaleState` (param `taxaMeio` resolvido + saída `taxaMeioAplicada` congelável) e `computeLiquidoProdutor` (união `number \| TaxaMeio`) + unit (RN-180/182/183) | FEITO — tsc 0 · eslint 0 · 160/160 (incl. regressão rn347/checkoutCore/repasseCore) | `1d71b41` |
+| T3 | Congelamento: carimbo `taxaCongelada` na criação (SEMPRE, incl. legado) + `conciliacao` na tx da confirmação (porta única `processarWebhookPagamento`) + `parseConciliacao` mode-aware + `agregarFinanceiro` híbrido + janela D+N do carimbo + cotação com a MESMA resolução (RN-179/182) | FEITO — tsc 0 · eslint 0 · congelamento r6 8/8 · regressão r6 exit 0 (rn347Checkout+financeiroEvento+repasseSaldo) | `335622e` |
+| T4 | Estorno: fixo no rateio via `sale.taxaRepassada` (mecânica `montarItensDoPedido`/`estornarInscricao` REUSADA — zero código novo, só prova): fatias 12,40/12,39 de fixo indivisível, ∑ = carimbo 24,79, devolve o PAGO, receita reverte só FACE, integral flipa (RN-181) | FEITO — r6 11/11 | `c14a084` |
+| T5 | Checkout E12/S1210: cotação `totaisPorMeio` (só valores; meio alternativo 1x null-safe) + StepResumo total por opção nos radios (repassada) + nota A-5 "varia conforme a forma de pagamento" | FEITO — r6 13/13 (congelamento+cotação) · rn347 15/15 (leak-scan ok) · landing RTL 11/11 · eslint 0 | (T5) |
 | T6 | Config UI E16/S1606: tela global (callable) + seção override no TermsEditor (RN-178/404/406) | — | — |
 | T7 | Gates: tsc 0 + eslint 0 (core/functions/api-client/landing/painel) + suítes da lane no r6 FRESCO (build antes) | — | — |
 | T8 | Review antagonista Fable contexto FRESCO (só diff+RNs+handoff) → fix-commits re-provados | — | — |

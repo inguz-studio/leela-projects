@@ -54,6 +54,22 @@ export function StepResumo({
   const cupomAtivo = cotacao?.cupomAplicado ?? null;
   const parcelado = forma === 'cartao_credito' && parcelas > 1;
 
+  // TAXAFLEX (RN-180 · S1210): com taxa REPASSADA o total varia por meio —
+  // exibir o total à vista EM CADA OPÇÃO antes de pagar (PIX R$ 108,00 ·
+  // Cartão R$ 110,30). Valores prontos do servidor (`totaisPorMeio`) — o
+  // componente nunca soma; servidor antigo sem o campo cai nos rótulos
+  // vigentes. Em 'incorporada' (taxaServico 0) os rótulos não mudam.
+  const totaisPorMeio = cotacao?.totaisPorMeio;
+  const totalPorOpcao = (cotacao?.taxaServico ?? 0) > 0 && totaisPorMeio !== undefined;
+  const labelPix =
+    totalPorOpcao && totaisPorMeio.pix !== null
+      ? `PIX (à vista) — ${formatarPreco(totaisPorMeio.pix)}`
+      : 'PIX (à vista)';
+  const labelCartao =
+    totalPorOpcao && totaisPorMeio.cartao_credito !== null
+      ? `Cartão de crédito — ${formatarPreco(totaisPorMeio.cartao_credito)}`
+      : 'Cartão de crédito';
+
   return (
     <div className="flex flex-col gap-6">
       {/* Itens do pedido */}
@@ -130,8 +146,8 @@ export function StepResumo({
           onValueChange={(v) => onForma(v as FormaUI)}
           orientation="horizontal"
         >
-          <Radio value="pix" label="PIX (à vista)" />
-          <Radio value="cartao_credito" label="Cartão de crédito" />
+          <Radio value="pix" label={labelPix} />
+          <Radio value="cartao_credito" label={labelCartao} />
         </RadioGroup>
 
         {forma === 'cartao_credito' && cotacao ? (

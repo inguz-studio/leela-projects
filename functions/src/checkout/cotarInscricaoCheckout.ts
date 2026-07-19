@@ -129,6 +129,16 @@ export interface CotarInscricaoCheckoutResult {
   /** O que o COMPRADOR paga na forma/parcelas escolhidas. */
   totalCobrado: number;
   forma: FormaPagamento;
+  /**
+   * TAXAFLEX (RN-180 · S1210): total À VISTA do comprador POR OPÇÃO de meio
+   * de pagamento — a UI exibe o total em cada opção ANTES de pagar (ex.:
+   * PIX R$ 108,00 · Cartão R$ 110,30) quando a taxa é repassada e varia por
+   * meio. SÓ VALORES em R$ (nunca percentual — confidencialidade 703db9c).
+   * `null` num meio = aquela derivação falhou (a cotação principal nunca
+   * degrada por causa do meio alternativo); em 'incorporada' os dois são
+   * iguais ao face.
+   */
+  totaisPorMeio: { pix: number | null; cartao_credito: number | null };
 }
 
 // ---------------------------------------------------------------------------
@@ -250,6 +260,40 @@ export async function cotarInscricaoCheckoutCore(
     );
   }
 
+  // TAXAFLEX (RN-180 · S1210): total à vista do MEIO ALTERNATIVO (parcelas
+  // 1x), com a MESMA resolução por meio — a UI mostra o total por opção.
+  // Falha do meio alternativo NUNCA degrada a cotação principal (null).
+  const formaAlternativa: FormaPagamento =
+    input.forma === 'pix' ? 'cartao_credito' : 'pix';
+  let totalAlternativo: number | null = null;
+  try {
+    const saleAlt = computeSaleState({
+      itens: insumos.itens,
+      cupom: insumos.cupom,
+      forma: formaAlternativa,
+      parcelas: 1,
+      installmentRules: insumos.terms.installmentRules,
+      platformFeePct: insumos.terms.platformFeePct,
+      taxaMeio: resolverTaxaMeio(
+        meioDaForma(formaAlternativa),
+        insumos.taxaTabelaGlobal,
+        insumos.terms.taxaTabela,
+        insumos.terms.platformFeePct
+      ),
+      modoTaxa: insumos.modoTaxa,
+      agora: agora(),
+    });
+    // Total À VISTA (sem juros de parcelamento) — o comparável por opção.
+    totalAlternativo = saleAlt.totalComprador;
+  } catch {
+    totalAlternativo = null;
+  }
+  const totaisPorMeio = {
+    pix: input.forma === 'pix' ? sale.totalComprador : totalAlternativo,
+    cartao_credito:
+      input.forma === 'cartao_credito' ? sale.totalComprador : totalAlternativo,
+  };
+
   return {
     itens: sale.itens.map((i) => ({
       modalidade: i.modalidade,
@@ -284,6 +328,7 @@ export async function cotarInscricaoCheckoutCore(
     },
     totalCobrado: sale.totalCobrado,
     forma: sale.forma,
+    totaisPorMeio,
   };
 }
 

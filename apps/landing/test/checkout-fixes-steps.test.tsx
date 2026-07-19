@@ -9,7 +9,10 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { CreateInscricaoChargeResult } from '@leela/api-client';
+import type {
+  CotarInscricaoCheckoutResult,
+  CreateInscricaoChargeResult,
+} from '@leela/api-client';
 import { StepResumo } from '../app/(public)/[eventSlug]/inscricao/checkout/StepResumo';
 import { StepPagamento } from '../app/(public)/[eventSlug]/inscricao/checkout/StepPagamento';
 import { StepModalidadeKit } from '../app/(public)/[eventSlug]/inscricao/checkout/StepModalidadeKit';
@@ -41,6 +44,54 @@ function renderResumo(overrides: Partial<Parameters<typeof StepResumo>[0]> = {})
     />,
   );
 }
+
+function cotacaoFixture(
+  over: Partial<CotarInscricaoCheckoutResult> = {}
+): CotarInscricaoCheckoutResult {
+  return {
+    itens: [],
+    valorBase: 100,
+    desconto: 0,
+    valorFinal: 100,
+    cupomAplicado: null,
+    taxaServico: 8,
+    totalAVista: 108,
+    opcoesParcelamento: [{ parcelas: 1, valorParcela: 108, valorTotal: 108 }],
+    parcelamento: { parcelas: 1, valorParcela: 108, valorTotal: 108 },
+    totalCobrado: 108,
+    forma: 'pix',
+    totaisPorMeio: { pix: 108, cartao_credito: 110.3 },
+    ...over,
+  };
+}
+
+describe('StepResumo — TAXAFLEX/RN-180 · total por opção de meio (S1210)', () => {
+  it('taxa repassada: cada opção mostra o próprio total (PIX ≠ cartão)', () => {
+    renderResumo({ cotacao: cotacaoFixture() });
+    expect(screen.getByRole('radio', { name: /pix \(à vista\).*108,00/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /cartão de crédito.*110,30/i })).toBeTruthy();
+  });
+
+  it('incorporada (taxaServico 0): rótulos vigentes, sem total por opção', () => {
+    renderResumo({
+      cotacao: cotacaoFixture({
+        taxaServico: 0,
+        totalAVista: 100,
+        totalCobrado: 100,
+        totaisPorMeio: { pix: 100, cartao_credito: 100 },
+      }),
+    });
+    expect(screen.getByRole('radio', { name: 'PIX (à vista)' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Cartão de crédito' })).toBeTruthy();
+  });
+
+  it('servidor antigo (sem totaisPorMeio): rótulos vigentes — nunca quebra', () => {
+    const { totaisPorMeio: _drop, ...semCampo } = cotacaoFixture();
+    renderResumo({ cotacao: semCampo as CotarInscricaoCheckoutResult });
+    expect(screen.getByRole('radio', { name: 'PIX (à vista)' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Cartão de crédito' })).toBeTruthy();
+  });
+});
 
 describe('StepResumo — BC-1 · retry da cotação', () => {
   it('mostra "Tentar novamente" no erro de cotação e re-dispara a cotação ao clicar', () => {

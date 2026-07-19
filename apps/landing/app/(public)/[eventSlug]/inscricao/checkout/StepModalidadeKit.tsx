@@ -143,14 +143,15 @@ export function StepModalidadeKit({
         <ApoioEtapa>
           Escolha o percurso e o kit de cada atleta. O total aparece no resumo.
         </ApoioEtapa>
-        {/* A-5 → CKFORM-T4: a nota vira CONDICIONAL pelo flag real do evento
-            (taxaRepassada do leitor — RN-347): só quando o evento repassa a
-            taxa; nunca revela percentual nem muda a matemática (o valor real
-            sai da cotação do servidor). Evento 'incorporada' fica sem ruído. */}
+        {/* A-5 → CKFORM-T4 → TAXAFLEX (P-TAXAFLEX-6/RN-180): a nota é
+            CONDICIONAL pelo flag real do evento (taxaRepassada do leitor —
+            RN-347) e agora reflete que o VALOR varia por forma de pagamento
+            (PIX vs cartão — o total de cada opção aparece no resumo). Nunca
+            revela percentual nem soma nada local (valores da cotação). */}
         {taxaRepassada ? (
           <p className="mt-2 text-xs text-text-tertiary">
-            Este evento repassa a taxa de serviço: ela entra no total exibido no resumo, antes do
-            pagamento.
+            Este evento repassa a taxa de serviço: ela varia conforme a forma de pagamento e entra
+            no total exibido por opção no resumo, antes do pagamento.
           </p>
         ) : null}
       </div>

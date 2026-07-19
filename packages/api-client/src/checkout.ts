@@ -72,6 +72,14 @@ export interface CotarInscricaoCheckoutResult {
   parcelamento: CotarParcelaResult;
   totalCobrado: number;
   forma: FormaPagamento;
+  /**
+   * TAXAFLEX (RN-180 · S1210): total À VISTA do comprador POR OPÇÃO de meio
+   * — a UI exibe o total em cada opção antes de pagar (PIX vs cartão) quando
+   * a taxa é repassada e varia por meio. SÓ valores em R$ (nunca %). `null`
+   * num meio = derivação indisponível; ausente = servidor antigo (a UI cai
+   * no comportamento vigente sem total por opção).
+   */
+  totaisPorMeio?: { pix: number | null; cartao_credito: number | null };
 }
 
 /** Cota a venda (base→desconto→final→parcelas) sem escrever nada. Read-only. */
