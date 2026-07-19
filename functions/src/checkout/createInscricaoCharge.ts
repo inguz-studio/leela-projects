@@ -45,6 +45,7 @@ import {
   isCodigoCupomValido,
   isRefCodigoValido,
   normalizarRefCodigo,
+  dataLocalISO,
   isFormaPagamento,
   isKitInscrito,
   isModoTaxa,
@@ -53,14 +54,21 @@ import {
   montarItensDoPedido,
   normalizarCodigoCupom,
   parseCupom,
+  parseEnderecoPedido,
   parseKit,
   parseLote,
+  POLITICA_VENDAS_DOC_ID,
   TAMANHOS_MAX_ENTRADAS,
+  telefoneValido,
   TermsNotFoundError,
+  TERMO_SAUDE_VERSAO_VIGENTE,
+  validarAceitesCheckoutInput,
   validarDadosMinimosInscrito,
   validarEmail,
+  validarEnderecoPedido,
   validarTamanhosInscrito,
   vendaSomentePorCupomAtiva,
+  versaoPoliticaVendas,
   type CommercialTerms,
   type CreateChargeParams,
   type CupomVenda,
@@ -111,6 +119,13 @@ export interface CheckoutInscritoInput {
    * NADA é escrito. O que passa é persistido no inscrito (fulfillment).
    */
   tamanhos?: Record<string, string>;
+  /**
+   * Nascimento date-only `yyyy-mm-dd` POR ATLETA (CKMOD · spec §5.1 item 2).
+   * Opcional (compat UI antiga); presente = validado (data civil, ≥ 1900,
+   * no PASSADO pelo relógio injetado) e persistido no bloco `[reg]` do
+   * inscrito junto do CPF (leitura Postel — demografia/CRM tratam ausência).
+   */
+  nascimento?: string;
 }
 
 /** Input do checkout (validado NO SERVIDOR — nunca confiar na UI). */
@@ -123,8 +138,36 @@ export interface CreateInscricaoChargeInput {
    * o responsável paga mas não corre (compra para terceiros — ADR-011).
    */
   responsavelIndex?: number;
-  /** Responsável/pagador do pedido (denormalizado no doc — ADR-011). */
-  responsavel: { nome: string; email: string };
+  /**
+   * Responsável/pagador do pedido (denormalizado no doc — ADR-011).
+   * `telefone` (CKMOD · spec §5.1 item 1): canal de contato do PEDIDO —
+   * opcional (compat UI antiga); presente = telefoneValido.
+   */
+  responsavel: { nome: string; email: string; telefone?: string };
+  /**
+   * Endereço do COMPRADOR (CKMOD · spec §5.1 item 3): 1× por pedido, mora
+   * em `pedidos/{id}.endereco`. Opcional (compat UI antiga); presente =
+   * shape validado (validarEnderecoPedido) e persistido com CEP canônico.
+   * Minimização RN-172: o CRM nunca agrega este campo.
+   */
+  endereco?: {
+    cep: string;
+    logradouro: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+    numero: string;
+    complemento?: string;
+  };
+  /**
+   * Aceites do pagar (CKMOD · spec §5.3): o cliente CONFIRMA
+   * `{termos: true, saude: true}` — versão e timestamp são carimbados pelo
+   * SERVIDOR (versão vigente da politicaVendas lida DENTRO da tx +
+   * TERMO_SAUDE_VERSAO_VIGENTE + serverTimestamp). Aceite parcial ⇒
+   * invalid-argument. Opcional NESTA camada (a UI vigente ainda não coleta;
+   * a obrigatoriedade flipa no lote de UI do checkout).
+   */
+  aceites?: { termos: boolean; saude: boolean };
   forma: FormaPagamento;
   /** Parcelas escolhidas (1 = à vista; > 1 só cartão). */
   parcelas: number;
@@ -193,9 +236,15 @@ const INSCRITOS_MAX = 50;
 /**
  * Valida o input bruto de `createInscricaoCharge`. Retorna a lista de erros
  * (vazia = válido). Pura — reutilizada pelos testes sem Emulator. NÃO ecoa
- * CPF/email nas mensagens (PII — LGPD). @pure
+ * CPF/email/telefone/nascimento/endereço nas mensagens (PII — LGPD).
+ *
+ * `hojeISO` (CKMOD): data civil do relógio INJETADO do chamador — gate
+ * "nascimento no passado"; ausente, valida só formato/piso. @pure
  */
-export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
+export function validarCreateInscricaoChargeInput(
+  raw: unknown,
+  hojeISO?: string
+): string[] {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return ['Input é obrigatório.'];
   }
@@ -213,7 +262,9 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
     erros.push(`"inscritos" excede ${INSCRITOS_MAX} inscrições por pedido.`);
   } else {
     inscritos.forEach((item, i) => {
-      const errosDados = validarDadosMinimosInscrito(item);
+      // CKMOD: validarDadosMinimosInscrito cobre também telefone/nascimento
+      // opcionais (estritos quando presentes; nascimento no passado via hojeISO).
+      const errosDados = validarDadosMinimosInscrito(item, hojeISO);
       erros.push(...errosDados.map((e) => `inscritos[${i}]: ${e}`));
       const obj = (item ?? {}) as Record<string, unknown>;
       if (typeof obj['modalidade'] !== 'string' || obj['modalidade'].length === 0) {
@@ -289,6 +340,23 @@ export function validarCreateInscricaoChargeInput(raw: unknown): string[] {
     if (typeof resp['email'] !== 'string' || !validarEmail(resp['email'])) {
       erros.push('"responsavel.email" inválido.');
     }
+    // CKMOD (spec §5.1 item 1): telefone do responsável — opcional; presente
+    // deve ser plausível (fonte única telefoneValido). Sem eco (PII).
+    if (resp['telefone'] !== undefined && !telefoneValido(resp['telefone'])) {
+      erros.push('"responsavel.telefone" inválido (10–13 dígitos).');
+    }
+  }
+
+  // CKMOD (spec §5.1 item 3): endereço do comprador — opcional; presente =
+  // shape completo validado no core (CEP 8 dígitos, UF canônica, tetos).
+  if (input['endereco'] !== undefined) {
+    erros.push(...validarEnderecoPedido(input['endereco']));
+  }
+
+  // CKMOD (spec §5.3): aceites — opcionais NESTA camada; presentes devem ser
+  // {termos: true, saude: true} LITERAIS (aceite parcial/forjado morre aqui).
+  if (input['aceites'] !== undefined) {
+    erros.push(...validarAceitesCheckoutInput(input['aceites']));
   }
 
   if (!isFormaPagamento(input['forma'])) {
@@ -981,11 +1049,49 @@ async function criarDocsDeCheckout(
         }
       }
 
+      // CKMOD (spec §5.3a): versão VIGENTE dos termos lida DENTRO da tx —
+      // o aceite carimba a versão que vigia NO COMMIT (bump em voo entre a
+      // cotação e o pagar nunca deixa versão stale na prova; mesma
+      // disciplina de freshness dos re-checks de cupom acima). Sem doc de
+      // política ⇒ vigente 1 (defaults legais CDC — versaoPoliticaVendas).
+      // A versão NUNCA vem do cliente (anti-forja de prova de aceite).
+      let versaoTermosVigente = 1;
+      if (input.aceites !== undefined) {
+        const politicaSnap = await tx.get(
+          eventoRef.collection('politicaVendas').doc(POLITICA_VENDAS_DOC_ID)
+        );
+        versaoTermosVigente = versaoPoliticaVendas(
+          politicaSnap.get('versao') as number | undefined
+        );
+      }
+
       // Inscritos — subcoleção do evento (ADR-011); nascem 'pendente'
       input.inscritos.forEach((inscrito, i) => {
         const inscritoId = inscritoIds[i];
         if (inscritoId === undefined) return;
         const ehResponsavel = input.responsavelIndex === i;
+
+        // CKMOD (spec §5.1 item 2): bloco `[reg]` PARCIAL — gravado quando o
+        // checkout coletou algo novo (nascimento por atleta; telefone só no
+        // inscrito-responsável — o form coleta telefone do RESPONSÁVEL). CPF
+        // entra junto (o bloco parse exige; já era validado, agora persiste).
+        // Sem campo novo ⇒ comportamento vigente (sem dadosPessoais) — as
+        // inscrições antigas seguem lidas em modo Postel (demografia/CRM).
+        const telefoneResp =
+          ehResponsavel && typeof input.responsavel.telefone === 'string'
+            ? input.responsavel.telefone.trim()
+            : undefined;
+        const dadosPessoais =
+          inscrito.nascimento !== undefined || telefoneResp !== undefined
+            ? {
+                cpf: inscrito.cpf,
+                ...(inscrito.nascimento !== undefined
+                  ? { nascimento: inscrito.nascimento }
+                  : {}),
+                ...(telefoneResp !== undefined ? { telefone: telefoneResp } : {}),
+              }
+            : undefined;
+
         tx.create(eventoRef.collection('inscritos').doc(inscritoId), {
           id: inscritoId,
           tenantId,
@@ -1018,6 +1124,9 @@ async function criarDocsDeCheckout(
           // aprovou contra os SKUs configurados (fail-closed ANTES de
           // qualquer escrita) — o balcão/estoque leem tamanho legítimo.
           tamanhos: inscrito.tamanhos ?? {},
+          // CKMOD: bloco [reg] parcial (cpf + nascimento; telefone no
+          // responsável) — ausente quando a UI não coletou campo novo.
+          ...(dadosPessoais !== undefined ? { dadosPessoais } : {}),
           criadoEm: now,
           atualizadoEm: now,
         });
@@ -1035,6 +1144,10 @@ async function criarDocsDeCheckout(
           atletaId: caller.uid,
           nome: input.responsavel.nome.trim(),
           email: input.responsavel.email.trim(),
+          // CKMOD: canal de contato do pedido (spec §5.1 item 1)
+          ...(typeof input.responsavel.telefone === 'string'
+            ? { telefone: input.responsavel.telefone.trim() }
+            : {}),
         },
         inscritoRefs: inscritoIds,
         itens: itensDoPedido,
@@ -1047,6 +1160,24 @@ async function criarDocsDeCheckout(
       };
       if (sale.forma === 'cartao_credito') {
         pedidoDoc['parcelas'] = sale.parcelamento.parcelas;
+      }
+      // CKMOD (spec §5.1 item 3): endereço do comprador — já validado na
+      // fronteira; parse do core normaliza (CEP canônico 8 dígitos + trim).
+      if (input.endereco !== undefined) {
+        pedidoDoc['endereco'] = parseEnderecoPedido(
+          `Pedido ${pedidoId}`,
+          input.endereco
+        );
+      }
+      // CKMOD (spec §5.3): prova de aceite — versão CARIMBADA PELO SERVIDOR
+      // (termos = versão vigente lida NESTA tx; saúde = constante vigente do
+      // produto) + serverTimestamp. O cliente só confirmou booleans — não há
+      // canal para forjar versão nem antedatar aceite (RN-149 pattern).
+      if (input.aceites !== undefined) {
+        pedidoDoc['aceites'] = {
+          termos: { versao: versaoTermosVigente, aceiteEm: now },
+          saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
+        };
       }
       tx.create(pedidoRef, pedidoDoc);
 
@@ -1248,7 +1379,9 @@ export async function createInscricaoChargeCore(
   caller: CheckoutCaller,
   agora: () => Date = () => new Date()
 ): Promise<CreateInscricaoChargeResult> {
-  const erros = validarCreateInscricaoChargeInput(rawInput);
+  // CKMOD: hojeISO do RELÓGIO INJETADO (dia civil do fuso do produto) —
+  // gate "nascimento no passado" testável sem relógio de máquina.
+  const erros = validarCreateInscricaoChargeInput(rawInput, dataLocalISO(agora()));
   if (erros.length > 0) {
     throw new https.HttpsError(
       'invalid-argument',

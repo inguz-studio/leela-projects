@@ -215,6 +215,14 @@ export { encerrarEventos } from './eventos/encerrarEventos';
 // re-aceita. ⚠️ Fable (contrato legal).
 export { versionarRegulamento } from './eventos/versionarRegulamento';
 
+// Eventos — VERSIONAMENTO DA POLÍTICA DE VENDAS (CKMOD · spec CHECKOUT-UX
+// §5.3(a) · paralelo RN-149): trigger onWrite bumpa `versao` MONOTÔNICA em
+// `politicaVendas/config` quando a política muda MATERIALMENTE (3 blocos
+// paramétricos; baseline de doc novo = defaults legais CDC). O pedido
+// registra a versão ACEITA no pagar (`aceites.termos`); Rules congelam
+// versao/hash/carimbo para cliente. ⚠️ Fable (contrato legal).
+export { versionarPoliticaVendas } from './eventos/versionarPoliticaVendas';
+
 // Eventos — EXPURGO DO DADO DE SAÚDE (S306-T3 · E04 · RN-147 · LGPD
 // Art. 11): cron 03:20 (ADR-015, slot após 03:00/03:05/03:10) apaga
 // `inscritos/*/saude/current` de eventos ENCERRADOS além da retenção

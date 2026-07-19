@@ -12,6 +12,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { validarCreateInscricaoChargeInput } from '../checkout/createInscricaoCharge';
 import {
   cepValido,
   normalizarCep,
@@ -383,6 +384,84 @@ describe('parsePedido (CKMOD — endereco/aceites/telefone)', () => {
     expect(p.endereco?.cep).toBe('88015600');
     expect(p.aceites?.termos.versao).toBe(1);
     expect(p.responsavel.telefone).toBe('(48) 99999-0001');
+  });
+
+  it('fronteira da Function: input CKMOD válido passa; forjas morrem na validação', () => {
+    const base = {
+      eventoId: 'evento-1',
+      inscritos: [
+        {
+          nome: 'Maria Atleta',
+          email: 'maria@exemplo.com.br',
+          cpf: '529.982.247-25',
+          modalidade: '5k',
+          nascimento: '1990-05-17',
+        },
+      ],
+      responsavelIndex: 0,
+      responsavel: {
+        nome: 'Maria Atleta',
+        email: 'maria@exemplo.com.br',
+        telefone: '(48) 99999-0001',
+      },
+      endereco: {
+        cep: '88015-600',
+        logradouro: 'Rua Bocaiúva',
+        bairro: 'Centro',
+        cidade: 'Florianópolis',
+        uf: 'SC',
+        numero: '2468',
+      },
+      aceites: { termos: true, saude: true },
+      forma: 'pix',
+      parcelas: 1,
+      idempotencyKey: 'chave-ckmod-0001',
+    };
+    expect(validarCreateInscricaoChargeInput(base, '2026-07-19')).toEqual([]);
+
+    // Sem os campos novos (UI antiga) segue válido — compat/regressão.
+    const antigo = { ...base } as Record<string, unknown>;
+    delete antigo['endereco'];
+    delete antigo['aceites'];
+    antigo['responsavel'] = { nome: 'Maria Atleta', email: 'maria@exemplo.com.br' };
+    antigo['inscritos'] = [
+      {
+        nome: 'Maria Atleta',
+        email: 'maria@exemplo.com.br',
+        cpf: '529.982.247-25',
+        modalidade: '5k',
+      },
+    ];
+    expect(validarCreateInscricaoChargeInput(antigo, '2026-07-19')).toEqual([]);
+
+    // Forjas: aceite parcial, nascimento futuro, telefone torto, CEP torto.
+    expect(
+      validarCreateInscricaoChargeInput(
+        { ...base, aceites: { termos: true, saude: false } },
+        '2026-07-19'
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      validarCreateInscricaoChargeInput(
+        {
+          ...base,
+          inscritos: [{ ...(base.inscritos[0] as object), nascimento: '2030-01-01' }],
+        },
+        '2026-07-19'
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      validarCreateInscricaoChargeInput(
+        { ...base, responsavel: { ...base.responsavel, telefone: '12' } },
+        '2026-07-19'
+      ).length
+    ).toBeGreaterThan(0);
+    expect(
+      validarCreateInscricaoChargeInput(
+        { ...base, endereco: { ...base.endereco, cep: '123' } },
+        '2026-07-19'
+      ).length
+    ).toBeGreaterThan(0);
   });
 
   it('endereco/aceites/telefone PRESENTES e corrompidos lançam (fail-fast)', () => {
