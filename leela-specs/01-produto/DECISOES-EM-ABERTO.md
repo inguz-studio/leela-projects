@@ -36,6 +36,25 @@ O painel curto de status continua sendo o [[DECISOES-ABERTAS]]. Este arquivo é 
 
 ---
 
+## ✅ Resolvido na rodada DEC-0719 (Vitor, 2026-07-19)
+
+Oito das treze decisões deste documento foram fechadas. O verbatim integral está em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`; o painel curto em [[DECISOES-ABERTAS]].
+
+- **1 (cards por atleta) = mantém os cards** + botão "+ adicionar atleta". Tela 2 do wireframe 112-4622 superseded.
+- **2 (campo de cupom) = leva o campo pro INÍCIO do fluxo** (paridade com a referência), em vez de só confiar no auto-apply.
+- **3 (Pix/cartão no pagamento) = SIM, mas como BOTÕES, sem toggle.** Verbatim: *"pix e cartao na etapa de pagamento, mas em botões, sem toggle."*
+- **4 (QR do Pix no pedido pendente) = SIM** + timer de validade de 30 min + copia-e-cola que copia sozinho e dispara toast (**RN-157**). O timer é a validade da própria cobrança PIX (`expiresIn`), não só um relógio de tela.
+- **5 (saúde no checkout) = OBRIGATÓRIA.** Termo de saúde BASE da plataforma sempre presente; a flag do organizador passa a ADICIONAR o termo custom dele (**RN-156**).
+- **6 (gênero) = coletar** com opção "não informado", pré-preenchendo sozinho para quem já comprou (**RN-154**, via CPF único **RN-173**).
+- **7 (split vs manual) = manter o repasse MANUAL na v1; split (fase 3) NÃO abre.** O racional estratégico está detalhado na seção Dinheiro abaixo (antecipação como margem).
+- **9 (Firebase Storage, ADR-016) = RATIFICADO.** Status da ADR: aceita.
+
+Continuam abertas: **8** (pré-compra do clube — validar com organizador antes), **10** (ADR-017 modal Radix-free), **11**, **12**, **13** (miudezas com default seguro).
+
+Duas RNs de identidade/conta entraram junto: **RN-173** (CPF único global no sistema — colisão no checkout linka a mesma pessoa, não duplica) e **RN-155** (conta criada sem fricção na 1ª compra + link de senha por e-mail, dependente do EmailProvider).
+
+---
+
 ## Checkout
 
 O job que manda aqui é o do atleta: *descubro o evento, quero me inscrever* (doc `jobs-to-be-done.md §04.1`, dimensão transacional H1). Por isso, nas decisões abaixo, o que ameaça **fechar a compra** e a **confiança no preço** pesa mais do que o que é só pixel. As seis decisões saem da revisão de usabilidade do fluxo (mind Don Norman) em [[CHECKOUT-UX-REPORT]].
@@ -142,7 +161,11 @@ Estas duas mexem em dinheiro de verdade, então o padrão da casa vale: rota Fab
 
 **O que destrava.** Ratificar o manual mantém a web-complete andando sem novo trabalho. Pedir o split abre a fase 3 no [[LEELA-E08-influenciador]], com rota Fable e review. Esta é uma das duas decisões que **bloqueiam código** quando você mexe (o lado do split).
 
-*Como decidir: responda "mantém o repasse manual" (recomendado) ou "abre a fase 3 do split automático".*
+**✅ Resolvido em 2026-07-19: manter o repasse MANUAL; split (fase 3) NÃO abre.** O racional que o Vitor deu vai além da simplicidade técnica, é estratégia de margem: **manter o controle dos repasses na plataforma serve para manejar ANTECIPAÇÕES**. A antecipação de recebíveis não é o padrão aos olhos do Asaas, mas a plataforma a oferece ao organizador como serviço, e **os juros dessa antecipação são markup nosso** — uma linha de receita que o split automático (dinheiro saindo direto na hora do pagamento) mataria. Por isso o desembolso fica manual e sob a plataforma por decisão de negócio, não só por cautela de engenharia. Quando/se o split entrar, é dinheiro real: rota Fable + review antagonista obrigatória.
+
+**Reembolso (ponta ligada a dinheiro, ainda em confirmação).** A priori, o reembolso **NÃO devolve a taxa de serviço** ao comprador. Essa é uma decisão **condicionada ao benchmark** (a lane BENCHMARK-REEMBOLSO roda em paralelo; report em `outputs/leela-build-2d6ee98d/BENCHMARK-REEMBOLSO-REPORT.md`). Fica registrada como **pendente-de-confirmação**, não como RN fechada — só vira regra depois que o benchmark voltar.
+
+*Decidido: repasse manual mantido. Split e política de reembolso da taxa seguem para quando virarem dor/benchmark real.*
 
 ### 8. Pré-compra do clube influenciador
 
