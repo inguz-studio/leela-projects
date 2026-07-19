@@ -21,7 +21,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/*/inscricao', '/health'],
+      // `/convite` cobre também `/convite/afiliado` (prefixo) — páginas
+      // transacionais de aceite com token na query (W2-F-02 · GATE-DS-W2).
+      disallow: ['/*/inscricao', '/health', '/convite'],
     },
     sitemap: `${base}/sitemap.xml`,
     host: base,

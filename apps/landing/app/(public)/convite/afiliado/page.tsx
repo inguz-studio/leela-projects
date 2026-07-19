@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { AfiliadoConviteForm } from './AfiliadoConviteForm';
+
+// Página transacional com TOKEN na query — fora do índice (W2-F-02 ·
+// GATE-DS-W2). noindex por metadata + disallow `/convite` no robots.ts.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Página PÚBLICA de aceite do convite de influenciador PF (R9-E · S-R9-11-T6 ·
 // RN-316). Espelha a página de aceite de assessoria (E18): captura

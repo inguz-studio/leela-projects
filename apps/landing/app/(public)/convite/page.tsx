@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ConviteForm } from './ConviteForm';
+
+// Página transacional com TOKEN na query — fora do índice (W2-F-02 ·
+// GATE-DS-W2). noindex por metadata + disallow `/convite` no robots.ts.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Página PÚBLICA de aceite do convite de assessoria parceira (E18 · S1801-T2).
 // Server Component: captura tenantId/parceriaId/token da URL (o token do link É
