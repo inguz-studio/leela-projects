@@ -242,7 +242,10 @@ export interface CheckoutPrefill {
 }
 
 export interface GetCheckoutPrefillResult {
-  /** null = sem prefill (sessão anônima, sem vínculo ou sem dados). */
+  /**
+   * null = sem prefill (sessão anônima, sem vínculo, sem dados, e-mail não
+   * verificado ou não correspondente — RN-174: denies indistinguíveis).
+   */
   prefill: CheckoutPrefill | null;
 }
 
@@ -250,6 +253,10 @@ export interface GetCheckoutPrefillResult {
  * Dados conhecidos do comprador AUTENTICADO para pré-preencher o checkout
  * (RN-154). O servidor resolve pela pessoa VINCULADA à conta (RN-173) —
  * nunca há canal para pedir dados de terceiro; sessão anônima recebe null.
+ * RN-174: o vínculo só nasce com pagamento CONFIRMADO + conta do e-mail da
+ * compra, e a leitura ainda exige e-mail do token VERIFICADO (Firebase
+ * nativo) e igual ao da compra — sem isso o resultado é `prefill: null`
+ * (mesmo shape de "sem ficha"; a UI só abre o form vazio).
  */
 export async function getCheckoutPrefill(): Promise<GetCheckoutPrefillResult> {
   const fn = httpsCallable<Record<string, never>, GetCheckoutPrefillResult>(
