@@ -124,6 +124,10 @@ export type { FilterMenuProps, FilterMenuOption } from './components/FilterMenu'
 // ── Modais (S001-3-T3) ──────────────────────────────────────────────────────
 export { Modal, ConfirmModal } from './components/Modal';
 export type { ModalProps, ModalSize, ConfirmModalProps, ConfirmModalDetails } from './components/Modal';
+// Dialog Radix-free da superfície pública (ADR-017) — também disponível pelo
+// subpath `@leela/design-system/dialog` (grafo sem @radix-ui p/ a landing).
+export { Dialog } from './components/Dialog';
+export type { DialogProps } from './components/Dialog';
 
 // ── Drawer off-canvas (LEELA-RESP-M1-T2) ────────────────────────────────────
 export { Drawer } from './components/Drawer';

@@ -1,0 +1,104 @@
+// =============================================================================
+// Pureza das entradas Radix-free (ADR-017 · anti-regressão do aceite (a) da
+// S1706). Caminha ESTATICAMENTE o grafo de imports de `src/server.ts` e
+// `src/dialog.ts` e falha se entrar qualquer coisa que quebre a superfície
+// pública da landing:
+//   - `@radix-ui/*` (o dist externaliza → MODULE_NOT_FOUND no bundle público
+//     — foi o 500 da lane LPVK);
+//   - `createContext` (ilegal em escopo de módulo no grafo de Server
+//     Component do App Router);
+//   - dependência externa fora da allowlist (react, cva, clsx/tw-merge,
+//     lucide) — qualquer lib nova aqui é decisão de arquitetura, não drift.
+// Adicionalmente, o grafo do `server.ts` não pode conter HOOK nenhum
+// (contrato: renderizável em RSC puro). O `dialog.ts` é client por natureza
+// (useState/useEffect ok) — só as duas primeiras proibições valem.
+// =============================================================================
+
+import { describe, expect, it } from 'vitest';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const EXTERNAL_ALLOWLIST = new Set([
+  'react',
+  'class-variance-authority',
+  'clsx',
+  'tailwind-merge',
+  'lucide-react',
+]);
+
+const IMPORT_RE = /(?:import|export)\s[^;]*?from\s+['"]([^'"]+)['"]/g;
+
+/** Remove comentários de linha e de bloco — a análise é sobre CÓDIGO. */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+}
+
+function resolveRelative(fromFile: string, spec: string): string {
+  const base = resolve(dirname(fromFile), spec);
+  // Só aceita ARQUIVO .ts/.tsx (existsSync em diretório também retorna true).
+  for (const candidate of [
+    `${base}.ts`,
+    `${base}.tsx`,
+    resolve(base, 'index.ts'),
+    resolve(base, 'index.tsx'),
+  ]) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error(`não resolveu import relativo "${spec}" a partir de ${fromFile}`);
+}
+
+/** Caminha o grafo a partir da entry; devolve arquivos visitados + externos. */
+function walk(entry: string): { files: string[]; externals: string[] } {
+  const seen = new Set<string>();
+  const externals = new Set<string>();
+  const queue = [resolve(SRC, entry)];
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const source = stripComments(readFileSync(file, 'utf8'));
+    for (const match of source.matchAll(IMPORT_RE)) {
+      const spec = match[1]!;
+      if (spec.startsWith('.')) {
+        queue.push(resolveRelative(file, spec));
+      } else {
+        externals.add(spec);
+      }
+    }
+  }
+  return { files: [...seen], externals: [...externals] };
+}
+
+describe('entradas Radix-free (ADR-017)', () => {
+  for (const entry of ['server.ts', 'dialog.ts']) {
+    it(`${entry}: grafo sem @radix-ui, sem createContext, externos na allowlist`, () => {
+      const { files, externals } = walk(entry);
+      expect(files.length).toBeGreaterThan(1);
+      for (const external of externals) {
+        expect(external, `dependência externa fora da allowlist em ${entry}`).toSatisfy(
+          (spec: string) => EXTERNAL_ALLOWLIST.has(spec),
+        );
+      }
+      for (const file of files) {
+        const source = stripComments(readFileSync(file, 'utf8'));
+        expect(source, `@radix-ui no grafo Radix-free: ${file}`).not.toContain('@radix-ui');
+        expect(source, `createContext no grafo Radix-free: ${file}`).not.toContain(
+          'createContext',
+        );
+      }
+    });
+  }
+
+  it('server.ts: grafo 100% server-safe — nenhum hook de React', () => {
+    const { files } = walk('server.ts');
+    for (const file of files) {
+      const source = stripComments(readFileSync(file, 'utf8'));
+      expect(source, `hook de React em grafo server-safe: ${file}`).not.toMatch(
+        /\buse(State|Effect|LayoutEffect|Ref|Callback|Memo|Context|Id|Reducer|SyncExternalStore|Transition|ImperativeHandle)\b/,
+      );
+    }
+  });
+});

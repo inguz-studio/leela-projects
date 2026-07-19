@@ -21,6 +21,16 @@
       "import": "./dist/rn.mjs",
       "require": "./dist/rn.js"
     },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.mjs",
+      "require": "./dist/server.js"
+    },
+    "./dialog": {
+      "types": "./dist/dialog.d.ts",
+      "import": "./dist/dialog.mjs",
+      "require": "./dist/dialog.js"
+    },
     "./themes/brasa.css": "./themes/brasa.css",
     "./themes/wine.css": "./themes/wine.css",
     "./themes/index.css": "./themes/index.css"
