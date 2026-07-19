@@ -34,6 +34,11 @@ import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { logComunicacaoDocId, type AuthClaims } from '@leela/core';
 import { enviarCampanhaCore } from '../eventos/enviarCampanha';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { recomputarResumoComunicacoes } from '../eventos/agregarComunicacoes';
 import { contarPushNaJanelaColecao } from '../shared/comunicacaoEnvio';
 
@@ -77,10 +82,18 @@ describe.skipIf(!hasEmulator)('enviarCampanha — idempotente + RN-133 + log RN-
     adminDb = admin.firestore();
   });
 
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados.
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seedFixtures();
-  });
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(adminDb, testEnv, () => seedFixtures(), [
+        `tenants/${CASTELO_ID}`,
+        `eventos/${EVENTO_ID}`,
+        `eventos/${EVENTO_B_ID}`,
+        `eventos/${EVENTO_ID}/inscritos/insc-prata-5`,
+      ]);
+    });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();

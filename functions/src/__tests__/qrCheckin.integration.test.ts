@@ -27,6 +27,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { registrarCheckinCore } from '../eventos/registrarCheckin';
 import { assinarQrToken, type QrKeyring } from '../eventos/qrToken';
 import type { EventoCaller } from '../eventos/criarEvento';
@@ -174,10 +179,19 @@ async function seedBase(): Promise<void> {
   await batch.commit();
 }
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados.
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedBase();
-});
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(adminDb, testEnv, seedBase, [
+      `tenants/${CASTELO_ID}`,
+      `eventos/${EVENTO_A}`,
+      `eventos/${EVENTO_A}/inscritos/insc-ana`,
+      `eventos/${EVENTO_A}/inscritos/insc-sem-ingresso`,
+      `eventos/${EVENTO_B}`,
+    ]);
+  });
+}, 30_000);
 
 function inscritoRef(inscritoId: string, eventoId = EVENTO_A) {
   return adminDb

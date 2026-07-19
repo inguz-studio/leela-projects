@@ -43,6 +43,11 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { logComunicacaoDocId } from '@leela/core';
 import { dispatchCampanhasAgendadasCore } from '../eventos/dispatchCampanhasAgendadas';
 import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
+import {
   dispatchAutomacoesCore,
   processarNovoInscritoCore,
 } from '../eventos/automacoesTriggers';
@@ -83,10 +88,17 @@ describe.skipIf(!hasEmulator)('J2 · Gatilhos + scheduler com relógio (LEELA-R4
     db = admin.firestore();
   }, 30_000);
 
+  // SUITE-STAB: clear+seed com triggers pausados + canários verificados.
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    await seed();
-  });
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await seedVerified(db, testEnv, () => seed(), [
+        `tenants/${CASTELO_ID}`,
+        `eventos/${EVENTO_ID}`,
+        `eventos/${EVENTO_ID}/inscritos/insc-0004`,
+      ]);
+    });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();

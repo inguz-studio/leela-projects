@@ -34,6 +34,11 @@ import {
   requestRepasseCore,
 } from '../finance/requestRepasse';
 import { recomputarSaldoRepasse } from '../finance/updateSaldoRepasse';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import type { FinanceCaller } from '../finance/atores';
 
 const PROJECT_ID = 'demo-leela';
@@ -71,8 +76,26 @@ function dadosBancariosMascarados() {
 }
 
 /** Cenário canônico: liquido 10000, retenção 15% ⇒ disponível 8500. */
+// SUITE-STAB: seed roda com triggers pausados + canários verificados —
+// full5: financeiro/current do seed era CLOBBERADO por recompute tardio do
+// backlog de triggers do arquivo vizinho (disponível 60138.11 vs 3500) e
+// dadosBancarios sumia ("Cadastre os dados bancários" — RN-354).
 async function seedCenario(opts: { comDados?: boolean; comTermo?: boolean } = {}) {
   const { comDados = true, comTermo = true } = opts;
+  const canaries = [
+    `tenants/${CASTELO_ID}`,
+    `eventos/${EVENTO_ID}`,
+    `eventos/${EVENTO_ID}/financeiro/current`,
+    ...(comTermo ? [`tenants/${CASTELO_ID}/commercialTerms/current`] : []),
+    ...(comDados ? [`tenants/${CASTELO_ID}/dadosBancarios/current`] : []),
+  ];
+  await withTriggersPaused(() =>
+    seedVerified(db, testEnv, () => seedCenarioRaw({ comDados, comTermo }), canaries)
+  );
+}
+
+async function seedCenarioRaw(opts: { comDados: boolean; comTermo: boolean }) {
+  const { comDados, comTermo } = opts;
   await db.collection('tenants').doc(CASTELO_ID).set({
     id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
     status: 'ativo', ownerUid: MARINA_UID, tipo: 'produtor',
@@ -133,8 +156,8 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-});
+  await withTriggersPaused(() => clearFirestoreDrained(testEnv));
+}, 30_000);
 
 afterAll(async () => {
   await testEnv?.cleanup();

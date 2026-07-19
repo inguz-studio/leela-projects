@@ -36,6 +36,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { doc as clientDoc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
+import {
+  clearFirestoreDrained,
+  deleteAllUsersDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { cadastrarAssessoriaCore } from '../assessorias/cadastrarAssessoria';
 import {
   ACEITE_JANELA_MS,
@@ -89,16 +95,25 @@ describe.skipIf(!hasEmulator)('rate-limit do aceite público (LEELA-R2)', () => 
     process.env['LEELA_CONVITE_EXPOR_TOKEN'] = 'true';
   });
 
+  // SUITE-STAB: clear+seed com triggers pausados + canário verificado.
   beforeEach(async () => {
-    await testEnv.clearFirestore();
-    const users = await auth.listUsers(1000);
-    await Promise.all(users.users.map((u) => auth.deleteUser(u.uid)));
-    await db.collection('tenants').doc(CASTELO_ID).set({
-      id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
-      status: 'ativo', ownerUid: MARINA_UID, tipo: 'produtor',
-      criadoEm: Timestamp.fromDate(AGORA), atualizadoEm: Timestamp.fromDate(AGORA),
+    await withTriggersPaused(async () => {
+      await clearFirestoreDrained(testEnv);
+      await deleteAllUsersDrained(auth);
+      await seedVerified(
+        db,
+        testEnv,
+        async () => {
+          await db.collection('tenants').doc(CASTELO_ID).set({
+            id: CASTELO_ID, nome: 'Castelo Produções', slug: CASTELO_ID,
+            status: 'ativo', ownerUid: MARINA_UID, tipo: 'produtor',
+            criadoEm: Timestamp.fromDate(AGORA), atualizadoEm: Timestamp.fromDate(AGORA),
+          });
+        },
+        [`tenants/${CASTELO_ID}`]
+      );
     });
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await testEnv?.cleanup();

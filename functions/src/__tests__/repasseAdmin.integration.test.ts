@@ -34,6 +34,11 @@ import {
   rejectRepasseCore,
   setRetencaoRepasseCore,
 } from '../finance/transicoesRepasse';
+import {
+  clearFirestoreDrained,
+  seedVerified,
+  withTriggersPaused,
+} from './helpers/stability';
 import { requestRepasseCore } from '../finance/requestRepasse';
 import { recomputarSaldoRepasse } from '../finance/updateSaldoRepasse';
 import type { FinanceCaller } from '../finance/atores';
@@ -122,10 +127,20 @@ beforeAll(async () => {
   db = admin.firestore();
 });
 
+// SUITE-STAB: clear+seed com triggers pausados + canários verificados
+// (full5: "Repasse 'X' não existe" — cenário engolido sob backlog).
 beforeEach(async () => {
-  await testEnv.clearFirestore();
-  await seedCenario();
-});
+  await withTriggersPaused(async () => {
+    await clearFirestoreDrained(testEnv);
+    await seedVerified(db, testEnv, seedCenario, [
+      `tenants/${CASTELO_ID}`,
+      `tenants/${CASTELO_ID}/commercialTerms/current`,
+      `tenants/${CASTELO_ID}/dadosBancarios/current`,
+      `eventos/${EVENTO_ID}`,
+      `eventos/${EVENTO_ID}/financeiro/current`,
+    ]);
+  });
+}, 30_000);
 
 afterAll(async () => {
   await testEnv?.cleanup();
