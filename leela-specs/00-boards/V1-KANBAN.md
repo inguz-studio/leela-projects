@@ -1,5 +1,4 @@
 ---
-
 kanban-plugin: board
 tags:
   - leela
