@@ -24,12 +24,13 @@ NÃO TOCAR: apps/painel/**, convite/**, demais landing, design-system.
 - [x] T4 api-client kits.ts: SalvarKitInput com campos novos — dentro de `dab8238`
 - [x] T5 leitura pública: KitPublico + lerKits + kitDetalheDados consome dado real (fallback mock rico) — `62bd7ba` + fixtures painel `64bf1e8`
 - [x] T6 seed: descricao/itens nos kits do preview (aditivo, idempotente, :8180) — `0ec9181` (ret3): itens DERIVADOS de ITEM_KIT_SEEDS via itensDoKitSeed(); gates tsc src+scripts 0 · eslint 0 · 20 kits (15 c/ visão) · 2ª rodada byte-idêntica · parseKit 20/20
-- [ ] T7 docs: modelo-de-dados-firestore.md + RN delta + épico E03 + boards
+- [x] T7 docs: modelo-de-dados-firestore.md + RN delta + épico E03 + boards — `5fcfd23`: RN da visão de compra RENUMERADA RN-229→**RN-230** (colisão real: RN-229 no cânon R9 = divisórias terciárias/E01, já codada em `b433f71`); comentários corrigidos em core/api-client/functions/landing (comment-only); boards por hunk (E19 intocada)
 
 ## Estado
-T1–T6 done (T1–T5B pushed; T6 `0ec9181` local). Lane ret3 ativa. Iniciando T7 (docs+boards).
-⚠️ V1-KANBAN/BOARD-EPICOS têm hunks da lane E19 no working tree — staging do T7
-por HUNK (git apply --cached de patch próprio), nunca `git add` do arquivo inteiro.
+✅ LOTE R9-C COMPLETO (T1–T7). Backend/seed/leitura pública do modelo real do
+Kit entregues. Pendência transferida à lane UI: edição de descricao/itens +
+upload de imagem no KitEditor (painel). Hunks da lane E19 seguem no working
+tree, intocados.
 ⚠️ Lane E19-CRM-BACKEND em paralelo nos arquivos compartilhados (firestore.rules,
 core/index.ts…) — staging por path explícito + revisão do diff staged por commit.
 Working tree tem hunks alheios em apps/painel (AddPatrocinadorModal) — NÃO staged.
