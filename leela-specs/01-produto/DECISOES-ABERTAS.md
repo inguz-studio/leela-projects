@@ -22,6 +22,14 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
    - **(d) Vaga/estoque durante a pré-compra.** A pré-compra **reserva ou não** vaga/estoque de lote enquanto aguarda X (reserva = risco de segurar vaga que não converte; não-reserva = risco de esgotar antes do disparo).
    **Default conservador enquanto não valida:** RN-315 (o link do clube só ativa o desconto ao cruzar o mínimo, **sem** cobrança em lote). **Quando/se implementar:** dinheiro ⇒ **rota Fable + review antagonista obrigatório** (anotar no DoD). Spec: `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-11` (bloco HIPÓTESE).
 
+### 🆕 TAXA-FLEX · taxa percentual + fixo por meio de pagamento (2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **percentual + valor fixo por venda, variável por meio de pagamento** (verbatim do Vitor: *"6% pix + 2,00 ou 8% de cartão + 1,50"*). Nível decidido (AskUserQuestion 2026-07-19): **tabela global + exceção por organizador**, sem por-evento no v1. Exibição no checkout repassado: **total por opção de meio** (PIX vs cartão) antes de pagar. Spec fechada em RN-178..183; código = card `TAXA-FLEX` (📋 executável-após-CLAIM-FIX). Restam abaixo só as pontas que dependem de você:
+
+- **(c · ratificar) Base da comissão de afiliado = FACE.** A comissão continua calculada sobre o valor **FACE** (RN-310), não sobre o líquido pós-taxa — coerente com a contabilidade do organizador em FACE. A taxa-flex **não** muda isso. **Default em vigor = FACE**; ratificar = confirmar. É premissa registrada (P-TAXAFLEX-3), não bloqueia código.
+- **(e · pergunta aberta) Taxa da plataforma por PARCELA?** No v1 a taxa é **única por meio** (`cartao` é uma linha só); parcelamento fica fora desta RN. Pergunta em aberto, **sem decisão**: a taxa da plataforma deveria variar por parcela? (Ortogonal aos juros Price 3,49% a.m. já repassados ao comprador, decisão 2026-07-05.) Não bloqueia — só abre um refinamento futuro se você quiser.
+- **(fronteira · JÁ EXISTE, só cruzando referência) Cobrar vs devolver a taxa no reembolso.** É a mesma decisão pendente do **item 23** (Reembolso a priori NÃO devolve a taxa de serviço, condicionada ao benchmark — lane BENCHMARK-REEMBOLSO). A RN-181 especifica **como ratear** o componente fixo cent-exato no estorno; **se** devolve ou não segue com o item 23, não foi decidido na TAXA-FLEX.
+
 ## 🟠 Ações externas suas (destravam código pronto)
 
 8. **Chave SANDBOX do Asaas** — destrava o teste ponta a ponta de cobrança real sem risco e a **ativação do adapter** (`AsaasProvider` está pronto e inerte; checklist de ativação em `outputs/leela-build-2d6ee98d/ASAAS-ADAPTER-REPORT.md`, com review Fable obrigatória na virada).

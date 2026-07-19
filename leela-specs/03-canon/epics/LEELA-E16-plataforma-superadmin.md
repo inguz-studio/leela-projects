@@ -56,6 +56,15 @@ Novas (plataforma & multi-tenancy — introduzidas neste épico, faixa **RN-400�
 - **RN-409 · Rollups macro cross-tenant.** Agregados em `platform/rollups/*` (GMV total, receita Leela por tenant, nº de tenants ativos, saúde por tenant) são mantidos por Cloud Function, cross-tenant; **só** `platform_admin` lê; **só** Function escreve.
 - **RN-410 · Antecipação (anticipation).** `anticipation` (disponível? custo?) é termo do tenant; o **campo** existe e é configurável desde a V1, mas a **mecânica** de antecipação de recebíveis é pós-V1 (adensa depois, não bloqueia o épico).
 
+### Reconciliação TAXA-FLEX (2026-07-19) — fonte da taxa vira tabela por meio
+
+Rodada `02-rodadas/2026-07-19-taxa-flex/` (RN-178, dona em E04). A fonte da taxa da plataforma deixa de ser um `platformFeePct` único e passa a ser uma **tabela por meio de pagamento** (`pix | cartao | boleto` → `{percentual, fixoCentavos}`), em dois níveis: **global** em `platform/config` (default de todos os tenants) + **override por organizador** em `commercialTerms/current`. RN-404 e RN-406 seguem valendo, agora sobre a tabela:
+
+- **RN-404 (reconciliada)** — a escrita da tabela (global E override do tenant) é **exclusiva do `platform_admin`**; o tenant lê a própria taxa efetiva (read-only). Ator "comercial" para o override negociado = futuro.
+- **RN-406 (reconciliada)** — a **fonte** de RN-330 (E09) e da base econômica do split (E04) passa a ser a **linha do meio de pagamento** na tabela por meio (override > global), não mais um percentual único. O mock 10,5% degrada para a linha do meio quando a tabela existir.
+
+Detalhe do modelo, congelamento e cálculo em E04 (RN-178) e E09 (RN-179..183).
+
 ## Regras de design aplicáveis
 
 - **§2.1** header 96px na área de plataforma; sidebar/shell dedicados do `platform_admin` (itens: Tenants, Termos, Billing, Macro) — reusa o Shell de E01, com set de navegação próprio.
