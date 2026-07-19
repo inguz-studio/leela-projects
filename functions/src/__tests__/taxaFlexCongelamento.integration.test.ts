@@ -35,6 +35,7 @@ import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
+import { estornarInscricaoCore, ESTORNOS_SUBCOL } from '../checkout/estornarInscricao';
 import { processarWebhookPagamento } from '../checkout/webhookPagamento';
 import { buildMockWebhookPayload, MockPaymentProvider } from '../payments/mockProvider';
 import { setTaxaPlataformaGlobalCore } from '../platform/setTaxaPlataformaGlobal';
@@ -86,6 +87,13 @@ const tsRel = (d: number): Timestamp => Timestamp.fromDate(new Date(Date.now() +
 
 const inscritoAna = {
   nome: 'Ana Souza', email: 'ana@exemplo.com', cpf: '529.982.247-25', modalidade: '10k',
+};
+const inscritoBia = {
+  nome: 'Bia Lima', email: 'bia@exemplo.com', cpf: '111.444.777-35', modalidade: '10k',
+};
+const MARINA = {
+  uid: 'uid-marina',
+  claims: { role: 'tenant_owner', tenantId: TENANT_ID } as AuthClaims,
 };
 
 const baseInput = (eventoId: string, key: string): CreateInscricaoChargeInput => ({
@@ -314,6 +322,90 @@ describe('TAXAFLEX · C4 — financeiro/current híbrido por fatos', () => {
       await eventoRef.update({ receitaConfirmada: receitaAtual });
       await recomputarFinanceiroEvento(db, EVENTO_INC);
     }
+  });
+});
+
+// =============================================================================
+// T4 · RN-181 — estorno: o FIXO entra no rateio cent-exato (maior resto);
+// ∑ das linhas == taxa CARIMBADA; devolve o PAGO; contabilidade segue FACE
+// =============================================================================
+describe('TAXAFLEX · RN-181 — estorno com fixo indivisível', () => {
+  // Grupo de 2 × 189,90 = 379,80 · taxa PIX v1 {6%, R$2,00}:
+  // round(37980 × 600/10000) = 2279c = 22,79 + 2,00 = 24,79 (fixo ÚNICO por
+  // VENDA, não por inscrição). 24,79 / 2 = 12,395 ⇒ maior resto: 12,40 +
+  // 12,39 (empate resolve pelo índice menor — determinístico).
+  const BASE_GRUPO = roundMoney(FACE * 2); // 379.80
+  const TAXA_GRUPO = 24.79;
+  const TOTAL_GRUPO = roundMoney(BASE_GRUPO + TAXA_GRUPO); // 404.59
+  const FATIA_0 = 12.4;
+  const FATIA_1 = 12.39;
+  let pedidoId = '';
+  let pagamentoId = '';
+  let inscritoIds: string[] = [];
+
+  beforeAll(async () => {
+    const charge = await createInscricaoChargeCore(
+      db, provider,
+      {
+        eventoId: EVENTO_REP,
+        inscritos: [inscritoAna, inscritoBia],
+        responsavelIndex: 0,
+        responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+        aceites: { termos: true, saude: true },
+        forma: 'pix', parcelas: 1,
+        idempotencyKey: 'txf-t4-grupo-0001',
+      },
+      { uid: ANA_UID });
+    pedidoId = charge.pedidoId;
+    pagamentoId = charge.pagamentoId;
+    inscritoIds = charge.inscritoIds;
+    expect(charge.valores.totalCobrado).toBe(TOTAL_GRUPO);
+    await confirmar(pedidoId, charge.chargeId, Math.round(TOTAL_GRUPO * 100), 'evt-txf-t4-grupo');
+  }, 60_000);
+
+  it('∑ itens[].taxaRepassada === taxa CARIMBADA (fixo indivisível, maior resto)', async () => {
+    const ped = await db.collection('pedidos').doc(pedidoId).get();
+    const itens = ped.get('itens') as { taxaRepassada?: number }[];
+    const fatias = itens.map((i) => i.taxaRepassada ?? 0);
+    expect(fatias).toEqual([FATIA_0, FATIA_1]);
+    const pag = await db.collection('pagamentos').doc(pagamentoId).get();
+    const carimbo = pag.get('taxaCongelada') as { valor: number };
+    expect(roundMoney(fatias.reduce((s, f) => s + f, 0))).toBe(carimbo.valor);
+    expect((pag.get('conciliacao') as { taxaValor: number }).taxaValor).toBe(carimbo.valor);
+    expect(carimbo.valor).toBe(TAXA_GRUPO);
+  });
+
+  it('estorno linha 0: devolve valorFinal + fatia (202,30); receita reverte SÓ o face', async () => {
+    const receitaAntes = (await db.doc(`eventos/${EVENTO_REP}`).get())
+      .get('receitaConfirmada') as number;
+    const r = await estornarInscricaoCore(
+      db, provider,
+      { pedidoId, inscritoId: inscritoIds[0], motivo: 'TAXAFLEX T4 linha 0' },
+      MARINA);
+    expect(r.duplicado).toBe(false);
+    expect(r.valorEstornado).toBe(roundMoney(FACE + FATIA_0)); // 202.30
+    expect(r.pagamentoEstornadoIntegral).toBe(false);
+    expect(
+      (await db.doc(`eventos/${EVENTO_REP}`).get()).get('receitaConfirmada')
+    ).toBe(roundMoney(receitaAntes - FACE));
+    const ledger = await db.collection('pagamentos').doc(pagamentoId)
+      .collection(ESTORNOS_SUBCOL).doc(inscritoIds[0] as string).get();
+    expect(ledger.get('valor')).toBe(roundMoney(FACE + FATIA_0));
+    expect(ledger.get('valorFace')).toBe(FACE);
+  });
+
+  it('estorno linha 1: integral — Σ devolvido == PAGO == face + taxa carimbada', async () => {
+    const r = await estornarInscricaoCore(
+      db, provider,
+      { pedidoId, inscritoId: inscritoIds[1], motivo: 'TAXAFLEX T4 linha 1' },
+      MARINA);
+    expect(r.valorEstornado).toBe(roundMoney(FACE + FATIA_1)); // 202.29
+    expect(r.pagamentoEstornadoIntegral).toBe(true);
+    const pag = await db.collection('pagamentos').doc(pagamentoId).get();
+    expect(pag.get('status')).toBe('estornado');
+    expect(pag.get('estornadoTotal')).toBe(BASE_GRUPO); // face, nunca a taxa
+    // Cent-exato de ponta a ponta: nada nasce nem some no rateio do fixo
+    expect(roundMoney(202.3 + 202.29)).toBe(TOTAL_GRUPO);
   });
 });
 
