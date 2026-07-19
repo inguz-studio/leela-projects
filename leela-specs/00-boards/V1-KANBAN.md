@@ -24,7 +24,7 @@ tags:
 
 ## 🔄 Em execução
 
-- [ ] **[E04/E12] Modelo do checkout novo** — endereço via CEP, telefone e nascimento entram no modelo, com os dois aceites (termos de compra + declaração de saúde) registrados como prova 🔄 [[LEELA-E04-config-vendas]]
+- [ ] **[E04/E12] Formulário novo do checkout** — comprador preenche endereço pelo CEP, telefone e nascimento, e aceita os termos da compra e o termo de saúde ao pagar 🔄 [[LEELA-E12-landing]]
 
 
 ## ✅ Feito
