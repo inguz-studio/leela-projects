@@ -143,6 +143,137 @@ export function isJanelaAtribuicaoValida(v: unknown): v is number {
 }
 
 // ---------------------------------------------------------------------------
+// Comissão do afiliado (E08 FASE 2 · COMF2 · DECISOES-ABERTAS item 23)
+// ---------------------------------------------------------------------------
+//
+// DINHEIRO — disciplina cent-exata: todo cálculo interno roda em CENTAVOS
+// INTEIROS (nunca float×float solto) e devolve R$ com 2 casas, coerente com
+// os agregados vigentes (`receitaConfirmada`, `valorAtribuido`). O acúmulo
+// nos ∑ segue read-modify-write + roundMoney na MESMA transação da
+// confirmação/estorno (kernel R9-E), NUNCA increment de float.
+//
+// CONGELAMENTO (anti "forja de percentual pós-venda"): a config de comissão
+// vigente no instante da CONFIRMAÇÃO é congelada no doc da conversão
+// (`comissaoConfig` + `comissao`). Mudar a config depois só afeta conversões
+// FUTURAS; o estorno decrementa pela config congelada — nunca pela vigente.
+
+/** Base da comissão: % sobre o valor FACE ou R$ fixo por INSCRIÇÃO. */
+export type TipoComissaoAfiliado = 'percentual' | 'valor_fixo';
+
+export const TIPOS_COMISSAO_AFILIADO: readonly TipoComissaoAfiliado[] = [
+  'percentual',
+  'valor_fixo',
+];
+
+/**
+ * Config de comissão do afiliado (RN-310: o ORGANIZADOR define; o afiliado
+ * só aceita/recusa). `null` no doc = SEM comissão (recorte R9-E intacto).
+ *
+ *  - `percentual`: % sobre o valor FACE da conversão — 0,01..100, passo de
+ *    0,01 (basis points): garante comissão computável cent-exata.
+ *  - `valor_fixo`: R$ POR INSCRIÇÃO confirmada (base coerente com
+ *    `conversoes`, que conta inscrições — premissa 1 do R9-E), cent-exato.
+ */
+export interface ComissaoAfiliado {
+  tipo: TipoComissaoAfiliado;
+  /** Só tipo 'percentual': 0,01..100 com no máx. 2 casas. */
+  percentual?: number;
+  /** Só tipo 'valor_fixo': R$ > 0 por inscrição, 2 casas, ≤ teto são. */
+  valorPorInscricao?: number;
+}
+
+/** Teto são do valor fixo por inscrição (anti configuração absurda). */
+export const COMISSAO_VALOR_POR_INSCRICAO_MAX = 100_000;
+
+/** v tem centavos exatos (múltiplo de 0,01 dentro do ruído de float)? @pure */
+export function isMoneyCentExato(v: unknown): v is number {
+  return (
+    typeof v === 'number' &&
+    Number.isFinite(v) &&
+    Math.abs(v * 100 - Math.round(v * 100)) < 0.001
+  );
+}
+
+/** Valida a config de comissão (shape discriminado estrito). @pure */
+export function isComissaoAfiliadoValida(v: unknown): v is ComissaoAfiliado {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const c = v as Record<string, unknown>;
+  if (c['tipo'] === 'percentual') {
+    const pct = c['percentual'];
+    return (
+      c['valorPorInscricao'] === undefined &&
+      typeof pct === 'number' &&
+      Number.isFinite(pct) &&
+      pct > 0 &&
+      pct <= 100 &&
+      // passo de 0,01% (basis point) — mantém o produto cent-exato
+      Math.abs(pct * 100 - Math.round(pct * 100)) < 0.001
+    );
+  }
+  if (c['tipo'] === 'valor_fixo') {
+    const val = c['valorPorInscricao'];
+    return (
+      c['percentual'] === undefined &&
+      isMoneyCentExato(val) &&
+      (val as number) > 0 &&
+      (val as number) <= COMISSAO_VALOR_POR_INSCRICAO_MAX
+    );
+  }
+  return false;
+}
+
+/**
+ * Comissão de uma conversão (R$, 2 casas) — CENT-EXATA por construção:
+ * centavos inteiros × basis points inteiros, arredondamento half-up no
+ * centavo. `null` = sem comissão (0). Nunca negativa (inputs clampados a 0).
+ * @pure
+ */
+export function computeComissaoConversao(
+  comissao: ComissaoAfiliado | null,
+  valorFace: number,
+  qtdInscricoes: number
+): number {
+  if (comissao === null) return 0;
+  const qtd = Number.isInteger(qtdInscricoes) && qtdInscricoes > 0 ? qtdInscricoes : 0;
+  if (comissao.tipo === 'percentual') {
+    const centavos = Math.max(0, Math.round(valorFace * 100));
+    const bp = Math.round((comissao.percentual ?? 0) * 100);
+    return Math.round((centavos * bp) / 10_000) / 100;
+  }
+  const centavosPorInscricao = Math.max(
+    0,
+    Math.round((comissao.valorPorInscricao ?? 0) * 100)
+  );
+  return (centavosPorInscricao * qtd) / 100;
+}
+
+/**
+ * Saldo de comissão do afiliado = acumulada − repassada (R$, 2 casas).
+ * PODE ser negativo: estorno DEPOIS de um repasse manual já registrado
+ * deixa o afiliado devedor — o saldo mostra a verdade, não esconde. @pure
+ */
+export function saldoComissaoAfiliado(
+  comissaoAcumulada: number,
+  comissaoRepassada: number
+): number {
+  const acumulada = Number.isFinite(comissaoAcumulada) ? comissaoAcumulada : 0;
+  const repassada = Number.isFinite(comissaoRepassada) ? comissaoRepassada : 0;
+  return Math.round((acumulada - repassada + Number.EPSILON) * 100) / 100;
+}
+
+/** Subcoleção de repasses manuais: `.../afiliados/{id}/repasses/{repasseId}`. */
+export const SUBCOLECAO_REPASSES_AFILIADO = 'repasses';
+
+/**
+ * repasseId (idempotência do registro manual): 8..64 chars URL-safe, gerado
+ * pelo CLIENTE (uuid) — replay do mesmo registro colide na chave.
+ */
+export const REPASSE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Teto da observação do repasse manual (higiene de doc). */
+export const REPASSE_OBSERVACAO_MAX = 200;
+
+// ---------------------------------------------------------------------------
 // Entidade
 // ---------------------------------------------------------------------------
 
@@ -195,6 +326,16 @@ export interface Afiliado {
   conversoes: number;
   /** ∑ Valor bruto atribuído (R$) — informativo, SEM comissão (RN-314). */
   valorAtribuido: number;
+  /**
+   * Config de comissão (FASE 2 — organizador define, RN-310). null = sem
+   * comissão. Mudança só afeta conversões FUTURAS (config congelada por
+   * conversão no doc do ledger).
+   */
+  comissao: ComissaoAfiliado | null;
+  /** ∑ Comissão acumulada de conversões CONFIRMADAS (R$) — Function-only. */
+  comissaoAcumulada: number;
+  /** ∑ Comissão já repassada manualmente (R$) — Function-only. */
+  comissaoRepassada: number;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -207,6 +348,8 @@ export interface Afiliado {
 export const CAMPOS_FUNCTION_AFILIADO = [
   'conversoes',
   'valorAtribuido',
+  'comissaoAcumulada',
+  'comissaoRepassada',
   'responsavelUid',
   'responsavelEmail',
   'documentoMascarado',
@@ -256,6 +399,11 @@ export interface SalvarAfiliadoInput {
   documento?: string;
   /** Update: inativar/reativar (clube) — nunca cria estado de convite. */
   status?: 'ativo' | 'inativo';
+  /**
+   * FASE 2: config de comissão. `null` explícito remove (sem comissão);
+   * ausente no update preserva a vigente. Só afeta conversões FUTURAS.
+   */
+  comissao?: ComissaoAfiliado | null;
 }
 
 /**
@@ -324,6 +472,17 @@ export function validarSalvarAfiliadoInput(raw: unknown): string[] {
   const status = input['status'];
   if (status !== undefined && status !== 'ativo' && status !== 'inativo') {
     erros.push('"status" só aceita ativo|inativo (convite é da Function).');
+  }
+  const comissao = input['comissao'];
+  if (
+    comissao !== undefined &&
+    comissao !== null &&
+    !isComissaoAfiliadoValida(comissao)
+  ) {
+    erros.push(
+      '"comissao" inválida: percentual 0,01..100 (passo 0,01) OU ' +
+        `valor_fixo com valorPorInscricao cent-exato > 0 e ≤ ${COMISSAO_VALOR_POR_INSCRICAO_MAX}.`
+    );
   }
   if (input['tipo'] === 'clube') {
     const clubeRef = input['clubeRef'];
@@ -415,6 +574,27 @@ export function parseAfiliado(
   ) {
     throw new Error(`Afiliado ${id}: "valorAtribuido" deve ser número ≥ 0 (∑ Function)`);
   }
+  const comissaoRaw = data['comissao'];
+  if (
+    comissaoRaw !== undefined &&
+    comissaoRaw !== null &&
+    !isComissaoAfiliadoValida(comissaoRaw)
+  ) {
+    throw new Error(`Afiliado ${id}: "comissao" fora do shape (FASE 2)`);
+  }
+  const comissaoAcumulada = data['comissaoAcumulada'];
+  const comissaoRepassada = data['comissaoRepassada'];
+  for (const [campo, valor] of [
+    ['comissaoAcumulada', comissaoAcumulada],
+    ['comissaoRepassada', comissaoRepassada],
+  ] as const) {
+    if (
+      valor !== undefined &&
+      (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0)
+    ) {
+      throw new Error(`Afiliado ${id}: "${campo}" deve ser número ≥ 0 (∑ Function)`);
+    }
+  }
   // PF convidado exige e-mail do convite (chave do aceite — RN-316).
   const responsavelEmail = data['responsavelEmail'];
   if (
@@ -440,6 +620,12 @@ export function parseAfiliado(
     cupomCodigo: typeof cupomCodigo === 'string' ? cupomCodigo : null,
     conversoes: typeof conversoes === 'number' ? conversoes : 0,
     valorAtribuido: typeof valorAtribuido === 'number' ? valorAtribuido : 0,
+    // Docs R9-E (pré-fase 2) não têm os campos — default = sem comissão.
+    comissao: isComissaoAfiliadoValida(comissaoRaw) ? comissaoRaw : null,
+    comissaoAcumulada:
+      typeof comissaoAcumulada === 'number' ? comissaoAcumulada : 0,
+    comissaoRepassada:
+      typeof comissaoRepassada === 'number' ? comissaoRepassada : 0,
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
