@@ -109,6 +109,14 @@ export interface EventoPublico {
   secoes: SecaoPublica[];
   seo: { titulo: string; descricao: string };
   estadoVenda: EstadoVenda;
+  /**
+   * Texto do regulamento da prova (RN-153, ≤50k), quando o organizador o
+   * publicou. Exibido em MODAL na página do evento (LP-VENDAS-KIT/T2). Ausente
+   * = sem regulamento → o componente de regulamento não renderiza.
+   */
+  regulamento?: string;
+  /** Versão vigente do regulamento (RN-149) — referência de exibição. */
+  regulamentoVersao?: number;
 }
 
 /** Resumo de evento para o card da home marketplace. */

@@ -10,6 +10,7 @@ import { JsonLd } from '../../components/JsonLd';
 import { SectionRenderer } from './SectionRenderer';
 import { HeroMinimo } from './sections/HeroMinimo';
 import { GaleriaSection } from './sections/GaleriaSection';
+import { RegulamentoSection } from './sections/RegulamentoSection';
 import { OrganizadorSection } from './sections/OrganizadorSection';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
@@ -193,6 +194,10 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
       ) : (
         <HeroMinimo evento={evento} />
       )}
+
+      {/* Regulamento da prova em MODAL (LP-VENDAS-KIT/T2). Self-gated: some sem
+          costura quando o organizador não publicou regulamento (RN-153). */}
+      <RegulamentoSection evento={evento} />
 
       {/* Galeria de imagens de EXEMPLO (LEELA-R12 · Frente 2.4) — só na página
           completa (evento com seções). Assets locais brasa, app-side (RN-153). */}

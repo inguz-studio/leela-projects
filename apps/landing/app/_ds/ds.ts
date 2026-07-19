@@ -39,6 +39,8 @@ export {
   RadioGroup,
   RadioCard,
   Stepper,
+  // Modal (Radix Dialog do DS) — regulamento do evento (LP-VENDAS-KIT/T2).
+  Modal,
   // Estados de sistema (404/500 públicos) — LEELA-E07-web · S500-T3 / S502-T1.
   SystemStateScreen,
 } from '@leela/design-system';

@@ -5,8 +5,17 @@ brief: .nirvana/briefs/leela-lp-vendas-kit-enriched.md
 
 ## Estado das tasks
 - [x] T1 — Imagens mock semi-realistas (fotos royalty-free) nas superfícies públicas
-- [ ] T2 — Modal de regulamento na página do evento (Dialog/Modal do DS)
+- [x] T2 — Modal de regulamento na página do evento (Dialog/Modal do DS)
 - [x] T3 — KitEditor no painel (descrição/itens/upload 1:1) + exibição no KitDetalhe
+
+## T2 FEITO (gates: tsc 0 · eslint 0 · verify:brand PASS)
+- `regulamento` (+ regulamentoVersao) projetado p/ EventoPublico (tipos + leitor,
+  ≤50k REGULAMENTO_MAX, só string não-vazia; texto puro, sem dangerouslySetInnerHTML).
+- `RegulamentoSection` (client) na página do evento: Dobra + título + botão →
+  Modal (Dialog do DS §8, size lg, scroll interno, Exo 2). Self-gated: sem
+  regulamento não renderiza (nada de vazio fake). Modal exportado no boundary _ds/ds.
+- Gate visual precisa de evento COM regulamento → injeção aditiva no emulator
+  (sem tocar seed/functions).
 
 ## T3 FEITO (gates: tsc 0 · eslint 0 · KitEditor 8/8 verde)
 - KitEditor ganhou: Textarea de descrição (≤280 c/ contador), editor de "o que está

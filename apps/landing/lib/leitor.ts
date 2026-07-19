@@ -21,6 +21,7 @@
 
 import {
   isUrlCapaValida,
+  REGULAMENTO_MAX,
   parseKit,
   parseLote,
   parsePaginaVendas,
@@ -295,6 +296,22 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
     const modalidadeEsporte =
       texto(data['modalidadeEsporte']).trim() || esporteDoEvento(nome, modalidadesNomes);
 
+    // Regulamento (RN-153 · T2): só string não-vazia atravessa, capada em 50k
+    // (REGULAMENTO_MAX) — vira TEXTO num modal (nunca `dangerouslySetInnerHTML`).
+    // Ausente/vazio ⇒ o componente de regulamento não renderiza na página.
+    const regulamentoRaw = data['regulamento'];
+    const regulamento =
+      typeof regulamentoRaw === 'string' && regulamentoRaw.trim().length > 0
+        ? regulamentoRaw.slice(0, REGULAMENTO_MAX)
+        : undefined;
+    const regulamentoVersaoRaw = data['regulamentoVersao'];
+    const regulamentoVersao =
+      typeof regulamentoVersaoRaw === 'number' &&
+      Number.isInteger(regulamentoVersaoRaw) &&
+      regulamentoVersaoRaw > 0
+        ? regulamentoVersaoRaw
+        : undefined;
+
     const evento: EventoPublico = {
       slug,
       nome,
@@ -315,6 +332,8 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       seo,
       estadoVenda,
       ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
+      ...(regulamento !== undefined ? { regulamento } : {}),
+      ...(regulamentoVersao !== undefined ? { regulamentoVersao } : {}),
     };
     return evento;
   } catch (err) {
