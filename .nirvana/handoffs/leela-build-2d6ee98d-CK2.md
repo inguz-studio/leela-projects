@@ -8,8 +8,15 @@ employee: sf-backend-lead (software-forge) · modelo: Fable · 2026-07-19
       checkout, corrida serializa por retry otimista), `pessoaRef` no inscrito (CAMPOS_FUNCTION +
       Rules + espelhos), first-claim de conta + anti-hijack, Rules `pessoas` deny-all.
       Integração 5/5 (incl. corrida concorrente) + unit 13 novas + espelhos 55.
-- [ ] T2 — RN-154 gênero no [reg] + prefill sem vazar PII (callable getCheckoutPrefill) — código pronto, integração 3/3
-- [ ] T3 — RN-155 conta sem fricção (Firebase Auth + link de senha oficial + EmailProvider fail-closed)
+- [x] T2 `706bf77` — RN-154: genero no input (enum GENEROS_INSCRITO reusado) → [reg] + dadosConhecidos
+      da pessoa; callable `getCheckoutPrefill` (só o PRÓPRIO via contaUid do token; anônimo=null);
+      api-client espelhado. Integração 3/3.
+- [x] T3 — RN-155: `contaSemFriccao.ts` (conta Auth SEM senha na 1ª compra confirmada +
+      `generatePasswordResetLink` oficial + EmailProvider fail-closed → carimbo
+      `pedidos/{id}.contaSemFriccao` {contaUid, contaCriada, emailStatus: enviado|pendente_chave|
+      falha_envio|nao_aplicavel, pessoaVinculada}); disparo best-effort pós-confirmação nos 3
+      confirmadores (sandbox/pagamentoWebhook/asaasWebhook) — falha NUNCA quebra compra; template
+      renderContaCriadaEmail (escape+link-servidor). Integração 5/5 (auth emulator real) + unit 3.
 - [ ] T4 — RN-156 termo de saúde base sempre + custom aditivo versionado (fence server-side F-4a pattern)
 - [ ] T5 — RN-157 PIX expira 30 min (contrato provider + pixExpiraEm + expirarPixPendente)
 - [ ] T6 — review antagonista Fable contexto fresco + fixes re-provados

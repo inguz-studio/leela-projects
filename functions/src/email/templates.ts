@@ -206,6 +206,55 @@ export function renderConviteAssessoriaEmail(
 }
 
 // ---------------------------------------------------------------------------
+// Conta criada sem fricção (CK2-T3 · RN-155 — consumidor contaSemFriccao)
+// ---------------------------------------------------------------------------
+
+export interface ContaCriadaEmailInput {
+  nomeComprador: string;
+  nomeEvento: string;
+  /**
+   * Link OFICIAL do Firebase Auth para definir a senha
+   * (`generatePasswordResetLink` — oobCode single-use; nunca token próprio).
+   */
+  linkDefinirSenha: string;
+}
+
+export function renderContaCriadaEmail(
+  input: ContaCriadaEmailInput
+): EmailRenderizado {
+  if (!isLinkDeAppValido(input.linkDefinirSenha)) {
+    throw new Error('linkDefinirSenha inválido para template (montagem do servidor).');
+  }
+  const nome = limparCampoCurto(input.nomeComprador, TEMPLATE_NOME_MAX) || 'Olá';
+  const evento = limparCampoCurto(input.nomeEvento, TEMPLATE_NOME_MAX) || 'seu evento';
+  const nomeEsc = escapeHtml(nome);
+  const eventoEsc = escapeHtml(evento);
+  const linkEsc = escapeHtml(input.linkDefinirSenha);
+
+  const assunto = limparCampoCurto(
+    'Sua conta na Leela foi criada — defina sua senha',
+    TEMPLATE_ASSUNTO_MAX
+  );
+  const html = layoutBase(
+    'Sua conta na Leela foi criada',
+    `<p style="margin:0 0 12px;">${nomeEsc}, sua inscrição em ` +
+      `<strong>${eventoEsc}</strong> foi confirmada e criamos uma conta para ` +
+      `você acompanhar a compra.</p>` +
+      `<p style="margin:0 0 12px;">Defina uma senha para acessar sua conta e ` +
+      `visualizar a inscrição quando quiser.</p>` +
+      botaoLink(linkEsc, 'Definir minha senha') +
+      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">Se você não ` +
+      `fez esta compra, ignore esta mensagem — nenhuma senha foi definida.</p>`
+  );
+  const texto =
+    `${nome}, sua inscrição em ${evento} foi confirmada e criamos uma conta ` +
+    `para você acompanhar a compra.\n\nDefina sua senha: ` +
+    `${input.linkDefinirSenha}\n\nSe você não fez esta compra, ignore esta ` +
+    `mensagem — nenhuma senha foi definida.`;
+  return { assunto, html, texto };
+}
+
+// ---------------------------------------------------------------------------
 // Campanha por e-mail (E06 — consumidor `executarDisparoCampanha`)
 // ---------------------------------------------------------------------------
 

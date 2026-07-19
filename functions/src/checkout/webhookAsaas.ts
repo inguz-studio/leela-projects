@@ -48,6 +48,7 @@ import {
   AsaasWebhookAssinaturaError,
 } from '../payments/asaasProvider';
 import { selectPaymentProvider } from '../payments/selectProvider';
+import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
 import {
   processarWebhookPagamento,
   WebhookRejeitadoError,
@@ -220,6 +221,8 @@ export const asaasWebhook = https.onRequest(async (req, res) => {
       res.status(200).json({ ok: true, ignorado: true });
       return;
     }
+    // CK2-T3 (RN-155): conta sem fricção pós-confirmação (best-effort).
+    await dispararContaSemFriccaoPosConfirmacao(admin.firestore(), r.resultado);
     logger.info('webhook_asaas_processado', {
       pedidoId: r.resultado.pedidoId,
       chargeId: r.resultado.chargeId,

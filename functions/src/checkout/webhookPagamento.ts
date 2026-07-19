@@ -50,6 +50,7 @@ import {
   type WebhookResult,
 } from '@leela/core';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
+import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
 
 type Db = admin.firestore.Firestore;
 
@@ -578,6 +579,9 @@ export const pagamentoWebhook = https.onRequest(async (req, res) => {
       provider,
       req.body
     );
+    // CK2-T3 (RN-155): conta sem fricção pós-confirmação (best-effort —
+    // roda ANTES da resposta; Functions encerra após o res.json).
+    await dispararContaSemFriccaoPosConfirmacao(admin.firestore(), resultado);
     logger.info('webhook_pagamento_processado', {
       pedidoId: resultado.pedidoId,
       chargeId: resultado.chargeId,

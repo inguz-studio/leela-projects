@@ -1,0 +1,280 @@
+// =============================================================================
+// functions/src/checkout/contaSemFriccao.ts
+//
+// Conta SEM FRICÇÃO na primeira compra (LEELA-CK2-T3 · RN-155 · DEC-0719).
+//
+// Primeira compra CONFIRMADA de um e-mail sem conta → cria a conta Firebase
+// Auth automaticamente (SEM senha — zero fricção no fluxo de compra) e envia
+// e-mail com o link OFICIAL do Firebase para definir a senha e ver a compra
+// (`generatePasswordResetLink` — oobCode single-use do próprio Auth; NUNCA
+// token inventado aqui). Recompra do mesmo e-mail/CPF NÃO recria conta nem
+// reenvia e-mail (idempotente — RN-173 linka via registry de pessoa).
+//
+// ONDE RODA: PÓS-CONFIRMAÇÃO, FORA da transação de dinheiro — chamado pelos
+// três confirmadores (confirmarPagamentoSandbox, pagamentoWebhook,
+// asaasWebhook) em modo BEST-EFFORT: NENHUMA falha aqui (Auth fora do ar,
+// e-mail sem chave, doc torto) quebra a confirmação da compra. O resultado
+// fica carimbado no pedido (`pedidos/{id}.contaSemFriccao`) — replay lê o
+// carimbo e não repete efeito.
+//
+// FAIL-CLOSED DO E-MAIL (RN-137): sem `BREVO_API_KEY` o selectEmailProvider
+// devolve null → o envio fica registrado como `pendente_chave` no carimbo
+// (pendência observável; a compra NUNCA quebra; e2e do envio real = skip
+// documentado até a chave existir). Conta JÁ existente ⇒ `nao_aplicavel`
+// (avisar "sua conta foi criada" para conta antiga seria mentira/phishing).
+//
+// VÍNCULO PESSOA↔CONTA (RN-173): a conta criada reivindica a pessoa do
+// CPF do responsável-inscrito SÓ se ainda não reivindicada (first-claim —
+// mesma regra anti-hijack do pessoaRegistry).
+// =============================================================================
+
+import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import * as logger from 'firebase-functions/logger';
+import { COLECAO_PESSOAS, validarEmail, type EmailProvider } from '@leela/core';
+import { selectEmailProvider } from '../email/selectEmailProvider';
+import { renderContaCriadaEmail } from '../email/templates';
+
+type Db = admin.firestore.Firestore;
+
+// ---------------------------------------------------------------------------
+// Contratos (Auth injetável — testes cobrem sem/with Auth emulator)
+// ---------------------------------------------------------------------------
+
+/** Porta mínima do Firebase Auth que o fluxo usa (injetável nos testes). */
+export interface ContaSemFriccaoAuth {
+  /** uid da conta do e-mail, ou null quando não existe. */
+  getUidPorEmail(email: string): Promise<string | null>;
+  /** Cria a conta SEM senha; devolve o uid. */
+  criarConta(params: { email: string; displayName?: string }): Promise<string>;
+  /** Link oficial de definição de senha (generatePasswordResetLink). */
+  gerarLinkDefinirSenha(email: string): Promise<string>;
+}
+
+export type EmailStatusContaSemFriccao =
+  | 'enviado'
+  | 'pendente_chave'
+  | 'falha_envio'
+  | 'nao_aplicavel';
+
+export interface ContaSemFriccaoResultado {
+  /** false = nada feito nesta chamada (replay, pedido inelegível). */
+  processado: boolean;
+  contaUid: string | null;
+  contaCriada: boolean;
+  emailStatus: EmailStatusContaSemFriccao | null;
+  motivo?: string;
+}
+
+/** Adapter default sobre admin.auth() (produção/emulator). */
+export function contaSemFriccaoAuthAdmin(): ContaSemFriccaoAuth {
+  return {
+    async getUidPorEmail(email) {
+      try {
+        return (await admin.auth().getUserByEmail(email)).uid;
+      } catch (err) {
+        if ((err as { code?: string }).code === 'auth/user-not-found') return null;
+        throw err;
+      }
+    },
+    async criarConta(params) {
+      try {
+        return (
+          await admin.auth().createUser({
+            email: params.email,
+            ...(params.displayName !== undefined
+              ? { displayName: params.displayName }
+              : {}),
+            emailVerified: false,
+          })
+        ).uid;
+      } catch (err) {
+        // Corrida rara (dois confirmadores): conta nasceu no meio — re-lê.
+        if ((err as { code?: string }).code === 'auth/email-already-exists') {
+          const uid = await this.getUidPorEmail(params.email);
+          if (uid !== null) return uid;
+        }
+        throw err;
+      }
+    },
+    async gerarLinkDefinirSenha(email) {
+      return admin.auth().generatePasswordResetLink(email);
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Núcleo (testável com Admin SDK contra o Emulator)
+// ---------------------------------------------------------------------------
+
+export async function garantirContaSemFriccao(
+  db: Db,
+  pedidoId: string,
+  auth: ContaSemFriccaoAuth,
+  emailProvider: EmailProvider | null
+): Promise<ContaSemFriccaoResultado> {
+  const pedidoRef = db.collection('pedidos').doc(pedidoId);
+  const pedidoSnap = await pedidoRef.get();
+  const nada = (motivo: string): ContaSemFriccaoResultado => ({
+    processado: false,
+    contaUid: null,
+    contaCriada: false,
+    emailStatus: null,
+    motivo,
+  });
+  if (!pedidoSnap.exists) return nada('pedido_inexistente');
+  if (pedidoSnap.get('status') !== 'pago') return nada('pedido_nao_pago');
+  const marker = pedidoSnap.get('contaSemFriccao') as
+    | { contaUid?: string | null; contaCriada?: boolean; emailStatus?: string }
+    | undefined;
+  if (marker !== undefined) {
+    return {
+      processado: false,
+      contaUid: typeof marker.contaUid === 'string' ? marker.contaUid : null,
+      contaCriada: marker.contaCriada === true,
+      emailStatus: (marker.emailStatus ?? null) as EmailStatusContaSemFriccao | null,
+      motivo: 'ja_processado',
+    };
+  }
+
+  const emailRaw = pedidoSnap.get('responsavel.email') as string | undefined;
+  const nome = (pedidoSnap.get('responsavel.nome') as string | undefined) ?? '';
+  if (typeof emailRaw !== 'string' || !validarEmail(emailRaw)) {
+    return nada('email_invalido');
+  }
+  const email = emailRaw.trim().toLowerCase();
+
+  // 1. Conta: reusa a existente; cria SEM senha quando não há (RN-155).
+  let contaUid = await auth.getUidPorEmail(email);
+  const contaCriada = contaUid === null;
+  if (contaUid === null) {
+    contaUid = await auth.criarConta({
+      email,
+      ...(nome.length > 0 ? { displayName: nome } : {}),
+    });
+  }
+
+  // 2. Vínculo pessoa↔conta (RN-173, first-claim): a pessoa do CPF do
+  //    responsável-INSCRITO. Compra para terceiros (sem responsavelIndex)
+  //    não tem CPF do pagador — sem vínculo (limitação documentada).
+  const eventoId = pedidoSnap.get('eventoId') as string;
+  const inscritoRefs = (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [];
+  let pessoaVinculada = false;
+  for (const inscritoId of inscritoRefs) {
+    const inscritoSnap = await db
+      .doc(`eventos/${eventoId}/inscritos/${inscritoId}`)
+      .get();
+    if (inscritoSnap.get('ehResponsavel') !== true) continue;
+    const pessoaRef = inscritoSnap.get('pessoaRef') as string | null | undefined;
+    if (typeof pessoaRef !== 'string' || pessoaRef.length === 0) break;
+    await db.runTransaction(async (tx) => {
+      const ref = db.collection(COLECAO_PESSOAS).doc(pessoaRef);
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const atual = snap.get('contaUid') as string | null | undefined;
+      if (typeof atual === 'string' && atual.length > 0) return; // first-claim
+      tx.update(ref, { contaUid, atualizadoEm: FieldValue.serverTimestamp() });
+      pessoaVinculada = true;
+    });
+    break;
+  }
+
+  // 3. E-mail com o link de senha — SÓ para conta recém-criada.
+  let emailStatus: EmailStatusContaSemFriccao;
+  if (!contaCriada) {
+    emailStatus = 'nao_aplicavel';
+  } else if (emailProvider === null) {
+    // Fail-closed RN-137: sem chave, pendência registrada — compra intocada.
+    emailStatus = 'pendente_chave';
+  } else {
+    try {
+      const link = await auth.gerarLinkDefinirSenha(email);
+      const eventoSnap = await db.collection('eventos').doc(eventoId).get();
+      const nomeEvento =
+        (eventoSnap.get('nome') as string | undefined) ?? 'seu evento';
+      const rendered = renderContaCriadaEmail({
+        nomeComprador: nome,
+        nomeEvento,
+        linkDefinirSenha: link,
+      });
+      await emailProvider.sendTransactional({
+        to: { email, ...(nome.length > 0 ? { nome } : {}) },
+        assunto: rendered.assunto,
+        html: rendered.html,
+        texto: rendered.texto,
+        tag: 'conta-sem-friccao',
+      });
+      emailStatus = 'enviado';
+    } catch (err) {
+      // Envio é acessório — falha registrada, compra intocada.
+      logger.error('conta_sem_friccao_email_falhou', {
+        pedidoId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      emailStatus = 'falha_envio';
+    }
+  }
+
+  // 4. Carimbo no pedido (replay-proof): grava UMA vez; corrida entre dois
+  //    confirmadores é teórica (confirmação é exactly-once via ledger) e o
+  //    pior caso é benigno (mesmo uid, mesmo estado).
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(pedidoRef);
+    if (!snap.exists || snap.get('contaSemFriccao') !== undefined) return;
+    tx.update(pedidoRef, {
+      contaSemFriccao: {
+        contaUid,
+        contaCriada,
+        emailStatus,
+        pessoaVinculada,
+        processadoEm: FieldValue.serverTimestamp(),
+      },
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+  });
+
+  // Sem PII no log (LGPD) — nunca o e-mail/nome.
+  logger.info('conta_sem_friccao', {
+    pedidoId,
+    contaCriada,
+    emailStatus,
+    pessoaVinculada,
+  });
+  return { processado: true, contaUid, contaCriada, emailStatus };
+}
+
+// ---------------------------------------------------------------------------
+// Disparo pós-confirmação (best-effort — os 3 confirmadores chamam)
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispara o fluxo APÓS uma confirmação efetivada (`statusGateway confirmed`
+ * sem `ignorado`/`duplicado`). Engole QUALQUER erro com log — a resposta do
+ * webhook/callable nunca falha por causa de conta/e-mail (a compra é a
+ * prioridade; o carimbo ausente deixa a pendência visível para reprocesso).
+ */
+export async function dispararContaSemFriccaoPosConfirmacao(
+  db: Db,
+  resultado: { statusGateway: string; ignorado: boolean; duplicado: boolean; pedidoId: string }
+): Promise<void> {
+  if (
+    resultado.statusGateway !== 'confirmed' ||
+    resultado.ignorado ||
+    resultado.duplicado
+  ) {
+    return;
+  }
+  try {
+    await garantirContaSemFriccao(
+      db,
+      resultado.pedidoId,
+      contaSemFriccaoAuthAdmin(),
+      selectEmailProvider()
+    );
+  } catch (err) {
+    logger.error('conta_sem_friccao_falhou', {
+      pedidoId: resultado.pedidoId,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+}

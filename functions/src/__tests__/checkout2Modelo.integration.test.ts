@@ -28,9 +28,19 @@ import {
 } from '../checkout/createInscricaoCharge';
 import { pessoaDocIdDoCpf } from '../checkout/pessoaRegistry';
 import { getCheckoutPrefillCore } from '../checkout/prefillCheckout';
+import {
+  contaSemFriccaoAuthAdmin,
+  garantirContaSemFriccao,
+} from '../checkout/contaSemFriccao';
+import { confirmarPagamentoSandboxCore } from '../checkout/confirmarPagamentoSandbox';
 import { MockPaymentProvider } from '../payments/mockProvider';
 
 const PROJECT_ID = 'demo-leela-ck2';
+
+// T3 (RN-155): o adapter REAL de Auth roda contra o Auth Emulator da lane de
+// teste (9598 via firebase.r6.json; honra LEELA_AUTH_EMU_PORT).
+process.env['FIREBASE_AUTH_EMULATOR_HOST'] =
+  `localhost:${process.env['LEELA_AUTH_EMU_PORT'] ?? '9099'}`;
 const TENANT_ID = 'castelo-producoes';
 const EVENTO_ID = 'meia-floripa-2026';
 const ANA_UID = 'uid-ana-anon';
@@ -396,5 +406,132 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
       uid: 'conta-outra', ehAnonimo: false,
     });
     expect(terceiro.prefill).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T3 — RN-155 · conta sem fricção na 1ª compra (fail-closed sem chave Brevo)
+// ---------------------------------------------------------------------------
+
+describe('CK2-T3 — RN-155: conta sem fricção', () => {
+  const CPF_DAVI = '963.074.185-75';
+
+  function inputDavi(key: string): CreateInscricaoChargeInput {
+    return inputCk2(key, {
+      inscritos: [{
+        nome: 'Davi Estreante', email: 'davi@exemplo.com.br', cpf: CPF_DAVI,
+        modalidade: '10k', nascimento: '1992-02-02', genero: 'masculino',
+      }],
+      responsavelIndex: 0,
+      responsavel: { nome: 'Davi Estreante', email: 'Davi@Exemplo.com.br' },
+    });
+  }
+
+  it('1ª compra confirmada SEM chave Brevo: conta criada sem senha, pessoa vinculada, pendência de envio registrada — compra INTOCADA', async () => {
+    delete process.env['BREVO_API_KEY']; // estado real de produção hoje
+    const r = await createInscricaoChargeCore(db, provider, inputDavi('ck2-t3-first-01'), {
+      uid: 'anon-davi', ehAnonimo: true,
+    });
+    // Confirmação pela porta única (sandbox dispara o webhook assinado) —
+    // o pós-confirmação chama o fluxo de conta com o adapter REAL de Auth
+    // contra o Auth Emulator.
+    const conf = await confirmarPagamentoSandboxCore(db, provider, {
+      pedidoId: r.pedidoId,
+    }, { uid: 'anon-davi' });
+    expect(conf.statusPedido).toBe('pago');
+
+    const pedidoSnap = await db.collection('pedidos').doc(r.pedidoId).get();
+    const marker = pedidoSnap.get('contaSemFriccao') as Record<string, unknown>;
+    expect(marker).toBeDefined();
+    expect(marker['contaCriada']).toBe(true);
+    expect(marker['emailStatus']).toBe('pendente_chave'); // fail-closed RN-137
+    expect(marker['pessoaVinculada']).toBe(true);
+    const contaUid = marker['contaUid'] as string;
+    expect(typeof contaUid).toBe('string');
+
+    // A conta EXISTE no Auth (sem senha — link de senha é o caminho de acesso)
+    const user = await admin.auth().getUserByEmail('davi@exemplo.com.br');
+    expect(user.uid).toBe(contaUid);
+
+    // Pessoa do CPF do responsável vinculada à conta nova (first-claim)
+    const pessoa = parsePessoa(
+      pessoaDocIdDoCpf(CPF_DAVI),
+      (await db.doc(`pessoas/${pessoaDocIdDoCpf(CPF_DAVI)}`).get()).data() ?? {}
+    );
+    expect(pessoa.contaUid).toBe(contaUid);
+
+    // Prefill agora funciona para a conta criada (ponte anon→conta — RN-154)
+    const prefill = await getCheckoutPrefillCore(db, {
+      uid: contaUid, ehAnonimo: false,
+    });
+    expect(prefill.prefill?.cpf).toBe('96307418575');
+    expect(prefill.prefill?.genero).toBe('masculino');
+  });
+
+  it('replay do fluxo: marker existente ⇒ nenhum efeito novo (idempotente)', async () => {
+    const pedidoId = 'ped-anon-davi-ck2-t3-first-01';
+    const resultado = await garantirContaSemFriccao(
+      db, pedidoId, contaSemFriccaoAuthAdmin(), null
+    );
+    expect(resultado.processado).toBe(false);
+    expect(resultado.motivo).toBe('ja_processado');
+  });
+
+  it('RECOMPRA do mesmo e-mail: conta NÃO recriada, e-mail nao_aplicavel (linka via RN-173)', async () => {
+    const r = await createInscricaoChargeCore(db, provider, inputDavi('ck2-t3-second-01'), {
+      uid: 'anon-davi-2', ehAnonimo: true,
+    });
+    await confirmarPagamentoSandboxCore(db, provider, { pedidoId: r.pedidoId }, {
+      uid: 'anon-davi-2',
+    });
+    const marker = (await db.collection('pedidos').doc(r.pedidoId).get())
+      .get('contaSemFriccao') as Record<string, unknown>;
+    expect(marker['contaCriada']).toBe(false);
+    expect(marker['emailStatus']).toBe('nao_aplicavel'); // sem reenvio
+    // Mesmo uid da primeira compra (getUserByEmail — nunca segunda conta)
+    const user = await admin.auth().getUserByEmail('davi@exemplo.com.br');
+    expect(marker['contaUid']).toBe(user.uid);
+  });
+
+  it('falha do provedor de e-mail NÃO quebra: carimbo falha_envio, conta criada', async () => {
+    const cpf = '111.444.777-35';
+    const r = await createInscricaoChargeCore(db, provider, inputCk2('ck2-t3-fail-01', {
+      inscritos: [{ nome: 'Elisa Nova', email: 'elisa@exemplo.com.br', cpf, modalidade: '10k' }],
+      responsavelIndex: 0,
+      responsavel: { nome: 'Elisa Nova', email: 'elisa@exemplo.com.br' },
+    }), { uid: 'anon-elisa', ehAnonimo: true });
+    // Estado 'pago' SIMULADO por Admin (sem passar pelo disparo automático —
+    // este teste isola o ramo contaCriada+provider hostil do garantir).
+    await db.collection('pedidos').doc(r.pedidoId).update({ status: 'pago' });
+    const hostil = {
+      name: 'hostil',
+      sendTransactional: async () => {
+        throw new Error('provider fora do ar');
+      },
+    };
+    const resultado = await garantirContaSemFriccao(
+      db, r.pedidoId, contaSemFriccaoAuthAdmin(), hostil
+    );
+    expect(resultado.processado).toBe(true);
+    expect(resultado.contaCriada).toBe(true);
+    expect(resultado.emailStatus).toBe('falha_envio');
+    // Conta EXISTE apesar da falha de envio; compra intocada
+    const user = await admin.auth().getUserByEmail('elisa@exemplo.com.br');
+    expect(user.uid).toBe(resultado.contaUid);
+    expect((await db.collection('pedidos').doc(r.pedidoId).get()).get('status')).toBe('pago');
+  });
+
+  it('pedido NÃO pago: fluxo não roda (conta nunca nasce de compra pendente)', async () => {
+    const r = await createInscricaoChargeCore(db, provider, inputCk2('ck2-t3-pend-01', {
+      inscritos: [{ nome: 'Fabio Pendente', email: 'fabio@exemplo.com.br', cpf: CPF_ANA, modalidade: '10k' }],
+      responsavelIndex: 0,
+      responsavel: { nome: 'Fabio Pendente', email: 'fabio@exemplo.com.br' },
+    }), { uid: 'anon-fabio', ehAnonimo: true });
+    const resultado = await garantirContaSemFriccao(
+      db, r.pedidoId, contaSemFriccaoAuthAdmin(), null
+    );
+    expect(resultado.processado).toBe(false);
+    expect(resultado.motivo).toBe('pedido_nao_pago');
+    await expect(admin.auth().getUserByEmail('fabio@exemplo.com.br')).rejects.toThrow();
   });
 });
