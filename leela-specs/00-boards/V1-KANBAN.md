@@ -24,11 +24,13 @@ tags:
 
 ## 🔄 Em execução
 
-- [ ] **[E00] Telas de conta** — login, cadastro, recuperação e configurações 🔄 aguarda review [[LEELA-E00-fundacao-tecnica]]
+- [ ] **[E19/E08] Tela do CRM + comissão no painel** — organizador vê seus clientes (LTV, histórico entre eventos, aniversários) e configura/acompanha a comissão do influenciador 🔄 [[LEELA-E19-crm]]
+- [ ] **[E04/E12] Modelo do checkout novo** — endereço via CEP, telefone e nascimento entram no modelo, com os dois aceites (termos de compra + declaração de saúde) registrados como prova 🔄 [[LEELA-E04-config-vendas]]
 
 
 ## ✅ Feito
 
+- [x] **[E00] Telas de conta** — login, cadastro, recuperação e configurações ✅ (entregue e aprovado em review 2026-07-13, lote S020; card estava defasado) [[LEELA-E00-fundacao-tecnica]]
 - [x] **[E01] Varredura §8 no painel (W2 do gate de DS)** — as telas antigas trocaram as datas, as buscas, os campos de texto, os radinhos, os "⋯" e os filtros feitos à mão pelos componentes oficiais do DS; a divisória fantasma (que aparecia 3× mais grossa) foi corrigida e o modal de regulamento da landing agora tem conteúdo em 3 eventos do preview ✅ [[BOARD-HISTORICO]]
 - [x] **[E01/E12] Modal e primitivos do design system na página pública** — o modal acessível vira peça oficial do DS e a home carrega menos código para o mesmo visual ✅ [[BOARD-HISTORICO]]
 - [x] **[E12] Blindagem da página pública (SECFIX)** — dado do organizador não vira código na página do evento, convites com token ficam fora do Google e o modal de regulamento prende o teclado dentro dele ✅ [[BOARD-HISTORICO]]
