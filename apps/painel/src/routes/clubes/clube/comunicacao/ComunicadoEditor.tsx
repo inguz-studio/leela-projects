@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Badge, Button, Chip, Input, RadioCard, RadioGroup, Tabs, useToast } from '@leela/design-system';
+import { Badge, Button, Chip, Input, RadioCard, RadioGroup, Tabs, Textarea, useToast } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
 import { DateField } from '@/components/fields/DateField';
 import type {
@@ -174,15 +174,12 @@ export function ComunicadoEditor({
               placeholder="Treino especial de sábado"
             />
             <div className="flex flex-col gap-1">
-              <label htmlFor="comunicado-conteudo" className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-                Conteúdo
-              </label>
-              <textarea
+              <Textarea
                 id="comunicado-conteudo"
+                label="Conteúdo"
                 rows={4}
                 value={values.conteudo}
                 onChange={(e) => patch({ conteudo: e.target.value })}
-                className="w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
               />
               <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
                 {charCount} caracteres{values.canais.includes('push') ? ` · push corta em ${PUSH_MAX_CHARS}` : ''}

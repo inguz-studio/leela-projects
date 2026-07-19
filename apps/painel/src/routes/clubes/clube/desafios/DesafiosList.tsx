@@ -15,8 +15,11 @@ import {
   Chip,
   EmptyState,
   DropdownMenu,
+  IconButton,
+  SearchInput,
   Skeleton,
 } from '@leela/design-system';
+import { MoreVertical } from 'lucide-react';
 import type { Desafio, ModeloDesafio, StatusDesafio } from '@leela/core';
 import { copyPreparacao } from '@leela/core';
 import { formatInt } from '../../_lib/format';
@@ -122,13 +125,9 @@ function DesafioCardComActions({
             onClick: () => onAcao?.(desafio, a.id),
           }))}
           trigger={
-            <button
-              type="button"
-              aria-label={`Ações de ${desafio.nome}`}
-              className="rounded-[var(--radius-sm)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--text-secondary)] hover:bg-[var(--action-ghost-hover)] hover:text-[var(--text-primary)]"
-            >
-              <span aria-hidden>⋯</span>
-            </button>
+            <IconButton aria-label={`Ações de ${desafio.nome}`}>
+              <MoreVertical />
+            </IconButton>
           }
         />
       </div>
@@ -218,13 +217,12 @@ export function DesafiosList({
       </div>
 
       <div className="flex flex-col gap-[var(--spacing-3)]">
-        <input
-          type="search"
+        <SearchInput
           aria-label="Buscar desafio por nome"
           placeholder="Buscar por nome"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          className="max-w-md rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-raised)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
+          shortcutLabel={null}
         />
         <div className="flex flex-wrap items-center gap-[var(--spacing-4)]">
           <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">

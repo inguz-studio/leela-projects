@@ -10,7 +10,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, Modal, Tabs, useToast } from '@leela/design-system';
+import { Button, Modal, Tabs, Textarea, useToast } from '@leela/design-system';
 import type { TabItem } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { parseEmails, validarConvite } from '@leela/core';
@@ -94,16 +94,13 @@ export function ConviteModal({ open, onOpenChange, clube, onEnviar }: ConviteMod
       label: 'Por email',
       content: (
         <div className="flex flex-col gap-[var(--spacing-3)]">
-          <label htmlFor="convite-emails" className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Emails dos convidados
-          </label>
-          <textarea
+          <Textarea
             id="convite-emails"
+            label="Emails dos convidados"
             rows={4}
             value={rawEmails}
             onChange={(e) => setRawEmails(e.target.value)}
             placeholder="pedro@gmail.com, ana@gmail.com, carlos@outlook.com"
-            className="rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-3)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]"
           />
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
             {emails.length > 0

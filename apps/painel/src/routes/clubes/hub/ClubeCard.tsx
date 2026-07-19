@@ -6,7 +6,8 @@
 // exclusividade C3 é gerida pelo hub, que mantém um único popover aberto).
 // =============================================================================
 
-import { Avatar, Badge, Button, DropdownMenu } from '@leela/design-system';
+import { Avatar, Badge, Button, DropdownMenu, IconButton } from '@leela/design-system';
+import { MoreVertical } from 'lucide-react';
 import type { DropdownMenuAction } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
@@ -92,13 +93,9 @@ export function ClubeCard({
             onOpenChange={onPopoverOpenChange ?? (() => {})}
             align="right"
             trigger={
-              <button
-                type="button"
-                aria-label={`Ações de ${clube.nome}`}
-                className="shrink-0 rounded-[var(--radius-sm)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--text-secondary)] hover:bg-[var(--action-ghost-hover)] hover:text-[var(--text-primary)]"
-              >
-                <span aria-hidden>⋯</span>
-              </button>
+              <IconButton aria-label={`Ações de ${clube.nome}`} className="shrink-0">
+                <MoreVertical />
+              </IconButton>
             }
           />
         ) : null}

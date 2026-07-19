@@ -20,6 +20,7 @@ import {
   Select,
   Switch,
   Tabs,
+  Textarea,
   useToast,
   type SelectOption,
   type TabItem,
@@ -294,18 +295,12 @@ export function CampanhaEditor({
               placeholder="Seu kit está pronto para retirada"
             />
             <div className="flex flex-col gap-1">
-              <label
-                htmlFor="campanha-conteudo"
-                className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
-              >
-                Conteúdo
-              </label>
-              <textarea
+              <Textarea
                 id="campanha-conteudo"
+                label="Conteúdo"
                 rows={4}
                 value={values.conteudo}
                 onChange={(e) => patch({ conteudo: e.target.value })}
-                className="w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
               />
               <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
                 {charCount} caracteres

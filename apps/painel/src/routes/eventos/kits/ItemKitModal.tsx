@@ -7,7 +7,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal, useToast } from '@leela/design-system';
+import { Button, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
 import type { ItemKit, OrigemItem } from '@leela/core';
 import type { SalvarItemKitInput } from '@leela/api-client';
 
@@ -122,43 +122,25 @@ export function ItemKitModal({
           {...(erro && nome.trim().length === 0 ? { errorMessage: erro } : {})}
         />
 
-        <fieldset className="flex flex-col gap-[var(--spacing-2)]">
-          <legend className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-            Tipo
-          </legend>
-          <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-            <input type="radio" name="tipo" checked={tamanhado} onChange={() => setTamanhado(true)} />
-            Tamanhado (camiseta)
-          </label>
-          <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-            <input type="radio" name="tipo" checked={!tamanhado} onChange={() => setTamanhado(false)} />
-            Único (sacochila, amostra)
-          </label>
-        </fieldset>
+        <RadioGroup
+          name="tipo"
+          label="Tipo"
+          value={tamanhado ? 'tamanhado' : 'unico'}
+          onValueChange={(v) => setTamanhado(v === 'tamanhado')}
+        >
+          <Radio value="tamanhado" label="Tamanhado (camiseta)" />
+          <Radio value="unico" label="Único (sacochila, amostra)" />
+        </RadioGroup>
 
-        <fieldset className="flex flex-col gap-[var(--spacing-2)]">
-          <legend className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-            Origem
-          </legend>
-          <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-            <input
-              type="radio"
-              name="origem"
-              checked={origem === 'organizador'}
-              onChange={() => trocarOrigem('organizador')}
-            />
-            Organizador
-          </label>
-          <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-            <input
-              type="radio"
-              name="origem"
-              checked={origem === 'patrocinador'}
-              onChange={() => trocarOrigem('patrocinador')}
-            />
-            Patrocinador
-          </label>
-        </fieldset>
+        <RadioGroup
+          name="origem"
+          label="Origem"
+          value={origem}
+          onValueChange={(v) => trocarOrigem(v as OrigemItem)}
+        >
+          <Radio value="organizador" label="Organizador" />
+          <Radio value="patrocinador" label="Patrocinador" />
+        </RadioGroup>
 
         {patrocinado && (
           <div className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-md)] bg-[var(--surface-high)] p-[var(--spacing-4)]">

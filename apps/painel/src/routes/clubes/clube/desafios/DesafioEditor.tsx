@@ -16,6 +16,7 @@ import {
   RadioCard,
   RadioGroup,
   Tabs,
+  Textarea,
   CardDesafio,
   useToast,
 } from '@leela/design-system';
@@ -247,18 +248,13 @@ export function DesafioEditor({
               onChange={(e) => patch({ nome: e.target.value })}
               placeholder="Desafio 21 dias de constância"
             />
-            <div className="flex flex-col gap-1">
-              <label htmlFor="desafio-descricao" className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-                Descrição
-              </label>
-              <textarea
-                id="desafio-descricao"
-                rows={2}
-                value={values.descricao}
-                onChange={(e) => patch({ descricao: e.target.value })}
-                className="w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
-              />
-            </div>
+            <Textarea
+              id="desafio-descricao"
+              label="Descrição"
+              rows={2}
+              value={values.descricao}
+              onChange={(e) => patch({ descricao: e.target.value })}
+            />
             <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
               <DateField id="desafio-inicio" label="Início" value={values.dataInicio} onChange={(dataInicio) => patch({ dataInicio })} />
               <DateField id="desafio-fim" label="Término" value={values.dataFim} onChange={(dataFim) => patch({ dataFim })} />

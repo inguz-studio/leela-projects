@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Chip, FileInput, Input, Select } from '@leela/design-system';
+import { Badge, Button, Chip, FileInput, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import {
@@ -227,25 +227,17 @@ export function ConfiguracoesView({
           }
           salvarDisabled={nome.trim().length === 0}
         >
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Nome do clube</span>
-            <input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              aria-label="Nome do clube"
-              className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Descrição</span>
-            <textarea
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              aria-label="Descrição"
-              rows={2}
-              className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
-            />
-          </label>
+          <Input
+            label="Nome do clube"
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+          />
+          <Textarea
+            label="Descrição"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            rows={2}
+          />
           {/* Capa do clube (RN-166 · S1702-T1 + LEELA-R5) — upload de arquivo
               OU URL colada + prévia; sem capa a página pública usa o gradiente
               do DS. */}
@@ -345,21 +337,19 @@ export function ConfiguracoesView({
           refCb={(el) => { if (el) refs.current.pagina = el; }}
           onSalvar={() => void onSalvar({ visibilidade })}
         >
-          <label className="flex flex-col gap-1">
-            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Slug público</span>
-            {/* Read-only (fix S4): docId = slug por design — editar aqui era
-                descartado em silêncio sob o toast de sucesso da seção. */}
-            <input
+          {/* Read-only (fix S4): docId = slug por design — editar aqui era
+              descartado em silêncio sob o toast de sucesso da seção. */}
+          <div className="flex flex-col gap-1">
+            <Input
+              label="Slug público"
               value={clube.slug}
               readOnly
-              aria-label="Slug público"
               aria-describedby="slug-hint"
-              className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-tertiary)] focus:outline-none"
             />
             <span id="slug-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
               be-hero.com.br/c/{clube.slug} — o endereço público é definido na criação do clube e não pode ser alterado.
             </span>
-          </label>
+          </div>
           <div className="flex flex-col gap-[var(--spacing-2)]">
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">Visibilidade</span>
             <div role="group" aria-label="Visibilidade" className="flex flex-wrap gap-[var(--spacing-2)]">
@@ -411,21 +401,17 @@ export function ConfiguracoesView({
           refCb={(el) => { if (el) refs.current.moderacao = el; }}
           emBreve
         >
-          <div role="group" aria-label="Comportamento dos membros" className="flex flex-col gap-[var(--spacing-2)]">
+          <RadioGroup
+            name="comportamento"
+            aria-label="Comportamento dos membros"
+            value={comportamento}
+            onValueChange={(v) => setComportamento(v as ComportamentoMembros)}
+            disabled
+          >
             {COMPORTAMENTOS.map((c) => (
-              <label key={c.id} className="flex items-center gap-[var(--spacing-2)]">
-                <input
-                  type="radio"
-                  name="comportamento"
-                  disabled
-                  checked={comportamento === c.id}
-                  onChange={() => setComportamento(c.id)}
-                />
-                <span className="text-[var(--text-secondary)]">{c.label}</span>
-                <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">{c.hint}</span>
-              </label>
+              <Radio key={c.id} value={c.id} label={c.label} description={c.hint} />
             ))}
-          </div>
+          </RadioGroup>
         </Secao>
 
         <Secao

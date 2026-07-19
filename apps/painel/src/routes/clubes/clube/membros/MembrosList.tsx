@@ -14,8 +14,10 @@ import {
   ConfirmModal,
   Input,
   DropdownMenu,
+  IconButton,
   Skeleton,
 } from '@leela/design-system';
+import { MoreVertical } from 'lucide-react';
 import type { PapelMembro, StatusMembro, Membro } from '@leela/core';
 import { MembrosTable } from '../../_components/MembrosTable';
 import {
@@ -175,13 +177,9 @@ export function MembrosList({
               { id: 'remover', label: 'Remover do clube', destructive: true, onClick: () => setConfirmar({ membro: m, tipo: 'remover' }) },
             ]}
             trigger={
-              <button
-                type="button"
-                aria-label={`Ações de ${m.atletaNome}`}
-                className="rounded-[var(--radius-sm)] px-[var(--spacing-2)] py-[var(--spacing-1)] text-[var(--text-secondary)] hover:bg-[var(--action-ghost-hover)] hover:text-[var(--text-primary)]"
-              >
-                <span aria-hidden>⋯</span>
-              </button>
+              <IconButton aria-label={`Ações de ${m.atletaNome}`}>
+                <MoreVertical />
+              </IconButton>
             }
           />
         )}

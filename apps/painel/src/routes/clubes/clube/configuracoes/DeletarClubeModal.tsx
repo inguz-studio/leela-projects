@@ -8,7 +8,7 @@
 // =============================================================================
 
 import { useState } from 'react';
-import { Badge, Button, Modal } from '@leela/design-system';
+import { Badge, Button, Input, Modal } from '@leela/design-system';
 
 export interface DeletarClubeModalProps {
   open: boolean;
@@ -92,18 +92,21 @@ export function DeletarClubeModal({
           </Button>
         </div>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="deletar-confirmacao"
+            className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]"
+          >
             Digite <strong>{nomeClube}</strong> para confirmar
-          </span>
-          <input
+          </label>
+          <Input
+            id="deletar-confirmacao"
             value={confirmacao}
             onChange={(e) => setConfirmacao(e.target.value)}
             aria-label="Confirmar nome do clube"
             placeholder={nomeClube}
-            className="rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-[var(--border-strong)] bg-[var(--surface-base)] px-[var(--input-px)] py-[var(--spacing-2)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--border-focus)]"
           />
-        </label>
+        </div>
       </div>
     </Modal>
   );

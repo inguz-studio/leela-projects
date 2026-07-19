@@ -7,7 +7,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { Button, Chip, Combobox, FileInput, Input, Modal } from '@leela/design-system';
+import { Button, Chip, Combobox, FileInput, Input, Modal, Textarea } from '@leela/design-system';
 import type { ComboboxOption } from '@leela/design-system';
 import type { Marca, ModeloComercial } from '@leela/core';
 import {
@@ -214,16 +214,13 @@ export function AddPatrocinadorModal({
         ) : null}
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="patrocinador-contrapartida" className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Contrapartida
-          </label>
-          <textarea
+          <Textarea
             id="patrocinador-contrapartida"
+            label="Contrapartida"
             rows={3}
             value={contrapartida}
             onChange={(e) => setContrapartida(e.target.value)}
             placeholder="O que o patrocinador recebe/entrega (mín. 20 caracteres)."
-            className="rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-3)] text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--border-focus)]"
           />
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
             {contrapartida.trim().length}/{CONTRAPARTIDA_MIN} caracteres mínimos
