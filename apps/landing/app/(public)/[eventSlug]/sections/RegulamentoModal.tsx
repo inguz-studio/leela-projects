@@ -16,12 +16,21 @@
 //
 // A11y (DoD Modal): role=dialog + aria-modal + aria-labelledby; 4 vias de
 // fechamento (X, Esc, clique no overlay, botão Fechar); foco entra no fechar ao
-// abrir e RETORNA ao gatilho ao fechar; scroll do body travado enquanto aberto.
+// abrir e RETORNA ao gatilho ao fechar; scroll do body travado enquanto aberto;
+// FOCUS TRAP de Tab (W2-F-05 · GATE-DS-W2): aria-modal sinaliza AT mas NÃO
+// bloqueia teclado — o mini-trap abaixo mantém Tab/Shift+Tab cíclico dentro do
+// painel (Radix-free, constraint vigente da landing).
 // =============================================================================
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { FileText, X } from 'lucide-react';
 import { Button } from '@/app/_ds/ds';
+
+// Seletor dos elementos focáveis do painel (suficiente para o conteúdo do
+// modal: botões + eventuais links no texto). Mantido simples de propósito —
+// não é um focus-trap genérico de biblioteca.
+const FOCAVEIS =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function RegulamentoModal({
   regulamento,
@@ -34,14 +43,39 @@ export function RegulamentoModal({
   const tituloId = useId();
   const gatilhoRef = useRef<HTMLButtonElement | null>(null);
   const fecharRef = useRef<HTMLButtonElement | null>(null);
+  const painelRef = useRef<HTMLDivElement | null>(null);
 
   const fechar = useCallback(() => setAberto(false), []);
 
-  // Esc fecha; foco entra no botão fechar ao abrir; scroll do body travado.
+  // Esc fecha; foco entra no botão fechar ao abrir; scroll do body travado;
+  // Tab/Shift+Tab ficam CÍCLICOS dentro do painel (focus trap · W2-F-05).
   useEffect(() => {
     if (!aberto) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') fechar();
+      if (e.key === 'Escape') {
+        fechar();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const painel = painelRef.current;
+      if (painel === null) return;
+      const focaveis = Array.from(painel.querySelectorAll<HTMLElement>(FOCAVEIS));
+      if (focaveis.length === 0) return;
+      const primeiro = focaveis[0]!;
+      const ultimo = focaveis[focaveis.length - 1]!;
+      const ativo = document.activeElement;
+      const dentroDoPainel = ativo instanceof HTMLElement && painel.contains(ativo);
+      if (e.shiftKey) {
+        // Shift+Tab no primeiro (ou com foco fora do painel) → cicla p/ último.
+        if (!dentroDoPainel || ativo === primeiro) {
+          e.preventDefault();
+          ultimo.focus();
+        }
+      } else if (!dentroDoPainel || ativo === ultimo) {
+        // Tab no último (ou com foco fora do painel) → cicla p/ primeiro.
+        e.preventDefault();
+        primeiro.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     const overflowAntes = document.body.style.overflow;
@@ -76,7 +110,10 @@ export function RegulamentoModal({
           />
 
           {/* Painel — surface-raised, radius e elevação do DS; scroll interno. */}
-          <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-t-ds-lg bg-surface-raised shadow-elev-3 sm:rounded-ds-lg">
+          <div
+            ref={painelRef}
+            className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-t-ds-lg bg-surface-raised shadow-elev-3 sm:rounded-ds-lg"
+          >
             <div className="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
               <div className="min-w-0">
                 <h3
