@@ -31,6 +31,10 @@ export function LotesSection({ evento }: { evento: EventoPublico }): React.JSX.E
               <span className="font-display text-2xl font-extrabold text-text-brand">
                 {formatarPreco(evento.precoMinimo)}
               </span>
+              {/* A-5/CKFORM-T4: badge SÓ quando o evento repassa (RN-347). */}
+              {evento.taxaRepassada ? (
+                <span className="text-sm text-text-tertiary"> + taxa de serviço</span>
+              ) : null}
             </p>
           ) : null}
         </div>

@@ -149,8 +149,8 @@ describe('StepPagamento — A-3 · PIX com QR visual + copiar', () => {
   });
 });
 
-describe('StepModalidadeKit — A-5 · transparência da taxa', () => {
-  it('mostra a nota de taxa de serviço no step 0, antes do resumo', () => {
+describe('StepModalidadeKit — A-5/CKFORM-T4 · nota de taxa CONDICIONAL (RN-347)', () => {
+  function renderKit(taxaRepassada: boolean): void {
     render(
       <StepModalidadeKit
         modalidades={[{ nome: '5k', precoVigente: 5000 }]}
@@ -162,8 +162,19 @@ describe('StepModalidadeKit — A-5 · transparência da taxa', () => {
         onRemoveInscrito={noop}
         errosModalidade={[]}
         errosKit={[]}
+        taxaRepassada={taxaRepassada}
       />,
     );
-    expect(screen.getByText(/eventuais taxas de serviço/i)).toBeTruthy();
+  }
+
+  it('evento em modo repassada: nota da taxa aparece no step 0, antes do resumo', () => {
+    renderKit(true);
+    expect(screen.getByText(/repassa a taxa de serviço/i)).toBeTruthy();
+  });
+
+  it('evento em modo incorporada: SEM nota de taxa (a antiga nota fixa saiu)', () => {
+    renderKit(false);
+    expect(screen.queryByText(/taxa de serviço/i)).toBeNull();
+    expect(screen.queryByText(/eventuais taxas/i)).toBeNull();
   });
 });

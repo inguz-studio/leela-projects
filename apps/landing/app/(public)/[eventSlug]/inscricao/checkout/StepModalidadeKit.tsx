@@ -33,6 +33,7 @@ export function StepModalidadeKit({
   onRemoveInscrito,
   errosModalidade,
   errosKit,
+  taxaRepassada,
 }: {
   modalidades: { nome: string; precoVigente: number | null }[];
   kits: KitPublico[];
@@ -43,6 +44,8 @@ export function StepModalidadeKit({
   onRemoveInscrito: (index: number) => void;
   errosModalidade: (string | undefined)[];
   errosKit: (string | undefined)[];
+  /** RN-347 (leitor · CKFORM-T4): `true` = evento repassa a taxa ao comprador. */
+  taxaRepassada: boolean;
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
@@ -51,13 +54,16 @@ export function StepModalidadeKit({
         <ApoioEtapa>
           Escolha o percurso e o kit de cada atleta. O total aparece no resumo.
         </ApoioEtapa>
-        {/* A-5 · transparência de preço: sinaliza a possível taxa ANTES do
-            resumo, sem revelar percentual nem mudar a matemática (o valor real
-            sai da cotação do servidor — RN-347). */}
-        <p className="mt-2 text-xs text-text-tertiary">
-          Eventuais taxas de serviço, quando houver, entram no total exibido no resumo, antes do
-          pagamento.
-        </p>
+        {/* A-5 → CKFORM-T4: a nota vira CONDICIONAL pelo flag real do evento
+            (taxaRepassada do leitor — RN-347): só quando o evento repassa a
+            taxa; nunca revela percentual nem muda a matemática (o valor real
+            sai da cotação do servidor). Evento 'incorporada' fica sem ruído. */}
+        {taxaRepassada ? (
+          <p className="mt-2 text-xs text-text-tertiary">
+            Este evento repassa a taxa de serviço: ela entra no total exibido no resumo, antes do
+            pagamento.
+          </p>
+        ) : null}
       </div>
 
       {inscritos.map((inscrito, i) => {

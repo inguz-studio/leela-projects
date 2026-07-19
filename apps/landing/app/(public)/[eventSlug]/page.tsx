@@ -226,7 +226,8 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
             <p className="truncate text-sm font-semibold text-text-primary">{evento.nome}</p>
             <p className="text-xs text-text-secondary">
               {vendaAberta && evento.precoMinimo !== null
-                ? `a partir de R$ ${evento.precoMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                ? // A-5/CKFORM-T4: "+ taxa" SÓ quando o evento repassa (RN-347).
+                  `a partir de R$ ${evento.precoMinimo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${evento.taxaRepassada ? ' + taxa de serviço' : ''}`
                 : 'Inscrições encerradas'}
             </p>
           </div>

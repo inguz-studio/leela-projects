@@ -103,6 +103,11 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
                 <span className="font-semibold text-text-primary">
                   {formatarPreco(evento.precoMinimo)}
                 </span>
+                {/* A-5/CKFORM-T4: sublinha SÓ quando o evento repassa a taxa
+                    (RN-347 — flag do leitor; nunca o percentual do tenant). */}
+                {evento.taxaRepassada ? (
+                  <span className="text-text-tertiary"> + taxa de serviço</span>
+                ) : null}
               </p>
             ) : (
               <p className="text-sm font-medium text-text-tertiary">

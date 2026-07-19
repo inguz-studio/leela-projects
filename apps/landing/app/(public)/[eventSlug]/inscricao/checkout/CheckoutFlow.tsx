@@ -645,6 +645,7 @@ export function CheckoutFlow({
             onRemoveInscrito={removeInscrito}
             errosModalidade={errosModalidade}
             errosKit={errosKit}
+            taxaRepassada={evento.taxaRepassada}
           />
         ) : null}
 

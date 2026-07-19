@@ -72,6 +72,10 @@ export function HeroMinimo({ evento }: { evento: EventoPublico }): React.JSX.Ele
               <span className="font-semibold text-text-primary">
                 {formatarPreco(evento.precoMinimo)}
               </span>
+              {/* A-5/CKFORM-T4: sublinha condicional pelo flag RN-347. */}
+              {evento.taxaRepassada ? (
+                <span className="text-text-tertiary"> + taxa de serviço</span>
+              ) : null}
             </p>
           ) : (
             <p className="text-sm font-medium text-text-tertiary">

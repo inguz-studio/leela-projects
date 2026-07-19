@@ -40,6 +40,10 @@ export function CheckoutCtaSection({ evento }: { evento: EventoPublico }): React
             <span className="font-semibold text-text-primary">
               {formatarPreco(evento.precoMinimo)}
             </span>
+            {/* A-5/CKFORM-T4: sublinha condicional pelo flag RN-347. */}
+            {evento.taxaRepassada ? (
+              <span className="text-text-tertiary"> + taxa de serviço</span>
+            ) : null}
           </p>
         ) : null}
       </div>
