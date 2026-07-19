@@ -568,6 +568,19 @@ export {
 } from './pedidos/aceites';
 
 // ---------------------------------------------------------------------------
+// CK2 — RN-173: registro global de pessoa por CPF (unicidade estrutural pela
+// chave; colisão = mesma pessoa, linka, nunca duplica). Base do linking da
+// conta (RN-155), do prefill (RN-154) e do CRM (RN-172).
+// ---------------------------------------------------------------------------
+export type { Pessoa, DadosConhecidosPessoa } from './pedidos/pessoa';
+export {
+  COLECAO_PESSOAS,
+  PESSOA_ID_PREFIXO_CPF,
+  mesclarDadosConhecidosPessoa,
+  parsePessoa,
+} from './pedidos/pessoa';
+
+// ---------------------------------------------------------------------------
 // Checkout (LEELA-E12 · fundação) — estado de venda puro
 // preço vigente → cupom → valorFinal → taxa → parcelamento (reusa lote/cupom/
 // finance); validação mínima do inscrito; máquina de etapas. A UI (S1203) e

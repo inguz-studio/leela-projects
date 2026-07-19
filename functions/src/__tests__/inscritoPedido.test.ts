@@ -137,6 +137,8 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       // S904-T4 (RN-345): trilha de titularidade — Function-only (drift do
       // teste-espelho vs lista canônica; corrigido no CKMOD)
       'titularHistorico',
+      // CK2 (RN-173): vínculo ao registro global de pessoa — Function-only
+      'pessoaRef',
     ]);
   });
 });

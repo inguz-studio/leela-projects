@@ -98,7 +98,7 @@ type DocData = Record<string, unknown>;
  * nem ecoar o valor. Checagem em TEMPO DE CHAMADA (não no load do módulo) —
  * o deploy não quebra, o gatilho quebra alto se mal provisionado.
  */
-function crmIdPepper(): string {
+export function crmIdPepper(): string {
   const pepper = process.env['CRM_ID_PEPPER'];
   if (typeof pepper !== 'string' || pepper.length === 0) {
     throw new Error(

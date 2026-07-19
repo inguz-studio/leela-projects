@@ -714,7 +714,7 @@ service cloud.firestore {
           return !request.resource.data.keys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
-             'estornadoEm', 'titularHistorico']
+             'estornadoEm', 'titularHistorico', 'pessoaRef']
           );
         }
 
@@ -738,7 +738,8 @@ service cloud.firestore {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
-             'estornadoEm', 'titularHistorico', 'atletaNome', 'atletaId', 'modalidade']
+             'estornadoEm', 'titularHistorico', 'atletaNome', 'atletaId', 'modalidade',
+             'pessoaRef']
           );
         }
 
@@ -2341,6 +2342,18 @@ service cloud.firestore {
     match /pedidos/{pedidoId} {
       allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
       allow write: if false;
+    }
+
+    // `pessoas/{pessoaId}` — registro GLOBAL de identidade por CPF (CK2 ·
+    // RN-173). docId = HMAC do CPF (path sem PII); o DOC carrega CPF em
+    // claro + dados conhecidos + contaUid — PII pura, cross-tenant.
+    // TUDO fechado para cliente (leitura incluída — nem platform_admin via
+    // client SDK): escrita é da Function do checkout (na tx do pedido) e do
+    // linking de conta (RN-155); a ÚNICA leitura de superfície é o callable
+    // getCheckoutPrefill, que devolve SÓ o registro da PRÓPRIA conta
+    // autenticada (RN-172 — PII de terceiro nunca atravessa).
+    match /pessoas/{pessoaId} {
+      allow read, write: if false;
     }
 
     // `equipe` — gestão de time do tenant: write restrito ao tenant_owner

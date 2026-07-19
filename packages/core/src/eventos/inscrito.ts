@@ -151,6 +151,14 @@ export interface Inscrito {
    */
   pedidoRef: string | null;
   /**
+   * RN-173 (CK2) — vínculo ao registro global de pessoa (→ pessoas/{id},
+   * docId derivado do CPF por HMAC — nunca o CPF em claro). Inscrições do
+   * MESMO CPF apontam o MESMO doc (unicidade estrutural). Ausente = doc
+   * legado pré-RN-173 (leitura Postel); null = sem vínculo. Escrita SÓ pela
+   * Function do checkout.
+   */
+  pessoaRef?: string | null;
+  /**
    * ADR-011 — este inscrito também é o responsável/pagador do pedido
    * (auto-inscrição = pedido de 1 inscrito com ehResponsavel = true).
    * Coerência com `pedido.responsavel` verificável por
@@ -250,6 +258,10 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   // `requestTransfer`. Cliente forjá-la reescreveria quem é o titular
   // (e quem corre/retira kit) sem passar pelas guardas de kit/chip/janela.
   'titularHistorico',
+  // CK2 (RN-173): vínculo ao registro global de pessoa — só a Function do
+  // checkout escreve. Cliente forjá-lo religaria a inscrição a outra
+  // identidade (contaminaria CRM/prefill).
+  'pessoaRef',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -385,6 +397,20 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   // distinta de null = "cobrado sem kit") — exactOptionalPropertyTypes.
   if (kitId !== undefined) {
     inscrito.kitId = typeof kitId === 'string' ? kitId : null;
+  }
+
+  // RN-173 (CK2): pessoaRef presente deve ser id não-vazio ou null; ausente
+  // = doc legado pré-registro (Postel). Vínculo corrompido lança fail-fast.
+  const pessoaRef = data['pessoaRef'];
+  if (
+    pessoaRef !== undefined &&
+    pessoaRef !== null &&
+    (typeof pessoaRef !== 'string' || pessoaRef.length === 0)
+  ) {
+    throw new Error(`Inscrito ${id}: "pessoaRef" inválido (string|null — RN-173)`);
+  }
+  if (pessoaRef !== undefined) {
+    inscrito.pessoaRef = typeof pessoaRef === 'string' ? pessoaRef : null;
   }
 
   if (data['dadosPessoais'] !== undefined) {

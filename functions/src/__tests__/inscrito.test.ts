@@ -155,6 +155,9 @@ describe('derivações puras de Inscrito', () => {
       // transferência de titularidade — só a Function requestTransfer/decide
       // escreve). O espelho aqui ficou stale até a varredura CKFORM.
       'titularHistorico',
+      // CK2 (RN-173): + pessoaRef (vínculo ao registro global de pessoa —
+      // só a Function do checkout escreve).
+      'pessoaRef',
     ]);
   });
 });

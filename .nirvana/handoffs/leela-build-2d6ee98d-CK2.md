@@ -1,0 +1,38 @@
+# Handoff — leela-build-2d6ee98d · lote CHECKOUT2-MODELO (CK2)
+
+employee: sf-backend-lead (software-forge) · modelo: Fable · 2026-07-19
+
+## Estado por task
+
+- [ ] T1 — RN-173 CPF único global (registry `pessoas` transacional + pessoaRef no inscrito + Rules deny-all) — EM ANDAMENTO
+- [ ] T2 — RN-154 gênero no [reg] + prefill sem vazar PII (callable getCheckoutPrefill)
+- [ ] T3 — RN-155 conta sem fricção (Firebase Auth + link de senha oficial + EmailProvider fail-closed)
+- [ ] T4 — RN-156 termo de saúde base sempre + custom aditivo versionado (fence server-side F-4a pattern)
+- [ ] T5 — RN-157 PIX expira 30 min (contrato provider + pixExpiraEm + expirarPixPendente)
+- [ ] T6 — review antagonista Fable contexto fresco + fixes re-provados
+- [ ] T7 — boards/épicos E12/E19/E04 + report
+
+## Decisões de desenho (premissas — consolidar no report)
+
+1. **Registry `pessoas/{cpf_<hmac32>}`** — docId = HMAC-SHA256(CRM_ID_PEPPER, `pessoa:cpf:{cpf11}`)[0:32]
+   (reuso do pepper do CRM, domínio de mensagem distinto — path sem PII; padrão do registry de
+   @handle: unicidade estrutural pela CHAVE, escrita só por Function, Rules deny-all).
+   CPF em claro FICA no doc (Function-only; necessário p/ prefill e gateway) — minimização RN-172
+   segue valendo no CRM (que nunca lê este doc em claro).
+2. **Anti-hijack de conta**: `contaUid` só é escrito quando null (first-claim); `dadosConhecidos`
+   só atualiza se pessoa não-reivindicada OU caller autenticado == contaUid. Compra de terceiro com
+   CPF alheio nunca lê nem regrava dados da vítima.
+3. **Duplicatas pré-existentes**: registry nasce vazio; inscritos legados sem `pessoaRef` = leitura
+   Postel; produção sem dado real ⇒ nada a migrar; backfill = reprocesso Admin futuro (follow-up).
+4. **PIX expirado**: transição escolhida = `pendente → cancelado` + `canceladoMotivo: 'pix_expirado'`
+   (matriz existente reusada; retry = NOVA cotação/pedido com idempotencyKey nova — BC-1).
+   Enforcement de 30 min é da PLATAFORMA (Asaas real: dueDate é dia-nível; contrato do provider
+   coberto por teste; follow-up produção: cancelar cobrança no gateway ao expirar).
+5. **Link de senha** = `admin.auth().generatePasswordResetLink` (fluxo oficial Firebase, oobCode
+   single-use). Conta já existente ⇒ não recria, não reenvia (idempotente por marker no pedido).
+
+## Portas/lanes
+
+Emulator TESTE: 8480/9598 (`firebase.r6.json` + emulators:exec fb-tools@13, JDK 21 ~/.jdks) —
+NUNCA :8180/:9198 do preview. Não tocar: apps/painel, apps/landing (exceto leitores), packages/design-system,
+.nirvana/HANDOFF.md, produto/00-MOC-produto.md. Lane UPLOAD-SWEEP ativa no painel.

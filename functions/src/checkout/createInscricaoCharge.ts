@@ -94,6 +94,11 @@ import {
   hashPoliticaVendas,
 } from '../eventos/versionarPoliticaVendas';
 import { selectPaymentProvider } from '../payments/selectProvider';
+import {
+  lerPessoasNaTx,
+  planejarPessoasDoCheckout,
+  upsertPessoasNaTx,
+} from './pessoaRegistry';
 import { agoraCheckout } from './relogioCheckout';
 
 type Db = admin.firestore.Firestore;
@@ -240,6 +245,14 @@ export interface CreateInscricaoChargeResult {
 /** Identidade do caller (extraída do context.auth pelo wrapper callable). */
 export interface CheckoutCaller {
   uid: string;
+  /**
+   * true = sessão ANÔNIMA do checkout público (sign_in_provider
+   * 'anonymous'); false = conta real autenticada. Controla o first-claim do
+   * vínculo pessoa↔conta (RN-173/155): anônimo NUNCA reivindica conta —
+   * `undefined` (chamador legado) é tratado como anônimo (fail-safe: na
+   * dúvida, não vincular).
+   */
+  ehAnonimo?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -1002,6 +1015,12 @@ async function criarDocsDeCheckout(
     sale.taxaRepassada
   );
 
+  // RN-173 (CK2-T1): plano de upsert do registry de pessoas — derivado do
+  // input VALIDADO, uma entrada por CPF distinto (docId determinístico =
+  // unicidade estrutural; ver pessoaRegistry.ts).
+  const { planos: planosPessoa, pessoaIdPorInscrito } =
+    planejarPessoasDoCheckout(input, caller);
+
   try {
     await db.runTransaction(async (tx) => {
       const jaExiste = await tx.get(pedidoRef);
@@ -1108,6 +1127,11 @@ async function criarDocsDeCheckout(
         }
       }
 
+      // RN-173 (CK2-T1): leitura dos docs de pessoa AINDA na fase de leitura
+      // da tx (contrato de transação) — corrida de dois checkouts com o
+      // MESMO CPF serializa por retry otimista, nunca duplica pessoa.
+      const leiturasPessoa = await lerPessoasNaTx(db, tx, planosPessoa);
+
       // Inscritos — subcoleção do evento (ADR-011); nascem 'pendente'
       input.inscritos.forEach((inscrito, i) => {
         const inscritoId = inscritoIds[i];
@@ -1166,6 +1190,11 @@ async function criarDocsDeCheckout(
           modalidade: inscrito.modalidade,
           pedidoRef: pedidoId,
           ehResponsavel,
+          // RN-173 (CK2-T1): vínculo inscrição → pessoa (registry global de
+          // CPF). Colisão de CPF = MESMA pessoa: inscrições distintas
+          // apontam o MESMO doc — nunca duplica. Inscrições pré-CK2 não têm
+          // o campo (leitura Postel nos consumidores).
+          pessoaRef: pessoaIdPorInscrito[i] ?? null,
           // RN-223 (T4): só entra aqui o que validarTamanhosDoCheckout
           // aprovou contra os SKUs configurados (fail-closed ANTES de
           // qualquer escrita) — o balcão/estoque leem tamanho legítimo.
@@ -1293,6 +1322,10 @@ async function criarDocsDeCheckout(
         };
       }
       tx.create(pagamentoRef, pagamentoDoc);
+
+      // RN-173 (CK2-T1): upsert do registry de pessoas na MESMA tx do
+      // pedido — first-claim de conta + merge anti-hijack (pessoaRegistry).
+      upsertPessoasNaTx(db, tx, leiturasPessoa);
     });
   } catch (err) {
     // Corrida entre retries do MESMO key: create() colidiu — os docs já
@@ -1587,11 +1620,19 @@ export const createInscricaoCharge = https.onCall(async (data: unknown, context)
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
+  // CK2 (RN-173/155): anônimo vs conta real — lido do TOKEN verificado
+  // (sign_in_provider), nunca do payload (cliente não escolhe reivindicar).
+  const signInProvider = (
+    context.auth.token as { firebase?: { sign_in_provider?: string } }
+  ).firebase?.sign_in_provider;
   return createInscricaoChargeCore(
     admin.firestore(),
     selectPaymentProvider(),
     data,
-    { uid: context.auth.uid },
+    {
+      uid: context.auth.uid,
+      ehAnonimo: signInProvider === undefined || signInProvider === 'anonymous',
+    },
     // Relógio da venda: real em produção; honra LEELA_CLOCK SÓ no emulator
     // (demo contra o seed de datas fixas — ver relogioCheckout.ts). ⚠️ Fable.
     agoraCheckout
