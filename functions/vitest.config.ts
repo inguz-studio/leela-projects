@@ -14,7 +14,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 30_000,
-    setupFiles: [],
+    // CK2-T6: CRM_ID_PEPPER de TESTE global — o checkout (RN-173) passou a
+    // exigir o pepper (fail-closed); ver vitest.setup.ts.
+    setupFiles: ['./vitest.setup.ts'],
     // Coleta SÓ os testes-fonte; lib/ contém artefatos compilados (tsc)
     // que quebravam a coleta do vitest (F6 — review S1600).
     include: ['src/**/*.test.ts'],
