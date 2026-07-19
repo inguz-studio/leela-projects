@@ -58,11 +58,11 @@ export interface SalvarKitInput {
   capacidade: number;
   modalidades: string[];
   /**
-   * R9-C (RN-229) — frase que posiciona o kit no checkout (≤280).
+   * R9-C (RN-230) — frase que posiciona o kit no checkout (≤280).
    * `null` limpa o campo; ausente não toca.
    */
   descricao?: string | null;
-  /** R9-C (RN-229) — "o que está incluso" (≤30 itens). Ausente não toca. */
+  /** R9-C (RN-230) — "o que está incluso" (≤30 itens). Ausente não toca. */
   itens?: string[];
   /**
    * R9-C (RN-227) — URL http(s) da imagem 1:1 (vinda de `uploadImagemKit`

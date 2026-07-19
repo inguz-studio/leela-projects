@@ -29,7 +29,7 @@ export interface ModalidadePublica {
  * `preco` é o DELTA sobre a inscrição (NEGATIVO = desconto). `modalidades` é a
  * chave da FILTRAGEM do checkout: o kit só aparece nas modalidades que oferta.
  *
- * VISÃO DE COMPRA (R9-C · RN-227/RN-229): `descricao`/`itens`/`imagemUrl`
+ * VISÃO DE COMPRA (R9-C · RN-227/RN-230): `descricao`/`itens`/`imagemUrl`
  * vêm do doc real quando preenchidos; `null`/`[]` = sem dado → o checkout
  * cai no fallback mock rico (`kitDetalheDados`), nunca vazio. `imagemUrl`
  * já passou pela fronteira http(s) do core (`parseKit`) — seguro p/ <img>.

@@ -34,7 +34,7 @@ import { isUrlCapaValida } from './evento';
 // Kit
 // ---------------------------------------------------------------------------
 
-// Limites da VISÃO do kit (R9-C · RN-227/RN-229 — anti doc-bomba; a visão é
+// Limites da VISÃO do kit (R9-C · RN-227/RN-230 — anti doc-bomba; a visão é
 // decorativa, nunca pode virar vetor de payload gigante no checkout público).
 /** Teto da descrição do kit (mesma ordem do `descricao` de clube). */
 export const KIT_DESCRICAO_MAX = 280;
@@ -47,7 +47,7 @@ export const KIT_ITEM_MAX = 140;
  * Kit do evento (RN-210/211).
  * Subcoleção: `eventos/{eventoId}/kits/{kitId}`.
  *
- * VISÃO DE COMPRA (R9-C · gap R13 · RN-227/RN-229): `descricao`, `itens[]` e
+ * VISÃO DE COMPRA (R9-C · gap R13 · RN-227/RN-230): `descricao`, `itens[]` e
  * `imagemUrl` alimentam o detalhe do kit no checkout. Todos OPCIONAIS — doc
  * legado continua parseando; a UI cai no fallback mock (nunca vazio).
  */
@@ -63,10 +63,10 @@ export interface Kit {
   capacidade: number;
   /** Modalidades onde o kit é oferecido (ex.: ['21k']) */
   modalidades: string[];
-  /** Frase que posiciona o kit no checkout (≤280 — RN-229). Ausente = fallback. */
+  /** Frase que posiciona o kit no checkout (≤280 — RN-230). Ausente = fallback. */
   descricao?: string;
   /**
-   * "O que está incluso" — itens em linguagem de produto (RN-229).
+   * "O que está incluso" — itens em linguagem de produto (RN-230).
    * `[]` = doc legado/sem preenchimento → a UI usa o fallback.
    */
   itens: string[];
@@ -92,7 +92,7 @@ export function kitEhDesconto(kit: Pick<Kit, 'preco'>): boolean {
 }
 
 /**
- * Normaliza a lista "o que está incluso" de um doc (RN-229). Postel para
+ * Normaliza a lista "o que está incluso" de um doc (RN-230). Postel para
  * campo DECORATIVO: entrada que não é lista → `[]`; elementos que não são
  * string não-vazia são descartados; corta em KIT_ITENS_MAX e cada item em
  * KIT_ITEM_MAX. Um doc envenenado nunca derruba o checkout público. @pure
@@ -146,7 +146,7 @@ export function parseKit(id: string, data: Record<string, unknown>): Kit {
     preco,
     capacidade: typeof capacidade === 'number' ? capacidade : 0,
     modalidades,
-    // RN-229: campos de visão são DECORATIVOS — normalização Postel (nunca
+    // RN-230: campos de visão são DECORATIVOS — normalização Postel (nunca
     // derrubam o parse; segurança da URL via isUrlImagemKitValida abaixo).
     itens: normalizarItensKit(data['itens']),
     criadoEm: data['criadoEm'] as Timestamp,

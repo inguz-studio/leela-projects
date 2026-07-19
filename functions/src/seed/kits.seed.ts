@@ -32,10 +32,10 @@ export interface KitSeedDef {
   preco: number;
   capacidade: number;
   modalidades: string[];
-  /** R9-C (RN-229) — frase que posiciona o kit na visão do checkout. */
+  /** R9-C (RN-230) — frase que posiciona o kit na visão do checkout. */
   descricao: string;
   /**
-   * R9-C (RN-229) — "o que está incluso". Quando ausente, o seed DERIVA do
+   * R9-C (RN-230) — "o que está incluso". Quando ausente, o seed DERIVA do
    * catálogo canônico (`ITEM_KIT_SEEDS` cujo `kits[]` contém o kit) — uma
    * fonte só, sem texto duplicado. `sem_kit` (fora do catálogo) declara.
    */
@@ -202,7 +202,7 @@ export async function seedKits(db: admin.firestore.Firestore): Promise<void> {
       preco: kit.preco,
       capacidade: kit.capacidade,
       modalidades: kit.modalidades,
-      // R9-C (RN-229): visão de compra — itens derivados do catálogo.
+      // R9-C (RN-230): visão de compra — itens derivados do catálogo.
       // Imagem NÃO é semeada (lição R14: URL relativa não passa da fronteira
       // http(s); mock rico é app-side no checkout; imagem real = upload).
       descricao: kit.descricao,

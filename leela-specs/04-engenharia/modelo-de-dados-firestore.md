@@ -76,6 +76,7 @@ Subcoleções:
   ➕ Titularidade: `titularHistorico[]`(append-only — RN-345; `status=cancelado` usado no estorno — RN-204/341).
   Subcoleções: ➕ **`saude/{unico}`** (condicional), ➕ **`notificacoes/{tipo}`** — ver abaixo.
 - **`kits/{kitId}`** — `nome`(nunca "tier" — RN-216), `preco`(decimal, aceita negativo=desconto — RN-211), `capacidade`, `modalidades[]` (RN-210).
+  ➕ Visão de compra (R9-C — RN-227/RN-230, contrato em `packages/core/src/eventos/kit.ts`): `descricao?`(≤280 — RN-230), `itens[]`("o que está incluso", ≤30×≤140 — RN-230; `[]` = legado ⇒ checkout usa fallback mock rico), `imagemUrl?`(1:1, upload em `eventos/{eventoId}/kits/{kitId}` no Storage — RN-227; só http(s) válida, nunca fabricada). Campos decorativos com normalização Postel no parse; Rules validam shape na escrita. Seed do preview deriva `itens[]` do catálogo canônico de `itensKit` (uma fonte só; marca no rótulo quando `exibirLogo` — RN-214).
 - **`programaAfiliacao/{unico}`** — criado pelo organizador (RN-310/311): `comissaoPct`, `janelaAtribuicaoDias`, `tetoMensal?`, `cupom?`. 1:N para parcerias de clubes.
 - ➕ **`politicaVendas/{unico}`** — política de reembolso/transferência/troca (S305) — ver abaixo.
 - ➕ **`aprovisionamento/{sku}`** — encomenda→estoque por SKU (S210) — ver abaixo.

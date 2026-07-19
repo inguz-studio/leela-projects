@@ -113,7 +113,7 @@ async function lerLotesPorModalidade(db: Firestore, eventoId: string): Promise<M
  * filtrar por modalidade (RN-210). Parse fail-fast do core; ordena do mais
  * caro ao desconto ("Sem kit" por último), igual ao painel (listarKits).
  *
- * R9-C (RN-227/RN-229): a visão de compra (descricao/itens/imagemUrl) vem do
+ * R9-C (RN-227/RN-230): a visão de compra (descricao/itens/imagemUrl) vem do
  * doc real — `parseKit` já é a fronteira de segurança (imagemUrl só http(s)
  * válida; itens normalizados). Sem dado → null/[] e o checkout cai no
  * fallback mock rico (nunca fabricamos aqui).

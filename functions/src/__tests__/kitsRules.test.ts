@@ -177,7 +177,7 @@ describe('kits canônicos e preço negativo (RN-210/211)', () => {
   });
 });
 
-// ── R9-C: visão de compra do kit (RN-227/RN-229) ──────────────────────────
+// ── R9-C: visão de compra do kit (RN-227/RN-230) ──────────────────────────
 
 describe('kits — visão de compra: descricao/itens/imagemUrl (R9-C)', () => {
   it('owner salva kit COMPLETO via salvarKit (api-client) e o dado persiste', async () => {

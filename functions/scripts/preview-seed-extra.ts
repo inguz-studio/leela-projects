@@ -428,7 +428,7 @@ interface KitExtra {
   preco: number;
   capacidade: number;
   modalidades: string[];
-  /** R9-C (RN-229) — visão de compra no checkout do preview. */
+  /** R9-C (RN-230) — visão de compra no checkout do preview. */
   descricao: string;
   itens: string[];
 }
@@ -529,7 +529,7 @@ export async function seedKitsExtra(db: Db): Promise<void> {
         preco: kit.preco,
         capacidade: kit.capacidade,
         modalidades: kit.modalidades,
-        // R9-C (RN-229) — visão de compra do checkout
+        // R9-C (RN-230) — visão de compra do checkout
         descricao: kit.descricao,
         itens: kit.itens,
       }

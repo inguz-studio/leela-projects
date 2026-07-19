@@ -66,6 +66,7 @@ tags:
 - [x] **[R12] Landing com identidade** — tipografia, bordas e ícones do DS, evento com modalidade, página-calendário do organizador e imagens mockadas em todo slot ✅ [[BOARD-HISTORICO]]
 - [x] **[R13] Checkout com identidade** — etapas visíveis, formulário na vertical e kits com hierarquia e imagem ✅ [[BOARD-HISTORICO]]
 - [x] **[R9-B] Análise financeira unificada** — filtro por evento na Análise, Análise vira a porta única (Analytics some) e Repasses declara o saldo consolidado de todos os eventos ✅ [[BOARD-HISTORICO]]
+- [x] **[R9-C] Kit de verdade no checkout** — cada kit tem imagem 1:1 (upload seguro), descrição e "o que está incluso"; o checkout mostra o dado real e os eventos de demonstração vêm preenchidos ✅ (falta só a edição na tela de kits — lote de UI) [[LEELA-E03-operacao-evento]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 

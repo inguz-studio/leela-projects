@@ -53,7 +53,7 @@ describe('Kit — preço e desconto (RN-210/211)', () => {
   });
 });
 
-describe('Kit — visão de compra (R9-C · RN-227/RN-229)', () => {
+describe('Kit — visão de compra (R9-C · RN-227/RN-230)', () => {
   const base = {
     tenantId: 'castelo-producoes', nome: 'Kit Ouro', preco: 89,
     capacidade: 80, modalidades: ['21k'], criadoEm: fakeTs, atualizadoEm: fakeTs,

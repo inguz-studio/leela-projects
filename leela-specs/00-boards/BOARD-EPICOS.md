@@ -26,7 +26,7 @@ O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clube
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E03-operacao-evento]] | Operar o evento: inscritos, balcão, kits, financeiro | ✅ |
+| [[LEELA-E03-operacao-evento]] | Operar o evento: inscritos, balcão, kits, financeiro | ✅ +R9-C: kit ganhou imagem 1:1 e visão de compra no checkout (RN-227/RN-230 — backend, regras, upload, leitura e dados de demonstração prontos; falta só a edição na tela de kits) |
 | [[LEELA-E05-clubs]] | Clubes: membros, desafios, parcerias, comunicados | ✅ |
 | [[LEELA-E02-visao-geral]] | Painel de abertura com os números do evento | ✅ |
 | [[LEELA-E16-plataforma-superadmin]] · slim | Onboarding de tenant e termos comerciais | ✅ |

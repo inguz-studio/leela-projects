@@ -5,7 +5,7 @@
 // descrição do kit para o que está incluso, e imagens também para que o
 // comprador possa visualizar."
 //
-// R9-C (RN-227/RN-229 — modelo REAL): `KitPublico` agora carrega
+// R9-C (RN-227/RN-230 — modelo REAL): `KitPublico` agora carrega
 // `descricao`/`itens`/`imagemUrl` vindos do doc `eventos/{id}/kits` (upload
 // 1:1 real em `eventos/{eventoId}/kits/{kitId}` no Storage). Este módulo
 // passa a ser a POLÍTICA DE FALLBACK, campo a campo (padrão capas R14 —
