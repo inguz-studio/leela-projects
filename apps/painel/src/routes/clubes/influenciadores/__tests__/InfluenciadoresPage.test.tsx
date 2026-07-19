@@ -1,19 +1,25 @@
 // =============================================================================
 // InfluenciadoresPage (R9-E · S-R9-11-T8 · RN-319, lado do ORGANIZADOR) — na
-// aba Clubs, vê as vendas/conversões dos afiliados do PRÓPRIO tenant. Testa os
-// estados da tela (vazio/dados/erro), os KPIs somados e a busca.
+// aba Clubs, vê as vendas/conversões + comissão dos afiliados do PRÓPRIO tenant.
+// Testa os estados da tela (vazio/dados/erro), KPIs somados, busca, e o registro
+// de repasse manual de comissão (FASE 2 · idempotência amigável).
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import { ToastProvider } from '@leela/design-system';
 import { InfluenciadoresPage } from '../InfluenciadoresPage';
 import type { AfiliadoDoTenant } from '@leela/api-client';
 
-const mocks = vi.hoisted(() => ({ getAfiliadosDoTenant: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  getAfiliadosDoTenant: vi.fn(),
+  registrarRepasseComissao: vi.fn(),
+}));
 
 vi.mock('@leela/api-client', () => ({
   getAfiliadosDoTenant: mocks.getAfiliadosDoTenant,
+  registrarRepasseComissao: mocks.registrarRepasseComissao,
 }));
 
 function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
@@ -28,7 +34,6 @@ function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
     cupomCodigo: null,
     conversoes: 10,
     valorAtribuido: 3000,
-    // FASE 2 (COMF2): campos de comissão agora obrigatórios no tipo do reader.
     comissao: null,
     comissaoAcumulada: 0,
     comissaoRepassada: 0,
@@ -46,14 +51,17 @@ function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
 
 function renderPage(): void {
   render(
-    <MemoryRouter initialEntries={['/clubes/influenciadores']}>
-      <InfluenciadoresPage />
-    </MemoryRouter>,
+    <ToastProvider>
+      <MemoryRouter initialEntries={['/clubes/influenciadores']}>
+        <InfluenciadoresPage />
+      </MemoryRouter>
+    </ToastProvider>,
   );
 }
 
 beforeEach(() => {
   mocks.getAfiliadosDoTenant.mockReset();
+  mocks.registrarRepasseComissao.mockReset();
 });
 
 describe('InfluenciadoresPage', () => {
@@ -105,5 +113,52 @@ describe('InfluenciadoresPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Não foi possível carregar os influenciadores',
     );
+  });
+
+  it('saldo negativo aparece como dívida e não oferece repasse', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({
+      afiliados: [
+        afiliado({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 100,
+          comissaoRepassada: 300,
+          saldoComissao: -200,
+        }),
+      ],
+    });
+    renderPage();
+    expect(await screen.findByText('-R$ 200,00 (dívida)')).toBeInTheDocument();
+    expect(screen.getByText('Em dívida')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Registrar repasse' })).not.toBeInTheDocument();
+  });
+
+  it('registra repasse do saldo com idempotência e atualiza o toast', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({
+      afiliados: [
+        afiliado({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 500,
+          comissaoRepassada: 0,
+          saldoComissao: 500,
+        }),
+      ],
+    });
+    mocks.registrarRepasseComissao.mockResolvedValue({
+      ok: true,
+      repasseId: 'r1',
+      duplicado: false,
+      saldoComissao: 0,
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Registrar repasse' }));
+    // ConfirmModal aberto com o valor do saldo.
+    expect(await screen.findByText(/Repasse de R\$\s*500,00/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(1));
+    const arg = mocks.registrarRepasseComissao.mock.calls[0][0];
+    expect(arg).toMatchObject({ eventoId: 'evt-1', afiliadoId: 'DIONEY10', valor: 500 });
+    expect(typeof arg.repasseId).toBe('string');
+    expect(arg.repasseId.length).toBeGreaterThanOrEqual(8);
+    expect(await screen.findByText('Repasse registrado')).toBeInTheDocument();
   });
 });

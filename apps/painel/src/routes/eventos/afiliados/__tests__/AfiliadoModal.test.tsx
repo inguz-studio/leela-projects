@@ -90,4 +90,40 @@ describe('AfiliadoModal (RN-317)', () => {
     await userEvent.type(screen.getByLabelText(/Mínimo p\/ desconto/), '0');
     expect(enviar).toBeDisabled();
   });
+
+  it('comissão percentual: valor fora de 0,01..100 trava; válido entra no payload (FASE 2)', async () => {
+    const onSalvar = vi.fn().mockResolvedValue({
+      afiliadoId: 'X', refCodigo: 'X', status: 'convite_pendente', jaExistia: false,
+    });
+    renderModal({ onSalvar });
+    await userEvent.type(screen.getByLabelText('Nome'), 'Dioney Galharte');
+    await userEvent.type(screen.getByLabelText('E-mail do convite'), 'dioney@exemplo.com');
+    const enviar = screen.getByRole('button', { name: 'Criar afiliado' });
+    expect(enviar).toBeEnabled();
+    // Aviso de não-retroatividade só aparece com comissão ativa.
+    await userEvent.click(screen.getByRole('button', { name: 'Percentual sobre a face' }));
+    expect(screen.getByText(/só para conversões futuras/)).toBeInTheDocument();
+    // Sem valor → inválido.
+    expect(enviar).toBeDisabled();
+    await userEvent.type(screen.getByLabelText(/Percentual/), '150');
+    expect(enviar).toBeDisabled(); // > 100
+    await userEvent.clear(screen.getByLabelText(/Percentual/));
+    await userEvent.type(screen.getByLabelText(/Percentual/), '10');
+    expect(enviar).toBeEnabled();
+    await userEvent.click(enviar);
+    expect(onSalvar).toHaveBeenCalledWith(
+      expect.objectContaining({ comissao: { tipo: 'percentual', percentual: 10 } }),
+    );
+  });
+
+  it('sem comissão selecionada envia comissao=null', async () => {
+    const onSalvar = vi.fn().mockResolvedValue({
+      afiliadoId: 'X', refCodigo: 'X', status: 'convite_pendente', jaExistia: false,
+    });
+    renderModal({ onSalvar });
+    await userEvent.type(screen.getByLabelText('Nome'), 'Dioney');
+    await userEvent.type(screen.getByLabelText('E-mail do convite'), 'd@e.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Criar afiliado' }));
+    expect(onSalvar).toHaveBeenCalledWith(expect.objectContaining({ comissao: null }));
+  });
 });

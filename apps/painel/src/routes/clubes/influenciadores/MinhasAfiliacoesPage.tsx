@@ -21,6 +21,7 @@ import {
   getMinhasAfiliacoes,
   type ConversaoProjetada,
   type MinhaAfiliacao,
+  type RepasseProjetado,
 } from '@leela/api-client';
 
 function formatBRL(v: number): string {
@@ -37,13 +38,25 @@ function formatData(millis: number | null): string {
   });
 }
 
+const COLUNAS_REPASSE: TableColumn<RepasseProjetado>[] = [
+  { key: 'quando', header: 'Registrado em', render: (r) => formatData(r.criadoEmMillis) },
+  { key: 'valor', header: 'Valor', align: 'right', render: (r) => formatBRL(r.valor) },
+  { key: 'obs', header: 'Observação', render: (r) => r.observacao ?? '—' },
+];
+
 function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
   const gateFechado =
     a.minimoInscricoes !== null && a.conversoes < a.minimoInscricoes;
+  // RN-318: comissão só existe quando o organizador a configurou p/ este link.
+  const temComissao = a.comissao !== null;
+  const devendo = a.saldoComissao < 0;
   const colunas: TableColumn<ConversaoProjetada>[] = [
     { key: 'quando', header: 'Confirmada em', render: (c) => formatData(c.convertidoEmMillis) },
-    { key: 'inscricoes', header: 'Inscrições', render: (c) => String(c.qtdInscricoes) },
-    { key: 'valor', header: 'Valor', render: (c) => formatBRL(c.valor) },
+    { key: 'inscricoes', header: 'Inscrições', align: 'right', render: (c) => String(c.qtdInscricoes) },
+    { key: 'valor', header: 'Valor', align: 'right', render: (c) => formatBRL(c.valor) },
+    ...(temComissao
+      ? [{ key: 'comissao', header: 'Comissão', align: 'right' as const, render: (c: ConversaoProjetada) => formatBRL(c.comissao) }]
+      : []),
   ];
   return (
     <article className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
@@ -76,6 +89,18 @@ function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
         ) : null}
       </div>
 
+      {temComissao ? (
+        <div className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-3">
+          <KpiCard label="Comissão acumulada" value={formatBRL(a.comissaoAcumulada)} />
+          <KpiCard label="Já repassada" value={formatBRL(a.comissaoRepassada)} />
+          <KpiCard
+            label="Saldo"
+            value={`${formatBRL(a.saldoComissao)}${devendo ? ' (dívida)' : ''}`}
+            hint={devendo ? 'estorno após repasse — saldo devedor' : 'a receber do organizador'}
+          />
+        </div>
+      ) : null}
+
       {a.ultimasConversoes.length > 0 ? (
         <Table
           columns={colunas}
@@ -88,6 +113,20 @@ function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
           Nenhuma conversão confirmada ainda — compartilhe seu link.
         </p>
       )}
+
+      {temComissao && a.ultimosRepasses.length > 0 ? (
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-secondary)]">
+            Repasses registrados
+          </h3>
+          <Table
+            columns={COLUNAS_REPASSE}
+            data={a.ultimosRepasses}
+            keyExtractor={(r) => `${a.refCodigo}-repasse-${r.criadoEmMillis ?? 'sem-data'}-${r.valor}`}
+            caption={`Repasses de ${a.eventoNome}`}
+          />
+        </div>
+      ) : null}
     </article>
   );
 }

@@ -35,6 +35,15 @@ function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/** Termos de comissão configurados (FASE 2) em texto curto para a coluna. */
+function descreverComissao(c: AfiliadoDoTenant['comissao']): string {
+  if (c === null) return '—';
+  if (c.tipo === 'percentual') {
+    return `${(c.percentual ?? 0).toLocaleString('pt-BR')}%`;
+  }
+  return `${formatBRL(c.valorPorInscricao ?? 0)}/insc.`;
+}
+
 function statusBadge(status: string): { label: string; variant: 'vitoria' | 'heroico' | 'neutro' } {
   if (status === 'ativo') return { label: 'Ativo', variant: 'vitoria' };
   if (status === 'convite_pendente') return { label: 'Convite pendente', variant: 'heroico' };
@@ -137,6 +146,7 @@ export function AfiliadosPage(): JSX.Element {
       ),
     },
     { key: 'valor', header: 'Valor atribuído', render: (a) => formatBRL(a.valorAtribuido) },
+    { key: 'comissao', header: 'Comissão', render: (a) => descreverComissao(a.comissao) },
     { key: 'cupom', header: 'Cupom', render: (a) => a.cupomCodigo ?? '—' },
   ];
 
@@ -148,8 +158,8 @@ export function AfiliadosPage(): JSX.Element {
             Afiliados e influenciadores
           </h1>
           <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-            Links rastreáveis com atribuição por janela — valor bruto informativo,
-            sem comissão nesta fase.
+            Links rastreáveis com atribuição por janela e comissão opcional.
+            Saldo e repasses ficam na aba Clubs (Influenciadores).
           </p>
         </div>
         <Button

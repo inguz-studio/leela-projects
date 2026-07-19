@@ -13,8 +13,23 @@
 
 import { useMemo, useState } from 'react';
 import { Button, Chip, Input, Modal } from '@leela/design-system';
-import type { SalvarAfiliadoClientInput, SalvarAfiliadoClientResult } from '@leela/api-client';
+import type {
+  ComissaoAfiliadoClient,
+  SalvarAfiliadoClientInput,
+  SalvarAfiliadoClientResult,
+} from '@leela/api-client';
 import type { AfiliadoDoTenant } from '@leela/api-client';
+import { isComissaoAfiliadoValida } from '@leela/core';
+
+type TipoComissao = 'nenhuma' | 'percentual' | 'valor_fixo';
+
+/** Reconstrói a config de comissão do formulário (null = sem comissão). */
+function montarComissao(tipo: TipoComissao, valor: string): ComissaoAfiliadoClient | null {
+  if (tipo === 'nenhuma') return null;
+  const n = Number(valor.replace(',', '.'));
+  if (tipo === 'percentual') return { tipo: 'percentual', percentual: n };
+  return { tipo: 'valor_fixo', valorPorInscricao: n };
+}
 
 export interface AfiliadoModalProps {
   open: boolean;
@@ -54,6 +69,17 @@ export function AfiliadoModal({
   const [clubeRef, setClubeRef] = useState(afiliado?.clubeRef ?? '');
   const [email, setEmail] = useState(afiliado?.responsavelEmail ?? '');
   const [documento, setDocumento] = useState('');
+  // FASE 2 (COMF2 · RN-310): config de comissão — o ORGANIZADOR define; mudar
+  // só afeta conversões FUTURAS (config congelada por conversão no servidor).
+  const comissaoInicial = afiliado?.comissao ?? null;
+  const [comTipo, setComTipo] = useState<TipoComissao>(comissaoInicial?.tipo ?? 'nenhuma');
+  const [comValor, setComValor] = useState(
+    comissaoInicial?.tipo === 'percentual'
+      ? String(comissaoInicial.percentual ?? '')
+      : comissaoInicial?.tipo === 'valor_fixo'
+        ? String(comissaoInicial.valorPorInscricao ?? '')
+        : '',
+  );
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [tokenGerado, setTokenGerado] = useState<string | null>(null);
@@ -69,8 +95,13 @@ export function AfiliadoModal({
     if (tipo === 'pessoa_fisica' && !editando && !/^\S+@\S+\.\S+$/.test(email.trim())) {
       return false;
     }
+    if (comTipo !== 'nenhuma') {
+      // Espelha o core (isComissaoAfiliadoValida): percentual 0,01..100 passo
+      // 0,01 OU valor fixo R$ > 0 cent-exato ≤ teto. O servidor revalida.
+      if (!isComissaoAfiliadoValida(montarComissao(comTipo, comValor))) return false;
+    }
     return true;
-  }, [nome, janela, minimo, tipo, email, editando]);
+  }, [nome, janela, minimo, tipo, email, editando, comTipo, comValor]);
 
   async function salvar(): Promise<void> {
     if (!valido || enviando) return;
@@ -84,6 +115,9 @@ export function AfiliadoModal({
         janelaAtribuicaoDias: Number(janela),
         minimoInscricoes: minimo.trim() === '' ? null : Number(minimo),
         cupomCodigo: cupomCodigo.trim() === '' ? null : cupomCodigo.trim(),
+        // FASE 2: null = sem comissão (ou remover a vigente). Como o form
+        // inicia da config atual, não-tocar reenvia a mesma (idempotente).
+        comissao: montarComissao(comTipo, comValor),
       };
       if (refCodigo.trim() !== '') input.refCodigo = refCodigo.trim();
       if (canal.trim() !== '') input.canal = canal.trim();
@@ -127,7 +161,7 @@ export function AfiliadoModal({
       open={open}
       onOpenChange={onOpenChange}
       title={editando ? `Editar afiliado · ${afiliado.refCodigo}` : 'Novo influenciador'}
-      description="Link rastreável de divulgação com atribuição por janela — sem comissão nesta fase."
+      description="Link rastreável com atribuição por janela e comissão opcional (congelada por conversão)."
       footer={footer}
     >
       {tokenGerado !== null ? (
@@ -245,6 +279,42 @@ export function AfiliadoModal({
             onChange={(e) => setCupomCodigo(e.target.value.toUpperCase())}
             placeholder="FLORIPA10OFF"
           />
+
+          <div className="flex flex-col gap-[var(--spacing-2)] rounded-[var(--radius-md)] bg-[var(--surface-base)] p-[var(--spacing-3)]">
+            <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+              Comissão (opcional)
+            </span>
+            <div role="group" aria-label="Tipo de comissão" className="flex flex-wrap gap-[var(--spacing-2)]">
+              <Chip active={comTipo === 'nenhuma'} onClick={() => setComTipo('nenhuma')}>
+                Sem comissão
+              </Chip>
+              <Chip active={comTipo === 'percentual'} onClick={() => setComTipo('percentual')}>
+                Percentual sobre a face
+              </Chip>
+              <Chip active={comTipo === 'valor_fixo'} onClick={() => setComTipo('valor_fixo')}>
+                Valor fixo por inscrição
+              </Chip>
+            </div>
+            {comTipo !== 'nenhuma' ? (
+              <>
+                <Input
+                  id="afiliado-comissao-valor"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  label={comTipo === 'percentual' ? 'Percentual (%) — 0,01 a 100' : 'Valor por inscrição (R$)'}
+                  value={comValor}
+                  onChange={(e) => setComValor(e.target.value)}
+                  placeholder={comTipo === 'percentual' ? '10' : '5,00'}
+                />
+                <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                  Mudanças na comissão valem só para conversões futuras — a config
+                  é congelada por conversão (sem retroatividade).
+                </p>
+              </>
+            ) : null}
+          </div>
 
           {erro !== null ? (
             <p role="alert" className="text-[length:var(--font-size-sm)] text-[var(--feedback-danger-fg)]">

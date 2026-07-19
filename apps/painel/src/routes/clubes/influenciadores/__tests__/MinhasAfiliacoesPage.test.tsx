@@ -77,4 +77,50 @@ describe('MinhasAfiliacoesPage', () => {
       'Não foi possível carregar suas afiliações',
     );
   });
+
+  it('comissão configurada: mostra saldo/extrato próprio (projeção RN-318)', async () => {
+    mocks.getMinhasAfiliacoes.mockResolvedValue({
+      afiliacoes: [
+        afiliacao({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 360,
+          comissaoRepassada: 100,
+          saldoComissao: 260,
+          ultimasConversoes: [
+            { valor: 300, qtdInscricoes: 1, comissao: 30, convertidoEmMillis: 1_700_000_000_000 },
+          ],
+          ultimosRepasses: [
+            { valor: 100, observacao: 'PIX', criadoEmMillis: 1_700_100_000_000 },
+          ],
+        }),
+      ],
+    });
+    render(<MinhasAfiliacoesPage />);
+    expect(await screen.findByText('Comissão acumulada')).toBeInTheDocument();
+    expect(screen.getByText('R$ 260,00')).toBeInTheDocument(); // saldo
+    expect(screen.getByText('Repasses registrados')).toBeInTheDocument();
+    expect(screen.getByText('PIX')).toBeInTheDocument();
+  });
+
+  it('saldo negativo (estorno pós-repasse) aparece como dívida — sem clamp', async () => {
+    mocks.getMinhasAfiliacoes.mockResolvedValue({
+      afiliacoes: [
+        afiliacao({
+          comissao: { tipo: 'valor_fixo', valorPorInscricao: 5 },
+          comissaoAcumulada: 50,
+          comissaoRepassada: 200,
+          saldoComissao: -150,
+        }),
+      ],
+    });
+    render(<MinhasAfiliacoesPage />);
+    expect(await screen.findByText('-R$ 150,00 (dívida)')).toBeInTheDocument();
+  });
+
+  it('sem comissão configurada não renderiza bloco de comissão', async () => {
+    mocks.getMinhasAfiliacoes.mockResolvedValue({ afiliacoes: [afiliacao()] });
+    render(<MinhasAfiliacoesPage />);
+    await screen.findByText('Meia de Floripa');
+    expect(screen.queryByText('Comissão acumulada')).not.toBeInTheDocument();
+  });
 });
