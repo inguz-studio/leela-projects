@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button,
   EmptyState,
-  Input,
+  SearchInput,
   PageHeader,
   Select,
   Skeleton,
@@ -104,14 +104,14 @@ export function ClientesPage(): JSX.Element {
         ) : (
           <>
             <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
-              <Input
+              <SearchInput
                 id="crm-busca"
-                type="search"
-                label="Buscar por nome"
+                aria-label="Buscar por nome"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Início do nome (ex.: Ana)"
-                wrapperClassName="max-w-md flex-1"
+                shortcutLabel={null}
+                className="w-full max-w-md flex-1"
               />
               <Select
                 id="crm-ordem"

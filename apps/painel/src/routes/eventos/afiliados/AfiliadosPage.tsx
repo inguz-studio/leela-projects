@@ -13,7 +13,7 @@ import {
   Button,
   Chip,
   EmptyState,
-  Input,
+  SearchInput,
   Skeleton,
   Table,
   useToast,
@@ -198,13 +198,13 @@ export function AfiliadosPage(): JSX.Element {
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-[var(--spacing-3)]">
-            <Input
-              type="search"
+            <SearchInput
               aria-label="Buscar afiliado"
               placeholder="Buscar por nome, código ou canal"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              wrapperClassName="max-w-md"
+              shortcutLabel={null}
+              className="w-full max-w-md"
             />
             <div role="group" aria-label="Filtrar por tipo" className="flex gap-[var(--spacing-2)]">
               {(

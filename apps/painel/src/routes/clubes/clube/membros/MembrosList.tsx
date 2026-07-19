@@ -12,7 +12,7 @@ import {
   Button,
   Chip,
   ConfirmModal,
-  Input,
+  SearchInput,
   DropdownMenu,
   IconButton,
   Skeleton,
@@ -126,13 +126,13 @@ export function MembrosList({
       </div>
 
       <div className="flex flex-col gap-[var(--spacing-3)]">
-        <Input
-          type="search"
+        <SearchInput
           aria-label="Buscar membro por nome"
           placeholder="Buscar por nome"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          wrapperClassName="max-w-md"
+          shortcutLabel={null}
+          className="w-full max-w-md"
         />
         <div className="flex flex-wrap items-center gap-[var(--spacing-4)]">
           <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-[var(--spacing-2)]">

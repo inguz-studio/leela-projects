@@ -14,7 +14,7 @@ import {
   Button,
   ConfirmModal,
   EmptyState,
-  Input,
+  SearchInput,
   KpiCard,
   PageHeader,
   Skeleton,
@@ -221,13 +221,13 @@ export function InfluenciadoresPage(): JSX.Element {
               <KpiCard label="Comissão em aberto" value={formatBRL(kpis.saldoAberto)} hint="saldo a repassar" />
             </section>
 
-            <Input
-              type="search"
+            <SearchInput
               aria-label="Buscar influenciador"
               placeholder="Buscar por nome, código ou evento"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              wrapperClassName="max-w-md"
+              shortcutLabel={null}
+              className="w-full max-w-md"
             />
             <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]" aria-live="polite">
               mostrando {filtrados.length} de {(afiliados ?? []).length}

@@ -12,6 +12,7 @@ import {
   Button,
   ConfirmModal,
   Input,
+  SearchInput,
   Stepper,
   useToast,
 } from '@leela/design-system';
@@ -261,13 +262,13 @@ function BuscaAtleta({
 }): JSX.Element {
   return (
     <div className="relative flex flex-col gap-[var(--spacing-2)]">
-      <Input
-        type="search"
-        label="Buscar atleta"
+      <SearchInput
         aria-label="Buscar atleta"
         placeholder="Nome do atleta ou dorsal"
         value={busca}
         onChange={(e) => onBusca(e.target.value)}
+        shortcutLabel={null}
+        className="w-full"
       />
       {resultados.length > 0 && (
         <ul className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-md)] bg-[var(--surface-raised)] p-[var(--spacing-2)] shadow-[var(--elevation-2)]">

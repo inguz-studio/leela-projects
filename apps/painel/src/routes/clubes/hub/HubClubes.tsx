@@ -6,7 +6,7 @@
 // =============================================================================
 
 import { useMemo, useState } from 'react';
-import { KpiCard, Button, EmptyState, Input, PageHeader, Skeleton } from '@leela/design-system';
+import { KpiCard, Button, EmptyState, SearchInput, PageHeader, Skeleton } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
 import { ClubeCard } from './ClubeCard';
@@ -175,13 +175,13 @@ export function HubClubes({
                 Clubes parceiros · {formatInt(parceiros.length)}
               </h2>
               {parceiros.length > 0 ? (
-                <Input
-                  type="search"
+                <SearchInput
                   aria-label="Buscar clube parceiro"
                   placeholder="Buscar por nome, categoria ou localização"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  wrapperClassName="max-w-md"
+                  shortcutLabel={null}
+                  className="w-full max-w-md"
                 />
               ) : null}
               {parceiros.length === 0 ? (
