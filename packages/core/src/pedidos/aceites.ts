@@ -46,6 +46,16 @@ export interface AceiteVersionado {
   /** Versão do texto aceita (monotônica — RN-149 pattern). */
   versao: number;
   aceiteEm: Timestamp;
+  /**
+   * Hash (sha256 hex) do MATERIAL efetivamente vigente no instante do aceite
+   * — lido na MESMA tx que grava a prova (fix F-1 da review antagonista
+   * CKMOD): o bump de versão é trigger ASSÍNCRONO, então `versao` sozinha
+   * pode apontar material defasado na janela edição→bump. Com o hash a prova
+   * é AUTOSSUFICIENTE: aponta o conteúdo aceito, não só o número. Presente
+   * nos termos (material da politicaVendas); opcional por schema evolution
+   * (aceites gravados antes do fix não o carregam).
+   */
+  materialHash?: string;
 }
 
 /** Bloco de aceites do pedido (spec §5.3 — os DOIS são obrigatórios juntos). */
@@ -93,7 +103,22 @@ function parseAceite(contexto: string, campo: string, raw: unknown): AceiteVersi
       `${contexto}: "aceites.${campo}.aceiteEm" ausente — aceite sem carimbo não é prova (RN-149)`
     );
   }
-  return { versao, aceiteEm: a['aceiteEm'] as Timestamp };
+  // materialHash (F-1): opcional (schema evolution); presente deve ser hex
+  // sha256 plausível — prova corrompida é pior que ausente.
+  const materialHash = a['materialHash'];
+  if (
+    materialHash !== undefined &&
+    (typeof materialHash !== 'string' || !/^[0-9a-f]{64}$/.test(materialHash))
+  ) {
+    throw new Error(
+      `${contexto}: "aceites.${campo}.materialHash" deve ser sha256 hex (F-1)`
+    );
+  }
+  return {
+    versao,
+    aceiteEm: a['aceiteEm'] as Timestamp,
+    ...(materialHash !== undefined ? { materialHash: materialHash as string } : {}),
+  };
 }
 
 /**

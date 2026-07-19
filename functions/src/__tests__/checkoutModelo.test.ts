@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { validarCreateInscricaoChargeInput } from '../checkout/createInscricaoCharge';
+import * as coreValidadores from '@leela/core';
 import {
   cepValido,
   normalizarCep,
@@ -141,6 +142,18 @@ describe('aceites do pagar (CKMOD §5.3)', () => {
     });
     expect(ok.termos.versao).toBe(3);
     expect(ok.saude.versao).toBe(1);
+    // F-1: materialHash opcional (schema evolution); presente = sha256 hex
+    const comHash = parseAceitesPedido('Pedido ped-1', {
+      termos: { versao: 3, aceiteEm: fakeTs, materialHash: 'a'.repeat(64) },
+      saude: { versao: 1, aceiteEm: fakeTs },
+    });
+    expect(comHash.termos.materialHash).toBe('a'.repeat(64));
+    expect(() =>
+      parseAceitesPedido('Pedido ped-1', {
+        termos: { versao: 3, aceiteEm: fakeTs, materialHash: 'nao-e-hash' },
+        saude: { versao: 1, aceiteEm: fakeTs },
+      })
+    ).toThrow(/materialHash/);
     expect(() =>
       parseAceitesPedido('Pedido ped-1', { termos: { versao: 1, aceiteEm: fakeTs } })
     ).toThrow(/saude/);
@@ -288,6 +301,26 @@ describe('parseDadosPessoais Postel (CKMOD — bloco parcial)', () => {
     expect(dp.genero).toBe('nao_informado');
     expect(dp.cidade).toBe('');
     expect(dp.uf).toBe('');
+  });
+
+  it("F-6: '' equivale a AUSENTE — round-trip do struct parseado nunca envenena", () => {
+    // O tipo promete '' = "não coletado"; re-persistir o parseado deve reparsear.
+    const parcial = parseDadosPessoais('Inscrito i1', {
+      cpf: '52998224725',
+      nascimento: '1990-05-17',
+    });
+    const roundTrip = parseDadosPessoais('Inscrito i1', { ...parcial });
+    expect(roundTrip).toEqual(parcial);
+    expect(roundTrip.telefone).toBe('');
+    expect(roundTrip.uf).toBe('');
+  });
+
+  it('F-3: validadores-fonte rejeitam padding bruto ilimitado (doc-bomba)', () => {
+    const { cpfValido, telefoneValido } = coreValidadores;
+    expect(cpfValido('529.982.247-25')).toBe(true);
+    expect(cpfValido(`${' '.repeat(100)}52998224725`)).toBe(false); // > teto bruto
+    expect(telefoneValido('+55 (48) 99999-0001')).toBe(true);
+    expect(telefoneValido(`(48) 99999-0001${' '.repeat(100)}`)).toBe(false);
   });
 
   it('campo PRESENTE mas inválido segue fail-fast (PII errada > ausente)', () => {
@@ -459,6 +492,13 @@ describe('parsePedido (CKMOD — endereco/aceites/telefone)', () => {
     expect(
       validarCreateInscricaoChargeInput(
         { ...base, endereco: { ...base.endereco, cep: '123' } },
+        '2026-07-19'
+      ).length
+    ).toBeGreaterThan(0);
+    // F-8a: responsavel.nome ganhou teto (120 — mesmo do inscrito)
+    expect(
+      validarCreateInscricaoChargeInput(
+        { ...base, responsavel: { ...base.responsavel, nome: 'A'.repeat(200) } },
         '2026-07-19'
       ).length
     ).toBeGreaterThan(0);

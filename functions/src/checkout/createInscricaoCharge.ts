@@ -53,6 +53,8 @@ import {
   MSG_EVENTO_FECHADO_SEM_CUPOM,
   montarItensDoPedido,
   normalizarCodigoCupom,
+  normalizarCpf,
+  normalizarTelefone,
   parseCupom,
   parseEnderecoPedido,
   parseKit,
@@ -66,9 +68,11 @@ import {
   validarDadosMinimosInscrito,
   validarEmail,
   validarEnderecoPedido,
+  validarPoliticaVendas,
   validarTamanhosInscrito,
   vendaSomentePorCupomAtiva,
   versaoPoliticaVendas,
+  INSCRITO_NOME_MAX,
   type CommercialTerms,
   type CreateChargeParams,
   type CupomVenda,
@@ -84,6 +88,10 @@ import {
   type StatusPedido,
 } from '@leela/core';
 import { assertTenantAtivo } from '../eventos/criarEvento';
+import {
+  hashPoliticaPadrao,
+  hashPoliticaVendas,
+} from '../eventos/versionarPoliticaVendas';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import { agoraCheckout } from './relogioCheckout';
 
@@ -164,8 +172,11 @@ export interface CreateInscricaoChargeInput {
    * `{termos: true, saude: true}` — versão e timestamp são carimbados pelo
    * SERVIDOR (versão vigente da politicaVendas lida DENTRO da tx +
    * TERMO_SAUDE_VERSAO_VIGENTE + serverTimestamp). Aceite parcial ⇒
-   * invalid-argument. Opcional NESTA camada (a UI vigente ainda não coleta;
-   * a obrigatoriedade flipa no lote de UI do checkout).
+   * invalid-argument. Opcional NESTA camada (a UI vigente ainda não coleta).
+   * ⚠️ PENDÊNCIA DURA (F-4a review CKMOD): quando o lote de UI coletar os
+   * aceites, o flip de obrigatoriedade é AQUI, SERVER-SIDE (este campo vira
+   * obrigatório em validarCreateInscricaoChargeInput) — gate só na UI não é
+   * gate: a callable direta compraria sem aceite nenhum.
    */
   aceites?: { termos: boolean; saude: boolean };
   forma: FormaPagamento;
@@ -336,6 +347,10 @@ export function validarCreateInscricaoChargeInput(
     const resp = responsavel as Record<string, unknown>;
     if (typeof resp['nome'] !== 'string' || resp['nome'].trim().length < 3) {
       erros.push('"responsavel.nome" é obrigatório (mínimo 3 caracteres).');
+    } else if (resp['nome'].trim().length > INSCRITO_NOME_MAX) {
+      // Fix F-8a review CKMOD: inscrito tinha teto 120, responsável não —
+      // doc-bomba/borda do gateway.
+      erros.push(`"responsavel.nome" excede ${INSCRITO_NOME_MAX} caracteres.`);
     }
     if (typeof resp['email'] !== 'string' || !validarEmail(resp['email'])) {
       erros.push('"responsavel.email" inválido.');
@@ -1049,20 +1064,34 @@ async function criarDocsDeCheckout(
         }
       }
 
-      // CKMOD (spec §5.3a): versão VIGENTE dos termos lida DENTRO da tx —
-      // o aceite carimba a versão que vigia NO COMMIT (bump em voo entre a
-      // cotação e o pagar nunca deixa versão stale na prova; mesma
-      // disciplina de freshness dos re-checks de cupom acima). Sem doc de
-      // política ⇒ vigente 1 (defaults legais CDC — versaoPoliticaVendas).
-      // A versão NUNCA vem do cliente (anti-forja de prova de aceite).
+      // CKMOD (spec §5.3a): versão + HASH DO MATERIAL vigentes dos termos,
+      // lidos DENTRO da tx — o aceite carimba o que vigia NO COMMIT (mesma
+      // disciplina de freshness dos re-checks de cupom acima). O HASH (fix
+      // F-1 da review antagonista) torna a prova AUTOSSUFICIENTE: o bump de
+      // versão é trigger ASSÍNCRONO, então na janela edição→bump o campo
+      // `versao` pode não corresponder ao material que o modal renderizou —
+      // o hash do material LIDO AQUI aponta o conteúdo aceito sem depender
+      // do trigger. Sem doc/doc inválido ⇒ vigente 1 + hash dos defaults
+      // legais CDC (coerente com o fallback do leitor público, que renderiza
+      // os defaults nesses casos). NADA vem do cliente (anti-forja).
       let versaoTermosVigente = 1;
+      let materialTermosHash = '';
       if (input.aceites !== undefined) {
         const politicaSnap = await tx.get(
           eventoRef.collection('politicaVendas').doc(POLITICA_VENDAS_DOC_ID)
         );
-        versaoTermosVigente = versaoPoliticaVendas(
-          politicaSnap.get('versao') as number | undefined
-        );
+        const politicaData = politicaSnap.exists ? (politicaSnap.data() ?? {}) : null;
+        if (politicaData !== null && validarPoliticaVendas(politicaData).length === 0) {
+          versaoTermosVigente = versaoPoliticaVendas(
+            politicaData['versao'] as number | undefined
+          );
+          materialTermosHash = hashPoliticaVendas(
+            politicaData as Parameters<typeof hashPoliticaVendas>[0]
+          );
+        } else {
+          versaoTermosVigente = 1;
+          materialTermosHash = hashPoliticaPadrao();
+        }
       }
 
       // Inscritos — subcoleção do evento (ADR-011); nascem 'pendente'
@@ -1077,14 +1106,17 @@ async function criarDocsDeCheckout(
         // entra junto (o bloco parse exige; já era validado, agora persiste).
         // Sem campo novo ⇒ comportamento vigente (sem dadosPessoais) — as
         // inscrições antigas seguem lidas em modo Postel (demografia/CRM).
+        // F-3 (review CKMOD): PII persistida CANÔNICA — CPF 11 dígitos e
+        // telefone só-dígitos (máscara é da UI; "529.982.247-25" e
+        // "52998224725" não podem virar dois valores no doc).
         const telefoneResp =
           ehResponsavel && typeof input.responsavel.telefone === 'string'
-            ? input.responsavel.telefone.trim()
+            ? normalizarTelefone(input.responsavel.telefone)
             : undefined;
         const dadosPessoais =
           inscrito.nascimento !== undefined || telefoneResp !== undefined
             ? {
-                cpf: inscrito.cpf,
+                cpf: normalizarCpf(inscrito.cpf),
                 ...(inscrito.nascimento !== undefined
                   ? { nascimento: inscrito.nascimento }
                   : {}),
@@ -1144,9 +1176,10 @@ async function criarDocsDeCheckout(
           atletaId: caller.uid,
           nome: input.responsavel.nome.trim(),
           email: input.responsavel.email.trim(),
-          // CKMOD: canal de contato do pedido (spec §5.1 item 1)
+          // CKMOD: canal de contato do pedido (spec §5.1 item 1) — canônico
+          // só-dígitos (F-3)
           ...(typeof input.responsavel.telefone === 'string'
-            ? { telefone: input.responsavel.telefone.trim() }
+            ? { telefone: normalizarTelefone(input.responsavel.telefone) }
             : {}),
         },
         inscritoRefs: inscritoIds,
@@ -1175,7 +1208,15 @@ async function criarDocsDeCheckout(
       // canal para forjar versão nem antedatar aceite (RN-149 pattern).
       if (input.aceites !== undefined) {
         pedidoDoc['aceites'] = {
-          termos: { versao: versaoTermosVigente, aceiteEm: now },
+          // F-1: materialHash torna a prova autossuficiente (versão pode
+          // estar defasada do material na janela do trigger — o hash não).
+          termos: {
+            versao: versaoTermosVigente,
+            aceiteEm: now,
+            materialHash: materialTermosHash,
+          },
+          // Termo de saúde é template DO PRODUTO — a constante de versão é a
+          // identidade do texto (sem material por-evento a hashear).
           saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
         };
       }
@@ -1363,6 +1404,60 @@ async function garantirCobrancaEMontarResultado(
 }
 
 // ---------------------------------------------------------------------------
+// F-4b (review CKMOD): replay COMPLETA a prova de aceite ausente
+// ---------------------------------------------------------------------------
+
+/**
+ * Retry com a mesma idempotencyKey trazendo `aceites` sobre um pedido que
+ * nasceu SEM o bloco (tentativa 1 sem aceites, ou crash antes do fix F-1):
+ * mesma filosofia do `gatewayChargeId` — "retry completa o fluxo". A prova
+ * carimba a versão/hash VIGENTES e o timestamp DESTE instante (é quando o
+ * aceite de fato chegou ao servidor — antedatar seria forja). Pedido que JÁ
+ * tem aceites fica INTOCADO (prova nunca é reescrita).
+ */
+async function garantirAceitesNoReplay(
+  db: Db,
+  input: CreateInscricaoChargeInput,
+  pedidoId: string
+): Promise<void> {
+  if (input.aceites === undefined) return;
+  const pedidoRef = db.collection('pedidos').doc(pedidoId);
+  const politicaRef = db
+    .collection('eventos')
+    .doc(input.eventoId)
+    .collection('politicaVendas')
+    .doc(POLITICA_VENDAS_DOC_ID);
+  await db.runTransaction(async (tx) => {
+    const [pedidoSnap, politicaSnap] = await Promise.all([
+      tx.get(pedidoRef),
+      tx.get(politicaRef),
+    ]);
+    if (!pedidoSnap.exists || pedidoSnap.get('aceites') !== undefined) return;
+    const politicaData = politicaSnap.exists ? (politicaSnap.data() ?? {}) : null;
+    const valida =
+      politicaData !== null && validarPoliticaVendas(politicaData).length === 0;
+    const now = FieldValue.serverTimestamp();
+    tx.update(pedidoRef, {
+      aceites: {
+        termos: {
+          versao: valida
+            ? versaoPoliticaVendas(politicaData['versao'] as number | undefined)
+            : 1,
+          aceiteEm: now,
+          materialHash: valida
+            ? hashPoliticaVendas(
+                politicaData as Parameters<typeof hashPoliticaVendas>[0]
+              )
+            : hashPoliticaPadrao(),
+        },
+        saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
+      },
+      atualizadoEm: now,
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Núcleo (testável com Admin SDK contra o Emulator; callable é wrapper fino)
 // ---------------------------------------------------------------------------
 
@@ -1408,6 +1503,10 @@ export async function createInscricaoChargeCore(
         'idempotencyKey já usada para outro evento — gere uma nova chave.'
       );
     }
+    // F-4b: retry trazendo aceites sobre pedido sem o bloco COMPLETA a
+    // prova (nunca reescreve prova existente) — sem isto o replay engoliria
+    // o aceite silenciosamente.
+    await garantirAceitesNoReplay(db, input, pedidoId);
   } else {
     const {
       tenantId,

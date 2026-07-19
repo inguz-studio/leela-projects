@@ -393,6 +393,8 @@ export {
   isUfBrasil,
   cpfValido,
   telefoneValido,
+  normalizarCpf,
+  normalizarTelefone,
   idadeNaData,
   parseDadosPessoais,
   parseTamanhos,

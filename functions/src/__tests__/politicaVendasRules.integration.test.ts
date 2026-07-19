@@ -286,6 +286,35 @@ describe('politicaVendas — versão CONGELADA p/ cliente (CKMOD · RN-149 patte
     await assertFails(updateDoc(doc(db, ...P_POL), { versao: deleteField() }));
   });
 
+  it('F-2: platform_admin via CLIENT SDK também não fura o congelamento', async () => {
+    // create já carimbado ⇒ NEGA (hash pré-plantado suprimiria bump futuro)
+    await assertFails(
+      setDoc(
+        doc(platformAdmin().firestore(), ...P_POL),
+        politicaValida({ versao: 7, politicaTextoHash: 'hash-plantado' })
+      )
+    );
+    await adminDb.doc(P_POL.join('/')).set({
+      ...politicaValida(),
+      atualizadoEm: Timestamp.now(),
+      versao: 2, politicaTextoHash: 'hash-legitimo', versaoAtualizadaEm: Timestamp.now(),
+    });
+    // update tocando versão/hash ⇒ NEGA; material sem tocar versão ⇒ PERMITE
+    await assertFails(
+      updateDoc(doc(platformAdmin().firestore(), ...P_POL), { versao: 99 })
+    );
+    await assertFails(
+      updateDoc(doc(platformAdmin().firestore(), ...P_POL), {
+        politicaTextoHash: 'hash-plantado',
+      })
+    );
+    await assertSucceeds(
+      updateDoc(doc(platformAdmin().firestore(), ...P_POL), {
+        reembolso: { janelaArrependimentoDias: 5, corteHoras: 48, slaAnaliseDias: 3 },
+      })
+    );
+  });
+
   it('OWNER edita o MATERIAL sem tocar a versão ⇒ PERMITE (o bump é do trigger)', async () => {
     await adminDb.doc(P_POL.join('/')).set({
       ...politicaValida(),

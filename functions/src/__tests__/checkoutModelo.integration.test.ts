@@ -35,7 +35,11 @@ import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
-import { versionarPoliticaVendasCore } from '../eventos/versionarPoliticaVendas';
+import {
+  hashPoliticaPadrao,
+  hashPoliticaVendas,
+  versionarPoliticaVendasCore,
+} from '../eventos/versionarPoliticaVendas';
 import { MockPaymentProvider } from '../payments/mockProvider';
 
 const PROJECT_ID = 'demo-leela-ckmod';
@@ -184,23 +188,29 @@ describe('CKMOD — persistência do modelo novo no fluxo do checkout', () => {
     expect(pedido.endereco?.uf).toBe('SC');
     expect(pedido.endereco?.complemento).toBe('ap 301');
 
-    // Telefone do responsável: canal de contato do pedido
-    expect(pedido.responsavel.telefone).toBe('(48) 99999-0001');
+    // Telefone do responsável: canal de contato do pedido (canônico — F-3)
+    expect(pedido.responsavel.telefone).toBe('48999990001');
 
     // Aceites: versão dos TERMOS = vigente da política (3, lida in-tx);
     // saúde = constante vigente do produto; carimbo de servidor presente.
+    // F-1: a prova carrega o HASH do material lido NA MESMA tx (o seed usa
+    // o material padrão) — autossuficiente na janela do trigger.
     expect(pedido.aceites?.termos.versao).toBe(3);
+    expect(pedido.aceites?.termos.materialHash).toBe(
+      hashPoliticaVendas(politicaVendasPadrao())
+    );
     expect(pedido.aceites?.saude.versao).toBe(TERMO_SAUDE_VERSAO_VIGENTE);
     expect(pedido.aceites?.termos.aceiteEm).toBeTruthy();
 
-    // [reg] parcial POR INSCRITO: cpf+nascimento; telefone SÓ no responsável
+    // [reg] parcial POR INSCRITO: cpf+nascimento; telefone SÓ no responsável.
+    // F-3: PII persistida CANÔNICA (só dígitos — máscara é da UI).
     const [respId, convidadoId] = r.inscritoIds;
     const respSnap = await db
       .doc(`eventos/${EVENTO_ID}/inscritos/${respId}`).get();
     const resp = parseInscrito(respSnap.id, respSnap.data() ?? {});
-    expect(resp.dadosPessoais?.cpf).toBe('529.982.247-25');
+    expect(resp.dadosPessoais?.cpf).toBe('52998224725');
     expect(resp.dadosPessoais?.nascimento).toBe('1990-05-17');
-    expect(resp.dadosPessoais?.telefone).toBe('(48) 99999-0001');
+    expect(resp.dadosPessoais?.telefone).toBe('48999990001');
     expect(resp.dadosPessoais?.genero).toBe('nao_informado'); // Postel
 
     const convSnap = await db
@@ -223,6 +233,43 @@ describe('CKMOD — persistência do modelo novo no fluxo do checkout', () => {
       (await db.collection('pedidos').doc(r.pedidoId).get()).data() ?? {}
     );
     expect(pedido.aceites?.termos.versao).toBe(1);
+    // F-1: sem doc, o material aceito são os defaults legais — hash coerente
+    // com o que o leitor público renderiza no modal.
+    expect(pedido.aceites?.termos.materialHash).toBe(hashPoliticaPadrao());
+  });
+
+  it('F-4b: replay trazendo aceites sobre pedido SEM o bloco COMPLETA a prova (e nunca a reescreve)', async () => {
+    const key = 'ckmod-f4b-0001';
+    // Tentativa 1: UI antiga (sem aceites) cria o pedido
+    const semAceites = inputCkmod(EVENTO_ID, key);
+    delete semAceites.aceites;
+    await createInscricaoChargeCore(db, provider, semAceites, { uid: ANA_UID });
+    const pedidoRef = db.collection('pedidos').doc(`ped-${ANA_UID}-${key}`);
+    expect((await pedidoRef.get()).get('aceites')).toBeUndefined();
+
+    // Retry (mesma chave) COM aceites: prova é completada com o vigente
+    await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    const completado = parsePedido(
+      `ped-${ANA_UID}-${key}`,
+      (await pedidoRef.get()).data() ?? {}
+    );
+    expect(completado.aceites?.termos.versao).toBe(3);
+    expect(completado.aceites?.termos.materialHash).toBe(
+      hashPoliticaVendas(politicaVendasPadrao())
+    );
+    const carimbo1 = completado.aceites?.termos.aceiteEm;
+
+    // 3ª chamada com aceites: prova EXISTENTE fica intocada
+    await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    const depois = parsePedido(
+      `ped-${ANA_UID}-${key}`,
+      (await pedidoRef.get()).data() ?? {}
+    );
+    expect(depois.aceites?.termos.aceiteEm).toEqual(carimbo1);
   });
 
   it('REPLAY (mesma chave) preserva endereco/aceites — nada recomputado', async () => {
@@ -361,5 +408,35 @@ describe('CKMOD — versionarPoliticaVendasCore (bump material, idempotente)', (
   it('doc ausente ⇒ vigem os defaults (versão 1, nada a escrever)', async () => {
     const r = await versionarPoliticaVendasCore(db, 'evento-sem-politica-x');
     expect(r).toEqual({ bumpado: false, versao: 1 });
+  });
+
+  it('F-5: doc LEGADO custom sem hash — re-save idêntico NÃO bumpa (baseline = material do before)', async () => {
+    const EVT_LEG = 'evento-politica-legada';
+    const padrao = politicaVendasPadrao();
+    const materialCustom = {
+      ...padrao,
+      reembolso: { ...padrao.reembolso, janelaArrependimentoDias: 14 },
+    };
+    // Doc pré-CKMOD: material custom publicado, SEM versao/hash
+    await db.doc(`eventos/${EVT_LEG}/politicaVendas/config`).set({
+      id: 'config', tenantId: TENANT_ID,
+      atualizadoEm: FieldValue.serverTimestamp(),
+      ...materialCustom,
+    });
+    // Re-save idêntico (trigger passa antesHash = hash do material anterior):
+    // sem bump — o material publicado JÁ ERA a versão 1 vigente.
+    const antesHash = hashPoliticaVendas(materialCustom);
+    const r1 = await versionarPoliticaVendasCore(db, EVT_LEG, antesHash);
+    expect(r1).toEqual({ bumpado: false, versao: 1 });
+    const snap1 = await db.doc(`eventos/${EVT_LEG}/politicaVendas/config`).get();
+    expect(snap1.get('versao')).toBe(1);
+    expect(snap1.get('politicaTextoHash')).toBe(antesHash);
+
+    // Mudança material REAL sobre o legado ⇒ bump 1→2
+    await db.doc(`eventos/${EVT_LEG}/politicaVendas/config`).update({
+      reembolso: { ...padrao.reembolso, janelaArrependimentoDias: 30 },
+    });
+    const r2 = await versionarPoliticaVendasCore(db, EVT_LEG, antesHash);
+    expect(r2).toEqual({ bumpado: true, versao: 2 });
   });
 });

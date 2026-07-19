@@ -85,17 +85,21 @@ async function lerInscrito(db: Firestore, inscritoId: string) {
 }
 
 beforeAll(async () => {
+  // Porta da LANE (honra LEELA_FS_EMU_PORT — CKMOD roda em 8480 via
+  // firebase.r6.json; NUNCA :8180 do preview); fallback 8080 preserva o
+  // gate consolidado.
+  const FS_PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: 8080,
+      port: FS_PORT,
     },
   });
 
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${FS_PORT}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();

@@ -1599,19 +1599,24 @@ service cloud.firestore {
         allow read: if isPlatformAdmin()
                     || isTenantWriter(tenantDoEventoPai())
                     || papelEventoAtivo(['organizador', 'administrador', 'financeiro']);
+        // F-2 (review CKMOD): o ramo platform_admin TAMBÉM respeita o
+        // congelamento de versão — admin via client SDK setando `versao`/
+        // `politicaTextoHash` suprimiria o bump futuro do trigger (hash
+        // pré-plantado ⇒ mudança material silenciosa sob a mesma versão),
+        // corrompendo toda prova de aceite. Admin de verdade usa Admin SDK.
         allow create: if (isTenantOwner(request.resource.data.tenantId)
                           && docId == 'config'
                           && request.resource.data.tenantId == tenantDoEventoPai()
                           && tenantAtivo(request.resource.data.tenantId)
                           && shapePoliticaValida()
                           && camposVersaoPoliticaNaoNascem())
-                      || isPlatformAdmin();
+                      || (isPlatformAdmin() && camposVersaoPoliticaNaoNascem());
         allow update: if (isTenantOwner(resource.data.tenantId)
                           && request.resource.data.tenantId == resource.data.tenantId
                           && tenantAtivo(resource.data.tenantId)
                           && shapePoliticaValida()
                           && camposVersaoPoliticaIntocados())
-                      || isPlatformAdmin();
+                      || (isPlatformAdmin() && camposVersaoPoliticaIntocados());
         allow delete: if false;
       }
 

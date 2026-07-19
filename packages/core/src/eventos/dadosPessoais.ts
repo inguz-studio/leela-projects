@@ -73,6 +73,9 @@ export function isUfBrasil(value: unknown): value is string {
  */
 export function cpfValido(value: unknown): boolean {
   if (typeof value !== 'string') return false;
+  // Teto BRUTO (fix F-3 review CKMOD): CPF formatado tem 14 chars — padding
+  // de máscara/espaço ilimitado era doc-bomba parcial ao persistir.
+  if (value.length > 24) return false;
   const digitos = value.replace(/\D/g, '');
   if (digitos.length !== 11 || value.replace(/[\d.\-\s]/g, '').length > 0) {
     return false;
@@ -99,8 +102,30 @@ export function cpfValido(value: unknown): boolean {
  */
 export function telefoneValido(value: unknown): boolean {
   if (typeof value !== 'string') return false;
+  // Teto BRUTO (fix F-3 review CKMOD): "+55 (48) 99999-0001" tem 19 chars —
+  // lixo não-dígito ilimitado passava e era persistido cru.
+  if (value.length > 32) return false;
   const digitos = value.replace(/\D/g, '');
   return digitos.length >= 10 && digitos.length <= 13;
+}
+
+/**
+ * CPF canônico para PERSISTÊNCIA: 11 dígitos, sem máscara (fix F-3 review
+ * CKMOD — "529.982.247-25" e "52998224725" não podem virar dois valores no
+ * doc). Chamar SÓ após `cpfValido`; entrada inválida devolve só os dígitos
+ * que houver (o validador é o gate, não este normalizador). @pure
+ */
+export function normalizarCpf(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
+/**
+ * Telefone canônico para PERSISTÊNCIA: só dígitos (10–13, com DDI quando
+ * houver) — máscara é da UI (`formatarTelefone` do painel re-formata).
+ * Chamar SÓ após `telefoneValido`. @pure
+ */
+export function normalizarTelefone(value: string): string {
+  return value.replace(/\D/g, '');
 }
 
 /**
@@ -186,13 +211,19 @@ export function parseDadosPessoais(
   }
   const data = raw as Record<string, unknown>;
 
+  // Postel SIMÉTRICO (fix F-6 review CKMOD): '' equivale a AUSENTE — o tipo
+  // promete '' = "não coletado", então re-persistir o struct parseado nunca
+  // pode virar poison pill (parser que lançasse em '' quebraria o round-trip).
+  const ausente = (v: unknown): boolean =>
+    v === undefined || (typeof v === 'string' && v.length === 0);
+
   if (!cpfValido(data['cpf'])) {
     throw new Error(`${contexto}: "dadosPessoais.cpf" inválido (11 dígitos + DV)`);
   }
-  if (data['telefone'] !== undefined && !telefoneValido(data['telefone'])) {
+  if (!ausente(data['telefone']) && !telefoneValido(data['telefone'])) {
     throw new Error(`${contexto}: "dadosPessoais.telefone" inválido (10–13 dígitos)`);
   }
-  if (data['nascimento'] !== undefined && !isDataEventoISO(data['nascimento'])) {
+  if (!ausente(data['nascimento']) && !isDataEventoISO(data['nascimento'])) {
     throw new Error(
       `${contexto}: "dadosPessoais.nascimento" deve ser data civil yyyy-mm-dd válida`
     );
@@ -203,12 +234,12 @@ export function parseDadosPessoais(
     );
   }
   if (
-    data['cidade'] !== undefined &&
-    (typeof data['cidade'] !== 'string' || data['cidade'].length === 0)
+    !ausente(data['cidade']) &&
+    typeof data['cidade'] !== 'string'
   ) {
     throw new Error(`${contexto}: "dadosPessoais.cidade" inválida`);
   }
-  if (data['uf'] !== undefined && !isUfBrasil(data['uf'])) {
+  if (!ausente(data['uf']) && !isUfBrasil(data['uf'])) {
     throw new Error(`${contexto}: uf "${String(data['uf'])}" fora da lista de UFs`);
   }
 

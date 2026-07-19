@@ -28,7 +28,14 @@
 //
 // RN-149 ponta-a-ponta: o pedido mantém `aceites.termos.versao` (persistido
 // pelo checkout — NUNCA tocado aqui); `precisaNovoAceiteTermos` (core) diz
-// se um aceite antigo ainda vale para a vigente.
+// se um aceite antigo ainda vale para a vigente. A prova do pedido carrega
+// também o HASH do material aceito (F-1) — autossuficiente mesmo na janela
+// edição→bump deste trigger assíncrono.
+//
+// ⚠️ INVARIANTE OPERACIONAL (F-7, risco aceito): apagar e recriar o doc via
+// Admin/tooling RESETA a monotonicidade (recriação nasce da baseline padrão).
+// Rules negam delete de cliente; tooling NÃO deve recriar `config` sem
+// migrar `versao`/`politicaTextoHash` do doc apagado.
 // =============================================================================
 
 import { createHash } from 'crypto';
@@ -71,15 +78,21 @@ export interface VersionarPoliticaVendasResult {
 
 /**
  * Núcleo testável: relê `eventos/{eventoId}/politicaVendas/config` e bumpa a
- * versão quando o material do DISCO difere do último material versionado
- * (`politicaTextoHash`; doc sem hash usa os defaults legais como baseline —
- * é o conteúdo que vigia antes do doc existir). Doc inválido = no-op
- * (parse-fail nunca versiona lixo; as Rules já barram cliente — doc torto
- * aqui é Admin/corrompido, e versão não pode nascer de política ilegível).
+ * versão quando o material do DISCO difere do último material versionado.
+ * Baseline, na ordem (fix F-5 review CKMOD):
+ *   1. `politicaTextoHash` gravado (doc já versionado);
+ *   2. `antesHash` — hash do material do `change.before` (doc LEGADO
+ *      pré-CKMOD sem hash: o material publicado É a versão 1 vigente —
+ *      re-save idêntico não pode bumpar; só mudança real bumpa);
+ *   3. defaults legais (doc NASCENDO — o que vigia era o padrão CDC).
+ * Doc inválido = no-op (parse-fail nunca versiona lixo; as Rules já barram
+ * cliente — doc torto aqui é Admin/corrompido, e versão não pode nascer de
+ * política ilegível).
  */
 export async function versionarPoliticaVendasCore(
   db: Db,
-  eventoId: string
+  eventoId: string,
+  antesHash?: string
 ): Promise<VersionarPoliticaVendasResult> {
   const ref = db
     .collection('eventos')
@@ -107,9 +120,13 @@ export async function versionarPoliticaVendasCore(
     const hashGravado = data['politicaTextoHash'] as string | undefined;
     const vigente = versaoPoliticaVendas(versaoGravada);
 
-    // Baseline do último material VERSIONADO: hash gravado, ou os defaults
-    // legais quando o doc nunca foi versionado (o que vigia era o padrão).
-    const baseline = typeof hashGravado === 'string' ? hashGravado : hashPoliticaPadrao();
+    // Baseline do último material VERSIONADO (F-5): hash gravado > material
+    // do `before` (doc legado publicado = versão 1 vigente) > defaults
+    // legais (doc nascendo — o que vigia era o padrão).
+    const baseline =
+      typeof hashGravado === 'string'
+        ? hashGravado
+        : (antesHash ?? hashPoliticaPadrao());
 
     if (hashAtual === baseline) {
       // Conteúdo vigente idêntico — garante só o CARIMBO em doc que nunca
@@ -144,7 +161,16 @@ export const versionarPoliticaVendas = firestoreV1
     if (!change.after.exists) return null; // delete: defaults voltam a viger
     if (context.params['docId'] !== POLITICA_VENDAS_DOC_ID) return null;
     const eventoId = context.params['eventoId'] as string;
-    const r = await versionarPoliticaVendasCore(admin.firestore(), eventoId);
+    // Baseline F-5: doc LEGADO (before existe, material válido) — o material
+    // anterior é a versão vigente; inválido/ausente cai nos defaults no core.
+    let antesHash: string | undefined;
+    if (change.before.exists) {
+      const antes = change.before.data() ?? {};
+      if (validarPoliticaVendas(antes).length === 0) {
+        antesHash = hashPoliticaVendas(antes as unknown as MaterialPolitica);
+      }
+    }
+    const r = await versionarPoliticaVendasCore(admin.firestore(), eventoId, antesHash);
     if (r.bumpado) {
       logger.info('politica_vendas_versionada', { eventoId, versao: r.versao });
     }
