@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import QRCode from 'qrcode';
 import { Button, Field, Input } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
@@ -10,6 +13,72 @@ export interface CartaoForm {
   numero: string;
   validade: string;
   cvv: string;
+}
+
+/**
+ * A-3 · QR visual do PIX. Reusa a lib `qrcode` (já dependência, mesma usada no
+ * ingresso `Ticket.tsx`) para renderizar o payload copia-e-cola como QR
+ * escaneável — o caminho natural desktop→app do banco. Falha do encode cai em
+ * silêncio (o copia-e-cola abaixo continua servindo).
+ */
+function PixQrCode({ payload }: { payload: string }): React.JSX.Element | null {
+  const [qr, setQr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelado = false;
+    QRCode.toDataURL(payload, { width: 200, margin: 1 })
+      .then((url) => {
+        if (!cancelado) setQr(url);
+      })
+      .catch(() => {
+        if (!cancelado) setQr(null);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [payload]);
+
+  if (qr === null) return null;
+  return (
+    <div className="flex justify-center">
+      <div className="rounded-ds-md bg-surface-base p-3">
+        <img
+          src={qr}
+          alt="QR Code para pagamento via PIX"
+          className="h-44 w-44 object-contain"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Botão "Copiar código" com feedback "copiado ✓" (some após 2s). */
+function CopiarCodigoPix({ codigo }: { codigo: string }): React.JSX.Element {
+  const [copiado, setCopiado] = useState(false);
+
+  useEffect(() => {
+    if (!copiado) return;
+    const t = setTimeout(() => setCopiado(false), 2000);
+    return () => clearTimeout(t);
+  }, [copiado]);
+
+  const copiar = (): void => {
+    void navigator.clipboard
+      ?.writeText(codigo)
+      .then(() => setCopiado(true))
+      .catch(() => setCopiado(false));
+  };
+
+  return (
+    <Button variant="secondary" size="sm" onClick={copiar}>
+      {copiado ? (
+        <Check size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
+      ) : (
+        <Copy size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
+      )}
+      {copiado ? 'Código copiado' : 'Copiar código'}
+    </Button>
+  );
 }
 
 /**
@@ -60,23 +129,32 @@ export function StepPagamento({
           {charge === null ? (
             <>
               <p className="text-sm text-text-secondary">
-                Gere o código PIX para pagar {totalLabel ? <strong>{totalLabel}</strong> : null} à
-                vista. Sua vaga fica reservada como pendente até a confirmação.
+                Estamos preparando o código PIX para pagar{' '}
+                {totalLabel ? <strong>{totalLabel}</strong> : null} à vista. Sua vaga fica reservada
+                como pendente até a confirmação.
               </p>
+              {/* Auto-gerado ao entrar na etapa (A-3); o botão fica como fallback
+                  se a geração automática falhar. */}
               <div>
                 <Button onClick={onGerarCobranca} disabled={criandoCharge}>
-                  {criandoCharge ? 'Gerando cobrança…' : 'Gerar código PIX'}
+                  {criandoCharge ? 'Preparando código PIX…' : 'Gerar código PIX'}
                 </Button>
               </div>
             </>
           ) : (
             <>
-              <div className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
-                <p className="text-sm font-medium text-text-primary">Copia e cola / QR (sandbox)</p>
-                <p className="mt-2 break-all rounded-ds-md bg-surface-sunken px-3 py-2 font-mono text-xs text-text-secondary">
+              <div className="flex flex-col gap-3 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
+                <p className="text-sm font-medium text-text-primary">
+                  Escaneie o QR ou use o copia e cola
+                </p>
+                <PixQrCode payload={charge.qrCode ?? charge.paymentUrl ?? charge.chargeId} />
+                <p className="break-all rounded-ds-md bg-surface-sunken px-3 py-2 font-mono text-xs text-text-secondary">
                   {charge.qrCode ?? charge.paymentUrl ?? charge.chargeId}
                 </p>
-                <p className="mt-2 text-xs text-text-tertiary">
+                <div>
+                  <CopiarCodigoPix codigo={charge.qrCode ?? charge.paymentUrl ?? charge.chargeId} />
+                </div>
+                <p className="text-xs text-text-tertiary">
                   Ambiente de simulação: nenhum PIX real é cobrado. Clique abaixo para simular a
                   confirmação do pagamento (o gateway dispara o webhook).
                 </p>
