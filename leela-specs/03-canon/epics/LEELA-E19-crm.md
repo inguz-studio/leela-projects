@@ -89,6 +89,7 @@ de minimização assumidas na implementação (registradas no handoff do trace):
 4. **P-E19-4 · Dado mínimo** = armazenar `nascimento` (date-only) em vez de idade pré-calculada (idade envelhece no doc; aniversário deriva mm-dd).
 5. **P-E19-5 · Dinheiro** = `valorGasto` = Σ(valorFinal+taxaRepassada) das confirmadas; `ltv` = Σ valorFinal (consistente com `receitaConfirmada`). Estornada fica no histórico fora dos dois números.
 6. **P-E19-6 · Só quem comprou** = apenas inscrição confirmada/estornada entra no CRM; pendente/cancelada não constrói perfil.
+7. **P-CKMOD-1 (2026-07-19) · Endereço NUNCA entra no CRM** — o checkout novo (lote CHECKOUT-MODELO) passou a coletar endereço do comprador em `pedidos/{id}.endereco`; por minimização RN-172, a allowlist do doc de cliente **não ganha endereço** (nem cidade/UF derivadas dele). A agregação do CRM segue lendo INSCRITOS (nunca o pedido). Incluir endereço no CRM exige decisão explícita do Vitor registrada aqui.
 
 ## Estado de implementação (backend — trace leela-build-2d6ee98d, 2026-07-18)
 
