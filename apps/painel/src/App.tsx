@@ -7,6 +7,7 @@ import { OverviewRoutes } from './routes/overview/OverviewRoutes';
 import { EventosRoutes } from './routes/eventos/EventosRoutes';
 import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
 import { CrmRoutes } from './routes/crm/CrmRoutes';
+import { MarcasRoutes } from './routes/marcas/MarcasRoutes';
 import { FinanceiroRoutes } from './routes/financeiro/FinanceiroRoutes';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
@@ -54,6 +55,8 @@ export function App() {
                   <Route path="/clubes/*" element={<ClubesRoutes />} />
                   {/* E19 · CRM — hub "Clientes & Comunicação" (item comunicacao) */}
                   <Route path="/crm/*" element={<CrmRoutes />} />
+                  {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
+                  <Route path="/marcas/*" element={<MarcasRoutes />} />
                   {/* E09-slim · Repasses do organizador (saldo, dados bancários, saque) */}
                   <Route path="/financeiro/*" element={<FinanceiroRoutes />} />
                   {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}

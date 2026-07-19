@@ -29,7 +29,9 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // (CRM). Deixa de ser placeholder inerte; a comunicação por evento/clube
   // (E06/E05) segue nas próprias telas — o hub é a superfície nova.
   comunicacao: '/crm',
-  marcas: undefined,
+  // E10 · S811 seed: o item Marcas leva ao módulo de patrocinadores
+  // reutilizáveis (RN-171). Deixa de ser placeholder inerte.
+  marcas: '/marcas',
   configuracoes: undefined,
 };
 
@@ -62,6 +64,7 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname.startsWith('/clubes')) return 'clubs';
   if (pathname.startsWith('/financeiro')) return 'financeiro';
   if (pathname.startsWith('/crm')) return 'comunicacao';
+  if (pathname.startsWith('/marcas')) return 'marcas';
   return null;
 }
 

@@ -13,6 +13,9 @@ describe('painelActiveId', () => {
     // E19 · S-R9-13: o hub CRM ativa o item Comunicação da sidebar.
     ['/crm', 'comunicacao'],
     ['/crm/tipo_abc123', 'comunicacao'],
+    // E10 · S811 seed: o módulo Marcas ativa o item Marcas.
+    ['/marcas', 'marcas'],
+    ['/marcas/qualquer', 'marcas'],
     ['/health', null],
   ])('%s → %s', (pathname, esperado) => {
     expect(painelActiveId(pathname)).toBe(esperado);
@@ -50,8 +53,10 @@ describe('shellSidebarSections', () => {
     // E19 · S-R9-13: Comunicação agora leva ao hub CRM "Clientes & Comunicação".
     items.find((i) => i.id === 'comunicacao')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/crm');
+    // E10 · S811 seed: Marcas agora leva ao módulo de patrocinadores reutilizáveis.
+    items.find((i) => i.id === 'marcas')?.onClick?.();
+    expect(navigate).toHaveBeenCalledWith('/marcas');
     // Itens ainda inertes (sem rota) permanecem sem onClick — estado honesto.
-    expect(items.find((i) => i.id === 'marcas')?.onClick).toBeUndefined();
     expect(items.find((i) => i.id === 'configuracoes')?.onClick).toBeUndefined();
   });
 
