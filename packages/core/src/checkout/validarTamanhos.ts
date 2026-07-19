@@ -21,14 +21,16 @@
 // quebra no fluxo vigente.
 // =============================================================================
 
-import { SEPARADOR_SKU } from '../eventos/aprovisionamento';
-import type { ItemKit } from '../eventos/kit';
+import { parseSufixoTamanho, SEPARADOR_SKU } from '../eventos/aprovisionamento';
+import { gradeEfetivaDoItem, tamanhosDoCorte, type GradeCorte, type ItemKit } from '../eventos/kit';
 
-/** Projeção mínima de um ItemKit para a validação de tamanhos. */
+/** Projeção mínima de um ItemKit para a validação de tamanhos.
+ *  RN-231: `grade` opcional — ausente valida contra o legado
+ *  `tamanhosDisponiveis` (≡ grade unissex, via gradeEfetivaDoItem). */
 export type ItemKitParaTamanhos = Pick<
   ItemKit,
   'id' | 'tamanhado' | 'tamanhosDisponiveis' | 'kits'
->;
+> & { grade?: GradeCorte[] };
 
 /**
  * Teto SANITÁRIO de entradas no map `tamanhos` (review antagonista T4):
@@ -46,7 +48,11 @@ function eco(valor: string): string {
 
 /** Parâmetros da validação — por INSCRITO (ADR-011: tamanho é por inscrito). */
 export interface ValidarTamanhosParams {
-  /** Map `itemId → tamanho` informado no checkout (RN-223) */
+  /**
+   * Map `itemId → sufixo de SKU` informado no checkout (RN-223/RN-231):
+   * `'M'` (grade unissex/legado) ou `'feminina__M'` (grade por corte) —
+   * exatamente o sufixo da chave de aprovisionamento (sufixoSku).
+   */
   tamanhos: Readonly<Record<string, string>>;
   /** Kit escolhido pelo inscrito (`kitId` real do evento) — undefined = sem kit */
   kitId: string | undefined;
@@ -85,17 +91,22 @@ export function validarTamanhosInscrito(params: ValidarTamanhosParams): string[]
   const porId = new Map<string, ItemKitParaTamanhos>();
   for (const item of itensDoEvento) porId.set(item.id, item);
 
-  for (const [itemId, tamanho] of entradas) {
-    if (
-      itemId.length === 0 ||
-      itemId.includes(SEPARADOR_SKU) ||
-      typeof tamanho !== 'string' ||
-      tamanho.length === 0 ||
-      tamanho.includes(SEPARADOR_SKU)
-    ) {
-      // "__" quebraria o round-trip da chave de SKU `itemId__tamanho` (S210-T2)
+  for (const [itemId, sufixo] of entradas) {
+    if (itemId.length === 0 || itemId.includes(SEPARADOR_SKU) || typeof sufixo !== 'string') {
+      // "__" no itemId quebraria o round-trip da chave de SKU (S210-T2)
       erros.push(
-        `tamanhos["${eco(itemId)}"]: item/tamanho devem ser não-vazios sem "${SEPARADOR_SKU}" (RN-223/S210-T2).`
+        `tamanhos["${eco(itemId)}"]: item deve ser não-vazio sem "${SEPARADOR_SKU}" (RN-223/S210-T2).`
+      );
+      continue;
+    }
+    // RN-231: o valor é o SUFIXO do SKU — `tamanho` (unissex) ou
+    // `corte__tamanho`. Malformado (vazio, `__` sobrando, corte forjado,
+    // `unissex` explícito) morre AQUI, antes de virar doc.
+    const decomposto = sufixo.length > 0 ? parseSufixoTamanho(sufixo) : null;
+    if (decomposto === null) {
+      erros.push(
+        `tamanhos["${eco(itemId)}"]: valor '${eco(sufixo)}' fora do padrão ` +
+          `tamanho ou corte${SEPARADOR_SKU}tamanho (RN-231/S210-T2).`
       );
       continue;
     }
@@ -112,10 +123,19 @@ export function validarTamanhosInscrito(params: ValidarTamanhosParams): string[]
       erros.push(`tamanhos["${eco(itemId)}"]: item não é tamanhado (RN-212).`);
       continue;
     }
-    if (!item.tamanhosDisponiveis.includes(tamanho)) {
+    const grade = gradeEfetivaDoItem(item);
+    const daGrade = tamanhosDoCorte(grade, decomposto.corte);
+    if (daGrade.length === 0) {
       erros.push(
-        `tamanhos["${eco(itemId)}"]: tamanho '${eco(tamanho)}' fora dos disponíveis ` +
-          `[${item.tamanhosDisponiveis.join(', ')}] (RN-223).`
+        `tamanhos["${eco(itemId)}"]: corte '${decomposto.corte}' fora da grade ` +
+          `[${grade.map((g) => g.corte).join(', ')}] (RN-231).`
+      );
+      continue;
+    }
+    if (!daGrade.includes(decomposto.tamanho)) {
+      erros.push(
+        `tamanhos["${eco(itemId)}"]: tamanho '${eco(decomposto.tamanho)}' fora dos disponíveis ` +
+          `do corte ${decomposto.corte} [${daGrade.join(', ')}] (RN-223/231).`
       );
     }
   }
@@ -126,7 +146,7 @@ export function validarTamanhosInscrito(params: ValidarTamanhosParams): string[]
       if (
         item.tamanhado &&
         item.kits.includes(kitId) &&
-        item.tamanhosDisponiveis.length > 0 &&
+        gradeEfetivaDoItem(item).length > 0 &&
         tamanhos[item.id] === undefined
       ) {
         erros.push(`tamanhos["${item.id}"]: tamanho é obrigatório para item tamanhado (RN-223).`);

@@ -2388,6 +2388,10 @@ service cloud.firestore {
        * `modeloEstoque`/`tamanhosDisponiveis` (RN-225/223 · S210-T1) são
        * config do ORGANIZADOR (cliente escreve) — validados quando presentes;
        * ausentes = doc legado (o parse do core normaliza sob_encomenda/[]).
+       * `grade` (RN-231 · TAMANHOS-GRADE): grade por corte do item tamanhado —
+       * lista não-vazia, só em item tamanhado (validação profunda de cada
+       * linha {corte, tamanhos[]} é do core/Functions — validarGradeItem —
+       * mesma profundidade adotada para tamanhosDisponiveis).
        */
       function shapeItemKitValido() {
         return request.resource.data.nome is string
@@ -2403,7 +2407,11 @@ service cloud.firestore {
           && (!request.resource.data.keys().hasAny(['modeloEstoque'])
               || request.resource.data.modeloEstoque in ['sob_encomenda', 'estoque_proprio'])
           && (!request.resource.data.keys().hasAny(['tamanhosDisponiveis'])
-              || request.resource.data.tamanhosDisponiveis is list);
+              || request.resource.data.tamanhosDisponiveis is list)
+          && (!request.resource.data.keys().hasAny(['grade'])
+              || (request.resource.data.grade is list
+                  && request.resource.data.grade.size() > 0
+                  && request.resource.data.tamanhado == true));
       }
 
       /**

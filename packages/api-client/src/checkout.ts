@@ -103,6 +103,13 @@ export interface CheckoutInscritoInput {
   /** Id do kit real do evento — precifica o delta via o core (RN-210/211). */
   kitId?: string;
   /**
+   * Map `itemId → sufixo de SKU` (RN-223/RN-231 · TAMANHOS-GRADE): `'M'`
+   * (grade única/unissex) ou `'feminina__M'` (grade por corte) — POR
+   * INSCRITO (cada atleta escolhe o seu). O servidor valida FAIL-CLOSED
+   * contra a grade configurada do evento; forjado ⇒ invalid-argument.
+   */
+  tamanhos?: Record<string, string>;
+  /**
    * Nascimento date-only `yyyy-mm-dd` POR ATLETA (CKMOD · spec §5.1).
    * Opcional; o servidor valida (data civil, ≥ 1900, no passado) e persiste
    * no bloco `[reg]` do inscrito.

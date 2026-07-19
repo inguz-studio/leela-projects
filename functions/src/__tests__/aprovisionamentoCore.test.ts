@@ -15,24 +15,48 @@ import {
   LIMIAR_BAIXA_SKU_DEFAULT,
   parseAprovisionamento,
   parseSkuId,
+  parseSufixoTamanho,
   podeTransicionarAprovisionamento,
   qtdEstoqueValida,
   saldoFisicoSku,
   skuId,
   skusDeclaradosDoItem,
+  sufixoSku,
   TRANSICOES_APROVISIONAMENTO,
 } from '@leela/core';
-import { validarTransicaoAprovisionamentoInput } from '../eventos/agregarEstoque';
+import {
+  validarEncerrarEncomendasItemInput,
+  validarTransicaoAprovisionamentoInput,
+} from '../eventos/agregarEstoque';
 
 const fakeTs = { seconds: 1_770_000_000, nanoseconds: 0 };
 
-describe('skuId / parseSkuId (S210-T2 — docId itemId__tamanho)', () => {
-  it('round-trip exato', () => {
+describe('skuId / parseSkuId (S210-T2 · RN-231 — itemId__[corte__]tamanho)', () => {
+  it('round-trip exato — unissex/legado usa a chave de 2 segmentos', () => {
     expect(skuId('camiseta-tecnica', 'M')).toBe('camiseta-tecnica__M');
+    expect(skuId('camiseta-tecnica', 'M', 'unissex')).toBe('camiseta-tecnica__M');
     expect(parseSkuId('camiseta-tecnica__M')).toEqual({
       itemId: 'camiseta-tecnica',
+      corte: 'unissex',
       tamanho: 'M',
     });
+  });
+
+  it('round-trip exato — corte feminina/masculina usa 3 segmentos', () => {
+    expect(skuId('camiseta-tecnica', 'M', 'feminina')).toBe(
+      'camiseta-tecnica__feminina__M'
+    );
+    expect(parseSkuId('camiseta-tecnica__masculina__GG')).toEqual({
+      itemId: 'camiseta-tecnica',
+      corte: 'masculina',
+      tamanho: 'GG',
+    });
+    // parse(skuId(x)) ≡ x para os três cortes
+    for (const corte of ['feminina', 'masculina', 'unissex'] as const) {
+      const sku = skuId('item-a', 'P', corte);
+      expect(parseSkuId(sku)).toEqual({ itemId: 'item-a', corte, tamanho: 'P' });
+      expect(skuId('item-a', 'P', parseSkuId(sku).corte)).toBe(sku);
+    }
   });
 
   it('rejeita chave ambígua/malformada (fail-fast)', () => {
@@ -40,14 +64,40 @@ describe('skuId / parseSkuId (S210-T2 — docId itemId__tamanho)', () => {
     expect(() => skuId('item__x', 'M')).toThrow(/itemId/);
     expect(() => skuId('camiseta', '')).toThrow(/tamanho/);
     expect(() => skuId('camiseta', 'P__G')).toThrow(/tamanho/);
+    expect(() => skuId('camiseta', 'M', 'juvenil' as never)).toThrow(/RN-231/);
     expect(() => parseSkuId('sem-separador')).toThrow(/S210-T2/);
+    // segmento do meio fora do enum de corte = malformada, não "tamanho b__c"
     expect(() => parseSkuId('a__b__c')).toThrow(/S210-T2/);
     expect(() => parseSkuId('__M')).toThrow(/S210-T2/);
+    expect(() => parseSkuId('a__masculina__')).toThrow(/S210-T2/);
+    expect(() => parseSkuId('a__masculina__M__G')).toThrow(/S210-T2/);
+    // `unissex` explícito NUNCA é chave canônica (chave única por SKU)
+    expect(() => parseSkuId('a__unissex__M')).toThrow(/S210-T2/);
   });
 });
 
-describe('skusDeclaradosDoItem (item tamanhado × tamanhos — S210-T3)', () => {
-  it('item tamanhado gera um SKU por tamanho (duplicata colapsa)', () => {
+describe('sufixoSku / parseSufixoTamanho (RN-231 — valor de inscrito.tamanhos)', () => {
+  it('unissex é o sufixo bare; corte prefixa com __', () => {
+    expect(sufixoSku('unissex', 'M')).toBe('M');
+    expect(sufixoSku('feminina', 'M')).toBe('feminina__M');
+    expect(parseSufixoTamanho('M')).toEqual({ corte: 'unissex', tamanho: 'M' });
+    expect(parseSufixoTamanho('masculina__G')).toEqual({
+      corte: 'masculina',
+      tamanho: 'G',
+    });
+  });
+
+  it('sufixo malformado → null (corte forjado, unissex explícito, vazios)', () => {
+    expect(parseSufixoTamanho('')).toBeNull();
+    expect(parseSufixoTamanho('juvenil__M')).toBeNull();
+    expect(parseSufixoTamanho('unissex__M')).toBeNull();
+    expect(parseSufixoTamanho('masculina__')).toBeNull();
+    expect(parseSufixoTamanho('a__b__c')).toBeNull();
+  });
+});
+
+describe('skusDeclaradosDoItem (item tamanhado × grade efetiva — S210-T3/RN-231)', () => {
+  it('item tamanhado LEGADO gera um SKU por tamanho (duplicata colapsa)', () => {
     expect(
       skusDeclaradosDoItem({
         id: 'camiseta-tecnica',
@@ -55,6 +105,26 @@ describe('skusDeclaradosDoItem (item tamanhado × tamanhos — S210-T3)', () => 
         tamanhosDisponiveis: ['P', 'M', 'M'],
       })
     ).toEqual(['camiseta-tecnica__P', 'camiseta-tecnica__M']);
+  });
+
+  it('grade por corte gera SKU 3-segmentos; unissex na grade mantém chave legada', () => {
+    expect(
+      skusDeclaradosDoItem({
+        id: 'camiseta-tecnica',
+        tamanhado: true,
+        tamanhosDisponiveis: ['P', 'M'], // legado IGNORADO quando há grade
+        grade: [
+          { corte: 'feminina', tamanhos: ['P', 'M'] },
+          { corte: 'masculina', tamanhos: ['M'] },
+          { corte: 'unissex', tamanhos: ['G'] },
+        ],
+      })
+    ).toEqual([
+      'camiseta-tecnica__feminina__P',
+      'camiseta-tecnica__feminina__M',
+      'camiseta-tecnica__masculina__M',
+      'camiseta-tecnica__G',
+    ]);
   });
 
   it('item único (não tamanhado) NÃO gera SKU — aprovisionamento por tamanho', () => {
@@ -206,6 +276,25 @@ describe('parseAprovisionamento — fail-fast (integridade de movimentação)', 
     ).toThrow(/historico\[0\]/);
   });
 
+  it('doc LEGADO (2 segmentos, sem campo corte) parseia como unissex — retrocompat', () => {
+    const a = parseAprovisionamento(ID, base); // base não tem `corte`
+    expect(a.corte).toBe('unissex');
+  });
+
+  it('doc de SKU com corte (3 segmentos) parseia; corte incoerente rejeita', () => {
+    const idF = 'camiseta-tecnica__feminina__M';
+    const docF = { ...base, corte: 'feminina' };
+    const a = parseAprovisionamento(idF, docF);
+    expect(a.corte).toBe('feminina');
+    expect(a.tamanho).toBe('M');
+    expect(() =>
+      parseAprovisionamento(idF, { ...base, corte: 'masculina' })
+    ).toThrow(/RN-231/);
+    expect(() =>
+      parseAprovisionamento(ID, { ...base, corte: 'feminina' })
+    ).toThrow(/RN-231/);
+  });
+
   it('qtdEstoqueValida: inteiro ≥ 0', () => {
     expect(qtdEstoqueValida(0)).toBe(true);
     expect(qtdEstoqueValida(120)).toBe(true);
@@ -241,5 +330,35 @@ describe('validarTransicaoAprovisionamentoInput (callable — validação pura)'
     expect(
       validarTransicaoAprovisionamentoInput({ ...valido, qtd: 2.5 })
     ).toEqual([expect.stringContaining('qtd')]);
+  });
+
+  it('aceita sku de grade por corte (3 segmentos — RN-231)', () => {
+    expect(
+      validarTransicaoAprovisionamentoInput({
+        ...valido,
+        sku: 'camiseta-tecnica__feminina__M',
+      })
+    ).toEqual([]);
+  });
+});
+
+describe('validarEncerrarEncomendasItemInput (RN-232 — validação pura)', () => {
+  it('input válido → sem erros; ausências e itemId com __ rejeitados', () => {
+    expect(
+      validarEncerrarEncomendasItemInput({
+        eventoId: 'meia-floripa-2026',
+        itemId: 'camiseta-tecnica',
+      })
+    ).toEqual([]);
+    expect(validarEncerrarEncomendasItemInput(null)).toHaveLength(1);
+    expect(
+      validarEncerrarEncomendasItemInput({ eventoId: '', itemId: 'x' })
+    ).toEqual([expect.stringContaining('eventoId')]);
+    expect(
+      validarEncerrarEncomendasItemInput({
+        eventoId: 'e1',
+        itemId: 'a__b',
+      })
+    ).toEqual([expect.stringContaining('itemId')]);
   });
 });

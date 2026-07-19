@@ -357,6 +357,14 @@ export type {
   TransicaoAprovisionamentoInput,
   TransicaoAprovisionamentoResult,
 } from './eventos/mutations';
+// TAMANHOS-GRADE (RN-232) — encerrar encomendas do item (callable; transiciona
+// todos os SKUs em `estimativa` → `encomendado` com a foto vendida; NÃO fecha
+// as vendas do kit)
+export { encerrarEncomendasItem } from './eventos/mutations';
+export type {
+  EncerrarEncomendasItemInput,
+  EncerrarEncomendasItemResult,
+} from './eventos/mutations';
 
 // ---------------------------------------------------------------------------
 // Pedidos — kernel `pedidos/{id}` + `pagamentos/{id}` (ADR-011 · FABLE-A-T1)

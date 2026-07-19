@@ -109,6 +109,7 @@ export { onComunicacaoWrite } from './eventos/agregarComunicacoes';
 export {
   onInscritoWriteEstoque,
   transicaoAprovisionamento,
+  encerrarEncomendasItem,
 } from './eventos/agregarEstoque';
 
 // Eventos — EQUIPE: 4 papéis por evento em custom claims (S304-T1 · RN-320 ·

@@ -29,7 +29,7 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
-import type { ItemKit } from './kit';
+import { gradeEfetivaDoItem, isCorteItem, type CorteItem, type GradeCorte, type ItemKit } from './kit';
 
 // ---------------------------------------------------------------------------
 // Constantes de coleção
@@ -39,18 +39,29 @@ import type { ItemKit } from './kit';
 export const COLECAO_APROVISIONAMENTO = 'aprovisionamento';
 
 // ---------------------------------------------------------------------------
-// Chave de SKU — `itemId__tamanho` (S210-T2)
+// Chave de SKU — `itemId__tamanho` | `itemId__corte__tamanho` (S210-T2 · RN-231)
 // ---------------------------------------------------------------------------
 
 /** Separador canônico do docId de SKU (S210-T2: `itemId__tamanho`) */
 export const SEPARADOR_SKU = '__';
 
 /**
- * docId canônico do SKU (item × tamanho). Fail-fast: itemId/tamanho vazios ou
- * contendo o separador tornariam a chave ambígua/não-parseável — integridade
- * de chave antes de integridade de valor. @pure
+ * DECISÃO DE CHAVE (TAMANHOS-GRADE · documentada — round-trip é dinheiro):
+ *   - corte `unissex`  → chave LEGADA `itemId__tamanho` (2 segmentos). A grade
+ *     unissex É o modelo antigo: os docs de aprovisionamento existentes
+ *     continuam sendo os MESMOS docs — zero migração de estoque.
+ *   - corte `feminina`/`masculina` → `itemId__corte__tamanho` (3 segmentos).
+ * BIJEÇÃO GARANTIDA: itemId e tamanho nunca contêm `__` (validados aqui e na
+ * origem — S209-T2); corte vem de enum fechado sem `__`; `unissex` NUNCA
+ * aparece como segmento explícito (chave canônica única por SKU — parse
+ * rejeita `itemId__unissex__M`). Logo split('__') dá 2 ou 3 partes, sem
+ * ambiguidade, e parse(skuId(x)) ≡ x para todo SKU válido.
  */
-export function skuId(itemId: string, tamanho: string): string {
+export function skuId(
+  itemId: string,
+  tamanho: string,
+  corte: CorteItem = 'unissex'
+): string {
   if (itemId.length === 0 || itemId.includes(SEPARADOR_SKU)) {
     throw new Error(
       `skuId: itemId "${itemId}" inválido (não-vazio, sem "${SEPARADOR_SKU}")`
@@ -61,36 +72,86 @@ export function skuId(itemId: string, tamanho: string): string {
       `skuId: tamanho "${tamanho}" inválido (não-vazio, sem "${SEPARADOR_SKU}")`
     );
   }
-  return `${itemId}${SEPARADOR_SKU}${tamanho}`;
+  if (!isCorteItem(corte)) {
+    throw new Error(`skuId: corte "${String(corte)}" fora do enum (RN-231)`);
+  }
+  return `${itemId}${SEPARADOR_SKU}${sufixoSku(corte, tamanho)}`;
 }
 
 /**
- * Decompõe um docId de SKU em (itemId, tamanho). Inverso exato de `skuId`
- * (round-trip garantido) — lança em chave malformada. @pure
+ * Sufixo do SKU (a chave SEM o itemId): `tamanho` (unissex) ou
+ * `corte__tamanho`. É EXATAMENTE o valor que o checkout persiste em
+ * `inscrito.tamanhos[itemId]` — assim a agregação de estoque segue sendo UMA
+ * equality no subcampo do map (RN-224), sem índice novo. @pure
  */
-export function parseSkuId(sku: string): { itemId: string; tamanho: string } {
-  const partes = sku.split(SEPARADOR_SKU);
-  if (partes.length !== 2 || partes[0]!.length === 0 || partes[1]!.length === 0) {
+export function sufixoSku(corte: CorteItem, tamanho: string): string {
+  return corte === 'unissex' ? tamanho : `${corte}${SEPARADOR_SKU}${tamanho}`;
+}
+
+/**
+ * Decompõe o SUFIXO (valor de `inscrito.tamanhos[itemId]`) em (corte,
+ * tamanho). `null` para sufixo malformado (vazio, `__` sobrando, corte fora
+ * do enum, `unissex` explícito) — o chamador decide rejeitar (validação) ou
+ * pular (agregação Postel). @pure
+ */
+export function parseSufixoTamanho(
+  sufixo: string
+): { corte: CorteItem; tamanho: string } | null {
+  const partes = sufixo.split(SEPARADOR_SKU);
+  if (partes.length === 1) {
+    return partes[0]!.length > 0
+      ? { corte: 'unissex', tamanho: partes[0]! }
+      : null;
+  }
+  if (partes.length === 2) {
+    const [corte, tamanho] = partes;
+    // `unissex` explícito é rejeitado: a chave canônica do unissex é a bare
+    // (2 segmentos) — duas grafias para o MESMO SKU dividiriam o estoque.
+    if (!isCorteItem(corte) || corte === 'unissex' || tamanho!.length === 0) {
+      return null;
+    }
+    return { corte, tamanho: tamanho! };
+  }
+  return null;
+}
+
+/**
+ * Decompõe um docId de SKU em (itemId, corte, tamanho). Inverso exato de
+ * `skuId` (round-trip garantido) — lança em chave malformada. Chave legada
+ * de 2 segmentos ⇒ corte `unissex`. @pure
+ */
+export function parseSkuId(
+  sku: string
+): { itemId: string; corte: CorteItem; tamanho: string } {
+  const idx = sku.indexOf(SEPARADOR_SKU);
+  const itemId = idx > 0 ? sku.slice(0, idx) : '';
+  const sufixo = idx > 0 ? sku.slice(idx + SEPARADOR_SKU.length) : '';
+  const decomposto = sufixo.length > 0 ? parseSufixoTamanho(sufixo) : null;
+  if (itemId.length === 0 || decomposto === null) {
     throw new Error(
-      `parseSkuId: "${sku}" fora do padrão itemId${SEPARADOR_SKU}tamanho (S210-T2)`
+      `parseSkuId: "${sku}" fora do padrão itemId${SEPARADOR_SKU}[corte${SEPARADOR_SKU}]tamanho (S210-T2/RN-231)`
     );
   }
-  return { itemId: partes[0]!, tamanho: partes[1]! };
+  return { itemId, ...decomposto };
 }
 
 /**
- * SKUs declarados de um item: item TAMANHADO × cada tamanho disponível
- * (RN-223/S210-T1). Item único (não tamanhado) não gera SKU — o
- * aprovisionamento por tamanho só existe onde tamanho existe (S210-T3).
- * Tamanhos duplicados colapsam (mesma chave). @pure
+ * SKUs declarados de um item: item TAMANHADO × cada (corte × tamanho) da
+ * GRADE EFETIVA (RN-231 — legado `tamanhosDisponiveis` ≡ grade unissex, que
+ * produz as MESMAS chaves de sempre). Item único (não tamanhado) não gera SKU
+ * (S210-T3). Duplicados colapsam (mesma chave). @pure
  */
 export function skusDeclaradosDoItem(
-  item: Pick<ItemKit, 'id' | 'tamanhado' | 'tamanhosDisponiveis'>
+  item: Pick<ItemKit, 'id' | 'tamanhado' | 'tamanhosDisponiveis'> & {
+    grade?: GradeCorte[];
+  }
 ): string[] {
   if (!item.tamanhado) return [];
   const skus = new Set<string>();
-  for (const tamanho of item.tamanhosDisponiveis) {
-    skus.add(skuId(item.id, tamanho));
+  for (const linha of gradeEfetivaDoItem(item)) {
+    for (const tamanho of linha.tamanhos) {
+      skus.add(skuId(item.id, tamanho, linha.corte));
+    }
   }
   return [...skus];
 }
@@ -168,12 +229,14 @@ export type AlertaEstoqueSku = 'baixa' | 'esgotado';
  * `transicaoAprovisionamento` (callable do organizador).
  */
 export interface Aprovisionamento {
-  /** docId = `itemId__tamanho` (S210-T2) */
+  /** docId = `itemId__tamanho` | `itemId__corte__tamanho` (S210-T2 · RN-231) */
   id: string;
   /** Propagado do evento pai — isolamento multi-tenant (ADR-009) */
   tenantId: string;
   /** Decomposição da chave (redundante com o id — validada no parse) */
   itemId: string;
+  /** RN-231 — corte do SKU (doc legado de 2 segmentos ⇒ `unissex`) */
+  corte: CorteItem;
   tamanho: string;
   /** RN-226 — estado da máquina (`estimativa` é o estado inicial) */
   estado: EstadoAprovisionamento;
@@ -261,7 +324,7 @@ export function parseAprovisionamento(
   id: string,
   data: Record<string, unknown>
 ): Aprovisionamento {
-  const { itemId, tamanho } = parseSkuId(id);
+  const { itemId, corte, tamanho } = parseSkuId(id);
 
   const tenantId = data['tenantId'];
   if (typeof tenantId !== 'string' || tenantId.length === 0) {
@@ -270,6 +333,13 @@ export function parseAprovisionamento(
   if (data['itemId'] !== itemId || data['tamanho'] !== tamanho) {
     throw new Error(
       `Aprovisionamento ${id}: itemId/tamanho não batem com o docId (S210-T2)`
+    );
+  }
+  // RN-231: `corte` presente deve bater com a chave; ausente = doc legado
+  // (pré-grade) — a chave de 2 segmentos JÁ diz `unissex`.
+  if (data['corte'] !== undefined && data['corte'] !== corte) {
+    throw new Error(
+      `Aprovisionamento ${id}: corte não bate com o docId (RN-231)`
     );
   }
 
@@ -333,6 +403,7 @@ export function parseAprovisionamento(
     id,
     tenantId,
     itemId,
+    corte,
     tamanho,
     estado,
     qtdVendida,

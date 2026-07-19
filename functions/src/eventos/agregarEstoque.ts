@@ -60,11 +60,13 @@ import {
   alertaAprovisionamento,
   COLECAO_APROVISIONAMENTO,
   computeAEncomendar,
+  gradeDoDocItemKit,
   isEstadoAprovisionamento,
   parseSkuId,
   podeTransicionarAprovisionamento,
   qtdEstoqueValida,
-  skusDeclaradosDoItem,
+  skuId,
+  sufixoSku,
   TRANSICOES_APROVISIONAMENTO,
   type AlertaEstoqueSku,
   type AuthClaims,
@@ -112,6 +114,9 @@ export async function recomputarAprovisionamentoEvento(
     const aprovCol = eventoRef.collection(COLECAO_APROVISIONAMENTO);
 
     // Itens tamanhados do evento (S210-T1) — matriz declarada de SKUs.
+    // RN-231: a GRADE EFETIVA (Postel — gradeDoDocItemKit) decide os SKUs:
+    // grade por corte gera `itemId__corte__tamanho`; legado/unissex mantém as
+    // chaves `itemId__tamanho` de sempre (mesmos docs, zero migração).
     // Filtro `tamanhado` em memória: catálogo de itens é pequeno (unidades)
     // e evita depender de zigzag para dois equality no mesmo snapshot.
     const itensSnap = await tx.get(
@@ -119,19 +124,10 @@ export async function recomputarAprovisionamentoEvento(
     );
     const declarados = new Set<string>();
     for (const itemDoc of itensSnap.docs) {
-      const tamanhado = itemDoc.get('tamanhado') === true;
-      const tamanhos = Array.isArray(itemDoc.get('tamanhosDisponiveis'))
-        ? (itemDoc.get('tamanhosDisponiveis') as unknown[]).filter(
-            (t): t is string =>
-              typeof t === 'string' && t.length > 0 && !t.includes('__')
-          )
-        : [];
-      for (const sku of skusDeclaradosDoItem({
-        id: itemDoc.id,
-        tamanhado,
-        tamanhosDisponiveis: tamanhos,
-      })) {
-        declarados.add(sku);
+      for (const linha of gradeDoDocItemKit(itemDoc.data())) {
+        for (const tamanho of linha.tamanhos) {
+          declarados.add(skuId(itemDoc.id, tamanho, linha.corte));
+        }
       }
     }
 
@@ -149,12 +145,15 @@ export async function recomputarAprovisionamentoEvento(
 
     // count() por SKU no MESMO snapshot transacional (RN-224): dois equality
     // (status + subcampo do map) — índices single-field automáticos.
+    // RN-231: o valor do map `tamanhos.{itemId}` é o SUFIXO do SKU ('M' no
+    // unissex/legado, 'feminina__M' na grade por corte) — a query segue UMA
+    // equality, idêntica à de antes para os SKUs legados.
     const vendidoPorSku: Record<string, number> = {};
     for (const sku of todosSkus) {
-      const { itemId, tamanho } = parseSkuId(sku);
+      const { itemId, corte, tamanho } = parseSkuId(sku);
       const q = inscritosCol
         .where('status', '==', 'confirmado')
-        .where(new FieldPath('tamanhos', itemId), '==', tamanho);
+        .where(new FieldPath('tamanhos', itemId), '==', sufixoSku(corte, tamanho));
       vendidoPorSku[sku] = (await tx.get(q.count())).data().count;
     }
 
@@ -162,7 +161,7 @@ export async function recomputarAprovisionamentoEvento(
     // preservado (estado/estoqueFisico/historico/criadoEm são da máquina de
     // estados, não desta agregação).
     for (const sku of todosSkus) {
-      const { itemId, tamanho } = parseSkuId(sku);
+      const { itemId, corte, tamanho } = parseSkuId(sku);
       const atual = existentes.get(sku);
       const estado: EstadoAprovisionamento =
         atual !== undefined && isEstadoAprovisionamento(atual.get('estado'))
@@ -182,6 +181,7 @@ export async function recomputarAprovisionamentoEvento(
         id: sku,
         tenantId,
         itemId,
+        corte,
         tamanho,
         estado,
         qtdVendida,
@@ -447,6 +447,197 @@ export const transicaoAprovisionamento = https.onCall(
     logger.info('aprovisionamento_transicao', {
       sku: resultado.sku,
       estado: resultado.estado,
+      uid: caller.uid,
+    });
+    return resultado;
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Encerrar encomendas do ITEM (TAMANHOS-GRADE · RN-232) — ação do organizador
+// ---------------------------------------------------------------------------
+
+/**
+ * SEMÂNTICA RATIFICADA (premissa documentada — pedido do Vitor: "quando
+ * encerrar encomendas, e depois ajustar o estoque físico"):
+ *
+ *   "Encerrar encomendas" do item = o organizador VAI À PRODUÇÃO com a
+ *   contagem vendida daquele momento. Tecnicamente: TODOS os SKUs do item em
+ *   `estimativa` transicionam para `encomendado` (RN-226) com
+ *   `qtd = qtdVendida` do instante (a FOTO da encomenda), numa única
+ *   transação (nenhum SKU encerra com foto de instante diferente).
+ *
+ *   NÃO fecha as vendas do kit e NÃO congela o que o comprador escolhe —
+ *   encerrar encomenda ≠ fechar vendas: quem compra depois segue escolhendo
+ *   corte/tamanho; a diferença entre o vendido final e a foto encomendada
+ *   aparece em `aEncomendar` quando o estoque chega (`em_estoque`) e nos
+ *   alertas derivados. Quem fecha venda é o lote/kit, não o estoque.
+ *
+ *   IDEMPOTENTE por máquina de estados: SKU já `encomendado`/`em_estoque` é
+ *   PULADO (contado em `jaEncerrados`) — re-invocar não duplica histórico.
+ *   SKUs materializados depois (venda nova de SKU inédito) podem ser
+ *   encerrados numa nova chamada.
+ */
+export interface EncerrarEncomendasItemInput {
+  eventoId: string;
+  itemId: string;
+}
+
+/** Resultado do encerramento (consumido pela UI do organizador e testes). */
+export interface EncerrarEncomendasItemResult {
+  itemId: string;
+  /** SKUs transicionados estimativa→encomendado NESTA chamada. */
+  encerrados: string[];
+  /** SKUs que já estavam além de `estimativa` (pulados — idempotência). */
+  jaEncerrados: string[];
+}
+
+/** Valida o input bruto de `encerrarEncomendasItem`. @pure */
+export function validarEncerrarEncomendasItemInput(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return ['Input é obrigatório.'];
+  }
+  const input = raw as Record<string, unknown>;
+  const erros: string[] = [];
+  if (typeof input['eventoId'] !== 'string' || input['eventoId'].length === 0) {
+    erros.push('"eventoId" é obrigatório.');
+  }
+  const itemId = input['itemId'];
+  if (
+    typeof itemId !== 'string' ||
+    itemId.length === 0 ||
+    itemId.includes('__')
+  ) {
+    erros.push('"itemId" é obrigatório (não-vazio, sem "__" — S210-T2).');
+  }
+  return erros;
+}
+
+/**
+ * Núcleo do encerramento (testável com Admin SDK contra o Emulator).
+ * Guards idênticos aos da transição unitária: papel de escrita no tenant
+ * (RN-401) + tenant ativo (RN-402) + evento do PRÓPRIO tenant (RN-400).
+ * Transacional: a foto `qtd = qtdVendida` de TODOS os SKUs sai do MESMO
+ * snapshot — venda em corrida entra na diferença do `aEncomendar`, nunca
+ * numa foto meio-atualizada.
+ */
+export async function encerrarEncomendasItemCore(
+  db: Db,
+  rawInput: unknown,
+  caller: EventoCaller
+): Promise<EncerrarEncomendasItemResult> {
+  const erros = validarEncerrarEncomendasItemInput(rawInput);
+  if (erros.length > 0) {
+    throw new https.HttpsError('invalid-argument', erros.join(' '));
+  }
+  const input = rawInput as unknown as EncerrarEncomendasItemInput;
+
+  const tenantId = assertTenantWriter(caller.claims);
+  await assertTenantAtivo(db, tenantId);
+
+  return db.runTransaction(async (tx) => {
+    const eventoRef = db.collection('eventos').doc(input.eventoId);
+    const eventoSnap = await tx.get(eventoRef);
+    if (!eventoSnap.exists) {
+      throw new https.HttpsError(
+        'not-found',
+        `Evento '${input.eventoId}' não existe.`
+      );
+    }
+    if (eventoSnap.get('tenantId') !== tenantId) {
+      throw new https.HttpsError(
+        'permission-denied',
+        'Evento pertence a outro tenant (RN-400).'
+      );
+    }
+
+    const skusSnap = await tx.get(
+      eventoRef
+        .collection(COLECAO_APROVISIONAMENTO)
+        .where('itemId', '==', input.itemId)
+    );
+    if (skusSnap.empty) {
+      throw new https.HttpsError(
+        'not-found',
+        `Item '${input.itemId}' sem SKUs de aprovisionamento — a agregação ` +
+          `(onWrite de inscrito) materializa os docs antes do encerramento.`
+      );
+    }
+
+    const encerrados: string[] = [];
+    const jaEncerrados: string[] = [];
+    const em = Timestamp.now();
+    for (const skuDoc of skusSnap.docs) {
+      const estadoAtual = skuDoc.get('estado');
+      if (!isEstadoAprovisionamento(estadoAtual)) {
+        throw new https.HttpsError(
+          'internal',
+          `SKU '${skuDoc.id}' com estado corrompido — intervenção manual.`
+        );
+      }
+      if (estadoAtual !== 'estimativa') {
+        // Já encomendado/em estoque — idempotência por máquina de estados.
+        jaEncerrados.push(skuDoc.id);
+        continue;
+      }
+      const qtdVendida = qtdEstoqueValida(skuDoc.get('qtdVendida'))
+        ? (skuDoc.get('qtdVendida') as number)
+        : 0;
+      const estoqueFisico = qtdEstoqueValida(skuDoc.get('estoqueFisico'))
+        ? (skuDoc.get('estoqueFisico') as number)
+        : 0;
+      const entrada: TransicaoAprovisionamento = {
+        estado: 'encomendado',
+        qtd: qtdVendida,
+        em,
+      };
+      const historicoAtual = Array.isArray(skuDoc.get('historico'))
+        ? (skuDoc.get('historico') as unknown[])
+        : [];
+      tx.update(skuDoc.ref, {
+        estado: 'encomendado' satisfies EstadoAprovisionamento,
+        aEncomendar: computeAEncomendar(qtdVendida, estoqueFisico),
+        alerta: alertaAprovisionamento({
+          estado: 'encomendado',
+          estoqueFisico,
+          qtdVendida,
+        }),
+        historico: [...historicoAtual, entrada],
+        atualizadoEm: FieldValue.serverTimestamp(),
+      });
+      encerrados.push(skuDoc.id);
+    }
+
+    return { itemId: input.itemId, encerrados, jaEncerrados };
+  });
+}
+
+/**
+ * Callable: encerra as encomendas de UM item (todos os SKUs em `estimativa`
+ * → `encomendado`, com a contagem vendida do momento — RN-232). SÓ
+ * organizador (tenant_owner/tenant_staff). NÃO fecha vendas do kit.
+ */
+export const encerrarEncomendasItem = https.onCall(
+  async (data: unknown, context) => {
+    if (!context.auth) {
+      throw new https.HttpsError(
+        'unauthenticated',
+        'Autenticação obrigatória para operar aprovisionamento.'
+      );
+    }
+    const caller: EventoCaller = {
+      uid: context.auth.uid,
+      claims: context.auth.token as unknown as AuthClaims,
+    };
+    const resultado = await encerrarEncomendasItemCore(
+      admin.firestore(),
+      data,
+      caller
+    );
+    logger.info('aprovisionamento_encerrar_encomendas', {
+      itemId: resultado.itemId,
+      encerrados: resultado.encerrados.length,
+      jaEncerrados: resultado.jaEncerrados.length,
       uid: caller.uid,
     });
     return resultado;

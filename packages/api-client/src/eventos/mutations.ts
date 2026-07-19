@@ -227,3 +227,34 @@ export async function transicaoAprovisionamento(
   >(functions, 'transicaoAprovisionamento');
   return (await call(input)).data;
 }
+
+/** Input de `encerrarEncomendasItem` (RN-232 · TAMANHOS-GRADE). */
+export interface EncerrarEncomendasItemInput {
+  eventoId: string;
+  itemId: string;
+}
+
+/** Resultado do encerramento — SKUs transicionados vs já encerrados. */
+export interface EncerrarEncomendasItemResult {
+  itemId: string;
+  encerrados: string[];
+  jaEncerrados: string[];
+}
+
+/**
+ * Encerra as encomendas de UM item (RN-232): todos os SKUs em `estimativa`
+ * viram `encomendado` com a contagem vendida do momento (foto da produção),
+ * numa única transação NO SERVIDOR. NÃO fecha as vendas do kit — vendas
+ * seguem; a diferença aparece em `aEncomendar` quando o estoque chega.
+ * Idempotente: SKU já encerrado é pulado (volta em `jaEncerrados`).
+ */
+export async function encerrarEncomendasItem(
+  functions: Functions,
+  input: EncerrarEncomendasItemInput
+): Promise<EncerrarEncomendasItemResult> {
+  const call = httpsCallable<
+    EncerrarEncomendasItemInput,
+    EncerrarEncomendasItemResult
+  >(functions, 'encerrarEncomendasItem');
+  return (await call(input)).data;
+}

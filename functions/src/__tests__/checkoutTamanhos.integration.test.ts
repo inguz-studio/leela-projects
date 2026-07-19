@@ -226,3 +226,97 @@ describe('checkout × tamanhos — ATAQUES (fail-closed, nada criado)', () => {
     );
   });
 });
+
+describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
+  const REGATA = 'regata-corte';
+
+  beforeAll(async () => {
+    const now = FieldValue.serverTimestamp();
+    await db.collection('itensKit').doc(REGATA).set({
+      id: REGATA, tenantId: TENANT_ID, eventoId: EVENTO_ID,
+      nome: 'Regata por corte', tamanhado: true, origem: 'organizador',
+      exibirLogo: false, modeloEstoque: 'sob_encomenda',
+      tamanhosDisponiveis: ['P', 'M', 'G'], // união — superfície legada
+      grade: [
+        { corte: 'feminina', tamanhos: ['P', 'M'] },
+        { corte: 'masculina', tamanhos: ['M', 'G'] },
+      ],
+      kits: ['kit_prata'], criadoEm: now, atualizadoEm: now,
+    });
+  });
+
+  it('caminho honesto: corte__tamanho da grade ⇒ SUFIXO persistido no inscrito', async () => {
+    const resultado = await createInscricaoChargeCore(
+      db,
+      provider,
+      input({
+        kitId: 'kit_prata',
+        tamanhos: { [REGATA]: 'feminina__M', 'camiseta-tecnica': 'M' },
+      }),
+      caller
+    );
+    const inscrito = (
+      await db.doc(`eventos/${EVENTO_ID}/inscritos/${resultado.inscritoIds[0]!}`).get()
+    ).data()!;
+    expect(inscrito['tamanhos']).toEqual({
+      [REGATA]: 'feminina__M',
+      'camiseta-tecnica': 'M',
+    });
+  });
+
+  it('ATAQUE: tamanho de OUTRO corte (P só existe na feminina) ⇒ rejeita, zero docs', async () => {
+    const antes = await contarInscritos();
+    await expect(
+      createInscricaoChargeCore(
+        db, provider,
+        input({ kitId: 'kit_prata', tamanhos: { [REGATA]: 'masculina__P' } }),
+        caller
+      )
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: /fora dos disponíveis do corte masculina/,
+    });
+    expect(await contarInscritos()).toBe(antes);
+  });
+
+  it('ATAQUE: sufixo bare em item com grade SÓ por corte ⇒ rejeita (unissex fora da grade)', async () => {
+    await expect(
+      createInscricaoChargeCore(
+        db, provider,
+        input({ kitId: 'kit_prata', tamanhos: { [REGATA]: 'M' } }),
+        caller
+      )
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: /corte 'unissex' fora da grade/,
+    });
+  });
+
+  it('ATAQUE: corte forjado/unissex explícito ⇒ rejeita na forma do sufixo', async () => {
+    for (const valor of ['juvenil__M', 'unissex__M', 'feminina__M__G']) {
+      await expect(
+        createInscricaoChargeCore(
+          db, provider,
+          input({ kitId: 'kit_prata', tamanhos: { [REGATA]: valor } }),
+          caller
+        )
+      ).rejects.toMatchObject({
+        code: 'invalid-argument',
+        message: /fora do padrão/,
+      });
+    }
+  });
+
+  it('ATAQUE: corte explícito em item LEGADO sem grade ⇒ rejeita (grade efetiva = unissex)', async () => {
+    await expect(
+      createInscricaoChargeCore(
+        db, provider,
+        input({ kitId: 'kit_prata', tamanhos: { 'camiseta-tecnica': 'feminina__M' } }),
+        caller
+      )
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: /corte 'feminina' fora da grade/,
+    });
+  });
+});

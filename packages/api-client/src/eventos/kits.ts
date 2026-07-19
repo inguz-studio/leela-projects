@@ -24,7 +24,7 @@ import {
   where,
   type Firestore,
 } from 'firebase/firestore';
-import { parseItemKit, parseKit, type ItemKit, type Kit } from '@leela/core';
+import { parseItemKit, parseKit, type GradeCorte, type ItemKit, type Kit } from '@leela/core';
 
 // ---------------------------------------------------------------------------
 // Kits (subcoleção do evento)
@@ -162,6 +162,12 @@ export interface SalvarItemKitInput {
   modeloEstoque?: 'sob_encomenda' | 'estoque_proprio';
   /** RN-223 (S210-T1) — tamanhos válidos do item tamanhado (ex.: P/M/G/GG) */
   tamanhosDisponiveis?: string[];
+  /**
+   * RN-231 (TAMANHOS-GRADE) — grade por corte do item tamanhado. Quando a UI
+   * envia grade, DEVE espelhar `tamanhosDisponiveis` com a UNIÃO dos tamanhos
+   * (superfícies legadas de exibição); toda validação/SKU lê a grade efetiva.
+   */
+  grade?: GradeCorte[];
   /** N:N — ids dos kits que usam o item (RN-215) */
   kits: string[];
 }
@@ -194,6 +200,9 @@ export async function salvarItemKit(
   }
   if (input.tamanhosDisponiveis !== undefined) {
     payload['tamanhosDisponiveis'] = input.tamanhosDisponiveis;
+  }
+  if (input.grade !== undefined) {
+    payload['grade'] = input.grade;
   }
   await setDoc(doc(db, 'itensKit', itemId), payload, { merge: true });
 }

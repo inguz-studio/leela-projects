@@ -43,6 +43,7 @@ import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { AuthClaims } from '@leela/core';
 import {
+  encerrarEncomendasItemCore,
   recomputarAprovisionamentoEvento,
   transicaoAprovisionamentoCore,
 } from '../eventos/agregarEstoque';
@@ -423,5 +424,203 @@ describe('Rules de itensKit — shape RN-225/223 (S210-T1)', () => {
     );
     await assertFails(updateDoc(ref, { modeloEstoque: 'dropshipping' }));
     await assertFails(updateDoc(ref, { tamanhosDisponiveis: 'P' }));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grade por corte (RN-231) + encerrar encomendas (RN-232) — TAMANHOS-GRADE
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('grade por corte (RN-231) — SKUs 2D, retrocompat e estorno', () => {
+  const REGATA = 'regata-corte';
+
+  /** Item com grade mista (feminina/masculina/unissex) + inscritos com sufixo. */
+  async function seedGrade(): Promise<void> {
+    const now = FieldValue.serverTimestamp();
+    await db.collection('itensKit').doc(REGATA).set({
+      id: REGATA, tenantId: TENANT_ID, eventoId: EVENTO_ID,
+      nome: 'Regata por corte', tamanhado: true, origem: 'organizador',
+      exibirLogo: false, modeloEstoque: 'sob_encomenda',
+      tamanhosDisponiveis: ['P', 'M', 'U'], // união — superfície legada
+      grade: [
+        { corte: 'feminina', tamanhos: ['P', 'M'] },
+        { corte: 'masculina', tamanhos: ['M'] },
+        { corte: 'unissex', tamanhos: ['U'] },
+      ],
+      kits: ['kit_prata'], criadoEm: now, atualizadoEm: now,
+    });
+    const inscritos = db.collection('eventos').doc(EVENTO_ID).collection('inscritos');
+    await inscritos.doc('g1').set(mkInscritoDoc('g1', 'confirmado', 'kit_prata', { [REGATA]: 'feminina__M' }));
+    await inscritos.doc('g2').set(mkInscritoDoc('g2', 'confirmado', 'kit_prata', { [REGATA]: 'feminina__M' }));
+    await inscritos.doc('g3').set(mkInscritoDoc('g3', 'confirmado', 'kit_prata', { [REGATA]: 'masculina__M' }));
+    await inscritos.doc('g4').set(mkInscritoDoc('g4', 'confirmado', 'kit_prata', { [REGATA]: 'U' }));
+    await inscritos.doc('g5').set(mkInscritoDoc('g5', 'pendente', 'kit_prata', { [REGATA]: 'feminina__P' }));
+  }
+
+  it('grade gera SKUs 3-segmentos (unissex mantém 2) e conta pelo SUFIXO', async () => {
+    await seedGrade();
+    const r = await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    // camiseta legada P/M/G/GG (4) + regata feminina P/M + masculina M + unissex U (4)
+    expect(r?.skus).toBe(8);
+    expect(r?.vendidoPorSku[`${REGATA}__feminina__M`]).toBe(2);
+    expect(r?.vendidoPorSku[`${REGATA}__feminina__P`]).toBe(0); // pendente fora
+    expect(r?.vendidoPorSku[`${REGATA}__masculina__M`]).toBe(1);
+    expect(r?.vendidoPorSku[`${REGATA}__U`]).toBe(1); // linha unissex = chave legada
+    // retrocompat: SKUs legados da camiseta intactos (mesmas chaves de sempre)
+    expect(r?.vendidoPorSku[SKU_M]).toBe(2);
+
+    const fm = await aprovRef(`${REGATA}__feminina__M`).get();
+    expect(fm.get('corte')).toBe('feminina');
+    expect(fm.get('itemId')).toBe(REGATA);
+    expect(fm.get('tamanho')).toBe('M');
+    expect(fm.get('qtdVendida')).toBe(2);
+    expect((await aprovRef(`${REGATA}__U`).get()).get('corte')).toBe('unissex');
+    // doc legado (camiseta) também ganha corte unissex no recompute
+    expect((await aprovRef(SKU_M).get()).get('corte')).toBe('unissex');
+  });
+
+  it('estorno REVERTE o consumo 2D (confirmado→estornado no corte certo)', async () => {
+    await seedGrade();
+    await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    await db.doc(`eventos/${EVENTO_ID}/inscritos/g1`).update({
+      status: 'estornado', estornadoEm: Timestamp.now(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    const r = await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    expect(r?.vendidoPorSku[`${REGATA}__feminina__M`]).toBe(1); // só g2
+    expect(r?.vendidoPorSku[`${REGATA}__masculina__M`]).toBe(1); // intacto
+    expect((await aprovRef(`${REGATA}__feminina__M`).get()).get('qtdVendida')).toBe(1);
+  });
+
+  it('máquina de estados funciona por SKU 3-segmentos (ajuste de estoque 2D)', async () => {
+    await seedGrade();
+    await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    const sku = `${REGATA}__feminina__M`;
+    await transicaoAprovisionamentoCore(db, {
+      eventoId: EVENTO_ID, sku, novoEstado: 'encomendado', qtd: 5,
+    }, organizador);
+    const r = await transicaoAprovisionamentoCore(db, {
+      eventoId: EVENTO_ID, sku, novoEstado: 'em_estoque', qtd: 5,
+    }, organizador);
+    expect(r.estado).toBe('em_estoque');
+    expect(r.estoqueFisico).toBe(5);
+    expect(r.aEncomendar).toBe(0);
+  });
+});
+
+describe('encerrarEncomendasItem (RN-232) — foto transacional + idempotência', () => {
+  const REGATA = 'regata-corte';
+
+  async function seedGradeComVendas(): Promise<void> {
+    const now = FieldValue.serverTimestamp();
+    await db.collection('itensKit').doc(REGATA).set({
+      id: REGATA, tenantId: TENANT_ID, eventoId: EVENTO_ID,
+      nome: 'Regata por corte', tamanhado: true, origem: 'organizador',
+      exibirLogo: false, modeloEstoque: 'sob_encomenda',
+      tamanhosDisponiveis: ['P', 'M'],
+      grade: [
+        { corte: 'feminina', tamanhos: ['P', 'M'] },
+        { corte: 'masculina', tamanhos: ['M'] },
+      ],
+      kits: ['kit_prata'], criadoEm: now, atualizadoEm: now,
+    });
+    const inscritos = db.collection('eventos').doc(EVENTO_ID).collection('inscritos');
+    await inscritos.doc('g1').set(mkInscritoDoc('g1', 'confirmado', 'kit_prata', { [REGATA]: 'feminina__M' }));
+    await inscritos.doc('g2').set(mkInscritoDoc('g2', 'confirmado', 'kit_prata', { [REGATA]: 'masculina__M' }));
+    await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+  }
+
+  it('todos os SKUs do item em estimativa → encomendado com a FOTO vendida; outros itens intactos', async () => {
+    await seedGradeComVendas();
+    const r = await encerrarEncomendasItemCore(db, {
+      eventoId: EVENTO_ID, itemId: REGATA,
+    }, organizador);
+    expect(r.itemId).toBe(REGATA);
+    expect(r.encerrados.sort()).toEqual([
+      `${REGATA}__feminina__M`,
+      `${REGATA}__feminina__P`,
+      `${REGATA}__masculina__M`,
+    ]);
+    expect(r.jaEncerrados).toEqual([]);
+
+    const fm = await aprovRef(`${REGATA}__feminina__M`).get();
+    expect(fm.get('estado')).toBe('encomendado');
+    const hist = fm.get('historico') as { estado: string; qtd: number }[];
+    expect(hist).toHaveLength(1);
+    expect(hist[0]).toMatchObject({ estado: 'encomendado', qtd: 1 }); // foto = vendido
+    // SKU sem venda encerra com foto 0
+    const fp = await aprovRef(`${REGATA}__feminina__P`).get();
+    expect((fp.get('historico') as { qtd: number }[])[0]?.qtd).toBe(0);
+    // item NÃO alvo (camiseta) segue em estimativa
+    expect((await aprovRef(SKU_M).get()).get('estado')).toBe('estimativa');
+  });
+
+  it('IDEMPOTENTE: re-invocar pula SKUs já encerrados (nada duplica no historico)', async () => {
+    await seedGradeComVendas();
+    await encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: REGATA }, organizador);
+    const r2 = await encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: REGATA }, organizador);
+    expect(r2.encerrados).toEqual([]);
+    expect(r2.jaEncerrados).toHaveLength(3);
+    const fm = await aprovRef(`${REGATA}__feminina__M`).get();
+    expect(fm.get('historico') as unknown[]).toHaveLength(1);
+  });
+
+  it('encerrar NÃO trava a venda: compra posterior segue contando (aEncomendar mostra a diferença)', async () => {
+    await seedGradeComVendas();
+    await encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: REGATA }, organizador);
+    // venda NOVA depois do encerramento — permitida (encerrar ≠ fechar vendas)
+    await db.collection('eventos').doc(EVENTO_ID).collection('inscritos')
+      .doc('g9').set(mkInscritoDoc('g9', 'confirmado', 'kit_prata', { [REGATA]: 'feminina__M' }));
+    await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    const fm = await aprovRef(`${REGATA}__feminina__M`).get();
+    expect(fm.get('estado')).toBe('encomendado'); // preservado
+    expect(fm.get('qtdVendida')).toBe(2); // recomputado — venda NÃO travou
+    expect(fm.get('aEncomendar')).toBe(2); // diferença aparece aqui
+    expect((fm.get('historico') as { qtd: number }[])[0]?.qtd).toBe(1); // foto imutável
+  });
+
+  it('guards: papel (RN-401), cross-tenant (RN-400), item sem SKUs, input inválido', async () => {
+    await seedGradeComVendas();
+    const atleta: EventoCaller = {
+      uid: 'uid-atleta', claims: { role: 'athlete', tenantId: TENANT_ID } as AuthClaims,
+    };
+    await expect(
+      encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: REGATA }, atleta)
+    ).rejects.toThrow(/RN-401/);
+
+    const outroTenant: EventoCaller = {
+      uid: 'uid-passo-owner', claims: { role: 'tenant_owner', tenantId: OUTRO_TENANT_ID } as AuthClaims,
+    };
+    await expect(
+      encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: REGATA }, outroTenant)
+    ).rejects.toThrow(/outro tenant/);
+
+    await expect(
+      encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: 'item-sem-skus' }, organizador)
+    ).rejects.toThrow(/sem SKUs/);
+
+    await expect(
+      encerrarEncomendasItemCore(db, { eventoId: EVENTO_ID, itemId: 'a__b' }, organizador)
+    ).rejects.toThrow(/itemId/);
+  });
+});
+
+describe('Rules de itensKit — shape da grade (RN-231)', () => {
+  it('grade válida do organizador passa; não-lista/vazia/em item não tamanhado negadas', async () => {
+    const owner = dbAs(MARINA_UID, { role: 'tenant_owner', tenantId: TENANT_ID });
+    const camiseta = doc(owner, `itensKit/${CAMISETA}`);
+    await assertSucceeds(
+      updateDoc(camiseta, {
+        grade: [{ corte: 'feminina', tamanhos: ['P', 'M'] }],
+        tamanhosDisponiveis: ['P', 'M'],
+      })
+    );
+    await assertFails(updateDoc(camiseta, { grade: 'feminina' }));
+    await assertFails(updateDoc(camiseta, { grade: [] }));
+    // grade em item NÃO tamanhado negada (sacochila)
+    const sacochila = doc(owner, 'itensKit/sacochila-evento');
+    await assertFails(
+      updateDoc(sacochila, { grade: [{ corte: 'unissex', tamanhos: ['U'] }] })
+    );
   });
 });

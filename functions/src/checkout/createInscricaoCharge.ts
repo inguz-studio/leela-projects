@@ -46,6 +46,7 @@ import {
   isRefCodigoValido,
   normalizarRefCodigo,
   dataLocalISO,
+  gradeDoDocItemKit,
   isFormaPagamento,
   isKitInscrito,
   isModoTaxa,
@@ -119,12 +120,14 @@ export interface CheckoutInscritoInput {
    */
   kitId?: string;
   /**
-   * Map `itemId → tamanho` do kit (RN-223 · S209 · LEELA-BEPEND-T4). Opcional
-   * enquanto a UI não coleta (S209-T3); quando presente, o servidor valida
-   * FAIL-CLOSED contra os SKUs configurados do evento (`itensKit` ×
-   * `tamanhosDisponiveis` — validarTamanhosInscrito, core): item inexistente,
-   * fora do kit escolhido, não tamanhado ou tamanho forjado ⇒ invalid-argument,
-   * NADA é escrito. O que passa é persistido no inscrito (fulfillment).
+   * Map `itemId → sufixo de SKU` do kit (RN-223/RN-231 · S209 ·
+   * LEELA-BEPEND-T4 · TAMANHOS-GRADE). Valor = `'M'` (grade unissex/legado)
+   * ou `'feminina__M'` (grade por corte) — o MESMO sufixo da chave de
+   * aprovisionamento. Opcional; quando presente, o servidor valida
+   * FAIL-CLOSED contra a grade efetiva do evento (validarTamanhosInscrito,
+   * core): item inexistente, fora do kit escolhido, não tamanhado, corte ou
+   * tamanho forjado ⇒ invalid-argument, NADA é escrito. O que passa é
+   * persistido no inscrito (fulfillment).
    */
   tamanhos?: Record<string, string>;
   /**
@@ -911,6 +914,9 @@ export async function validarTamanhosDoCheckout(
             (t): t is string => typeof t === 'string' && t.length > 0
           )
         : [],
+      // RN-231: grade por corte (Postel — só entradas válidas legitimam SKU;
+      // sem grade, o validador cai no legado ≡ unissex via gradeEfetivaDoItem).
+      grade: gradeDoDocItemKit(itemDoc.data()),
       kits: Array.isArray(itemDoc.get('kits'))
         ? (itemDoc.get('kits') as unknown[]).filter(
             (k): k is string => typeof k === 'string'

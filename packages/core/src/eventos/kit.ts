@@ -19,6 +19,15 @@
 // RN-223 (S210-T1): item tamanhado carrega `tamanhosDisponiveis[]` (valores
 //         de tamanho válidos, ex.: ['P','M','G','GG']) — fonte da validação
 //         de tamanho do checkout (S209-T2) e da matriz de SKUs (S210-T3).
+// RN-231 (TAMANHOS-GRADE): item tamanhado pode ter GRADE POR CORTE
+//         (`grade[]` = [{corte: feminina|masculina|unissex, tamanhos[]}]) —
+//         pedido do organizador: "separar forma masculina e feminina e DEPOIS
+//         a pessoa seleciona o tamanho". RETROCOMPAT (Postel, só leitura):
+//         doc legado com apenas `tamanhosDisponiveis[]` ≡ grade de UM corte
+//         `unissex` — `gradeEfetivaDoItem` é o acessor canônico; NENHUM doc
+//         existente é migrado. Corte unissex é PERMITIDO (default ratificado
+//         do maestro): organizador que não separa forma usa grade única;
+//         escolher M/F nunca é obrigatório por plataforma.
 //
 // CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): `Kit.id` dos kits canônicos do seed
 // É o próprio valor do enum `KitInscrito` (`kit_ouro`, não `kit-ouro`) — o
@@ -205,6 +214,157 @@ export function isOrigemItem(value: unknown): value is OrigemItem {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Grade por corte (RN-231 · TAMANHOS-GRADE)
+// ---------------------------------------------------------------------------
+
+/**
+ * Corte do item tamanhado (RN-231). Enum FECHADO — os valores entram na chave
+ * de SKU (`itemId__corte__tamanho`) e por isso NUNCA podem conter o separador
+ * `__` nem crescer sem revisar o round-trip da chave (aprovisionamento.ts).
+ * `unissex` = grade única (default ratificado — nunca é obrigatório separar).
+ */
+export type CorteItem = 'feminina' | 'masculina' | 'unissex';
+
+/** Lista canônica de cortes (RN-231) — única fonte para validação/UI. */
+export const CORTES_ITEM: readonly CorteItem[] = [
+  'feminina',
+  'masculina',
+  'unissex',
+];
+
+/** Type guard de CorteItem (RN-231) */
+export function isCorteItem(value: unknown): value is CorteItem {
+  return (
+    typeof value === 'string' && (CORTES_ITEM as readonly string[]).includes(value)
+  );
+}
+
+/** Uma linha da grade: corte + tamanhos válidos DESSE corte (RN-231). */
+export interface GradeCorte {
+  corte: CorteItem;
+  /** Tamanhos válidos do corte (ex.: ['P','M','G']) — não-vazios, sem `__`. */
+  tamanhos: string[];
+}
+
+/** Tamanho de item VÁLIDO para compor chave de SKU: não-vazio e sem `__`
+ *  (S210-T2 — `__` quebraria o round-trip `itemId__[corte__]tamanho`). @pure */
+export function isTamanhoItemValido(t: unknown): t is string {
+  return typeof t === 'string' && t.length > 0 && !t.includes('__');
+}
+
+/**
+ * Valida uma grade de escrita (config do organizador — fail-fast como o resto
+ * do parse). Regras: lista não-vazia de entradas {corte ∈ enum, tamanhos
+ * lista não-vazia de tamanhos válidos}; corte NÃO repete (uma linha por
+ * corte); tamanho não repete DENTRO do corte (SKU colapsaria). Retorna a
+ * lista de erros (vazia = válida). @pure
+ */
+export function validarGradeItem(grade: unknown): string[] {
+  if (!Array.isArray(grade) || grade.length === 0) {
+    return ['grade deve ser lista não-vazia de {corte, tamanhos[]} (RN-231)'];
+  }
+  const erros: string[] = [];
+  const cortesVistos = new Set<string>();
+  grade.forEach((linha, idx) => {
+    if (linha === null || typeof linha !== 'object' || Array.isArray(linha)) {
+      erros.push(`grade[${idx}]: entrada deve ser objeto {corte, tamanhos[]}`);
+      return;
+    }
+    const { corte, tamanhos } = linha as Record<string, unknown>;
+    if (!isCorteItem(corte)) {
+      erros.push(`grade[${idx}]: corte "${String(corte)}" fora do enum (RN-231)`);
+      return;
+    }
+    if (cortesVistos.has(corte)) {
+      erros.push(`grade[${idx}]: corte "${corte}" repetido (uma linha por corte)`);
+      return;
+    }
+    cortesVistos.add(corte);
+    if (
+      !Array.isArray(tamanhos) ||
+      tamanhos.length === 0 ||
+      !tamanhos.every(isTamanhoItemValido)
+    ) {
+      erros.push(
+        `grade[${idx}] (${corte}): tamanhos deve ser lista não-vazia de ` +
+          `tamanhos não-vazios sem "__" (RN-223/S210-T2)`
+      );
+      return;
+    }
+    if (new Set(tamanhos).size !== tamanhos.length) {
+      erros.push(`grade[${idx}] (${corte}): tamanho repetido no corte`);
+    }
+  });
+  return erros;
+}
+
+/**
+ * Grade EFETIVA de um item parseado (acessor canônico — RN-231):
+ *   - `grade[]` presente e não-vazia → é ela;
+ *   - senão, item tamanhado com `tamanhosDisponiveis[]` legado → grade de UM
+ *     corte `unissex` (retrocompat Postel de leitura — doc NÃO é migrado);
+ *   - senão → `[]` (item único ou tamanhado sem configuração).
+ * TODA lógica nova (SKUs declarados, validação de checkout, UI) lê por aqui —
+ * `tamanhosDisponiveis` cru vira detalhe de persistência legado. @pure
+ */
+export function gradeEfetivaDoItem(
+  item: Pick<ItemKit, 'tamanhado' | 'tamanhosDisponiveis'> & {
+    grade?: GradeCorte[];
+  }
+): GradeCorte[] {
+  if (Array.isArray(item.grade) && item.grade.length > 0) return item.grade;
+  if (item.tamanhado && item.tamanhosDisponiveis.length > 0) {
+    return [{ corte: 'unissex', tamanhos: [...item.tamanhosDisponiveis] }];
+  }
+  return [];
+}
+
+/** Tamanhos de um corte na grade — `[]` quando o corte não existe nela. @pure */
+export function tamanhosDoCorte(
+  grade: readonly GradeCorte[],
+  corte: CorteItem
+): string[] {
+  return grade.find((g) => g.corte === corte)?.tamanhos ?? [];
+}
+
+/**
+ * Grade efetiva a partir de um DOC CRU de `itensKit` (Postel — para Functions
+ * que leem snapshots sem parse fail-fast, ex.: agregação de estoque e
+ * validação do checkout): entradas inválidas são DESCARTADAS (corte fora do
+ * enum, tamanho vazio/com `__`), corte repetido fica com a PRIMEIRA linha;
+ * sem grade aproveitável cai no legado `tamanhosDisponiveis` ≡ unissex.
+ * Item não-tamanhado → `[]` sempre. Um doc envenenado nunca derruba a
+ * agregação — e nunca legitima um SKU forjado (só entra o que é válido). @pure
+ */
+export function gradeDoDocItemKit(data: Record<string, unknown>): GradeCorte[] {
+  if (data['tamanhado'] !== true) return [];
+  const bruto = data['grade'];
+  const resultado: GradeCorte[] = [];
+  if (Array.isArray(bruto)) {
+    const cortesVistos = new Set<string>();
+    for (const linha of bruto) {
+      if (linha === null || typeof linha !== 'object' || Array.isArray(linha)) continue;
+      const { corte, tamanhos } = linha as Record<string, unknown>;
+      if (!isCorteItem(corte) || cortesVistos.has(corte)) continue;
+      const validos = Array.isArray(tamanhos)
+        ? [...new Set(tamanhos.filter(isTamanhoItemValido))]
+        : [];
+      if (validos.length === 0) continue;
+      cortesVistos.add(corte);
+      resultado.push({ corte, tamanhos: validos });
+    }
+  }
+  if (resultado.length > 0) return resultado;
+  const legado = data['tamanhosDisponiveis'];
+  const tamanhosLegado = Array.isArray(legado)
+    ? [...new Set(legado.filter(isTamanhoItemValido))]
+    : [];
+  return tamanhosLegado.length > 0
+    ? [{ corte: 'unissex', tamanhos: tamanhosLegado }]
+    : [];
+}
+
 /** Entrada do índice inverso desnormalizado "usado em" (RN-215) */
 export interface UsadoEmKit {
   kitId: string;
@@ -245,6 +405,13 @@ export interface ItemKit {
    * do aprovisionamento (S210-T3 — ver aprovisionamento.ts).
    */
   tamanhosDisponiveis: string[];
+  /**
+   * RN-231 (TAMANHOS-GRADE) — grade por CORTE do item tamanhado. Ausente =
+   * doc legado/sem separação: `gradeEfetivaDoItem` deriva a grade unissex de
+   * `tamanhosDisponiveis`. Quando presente, é a FONTE da validação do
+   * checkout (corte→tamanho) e da matriz de SKUs (`itemId__corte__tamanho`).
+   */
+  grade?: GradeCorte[];
   /** N:N — ids dos kits que incluem este item (fonte de verdade — RN-215) */
   kits: string[];
   /** ∑ Índice inverso desnormalizado — mantido pela Function itemKitIndex */
@@ -349,6 +516,19 @@ export function parseItemKit(id: string, data: Record<string, unknown>): ItemKit
     );
   }
 
+  // RN-231: grade presente deve ser válida (fail-fast — é config que vira
+  // chave de SKU); ausente = doc legado (gradeEfetivaDoItem cobre a leitura).
+  const grade = data['grade'];
+  if (grade !== undefined) {
+    const errosGrade = validarGradeItem(grade);
+    if (errosGrade.length > 0) {
+      throw new Error(`ItemKit ${id}: ${errosGrade.join('; ')}`);
+    }
+    if (tamanhado !== true) {
+      throw new Error(`ItemKit ${id}: grade só existe em item tamanhado (RN-212/231)`);
+    }
+  }
+
   const item: ItemKit = {
     id,
     tenantId,
@@ -365,6 +545,9 @@ export function parseItemKit(id: string, data: Record<string, unknown>): ItemKit
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
 
+  if (grade !== undefined) {
+    item.grade = grade as GradeCorte[];
+  }
   if (typeof data['marca'] === 'string') {
     item.marca = data['marca'];
   }

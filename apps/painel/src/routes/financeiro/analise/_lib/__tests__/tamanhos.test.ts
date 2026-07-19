@@ -13,6 +13,7 @@ function sku(itemId: string, tamanho: string, qtdVendida: number): Aprovisioname
     id: `${itemId}__${tamanho}`,
     tenantId: 'corrida',
     itemId,
+    corte: 'unissex',
     tamanho,
     estado: 'estimativa',
     qtdVendida,

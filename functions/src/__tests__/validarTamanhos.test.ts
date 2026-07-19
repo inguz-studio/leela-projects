@@ -96,17 +96,23 @@ describe('validarTamanhosInscrito — forjas (fail-closed)', () => {
     expect(erros[0]).toMatch(/sem kit escolhido/);
   });
 
-  it('separador de SKU "__" no tamanho/item → rejeita (round-trip S210-T2)', () => {
-    for (const tamanhos of [
-      { 'camiseta-tecnica': 'M__G' },
-      { 'camiseta__tecnica': 'M' },
-    ]) {
+  it('separador de SKU "__" no itemId → rejeita (round-trip S210-T2)', () => {
+    const erros = validarTamanhosInscrito({
+      tamanhos: { 'camiseta__tecnica': 'M' },
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS,
+    });
+    expect(erros[0]).toMatch(/sem "__"/);
+  });
+
+  it('sufixo malformado no valor → rejeita (RN-231: "M__G" não é corte__tamanho)', () => {
+    for (const valor of ['M__G', 'unissex__M', 'feminina__', 'a__b__c', '']) {
       const erros = validarTamanhosInscrito({
-        tamanhos,
+        tamanhos: { 'camiseta-tecnica': valor },
         kitId: 'kit_prata',
         itensDoEvento: ITENS,
       });
-      expect(erros[0]).toMatch(/sem "__"/);
+      expect(erros[0]).toMatch(/fora do padrão/);
     }
   });
 
@@ -168,5 +174,77 @@ describe('validarTamanhosInscrito — exigirTamanhado (flip S209-T3)', () => {
         itensDoEvento: ITENS,
       })
     ).toEqual([]);
+  });
+});
+
+describe('validarTamanhosInscrito — grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
+  const CAMISETA_GRADE: ItemKitParaTamanhos = {
+    id: 'camiseta-corte',
+    tamanhado: true,
+    tamanhosDisponiveis: ['P', 'M', 'G'], // união (superfície legada) — validação lê a grade
+    grade: [
+      { corte: 'feminina', tamanhos: ['P', 'M'] },
+      { corte: 'masculina', tamanhos: ['M', 'G'] },
+    ],
+    kits: ['kit_prata'],
+  };
+  const ITENS_GRADE = [CAMISETA_GRADE, SACOCHILA];
+
+  it('caminho honesto: corte__tamanho da grade → sem erros', () => {
+    expect(
+      validarTamanhosInscrito({
+        tamanhos: { 'camiseta-corte': 'feminina__M' },
+        kitId: 'kit_prata',
+        itensDoEvento: ITENS_GRADE,
+      })
+    ).toEqual([]);
+  });
+
+  it('tamanho fora do CORTE (G existe só na masculina) → rejeita', () => {
+    const erros = validarTamanhosInscrito({
+      tamanhos: { 'camiseta-corte': 'feminina__G' },
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS_GRADE,
+    });
+    expect(erros).toHaveLength(1);
+    expect(erros[0]).toMatch(/fora dos disponíveis do corte feminina/);
+  });
+
+  it('sufixo bare (unissex) em item com grade SÓ por corte → rejeita (corte fora da grade)', () => {
+    const erros = validarTamanhosInscrito({
+      tamanhos: { 'camiseta-corte': 'M' },
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS_GRADE,
+    });
+    expect(erros).toHaveLength(1);
+    expect(erros[0]).toMatch(/corte 'unissex' fora da grade/);
+  });
+
+  it('item legado SEM grade rejeita corte explícito (grade efetiva é só unissex)', () => {
+    const erros = validarTamanhosInscrito({
+      tamanhos: { 'camiseta-tecnica': 'feminina__M' },
+      kitId: 'kit_prata',
+      itensDoEvento: ITENS,
+    });
+    expect(erros).toHaveLength(1);
+    expect(erros[0]).toMatch(/corte 'feminina' fora da grade/);
+  });
+
+  it('exigirTamanhado cobra item com grade mas sem tamanhosDisponiveis legado', () => {
+    const soGrade: ItemKitParaTamanhos = {
+      id: 'regata-corte',
+      tamanhado: true,
+      tamanhosDisponiveis: [],
+      grade: [{ corte: 'feminina', tamanhos: ['U'] }],
+      kits: ['kit_prata'],
+    };
+    const erros = validarTamanhosInscrito({
+      tamanhos: {},
+      kitId: 'kit_prata',
+      itensDoEvento: [soGrade],
+      exigirTamanhado: true,
+    });
+    expect(erros).toHaveLength(1);
+    expect(erros[0]).toMatch(/obrigatório/);
   });
 });

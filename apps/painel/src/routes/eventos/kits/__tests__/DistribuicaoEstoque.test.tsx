@@ -34,6 +34,7 @@ function mkAprov(over: Partial<Aprovisionamento>): Aprovisionamento {
     id: 'camiseta__M',
     tenantId: 'castelo',
     itemId: 'camiseta',
+    corte: 'unissex',
     tamanho: 'M',
     estado: 'estimativa',
     qtdVendida: 7,
