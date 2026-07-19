@@ -19,8 +19,6 @@ tags:
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
 - [ ] **[DEC-0719 · c] CHECKOUT-FORM-2 (só UI restante)** — cupom no início + Pix/Cartão em botões (sem toggle) + botão "+ adicionar atleta" 📋 backend de gênero (RN-154) e PIX 30 min (RN-157) já PAGO no CHECKOUT2-MODELO; falta a camada de tela [[01-decisoes|DEC-0719]]
-
-- [ ] **[DEC-0719-ret · h] Posse de identidade por CPF — DECIDIDO, virou fila de código (CLAIM-FIX)** — o Vitor fechou a dúvida F1/F2: o vínculo da conta à ficha da pessoa passa a acontecer **só com pagamento confirmado + e-mail igual ao da compra + e-mail confirmado**, e o pré-preenchimento só responde a quem cumpre as três condições (mata o abuso de "reivindicar CPF alheio" e o vazamento do anônimo). O e-mail de confirmação vai no primeiro login ou na primeira entrega de ingressos. Prova de posse por verificação externa fica como reforço antes de ir ao ar com dado real. Executável já 📋 RN-174 · fila CLAIM-FIX · report `CHECKOUT2-MODELO-REPORT.md` [[01-decisoes|DEC-0719-ret]]
 - [ ] **[TAXA-FLEX · j] Taxa da plataforma com percentual + valor fixo por meio de pagamento** — o Vitor quer flexibilidade para cobrar, por exemplo, "6% no PIX + R$2,00" e "8% no cartão + R$1,50". A taxa vira uma tabela por meio (PIX/cartão/boleto) com percentual e valor fixo, definida globalmente pela plataforma e com exceção negociada por organizador; é congelada na compra (mudar a tabela nunca reprecifica pedido feito). No checkout que repassa a taxa, o total aparece por opção de pagamento antes de pagar (PIX mais barato que cartão). Spec pronta; o código espera a lane do checkout (CLAIM-FIX) sair da frente porque mexe no mesmo lugar, e é dinheiro (rota Fable + antagonista) 📋 executável-após-CLAIM-FIX · RN-178/179/180/181/182/183 [[TAXA-FLEX]]
 - [ ] **[DEC-0719-ret · i · GATED] Estrangeiro sem CPF compra com passaporte** — decidido no modelo Doity/Sympla sobre o Asaas: o organizador liga um botão por evento "aceitar estrangeiros"; com ele ligado, o checkout pergunta a nacionalidade e o estrangeiro entra por passaporte (sem CPF) pagando só no cartão internacional à vista. Espera a liberação da conta Asaas para pagador estrangeiro (contato com o gerente, ~6 dias úteis) antes de virar código; enquanto isso, um brasileiro já pode comprar pelo estrangeiro 🧊 RN-175/176/177 · fila ESTRANGEIRO-CHECKOUT · report `ESTRANGEIRO-PAGAMENTO-REPORT.md` [[01-decisoes|DEC-0719-ret]]
 - [ ] **[DEC-0719 · g · PARKED] clube-retroativo** — desconto retroativo do clube-influenciador ao bater o mínimo; aguarda o Vitor revisar como funciona na Ticketsports; é dinheiro (rota Fable + antagonista) 🧊 RN-315 [[01-decisoes|DEC-0719]]
@@ -29,7 +27,7 @@ tags:
 
 ## 🔄 Em execução
 
-
+- [ ] **[DEC-0719-ret · h] Posse de identidade por CPF (CLAIM-FIX) — EM EXECUÇÃO** — o Vitor fechou a dúvida F1/F2: o vínculo da conta à ficha da pessoa passa a acontecer **só com pagamento confirmado + e-mail igual ao da compra + e-mail confirmado**, e o pré-preenchimento só responde a quem cumpre as três condições (mata o abuso de "reivindicar CPF alheio" e o vazamento do anônimo). O e-mail de confirmação vai no primeiro login ou na primeira entrega de ingressos. Prova de posse por verificação externa fica como reforço antes de ir ao ar com dado real. Lane Fable rodando: T1 claim na confirmação (`ca9ec6a`) + T2 gate do prefill (`222dc3b`) + T3 suíte negativa (`71c32d1`) já no ar; falta review antagonista + aterrissagem 🔄 RN-174 · report `CHECKOUT2-MODELO-REPORT.md` [[01-decisoes|DEC-0719-ret]]
 
 ## ✅ Feito
 
@@ -108,6 +106,6 @@ tags:
 
 %% kanban:settings
 ```
-{"kanban-plugin":"board","list-collapse":[true,false,true,false]}
+{"kanban-plugin":"board","list-collapse":[false,false,true,false]}
 ```
 %%
