@@ -45,9 +45,16 @@ do provedor e o desenho das regras são decisão type-1.
    `uploadAvatarPerfilPublico`, `uploadCapaPerfilPublico`,
    `uploadCapaClube`); componente `FileInput` no DS.
 
-**Status.** PROPOSTA aplicada por default (LEELA-R5, 2026-07-18) — aguarda
-ratificação do Vitor (item no `DECISOES-ABERTAS.md`). Reverter = trocar o
-provedor atrás do seam do api-client; os campos de URL não mudam.
+**Status.** **ACEITA — RATIFICADA pelo Vitor em 2026-07-19** (rodada DEC-0719,
+item 18: *"Firebase Storage confirmado"*). Era PROPOSTA aplicada por default
+(LEELA-R5, 2026-07-18). Reverter = trocar o provedor atrás do seam do api-client;
+os campos de URL não mudam. **Nota de decisão associada (item 19, RN-168):** o
+*fallback de URL colada* — citado no ponto 5 desta ADR — foi **supersedido**: a
+URL colada morre em TODAS as superfícies de imagem (upload-only), e toda
+superfície ganha ação de TROCAR imagem + ajuste automático de proporção
+(RN-170). O provedor ratificado aqui permanece; muda só a política de entrada
+(sem URL colada). Ver `DECISOES-ABERTAS.md` §Ratificadas e a rodada
+`02-rodadas/2026-07-19-decisoes/`.
 
 **Consequência.**
 - (+) Upload real nas 3 superfícies com Rules fail-closed provadas no
