@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import type { DemografiaEvento } from '@leela/api-client';
 import { matrizFaixaGeneroVazia, type MatrizFaixaGenero } from '@leela/core';
-import { notaCobertura, somarDemografia } from '../demografia';
+import { notaCobertura, notaReprocesso, somarDemografia } from '../demografia';
 
 function faixasZeradas(): DemografiaEvento['faixasEtarias'] {
   return {
@@ -34,6 +34,7 @@ function agg(over: Partial<DemografiaEvento> = {}): DemografiaEvento {
     porGenero: { feminino: 0, masculino: 0, outro: 0, nao_informado: 0 },
     semGenero: 0,
     faixaXGenero: matrizFaixaGeneroVazia(),
+    aguardandoReprocesso: false,
     ...over,
   };
 }
@@ -99,6 +100,33 @@ describe('somarDemografia (∑ pura dos agregados por evento)', () => {
     expect(soma.sexo).toEqual([]);
     expect(soma.cohort).toEqual([]);
     expect(soma.cohortTemSupressao).toBe(false);
+    expect(soma.eventosAguardandoReprocesso).toBe(0);
+  });
+
+  it('evento aguardandoReprocesso fica FORA das somas e é CONTADO (review F4 — nunca subcontagem muda)', () => {
+    const ok = agg({
+      totalConfirmados: 10,
+      faixasEtarias: { ...faixasZeradas(), '25_29': 10 },
+      porGenero: { feminino: 10, masculino: 0, outro: 0, nao_informado: 0 },
+      faixaXGenero: matriz([['25_29', 'feminino', 10]]),
+    });
+    const antigo = agg({ aguardandoReprocesso: true });
+    const soma = somarDemografia([ok, antigo]);
+    expect(soma.totalConfirmados).toBe(10); // só o evento migrado
+    expect(soma.eventosAguardandoReprocesso).toBe(1);
+    expect(soma.faixas).toEqual([{ label: '25–29', value: 10 }]);
+    // Nota declara a lacuna; cobertura NÃO é distorcida pelo evento excluído.
+    expect(notaReprocesso(soma)).toContain('1 evento');
+    expect(notaCobertura(soma)).toBeNull();
+  });
+
+  it('notaReprocesso: 0 eventos → null; plural correto', () => {
+    expect(notaReprocesso(somarDemografia([]))).toBeNull();
+    const soma = somarDemografia([
+      agg({ aguardandoReprocesso: true }),
+      agg({ aguardandoReprocesso: true }),
+    ]);
+    expect(notaReprocesso(soma)).toContain('2 eventos');
   });
 });
 

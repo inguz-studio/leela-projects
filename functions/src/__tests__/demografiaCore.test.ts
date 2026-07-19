@@ -84,6 +84,17 @@ describe('faixaEtariaDaIdade (fronteiras das 10 bandas RN-822)', () => {
     expect(faixaEtariaDaIdade(-1)).toBeNull();
     expect(faixaEtariaDaIdade(Number.NaN)).toBeNull();
   });
+
+  it('idade fracionária trunca para anos completos — nunca chave fora do union (review F6)', () => {
+    expect(faixaEtariaDaIdade(24.5)).toBe('18_24'); // sem guarda viraria '20_24'
+    expect(faixaEtariaDaIdade(25.9)).toBe('25_29');
+    expect(faixaEtariaDaIdade(59.99)).toBe('55_59');
+    expect(faixaEtariaDaIdade(17.9)).toBe('ate_17');
+    for (let d = 0; d <= 120; d += 0.25) {
+      const faixa = faixaEtariaDaIdade(d);
+      expect(FAIXAS_ETARIAS, `idade ${d}`).toContain(faixa);
+    }
+  });
 });
 
 describe('computeDemografia (recontagem íntegra, sem PII)', () => {

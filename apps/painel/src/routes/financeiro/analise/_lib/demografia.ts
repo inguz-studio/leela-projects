@@ -88,6 +88,12 @@ export interface DemografiaTenant {
   comGenero: number;
   /** Total de inscritos confirmados considerados nos agregados */
   totalConfirmados: number;
+  /**
+   * Eventos com agregado no shape PRÉ-RN822 (aguardando reprocesso):
+   * EXCLUÍDOS de todas as somas acima e DECLARADOS pela View — somar zeros
+   * seria subcontagem apresentada como total (review F4).
+   */
+  eventosAguardandoReprocesso: number;
 }
 
 /**
@@ -107,8 +113,16 @@ export function somarDemografia(aggs: readonly DemografiaEvento[]): DemografiaTe
   let totalConfirmados = 0;
   let semNascimento = 0;
   let semGenero = 0;
+  let eventosAguardandoReprocesso = 0;
+  const incluidos: DemografiaEvento[] = [];
 
   for (const agg of aggs) {
+    // Shape pré-RN822 (review F4): fora das somas + declarado pela View.
+    if (agg.aguardandoReprocesso) {
+      eventosAguardandoReprocesso += 1;
+      continue;
+    }
+    incluidos.push(agg);
     totalConfirmados += agg.totalConfirmados;
     semNascimento += agg.semNascimento;
     semGenero += agg.semGenero;
@@ -127,7 +141,9 @@ export function somarDemografia(aggs: readonly DemografiaEvento[]): DemografiaTe
   );
 
   // Cohort (RN-822): soma das matrizes → salvaguarda k-anonimato → viz.
-  const matrizSomada = somarMatrizes(aggs.map((a) => a.faixaXGenero));
+  // Só eventos no shape atual (os aguardando reprocesso têm matriz zerada,
+  // mas ficam fora por coerência com as somas 1D).
+  const matrizSomada = somarMatrizes(incluidos.map((a) => a.faixaXGenero));
   const visiveis = suprimirCohortPorK(matrizSomada);
   const cohort: CohortLinha[] = visiveis.map((v) => {
     const linha = v.porGenero;
@@ -146,7 +162,29 @@ export function somarDemografia(aggs: readonly DemografiaEvento[]): DemografiaTe
   });
   const cohortTemSupressao = cohort.some((l) => l.segmentos === null);
 
-  return { faixas, sexo, cohort, cohortTemSupressao, comIdade, comGenero, totalConfirmados };
+  return {
+    faixas,
+    sexo,
+    cohort,
+    cohortTemSupressao,
+    comIdade,
+    comGenero,
+    totalConfirmados,
+    eventosAguardandoReprocesso,
+  };
+}
+
+/**
+ * Nota honesta da janela de REPROCESSO (RN-822 · review F4): declara quantos
+ * eventos têm agregado no shape antigo e ficaram FORA dos números exibidos.
+ * null quando não há evento aguardando (nota desnecessária). @pure
+ */
+export function notaReprocesso(d: DemografiaTenant): string | null {
+  const n = d.eventosAguardandoReprocesso;
+  if (n === 0) return null;
+  return n === 1
+    ? `1 evento está com os dados demográficos em reprocessamento e ficou fora dos números abaixo.`
+    : `${n} eventos estão com os dados demográficos em reprocessamento e ficaram fora dos números abaixo.`;
 }
 
 /**

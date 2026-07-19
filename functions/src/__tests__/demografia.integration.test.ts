@@ -230,6 +230,34 @@ describe('recomputarDemografiaEvento — agregação real', () => {
     expect(await recomputarDemografiaEvento(adminDb, 'evento-fantasma')).toBeNull();
   });
 
+  it('READER na janela RN-822 (review F4): doc shape antigo → aguardandoReprocesso=true zerado; pós-recompute → agregado real', async () => {
+    // Seed do shape antigo e leitura pelo api-client REAL (aliasado por source).
+    const { getDemografiaEvento } = await import('@leela/api-client');
+    await adminDb.doc(P_DEMO.join('/')).set({
+      tenantId: CASTELO_ID,
+      totalConfirmados: 4,
+      faixasEtarias: { ate_17: 0, '18_24': 1, '25_34': 1, '35_44': 0, '45_54': 1, '55_mais': 0 },
+      semNascimento: 1,
+      porGenero: { feminino: 2, masculino: 1, outro: 0, nao_informado: 0 },
+      semGenero: 1,
+      referencia: '2026-04-25',
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    const antigo = await getDemografiaEvento(
+      ownerA().firestore() as never,
+      EVENTO_ID,
+    );
+    expect(antigo).not.toBeNull();
+    expect(antigo!.aguardandoReprocesso).toBe(true);
+    expect(antigo!.totalConfirmados).toBe(0); // ZERADO — nunca soma parcial muda
+    // Pós-reprocesso: parse normal com matriz e flag false.
+    await recomputarDemografiaEvento(adminDb, EVENTO_ID);
+    const novo = await getDemografiaEvento(ownerA().firestore() as never, EVENTO_ID);
+    expect(novo!.aguardandoReprocesso).toBe(false);
+    expect(novo!.totalConfirmados).toBe(4);
+    expect(novo!.faixaXGenero['25_29'].feminino).toBe(1);
+  });
+
   it('MIGRAÇÃO RN-822: doc no shape ANTIGO (6 faixas, sem matriz) é REESCRITO no shape novo', async () => {
     // Seed do doc como a Function PRÉ-RN822 gravava (faixas grossas, sem
     // faixaXGenero) — o agregado antigo "no ar" durante o deploy.

@@ -31,15 +31,36 @@
 //      suprimida, suprime-se TAMBÉM a linha exposta de menor total. Motivo:
 //      o marginal 1D `porGenero` é público (RN-820) — com uma única linha
 //      suprimida, (marginal − Σ linhas expostas) recuperaria a linha por
-//      diferença. Com ≥2 linhas suprimidas só a SOMA delas é inferível.
+//      diferença. Com ≥2 linhas suprimidas resta inferível a SOMA delas —
+//      e, nos cantos descritos abaixo (R-c), até a decomposição.
 //
-// LIMITE DOCUMENTADO (residual, aceito): os marginais 1D (faixasEtarias,
-// porGenero) são superfície RN-820 já entregue e não passam por k — num
-// evento degenerado onde TODOS os inscritos com idade caem numa única faixa,
-// o marginal de gênero se aproxima da linha da matriz. Esse residual é
-// limitado pelo acesso legítimo que a audiência (owner/staff) já tem ao dado
-// individual (RN-172); a régua aqui é minimização da superfície, não
-// anonimização contra o próprio controlador.
+// RESIDUAIS DOCUMENTADOS (aceitos, com lastro RN-172 — ver parágrafo final):
+//   R-a · Marginais 1D fora do k: `faixasEtarias`/`porGenero` são superfície
+//      RN-820 já entregue e não passam por k. Num evento onde TODOS os
+//      inscritos com idade caem numa única faixa, o marginal de gênero
+//      IGUALA a linha da matriz quando a cobertura de idade é total (e se
+//      aproxima dela quando parcial) — e R3 é no-op sem linhas expostas.
+//   R-b · Diferenciação ENTRE VISÕES (filtro por evento, RN-821): cada visão
+//      aplica o k sobre a própria soma. Quem compõe ativamente as visões
+//      ("todos os eventos" − eventos expostos um a um) pode recuperar célula
+//      suprimida de um evento pequeno por subtração. O k protege cada visão
+//      compartilhada isoladamente (um print para patrocinador), não a
+//      composição ativa de visões por quem opera o painel.
+//   R-c · Decomposição de linhas suprimidas: os TOTAIS das linhas suprimidas
+//      permanecem visíveis (honestidade do 1D). Quando o residual
+//      (`porGenero` − Σ linhas expostas) é concentrado num único sexo, as
+//      linhas suprimidas são decomponíveis de forma única (ex.: residual =
+//      5 masculino com linhas suprimidas de totais 2 e 3).
+//
+// POR QUE os residuais são aceitos e não "consertados": a única audiência
+// com acesso a estas visões (owner/staff do tenant, via Rules) JÁ tem acesso
+// legítimo ao dado individual dos inscritos (RN-172/CRM) — os residuais não
+// concedem a ela nenhum dado novo. A régua desta salvaguarda é MINIMIZAÇÃO
+// da superfície de analytics e segurança do que se compartilha adiante
+// (RN-820/LGPD art. 6º III), não anonimização contra o próprio controlador.
+// Se um dia esta superfície for exposta a papel SEM acesso individual
+// (patrocinador logado, portal público), os residuais R-a/R-b/R-c viram
+// bloqueadores e o desenho precisa ser revisto ANTES da exposição.
 // =============================================================================
 
 import {

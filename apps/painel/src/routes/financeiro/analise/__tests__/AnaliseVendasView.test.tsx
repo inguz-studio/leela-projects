@@ -57,6 +57,7 @@ const DEMOGRAFIA: DemografiaTenant = {
   comIdade: 294,
   comGenero: 294,
   totalConfirmados: 294,
+  eventosAguardandoReprocesso: 0,
 };
 
 const DEMOGRAFIA_VAZIA: DemografiaTenant = {
@@ -67,6 +68,7 @@ const DEMOGRAFIA_VAZIA: DemografiaTenant = {
   comIdade: 0,
   comGenero: 0,
   totalConfirmados: 0,
+  eventosAguardandoReprocesso: 0,
 };
 
 function props(over: Partial<AnaliseVendasViewProps> = {}): AnaliseVendasViewProps {
@@ -135,6 +137,24 @@ describe('AnaliseVendasView', () => {
     };
     render(<AnaliseVendasView {...props({ demografia: parcial })} />);
     expect(screen.getByRole('note')).toHaveTextContent(/294 de 300/);
+  });
+
+  // Janela de reprocesso RN-822 (review F4/F5) -----------------------------
+  it('tudo aguardando reprocesso → EmptyState declara a CAUSA (reprocessamento, não falta de coleta)', () => {
+    const aguardando: DemografiaTenant = { ...DEMOGRAFIA_VAZIA, eventosAguardandoReprocesso: 2 };
+    render(<AnaliseVendasView {...props({ demografia: aguardando })} />);
+    expect(screen.getByText('Dados demográficos em reprocessamento')).toBeInTheDocument();
+    expect(screen.queryByText('Sem dados demográficos ainda')).not.toBeInTheDocument();
+  });
+
+  it('parte dos eventos aguardando reprocesso → nota declara a exclusão (nunca subcontagem muda)', () => {
+    const parcial: DemografiaTenant = { ...DEMOGRAFIA, eventosAguardandoReprocesso: 1 };
+    render(<AnaliseVendasView {...props({ demografia: parcial })} />);
+    expect(
+      screen.getByText(/1 evento está com os dados demográficos em reprocessamento/i),
+    ).toBeInTheDocument();
+    // Os gráficos seguem com os eventos migrados.
+    expect(screen.getByText('Faixa etária')).toBeInTheDocument();
   });
 
   // Cohort idade×sexo (RN-822 · S-R9-02) ----------------------------------

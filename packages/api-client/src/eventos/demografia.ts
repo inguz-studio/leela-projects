@@ -40,6 +40,15 @@ export interface DemografiaEvento {
    * k-anonimato, pós-soma (nunca renderizar esta matriz diretamente).
    */
   faixaXGenero: MatrizFaixaGenero;
+  /**
+   * Doc no shape PRÉ-RN822 detectado (6 faixas grossas, sem matriz): as
+   * contagens vêm ZERADAS e este flag é true. O consumidor DEVE excluir o
+   * evento das somas E DECLARAR a lacuna ("aguardando reprocessamento") —
+   * somar zeros seria subcontagem muda, apresentada como total (review F4).
+   * O doc é migrado pelo reprocesso que anda junto com o deploy da Function
+   * (ou pelo próximo write de inscrito do evento).
+   */
+  aguardandoReprocesso: boolean;
 }
 
 function toCount(v: unknown): number {
@@ -78,18 +87,20 @@ function parseDemografiaDoc(data: Record<string, unknown>): DemografiaEvento {
     porGenero,
     semGenero: toCount(data['semGenero']),
     faixaXGenero,
+    aguardandoReprocesso: false,
   };
 }
 
 /**
  * Lê o agregado demográfico do evento (`demografia/current`). Retorna null
- * quando ainda não foi computado — INCLUSIVE quando o doc está no shape
- * PRÉ-RN822 (6 faixas grossas, sem `faixaXGenero`): as faixas antigas não
- * são re-bucketizáveis no cliente e exibi-las como zero seria número
- * fabricado; o doc é reescrito pelo reprocesso que anda JUNTO com o deploy
- * da Function (premissa RN-822) — até lá a tela mostra o EmptyState honesto.
- * Só o tenant dono (owner/staff) ou platform_admin lê — cross-tenant vira
- * permission-denied (Rules).
+ * quando o agregado nunca foi computado (doc ausente). Doc no shape
+ * PRÉ-RN822 (6 faixas grossas, sem `faixaXGenero`) NÃO é `null` nem parse
+ * normal: as faixas antigas não são re-bucketizáveis no cliente e exibi-las
+ * (ou omiti-las em silêncio) fabricaria número — devolve o agregado ZERADO
+ * com `aguardandoReprocesso: true`, para o consumidor excluir das somas e
+ * DECLARAR a lacuna até o reprocesso (que anda JUNTO com o deploy da
+ * Function — premissa RN-822). Só o tenant dono (owner/staff) ou
+ * platform_admin lê — cross-tenant vira permission-denied (Rules).
  */
 export async function getDemografiaEvento(
   db: Firestore,
@@ -98,6 +109,9 @@ export async function getDemografiaEvento(
   const snap = await getDoc(doc(db, 'eventos', eventoId, 'demografia', 'current'));
   if (!snap.exists()) return null;
   const data = snap.data();
-  if (!isRecord(data['faixaXGenero'])) return null; // shape pré-RN822 — aguarda reprocesso
+  if (!isRecord(data['faixaXGenero'])) {
+    // Shape pré-RN822: sinaliza (nunca soma, nunca silencia — review F4).
+    return { ...parseDemografiaDoc({ tenantId: data['tenantId'] }), aguardandoReprocesso: true };
+  }
   return parseDemografiaDoc(data);
 }

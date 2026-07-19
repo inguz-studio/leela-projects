@@ -59,14 +59,18 @@ export const FAIXAS_ETARIAS = [
 export type FaixaEtaria = (typeof FAIXAS_ETARIAS)[number];
 
 /** Bucket etário de uma idade (anos completos). Idade negativa → null
- *  (nascimento no futuro = dado corrompido; nunca inventar bucket). @pure */
+ *  (nascimento no futuro = dado corrompido; nunca inventar bucket). Idade
+ *  fracionária é truncada para anos COMPLETOS antes do bucket — sem isso,
+ *  24.5 geraria a chave inexistente '20_24' (review F6). @pure */
 export function faixaEtariaDaIdade(idade: number): FaixaEtaria | null {
   if (!Number.isFinite(idade) || idade < 0) return null;
-  if (idade <= 17) return 'ate_17';
-  if (idade <= 24) return '18_24';
-  if (idade >= 60) return '60_mais';
-  // Bandas de 5 em 5 (25_29 … 55_59): piso = múltiplo de 5 ≤ idade.
-  const piso = Math.floor(idade / 5) * 5;
+  const anos = Math.floor(idade);
+  if (anos <= 17) return 'ate_17';
+  if (anos <= 24) return '18_24';
+  if (anos >= 60) return '60_mais';
+  // Bandas de 5 em 5 (25_29 … 55_59): piso = múltiplo de 5 ≤ anos. `anos` é
+  // inteiro em [25,59], logo o template SEMPRE produz chave canônica.
+  const piso = Math.floor(anos / 5) * 5;
   return `${piso}_${piso + 4}` as FaixaEtaria;
 }
 

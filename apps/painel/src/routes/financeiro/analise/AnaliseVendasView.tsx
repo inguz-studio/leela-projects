@@ -28,7 +28,7 @@ import {
   type DateRange,
 } from '@leela/design-system';
 import type { OverviewResult } from '@leela/api-client';
-import { notaCobertura, type DemografiaTenant } from './_lib/demografia';
+import { notaCobertura, notaReprocesso, type DemografiaTenant } from './_lib/demografia';
 import { CohortIdadeSexo } from './CohortIdadeSexo';
 
 /** Sentinela do filtro: "Todos os eventos" (agregado do tenant, RN-821). */
@@ -109,6 +109,7 @@ export function AnaliseVendasView({
   onRetryTamanhos,
 }: AnaliseVendasViewProps): JSX.Element {
   const cobertura = notaCobertura(demografia);
+  const reprocesso = notaReprocesso(demografia);
   const totalSexo = demografia.sexo.reduce((acc, s) => acc + s.value, 0);
   const demografiaVazia = demografia.faixas.length === 0 && demografia.sexo.length === 0;
 
@@ -171,12 +172,22 @@ export function AnaliseVendasView({
               <Skeleton variant="rect" className="h-52" />
             </div>
           ) : demografiaVazia ? (
-            <EmptyState
-              title="Sem dados demográficos ainda"
-              description="O perfil de idade e sexo aparece quando houver inscrições confirmadas com dados demográficos coletados no checkout."
-            />
+            demografia.eventosAguardandoReprocesso > 0 ? (
+              // Janela RN-822 (review F5): os dados EXISTEM, o agregado está
+              // sendo migrado — a causa declarada é o reprocesso, não a coleta.
+              <EmptyState
+                title="Dados demográficos em reprocessamento"
+                description="O agregado de idade e sexo está sendo recalculado nas novas faixas etárias. Os gráficos voltam automaticamente quando o reprocessamento concluir."
+              />
+            ) : (
+              <EmptyState
+                title="Sem dados demográficos ainda"
+                description="O perfil de idade e sexo aparece quando houver inscrições confirmadas com dados demográficos coletados no checkout."
+              />
+            )
           ) : (
             <>
+              {reprocesso !== null && <NotaCobertura>{reprocesso}</NotaCobertura>}
               {cobertura !== null && <NotaCobertura>{cobertura}</NotaCobertura>}
               <div className="grid grid-cols-1 gap-[var(--spacing-4)] lg:grid-cols-2">
                 <CardGrafico titulo="Faixa etária" nota="idade na data da prova">
