@@ -34,8 +34,8 @@ employee: sf-backend-lead (software-forge) · modelo: Fable · 2026-07-19
       corrida vence, idempotente). api-client: wrapper em checkout.ts (re-export raiz
       fica p/ lane FORM — index.ts em edição pela lane UPSW). Integração 6/6 + Asaas
       unit 3 novas + Mock contrato.
-- [ ] T6 — review antagonista Fable contexto fresco + fixes re-provados
-- [ ] T7 — boards/épicos E12/E19/E04 + report
+- [x] T6 `f46c83c` — review antagonista Fable contexto fresco: **APROVADO COM FIXES**. WIP do disco (vitest.setup.ts + config) aproveitado-e-commitado (pepper de TESTE global; a suíte de functions inteira roda verde com o checkout fail-closed do RN-173). Findings: F1 (MÉDIO→ALTO p/ prod: first-claim de CPF alheio sem prova de posse; ordem anônima-primeiro vaza PII da vítima via prefill) e F2 (conta/e-mail p/ e-mail arbitrário em pedido pago) **ESCALADOS como decisão type-1 de identidade do Vitor** (Direção A prova de posse vs. B claim segue o pagamento — NÃO redecidido em T6 p/ não pré-emptar); F3/F5/F6 LOW/INFO aceitos; F4 premissa já aceita. Gates: tsc/eslint 0 (functions+core+api-client+landing) · suíte functions INTEIRA **159 arquivos/2857 testes/0 falhas** (emulator TESTE via emulators:exec fb-tools@13 JDK 21; suítes CK2 também em 8480/9598).
+- [x] T7 — report `outputs/leela-build-2d6ee98d/CHECKOUT2-MODELO-REPORT.md` (5 premissas consolidadas + review + escalação F1/F2) · boards: V1-KANBAN (cards DEC-0719 d/e/f → Feito; c reduzido a UI; card de DECISÃO F1/F2 no Backlog) + V1-CHECKLIST (LEELA-CK2-T1..T7) · épicos E19 (RN-173 pago + decisão F1/F2 aberta), E12 (status backend das 5 RNs), E04 (termo custom versionado).
 
 ## Decisões de desenho (premissas — consolidar no report)
 
