@@ -100,6 +100,18 @@ export interface PoliticaVendas {
   transferencia: PoliticaTransferencia;
   trocaIngresso: PoliticaTrocaIngresso;
   atualizadoEm: Timestamp;
+  /**
+   * Versão VIGENTE da política (CKMOD · paralelo RN-149 do regulamento):
+   * MONOTÔNICA, bump em edição MATERIAL (blocos reembolso/transferencia/
+   * trocaIngresso — ver materialPoliticaVendas), escrita EXCLUSIVA
+   * server-side (trigger versionarPoliticaVendas; Rules congelam p/ cliente).
+   * Ausente = doc legado pré-CKMOD ⇒ vigente 1 (versaoPoliticaVendas):
+   * a versão 1 é a política em vigor — defaults legais CDC quando não há
+   * doc, ou o doc legado como publicado.
+   */
+  versao?: number;
+  /** Carimbo do último bump de versão (server-side). */
+  versaoAtualizadaEm?: Timestamp;
 }
 
 /**
@@ -222,6 +234,15 @@ export function parsePoliticaVendas(
     trocaIngresso: PoliticaTrocaIngresso;
     atualizadoEm: Timestamp;
   };
+  // Versão (CKMOD): leitura Postel — doc legado sem campo segue válido
+  // (vigente = 1 via versaoPoliticaVendas); presente deve ser inteiro ≥ 1.
+  const versaoRaw = data['versao'];
+  if (
+    versaoRaw !== undefined &&
+    (typeof versaoRaw !== 'number' || !Number.isInteger(versaoRaw) || versaoRaw < 1)
+  ) {
+    throw new Error(`politicaVendas/${id} com "versao" inválida (inteiro ≥ 1 — CKMOD).`);
+  }
   return {
     id,
     tenantId: d.tenantId,
@@ -241,7 +262,83 @@ export function parsePoliticaVendas(
       permiteReembolsoDowngrade: d.trocaIngresso.permiteReembolsoDowngrade,
     },
     atualizadoEm: d.atualizadoEm,
+    ...(versaoRaw !== undefined ? { versao: versaoRaw as number } : {}),
+    ...(data['versaoAtualizadaEm'] !== undefined
+      ? { versaoAtualizadaEm: data['versaoAtualizadaEm'] as Timestamp }
+      : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Versão vigente (CKMOD · paralelo RN-149) — consumida pelo checkout (aceite
+// dos termos) e pelo leitor público da landing (modal "termos da compra")
+// ---------------------------------------------------------------------------
+
+/**
+ * Campos da política com escrita EXCLUSIVA server-side (trigger
+ * versionarPoliticaVendas) — espelhados nas Rules: cliente nem cria nem toca.
+ * Forjar `versao` invalidaria a prova de aceite (RN-149 pattern).
+ */
+export const CAMPOS_FUNCTION_POLITICA_VENDAS = [
+  'versao',
+  'versaoAtualizadaEm',
+  'politicaTextoHash',
+] as const;
+
+/**
+ * Versão VIGENTE da política de um evento. Diferente do regulamento (versão
+ * 0 = nada publicado), a política SEMPRE vige: sem doc/doc legado sem campo
+ * ⇒ versão 1 (defaults legais CDC Art. 49 ou o doc como publicado). @pure
+ */
+export function versaoPoliticaVendas(versao: number | undefined): number {
+  return typeof versao === 'number' && Number.isInteger(versao) && versao > 0
+    ? versao
+    : 1;
+}
+
+/**
+ * Projeção MATERIAL da política — o que, mudando, exige NOVO aceite
+ * (RN-149 pattern): os 3 blocos paramétricos, serializados em ordem FIXA de
+ * chaves (string canônica p/ hash de idempotência do bump). `tenantId`/
+ * carimbos ficam FORA — mudá-los não é edição material. @pure
+ */
+export function materialPoliticaVendas(
+  p: Pick<PoliticaVendas, 'reembolso' | 'transferencia' | 'trocaIngresso'>
+): string {
+  return JSON.stringify({
+    reembolso: {
+      janelaArrependimentoDias: p.reembolso.janelaArrependimentoDias,
+      corteHoras: p.reembolso.corteHoras,
+      slaAnaliseDias: p.reembolso.slaAnaliseDias,
+    },
+    transferencia: {
+      habilitada: p.transferencia.habilitada,
+      janelaHoras: p.transferencia.janelaHoras,
+      taxa: p.transferencia.taxa,
+    },
+    trocaIngresso: {
+      habilitada: p.trocaIngresso.habilitada,
+      janelaHoras: p.trocaIngresso.janelaHoras,
+      permiteReembolsoDowngrade: p.trocaIngresso.permiteReembolsoDowngrade,
+    },
+  });
+}
+
+/**
+ * O aceite registrado no pedido ainda vale para a versão vigente? (RN-149:
+ * aceite de versão ANTERIOR não vale para a vigente; `undefined` = nunca
+ * aceitou ⇒ sempre precisa — a política sempre vige, vigente ≥ 1.) @pure
+ */
+export function precisaNovoAceiteTermos(
+  aceitaVersao: number | undefined,
+  eventoVersao: number | undefined
+): boolean {
+  const vigente = versaoPoliticaVendas(eventoVersao);
+  const aceita =
+    typeof aceitaVersao === 'number' && Number.isInteger(aceitaVersao) && aceitaVersao > 0
+      ? aceitaVersao
+      : 0;
+  return aceita < vigente;
 }
 
 // ---------------------------------------------------------------------------

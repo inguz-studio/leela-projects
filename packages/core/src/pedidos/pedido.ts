@@ -24,6 +24,9 @@
 
 import type { Timestamp } from '../index';
 import { roundMoney } from '../finance/calc';
+import { telefoneValido } from '../eventos/dadosPessoais';
+import { parseAceitesPedido, type AceitesPedido } from './aceites';
+import { parseEnderecoPedido, type EnderecoPedido } from './endereco';
 import { isFormaPagamento, type FormaPagamento, type Pagamento } from './pagamento';
 import { parseMoney, parseTimestamp, TOLERANCIA_MEIO_CENTAVO } from './validacao';
 
@@ -97,6 +100,12 @@ export interface ResponsavelPedido {
   nome: string;
   /** 🔁 Desnormalizado — destino do e-mail do pedido */
   email: string;
+  /**
+   * Telefone celular do RESPONSÁVEL — canal de contato do pedido (CKMOD ·
+   * spec §5.1 item 1). PII: leitura já restrita (tenant writer). Ausente =
+   * pedido pré-CKMOD ou UI antiga (schema evolution — leitura Postel).
+   */
+  telefone?: string;
 }
 
 /**
@@ -172,6 +181,22 @@ export interface Pedido {
    */
   valorTotal: number;
   status: StatusPedido;
+  /**
+   * Endereço do COMPRADOR/responsável — 1× por pedido (CKMOD · spec §5.1
+   * item 3; morada ratificável: PEDIDO, nunca por inscrito). PII com
+   * minimização RN-172: o CRM NÃO agrega endereço. Ausente = pedido
+   * pré-CKMOD/UI antiga. Escrita SÓ pela Function do checkout (Rules:
+   * write false em pedidos).
+   */
+  endereco?: EnderecoPedido;
+  /**
+   * Aceites versionados do pagar (CKMOD · spec §5.3 · RN-149 pattern):
+   * termos da compra (versão vigente da politicaVendas) + termo de saúde
+   * (TERMO_SAUDE_VERSAO_VIGENTE), ambos com timestamp de SERVIDOR. Versão e
+   * carimbo são do servidor — o cliente só confirma booleans. Ausente =
+   * pedido pré-CKMOD (a obrigatoriedade flipa no lote de UI do checkout).
+   */
+  aceites?: AceitesPedido;
   /** 🔁 Espelho de `pagamentos.forma` p/ listagem sem join — só pós-cobrança */
   formaPagamento?: FormaPagamento;
   /**
@@ -197,6 +222,11 @@ export const CAMPOS_FUNCTION_PEDIDO = [
   'pagamentoRef',
   'formaPagamento',
   'parcelas',
+  // CKMOD: endereço do comprador (PII) e aceites versionados (prova legal
+  // RN-149 pattern) — escritos SÓ pela Function do checkout; cliente
+  // forjando aceite simularia consentimento que não houve.
+  'endereco',
+  'aceites',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -427,6 +457,12 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
   if (typeof resp['email'] !== 'string' || resp['email'].length === 0) {
     throw new Error(`Pedido ${id}: "responsavel.email" inválido (ADR-011)`);
   }
+  // CKMOD: telefone do responsável — OPCIONAL (Postel: pedido antigo não
+  // tem); presente deve ser plausível (telefoneValido — fonte única). Não
+  // ecoar o valor na mensagem (PII — LGPD).
+  if (resp['telefone'] !== undefined && !telefoneValido(resp['telefone'])) {
+    throw new Error(`Pedido ${id}: "responsavel.telefone" inválido (10–13 dígitos)`);
+  }
   if (
     !Array.isArray(inscritoRefs) ||
     inscritoRefs.length === 0 ||
@@ -540,6 +576,8 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
       atletaId: resp['atletaId'],
       nome: resp['nome'],
       email: resp['email'],
+      // exactOptionalPropertyTypes: só entra quando o doc carrega
+      ...(typeof resp['telefone'] === 'string' ? { telefone: resp['telefone'] } : {}),
     },
     inscritoRefs: inscritoRefs as string[],
     itens,
@@ -560,6 +598,16 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
       `Pedido ${id}: status "pago" com pagamentoRef null — estado financeiro ` +
         `incoerente (confirmação escreve status + pagamentoRef no mesmo batch)`
     );
+  }
+
+  // CKMOD: endereço e aceites — OPCIONAIS (schema evolution: pedidos
+  // pré-CKMOD não têm); presentes, o parse é fail-fast (PII/prova legal
+  // corrompida é pior que ausente).
+  if (data['endereco'] !== undefined) {
+    pedido.endereco = parseEnderecoPedido(ctx, data['endereco']);
+  }
+  if (data['aceites'] !== undefined) {
+    pedido.aceites = parseAceitesPedido(ctx, data['aceites']);
   }
 
   if (data['formaPagamento'] !== undefined) {

@@ -135,17 +135,28 @@ export interface ContatoEmergencia {
 /**
  * Dados pessoais `[reg]` do titular da inscrição (aba Geral do slide-in —
  * S203). TODO o bloco é PII; escrita só pela Function do checkout.
+ *
+ * SCHEMA EVOLUTION (CKMOD · spec CHECKOUT-UX §5.1): o checkout ratificado
+ * coleta POR ATLETA só CPF + nascimento (telefone é do RESPONSÁVEL → pedido;
+ * gênero não ratificado; cidade/UF não coletados — endereço é do pedido).
+ * O bloco gravado pelo checkout novo é PARCIAL; o leitor (parseDadosPessoais)
+ * é Postel: campo AUSENTE normaliza para valor vazio/`nao_informado` (os
+ * consumidores de exibição já degradam — máscaras/format do painel são
+ * ''-safe); campo PRESENTE segue validação estrita (PII errada é pior que
+ * ausente). `''` nestes campos significa "não coletado".
  */
 export interface DadosPessoaisInscrito {
   /** CPF do titular (com ou sem máscara) — MASCARAR no cliente (A-T3) */
   cpf: string;
-  /** Telefone de contato — MASCARAR no cliente (A-T3) */
+  /** Telefone de contato — MASCARAR no cliente (A-T3). '' = não coletado. */
   telefone: string;
-  /** Nascimento date-only `yyyy-mm-dd` (dia civil — sem fuso) */
+  /** Nascimento date-only `yyyy-mm-dd` (dia civil). '' = não coletado. */
   nascimento: string;
+  /** `nao_informado` quando o checkout não coletou (enum canônico). */
   genero: GeneroInscrito;
+  /** '' = não coletado (checkout §5 não coleta cidade por atleta). */
   cidade: string;
-  /** UF (sigla, ex.: "SC") — produto Brasil-only na V1 */
+  /** UF (sigla, ex.: "SC") — produto Brasil-only na V1. '' = não coletado. */
   uf: string;
   /** Presente quando o evento exige (ADR-011 — por inscrito, não herdado) */
   contatoEmergencia?: ContatoEmergencia;
@@ -158,9 +169,13 @@ export interface DadosPessoaisInscrito {
 // ---------------------------------------------------------------------------
 
 /**
- * Parsing do bloco `[reg]` (fail-fast). PII errada é pior que ausente —
- * doc fora do contrato lança em vez de renderizar dado corrompido.
- * `contexto` prefixa a mensagem: "Inscrito insc-0001". @pure
+ * Parsing do bloco `[reg]`. PII errada é pior que ausente — campo PRESENTE
+ * fora do contrato lança em vez de renderizar dado corrompido. Leitura
+ * POSTEL (CKMOD): campo AUSENTE (checkout §5 grava bloco PARCIAL —
+ * cpf+nascimento; telefone só no inscrito-responsável) normaliza para
+ * ''/`nao_informado` em vez de lançar — inscrição nova não pode quebrar o
+ * slide-in/listagem do painel. CPF segue OBRIGATÓRIO (todo produtor do
+ * bloco o coleta). `contexto` prefixa a mensagem: "Inscrito insc-0001". @pure
  */
 export function parseDadosPessoais(
   contexto: string,
@@ -174,33 +189,36 @@ export function parseDadosPessoais(
   if (!cpfValido(data['cpf'])) {
     throw new Error(`${contexto}: "dadosPessoais.cpf" inválido (11 dígitos + DV)`);
   }
-  if (!telefoneValido(data['telefone'])) {
+  if (data['telefone'] !== undefined && !telefoneValido(data['telefone'])) {
     throw new Error(`${contexto}: "dadosPessoais.telefone" inválido (10–13 dígitos)`);
   }
-  if (!isDataEventoISO(data['nascimento'])) {
+  if (data['nascimento'] !== undefined && !isDataEventoISO(data['nascimento'])) {
     throw new Error(
       `${contexto}: "dadosPessoais.nascimento" deve ser data civil yyyy-mm-dd válida`
     );
   }
-  if (!isGeneroInscrito(data['genero'])) {
+  if (data['genero'] !== undefined && !isGeneroInscrito(data['genero'])) {
     throw new Error(
       `${contexto}: genero "${String(data['genero'])}" fora do enum canônico`
     );
   }
-  if (typeof data['cidade'] !== 'string' || data['cidade'].length === 0) {
+  if (
+    data['cidade'] !== undefined &&
+    (typeof data['cidade'] !== 'string' || data['cidade'].length === 0)
+  ) {
     throw new Error(`${contexto}: "dadosPessoais.cidade" inválida`);
   }
-  if (!isUfBrasil(data['uf'])) {
+  if (data['uf'] !== undefined && !isUfBrasil(data['uf'])) {
     throw new Error(`${contexto}: uf "${String(data['uf'])}" fora da lista de UFs`);
   }
 
   const dados: DadosPessoaisInscrito = {
     cpf: data['cpf'] as string,
-    telefone: data['telefone'] as string,
-    nascimento: data['nascimento'],
-    genero: data['genero'],
-    cidade: data['cidade'],
-    uf: data['uf'] as string,
+    telefone: typeof data['telefone'] === 'string' ? data['telefone'] : '',
+    nascimento: typeof data['nascimento'] === 'string' ? data['nascimento'] : '',
+    genero: isGeneroInscrito(data['genero']) ? data['genero'] : 'nao_informado',
+    cidade: typeof data['cidade'] === 'string' ? data['cidade'] : '',
+    uf: typeof data['uf'] === 'string' ? data['uf'] : '',
   };
 
   if (data['contatoEmergencia'] !== undefined) {

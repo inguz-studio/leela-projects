@@ -216,6 +216,10 @@ describe('derivações puras de Pedido', () => {
       'pagamentoRef',
       'formaPagamento',
       'parcelas',
+      // CKMOD: endereço do comprador + aceites versionados — Function-only
+      // (espelho da lista canônica em pedidos/pedido.ts)
+      'endereco',
+      'aceites',
     ]);
   });
 });

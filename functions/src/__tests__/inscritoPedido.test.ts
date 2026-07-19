@@ -134,6 +134,9 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       // FABLE-B (RN-341): carimbo do estorno — Function-only (espelho da
       // lista canônica em eventos/inscrito.ts; drift pego por este teste)
       'estornadoEm',
+      // S904-T4 (RN-345): trilha de titularidade — Function-only (drift do
+      // teste-espelho vs lista canônica; corrigido no CKMOD)
+      'titularHistorico',
     ]);
   });
 });

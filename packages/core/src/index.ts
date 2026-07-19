@@ -526,7 +526,33 @@ export {
   rotearReembolso,
   transferenciaAberta,
   trocaIngressoAberta,
+  // CKMOD — versão vigente da política (paralelo RN-149)
+  CAMPOS_FUNCTION_POLITICA_VENDAS,
+  versaoPoliticaVendas,
+  materialPoliticaVendas,
+  precisaNovoAceiteTermos,
 } from './eventos/politicaVendas';
+
+// ---------------------------------------------------------------------------
+// CKMOD — extensão de modelo do checkout (spec CHECKOUT-UX §5, ratificada
+// 2026-07-18): endereço do pedido + aceites versionados no pagar.
+// ---------------------------------------------------------------------------
+export type { EnderecoPedido } from './pedidos/endereco';
+export {
+  ENDERECO_LOGRADOURO_MAX,
+  ENDERECO_CAMPO_MAX,
+  ENDERECO_NUMERO_MAX,
+  normalizarCep,
+  cepValido,
+  validarEnderecoPedido,
+  parseEnderecoPedido,
+} from './pedidos/endereco';
+export type { AceiteVersionado, AceitesPedido } from './pedidos/aceites';
+export {
+  TERMO_SAUDE_VERSAO_VIGENTE,
+  validarAceitesCheckoutInput,
+  parseAceitesPedido,
+} from './pedidos/aceites';
 
 // ---------------------------------------------------------------------------
 // Checkout (LEELA-E12 · fundação) — estado de venda puro
@@ -550,6 +576,7 @@ export type { DadosMinimosInscrito } from './checkout/validarDados';
 export {
   INSCRITO_NOME_MIN,
   INSCRITO_NOME_MAX,
+  NASCIMENTO_MIN_ISO,
   validarDadosMinimosInscrito,
 } from './checkout/validarDados';
 
