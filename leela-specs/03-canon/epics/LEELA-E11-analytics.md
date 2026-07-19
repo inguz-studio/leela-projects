@@ -273,3 +273,43 @@ Exibir as métricas de comunidade (novos atletas por clube/mês, churn de clube,
 
 - **RN-821 · `/financeiro` = superfície única de análise (desempenho + analytics).** A rota `/financeiro` já é a análise de vendas (index `AnaliseVendasPage`; `/financeiro/repasses`). A entrada "Analytics" do sidebar (`sidebar.ts:31`, placeholder inerte) deixa de ser uma entrada divergente — a Análise É o analytics ao nível do profissional. A Análise passa a aceitar **filtro por evento** (recorta os 4 blocos; "Todos os eventos" = agregado do tenant) e **seleção temporal** (intervalo de datas, calendário shadcn), lendo agregados `eventos/{id}/…/current` por evento — nunca varredura no cliente. Story `S-R9-01`.
 - **RN-822 · Buckets etários em bandas de 5 anos.** `FAIXAS_ETARIAS`/`faixaEtariaDaIdade` (`packages/core/src/analytics/demografia.ts`) passam de `ate_17/18_24/25_34/35_44/45_54/55_mais` para bandas de 5 anos (default padrão corrida: `ate_17, 18_24, 25_29, 30_34, 35_39, 40_44, 45_49, 50_54, 55_59, 60_mais`). Idade na data civil da prova, determinística; agregado só de contagens (mesma disciplina de PII do RN-820). Cohort idade×sexo na Análise. Story `S-R9-02`. Spec: `02-rodadas/2026-07-18-ux-review/`.
+
+## Estado de implementação e triage — lote E11-COHORT (trace leela-build-2d6ee98d · 2026-07-19)
+
+### Onde a bucketização etária vive hoje (inventário RN-822)
+
+A conversão idade → bucket acontece numa única camada: `packages/core/src/analytics/demografia.ts` (`FAIXAS_ETARIAS` + `faixaEtariaDaIdade`), consumida na INGESTÃO pela Cloud Function `agregarDemografia`. O doc materializado `eventos/{eventoId}/demografia/current` guarda só CONTAGENS por bucket já fechado (6 faixas grossas `ate_17/18_24/25_34/35_44/45_54/55_mais`) mais o 1D de gênero (`porGenero`). Nunca a idade crua, nunca o cruzamento idade×sexo.
+
+Consequência para o painel: a Análise (`AnaliseVendasView`) lê o agregado grosso e não tem como re-bucketizar em bandas de 5 anos. A informação já se perdeu no fechamento (a faixa `25_34` não se divide em `25_29` + `30_34`). E o cohort idade×sexo do verbatim exige uma matriz `(faixa × gênero)` que o agregado atual não carrega. A premissa do recorte ("se o agregado já entrega idades agregáveis, re-bucketize no painel") não se sustenta contra o código real: o agregado entrega buckets fechados, não idades.
+
+### Por que RN-822 é lote coordenado core+functions (fora desta janela)
+
+A re-bucketização real precisa de: (1) trocar `FAIXAS_ETARIAS`/`faixaEtariaDaIdade` no core para as 10 bandas; (2) para o cohort, somar a matriz `faixaXGenero` a `DemografiaContagens`/`computeDemografia`; (3) redeploy da Function `agregarDemografia` (que importa o core) para produzir o novo shape; (4) reprocesso de todos os `eventos/{id}/demografia/current` (docs antigos ficam no shape velho até reprocessar); (5) atualizar os testes de functions que fixam os buckets antigos.
+
+Os itens 3 a 5 são `functions/**`, bloqueado nesta janela (lane CHECKOUT-FORM). E o painel e a Function têm que concordar no contrato de bucket: virar o union do core sozinho quebra o build da lane de functions (`demografiaCore.test.ts`/`demografia.integration.test.ts` fixam `'25_34'` etc., e o tsc de functions resolve `@leela/core` por source via `paths` do tsconfig raiz). Mexer só no core não é "zero mudança em functions" — viola o próprio gate. Um split-brain (painel em 5 anos, Function em 6 faixas) mostraria idade toda vazia no painel. Por isso RN-822 fica roteada como pendência de backend coordenada, com o painel entrando na sequência.
+
+Sequência quando functions destravar (Fable no core+functions, Opus na viz):
+1. core: 10 bandas + (cohort) matriz `faixaXGenero`; suíte do core verde.
+2. functions: redeploy `agregarDemografia` + atualizar os 2 testes de bucket; suíte de functions verde; reprocesso dos `demografia/current`.
+3. api-client: `DemografiaEvento` ganha a matriz (parse defensivo).
+4. painel: `ROTULO_FAIXA` das 10 bandas + viz cohort (stacked por sexo dentro de cada faixa, reusando `charts`/tokens do DS, sem dependência nova) + RTL vazio/sem-nascimento/dados; a nota de cobertura honesta ("confirmados sem nascimento") permanece. PII do RN-820 mantida: só contagens sobem.
+
+### Triage do restante (T2)
+
+Panel-executável, já entregue em rodadas anteriores (nada novo restou para este lote):
+- RN-821 · superfície única `/financeiro` + filtro por evento (Combobox) + supressão do placeholder "Analytics" do sidebar (`IDS_SUPRIMIDOS`) + estado do seletor temporal — entregues (R9-B). O seletor temporal é honesto-inerte por ora: os agregados são `…/current`, não série datada, e a View declara a lacuna.
+- RN-820 · demografia idade/sexo real — entregue (LEELA-BEPEND-T1).
+
+Backend-gated, pendências nomeadas (`functions/**`, fora desta janela):
+- **RN-822** · re-bucketização 5-em-5 + cohort idade×sexo — ver acima (core + functions + reprocesso).
+- **S821-T1** · Function de rollup `profissionais/{profId}/analytics/{periodo}` + hook BigQuery — hoje só existe `coletaDiaria` (snapshot diário `analyticsSnapshots`); o rollup consolidado por período não existe. Bloqueia S821-T2, S822, S823.
+- **S821-T2** · dashboard consolidado (tela) — depende do rollup S821-T1.
+- **S822** · conversão via link vs direto + % GMV via parcerias (tela) — campos de conversão/parceria estão fora do snapshot até E12 gerar atribuição (documentado em `snapshot.ts`).
+- **S823** · comunidade: novos atletas/churn/retenção 60d (tela) — depende dos campos do rollup S821-T1.
+- **Seletor temporal funcional** (RN-821) — depende de agregado histórico por período, não do `…/current`.
+
+Nenhuma tela de S821-T2/S822/S823 existe em `apps/painel/src/routes/financeiro` (só `analise` + `repasses`), coerente com a dependência do rollup de backend.
+
+### Achado de gate (fora de escopo E11, corrigido para destravar)
+
+O `tsc` do painel estava RED no baseline (4 erros em `apps/painel/src/routes/marcas/__tests__/MarcasPage.test.tsx`, lote MARCAS `d2e7126`: `valorAnual: undefined` sob `exactOptionalPropertyTypes` + destructure de `mock.calls[0]`). Corrigido em `[LEELA-E11-GATE]` (fix type-only, runtime intocado, MarcasPage 7/7) para destravar o gate compartilhado `tsc painel 0`.

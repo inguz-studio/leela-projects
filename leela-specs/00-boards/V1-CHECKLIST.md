@@ -447,7 +447,7 @@ Receber comunicados (push):
 - **LEELA-E08** — Painel do influenciador: **adiado por inteiro** (dependia de afiliação).
 - **LEELA-E09** — só o recorte **E09-slim (repasses do organizador)** entrou na Onda 2; painel financeiro rico (KPIs/donut/CSV), split de afiliação e reembolso (S904 + S305/S306) ficam na Onda 3.
 - **LEELA-E10** — Marcas (patrocinadores/ativações).
-- **LEELA-E11** — só a **coleta** (rollup diário S821-T1) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3.
+- **LEELA-E11** — só a **coleta** (snapshot diário `coletaDiaria`) entrou na Onda 2; dashboards/telas de analytics ficam na Onda 3. Triage E11-COHORT (2026-07-19): RN-822 (cohort 5-em-5) + rollup `analytics/{periodo}` + telas S821-T2/S822/S823 são todos backend-gated (`functions/**` bloqueado pela lane CHECKOUT-FORM); RN-821/RN-820 (superfície única, filtro por evento, demografia real) já entregues (R9-B/BEPEND-T1). Detalhe no épico E11 §"Estado de implementação e triage".
 - **LEELA-E14** — Integrações de treino / `TrainingProvider` (Strava/Garmin/Health). Ação externa pendente: registrar o app OAuth na Strava (lead time).
 - **LEELA-E15** — Creator Studio: só a **higiene** (`autorId` + `anexo?` no tipo `Desafio`) entrou na Onda 2; o resto congelado até a V1 validar.
 
