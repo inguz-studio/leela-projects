@@ -96,6 +96,21 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 const tsRel = (deltaDias: number): Timestamp =>
   Timestamp.fromDate(new Date(Date.now() + deltaDias * DIA_MS));
 
+/** createUser idempotente p/ re-run contra Auth Emulator QUENTE (sem reset). */
+async function criarContaAuthTeste(uid: string, email: string): Promise<void> {
+  try {
+    await admin.auth().createUser({ uid, email });
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (
+      code !== 'auth/uid-already-exists' &&
+      code !== 'auth/email-already-exists'
+    ) {
+      throw err;
+    }
+  }
+}
+
 async function seedBase(): Promise<void> {
   const now = FieldValue.serverTimestamp();
   const batch = db.batch();
@@ -292,9 +307,7 @@ describe('CK2-T1 — RN-173: registry global de pessoa por CPF', () => {
       });
 
     // 0. A dona TEM conta real no Auth (a conta do e-mail da compra)
-    await admin.auth().createUser({
-      uid: 'conta-dona', email: 'dona@exemplo.com.br',
-    });
+    await criarContaAuthTeste('conta-dona', 'dona@exemplo.com.br');
 
     // 1. Dona compra AUTENTICADA → a CRIAÇÃO não vincula NADA (RN-174)
     const r1 = await createInscricaoChargeCore(db, provider, inputDe('Dona Original', 'ck2-t1-claim-01', '1991-01-01'), {
@@ -396,9 +409,7 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
 
   it('prefill (gate RN-174): só claim confirmado + e-mail verificado E correspondente; anônimo/terceiro null', async () => {
     const cpf = '418.529.630-42';
-    await admin.auth().createUser({
-      uid: 'conta-clara', email: 'clara@exemplo.com.br',
-    });
+    await criarContaAuthTeste('conta-clara', 'clara@exemplo.com.br');
     const input = inputCk2('ck2-t2-prefill-01', {
       inscritos: [{
         nome: 'Clara Compradora', email: 'clara@exemplo.com.br', cpf,
@@ -470,6 +481,20 @@ describe('CK2-T2 — RN-154: gênero + prefill do PRÓPRIO', () => {
 
 describe('CK2-T3 — RN-155: conta sem fricção', () => {
   const CPF_DAVI = '963.074.185-75';
+
+  // Warm-safe: os testes deste describe provam CRIAÇÃO de conta — num Auth
+  // Emulator quente (re-run sem reset) as contas da rodada anterior
+  // existiriam e falseariam `contaCriada`. Remove antes (fresco = no-op).
+  beforeAll(async () => {
+    for (const email of ['davi@exemplo.com.br', 'elisa@exemplo.com.br']) {
+      try {
+        const { uid } = await admin.auth().getUserByEmail(email);
+        await admin.auth().deleteUser(uid);
+      } catch (err) {
+        if ((err as { code?: string }).code !== 'auth/user-not-found') throw err;
+      }
+    }
+  });
 
   function inputDavi(key: string): CreateInscricaoChargeInput {
     return inputCk2(key, {

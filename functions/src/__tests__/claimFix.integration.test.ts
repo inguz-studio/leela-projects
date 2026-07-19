@@ -150,7 +150,20 @@ async function pessoaDoCpf(cpf: string) {
 }
 
 async function criarContaAuth(uid: string, email: string): Promise<void> {
-  await admin.auth().createUser({ uid, email });
+  try {
+    await admin.auth().createUser({ uid, email });
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    // Re-run contra Auth Emulator QUENTE (sem reset): a conta da rodada
+    // anterior já existe — estado equivalente, segue (o Firestore é limpo
+    // no beforeAll; o Auth não tem clear equivalente aqui).
+    if (
+      code !== 'auth/uid-already-exists' &&
+      code !== 'auth/email-already-exists'
+    ) {
+      throw err;
+    }
+  }
 }
 
 describe('CLAIM-FIX — RN-174: claim só na confirmação (escritor único)', () => {
