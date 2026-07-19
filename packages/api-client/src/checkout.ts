@@ -151,7 +151,16 @@ export interface CreateInscricaoChargeInput {
    * OBRIGATÓRIO (CKFORM-T3 · flip F-4a): pedido sem os 2 aceites é
    * REJEITADO server-side.
    */
-  aceites: { termos: boolean; saude: boolean };
+  aceites: {
+    termos: boolean;
+    saude: boolean;
+    /**
+     * CK2 (RN-156): aceite do termo de saúde CUSTOM do organizador —
+     * OBRIGATÓRIO quando o evento tem termo custom ativo (o leitor público
+     * projeta `termoSaudeCustom`); o servidor rejeita fail-closed sem ele.
+     */
+    saudeCustom?: boolean;
+  };
   forma: FormaPagamento;
   parcelas: number;
   cupomCodigo?: string;

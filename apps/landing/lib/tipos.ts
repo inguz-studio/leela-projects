@@ -175,6 +175,12 @@ export interface EventoPublico {
    */
   termoSaudeVersao: number;
   /**
+   * Termo de saúde CUSTOM do organizador (CK2 · RN-156 — ADITIVO ao base):
+   * texto + versão vigente para o modal do 3º aceite (`saudeCustom`).
+   * `null` = evento sem termo custom ativo (o checkout mostra só o base).
+   */
+  termoSaudeCustom: { texto: string; versao: number } | null;
+  /**
    * RN-347 (CKMOD · pendência T5 do CKFIX): `true` = evento em modo
    * 'repassada' — o checkout mostra o badge condicional "+ taxa" ANTES do
    * Resumo. Só o FLAG cruza (nunca percentual/termo do tenant — RN-330/404).

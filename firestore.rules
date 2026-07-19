@@ -1621,6 +1621,56 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // `termoSaude/{config}` — termo de saúde CUSTOM do organizador (CK2 ·
+      // RN-156 · DEC-0719 D-7). Doc ÚNICO por evento (docId `config`).
+      // ADITIVO ao termo BASE da plataforma (que é sempre obrigatório e vive
+      // como template do produto — nunca em doc). Texto '' = termo INATIVO
+      // (desativação; DELETE nunca por cliente — trilha de versão).
+      //
+      // ESCRITA: SÓ o OWNER (contrato legal do organizador — mesmo aceite da
+      // politicaVendas). Campos de VERSÃO (versao/versaoAtualizadaEm/
+      // termoTextoHash) são EXCLUSIVOS do trigger versionarTermoSaude —
+      // espelho de CAMPOS_FUNCTION_TERMO_SAUDE do core; forjá-los
+      // invalidaria a prova de aceite `pedidos/{id}.aceites.saudeCustom`.
+      // Mesma lição F-2 do CKMOD: platform_admin via client SDK TAMBÉM
+      // respeita o congelamento.
+      match /termoSaude/{docId} {
+
+        function shapeTermoSaudeValido() {
+          return request.resource.data.tenantId is string
+            && request.resource.data.texto is string
+            && request.resource.data.texto.size() <= 20000;
+        }
+        function camposVersaoTermoNaoNascem() {
+          return !request.resource.data.keys().hasAny(
+            ['versao', 'versaoAtualizadaEm', 'termoTextoHash']
+          );
+        }
+        function camposVersaoTermoIntocados() {
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
+            ['versao', 'versaoAtualizadaEm', 'termoTextoHash']
+          );
+        }
+
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'administrador']);
+        allow create: if (isTenantOwner(request.resource.data.tenantId)
+                          && docId == 'config'
+                          && request.resource.data.tenantId == tenantDoEventoPai()
+                          && tenantAtivo(request.resource.data.tenantId)
+                          && shapeTermoSaudeValido()
+                          && camposVersaoTermoNaoNascem())
+                      || (isPlatformAdmin() && camposVersaoTermoNaoNascem());
+        allow update: if (isTenantOwner(resource.data.tenantId)
+                          && request.resource.data.tenantId == resource.data.tenantId
+                          && tenantAtivo(resource.data.tenantId)
+                          && shapeTermoSaudeValido()
+                          && camposVersaoTermoIntocados())
+                      || (isPlatformAdmin() && camposVersaoTermoIntocados());
+        allow delete: if false;
+      }
+
       // `afiliados/{afiliadoId}` — afiliados/influenciadores do evento
       // (E08 antecipado · R9-E · S-R9-11 · RN-313..319). docId == refCodigo
       // (unicidade por chave, como cupons).

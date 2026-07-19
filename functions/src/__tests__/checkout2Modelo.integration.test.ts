@@ -21,13 +21,22 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { parseInscrito, parsePessoa } from '@leela/core';
+import {
+  parseInscrito,
+  parsePedido,
+  parsePessoa,
+  TERMO_SAUDE_VERSAO_VIGENTE,
+} from '@leela/core';
 import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
 import { pessoaDocIdDoCpf } from '../checkout/pessoaRegistry';
 import { getCheckoutPrefillCore } from '../checkout/prefillCheckout';
+import {
+  hashTermoSaude,
+  versionarTermoSaudeCore,
+} from '../eventos/versionarTermoSaude';
 import {
   contaSemFriccaoAuthAdmin,
   garantirContaSemFriccao,
@@ -533,5 +542,114 @@ describe('CK2-T3 — RN-155: conta sem fricção', () => {
     expect(resultado.processado).toBe(false);
     expect(resultado.motivo).toBe('pedido_nao_pago');
     await expect(admin.auth().getUserByEmail('fabio@exemplo.com.br')).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T4 — RN-156 · termo de saúde base sempre + custom ADITIVO com fence
+// ---------------------------------------------------------------------------
+
+describe('CK2-T4 — RN-156: termo custom aditivo do organizador', () => {
+  const TEXTO_TERMO = 'Declaro que estou apto conforme o regulamento médico da prova.\n';
+  const termoRef = () =>
+    db.doc(`eventos/${EVENTO_ID}/termoSaude/config`);
+
+  it('termo custom ATIVO + input SEM saudeCustom ⇒ failed-precondition, NADA escrito (fence in-tx)', async () => {
+    await termoRef().set({
+      id: 'config', tenantId: TENANT_ID, texto: TEXTO_TERMO,
+      versao: 2, termoTextoHash: hashTermoSaude(TEXTO_TERMO),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    await expect(
+      createInscricaoChargeCore(db, provider, inputCk2('ck2-t4-fence-01'), {
+        uid: 'uid-t4-a', ehAnonimo: true,
+      })
+    ).rejects.toThrow(/termo de saúde do organizador/);
+    expect(
+      (await db.collection('pedidos').doc('ped-uid-t4-a-ck2-t4-fence-01').get()).exists
+    ).toBe(false);
+  });
+
+  it('com aceites.saudeCustom=true ⇒ prova carimbada (versão+hash do texto do organizador) + base sempre presente', async () => {
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      inputCk2('ck2-t4-ok-01', {
+        aceites: { termos: true, saude: true, saudeCustom: true },
+      }),
+      { uid: 'uid-t4-b', ehAnonimo: true }
+    );
+    const pedido = parsePedido(
+      r.pedidoId,
+      (await db.collection('pedidos').doc(r.pedidoId).get()).data() ?? {}
+    );
+    // Base da plataforma: SEMPRE presente (já incondicional desde o F-4a)
+    expect(pedido.aceites?.saude.versao).toBe(TERMO_SAUDE_VERSAO_VIGENTE);
+    // Custom ADITIVO: versão + hash do material do organizador, carimbo servidor
+    expect(pedido.aceites?.saudeCustom?.versao).toBe(2);
+    expect(pedido.aceites?.saudeCustom?.materialHash).toBe(hashTermoSaude(TEXTO_TERMO));
+    expect(pedido.aceites?.saudeCustom?.aceiteEm).toBeTruthy();
+  });
+
+  it('saudeCustom=false explícito ⇒ invalid-argument na fronteira (shape)', async () => {
+    await expect(
+      createInscricaoChargeCore(
+        db, provider,
+        inputCk2('ck2-t4-false-01', {
+          aceites: { termos: true, saude: true, saudeCustom: false },
+        }),
+        { uid: 'uid-t4-c', ehAnonimo: true }
+      )
+    ).rejects.toThrow(/saudeCustom/);
+  });
+
+  it('termo DESATIVADO (texto vazio): saudeCustom enviado é ignorado — sem carimbo custom', async () => {
+    await termoRef().set({
+      id: 'config', tenantId: TENANT_ID, texto: '',
+      versao: 2, termoTextoHash: hashTermoSaude(''),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      inputCk2('ck2-t4-inativo-01', {
+        aceites: { termos: true, saude: true, saudeCustom: true },
+      }),
+      { uid: 'uid-t4-d', ehAnonimo: true }
+    );
+    const pedido = parsePedido(
+      r.pedidoId,
+      (await db.collection('pedidos').doc(r.pedidoId).get()).data() ?? {}
+    );
+    expect(pedido.aceites?.saude.versao).toBe(TERMO_SAUDE_VERSAO_VIGENTE);
+    expect(pedido.aceites?.saudeCustom).toBeUndefined();
+    // limpeza para os demais describes (termo inativo permanece)
+  });
+
+  it('versionarTermoSaudeCore: 1ª publicação carimba v1; edição material bumpa; re-save idêntico e whitespace = no-op', async () => {
+    const eventoId = 'evt-t4-versao';
+    const ref = db.doc(`eventos/${eventoId}/termoSaude/config`);
+
+    // 1ª publicação (sem versao/hash — como o painel grava): carimba v1
+    await ref.set({
+      id: 'config', tenantId: TENANT_ID, texto: 'Termo v1.',
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    let r = await versionarTermoSaudeCore(db, eventoId);
+    expect(r).toEqual({ bumpado: false, versao: 1 });
+    expect((await ref.get()).get('termoTextoHash')).toBe(hashTermoSaude('Termo v1.'));
+
+    // Redelivery/no-op: mesmo material não re-bumpa (idempotência por hash)
+    r = await versionarTermoSaudeCore(db, eventoId);
+    expect(r).toEqual({ bumpado: false, versao: 1 });
+
+    // Whitespace de borda NÃO é edição material
+    await ref.update({ texto: '  Termo v1.\r\n' });
+    r = await versionarTermoSaudeCore(db, eventoId, hashTermoSaude('Termo v1.'));
+    expect(r).toEqual({ bumpado: false, versao: 1 });
+
+    // Edição MATERIAL bumpa 1 → 2
+    await ref.update({ texto: 'Termo v2 — exige atestado.' });
+    r = await versionarTermoSaudeCore(db, eventoId, hashTermoSaude('Termo v1.'));
+    expect(r).toEqual({ bumpado: true, versao: 2 });
+    expect((await ref.get()).get('versao')).toBe(2);
   });
 });

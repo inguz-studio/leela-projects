@@ -21,6 +21,11 @@
 
 import {
   exigenciasSaudePadrao,
+  materialTermoSaude,
+  TERMO_SAUDE_CUSTOM_DOC_ID,
+  termoSaudeCustomAtivo,
+  validarTermoSaudeCustom,
+  versaoTermoSaude,
   gradeDoDocItemKit,
   isExigenciasSaude,
   isModoTaxa,
@@ -239,6 +244,42 @@ async function lerPoliticaVendasPublica(
   }
 }
 
+/**
+ * Termo de saúde CUSTOM público do evento (CK2 · RN-156): texto + versão
+ * vigente para o modal do 3º aceite (`saudeCustom`). `null` honesto quando
+ * não há doc, o texto está vazio (termo desativado), o doc é inválido ou a
+ * leitura falha — o checkout mostra só o termo BASE (que é sempre
+ * obrigatório e vive como template do produto). NUNCA projeta tenantId.
+ */
+async function lerTermoSaudeCustomPublico(
+  db: Firestore,
+  eventoId: string,
+): Promise<{ texto: string; versao: number } | null> {
+  try {
+    const snap = await db
+      .collection('eventos')
+      .doc(eventoId)
+      .collection('termoSaude')
+      .doc(TERMO_SAUDE_CUSTOM_DOC_ID)
+      .get();
+    if (!snap.exists) return null;
+    const data = snap.data() ?? {};
+    if (validarTermoSaudeCustom(data).length > 0) {
+      console.error(`[leitor] termoSaude de ${eventoId} inválido — ignorado`);
+      return null;
+    }
+    const textoTermo = materialTermoSaude(data['texto'] as string);
+    if (!termoSaudeCustomAtivo(textoTermo)) return null;
+    return {
+      texto: textoTermo,
+      versao: versaoTermoSaude(data['versao'] as number | undefined),
+    };
+  } catch (err) {
+    console.error(`[leitor] lerTermoSaudeCustomPublico(${eventoId}) falhou`, err);
+    return null;
+  }
+}
+
 function precoMinimo(modalidades: readonly ModalidadePublica[]): number | null {
   const precos = modalidades
     .map((m) => m.precoVigente)
@@ -348,14 +389,21 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
       : [];
 
-    const [lotesPorModalidade, kits, organizador, politicaVendas, itensTamanhados] =
-      await Promise.all([
-        lerLotesPorModalidade(db, slug),
-        lerKits(db, slug),
-        resolverOrganizadorPublico(db, texto(data['tenantId'])),
-        lerPoliticaVendasPublica(db, slug),
-        lerItensTamanhados(db, slug, texto(data['tenantId'])),
-      ]);
+    const [
+      lotesPorModalidade,
+      kits,
+      organizador,
+      politicaVendas,
+      itensTamanhados,
+      termoSaudeCustom,
+    ] = await Promise.all([
+      lerLotesPorModalidade(db, slug),
+      lerKits(db, slug),
+      resolverOrganizadorPublico(db, texto(data['tenantId'])),
+      lerPoliticaVendasPublica(db, slug),
+      lerItensTamanhados(db, slug, texto(data['tenantId'])),
+      lerTermoSaudeCustomPublico(db, slug),
+    ]);
 
     const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
       nome,
@@ -454,6 +502,7 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       exigenciasSaude,
       politicaVendas,
       termoSaudeVersao: TERMO_SAUDE_VERSAO_VIGENTE,
+      termoSaudeCustom,
       taxaRepassada,
       ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
       ...(regulamento !== undefined ? { regulamento } : {}),

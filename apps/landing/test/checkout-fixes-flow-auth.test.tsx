@@ -62,6 +62,7 @@ const evento: EventoPublico = {
     trocaIngresso: { habilitada: false, janelaHoras: 48, permiteReembolsoDowngrade: false },
   },
   termoSaudeVersao: 1,
+  termoSaudeCustom: null,
   taxaRepassada: false,
 };
 

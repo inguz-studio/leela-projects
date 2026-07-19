@@ -62,14 +62,25 @@ export interface AceiteVersionado {
 export interface AceitesPedido {
   /** (a) Termos da compra + política de cancelamento (politicaVendas). */
   termos: AceiteVersionado;
-  /** (b) Termo de responsabilidade de saúde (template do produto). */
+  /** (b) Termo de responsabilidade de saúde BASE (template do produto). */
   saude: AceiteVersionado;
+  /**
+   * (c) Termo de saúde CUSTOM do organizador (CK2-T4 · RN-156 — ADITIVO,
+   * nunca substitui o base). Presente SE E SOMENTE SE o evento tinha termo
+   * custom ATIVO no instante da compra (fence server-side); versão+hash do
+   * texto do organizador carimbados na MESMA tx (termoSaude.ts). Ausente =
+   * evento sem termo custom (ou pedido pré-CK2 — schema evolution).
+   */
+  saudeCustom?: AceiteVersionado;
 }
 
 /**
  * Valida o INPUT de aceites do checkout (o que o cliente manda): objeto
  * `{termos: true, saude: true}` — ambos LITERALMENTE true (checkbox parcial
  * nunca deveria chegar ao servidor: o gate da UI é o botão de pagar).
+ * `saudeCustom` (CK2-T4 · RN-156) é opcional no SHAPE — presente deve ser
+ * true literal; a OBRIGATORIEDADE dele depende da config do evento e é
+ * decidida DENTRO da tx do checkout (fence — não aqui, que é pura).
  * Retorna a lista de erros (vazia = válido). @pure
  */
 export function validarAceitesCheckoutInput(raw: unknown): string[] {
@@ -83,6 +94,9 @@ export function validarAceitesCheckoutInput(raw: unknown): string[] {
   }
   if (a['saude'] !== true) {
     erros.push('"aceites.saude" deve ser true (termo de responsabilidade de saúde é obrigatório).');
+  }
+  if (a['saudeCustom'] !== undefined && a['saudeCustom'] !== true) {
+    erros.push('"aceites.saudeCustom" quando enviado deve ser true (RN-156).');
   }
   return erros;
 }
@@ -135,5 +149,10 @@ export function parseAceitesPedido(contexto: string, raw: unknown): AceitesPedid
   return {
     termos: parseAceite(contexto, 'termos', a['termos']),
     saude: parseAceite(contexto, 'saude', a['saude']),
+    // CK2-T4 (RN-156): aceite do termo custom — opcional (só eventos com
+    // termo custom ativo no instante da compra o carregam).
+    ...(a['saudeCustom'] !== undefined
+      ? { saudeCustom: parseAceite(contexto, 'saudeCustom', a['saudeCustom']) }
+      : {}),
   };
 }

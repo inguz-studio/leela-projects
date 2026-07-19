@@ -139,6 +139,9 @@ export { confirmarPagamentoSandbox } from './checkout/confirmarPagamentoSandbox'
 // saga idempotente ledger→refund→efeito; só organizador (tenant writer);
 // reverte a receita agregada e audita quem/quando/quanto/motivo. ⚠️ Fable.
 export { estornarInscricao } from './checkout/estornarInscricao';
+// Versionamento do termo de saúde CUSTOM do organizador (CK2-T4 · RN-156 —
+// espelho do versionarPoliticaVendas: bump material por hash, transacional).
+export { versionarTermoSaude } from './eventos/versionarTermoSaude';
 // Prefill do checkout (CK2 · RN-154): dados conhecidos do PRÓPRIO comprador
 // autenticado, via pessoa vinculada à conta (RN-173). PII de terceiro é
 // inalcançável por construção (query pelo uid do token; sem canal de input).

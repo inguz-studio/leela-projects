@@ -567,6 +567,20 @@ export {
   parseAceitesPedido,
 } from './pedidos/aceites';
 
+// CK2-T4 — RN-156: termo de saúde CUSTOM do organizador (aditivo ao base;
+// versionado como a politicaVendas; fence server-side no pagar).
+export type { TermoSaudeCustom } from './eventos/termoSaude';
+export {
+  TERMO_SAUDE_CUSTOM_DOC_ID,
+  TERMO_SAUDE_CUSTOM_TEXTO_MAX,
+  CAMPOS_FUNCTION_TERMO_SAUDE,
+  materialTermoSaude,
+  termoSaudeCustomAtivo,
+  versaoTermoSaude,
+  validarTermoSaudeCustom,
+  parseTermoSaudeCustom,
+} from './eventos/termoSaude';
+
 // ---------------------------------------------------------------------------
 // CK2 — RN-173: registro global de pessoa por CPF (unicidade estrutural pela
 // chave; colisão = mesma pessoa, linka, nunca duplica). Base do linking da

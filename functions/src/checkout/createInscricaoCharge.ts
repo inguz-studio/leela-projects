@@ -64,8 +64,12 @@ import {
   TAMANHOS_MAX_ENTRADAS,
   telefoneValido,
   TermsNotFoundError,
+  TERMO_SAUDE_CUSTOM_DOC_ID,
   TERMO_SAUDE_VERSAO_VIGENTE,
+  termoSaudeCustomAtivo,
   validarAceitesCheckoutInput,
+  validarTermoSaudeCustom,
+  versaoTermoSaude,
   validarDadosMinimosInscrito,
   validarEmail,
   validarEnderecoPedido,
@@ -94,6 +98,7 @@ import {
   hashPoliticaPadrao,
   hashPoliticaVendas,
 } from '../eventos/versionarPoliticaVendas';
+import { hashTermoSaude } from '../eventos/versionarTermoSaude';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import {
   lerPessoasNaTx,
@@ -199,7 +204,18 @@ export interface CreateInscricaoChargeInput {
    * aceites — COMPLETA a prova via `garantirAceitesNoReplay` (F-4b); prova
    * existente nunca é reescrita.
    */
-  aceites: { termos: boolean; saude: boolean };
+  aceites: {
+    termos: boolean;
+    saude: boolean;
+    /**
+     * CK2-T4 (RN-156): aceite do termo de saúde CUSTOM do organizador
+     * (ADITIVO ao base). Obrigatório QUANDO o evento tem termo custom ATIVO
+     * — fence decidido DENTRO da tx (config fresca; mesmo padrão F-4a):
+     * ativo sem aceite ⇒ failed-precondition, NADA escrito. Evento sem
+     * termo custom ignora o campo (organizador pode desativar em voo).
+     */
+    saudeCustom?: boolean;
+  };
   forma: FormaPagamento;
   /** Parcelas escolhidas (1 = à vista; > 1 só cartão). */
   parcelas: number;
@@ -1136,6 +1152,45 @@ async function criarDocsDeCheckout(
         }
       }
 
+      // CK2-T4 (RN-156): termo de saúde CUSTOM do organizador — config
+      // FRESCA lida NA MESMA tx (fence F-4a pattern): termo ATIVO exige o
+      // aceite `saudeCustom` do input; sem ele, failed-precondition ANTES de
+      // qualquer escrita. Versão+hash carimbados do que vigia NO COMMIT.
+      let termoCustomStamp: { versao: number; materialHash: string } | null =
+        null;
+      if (input.aceites !== undefined) {
+        const termoSnap = await tx.get(
+          eventoRef.collection('termoSaude').doc(TERMO_SAUDE_CUSTOM_DOC_ID)
+        );
+        const termoData = termoSnap.exists ? (termoSnap.data() ?? {}) : null;
+        const termoValido =
+          termoData !== null && validarTermoSaudeCustom(termoData).length === 0;
+        const termoAtivo =
+          termoValido && termoSaudeCustomAtivo(termoData['texto'] as string);
+        if (termoAtivo) {
+          if (input.aceites.saudeCustom !== true) {
+            throw new https.HttpsError(
+              'failed-precondition',
+              'Este evento exige o aceite do termo de saúde do organizador — ' +
+                'recarregue o checkout e aceite o termo (RN-156).'
+            );
+          }
+          termoCustomStamp = {
+            versao: versaoTermoSaude(
+              (termoData as Record<string, unknown>)['versao'] as
+                | number
+                | undefined
+            ),
+            materialHash: hashTermoSaude(
+              (termoData as Record<string, unknown>)['texto'] as string
+            ),
+          };
+        }
+        // Termo INATIVO/inexistente: `saudeCustom` enviado é IGNORADO (o
+        // organizador pode ter desativado entre o render e o pagar — aceite
+        // de termo que não existe não vira prova).
+      }
+
       // RN-173 (CK2-T1): leitura dos docs de pessoa AINDA na fase de leitura
       // da tx (contrato de transação) — corrida de dois checkouts com o
       // MESMO CPF serializa por retry otimista, nunca duplica pessoa.
@@ -1274,9 +1329,21 @@ async function criarDocsDeCheckout(
             aceiteEm: now,
             materialHash: materialTermosHash,
           },
-          // Termo de saúde é template DO PRODUTO — a constante de versão é a
-          // identidade do texto (sem material por-evento a hashear).
+          // Termo de saúde BASE é template DO PRODUTO — a constante de versão
+          // é a identidade do texto (sem material por-evento a hashear).
           saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
+          // CK2-T4 (RN-156): termo CUSTOM aditivo — presente SÓ quando o
+          // evento o tinha ATIVO no commit (versão+hash do texto do
+          // organizador, lidos NESTA tx).
+          ...(termoCustomStamp !== null
+            ? {
+                saudeCustom: {
+                  versao: termoCustomStamp.versao,
+                  aceiteEm: now,
+                  materialHash: termoCustomStamp.materialHash,
+                },
+              }
+            : {}),
         };
       }
       tx.create(pedidoRef, pedidoDoc);
@@ -1485,20 +1552,31 @@ async function garantirAceitesNoReplay(
 ): Promise<void> {
   if (input.aceites === undefined) return;
   const pedidoRef = db.collection('pedidos').doc(pedidoId);
-  const politicaRef = db
-    .collection('eventos')
-    .doc(input.eventoId)
+  const eventoRef = db.collection('eventos').doc(input.eventoId);
+  const politicaRef = eventoRef
     .collection('politicaVendas')
     .doc(POLITICA_VENDAS_DOC_ID);
+  const termoRef = eventoRef
+    .collection('termoSaude')
+    .doc(TERMO_SAUDE_CUSTOM_DOC_ID);
   await db.runTransaction(async (tx) => {
-    const [pedidoSnap, politicaSnap] = await Promise.all([
+    const [pedidoSnap, politicaSnap, termoSnap] = await Promise.all([
       tx.get(pedidoRef),
       tx.get(politicaRef),
+      tx.get(termoRef),
     ]);
     if (!pedidoSnap.exists || pedidoSnap.get('aceites') !== undefined) return;
     const politicaData = politicaSnap.exists ? (politicaSnap.data() ?? {}) : null;
     const valida =
       politicaData !== null && validarPoliticaVendas(politicaData).length === 0;
+    // CK2-T4 (RN-156): a completude do replay também carimba o termo CUSTOM
+    // quando o cliente o aceitou E o termo está ativo AGORA (o instante do
+    // aceite tardio é este — mesmo racional do carimbo do bloco todo).
+    const termoData = termoSnap.exists ? (termoSnap.data() ?? {}) : null;
+    const termoAtivo =
+      termoData !== null &&
+      validarTermoSaudeCustom(termoData).length === 0 &&
+      termoSaudeCustomAtivo(termoData['texto'] as string);
     const now = FieldValue.serverTimestamp();
     tx.update(pedidoRef, {
       aceites: {
@@ -1514,6 +1592,17 @@ async function garantirAceitesNoReplay(
             : hashPoliticaPadrao(),
         },
         saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
+        ...(termoAtivo && input.aceites.saudeCustom === true && termoData !== null
+          ? {
+              saudeCustom: {
+                versao: versaoTermoSaude(
+                  termoData['versao'] as number | undefined
+                ),
+                aceiteEm: now,
+                materialHash: hashTermoSaude(termoData['texto'] as string),
+              },
+            }
+          : {}),
       },
       atualizadoEm: now,
     });
