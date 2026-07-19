@@ -18,9 +18,12 @@
 // — chave do CRM e chave de pessoa nunca correlacionam por igualdade.
 // Fail-closed: sem pepper, LANÇA (herda o contrato de crmIdPepper).
 //
-// ANTI-HIJACK (ver core/pedidos/pessoa.ts): contaUid é first-claim (só
-// escreve quando null); dadosConhecidos só atualizam se a pessoa não foi
-// reivindicada OU o caller autenticado É a conta dona.
+// CLAIM (RN-174 · DEC-0719-ret — fecha o F1 do report CK2): a CRIAÇÃO do
+// pedido NUNCA escreve `contaUid`. O claim tem ESCRITOR ÚNICO — a
+// confirmação de pagamento (contaSemFriccao), que exige pedido PAGO e
+// resolve a conta PELO e-mail da compra (e carimba `contaEmail`). Aqui só
+// fica o merge de `dadosConhecidos` com anti-hijack: atualiza se a pessoa
+// não foi reivindicada OU o caller autenticado É a conta dona (callerUid).
 // =============================================================================
 
 import { createHmac } from 'node:crypto';
@@ -76,11 +79,12 @@ export interface PlanoPessoa {
   /** Dados coletados NESTE checkout para esta pessoa (merge no doc). */
   dados: Partial<DadosConhecidosPessoa>;
   /**
-   * uid a reivindicar como conta (first-claim) — presente SÓ quando o caller
-   * é AUTENTICADO NÃO-ANÔNIMO e esta pessoa é o PRÓPRIO responsável-inscrito
-   * (nunca se reivindica conta comprando para terceiro).
+   * uid do caller AUTENTICADO NÃO-ANÔNIMO — usado SÓ no anti-hijack de
+   * `dadosConhecidos` (dono atualiza os próprios dados). NUNCA vira claim:
+   * a criação do pedido não reivindica conta (RN-174 — escritor único do
+   * `contaUid` é a confirmação de pagamento).
    */
-  claimContaUid?: string;
+  callerUid?: string;
 }
 
 /**
@@ -131,14 +135,11 @@ export function planejarPessoasDoCheckout(
       // Mesmo CPF 2× no pedido: mescla os dados das ocorrências.
       dados: { ...(porId.get(pessoaId)?.dados ?? {}), ...dados },
     };
-    // First-claim da conta: SÓ caller autenticado não-anônimo comprando a
-    // PRÓPRIA inscrição (responsável-inscrito). Anônimo nunca vira conta
-    // (o vínculo dele nasce no T3, com a conta real criada por e-mail).
-    const claimAnterior = porId.get(pessoaId)?.claimContaUid;
-    if (caller.ehAnonimo === false && ehResponsavel) {
-      plano.claimContaUid = caller.uid;
-    } else if (claimAnterior !== undefined) {
-      plano.claimContaUid = claimAnterior;
+    // RN-174: a criação NUNCA reivindica conta. O uid do caller autenticado
+    // entra SÓ para o anti-hijack de dados (a conta dona pode atualizar os
+    // PRÓPRIOS dados conhecidos numa recompra). Anônimo/legado: sem uid.
+    if (caller.ehAnonimo === false) {
+      plano.callerUid = caller.uid;
     }
     porId.set(pessoaId, plano);
   });
@@ -172,12 +173,12 @@ export async function lerPessoasNaTx(
 
 /**
  * Fase de ESCRITA: aplica o upsert de cada pessoa lida.
- *   - doc NOVO → create com dados deste checkout (+ claim, se houver);
+ *   - doc NOVO → create com dados deste checkout, SEMPRE sem vínculo
+ *     (`contaUid: null` — RN-174: claim só na confirmação de pagamento);
  *   - doc EXISTENTE → merge:
- *       · contaUid: escreve SÓ se null e há claim (first-claim; conta
- *         divergente NUNCA é sobrescrita — anti-hijack);
+ *       · contaUid: NUNCA tocado aqui (escritor único = contaSemFriccao);
  *       · dadosConhecidos: atualiza SÓ se a pessoa não foi reivindicada OU
- *         o claim deste checkout É a conta dona (dados da vítima intocados
+ *         o caller autenticado É a conta dona (dados da vítima intocados
  *         em compra de terceiro com CPF alheio).
  * Idempotente: replay do mesmo input produz o mesmo estado final.
  */
@@ -193,7 +194,7 @@ export function upsertPessoasNaTx(
       tx.create(ref, {
         id: plano.pessoaId,
         cpf: plano.cpf,
-        contaUid: plano.claimContaUid ?? null,
+        contaUid: null, // RN-174: criação nunca reivindica
         dadosConhecidos: mesclarDadosConhecidosPessoa(undefined, plano.dados),
         criadoEm: agora,
         atualizadoEm: agora,
@@ -204,11 +205,9 @@ export function upsertPessoasNaTx(
     const reivindicada =
       typeof contaUidAtual === 'string' && contaUidAtual.length > 0;
     const update: Record<string, unknown> = {};
-    if (!reivindicada && plano.claimContaUid !== undefined) {
-      update['contaUid'] = plano.claimContaUid;
-    }
     const podeAtualizarDados =
-      !reivindicada || contaUidAtual === plano.claimContaUid;
+      !reivindicada ||
+      (plano.callerUid !== undefined && contaUidAtual === plano.callerUid);
     if (podeAtualizarDados) {
       const atualRaw = snap.get('dadosConhecidos');
       const atual =

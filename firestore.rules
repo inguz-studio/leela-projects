@@ -2396,12 +2396,15 @@ service cloud.firestore {
 
     // `pessoas/{pessoaId}` — registro GLOBAL de identidade por CPF (CK2 ·
     // RN-173). docId = HMAC do CPF (path sem PII); o DOC carrega CPF em
-    // claro + dados conhecidos + contaUid — PII pura, cross-tenant.
+    // claro + dados conhecidos + contaUid/contaEmail — PII pura, cross-tenant.
     // TUDO fechado para cliente (leitura incluída — nem platform_admin via
-    // client SDK): escrita é da Function do checkout (na tx do pedido) e do
-    // linking de conta (RN-155); a ÚNICA leitura de superfície é o callable
-    // getCheckoutPrefill, que devolve SÓ o registro da PRÓPRIA conta
-    // autenticada (RN-172 — PII de terceiro nunca atravessa).
+    // client SDK): a escrita de DADOS é da Function do checkout (na tx do
+    // pedido); o CLAIM (contaUid+contaEmail) tem escritor ÚNICO — a
+    // confirmação de pagamento (RN-174/RN-155); a ÚNICA leitura de
+    // superfície é o callable getCheckoutPrefill, que devolve SÓ o registro
+    // da PRÓPRIA conta autenticada com pagamento confirmado + e-mail da
+    // compra verificado e correspondente (RN-172/RN-174 — PII de terceiro
+    // nunca atravessa).
     match /pessoas/{pessoaId} {
       allow read, write: if false;
     }

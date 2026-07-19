@@ -1424,7 +1424,8 @@ async function criarDocsDeCheckout(
       tx.create(pagamentoRef, pagamentoDoc);
 
       // RN-173 (CK2-T1): upsert do registry de pessoas na MESMA tx do
-      // pedido — first-claim de conta + merge anti-hijack (pessoaRegistry).
+      // pedido — merge anti-hijack de dados, SEM claim (RN-174: o vínculo
+      // contaUid é escrito só na confirmação de pagamento — pessoaRegistry).
       upsertPessoasNaTx(db, tx, leiturasPessoa);
     });
   } catch (err) {

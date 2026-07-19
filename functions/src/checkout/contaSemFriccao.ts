@@ -23,9 +23,15 @@
 // documentado até a chave existir). Conta JÁ existente ⇒ `nao_aplicavel`
 // (avisar "sua conta foi criada" para conta antiga seria mentira/phishing).
 //
-// VÍNCULO PESSOA↔CONTA (RN-173): a conta criada reivindica a pessoa do
-// CPF do responsável-inscrito SÓ se ainda não reivindicada (first-claim —
-// mesma regra anti-hijack do pessoaRegistry).
+// VÍNCULO PESSOA↔CONTA (RN-173 + RN-174): este fluxo é o ESCRITOR ÚNICO do
+// claim — a criação do pedido NUNCA reivindica (RN-174, fecha o F1 do CK2).
+// Aqui as condições (a) e (b) da RN-174 valem POR CONSTRUÇÃO: o pedido está
+// PAGO (gate de status acima) e a conta é resolvida PELO e-mail da compra
+// (getUidPorEmail/criarConta). O claim carimba `contaEmail` junto com
+// `contaUid`; a condição (c) — e-mail CONFIRMADO (Firebase nativo
+// emailVerified) — é exigida no LEITOR (getCheckoutPrefill): exigi-la no
+// escritor travaria o claim para sempre (a conta nasce não-verificada).
+// First-claim: vínculo divergente NUNCA é sobrescrito (anti-hijack).
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -154,9 +160,12 @@ export async function garantirContaSemFriccao(
     });
   }
 
-  // 2. Vínculo pessoa↔conta (RN-173, first-claim): a pessoa do CPF do
-  //    responsável-INSCRITO. Compra para terceiros (sem responsavelIndex)
-  //    não tem CPF do pagador — sem vínculo (limitação documentada).
+  // 2. Vínculo pessoa↔conta (RN-173 + RN-174, ESCRITOR ÚNICO do claim): a
+  //    pessoa do CPF do responsável-INSCRITO. Pedido PAGO (gate acima) +
+  //    conta resolvida pelo e-mail da compra = condições (a) e (b) da
+  //    RN-174 por construção; `contaEmail` é carimbado junto (insumo do
+  //    gate de leitura). Compra para terceiros (sem responsavelIndex) não
+  //    tem CPF do pagador — sem vínculo (limitação documentada).
   const eventoId = pedidoSnap.get('eventoId') as string;
   const inscritoRefs = (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [];
   let pessoaVinculada = false;
@@ -172,8 +181,24 @@ export async function garantirContaSemFriccao(
       const snap = await tx.get(ref);
       if (!snap.exists) return;
       const atual = snap.get('contaUid') as string | null | undefined;
-      if (typeof atual === 'string' && atual.length > 0) return; // first-claim
-      tx.update(ref, { contaUid, atualizadoEm: FieldValue.serverTimestamp() });
+      if (typeof atual === 'string' && atual.length > 0) {
+        // First-claim: vínculo divergente NUNCA sobrescrito (anti-hijack).
+        // Auto-cura RN-174: claim legado da MESMA conta sem `contaEmail`
+        // ganha o carimbo desta compra confirmada (mesma conta ⇒ mesmo
+        // e-mail por construção — a conta foi resolvida por este e-mail).
+        if (atual === contaUid && typeof snap.get('contaEmail') !== 'string') {
+          tx.update(ref, {
+            contaEmail: email,
+            atualizadoEm: FieldValue.serverTimestamp(),
+          });
+        }
+        return;
+      }
+      tx.update(ref, {
+        contaUid,
+        contaEmail: email,
+        atualizadoEm: FieldValue.serverTimestamp(),
+      });
       pessoaVinculada = true;
     });
     break;

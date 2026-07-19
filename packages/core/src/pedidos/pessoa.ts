@@ -17,11 +17,16 @@
 // da PRÓPRIA conta autenticada (`contaUid === caller.uid` — RN-172: PII de
 // terceiro nunca atravessa). O PATH não carrega PII (docId é HMAC).
 //
-// ANTI-HIJACK (review de desenho CK2): `contaUid` é first-claim — só é
-// escrito quando null (T3 conta-sem-fricção ou compra autenticada do próprio
-// responsável). `dadosConhecidos` só atualiza enquanto a pessoa não foi
-// reivindicada OU quando o caller autenticado É a conta dona. Comprar com o
-// CPF de terceiro nunca lê nem regrava os dados da vítima.
+// ANTI-HIJACK + CLAIM (RN-174 · DEC-0719-ret — fecha o F1 do report CK2):
+// `contaUid` é first-claim com ESCRITOR ÚNICO: só a confirmação de pagamento
+// (conta-sem-fricção) escreve o vínculo — a CRIAÇÃO do pedido (não-paga)
+// NUNCA reivindica. Junto do vínculo é carimbado `contaEmail` (o e-mail da
+// compra CONFIRMADA que efetivou o claim); o leitor de prefill exige token
+// com e-mail VERIFICADO e IGUAL a esse carimbo (as três condições da RN-174:
+// pago + e-mail correspondente + e-mail confirmado). `dadosConhecidos` só
+// atualiza enquanto a pessoa não foi reivindicada OU quando o caller
+// autenticado É a conta dona. Comprar com o CPF de terceiro nunca lê nem
+// regrava os dados da vítima.
 //
 // RETROCOMPAT (premissa CK2-3): o registry nasce vazio; inscritos criados
 // antes do RN-173 não têm `pessoaRef` (leitura Postel nos consumidores).
@@ -37,6 +42,7 @@ import {
   type GeneroInscrito,
 } from '../eventos/dadosPessoais';
 import { isDataEventoISO } from '../eventos/dataEvento';
+import { validarEmail } from '../clubs/convite';
 import { validarEnderecoPedido, type EnderecoPedido } from './endereco';
 
 // ---------------------------------------------------------------------------
@@ -78,10 +84,20 @@ export interface Pessoa {
   cpf: string;
   /**
    * Conta Firebase Auth vinculada (uid NÃO-anônimo) — null até a pessoa ter
-   * conta (RN-155). First-claim: uma vez preenchido, NUNCA sobrescrito por
-   * checkout (troca de vínculo = operação administrativa explícita).
+   * conta (RN-155). First-claim com ESCRITOR ÚNICO (RN-174): só a
+   * confirmação de pagamento escreve; uma vez preenchido, NUNCA sobrescrito
+   * (troca de vínculo = operação administrativa explícita).
    */
   contaUid: string | null;
+  /**
+   * E-mail (minúsculo) da compra CONFIRMADA que efetivou o claim (RN-174) —
+   * carimbado pelo escritor único JUNTO com `contaUid`. O gate de leitura do
+   * prefill exige token com e-mail verificado e IGUAL a este. Ausente/null =
+   * pessoa não reivindicada ou claim legado pré-RN-174 (leitura NEGADA —
+   * fail-closed; o carimbo se auto-cura na próxima compra confirmada da
+   * mesma conta).
+   */
+  contaEmail?: string | null;
   dadosConhecidos?: DadosConhecidosPessoa;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
@@ -194,6 +210,16 @@ export function parsePessoa(id: string, data: Record<string, unknown>): Pessoa {
   ) {
     throw new Error(`${contexto}: "contaUid" deve ser string não-vazia ou null`);
   }
+  const contaEmail = data['contaEmail'];
+  if (
+    contaEmail !== undefined &&
+    contaEmail !== null &&
+    (typeof contaEmail !== 'string' || !validarEmail(contaEmail))
+  ) {
+    throw new Error(
+      `${contexto}: "contaEmail" deve ser e-mail válido ou null (RN-174)`
+    );
+  }
   const pessoa: Pessoa = {
     id,
     cpf: data['cpf'] as string,
@@ -201,6 +227,9 @@ export function parsePessoa(id: string, data: Record<string, unknown>): Pessoa {
     criadoEm: data['criadoEm'] as Timestamp,
     atualizadoEm: data['atualizadoEm'] as Timestamp,
   };
+  if (contaEmail !== undefined) {
+    pessoa.contaEmail = contaEmail === null ? null : (contaEmail as string);
+  }
   if (data['dadosConhecidos'] !== undefined) {
     pessoa.dadosConhecidos = parseDadosConhecidos(contexto, data['dadosConhecidos']);
   }
