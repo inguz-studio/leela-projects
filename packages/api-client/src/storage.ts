@@ -194,7 +194,11 @@ export async function uploadImagemKit(
  */
 export const CAPA_EVENTO_UPLOAD_TIPOS = ['image/jpeg', 'image/png', 'image/gif'] as const;
 
-/** Teto da capa de evento — 2MB (RN-228; app-level — as Rules ficam em 5MB). */
+/**
+ * Teto da capa de evento — 2MB (RN-228). ESPELHADO nas storage.rules
+ * (`capaEventoFormatoValido` também impõe 2MB — hardening da review CEV):
+ * a Rule é a fronteira contra SDK direto; aqui é UX/fail-fast.
+ */
 export const CAPA_EVENTO_MAX_BYTES = 2 * 1024 * 1024;
 
 /**

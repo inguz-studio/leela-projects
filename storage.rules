@@ -208,12 +208,14 @@ service firebase.storage {
     // allowlist MAIS ESTRITA que `imagemValida()` (webp/avif ficam de fora
     // NESTE path; SVG já era banido em todos). Regex ANCORADA como a base
     // (full-match; token embutido tipo 'text/html; image/png' NÃO casa).
-    // Teto: 5MB nas Rules (padrão das entradas — brief CEV); o teto fino de
-    // 2MB da RN-228 é APP-LEVEL (seam `uploadCapaEvento` + crop client-side),
-    // mesma divisão de responsabilidade da proporção 1.9:1 (Rules não
-    // decodificam imagem — limitação honesta registrada).
+    // TETO: 2MB TAMBÉM nas Rules (hardening da review antagonista CEV — o
+    // seam/crop já impõem 2MB app-level; espelhar aqui fecha o SDK direto e
+    // desfaz a assimetria formato-com-rule/tamanho-sem). O `imagemValida()`
+    // ANDado segue dando payload presente + >0; a proporção 1.9:1 continua
+    // app-level (Rules não decodificam imagem — limitação honesta).
     function capaEventoFormatoValido() {
-      return request.resource.contentType.matches('^image/(jpeg|png|gif)$');
+      return request.resource.contentType.matches('^image/(jpeg|png|gif)$')
+        && request.resource.size <= 2 * 1024 * 1024;
     }
 
     match /eventos/{eventoId}/capa {

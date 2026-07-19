@@ -242,6 +242,40 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     expect(onSalvarCapa).not.toHaveBeenCalled();
   });
 
+  it('desmontar a tela REVOGA a object URL da prévia (review CEV BAIXO-2 — sem blob vivo)', async () => {
+    // jsdom não tem create/revokeObjectURL — instala espiões e restaura no fim.
+    const criarSpy = vi.fn(() => 'blob:previa-capa-teste');
+    const revogarSpy = vi.fn();
+    const originais = {
+      criar: (URL as unknown as Record<string, unknown>)['createObjectURL'],
+      revogar: (URL as unknown as Record<string, unknown>)['revokeObjectURL'],
+    };
+    Object.assign(URL, { createObjectURL: criarSpy, revokeObjectURL: revogarSpy });
+    try {
+      const { unmount } = render(
+        <ToastProvider>
+          <EventoForm
+            onCriarEvento={vi.fn().mockResolvedValue({ eventoId: 'e1', slug: 'e1' })}
+            onUploadCapa={vi.fn().mockResolvedValue('https://storage.leela.dev/eventos/e1/capa')}
+            onSalvarCapa={vi.fn().mockResolvedValue(undefined)}
+          />
+        </ToastProvider>,
+      );
+      const png = new File(['x'], 'capa.png', { type: 'image/png' });
+      await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+      await waitFor(() => expect(criarSpy).toHaveBeenCalledTimes(1));
+      expect(revogarSpy).not.toHaveBeenCalled(); // prévia vigente segue viva
+
+      unmount(); // navegou/saiu da tela → cleanup effect revoga
+      expect(revogarSpy).toHaveBeenCalledWith('blob:previa-capa-teste');
+    } finally {
+      Object.assign(URL, {
+        createObjectURL: originais.criar,
+        revokeObjectURL: originais.revogar,
+      });
+    }
+  });
+
   it('falha no upload da capa NÃO desfaz o evento: toast honesto + onSuccess mesmo assim', async () => {
     const { onSalvarCapa, onSuccess } = renderFormComCapa({
       onUploadCapa: vi.fn().mockRejectedValue(new Error('permission-denied')),

@@ -557,19 +557,44 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
     }
   );
 
-  it('acima de 5MB NEGADO e arquivo VAZIO NEGADO na capa de evento', async () => {
+  // Teto RN-228 nas Rules (fix da review antagonista CEV): 2MB exato PASSA
+  // (boundary), 2MB+1 NEGADO — o teto fino vale TAMBÉM contra SDK direto,
+  // não só no seam. Vazio NEGADO (imagemValida).
+  it('2MB exato PASSA e 2MB+1 NEGADO na capa de evento (teto RN-228 nas Rules)', async () => {
     const storage = storageDe(MARINA_UID, marinaClaims);
-    await assertFails(
-      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(CINCO_MB + 1), {
+    const DOIS_MB = 2 * 1024 * 1024;
+    await assertSucceeds(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(DOIS_MB), {
         contentType: 'image/jpeg',
       })
     );
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(DOIS_MB + 1), {
+        contentType: 'image/jpeg',
+      })
+    );
+  }, 30_000);
+
+  it('arquivo VAZIO NEGADO na capa de evento', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
     await assertFails(
       uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), new Uint8Array(0), {
         contentType: 'image/png',
       })
     );
-  }, 30_000);
+  });
+
+  // Claim writer MALFORMADO (gap apontado pela review): role=tenant_owner SEM
+  // tenantId — `tenantId is string` no isTenantWriterRole NEGA por construção
+  // (nunca chega ao null==null do firestore.get).
+  it('tenant_owner SEM tenantId no claim NEGADO na capa de evento (claim malformado)', async () => {
+    const storage = storageDe('uid-owner-sem-tenant', { role: 'tenant_owner' });
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/capa`), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
 
   // Path traversal / probing (vetor do brief CEV): só o segmento LITERAL
   // `capa` casa — path aninhado, nome próximo e objeto solto sob eventos/

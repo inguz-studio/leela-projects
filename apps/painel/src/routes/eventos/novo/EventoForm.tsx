@@ -103,6 +103,15 @@ export function EventoForm({
   // devolver o eventoId (as Rules negam upload p/ evento inexistente). O
   // `values.capa` guarda a object URL da prévia (blob:) — revogada na troca.
   const capaFileRef = React.useRef<File | null>(null);
+  // Espelho da prévia vigente p/ o cleanup de UNMOUNT (review antagonista CEV
+  // BAIXO-2): navegar após criar (ou sair da tela) revoga a object URL — sem
+  // blob vivo até o unload da página.
+  const previaCapaRef = React.useRef<string>('');
+  React.useEffect(() => {
+    return () => {
+      revogarPreviaCapa(previaCapaRef.current);
+    };
+  }, []);
 
   function set<K extends keyof NovoEventoFormValues>(campo: K, valor: NovoEventoFormValues[K]) {
     setValues((v) => ({ ...v, [campo]: valor }));
@@ -130,13 +139,16 @@ export function EventoForm({
     if (problema) throw new Error(problema);
     revogarPreviaCapa(values.capa);
     capaFileRef.current = file;
+    let previa: string;
     try {
-      return URL.createObjectURL(file);
+      previa = URL.createObjectURL(file);
     } catch {
       // Runtime sem createObjectURL (jsdom): sem prévia, mas o arquivo segue
       // pendente — sentinela `blob:` para o campo indicar "tem imagem".
-      return 'blob:capa-pendente';
+      previa = 'blob:capa-pendente';
     }
+    previaCapaRef.current = previa;
+    return previa;
   }
 
   function onCapaChange(url: string) {
@@ -144,6 +156,7 @@ export function EventoForm({
       // Remover: solta a prévia e esquece o arquivo pendente.
       revogarPreviaCapa(values.capa);
       capaFileRef.current = null;
+      previaCapaRef.current = '';
     }
     set('capa', url);
   }
