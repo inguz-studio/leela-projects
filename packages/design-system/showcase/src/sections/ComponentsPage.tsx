@@ -14,7 +14,10 @@ import {
   CardEvento,
   Checkbox,
   Chip,
+  Combobox,
   DEFAULT_SIDEBAR_SECTIONS,
+  DatePicker,
+  DateRangePicker,
   DonutChart,
   ConfirmModal,
   Divider,
@@ -24,14 +27,19 @@ import {
   Field,
   FileInput,
   FilterMenu,
+  IconButton,
   Input,
   KpiCard,
   Modal,
   PageHeader,
   Pagination,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Radio,
   RadioCard,
   RadioGroup,
+  SearchInput,
   Select,
   Sidebar,
   Skeleton,
@@ -47,9 +55,10 @@ import {
   cn,
   useToast,
   type BadgeProps,
+  type DateRange,
   type TableColumn,
 } from '@leela/design-system';
-import { CalendarDays, Flame, MapPin, MoreVertical, SearchX, Users } from 'lucide-react';
+import { Bell, CalendarDays, Flame, MapPin, MoreVertical, SearchX, Users } from 'lucide-react';
 import { DemoCard, Section } from '../ui';
 
 // ---------------------------------------------------------------------------
@@ -135,6 +144,11 @@ export function ComponentsPage(): JSX.Element {
   const [inscricoesAbertas, setInscricoesAbertas] = React.useState(true);
   const [eventoPublico, setEventoPublico] = React.useState(false);
   const [fieldNome, setFieldNome] = React.useState('');
+  const [comboModalidade, setComboModalidade] = React.useState<string | string[]>('');
+  const [comboKits, setComboKits] = React.useState<string | string[]>([]);
+  const [dataEvento, setDataEvento] = React.useState<Date | undefined>(undefined);
+  const [periodoVendas, setPeriodoVendas] = React.useState<DateRange | undefined>(undefined);
+  const [buscaGlobal, setBuscaGlobal] = React.useState('');
 
   function toggleFiltro(id: string): void {
     setFiltros((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -143,7 +157,7 @@ export function ComponentsPage(): JSX.Element {
   return (
     <>
       {/* ── Ações ─────────────────────────────────────────────────────── */}
-      <Section title="Ações" description="Button e DropdownMenu.">
+      <Section title="Ações" description="Button, IconButton e DropdownMenu.">
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard
             title="Button"
@@ -194,6 +208,21 @@ export function ComponentsPage(): JSX.Element {
               />
             </div>
           </DemoCard>
+
+          <DemoCard
+            title="IconButton"
+            description="Botão só-ícone com aria-label obrigatório e pip de notificação. É o trigger canônico do menu kebab (⋮) nas linhas de tabela/card — não recrie <button> cru com glifo de texto."
+          >
+            <div className="flex flex-wrap items-center gap-[var(--spacing-3)]">
+              <IconButton aria-label="Ações da linha (demo)">{dsIcon(MoreVertical)}</IconButton>
+              <IconButton aria-label="Notificações — 1 nova" pip>
+                {dsIcon(Bell)}
+              </IconButton>
+              <IconButton aria-label="Ação desabilitada" disabled>
+                {dsIcon(MoreVertical)}
+              </IconButton>
+            </div>
+          </DemoCard>
         </div>
       </Section>
 
@@ -205,7 +234,7 @@ export function ComponentsPage(): JSX.Element {
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard
             title="Select"
-            description="Filtro compacto de faceta (4-15 valores). Select nativo restilizado — a11y de teclado/leitor de tela de fábrica. Colapsa uma fileira de chips num controle."
+            description="Formulário simples de BAIXA cardinalidade (governança §8): select nativo restilizado — o painel de opções é do SO, não do DS. Para filtros e seleções ricas, use o Combobox (seção Seleção rica e datas)."
           >
             <Select
               id="demo-kit"
@@ -514,6 +543,110 @@ export function ComponentsPage(): JSX.Element {
                 className="h-[var(--input-height)] w-full rounded-[var(--input-radius)] border-[length:var(--input-border-width)] border-input bg-[var(--surface-raised)] px-[var(--input-px)] text-[length:var(--input-font-size)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </Field>
+          </DemoCard>
+
+          <DemoCard
+            title="SearchInput"
+            description="Campo de busca canônico do DS (ícone + kbd de atalho + Enter submete). É o padrão para busca em listas/tabelas do painel — não recrie <input type='search'> na tela."
+          >
+            <SearchInput
+              aria-label="Buscar evento (demo)"
+              placeholder="Buscar evento, inscrito, kit…"
+              value={buscaGlobal}
+              onChange={(e) => setBuscaGlobal(e.target.value)}
+              onSubmit={() => undefined}
+            />
+            <SearchInput aria-label="Busca desabilitada" placeholder="Indisponível" disabled shortcutLabel={null} />
+          </DemoCard>
+        </div>
+      </Section>
+
+      {/* ── Seleção rica e datas (§8 shadcn) ──────────────────────────── */}
+      <Section
+        title="Seleção rica e datas (§8 shadcn)"
+        description="Popover (âncora) + Command (lista filtrável WAI-APG) + Combobox + DatePicker/DateRangePicker (react-day-picker). Governança §8: filtros, seleções ricas e calendários abrem painel do DS — nunca o listbox/calendário do SO."
+      >
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
+          <DemoCard
+            title="Combobox — seleção única"
+            description="Popover + Command: lista filtrável com teclado completo. Substitui o <select> nativo em filtros e seleções ricas (§8)."
+          >
+            <Combobox
+              aria-label="Modalidade"
+              placeholder="Modalidade"
+              searchPlaceholder="Buscar modalidade…"
+              emptyText="Nenhuma modalidade encontrada."
+              value={comboModalidade}
+              onValueChange={setComboModalidade}
+              options={[
+                { value: '5k', label: 'Corrida 5K' },
+                { value: '10k', label: 'Corrida 10K' },
+                { value: '21k', label: 'Meia maratona' },
+                { value: 'mtb', label: 'MTB 40km' },
+                { value: 'kids', label: 'Kids' },
+              ]}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="Combobox — multi-seleção"
+            description="Mesma anatomia com marcação múltipla; o trigger resume a seleção."
+          >
+            <Combobox
+              aria-label="Kits"
+              placeholder="Kits"
+              searchPlaceholder="Buscar kit…"
+              emptyText="Nenhum kit encontrado."
+              multiple
+              value={comboKits}
+              onValueChange={setComboKits}
+              options={[
+                { value: 'kit_ouro', label: 'Kit Ouro' },
+                { value: 'kit_prata', label: 'Kit Prata' },
+                { value: 'kit_basico', label: 'Kit Básico' },
+                { value: 'sem_kit', label: 'Sem kit' },
+              ]}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="DatePicker"
+            description="Calendário react-day-picker ancorado em Popover (§8) — nunca <input type='date'> do SO."
+          >
+            <DatePicker
+              aria-label="Data do evento"
+              placeholder="Data do evento"
+              value={dataEvento}
+              onValueChange={setDataEvento}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="DateRangePicker"
+            description="Intervalo (de–até) para janelas de venda, lotes e análise financeira."
+          >
+            <DateRangePicker
+              aria-label="Período de vendas"
+              placeholder="Período de vendas"
+              value={periodoVendas}
+              onValueChange={setPeriodoVendas}
+            />
+          </DemoCard>
+
+          <DemoCard
+            title="Popover (primitivo de âncora)"
+            description="Âncora shadcn/Radix crua — base do Combobox e dos date pickers; use para conteúdo flutuante rico ancorado num trigger."
+          >
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="secondary">Abrir popover</Button>
+              </PopoverTrigger>
+              <PopoverContent align="start">
+                <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+                  Conteúdo do DS num painel flutuante — tokens, foco e Esc corretos.
+                </p>
+              </PopoverContent>
+            </Popover>
           </DemoCard>
         </div>
       </Section>
