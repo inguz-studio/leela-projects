@@ -10,9 +10,20 @@ import { describe, expect, it } from 'vitest';
 import {
   imagemDoKit,
   temaKit,
+  rotuloKit,
   KITS_MOCK,
   PLACEHOLDER_KIT,
 } from '../lib/kitImagem';
+
+describe('rotuloKit — alt descritivo sem duplicar "Kit"', () => {
+  it('nome que já começa com "Kit" não duplica', () => {
+    expect(rotuloKit('Kit Prata')).toBe('Kit Prata');
+    expect(rotuloKit('kit básico')).toBe('kit básico');
+  });
+  it('nome solto ganha o prefixo "Kit"', () => {
+    expect(rotuloKit('Ouro')).toBe('Kit Ouro');
+  });
+});
 
 describe('imagemDoKit — cascata real → mock preview → placeholder Leela', () => {
   const kitCorrida = { nome: 'Kit Prata', modalidades: ['5km', '10km'] };

@@ -17,7 +17,7 @@
 
 import { Check } from 'lucide-react';
 import type { KitPublico } from '@/lib/tipos';
-import { imagemDoKit } from '@/lib/kitImagem';
+import { imagemDoKit, rotuloKit } from '@/lib/kitImagem';
 import { ehPreview } from '@/lib/mockImagem';
 import { KitImagem } from '@/app/components/KitImagem';
 import { detalheDoKit } from './kitDetalheDados';
@@ -39,7 +39,7 @@ export function KitDetalhe({ kit }: { kit: KitPublico }): React.JSX.Element {
     <div className="mt-4 rounded-ds-md border border-border-subtle bg-surface-sunken p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="w-full shrink-0 sm:w-36">
-          <KitImagem src={img.src} alt={`Kit ${kit.nome}`} ampliavel={img.ampliavel} />
+          <KitImagem src={img.src} alt={rotuloKit(kit.nome)} ampliavel={img.ampliavel} />
         </div>
 
         <div className="min-w-0 flex-1">

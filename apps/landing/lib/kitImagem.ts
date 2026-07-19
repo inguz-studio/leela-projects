@@ -59,6 +59,16 @@ export function temaKit(nome: string, modalidades: readonly string[]): keyof typ
   return 'tee';
 }
 
+/**
+ * Rótulo acessível/alt do kit — evita "Kit Kit Prata" quando o nome do doc já
+ * começa com "Kit" (o caso comum do seed), mas ainda prefixa nomes soltos
+ * ("Ouro" → "Kit Ouro") para o alt ser sempre descritivo (SEO/a11y).
+ */
+export function rotuloKit(nome: string): string {
+  const limpo = nome.trim();
+  return /^kit\b/i.test(limpo) ? limpo : `Kit ${limpo}`;
+}
+
 /** Origem da imagem resolvida — dita se ela é ampliável no lightbox. */
 export type OrigemImagemKit = 'real' | 'mock' | 'placeholder';
 

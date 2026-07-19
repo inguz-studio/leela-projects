@@ -1,6 +1,6 @@
 import type { EventoPublico } from '@/lib/tipos';
 import { formatarPreco } from '@/lib/formato';
-import { imagemDoKit } from '@/lib/kitImagem';
+import { imagemDoKit, rotuloKit } from '@/lib/kitImagem';
 import { ehPreview } from '@/lib/mockImagem';
 import { KitImagem } from '@/app/components/KitImagem';
 import { Dobra } from './Dobra';
@@ -47,7 +47,7 @@ export function KitsSection({ evento }: { evento: EventoPublico }): React.JSX.El
           >
             <div>
               {/* Imagem 1:1 do kit — clicável p/ ampliar quando é foto (T2). */}
-              <KitImagem src={img.src} alt={`Kit ${k.nome}`} ampliavel={img.ampliavel} />
+              <KitImagem src={img.src} alt={rotuloKit(k.nome)} ampliavel={img.ampliavel} />
               <p className="mt-4 font-display text-xl font-extrabold tracking-tight text-text-primary">
                 {k.nome}
               </p>
