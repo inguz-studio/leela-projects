@@ -38,6 +38,10 @@ import type { InstallmentRules } from '../platform/commercialTerms';
 import type { ModoTaxa } from '../finance/repasse-types';
 import { isModoTaxa } from '../finance/repasse-types';
 import { computeLiquidoProdutor } from '../finance/repasse';
+import {
+  computeTaxaPlataformaReais,
+  type TaxaMeioResolvida,
+} from '../finance/taxaPlataforma';
 import { loteAtivo } from '../eventos/lote';
 import { precoKitValido } from '../eventos/kit';
 import { cupomNaJanela, cupomNoTeto, descontoDoCupom } from '../eventos/cupom';
@@ -108,6 +112,16 @@ export interface ComputeSaleStateParams {
   /** Taxa da plataforma do TERMO do tenant (RN-330/RN-406) — nunca constante. */
   platformFeePct: number;
   /**
+   * TAXAFLEX (RN-178/180): linha da tabela por meio JÁ RESOLVIDA para a
+   * `forma` desta venda (override > global > legado — `resolverTaxaMeio`,
+   * feita pelo chamador que carrega `platform/config` + termo). Quando
+   * presente com origem de TABELA, a taxa = `round(face × percentual) +
+   * fixoCentavos` (cent-exato — RN-183). `origem: 'legado'` ou ausente ⇒
+   * caminho vigente (`platformFeePct` pct-único, byte a byte — pct legado
+   * pode ter precisão fora do passo de 0,01% e nunca passa pelo caminho bp).
+   */
+  taxaMeio?: TaxaMeioResolvida | null;
+  /**
    * Modo da taxa do EVENTO (RN-347) — decide QUEM paga a taxa da plataforma:
    *   'incorporada' — comprador paga o face; a taxa sai do repasse (vigente);
    *   'repassada'   — comprador paga face + taxa; líquido do produtor = face.
@@ -163,6 +177,14 @@ export interface SaleState {
   cupomAplicado: CupomAplicadoVenda | null;
   /** Taxa Leela sobre o valorFinal (RN-330) — informativa (organizador). */
   taxa: number;
+  /**
+   * TAXAFLEX (RN-179): a linha de taxa APLICADA nesta derivação — o par
+   * `{percentual, fixoCentavos}` + origem que a Function CARIMBA no doc de
+   * pagamento no ato da compra (`taxaCongelada`; mudar a tabela nunca
+   * reprecifica). NUNCA exposta ao comprador (a cotação não a serializa —
+   * confidencialidade 703db9c: só VALORES saem, nunca percentual).
+   */
+  taxaMeioAplicada: TaxaMeioResolvida;
   /**
    * Líquido do organizador — MODE-AWARE (RN-347, via `computeLiquidoProdutor`):
    * 'incorporada' ⇒ valorFinal − taxa; 'repassada' ⇒ valorFinal (a taxa é
@@ -377,17 +399,31 @@ export function computeSaleState(params: ComputeSaleStateParams): SaleState {
     );
   }
 
-  // 4. Taxa/líquido do organizador — % do TERMO (RN-330/RN-406), modo do
-  //    EVENTO (RN-347). A taxa é SEMPRE calculada server-side sobre o
-  //    valorFinal; o modo só decide QUEM a paga:
+  // 4. Taxa/líquido do organizador — TABELA por meio quando resolvida
+  //    (TAXAFLEX · RN-178/180/183: `round(face × percentual) + fixo`,
+  //    cent-exato) ou % do TERMO no caminho legado (RN-330/RN-406 —
+  //    comportamento vigente byte a byte; pct legado pode ter precisão fora
+  //    do passo bp e nunca entra no caminho centavos×bp). Modo do EVENTO
+  //    (RN-347) decide QUEM paga:
   //      incorporada ⇒ líquido = final − taxa; comprador paga o face;
   //      repassada   ⇒ líquido = face; comprador paga face + taxa.
-  const taxa = computeTaxa(valorFinal, platformFeePct);
+  const taxaMeio = params.taxaMeio ?? null;
+  const usaTabelaFlex = taxaMeio !== null && taxaMeio.origem !== 'legado';
+  const pctEfetivo = taxaMeio !== null ? taxaMeio.percentual : platformFeePct;
+  const taxa = usaTabelaFlex
+    ? computeTaxaPlataformaReais(valorFinal, taxaMeio)
+    : computeTaxa(valorFinal, pctEfetivo);
   const receitaLiquidaOrganizador = computeLiquidoProdutor(
     valorFinal,
-    platformFeePct,
+    usaTabelaFlex ? taxaMeio : pctEfetivo,
     modoTaxa
   );
+  // Linha congelável (RN-179): o que a Function carimba no doc de pagamento.
+  const taxaMeioAplicada: TaxaMeioResolvida = taxaMeio ?? {
+    percentual: platformFeePct,
+    fixoCentavos: 0,
+    origem: 'legado',
+  };
   const taxaRepassada = modoTaxa === 'repassada' ? taxa : 0;
   const totalComprador = roundMoney(valorFinal + taxaRepassada);
 
@@ -416,6 +452,7 @@ export function computeSaleState(params: ComputeSaleStateParams): SaleState {
     valorFinal,
     cupomAplicado,
     taxa,
+    taxaMeioAplicada,
     receitaLiquidaOrganizador,
     taxaRepassada,
     totalComprador,

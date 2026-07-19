@@ -75,15 +75,15 @@ export interface TaxaMeio {
 export const TAXA_FIXO_CENTAVOS_MAX = 100_000;
 
 /**
- * Linha estruturalmente válida? percentual finito 0–100 em passo de 0,01%
- * (basis point — mesmo guard da comissão de afiliado) e fixoCentavos inteiro
- * em [0, TAXA_FIXO_CENTAVOS_MAX]. @pure
+ * Os VALORES da linha são válidos? percentual finito 0–100 em passo de
+ * 0,01% (basis point — mesmo guard da comissão de afiliado) e fixoCentavos
+ * inteiro em [0, TAXA_FIXO_CENTAVOS_MAX]. Ignora chaves extras — é o guard
+ * dos caminhos de CÁLCULO, que recebem também a linha RESOLVIDA (carrega
+ * `origem`, RN-179). @pure
  */
-export function isTaxaMeioValida(value: unknown): value is TaxaMeio {
+export function taxaMeioValoresValidos(value: unknown): value is TaxaMeio {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const linha = value as Record<string, unknown>;
-  const chaves = Object.keys(linha);
-  if (chaves.length !== 2) return false;
   const pct = linha['percentual'];
   const fixo = linha['fixoCentavos'];
   return (
@@ -97,6 +97,17 @@ export function isTaxaMeioValida(value: unknown): value is TaxaMeio {
     (fixo as number) >= 0 &&
     (fixo as number) <= TAXA_FIXO_CENTAVOS_MAX
   );
+}
+
+/**
+ * Linha estruturalmente válida para ESCRITA/doc? shape EXATO
+ * `{percentual, fixoCentavos}` (chave extra = lixo em doc de dinheiro —
+ * espelho do `hasOnly` das Rules) + valores válidos. @pure
+ */
+export function isTaxaMeioValida(value: unknown): value is TaxaMeio {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (Object.keys(value).length !== 2) return false;
+  return taxaMeioValoresValidos(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -250,7 +261,7 @@ export function taxaMeioParaBp(linha: TaxaMeio): {
   percentualBp: number;
   fixoCentavos: number;
 } {
-  if (!isTaxaMeioValida(linha)) {
+  if (!taxaMeioValoresValidos(linha)) {
     throw new RangeError('taxaMeioParaBp: linha de taxa inválida (RN-178).');
   }
   return {

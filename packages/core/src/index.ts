@@ -755,6 +755,7 @@ export {
   meioDaForma,
   TAXA_FIXO_CENTAVOS_MAX,
   isTaxaMeioValida,
+  taxaMeioValoresValidos,
   validarTabelaTaxaPlataforma,
   validarTaxaTabelaOverride,
   resolverTaxaMeio,

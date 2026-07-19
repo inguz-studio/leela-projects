@@ -21,6 +21,11 @@
 // =============================================================================
 
 import { computeReceitaLiquida, roundMoney } from './calc';
+import {
+  computeTaxaPlataformaReais,
+  taxaMeioValoresValidos,
+  type TaxaMeio,
+} from './taxaPlataforma';
 import { FUSO_EVENTO, dataLocalISO } from '../eventos/dataEvento';
 import type {
   AtorRepasse,
@@ -52,27 +57,43 @@ export const COMPROVANTE_PREFIXO = 'REP';
 // ---------------------------------------------------------------------------
 
 /**
- * Líquido do produtor a partir do valor de face (RN-347):
- *   'incorporada' — a taxa sai do face: líquido = face − taxa (reusa
- *                   `computeReceitaLiquida` — RN-406, nunca reimplementa);
+ * Líquido do produtor a partir do valor de face (RN-347 · RN-180/182):
+ *   'incorporada' — a taxa sai do face: líquido = face − taxa;
  *   'repassada'   — a taxa é cobrada por fora do comprador: líquido = face.
+ *
+ * `platformFee` (TAXAFLEX · RN-180/183) aceita as DUAS fontes:
+ *   - `number` — percentual LEGADO do termo (comportamento vigente byte a
+ *     byte: reusa `computeReceitaLiquida`, RN-406 — nunca reimplementa);
+ *   - `TaxaMeio` — linha da tabela por meio `{percentual, fixoCentavos}`
+ *     (RN-178): taxa cent-exata via `computeTaxaPlataformaReais` (half-up
+ *     em centavos — RN-183), fixo incluído.
+ *
  * O modo é SEMPRE parâmetro (default 'incorporada' = comportamento vigente);
- * `platformFeePct` valida range nos DOIS modos — termo lixo falha cedo.
+ * fee inválida valida nos DOIS modos — termo/tabela lixo falha cedo.
  * @pure
  */
 export function computeLiquidoProdutor(
   receitaBruta: number,
-  platformFeePct: number,
+  platformFee: number | TaxaMeio,
   modo: ModoTaxa = MODO_TAXA_DEFAULT
 ): number {
   if (!Number.isFinite(receitaBruta) || receitaBruta < 0) {
     throw new RangeError('receitaBruta deve ser um número ≥ 0.');
   }
-  if (!Number.isFinite(platformFeePct) || platformFeePct < 0 || platformFeePct > 100) {
-    throw new RangeError('platformFeePct deve estar entre 0 e 100.');
+  if (typeof platformFee === 'number') {
+    if (!Number.isFinite(platformFee) || platformFee < 0 || platformFee > 100) {
+      throw new RangeError('platformFeePct deve estar entre 0 e 100.');
+    }
+    if (modo === 'repassada') return roundMoney(receitaBruta);
+    return computeReceitaLiquida(receitaBruta, platformFee);
+  }
+  if (!taxaMeioValoresValidos(platformFee)) {
+    throw new RangeError(
+      'platformFee (TaxaMeio) inválida — {percentual 0–100 passo 0,01, fixoCentavos int ≥ 0} (RN-178).'
+    );
   }
   if (modo === 'repassada') return roundMoney(receitaBruta);
-  return computeReceitaLiquida(receitaBruta, platformFeePct);
+  return roundMoney(receitaBruta - computeTaxaPlataformaReais(receitaBruta, platformFee));
 }
 
 // ---------------------------------------------------------------------------
