@@ -1020,6 +1020,24 @@ Dashboards ricos (séries temporais, coortes, funil de tenants, drill-down por e
 
 ---
 
+> História nova da rodada TAXA-FLEX (Vitor, 2026-07-19). Detalhe em `02-rodadas/2026-07-19-taxa-flex/`; a tabela (dona) é RN-178/E04-S308 e o cálculo é E09-S905; aqui fica a **tela de config** no super-admin (reconcilia RN-404/406). Molde igual ao de S1900 (E19).
+
+### LEELA-S1606 · Config da taxa da plataforma no super-admin (tabela global + override por organizador) · (de-para novo · TAXA-FLEX)
+
+**Como** platform_admin, **quero** editar a tabela global de taxa por meio e as exceções negociadas por organizador, **para** operar a cobrança da plataforma sem tocar em código.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel super-admin · **RNs:** RN-178 (tabela), RN-404/406 (escrita só platform_admin / fonte da taxa — reconciliadas)
+- **Origem:** rodada TAXA-FLEX (Vitor, 2026-07-19). Consome o modelo de E04-S308; não redefine a tabela. Fila `03-fila-codigo (j)` — item (6) do lote.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** a tela de config global, **quando** edito, **então** defino `{percentual, fixoCentavos}` por meio (`pix | cartao | boleto`) em `platform/config`.
+- **Dado** um organizador com condição negociada, **quando** crio a exceção, **então** ela grava o override em `commercialTerms/current` do tenant (precedência organizador > global).
+- **Dado** um ator não-`platform_admin`, **quando** tenta abrir/gravar a config, **então** é negado (RN-404, fail-closed); **sem nível por-evento no v1**.
+
+**Tasks:** `S1606-T1` (tela do super-admin: editar a tabela global por meio + gerir override por organizador — consome E04-S308, RN-178/404/406). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+
+---
+
 ## Ordem sugerida
 
 `S1600 (modelo + claims + isolamento) → S1601 (onboarding & lifecycle) → S1602 (termos comerciais + consumo E04/E09) → S1605 (macro básico)` fecha o **E16-slim da V1**. Depois: `S1603 (recorrência comunidade) → S1604 (recorrência SaaS) → S1605 rico (dashboards)`. Começar por S1600 é obrigatório: o isolamento é fundacional (ADR-009) e o retrofit é proibitivo; toda coleção de domínio (E03/E04/E05/E09) só é segura depois que as Rules multi-tenant de S1600-T3 estão no lugar.

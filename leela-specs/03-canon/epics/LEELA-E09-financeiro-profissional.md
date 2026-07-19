@@ -806,6 +806,25 @@ UI de transferência no app (LEELA-S1316); cobrança da diferença (fluxo de che
 
 ---
 
+> História nova da rodada TAXA-FLEX (Vitor, 2026-07-19). Detalhe em `02-rodadas/2026-07-19-taxa-flex/`; regras em §"Regras de negócio novas (TAXA-FLEX...)" abaixo (RN-179/181/182/183). Molde igual ao de S1900 (E19).
+
+### LEELA-S905 · Cálculo, congelamento e estorno da taxa por meio (percentual + fixo) · (de-para novo · TAXA-FLEX)
+
+**Como** plataforma, **quero** calcular a taxa por meio (percentual + fixo), congelá-la na compra e ratear o fixo no estorno, **para** que o dinheiro feche cent-exato e mudar a tabela nunca reprecifique pedido feito.
+
+- **MoSCoW:** Should · **Estimativa:** L · **Superfície:** Core/Functions financeiro (efeito em E12 exibição) · **RNs:** RN-179 (congelamento), RN-180 (cálculo), RN-181 (estorno), RN-182 (repasse), RN-183 (rounding/fonte única)
+- **Origem:** rodada TAXA-FLEX (Vitor, 2026-07-19). A tabela (dona) é RN-178/E04; aqui vive o **cálculo, o carimbo e o estorno**. Fila `03-fila-codigo (j)` — executável (a lane CLAIM-FIX que segurava o território do checkout aterrissou). É dinheiro ⇒ rota Fable + review antagonista.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** `computeTaxaPlataforma(faceCentavos, {percentualBp, fixoCentavos})`, **quando** calculo, **então** usa **half-up em centavos inteiros**, fonte única, **sem constante hardcoded** (RN-183/404); `computeSaleState`/`computeLiquidoProdutor` passam de percentual único para percentual + fixo por meio.
+- **Dado** o ato da compra, **quando** o pagamento confirma, **então** o par `{percentual, fixoCentavos}` do meio escolhido é resolvido (override > global) e **carimbado** (`conciliacao.taxaPct/taxaFixa/taxaValor` + cotação) na **mesma transação**; mudar a tabela depois **não reprecifica** o pedido (RN-179).
+- **Dado** um estorno, **quando** rateio, **então** o componente **fixo** entra por linha **como a taxa percentual entra hoje** (`itens[].taxaRepassada`, maior resto, ∑ = taxa carimbada) — RN-181; o **SE** devolve a taxa fica na fronteira aberta BENCHMARK-REEMBOLSO (não decidido aqui).
+- **Dado** o repasse, **quando** calculo o "a receber", **então** = `face − taxa(meio)` em **absorvida** e = `face` em **repassada** (RN-182); o ledger usa só o `valorFace`.
+
+**Tasks:** `S905-T1` (core `computeTaxaPlataforma` half-up + estender `computeSaleState`/`computeLiquidoProdutor` para pct + fixo por meio — RN-180/182/183), `S905-T2` (congelamento: resolver override > global e carimbar na cotação/pedido na tx da confirmação, padrão COMF2 — RN-179), `S905-T3` (estorno: fixo no rateio `itens[].taxaRepassada` por maior resto — RN-181, só o COMO). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+
+---
+
 ## Ordem sugerida
 
 `S901 (modelo + agregação + cálculo puro) → S902 (split + saldo consolidado) → S900 (tela: KPIs, gráficos) → S903 (transações + export)`. A tela (S900/S903) consome os agregados mantidos por S901/S902; começar pelo backend garante que a UI leia números íntegros desde o primeiro render.

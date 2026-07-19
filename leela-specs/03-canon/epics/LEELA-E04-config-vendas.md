@@ -1421,6 +1421,38 @@ Backend guard/auditoria (T1); qualquer devolução automática de vaga.
 
 ---
 
+> Histórias novas das rodadas de 2026-07-19 (TAXA-FLEX, DEC-0719-ret). Detalhe/verbatim em `02-rodadas/2026-07-19-taxa-flex/` e `-decisoes/`; regras em §"Regras de negócio novas (TAXA-FLEX...)" abaixo (RN-178) e RN-175. Molde igual ao de S1900 (E19).
+
+### LEELA-S308 · Tabela de taxa da plataforma por meio de pagamento (percentual + valor fixo) · (de-para novo · TAXA-FLEX)
+
+**Como** plataforma, **quero** definir a taxa como percentual + valor fixo por meio de pagamento (global, com exceção por organizador), **para** ter flexibilidade de cobrança (ex.: "6% PIX + R$2,00", "8% cartão + R$1,50").
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel/config (dona da tabela) · **RNs:** RN-178 (tabela por meio), reconcilia RN-404/406 (E16)
+- **Origem:** rodada TAXA-FLEX (Vitor, 2026-07-19). Verbatim: *"6% pix + 2,00 ou 8% de cartão + 1,50"*. A tela do super-admin que edita a tabela vive em E16 (S1606); aqui fica o **modelo da tabela** (a dona). Fila `03-fila-codigo (j)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o modelo de taxa, **quando** especifico, **então** a taxa é uma **tabela por meio** (`pix | cartao | boleto`) de `{percentual, fixoCentavos}`, com **global** em `platform/config` + **override por organizador** em `commercialTerms/current` (precedência organizador > global), **sem nível por-evento no v1**.
+- **Dado** a escrita da tabela, **quando** um ator não-`platform_admin` tenta gravar (global ou override), **então** as Rules negam (fail-closed, RN-404).
+- **Dado** o enum de meios, **quando** o checkout não oferece boleto, **então** a linha `boleto` fica **inerte** (especificada, não ativada — P-TAXAFLEX-2).
+
+**Tasks:** `S308-T1` (modelo `platform/config` global + override `commercialTerms/current` + Rules escrita só `platform_admin`, fail-closed — RN-178/404; campos `conciliacao.taxaPct/taxaFixa` já existentes, reuso). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+
+### LEELA-S309 · Toggle "aceitar inscrição de estrangeiros" por evento · GATED · (de-para novo · DEC-0719-ret)
+
+**Como** organizador, **quero** ligar por evento a aceitação de estrangeiros, **para** habilitar (só quando eu quiser) o checkout de quem não tem CPF.
+
+- **MoSCoW:** Could · **Estimativa:** S · **Superfície:** Painel/config de evento · **RNs:** RN-175 (toggle), habilita RN-176 (E12) e RN-177 (E19)
+- **Origem:** rodada DEC-0719-ret (Vitor, 2026-07-19). **GATED** pela liberação Asaas (o toggle sem o rail de pagamento não vende). Fila `03-fila-codigo (i)`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o cadastro do evento, **quando** vejo a config, **então** há o toggle `aceitaEstrangeiros` com **default OFF**.
+- **Dado** o toggle **OFF**, **quando** o checkout roda, **então** nada muda (CPF exigido, RN-173).
+- **Dado** o toggle **ON**, **quando** o checkout roda, **então** habilita o fluxo de estrangeiro (RN-176) + documento tipado (RN-177).
+
+**Tasks:** `S309-T1` (flag `aceitaEstrangeiros` no modelo do evento + UI do toggle na config — default OFF; RN-175). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md` §DEC-0719-ret. **Não despachar antes da liberação Asaas.**
+
+---
+
 ## Rastreabilidade (de-para BH-###)
 
 | Story | De-para | Tela(s) de referência | Observação |
