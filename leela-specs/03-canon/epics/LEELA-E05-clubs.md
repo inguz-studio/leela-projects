@@ -86,6 +86,10 @@ Ver `modelo-de-dados-firestore.md`. Coleções/subcoleções desta fase:
 
 Todas as coleções novas são criadas **com Security Rules na mesma task**. Agregados ∑ e campos financeiros: escrita **apenas via Cloud Function** (Admin SDK), nunca do cliente.
 
+## Análise futura (capturado, NÃO-DECIDIDO)
+
+- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER, 2026-07-19).** O Vitor pediu, ao analisar concorrentes, para **registrar e analisar depois** a ideia de o organizador montar perguntas próprias exibidas **na inscrição/entrada de clubes** (e na compra de eventos, ver E12): seleção múltipla/única, sim-não e anexo de arquivo. **Escopo NÃO-DECIDIDO** (onde a resposta vive, quem lê, export, obrigatoriedade por pergunta, limite de perguntas) e riscos a estudar na análise (anexo de arquivo = Storage + LGPD, dado sensível de saúde Art. 11; resposta ligada ao membro/inscrito; benchmark Sympla/TicketSports). **Não gera RN nem entra na fila executável.** Registro canônico: `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
+
 ## Fora de escopo (Won't nesta fase)
 
 - Painel financeiro do clube (a coluna "a receber" das parcerias cobre a visão mínima; financeiro completo é E09).

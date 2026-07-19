@@ -102,6 +102,10 @@ Ver `modelo-de-dados-firestore.md`. Leitura pública (server-side) e escrita tra
 
 Todo agregado (∑) e campo financeiro é escrito **apenas por Cloud Function** (Admin SDK); a landing nunca escreve receita/conversão a partir do cliente. Security Rules na task que cria coleção.
 
+## Análise futura (capturado, NÃO-DECIDIDO)
+
+- **Construtor de formulário de perguntas personalizadas (CAP-FORMBUILDER, 2026-07-19).** O Vitor pediu, ao analisar concorrentes, para **registrar e analisar depois** a ideia de o organizador montar perguntas próprias exibidas **no momento da compra do evento** (e na inscrição em clubes, ver E05): seleção múltipla/única, sim-não e anexo de arquivo. **Escopo NÃO-DECIDIDO** (onde a resposta vive, quem lê, export, obrigatoriedade por pergunta, limite de perguntas) e riscos a estudar na análise (anexo de arquivo = Storage + LGPD, atestado médico é dado sensível Art. 11 — interage com RN-149/RN-146/147 e a minimização RN-172; resposta no pedido ou no inscrito — interage com RN-173/RN-174; benchmark Sympla campos personalizados / TicketSports ficha de inscrição). **Não gera RN nem entra na fila executável.** Registro canônico: `02-rodadas/2026-07-19-formbuilder/00-captura.md`.
+
 ## Fora de escopo (Won't nesta fase)
 
 - Login / conta do atleta (é E13 mobile; a landing pode oferecer "baixar o app", mas não autentica).
