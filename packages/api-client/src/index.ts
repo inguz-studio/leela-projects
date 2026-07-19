@@ -460,6 +460,13 @@ export type {
 } from './platform/mutations';
 export { getCommercialTerms, saveCommercialTerms } from './platform/commercialTerms';
 export { getPlatformRollups } from './platform/rollups';
+// TAXAFLEX (RN-178/404): tabela GLOBAL de taxa por meio — leitura direta
+// (read só platform_admin) + escrita via callable (client nunca grava).
+export {
+  getTaxaPlataformaGlobal,
+  setTaxaPlataformaGlobal,
+} from './platform/taxaPlataforma';
+export type { SetTaxaPlataformaGlobalResult } from './platform/taxaPlataforma';
 
 // ---------------------------------------------------------------------------
 // Overview — dashboard do profissional (LEELA-E02 · S600-T2)

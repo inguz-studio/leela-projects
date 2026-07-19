@@ -22,6 +22,11 @@ import type { Timestamp } from '../index';
 // Guard puro + tipo do modo da taxa (RN-347) — sem dependência de runtime
 // além do próprio guard (repasse-types não importa nada em runtime).
 import { isModoTaxa, type ModoTaxa } from '../finance/repasse-types';
+// Taxa-flex (TAXAFLEX · RN-178): override por organizador da tabela por meio.
+import {
+  validarTaxaTabelaOverride,
+  type TaxaTabelaOverride,
+} from '../finance/taxaPlataforma';
 
 // ---------------------------------------------------------------------------
 // Tipos
@@ -136,6 +141,16 @@ export interface CommercialTerms {
    * Escrita segue RN-404 — só platform_admin.
    */
   modoTaxaDefault?: ModoTaxa;
+  /**
+   * TAXAFLEX (RN-178 · rodada 2026-07-19): OVERRIDE por organizador da
+   * tabela de taxa por meio (`{pix|cartao|boleto} → {percentual,
+   * fixoCentavos}`). PARCIAL: só as linhas negociadas por contrato — linha
+   * ausente herda a GLOBAL (`platform/config.taxaPlataforma`); precedência
+   * override > global > `platformFeePct` legado. Escrita segue RN-404 —
+   * só platform_admin. Congelada por venda no ato da compra (RN-179).
+   * Supersede `taxaPorMetodo` (Onda 2 — nunca consumido pelo checkout).
+   */
+  taxaTabela?: TaxaTabelaOverride;
   /**
    * Auditoria de origem (T2-L4 · CB-T2): id do plano aplicado que estampou
    * esta versão — REFERÊNCIA MORTA (rastro; SEM vínculo vivo: editar o
@@ -278,6 +293,12 @@ export function validateCommercialTerms(
         'tabelaTaxasParcela inválida (chaves 2..12; taxas entre 0 e 100).'
       );
     }
+  }
+
+  // TAXAFLEX (RN-178): override da tabela por meio OPCIONAL — quando
+  // presente, cada linha valida range/passo (mesma disciplina dos demais).
+  if (input.taxaTabela !== undefined) {
+    errors.push(...validarTaxaTabelaOverride(input.taxaTabela));
   }
 
   // RN-347: modo default da taxa OPCIONAL — quando presente, enum fechado.

@@ -738,6 +738,33 @@ export {
   buildInstallmentOptions,
 } from './finance/calc';
 
+// Taxa-flex da plataforma — tabela por meio de pagamento (TAXAFLEX ·
+// RN-178/179/180/182/183): global + override, resolução e cálculo half-up
+// em centavos inteiros (fonte única — nunca constante).
+export type {
+  MeioTaxa,
+  TaxaMeio,
+  TabelaTaxaPlataforma,
+  TaxaTabelaOverride,
+  OrigemTaxaMeio,
+  TaxaMeioResolvida,
+} from './finance/taxaPlataforma';
+export {
+  MEIOS_TAXA,
+  isMeioTaxa,
+  meioDaForma,
+  TAXA_FIXO_CENTAVOS_MAX,
+  isTaxaMeioValida,
+  validarTabelaTaxaPlataforma,
+  validarTaxaTabelaOverride,
+  resolverTaxaMeio,
+  computeTaxaPlataforma,
+  taxaMeioParaBp,
+  computeTaxaPlataformaReais,
+  PLATFORM_CONFIG_DOC_PATH,
+  CAMPO_TAXA_PLATAFORMA,
+} from './finance/taxaPlataforma';
+
 // ---------------------------------------------------------------------------
 // Repasse do organizador — E09-slim (LEELA-E09s-L1 · RN-347/348/350..357)
 // Shapes das coleções tenant-scoped `dadosBancarios[Secret]`, `repasses`,

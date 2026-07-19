@@ -139,6 +139,25 @@ service cloud.firestore {
       //     (histórico imutável — update/delete negados até para admin).
       match /commercialTerms/{doc} {
 
+        /** TAXAFLEX (RN-178): linha `{percentual, fixoCentavos}` da tabela
+            por meio. percentual finito 0–100 em passo 0,01% (basis point —
+            NaN/Infinity falham as comparações, fail-closed; mesmo idioma de
+            moneyCentExato) e fixoCentavos INTEIRO 0–100000 (R$ 1.000 teto
+            de sanidade — espelho de TAXA_FIXO_CENTAVOS_MAX no core). */
+        function taxaMeioValido(linha) {
+          return linha is map
+            && linha.keys().hasOnly(['percentual', 'fixoCentavos'])
+            && linha.keys().hasAll(['percentual', 'fixoCentavos'])
+            && linha.percentual is number
+            && linha.percentual >= 0
+            && linha.percentual <= 100
+            && linha.percentual * 0.0 == 0.0
+            && math.abs(linha.percentual * 100.0 - math.round(linha.percentual * 100.0)) < 0.001
+            && linha.fixoCentavos is int
+            && linha.fixoCentavos >= 0
+            && linha.fixoCentavos <= 100000;
+        }
+
         /** Shape completo dos termos + ranges (RN-404/405/410). */
         function termsShapeValido() {
           return request.resource.data.keys().hasAll([
@@ -194,6 +213,18 @@ service cloud.firestore {
                     && request.resource.data.taxaPorMetodo.pix <= 100))
             && (!('tabelaTaxasParcela' in request.resource.data)
                 || request.resource.data.tabelaTaxasParcela is map)
+            // TAXAFLEX (RN-178/404): override da tabela por meio OPCIONAL e
+            // PARCIAL — quando presente, só chaves do enum e cada linha
+            // presente com shape/range travados (fail-closed).
+            && (!('taxaTabela' in request.resource.data)
+                || (request.resource.data.taxaTabela is map
+                    && request.resource.data.taxaTabela.keys().hasOnly(['pix', 'cartao', 'boleto'])
+                    && (!('pix' in request.resource.data.taxaTabela)
+                        || taxaMeioValido(request.resource.data.taxaTabela.pix))
+                    && (!('cartao' in request.resource.data.taxaTabela)
+                        || taxaMeioValido(request.resource.data.taxaTabela.cartao))
+                    && (!('boleto' in request.resource.data.taxaTabela)
+                        || taxaMeioValido(request.resource.data.taxaTabela.boleto))))
             // Rastro de plano aplicado (CB-T2) — referência MORTA, tipada
             && (!('planoAplicadoId' in request.resource.data)
                 || request.resource.data.planoAplicadoId is string)

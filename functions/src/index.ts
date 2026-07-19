@@ -295,6 +295,14 @@ export { entrarNoDesafio } from './jornada/entrarNoDesafio';
 // platform_admin (RN-404). ⚠️ Fable (economia do tenant).
 export { aplicarPlano } from './platform/aplicarPlano';
 
+// Plataforma — TABELA GLOBAL DE TAXA-FLEX (TAXAFLEX · RN-178/404): grava
+// `platform/config.taxaPlataforma` ({pix|cartao|boleto} → {percentual,
+// fixoCentavos}). Rules de `platform/` são write:false p/ TODO client — o
+// caminho de escrita é ESTE callable (Admin SDK, papel checado no token).
+// Mudar a tabela NUNCA reprecifica pedido feito (RN-179 congela na compra).
+// ⚠️ Fable (dinheiro — economia de TODOS os tenants).
+export { setTaxaPlataformaGlobal } from './platform/setTaxaPlataformaGlobal';
+
 // Perfil — REGISTRY do perfil público / link-in-bio (E17 · S1700-T1 + DN-1
 // organizador-only · Onda 3): escrita EXCLUSIVA desta callable (Rules de
 // `perfis/{handle}` congelam o cliente). Unicidade global case-insensitive

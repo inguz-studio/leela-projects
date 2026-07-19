@@ -11,7 +11,7 @@
 | Task | Escopo | Status | Commit |
 |------|--------|--------|--------|
 | T0 | Contexto + inventário de reuso + desenho + checkpoint + card (j) → Em execução | FEITO | (este commit) |
-| T1 | Modelo + Rules: core `taxaPlataforma.ts`, `platform/config.taxaPlataforma` global, `commercialTerms.taxaTabela` override, callable `setTaxaPlataformaGlobal` + api-client, Rules fail-closed (RN-178/404) | — | — |
+| T1 | Modelo + Rules: core `taxaPlataforma.ts`, `platform/config.taxaPlataforma` global, `commercialTerms.taxaTabela` override, callable `setTaxaPlataformaGlobal` + api-client, Rules fail-closed (RN-178/404) | FEITO — tsc 0 · eslint 0 · unit 26/26 · Rules r6 11/11 | (T1) |
 | T2 | Core: `computeTaxaPlataforma(faceCentavos,{percentualBp,fixoCentavos})` half-up + resolver override>global>legado + extensão `computeSaleState`/`computeLiquidoProdutor` + unit (RN-180/182/183) | — | — |
 | T3 | Congelamento: carimbo `taxaCongelada` na criação (SEMPRE, incl. legado) + `conciliacao` na tx da confirmação + `parseConciliacao` mode-aware + `agregarFinanceiro` híbrido + janela D+N do carimbo (RN-179/182) | — | — |
 | T4 | Estorno: fixo no rateio via `sale.taxaRepassada` (mecânica `montarItensDoPedido` REUSADA) + testes ∑=carimbo/fixo indivisível (RN-181) | — | — |
