@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
+  Checkbox,
   Chip,
   Input,
   RadioCard,
@@ -191,8 +192,7 @@ export function DesafioEditor({
             return (
               <li key={a.id} className="flex flex-wrap items-center gap-[var(--spacing-3)]">
                 <label className="flex flex-1 items-center gap-[var(--spacing-2)] text-[var(--text-primary)]">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={Boolean(sel)}
                     aria-label={`Selecionar ${a.nome}`}
                     onChange={() => setValues((v) => toggleAcao(v, a.id))}

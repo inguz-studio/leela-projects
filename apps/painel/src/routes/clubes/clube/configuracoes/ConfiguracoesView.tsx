@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Chip, FileInput, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
+import { Badge, Button, Checkbox, Chip, FileInput, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
 import {
@@ -382,8 +382,7 @@ export function ConfiguracoesView({
             </div>
           </div>
           <label className="flex items-center gap-[var(--spacing-2)]">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={aprovacaoManual}
               onChange={(e) => setAprovacaoManual(e.target.checked)}
             />
@@ -423,8 +422,7 @@ export function ConfiguracoesView({
           <div role="group" aria-label="Permissões de admin" className="flex flex-col gap-[var(--spacing-2)]">
             {PERMISSOES_ADMIN.map((p) => (
               <label key={p.id} className="flex items-center gap-[var(--spacing-2)]">
-                <input
-                  type="checkbox"
+                <Checkbox
                   disabled
                   checked={permissoes.has(p.id)}
                   onChange={() => togglePermissao(p.id)}

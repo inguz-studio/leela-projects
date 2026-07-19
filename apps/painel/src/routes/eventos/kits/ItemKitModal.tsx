@@ -7,7 +7,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
+import { Button, Checkbox, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
 import type { ItemKit, OrigemItem } from '@leela/core';
 import type { SalvarItemKitInput } from '@leela/api-client';
 
@@ -152,8 +152,7 @@ export function ItemKitModal({
               {...(erro && marca.trim().length === 0 ? { errorMessage: erro } : {})}
             />
             <label className="flex items-center gap-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={exibirLogo}
                 onChange={(e) => setExibirLogo(e.target.checked)}
               />

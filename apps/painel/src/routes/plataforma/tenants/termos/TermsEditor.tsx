@@ -8,7 +8,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, Input, PageHeader, Skeleton } from '@leela/design-system';
+import { Badge, Button, Checkbox, Input, PageHeader, Skeleton } from '@leela/design-system';
 import {
   DEFAULT_COMMERCIAL_TERMS,
   validateCommercialTerms,
@@ -219,12 +219,10 @@ export function TermsEditor({
         </fieldset>
 
         <label className="flex items-center gap-[var(--spacing-2)]">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={values.communityMonthlyEnabled}
             disabled={readOnly || saving}
             onChange={(e) => set('communityMonthlyEnabled', e.target.checked)}
-            className="h-[var(--spacing-4)] w-[var(--spacing-4)] accent-[var(--action-primary)]"
           />
           <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
             Habilitar mensalidade da comunidade
@@ -234,12 +232,10 @@ export function TermsEditor({
         {/* Antecipação — campo existe, mecânica é pós-V1 (RN-410) */}
         <div className="flex items-center gap-[var(--spacing-3)] opacity-70">
           <label className="flex items-center gap-[var(--spacing-2)]">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={values.anticipationDisponivel}
               disabled
               readOnly
-              className="h-[var(--spacing-4)] w-[var(--spacing-4)] accent-[var(--action-primary)]"
             />
             <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
               Antecipação de recebíveis
