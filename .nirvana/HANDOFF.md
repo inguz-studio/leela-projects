@@ -1,6 +1,41 @@
-# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-18 (EXECUÇÃO DO DIA: R9-A/E + R10-R13 + 4 retomadas + R12-fix)
+# HANDOFF — LEELA build (trace leela-build-2d6ee98d) · atualizado 2026-07-19 noite (RETOMADA-0719B: CK2+CEV fechadas)
 
-## 🏁 APÊNDICE DO DIA · 2026-07-18 noite — EXECUÇÃO DA REVISÃO UX (o mais recente) — COMECE AQUI
+## 🏁 APÊNDICE · 2026-07-19 tarde/noite — RETOMADA PÓS-QUEDA (CK2-ret2 + CEV-ret) — COMECE AQUI
+
+Terminal caiu ~17:40 com DUAS lanes na fase de review antagonista; todo o resto do dia já tinha gate (TAMANHOS-GRADE, UPLOAD-SWEEP, SUBNAV-DIV, KIT-IMG-LANDING, E11-COHORT+BACKEND, E08-PROMOTOR, CRM-COMISSAO-UI, SHADCN-SWEEP, MARCAS-TELA, BOARDS-RECONCILE, DECISOES-0719, BENCHMARK-REEMBOLSO, CHECKOUT-FORM-ret, MODAL-CONVERGE-ret). Retomada serial (L-009/L-010), **ambas FECHADAS com gate, main == origin == `7bdc274`, zero WIP de lane no disco**:
+
+1. **CK2-ret2 · CHECKOUT2-MODELO T6+T7** (`f46c83c`+`bb35501`) — vitest.setup pepper global (suíte functions INTEIRA 2857/0 verde), review antagonista APROVADO COM FIXES; boards/E19/E12/E04 + report CHECKOUT2-MODELO-REPORT.md. **F1 (first-claim de CPF sem prova de posse → vaza PII via prefill na ordem "anônimo primeiro") + F2 (conta Auth p/ e-mail de terceiro) = DECISÃO ABERTA do Vitor** (direções A prova-de-posse vs B claim-só-pós-pagamento; recomendação do lead: B agora + A pré-go-live; card no Kanban). Bloqueia produção com dado real, não o dev.
+2. **CEV-ret · CAPA-EVENTO-UPLOAD review+aterrissagem** (`150718c`+`7bdc274`) — F1 ALTO fixado (teto 2MB TAMBÉM nas storage.rules — SDK direto não fura mais a RN-228), F3 blob cleanup no EventoForm, F2/F4 cobertura/doc; F5 (webp erro-na-seleção) e F6 (upload pré-Salvar, paridade ADR-016) aceitos com justificativa. Rules 66/66 · painel 1275/1275. Pendência UPSW "capa de evento" PAGA nos boards.
+
+**EM VOO:** pesquisa **ESTRANGEIRO-PAGAMENTO** (agent-x, web): Asaas aceita pagador sem CPF? + prática Sympla/TicketSports/Doity + alternativas → report `outputs/leela-build-2d6ee98d/ESTRANGEIRO-PAGAMENTO-REPORT.md`. Motivo: Vitor levantou estrangeiro sem CPF (não previsto; RN-173 exige CPF) e quer **CPF↔e-mail vinculados** no claim — decisão F1/F2 + RN nova serão tomadas JUNTAS com a pesquisa na mesa.
+
+**Aguardando o Vitor:** decisão F1/F2 (A vs B; explicação em linguagem simples já dada no chat — fluxo do código de verificação incluso) · decisão estrangeiro pós-pesquisa · ratificar ADR-017 · benchmark reembolso (ratificação) · checkboxes nativos/M-08 · BREVO_API_KEY · CRM_ID_PEPPER no Secret Manager no deploy · restart :3200/:5273 p/ provas vivas.
+
+**Nota de árvore:** `produto/00-MOC-produto.md` + `produto/01-tese-de-negocio.md` aparecem M por line-ending apenas (diff de conteúdo vazio) — deixados como estão.
+
+---
+
+## (histórico) APÊNDICE · 2026-07-18 noite → 19 madrugada — RODADA CONSISTÊNCIA/UX/ONDA-3
+
+Sessão do maestro pós-queda de terminal (2 retomadas + rodada nova a pedido do Vitor). **11 lotes aterrissados com gate, tudo pushed:**
+1. **R9-C-ret3** (`0ec9181..51aec78`) — seed visão de compra do kit (RN-230, renumerada da colisão com RN-229) + docs. **E19-ret3** (`ef23ee9..fcf2c0b`) — CRM backend fechado: fix A1 + A2 fence de ordem + A4 clamp; review fresca APROVADA. Pendência de ops A3 PAGA depois (ver COMF2).
+2. **GATE-DS-W1** (squad magic-ds + mind brad-frost, Fable) — `76df8f1..5bbf26b`: showroom §8, LLM.txt regenerado, contratos, **flat RESTAURADO** (F-07 do Vitor ao vivo: token input-border-flat voltou a transparent; exceção AA ratificada documentada; **baseline DS 1033**→depois 1046 c/ Dialog). Findings painel → pagos no S8FIX.
+3. **LP-VENDAS-KIT** (`0841891..9cb09f9`) — 7 fotos royalty-free otimizadas (≤300KB, alt 100%, hero priority), KitEditor 1:1 no painel, modal de regulamento (local, Radix-free). Diretriz NOVA do Vitor: **landing = SEO-first** (memória permanente).
+4. **GATE-DS-W2 + audit-seo** — landing nota B; achou **W2-F-01 XSS no JSON-LD** → **LANDING-SECFIX** (`6a396f9..ed505d4`): serializador seguro (13 vetores resistidos), noindex /convite, focus trap; **bootstrap de testes da landing** (vitest, 10/10).
+5. **CHECKOUT-UX** (mind don-norman, Fable, read-only) — 18 fricções + 6 decisões D-2..D-7 + spec §5 ratificada (campos+CEP+2 termos). Report `outputs/.../CHECKOUT-UX-REPORT.md`. → **CHECKOUT-FIXES** (`461344d..1a1fc36`): BC-1 retry cotação, BC-2 auth recuperável, A-2 cupom auto-aplica, A-3 QR PIX visual, A-5 nota de taxa. 19/19.
+6. **COMISSIONAMENTO-F2** (`33628bd..e86d301`, Fable) — comissão percentual/fixa CONGELADA por conversão, estorno decrementa, repasse manual idempotente, readers RN-318/319, **CRM A3 pago (HMAC+CRM_ID_PEPPER; secret = deploy)**. Review fresca: 0 alto. Desembolso default = manual; **split Asaas = fase 3 (item 23, decisão Vitor)**.
+7. **MODAL-ADR** (`24405ca..30801dd`, Fable) — **ADR-017**: DS ganha entradas Radix-free `/server` + `/dialog`; landing segue sem radix; comportamento (trap/Esc/scroll-lock) promovido ao DS. DS 1046/1046. Ratificação do Vitor pendente.
+8. **PAINEL-S8-FIX** (`a72a9ca..1e7aade`) — 10 date pickers→DS, forks de primitivo ZERADOS, divisória 1px, 2 filtros→Combobox, regulamento em 3 eventos do preview. **Suíte painel 1167/1167.** Parked: checkboxes nativos + M-08 (decisão Vitor).
+
+**EM VOO agora:** **CHECKOUT-MODELO** (Fable: endereço NOVO no core + telefone/nascimento destravados + aceites versionados + politicaVendas.versao + projeção no leitor incl. flag de taxa) · **CRM-COMISSAO-UI** (Opus painel: T0 fixtures E08/comissão, T1 hub Clientes&Comunicação, T2 UI de comissão). **FILA:** CHECKOUT-FORM (UI campos+CEP+2 termos, pós-modelo).
+
+**Decisões do Vitor nesta rodada (aplicadas):** coletar telefone+nascimento+endereço (CEP autopreenche, só número manual) · 2 aceites no pagar (termos de uso c/ cancelamento + termo de saúde modelo Sympla) · modal = delegado à forge (ADR-017) · roadmap segue · **diretriz permanente reuso-primeiro/código limpo** (memória + briefs). **Asaas: SEM chave até produção** (slot _PROD_ contém a sandbox — footgun de nome a limpar; verificado por hash).
+
+**Aguardando o Vitor:** D-2..D-7 do checkout (recomendações no report) · item 23 split fase 3 · ratificar ADR-017 · gênero no form? · checkboxes nativos/M-08 no painel? · restart :3200 (saturado 1.37GB) e :5273 (stale) p/ provas vivas · BREVO_API_KEY · CRM_ID_PEPPER no Secret Manager no deploy.
+
+---
+
+## (histórico) APÊNDICE · 2026-07-18 noite — EXECUÇÃO DA REVISÃO UX
 
 Depois do pacote de spec R9 (seção logo abaixo), o Vitor liberou a execução. A onda do dia rodou multi-lane sobre uma árvore de trabalho única; uma queda de terminal às ~11:10 exigiu **4 retomadas** (R9-A-ret, R9-E-ret, R12-ret, R13-ret). Todas fecharam com gate verde. Incidente **L-009** registrado (autostash/`git stash -u` concorrente é destrutivo para untracked de outra lane na mesma árvore — serializar lanes que compartilham árvore).
 
