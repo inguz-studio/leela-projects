@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { transitionTenant } from '../platform/tenantLifecycle';
 
 type AnyRec = Record<string, unknown>;
@@ -106,9 +107,13 @@ describe('transitionTenant — autorização e validação (RN-402)', () => {
     currentStatus = 'ativo';
     const res = (await run({ tenantId: 'castelo-producoes', to: 'suspenso' })) as AnyRec;
     expect(res).toMatchObject({ success: true, status: 'suspenso' });
+    // Desde LEELA-FB-ADMIN (8e6badd) a fonte usa FieldValue MODULAR de
+    // 'firebase-admin/firestore' — o stub estático de admin.firestore não
+    // intercepta mais o serverTimestamp. Asserta o transform real (duas
+    // instâncias de ServerTimestampTransform são deep-equal).
     expect(txUpdate).toHaveBeenCalledWith(expect.anything(), {
       status: 'suspenso',
-      atualizadoEm: '__ts__',
+      atualizadoEm: FieldValue.serverTimestamp(),
       atualizadoPor: 'admin-1',
     });
     // Trilha lifecycleAudit gravada na MESMA transação (S1601-T2)
@@ -116,7 +121,7 @@ describe('transitionTenant — autorização e validação (RN-402)', () => {
       from: 'ativo',
       to: 'suspenso',
       por: 'admin-1',
-      em: '__ts__',
+      em: FieldValue.serverTimestamp(),
     });
   });
 

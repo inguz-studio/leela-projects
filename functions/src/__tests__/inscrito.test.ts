@@ -151,6 +151,10 @@ describe('derivações puras de Inscrito', () => {
       'tamanhos',
       'kitId',
       'estornadoEm',
+      // E09/S904-T4 (bebbc0a — RN-343/345): + titularHistorico (trilha de
+      // transferência de titularidade — só a Function requestTransfer/decide
+      // escreve). O espelho aqui ficou stale até a varredura CKFORM.
+      'titularHistorico',
     ]);
   });
 });

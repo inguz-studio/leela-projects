@@ -387,14 +387,21 @@ describe('ataques — claims/âncora', () => {
   });
 
   it('catch-all NÃO re-concede: papel organizador não lê subcoleção fora da lista', async () => {
+    // Originalmente este teste usava `reembolsos` — que na época caía no
+    // catch-all. O E09 (bebbc0a) deu match PRÓPRIO a reembolsos com leitura
+    // deliberada para organizador/financeiro (fila de análise, RN-341), então
+    // reembolsos deixou de provar o catch-all. O alvo agora é `ledger` —
+    // subcoleção sem match próprio e fora da allowlist (citada como exemplo
+    // de área futura no comentário do catch-all): papel de evento só ganha
+    // leitura via regra explícita + teste, nunca pelo catch-all.
     await adminDb
       .collection('eventos')
       .doc(EV)
-      .collection('reembolsos')
+      .collection('ledger')
       .doc('r1')
       .set({ tenantId: CASTELO_TENANT_ID, valor: 10 });
     await assertFails(
-      getDoc(doc(ctxPapel('organizador'), 'eventos', EV, 'reembolsos', 'r1'))
+      getDoc(doc(ctxPapel('organizador'), 'eventos', EV, 'ledger', 'r1'))
     );
   });
 });
