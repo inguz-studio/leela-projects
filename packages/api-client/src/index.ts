@@ -136,6 +136,7 @@ export {
   provisionAfiliadoAccount,
   getMinhasAfiliacoes,
   getAfiliadosDoTenant,
+  registrarRepasseComissao,
   SENHA_MIN_AFILIADO,
 } from './affiliation';
 export type {
@@ -146,6 +147,10 @@ export type {
   MinhaAfiliacao,
   AfiliadoDoTenant,
   ConversaoProjetada,
+  ComissaoAfiliadoClient,
+  RepasseProjetado,
+  RegistrarRepasseComissaoClientInput,
+  RegistrarRepasseComissaoClientResult,
 } from './affiliation';
 
 // ---------------------------------------------------------------------------

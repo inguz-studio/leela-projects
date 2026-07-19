@@ -1624,7 +1624,25 @@ service cloud.firestore {
         // (RN-314): escrita EXCLUSIVA da Function do webhook (mesma tx da
         // confirmação — idempotente por chave). Shape SEM PII de comprador
         // (valor/instantes/pedidoRef). Leitura espelha o doc pai.
+        // FASE 2 (COMF2): o doc carrega `comissao` + `comissaoConfig`
+        // CONGELADOS — a negação total de escrita de cliente é o que impede
+        // forjar/retocar comissão de conversão já registrada.
         match /conversoes/{conversaoId} {
+          allow read: if isPlatformAdmin()
+                      || isTenantWriter(tenantDoEventoPai())
+                      || (isSignedIn()
+                          && get(/databases/$(database)/documents/eventos/$(eventoId)/afiliados/$(afiliadoId))
+                              .data.get('responsavelUid', '') == request.auth.uid);
+          allow write: if false;
+        }
+
+        // `repasses/{repasseId}` — repasse MANUAL de comissão (E08 FASE 2 ·
+        // COMF2 · item 23): registro de pagamento off-platform feito pelo
+        // organizador; escrita EXCLUSIVA da Function
+        // `registrarRepasseComissao` (guarda de saldo + ∑ na mesma tx —
+        // cliente forjando repasse zeraria dívida real). Leitura espelha o
+        // doc pai (organizador do tenant + o PRÓPRIO afiliado — RN-318).
+        match /repasses/{repasseId} {
           allow read: if isPlatformAdmin()
                       || isTenantWriter(tenantDoEventoPai())
                       || (isSignedIn()

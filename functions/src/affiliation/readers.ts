@@ -20,7 +20,11 @@ import { https } from 'firebase-functions/v1';
 import {
   COLECAO_AFILIADOS,
   SUBCOLECAO_CONVERSOES_AFILIADO,
+  SUBCOLECAO_REPASSES_AFILIADO,
+  isComissaoAfiliadoValida,
+  saldoComissaoAfiliado,
   type AuthClaims,
+  type ComissaoAfiliado,
   type StatusAfiliado,
   type TipoAfiliado,
 } from '@leela/core';
@@ -36,7 +40,16 @@ type Db = admin.firestore.Firestore;
 export interface ConversaoProjetada {
   valor: number;
   qtdInscricoes: number;
+  /** Comissão congelada da conversão (FASE 2) — 0 em docs pré-fase-2. */
+  comissao: number;
   convertidoEmMillis: number | null;
+}
+
+/** Repasse manual projetado (FASE 2 — extrato do saldo de comissão). */
+export interface RepasseProjetado {
+  valor: number;
+  observacao: string | null;
+  criadoEmMillis: number | null;
 }
 
 /** Lado do INFLUENCIADOR (próprio): uma afiliação com as próprias somas. */
@@ -51,7 +64,18 @@ export interface MinhaAfiliacao {
   cupomCodigo: string | null;
   conversoes: number;
   valorAtribuido: number;
+  /**
+   * FASE 2 — termos e saldo de comissão (RN-310: config read-only para o
+   * afiliado; RN-318: só os PRÓPRIOS números). saldoComissao PODE ser
+   * negativo (estorno pós-repasse — verdade, não esconde).
+   */
+  comissao: ComissaoAfiliado | null;
+  comissaoAcumulada: number;
+  comissaoRepassada: number;
+  saldoComissao: number;
   ultimasConversoes: ConversaoProjetada[];
+  /** Extrato de repasses manuais registrados (mais recentes primeiro). */
+  ultimosRepasses: RepasseProjetado[];
 }
 
 /** Lado do ORGANIZADOR: afiliado do tenant (inclui dados que ELE cadastrou). */
@@ -88,10 +112,34 @@ async function conversoesDoAfiliado(
         typeof d.get('qtdInscricoes') === 'number'
           ? (d.get('qtdInscricoes') as number)
           : 1,
+      comissao:
+        typeof d.get('comissao') === 'number' ? (d.get('comissao') as number) : 0,
       convertidoEmMillis:
         typeof convertidoEm?.toMillis === 'function'
           ? convertidoEm.toMillis()
           : null,
+    };
+  });
+}
+
+async function repassesDoAfiliado(
+  ref: admin.firestore.DocumentReference
+): Promise<RepasseProjetado[]> {
+  const snap = await ref
+    .collection(SUBCOLECAO_REPASSES_AFILIADO)
+    .orderBy('criadoEm', 'desc')
+    .limit(ULTIMAS_CONVERSOES_LIMITE)
+    .get();
+  return snap.docs.map((d) => {
+    const criadoEm = d.get('criadoEm') as { toMillis?: () => number } | undefined;
+    return {
+      valor: typeof d.get('valor') === 'number' ? (d.get('valor') as number) : 0,
+      observacao:
+        typeof d.get('observacao') === 'string'
+          ? (d.get('observacao') as string)
+          : null,
+      criadoEmMillis:
+        typeof criadoEm?.toMillis === 'function' ? criadoEm.toMillis() : null,
     };
   });
 }
@@ -104,7 +152,16 @@ async function nomeDoEvento(db: Db, eventoId: string): Promise<string> {
 
 function baseDaAfiliacao(
   d: admin.firestore.QueryDocumentSnapshot
-): Omit<MinhaAfiliacao, 'eventoNome' | 'ultimasConversoes'> {
+): Omit<MinhaAfiliacao, 'eventoNome' | 'ultimasConversoes' | 'ultimosRepasses'> {
+  const comissaoRaw = d.get('comissao');
+  const comissaoAcumulada =
+    typeof d.get('comissaoAcumulada') === 'number'
+      ? (d.get('comissaoAcumulada') as number)
+      : 0;
+  const comissaoRepassada =
+    typeof d.get('comissaoRepassada') === 'number'
+      ? (d.get('comissaoRepassada') as number)
+      : 0;
   return {
     eventoId: (d.get('eventoId') ?? '') as string,
     refCodigo: d.id,
@@ -128,6 +185,10 @@ function baseDaAfiliacao(
       typeof d.get('valorAtribuido') === 'number'
         ? (d.get('valorAtribuido') as number)
         : 0,
+    comissao: isComissaoAfiliadoValida(comissaoRaw) ? comissaoRaw : null,
+    comissaoAcumulada,
+    comissaoRepassada,
+    saldoComissao: saldoComissaoAfiliado(comissaoAcumulada, comissaoRepassada),
   };
 }
 
@@ -154,6 +215,7 @@ export async function getMinhasAfiliacoesCore(
       ...base,
       eventoNome: await nomeDoEvento(db, base.eventoId),
       ultimasConversoes: await conversoesDoAfiliado(d.ref),
+      ultimosRepasses: await repassesDoAfiliado(d.ref),
     });
   }
   afiliacoes.sort((a, b) => b.valorAtribuido - a.valorAtribuido);
@@ -200,6 +262,7 @@ export async function getAfiliadosDoTenantCore(
       ...base,
       eventoNome: await nomeDoEvento(db, base.eventoId),
       ultimasConversoes: await conversoesDoAfiliado(d.ref),
+      ultimosRepasses: await repassesDoAfiliado(d.ref),
       nome: (d.get('nome') ?? '') as string,
       canal: typeof d.get('canal') === 'string' ? (d.get('canal') as string) : null,
       clubeRef:

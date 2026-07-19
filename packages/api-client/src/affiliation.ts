@@ -15,6 +15,18 @@ import { getLeelaFunctions } from './firebase';
 // salvarAfiliado (organizador — modal RN-317)
 // ---------------------------------------------------------------------------
 
+/**
+ * Config de comissão do afiliado (FASE 2 · COMF2): percentual sobre o valor
+ * FACE (0,01..100, passo 0,01) OU R$ fixo POR INSCRIÇÃO confirmada. O
+ * ORGANIZADOR define (RN-310); mudar só afeta conversões FUTURAS (a config é
+ * congelada por conversão no servidor).
+ */
+export interface ComissaoAfiliadoClient {
+  tipo: 'percentual' | 'valor_fixo';
+  percentual?: number;
+  valorPorInscricao?: number;
+}
+
 export interface SalvarAfiliadoClientInput {
   eventoId: string;
   refCodigo?: string;
@@ -32,6 +44,8 @@ export interface SalvarAfiliadoClientInput {
   /** PF: CPF opcional — o servidor persiste SÓ mascarado. */
   documento?: string;
   status?: 'ativo' | 'inativo';
+  /** FASE 2: null remove; ausente no update preserva a vigente. */
+  comissao?: ComissaoAfiliadoClient | null;
 }
 
 export interface SalvarAfiliadoClientResult {
@@ -93,7 +107,16 @@ export async function provisionAfiliadoAccount(
 export interface ConversaoProjetada {
   valor: number;
   qtdInscricoes: number;
+  /** Comissão congelada da conversão (FASE 2) — 0 em docs pré-fase-2. */
+  comissao: number;
   convertidoEmMillis: number | null;
+}
+
+/** Repasse manual registrado (FASE 2 — extrato do saldo de comissão). */
+export interface RepasseProjetado {
+  valor: number;
+  observacao: string | null;
+  criadoEmMillis: number | null;
 }
 
 export interface MinhaAfiliacao {
@@ -107,7 +130,14 @@ export interface MinhaAfiliacao {
   cupomCodigo: string | null;
   conversoes: number;
   valorAtribuido: number;
+  /** FASE 2 — termos read-only (RN-310) + saldo próprio (RN-318). O saldo
+   *  PODE ser negativo (estorno depois de repasse já registrado). */
+  comissao: ComissaoAfiliadoClient | null;
+  comissaoAcumulada: number;
+  comissaoRepassada: number;
+  saldoComissao: number;
   ultimasConversoes: ConversaoProjetada[];
+  ultimosRepasses: RepasseProjetado[];
 }
 
 export interface AfiliadoDoTenant extends MinhaAfiliacao {
@@ -138,4 +168,42 @@ export async function getAfiliadosDoTenant(input?: {
     { afiliados: AfiliadoDoTenant[] }
   >(getLeelaFunctions(), 'getAfiliadosDoTenant');
   return (await fn(input ?? {})).data;
+}
+
+// ---------------------------------------------------------------------------
+// registrarRepasseComissao (FASE 2 — repasse MANUAL, default proposto)
+// ---------------------------------------------------------------------------
+
+export interface RegistrarRepasseComissaoClientInput {
+  eventoId: string;
+  afiliadoId: string;
+  /**
+   * Chave de idempotência (8..64 chars URL-safe) — gere com
+   * `crypto.randomUUID()` no submit e REUSE no retry: replay não debita 2×.
+   */
+  repasseId: string;
+  /** R$ cent-exato > 0, limitado ao saldo de comissão do afiliado. */
+  valor: number;
+  observacao?: string;
+}
+
+export interface RegistrarRepasseComissaoClientResult {
+  ok: true;
+  repasseId: string;
+  duplicado: boolean;
+  saldoComissao: number;
+}
+
+/**
+ * Registra um repasse MANUAL de comissão (pagamento feito FORA da
+ * plataforma). Nenhum dinheiro é movido — split automático é fase 3.
+ */
+export async function registrarRepasseComissao(
+  input: RegistrarRepasseComissaoClientInput
+): Promise<RegistrarRepasseComissaoClientResult> {
+  const fn = httpsCallable<
+    RegistrarRepasseComissaoClientInput,
+    RegistrarRepasseComissaoClientResult
+  >(getLeelaFunctions(), 'registrarRepasseComissao');
+  return (await fn(input)).data;
 }

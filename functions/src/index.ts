@@ -345,6 +345,13 @@ export { provisionAfiliadoAccount } from './affiliation/provisionAfiliado';
 // input). ⚠️ Fable (escopo de leitura/PII).
 export { getMinhasAfiliacoes, getAfiliadosDoTenant } from './affiliation/readers';
 
+// Afiliados — REPASSE MANUAL de comissão (E08 FASE 2 · COMF2 · item 23):
+// registra pagamento off-platform feito pelo organizador e debita o saldo
+// (comissaoRepassada ∑) — NENHUM dinheiro movido por código; split
+// automático = fase 3 (não ratificado). Idempotente por repasseId (chave).
+// ⚠️ Fable (dinheiro).
+export { registrarRepasseComissao } from './affiliation/registrarRepasse';
+
 // CRM do organizador (E19 · S-R9-13-T1 · RN-172): cliente consolidado
 // cross-evento com LTV em `tenants/{tid}/crmClientes/{key}` — ledger fechado
 // por inscrição + recompute transacional idempotente (computeCrmCliente do
