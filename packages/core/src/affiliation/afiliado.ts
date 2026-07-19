@@ -236,7 +236,13 @@ export function computeComissaoConversao(
   if (comissao === null) return 0;
   const qtd = Number.isInteger(qtdInscricoes) && qtdInscricoes > 0 ? qtdInscricoes : 0;
   if (comissao.tipo === 'percentual') {
-    const centavos = Math.max(0, Math.round(valorFace * 100));
+    // F-1 da review antagonista COMF2 (defesa em profundidade): valorFace
+    // não-finito (NaN/Infinity de um doc corrompido) vira 0 — NaN aqui
+    // poluiria o ∑ comissaoAcumulada via roundMoney(atual + NaN).
+    const centavos = Math.max(
+      0,
+      Math.round(Number.isFinite(valorFace) ? valorFace * 100 : 0)
+    );
     const bp = Math.round((comissao.percentual ?? 0) * 100);
     return Math.round((centavos * bp) / 10_000) / 100;
   }

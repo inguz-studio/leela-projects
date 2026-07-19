@@ -135,6 +135,9 @@ describe('comissão FASE 2 (COMF2 — cent-exata, congelável, nunca negativa)',
     expect(computeComissaoConversao({ tipo: 'percentual', percentual: 100 }, 88.88, 3)).toBe(88.88);
     // valor negativo/lixo clampa a 0 — comissão NUNCA negativa
     expect(computeComissaoConversao({ tipo: 'percentual', percentual: 10 }, -50, 1)).toBe(0);
+    // F-1 review antagonista: valorFace não-finito NUNCA polui o ∑ (NaN→0)
+    expect(computeComissaoConversao({ tipo: 'percentual', percentual: 10 }, NaN, 1)).toBe(0);
+    expect(computeComissaoConversao({ tipo: 'percentual', percentual: 10 }, Infinity, 1)).toBe(0);
   });
 
   it('computeComissaoConversao valor_fixo: R$ POR INSCRIÇÃO × qtd, exato em centavos', () => {
