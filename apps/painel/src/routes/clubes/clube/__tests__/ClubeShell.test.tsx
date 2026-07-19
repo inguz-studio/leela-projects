@@ -53,4 +53,14 @@ describe('ClubeShell', () => {
     );
     expect(screen.getByText('conteúdo do overview')).toBeInTheDocument();
   });
+
+  it('aplica a divisória padrão na sub-nav (RN-229 · DEC-0719 item 21)', () => {
+    render(
+      <ClubeShell clube={mkClube()} ativa="overview" onCopiarCodigo={noop}>
+        <p>c</p>
+      </ClubeShell>,
+    );
+    // Mesmo token/padrão (border-b em --border-subtle) das terciárias de eventos.
+    expect(screen.getByRole('navigation', { name: 'Seções do clube' })).toHaveClass('border-b');
+  });
 });

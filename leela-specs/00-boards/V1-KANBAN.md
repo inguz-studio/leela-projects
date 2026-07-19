@@ -19,7 +19,6 @@ tags:
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
 - [ ] **[DEC-0719 · a] upload-sweep** — tira o "colar URL" de toda imagem e põe TROCAR + ajuste automático de proporção (a imagem em proporção diferente é recortada sozinha para caber) 📋 RN-168/RN-170 [[01-decisoes|DEC-0719]]
-- [ ] **[DEC-0719 · b] subnav-divisórias** — divisória em todo SubNav (não só nas abas dentro de eventos) 📋 RN-229 [[01-decisoes|DEC-0719]]
 - [ ] **[DEC-0719 · c] CHECKOUT-FORM-2** — cupom no início + Pix/Cartão em botões (sem toggle) + QR PIX com timer de 30 min e cópia automática com aviso + gênero por atleta + botão "+ adicionar atleta" 📋 RN-154/RN-157 [[01-decisoes|DEC-0719]]
 - [ ] **[DEC-0719 · d] conta-sem-fricção** — cria a conta sozinha na 1ª compra e manda link por e-mail para definir senha e ver a compra 📋 RN-155 · depende da chave Brevo [[01-decisoes|DEC-0719]]
 - [ ] **[DEC-0719 · e] saúde-termo-base** — termo de saúde base obrigatório sempre + termo custom do organizador por cima 📋 RN-156 [[01-decisoes|DEC-0719]]
@@ -34,6 +33,7 @@ tags:
 
 ## ✅ Feito
 
+- [x] **[DEC-0719 · b] subnav-divisórias (SUBNAV-DIV)** — a linha fininha que separa o menu de seções do conteúdo passou a valer em TODO SubNav do painel, não só nas abas dentro de eventos: entrou no menu do evento, no menu do clube e no menu do Financeiro (Análise/Repasses); as abas terciárias de evento já tinham. Mesma linha (o mesmo padrão de 1px das terciárias), sem inventar estilo novo, e a rolagem lateral do menu em telas estreitas continua intacta ✅ RN-229 [[BOARD-HISTORICO]]
 - [x] **[E03] Tamanhos por corte + ciclo de encomenda (TAMANHOS-GRADE)** — a camiseta separa corte feminino/masculino (quem compra escolhe o corte e depois o tamanho); o organizador configura a grade, encerra encomendas com a contagem do momento (sem travar vendas), ajusta o estoque quando as camisas chegam e acompanha as entregas por corte e tamanho no balcão; promotor copia o link de indicação pronto ✅ [[BOARD-HISTORICO]]
 - [x] **[E04/E12] Formulário novo do checkout (CHECKOUT-FORM)** — comprador preenche telefone, nascimento e endereço pelo CEP (digita o CEP, completa só o número; se o serviço de CEP cair ou demorar, preenche à mão e a compra nunca trava) e aceita os termos da compra e o termo de saúde antes de pagar; o servidor passou a EXIGIR os dois aceites (comprar por fora da tela não fura o aceite legal, e pedido antigo re-tentado completa a prova sem reescrever nada); o aviso "+ taxa de serviço" só aparece quando o evento repassa a taxa ✅ [[BOARD-HISTORICO]]
 - [x] **[E00] Telas de conta** — login, cadastro, recuperação e configurações ✅ (entregue e aprovado em review 2026-07-13, lote S020; card estava defasado) [[LEELA-E00-fundacao-tecnica]]

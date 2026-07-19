@@ -47,6 +47,17 @@ describe('EventoShell', () => {
     expect(screen.getByText('conteúdo do overview')).toBeInTheDocument();
   });
 
+  it('aplica a divisória padrão na sub-nav (RN-229 · DEC-0719 item 21)', () => {
+    render(
+      <EventoShell evento={mkEvento()} ativa="overview">
+        <p>c</p>
+      </EventoShell>,
+    );
+    // A divisória é o border-b em --border-subtle do SubNav (mesmo token/padrão
+    // das terciárias de eventos desde R9-A/PAINEL-S8-FIX).
+    expect(screen.getByRole('navigation', { name: 'Seções do evento' })).toHaveClass('border-b');
+  });
+
   it('mostra o breadcrumb "Eventos › {nome}" com link de volta', () => {
     render(
       <EventoShell evento={mkEvento()} ativa="overview">

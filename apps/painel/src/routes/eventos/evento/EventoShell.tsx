@@ -192,7 +192,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
         </div>
       </header>
 
-      <SubNav tabs={tabs} aria-label="Seções do evento" />
+      <SubNav tabs={tabs} aria-label="Seções do evento" divider />
       <div className="p-[var(--spacing-6)]">{children}</div>
     </div>
   );

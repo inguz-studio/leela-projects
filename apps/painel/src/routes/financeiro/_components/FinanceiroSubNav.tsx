@@ -17,6 +17,7 @@ export function FinanceiroSubNav(): JSX.Element {
   return (
     <SubNav
       aria-label="Seções de Financeiro"
+      divider
       tabs={[
         {
           id: 'analise',
