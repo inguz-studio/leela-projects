@@ -362,6 +362,25 @@ describe('aplicarWriteInscritoNoCrm — linking e agregação real', () => {
     expect((await adminDb.doc(crmPath(KEY_BRUNA())).get()).exists).toBe(false);
   });
 
+  it('A1 fail-closed: inscrito com tenantId INCOERENTE com o evento pai não planta PII', async () => {
+    // Write forjado/bugado (só possível via Admin — Rules negam de cliente):
+    // inscrito "do tenant PASSO" dentro de evento do CASTELO.
+    const forjado = inscrito('i8', 'confirmado',
+      { tenantId: PASSO_ID, atletaId: 'atleta-i8' },
+      reg('1991-01-01', 'feminino'));
+    await aplicar(EV1, 'i8', null, forjado);
+    // NENHUM doc de CRM nasce — nem no PASSO (alvo do forjador)…
+    const colPasso = await adminDb
+      .collection(`tenants/${PASSO_ID}/${SUBCOLECAO_CRM_CLIENTES}`)
+      .get();
+    expect(colPasso.size).toBe(0);
+    // …nem no CASTELO (o doc não é do tenant do evento)
+    const colCastelo = await adminDb
+      .collection(`tenants/${CASTELO_ID}/${SUBCOLECAO_CRM_CLIENTES}`)
+      .get();
+    expect(colCastelo.size).toBe(0);
+  });
+
   it('CROSS-TENANT fail-closed: pedido de OUTRO tenant não dá valor nem chave', async () => {
     const i5 = inscrito('i5', 'confirmado', {
       atletaId: 'atleta-i5', pedidoRef: 'ped-intruso', ehResponsavel: true,

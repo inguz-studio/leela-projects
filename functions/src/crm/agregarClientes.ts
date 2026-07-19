@@ -220,6 +220,15 @@ export async function aplicarWriteInscritoNoCrm(
     const eventoSnap = await tx.get(db.collection('eventos').doc(eventoId));
     const eventoNome =
       typeof eventoSnap.get('nome') === 'string' ? (eventoSnap.get('nome') as string) : '';
+    // Defesa em profundidade (review antagonista E19 · A1): a entrada SÓ se
+    // sustenta se o tenant do INSCRITO bate com o do EVENTO PAI. As Rules já
+    // negam tenantId forjado no create/update de cliente, mas um write de
+    // Admin/Function bugado não pode plantar PII no CRM de OUTRO tenant —
+    // incoerência ⇒ fail-closed (sem entrada; remoção de histórico segue).
+    const eventoCoerente = (view: InscritoCrmView | null): boolean =>
+      view !== null &&
+      eventoSnap.exists &&
+      eventoSnap.get('tenantId') === view.tenantId;
 
     const pedidoRefs = new Set<string>();
     if (viewBefore?.pedidoRef) pedidoRefs.add(viewBefore.pedidoRef);
@@ -247,9 +256,11 @@ export async function aplicarWriteInscritoNoCrm(
         ? clienteDocId(viewBefore.tenantId, identidadeDo(viewBefore, linhaBefore))
         : null;
 
-    // Entrada nova SÓ para inscrição que comprou (P-E19-6)
+    // Entrada nova SÓ para inscrição que comprou (P-E19-6) e com tenant
+    // coerente inscrito↔evento (A1 — fail-closed)
     const entryAfter: CrmInscricaoEntry | null =
       viewAfter !== null &&
+      eventoCoerente(viewAfter) &&
       (viewAfter.status === 'confirmado' || viewAfter.status === 'estornado')
         ? {
             eventoId,
