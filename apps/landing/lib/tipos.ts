@@ -8,7 +8,7 @@
 // pt-BR (fuso America/Sao_Paulo) para evitar recomputo/serialização no render.
 // =============================================================================
 
-import type { CanalSecao } from '@leela/core';
+import type { CanalSecao, GradeCorte } from '@leela/core';
 
 /** Estado público de venda derivado (S1201-T3). */
 export type EstadoVenda = 'aberto' | 'encerrado' | 'esgotado';
@@ -43,6 +43,21 @@ export interface KitPublico {
   descricao: string | null;
   itens: string[];
   imagemUrl: string | null;
+}
+
+
+/**
+ * Item TAMANHADO público do evento (RN-231 · TAMANHOS-GRADE) — projeção
+ * mínima do catálogo `itensKit` para o checkout coletar corte→tamanho POR
+ * inscrito. `grade` é a grade EFETIVA (legado `tamanhosDisponiveis` já vem
+ * normalizado como corte unissex pelo leitor). Sem PII: id/nome/kits/grade.
+ */
+export interface ItemTamanhadoPublico {
+  id: string;
+  nome: string;
+  /** Ids dos kits que incluem o item (RN-215) — filtra por kit escolhido. */
+  kits: string[];
+  grade: GradeCorte[];
 }
 
 /** Uma janela de retirada de kit (espelho público do cronograma). */
@@ -125,6 +140,8 @@ export interface EventoPublico {
   modalidades: ModalidadePublica[];
   /** Kits do evento (RN-210) — o checkout filtra por modalidade. `[]` se nenhum. */
   kits: KitPublico[];
+  /** Itens tamanhados com grade (RN-231) — o checkout coleta corte→tamanho. */
+  itensTamanhados: ItemTamanhadoPublico[];
   /** Menor preço vigente entre as modalidades ("a partir de"), ou null. */
   precoMinimo: number | null;
   janelasRetirada: JanelaRetiradaPublica[];

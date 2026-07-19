@@ -57,7 +57,14 @@ brief retomada: `.nirvana/briefs/leela-tamanhos-grade-RETOMADA-enriched.md`
       Lib pura nova: apps/painel/src/routes/eventos/_lib/gradeTamanhos.ts.
       Gates: tsc/eslint painel 0 · RTL novas verdes · suíte painel COMPLETA
       1232/1232 (baseline 1167 + novas).
-- [ ] T3 — checkout corte-primeiro na landing
+- [x] T3 — checkout corte-primeiro na landing: leitor público projeta
+      `itensTamanhados` (id/nome/kits/grade efetiva via gradeDoDocItemKit — Postel,
+      isolamento por tenant); StepModalidadeKit ganha SeletorGradeItem na ordem
+      RATIFICADA (corte → tamanho; unissex pula direto), POR inscrito; trocar
+      corte/kit/modalidade zera a escolha; valor = sufixo de SKU; validação de
+      obrigatoriedade no avançar do step 0; payload envia `tamanhos` por inscrito
+      (o servidor revalida fail-closed). Kit sem grade mantém a nota antiga.
+      Gates: tsc/eslint landing 0 · RTL nova 5/5 · suíte landing completa 60/60.
 - [ ] T-extra — eventoSlug no reader do promotor (commit separado)
 - [ ] Gates: tsc/eslint 0 · unit core · integração emulator teste (portas próprias, NUNCA 8180) · suíte painel · suíte landing · RTL UIs novas
 - [ ] Review antagonista Fable contexto fresco + fixes re-provados

@@ -155,6 +155,7 @@ describe('StepModalidadeKit — A-5/CKFORM-T4 · nota de taxa CONDICIONAL (RN-34
       <StepModalidadeKit
         modalidades={[{ nome: '5k', precoVigente: 5000 }]}
         kits={[]}
+        itensTamanhados={[]}
         inscritos={[inscritoVazio()]}
         euCorro
         onInscrito={noop}
@@ -162,6 +163,7 @@ describe('StepModalidadeKit — A-5/CKFORM-T4 · nota de taxa CONDICIONAL (RN-34
         onRemoveInscrito={noop}
         errosModalidade={[]}
         errosKit={[]}
+        errosTamanhos={[]}
         taxaRepassada={taxaRepassada}
       />,
     );

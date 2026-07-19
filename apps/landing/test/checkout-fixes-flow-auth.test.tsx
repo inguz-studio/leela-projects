@@ -47,6 +47,7 @@ const evento: EventoPublico = {
   organizador: null,
   modalidades: [{ nome: '5k', precoVigente: 5000 }],
   kits: [],
+  itensTamanhados: [],
   precoMinimo: 5000,
   janelasRetirada: [],
   secoes: [],

@@ -4,7 +4,7 @@
 // =============================================================================
 
 import type { KitInscritoInput } from '@leela/api-client';
-import type { KitPublico } from '@/lib/tipos';
+import type { ItemTamanhadoPublico, KitPublico } from '@/lib/tipos';
 
 /** Dados de UM inscrito em edição no formulário. */
 export interface InscritoForm {
@@ -24,6 +24,13 @@ export interface InscritoForm {
    * o `preco` do kit via kitId); o rótulo persistido no inscrito deriva daqui.
    */
   kitId: string;
+  /**
+   * Escolha de corte→tamanho POR item tamanhado do kit (RN-231 · TAMANHOS-
+   * GRADE): `itemId → sufixo de SKU` ('M' na grade única/unissex,
+   * 'feminina__M' na grade por corte) — o MESMO formato que o servidor
+   * valida FAIL-CLOSED e persiste no inscrito. Zera ao trocar kit/modalidade.
+   */
+  tamanhos: Record<string, string>;
 }
 
 /** Forma de pagamento na UI (espelho de FormaPagamento do core). */
@@ -69,9 +76,18 @@ export function kitsDaModalidade(
   return kits.filter((k) => k.modalidades.includes(modalidade));
 }
 
+/** Itens tamanhados (com grade) inclusos no kit escolhido (RN-215/231). */
+export function itensTamanhadosDoKit(
+  itens: readonly ItemTamanhadoPublico[],
+  kitId: string,
+): ItemTamanhadoPublico[] {
+  if (kitId.length === 0) return [];
+  return itens.filter((item) => item.kits.includes(kitId));
+}
+
 /** Inscrito em branco (sem modalidade nem kit escolhidos ainda). */
 export function inscritoVazio(): InscritoForm {
-  return { nome: '', email: '', cpf: '', nascimento: '', modalidade: '', kitId: '' };
+  return { nome: '', email: '', cpf: '', nascimento: '', modalidade: '', kitId: '', tamanhos: {} };
 }
 
 /**

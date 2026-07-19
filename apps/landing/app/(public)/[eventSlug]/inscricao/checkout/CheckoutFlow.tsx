@@ -25,6 +25,7 @@ import {
   type EnderecoForm,
   type FormaUI,
   type InscritoForm,
+  itensTamanhadosDoKit,
 } from './tipos';
 import {
   validarEndereco,
@@ -143,6 +144,8 @@ export function CheckoutFlow({
   const [errosEndereco, setErrosEndereco] = useState<ErrosEndereco>({});
   const [errosModalidade, setErrosModalidade] = useState<(string | undefined)[]>([]);
   const [errosKit, setErrosKit] = useState<(string | undefined)[]>([]);
+  // RN-231: erro por (inscrito × itemId) — tamanho obrigatório do item do kit.
+  const [errosTamanhos, setErrosTamanhos] = useState<Record<string, string>[]>([]);
 
   // Pagamento / cotação
   const [forma, setForma] = useState<FormaUI>('pix');
@@ -441,6 +444,9 @@ export function CheckoutFlow({
           modalidade: ins.modalidade,
           kit: kitEnumFromId(ins.kitId),
           ...(ins.kitId.length > 0 ? { kitId: ins.kitId } : {}),
+          // RN-231: corte→tamanho por atleta (sufixo de SKU) — o servidor
+          // valida contra a grade do evento e persiste no inscrito.
+          ...(Object.keys(ins.tamanhos).length > 0 ? { tamanhos: ins.tamanhos } : {}),
         })),
         ...(euCorro ? { responsavelIndex: 0 } : {}),
         responsavel: {
@@ -542,9 +548,26 @@ export function CheckoutFlow({
         const ofertados = kitsDaModalidade(evento.kits, ins.modalidade);
         return ofertados.length > 0 && ins.kitId.length === 0 ? 'Escolha um kit.' : undefined;
       });
+      // RN-231: cada item tamanhado (com grade) do kit escolhido exige a
+      // escolha de corte→tamanho DESTE atleta — o servidor revalida fail-closed.
+      const eTam = inscritos.map((ins) => {
+        const pendentes: Record<string, string> = {};
+        for (const item of itensTamanhadosDoKit(evento.itensTamanhados, ins.kitId)) {
+          if ((ins.tamanhos[item.id] ?? '').length === 0) {
+            pendentes[item.id] = 'Escolha o tamanho.';
+          }
+        }
+        return pendentes;
+      });
       setErrosModalidade(eMod);
       setErrosKit(eKit);
-      if (eMod.some((e) => e !== undefined) || eKit.some((e) => e !== undefined)) return;
+      setErrosTamanhos(eTam);
+      if (
+        eMod.some((e) => e !== undefined) ||
+        eKit.some((e) => e !== undefined) ||
+        eTam.some((e) => Object.keys(e).length > 0)
+      )
+        return;
       setStep(1);
       return;
     }
@@ -572,7 +595,7 @@ export function CheckoutFlow({
       setStep(3);
       return;
     }
-  }, [step, evento.kits, responsavel, inscritos, euCorro, endereco, cotacao, erroCotacao, erroAuth]);
+  }, [step, evento.kits, evento.itensTamanhados, responsavel, inscritos, euCorro, endereco, cotacao, erroCotacao, erroAuth]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -638,6 +661,7 @@ export function CheckoutFlow({
           <StepModalidadeKit
             modalidades={evento.modalidades}
             kits={evento.kits}
+            itensTamanhados={evento.itensTamanhados}
             inscritos={inscritos}
             euCorro={euCorro}
             onInscrito={patchInscrito}
@@ -645,6 +669,7 @@ export function CheckoutFlow({
             onRemoveInscrito={removeInscrito}
             errosModalidade={errosModalidade}
             errosKit={errosKit}
+            errosTamanhos={errosTamanhos}
             taxaRepassada={evento.taxaRepassada}
           />
         ) : null}

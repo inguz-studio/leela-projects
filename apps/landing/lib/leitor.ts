@@ -21,6 +21,7 @@
 
 import {
   exigenciasSaudePadrao,
+  gradeDoDocItemKit,
   isExigenciasSaude,
   isModoTaxa,
   isUrlCapaValida,
@@ -55,6 +56,7 @@ import type {
   EventoPublico,
   EventoResumo,
   JanelaRetiradaPublica,
+  ItemTamanhadoPublico,
   KitPublico,
   ModalidadePublica,
   OrganizadorPublico,
@@ -146,6 +148,38 @@ async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
       };
     })
     .sort((a, b) => b.preco - a.preco);
+}
+
+/**
+ * Itens TAMANHADOS do evento com grade (RN-231 · TAMANHOS-GRADE) — projeção
+ * pública mínima para o checkout coletar corte→tamanho por inscrito. Postel:
+ * a grade EFETIVA sai de `gradeDoDocItemKit` (grade por corte quando há; o
+ * legado `tamanhosDisponiveis[]` vira corte unissex; entrada inválida é
+ * descartada). Item sem grade aproveitável fica FORA (checkout não tem o que
+ * perguntar). Isolamento: só itens do MESMO tenant do evento (ADR-009).
+ */
+async function lerItensTamanhados(
+  db: Firestore,
+  eventoId: string,
+  tenantId: string,
+): Promise<ItemTamanhadoPublico[]> {
+  const snap = await db.collection('itensKit').where('eventoId', '==', eventoId).get();
+  const itens: ItemTamanhadoPublico[] = [];
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if (tenantId.length > 0 && data['tenantId'] !== tenantId) continue;
+    const grade = gradeDoDocItemKit(data);
+    if (grade.length === 0) continue;
+    itens.push({
+      id: doc.id,
+      nome: typeof data['nome'] === 'string' && data['nome'].length > 0 ? data['nome'] : doc.id,
+      kits: Array.isArray(data['kits'])
+        ? (data['kits'] as unknown[]).filter((k): k is string => typeof k === 'string')
+        : [],
+      grade,
+    });
+  }
+  return itens.sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 /**
@@ -314,12 +348,14 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       ? (data['modalidades'] as unknown[]).filter((m): m is string => typeof m === 'string')
       : [];
 
-    const [lotesPorModalidade, kits, organizador, politicaVendas] = await Promise.all([
-      lerLotesPorModalidade(db, slug),
-      lerKits(db, slug),
-      resolverOrganizadorPublico(db, texto(data['tenantId'])),
-      lerPoliticaVendasPublica(db, slug),
-    ]);
+    const [lotesPorModalidade, kits, organizador, politicaVendas, itensTamanhados] =
+      await Promise.all([
+        lerLotesPorModalidade(db, slug),
+        lerKits(db, slug),
+        resolverOrganizadorPublico(db, texto(data['tenantId'])),
+        lerPoliticaVendasPublica(db, slug),
+        lerItensTamanhados(db, slug, texto(data['tenantId'])),
+      ]);
 
     const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
       nome,
@@ -409,6 +445,7 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       organizador,
       modalidades,
       kits,
+      itensTamanhados,
       precoMinimo: precoMinimo(modalidades),
       janelasRetirada,
       secoes,

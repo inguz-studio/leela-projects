@@ -51,6 +51,7 @@ function eventoMalicioso(): EventoPublico {
     organizador: null,
     modalidades: [{ nome: PAYLOAD_ASPAS, precoVigente: 90 }],
     kits: [],
+  itensTamanhados: [],
     precoMinimo: 90,
     janelasRetirada: [],
     secoes: [],

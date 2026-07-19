@@ -1,10 +1,12 @@
 'use client';
 
+import * as React from 'react';
 import { PackageOpen } from 'lucide-react';
+import { parseSufixoTamanho, sufixoSku, type CorteItem } from '@leela/core';
 import { Badge, Button, RadioCard, RadioGroup } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
-import type { KitPublico } from '@/lib/tipos';
-import { kitsDaModalidade, type InscritoForm } from './tipos';
+import type { ItemTamanhadoPublico, KitPublico } from '@/lib/tipos';
+import { itensTamanhadosDoKit, kitsDaModalidade, type InscritoForm } from './tipos';
 import { KitDetalhe } from './KitDetalhe';
 import { TituloEtapa, ApoioEtapa } from './tipografia';
 
@@ -13,6 +15,87 @@ function labelDeltaKit(preco: number): string {
   if (preco === 0) return 'Incluso';
   if (preco < 0) return `Desconto ${formatarPreco(Math.abs(preco))}`;
   return `+ ${formatarPreco(preco)}`;
+}
+
+/** Rótulos pt-BR do corte (RN-231). */
+const CORTE_LABEL: Record<CorteItem, string> = {
+  feminina: 'Feminina',
+  masculina: 'Masculina',
+  unissex: 'Unissex',
+};
+
+/**
+ * Seletor de corte→tamanho de UM item tamanhado (RN-231 · TAMANHOS-GRADE),
+ * na ORDEM RATIFICADA: o atleta escolhe o CORTE primeiro e SÓ ENTÃO vê os
+ * tamanhos daquele corte; item de grade única (só unissex) pula direto para
+ * o tamanho. O valor emitido é o SUFIXO de SKU ('M' | 'feminina__M') — o
+ * mesmo formato que o servidor valida fail-closed e persiste no inscrito.
+ */
+function SeletorGradeItem({
+  item,
+  inscritoIndex,
+  valor,
+  onChange,
+  errorMessage,
+}: {
+  item: ItemTamanhadoPublico;
+  inscritoIndex: number;
+  /** Sufixo escolhido ('' = nenhum). */
+  valor: string;
+  onChange: (sufixo: string) => void;
+  errorMessage: string;
+}): React.JSX.Element {
+  const soUnissex = item.grade.length === 1 && item.grade[0]!.corte === 'unissex';
+  const escolhido = valor.length > 0 ? parseSufixoTamanho(valor) : null;
+  // Corte em foco: o da escolha completa OU o corte tocado (tamanho pendente).
+  const [cortePendente, setCortePendente] = React.useState<CorteItem | null>(null);
+  const corteAtivo = escolhido?.corte ?? cortePendente;
+  const linhaAtiva = corteAtivo ? (item.grade.find((g) => g.corte === corteAtivo) ?? null) : null;
+
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      {!soUnissex ? (
+        <RadioGroup
+          name={`corte-${inscritoIndex}-${item.id}`}
+          label={`${item.nome} — corte`}
+          value={corteAtivo ?? ''}
+          onValueChange={(v) => {
+            // Trocar de corte INVALIDA o tamanho (a grade muda) — nada de
+            // carregar 'M' da feminina para a masculina sem o atleta ver.
+            setCortePendente(v as CorteItem);
+            onChange('');
+          }}
+          errorMessage={linhaAtiva === null ? errorMessage : ''}
+        >
+          {item.grade.map((linha) => (
+            <RadioCard
+              key={linha.corte}
+              value={linha.corte}
+              title={CORTE_LABEL[linha.corte]}
+              description={`Tamanhos ${linha.tamanhos.join(', ')}`}
+            />
+          ))}
+        </RadioGroup>
+      ) : null}
+
+      {(soUnissex || linhaAtiva !== null) && (
+        <RadioGroup
+          name={`tamanho-${inscritoIndex}-${item.id}`}
+          label={soUnissex ? `${item.nome} — tamanho` : 'Tamanho'}
+          value={escolhido?.tamanho ?? ''}
+          onValueChange={(t) => {
+            const corte = soUnissex ? 'unissex' : (linhaAtiva?.corte ?? 'unissex');
+            onChange(sufixoSku(corte, t));
+          }}
+          errorMessage={soUnissex || linhaAtiva !== null ? errorMessage : ''}
+        >
+          {(soUnissex ? item.grade[0]!.tamanhos : (linhaAtiva?.tamanhos ?? [])).map((t) => (
+            <RadioCard key={t} value={t} title={t} description="" />
+          ))}
+        </RadioGroup>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -26,6 +109,7 @@ function labelDeltaKit(preco: number): string {
 export function StepModalidadeKit({
   modalidades,
   kits,
+  itensTamanhados,
   inscritos,
   euCorro,
   onInscrito,
@@ -33,10 +117,13 @@ export function StepModalidadeKit({
   onRemoveInscrito,
   errosModalidade,
   errosKit,
+  errosTamanhos,
   taxaRepassada,
 }: {
   modalidades: { nome: string; precoVigente: number | null }[];
   kits: KitPublico[];
+  /** Itens tamanhados com grade (RN-231) — coleta de corte→tamanho por kit. */
+  itensTamanhados: ItemTamanhadoPublico[];
   inscritos: InscritoForm[];
   euCorro: boolean;
   onInscrito: (index: number, patch: Partial<InscritoForm>) => void;
@@ -44,6 +131,8 @@ export function StepModalidadeKit({
   onRemoveInscrito: (index: number) => void;
   errosModalidade: (string | undefined)[];
   errosKit: (string | undefined)[];
+  /** Erro por (inscrito × itemId) — tamanho obrigatório do item do kit. */
+  errosTamanhos: Record<string, string>[];
   /** RN-347 (leitor · CKFORM-T4): `true` = evento repassa a taxa ao comprador. */
   taxaRepassada: boolean;
 }): React.JSX.Element {
@@ -76,6 +165,9 @@ export function StepModalidadeKit({
           inscrito.kitId.length > 0
             ? (kitsOfertados.find((k) => k.id === inscrito.kitId) ?? null)
             : null;
+        // RN-231: itens tamanhados do kit escolhido — cada atleta escolhe o
+        // SEU corte→tamanho (por inscrito, ADR-011).
+        const itensDoKitEscolhido = itensTamanhadosDoKit(itensTamanhados, inscrito.kitId);
 
         return (
           <div
@@ -101,7 +193,7 @@ export function StepModalidadeKit({
               name={`modalidade-${i}`}
               label="Modalidade"
               value={inscrito.modalidade}
-              onValueChange={(v) => onInscrito(i, { modalidade: v, kitId: '' })}
+              onValueChange={(v) => onInscrito(i, { modalidade: v, kitId: '', tamanhos: {} })}
               errorMessage={errosModalidade[i] ?? ''}
             >
               {modalidades.map((m) => {
@@ -144,7 +236,7 @@ export function StepModalidadeKit({
                   name={`kit-${i}`}
                   label="Kit"
                   value={inscrito.kitId}
-                  onValueChange={(v) => onInscrito(i, { kitId: v })}
+                  onValueChange={(v) => onInscrito(i, { kitId: v, tamanhos: {} })}
                   errorMessage={errosKit[i] ?? ''}
                 >
                   {kitsOfertados.map((k) => (
@@ -162,9 +254,33 @@ export function StepModalidadeKit({
                   ))}
                 </RadioGroup>
               )}
-              <p className="mt-2 text-xs text-text-tertiary">
-                O tamanho do kit é confirmado na retirada, nas janelas do evento.
-              </p>
+              {/* RN-231: com grade configurada o tamanho é escolhido AQUI
+                  (corte → tamanho, por atleta); sem grade, mantém a nota do
+                  fluxo antigo (confirmação na retirada). */}
+              {itensDoKitEscolhido.length === 0 ? (
+                <p className="mt-2 text-xs text-text-tertiary">
+                  O tamanho do kit é confirmado na retirada, nas janelas do evento.
+                </p>
+              ) : (
+                itensDoKitEscolhido.map((item) => (
+                  <SeletorGradeItem
+                    key={item.id}
+                    item={item}
+                    inscritoIndex={i}
+                    valor={inscrito.tamanhos[item.id] ?? ''}
+                    onChange={(sufixo) => {
+                      // Corte trocado (sufixo '') REMOVE a escolha do item —
+                      // nunca fica um tamanho de corte antigo no payload.
+                      const { [item.id]: _fora, ...resto } = inscrito.tamanhos;
+                      onInscrito(i, {
+                        tamanhos:
+                          sufixo.length > 0 ? { ...resto, [item.id]: sufixo } : resto,
+                      });
+                    }}
+                    errorMessage={errosTamanhos[i]?.[item.id] ?? ''}
+                  />
+                ))
+              )}
 
               {/* Frente 7: visão do kit escolhido — imagem 1:1, descrição e o
                   que está incluso, com hierarquia de H's/textos do DS. */}
