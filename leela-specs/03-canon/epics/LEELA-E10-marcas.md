@@ -186,3 +186,18 @@ Consolidar as ativações de cada marca via índice inverso mantido por Function
 - **RN-171 · Registro de patrocinador reutilizável no tenant + autocomplete.** O patrocinador cadastrado fica salvo no registro reutilizável (`profissionais/{profId}/marcas`, o alvo de S811) e alimenta o cadastro futuro de patrocínio em outro evento por **autocomplete/seleção** — não se recomeça do zero. Reusa o shape `ParceriaPatrocinador` (`packages/core/src/clubs/parceria.ts:122-132`: nome/modeloComercial/valorAnual/contrapartida) promovido a registro reutilizável. RN-123 ✅ (modelo comercial).
 
 Story `S-R9-12`. Spec: `02-rodadas/2026-07-18-ux-review/`.
+
+### Tela dedicada `/marcas` (lote MARCAS-TELA · 2026-07-19)
+
+A **tela dedicada** do recorte S811 foi entregue no painel (antes só havia o registro + autocomplete no modal de patrocínio do R9-E). Escopo entregue:
+
+- **Rota própria `/marcas`** na sidebar (o item "Marcas" do DS, antes inerte, agora navega) — decisão de navegação: rota de 1º nível, não aba em Configurações, pelo padrão do painel (espelho de `CrmRoutes`) e porque o DS já reserva o item "Marcas". Commits `[LEELA-MARCAS-T1..T3]`.
+- **Lista** densa (logo 1:1 + nome + Badge de modelo comercial + detalhe R$/ano ou contrapartida), busca por nome, contador "mostrando X de Y", EmptyState honesto.
+- **Criar/editar** via modal do DS (nome + modelo RN-123 condicional + valor/contrapartida + FileInput de logo 1:1 upload-only). Em edição o docId é fixo (renomear não cria órfão).
+- **Excluir** via `ConfirmModal` com consequências reais.
+
+**Decisões documentadas (honestidade de dado):**
+- "Em quantos patrocínios a marca é usada" foi **OMITIDO** — a contagem de ativações (`qtdAtivacoes`) é o **S812** (ainda 🧊 Icebox) e não há reader barato neste recorte. Não se exibe número inventado; a tela explica o papel do registro.
+- **Semântica de exclusão:** excluir remove o doc do registro reutilizável — a marca sai do autocomplete de patrocínios **futuros**; patrocínios **já cadastrados** em eventos/clubes são cópias independentes (`ParceriaPatrocinador`) e **permanecem intactos**. Documentada na própria `ConfirmModal`.
+
+**Falta (segue no horizonte do épico):** consolidação de ativações + toggle de logo (**S812**), que mantém `marcas/{marcaId}/ativacoes` + `qtdAtivacoes` por Function. Quando entrar, exibir a contagem na lista e trocar o preview da exclusão para as ativações afetadas.

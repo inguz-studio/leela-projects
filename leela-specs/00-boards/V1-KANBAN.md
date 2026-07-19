@@ -14,7 +14,7 @@ tags:
 
 - [ ] **[E13] App do atleta** — descobrir, inscrever, ingresso com QR e clube no celular 📋 [[LEELA-E13-app-atleta]]
 - [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend completo (atribuição + comissão + saldo) + UI de comissão entregue (config, saldo dos 2 lados, repasse manual); falta o painel do promotor [[LEELA-E08-influenciador]]
-- [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 📋 [[LEELA-E10-marcas]]
+- [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 🔄 registro reutilizável + logo 1:1 + autocomplete (R9-E) + tela dedicada `/marcas` no painel entregue (lista/criar/editar/excluir); falta a consolidação de ativações (S812) [[LEELA-E10-marcas]]
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 [[LEELA-E11-analytics]]
 - [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto + hub "Clientes & Comunicação" entregue (lista cross-evento com LTV + detalhe com histórico e aniversário); falta o disparo de comunicação a segmentos [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
