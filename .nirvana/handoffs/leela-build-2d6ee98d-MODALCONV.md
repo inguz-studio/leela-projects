@@ -80,4 +80,30 @@ Gates: DS 1046/1046 · tsc DS 0 (cmdk resolve react-dialog transitivamente, inta
 
 Commit: [LEELA-MODALCONV-T2]
 
-## T3 — showcase do Dialog — status: pendente (próximo)
+## T3 — showcase do Dialog — status: FEITO
+
+Adicionado o DemoCard "Dialog" na seção Overlays do showroom
+(`showcase/src/sections/ComponentsPage.tsx`), no padrão das demais seções: um
+gatilho (Button com ref) abre o `Dialog` público com titleIcon (Flame),
+description, footer e `returnFocusRef` (foco volta ao gatilho). Brasa+Wine: o
+`ShowroomBar` troca o tema ao vivo (todo o showroom, incl. o novo card, renderiza
+nos dois temas) — mesmo mecanismo das outras seções §8.
+
+De quebra (correção de prosa que T1 tornou obsoleta): as descrições do Modal e do
+Drawer diziam "Radix"; agora dizem "Radix-free"; a descrição da seção Overlays
+explica o comportamento único via useDialogBehavior.
+
+Reuso vs criado: reaproveitados os primitivos do showroom (`Section`, `DemoCard`,
+`dsIcon`, `Button`) e o padrão de demo interativa; nada novo criado.
+
+Gates: `showcase:build` exit 0 (o card novo type-check limpo; avisos "use client"
+do bundle são pré-existentes do cmdk/popover/tooltip, alheios ao react-dialog).
+
+Commit: [LEELA-MODALCONV-T3]
+
+## Follow-ups (fora do escopo dos gates deste lote)
+- Prosa "Radix" ainda em `Modal.docs.mdx`/`Drawer.docs.mdx`/`*.stories.tsx`/
+  `LLM.txt` (storybook/docs, não são gate) — atualizar quando tocar o storybook.
+- `@radix-ui/react-dialog` segue no lockfile como TRANSITIVA de cmdk/vaul;
+  remoção total exigiria trocar essas libs (fora do escopo, sem ganho ao bundle
+  público, que não usa cmdk).

@@ -20,6 +20,7 @@ import {
   DateRangePicker,
   DonutChart,
   ConfirmModal,
+  Dialog,
   Divider,
   Drawer,
   DropdownMenu,
@@ -133,6 +134,8 @@ export function ComponentsPage(): JSX.Element {
   const [etapa, setEtapa] = React.useState(2);
   const [modalAberto, setModalAberto] = React.useState(false);
   const [confirmAberto, setConfirmAberto] = React.useState(false);
+  const [dialogAberto, setDialogAberto] = React.useState(false);
+  const dialogTriggerRef = React.useRef<HTMLButtonElement>(null);
   const [drawerAberto, setDrawerAberto] = React.useState(false);
   const [busca, setBusca] = React.useState('');
   const [kitSel, setKitSel] = React.useState('');
@@ -1038,11 +1041,14 @@ export function ComponentsPage(): JSX.Element {
       </Section>
 
       {/* ── Overlays ──────────────────────────────────────────────────── */}
-      <Section title="Overlays" description="Modal e ConfirmModal (o DropdownMenu está em Ações).">
+      <Section
+        title="Overlays"
+        description="Modal, ConfirmModal, Dialog e Drawer — todos Radix-free (ADR-017): comportamento de diálogo (focus trap, Esc, scroll-lock, retorno de foco) é fonte única no useDialogBehavior. O DropdownMenu está em Ações."
+      >
         <div className="grid grid-cols-1 gap-[var(--spacing-4)] xl:grid-cols-2">
           <DemoCard
             title="Modal"
-            description="Diálogo Radix com quatro vias de fechamento: X, Esc, overlay e botão do rodapé."
+            description="Diálogo centrado do painel (Radix-free) com quatro vias de fechamento: X, Esc, overlay e botão do rodapé."
           >
             <div>
               <Button variant="secondary" onClick={() => setModalAberto(true)}>
@@ -1111,8 +1117,42 @@ export function ComponentsPage(): JSX.Element {
           </DemoCard>
 
           <DemoCard
+            title="Dialog"
+            description="Primitivo Radix-free da superfície PÚBLICA (ADR-017): bottom-sheet no mobile → centrado a partir de sm. Título com ícone, descrição, footer e retorno de foco ao gatilho (returnFocusRef). É a fonte do comportamento que Modal e Drawer reusam."
+          >
+            <div>
+              <Button
+                ref={dialogTriggerRef}
+                variant="secondary"
+                onClick={() => setDialogAberto(true)}
+              >
+                Abrir dialog
+              </Button>
+            </div>
+            <Dialog
+              open={dialogAberto}
+              onOpenChange={setDialogAberto}
+              title="Regulamento do evento"
+              titleIcon={dsIcon(Flame)}
+              description="Leia antes de confirmar a inscrição."
+              returnFocusRef={dialogTriggerRef}
+              footer={
+                <Button variant="secondary" onClick={() => setDialogAberto(false)}>
+                  Fechar
+                </Button>
+              }
+            >
+              <p className="text-[length:var(--font-size-base)] text-[var(--text-secondary)]">
+                O mesmo dialog acessível que a landing usa no RegulamentoModal —
+                agora servido pelo DS. Tab cicla dentro do painel; Esc, X e o
+                clique no overlay fecham; o foco volta para o botão que abriu.
+              </p>
+            </Dialog>
+          </DemoCard>
+
+          <DemoCard
             title="Drawer"
-            description="Painel off-canvas Radix (RESP-M1): a MESMA Sidebar vira menu mobile abaixo de lg. Fecha por Esc, overlay e ao navegar. Slide gated por motion-safe (reduce = sem animação)."
+            description="Painel off-canvas Radix-free (RESP-M1): a MESMA Sidebar vira menu mobile abaixo de lg. Fecha por Esc, overlay e ao navegar. Slide gated por motion-safe (reduce = sem animação)."
           >
             <div>
               <Button variant="secondary" onClick={() => setDrawerAberto(true)}>
