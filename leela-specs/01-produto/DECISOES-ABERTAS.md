@@ -3,6 +3,7 @@
 > Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-17, rodada de decisões do Vitor — itens 1-7 ratificados**).
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md` + seção Ratificadas no fim.
 > **Nada abaixo bloqueia código**: tudo roda com default defensável em vigor. Ratificar = confirmar o default; mudar = eu ajusto no próximo lote.
+> 📄 Versão longa e argumentada (porquê, caso sim, caso não, recomendação por JTBD/story): [[DECISOES-EM-ABERTO]].
 
 ## 🟢 Ratificações rápidas — RESOLVIDAS em 2026-07-17
 
