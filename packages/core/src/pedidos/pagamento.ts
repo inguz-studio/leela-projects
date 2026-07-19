@@ -175,6 +175,28 @@ export interface CartaoPagamento {
 }
 
 /**
+ * TAXAFLEX (RN-179) — a linha de taxa RESOLVIDA (override > global > legado)
+ * e CONGELADA no ATO DA COMPRA, na MESMA tx que cria pedido/pagamento.
+ * Mudar a tabela depois NUNCA reprecifica este doc; o replay lê daqui e não
+ * recomputa. A `conciliacao` (escrita na confirmação) COPIA estes valores —
+ * nunca re-resolve a tabela. Mesmo padrão de congelamento do COMF2
+ * (`comissaoConfig` no doc da conversão). Ausente = doc pré-TAXAFLEX
+ * (leitura Postel; conciliação segue o comportamento vigente).
+ */
+export interface TaxaCongelada {
+  /** Meio da tabela usado na resolução ('pix' | 'cartao'; boleto inerte). */
+  meio: string;
+  /** Percentual congelado (0–100). */
+  percentual: number;
+  /** Componente fixo congelado em CENTAVOS inteiros (≥ 0). */
+  fixoCentavos: number;
+  /** Taxa TOTAL da venda em R$ (round(face × pct) + fixo — RN-183). */
+  valor: number;
+  /** De onde a linha veio: 'override' | 'global' | 'legado' (rastro). */
+  origem: string;
+}
+
+/**
  * Conciliação da transação (slide-in §Conciliação) — escrita pelo MESMO
  * webhook que confirma o pagamento (write atômico de doc único).
  */
@@ -241,6 +263,12 @@ export interface Pagamento {
    * É sempre o VALOR em R$, nunca o `platformFeePct` do termo (fix 703db9c).
    */
   taxaRepassada?: number;
+  /**
+   * TAXAFLEX (RN-179): linha de taxa congelada no ato da compra — ver
+   * {@link TaxaCongelada}. Presente em TODO doc novo (inclusive caminho
+   * legado pct-único, origem 'legado'); ausente = doc pré-TAXAFLEX.
+   */
+  taxaCongelada?: TaxaCongelada;
   /** Só quando forma === 'cartao_credito' */
   cartao?: CartaoPagamento;
   /**
@@ -309,13 +337,18 @@ export function valorPagoPeloComprador(
 /**
  * Parsing do bloco de conciliação (fail-fast). Quando `valorFinal` é
  * fornecido (caminho do parsePagamento), valida a invariante monetária
- * `repasseOrganizador ≈ valorFinal − taxaValor` (tolerância de 1 centavo —
- * arredondamento do gateway). @pure
+ * MODE-AWARE (TAXAFLEX/RN-182):
+ *   `repasseOrganizador ≈ valorFinal − taxaValor + taxaRepassada`
+ * — em 'incorporada' (taxaRepassada 0/ausente) é o `valorFinal − taxaValor`
+ * vigente; em 'repassada' (taxaRepassada == taxaValor) o repasse é o FACE
+ * (a taxa foi paga por fora pelo comprador e nunca entra no "a receber").
+ * Tolerância de 1 centavo (arredondamento do gateway). @pure
  */
 export function parseConciliacao(
   id: string,
   raw: unknown,
-  valorFinal?: number
+  valorFinal?: number,
+  taxaRepassada: number = 0
 ): Conciliacao {
   if (raw === null || typeof raw !== 'object') {
     throw new Error(`Pagamento ${id}: "conciliacao" inválida`);
@@ -343,18 +376,23 @@ export function parseConciliacao(
     ),
   };
 
-  // Invariante (r1 fix 2d): repasse ao organizador = valorFinal − taxa,
-  // com 1 centavo de folga (arredondamento do gateway). Só verificável
-  // quando o chamador fornece o valorFinal do pagamento.
+  // Invariante (r1 fix 2d · mode-aware TAXAFLEX/RN-182): repasse ao
+  // organizador = valorFinal − taxaValor + taxaRepassada, com 1 centavo de
+  // folga (arredondamento do gateway). Em 'incorporada' taxaRepassada é 0
+  // (fórmula vigente intocada); em 'repassada' taxaRepassada == taxaValor e
+  // o repasse é o FACE. Só verificável quando o chamador fornece valorFinal.
   if (valorFinal !== undefined) {
-    const repasseEsperado = roundMoney(valorFinal - conciliacao.taxaValor);
+    const repasseEsperado = roundMoney(
+      valorFinal - conciliacao.taxaValor + taxaRepassada
+    );
     if (
       Math.abs(conciliacao.repasseOrganizador - repasseEsperado) >
       TOLERANCIA_CENTAVO + 1e-9
     ) {
       throw new Error(
         `${ctx}: "conciliacao.repasseOrganizador" (${conciliacao.repasseOrganizador}) ` +
-          `≉ valorFinal − taxaValor (${repasseEsperado}) — invariante monetária violada`
+          `≉ valorFinal − taxaValor + taxaRepassada (${repasseEsperado}) — ` +
+          `invariante monetária violada (RN-182)`
       );
     }
   }
@@ -588,8 +626,40 @@ export function parsePagamento(
     pagamento.conciliacao = parseConciliacao(
       id,
       data['conciliacao'],
-      pagamento.valorFinal
+      pagamento.valorFinal,
+      pagamento.taxaRepassada ?? 0
     );
+  }
+  // TAXAFLEX (RN-179): linha congelada no ato da compra — opcional (doc
+  // pré-TAXAFLEX não tem). Quando presente, fail-fast em lixo (só Function
+  // escreve; corrupção = bug, nunca mascarar em dinheiro).
+  if (data['taxaCongelada'] !== undefined) {
+    const tcRaw = data['taxaCongelada'];
+    if (tcRaw === null || typeof tcRaw !== 'object') {
+      throw new Error(`${ctx}: "taxaCongelada" inválida (RN-179)`);
+    }
+    const tc = tcRaw as Record<string, unknown>;
+    const pct = tc['percentual'];
+    const fixo = tc['fixoCentavos'];
+    if (typeof tc['meio'] !== 'string' || tc['meio'].length === 0) {
+      throw new Error(`${ctx}: "taxaCongelada.meio" inválido`);
+    }
+    if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+      throw new Error(`${ctx}: "taxaCongelada.percentual" deve estar entre 0 e 100`);
+    }
+    if (!Number.isInteger(fixo) || (fixo as number) < 0) {
+      throw new Error(`${ctx}: "taxaCongelada.fixoCentavos" deve ser inteiro ≥ 0`);
+    }
+    if (typeof tc['origem'] !== 'string' || tc['origem'].length === 0) {
+      throw new Error(`${ctx}: "taxaCongelada.origem" inválida`);
+    }
+    pagamento.taxaCongelada = {
+      meio: tc['meio'],
+      percentual: pct,
+      fixoCentavos: fixo as number,
+      valor: parseMoney(ctx, 'taxaCongelada.valor', tc['valor']),
+      origem: tc['origem'],
+    };
   }
   if (data['webhookEventoId'] !== undefined) {
     const eventoId = data['webhookEventoId'];

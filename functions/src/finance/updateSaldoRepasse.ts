@@ -64,6 +64,7 @@ import {
   computeSaldoRepasse,
   isEstadoRepasse,
   isModoTaxa,
+  roundMoney,
   type EventoSaldoInput,
   type ModoTaxa,
   type RepasseSaldoInput,
@@ -227,8 +228,30 @@ export async function lerInputsSaldoRepasse(
         typeof eventoIdPagamento === 'string'
           ? (modoPorEvento.get(eventoIdPagamento) ?? 'incorporada')
           : 'incorporada';
+      // TAXAFLEX (RN-179/182): doc com CARIMBO usa a taxa REAL congelada na
+      // venda (pct+fixo por meio) — a aproximação (a) "feePct do termo
+      // VIGENTE" vira exata p/ docs novos. O modo congelado do DOC
+      // (`taxaRepassada` presente ⇒ repassada) vence o mapa do evento.
+      // Doc pré-TAXAFLEX (sem carimbo) segue a imputação vigente.
+      const tc = doc.get('taxaCongelada') as { valor?: unknown } | undefined;
+      const taxaRepassadaDoc = doc.get('taxaRepassada');
+      let valorLiquido: number;
+      if (
+        tc !== undefined &&
+        typeof tc.valor === 'number' &&
+        Number.isFinite(tc.valor) &&
+        tc.valor >= 0
+      ) {
+        const ehRepassada =
+          typeof taxaRepassadaDoc === 'number' && taxaRepassadaDoc > 0;
+        valorLiquido = ehRepassada
+          ? valorFinal
+          : Math.max(0, roundMoney(valorFinal - tc.valor));
+      } else {
+        valorLiquido = computeLiquidoProdutor(valorFinal, feePct, modo);
+      }
       transacoes.push({
-        valorLiquido: computeLiquidoProdutor(valorFinal, feePct, modo),
+        valorLiquido,
         confirmadaEm: pagoEm.toDate(),
       });
     }

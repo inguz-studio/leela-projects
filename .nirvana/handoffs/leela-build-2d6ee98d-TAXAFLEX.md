@@ -13,7 +13,7 @@
 | T0 | Contexto + inventário de reuso + desenho + checkpoint + card (j) → Em execução | FEITO | (este commit) |
 | T1 | Modelo + Rules: core `taxaPlataforma.ts`, `platform/config.taxaPlataforma` global, `commercialTerms.taxaTabela` override, callable `setTaxaPlataformaGlobal` + api-client, Rules fail-closed (RN-178/404) | FEITO — tsc 0 · eslint 0 · unit 26/26 · Rules r6 11/11 | (T1) |
 | T2 | Core: extensão `computeSaleState` (param `taxaMeio` resolvido + saída `taxaMeioAplicada` congelável) e `computeLiquidoProdutor` (união `number \| TaxaMeio`) + unit (RN-180/182/183) | FEITO — tsc 0 · eslint 0 · 160/160 (incl. regressão rn347/checkoutCore/repasseCore) | (T2) |
-| T3 | Congelamento: carimbo `taxaCongelada` na criação (SEMPRE, incl. legado) + `conciliacao` na tx da confirmação + `parseConciliacao` mode-aware + `agregarFinanceiro` híbrido + janela D+N do carimbo (RN-179/182) | — | — |
+| T3 | Congelamento: carimbo `taxaCongelada` na criação (SEMPRE, incl. legado) + `conciliacao` na tx da confirmação (porta única `processarWebhookPagamento`) + `parseConciliacao` mode-aware + `agregarFinanceiro` híbrido + janela D+N do carimbo + cotação com a MESMA resolução (RN-179/182) | FEITO — tsc 0 · eslint 0 · congelamento r6 8/8 · regressão r6 exit 0 (rn347Checkout+financeiroEvento+repasseSaldo) | (T3) |
 | T4 | Estorno: fixo no rateio via `sale.taxaRepassada` (mecânica `montarItensDoPedido` REUSADA) + testes ∑=carimbo/fixo indivisível (RN-181) | — | — |
 | T5 | Checkout E12/S1210: cotação `totaisPorMeio` + StepResumo total por opção + nota A-5 varia por meio (RN-180) | — | — |
 | T6 | Config UI E16/S1606: tela global (callable) + seção override no TermsEditor (RN-178/404/406) | — | — |
@@ -58,6 +58,10 @@ CRIADO (justificado):
 10. **Comissão de afiliado segue FACE** (`computeComissaoConversao(valorFace)`) — INTOCADA (premissa c).
 11. **Cotação** calcula o meio alternativo com parcelas=1 p/ `totaisPorMeio` (total à vista por opção); falha do meio alternativo ⇒ `null` naquele meio (nunca degrada a cotação principal).
 12. **Modo no confirmador** derivado do DOC congelado (`taxaRepassada` presente ⇒ repassada), nunca re-lendo o evento.
+
+## Notas de coordenação (SUITE-STAB)
+- `financeiroEvento.integration` e `repasseSaldo.integration` cravavam porta 8080 — passaram a honrar `LEELA_FS_EMU_PORT` (default 8080 preservado, padrão ck2Rules). Motivo: são a REGRESSÃO das Functions que a TAXAFLEX tocou (`agregarFinanceiro`/`updateSaldoRepasse`) e a lane é proibida de usar 8080. Zero mudança de comportamento no fluxo default da suíte.
+- Cotação → mudança de tabela → cobrança: a cobrança RE-RESOLVE no ato da compra (o valor autoritativo é o do `createInscricaoCharge`, padrão vigente da cotação informativa). O congelamento vale da COMPRA em diante (premissa; RN-179 fala em "ato da compra").
 
 ## Fronteiras (NÃO tocar)
 SE reembolso devolve taxa (BENCHMARK-REEMBOLSO/item 23) · taxa por parcela · ator "comercial" · base da comissão de afiliado · testes de infra da SUITE-STAB (8080/9099; fixtures/helpers/setup fora do meu território — checkout*/claim*/precoBloqueado são MEUS).

@@ -438,6 +438,52 @@ export async function processarWebhookPagamento(
       logger.warn('webhook_cartao_sem_dados', { pagamentoId, chargeId: resultado.chargeId });
     }
 
+    // TAXAFLEX (RN-179/182): a CONCILIAÇÃO nasce na MESMA tx da confirmação,
+    // COPIANDO a linha congelada no ato da compra (`taxaCongelada` — nunca
+    // re-resolve a tabela: mudar tabela/termo entre a compra e a confirmação
+    // não reprecifica). repasseOrganizador é MODE-AWARE (RN-182), com o modo
+    // derivado do DOC congelado (`taxaRepassada` presente ⇒ 'repassada' na
+    // venda), nunca re-lendo o evento: repassada ⇒ repasse = FACE (a taxa
+    // foi paga por fora); incorporada ⇒ repasse = FACE − taxa. Doc SEM
+    // carimbo (pré-TAXAFLEX) ⇒ sem conciliação (comportamento vigente).
+    const tcRaw = pagamentoSnap.get('taxaCongelada') as
+      | { valor?: unknown; percentual?: unknown; fixoCentavos?: unknown }
+      | undefined;
+    let blocoConciliacao: Record<string, unknown> | undefined;
+    if (
+      tcRaw !== undefined &&
+      typeof tcRaw.valor === 'number' &&
+      Number.isFinite(tcRaw.valor) &&
+      tcRaw.valor >= 0 &&
+      typeof tcRaw.percentual === 'number' &&
+      Number.isFinite(tcRaw.percentual)
+    ) {
+      const valorFinalDoc = pagamentoSnap.get('valorFinal') as number;
+      const taxaRepassadaDoc = pagamentoSnap.get('taxaRepassada') as
+        | number
+        | undefined;
+      const ehRepassada =
+        typeof taxaRepassadaDoc === 'number' && taxaRepassadaDoc > 0;
+      const fixoCentavos =
+        typeof tcRaw.fixoCentavos === 'number' &&
+        Number.isInteger(tcRaw.fixoCentavos) &&
+        tcRaw.fixoCentavos >= 0
+          ? tcRaw.fixoCentavos
+          : 0;
+      blocoConciliacao = {
+        idTransacao: resultado.chargeId,
+        // Enum canônico D2 (gateway único) — o sandbox/mock representa o
+        // MESMO rail; o doc de conciliação carrega o enum do domínio.
+        gateway: 'asaas',
+        taxaPct: tcRaw.percentual,
+        taxaFixa: roundMoney(fixoCentavos / 100),
+        taxaValor: tcRaw.valor,
+        repasseOrganizador: ehRepassada
+          ? valorFinalDoc
+          : roundMoney(valorFinalDoc - tcRaw.valor),
+      };
+    }
+
     // ── ESCRITAS (efeito financeiro — exactly-once sob a+b+c) ─────────────
     gravarLedger('confirmado');
 
@@ -446,6 +492,9 @@ export async function processarWebhookPagamento(
       pagoEm: agora,
       atualizadoEm: agora,
       ...(blocoCartao !== undefined ? { cartao: blocoCartao } : {}),
+      ...(blocoConciliacao !== undefined
+        ? { conciliacao: blocoConciliacao }
+        : {}),
     });
     tx.update(pedidoRef, { status: 'pago', atualizadoEm: agora });
 

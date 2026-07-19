@@ -18,7 +18,8 @@
  *     nada libera;
  *   - ATAQUE (regressão RN-357): cliente não escreve saldo/current.
  *
- * Pré-requisito: Firestore Emulator na 8080 (via emulators:exec).
+ * Pré-requisito: Firestore Emulator via emulators:exec — honra
+ * LEELA_FS_EMU_PORT (default 8080; a lane TAXAFLEX roda no r6 8480).
  */
 import {
   assertFails,
@@ -138,11 +139,12 @@ beforeAll(async () => {
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: 8080,
+      port: Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080),
     },
   });
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] =
+      `localhost:${Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080)}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   db = admin.firestore();

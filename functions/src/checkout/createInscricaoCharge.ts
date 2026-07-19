@@ -50,8 +50,13 @@ import {
   isFormaPagamento,
   isKitInscrito,
   isModoTaxa,
+  meioDaForma,
   modoTaxaDoEvento,
   MSG_EVENTO_FECHADO_SEM_CUPOM,
+  PLATFORM_CONFIG_DOC_PATH,
+  CAMPO_TAXA_PLATAFORMA,
+  resolverTaxaMeio,
+  validarTabelaTaxaPlataforma,
   montarItensDoPedido,
   PIX_EXPIRACAO_SEGUNDOS,
   normalizarCodigoCupom,
@@ -93,6 +98,7 @@ import {
   type PaymentProvider,
   type SaleState,
   type StatusPedido,
+  type TabelaTaxaPlataforma,
 } from '@leela/core';
 import { assertTenantAtivo } from '../eventos/criarEvento';
 import {
@@ -586,6 +592,14 @@ export interface InsumosVenda {
    * e mesmo que tivesse, este valor vem daqui).
    */
   modoTaxa: ModoTaxa;
+  /**
+   * TAXAFLEX (RN-178): tabela GLOBAL de taxa por meio de pagamento
+   * (`platform/config.taxaPlataforma`), lida na MESMA carga de insumos.
+   * `null` = plataforma ainda sem tabela OU shape inválido (leitura
+   * fail-safe; a escrita é fail-closed no callable) — a resolução cai no
+   * override do termo e, por fim, no `platformFeePct` legado.
+   */
+  taxaTabelaGlobal: TabelaTaxaPlataforma | null;
 }
 
 /**
@@ -886,6 +900,19 @@ export async function carregarInsumos(
     }
   }
 
+  // TAXAFLEX (RN-178): tabela GLOBAL de taxa por meio — 1 doc read, mesma
+  // carga. Shape inválido/ausente ⇒ null (fail-safe de leitura; resolução
+  // cai no override do termo → platformFeePct legado).
+  const configSnap = await db.doc(PLATFORM_CONFIG_DOC_PATH).get();
+  const taxaTabelaRaw = configSnap.exists
+    ? (configSnap.get(CAMPO_TAXA_PLATAFORMA) as unknown)
+    : undefined;
+  const taxaTabelaGlobal: TabelaTaxaPlataforma | null =
+    taxaTabelaRaw !== undefined &&
+    validarTabelaTaxaPlataforma(taxaTabelaRaw).length === 0
+      ? (taxaTabelaRaw as TabelaTaxaPlataforma)
+      : null;
+
   // Termo do tenant (RN-406) — SEM termo, SEM venda (nunca taxa default)
   const termsProvider = createTermsProvider(
     async (tid): Promise<CommercialTerms | null> => {
@@ -916,6 +943,7 @@ export async function carregarInsumos(
     afiliadoAtribuicao,
     terms,
     modoTaxa,
+    taxaTabelaGlobal,
   };
 }
 
@@ -1384,6 +1412,19 @@ async function criarDocsDeCheckout(
       if (sale.taxaRepassada > 0) {
         pagamentoDoc['taxaRepassada'] = sale.taxaRepassada;
       }
+      // TAXAFLEX (RN-179): CONGELA a linha de taxa resolvida no ato da
+      // compra (override > global > legado) na MESMA tx que cria o doc —
+      // mudar a tabela NUNCA reprecifica este pedido; o replay lê daqui; a
+      // conciliação (confirmação) COPIA estes valores sem re-resolver.
+      // Carimbo SEMPRE (inclusive origem 'legado') — congela também mudança
+      // de platformFeePct entre a venda e os recomputes do E09.
+      pagamentoDoc['taxaCongelada'] = {
+        meio: meioDaForma(sale.forma),
+        percentual: sale.taxaMeioAplicada.percentual,
+        fixoCentavos: sale.taxaMeioAplicada.fixoCentavos,
+        valor: sale.taxa,
+        origem: sale.taxaMeioAplicada.origem,
+      };
       // RN-157 (CK2-T5): PIX expira em 30 min da CRIAÇÃO do pedido —
       // carimbo do relógio INJETADO (não do gateway): a autoridade do timer
       // é a plataforma; replay lê este doc e nunca re-estende o prazo.
@@ -1703,6 +1744,7 @@ export async function createInscricaoChargeCore(
       afiliadoAtribuicao,
       terms,
       modoTaxa,
+      taxaTabelaGlobal,
     } = await carregarInsumos(db, input, agora());
     // RN-223 (T4) — validação de tamanho NA ORIGEM, antes de qualquer escrita:
     // tamanho/SKU forjado ⇒ invalid-argument fail-closed (nada criado).
@@ -1716,6 +1758,15 @@ export async function createInscricaoChargeCore(
         parcelas: input.parcelas,
         installmentRules: terms.installmentRules,
         platformFeePct: terms.platformFeePct,
+        // TAXAFLEX (RN-178/179): linha do MEIO desta venda resolvida no ATO
+        // DA COMPRA (override > global > legado) — vira o carimbo
+        // `taxaCongelada` do doc de pagamento (criarDocsDeCheckout).
+        taxaMeio: resolverTaxaMeio(
+          meioDaForma(input.forma),
+          taxaTabelaGlobal,
+          terms.taxaTabela,
+          terms.platformFeePct
+        ),
         // RN-347: modo do DOC do evento (carregarInsumos) — nunca do input
         modoTaxa,
         agora: agora(),

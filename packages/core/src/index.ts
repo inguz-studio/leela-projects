@@ -671,6 +671,7 @@ export {
 export type {
   Pagamento,
   Conciliacao,
+  TaxaCongelada,
   CupomAplicado,
   CartaoPagamento,
   FormaPagamento,

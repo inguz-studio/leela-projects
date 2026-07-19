@@ -40,7 +40,9 @@ import {
   computeSaleState,
   isCodigoCupomValido,
   isFormaPagamento,
+  meioDaForma,
   normalizarCodigoCupom,
+  resolverTaxaMeio,
   type FormaPagamento,
   type SaleState,
 } from '@leela/core';
@@ -227,6 +229,14 @@ export async function cotarInscricaoCheckoutCore(
       parcelas: input.parcelas,
       installmentRules: insumos.terms.installmentRules,
       platformFeePct: insumos.terms.platformFeePct,
+      // TAXAFLEX (RN-178/180): a MESMA resolução da cobrança (override >
+      // global > legado) — o preço da vitrine É o preço da cobrança.
+      taxaMeio: resolverTaxaMeio(
+        meioDaForma(input.forma),
+        insumos.taxaTabelaGlobal,
+        insumos.terms.taxaTabela,
+        insumos.terms.platformFeePct
+      ),
       // RN-347: modo do DOC do evento (carregarInsumos) — nunca do input.
       // A cotação e a cobrança derivam do MESMO modo: o preço da vitrine é
       // o preço da cobrança.

@@ -48,6 +48,7 @@ import {
   createTermsProvider,
   isModoTaxa,
   KITS_INSCRITO,
+  roundMoney,
   STATUS_INSCRITO,
   TermsNotFoundError,
 } from '@leela/core';
@@ -83,7 +84,29 @@ export interface FinanceiroEvento {
 }
 
 /**
- * Deriva taxa e líquido a partir do bruto + % do termo (null-safe, RN-406).
+ * Σ dos CARIMBOS de taxa (TAXAFLEX · RN-179/182) dos pagamentos CONFIRMADOS
+ * do evento — a fonte por transação da taxa real (pct+fixo por meio,
+ * congelada na compra). `receitaComCarimbo` = Σ valorFinal desses docs, a
+ * fatia da receita que NÃO precisa mais de imputação por %.
+ */
+export interface CarimbosTaxaEvento {
+  taxaCarimbada: number;
+  receitaComCarimbo: number;
+}
+
+/**
+ * Deriva taxa e líquido a partir do bruto + % do termo (null-safe, RN-406),
+ * agora HÍBRIDO com os carimbos TAXAFLEX (RN-179/182):
+ *
+ *   taxaValor = Σ taxaCongelada.valor (confirmados com carimbo)
+ *             + computeTaxa(max(0, bruto − Σ valorFinal com carimbo), pct)
+ *
+ * — a fatia carimbada usa a taxa REAL da venda (pct+fixo por meio, congelada
+ * na compra; mudar tabela/termo não retroage); só o RESTO legado/seed segue
+ * na imputação por % vigente (aproximação documentada do E09s). Estorno
+ * PARCIAL mantém o pagamento confirmado ⇒ a taxa cheia permanece contada
+ * (conservador p/ o organizador; o SE devolve taxa = BENCHMARK-REEMBOLSO);
+ * estorno INTEGRAL flipa o status e sai do Σ inteiro.
  *
  * RN-347 (EVENTO-CAMPOS): o líquido respeita o MODO da taxa do evento —
  * 'incorporada' (default/vigente): líquido = bruto − taxa;
@@ -91,21 +114,44 @@ export interface FinanceiroEvento {
  * (a taxa nunca foi dinheiro do produtor). Reusa `computeLiquidoProdutor`
  * do core (E09s-L1) — NUNCA reimplementa a matemática. `taxaValor` segue
  * informativo nos DOIS modos (é a fatia Leela; o modo decide QUEM paga).
+ *
+ * Sem termo E sem carimbo ⇒ triple null (vigente — decisão #7: nada libera).
+ * Sem termo COM carimbo (termo deletado é negado pelas Rules — quase
+ * impossível): a fatia carimbada ainda vale; o resto fica sem imputação.
  * @pure
  */
 export function computeFinanceiro(
   receitaBruta: number,
   taxaPct: number | null,
-  modo: ModoTaxa = 'incorporada'
+  modo: ModoTaxa = 'incorporada',
+  carimbos?: CarimbosTaxaEvento
 ): Pick<FinanceiroEvento, 'taxaPct' | 'taxaValor' | 'receitaLiquida'> {
-  if (taxaPct === null) {
+  const temCarimbo =
+    carimbos !== undefined && carimbos.receitaComCarimbo > 0;
+  if (taxaPct === null && !temCarimbo) {
     return { taxaPct: null, taxaValor: null, receitaLiquida: null };
   }
-  return {
-    taxaPct,
-    taxaValor: computeTaxa(receitaBruta, taxaPct),
-    receitaLiquida: computeLiquidoProdutor(receitaBruta, taxaPct, modo),
-  };
+  if (!temCarimbo) {
+    // Caminho vigente byte a byte (só imputação por % do termo)
+    return {
+      taxaPct,
+      taxaValor: computeTaxa(receitaBruta, taxaPct as number),
+      receitaLiquida: computeLiquidoProdutor(receitaBruta, taxaPct as number, modo),
+    };
+  }
+  const restoLegado = Math.max(
+    0,
+    roundMoney(receitaBruta - carimbos.receitaComCarimbo)
+  );
+  const taxaValor = roundMoney(
+    carimbos.taxaCarimbada +
+      (taxaPct !== null ? computeTaxa(restoLegado, taxaPct) : 0)
+  );
+  const receitaLiquida =
+    modo === 'repassada'
+      ? roundMoney(receitaBruta)
+      : Math.max(0, roundMoney(receitaBruta - taxaValor));
+  return { taxaPct, taxaValor, receitaLiquida };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,10 +255,43 @@ export async function recomputarFinanceiroEvento(
     const taxaModoRaw = eventoSnap.get('taxaModo');
     const modoTaxa: ModoTaxa = isModoTaxa(taxaModoRaw) ? taxaModoRaw : 'incorporada';
 
+    // TAXAFLEX (RN-179/182): Σ dos carimbos dos pagamentos CONFIRMADOS do
+    // evento — fonte por transação, MESMO snapshot da tx (query equality-only
+    // eventoId+status: merge de índices single-field, sem índice novo).
+    // Doc com tenantId divergente (ADR-009 violado) fica FORA do Σ.
+    const pagamentosSnap = await tx.get(
+      db
+        .collection('pagamentos')
+        .where('eventoId', '==', eventoId)
+        .where('status', '==', 'confirmado')
+    );
+    let taxaCarimbada = 0;
+    let receitaComCarimbo = 0;
+    for (const pagDoc of pagamentosSnap.docs) {
+      if (pagDoc.get('tenantId') !== tenantId) continue;
+      const tc = pagDoc.get('taxaCongelada') as { valor?: unknown } | undefined;
+      const vf = pagDoc.get('valorFinal');
+      if (
+        tc !== undefined &&
+        typeof tc.valor === 'number' &&
+        Number.isFinite(tc.valor) &&
+        tc.valor >= 0 &&
+        typeof vf === 'number' &&
+        Number.isFinite(vf) &&
+        vf > 0
+      ) {
+        taxaCarimbada = roundMoney(taxaCarimbada + tc.valor);
+        receitaComCarimbo = roundMoney(receitaComCarimbo + vf);
+      }
+    }
+
     const financeiro: FinanceiroEvento = {
       tenantId,
       receitaBruta,
-      ...computeFinanceiro(receitaBruta, taxaPct, modoTaxa),
+      ...computeFinanceiro(receitaBruta, taxaPct, modoTaxa, {
+        taxaCarimbada,
+        receitaComCarimbo,
+      }),
       inscritos,
     };
 
