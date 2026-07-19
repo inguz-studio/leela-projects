@@ -338,6 +338,18 @@ export async function salvarAfiliadoCore(
           : jaExistia
             ? ((snap.get('minimoInscricoes') ?? null) as number | null)
             : null;
+      // Comissão FASE 2 (COMF2): config definida SÓ pelo organizador (RN-310,
+      // validada no core). Ausente no update = preserva; null = remove.
+      // Mudança NUNCA recalcula conversões passadas — a config vigente é
+      // congelada POR CONVERSÃO no webhook (anti forja de percentual
+      // pós-venda); os ∑ (comissaoAcumulada/comissaoRepassada) são
+      // intocáveis por aqui (só webhook/estorno/registrarRepasse).
+      const comissao =
+        input.comissao !== undefined
+          ? input.comissao
+          : jaExistia
+            ? ((snap.get('comissao') ?? null) as unknown)
+            : null;
 
       if (!jaExistia) {
         const doc: Record<string, unknown> = {
@@ -353,6 +365,9 @@ export async function salvarAfiliadoCore(
           cupomCodigo: typeof cupomCodigo === 'string' ? cupomCodigo : null,
           conversoes: 0,
           valorAtribuido: 0,
+          comissao,
+          comissaoAcumulada: 0,
+          comissaoRepassada: 0,
           criadoEm: now,
           atualizadoEm: now,
         };
@@ -382,6 +397,7 @@ export async function salvarAfiliadoCore(
           nome,
           janelaAtribuicaoDias: janela,
           minimoInscricoes: minimo,
+          comissao,
           status: statusFinal,
           atualizadoEm: now,
         };

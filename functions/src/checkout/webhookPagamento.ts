@@ -40,8 +40,11 @@ import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
   SUBCOLECAO_CONVERSOES_AFILIADO,
+  computeComissaoConversao,
   dentroDaJanelaAtribuicao,
+  isComissaoAfiliadoValida,
   roundMoney,
+  type ComissaoAfiliado,
   type PaymentProvider,
   type WebhookPayload,
   type WebhookResult,
@@ -314,6 +317,9 @@ export async function processarWebhookPagamento(
       conversaoRef: admin.firestore.DocumentReference;
       conversoesAtual: number;
       valorAtribuidoAtual: number;
+      /** Comissão FASE 2 (COMF2): config VIGENTE lida na mesma tx + ∑ atual. */
+      comissaoConfig: ComissaoAfiliado | null;
+      comissaoAcumuladaAtual: number;
       clicadoEmMillis: number;
       qtdInscricoes: number;
     } | null = null;
@@ -345,6 +351,10 @@ export async function processarWebhookPagamento(
           janelaDias
         )
       ) {
+        // Config de comissão VIGENTE no instante da confirmação (FASE 2):
+        // shape validado — doc torto vira "sem comissão" (marketing/dinheiro
+        // acessório NUNCA quebra a confirmação da venda).
+        const comissaoRaw = afiliadoSnap.get('comissao');
         registrarConversaoAfiliado = {
           afiliadoRef,
           conversaoRef,
@@ -355,6 +365,13 @@ export async function processarWebhookPagamento(
           valorAtribuidoAtual:
             typeof afiliadoSnap.get('valorAtribuido') === 'number'
               ? (afiliadoSnap.get('valorAtribuido') as number)
+              : 0,
+          comissaoConfig: isComissaoAfiliadoValida(comissaoRaw)
+            ? comissaoRaw
+            : null,
+          comissaoAcumuladaAtual:
+            typeof afiliadoSnap.get('comissaoAcumulada') === 'number'
+              ? (afiliadoSnap.get('comissaoAcumulada') as number)
               : 0,
           clicadoEmMillis,
           qtdInscricoes: inscritoRefs.length,
@@ -466,27 +483,44 @@ export async function processarWebhookPagamento(
       tx.update(cupomRef, { usos: usosAtual + 1, atualizadoEm: agora });
     }
 
-    // Conversão de AFILIADO (R9-E · RN-314): 1 doc por PEDIDO confirmado
-    // (chave = pedidoId — replay colide) + ∑ read-modify-write na MESMA tx
-    // (mesma disciplina cent-exata da receitaConfirmada — nunca increment
-    // de float). `conversoes` conta INSCRIÇÕES (base do gate RN-315:
-    // minimoInscricoes compara inscrições, não pedidos). Shape SEM PII de
-    // comprador. Estorno NÃO decrementa nesta fase (registrado — fase 2).
+    // Conversão de AFILIADO (R9-E · RN-314 + COMF2 fase 2): 1 doc por PEDIDO
+    // confirmado (chave = pedidoId — replay colide) + ∑ read-modify-write na
+    // MESMA tx (mesma disciplina cent-exata da receitaConfirmada — nunca
+    // increment de float). `conversoes` conta INSCRIÇÕES (base do gate
+    // RN-315: minimoInscricoes compara inscrições, não pedidos). Shape SEM
+    // PII de comprador.
+    //
+    // COMISSÃO (FASE 2 · item 23): a config VIGENTE do afiliado é CONGELADA
+    // no doc da conversão (`comissaoConfig`) junto do valor computado
+    // (`comissao`, cent-exato via computeComissaoConversao) — mudar a config
+    // depois NÃO altera o que já acumulou (anti forja de percentual
+    // pós-venda) e o ESTORNO decrementa pela config congelada (Finding 1b).
+    // ∑ comissaoAcumulada acumula na MESMA tx — idempotente sob as mesmas
+    // guardas (ledger + create da conversão colide no replay).
     if (registrarConversaoAfiliado !== null) {
       const r = registrarConversaoAfiliado;
+      const valorConversao = pagamentoSnap.get('valorFinal') as number;
+      const comissaoConversao = computeComissaoConversao(
+        r.comissaoConfig,
+        valorConversao,
+        r.qtdInscricoes
+      );
       tx.create(r.conversaoRef, {
         id: orderId,
         pedidoRef: orderId,
-        valor: pagamentoSnap.get('valorFinal') as number,
+        valor: valorConversao,
         qtdInscricoes: r.qtdInscricoes,
+        comissao: comissaoConversao,
+        comissaoConfig: r.comissaoConfig,
         clicadoEm: admin.firestore.Timestamp.fromMillis(r.clicadoEmMillis),
         convertidoEm: agora,
         criadoEm: agora,
       });
       tx.update(r.afiliadoRef, {
         conversoes: r.conversoesAtual + r.qtdInscricoes,
-        valorAtribuido: roundMoney(
-          r.valorAtribuidoAtual + (pagamentoSnap.get('valorFinal') as number)
+        valorAtribuido: roundMoney(r.valorAtribuidoAtual + valorConversao),
+        comissaoAcumulada: roundMoney(
+          r.comissaoAcumuladaAtual + comissaoConversao
         ),
         atualizadoEm: agora,
       });

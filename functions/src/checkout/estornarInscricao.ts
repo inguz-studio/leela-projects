@@ -60,6 +60,8 @@ import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
   SUBCOLECAO_CONVERSOES_AFILIADO,
+  computeComissaoConversao,
+  isComissaoAfiliadoValida,
   podeTransicionarStatusInscrito,
   podeTransicionarStatusPagamento,
   roundMoney,
@@ -602,11 +604,6 @@ async function aplicarEfeitoEstorno(
         typeof afiliadoSnapEstorno.get('valorAtribuido') === 'number'
           ? (afiliadoSnapEstorno.get('valorAtribuido') as number)
           : 0;
-      tx.update(afiliadoRefEstorno, {
-        conversoes: Math.max(0, conversoesAtual - 1),
-        valorAtribuido: Math.max(0, roundMoney(valorAtribuidoAtual - valorFace)),
-        atualizadoEm: agora,
-      });
 
       const qtdConv =
         typeof conversaoSnapEstorno.get('qtdInscricoes') === 'number'
@@ -616,12 +613,60 @@ async function aplicarEfeitoEstorno(
         typeof conversaoSnapEstorno.get('valor') === 'number'
           ? (conversaoSnapEstorno.get('valor') as number)
           : 0;
+
+      // COMISSÃO (COMF2 fase 2 — mesma TX do Finding 1b): o estorno
+      // decrementa a comissão pela config CONGELADA na conversão (nunca a
+      // vigente do afiliado — anti forja pós-venda nos DOIS sentidos). O
+      // invariante do doc de conversão é `comissao == compute(config, valor,
+      // qtd)`: recomputa-se a comissão RESTANTE sobre o valor/qtd restantes e
+      // o delta (atual − restante) sai do ∑ comissaoAcumulada — cent-exato,
+      // clampado a 0 (comissão NUNCA negativa). Conversão pré-fase-2 (sem
+      // campos) decrementa 0 — comportamento R9-E intacto. Replay do estorno
+      // não re-decrementa (guarda do ledger pendente→aprovado, inalterada).
+      const comissaoConfigRaw = conversaoSnapEstorno.get('comissaoConfig');
+      const comissaoConfigCongelada = isComissaoAfiliadoValida(comissaoConfigRaw)
+        ? comissaoConfigRaw
+        : null;
+      const comissaoAtualConv =
+        typeof conversaoSnapEstorno.get('comissao') === 'number'
+          ? (conversaoSnapEstorno.get('comissao') as number)
+          : 0;
+      const qtdRestante = Math.max(0, qtdConv - 1);
+      const valorRestante = Math.max(0, roundMoney(valorConv - valorFace));
+      const comissaoRestante =
+        qtdConv <= 1
+          ? 0
+          : computeComissaoConversao(
+              comissaoConfigCongelada,
+              valorRestante,
+              qtdRestante
+            );
+      const deltaComissao = Math.max(
+        0,
+        roundMoney(comissaoAtualConv - comissaoRestante)
+      );
+      const comissaoAcumuladaAtual =
+        typeof afiliadoSnapEstorno.get('comissaoAcumulada') === 'number'
+          ? (afiliadoSnapEstorno.get('comissaoAcumulada') as number)
+          : 0;
+
+      tx.update(afiliadoRefEstorno, {
+        conversoes: Math.max(0, conversoesAtual - 1),
+        valorAtribuido: Math.max(0, roundMoney(valorAtribuidoAtual - valorFace)),
+        comissaoAcumulada: Math.max(
+          0,
+          roundMoney(comissaoAcumuladaAtual - deltaComissao)
+        ),
+        atualizadoEm: agora,
+      });
+
       if (qtdConv <= 1) {
         tx.delete(conversaoRefEstorno);
       } else {
         tx.update(conversaoRefEstorno, {
-          qtdInscricoes: qtdConv - 1,
-          valor: Math.max(0, roundMoney(valorConv - valorFace)),
+          qtdInscricoes: qtdRestante,
+          valor: valorRestante,
+          comissao: comissaoRestante,
         });
       }
     }
