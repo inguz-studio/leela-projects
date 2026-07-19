@@ -248,7 +248,7 @@
   --input-font-size: var(--font-size-md);
   --input-px: var(--spacing-4);
   --input-border-width: 1px;
-  --input-border-flat: var(--neutral-500);
+  --input-border-flat: transparent;
   --switch-thumb-off: var(--neutral-500);
   --command-list-max-height: 288px;
   --badge-radius: var(--radius-xs);

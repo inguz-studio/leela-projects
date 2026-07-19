@@ -39,8 +39,8 @@
     "font-size":     "{font.size.md}",
     "px":            "{spacing.4}",
     "border-width":  "1px",
-    "$border-flat":  "S-R9-04-T2 (L-006): borda do campo flat em repouso. O fill sunken sozinho dava ~1.01:1 vs a pagina (imperceptivel). neutral.500 (= border-strong) e o unico degrau que cruza 3:1 (1.4.11) nos DOIS temas: brasa 4.13:1, wine 3.60:1.",
-    "border-flat":   "{neutral.500}"
+    "$border-flat":  "GATE-DS-W1 (2026-07-18, diretriz do Vitor — verbatim: 'nao estamos respeitando o estilo flat, sem linhas de borda'): campo flat em repouso NAO tem linha de borda; o token volta a transparent e a identificacao do campo e por fill sunken + label + placeholder + focus ring 2px (excecao 1.4.11 RATIFICADA, registrada na matriz de contraste). Historico: S-R9-04-T2 (L-006) havia posto neutral.500 (brasa 4.13:1 / wine 3.60:1) porque o fill sozinho da ~1.01:1 — essa troca contrariou o LEELA-FLAT-DEFAULT ratificado e foi revertida a pedido do Vitor. Contexto que exigir borda funcional usa variant='bordered' (border-strong, 1.4.11 pleno).",
+    "border-flat":   "transparent"
   },
   "switch": {
     "$description": "S-R9-04-T2 (L-006): thumb do Switch DESLIGADO. Era surface-raised (#161616) sobre o trilho surface-sunken (#0A0A0A) = 1.09:1 — o polegar sumia no escuro. neutral.500 (= border-strong) cruza 3:1 nos 2 temas: brasa 4.18:1, wine 3.33:1. Ligado segue action-primary-fg.",

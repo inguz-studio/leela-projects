@@ -154,12 +154,18 @@ const NON_TEXT_PAIRS: Array<[fg: string, bg: string]> = [
   // cobriu — o contraste passado só media pares de texto. Em T1 estes pares
   // eram os surrogate surface-raised×sunken (1.09:1) e sunken×base (1.01:1),
   // que FALHAVAM e provaram o buraco. T2 repôs os tokens por --switch-thumb-off
-  // e --input-border-flat (ambos = neutral.500/border-strong) e agora a matriz
-  // referencia os tokens de componente reais:
+  // e --input-border-flat (ambos = neutral.500/border-strong):
   //   Switch thumb-OFF × trilho-OFF (surface-sunken): brasa 4.18:1 / wine 3.33:1
-  //   borda do campo flat × página (surface-base):    brasa 4.13:1 / wine 3.60:1
   ['switch-thumb-off',  'surface-sunken'], // Switch thumb-OFF × trilho-OFF
-  ['input-border-flat', 'surface-base'],   // borda do campo flat × página
+  // GATE-DS-W1 (2026-07-18) · EXCEÇÃO RATIFICADA pelo Vitor (verbatim: "não
+  // estamos respeitando o estilo flat, sem linhas de borda"): o par
+  // ['input-border-flat','surface-base'] SAIU da matriz — --input-border-flat
+  // voltou a transparent (o S-R9-04-T2 havia posto neutral.500, contrariando o
+  // LEELA-FLAT-DEFAULT ratificado em 2026-07-17). No flat em repouso a
+  // identificação do campo (1.4.11) é por fill sunken + label + placeholder +
+  // focus ring 2px; contexto que exigir borda funcional usa variant='bordered'
+  // (border-strong, coberto pelos pares border-strong acima). NÃO recoloque
+  // este par sem nova decisão do Vitor.
 ];
 
 // ---------------------------------------------------------------------------
@@ -176,7 +182,7 @@ describe('Higiene da matriz', () => {
     expect(new Set(NON_TEXT_PAIRS.map(key)).size).toBe(NON_TEXT_PAIRS.length);
   });
 
-  it('contagem declarada bate com o disco: 35 texto + 22 não-texto = 57 pares', () => {
+  it('contagem declarada bate com o disco: 35 texto + 21 não-texto = 56 pares', () => {
     // Lote A restante (shadcn): +1 par texto — text-danger/surface-overlay
     // (DropdownMenu, bg-popover). Toast/Dialog/Tabs/Card/Table/Avatar shadcn
     // resolvem por alias em pares pré-existentes (ver PROVENIÊNCIA de cada um);
@@ -189,8 +195,10 @@ describe('Higiene da matriz', () => {
     // legibilidade em repouso vira garantia de primeira classe.
     // S-R9-04-T1 (L-006): +2 não-texto (Switch thumb-OFF × trilho e borda do
     // campo flat × página) — pares de COMPONENTE que faltavam na matriz.
+    // GATE-DS-W1 (2026-07-18): -1 não-texto — o par input-border-flat×base saiu
+    // (flat sem borda ratificado pelo Vitor; exceção documentada na matriz).
     expect(TEXT_PAIRS.length).toBe(35);
-    expect(NON_TEXT_PAIRS.length).toBe(22);
+    expect(NON_TEXT_PAIRS.length).toBe(21);
   });
 });
 
