@@ -11,9 +11,12 @@ import * as React from 'react';
 import { Badge, Button, Checkbox, Input, PageHeader, Skeleton } from '@leela/design-system';
 import {
   DEFAULT_COMMERCIAL_TERMS,
+  MEIOS_TAXA,
   validateCommercialTerms,
   type CommercialTerms,
   type CommercialTermsInput,
+  type MeioTaxa,
+  type TaxaTabelaOverride,
 } from '@leela/core';
 
 export interface TermsEditorProps {
@@ -28,6 +31,19 @@ export interface TermsEditorProps {
   onVoltar: () => void;
 }
 
+/** Rótulos das linhas do override por meio (TAXAFLEX · RN-178). */
+const ROTULO_MEIO: Record<MeioTaxa, string> = {
+  pix: 'PIX',
+  cartao: 'Cartão',
+  boleto: 'Boleto (inativo no checkout)',
+};
+
+/** Par de campos de UMA linha do override (strings; vazio = herda a global). */
+interface LinhaTaxaForm {
+  percentual: string;
+  fixoReais: string;
+}
+
 interface FormValues {
   platformFeePct: string;
   saasMonthlyFee: string;
@@ -36,10 +52,18 @@ interface FormValues {
   parcelaMinima: string;
   communityMonthlyEnabled: boolean;
   anticipationDisponivel: boolean;
+  /** TAXAFLEX (RN-178): override por meio — linha vazia herda a GLOBAL. */
+  taxaTabela: Record<MeioTaxa, LinhaTaxaForm>;
 }
 
 function toForm(terms: CommercialTerms | null): FormValues {
   const t = terms ?? { ...DEFAULT_COMMERCIAL_TERMS, versao: 0, atualizadoPor: '', atualizadoEm: null as never };
+  const linha = (meio: MeioTaxa): LinhaTaxaForm => {
+    const o = t.taxaTabela?.[meio];
+    return o
+      ? { percentual: String(o.percentual), fixoReais: (o.fixoCentavos / 100).toFixed(2) }
+      : { percentual: '', fixoReais: '' };
+  };
   return {
     platformFeePct: String(t.platformFeePct),
     saasMonthlyFee: String(t.saasMonthlyFee),
@@ -48,11 +72,56 @@ function toForm(terms: CommercialTerms | null): FormValues {
     parcelaMinima: String(t.installmentRules.parcelaMinima),
     communityMonthlyEnabled: t.communityMonthlyEnabled,
     anticipationDisponivel: t.anticipation.disponivel,
+    taxaTabela: { pix: linha('pix'), cartao: linha('cartao'), boleto: linha('boleto') },
   };
 }
 
-function toInput(v: FormValues): CommercialTermsInput {
+/**
+ * Linhas do override PREENCHIDAS (par completo) → `taxaTabela` do termo.
+ * Linha vazia fica FORA (herda a global). Linha meio-preenchida devolve
+ * erro explícito (nunca gravar par incompleto em doc de dinheiro).
+ */
+function overrideDoForm(
+  v: FormValues
+): { tabela: TaxaTabelaOverride | undefined; erros: string[] } {
+  const tabela: TaxaTabelaOverride = {};
+  const erros: string[] = [];
+  for (const meio of MEIOS_TAXA) {
+    const linha = v.taxaTabela[meio];
+    const temPct = linha.percentual.trim() !== '';
+    const temFixo = linha.fixoReais.trim() !== '';
+    if (!temPct && !temFixo) continue; // herda a global
+    if (!temPct || !temFixo) {
+      erros.push(
+        `Exceção de taxa (${ROTULO_MEIO[meio]}): preencha percentual E valor fixo, ou deixe os dois vazios para herdar a tabela global.`
+      );
+      continue;
+    }
+    tabela[meio] = {
+      percentual: Number(linha.percentual),
+      fixoCentavos: Math.round(Number(linha.fixoReais) * 100),
+    };
+  }
+  return { tabela: Object.keys(tabela).length > 0 ? tabela : undefined, erros };
+}
+
+/**
+ * Monta o input do save. `atual` PRESERVA os campos opcionais que este form
+ * não edita (retenção/D+N, taxaPorMetodo/tabelaTaxasParcela legados,
+ * modoTaxaDefault, rastro de plano) — antes deste fix, salvar pelo editor
+ * APAGAVA esses campos do termo (footgun TAXAFLEX-9).
+ */
+function toInput(v: FormValues, atual: CommercialTerms | null): CommercialTermsInput {
+  const { tabela } = overrideDoForm(v);
   return {
+    // Opcionais NÃO editados aqui — preservados do termo vigente
+    ...(atual?.retencaoRepassePct !== undefined ? { retencaoRepassePct: atual.retencaoRepassePct } : {}),
+    ...(atual?.disponibilizacaoDiasUteis !== undefined ? { disponibilizacaoDiasUteis: atual.disponibilizacaoDiasUteis } : {}),
+    ...(atual?.taxaPorMetodo !== undefined ? { taxaPorMetodo: atual.taxaPorMetodo } : {}),
+    ...(atual?.tabelaTaxasParcela !== undefined ? { tabelaTaxasParcela: atual.tabelaTaxasParcela } : {}),
+    ...(atual?.modoTaxaDefault !== undefined ? { modoTaxaDefault: atual.modoTaxaDefault } : {}),
+    ...(atual?.planoAplicadoId !== undefined ? { planoAplicadoId: atual.planoAplicadoId } : {}),
+    ...(atual?.planoAplicadoEm !== undefined ? { planoAplicadoEm: atual.planoAplicadoEm } : {}),
     platformFeePct: Number(v.platformFeePct),
     saasMonthlyFee: Number(v.saasMonthlyFee),
     installmentRules: {
@@ -63,6 +132,8 @@ function toInput(v: FormValues): CommercialTermsInput {
     // Antecipação é campo só-leitura na V1 (RN-410) — preserva o valor atual.
     anticipation: { disponivel: v.anticipationDisponivel },
     communityMonthlyEnabled: v.communityMonthlyEnabled,
+    // TAXAFLEX (RN-178): só as linhas negociadas; ausente = herda a global
+    ...(tabela !== undefined ? { taxaTabela: tabela } : {}),
   };
 }
 
@@ -119,8 +190,11 @@ export function TermsEditor({
     e.preventDefault();
     if (readOnly) return;
     setEnviado(true);
-    const input = toInput(values);
-    const validationErrors = validateCommercialTerms(input);
+    // Linha de override meio-preenchida = erro EXPLÍCITO antes do parse
+    // numérico (nunca gravar par incompleto em doc de dinheiro).
+    const { erros: errosOverride } = overrideDoForm(values);
+    const input = toInput(values, terms);
+    const validationErrors = [...errosOverride, ...validateCommercialTerms(input)];
     setErros(validationErrors);
     if (validationErrors.length > 0) return;
     onSave(input);
@@ -216,6 +290,55 @@ export function TermsEditor({
             onChange={(e) => set('parcelaMinima', e.target.value)}
             disabled={readOnly || saving}
           />
+        </fieldset>
+
+        {/* TAXAFLEX (RN-178 · S1606): exceção NEGOCIADA por meio — linha
+            vazia herda a tabela GLOBAL da plataforma (config em
+            /plataforma/taxa). Congelada por venda no ato da compra (RN-179):
+            mudar aqui nunca reprecifica pedido feito. */}
+        <fieldset className="flex flex-col gap-[var(--spacing-4)]">
+          <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            Exceção de taxa por meio de pagamento
+          </legend>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Condição negociada por contrato. Linha vazia herda a tabela global da plataforma;
+            preenchida, vale percentual + valor fixo por venda (ex.: 6% + R$ 2,00). Vendas já
+            feitas não são reprecificadas.
+          </p>
+          {MEIOS_TAXA.map((meio) => (
+            <div key={meio} className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
+              <Input
+                id={`taxa-${meio}-pct`}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                label={`${ROTULO_MEIO[meio]} — percentual (%)`}
+                value={values.taxaTabela[meio].percentual}
+                onChange={(e) =>
+                  set('taxaTabela', {
+                    ...values.taxaTabela,
+                    [meio]: { ...values.taxaTabela[meio], percentual: e.target.value },
+                  })
+                }
+                disabled={readOnly || saving}
+              />
+              <Input
+                id={`taxa-${meio}-fixo`}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                label={`${ROTULO_MEIO[meio]} — fixo por venda (R$)`}
+                value={values.taxaTabela[meio].fixoReais}
+                onChange={(e) =>
+                  set('taxaTabela', {
+                    ...values.taxaTabela,
+                    [meio]: { ...values.taxaTabela[meio], fixoReais: e.target.value },
+                  })
+                }
+                disabled={readOnly || saving}
+              />
+            </div>
+          ))}
         </fieldset>
 
         <label className="flex items-center gap-[var(--spacing-2)]">

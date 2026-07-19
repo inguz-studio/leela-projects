@@ -20,6 +20,7 @@ import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
 import { PlanosRoute } from './planos/PlanosRoute';
+import { TaxaGlobalRoute } from './taxa/TaxaGlobalRoute';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 
@@ -35,6 +36,8 @@ export function PlataformaRoutes(): JSX.Element {
           <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
           <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
           <Route path="planos" element={<PlanosRoute />} />
+          {/* TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio */}
+          <Route path="taxa" element={<TaxaGlobalRoute />} />
           <Route path="repasses" element={<RepassesAdminRoute />} />
           <Route path="macro" element={<MacroDashboardRoute />} />
           {/* 404 dentro do PlatformShell (sidebar de plataforma preservada). S500-T2. */}
