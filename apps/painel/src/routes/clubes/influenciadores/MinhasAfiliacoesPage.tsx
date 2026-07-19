@@ -7,14 +7,16 @@
 // tenant): quem não tem afiliação vê EmptyState honesto.
 // =============================================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
+  Button,
   EmptyState,
   KpiCard,
   PageHeader,
   Skeleton,
   Table,
+  useToast,
 } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import {
@@ -44,7 +46,13 @@ const COLUNAS_REPASSE: TableColumn<RepasseProjetado>[] = [
   { key: 'obs', header: 'Observação', render: (r) => r.observacao ?? '—' },
 ];
 
-function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
+function CartaoAfiliacao({
+  a,
+  onCopiar,
+}: {
+  a: MinhaAfiliacao;
+  onCopiar: (refCodigo: string) => void;
+}): JSX.Element {
   const gateFechado =
     a.minimoInscricoes !== null && a.conversoes < a.minimoInscricoes;
   // RN-318: comissão só existe quando o organizador a configurou p/ este link.
@@ -61,14 +69,23 @@ function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
   return (
     <article className="flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
       <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-3)]">
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-[var(--spacing-2)]">
           <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
             {a.eventoNome}
           </h2>
-          <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-            Link <code>?ref={a.refCodigo}</code> · janela {a.janelaAtribuicaoDias} dias
-            {a.cupomCodigo !== null ? ` · cupom ${a.cupomCodigo}` : ''}
-          </span>
+          <div className="flex flex-wrap items-center gap-[var(--spacing-2)]">
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+              Seu link <code>?ref={a.refCodigo}</code> · janela {a.janelaAtribuicaoDias} dias
+              {a.cupomCodigo !== null ? ` · cupom ${a.cupomCodigo}` : ''}
+            </span>
+            <Button
+              variant="ghost"
+              onClick={() => onCopiar(a.refCodigo)}
+              aria-label={`Copiar código de indicação de ${a.eventoNome}`}
+            >
+              Copiar código
+            </Button>
+          </div>
         </div>
         {a.status === 'ativo' ? (
           <Badge variant="vitoria">Ativa</Badge>
@@ -131,7 +148,32 @@ function CartaoAfiliacao({ a }: { a: MinhaAfiliacao }): JSX.Element {
   );
 }
 
+/**
+ * Resumo consolidado (o "meu negócio" do promotor cross-eventos) — soma os
+ * agregados das PRÓPRIAS afiliações que o reader já devolveu (RN-318: nenhum
+ * dado de terceiro entra na conta; a query server-side já é keyed no uid). É a
+ * visão de hub do influenciador materializada por evolução da tela existente,
+ * não por rota nova. `aReceber` soma só os saldos POSITIVOS — dívidas (estorno
+ * pós-repasse) não abatem o que o organizador ainda deve, igual ao lado dele.
+ */
+function resumirAfiliacoes(afiliacoes: MinhaAfiliacao[]): {
+  ativas: number;
+  inscricoes: number;
+  valor: number;
+  temComissao: boolean;
+  aReceber: number;
+} {
+  return {
+    ativas: afiliacoes.filter((a) => a.status === 'ativo').length,
+    inscricoes: afiliacoes.reduce((acc, a) => acc + a.conversoes, 0),
+    valor: afiliacoes.reduce((acc, a) => acc + a.valorAtribuido, 0),
+    temComissao: afiliacoes.some((a) => a.comissao !== null),
+    aReceber: afiliacoes.reduce((acc, a) => acc + Math.max(0, a.saldoComissao), 0),
+  };
+}
+
 export function MinhasAfiliacoesPage(): JSX.Element {
+  const { toast } = useToast();
   const [afiliacoes, setAfiliacoes] = useState<MinhaAfiliacao[] | null>(null);
   const [erro, setErro] = useState<Error | null>(null);
 
@@ -149,13 +191,63 @@ export function MinhasAfiliacoesPage(): JSX.Element {
     };
   }, []);
 
+  const resumo = useMemo(
+    () => resumirAfiliacoes(afiliacoes ?? []),
+    [afiliacoes],
+  );
+
+  // "Qual link uso": o código de indicação é o que o influenciador anexa como
+  // `?ref=` ao link do evento. Copiar o CÓDIGO é o que dá pra entregar sem o
+  // slug do evento (o reader getMinhasAfiliacoes não o projeta — follow-up
+  // registrado no handoff: expor eventoSlug → copiar a URL completa como faz a
+  // AfiliadosPage do organizador).
+  function copiarCodigo(refCodigo: string): void {
+    void navigator.clipboard
+      .writeText(refCodigo)
+      .then(() =>
+        toast({
+          variant: 'success',
+          title: 'Código copiado',
+          description: `Use ?ref=${refCodigo} no link do evento`,
+        }),
+      )
+      .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar' }));
+  }
+
+  const temAfiliacoes = (afiliacoes ?? []).length > 0;
+
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <PageHeader
         title="Minhas afiliações"
-        subtitle="As conversões dos SEUS links de divulgação — só as suas"
+        subtitle="Seu negócio como divulgador — quanto você trouxe, quanto vai receber e qual link usar. Só o seu."
       />
       <div className="flex flex-col gap-[var(--spacing-5)] px-[var(--spacing-6)]">
+        {temAfiliacoes ? (
+          <section
+            aria-label="Resumo consolidado das suas afiliações"
+            className="grid grid-cols-2 gap-[var(--spacing-4)] md:grid-cols-4"
+          >
+            <KpiCard label="Afiliações ativas" value={String(resumo.ativas)} />
+            <KpiCard
+              label="Inscrições no total"
+              value={resumo.inscricoes.toLocaleString('pt-BR')}
+              hint="somando seus eventos"
+            />
+            <KpiCard
+              label="Valor total (bruto)"
+              value={formatBRL(resumo.valor)}
+              hint="antes de comissão"
+            />
+            {resumo.temComissao ? (
+              <KpiCard
+                label="Comissão a receber"
+                value={formatBRL(resumo.aReceber)}
+                hint="saldo somado (dívidas não abatem)"
+              />
+            ) : null}
+          </section>
+        ) : null}
         {afiliacoes === null && erro === null ? (
           <div role="status" aria-label="Carregando afiliações" className="flex flex-col gap-[var(--spacing-4)]">
             <Skeleton variant="rect" className="h-40" />
@@ -175,7 +267,11 @@ export function MinhasAfiliacoesPage(): JSX.Element {
           />
         ) : (
           (afiliacoes ?? []).map((a) => (
-            <CartaoAfiliacao key={`${a.eventoId}:${a.refCodigo}`} a={a} />
+            <CartaoAfiliacao
+              key={`${a.eventoId}:${a.refCodigo}`}
+              a={a}
+              onCopiar={copiarCodigo}
+            />
           ))
         )}
       </div>
