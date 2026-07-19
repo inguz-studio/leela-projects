@@ -47,14 +47,17 @@ import * as logger from 'firebase-functions/logger';
 import {
   diffTrocaIngresso,
   exigeRecoletaTamanhos,
+  gradeDoDocItemKit,
   isTipoTransferencia,
   loteAtivo,
   parseDadosPessoais,
   parseInscrito,
   parseLote,
+  parseSufixoTamanho,
   podeTransferirTitularidade,
   podeTrocarIngresso,
   roundMoney,
+  tamanhosDoCorte,
   type AuthClaims,
   type EstadoTransferencia,
   type Inscrito,
@@ -274,6 +277,43 @@ export async function requestTransferCore(
             'invalid-argument',
             `Kit tem item tamanhado — recolete o tamanho do novo titular para: ${chavesEsperadas.join(', ')} (RN-345).`
           );
+        }
+        // RN-231 (fix A1 da review antagonista TAMANHOS-GRADE): o valor
+        // recoletado é o SUFIXO de SKU ('M' | 'feminina__M') e este callable
+        // é um PRODUTOR de escrita de `inscrito.tamanhos` — a validação na
+        // origem cobre TODAS as origens, não só o checkout. Sufixo malformado
+        // ou fora da grade EFETIVA do item ⇒ rejeita ANTES de escrever
+        // (senão o recompute 2D decrementaria o SKU antigo e o valor novo não
+        // casaria com SKU nenhum — a camiseta do atleta sumiria da contagem).
+        for (const [itemId, sufixo] of Object.entries(recoletados)) {
+          const decomposto =
+            sufixo.length > 0 ? parseSufixoTamanho(sufixo) : null;
+          if (decomposto === null) {
+            throw new https.HttpsError(
+              'invalid-argument',
+              `Tamanho de '${itemId.slice(0, 80)}' fora do padrão tamanho ou corte__tamanho (RN-231/RN-345).`
+            );
+          }
+          const itemSnap = await tx.get(db.collection('itensKit').doc(itemId));
+          // Fail-closed como no checkout: item fora do catálogo nunca
+          // legitima um SKU (a chave veio de checkout validado; o catálogo
+          // sumir depois é dado corrompido — intervenção do organizador).
+          if (!itemSnap.exists) {
+            throw new https.HttpsError(
+              'failed-precondition',
+              `Item '${itemId.slice(0, 80)}' não existe mais no catálogo do evento (RN-345).`
+            );
+          }
+          const daGrade = tamanhosDoCorte(
+            gradeDoDocItemKit(itemSnap.data() ?? {}),
+            decomposto.corte
+          );
+          if (!daGrade.includes(decomposto.tamanho)) {
+            throw new https.HttpsError(
+              'invalid-argument',
+              `Tamanho de '${itemId.slice(0, 80)}' fora da grade do item (corte ${decomposto.corte}) — RN-231/RN-345.`
+            );
+          }
         }
         tamanhosNovos = recoletados;
       }

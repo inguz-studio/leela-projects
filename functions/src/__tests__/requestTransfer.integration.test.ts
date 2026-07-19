@@ -115,6 +115,15 @@ async function seed(): Promise<void> {
     trocaIngresso: { habilitada: true, janelaHoras: 48, permiteReembolsoDowngrade: false },
     atualizadoEm: now,
   });
+  // Catálogo do item tamanhado (RN-231 — fix A1): a recoleta valida o sufixo
+  // contra a GRADE EFETIVA do item; legado `tamanhosDisponiveis` ≡ unissex.
+  batch.set(db.collection('itensKit').doc('camiseta-tecnica'), {
+    id: 'camiseta-tecnica', tenantId: TENANT_ID, eventoId: EVENTO_ID,
+    nome: 'Camiseta técnica', tamanhado: true, origem: 'organizador',
+    exibirLogo: false, modeloEstoque: 'sob_encomenda',
+    tamanhosDisponiveis: ['P', 'M', 'G'], kits: ['kit_prata'],
+    criadoEm: now, atualizadoEm: now,
+  });
   await batch.commit();
 }
 
@@ -206,6 +215,22 @@ describe('titularidade — caminho feliz + trilha + idempotência', () => {
     ).rejects.toMatchObject({ code: 'invalid-argument' });
     // Nada mudou
     expect((await inscritoRefDe(alvo).get()).get('atletaNome')).toBe(nomeOriginal);
+  });
+
+  it('recoleta valida contra a GRADE (RN-231 — fix A1): sufixo forjado/fora da grade ⇒ rejeita, nada escrito', async () => {
+    // Corte forjado (não existe grade por corte no item legado ≡ unissex)
+    for (const forja of ['feminina__M', 'unissex__M', 'M__G', 'XGG-FORJADO']) {
+      await expect(
+        requestTransferCore(db, {
+          pedidoId, inscritoId: alvo, tipo: 'titularidade',
+          novoTitular: { nome: 'Bruno Silva', tamanhos: { 'camiseta-tecnica': forja } },
+        }, organizador)
+      ).rejects.toMatchObject({ code: 'invalid-argument' });
+    }
+    // Σ 2D intacto: o inscrito segue com o tamanho original válido
+    const inscrito = await inscritoRefDe(alvo).get();
+    expect(inscrito.get('atletaNome')).toBe(nomeOriginal);
+    expect(inscrito.get('tamanhos')).toEqual({ 'camiseta-tecnica': 'M' });
   });
 
   it('executa: novo nome + tamanho recoletado + trilha + doc concluída (taxa 25)', async () => {

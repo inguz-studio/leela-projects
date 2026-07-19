@@ -624,3 +624,21 @@ describe('Rules de itensKit — shape da grade (RN-231)', () => {
     );
   });
 });
+
+describe('item envenenado não derruba a agregação (fix A3 da review)', () => {
+  it('docId de item com "__" é PULADO; os itens sãos seguem agregando', async () => {
+    const now = FieldValue.serverTimestamp();
+    await db.collection('itensKit').doc('item__forjado').set({
+      id: 'item__forjado', tenantId: TENANT_ID, eventoId: EVENTO_ID,
+      nome: 'Item forjado', tamanhado: true, origem: 'organizador',
+      exibirLogo: false, modeloEstoque: 'sob_encomenda',
+      tamanhosDisponiveis: ['M'], kits: ['kit_prata'],
+      criadoEm: now, atualizadoEm: now,
+    });
+    const r = await recomputarAprovisionamentoEvento(db, EVENTO_ID);
+    expect(r).not.toBeNull();
+    expect(r?.skus).toBe(4); // só a camiseta sã (P/M/G/GG) — forjado fora
+    expect(r?.vendidoPorSku[SKU_M]).toBe(2);
+    expect(Object.keys(r?.vendidoPorSku ?? {}).some((s) => s.includes('forjado'))).toBe(false);
+  });
+});

@@ -124,10 +124,22 @@ export async function recomputarAprovisionamentoEvento(
     );
     const declarados = new Set<string>();
     for (const itemDoc of itensSnap.docs) {
-      for (const linha of gradeDoDocItemKit(itemDoc.data())) {
-        for (const tamanho of linha.tamanhos) {
-          declarados.add(skuId(itemDoc.id, tamanho, linha.corte));
+      // Fix A3 da review antagonista: docId de item forjado (ex.: com `__`)
+      // faria skuId LANÇAR e derrubaria a agregação INTEIRA do evento (retry
+      // infinito do gatilho). Um item envenenado é PULADO — nunca legitima
+      // SKU nem derruba o Σ dos itens sãos (filosofia Postel da agregação).
+      try {
+        for (const linha of gradeDoDocItemKit(itemDoc.data())) {
+          for (const tamanho of linha.tamanhos) {
+            declarados.add(skuId(itemDoc.id, tamanho, linha.corte));
+          }
         }
+      } catch (e) {
+        logger.warn('estoque_item_envenenado_pulado', {
+          eventoId,
+          itemId: itemDoc.id.slice(0, 80),
+          erro: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 
@@ -288,7 +300,9 @@ export function validarTransicaoAprovisionamentoInput(raw: unknown): string[] {
     try {
       parseSkuId(sku);
     } catch {
-      erros.push(`"sku" '${sku}' fora do padrão itemId__tamanho (S210-T2).`);
+      // Eco TRUNCADO (fix A7 — disciplina eco() de validarTamanhos: nunca
+      // devolver a string forjada inteira na mensagem de erro).
+      erros.push(`"sku" '${sku.slice(0, 80)}' fora do padrão itemId__tamanho (S210-T2).`);
     }
   }
   if (!isEstadoAprovisionamento(input['novoEstado'])) {

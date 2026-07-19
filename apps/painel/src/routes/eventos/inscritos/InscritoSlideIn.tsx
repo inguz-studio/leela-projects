@@ -62,6 +62,7 @@ import {
   mascararCpf,
   mascararTelefone,
 } from '../_lib/pii';
+import { rotuloSufixo } from '../_lib/gradeTamanhos';
 
 export interface InscritoSlideInProps {
   /** Inscrito em foco; null = painel fechado. */
@@ -275,7 +276,9 @@ function AbaGeral({ inscrito, agora }: { inscrito: Inscrito; agora: Date }): JSX
         termo="Tamanhos do kit"
         valor={
           tamanhosEntries.length > 0
-            ? tamanhosEntries.map(([item, t]) => `${item}: ${t}`).join(' · ')
+            ? // RN-231 (fix A5 da review): o valor é o SUFIXO de SKU — exibe
+              // "Feminina M" em vez do cru "feminina__M" (rotuloSufixo).
+              tamanhosEntries.map(([item, t]) => `${item}: ${rotuloSufixo(t)}`).join(' · ')
             : 'Kit sem item tamanhado'
         }
       />
