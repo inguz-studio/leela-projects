@@ -17,7 +17,7 @@ tags:
 - [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 📋 [[LEELA-E08-influenciador]]
 - [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 📋 [[LEELA-E10-marcas]]
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 [[LEELA-E11-analytics]]
-- [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 📋 [[LEELA-E19-crm]]
+- [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto (clientes consolidados com LTV + privacidade provada); falta a tela [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]

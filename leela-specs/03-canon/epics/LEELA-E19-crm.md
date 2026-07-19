@@ -4,7 +4,7 @@
 - **Horizonte:** H3 (Onda web-complete — antecipada 2026-07-18)
 - **MoSCoW:** Could (proposto pelo Vitor 2026-07-18; a ratificar)
 - **Estimativa:** XL
-- **Status:** 📋 Novo (proposto no LOTE R9)
+- **Status:** 🔨 Backend construído (S-R9-13-T1/T2 + api-client · trace leela-build-2d6ee98d E19); UI (T3/T4) em lote posterior
 - **Depende de:** LEELA-E00 (fundação), LEELA-E01 (DS & Shell), identidade transacional (inscrições/pedidos ✅), LEELA-E11 (demografia RN-820, para idade/sexo)
 - **Origem:** verbatim do Vitor 2026-07-18 (adendo 2). Spec: `02-rodadas/2026-07-18-ux-review/`.
 
@@ -78,12 +78,35 @@ Dar ao **organizador** uma visão única dos seus clientes (atletas que comprara
 
 ---
 
-## Decisões abertas (bloqueiam código — ver `DECISOES-ABERTAS`)
+## Decisões — RESOLVIDAS por defaults autorizados (Vitor, 2026-07-18 10:24)
 
-1. **Base legal** exata (legítimo interesse vs execução de contrato) — ratificar com o Vitor.
-2. **Unificação CRM + Comunicação** numa aba ou abas irmãs (default recomendado: hub "Clientes & Comunicação").
-3. **Chave de linking** (CPF vs e-mail vs ambos — default: CPF quando presente, e-mail fallback).
+As 3 decisões abertas foram fechadas pelos defaults P-E19-1..3; P-E19-4..6 são premissas
+de minimização assumidas na implementação (registradas no handoff do trace):
+
+1. **P-E19-2 · Base legal** = legítimo interesse sobre a base transacional própria; finalidade = gestão + comunicação (RN-172).
+2. **P-E19-3 · Unificação CRM + Comunicação** = hub "Clientes & Comunicação" (decisão de UI — lote posterior; o backend já entrega a fonte de audiência: mapa `eventos` por cliente).
+3. **P-E19-1 · Chave de linking** = CPF normalizado (11 dígitos) quando válido; fallback e-mail do responsável (só quando o inscrito É o responsável do pedido — o [reg] não tem e-mail); último recurso `atletaId`. DocId = `{tipo}_{sha256(tenantId:tipo:valor)[0:32]}` — CPF/e-mail NUNCA em claro em path/doc/log; salt por tenant impede correlação cross-tenant.
+4. **P-E19-4 · Dado mínimo** = armazenar `nascimento` (date-only) em vez de idade pré-calculada (idade envelhece no doc; aniversário deriva mm-dd).
+5. **P-E19-5 · Dinheiro** = `valorGasto` = Σ(valorFinal+taxaRepassada) das confirmadas; `ltv` = Σ valorFinal (consistente com `receitaConfirmada`). Estornada fica no histórico fora dos dois números.
+6. **P-E19-6 · Só quem comprou** = apenas inscrição confirmada/estornada entra no CRM; pendente/cancelada não constrói perfil.
+
+## Estado de implementação (backend — trace leela-build-2d6ee98d, 2026-07-18)
+
+**Entregue e provado no emulator de TESTE (:8080, emulators:exec fb-tools@13):**
+- **T1 core** (`packages/core/src/crm/cliente.ts`, `9006a47`): identidade CPF→email→atletaId + `computeCrmCliente` (agregado fechado a partir do ledger `inscricoes`) + parse. 14 unit tests.
+- **T2 function** (`functions/src/crm/agregarClientes.ts`, `463e22a`): `onInscritoWriteCrm` — transação idempotente (replay = no-op, `atualizadoEm` intocado), migração de chave com expurgo do doc vazio, fail-closed p/ pedido de outro tenant.
+- **T3 rules** (`firestore.rules`, `2e864f0`): `tenants/{tid}/crmClientes` read só `isTenantWriter`, write negada a QUALQUER cliente (inclusive owner e platform_admin via client SDK). Suíte de ataques no emulator.
+- **api-client** (`packages/api-client/src/crm.ts`, `a7a4bb7`): readers tipados — lista paginada, busca por prefixo, detalhe 1-read.
+- **Review antagonista (gate PII/LGPD, rodada final em contexto fresco): APROVADO COM RESSALVAS** — nenhum bloqueador (sem bypass de auth, sem PII cross-tenant, sem escrita de cliente). Fixes aplicados e re-provados (`ef23ee9` + `9519f38`): A1 guarda `eventoCoerente` fail-closed; A2 fence de monotonicidade (redelivery fora de ordem não regride estorno — LTV não ressuscita dinheiro devolvido); A4 clamp [1,100] no pageSize; A5 trava de regressão collectionGroup comentada nas rules. Report completo: `outputs/leela-build-2d6ee98d/E19-CRM-REPORT.md`.
+
+**⚠️ Pendência de ops (A3 · MÉDIO — decisão do Vitor ANTES de o CRM ir a produção):** o docId usa `sha256(tenantId:tipo:valor)` — para chave CPF (~10⁹ valores) é força-brutável offline por quem tenha um dump da coleção + o tenantId (que está no path). Protege contra exposição casual e correlação cross-tenant, NÃO contra reversão offline. Hardening recomendado: trocar por HMAC-SHA256 com pepper secreto (`CRM_ID_PEPPER` no Secret Manager, fail-closed). Não foi aplicado nesta lane porque exige provisionar secret em prod (ação de ops fora da alçada; fail-closed sem o secret quebraria o trigger). Sem dado em produção ainda — trocar o esquema agora é barato; depois exige migração de chaves.
+
+**Caminho real do modelo:** `tenants/{tenantId}/crmClientes/{clienteKey}` (subcoleção direta — não `crm/clientes`). Sem índice composto novo (`firestore.indexes.json` intocado).
+
+**Reconciliação E06 (adendo do Vitor 09:14):** NADA mudou em enviarCampanha/estimarAlcance/automações — audiência por EVENTO segue dona do fluxo. O CRM vira a FONTE DE AUDIÊNCIA do hub central (S-R9-13-T4, lote de UI): o mapa `eventos` por cliente segmenta "participou do evento X" e o disparo REUSARÁ o pipeline único `executarDisparoCampanha` por evento.
+
+**Limitação documentada:** entrega fora de ordem de eventos ANTIGOS do trigger pode deixar entrada órfã na chave antiga até o próximo write do inscrito (mesma classe da limitação do agregarDemografia).
 
 ## Ordem sugerida
 
-`S1900 (CRM: modelo+Rules+tela) → S1901 (hub de Comunicação)`. **Gate obrigatório:** review antagonista (PII/LGPD) antes de qualquer código — categoria distinta do RN-820.
+`S1900 (CRM: modelo+Rules ✅ → tela) → S1901 (hub de Comunicação)`. **Gate obrigatório:** review antagonista (PII/LGPD) antes de qualquer código — categoria distinta do RN-820. Backend passou pelo gate; a UI (T3/T4) repete o gate no próprio lote.
