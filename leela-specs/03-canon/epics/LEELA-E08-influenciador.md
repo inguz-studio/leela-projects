@@ -322,6 +322,8 @@ Onda 3 liberada pelo Vitor (audit 14:06). Rota **Fable** + review antagonista (D
 
 Report: `outputs/leela-build-2d6ee98d/COMF2-REPORT.md`. O que segue H3: painel do promotor (S701-S704) e split automático (fase 3).
 
+**UI entregue (lote CRM-COMISSAO-UI, trace leela-build-2d6ee98d — Opus):** config de comissão no `AfiliadoModal` (percentual 0,01..100 passo 0,01 | valor fixo por inscrição, validação espelhando `isComissaoAfiliadoValida`, aviso de NÃO-retroatividade) + coluna de comissão na aba Afiliados; **organizador** (aba Clubs → Influenciadores) vê comissão acumulada/repassada/saldo (saldo negativo = dívida, sem clamp) + KPI de comissão em aberto + registra repasse manual via `ConfirmModal` (`registrarRepasseComissao`, idempotência amigável — repasseId reusado no retry, repasse do saldo total off-platform); **influenciador** (Minhas afiliações) vê saldo/extrato SÓ do próprio (RN-318) — comissão por conversão + extrato de repasses. Gates: tsc painel 0, eslint 0, RTL das 3 superfícies verdes. Falta: repasse PARCIAL (hoje é do saldo total — follow-up).
+
 ### Adendo 5 (Vitor · 2026-07-18)
 
 - **RN-319 · Acompanhamento de vendas na aba Clubs (dois lados) — RATIFICADA.** O **organizador** vê as vendas/conversões do clube-influenciador e do influenciador PF na **sua aba Clubs**; o **clube/influenciador** vê as próprias vendas na **aba Clubs da própria conta**. Escopo de leitura coerente com RN-318 (cada influenciador só as próprias; organizador só as do próprio tenant). Story `S-R9-11` (task T8).

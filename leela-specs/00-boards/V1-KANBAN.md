@@ -13,10 +13,10 @@ tags:
 ## 📋 Backlog
 
 - [ ] **[E13] App do atleta** — descobrir, inscrever, ingresso com QR e clube no celular 📋 [[LEELA-E13-app-atleta]]
-- [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend completo (atribuição + comissão + saldo); falta o painel do promotor e a UI de comissão [[LEELA-E08-influenciador]]
+- [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend completo (atribuição + comissão + saldo) + UI de comissão entregue (config, saldo dos 2 lados, repasse manual); falta o painel do promotor [[LEELA-E08-influenciador]]
 - [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 📋 [[LEELA-E10-marcas]]
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 [[LEELA-E11-analytics]]
-- [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto (clientes consolidados com LTV + privacidade provada); falta a tela [[LEELA-E19-crm]]
+- [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto + hub "Clientes & Comunicação" entregue (lista cross-evento com LTV + detalhe com histórico e aniversário); falta o disparo de comunicação a segmentos [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]
 - [ ] **[Higiene] Follow-ups do gate** — pendências datadas que não bloqueiam a próxima onda 📋 [[BOARD-HISTORICO]]
@@ -24,7 +24,6 @@ tags:
 
 ## 🔄 Em execução
 
-- [ ] **[E19/E08] Tela do CRM + comissão no painel** — organizador vê seus clientes (LTV, histórico entre eventos, aniversários) e configura/acompanha a comissão do influenciador 🔄 [[LEELA-E19-crm]]
 - [ ] **[E04/E12] Modelo do checkout novo** — endereço via CEP, telefone e nascimento entram no modelo, com os dois aceites (termos de compra + declaração de saúde) registrados como prova 🔄 [[LEELA-E04-config-vendas]]
 
 
@@ -79,6 +78,7 @@ tags:
 - [x] **[E12] Modelo do checkout novo (CHECKOUT-MODELO)** — o banco já sabe guardar tudo que o formulário novo vai coletar: endereço do comprador no pedido (CEP guardado limpo, 8 dígitos), telefone do responsável, nascimento por atleta, e os dois aceites do pagar (termos da compra + termo de saúde) com prova forte — versão E "impressão digital" do texto aceito, carimbados pelo servidor (impossível forjar ou antedatar). A política de cancelamento ganhou versão automática (muda o conteúdo, sobe a versão) e a página pública já entrega o que o form precisa (política, exigências de saúde, aviso "+ taxa") sem expor dado pessoal. Review antagonista achou 1 grave + 5 médios — todos corrigidos e re-provados ✅ report `outputs/leela-build-2d6ee98d/CKMOD-REPORT.md` — falta a UI coletar (próximo lote, que também torna os aceites obrigatórios no servidor) [[BOARD-HISTORICO]]
 - [x] **[E08] Comissão do influenciador (fase 2)** — organizador define % ou valor fixo, a comissão acumula sozinha a cada venda confirmada, estorno devolve certinho e o afiliado vê saldo e extrato; repasse manual registrado no sistema (split automático fica para decisão) ✅ [[BOARD-HISTORICO]]
 - [x] **[E19] CRM blindado (A3)** — a chave que identifica cada cliente ganhou segredo criptográfico: mesmo com um vazamento do banco, o CPF não é recuperável ✅ [[BOARD-HISTORICO]]
+- [x] **[E19/E08] Tela do CRM + UI de comissão (CRM-COMISSAO-UI)** — o organizador abre "Clientes & Comunicação" no menu e vê seus clientes cross-evento com LTV, valor gasto e histórico, com aniversário e idade ao vivo no detalhe; configura a comissão do influenciador (% ou valor fixo, sem retroatividade), acompanha saldo/extrato dos dois lados e registra o repasse manual ✅ [[BOARD-HISTORICO]]
 - [x] **[Decisões] Rodada de decisões do Vitor** — ratificadas e propagadas aos épicos ✅ [[BOARD-HISTORICO]]
 - [x] **[Docs] Terminologia única** — Onda, Épico, História e Tarefa ✅ [[MODELO-ROADMAP]]
 

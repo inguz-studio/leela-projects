@@ -4,7 +4,7 @@
 - **Horizonte:** H3 (Onda web-complete — antecipada 2026-07-18)
 - **MoSCoW:** Could (proposto pelo Vitor 2026-07-18; a ratificar)
 - **Estimativa:** XL
-- **Status:** 🔨 Backend construído (S-R9-13-T1/T2 + api-client · trace leela-build-2d6ee98d E19); UI (T3/T4) em lote posterior
+- **Status:** 🔨 Backend construído (S-R9-13-T1/T2 + api-client) + **UI T3 entregue** (lote CRM-COMISSAO-UI, trace leela-build-2d6ee98d): hub "Clientes & Comunicação" no menu (item `comunicacao` da sidebar ativo), lista paginada por cursor + busca por prefixo + ordenação, detalhe 1-read com histórico por evento, aniversário mm-dd e idade ao vivo. **Falta T4** (disparo de comunicação a segmentos do CRM — reusa `executarDisparoCampanha`)
 - **Depende de:** LEELA-E00 (fundação), LEELA-E01 (DS & Shell), identidade transacional (inscrições/pedidos ✅), LEELA-E11 (demografia RN-820, para idade/sexo)
 - **Origem:** verbatim do Vitor 2026-07-18 (adendo 2). Spec: `02-rodadas/2026-07-18-ux-review/`.
 
