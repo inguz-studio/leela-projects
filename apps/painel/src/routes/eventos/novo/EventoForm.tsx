@@ -17,8 +17,12 @@
 // venda a troca congela (Rules) — isso é tratado na aba Configurações.
 //
 // LACUNAS ainda registradas (fora de escopo desta task):
-//   - CAPA: só URL (sem upload/Storage no repo); `imagemUrl` não é enviado por
-//     esta tela — coletada p/ fidelidade + preview.
+//   - CAPA: UPLOAD-ONLY (RN-168) — o input de URL foi REMOVIDO. O upload real
+//     está BLOQUEADO por backend: não existe path `eventos/{id}/capa` nas
+//     storage.rules nem seam, e o cadastro não persiste `imagemUrl` (nem esta
+//     tela nem ConfigGerais). Pendência de lote backend registrada no
+//     checkpoint UPSW; até lá, nota honesta no lugar do campo (o campo `capa`
+//     do form fica reservado, sem UI).
 //   - REGULAMENTO: coletado p/ fidelidade, não enviado por esta tela. Ver REPORT.
 // =============================================================================
 
@@ -64,18 +68,6 @@ function montarDataEnvio(data: string, hora: string): string {
   const parede = `${data}T${hora}`;
   if (!isDataHoraLocalISO(parede)) return data; // fallback seguro (date-only)
   return dataHoraLocalParaDate(parede).toISOString();
-}
-
-/** URL http(s) válida? Só p/ decidir se mostra a prévia da capa. @pure */
-function urlDeImagemValida(valor: string): boolean {
-  const v = valor.trim();
-  if (v.length === 0) return false;
-  try {
-    const u = new URL(v);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
 }
 
 export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.Element {
@@ -154,8 +146,6 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
     }
   }
 
-  const mostrarPrevia = urlDeImagemValida(values.capa);
-
   return (
     <form
       noValidate
@@ -173,30 +163,22 @@ export function EventoForm({ onCriarEvento, onSuccess }: EventoFormProps): JSX.E
         </p>
       </header>
 
-      {/* Capa (hero) — URL + preview. Upload é lacuna (ver REPORT). */}
-      <div className="flex flex-col gap-[var(--spacing-2)]">
-        <Input
-          id="capa"
-          type="url"
-          inputMode="url"
-          label="Imagem de capa (URL)"
-          value={values.capa}
-          onChange={(e) => set('capa', e.target.value)}
-          placeholder="https://…/capa.jpg"
-          aria-describedby="capa-hint"
-        />
-        <span id="capa-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Cole a URL da imagem. Upload de arquivo ainda não está disponível.
+      {/* Capa (hero) — UPLOAD-ONLY (RN-168): o input de URL foi REMOVIDO. O
+          upload real depende de backend ainda não disponível (Storage path
+          `eventos/{id}/capa` + seam + persistência de `imagemUrl` no cadastro —
+          pendência de lote backend registrada no checkpoint UPSW). Nota honesta
+          no lugar do campo, sem prometer o que ainda não funciona. */}
+      <div
+        className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--card-radius)] bg-[var(--surface-sunken)] p-[var(--spacing-4)]"
+        aria-label="Imagem de capa"
+      >
+        <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+          Imagem de capa
         </span>
-        {mostrarPrevia ? (
-          <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-sunken)]">
-            <img
-              src={values.capa.trim()}
-              alt="Prévia da capa do evento"
-              className="aspect-[16/10] w-full object-cover"
-            />
-          </div>
-        ) : null}
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          O upload da capa (1600×838, 1.9:1) chega em breve. Até lá, o evento usa o gradiente do
+          tema na página pública — você pode publicar sem capa.
+        </span>
       </div>
 
       <Input

@@ -9,12 +9,14 @@
 //     no EDIT vira leitura pura ("@handle" + nota).
 //   - RN-161 visibilidade: publica (link direto, noindex) | indexavel
 //     (buscadores) | privada (404 público) — a copy explica cada estado.
-//   - Capa `imagemUrl` (RN-166) e avatar `avatarUrl`: UPLOAD de arquivo
-//     (LEELA-R5, quando o container passa onUploadAvatar/onUploadCapa) OU URL
-//     http(s) colada + prévia (fallback aceito). O upload devolve a
-//     downloadURL e PREENCHE o mesmo campo — persistir continua sendo o
-//     "Salvar alterações" (salvarPerfil), um único caminho de escrita.
-//     Sem capa = gradiente do DS na página pública (fallback honesto).
+//   - Capa `imagemUrl` (RN-166) e avatar `avatarUrl`: UPLOAD-ONLY (DEC-0719 ·
+//     RN-168 ampliada). O "cole uma URL" MORREU — a única entrada é o arquivo,
+//     via `ImageUploadField` (valida tipo/tamanho, ajusta a proporção por COVER
+//     — RN-170 — e sobe pelo seam). A downloadURL PREENCHE o mesmo campo;
+//     persistir continua sendo o "Salvar alterações" (salvarPerfil), caminho
+//     único de escrita. Proporção-alvo: avatar 1:1, capa 16/9 (premissa
+//     documentada no checkpoint UPSW). Sem capa = gradiente do DS na página
+//     pública; "Remover" limpa o campo (preserva o clear que a URL dava).
 //
 // Presentational + controlado: a persistência (`salvarPerfil`) e a sessão vivem
 // no container. Após salvar, exibe o bloco "link público" com o endereço final.
@@ -25,11 +27,11 @@ import {
   Badge,
   Button,
   Chip,
-  FileInput,
   Input,
   Textarea,
   useToast,
 } from '@leela/design-system';
+import { ImageUploadField } from '@/components/upload';
 import {
   PERFIL_BIO_MAX,
   PERFIL_LINKS_MAX,
@@ -67,26 +69,14 @@ export interface PerfilPublicoEditorProps {
   /** Persiste via `salvarPerfil`; resolve com o handle gravado (para o preview). */
   onSalvar: (values: PerfilFormValues) => Promise<{ handle: string; criado: boolean }>;
   /**
-   * Upload do avatar (LEELA-R5): sobe o arquivo e resolve a downloadURL, que
-   * PREENCHE `avatarUrl` (persistir segue no "Salvar alterações"). Erro de
-   * validação/upload deve vir como Error com mensagem amigável (vira erro
-   * inline do FileInput). Ausente = só o caminho de URL colada.
+   * Upload do avatar (LEELA-R5 · RN-168 upload-only): sobe o arquivo e resolve
+   * a downloadURL, que PREENCHE `avatarUrl` (persistir segue no "Salvar
+   * alterações"). Erro de upload vira erro inline no campo. OBRIGATÓRIO — não
+   * existe mais fallback de URL colada.
    */
-  onUploadAvatar?: (file: File) => Promise<string>;
-  /** Upload da capa (LEELA-R5) — mesmo contrato do onUploadAvatar. */
-  onUploadCapa?: (file: File) => Promise<string>;
-}
-
-/** URL http(s) válida? Só para decidir se mostra a prévia da imagem. @pure */
-function urlDeImagemValida(valor: string): boolean {
-  const v = valor.trim();
-  if (v.length === 0) return false;
-  try {
-    const u = new URL(v);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  onUploadAvatar: (file: File) => Promise<string>;
+  /** Upload da capa (LEELA-R5 · RN-168) — mesmo contrato do onUploadAvatar. */
+  onUploadCapa: (file: File) => Promise<string>;
 }
 
 export function PerfilPublicoEditor({
@@ -103,32 +93,6 @@ export function PerfilPublicoEditor({
   const [handleSalvo, setHandleSalvo] = useState<string | null>(
     modo === 'edit' && inicial ? inicial.handle : null
   );
-
-  // Upload (LEELA-R5) — estado por campo; a URL resultante PREENCHE o campo
-  // (persistir segue pelo submit único `onSalvar`).
-  const [enviandoAvatar, setEnviandoAvatar] = useState(false);
-  const [erroAvatar, setErroAvatar] = useState<string | null>(null);
-  const [enviandoCapa, setEnviandoCapa] = useState(false);
-  const [erroCapa, setErroCapa] = useState<string | null>(null);
-
-  async function enviarImagem(
-    file: File,
-    upload: (file: File) => Promise<string>,
-    campo: 'avatarUrl' | 'imagemUrl',
-    setEnviando: (v: boolean) => void,
-    setErro: (v: string | null) => void
-  ): Promise<void> {
-    setErro(null);
-    setEnviando(true);
-    try {
-      const url = await upload(file);
-      set(campo, url);
-    } catch (err) {
-      setErro(err instanceof Error && err.message ? err.message : 'Não foi possível enviar a imagem.');
-    } finally {
-      setEnviando(false);
-    }
-  }
 
   function set<K extends keyof PerfilFormValues>(campo: K, valor: PerfilFormValues[K]): void {
     setValues((v) => ({ ...v, [campo]: valor }));
@@ -178,8 +142,6 @@ export function PerfilPublicoEditor({
     }
   }
 
-  const mostrarPreviaCapa = urlDeImagemValida(values.imagemUrl);
-  const mostrarPreviaAvatar = urlDeImagemValida(values.avatarUrl);
   const linkPublico = handleSalvo ? `${linkPublicoBase}/@${handleSalvo}` : null;
   const bioRestante = PERFIL_BIO_MAX - values.bio.length;
 
@@ -259,75 +221,40 @@ export function PerfilPublicoEditor({
         </span>
       </div>
 
-      {/* Avatar — upload de arquivo (LEELA-R5) OU URL colada + prévia. */}
-      <div className="flex flex-col gap-[var(--spacing-2)]">
-        {onUploadAvatar ? (
-          <FileInput
-            id="perfil-avatar-arquivo"
-            label="Enviar foto"
-            busy={enviandoAvatar}
-            hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Depois, salve as alterações."
-            {...(erroAvatar ? { errorMessage: erroAvatar } : {})}
-            onFileSelected={(file) =>
-              void enviarImagem(file, onUploadAvatar, 'avatarUrl', setEnviandoAvatar, setErroAvatar)
-            }
-          />
-        ) : null}
-        <Input
-          id="perfil-avatar"
-          type="url"
-          inputMode="url"
-          label={onUploadAvatar ? 'Ou cole uma URL' : 'Foto (URL)'}
-          value={values.avatarUrl}
-          onChange={(e) => set('avatarUrl', e.target.value)}
-          placeholder="https://…/foto.jpg"
-        />
-        {mostrarPreviaAvatar ? (
-          <img
-            src={values.avatarUrl.trim()}
-            alt="Prévia da foto do perfil"
-            className="size-20 rounded-full object-cover"
-          />
-        ) : null}
-      </div>
+      {/* Avatar — UPLOAD-ONLY (RN-168): arquivo → crop 1:1 (RN-170) → preenche
+          `avatarUrl`; persistir segue no "Salvar alterações". */}
+      <ImageUploadField
+        id="perfil-avatar"
+        label="Foto do perfil"
+        hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 1:1. Depois, salve as alterações."
+        value={values.avatarUrl}
+        onChange={(url) => set('avatarUrl', url)}
+        onUpload={onUploadAvatar}
+        aspecto={{ w: 1, h: 1 }}
+        forma="circulo"
+        previewAlt="Prévia da foto do perfil"
+        permiteRemover
+        removerLabel="Remover foto"
+      />
 
-      {/* Capa `imagemUrl` (RN-166) — upload (LEELA-R5) OU URL + prévia; sem
-          capa = gradiente do DS. */}
-      <div className="flex flex-col gap-[var(--spacing-2)]">
-        {onUploadCapa ? (
-          <FileInput
-            id="perfil-capa-arquivo"
-            label="Enviar imagem de capa"
-            busy={enviandoCapa}
-            hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Depois, salve as alterações."
-            {...(erroCapa ? { errorMessage: erroCapa } : {})}
-            onFileSelected={(file) =>
-              void enviarImagem(file, onUploadCapa, 'imagemUrl', setEnviandoCapa, setErroCapa)
-            }
-          />
-        ) : null}
-        <Input
+      {/* Capa `imagemUrl` (RN-166) — UPLOAD-ONLY; crop 16/9 (RN-170); sem capa =
+          gradiente do DS na página pública. */}
+      <div className="flex flex-col gap-[var(--spacing-1)]">
+        <ImageUploadField
           id="perfil-capa"
-          type="url"
-          inputMode="url"
-          label={onUploadCapa ? 'Ou cole uma URL' : 'Imagem de capa (URL)'}
+          label="Imagem de capa"
+          hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 16:9. Depois, salve as alterações."
           value={values.imagemUrl}
-          onChange={(e) => set('imagemUrl', e.target.value)}
-          placeholder="https://…/capa.jpg"
-          aria-describedby="perfil-capa-hint"
+          onChange={(url) => set('imagemUrl', url)}
+          onUpload={onUploadCapa}
+          aspecto={{ w: 16, h: 9 }}
+          previewAlt="Prévia da capa do perfil"
+          permiteRemover
+          removerLabel="Remover capa"
         />
-        <span id="perfil-capa-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+        <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
           Sem capa, a página usa um gradiente.
         </span>
-        {mostrarPreviaCapa ? (
-          <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-sunken)]">
-            <img
-              src={values.imagemUrl.trim()}
-              alt="Prévia da capa do perfil"
-              className="aspect-[16/10] w-full object-cover"
-            />
-          </div>
-        ) : null}
       </div>
 
       {/* Visibilidade (RN-161) */}

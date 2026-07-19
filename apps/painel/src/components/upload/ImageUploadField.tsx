@@ -25,7 +25,7 @@
 // =============================================================================
 
 import { useState } from 'react';
-import { FileInput } from '@leela/design-system';
+import { Button, FileInput } from '@leela/design-system';
 import { problemaDoArquivoImagem, IMAGEM_UPLOAD_MAX_BYTES } from '@leela/api-client';
 import { ajustarProporcaoImagem } from './ajustarProporcao';
 
@@ -52,6 +52,13 @@ export interface ImageUploadFieldProps {
   maxLadoPx?: number;
   /** Teto de bytes da saída (default = teto do upload, 5MB). */
   maxBytes?: number;
+  /**
+   * Mostra "Remover" quando há imagem (chama `onChange('')`). Preserva o clear
+   * que o antigo input de URL dava às capas (vazio → gradiente); default false
+   * (avatar/foto seguem o padrão ContaPage sem remover). Rótulo customizável.
+   */
+  permiteRemover?: boolean;
+  removerLabel?: string;
 }
 
 /** URL http(s) válida? Só decide se mostra a prévia. @pure */
@@ -78,6 +85,8 @@ export function ImageUploadField({
   previewAlt,
   maxLadoPx,
   maxBytes,
+  permiteRemover = false,
+  removerLabel = 'Remover imagem',
 }: ImageUploadFieldProps): JSX.Element {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -141,6 +150,21 @@ export function ImageUploadField({
             // permitida pela governança §2. Círculo já é 1:1 via `size-20`.
             {...(forma === 'retangulo' ? { style: { aspectRatio: razao } } : {})}
           />
+        </div>
+      ) : null}
+      {temImagem && permiteRemover ? (
+        <div>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={enviando}
+            onClick={() => {
+              setErro(null);
+              onChange('');
+            }}
+          >
+            {removerLabel}
+          </Button>
         </div>
       ) : null}
     </div>

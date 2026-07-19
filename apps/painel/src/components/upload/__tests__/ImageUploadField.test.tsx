@@ -114,4 +114,16 @@ describe('ImageUploadField — upload-only (RN-168)', () => {
     renderField({ value: 'https://storage.leela.dev/img', previewAlt: 'Prévia da capa' });
     expect(screen.getByAltText('Prévia da capa')).toHaveAttribute('src', 'https://storage.leela.dev/img');
   });
+
+  it('sem permiteRemover: não mostra botão Remover', () => {
+    renderField({ value: 'https://storage.leela.dev/img' });
+    expect(screen.queryByRole('button', { name: 'Remover imagem' })).not.toBeInTheDocument();
+  });
+
+  it('permiteRemover: "Remover" limpa o campo via onChange("") (preserva o clear das capas)', async () => {
+    const onChange = vi.fn();
+    renderField({ value: 'https://storage.leela.dev/img', onChange, permiteRemover: true });
+    await userEvent.click(screen.getByRole('button', { name: 'Remover imagem' }));
+    expect(onChange).toHaveBeenCalledWith('');
+  });
 });

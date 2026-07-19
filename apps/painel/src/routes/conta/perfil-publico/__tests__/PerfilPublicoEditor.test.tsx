@@ -16,6 +16,10 @@ function renderEditor(over: Partial<Parameters<typeof PerfilPublicoEditor>[0]> =
     modo: 'create' as const,
     linkPublicoBase: 'https://be-hero.com.br',
     onSalvar: vi.fn().mockResolvedValue({ handle: 'corrida', criado: true }),
+    // Upload-only (RN-168): onUpload* são obrigatórios; default no-op nos testes
+    // que não exercitam upload.
+    onUploadAvatar: vi.fn().mockResolvedValue('https://storage.leela.dev/avatar'),
+    onUploadCapa: vi.fn().mockResolvedValue('https://storage.leela.dev/capa'),
     ...over,
   };
   render(
@@ -70,35 +74,38 @@ describe('PerfilPublicoEditor', () => {
   });
 });
 
-describe('PerfilPublicoEditor — upload de avatar/capa (LEELA-R5)', () => {
+describe('PerfilPublicoEditor — upload-only de avatar/capa (RN-168 · RN-170)', () => {
   const arquivo = new File(['x'], 'foto.png', { type: 'image/png' });
 
-  it('sem onUpload*: só o caminho de URL (comportamento anterior intacto)', () => {
+  it('não há mais input de URL de imagem — só os seletores de arquivo', () => {
     renderEditor({ modo: 'edit', inicial: inicialEdit });
-    expect(screen.queryByLabelText('Enviar foto')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Enviar imagem de capa')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Foto (URL)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Imagem de capa (URL)')).toBeInTheDocument();
+    // Os labels de URL de imagem sumiram (RN-168).
+    expect(screen.queryByLabelText('Foto (URL)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Imagem de capa (URL)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Ou cole uma URL')).not.toBeInTheDocument();
+    // Os seletores de arquivo estão presentes (type=file).
+    expect(screen.getByLabelText('Foto do perfil')).toHaveAttribute('type', 'file');
+    expect(screen.getByLabelText('Imagem de capa')).toHaveAttribute('type', 'file');
   });
 
   it('upload do avatar resolve → downloadURL preenche avatarUrl e mostra prévia', async () => {
     const onUploadAvatar = vi.fn().mockResolvedValue('https://storage.leela.dev/users/u1/perfil-avatar');
     renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadAvatar });
-    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
-    expect(onUploadAvatar).toHaveBeenCalledWith(arquivo);
-    const campo = await screen.findByLabelText('Ou cole uma URL');
-    expect(campo).toHaveValue('https://storage.leela.dev/users/u1/perfil-avatar');
-    expect(screen.getByAltText('Prévia da foto do perfil')).toHaveAttribute(
-      'src',
-      'https://storage.leela.dev/users/u1/perfil-avatar'
+    await userEvent.upload(screen.getByLabelText('Foto do perfil'), arquivo);
+    await waitFor(() => expect(onUploadAvatar).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.getByAltText('Prévia da foto do perfil')).toHaveAttribute(
+        'src',
+        'https://storage.leela.dev/users/u1/perfil-avatar'
+      )
     );
   });
 
   it('upload da capa resolve → downloadURL preenche imagemUrl e mostra prévia', async () => {
     const onUploadCapa = vi.fn().mockResolvedValue('https://storage.leela.dev/users/u1/perfil-capa');
     renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadCapa });
-    await userEvent.upload(screen.getByLabelText('Enviar imagem de capa'), arquivo);
-    expect(onUploadCapa).toHaveBeenCalledWith(arquivo);
+    await userEvent.upload(screen.getByLabelText('Imagem de capa'), arquivo);
+    await waitFor(() => expect(onUploadCapa).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(screen.getByAltText('Prévia da capa do perfil')).toHaveAttribute(
         'src',
@@ -108,10 +115,18 @@ describe('PerfilPublicoEditor — upload de avatar/capa (LEELA-R5)', () => {
   });
 
   it('upload que falha → erro inline com a mensagem do Error', async () => {
-    const onUploadAvatar = vi.fn().mockRejectedValue(new Error('Use uma imagem JPG, PNG, WebP, GIF ou AVIF.'));
+    const onUploadAvatar = vi.fn().mockRejectedValue(new Error('Sem sessão ativa para enviar a imagem.'));
     renderEditor({ modo: 'edit', inicial: inicialEdit, onUploadAvatar });
-    await userEvent.upload(screen.getByLabelText('Enviar foto'), arquivo);
+    await userEvent.upload(screen.getByLabelText('Foto do perfil'), arquivo);
     const alerta = await screen.findByRole('alert');
-    expect(alerta).toHaveTextContent('Use uma imagem JPG, PNG, WebP, GIF ou AVIF.');
+    expect(alerta).toHaveTextContent('Sem sessão ativa para enviar a imagem.');
+  });
+
+  it('"Trocar imagem" aparece quando já há avatar/capa (RN-170 T2)', () => {
+    renderEditor({
+      modo: 'edit',
+      inicial: { ...inicialEdit, avatarUrl: 'https://x.dev/a.png', imagemUrl: 'https://x.dev/c.png' },
+    });
+    expect(screen.getAllByRole('button', { name: 'Trocar imagem' }).length).toBeGreaterThanOrEqual(2);
   });
 });

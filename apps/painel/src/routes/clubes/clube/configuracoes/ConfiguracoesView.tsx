@@ -11,9 +11,10 @@
 // =============================================================================
 
 import { useEffect, useRef, useState } from 'react';
-import { Badge, Button, Checkbox, Chip, FileInput, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
+import { Badge, Button, Checkbox, Chip, Input, Radio, RadioGroup, Select, Textarea } from '@leela/design-system';
 import type { Clube, ModeloEntradaClube, VisibilidadeClube } from '@leela/core';
 import type { AtualizarClubeInput } from '@leela/api-client';
+import { ImageUploadField } from '@/components/upload';
 import {
   CATEGORIA_OPCOES,
   COMPORTAMENTOS,
@@ -36,25 +37,12 @@ export interface ConfiguracoesViewProps {
   /** Abre o fluxo de exclusao (S110-T2). */
   onDeletar: () => void;
   /**
-   * Upload da capa (LEELA-R5): sobe o arquivo pro Storage
+   * Upload da capa (LEELA-R5 · RN-168 upload-only): sobe o arquivo pro Storage
    * (`clubes/{clubeId}/capa`) e resolve a downloadURL, que PREENCHE o campo
-   * `imagemUrl` (persistir segue no "Salvar alterações" da seção). Erro deve
-   * vir como Error com mensagem amigável (erro inline do FileInput).
-   * Ausente = só o caminho de URL colada.
+   * `imagemUrl` (persistir segue no "Salvar alterações" da seção). OBRIGATÓRIO —
+   * não existe mais fallback de URL colada.
    */
-  onUploadCapa?: (file: File) => Promise<string>;
-}
-
-/** URL http(s) válida? Só decide se mostra a prévia da capa. @pure */
-function urlDeImagemValida(valor: string): boolean {
-  const v = valor.trim();
-  if (v.length === 0) return false;
-  try {
-    const u = new URL(v);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  onUploadCapa: (file: File) => Promise<string>;
 }
 
 function Secao({
@@ -112,10 +100,8 @@ export function ConfiguracoesView({
   const [nome, setNome] = useState(clube.nome);
   const [descricao, setDescricao] = useState(clube.descricao);
   // Capa `imagemUrl` (RN-166) — string vazia = sem capa (fallback gradiente).
+  // Upload-only (RN-168): a downloadURL do ImageUploadField preenche este campo.
   const [imagemUrl, setImagemUrl] = useState(clube.imagemUrl ?? '');
-  // Upload da capa (LEELA-R5) — a URL resultante preenche o campo acima.
-  const [enviandoCapa, setEnviandoCapa] = useState(false);
-  const [erroCapa, setErroCapa] = useState<string | null>(null);
   const [categoria, setCategoria] = useState(clube.categoria);
   const [modalidade, setModalidade] = useState(clube.modalidade);
   const [cidade, setCidade] = useState(clube.localizacao.cidade);
@@ -156,21 +142,6 @@ export function ConfiguracoesView({
     const el = refs.current[id];
     if (el && typeof el.scrollIntoView === 'function') {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
-  async function enviarCapa(file: File, upload: (file: File) => Promise<string>): Promise<void> {
-    setErroCapa(null);
-    setEnviandoCapa(true);
-    try {
-      const url = await upload(file);
-      setImagemUrl(url);
-    } catch (err) {
-      setErroCapa(
-        err instanceof Error && err.message ? err.message : 'Não foi possível enviar a imagem.',
-      );
-    } finally {
-      setEnviandoCapa(false);
     }
   }
 
@@ -238,42 +209,25 @@ export function ConfiguracoesView({
             onChange={(e) => setDescricao(e.target.value)}
             rows={2}
           />
-          {/* Capa do clube (RN-166 · S1702-T1 + LEELA-R5) — upload de arquivo
-              OU URL colada + prévia; sem capa a página pública usa o gradiente
-              do DS. */}
-          <div className="flex flex-col gap-[var(--spacing-2)]">
-            {onUploadCapa ? (
-              <FileInput
-                id="config-capa-arquivo"
-                label="Enviar imagem de capa"
-                busy={enviandoCapa}
-                hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Depois, salve as alterações."
-                {...(erroCapa ? { errorMessage: erroCapa } : {})}
-                onFileSelected={(file) => void enviarCapa(file, onUploadCapa)}
-              />
-            ) : null}
-            <Input
+          {/* Capa do clube (RN-166 · S1702-T1 + LEELA-R5 · RN-168 upload-only) —
+              arquivo → crop 16/9 (RN-170) → preenche `imagemUrl`; sem capa a
+              página pública usa o gradiente do DS. */}
+          <div className="flex flex-col gap-[var(--spacing-1)]">
+            <ImageUploadField
               id="config-capa"
-              type="url"
-              inputMode="url"
-              label={onUploadCapa ? 'Ou cole uma URL' : 'Imagem de capa (URL)'}
+              label="Imagem de capa"
+              hint="JPG, PNG, WebP, GIF ou AVIF até 5MB. Ajustada para 16:9. Depois, salve as alterações."
               value={imagemUrl}
-              onChange={(e) => setImagemUrl(e.target.value)}
-              placeholder="https://…/capa.jpg"
-              aria-describedby="config-capa-hint"
+              onChange={setImagemUrl}
+              onUpload={onUploadCapa}
+              aspecto={{ w: 16, h: 9 }}
+              previewAlt="Prévia da capa do clube"
+              permiteRemover
+              removerLabel="Remover capa"
             />
-            <span id="config-capa-hint" className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
               Sem capa, a página do clube usa um gradiente.
             </span>
-            {urlDeImagemValida(imagemUrl) ? (
-              <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-base)]">
-                <img
-                  src={imagemUrl.trim()}
-                  alt="Prévia da capa do clube"
-                  className="aspect-[16/10] w-full object-cover"
-                />
-              </div>
-            ) : null}
           </div>
           {/* Mesmos selects do form de criação — criar e editar não divergem. */}
           <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2">
