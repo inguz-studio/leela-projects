@@ -276,3 +276,18 @@ Login funcional com os provedores exigidos (Apple obrigatório p/ App Store) e c
 - **S020-T3 · Cadastro de conta** — cria a conta Firebase do profissional; o ACESSO a tenant continua vindo por provisionamento (E16) ou convite de equipe (S304)/parceria (E18) — cadastro NÃO cria tenant (default defensável; mudar = decisão de produto).
 - **S020-T4 · Configurações da conta** — perfil do usuário logado (nome, e-mail, troca de senha com reauth, foto se houver padrão de upload), separada das Configurações do TENANT (E16) e do EVENTO (S304-T2).
 - Segurança: review antagonista Fable obrigatória no lote (fluxos de auth: enumeração, reset, session fixation, reauth na troca de senha).
+
+### LEELA-S021 · Estabilidade da suíte de integração (SUITE-STAB) — ✅ ENTREGUE 2026-07-19
+
+**Como** time, **quero** a suíte inteira de functions determinística mesmo em máquina lenta, **para** que o gate de suíte-verde seja confiável e nenhum lote fique refém de flakiness alheia.
+
+- **Tasks (todas feitas):** T1 helper `functions/src/__tests__/helpers/stability.ts` + drain global no `vitest.setup.ts` · T2 wiring dos 21 arquivos flaky · T3 prova destrutiva do desenho (smoke falsificou pausa-por-teste → pausa sticky por arquivo) · T4 prova final (suíte 2× consecutivas verde: 164 arquivos / 2935 testes).
+- **Causa-raiz pagada:** triggers de background do Functions Emulator rodam ASSÍNCRONOS ao vitest — backlog de execuções transborda entre arquivos e corre contra o clear+seed (seeds engolidos, leftovers, contenção 409/500) + janela do `onCreateUser` clobbera claims setadas no meio.
+
+**REGRA DE INFRA DE TESTE (vale para todo teste de integração novo em functions/):**
+1. `beforeEach`/`beforeAll` que limpa e semeia o Firestore usa os helpers de `helpers/stability.ts`: `withTriggersPaused(clearFirestoreDrained → seedVerified(canários))` — nunca `clearFirestore()`+seed cru.
+2. Usuário de fixture no Auth Emulator nasce via `ensureUserWithClaims` (idempotente + à prova da janela do onCreateUser) — nunca `createUser`+`setCustomUserClaims` cru.
+3. NUNCA re-habilitar background triggers dentro de `beforeEach` — o re-enable dispara reload das function definitions (~segundos) e mata o runtime em série; a pausa é sticky por arquivo e o `afterAll` global do `vitest.setup.ts` re-habilita 1× no fim.
+4. Teste que precisa de entrega REAL de trigger em background no corpo do teste não usa a pausa — invoca o handler manualmente (padrão `runTrigger`) ou drena a convergência (padrão `provisionarDrenado`).
+5. Suites sem `RulesTestEnvironment` limpam via `clearFirestoreRest` (bulk), nunca `recursiveDelete` doc-a-doc.
+6. Comando canônico do gate de suíte: `npm run build && npx firebase-tools@13 emulators:exec --project demo-leela "npx vitest run"` (build SEMPRE antes — lição RN-822/CLAIMFIX).
