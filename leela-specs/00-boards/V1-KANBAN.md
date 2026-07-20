@@ -12,7 +12,7 @@ tags:
 
 - [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend, painel do promotor e UI de comissão entregues; falta o repasse parcial (hoje só quita o saldo inteiro) e o aviso ao afiliado 📋 plano em [[LEELA-E08-influenciador]]
 - [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 🔄 registro reutilizável + logo 1:1 + autocomplete (R9-E) + tela dedicada `/marcas` no painel entregue (lista/criar/editar/excluir); falta a consolidação de ativações (S812) [[LEELA-E10-marcas]]
-- [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 [[LEELA-E11-analytics]]
+- [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 planejado em 6 tarefas; o histórico diário já é coletado e destrava o seletor de período [[LEELA-E11-analytics]]
 - [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto + hub "Clientes & Comunicação" entregue (lista cross-evento com LTV + detalhe com histórico e aniversário); falta o disparo a segmentos, planejado em 4 tarefas e travado na chave do Brevo [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 [[LEELA-E17-perfil-social]]
 - [ ] **[Plano] Onda 3** — 5 lotes e 22 histórias planejadas (falta o app) 📋 [[ROADMAP-onda3]]

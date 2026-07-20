@@ -327,3 +327,56 @@ Vertical coordenada completa (sf-backend-lead · Fable), commits `aa0afac` (core
 - **Review antagonista (Fable, contexto fresco): APROVADO COM RESSALVAS → 6 fixes aplicados e re-provados** (`[LEELA-RN822-T4]`): F4 janela deploy→reprocesso agora é DECLARADA (`aguardandoReprocesso` excluído das somas + nota/EmptyState com a causa real — nunca subcontagem muda), F6 guarda de idade fracionária (24.5 geraria chave fora do union), F1/F2/F3 residuais de diferenciação (entre visões RN-821, decomposição mono-sexo, marginal=linha em faixa única) REGISTRADOS em `cohortPrivacidade.ts` com lastro RN-172 e gatilho de bloqueio para exposição futura a papel sem acesso individual. Detalhe no handoff `leela-build-2d6ee98d-RN822.md`.
 
 Seguem backend-gated (inalterados): S821-T1 (rollup), S821-T2, S822, S823, seletor temporal funcional.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+**Onda 4 · item 5.** É a maior lacuna de planejamento da onda e, ao mesmo tempo, o épico com mais base pronta do que a leitura anterior sugeria. Duas premissas registradas no épico envelheceram e são corrigidas aqui.
+
+### Inventário de reuso — duas correções
+
+**1. O histórico diário já existe.** `functions/src/analytics/coletaDiaria.ts` grava, todo dia às 03:05, `profissionais/{profId}/analyticsSnapshots/{YYYY-MM-DD}` com o subset `OverviewKPIs` (`CAMPOS_KPI_SNAPSHOT`: inscrições, receita confirmada, trends, vagas, taxa de conversão, sparkline, membros ativos, desafios ativos), por substituição total e idempotente, no padrão ADR-015. O rollup de S821-T1 **não parte do zero**: ele agrega a série diária que já está sendo coletada. Isso também é o que torna o **seletor temporal do RN-821 finalmente funcional** — hoje ele é honesto-inerte porque a Análise lê `…/current`, não série datada. Com a série, um intervalo de datas vira leitura de docs, não agregado novo.
+
+**2. A atribuição de conversão já existe.** O corte registrado em `snapshot.ts` diz que `conversoesViaLink`/`gmvViaParcerias` ficam fora "até E12 gerar atribuição". Isso foi pago: o kernel R9-E entregou atribuição por link (RN-313) e o registro de conversões por afiliado (RN-314, `eventos/{eventoId}/afiliados/{afiliadoId}` com ∑ conversões), e o COMF2 somou comissão congelada. **S822 não está mais bloqueada na origem** — falta só levar esses números ao snapshot.
+
+**Armadilha que a agregação precisa respeitar.** Os campos do snapshot diário são de **estoque** (o total naquele dia), não de fluxo. Somar `receitaConfirmada` de 30 dias dá trinta vezes o número errado. Métrica de fluxo no período é **diferença entre as pontas** (valor do último dia menos o do dia anterior ao início); métrica de estoque é o **valor da ponta final**. Errar isso produz um número que parece plausível e não é — o pior modo de falha possível num painel financeiro.
+
+### O que resta
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 1 | `S821-T1a` | core puro do rollup: agregação de uma janela de snapshots diários em snapshot de período, com a distinção estoque × fluxo explícita e testada; fórmulas de churn, retenção 60d e % de GMV via parcerias | `packages/core/src/analytics` | coletaDiaria ✅ | **opus** xhigh | ⚔ |
+| 2 | `S821-T1b` | Function de rollup escrevendo `profissionais/{profId}/analytics/{periodo}` (`YYYY-MM` e `rolling-30d`) idempotente, Rules de leitura pelo dono e escrita só por Function, hook de export BigQuery atrás de flag | `functions/src/analytics` · `firestore.rules` | T1a | **opus** xhigh | ⚔ |
+| 3 | `S821-T2` | dashboard consolidado lendo o snapshot de período + **seletor temporal funcional** (fecha a lacuna que a Análise declara honestamente hoje) | `apps/painel/src/routes/financeiro/analise` | T1b | **opus** xhigh | — |
+| 4 | `S822-T1` | levar conversão e GMV por parceria ao snapshot, lendo o ledger de afiliados do R9-E/COMF2 — sem contabilidade paralela | `functions/src/analytics` · `packages/core` | T1b · R9-E ✅ | **opus** xhigh | ⚔ |
+| 5 | `S822-T2` | seção de conversão via link versus direto, com a relação alvo, e % de GMV via parcerias com breakdown por parceiro | `apps/painel/src/routes/financeiro/analise` | S822-T1 | **opus** xhigh | — |
+| 6 | `S823-T1` | seção de comunidade: novos atletas por clube/mês, churn de clube e retenção 60 dias, em série temporal | `apps/painel/src/routes/financeiro/analise` | T1a, T1b | **opus** xhigh | — |
+
+**Por que nenhuma é haiku.** Todas produzem número que o organizador usa para decidir preço, parceria e investimento — e três delas leem o ledger financeiro. Não existe aqui trabalho mecânico com gate determinístico: o gate de um número agregado é a corretude da fórmula, que nenhum linter verifica.
+
+### Ordem interna e grafo
+
+```
+S821-T1a (core) ─► S821-T1b (Function + Rules) ─┬─► S821-T2 (dashboard + seletor temporal)
+                                                 ├─► S822-T1 (conversão no snapshot) ─► S822-T2 (seção)
+                                                 └─► S823-T1 (comunidade)
+```
+
+O rollup é o gargalo único: nada de E11 é despachável antes dele. Depois dele, T2, S822-T1 e S823-T1 correm em paralelo (territórios distintos).
+
+### Critério de pronto
+
+- [ ] rodar o rollup duas vezes sobre a mesma janela produz o snapshot idêntico (idempotência provada, não assumida)
+- [ ] teste explícito de estoque × fluxo: uma janela onde a receita cresceu R$ 1.000 reporta R$ 1.000, nunca a soma dos totais diários
+- [ ] período sem snapshot devolve estado vazio honesto — nunca gráfico zerado fingindo dado (mesma disciplina do RN-822)
+- [ ] o número de conversão via link bate com o ledger de afiliados no ambiente de teste (reconciliação, não recálculo)
+- [ ] nenhum cálculo pesado no cliente — regra de governança do épico
+- [ ] a supressão por k-anonimato do cohort (k=5) continua valendo em qualquer visão nova que cruze demografia
+- [ ] review antagonista em contexto fresco nas tasks ⚔
+
+### Fica de fora, e por quê
+
+Dados individuais de atleta (só agregado, por LGPD), construtor de relatório customizado, o pipeline BigQuery completo — aqui entra só o hook atrás de flag —, e analytics do atleta, que é E13.
+
+### Decisão que volta para o Vitor
+
+**O histórico não é retroativo.** A série diária começou quando a `coletaDiaria` subiu; o rollup só enxerga a partir dali. Se o Vitor quiser comparação com períodos anteriores a isso, existe uma reconstrução aproximada a partir do ledger transacional — mas é aproximação, custa um lote próprio e traz risco de número que não bate com o painel. Não decidir isso sozinho. Detalhe em `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
