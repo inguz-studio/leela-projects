@@ -330,3 +330,48 @@ Report: `outputs/leela-build-2d6ee98d/COMF2-REPORT.md`. O que segue H3: painel d
 
 - **RN-319 · Acompanhamento de vendas na aba Clubs (dois lados) — RATIFICADA.** O **organizador** vê as vendas/conversões do clube-influenciador e do influenciador PF na **sua aba Clubs**; o **clube/influenciador** vê as próprias vendas na **aba Clubs da própria conta**. Escopo de leitura coerente com RN-318 (cada influenciador só as próprias; organizador só as do próprio tenant). Story `S-R9-11` (task T8).
 - **HIP-R9-01 · Modelo "pré-compra" do clube-influenciador (HIPÓTESE, NÃO ratificada).** Proposta group-buy: inscrições pelo link do clube entram em estado "pré-compra"; ao atingir o mínimo X do organizador, dispara a cobrança no cartão de todas. **Pendente validação com um organizador de eventos** (verbatim do Vitor). Não é RN — a spec entrega a proposta + 4 questões de dinheiro (pré-auth expira; X nunca atingido; recusas parciais no lote; reserva de vaga/estoque). Default conservador enquanto não valida = RN-315. Quando/se implementar: dinheiro ⇒ **rota Fable + review antagonista** (DoD). Detalhe em `DECISOES-ABERTAS` (HIP-R9-01) + `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-11`.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+**Onda 4 · item 2.** Antes de listar lacuna, o inventário — porque o card do kanban estava desatualizado e sugeria um buraco maior do que existe.
+
+### Estado real
+
+O painel do promotor **não é mais a lacuna do épico**. O lote PROMOTOR (`fb6f58a`) fechou o hub por evolução de `/clubes/minhas-afiliacoes` (`apps/painel/src/routes/clubes/influenciadores/MinhasAfiliacoesPage.tsx`), em vez de criar rota `/promotor` nova. O que está no ar hoje:
+
+| Story do épico | Materializada como | Estado |
+|---|---|---|
+| S701 (hub de KPIs) | resumo consolidado cross-eventos em Minhas afiliações | ✅ |
+| S702 (eventos disponíveis + aceitar) | **não existe** — o modelo vigente é por convite do organizador | ❌ ver decisão aberta |
+| S703 (minhas conversões) | cartões por evento com conversões e status | ✅ (recorte R9-E) |
+| S704 (financeiro) | saldo, extrato e comissão por evento, escopo RN-318 | ✅ (COMF2 + CRM-COMISSAO-UI) |
+
+Backend completo: atribuição por link (RN-313), registro de conversões (RN-314), comissão congelada cent-exata com estorno telescopado (COMF2), repasse manual idempotente. Rules com suíte de ataques. Nada disso volta a ser especificado.
+
+### O que resta, na ordem
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 1 | `S704-T2` | **repasse parcial** — hoje o registro de repasse quita o saldo total; falta informar um valor menor, com guarda de saldo na mesma transação e idempotência por `repasseId` | `functions/` (repasse) · `packages/core` · `apps/painel` (ConfirmModal do repasse) | COMF2 ✅ | **opus** xhigh | ⚔ |
+| 2 | `S-E08-NOTIF` | avisar o afiliado quando o repasse é registrado e quando a comissão cruza um marco — **reusa** o log de comunicação e o pipeline de disparo, sem canal novo | `functions/` (notificação) | EmailProvider (RN-137) | **opus** xhigh | — |
+| 3 | `S-R9-11-T*` (convite PF em produção) | o fluxo existe e está provado; o que falta é a chave — não é código | — | **EmailProvider Brevo** | — | — |
+
+**Por que o repasse parcial é opus e não haiku.** Parece um campo a mais no formulário, mas o valor informado entra na mesma transação que já protege o saldo contra corrida e contra estorno posterior. Um parcial que não respeite a guarda de saldo cria dívida invisível — a mesma classe de erro que o COMF2 blindou. Dinheiro não rebaixa.
+
+**Ordem interna:** `S704-T2` é independente e pode entrar já. `S-E08-NOTIF` espera a chave do Brevo, que é a mesma dependência do E19 — os dois destravam juntos.
+
+### Fora da fila, por decisão e não por esquecimento
+
+- **Split automático (fase 3)** — o item 23 foi ratificado: desembolso é repasse manual, o split **não abre**. O racional é de negócio: manter o controle dos repasses permite manejar antecipações, cujos juros são margem nossa. Não voltar a propor split sem o Vitor reabrir.
+- **RN-315 · desconto retroativo do clube-influenciador** — PARKED; o Vitor quer ver como a Ticketsports resolve antes de decidir. Retroatividade obriga reprocessar vendas pagas, então é dinheiro e não entra sem decisão explícita.
+- **HIP-R9-01 · pré-compra do clube-influenciador** — hipótese, não regra. Pende de validação com um organizador real. As quatro perguntas de dinheiro (pré-autorização que expira, mínimo nunca atingido, recusas parciais no lote, reserva de vaga) seguem sem resposta e são o que torna a implementação arriscada.
+
+### Critério de pronto do épico nesta onda
+
+- [ ] repasse parcial provado por integração: valor menor que o saldo, valor igual ao saldo, valor maior (negado), retry com o mesmo `repasseId` (idempotente), estorno posterior ao parcial
+- [ ] o afiliado continua vendo **só** o dele (RN-318) depois de qualquer mudança — a prova de não-vazamento no DOM permanece verde
+- [ ] review antagonista em contexto fresco no repasse parcial
+
+### Decisão que volta para o Vitor
+
+**Como o influenciador chega ao evento: por convite ou por descoberta?** Hoje o modelo é convite (o organizador cadastra via modal, RN-317, e convida a PF por e-mail, RN-316). A story S702 do épico original assume o oposto — uma vitrine de eventos com programa aberto, onde o promotor aceita sozinho e o link nasce na hora. São dois produtos diferentes; o segundo é um marketplace de afiliação. Detalhe em `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
