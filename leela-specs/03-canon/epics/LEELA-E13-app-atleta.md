@@ -1684,3 +1684,57 @@ Fluxos críticos para e2e (Detox/Maestro), alinhados a `estrategia-testes.md`: (
 - **Ordem no roadmap:** o E13 segue **DEPOIS do web completo** (reorder de 2026-07-18, ver `MODELO-ROADMAP.md §3`). A decisão de PWA muda a plataforma, não a posição na fila.
 - **Implicações técnicas mínimas (sem especificar stories agora — spec do E13 detalha depois):** a stack web existente (Next/React + DS temável) serve de base; **installable + service worker**; **push em iOS** suportado via web push moderno, com **limitações vs. nativo** (ressalva honesta); **offline** = escopo a decidir na spec futura do E13. A antiga fatia Expo/EAS (S1300-T2 enrollment) é reavaliada quando/se o nativo v2 entrar.
 - Registro em `DECISOES-ABERTAS` (Ratificadas, 2026-07-18) junto da reordenação H3→antes→H2.
+
+## RE-SPEC como PWA (ESPEC-SWEEP · 2026-07-19) — reavaliação das 9 stories do lote 5
+
+**Onda 5.** A spec do E13-slim (lote 5 da trilha `next-trail-onda3`, 2026-07-17) foi escrita para **Expo nativo**. A decisão do Vitor de 2026-07-18 — *"o app v1 pode ser um PWA, não tem problema"* — invalida a base arquitetural dela: não há `apps/mobile`, EAS, credenciais de loja, Detox nem FCM nativo no caminho de um PWA.
+
+**A arquitetura é decisão do Vitor, não desta lane.** A proposta está em `02-rodadas/2026-07-19-espec-sweep/03-adr-proposta-pwa.md` (recomendação: a landing vira instalável, área do atleta em `/app/*`, service worker com HTML sempre network-first). **Nada abaixo é despachável antes dessa ratificação** — o território de arquivos depende dela.
+
+### Veredito story a story
+
+| Story original (Expo) | Veredito | O que acontece |
+|---|---|---|
+| `S1300` setup Expo + EAS | **SAI e é substituída** | Não há bootstrap de Expo nem pipeline de loja. Vira `S1300-PWA`: manifest, service worker, jogo de ícones, splash, prompt de instalação. **O bloqueio de enrollment das lojas morre** — era o pré-requisito que segurava o lote inteiro. Sentry: reusa o do web, já configurado |
+| `S1302` tab navigator + safe area + deep linking | **MUDA, encolhe** | Bottom-nav web com rotas do Next em vez de navigator nativo. Deep linking **sai de graça** — no web, link é URL. Safe area vira `env(safe-area-inset-*)` no CSS. Estimativa cai de M para S |
+| `S1301` provisionamento + login Apple/Google | **MUDA pela metade** | `onAtletaCreate` + Rules **ficam intactas** — backend não sabe se o cliente é nativo ou web. O login **Apple deixa de ser obrigatório** (era exigência da App Store). E há reuso forte a respeitar: o produto **já cria conta na 1ª compra** (RN-155) e já resolve posse de identidade (RN-174). O app não inventa onboarding novo — ele entra na conta que a compra criou |
+| `S1304` feed de eventos + busca | **MUDA para delta** | A descoberta pública já existe (página de evento S1201, portal do organizador S1208, perfil `@handle` S1700). O que falta é a visão **do atleta logado** — "eventos perto de mim e os que já são meus". Deixa de ser tela nova e vira recorte sobre o que existe |
+| `S1305` detalhe do evento + seleção modalidade/kit | **SAI como story** | A página pública de evento já entrega detalhe, modalidade e kit com descrição, itens e imagem (R9-C + R12). No PWA é a mesma página. Resta ajuste de navegação dentro do escopo instalado, absorvido por `S1302-PWA` |
+| `S1306` checkout + meus ingressos/QR | **PARTE-SE EM DUAS** | O **checkout já existe** na landing (S1203 + S1209) e o kernel de pedido também — essa metade some. Sobra o que nunca foi construído e é o coração do app: **"Meus ingressos" com QR**, na área logada do atleta |
+| `S1310` entrar no clube por código/link + página do clube | **FICA, muda de território** | Mesma regra (RN-101/140), superfície web. O código de convite e o link já funcionam |
+| `S1311` feed do clube (leitura) | **FICA** | Modelo de feed, Function de agregado e Rules são **idênticos** — backend não muda com a plataforma. Só a tela vira web |
+| `S1312` push FCM + inbox | **MUDA e é o risco da decisão** | Web Push funciona no Android e no desktop; no iOS **só depois do usuário instalar** o app na tela de início, e sem as garantias do FCM nativo. O JTBD servido é central (*"assessoria manda treino, recebo no app, elimino o WhatsApp"*). Proposta: **inbox in-app é a fonte de verdade** e o **e-mail pelo Brevo** é o canal que não depende de instalação; push vira reforço. **Isso é decisão do Vitor** |
+
+### O recorte resultante
+
+De 9 stories e 15 tasks (Expo), o recorte PWA fica em **6 stories**:
+
+| # | Story | O que é | Território (sob a opção A) | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 1 | `S1300-PWA` | manifest, service worker (HTML network-first), ícones, splash, prompt de instalação | `apps/landing` | ADR ratificada | **opus** xhigh | ⚔ |
+| 1b | `S1300-PWA-T2` | jogo de ícones e splash nas medidas exigidas pelo manifest, a partir da arte-fonte | assets da `apps/landing` | S1300-PWA | **haiku** | — |
+| 2 | `S1302-PWA` | shell da área do atleta: bottom-nav, safe area, rotas | `apps/landing/app` | S1300-PWA | **opus** xhigh | — |
+| 3 | `S1301-PWA` | entrada do atleta reusando a conta criada na compra (RN-155/174); `onAtletaCreate` + Rules como já especificado | `functions/` · `apps/landing` | S1302-PWA | **opus** xhigh | ⚔ |
+| 4 | `S1306-PWA` | **meus ingressos + QR**, com o ingresso disponível offline (é o único cache de conteúdo autorizado) | `apps/landing/app` | S1301-PWA · RN-221/222 | **opus** xhigh | ⚔ |
+| 5 | `S1310-PWA` + `S1311-PWA` | entrar no clube por código/link, página do clube e feed de leitura | `apps/landing/app` · `functions/` (feed) | S1301-PWA · E05 ✅ | **opus** xhigh | — |
+| 6 | `S1312-PWA` | inbox de comunicados como fonte de verdade + registro de push web + permissão | `apps/landing/app` · `functions/` | S1301-PWA · E05 ✅ | **opus** xhigh | ⚔ |
+| — | `S1300-GATE-PWA` | gate visual e ponta a ponta em 390×844, **reusando o Playwright que já existe** em vez de Detox/Maestro | `apps/landing` | todas | **opus** xhigh (veredito) | — |
+
+**A única task haiku do recorte** é a geração do jogo de ícones: é mecânica e tem gate determinístico — ou os arquivos existem nas dimensões exatas que o manifest declara, ou falha. Todo o resto toca sessão, dinheiro, Rules ou cache que pode servir conteúdo errado.
+
+### O que o PWA ganha e o Expo não tinha
+
+**O ingresso funciona sem rede.** Na largada de uma prova a rede cai — é a regra, não a exceção. Um service worker que cacheia o QR do atleta resolve um problema real que a versão nativa também teria que resolver, e resolve com menos máquina. É o único cache de conteúdo autorizado pela proposta de ADR.
+
+### Critério de pronto do recorte
+
+- [ ] o gate de SEO da landing continua verde **depois** do service worker subir — se o Google vê conteúdo diferente do usuário, o service worker sai
+- [ ] nenhuma página de vendas, evento ou checkout é servida do cache (prova: alterar preço e recarregar mostra o novo)
+- [ ] o app instalado abre e fecha a compra sem sair do escopo (o atleta nunca é jogado para o navegador no meio do pagamento)
+- [ ] o QR abre sem rede depois de visto uma vez
+- [ ] o inbox mostra o comunicado mesmo quando o push não chegou
+- [ ] a área do atleta só lê o que é dele (Rules, no padrão RN-318)
+
+### O que volta para o Vitor
+
+Três perguntas, todas no ADR-proposta: a opção de arquitetura, se push sem garantia no iOS é aceitável na v1, e se o app instalável fica no mesmo domínio da landing. A segunda é a que pode reverter a decisão de 18/07.
