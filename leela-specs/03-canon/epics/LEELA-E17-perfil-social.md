@@ -227,3 +227,26 @@ Dependências: `E12-S1200 ✅→ S1700`; `E01 ThemeProvider ✅→ S1701`; `E13 
 - **LEELA-S1706 · Primitivos server-safe no DS + gate de conformidade da landing.** *Como* time, *quero* extrair os primitivos estáticos (Button/Badge/Card **sem estado/sem `createContext`**) do `@leela/design-system` num subpath **server-safe** (sem `'use client'` no topo, sem barrel que avalie `createContext`), consumível tanto pelo painel (client) quanto pela **landing (Server Components, SSR puro)**, *para* eliminar a divergência entre os componentes da landing e o showroom sem re-importar o barrel de cliente. Hoje (R12) a landing replica os VALORES do showroom LOCALMENTE (`apps/landing/app/(public)/[eventSlug]/sections/marca.tsx` — selo/badge flat + tipografia + iconografia Lucide de apoio) porque o barrel do DS avalia `createContext` no topo e só entra pelo boundary `'use client'` de `_ds/ds.ts`. **Aceite:** (a) subpath `@leela/design-system/server` exporta Button/Badge/Card estáticos server-safe (tokens semânticos, flat §2.16, radius do DS); (b) a landing consome o subpath e **remove** as réplicas locais de `marca.tsx`; (c) **gate de conformidade** que compara o HTML SSR da landing com as specs do showroom (escala tipográfica, radius, pesos, iconografia) — flag na CI se a landing divergir do showroom. **Dep:** encadear **pós-R9-A** (o DS está em obra na lane R9-A — Combobox/Popover/Command). Fora do escopo do R12 (que preserva SSR com réplica local).
 
   **STATUS (lote MODAL-ADR, 2026-07-18 · [[ADR-017]]):** aceite **(a) FEITO com alcance ampliado** — subpath `@leela/design-system/server` exporta Badge/Card/CardEvento/DateBadge/EmptyState/`buttonVariants` server-safe, com **teste de pureza executável** no DS (grafo sem `@radix-ui`/`createContext`/hooks); NOVO subpath `@leela/design-system/dialog` entrega o `Dialog` Radix-free (o modal a11y da landing promovido a primitivo do DS). Aceite **(b) PARCIAL por decisão** — home e PerfilView já consomem o subpath (estáticos sem hydration); as réplicas de `marca.tsx` de escala própria da landing (selo hero, título com ícone) permanecem como composição de app DE PROPÓSITO (promover padrão de consumidor único mudaria visual aprovado sem QA — racional no ADR-017). Aceite **(c) PENDENTE** (gate CI de conformidade SSR×showroom).
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19) — profundidade média
+
+**Onda 6 (H2).** A fatia pública deste épico já está no ar: perfil `@handle` com abas, capas e upload real de imagem (Onda 3 · L2 + lote R5). O que resta é a **fatia social dentro do app**, e ela herda uma dependência que mudou de natureza: "app" agora quer dizer **PWA**, não Expo.
+
+### Histórias-âncora que restam
+
+| Story | O que é | Depende de | Rota |
+|---|---|---|---|
+| `S1701` · tematização por-usuário | accent por conta sobre o `ThemeProvider` do DS, sem que nenhuma tela redefina token | E01 ✅ | **opus** xhigh |
+| `S1703` · feed in-app (leitura) | aba Feed no bottom-nav lista posts visíveis, com estado vazio | E13-slim PWA · S1700 ✅ | **opus** xhigh |
+| `S1705` · abas Eventos e Clubs in-app | reusa a projeção que o perfil público já entrega; respeita o opt-in de participação (RN-167) | S1703 · S1700 ✅ | **opus** xhigh |
+| `S1704` · composição do post pelo dono | só o dono compõe (RN-163), escrita por Function, respeitando a visibilidade do perfil | S1703 | **opus** xhigh ⚔ |
+
+**Ordem:** `S1701` em paralelo com `S1703` → `S1705` → `S1704` por último (é o único que escreve, e escrita pública é onde mora o risco de abuso).
+
+### Dependência que mudou
+
+`S1703`, `S1704` e `S1705` foram escritas assumindo o app Expo. Com o PWA, elas passam a viver na mesma superfície do E13-slim, o que **barateia** as três — o feed de leitura reusa o componente do perfil público em vez de reimplementar em React Native. **Não despachar antes da arquitetura do PWA ser ratificada** (ver `03-adr-proposta-pwa.md`): o território de arquivos depende dela.
+
+### Reuso a respeitar
+
+O modelo de feed e a Function de agregado do clube são os mesmos do `S1311` do E13. Se os dois lotes forem despachados separados, um vai reimplementar o outro. **Despachar o feed do clube e o feed do perfil no mesmo lote**, ou nomear explicitamente qual dos dois é dono do modelo.

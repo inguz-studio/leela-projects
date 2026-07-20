@@ -699,3 +699,23 @@ Refatoração da sub-nav (T1).
 ## Regra de negócio nova (R9 · adendo 7→8 do Vitor 2026-07-18)
 
 - **RN-137 · E-mail transacional via `EmailProvider` plugável (impl de referência Brevo) — RATIFICADO.** **Fornecedor de e-mail = Brevo** (brevo.com). **História:** Resend foi ratificado (adendo 7) e **superseded por Brevo no mesmo dia por custo** (adendo 8: free 300/dia vs 100/dia; US$9 vs US$20 no primeiro pago; SendPulse descartado pelo throttle 50/h). Port **provider-agnóstico** no padrão do `PaymentProvider` (ADR-006): interface `EmailProvider` + `BrevoProvider` (API transacional REST) + seletor `selectEmailProvider`; **fail-closed sem `BREVO_API_KEY`** (o convite E18 hoje lança em produção sem provider — `cadastrarAssessoria.ts:181-190`; com a key passa a enviar de verdade). Trocar de provedor no futuro = **nova impl do port, zero mudança nos consumidores**. Secret no Secret Manager, **nunca logado nem commitado** (disciplina da chave Asaas, R6). Templates transacionais com **sanitização dos campos do organizador** (superfície de e-mail = phishing/injeção de conteúdo). Consumidores: convite E18 (`9e7e017`), convite influenciador PF (RN-316), campanhas por e-mail (E06 `executarDisparoCampanha`), futuro gatilho aniversário (E19). **Ação externa do Vitor:** conta Brevo + verificação de domínio (depende da decisão de domínio, item 12) + `BREVO_API_KEY` no `functions/.env`; sem domínio verificado, o envio fica limitado ao remetente/limitações do free tier do Brevo (anotar o que a doc do Brevo exigir na implementação, sem inventar) — suficiente para teste. Story `S-R9-14`. Spec: `02-rodadas/2026-07-18-ux-review/`.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19) — profundidade média
+
+**Onda 6 (H2), exceto o consumo pelo E19, que é Onda 4.** O épico está operante: parceiros, campanhas (modelo, lista, editor, envio), automações por gatilho e o scheduler (ADR-015) estão entregues. Não há lacuna de V1.
+
+### O que "E06 avançado" quer dizer
+
+Três frentes, nenhuma delas bloqueando nada hoje:
+
+1. **Segmentação além do evento.** Hoje a audiência é por evento. O E19 traz a audiência cross-evento e **reusa** `executarDisparoCampanha` — ou seja, a primeira parcela do "avançado" chega pelo E19 na Onda 4, não por aqui. Nada a fazer neste épico para isso acontecer.
+2. **Novos gatilhos de automação.** O de aniversário já está mapeado como oportunidade no E19 (`S1901-T5`). Outros gatilhos (abandono de checkout, pós-prova, reengajamento de inativo) são propostas sem lastro de pedido do Vitor — ficam registrados como ideia, não como backlog.
+3. **Canal.** Tudo hoje é e-mail via `EmailProvider`. WhatsApp está no tooling contratado e nunca foi especificado. É frente nova, com custo e regra própria (janela de 24h, template aprovado, opt-in) — **não** um incremento deste épico.
+
+### Rota e dependência
+
+Qualquer frente acima roteia **opus** xhigh: disparo em massa toca reputação de domínio e dado pessoal, e idempotência de envio é a classe de erro que já obrigou review antagonista no scheduler. Todas dependem da chave do Brevo (RN-137), que é ação externa do Vitor.
+
+### O que volta para o Vitor
+
+**WhatsApp entra na V1?** Está no tooling contratado, aparece no roadmap como capacidade transversal, e nunca foi especificado nem estimado. Se entra, é épico próprio, não incremento. Ver `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
