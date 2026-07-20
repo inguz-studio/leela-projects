@@ -12,9 +12,15 @@
 | **ESPEC-SWEEP** (revisita de TODOS os épicos + specs na ordem de implementação, ordem do Vitor) | AGUARDANDO: brief pronto em `.nirvana/briefs/leela-espec-sweep-enriched.md` | — | **SÓ DISPARAR COM COTA RENOVADA** (é o maior gasto Fable previsto; commit por épico embutido no brief) |
 | FORMBUILDER-CODIGO-F1 | brief da sessão morta existe; NÃO redispachado | — | fila, após TAXAFLEX aterrissar (território E04/E12 sobrepõe) |
 
-## Regras de cota (decisão operacional desta retomada)
-- **Classe crítica (T8 antagonista, ESPEC-SWEEP) NUNCA rebaixa para Opus** — espera a cota renovar (política 08-model-routing: fallback de crítico é humano/espera, não tier menor).
-- **Babysitting/maestro NÃO precisa de Fable**: a próxima sessão de orquestração pode rodar em OPUS (acordar agentes, vigiar logs, aterrissar boards). Fable fica reservado para: T8, ESPEC-SWEEP, e futuras lanes de dinheiro.
+## ATUALIZAÇÃO 22:45 — cota Fable esgotada + TETO DE MODELO VIROU OPUS
+
+- **Fable acabou** (agente da SUITE-STAB morreu com `You've reached your Fable 5 limit` — checkpoint segurou: boards já estavam commitados em `a3eb23d`).
+- **Decisão do Vitor (2026-07-19): o modelo mais forte passa a ser sempre o OPUS.** Regra L global gravada em `~/.claude/skills/harness/references/08-model-routing.md` (bloco no topo): toda linha `fable` da matriz lê-se `opus`; classe crítica roteia opus/xhigh e **nunca rebaixa**; estouro do topo escala para HUMANO, não para tier acima.
+- Consequência: **nada mais fica esperando cota de Fable.** TAXAFLEX já tinha fechado com antagonista pago; SUITE-STAB atingiu o aceite; ESPEC-SWEEP foi despachado em Opus.
+
+## Regras de cota (histórico da decisão original — superadas pelo bloco acima)
+- ~~Classe crítica nunca rebaixa para Opus — espera a cota renovar~~ → **superado**: Opus É o topo agora.
+- Babysitting/maestro em Opus: continua válido e é o padrão.
 - Lições operacionais da rodada: suíte inteira SEMPRE com `npm run build` antes do `emulators:exec`; emulator de suíte é exclusivo; agentes NÃO podem pausar "esperando watcher" (não acorda sozinho) — esperar runs com loop bloqueante em foreground.
 
 ## Watchers/processos no momento do checkpoint
