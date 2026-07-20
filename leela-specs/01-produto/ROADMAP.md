@@ -80,6 +80,8 @@ leela/
 | **H3 — Longo** | 24-36m | SaaS organizadores + mídia local | E08, E11, camada SaaS |
 | **Visão — H4** | 36-60m | Capital digital do bem-estar no Brasil | expansão, arrecadação municipal |
 
+> **⚠ Reordenação ratificada (Vitor, 2026-07-18 — adendo 3 da rodada `2026-07-18-ux-review`):** *"adiante o H3 para antes do H2, para finalizarmos por projeto, exceto o creator-studio, que vai entrar depois."* A tabela acima descreve o **valor de negócio** de cada horizonte, não mais a ordem de execução. A ordem vigente é: **terminar o produto web inteiro (H3: E08 · E10 · E11 · E19) antes de abrir a frente do app heroico (H2: E13 completo · E17 social · E14)**, com o **E15 Creator Studio por último**. O sequenciamento executável está em §5.
+
 ---
 
 ## 4 · Mapa de épicos
@@ -106,7 +108,8 @@ IDs renomeados para o prefixo `LEELA-` (produto unificado). Coluna "De-para" pre
 | **LEELA-E15** | Creator Studio (desafios/programas + ebooks + materiais · SaaS estilo MyDose) | Painel | Could (H2/H3) | XL | 🧊 futuro | E05, E04 | (novo) |
 | **LEELA-E16** | Plataforma & Super-Admin (marketplace multi-tenant) | Painel (back-office) | Must (fundacional) | L | 🆕 spec em produção | E00, E01, E04 | (novo) |
 | **LEELA-E17** | Perfil social / link-in-bio (Feed·Eventos·Clubs, tema por-usuário, capas) | Landing + Mobile | Should/Could (H2) | XL | 🆕 planejado 2026-07-12 | E01, E12, E05, E13 | (novo) |
-| **LEELA-E18** | Assessorias parceiras (tração B2B — clubes parceiros com desconto) | Painel + Landing | Should (H1→H2) | L | 🆕 planejado 2026-07-12 | E05, E04, E16, E00, E12 | reusa E08/E05-S107 |
+| **LEELA-E18** | Assessorias parceiras (tração B2B — clubes parceiros com desconto) | Painel + Landing | Should (H1→H2) | L | ✅ entregue (Onda 3 · L3) | E05, E04, E16, E00, E12 | reusa E08/E05-S107 |
+| **LEELA-E19** | CRM do organizador + hub de Comunicação (clientes cross-evento, LTV, disparo a segmentos) | Painel (menu principal) | Could (H3, antecipado) | XL | 🔄 backend + hub entregues; falta o disparo a segmentos | E00, E01, E11 (demografia), identidade transacional | (novo · adendo 2 de 2026-07-18) |
 
 > **📐 Terminologia (2026-07-12):** a hierarquia canônica é **Onda → Épico → User Story → Task** (cada nível ancorado a JTBD+persona). "Wave A-D"/"Frente F1-F4" da trilha `next-trail` = **lotes de execução** (agenda de sprint), NÃO um eixo de release — de-para completo em `MODELO-ROADMAP.md`. "Wave C" = Onda 2.
 
@@ -121,22 +124,28 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 ## 5 · Ondas de execução (sequenciamento por dependência)
 
 > Regra de granularidade herdada de §2.11/§2.13: **1 task ≈ 1 tela/componente/Function = 1 PR**. Cada task é um spec autocontido (ver template).
+>
+> **Estado em 2026-07-19:** Ondas 0 a 3 estão **entregues** (histórico e prova em `00-boards/BOARD-HISTORICO.md` e nos `outputs/leela-build-2d6ee98d/*-REPORT.md`). Ficam registradas abaixo como lastro de dependência. A onda **em execução** é a 4. Ondas 0-3 não voltam a ser fonte de despacho.
+>
+> **Rota de modelo (Regra L, Vitor 2026-07-19):** o teto é **opus**. Toda ocorrência de "ROTA FABLE" nos blocos históricos abaixo lê-se **opus effort xhigh**. Sonnet segue proibido no Leela. Classe mecânica com gate determinístico roteia **haiku**. Estourou opus no effort máximo ⇒ escala para o humano.
 
-**Onda 0 · Fundação (bloqueia tudo)**
+**Onda 0 · Fundação (bloqueia tudo) — ✅ entregue**
 - LEELA-E00 — monorepo Turborepo, apps Next.js (painel+landing), Expo, projeto Firebase (Firestore + Auth + Functions), CI/CD GitHub Actions, Sentry, convenções de código.
 - LEELA-E01 — tokens.json (Design System v3 como código), componentes React base (Button, Card, Badge, Input, Table densa, SubNav, Modal/ConfirmModal, Toast, Sidebar, Breadcrumb), shell de layout.
 
-**Onda 1 · Núcleo do Painel (H1)**
+**Onda 1 · Núcleo do Painel (H1) — ✅ entregue**
 - LEELA-E05 Clubs · LEELA-E03 Operação do Evento · LEELA-E02 Visão Geral.
 - Entram juntos porque compartilham shell + entidades base (Evento, Clube, Inscrição, Membro).
 
-**Onda 2 · Vender ponta a ponta + features que fecham o ciclo do evento (H1)** *(reconciliada 2026-07-10 — D4; definição canônica = `V1-CHECKLIST.md §Onda 2 · Vender`)*
+**Onda 2 · Vender ponta a ponta + features que fecham o ciclo do evento (H1) — ✅ entregue** *(reconciliada 2026-07-10 — D4; definição canônica = `V1-CHECKLIST.md §Onda 2 · Vender`)*
 - **Núcleo de venda (o antigo sentido estreito):** LEELA-E04-slim (S300 vendas/lotes/cupons + S304 equipe + PaymentProvider) · LEELA-E12 Landing (inscrição + checkout público sandbox) · LEELA-E09-slim (repasses do organizador).
 - **Superfície nova (abas que faltam na sub-nav do evento, ordem E04 → E06):** Página de vendas (E04-L3) · Configurações (E04-L5) · Comunicação (E06-L3, campanhas = V1 por D3). **E08 (Promotores) fora — adiado** (dependia de afiliação, cortada).
 - **Robustez + coleta:** LEELA-E07-web (404/500/403) · transversais (rollup diário E11-S821, V1 + backend do desafio S1307/S1308, V1.5).
 - Fecha o ciclo "atleta descobre → inscreve → paga → organizador vê receita".
 
-**Onda 3 · App simples + alavancas (H1→H2)** *(plano executável ratificável em `leela-specs/99-arquivo/next-trail-onda3/` — 2026-07-17; 5 lotes, 22 stories, 48 tasks)*
+**Onda 3 · Robustez + discovery + assessorias (H1→H2) — ✅ lotes 1-4 entregues; lote 5 RE-ESPECIFICADO** *(plano original em `leela-specs/99-arquivo/next-trail-onda3/` — 2026-07-17; 5 lotes, 22 stories, 48 tasks)*
+
+> **O lote 5 (E13-slim em Expo nativo) não é mais fonte de despacho.** A decisão "app v1 = PWA" (2026-07-18) mudou a arquitetura; as 9 stories foram reavaliadas na rodada `2026-07-19-espec-sweep/` e o recorte vive agora na **Onda 5** deste documento.
 
 Trilha própria (padrão next-trail): `ROADMAP-onda3` (lotes+grafo) · `STORIES-onda3` (JTBD por story) · `TASKS-onda3` (1-task-1-PR, rota Fable/Opus) · `JTBD-TRACE-onda3` (P6/P7 propostos) · `DECISOES-NECESSARIAS-onda3` (só DN-1 é decisão real; resto = ações externas/premissas). Ordem de despacho: `Lote 1` ∥ `Lote 2` → `Lote 3` ∥ `Lote 4` → `Lote 5` (por último, gated pelo enrollment das lojas). Sonnet proibido.
 
@@ -159,12 +168,33 @@ Lote 5 · App do atleta E13-slim       ROTA OPUS mobile + Fable · apps/mobile +
 - **LEELA-E17 (fatia link-in-bio público)** — perfil `@handle` SSR/ISR reusando E12; abas Feed·Eventos·Clubs + capas.
 - **LEELA-E13-slim** — app do atleta nativo (Expo) recorte: descobrir→checkout→meus ingressos/QR→clube (leitura)→push. Detalhe em `V1-CHECKLIST §Onda 3 · App simples`.
 
-**Onda 4 · App do Atleta + social completo (H1→H2)**
-- LEELA-E13 — reusa `packages/core` + `design-system`; jornada, inscrições, desafios, comunidade.
-- **LEELA-E17 (fatia social in-app)** — Feed·Eventos·Clubs no bottom-nav + tematização por-usuário (accent sobre o DS).
+**Onda 4 · Fechar o produto web (H3 antecipado) — ORDEM VIGENTE** *(ratificada 2026-07-18; passo a passo executável em `02-rodadas/2026-07-19-espec-sweep/`)*
 
-**Onda 5 · Expansão (H2+)**
-- LEELA-E08 Influenciador · LEELA-E10 Marcas · LEELA-E11 Analytics.
+Esta é a onda em curso. A decisão de "finalizar por projeto" mandou a expansão web (a antiga Onda 5) para antes do app. A ordem interna abaixo **é** a ordem de despacho — cada item entra quando o anterior aterrissa ou em paralelo onde o território de arquivos não colide.
+
+```
+4.0  Caminho do dinheiro em curso (E04 · E09 · E12 · E16)   ← o que já tem spec e está em voo
+       S1209 (camada de tela do checkout novo) · tela de refund do E04
+       fronteira do reembolso (DECISOES-ABERTAS item 23) · S310/S112/S1212 (formbuilder)
+       GATED: S309/S1211/S1903 (estrangeiro — espera liberação Asaas)
+4.1  E08 · painel do promotor            ← única lacuna do épico; backend+UI de comissão ✅
+4.2  E10 · consolidação de ativações (S812)
+4.3  E19 · disparo de comunicação a segmentos (S1901/T4)   ← dep dura: EmailProvider Brevo (RN-137)
+4.4  E11 · analytics inteiro             ← maior lacuna; parte do rollup S821
+```
+
+**Onda 5 · App do atleta como PWA (E13-slim) + link-in-bio completo**
+- **LEELA-E13-slim — app v1 = PWA** (Vitor, 2026-07-18, adendo 4: *"o app v1 pode ser um PWA, não tem problema"*). Isso **substitui** o recorte Expo nativo do lote 5 da trilha `next-trail-onda3`: manifest + service worker + push web + instalação, sobre a landing Next.js já existente, em vez de build EAS e enrollment de loja. As 9 stories do lote 5 (S1300, S1302, S1301, S1304, S1305, S1306, S1310, S1311, S1312) foram reavaliadas uma a uma na rodada `2026-07-19-espec-sweep/` — o que fica, o que muda e o que sai está lá, com a arquitetura proposta como ADR (decisão do Vitor, não da lane).
+- Destrava-se o bloqueio de loja que segurava o lote 5.
+
+**Onda 6 · H2 — app heroico e alavancas de comunidade**
+- **LEELA-E13 completo** — jornada heroica, desafios, comunidade (reusa `packages/core` + `design-system`).
+- **LEELA-E17 (fatia social in-app)** — Feed·Eventos·Clubs no bottom-nav + tematização por-usuário (accent sobre o DS). A fatia link-in-bio pública já entregou na Onda 3.
+- **LEELA-E14 TrainingProvider** — Health/Strava/agregador.
+- **LEELA-E06 avançado** — segmentação e automação além do que a V1 entregou.
+
+**Onda 7 · LEELA-E15 Creator Studio**
+- Por último, por decisão explícita do Vitor (adendo 3): *"exceto o creator-studio, que vai entrar depois"*. Esqueleto (objetivo, fronteiras, dependências) na rodada `2026-07-19-espec-sweep/`; sem quebra em tasks até a onda chegar.
 
 **Trilha next-trail (ratificada 2026-07-10 — D1-D7) · ondas de execução entre a Onda 1 e a Onda 2** *(fonte: `next-trail/ROADMAP-next.md §7`; stories/tasks em `V1-CHECKLIST.md §Trilha next-trail`)*:
 
@@ -199,6 +229,24 @@ E00 ──► E01 ──► E05 ─┐
                      ├─► E07
                      └─► E13 (após E00+E01+E05)
 E04 ──► E08 · E01 ──► E10 · (E03+E05) ──► E11
+```
+
+Grafo da Onda 4 (o que bloqueia o quê na ordem vigente):
+
+```
+[em voo] caminho do dinheiro (E04/E09/E12/E16)
+   S1209 camada de tela do checkout ─┐
+   tela de refund do E04            ─┤
+   formbuilder S310→S112→S1212      ─┴─► fecham o ciclo de venda antes de abrir frente nova
+   item 23 (fronteira do reembolso) ── DECISÃO DO VITOR, bloqueia E08 fase 3 (split automático)
+
+E08-S701..S704 (painel do promotor) ── independente: só painel, sobre o kernel R9-E ✅
+E10-S812 (ativações)   ◄── S811 ✅ ; lê vínculos de E03 (itensKit) + E05 (parcerias/desafios)
+E19-S1901-T4 (disparo) ◄── E19 backend ✅ + E06 executarDisparoCampanha ✅ + **EmailProvider Brevo (RN-137)**
+                            └─► destrava também o convite PF do E08 (RN-316)
+E11-S821-T1 (rollup)   ─┬─► S821-T2 (dashboard)
+                        ├─► S823 (comunidade)
+                        └─► S822 (conversão) ◄── precisa de atribuição do E12/E08 no snapshot
 ```
 
 Delta next-trail (ratificado 2026-07-10):
@@ -264,4 +312,4 @@ MoSCoW por horizonte: Must bloqueia a fase · Should agrega valor · Could nice-
 
 ---
 
-*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança. Última atualização: 2026-07-17 — Onda 3 planejada (§5): trilha `next-trail-onda3/` executável (5 lotes, 22 stories, 48 tasks), E13-slim nativo, E17/E18 encaixados.*
+*Documento vivo. Atualizar mapa de épicos e ondas conforme execução avança. Última atualização: 2026-07-19 — §5 consolidado com a ordem ratificada em 18/07 (H3 antes do H2, "finalizar por projeto", app v1 = PWA, E15 por último, E08 antecipado); Ondas 0-3 marcadas como entregues; Onda 4 (fechar o produto web) vira a onda em execução; E19 entra no mapa de épicos; teto de modelo = opus (Regra L). Passo a passo por épico em `02-rodadas/2026-07-19-espec-sweep/`.*
