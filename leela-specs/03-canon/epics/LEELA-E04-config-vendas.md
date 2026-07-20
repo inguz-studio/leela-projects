@@ -1516,3 +1516,13 @@ Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário
 - **RN-187 · Limites com fonte única no core.** Teto de **perguntas por formulário** e de **opções por pergunta** como constante única no core (default proposto: **20 perguntas / 10 opções**), no padrão do `PIX_EXPIRACAO_SEGUNDOS` (RN-157). O Vitor ajusta os números num lugar só.
 - **RN-188 · Versionamento da pergunta.** Editar uma pergunta com respostas existentes **versiona**: a resposta carimba a versão no ato, a versão antiga fica intacta, a edição vale para o futuro. **Nunca reescreve resposta antiga.** Mesmo desenho do termo de saúde (RN-149) e do regulamento versionado (S306-T3).
 - *Efeito (RN-185/186/189 — donas em E05/E12):* a resposta vive no **inscrito/membro** (nunca no pedido — RN-185); pergunta obrigatória **bloqueia o pagar/inscrever no fence dos aceites** (RN-186); leitura/export pelo organizador/equipe do tenant **reusa a lista de inscritos existente** (RN-189).
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso). O que resta dele, com passo a passo, território e rota de modelo, está em `02-rodadas/2026-07-19-espec-sweep/02-caminho-do-dinheiro.md`:
+
+- **S310-T1/T2** (construtor de formulário) — bloco C. E04 é **dono do modelo e do core**; E05 e E12 reusam. Rota **opus** xhigh; T1 com review antagonista (Rules).
+- **S309** (toggle de estrangeiro) — bloco D, **GATED** pela liberação da conta Asaas. Não despachar.
+- **S308** (tabela de taxa) — ✅ entregue na TAXA-FLEX.
+
+Nada mais deste épico está na fila da Onda 4.

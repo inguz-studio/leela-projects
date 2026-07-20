@@ -1049,3 +1049,11 @@ Dashboards ricos (séries temporais, coortes, funil de tenants, drill-down por e
 - **Consome/alimenta:** E04 (checkout/parcelamento lê `commercialTerms`; split usa a taxa do tenant), E09 (`platformFeePct` do termo é fonte de RN-330), E05 (clube pago destravado por S1603, RN-104), E00 (Auth/claims/isolamento dia-1), E01 (Design System/Shell).
 - **Impacta ADR-006:** as recorrências (comunidade + SaaS) exigem que o gateway concreto suporte **assinatura + split** — requisito registrado para a decisão do provider.
 - **Pendências:** onboarding self-service + KYC do produtor; mecânica de antecipação de recebíveis (RN-410); dashboards macro ricos; dunning/nota fiscal da mensalidade SaaS — todos pós-V1.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+Este épico **não tem lacuna aberta na Onda 4**. A última peça do caminho do dinheiro que dependia dele — a config da taxa da plataforma (tabela global + override por organizador, S1606) — foi entregue na TAXA-FLEX, incluindo a trava que impedia campo vazio virar taxa zero para todo mundo.
+
+O que segue fora da fila, por recorte e não por lacuna: **S1603** (recorrência da comunidade) e **S1604** (recorrência SaaS), ambos pós-V1; **S1605** entregue em fatia slim.
+
+Ação de operação pendente, herdada e não-código: provisionar `CRM_ID_PEPPER` no Secret Manager antes do primeiro deploy com dado real (ver E19). Trocar o pepper depois de haver dado real obriga migração de todas as chaves.

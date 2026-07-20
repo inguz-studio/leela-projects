@@ -858,3 +858,12 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma vira **percentua
 - **RN-183 · Rounding único + fonte única no core.** Arredondamento único = **half-up em centavos inteiros** (convenção da casa — COMF2 já usa `centavos × basis-points inteiros, half-up`; RN-347 opera em centavos). Fonte de cálculo = função `computeTaxaPlataforma(faceCentavos, {percentualBp, fixoCentavos})` no core, ao lado de `computeLiquidoProdutor`, **sem constante hardcoded** (RN-404); a fonte de dados é a tabela (RN-178). Mesmo padrão de fonte única do `PIX_EXPIRACAO_SEGUNDOS`.
 - *Ampliada · RN-330:* a **fonte** da taxa da plataforma passa da constante/`platformFeePct` único para a **tabela por meio** (RN-178); o cálculo por pagamento usa a linha do meio do próprio pagamento. RN-348 (D+N/retenção) inalterada.
 - *Premissa a ratificar (c):* a **base da comissão de afiliado permanece FACE** (RN-310: percentual sobre FACE OU valor fixo por inscrição), coerente com a contabilidade do organizador em FACE. A taxa-flex não muda a base. Ver `DECISOES-ABERTAS`.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso). Resta uma task, e ela é a que faltava para o pós-venda ter operador:
+
+- **S904-T5** · fila de reembolso e transferência no painel financeiro. A máquina de estados (T1-T4) está aterrissada e auditável; falta a superfície pela qual o organizador aprova ou recusa o que não caiu em `aprovado_auto`. Rota **opus** xhigh, review antagonista obrigatório (dinheiro). Passo a passo, cuidados e critério de pronto em `02-rodadas/2026-07-19-espec-sweep/02-caminho-do-dinheiro.md` §Bloco B.
+- **S905** (cálculo/congelamento/estorno da taxa) — ✅ entregue na TAXA-FLEX.
+
+**Decisão aberta que toca este épico:** a fronteira do reembolso (item 23) — se o reembolso devolve a taxa de serviço ao comprador. A RN-181 crava o rateio; o *se* segue pendente. Não bloqueia S904-T5, desde que a tela não afirme nada sobre devolução de taxa até a decisão sair. Ver `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.

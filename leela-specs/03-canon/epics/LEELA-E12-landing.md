@@ -1524,3 +1524,14 @@ Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário
 - **RN-186 (efeito no checkout):** pergunta obrigatória sem resposta **bloqueia o pagar no MESMO fence server-side dos aceites** (S1207) — reuso do fence, não gate novo.
 - **RN-188 (efeito no render):** a resposta **carimba a versão** da pergunta no ato (padrão do termo de saúde RN-149 / regulamento S306-T3); editar a pergunta nunca reescreve resposta antiga.
 - **RN-189 (leitura/export):** a resposta é coluna do inscrito na **lista/export já existente** — sem relatório novo. Minimização: o CRM (RN-172) não agrega respostas por default (P-FB-4).
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso) e é onde mora a maior lacuna: a tela. Passo a passo, território e critério de pronto em `02-rodadas/2026-07-19-espec-sweep/02-caminho-do-dinheiro.md`:
+
+- **S1209-T1..T4** (camada de tela do checkout novo) — bloco A. O backend das cinco RNs já foi pago no CHECKOUT2-MODELO; falta o que o comprador vê. Rota **opus** xhigh nas quatro; T2 (timer do PIX) e T3 (prefill/gênero) com review antagonista.
+- **S1212-T1/T2** (render do formulário de perguntas na compra) — bloco C. **T2 serializa depois do bloco A** — mesma tela, despachar em paralelo dá conflito de território.
+- **S1211** (checkout de estrangeiro) — bloco D, **GATED** pela liberação da conta Asaas.
+- **S1210** (exibição da taxa por meio) — ✅ entregue na TAXA-FLEX.
+
+**Ordem de despacho desta tela:** `S1209-T1 → S1209-T2 → S1209-T4 → S1212-T2`, com `S1209-T3` em paralelo (arquivo distinto).
