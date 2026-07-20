@@ -380,3 +380,25 @@ Dados individuais de atleta (só agregado, por LGPD), construtor de relatório c
 ### Decisão que volta para o Vitor
 
 **O histórico não é retroativo.** A série diária começou quando a `coletaDiaria` subiu; o rollup só enxerga a partir dali. Se o Vitor quiser comparação com períodos anteriores a isso, existe uma reconstrução aproximada a partir do ledger transacional — mas é aproximação, custa um lote próprio e traz risco de número que não bate com o painel. Não decidir isso sozinho. Detalhe em `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
+
+---
+
+## Regras de negócio novas (IA-MENU · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. O item de menu `Financeiro`, que era a porta da análise, deixa de existir; o item `Analytics`, que nunca teve rota, sai do design system. Verbatim e desenho em `00-decisao.md`.
+
+- **RN-823 · A análise de vendas é a Visão geral do CRM.** O destino do analytics ao nível do organizador passa a ser **`CRM › Visão geral`** (`/crm`, índice). A tela é a mesma — desempenho de vendas, perfil demográfico dos compradores, cohort idade × sexo, filtro por evento e seletor temporal — e muda de endereço, não de conteúdo. **Supersede a RN-821 em dois pontos:** (1) a superfície única de análise não é mais `/financeiro`, é `/crm`; (2) a supressão do item "Analytics" deixa de ser um filtro no consumidor (`IDS_SUPRIMIDOS` no `sidebar.ts`) e vira **remoção no `DEFAULT_SIDEBAR_SECTIONS` do design system** — o item não volta por descuido em outro consumidor. O resto da RN-821 (filtro por evento, seletor temporal, leitura de agregados por evento, nunca varredura no cliente) permanece intacto. RN-820 e RN-822 seguem inalteradas.
+
+### Por que a análise vai para o CRM, e não continua sozinha
+
+O Vitor viu o produto do lado de quem usa: *"não vejo no menu principal o CRM ou analytics, pois em análise de vendas e comunicação as coisas estão se misturando um pouco. No financeiro tenho a visão de perfil dos compradores."* Perfil demográfico de comprador é conhecimento sobre cliente — é a mesma pergunta que a lista de clientes responde, só que agregada. Ficavam em dois lugares porque nasceram em épicos diferentes, não porque respondiam a coisas diferentes.
+
+**A disciplina de dado não afrouxa com a mudança de endereço.** A Visão geral continua sendo agregado sem identidade (contagens por bucket, supressão k=5 no cohort, nenhuma leitura de `crmClientes`), e a subdivisão Clientes continua sendo identidade individual (RN-172). A vizinhança nova cria um risco que não existia: um "filtro de clientes por faixa etária" na área CRM reintroduziria a diferenciação que o k-anonimato fecha. Fica registrado como gatilho de bloqueio, com o mesmo lastro dos residuais F1/F2/F3 já documentados em `cohortPrivacidade.ts`.
+
+### Correção do plano de execução escrito hoje (ESPEC-SWEEP)
+
+O plano da Onda 4 acima fixou `apps/painel/src/routes/financeiro/analise` como território de `S821-T2`, `S822-T2` e `S823-T1`. **Esse diretório deixa de existir.** O território correto passa a ser **`apps/painel/src/routes/crm/visao-geral`**, e as três tarefas passam a acrescentar seção a uma tela que vive dentro da área CRM.
+
+Nada mais do plano muda: o grafo (`S821-T1a → S821-T1b → {T2, S822-T1, S823-T1}`), as rotas de modelo (todas opus xhigh, pelo motivo já registrado — o gate de um número agregado é a corretude da fórmula, que nenhum linter verifica), a armadilha estoque × fluxo e o critério de pronto seguem valendo palavra por palavra.
+
+**Ordem entre os dois lotes:** `IAM-T2` (o move) é pré-requisito das três tarefas de tela do E11. Despachar `S821-T2` antes do move significa escrever código num diretório que vai ser movido — retrabalho garantido e conflito de território com a lane IA-MENU. O move é barato, não depende do rollup e vai primeiro.

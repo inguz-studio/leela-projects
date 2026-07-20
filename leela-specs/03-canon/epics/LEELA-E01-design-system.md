@@ -144,3 +144,18 @@ Nenhum. Puramente apresentação.
 ## Ordem sugerida
 
 `S001-1 (tokens+tema) → S001-2 (átomos) → S001-3 (moléculas/organismos) → S001-4 (governança)`. Ao fim, Onda 1 (E05/E03/E02) consome estes componentes.
+
+---
+
+## Regras de negócio novas (IA-MENU · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. O E01 é o dono da navegação — a arquitetura de informação do menu principal é regra deste épico, e os épicos de domínio (E09, E11, E19, E03) apenas consomem o endereço que ela define. Verbatim e desenho completo em `00-decisao.md`; mapa das rotas em `01-mapa-de-para.md`.
+
+- **RN-233 · O menu principal tem 6 áreas.** OPERAÇÃO: **Visão geral · Eventos · Clubs · CRM · Marcas**; CONTA: **Configurações**. Saem `Financeiro` (os dois filhos se mudaram: Análise → CRM › Visão geral; Repasses → Eventos › Repasses) e `Analytics` (placeholder sem rota, hoje suprimido no consumidor pela RN-821 — passa a ser removido do `DEFAULT_SIDEBAR_SECTIONS` do próprio DS, e o filtro `IDS_SUPRIMIDOS` do painel deixa de existir). `Comunicação` vira **CRM** (id `crm`, destino `/crm`). **Item de menu sem rota é proibido** — por isso `Configurações` passa a apontar para `/conta`, fechando a última entrada inerte. A troca dentro de cada área acontece por SubNav no padrão §2.14 (underline 2px na ativa, divisória, rolagem lateral própria em tela estreita), o mesmo componente que Eventos, Clubs e o antigo Financeiro já usavam.
+- **RN-234 · Rota antiga nunca quebra.** Toda URL que existia antes de uma reorganização de navegação redireciona para o destino novo, preservando o que vier depois do prefixo. Para esta rodada: `/financeiro` → `/crm`; `/financeiro/repasses` → `/eventos/repasses`; `/financeiro/*` → `/crm`; `/crm/{chave}` no formato antigo → `/crm/clientes/{chave}`. O redirecionamento é declarado na entrada da rota (sem camada nova, sem configuração de servidor) e **cada linha do mapa tem teste próprio** — a falha aqui é silenciosa no build e barulhenta na cara de quem clicou. Armadilha estrutural: a rota legada `/crm/:param` casa com qualquer segmento, então as subdivisões nomeadas (`clientes`, `comunicacao`) precisam ser declaradas antes do parâmetro, com teste provando que `/crm/clientes` abre a lista e não entra em laço.
+
+### Efeito no S001-3-T1 (Shell)
+
+A task de Shell foi escrita com "Sidebar OPERAÇÃO (Visão Geral, Eventos badge, Clubs, Financeiro, Comunicação, Marcas, Analytics) + CONTA (Configurações)" — **8 itens**. Esse inventário está superado pela RN-233. O contrato do componente não muda (seções, itens, badge, item ativo derivado do pathname); muda a lista default e a documentação que a acompanha: `Sidebar.stories.tsx`, `Sidebar.docs.mdx`, `LLM.txt` e a suíte do Sidebar precisam ser reconciliados para 6 itens no mesmo lote — senão o catálogo passa a documentar um menu que não existe, que é exatamente o tipo de divergência que a governança do S001-4 existe para impedir.
+
+**Execução:** `IAM-T1` (menu de 6 áreas, rota sonnet) e `IAM-T6` (redirects, rota sonnet) em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`.

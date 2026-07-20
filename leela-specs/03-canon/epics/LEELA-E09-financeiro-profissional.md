@@ -867,3 +867,47 @@ Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso). Resta 
 - **S905** (cálculo/congelamento/estorno da taxa) — ✅ entregue na TAXA-FLEX.
 
 **Decisão aberta que toca este épico:** a fronteira do reembolso (item 23) — se o reembolso devolve a taxa de serviço ao comprador. A RN-181 crava o rateio; o *se* segue pendente. Não bloqueia S904-T5, desde que a tela não afirme nada sobre devolução de taxa até a decisão sair. Ver `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
+
+---
+
+## Regras de negócio novas (IA-MENU · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. Verbatim dele: *"deixando a parte repasses como uma subdivisão de eventos com a visão macro. Já que o caixa de eventos é separado dos repasses que poderão vir futuramente dos clubs, caso eles sejam pagos."* Desenho completo em `00-decisao.md`; mapa das rotas em `01-mapa-de-para.md`.
+
+- **RN-366 · O repasse pertence à origem que gerou o dinheiro.** Repasse deixa de ser assunto guarda-chuva de um item "Financeiro" e vira **subdivisão da origem**: hoje **Eventos › Repasses** (`/eventos/repasses`, com a visão macro); amanhã, se o clube pago existir, **Clubs › Repasses**, sem herdar nada de eventos. Três consequências, todas ratificadas pelo Vitor na mesma noite:
+  - **Dados bancários são do titular, não da origem.** O cadastro sai de dentro de Repasses e vira **Configurações › Dados de recebimento** (`/conta`), uma vez só. A **RN-354 não muda** — o callable continua devolvendo apenas o mascarado, nunca o número em claro. Muda a superfície, não a regra.
+  - **O saldo permanece único.** A **RN-334** (saldo consolidado: repasse como organizador + comissão como afiliado) e a **RN-346** (clawback, hoje por profissional) seguem exatamente como estão. O saque acontece **na origem**, sobre esse saldo único. A origem é dimensão do lançamento, não do titular — e essa é a razão pela qual saldo por origem com conta bancária por origem foi descartado: reescreveria RN-334 e RN-346 sem nenhuma dor real que justifique.
+  - **A visão consolidada mora na visão macro de Eventos**, junto do eixo por evento — não num lugar novo. É onde a RN-358 já a colocou.
+
+### Repasse individualizado por evento — reconciliação com a RN-349, não regra nova
+
+O Vitor reforçou o requisito: *"cada evento seu repasse, e deve ter o registro individualizado e controle. Embora ainda seja possível termos a visão geral e consolidada."*
+
+**Isso já é lei desde 2026-07-13.** É a **RN-349** (visão quebrada por evento: vendido, retido, disponível e os repasses associados a cada um) somada à **RN-358** (o consolidado declarado explicitamente na mesma superfície). Nenhuma RN nova nasce daqui — e o inventário do código confirma que a promessa está construída:
+
+- quebra por evento na tela (`RepassesPorEvento`, reader `repassesPorEvento`);
+- histórico agrupado pelo campo `eventoId` do próprio lançamento — associação exata, fim da heurística;
+- solicitação de repasse **com o evento escolhido** (`requestRepasse` recebe `eventoId`; o servidor valida que o evento é do tenant e recusa o que não for, com teste de ataque cobrindo evento inexistente);
+- os três cards de saldo como número autoritativo do servidor (`saldo/current`).
+
+**Portanto o delta desta rodada é de navegação, não de domínio:** a tela inteira muda de `/financeiro/repasses` para `/eventos/repasses` e nenhum contrato de dado é tocado.
+
+**A lacuna real, e ela está do outro lado.** A aba de Caixa do evento (E03 · S207) mostra "repassado R$ 0,00" com aviso honesto, porque nunca leu o ledger de repasse — a informação existe, mas só na tela consolidada. Com "registro individualizado e controle" ratificado, isso vira delta explícito: a Caixa do evento passa a mostrar a linha de repasse **daquele** evento, reusando o reader que já existe. É reuso de leitor, não backend novo. Dono da execução: E03 (ver lá).
+
+**Efeito de UI que a execução não pode perder:** hoje o modal de saque só é montado quando há dados bancários salvos, porque o formulário está na mesma tela. Com o cadastro em Configurações, a proximidade acaba. A tela de Repasses continua exigindo o mesmo pré-requisito e, quando faltar, **mostra o caminho** em vez de abrir um modal que o servidor recusaria. A regra do servidor não muda; muda quem avisa.
+
+### Reconciliação com a "Redefinição da aba Financeiro" (Vitor, 2026-07-13)
+
+Aquela decisão dizia: o item "Financeiro" do menu vira ANÁLISE (E11); o financeiro operacional fica na aba do evento; repasses ficam em Repasses. **A decisão de hoje é a continuação dela, e a completa:**
+
+| 2026-07-13 | 2026-07-19 |
+|---|---|
+| item "Financeiro" = ANÁLISE | o item "Financeiro" **morre**; a análise vira `CRM › Visão geral` (RN-823) |
+| financeiro operacional na aba do evento | a aba passa a se chamar **Caixa** e ganha a linha de repasse do próprio evento |
+| repasses em Repasses (com RN-349) | Repasses viram **subdivisão de Eventos**; RN-349 e RN-358 inalteradas |
+
+As duas versões não convivem soltas: a de 13/07 fica como o passo anterior, e o que vale é a tabela acima.
+
+### Execução
+
+`IAM-T4` (repasses migram para Eventos, com a SubNav do hub) e `IAM-T5` (dados de recebimento em Configurações + o aviso do pré-requisito), ambas **opus xhigh com review antagonista** — é a superfície pela qual o organizador tira dinheiro do sistema. Detalhe em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`. **Nenhuma toca `functions/`, `firestore.rules` ou callable**; se precisar, saiu do escopo e volta para a spec.

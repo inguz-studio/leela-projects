@@ -1,4 +1,6 @@
-# LEELA-E19 · CRM do organizador + hub de Comunicação
+# LEELA-E19 · CRM — a área do organizador para conhecer e falar com a base
+
+> **Nota de IA (2026-07-19 · rodada IA-MENU):** este épico deixou de ser "um hub dentro do item Comunicação" e passou a ser **uma área do menu principal, chamada CRM, com três subdivisões** — Visão geral · Clientes · Comunicação. A leitura correta do épico começa por §Arquitetura da área (IA-MENU); tudo que vem antes descreve o desenho anterior e continua válido como histórico e como spec das regras de dado.
 
 - **Superfície:** Painel (menu principal)
 - **Horizonte:** H3 (Onda web-complete — antecipada 2026-07-18)
@@ -203,3 +205,43 @@ Falta **T4**: o hub sabe quem são os clientes, mas ainda não fala com eles.
 - [ ] a estimativa de alcance bate com o número realmente enviado no ambiente de teste
 - [ ] sem a chave, o comportamento é fail-closed e visível na tela — nunca "enviado" mentindo
 - [ ] review antagonista de PII/LGPD em contexto fresco antes do merge
+
+---
+
+## Arquitetura da área (IA-MENU · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. O Vitor observou que análise de vendas e comunicação estavam se misturando: *"No financeiro tenho a visão de perfil dos compradores, e comunicação tenho clientes e comunicação. Acho que poderíamos simplificar essas duas rotas em uma só, tendo subdivisões."* Verbatim completo e desenho em `00-decisao.md`.
+
+### O que muda neste épico
+
+O **hub "Clientes & Comunicação"**, montado no item `comunicacao` do menu, vira a **área CRM** — item próprio (`crm`, rótulo "CRM", destino `/crm`), com três subdivisões em SubNav §2.14:
+
+| Subdivisão | Rota | Conteúdo | Origem |
+|---|---|---|---|
+| **Visão geral** | `/crm` (índice) | desempenho de vendas, perfil demográfico dos compradores, cohort idade × sexo | vinha de `Financeiro › Análise` (E11 · RN-820/821/822) |
+| **Clientes** | `/crm/clientes` e `/crm/clientes/:clienteKey` | lista cross-evento com LTV, ficha individual, histórico, aniversário | era o índice de `/crm` (S1900, entregue) |
+| **Comunicação** | `/crm/comunicacao` | disparo por segmento da base | é a S1901-T4c, ainda travada na chave do Brevo |
+
+O item de menu `Financeiro` deixa de existir (RN-233, dona no E01) e o item `Analytics` sai do design system.
+
+### A fronteira de PII passa a ser explícita
+
+A área junta, sob a mesma casca, duas categorias de dado que o épico sempre tratou como distintas e que **continuam distintas**:
+
+- **Visão geral** é agregado **sem identidade** — RN-820/RN-822, contagens por bucket, cohort com supressão k=5 (`cohortPrivacidade.ts`), nunca a pessoa.
+- **Clientes** é **identidade individual** — RN-172, chave HMAC com pepper, leitura só `isTenantWriter`, minimização (endereço fora, P-CKMOD-1).
+
+**A fronteira é de dado, não de tela.** Estar sob o mesmo item de menu não autoriza cruzar as camadas: nenhum componente da Visão geral pode consumir `crmClientes`, e nenhum componente de Clientes pode desagregar o cohort. O risco novo que a reorganização cria é justamente esse — a proximidade convidar a um "filtro de clientes por faixa etária" que reintroduz a diferenciação que a supressão k=5 fecha. Isso vale como **gatilho de bloqueio** no gate antagonista de PII que este épico já exige por regra própria.
+
+### Reconciliação com o que estava escrito
+
+- O título do épico e a S1901 falavam em "hub de Comunicação" no item `comunicacao`. Passa a ser a subdivisão **Comunicação** da área **CRM**. O critério de aceite "Dado o menu principal, quando abro Comunicação" lê-se agora "quando abro CRM › Comunicação".
+- A decisão **P-E19-3** (hub unificado "Clientes & Comunicação"), confirmada pelo Vitor em 24(b) da DEC-0719, **não é revogada — é ampliada**: a unificação passou a incluir também a análise de vendas, que ele identificou como a terceira peça da mesma conversa.
+- **Nada é apagado**, e isso continua sendo regra do épico: a comunicação por evento (E06) e por clube (E05) seguem intactas nas próprias telas.
+- As tasks `S1901-T4a/T4b/T4c` seguem exatamente como planejadas na Onda 4; muda só o endereço da tela do T4c, que passa a ser `/crm/comunicacao`.
+
+### Execução
+
+`IAM-T2` (a análise migra para CRM › Visão geral) → `IAM-T3` (a área ganha as 3 subdivisões), ambas **opus xhigh com review antagonista**, em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`. São tarefas de navegação: **nenhum contrato de dado, Rule ou callable é tocado**. Se a execução precisar mexer em `functions/` ou `firestore.rules`, saiu do escopo e volta para a spec.
+
+**Gate específico do move:** a suíte das telas movidas (`ClientesPage`, `ClienteDetailPage`, `AnaliseVendasView`, `CohortIdadeSexo`) tem de passar **sem asserção reescrita**. Um teste que precisou mudar de expectativa é a prova de que o move alterou comportamento — e o comportamento inclui a supressão k=5 e a nota de cobertura honesta.

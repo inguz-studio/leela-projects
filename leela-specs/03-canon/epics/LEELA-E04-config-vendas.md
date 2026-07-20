@@ -1526,3 +1526,13 @@ Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso). O que 
 - **S308** (tabela de taxa) — ✅ entregue na TAXA-FLEX.
 
 Nada mais deste épico está na fila da Onda 4.
+
+---
+
+## Nota de fronteira (IA-MENU · 2026-07-19) — a aba de Caixa do evento é do E03
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. Na reorganização do menu, o evento ganhou uma aba de **Caixa** (o macro do dinheiro daquele evento). O dono é o **E03**, não este épico — a regra canônica é a **RN-235**, especificada lá.
+
+**A linha divisória:** o E04 define **sob quais regras** o dinheiro entra (lotes, preços, cupons, política de vendas, taxa por meio de pagamento — RN-178 a RN-183); o E03 mostra **o que entrou** depois que as regras rodaram. Caixa é resultado de operação, não configuração. A aba já vivia sob `EventoLayout` com a matriz de papéis da operação do evento, o que confirma a fronteira na prática.
+
+O que este épico **continua** possuindo e que alimenta aquela tela: o congelamento da taxa na cotação (RN-179), o modo da taxa por evento (RN-347, fio no E09) e a tabela por meio de pagamento (RN-178). Mudança na aba de Caixa nunca é motivo para tocar essas regras — e mudança nessas regras precisa checar o efeito na Caixa.

@@ -1707,3 +1707,27 @@ Pedido verbatim do Vitor: (1) "separar forma masculina e feminina e DEPOIS a pes
 - **RN-232 · Encerrar encomendas do item.** Ação explícita do organizador: TODOS os SKUs do item em `estimativa` transicionam para `encomendado` (RN-226) com `qtd = qtdVendida` do instante (a FOTO da produção), numa única transação. **Encerrar encomenda ≠ fechar vendas**: quem compra depois segue escolhendo corte/tamanho; a diferença aparece em `aEncomendar` quando o estoque chega. Idempotente por máquina de estados (SKU já encerrado é pulado). Só organizador (RN-400/401/402).
 
 **✅ ENTREGUE ponta a ponta (lote TAMANHOS-GRADE · trace leela-build-2d6ee98d · 2026-07-19, retomada pós-queda):** T1 modelo+SKU+Rules+validação origem+callable (`09be9e7`) · T2 ciclo do organizador no painel — grade no ItemKitModal, Vendido/Entregues por corte×tamanho, "Encerrar encomendas", ajuste de estoque 2D, corte+tamanho no checklist do balcão (`9270083`) · T3 checkout corte-primeiro na landing (`b1d7e82`). Gates: unit 67/67 · emulator estoque 21/21 + checkout 12/12 · painel 1232/1232 · landing 60/60. Report: `outputs/leela-build-2d6ee98d/TAMANHOS-GRADE-REPORT.md`.
+
+---
+
+## Regras de negócio novas (IA-MENU · Vitor 2026-07-19)
+
+Rodada `02-rodadas/2026-07-19-ia-menu/`. Verbatim dele: *"o caixa de eventos é separado dos repasses que poderão vir futuramente dos clubs, caso eles sejam pagos."* Desenho completo em `00-decisao.md`.
+
+### Por que a aba de caixa do evento é deste épico, e não do E04
+
+A S207 (Financeiro do evento) já vive aqui, e é a decisão certa: o E03 é a **operação** do evento — inscritos, balcão, kits, entrega, o que aconteceu. Caixa é exatamente isso: o dinheiro que **entrou** naquele evento, resultado da operação. O E04 é **configuração e vendas** — lotes, preços, política, cupons, taxa, ou seja, o que **vai** acontecer e sob quais regras. Uma tela que mostra receita realizada, taxa cobrada e o que sobrou pertence a quem opera, não a quem configura. A prova prática: a aba já está montada sob `EventoLayout` com `RequirePapel area="financeiro"`, e a matriz de papéis que decide quem entra é a mesma matriz de operação do evento.
+
+- **RN-235 · A aba do evento se chama Caixa, e mostra o repasse daquele evento.** A sub-aba "Resumo" da seção financeira do evento passa a se chamar **Caixa** — é o macro daquele evento: o que entrou, o que é taxa, o que sobra. **A URL não muda** (`/eventos/{slug}/financeiro`) e a permissão não muda (`area="financeiro"` na matriz de papéis): muda o rótulo, que é o que a pessoa lê, e muda o conteúdo em um ponto. Hoje a tela declara "repassado R$ 0,00" com aviso honesto, porque nunca leu o ledger de repasse; passa a mostrar a **linha de repasse do próprio evento**, lendo o reader `repassesPorEvento` que já existe (RN-349), com atalho para a visão macro em `Eventos › Repasses`. É reuso de leitor — nenhum agregado, callable ou Rule novo. Sem repasse, o estado é honesto: nunca R$ 0,00 sugerindo que houve movimento.
+
+**Caixa ≠ repasse, e a tela precisa deixar isso claro.** Caixa é o que o evento faturou; repasse é o dinheiro saindo para a conta do organizador, que acontece sobre um saldo único do titular (RN-366, E09) e tem janela de liberação própria (RN-348). Confundir os dois é o erro que o Vitor separou de propósito ao dizer que "o caixa de eventos é separado dos repasses".
+
+### O hub de Eventos ganha subdivisão
+
+`/eventos` passa a ter SubNav (padrão §2.14): **Eventos** (a lista de hoje, intacta) | **Repasses** (`/eventos/repasses`, a visão macro que migra do antigo `/financeiro/repasses`, mantendo RN-349 e RN-358 palavra por palavra). Detalhe da regra no E09 · RN-366.
+
+**Armadilha de rota:** `/eventos/repasses` convive com `/eventos/:slug`. A precedência tem de ser declarada e testada — um evento com slug `repasses` não pode sequestrar a subdivisão nem ser sequestrado por ela em silêncio.
+
+### Execução
+
+`IAM-T7` (aba Caixa com o repasse do evento) — **opus xhigh com review antagonista**, porque põe número de dinheiro dentro da tela de um evento específico. Depende de `IAM-T4` (a migração de repasses). Gate: o teste da matriz de papéis passa **sem edição**, e a linha de repasse bate com o mesmo número que aquele evento mostra em `/eventos/repasses` — reconciliação entre as duas telas, nunca recálculo. Detalhe em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`.
