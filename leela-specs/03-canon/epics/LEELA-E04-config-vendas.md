@@ -1423,7 +1423,7 @@ Backend guard/auditoria (T1); qualquer devolução automática de vaga.
 
 > Histórias novas das rodadas de 2026-07-19 (TAXA-FLEX, DEC-0719-ret). Detalhe/verbatim em `02-rodadas/2026-07-19-taxa-flex/` e `-decisoes/`; regras em §"Regras de negócio novas (TAXA-FLEX...)" abaixo (RN-178) e RN-175. Molde igual ao de S1900 (E19).
 
-### LEELA-S308 · Tabela de taxa da plataforma por meio de pagamento (percentual + valor fixo) · (de-para novo · TAXA-FLEX)
+### LEELA-S308 · Tabela de taxa da plataforma por meio de pagamento (percentual + valor fixo) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
 **Como** plataforma, **quero** definir a taxa como percentual + valor fixo por meio de pagamento (global, com exceção por organizador), **para** ter flexibilidade de cobrança (ex.: "6% PIX + R$2,00", "8% cartão + R$1,50").
 
@@ -1435,7 +1435,7 @@ Backend guard/auditoria (T1); qualquer devolução automática de vaga.
 - **Dado** a escrita da tabela, **quando** um ator não-`platform_admin` tenta gravar (global ou override), **então** as Rules negam (fail-closed, RN-404).
 - **Dado** o enum de meios, **quando** o checkout não oferece boleto, **então** a linha `boleto` fica **inerte** (especificada, não ativada — P-TAXAFLEX-2).
 
-**Tasks:** `S308-T1` (modelo `platform/config` global + override `commercialTerms/current` + Rules escrita só `platform_admin`, fail-closed — RN-178/404; campos `conciliacao.taxaPct/taxaFixa` já existentes, reuso). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+**Tasks:** `S308-T1` (modelo `platform/config` global + override `commercialTerms/current` + Rules escrita só `platform_admin`, fail-closed — RN-178/404; campos `conciliacao.taxaPct/taxaFixa` já existentes, reuso — `ec9b248`) ✅. **Status:** ✅ ENTREGUE 2026-07-19 (lote TAXA-FLEX, lane TAXAFLEX): tabela global gravada SÓ via callable `setTaxaPlataformaGlobal` (Rules de `platform/` seguem write:false p/ todo client); override PARCIAL por meio em `commercialTerms.taxaTabela` (linha ausente herda a global); precedência override > global > `platformFeePct` legado. Review antagonista Fable APROVADO COM FIXES (F1 da tela global pago). Report `outputs/leela-build-2d6ee98d/TAXA-FLEX-REPORT.md`. Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
 
 ### LEELA-S309 · Toggle "aceitar inscrição de estrangeiros" por evento · GATED · (de-para novo · DEC-0719-ret)
 

@@ -1022,7 +1022,7 @@ Dashboards ricos (séries temporais, coortes, funil de tenants, drill-down por e
 
 > História nova da rodada TAXA-FLEX (Vitor, 2026-07-19). Detalhe em `02-rodadas/2026-07-19-taxa-flex/`; a tabela (dona) é RN-178/E04-S308 e o cálculo é E09-S905; aqui fica a **tela de config** no super-admin (reconcilia RN-404/406). Molde igual ao de S1900 (E19).
 
-### LEELA-S1606 · Config da taxa da plataforma no super-admin (tabela global + override por organizador) · (de-para novo · TAXA-FLEX)
+### LEELA-S1606 · Config da taxa da plataforma no super-admin (tabela global + override por organizador) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
 **Como** platform_admin, **quero** editar a tabela global de taxa por meio e as exceções negociadas por organizador, **para** operar a cobrança da plataforma sem tocar em código.
 
@@ -1034,7 +1034,7 @@ Dashboards ricos (séries temporais, coortes, funil de tenants, drill-down por e
 - **Dado** um organizador com condição negociada, **quando** crio a exceção, **então** ela grava o override em `commercialTerms/current` do tenant (precedência organizador > global).
 - **Dado** um ator não-`platform_admin`, **quando** tenta abrir/gravar a config, **então** é negado (RN-404, fail-closed); **sem nível por-evento no v1**.
 
-**Tasks:** `S1606-T1` (tela do super-admin: editar a tabela global por meio + gerir override por organizador — consome E04-S308, RN-178/404/406). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+**Tasks:** `S1606-T1` (tela do super-admin: editar a tabela global por meio + gerir override por organizador — consome E04-S308, RN-178/404/406 — `c6ab442`) ✅. **Status:** ✅ ENTREGUE 2026-07-19 (lane TAXAFLEX): rota `/plataforma/taxa` (nav "Taxa") salva a global SÓ pelo callable; guardas F1 da review antagonista (campo vazio NUNCA vira 0%+R$0; taxa zero em meio ativo exige confirmação — `242cef7`); exceção por organizador na seção nova do editor de termos (linha vazia herda a global; par incompleto não grava) com lock otimista contra edição concorrente (F5). BÔNUS: o save do editor deixou de APAGAR os campos opcionais do termo (footgun pré-existente). Report `outputs/leela-build-2d6ee98d/TAXA-FLEX-REPORT.md`.
 
 ---
 

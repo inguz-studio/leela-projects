@@ -1446,7 +1446,7 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 
 **Tasks:** `S1209-T1` (cupom no step 0 + Pix/Cartão em botões sem toggle — D-4/D-5), `S1209-T2` (QR PIX na tela + timer 30 min + auto-copy com toast — RN-157 UI, tela de pagamento e tela do pedido pendente), `S1209-T3` (campo de gênero por inscrito + pré-preenchimento — RN-154 UI), `S1209-T4` (cards por atleta + botão "+ adicionar atleta" — D-2). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`.
 
-### LEELA-S1210 · Exibição da taxa por meio de pagamento no checkout (total por opção) · (de-para novo · TAXA-FLEX)
+### LEELA-S1210 · Exibição da taxa por meio de pagamento no checkout (total por opção) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
 **Como** comprador, **quero** ver o total de cada meio de pagamento antes de pagar quando a taxa é repassada, **para** escolher com clareza (ex.: PIX mais barato que cartão).
 
@@ -1459,7 +1459,7 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 - **Dado** a nota de transparência de taxa (badge A-5 "+ taxa de serviço"), **quando** a taxa varia por meio, **então** a nota reflete que **o valor varia por meio de pagamento** (P-TAXAFLEX-6).
 - **Dado** qualquer meio, **quando** renderizo o checkout, **então** `platformFeePct`/termos comerciais **nunca** vazam ao comprador (só o total).
 
-**Tasks:** `S1210-T1` (exibir total por opção de meio em repassada + atualizar a nota A-5 para variação por meio — consome `computeSaleState` estendido do lote E09). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+**Tasks:** `S1210-T1` (exibir total por opção de meio em repassada + atualizar a nota A-5 para variação por meio — consome `computeSaleState` estendido do lote E09 — `4e786ac`) ✅. **Status:** ✅ ENTREGUE 2026-07-19 (lane TAXAFLEX): cotação devolve `totaisPorMeio` (SÓ valores em R$ — leak-scan de `%` provado); os radios de forma mostram o total de cada opção quando os totais DIFEREM (refino F6 da review: cobre override zero num só meio); nota A-5 diz que a taxa varia conforme a forma de pagamento. Report `outputs/leela-build-2d6ee98d/TAXA-FLEX-REPORT.md`.
 
 ### LEELA-S1211 · Checkout de estrangeiro sem CPF (passaporte, cartão internacional à vista) · GATED · (de-para novo · DEC-0719-ret)
 

@@ -808,7 +808,7 @@ UI de transferência no app (LEELA-S1316); cobrança da diferença (fluxo de che
 
 > História nova da rodada TAXA-FLEX (Vitor, 2026-07-19). Detalhe em `02-rodadas/2026-07-19-taxa-flex/`; regras em §"Regras de negócio novas (TAXA-FLEX...)" abaixo (RN-179/181/182/183). Molde igual ao de S1900 (E19).
 
-### LEELA-S905 · Cálculo, congelamento e estorno da taxa por meio (percentual + fixo) · (de-para novo · TAXA-FLEX)
+### LEELA-S905 · Cálculo, congelamento e estorno da taxa por meio (percentual + fixo) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
 **Como** plataforma, **quero** calcular a taxa por meio (percentual + fixo), congelá-la na compra e ratear o fixo no estorno, **para** que o dinheiro feche cent-exato e mudar a tabela nunca reprecifique pedido feito.
 
@@ -821,7 +821,7 @@ UI de transferência no app (LEELA-S1316); cobrança da diferença (fluxo de che
 - **Dado** um estorno, **quando** rateio, **então** o componente **fixo** entra por linha **como a taxa percentual entra hoje** (`itens[].taxaRepassada`, maior resto, ∑ = taxa carimbada) — RN-181; o **SE** devolve a taxa fica na fronteira aberta BENCHMARK-REEMBOLSO (não decidido aqui).
 - **Dado** o repasse, **quando** calculo o "a receber", **então** = `face − taxa(meio)` em **absorvida** e = `face` em **repassada** (RN-182); o ledger usa só o `valorFace`.
 
-**Tasks:** `S905-T1` (core `computeTaxaPlataforma` half-up + estender `computeSaleState`/`computeLiquidoProdutor` para pct + fixo por meio — RN-180/182/183), `S905-T2` (congelamento: resolver override > global e carimbar na cotação/pedido na tx da confirmação, padrão COMF2 — RN-179), `S905-T3` (estorno: fixo no rateio `itens[].taxaRepassada` por maior resto — RN-181, só o COMO). Detalhe em `02-rodadas/2026-07-19-taxa-flex/01-decisoes.md`.
+**Tasks:** `S905-T1` (core `computeTaxaPlataforma` half-up + estender `computeSaleState`/`computeLiquidoProdutor` para pct + fixo por meio — RN-180/182/183 — `ec9b248`+`1d71b41`) ✅, `S905-T2` (congelamento: linha resolvida no ATO DA COMPRA carimbada em `pagamento.taxaCongelada` na tx de criação + `conciliacao.taxaPct/taxaFixa/taxaValor` escrita na tx da CONFIRMAÇÃO copiando o congelado — padrão COMF2, RN-179 — `335622e`) ✅, `S905-T3` (estorno: fixo no rateio `itens[].taxaRepassada` por maior resto, ∑ = taxa carimbada — RN-181, mecânica REUSADA, só prova — `c14a084`) ✅. **Status:** ✅ ENTREGUE 2026-07-19 (lane TAXAFLEX): agregado E09 híbrido por carimbos (`242cef7` paga F2 da review — estorno parcial não engole a imputação legada) + janela D+N carimbo-aware; repasse mode-aware provado nos 2 modos. Review antagonista Fable APROVADO COM FIXES (todos pagos). Report `outputs/leela-build-2d6ee98d/TAXA-FLEX-REPORT.md`.
 
 ---
 
