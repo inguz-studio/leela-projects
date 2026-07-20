@@ -160,3 +160,46 @@ de minimização assumidas na implementação (registradas no handoff do trace):
 ## Ordem sugerida
 
 `S1900 (CRM: modelo+Rules ✅ → tela) → S1901 (hub de Comunicação)`. **Gate obrigatório:** review antagonista (PII/LGPD) antes de qualquer código — categoria distinta do RN-820. Backend passou pelo gate; a UI (T3/T4) repete o gate no próprio lote.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+**Onda 4 · item 4.** Este épico carrega a dependência de maior alavancagem da onda: a chave do Brevo destrava, ao mesmo tempo, o disparo daqui e o convite PF do E08.
+
+### Estado real
+
+Backend inteiro pago e provado: identidade cross-evento com HMAC e pepper fail-closed (T1/T2/T3 + A3), readers tipados, Rules com suíte de ataques, RN-173 (CPF único, à prova de corrida) e RN-174 (claim condicionado). A UI T3 subiu no lote CRM-COMISSAO-UI — o hub "Clientes & Comunicação" existe no menu, com lista paginada, busca por prefixo, detalhe de 1 leitura, aniversário e idade ao vivo.
+
+Falta **T4**: o hub sabe quem são os clientes, mas ainda não fala com eles.
+
+### O que resta
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 1 | `S1901-T4a` | segmentação: core puro que deriva os segmentos a partir do mapa `eventos` por cliente já mantido pelo agregador (participou de um evento, faixa de valor gasto, aniversariantes do mês), mais o reader server-side de shape fechado que resolve o segmento em destinatários | `packages/core/src/crm` · `functions/src/crm` | E19 backend ✅ | **opus** xhigh | ⚔ |
+| 2 | `S1901-T4b` | disparo: **reusa** `executarDisparoCampanha`/`enviarCampanha` do E06 e o log de envio; nenhum pipeline novo. Idempotência por campanha, estimativa de alcance antes de enviar | `functions/src/eventos` (consumidor) · `functions/src/crm` | T4a · **RN-137** | **opus** xhigh | ⚔ |
+| 3 | `S1901-T4c` | tela do disparo dentro do hub: escolher segmento, ver o alcance estimado, confirmar com preview do que vai sair | `apps/painel` · hub Clientes & Comunicação | T4b | **opus** xhigh | — |
+| 4 | `S1901-T5` | oportunidade, não obrigatório: ligar o gatilho `aniversario` das automações do E06 ao segmento de aniversariantes | `functions/` (automações) | T4a · E06 ✅ | **opus** xhigh | — |
+
+**Dependência dura, e ela é externa.** Sem `BREVO_API_KEY` o `selectEmailProvider` é fail-closed por desenho — o envio lança em vez de falhar em silêncio. T4a e T4c podem ser construídos e testados sem a chave (segmentação e tela são verificáveis com o provider mockado); T4b só fecha de verdade com a chave. Ação do Vitor: conta Brevo, verificação de domínio (depende da decisão de domínio, item 12) e a chave no Secret Manager.
+
+**Por que tudo em opus.** Segmentar é escolher quem recebe e-mail a partir de identidade individual — é a superfície de PII do produto inteiro. Um segmento que vaze cliente de outro tenant, ou que inclua quem nunca comprou, é incidente de LGPD, não bug de tela. O gate antagonista de PII já era obrigatório neste épico por regra própria; ele continua valendo em cada task deste bloco.
+
+### O que não pode ser esquecido no lote
+
+- **Minimização RN-172 intacta.** O segmento lê o agregado de cliente, nunca o pedido. Endereço continua fora do CRM (P-CKMOD-1) — incluir exige decisão explícita do Vitor.
+- **Nada é apagado.** A comunicação por evento (E06) e por clube (E05) seguem funcionando; o hub central soma, não substitui.
+- **`CRM_ID_PEPPER` no Secret Manager** antes do primeiro deploy com dado real. Trocar o pepper depois obriga migração de todas as chaves.
+- **Base legal a revisitar antes do go-live.** O default de legítimo interesse segue vigente; a pendência não foi apagada, só teve a severidade rebaixada.
+
+### Ordem interna
+
+`T4a → T4b → T4c`, com `T5` opcional ao final. Se a chave do Brevo demorar, despachar `T4a` e `T4c` contra o provider mockado e deixar `T4b` como a última milha — assim o épico não fica parado esperando uma ação externa.
+
+### Critério de pronto
+
+- [ ] o reader de segmento devolve shape fechado e nega para quem não é `isTenantWriter` (fail-closed provado no emulador)
+- [ ] nenhum destinatário de outro tenant entra em nenhum segmento — teste de ataque explícito
+- [ ] disparar a mesma campanha duas vezes não envia duas vezes (idempotência provada, no padrão do scheduler ADR-015)
+- [ ] a estimativa de alcance bate com o número realmente enviado no ambiente de teste
+- [ ] sem a chave, o comportamento é fail-closed e visível na tela — nunca "enviado" mentindo
+- [ ] review antagonista de PII/LGPD em contexto fresco antes do merge
