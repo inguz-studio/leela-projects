@@ -39,7 +39,20 @@ Os três pontos que iriam voltar como pergunta foram ratificados antes do fecham
 
 ## Fila de execução deixada pronta
 
-`IAM-T1` (sonnet) · `IAM-T2` ⚔ · `IAM-T3` ⚔ · `IAM-T4` ⚔ · `IAM-T5` ⚔ · `IAM-T6` (sonnet) · `IAM-T7` ⚔ — cinco em opus xhigh com review antagonista. Grafo, territórios, conflito de território entre T2/T4 e gates por tarefa em `leela-specs/02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`.
+`IAM-T1` (opus) · `IAM-T2` ⚔ · `IAM-T3` ⚔ · `IAM-T4` ⚔ · `IAM-T5` ⚔ · `IAM-T6` (**haiku**, condicionada ao gate) · `IAM-T7` ⚔ — **seis em opus, cinco delas com review antagonista; uma haiku**. Grafo, territórios, conflito de território entre T2/T4 e gates por tarefa em `leela-specs/02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`.
+
+**A rota haiku do T6 é condicional.** Vale enquanto o PR trouxer o gate determinístico cravado na fila: teste orientado a tabela que resolve cada rota legada **e** cada negativo (`/crm/clientes` não redireciona, `/crm/comunicacao` não redireciona, no máximo um salto). Chegar sem o teste reprova a tarefa e a reclassifica para opus.
+
+## Lição da lane · roteamento (correção aplicada)
+
+A primeira versão da fila roteou `IAM-T1` e `IAM-T6` para **sonnet** — aplicando a matriz genérica de roteamento em vez da regra do projeto. **Sonnet é proibido no Leela**: Regra L (Vitor, 2026-07-19) em `leela-specs/01-produto/ROADMAP.md:130`, reforçada em `V1-CHECKLIST.md` e `BOARD-HISTORICO.md`. O teto é opus, classe mecânica **com gate determinístico** roteia haiku, estourou opus no effort máximo escala para o humano. **A escada pula o degrau do meio: `haiku → opus`.**
+
+Duas lições, e a segunda é a que importa mais:
+
+1. **Roteamento se decide ANTES do dispatch, contra a regra do projeto.** Regra do projeto vence matriz genérica de fora, sempre.
+2. **Falha silenciosa é ausência de gate.** Eu havia escrito, no mesmo documento, que T6 tinha "falha silenciosa no build" — e ainda assim a tratei como classe mecânica. Ou se crava o gate determinístico (foi o que fiz: a tabela de rotas com os negativos), ou a tarefa sobe de tier. Não existe meio-termo, e o meio-termo era exatamente o que o degrau proibido representava.
+
+Corrigido em: fila (`02-fila-codigo.md`), épico E01, report e este handoff. Commit `[LEELA-IAMENU-5]`.
 
 **Ordem entre lotes:** `IAM-T2` é pré-requisito das tarefas de tela do E11 (`S821-T2`, `S822-T2`, `S823-T1`) — despachá-las antes significa escrever num diretório que vai ser movido.
 
