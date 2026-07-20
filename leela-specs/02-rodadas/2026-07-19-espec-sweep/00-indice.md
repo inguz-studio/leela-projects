@@ -45,7 +45,7 @@ E04/E09/E12/E16 ─────────┤        ├─► E19-S1901-T4 (di
  (caminho do dinheiro)   │        └─► E08 convite PF (RN-316)
    │                     │
    │ item 23 (fronteira  │
-   │ do reembolso)       └─► DECISÃO DO VITOR ──► E08 fase 3 (split automático)
+   │ do reembolso)       └─► DECISÃO DO VITOR ──► texto da tela de reembolso (S904-T5)
    │
    ├─► E08-S701..S704 (painel do promotor)  ── independente do resto da onda
    │
@@ -60,7 +60,17 @@ E11-S821-T1 (rollup) ─┬─► S821-T2 (dashboard)
 E12 (landing/checkout ✅) + E01 (DS ✅) ──► E13-slim PWA ──► E17 social in-app ──► E14 ──► E15
 ```
 
-**Leitura do grafo:** só três arestas são duras. (a) O EmailProvider bloqueia dois épicos ao mesmo tempo — é a dependência de maior alavancagem da onda. (b) O rollup do E11 bloqueia as três telas de analytics; sem ele nada de E11 é despachável. (c) A decisão da fronteira do reembolso (item 23) bloqueia a fase 3 do E08, não o painel do promotor — por isso o E08 entra cedo mesmo com a decisão aberta.
+**Leitura do grafo:** só três arestas são duras. (a) O EmailProvider bloqueia dois épicos ao mesmo tempo — é a dependência de maior alavancagem da onda. (b) O rollup do E11 bloqueia as três telas de analytics; sem ele nada de E11 é despachável. (c) A decisão da fronteira do reembolso (item 23) não bloqueia código nenhum: ela amarra só o que a tela de reembolso pode **afirmar** sobre devolução de taxa. O split automático não está esperando decisão — foi decidido que não abre.
+
+## Distribuição de rota de modelo
+
+| | Tarefas de 1 PR |
+|---|---|
+| **opus** effort xhigh | 34 |
+| **haiku** (com gate determinístico) | 1 |
+| GATED, fora da fila | 3 |
+
+Vinte das tarefas em opus carregam review antagonista obrigatório. A concentração não é conservadorismo: o que sobrou do backlog do Leela é dinheiro, Rules, PII e tela — classes que a política de roteamento manda entrar no topo e nunca rebaixar. A única tarefa que desce de tier é a geração do jogo de ícones do PWA, e ela desce porque tem gate determinístico de verdade: ou o arquivo existe na dimensão exata que o manifest declara, ou falha.
 
 ## Rota de modelo — o que isso significa na prática
 

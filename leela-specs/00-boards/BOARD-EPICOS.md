@@ -1,7 +1,7 @@
 ---
 tags: [leela, kanban, epicos, visao-alto-nivel]
 aliases: [Board de épicos, Visão de épicos, Onde o produto está]
-atualizado: 2026-07-18
+atualizado: 2026-07-19
 ---
 
 # 🗺️ Visão de épicos — onde o produto está
@@ -12,7 +12,7 @@ atualizado: 2026-07-18
 
 ## Onde estamos, em quatro linhas
 
-O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clubes) e já **vende** ponta a ponta (o atleta descobre, se inscreve, paga; o organizador vê a receita, estorna com dignidade e pede o repasse). A rodada atual (Onda 3) fechou as **assessorias parceiras**, o **perfil público link-na-bio** e a robustez financeira; falta o **app do atleta**. Depois vem o **produto web completo** (afiliados, marcas, analytics, CRM) e, por último, a **camada social e heroica** no app.
+O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clubes) e já **vende** ponta a ponta (o atleta descobre, se inscreve, paga; o organizador vê a receita, estorna com dignidade e pede o repasse). A Onda 3 fechou as **assessorias parceiras**, o **perfil público link-na-bio** e a robustez financeira. A onda em execução é a **4 · fechar o produto web** (o dinheiro que está em voo, depois afiliados, marcas, CRM e analytics). Só então vem o **app do atleta, agora como PWA**, e por último a **camada social e heroica**. Passo a passo por épico na rodada 2026-07-19-espec-sweep.
 
 ## Onda 0 · Fundação — ✅ concluída
 
@@ -41,35 +41,41 @@ O organizador já **opera** o evento inteiro (inscritos, kits, financeiro, clube
 | [[LEELA-E07-estados-sistema]] · web | Telas de erro com cara profissional (404/500/403) | ✅ |
 | [[LEELA-E06-marketing]] | Falar com o público por campanhas e automações | ✅ |
 
-## Onda 3 · App simples e alavancas — 🔄 em andamento
+## Onda 3 · Alavancas e robustez — ✅ concluída (o app saiu daqui e virou a Onda 5)
 
 | Épico | O que entrega | Estado |
 |---|---|---|
 | [[LEELA-E18-assessorias-parceiras]] | Organizador cadastra assessoria como clube parceiro com desconto | ✅ |
 | [[LEELA-E17-perfil-social]] · link-na-bio | Perfil público compartilhável do organizador e do atleta | ✅ |
-| [[LEELA-E13-app-atleta]] · slim | App do atleta: descobrir, inscrever, ingresso, clube | 📋 |
 
-## Onda web-complete (H3) · Produto web inteiro — 📋 próxima
+## Onda 4 · Fechar o produto web (H3 antecipado) — 🔄 em execução
 
-Antecipada por decisão de 2026-07-18: fecha o produto web antes do app.
+Antecipada por decisão de 2026-07-18: fecha o produto web antes do app. **Item 1 da onda é o caminho do dinheiro em voo** (E04/E09/E12/E16 — camada de tela do checkout, fila de reembolso, construtor de formulário; mapa em 02-rodadas/2026-07-19-espec-sweep/02-caminho-do-dinheiro.md). Depois, na ordem: E08, E10, E19, E11.
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 🔄 recorte antecipado (R9-E) + **fase 2 comissão entregue** (COMF2) + **UI de comissão entregue** (CRM-COMISSAO-UI) + **hub do promotor entregue** (PROMOTOR: resumo consolidado cross-eventos + copiar código, por evolução de Minhas afiliações — reuso-primeiro, sem rota nova); falta split automático (fase 3, decisão aberta) + app/superfície dedicada do promotor (Won't nesta fase); copiar URL completa ENTREGUE (TAMANHOS-GRADE T-extra: reader projeta eventoSlug e o botão copia o link pronto) |
+| [[LEELA-E08-influenciador]] | Influenciador tem link próprio e vê as próprias vendas | 🔄 recorte antecipado (R9-E) + **fase 2 comissão entregue** (COMF2) + **UI de comissão entregue** (CRM-COMISSAO-UI) + **hub do promotor entregue** (PROMOTOR: resumo consolidado cross-eventos + copiar código, por evolução de Minhas afiliações — reuso-primeiro, sem rota nova); falta o repasse PARCIAL (hoje quita só o saldo inteiro) e o aviso ao afiliado; o split automático NÃO abre (item 23 ratificado — repasse manual é o desembolso); copiar URL completa ENTREGUE (TAMANHOS-GRADE T-extra: reader projeta eventoSlug e o botão copia o link pronto) |
 | [[LEELA-E10-marcas]] | Gerenciar patrocinadores e marcas num lugar só | 🔄 registro reutilizável + logo 1:1 + autocomplete (R9-E) + tela dedicada `/marcas` no painel entregue (MARCAS-TELA: lista/criar/editar/excluir, rota própria na sidebar); falta a consolidação de ativações (S812) |
 | [[LEELA-E11-analytics]] | Análise de vendas e público unificada | 🔄 recorte antecipado entregue (R9-B: Análise vira a porta única — Analytics divergente removido —, filtro por evento com Combobox do DS recorta os 4 blocos, RN-821/RN-820 com nota de cobertura honesta). **RN-822 ENTREGUE (E11-COHORT-BACKEND, 2026-07-19 · `aa0afac`/`fcfeda4`/`ba2f53c`):** vertical coordenada core→functions→api-client→painel — 10 bandas de 5 anos + matriz idade×sexo no agregado + card "Idade × sexo (cohort)" na Análise, com salvaguarda LGPD de k-anonimato (k=5, reader-side pós-soma, `cohortPrivacidade.ts`) e reprocesso idempotente (`reprocessarDemografiaTodosEventos` — deploy da Function e reprocesso andam JUNTOS). Restante segue backend-gated: S821-T1 rollup `analytics/{periodo}` (não existe, só `coletaDiaria`) bloqueia S821-T2/S822/S823 + seletor temporal funcional. Detalhe no épico §"RN-822 ENTREGUE" |
 | [[LEELA-E19-crm]] | Conhecer e reter a base de contatos do organizador | 🔄 backend entregue + **A3 pago** (chave HMAC com pepper) + **hub "Clientes & Comunicação" (UI) entregue** (CRM-COMISSAO-UI: item da sidebar ativo, lista cross-evento com LTV/valor/eventos, busca por prefixo, detalhe com histórico + aniversário + idade ao vivo); falta o disparo de comunicação a segmentos (S-R9-13-T4) + secret no deploy. +histórias 2026-07-19: **S1902** posse de identidade por CPF (CLAIM-FIX · RN-174 · ✅ ENTREGUE) · **S1903** documento tipado cpf/passaporte "documento único" (RN-177 · 🧊 GATED) |
 
-## Onda heroica (H2) · Comunidade e social no app — 🧊
+## Onda 5 · App do atleta como PWA — 📋 aguarda decisão de arquitetura
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| [[LEELA-E13-app-atleta]] · heroica | Jornada heroica: rotina diária com propósito | 🧊 |
-| [[LEELA-E17-perfil-social]] · in-app | Feed, eventos e clubs no app, com tema por conta | 🧊 |
-| E14 Integrações de treino | Importar treino e corrida do Strava e afins | 🧊 |
+| [[LEELA-E13-app-atleta]] · slim | Descobrir, inscrever, ingresso com QR, clube | 📋 re-especificado como PWA (de 9 histórias sobraram 6); o bloqueio das lojas morreu e o ingresso passa a funcionar sem rede. Aguarda a ratificação da ADR-proposta |
 
-## Onda 5 · Expansão — 🧊
+## Onda 6 · Comunidade e social no app (H2) — 🧊
 
 | Épico | O que entrega | Estado |
 |---|---|---|
-| E15 Creator Studio | Criador monta conteúdo e produtos (MyDose) | 🧊 |
+| [[LEELA-E17-perfil-social]] · in-app | Feed, eventos e clubs no app, com tema por conta | 🧊 Onda 6 — 4 histórias-âncora; o feed do perfil e o do clube compartilham modelo e devem sair no mesmo lote |
+| [[LEELA-E13-app-atleta]] · heroica | Jornada heroica: rotina diária com propósito | 🧊 Onda 6 |
+| [[LEELA-E14-integracoes-treino]] | Importar treino e corrida do Strava e afins | 🧊 Onda 6 — esqueleto escrito; com PWA a camada do aparelho (Health) some e o Strava vira a primeira camada viável |
+| [[LEELA-E06-marketing]] · avançado | Segmentação além do evento e novos gatilhos | 🧊 Onda 6 — sem lacuna de V1; a primeira parcela do avançado chega pelo E19 |
+
+## Onda 7 · Creator Studio — 🧊
+
+| Épico | O que entrega | Estado |
+|---|---|---|
+| [[LEELA-E15-creator-studio]] | Criador monta conteúdo e produtos (MyDose) | 🧊 esqueleto escrito (objetivo, fronteiras, dependências, 4 perguntas de escopo); último por decisão explícita |
