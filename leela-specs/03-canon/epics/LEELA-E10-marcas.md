@@ -201,3 +201,40 @@ A **tela dedicada** do recorte S811 foi entregue no painel (antes só havia o re
 - **Semântica de exclusão:** excluir remove o doc do registro reutilizável — a marca sai do autocomplete de patrocínios **futuros**; patrocínios **já cadastrados** em eventos/clubes são cópias independentes (`ParceriaPatrocinador`) e **permanecem intactos**. Documentada na própria `ConfirmModal`.
 
 **Falta (segue no horizonte do épico):** consolidação de ativações + toggle de logo (**S812**), que mantém `marcas/{marcaId}/ativacoes` + `qtdAtivacoes` por Function. Quando entrar, exibir a contagem na lista e trocar o preview da exclusão para as ativações afetadas.
+
+## Plano de execução (ESPEC-SWEEP · 2026-07-19)
+
+**Onda 4 · item 3.** É o menor épico da onda e o mais isolado: nada depende dele, e ele depende só de vínculos que já existem.
+
+### Estado real
+
+S811 está entregue em duas camadas: o registro reutilizável com autocomplete (R9-E, RN-171) e a tela dedicada `/marcas` (lote MARCAS-TELA) com lista, criar/editar por modal, logo 1:1 upload-only e exclusão com consequências. Falta **S812** inteira — e a tela de hoje carrega uma omissão deliberada por causa disso: não mostra em quantos patrocínios a marca é usada, porque não há reader barato e a casa não exibe número inventado.
+
+### O que resta
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 1 | `S812-T1` | Function de índice inverso: no onWrite de `parcerias` tipo patrocinador (RN-123), de `desafios.patrocinioId` (RN-112) e de `itensKit.origem=patrocinador` (RN-213), mantém `marcas/{marcaId}/ativacoes` e ∑`qtdAtivacoes`, idempotente; Rules de leitura pelo dono e escrita só por Function | `functions/src/brands` · `packages/core/src/brands` · `firestore.rules` | E03 ✅ · E05 ✅ · S811 ✅ | **opus** xhigh | ⚔ |
+| 2 | `S812-T2` | tela de ativações da marca: abas Desafios / Itens de kit / Eventos (todas no DOM, §2.7), contador, EmptyState honesto | `apps/painel/src/routes/marcas` | S812-T1 | **opus** xhigh | — |
+| 3 | `S812-T3` | toggle "exibir logo ao atleta" por item patrocinado, gravando `itensKit.exibirLogo` (RN-214) | `apps/painel/src/routes/marcas` · `firestore.rules` | S812-T1 | **opus** xhigh | — |
+| 4 | `S812-T4` | fechar as duas dívidas que a tela `/marcas` declarou: mostrar `qtdAtivacoes` na lista e trocar o preview da exclusão pelas ativações realmente afetadas | `apps/painel/src/routes/marcas` | S812-T1, T2 | **opus** xhigh | — |
+
+**Por que T1 leva review antagonista.** É fan-out por gatilho sobre três fontes distintas, e o modo de falha é silencioso: uma ativação contada duas vezes, ou um vínculo removido que não some do índice, produz um número errado numa conversa com patrocinador. Idempotência tem que ser provada por reprocesso, não assumida.
+
+**Por que nada aqui é haiku.** T3 parece um toggle, mas grava num documento que o atleta lê — e a regra de quem pode gravar mora nas Rules. Sem gate determinístico de permissão, não desce de tier.
+
+### Ordem interna
+
+`T1 → T2 → T3` (T3 depende da aba de itens existir) `→ T4`. T4 por último de propósito: só faz sentido exibir a contagem depois que o índice está provado idempotente.
+
+### Critério de pronto
+
+- [ ] reprocessar o mesmo vínculo duas vezes não duplica ativação nem incrementa a contagem duas vezes (integração no emulador)
+- [ ] remover o vínculo remove a ativação do índice — o caso que fan-out costuma esquecer
+- [ ] a exclusão de marca continua honesta: o `ConfirmModal` diz que patrocínios já cadastrados são cópias independentes e permanecem intactos
+- [ ] nenhum número na tela vem de varredura no cliente
+- [ ] review antagonista em contexto fresco no T1
+
+### Sem decisão aberta
+
+Este épico não tem nada para o Vitor decidir. RN-112, RN-123, RN-213 e RN-214 já estão cravadas e a semântica de exclusão foi documentada no lote anterior.
