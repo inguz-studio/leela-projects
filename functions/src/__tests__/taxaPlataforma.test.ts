@@ -208,6 +208,35 @@ describe('resolverTaxaMeio', () => {
   });
 });
 
+// ── Fix F7 (review antagonista) — carimbo com enums fechados no parse ──────
+describe('parsePagamento.taxaCongelada — enums fechados (F7)', () => {
+  const docBase = {
+    tenantId: 't1', eventoId: 'e1', pedidoRef: 'p1',
+    status: 'pendente', forma: 'pix',
+    valorBase: 100, desconto: 0, valorFinal: 100,
+    criadoEm: { seconds: 1, nanoseconds: 0, toDate: () => new Date(1000), toMillis: () => 1000 },
+    atualizadoEm: { seconds: 1, nanoseconds: 0, toDate: () => new Date(1000), toMillis: () => 1000 },
+  };
+  const carimbo = { meio: 'pix', percentual: 6, fixoCentavos: 200, valor: 8, origem: 'global' };
+
+  it('carimbo válido parseia com meio/origem tipados', async () => {
+    const { parsePagamento } = await import('@leela/core');
+    const p = parsePagamento('pg1', { ...docBase, taxaCongelada: carimbo });
+    expect(p.taxaCongelada?.meio).toBe('pix');
+    expect(p.taxaCongelada?.origem).toBe('global');
+  });
+
+  it('meio/origem fora do enum LANÇAM (doc de dinheiro nunca carrega lixo)', async () => {
+    const { parsePagamento } = await import('@leela/core');
+    expect(() =>
+      parsePagamento('pg2', { ...docBase, taxaCongelada: { ...carimbo, meio: 'credit_card' } })
+    ).toThrow(/fora do enum/);
+    expect(() =>
+      parsePagamento('pg3', { ...docBase, taxaCongelada: { ...carimbo, origem: 'plano' } })
+    ).toThrow(/fora do enum/);
+  });
+});
+
 // ── Integração com validateCommercialTerms (campo opcional taxaTabela) ─────
 describe('commercialTerms.taxaTabela (RN-178 no termo)', () => {
   it('termo com override válido passa; inválido acusa', () => {

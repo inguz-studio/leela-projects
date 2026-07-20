@@ -50,14 +50,22 @@ export async function getCommercialTerms(
  * (anterior + 1) e grava `current` + snapshot `v{versao}` num batch atômico.
  * A Security Rule revalida ranges e o bump no servidor.
  *
- * @throws Error se o payload for inválido (lista de erros na mensagem).
+ * LOCK OTIMISTA (review antagonista TAXAFLEX F5): quando o chamador informa
+ * `expectedVersion` (a versão que ele CARREGOU), o save é recusado se o
+ * termo vigente mudou no meio-tempo (2º admin, aplicarPlano) — sem isso um
+ * editor com cópias stale dos campos preservados sobrescreveria a mudança
+ * concorrente em silêncio (lost-update em doc de dinheiro).
+ *
+ * @throws Error se o payload for inválido OU se a versão vigente divergir
+ *         de `expectedVersion` (conflito de edição concorrente).
  * @returns a versão gravada.
  */
 export async function saveCommercialTerms(
   db: Firestore,
   tenantId: string,
   input: CommercialTermsInput,
-  adminUid: string
+  adminUid: string,
+  expectedVersion?: number
 ): Promise<number> {
   const errors = validateCommercialTerms(input);
   if (errors.length > 0) {
@@ -68,6 +76,12 @@ export async function saveCommercialTerms(
   const previousVersion = currentSnap.exists()
     ? ((currentSnap.data() as CommercialTerms).versao ?? 0)
     : 0;
+  if (expectedVersion !== undefined && previousVersion !== expectedVersion) {
+    throw new Error(
+      `Termos mudaram enquanto você editava (vigente v${previousVersion}, ` +
+        `carregado v${expectedVersion}) — recarregue e aplique de novo.`
+    );
+  }
   const versao = previousVersion + 1;
 
   const payload = {

@@ -22,7 +22,9 @@ export function TermsEditorRoute(): JSX.Element {
   const { toast } = useToast();
 
   const { data: terms, loading, error } = useCommercialTerms(tenantId);
-  const saver = useSaveCommercialTerms(tenantId, uid ?? '');
+  // Lock otimista (TAXAFLEX F5): a versão CARREGADA viaja no save — termo
+  // alterado por outro admin/aplicarPlano no meio-tempo recusa o save.
+  const saver = useSaveCommercialTerms(tenantId, uid ?? '', terms?.versao);
 
   const handleSave = useCallback(
     async (input: CommercialTermsInput) => {

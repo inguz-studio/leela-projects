@@ -28,7 +28,13 @@ import { FieldValue } from 'firebase-admin/firestore';
 import {
   setTaxaPlataformaGlobalCore,
 } from '../platform/setTaxaPlataformaGlobal';
-import type { AuthClaims, TabelaTaxaPlataforma } from '@leela/core';
+import { saveCommercialTerms } from '@leela/api-client';
+import type { Firestore } from 'firebase/firestore';
+import {
+  DEFAULT_COMMERCIAL_TERMS,
+  type AuthClaims,
+  type TabelaTaxaPlataforma,
+} from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -189,6 +195,28 @@ describe('Rules — platform/config (tabela GLOBAL)', () => {
     await adminDb.doc('platform/config').set({ taxaPlataforma: TABELA });
     await assertSucceeds(getDoc(doc(asAdmin(), 'platform', 'config')));
     await assertFails(getDoc(doc(asOwner(), 'platform', 'config')));
+  });
+});
+
+// ── Fix F5 (review antagonista) — lock otimista do saveCommercialTerms ─────
+describe('F5 — saveCommercialTerms com expectedVersion (lock otimista)', () => {
+  it('versão carregada divergente da vigente RECUSA o save (lost-update); a certa salva', async () => {
+    const adminFs = asAdmin() as unknown as Firestore;
+    // Vigente = v1 (seed). expectedVersion 1 ⇒ salva v2.
+    const v2 = await saveCommercialTerms(
+      adminFs, CASTELO_ID, DEFAULT_COMMERCIAL_TERMS, ADMIN_UID, 1
+    );
+    expect(v2).toBe(2);
+    // 2º save ainda achando que carregou v1 (outro admin/aplicarPlano
+    // bumpou no meio-tempo) ⇒ recusa SEM gravar.
+    await expect(
+      saveCommercialTerms(adminFs, CASTELO_ID, DEFAULT_COMMERCIAL_TERMS, ADMIN_UID, 1)
+    ).rejects.toThrow(/mudaram/i);
+    // Sem expectedVersion (chamador legado) segue funcionando (compat).
+    const v3 = await saveCommercialTerms(
+      adminFs, CASTELO_ID, DEFAULT_COMMERCIAL_TERMS, ADMIN_UID
+    );
+    expect(v3).toBe(3);
   });
 });
 

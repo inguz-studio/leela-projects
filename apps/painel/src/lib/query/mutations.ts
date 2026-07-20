@@ -818,10 +818,15 @@ export function useTransitionTenant(
 export function useSaveCommercialTerms(
   tenantId: string,
   adminUid: string,
+  expectedVersion?: number,
 ): UseMutationResult<number, Error, CommercialTermsInput> {
   const queryClient = useQueryClient();
   return useMutation<number, Error, CommercialTermsInput>({
-    mutationFn: (input) => saveCommercialTerms(getLeelaDb(), tenantId, input, adminUid),
+    // Lock otimista (TAXAFLEX F5): recusa o save se o termo vigente mudou
+    // desde o load (2º admin/aplicarPlano) — evita lost-update dos campos
+    // preservados pelo editor.
+    mutationFn: (input) =>
+      saveCommercialTerms(getLeelaDb(), tenantId, input, adminUid, expectedVersion),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['plataforma', 'termos', tenantId] });
     },

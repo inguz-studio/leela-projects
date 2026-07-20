@@ -15,7 +15,7 @@
 
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Input, PageHeader, Skeleton, useToast } from '@leela/design-system';
+import { Badge, Button, Checkbox, Input, PageHeader, Skeleton, useToast } from '@leela/design-system';
 import {
   MEIOS_TAXA,
   validarTabelaTaxaPlataforma,
@@ -28,39 +28,16 @@ import {
   getTaxaPlataformaGlobal,
   setTaxaPlataformaGlobal,
 } from '@leela/api-client';
-
-const ROTULO_MEIO: Record<MeioTaxa, string> = {
-  pix: 'PIX',
-  cartao: 'Cartão de crédito',
-  boleto: 'Boleto (inativo no checkout)',
-};
-
-interface LinhaForm {
-  percentual: string;
-  fixoReais: string;
-}
-type FormTabela = Record<MeioTaxa, LinhaForm>;
-
-const LINHA_VAZIA: LinhaForm = { percentual: '', fixoReais: '' };
-
-function toForm(tabela: TabelaTaxaPlataforma | null): FormTabela {
-  const linha = (meio: MeioTaxa): LinhaForm =>
-    tabela
-      ? {
-          percentual: String(tabela[meio].percentual),
-          fixoReais: (tabela[meio].fixoCentavos / 100).toFixed(2),
-        }
-      : LINHA_VAZIA;
-  return { pix: linha('pix'), cartao: linha('cartao'), boleto: linha('boleto') };
-}
-
-function toTabela(form: FormTabela): TabelaTaxaPlataforma {
-  const linha = (meio: MeioTaxa) => ({
-    percentual: Number(form[meio].percentual),
-    fixoCentavos: Math.round(Number(form[meio].fixoReais) * 100),
-  });
-  return { pix: linha('pix'), cartao: linha('cartao'), boleto: linha('boleto') };
-}
+// Lógica PURA do form (guardas F1 da review antagonista) — testável em _lib
+import {
+  errosDeFormularioGlobal,
+  ROTULO_MEIO,
+  temZeroAtivoExplicito,
+  toForm,
+  toTabela,
+  type FormTabela,
+  type LinhaForm,
+} from './_lib/taxaGlobalForm';
 
 export function TaxaGlobalRoute(): JSX.Element {
   const { toast } = useToast();
@@ -73,6 +50,7 @@ export function TaxaGlobalRoute(): JSX.Element {
 
   const [form, setForm] = React.useState<FormTabela>(() => toForm(null));
   const [erros, setErros] = React.useState<string[]>([]);
+  const [confirmaZero, setConfirmaZero] = React.useState(false);
   const carregado = React.useRef(false);
   React.useEffect(() => {
     if (query.data !== undefined && !carregado.current) {
@@ -107,12 +85,21 @@ export function TaxaGlobalRoute(): JSX.Element {
 
   function handleSubmit(e: React.FormEvent): void {
     e.preventDefault();
+    // F1: guardas de formulário ANTES da conversão (vazio nunca vira 0)
+    const errosForm = errosDeFormularioGlobal(form, confirmaZero);
+    if (errosForm.length > 0) {
+      setErros(errosForm);
+      return;
+    }
     const tabela = toTabela(form);
     const validationErrors = validarTabelaTaxaPlataforma(tabela);
     setErros(validationErrors);
     if (validationErrors.length > 0) return;
     saver.mutate(tabela);
   }
+
+  // Confirmação de taxa zero só aparece quando algum meio ATIVO está 0+0
+  const temZeroAtivo = temZeroAtivoExplicito(form);
 
   if (query.isPending) {
     return (
@@ -190,6 +177,20 @@ export function TaxaGlobalRoute(): JSX.Element {
             />
           </fieldset>
         ))}
+
+        {temZeroAtivo && (
+          <label className="flex items-center gap-[var(--spacing-2)]">
+            <Checkbox
+              checked={confirmaZero}
+              disabled={saver.isPending}
+              onChange={(e) => setConfirmaZero(e.target.checked)}
+            />
+            <span className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">
+              Confirmo taxa ZERO no(s) meio(s) marcado(s) — a plataforma não cobrará nada nessas
+              vendas
+            </span>
+          </label>
+        )}
 
         {erros.length > 0 && (
           <ul role="alert" className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--card-radius)] border-l-4 border-l-[var(--border-danger)] bg-[var(--surface-raised)] p-[var(--spacing-4)] text-[length:var(--font-size-sm)] text-[var(--text-primary)]">

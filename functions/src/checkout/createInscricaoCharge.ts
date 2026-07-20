@@ -57,6 +57,7 @@ import {
   CAMPO_TAXA_PLATAFORMA,
   resolverTaxaMeio,
   validarTabelaTaxaPlataforma,
+  validarTaxaTabelaOverride,
   montarItensDoPedido,
   PIX_EXPIRACAO_SEGUNDOS,
   normalizarCodigoCupom,
@@ -932,6 +933,20 @@ export async function carregarInsumos(
       );
     }
     throw err;
+  }
+
+  // Review antagonista F3 (telemetria de dinheiro): override negociado
+  // presente mas estruturalmente INVÁLIDO seria ignorado em silêncio pelo
+  // resolver (cai na global — reprecificação silenciosa). A leitura segue
+  // fail-safe (venda nunca trava por doc torto), mas o desvio fica VISÍVEL.
+  if (terms.taxaTabela !== undefined) {
+    const errosOverride = validarTaxaTabelaOverride(terms.taxaTabela);
+    if (errosOverride.length > 0) {
+      logger.warn('taxaflex_override_invalido', {
+        tenantId,
+        erros: errosOverride,
+      });
+    }
   }
 
   return {

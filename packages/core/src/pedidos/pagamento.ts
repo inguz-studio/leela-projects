@@ -29,6 +29,14 @@
 
 import type { Timestamp } from '../index';
 import { roundMoney } from '../finance/calc';
+// TAXAFLEX (RN-179): enums do carimbo — runtime-safe (taxaPlataforma só
+// importa TIPO de pagamento.ts; sem ciclo de runtime).
+import {
+  isMeioTaxa,
+  isOrigemTaxaMeio,
+  type MeioTaxa,
+  type OrigemTaxaMeio,
+} from '../finance/taxaPlataforma';
 import {
   parseMoney,
   parseTimestamp,
@@ -185,15 +193,15 @@ export interface CartaoPagamento {
  */
 export interface TaxaCongelada {
   /** Meio da tabela usado na resolução ('pix' | 'cartao'; boleto inerte). */
-  meio: string;
+  meio: MeioTaxa;
   /** Percentual congelado (0–100). */
   percentual: number;
   /** Componente fixo congelado em CENTAVOS inteiros (≥ 0). */
   fixoCentavos: number;
   /** Taxa TOTAL da venda em R$ (round(face × pct) + fixo — RN-183). */
   valor: number;
-  /** De onde a linha veio: 'override' | 'global' | 'legado' (rastro). */
-  origem: string;
+  /** De onde a linha veio (rastro da resolução — union fechada). */
+  origem: OrigemTaxaMeio;
 }
 
 /**
@@ -641,8 +649,8 @@ export function parsePagamento(
     const tc = tcRaw as Record<string, unknown>;
     const pct = tc['percentual'];
     const fixo = tc['fixoCentavos'];
-    if (typeof tc['meio'] !== 'string' || tc['meio'].length === 0) {
-      throw new Error(`${ctx}: "taxaCongelada.meio" inválido`);
+    if (!isMeioTaxa(tc['meio'])) {
+      throw new Error(`${ctx}: "taxaCongelada.meio" fora do enum (pix|cartao|boleto)`);
     }
     if (typeof pct !== 'number' || !Number.isFinite(pct) || pct < 0 || pct > 100) {
       throw new Error(`${ctx}: "taxaCongelada.percentual" deve estar entre 0 e 100`);
@@ -650,8 +658,10 @@ export function parsePagamento(
     if (!Number.isInteger(fixo) || (fixo as number) < 0) {
       throw new Error(`${ctx}: "taxaCongelada.fixoCentavos" deve ser inteiro ≥ 0`);
     }
-    if (typeof tc['origem'] !== 'string' || tc['origem'].length === 0) {
-      throw new Error(`${ctx}: "taxaCongelada.origem" inválida`);
+    if (!isOrigemTaxaMeio(tc['origem'])) {
+      throw new Error(
+        `${ctx}: "taxaCongelada.origem" fora do enum (override|global|legado)`
+      );
     }
     pagamento.taxaCongelada = {
       meio: tc['meio'],

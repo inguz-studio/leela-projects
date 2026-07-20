@@ -454,3 +454,66 @@ describe('TAXAFLEX · C5 — dentroJanelaDN carimbo-aware', () => {
     expect(saldo.dentroJanelaDN).not.toBe(roundMoney(169.96 + FACE));
   });
 });
+
+// =============================================================================
+// FIXES da review antagonista — F2 (agregado × estorno parcial × fatia
+// legada) e F4 (carimbo corrompido nunca vira conciliação coagida)
+// =============================================================================
+describe('TAXAFLEX · fixes da review — F2/F4', () => {
+  it('F2: estorno parcial NÃO engole a imputação da fatia legada no agregado', async () => {
+    // Grupo de 2 no INC (incorporada): 379,80 · taxa {6%, R$2} = 24,79
+    const charge = await createInscricaoChargeCore(
+      db, provider,
+      {
+        eventoId: EVENTO_INC,
+        inscritos: [inscritoAna, inscritoBia],
+        responsavelIndex: 0,
+        responsavel: { nome: 'Ana Souza', email: 'ana@exemplo.com' },
+        aceites: { termos: true, saude: true },
+        forma: 'pix', parcelas: 1,
+        idempotencyKey: 'txf-f2-grupo-01',
+      },
+      { uid: ANA_UID });
+    await confirmar(charge.pedidoId, charge.chargeId, 37980, 'evt-txf-f2-grupo');
+    // Estorno PARCIAL (linha 0): receita reverte 189,90; pagamento segue
+    // confirmado com estornadoTotal 189,90 e taxa carimbada CHEIA (24,79).
+    await estornarInscricaoCore(
+      db, provider,
+      { pedidoId: charge.pedidoId, inscritoId: charge.inscritoIds[0], motivo: 'F2 parcial' },
+      MARINA);
+
+    // Fatia LEGADA: receita seed sem pagamento materializado (+R$ 100)
+    const eventoRef = db.collection('eventos').doc(EVENTO_INC);
+    const receitaAtual = (await eventoRef.get()).get('receitaConfirmada') as number;
+    await eventoRef.update({ receitaConfirmada: roundMoney(receitaAtual + 100) });
+
+    const fin = await recomputarFinanceiroEvento(db, EVENTO_INC);
+    // Estado do INC: pagamento c3 (189,90 · taxa 13,39, sem estorno) +
+    // grupo F2 (379,80 · taxa 24,79 · estornado 189,90 ⇒ coberto 189,90)
+    // + fatia legada 100.
+    // receitaBruta = 189,90 + 189,90 + 100 = 479,80
+    // receitaComCarimbo EFETIVA = 189,90 + 189,90 = 379,80 ⇒ resto = 100
+    // taxaValor = 13,39 + 24,79 + 10,50 (10,5% × 100) = 48,68
+    expect(fin?.receitaBruta).toBe(479.8);
+    expect(fin?.taxaValor).toBe(48.68);
+    expect(fin?.receitaLiquida).toBe(roundMoney(479.8 - 48.68)); // 431.12
+    // SEM o fix: coberto = 569,70 > bruta ⇒ resto 0 ⇒ taxa 38,18 (os
+    // R$ 10,50 da fatia legada sumiam — líquido superestimado).
+    expect(fin?.taxaValor).not.toBe(roundMoney(13.39 + 24.79));
+  });
+
+  it('F4: carimbo CORROMPIDO ⇒ confirma SEM conciliação (nunca coage lixo)', async () => {
+    const charge = await createInscricaoChargeCore(
+      db, provider, baseInput(EVENTO_INC, 'txf-f4-corrompe-01'), { uid: ANA_UID });
+    // Corrompe o fixo do carimbo ANTES da confirmação (Admin SDK — simula
+    // doc torto; Rules impedem cliente).
+    await db.collection('pagamentos').doc(charge.pagamentoId).update({
+      'taxaCongelada.fixoCentavos': 1.5,
+    });
+    const ok = await confirmar(charge.pedidoId, charge.chargeId, 18990, 'evt-txf-f4');
+    expect(ok.ignorado).toBe(false);
+    const pag = await db.collection('pagamentos').doc(charge.pagamentoId).get();
+    expect(pag.get('status')).toBe('confirmado'); // dinheiro segue
+    expect(pag.get('conciliacao')).toBeUndefined(); // lixo nunca vira conciliação
+  });
+});

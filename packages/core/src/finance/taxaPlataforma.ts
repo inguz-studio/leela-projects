@@ -183,6 +183,21 @@ export function validarTaxaTabelaOverride(raw: unknown): string[] {
 /** Origem da linha resolvida — rastro do carimbo RN-179. */
 export type OrigemTaxaMeio = 'override' | 'global' | 'legado';
 
+/** Lista canônica das origens (validação do carimbo no parse). */
+export const ORIGENS_TAXA_MEIO: readonly OrigemTaxaMeio[] = [
+  'override',
+  'global',
+  'legado',
+];
+
+/** Type guard de OrigemTaxaMeio. @pure */
+export function isOrigemTaxaMeio(value: unknown): value is OrigemTaxaMeio {
+  return (
+    typeof value === 'string' &&
+    (ORIGENS_TAXA_MEIO as readonly string[]).includes(value)
+  );
+}
+
 /** Linha resolvida do meio, com rastro de onde veio (carimbo RN-179). */
 export interface TaxaMeioResolvida extends TaxaMeio {
   origem: OrigemTaxaMeio;

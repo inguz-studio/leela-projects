@@ -753,6 +753,8 @@ export type {
 export {
   MEIOS_TAXA,
   isMeioTaxa,
+  ORIGENS_TAXA_MEIO,
+  isOrigemTaxaMeio,
   meioDaForma,
   TAXA_FIXO_CENTAVOS_MAX,
   isTaxaMeioValida,

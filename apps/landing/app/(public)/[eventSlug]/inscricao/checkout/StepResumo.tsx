@@ -54,13 +54,19 @@ export function StepResumo({
   const cupomAtivo = cotacao?.cupomAplicado ?? null;
   const parcelado = forma === 'cartao_credito' && parcelas > 1;
 
-  // TAXAFLEX (RN-180 · S1210): com taxa REPASSADA o total varia por meio —
-  // exibir o total à vista EM CADA OPÇÃO antes de pagar (PIX R$ 108,00 ·
-  // Cartão R$ 110,30). Valores prontos do servidor (`totaisPorMeio`) — o
-  // componente nunca soma; servidor antigo sem o campo cai nos rótulos
-  // vigentes. Em 'incorporada' (taxaServico 0) os rótulos não mudam.
+  // TAXAFLEX (RN-180 · S1210): quando o total VARIA por meio (taxa
+  // repassada com linhas distintas), exibir o total à vista EM CADA OPÇÃO
+  // antes de pagar (PIX R$ 108,00 · Cartão R$ 110,30). Critério = totais
+  // DIFERENTES (review F6: cobre override zero num meio — a forma atual
+  // pode ter taxa 0 e a outra não); iguais (incorporada ou mesma linha) =
+  // rótulos vigentes sem ruído. Valores prontos do servidor — o componente
+  // nunca soma; servidor antigo sem o campo cai nos rótulos vigentes.
   const totaisPorMeio = cotacao?.totaisPorMeio;
-  const totalPorOpcao = (cotacao?.taxaServico ?? 0) > 0 && totaisPorMeio !== undefined;
+  const totalPorOpcao =
+    totaisPorMeio !== undefined &&
+    totaisPorMeio.pix !== null &&
+    totaisPorMeio.cartao_credito !== null &&
+    totaisPorMeio.pix !== totaisPorMeio.cartao_credito;
   const labelPix =
     totalPorOpcao && totaisPorMeio.pix !== null
       ? `PIX (à vista) — ${formatarPreco(totaisPorMeio.pix)}`

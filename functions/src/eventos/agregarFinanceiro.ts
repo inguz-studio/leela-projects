@@ -281,7 +281,24 @@ export async function recomputarFinanceiroEvento(
         vf > 0
       ) {
         taxaCarimbada = roundMoney(taxaCarimbada + tc.valor);
-        receitaComCarimbo = roundMoney(receitaComCarimbo + vf);
+        // Review antagonista F2: estorno PARCIAL mantém o pagamento
+        // 'confirmado' mas REVERTE o face estornado em receitaConfirmada —
+        // a fatia de receita "coberta pelo carimbo" é o que SOBROU
+        // (valorFinal − estornadoTotal, clamp 0). Sem isso, o carimbo
+        // "cobriria" receita que já saiu do bruto e o clamp do resto
+        // engoliria a imputação da fatia LEGADA (líquido superestimado).
+        // A TAXA carimbada segue CHEIA (decisão documentada: estorno
+        // parcial não devolve taxa — fronteira BENCHMARK-REEMBOLSO).
+        const estornadoRaw = pagDoc.get('estornadoTotal');
+        const estornado =
+          typeof estornadoRaw === 'number' &&
+          Number.isFinite(estornadoRaw) &&
+          estornadoRaw > 0
+            ? estornadoRaw
+            : 0;
+        receitaComCarimbo = roundMoney(
+          receitaComCarimbo + Math.max(0, roundMoney(vf - estornado))
+        );
       }
     }
 

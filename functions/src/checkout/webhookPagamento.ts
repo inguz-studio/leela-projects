@@ -450,38 +450,44 @@ export async function processarWebhookPagamento(
       | { valor?: unknown; percentual?: unknown; fixoCentavos?: unknown }
       | undefined;
     let blocoConciliacao: Record<string, unknown> | undefined;
-    if (
+    const carimboIntegro =
       tcRaw !== undefined &&
       typeof tcRaw.valor === 'number' &&
       Number.isFinite(tcRaw.valor) &&
       tcRaw.valor >= 0 &&
       typeof tcRaw.percentual === 'number' &&
-      Number.isFinite(tcRaw.percentual)
-    ) {
+      Number.isFinite(tcRaw.percentual) &&
+      typeof tcRaw.fixoCentavos === 'number' &&
+      Number.isInteger(tcRaw.fixoCentavos) &&
+      tcRaw.fixoCentavos >= 0;
+    if (carimboIntegro) {
       const valorFinalDoc = pagamentoSnap.get('valorFinal') as number;
       const taxaRepassadaDoc = pagamentoSnap.get('taxaRepassada') as
         | number
         | undefined;
       const ehRepassada =
         typeof taxaRepassadaDoc === 'number' && taxaRepassadaDoc > 0;
-      const fixoCentavos =
-        typeof tcRaw.fixoCentavos === 'number' &&
-        Number.isInteger(tcRaw.fixoCentavos) &&
-        tcRaw.fixoCentavos >= 0
-          ? tcRaw.fixoCentavos
-          : 0;
       blocoConciliacao = {
         idTransacao: resultado.chargeId,
         // Enum canônico D2 (gateway único) — o sandbox/mock representa o
         // MESMO rail; o doc de conciliação carrega o enum do domínio.
         gateway: 'asaas',
         taxaPct: tcRaw.percentual,
-        taxaFixa: roundMoney(fixoCentavos / 100),
+        taxaFixa: roundMoney((tcRaw.fixoCentavos as number) / 100),
         taxaValor: tcRaw.valor,
         repasseOrganizador: ehRepassada
           ? valorFinalDoc
-          : roundMoney(valorFinalDoc - tcRaw.valor),
+          : roundMoney(valorFinalDoc - (tcRaw.valor as number)),
       };
+    } else if (tcRaw !== undefined) {
+      // Review antagonista F4: carimbo presente porém CORROMPIDO — nunca
+      // coagir campo para 0 e gravar conciliação auto-inconsistente (doc de
+      // dinheiro não carrega lixo). Sem conciliação (mesmo tratamento do
+      // doc pré-TAXAFLEX) + telemetria; a confirmação financeira segue.
+      logger.warn('taxaflex_carimbo_corrompido_sem_conciliacao', {
+        pagamentoId,
+        chargeId: resultado.chargeId,
+      });
     }
 
     // ── ESCRITAS (efeito financeiro — exactly-once sob a+b+c) ─────────────
