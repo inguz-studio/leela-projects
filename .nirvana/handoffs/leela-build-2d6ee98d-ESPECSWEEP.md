@@ -18,7 +18,7 @@
 | 6 | E13-slim — RESPEC como PWA + ADR-proposta | ✅ | `b7bb955` |
 | 7 | H2 — E17 social · E14 (épico novo) · E06 avançado | ✅ | `93c664c` |
 | 8 | E15 — Creator Studio (esqueleto) | ✅ | `1dbb943` |
-| 9 | Decisões abertas + boards + report | ✅ | (este commit) |
+| 9 | Decisões abertas + boards + report | ✅ | `5a45233` |
 
 ## Números
 
