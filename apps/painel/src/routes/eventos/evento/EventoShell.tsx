@@ -7,10 +7,15 @@
 //
 // Reuso-first: Breadcrumb, Badge, Button, IconButton, DropdownMenu, SubNav do DS;
 // tokens de thumb/gradiente (--thumb-*); heurística `thumbVariantDoEvento` (DRY).
-// Presentational puro (props) — testável sem router nem dados.
+// Dados continuam vindo por props (nenhuma query aqui), mas a casca NAVEGA:
+// desde LEELA-NAVFIX-T2 ela fia `preventDefault` + `navigate` nas abas e no
+// breadcrumb, então precisa de um Router em volta (os testes montam
+// `MemoryRouter`). Antes disso cada aba era um `<a href>` cru e recarregava o
+// documento inteiro.
 // =============================================================================
 
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Badge,
   Breadcrumb,
@@ -34,6 +39,7 @@ import { formatDataEvento, formatInt, diasParaEvento, faltamDiasLabel } from '..
 import { eventoSubNavTabs, type EventoAbaId } from '../_lib/subnav';
 import { thumbVariantDoEvento } from '../../overview/_lib/activeEvents';
 import { linkEventoPublico } from '../../../lib/linkPublico';
+import { tabsComNavSpa, trilhaComNavSpa } from '../../../lib/navSpa';
 import type { EventThumbVariant } from '@leela/design-system';
 
 export interface EventoShellProps {
@@ -80,9 +86,20 @@ function EventoTile({ variant }: { variant: EventThumbVariant }): JSX.Element {
 
 export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const status = statusEventoBadge(evento.status);
-  const tabs = eventoSubNavTabs(evento.slug, ativa, { inscritos: evento.qtdInscritos });
+  // O construtor `eventoSubNavTabs` é @pure e segue intocado (o teste orientado
+  // a tabela em `_lib/__tests__/subnav.test.ts` é o contrato dele). A navegação
+  // de SPA é fiada AQUI, no ponto de render.
+  const tabs = tabsComNavSpa(
+    eventoSubNavTabs(evento.slug, ativa, { inscritos: evento.qtdInscritos }),
+    navigate,
+  );
+  const trilha = trilhaComNavSpa(
+    [{ label: 'Eventos', href: '/eventos' }, { label: evento.nome }],
+    navigate,
+  );
   const thumbVariant = thumbVariantDoEvento(evento.modalidades, evento.nome);
 
   const dias = diasParaEvento(evento.data);
@@ -129,9 +146,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
   return (
     <div className="flex flex-col">
       <div className="px-[var(--spacing-6)] pt-[var(--spacing-5)]">
-        <Breadcrumb
-          items={[{ label: 'Eventos', href: '/eventos' }, { label: evento.nome }]}
-        />
+        <Breadcrumb items={trilha} />
       </div>
 
       <header

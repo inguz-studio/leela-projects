@@ -16,27 +16,34 @@
 // EventoLayout — as páginas leem `evento` sem recomputar).
 // =============================================================================
 
-import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { SubNav, type SubNavTab } from '@leela/design-system';
 import type { EventoOutletContext } from '../evento/EventoLayout';
+import { tabsComNavSpa } from '../../../lib/navSpa';
 
 export function FinanceiroLayout(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const base = `/eventos/${evento.slug}/financeiro`;
   const resto = pathname.startsWith(base) ? pathname.slice(base.length).replace(/^\/+/, '') : '';
   const ativa = resto.split('/')[0] || 'resumo';
 
-  const tabs: SubNavTab[] = [
-    { id: 'resumo', label: 'Caixa', href: base, active: ativa === 'resumo' },
-    {
-      id: 'reembolsos',
-      label: 'Reembolsos e transferências',
-      href: `${base}/reembolsos`,
-      active: ativa === 'reembolsos',
-    },
-  ];
+  // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
+  // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
+  const tabs: SubNavTab[] = tabsComNavSpa(
+    [
+      { id: 'resumo', label: 'Caixa', href: base, active: ativa === 'resumo' },
+      {
+        id: 'reembolsos',
+        label: 'Reembolsos e transferências',
+        href: `${base}/reembolsos`,
+        active: ativa === 'reembolsos',
+      },
+    ],
+    navigate,
+  );
 
   const context: EventoOutletContext = { evento };
 

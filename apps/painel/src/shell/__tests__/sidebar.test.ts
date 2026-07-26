@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { painelActiveId, shellSidebarSections } from '../sidebar';
+// LEELA-NAVFIX-T2: os itens do menu passaram a receber o MouseEvent (é ele que
+// permite `preventDefault()` e, com isso, ter `href` E navegação de SPA no mesmo
+// item). O dublê é o mínimo que o handler lê — fonte única em src/test/clique.
+import { CLIQUES_DO_NAVEGADOR, chamarOnClick } from '../../test/clique';
 
 describe('painelActiveId', () => {
   it.each([
@@ -69,17 +73,17 @@ describe('shellSidebarSections', () => {
     const navigate = vi.fn();
     const sections = shellSidebarSections('/', navigate);
     const items = sections.flatMap((s) => s.items);
-    items.find((i) => i.id === 'clubs')?.onClick?.();
+    chamarOnClick(items.find((i) => i.id === 'clubs')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/clubes');
     // RN-233/RN-823: CRM é a porta única da análise de vendas + clientes.
-    items.find((i) => i.id === 'crm')?.onClick?.();
+    chamarOnClick(items.find((i) => i.id === 'crm')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/crm');
     // E10 · S811 seed: Marcas agora leva ao módulo de patrocinadores reutilizáveis.
-    items.find((i) => i.id === 'marcas')?.onClick?.();
+    chamarOnClick(items.find((i) => i.id === 'marcas')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/marcas');
     // RN-233 sem exceção aberta: TODO item do menu tem destino. Configurações
     // leva a `/conta`, onde vivem os Dados de recebimento (RN-366 · IAM-T5).
-    items.find((i) => i.id === 'configuracoes')?.onClick?.();
+    chamarOnClick(items.find((i) => i.id === 'configuracoes')?.onClick);
     expect(navigate).toHaveBeenCalledWith('/conta');
   });
 
@@ -89,6 +93,37 @@ describe('shellSidebarSections', () => {
     for (const item of items) {
       expect(item.onClick, `item "${item.id}" sem destino`).toBeDefined();
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // LEELA-NAVFIX-T2 — o defeito espelhado: o menu navegava mas não era link.
+  // -------------------------------------------------------------------------
+
+  it('todo item com destino é LINK: href + onClick no mesmo item', () => {
+    const items = shellSidebarSections('/', vi.fn()).flatMap((s) => s.items);
+    for (const item of items) {
+      expect(item.href, `item "${item.id}" navega mas não é link`).toBeTruthy();
+      expect(item.onClick, `item "${item.id}" é link mas recarrega o documento`).toBeDefined();
+    }
+    // O par href↔destino é o mesmo — o link não mente sobre para onde vai.
+    expect(items.find((i) => i.id === 'crm')?.href).toBe('/crm');
+    expect(items.find((i) => i.id === 'configuracoes')?.href).toBe('/conta');
+  });
+
+  it('clique simples: preventDefault + navigate (sem recarregar o documento)', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/', navigate).flatMap((s) => s.items);
+    const evento = chamarOnClick(items.find((i) => i.id === 'eventos')?.onClick);
+    expect(evento.defaultPrevented).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/eventos');
+  });
+
+  it.each(CLIQUES_DO_NAVEGADOR)('%s NÃO é interceptado — o href faz o trabalho do navegador', (_nome, over) => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/', navigate).flatMap((s) => s.items);
+    const evento = chamarOnClick(items.find((i) => i.id === 'eventos')?.onClick, over);
+    expect(evento.defaultPrevented).toBe(false);
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('nav-badge de Eventos: contagem > 0 vira badge neutro (mockup)', () => {
@@ -122,7 +157,10 @@ describe('shellSidebarSections', () => {
     const items = sections[0]?.items ?? [];
     const planos = items.find((i) => i.id === 'planos');
     expect(planos?.active).toBe(true);
-    planos?.onClick?.();
+    // LEELA-NAVFIX-T2: a nav de plataforma segue o mesmo padrão — href + SPA.
+    expect(planos?.href).toBe('/plataforma/planos');
+    const evento = chamarOnClick(planos?.onClick);
+    expect(evento.defaultPrevented).toBe(true);
     expect(navigate).toHaveBeenCalledWith('/plataforma/planos');
   });
 });

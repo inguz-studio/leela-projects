@@ -11,11 +11,12 @@
 // recomputam o papel).
 // =============================================================================
 
-import { Outlet, useLocation, useOutletContext } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { EmptyState, Skeleton, SubNav, type SubNavTab } from '@leela/design-system';
 import type { Evento, PapelEvento } from '@leela/core';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 import { usePapelEvento } from '../_data/papelEvento';
+import { tabsComNavSpa } from '../../../lib/navSpa';
 import { podeEditarConfiguracoes, podeGerirEquipe } from './_lib/gateEvento';
 
 export interface ConfiguracoesOutletContext {
@@ -33,6 +34,8 @@ interface SubAba {
 export function ConfiguracoesLayout(): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
   const { pathname } = useLocation();
+  // Hook no topo: abaixo há retornos antecipados (loading, sem acesso).
+  const navigate = useNavigate();
   const { papel, loading } = usePapelEvento(evento);
 
   const base = `/eventos/${evento.slug}/configuracoes`;
@@ -78,12 +81,17 @@ export function ConfiguracoesLayout(): JSX.Element {
 
   const context: ConfiguracoesOutletContext = { evento, papel };
 
-  const tabs: SubNavTab[] = visiveis.map((a) => ({
-    id: a.id,
-    label: a.label,
-    href: a.segmento ? `${base}/${a.segmento}` : base,
-    active: a.id === ativa,
-  }));
+  // `href` fica (ctrl+clique, clique do meio, copiar endereço); o clique simples
+  // é interceptado e navega por SPA — LEELA-NAVFIX-T2.
+  const tabs: SubNavTab[] = tabsComNavSpa(
+    visiveis.map((a) => ({
+      id: a.id,
+      label: a.label,
+      href: a.segmento ? `${base}/${a.segmento}` : base,
+      active: a.id === ativa,
+    })),
+    navigate,
+  );
 
   return (
     <div className="flex flex-col gap-[var(--spacing-5)]">
