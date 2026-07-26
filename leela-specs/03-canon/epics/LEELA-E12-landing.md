@@ -1455,7 +1455,29 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 
 **Gates:** tsc 0 · eslint 0 · `next build` verde · `verify:brand` PASS · vitest da landing 13 arquivos / 105 testes verdes (42 novos, incluindo timer/expiração do PIX com fake timers, auto-copy + toast, prova de não-oráculo do prefill, cupom inválido no step 0 e adicionar/remover atleta). Report `outputs/leela-build-2d6ee98d/S1209-TELA-REPORT.md`. **Pendente: review antagonista em contexto fresco de T2 e T3.**
 
-**Ponte temporária registrada:** `expirarPixPendente` não é re-exportado pela raiz do `@leela/api-client` (nota do próprio lote CK2 — o `index.ts` estava em edição por outra lane). A landing consome pelo subpath, com `paths` no `tsconfig` e alias no `vitest.config`. O pacote não foi tocado. Quando a raiz re-exportar, o alias sai.
+**Ponte temporária registrada:** `expirarPixPendente` não é re-exportado pela raiz do `@leela/api-client` (nota do próprio lote CK2 — o `index.ts` estava em edição por outra lane). A landing consome pelo subpath, com `paths` no `tsconfig` e alias no `vitest.config`. O pacote não foi tocado. Quando a raiz re-exportar, o alias sai. → **PAGA** no apêndice PIXBE abaixo (T4).
+
+#### Apêndice PIXBE · a arbitragem que só o servidor pode dar (lane S1209-PIXBE · também E09) · ✅ ENTREGUE 2026-07-26
+
+A review antagonista de T2/T3 aprovou a tela com fixes e deixou quatro itens FORA do alcance dela — todos a mesma frase: **a tela não pode garantir o que só o servidor sabe**. Esta lane (sf-backend-lead, opus xhigh) fecha os quatro. Território: `functions/`, `packages/core`, `packages/api-client` e, só em T4/T5, `apps/landing`. Toca a máquina de dinheiro do **E09** tanto quanto a tela do E12.
+
+**Tasks:** `S1209-PIXBE-T1` (relógio do servidor na resposta da cobrança) ✅ `c6e6712` · `S1209-PIXBE-T2` (trava server-side de 2ª cobrança PIX viva) ✅ `33d4f08` · `S1209-PIXBE-T3` (cancelamento gateway-primeiro na expiração) ✅ `df25872` · `S1209-PIXBE-T4` (higiene da ponte do api-client) ✅ `d545aa5` · `S1209-PIXBE-T5` (tela consome o relógio do servidor) ✅ `d545aa5`.
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** um PIX pendente, **quando** a tela monta a contagem, **então** ela usa o `agora` do SERVIDOR devolvido junto do `pixExpiraEmMillis` — aparelho 40 min atrasado mostra 30:00, não 70:00 (fecha o achado #6 da review).
+- **Dado** uma cobrança PIX pendente e dentro do prazo, **quando** o mesmo comprador tenta abrir outra do MESMO carrinho, **então** o servidor recusa com `failed-precondition` e `details.motivo = pix_pendente_ativo`, mesmo em requisições concorrentes (uma vive, uma morre).
+- **Dado** o timer zerado, **quando** o servidor materializa a expiração, **então** a cobrança é cancelada NO GATEWAY antes de o pedido virar cancelado; **e dado** que o gateway falhe, **então** o pedido NÃO vira expirado e a resposta diz que a cobrança continua válida (fail-safe).
+- **Dado** um pagamento retardatário sobre pedido expirado, **quando** o webhook chega (inclusive em redelivery), **então** ele é ignorado por estado final, sem efeito e sem receita nova.
+
+**Decisões de arquitetura registradas:**
+- **Trava por conflito materializado** (Kleppmann · DDIA §7.2.4). Duas requisições com chaves de idempotência distintas criam pedidos distintos ⇒ não há doc em comum para o Firestore serializar (phantom read). A sentinela `cobrancasPixAtivas/{uid}__{evento}__{hash do carrinho}` É esse doc. Ela é PONTEIRO, não cadeado: o veredito é sempre relido dos docs apontados, então não precisa ser liberada e não gera job de limpeza. Coleção Function-only, deny-by-default nas Rules.
+- **Escopo da chave = carrinho**, não (comprador, evento). O defeito é "duas cobranças vivas para A MESMA compra"; travar por comprador barraria quem volta para inscrever outra pessoa com o próprio PIX no prazo — segunda COMPRA, não cobrança duplicada. Hash com HMAC do pepper do CRM (RN-173) porque o carrinho contém CPF.
+- **`PaymentProvider.cancelCharge`** entra no contrato (cancelar ≠ estornar: nenhum dinheiro trocou de mãos). Asaas = `DELETE /payments/{id}` (`DELETED` ≡ `cancelled`, mapa já existente). O adapter FALHA ALTO: só devolve sucesso com prova. Corolário: cobrança já paga não é cancelável ⇒ pedido pago nunca morre por timer.
+- **A falha de cancelamento devolve `failed-precondition`** porque é a verdade literal (a cobrança segue valendo) — e é o code que a tela já traduz como estado `contestado` desde o fix `59f18ed`: devolve a chave ao comprador e não abre outra cobrança. Zero tela nova.
+
+**Gates:** suíte de functions **165 arquivos / 2960 testes verdes, 0 falhas** no comando canônico (baseline 164/2935) · tsc 0 em functions/core/api-client/landing · eslint 0 · landing 14 arquivos / 124 testes · `next build` verde · `verify:brand` PASS. Report `outputs/leela-build-2d6ee98d/S1209-PIXBE-REPORT.md`. **Pendente: review antagonista em contexto fresco.**
+
+**Escalado ao Vitor (política de produto, não decidida aqui):** (1) pagamento que entra DEPOIS do cancelamento — estorno automático × fila de reconciliação × ressuscitar a inscrição (premissa CK2-4, agora bem menor mas viva); (2) cartão aberto sobre PIX vivo do mesmo carrinho segue passando (fronteira declarada, com teste que a fixa); (3) confirmar o escopo da trava; (4) `DELETE /payments/{id}` do Asaas não foi validado contra conta real (a suíte proíbe rede) — validar em sandbox antes do deploy.
 
 ### LEELA-S1210 · Exibição da taxa por meio de pagamento no checkout (total por opção) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
