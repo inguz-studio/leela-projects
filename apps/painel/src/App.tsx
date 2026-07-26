@@ -8,7 +8,7 @@ import { EventosRoutes } from './routes/eventos/EventosRoutes';
 import { ClubesRoutes } from './routes/clubes/ClubesRoutes';
 import { CrmRoutes } from './routes/crm/CrmRoutes';
 import { MarcasRoutes } from './routes/marcas/MarcasRoutes';
-import { FinanceiroRoutes } from './routes/financeiro/FinanceiroRoutes';
+import { rotasLegadas } from './routes/_system/RotasLegadas';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
@@ -53,12 +53,14 @@ export function App() {
                   <Route path="/eventos/*" element={<EventosRoutes />} />
                   {/* E05 · Clubs (hub, shell + overview + membros) */}
                   <Route path="/clubes/*" element={<ClubesRoutes />} />
-                  {/* E19 · CRM — hub "Clientes & Comunicação" (item comunicacao) */}
+                  {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
                   <Route path="/crm/*" element={<CrmRoutes />} />
                   {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
                   <Route path="/marcas/*" element={<MarcasRoutes />} />
-                  {/* E09-slim · Repasses do organizador (saldo, dados bancários, saque) */}
-                  <Route path="/financeiro/*" element={<FinanceiroRoutes />} />
+                  {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
+                      antigas continuam abrindo, agora redirecionando para os
+                      endereços novos. Link salvo e favorito seguem vivos. */}
+                  {rotasLegadas()}
                   {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
                   <Route path="/plataforma/*" element={<PlataformaRoutes />} />
                   {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
