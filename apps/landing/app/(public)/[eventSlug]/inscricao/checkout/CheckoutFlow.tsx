@@ -12,7 +12,11 @@ import {
   type CotarInscricaoCheckoutResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
-import { Button } from '@/app/_ds/ds';
+// RN-157: a expiração do PIX vive no subpath do api-client (a raiz ainda não
+// re-exporta — nota do lote CK2). O pacote não é território desta lane; a
+// landing só aponta o `paths` do tsconfig/vitest para o módulo.
+import { expirarPixPendente } from '@leela/api-client/checkout';
+import { Button, ToastProvider } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
 import type { EventoPublico } from '@/lib/tipos';
@@ -185,6 +189,12 @@ export function CheckoutFlow({
   const [confirmando, setConfirmando] = useState(false);
   const [erroConfirmar, setErroConfirmar] = useState<string | null>(null);
   const [cartao, setCartao] = useState<CartaoForm>({ nome: '', numero: '', validade: '', cvv: '' });
+  // RN-157 · D-6: a cobrança PIX vale 30 min. Quando o timer da UI zera, a
+  // expiração é MATERIALIZADA no servidor (`expirarPixPendente`, que confere o
+  // próprio relógio) e a tela para de oferecer um código morto. O flag também
+  // segura a auto-geração — expirar não pode virar cobrança nova sem a pessoa
+  // pedir (seria cobrança dupla à revelia).
+  const [pixExpirado, setPixExpirado] = useState(false);
 
   // Auth anônima (checkout sem login)
   const [authPronto, setAuthPronto] = useState(false);
@@ -398,6 +408,7 @@ export function CheckoutFlow({
     setConfirmacao(null);
     setErroCharge(null);
     setErroConfirmar(null);
+    setPixExpirado(false);
   }, [cupomAplicado, forma, parcelasEfetivas, selecaoSig]);
 
   const aplicarCupom = useCallback(async () => {
@@ -548,11 +559,47 @@ export function CheckoutFlow({
       aceitesOk &&
       charge === null &&
       !criandoCharge &&
-      erroCharge === null
+      erroCharge === null &&
+      // RN-157: PIX expirado NÃO regenera sozinho — a pessoa pede.
+      !pixExpirado
     ) {
       void gerarCobranca();
     }
-  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gerarCobranca]);
+  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, pixExpirado, gerarCobranca]);
+
+  // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
+  // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
+  // servidor que materialize a transição pendente → cancelado (`pix_expirado`)
+  // com o relógio DELE. Chamada antes da hora volta em failed-precondition e a
+  // cobrança segue viva — por isso o flag local só sobe depois da resposta, e
+  // erro de rede não pode prender o comprador num código que já não vale (o
+  // flag sobe mesmo assim: a UI para de oferecer, o servidor decide o resto).
+  const pixExpirandoRef = useRef(false);
+  const aoExpirarPix = useCallback(() => {
+    if (pixExpirandoRef.current || charge === null) return;
+    pixExpirandoRef.current = true;
+    expirarPixPendente({ pedidoId: charge.pedidoId })
+      .catch((err) => {
+        if (typeof console !== 'undefined')
+          console.error('[checkout] Falha ao materializar a expiração do PIX.', err);
+      })
+      .finally(() => {
+        if (montadoRef.current) setPixExpirado(true);
+      });
+  }, [charge]);
+
+  // Recomeço explícito: cobrança NOVA (chave de idempotência nova), nunca a
+  // mesma — replay da chave antiga devolveria a cobrança já cancelada.
+  const novaCobrancaPix = useCallback(() => {
+    pixExpirandoRef.current = false;
+    chaveRef.current = undefined;
+    setCharge(null);
+    setConfirmacao(null);
+    setErroCharge(null);
+    setErroConfirmar(null);
+    setPixExpirado(false);
+    setStep(3);
+  }, []);
 
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
@@ -669,6 +716,10 @@ export function CheckoutFlow({
   const mostraNav = step <= 2;
 
   return (
+    // ToastProvider do DS (Radix-free, ADR-017): a fila de feedback do
+    // checkout. Hoje serve o auto-copy da chave PIX (RN-157); é o mesmo
+    // provider para qualquer toast futuro desta tela — nada de viewport ad hoc.
+    <ToastProvider>
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
       {/* Frente 3: voltar em ghost, rótulo curto (sem "excesso de textos"). */}
       <Button asChild variant="ghost" size="sm">
@@ -780,6 +831,9 @@ export function CheckoutFlow({
             aceiteSaude={aceiteSaude}
             onAceiteTermos={setAceiteTermos}
             onAceiteSaude={setAceiteSaude}
+            pixExpirado={pixExpirado}
+            onPixExpirar={aoExpirarPix}
+            onNovaCobranca={novaCobrancaPix}
           />
         ) : null}
 
@@ -791,6 +845,10 @@ export function CheckoutFlow({
             slug={evento.slug}
             responsavelEmail={responsavel.email.trim()}
             linhas={linhasConfirmacao}
+            forma={forma}
+            pixExpirado={pixExpirado}
+            onPixExpirar={aoExpirarPix}
+            onNovaCobranca={novaCobrancaPix}
           />
         ) : null}
       </div>
@@ -831,5 +889,6 @@ export function CheckoutFlow({
         </p>
       </footer>
     </div>
+    </ToastProvider>
   );
 }

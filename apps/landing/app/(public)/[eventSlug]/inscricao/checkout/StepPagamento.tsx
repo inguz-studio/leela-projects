@@ -1,86 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Check, Copy } from 'lucide-react';
-import QRCode from 'qrcode';
 import { Button, Field, Input } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import type { PoliticaVendasPublica } from '@/lib/tipos';
 import type { FormaUI } from './tipos';
 import { AceitesCompra } from './AceitesCompra';
+import { PixCobranca, payloadPix } from './PixCobranca';
 
 export interface CartaoForm {
   nome: string;
   numero: string;
   validade: string;
   cvv: string;
-}
-
-/**
- * A-3 · QR visual do PIX. Reusa a lib `qrcode` (já dependência, mesma usada no
- * ingresso `Ticket.tsx`) para renderizar o payload copia-e-cola como QR
- * escaneável — o caminho natural desktop→app do banco. Falha do encode cai em
- * silêncio (o copia-e-cola abaixo continua servindo).
- */
-function PixQrCode({ payload }: { payload: string }): React.JSX.Element | null {
-  const [qr, setQr] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelado = false;
-    QRCode.toDataURL(payload, { width: 200, margin: 1 })
-      .then((url) => {
-        if (!cancelado) setQr(url);
-      })
-      .catch(() => {
-        if (!cancelado) setQr(null);
-      });
-    return () => {
-      cancelado = true;
-    };
-  }, [payload]);
-
-  if (qr === null) return null;
-  return (
-    <div className="flex justify-center">
-      <div className="rounded-ds-md bg-surface-base p-3">
-        <img
-          src={qr}
-          alt="QR Code para pagamento via PIX"
-          className="h-44 w-44 object-contain"
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Botão "Copiar código" com feedback "copiado ✓" (some após 2s). */
-function CopiarCodigoPix({ codigo }: { codigo: string }): React.JSX.Element {
-  const [copiado, setCopiado] = useState(false);
-
-  useEffect(() => {
-    if (!copiado) return;
-    const t = setTimeout(() => setCopiado(false), 2000);
-    return () => clearTimeout(t);
-  }, [copiado]);
-
-  const copiar = (): void => {
-    void navigator.clipboard
-      ?.writeText(codigo)
-      .then(() => setCopiado(true))
-      .catch(() => setCopiado(false));
-  };
-
-  return (
-    <Button variant="secondary" size="sm" onClick={copiar}>
-      {copiado ? (
-        <Check size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
-      ) : (
-        <Copy size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
-      )}
-      {copiado ? 'Código copiado' : 'Copiar código'}
-    </Button>
-  );
 }
 
 /**
@@ -120,6 +52,9 @@ export function StepPagamento({
   aceiteSaude,
   onAceiteTermos,
   onAceiteSaude,
+  pixExpirado = false,
+  onPixExpirar,
+  onNovaCobranca,
 }: {
   forma: FormaUI;
   total: number | null;
@@ -141,6 +76,12 @@ export function StepPagamento({
   aceiteSaude: boolean;
   onAceiteTermos: (v: boolean) => void;
   onAceiteSaude: (v: boolean) => void;
+  /** RN-157: cobrança PIX já expirada (timer zerou / servidor cancelou). */
+  pixExpirado?: boolean;
+  /** RN-157: o timer zerou — materializar a expiração no servidor. */
+  onPixExpirar?: () => void;
+  /** RN-157: recomeçar com uma cobrança NOVA (nunca reusa a expirada). */
+  onNovaCobranca?: () => void;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
   const aceitesOk = aceiteTermos && aceiteSaude;
@@ -200,30 +141,33 @@ export function StepPagamento({
             </>
           ) : (
             <>
-              <div className="flex flex-col gap-3 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
-                <p className="text-sm font-medium text-text-primary">
-                  Escaneie o QR ou use o copia e cola
-                </p>
-                <PixQrCode payload={charge.qrCode ?? charge.paymentUrl ?? charge.chargeId} />
-                <p className="break-all rounded-ds-md bg-surface-sunken px-3 py-2 font-mono text-xs text-text-secondary">
-                  {charge.qrCode ?? charge.paymentUrl ?? charge.chargeId}
-                </p>
-                <div>
-                  <CopiarCodigoPix codigo={charge.qrCode ?? charge.paymentUrl ?? charge.chargeId} />
-                </div>
-                <p className="text-xs text-text-tertiary">
-                  Ambiente de simulação: nenhum PIX real é cobrado. Clique abaixo para simular a
-                  confirmação do pagamento (o gateway dispara o webhook).
-                </p>
-              </div>
+              {/* RN-157 · D-6: o MESMO bloco vivo da tela do pedido pendente —
+                  QR + copia-e-cola + contagem de 30 min + copiar com toast. */}
+              <PixCobranca
+                codigo={payloadPix(charge)}
+                expiraEmMillis={charge.pixExpiraEmMillis}
+                expirado={pixExpirado}
+                onExpirar={onPixExpirar}
+                onNovaCobranca={onNovaCobranca}
+                nota={
+                  <p className="text-xs text-text-tertiary">
+                    Ambiente de simulação: nenhum PIX real é cobrado. Clique abaixo para simular a
+                    confirmação do pagamento (o gateway dispara o webhook).
+                  </p>
+                }
+              />
               {/* Prova registrada com a cobrança — os checks ficam visíveis
                   (e travados) enquanto a pessoa paga. */}
               {blocoAceites}
-              <div>
-                <Button onClick={onConfirmar} disabled={confirmando}>
-                  {confirmando ? 'Confirmando…' : 'Já paguei — confirmar'}
-                </Button>
-              </div>
+              {/* Cobrança expirada não tem o que confirmar: o caminho é uma
+                  cobrança nova (o botão vive dentro do bloco do PIX). */}
+              {pixExpirado ? null : (
+                <div>
+                  <Button onClick={onConfirmar} disabled={confirmando}>
+                    {confirmando ? 'Confirmando…' : 'Já paguei — confirmar'}
+                  </Button>
+                </div>
+              )}
             </>
           )}
         </section>

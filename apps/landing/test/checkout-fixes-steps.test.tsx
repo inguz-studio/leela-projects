@@ -17,6 +17,7 @@ import { StepResumo } from '../app/(public)/[eventSlug]/inscricao/checkout/StepR
 import { StepPagamento } from '../app/(public)/[eventSlug]/inscricao/checkout/StepPagamento';
 import { StepModalidadeKit } from '../app/(public)/[eventSlug]/inscricao/checkout/StepModalidadeKit';
 import { inscritoVazio } from '../app/(public)/[eventSlug]/inscricao/checkout/tipos';
+import { ToastProvider } from '../app/_ds/ds';
 
 afterEach(cleanup);
 
@@ -146,7 +147,11 @@ const politicaFixture = {
 };
 
 function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]> = {}): void {
+  // S1209-T2: o bloco do PIX passou a disparar o toast do auto-copy (RN-157),
+  // então o step declara dependência do ToastProvider do DS. Só o WRAPPER
+  // mudou — nenhuma asserção deste arquivo foi tocada.
   render(
+    <ToastProvider>
     <StepPagamento
       forma="pix"
       total={5000}
@@ -169,7 +174,8 @@ function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]>
       onAceiteTermos={noop}
       onAceiteSaude={noop}
       {...overrides}
-    />,
+    />
+    </ToastProvider>,
   );
 }
 

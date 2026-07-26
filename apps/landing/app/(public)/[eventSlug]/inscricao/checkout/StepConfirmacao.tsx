@@ -8,6 +8,7 @@ import type {
   CreateInscricaoChargeResult,
 } from '@leela/api-client';
 import { Ticket } from './Ticket';
+import { PixCobranca, payloadPix } from './PixCobranca';
 
 /** Metadados por inscrito, na MESMA ordem de `charge.inscritoIds`. */
 export interface LinhaConfirmacao {
@@ -28,6 +29,10 @@ export function StepConfirmacao({
   slug,
   responsavelEmail,
   linhas,
+  forma,
+  pixExpirado = false,
+  onPixExpirar,
+  onNovaCobranca,
 }: {
   charge: CreateInscricaoChargeResult;
   confirmacao: ConfirmarPagamentoSandboxResult | null;
@@ -35,9 +40,21 @@ export function StepConfirmacao({
   slug: string;
   responsavelEmail: string;
   linhas: LinhaConfirmacao[];
+  /** Forma escolhida — o bloco do PIX só existe quando a cobrança é PIX. */
+  forma?: 'pix' | 'cartao_credito';
+  /** RN-157: cobrança já expirada (timer zerou / servidor cancelou). */
+  pixExpirado?: boolean;
+  /** RN-157: o timer zerou — materializar a expiração no servidor. */
+  onPixExpirar?: () => void;
+  /** RN-157: recomeçar com uma cobrança NOVA. */
+  onNovaCobranca?: () => void;
 }): React.JSX.Element {
   const pago = confirmacao?.statusPedido === 'pago';
   const { valores } = charge;
+  // D-6 · RN-157: enquanto o PIX está PENDENTE, o QR e o copia-e-cola valem
+  // também AQUI — esta é a "tela do pedido pendente" do checkout. Pedido pago
+  // não mostra cobrança: não há mais o que pagar.
+  const mostraPix = !pago && forma === 'pix';
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,6 +81,21 @@ export function StepConfirmacao({
         </p>
         <p className="mt-2 font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
       </section>
+
+      {/* PIX pendente: a chave continua à mão (D-6) com a MESMA contagem da
+          tela de pagamento — quem fechou o app e voltou paga daqui. */}
+      {mostraPix ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-text-primary">Pague com PIX</h3>
+          <PixCobranca
+            codigo={payloadPix(charge)}
+            expiraEmMillis={charge.pixExpiraEmMillis}
+            expirado={pixExpirado}
+            onExpirar={onPixExpirar}
+            onNovaCobranca={onNovaCobranca}
+          />
+        </section>
+      ) : null}
 
       {/* Resumo financeiro — valores do resultado da cobrança (core) */}
       <section className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">

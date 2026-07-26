@@ -39,6 +39,12 @@ export {
   RadioGroup,
   RadioCard,
   Stepper,
+  // Feedback de ação (S1209-T2 · RN-157): o toast do auto-copy da chave PIX.
+  // Peça do DS, Radix-free (fila própria do ToastProvider) — respeita a
+  // ADR-017 da landing sem reinventar posicionamento nem fila.
+  Toast,
+  ToastProvider,
+  useToast,
   // Estados de sistema (404/500 públicos) — LEELA-E07-web · S500-T3 / S502-T1.
   SystemStateScreen,
 } from '@leela/design-system';

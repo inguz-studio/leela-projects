@@ -13,6 +13,7 @@
       "@leela/design-system/server": ["../../packages/design-system/src/server.ts"],
       "@leela/design-system/dialog": ["../../packages/design-system/src/dialog.ts"],
       "@leela/api-client": ["../../packages/api-client/src/index.ts"],
+      "@leela/api-client/checkout": ["../../packages/api-client/src/checkout.ts"],
       "@/*": ["./*"]
     }
   },

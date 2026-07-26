@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import { StepPagamento } from '../app/(public)/[eventSlug]/inscricao/checkout/StepPagamento';
+import { ToastProvider } from '../app/_ds/ds';
 
 afterEach(cleanup);
 
@@ -46,7 +47,10 @@ function charge(): CreateInscricaoChargeResult {
 }
 
 function renderPagamento(over: Partial<Parameters<typeof StepPagamento>[0]> = {}): void {
+  // S1209-T2: o bloco do PIX dispara o toast do auto-copy (RN-157) — o step
+  // declara dependência do ToastProvider do DS. Só o WRAPPER mudou aqui.
   render(
+    <ToastProvider>
     <StepPagamento
       forma="pix"
       total={5000}
@@ -69,7 +73,8 @@ function renderPagamento(over: Partial<Parameters<typeof StepPagamento>[0]> = {}
       onAceiteTermos={noop}
       onAceiteSaude={noop}
       {...over}
-    />,
+    />
+    </ToastProvider>,
   );
 }
 

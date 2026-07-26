@@ -22,6 +22,14 @@ export default defineConfig({
       '@leela/design-system': fileURLToPath(
         new URL('../../packages/design-system/src/index.ts', import.meta.url),
       ),
+      // S1209-T2 · RN-157: `expirarPixPendente` existe no api-client mas ainda
+      // não é re-exportado pela raiz do pacote (nota do lote CK2 — o index.ts
+      // estava em edição por outra lane). A landing consome pelo subpath, com
+      // o alias espelhando o `paths` do tsconfig; o pacote continua INTOCADO
+      // (é território de outra lane). Quando a raiz re-exportar, some daqui.
+      '@leela/api-client/checkout': fileURLToPath(
+        new URL('../../packages/api-client/src/checkout.ts', import.meta.url),
+      ),
     },
   },
   test: {
