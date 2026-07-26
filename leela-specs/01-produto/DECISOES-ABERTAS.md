@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-26, rodada DEC-0726 — Asaas adiado sem urgência; BREVO_API_KEY prometida; TAXA-FLEX (c)/(e) + fronteira do item 23 seguem no default, ratificadas**).
+> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-26 tarde — 3 decisões novas da rodada PIX-ARBITRAGEM (S1209-PIXBE/PIXREV), a 25 é a que importa; de manhã, DEC-0726: Asaas adiado, Brevo prometida, defaults ratificados**).
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md` + seção Ratificadas no fim.
 > **Nada abaixo bloqueia código**: tudo roda com default defensável em vigor. Ratificar = confirmar o default; mudar = eu ajusto no próximo lote.
 > 📄 Versão longa e argumentada (porquê, caso sim, caso não, recomendação por JTBD/story): [[DECISOES-EM-ABERTO]].
@@ -27,6 +27,16 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **percentual + valor fixo por venda, variável por meio de pagamento** (verbatim do Vitor: *"6% pix + 2,00 ou 8% de cartão + 1,50"*). Nível decidido (AskUserQuestion 2026-07-19): **tabela global + exceção por organizador**, sem por-evento no v1. Exibição no checkout repassado: **total por opção de meio** (PIX vs cartão) antes de pagar. Spec fechada em RN-178..183.
 
 > **✅ As três pontas desta seção foram RESOLVIDAS na rodada DEC-0726 (Vitor, 2026-07-26 — "o ponto 4 pode seguir"):** (c) comissão de afiliado sobre **FACE ratificada** (RN-310 confirmada; P-TAXAFLEX-3 vira premissa fechada) · (e) taxa por parcela **segue única por meio no v1** (refinamento futuro só se o Vitor reabrir) · (fronteira/item 23) o default **"reembolso NÃO devolve a taxa de serviço" está confirmado para seguir** (a revisão fina do benchmark BENCHMARK-REEMBOLSO fica disponível se ele quiser reabrir). Detalhe no bloco Rodada DEC-0726 em ✅ Ratificadas.
+
+### 🆕 PIX-ARBITRAGEM · o que sobrou da blindagem do PIX (2026-07-26, lanes S1209-PIXBE + review antagonista)
+
+Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva e cancela no gateway antes de expirar; a review antagonista provou 48 ataques e deixou 3 decisões (reports `S1209-PIXBE-REPORT.md` + `S1209-PIXREV-REPORT.md`).
+
+25. **⚠️ A QUE IMPORTA · O que é "cobrança viva" quando o gateway RECUSA cancelar?** Hoje, se o gateway recusa o cancelamento e os 30 min passam, a trava solta **pelo relógio** — e uma 2ª cobrança pode nascer com a 1ª ainda pagável (provado por teste no servidor e na tela; achado A1, severidade ALTA). As duas saídas trocam riscos: **(a)** segurar a trava até o gateway confirmar o cancelamento — nunca há 2 cobranças, mas o comprador pode ficar travado sem conseguir comprar; **(b)** antes de criar a cobrança nova, cancelar a antiga no gateway DENTRO do fluxo de criação — reusa a disciplina gateway-primeiro do T3 e só nega venda no exato caso em que o gateway recusa o cancelamento (negativa honesta). **Recomendação da engenharia = (b).** É dinheiro: quando você decidir, vira lote com rota opus + review antagonista. **Default em vigor até lá = o comportamento atual (solta pelo relógio)** — aceitável em sandbox/Mock, NÃO aceitável para produção com dado real (entra como bloqueador de go-live).
+26. **Limite de cobranças PIX vivas por comprador?** A trava é por (comprador, evento, carrinho) — carrinhos diferentes abrem cobranças livremente: a review provou 5 vivas simultâneas do mesmo comprador, sem teto. Não é fraude óbvia (cada uma é uma compra distinta), mas é superfície de abuso. Pergunta aberta, sem urgência: cravar um teto (ex.: 3 vivas por comprador/evento)? Default em vigor = sem teto.
+27. **Pagamento retardatário (premissa CK2-4, agora delimitada).** Pagamento que entra APÓS o cancelamento cai num ledger durável (`ignorado_estado_final`) — o dinheiro saiu do comprador e fica registrado, mas nada ALERTA. Opções quando você quiser fechar: estorno automático × fila de reconciliação × ressuscitar a inscrição. Qualquer uma exige antes um **contador/alerta sobre o ledger** (recomendação da review — senão a reconciliação nasce sem gatilho). Sem urgência com Mock ativo; entra no pacote de go-live.
+
+**Checklist pré-deploy (novo item):** validar o `DELETE /payments/{id}` do Asaas em sandbox antes de qualquer deploy que dependa do cancelamento — o modo de falha está provado seguro (fail-closed, 11 shapes divergentes + 9 HTTP), mas o shape veio da doc, não de conta real.
 
 ## 🟠 Ações externas suas (destravam código pronto)
 
