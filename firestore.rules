@@ -2722,6 +2722,17 @@ service cloud.firestore {
     // escrever permitiria forjar ou derrubar a própria trava e abrir a
     // segunda cobrança viva que ela existe para impedir.
 
+    // ── `carrinhos/{uid__eventoId}` (+ `/ciclos/{n}`) — prazo do carrinho ─
+    // (LEELA-PIX-CARRINHO-T2/T3 · RN-158). O relógio de 15 minutos da
+    // ABERTURA até a CONCLUSÃO da compra, e o registro durável por ciclo que
+    // a fase 2 (visibilidade de carrinhos abandonados) vai agregar. Leitura/
+    // escrita EXCLUSIVAS de Function (Admin SDK — cotarInscricaoCheckout
+    // abre, createInscricaoCharge conclui, expirarCarrinhosAbandonados
+    // carimba). SEM match DE PROPÓSITO: cai no deny-by-default abaixo. NÃO
+    // abrir para client SDK — escrever deixaria o comprador reabrir o
+    // próprio prazo (o timer viraria enfeite) e ler daria a um sondador o
+    // mapa dos carrinhos abertos de terceiros.
+
     // ── Bloqueia qualquer coleção não modelada acima ─────────────────────
     // Deny-by-default — não inverta sem rule explícita e testada.
     match /{document=**} {

@@ -47,6 +47,7 @@ import {
   type SaleState,
 } from '@leela/core';
 import { carregarInsumos } from './createInscricaoCharge';
+import { abrirCarrinhoBestEffort } from './carrinhoCheckout';
 import { agoraCheckout } from './relogioCheckout';
 
 type Db = admin.firestore.Firestore;
@@ -333,13 +334,47 @@ export async function cotarInscricaoCheckoutCore(
 }
 
 // ---------------------------------------------------------------------------
+// Cotação + ABERTURA do carrinho (PIX-CARRINHO-T2 · RN-158)
+// ---------------------------------------------------------------------------
+
+/**
+ * A cotação é o instante em que o servidor descobre que existe um carrinho —
+ * e a RN-158 conta 15 minutos DALI até a conclusão da compra. Não existe
+ * sinal anterior a este no backend, e criar um exigiria fiação nova de tela
+ * (fora do território desta lane).
+ *
+ * A separação é deliberada: `cotarInscricaoCheckoutCore` segue **read-only**
+ * (a garantia do cabeçalho deste arquivo vale intacta — nenhum caminho de
+ * PREÇO escreve), e a abertura do carrinho é um passo próprio, DEPOIS de a
+ * cotação vingar (evento inexistente ou venda fechada não abre carrinho) e
+ * best-effort (bookkeeping não derruba o preço do comprador).
+ */
+export async function cotarInscricaoCheckoutComCarrinho(
+  db: Db,
+  uid: string,
+  rawInput: unknown,
+  agora: () => Date = () => new Date()
+): Promise<CotarInscricaoCheckoutResult> {
+  const resultado = await cotarInscricaoCheckoutCore(db, rawInput, agora);
+  // `eventoId` já passou pela validação do núcleo acima.
+  const eventoId = (rawInput as { eventoId: string }).eventoId;
+  await abrirCarrinhoBestEffort(db, uid, eventoId, agora().getTime());
+  return resultado;
+}
+
+// ---------------------------------------------------------------------------
 // Callable
 // ---------------------------------------------------------------------------
 
-/** `cotarInscricaoCheckout` — cotação read-only do checkout público (S1203). */
+/** `cotarInscricaoCheckout` — cotação do checkout público (S1203) + RN-158. */
 export const cotarInscricaoCheckout = https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
-  return cotarInscricaoCheckoutCore(admin.firestore(), data, agoraCheckout);
+  return cotarInscricaoCheckoutComCarrinho(
+    admin.firestore(),
+    context.auth.uid,
+    data,
+    agoraCheckout
+  );
 });

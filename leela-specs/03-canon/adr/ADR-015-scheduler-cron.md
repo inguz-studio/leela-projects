@@ -52,6 +52,17 @@ seguiu o padrão por antecipação.
      RN-133 + fan-out idempotente RN-219); replay não duplica. Limite de
      push estourado / segmento vazio / tenant não-ativo ficam `agendado`
      (retry natural na próxima varredura).
+   - `expirarCarrinhosAbandonados` (PIX-CARRINHO · RN-158) — varre
+     `carrinhos` `status='aberto'` com `expiraEmMillis` no passado (índice
+     composto `status+expiraEmMillis` em firestore.indexes.json), carimba o
+     estado terminal `expirado_sem_concluir` e grava o registro durável do
+     ciclo em `carrinhos/{id}/ciclos/{n}` (insumo da fase 2 de carrinhos
+     abandonados). Lote bounded (200/rodada). ⚠️ **Este cron não decide
+     dinheiro:** quem recusa a conclusão fora do prazo é o gate transacional
+     de `createInscricaoCharge`, contra o relógio do servidor. Rodada
+     atrasada ou morta atrasa só o CARIMBO — e o atraso é mensurável, porque
+     `expiraEmMillis` (venceu) e `expiradoEmMillis` (foi carimbado) ficam
+     gravados separados.
 4. **Sem registry/índice de crons** por ora — 3 tarefas não justificam
    abstração. Reavaliar se passar de ~6.
 

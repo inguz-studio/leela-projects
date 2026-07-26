@@ -115,6 +115,11 @@ import {
 } from './pessoaRegistry';
 import { agoraCheckout } from './relogioCheckout';
 import {
+  concluirCarrinhoNaTx,
+  exigirCarrinhoNoPrazo,
+  lerCarrinhoNaTx,
+} from './carrinhoCheckout';
+import {
   encerrarPixAnteriorNaCriacao,
   gravarTravaPixNaTx,
   lerTravaPixNaTx,
@@ -1209,6 +1214,22 @@ async function criarDocsDeCheckout(
         travaPixRef = ref;
       }
 
+      // PRAZO DO CARRINHO (PIX-CARRINHO-T2 · RN-158) — 15 min da ABERTURA
+      // (primeira cotação) para CONCLUIR, e concluir É criar este pedido.
+      // Lido na MESMA tx que o cria: o carrinho pode vencer entre a leitura
+      // de fora e o commit, e é aqui que a fronteira tem de valer.
+      //
+      // Vale para as DUAS formas de pagamento — o relógio é do checkout, não
+      // do PIX. Sem carrinho (chamada direta, sem cotação) o gate FALHA
+      // ABERTO: fronteira declarada em carrinhoCheckout.ts.
+      const { ref: carrinhoRef, carrinho } = await lerCarrinhoNaTx(
+        db,
+        tx,
+        caller.uid,
+        input.eventoId
+      );
+      exigirCarrinhoNoPrazo(carrinho, agoraMs);
+
       // RE-CHECK do cupom club_parceiro DENTRO da tx (RN-364 · S1803
       // "revogação com corrida" + fix review S1802 #1 "freshness"):
       //   - parceria FRESCA precisa seguir 'ativa' (encerrar mata o
@@ -1593,6 +1614,17 @@ async function criarDocsDeCheckout(
           pedidoId,
           pagamentoId,
           pixExpiraEmMillis,
+        });
+      }
+
+      // RN-158: o carrinho CONCLUIU — na mesma tx do pedido, senão a fase 2
+      // leria como abandono um carrinho que virou compra. Só quando ele
+      // existe: pedido sem carrinho não ganha um carrinho inventado (a
+      // abertura tem instante próprio, e forjá-lo corromperia o dado).
+      if (carrinho !== null) {
+        concluirCarrinhoNaTx(tx, carrinhoRef, {
+          pedidoId,
+          concluidoEmMillis: agoraMs,
         });
       }
 

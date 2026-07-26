@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "carrinhos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiraEmMillis",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "eventos",
       "queryScope": "COLLECTION",
       "fields": [

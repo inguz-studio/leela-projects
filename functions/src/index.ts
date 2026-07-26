@@ -150,6 +150,11 @@ export { getCheckoutPrefill } from './checkout/prefillCheckout';
 // servidor confere o PRÓPRIO relógio e transiciona pendente→cancelado
 // (pix_expirado); webhook em corrida vence (dinheiro pago nunca cancela).
 export { expirarPixPendente } from './checkout/expirarPixPendente';
+// Prazo do carrinho (PIX-CARRINHO-T2 · RN-158 · ADR-015): varredura contínua
+// (5 min) que carimba `expirado_sem_concluir` nos carrinhos que passaram dos
+// 15 min sem virar pedido. O cron NÃO decide a venda — quem recusa a
+// conclusão fora do prazo é o gate transacional de createInscricaoCharge.
+export { expirarCarrinhosAbandonados } from './checkout/expirarCarrinhosAbandonados';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via

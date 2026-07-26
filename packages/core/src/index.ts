@@ -643,6 +643,21 @@ export {
   etapaAnterior,
 } from './checkout/etapas';
 
+// PRAZO DO CARRINHO (RN-158 · PIX-CARRINHO-T2) — 15 min da abertura até
+// concluir. Vizinho declarado da RN-157: os dois relógios compõem em
+// sequência (ver o cabeçalho de checkout/carrinho.ts).
+export type { StatusCarrinho } from './checkout/carrinho';
+export {
+  CARRINHO_PRAZO_SEGUNDOS,
+  STATUS_CARRINHO,
+  isStatusCarrinho,
+  STATUS_CARRINHO_EXPIRADO,
+  MOTIVO_CARRINHO_EXPIRADO,
+  CARRINHO_CRON_INTERVALO_MIN,
+  CARRINHO_CARIMBO_TOLERANCIA_MS,
+  carrinhoNoPrazo,
+} from './checkout/carrinho';
+
 // ---------------------------------------------------------------------------
 // Módulo Pedidos (ADR-011 · LEELA-FABLE-A-T1)
 // Kernel `pedidos/{id}` — pedido em grupo (1 responsável, N inscritos) +
