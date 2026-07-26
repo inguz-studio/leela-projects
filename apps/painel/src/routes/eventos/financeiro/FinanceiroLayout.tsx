@@ -2,8 +2,16 @@
 // FinanceiroLayout — casca da seção Financeiro do evento (S207 + S904-T5).
 // Sob o EventoLayout (RequirePapel area="financeiro" já gateia o acesso). Monta
 // uma sub-nav de duas superfícies:
-//   Resumo — repasse/breakdown do organizador (S207, superfície viva);
+//   Caixa — o macro DESTE evento: o que entrou, o que é taxa, o que sobra
+//           (S207, superfície viva). Era "Resumo" até a rodada IA-MENU
+//           (RN-235); mudou o RÓTULO, que é o que a pessoa lê — a URL
+//           (`/eventos/{slug}/financeiro`) e a permissão (area="financeiro")
+//           seguem idênticas.
 //   Reembolsos e transferências — a fila de decisão (S904-T5).
+//
+// Caixa do evento e REPASSE são coisas separadas, e o Vitor foi explícito
+// nisso: "o caixa de eventos é separado dos repasses". A visão macro de
+// repasses vive em `/eventos/repasses`.
 // Repassa `{ evento }` às rotas-filhas via Outlet context (mesmo contrato do
 // EventoLayout — as páginas leem `evento` sem recomputar).
 // =============================================================================
@@ -21,7 +29,7 @@ export function FinanceiroLayout(): JSX.Element {
   const ativa = resto.split('/')[0] || 'resumo';
 
   const tabs: SubNavTab[] = [
-    { id: 'resumo', label: 'Resumo', href: base, active: ativa === 'resumo' },
+    { id: 'resumo', label: 'Caixa', href: base, active: ativa === 'resumo' },
     {
       id: 'reembolsos',
       label: 'Reembolsos e transferências',

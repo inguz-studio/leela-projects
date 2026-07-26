@@ -20,6 +20,7 @@ import {
   type TableColumn,
 } from '@leela/design-system';
 import type { FinanceiroEvento } from '@leela/api-client';
+import type { RepassesAssociados } from '../repasses/_lib/repassesPorEvento';
 import {
   breakdownFinanceiro,
   derivarRepasse,
@@ -36,9 +37,31 @@ export interface FinanceiroViewProps {
   financeiro: FinanceiroEvento | null;
   loading: boolean;
   error: Error | null;
+  /**
+   * Σ dos repasses associados a ESTE evento pelo campo exato `eventoId`
+   * (RN-349). `null` = nenhum repasse associado — estado honesto, nunca
+   * R$ 0,00 sugerindo que houve movimento. Vem do MESMO reader e da MESMA
+   * função pura (`associarRepassesPorEvento`) que alimentam a linha deste
+   * evento em `/eventos/repasses`: os dois números se reconciliam por
+   * construção, não por recálculo paralelo.
+   */
+  repasseDoEvento?: RepassesAssociados | null;
+  repasseLoading?: boolean;
+  /** Atalho para a visão macro — só para quem tem acesso a repasse (RN-320). */
+  podeVerRepasses?: boolean;
+  onVerRepasses?: () => void;
 }
 
-export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroViewProps): JSX.Element {
+export function FinanceiroView({
+  slug,
+  financeiro,
+  loading,
+  error,
+  repasseDoEvento = null,
+  repasseLoading = false,
+  podeVerRepasses = false,
+  onVerRepasses,
+}: FinanceiroViewProps): JSX.Element {
   if (loading) {
     return (
       <div role="status" aria-label="Carregando financeiro" className="flex flex-col gap-[var(--spacing-3)]">
@@ -84,16 +107,28 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <div className="flex items-center justify-between gap-[var(--spacing-3)]">
         <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Financeiro
+          Caixa do evento
         </h2>
-        <Button variant="secondary" onClick={exportar}>
-          Exportar CSV
-        </Button>
+        <div className="flex items-center gap-[var(--spacing-3)]">
+          {/* Atalho para a visão macro — aparece só para quem tem acesso a
+              repasse (RN-320, matriz de papéis). O caixa deste evento e o
+              repasse consolidado são coisas separadas; o atalho liga as duas
+              sem fundi-las. */}
+          {podeVerRepasses && onVerRepasses && (
+            <Button variant="ghost" onClick={onVerRepasses}>
+              Ver todos os repasses
+            </Button>
+          )}
+          <Button variant="secondary" onClick={exportar}>
+            Exportar CSV
+          </Button>
+        </div>
       </div>
 
-      {/* Resumo — visão de REPASSE do organizador (sem taxa/margem da
-          plataforma, RN-404). "Repassado" depende do módulo de repasses (E09):
-          estado honesto R$ 0,00 + hint, sem inventar transferência. */}
+      {/* Caixa — visão de REPASSE do organizador (sem taxa/margem da
+          plataforma, RN-404). "Valor repassado" deixou de ser R$ 0,00 genérico
+          (RN-235 · IAM-T7): lê o repasse DESTE evento pelo ledger que já
+          existia. A informação sempre existiu — só não chegava aqui. */}
       <section
         aria-label="Resumo financeiro"
         className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4"
@@ -101,8 +136,20 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
         <CardValor rotulo="Receita total" valor={formatBRL(rep.receitaTotal)} tom="primary" />
         <CardValor
           rotulo="Valor repassado"
-          valor={formatBRL(rep.repassado)}
-          nota="Disponível com o módulo de repasses"
+          valor={
+            repasseLoading
+              ? '…'
+              : repasseDoEvento && repasseDoEvento.qtd > 0
+                ? formatBRL(repasseDoEvento.total)
+                : '—'
+          }
+          nota={
+            repasseLoading
+              ? 'Consultando os repasses deste evento'
+              : repasseDoEvento && repasseDoEvento.qtd > 0
+                ? `${repasseDoEvento.qtd} ${repasseDoEvento.qtd === 1 ? 'repasse solicitado' : 'repasses solicitados'} para este evento`
+                : 'Nenhum repasse solicitado para este evento'
+          }
           tom="primary"
         />
         <CardValor rotulo="Valor disponível" valor={formatBRL(rep.disponivel)} tom="success" />
@@ -167,7 +214,7 @@ export function FinanceiroView({ slug, financeiro, loading, error }: FinanceiroV
           modelo de pagamento/afiliação (E12), ausente no agregado atual. */}
       <EmptyState
         title="Disponível com o módulo de pagamento"
-        description="Inscrições por forma de pagamento, breakdown por lote e status de repasse do organizador dependem dos dados de pagamento (E12) — ainda não computados neste agregado."
+        description="Inscrições por forma de pagamento e breakdown por lote dependem dos dados de pagamento (E12) — ainda não computados neste agregado. O repasse deste evento já aparece acima (RN-349)."
       />
     </div>
   );

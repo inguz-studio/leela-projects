@@ -47,7 +47,11 @@ describe('FinanceiroView (S207-T1)', () => {
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText(/Retenção de até 15% do total/)).toBeInTheDocument();
-    expect(screen.getByText(/módulo de repasses/)).toBeInTheDocument();
+    // RN-235 · IAM-T7: o hint genérico "Disponível com o módulo de repasses"
+    // MORREU. Sem repasse associado, o estado honesto é explícito sobre ESTE
+    // evento — e nunca R$ 0,00, que sugeriria movimento que não houve.
+    expect(screen.getByText('Nenhum repasse solicitado para este evento')).toBeInTheDocument();
+    expect(screen.queryByText(/Disponível com o módulo de repasses/)).not.toBeInTheDocument();
   });
 
   it('financeiro ausente → EmptyState', () => {
