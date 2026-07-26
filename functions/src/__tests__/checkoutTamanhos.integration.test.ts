@@ -113,7 +113,14 @@ function input(
   };
 }
 
-const caller = { uid: 'uid-ana-tam' };
+// S1209-PIXBE-T2 (RN-157): COMPRADOR POR CHAMADA. A trava server-side de
+// segunda cobrança PIX viva recusa dois pedidos do MESMO comprador com o
+// MESMO carrinho enquanto o primeiro segue pendente e dentro do prazo, e
+// este fixture repete a compra idêntica de teste em teste (o que em
+// produção seria cobrança duplicada). O `seq` que já dava a chave de
+// idempotência agora dá também o comprador — nenhuma asserção muda: o uid
+// não é comparado a literal em lugar nenhum deste arquivo.
+const caller = (): { uid: string } => ({ uid: `uid-ana-tam-${seq}` });
 
 async function contar(col: string): Promise<number> {
   const snap = await db.collection(col).where('eventoId', '==', EVENTO_ID).count().get();
@@ -148,7 +155,7 @@ describe('checkout × tamanhos — caminho honesto', () => {
       db,
       provider,
       input({ kitId: 'kit_prata', tamanhos: { 'camiseta-tecnica': 'M' } }),
-      caller
+      caller()
     );
     expect(resultado.statusPedido).toBe('pendente');
     const inscritoId = resultado.inscritoIds[0]!;
@@ -164,7 +171,7 @@ describe('checkout × tamanhos — caminho honesto', () => {
       db,
       provider,
       input({ kitId: 'kit_prata' }),
-      caller
+      caller()
     );
     const inscrito = (
       await db.doc(`eventos/${EVENTO_ID}/inscritos/${resultado.inscritoIds[0]!}`).get()
@@ -181,7 +188,7 @@ describe('checkout × tamanhos — ATAQUES (fail-closed, nada criado)', () => {
     const pedidosAntes = await contar('pedidos');
     const inscritosAntes = await contarInscritos();
     await expect(
-      createInscricaoChargeCore(db, provider, input(over), caller)
+      createInscricaoChargeCore(db, provider, input(over), caller())
     ).rejects.toMatchObject({ code: 'invalid-argument', message: padrao });
     expect(await contar('pedidos')).toBe(pedidosAntes);
     expect(await contarInscritos()).toBe(inscritosAntes);
@@ -253,7 +260,7 @@ describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
         kitId: 'kit_prata',
         tamanhos: { [REGATA]: 'feminina__M', 'camiseta-tecnica': 'M' },
       }),
-      caller
+      caller()
     );
     const inscrito = (
       await db.doc(`eventos/${EVENTO_ID}/inscritos/${resultado.inscritoIds[0]!}`).get()
@@ -270,7 +277,7 @@ describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
       createInscricaoChargeCore(
         db, provider,
         input({ kitId: 'kit_prata', tamanhos: { [REGATA]: 'masculina__P' } }),
-        caller
+        caller()
       )
     ).rejects.toMatchObject({
       code: 'invalid-argument',
@@ -284,7 +291,7 @@ describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
       createInscricaoChargeCore(
         db, provider,
         input({ kitId: 'kit_prata', tamanhos: { [REGATA]: 'M' } }),
-        caller
+        caller()
       )
     ).rejects.toMatchObject({
       code: 'invalid-argument',
@@ -298,7 +305,7 @@ describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
         createInscricaoChargeCore(
           db, provider,
           input({ kitId: 'kit_prata', tamanhos: { [REGATA]: valor } }),
-          caller
+          caller()
         )
       ).rejects.toMatchObject({
         code: 'invalid-argument',
@@ -312,7 +319,7 @@ describe('checkout × grade por corte (RN-231 · TAMANHOS-GRADE)', () => {
       createInscricaoChargeCore(
         db, provider,
         input({ kitId: 'kit_prata', tamanhos: { 'camiseta-tecnica': 'feminina__M' } }),
-        caller
+        caller()
       )
     ).rejects.toMatchObject({
       code: 'invalid-argument',

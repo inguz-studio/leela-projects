@@ -2712,6 +2712,16 @@ service cloud.firestore {
     // contadores daria oráculo de janela ao atacante; escrever permitiria
     // zerar o próprio limite.
 
+    // ── `cobrancasPixAtivas/{uid__eventoId}` — trava de 2ª cobrança PIX ──
+    // (LEELA-S1209-PIXBE-T2 · RN-157). Sentinela de chave determinística que
+    // dá às requisições concorrentes de cobrança um documento em comum para
+    // o Firestore serializar — leitura/escrita EXCLUSIVAS de Function (Admin
+    // SDK, createInscricaoCharge → travaCobrancaPix.ts). SEM match DE
+    // PROPÓSITO: cai no deny-by-default abaixo. NÃO abrir para client SDK —
+    // ler daria a um sondador o mapa das cobranças abertas de terceiros;
+    // escrever permitiria forjar ou derrubar a própria trava e abrir a
+    // segunda cobrança viva que ela existe para impedir.
+
     // ── Bloqueia qualquer coleção não modelada acima ─────────────────────
     // Deny-by-default — não inverta sem rule explícita e testada.
     match /{document=**} {

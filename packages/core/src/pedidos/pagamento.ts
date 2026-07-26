@@ -79,6 +79,17 @@ export function isFormaPagamento(value: unknown): value is FormaPagamento {
 export const PIX_EXPIRACAO_SEGUNDOS = 30 * 60;
 
 /**
+ * Motivo TIPADO da recusa de uma SEGUNDA cobrança PIX enquanto a primeira
+ * está pendente e dentro do prazo (S1209-PIXBE-T2 · RN-157). Viaja no
+ * `details` do erro `failed-precondition` de `createInscricaoCharge`.
+ *
+ * Mora no core porque é CONTRATO entre servidor e cliente: a Function
+ * carimba, a UI reconhece. Sem a constante, a tela acabaria decidindo por
+ * comparação de mensagem — texto é para humano, não para código.
+ */
+export const MOTIVO_PIX_PENDENTE_ATIVO = 'pix_pendente_ativo';
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),

@@ -22,7 +22,7 @@
  */
 
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { roundMoney, type AuthClaims } from '@leela/core';
@@ -42,7 +42,19 @@ const PROJECT_ID = 'demo-leela-s1203';
 const TENANT_ID = 'castelo-producoes';
 const EVENTO_INC = 'rn347-evento-incorporada';
 const EVENTO_REP = 'rn347-evento-repassada';
-const ANA_UID = 'uid-ana-rn347';
+// S1209-PIXBE-T2 (RN-157): COMPRADOR POR TESTE. A trava server-side de
+// segunda cobranca PIX viva recusa dois pedidos do MESMO comprador com o
+// MESMO carrinho enquanto o primeiro segue pendente e dentro do prazo — e
+// estes fixtures encadeiam compras IDENTICAS em sequencia, que em producao
+// seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
+// devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
+// comparado a literal, so a ele mesmo.
+let ANA_UID = 'uid-ana-rn347';
+let seqCompradorPixbe = 0;
+beforeEach(() => {
+  seqCompradorPixbe += 1;
+  ANA_UID = `uid-ana-rn347-${seqCompradorPixbe}`;
+});
 const MARINA: { uid: string; claims: AuthClaims } = {
   uid: 'uid-marina-rn347',
   claims: { role: 'tenant_owner', tenantId: TENANT_ID } as AuthClaims,

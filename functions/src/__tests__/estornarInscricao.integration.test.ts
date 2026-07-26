@@ -25,7 +25,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { deleteDoc, doc, getDoc, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
@@ -48,7 +48,19 @@ const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 const TENANT_ID = 'castelo-producoes';
 const OUTRO_TENANT_ID = 'passo-certo';
 const EVENTO_ID = 'meia-floripa-2026';
-const ANA_UID = 'uid-ana-atleta';
+// S1209-PIXBE-T2 (RN-157): COMPRADOR POR TESTE. A trava server-side de
+// segunda cobranca PIX viva recusa dois pedidos do MESMO comprador com o
+// MESMO carrinho enquanto o primeiro segue pendente e dentro do prazo — e
+// estes fixtures encadeiam compras IDENTICAS em sequencia, que em producao
+// seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
+// devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
+// comparado a literal, so a ele mesmo.
+let ANA_UID = 'uid-ana-atleta';
+let seqCompradorPixbe = 0;
+beforeEach(() => {
+  seqCompradorPixbe += 1;
+  ANA_UID = `uid-ana-atleta-${seqCompradorPixbe}`;
+});
 const MARINA_UID = 'uid-marina';
 
 /** Organizador do tenant dono (papel de escrita — RN-401). */

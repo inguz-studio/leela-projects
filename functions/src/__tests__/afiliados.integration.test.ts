@@ -649,10 +649,16 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
       eventoId: EVENTO_ID, tipo: 'clube', nome: 'Inativo', refCodigo: 'INATIVO1',
       status: 'inativo',
     }, marina);
+    // S1209-PIXBE-T2: comprador DISTINTO na segunda compra. A trava de
+    // segunda cobrança PIX viva (RN-157) recusa dois pedidos do mesmo
+    // comprador com o MESMO carrinho enquanto o primeiro está no prazo —
+    // e `ref` (atribuição de marketing) não faz parte da identidade do
+    // carrinho DE PROPÓSITO, senão `?ref=` viraria o atalho para escapar
+    // dela. O que este teste afirma (ref inválido não atribui) é idêntico.
     const r2 = await createInscricaoChargeCore(
       db, provider,
       chargeInput('chave-ref-00000003', { ref: { codigo: 'INATIVO1' } }),
-      caller
+      { uid: `${caller.uid}-d2b` }
     );
     const pag2 = await db.doc(`pagamentos/${r2.pagamentoId}`).get();
     expect(pag2.get('afiliado')).toBeUndefined();

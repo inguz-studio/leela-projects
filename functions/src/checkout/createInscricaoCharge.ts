@@ -114,6 +114,12 @@ import {
   upsertPessoasNaTx,
 } from './pessoaRegistry';
 import { agoraCheckout } from './relogioCheckout';
+import {
+  gravarTravaPixNaTx,
+  lerTravaPixNaTx,
+  MOTIVO_PIX_PENDENTE_ATIVO,
+  MSG_PIX_PENDENTE_ATIVO,
+} from './travaCobrancaPix';
 
 type Db = admin.firestore.Firestore;
 
@@ -1120,10 +1126,61 @@ async function criarDocsDeCheckout(
   const { planos: planosPessoa, pessoaIdPorInscrito } =
     planejarPessoasDoCheckout(input, caller);
 
+  // S1209-PIXBE-T2: identidade do CARRINHO (o que está sendo comprado) —
+  // chave da trava de segunda cobrança PIX viva. Ver travaCobrancaPix.ts.
+  const carrinhoDaTrava = {
+    eventoId: input.eventoId,
+    inscritos: input.inscritos.map((i) => ({
+      cpf: i.cpf,
+      modalidade: i.modalidade,
+      ...(typeof i.kitId === 'string' && i.kitId.length > 0
+        ? { kitId: i.kitId }
+        : {}),
+    })),
+    ...(input.cupomCodigo !== undefined ? { cupomCodigo: input.cupomCodigo } : {}),
+  };
+
   try {
     await db.runTransaction(async (tx) => {
       const jaExiste = await tx.get(pedidoRef);
       if (jaExiste.exists) return; // corrida do MESMO key — replay resolve
+
+      // TRAVA DE SEGUNDA COBRANÇA PIX VIVA (S1209-PIXBE-T2 · RN-157) — a
+      // garantia server-side que o pré-voo do cliente (`59f18ed`) só
+      // aproximava. Lida na MESMA tx que cria o pedido, sobre um doc
+      // sentinela de chave determinística: é ELE que dá às duas requisições
+      // concorrentes um documento em comum para o Firestore serializar
+      // (duas chaves de idempotência distintas criam pedidos distintos —
+      // sem a sentinela não há conflito a detectar). Ver travaCobrancaPix.ts.
+      //
+      // A trava é EXCLUSIVA do PIX: é a única forma com janela de validade
+      // em que a cobrança anterior continua pagável enquanto a nova nasce.
+      let travaPixRef: admin.firestore.DocumentReference | null = null;
+      if (sale.forma === 'pix') {
+        const { ref, bloqueio } = await lerTravaPixNaTx(
+          db,
+          tx,
+          caller.uid,
+          carrinhoDaTrava,
+          agoraMs
+        );
+        if (bloqueio !== null) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            MSG_PIX_PENDENTE_ATIVO,
+            // Contrato TIPADO para a UI decidir sem parsear texto. O pedido
+            // é do PRÓPRIO caller (a chave da sentinela é o uid dele) —
+            // devolvê-lo não vaza nada e deixa a tela oferecer o caminho
+            // certo: voltar à cobrança viva, não abrir outra.
+            {
+              motivo: MOTIVO_PIX_PENDENTE_ATIVO,
+              pedidoId: bloqueio.pedidoId,
+              pixExpiraEmMillis: bloqueio.pixExpiraEmMillis,
+            }
+          );
+        }
+        travaPixRef = ref;
+      }
 
       // RE-CHECK do cupom club_parceiro DENTRO da tx (RN-364 · S1803
       // "revogação com corrida" + fix review S1802 #1 "freshness"):
@@ -1465,10 +1522,9 @@ async function criarDocsDeCheckout(
       // RN-157 (CK2-T5): PIX expira em 30 min da CRIAÇÃO do pedido —
       // carimbo do relógio INJETADO (não do gateway): a autoridade do timer
       // é a plataforma; replay lê este doc e nunca re-estende o prazo.
+      const pixExpiraEmMillis = agoraMs + PIX_EXPIRACAO_SEGUNDOS * 1000;
       if (sale.forma === 'pix') {
-        pagamentoDoc['pixExpiraEm'] = Timestamp.fromMillis(
-          agoraMs + PIX_EXPIRACAO_SEGUNDOS * 1000
-        );
+        pagamentoDoc['pixExpiraEm'] = Timestamp.fromMillis(pixExpiraEmMillis);
       }
       if (loteUnico !== null && loteUnico.loteId !== null) {
         pagamentoDoc['loteId'] = loteUnico.loteId;
@@ -1500,6 +1556,18 @@ async function criarDocsDeCheckout(
         };
       }
       tx.create(pagamentoRef, pagamentoDoc);
+
+      // S1209-PIXBE-T2: esta cobrança passa a ser a PIX viva do par
+      // (comprador, evento) — na MESMA tx que a criou, senão a janela entre
+      // as duas escritas seria exatamente o buraco que a trava fecha.
+      if (travaPixRef !== null) {
+        gravarTravaPixNaTx(tx, travaPixRef, {
+          eventoId: input.eventoId,
+          pedidoId,
+          pagamentoId,
+          pixExpiraEmMillis,
+        });
+      }
 
       // RN-173 (CK2-T1): upsert do registry de pessoas na MESMA tx do
       // pedido — merge anti-hijack de dados, SEM claim (RN-174: o vínculo

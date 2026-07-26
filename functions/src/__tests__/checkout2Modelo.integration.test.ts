@@ -20,7 +20,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
@@ -59,7 +59,19 @@ process.env['FIREBASE_AUTH_EMULATOR_HOST'] =
   `localhost:${process.env['LEELA_AUTH_EMU_PORT'] ?? '9099'}`;
 const TENANT_ID = 'castelo-producoes';
 const EVENTO_ID = 'meia-floripa-2026';
-const ANA_UID = 'uid-ana-anon';
+// S1209-PIXBE-T2 (RN-157): COMPRADOR POR TESTE. A trava server-side de
+// segunda cobranca PIX viva recusa dois pedidos do MESMO comprador com o
+// MESMO carrinho enquanto o primeiro segue pendente e dentro do prazo — e
+// estes fixtures encadeiam compras IDENTICAS em sequencia, que em producao
+// seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
+// devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
+// comparado a literal, so a ele mesmo.
+let ANA_UID = 'uid-ana-anon';
+let seqCompradorPixbe = 0;
+beforeEach(() => {
+  seqCompradorPixbe += 1;
+  ANA_UID = `uid-ana-anon-${seqCompradorPixbe}`;
+});
 
 const CPF_ANA = '529.982.247-25'; // canônico 52998224725
 const CPF_BRUNO = '168.995.350-09'; // canônico 16899535009
@@ -786,7 +798,7 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
       { uid: 'uid-t5-c', ehAnonimo: true }, relogio(T0)
     );
     await expect(
-      expirarPixPendenteCore(db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-c' },
+      expirarPixPendenteCore(db, provider, { pedidoId: r.pedidoId }, { uid: 'uid-t5-c' },
         relogio(new Date(T0.getTime() + MEIA_HORA_MS - 1000)))
     ).rejects.toThrow(/ainda não expirou/);
     expect(
@@ -803,11 +815,11 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
 
     // OUTRO uid nunca expira pedido alheio
     await expect(
-      expirarPixPendenteCore(db, { pedidoId: r.pedidoId }, { uid: 'intruso' }, depois)
+      expirarPixPendenteCore(db, provider, { pedidoId: r.pedidoId }, { uid: 'intruso' }, depois)
     ).rejects.toThrow(/outro pagador/);
 
     const res = await expirarPixPendenteCore(
-      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
+      db, provider, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
     );
     expect(res).toEqual({
       pedidoId: r.pedidoId, statusPedido: 'cancelado', expirado: true, jaFinal: false,
@@ -820,7 +832,7 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
 
     // Idempotente: segunda chamada = jaFinal, sem efeito novo
     const res2 = await expirarPixPendenteCore(
-      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
+      db, provider, { pedidoId: r.pedidoId }, { uid: 'uid-t5-d' }, depois
     );
     expect(res2.jaFinal).toBe(true);
     expect(res2.expirado).toBe(false);
@@ -860,7 +872,7 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
       uid: 'uid-t5-e',
     });
     const res = await expirarPixPendenteCore(
-      db, { pedidoId: r.pedidoId }, { uid: 'uid-t5-e' },
+      db, provider, { pedidoId: r.pedidoId }, { uid: 'uid-t5-e' },
       relogio(new Date(T0.getTime() + MEIA_HORA_MS + 1000))
     );
     expect(res.jaFinal).toBe(true);

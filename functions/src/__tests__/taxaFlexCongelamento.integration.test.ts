@@ -22,7 +22,7 @@
  *   "npx vitest run src/__tests__/taxaFlexCongelamento.integration.test.ts"
  */
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
@@ -49,7 +49,19 @@ const PROJECT_ID = 'demo-leela';
 const TENANT_ID = 'castelo-producoes';
 const EVENTO_INC = 'taxaflex-evento-incorporada';
 const EVENTO_REP = 'taxaflex-evento-repassada';
-const ANA_UID = 'uid-ana-taxaflex';
+// S1209-PIXBE-T2 (RN-157): COMPRADOR POR TESTE. A trava server-side de
+// segunda cobranca PIX viva recusa dois pedidos do MESMO comprador com o
+// MESMO carrinho enquanto o primeiro segue pendente e dentro do prazo — e
+// estes fixtures encadeiam compras IDENTICAS em sequencia, que em producao
+// seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
+// devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
+// comparado a literal, so a ele mesmo.
+let ANA_UID = 'uid-ana-taxaflex';
+let seqCompradorPixbe = 0;
+beforeEach(() => {
+  seqCompradorPixbe += 1;
+  ANA_UID = `uid-ana-taxaflex-${seqCompradorPixbe}`;
+});
 const ADMIN_CALLER = {
   uid: 'uid-platform-admin',
   claims: { role: 'platform_admin' } as AuthClaims,
@@ -239,9 +251,16 @@ describe('TAXAFLEX · C2/C3 — mudar a tabela nunca reprecifica; conciliação 
       expect(pagAntes.get('gatewayAmountCentavos')).toBe(CENTAVOS_PIX_V1);
       expect((pagAntes.get('taxaCongelada') as { valor: number }).valor).toBe(TAXA_PIX_V1);
 
-      // Chave NOVA: pega a tabela v2 (a mudança só afeta vendas FUTURAS)
+      // Chave NOVA: pega a tabela v2 (a mudança só afeta vendas FUTURAS).
+      // S1209-PIXBE-T2 (RN-157): a venda futura é de OUTRO comprador — a
+      // trava de segunda cobrança PIX viva recusaria o MESMO comprador
+      // abrindo um segundo PIX do MESMO carrinho com o primeiro ainda no
+      // prazo, que é exatamente a cobrança duplicada. O que este teste
+      // afirma (preço da venda futura sai da tabela v2) não depende de
+      // quem compra.
       const depois = await createInscricaoChargeCore(
-        db, provider, baseInput(EVENTO_REP, 'txf-c2-nova-0001'), { uid: ANA_UID });
+        db, provider, baseInput(EVENTO_REP, 'txf-c2-nova-0001'),
+        { uid: `${ANA_UID}-venda-futura` });
       expect(depois.valores.taxaServico).toBe(TAXA_PIX_V2);
       expect(depois.valores.totalCobrado).toBe(roundMoney(FACE + TAXA_PIX_V2));
 
