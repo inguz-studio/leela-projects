@@ -31,6 +31,7 @@ export function StepConfirmacao({
   linhas,
   forma,
   pixExpirado = false,
+  pixVivoPeloServidor = false,
   onPixExpirar,
   onNovaCobranca,
 }: {
@@ -44,6 +45,8 @@ export function StepConfirmacao({
   forma?: 'pix' | 'cartao_credito';
   /** RN-157: cobrança já expirada (timer zerou / servidor cancelou). */
   pixExpirado?: boolean;
+  /** S1209-REV: o servidor RECUSOU a expiração — a cobrança segue viva. */
+  pixVivoPeloServidor?: boolean;
   /** RN-157: o timer zerou — materializar a expiração no servidor. */
   onPixExpirar?: () => void;
   /** RN-157: recomeçar com uma cobrança NOVA. */
@@ -91,6 +94,7 @@ export function StepConfirmacao({
             codigo={payloadPix(charge)}
             expiraEmMillis={charge.pixExpiraEmMillis}
             expirado={pixExpirado}
+            vivoPeloServidor={pixVivoPeloServidor}
             onExpirar={onPixExpirar}
             onNovaCobranca={onNovaCobranca}
           />

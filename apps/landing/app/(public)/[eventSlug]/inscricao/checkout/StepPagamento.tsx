@@ -53,6 +53,7 @@ export function StepPagamento({
   onAceiteTermos,
   onAceiteSaude,
   pixExpirado = false,
+  pixVivoPeloServidor = false,
   onPixExpirar,
   onNovaCobranca,
 }: {
@@ -78,6 +79,8 @@ export function StepPagamento({
   onAceiteSaude: (v: boolean) => void;
   /** RN-157: cobrança PIX já expirada (timer zerou / servidor cancelou). */
   pixExpirado?: boolean;
+  /** S1209-REV: o servidor RECUSOU a expiração — a cobrança segue viva. */
+  pixVivoPeloServidor?: boolean;
   /** RN-157: o timer zerou — materializar a expiração no servidor. */
   onPixExpirar?: () => void;
   /** RN-157: recomeçar com uma cobrança NOVA (nunca reusa a expirada). */
@@ -147,6 +150,7 @@ export function StepPagamento({
                 codigo={payloadPix(charge)}
                 expiraEmMillis={charge.pixExpiraEmMillis}
                 expirado={pixExpirado}
+                vivoPeloServidor={pixVivoPeloServidor}
                 onExpirar={onPixExpirar}
                 onNovaCobranca={onNovaCobranca}
                 nota={

@@ -31,13 +31,22 @@ import { Button, useToast } from '@/app/_ds/ds';
 //     final é sempre do servidor e o retry é uma cobrança NOVA, nunca a mesma.
 // =============================================================================
 
-/** Texto do copia-e-cola exibido/copiado (payload PIX ou fallback do provider). */
+/**
+ * Texto do copia-e-cola exibido/copiado — o payload PIX do provider, ou a URL
+ * de pagamento quando é o que ele devolve.
+ *
+ * S1209-REV: NÃO cai mais no `chargeId`. O id da cobrança é um identificador
+ * INTERNO; colocá-lo no lugar do copia-e-cola fazia a tela oferecer para cópia
+ * uma string que nenhum banco aceita — e o toast dizer "a chave para pagamento
+ * foi copiada" sobre ela. Sem payload, a resposta honesta é `''`, e o bloco
+ * mostra o estado de código indisponível em vez de fabricar uma chave.
+ */
 export function payloadPix(charge: {
   qrCode?: string;
   paymentUrl?: string;
   chargeId: string;
 }): string {
-  return charge.qrCode ?? charge.paymentUrl ?? charge.chargeId;
+  return charge.qrCode ?? charge.paymentUrl ?? '';
 }
 
 /** `mm:ss` a partir de milissegundos restantes (nunca negativo). */
@@ -96,10 +105,57 @@ function PixQrCode({ payload }: { payload: string }): React.JSX.Element | null {
 }
 
 /**
+ * Aviso quando a cópia não acontece (S1209-REV). O botão vive na tela do
+ * dinheiro: clique sem resposta nenhuma é o pior desfecho, porque a pessoa
+ * acha que a chave está na área de transferência e cola outra coisa no banco.
+ */
+const COPIA_FALHOU = 'Não conseguimos copiar. Selecione o código acima e copie manualmente.';
+
+/**
+ * Fallback de cópia para contexto SEM Clipboard API (origem http do preview,
+ * WebView antiga de app de banco). Devolve `false` quando nem isso existe —
+ * aí quem avisa a pessoa é o toast, não o silêncio.
+ */
+function copiaDeFallback(texto: string): boolean {
+  if (typeof document === 'undefined' || typeof document.execCommand !== 'function') return false;
+  const area = document.createElement('textarea');
+  area.value = texto;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  document.body.removeChild(area);
+  return ok;
+}
+
+/** `true` só quando a chave REALMENTE foi para a área de transferência. */
+function copiarChave(texto: string): Promise<boolean> {
+  const api = typeof navigator !== 'undefined' ? navigator.clipboard : undefined;
+  if (api !== undefined && typeof api.writeText === 'function') {
+    return api.writeText(texto).then(
+      () => true,
+      () => copiaDeFallback(texto),
+    );
+  }
+  return Promise.resolve(copiaDeFallback(texto));
+}
+
+/**
  * Botão de copiar do D-6: um clique copia a chave inteira (a pessoa nunca
  * precisa selecionar o payload na mão) e dispara o toast com o verbatim do
  * Vitor. O rótulo "Código copiado" continua como confirmação in-place para
  * quem não vê o toast (leitor de tela ouve o toast; o rótulo cobre o resto).
+ *
+ * S1209-REV: o toast de sucesso só sai quando a cópia CONFIRMA. Falha (sem
+ * API, permissão negada, WebView) devolve um toast de erro com a saída manual
+ * — antes o clique morria em silêncio e a pessoa ficava sem chave e sem aviso.
  */
 function CopiarChavePix({ codigo }: { codigo: string }): React.JSX.Element {
   const [copiado, setCopiado] = useState(false);
@@ -112,13 +168,14 @@ function CopiarChavePix({ codigo }: { codigo: string }): React.JSX.Element {
   }, [copiado]);
 
   const copiar = (): void => {
-    void navigator.clipboard
-      ?.writeText(codigo)
-      .then(() => {
-        setCopiado(true);
-        toast({ title: 'A chave para pagamento foi copiada', variant: 'success' });
-      })
-      .catch(() => setCopiado(false));
+    void copiarChave(codigo).then((ok) => {
+      setCopiado(ok);
+      toast(
+        ok
+          ? { title: 'A chave para pagamento foi copiada', variant: 'success' }
+          : { title: COPIA_FALHOU, variant: 'danger' },
+      );
+    });
   };
 
   return (
@@ -139,9 +196,10 @@ export function PixCobranca({
   onExpirar,
   onNovaCobranca,
   expirado: expiradoExterno = false,
+  vivoPeloServidor = false,
   nota,
 }: {
-  /** Payload copia-e-cola da cobrança. */
+  /** Payload copia-e-cola da cobrança. `''` = o provider não devolveu chave. */
   codigo: string;
   /** Expiração carimbada pelo SERVIDOR (epoch-ms). `undefined` = sem timer. */
   expiraEmMillis?: number | undefined;
@@ -151,11 +209,18 @@ export function PixCobranca({
   onNovaCobranca?: (() => void) | undefined;
   /** Expiração já conhecida pelo consumidor (ex.: servidor cancelou o pedido). */
   expirado?: boolean | undefined;
+  /**
+   * S1209-REV: o SERVIDOR recusou a expiração (`failed-precondition`) — a
+   * cobrança está viva e quem errou foi o relógio deste dispositivo. O
+   * veredito do servidor SUPERA a contagem local: o bloco volta a mostrar a
+   * chave e a contagem some (00:00 seria a mentira do relógio errado).
+   */
+  vivoPeloServidor?: boolean | undefined;
   /** Nota de contexto abaixo do bloco (difere por tela). */
   nota?: React.ReactNode;
 }): React.JSX.Element {
   const restante = useRestante(expiraEmMillis);
-  const expiradoPeloTimer = restante !== null && restante <= 0;
+  const expiradoPeloTimer = !vivoPeloServidor && restante !== null && restante <= 0;
   const expirado = expiradoExterno || expiradoPeloTimer;
 
   // Avisa o consumidor UMA vez — o efeito depende do booleano, não do tempo,
@@ -189,14 +254,44 @@ export function PixCobranca({
     );
   }
 
+  // S1209-REV: cobrança criada, mas o provider não devolveu copia-e-cola nem
+  // URL. Sem chave não há o que escanear nem o que copiar — e o id interno da
+  // cobrança JAMAIS ocupa esse lugar (era o que o fallback antigo fazia).
+  if (codigo.length === 0) {
+    return (
+      <div
+        role="status"
+        className="flex flex-col gap-3 rounded-ds-lg border border-border-default bg-feedback-warning-surface p-4 sm:p-5"
+      >
+        <p className="text-sm font-semibold text-feedback-warning-fg">Código PIX indisponível</p>
+        <p className="text-sm text-text-primary">
+          A cobrança foi aberta, mas o código de pagamento não chegou. Nada foi cobrado de você —
+          gere uma cobrança nova para receber um código novo.
+        </p>
+        {onNovaCobranca ? (
+          <div>
+            <Button variant="secondary" size="sm" onClick={onNovaCobranca}>
+              Gerar nova cobrança
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3 rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
       <p className="text-sm font-medium text-text-primary">Escaneie o QR ou use o copia e cola</p>
 
       <PixQrCode payload={codigo} />
 
-      {/* Timer só existe com carimbo do servidor — nunca contagem inventada. */}
-      {restante !== null ? (
+      {/* Timer só existe com carimbo do servidor — nunca contagem inventada.
+          E some quando o servidor já provou que este relógio está errado. */}
+      {vivoPeloServidor ? (
+        <p role="status" className="text-center text-sm text-text-secondary">
+          Esta cobrança continua válida. O prazo é conferido pelo servidor.
+        </p>
+      ) : restante !== null ? (
         <p
           role="timer"
           aria-live="off"

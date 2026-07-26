@@ -77,6 +77,19 @@ function novaChaveIdempotencia(): string {
   return `chk-${rnd}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
 }
 
+/**
+ * `failed-precondition` do callable (S1209-REV · RN-157): o SERVIDOR conferiu
+ * o próprio relógio e disse que a cobrança AINDA vale. É o único erro que
+ * carrega veredito — os demais só dizem que a conversa não chegou. O SDK
+ * prefixa o código (`functions/failed-precondition`), o emulador não; por isso
+ * a comparação é pelo último segmento.
+ */
+function ehPrecondicaoNaoAtendida(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false;
+  const code = (err as { code?: unknown }).code;
+  return typeof code === 'string' && code.split('/').pop() === 'failed-precondition';
+}
+
 function mensagemErro(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'message' in err) {
     const m = (err as { message?: unknown }).message;
@@ -193,10 +206,18 @@ export function CheckoutFlow({
   const [cartao, setCartao] = useState<CartaoForm>({ nome: '', numero: '', validade: '', cvv: '' });
   // RN-157 · D-6: a cobrança PIX vale 30 min. Quando o timer da UI zera, a
   // expiração é MATERIALIZADA no servidor (`expirarPixPendente`, que confere o
-  // próprio relógio) e a tela para de oferecer um código morto. O flag também
-  // segura a auto-geração — expirar não pode virar cobrança nova sem a pessoa
-  // pedir (seria cobrança dupla à revelia).
-  const [pixExpirado, setPixExpirado] = useState(false);
+  // próprio relógio) e a tela para de oferecer um código morto. O estado
+  // também segura a auto-geração — expirar não pode virar cobrança nova sem a
+  // pessoa pedir (seria cobrança dupla à revelia).
+  //
+  // S1209-REV: são TRÊS estados, não um booleano. O relógio do comprador pode
+  // estar adiantado, e nesse caso o servidor RECUSA a expiração — 'contestado'
+  // é exatamente esse caso: a cobrança está VIVA e a tela tem de voltar a
+  // mostrar a chave em vez de anunciar um fim que não aconteceu (e oferecer
+  // uma segunda cobrança sobre uma primeira ainda cobrável).
+  const [pixEstado, setPixEstado] = useState<'vivo' | 'expirado' | 'contestado'>('vivo');
+  const pixExpirado = pixEstado === 'expirado';
+  const pixContestado = pixEstado === 'contestado';
 
   // Auth anônima (checkout sem login)
   const [authPronto, setAuthPronto] = useState(false);
@@ -271,7 +292,16 @@ export function CheckoutFlow({
   // diferente. Qualquer atalho de cliente (cache local da compra anterior,
   // consulta disparada ao digitar o CPF) reabriria o oráculo de CPF que o
   // CLAIM-FIX fechou. Por isso a chamada é UMA, no mount, sem input.
+  //
+  // S1209-REV: "eu também vou correr" é lido no INSTANTE DA RESPOSTA, por ref.
+  // A resposta pode chegar depois de a pessoa desmarcar o checkbox — e aí o
+  // card 1 já é de um TERCEIRO. Com o valor congelado na closure, o CPF e o
+  // nascimento do comprador aterrissavam no card de outra pessoa.
   const prefillPedidoRef = useRef(false);
+  const euCorroRef = useRef(euCorro);
+  useEffect(() => {
+    euCorroRef.current = euCorro;
+  }, [euCorro]);
   useEffect(() => {
     if (!authPronto || prefillPedidoRef.current) return;
     prefillPedidoRef.current = true;
@@ -296,8 +326,9 @@ export function CheckoutFlow({
         setInscritos((prev) =>
           prev.map((ins, i) =>
             // Os dados são da PRÓPRIA pessoa: só cabem no 1º inscrito, e só
-            // quando ele é o comprador ("eu também vou correr").
-            i === 0 && euCorro
+            // quando ele é o comprador ("eu também vou correr") NO MOMENTO em
+            // que a resposta chega — não quando a chamada saiu.
+            i === 0 && euCorroRef.current
               ? {
                   ...ins,
                   nome: manter(ins.nome, p.nome),
@@ -328,7 +359,7 @@ export function CheckoutFlow({
         if (typeof console !== 'undefined')
           console.error('[checkout] Prefill indisponível — seguindo com o formulário vazio.', err);
       });
-  }, [authPronto, euCorro]);
+  }, [authPronto]);
 
   const parcelasEfetivas = forma === 'pix' ? 1 : parcelas;
   // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
@@ -493,7 +524,7 @@ export function CheckoutFlow({
     setConfirmacao(null);
     setErroCharge(null);
     setErroConfirmar(null);
-    setPixExpirado(false);
+    setPixEstado('vivo');
   }, [cupomAplicado, forma, parcelasEfetivas, selecaoSig]);
 
   const aplicarCupom = useCallback(async () => {
@@ -659,36 +690,100 @@ export function CheckoutFlow({
   // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
   // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
   // servidor que materialize a transição pendente → cancelado (`pix_expirado`)
-  // com o relógio DELE. Chamada antes da hora volta em failed-precondition e a
-  // cobrança segue viva — por isso o flag local só sobe depois da resposta, e
-  // erro de rede não pode prender o comprador num código que já não vale (o
-  // flag sobe mesmo assim: a UI para de oferecer, o servidor decide o resto).
+  // com o relógio DELE.
+  //
+  // S1209-REV — quem tem a palavra final é a RESPOSTA, não a chamada:
+  //   - resolveu com `expirado`/`jaFinal` ⇒ o servidor confirmou o fim.
+  //   - `failed-precondition` ⇒ o servidor diz que a cobrança AINDA vale (o
+  //     relógio deste dispositivo está adiantado). Anunciar "expirado" aqui
+  //     escondia um PIX cobrável e ainda abria o botão de gerar OUTRA — duas
+  //     cobranças vivas no mesmo pedido. Agora vira 'contestado': a chave
+  //     volta à tela e o relógio local perde a palavra.
+  //   - qualquer outra falha ⇒ sem veredito: a UI para de oferecer o código
+  //     (não empurra um código provavelmente morto), mas a cobrança nova passa
+  //     a exigir confirmação do servidor antes de nascer (ver abaixo).
   const pixExpirandoRef = useRef(false);
+  // O servidor CONFIRMOU o fim desta cobrança? Só então gerar outra é seguro.
+  const pixFimConfirmadoRef = useRef(false);
   const aoExpirarPix = useCallback(() => {
     if (pixExpirandoRef.current || charge === null) return;
     pixExpirandoRef.current = true;
     expirarPixPendente({ pedidoId: charge.pedidoId })
+      .then((r) => {
+        if (!montadoRef.current) return;
+        if (r.expirado || r.jaFinal) {
+          pixFimConfirmadoRef.current = true;
+          setPixEstado('expirado');
+          return;
+        }
+        // Respondeu sem encerrar: a cobrança continua de pé.
+        pixExpirandoRef.current = false;
+        setPixEstado('contestado');
+      })
       .catch((err) => {
         if (typeof console !== 'undefined')
           console.error('[checkout] Falha ao materializar a expiração do PIX.', err);
-      })
-      .finally(() => {
-        if (montadoRef.current) setPixExpirado(true);
+        if (!montadoRef.current) return;
+        if (ehPrecondicaoNaoAtendida(err)) {
+          pixExpirandoRef.current = false;
+          setPixEstado('contestado');
+          return;
+        }
+        setPixEstado('expirado');
       });
   }, [charge]);
 
   // Recomeço explícito: cobrança NOVA (chave de idempotência nova), nunca a
   // mesma — replay da chave antiga devolveria a cobrança já cancelada.
+  //
+  // S1209-REV: antes de abrir a segunda, o fim da PRIMEIRA precisa estar
+  // confirmado pelo servidor. Sem isso, um relógio adiantado (ou uma falha de
+  // rede no momento da expiração) deixaria duas cobranças vivas para o mesmo
+  // pedido, e a pessoa poderia pagar as duas.
   const novaCobrancaPix = useCallback(() => {
-    pixExpirandoRef.current = false;
-    chaveRef.current = undefined;
-    setCharge(null);
-    setConfirmacao(null);
+    const recomecar = (): void => {
+      pixExpirandoRef.current = false;
+      pixFimConfirmadoRef.current = false;
+      chaveRef.current = undefined;
+      setCharge(null);
+      setConfirmacao(null);
+      setErroCharge(null);
+      setErroConfirmar(null);
+      setPixEstado('vivo');
+      setStep(3);
+    };
+
+    if (charge === null || pixFimConfirmadoRef.current) {
+      recomecar();
+      return;
+    }
+
     setErroCharge(null);
-    setErroConfirmar(null);
-    setPixExpirado(false);
-    setStep(3);
-  }, []);
+    expirarPixPendente({ pedidoId: charge.pedidoId })
+      .then((r) => {
+        if (!montadoRef.current) return;
+        if (r.expirado || r.jaFinal) {
+          pixFimConfirmadoRef.current = true;
+          recomecar();
+          return;
+        }
+        pixExpirandoRef.current = false;
+        setPixEstado('contestado');
+      })
+      .catch((err) => {
+        if (typeof console !== 'undefined')
+          console.error('[checkout] Falha ao encerrar a cobrança anterior.', err);
+        if (!montadoRef.current) return;
+        if (ehPrecondicaoNaoAtendida(err)) {
+          pixExpirandoRef.current = false;
+          setPixEstado('contestado');
+          return;
+        }
+        setErroCharge(
+          'Não conseguimos encerrar a cobrança anterior. Tente de novo em alguns instantes.',
+        );
+      });
+  }, [charge]);
 
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
@@ -922,6 +1017,7 @@ export function CheckoutFlow({
             onAceiteTermos={setAceiteTermos}
             onAceiteSaude={setAceiteSaude}
             pixExpirado={pixExpirado}
+            pixVivoPeloServidor={pixContestado}
             onPixExpirar={aoExpirarPix}
             onNovaCobranca={novaCobrancaPix}
           />
@@ -937,6 +1033,7 @@ export function CheckoutFlow({
             linhas={linhasConfirmacao}
             forma={forma}
             pixExpirado={pixExpirado}
+            pixVivoPeloServidor={pixContestado}
             onPixExpirar={aoExpirarPix}
             onNovaCobranca={novaCobrancaPix}
           />
