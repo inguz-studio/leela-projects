@@ -5,9 +5,14 @@
 // export CSV. Presentational.
 //
 // A TAXA/MARGEM DA PLATAFORMA NÃO APARECE (RN-404 + decisão do dono,
-// fix-tema-clube): sem card de "Taxa Leela", sem % de taxa, sem nota RN-406. O
-// que exige o módulo de repasses (E09 — transferências reais) fica em estado
-// honesto (repassado R$ 0,00 + hint), NÃO inventamos transferência.
+// fix-tema-clube): sem card de "Taxa Leela", sem % de taxa, sem nota RN-406.
+//
+// "Valor repassado" (RN-235 · IAM-T7) vem do LEDGER de repasse deste evento,
+// não do agregado — `derivarRepasse().repassado` segue cravado em 0 porque o
+// agregado não conhece transferências. Consequência que a review antagonista
+// cobrou: o disponível derivado NÃO abate esse repasse, então o card declara a
+// estimativa quando há repasse vivo, e o CSV exporta a MESMA Σ que a tela
+// mostra (nunca dois números para a mesma linha).
 // =============================================================================
 
 import {
@@ -93,8 +98,14 @@ export function FinanceiroView({
     fin.receitaPorModalidade,
   );
 
+  // Σ de repasse EXIBIDA nesta tela (null = nenhum repasse associado). Uma só
+  // fonte para o card, para a nota do disponível e para o CSV — achado A-1 da
+  // review antagonista: o export não pode contradizer o número lido na tela.
+  const repasseExibido =
+    repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento : null;
+
   function exportar(): void {
-    baixarTexto(gerarCsvFinanceiro(fin), `financeiro-${slug}.csv`);
+    baixarTexto(gerarCsvFinanceiro(fin, repasseExibido), `financeiro-${slug}.csv`);
   }
 
   const columns: TableColumn<LinhaBreakdown>[] = [
@@ -137,22 +148,34 @@ export function FinanceiroView({
         <CardValor
           rotulo="Valor repassado"
           valor={
-            repasseLoading
-              ? '…'
-              : repasseDoEvento && repasseDoEvento.qtd > 0
-                ? formatBRL(repasseDoEvento.total)
-                : '—'
+            repasseLoading ? '…' : repasseExibido ? formatBRL(repasseExibido.total) : '—'
           }
           nota={
             repasseLoading
               ? 'Consultando os repasses deste evento'
-              : repasseDoEvento && repasseDoEvento.qtd > 0
-                ? `${repasseDoEvento.qtd} ${repasseDoEvento.qtd === 1 ? 'repasse solicitado' : 'repasses solicitados'} para este evento`
+              : repasseExibido
+                ? `${repasseExibido.qtd} ${repasseExibido.qtd === 1 ? 'repasse solicitado' : 'repasses solicitados'} para este evento`
                 : 'Nenhum repasse solicitado para este evento'
           }
           tom="primary"
         />
-        <CardValor rotulo="Valor disponível" valor={formatBRL(rep.disponivel)} tom="success" />
+        {/* Achado A-2 da review antagonista: `derivarRepasse` calcula o
+            disponível com `repassado = 0` (E09 ausente no agregado). Enquanto
+            o card ao lado mostrava R$ 0,00, os quatro números fechavam entre
+            si; com o repasse REAL do ledger ao lado (IAM-T7) eles deixaram de
+            fechar. A nota repõe a honestidade — mesma disciplina já ratificada
+            na visão macro, onde "disponível estimado" declara não abater os
+            repasses solicitados. Só aparece quando a incoerência é visível. */}
+        <CardValor
+          rotulo="Valor disponível"
+          valor={formatBRL(rep.disponivel)}
+          {...(repasseExibido
+            ? {
+                nota: 'Estimativa deste evento: não desconta os repasses já solicitados. O disponível oficial está em Eventos › Repasses.',
+              }
+            : {})}
+          tom="success"
+        />
         <CardValor
           rotulo="Valor a ser disponibilizado"
           valor={formatBRL(rep.aSerDisponibilizado)}

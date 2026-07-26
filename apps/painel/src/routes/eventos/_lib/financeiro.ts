@@ -88,19 +88,41 @@ export function breakdownFinanceiro(fin: FinanceiroEvento): LinhaBreakdown[] {
 }
 
 /**
+ * Σ dos repasses vivos associados a UM evento (shape estrutural de
+ * `RepassesAssociados`, tipado aqui para o `_lib` não passar a depender do
+ * módulo de repasses). `null`/`qtd === 0` = nenhum repasse associado.
+ */
+export interface RepasseDoEventoCsv {
+  qtd: number;
+  total: number;
+}
+
+/**
  * Gera o CSV das linhas exibidas: resumo (repasse do organizador) + breakdown.
  * SEM taxa/margem da plataforma (RN-404) — mesma visão dos cards: receita
  * total, valor repassado, disponível e a ser disponibilizado. Números crus
  * (machine-readable). As células passam pela sanitização partilhada
  * (`celulaCsv` · separador `,`): RFC 4180 + anti-injeção de fórmula — a
  * modalidade é texto livre público (mesma superfície de ataque do
- * inscritosCsv). @pure
+ * inscritosCsv).
+ *
+ * `repasseDoEvento` (achado A-1 da review antagonista da IA-MENU): a partir do
+ * IAM-T7 a Caixa exibe o repasse REAL daquele evento, lido do ledger, enquanto
+ * `derivarRepasse().repassado` segue cravado em 0 (E09 ausente no agregado).
+ * Sem este parâmetro o CSV exportado da MESMA tela contradiz o número que a
+ * pessoa acabou de ler. O export passa a receber a mesma Σ que a tela mostra —
+ * omitido, o comportamento anterior (0) é preservado. @pure
  */
-export function gerarCsvFinanceiro(fin: FinanceiroEvento): string {
+export function gerarCsvFinanceiro(
+  fin: FinanceiroEvento,
+  repasseDoEvento?: RepasseDoEventoCsv | null,
+): string {
   const rep = derivarRepasse(fin);
+  const repassado =
+    repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento.total : rep.repassado;
   const linhas: (string | number)[][] = [['Categoria', 'Item', 'Valor']];
   linhas.push(['Resumo', 'Receita total (R$)', rep.receitaTotal]);
-  linhas.push(['Resumo', 'Valor repassado (R$)', rep.repassado]);
+  linhas.push(['Resumo', 'Valor repassado (R$)', repassado]);
   linhas.push(['Resumo', 'Valor disponível (R$)', rep.disponivel]);
   linhas.push(['Resumo', 'Valor a ser disponibilizado (R$)', rep.aSerDisponibilizado]);
   linhas.push(['Inscritos', 'Total', fin.inscritos.total]);
