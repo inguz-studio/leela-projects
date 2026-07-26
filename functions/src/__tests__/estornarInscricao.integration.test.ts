@@ -55,6 +55,11 @@ const EVENTO_ID = 'meia-floripa-2026';
 // seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
 // devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
 // comparado a literal, so a ele mesmo.
+// ARMADILHA (S1209-PIXREV): o Vitest roda `beforeAll` de describe ANTES do
+// `beforeEach` de arquivo, entao dentro de um `beforeAll` este uid AINDA e o
+// do teste anterior. Fixture semeada em hook NAO pode ser referenciada por
+// este identificador nos testes — capture o comprador REAL no proprio hook
+// (ver `criarPedidoPago` neste arquivo).
 let ANA_UID = 'uid-ana-atleta';
 let seqCompradorPixbe = 0;
 beforeEach(() => {
@@ -123,7 +128,7 @@ async function criarPedidoPago(
   key: string,
   n: number,
   cupomCodigo?: string
-): Promise<CreateInscricaoChargeResult> {
+): Promise<CreateInscricaoChargeResult & { compradorUid: string }> {
   const input: CreateInscricaoChargeInput = {
     eventoId: EVENTO_ID,
     inscritos: Array.from({ length: n }, (_, i) => ({
@@ -142,7 +147,12 @@ async function criarPedidoPago(
   };
   const charge = await createInscricaoChargeCore(db, provider, input, { uid: ANA_UID });
   await confirmarPagamentoSandboxCore(db, provider, { pedidoId: charge.pedidoId }, { uid: ANA_UID });
-  return charge;
+  // S1209-PIXREV (review antagonista): devolve QUEM comprou junto do pedido.
+  // `ANA_UID` passou a mudar a cada `beforeEach`, e o Vitest roda o
+  // `beforeAll` de um describe ANTES desse `beforeEach` — então o comprador
+  // que semeou o fixture NÃO é o `ANA_UID` que os testes enxergam. Os testes
+  // que precisam do PRÓPRIO PAGADOR (e não de um atleta qualquer) leem daqui.
+  return { ...charge, compradorUid: ANA_UID };
 }
 
 async function receitaConfirmada(): Promise<number> {
@@ -345,19 +355,24 @@ describe('crash-recovery — ledger pendente (crash entre TX1 e refund)', () => 
 describe('guards do estorno — quem NÃO pode e o que NÃO estorna', () => {
   let pedidoId = '';
   let inscritoId = '';
+  /** Quem PAGOU este pedido (ver `criarPedidoPago` — S1209-PIXREV). */
+  let compradorUid = '';
 
   beforeAll(async () => {
     const charge = await criarPedidoPago('estorno-guards-0001', 1);
     pedidoId = charge.pedidoId;
     inscritoId = charge.inscritoIds[0]!;
+    compradorUid = charge.compradorUid;
   }, 60_000);
 
   const inputValido = () => ({ pedidoId, inscritoId, motivo: 'Teste de guard' });
 
   it('athlete NÃO estorna (permission-denied — RN-401)', async () => {
+    // O atleta aqui é o PRÓPRIO PAGADOR do pedido — a forma mais forte da
+    // regra: nem quem pagou pode se autoestornar (RN-401 é por PAPEL).
     await expect(
       estornarInscricaoCore(db, provider, inputValido(), {
-        uid: ANA_UID, claims: { role: 'athlete' } as AuthClaims,
+        uid: compradorUid, claims: { role: 'athlete' } as AuthClaims,
       })
     ).rejects.toThrow(/RN-401/);
   });
@@ -443,6 +458,8 @@ describe('Rules — status/campos de estorno são writer-only (Function)', () =>
   let pagamentoId = '';
   let confirmadoId = '';
   let estornadoId = '';
+  /** Quem PAGOU este pedido (ver `criarPedidoPago` — S1209-PIXREV). */
+  let compradorUid = '';
 
   beforeAll(async () => {
     const charge = await criarPedidoPago('estorno-rules-0001', 2);
@@ -450,6 +467,7 @@ describe('Rules — status/campos de estorno são writer-only (Function)', () =>
     pagamentoId = charge.pagamentoId;
     confirmadoId = charge.inscritoIds[0]!;
     estornadoId = charge.inscritoIds[1]!;
+    compradorUid = charge.compradorUid;
     await estornarInscricaoCore(db, provider, {
       pedidoId, inscritoId: estornadoId, motivo: 'Setup dos testes de Rules',
     }, organizador);
@@ -506,7 +524,11 @@ describe('Rules — status/campos de estorno são writer-only (Function)', () =>
   it('LEITURA do ledger: organizador dono lê a auditoria; athlete NÃO', async () => {
     const fsDono = dbAs(MARINA_UID, marinaClaims);
     await assertSucceeds(getDoc(ledgerDoc(fsDono, estornadoId)));
-    const fsAtleta = dbAs(ANA_UID, { role: 'athlete' });
+    // O athlete negado é o PRÓPRIO PAGADOR deste estorno — a forma forte da
+    // regra (a auditoria é do tenant, nem o comprador entra). Ler `ANA_UID`
+    // aqui negaria um atleta qualquer e deixaria passar quem viesse a abrir
+    // o ledger para o próprio pagador.
+    const fsAtleta = dbAs(compradorUid, { role: 'athlete' });
     await assertFails(getDoc(ledgerDoc(fsAtleta, estornadoId)));
   });
 

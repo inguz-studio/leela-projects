@@ -42,6 +42,11 @@ const EVENTO_ID = 'meia-floripa-2026';
 // seriam justamente a cobranca duplicada. Trocar o comprador a cada teste
 // devolve o cenario realista e NAO mexe em nenhuma asercao: o uid nunca e
 // comparado a literal, so a ele mesmo.
+// ARMADILHA (S1209-PIXREV): o Vitest roda `beforeAll` de describe ANTES do
+// `beforeEach` de arquivo, entao dentro de um `beforeAll` este uid AINDA e o
+// do teste anterior. Fixture semeada em hook NAO pode ser referenciada por
+// este identificador nos testes — capture o comprador REAL no proprio hook
+// (ver `criarPedidoPago` em estornarInscricao.integration.test.ts).
 let ANA_UID = 'uid-ana-atleta';
 let seqCompradorPixbe = 0;
 beforeEach(() => {
