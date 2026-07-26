@@ -17,6 +17,10 @@ const loginAnonimo = vi.fn();
 const cotarInscricaoCheckout = vi.fn();
 const createInscricaoCharge = vi.fn();
 const confirmarPagamentoSandbox = vi.fn();
+// S1209-T3: o flow passou a consultar o prefill do comprador conhecido
+// (RN-154/RN-174) assim que a sessão fica pronta. O mock ganhou a função —
+// nenhuma asserção deste arquivo foi tocada.
+const getCheckoutPrefill = vi.fn(async () => ({ prefill: null }));
 const ensureLeela = vi.fn();
 
 vi.mock('@leela/api-client', () => ({
@@ -24,6 +28,7 @@ vi.mock('@leela/api-client', () => ({
   cotarInscricaoCheckout: (...a: unknown[]) => cotarInscricaoCheckout(...a),
   createInscricaoCharge: (...a: unknown[]) => createInscricaoCharge(...a),
   confirmarPagamentoSandbox: (...a: unknown[]) => confirmarPagamentoSandbox(...a),
+  getCheckoutPrefill: (...a: unknown[]) => getCheckoutPrefill(...(a as [])),
 }));
 
 vi.mock('@/lib/leelaClient', () => ({

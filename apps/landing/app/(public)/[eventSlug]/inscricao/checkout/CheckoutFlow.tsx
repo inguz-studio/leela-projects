@@ -7,6 +7,7 @@ import {
   cotarInscricaoCheckout,
   createInscricaoCharge,
   confirmarPagamentoSandbox,
+  getCheckoutPrefill,
   loginAnonimo,
   type ConfirmarPagamentoSandboxResult,
   type CotarInscricaoCheckoutResult,
@@ -48,6 +49,7 @@ import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 import { CheckoutStepper } from './CheckoutStepper';
 import { LeelaWordmark } from './LeelaWordmark';
+import { mascaraCep, mascaraTelefone } from './cep';
 
 // Copy humana do erro de sessão (BC-2): o comprador NUNCA vê jargão de infra
 // ("Firebase Anonymous Auth", erro cru do SDK) — o detalhe técnico fica só no
@@ -254,6 +256,80 @@ export function CheckoutFlow({
     };
   }, [iniciarAuth]);
 
+  // ── Prefill do comprador conhecido (RN-154 · RN-174 · S1209-T3) ────────────
+  //
+  // O que a tela PODE fazer aqui é muito pouco, e isso é o desenho, não uma
+  // limitação: `getCheckoutPrefill` não aceita nenhum parâmetro. Não existe
+  // canal para perguntar "o que você sabe sobre ESTE CPF" — o servidor resolve
+  // pela pessoa VINCULADA à conta autenticada, e a RN-174 exige as três
+  // condições de posse (pagamento confirmado + e-mail da conta igual ao da
+  // compra + e-mail verificado). Sem isso a resposta é `prefill: null`.
+  //
+  // Consequência que esta lane NÃO pode afrouxar: `null` é indistinguível
+  // entre "CPF sem ficha", "CPF de terceiro" e "sessão anônima". A tela trata
+  // os três do mesmo jeito — formulário vazio, sem mensagem, sem estado
+  // diferente. Qualquer atalho de cliente (cache local da compra anterior,
+  // consulta disparada ao digitar o CPF) reabriria o oráculo de CPF que o
+  // CLAIM-FIX fechou. Por isso a chamada é UMA, no mount, sem input.
+  const prefillPedidoRef = useRef(false);
+  useEffect(() => {
+    if (!authPronto || prefillPedidoRef.current) return;
+    prefillPedidoRef.current = true;
+    getCheckoutPrefill()
+      .then((r) => {
+        if (!montadoRef.current || r.prefill === null) return;
+        const p = r.prefill;
+        // Prefill NUNCA sobrescreve o que a pessoa já digitou — só preenche
+        // campo vazio (a resposta chega depois do primeiro paint).
+        const manter = (atual: string, vindo: string): string =>
+          atual.trim().length > 0 ? atual : vindo;
+
+        setResponsavel((prev) => ({
+          nome: manter(prev.nome, p.nome),
+          // E-mail do pedido é escolha do comprador nesta compra — não vem do
+          // prefill (é ele que a RN-174 usa para casar a posse; preenchê-lo
+          // sozinho misturaria a chave com o dado).
+          email: prev.email,
+          telefone: manter(prev.telefone, mascaraTelefone(p.telefone)),
+        }));
+
+        setInscritos((prev) =>
+          prev.map((ins, i) =>
+            // Os dados são da PRÓPRIA pessoa: só cabem no 1º inscrito, e só
+            // quando ele é o comprador ("eu também vou correr").
+            i === 0 && euCorro
+              ? {
+                  ...ins,
+                  nome: manter(ins.nome, p.nome),
+                  cpf: manter(ins.cpf, p.cpf),
+                  nascimento: manter(ins.nascimento, p.nascimento),
+                  genero: ins.genero.length > 0 ? ins.genero : p.genero,
+                }
+              : ins,
+          ),
+        );
+
+        const end = p.endereco;
+        if (end !== undefined) {
+          setEndereco((prev) => ({
+            cep: manter(prev.cep, mascaraCep(end.cep)),
+            logradouro: manter(prev.logradouro, end.logradouro),
+            bairro: manter(prev.bairro, end.bairro),
+            cidade: manter(prev.cidade, end.cidade),
+            uf: manter(prev.uf, end.uf),
+            numero: manter(prev.numero, end.numero),
+            complemento: manter(prev.complemento, end.complemento ?? ''),
+          }));
+        }
+      })
+      .catch((err) => {
+        // Falha de prefill é INVISÍVEL: sem dado conhecido a tela é a mesma de
+        // quem nunca comprou. Nada de banner que revele o estado da ficha.
+        if (typeof console !== 'undefined')
+          console.error('[checkout] Prefill indisponível — seguindo com o formulário vazio.', err);
+      });
+  }, [authPronto, euCorro]);
+
   const parcelasEfetivas = forma === 'pix' ? 1 : parcelas;
   // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
   const selecaoSig = inscritos.map((i) => `${i.modalidade}:${i.kitId}`).join('|');
@@ -315,6 +391,15 @@ export function CheckoutFlow({
 
   const removeInscrito = useCallback((index: number) => {
     setInscritos((prev) => prev.filter((_, i) => i !== index));
+    // D-2 (S1209-T4): remover um atleta reindexa TODO mundo depois dele. As
+    // listas de erro são posicionais — sem encolher junto, o erro do atleta 3
+    // passaria a acusar o atleta 2, que não fez nada. Com o remover agora em
+    // duas etapas, esse deslocamento deixou de ser hipótese.
+    const semIndice = <T,>(prev: T[]): T[] => prev.filter((_, i) => i !== index);
+    setErrosInscritos(semIndice);
+    setErrosModalidade(semIndice);
+    setErrosKit(semIndice);
+    setErrosTamanhos(semIndice);
   }, []);
 
   // ── Cotação (read-only; consome computeSaleState no servidor) ──────────────
@@ -474,6 +559,10 @@ export function CheckoutFlow({
           // CKFORM §5.1 item 2: nascimento por atleta (yyyy-mm-dd do input
           // date — o servidor valida civil/passado e persiste no [reg]).
           ...(ins.nascimento.length > 0 ? { nascimento: ins.nascimento } : {}),
+          // RN-154: gênero por inscrito. Só sobe quando a pessoa RESPONDEU —
+          // '' (não escolheu) não vira 'nao_informado' no caminho, porque
+          // isso seria inventar uma declaração que ela não fez.
+          ...(ins.genero !== '' ? { genero: ins.genero } : {}),
           modalidade: ins.modalidade,
           kit: kitEnumFromId(ins.kitId),
           ...(ins.kitId.length > 0 ? { kitId: ins.kitId } : {}),
@@ -779,6 +868,7 @@ export function CheckoutFlow({
             onEuCorro={handleEuCorro}
             inscritos={inscritos}
             onInscrito={patchInscrito}
+            onRemoveInscrito={removeInscrito}
             endereco={endereco}
             onEndereco={patchEndereco}
             errosResponsavel={errosResponsavel}

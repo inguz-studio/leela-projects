@@ -4,6 +4,7 @@
 // =============================================================================
 
 import type { KitInscritoInput } from '@leela/api-client';
+import type { GeneroInscrito } from '@leela/core';
 import type { ItemTamanhadoPublico, KitPublico } from '@/lib/tipos';
 
 /** Dados de UM inscrito em edição no formulário. */
@@ -16,6 +17,15 @@ export interface InscritoForm {
    * de prova + demografia são do titular, ADR-011). '' = ainda não preenchido.
    */
   nascimento: string;
+  /**
+   * Gênero POR INSCRITO (CK2 · RN-154 · S1209-T3) — enum `GENEROS_INSCRITO`
+   * do core, IMPORTADO, nunca redeclarado (é o mesmo vocabulário do agregado
+   * demográfico RN-820/822). `''` = a pessoa ainda não escolheu e nada sobe
+   * no payload; `'nao_informado'` é escolha DELIBERADA de não declarar e sobe
+   * como valor legítimo. Os dois não podem ser confundidos: um é ausência de
+   * resposta, o outro é a resposta.
+   */
+  genero: GeneroInscrito | '';
   /** '' até a etapa Modalidade e kit. */
   modalidade: string;
   /**
@@ -87,8 +97,29 @@ export function itensTamanhadosDoKit(
 
 /** Inscrito em branco (sem modalidade nem kit escolhidos ainda). */
 export function inscritoVazio(): InscritoForm {
-  return { nome: '', email: '', cpf: '', nascimento: '', modalidade: '', kitId: '', tamanhos: {} };
+  return {
+    nome: '',
+    email: '',
+    cpf: '',
+    nascimento: '',
+    genero: '',
+    modalidade: '',
+    kitId: '',
+    tamanhos: {},
+  };
 }
+
+/**
+ * Rótulos pt-BR do gênero no FORMULÁRIO, na ordem canônica do core. A lista de
+ * VALORES é sempre `GENEROS_INSCRITO` — aqui só mora a copy da tela, que é de
+ * quem responde ("Prefiro não informar"), não a do relatório ("Não informado").
+ */
+export const GENERO_LABEL_FORM: Record<GeneroInscrito, string> = {
+  feminino: 'Feminino',
+  masculino: 'Masculino',
+  outro: 'Outro',
+  nao_informado: 'Prefiro não informar',
+};
 
 /**
  * Endereço do COMPRADOR em edição (CKFORM · spec §5.1 item 3): 1× por pedido,

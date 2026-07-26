@@ -6,11 +6,14 @@ import {
   ENDERECO_CAMPO_MAX,
   ENDERECO_LOGRADOURO_MAX,
   ENDERECO_NUMERO_MAX,
+  GENEROS_INSCRITO,
   UFS_BRASIL,
   normalizarCep,
+  type GeneroInscrito,
 } from '@leela/core';
 import { Checkbox, Field, Input, Select } from '@/app/_ds/ds';
-import type { EnderecoForm, InscritoForm } from './tipos';
+import { GENERO_LABEL_FORM, type EnderecoForm, type InscritoForm } from './tipos';
+import { CardAtleta } from './CardAtleta';
 import type { ErrosEndereco, ErrosInscrito, ErrosResponsavel } from './validacao';
 import { buscarEnderecoPorCep, mascaraCep, mascaraTelefone } from './cep';
 import { TituloEtapa, ApoioEtapa } from './tipografia';
@@ -225,6 +228,7 @@ export function StepDados({
   onEuCorro,
   inscritos,
   onInscrito,
+  onRemoveInscrito,
   endereco,
   onEndereco,
   errosResponsavel,
@@ -239,6 +243,8 @@ export function StepDados({
   onEuCorro: (v: boolean) => void;
   inscritos: InscritoForm[];
   onInscrito: (index: number, patch: Partial<InscritoForm>) => void;
+  /** D-2: remover atleta do pedido também daqui (opcional p/ consumidores antigos). */
+  onRemoveInscrito?: ((index: number) => void) | undefined;
   endereco: EnderecoForm;
   onEndereco: (patch: Partial<EnderecoForm>) => void;
   errosResponsavel: ErrosResponsavel;
@@ -315,16 +321,14 @@ export function StepDados({
           const erros = errosInscritos[i] ?? {};
           const ehVoce = euCorro && i === 0;
           return (
-            <div
+            <CardAtleta
               key={i}
-              className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
+              titulo={ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`}
+              // D-2: o mesmo card do step 0. Remover é seguro aqui; ADICIONAR
+              // não vive nesta etapa (o novo atleta nasceria sem modalidade).
+              podeRemover={!ehVoce && inscritos.length > 1 && onRemoveInscrito !== undefined}
+              onRemover={() => onRemoveInscrito?.(i)}
             >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-text-primary">
-                  {ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`}
-                </h3>
-              </div>
-
               {/* Vertical: campos empilhados em coluna única (sem grid). */}
               <div className="flex flex-col gap-4">
                 {ehVoce ? (
@@ -376,8 +380,29 @@ export function StepDados({
                     onChange={(e) => onInscrito(i, { nascimento: e.target.value })}
                   />
                 </Field>
+                {/* RN-154 (S1209-T3): gênero POR ATLETA, no vocabulário do
+                    core (GENEROS_INSCRITO — o mesmo da demografia RN-820/822;
+                    a lista NUNCA é redigitada aqui). Opcional: quem não
+                    escolhe nada não manda nada; quem escolhe "prefiro não
+                    informar" está RESPONDENDO, e essa resposta sobe. */}
+                <Field label="Gênero (opcional)" errorMessage="">
+                  <Select
+                    value={inscrito.genero}
+                    autoComplete={ehVoce ? 'sex' : `section-atleta${i + 1} sex`}
+                    options={[
+                      { label: 'Selecione', value: '' },
+                      ...GENEROS_INSCRITO.map((g) => ({
+                        label: GENERO_LABEL_FORM[g],
+                        value: g,
+                      })),
+                    ]}
+                    onChange={(e) =>
+                      onInscrito(i, { genero: e.target.value as GeneroInscrito | '' })
+                    }
+                  />
+                </Field>
               </div>
-            </div>
+            </CardAtleta>
           );
         })}
       </section>
