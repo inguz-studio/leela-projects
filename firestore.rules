@@ -2712,7 +2712,7 @@ service cloud.firestore {
     // contadores daria oráculo de janela ao atacante; escrever permitiria
     // zerar o próprio limite.
 
-    // ── `cobrancasPixAtivas/{uid__eventoId}` — trava de 2ª cobrança PIX ──
+    // ── `cobrancasPixAtivas/{uid__eventoId__hashCarrinho}` — trava PIX ───
     // (LEELA-S1209-PIXBE-T2 · RN-157). Sentinela de chave determinística que
     // dá às requisições concorrentes de cobrança um documento em comum para
     // o Firestore serializar — leitura/escrita EXCLUSIVAS de Function (Admin

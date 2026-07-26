@@ -17,7 +17,8 @@
 // clássico de phantom read. Duas requisições concorrentes com chaves de
 // idempotência distintas criam pedidos DIFERENTES, então não há um documento
 // em comum para o Firestore serializar, e as duas passariam. A sentinela
-// `cobrancasPixAtivas/{uid}__{eventoId}` é esse documento em comum: as duas
+// `cobrancasPixAtivas/{uid}__{eventoId}__{hash do carrinho}` é esse documento
+// em comum (o hash faz parte da chave — ver ESCOPO abaixo): as duas
 // transações LEEM a mesma chave determinística, o Firestore serializa o
 // conflito, a segunda relê e encontra a primeira. Custo: 1 doc read no
 // caminho feliz (contra query + índice composto, cujo phantom-locking eu não
