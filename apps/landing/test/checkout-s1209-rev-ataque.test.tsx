@@ -490,3 +490,80 @@ describe('S1209-REV · ataque 5 — o CPF do comprador no card de um terceiro', 
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// S1209-PIXREV · ATAQUE 6 — a tela abre a SEGUNDA cobrança sem o servidor ter
+// confirmado a morte da primeira.
+//
+// O fix `59f18ed` fechou o caminho ÓBVIO: o botão "gerar nova cobrança" exige
+// confirmação do servidor antes de recomeçar. Mas o estado `contestado` NÃO é
+// `expirado`, e o efeito que invalida a cobrança por mudança de preço zera
+// `charge` + `chaveRef` e devolve `pixEstado` para 'vivo'. Com isso o efeito de
+// auto-geração (guarda: `!pixExpirado`) recria a cobrança com chave NOVA.
+//
+// Por que isso é dinheiro: `contestado` é exatamente o estado em que o servidor
+// disse "não consegui encerrar a cobrança no gateway — ela CONTINUA válida"
+// (S1209-PIXBE-T3). A primeira segue pagável no banco do comprador.
+//
+// Este teste prova o lado da TELA (ela PEDE outra cobrança). O lado do
+// SERVIDOR — que a trava CONCEDE, porque solta só pelo relógio — está provado
+// em `functions/src/__tests__/pixArbitragem.ataque.integration.test.ts` (AT-5).
+// Juntos fecham o achado A1 da review S1209-PIXREV.
+// ---------------------------------------------------------------------------
+
+describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "contestado"', () => {
+  beforeEach(() => {
+    // Cobrança já vencida pelo relógio deste aparelho ⇒ o timer zera sozinho.
+    createInscricaoCharge.mockResolvedValue(chargePix(Date.now() - 60_000));
+    // O gateway RECUSOU o cancelamento: a cobrança CONTINUA válida (T3).
+    expirarPixPendente.mockRejectedValue(
+      erroCallable(
+        'functions/failed-precondition',
+        'Não foi possível encerrar a cobrança no provedor de pagamento — ela CONTINUA válida.',
+      ),
+    );
+  });
+
+  it('trocar a forma de pagamento e voltar ao PIX abre uma cobrança NOVA sobre a que segue viva', async () => {
+    await irAtePagamentoPix();
+    await waitFor(() => {
+      expect(expirarPixPendente).toHaveBeenCalledTimes(1);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // Estado `contestado`: a chave voltou para a tela, nada foi declarado morto.
+    expect(screen.queryByText(/código pix expirado/i)).toBeNull();
+    expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
+    const chave1 = (createInscricaoCharge.mock.calls[0]?.[0] as { idempotencyKey: string })
+      .idempotencyKey;
+
+    // A pessoa volta ao resumo e mexe na forma de pagamento — nada proibido.
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /voltar/i }).at(-1)!);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
+    });
+
+    // ⛔ O QUE ESTE TESTE FIXA (comportamento ATUAL, defeito A1): a tela pede
+    // uma cobrança NOVA, com chave de idempotência NOVA, sem que o servidor
+    // tenha confirmado o fim da primeira — que segue pagável no gateway.
+    await waitFor(() => {
+      expect(createInscricaoCharge).toHaveBeenCalledTimes(2);
+    });
+    const chave2 = (createInscricaoCharge.mock.calls[1]?.[0] as { idempotencyKey: string })
+      .idempotencyKey;
+    expect(chave2).not.toBe(chave1);
+    // E em nenhum momento o servidor confirmou o fim da primeira: TODAS as
+    // tentativas de encerrar foram recusadas pelo gateway, então a tela nunca
+    // chegou a declarar a cobrança expirada.
+    expect(screen.queryByText(/código pix expirado/i)).toBeNull();
+  });
+});

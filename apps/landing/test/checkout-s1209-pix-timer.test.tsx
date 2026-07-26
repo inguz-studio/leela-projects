@@ -326,7 +326,11 @@ describe('S1209-PIXBE-T5 · a contagem usa o relógio do servidor', () => {
   });
 
   it('aparelho ADIANTADO: a cobrança não morre antes da hora na tela', async () => {
-    // Aparelho 20 min à frente ⇒ desvio NEGATIVO. Restam 10 min reais.
+    // Aparelho 20 min à frente ⇒ desvio NEGATIVO. A cobrança acabou de
+    // nascer: restam 30 min REAIS. Sem o desvio, a tela mostraria 10:00 —
+    // subcontagem, não expiração (o caso que de fato MATA a cobrança na tela
+    // está no bloco S1209-PIXREV abaixo, com o aparelho adiantado além da
+    // janela inteira).
     renderPix({
       expiraEmMillis: T0 - 20 * 60 * 1000 + MEIA_HORA_MS,
       desvioRelogioMs: -20 * 60 * 1000,
@@ -359,5 +363,87 @@ describe('S1209-PIXBE-T5 · a contagem usa o relógio do servidor', () => {
       await vi.advanceTimersByTimeAsync(90_000);
     });
     expect(screen.getByTestId('pix-timer').textContent).toMatch(/28:30/);
+  });
+});
+
+// =============================================================================
+// S1209-PIXREV — review ANTAGONISTA do T5.
+//
+// O bloco acima prova o aparelho ATRASADO (mostra tempo A MAIS) e um aparelho
+// adiantado DENTRO da janela (mostra tempo a MENOS). Falta o caso que custa
+// dinheiro: aparelho adiantado ALÉM da janela inteira. Aí a tela antiga não
+// subcontava — ela DECLARAVA MORTA uma cobrança viva, escondia o QR e ainda
+// disparava `onExpirar` (que pede ao servidor para matar a cobrança) e o botão
+// de gerar OUTRA. É o caminho de duas cobranças vivas nascendo da tela.
+// =============================================================================
+
+describe('S1209-PIXREV · aparelho adiantado ALÉM da janela não mata a cobrança viva', () => {
+  const QUARENTA_CINCO_MIN_MS = 45 * 60 * 1000;
+
+  /** Cobrança nascida agora, com o aparelho 45 min à frente do servidor. */
+  const adiantado = {
+    expiraEmMillis: T0 - QUARENTA_CINCO_MIN_MS + MEIA_HORA_MS,
+    desvioRelogioMs: -QUARENTA_CINCO_MIN_MS,
+  };
+
+  it('COM o desvio: mostra os 30:00 reais, mantém o QR e NÃO pede a expiração ao servidor', async () => {
+    const onExpirar = vi.fn();
+    renderPix({ ...adiantado, onExpirar });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);
+    expect(screen.queryByText(/expirado/i)).toBeNull();
+    expect(screen.getByText('PIX-COPIA-E-COLA-PAYLOAD')).toBeTruthy();
+    // O ponto do dinheiro: sem o desvio a tela pediria ao servidor para matar
+    // uma cobrança que o comprador ainda pode pagar.
+    expect(onExpirar).not.toHaveBeenCalled();
+  });
+
+  it('SEM o desvio (a mentira antiga): a tela declara morta a MESMA cobrança viva e dispara onExpirar', async () => {
+    const onExpirar = vi.fn();
+    renderPix({ expiraEmMillis: adiantado.expiraEmMillis, onExpirar });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    // 00:00 sobre uma cobrança com 30 min de vida — e o QR some.
+    expect(screen.queryByText('PIX-COPIA-E-COLA-PAYLOAD')).toBeNull();
+    expect(onExpirar).toHaveBeenCalled();
+  });
+
+  it('desvio POSITIVO extremo: o piso é o fim da cobrança, não uma contagem negativa', async () => {
+    // Servidor 2h à FRENTE do aparelho ⇒ pelo relógio do servidor a cobrança
+    // já venceu. A tela tem de cair no estado de expirada — nunca exibir
+    // `-90:00` nem `NaN:NaN`.
+    renderPix({
+      expiraEmMillis: T0 + 30 * 60 * 1000,
+      desvioRelogioMs: 2 * 60 * 60 * 1000,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByTestId('pix-timer')).toBeNull();
+    expect(screen.getByText(/expirado/i)).toBeTruthy();
+    expect(document.body.textContent ?? '').not.toMatch(/NaN|-\d+:\d{2}/);
+  });
+
+  it('a contagem NUNCA vira negativa nem NaN varrendo desvios absurdos', async () => {
+    for (const desvio of [
+      -8 * 60 * 60 * 1000, 0, 8 * 60 * 60 * 1000, Number.MAX_SAFE_INTEGER,
+    ]) {
+      cleanup();
+      renderPix({ expiraEmMillis: T0 + MEIA_HORA_MS, desvioRelogioMs: desvio });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const corpo = document.body.textContent ?? '';
+      expect(corpo, `desvio=${desvio}`).not.toMatch(/NaN/);
+      expect(corpo, `desvio=${desvio}`).not.toMatch(/-\d+:\d{2}/);
+      const timer = screen.queryByTestId('pix-timer');
+      if (timer !== null) {
+        // Contagem viva: sempre `mm:ss` (ou `hhh:ss` com desvio absurdo).
+        expect(timer.textContent ?? '', `desvio=${desvio}`).toMatch(/\d+:\d{2}/);
+      }
+    }
   });
 });
