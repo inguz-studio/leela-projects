@@ -10,12 +10,12 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Button, PageHeader } from '@leela/design-system';
+import { useNavigate } from 'react-router-dom';
+import { Button, PageHeader, Skeleton } from '@leela/design-system';
 import type { DadosBancarios, Repasse, SaldoRepasse } from '@leela/core';
-import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { SaldoCards } from './_components/SaldoCards';
 import { RepassesPorEvento } from './_components/RepassesPorEvento';
-import { DadosBancariosSection } from './_components/DadosBancariosSection';
+import { PreRequisitoRecebimento } from './_components/PreRequisitoRecebimento';
 import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
 import { HistoricoRepasses } from './_components/HistoricoRepasses';
 import { RepasseErro } from './_components/RepasseErro';
@@ -36,14 +36,13 @@ export interface RepassesViewProps {
   porEventoError: Error | null;
   onRetryPorEvento: () => void;
 
-  // Dados bancários (T2)
+  // Dados de recebimento (RN-366 · IAM-T5): LEITURA apenas. O cadastro mudou
+  // de casa (Configurações › Dados de recebimento, `/conta`); aqui o dado só
+  // decide se o saque é possível e, quando falta, mostra o caminho até lá.
   dadosBancarios: DadosBancarios | null;
   dbLoading: boolean;
   dbError: Error | null;
   onRetryDb: () => void;
-  dbSaving: boolean;
-  dbSaveError?: string | undefined;
-  onSubmitDados: (input: SaveDadosBancariosInput) => Promise<boolean>;
 
   // Solicitar repasse (T3) — eventoId opcional (RN-349 · associação exata)
   solicitarRunning: boolean;
@@ -70,9 +69,6 @@ export function RepassesView({
   dbLoading,
   dbError,
   onRetryDb,
-  dbSaving,
-  dbSaveError,
-  onSubmitDados,
   solicitarRunning,
   onSolicitar,
   historico,
@@ -80,11 +76,21 @@ export function RepassesView({
   histError,
   onRetryHist,
 }: RepassesViewProps): JSX.Element {
+  const navigate = useNavigate();
   const [solicitarAberto, setSolicitarAberto] = React.useState(false);
 
   const disponivel = saldo?.disponivel ?? 0;
   // Só solicita com dados bancários cadastrados E saldo disponível > 0 (o
   // servidor reconfere — RN-352). Botão desabilitado é o estado honesto.
+  //
+  // RISCO #5 da rodada IA-MENU: até aqui esse pré-requisito era garantido por
+  // PROXIMIDADE — o formulário bancário ficava a dois centímetros do botão,
+  // então "tem dado salvo" era quase tautológico. Com o cadastro em
+  // Configurações a proximidade acabou, e a checagem passa a ser de propósito:
+  // sem dado, o botão não habilita, o modal não monta e a tela DIZ onde
+  // cadastrar. Nunca um modal de saque que o servidor vai recusar, na tela
+  // onde a pessoa tira dinheiro.
+  const semDadosDeRecebimento = !dbLoading && dbError === null && dadosBancarios === null;
   const podeSolicitar = dadosBancarios !== null && disponivel > 0;
 
   // RN-349 — associação exata repasse↔evento: agrupamento PURO do histórico
@@ -138,16 +144,22 @@ export function RepassesView({
           onRetry={onRetryPorEvento}
         />
 
-        {/* Dados bancários (T2) — resumo mascarado ↔ form (RN-354). */}
-        <DadosBancariosSection
-          dados={dadosBancarios}
-          loading={dbLoading}
-          error={dbError}
-          onRetry={onRetryDb}
-          saving={dbSaving}
-          saveError={dbSaveError}
-          onSubmit={onSubmitDados}
-        />
+        {/* Dados de recebimento (RN-366 · IAM-T5) — o cadastro mora em
+            Configurações; aqui só o pré-requisito do saque. Enquanto carrega,
+            skeleton: nunca anunciar "faltam dados" sobre um dado que ainda
+            está vindo. */}
+        {dbLoading ? (
+          <div role="status" aria-label="Carregando dados de recebimento">
+            <Skeleton variant="rect" className="h-24" />
+          </div>
+        ) : dbError ? (
+          <RepasseErro
+            message="Não foi possível verificar seus dados de recebimento."
+            onRetry={onRetryDb}
+          />
+        ) : semDadosDeRecebimento ? (
+          <PreRequisitoRecebimento onIrParaConfiguracoes={() => navigate('/conta')} />
+        ) : null}
 
         {/* Histórico (T4) — tabela densa + comprovante do pago (RN-355/356). */}
         <HistoricoRepasses

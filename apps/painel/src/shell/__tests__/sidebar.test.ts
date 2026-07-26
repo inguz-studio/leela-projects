@@ -21,6 +21,9 @@ describe('painelActiveId', () => {
     // E10 · S811 seed: o módulo Marcas ativa o item Marcas.
     ['/marcas', 'marcas'],
     ['/marcas/qualquer', 'marcas'],
+    // RN-233/RN-366: Configurações deixou de ser inerte e leva a `/conta`.
+    ['/conta', 'configuracoes'],
+    ['/conta/perfil-publico', 'configuracoes'],
     ['/health', null],
   ])('%s → %s', (pathname, esperado) => {
     expect(painelActiveId(pathname)).toBe(esperado);
@@ -74,9 +77,18 @@ describe('shellSidebarSections', () => {
     // E10 · S811 seed: Marcas agora leva ao módulo de patrocinadores reutilizáveis.
     items.find((i) => i.id === 'marcas')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/marcas');
-    // `configuracoes` ganha destino no IAM-T5 (Dados de recebimento em /conta);
-    // até lá segue inerte — estado honesto, sem onClick.
-    expect(items.find((i) => i.id === 'configuracoes')?.onClick).toBeUndefined();
+    // RN-233 sem exceção aberta: TODO item do menu tem destino. Configurações
+    // leva a `/conta`, onde vivem os Dados de recebimento (RN-366 · IAM-T5).
+    items.find((i) => i.id === 'configuracoes')?.onClick?.();
+    expect(navigate).toHaveBeenCalledWith('/conta');
+  });
+
+  it('RN-233: nenhum item de menu fica sem rota', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/', navigate).flatMap((s) => s.items);
+    for (const item of items) {
+      expect(item.onClick, `item "${item.id}" sem destino`).toBeDefined();
+    }
   });
 
   it('nav-badge de Eventos: contagem > 0 vira badge neutro (mockup)', () => {

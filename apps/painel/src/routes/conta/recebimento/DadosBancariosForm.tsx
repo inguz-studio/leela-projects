@@ -18,7 +18,7 @@ import {
   toSaveDadosBancariosInput,
   validarDadosBancarios,
   type DadosBancariosFormValues,
-} from '../_lib/dadosBancariosForm';
+} from '../../eventos/repasses/_lib/dadosBancariosForm';
 
 export interface DadosBancariosFormProps {
   /** Prefill dos campos não-sensíveis ao editar (banco/agência/tipo/titular). */

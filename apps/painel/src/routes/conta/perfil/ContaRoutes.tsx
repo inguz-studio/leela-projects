@@ -8,6 +8,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { ContaPage } from './ContaPage';
+import { RecebimentoSection } from '../recebimento/RecebimentoSection';
 import { PerfilPublicoEditorPage } from '../perfil-publico/PerfilPublicoEditorPage';
 import { NotFound } from '../../_system/NotFound';
 import { AppErrorBoundary } from '../../_system/AppErrorBoundary';
@@ -17,7 +18,10 @@ export function ContaRoutes(): JSX.Element {
     <ToastProvider>
       <AppErrorBoundary layout="shell">
         <Routes>
-          <Route index element={<ContaPage />} />
+          {/* RN-366 · IAM-T5: os Dados de recebimento entram por COMPOSIÇÃO.
+              A `ContaPage` segue sem dependência de react-query; quem carrega
+              o container de dados é a rota. */}
+          <Route index element={<ContaPage recebimento={<RecebimentoSection />} />} />
           {/* DN-1-T1 · editor de perfil público / link-in-bio do organizador */}
           <Route path="perfil-publico" element={<PerfilPublicoEditorPage />} />
           <Route path="*" element={<NotFound />} />

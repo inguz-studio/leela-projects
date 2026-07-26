@@ -1,9 +1,21 @@
 // =============================================================================
-// DadosBancariosSection — bloco "Dados bancários" do painel de repasse (T2).
-// Orquestra os dois modos: resumo MASCARADO (dado já salvo) ↔ form (cadastro/
-// edição). Após salvar, a tela mostra SÓ o mascarado (`****1234` / PIX/CPF
-// mascarados — RN-354); o número em claro nunca aparece. Presentational; o
-// estado `editando` é UI local (o dado e o save chegam por props do container).
+// DadosBancariosSection — bloco "Dados bancários" de **Configurações › Dados
+// de recebimento** (`/conta`). Orquestra os dois modos: resumo MASCARADO (dado
+// já salvo) ↔ form (cadastro/edição). Após salvar, a tela mostra SÓ o mascarado
+// (`****1234` / PIX/CPF mascarados — RN-354); o número em claro nunca aparece.
+// Presentational; o estado `editando` é UI local (o dado e o save chegam por
+// props do container).
+//
+// RN-366: dados bancários são do TITULAR, não da origem do dinheiro. Por isso
+// o cadastro é único e mora aqui, e não dentro de Repasses — quando o clube
+// pago existir e trouxer a segunda origem, não há dado de titular duplicado
+// para reconciliar. O saldo segue único (RN-334) e o saque acontece na origem.
+//
+// `RepasseErro` e `_lib/dadosBancariosForm` continuam vindo do módulo de
+// repasse: são COMPARTILHADOS (ComprovanteModal, SolicitarRepasseModal,
+// HistoricoRepasses e RepassesPorEvento também os usam). Mover o que é
+// compartilhado por causa de um consumidor criaria a cópia que esta rodada
+// existe para evitar.
 // =============================================================================
 
 import * as React from 'react';
@@ -11,8 +23,11 @@ import { Button, Skeleton } from '@leela/design-system';
 import type { DadosBancarios } from '@leela/core';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
 import { DadosBancariosForm } from './DadosBancariosForm';
-import { RepasseErro } from './RepasseErro';
-import { DADOS_BANCARIOS_INICIAIS, rotuloTipoConta } from '../_lib/dadosBancariosForm';
+import { RepasseErro } from '../../eventos/repasses/_components/RepasseErro';
+import {
+  DADOS_BANCARIOS_INICIAIS,
+  rotuloTipoConta,
+} from '../../eventos/repasses/_lib/dadosBancariosForm';
 
 export interface DadosBancariosSectionProps {
   dados: DadosBancarios | null;

@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@leela/design-system';
 import { ContaPage } from '../ContaPage';
 import { ContaRoutes } from '../ContaRoutes';
@@ -240,12 +241,18 @@ describe('ContaPage — sessão (logout)', () => {
 
 describe('ContaRoutes', () => {
   it('registra a rota /conta apontando para a ContaPage', async () => {
+    // IAM-T5: a rota passou a compor os Dados de recebimento (RN-366), que
+    // leem via react-query. O QueryClientProvider aqui é o mesmo que o
+    // App.tsx já fornece em produção — completa o harness, não afrouxa a
+    // asserção (que segue idêntica).
     render(
-      <MemoryRouter initialEntries={['/conta']}>
-        <Routes>
-          <Route path="/conta/*" element={<ContaRoutes />} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/conta']}>
+          <Routes>
+            <Route path="/conta/*" element={<ContaRoutes />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
     expect(await screen.findByRole('heading', { name: 'Sua conta' })).toBeInTheDocument();
   });

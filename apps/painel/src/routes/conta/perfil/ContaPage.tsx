@@ -19,6 +19,7 @@
 // são as storage.rules (ADR-016).
 // =============================================================================
 
+import * as React from 'react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, Button, FileInput, Input, useToast } from '@leela/design-system';
@@ -51,7 +52,19 @@ function urlDeImagemValida(valor: string): boolean {
   }
 }
 
-export function ContaPage(): JSX.Element {
+export interface ContaPageProps {
+  /**
+   * Slot de **Dados de recebimento** (RN-366 · IAM-T5). Chega por composição,
+   * do `ContaRoutes`, em vez de a página importar o container direto: os dados
+   * bancários são a ÚNICA parte de `/conta` que depende de react-query e de
+   * sessão de tenant, e embutir isso aqui acorrentaria a página inteira (nome,
+   * foto, senha, logout) a um QueryClient que ela não usa para mais nada.
+   * Mesma convenção dos slots `brand`/`footer` da Sidebar do DS.
+   */
+  recebimento?: React.ReactNode;
+}
+
+export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
   const { user, loading } = useContaUsuario();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -260,6 +273,22 @@ export function ContaPage(): JSX.Element {
           </Button>
         </div>
       </section>
+
+      {/* Dados de recebimento (RN-366 · IAM-T5) — cadastro ÚNICO do titular.
+          Mora aqui, e não dentro de Repasses, porque dado bancário é do
+          organizador e não da origem do dinheiro: quando o clube pago trouxer
+          a segunda origem, não há titular duplicado para reconciliar. O saque
+          continua acontecendo na origem, sobre o saldo único (RN-334). */}
+      {recebimento ? (
+        <section className={SECAO} aria-label="Dados de recebimento">
+          <span className={SECAO_TITULO}>Dados de recebimento</span>
+          <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+            A conta que recebe seus repasses. Vale para todos os seus eventos — você solicita o
+            repasse em Eventos › Repasses.
+          </p>
+          {recebimento}
+        </section>
+      ) : null}
 
       {/* Troca de senha (reauth obrigatória) */}
       <form className={SECAO} onSubmit={(e) => void trocarSenhaSubmit(e)} aria-label="Trocar senha">

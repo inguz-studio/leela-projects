@@ -31,7 +31,11 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   // E10 · S811 seed: o item Marcas leva ao módulo de patrocinadores
   // reutilizáveis (RN-171). Deixa de ser placeholder inerte.
   marcas: '/marcas',
-  configuracoes: undefined,
+  // RN-233/RN-366 (IAM-T5): `Configurações` deixa de ser inerte. Passa a
+  // hospedar os Dados de recebimento — cadastro único do titular — e por isso
+  // ganha destino. A regra "item de menu sem rota é proibido" nasce sem
+  // exceção aberta.
+  configuracoes: '/conta',
 };
 
 /** Ícone Lucide por item da nav de plataforma (nav do super-admin é própria —
@@ -58,6 +62,7 @@ export function painelActiveId(pathname: string): string | null {
   if (pathname.startsWith('/clubes')) return 'clubs';
   if (pathname.startsWith('/crm')) return 'crm';
   if (pathname.startsWith('/marcas')) return 'marcas';
+  if (pathname.startsWith('/conta')) return 'configuracoes';
   return null;
 }
 
