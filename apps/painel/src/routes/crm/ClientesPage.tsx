@@ -79,7 +79,9 @@ export function ClientesPage(): JSX.Element {
   const cols = useMemo(colunas, []);
 
   function abrirDetalhe(c: CrmCliente): void {
-    navigate(`/crm/${encodeURIComponent(c.clienteKey)}`);
+    // IAM-T3: a ficha desceu um nível (`/crm/clientes/:clienteKey`); a rota
+    // antiga segue funcionando pelo redirect da RN-234 (IAM-T6).
+    navigate(`/crm/clientes/${encodeURIComponent(c.clienteKey)}`);
   }
 
   const semTenant = session.status === 'authenticated' && tenantId === null;

@@ -52,7 +52,7 @@ export function ClienteDetailPage(): JSX.Element {
   );
 
   const voltar = (
-    <Button variant="secondary" onClick={() => navigate('/crm')}>
+    <Button variant="secondary" onClick={() => navigate('/crm/clientes')}>
       Voltar para Clientes
     </Button>
   );
