@@ -896,6 +896,16 @@ O Vitor reforçou o requisito: *"cada evento seu repasse, e deve ter o registro 
 
 **Efeito de UI que a execução não pode perder:** hoje o modal de saque só é montado quando há dados bancários salvos, porque o formulário está na mesma tela. Com o cadastro em Configurações, a proximidade acaba. A tela de Repasses continua exigindo o mesmo pré-requisito e, quando faltar, **mostra o caminho** em vez de abrir um modal que o servidor recusaria. A regra do servidor não muda; muda quem avisa.
 
+#### ⛔ PONTA SOLTA · P-IAMENU-2 (2026-07-26) — o "disponível" da Caixa não abate o repasse do evento
+
+Levantado pela **review antagonista da IA-MENU** (achados A-2/A-7) depois que a Caixa passou a ler o ledger.
+
+`derivarRepasse` (`apps/painel/src/routes/eventos/_lib/financeiro.ts`) calcula `disponivel = receitaTotal − retenção − repassado` com **`repassado` cravado em `0`**, e devolve `repasseIndisponivel: true`. Isso era coerente enquanto a Caixa exibia R$ 0,00: os quatro cards fechavam entre si. Com o repasse REAL do ledger ao lado, **deixaram de fechar** — a tela pode mostrar "repassado R$ 500" e "disponível" calculado como se nada tivesse saído.
+
+**Contornado, não resolvido.** O fix da lane de review (`6c5f719`) fez o card **declarar** a estimativa quando há repasse vivo — mesma disciplina que a visão macro já pratica na coluna "disponível estimado" (que também não abate o comprometido nem a janela D+N, e diz isso). E o CSV exportado dessa tela passou a levar a **mesma Σ** que a tela mostra, fechando um buraco pior: até então a planilha de conciliação dizia `0` enquanto a tela dizia o valor real.
+
+**O que fica em aberto, para dono:** (a) o `disponivel` por evento deveria abater os repasses vivos daquele evento, ou permanecer estimativa declarada? O número **autoritativo** é do servidor (RN-352, `saldo/current`), e recalcular no cliente é exatamente o que a RN-352 proíbe — então a resposta provável é "permanece estimativa", mas isso precisa ser dito. (b) `repasseIndisponivel` e o docblock de `derivarRepasse` seguem descrevendo o mundo pré-T7 e **não são mais lidos por ninguém** além do próprio teste unitário: reconciliar exige alterar uma asserção existente, o que a lane de review não faz sem dono.
+
 ### Reconciliação com a "Redefinição da aba Financeiro" (Vitor, 2026-07-13)
 
 Aquela decisão dizia: o item "Financeiro" do menu vira ANÁLISE (E11); o financeiro operacional fica na aba do evento; repasses ficam em Repasses. **A decisão de hoje é a continuação dela, e a completa:**

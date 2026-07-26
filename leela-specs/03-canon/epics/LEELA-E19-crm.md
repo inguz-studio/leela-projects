@@ -129,6 +129,20 @@ de minimização assumidas na implementação (registradas no handoff do trace):
 6. **P-E19-6 · Só quem comprou** = apenas inscrição confirmada/estornada entra no CRM; pendente/cancelada não constrói perfil.
 7. **P-CKMOD-1 (2026-07-19) · Endereço NUNCA entra no CRM** — o checkout novo (lote CHECKOUT-MODELO) passou a coletar endereço do comprador em `pedidos/{id}.endereco`; por minimização RN-172, a allowlist do doc de cliente **não ganha endereço** (nem cidade/UF derivadas dele). A agregação do CRM segue lendo INSCRITOS (nunca o pedido). Incluir endereço no CRM exige decisão explícita do Vitor registrada aqui.
 
+### ⛔ PONTA SOLTA · P-IAMENU-1 (2026-07-26) — o agregado e a ficha individual não têm audiências separadas
+
+Levantado pela **review antagonista da rodada IA-MENU** (lane IAMENU-REV, vetor 2), depois que as duas camadas passaram a dividir a mesma casca de menu — `CRM › Visão geral` (agregado sem identidade, RN-820/822, supressão k=5) e `CRM › Clientes` (identidade individual, RN-172).
+
+**O fato, medido:** as duas são liberadas pela **mesma regra**. `crmClientes` lê com `isTenantWriter(tenantId)` (`firestore.rules`) e a área `/crm` **não tem guarda de papel no roteador** — nunca teve, nem antes da rodada. Logo **quem enxerga o cohort agregado enxerga também a lista com nome e gênero por pessoa**.
+
+**A consequência que importa:** a supressão k=5 do cohort é **minimização de dado na superfície agregada**, e não controle de confidencialidade entre audiências. Ela protege contra reidentificação por quem só vê o gráfico — mas essa pessoa não existe hoje no modelo de permissão. Tratar o k=5 como separação de camadas é ler a garantia acima do que ela entrega.
+
+**Por que não foi resolvido na lane:** separar de fato exige um **papel/claim de TENANT**, que o painel não tem. O único modelo de papel é `PapelEvento` × `AreaEvento` (`packages/core/src/eventos/equipe.ts`) e ele só existe **dentro de um evento** — não há como consultá-lo numa rota de nível de tenant como `/crm`. É decisão de produto + backend, não de tela.
+
+**O que ficou no lugar:** gate executável em `apps/painel/src/routes/crm/__tests__/FronteiraPII.test.ts` (`3668d24`, 16 testes) — ele reprova por **adição**, fechando os quatro caminhos que borrariam a fronteira dentro do modelo atual: filtro demográfico na lista, drill-down do agregado para a ficha, filtro por querystring e export da base individual. O gate prova o que há; não inventa a separação que não existe.
+
+**Decisão pendente do Vitor:** o CRM precisa de audiências distintas (quem vê o agregado ≠ quem vê a ficha individual)? Se sim, isso vira papel de tenant + Rule própria + guarda de rota — e entra como RN nova neste épico. Se não, o k=5 deve ser redocumentado como minimização, não como fronteira.
+
 ### Confirmações da rodada DEC-0719 (Vitor, 2026-07-19, item 24)
 
 - **(a) Base legal LGPD — "pode relevar agora".** Segue sem bloqueio com o default de **legítimo interesse** (RN-172, P-E19-2), MAS com **nota explícita de REVISITAR antes do go-live**: a pendência de PII não é apagada, só teve a severidade rebaixada de bloqueadora para revisão pré-produção. O gate antagonista PII/LGPD do lote de UI (T3/T4) permanece obrigatório.

@@ -90,3 +90,69 @@ Dos 21: **2** são os pré-existentes da tabela de baseline; **19** são `Test t
 **A deleção de `routes/financeiro/` inteira foi movida da T4 para a T6.** A fila manda "quem chegar por último (T4) apaga `FinanceiroRoutes.tsx` e `_components/FinanceiroSubNav.tsx`". Executar isso na T4 quebraria o `tsc` — o `App.tsx` ainda monta `<Route path="/financeiro/*">` — e forçaria a T4 a escrever no `App.tsx`, que é território exclusivo da T6. Pior: `/financeiro` passaria a dar 404 numa janela entre T4 e T6, violando a RN-234 no meio do próprio lote que a implementa.
 
 Solução adotada: T2 e T4 repontam os imports do módulo legado para os endereços novos, então `/financeiro` e `/financeiro/repasses` **seguem servindo as telas certas** até a T6 substituí-los por redirects e apagar o diretório inteiro, num commit só. Resultado: deleção acontece uma vez (sem duplicação), nenhum arquivo órfão ao fim do lote (gate do lote preservado), nenhum commit intermediário vermelho e nenhuma janela de URL quebrada.
+
+---
+
+# Apêndice · review ANTAGONISTA ⚔ (lane IAMENU-REV, contexto fresco)
+
+**Veredito global: APROVADO-COM-FIXES.** Report completo: `outputs/leela-build-2d6ee98d/IAMENU-REV-REPORT.md`.
+
+O preview do Vitor (`:5273` / `:8180`) não foi tocado: nenhum reinício, nenhuma ressemeadura, nenhum navegador. Só a suíte de unit do painel rodou.
+
+## Veredito por vetor
+
+| # | Vetor | Veredito |
+|---|---|---|
+| 1 | Escopo do toque no DS (T1) | **RATIFICADO** — 5 arquivos, todos sob `Sidebar/`; zero token, zero primitivo, zero outro componente |
+| 2 | Fronteira de PII sem prova executável | **PROCEDENTE** — prova escrita; lacuna real **escalada** |
+| 3 | Dívida dos hooks de sessão + acoplamento `conta/`→`eventos/repasses/` | **PROCEDENTE e subdimensionada** — 5 cópias byte-idênticas, não 3; sem divergência, sem ciclo |
+| 4 | Asserção mudada no T7 | **CONFORME `00-decisao §6`** — mas o T7 deixou 2 defeitos reais ao lado |
+| 5 | Slot da `ContaPage` (T5) | **APROVADO** — composição correta; o modal não monta sem dado; a re-checagem ao voltar de `/conta` funciona por invalidação de chave compartilhada |
+| 6 | Redirects além da tabela (T6) | **REPROVADO e CORRIGIDO** — querystring e fragmento morriam no salto |
+| 7 | Navegação por papel | **SEM REGRESSÃO** — e a premissa não existe: o menu do painel nunca teve gate de papel (`podeAcessar` é matriz de evento) |
+
+## Achados
+
+| # | Sev. | Achado | Estado |
+|---|---|---|---|
+| A-1 | **ALTA** | O CSV da Caixa contradizia o número na tela: card com a Σ real do ledger, export com `derivarRepasse().repassado` cravado em 0 | CORRIGIDO `6c5f719` |
+| A-2 | MÉDIA | Os 4 cards da Caixa deixaram de fechar entre si (`disponivel` derivado com `repassado = 0`) e o hint honesto morreu sem substituto | CORRIGIDO `6c5f719` |
+| A-3 | MÉDIA | O redirect da RN-234 comia querystring e fragmento — atinge o `?preview=` do Vitor no F5 | CORRIGIDO `58c1b28` |
+| A-4 | MÉDIA | Fronteira de PII sem controle de audiência (uma só regra libera agregado e ficha individual) | PROVA `3668d24` + **ESCALADO** |
+| A-5 | MÉDIA | 5 cópias byte-idênticas de `resolverSessao`, não 3 | REGISTRADO — card |
+| A-6 | BAIXA | Dois padrões de gate para o mesmo destino `/eventos/repasses` (atalho da Caixa gated, aba do hub não) — sintoma de A-4 | REGISTRADO |
+| A-7 | BAIXA | `derivarRepasse().repasseIndisponivel` e docblock viraram letra morta pós-T7 | REGISTRADO |
+| A-8 | BAIXA | `showcase/IconsPage.tsx` ainda descreve 8 ícones — diagnóstico do produtor **confirmado** | REGISTRADO |
+| A-9 | INFO | `packages/design-system/dist/` é gitignored e é ele que o painel/preview executam. Dist local conferido: 6 ids novos, zero `analytics\|financeiro\|comunicacao`. **Preview subido antes do rebuild mostra o menu velho** — restart resolve, não é defeito | NOTA DE CONFERÊNCIA |
+| A-10 | BAIXA | Os 2 vermelhos de baseline seguem sem dono (`c6ab442` taxaflex, `a26036b` CONS-3-T1) | REGISTRADO |
+
+## Ratificações que exigiram medição, não leitura
+
+- **"17 arquivos de teste movidos com `| 0`"**: medido por `git show --numstat -M`. São **18** arquivos distintos, **todos `0 0`**. O produtor contou a menos. Os únicos testes com edição real (`ContaPage.test.tsx`, `sidebar.test.ts`) não são telas movidas, e o de `ContaPage` só ganhou o `QueryClientProvider` — asserção idêntica.
+- **"Nenhuma cópia nova de sessão nasceu"**: verdadeiro.
+- **"O modal não monta sem dado"**: verdadeiro — `{dadosBancarios !== null && <SolicitarRepasseModal …/>}`.
+- **"`routes/_system/` não aparece no diff do T7"**: verdadeiro — a matriz de papéis passou sem edição.
+- **Os 2 vermelhos de baseline**: reproduzidos **isolados**, não são flake. O item `taxa` entrou em `c6ab442`, e a lane não tocou a asserção de plataforma.
+- **O terceiro vermelho da minha primeira passada** (`EventoForm.test.tsx`) re-rodou isolado **15/15 verdes** — flake de carga, como o produtor descreveu. A passada final fechou com **zero timeout**.
+
+## Gates (literal)
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` · painel | **0** |
+| `eslint --max-warnings 0` · painel | **0** |
+| Suíte do painel, antes dos fixes | `1359 passed · 3 failed · 1362` |
+| Suíte do painel, **depois** dos fixes | **`1389 passed · 2 failed · 1391`** |
+| Vermelhos NOVOS | **0** |
+| Gate dos redirects (`routes/_system`) | **52/52** (ampliado de 44) |
+| Gate de fronteira de PII (`routes/crm`) | **90/90**, 16 novos |
+
+Nenhum teste existente foi enfraquecido: `gerarCsvFinanceiro` ganhou parâmetro **opcional** (omitido = comportamento anterior byte a byte) e o gate dos redirects foi **ampliado**, não reescrito.
+
+## Escalados ao Vitor / E19
+
+1. **A fronteira de PII do CRM não separa audiências.** `crmClientes` lê com `isTenantWriter(tenantId)` e `/crm` não tem guarda de papel no roteador — nunca teve. Quem vê o cohort agregado vê a ficha individual com nome e gênero. O k=5 é minimização na superfície agregada, **não** controle de confidencialidade. Separar exige papel/claim de tenant, que o painel não tem (o único modelo de papel é `PapelEvento`, e só existe dentro de um evento).
+2. **SessionProvider global** — 5 cópias, refactor transversal, precisa de dono e janela sem lanes concorrentes.
+3. **`derivarRepasse` precisa reconciliar contrato** com a realidade pós-T7 (mexe em asserção existente ⇒ não fiz).
+4. **Os 2 vermelhos de baseline precisam de dono** — enquanto existirem, "suíte inteira verde" é inalcançável para qualquer lote.
+5. **Card para o `IconsPage.tsx` do showcase.**
