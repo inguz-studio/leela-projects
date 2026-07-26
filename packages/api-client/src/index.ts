@@ -426,6 +426,13 @@ export {
   createInscricaoCharge,
   confirmarPagamentoSandbox,
   getCheckoutPrefill,
+  // RN-157 (CK2-T5 · S1209): expiração do PIX pelo relógio do SERVIDOR.
+  // S1209-PIXBE-T4: re-export da RAIZ — a ponte temporária por subpath
+  // (`@leela/api-client/checkout`, com `paths` no tsconfig e alias no
+  // vitest da landing) existia só porque este index estava em edição por
+  // outra lane no lote CK2. Com o re-export aqui, a dívida some: a landing
+  // importa tudo de um lugar só, como o resto do app.
+  expirarPixPendente,
 } from './checkout';
 export type {
   CotarItemInput,
@@ -443,6 +450,8 @@ export type {
   ConfirmarPagamentoSandboxInput,
   ConfirmarPagamentoSandboxResult,
   GetCheckoutPrefillResult,
+  ExpirarPixPendenteInput,
+  ExpirarPixPendenteResult,
 } from './checkout';
 
 // ---------------------------------------------------------------------------

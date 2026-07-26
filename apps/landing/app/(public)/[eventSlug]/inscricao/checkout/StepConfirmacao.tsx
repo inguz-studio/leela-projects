@@ -32,6 +32,7 @@ export function StepConfirmacao({
   forma,
   pixExpirado = false,
   pixVivoPeloServidor = false,
+  pixDesvioRelogioMs = 0,
   onPixExpirar,
   onNovaCobranca,
 }: {
@@ -47,6 +48,12 @@ export function StepConfirmacao({
   pixExpirado?: boolean;
   /** S1209-REV: o servidor RECUSOU a expiração — a cobrança segue viva. */
   pixVivoPeloServidor?: boolean;
+  /**
+   * S1209-PIXBE-T5: relógio do servidor − relógio do aparelho, medido na
+   * resposta da cobrança. Ancora a contagem no relógio que carimbou a
+   * expiração (achado #6 da review). 0 = comportamento vigente.
+   */
+  pixDesvioRelogioMs?: number;
   /** RN-157: o timer zerou — materializar a expiração no servidor. */
   onPixExpirar?: () => void;
   /** RN-157: recomeçar com uma cobrança NOVA. */
@@ -95,6 +102,7 @@ export function StepConfirmacao({
             expiraEmMillis={charge.pixExpiraEmMillis}
             expirado={pixExpirado}
             vivoPeloServidor={pixVivoPeloServidor}
+            desvioRelogioMs={pixDesvioRelogioMs}
             onExpirar={onPixExpirar}
             onNovaCobranca={onNovaCobranca}
           />

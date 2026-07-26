@@ -343,9 +343,14 @@ export interface ExpirarPixPendenteResult {
  * SERVIDOR confere o próprio relógio (chamar antes da hora ⇒
  * failed-precondition) e transiciona pendente → cancelado (pix_expirado).
  * O retry do comprador é NOVA cotação (novo pedido, idempotencyKey nova).
- * NOTA (CK2): o re-export raiz do pacote fica para o lote CHECKOUT2-FORM
- * (arquivo index.ts em edição por outra lane) — importar de
- * '@leela/api-client/src/checkout' ou adicionar o re-export na fiação da UI.
+ *
+ * S1209-PIXBE-T3 — o servidor agora cancela a cobrança NO GATEWAY antes de
+ * marcar o pedido: falha lá ⇒ `failed-precondition` e o pedido segue VIVO
+ * (a cobrança continua válida). A tela trata esse code como "contestado":
+ * devolve a chave ao comprador e NÃO abre uma segunda cobrança.
+ *
+ * Re-exportado pela RAIZ do pacote desde S1209-PIXBE-T4 (a ponte por
+ * subpath foi removida).
  */
 export async function expirarPixPendente(
   input: ExpirarPixPendenteInput

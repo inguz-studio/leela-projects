@@ -289,3 +289,75 @@ describe('S1209-T2 · tela do PEDIDO PENDENTE — o mesmo bloco vivo', () => {
     expect(screen.queryByText('PIX-COPIA-E-COLA-PAYLOAD')).toBeNull();
   });
 });
+
+// =============================================================================
+// S1209-PIXBE-T5 — a contagem parte do relógio do SERVIDOR (achado #6 da
+// review antagonista S1209-REV, que ficou ESCALADO por falta de dado).
+//
+// O carimbo `pixExpiraEmMillis` sempre foi do servidor; quem fazia a
+// subtração era o relógio do aparelho. Aparelho errado ⇒ contagem errada nos
+// dois sentidos, e nenhum clamp no cliente conserta isso sem inventar
+// relógio. Agora a resposta traz também o `agora` do servidor, e o desvio
+// entre os dois relógios entra na conta.
+// =============================================================================
+
+const QUARENTA_MIN_MS = 40 * 60 * 1000;
+
+describe('S1209-PIXBE-T5 · a contagem usa o relógio do servidor', () => {
+  it('aparelho 40 min ATRASADO: sem o desvio mostraria 70:00; com ele, os 30:00 reais', async () => {
+    // O aparelho acha que é T0 − 40min (fake timer em T0, expiração
+    // carimbada como se o servidor estivesse 40 min à frente).
+    renderPix({
+      expiraEmMillis: T0 + QUARENTA_MIN_MS + MEIA_HORA_MS,
+      desvioRelogioMs: QUARENTA_MIN_MS,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);
+  });
+
+  it('o MESMO caso sem o desvio prova a mentira antiga (70:00) — o dado é que conserta, não um clamp', async () => {
+    renderPix({ expiraEmMillis: T0 + QUARENTA_MIN_MS + MEIA_HORA_MS });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/70:00/);
+  });
+
+  it('aparelho ADIANTADO: a cobrança não morre antes da hora na tela', async () => {
+    // Aparelho 20 min à frente ⇒ desvio NEGATIVO. Restam 10 min reais.
+    renderPix({
+      expiraEmMillis: T0 - 20 * 60 * 1000 + MEIA_HORA_MS,
+      desvioRelogioMs: -20 * 60 * 1000,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);
+    expect(screen.queryByText(/código pix expirado/i)).toBeNull();
+  });
+
+  it('desvio ausente (servidor antigo) = comportamento vigente, sem quebrar a tela', async () => {
+    renderPix();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);
+  });
+
+  it('depois de ancorada, a contagem anda com o relógio local (o aparelho mede duração, não o ponto de partida)', async () => {
+    renderPix({
+      expiraEmMillis: T0 + QUARENTA_MIN_MS + MEIA_HORA_MS,
+      desvioRelogioMs: QUARENTA_MIN_MS,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000);
+    });
+    expect(screen.getByTestId('pix-timer').textContent).toMatch(/28:30/);
+  });
+});

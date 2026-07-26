@@ -61,8 +61,24 @@ export function formatarContagem(restanteMs: number): string {
  * Milissegundos restantes até `expiraEmMillis`. `null` = não há contagem
  * (sem carimbo do servidor, ou ainda no primeiro paint do cliente — o relógio
  * só entra depois da montagem, para não divergir do HTML do servidor).
+ *
+ * S1209-PIXBE-T5 (fecha o achado #6 da review): `desvioRelogioMs` é a
+ * diferença medida entre o relógio do SERVIDOR e o deste aparelho no
+ * instante da cobrança. `expiraEmMillis` sempre foi carimbado pelo servidor;
+ * o que faltava era o outro lado da subtração vir da MESMA fonte. Somando o
+ * desvio, a contagem passa a ser a duração real da janela: aparelho 40 min
+ * atrasado deixa de exibir 70:00 de uma cobrança de 30, e adiantado deixa de
+ * zerar um PIX que ainda vale.
+ *
+ * O `setInterval` continua no relógio local — de propósito. Depois de
+ * ancorada, a contagem só precisa MEDIR PASSAGEM DE TEMPO, e para isso o
+ * relógio do aparelho serve: quem estava errado era o ponto de partida, não
+ * o ritmo do segundo.
  */
-function useRestante(expiraEmMillis: number | undefined): number | null {
+function useRestante(
+  expiraEmMillis: number | undefined,
+  desvioRelogioMs: number
+): number | null {
   const [agora, setAgora] = useState<number | null>(null);
 
   useEffect(() => {
@@ -73,7 +89,7 @@ function useRestante(expiraEmMillis: number | undefined): number | null {
   }, [expiraEmMillis]);
 
   if (expiraEmMillis === undefined || agora === null) return null;
-  return Math.max(0, expiraEmMillis - agora);
+  return Math.max(0, expiraEmMillis - (agora + desvioRelogioMs));
 }
 
 /** QR escaneável do payload (falha de encode cai em silêncio — o texto serve). */
@@ -197,6 +213,7 @@ export function PixCobranca({
   onNovaCobranca,
   expirado: expiradoExterno = false,
   vivoPeloServidor = false,
+  desvioRelogioMs = 0,
   nota,
 }: {
   /** Payload copia-e-cola da cobrança. `''` = o provider não devolveu chave. */
@@ -216,10 +233,17 @@ export function PixCobranca({
    * chave e a contagem some (00:00 seria a mentira do relógio errado).
    */
   vivoPeloServidor?: boolean | undefined;
+  /**
+   * S1209-PIXBE-T5: relógio do SERVIDOR menos o relógio deste aparelho,
+   * medido no instante da cobrança (`servidorAgoraMillis` da resposta). É o
+   * que ancora a contagem no mesmo relógio que carimbou a expiração —
+   * default 0 = comportamento vigente (servidor antigo sem o campo).
+   */
+  desvioRelogioMs?: number | undefined;
   /** Nota de contexto abaixo do bloco (difere por tela). */
   nota?: React.ReactNode;
 }): React.JSX.Element {
-  const restante = useRestante(expiraEmMillis);
+  const restante = useRestante(expiraEmMillis, desvioRelogioMs);
   const expiradoPeloTimer = !vivoPeloServidor && restante !== null && restante <= 0;
   const expirado = expiradoExterno || expiradoPeloTimer;
 

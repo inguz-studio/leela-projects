@@ -7,16 +7,13 @@ import {
   cotarInscricaoCheckout,
   createInscricaoCharge,
   confirmarPagamentoSandbox,
+  expirarPixPendente,
   getCheckoutPrefill,
   loginAnonimo,
   type ConfirmarPagamentoSandboxResult,
   type CotarInscricaoCheckoutResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
-// RN-157: a expiração do PIX vive no subpath do api-client (a raiz ainda não
-// re-exporta — nota do lote CK2). O pacote não é território desta lane; a
-// landing só aponta o `paths` do tsconfig/vitest para o módulo.
-import { expirarPixPendente } from '@leela/api-client/checkout';
 import { Button, ToastProvider } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
@@ -215,6 +212,11 @@ export function CheckoutFlow({
   // é exatamente esse caso: a cobrança está VIVA e a tela tem de voltar a
   // mostrar a chave em vez de anunciar um fim que não aconteceu (e oferecer
   // uma segunda cobrança sobre uma primeira ainda cobrável).
+  // S1209-PIXBE-T5: quanto o relógio do SERVIDOR está à frente do relógio
+  // deste aparelho (ms), medido no instante da cobrança. A contagem do PIX
+  // parte daqui — o aparelho só marca a passagem do tempo, não o ponto de
+  // partida. 0 enquanto não há cobrança (ou com servidor antigo).
+  const [desvioRelogioMs, setDesvioRelogioMs] = useState(0);
   const [pixEstado, setPixEstado] = useState<'vivo' | 'expirado' | 'contestado'>('vivo');
   const pixExpirado = pixEstado === 'expirado';
   const pixContestado = pixEstado === 'contestado';
@@ -580,6 +582,12 @@ export function CheckoutFlow({
     if (chaveRef.current === undefined) chaveRef.current = novaChaveIdempotencia();
     setCriandoCharge(true);
     setErroCharge(null);
+    // S1209-PIXBE-T5: marca do relógio LOCAL antes da chamada. O servidor
+    // devolve o `agora` DELE; a diferença entre os dois é o desvio deste
+    // aparelho, e é ele que ancora a contagem do PIX (achado #6). Medir
+    // ANTES e não depois é deliberado: a latência entra a favor da segurança
+    // (a tela nunca mostra MAIS tempo do que a cobrança tem).
+    const antesDaChamada = Date.now();
     try {
       const data = await createInscricaoCharge({
         eventoId: evento.slug,
@@ -638,6 +646,13 @@ export function CheckoutFlow({
         })(),
         idempotencyKey: chaveRef.current,
       });
+      // Servidor antigo (sem o campo) ⇒ desvio 0: a contagem cai no
+      // comportamento vigente em vez de quebrar a tela do dinheiro.
+      setDesvioRelogioMs(
+        typeof data.servidorAgoraMillis === 'number'
+          ? data.servidorAgoraMillis - antesDaChamada
+          : 0,
+      );
       setCharge(data);
       return data;
     } catch (err) {
@@ -1018,6 +1033,7 @@ export function CheckoutFlow({
             onAceiteSaude={setAceiteSaude}
             pixExpirado={pixExpirado}
             pixVivoPeloServidor={pixContestado}
+            pixDesvioRelogioMs={desvioRelogioMs}
             onPixExpirar={aoExpirarPix}
             onNovaCobranca={novaCobrancaPix}
           />
@@ -1034,6 +1050,7 @@ export function CheckoutFlow({
             forma={forma}
             pixExpirado={pixExpirado}
             pixVivoPeloServidor={pixContestado}
+            pixDesvioRelogioMs={desvioRelogioMs}
             onPixExpirar={aoExpirarPix}
             onNovaCobranca={novaCobrancaPix}
           />

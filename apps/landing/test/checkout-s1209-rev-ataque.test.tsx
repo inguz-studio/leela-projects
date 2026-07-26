@@ -27,15 +27,14 @@ const getCheckoutPrefill = vi.fn();
 const expirarPixPendente = vi.fn();
 const ensureLeela = vi.fn();
 
+// S1209-PIXBE-T4: `expirarPixPendente` passou a ser re-exportado pela RAIZ do
+// api-client (a ponte por subpath foi removida) — um mock só, como o resto.
 vi.mock('@leela/api-client', () => ({
   loginAnonimo: (...a: unknown[]) => loginAnonimo(...a),
   cotarInscricaoCheckout: (...a: unknown[]) => cotarInscricaoCheckout(...a),
   createInscricaoCharge: (...a: unknown[]) => createInscricaoCharge(...a),
   confirmarPagamentoSandbox: (...a: unknown[]) => confirmarPagamentoSandbox(...a),
   getCheckoutPrefill: (...a: unknown[]) => getCheckoutPrefill(...a),
-}));
-
-vi.mock('@leela/api-client/checkout', () => ({
   expirarPixPendente: (...a: unknown[]) => expirarPixPendente(...a),
 }));
 
