@@ -304,6 +304,54 @@ describe('gate de navegação SPA — nenhuma superfície recarrega o documento'
 });
 
 // ---------------------------------------------------------------------------
+// LEELA-NAVFIX-REV — o menu lateral era a metade ESPELHADA do defeito e é a
+// superfície mais usada do painel. As duas pontas do conserto ficavam provadas
+// só por composição: a tabela de dublê no construtor puro (shell/sidebar.ts) e
+// a presença do `href` no DOM, em testes diferentes. Aqui elas se encontram no
+// mesmo elemento renderizado.
+// ---------------------------------------------------------------------------
+
+describe('menu lateral do produtor — as duas pontas no mesmo elemento', () => {
+  function itemDoMenu(rotulo: string): HTMLElement {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <RootShell>
+          <Sonda />
+        </RootShell>
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    return within(nav).getByRole('link', { name: new RegExp(rotulo) });
+  }
+
+  it('clique simples: cancela o default E troca a rota sem recarregar', () => {
+    const item = itemDoMenu('Eventos');
+    expect(item).toHaveAttribute('href', '/eventos');
+    const evento = clicarNoDom(item);
+    expect(evento.defaultPrevented).toBe(true);
+    // Igualdade exata, não `toHaveTextContent`: substring deixaria "/" passar
+    // por "/eventos" e a asserção ficaria decorativa.
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/eventos');
+  });
+
+  it.each([
+    ['ctrl+clique', { ctrlKey: true }],
+    ['cmd+clique', { metaKey: true }],
+    ['shift+clique', { shiftKey: true }],
+    ['clique do meio', { button: 1 }],
+  ])('%s: nada interceptado — o href é quem abre a aba/janela nova', (_nome, init) => {
+    // Nota de leitura do log: o jsdom emite "Not implemented: navigation" aqui.
+    // É esperado e é a PROVA de que o default sobreviveu ao handler — num
+    // navegador de verdade é este o ponto em que a aba nova abre.
+    const item = itemDoMenu('Eventos');
+    const evento = clicarNoDom(item, init);
+    expect(evento.defaultPrevented).toBe(false);
+    // A rota da SPA não mudou: quem abre em outro lugar é o navegador, não nós.
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // A outra metade do padrão: as duas SubNavs nascidas na rodada IA-MENU navegam
 // por `onClick` SEM `href`. Nunca recarregaram o documento — não são o defeito
 // desta lane. Mas também não são links: sem ctrl+clique, sem clique do meio,
