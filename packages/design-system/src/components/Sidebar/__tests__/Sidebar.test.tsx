@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CalendarDays, LayoutDashboard, Settings } from 'lucide-react';
@@ -80,6 +81,62 @@ describe('Sidebar', () => {
     ];
     render(<Sidebar sections={sectionsWithHref} />);
     expect(screen.getByRole('link', { name: 'Eventos' })).toHaveAttribute('href', '/eventos');
+  });
+
+  // -------------------------------------------------------------------------
+  // LEELA-NAVFIX-T1 — o defeito ESPELHADO da SubNav: aqui o menu navegava por
+  // onClick mas não era link. `href` + `onClick` juntos é o estado correto —
+  // âncora de verdade, e o consumidor intercepta o clique simples pra navegar
+  // por SPA.
+  // -------------------------------------------------------------------------
+
+  it('href + onClick: item é âncora de verdade E encaminha o MouseEvent', async () => {
+    const recebido: unknown[] = [];
+    const sectionsSpa: SidebarSection[] = [
+      {
+        label: 'OPERAÇÃO',
+        items: [
+          {
+            id: 'eventos',
+            label: 'Eventos',
+            icon: sidebarNavIcon(CalendarDays),
+            href: '/eventos',
+            onClick: (event) => {
+              recebido.push(event);
+              event.preventDefault();
+            },
+          },
+        ],
+      },
+    ];
+    render(<Sidebar sections={sectionsSpa} />);
+    const link = screen.getByRole('link', { name: 'Eventos' });
+    await userEvent.click(link);
+
+    expect(recebido).toHaveLength(1);
+    const event = recebido[0] as React.MouseEvent;
+    expect(typeof event.preventDefault).toBe('function');
+    expect(event.defaultPrevented).toBe(true);
+    // O href sobrevive ao onClick: é ele que devolve ctrl+clique, clique do
+    // meio e "copiar endereço do link" ao menu.
+    expect(link).toHaveAttribute('href', '/eventos');
+  });
+
+  it('sem href, o botão também encaminha o MouseEvent', async () => {
+    const recebido: unknown[] = [];
+    render(
+      <Sidebar
+        sections={[
+          {
+            label: 'OPERAÇÃO',
+            items: [{ id: 'crm', label: 'CRM', icon: null, onClick: (event) => recebido.push(event) }],
+          },
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'CRM' }));
+    expect(recebido).toHaveLength(1);
+    expect(typeof (recebido[0] as React.MouseEvent).preventDefault).toBe('function');
   });
 
   it('DEFAULT_SIDEBAR_SECTIONS has 6 items total (RN-233 · rodada IA-MENU)', () => {

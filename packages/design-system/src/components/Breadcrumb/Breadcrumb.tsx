@@ -5,8 +5,8 @@
  * li, item atual = span[aria-current="page"], separador aria-hidden entre itens)
  * restilizada ao brasa. Diff vs stock (esteira shadcn→brasa):
  *   - API pública PRESERVADA: o consumidor passa `items: BreadcrumbItem[]`
- *     ({label, href?}); a composição stock (Breadcrumb/List/Item/Link/Page/
- *     Separator) fica encapsulada aqui dentro — as telas do painel não mudam;
+ *     ({label, href?, onClick?}); a composição stock (Breadcrumb/List/Item/Link/
+ *     Page/Separator) fica encapsulada aqui dentro — as telas do painel não mudam;
  *   - separador textual "/" (aria-hidden), não o ChevronRight do lucide: lucide
  *     só entra no DS no Lote B (evita dep prematura);
  *   - cores por alias: item atual `text-foreground` (= text-primary), separador
@@ -18,6 +18,7 @@
  * último item (não clicável). §2.16 flat.
  */
 
+import type * as React from 'react';
 import { cn } from '../../utils/cn';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,18 @@ import { cn } from '../../utils/cn';
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+  /**
+   * Recebe o evento — em `href` + `onClick`, permite `preventDefault()` (nav
+   * SPA). Mesmo contrato do `CardEvento`/`SubNav`/`Sidebar`.
+   *
+   * Só tem efeito no item que RENDERIZA como link: o último item é a página
+   * atual (`aria-current="page"`, nunca clicável) e um item intermediário sem
+   * `href` é texto. Passar `onClick` nesses dois casos é inerte de propósito —
+   * o breadcrumb não inventa alvo de clique onde não existe destino.
+   *
+   * Alargamento ADITIVO: o campo é opcional e nenhum consumidor existente muda.
+   */
+  onClick?: (event: React.MouseEvent) => void;
 }
 
 export interface BreadcrumbProps {
@@ -77,6 +90,7 @@ function Breadcrumb({ items, className }: BreadcrumbProps): JSX.Element {
               ) : (
                 <a
                   href={item.href}
+                  {...(item.onClick ? { onClick: item.onClick } : {})}
                   className={cn(
                     'text-[length:var(--font-size-sm)]',
                     'text-[var(--text-secondary)]',
