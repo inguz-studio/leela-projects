@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-26 tarde — 3 decisões novas da rodada PIX-ARBITRAGEM (S1209-PIXBE/PIXREV), a 25 é a que importa; de manhã, DEC-0726: Asaas adiado, Brevo prometida, defaults ratificados**).
+> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-26 tarde, rodada DEC-0726B — item 25 RATIFICADO (opção b) e item 26 RESOLVIDO com regra NOVA: carrinho tem 15 min para concluir, senão cancela; carrinhos abandonados mapeados na fase 2. Resta aberto o 27 (go-live)**).
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md` + seção Ratificadas no fim.
 > **Nada abaixo bloqueia código**: tudo roda com default defensável em vigor. Ratificar = confirmar o default; mudar = eu ajusto no próximo lote.
 > 📄 Versão longa e argumentada (porquê, caso sim, caso não, recomendação por JTBD/story): [[DECISOES-EM-ABERTO]].
@@ -32,8 +32,8 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **pe
 
 Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva e cancela no gateway antes de expirar; a review antagonista provou 48 ataques e deixou 3 decisões (reports `S1209-PIXBE-REPORT.md` + `S1209-PIXREV-REPORT.md`).
 
-25. **⚠️ A QUE IMPORTA · O que é "cobrança viva" quando o gateway RECUSA cancelar?** Hoje, se o gateway recusa o cancelamento e os 30 min passam, a trava solta **pelo relógio** — e uma 2ª cobrança pode nascer com a 1ª ainda pagável (provado por teste no servidor e na tela; achado A1, severidade ALTA). As duas saídas trocam riscos: **(a)** segurar a trava até o gateway confirmar o cancelamento — nunca há 2 cobranças, mas o comprador pode ficar travado sem conseguir comprar; **(b)** antes de criar a cobrança nova, cancelar a antiga no gateway DENTRO do fluxo de criação — reusa a disciplina gateway-primeiro do T3 e só nega venda no exato caso em que o gateway recusa o cancelamento (negativa honesta). **Recomendação da engenharia = (b).** É dinheiro: quando você decidir, vira lote com rota opus + review antagonista. **Default em vigor até lá = o comportamento atual (solta pelo relógio)** — aceitável em sandbox/Mock, NÃO aceitável para produção com dado real (entra como bloqueador de go-live).
-26. **Limite de cobranças PIX vivas por comprador?** A trava é por (comprador, evento, carrinho) — carrinhos diferentes abrem cobranças livremente: a review provou 5 vivas simultâneas do mesmo comprador, sem teto. Não é fraude óbvia (cada uma é uma compra distinta), mas é superfície de abuso. Pergunta aberta, sem urgência: cravar um teto (ex.: 3 vivas por comprador/evento)? Default em vigor = sem teto.
+25. **✅ RATIFICADO (Vitor, 2026-07-26, rodada DEC-0726B): opção (b).** Antes de criar cobrança nova, a antiga é cancelada no gateway DENTRO do fluxo de criação (disciplina gateway-primeiro do T3); negativa honesta só quando o gateway recusa o cancelamento. Vira o lote de código **`PIX-CARRINHO`** (dinheiro ⇒ opus + review antagonista), card no kanban. Até o lote aterrissar, o comportamento atual (solta pelo relógio) segue como transitório — e continua **bloqueador de go-live** com dado real.
+26. **✅ RESOLVIDO (Vitor, 2026-07-26, rodada DEC-0726B) — não com teto, com PRAZO DO CARRINHO (regra NOVA, RN a numerar):** *"não existem carrinhos simultâneos: o checkout tem timer de 15 minutos a partir da abertura para concluir a compra; não concluiu, cancelamos."* A regra NÃO existia na spec (verificado 2026-07-26 — os "15 minutos" existentes eram outro contexto) — nasce agora e entra no MESMO lote `PIX-CARRINHO`. Ponto a cravar na spec do lote: a composição dos dois relógios (15 min do carrinho até concluir × 30 min de validade do PIX já cobrado, RN-157). **Fase 2 (lastro novo do Vitor):** mapear **carrinhos abandonados** para visibilidade — promove a ideia registrada no E06 §gatilhos (abandono de checkout) de "sem lastro" para backlog com dono.
 27. **Pagamento retardatário (premissa CK2-4, agora delimitada).** Pagamento que entra APÓS o cancelamento cai num ledger durável (`ignorado_estado_final`) — o dinheiro saiu do comprador e fica registrado, mas nada ALERTA. Opções quando você quiser fechar: estorno automático × fila de reconciliação × ressuscitar a inscrição. Qualquer uma exige antes um **contador/alerta sobre o ledger** (recomendação da review — senão a reconciliação nasce sem gatilho). Sem urgência com Mock ativo; entra no pacote de go-live.
 
 **Checklist pré-deploy (novo item):** validar o `DELETE /payments/{id}` do Asaas em sandbox antes de qualquer deploy que dependa do cancelamento — o modo de falha está provado seguro (fail-closed, 11 shapes divergentes + 9 HTTP), mas o shape veio da doc, não de conta real.
@@ -64,6 +64,14 @@ Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva
 - Logos: entregues e aplicadas (sidebar, landing). · Homepage/catálogo: no ar (E12). · Checkout sandbox: no ar, marco "vender ponta a ponta" fechado. · D3 middle-action "Comunicar": aplicado (`c555e93`). · Divergências do cupom brief×kernel: reconciliadas no épico E04 (kernel é a autoridade). · S300-T6 PercursoModal: superseded por ADR-012.
 
 ## ✅ Ratificadas recentemente (referência rápida)
+
+### 🟢 Rodada DEC-0726B (Vitor, 2026-07-26 tarde) — arbitragem do PIX
+
+Verbatim integral: *"25 - ok. 26 - nao existem carrinhos simultaneos, para isso temos o timer de 15 minutos ao momento de abertura do checkout, para conclusao de compra, nao concluiu? cancelamo. preisamos mapear os carrinhos abandonados também, para ter visibilidade depois (fase 2)."*
+
+- **Item 25 · opção (b) ratificada** — cancelar a cobrança antiga no gateway dentro do fluxo de criação da nova; negativa honesta só quando o gateway recusa cancelar.
+- **Item 26 · morre o teto, nasce o PRAZO DO CARRINHO (RN a numerar):** checkout tem **15 minutos da abertura para concluir**; não concluiu → cancela. Fase 2: **visibilidade de carrinhos abandonados** (promove a ideia do E06 §gatilhos de "sem lastro" a backlog).
+- Ambos viram o lote **`PIX-CARRINHO`** (dinheiro ⇒ opus + review antagonista), na fila após a IA-MENU (serial, L-009).
 
 ### 🟢 Rodada DEC-0726 (Vitor, 2026-07-26) — retomada pós-pausa
 
