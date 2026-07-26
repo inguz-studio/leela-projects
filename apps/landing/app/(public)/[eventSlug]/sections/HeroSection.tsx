@@ -46,7 +46,7 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
       <div aria-hidden className="absolute inset-0 -z-10">
         {/* Via CoverImage: se a capa REAL do organizador falhar em runtime, cai
             no gradiente de tokens (nunca `<img>` quebrado atrás do overlay). */}
-        <CoverImage src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
+        <CoverImage src={capa} alt="" className="h-full w-full scale-110 object-cover blur-2xl opacity-50" />
         {/* Escurecimento base — garante contraste AA do texto sobre a imagem */}
         <div className="absolute inset-0 bg-surface-base/80" />
         {/* Reforço lateral no lado do texto (esquerda) */}
