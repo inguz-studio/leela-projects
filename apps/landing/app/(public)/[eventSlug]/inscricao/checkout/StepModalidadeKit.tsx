@@ -8,6 +8,7 @@ import { formatarPreco } from '@/lib/formato';
 import type { ItemTamanhadoPublico, KitPublico } from '@/lib/tipos';
 import { itensTamanhadosDoKit, kitsDaModalidade, type InscritoForm } from './tipos';
 import { KitDetalhe } from './KitDetalhe';
+import { CupomCampo, type CupomCampoProps } from './CupomCampo';
 import { TituloEtapa, ApoioEtapa } from './tipografia';
 
 /** Rótulo do delta do kit (RN-211: negativo = desconto; 0 = incluso). */
@@ -119,6 +120,7 @@ export function StepModalidadeKit({
   errosKit,
   errosTamanhos,
   taxaRepassada,
+  cupom,
 }: {
   modalidades: { nome: string; precoVigente: number | null }[];
   kits: KitPublico[];
@@ -135,6 +137,13 @@ export function StepModalidadeKit({
   errosTamanhos: Record<string, string>[];
   /** RN-347 (leitor · CKFORM-T4): `true` = evento repassa a taxa ao comprador. */
   taxaRepassada: boolean;
+  /**
+   * D-4 (S1209-T1): o campo de cupom aparece JÁ NO INÍCIO do fluxo. É o MESMO
+   * componente do Resumo — o step 0 só recebe as props; a lógica (cotar com o
+   * código, auto-apply do link, remover) segue única no CheckoutFlow.
+   * `undefined` = step 0 sem cupom (usado nos testes de outras frentes).
+   */
+  cupom?: CupomCampoProps;
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-6">
@@ -155,6 +164,11 @@ export function StepModalidadeKit({
           </p>
         ) : null}
       </div>
+
+      {/* D-4 · cupom LOGO NO COMEÇO (paridade com a referência): quem chega com
+          um código não precisa atravessar o fluxo inteiro para saber se ele
+          cola. A validação é do SERVIDOR (cotação) — aqui não se calcula nada. */}
+      {cupom ? <CupomCampo {...cupom} /> : null}
 
       {inscritos.map((inscrito, i) => {
         const ehVoce = euCorro && i === 0;

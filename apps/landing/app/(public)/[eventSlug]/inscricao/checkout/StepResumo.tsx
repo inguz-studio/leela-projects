@@ -1,9 +1,11 @@
 'use client';
 
-import { Button, Input, Radio, RadioGroup, Select } from '@/app/_ds/ds';
+import { Button, Select } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CotarInscricaoCheckoutResult } from '@leela/api-client';
 import type { FormaUI } from './tipos';
+import { CupomCampo } from './CupomCampo';
+import { SeletorForma } from './SeletorForma';
 
 /** Uma linha do resumo (metadados do inscrito — o preço vem da cotação). */
 export interface LinhaResumo {
@@ -104,57 +106,30 @@ export function StepResumo({
         </ul>
       </section>
 
-      {/* Cupom */}
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-text-primary">Cupom de desconto</h2>
-        {cupomAtivo ? (
-          <div className="flex items-center justify-between gap-3 rounded-ds-md border border-border-subtle bg-feedback-success-surface px-4 py-3">
-            <p className="text-sm font-medium text-feedback-success-fg">
-              Cupom {cupomAtivo.codigo} aplicado
-              {cotacao && cotacao.desconto > 0 ? ` — menos ${formatarPreco(cotacao.desconto)}` : ''}
-            </p>
-            <Button variant="ghost" size="sm" onClick={onRemoverCupom}>
-              Remover
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <Input
-                aria-label="Código do cupom"
-                value={cupomInput}
-                placeholder="Ex.: HEROI10"
-                onChange={(e) => onCupomInput(e.target.value.toUpperCase())}
-              />
-            </div>
-            <Button
-              variant="secondary"
-              onClick={onAplicarCupom}
-              disabled={aplicandoCupom || cupomInput.trim().length === 0}
-            >
-              {aplicandoCupom ? 'Aplicando…' : 'Aplicar'}
-            </Button>
-          </div>
-        )}
-        {erroCupomUrl && !cupomAtivo ? (
-          <p role="alert" className="text-sm text-feedback-warning-fg">
-            {erroCupomUrl}
-          </p>
-        ) : null}
-      </section>
+      {/* Cupom — MESMO componente do step 0 (D-4): a pessoa confere aqui o que
+          já aplicou lá, ou aplica agora. Lógica única no CheckoutFlow. */}
+      <CupomCampo
+        valor={cupomInput}
+        onValor={onCupomInput}
+        onAplicar={onAplicarCupom}
+        onRemover={onRemoverCupom}
+        aplicando={aplicandoCupom}
+        codigoAplicado={cupomAtivo?.codigo ?? null}
+        descontoLabel={
+          cotacao && cotacao.desconto > 0 ? `menos ${formatarPreco(cotacao.desconto)}` : ''
+        }
+        erro={erroCupomUrl}
+        bloqueio={null}
+      />
 
-      {/* Forma de pagamento */}
+      {/* Forma de pagamento — D-5: BOTÕES (RadioCard do DS), sem toggle. */}
       <section className="flex flex-col gap-3">
-        <RadioGroup
-          name="forma-pagamento"
-          label="Forma de pagamento"
-          value={forma}
-          onValueChange={(v) => onForma(v as FormaUI)}
-          orientation="horizontal"
-        >
-          <Radio value="pix" label={labelPix} />
-          <Radio value="cartao_credito" label={labelCartao} />
-        </RadioGroup>
+        <SeletorForma
+          forma={forma}
+          onForma={onForma}
+          labelPix={labelPix}
+          labelCartao={labelCartao}
+        />
 
         {forma === 'cartao_credito' && cotacao ? (
           <div className="max-w-xs">

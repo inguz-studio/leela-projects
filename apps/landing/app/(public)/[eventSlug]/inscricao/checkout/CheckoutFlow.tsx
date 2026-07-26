@@ -36,6 +36,7 @@ import {
   type ErrosInscrito,
   type ErrosResponsavel,
 } from './validacao';
+import type { CupomCampoProps } from './CupomCampo';
 import { StepDados } from './StepDados';
 import { StepModalidadeKit } from './StepModalidadeKit';
 import { StepResumo, type LinhaResumo } from './StepResumo';
@@ -163,6 +164,10 @@ export function CheckoutFlow({
   // o cupom do link; `erroCupomUrl` é o banner honesto quando ele não cola.
   const [cupomUrlPendente, setCupomUrlPendente] = useState<boolean>(Boolean(atribuicao.cupom));
   const [erroCupomUrl, setErroCupomUrl] = useState<string | null>(null);
+  // D-4 (S1209-T1): o cupom agora é aplicável já no step 0, longe do bloco de
+  // totais. A recusa do cupom deixa de se disfarçar de "erro de cotação" (que
+  // significa "não consegui calcular o total") e ganha canal próprio.
+  const [erroCupom, setErroCupom] = useState<string | null>(null);
 
   // CKFORM §5.3 — os DOIS aceites do pagar (termos da compra + termo de
   // saúde). Gateiam Gerar PIX/Pagar; entram no input do createInscricaoCharge
@@ -244,6 +249,9 @@ export function CheckoutFlow({
   const selecaoSig = inscritos.map((i) => `${i.modalidade}:${i.kitId}`).join('|');
   const todasModalidades = inscritos.every((i) => i.modalidade.length > 0);
   const precisaCotar = step >= 2;
+  // Cotar exige sessão pronta + modalidade de TODO mundo (o servidor precifica
+  // o item para dizer se o cupom cola). É o gate do "Aplicar" do step 0 (D-4).
+  const podeCotar = authPronto && todasModalidades;
 
   // ── Sincronização do 1º inscrito com o responsável quando "eu vou correr" ──
   const patchInscrito = useCallback((index: number, patch: Partial<InscritoForm>) => {
@@ -327,7 +335,7 @@ export function CheckoutFlow({
   // Enquanto o cupom da URL ainda não resolveu (A-2), o efeito de auto-aplicação
   // faz a 1ª cotação — este espera para não disparar duas cotações concorrentes.
   useEffect(() => {
-    if (!precisaCotar || !authPronto || !todasModalidades || cupomUrlPendente) return;
+    if (!precisaCotar || !podeCotar || cupomUrlPendente) return;
     let vivo = true;
     setCotando(true);
     cotarCom(cupomAplicado).then((r) => {
@@ -344,14 +352,19 @@ export function CheckoutFlow({
     return () => {
       vivo = false;
     };
-  }, [precisaCotar, authPronto, cupomAplicado, forma, parcelasEfetivas, selecaoSig, todasModalidades, cupomUrlPendente, recotarNonce, cotarCom]);
+  }, [precisaCotar, podeCotar, cupomAplicado, forma, parcelasEfetivas, selecaoSig, cupomUrlPendente, recotarNonce, cotarCom]);
 
   // A-2 · auto-aplica o cupom vindo da URL. Na 1ª cotação possível, tenta o
   // cupom do link: sucesso ⇒ vira `cupomAplicado` (o efeito acima recota e
   // exibe o desconto); falha ⇒ banner honesto e segue sem cupom (o servidor
   // revalida tudo — risco zero de preço no cliente). Roda no máximo 1×.
+  //
+  // D-4 (S1209-T1): o gate `precisaCotar` saiu — o cupom do link resolve assim
+  // que houver modalidade, AINDA NO STEP 0, que é onde o campo passou a viver.
+  // O sucesso já grava a cotação (antes só levantava `cupomAplicado` e deixava
+  // o efeito de cima assumir, o que no step 0 travaria o "Calculando…").
   useEffect(() => {
-    if (!cupomUrlPendente || !precisaCotar || !authPronto || !todasModalidades) return;
+    if (!cupomUrlPendente || !podeCotar) return;
     const codigo = (atribuicao.cupom ?? '').trim().toUpperCase();
     if (codigo.length === 0) {
       setCupomUrlPendente(false);
@@ -361,11 +374,13 @@ export function CheckoutFlow({
     setCotando(true);
     cotarCom(codigo).then((r) => {
       if (!vivo) return;
+      setCotando(false);
       if (r.ok) {
         setCupomAplicado(codigo);
+        setCotacao(r.data);
+        setErroCotacao(null);
         setErroCupomUrl(null);
       } else {
-        setCotando(false);
         setErroCupomUrl(`O cupom ${codigo} não pôde ser aplicado (${r.error})`);
       }
       setCupomUrlPendente(false);
@@ -373,7 +388,7 @@ export function CheckoutFlow({
     return () => {
       vivo = false;
     };
-  }, [cupomUrlPendente, precisaCotar, authPronto, todasModalidades, atribuicao.cupom, cotarCom]);
+  }, [cupomUrlPendente, podeCotar, atribuicao.cupom, cotarCom]);
 
   // Qualquer mudança de preço invalida a cobrança já criada (evita replay com
   // valores antigos — a UI reflete sempre a seleção atual).
@@ -388,7 +403,11 @@ export function CheckoutFlow({
   const aplicarCupom = useCallback(async () => {
     const code = cupomInput.trim().toUpperCase();
     if (code.length === 0) return;
+    // Guarda de estado: sem sessão/modalidade não há cotação para validar o
+    // código — a UI já desabilita o botão; aqui é defesa em profundidade.
+    if (!podeCotar) return;
     setErroCupomUrl(null);
+    setErroCupom(null);
     setAplicandoCupom(true);
     const r = await cotarCom(code);
     setAplicandoCupom(false);
@@ -397,12 +416,15 @@ export function CheckoutFlow({
       setCotacao(r.data);
       setErroCotacao(null);
     } else {
-      setErroCotacao(r.error);
+      // Cupom recusado ≠ cotação quebrada: a mensagem fica no campo do cupom
+      // (D-4: o campo vive no step 0, onde não existe bloco de totais).
+      setErroCupom(`O cupom ${code} não pôde ser aplicado (${r.error})`);
     }
-  }, [cupomInput, cotarCom]);
+  }, [cupomInput, podeCotar, cotarCom]);
 
   const removerCupom = useCallback(() => {
     setErroCupomUrl(null);
+    setErroCupom(null);
     setCupomAplicado(null);
     setCupomInput('');
   }, []);
@@ -623,6 +645,27 @@ export function CheckoutFlow({
     [inscritos, euCorro, evento.kits],
   );
 
+  // D-4 · props do campo de cupom do STEP 0 (mesma peça do Resumo). O bloqueio
+  // é honesto: sem modalidade não há item para o servidor precificar, então o
+  // "Aplicar" fica desabilitado com a razão à vista — nunca um "aplicado" falso.
+  const propsCupomStep0: CupomCampoProps = {
+    valor: cupomInput,
+    onValor: setCupomInput,
+    onAplicar: () => void aplicarCupom(),
+    onRemover: removerCupom,
+    aplicando: aplicandoCupom,
+    codigoAplicado: cotacao?.cupomAplicado?.codigo ?? null,
+    descontoLabel:
+      cotacao && cotacao.desconto > 0 ? `menos ${formatarPreco(cotacao.desconto)}` : '',
+    erro: erroCupom ?? erroCupomUrl,
+    bloqueio: !todasModalidades
+      ? 'Escolha a modalidade de cada atleta para validar o cupom.'
+      : !authPronto
+        ? 'Preparando sua sessão — o cupom pode ser aplicado em instantes.'
+        : null,
+    apoio: 'Tem um código? Aplique agora — o desconto entra no total do resumo.',
+  };
+
   const mostraNav = step <= 2;
 
   return (
@@ -671,6 +714,7 @@ export function CheckoutFlow({
             errosKit={errosKit}
             errosTamanhos={errosTamanhos}
             taxaRepassada={evento.taxaRepassada}
+            cupom={propsCupomStep0}
           />
         ) : null}
 
@@ -704,7 +748,7 @@ export function CheckoutFlow({
             onAplicarCupom={aplicarCupom}
             onRemoverCupom={removerCupom}
             aplicandoCupom={aplicandoCupom}
-            erroCupomUrl={erroCupomUrl}
+            erroCupomUrl={erroCupom ?? erroCupomUrl}
             forma={forma}
             onForma={setForma}
             parcelas={parcelas}

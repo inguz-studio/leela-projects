@@ -1,0 +1,64 @@
+'use client';
+
+import { CreditCard, QrCode } from 'lucide-react';
+import { RadioCard, RadioGroup } from '@/app/_ds/ds';
+import type { FormaUI } from './tipos';
+
+// =============================================================================
+// SeletorForma — escolha da forma de pagamento (S1209-T1 · decisão D-5).
+//
+// Verbatim do Vitor: "pix e cartao na etapa de pagamento, mas em botões, sem
+// toggle." O controle é o `RadioCard` do DS (shadcn-first §8): cartão clicável
+// de decisão — ícone, título e apoio — que LÊ como botão e é, por baixo, um
+// `<input type="radio">` nativo. Isso entrega o que a decisão pede (botão, não
+// toggle) sem inventar peça fora do DS e sem perder navegação por seta, foco
+// de teclado e o role de fábrica (design-principles: escolha única exclusiva
+// entre 2 opções que valem ser comparadas = radio/segmented, nunca switch).
+//
+// O TÍTULO é o rótulo vindo do consumidor (S1210 · RN-180: quando a taxa é
+// repassada e os totais DIFEREM por meio, o total de cada opção entra no
+// rótulo). O nome acessível de cada opção segue sendo exatamente esse rótulo —
+// o ícone é aria-hidden e a descrição vai por aria-describedby.
+// =============================================================================
+
+export function SeletorForma({
+  forma,
+  onForma,
+  labelPix,
+  labelCartao,
+  disabled = false,
+}: {
+  forma: FormaUI;
+  onForma: (f: FormaUI) => void;
+  /** Rótulo do PIX (com o total da opção quando os totais diferem — S1210). */
+  labelPix: string;
+  /** Rótulo do cartão (idem). */
+  labelCartao: string;
+  disabled?: boolean;
+}): React.JSX.Element {
+  return (
+    <RadioGroup
+      name="forma-pagamento"
+      label="Forma de pagamento"
+      value={forma}
+      onValueChange={(v) => onForma(v as FormaUI)}
+      orientation="horizontal"
+      disabled={disabled}
+    >
+      <RadioCard
+        value="pix"
+        title={labelPix}
+        description="Aprovação na hora. O código vale por 30 minutos."
+        icon={<QrCode size={20} strokeWidth={2} />}
+        className="flex-1 basis-full sm:basis-0"
+      />
+      <RadioCard
+        value="cartao_credito"
+        title={labelCartao}
+        description="À vista ou parcelado, com aprovação imediata."
+        icon={<CreditCard size={20} strokeWidth={2} />}
+        className="flex-1 basis-full sm:basis-0"
+      />
+    </RadioGroup>
+  );
+}
