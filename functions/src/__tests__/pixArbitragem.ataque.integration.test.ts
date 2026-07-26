@@ -57,7 +57,11 @@ import {
   docIdTravaPix,
   impressaoDoCarrinho,
 } from '../checkout/travaCobrancaPix';
-import { MOTIVO_PIX_PENDENTE_ATIVO, type PaymentProvider } from '@leela/core';
+import {
+  MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO,
+  MOTIVO_PIX_PENDENTE_ATIVO,
+  type PaymentProvider,
+} from '@leela/core';
 
 const PROJECT_ID = 'demo-leela';
 const hasEmulator = Boolean(process.env['FIRESTORE_EMULATOR_HOST']);
@@ -418,18 +422,24 @@ describe.skipIf(!hasEmulator)('S1209-PIXREV — ataque à arbitragem server-side
   // AT-5 · ⛔ O FURO: T3 falha no gateway + prazo vence ⇒ T2 solta
   // ==========================================================================
 
-  it('AT-5 · ⛔ cancelamento no gateway FALHOU + prazo vencido ⇒ NASCE a segunda cobrança com a primeira AINDA PAGÁVEL', async () => {
+  // ⚠️ ESTE TESTE MUDOU DE LADO EM PIX-CARRINHO-T1. Ele nasceu PROVANDO o
+  // defeito A1 (as duas cobranças pagáveis ao mesmo tempo); o item 25 da
+  // rodada DEC-0726B ratificou a opção (b) e o mesmo roteiro de ataque agora
+  // tem de terminar em UMA cobrança. A sequência de passos é a MESMA, letra
+  // por letra — só o desfecho esperado inverteu.
+  it('AT-5 · [T1] cancelamento no gateway FALHOU + prazo vencido ⇒ a segunda é NEGADA e a primeira segue única', async () => {
     const t0 = T0();
     const uid = 'uid-at5';
     const primeira = await criar(uid, 'at5-01', t0);
     const depoisDoPrazo = new Date(t0.getTime() + MEIA_HORA_MS + 1000);
+    const semGateway = gatewayQueNaoCancela(provider);
 
     // 1) O timer zera e a plataforma tenta matar a cobrança. O gateway
     //    recusa/está fora ⇒ FAIL-SAFE do T3: o pedido segue VIVO, e a
-    //    cobrança segue PAGÁVEL no gateway. Até aqui, correto.
+    //    cobrança segue PAGÁVEL no gateway. Até aqui, correto (inalterado).
     await expect(
       expirarPixPendenteCore(
-        db, gatewayQueNaoCancela(provider), { pedidoId: primeira.pedidoId },
+        db, semGateway, { pedidoId: primeira.pedidoId },
         { uid }, relogio(depoisDoPrazo)
       )
     ).rejects.toThrow(/CONTINUA válida/);
@@ -439,19 +449,31 @@ describe.skipIf(!hasEmulator)('S1209-PIXREV — ataque à arbitragem server-side
     // Não cancelada no gateway = ainda pagável pelo banco do comprador.
     expect(provider.getCharge(primeira.chargeId)?.status).not.toBe('cancelled');
 
-    // 2) O comprador pede outra cobrança do MESMO carrinho. A trava lê a
-    //    sentinela, vê `pixExpiraEm` no passado e SOLTA — porque "vivo" para
-    //    ela é só "prazo no futuro", enquanto para o T3 "morto" é "o gateway
-    //    confirmou". As duas lanes discordam sobre o que é uma cobrança viva.
-    const segunda = await criar(uid, 'at5-02', depoisDoPrazo);
-    expect(segunda.pedidoId).not.toBe(primeira.pedidoId);
+    // 2) O comprador pede outra cobrança do MESMO carrinho, com o gateway
+    //    AINDA fora. A trava não solta mais pelo relógio: o pré-voo do T1
+    //    tenta encerrar a anterior, o gateway recusa de novo, e a criação é
+    //    NEGADA com motivo tipado próprio — negativa honesta.
+    await expect(
+      createInscricaoChargeCore(
+        db, semGateway, inputPix('at5-02'), { uid, ehAnonimo: true },
+        relogio(depoisDoPrazo)
+      )
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { motivo: MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO },
+    });
 
-    // 3) O resultado é o defeito que T2 existe para impedir: DUAS cobranças
-    //    PAGÁVEIS no gateway, do mesmo comprador, para o mesmo carrinho.
-    //    Pagar as duas cobra duas vezes.
+    // 3) O desfecho que o A1 não tinha: UMA cobrança, UM pedido pendente.
     expect(provider.getCharge(primeira.chargeId)?.status).not.toBe('cancelled');
+    expect(await pedidosPendentes(uid)).toBe(1);
+
+    // 4) E não é denial of purchase: com o gateway de volta, a MESMA tentativa
+    //    encerra a anterior e a nova nasce — sem tela nova, sem intervenção.
+    const segunda = await criar(uid, 'at5-03', depoisDoPrazo);
+    expect(segunda.pedidoId).not.toBe(primeira.pedidoId);
+    expect(provider.getCharge(primeira.chargeId)?.status).toBe('cancelled');
     expect(provider.getCharge(segunda.chargeId)?.status).not.toBe('cancelled');
-    expect(await pedidosPendentes(uid)).toBe(2);
+    expect(await pedidosPendentes(uid)).toBe(1);
   }, 60_000);
 
   // ==========================================================================

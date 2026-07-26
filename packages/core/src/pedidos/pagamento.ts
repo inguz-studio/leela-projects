@@ -90,6 +90,23 @@ export const PIX_EXPIRACAO_SEGUNDOS = 30 * 60;
 export const MOTIVO_PIX_PENDENTE_ATIVO = 'pix_pendente_ativo';
 
 /**
+ * Motivo TIPADO da recusa quando a cobrança PIX ANTERIOR já passou do prazo
+ * mas o gateway não confirmou a morte dela (PIX-CARRINHO-T1 · item 25 da
+ * rodada DEC-0726B · RN-157).
+ *
+ * A diferença para `MOTIVO_PIX_PENDENTE_ATIVO` é a instrução ao comprador, e
+ * por isso os dois não podem compartilhar o literal: em `pix_pendente_ativo`
+ * a saída é PAGAR o código que está na mão (ele vale); aqui o código venceu
+ * e a plataforma não conseguiu encerrá-lo no provedor — a saída é tentar de
+ * novo em instantes, e NUNCA abrir uma segunda cobrança por cima.
+ *
+ * Regra que este motivo materializa: a trava da segunda cobrança PIX não
+ * solta mais pelo RELÓGIO — só solta quando o gateway confirma que a
+ * anterior morreu. Negativa honesta > cobrança dupla.
+ */
+export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),

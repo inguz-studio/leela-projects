@@ -310,9 +310,16 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
       expect(replay.pixExpiraEmMillis).toBe(primeira.pixExpiraEmMillis);
     });
 
-    it('depois do PRAZO a trava solta sozinha — sem precisar de expirarPixPendente antes', async () => {
+    // ⚠️ PIX-CARRINHO-T1 (item 25 · opção b) INVERTEU a premissa deste teste.
+    // Ele nasceu fixando "depois do prazo a trava solta sozinha, sem precisar
+    // de expirarPixPendente antes" — e foi exatamente essa soltura pelo
+    // RELÓGIO que a review antagonista provou ser o achado A1 (a anterior
+    // seguia PAGÁVEL no gateway). A asserção antiga continua aqui, intacta
+    // (a nova cobrança nasce), com as DUAS que faltavam: agora a anterior
+    // morre no gateway ANTES, dentro do próprio fluxo de criação.
+    it('depois do PRAZO a nova nasce — mas só depois de a anterior ser CANCELADA no gateway (T1)', async () => {
       const t0 = T0();
-      await createImpl('uid-t2-c', 'pixbe-t2-prazo-01', t0);
+      const primeira = await createImpl('uid-t2-c', 'pixbe-t2-prazo-01', t0);
       // 31 min pelo relógio do SERVIDOR: a primeira não é mais cobrável.
       const depois = new Date(t0.getTime() + MEIA_HORA_MS + 60_000);
       const nova = await createInscricaoChargeCore(
@@ -321,6 +328,12 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
       );
       expect(nova.statusPedido).toBe('pendente');
       expect(nova.pixExpiraEmMillis).toBe(depois.getTime() + MEIA_HORA_MS);
+
+      // O que o T1 acrescenta: a cobrança anterior não ficou para trás viva.
+      expect(provider.getCharge(primeira.chargeId)?.status).toBe('cancelled');
+      const anterior = await db.collection('pedidos').doc(primeira.pedidoId).get();
+      expect(anterior.get('status')).toBe('cancelado');
+      expect(anterior.get('canceladoMotivo')).toBe('pix_expirado');
     });
 
     it('cobrança CANCELADA não bloqueia a próxima (o caminho de retry da RN-157 continua inteiro)', async () => {

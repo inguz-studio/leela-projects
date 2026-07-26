@@ -511,10 +511,27 @@ describe('S1209-REV · ataque 5 — o CPF do comprador no card de um terceiro', 
 // Juntos fecham o achado A1 da review S1209-PIXREV.
 // ---------------------------------------------------------------------------
 
+// ⚠️ ESTE BLOCO MUDOU DE LADO EM PIX-CARRINHO-T1 (item 25 · DEC-0726B).
+// Ele nasceu na review PROVANDO o achado A1 pelo lado da tela: no estado
+// `contestado`, alternar PIX→Cartão→PIX fazia a tela pedir uma cobrança nova
+// com o servidor jamais tendo confirmado o fim da primeira. A tela continua
+// PEDINDO (ela não tem como saber, e nunca teve) — o que mudou é que o
+// SERVIDOR agora NEGA. O roteiro do ataque é o mesmo, letra por letra; o que
+// se prova agora é que a negativa chega ao comprador e nenhuma segunda
+// cobrança aparece na tela.
 describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "contestado"', () => {
   beforeEach(() => {
     // Cobrança já vencida pelo relógio deste aparelho ⇒ o timer zera sozinho.
-    createInscricaoCharge.mockResolvedValue(chargePix(Date.now() - 60_000));
+    // A 1ª criação vinga; a 2ª é RECUSADA pelo servidor (T1), porque o
+    // gateway segue recusando encerrar a primeira.
+    createInscricaoCharge
+      .mockResolvedValueOnce(chargePix(Date.now() - 60_000))
+      .mockRejectedValue(
+        erroCallable(
+          'functions/failed-precondition',
+          'A cobrança PIX anterior venceu, mas não conseguimos encerrá-la no provedor de pagamento — ela ainda pode ser aceita pelo seu banco.',
+        ),
+      );
     // O gateway RECUSOU o cancelamento: a cobrança CONTINUA válida (T3).
     expirarPixPendente.mockRejectedValue(
       erroCallable(
@@ -524,7 +541,7 @@ describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "con
     );
   });
 
-  it('trocar a forma de pagamento e voltar ao PIX abre uma cobrança NOVA sobre a que segue viva', async () => {
+  it('trocar a forma de pagamento e voltar ao PIX NÃO produz segunda cobrança — o servidor nega e a tela diz a verdade', async () => {
     await irAtePagamentoPix();
     await waitFor(() => {
       expect(expirarPixPendente).toHaveBeenCalledTimes(1);
@@ -552,18 +569,28 @@ describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "con
       fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
     });
 
-    // ⛔ O QUE ESTE TESTE FIXA (comportamento ATUAL, defeito A1): a tela pede
-    // uma cobrança NOVA, com chave de idempotência NOVA, sem que o servidor
-    // tenha confirmado o fim da primeira — que segue pagável no gateway.
+    // A tela PEDE a cobrança nova (chave de idempotência nova) — isso não
+    // mudou, e não podia: nenhuma tela sabe o que o gateway respondeu.
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(2);
     });
     const chave2 = (createInscricaoCharge.mock.calls[1]?.[0] as { idempotencyKey: string })
       .idempotencyKey;
     expect(chave2).not.toBe(chave1);
-    // E em nenhum momento o servidor confirmou o fim da primeira: TODAS as
-    // tentativas de encerrar foram recusadas pelo gateway, então a tela nunca
-    // chegou a declarar a cobrança expirada.
+
+    // ✅ O QUE ESTE TESTE FIXA AGORA (T1): o SERVIDOR nega, e a tela mostra a
+    // negativa em vez de um segundo QR. Nenhuma segunda cobrança existe.
+    await waitFor(() => {
+      expect(screen.getByText(/não conseguimos encerrá-la/i)).toBeTruthy();
+    });
+    expect(screen.queryByText('PIX-PAYLOAD')).toBeNull();
+    // E a tela não inventa um fim que o servidor nunca confirmou.
     expect(screen.queryByText(/código pix expirado/i)).toBeNull();
+
+    // A negativa também não vira loop: a tela não fica repetindo o pedido.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(createInscricaoCharge).toHaveBeenCalledTimes(2);
   });
 });

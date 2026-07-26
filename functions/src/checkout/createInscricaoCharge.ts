@@ -115,10 +115,14 @@ import {
 } from './pessoaRegistry';
 import { agoraCheckout } from './relogioCheckout';
 import {
+  encerrarPixAnteriorNaCriacao,
   gravarTravaPixNaTx,
   lerTravaPixNaTx,
+  MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO,
   MOTIVO_PIX_PENDENTE_ATIVO,
+  MSG_PIX_ANTERIOR_NAO_ENCERRADO,
   MSG_PIX_PENDENTE_ATIVO,
+  type CarrinhoParaTrava,
 } from './travaCobrancaPix';
 
 type Db = admin.firestore.Firestore;
@@ -1069,6 +1073,29 @@ function centavosDaBorda(valorReais: number): number {
   return Math.round(valorReais * 100);
 }
 
+/**
+ * Identidade do CARRINHO derivada do input validado (S1209-PIXBE-T2). Fonte
+ * ÚNICA: o pré-voo do T1 (que encerra a cobrança anterior) e a transação de
+ * criação (que lê e grava a sentinela) TÊM de olhar para o mesmo carrinho —
+ * duas derivações seriam duas chaves, e a trava recairia sobre a sentinela
+ * errada. @pure
+ */
+export function carrinhoDaTravaDoInput(
+  input: CreateInscricaoChargeInput
+): CarrinhoParaTrava {
+  return {
+    eventoId: input.eventoId,
+    inscritos: input.inscritos.map((i) => ({
+      cpf: i.cpf,
+      modalidade: i.modalidade,
+      ...(typeof i.kitId === 'string' && i.kitId.length > 0
+        ? { kitId: i.kitId }
+        : {}),
+    })),
+    ...(input.cupomCodigo !== undefined ? { cupomCodigo: input.cupomCodigo } : {}),
+  };
+}
+
 async function criarDocsDeCheckout(
   db: Db,
   input: CreateInscricaoChargeInput,
@@ -1128,17 +1155,7 @@ async function criarDocsDeCheckout(
 
   // S1209-PIXBE-T2: identidade do CARRINHO (o que está sendo comprado) —
   // chave da trava de segunda cobrança PIX viva. Ver travaCobrancaPix.ts.
-  const carrinhoDaTrava = {
-    eventoId: input.eventoId,
-    inscritos: input.inscritos.map((i) => ({
-      cpf: i.cpf,
-      modalidade: i.modalidade,
-      ...(typeof i.kitId === 'string' && i.kitId.length > 0
-        ? { kitId: i.kitId }
-        : {}),
-    })),
-    ...(input.cupomCodigo !== undefined ? { cupomCodigo: input.cupomCodigo } : {}),
-  };
+  const carrinhoDaTrava = carrinhoDaTravaDoInput(input);
 
   try {
     await db.runTransaction(async (tx) => {
@@ -1165,15 +1182,25 @@ async function criarDocsDeCheckout(
           agoraMs
         );
         if (bloqueio !== null) {
+          // PIX-CARRINHO-T1: DOIS motivos, porque são duas instruções
+          // diferentes ao comprador. Dentro do prazo, o código na mão dele
+          // vale e a saída é pagá-lo. Com o prazo vencido, chegar aqui
+          // significa que o pré-voo não conseguiu encerrar a anterior (ou
+          // que um concorrente recriou uma no meio) — e aí a única saída
+          // segura é esperar, nunca abrir a segunda por cima.
           throw new https.HttpsError(
             'failed-precondition',
-            MSG_PIX_PENDENTE_ATIVO,
+            bloqueio.prazoVencido
+              ? MSG_PIX_ANTERIOR_NAO_ENCERRADO
+              : MSG_PIX_PENDENTE_ATIVO,
             // Contrato TIPADO para a UI decidir sem parsear texto. O pedido
             // é do PRÓPRIO caller (a chave da sentinela é o uid dele) —
             // devolvê-lo não vaza nada e deixa a tela oferecer o caminho
             // certo: voltar à cobrança viva, não abrir outra.
             {
-              motivo: MOTIVO_PIX_PENDENTE_ATIVO,
+              motivo: bloqueio.prazoVencido
+                ? MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO
+                : MOTIVO_PIX_PENDENTE_ATIVO,
               pedidoId: bloqueio.pedidoId,
               pixExpiraEmMillis: bloqueio.pixExpiraEmMillis,
             }
@@ -1886,6 +1913,26 @@ export async function createInscricaoChargeCore(
       throw new https.HttpsError(
         'invalid-argument',
         err instanceof Error ? err.message : 'Estado de venda inválido.'
+      );
+    }
+    // ── PIX-CARRINHO-T1 · pré-voo do cancelamento-na-criação ────────────────
+    // Item 25 (opção b) ratificado: havendo cobrança PIX ANTERIOR do mesmo
+    // (comprador, evento, carrinho) com o prazo vencido e sem morte
+    // confirmada no gateway, ela é encerrada AQUI — no gateway primeiro,
+    // como manda a disciplina do T3 — e só então a nova nasce. Gateway
+    // recusou ⇒ isto levanta e a criação é NEGADA (nada foi escrito).
+    //
+    // POSIÇÃO deliberada: DEPOIS de toda validação e da derivação de preço,
+    // ANTES de qualquer escrita. Antes das validações, um input inválido
+    // mataria a cobrança viva do comprador de graça; depois da escrita,
+    // haveria dois pedidos pendentes na janela.
+    if (input.forma === 'pix') {
+      await encerrarPixAnteriorNaCriacao(
+        db,
+        provider,
+        caller.uid,
+        carrinhoDaTravaDoInput(input),
+        agora
       );
     }
     await criarDocsDeCheckout(

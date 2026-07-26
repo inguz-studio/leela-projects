@@ -50,20 +50,51 @@
 // deny-by-default do firestore.rules e NÃO deve ser aberta para client SDK:
 // leitura daria a um sondador o mapa das cobranças abertas de terceiros;
 // escrita permitiria forjar/derrubar a própria trava.
+//
+// ── PIX-CARRINHO-T1 · A TRAVA NÃO SOLTA MAIS PELO RELÓGIO ───────────────────
+// (item 25 da rodada DEC-0726B, opção (b) ratificada pelo Vitor · fecha o
+// achado A1 da review antagonista S1209-PIXREV.)
+//
+// O defeito era um desacordo de definição entre duas lanes irmãs: para o T3
+// (`expirarPixPendente`) uma cobrança só morre quando o GATEWAY confirma;
+// para o T2 (esta trava) ela morria quando o RELÓGIO passava. Com o gateway
+// recusando o cancelamento, o pedido seguia pendente e a cobrança seguia
+// pagável — e a trava, olhando só o prazo, deixava nascer a segunda. Duas
+// cobranças vivas do mesmo carrinho: exatamente o que ela existe para
+// impedir.
+//
+// Agora existe UMA definição de morta nas duas lanes — o gateway confirmou.
+// A consequência é que "prazo vencido" deixa de ser saída e vira TAREFA: o
+// caminho de criação encerra a anterior no gateway (`encerrarPixAnteriorNaCriacao`,
+// que REUSA o `expirarPixPendenteCore` — nenhuma segunda máquina de
+// cancelamento nasceu aqui) e só então deixa a nova nascer. Gateway recusou
+// ⇒ a criação é NEGADA com motivo tipado próprio. Negativa honesta é melhor
+// do que cobrança dupla, e ela NÃO cria denial of purchase permanente: cada
+// nova tentativa de compra retenta o cancelamento, então o gateway voltando
+// destrava sozinho, sem fiação nova de tela.
 // =============================================================================
 
 import { createHmac } from 'node:crypto';
 import type * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { https } from 'firebase-functions/v1';
+import * as logger from 'firebase-functions/logger';
 import {
+  MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO,
   MOTIVO_PIX_PENDENTE_ATIVO,
   normalizarCodigoCupom,
   normalizarCpf,
+  type PaymentProvider,
 } from '@leela/core';
 import { crmIdPepper } from '../crm/agregarClientes';
+import { expirarPixPendenteCore } from './expirarPixPendente';
 
 type Db = admin.firestore.Firestore;
 type Tx = admin.firestore.Transaction;
+type Snap = admin.firestore.DocumentSnapshot;
+type Ref = admin.firestore.DocumentReference;
+/** Leitor de doc — `tx.get` na transação, `ref.get()` no pré-voo. */
+type Ler = (ref: Ref) => Promise<Snap>;
 
 /** Coleção da sentinela — Function-only (deny-by-default nas Rules). */
 export const COLECAO_TRAVA_PIX = 'cobrancasPixAtivas';
@@ -73,13 +104,25 @@ export const COLECAO_TRAVA_PIX = 'cobrancasPixAtivas';
  * cobrança — REEXPORTADO do core, que é onde mora o contrato servidor↔cliente
  * (a UI reconhece a mesma constante). Nunca redeclarar aqui.
  */
-export { MOTIVO_PIX_PENDENTE_ATIVO };
+export { MOTIVO_PIX_PENDENTE_ATIVO, MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO };
 
 /** Mensagem ao comprador — diz o que houve E o que fazer. */
 export const MSG_PIX_PENDENTE_ATIVO =
   'Já existe uma cobrança PIX aberta e dentro do prazo para este evento. ' +
   'Pague o código atual ou aguarde o prazo terminar para gerar outro — ' +
   'duas cobranças abertas ao mesmo tempo cobrariam você duas vezes.';
+
+/**
+ * Mensagem da NEGATIVA HONESTA do T1: o prazo da anterior passou, mas o
+ * provedor não confirmou o encerramento dela. Diz a verdade literal (o
+ * código antigo ainda pode ser aceito pelo banco) e a única saída segura
+ * (esperar, nunca abrir outra).
+ */
+export const MSG_PIX_ANTERIOR_NAO_ENCERRADO =
+  'A cobrança PIX anterior venceu, mas não conseguimos encerrá-la no ' +
+  'provedor de pagamento — ela ainda pode ser aceita pelo seu banco. Tente ' +
+  'de novo em alguns instantes: não vamos abrir uma segunda cobrança por ' +
+  'cima da primeira, porque isso cobraria você duas vezes.';
 
 /**
  * O que define "a MESMA compra" para a trava — o subconjunto do input que
@@ -143,38 +186,47 @@ export interface BloqueioPixAtivo {
   pedidoId: string;
   pagamentoId: string;
   pixExpiraEmMillis: number;
+  /**
+   * O prazo dela já passou pelo relógio do SERVIDOR? (PIX-CARRINHO-T1)
+   *
+   * `false` ⇒ o comprador tem um código VÁLIDO na mão: a saída é pagá-lo
+   * (recusa `pix_pendente_ativo`, inalterada desde o T2 da PIXBE).
+   *
+   * `true` ⇒ o código venceu e MESMO ASSIM a trava segura, porque ninguém
+   * confirmou a morte dele no gateway. Não é mais motivo de soltura: é
+   * tarefa. O caminho de criação encerra a anterior antes de deixar a nova
+   * nascer, e só nega se o gateway recusar.
+   */
+  prazoVencido: boolean;
 }
 
 /**
- * LEITURA da trava DENTRO da transação de criação do pedido. Devolve o
- * `ref` da sentinela (para a escrita no fim da mesma tx) e o bloqueio, se
- * houver.
+ * Avaliação da trava com um LEITOR injetado — `tx.get` dentro da transação
+ * de criação, `ref.get()` no pré-voo que roda antes dela. A definição de
+ * "vivo" é escrita UMA vez: dois leitores com dois vereditos foi exatamente
+ * o defeito A1, e não vai renascer por duplicação de código aqui.
  *
- * "Vivo" tem definição estreita de propósito — os TRÊS ao mesmo tempo:
+ * "Vivo" (PIX-CARRINHO-T1) = os DOIS ao mesmo tempo:
  *   1. pedido apontado ainda `pendente` (pago/cancelado/falhou não bloqueia);
- *   2. pagamento apontado ainda `pendente` (webhook confirmando vence);
- *   3. `pixExpiraEm` no FUTURO pelo relógio do SERVIDOR (`agoraMs`) — depois
- *      do prazo a cobrança não é mais cobrável e não pode barrar a próxima,
- *      mesmo que ninguém tenha chamado `expirarPixPendente` ainda.
+ *   2. pagamento apontado ainda `pendente` (webhook confirmando vence).
  *
- * Qualquer um faltando ⇒ `null` (a venda segue): a trava protege contra
- * cobrança DUPLICADA, nunca contra a primeira cobrança.
+ * O PRAZO deixou de ser condição de soltura e virou uma PROPRIEDADE do
+ * bloqueio (`prazoVencido`): cobrança vencida que ninguém confirmou morta
+ * no gateway continua PAGÁVEL pelo banco do comprador, e deixar a próxima
+ * nascer por cima dela é a cobrança dupla do achado A1.
  *
- * ⚠️ Chamar na FASE DE LEITURA da transação (Firestore exige todo get antes
- * de qualquer write).
+ * Qualquer condição faltando ⇒ `null` (a venda segue): a trava protege
+ * contra cobrança DUPLICADA, nunca contra a primeira cobrança.
  */
-export async function lerTravaPixNaTx(
+async function avaliarTravaPix(
   db: Db,
-  tx: Tx,
+  ler: Ler,
   uid: string,
   carrinho: CarrinhoParaTrava,
   agoraMs: number
-): Promise<{
-  ref: admin.firestore.DocumentReference;
-  bloqueio: BloqueioPixAtivo | null;
-}> {
+): Promise<{ ref: Ref; bloqueio: BloqueioPixAtivo | null }> {
   const ref = db.collection(COLECAO_TRAVA_PIX).doc(docIdTravaPix(uid, carrinho));
-  const snap = await tx.get(ref);
+  const snap = await ler(ref);
   if (!snap.exists) return { ref, bloqueio: null };
 
   const pedidoId = snap.get('pedidoId') as unknown;
@@ -187,8 +239,8 @@ export async function lerTravaPixNaTx(
   }
 
   const [pedidoSnap, pagamentoSnap] = await Promise.all([
-    tx.get(db.collection('pedidos').doc(pedidoId)),
-    tx.get(db.collection('pagamentos').doc(pagamentoId)),
+    ler(db.collection('pedidos').doc(pedidoId)),
+    ler(db.collection('pagamentos').doc(pagamentoId)),
   ]);
   if (!pedidoSnap.exists || !pagamentoSnap.exists) return { ref, bloqueio: null };
   if (pedidoSnap.get('status') !== 'pendente') return { ref, bloqueio: null };
@@ -198,14 +250,133 @@ export async function lerTravaPixNaTx(
     | { toMillis?: () => number }
     | undefined;
   if (pixExpiraEm === undefined || typeof pixExpiraEm.toMillis !== 'function') {
-    // Pagamento PIX sem prazo (pedido anterior à RN-157): sem prazo não há
-    // como afirmar que ainda vale — não bloqueia.
+    // Pagamento PIX SEM prazo (pedido anterior à RN-157). Fail-open
+    // DELIBERADO mesmo depois do T1: sem `pixExpiraEm` o
+    // `expirarPixPendenteCore` recusa encerrar ("cobrança sem expiração"),
+    // então segurar aqui seria negar a compra para sempre, sem caminho de
+    // saída. O universo é fechado (docs pré-RN-157, que não existem em
+    // produção) e a alternativa é pior.
     return { ref, bloqueio: null };
   }
   const pixExpiraEmMillis = pixExpiraEm.toMillis();
-  if (pixExpiraEmMillis <= agoraMs) return { ref, bloqueio: null };
 
-  return { ref, bloqueio: { pedidoId, pagamentoId, pixExpiraEmMillis } };
+  return {
+    ref,
+    bloqueio: {
+      pedidoId,
+      pagamentoId,
+      pixExpiraEmMillis,
+      prazoVencido: pixExpiraEmMillis <= agoraMs,
+    },
+  };
+}
+
+/**
+ * LEITURA da trava DENTRO da transação de criação do pedido. Devolve o
+ * `ref` da sentinela (para a escrita no fim da mesma tx) e o bloqueio, se
+ * houver.
+ *
+ * ⚠️ Chamar na FASE DE LEITURA da transação (Firestore exige todo get antes
+ * de qualquer write).
+ */
+export async function lerTravaPixNaTx(
+  db: Db,
+  tx: Tx,
+  uid: string,
+  carrinho: CarrinhoParaTrava,
+  agoraMs: number
+): Promise<{ ref: Ref; bloqueio: BloqueioPixAtivo | null }> {
+  return avaliarTravaPix(db, (ref) => tx.get(ref), uid, carrinho, agoraMs);
+}
+
+/**
+ * A MESMA leitura, fora de transação — insumo do pré-voo do T1. Não decide
+ * nada sozinha: o veredito que cria pedido continua sendo o da tx (este
+ * aqui pode envelhecer entre a leitura e ela, e é por isso que a tx relê).
+ */
+export async function lerTravaPixForaDaTx(
+  db: Db,
+  uid: string,
+  carrinho: CarrinhoParaTrava,
+  agoraMs: number
+): Promise<{ ref: Ref; bloqueio: BloqueioPixAtivo | null }> {
+  return avaliarTravaPix(db, (ref) => ref.get(), uid, carrinho, agoraMs);
+}
+
+/**
+ * PRÉ-VOO DO T1 (item 25 · opção (b)) — encerra a cobrança PIX ANTERIOR no
+ * gateway ANTES da transação que cria a nova.
+ *
+ * Roda só quando a sentinela aponta para uma cobrança pendente com o prazo
+ * VENCIDO. Dentro do prazo nada acontece aqui: o comprador tem um código
+ * válido na mão e a recusa `pix_pendente_ativo` continua sendo a resposta
+ * (um único ponto de recusa, dentro da tx).
+ *
+ * REUSO, não máquina nova: o encerramento É o `expirarPixPendenteCore` —
+ * mesma autorização (o dono é o próprio caller: a sentinela é chaveada pelo
+ * uid dele), mesmo gate de relógio do servidor, mesma ordem gateway-primeiro
+ * e o mesmo fail-safe do T3. O que muda é QUEM chama e QUANDO.
+ *
+ * FALHA DO GATEWAY ⇒ a criação é NEGADA (`failed-precondition` com motivo
+ * tipado). A rede no caminho quente do dinheiro é o preço declarado desta
+ * escolha — a alternativa era travar a venda até a confirmação, que exigiria
+ * fiação nova de tela e produziria denial of purchase.
+ *
+ * CORRIDA: duas criações simultâneas podem chamar o encerramento ao mesmo
+ * tempo. A segunda pode receber erro (do Firestore sob contenção ou do
+ * gateway sobre uma cobrança já morta) — por isso o `catch` RELÊ o estado
+ * antes de negar: se a anterior já morreu, quem morreu não importa.
+ */
+export async function encerrarPixAnteriorNaCriacao(
+  db: Db,
+  provider: PaymentProvider,
+  uid: string,
+  carrinho: CarrinhoParaTrava,
+  agora: () => Date
+): Promise<{ encerrado: boolean; pedidoId: string | null }> {
+  const agoraMs = agora().getTime();
+  const { bloqueio } = await lerTravaPixForaDaTx(db, uid, carrinho, agoraMs);
+  if (bloqueio === null) return { encerrado: false, pedidoId: null };
+  if (!bloqueio.prazoVencido) return { encerrado: false, pedidoId: null };
+
+  try {
+    await expirarPixPendenteCore(
+      db,
+      provider,
+      { pedidoId: bloqueio.pedidoId },
+      { uid },
+      agora
+    );
+    return { encerrado: true, pedidoId: bloqueio.pedidoId };
+  } catch (err) {
+    // RELEITURA antes de negar: um concorrente pode ter encerrado a mesma
+    // cobrança (AT-8 da review provou que a segunda chamada concorrente pode
+    // levantar erro cru sobre um trabalho JÁ FEITO). Negar uma venda por
+    // causa de um erro sobre algo que já aconteceu seria falso negativo.
+    const { bloqueio: fresco } = await lerTravaPixForaDaTx(
+      db,
+      uid,
+      carrinho,
+      agora().getTime()
+    );
+    if (fresco === null) return { encerrado: true, pedidoId: bloqueio.pedidoId };
+
+    logger.error('pix_anterior_nao_encerrado_na_criacao', {
+      pedidoId: bloqueio.pedidoId,
+      erro: err instanceof Error ? err.message : String(err),
+    }); // sem PII
+    throw new https.HttpsError(
+      'failed-precondition',
+      fresco.prazoVencido ? MSG_PIX_ANTERIOR_NAO_ENCERRADO : MSG_PIX_PENDENTE_ATIVO,
+      {
+        motivo: fresco.prazoVencido
+          ? MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO
+          : MOTIVO_PIX_PENDENTE_ATIVO,
+        pedidoId: fresco.pedidoId,
+        pixExpiraEmMillis: fresco.pixExpiraEmMillis,
+      }
+    );
+  }
 }
 
 /**
