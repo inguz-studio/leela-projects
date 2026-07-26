@@ -177,3 +177,67 @@ Duas armadilhas de resolução, para quem pegar este worktree depois:
 - **Flake de carga da suíte do painel** é dívida real e crescente: 6 timeouts
   por lote nas duas rodadas, conjunto diferente a cada vez. Enquanto isso, todo
   gate desta suíte exige re-rodada isolada para ser lido.
+
+---
+
+# Apêndice · Lane NAVFIX-REV (review antagonista) — 2026-07-26
+
+Contexto fresco, worktree e branch os mesmos. Report completo em
+`C:\dev\LEELA\outputs\leela-build-2d6ee98d\NAVFIX-REV-REPORT.md`.
+
+**Veredito global: APROVADO-COM-FIXES.** O conserto está certo e nenhum defeito de
+comportamento vivo foi encontrado. O que reprovou foi o **gate**, não o código.
+
+## Por vetor
+
+| # | Vetor | Veredito |
+|---|---|---|
+| 1 | `<button>` → `<a>`, "zero mudança visual" | APROVADO — dedução confirmada por medida; delta do Espaço, baixa |
+| 2 | 14 `render()` com `MemoryRouter` | APROVADO — asserções byte-idênticas ao base |
+| 3 | `onClickSpa` | APROVADO-COM-FIXES — early-return seguro; 1 defeito no helper |
+| 4 | `aria-current="page"` | REPROVADO → CORRIGIDO — sem gate em 5 das 8 superfícies |
+| 5 | Metade da Sidebar no T2 | APROVADO — a alternativa era defeito, não commit feio |
+| 6 | Falsificação independente | APROVADO — 3 falsificações em superfícies não usadas pelo produtor |
+| 7 | Regressão transversal | APROVADO — nada perdeu `href`; IA-MENU intocada |
+
+## Achados corrigidos no branch
+
+| Commit | Achado |
+|---|---|
+| `bf47c86` | A-4 · paridade `<a>`×`<button>` medida em DOM; Enter/Espaço travados por teste |
+| `34e6206` | A-3 · `tabsComNavSpa`/`trilhaComNavSpa` descartavam em silêncio o `onClick` da superfície |
+| `fbb1e97` | A-1 · gate ficava 26/26 VERDE com todas as abas MORTAS · A-2 · `aria-current` sem gate |
+| `e64dad6` | A-5 · a junta do menu lateral (href + preventDefault) não era medida no mesmo elemento |
+
+Achados sem ação: A-6 (`RootShell.test.tsx` usa `.closest('a,button')`, seletor pré-existente
+que absorveu a troca de elemento) e A-7 (clique na aba ativa passa a empilhar histórico).
+
+## Gates re-rodados (literal)
+
+**Design System** — `Test Files 58 passed (58)` · `Tests 1060 passed (1060)`
+(era 1055 no fim da lane; +5 meus) · `tsc` exit 0 · `eslint --max-warnings 0` exit 0.
+
+**Painel** — `Test Files 2 failed | 176 passed (178)` · `Tests 2 failed | 1469 passed (1471)`.
+**Vermelhos novos: 0.** Os 2 são os pré-existentes (`taxa` na nav de plataforma e
+`useSaveCommercialTerms`), ambos com a asserção que cai byte-idêntica à do base e em arquivos
+que a lane não tocou. `tsc` exit 0 · `eslint --max-warnings 0` exit 0.
+Gate do T3 isolado: `Tests 47 passed (47)` (era 26).
+
+**Flake de carga: não reproduziu.** Duas rodadas completas da suíte do painel voltaram com
+exatamente 2 vermelhos e nenhum `Test timed out`. A dívida continua registrada; a conclusão de
+"0 vermelhos novos" agora está lastreada em rodada limpa, não em decomposição de flake.
+
+## Armadilhas do worktree — confirmadas e mantidas
+
+`pnpm install` NÃO foi rodado. Gates pelos binários locais, exatamente como esta seção documenta.
+`pnpm-workspace.yaml` conferido íntegro no início e no fim. `git status` limpo ao fechar.
+Navegador nunca aberto; `:5273`/`:8180` intocados; sem push, sem merge.
+
+## Pendências que a review acrescenta
+
+- **Espaço no menu lateral** é decisão de produto para o Vitor: `<a>` se ativa com Enter, `<button>`
+  com Enter e Espaço. Hoje há teste travando os dois ramos.
+- **`KitEditor`: "Kits" e "Cadastro" para o mesmo destino** — pré-existente, agora visível no gate.
+  Vale card de UX de trilha.
+- **Última milha visual do menu** (cor, sublinhado, cursor, anel de foco renderizados) segue com o
+  Vitor: é o que jsdom não computa. Todo o resto da paridade está provado em teste.
