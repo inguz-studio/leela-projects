@@ -32,7 +32,10 @@ import * as admin from 'firebase-admin';
 import { pubsub } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { STATUS_CARRINHO_EXPIRADO, carrinhoNoPrazo } from '@leela/core';
-import { COLECAO_CARRINHOS } from './carrinhoCheckout';
+import {
+  COLECAO_CARRINHOS,
+  registrarCicloAbandonadoNaTx,
+} from './carrinhoCheckout';
 import { agoraCheckout } from './relogioCheckout';
 
 type Db = admin.firestore.Firestore;
@@ -88,9 +91,13 @@ export async function expirarCarrinhosAbandonadosCore(
         if (!fresco.exists) return false;
         const status = fresco.get('status') as unknown;
         const expiraEmMillis = fresco.get('expiraEmMillis') as unknown;
+        const abertoEmMillis = fresco.get('abertoEmMillis') as unknown;
+        const ciclo = fresco.get('ciclo') as unknown;
         if (
           status !== 'aberto' ||
           typeof expiraEmMillis !== 'number' ||
+          typeof abertoEmMillis !== 'number' ||
+          typeof ciclo !== 'number' ||
           carrinhoNoPrazo(expiraEmMillis, agoraMs)
         ) {
           return false;
@@ -99,6 +106,19 @@ export async function expirarCarrinhosAbandonadosCore(
           status: STATUS_CARRINHO_EXPIRADO,
           expiradoEmMillis: agoraMs,
           atualizadoEm: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        // T3 · o dado que a fase 2 vai agregar nasce AQUI, na MESMA tx do
+        // carimbo: carrinho expirado sem registro seria abandono invisível,
+        // e as duas escritas separadas abririam a janela para exatamente
+        // isso.
+        registrarCicloAbandonadoNaTx(tx, doc.ref, {
+          ciclo,
+          eventoId: (fresco.get('eventoId') as string | undefined) ?? '',
+          tenantId: (fresco.get('tenantId') as string | undefined) ?? '',
+          abertoEmMillis,
+          expiraEmMillis,
+          expiradoEmMillis: agoraMs,
+          origem: 'cron',
         });
         return true;
       });

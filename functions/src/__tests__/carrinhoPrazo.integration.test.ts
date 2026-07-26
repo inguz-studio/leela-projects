@@ -47,7 +47,11 @@ import {
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
 import { cotarInscricaoCheckoutComCarrinho } from '../checkout/cotarInscricaoCheckout';
-import { COLECAO_CARRINHOS, docIdCarrinho } from '../checkout/carrinhoCheckout';
+import {
+  COLECAO_CARRINHOS,
+  SUBCOLECAO_CICLOS,
+  docIdCarrinho,
+} from '../checkout/carrinhoCheckout';
 import { expirarCarrinhosAbandonadosCore } from '../checkout/expirarCarrinhosAbandonados';
 import { expirarPixPendenteCore } from '../checkout/expirarPixPendente';
 import { MockPaymentProvider } from '../payments/mockProvider';
@@ -330,6 +334,10 @@ describe.skipIf(!hasEmulator)('PIX-CARRINHO-T2/T3 — prazo do carrinho (RN-158)
     expect((await carrinhoRef(uid).get()).get('expiradoEmMillis')).toBe(
       varredura.getTime()
     );
+    // T3: um abandono, um registro. Contar duas vezes o mesmo abandono seria
+    // pior para a fase 2 do que não contar.
+    const ciclos = await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).get();
+    expect(ciclos.size).toBe(1);
   }, 60_000);
 
   it('o cron NÃO encosta em carrinho vivo nem em carrinho concluído', async () => {
@@ -396,6 +404,107 @@ describe.skipIf(!hasEmulator)('PIX-CARRINHO-T2/T3 — prazo do carrinho (RN-158)
       db, provider, inputPix('reabre'), { uid, ehAnonimo: true }, relogio(volta)
     );
     expect(r.statusPedido).toBe('pendente');
+  }, 60_000);
+
+  // -------------------------------------------------------------------------
+  // T3 · o carimbo da fase 2
+  // -------------------------------------------------------------------------
+
+  it('T3 · o cancelamento por prazo deixa registro DURÁVEL e agregável (estado + instantes + evento + tenant)', async () => {
+    const uid = 'uid-carimbo';
+    const t0 = T0();
+    await cotar(uid, t0);
+    const varredura = new Date(t0.getTime() + PRAZO_MS + 60_000);
+    await expirarCarrinhosAbandonadosCore(db, varredura);
+
+    const ciclo = await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('1').get();
+    expect(ciclo.exists).toBe(true);
+    expect(ciclo.get('status')).toBe(STATUS_CARRINHO_EXPIRADO);
+    expect(ciclo.get('eventoId')).toBe(EVENTO_ID);
+    expect(ciclo.get('tenantId')).toBe(TENANT_ID);
+    expect(ciclo.get('abertoEmMillis')).toBe(t0.getTime());
+    expect(ciclo.get('expiraEmMillis')).toBe(t0.getTime() + PRAZO_MS);
+    expect(ciclo.get('expiradoEmMillis')).toBe(varredura.getTime());
+    expect(ciclo.get('origem')).toBe('cron');
+    expect(ciclo.get('carimbadoEm')).toBeTruthy();
+  }, 60_000);
+
+  it('T3 · o registro NÃO carrega PII — nem nome, nem CPF, nem e-mail', async () => {
+    const uid = 'uid-pii';
+    const t0 = T0();
+    await cotar(uid, t0);
+    await expirarCarrinhosAbandonadosCore(db, new Date(t0.getTime() + PRAZO_MS + 60_000));
+
+    const pai = JSON.stringify((await carrinhoRef(uid).get()).data());
+    const ciclo = JSON.stringify(
+      (await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('1').get()).data()
+    );
+    for (const doc of [pai, ciclo]) {
+      expect(doc).not.toContain(NOME);
+      expect(doc).not.toContain(EMAIL);
+      expect(doc).not.toContain('529');
+    }
+  }, 60_000);
+
+  it('T3 · o carimbo SOBREVIVE à reabertura do carrinho (o doc pai é sobrescrito, o histórico não)', async () => {
+    const uid = 'uid-arquiva';
+    const t0 = T0();
+    await cotar(uid, t0);
+
+    // O comprador some antes de o cron passar e volta 40 minutos depois.
+    // Sem o arquivamento na reabertura, o ciclo 1 desapareceria sob a
+    // sobrescrita — o abandono viraria um evento que nunca existiu.
+    const volta = new Date(t0.getTime() + 40 * 60_000);
+    await cotar(uid, volta);
+
+    const ciclo1 = await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('1').get();
+    expect(ciclo1.get('status')).toBe(STATUS_CARRINHO_EXPIRADO);
+    expect(ciclo1.get('origem')).toBe('reabertura');
+    expect(ciclo1.get('abertoEmMillis')).toBe(t0.getTime());
+    expect(ciclo1.get('expiraEmMillis')).toBe(t0.getTime() + PRAZO_MS);
+    expect(ciclo1.get('eventoId')).toBe(EVENTO_ID);
+    expect(ciclo1.get('tenantId')).toBe(TENANT_ID);
+
+    // E o carimbo do ciclo 1 não é reescrito quando o ciclo 2 morre depois.
+    const varredura = new Date(volta.getTime() + PRAZO_MS + 60_000);
+    await expirarCarrinhosAbandonadosCore(db, varredura);
+    const ciclos = await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).get();
+    expect(ciclos.size).toBe(2);
+    expect(
+      (await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('1').get()).get('origem')
+    ).toBe('reabertura');
+    expect(
+      (await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('2').get()).get('origem')
+    ).toBe('cron');
+  }, 60_000);
+
+  it('T3 · cron atrasado grava os DOIS instantes no registro — o atraso fica mensurável', async () => {
+    const uid = 'uid-atraso-ciclo';
+    const t0 = T0();
+    await cotar(uid, t0);
+    const atrasado = new Date(t0.getTime() + PRAZO_MS + 10 * 60_000);
+    await expirarCarrinhosAbandonadosCore(db, atrasado);
+
+    const ciclo = await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).doc('1').get();
+    expect(ciclo.get('expiraEmMillis')).toBe(t0.getTime() + PRAZO_MS);
+    expect(ciclo.get('expiradoEmMillis')).toBe(atrasado.getTime());
+    // A fase 2 consegue calcular o atraso sem adivinhar nada.
+    expect(
+      (ciclo.get('expiradoEmMillis') as number) - (ciclo.get('expiraEmMillis') as number)
+    ).toBe(10 * 60_000);
+  }, 60_000);
+
+  it('T3 · carrinho CONCLUÍDO não vira registro de abandono', async () => {
+    const uid = 'uid-nao-abandono';
+    const t0 = T0();
+    await cotar(uid, t0);
+    await createInscricaoChargeCore(
+      db, provider, inputPix('nao-aband'), { uid, ehAnonimo: true }, relogio(t0)
+    );
+    // Muito depois do prazo do carrinho: o cron não o vê (status concluido)
+    // e nenhum ciclo é arquivado. Compra não é abandono.
+    await expirarCarrinhosAbandonadosCore(db, new Date(t0.getTime() + PRAZO_MS + 60_000));
+    expect((await carrinhoRef(uid).collection(SUBCOLECAO_CICLOS).get()).size).toBe(0);
   }, 60_000);
 
   it('carrinho abandonado não deixa NADA preso: nenhuma sentinela de PIX nasce sem conclusão', async () => {

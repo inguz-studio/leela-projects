@@ -46,6 +46,7 @@ import * as logger from 'firebase-functions/logger';
 import {
   CARRINHO_PRAZO_SEGUNDOS,
   MOTIVO_CARRINHO_EXPIRADO,
+  STATUS_CARRINHO_EXPIRADO,
   carrinhoNoPrazo,
 } from '@leela/core';
 
@@ -55,6 +56,18 @@ type Ref = admin.firestore.DocumentReference;
 
 /** Coleção do carrinho — Function-only (deny-by-default nas Rules). */
 export const COLECAO_CARRINHOS = 'carrinhos';
+
+/**
+ * Subcoleção do REGISTRO DURÁVEL por ciclo (T3 · insumo da FASE 2, a
+ * visibilidade de carrinhos abandonados que o Vitor pediu). O doc pai é
+ * sobrescrito quando o comprador recomeça — sem este arquivo, o abandono
+ * que a fase 2 precisa contar viraria um evento que nunca existiu.
+ *
+ * Ledger, não agregado: aqui só nasce o DADO. Nenhuma tela, nenhum
+ * contador, nenhum rollup — isso é a fase 2, e antecipá-la seria inventar
+ * escopo.
+ */
+export const SUBCOLECAO_CICLOS = 'ciclos';
 
 /** Mensagem ao comprador — diz o que houve E o que fazer. */
 export const MSG_CARRINHO_EXPIRADO =
@@ -103,6 +116,46 @@ function lerCarrinhoDoSnap(
 }
 
 /**
+ * T3 · REGISTRO DURÁVEL do ciclo que morreu sem concluir — o carimbo que a
+ * FASE 2 vai agregar.
+ *
+ * Estado + instantes + evento + tenant, nada mais. `expiradoEmMillis` é
+ * quando o carimbo saiu, e é DIFERENTE de `expiraEmMillis` (quando o prazo
+ * venceu) de propósito: a distância entre os dois é o atraso do cron, e sem
+ * os dois números a fase 2 não teria como saber se o dado que ela agrega
+ * está fresco.
+ *
+ * Idempotente por construção: o id é o número do ciclo, então recarimbar o
+ * mesmo ciclo sobrescreve o mesmo doc em vez de inflar a contagem — um
+ * agregado que conta duas vezes o mesmo abandono é pior do que não existir.
+ *
+ * SEM PII NOVA: o uid já está na chave do doc pai (precedente
+ * `cobrancasPixAtivas`); nome, CPF, e-mail e o conteúdo do carrinho ficam
+ * fora. A fase 2 pediu CONTAGEM de carrinhos abandonados, não a identidade
+ * de quem abandonou.
+ */
+export function registrarCicloAbandonadoNaTx(
+  tx: Tx,
+  carrinhoRef: Ref,
+  dados: {
+    ciclo: number;
+    eventoId: string;
+    tenantId: string;
+    abertoEmMillis: number;
+    expiraEmMillis: number;
+    expiradoEmMillis: number;
+    /** Quem carimbou: a varredura do cron ou a reabertura do carrinho. */
+    origem: 'cron' | 'reabertura';
+  }
+): void {
+  tx.set(carrinhoRef.collection(SUBCOLECAO_CICLOS).doc(String(dados.ciclo)), {
+    ...dados,
+    status: STATUS_CARRINHO_EXPIRADO,
+    carimbadoEm: FieldValue.serverTimestamp(),
+  });
+}
+
+/**
  * ABERTURA do carrinho na cotação (RN-158). Idempotente e SEM extensão de
  * prazo: cotar de novo dentro do prazo não move `expiraEmMillis` um
  * milissegundo — a mesma disciplina do replay do PIX, que recarimba o
@@ -139,6 +192,21 @@ export async function abrirCarrinhoNaCotacao(
     }
     if (!eventoSnap.exists) return null;
     const tenantId = (eventoSnap.get('tenantId') as string | undefined) ?? '';
+
+    // T3: o ciclo anterior morreu sem concluir e o cron ainda não passou por
+    // ele. Vira registro durável ANTES de o doc pai ser sobrescrito — este é
+    // o caminho pelo qual o dado da fase 2 se perderia em silêncio.
+    if (vigente !== null && vigente.status === 'aberto') {
+      registrarCicloAbandonadoNaTx(tx, ref, {
+        ciclo: vigente.ciclo,
+        eventoId,
+        tenantId,
+        abertoEmMillis: vigente.abertoEmMillis,
+        expiraEmMillis: vigente.expiraEmMillis,
+        expiradoEmMillis: agoraMs,
+        origem: 'reabertura',
+      });
+    }
 
     const ciclo = (vigente?.ciclo ?? 0) + 1;
     const novo: CarrinhoVigente = {
