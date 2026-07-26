@@ -82,9 +82,31 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: 'Eventos' })).toHaveAttribute('href', '/eventos');
   });
 
-  it('DEFAULT_SIDEBAR_SECTIONS has 8 items total', () => {
+  it('DEFAULT_SIDEBAR_SECTIONS has 6 items total (RN-233 · rodada IA-MENU)', () => {
     const count = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).length;
-    expect(count).toBe(8);
+    expect(count).toBe(6);
+  });
+
+  it('DEFAULT_SIDEBAR_SECTIONS: inventário EXATO e na ordem (catálogo é contrato)', () => {
+    expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.label)).toEqual(['OPERAÇÃO', 'CONTA']);
+    expect(DEFAULT_SIDEBAR_SECTIONS.map((s) => s.items.map((i) => [i.id, i.label]))).toEqual([
+      [
+        ['visao-geral', 'Visão Geral'],
+        ['eventos', 'Eventos'],
+        ['clubs', 'Clubs'],
+        ['crm', 'CRM'],
+        ['marcas', 'Marcas'],
+      ],
+      [['configuracoes', 'Configurações']],
+    ]);
+  });
+
+  it('RN-823: "financeiro" e "analytics" saíram do catálogo do DS, não só do consumidor', () => {
+    const ids = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).map((i) => i.id);
+    expect(ids).not.toContain('financeiro');
+    expect(ids).not.toContain('analytics');
+    // e o id antigo do hub não sobrevive em lugar nenhum do catálogo
+    expect(ids).not.toContain('comunicacao');
   });
 
   it('every DEFAULT_SIDEBAR_SECTIONS item has a Lucide icon (B1 — fim do menu sem ícone)', () => {
@@ -97,7 +119,7 @@ describe('Sidebar', () => {
   it('renders icons as decorative (aria-hidden) — nome acessível vem do label', () => {
     const { container } = render(<Sidebar sections={DEFAULT_SIDEBAR_SECTIONS} />);
     const svgs = container.querySelectorAll('svg[aria-hidden="true"]');
-    expect(svgs.length).toBe(8);
+    expect(svgs.length).toBe(6);
   });
 
   it('labels stay visible (nome acessível = label do item)', () => {

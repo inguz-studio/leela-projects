@@ -2,8 +2,9 @@
 // Seções da Sidebar do shell RAIZ do painel (Lote B3).
 //
 // Puro (pathname + navigate → seções): decide entre a navegação do PRODUTOR
-// (8 itens canônicos do DS, tabela do doc de IA Be Hero) e a navegação de
-// PLATAFORMA (super-admin, nav própria em routes/plataforma/_lib/nav.ts).
+// (6 itens canônicos do DS pós-RN-233, tabela do doc de IA Be Hero) e a
+// navegação de PLATAFORMA (super-admin, nav própria em
+// routes/plataforma/_lib/nav.ts).
 // O item ativo é derivado do pathname — a sidebar é a mesma em todas as
 // rotas, só o conteúdo troca (contrato "permanece visível e imutável").
 // =============================================================================
@@ -22,29 +23,16 @@ const HREF_POR_ID: Record<string, string | undefined> = {
   'visao-geral': '/',
   eventos: '/eventos',
   clubs: '/clubes',
-  // RN-820: o item Financeiro leva à ANÁLISE de vendas (rota índice); a SubNav
-  // interna (Análise | Repasses) alcança os repasses do organizador (RN-349).
-  financeiro: '/financeiro',
-  // E19 · S-R9-13: o item Comunicação leva ao hub "Clientes & Comunicação"
-  // (CRM). Deixa de ser placeholder inerte; a comunicação por evento/clube
-  // (E06/E05) segue nas próprias telas — o hub é a superfície nova.
-  comunicacao: '/crm',
+  // RN-233/RN-823: o item CRM leva à área que reúne Visão geral (a análise de
+  // vendas que era `/financeiro`), Clientes e Comunicação. Sucede o antigo id
+  // `comunicacao`; a comunicação por evento/clube (E06/E05) segue nas próprias
+  // telas — o hub soma, não substitui.
+  crm: '/crm',
   // E10 · S811 seed: o item Marcas leva ao módulo de patrocinadores
   // reutilizáveis (RN-171). Deixa de ser placeholder inerte.
   marcas: '/marcas',
   configuracoes: undefined,
 };
-
-/**
- * Itens do produtor suprimidos da nav renderizada (RN-821). "Analytics" era um
- * placeholder INERTE e DIVERGENTE: a Análise de vendas já é a superfície única
- * de desempenho + analytics, alcançada pelo item "Financeiro" (→ /financeiro).
- * Manter uma segunda entrada morta (ou apontá-la ao mesmo destino) confundiria
- * o organizador com duas portas para a mesma tela. O item vive no DS
- * (DEFAULT_SIDEBAR_SECTIONS, compartilhado) — filtramos aqui, no consumidor,
- * sem tocar o design system.
- */
-const IDS_SUPRIMIDOS: ReadonlySet<string> = new Set(['analytics']);
 
 /** Ícone Lucide por item da nav de plataforma (nav do super-admin é própria —
  *  fora da tabela do doc de IA, que cobre só os 8 itens do produtor). */
@@ -57,13 +45,18 @@ const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   macro: Gauge,
 };
 
-/** id do item ATIVO da navegação do produtor dado o pathname (null = nenhum). */
+/**
+ * id do item ATIVO da navegação do produtor dado o pathname (null = nenhum).
+ *
+ * `/financeiro` saiu da tabela (RN-233): enquanto a rota legada ainda responde
+ * — ela só redireciona (RN-234) — nenhum item fica marcado, que é o estado
+ * honesto para uma URL que não é mais destino de menu nenhum.
+ */
 export function painelActiveId(pathname: string): string | null {
   if (pathname === '/') return 'visao-geral';
   if (pathname.startsWith('/eventos')) return 'eventos';
   if (pathname.startsWith('/clubes')) return 'clubs';
-  if (pathname.startsWith('/financeiro')) return 'financeiro';
-  if (pathname.startsWith('/crm')) return 'comunicacao';
+  if (pathname.startsWith('/crm')) return 'crm';
   if (pathname.startsWith('/marcas')) return 'marcas';
   return null;
 }
@@ -75,9 +68,7 @@ function producerSections(
 ): SidebarSection[] {
   return DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
     label: section.label,
-    items: section.items
-      .filter((item) => !IDS_SUPRIMIDOS.has(item.id))
-      .map((item) => {
+    items: section.items.map((item) => {
       const href = HREF_POR_ID[item.id];
       // nav-badge com dado REAL (mockup: Eventos = badge neutro com contagem).
       // Sem contagem (null/0) não há badge — estado honesto, nunca 0 decorativo.

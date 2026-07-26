@@ -1,9 +1,15 @@
 /**
  * Sidebar — painel de navegação lateral do shell.
  *
- * Seções:
- *   OPERAÇÃO: Visão Geral, Eventos, Clubs, Financeiro, Comunicação, Marcas, Analytics
+ * Seções (RN-233, rodada IA-MENU 2026-07-19 — o menu foi de 8 para 6 itens):
+ *   OPERAÇÃO: Visão Geral, Eventos, Clubs, CRM, Marcas
  *   CONTA:    Configurações
+ *
+ * `Financeiro` e `Analytics` saíram do catálogo: a análise de vendas virou
+ * CRM › Visão geral (RN-823) e os repasses viraram subdivisão de Eventos
+ * (RN-366). `Analytics` era placeholder inerte e divergente — a RN-821 o
+ * suprimia no consumidor; a RN-823 manda removê-lo aqui, na fonte, para não
+ * voltar por descuido em outro consumidor.
  *
  * FIXA em 240px (`--sidebar-width`), padrão Be Hero — decisão vinculante do
  * Vitor (2026-07-05, brief ds-consolidacao-shadcn-brasa §2): a variante fixa
@@ -26,13 +32,11 @@
 
 import * as React from 'react';
 import {
-  BarChart3,
   Bell,
   Briefcase,
   CalendarDays,
   LayoutDashboard,
   Settings,
-  TrendingUp,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react';
@@ -42,7 +46,7 @@ import { cn } from '../../utils/cn';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Variante do badge de contagem (mockup: Comunicação = danger, Eventos = neutral). */
+/** Variante do badge de contagem (mockup: CRM = danger, Eventos = neutral). */
 export type SidebarBadgeVariant = 'danger' | 'neutral';
 
 export interface SidebarItem {
@@ -93,7 +97,14 @@ export function sidebarNavIcon(Icon: LucideIcon): React.ReactNode {
   );
 }
 
-/** Mapeamento item → ícone da fonte da verdade (doc de IA do painel Be Hero, §Sidebar). */
+/**
+ * Mapeamento item → ícone da fonte da verdade (doc de IA do painel Be Hero,
+ * §Sidebar), reconciliado pela rodada IA-MENU: **6 itens**, não 8.
+ *
+ * O id `comunicacao` virou `crm` (rótulo "CRM") porque a casca deixou de ser
+ * só comunicação — passa a abrigar Visão geral, Clientes e Comunicação. O
+ * ícone segue o mesmo (`Bell`): a rodada renomeia o item, não redesenha a nav.
+ */
 export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     label: 'OPERAÇÃO',
@@ -101,10 +112,8 @@ export const DEFAULT_SIDEBAR_SECTIONS: SidebarSection[] = [
       { id: 'visao-geral',  label: 'Visão Geral',   icon: sidebarNavIcon(LayoutDashboard) },
       { id: 'eventos',      label: 'Eventos',        icon: sidebarNavIcon(CalendarDays) },
       { id: 'clubs',        label: 'Clubs',          icon: sidebarNavIcon(UsersRound) },
-      { id: 'financeiro',   label: 'Financeiro',     icon: sidebarNavIcon(BarChart3) },
-      { id: 'comunicacao',  label: 'Comunicação',    icon: sidebarNavIcon(Bell) },
+      { id: 'crm',          label: 'CRM',            icon: sidebarNavIcon(Bell) },
       { id: 'marcas',       label: 'Marcas',         icon: sidebarNavIcon(Briefcase) },
-      { id: 'analytics',    label: 'Analytics',      icon: sidebarNavIcon(TrendingUp) },
     ],
   },
   {

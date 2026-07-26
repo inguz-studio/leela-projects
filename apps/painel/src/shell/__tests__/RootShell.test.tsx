@@ -94,11 +94,19 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
     expect(ativo).toHaveAttribute('aria-current', 'page');
   });
 
-  it('os 7 itens do produtor renderizam com ícone (Analytics suprimido — RN-821)', () => {
+  it('os 6 itens do produtor renderizam com ícone (RN-233 · menu de 6 áreas)', () => {
     renderAt('/');
     const svgs = nav().querySelectorAll('svg[aria-hidden="true"]');
-    // 8 do DS − "analytics" (a Análise de vendas já é a superfície única).
-    expect(svgs.length).toBe(7);
+    // 6 itens do DS: Visão Geral · Eventos · Clubs · CRM · Marcas · Configurações.
+    expect(svgs.length).toBe(6);
+  });
+
+  it('RN-233: a nav mostra CRM e não mostra mais Financeiro nem Analytics', () => {
+    renderAt('/');
+    const sidebar = nav();
+    expect(within(sidebar).getByText('CRM')).toBeInTheDocument();
+    expect(within(sidebar).queryByText('Financeiro')).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText('Analytics')).not.toBeInTheDocument();
   });
 
   it('rodapé mostra avatar + nome da sessão (B4 — dados do consumidor)', () => {

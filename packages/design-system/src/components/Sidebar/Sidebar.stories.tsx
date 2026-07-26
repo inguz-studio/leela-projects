@@ -13,13 +13,13 @@ const SECTIONS_ATIVAS: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section)
 }));
 
 /** Seções padrão com item ativo + badges nas duas variantes do mockup:
- *  Eventos = neutral (contagem operacional), Comunicação = danger (pendência). */
+ *  Eventos = neutral (contagem operacional), CRM = danger (pendência). */
 const SECTIONS_COM_BADGE: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
   ...section,
   items: section.items.map((item) => {
     if (item.id === 'eventos')
       return { ...item, active: true, badge: 3, badgeVariant: 'neutral' as const };
-    if (item.id === 'comunicacao') return { ...item, badge: 4 };
+    if (item.id === 'crm') return { ...item, badge: 4 };
     return item;
   }),
 }));
@@ -32,12 +32,12 @@ const meta: Meta<typeof Sidebar> = {
 export default meta;
 type Story = StoryObj<typeof Sidebar>;
 
-/** Navegação padrão Be Hero: 8 itens em 2 seções, largura fixa 240px. */
+/** Navegação padrão Be Hero: 6 itens em 2 seções (RN-233), largura fixa 240px. */
 export const Padrao: Story = {
   render: () => <Sidebar sections={SECTIONS_ATIVAS} />,
 };
 
-/** Item ativo (aria-current="page") + badges (Eventos neutral, Comunicação danger). */
+/** Item ativo (aria-current="page") + badges (Eventos neutral, CRM danger). */
 export const ComBadge: Story = {
   render: () => <Sidebar sections={SECTIONS_COM_BADGE} />,
 };

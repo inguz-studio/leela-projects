@@ -12,6 +12,11 @@ import { Sidebar, SidebarBrand, SidebarFooter, DEFAULT_SIDEBAR_SECTIONS, sidebar
 ## Quando usar
 Navegação lateral do shell, FIXA em 240px (--sidebar-width) — sem modo colapsado. Use DEFAULT_SIDEBAR_SECTIONS para as seções padrão do painel Be Hero e sidebarNavIcon(IconeLucide) para ícones nos tokens do DS.
 
+## Inventário de DEFAULT_SIDEBAR_SECTIONS (6 itens · RN-233, rodada IA-MENU 2026-07-19)
+OPERAÇÃO: visao-geral "Visão Geral" · eventos "Eventos" · clubs "Clubs" · crm "CRM" · marcas "Marcas"
+CONTA: configuracoes "Configurações"
+Os ids `financeiro` e `analytics` FORAM REMOVIDOS do catálogo (RN-823) e o id `comunicacao` foi RENOMEADO para `crm`. Não os reintroduza: a análise de vendas vive em CRM › Visão geral e os repasses em Eventos › Repasses.
+
 ## Quando NÃO usar
 Não use para menus contextuais (use DropdownMenu) nem para sub-navegação de página (use SubNav). Não implemente toggle de colapso: a variante fixa substitui o modo colapsável por decisão vinculante.
 

@@ -8,11 +8,16 @@ describe('painelActiveId', () => {
     ['/eventos/corrida/kits/novo', 'eventos'],
     ['/clubes', 'clubs'],
     ['/clubes/trail/desafios', 'clubs'],
-    ['/financeiro', 'financeiro'],
-    ['/financeiro/repasses', 'financeiro'],
-    // E19 · S-R9-13: o hub CRM ativa o item Comunicação da sidebar.
-    ['/crm', 'comunicacao'],
-    ['/crm/tipo_abc123', 'comunicacao'],
+    // RN-233: `Financeiro` deixou de ser item de menu. Enquanto a rota legada
+    // ainda responde (só para redirecionar — RN-234), NENHUM item fica ativo.
+    ['/financeiro', null],
+    ['/financeiro/repasses', null],
+    // RN-233: o item `crm` (rótulo "CRM") sucede o antigo `comunicacao`.
+    ['/crm', 'crm'],
+    ['/crm/visao-geral', 'crm'],
+    ['/crm/clientes', 'crm'],
+    ['/crm/clientes/tipo_abc123', 'crm'],
+    ['/crm/comunicacao', 'crm'],
     // E10 · S811 seed: o módulo Marcas ativa o item Marcas.
     ['/marcas', 'marcas'],
     ['/marcas/qualquer', 'marcas'],
@@ -23,21 +28,38 @@ describe('painelActiveId', () => {
 });
 
 describe('shellSidebarSections', () => {
-  it('rotas do produtor: 7 itens (Analytics suprimido), todos com ícone, ativo marcado', () => {
+  it('RN-233: nav do produtor = 6 itens, na ordem, todos com ícone, ativo marcado', () => {
     const sections = shellSidebarSections('/eventos', vi.fn());
     const items = sections.flatMap((s) => s.items);
-    // 8 itens do DS − "analytics" (RN-821: a Análise já é a superfície única).
-    expect(items).toHaveLength(7);
+    expect(items).toHaveLength(6);
+    expect(items.map((i) => i.id)).toEqual([
+      'visao-geral',
+      'eventos',
+      'clubs',
+      'crm',
+      'marcas',
+      'configuracoes',
+    ]);
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'eventos')?.active).toBe(true);
   });
 
-  it('RN-821: "Analytics" some da nav do produtor (placeholder divergente eliminado)', () => {
+  it('RN-233/RN-823: "Financeiro" e "Analytics" sumiram da nav do produtor', () => {
     const sections = shellSidebarSections('/', vi.fn());
     const items = sections.flatMap((s) => s.items);
     expect(items.find((i) => i.id === 'analytics')).toBeUndefined();
-    // Financeiro segue como a porta única da Análise de vendas.
-    expect(items.find((i) => i.id === 'financeiro')).toBeDefined();
+    expect(items.find((i) => i.id === 'financeiro')).toBeUndefined();
+    // e não sobraram por um filtro do consumidor: sumiram na fonte (o DS).
+    expect(items.find((i) => i.id === 'comunicacao')).toBeUndefined();
+  });
+
+  it('/crm marca "CRM" como ativo; /financeiro (legado) não marca nada', () => {
+    const doCrm = shellSidebarSections('/crm', vi.fn()).flatMap((s) => s.items);
+    expect(doCrm.find((i) => i.id === 'crm')?.active).toBe(true);
+    expect(doCrm.find((i) => i.id === 'crm')?.label).toBe('CRM');
+
+    const doLegado = shellSidebarSections('/financeiro', vi.fn()).flatMap((s) => s.items);
+    expect(doLegado.some((i) => i.active)).toBe(false);
   });
 
   it('itens com rota conhecida navegam; inertes não têm onClick', () => {
@@ -46,17 +68,14 @@ describe('shellSidebarSections', () => {
     const items = sections.flatMap((s) => s.items);
     items.find((i) => i.id === 'clubs')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/clubes');
-    // Financeiro navega para a ANÁLISE de vendas (RN-820: rota índice; a SubNav
-    // interna alcança os repasses do organizador — RN-349).
-    items.find((i) => i.id === 'financeiro')?.onClick?.();
-    expect(navigate).toHaveBeenCalledWith('/financeiro');
-    // E19 · S-R9-13: Comunicação agora leva ao hub CRM "Clientes & Comunicação".
-    items.find((i) => i.id === 'comunicacao')?.onClick?.();
+    // RN-233/RN-823: CRM é a porta única da análise de vendas + clientes.
+    items.find((i) => i.id === 'crm')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/crm');
     // E10 · S811 seed: Marcas agora leva ao módulo de patrocinadores reutilizáveis.
     items.find((i) => i.id === 'marcas')?.onClick?.();
     expect(navigate).toHaveBeenCalledWith('/marcas');
-    // Itens ainda inertes (sem rota) permanecem sem onClick — estado honesto.
+    // `configuracoes` ganha destino no IAM-T5 (Dados de recebimento em /conta);
+    // até lá segue inerte — estado honesto, sem onClick.
     expect(items.find((i) => i.id === 'configuracoes')?.onClick).toBeUndefined();
   });
 
