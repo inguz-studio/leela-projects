@@ -939,3 +939,35 @@ As duas versões não convivem soltas: a de 13/07 fica como o passo anterior, e 
 **Dívida deixada explícita:** existem três cópias do mesmo hook de sessão (`assessorias`, `crm`, `eventos/repasses`). A T5 importou a existente em vez de criar a quarta, com acoplamento declarado `conta/` → `eventos/repasses/` (precedente: `plataforma/repasses` já importa de lá). Os próprios docblocks dos três apontam o `SessionProvider` global como saída. Vale card.
 
 **Nota de procedência:** os 3 renames da T5 aterrissaram antes, por colateral, no commit de docs `05708dd` do maestro, com 0 mudança de conteúdo — o que deixou `main` momentaneamente sem compilar (os arquivos no destino ainda importavam os vizinhos da origem). `14f059e` traz o restante e fecha o buraco.
+
+### Apêndice PIX-CARRINHO (2026-07-26 · rodada DEC-0726B · lane PIX-CARRINHO)
+
+Duas decisões de DINHEIRO do Vitor viraram código nesta lane. Elas moram no
+E12 (o checkout é a superfície), mas tocam o E09 porque decidem **quantas
+cobranças podem existir vivas ao mesmo tempo** e **quando uma intenção de
+compra morre sem virar receita**.
+
+**Item 25 · cobrança PIX nunca mais duplica por causa do relógio** (`7e957e9`
+· detalhe na RN-157 do E12). A trava da segunda cobrança PIX parou de soltar
+por vencimento: cobrança só é considerada morta quando o **gateway
+confirma**. Ao chegar um pedido de cobrança nova sobre uma anterior vencida e
+não confirmada, a plataforma cancela a anterior no gateway DENTRO do fluxo de
+criação; recusa do gateway ⇒ a criação é **negada** com motivo tipado. Efeito
+financeiro: some o cenário em que o comprador podia pagar dois códigos do
+mesmo carrinho — que antes só era detectável na conciliação, depois do
+dinheiro já ter entrado duas vezes.
+
+**Item 26 · RN-158, prazo do carrinho** (`b7a2a77` + `522c23b` · spec completa
+no E12). Checkout tem **15 minutos da abertura para concluir**; não concluiu,
+o carrinho morre com estado terminal próprio (`expirado_sem_concluir`). Os
+dois relógios do checkout compõem em SEQUÊNCIA — 15 min até concluir, 30 min
+de validade do PIX depois disso (RN-157) — e nenhum encurta o outro.
+
+**O que este apêndice deixa PENDENTE para o E09.** O carrinho abandonado
+passou a deixar registro durável e agregável (`carrinhos/{uid}__{evento}/ciclos/{n}`:
+estado, instantes, evento, tenant — sem PII). **A FASE 2 não foi construída**:
+não existe tela, agregado, contador nem alerta sobre esses documentos. Quando
+o Vitor abrir a visibilidade de carrinhos abandonados, o histórico já estará
+lá — é exatamente por isso que o dado nasceu antes da tela.
+
+⚔ Review antagonista da lane: **pendente**.
