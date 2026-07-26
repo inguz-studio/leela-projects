@@ -21,7 +21,7 @@ import { ToastProvider } from '@leela/design-system';
 // segue respondendo, agora servindo a tela do endereço novo — nenhuma janela
 // em que a URL legada quebra.
 import { AnaliseVendasPage } from '../crm/visao-geral/AnaliseVendasPage';
-import { RepassesPage } from './repasses/RepassesPage';
+import { RepassesPage } from '../eventos/repasses/RepassesPage';
 import { FinanceiroSubNav } from './_components/FinanceiroSubNav';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';

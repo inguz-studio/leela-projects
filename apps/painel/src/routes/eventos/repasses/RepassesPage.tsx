@@ -1,14 +1,20 @@
 // =============================================================================
-// RepassesPage — container da rota `/financeiro/repasses` (E09s-L3). Liga a
+// RepassesPage — container da rota `/eventos/repasses` (E09s-L3). Liga a
 // sessão do organizador (tenantId) às leituras do repasse e passa tudo ao
 // RepassesView. Enquanto a sessão resolve o claim, os blocos ficam em Skeleton
 // (o container marca `loading`); nenhuma soma de dinheiro acontece aqui.
+//
+// RN-366: o repasse pertence à ORIGEM do dinheiro — hoje eventos, amanhã o
+// clube pago com a própria subdivisão, sem herdar nada daqui. O que mudou na
+// rodada IA-MENU foi o ENDEREÇO (`/financeiro/repasses` → `/eventos/repasses`);
+// RN-334 (saldo único), RN-349 (quebra por evento) e RN-358 (consolidado
+// declarado na mesma superfície) seguem vigentes, sem uma vírgula de diferença.
 // =============================================================================
 
 import { useCallback } from 'react';
 import { useToast } from '@leela/design-system';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
-import { useFinanceiroSession } from '../_data/session';
+import { useFinanceiroSession } from './_data/session';
 import { useRequestRepasse, useSaveDadosBancarios } from '../../../lib/query/mutations';
 import { useDadosBancarios, useHistoricoRepasses, useSaldoRepasse } from './_data/repasses';
 import { useRepassesPorEvento } from './_data/repassesPorEvento';

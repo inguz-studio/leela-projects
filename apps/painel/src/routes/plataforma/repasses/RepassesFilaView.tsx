@@ -17,8 +17,8 @@
 
 import { Badge, Button, Combobox, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { SelectOption, TableColumn } from '@leela/design-system';
-import { badgeEstado } from '../../financeiro/repasses/_lib/estadoRepasse';
-import { formatBRL, formatData } from '../../financeiro/repasses/_lib/format';
+import { badgeEstado } from '../../eventos/repasses/_lib/estadoRepasse';
+import { formatBRL, formatData } from '../../eventos/repasses/_lib/format';
 import type { RepasseFilaItem } from '../../../lib/query/queries';
 import {
   ESTADO_FILA_FILTERS,

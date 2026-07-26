@@ -14,6 +14,8 @@
 import { Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { HubRoute } from './hub/HubRoute';
+import { EventosHubLayout } from './EventosHubLayout';
+import { RepassesPage } from './repasses/RepassesPage';
 import { NovoEventoRoute } from './novo/NovoEventoRoute';
 import { EventoLayout } from './evento/EventoLayout';
 import { OverviewPage } from './evento/overview/OverviewPage';
@@ -49,7 +51,19 @@ export function EventosRoutes(): JSX.Element {
       {/* Boundary de segmento (mantém o RootShell) — 500 no shell. E07 · S502-T1. */}
       <AppErrorBoundary layout="shell">
       <Routes>
-        <Route index element={<HubRoute />} />
+        {/* Subdivisões de PRIMEIRO nível da área (RN-366 · IAM-T4): a lista de
+            eventos e a visão macro de repasses, sob a SubNav do hub.
+
+            PRECEDÊNCIA DECLARADA: `repasses` é segmento ESTÁTICO e por isso
+            vence `:slug` no ranking do react-router — um evento cujo slug seja
+            literalmente "repasses" NÃO sequestra a subdivisão, e a subdivisão
+            não sequestra nenhum outro evento. Isso não fica ao acaso: há teste
+            explícito em `__tests__/EventosRoutes.repasses.test.tsx`. */}
+        <Route element={<EventosHubLayout />}>
+          <Route index element={<HubRoute />} />
+          <Route path="repasses" element={<RepassesPage />} />
+        </Route>
+        {/* Criação em tela cheia — fora da moldura do hub de propósito. */}
         <Route path="novo" element={<NovoEventoRoute />} />
         <Route path=":slug" element={<EventoLayout />}>
           <Route index element={<OverviewPage />} />

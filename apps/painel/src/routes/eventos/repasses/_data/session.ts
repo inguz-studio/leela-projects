@@ -1,10 +1,15 @@
 // =============================================================================
 // Sessão do organizador para as telas de REPASSE (uid + tenantId).
 //
-// Escopo LOCAL ao módulo de financeiro, mesmo racional de eventos/clubes/
+// Escopo LOCAL à subdivisão de Repasses, mesmo racional de eventos/clubes/
 // plataforma: um SessionProvider global é preocupação transversal de vários
 // agentes em paralelo — quando existir, este hook deve passar a consumi-lo.
 // `tenantId` é obrigatório para toda leitura tenant-scoped do repasse (ADR-009).
+//
+// Viajou de `routes/financeiro/_data/` para cá na rodada IA-MENU: era
+// compartilhado entre a Análise e os Repasses, as duas telas que se separaram.
+// A Análise passou a usar o `useCrmSession` (contrato idêntico) que já existia
+// no módulo de CRM; este hook seguiu com o Repasse. Nenhuma cópia nova nasceu.
 // =============================================================================
 
 import { useEffect, useState } from 'react';

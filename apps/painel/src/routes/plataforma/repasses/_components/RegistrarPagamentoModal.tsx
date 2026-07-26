@@ -17,7 +17,7 @@
 import * as React from 'react';
 import { Button, Modal, Skeleton } from '@leela/design-system';
 import type { GetBankDetailsInput, GetBankDetailsResult } from '@leela/api-client';
-import { formatBRL } from '../../../financeiro/repasses/_lib/format';
+import { formatBRL } from '../../../eventos/repasses/_lib/format';
 import type { RepasseFilaItem } from '../../../../lib/query/queries';
 
 export interface RegistrarPagamentoModalProps {

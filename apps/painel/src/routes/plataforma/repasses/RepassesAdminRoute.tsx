@@ -14,7 +14,7 @@
 import { useMemo, useState } from 'react';
 import { ConfirmModal, useToast } from '@leela/design-system';
 import { getBankDetailsForPayout } from '@leela/api-client';
-import { formatBRL } from '../../financeiro/repasses/_lib/format';
+import { formatBRL } from '../../eventos/repasses/_lib/format';
 import { RepassesFilaView } from './RepassesFilaView';
 import { RetencaoEditor } from './_components/RetencaoEditor';
 import { RegistrarPagamentoModal } from './_components/RegistrarPagamentoModal';
