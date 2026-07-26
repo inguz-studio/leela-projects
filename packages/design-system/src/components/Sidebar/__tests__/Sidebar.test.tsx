@@ -139,6 +139,109 @@ describe('Sidebar', () => {
     expect(typeof (recebido[0] as React.MouseEvent).preventDefault).toBe('function');
   });
 
+  // -------------------------------------------------------------------------
+  // LEELA-NAVFIX-REV — o item do menu do painel passou de `<button>` para `<a>`
+  // quando o consumidor lhe deu `href`. A alegação de "zero mudança visual" era
+  // DEDUTIVA; aqui ela vira medida, e o que MUDA de fato fica travado por
+  // escrito em vez de descoberto no navegador.
+  // -------------------------------------------------------------------------
+
+  const itemDosDoisJeitos = (over: Partial<{ href: string }>, onClick?: () => void): SidebarSection[] => [
+    {
+      label: 'OPERAÇÃO',
+      items: [
+        {
+          id: 'eventos',
+          label: 'Eventos',
+          icon: sidebarNavIcon(CalendarDays),
+          badge: 3,
+          badgeVariant: 'neutral',
+          active: true,
+          ...(onClick ? { onClick } : {}),
+          ...over,
+        },
+      ],
+    },
+  ];
+
+  it('<a> e <button> saem com a MESMA string de classes e o MESMO conteúdo', () => {
+    const { unmount } = render(<Sidebar sections={itemDosDoisJeitos({})} />);
+    const botao = screen.getByRole('button', { name: /Eventos/ });
+    const classeBotao = botao.getAttribute('class');
+    const htmlBotao = botao.innerHTML;
+    const ariaBotao = botao.getAttribute('aria-current');
+    unmount();
+
+    render(<Sidebar sections={itemDosDoisJeitos({ href: '/eventos' })} />);
+    const link = screen.getByRole('link', { name: /Eventos/ });
+
+    // O ramo `<a>` usa `sharedProps.className` — a mesma string. Se alguém
+    // divergir os dois ramos, o menu muda de aparência sem ninguém ver.
+    expect(link.getAttribute('class')).toBe(classeBotao);
+    expect(link.innerHTML).toBe(htmlBotao);
+    expect(link.getAttribute('aria-current')).toBe(ariaBotao);
+    expect(ariaBotao).toBe('page');
+  });
+
+  it('o DELTA de atributos entre os dois ramos é exatamente +href / -type', () => {
+    const atributos = (el: Element): string[] => Array.from(el.attributes).map((a) => a.name).sort();
+
+    const { unmount } = render(<Sidebar sections={itemDosDoisJeitos({})} />);
+    const doBotao = atributos(screen.getByRole('button', { name: /Eventos/ }));
+    unmount();
+
+    render(<Sidebar sections={itemDosDoisJeitos({ href: '/eventos' })} />);
+    const doLink = atributos(screen.getByRole('link', { name: /Eventos/ }));
+
+    expect(doLink.filter((a) => !doBotao.includes(a))).toEqual(['href']);
+    expect(doBotao.filter((a) => !doLink.includes(a))).toEqual(['type']);
+  });
+
+  it('Enter ativa o item nos dois ramos — navegação por teclado não regride', async () => {
+    const noBotao = vi.fn();
+    const { unmount } = render(<Sidebar sections={itemDosDoisJeitos({}, noBotao)} />);
+    screen.getByRole('button', { name: /Eventos/ }).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(noBotao).toHaveBeenCalledTimes(1);
+    unmount();
+
+    const noLink = vi.fn();
+    render(<Sidebar sections={itemDosDoisJeitos({ href: '/eventos' }, noLink)} />);
+    screen.getByRole('link', { name: /Eventos/ }).focus();
+    await userEvent.keyboard('{Enter}');
+    expect(noLink).toHaveBeenCalledTimes(1);
+  });
+
+  it('DELTA DELIBERADO: Espaço ativa o <button> e NÃO ativa o <a>', async () => {
+    // Semântica de HTML, não defeito: link se ativa com Enter, botão com Enter
+    // e Espaço. Dar `href` ao item troca uma coisa pela outra, e isso não estava
+    // escrito em lugar nenhum. Fica travado aqui: se algum dia o menu precisar
+    // de Espaço, é decisão consciente com um teste vermelho na frente.
+    const noLink = vi.fn();
+    const { unmount } = render(<Sidebar sections={itemDosDoisJeitos({ href: '/eventos' }, noLink)} />);
+    screen.getByRole('link', { name: /Eventos/ }).focus();
+    await userEvent.keyboard('[Space]');
+    expect(noLink).not.toHaveBeenCalled();
+    unmount();
+
+    const noBotao = vi.fn();
+    render(<Sidebar sections={itemDosDoisJeitos({}, noBotao)} />);
+    screen.getByRole('button', { name: /Eventos/ }).focus();
+    await userEvent.keyboard('[Space]');
+    expect(noBotao).toHaveBeenCalledTimes(1);
+  });
+
+  it('o item é alcançável por Tab nos dois ramos (ordem de tabulação intacta)', async () => {
+    const { unmount } = render(<Sidebar sections={itemDosDoisJeitos({})} />);
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: /Eventos/ })).toHaveFocus();
+    unmount();
+
+    render(<Sidebar sections={itemDosDoisJeitos({ href: '/eventos' })} />);
+    await userEvent.tab();
+    expect(screen.getByRole('link', { name: /Eventos/ })).toHaveFocus();
+  });
+
   it('DEFAULT_SIDEBAR_SECTIONS has 6 items total (RN-233 · rodada IA-MENU)', () => {
     const count = DEFAULT_SIDEBAR_SECTIONS.flatMap((s) => s.items).length;
     expect(count).toBe(6);
