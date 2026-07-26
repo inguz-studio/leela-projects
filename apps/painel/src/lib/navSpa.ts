@@ -58,6 +58,31 @@ export function onClickSpa(
 }
 
 /**
+ * Compõe um `onClick` que a superfície já trazia com a navegação de SPA
+ * (LEELA-NAVFIX-REV).
+ *
+ * A fiação por spread (`{ ...tab, onClick: onClickSpa(...) }`) SOBRESCREVIA em
+ * silêncio um `onClick` que a aba trouxesse — fechar um menu, registrar um
+ * evento de produto. Como a Directive desta lane manda toda superfície nova
+ * nascer por aqui, o descarte silencioso seria descoberto em produção, não no
+ * gate. A ordem é a mesma do resto do contrato: quem chegou primeiro decide —
+ * o handler original roda antes, e se ele cancelar o default o `onClickSpa`
+ * desiste sozinho pelo early-return de `defaultPrevented`.
+ */
+function comNavSpa(
+  original: ((event: React.MouseEvent) => void) | undefined,
+  navegar: NavegarSpa,
+  para: string,
+): (event: React.MouseEvent) => void {
+  const spa = onClickSpa(navegar, para);
+  if (!original) return spa;
+  return (event) => {
+    original(event);
+    spa(event);
+  };
+}
+
+/**
  * Fia as abas de um `SubNav` para navegar por SPA. Aplicado no PONTO DE RENDER
  * (a casca que monta a barra), nunca dentro dos construtores `@pure` de abas —
  * eles seguem sendo funções puras de (slug, aba ativa) → tabs, com teste
@@ -67,7 +92,9 @@ export function onClickSpa(
  * passa intocada.
  */
 export function tabsComNavSpa(tabs: readonly SubNavTab[], navegar: NavegarSpa): SubNavTab[] {
-  return tabs.map((tab) => (tab.href ? { ...tab, onClick: onClickSpa(navegar, tab.href) } : tab));
+  return tabs.map((tab) =>
+    tab.href ? { ...tab, onClick: comNavSpa(tab.onClick, navegar, tab.href) } : tab,
+  );
 }
 
 /**
@@ -80,6 +107,6 @@ export function trilhaComNavSpa(
   navegar: NavegarSpa,
 ): BreadcrumbItem[] {
   return itens.map((item) =>
-    item.href ? { ...item, onClick: onClickSpa(navegar, item.href) } : item,
+    item.href ? { ...item, onClick: comNavSpa(item.onClick, navegar, item.href) } : item,
   );
 }

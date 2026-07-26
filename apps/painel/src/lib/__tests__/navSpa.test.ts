@@ -88,6 +88,39 @@ describe('tabsComNavSpa', () => {
     expect(aba?.onClick).toBe(onClick);
   });
 
+  // LEELA-NAVFIX-REV — a fiação por spread engolia em silêncio um onClick que a
+  // aba já trouxesse. A Directive da lane manda toda superfície nova nascer
+  // por aqui: o descarte apareceria em produção, não no gate.
+  it('aba com href E onClick próprio: o handler original NÃO é descartado', () => {
+    const navegar = vi.fn();
+    const proprio = vi.fn();
+    const [aba] = tabsComNavSpa(
+      [{ id: 'inscritos', label: 'Inscritos', href: '/eventos/x/inscritos', onClick: proprio }],
+      navegar,
+    );
+    const evento = chamarOnClick(aba?.onClick);
+    expect(proprio).toHaveBeenCalledTimes(1);
+    expect(evento.defaultPrevented).toBe(true);
+    expect(navegar).toHaveBeenCalledWith('/eventos/x/inscritos');
+  });
+
+  it('handler original que cancela o default manda — a SPA desiste', () => {
+    const navegar = vi.fn();
+    const [aba] = tabsComNavSpa(
+      [
+        {
+          id: 'inscritos',
+          label: 'Inscritos',
+          href: '/eventos/x/inscritos',
+          onClick: (event) => event.preventDefault(),
+        },
+      ],
+      navegar,
+    );
+    chamarOnClick(aba?.onClick);
+    expect(navegar).not.toHaveBeenCalled();
+  });
+
   it('cada aba navega para o PRÓPRIO destino (sem closure compartilhada)', () => {
     const navegar = vi.fn();
     const abas = tabsComNavSpa(
@@ -117,5 +150,14 @@ describe('trilhaComNavSpa', () => {
 
     expect(trilha[1]).toBe(atual);
     expect(trilha[1]?.onClick).toBeUndefined();
+  });
+
+  it('item com href E onClick próprio: o handler original NÃO é descartado', () => {
+    const navegar = vi.fn();
+    const proprio = vi.fn();
+    const [item] = trilhaComNavSpa([{ label: 'Eventos', href: '/eventos', onClick: proprio }], navegar);
+    chamarOnClick(item?.onClick);
+    expect(proprio).toHaveBeenCalledTimes(1);
+    expect(navegar).toHaveBeenCalledWith('/eventos');
   });
 });
