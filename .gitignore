@@ -47,6 +47,9 @@ storybook-static/
 .env.*
 !.env.example
 
+# Snapshot local do Emulator Suite (emulators:export / --import)
+.emulator-data/
+
 # pnpm
 .pnpm-store/
 
