@@ -16,7 +16,11 @@
 
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
-import { AnaliseVendasPage } from './analise/AnaliseVendasPage';
+// IAM-T2: a tela migrou para `routes/crm/visao-geral/`. Este módulo inteiro é
+// deletado no IAM-T6 (que instala os redirects da RN-234); até lá `/financeiro`
+// segue respondendo, agora servindo a tela do endereço novo — nenhuma janela
+// em que a URL legada quebra.
+import { AnaliseVendasPage } from '../crm/visao-geral/AnaliseVendasPage';
 import { RepassesPage } from './repasses/RepassesPage';
 import { FinanceiroSubNav } from './_components/FinanceiroSubNav';
 import { NotFound } from '../_system/NotFound';

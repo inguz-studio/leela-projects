@@ -1,15 +1,23 @@
 // =============================================================================
-// AnaliseVendasPage — container da rota índice `/financeiro` (RN-820/RN-821).
-// Liga a sessão do organizador (tenantId + uid) às leituras da análise e passa
-// tudo ao AnaliseVendasView. O filtro por evento (RN-821) vive aqui como estado
-// local: `null` = todos os eventos (agregado do tenant); um id recorta os 4
-// blocos para o `…/current` daquele evento. Nenhuma soma pesada no cliente —
-// só leituras de agregado ∑ (§2.12).
+// AnaliseVendasPage — container de **CRM › Visão geral**, a rota índice `/crm`
+// (RN-823, que supersede a parte da RN-821 que fixava `/financeiro` como
+// superfície única de análise). Liga a sessão do organizador (tenantId + uid)
+// às leituras da análise e passa tudo ao AnaliseVendasView. O filtro por evento
+// (RN-821) vive aqui como estado local: `null` = todos os eventos (agregado do
+// tenant); um id recorta os 4 blocos para o `…/current` daquele evento. Nenhuma
+// soma pesada no cliente — só leituras de agregado ∑ (§2.12).
+//
+// A tela mudou de ENDEREÇO, não de comportamento: o move da rodada IA-MENU é
+// de navegação. A sessão passa a vir do `useCrmSession` que já existia no
+// módulo (mesmo contrato `status`/`uid`/`tenantId`) — nenhuma cópia nova.
+// PII: esta é a camada AGREGADA (RN-820/822, supressão k=5 no cohort). Dividir
+// a casca de menu com CRM › Clientes (identidade individual, RN-172) NÃO
+// autoriza cruzar as duas camadas.
 // =============================================================================
 
 import * as React from 'react';
 import type { DateRange } from '@leela/design-system';
-import { useFinanceiroSession } from '../_data/session';
+import { useCrmSession } from '../_data/session';
 import {
   useDemografiaAnalise,
   useDesempenhoAnalise,
@@ -20,7 +28,7 @@ import {
 import { AnaliseVendasView } from './AnaliseVendasView';
 
 export function AnaliseVendasPage(): JSX.Element {
-  const session = useFinanceiroSession();
+  const session = useCrmSession();
   const carregandoSessao = session.status === 'loading';
 
   // Filtro por evento (RN-821): null = todos os eventos (agregado do tenant).
