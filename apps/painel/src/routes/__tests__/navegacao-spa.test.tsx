@@ -21,7 +21,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 
 import { EventoShell } from '../eventos/evento/EventoShell';
@@ -59,6 +59,20 @@ vi.mock('../eventos/_data/papelEvento', () => ({
 const SLUG = 'meia-floripa-2026';
 const EVENTO = mkEvento();
 
+/**
+ * Sonda de rota — LEELA-NAVFIX-REV.
+ *
+ * O gate original media só `defaultPrevented`, que prova a METADE do contrato:
+ * que a aba parou de recarregar o documento. Um handler que só chamasse
+ * `preventDefault()` e nunca navegasse passaria verde com a aba MORTA. A sonda
+ * fecha a outra metade: depois do clique, a rota do router tem de ser o `href`
+ * da própria âncora.
+ */
+function Sonda(): JSX.Element {
+  const { pathname } = useLocation();
+  return <div data-testid="rota-gate">{pathname}</div>;
+}
+
 /** Provedor de Outlet context para as cascas terciárias do evento. */
 function ComContextoDoEvento({ ctx }: { ctx: EventoOutletContext }): JSX.Element {
   return <Outlet context={ctx} />;
@@ -81,6 +95,7 @@ function montarSobContexto(rota: string, elemento: JSX.Element): void {
           <Route path="*" element={elemento} />
         </Route>
       </Routes>
+      <Sonda />
     </MemoryRouter>,
   );
 }
@@ -92,6 +107,15 @@ interface SuperficieNav {
   landmark: string;
   /** Quantas âncoras a superfície renderiza. Contagem EXATA. */
   ancoras: number;
+  /**
+   * Texto do ÚNICO elemento com `aria-current="page"` dentro do landmark
+   * (LEELA-NAVFIX-REV). É a asserção que este tipo de mudança regride calada:
+   * a fiação copia a aba com spread, e basta alguém montar o objeto novo em vez
+   * de espalhá-lo para o marcador de "onde estou" sumir sem nenhum teste cair.
+   * Nos breadcrumbs o marcador está no `<span>` da página atual, não num link —
+   * por isso a busca é por atributo, não por role.
+   */
+  atual: string;
   montar: () => void;
 }
 
@@ -100,12 +124,14 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'abas do evento',
     landmark: 'Seções do evento',
     ancoras: 10,
+    atual: 'Visão geral',
     montar: () =>
       void render(
         <MemoryRouter initialEntries={[`/eventos/${SLUG}`]}>
           <EventoShell evento={EVENTO} ativa="overview">
             <p>c</p>
           </EventoShell>
+          <Sonda />
         </MemoryRouter>,
       ),
   },
@@ -113,12 +139,14 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'breadcrumb do evento',
     landmark: 'Breadcrumb',
     ancoras: 1,
+    atual: EVENTO.nome,
     montar: () =>
       void render(
         <MemoryRouter initialEntries={[`/eventos/${SLUG}`]}>
           <EventoShell evento={EVENTO} ativa="overview">
             <p>c</p>
           </EventoShell>
+          <Sonda />
         </MemoryRouter>,
       ),
   },
@@ -126,12 +154,14 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'abas do clube',
     landmark: 'Seções do clube',
     ancoras: 6,
+    atual: 'Overview',
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/clubes/corrida-perfeita-sul']}>
           <ClubeShell clube={mkClube()} ativa="overview" onCopiarCodigo={() => {}}>
             <p>c</p>
           </ClubeShell>
+          <Sonda />
         </MemoryRouter>,
       ),
   },
@@ -139,6 +169,7 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'sub-abas de Kits',
     landmark: 'Seções de kits',
     ancoras: 4,
+    atual: 'Cadastro',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/kits`, <KitsLayout />),
   },
@@ -146,6 +177,7 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'sub-abas do Financeiro',
     landmark: 'Seções do financeiro',
     ancoras: 2,
+    atual: 'Caixa',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/financeiro`, <FinanceiroLayout />),
   },
@@ -153,6 +185,7 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'sub-abas de Configurações',
     landmark: 'Seções de configurações',
     ancoras: 4,
+    atual: 'Geral',
     montar: () =>
       montarSobContexto(`/eventos/${SLUG}/configuracoes`, <ConfiguracoesLayout />),
   },
@@ -161,6 +194,7 @@ const SUPERFICIES: SuperficieNav[] = [
     landmark: 'Breadcrumb',
     // 5 níveis, o último é a página atual (span, não link) → 4 âncoras.
     ancoras: 4,
+    atual: 'Novo kit',
     montar: () =>
       void render(
         <MemoryRouter initialEntries={[`/eventos/${SLUG}/kits/novo`]}>
@@ -174,6 +208,7 @@ const SUPERFICIES: SuperficieNav[] = [
               onConcluir={vi.fn()}
             />
           </ToastProvider>
+          <Sonda />
         </MemoryRouter>,
       ),
   },
@@ -183,11 +218,12 @@ const SUPERFICIES: SuperficieNav[] = [
     nome: 'menu lateral do produtor',
     landmark: 'Navegação principal',
     ancoras: 6,
+    atual: 'Visão Geral',
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/']}>
           <RootShell>
-            <p>c</p>
+            <Sonda />
           </RootShell>
         </MemoryRouter>,
       ),
@@ -227,6 +263,44 @@ describe('gate de navegação SPA — nenhuma superfície recarrega o documento'
       expect(href, `âncora "${ancora.textContent ?? ''}" sem href`).toMatch(/^\//);
     }
   });
+
+  // -------------------------------------------------------------------------
+  // LEELA-NAVFIX-REV — as duas metades que faltavam ao gate.
+  // -------------------------------------------------------------------------
+
+  it.each(SUPERFICIES)(
+    '$nome: TODA âncora LEVA ao destino do próprio href (aba viva, não só silenciada)',
+    ({ landmark, montar }) => {
+      montar();
+      const nav = screen.getByRole('navigation', { name: landmark });
+      for (const ancora of within(nav).getAllByRole('link')) {
+        const href = ancora.getAttribute('href') ?? '?';
+        clicarNoDom(ancora);
+        // `defaultPrevented` sozinho não distingue "navega por SPA" de "clique
+        // não faz nada": um handler que só cancelasse o default passaria no
+        // teste acima com a aba MORTA. Aqui a rota do router tem de virar o
+        // href — as duas metades do contrato, medidas separadamente.
+        expect(
+          screen.getByTestId('rota-gate').textContent,
+          `"${ancora.textContent ?? ''}" cancela o default mas não navega para ${href}`,
+        ).toBe(href);
+      }
+    },
+  );
+
+  it.each(SUPERFICIES)(
+    '$nome: exatamente um "aria-current=page", e é "$atual"',
+    ({ landmark, atual, montar }) => {
+      montar();
+      const nav = screen.getByRole('navigation', { name: landmark });
+      const marcados = Array.from(nav.querySelectorAll('[aria-current="page"]'));
+      expect(
+        marcados.map((e) => e.textContent),
+        'a superfície tem de dizer ONDE a pessoa está — uma marca, nem zero nem duas',
+      ).toHaveLength(1);
+      expect(marcados[0]?.textContent).toContain(atual);
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
