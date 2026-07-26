@@ -402,3 +402,15 @@ O plano da Onda 4 acima fixou `apps/painel/src/routes/financeiro/analise` como t
 Nada mais do plano muda: o grafo (`S821-T1a → S821-T1b → {T2, S822-T1, S823-T1}`), as rotas de modelo (todas opus xhigh, pelo motivo já registrado — o gate de um número agregado é a corretude da fórmula, que nenhum linter verifica), a armadilha estoque × fluxo e o critério de pronto seguem valendo palavra por palavra.
 
 **Ordem entre os dois lotes:** `IAM-T2` (o move) é pré-requisito das três tarefas de tela do E11. Despachar `S821-T2` antes do move significa escrever código num diretório que vai ser movido — retrabalho garantido e conflito de território com a lane IA-MENU. O move é barato, não depende do rollup e vai primeiro.
+
+### Apêndice de execução IA-MENU (2026-07-26 · lane IAMENU-EXEC)
+
+**O move está feito: `IAM-T2` `c1f6f03` (opus xhigh). O pré-requisito de `S821-T2`, `S822-T2` e `S823-T1` está pago — as três podem ser despachadas.**
+
+Território novo confirmado: **`apps/painel/src/routes/crm/visao-geral/**`**. Migraram `AnaliseVendasPage`, `AnaliseVendasView`, `CohortIdadeSexo`, `_lib/{demografia,desempenho,modalidades,tamanhos}`, `_data/analise` e os testes. `apps/painel/src/routes/financeiro/` **não existe mais** (deletado no `IAM-T6`) — qualquer plano que ainda cite aquele caminho está desatualizado.
+
+**RN-823 cumprida na fonte.** A supressão de "Analytics" deixou de ser filtro no consumidor: o item saiu do `DEFAULT_SIDEBAR_SECTIONS` do design system junto com `financeiro`, e o `IDS_SUPRIMIDOS` do painel foi deletado (`IAM-T1` `41fcb73`). A análise agora se alcança por **CRM › Visão geral** (`/crm`), e `/financeiro` redireciona para lá (RN-234).
+
+**Prova de que o move não mexeu em comportamento:** `git diff -M --stat` mostra **0 inserções e 0 deleções** nos 6 arquivos de teste movidos. A supressão k=5 do cohort, a linha companheira arrastada, a nota de cobertura honesta e a exclusão do `aguardandoReprocesso` chegaram intactas — nenhuma asserção foi reescrita, que era o gate.
+
+**Uma mudança de import, e só:** a página passou a usar o `useCrmSession` (mesmo contrato do `useFinanceiroSession`, que viajou com Repasses). Como o caminho relativo `../_data/session` é idêntico nos dois módulos, a troca foi de NOME do hook, não de topologia — e nenhuma cópia nova de sessão nasceu.

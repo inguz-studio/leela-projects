@@ -3,7 +3,7 @@
 - **Employee:** sf-frontend-lead (software-forge) · rota opus, effort xhigh em todas as tasks
 - **Repo:** `C:\dev\LEELA` · branch `main` · topo na entrada `aa4c8ff`
 - **Natureza:** execução da fila `IAM-T1..T7` (`leela-specs/02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`)
-- **Estado:** 🟡 EM EXECUÇÃO
+- **Estado:** ✅ **CONCLUÍDA** — 7 tasks, 7 commits, todos pushados
 
 ## Baseline medido ANTES de qualquer alteração (2026-07-26)
 
@@ -41,10 +41,19 @@ Leitura adotada: no brief enriquecido a frase aparece dentro da seção **"Guia 
 | IAM-T1 · menu de 6 áreas | ✅ | `41fcb73` | ✅ |
 | IAM-T2 · análise → CRM › Visão geral | ✅ | `c1f6f03` | ✅ |
 | IAM-T4 · repasses → Eventos | ✅ | `cee7bbe` | ✅ |
-| IAM-T3 · CRM com 3 subdivisões | ✅ | `7b78538` | ⏳ |
-| IAM-T5 · dados de recebimento em Configurações | ⏳ | — | — |
-| IAM-T7 · Caixa do evento | ⏳ | — | — |
-| IAM-T6 · redirects | ⏳ | — | — |
+| IAM-T3 · CRM com 3 subdivisões | ✅ | `7b78538` | ✅ |
+| IAM-T5 · dados de recebimento em Configurações | ✅ | `14f059e` (+ renames em `05708dd`) | ✅ |
+| IAM-T7 · Caixa do evento | ✅ | `e5c77cb` | ✅ |
+| IAM-T6 · redirects | ✅ | `7a8f158` | ✅ |
+
+### Colateral do maestro registrado (T5)
+
+Os 3 renames da T5 — `DadosBancariosSection.tsx`, `DadosBancariosForm.tsx` e o teste da section, de `eventos/repasses/_components/` para `conta/recebimento/` — aterrissaram **antes**, por engano, no commit de docs `05708dd` do maestro, com **0 mudança de conteúdo**. Efeito colateral: `main` ficou momentaneamente sem compilar (os arquivos no destino ainda importavam os vizinhos da origem). O commit `14f059e` traz o restante da T5 e fecha o buraco. Nada a reverter.
+
+### Dois defeitos meus, pegos antes de subir
+
+1. **T5** — a primeira versão importava o container de dados dentro da `ContaPage`, acorrentando a página inteira (nome, foto, senha, logout) a um QueryClient que ela não usa: **13 testes pré-existentes quebraram**. Redesenhado para slot (`recebimento?: ReactNode`) com o container composto na rota. Os 12 testes de `ContaPage` voltaram **sem uma linha tocada**; só o único que monta `ContaRoutes` ganhou o `QueryClientProvider` que o App.tsx já fornece em produção — harness completado, asserção idêntica.
+2. **T6** — a primeira versão exportava `<RotasLegadas />` como **componente**. O `<Routes>` do react-router só aceita `<Route>` ou `React.Fragment` e **lança em runtime** diante de qualquer outro componente: teria derrubado o painel inteiro na primeira renderização, e nenhum `tsc`/`eslint` pegaria. Virou `rotasLegadas()`, função que devolve array de `<Route>`. **Foi o próprio gate orientado a tabela que pegou** — a prova de que ele não era burocracia.
 
 ### Prova do gate transversal (asserção reescrita = reprovação)
 
@@ -56,6 +65,20 @@ Medida por `git diff -M --stat`, não por leitura. **Todo arquivo de teste movid
 
 Ordem de execução (agente único, serializando o grafo): T1 → T2 → T4 → T3 → T5 → T7 → T6.
 Respeita todas as dependências e **serializa por construção o conflito de território T2/T4**.
+
+## Gates finais (exit code literal)
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` · painel | **0** |
+| `tsc --noEmit` · design-system | **0** |
+| `eslint --max-warnings 0` · painel | **0** |
+| `eslint --max-warnings 0` · design-system | **0** |
+| Gate determinístico dos redirects (T6) | **44/44** |
+| Suíte do painel, passada única | 1341 passed · 21 failed · 1362 |
+| **Vermelhos NOVOS desta lane** | **0** |
+
+Dos 21: **2** são os pré-existentes da tabela de baseline; **19** são `Test timed out in 5000ms` em 10 arquivos que esta lane nunca tocou. Re-rodados isolados em 2 lotes: **112 testes, 100% verdes**. É flake de carga, não regressão — e vale card próprio (mesma classe do SUITE-STAB, só que do lado do painel).
 
 ## Fugas de escopo registradas (registrar e pular, nunca improvisar)
 

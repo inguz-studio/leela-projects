@@ -245,3 +245,19 @@ A área junta, sob a mesma casca, duas categorias de dado que o épico sempre tr
 `IAM-T2` (a análise migra para CRM › Visão geral) → `IAM-T3` (a área ganha as 3 subdivisões), ambas **opus xhigh com review antagonista**, em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`. São tarefas de navegação: **nenhum contrato de dado, Rule ou callable é tocado**. Se a execução precisar mexer em `functions/` ou `firestore.rules`, saiu do escopo e volta para a spec.
 
 **Gate específico do move:** a suíte das telas movidas (`ClientesPage`, `ClienteDetailPage`, `AnaliseVendasView`, `CohortIdadeSexo`) tem de passar **sem asserção reescrita**. Um teste que precisou mudar de expectativa é a prova de que o move alterou comportamento — e o comportamento inclui a supressão k=5 e a nota de cobertura honesta.
+
+### Apêndice de execução IA-MENU (2026-07-26 · lane IAMENU-EXEC)
+
+**A área CRM está construída.** `IAM-T2` `c1f6f03` → `IAM-T3` `7b78538`, ambas opus xhigh. ⚔ reviews antagonistas **pendentes**.
+
+**As 3 subdivisões.** `CrmLayout` + `CrmSubNav` (Visão geral | Clientes | Comunicação), sucedendo a `FinanceiroSubNav` de 2 abas. Rotas: `/crm` índice = Visão geral, `/crm/visao-geral` = alias explícito, `/crm/clientes` = lista, `/crm/clientes/:clienteKey` = ficha, `/crm/comunicacao` = estado honesto.
+
+**A armadilha de ordem, fechada.** As subdivisões nomeadas são rotas **reais**, declaradas antes de qualquer parâmetro, com teste sobre a árvore real provando que `/crm/clientes` abre a LISTA e nunca a ficha de um cliente de chave "clientes". `visao-geral` entrou como rota declarada e não só como índice: o mapa DE→PARA exige que o redirect legado ignore `clientes`, `comunicacao` e `visao-geral`, e rota real torna a exclusão **estrutural** em vez de uma lista de strings que alguém esquece de atualizar. Sem essa base, o redirect do `IAM-T6` entraria em laço.
+
+**`/crm/comunicacao`.** Reusa o `SystemStateScreen` do DS na variante `maintenance` — zero componente novo. Não é vazio decorativo: declara o que não existe, declara o que JÁ existe (comunicação por evento, E06) e leva até lá. A RN-233 pede que o item tenha rota; não pede que ele finja funcionar. O S1901-T4a/b/c segue travado na chave do Brevo e é quem substitui esta casca.
+
+**Gate do move honrado, com prova.** Os 6 arquivos de teste da Visão geral (`AnaliseVendasView`, `CohortIdadeSexo`, `demografia`, `desempenho`, `modalidades`, `tamanhos`) saíram do `git diff -M --stat` com **`| 0`** — zero inserções, zero deleções. E `ClientesPage.test.tsx` e `ClienteDetailPage.test.tsx` **nem aparecem no diff**: a ficha desceu um nível (`ClientesPage` navega para `/crm/clientes/{chave}`, o "voltar" aponta para `/crm/clientes`) e nenhum dos dois testes precisou mudar, porque nenhum deles assertava alvo de navegação.
+
+**Sessão.** A Visão geral passou a usar o `useCrmSession` que já existia no módulo (contrato idêntico `status`/`uid`/`tenantId`); o `useFinanceiroSession` viajou com Repasses. Nenhum arquivo órfão, nenhuma cópia nova.
+
+⚠️ **A fronteira de PII é o único dos 8 riscos da rodada SEM prova executável.** Visão geral (agregado, k=5, RN-820/822) e Clientes (identidade individual, RN-172) passaram a dividir a casca de menu. A fronteira está declarada como diretriz de código no `CrmSubNav` e no `AnaliseVendasPage`, e nenhum recorte demográfico foi adicionado à lista — mas **nada no código impede** que alguém acrescente um "filtro de clientes por faixa etária", que reintroduziria exatamente a diferenciação que o k-anonimato fecha. Isso é vigilância, não garantia: segue como gatilho de bloqueio do gate antagonista de PII deste épico, e é o item que a review antagonista tem de atacar primeiro.

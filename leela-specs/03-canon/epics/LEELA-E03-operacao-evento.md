@@ -1731,3 +1731,17 @@ A S207 (Financeiro do evento) já vive aqui, e é a decisão certa: o E03 é a *
 ### Execução
 
 `IAM-T7` (aba Caixa com o repasse do evento) — **opus xhigh com review antagonista**, porque põe número de dinheiro dentro da tela de um evento específico. Depende de `IAM-T4` (a migração de repasses). Gate: o teste da matriz de papéis passa **sem edição**, e a linha de repasse bate com o mesmo número que aquele evento mostra em `/eventos/repasses` — reconciliação entre as duas telas, nunca recálculo. Detalhe em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`.
+
+### Apêndice de execução (2026-07-26 · lane IAMENU-EXEC)
+
+**RN-235 está construída.** `IAM-T7` `e5c77cb`, opus xhigh. ⚔ review antagonista **pendente**.
+
+**O rótulo.** A sub-aba lê **Caixa** e o título da tela virou "Caixa do evento". `/eventos/{slug}/financeiro` e `RequirePapel area="financeiro"` intactos — prova objetiva: `routes/_system/` **não aparece no diff do commit**, ou seja, o teste da matriz de papéis passou sem uma edição, que era o gate.
+
+**A lacuna fechada.** A Caixa lê o repasse **daquele** evento pelo `useHistoricoRepasses` + `associarRepassesPorEvento` — o MESMO reader e a MESMA função pura que montam a linha do evento em `/eventos/repasses`. A reconciliação é **por construção**, não por conferência: mesma fonte, mesma derivação, mesmo campo exato `eventoId`. Se um dia divergirem, é bug de dado, não duas contas paralelas. O teste monta um histórico com ruído de propósito (outro evento, um cancelado, um sem associação), deriva pela função da macro e afirma que a Caixa exibe exatamente aquele número.
+
+**Estados honestos.** Sem repasse associado: "—" com "Nenhum repasse solicitado para este evento". O "repassado R$ 0,00" genérico morreu — zero que parece movimento era o pior modo de falha desta tela. Enquanto o histórico carrega, a tela **não** afirma ausência: diz que está consultando.
+
+**O atalho.** "Ver todos os repasses" leva a `/eventos/repasses`, e a visibilidade deriva da **matriz única** (`podeAcessar(papel, 'financeiro')`, RN-320) — a mesma que o `RequirePapel` consulta, nunca uma segunda regra de acesso. Testado nos dois sentidos e com espelho célula a célula da matriz (organizador ✅ · financeiro ✅ · administrador ❌ · operador ❌).
+
+**Uma asserção mudou de propósito.** O hint genérico "Disponível com o módulo de repasses" saiu de `FinanceiroView.test.tsx`. Isso é mudança de comportamento **deliberada** desta RN, ratificada em `00-decisao` §6 — **não** é o gate transversal de "move sem asserção reescrita", que vale para as telas que se mudaram de pasta (esta não se mudou). Ponto explícito para a review antagonista confirmar.

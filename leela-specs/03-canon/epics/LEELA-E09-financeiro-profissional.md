@@ -911,3 +911,21 @@ As duas versões não convivem soltas: a de 13/07 fica como o passo anterior, e 
 ### Execução
 
 `IAM-T4` (repasses migram para Eventos, com a SubNav do hub) e `IAM-T5` (dados de recebimento em Configurações + o aviso do pré-requisito), ambas **opus xhigh com review antagonista** — é a superfície pela qual o organizador tira dinheiro do sistema. Detalhe em `02-rodadas/2026-07-19-ia-menu/02-fila-codigo.md`. **Nenhuma toca `functions/`, `firestore.rules` ou callable**; se precisar, saiu do escopo e volta para a spec.
+
+### Apêndice de execução IA-MENU (2026-07-26 · lane IAMENU-EXEC)
+
+**RN-366 está construída.** `IAM-T4` `cee7bbe` · `IAM-T5` `14f059e`, ambas opus xhigh. ⚔ reviews antagonistas **pendentes**.
+
+**A migração (T4).** `routes/financeiro/repasses/**` inteiro virou `routes/eventos/repasses/**`, e `/eventos/repasses` nasceu **fora de `:slug`**, sob a `EventosHubLayout` nova (SubNav Eventos | Repasses, reusando o SubNav do DS com `divider` — mesmo componente e mesmas props da área Financeiro que morreu, para a troca de casa não virar troca de aparência). RN-334, RN-349 e RN-358 seguem palavra por palavra: o delta foi de endereço.
+
+**Prova do gate do move:** `git diff -M --stat` mostra **0 inserções e 0 deleções nos 11 arquivos de teste movidos** (SaldoCards, HistoricoRepasses, RepassesPorEvento, SolicitarRepasseModal, DadosBancariosSection, session e os 5 de `_lib`). Mascaramento RN-354 e a associação exata por `eventoId` chegaram intactos.
+
+**Colisão de rota fechada.** `/eventos/repasses` × `/eventos/:slug` tem precedência declarada **e testada sobre a árvore de rotas real**: um evento de slug `repasses` não sequestra a subdivisão, e a subdivisão não sequestra `/eventos/repasse`, `/eventos/repassess` nem `/eventos/meus-repasses`. O harness monta o módulo em `/eventos/*`, o mesmo ponto do `App.tsx` — a primeira versão montava na raiz e media o harness em vez do produto.
+
+**O cadastro único (T5).** `DadosBancariosSection` + `DadosBancariosForm` mudaram para `routes/conta/recebimento/`, com um container fino que orquestra as MESMAS `useDadosBancarios` / `useSaveDadosBancarios`. Zero backend novo, RN-354 intacta. `RepasseErro` e `_lib/dadosBancariosForm` **não** se mudaram: são compartilhados com ComprovanteModal, SolicitarRepasseModal, HistoricoRepasses e RepassesPorEvento, e mover o compartilhado por causa de um consumidor criaria a cópia que a rodada existe para evitar.
+
+**O ponto que mais exigia cuidado — o pré-requisito do saque.** Até aqui ele era garantido por PROXIMIDADE: o formulário bancário ficava dois centímetros abaixo do botão, então "tem dado salvo" era quase tautológico. Com o cadastro em outra tela isso acabou, e a checagem virou explícita: sem dado, o `PreRequisitoRecebimento` diz o que falta e leva a `/conta`, o botão não habilita e **o modal não monta** — a proteção é o modal não existir, não o `disabled` do botão. Testado nos estados que mais enganam: enquanto o dado **carrega** a tela não anuncia "faltam dados", e em **erro de leitura** oferece retry em vez de acusar falta de cadastro.
+
+**Dívida deixada explícita:** existem três cópias do mesmo hook de sessão (`assessorias`, `crm`, `eventos/repasses`). A T5 importou a existente em vez de criar a quarta, com acoplamento declarado `conta/` → `eventos/repasses/` (precedente: `plataforma/repasses` já importa de lá). Os próprios docblocks dos três apontam o `SessionProvider` global como saída. Vale card.
+
+**Nota de procedência:** os 3 renames da T5 aterrissaram antes, por colateral, no commit de docs `05708dd` do maestro, com 0 mudança de conteúdo — o que deixou `main` momentaneamente sem compilar (os arquivos no destino ainda importavam os vizinhos da origem). `14f059e` traz o restante e fecha o buraco.
