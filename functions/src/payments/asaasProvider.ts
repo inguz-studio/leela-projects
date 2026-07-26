@@ -45,6 +45,8 @@ import type {
   CreateChargeParams,
   ChargeResult,
   ChargeStatus,
+  CancelChargeParams,
+  CancelChargeResult,
   SplitRulesParams,
   SplitRulesResult,
   RefundParams,
@@ -487,6 +489,8 @@ export class AsaasProvider implements PaymentProvider {
 
   /** Dedup em memória (best-effort por instância; durável = domínio). */
   private readonly refundsPorChave = new Map<string, RefundResult>();
+  /** Dedup de cancelamento (RN-157 · T3) — mesma disciplina do refund. */
+  private readonly cancelamentosPorChave = new Map<string, CancelChargeResult>();
   private readonly webhooksPorEntrega = new Map<string, WebhookResult>();
 
   constructor(config: AsaasProviderConfig) {
@@ -533,7 +537,7 @@ export class AsaasProvider implements PaymentProvider {
   // ── Transporte ────────────────────────────────────────────────────────────
 
   private async request(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     opts: { query?: Record<string, string>; body?: unknown } = {}
   ): Promise<unknown> {
@@ -833,6 +837,64 @@ export class AsaasProvider implements PaymentProvider {
       // boletoBarCode (linha digitável): campo da resposta NÃO confirmado
       // na coleta — omitido até validação em sandbox (nunca inventar).
     };
+  }
+
+  // ── cancelCharge ──────────────────────────────────────────────────────────
+
+  /**
+   * Cancela a cobrança no Asaas (RN-157 · S1209-PIXBE-T3): `DELETE
+   * /payments/{id}` — a operação de "remover cobrança" do Asaas, que mapeia
+   * para o status `DELETED` (já traduzido como `cancelled` em
+   * PAYMENT_STATUS_TO_CHARGE). Depois dela o QR/link não é mais pagável.
+   *
+   * FALHA ALTO por desenho: cobrança já RECEBIDA/CONFIRMADA faz o Asaas
+   * responder 4xx e o AsaasApiError SOBE. É essa subida que garante o
+   * fail-safe do `expirarPixPendente` — pedido cujo dinheiro entrou nunca é
+   * cancelado por timer.
+   *
+   * IDEMPOTÊNCIA: dedup best-effort por chave no processo (mesmo padrão do
+   * `refund` — o Asaas não tem idempotency-key HTTP), e o DELETE repetido
+   * de uma cobrança já removida devolve `deleted: true`, que já é a
+   * resposta idempotente correta.
+   *
+   * ⚠️ PREMISSA (a mesma disciplina do createCharge): o shape `{deleted,
+   * id}` vem da doc do Asaas e NÃO foi confirmado contra a conta real nesta
+   * lane — a suíte cobre o adapter com HTTP mockado. Validar em sandbox
+   * junto da ativação da chave.
+   */
+  async cancelCharge(params: CancelChargeParams): Promise<CancelChargeResult> {
+    if (params.chargeId.trim().length === 0) {
+      throw new AsaasValidationError('[asaas] chargeId vazio no cancelamento');
+    }
+    if (params.idempotencyKey.trim().length === 0) {
+      throw new AsaasValidationError('[asaas] idempotencyKey vazia (RN-333)');
+    }
+    const cacheado = this.cancelamentosPorChave.get(params.idempotencyKey);
+    if (cacheado !== undefined) {
+      return { ...cacheado, jaCancelada: true, processedAt: timestampDe(this.now()) };
+    }
+
+    const resposta = asRecord(
+      await this.request('DELETE', `/payments/${params.chargeId}`),
+      'resposta de DELETE /payments/{id}'
+    );
+    if (resposta['deleted'] !== true) {
+      // Sem `deleted: true` não há prova de que a cobrança morreu. Devolver
+      // sucesso aqui seria a mentira mais cara desta lane.
+      throw new AsaasMappingError(
+        `[asaas] DELETE /payments/${params.chargeId} sem deleted=true — ` +
+          'cancelamento NÃO confirmado'
+      );
+    }
+
+    const resultado: CancelChargeResult = {
+      chargeId: params.chargeId,
+      status: 'cancelled',
+      jaCancelada: false,
+      processedAt: timestampDe(this.now()),
+    };
+    this.cancelamentosPorChave.set(params.idempotencyKey, resultado);
+    return resultado;
   }
 
   // ── refund ────────────────────────────────────────────────────────────────

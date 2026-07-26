@@ -148,6 +148,40 @@ export interface SplitRulesResult {
   appliedAt: Timestamp;
 }
 
+/**
+ * Parâmetros do CANCELAMENTO de uma cobrança ainda não paga
+ * (LEELA-S1209-PIXBE-T3 · RN-157).
+ *
+ * Cancelar ≠ estornar: aqui NENHUM dinheiro trocou de mãos — o que se pede
+ * ao gateway é que a cobrança deixe de ser PAGÁVEL. É a operação que faltava
+ * para a expiração do PIX ser real: sem ela a plataforma marcava o pedido
+ * como expirado enquanto o código seguia vivo no banco do comprador.
+ */
+export interface CancelChargeParams {
+  chargeId: string;
+  tenantId: string;
+  /** Motivo (auditoria/descrição no gateway). */
+  reason: string;
+  /**
+   * Chave de idempotência — reprocessar o mesmo cancelamento não pode
+   * produzir efeito novo nem erro espúrio (RN-333).
+   */
+  idempotencyKey: string;
+}
+
+/** Resultado do cancelamento */
+export interface CancelChargeResult {
+  chargeId: string;
+  /** Estado da cobrança APÓS a operação (esperado: 'cancelled'). */
+  status: ChargeStatus;
+  /**
+   * true = a cobrança JÁ estava cancelada antes desta chamada (no-op
+   * idempotente). false = ESTA chamada a cancelou.
+   */
+  jaCancelada: boolean;
+  processedAt: Timestamp;
+}
+
 /** Parâmetros para solicitação de estorno */
 export interface RefundParams {
   chargeId: string;
@@ -230,10 +264,20 @@ export interface PayoutResult {
  *   - `createCharge` é idempotente via `idempotencyKey`.
  *   - `handleWebhook` verifica assinatura antes de qualquer escrita.
  *   - `handleWebhook` é idempotente — reprocessar não duplica estado.
+ *   - `cancelCharge` é idempotente e FALHA ALTO: adapter que não consegue
+ *     cancelar LANÇA (nunca devolve sucesso otimista) — quem chama decide
+ *     fail-safe em cima do erro, e um "ok" mentiroso deixaria cobrança viva
+ *     com pedido morto (RN-157 · S1209-PIXBE-T3).
  *   - Suporte a assinatura + split obrigatório (RN-104).
  */
 export interface PaymentProvider {
   createCharge(params: CreateChargeParams): Promise<ChargeResult>;
+  /**
+   * Cancela cobrança AINDA NÃO PAGA no gateway (RN-157). Cobrança já paga
+   * não é cancelável — o adapter LANÇA, e é isso que impede o timer de
+   * matar um pedido cujo dinheiro entrou.
+   */
+  cancelCharge(params: CancelChargeParams): Promise<CancelChargeResult>;
   splitRules(params: SplitRulesParams): Promise<SplitRulesResult>;
   refund(params: RefundParams): Promise<RefundResult>;
   handleWebhook(payload: WebhookPayload): Promise<WebhookResult>;

@@ -23,7 +23,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
-import type { CreateChargeParams, WebhookPayload } from '@leela/core';
+import type {
+  CancelChargeParams,
+  CreateChargeParams,
+  WebhookPayload,
+} from '@leela/core';
 import {
   AsaasProvider,
   AsaasApiError,
@@ -70,7 +74,8 @@ const WEBHOOK_TOKEN = 'leela-webhook-token-0123456789abcdef0123456789';
 const AGORA = new Date('2026-07-12T12:00:00.000Z');
 
 interface Expectativa {
-  method: 'GET' | 'POST';
+  // DELETE entrou com o cancelCharge (RN-157 · PIXBE-T3).
+  method: 'GET' | 'POST' | 'DELETE';
   /** Trecho que a URL deve conter. */
   url: string;
   status?: number;
@@ -693,6 +698,109 @@ describe('erros do gateway — 4xx/5xx/429 viram erro de domínio', () => {
 // ---------------------------------------------------------------------------
 // 7. refund
 // ---------------------------------------------------------------------------
+
+// =============================================================================
+// cancelCharge — LEELA-S1209-PIXBE-T3 (RN-157)
+//
+// A operação que faltava para a expiração do PIX ser real. O que estes casos
+// travam é a REGRA DE OURO do fail-safe: o adapter só devolve sucesso com
+// prova (`deleted: true`); em qualquer outra situação ele LANÇA, porque quem
+// chama (expirarPixPendente) transforma sucesso em "pedido cancelado" — e um
+// sucesso mentiroso aqui vira pedido morto com código PIX pagável.
+// =============================================================================
+describe('cancelCharge — cancelamento no gateway (RN-157 · PIXBE-T3)', () => {
+  const cancelParams = (over: Partial<CancelChargeParams> = {}): CancelChargeParams => ({
+    chargeId: 'pay_1',
+    tenantId: 'tenant-1',
+    reason: 'Expiração do PIX por prazo (RN-157)',
+    idempotencyKey: 'cancel-ped-1',
+    ...over,
+  });
+
+  it('DELETE /payments/{id} com deleted=true ⇒ cancelled (1 chamada, sem body)', async () => {
+    const { provider, chamadas, pendentes } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: true, id: 'pay_1' } },
+    ]);
+
+    const r = await provider.cancelCharge(cancelParams());
+    expect(r.chargeId).toBe('pay_1');
+    expect(r.status).toBe('cancelled');
+    expect(r.jaCancelada).toBe(false);
+    expect(r.processedAt.toMillis()).toBe(AGORA.getTime());
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]?.method).toBe('DELETE');
+    expect(chamadas[0]?.body).toBeUndefined();
+    expect(pendentes()).toBe(0);
+  });
+
+  it('REPLAY da mesma chave não repete o DELETE e marca jaCancelada', async () => {
+    const { provider, chamadas } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: true, id: 'pay_1' } },
+    ]);
+
+    await provider.cancelCharge(cancelParams());
+    const replay = await provider.cancelCharge(cancelParams());
+    expect(replay.status).toBe('cancelled');
+    expect(replay.jaCancelada).toBe(true);
+    // Nenhuma chamada extra — a fila teria lançado em HTTP inesperado.
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('resposta SEM deleted=true ⇒ AsaasMappingError (nunca sucesso sem prova)', async () => {
+    const { provider } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { id: 'pay_1' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toThrow(
+      AsaasMappingError
+    );
+  });
+
+  it('cobrança JÁ RECEBIDA (4xx do Asaas) ⇒ o erro SOBE — é o que impede o timer de matar pedido pago', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        status: 400,
+        json: {
+          errors: [
+            {
+              code: 'invalid_action',
+              description: 'Não é possível remover uma cobrança já recebida.',
+            },
+          ],
+        },
+      },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+  });
+
+  it('falha de rede/5xx NÃO fica cacheada: a tentativa seguinte volta ao gateway', async () => {
+    const { provider, chamadas } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', status: 502, json: {} },
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: true, id: 'pay_1' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+    const ok = await provider.cancelCharge(cancelParams());
+    expect(ok.status).toBe('cancelled');
+    expect(ok.jaCancelada).toBe(false);
+    expect(chamadas).toHaveLength(2);
+  });
+
+  it('parâmetros inválidos morrem ANTES de qualquer HTTP', async () => {
+    const { provider, chamadas } = novoProvider([]);
+    await expect(
+      provider.cancelCharge(cancelParams({ chargeId: '  ' }))
+    ).rejects.toThrow(AsaasValidationError);
+    await expect(
+      provider.cancelCharge(cancelParams({ idempotencyKey: '' }))
+    ).rejects.toThrow(AsaasValidationError);
+    expect(chamadas).toHaveLength(0);
+  });
+});
 
 describe('refund — total/parcial, mapa de status, idempotência', () => {
   const refundParams = (amount?: number) => ({

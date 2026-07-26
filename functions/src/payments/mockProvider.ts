@@ -19,6 +19,8 @@ import type {
   PaymentProvider,
   CreateChargeParams,
   ChargeResult,
+  CancelChargeParams,
+  CancelChargeResult,
   SplitRulesParams,
   SplitRulesResult,
   RefundParams,
@@ -307,6 +309,56 @@ export class MockPaymentProvider implements PaymentProvider {
       ...(expiresAtMillis !== undefined
         ? { expiresAt: timestampDeMillis(expiresAtMillis) }
         : {}),
+    };
+  }
+
+  // ── cancelCharge ────────────────────────────────────────────────────────
+
+  /**
+   * Cancela a cobrança (RN-157 · S1209-PIXBE-T3) — a cobrança deixa de ser
+   * pagável.
+   *
+   * Disciplina herdada do `refund` (achado M1 da review E00): cobrança
+   * INEXISTENTE lança em vez de devolver um "ok" otimista — cancelar o que
+   * não existe é bug de chamador, e engolir isso esconderia justamente o
+   * caso em que o pedido morre com o código vivo.
+   *
+   * Cobrança ESTORNADA não é cancelável (o dinheiro já circulou nos dois
+   * sentidos; cancelar depois disso é incoerência de estado). O `confirmed`
+   * do Mock, ao contrário, NÃO impede: ele é o atalho documentado deste
+   * adapter (nasce 'confirmed' sem gateway real), enquanto a autoridade
+   * sobre "foi pago" no domínio é o webhook — quem chama já releu o
+   * pagamento antes de pedir o cancelamento.
+   */
+  async cancelCharge(params: CancelChargeParams): Promise<CancelChargeResult> {
+    if (params.idempotencyKey.trim().length === 0) {
+      throw new Error('[mock] Cancelamento rejeitado: idempotencyKey vazia (RN-333)');
+    }
+    const charge = this.charges.get(params.chargeId);
+    if (!charge) {
+      throw new Error(
+        `[mock] Cancelamento rejeitado: cobrança inexistente (${params.chargeId})`
+      );
+    }
+    if (charge.status === 'cancelled') {
+      return {
+        chargeId: params.chargeId,
+        status: 'cancelled',
+        jaCancelada: true,
+        processedAt: nowTimestamp(),
+      };
+    }
+    if (charge.status === 'refunded') {
+      throw new Error(
+        `[mock] Cancelamento rejeitado: cobrança ${params.chargeId} já estornada`
+      );
+    }
+    charge.status = 'cancelled';
+    return {
+      chargeId: params.chargeId,
+      status: 'cancelled',
+      jaCancelada: false,
+      processedAt: nowTimestamp(),
     };
   }
 
