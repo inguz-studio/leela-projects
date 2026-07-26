@@ -1430,7 +1430,7 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 
 > Histórias novas das rodadas de 2026-07-19 (DEC-0719, TAXA-FLEX, DEC-0719-ret). O detalhe/verbatim vive em `02-rodadas/2026-07-19-decisoes/`, `-taxa-flex/`; a fila de código em `03-fila-codigo`. Molde igual ao de S1900 (E19).
 
-### LEELA-S1209 · Camada de tela do checkout novo (cupom no início, Pix/Cartão em botões, QR com timer, gênero, cards por atleta) · (de-para novo · DEC-0719 (c))
+### LEELA-S1209 · Camada de tela do checkout novo (cupom no início, Pix/Cartão em botões, QR com timer, gênero, cards por atleta) · (de-para novo · DEC-0719 (c)) · ✅ ENTREGUE
 
 **Como** atleta anônimo, **quero** um checkout com cupom logo no começo, escolha de pagamento em botões claros, PIX com QR e contagem regressiva, e um card por atleta com botão de adicionar outro, **para** comprar com menos fricção e entender cada passo.
 
@@ -1444,7 +1444,18 @@ Envio de campanhas/e-mail marketing (fora do épico); editor do bloco no painel 
 - **Dado** o formulário de inscrito, **quando** preencho, **então** há campo de **gênero** por inscrito (enum `GENEROS_INSCRITO`, opção "não informado"), pré-preenchido quando a pessoa já é conhecida (RN-154 via CPF único RN-173).
 - **Dado** uma compra para vários atletas, **quando** monto o pedido, **então** vejo **um card por atleta** e um botão **"+ adicionar atleta"** (D-2).
 
-**Tasks:** `S1209-T1` (cupom no step 0 + Pix/Cartão em botões sem toggle — D-4/D-5), `S1209-T2` (QR PIX na tela + timer 30 min + auto-copy com toast — RN-157 UI, tela de pagamento e tela do pedido pendente), `S1209-T3` (campo de gênero por inscrito + pré-preenchimento — RN-154 UI), `S1209-T4` (cards por atleta + botão "+ adicionar atleta" — D-2). Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`.
+**Tasks:** `S1209-T1` (cupom no step 0 + Pix/Cartão em botões sem toggle — D-4/D-5) ✅, `S1209-T2` (QR PIX na tela + timer 30 min + auto-copy com toast — RN-157 UI, tela de pagamento e tela do pedido pendente) ✅ ⚔, `S1209-T3` (campo de gênero por inscrito + pré-preenchimento — RN-154 UI) ✅ ⚔, `S1209-T4` (cards por atleta + botão "+ adicionar atleta" — D-2) ✅. Detalhe em `02-rodadas/2026-07-19-decisoes/01-decisoes.md`.
+
+**Status:** ✅ **ENTREGUE 2026-07-26** (lane S1209-TELA · sf-frontend-lead · opus xhigh) — commits `1866515` (T1) · `f390e6c` (T2) · `ffa88ac` (T3) · `8bbe044` (T4). Território: só `apps/landing`.
+
+- **T1 · D-4/D-5** — `CupomCampo` é uma peça só, consumida pelo step 0 e pelo Resumo (a lógica de cotar/aplicar/remover segue única no `CheckoutFlow`); sem modalidade escolhida o "Aplicar" fica desabilitado com a razão explícita, porque não há item para o servidor precificar. Cupom recusado ganhou canal próprio e parou de se disfarçar de `erroCotacao`. O auto-apply do cupom da URL perdeu o gate de step e resolve já no step 0. `SeletorForma` usa `RadioCard` do DS (shadcn-first §8, ADR-017 Radix-free): botão de decisão com ícone e apoio, semântica de radio de fábrica — o rótulo do S1210 (total por opção) continua no título, então o nome acessível coberto por teste não mudou.
+- **T2 · D-6/RN-157** ⚔ — `PixCobranca` é o MESMO bloco nas duas telas. A contagem só existe com `pixExpiraEmMillis` do servidor; sem carimbo não há timer (contagem fabricada no cliente cancelaria PIX vivo ou mostraria PIX morto como vivo). Ao zerar, QR e copia-e-cola somem e a UI chama `expirarPixPendente` — o servidor arbitra com o próprio relógio e recusa chamada adiantada. Expirar não regenera cobrança sozinho; o retry é cobrança NOVA com `idempotencyKey` nova (replay da antiga devolveria a cancelada). Auto-copy num clique + toast do DS com o verbatim.
+- **T3 · RN-154/RN-174** ⚔ — gênero por inscrito com os valores de `GENEROS_INSCRITO` importados do core; opcional, e `''` nunca vira `nao_informado` no caminho. O prefill consome `getCheckoutPrefill`, **que não aceita parâmetro** — não existe canal para perguntar sobre um CPF. As três negativas da RN-174 chegam como o mesmo `prefill: null` e a tela trata as três igual: formulário vazio, sem mensagem. Falha da chamada é invisível; digitar CPF não dispara consulta; prefill não sobrescreve o que a pessoa digitou.
+- **T4 · D-2** — `CardAtleta` unifica as duas molduras que existiam. "+ Adicionar atleta" vive só no step 0 (no step 1 o atleta nasceria sem modalidade e travaria o total). Remover nos dois steps, agora reindexando as listas de erro junto.
+
+**Gates:** tsc 0 · eslint 0 · `next build` verde · `verify:brand` PASS · vitest da landing 13 arquivos / 105 testes verdes (42 novos, incluindo timer/expiração do PIX com fake timers, auto-copy + toast, prova de não-oráculo do prefill, cupom inválido no step 0 e adicionar/remover atleta). Report `outputs/leela-build-2d6ee98d/S1209-TELA-REPORT.md`. **Pendente: review antagonista em contexto fresco de T2 e T3.**
+
+**Ponte temporária registrada:** `expirarPixPendente` não é re-exportado pela raiz do `@leela/api-client` (nota do próprio lote CK2 — o `index.ts` estava em edição por outra lane). A landing consome pelo subpath, com `paths` no `tsconfig` e alias no `vitest.config`. O pacote não foi tocado. Quando a raiz re-exportar, o alias sai.
 
 ### LEELA-S1210 · Exibição da taxa por meio de pagamento no checkout (total por opção) · (de-para novo · TAXA-FLEX) · ✅ ENTREGUE
 
@@ -1529,7 +1540,7 @@ Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário
 
 Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso) e é onde mora a maior lacuna: a tela. Passo a passo, território e critério de pronto em `02-rodadas/2026-07-19-espec-sweep/02-caminho-do-dinheiro.md`:
 
-- **S1209-T1..T4** (camada de tela do checkout novo) — bloco A. O backend das cinco RNs já foi pago no CHECKOUT2-MODELO; falta o que o comprador vê. Rota **opus** xhigh nas quatro; T2 (timer do PIX) e T3 (prefill/gênero) com review antagonista.
+- ~~**S1209-T1..T4** (camada de tela do checkout novo) — bloco A.~~ ✅ **ENTREGUE 2026-07-26** (`1866515`, `f390e6c`, `ffa88ac`, `8bbe044`) — ver §S1209 acima. Segue pendente só a **review antagonista de T2 e T3** em contexto fresco. Com o bloco A fechado, `S1212-T2` (render das perguntas no checkout) está desbloqueado pela ordem de território.
 - **S1212-T1/T2** (render do formulário de perguntas na compra) — bloco C. **T2 serializa depois do bloco A** — mesma tela, despachar em paralelo dá conflito de território.
 - **S1211** (checkout de estrangeiro) — bloco D, **GATED** pela liberação da conta Asaas.
 - **S1210** (exibição da taxa por meio) — ✅ entregue na TAXA-FLEX.
