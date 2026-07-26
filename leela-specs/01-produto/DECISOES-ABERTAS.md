@@ -1,6 +1,6 @@
 # Decisões em aberto — painel do Vitor
 
-> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-19, rodada DEC-0719 — itens 18/19/21/22/23/24 + D-2..D-7 + gênero/conta resolvidos**).
+> Fonte única das decisões que dependem de você. Atualizado pelo maestro a cada mudança (última: **2026-07-26, rodada DEC-0726 — Asaas adiado sem urgência; BREVO_API_KEY prometida; TAXA-FLEX (c)/(e) + fronteira do item 23 seguem no default, ratificadas**).
 > Histórico de decisões já tomadas: `discovery/decisoes-escopo-2026-07-04.md` + seção Ratificadas no fim.
 > **Nada abaixo bloqueia código**: tudo roda com default defensável em vigor. Ratificar = confirmar o default; mudar = eu ajusto no próximo lote.
 > 📄 Versão longa e argumentada (porquê, caso sim, caso não, recomendação por JTBD/story): [[DECISOES-EM-ABERTO]].
@@ -24,13 +24,13 @@ Os 7 itens desta seção foram todos decididos pelo Vitor em 2026-07-17. As resp
 
 ### 🆕 TAXA-FLEX · taxa percentual + fixo por meio de pagamento (2026-07-19)
 
-Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **percentual + valor fixo por venda, variável por meio de pagamento** (verbatim do Vitor: *"6% pix + 2,00 ou 8% de cartão + 1,50"*). Nível decidido (AskUserQuestion 2026-07-19): **tabela global + exceção por organizador**, sem por-evento no v1. Exibição no checkout repassado: **total por opção de meio** (PIX vs cartão) antes de pagar. Spec fechada em RN-178..183; código = card `TAXA-FLEX` (📋 executável-após-CLAIM-FIX). Restam abaixo só as pontas que dependem de você:
+Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **percentual + valor fixo por venda, variável por meio de pagamento** (verbatim do Vitor: *"6% pix + 2,00 ou 8% de cartão + 1,50"*). Nível decidido (AskUserQuestion 2026-07-19): **tabela global + exceção por organizador**, sem por-evento no v1. Exibição no checkout repassado: **total por opção de meio** (PIX vs cartão) antes de pagar. Spec fechada em RN-178..183.
 
-- **(c · ratificar) Base da comissão de afiliado = FACE.** A comissão continua calculada sobre o valor **FACE** (RN-310), não sobre o líquido pós-taxa — coerente com a contabilidade do organizador em FACE. A taxa-flex **não** muda isso. **Default em vigor = FACE**; ratificar = confirmar. É premissa registrada (P-TAXAFLEX-3), não bloqueia código.
-- **(e · pergunta aberta) Taxa da plataforma por PARCELA?** No v1 a taxa é **única por meio** (`cartao` é uma linha só); parcelamento fica fora desta RN. Pergunta em aberto, **sem decisão**: a taxa da plataforma deveria variar por parcela? (Ortogonal aos juros Price 3,49% a.m. já repassados ao comprador, decisão 2026-07-05.) Não bloqueia — só abre um refinamento futuro se você quiser.
-- **(fronteira · JÁ EXISTE, só cruzando referência) Cobrar vs devolver a taxa no reembolso.** É a mesma decisão pendente do **item 23** (Reembolso a priori NÃO devolve a taxa de serviço, condicionada ao benchmark — lane BENCHMARK-REEMBOLSO). A RN-181 especifica **como ratear** o componente fixo cent-exato no estorno; **se** devolve ou não segue com o item 23, não foi decidido na TAXA-FLEX.
+> **✅ As três pontas desta seção foram RESOLVIDAS na rodada DEC-0726 (Vitor, 2026-07-26 — "o ponto 4 pode seguir"):** (c) comissão de afiliado sobre **FACE ratificada** (RN-310 confirmada; P-TAXAFLEX-3 vira premissa fechada) · (e) taxa por parcela **segue única por meio no v1** (refinamento futuro só se o Vitor reabrir) · (fronteira/item 23) o default **"reembolso NÃO devolve a taxa de serviço" está confirmado para seguir** (a revisão fina do benchmark BENCHMARK-REEMBOLSO fica disponível se ele quiser reabrir). Detalhe no bloco Rodada DEC-0726 em ✅ Ratificadas.
 
 ## 🟠 Ações externas suas (destravam código pronto)
+
+> **⏸️ Bloco Asaas ADIADO (Vitor, 2026-07-26 — "quanto ao asaas, não precisamos disso agora"):** os itens 8, 9, 10 e 12b saem da fila de cobrança — sem urgência, ninguém vai te lembrar deles a cada retomada. Consequências mantidas: o lote `ESTRANGEIRO-CHECKOUT` segue GATED (nem contato com o gerente agora) e a rotação da chave prod continua **mandatória ANTES do primeiro deploy real** (o adiamento não a cancela — só a desliga do dia a dia).
 
 8. **Chave SANDBOX do Asaas** — destrava o teste ponta a ponta de cobrança real sem risco e a **ativação do adapter** (`AsaasProvider` está pronto e inerte; checklist de ativação em `outputs/leela-build-2d6ee98d/ASAAS-ADAPTER-REPORT.md`, com review Fable obrigatória na virada).
 9. **KYC do Asaas** — conclui `E04-PAY-T2` (parked). Lead time de negócio; sem custo de código.
@@ -41,7 +41,7 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **pe
 ## 🟡 Go-live / quando tiver os dados
 
 12. **Domínio público** — `{DOMINIO_LEELA}` segue placeholder em todo slug/URL; bloqueia só SEO/links de produção.
-13. **E-mail transacional — ✅ RATIFICADA (Vitor, 2026-07-18, adendo 8): fornecedor = Brevo** (brevo.com). **Histórico da decisão (mesmo dia):** Resend foi ratificado no adendo 7 → **superseded por Brevo por CUSTO** no adendo 8. Razão registrável: Brevo tem free tier **300 e-mails/dia** com API transacional inclusa (vs 100/dia do Resend) e primeiro plano pago **US$9** (vs US$20 do Resend); SendPulse foi descartado pelo throttle de 50/hora. Destrava o ramo fail-closed do convite E18 (`9e7e017`) + convite de influenciador PF (RN-316) + campanhas por e-mail (E06) + futuro gatilho aniversário (E19). Spec do adapter = story **S-R9-14** (port `EmailProvider` no padrão do `PaymentProvider`/ADR-006, **provider-agnóstico** — impl de referência `BrevoProvider`, fail-closed sem `BREVO_API_KEY`). **Parte EXTERNA que resta ao Vitor (ação externa):** criar conta Brevo, **verificar o domínio de envio** e gerar a API key (`BREVO_API_KEY` no `functions/.env` / Secret Manager). **Atenção — dependência:** a verificação de domínio **depende da decisão de domínio ainda aberta** (item 12, `{DOMINIO_LEELA}`); **sem domínio verificado, o envio fica limitado ao remetente verificado do provedor** — suficiente para TESTE, não para produção com destinatários reais. Trocar de provedor no futuro = **nova impl do port, zero mudança nos consumidores** (é o ponto do padrão ADR-006). `BREVO_API_KEY` é secret (nunca no cliente/commit).
+13. **E-mail transacional — ✅ RATIFICADA (Vitor, 2026-07-18, adendo 8): fornecedor = Brevo** (brevo.com). **📌 2026-07-26: o Vitor confirmou que passa a `BREVO_API_KEY` em breve** ("Brevo te passo mais tarde") — quando chegar, ligar no `functions/.env`/Secret Manager destrava os 3 consumidores sem código novo. **Histórico da decisão (mesmo dia):** Resend foi ratificado no adendo 7 → **superseded por Brevo por CUSTO** no adendo 8. Razão registrável: Brevo tem free tier **300 e-mails/dia** com API transacional inclusa (vs 100/dia do Resend) e primeiro plano pago **US$9** (vs US$20 do Resend); SendPulse foi descartado pelo throttle de 50/hora. Destrava o ramo fail-closed do convite E18 (`9e7e017`) + convite de influenciador PF (RN-316) + campanhas por e-mail (E06) + futuro gatilho aniversário (E19). Spec do adapter = story **S-R9-14** (port `EmailProvider` no padrão do `PaymentProvider`/ADR-006, **provider-agnóstico** — impl de referência `BrevoProvider`, fail-closed sem `BREVO_API_KEY`). **Parte EXTERNA que resta ao Vitor (ação externa):** criar conta Brevo, **verificar o domínio de envio** e gerar a API key (`BREVO_API_KEY` no `functions/.env` / Secret Manager). **Atenção — dependência:** a verificação de domínio **depende da decisão de domínio ainda aberta** (item 12, `{DOMINIO_LEELA}`); **sem domínio verificado, o envio fica limitado ao remetente verificado do provedor** — suficiente para TESTE, não para produção com destinatários reais. Trocar de provedor no futuro = **nova impl do port, zero mudança nos consumidores** (é o ponto do padrão ADR-006). `BREVO_API_KEY` é secret (nunca no cliente/commit).
 14. **Valores restantes do plano de cobrança** — mensalidades (Leela+ e SaaS) e ajuste fino das taxas por parcela quando houver custos reais do gateway.
 
 ## ⚪ Menores (viram config quando você quiser)
@@ -54,6 +54,14 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma passa a ser **pe
 - Logos: entregues e aplicadas (sidebar, landing). · Homepage/catálogo: no ar (E12). · Checkout sandbox: no ar, marco "vender ponta a ponta" fechado. · D3 middle-action "Comunicar": aplicado (`c555e93`). · Divergências do cupom brief×kernel: reconciliadas no épico E04 (kernel é a autoridade). · S300-T6 PercursoModal: superseded por ADR-012.
 
 ## ✅ Ratificadas recentemente (referência rápida)
+
+### 🟢 Rodada DEC-0726 (Vitor, 2026-07-26) — retomada pós-pausa
+
+Verbatim integral: *"quanto ao asaas, nao precisamso disso agora. Bervo te passo mais tarde. e o ponto 4 pode seguir."*
+
+- **Asaas = ADIADO sem urgência.** Itens 8/9/10/12b (sandbox-checklist, KYC, rotação da chave prod, liberação p/ estrangeiro) saem da fila ativa de cobrança. `ESTRANGEIRO-CHECKOUT` segue gated; rotação da prod continua mandatória antes do 1º deploy real.
+- **BREVO_API_KEY = prometida.** O Vitor vai passar a chave mais tarde; segue como a dependência externa de maior alavancagem (destrava E19 disparo a segmentos + convite PF E08 + campanhas E06).
+- **"Ponto 4 pode seguir" = defaults ratificados:** (1) comissão de afiliado sobre **FACE** (RN-310 confirmada, P-TAXAFLEX-3 fechada); (2) taxa da plataforma **única por meio** no v1 — sem variação por parcela; (3) **reembolso NÃO devolve a taxa de serviço** (fronteira do item 23 confirmada como default operante; benchmark reabre só se o Vitor quiser).
 
 ### 🟢 Rodada DEC-0719 (Vitor, 2026-07-19) — verbatim integral em `02-rodadas/2026-07-19-decisoes/`
 
