@@ -3,11 +3,12 @@
 import * as React from 'react';
 import { PackageOpen } from 'lucide-react';
 import { parseSufixoTamanho, sufixoSku, type CorteItem } from '@leela/core';
-import { Badge, Button, RadioCard, RadioGroup } from '@/app/_ds/ds';
+import { Badge, RadioCard, RadioGroup } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { ItemTamanhadoPublico, KitPublico } from '@/lib/tipos';
 import { itensTamanhadosDoKit, kitsDaModalidade, type InscritoForm } from './tipos';
 import { KitDetalhe } from './KitDetalhe';
+import { CardAtleta, BotaoAdicionarAtleta } from './CardAtleta';
 import { CupomCampo, type CupomCampoProps } from './CupomCampo';
 import { TituloEtapa, ApoioEtapa } from './tipografia';
 
@@ -185,24 +186,12 @@ export function StepModalidadeKit({
         const itensDoKitEscolhido = itensTamanhadosDoKit(itensTamanhados, inscrito.kitId);
 
         return (
-          <div
+          <CardAtleta
             key={i}
-            className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
+            titulo={titulo}
+            podeRemover={podeRemover}
+            onRemover={() => onRemoveInscrito(i)}
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-text-primary">{titulo}</h3>
-              {podeRemover ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRemoveInscrito(i)}
-                  aria-label={`Remover atleta ${i + 1}`}
-                >
-                  Remover
-                </Button>
-              ) : null}
-            </div>
-
             {/* Modalidade — trocar a modalidade zera o kit (a oferta muda). */}
             <RadioGroup
               name={`modalidade-${i}`}
@@ -301,15 +290,13 @@ export function StepModalidadeKit({
                   que está incluso, com hierarquia de H's/textos do DS. */}
               {kitSelecionado ? <KitDetalhe kit={kitSelecionado} /> : null}
             </div>
-          </div>
+          </CardAtleta>
         );
       })}
 
-      <div>
-        <Button variant="secondary" size="sm" onClick={onAddInscrito}>
-          + Adicionar outro atleta
-        </Button>
-      </div>
+      {/* D-2 · o botão que monta o pedido para várias pessoas. Vive AQUI, onde
+          modalidade e kit do novo atleta são escolhidos no mesmo fôlego. */}
+      <BotaoAdicionarAtleta onClick={onAddInscrito} />
     </div>
   );
 }
