@@ -21,7 +21,7 @@
 // ToastProvider escopado ao módulo; AppErrorBoundary mantém o RootShell no 500.
 // =============================================================================
 
-import { Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { AnaliseVendasPage } from './visao-geral/AnaliseVendasPage';
 import { ClientesPage } from './ClientesPage';
@@ -36,10 +36,19 @@ import { AppErrorBoundary } from '../_system/AppErrorBoundary';
  * `replace` para o "voltar" do navegador não devolver a pessoa à URL morta.
  * A chave é re-encodada: ela vem decodificada do `useParams` e volta para a
  * URL — sem isso, uma chave com caractere especial se perderia no caminho.
+ * Querystring e fragmento viajam junto (achado A-3 da review antagonista):
+ * `<Navigate to="…">` com string simples troca a location inteira e o
+ * `?preview=` do preview local do Vitor evaporaria no salto.
  */
 function RedirectFichaLegada(): JSX.Element {
   const { clienteKey } = useParams<{ clienteKey: string }>();
-  return <Navigate to={`/crm/clientes/${encodeURIComponent(clienteKey ?? '')}`} replace />;
+  const { search, hash } = useLocation();
+  return (
+    <Navigate
+      to={`/crm/clientes/${encodeURIComponent(clienteKey ?? '')}${search}${hash}`}
+      replace
+    />
+  );
 }
 
 RedirectFichaLegada.displayName = 'RedirectFichaLegada';

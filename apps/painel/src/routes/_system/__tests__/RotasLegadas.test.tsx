@@ -186,3 +186,78 @@ describe('RN-234 · o módulo financeiro deixou de existir', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// A-3 (review antagonista) — o que a tabela NÃO cobria: querystring e fragmento
+//
+// `<Navigate to="/destino">` com string simples troca a location INTEIRA. O
+// `?a=b#c` da URL antiga evaporava no salto, e nenhum dos 44 testes olhava para
+// além do pathname. Quem paga primeiro é o preview local do Vitor: `?preview=`
+// escolhe a identidade do seed, o autologin a lê antes do render (a primeira
+// carga funciona) e o F5 seguinte, já sem o parâmetro, cai na identidade padrão
+// sem avisar. A RN-234 promete o contrário: "o preview local continua abrindo
+// em qualquer URL que já estivesse na mão dele".
+// ---------------------------------------------------------------------------
+
+/** Registra a location COMPLETA (pathname + search + hash) de cada passada. */
+function SondaCompleta({ trilha }: { trilha: string[] }): null {
+  const { pathname, search, hash } = useLocation();
+  const atual = `${pathname}${search}${hash}`;
+  if (trilha[trilha.length - 1] !== atual) trilha.push(atual);
+  return null;
+}
+
+/** Como `resolver`, mas a trilha carrega querystring e fragmento. */
+function resolverCompleto(entrada: string): string[] {
+  const trilha: string[] = [];
+  const { unmount } = render(
+    <MemoryRouter initialEntries={[entrada]}>
+      <SondaCompleta trilha={trilha} />
+      <Routes>
+        <Route path="/crm/*" element={<CrmRoutes />} />
+        <Route path="/eventos/*" element={<EventosRoutes />} />
+        {rotasLegadas()}
+      </Routes>
+    </MemoryRouter>,
+  );
+  unmount();
+  return trilha;
+}
+
+describe('RN-234 · o salto preserva querystring e fragmento', () => {
+  it.each([
+    ['/financeiro?preview=admin', '/crm?preview=admin'],
+    ['/financeiro/repasses?preview=corrida', '/eventos/repasses?preview=corrida'],
+    ['/financeiro/qualquer-coisa?preview=admin', '/crm?preview=admin'],
+    ['/crm/abc123?preview=admin', '/crm/clientes/abc123?preview=admin'],
+  ])('%s → %s', (entrada, destino) => {
+    expect(resolverCompleto(entrada).at(-1)).toBe(destino);
+  });
+
+  it('mais de um parâmetro sobrevive inteiro, na ordem', () => {
+    expect(resolverCompleto('/financeiro/repasses?preview=admin&evento=meia-2026').at(-1)).toBe(
+      '/eventos/repasses?preview=admin&evento=meia-2026',
+    );
+  });
+
+  it('o fragmento (#) também viaja', () => {
+    expect(resolverCompleto('/financeiro#saldo').at(-1)).toBe('/crm#saldo');
+  });
+
+  it('sem querystring nada é inventado — o destino sai limpo', () => {
+    expect(resolverCompleto('/financeiro').at(-1)).toBe('/crm');
+    expect(resolverCompleto('/crm/abc123').at(-1)).toBe('/crm/clientes/abc123');
+  });
+
+  it('preservar não reabre laço: segue em no máximo UM salto', () => {
+    for (const entrada of [
+      '/financeiro?preview=admin',
+      '/financeiro/repasses?preview=admin',
+      '/crm/abc123?preview=admin',
+      '/crm/clientes?preview=admin',
+    ]) {
+      const trilha = resolverCompleto(entrada);
+      expect(trilha.length, `trilha: ${trilha.join(' → ')}`).toBeLessThanOrEqual(2);
+    }
+  });
+});
