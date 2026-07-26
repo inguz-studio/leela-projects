@@ -194,6 +194,17 @@ export interface CreateInscricaoChargeResult {
    * PIX. Base do TIMER de 30 min da UI; replay devolve a MESMA expiração.
    */
   pixExpiraEmMillis?: number;
+  /**
+   * Relógio do SERVIDOR (epoch-ms) no instante da resposta — S1209-PIXBE-T1.
+   * Par honesto do `pixExpiraEmMillis`: os dois vêm do MESMO relógio, então
+   * `pixExpiraEmMillis - servidorAgoraMillis` é a duração REAL que falta, sem
+   * o desvio do aparelho do comprador entrar na conta (achado #6 · S1209-REV).
+   *
+   * OPCIONAL no cliente de propósito (leitura Postel): deploy de servidor
+   * antigo não manda o campo, e a UI cai no comportamento vigente (contagem
+   * pelo relógio local) em vez de quebrar a tela do dinheiro.
+   */
+  servidorAgoraMillis?: number;
   statusPedido: string;
   valores: {
     valorBase: number;

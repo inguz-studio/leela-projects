@@ -264,6 +264,28 @@ export interface CreateInscricaoChargeResult {
    * devolve a MESMA expiração (o retry nunca re-estende o prazo).
    */
   pixExpiraEmMillis?: number;
+  /**
+   * Relógio do SERVIDOR (epoch-ms) no instante em que ESTA resposta foi
+   * montada — S1209-PIXBE-T1, fecha o achado #6 da review S1209-REV.
+   *
+   * Por que existe: `pixExpiraEmMillis` é um epoch ABSOLUTO carimbado pelo
+   * relógio do servidor, mas quem fazia a subtração era o relógio do
+   * DISPOSITIVO. Aparelho 40 min atrasado exibia `70:00` de uma janela que
+   * já tinha 30; adiantado exibia `00:00` de uma cobrança viva e cobrável.
+   * Com este par (`agora` do servidor + expiração do servidor) a DURAÇÃO
+   * restante sai de dois números do MESMO relógio, e o desvio do aparelho
+   * cai fora da conta: `restante = pixExpiraEmMillis - servidorAgoraMillis`.
+   *
+   * Um único campo DE PROPÓSITO (não devolvemos também a duração pronta):
+   * duração é derivação pura destes dois valores, e dado derivado com duas
+   * autoridades diverge — a fonte é uma só.
+   *
+   * SEMPRE presente (inclusive cartão e replay): é o relógio da resposta,
+   * não um atributo do PIX. O REPLAY (o "leitor do pedido pendente" deste
+   * fluxo — mesma chave devolve o mesmo pedido) carimba o instante DELE, e
+   * é isso que faz a tela de pedido pendente recontar certo ao reabrir.
+   */
+  servidorAgoraMillis: number;
   valores: {
     valorBase: number;
     desconto: number;
@@ -1500,7 +1522,9 @@ async function garantirCobrancaEMontarResultado(
   db: Db,
   provider: PaymentProvider,
   input: CreateInscricaoChargeInput,
-  caller: CheckoutCaller
+  caller: CheckoutCaller,
+  /** Relógio INJETADO do servidor (T1) — carimba `servidorAgoraMillis`. */
+  agora: () => Date = () => new Date()
 ): Promise<CreateInscricaoChargeResult> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -1608,6 +1632,10 @@ async function garantirCobrancaEMontarResultado(
     ...(paymentUrl !== undefined ? { paymentUrl } : {}),
     ...(qrCode !== undefined ? { qrCode } : {}),
     ...(pixExpiraEmMillis !== undefined ? { pixExpiraEmMillis } : {}),
+    // T1: o instante do SERVIDOR que acompanha a expiração acima — a tela
+    // subtrai um do outro e nunca mais consulta o relógio do aparelho para
+    // saber QUANTO falta (achado #6 · S1209-REV).
+    servidorAgoraMillis: agora().getTime(),
     statusPedido: pedidoSnap.get('status') as StatusPedido,
     valores: {
       valorBase: pagamentoSnap.get('valorBase') as number,
@@ -1805,7 +1833,13 @@ export async function createInscricaoChargeCore(
     );
   }
 
-  const resultado = await garantirCobrancaEMontarResultado(db, provider, input, caller);
+  const resultado = await garantirCobrancaEMontarResultado(
+    db,
+    provider,
+    input,
+    caller,
+    agora
+  );
   // Sem PII no log (LGPD) — só ids e valores agregados
   logger.info('checkout_charge_criada', {
     pedidoId: resultado.pedidoId,
