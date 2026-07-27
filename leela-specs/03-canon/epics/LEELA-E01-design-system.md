@@ -220,3 +220,31 @@ graça no teste de resolução dos dois temas (+10 casos gerados).
 **Gates:** tsc 0 · eslint 0 · 19 testes do componente · suíte do DS **1089/1089**
 (baseline 1060 + 19 + 10 de resolução de token). Showroom, `stories`, `docs.mdx` e
 `LLM.txt` no mesmo commit, como a disciplina do DS exige.
+
+### Review antagonista (lane THUMBS-REV, 2026-07-27) — dois achados no DS
+
+**`ratio`/`size` nulos apagavam a caixa (`537d613`).** `VariantProps` do cva
+publica `null` como valor legal de toda variante e `defaultVariants` só cobre
+`undefined`. Nos outros componentes do DS isso degrada a estilo; aqui degradava a
+**tamanho zero**, porque as duas únicas medidas da caixa saem justamente dessas
+variantes. `<Thumb ratio={null} />` passava em tsc e eslint e sumia da tela. E o
+`null` já estava exposto ao painel: o `ImageUploadField` publica
+`previewMiniatura?: ThumbProps['ratio']`. Corrigido por coerção para o default,
+com teste que falha se a coerção sair.
+
+**O `Thumb` não entrou no índice de contratos do package (`589950a`).** O
+componente nasceu com `LLM.txt` próprio, mas `packages/design-system/LLM.txt` —
+a porta de entrada que a governança §8 manda consultar — não ganhou a linha. Sem
+ela, o próximo agente que precisar de miniatura lê a tabela, não acha nada e
+refaz o `<img className="h-10 w-10">` à mão. O cabeçalho também estava com a
+contagem errada; agora confere com o disco (48 diretórios, 36 com contrato).
+
+**O que sobreviveu ao ataque:** a decisão de não migrar o thumb do `EventRow`
+(conferida na fonte: gradiente `--thumb-{modalidade}` e `max-lg:row-span-3` estão
+lá, o contrato de fallback é mesmo outro); os 5 tokens novos nos dois temas
+(regerei `generate-tokens` e o diff dos gerados veio **vazio** — CSS e
+`rn-themes.ts` estão em sincronia com o JSON, o que a suíte por si só não prova);
+o par AA do fallback (`text-tertiary × surface-sunken` = **6.95:1** brasa,
+**4.89:1** wine); e o `LLM.txt` do componente, fiel ao `.tsx` prop a prop.
+
+Suíte do DS após os fixes: **1090/1090** (1089 + 1 do teste de variante nula).

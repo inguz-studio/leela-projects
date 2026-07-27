@@ -1817,4 +1817,50 @@ clube) seguem byte-idênticas. A razão não é derivada de `aspecto` de propós
 **Onde o Vitor confere:** `/eventos/{slug}/kits` · `/marcas` ·
 `/eventos/{slug}/configuracoes`.
 
-⚔ review antagonista **pendente**.
+### ⚔ Review antagonista (lane THUMBS-REV, 2026-07-27) — APROVADO COM FIXES
+
+Quatro defeitos provados, quatro commits. Dois no DS estão no E01; os dois do
+painel:
+
+**A capa com URL morta virava caixa VAZIA, não fallback (`8f4b999`).** Das três
+superfícies, a capa era a única que não passava `fallback` ao `Thumb` — nem no
+ramo editável nem no de leitura. A RN-236 promete o contrário ("ausência de
+imagem, **e também URL quebrada**, caem num fallback digno") e o `LLM.txt` do
+Thumb é categórico no mesmo ponto. Era o pior lugar para falhar: a miniatura da
+capa só monta quando `imagemUrl` está preenchida, então cair no fallback ali
+significa exatamente "existe capa salva e o navegador não baixou" — e a caixa
+vazia lia como "não tem capa". Agora cai no ícone `ImageOff`.
+
+**As duas asserções de fallback das listagens passavam a vazio (`e2cca94`).**
+Arranquei a prop `fallback` de `/marcas` e da grade de kits e rodei: 22/22
+verdes. `toHaveTextContent('C')` casava com o 'C' de "CDL Wellness" na célula ao
+lado, e `toHaveTextContent('K')` com o 'K' de "Kit Ouro" no `<h3>` ao lado. A
+sigla nunca foi olhada. Escopo estreitado para a célula do logo e para a caixa da
+miniatura; agora os dois morrem sem o fallback.
+
+**O que sobreviveu ao ataque.** A fiação das três superfícies morde de verdade
+(removi o `Thumb` do `KitCard`, o `Thumb` da `LogoCell` e o `previewMiniatura` do
+`ConfigGeraisForm`: 3, 2 e 2 testes caem, respectivamente). O `loading="lazy"`
+está provado por atributo nas três, com `false` correto nas duas caixas de capa.
+O `onError` aguenta troca de URL, ida e volta para a URL que já morreu, rerender
+com o mesmo `src` e `src` vazio×nulo. O `previewMiniatura` opt-in não tocou as
+outras três superfícies do `ImageUploadField`.
+
+**O número dos 400px, aterrissado.** O formulário é `max-w-3xl` (768px) e o
+preview antigo era bloco de largura cheia com `aspect-ratio: 1600/838`: no
+máximo da coluna dá **402px** de altura. A conta fecha. Só que a miniatura nova é
+`size="lg"` — 96px de largura, **~50px de altura**. A oscilação foi de 402px para
+50px, e `lg` já é o maior tamanho que o `Thumb` publica. Se 50px for pequeno
+demais para reconhecer a capa, o caminho é token novo no DS, não ajuste na tela.
+**Fica para o olho do Vitor.**
+
+**Ponta solta de fidelidade:** a razão do `Thumb` é 1.9:1 e o `CAPA_EVENTO_ASPECTO`
+é 1600×838, que é 1.909:1. O JSDoc do `previewMiniatura` diz "a MESMA razão"; são
+0,5% de diferença (0,25px na caixa de 96px), invisível, mas "a mesma" não é
+literal. A RN-228 fala em 1.9:1, então quem está fora é o par de pixels, não o
+componente.
+
+Suítes após os fixes: DS **1090/1090** · painel **1492/1494** (os 2 vermelhos —
+sidebar de `/plataforma` e mutations de termos comerciais — foram reproduzidos
+idênticos no base `0705ccc`, são anteriores a esta lane e não têm relação com
+miniatura).
