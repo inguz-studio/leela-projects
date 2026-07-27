@@ -96,6 +96,14 @@ export function FinanceiroView({
   const repasseExibido =
     repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento : null;
   const rep = derivarRepasse(fin, repasseExibido);
+  // Quanto do repasse CABE no liberado deste evento (review CAIXADISP-REV,
+  // R-2): `computeDisponivelPorEvento` trava em 0 (RN-351), então repasse vivo
+  // maior que o liberado é absorvido só até o clamp. A nota diz o que o número
+  // ABSORVEU, nunca a Σ que ele viu — afirmar "já desconta R$ 9.000" com o
+  // liberado em R$ 8.500 é um desconto que não aconteceu.
+  const abatidoNoDisponivel = repasseExibido
+    ? Math.min(repasseExibido.total, rep.receitaTotal - rep.aSerDisponibilizado)
+    : 0;
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -163,14 +171,20 @@ export function FinanceiroView({
         {/* DEC-0727 (achado A-2 da review antagonista, resolvido): o disponível
             abate os repasses vivos deste evento. A nota diz o que ele JÁ
             desconta — some quando não há repasse, porque aí não há o que
-            declarar e os quatro números fecham sozinhos. O caminho para o saldo
-            consolidado do servidor é o botão "Ver todos os repasses" acima: um
-            atalho, não um aviso de que este número não presta. */}
+            declarar e os quatro números fecham sozinhos.
+            O PONTEIRO para o consolidado fica na nota (review CAIXADISP-REV,
+            R-3), não só no botão "Ver todos os repasses": o botão é condicional
+            (RN-320 + janela de resolução do claim) e este número segue sendo a
+            fatia por evento sobre a receita TOTAL, sistematicamente acima do
+            saque autoritativo — que parte do líquido. Ressalva de "não desconta"
+            está morta (a conta abate); o endereço do número oficial não. */}
         <CardValor
           rotulo="Valor disponível"
           valor={formatBRL(rep.disponivel)}
           {...(repasseExibido
-            ? { nota: `Já desconta ${formatBRL(repasseExibido.total)} em repasse deste evento.` }
+            ? {
+                nota: `Já desconta ${formatBRL(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`,
+              }
             : {})}
           tom="success"
         />

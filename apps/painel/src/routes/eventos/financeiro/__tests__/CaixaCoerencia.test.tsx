@@ -131,12 +131,41 @@ describe('A-2 · o disponível ABATE o repasse (DEC-0727)', () => {
     );
     expect(screen.getByText('Valor disponível')).toBeInTheDocument();
     // Regex por causa do NBSP do Intl entre "R$" e o número (e o card do
-    // dashboard formata sem centavos — `formatBRL`).
+    // dashboard formata sem centavos — `formatBRL`). A nota diz o que o número
+    // desconta E onde está o número oficial de saque (review CAIXADISP-REV,
+    // R-3: o botão "Ver todos os repasses" é condicional, a nota não).
     expect(
-      screen.getByText(/^Já desconta R\$\s*1\.200 em repasse deste evento\.$/),
+      screen.getByText(
+        /^Já desconta R\$\s*1\.200 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(AVISO_MORTO)).not.toBeInTheDocument();
     expect(screen.queryByText(/não desconta/)).not.toBeInTheDocument();
+  });
+
+  // R-2 da review CAIXADISP-REV: repasse vivo MAIOR que o liberado do evento
+  // (alcançável — o modal valida o valor contra o saldo do TENANT, não contra
+  // este evento). O clamp de RN-351 absorve só até 8.500; a nota não pode
+  // afirmar um desconto de 9.000 que não aconteceu.
+  it('repasse maior que o liberado: a nota declara o que ABSORVEU, não a Σ', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin({ receitaBruta: 10000 })}
+        loading={false}
+        error={null}
+        repasseDoEvento={{ qtd: 1, total: 9000 }}
+      />,
+    );
+    // Disponível travado em 0 (nunca negativo) …
+    expect(screen.getByText(/^R\$\s*0$/)).toBeInTheDocument();
+    // … e a nota diz 8.500 (o liberado deste evento), não 9.000.
+    expect(
+      screen.getByText(
+        /^Já desconta R\$\s*8\.500 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Já desconta R\$\s*9\.000/)).not.toBeInTheDocument();
   });
 
   it('sem repasse, os quatro números fecham entre si — nada a declarar', () => {
