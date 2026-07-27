@@ -34,7 +34,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
@@ -110,7 +110,7 @@ import {
 } from '../eventos/versionarPoliticaVendas';
 import { hashTermoSaude } from '../eventos/versionarTermoSaude';
 import { selectPaymentProvider } from '../payments/selectProvider';
-import { AsaasTimeoutError } from '../payments/asaasProvider';
+import { ASAAS_TIMEOUT_MS, AsaasTimeoutError } from '../payments/asaasProvider';
 import {
   lerPessoasNaTx,
   planejarPessoasDoCheckout,
@@ -2058,8 +2058,66 @@ export async function createInscricaoChargeCore(
 // Callable
 // ---------------------------------------------------------------------------
 
+/**
+ * Quantas chamadas ao Asaas o PIOR CASO desta callable pode fazer (DEC-0727 ·
+ * T3). Contadas no código, uma a uma, não estimadas:
+ *
+ *   encerrarPixAnteriorNaCriacao → cancelCharge
+ *     1. DELETE /payments/{id}
+ *     2. GET /payments/{id}          (reconciliação A1-REV, só em 4xx≠429)
+ *   createCharge
+ *     3. GET /payments?externalReference=   (lookup idempotente)
+ *     4. GET /customers?cpfCnpj=            (lookup do cliente)
+ *     5. POST /customers                    (cliente novo)
+ *     6. POST /payments
+ *     7. GET /payments/{id}/pixQrCode       (só PIX pendente)
+ *
+ * Ninguém vive esse caminho no dia a dia — ele exige comprador novo, com uma
+ * cobrança PIX anterior vencida e não confirmada, e o gateway devagar em toda
+ * chamada. Mas é ELE que o teto da Function precisa acomodar.
+ */
+const CHAMADAS_ASAAS_PIOR_CASO = 7;
+
+/**
+ * Folga para o que NÃO é Asaas dentro da mesma invocação: leitura de evento/
+ * lote/termos, validação de tamanhos, a transação que cria pedido +
+ * pagamento + inscritos + sentinela, e a transação que grava o chargeId.
+ */
+const FOLGA_NAO_GATEWAY_SEGUNDOS = 15;
+
+/**
+ * Teto da callable do checkout (DEC-0727 · T3).
+ *
+ * POR QUE DEIXAR DE HERDAR OS 60s: o default do Firebase é menor que a soma
+ * dos tetos por chamada do adapter. Uma Function morta no meio do caminho é
+ * o pior desfecho possível aqui — ela pode ser derrubada JUSTAMENTE entre o
+ * `POST /payments` que vingou e a transação que grava o `gatewayChargeId`,
+ * produzindo a cobrança órfã que o teto de 15s existe para tornar rara. O
+ * teto por chamada só é honesto se a Function sobreviver a todos eles.
+ *
+ * DERIVADO, nunca digitado: sai de `ASAAS_TIMEOUT_MS`. Se o dono mudar os
+ * 15s, este número acompanha no mesmo commit — dois números soltos derivam,
+ * e o que deriva mente. `tetoCallable.test.ts` prende a relação.
+ *
+ * ⚠️ Isto é um TETO, não uma expectativa: o caminho normal do checkout
+ * resolve em menos de um segundo de gateway. E o comprador não olha para
+ * este número — quem fala com ele é o "processando pagamento" do T2.
+ *
+ * ⚠️ FRONTEIRA DECLARADA: o SDK callable do cliente tem teto próprio (70s
+ * default, `packages/api-client` — fora do território desta lane). No pior
+ * caso o cliente desiste antes do servidor, e o erro que ele fabrica é
+ * `deadline-exceeded` — o MESMO código que a tela do T2 já lê como
+ * "processando pagamento". A tela não mente por causa disso; o servidor
+ * termina o trabalho e o replay reencontra a cobrança. Alinhar os dois tetos
+ * é follow-up registrado no relatório da lane.
+ */
+export const TETO_CALLABLE_CHECKOUT_SEGUNDOS =
+  (ASAAS_TIMEOUT_MS / 1000) * CHAMADAS_ASAAS_PIOR_CASO + FOLGA_NAO_GATEWAY_SEGUNDOS;
+
 /** `createInscricaoCharge` — callable do checkout público (S1203). */
-export const createInscricaoCharge = https.onCall(async (data: unknown, context) => {
+export const createInscricaoCharge = runWith({
+  timeoutSeconds: TETO_CALLABLE_CHECKOUT_SEGUNDOS,
+}).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
