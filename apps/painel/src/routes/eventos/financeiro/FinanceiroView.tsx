@@ -53,6 +53,15 @@ export interface FinanceiroViewProps {
    */
   repasseDoEvento?: RepassesAssociados | null;
   repasseLoading?: boolean;
+  /**
+   * Falha na leitura do ledger de repasse (review CAIXADISP-REV, R-4). Desde a
+   * DEC-0727 o disponível ABATE a Σ deste evento — logo, ledger ilegível é
+   * questão de dinheiro, não de cosmética: a Σ chega vazia, `derivarRepasse`
+   * devolve o disponível SEM abater, e o resultado é indistinguível do evento
+   * que de fato não teve repasse. Declarado, a tela distingue "não houve saída"
+   * de "não conseguimos ler a saída".
+   */
+  repasseErro?: Error | null;
   /** Atalho para a visão macro — só para quem tem acesso a repasse (RN-320). */
   podeVerRepasses?: boolean;
   onVerRepasses?: () => void;
@@ -65,6 +74,7 @@ export function FinanceiroView({
   error,
   repasseDoEvento = null,
   repasseLoading = false,
+  repasseErro = null,
   podeVerRepasses = false,
   onVerRepasses,
 }: FinanceiroViewProps): JSX.Element {
@@ -104,6 +114,16 @@ export function FinanceiroView({
   const abatidoNoDisponivel = repasseExibido
     ? Math.min(repasseExibido.total, rep.receitaTotal - rep.aSerDisponibilizado)
     : 0;
+  // Ledger ilegível (R-4): a Σ vazia por FALHA é o mesmo objeto que a Σ vazia
+  // por ausência. O disponível ao lado não abateu nada e não sabe disso.
+  const ledgerIlegivel = !repasseLoading && repasseErro !== null;
+  // Nota do disponível: o que ele abateu (e onde está o oficial), ou o aviso de
+  // que ele PODE não ter abatido. Sem repasse e sem falha, nada a declarar.
+  const notaDisponivel = ledgerIlegivel
+    ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
+    : repasseExibido
+      ? `Já desconta ${formatBRL(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
+      : null;
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -162,9 +182,11 @@ export function FinanceiroView({
           nota={
             repasseLoading
               ? 'Consultando os repasses deste evento'
-              : repasseExibido
-                ? `${repasseExibido.qtd} ${repasseExibido.qtd === 1 ? 'repasse solicitado' : 'repasses solicitados'} para este evento`
-                : 'Nenhum repasse solicitado para este evento'
+              : ledgerIlegivel
+                ? 'Não foi possível ler os repasses deste evento'
+                : repasseExibido
+                  ? `${repasseExibido.qtd} ${repasseExibido.qtd === 1 ? 'repasse solicitado' : 'repasses solicitados'} para este evento`
+                  : 'Nenhum repasse solicitado para este evento'
           }
           tom="primary"
         />
@@ -173,19 +195,15 @@ export function FinanceiroView({
             desconta — some quando não há repasse, porque aí não há o que
             declarar e os quatro números fecham sozinhos.
             O PONTEIRO para o consolidado fica na nota (review CAIXADISP-REV,
-            R-3), não só no botão "Ver todos os repasses": o botão é condicional
-            (RN-320 + janela de resolução do claim) e este número segue sendo a
-            fatia por evento sobre a receita TOTAL, sistematicamente acima do
-            saque autoritativo — que parte do líquido. Ressalva de "não desconta"
-            está morta (a conta abate); o endereço do número oficial não. */}
+            R-3), não só no botão "Ver todos os repasses": um botão de navegação
+            não afirma nada sobre a AUTORIDADE do número, e este número segue
+            sendo a fatia por evento sobre a receita TOTAL, sistematicamente
+            acima do saque autoritativo — que parte do líquido. Ressalva de "não
+            desconta" está morta (a conta abate); o endereço do oficial não. */}
         <CardValor
           rotulo="Valor disponível"
           valor={formatBRL(rep.disponivel)}
-          {...(repasseExibido
-            ? {
-                nota: `Já desconta ${formatBRL(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`,
-              }
-            : {})}
+          {...(notaDisponivel !== null ? { nota: notaDisponivel } : {})}
           tom="success"
         />
         <CardValor

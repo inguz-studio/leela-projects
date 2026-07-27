@@ -53,6 +53,12 @@ export function FinanceiroPage(): JSX.Element {
       error={error}
       repasseDoEvento={repasseDoEvento}
       repasseLoading={session.status === 'loading' || historico.loading}
+      // DEC-0727 tornou o disponível DEPENDENTE deste reader: sem o histórico a
+      // Σ chega vazia e o número não abate. O erro tem de chegar à tela — antes
+      // da DEC-0727 ele era cosmético (o disponível não abatia de todo jeito),
+      // agora ele é a diferença entre um valor abatido e um valor cheio com
+      // cara de final (review CAIXADISP-REV, R-4).
+      repasseErro={historico.error}
       podeVerRepasses={podeVerRepasses}
       onVerRepasses={() => navigate('/eventos/repasses')}
     />

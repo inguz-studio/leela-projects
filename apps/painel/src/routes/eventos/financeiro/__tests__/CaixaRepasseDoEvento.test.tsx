@@ -119,6 +119,56 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
     ).not.toBeInTheDocument();
   });
 
+  // R-4 da review CAIXADISP-REV. Depois da DEC-0727 o disponível DEPENDE deste
+  // reader: falha na leitura ⇒ Σ vazia ⇒ o número não abate. Sem declarar, a
+  // tela fica idêntica à do evento que não teve repasse — e mostra o disponível
+  // cheio com cara de final. Antes da DEC-0727 esse erro era cosmético.
+  it('ledger ilegível: não afirma ausência de repasse e declara que o disponível pode não estar abatido', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin({ receitaBruta: 10000 })}
+        loading={false}
+        error={null}
+        repasseDoEvento={null}
+        repasseErro={new Error('permission-denied')}
+      />,
+    );
+    // A afirmação falsa não sobrevive à falha de leitura.
+    expect(
+      screen.queryByText('Nenhum repasse solicitado para este evento'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('Não foi possível ler os repasses deste evento')).toBeInTheDocument();
+    // O disponível continua exibido (é o único número que a tela tem), mas
+    // declarado: 8.500 aqui é "não abatido", não "nada saiu".
+    expect(screen.getByText(/^R\$\s*8\.500$/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /^Não foi possível ler os repasses deste evento: este valor pode não estar abatido\. O disponível oficial de saque está em Eventos › Repasses\.$/,
+      ),
+    ).toBeInTheDocument();
+    // E nunca a nota de desconto — não houve desconto nenhum.
+    expect(screen.queryByText(/Já desconta/)).not.toBeInTheDocument();
+  });
+
+  it('erro do ledger não vence o loading: enquanto consulta, só o "consultando"', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin({ receitaBruta: 10000 })}
+        loading={false}
+        error={null}
+        repasseDoEvento={null}
+        repasseLoading
+        repasseErro={new Error('transient')}
+      />,
+    );
+    expect(screen.getByText('Consultando os repasses deste evento')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível ler os repasses deste evento'),
+    ).not.toBeInTheDocument();
+  });
+
   it('RECONCILIAÇÃO: o número da Caixa é o MESMO da linha em /eventos/repasses', () => {
     // Um histórico como o que a tela macro recebe — inclusive ruído que ela
     // ignora: outro evento, um cancelado e um sem associação.
