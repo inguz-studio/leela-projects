@@ -116,7 +116,13 @@ export function FinanceiroView({
     : 0;
   // Ledger ilegível (R-4): a Σ vazia por FALHA é o mesmo objeto que a Σ vazia
   // por ausência. O disponível ao lado não abateu nada e não sabe disso.
-  const ledgerIlegivel = !repasseLoading && repasseErro !== null;
+  //
+  // Só quando NÃO há Σ. O reader (react-query) pode devolver erro de refetch
+  // COM o dado anterior de pé; nesse caso o número ao lado é real e já foi
+  // abatido — declarar "não foi possível ler" ao lado de um valor exibido seria
+  // contradizer a própria tela. O defeito é a falha indistinguível da ausência,
+  // não o erro em si.
+  const ledgerIlegivel = !repasseLoading && repasseErro !== null && repasseExibido === null;
   // Nota do disponível: o que ele abateu (e onde está o oficial), ou o aviso de
   // que ele PODE não ter abatido. Sem repasse e sem falha, nada a declarar.
   // `formatDinheiro` (com centavos), não `formatBRL`: os quatro CARDS seguem a

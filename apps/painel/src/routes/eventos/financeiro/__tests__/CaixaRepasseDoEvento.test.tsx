@@ -151,6 +151,28 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
     expect(screen.queryByText(/Já desconta/)).not.toBeInTheDocument();
   });
 
+  // O reader pode falhar no refetch com o dado anterior de pé (react-query
+  // mantém `data` e seta `error`). Aí o número exibido é real e JÁ abateu —
+  // declarar "não foi possível ler" ao lado dele seria a tela se desmentindo.
+  it('erro COM Σ de pé: mostra o número (real, já abatido) e não declara falha', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin({ receitaBruta: 10000 })}
+        loading={false}
+        error={null}
+        repasseDoEvento={{ qtd: 1, total: 500 }}
+        repasseErro={new Error('refetch falhou')}
+      />,
+    );
+    expect(screen.getByText('1 repasse solicitado para este evento')).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s*8\.000$/)).toBeInTheDocument();
+    expect(
+      screen.queryByText('Não foi possível ler os repasses deste evento'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/^Já desconta R\$\s*500,00 em repasse/)).toBeInTheDocument();
+  });
+
   it('erro do ledger não vence o loading: enquanto consulta, só o "consultando"', () => {
     render(
       <FinanceiroView
