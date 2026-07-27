@@ -18,7 +18,8 @@
 // =============================================================================
 
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { SubNav } from '@leela/design-system';
+import { SubNav, type SubNavTab } from '@leela/design-system';
+import { tabsComNavSpa } from '../../lib/navSpa';
 
 /** Sub-navegação de primeiro nível da área Eventos (padrão §2.14). */
 export function EventosHubSubNav(): JSX.Element {
@@ -29,26 +30,20 @@ export function EventosHubSubNav(): JSX.Element {
   // segmento estático sobre `:slug` está declarada e testada em EventosRoutes.
   const emRepasses = pathname.startsWith('/eventos/repasses');
 
-  return (
-    <SubNav
-      aria-label="Seções de Eventos"
-      divider
-      tabs={[
-        {
-          id: 'eventos',
-          label: 'Eventos',
-          active: !emRepasses,
-          onClick: () => navigate('/eventos'),
-        },
-        {
-          id: 'repasses',
-          label: 'Repasses',
-          active: emRepasses,
-          onClick: () => navigate('/eventos/repasses'),
-        },
-      ]}
-    />
+  // LEELA-DEBT-T4 (H7 do PAINEL-NAV-DIAG-REPORT) — a barra nasceu na rodada
+  // IA-MENU navegando por `onClick` SEM `href`: nunca recarregou o documento,
+  // mas também não era link (sem ctrl+clique, sem clique do meio, sem "copiar
+  // endereço do link"). Agora segue o mesmo par das outras superfícies — `href`
+  // no DOM E `onClick` com `preventDefault`, fiado por `tabsComNavSpa`.
+  const tabs: SubNavTab[] = tabsComNavSpa(
+    [
+      { id: 'eventos', label: 'Eventos', href: '/eventos', active: !emRepasses },
+      { id: 'repasses', label: 'Repasses', href: '/eventos/repasses', active: emRepasses },
+    ],
+    navigate,
   );
+
+  return <SubNav aria-label="Seções de Eventos" divider tabs={tabs} />;
 }
 
 EventosHubSubNav.displayName = 'EventosHubSubNav';

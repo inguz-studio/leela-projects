@@ -37,7 +37,7 @@ describe('crmAbaAtiva — derivação pura pelo pathname', () => {
 describe('CrmSubNav', () => {
   it('renderiza exatamente as 3 subdivisões, na ordem da decisão', () => {
     renderEm('/crm');
-    const abas = screen.getAllByRole('button');
+    const abas = screen.getAllByRole('link');
     expect(abas.map((b) => b.textContent)).toEqual(['Visão geral', 'Clientes', 'Comunicação']);
   });
 
@@ -50,7 +50,7 @@ describe('CrmSubNav', () => {
     ] as const) {
       const { unmount } = renderEm(rota);
       const marcadas = screen
-        .getAllByRole('button')
+        .getAllByRole('link')
         .filter((b) => b.getAttribute('aria-current') === 'page');
       expect(marcadas, `rota ${rota}`).toHaveLength(1);
       expect(marcadas[0]?.textContent, `rota ${rota}`).toBe(ativa);
@@ -63,6 +63,20 @@ describe('CrmSubNav', () => {
     expect(screen.getByRole('navigation', { name: 'Seções de CRM' })).toHaveClass('border-b');
   });
 
+  // LEELA-DEBT-T4 (H7): as abas eram `<button>` — navegavam, mas não davam
+  // ctrl+clique, clique do meio nem "copiar endereço do link".
+  it('cada aba é LINK de verdade: href no DOM apontando para a própria rota', () => {
+    renderEm('/crm');
+    const porRotulo = Object.fromEntries(
+      screen.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')]),
+    );
+    expect(porRotulo).toEqual({
+      'Visão geral': '/crm',
+      Clientes: '/crm/clientes',
+      Comunicação: '/crm/comunicacao',
+    });
+  });
+
   it('as 3 abas navegam para as rotas declaradas', async () => {
     render(
       <MemoryRouter initialEntries={['/crm']}>
@@ -72,11 +86,11 @@ describe('CrmSubNav', () => {
         </Routes>
       </MemoryRouter>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Clientes' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Clientes' }));
     expect(screen.getByTestId('pathname')).toHaveTextContent('/crm/clientes');
-    await userEvent.click(screen.getByRole('button', { name: 'Comunicação' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Comunicação' }));
     expect(screen.getByTestId('pathname')).toHaveTextContent('/crm/comunicacao');
-    await userEvent.click(screen.getByRole('button', { name: 'Visão geral' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Visão geral' }));
     expect(screen.getByTestId('pathname')).toHaveTextContent('/crm');
   });
 });

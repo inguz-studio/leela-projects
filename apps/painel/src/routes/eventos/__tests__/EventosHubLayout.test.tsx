@@ -26,25 +26,25 @@ function Pathname(): JSX.Element {
 describe('EventosHubSubNav', () => {
   it('marca Eventos como ativa em /eventos e Repasses em /eventos/repasses', () => {
     renderEm('/eventos');
-    expect(screen.getByRole('button', { name: 'Eventos' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Eventos' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    expect(screen.getByRole('button', { name: 'Repasses' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Repasses' })).not.toHaveAttribute('aria-current');
   });
 
   it('em /eventos/repasses a aba Repasses fica ativa e a lista sai de ativa', () => {
     renderEm('/eventos/repasses');
-    expect(screen.getByRole('button', { name: 'Repasses' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Repasses' })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    expect(screen.getByRole('button', { name: 'Eventos' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Eventos' })).not.toHaveAttribute('aria-current');
   });
 
   it('dentro de um evento (/eventos/{slug}/...) a aba Eventos segue a ativa', () => {
     renderEm('/eventos/corrida-da-serra/inscritos');
-    expect(screen.getByRole('button', { name: 'Eventos' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Eventos' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -53,6 +53,16 @@ describe('EventosHubSubNav', () => {
   it('aplica a divisória padrão da sub-nav (RN-229)', () => {
     renderEm('/eventos');
     expect(screen.getByRole('navigation', { name: 'Seções de Eventos' })).toHaveClass('border-b');
+  });
+
+  // LEELA-DEBT-T4 (H7): as abas eram `<button>` — navegavam, mas não davam
+  // ctrl+clique, clique do meio nem "copiar endereço do link".
+  it('cada aba é LINK de verdade: href no DOM apontando para a própria rota', () => {
+    renderEm('/eventos');
+    const porRotulo = Object.fromEntries(
+      screen.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')]),
+    );
+    expect(porRotulo).toEqual({ Eventos: '/eventos', Repasses: '/eventos/repasses' });
   });
 
   it('as duas abas navegam para as rotas declaradas', async () => {
@@ -64,9 +74,9 @@ describe('EventosHubSubNav', () => {
         </Routes>
       </MemoryRouter>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Repasses' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Repasses' }));
     expect(screen.getByTestId('pathname')).toHaveTextContent('/eventos/repasses');
-    await userEvent.click(screen.getByRole('button', { name: 'Eventos' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Eventos' }));
     expect(screen.getByTestId('pathname')).toHaveTextContent('/eventos');
   });
 });

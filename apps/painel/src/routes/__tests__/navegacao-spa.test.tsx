@@ -116,6 +116,15 @@ interface SuperficieNav {
    * por isso a busca é por atributo, não por role.
    */
   atual: string;
+  /**
+   * `<button>` que a superfície pode conter por NÃO ser destino de navegação
+   * (LEELA-DEBT-T4). A lista é a exceção declarada, texto por texto: quem
+   * acrescentar um botão aqui está afirmando que ele abre um menu ou dispara
+   * uma ação, e não que leva a uma rota. Destino em `<button>` é o defeito que
+   * este arquivo existe para pegar — a pessoa não consegue abrir em nova aba
+   * nem copiar o endereço.
+   */
+  botoesQueNaoSaoDestino?: string[];
   montar: () => void;
 }
 
@@ -219,12 +228,53 @@ const SUPERFICIES: SuperficieNav[] = [
     landmark: 'Navegação principal',
     ancoras: 6,
     atual: 'Visão Geral',
+    // O rodapé da sidebar (B4) é o gatilho do menu do usuário: abre um menu,
+    // não leva a uma rota. Botão é o elemento certo para ele.
+    botoesQueNaoSaoDestino: ['MCMarina CasteloVer perfil'],
     montar: () =>
       void render(
         <MemoryRouter initialEntries={['/']}>
           <RootShell>
             <Sonda />
           </RootShell>
+        </MemoryRouter>,
+      ),
+  },
+  // ---------------------------------------------------------------------------
+  // LEELA-DEBT-T4 — as duas últimas superfícies fora da tabela (H7).
+  //
+  // Nasceram na rodada IA-MENU navegando por `onClick` sem `href`: nunca
+  // recarregaram o documento, e por isso a lane NAV-FIX as deixou de fora, num
+  // bloco separado que só registrava "zero âncoras". Esse bloco some agora, e
+  // ele era a parte FRACA da prova — afirmava a ausência de links. Como abas
+  // de verdade, as duas passam pelas cinco asserções da tabela: contagem exata,
+  // cancelar o default, apontar para rota interna, LEVAR ao destino do próprio
+  // href e marcar um único "onde estou". O inventário para de registrar
+  // 0-âncoras nelas porque elas deixaram de ter zero.
+  // ---------------------------------------------------------------------------
+  {
+    nome: 'abas do CRM',
+    landmark: 'Seções de CRM',
+    ancoras: 3,
+    atual: 'Visão geral',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/crm']}>
+          <CrmSubNav />
+          <Sonda />
+        </MemoryRouter>,
+      ),
+  },
+  {
+    nome: 'abas do hub de Eventos',
+    landmark: 'Seções de Eventos',
+    ancoras: 2,
+    atual: 'Eventos',
+    montar: () =>
+      void render(
+        <MemoryRouter initialEntries={['/eventos']}>
+          <EventosHubSubNav />
+          <Sonda />
         </MemoryRouter>,
       ),
   },
@@ -352,47 +402,27 @@ describe('menu lateral do produtor — as duas pontas no mesmo elemento', () => 
 });
 
 // ---------------------------------------------------------------------------
-// A outra metade do padrão: as duas SubNavs nascidas na rodada IA-MENU navegam
-// por `onClick` SEM `href`. Nunca recarregaram o documento — não são o defeito
-// desta lane. Mas também não são links: sem ctrl+clique, sem clique do meio,
-// sem "copiar endereço do link". É a ponta invertida (H7) que sobra depois de
-// T1-T3 e que vale um card próprio; ficam registradas aqui para o inventário
-// não mentir sobre o que está fiado e o que não está.
+// LEELA-DEBT-T4 — não sobra superfície de navegação fora da tabela.
+//
+// As duas SubNavs da rodada IA-MENU eram a última exceção: navegavam por
+// `onClick` sem `href` e viviam num bloco à parte que só media a AUSÊNCIA de
+// links. Elas entraram na tabela acima como abas de verdade. Esta asserção é o
+// que impede a exceção de voltar: um `<button>` dentro de uma barra de
+// navegação é, por definição, um destino que a pessoa não consegue abrir em
+// outra aba nem copiar.
 // ---------------------------------------------------------------------------
 
-const SEM_ANCORA: Array<{ nome: string; landmark: string; abas: number; montar: () => void }> = [
-  {
-    nome: 'abas do CRM',
-    landmark: 'Seções de CRM',
-    abas: 3,
-    montar: () =>
-      void render(
-        <MemoryRouter initialEntries={['/crm']}>
-          <CrmSubNav />
-        </MemoryRouter>,
-      ),
-  },
-  {
-    nome: 'abas do hub de Eventos',
-    landmark: 'Seções de Eventos',
-    abas: 2,
-    montar: () =>
-      void render(
-        <MemoryRouter initialEntries={['/eventos']}>
-          <EventosHubSubNav />
-        </MemoryRouter>,
-      ),
-  },
-];
-
-describe('superfícies que navegam por onClick, sem href (padrão IA-MENU)', () => {
-  it.each(SEM_ANCORA)(
-    '$nome: nenhuma âncora — logo, nada a recarregar (mas também não é link)',
-    ({ landmark, abas, montar }) => {
+describe('nenhuma superfície de navegação navega por botão', () => {
+  it.each(SUPERFICIES)(
+    '$nome: todo destino é âncora — só sobram os botões declarados',
+    ({ landmark, botoesQueNaoSaoDestino = [], montar }) => {
       montar();
       const nav = screen.getByRole('navigation', { name: landmark });
-      expect(within(nav).queryAllByRole('link')).toHaveLength(0);
-      expect(within(nav).getAllByRole('button')).toHaveLength(abas);
+      expect(
+        within(nav).queryAllByRole('button').map((b) => b.textContent),
+        'destino de navegação em <button> não abre em nova aba nem copia endereço — ' +
+          'se este botão realmente não é destino, declare-o em botoesQueNaoSaoDestino',
+      ).toEqual(botoesQueNaoSaoDestino);
     },
   );
 });
