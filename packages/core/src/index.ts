@@ -822,10 +822,15 @@ export {
 // Núcleo puro do repasse (E09s-L1-T3): retenção RN-350, saldo RN-351,
 // solicitação RN-352, máquina RN-353, comprovante RN-355, líquido com modo
 // de taxa RN-347 e janela D+N em dias úteis RN-348. O disponível POR EVENTO
-// abate os repasses vivos daquele evento (DEC-0727 · computeDisponivelPorEvento).
+// abate os repasses vivos daquele evento (DEC-0727 · computeDisponivelPorEvento)
+// e sai da base ÚNICA do saque — líquido, retenção que libera no encerramento
+// (RN-367 · DEC-0727C · computeDisponivelDoEvento), a mesma da Caixa, da coluna
+// por evento e do guard por evento do requestRepasse (RN-368).
 export type {
   ComputeSaldoRepasseParams,
   SaldoRepasseComputado,
+  DisponivelDoEventoParams,
+  DisponivelDoEvento,
   ResultadoValidacaoSolicitacao,
   EventoRepasseMaquina,
   ResultadoTransicaoRepasse,
@@ -839,6 +844,7 @@ export {
   computeRetido,
   computeLiberadoPorEvento,
   computeDisponivelPorEvento,
+  computeDisponivelDoEvento,
   ESTADOS_REPASSE_COMPROMETIDOS,
   comprometeSaldo,
   computeSaldoRepasse,

@@ -24,19 +24,22 @@ function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
 const norm = (s: string | null | undefined) => (s ?? '').replace(/\s/g, ' ');
 
 describe('FinanceiroView (S207-T1)', () => {
-  it('mostra receita total e os 4 KPIs de repasse (sem taxa da plataforma)', () => {
+  // DEC-0727C: eram 4 KPIs, agora são 3 (o card de retenção saiu da conta
+  // visível). A asserção do 4º card virou a NEGATIVA dele — mais forte, porque
+  // reintroduzi-lo passa a quebrar o teste em vez de passar despercebido.
+  it('mostra os 3 KPIs de repasse com o nome do dono (sem taxa da plataforma)', () => {
     const { container } = render(<FinanceiroView slug="e1" financeiro={mkFin()} loading={false} error={null} />);
     expect(norm(container.textContent)).toContain('R$ 85.617');
-    expect(screen.getByText('Receita total')).toBeInTheDocument();
-    expect(screen.getByText('Valor repassado')).toBeInTheDocument();
-    expect(screen.getByText('Valor disponível')).toBeInTheDocument();
-    expect(screen.getByText('Valor a ser disponibilizado')).toBeInTheDocument();
+    expect(screen.getByText('Receita Total')).toBeInTheDocument();
+    expect(screen.getByText('Disponível para Repasse')).toBeInTheDocument();
+    expect(screen.getByText('Valor Repassado')).toBeInTheDocument();
+    expect(screen.queryByText('Valor a ser disponibilizado')).not.toBeInTheDocument();
     // Taxa/margem da plataforma NUNCA aparece (RN-404).
     expect(screen.queryByText(/Taxa Leela/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Receita líquida')).not.toBeInTheDocument();
   });
 
-  it('não mostra alerta RN-406 de taxa; exibe hint de retenção negociável + estado honesto do repasse', () => {
+  it('sem termo comercial: sem alerta RN-406, disponível indeterminado e estado honesto do repasse', () => {
     render(
       <FinanceiroView
         slug="e1"
@@ -46,7 +49,14 @@ describe('FinanceiroView (S207-T1)', () => {
       />,
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByText(/Retenção de até 15% do total/)).toBeInTheDocument();
+    // A frase da retenção morreu com o card (DEC-0727C) — a retenção continua
+    // existindo na conta, só não é mais um número que o organizador persegue.
+    expect(screen.queryByText(/Retenção de até 15% do total/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Sem termo comercial cadastrado: o disponível deste evento ainda não pode ser calculado.',
+      ),
+    ).toBeInTheDocument();
     // RN-235 · IAM-T7: o hint genérico "Disponível com o módulo de repasses"
     // MORREU. Sem repasse associado, o estado honesto é explícito sobre ESTE
     // evento — e nunca R$ 0,00, que sugeriria movimento que não houve.

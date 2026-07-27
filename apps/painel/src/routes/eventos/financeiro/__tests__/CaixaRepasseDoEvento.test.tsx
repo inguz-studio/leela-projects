@@ -32,12 +32,13 @@ function ts(ms: number): Timestamp {
   };
 }
 
+/** Mock CANÔNICO do repo: bruto 12.000 · líquido 10.000 ⇒ liberado 8.500. */
 function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
   return {
-    receitaBruta: 85617,
-    receitaLiquida: 80000,
-    taxaPct: 6.5,
-    taxaValor: 5617,
+    receitaBruta: 12000,
+    receitaLiquida: 10000,
+    taxaPct: 16.67,
+    taxaValor: 2000,
     inscritos: { total: 3, porModalidade: {}, porKit: {}, porStatus: {} },
     receitaPorModalidade: {},
     atualizadoEm: ts(Date.UTC(2026, 3, 15)),
@@ -69,7 +70,7 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
         repasseDoEvento={null}
       />,
     );
-    expect(screen.getByText('Valor repassado')).toBeInTheDocument();
+    expect(screen.getByText('Valor Repassado')).toBeInTheDocument();
     expect(screen.getByText('Nenhum repasse solicitado para este evento')).toBeInTheDocument();
     // O modo de falha que a RN-235 fecha: zero que parece movimento.
     expect(screen.queryByText('R$ 0,00')).not.toBeInTheDocument();
@@ -127,7 +128,7 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
     render(
       <FinanceiroView
         slug="castelo"
-        financeiro={mkFin({ receitaBruta: 10000 })}
+        financeiro={mkFin()}
         loading={false}
         error={null}
         repasseDoEvento={null}
@@ -158,7 +159,7 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
     render(
       <FinanceiroView
         slug="castelo"
-        financeiro={mkFin({ receitaBruta: 10000 })}
+        financeiro={mkFin()}
         loading={false}
         error={null}
         repasseDoEvento={{ qtd: 1, total: 500 }}
@@ -177,7 +178,7 @@ describe('Caixa do evento — linha de repasse (RN-235 · IAM-T7)', () => {
     render(
       <FinanceiroView
         slug="castelo"
-        financeiro={mkFin({ receitaBruta: 10000 })}
+        financeiro={mkFin()}
         loading={false}
         error={null}
         repasseDoEvento={null}

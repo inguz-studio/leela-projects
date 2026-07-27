@@ -1,19 +1,20 @@
 // =============================================================================
-// FinanceiroView — financeiro do evento (S207-T1). Lê o agregado (nunca
-// recalcula receita): visão de REPASSE do organizador (receita total, repassado,
-// disponível, a ser disponibilizado), breakdown por kit/modalidade/status e
-// export CSV. Presentational.
+// FinanceiroView — a Caixa do evento (S207-T1). Lê o agregado (nunca recalcula
+// receita), mostra os TRÊS números da DEC-0727C, o breakdown por
+// kit/modalidade/status e o export CSV. Presentational.
 //
-// A TAXA/MARGEM DA PLATAFORMA NÃO APARECE (RN-404 + decisão do dono,
-// fix-tema-clube): sem card de "Taxa Leela", sem % de taxa, sem nota RN-406.
+// TRÊS cards (verbatim do dono: *"o que devemos mostrar: Receita Total,
+// Disponível para Repasse, Valor Repassado. nao complica essa porra"*). O card
+// de retenção saiu: a diferença entre a receita e os outros dois é retido +
+// taxa e fica implícita — a TAXA/MARGEM DA PLATAFORMA continua sem aparecer
+// (RN-404 + decisão do dono, fix-tema-clube).
 //
-// "Valor repassado" (RN-235 · IAM-T7) vem do LEDGER de repasse deste evento,
-// não do agregado. Desde a DEC-0727 o disponível ABATE esse repasse: a Σ do
-// ledger entra na própria `derivarRepasse`, então os quatro números da Caixa
-// fecham entre si e o CSV sai da mesma derivação (nunca dois números para a
-// mesma linha). O aviso de "estimativa que não abate o repasse" era o contorno
-// da review anterior — morto o motivo, morreu o aviso; ficou uma nota que diz o
-// que o número JÁ desconta, e só quando há repasse para descontar.
+// "Valor Repassado" (RN-235 · IAM-T7) vem do LEDGER de repasse deste evento,
+// não do agregado. O "Disponível para Repasse" sai da base ÚNICA do saque
+// (RN-367 · `computeDisponivelDoEvento`): é o número que o modal de repasse
+// aceita, não uma estimativa paralela — até a DEC-0727C esta tela dizia 9.700
+// onde o saque aceitava 8.000. O CSV sai da mesma derivação (nunca dois números
+// para a mesma linha).
 // =============================================================================
 
 import {
@@ -31,7 +32,8 @@ import {
   breakdownFinanceiro,
   derivarRepasse,
   gerarCsvFinanceiro,
-  RETENCAO_MAX_PCT,
+  SEM_VALOR,
+  type ContextoRepasseEvento,
   type LinhaBreakdown,
 } from '../_lib/financeiro';
 import { prepararModalidades } from '../evento/overview/modalidades';
@@ -62,6 +64,13 @@ export interface FinanceiroViewProps {
    * de "não conseguimos ler a saída".
    */
   repasseErro?: Error | null;
+  /**
+   * Contexto do evento que a base do saque exige (RN-367): encerramento
+   * (RN-350 — libera a retenção) e a % do termo do tenant. Omitido, vale o
+   * default do core (15%, evento em andamento) — o mesmo fallback da coluna
+   * por evento quando o termo não pôde ser lido.
+   */
+  contexto?: ContextoRepasseEvento;
   /** Atalho para a visão macro — só para quem tem acesso a repasse (RN-320). */
   podeVerRepasses?: boolean;
   onVerRepasses?: () => void;
@@ -75,6 +84,7 @@ export function FinanceiroView({
   repasseDoEvento = null,
   repasseLoading = false,
   repasseErro = null,
+  contexto,
   podeVerRepasses = false,
   onVerRepasses,
 }: FinanceiroViewProps): JSX.Element {
@@ -105,15 +115,7 @@ export function FinanceiroView({
   // disponível que ignorava a saída (A-2); as duas se fecham entrando aqui.
   const repasseExibido =
     repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento : null;
-  const rep = derivarRepasse(fin, repasseExibido);
-  // Quanto do repasse CABE no liberado deste evento (review CAIXADISP-REV,
-  // R-2): `computeDisponivelPorEvento` trava em 0 (RN-351), então repasse vivo
-  // maior que o liberado é absorvido só até o clamp. A nota diz o que o número
-  // ABSORVEU, nunca a Σ que ele viu — afirmar "já desconta R$ 9.000" com o
-  // liberado em R$ 8.500 é um desconto que não aconteceu.
-  const abatidoNoDisponivel = repasseExibido
-    ? Math.min(repasseExibido.total, rep.receitaTotal - rep.aSerDisponibilizado)
-    : 0;
+  const rep = derivarRepasse(fin, repasseExibido, contexto);
   // Ledger ilegível (R-4): a Σ vazia por FALHA é o mesmo objeto que a Σ vazia
   // por ausência. O disponível ao lado não abateu nada e não sabe disso.
   //
@@ -123,18 +125,27 @@ export function FinanceiroView({
   // contradizer a própria tela. O defeito é a falha indistinguível da ausência,
   // não o erro em si.
   const ledgerIlegivel = !repasseLoading && repasseErro !== null && repasseExibido === null;
-  // Nota do disponível: o que ele abateu (e onde está o oficial), ou o aviso de
-  // que ele PODE não ter abatido. Sem repasse e sem falha, nada a declarar.
-  // `formatDinheiro` (com centavos), não `formatBRL`: os quatro CARDS seguem a
+  // Nota do disponível, em ordem de gravidade: sem termo (não há número), falha
+  // de leitura (o número pode não ter abatido) e, por fim, o que ele JÁ
+  // descontou. Sem nada disso, o card fala sozinho.
+  //
+  // `rep.absorvido` (do core), não a Σ do ledger: o clamp de RN-351 trava em 0,
+  // então repasse vivo maior que o liberado é absorvido só até o liberado —
+  // afirmar "já desconta R$ 9.000" com o liberado em R$ 8.500 é um desconto que
+  // não aconteceu (review CAIXADISP-REV, R-2).
+  //
+  // `formatDinheiro` (com centavos), não `formatBRL`: os CARDS seguem a
   // convenção arredondada do dashboard, mas esta frase AFIRMA um valor descontado
   // e é lida contra o extrato — R$ 3.200,55 virava "Já desconta R$ 3.201", 45
   // centavos que ninguém descontou, e a MESMA Σ aparece com centavos na tabela
   // de /eventos/repasses e no CSV (review CAIXADISP-REV, R-5).
-  const notaDisponivel = ledgerIlegivel
-    ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
-    : repasseExibido
-      ? `Já desconta ${formatDinheiro(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
-      : null;
+  const notaDisponivel = rep.semTermo
+    ? 'Sem termo comercial cadastrado: o disponível deste evento ainda não pode ser calculado.'
+    : ledgerIlegivel
+      ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
+      : repasseExibido
+        ? `Já desconta ${formatDinheiro(rep.absorvido)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
+        : null;
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -145,7 +156,7 @@ export function FinanceiroView({
   );
 
   function exportar(): void {
-    baixarTexto(gerarCsvFinanceiro(fin, repasseExibido), `financeiro-${slug}.csv`);
+    baixarTexto(gerarCsvFinanceiro(fin, repasseExibido, contexto), `financeiro-${slug}.csv`);
   }
 
   const columns: TableColumn<LinhaBreakdown>[] = [
@@ -176,19 +187,33 @@ export function FinanceiroView({
         </div>
       </div>
 
-      {/* Caixa — visão de REPASSE do organizador (sem taxa/margem da
-          plataforma, RN-404). "Valor repassado" deixou de ser R$ 0,00 genérico
+      {/* Caixa — os TRÊS números da DEC-0727C, sem taxa/margem da plataforma
+          (RN-404). "Valor Repassado" deixou de ser R$ 0,00 genérico
           (RN-235 · IAM-T7): lê o repasse DESTE evento pelo ledger que já
           existia. A informação sempre existiu — só não chegava aqui. */}
       <section
         aria-label="Resumo financeiro"
-        className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-2 lg:grid-cols-3"
       >
-        <CardValor rotulo="Receita total" valor={formatBRL(rep.receitaTotal)} tom="primary" />
+        <CardValor rotulo="Receita Total" valor={formatBRL(rep.receitaTotal)} tom="primary" />
+        {/* RN-367 — a MESMA base do saque autoritativo: líquido do produtor,
+            retenção que libera no encerramento, menos os repasses vivos deste
+            evento. É o número que o modal de repasse aceita.
+            O PONTEIRO para o consolidado fica na nota (review CAIXADISP-REV,
+            R-3), não só no botão "Ver todos os repasses": um botão de navegação
+            não afirma nada sobre a AUTORIDADE do número, e o saldo do tenant
+            ainda difere deste por grandezas que são do tenant, não do evento
+            (janela D+N — RN-348). */}
         <CardValor
-          rotulo="Valor repassado"
+          rotulo="Disponível para Repasse"
+          valor={rep.disponivel === null ? SEM_VALOR : formatBRL(rep.disponivel)}
+          {...(notaDisponivel !== null ? { nota: notaDisponivel } : {})}
+          tom="success"
+        />
+        <CardValor
+          rotulo="Valor Repassado"
           valor={
-            repasseLoading ? '…' : repasseExibido ? formatBRL(repasseExibido.total) : '—'
+            repasseLoading ? '…' : repasseExibido ? formatBRL(repasseExibido.total) : SEM_VALOR
           }
           nota={
             repasseLoading
@@ -200,28 +225,6 @@ export function FinanceiroView({
                   : 'Nenhum repasse solicitado para este evento'
           }
           tom="primary"
-        />
-        {/* DEC-0727 (achado A-2 da review antagonista, resolvido): o disponível
-            abate os repasses vivos deste evento. A nota diz o que ele JÁ
-            desconta — some quando não há repasse, porque aí não há o que
-            declarar e os quatro números fecham sozinhos.
-            O PONTEIRO para o consolidado fica na nota (review CAIXADISP-REV,
-            R-3), não só no botão "Ver todos os repasses": um botão de navegação
-            não afirma nada sobre a AUTORIDADE do número, e este número segue
-            sendo a fatia por evento sobre a receita TOTAL, sistematicamente
-            acima do saque autoritativo — que parte do líquido. Ressalva de "não
-            desconta" está morta (a conta abate); o endereço do oficial não. */}
-        <CardValor
-          rotulo="Valor disponível"
-          valor={formatBRL(rep.disponivel)}
-          {...(notaDisponivel !== null ? { nota: notaDisponivel } : {})}
-          tom="success"
-        />
-        <CardValor
-          rotulo="Valor a ser disponibilizado"
-          valor={formatBRL(rep.aSerDisponibilizado)}
-          nota={`Retenção de até ${RETENCAO_MAX_PCT}% do total, liberada pós-evento; negociável por cliente.`}
-          tom="warning"
         />
       </section>
 

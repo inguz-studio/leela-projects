@@ -4,31 +4,30 @@
 // / exporta.
 //
 // TAXA/MARGEM DA PLATAFORMA NÃO É EXPOSTA AO ORGANIZADOR (RN-404 + decisão do
-// dono, fix-tema-clube): nem card, nem hint, nem coluna de CSV. A visão do
-// organizador é de REPASSE — quanto entra (receita total), quanto já saiu
-// (repassado), quanto pode sacar (disponível) e quanto fica retido até o
-// pós-evento (a ser disponibilizado). A retenção default é NEGOCIÁVEL por
-// cliente (sairá de `commercialTerms` do tenant quando existir).
+// dono, fix-tema-clube): nem card, nem hint, nem coluna de CSV.
 //
-// DEC-0727: o disponível ABATE os repasses vivos do evento — os quatro números
-// da Caixa fecham entre si com o repasse real ao lado. O número autoritativo de
-// SAQUE continua sendo o saldo consolidado do servidor (RN-350/351/357): aqui a
-// base da retenção é a receita total exibida, e a janela D+N (RN-348) é grandeza
-// do tenant, não do evento.
+// DEC-0727C (verbatim do dono: *"o que devemos mostrar: Receita Total,
+// Disponível para Repasse, Valor Repassado. nao complica essa porra. Faz o
+// simples"*): a Caixa mostra TRÊS números. O card de retenção saiu da conta
+// visível — a diferença entre a receita e os outros dois é retido + taxa, e
+// fica implícita.
+//
+// A BASE do disponível é a MESMA do saque autoritativo (RN-367): líquido do
+// produtor, retenção que libera no encerramento, menos os repasses vivos
+// daquele evento. A conta inteira é do core (`computeDisponivelDoEvento`) — a
+// Caixa não tem matemática própria. Até a DEC-0727C esta tela retinha 15% do
+// BRUTO e o saque calculava sobre o LÍQUIDO: no mock canônico do repo a Caixa
+// dizia 9.700 onde o modal aceitava 8.000 (review CAIXADISP-REV, vetor 3).
+//
+// O número autoritativo de SAQUE continua sendo o saldo consolidado do servidor
+// (RN-350/351/357): a janela D+N (RN-348) é grandeza do TENANT, não do evento.
 // =============================================================================
 
 import type { FinanceiroEvento } from '@leela/api-client';
-import { KITS_INSCRITO, STATUS_INSCRITO, computeDisponivelPorEvento, roundMoney } from '@leela/core';
+import { KITS_INSCRITO, STATUS_INSCRITO, computeDisponivelDoEvento } from '@leela/core';
 import { kitInscritoLabel } from './kitLabels';
 import { statusInscritoBadge } from './statusInscrito';
 import { celulaCsv } from './csv';
-
-/**
- * Retenção default: até 15% do total, liberada pós-evento. NEGOCIÁVEL por
- * cliente — quando o tenant tiver `commercialTerms`, o valor sai de lá. É a
- * visão do organizador (quanto fica retido), NUNCA a margem/taxa da plataforma.
- */
-export const RETENCAO_MAX_PCT = 15;
 
 /**
  * Σ dos repasses VIVOS associados a UM evento (shape estrutural de
@@ -42,29 +41,44 @@ export interface RepasseDoEvento {
   total: number;
 }
 
+/** Contexto do evento que a base do saque exige (RN-350/367). */
+export interface ContextoRepasseEvento {
+  /** `evento.status === 'encerrado'` — encerrar libera a retenção (RN-350). */
+  encerrado: boolean;
+  /** % de retenção do termo do tenant; ausente ⇒ default 15 do core (RN-350). */
+  retencaoPct?: number;
+}
+
 /** Visão de repasse do organizador (sem taxa/margem da plataforma). */
 export interface RepasseEvento {
   /** Receita total de vendas de ingressos (= receita bruta confirmada). */
   receitaTotal: number;
   /** Σ dos repasses VIVOS deste evento (ledger — RN-349 · DEC-0727). */
   repassado: number;
-  /** Disponível para saque agora (total − retenção − repassado vivo). */
-  disponivel: number;
-  /** Retido, liberado pós-evento (retenção de até 15% do total). */
-  aSerDisponibilizado: number;
+  /**
+   * Disponível para repasse na base do saque (RN-367); `null` = tenant sem
+   * termo comercial — indeterminado, nunca zero (decisão #7).
+   */
+  disponivel: number | null;
+  /** Quanto da Σ o disponível ABSORVEU (clamp RN-351 — review R-2). */
+  absorvido: number;
+  /** Sem termo comercial: disponível indeterminado ("—" honesto). */
+  semTermo: boolean;
 }
 
 /**
  * Deriva a visão de repasse a partir do agregado + do repasse DAQUELE evento.
- * Retenção = 15% do total (default negociável, RN de retenção intacta);
- * `disponivel` = total − retenção − repasses vivos (DEC-0727, verbatim do
- * dono: *"disponivel tem que abater o que já foi repassado"*).
  *
- * O abatimento em si é do core (`computeDisponivelPorEvento`) — a MESMA função
- * que a visão macro usa na coluna por evento: as duas telas nunca divergem no
- * que abate. Nada é somado aqui: `repassado` chega pronto do ledger, pela
- * mesma função pura que alimenta `/eventos/repasses` (RN-337 — valor de
- * dinheiro sempre vem do backend).
+ * Toda a matemática é do core (`computeDisponivelDoEvento` — RN-367): líquido
+ * do produtor, retenção que libera no encerramento (RN-350), menos os repasses
+ * vivos do evento (DEC-0727, verbatim do dono: *"disponivel tem que abater o
+ * que já foi repassado"*). É a MESMA base que o `requestRepasse` relê no
+ * servidor para autorizar o saque, então o número do card e o teto do modal são
+ * o mesmo número — não dois cálculos que precisam ser mantidos iguais na mão.
+ *
+ * Nada é somado aqui: `repassado` chega pronto do ledger, pela mesma função
+ * pura que alimenta `/eventos/repasses` (RN-357 — dinheiro é escrito só por
+ * Function; o cliente lê e formata).
  *
  * Sem repasse associado (`undefined`/`null`/`qtd === 0`), `repassado = 0` e o
  * disponível é o de antes — nada é inventado quando não houve movimento. @pure
@@ -72,16 +86,37 @@ export interface RepasseEvento {
 export function derivarRepasse(
   fin: FinanceiroEvento,
   repasseDoEvento?: RepasseDoEvento | null,
+  contexto: ContextoRepasseEvento = { encerrado: false },
 ): RepasseEvento {
-  const receitaTotal = fin.receitaBruta;
-  const aSerDisponibilizado = roundMoney(receitaTotal * (RETENCAO_MAX_PCT / 100));
   const repassado =
     repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento.total : 0;
-  const disponivel = computeDisponivelPorEvento(
-    roundMoney(receitaTotal - aSerDisponibilizado),
+  const doCore = computeDisponivelDoEvento({
+    receitaLiquida: fin.receitaLiquida,
+    encerrado: contexto.encerrado,
+    repassadoVivo: repassado,
+    ...(contexto.retencaoPct !== undefined
+      ? { retencaoPct: contexto.retencaoPct }
+      : {}),
+  });
+  return {
+    receitaTotal: fin.receitaBruta,
     repassado,
-  );
-  return { receitaTotal, repassado, disponivel, aSerDisponibilizado };
+    disponivel: doCore.disponivel,
+    absorvido: doCore.absorvido,
+    semTermo: doCore.semTermo,
+  };
+}
+
+/** Marcador de valor indeterminado — o mesmo glifo da tela. */
+export const SEM_VALOR = '—';
+
+/**
+ * Célula de dinheiro do CSV: número cru quando existe, o MESMO "—" da tela
+ * quando o valor é indeterminado (sem termo). Célula vazia leria como zero na
+ * planilha de conciliação, que é o modo de falha que a RN-235 fecha. @pure
+ */
+function celulaValor(valor: number | null): string | number {
+  return valor === null ? SEM_VALOR : valor;
 }
 
 export interface LinhaBreakdown {
@@ -112,31 +147,30 @@ export function breakdownFinanceiro(fin: FinanceiroEvento): LinhaBreakdown[] {
 
 /**
  * Gera o CSV das linhas exibidas: resumo (repasse do organizador) + breakdown.
- * SEM taxa/margem da plataforma (RN-404) — mesma visão dos cards: receita
- * total, valor repassado, disponível e a ser disponibilizado. Números crus
- * (machine-readable). As células passam pela sanitização partilhada
- * (`celulaCsv` · separador `,`): RFC 4180 + anti-injeção de fórmula — a
- * modalidade é texto livre público (mesma superfície de ataque do
+ * SEM taxa/margem da plataforma (RN-404) — mesma visão dos cards, agora os TRÊS
+ * da DEC-0727C: Receita Total, Disponível para Repasse, Valor Repassado.
+ * Números crus (machine-readable). As células passam pela sanitização
+ * partilhada (`celulaCsv` · separador `,`): RFC 4180 + anti-injeção de fórmula
+ * — a modalidade é texto livre público (mesma superfície de ataque do
  * inscritosCsv).
  *
- * `repasseDoEvento` entra na MESMA `derivarRepasse` que a tela usa, e as quatro
- * linhas do resumo saem todas dela. Era aqui que vivia o achado A-1 da review
- * IA-MENU (o export imprimia `repassado = 0` ao lado do valor real na tela);
- * agora a coerência tela↔CSV é estrutural, não uma segunda regra que alguém
- * precisa lembrar de atualizar duas vezes — inclusive no disponível, que a
- * DEC-0727 passou a abater. Omitido, o resultado é o do evento sem repasse
- * associado. @pure
+ * `repasseDoEvento` entra na MESMA `derivarRepasse` que a tela usa, e as três
+ * linhas do resumo saem todas dela — inclusive os rótulos, que são os mesmos
+ * dos cards. Era aqui que vivia o achado A-1 da review IA-MENU (o export
+ * imprimia `repassado = 0` ao lado do valor real na tela); a coerência tela↔CSV
+ * é estrutural, não uma segunda regra que alguém precisa lembrar de atualizar
+ * duas vezes. Omitido, o resultado é o do evento sem repasse associado. @pure
  */
 export function gerarCsvFinanceiro(
   fin: FinanceiroEvento,
   repasseDoEvento?: RepasseDoEvento | null,
+  contexto?: ContextoRepasseEvento,
 ): string {
-  const rep = derivarRepasse(fin, repasseDoEvento);
+  const rep = derivarRepasse(fin, repasseDoEvento, contexto);
   const linhas: (string | number)[][] = [['Categoria', 'Item', 'Valor']];
-  linhas.push(['Resumo', 'Receita total (R$)', rep.receitaTotal]);
-  linhas.push(['Resumo', 'Valor repassado (R$)', rep.repassado]);
-  linhas.push(['Resumo', 'Valor disponível (R$)', rep.disponivel]);
-  linhas.push(['Resumo', 'Valor a ser disponibilizado (R$)', rep.aSerDisponibilizado]);
+  linhas.push(['Resumo', 'Receita Total (R$)', rep.receitaTotal]);
+  linhas.push(['Resumo', 'Disponível para Repasse (R$)', celulaValor(rep.disponivel)]);
+  linhas.push(['Resumo', 'Valor Repassado (R$)', rep.repassado]);
   linhas.push(['Inscritos', 'Total', fin.inscritos.total]);
   for (const l of breakdownFinanceiro(fin)) {
     linhas.push([l.categoria, l.item, l.valor]);

@@ -197,7 +197,7 @@ describe('associarRepassesPorEvento (campo EXATO — fim de heurística)', () =>
     // sem `roundMoney` na acumulação, `String(total)` = '300.29999999999995'.
     expect(String(doEvento?.total)).toBe('300.3');
     expect(gerarCsvFinanceiro(fin({ receitaBruta: 10000 }), doEvento)).toContain(
-      'Resumo,Valor repassado (R$),300.3',
+      'Resumo,Valor Repassado (R$),300.3',
     );
   });
 

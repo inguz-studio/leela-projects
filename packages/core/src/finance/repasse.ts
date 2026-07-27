@@ -174,6 +174,86 @@ export function computeDisponivelPorEvento(
 }
 
 // ---------------------------------------------------------------------------
+// RN-367 — a BASE ÚNICA do "Disponível para Repasse" de UM evento
+// ---------------------------------------------------------------------------
+
+export interface DisponivelDoEventoParams {
+  /**
+   * `financeiro/current.receitaLiquida` do evento — LÍQUIDO do produtor.
+   * `null` = tenant sem termo comercial (decisão #7): nada libera e o número
+   * é INDETERMINADO, nunca zero.
+   */
+  receitaLiquida: number | null;
+  /** `evento.status === 'encerrado'` (RN-350 — encerrar libera a retenção). */
+  encerrado: boolean;
+  /** % do termo do tenant; ausente ⇒ default 15 (RN-350). */
+  retencaoPct?: number;
+  /** Σ dos repasses VIVOS ({solicitado, aprovado, pago}) DAQUELE evento. */
+  repassadoVivo: number;
+}
+
+export interface DisponivelDoEvento {
+  /** Liberado do evento ANTES do abatimento (null = sem termo). */
+  liberado: number | null;
+  /** Disponível DEPOIS de abater os repasses vivos, clamp 0 (null = sem termo). */
+  disponivel: number | null;
+  /**
+   * Quanto da Σ de repasse CABE no liberado — o que o disponível de fato
+   * ABSORVEU. Existe porque o clamp de RN-351 trava em 0: com liberado 8.500 e
+   * repasse vivo 9.000, o número absorveu 8.500, e qualquer frase que afirme
+   * "já desconta 9.000" descreve um desconto que não aconteceu (review
+   * CAIXADISP-REV, R-2). Sem termo ⇒ 0 (não há de onde abater).
+   */
+  absorvido: number;
+  /** `receitaLiquida === null` — o disponível é indeterminado, não zero. */
+  semTermo: boolean;
+}
+
+/**
+ * Disponível para repasse de UM evento (RN-367 · DEC-0727C) — a base ÚNICA do
+ * número, compartilhada pela Caixa do evento, pela coluna por-evento e pelo
+ * guard do `requestRepasse`:
+ *
+ *   liberado   = encerrado ? líquido : líquido − líquido × pct/100   (RN-350)
+ *   disponível = max(0, liberado − Σ repasses vivos do evento)       (RN-351)
+ *
+ * A base é o LÍQUIDO do produtor, nunca a receita bruta. A taxa da plataforma
+ * nunca foi dinheiro do organizador e não é repassável, então literalizar
+ * "tudo que entrou − tudo que saiu" para dentro dela produziria um disponível
+ * sistematicamente ACIMA do que o saque aceita — a divergência de R$ 4.774,45
+ * que a review CAIXADISP-REV mediu no mock canônico do repo (vetor 3), e que a
+ * DEC-0727C fechou mandando a Caixa usar a base do saque. A diferença entre a
+ * receita total e este número é retido + taxa, e fica IMPLÍCITA na tela: o
+ * organizador vê três números, não a margem da plataforma (RN-404).
+ *
+ * Sem termo (`receitaLiquida === null`) devolve `null` nos dois valores — "—"
+ * honesto na tela, rejeição honesta no servidor. Zero seria mentira: não é que
+ * não haja dinheiro, é que não há como saber quanto. @pure
+ */
+export function computeDisponivelDoEvento(
+  params: DisponivelDoEventoParams
+): DisponivelDoEvento {
+  const pct = params.retencaoPct ?? RETENCAO_REPASSE_PCT_DEFAULT;
+  if (!Number.isFinite(params.repassadoVivo) || params.repassadoVivo < 0) {
+    throw new RangeError('repassadoVivo deve ser um número ≥ 0 (Σ dos repasses vivos).');
+  }
+  if (params.receitaLiquida === null) {
+    return { liberado: null, disponivel: null, absorvido: 0, semTermo: true };
+  }
+  const liberado = computeLiberadoPorEvento(
+    params.receitaLiquida,
+    pct,
+    params.encerrado
+  );
+  return {
+    liberado,
+    disponivel: computeDisponivelPorEvento(liberado, params.repassadoVivo),
+    absorvido: roundMoney(Math.min(params.repassadoVivo, liberado)),
+    semTermo: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // RN-351 — saldo consolidado (∑ do tenant)
 // ---------------------------------------------------------------------------
 

@@ -12,17 +12,25 @@
 // (`/eventos/repasses`) usa. Os dois números se reconciliam por CONSTRUÇÃO:
 // mesma fonte, mesma derivação, mesmo campo exato `eventoId`. Se algum dia
 // divergirem, é bug de dado — não de duas contas diferentes.
+//
+// RN-367 (DEC-0727C): o disponível agora sai da base do SAQUE, que precisa de
+// duas coisas que o agregado do evento não carrega — o encerramento (RN-350) e
+// a % de retenção do termo do tenant. As duas chegam por aqui, pelas MESMAS
+// fontes da visão macro (`evento.status` e `commercialTerms/current`).
 // =============================================================================
 
 import { useMemo } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { podeAcessar } from '@leela/core';
 import { FinanceiroView } from './FinanceiroView';
 import { useFinanceiroRealtime } from '../../../lib/query/realtime';
+import { commercialTermsQuery } from '../../../lib/query/queries';
 import { useFinanceiroSession } from '../repasses/_data/session';
 import { useHistoricoRepasses } from '../repasses/_data/repasses';
 import { associarRepassesPorEvento } from '../repasses/_lib/repassesPorEvento';
 import { usePapelEvento } from '../_data/papelEvento';
+import type { ContextoRepasseEvento } from '../_lib/financeiro';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
 export function FinanceiroPage(): JSX.Element {
@@ -33,6 +41,24 @@ export function FinanceiroPage(): JSX.Element {
   const session = useFinanceiroSession();
   const historico = useHistoricoRepasses(session.tenantId);
   const { papel } = usePapelEvento(evento);
+
+  // Termo comercial — AUXILIAR, exatamente como em `useRepassesPorEvento`:
+  // alimenta só a % de retenção e nunca bloqueia a tela. Ausente ou ilegível ⇒
+  // o core aplica o default 15 (RN-350). A diferença de % entre o default e um
+  // termo negociado move o número, e é por isso que o termo é lido em vez de
+  // chutado — mas um termo indisponível não pode apagar a Caixa inteira.
+  const termos = useQuery({
+    ...commercialTermsQuery(session.tenantId ?? ''),
+    enabled: !!session.tenantId,
+  });
+
+  const contexto = useMemo<ContextoRepasseEvento>(() => {
+    const pct = termos.data?.retencaoRepassePct;
+    return {
+      encerrado: evento.status === 'encerrado',
+      ...(typeof pct === 'number' ? { retencaoPct: pct } : {}),
+    };
+  }, [evento.status, termos.data]);
 
   // Σ dos repasses vivos ({solicitado, aprovado, pago}) associados a ESTE
   // evento. `undefined` (evento sem repasse) vira `null` = estado honesto.
@@ -59,6 +85,7 @@ export function FinanceiroPage(): JSX.Element {
       // agora ele é a diferença entre um valor abatido e um valor cheio com
       // cara de final (review CAIXADISP-REV, R-4).
       repasseErro={historico.error}
+      contexto={contexto}
       podeVerRepasses={podeVerRepasses}
       onVerRepasses={() => navigate('/eventos/repasses')}
     />
