@@ -10,6 +10,10 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E12] O relógio do carrinho começa no clique de "Garantir inscrição"** — hoje os 15 minutos partem da primeira vez que o servidor calcula o preço; sua decisão de 2026-07-27 move o começo para o clique, o que pede um sinal de abertura na entrada da tela 📋 ajusta a RN-158 [[LEELA-E12-landing]]
+- [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]
+- [ ] **[E12] Fontes do site embarcadas, como no painel do organizador** — Exo 2 e JetBrains Mono deixam o provedor externo e passam a morar no próprio site, desde que o carregamento não piore; a diretriz de busca e velocidade da landing vale como aceite 📋 [[LEELA-E12-landing]]
+- [ ] **[E16/E04] Preço do SaaS e acréscimo por parcela** — Leela+ sem mensalidade por ora, SaaS a R$ 249,00 e 2,5% acrescidos a cada parcela, tudo editável depois 📋 [[LEELA-E04-config-vendas]]
 - [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend, painel do promotor e UI de comissão entregues; falta o repasse parcial (hoje só quita o saldo inteiro) e o aviso ao afiliado 📋 plano em [[LEELA-E08-influenciador]]
 - [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 🔄 registro reutilizável + logo 1:1 + autocomplete (R9-E) + tela dedicada `/marcas` no painel entregue (lista/criar/editar/excluir); falta a consolidação de ativações (S812), planejada em 4 tarefas [[LEELA-E10-marcas]]
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 planejado em 6 tarefas; o histórico diário já é coletado e destrava o seletor de período; a tela passa a viver em CRM › Visão geral [[LEELA-E11-analytics]]
