@@ -6,9 +6,16 @@
 
 import { describe, it, expect } from 'vitest';
 import type { FinanceiroEvento } from '@leela/api-client';
+import {
+  comprometeSaldo,
+  computeSaldoRepasse,
+  ESTADOS_REPASSE,
+  ESTADOS_REPASSE_COMPROMETIDOS,
+} from '@leela/core';
 import type { Repasse, Timestamp } from '@leela/core';
 import type { EventoFinanceiroRow } from '../../../../../lib/query/queries';
 import {
+  abaterRepassesVivos,
   associarRepassesPorEvento,
   derivarRepassesPorEvento,
   totaisRepasseEvento,
@@ -168,5 +175,134 @@ describe('associarRepassesPorEvento (campo EXATO — fim de heurística)', () =>
     const { porEvento, semAssociacao } = associarRepassesPorEvento([]);
     expect(porEvento.size).toBe(0);
     expect(semAssociacao).toEqual({ qtd: 0, total: 0 });
+  });
+
+  // A coerência que a DEC-0727 exige entre a Caixa do evento e a visão macro é
+  // a da DEFINIÇÃO de repasse vivo. Ela não é conferida por leitura: vale para
+  // TODO estado da máquina (RN-353), e é a do core — não uma lista repetida aqui.
+  it('vivo == comprometeSaldo, estado por estado (mesma definição do saldo do servidor)', () => {
+    for (const estado of ESTADOS_REPASSE) {
+      const { porEvento } = associarRepassesPorEvento([repasse('r', estado, 100, 'ev-a')]);
+      expect(porEvento.get('ev-a')?.total ?? 0, `estado ${estado}`).toBe(
+        comprometeSaldo(estado) ? 100 : 0,
+      );
+    }
+    expect([...ESTADOS_REPASSE_COMPROMETIDOS]).toEqual(['solicitado', 'aprovado', 'pago']);
+  });
+
+  it('o que o evento abate é o que o tenant compromete (mesmo Σ, RN-351)', () => {
+    const historico = [
+      repasse('r1', 'solicitado', 1000, 'ev-a'),
+      repasse('r2', 'aprovado', 500, 'ev-a'),
+      repasse('r3', 'pago', 200, 'ev-a'),
+      repasse('r4', 'cancelado', 900, 'ev-a'),
+      repasse('r5', 'recusado', 700, 'ev-a'),
+    ];
+    // Σ por evento (as duas telas) × comprometido do saldo consolidado (servidor).
+    const doEvento = associarRepassesPorEvento(historico).porEvento.get('ev-a');
+    const doTenant = computeSaldoRepasse({
+      eventos: [{ eventoId: 'ev-a', receitaBruta: 10000, receitaLiquida: 10000, encerrado: true }],
+      repasses: historico.map((r) => ({ valor: r.valor, estado: r.estado })),
+    });
+    expect(doEvento).toEqual({ qtd: 3, total: 1700 });
+    expect(doTenant.comprometido).toBe(1700);
+    expect(doTenant.disponivel).toBe(8300); // 10.000 − 1.700
+  });
+});
+
+// ---------------------------------------------------------------------------
+// abaterRepassesVivos (DEC-0727) — a coluna por evento abate o que já saiu
+// ---------------------------------------------------------------------------
+
+describe('abaterRepassesVivos (DEC-0727)', () => {
+  const LINHAS = () =>
+    derivarRepassesPorEvento(
+      [
+        row('ev-a', 'ao_vivo', fin({ receitaBruta: 12000, receitaLiquida: 10000 })),
+        row('ev-b', 'ao_vivo', fin({ receitaBruta: 5000, receitaLiquida: null })),
+      ],
+      15,
+    );
+
+  function porId(linhas: ReturnType<typeof LINHAS>, id: string) {
+    return linhas.find((l) => l.eventoId === id);
+  }
+
+  it('abate a Σ viva daquele evento do disponível estimado', () => {
+    const assoc = associarRepassesPorEvento([repasse('r1', 'pago', 500, 'ev-a')]);
+    const linhas = abaterRepassesVivos(LINHAS(), assoc);
+    expect(porId(linhas, 'ev-a')?.disponivelEstimado).toBe(8000); // 8.500 − 500
+    expect(porId(linhas, 'ev-a')?.retido).toBe(1500); // retenção intacta (RN-350)
+    expect(porId(linhas, 'ev-a')?.vendido).toBe(12000);
+  });
+
+  it('não vaza entre eventos: repasse de ev-a não toca ev-b', () => {
+    const linhas = abaterRepassesVivos(
+      derivarRepassesPorEvento(
+        [
+          row('ev-a', 'ao_vivo', fin({ receitaBruta: 12000, receitaLiquida: 10000 })),
+          row('ev-c', 'ao_vivo', fin({ receitaBruta: 4000, receitaLiquida: 4000 })),
+        ],
+        15,
+      ),
+      associarRepassesPorEvento([repasse('r1', 'pago', 500, 'ev-a')]),
+    );
+    expect(porId(linhas, 'ev-a')?.disponivelEstimado).toBe(8000);
+    expect(porId(linhas, 'ev-c')?.disponivelEstimado).toBe(3400); // 4.000 − 15%, intacto
+  });
+
+  it('ESTORNO devolve: o mesmo histórico com o repasse cancelado volta ao número cheio', () => {
+    const vivo = abaterRepassesVivos(
+      LINHAS(),
+      associarRepassesPorEvento([repasse('r1', 'pago', 500, 'ev-a')]),
+    );
+    const estornado = abaterRepassesVivos(
+      LINHAS(),
+      associarRepassesPorEvento([repasse('r1', 'cancelado', 500, 'ev-a')]),
+    );
+    expect(porId(vivo, 'ev-a')?.disponivelEstimado).toBe(8000);
+    expect(porId(estornado, 'ev-a')?.disponivelEstimado).toBe(8500);
+    // Recusa (rejectRepasse) devolve igual — os dois caminhos de estorno.
+    const recusado = abaterRepassesVivos(
+      LINHAS(),
+      associarRepassesPorEvento([repasse('r1', 'recusado', 500, 'ev-a')]),
+    );
+    expect(porId(recusado, 'ev-a')?.disponivelEstimado).toBe(8500);
+  });
+
+  it('evento SEM termo continua "—": não há líquido de onde abater', () => {
+    const linhas = abaterRepassesVivos(
+      LINHAS(),
+      associarRepassesPorEvento([repasse('r1', 'pago', 500, 'ev-b')]),
+    );
+    expect(porId(linhas, 'ev-b')?.disponivelEstimado).toBeNull();
+    expect(porId(linhas, 'ev-b')?.semTermo).toBe(true);
+  });
+
+  it('sem associação (histórico vazio ou repasse legado sem eventoId): linhas intactas', () => {
+    const base = LINHAS();
+    expect(abaterRepassesVivos(base, associarRepassesPorEvento([]))).toEqual(base);
+    expect(
+      abaterRepassesVivos(base, associarRepassesPorEvento([repasse('r1', 'pago', 500)])),
+    ).toEqual(base);
+  });
+
+  it('repasse maior que o liberado: 0, nunca negativo (clamp RN-351)', () => {
+    const linhas = abaterRepassesVivos(
+      LINHAS(),
+      associarRepassesPorEvento([repasse('r1', 'pago', 99999, 'ev-a')]),
+    );
+    expect(porId(linhas, 'ev-a')?.disponivelEstimado).toBe(0);
+  });
+
+  it('evento ENCERRADO abate sobre o líquido inteiro (retenção já liberada)', () => {
+    const linhas = abaterRepassesVivos(
+      derivarRepassesPorEvento(
+        [row('ev-a', 'encerrado', fin({ receitaBruta: 12000, receitaLiquida: 10000 }))],
+        15,
+      ),
+      associarRepassesPorEvento([repasse('r1', 'pago', 500, 'ev-a')]),
+    );
+    expect(porId(linhas, 'ev-a')?.disponivelEstimado).toBe(9500); // 10.000 − 0 − 500
   });
 });

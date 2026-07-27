@@ -1,21 +1,17 @@
 // =============================================================================
-// Coerência da Caixa do evento — achados A-1/A-2 da review antagonista IA-MENU.
+// Coerência da Caixa do evento — achados A-1/A-2 da review antagonista IA-MENU,
+// agora sob a DEC-0727 ("sim disponivel tem que abater o que já foi repassado,
+// isso é muito imoprtante").
 //
-// O IAM-T7 passou a exibir em "Valor repassado" a Σ REAL do ledger daquele
-// evento. Duas coisas ficaram para trás e este arquivo as trava:
-//
-//   A-1 · o CSV exportado pelo botão da MESMA tela seguia imprimindo
-//         `derivarRepasse().repassado`, cravado em 0 — a pessoa lia R$ 3.200,00
-//         na tela e exportava "Valor repassado (R$),0". Export que contradiz a
-//         tela de onde saiu é pior que export ausente: ele é o que vai para a
-//         planilha de conciliação;
-//   A-2 · `disponivel` é derivado com `repassado = 0`. Enquanto o card ao lado
-//         mostrava R$ 0,00 os quatro números fechavam; com o repasse real ao
-//         lado, não fecham mais. A tela passa a DECLARAR a estimativa — mesma
-//         disciplina já ratificada na visão macro ("disponível estimado" não
-//         abate os repasses solicitados).
-//
-// Nenhuma asserção existente foi tocada: este arquivo só acrescenta.
+//   A-1 · o CSV exportado pelo botão da MESMA tela imprimia `repassado = 0`
+//         enquanto a tela mostrava R$ 3.200,00. Export que contradiz a tela de
+//         onde saiu é pior que export ausente: ele é o que vai para a planilha
+//         de conciliação. Invariante mantida e ESTENDIDA ao disponível;
+//   A-2 · o disponível era derivado com `repassado = 0` e a tela declarava a
+//         estimativa. O aviso era o contorno; a DEC-0727 matou o motivo. Agora
+//         o número ABATE e a nota diz o que ele já desconta — a asserção do
+//         aviso antigo saiu com autorização do dono, e no lugar entrou a prova
+//         numérica do caso do Castelo, antes × depois, na tela e no CSV.
 // =============================================================================
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -37,7 +33,7 @@ function ts(ms: number): Timestamp {
   } as unknown as Timestamp;
 }
 
-function mkFin(): FinanceiroEvento {
+function mkFin(over: Partial<FinanceiroEvento> = {}): FinanceiroEvento {
   return {
     receitaBruta: 85617,
     receitaLiquida: 80000,
@@ -46,6 +42,7 @@ function mkFin(): FinanceiroEvento {
     inscritos: { total: 3, porModalidade: {}, porKit: {}, porStatus: {} },
     receitaPorModalidade: {},
     atualizadoEm: ts(Date.UTC(2026, 3, 15)),
+    ...over,
   } as unknown as FinanceiroEvento;
 }
 
@@ -73,13 +70,19 @@ describe('A-1 · o CSV da Caixa não contradiz a tela', () => {
     );
 
     // O que a pessoa LÊ na tela (`formatBRL` do dashboard arredonda centavos;
-    // o separador do Intl é NBSP — casamos o número).
-    expect(screen.getByText(/3\.200/)).toBeInTheDocument();
+    // o separador do Intl é NBSP — o `\s*` cobre os dois). Ancorado: o valor
+    // do card, não a nota que agora também cita a Σ abatida.
+    expect(screen.getByText(/^R\$\s*3\.200$/)).toBeInTheDocument();
+    // E o disponível que ela lê já vem abatido: 85.617 − 12.842,55 − 3.200
+    // (o card do dashboard exibe sem centavos; a planilha leva o valor exato).
+    expect(screen.getByText(/^R\$\s*69\.574$/)).toBeInTheDocument();
 
-    // O que ela LEVA na planilha — tem de ser o mesmo número.
+    // O que ela LEVA na planilha — tem de ser o mesmo número, nas duas linhas.
     const csv = await exportar();
     expect(csv).toContain('Resumo,Valor repassado (R$),3200');
+    expect(csv).toContain('Resumo,Valor disponível (R$),69574.45');
     expect(csv).not.toContain('Resumo,Valor repassado (R$),0');
+    expect(csv).not.toContain('Resumo,Valor disponível (R$),72774.45');
   });
 
   it('sem repasse associado: o CSV segue em 0 (comportamento pré-T7 intacto)', async () => {
@@ -111,11 +114,12 @@ describe('A-1 · o CSV da Caixa não contradiz a tela', () => {
   });
 });
 
-describe('A-2 · o disponível declara que não abate o repasse', () => {
-  const NOTA =
+describe('A-2 · o disponível ABATE o repasse (DEC-0727)', () => {
+  /** O aviso do contorno. Morto o motivo, ele não pode voltar a aparecer. */
+  const AVISO_MORTO =
     'Estimativa deste evento: não desconta os repasses já solicitados. O disponível oficial está em Eventos › Repasses.';
 
-  it('com repasse vivo, o card de disponível declara a estimativa', () => {
+  it('com repasse vivo, o card diz o que JÁ desconta — e não a ressalva antiga', () => {
     render(
       <FinanceiroView
         slug="e1"
@@ -126,7 +130,13 @@ describe('A-2 · o disponível declara que não abate o repasse', () => {
       />,
     );
     expect(screen.getByText('Valor disponível')).toBeInTheDocument();
-    expect(screen.getByText(NOTA)).toBeInTheDocument();
+    // Regex por causa do NBSP do Intl entre "R$" e o número (e o card do
+    // dashboard formata sem centavos — `formatBRL`).
+    expect(
+      screen.getByText(/^Já desconta R\$\s*1\.200 em repasse deste evento\.$/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(AVISO_MORTO)).not.toBeInTheDocument();
+    expect(screen.queryByText(/não desconta/)).not.toBeInTheDocument();
   });
 
   it('sem repasse, os quatro números fecham entre si — nada a declarar', () => {
@@ -139,6 +149,74 @@ describe('A-2 · o disponível declara que não abate o repasse', () => {
         repasseDoEvento={null}
       />,
     );
-    expect(screen.queryByText(NOTA)).not.toBeInTheDocument();
+    expect(screen.queryByText(AVISO_MORTO)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Já desconta/)).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// O caso do painel §P-IAMENU-2, com números: o Castelo e os R$ 500
+// ---------------------------------------------------------------------------
+
+describe('o caso do Castelo (R$ 500 repassados) — antes × depois', () => {
+  /** R$ 10.000 vendidos: retenção 1.500, liberado 8.500. */
+  const CASTELO = mkFin({ receitaBruta: 10000 });
+
+  it('ANTES: sem repasse, disponível 8.500 e o CSV concorda', async () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={CASTELO}
+        loading={false}
+        error={null}
+        repasseDoEvento={null}
+      />,
+    );
+    expect(screen.getByText(/^R\$\s*8\.500$/)).toBeInTheDocument();
+    const csv = await exportar();
+    expect(csv).toContain('Resumo,Valor disponível (R$),8500');
+    expect(csv).toContain('Resumo,Valor repassado (R$),0');
+  });
+
+  it('DEPOIS: com os R$ 500 na terça, a quarta mostra 8.000 — a soma de cabeça fecha', async () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={CASTELO}
+        loading={false}
+        error={null}
+        repasseDoEvento={{ qtd: 1, total: 500 }}
+      />,
+    );
+    // Os quatro números da tela: 10.000 = 8.000 + 1.500 + 500.
+    expect(screen.getByText(/^R\$\s*10\.000$/)).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s*500$/)).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s*8\.000$/)).toBeInTheDocument();
+    expect(screen.getByText(/^R\$\s*1\.500$/)).toBeInTheDocument();
+    // O número do mundo anterior não aparece em lugar nenhum da tela.
+    expect(screen.queryByText(/^R\$\s*8\.500$/)).not.toBeInTheDocument();
+
+    const csv = await exportar();
+    expect(csv).toContain('Resumo,Receita total (R$),10000');
+    expect(csv).toContain('Resumo,Valor repassado (R$),500');
+    expect(csv).toContain('Resumo,Valor disponível (R$),8000');
+    expect(csv).toContain('Resumo,Valor a ser disponibilizado (R$),1500');
+  });
+
+  it('ESTORNO: repasse cancelado sai da Σ viva e o disponível volta a 8.500', async () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={CASTELO}
+        loading={false}
+        error={null}
+        // cancelRepasse/rejectRepasse tiram o doc do conjunto vivo — a Σ que
+        // chega à tela já é a de depois (`associarRepassesPorEvento`).
+        repasseDoEvento={{ qtd: 0, total: 0 }}
+      />,
+    );
+    expect(screen.getByText(/^R\$\s*8\.500$/)).toBeInTheDocument();
+    const csv = await exportar();
+    expect(csv).toContain('Resumo,Valor disponível (R$),8500');
   });
 });
