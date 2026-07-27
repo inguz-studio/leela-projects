@@ -107,6 +107,28 @@ export const MOTIVO_PIX_PENDENTE_ATIVO = 'pix_pendente_ativo';
 export const MOTIVO_PIX_ANTERIOR_NAO_ENCERRADO = 'pix_anterior_nao_encerrado';
 
 /**
+ * Motivo TIPADO de "o provedor de pagamento não respondeu no tempo do teto"
+ * (DEC-0727, item 28 — 15s por chamada no adapter Asaas). Viaja no `details`
+ * do erro `deadline-exceeded` de `createInscricaoCharge`.
+ *
+ * É o único motivo do checkout que NÃO é um veredito. Os outros dizem o que
+ * aconteceu (a cobrança anterior está viva, o cupom não existe, o lote
+ * fechou); este diz que a plataforma não sabe: a chamada foi abortada e a
+ * cobrança pode ter nascido no gateway sem que a resposta voltasse.
+ *
+ * O que a UI DEVE fazer com ele: mostrar "processando pagamento" (decisão do
+ * dono, cartão e PIX) e oferecer nova tentativa com a MESMA
+ * `idempotencyKey`. O que a UI NÃO pode fazer: afirmar sucesso, afirmar
+ * fracasso, dizer "nada foi cobrado", ou empurrar o comprador a abrir uma
+ * segunda cobrança.
+ *
+ * Quem fecha a conta depois: o webhook (cobrança que existe avisa quando é
+ * paga) e o replay idempotente (o lookup por `externalReference` do adapter
+ * encontra a cobrança órfã em vez de criar a segunda).
+ */
+export const MOTIVO_GATEWAY_SEM_RESPOSTA = 'gateway_sem_resposta';
+
+/**
  * Ciclo de vida do pagamento — espelho PT do ChargeStatus do gateway
  * (pending/confirmed/failed/refunded/cancelled — ADR-006). O estorno
  * PARCIAL (por inscrito — RN-341) vive na máquina de `reembolsos` (S904),

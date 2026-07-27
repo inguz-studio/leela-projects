@@ -7,6 +7,7 @@ import type { PoliticaVendasPublica } from '@/lib/tipos';
 import type { FormaUI } from './tipos';
 import { AceitesCompra } from './AceitesCompra';
 import { PixCobranca, payloadPix } from './PixCobranca';
+import { ProcessandoPagamento } from './ProcessandoPagamento';
 
 export interface CartaoForm {
   nome: string;
@@ -57,6 +58,7 @@ export function StepPagamento({
   pixDesvioRelogioMs = 0,
   onPixExpirar,
   onNovaCobranca,
+  gatewaySemResposta = false,
 }: {
   forma: FormaUI;
   total: number | null;
@@ -92,9 +94,24 @@ export function StepPagamento({
   onPixExpirar?: () => void;
   /** RN-157: recomeçar com uma cobrança NOVA (nunca reusa a expirada). */
   onNovaCobranca?: () => void;
+  /**
+   * DEC-0727 (item 28): o teto de 15s do adapter estourou — o provedor não
+   * respondeu e o estado da cobrança é DESCONHECIDO. Não é erro: a face disso
+   * é "processando pagamento", em cartão e em PIX.
+   */
+  gatewaySemResposta?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
   const aceitesOk = aceiteTermos && aceiteSaude;
+  // DEC-0727 · a espera do gateway é UM estado com duas entradas: a chamada
+  // ainda no ar (até 15s por chamada) e a chamada que estourou o teto. Os dois
+  // falam a MESMA frase ao comprador — o que muda é o que vem depois dela.
+  const emVoo = criandoCharge || confirmando;
+  const processando = gatewaySemResposta || emVoo;
+  // Erro e espera não coexistem: enquanto a plataforma não sabe o desfecho,
+  // qualquer alerta vermelho seria uma afirmação que ela não pode fazer.
+  const mostrarErroCharge = erroCharge !== null && !processando;
+  const mostrarErroConfirmar = erroConfirmar !== null && !processando;
 
   const blocoAceites = (
     <AceitesCompra
@@ -239,12 +256,35 @@ export function StepPagamento({
         </section>
       )}
 
-      {erroCharge ? (
+      {/* DEC-0727 · "processando pagamento" vale para PIX e cartão — o bloco
+          fica FORA do ramo por forma, de propósito: uma frase, um lugar. */}
+      {processando ? (
+        <ProcessandoPagamento
+          estado={emVoo ? 'em-voo' : 'sem-resposta'}
+          tentando={emVoo}
+          {...(gatewaySemResposta && !emVoo
+            ? {
+                // A retomada é a MESMA ação que estourou, não uma ação nova:
+                // sem cobrança, re-tenta a criação (que é replay pela chave);
+                // com cobrança na mão, o que faltou foi a confirmação. Mandar
+                // "criar" aqui devolveria a cobrança de cache e a tela ficaria
+                // parada no mesmo aviso — um botão que não faz nada.
+                onTentarNovamente:
+                  charge === null
+                    ? forma === 'pix'
+                      ? onGerarCobranca
+                      : onPagarCartao
+                    : onConfirmar,
+              }
+            : {})}
+        />
+      ) : null}
+      {mostrarErroCharge ? (
         <p role="alert" className="text-sm font-medium text-feedback-danger-fg">
           {erroCharge}
         </p>
       ) : null}
-      {erroConfirmar ? (
+      {mostrarErroConfirmar ? (
         <p role="alert" className="text-sm font-medium text-feedback-danger-fg">
           {erroConfirmar}
         </p>

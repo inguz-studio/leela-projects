@@ -14,6 +14,7 @@ import {
   type CotarInscricaoCheckoutResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
+import { MOTIVO_GATEWAY_SEM_RESPOSTA } from '@leela/core';
 import { Button, ToastProvider } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
@@ -85,6 +86,43 @@ function ehPrecondicaoNaoAtendida(err: unknown): boolean {
   if (err === null || typeof err !== 'object') return false;
   const code = (err as { code?: unknown }).code;
   return typeof code === 'string' && code.split('/').pop() === 'failed-precondition';
+}
+
+/**
+ * DEC-0727 (item 28) — o provedor de pagamento não respondeu no teto de 15s
+ * do adapter. É o único erro do checkout que NÃO carrega veredito: a cobrança
+ * pode ter nascido no gateway e a resposta não ter voltado. Por isso ele não
+ * pinta a tela de vermelho; ele vira "processando pagamento".
+ *
+ * DOIS canais, na ordem de confiança:
+ *   1. `details.motivo` — o contrato tipado que o servidor carimba
+ *      (`MOTIVO_GATEWAY_SEM_RESPOSTA`, do core: a Function escreve, a UI
+ *      reconhece a MESMA constante). É a leitura boa.
+ *   2. o `code` do callable — rede de segurança para o caso de `details` não
+ *      atravessar (proxy, SDK antigo, resposta remontada). Comparado pelo
+ *      último segmento porque o SDK prefixa (`functions/deadline-exceeded`) e
+ *      o emulador não — mesma disciplina de `ehPrecondicaoNaoAtendida`.
+ *
+ * Comparar TEXTO de mensagem ficou de fora de propósito: mensagem é para
+ * humano, não para código.
+ *
+ * ⚠️ O `typeof motivo === 'string'` NÃO é cerimônia. Sem ele, um erro SEM
+ * `details` compara `undefined === MOTIVO_GATEWAY_SEM_RESPOSTA` — e no dia em
+ * que a constante chegar `undefined` (build de `@leela/core` defasado: o
+ * pacote resolve por `dist`, não por src), a comparação vira `undefined ===
+ * undefined` e TODO erro do checkout passa a ser lido como "gateway sem
+ * resposta". Recusa de cupom, lote fechado, PIX anterior vivo: tudo viraria
+ * "processando pagamento", e o comprador perderia a única informação que
+ * poderia usar. O bug foi observado nesta lane, não imaginado.
+ */
+function ehGatewaySemResposta(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false;
+  const motivo = (err as { details?: { motivo?: unknown } }).details?.motivo;
+  if (typeof motivo === 'string' && motivo === MOTIVO_GATEWAY_SEM_RESPOSTA) {
+    return true;
+  }
+  const code = (err as { code?: unknown }).code;
+  return typeof code === 'string' && code.split('/').pop() === 'deadline-exceeded';
 }
 
 function mensagemErro(err: unknown, fallback: string): string {
@@ -197,6 +235,12 @@ export function CheckoutFlow({
   const [charge, setCharge] = useState<CreateInscricaoChargeResult | null>(null);
   const [criandoCharge, setCriandoCharge] = useState(false);
   const [erroCharge, setErroCharge] = useState<string | null>(null);
+  // DEC-0727 (item 28): o provedor estourou o teto de 15s. Estado PRÓPRIO, e
+  // não um `erroCharge` com outro texto, porque o desfecho é DESCONHECIDO — a
+  // tela não pode afirmar que a cobrança falhou (nem que deu certo). Também é
+  // ele que segura a auto-geração do PIX: sem esse freio, a tela re-tentaria
+  // sozinha em loop, cada volta custando outros 15s ao gateway e ao comprador.
+  const [gatewaySemResposta, setGatewaySemResposta] = useState(false);
   const [confirmacao, setConfirmacao] = useState<ConfirmarPagamentoSandboxResult | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [erroConfirmar, setErroConfirmar] = useState<string | null>(null);
@@ -579,9 +623,15 @@ export function CheckoutFlow({
       setErroCharge('Confirme os dois aceites para concluir o pagamento.');
       return null;
     }
+    // A chave nasce UMA vez e é reusada em toda tentativa deste carrinho — é
+    // ela que faz do retry um REPLAY (o servidor devolve o mesmo pedido e o
+    // adapter reencontra a cobrança pelo `externalReference`) em vez de uma
+    // segunda compra. Depois do teto de 15s isso deixa de ser detalhe de
+    // idempotência e passa a ser a única defesa contra cobrança dupla.
     if (chaveRef.current === undefined) chaveRef.current = novaChaveIdempotencia();
     setCriandoCharge(true);
     setErroCharge(null);
+    setGatewaySemResposta(false);
     // S1209-PIXBE-T5: marca do relógio LOCAL antes da chamada. O servidor
     // devolve o `agora` DELE; a diferença entre os dois é o desvio deste
     // aparelho, e é ele que ancora a contagem do PIX (achado #6). Medir
@@ -656,6 +706,13 @@ export function CheckoutFlow({
       setCharge(data);
       return data;
     } catch (err) {
+      // DEC-0727: teto estourado ⇒ "processando pagamento", nunca alerta de
+      // erro. Dizer "não foi possível criar a cobrança" seria afirmar um
+      // fracasso que a plataforma não apurou — a cobrança pode existir.
+      if (ehGatewaySemResposta(err)) {
+        setGatewaySemResposta(true);
+        return null;
+      }
       setErroCharge(mensagemErro(err, 'Não foi possível criar a cobrança.'));
       return null;
     } finally {
@@ -666,11 +723,20 @@ export function CheckoutFlow({
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
     setErroConfirmar(null);
+    setGatewaySemResposta(false);
     try {
       const data = await confirmarPagamentoSandbox({ pedidoId });
       setConfirmacao(data);
       setStep(4);
     } catch (err) {
+      // DEC-0727 · cartão: o teto vale para os dois meios. O comprador de
+      // cartão passa por aqui na mesma tacada do `pagarCartao`, e um "não foi
+      // possível confirmar" sobre um pagamento de estado desconhecido é a
+      // mesma mentira que o PIX não pode contar.
+      if (ehGatewaySemResposta(err)) {
+        setGatewaySemResposta(true);
+        return;
+      }
       setErroConfirmar(mensagemErro(err, 'Não foi possível confirmar o pagamento.'));
     } finally {
       setConfirmando(false);
@@ -695,12 +761,18 @@ export function CheckoutFlow({
       charge === null &&
       !criandoCharge &&
       erroCharge === null &&
+      // DEC-0727: teto estourado NÃO regenera sozinho. O efeito não olha para
+      // `gatewaySemResposta` como cortesia — sem este freio ele re-dispararia
+      // no mesmo instante (o erro não pousa em `erroCharge`), e cada volta
+      // gastaria outros 15s do gateway sobre uma cobrança que talvez JÁ
+      // exista. A retomada é um clique, como no caminho de erro.
+      !gatewaySemResposta &&
       // RN-157: PIX expirado NÃO regenera sozinho — a pessoa pede.
       !pixExpirado
     ) {
       void gerarCobranca();
     }
-  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, pixExpirado, gerarCobranca]);
+  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, gerarCobranca]);
 
   // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
   // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
@@ -1036,6 +1108,7 @@ export function CheckoutFlow({
             pixDesvioRelogioMs={desvioRelogioMs}
             onPixExpirar={aoExpirarPix}
             onNovaCobranca={novaCobrancaPix}
+            gatewaySemResposta={gatewaySemResposta}
           />
         ) : null}
 

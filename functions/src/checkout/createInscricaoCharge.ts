@@ -52,6 +52,7 @@ import {
   isModoTaxa,
   meioDaForma,
   modoTaxaDoEvento,
+  MOTIVO_GATEWAY_SEM_RESPOSTA,
   MSG_EVENTO_FECHADO_SEM_CUPOM,
   PLATFORM_CONFIG_DOC_PATH,
   CAMPO_TAXA_PLATAFORMA,
@@ -85,6 +86,7 @@ import {
   vendaSomentePorCupomAtiva,
   versaoPoliticaVendas,
   INSCRITO_NOME_MAX,
+  type ChargeResult,
   type CommercialTerms,
   type CreateChargeParams,
   type CupomVenda,
@@ -108,6 +110,7 @@ import {
 } from '../eventos/versionarPoliticaVendas';
 import { hashTermoSaude } from '../eventos/versionarTermoSaude';
 import { selectPaymentProvider } from '../payments/selectProvider';
+import { AsaasTimeoutError } from '../payments/asaasProvider';
 import {
   lerPessoasNaTx,
   planejarPessoasDoCheckout,
@@ -131,6 +134,21 @@ import {
 } from './travaCobrancaPix';
 
 type Db = admin.firestore.Firestore;
+
+/**
+ * Mensagem do estouro do teto de 15s (DEC-0727 · item 28). Carrega a frase
+ * que o dono escolheu — *"processando pagamento"* — porque um cliente que não
+ * conheça `MOTIVO_GATEWAY_SEM_RESPOSTA` mostra `error.message` cru, e nesse
+ * caso a cópia bruta ainda tem de ser honesta e não-assustadora.
+ *
+ * Três coisas que ela diz, na ordem: o estado (processando), o que a
+ * plataforma NÃO sabe (se a cobrança foi criada) e a única saída segura
+ * (tentar de novo, nunca abrir outra).
+ */
+export const MSG_GATEWAY_SEM_RESPOSTA =
+  'Processando pagamento: o provedor não respondeu no tempo esperado e ' +
+  'ainda não sabemos se a cobrança foi criada. Não abra outra — tentar de ' +
+  'novo reaproveita a mesma cobrança, sem risco de cobrar duas vezes.';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -1715,7 +1733,45 @@ async function garantirCobrancaEMontarResultado(
         ? { pixExpiraEmSegundos: PIX_EXPIRACAO_SEGUNDOS }
         : {}),
     };
-    const charge = await provider.createCharge(chargeParams);
+    let charge: ChargeResult;
+    try {
+      charge = await provider.createCharge(chargeParams);
+    } catch (err) {
+      // DEC-0727 (item 28) — o gateway estourou o teto de 15s. É o ÚNICO
+      // erro do checkout que não é veredito: a cobrança pode ter nascido lá
+      // e a resposta não voltou. Sem esta tradução o erro subiria cru, o
+      // wrapper do onCall o achataria em 'INTERNAL', e o comprador leria
+      // jargão sobre o próprio dinheiro.
+      //
+      // O que NÃO muda aqui: os docs (pedido/pagamento/inscritos) JÁ estão
+      // gravados e 'pendente', com `gatewayChargeId` ainda nulo. É esse
+      // estado que faz o replay curar o desconhecido — a nova tentativa com
+      // a MESMA idempotencyKey volta a este mesmo ponto e o `createCharge`
+      // faz lookup por `externalReference` ANTES de qualquer POST, então
+      // encontra a cobrança órfã em vez de criar a segunda.
+      if (!(err instanceof AsaasTimeoutError)) throw err;
+      logger.warn('checkout_gateway_sem_resposta', {
+        pedidoId,
+        pagamentoId,
+        // Sem PII e sem chave: só o que identifica a chamada abortada.
+        metodo: err.method,
+        path: err.path,
+        timeoutMs: err.timeoutMs,
+        efeitoPossivel: err.efeitoPossivel,
+      });
+      throw new https.HttpsError(
+        'deadline-exceeded',
+        MSG_GATEWAY_SEM_RESPOSTA,
+        {
+          motivo: MOTIVO_GATEWAY_SEM_RESPOSTA,
+          pedidoId,
+          pagamentoId,
+          // O contrato do retry seguro, explícito no erro: repetir com esta
+          // chave NÃO cria segunda cobrança.
+          idempotencyKey: input.idempotencyKey,
+        }
+      );
+    }
 
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(pagamentoRef);
