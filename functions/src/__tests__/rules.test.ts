@@ -78,5 +78,51 @@ describe.skipIf(!hasEmulator)(
       const docRef = doc(ctx.firestore(), 'pagamentos', 'qualquer-pagamento');
       await assertFails(setDoc(docRef, { tenantId: 't1', valor: 100 }));
     });
+
+    // ── PIXCARRINHO-REV · as duas coleções do checkout que só a Function toca ─
+    //
+    // `carrinhos` (RN-158) e `cobrancasPixAtivas` (RN-157) NÃO têm `match` no
+    // firestore.rules DE PROPÓSITO: caem no deny-by-default. A intenção estava
+    // escrita em comentário nos dois arquivos e em nenhum teste — e comentário
+    // não é gate. O risco não é teórico: com leitura aberta, o dono do próprio
+    // uid leria a chave DETERMINÍSTICA (`{uid}__{eventoId}`) e sondaria os
+    // carrinhos e as cobranças abertas de terceiros; com escrita aberta, ele
+    // reabriria o próprio prazo (o timer de 15 min viraria enfeite) e forjaria
+    // ou derrubaria a trava da segunda cobrança PIX.
+    //
+    // O uid usado é o DONO dos docs consultados: se algum dia alguém abrir um
+    // `match` "só para o dono", é este teste que cai.
+    it('nega leitura e escrita de `carrinhos` (RN-158) pelo cliente — inclusive ao próprio dono', async () => {
+      const uid = 'uid-dono-carrinho';
+      const ctx = testEnv.authenticatedContext(uid);
+      const { setDoc } = await import('firebase/firestore');
+      const meuCarrinho = doc(ctx.firestore(), 'carrinhos', `${uid}__evento-x`);
+      await assertFails(getDoc(meuCarrinho));
+      await assertFails(
+        setDoc(meuCarrinho, { status: 'aberto', expiraEmMillis: Date.now() + 9e9 })
+      );
+    });
+
+    it('nega leitura e escrita do ledger `carrinhos/{id}/ciclos/{n}` (T3) pelo cliente', async () => {
+      const uid = 'uid-dono-carrinho';
+      const ctx = testEnv.authenticatedContext(uid);
+      const { setDoc } = await import('firebase/firestore');
+      const ciclo = doc(ctx.firestore(), 'carrinhos', `${uid}__evento-x`, 'ciclos', '1');
+      await assertFails(getDoc(ciclo));
+      await assertFails(setDoc(ciclo, { status: 'expirado_sem_concluir', ciclo: 1 }));
+    });
+
+    it('nega leitura e escrita da sentinela `cobrancasPixAtivas` (RN-157) pelo cliente', async () => {
+      const uid = 'uid-dono-trava';
+      const ctx = testEnv.authenticatedContext(uid);
+      const { setDoc } = await import('firebase/firestore');
+      const sentinela = doc(
+        ctx.firestore(),
+        'cobrancasPixAtivas',
+        `${uid}__evento-x__deadbeef`
+      );
+      await assertFails(getDoc(sentinela));
+      await assertFails(setDoc(sentinela, { pedidoId: 'ped-forjado' }));
+    });
   }
 );
