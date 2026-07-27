@@ -29,7 +29,7 @@ Só `HOME.md` e `README.md` moram na raiz. O resto está em pastas numeradas por
 
 ## 🗂️ Acompanhamento (fonte da verdade)
 - [[BACKLOG]] — visão Jira (Épico → Story → Subtarefa) com progresso ao vivo (requer Dataview). 83 stories em `backlog/`.
-- [[PENDENCIAS]] — painel de pendências descritas, com exemplo de caso de uso em cada uma (20 itens em 3 grupos); o verbatim das decisões continua em [[DECISOES-ABERTAS]].
+- [[DECISOES-ABERTAS]] — painel ÚNICO do que depende de você: verbatim de cada decisão, a descrição e o caso de uso de cada item aberto, a dívida técnica pré-go-live e a fila de construção ratificada.
 
 ## ▶ Comece aqui — o que construir primeiro
 - [[IMPLEMENTATION-PLAN]] — **mini PRD + stack + kickoff do Fable 5** (comece por aqui para desenvolver)
