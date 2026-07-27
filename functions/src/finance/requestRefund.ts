@@ -47,17 +47,13 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
-  parsePoliticaVendas,
-  politicaVendasPadrao,
   rotearReembolso,
   roundMoney,
   transitionReembolso,
-  POLITICA_VENDAS_DOC_ID,
   type AuthClaims,
   type EstadoReembolso,
   type ItemPedido,
   type PaymentProvider,
-  type PoliticaReembolso,
   type StatusInscrito,
   type StatusPedido,
   type TransicaoReembolso,
@@ -67,6 +63,10 @@ import {
   assertTenantWriter,
   type EventoCaller,
 } from '../eventos/criarEvento';
+import {
+  lerPoliticaReembolsoTx,
+  lerPoliticaVendasTx,
+} from '../eventos/lerPoliticaVendas';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import { estornarInscricaoCore } from '../checkout/estornarInscricao';
 import {
@@ -75,7 +75,6 @@ import {
 } from './notifyRefund';
 
 type Db = admin.firestore.Firestore;
-type Tx = FirebaseFirestore.Transaction;
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -168,42 +167,11 @@ function valorPagoDaLinha(itens: ItemPedido[], inscritoId: string): number {
   return roundMoney(item.valorFinal + taxa);
 }
 
-/**
- * Carrega a política de vendas COMPLETA do evento dentro da transação
- * (fallback: defaults legais — CDC no reembolso; transferência/troca nascem
- * DESLIGADAS). Compartilhada com `requestTransfer` (S904-T4).
- */
-export async function lerPoliticaVendasTx(
-  tx: Tx,
-  db: Db,
-  eventoId: string,
-  tenantId: string
-): Promise<ReturnType<typeof politicaVendasPadrao>> {
-  const ref = db
-    .collection('eventos')
-    .doc(eventoId)
-    .collection('politicaVendas')
-    .doc(POLITICA_VENDAS_DOC_ID);
-  const snap = await tx.get(ref);
-  if (!snap.exists) {
-    // Sem política gravada: a lei (CDC Art. 49) ainda vale — usa os defaults.
-    logger.info('politica_vendas_ausente_usando_default', { eventoId });
-    return politicaVendasPadrao();
-  }
-  const data = snap.data() as Record<string, unknown>;
-  // tenantId pode faltar em doc legado de seed antigo — injeta o do evento.
-  return parsePoliticaVendas(POLITICA_VENDAS_DOC_ID, { tenantId, ...data });
-}
-
-/** Bloco de reembolso da política (RN-338/339/340). */
-async function lerPoliticaReembolso(
-  tx: Tx,
-  db: Db,
-  eventoId: string,
-  tenantId: string
-): Promise<PoliticaReembolso> {
-  return (await lerPoliticaVendasTx(tx, db, eventoId, tenantId)).reembolso;
-}
+// A leitura transacional da política mora em `eventos/lerPoliticaVendas` —
+// dois donos precisam dela (esta máquina e o primitivo de estorno) e importar
+// uma da outra fecharia ciclo. Re-exportada aqui pelos chamadores existentes
+// (requestTransfer — S904-T4).
+export { lerPoliticaVendasTx };
 
 function novaTransicao(
   de: EstadoReembolso,
@@ -312,7 +280,7 @@ async function abrirReembolso(
     }
 
     // ── ROTEAMENTO pela política (S305 · RN-338/339/340) ────────────────────
-    const politica = await lerPoliticaReembolso(tx, db, eventoId, tenantId);
+    const politica = await lerPoliticaReembolsoTx(tx, db, eventoId, tenantId);
     const rota = rotearReembolso(politica, compradoEm, dataEvento, agora);
     if (rota === 'bloqueado_corte') {
       throw new https.HttpsError(
@@ -373,7 +341,10 @@ async function executarEstorno(
   provider: PaymentProvider,
   eventoId: string,
   input: RequestRefundInput,
-  caller: EventoCaller
+  caller: EventoCaller,
+  /** Mesmo relógio do roteamento (RN-351: a janela de arrependimento que
+   * decide a taxa tem de ser a MESMA que decidiu a rota). */
+  agora: Date
 ): Promise<RefundResult> {
   const reembolsoRef = db
     .collection('eventos')
@@ -409,7 +380,8 @@ async function executarEstorno(
     db,
     provider,
     { pedidoId: input.pedidoId, inscritoId: input.inscritoId, motivo: input.motivo.trim() },
-    caller
+    caller,
+    agora
   );
 
   // RN-350: o gateway aceitou e ainda não concluiu. O reembolso NÃO vira
@@ -558,7 +530,14 @@ export async function requestRefundCore(
     case 'aprovado_auto':
     case 'aprovado':
     case 'estornado': {
-      const resultado = await executarEstorno(db, provider, abertura.eventoId, input, caller);
+      const resultado = await executarEstorno(
+        db,
+        provider,
+        abertura.eventoId,
+        input,
+        caller,
+        agora
+      );
       if (resultado.estado === 'estornado') {
         await notificarTransicaoReembolso(db, abertura.eventoId, input.inscritoId, 'estornado');
       }
@@ -587,7 +566,8 @@ export async function decideRefundCore(
   db: Db,
   provider: PaymentProvider,
   rawInput: unknown,
-  caller: EventoCaller
+  caller: EventoCaller,
+  agora: Date = new Date()
 ): Promise<RefundResult> {
   const tenantId = assertTenantWriter(caller.claims);
   const input = rawInput as Partial<DecideRefundInput> | null;
@@ -664,7 +644,8 @@ export async function decideRefundCore(
     provider,
     input.eventoId,
     { pedidoId, inscritoId: input.inscritoId, motivo },
-    caller
+    caller,
+    agora
   );
   if (resultado.estado === 'estornado') {
     await notificarTransicaoReembolso(db, input.eventoId, input.inscritoId, 'estornado');

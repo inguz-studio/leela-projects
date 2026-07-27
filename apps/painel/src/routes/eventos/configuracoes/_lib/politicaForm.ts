@@ -24,6 +24,12 @@ export interface PoliticaVendasValues {
   janelaArrependimentoDias: string;
   corteHoras: string;
   slaAnaliseDias: string;
+  /**
+   * RN-352: fora da janela de arrependimento, a taxa de serviço volta ao
+   * comprador? DENTRO da janela ela volta sempre (art. 49) e isso não aparece
+   * no form — não é do organizador desligar a lei.
+   */
+  devolveTaxaForaDaJanela: boolean;
   transferenciaHabilitada: boolean;
   transferenciaJanelaHoras: string;
   transferenciaTaxa: string;
@@ -43,6 +49,7 @@ export function valoresDaPolitica(politica: PoliticaVendas | null): PoliticaVend
     janelaArrependimentoDias: String(base.reembolso.janelaArrependimentoDias),
     corteHoras: String(base.reembolso.corteHoras),
     slaAnaliseDias: String(base.reembolso.slaAnaliseDias),
+    devolveTaxaForaDaJanela: base.reembolso.devolveTaxaForaDaJanela,
     transferenciaHabilitada: base.transferencia.habilitada,
     transferenciaJanelaHoras: String(base.transferencia.janelaHoras),
     transferenciaTaxa: String(base.transferencia.taxa),
@@ -73,6 +80,7 @@ export function construirPolitica(values: PoliticaVendasValues): {
       janelaArrependimentoDias: paraNumero(values.janelaArrependimentoDias),
       corteHoras: paraNumero(values.corteHoras),
       slaAnaliseDias: paraNumero(values.slaAnaliseDias),
+      devolveTaxaForaDaJanela: values.devolveTaxaForaDaJanela,
     },
     transferencia: {
       habilitada: values.transferenciaHabilitada,

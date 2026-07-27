@@ -73,7 +73,9 @@ import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
   SUBCOLECAO_CONVERSOES_AFILIADO,
+  calcularDevolucaoEstorno,
   computeComissaoConversao,
+  dentroDaJanelaArrependimento,
   isComissaoAfiliadoValida,
   podeTransicionarStatusInscrito,
   podeTransicionarStatusPagamento,
@@ -83,7 +85,9 @@ import {
   type PaymentProvider,
   type StatusInscrito,
   type StatusPagamento,
+  type Timestamp,
 } from '@leela/core';
+import { lerPoliticaReembolsoTx } from '../eventos/lerPoliticaVendas';
 import {
   assertTenantAtivo,
   assertTenantWriter,
@@ -377,7 +381,8 @@ async function comprometerEstorno(
   db: Db,
   input: EstornarInscricaoInput,
   tenantId: string,
-  solicitadoPor: string
+  solicitadoPor: string,
+  agora: Date
 ): Promise<CompromissoEstorno> {
   const pedidoRef = db.collection('pedidos').doc(input.pedidoId);
 
@@ -509,8 +514,38 @@ async function comprometerEstorno(
           `decomposição RN-347 corrompida.`
       );
     }
-    const valorFace = roundMoney(item.valorFinal);
-    const valor = roundMoney(valorFace + (taxaLinhaRaw ?? 0));
+    // RN-351/352 (decisão 42 do dono — "aceito a proposta dos 7 dias"): a
+    // taxa de serviço volta DENTRO da janela de arrependimento (art. 49) e
+    // segue a política fora dela (default: retida). A janela é do relógio da
+    // COMPRA — um estorno autorizado na véspera dentro dos 7 dias devolve a
+    // taxa do mesmo jeito. Doc de política ausente = defaults legais.
+    const compradoEm = pedidoSnap.get('criadoEm') as Timestamp | undefined;
+    const politicaReembolso = await lerPoliticaReembolsoTx(
+      tx,
+      db,
+      eventoId,
+      tenantId
+    );
+    // Pedido sem carimbo de compra (doc corrompido/seed antigo): trata como
+    // FORA da janela seria punir o comprador por defeito nosso — trata como
+    // DENTRO (o lado seguro juridicamente) e registra.
+    const dentroDaJanela =
+      compradoEm === undefined
+        ? true
+        : dentroDaJanelaArrependimento(politicaReembolso, compradoEm, agora);
+    if (compradoEm === undefined) {
+      logger.warn('estorno_pedido_sem_criadoEm_janela_presumida', {
+        pedidoId: input.pedidoId,
+      });
+    }
+    const devolucao = calcularDevolucaoEstorno(
+      politicaReembolso,
+      item.valorFinal,
+      taxaLinhaRaw ?? 0,
+      dentroDaJanela
+    );
+    const valorFace = devolucao.valorFace;
+    const valor = devolucao.valorDevolvido;
     const valorCentavos = Math.round(valor * 100);
     if (valorCentavos <= 0) {
       // Linha 100% descontada: não há dinheiro a devolver — o fluxo certo é
@@ -532,6 +567,10 @@ async function comprometerEstorno(
       valorCentavos,
       // Porção FACE (organizador) — ver CompromissoEstorno (RN-347)
       valorFace,
+      // Trilha da RN-351/352: o que voltou de taxa, o que ficou, e por quê.
+      taxaDevolvida: devolucao.taxaDevolvida,
+      taxaRetida: devolucao.taxaRetida,
+      dentroDaJanelaArrependimento: devolucao.dentroDaJanela,
       motivo: input.motivo.trim(),
       solicitadoPor,
       status: 'pendente',
@@ -922,7 +961,9 @@ export async function estornarInscricaoCore(
   db: Db,
   provider: PaymentProvider,
   rawInput: unknown,
-  caller: EventoCaller
+  caller: EventoCaller,
+  /** Relógio INJETADO (RN-351: a janela de arrependimento é derivação pura). */
+  agora: Date = new Date()
 ): Promise<EstornarInscricaoResult> {
   // GUARD de papel: só organizador (tenant_owner/tenant_staff) estorna —
   // athlete/promoter caem aqui com permission-denied (RN-401).
@@ -940,7 +981,13 @@ export async function estornarInscricaoCore(
   await assertTenantAtivo(db, tenantId);
 
   // ── TX1: compromisso (ou leitura do compromisso existente) ───────────────
-  const compromisso = await comprometerEstorno(db, input, tenantId, caller.uid);
+  const compromisso = await comprometerEstorno(
+    db,
+    input,
+    tenantId,
+    caller.uid,
+    agora
+  );
 
   const base = {
     pedidoId: input.pedidoId,

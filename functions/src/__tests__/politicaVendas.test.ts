@@ -107,6 +107,7 @@ describe('rotearReembolso — RN-338/339/340 (relógio injetado)', () => {
     janelaArrependimentoDias: JANELA_ARREPENDIMENTO_DIAS_DEFAULT,
     corteHoras: CORTE_HORAS_DEFAULT,
     slaAnaliseDias: 3,
+    devolveTaxaForaDaJanela: false,
   };
   const evento = ts('2026-04-25T12:00:00Z');
 

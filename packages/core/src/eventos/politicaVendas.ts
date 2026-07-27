@@ -33,6 +33,7 @@
 // =============================================================================
 
 import type { Timestamp } from '../index';
+import { roundMoney } from '../finance/calc';
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -59,7 +60,7 @@ export const TAXA_TRANSFERENCIA_MAX = 10_000; // R$ — teto sanitário
 // Entidade
 // ---------------------------------------------------------------------------
 
-/** Bloco de reembolso (RN-338/339/340). */
+/** Bloco de reembolso (RN-338/339/340/351/352). */
 export interface PoliticaReembolso {
   /** Dias corridos da COMPRA com reembolso integral automático (RN-338). */
   janelaArrependimentoDias: number;
@@ -67,6 +68,18 @@ export interface PoliticaReembolso {
   corteHoras: number;
   /** SLA (dias) para o organizador decidir o que cai em análise (RN-340). */
   slaAnaliseDias: number;
+  /**
+   * FORA da janela de arrependimento, a taxa de serviço volta ao comprador?
+   * (RN-352 — decisão 42 do dono: "aceito a proposta dos 7 dias").
+   *
+   * Default `false`: fora do art. 49 a retenção é o padrão de mercado (5 de 6
+   * plataformas no BENCHMARK-REEMBOLSO). DENTRO da janela a taxa volta
+   * SEMPRE e isso NÃO é parametrizável — reter no prazo de arrependimento é
+   * exatamente o que rendeu à Ingresse a multa de R$ 300.047,34 do Procon-MG.
+   *
+   * Ausente no doc (política legada) ⇒ `false` na leitura (Postel).
+   */
+  devolveTaxaForaDaJanela: boolean;
 }
 
 /** Bloco de transferência de titularidade (RN-343). */
@@ -125,6 +138,8 @@ export function politicaVendasPadrao(): Omit<PoliticaVendas, 'id' | 'tenantId' |
       janelaArrependimentoDias: JANELA_ARREPENDIMENTO_DIAS_DEFAULT,
       corteHoras: CORTE_HORAS_DEFAULT,
       slaAnaliseDias: SLA_ANALISE_DIAS_DEFAULT,
+      // RN-352: fora do art. 49, a taxa fica retida (decisão 42).
+      devolveTaxaForaDaJanela: false,
     },
     transferencia: {
       habilitada: false,
@@ -170,6 +185,14 @@ export function validarPoliticaVendas(raw: unknown): string[] {
     }
     if (!intEntre(reembolso['slaAnaliseDias'], 0, SLA_ANALISE_DIAS_MAX)) {
       erros.push(`"slaAnaliseDias" deve ser inteiro 0..${SLA_ANALISE_DIAS_MAX}.`);
+    }
+    // RN-352: campo NOVO — ausente é válido (doc legado ⇒ false na leitura);
+    // presente tem de ser boolean (lixo em doc de dinheiro nunca passa).
+    if (
+      reembolso['devolveTaxaForaDaJanela'] !== undefined &&
+      typeof reembolso['devolveTaxaForaDaJanela'] !== 'boolean'
+    ) {
+      erros.push('"reembolso.devolveTaxaForaDaJanela" deve ser boolean.');
     }
   }
 
@@ -250,6 +273,7 @@ export function parsePoliticaVendas(
       janelaArrependimentoDias: d.reembolso.janelaArrependimentoDias,
       corteHoras: d.reembolso.corteHoras,
       slaAnaliseDias: d.reembolso.slaAnaliseDias,
+      devolveTaxaForaDaJanela: d.reembolso.devolveTaxaForaDaJanela === true,
     },
     transferencia: {
       habilitada: d.transferencia.habilitada,
@@ -310,6 +334,9 @@ export function materialPoliticaVendas(
       janelaArrependimentoDias: p.reembolso.janelaArrependimentoDias,
       corteHoras: p.reembolso.corteHoras,
       slaAnaliseDias: p.reembolso.slaAnaliseDias,
+      // RN-352: mudar o destino da taxa é edição MATERIAL — quem comprou sob
+      // "a taxa volta" não fica preso a "a taxa fica" sem novo aceite.
+      devolveTaxaForaDaJanela: p.reembolso.devolveTaxaForaDaJanela === true,
     },
     transferencia: {
       habilitada: p.transferencia.habilitada,
@@ -376,6 +403,68 @@ export function rotearReembolso(
     return 'aprovado_auto';
   }
   return 'em_analise';
+}
+
+/**
+ * A compra está DENTRO da janela de arrependimento? (RN-351 · CDC Art. 49 —
+ * `janelaArrependimentoDias` dias corridos contados da COMPRA.)
+ *
+ * Separado de `rotearReembolso` de propósito: o direito do art. 49 é do
+ * relógio da COMPRA e não some porque o evento está na véspera. Um estorno
+ * autorizado pelo admin dentro dos 7 dias devolve a taxa mesmo quando a
+ * solicitação normal estaria bloqueada pelo corte (RN-339). @pure
+ */
+export function dentroDaJanelaArrependimento(
+  politica: PoliticaReembolso,
+  compradoEm: Timestamp,
+  agora: Date
+): boolean {
+  const msDesdeCompra = agora.getTime() - compradoEm.toMillis();
+  return msDesdeCompra <= politica.janelaArrependimentoDias * MS_DIA;
+}
+
+/** O que volta ao comprador e o que a plataforma retém (RN-351/352). */
+export interface DevolucaoEstorno {
+  /** Total devolvido ao COMPRADOR em R$ (face + taxa devolvida). */
+  valorDevolvido: number;
+  /** Porção FACE — a contabilidade do organizador (RN-347). */
+  valorFace: number;
+  /** Fatia da taxa de serviço que VOLTA ao comprador. */
+  taxaDevolvida: number;
+  /** Fatia da taxa de serviço RETIDA pela plataforma. */
+  taxaRetida: number;
+  /** Regra aplicada (trilha do ledger e texto honesto na tela). */
+  dentroDaJanela: boolean;
+}
+
+/**
+ * Decide, cent-exato, quanto volta ao comprador num estorno (RN-351/352 —
+ * decisão 42 do dono):
+ *   - DENTRO da janela de arrependimento (art. 49): volta face + taxa
+ *     INTEGRAL. Não parametrizável — reter aqui é a autuação do Procon.
+ *   - FORA da janela: volta o face; a taxa segue `devolveTaxaForaDaJanela`
+ *     (default `false` = retida, padrão de mercado).
+ * A taxa só existe em evento de taxa REPASSADA; em 'incorporada' o argumento
+ * chega 0 e as duas rotas coincidem — comportamento vigente byte a byte.
+ * @pure
+ */
+export function calcularDevolucaoEstorno(
+  politica: PoliticaReembolso,
+  valorFace: number,
+  taxaRepassada: number,
+  dentroDaJanela: boolean
+): DevolucaoEstorno {
+  const face = roundMoney(valorFace);
+  const taxa = roundMoney(Math.max(0, taxaRepassada));
+  const devolveTaxa = dentroDaJanela || politica.devolveTaxaForaDaJanela;
+  const taxaDevolvida = devolveTaxa ? taxa : 0;
+  return {
+    valorDevolvido: roundMoney(face + taxaDevolvida),
+    valorFace: face,
+    taxaDevolvida,
+    taxaRetida: roundMoney(taxa - taxaDevolvida),
+    dentroDaJanela,
+  };
 }
 
 /**

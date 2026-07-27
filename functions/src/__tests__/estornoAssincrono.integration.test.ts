@@ -119,22 +119,35 @@ interface Fixture {
   inscritoIds: string[];
   valorLinha: number;
   valorTotal: number;
+  /** Fatia de taxa repassada por linha (0 em evento 'incorporada'). */
+  taxaLinha: number;
+  /** O que o comprador PAGOU (face + taxa) — a borda do gateway. */
+  totalCobrado: number;
 }
 
 let seq = 0;
 
-async function criarPedidoPago(qtd: number, valorLinha = 189.9): Promise<Fixture> {
+async function criarPedidoPago(
+  qtd: number,
+  valorLinha = 189.9,
+  /** Fatia de taxa repassada POR LINHA (evento 'repassada' — RN-347). */
+  taxaLinha = 0,
+  /** Quantos dias ATRÁS a compra aconteceu (RN-351 — janela do art. 49). */
+  diasDesdeCompra = 0
+): Promise<Fixture> {
   seq += 1;
   const pedidoId = `ped-async-${seq}`;
   const pagamentoId = `pag-async-${seq}`;
   const inscritoIds = Array.from({ length: qtd }, (_, i) => `insc-async-${seq}-${i}`);
   const valorTotal = roundMoney(valorLinha * qtd);
+  const totalCobrado = roundMoney((valorLinha + taxaLinha) * qtd);
   const now = FieldValue.serverTimestamp();
+  const compradoEm = tsRel(-diasDesdeCompra);
 
   const charge = await gateway.base.createCharge({
     orderId: pedidoId,
     tenantId: TENANT_ID,
-    amount: Math.round(valorTotal * 100),
+    amount: Math.round(totalCobrado * 100),
     paymentMethod: 'pix',
     customer: { name: 'Comprador Teste', email: `c${seq}@ex.com`, taxId: '11144477735' },
     items: [
@@ -161,9 +174,10 @@ async function criarPedidoPago(qtd: number, valorLinha = 189.9): Promise<Fixture
       modalidade: '10k',
       loteId: '10k-l2',
       valorFinal: valorLinha,
+      ...(taxaLinha > 0 ? { taxaRepassada: taxaLinha } : {}),
     })),
     valorFinal: valorTotal,
-    criadoEm: now,
+    criadoEm: compradoEm,
     atualizadoEm: now,
   });
   batch.set(db.collection('pagamentos').doc(pagamentoId), {
@@ -174,8 +188,9 @@ async function criarPedidoPago(qtd: number, valorLinha = 189.9): Promise<Fixture
     status: 'confirmado',
     forma: 'pix',
     valorFinal: valorTotal,
+    ...(taxaLinha > 0 ? { taxaRepassada: roundMoney(taxaLinha * qtd) } : {}),
     gatewayChargeId: charge.chargeId,
-    gatewayAmountCentavos: Math.round(valorTotal * 100),
+    gatewayAmountCentavos: Math.round(totalCobrado * 100),
     criadoEm: now,
     atualizadoEm: now,
   });
@@ -203,7 +218,31 @@ async function criarPedidoPago(qtd: number, valorLinha = 189.9): Promise<Fixture
     inscritoIds,
     valorLinha,
     valorTotal,
+    taxaLinha,
+    totalCobrado,
   };
+}
+
+/** Grava a política de vendas do evento (RN-352 — o flag da taxa). */
+async function gravarPolitica(devolveTaxaForaDaJanela: boolean): Promise<void> {
+  await db
+    .collection('eventos')
+    .doc(EVENTO_ID)
+    .collection('politicaVendas')
+    .doc('config')
+    .set({
+      id: 'config',
+      tenantId: TENANT_ID,
+      reembolso: {
+        janelaArrependimentoDias: 7,
+        corteHoras: 48,
+        slaAnaliseDias: 3,
+        devolveTaxaForaDaJanela,
+      },
+      transferencia: { habilitada: false, janelaHoras: 72, taxa: 0 },
+      trocaIngresso: { habilitada: false, janelaHoras: 48, permiteReembolsoDowngrade: false },
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
 }
 
 const ledgerRef = (pagamentoId: string, inscritoId: string) =>
@@ -225,7 +264,7 @@ async function entregarWebhookEstorno(
   const payload = buildMockWebhookPayload('charge.refunded', {
     chargeId: fx.chargeId,
     orderId: fx.pedidoId,
-    amount: Math.round(fx.valorTotal * 100),
+    amount: Math.round(fx.totalCobrado * 100),
     eventId: opts.eventId,
     ...(opts.refundId !== undefined ? { refundId: opts.refundId } : {}),
     ...(opts.refundAmount !== undefined ? { refundAmount: opts.refundAmount } : {}),
@@ -564,6 +603,170 @@ describe('desfechos do gateway que não são "concluído"', () => {
   }, 60_000);
 
   it('resposta síncrona "concluído" (DONE) aplica o efeito na hora — inalterado', async () => {
+    const fx = await criarPedidoPago(1);
+    gateway.roteiro = [{ tipo: 'approved' }];
+    const receitaAntes = await receitaConfirmada();
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Estorno' },
+      organizador
+    );
+
+    expect(r.estado).toBe('aprovado');
+    expect(r.aguardandoConfirmacao).toBe(false);
+    expect(await receitaConfirmada()).toBe(roundMoney(receitaAntes - fx.valorLinha));
+    expect((await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get()).get('status')).toBe('aprovado');
+  }, 60_000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. T2 · a taxa de serviço nos 7 dias (RN-351/352 — decisão 42)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('taxa de serviço no estorno — dentro e fora da janela', () => {
+  const FACE = 170.91;
+  const TAXA = 17.95;
+
+  it('DENTRO da janela: devolve face + taxa; receita reverte SÓ o face', async () => {
+    const fx = await criarPedidoPago(1, FACE, TAXA, 2);
+    gateway.roteiro = [{ tipo: 'approved' }];
+    const receitaAntes = await receitaConfirmada();
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Arrependimento' },
+      organizador
+    );
+
+    expect(r.valorEstornado).toBe(roundMoney(FACE + TAXA));
+    expect(gateway.posts[0]?.amount).toBe(Math.round((FACE + TAXA) * 100));
+    const ledger = await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get();
+    expect(ledger.get('valorFace')).toBe(FACE);
+    expect(ledger.get('taxaDevolvida')).toBe(TAXA);
+    expect(ledger.get('taxaRetida')).toBe(0);
+    expect(ledger.get('dentroDaJanelaArrependimento')).toBe(true);
+    // RN-347 intacta: a contabilidade do organizador segue no FACE.
+    expect(await receitaConfirmada()).toBe(roundMoney(receitaAntes - FACE));
+    expect((await db.collection('pagamentos').doc(fx.pagamentoId).get()).get('estornadoTotal')).toBe(FACE);
+  }, 60_000);
+
+  it('FORA da janela (default): devolve só o face e RETÉM a taxa', async () => {
+    const fx = await criarPedidoPago(1, FACE, TAXA, 30);
+    gateway.roteiro = [{ tipo: 'approved' }];
+    const receitaAntes = await receitaConfirmada();
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Fora do prazo' },
+      organizador
+    );
+
+    expect(r.valorEstornado).toBe(FACE);
+    expect(gateway.posts[0]?.amount).toBe(Math.round(FACE * 100));
+    const ledger = await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get();
+    expect(ledger.get('taxaDevolvida')).toBe(0);
+    expect(ledger.get('taxaRetida')).toBe(TAXA);
+    expect(ledger.get('dentroDaJanelaArrependimento')).toBe(false);
+    // O face reverte igual nos dois casos — a taxa nunca foi receita.
+    expect(await receitaConfirmada()).toBe(roundMoney(receitaAntes - FACE));
+  }, 60_000);
+
+  it('FORA da janela com a política devolvendo: volta tudo', async () => {
+    await gravarPolitica(true);
+    const fx = await criarPedidoPago(1, FACE, TAXA, 30);
+    gateway.roteiro = [{ tipo: 'approved' }];
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Cortesia' },
+      organizador
+    );
+
+    expect(r.valorEstornado).toBe(roundMoney(FACE + TAXA));
+    expect((await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get()).get('taxaRetida')).toBe(0);
+  }, 60_000);
+
+  it('DENTRO da janela a política NÃO consegue reter (art. 49 não é opção)', async () => {
+    await gravarPolitica(false);
+    const fx = await criarPedidoPago(1, FACE, TAXA, 1);
+    gateway.roteiro = [{ tipo: 'approved' }];
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Arrependimento' },
+      organizador
+    );
+
+    expect(r.valorEstornado).toBe(roundMoney(FACE + TAXA));
+    expect((await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get()).get('taxaRetida')).toBe(0);
+  }, 60_000);
+
+  it('o relógio é INJETADO: a mesma compra muda de rota pelo instante', async () => {
+    const fx = await criarPedidoPago(1, FACE, TAXA, 2);
+    gateway.roteiro = [{ tipo: 'approved' }];
+    // 20 dias à frente do agora real ⇒ a compra de 2 dias atrás fica FORA.
+    const futuro = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Estorno tardio' },
+      organizador,
+      futuro
+    );
+
+    expect(r.valorEstornado).toBe(FACE);
+    expect((await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get()).get('taxaRetida')).toBe(TAXA);
+  }, 60_000);
+
+  it('evento de taxa INCORPORADA: comportamento vigente byte a byte', async () => {
+    const fx = await criarPedidoPago(1, 189.9, 0, 30);
+    gateway.roteiro = [{ tipo: 'approved' }];
+
+    const r = await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Fora do prazo' },
+      organizador
+    );
+
+    expect(r.valorEstornado).toBe(189.9);
+    const ledger = await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get();
+    expect(ledger.get('taxaDevolvida')).toBe(0);
+    expect(ledger.get('taxaRetida')).toBe(0);
+  }, 60_000);
+
+  it('o valor congelado no ledger manda: replay não recalcula a janela', async () => {
+    const fx = await criarPedidoPago(1, FACE, TAXA, 2);
+    gateway.roteiro = [{ tipo: 'pending' }];
+    await estornarInscricaoCore(
+      db,
+      gateway,
+      { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'Arrependimento' },
+      organizador
+    );
+
+    // Confirmação chega 30 dias depois: o congelado (com taxa) é o que vale.
+    const r = await entregarWebhookEstorno(fx, {
+      eventId: 'evt-congelado',
+      refundId: 'esp_refund_1',
+    });
+
+    expect(r.estornoConfirmado?.motivo).toBe('confirmado');
+    const ledger = await ledgerRef(fx.pagamentoId, fx.inscritoIds[0]!).get();
+    expect(ledger.get('valor')).toBe(roundMoney(FACE + TAXA));
+    expect(ledger.get('taxaDevolvida')).toBe(TAXA);
+  }, 60_000);
+});
+
+describe('resposta síncrona aprovada (bloco vigente)', () => {
+  it('DONE aplica o efeito na hora — inalterado', async () => {
     const fx = await criarPedidoPago(1);
     gateway.roteiro = [{ tipo: 'approved' }];
     const receitaAntes = await receitaConfirmada();

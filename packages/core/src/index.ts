@@ -528,6 +528,7 @@ export type {
   PoliticaTransferencia,
   PoliticaTrocaIngresso,
   RoteamentoReembolso,
+  DevolucaoEstorno,
 } from './eventos/politicaVendas';
 export {
   POLITICA_VENDAS_DOC_ID,
@@ -540,6 +541,9 @@ export {
   validarPoliticaVendas,
   parsePoliticaVendas,
   rotearReembolso,
+  // RN-351/352 — o que volta e o que fica no estorno (decisão 42)
+  dentroDaJanelaArrependimento,
+  calcularDevolucaoEstorno,
   transferenciaAberta,
   trocaIngressoAberta,
   // CKMOD — versão vigente da política (paralelo RN-149)

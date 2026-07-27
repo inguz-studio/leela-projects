@@ -203,6 +203,44 @@ describe('politicaVendas — payload direto (a Rule segura SOZINHA)', () => {
     );
   });
 
+  // RN-352 (ESTORNO-T2 · decisão 42): campo NOVO da taxa fora da janela.
+  it('devolveTaxaForaDaJanela: ausente OK (legado), bool OK, lixo NEGA', async () => {
+    const db = ownerA().firestore();
+    // Ausente = política legada; a leitura assume false (taxa retida).
+    await assertSucceeds(setDoc(doc(db, ...P_POL), politicaValida()));
+    await assertSucceeds(
+      setDoc(doc(db, ...P_POL), politicaValida({
+        reembolso: {
+          janelaArrependimentoDias: 7,
+          corteHoras: 48,
+          slaAnaliseDias: 3,
+          devolveTaxaForaDaJanela: true,
+        },
+      }))
+    );
+    // Doc de dinheiro nunca carrega lixo: string/número não passam.
+    await assertFails(
+      setDoc(doc(db, ...P_POL), politicaValida({
+        reembolso: {
+          janelaArrependimentoDias: 7,
+          corteHoras: 48,
+          slaAnaliseDias: 3,
+          devolveTaxaForaDaJanela: 'sim',
+        },
+      }))
+    );
+    await assertFails(
+      setDoc(doc(db, ...P_POL), politicaValida({
+        reembolso: {
+          janelaArrependimentoDias: 7,
+          corteHoras: 48,
+          slaAnaliseDias: 3,
+          devolveTaxaForaDaJanela: 1,
+        },
+      }))
+    );
+  });
+
   it('shape inválido ⇒ NEGA: float, negativo, acima do teto, tipo errado', async () => {
     const db = ownerA().firestore();
     await assertFails(
