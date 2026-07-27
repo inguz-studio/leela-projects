@@ -17,9 +17,12 @@
 
 import { initLeela, type FirebaseClientConfig } from '@leela/api-client';
 
-/** Lê uma porta de env (NEXT_PUBLIC_*) com fallback ao default do Suite. */
-function porta(nome: string, padrao: number): number {
-  const raw = process.env[nome];
+// O compilador do Next só inlina `process.env` no bundle do browser quando a
+// chave é LITERAL (`process.env.X` / `process.env['X']`). Lookup dinâmico
+// (`process.env[nome]`) vira `undefined` no cliente e o fallback sempre vence —
+// por isso o helper recebe o VALOR já lido estaticamente, nunca o nome da env.
+/** Faz o parse de uma porta lida de env, com fallback ao default do Suite. */
+function porta(raw: string | undefined, padrao: number): number {
   if (raw === undefined || raw.trim().length === 0) return padrao;
   const n = Number.parseInt(raw, 10);
   return Number.isInteger(n) && n > 0 ? n : padrao;
@@ -54,9 +57,9 @@ export function ensureLeela(): void {
     useEmulator,
     emulatorHost: process.env['NEXT_PUBLIC_EMULATOR_HOST'] ?? '127.0.0.1',
     emulatorPorts: {
-      firestore: porta('NEXT_PUBLIC_EMULATOR_FIRESTORE_PORT', 8080),
-      functions: porta('NEXT_PUBLIC_EMULATOR_FUNCTIONS_PORT', 5001),
-      auth: porta('NEXT_PUBLIC_EMULATOR_AUTH_PORT', 9099),
+      firestore: porta(process.env['NEXT_PUBLIC_EMULATOR_FIRESTORE_PORT'], 8080),
+      functions: porta(process.env['NEXT_PUBLIC_EMULATOR_FUNCTIONS_PORT'], 5001),
+      auth: porta(process.env['NEXT_PUBLIC_EMULATOR_AUTH_PORT'], 9099),
     },
     ...(firebaseConfig !== undefined ? { firebaseConfig } : {}),
   });
