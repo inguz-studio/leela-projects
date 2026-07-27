@@ -9,7 +9,7 @@ fonte: respostas do Vitor ao painel DECISOES-ABERTAS + CHECKOUT-UX-REPORT (seç�
 
 # Rodada de decisões do Vitor — 2026-07-19 (DEC-0719)
 
-Arquivo canônico da rodada. Preserva o **verbatim** do Vitor onde ele existe e registra a consolidação nos épicos, ADR e RNs. O painel curto vive em [[DECISOES-ABERTAS]]; a versão longa argumentada em [[DECISOES-EM-ABERTO]]. Delta de RNs em `02-rns-delta.md`; fila de código derivada em `03-fila-codigo.md`.
+Arquivo canônico da rodada. Preserva o **verbatim** do Vitor onde ele existe e registra a consolidação nos épicos, ADR e RNs. O painel vive em [[DECISOES-ABERTAS]] (a versão longa argumentada, DECISOES-EM-ABERTO, foi absorvida por ele em 2026-07-27 e o arquivo deletado). Delta de RNs em `02-rns-delta.md`; fila de código derivada em `03-fila-codigo.md`.
 
 ## Decisões (verbatim preservado onde indicado)
 
