@@ -17,7 +17,7 @@ import {
   type TableColumn,
 } from '@leela/design-system';
 import type { CrmEventoResumo } from '@leela/core';
-import { useCrmSession } from './_data/session';
+import { useTenantSession } from '../../lib/session/tenantSession';
 import { useCrmClienteDetalhe } from './_data/clientes';
 import { aniversarioLabel, formatBRL, formatInt, generoLabel, idadeAoVivo } from './_lib/format';
 
@@ -45,7 +45,7 @@ const COLUNAS_EVENTO: TableColumn<LinhaEvento>[] = [
 export function ClienteDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const { clienteKey } = useParams<{ clienteKey: string }>();
-  const session = useCrmSession();
+  const session = useTenantSession();
   const { cliente, naoEncontrado, loading, error } = useCrmClienteDetalhe(
     session.tenantId,
     clienteKey,

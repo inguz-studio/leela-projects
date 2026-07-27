@@ -15,7 +15,7 @@ import { Badge, Button, Checkbox, Chip, Input, Select, Textarea, useToast } from
 import type { ClubeInput, VisibilidadeClube } from '@leela/core';
 import { gerarCodigoConvite, validarClube } from '@leela/core';
 import { criarClubePadrao } from '../_data/clubes';
-import { useClubesSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import {
   CATEGORIA_OPCOES,
   MODALIDADE_OPCOES,
@@ -29,7 +29,7 @@ import {
 export function NovoClubePage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const session = useClubesSession();
+  const session = useTenantSession();
 
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');

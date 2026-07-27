@@ -24,7 +24,7 @@ import {
   type TableColumn,
 } from '@leela/design-system';
 import type { CrmCliente, CrmClientesOrdem } from '@leela/api-client';
-import { useCrmSession } from './_data/session';
+import { useTenantSession } from '../../lib/session/tenantSession';
 import { useBuscaClientes, useCrmClientes } from './_data/clientes';
 import { formatBRL, formatInt, generoLabel } from './_lib/format';
 
@@ -59,7 +59,7 @@ function colunas(): TableColumn<CrmCliente>[] {
 
 export function ClientesPage(): JSX.Element {
   const navigate = useNavigate();
-  const session = useCrmSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
 
   const [ordem, setOrdem] = useState<CrmClientesOrdem>('ltv');

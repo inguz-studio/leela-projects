@@ -26,7 +26,7 @@ import { podeAcessar } from '@leela/core';
 import { FinanceiroView } from './FinanceiroView';
 import { useFinanceiroRealtime } from '../../../lib/query/realtime';
 import { commercialTermsQuery } from '../../../lib/query/queries';
-import { useFinanceiroSession } from '../repasses/_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useHistoricoRepasses } from '../repasses/_data/repasses';
 import { associarRepassesPorEvento } from '../repasses/_lib/repassesPorEvento';
 import { usePapelEvento } from '../_data/papelEvento';
@@ -38,7 +38,7 @@ export function FinanceiroPage(): JSX.Element {
   const navigate = useNavigate();
   const { data, loading, error } = useFinanceiroRealtime(evento.id);
 
-  const session = useFinanceiroSession();
+  const session = useTenantSession();
   const historico = useHistoricoRepasses(session.tenantId);
   const { papel } = usePapelEvento(evento);
 

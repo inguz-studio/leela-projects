@@ -18,14 +18,14 @@
 import { useCallback } from 'react';
 import { useToast } from '@leela/design-system';
 import type { SaveDadosBancariosInput } from '@leela/api-client';
-import { useFinanceiroSession } from '../../eventos/repasses/_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useDadosBancarios } from '../../eventos/repasses/_data/repasses';
 import { repasseErrorMessage } from '../../eventos/repasses/_lib/erros';
 import { useSaveDadosBancarios } from '../../../lib/query/mutations';
 import { DadosBancariosSection } from './DadosBancariosSection';
 
 export function RecebimentoSection(): JSX.Element {
-  const session = useFinanceiroSession();
+  const session = useTenantSession();
   const carregandoSessao = session.status === 'loading';
   const tenantId = session.tenantId;
   const { toast } = useToast();

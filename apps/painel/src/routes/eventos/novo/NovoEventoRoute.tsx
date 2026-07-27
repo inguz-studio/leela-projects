@@ -9,12 +9,12 @@ import { useNavigate } from 'react-router-dom';
 import { getLeelaDb, salvarCapaEvento, uploadCapaEvento } from '@leela/api-client';
 import { EventoForm } from './EventoForm';
 import { useCriarEvento } from '../../../lib/query/mutations';
-import { useEventosSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import type { CriarEventoInput } from '../_data/contracts';
 
 export function NovoEventoRoute(): JSX.Element {
   const navigate = useNavigate();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const criar = useCriarEvento({
     tenantId: session.tenantId ?? '',
     organizadorId: session.uid ?? '',

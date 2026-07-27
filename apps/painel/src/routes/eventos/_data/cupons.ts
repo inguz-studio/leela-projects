@@ -14,7 +14,7 @@ import type { Cupom } from '@leela/core';
 import { cuponsDoEventoQuery } from '../../../lib/query/queries';
 import { useRemoverCupom, useSalvarCupom } from '../../../lib/query/mutations';
 import type { AsyncState } from './eventos';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 /**
  * Cupons de um evento — a seção deriva vigência/estado pelo core (cupomVigente),
@@ -42,7 +42,7 @@ export interface CupomMutations {
 
 /** Callers de escrita de cupom, com o tenantId da sessão injetado (ADR-009). */
 export function useCupomMutations(eventoId: string): CupomMutations {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
   const salvarCupomMutation = useSalvarCupom(eventoId);
   const removerCupomMutation = useRemoverCupom(eventoId);

@@ -26,7 +26,7 @@ import {
   clubesDoTenantQuery,
   membrosDoClubeQuery,
 } from '../../../lib/query/queries';
-import { useClubesSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 /** Porta real de CRIAÇÃO de clube (fix #14 — rota /clubes/novo). */
 export const criarClubePadrao = (input: ClubeInput): Promise<{ slug: string }> =>
@@ -63,7 +63,7 @@ export interface AsyncState<T> {
 
 /** Lista de clubes do tenant do profissional logado (hub — 2 zonas). */
 export function useClubes(): AsyncState<Clube[]> {
-  const session = useClubesSession();
+  const session = useTenantSession();
   const enabled = session.status === 'authenticated' && !!session.tenantId;
   const query = useQuery({
     ...clubesDoTenantQuery(session.tenantId ?? ''),
@@ -79,7 +79,7 @@ export function useClubes(): AsyncState<Clube[]> {
 
 /** Um clube pelo slug (leitura direta O(1) — docId = slug). */
 export function useClube(slug: string): AsyncState<Clube> {
-  const session = useClubesSession();
+  const session = useTenantSession();
   const query = useQuery({
     ...clubeDetalheQuery(slug),
     enabled: session.status !== 'loading' && !!slug,

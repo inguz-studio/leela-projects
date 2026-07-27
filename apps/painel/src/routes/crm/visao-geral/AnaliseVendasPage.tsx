@@ -8,8 +8,9 @@
 // soma pesada no cliente — só leituras de agregado ∑ (§2.12).
 //
 // A tela mudou de ENDEREÇO, não de comportamento: o move da rodada IA-MENU é
-// de navegação. A sessão passa a vir do `useCrmSession` que já existia no
-// módulo (mesmo contrato `status`/`uid`/`tenantId`) — nenhuma cópia nova.
+// de navegação. A sessão vem do `useTenantSession` (contrato
+// `status`/`uid`/`tenantId`), a implementação única do painel desde
+// LEELA-DEBT-T1 — nenhuma cópia nova, nem aqui nem nas outras rotas.
 // PII: esta é a camada AGREGADA (RN-820/822, supressão k=5 no cohort). Dividir
 // a casca de menu com CRM › Clientes (identidade individual, RN-172) NÃO
 // autoriza cruzar as duas camadas.
@@ -17,7 +18,7 @@
 
 import * as React from 'react';
 import type { DateRange } from '@leela/design-system';
-import { useCrmSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import {
   useDemografiaAnalise,
   useDesempenhoAnalise,
@@ -28,7 +29,7 @@ import {
 import { AnaliseVendasView } from './AnaliseVendasView';
 
 export function AnaliseVendasPage(): JSX.Element {
-  const session = useCrmSession();
+  const session = useTenantSession();
   const carregandoSessao = session.status === 'loading';
 
   // Filtro por evento (RN-821): null = todos os eventos (agregado do tenant).

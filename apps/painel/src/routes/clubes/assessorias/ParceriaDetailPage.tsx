@@ -23,7 +23,7 @@ import {
 import { DateTimeField } from '@/components/fields/DateTimeField';
 import { definirCondicaoDesconto } from '@leela/api-client';
 import { AuthAlert } from '../../conta/auth/AuthAlert';
-import { useAssessoriasSession } from './_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useEventosDoOrganizador, useParceriasAssessoria } from './_data/assessorias';
 import {
   CONDICAO_VALORES_INICIAIS,
@@ -65,7 +65,7 @@ export function ParceriaDetailPage(): JSX.Element {
   const { parceriaId = '' } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const session = useAssessoriasSession();
+  const session = useTenantSession();
   const { data: parcerias, loading, refetch } = useParceriasAssessoria(session.tenantId);
   const { data: eventos } = useEventosDoOrganizador(session.tenantId, session.uid);
 

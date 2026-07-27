@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { getClaims } from '@leela/api-client';
 import type { Evento, PapelEvento } from '@leela/core';
 import { papelDoUsuarioNoEvento } from '../configuracoes/_lib/gateEvento';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 export interface PapelEventoState {
   papel: PapelEvento | null;
@@ -29,7 +29,7 @@ export interface PapelEventoState {
  * (nunca esconde/mostra com base em estado a meio caminho).
  */
 export function usePapelEvento(evento: Evento): PapelEventoState {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const [claims, setClaims] = useState<Record<string, unknown> | null>(null);
   const [claimsLoading, setClaimsLoading] = useState(true);
 

@@ -18,7 +18,7 @@ import {
   type CadastrarAssessoriaResult,
 } from '@leela/api-client';
 import { AuthAlert } from '../../conta/auth/AuthAlert';
-import { useAssessoriasSession } from './_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import {
   CADASTRO_VALORES_INICIAIS,
   problemaDoDocumento,
@@ -49,7 +49,7 @@ function mensagemErro(err: unknown): string {
 export function CadastrarAssessoriaPage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const session = useAssessoriasSession();
+  const session = useTenantSession();
   const [values, setValues] = useState<CadastroAssessoriaValues>(CADASTRO_VALORES_INICIAIS);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);

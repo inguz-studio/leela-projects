@@ -13,7 +13,7 @@
 
 import { useCallback } from 'react';
 import { useToast } from '@leela/design-system';
-import { useFinanceiroSession } from './_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useRequestRepasse } from '../../../lib/query/mutations';
 import { useDadosBancarios, useHistoricoRepasses, useSaldoRepasse } from './_data/repasses';
 import { useRepassesPorEvento } from './_data/repassesPorEvento';
@@ -21,7 +21,7 @@ import { repasseErrorMessage } from './_lib/erros';
 import { RepassesView } from './RepassesView';
 
 export function RepassesPage(): JSX.Element {
-  const session = useFinanceiroSession();
+  const session = useTenantSession();
   const carregandoSessao = session.status === 'loading';
   const tenantId = session.tenantId;
   const { toast } = useToast();

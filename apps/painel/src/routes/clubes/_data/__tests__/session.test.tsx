@@ -1,5 +1,5 @@
 // =============================================================================
-// useClubesSession + useClubes — prova a CADEIA de dados da rota de clubes sob a
+// useTenantSession + useClubes — prova a CADEIA de dados da rota de clubes sob a
 // sessão de PREVIEW (?preview=corrida). O bug (LEELA-CLUBES-FIX): o preview-seed
 // seta o claim `tenantId` e em seguida REVOGA os refresh tokens
 // (revokeRefreshTokens). O primeiro token que o cliente vê pode (a) ainda não
@@ -17,7 +17,7 @@ import * as React from 'react';
 import { renderHook, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { useClubesSession } from '../session';
+import { useTenantSession } from '../../../../lib/session/tenantSession';
 import { useClubes } from '../clubes';
 import { HubRoute } from '../../hub/HubRoute';
 import { mkClube } from '../../_test/fixtures';
@@ -62,12 +62,12 @@ beforeEach(() => {
   mocks.listClubesByTenant.mockResolvedValue([]);
 });
 
-describe('useClubesSession (resiliência do claim de preview)', () => {
+describe('useTenantSession (resiliência do claim de preview)', () => {
   it('token em cache já traz o tenantId → resolve autenticado sem forceRefresh', async () => {
     fireSession(FELIPE);
     mocks.getClaims.mockResolvedValue({ role: 'tenant_owner', tenantId: 'corrida' });
 
-    const { result } = renderHook(() => useClubesSession());
+    const { result } = renderHook(() => useTenantSession());
 
     await waitFor(() => expect(result.current.status).toBe('authenticated'));
     expect(result.current.uid).toBe('felipe');
@@ -83,7 +83,7 @@ describe('useClubesSession (resiliência do claim de preview)', () => {
       ),
     );
 
-    const { result } = renderHook(() => useClubesSession());
+    const { result } = renderHook(() => useTenantSession());
 
     await waitFor(() => expect(result.current.tenantId).toBe('corrida'));
     expect(result.current.status).toBe('authenticated');
@@ -97,7 +97,7 @@ describe('useClubesSession (resiliência do claim de preview)', () => {
       .mockRejectedValueOnce(new Error('auth/user-token-expired'))
       .mockResolvedValue({ role: 'tenant_owner', tenantId: 'corrida' });
 
-    const { result } = renderHook(() => useClubesSession());
+    const { result } = renderHook(() => useTenantSession());
 
     await waitFor(() => expect(result.current.tenantId).toBe('corrida'));
     expect(result.current.status).toBe('authenticated');
@@ -107,7 +107,7 @@ describe('useClubesSession (resiliência do claim de preview)', () => {
     fireSession(FELIPE);
     mocks.getClaims.mockRejectedValue(new Error('token revogado — irrecuperável'));
 
-    const { result } = renderHook(() => useClubesSession());
+    const { result } = renderHook(() => useTenantSession());
 
     // A garantia central do fix: a sessão SAI de 'loading' mesmo no pior caso.
     await waitFor(() => expect(result.current.status).not.toBe('loading'));
@@ -119,7 +119,7 @@ describe('useClubesSession (resiliência do claim de preview)', () => {
   it('sem usuário → anônimo (não chama getClaims)', async () => {
     fireSession(null);
 
-    const { result } = renderHook(() => useClubesSession());
+    const { result } = renderHook(() => useTenantSession());
 
     await waitFor(() => expect(result.current.status).toBe('anonymous'));
     expect(mocks.getClaims).not.toHaveBeenCalled();

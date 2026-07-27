@@ -16,7 +16,7 @@ import { Navigate, useLocation, useOutletContext } from 'react-router-dom';
 import { Skeleton } from '@leela/design-system';
 import { podeAcessar, type AreaEvento, type PapelEvento } from '@leela/core';
 import { usePapelEvento } from '../eventos/_data/papelEvento';
-import { useEventosSession, type SessionStatus } from '../eventos/_data/session';
+import { useTenantSession, type SessionStatus } from '../../lib/session/tenantSession';
 import type { EventoOutletContext } from '../eventos/evento/EventoLayout';
 import { Forbidden } from './Forbidden';
 
@@ -48,7 +48,7 @@ interface RequirePapelProps {
 
 export function RequirePapel({ area, children }: RequirePapelProps): JSX.Element {
   const { evento } = useOutletContext<EventoOutletContext>();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const { papel, loading } = usePapelEvento(evento);
   const location = useLocation();
 

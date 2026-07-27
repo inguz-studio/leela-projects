@@ -23,7 +23,7 @@ import {
   eventosDoOrganizadorQuery,
   inscritosRecentesQuery,
 } from '../../../lib/query/queries';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -33,7 +33,7 @@ export interface AsyncState<T> {
 
 /** Lista de eventos do organizador logado (hub). Chave partilhada c/ Visão Geral. */
 export function useEventos(): AsyncState<Evento[]> {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const enabled =
     session.status === 'authenticated' && !!session.uid && !!session.tenantId;
   const query = useQuery({
@@ -72,7 +72,7 @@ export interface EventoDetalheState extends AsyncState<Evento> {
  * e reabrir eventos próprios além do pageLimit (mitiga #33).
  */
 export function useEvento(slug: string): EventoDetalheState {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const { data: eventos, loading, error } = useEventos();
 
   const daLista = eventos?.find((e) => e.slug === slug) ?? null;

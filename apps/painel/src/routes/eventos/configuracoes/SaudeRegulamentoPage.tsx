@@ -11,14 +11,14 @@
 import { useOutletContext } from 'react-router-dom';
 import type { AtualizarExigenciasRegulamentoInput } from '@leela/api-client';
 import { useAtualizarExigenciasRegulamento } from '../../../lib/query/mutations';
-import { useEventosSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { SaudeRegulamentoForm } from './_components/SaudeRegulamentoForm';
 import { podeEditarConfiguracoes } from './_lib/gateEvento';
 import type { ConfiguracoesOutletContext } from './ConfiguracoesLayout';
 
 export function SaudeRegulamentoPage(): JSX.Element {
   const { evento, papel } = useOutletContext<ConfiguracoesOutletContext>();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const mutation = useAtualizarExigenciasRegulamento({
     slug: evento.slug,
     eventoId: evento.id,

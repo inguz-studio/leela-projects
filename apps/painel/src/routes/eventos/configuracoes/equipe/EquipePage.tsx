@@ -17,7 +17,7 @@ import {
   useSetPapelEquipe,
 } from '../../../../lib/query/mutations';
 import { useEquipe } from '../../_data/equipe';
-import { useEventosSession } from '../../_data/session';
+import { useTenantSession } from '../../../../lib/session/tenantSession';
 import { ConvidarMembroModal } from '../_components/ConvidarMembroModal';
 import { EquipeLista } from '../_components/EquipeLista';
 import { LABEL_PAPEL, perdeAoRemover } from '../_lib/equipeLabels';
@@ -26,7 +26,7 @@ import type { ConfiguracoesOutletContext } from '../ConfiguracoesLayout';
 
 export function EquipePage(): JSX.Element {
   const { evento, papel } = useOutletContext<ConfiguracoesOutletContext>();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const { toast } = useToast();
 
   const { data: membros, loading, error } = useEquipe(evento.id);

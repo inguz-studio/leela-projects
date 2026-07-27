@@ -16,8 +16,8 @@ const { papelState, sessionState } = vi.hoisted(() => ({
 vi.mock('../../eventos/_data/papelEvento', () => ({
   usePapelEvento: () => papelState.current,
 }));
-vi.mock('../../eventos/_data/session', () => ({
-  useEventosSession: () => sessionState.current,
+vi.mock('../../../lib/session/tenantSession', () => ({
+  useTenantSession: () => sessionState.current,
 }));
 
 // ---------------------------------------------------------------------------

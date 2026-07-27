@@ -21,7 +21,7 @@ import {
   useSalvarConteudoPaginaVendas,
 } from '../../../lib/query/mutations';
 import type { AsyncState } from './eventos';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 /**
  * Página de vendas de um evento. `null` (doc ainda não criado) NÃO é erro — o
@@ -50,7 +50,7 @@ export interface PaginaVendasMutations {
 
 /** Callers de escrita da página, com o tenantId da sessão injetado (ADR-009). */
 export function usePaginaVendasMutations(eventoId: string): PaginaVendasMutations {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
   const salvarMutation = useSalvarConteudoPaginaVendas(eventoId);
   const publicarMutation = usePublicarPaginaVendas(eventoId);

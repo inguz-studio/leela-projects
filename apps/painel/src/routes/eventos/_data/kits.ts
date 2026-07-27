@@ -21,7 +21,7 @@ import { itensKitDoEventoQuery, kitsDoEventoQuery } from '../../../lib/query/que
 import { queryKeys } from '../../../lib/query/keys';
 import { useSalvarKit } from '../../../lib/query/mutations';
 import type { AsyncState } from './eventos';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 /**
  * Kits do evento (do mais caro ao "Sem kit") — TanStack Query (ADR-010). A chave
@@ -47,7 +47,7 @@ export function useKits(eventoId: string | null, reloadKey = 0): AsyncState<Kit[
  * Cadastro reflete sem contador de reload. Contrato {data,loading,error} mantido.
  */
 export function useItensKit(eventoId: string | null): AsyncState<ItemKit[]> {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
   const query = useQuery({
     ...itensKitDoEventoQuery(tenantId ?? '', eventoId ?? ''),
@@ -69,7 +69,7 @@ export interface KitMutations {
 
 /** Callers de escrita de kits/itens, com tenantId + eventoId injetados. */
 export function useKitMutations(eventoId: string): KitMutations {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
   const queryClient = useQueryClient();
   // Escrita via camada de mutation (lib/query): salvarKit + invalidação da

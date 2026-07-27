@@ -6,12 +6,12 @@
 import { useNavigate } from 'react-router-dom';
 import { HubClubes } from './HubClubes';
 import { useClubes } from '../_data/clubes';
-import { useClubesSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 export function HubRoute(): JSX.Element {
   const navigate = useNavigate();
   const { data, loading, error } = useClubes();
-  const session = useClubesSession();
+  const session = useTenantSession();
 
   return (
     <HubClubes

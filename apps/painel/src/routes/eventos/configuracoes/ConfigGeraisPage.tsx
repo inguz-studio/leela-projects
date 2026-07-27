@@ -9,14 +9,14 @@
 import { useOutletContext } from 'react-router-dom';
 import { uploadCapaEvento, type AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { useAtualizarConfiguracoesEvento } from '../../../lib/query/mutations';
-import { useEventosSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { ConfigGeraisForm } from './_components/ConfigGeraisForm';
 import { podeEditarConfiguracoes, podeFlipCupomOnly } from './_lib/gateEvento';
 import type { ConfiguracoesOutletContext } from './ConfiguracoesLayout';
 
 export function ConfigGeraisPage(): JSX.Element {
   const { evento, papel } = useOutletContext<ConfiguracoesOutletContext>();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const mutation = useAtualizarConfiguracoesEvento({
     slug: evento.slug,
     eventoId: evento.id,

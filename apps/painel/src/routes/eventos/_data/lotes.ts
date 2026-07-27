@@ -13,7 +13,7 @@ import type { Lote } from '@leela/core';
 import { lotesDoEventoQuery } from '../../../lib/query/queries';
 import { useRemoverLote, useSalvarLote } from '../../../lib/query/mutations';
 import type { AsyncState } from './eventos';
-import { useEventosSession } from './session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 
 /**
  * Lotes de um evento (todas as modalidades) — a tela agrupa por modalidade e
@@ -46,7 +46,7 @@ export interface LoteMutations {
 
 /** Callers de escrita de lote, com o tenantId da sessão injetado (ADR-009). */
 export function useLoteMutations(eventoId: string): LoteMutations {
-  const session = useEventosSession();
+  const session = useTenantSession();
   const tenantId = session.tenantId;
   const salvarLoteMutation = useSalvarLote(eventoId);
   const removerLoteMutation = useRemoverLote(eventoId);

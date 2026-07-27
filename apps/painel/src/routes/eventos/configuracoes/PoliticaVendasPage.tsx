@@ -14,14 +14,14 @@ import { EmptyState, Skeleton } from '@leela/design-system';
 import type { SalvarPoliticaVendasInput } from '@leela/api-client';
 import { politicaVendasDoEventoQuery } from '../../../lib/query/queries';
 import { useSalvarPoliticaVendas } from '../../../lib/query/mutations';
-import { useEventosSession } from '../_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { PoliticaVendasForm } from './_components/PoliticaVendasForm';
 import { podeEditarConfiguracoes } from './_lib/gateEvento';
 import type { ConfiguracoesOutletContext } from './ConfiguracoesLayout';
 
 export function PoliticaVendasPage(): JSX.Element {
   const { evento, papel } = useOutletContext<ConfiguracoesOutletContext>();
-  const session = useEventosSession();
+  const session = useTenantSession();
   const { data, isPending, error } = useQuery(politicaVendasDoEventoQuery(evento.id));
   const mutation = useSalvarPoliticaVendas({
     eventoId: evento.id,

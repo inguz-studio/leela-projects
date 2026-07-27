@@ -25,7 +25,7 @@ import {
 } from '@leela/design-system';
 import { encerrarParceriaAssessoria } from '@leela/api-client';
 import type { ParceriaAssessoria } from '@leela/core';
-import { useAssessoriasSession } from './_data/session';
+import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useParceriasAssessoria } from './_data/assessorias';
 import {
   formatarDocumentoValor,
@@ -47,7 +47,7 @@ function mensagemErroEncerrar(err: unknown): string {
 export function AssessoriasPage(): JSX.Element {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const session = useAssessoriasSession();
+  const session = useTenantSession();
   const { data: parcerias, loading, error, refetch } = useParceriasAssessoria(session.tenantId);
 
   const [busca, setBusca] = useState('');

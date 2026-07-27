@@ -17,7 +17,7 @@ import { ClubesRoutes } from '../../ClubesRoutes';
 const mocks = vi.hoisted(() => ({
   criarClubePadrao: vi.fn(),
   useClube: vi.fn(),
-  useClubesSession: vi.fn(),
+  useTenantSession: vi.fn(),
 }));
 
 // importOriginal: o teste de registro de rota monta o ClubesRoutes inteiro —
@@ -27,9 +27,9 @@ vi.mock('../../_data/clubes', async (importOriginal) => ({
   criarClubePadrao: mocks.criarClubePadrao,
   useClube: mocks.useClube,
 }));
-vi.mock('../../_data/session', async (importOriginal) => ({
+vi.mock('../../../../lib/session/tenantSession', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  useClubesSession: mocks.useClubesSession,
+  useTenantSession: mocks.useTenantSession,
 }));
 
 function renderPage(): void {
@@ -56,7 +56,7 @@ async function preencherObrigatorios(): Promise<void> {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.useClubesSession.mockReturnValue({
+  mocks.useTenantSession.mockReturnValue({
     status: 'authenticated',
     uid: 'uid-marina',
     tenantId: 'castelo',
