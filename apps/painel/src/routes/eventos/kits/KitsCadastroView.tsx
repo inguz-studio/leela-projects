@@ -6,8 +6,9 @@
 // =============================================================================
 
 import { Link } from 'react-router-dom';
-import { Badge, Button, EmptyState, KpiCard, Skeleton } from '@leela/design-system';
+import { Badge, Button, EmptyState, KpiCard, Skeleton, Thumb } from '@leela/design-system';
 import type { ItemKit, Kit } from '@leela/core';
+import { siglaDe } from '@/lib/sigla';
 import {
   formatPrecoKit,
   itemOrigemBadge,
@@ -116,11 +117,18 @@ export function KitsCadastroView({
 function KitCard({ kit, slug }: { kit: Kit; slug: string }): JSX.Element {
   return (
     <article className="flex flex-col gap-[var(--spacing-3)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-4)]">
-      <header className="flex items-start justify-between gap-[var(--spacing-2)]">
-        <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          {kit.nome}
-        </h3>
-        {kit.preco < 0 && <Badge variant="vitoria">Desconto</Badge>}
+      {/* Miniatura 1:1 da imagem do kit (RN-227 · RN-236) ANTES do nome: quem
+          varre a grade reconhece o kit de vista, sem abrir para descobrir qual
+          é. Decorativa de propósito (alt='') — o nome está ao lado e já é o
+          rótulo. Sem imagem, ou com URL morta, o Thumb cai na sigla. */}
+      <header className="flex items-start gap-[var(--spacing-3)]">
+        <Thumb size="md" src={kit.imagemUrl} fallback={siglaDe(kit.nome)} />
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-[var(--spacing-2)]">
+          <h3 className="text-[length:var(--font-size-md)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+            {kit.nome}
+          </h3>
+          {kit.preco < 0 && <Badge variant="vitoria">Desconto</Badge>}
+        </div>
       </header>
       <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
         {formatPrecoKit(kit.preco)}

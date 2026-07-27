@@ -111,4 +111,83 @@ describe('KitsCadastroView (RN-211/213/215/216)', () => {
     );
     expect(screen.getByText('Nenhum kit configurado')).toBeInTheDocument();
   });
+
+  // ── Miniatura do kit (RN-227 · RN-236) ──────────────────────────────────
+  // O job: reconhecer o kit DE VISTA na grade, antes de abrir. As asserções
+  // olham o que o organizador enxerga na linha do kit, não classe utilitária.
+  describe('miniatura da imagem do kit (RN-227 · RN-236)', () => {
+    /** Card do kit pelo título — a miniatura tem de estar DENTRO dele. */
+    function cardDoKit(nome: string): HTMLElement {
+      const titulo = screen.getByRole('heading', { name: nome });
+      const card = titulo.closest('article');
+      expect(card).not.toBeNull();
+      return card as HTMLElement;
+    }
+
+    it('kit COM imagem exibe a miniatura da própria imagem, adiada (lista)', () => {
+      render(
+        <MemoryRouter>
+          <KitsCadastroView
+            slug="e1"
+            kits={[mkKit({ id: 'ouro', nome: 'Kit Ouro', preco: 120, imagemUrl: 'https://cdn.x/ouro.jpg' })]}
+            itens={[]}
+            loading={false}
+            error={null}
+          />
+        </MemoryRouter>,
+      );
+      const img = cardDoKit('Kit Ouro').querySelector('img');
+      expect(img).not.toBeNull();
+      expect(img).toHaveAttribute('src', 'https://cdn.x/ouro.jpg');
+      expect(img).toHaveAttribute('loading', 'lazy');
+    });
+
+    it('cada kit mostra a SUA imagem — é isso que separa um do outro na grade', () => {
+      render(
+        <MemoryRouter>
+          <KitsCadastroView
+            slug="e1"
+            kits={[
+              mkKit({ id: 'ouro', nome: 'Kit Ouro', preco: 120, imagemUrl: 'https://cdn.x/ouro.jpg' }),
+              mkKit({ id: 'prata', nome: 'Kit Prata', preco: 60, imagemUrl: 'https://cdn.x/prata.jpg' }),
+            ]}
+            itens={[]}
+            loading={false}
+            error={null}
+          />
+        </MemoryRouter>,
+      );
+      expect(cardDoKit('Kit Ouro').querySelector('img')).toHaveAttribute('src', 'https://cdn.x/ouro.jpg');
+      expect(cardDoKit('Kit Prata').querySelector('img')).toHaveAttribute('src', 'https://cdn.x/prata.jpg');
+    });
+
+    it('kit SEM imagem cai na sigla e não renderiza img (nada de quadrado quebrado)', () => {
+      view();
+      const card = cardDoKit('Kit Ouro');
+      expect(card.querySelector('img')).toBeNull();
+      expect(card).toHaveTextContent('K');
+    });
+
+    it('a miniatura é decorativa: o nome do kit segue sendo o rótulo da linha', () => {
+      render(
+        <MemoryRouter>
+          <KitsCadastroView
+            slug="e1"
+            kits={[mkKit({ id: 'ouro', nome: 'Kit Ouro', preco: 120, imagemUrl: 'https://cdn.x/ouro.jpg' })]}
+            itens={[]}
+            loading={false}
+            error={null}
+          />
+        </MemoryRouter>,
+      );
+      expect(cardDoKit('Kit Ouro').querySelector('img')).toHaveAttribute('alt', '');
+      expect(screen.getByRole('heading', { name: 'Kit Ouro' })).toBeInTheDocument();
+    });
+
+    it('a miniatura não rouba o caminho de edição do kit', () => {
+      view();
+      // 4 kits na fixture → 4 atalhos "Editar", um por card.
+      expect(screen.getAllByRole('link', { name: 'Editar' })).toHaveLength(4);
+    });
+  });
 });
