@@ -25,6 +25,7 @@
 // =============================================================================
 
 import { useState } from 'react';
+import { ImageOff } from 'lucide-react';
 import { Button, FileInput, Thumb, type ThumbProps } from '@leela/design-system';
 import { problemaDoArquivoImagem, IMAGEM_UPLOAD_MAX_BYTES } from '@leela/api-client';
 import { ajustarProporcaoImagem } from './ajustarProporcao';
@@ -163,12 +164,21 @@ export function ImageUploadField({
           // Miniatura da imagem ATUAL ao lado do campo (RN-236). `lazy={false}`:
           // é uma imagem só e já visível na abertura do formulário — adiar aqui
           // atrasaria justamente o que a pessoa veio conferir.
+          //
+          // O `fallback` NÃO é opcional aqui. Esta miniatura só monta quando
+          // `temImagem` é verdadeiro, então a única forma de ela cair no
+          // fallback é a URL ter morrido — e sem conteúdo o Thumb renderiza
+          // caixa VAZIA, que a pessoa lê como "não tem capa" bem quando existe
+          // uma capa salva que o navegador não conseguiu baixar. Ícone, não
+          // texto: a caixa mede 96px de largura e o rótulo do campo já está
+          // escrito acima dela.
           <Thumb
             src={value}
             alt={previewAlt}
             ratio={previewMiniatura}
             size="lg"
             lazy={false}
+            fallback={<ImageOff />}
           />
         ) : (
           <div className={previewCls}>

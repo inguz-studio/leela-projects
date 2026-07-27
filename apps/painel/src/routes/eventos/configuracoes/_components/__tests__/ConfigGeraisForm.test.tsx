@@ -243,11 +243,20 @@ describe('ConfigGeraisForm (S304-T2)', () => {
       expect(screen.queryByAltText('Prévia da capa do evento')).not.toBeInTheDocument();
     });
 
-    it('capa com URL morta degrada para o fallback em vez de deixar quadrado quebrado', () => {
-      setup({ evento: fakeEvento({ imagemUrl: 'https://cdn.x/revogada.jpg' }) });
-      const img = screen.getByAltText('Prévia da capa do evento');
-      fireEvent.error(img);
-      expect(screen.queryByAltText('Prévia da capa do evento')).not.toBeInTheDocument();
-    });
+    it.each([true, false])(
+      'capa com URL morta degrada para o fallback em vez de deixar caixa vazia (podeEditar=%s)',
+      (podeEditar) => {
+        setup({ podeEditar, evento: fakeEvento({ imagemUrl: 'https://cdn.x/revogada.jpg' }) });
+        const img = screen.getByAltText('Prévia da capa do evento');
+        const caixa = img.parentElement as HTMLElement;
+        fireEvent.error(img);
+        expect(screen.queryByAltText('Prévia da capa do evento')).not.toBeInTheDocument();
+        // Sumir a img não basta: sem `fallback` o Thumb renderiza caixa VAZIA, e
+        // a pessoa lê "não tem capa" bem quando existe uma capa salva que o
+        // navegador não baixou. Esta miniatura só monta com imagemUrl
+        // preenchida, então o fallback aqui significa exatamente "URL morta".
+        expect(caixa.querySelector('svg')).not.toBeNull();
+      },
+    );
   });
 });

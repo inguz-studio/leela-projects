@@ -11,6 +11,7 @@
 // =============================================================================
 
 import * as React from 'react';
+import { ImageOff } from 'lucide-react';
 import { Badge, Button, Input, Switch, Thumb, useToast } from '@leela/design-system';
 import { CAPA_EVENTO_MAX_BYTES, type AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { temVenda, type Evento } from '@leela/core';
@@ -201,12 +202,17 @@ export function ConfigGeraisForm({
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
               Imagem de capa
             </span>
+            {/* `fallback` obrigatório pelo mesmo motivo do ramo editável: esta
+                miniatura só monta com `imagemUrl` preenchida, então cair no
+                fallback significa URL morta — e caixa vazia leria como "sem
+                capa" justamente quando existe capa salva. */}
             <Thumb
               src={values.imagemUrl}
               alt="Prévia da capa do evento"
               ratio="wide"
               size="lg"
               lazy={false}
+              fallback={<ImageOff />}
             />
           </div>
         ) : null}
