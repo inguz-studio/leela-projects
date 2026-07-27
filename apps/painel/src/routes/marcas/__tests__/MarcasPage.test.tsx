@@ -162,4 +162,59 @@ describe('MarcasPage', () => {
     expect(uid).toBe('u1');
     expect(marcaId).toBe('cdl-wellness');
   });
+
+  // ── Miniatura do logo (RN-171 · RN-236) ─────────────────────────────────
+  // O job: reconhecer a marca DE VISTA na lista, antes de abrir para editar.
+  describe('miniatura do logo 1:1 (RN-171 · RN-236)', () => {
+    /** Linha da marca pelo nome — a miniatura tem de estar na MESMA linha. */
+    function linhaDaMarca(nome: string): HTMLElement {
+      const celula = screen.getByText(nome);
+      const linha = celula.closest('tr');
+      expect(linha).not.toBeNull();
+      return linha as HTMLElement;
+    }
+
+    it('marca COM logo exibe a miniatura do próprio logo, adiada (lista)', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca({ logoUrl: 'https://cdn.x/cdl.png' })]);
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      const img = screen.getByAltText('Logo de CDL Wellness');
+      expect(img).toHaveAttribute('src', 'https://cdn.x/cdl.png');
+      expect(img).toHaveAttribute('loading', 'lazy');
+      // Na linha da marca, não perdida em outro canto da tabela.
+      expect(linhaDaMarca('CDL Wellness')).toContainElement(img);
+    });
+
+    it('cada marca mostra o SEU logo — é isso que separa uma da outra na lista', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([
+        marca({ id: 'cdl', nome: 'CDL Wellness', logoUrl: 'https://cdn.x/cdl.png' }),
+        marca({ id: 'growth', nome: 'Growth', logoUrl: 'https://cdn.x/growth.png' }),
+      ]);
+      renderPage();
+      await screen.findByText('Growth');
+
+      expect(linhaDaMarca('CDL Wellness').querySelector('img')).toHaveAttribute(
+        'src',
+        'https://cdn.x/cdl.png',
+      );
+      expect(linhaDaMarca('Growth').querySelector('img')).toHaveAttribute(
+        'src',
+        'https://cdn.x/growth.png',
+      );
+    });
+
+    it('marca SEM logo cai na sigla e não renderiza img (nada de quadrado quebrado)', async () => {
+      setSession('u1');
+      mocks.listarMarcas.mockResolvedValue([marca()]);
+      renderPage();
+      await screen.findByText('CDL Wellness');
+
+      const linha = linhaDaMarca('CDL Wellness');
+      expect(linha.querySelector('img')).toBeNull();
+      expect(linha).toHaveTextContent('C');
+    });
+  });
 });
