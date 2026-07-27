@@ -66,3 +66,64 @@ Nenhum navegador aberto. Nenhuma chamada de rede real.
 
 Sem emergência. Árvore limpa nos arquivos da lane; tudo commitado. Report em
 `outputs/leela-build-2d6ee98d/PIX-CARRINHO-REPORT.md`.
+
+---
+
+# Apêndice · review ANTAGONISTA (lane PIXCARRINHO-REV, contexto fresco, 2026-07-26)
+
+**Veredito: APROVADO-COM-FIXES.** Report em
+`outputs/leela-build-2d6ee98d/PIXCARRINHO-REV-REPORT.md`.
+
+## O alvo nº 1 procedia
+
+A pergunta que o produtor deixou no report — *"a negativa do T1 pode virar
+permanente com o Asaas?"* — tinha resposta **sim**, e o caminho é banal: o
+`cancelCharge` vinga no Asaas e a resposta se perde na volta. Da segunda
+tentativa em diante o Asaas responde "essa cobrança já foi removida", que é um
+4xx — o mesmo canal por onde chega "não consegui cancelar". O adapter tratava
+os dois como falha; o pré-voo relia, achava tudo no lugar e negava. Como a
+chave da sentinela é determinística, **toda** tentativa daquele carrinho
+repetia o mesmo erro, e a mensagem mandava o comprador tentar de novo
+eternamente.
+
+Provado em dois níveis: matriz de contrato do `DELETE` (3 das 12 respostas
+plausíveis travavam) e `AT-R1` contra o Emulator (12 tentativas seguidas
+negadas, estado imóvel — **o domínio não tem escape próprio**, todo o
+destravamento dependia de uma distinção que o adapter não sabia fazer).
+
+## Fixes
+
+| Achado | Sev | Fix |
+|---|---|---|
+| **A1-REV** deadlock permanente de compra | ALTA | `AsaasProvider.cancelCharge` reconcilia por leitura (`GET /payments/{id}`) quando o DELETE não prova a morte. Sucesso só com resposta POSITIVA (`DELETED` ou 404); `RECEIVED`/`CONFIRMED`/`PENDING`/`RESTORED`/sem-`status`/GET-que-falha continuam LANÇANDO. Reconciliação só em 4xx≠429 — 5xx e rede caída seguem custando UMA chamada |
+| **A2-REV** "Function-only" era comentário | MÉDIA | 3 testes nas Rules REAIS negando `carrinhos`, `carrinhos/{id}/ciclos/{n}` e `cobrancasPixAtivas` ao cliente, com o uid DONO dos docs |
+| **A3-REV** sem teto de espera do gateway | MÉDIA | **ESCALADO** (item 28 do painel) — número é decisão de operação |
+| **A4-REV** Mock repete o deadlock no preview | BAIXA | **ESCALADO** (item 29) — afrouxar guarda de teste-duplo é decisão do Vitor |
+| **A5-REV** saturação do cron sem sinal | BAIXA | **ESCALADO** (item 30) |
+
+## O que sobreviveu ao ataque
+
+Pré-voo com a anterior sendo PAGA no meio (`AT-R2`) · replay idempotente NÃO
+alcançado pelo gate do carrinho (curto-circuito roda antes do pré-voo,
+verificado no código) · abertura não sequestrável e prazo não renovável
+(`AT-R3`/`R3b`, 20 recotações) · concorrência N=8 na abertura E na reabertura
+com **1** registro de ciclo (`AT-R5`/`R5b`/`R5c` — a fase 2 não conta duas
+vezes) · fail-open medido e igual ao declarado (`AT-R4`) · backlog de 205
+drenando em 2 rodadas com os dois instantes (`AT-R6`) · vocabulário do carrinho
+não vaza para pedido/pagamento (`AT-R7b`).
+
+**Fixado, e não estava escrito em lugar nenhum:** a trava do PIX é por
+CARRINHO, o prazo da RN-158 é por EVENTO — trocar o conteúdo do carrinho
+depois dos 15 min não ganha prazo novo (`AT-R7`).
+
+**Vetor 9 (os 3 testes que mudaram de lado): auditados um a um, APROVADOS.**
+Roteiro preservado, asserções acrescentadas, a única inversão é a decisão do
+Vitor, nenhuma fixture tocada.
+
+## Territórios e disciplina
+
+Emulator exclusivo via `emulators:exec` · preview do Vitor (:5273/:8180)
+intocado · worktree `C:\dev\LEELA-navfix` não tocado · nenhum navegador ·
+nenhuma rede real (Asaas por `fetchFn` injetado; `fetch` global lança na
+suíte) · `npm run build` antes de cada `emulators:exec` · **zero asserção
+removida** em teste existente.
