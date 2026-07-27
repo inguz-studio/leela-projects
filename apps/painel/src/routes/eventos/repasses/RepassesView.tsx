@@ -45,10 +45,10 @@ export interface RepassesViewProps {
   dbError: Error | null;
   onRetryDb: () => void;
 
-  // Solicitar repasse (T3) — eventoId opcional (RN-349 · associação exata)
+  // Solicitar repasse (T3) — eventoId OBRIGATÓRIO (RN-369 · DEC-0727C)
   solicitarRunning: boolean;
   /** Solicita o repasse; resolve `true` em sucesso (o view fecha o modal). */
-  onSolicitar: (valor: number, eventoId?: string) => Promise<boolean>;
+  onSolicitar: (valor: number, eventoId: string) => Promise<boolean>;
 
   // Histórico (T4)
   historico: Repasse[];
@@ -110,9 +110,19 @@ export function RepassesView({
     () => abaterRepassesVivos(porEvento, associacao),
     [porEvento, associacao],
   );
+  // RN-369 — o modal escolhe entre estes, e cada um carrega o PRÓPRIO teto
+  // (RN-367/368): o disponível já abatido dos repasses vivos, exatamente o
+  // número que a Caixa daquele evento mostra. Sai de `porEventoAbatido`, não de
+  // `porEvento`: o teto sem abatimento seria maior que o real e o servidor
+  // recusaria um valor que o modal aceitou.
   const eventosAssociaveis = React.useMemo(
-    () => porEvento.map((l) => ({ id: l.eventoId, nome: l.nome })),
-    [porEvento],
+    () =>
+      porEventoAbatido.map((l) => ({
+        id: l.eventoId,
+        nome: l.nome,
+        disponivel: l.disponivelEstimado,
+      })),
+    [porEventoAbatido],
   );
 
   return (

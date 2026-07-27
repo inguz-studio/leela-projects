@@ -1,15 +1,22 @@
 // =============================================================================
 // SolicitarRepasseModal — modal "Solicitar repasse" (E09s-L3-T3). Lista os
-// dados bancários salvos (MASCARADOS — RN-354) como destino + campo de valor
-// + associação OPCIONAL a um evento (RN-349 · LEELA-BEPEND-T2): o organizador
-// escolhe de qual evento este saque "veio"; o servidor valida o evento e
-// grava `eventoId` no doc (Rules congelam — a UI só sugere).
+// dados bancários salvos (MASCARADOS — RN-354) como destino, o evento de onde
+// o dinheiro sai e o valor.
 //
-// Espelho CLIENT de RN-352 (avaliarSolicitacao): valor > disponível (ou <= 0)
-// ⇒ botão bloqueado + hint. Mas o SERVIDOR é autoritativo: `requestRepasse`
-// relê o disponível e pode recusar (failed-precondition) — o container trata
-// esse erro com Toast. Sucesso ⇒ o container fecha o modal e o histórico ganha
-// o novo item em `solicitado`.
+// DEC-0727C · RN-369: o evento é OBRIGATÓRIO. O default "Sem associação (saldo
+// geral)" morreu — era o caminho mais provável de uso e criava um repasse que
+// não abatia evento nenhum, o R$ 500 fantasma do §P-IAMENU-2 (escalado E-2 da
+// review CAIXADISP-REV). Verbatim do dono: repasse sempre amarrado a um evento.
+//
+// O teto exibido e validado é o disponível DAQUELE evento (RN-367/368) — o
+// MESMO número do card "Disponível para Repasse" da Caixa. Coerência ponta a
+// ponta: o número que a pessoa leu na aba do evento é o número que o modal
+// aceita e o que o servidor autoriza. O saldo consolidado continua sendo um
+// teto (RN-352), com hint próprio quando ele é o que barra.
+//
+// O SERVIDOR é autoritativo: `requestRepasse` relê os dois tetos e pode recusar
+// (failed-precondition) — o container trata com Toast, e o erro tipado do guard
+// por evento vira frase com número (`repasseErrorMessage`).
 // =============================================================================
 
 import * as React from 'react';
@@ -19,10 +26,15 @@ import { formatBRL } from '../_lib/format';
 import { rotuloTipoConta } from '../_lib/dadosBancariosForm';
 import { avaliarSolicitacao } from '../_lib/solicitarForm';
 
-/** Opção de associação do repasse (RN-349) — eventos com movimento. */
+/** Opção de associação do repasse (RN-349/369) — eventos com movimento. */
 export interface EventoAssociavel {
   id: string;
   nome: string;
+  /**
+   * Disponível DAQUELE evento (RN-367) — o mesmo número do card da Caixa.
+   * `null` = evento sem termo comercial: indeterminado, não zero.
+   */
+  disponivel: number | null;
 }
 
 export interface SolicitarRepasseModalProps {
@@ -30,17 +42,17 @@ export interface SolicitarRepasseModalProps {
   onOpenChange: (open: boolean) => void;
   /** Dados bancários salvos (destino do repasse) — mascarados. */
   dados: DadosBancarios;
-  /** Disponível do saldo (espelho de RN-352; o servidor reconfere). */
+  /** Saldo consolidado do tenant (espelho de RN-352; o servidor reconfere). */
   disponivel: number;
-  /** Eventos associáveis (RN-349) — vazio esconde o seletor. */
+  /** Eventos associáveis (RN-349) — sem eles não há repasse a solicitar. */
   eventos: EventoAssociavel[];
   running: boolean;
   /** Confirma; resolve `true` em sucesso (o container fecha o modal). */
-  onConfirmar: (valor: number, eventoId?: string) => Promise<boolean>;
+  onConfirmar: (valor: number, eventoId: string) => Promise<boolean>;
 }
 
-/** Valor sentinela do "sem associação" no Select (nunca vai ao servidor). */
-const SEM_EVENTO = '';
+/** Valor do placeholder do Select — nunca vai ao servidor (RN-369). */
+const NENHUM_EVENTO = '';
 
 export function SolicitarRepasseModal({
   open,
@@ -52,25 +64,32 @@ export function SolicitarRepasseModal({
   onConfirmar,
 }: SolicitarRepasseModalProps): JSX.Element {
   const [texto, setTexto] = React.useState('');
-  const [eventoId, setEventoId] = React.useState<string>(SEM_EVENTO);
+  const [eventoId, setEventoId] = React.useState<string>(NENHUM_EVENTO);
 
-  // Zera os campos a cada abertura.
+  // Zera os campos a cada abertura. Um único evento associável é pré-escolhido
+  // — não há decisão a tomar, e obrigar o clique só adicionaria um passo.
+  const unico = eventos.length === 1 ? eventos[0] : undefined;
   React.useEffect(() => {
     if (open) {
       setTexto('');
-      setEventoId(SEM_EVENTO);
+      setEventoId(unico ? unico.id : NENHUM_EVENTO);
     }
-  }, [open]);
+  }, [open, unico]);
 
-  const avaliacao = avaliarSolicitacao(texto, disponivel);
+  const eventoEscolhido =
+    eventoId === NENHUM_EVENTO ? null : (eventos.find((e) => e.id === eventoId) ?? null);
+  const avaliacao = avaliarSolicitacao({
+    texto,
+    eventoId: eventoEscolhido === null ? null : eventoEscolhido.id,
+    disponivelDoEvento: eventoEscolhido?.disponivel ?? null,
+    disponivelDoTenant: disponivel,
+  });
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!avaliacao.podeEnviar || avaliacao.valor === null || running) return;
-    void onConfirmar(
-      avaliacao.valor,
-      eventoId === SEM_EVENTO ? undefined : eventoId,
-    );
+    if (!avaliacao.podeEnviar || avaliacao.valor === null || eventoEscolhido === null) return;
+    if (running) return;
+    void onConfirmar(avaliacao.valor, eventoEscolhido.id);
   }
 
   return (
@@ -106,8 +125,40 @@ export function SolicitarRepasseModal({
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">{dados.titular}</span>
         </div>
 
+        {/* Evento (RN-369) — OBRIGATÓRIO e primeiro: ele decide o teto que o
+            campo de valor vai respeitar, então perguntar depois seria pedir um
+            número contra um limite que a pessoa ainda não conhece. */}
+        {eventos.length > 0 ? (
+          <Select
+            id="repasse-evento"
+            label="Evento deste repasse"
+            value={eventoId}
+            onChange={(e) => setEventoId(e.target.value)}
+            disabled={running}
+            options={[
+              ...(unico ? [] : [{ value: NENHUM_EVENTO, label: 'Selecione o evento' }]),
+              ...eventos.map((ev) => ({ value: ev.id, label: ev.nome })),
+            ]}
+          />
+        ) : (
+          <p role="note" className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+            Nenhum evento com receita confirmada para repassar.
+          </p>
+        )}
+
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)] [font-variant-numeric:tabular-nums]">
-          Disponível para saque: <strong className="text-[var(--text-primary)]">{formatBRL(disponivel)}</strong>
+          {eventoEscolhido === null ? (
+            <>Escolha o evento para ver quanto ele tem disponível.</>
+          ) : eventoEscolhido.disponivel === null ? (
+            <>Este evento ainda não tem termo comercial.</>
+          ) : (
+            <>
+              Disponível neste evento:{' '}
+              <strong className="text-[var(--text-primary)]">
+                {formatBRL(eventoEscolhido.disponivel)}
+              </strong>
+            </>
+          )}
         </p>
 
         <Input
@@ -120,26 +171,10 @@ export function SolicitarRepasseModal({
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           placeholder="0,00"
-          disabled={running}
+          disabled={running || eventos.length === 0}
           {...(avaliacao.hint ? { 'aria-describedby': 'repasse-valor-hint' } : {})}
         />
 
-        {/* Associação a evento (RN-349) — OPCIONAL: o saque continua saindo
-            do saldo consolidado; a associação só rotula de qual evento veio.
-            O servidor valida o evento (fail-closed) e grava o campo. */}
-        {eventos.length > 0 && (
-          <Select
-            id="repasse-evento"
-            label="Associar a um evento (opcional)"
-            value={eventoId}
-            onChange={(e) => setEventoId(e.target.value)}
-            disabled={running}
-            options={[
-              { value: SEM_EVENTO, label: 'Sem associação (saldo geral)' },
-              ...eventos.map((ev) => ({ value: ev.id, label: ev.nome })),
-            ]}
-          />
-        )}
         {avaliacao.hint && (
           <p id="repasse-valor-hint" role="note" className="text-[length:var(--font-size-sm)] text-[var(--text-danger)]">
             {avaliacao.hint}

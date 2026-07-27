@@ -35,18 +35,17 @@ export function RepassesPage(): JSX.Element {
   const historico = useHistoricoRepasses(tenantId);
   const solicitar = useRequestRepasse(tenantId ?? '');
 
-  // Solicita o repasse. O servidor relê o disponível e é autoritativo (RN-352):
-  // failed-precondition ⇒ Toast danger (a UI não adivinha o motivo). Sucesso ⇒
+  // Solicita o repasse. O servidor relê os DOIS tetos e é autoritativo
+  // (RN-352 tenant + RN-368 evento): failed-precondition ⇒ Toast danger, com a
+  // frase que o `repasseErrorMessage` deriva do erro TIPADO — a UI não adivinha
+  // o motivo, mas também não esconde o número que o servidor mandou. Sucesso ⇒
   // Toast + o histórico ganha o item em `solicitado` (query invalidada).
-  // RN-349: `eventoId` opcional associa o repasse a um evento — o servidor
-  // valida (evento do próprio tenant) e grava; a UI só sugere.
+  // RN-369: `eventoId` é obrigatório — o servidor valida que o evento é do
+  // próprio tenant e grava a associação.
   const onSolicitar = useCallback(
-    async (valor: number, eventoId?: string): Promise<boolean> => {
+    async (valor: number, eventoId: string): Promise<boolean> => {
       try {
-        await solicitar.mutateAsync({
-          valor,
-          ...(eventoId !== undefined ? { eventoId } : {}),
-        });
+        await solicitar.mutateAsync({ valor, eventoId });
         toast({
           variant: 'success',
           title: 'Repasse solicitado',

@@ -16,31 +16,82 @@ describe('parseValorReais', () => {
   });
 });
 
-describe('avaliarSolicitacao (espelho de RN-352)', () => {
+// A assinatura antiga (texto, disponivelDoTenant) descrevia o mundo em que o
+// evento era opcional e o único teto era o do tenant. A DEC-0727C encerrou os
+// dois: o evento é obrigatório (RN-369) e o teto que manda é o DAQUELE evento
+// (RN-368). As asserções trocadas ganharam substitutas mais fortes — cada uma
+// prova qual dos dois tetos barrou, o que a versão anterior nem conseguia
+// distinguir.
+const CASTELO = 'meia-floripa-2026';
+
+/** Caso base: evento com 8.500 liberados, tenant com folga. */
+function av(texto: string, over: Partial<Parameters<typeof avaliarSolicitacao>[0]> = {}) {
+  return avaliarSolicitacao({
+    texto,
+    eventoId: CASTELO,
+    disponivelDoEvento: 8500,
+    disponivelDoTenant: 17000,
+    ...over,
+  });
+}
+
+describe('avaliarSolicitacao (espelho de RN-352 + RN-368/369)', () => {
   it('vazio → não pode enviar, sem hint (nada digitado ainda)', () => {
-    expect(avaliarSolicitacao('', 8500)).toEqual({ valor: null, podeEnviar: false, hint: null });
+    expect(av('')).toEqual({ valor: null, podeEnviar: false, hint: null });
   });
 
-  it('valor dentro do disponível → pode enviar', () => {
-    const r = avaliarSolicitacao('5000', 8500);
+  it('valor dentro do disponível do evento → pode enviar', () => {
+    const r = av('5000');
     expect(r.podeEnviar).toBe(true);
     expect(r.valor).toBe(5000);
     expect(r.hint).toBeNull();
   });
 
-  it('valor exatamente igual ao disponível → pode enviar', () => {
-    expect(avaliarSolicitacao('8500', 8500).podeEnviar).toBe(true);
+  it('valor exatamente igual ao disponível do evento → pode enviar', () => {
+    expect(av('8500').podeEnviar).toBe(true);
   });
 
-  it('valor acima do disponível → bloqueado + hint (servidor reconfere)', () => {
-    const r = avaliarSolicitacao('9000', 8500);
+  it('valor acima do disponível DO EVENTO → bloqueado + hint (RN-368)', () => {
+    const r = av('9000');
     expect(r.podeEnviar).toBe(false);
-    expect(r.hint).toBe('O valor excede o disponível para saque.');
+    expect(r.hint).toBe('O valor excede o disponível deste evento.');
   });
 
   it('valor <= 0 → bloqueado + hint', () => {
-    expect(avaliarSolicitacao('0', 8500).podeEnviar).toBe(false);
-    expect(avaliarSolicitacao('-100', 8500).podeEnviar).toBe(false);
-    expect(avaliarSolicitacao('0', 8500).hint).toBe('Informe um valor válido (maior que zero).');
+    expect(av('0').podeEnviar).toBe(false);
+    expect(av('-100').podeEnviar).toBe(false);
+    expect(av('0').hint).toBe('Informe um valor válido (maior que zero).');
+  });
+
+  // RN-369 — sem evento não há solicitação. O "sem associação" era o default e
+  // criava o repasse que não abatia evento nenhum (§P-IAMENU-2).
+  it('SEM evento escolhido → bloqueado, e o hint só aparece depois do número', () => {
+    expect(av('', { eventoId: null })).toEqual({ valor: null, podeEnviar: false, hint: null });
+    const comValor = av('5000', { eventoId: null });
+    expect(comValor.podeEnviar).toBe(false);
+    expect(comValor.hint).toBe('Escolha o evento deste repasse.');
+  });
+
+  it('evento sem termo comercial → bloqueado com a razão, nunca com "excede"', () => {
+    const r = av('10', { disponivelDoEvento: null });
+    expect(r.podeEnviar).toBe(false);
+    expect(r.hint).toBe(
+      'Este evento ainda não tem termo comercial: não há disponível para repassar.',
+    );
+  });
+
+  // Os dois tetos COMPÕEM, e o hint diz qual barrou: cabe no evento, não cabe
+  // no caixa consolidado (normalmente a janela D+N — RN-348).
+  it('cabe no evento mas não no tenant → hint distingue os dois tetos (RN-352)', () => {
+    const r = av('8000', { disponivelDoTenant: 3000 });
+    expect(r.podeEnviar).toBe(false);
+    expect(r.hint).toBe(
+      'O valor cabe neste evento, mas excede o saldo disponível da sua conta.',
+    );
+  });
+
+  it('o teto do EVENTO é checado primeiro — o hint específico vence o genérico', () => {
+    const r = av('9000', { disponivelDoTenant: 100 });
+    expect(r.hint).toBe('O valor excede o disponível deste evento.');
   });
 });
