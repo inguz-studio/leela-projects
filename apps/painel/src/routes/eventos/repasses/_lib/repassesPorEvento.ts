@@ -26,6 +26,7 @@ import {
   computeLiberadoPorEvento,
   computeRetido,
   RETENCAO_REPASSE_PCT_DEFAULT,
+  roundMoney,
 } from '@leela/core';
 import type { Repasse } from '@leela/core';
 import type { EventoFinanceiroRow } from '../../../../lib/query/queries';
@@ -141,7 +142,12 @@ export interface AssociacaoRepasses {
  * paralela que deixava a Caixa e a macro divergirem por descuido.
  *
  * Doc sem `eventoId` (legado) cai em `semAssociacao` — a UI o declara,
- * honesto, em vez de atribuí-lo a um evento por adivinhação. @pure
+ * honesto, em vez de atribuí-lo a um evento por adivinhação.
+ *
+ * A Σ é fechada em CENTAVOS a cada parcela (`roundMoney`, a convenção monetária
+ * do core): dois repasses de R$ 100,10 e R$ 200,20 somados em float cru dão
+ * 300.29999999999995, e essa Σ não fica só na tela — ela vai crua para o CSV da
+ * Caixa (`gerarCsvFinanceiro`), que é a planilha de conciliação. @pure
  */
 export function associarRepassesPorEvento(
   historico: readonly Repasse[],
@@ -153,11 +159,14 @@ export function associarRepassesPorEvento(
     if (!comprometeSaldo(r.estado)) continue; // estornado (cancelado/recusado) devolve
     if (r.eventoId === undefined) {
       semAssociacao.qtd += 1;
-      semAssociacao.total += r.valor;
+      semAssociacao.total = roundMoney(semAssociacao.total + r.valor);
       continue;
     }
     const atual = porEvento.get(r.eventoId) ?? { qtd: 0, total: 0 };
-    porEvento.set(r.eventoId, { qtd: atual.qtd + 1, total: atual.total + r.valor });
+    porEvento.set(r.eventoId, {
+      qtd: atual.qtd + 1,
+      total: roundMoney(atual.total + r.valor),
+    });
   }
 
   return { porEvento, semAssociacao };

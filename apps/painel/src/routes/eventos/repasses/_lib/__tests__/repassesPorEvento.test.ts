@@ -14,6 +14,9 @@ import {
 } from '@leela/core';
 import type { Repasse, Timestamp } from '@leela/core';
 import type { EventoFinanceiroRow } from '../../../../../lib/query/queries';
+// A Σ desta associação é o que a Caixa do evento exporta no CSV — a coerência
+// entre os dois módulos é de produção (FinanceiroPage), não só de teste.
+import { gerarCsvFinanceiro } from '../../../_lib/financeiro';
 import {
   abaterRepassesVivos,
   associarRepassesPorEvento,
@@ -175,6 +178,27 @@ describe('associarRepassesPorEvento (campo EXATO — fim de heurística)', () =>
     const { porEvento, semAssociacao } = associarRepassesPorEvento([]);
     expect(porEvento.size).toBe(0);
     expect(semAssociacao).toEqual({ qtd: 0, total: 0 });
+  });
+
+  // Achado R-1 da review CAIXADISP-REV: a Σ era acumulada em float cru e o CSV
+  // da Caixa imprime esse número SEM formatar — a planilha de conciliação
+  // recebia "300.29999999999995". Os DOIS eixos fecham em centavos.
+  it('a Σ fecha em CENTAVOS nos dois eixos (o CSV da Caixa imprime esta Σ crua)', () => {
+    const { porEvento, semAssociacao } = associarRepassesPorEvento([
+      repasse('r1', 'pago', 100.1, 'ev-a'),
+      repasse('r2', 'solicitado', 200.2, 'ev-a'),
+      repasse('r3', 'pago', 100.1),
+      repasse('r4', 'aprovado', 200.2),
+    ]);
+    const doEvento = porEvento.get('ev-a');
+    expect(doEvento).toEqual({ qtd: 2, total: 300.3 });
+    expect(semAssociacao).toEqual({ qtd: 2, total: 300.3 });
+    // A prova que interessa é a do dígito, não a do arredondamento do expect:
+    // sem `roundMoney` na acumulação, `String(total)` = '300.29999999999995'.
+    expect(String(doEvento?.total)).toBe('300.3');
+    expect(gerarCsvFinanceiro(fin({ receitaBruta: 10000 }), doEvento)).toContain(
+      'Resumo,Valor repassado (R$),300.3',
+    );
   });
 
   // A coerência que a DEC-0727 exige entre a Caixa do evento e a visão macro é
