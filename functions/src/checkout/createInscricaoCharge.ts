@@ -2075,15 +2075,24 @@ export async function createInscricaoChargeCore(
  * Ninguém vive esse caminho no dia a dia — ele exige comprador novo, com uma
  * cobrança PIX anterior vencida e não confirmada, e o gateway devagar em toda
  * chamada. Mas é ELE que o teto da Function precisa acomodar.
+ *
+ * EXPORTADO para o teste (review ASAASTETO-REV): enquanto a suíte só conhecia
+ * a própria cópia da lista, uma viagem a mais aqui só doía ATRAVÉS da
+ * derivação — e bastava trocar a expressão por um literal para que os dois
+ * defeitos se cancelassem em silêncio. Com o número visível, a divergência é
+ * checada contra a fonte, não contra a lembrança dela.
  */
-const CHAMADAS_ASAAS_PIOR_CASO = 7;
+export const CHAMADAS_ASAAS_PIOR_CASO = 7;
 
 /**
  * Folga para o que NÃO é Asaas dentro da mesma invocação: leitura de evento/
  * lote/termos, validação de tamanhos, a transação que cria pedido +
  * pagamento + inscritos + sentinela, e a transação que grava o chargeId.
+ *
+ * EXPORTADA pelo mesmo motivo do número acima: a relação teto = gateway +
+ * folga só é verificável se os dois lados dela forem legíveis pelo teste.
  */
-const FOLGA_NAO_GATEWAY_SEGUNDOS = 15;
+export const FOLGA_NAO_GATEWAY_SEGUNDOS = 15;
 
 /**
  * Teto da callable do checkout (DEC-0727 · T3).
@@ -2098,6 +2107,13 @@ const FOLGA_NAO_GATEWAY_SEGUNDOS = 15;
  * DERIVADO, nunca digitado: sai de `ASAAS_TIMEOUT_MS`. Se o dono mudar os
  * 15s, este número acompanha no mesmo commit — dois números soltos derivam,
  * e o que deriva mente. `tetoCallable.test.ts` prende a relação.
+ *
+ * ⚠️ LIMITE HONESTO DA PROVA (review ASAASTETO-REV): nenhum teste consegue
+ * distinguir esta expressão de um literal `120` — hoje as duas valem o mesmo
+ * número, e igualdade não tem memória de como foi calculada. O que o teste
+ * garante, e é o que importa, é que a DERIVA doa: mexer no teto por chamada
+ * ou acrescentar uma viagem ao gateway quebra a suíte, com ou sem literal no
+ * lugar da conta.
  *
  * ⚠️ Isto é um TETO, não uma expectativa: o caminho normal do checkout
  * resolve em menos de um segundo de gateway. E o comprador não olha para

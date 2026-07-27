@@ -18,7 +18,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import { ASAAS_TIMEOUT_MS } from '../payments/asaasProvider';
-import { TETO_CALLABLE_CHECKOUT_SEGUNDOS } from '../checkout/createInscricaoCharge';
+import {
+  CHAMADAS_ASAAS_PIOR_CASO,
+  FOLGA_NAO_GATEWAY_SEGUNDOS,
+  TETO_CALLABLE_CHECKOUT_SEGUNDOS,
+} from '../checkout/createInscricaoCharge';
 
 /**
  * As chamadas ao Asaas que o pior caso da callable faz. A lista está aqui,
@@ -77,5 +81,35 @@ describe('DEC-0727 · T3 — o teto da callable acomoda o teto por chamada', () 
 
   it('fica dentro do máximo que o Firebase aceita numa Function v1 (540s)', () => {
     expect(TETO_CALLABLE_CHECKOUT_SEGUNDOS).toBeLessThanOrEqual(540);
+  });
+
+  // ── Review ASAASTETO-REV · o buraco que dois defeitos abriam juntos ────────
+  //
+  // Falsificação da review: trocar a expressão de `TETO_CALLABLE_CHECKOUT_
+  // SEGUNDOS` pelo literal `120` passava nos 5 testes acima. Sozinho isso é
+  // inofensivo (o número é o mesmo). O problema é o que ele DESLIGA: as
+  // asserções acima só enxergavam a contagem de chamadas ATRAVÉS da
+  // derivação, e a lista `CHAMADAS_NO_PIOR_CASO` deste arquivo é uma CÓPIA,
+  // não a fonte. Com o literal no lugar da conta, acrescentar a 8ª viagem ao
+  // gateway em `CHAMADAS_ASAAS_PIOR_CASO` ficava invisível: a suíte inteira
+  // seguia verde com a Function morrendo 15s antes da última chamada — a
+  // cobrança órfã que o T3 existe para evitar.
+  //
+  // As duas asserções abaixo leem a FONTE, e é isso que fecha a composição.
+
+  it('a relação teto = (chamadas × teto por chamada) + folga é verificada contra a FONTE', () => {
+    // Com o literal no lugar da conta E uma chamada a mais na fonte, os dois
+    // lados divergem aqui — é o cruzamento que a suíte não fazia.
+    expect(TETO_CALLABLE_CHECKOUT_SEGUNDOS).toBe(
+      (ASAAS_TIMEOUT_MS / 1000) * CHAMADAS_ASAAS_PIOR_CASO + FOLGA_NAO_GATEWAY_SEGUNDOS
+    );
+    expect(FOLGA_NAO_GATEWAY_SEGUNDOS).toBeGreaterThanOrEqual(10);
+  });
+
+  it('a lista repetida neste arquivo bate com a contagem que o código usa', () => {
+    // A lista existe duplicada de propósito (é a documentação legível do pior
+    // caso). Duplicata que pode divergir em silêncio, porém, é pior do que
+    // nenhuma: quem acrescentar uma viagem ao gateway tem de mexer NAS DUAS.
+    expect(CHAMADAS_ASAAS_PIOR_CASO).toBe(CHAMADAS_NO_PIOR_CASO.length);
   });
 });
