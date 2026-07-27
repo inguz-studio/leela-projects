@@ -20,11 +20,17 @@
  *   8. Webhook: token em tempo constante ANTES do parse, idempotência por
  *      entrega, mapa evento→status, bloco cartao, value (nunca netValue).
  *   9. splitRules/getPayout: falha ALTA explícita (gaps documentados).
+ *  10. pixExpiraEmSegundos (RN-157 · CK2-T5).
+ *  11. cancelCharge sobre cobrança já morta — reconciliação por leitura
+ *      (contrato A1-REV, C1–C12).
+ *  12. Teto de 15s por chamada (DEC-0727 · item 28): AsaasTimeoutError,
+ *      estado DESCONHECIDO, e o invariante "gateway mudo = UMA chamada".
  */
 
-import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import type {
   CancelChargeParams,
+  ChargeResult,
   CreateChargeParams,
   WebhookPayload,
 } from '@leela/core';
@@ -32,12 +38,15 @@ import {
   AsaasProvider,
   AsaasApiError,
   AsaasConfigError,
+  AsaasError,
   AsaasMappingError,
   AsaasOperacaoNaoSuportadaError,
+  AsaasTimeoutError,
   AsaasValidationError,
   AsaasWebhookAssinaturaError,
   ASAAS_PRODUCTION_BASE_URL,
   ASAAS_SANDBOX_BASE_URL,
+  ASAAS_TIMEOUT_MS,
   buildExternalReference,
   centavosFromReais,
   createAsaasProvider,
@@ -1463,5 +1472,384 @@ describe('cancelCharge — DELETE sobre cobrança JÁ morta (PIXCARRINHO-REV · 
     await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
       AsaasApiError
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. Teto de 15s por chamada (DEC-0727 · item 28 · lane ASAAS-TETO)
+//
+// O que esta seção prova, e por que cada asserção existe:
+//
+//   - o teto EXISTE e é do tamanho decidido pelo dono (15s, não 14,9s nem
+//     16s — o número é decisão, não detalhe de implementação);
+//   - ele é do TRANSPORTE: qualquer operação do adapter herda, inclusive as
+//     que ninguém escreveu ainda;
+//   - o estouro é um erro PRÓPRIO, distinguível de resposta do gateway —
+//     nada que ramifica em `httpStatus` pode confundir os dois;
+//   - o timeout NÃO dispara reconciliação por leitura (mesma família de
+//     5xx/429/rede): a contagem de chamadas é a prova, e ela é medida;
+//   - o teto não vira erro para o comprador quando a cobrança JÁ NASCEU (o
+//     QR é acessório; a cobrança é o dinheiro);
+//   - a chave nunca aparece na mensagem, e o timer não fica pendurado.
+//
+// Relógio FALSO em toda a seção: esperar 15s de verdade num teste seria
+// pagar o preço que o teto existe para não pagar.
+// ---------------------------------------------------------------------------
+
+describe('teto de 15s por chamada (DEC-0727 · AsaasTimeoutError)', () => {
+  /** fetchFn que NUNCA resolve — o gateway que engoliu a requisição. */
+  const nuncaResponde: FetchLike = () => new Promise<never>(() => {});
+
+  function providerLento(
+    fetchFn: FetchLike,
+    overrides: Partial<ConstructorParameters<typeof AsaasProvider>[0]> = {}
+  ): AsaasProvider {
+    return new AsaasProvider({
+      apiKey: SANDBOX_KEY,
+      webhookAuthToken: WEBHOOK_TOKEN,
+      fetchFn,
+      now: () => AGORA,
+      ...overrides,
+    });
+  }
+
+  /** Marca quando a promessa assenta, sem consumir a rejeição duas vezes. */
+  function observar<T>(p: Promise<T>): {
+    assentou: () => boolean;
+    resultado: Promise<unknown>;
+  } {
+    let assentou = false;
+    const resultado = p.then(
+      (v: T) => {
+        assentou = true;
+        return v as unknown;
+      },
+      (e: unknown) => {
+        assentou = true;
+        return e;
+      }
+    );
+    return { assentou: () => assentou, resultado };
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('o teto é 15s EXATOS: em 14.999ms ainda espera; em 15.000ms aborta', async () => {
+    expect(ASAAS_TIMEOUT_MS).toBe(15_000);
+    const provider = providerLento(nuncaResponde);
+    const obs = observar(provider.getAccountInfo());
+
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS - 1);
+    // Um teto que dispara antes da hora transforma lentidão normal do
+    // gateway em falha inventada — a espera é do tamanho que o dono aceitou.
+    expect(obs.assentou()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(obs.assentou()).toBe(true);
+    expect(await obs.resultado).toBeInstanceOf(AsaasTimeoutError);
+  });
+
+  it('o erro tipado documenta o ESTADO DESCONHECIDO e a chamada abortada', async () => {
+    const provider = providerLento(nuncaResponde);
+    const obs = observar(
+      provider.cancelCharge({
+        chargeId: 'pay_teto',
+        tenantId: 'tenant-1',
+        reason: 'Expiração do PIX por prazo (RN-157)',
+        idempotencyKey: 'cancel-teto',
+      })
+    );
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const err = (await obs.resultado) as AsaasTimeoutError;
+
+    expect(err).toBeInstanceOf(AsaasTimeoutError);
+    expect(err.name).toBe('AsaasTimeoutError');
+    expect(err.timeoutMs).toBe(15_000);
+    expect(err.method).toBe('DELETE');
+    expect(err.path).toBe('/payments/pay_teto');
+    // O literal é o contrato: quem trata este erro é obrigado a NOMEAR que
+    // não sabe o que aconteceu no gateway (nem sucesso, nem fracasso).
+    expect(err.estadoNoGateway).toBe('desconhecido');
+    // DELETE é ESCRITA: a cobrança pode ter sido removida de verdade.
+    expect(err.efeitoPossivel).toBe(true);
+    expect(err.message).toMatch(/DESCONHECIDO/);
+    expect(err.message).toMatch(/15000ms/);
+  });
+
+  it('GET abortado sai com efeitoPossivel=false (leitura não muda nada)', async () => {
+    const provider = providerLento(nuncaResponde);
+    const obs = observar(provider.getAccountInfo());
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const err = (await obs.resultado) as AsaasTimeoutError;
+
+    expect(err.method).toBe('GET');
+    // A distinção existe para que "confira o ledger antes de repetir" só
+    // apareça onde há efeito a conferir — senão vira ruído e ninguém lê.
+    expect(err.efeitoPossivel).toBe(false);
+    expect(err.message).toMatch(/repetir é seguro/);
+  });
+
+  it('AsaasTimeoutError é AsaasError mas NÃO é AsaasApiError (nada ramifica por httpStatus)', async () => {
+    const provider = providerLento(nuncaResponde);
+    const obs = observar(provider.getAccountInfo());
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const err = await obs.resultado;
+
+    expect(err).toBeInstanceOf(AsaasError);
+    // A separação é o que mantém o invariante A1-REV: reconciliação só nasce
+    // de VEREDITO do gateway (4xx≠429), e ausência de resposta não é veredito.
+    expect(err).not.toBeInstanceOf(AsaasApiError);
+    expect(err).not.toBeInstanceOf(AsaasMappingError);
+    expect((err as Error).message).not.toContain(SANDBOX_KEY);
+    expect(JSON.stringify(err)).not.toContain(SANDBOX_KEY);
+  });
+
+  it('o AbortController é acionado: a conexão real morre, não fica socket órfão', async () => {
+    const sinais: AbortSignal[] = [];
+    const provider = providerLento((_url, init) => {
+      if (init.signal !== undefined) sinais.push(init.signal);
+      return new Promise<never>(() => {});
+    });
+    const obs = observar(provider.getAccountInfo());
+
+    expect(sinais).toHaveLength(1);
+    expect(sinais[0]?.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    await obs.resultado;
+    // Sem isto, "abortar" seria só parar de esperar — e a conexão seguiria
+    // consumindo quota do Asaas por uma resposta que ninguém mais lê.
+    expect(sinais[0]?.aborted).toBe(true);
+  });
+
+  it('o teto cobre o CORPO, não só os headers (resposta que nunca termina de chegar)', async () => {
+    // fetch resolve rápido; `text()` é que fica pendurado. Medir só até o
+    // header deixaria justamente esta porta aberta.
+    const provider = providerLento(async () => ({
+      status: 200,
+      headers: { get: () => null },
+      text: () => new Promise<string>(() => {}),
+    }));
+    const obs = observar(provider.getAccountInfo());
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    expect(await obs.resultado).toBeInstanceOf(AsaasTimeoutError);
+  });
+
+  it('caminho feliz NÃO deixa timer pendurado (Function não fica presa por handle)', async () => {
+    const { provider } = novoProvider([
+      { method: 'GET', url: '/myAccount', json: { id: 'acc_1' } },
+    ]);
+    await provider.getAccountInfo();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  // ── O invariante que o teto NÃO pode quebrar: 1 chamada ──────────────────
+
+  it('TIMEOUT no DELETE ⇒ UMA chamada, ZERO reconciliação (mesma família de 5xx/429)', async () => {
+    const chamadas: string[] = [];
+    const provider = providerLento((_url, init) => {
+      chamadas.push(init.method);
+      return new Promise<never>(() => {});
+    });
+    const obs = observar(
+      provider.cancelCharge({
+        chargeId: 'pay_teto',
+        tenantId: 'tenant-1',
+        reason: 'Expiração do PIX por prazo (RN-157)',
+        idempotencyKey: 'cancel-teto',
+      })
+    );
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+
+    expect(await obs.resultado).toBeInstanceOf(AsaasTimeoutError);
+    // Gateway que ficou 15s calado não fica falante na pergunta seguinte, e
+    // os outros 15s sairiam do bolso de quem está parado no checkout.
+    expect(chamadas).toEqual(['DELETE']);
+  });
+
+  it('timeout no GET de reconciliação ⇒ o 4xx ORIGINAL sobe (não saber ≠ saber que morreu)', async () => {
+    // O DELETE dá veredito 400 (dispara a reconciliação, contrato A1-REV) e
+    // é o GET que estoura. Ausência de prova não pode virar cancelamento.
+    let n = 0;
+    const provider = providerLento(async () => {
+      n += 1;
+      if (n === 1) {
+        return {
+          status: 400,
+          headers: { get: () => null },
+          text: async () =>
+            JSON.stringify({
+              errors: [{ code: 'invalid_action', description: 'x' }],
+            }),
+        };
+      }
+      return new Promise<never>(() => {});
+    });
+    const obs = observar(
+      provider.cancelCharge({
+        chargeId: 'pay_teto',
+        tenantId: 'tenant-1',
+        reason: 'Expiração do PIX por prazo (RN-157)',
+        idempotencyKey: 'cancel-teto-2',
+      })
+    );
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const err = await obs.resultado;
+
+    expect(err).toBeInstanceOf(AsaasApiError);
+    expect((err as AsaasApiError).httpStatus).toBe(400);
+    expect(n).toBe(2);
+  });
+
+  it('TIMEOUT no lookup idempotente ⇒ NENHUM POST (a falha mais segura: nada criado)', async () => {
+    const chamadas: { method: string; url: string }[] = [];
+    const provider = providerLento((url, init) => {
+      chamadas.push({ method: init.method, url });
+      return new Promise<never>(() => {});
+    });
+    const obs = observar(provider.createCharge(paramsPix()));
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+
+    expect(await obs.resultado).toBeInstanceOf(AsaasTimeoutError);
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]?.method).toBe('GET');
+    expect(chamadas[0]?.url).toContain('/payments?externalReference=');
+  });
+
+  it('TIMEOUT no pixQrCode ⇒ a cobrança JÁ NASCIDA volta (degradar > orfanar dinheiro)', async () => {
+    // O POST vingou: existe cobrança no gateway. Derrubar tudo por causa do
+    // QR devolveria "erro" sobre dinheiro que o banco já pode receber.
+    const roteiro: readonly { method: string; frag: string; json: unknown }[] = [
+      { method: 'GET', frag: '/payments?externalReference=', json: { data: [] } },
+      { method: 'GET', frag: '/customers?', json: { data: [{ id: 'cus_1' }] } },
+      {
+        method: 'POST',
+        frag: '/payments',
+        json: {
+          id: 'pay_nasceu',
+          status: 'PENDING',
+          billingType: 'PIX',
+          invoiceUrl: 'https://asaas.example/i/pay_nasceu',
+          value: 99.99,
+        },
+      },
+    ];
+    const provider = providerLento(async (url, init) => {
+      if (init.method === 'GET' && url.includes('/pixQrCode')) {
+        return new Promise<never>(() => {});
+      }
+      const rota = roteiro.find(
+        (r) => r.method === init.method && url.includes(r.frag)
+      );
+      if (rota === undefined) {
+        throw new Error(`não roteirizado: ${init.method} ${url}`);
+      }
+      return {
+        status: 200,
+        headers: { get: () => null },
+        text: async () => JSON.stringify(rota.json),
+      };
+    });
+
+    const obs = observar(
+      provider.createCharge(paramsPix({ pixExpiraEmSegundos: 1_800 }))
+    );
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const r = (await obs.resultado) as ChargeResult;
+
+    expect(r).not.toBeInstanceOf(Error);
+    expect(r.chargeId).toBe('pay_nasceu');
+    expect(r.status).toBe('pending');
+    expect(r.paymentUrl).toBe('https://asaas.example/i/pay_nasceu');
+    expect(r.qrCode).toBeUndefined();
+    // Contrato RN-157 (CK2-T5) intacto: PIX com validade SEMPRE devolve
+    // expiresAt — aqui pelo fallback do relógio injetado.
+    expect(r.expiresAt?.toMillis()).toBe(AGORA.getTime() + 1_800 * 1000);
+  });
+
+  // ── ESTORNO: o caso do risco R9 (INV-CANCEL-ESTORNO) ─────────────────────
+
+  it('TIMEOUT no refund ⇒ UMA chamada e ZERO retry interno, com efeito POSSÍVEL declarado', async () => {
+    // O estorno é a escrita sem rede de segurança: o Asaas não dá
+    // idempotency-key HTTP para refund e o dedup daqui é em memória. Um retry
+    // escondido no adapter seria estorno DUPLO; um erro que diga "falhou" ao
+    // chamador seria estorno enviado-e-não-registrado. Sobra uma saída: uma
+    // chamada, e um erro que obriga o chamador a olhar o ledger dele.
+    const chamadas: string[] = [];
+    const provider = providerLento((url, init) => {
+      chamadas.push(`${init.method} ${url}`);
+      return new Promise<never>(() => {});
+    });
+    const obs = observar(
+      provider.refund({
+        chargeId: 'pay_r9',
+        tenantId: 'tenant-1',
+        reason: 'estorno integral',
+        idempotencyKey: 'refund-r9',
+      })
+    );
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    const err = (await obs.resultado) as AsaasTimeoutError;
+
+    expect(err).toBeInstanceOf(AsaasTimeoutError);
+    expect(err.method).toBe('POST');
+    expect(err.path).toBe('/payments/pay_r9/refund');
+    expect(err.estadoNoGateway).toBe('desconhecido');
+    // A flag que a lane ESTORNO-ADMIN vai consumir: "o dinheiro pode ter
+    // voltado ao comprador" — nunca "falhou, pode repetir à vontade".
+    expect(err.efeitoPossivel).toBe(true);
+    expect(err.message).toMatch(/estorno/);
+    expect(err.message).toMatch(/conferir o ledger/);
+    // ZERO segunda chamada: o adapter não re-tenta escrita de dinheiro.
+    expect(chamadas).toEqual(['POST https://api-sandbox.asaas.com/v3/payments/pay_r9/refund']);
+  });
+
+  it('TIMEOUT no refund NÃO entra no cache (a tentativa seguinte volta ao gateway)', async () => {
+    const chamadas: string[] = [];
+    let n = 0;
+    const provider = providerLento(async (url, init) => {
+      chamadas.push(`${init.method} ${url}`);
+      n += 1;
+      if (n === 1) return new Promise<never>(() => {});
+      return {
+        status: 200,
+        headers: { get: () => null },
+        text: async () =>
+          JSON.stringify({
+            refunds: [
+              {
+                id: 'ref_1',
+                status: 'DONE',
+                value: 99.99,
+                dateCreated: '2026-07-12',
+              },
+            ],
+          }),
+      };
+    });
+    const paramsRefund = {
+      chargeId: 'pay_1',
+      tenantId: 'tenant-1',
+      reason: 'estorno',
+      idempotencyKey: 'refund-teto',
+    };
+    const obs = observar(provider.refund(paramsRefund));
+    await vi.advanceTimersByTimeAsync(ASAAS_TIMEOUT_MS);
+    expect(await obs.resultado).toBeInstanceOf(AsaasTimeoutError);
+
+    // A SEGUNDA chamada abaixo é decisão EXPLÍCITA de quem chama (aqui, o
+    // teste no papel de chamador com ledger) — o adapter não a fez sozinho.
+    // O que se prova é o outro lado do R9: um estado DESCONHECIDO não pode
+    // ficar carimbado no dedup como resultado, senão o estorno legítimo
+    // ficaria travado para sempre atrás de um erro que nunca foi resposta.
+    const ok = await provider.refund(paramsRefund);
+    expect(ok.status).toBe('approved');
+    expect(chamadas).toHaveLength(2);
   });
 });

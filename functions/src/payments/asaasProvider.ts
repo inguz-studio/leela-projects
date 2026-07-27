@@ -37,6 +37,13 @@
 //
 // DINHEIRO: a interface trabalha em CENTAVOS (int); o Asaas em REAIS
 // (decimal). Conversão só na borda: /100 ao enviar, ×100 + round ao ler.
+//
+// TETO DE ESPERA (DEC-0727, item 28): 15s POR CHAMADA, aplicado no `request`
+// — um lugar só, e por isso vale para toda chamada Asaas, inclusive as que
+// ainda não existem. Estouro vira `AsaasTimeoutError`, com o estado do
+// gateway declarado DESCONHECIDO: não é sucesso, não é fracasso, e NÃO
+// dispara reconciliação por leitura (mesma família de 5xx/429/rede caída —
+// o gateway está mudo, e a segunda viagem sairia do bolso do comprador).
 // =============================================================================
 
 import { createHash, timingSafeEqual } from 'crypto';
@@ -77,6 +84,27 @@ export const ASAAS_PROVIDER_ID = 'asaas';
 
 /** Env var do authToken do webhook (par da ASAAS_API_KEY na ativação). */
 export const ASAAS_WEBHOOK_TOKEN_ENV = 'ASAAS_WEBHOOK_AUTH_TOKEN';
+
+/**
+ * Teto de espera POR CHAMADA ao Asaas — 15 segundos (DEC-0727, item 28:
+ * *"Aceito o teto de 15s, de aguardar o asaas."*).
+ *
+ * POR QUE AQUI E SÓ AQUI: todas as chamadas HTTP do adapter passam pelo
+ * `request`. Um teto por operação (createCharge, cancelCharge, refund…)
+ * seria N tetos para manter em sincronia e um esquecido por definição; o
+ * teto no transporte vale para a chamada que ainda não existe.
+ *
+ * NÃO é constante negociável por config de propósito: um knob de timeout é
+ * um jeito silencioso de desligar o teto (`timeoutMs: 600000` passa em
+ * qualquer review de tipo). O valor é decisão do dono; mudá-lo é mudar esta
+ * linha, com o commit que essa mudança merece.
+ *
+ * O que este número NÃO é: um contrato de latência do checkout. É o ponto
+ * em que a plataforma para de esperar — o pior caso da callable é a SOMA
+ * dos tetos das chamadas que ela faz (ver `TETO_ASAAS_*` em
+ * createInscricaoCharge.ts).
+ */
+export const ASAAS_TIMEOUT_MS = 15_000;
 
 // ---------------------------------------------------------------------------
 // Erros de domínio (nunca vazam chave/headers)
@@ -123,6 +151,103 @@ export class AsaasApiError extends AsaasError {
   }
 }
 
+/**
+ * O Asaas NÃO respondeu dentro do teto de `ASAAS_TIMEOUT_MS` (DEC-0727).
+ *
+ * ⚠️ ESTADO DESCONHECIDO — o ponto inteiro deste erro.
+ *
+ * Um timeout não é um "não". A requisição pode ter chegado, sido processada
+ * e ter tido efeito no gateway (uma cobrança CRIADA, uma cobrança REMOVIDA,
+ * um estorno APLICADO) sem que a resposta voltasse na janela. Quem trata
+ * este erro não sabe — e não pode fingir que sabe:
+ *
+ *   - NÃO tratar como sucesso (o invariante "nunca sucesso otimista" do
+ *     PaymentProvider vale aqui igual);
+ *   - NÃO tratar como fracasso definitivo, nem contar ao comprador que
+ *     "nada foi cobrado": o dinheiro pode ter saído;
+ *   - NÃO reconciliar por leitura no ato: gateway que não respondeu em 15s
+ *     não responde melhor à pergunta seguinte, e a segunda viagem sai do
+ *     bolso de quem está parado no checkout. É a MESMA família de 5xx/429/
+ *     rede caída — uma chamada, e sobe (ver `erroMereceReconciliacao`).
+ *
+ * QUEM RESOLVE o desconhecido, então: o webhook do Asaas (cobrança que
+ * existe avisa quando é paga) e o REPLAY idempotente — `createCharge` faz
+ * lookup por `externalReference` antes de qualquer POST, então a tentativa
+ * seguinte com a MESMA `idempotencyKey` encontra a cobrança que este
+ * timeout deixou órfã, em vez de criar a segunda.
+ *
+ * A face disso pro comprador é "processando pagamento" (DEC-0727) — nunca
+ * um erro que afirme mais do que a plataforma sabe.
+ *
+ * ── ESCRITAS: `efeitoPossivel` e o caso do ESTORNO (risco R9 da
+ *    investigação INV-CANCEL-ESTORNO) ─────────────────────────────────────
+ *
+ * Em GET, não saber é barato: leitura não muda nada, e a pergunta pode ser
+ * repetida à vontade. Nas ESCRITAS (`POST` de cobrança, `POST` de estorno,
+ * `DELETE` de cancelamento) o mesmo timeout carrega um efeito POSSÍVEL e
+ * indeterminado — é isso que `efeitoPossivel` marca, em campo legível por
+ * código e não em prosa que ninguém lê no `catch`.
+ *
+ * O estorno é o caso mais afiado, e o único cuja proteção NÃO mora aqui:
+ *   - `createCharge` tem lookup por `externalReference` (o replay ENCONTRA
+ *     a cobrança órfã) e `cancelCharge` tem reconciliação por leitura de
+ *     status. `refund` não tem nem um nem outro: o Asaas não expõe
+ *     idempotency-key HTTP para estorno, e o dedup deste adapter é em
+ *     MEMÓRIA (morre com a instância da Function).
+ *   - Logo, um `POST /payments/{id}/refund` que estourou o teto pode ter
+ *     estornado de verdade. Repetir por conta própria é o caminho para o
+ *     ESTORNO DUPLO; tratar como falha simples é o caminho para o estorno
+ *     enviado-e-não-registrado. Nenhum dos dois é aceitável em silêncio.
+ *
+ * REGRA, portanto: o adapter NÃO re-tenta nada por conta própria — nem
+ * escrita nem leitura, nem uma vez. Uma chamada, um resultado (ou este
+ * erro). Quem decide re-tentar é o CHAMADOR, contra o próprio ledger
+ * durável (`webhookEventos`/`reembolsos` — ADR-011), que é a única camada
+ * capaz de saber se aquele estorno já foi registrado. A lane ESTORNO-ADMIN
+ * consome exatamente esta semântica: `efeitoPossivel === true` significa
+ * "confira o ledger e o extrato ANTES de repetir", nunca "pode repetir".
+ */
+export class AsaasTimeoutError extends AsaasError {
+  /** Teto que estourou, em ms (documenta o número no próprio erro). */
+  readonly timeoutMs: number;
+  /** Método HTTP da chamada abortada. */
+  readonly method: string;
+  /** Path da chamada (SEM query, SEM headers — a chave não passa por aqui). */
+  readonly path: string;
+  /**
+   * Marcador explícito para quem faz `catch`: o efeito da chamada no
+   * gateway é indeterminado. Literal, não booleano, para que o código que
+   * lê isto seja obrigado a nomear o estado.
+   */
+  readonly estadoNoGateway = 'desconhecido' as const;
+  /**
+   * A chamada abortada podia MUDAR estado no gateway (POST/DELETE)?
+   *
+   * `true` = cobrança criada, cobrança removida ou estorno aplicado são
+   * desfechos possíveis desta chamada, e o chamador tem de conferir o
+   * próprio ledger antes de qualquer nova tentativa. `false` (GET) = a
+   * chamada não muda nada; repetir é seguro.
+   */
+  readonly efeitoPossivel: boolean;
+
+  constructor(method: string, path: string, timeoutMs: number) {
+    const escreve = method !== 'GET';
+    super(
+      `[asaas] Sem resposta em ${timeoutMs}ms (${method} ${path}) — a ` +
+        'chamada foi abortada e o efeito no gateway é DESCONHECIDO: ' +
+        (escreve
+          ? 'ela PODE ter tido efeito (cobrança, cancelamento ou estorno). ' +
+            'Não afirmar sucesso nem fracasso, não repetir sem conferir o ' +
+            'ledger; webhook e replay idempotente resolvem o resto'
+          : 'leitura sem efeito — repetir é seguro')
+    );
+    this.timeoutMs = timeoutMs;
+    this.method = method;
+    this.path = path;
+    this.efeitoPossivel = escreve;
+  }
+}
+
 /** Resposta 2xx com shape/status/evento fora do contrato mapeado. */
 export class AsaasMappingError extends AsaasError {}
 
@@ -153,13 +278,23 @@ export interface FetchLikeResponse {
   text(): Promise<string>;
 }
 
-/** Subset estrutural de fetch — o global satisfaz; os testes injetam fake. */
+/**
+ * Subset estrutural de fetch — o global satisfaz; os testes injetam fake.
+ *
+ * `signal` entrou com o teto de 15s (DEC-0727): o `fetch` global honra o
+ * AbortSignal e FECHA a conexão quando o teto estoura — sem ele, abortar
+ * seria só parar de esperar, com o socket vivo somando pressão no gateway.
+ * Fakes de teste podem ignorar o campo: o teto NÃO depende de cooperação do
+ * transporte (o `Promise.race` do `request` decide), o signal é o que evita
+ * o vazamento na chamada real.
+ */
 export type FetchLike = (
   url: string,
   init: {
     method: string;
     headers: Record<string, string>;
     body?: string;
+    signal?: AbortSignal;
   }
 ) => Promise<FetchLikeResponse>;
 
@@ -559,8 +694,12 @@ export class AsaasProvider implements PaymentProvider {
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
     };
 
-    const res = await this.fetchFn(url, init);
-    const texto = await res.text();
+    const { status, headers, texto } = await this.viagemComTeto(
+      method,
+      path,
+      url,
+      init
+    );
     let json: unknown;
     if (texto.length > 0) {
       try {
@@ -570,14 +709,72 @@ export class AsaasProvider implements PaymentProvider {
       }
     }
 
-    if (res.status >= 400) {
-      throw this.erroDaResposta(res, json);
+    if (status >= 400) {
+      throw this.erroDaResposta({ status, headers }, json);
     }
     return json;
   }
 
-  /** Traduz 4xx/5xx em AsaasApiError SEM vazar chave/headers/corpo cru. */
-  private erroDaResposta(res: FetchLikeResponse, json: unknown): AsaasApiError {
+  /**
+   * A viagem de ida e volta com TETO (DEC-0727, item 28) — 15s por chamada.
+   *
+   * O teto cobre a resposta INTEIRA, headers **e** corpo: `fetch` resolve
+   * quando os headers chegam, e um corpo que nunca termina de chegar é a
+   * mesma espera indeterminada de um gateway mudo. Medir só até o header
+   * deixaria a porta que o teto existe para fechar entreaberta.
+   *
+   * DOIS mecanismos, um propósito:
+   *   - `AbortController` → a conexão real MORRE (nada de socket órfão
+   *     segurando quota do Asaas depois que já desistimos dela);
+   *   - `Promise.race` → o teto vale mesmo que o transporte ignore o signal.
+   *     É o que torna o teto TESTÁVEL sem rede: um `fetchFn` que nunca
+   *     resolve estoura em 15s de relógio (fake timers) porque a decisão é
+   *     nossa, não do fetch.
+   *
+   * Sem `unhandledRejection`: o `race` registra reação nas duas promessas,
+   * então o AbortError que o fetch real levanta DEPOIS de perdermos a
+   * corrida já nasce tratado. E o timer morre no `finally` — caminho feliz
+   * não deixa handle pendurado prendendo o processo da Function.
+   */
+  private async viagemComTeto(
+    method: string,
+    path: string,
+    url: string,
+    init: Parameters<FetchLike>[1]
+  ): Promise<{
+    status: number;
+    headers: FetchLikeResponse['headers'];
+    texto: string;
+  }> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const teto = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AsaasTimeoutError(method, path, ASAAS_TIMEOUT_MS));
+      }, ASAAS_TIMEOUT_MS);
+    });
+
+    const viagem = (async () => {
+      const res = await this.fetchFn(url, { ...init, signal: controller.signal });
+      return { status: res.status, headers: res.headers, texto: await res.text() };
+    })();
+
+    try {
+      return await Promise.race([viagem, teto]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Traduz 4xx/5xx em AsaasApiError SEM vazar chave/headers/corpo cru.
+   * Recebe só status+headers: o corpo já foi lido (uma vez) na viagem.
+   */
+  private erroDaResposta(
+    res: Pick<FetchLikeResponse, 'status' | 'headers'>,
+    json: unknown
+  ): AsaasApiError {
     const codes: string[] = [];
     const descriptions: string[] = [];
     if (json !== null && typeof json === 'object' && !Array.isArray(json)) {
@@ -805,6 +1002,10 @@ export class AsaasProvider implements PaymentProvider {
     // PIX pendente: QR dinâmico vem de GET /payments/{id}/pixQrCode.
     // Falha aqui é NÃO-fatal (a cobrança JÁ existe; o invoiceUrl segue
     // pagável e um retry idempotente re-tenta o QR) — degradar > orfanar.
+    // DEC-0727: o TIMEOUT de 15s cai nesta mesma porta (AsaasTimeoutError é
+    // AsaasError). Deliberado: a cobrança já nasceu, e derrubar tudo por
+    // causa do QR devolveria "erro" sobre dinheiro que já pode ser cobrado.
+    // O comprador segue pelo invoiceUrl; o QR volta no replay.
     let qrCode: string | undefined;
     let expiresAt: StructuralTimestamp | undefined;
     if (billingType === 'PIX' && status === 'pending') {
@@ -939,6 +1140,13 @@ export class AsaasProvider implements PaymentProvider {
    * 429), ou é o gateway não respondendo (5xx, 429, rede)? Só o primeiro caso
    * merece a leitura de reconciliação: no segundo, a resposta seria a mesma
    * ausência de resposta, e a espera extra cairia no colo do comprador.
+   *
+   * DEC-0727: o TIMEOUT entra na segunda família, e o `instanceof
+   * AsaasApiError` já o mantém fora — `AsaasTimeoutError` não é resposta
+   * nenhuma, é a ausência dela. Explícito aqui porque é invariante cobrado
+   * por teste: 5xx/429/rede/timeout = UMA chamada. Gateway que ficou 15s sem
+   * responder não fica mais falante na pergunta seguinte, e quem pagaria os
+   * outros 15s é o comprador parado no checkout.
    */
   private erroMereceReconciliacao(err: unknown): boolean {
     if (!(err instanceof AsaasApiError)) return false;
@@ -980,9 +1188,9 @@ export class AsaasProvider implements PaymentProvider {
    *     comprador travado a um estado que já está quebrado. Registrado como
    *     escalado da review (item 32 do painel de decisões).
    *
-   * Qualquer outra coisa é `false` — inclusive o GET falhando por 5xx/rede
-   * (não saber não é saber que morreu) e `RESTORED` (o Asaas permite
-   * ressuscitar uma cobrança removida, e ressuscitada ela está VIVA).
+   * Qualquer outra coisa é `false` — inclusive o GET falhando por 5xx/rede/
+   * TIMEOUT de 15s (não saber não é saber que morreu) e `RESTORED` (o Asaas
+   * permite ressuscitar uma cobrança removida, e ressuscitada ela está VIVA).
    */
   private async cobrancaConfirmadamenteMorta(chargeId: string): Promise<boolean> {
     try {
@@ -998,6 +1206,25 @@ export class AsaasProvider implements PaymentProvider {
 
   // ── refund ────────────────────────────────────────────────────────────────
 
+  /**
+   * Estorno no Asaas — `POST /payments/{id}/refund`.
+   *
+   * ⚠️ TETO DE 15s E ESTADO DESCONHECIDO (DEC-0727 · risco R9 da
+   * INV-CANCEL-ESTORNO): esta é a escrita mais exposta do adapter. Ao
+   * contrário de `createCharge` (lookup por `externalReference`) e de
+   * `cancelCharge` (reconciliação por leitura de status), o estorno não tem
+   * como PERGUNTAR ao gateway se já aconteceu — o Asaas não dá
+   * idempotency-key HTTP para refund e o dedup abaixo é em memória, logo
+   * morre com a instância da Function.
+   *
+   * Consequência assumida, sem retry escondido: um `AsaasTimeoutError` aqui
+   * sai com `efeitoPossivel: true` e NENHUMA segunda chamada é feita por
+   * este método. Re-tentar é decisão de quem chama, contra o ledger durável
+   * de reembolsos (ADR-011) — e é a lane ESTORNO-ADMIN que vai ser dona
+   * dessa decisão. Repetir aqui por conta própria seria a receita do estorno
+   * DUPLO; devolver "falhou, tente de novo" seria a receita do estorno
+   * enviado-e-não-registrado.
+   */
   async refund(params: RefundParams): Promise<RefundResult> {
     if (params.idempotencyKey.trim().length === 0) {
       throw new AsaasValidationError('[asaas] idempotencyKey vazia (RN-333)');

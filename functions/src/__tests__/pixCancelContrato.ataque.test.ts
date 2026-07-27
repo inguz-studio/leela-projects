@@ -39,6 +39,7 @@ import {
   AsaasProvider,
   AsaasApiError,
   AsaasMappingError,
+  AsaasTimeoutError,
   type FetchLike,
 } from '../payments/asaasProvider';
 
@@ -309,6 +310,38 @@ describe('S1209-PIXREV · cancelCharge do Asaas sob resposta DIVERGENTE da doc',
       expect(metodosDe(p.chamadas)).toEqual(['DELETE']);
     });
   }
+
+  // DEC-0727 · o teto de 15s entra nesta MESMA família. Um gateway que não
+  // respondeu não deu veredito nenhum sobre a cobrança, então a leitura de
+  // reconciliação não teria o que ler — e os outros 15s sairiam do bolso de
+  // quem está parado no checkout. A contagem é a única prova disso, e o
+  // relógio é falso porque esperar 15s de verdade num teste seria pagar
+  // exatamente o preço que o teto existe para não pagar.
+  it('TIMEOUT de 15s ⇒ AsaasTimeoutError SOBE (o pedido não morre) — 1 chamada: gateway mudo não se reconcilia', async () => {
+    vi.useFakeTimers();
+    try {
+      const chamadas: ChamadaFake[] = [];
+      const provider = novoProvider((url, init) => {
+        chamadas.push({ method: init.method, url });
+        return new Promise<never>(() => {}); // nunca responde
+      });
+      const capturado = provider
+        .cancelCharge(params())
+        .then((r) => r as unknown)
+        .catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(15_000);
+      const err = await capturado;
+
+      expect(err).toBeInstanceOf(AsaasTimeoutError);
+      // Estado DESCONHECIDO carimbado no próprio erro: a camada de cima é
+      // proibida de contar ao comprador que "nada foi cobrado".
+      expect((err as AsaasTimeoutError).estadoNoGateway).toBe('desconhecido');
+      expect(metodosDe(chamadas)).toEqual(['DELETE']);
+      expect(String((err as Error).message)).not.toContain(SANDBOX_KEY);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   // Regressão do vazamento de segredo: a chave nunca pode aparecer na
   // mensagem do erro que sobe até o log do expirarPixPendente — nem na URL
