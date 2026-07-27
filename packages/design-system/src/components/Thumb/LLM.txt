@@ -21,6 +21,7 @@ Não use para representar PESSOA: o componente de usuário é o `Avatar` (circul
 - fallback: React.ReactNode   (default: undefined) — sigla curta ou ícone lucide; renderizado sempre com aria-hidden
 - size: 'sm' | 'md' | 'lg'   (default: 'sm') — largura 40px | 64px | 96px (a altura sai da razão)
 - ratio: 'square' | 'wide'   (default: 'square') — 1:1 (logo, kit) | 1.9:1 (capa de evento)
+  `null` em size ou ratio é normalizado para o default: sem isso a caixa ficaria sem largura E sem altura (as duas medidas saem destas variantes) e sumiria da tela.
 - lazy: boolean   (default: true) — `loading="lazy"`; passe false só na miniatura única já visível de saída
 - ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> EXCETO children (Omit<..., 'children'>)
 

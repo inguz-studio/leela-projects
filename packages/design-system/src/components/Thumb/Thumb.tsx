@@ -119,8 +119,22 @@ const Thumb = React.forwardRef<HTMLSpanElement, ThumbProps>(
     const url = typeof src === 'string' ? src.trim() : '';
     const mostraImagem = url.length > 0 && !erro;
 
+    // `VariantProps` do cva publica `null` como valor LEGAL de cada variante, e
+    // `defaultVariants` só cobre `undefined`. Aqui isso não é cosmético: a
+    // LARGURA vem de `size` e a ALTURA vem de `ratio`, então um `null` — idioma
+    // corriqueiro em `ratio={ehCapa ? 'wide' : null}` — apagaria as DUAS medidas
+    // e a caixa sumiria da tela, com tsc e eslint verdes. Normalizamos para o
+    // default. (Outros componentes do DS herdam o mesmo `null` do cva, mas lá
+    // ele degrada a estilo; aqui degradaria a tamanho zero.)
+    const sizeToken = size ?? undefined;
+    const ratioToken = ratio ?? undefined;
+
     return (
-      <span ref={ref} className={cn(thumbVariants({ size, ratio, className }))} {...props}>
+      <span
+        ref={ref}
+        className={cn(thumbVariants({ size: sizeToken, ratio: ratioToken, className }))}
+        {...props}
+      >
         {mostraImagem ? (
           <img
             src={url}

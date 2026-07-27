@@ -96,6 +96,19 @@ describe('Thumb', () => {
     expect(container.firstElementChild?.className).toContain(`w-[var(${token})]`);
   });
 
+  it('size/ratio nulos (valor legal do tipo cva) caem no default, não apagam a caixa', () => {
+    // `VariantProps` publica `null` em toda variante e `defaultVariants` só
+    // cobre `undefined`. Como a largura sai de `size` e a altura sai de `ratio`,
+    // um `null` sem normalização deixaria a miniatura sem NENHUMA medida — some
+    // da tela com tsc e eslint verdes.
+    const { container } = render(
+      <Thumb src="https://cdn.leela.app/a.png" size={null} ratio={null} />,
+    );
+    const raiz = container.firstElementChild as HTMLElement;
+    expect(raiz.className).toContain('w-[var(--thumb-size-sm)]');
+    expect(raiz.className).toContain('aspect-[1/1]');
+  });
+
   it('a caixa é tokenizada (radius do DS) e não vaza estilo cru', () => {
     const { container } = render(<Thumb src="https://cdn.leela.app/a.png" />);
     const raiz = container.firstElementChild as HTMLElement;
