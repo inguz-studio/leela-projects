@@ -29,7 +29,7 @@ Só `HOME.md` e `README.md` moram na raiz. O resto está em pastas numeradas por
 
 ## 🗂️ Acompanhamento (fonte da verdade)
 - [[BACKLOG]] — visão Jira (Épico → Story → Subtarefa) com progresso ao vivo (requer Dataview). 83 stories em `backlog/`.
-- [[DECISOES-ABERTAS]] — painel ÚNICO do que depende de você: verbatim de cada decisão, a descrição e o caso de uso de cada item aberto, a dívida técnica pré-go-live e a fila de construção ratificada.
+- [[DECISOES-ABERTAS]] — painel ÚNICO do que depende de você. Abre com um menu em linguagem direta de tudo o que está aberto (decisões, ações externas, dívida técnica pré-go-live e fila de construção), com exemplo curto por item e o detalhe logo abaixo pelo mesmo número. Item resolvido sai do painel na mesma aterrissagem: vira uma linha de referência, e o verbatim integral passa a viver no arquivo da rodada em `02-rodadas/`.
 
 ## ▶ Comece aqui — o que construir primeiro
 - [[IMPLEMENTATION-PLAN]] — **mini PRD + stack + kickoff do Fable 5** (comece por aqui para desenvolver)
