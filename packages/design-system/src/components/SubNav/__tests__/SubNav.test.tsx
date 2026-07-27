@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SubNav } from '../SubNav';
@@ -91,6 +92,51 @@ describe('SubNav', () => {
     const link = screen.getByRole('link', { name: 'Visão Geral' });
     expect(link).toHaveAttribute('href', '/eventos/1');
     expect(link).toHaveAttribute('aria-current', 'page');
+  });
+
+  // -------------------------------------------------------------------------
+  // LEELA-NAVFIX-T1 — o onClick encaminha o MouseEvent e o href sobrevive.
+  // Sem o evento em mãos o consumidor não consegue interceptar nem se quiser:
+  // era isso que fazia cada aba do painel recarregar o documento inteiro.
+  // -------------------------------------------------------------------------
+
+  it('href + onClick: o handler recebe o MouseEvent e o href continua no DOM', async () => {
+    const recebido: unknown[] = [];
+    const tabsSpa: SubNavTab[] = [
+      { id: 'overview', label: 'Visão Geral', href: '/eventos/1', active: true },
+      {
+        id: 'inscritos',
+        label: 'Inscrições',
+        href: '/eventos/1/inscritos',
+        onClick: (event) => {
+          recebido.push(event);
+          event.preventDefault();
+        },
+      },
+    ];
+    render(<SubNav tabs={tabsSpa} />);
+    const link = screen.getByRole('link', { name: 'Inscrições' });
+    await userEvent.click(link);
+
+    expect(recebido).toHaveLength(1);
+    const event = recebido[0] as React.MouseEvent;
+    expect(typeof event.preventDefault).toBe('function');
+    expect(event.defaultPrevented).toBe(true);
+    // O href é a razão de manter a âncora: ctrl+clique, clique do meio e
+    // "copiar endereço do link" continuam existindo.
+    expect(link).toHaveAttribute('href', '/eventos/1/inscritos');
+  });
+
+  it('sem href, o botão também encaminha o MouseEvent', async () => {
+    const recebido: unknown[] = [];
+    render(
+      <SubNav
+        tabs={[{ id: 'a', label: 'A', onClick: (event) => recebido.push(event) }]}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'A' }));
+    expect(recebido).toHaveLength(1);
+    expect(typeof (recebido[0] as React.MouseEvent).preventDefault).toBe('function');
   });
 
   it('all tabs are reachable via Tab key (no roving tabindex)', async () => {

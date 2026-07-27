@@ -35,7 +35,18 @@ export interface SubNavTab {
   href?: string;
   count?: number;
   active?: boolean;
-  onClick?: () => void;
+  /**
+   * Recebe o evento — em `href` + `onClick`, permite `preventDefault()` (nav
+   * SPA). Mesmo contrato do `CardEvento` (a primitiva que já tinha o conserto).
+   * O `href` CONTINUA no DOM: é o que dá ctrl/cmd+clique, clique do meio,
+   * "copiar endereço do link" e preview da URL na barra de status. Quem quer
+   * navegação de SPA intercepta aqui; quem não passa `onClick` mantém a
+   * navegação de documento do navegador.
+   *
+   * Alargamento ADITIVO: `() => void` continua atribuível a este tipo, então
+   * nenhum consumidor existente precisa mudar.
+   */
+  onClick?: (event: React.MouseEvent) => void;
 }
 
 export interface SubNavProps {

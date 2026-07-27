@@ -2,16 +2,21 @@
 // ClubeShell — layout compartilhado das rotas de um clube (S102-T1):
 // header 96px (SPEC §1.2) + sub-nav do club com 6 tabs (SPEC §1.3) e a aba
 // ativa marcada. Header traz o código de convite copiável (RN-101).
-// Presentational puro (props) — testável sem router nem dados. A ação de
-// copiar (clipboard + toast) é injetada por prop para manter a pureza.
+// Dados vêm por props e a ação de copiar (clipboard + toast) é injetada — a
+// casca não busca nada. Mas ela NAVEGA: desde LEELA-NAVFIX-T2 fia
+// `preventDefault` + `navigate` nas abas, então precisa de um Router em volta
+// (os testes montam `MemoryRouter`). Antes disso cada aba era um `<a href>` cru
+// e recarregava o documento inteiro.
 // =============================================================================
 
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Avatar, Badge, PageHeader, SubNav } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
 import { anoDe, formatInt } from '../_lib/format';
 import { clubeSubNavTabs, type ClubeAbaId } from '../_lib/subnav';
+import { tabsComNavSpa } from '../../../lib/navSpa';
 
 export interface ClubeShellProps {
   clube: Clube;
@@ -55,6 +60,7 @@ function CodigoConvite({
 }
 
 export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShellProps): JSX.Element {
+  const navigate = useNavigate();
   const desde = anoDe(clube.criadoEm);
   const subtitleParts = [
     formatarLocalizacaoClube(clube.localizacao),
@@ -62,10 +68,15 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
     desde ? `desde ${desde}` : null,
   ].filter(Boolean) as string[];
 
-  const tabs = clubeSubNavTabs(clube.slug, ativa, {
-    membros: clube.qtdMembrosAtivos,
-    desafios: clube.qtdDesafiosAtivos,
-  });
+  // `clubeSubNavTabs` é @pure e segue intocado (teste orientado a tabela em
+  // `_lib/__tests__/subnav.test.ts`). A navegação de SPA é fiada AQUI.
+  const tabs = tabsComNavSpa(
+    clubeSubNavTabs(clube.slug, ativa, {
+      membros: clube.qtdMembrosAtivos,
+      desafios: clube.qtdDesafiosAtivos,
+    }),
+    navigate,
+  );
 
   return (
     <div className="flex flex-col">

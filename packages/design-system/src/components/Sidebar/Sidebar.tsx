@@ -58,7 +58,20 @@ export interface SidebarItem {
   /** Cor do badge — union fechada; default 'danger' (o `.nav-badge` do mockup). */
   badgeVariant?: SidebarBadgeVariant;
   active?: boolean;
-  onClick?: () => void;
+  /**
+   * Recebe o evento — em `href` + `onClick`, permite `preventDefault()` (nav
+   * SPA). Mesmo contrato do `CardEvento`/`SubNav`.
+   *
+   * O item vira `<a href>` quando recebe `href` e `<button>` quando não recebe;
+   * as duas formas chamam este handler. Passar os DOIS é o estado correto: o
+   * menu volta a ser linkável (ctrl+clique, clique do meio, copiar endereço) e
+   * o clique simples ainda navega por SPA, porque o consumidor intercepta com
+   * `preventDefault()`. Só `onClick` (sem `href`) é o defeito espelhado do
+   * `<a href>` sem `preventDefault`: navega, mas não é link.
+   *
+   * Alargamento ADITIVO: `() => void` continua atribuível a este tipo.
+   */
+  onClick?: (event: React.MouseEvent) => void;
 }
 
 export interface SidebarSection {

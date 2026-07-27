@@ -7,6 +7,14 @@
 // routes/plataforma/_lib/nav.ts).
 // O item ativo é derivado do pathname — a sidebar é a mesma em todas as
 // rotas, só o conteúdo troca (contrato "permanece visível e imutável").
+//
+// LEELA-NAVFIX-T2 — o defeito ESPELHADO do das abas. As abas eram `<a href>`
+// sem `preventDefault` (recarregavam o documento); aqui era o contrário: só
+// `onClick`, sem `href`. O menu navegava por SPA mas NÃO era link — sem
+// ctrl+clique, sem clique do meio, sem "copiar endereço do link", sem preview
+// de URL na barra de status. O painel tinha os dois modos de falha ao mesmo
+// tempo. Agora cada item com destino leva `href` E `onClick` com
+// `preventDefault`: é link de verdade e o clique simples segue sendo SPA.
 // =============================================================================
 
 import {
@@ -17,6 +25,7 @@ import {
 } from '@leela/design-system';
 import { Banknote, Building2, CreditCard, FileText, Gauge, Tags, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
+import { onClickSpa } from '../lib/navSpa';
 
 /** id do item do produtor → rota conhecida do painel (undefined = inerte por ora). */
 const HREF_POR_ID: Record<string, string | undefined> = {
@@ -85,7 +94,8 @@ function producerSections(
         ...item,
         active: item.id === ativoId,
         ...badge,
-        ...(href ? { onClick: () => navigate(href) } : {}),
+        // href + onClick juntos: link de verdade, clique simples em SPA.
+        ...(href ? { href, onClick: onClickSpa(navigate, href) } : {}),
       };
     }),
   }));
@@ -110,7 +120,8 @@ function platformSections(
         if (item.badge !== undefined) base.badge = item.badge;
         if (item.href) {
           const href = item.href;
-          base.onClick = () => navigate(href);
+          base.href = href;
+          base.onClick = onClickSpa(navigate, href);
         }
         return base;
       }),

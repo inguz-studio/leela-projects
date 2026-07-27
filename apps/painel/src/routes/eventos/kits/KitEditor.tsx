@@ -7,6 +7,7 @@
 // =============================================================================
 
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Breadcrumb,
   Button,
@@ -29,6 +30,7 @@ import {
   type Kit,
 } from '@leela/core';
 import { uploadImagemKit, type SalvarKitInput } from '@leela/api-client';
+import { trilhaComNavSpa } from '../../../lib/navSpa';
 import type { ItemKitPayload } from './ItemKitModal';
 
 export type KitPayload = Omit<SalvarKitInput, 'tenantId'>;
@@ -63,6 +65,7 @@ export function KitEditor({
   onConcluir,
 }: KitEditorProps): JSX.Element {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const bloqueado = precoBloqueado(evento);
 
   const [nome, setNome] = React.useState(kit?.nome ?? '');
@@ -205,13 +208,16 @@ export function KitEditor({
   return (
     <div className="flex flex-col gap-[var(--spacing-6)]">
       <Breadcrumb
-        items={[
-          { label: 'Eventos', href: '/eventos' },
-          { label: evento.nome, href: `/eventos/${evento.slug}` },
-          { label: 'Kits', href: `/eventos/${evento.slug}/kits` },
-          { label: 'Cadastro', href: `/eventos/${evento.slug}/kits` },
-          { label: kit ? kit.nome : 'Novo kit' },
-        ]}
+        items={trilhaComNavSpa(
+          [
+            { label: 'Eventos', href: '/eventos' },
+            { label: evento.nome, href: `/eventos/${evento.slug}` },
+            { label: 'Kits', href: `/eventos/${evento.slug}/kits` },
+            { label: 'Cadastro', href: `/eventos/${evento.slug}/kits` },
+            { label: kit ? kit.nome : 'Novo kit' },
+          ],
+          navigate,
+        )}
       />
 
       <h1 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)]">
