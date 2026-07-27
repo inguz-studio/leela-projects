@@ -49,6 +49,41 @@ describe('onClickSpa', () => {
     expect(evento.defaultPrevented).toBe(false);
     expect(navegar).not.toHaveBeenCalled();
   });
+
+  // ---------------------------------------------------------------------------
+  // A-7 (LEELA-DEBT-T5) — clicar na aba ATIVA não pode empilhar histórico.
+  // Cada clique repetido na aba onde a pessoa já estava virava uma entrada
+  // idêntica no histórico, e o Voltar do navegador passava a repetir a mesma
+  // tela tantas vezes quantas ela tivesse clicado antes de sair dali.
+  // ---------------------------------------------------------------------------
+  it('destino IGUAL à rota atual: navega com replace (não empilha)', () => {
+    const navegar = vi.fn();
+    const evento = chamarOnClick(onClickSpa(navegar, '/crm/clientes', '/crm/clientes'));
+    // Continua sendo clique nosso: o documento não recarrega.
+    expect(evento.defaultPrevented).toBe(true);
+    expect(navegar).toHaveBeenCalledTimes(1);
+    expect(navegar).toHaveBeenCalledWith('/crm/clientes', { replace: true });
+  });
+
+  it('destino DIFERENTE da rota atual: empilha normalmente', () => {
+    const navegar = vi.fn();
+    chamarOnClick(onClickSpa(navegar, '/crm/clientes', '/crm'));
+    expect(navegar).toHaveBeenCalledWith('/crm/clientes');
+  });
+
+  it('comparação é de pathname EXATO — prefixo não conta como "já estou aqui"', () => {
+    const navegar = vi.fn();
+    // Está no detalhe do cliente e clica na aba da lista: é navegação de
+    // verdade, muda a URL, e merece uma entrada no histórico.
+    chamarOnClick(onClickSpa(navegar, '/crm/clientes', '/crm/clientes/tipo_abc123'));
+    expect(navegar).toHaveBeenCalledWith('/crm/clientes');
+  });
+
+  it('sem rota atual informada, o comportamento é o de antes (empilha)', () => {
+    const navegar = vi.fn();
+    chamarOnClick(onClickSpa(navegar, '/crm/clientes'));
+    expect(navegar).toHaveBeenCalledWith('/crm/clientes');
+  });
 });
 
 describe('ehCliqueDoNavegador', () => {
@@ -119,6 +154,22 @@ describe('tabsComNavSpa', () => {
     );
     chamarOnClick(aba?.onClick);
     expect(navegar).not.toHaveBeenCalled();
+  });
+
+  it('A-7: a aba da rota atual navega com replace; as outras empilham', () => {
+    const navegar = vi.fn();
+    const abas = tabsComNavSpa(
+      [
+        { id: 'a', label: 'A', href: '/crm', active: true },
+        { id: 'b', label: 'B', href: '/crm/clientes' },
+      ],
+      navegar,
+      '/crm',
+    );
+    chamarOnClick(abas[0]?.onClick);
+    expect(navegar).toHaveBeenLastCalledWith('/crm', { replace: true });
+    chamarOnClick(abas[1]?.onClick);
+    expect(navegar).toHaveBeenLastCalledWith('/crm/clientes');
   });
 
   it('cada aba navega para o PRÓPRIO destino (sem closure compartilhada)', () => {

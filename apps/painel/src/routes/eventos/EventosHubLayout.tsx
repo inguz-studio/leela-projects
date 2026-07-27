@@ -41,6 +41,7 @@ export function EventosHubSubNav(): JSX.Element {
       { id: 'repasses', label: 'Repasses', href: '/eventos/repasses', active: emRepasses },
     ],
     navigate,
+    pathname,
   );
 
   return <SubNav aria-label="Seções de Eventos" divider tabs={tabs} />;

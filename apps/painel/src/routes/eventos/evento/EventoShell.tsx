@@ -15,7 +15,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Badge,
   Breadcrumb,
@@ -87,6 +87,7 @@ function EventoTile({ variant }: { variant: EventThumbVariant }): JSX.Element {
 export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.Element {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const status = statusEventoBadge(evento.status);
   // O construtor `eventoSubNavTabs` é @pure e segue intocado (o teste orientado
@@ -95,6 +96,7 @@ export function EventoShell({ evento, ativa, children }: EventoShellProps): JSX.
   const tabs = tabsComNavSpa(
     eventoSubNavTabs(evento.slug, ativa, { inscritos: evento.qtdInscritos }),
     navigate,
+    pathname,
   );
   const trilha = trilhaComNavSpa(
     [{ label: 'Eventos', href: '/eventos' }, { label: evento.nome }],

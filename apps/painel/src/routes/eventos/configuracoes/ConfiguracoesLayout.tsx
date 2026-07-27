@@ -91,6 +91,7 @@ export function ConfiguracoesLayout(): JSX.Element {
       active: a.id === ativa,
     })),
     navigate,
+    pathname,
   );
 
   return (

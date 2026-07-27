@@ -25,7 +25,7 @@ import {
 } from '@leela/design-system';
 import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
-import { onClickSpa } from '../lib/navSpa';
+import { onClickSpa, type NavegarSpa } from '../lib/navSpa';
 
 /** id do item do produtor → rota conhecida do painel (undefined = inerte por ora). */
 const HREF_POR_ID: Record<string, string | undefined> = {
@@ -82,7 +82,8 @@ export function painelActiveId(pathname: string): string | null {
 
 function producerSections(
   ativoId: string | null,
-  navigate: (href: string) => void,
+  navigate: NavegarSpa,
+  pathname: string,
   eventosAtivos?: number | null
 ): SidebarSection[] {
   return DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
@@ -100,16 +101,15 @@ function producerSections(
         active: item.id === ativoId,
         ...badge,
         // href + onClick juntos: link de verdade, clique simples em SPA.
-        ...(href ? { href, onClick: onClickSpa(navigate, href) } : {}),
+        // A-7 (LEELA-DEBT-T5): o `pathname` entra como rota atual — clicar no
+        // item do menu onde a pessoa já está deixa de empilhar histórico.
+        ...(href ? { href, onClick: onClickSpa(navigate, href, pathname) } : {}),
       };
     }),
   }));
 }
 
-function platformSections(
-  pathname: string,
-  navigate: (href: string) => void
-): SidebarSection[] {
+function platformSections(pathname: string, navigate: NavegarSpa): SidebarSection[] {
   const ativo = activeNavId(pathname);
   return [
     {
@@ -126,7 +126,7 @@ function platformSections(
         if (item.href) {
           const href = item.href;
           base.href = href;
-          base.onClick = onClickSpa(navigate, href);
+          base.onClick = onClickSpa(navigate, href, pathname);
         }
         return base;
       }),
@@ -143,11 +143,11 @@ function platformSections(
  */
 export function shellSidebarSections(
   pathname: string,
-  navigate: (href: string) => void,
+  navigate: NavegarSpa,
   eventosAtivos?: number | null
 ): SidebarSection[] {
   if (pathname.startsWith('/plataforma')) {
     return platformSections(pathname, navigate);
   }
-  return producerSections(painelActiveId(pathname), navigate, eventosAtivos);
+  return producerSections(painelActiveId(pathname), navigate, pathname, eventosAtivos);
 }

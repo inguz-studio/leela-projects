@@ -32,7 +32,13 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const { nome, fotoUrl } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
 
-  const sections = shellSidebarSections(location.pathname, (href) => navigate(href), eventosAtivos);
+  // `navigate` vai INTEIRO, sem adaptador. O `(href) => navigate(href)` que
+  // morava aqui descartava em silêncio o segundo argumento, e com ele o
+  // `{ replace: true }` do A-7 (LEELA-DEBT-T5): o menu continuaria empilhando
+  // a rota atual a cada clique, e nenhum teste do construtor puro veria isso,
+  // porque lá o dublê recebe o que o construtor manda — o adaptador ficava
+  // entre os dois.
+  const sections = shellSidebarSections(location.pathname, navigate, eventosAtivos);
 
   // Toolbar global (T3) — só nas rotas do PRODUTOR (a /plataforma tem nav
   // própria e nenhuma busca de operação). Mesma condição do sidebar.ts.

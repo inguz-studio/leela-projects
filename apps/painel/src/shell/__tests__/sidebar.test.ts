@@ -176,7 +176,8 @@ describe('shellSidebarSections', () => {
     expect(taxa?.href).toBe('/plataforma/taxa');
     const evento = chamarOnClick(taxa?.onClick);
     expect(evento.defaultPrevented).toBe(true);
-    expect(navigate).toHaveBeenCalledWith('/plataforma/taxa');
+    // A-7 (LEELA-DEBT-T5): este item É a rota atual — clicar nele não empilha.
+    expect(navigate).toHaveBeenCalledWith('/plataforma/taxa', { replace: true });
     // E nenhum outro item fica marcado junto — a barra diz UM lugar só.
     expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['taxa']);
   });
@@ -191,6 +192,10 @@ describe('shellSidebarSections', () => {
     expect(planos?.href).toBe('/plataforma/planos');
     const evento = chamarOnClick(planos?.onClick);
     expect(evento.defaultPrevented).toBe(true);
-    expect(navigate).toHaveBeenCalledWith('/plataforma/planos');
+    // A-7: estando em /plataforma/planos, clicar em Planos substitui a entrada.
+    expect(navigate).toHaveBeenCalledWith('/plataforma/planos', { replace: true });
+    // Item de OUTRA rota segue empilhando — o A-7 é só sobre a atual.
+    chamarOnClick(items.find((i) => i.id === 'macro')?.onClick);
+    expect(navigate).toHaveBeenLastCalledWith('/plataforma/macro');
   });
 });

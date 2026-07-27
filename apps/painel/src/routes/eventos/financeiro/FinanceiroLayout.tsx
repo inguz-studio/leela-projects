@@ -43,6 +43,7 @@ export function FinanceiroLayout(): JSX.Element {
       },
     ],
     navigate,
+    pathname,
   );
 
   const context: EventoOutletContext = { evento };

@@ -21,7 +21,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 
 import { EventoShell } from '../eventos/evento/EventoShell';
@@ -425,4 +425,81 @@ describe('nenhuma superfície de navegação navega por botão', () => {
       ).toEqual(botoesQueNaoSaoDestino);
     },
   );
+});
+
+// ---------------------------------------------------------------------------
+// A-7 (LEELA-DEBT-T5) — clicar na aba ATIVA não empilha histórico.
+//
+// O sintoma era do lado de fora do app: a pessoa clicava algumas vezes na aba
+// em que já estava (por hábito, ou porque a tela demorou), e o Voltar do
+// navegador passava a repetir a MESMA tela uma vez por clique antes de
+// finalmente sair dali. Nenhum teste de handler pega isso — só um histórico de
+// verdade. Por isso este caso monta um router com pilha e volta nela.
+// ---------------------------------------------------------------------------
+
+/** Botão que aciona o voltar do router — o histórico é medido, não presumido. */
+function Voltar(): JSX.Element {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      voltar
+    </button>
+  );
+}
+
+describe('A-7 — clicar na aba ativa não empilha histórico', () => {
+  it('três cliques na aba ativa do CRM: um Voltar já sai da tela', () => {
+    render(
+      // A pessoa veio de /eventos e está em /crm — o topo da pilha é /crm.
+      <MemoryRouter initialEntries={['/eventos', '/crm']} initialIndex={1}>
+        <CrmSubNav />
+        <Voltar />
+        <Sonda />
+      </MemoryRouter>,
+    );
+    const abaAtiva = screen.getByRole('link', { name: 'Visão geral' });
+    clicarNoDom(abaAtiva);
+    clicarNoDom(abaAtiva);
+    clicarNoDom(abaAtiva);
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/crm');
+
+    clicarNoDom(screen.getByRole('button', { name: 'voltar' }));
+    // Com push, os três cliques teriam empilhado /crm três vezes e este Voltar
+    // devolveria /crm. Com replace, o passo anterior é o de verdade.
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/eventos');
+  });
+
+  it('aba NÃO ativa segue empilhando — o Voltar continua desfazendo a ida', () => {
+    render(
+      <MemoryRouter initialEntries={['/crm']}>
+        <CrmSubNav />
+        <Voltar />
+        <Sonda />
+      </MemoryRouter>,
+    );
+    clicarNoDom(screen.getByRole('link', { name: 'Clientes' }));
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/crm/clientes');
+
+    clicarNoDom(screen.getByRole('button', { name: 'voltar' }));
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/crm');
+  });
+
+  it('menu lateral: clicar no item da rota atual também não empilha', () => {
+    render(
+      <MemoryRouter initialEntries={['/clubes', '/eventos']} initialIndex={1}>
+        <RootShell>
+          <Voltar />
+          <Sonda />
+        </RootShell>
+      </MemoryRouter>,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Navegação principal' });
+    const itemAtivo = within(nav).getByRole('link', { name: /Eventos/ });
+    clicarNoDom(itemAtivo);
+    clicarNoDom(itemAtivo);
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/eventos');
+
+    clicarNoDom(screen.getByRole('button', { name: 'voltar' }));
+    expect(screen.getByTestId('rota-gate').textContent).toBe('/clubes');
+  });
 });

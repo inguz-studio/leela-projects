@@ -52,6 +52,7 @@ export function CrmSubNav(): JSX.Element {
       },
     ],
     navigate,
+    pathname,
   );
 
   return <SubNav aria-label="Seções de CRM" divider tabs={tabs} />;

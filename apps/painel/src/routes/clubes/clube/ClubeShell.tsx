@@ -10,7 +10,7 @@
 // =============================================================================
 
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, Badge, PageHeader, SubNav } from '@leela/design-system';
 import type { Clube } from '@leela/core';
 import { formatarLocalizacaoClube } from '@leela/core';
@@ -61,6 +61,7 @@ function CodigoConvite({
 
 export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShellProps): JSX.Element {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const desde = anoDe(clube.criadoEm);
   const subtitleParts = [
     formatarLocalizacaoClube(clube.localizacao),
@@ -76,6 +77,7 @@ export function ClubeShell({ clube, ativa, onCopiarCodigo, children }: ClubeShel
       desafios: clube.qtdDesafiosAtivos,
     }),
     navigate,
+    pathname,
   );
 
   return (

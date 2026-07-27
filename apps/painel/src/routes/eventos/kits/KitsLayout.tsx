@@ -29,6 +29,7 @@ export function KitsLayout(): JSX.Element {
       { id: 'entrega', label: 'Entrega', href: `/eventos/${slug}/entrega`, active: false },
     ],
     navigate,
+    pathname,
   );
 
   return (

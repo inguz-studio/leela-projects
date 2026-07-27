@@ -21,8 +21,12 @@
 import type * as React from 'react';
 import type { BreadcrumbItem, SubNavTab } from '@leela/design-system';
 
-/** Assinatura mínima do `navigate` do react-router que estas superfícies usam. */
-export type NavegarSpa = (para: string) => void;
+/**
+ * Assinatura mínima do `navigate` do react-router que estas superfícies usam.
+ * `replace` entrou em LEELA-DEBT-T5 (A-7) e é o único campo lido — o
+ * `NavigateFunction` do router continua atribuível a este tipo.
+ */
+export type NavegarSpa = (para: string, opcoes?: { replace?: boolean }) => void;
 
 /**
  * O clique pertence ao NAVEGADOR, não a nós?
@@ -42,10 +46,23 @@ export function ehCliqueDoNavegador(event: React.MouseEvent): boolean {
  * Handler de clique para uma superfície de navegação interna: clique simples
  * navega por SPA; qualquer clique com intenção de "abrir noutro lugar" passa
  * batido para o `href`.
+ *
+ * `atual` é o pathname em que a pessoa JÁ está (A-7 · LEELA-DEBT-T5). Quando o
+ * destino é ele mesmo, a navegação vira `replace`: clicar duas vezes na aba
+ * ativa empilhava duas entradas idênticas no histórico, e o Voltar do navegador
+ * passava a repetir a mesma tela quantas vezes a pessoa tivesse clicado antes
+ * de finalmente sair dali. Um lugar só decide isso — as superfícies apenas
+ * informam onde estão.
+ *
+ * Sem `atual` o comportamento é o de antes (sempre empilha). A comparação é de
+ * pathname EXATO de propósito: aba ativa cujo `href` aponta para outra URL
+ * (`/crm/visao-geral` marcando a aba de `/crm`) é navegação de verdade e
+ * merece uma entrada no histórico.
  */
 export function onClickSpa(
   navegar: NavegarSpa,
   para: string,
+  atual?: string,
 ): (event: React.MouseEvent) => void {
   return (event) => {
     // Alguém acima já tratou (ex.: um wrapper que fecha um menu) — não navegar
@@ -53,6 +70,12 @@ export function onClickSpa(
     if (event.defaultPrevented) return;
     if (ehCliqueDoNavegador(event)) return;
     event.preventDefault();
+    // Continua navegando (e não vira no-op) para que o estado de rota seja o
+    // mesmo dos outros caminhos — só não deixa rastro no histórico.
+    if (atual !== undefined && atual === para) {
+      navegar(para, { replace: true });
+      return;
+    }
     navegar(para);
   };
 }
@@ -73,8 +96,9 @@ function comNavSpa(
   original: ((event: React.MouseEvent) => void) | undefined,
   navegar: NavegarSpa,
   para: string,
+  atual?: string,
 ): (event: React.MouseEvent) => void {
-  const spa = onClickSpa(navegar, para);
+  const spa = onClickSpa(navegar, para, atual);
   if (!original) return spa;
   return (event) => {
     original(event);
@@ -90,10 +114,18 @@ function comNavSpa(
  *
  * Aba sem `href` já navega por `onClick` (padrão nascido na rodada IA-MENU) e
  * passa intocada.
+ *
+ * `atual` (o pathname corrente) liga o A-7 nesta barra: clicar na aba onde já
+ * se está deixa de empilhar histórico. Barra que não informa `atual` mantém o
+ * comportamento antigo.
  */
-export function tabsComNavSpa(tabs: readonly SubNavTab[], navegar: NavegarSpa): SubNavTab[] {
+export function tabsComNavSpa(
+  tabs: readonly SubNavTab[],
+  navegar: NavegarSpa,
+  atual?: string,
+): SubNavTab[] {
   return tabs.map((tab) =>
-    tab.href ? { ...tab, onClick: comNavSpa(tab.onClick, navegar, tab.href) } : tab,
+    tab.href ? { ...tab, onClick: comNavSpa(tab.onClick, navegar, tab.href, atual) } : tab,
   );
 }
 
@@ -101,6 +133,9 @@ export function tabsComNavSpa(tabs: readonly SubNavTab[], navegar: NavegarSpa): 
  * Mesma fiação para a trilha do `Breadcrumb`. O último item é a página atual
  * (não vira link) e um item sem `href` é texto — o DS ignora o `onClick` nos
  * dois casos, então mapear a lista inteira é seguro.
+ *
+ * Não recebe `atual` porque a trilha não tem como cair no caso do A-7: o único
+ * item que aponta para a página corrente é o último, e ele nasce sem `href`.
  */
 export function trilhaComNavSpa(
   itens: readonly BreadcrumbItem[],
