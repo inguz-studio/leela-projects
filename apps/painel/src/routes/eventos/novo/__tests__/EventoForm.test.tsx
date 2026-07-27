@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { usuario } from '../../../../test/usuario';
 import { ToastProvider } from '@leela/design-system';
 import { EventoForm } from '../EventoForm';
 
@@ -14,19 +14,28 @@ function renderForm(onCriarEvento = vi.fn().mockResolvedValue({ eventoId: 'e1', 
   return { onCriarEvento, onSuccess };
 }
 
+// LEELA-DEBT-T3 — este era o arquivo mais lento da suíte (17,4s de tempo de
+// teste), e a conta não era o React: era o user-event esperando um relógio
+// CONGELADO andar sozinho, 20ms de parede por tecla. A instância criada por
+// `usuario()` empurra o relógio falso ela mesma (a explicação inteira mora em
+// src/test/usuario.ts). Mesmas interações, mesmas asserções — 4,9s.
+let user: ReturnType<typeof usuario>;
+
 // A "Data da prova" agora é o DatePicker do DS (§8/F-01) — não há mais input
 // nativo p/ setar valor via fireEvent. O relógio é congelado em abr/2099
 // (beforeEach) para o calendário abrir nesse mês; clicar o dia 27 reproduz o
 // mesmo '2099-04-27' que as asserções já esperavam — asserções intocadas.
 async function escolherDataDaProva(): Promise<void> {
-  await userEvent.click(screen.getByRole('button', { name: 'Data da prova' }));
-  await userEvent.click(screen.getByRole('button', { name: /27 de abril de 2099/ }));
+  await user.click(screen.getByRole('button', { name: 'Data da prova' }));
+  await user.click(screen.getByRole('button', { name: /27 de abril de 2099/ }));
 }
 
 describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date(2099, 3, 15, 12, 0, 0));
+    // Depois do relógio falso: a instância nasce já acoplada a ele.
+    user = usuario();
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -34,7 +43,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
 
   it('bloqueia o submit e mostra erro inline quando falta campo obrigatório', async () => {
     const { onCriarEvento } = renderForm();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
     expect(await screen.findByText('Informe o nome do evento.')).toBeInTheDocument();
     expect(onCriarEvento).not.toHaveBeenCalled();
   });
@@ -42,15 +51,15 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('cria rascunho com dados válidos e DERIVA percursos das modalidades (preço 0)', async () => {
     const { onCriarEvento, onSuccess } = renderForm();
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida do Campeche');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Corrida do Campeche');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'Av. Campeche, 1000');
+    await user.type(screen.getByLabelText('Endereço / local'), 'Av. Campeche, 1000');
 
     // Modalidade por entrada livre (sem preço no cadastro).
-    await userEvent.type(screen.getByLabelText('Adicionar modalidade'), 'Trail 15k');
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.type(screen.getByLabelText('Adicionar modalidade'), 'Trail 15k');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
     expect(onCriarEvento).toHaveBeenCalledWith(
@@ -69,12 +78,12 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('sugestão de modalidade adiciona por clique (5k/10k/21k/42k)', async () => {
     const { onCriarEvento } = renderForm();
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Z');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Evento Z');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.click(screen.getByRole('button', { name: '5k' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.click(screen.getByRole('button', { name: '5k' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
     expect(onCriarEvento).toHaveBeenCalledWith(
@@ -85,14 +94,14 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('horário opcional vira INSTANTE ISO no fuso do produto (DST-safe)', async () => {
     const { onCriarEvento } = renderForm();
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida 7h');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Corrida 7h');
     await escolherDataDaProva();
     fireEvent.change(screen.getByLabelText('Horário (opcional)'), { target: { value: '07:00' } });
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.type(screen.getByLabelText('Adicionar modalidade'), '5k');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
     // 07:00 em America/Sao_Paulo (UTC-3) = 10:00Z — determinístico em qualquer runner.
@@ -106,11 +115,11 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
     const toggle = screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' });
     expect(toggle).toBeEnabled();
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Taxa');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Evento Taxa');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.click(screen.getByRole('button', { name: '10k' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.click(screen.getByRole('button', { name: '10k' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
     expect(onCriarEvento).toHaveBeenCalledWith(
@@ -121,14 +130,14 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('ligar o toggle persiste taxaModo=repassada (RN-347)', async () => {
     const { onCriarEvento } = renderForm();
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Repassada');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Evento Repassada');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.click(screen.getByRole('button', { name: '10k' }));
-    await userEvent.click(
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.click(screen.getByRole('button', { name: '10k' }));
+    await user.click(
       screen.getByRole('switch', { name: 'Repassar a taxa de serviço ao comprador' }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onCriarEvento).toHaveBeenCalledTimes(1));
     expect(onCriarEvento).toHaveBeenCalledWith(
@@ -139,12 +148,12 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('mostra Toast de erro quando a criação falha', async () => {
     renderForm(vi.fn().mockRejectedValue(new Error('backend off')));
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento X');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Evento X');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.type(screen.getByLabelText('Adicionar modalidade'), '5k');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     expect(await screen.findByText('Não foi possível criar o evento')).toBeInTheDocument();
   });
@@ -176,10 +185,10 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   }
 
   async function preencherObrigatorios(): Promise<void> {
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Corrida com Capa');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Corrida com Capa');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.click(screen.getByRole('button', { name: '10k' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.click(screen.getByRole('button', { name: '10k' }));
   }
 
   it('sem as portas de capa o bloco não renderiza (degradação honesta, sem nota falsa)', () => {
@@ -191,12 +200,12 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('capa selecionada NÃO sobe na hora (evento não existe); sobe APÓS criar, com o eventoId, e persiste', async () => {
     const { onCriarEvento, onUploadCapa, onSalvarCapa, onSuccess } = renderFormComCapa();
     const png = new File(['x'], 'capa.png', { type: 'image/png' });
-    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+    await user.upload(screen.getByLabelText('Imagem de capa'), png);
     // Deferred: nenhuma porta de upload chamada na seleção.
     expect(onUploadCapa).not.toHaveBeenCalled();
 
     await preencherObrigatorios();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     await waitFor(() => expect(onSalvarCapa).toHaveBeenCalledTimes(1));
     expect(onCriarEvento).toHaveBeenCalledTimes(1);
@@ -210,12 +219,12 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('capa webp REJEITADA inline (RN-228 jpeg/png/gif) e nada sobe no submit', async () => {
     const { onUploadCapa } = renderFormComCapa();
     const webp = new File(['x'], 'capa.webp', { type: 'image/webp' });
-    await userEvent.upload(screen.getByLabelText('Imagem de capa'), webp);
+    await user.upload(screen.getByLabelText('Imagem de capa'), webp);
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent(/JPG, PNG ou GIF/);
 
     await preencherObrigatorios();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
     await waitFor(() => expect(screen.getByText('Rascunho criado')).toBeInTheDocument());
     expect(onUploadCapa).not.toHaveBeenCalled();
   });
@@ -223,7 +232,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('capa acima de 2MB REJEITADA inline (teto RN-228 pós-crop; jsdom não reduz)', async () => {
     const { onUploadCapa } = renderFormComCapa();
     const grande = new File([new Uint8Array(3 * 1024 * 1024)], 'capa.png', { type: 'image/png' });
-    await userEvent.upload(screen.getByLabelText('Imagem de capa'), grande);
+    await user.upload(screen.getByLabelText('Imagem de capa'), grande);
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent(/no máximo 2MB/);
     expect(onUploadCapa).not.toHaveBeenCalled();
@@ -232,11 +241,11 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
   it('"Remover capa" esquece o arquivo pendente — criar não sobe nada', async () => {
     const { onUploadCapa, onSalvarCapa, onSuccess } = renderFormComCapa();
     const png = new File(['x'], 'capa.png', { type: 'image/png' });
-    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
-    await userEvent.click(await screen.findByRole('button', { name: 'Remover capa' }));
+    await user.upload(screen.getByLabelText('Imagem de capa'), png);
+    await user.click(await screen.findByRole('button', { name: 'Remover capa' }));
 
     await preencherObrigatorios();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1)); // evento criado normal
     expect(onUploadCapa).not.toHaveBeenCalled();
     expect(onSalvarCapa).not.toHaveBeenCalled();
@@ -262,7 +271,7 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
         </ToastProvider>,
       );
       const png = new File(['x'], 'capa.png', { type: 'image/png' });
-      await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+      await user.upload(screen.getByLabelText('Imagem de capa'), png);
       await waitFor(() => expect(criarSpy).toHaveBeenCalledTimes(1));
       expect(revogarSpy).not.toHaveBeenCalled(); // prévia vigente segue viva
 
@@ -281,10 +290,10 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
       onUploadCapa: vi.fn().mockRejectedValue(new Error('permission-denied')),
     });
     const png = new File(['x'], 'capa.png', { type: 'image/png' });
-    await userEvent.upload(screen.getByLabelText('Imagem de capa'), png);
+    await user.upload(screen.getByLabelText('Imagem de capa'), png);
 
     await preencherObrigatorios();
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     expect(await screen.findByText('A capa não foi enviada')).toBeInTheDocument();
     expect(screen.getByText('Rascunho criado')).toBeInTheDocument();
@@ -300,12 +309,12 @@ describe('EventoForm (REVISÃO RN-153 — cadastro enriquecido)', () => {
       }),
     );
 
-    await userEvent.type(screen.getByLabelText('Nome do evento'), 'Evento Y');
+    await user.type(screen.getByLabelText('Nome do evento'), 'Evento Y');
     await escolherDataDaProva();
-    await userEvent.type(screen.getByLabelText('Endereço / local'), 'SP');
-    await userEvent.type(screen.getByLabelText('Adicionar modalidade'), '5k');
-    await userEvent.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Criar rascunho' }));
+    await user.type(screen.getByLabelText('Endereço / local'), 'SP');
+    await user.type(screen.getByLabelText('Adicionar modalidade'), '5k');
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.click(screen.getByRole('button', { name: 'Criar rascunho' }));
 
     expect(
       await screen.findByText('Sua conta não pode criar eventos agora'),
