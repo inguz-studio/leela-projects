@@ -141,14 +141,44 @@ describe('shellSidebarSections', () => {
     }
   });
 
-  it('/plataforma: nav própria com 6 itens, ícones e ativo por sub-rota', () => {
+  // LEELA-DEBT-T2: a tabela abaixo é a nav de plataforma INTEIRA e vinha um
+  // item atrasada — `taxa` (TAXAFLEX · S1606 · RN-178) entrou em PLATFORM_NAV e
+  // ninguém trouxe para cá. O comportamento atual é o desejado (a rota
+  // `/plataforma/taxa` existe e é a tabela GLOBAL de taxa por meio de
+  // pagamento), então quem se move é a tabela do teste. O ícone, esse era gap
+  // de verdade e foi consertado no código: `items.every(i => i.icon)` já
+  // cobrava, mas caía depois desta linha e nunca chegava a ser avaliada.
+  it('/plataforma: nav própria com 7 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
-    expect(items.map((i) => i.id)).toEqual(['tenants', 'termos', 'planos', 'repasses', 'billing', 'macro']);
+    expect(items.map((i) => i.id)).toEqual([
+      'tenants',
+      'termos',
+      'planos',
+      'taxa',
+      'repasses',
+      'billing',
+      'macro',
+    ]);
     expect(items.every((i) => i.icon)).toBe(true);
     expect(items.find((i) => i.id === 'macro')?.active).toBe(true);
     expect(items.find((i) => i.id === 'billing')?.badge).toBe('em breve');
+  });
+
+  it('/plataforma/taxa: item Taxa ativo, com ícone e navegável (TAXAFLEX)', () => {
+    const navigate = vi.fn();
+    const items = shellSidebarSections('/plataforma/taxa', navigate)[0]?.items ?? [];
+    const taxa = items.find((i) => i.id === 'taxa');
+    expect(taxa?.active).toBe(true);
+    // O item que faltava na tabela era também o único sem ícone na barra.
+    expect(taxa?.icon).toBeDefined();
+    expect(taxa?.href).toBe('/plataforma/taxa');
+    const evento = chamarOnClick(taxa?.onClick);
+    expect(evento.defaultPrevented).toBe(true);
+    expect(navigate).toHaveBeenCalledWith('/plataforma/taxa');
+    // E nenhum outro item fica marcado junto — a barra diz UM lugar só.
+    expect(items.filter((i) => i.active).map((i) => i.id)).toEqual(['taxa']);
   });
 
   it('/plataforma/planos: item Planos ativo e navegável (CB-T3)', () => {

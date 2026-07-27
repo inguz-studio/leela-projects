@@ -258,7 +258,16 @@ describe('mutações de PLATAFORMA (read-your-writes · CONS-3-T1)', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'rollups'] });
   });
 
-  it('useSaveCommercialTerms reusa saveCommercialTerms (com adminUid) e invalida os termos do tenant', async () => {
+  // LEELA-DEBT-T2: o hook ganhou um 5º argumento (`expectedVersion`, o lock
+  // otimista do TAXAFLEX F5) e a asserção continuou esperando 4. O
+  // comportamento atual é o desejado e está provado nas duas pontas abaixo:
+  // SEM versão carregada o hook repassa `undefined`, e `saveCommercialTerms`
+  // só compara versões quando o argumento é diferente de `undefined` — ou seja,
+  // `undefined` é literalmente "não há lock a conferir". O par de casos é mais
+  // forte que a asserção antiga: ela nem sabia que o argumento existia, e um
+  // hook que ENGOLISSE a versão carregada (voltando a permitir lost-update dos
+  // campos preservados pelo editor) passava verde.
+  it('useSaveCommercialTerms SEM versão carregada: repassa undefined (nada a travar)', async () => {
     mocks.saveCommercialTerms.mockResolvedValue(3);
     const client = new QueryClient();
     const invalidate = vi.spyOn(client, 'invalidateQueries');
@@ -269,9 +278,35 @@ describe('mutações de PLATAFORMA (read-your-writes · CONS-3-T1)', () => {
     const versao = await result.current.mutateAsync({ taxaPct: 5 } as never);
 
     expect(versao).toBe(3);
-    expect(mocks.saveCommercialTerms).toHaveBeenCalledWith({}, 't1', { taxaPct: 5 }, 'admin-uid');
+    expect(mocks.saveCommercialTerms).toHaveBeenCalledWith(
+      {},
+      't1',
+      { taxaPct: 5 },
+      'admin-uid',
+      undefined,
+    );
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['plataforma', 'termos', 't1'] }),
+    );
+  });
+
+  it('useSaveCommercialTerms COM versão carregada: repassa o lock otimista (TAXAFLEX F5)', async () => {
+    mocks.saveCommercialTerms.mockResolvedValue(8);
+    const client = new QueryClient();
+
+    const { result } = renderHook(() => useSaveCommercialTerms('t1', 'admin-uid', 7), {
+      wrapper: makeWrapper(client),
+    });
+    await result.current.mutateAsync({ taxaPct: 5 } as never);
+
+    // A versão que o editor carregou tem de CHEGAR na porta — é ela que faz o
+    // save recusar quando um 2º admin (ou o aplicarPlano) mexeu no meio.
+    expect(mocks.saveCommercialTerms).toHaveBeenCalledWith(
+      {},
+      't1',
+      { taxaPct: 5 },
+      'admin-uid',
+      7,
     );
   });
 });

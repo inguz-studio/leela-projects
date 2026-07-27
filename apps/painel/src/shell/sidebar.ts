@@ -23,7 +23,7 @@ import {
   type SidebarItem,
   type SidebarSection,
 } from '@leela/design-system';
-import { Banknote, Building2, CreditCard, FileText, Gauge, Tags, type LucideIcon } from 'lucide-react';
+import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 import { onClickSpa } from '../lib/navSpa';
 
@@ -53,6 +53,11 @@ const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   tenants: Building2,
   termos: FileText,
   planos: Tags,
+  // TAXAFLEX (S1606 · RN-178): o item entrou em PLATFORM_NAV mas ficou de fora
+  // desta tabela e renderizava SEM ícone, único assim na barra do super-admin
+  // (LEELA-DEBT-T2). A asserção `items.every(i => i.icon)` já cobrava isso —
+  // ela ficava atrás da comparação da lista, que caía antes.
+  taxa: Percent,
   repasses: Banknote,
   billing: CreditCard,
   macro: Gauge,
