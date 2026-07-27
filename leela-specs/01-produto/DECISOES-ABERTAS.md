@@ -57,7 +57,7 @@ Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva
     **Exemplo.** Ana entra na página do evento do Castelo às 20h00 e passa vinte minutos lendo o regulamento e comparando kits. Às 20h20 ela escolhe o lote, e esse é o momento em que o servidor cota pela primeira vez. O relógio dos 15 minutos começa às 20h20, e ela tem até 20h35. Se a sua intenção era contar da entrada na tela, Ana está ganhando vinte minutos que você não previu; se era contar do pagamento, ela está perdendo tempo antes da hora.
 
     **O que destrava.** Uma frase confirmando ou corrigindo o ponto de partida. Nenhum código novo depende dela para ser respondida, e o ajuste, se houver, é pequeno.
-27. **Pagamento retardatário (premissa CK2-4, agora delimitada).** Pagamento que entra APÓS o cancelamento cai num ledger durável (`ignorado_estado_final`) — o dinheiro saiu do comprador e fica registrado, mas nada ALERTA. Opções quando você quiser fechar: estorno automático × fila de reconciliação × ressuscitar a inscrição. Qualquer uma exige antes um **contador/alerta sobre o ledger** (recomendação da review — senão a reconciliação nasce sem gatilho). Sem urgência com Mock ativo; entra no pacote de go-live.
+27. **Pagamento retardatário (premissa CK2-4, agora delimitada).** Pagamento que entra APÓS o cancelamento cai num ledger durável (`ignorado_estado_final`) — o dinheiro saiu do comprador e fica registrado, mas nada ALERTA. Opções quando você quiser fechar: estorno automático × fila de reconciliação × ressuscitar a inscrição. Qualquer uma exige antes um **contador/alerta sobre o ledger** (recomendação da review — senão a reconciliação nasce sem gatilho). Sem urgência com Mock ativo; entra no pacote de go-live. **→ ✅ RESOLVIDO (DEC-0727): estorno automático**, com o contador/alerta nascendo antes do gatilho; implementação no pacote de estorno (ver rodada).
 
     **Em português comum.** Um pagamento que entra depois de o pedido já ter sido cancelado cai num registro durável chamado `ignorado_estado_final`. O dinheiro saiu do comprador e fica anotado, mas nada avisa ninguém. As três saídas possíveis são estorno automático, fila de reconciliação ou ressuscitar a inscrição, e qualquer uma delas exige antes um contador com alerta sobre esse registro.
 
@@ -67,7 +67,7 @@ Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva
 
     **O que destrava.** Você escolhe uma das três saídas e aprova o contador com alerta como pré-requisito dela. Só depois isso vira lote de código. Fonte: `outputs/leela-build-2d6ee98d/PIXCARRINHO-REV-REPORT.md` §Escalados item 7.
 
-28. **🆕 [PIXCARRINHO-REV] Quanto tempo a plataforma espera o Asaas antes de desistir?** Hoje: **nada**. Não existe teto em camada nenhuma — o adapter chama `fetch` sem `AbortController` e a callable do checkout não declara `timeoutSeconds`, então o único limite é o timeout da Function (60s) e o comprador recebe o erro genérico de uma Function que estourou, não uma explicação sobre o gateway. Não é regressão do T1 (o `createCharge` já era uma chamada sem teto no mesmo caminho), mas o T1 somou uma segunda. Recomendação da review: teto por chamada na casa de **10-15s** com erro tipado próprio, aplicado no `request` do adapter (um lugar só, vale para todas as chamadas Asaas). O número é seu — apertado demais transforma cobrança criada em erro para o comprador.
+28. **🆕 [PIXCARRINHO-REV] Quanto tempo a plataforma espera o Asaas antes de desistir?** Hoje: **nada**. Não existe teto em camada nenhuma — o adapter chama `fetch` sem `AbortController` e a callable do checkout não declara `timeoutSeconds`, então o único limite é o timeout da Function (60s) e o comprador recebe o erro genérico de uma Function que estourou, não uma explicação sobre o gateway. Não é regressão do T1 (o `createCharge` já era uma chamada sem teto no mesmo caminho), mas o T1 somou uma segunda. Recomendação da review: teto por chamada na casa de **10-15s** com erro tipado próprio, aplicado no `request` do adapter (um lugar só, vale para todas as chamadas Asaas). O número é seu — apertado demais transforma cobrança criada em erro para o comprador. **→ ✅ RESOLVIDO (DEC-0727): teto de 15s aceito**, comprador vê "processando pagamento" (cartão e PIX); lane ASAAS-TETO em execução.
 
     **Em português comum.** Não existe limite de tempo para a plataforma esperar a resposta do Asaas. O que chega ao comprador quando isso estoura é o erro genérico de uma função que morreu, não uma explicação sobre o meio de pagamento. O conserto cabe num lugar só, o `request` do adapter, que vale para todas as chamadas ao gateway.
 
@@ -180,7 +180,9 @@ Contexto em 1 linha: o servidor agora manda o relógio, trava 2ª cobrança viva
 
 Nenhum item desta seção é decisão de produto fechada nem lote em execução: são pontas que precisam de um dono antes do go-live. A ordem é de gravidade, não de fila.
 
-### P-IAMENU-1 (grave) · o CRM não separa quem vê o agregado de quem vê a ficha
+### P-IAMENU-1 · o CRM não separa quem vê o agregado de quem vê a ficha — ⏸️ DESPRIORIZADO (DEC-0727)
+
+> **Vitor, 2026-07-27:** não é relevante agora — o modelo de acessos admin em Configurações ainda nem existe. Sai do pré-go-live; este item volta quando aquele modelo nascer.
 
 **O que é.** O CRM tem duas camadas de dado muito diferentes. Visão geral mostra o público em agregado, sem identidade, com supressão de grupos pequenos (k=5). Clientes mostra a ficha individual, com nome, gênero, valor gasto e histórico. Depois da reorganização do menu as duas passaram a dividir a mesma casca, e a medida do código diz que **as duas são liberadas pela mesma regra**: a coleção de clientes é lida por quem escreve no tenant, e a área do CRM não tem guarda de papel no roteador (nunca teve, nem antes da mudança). Logo, quem vê o gráfico vê a lista.
 
@@ -198,7 +200,7 @@ Nenhum item desta seção é decisão de produto fechada nem lote em execução:
 
 **Exemplo.** O Castelo recebe R$ 500 de repasse na terça e abre a aba Caixa do evento na quarta. A tela mostra o repasse certo e, na linha de baixo, um disponível que ignora essa saída. Ele soma de cabeça, não fecha, e liga para a Marina achando que perdeu dinheiro no meio do caminho. O que deveria acontecer: ou o disponível abater os repasses vivos daquele evento, ou a tela dizer com clareza que aquele número é estimativa que não abate o repasse (é o que o contorno faz hoje, e é exatamente a escolha que falta ratificar).
 
-**O que destrava.** Duas respostas de dono: (a) o disponível por evento abate os repasses vivos, ou permanece estimativa declarada? (b) autorização para reconciliar a função de derivação e a asserção do teste que ainda descrevem o mundo anterior. Fonte: [[LEELA-E09-financeiro-profissional]] §P-IAMENU-2 · `outputs/leela-build-2d6ee98d/IAMENU-REV-REPORT.md`.
+**O que destrava.** Duas respostas de dono: (a) o disponível por evento abate os repasses vivos, ou permanece estimativa declarada? (b) autorização para reconciliar a função de derivação e a asserção do teste que ainda descrevem o mundo anterior. Fonte: [[LEELA-E09-financeiro-profissional]] §P-IAMENU-2 · `outputs/leela-build-2d6ee98d/IAMENU-REV-REPORT.md`. **→ ✅ RESOLVIDO (DEC-0727): (a) abate os repasses vivos ("isso é muito importante") e (b) autorizada a reconciliação**; lane CAIXA-DISPONIVEL em execução.
 
 ### T5 · o observador de sessão está copiado cinco vezes
 
@@ -276,6 +278,14 @@ Formato curto de propósito. O detalhe de cada frente mora no card do backlog em
 - Logos: entregues e aplicadas (sidebar, landing). · Homepage/catálogo: no ar (E12). · Checkout sandbox: no ar, marco "vender ponta a ponta" fechado. · D3 middle-action "Comunicar": aplicado (`c555e93`). · Divergências do cupom brief×kernel: reconciliadas no épico E04 (kernel é a autoridade). · S300-T6 PercursoModal: superseded por ADR-012.
 
 ## ✅ Ratificadas recentemente (referência rápida)
+
+### 🟢 Rodada DEC-0727 (Vitor, 2026-07-27 madrugada) — estornos, teto do gateway e Caixa
+
+- **Cancelamento de inscrição pelo painel admin via estorno (NOVO — em investigação).** Verbatim: *"para facilitar no inicio da operação, como nao teremos muitos braços, é mais fácil cancelarmos inscrições, através do estorno de pagamento via painel admin interno, onde cancelamos, via API, no ASAAS. Veja se isso é possivel."* Lane de investigação read-only despachada (INV-CANCEL-ESTORNO): mapear o que já existe (fila de reembolso S904-T5, `estornarInscricao`, suporte a estorno no `AsaasProvider`, RN-304 da vaga que não volta sozinha) e responder viabilidade + plano.
+- **Item 27 = estorno automático.** Verbatim: *"Sobre os pagamentos que caem depois, devemos cancelar automaticamente."* Pré-requisito da review mantido: contador/alerta sobre o ledger `ignorado_estado_final` nasce antes do gatilho. Implementação entra no mesmo pacote de estorno da investigação acima (mesma mecânica de estorno no gateway).
+- **Item 28 = teto de 15s no gateway.** Verbatim: *"Aceito o teto de 15s, de aguardar o asaas."* E a face pro comprador: *"confirmo a sugestao de falar 'processando pagamento'. Isso pode se aplicar para cartao e pix."* Teto por chamada no `request` do adapter (um lugar só, todas as chamadas Asaas), erro tipado próprio, e o comprador vê "processando pagamento" nos dois meios quando o gateway demora. Lane ASAAS-TETO despachada.
+- **P-IAMENU-1 = DESPRIORIZADO.** Verbatim: *"nao é relevante agoar, visto que nem fizemos nada quanto à acessos admin, em configurações."* Sai do pré-go-live; volta quando o modelo de acessos admin em Configurações existir.
+- **P-IAMENU-2 = o disponível ABATE o repassado.** Verbatim: *"sim disponivel tem que abater o que já foi repassado, isso é muito imoprtante."* Ratificada a opção (a): o disponível por evento abate os repasses vivos; autorizada a reconciliação da função de derivação e da asserção de teste que descreviam o mundo anterior. Lane CAIXA-DISPONIVEL despachada (dinheiro: opus + review antagonista).
 
 ### 🟢 Rodada DEC-0726B (Vitor, 2026-07-26 tarde) — arbitragem do PIX
 
