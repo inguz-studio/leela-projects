@@ -95,6 +95,7 @@ export type {
   RefundResult,
   WebhookPayload,
   WebhookResult,
+  WebhookRefundInfo,
   GetPayoutParams,
   PayoutResult,
   PaymentProvider,

@@ -51,6 +51,11 @@ import {
 } from '@leela/core';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
+import {
+  confirmarEstornoPorWebhook,
+  type ResultadoConfirmacaoEstorno,
+} from './estornarInscricao';
+import { fecharReembolsoPorEstorno } from '../finance/requestRefund';
 
 type Db = admin.firestore.Firestore;
 
@@ -70,6 +75,15 @@ export interface ResultadoWebhookPagamento {
   /** true = entrega registrada, mas SEM efeito financeiro (ver motivo). */
   ignorado: boolean;
   motivo?: string;
+  /**
+   * Interno da porta (RN-350): a entrega é de ESTORNO e a confirmação do
+   * ledger roda FORA da transação do webhook. Preenchido pelo core e
+   * consumido logo em seguida; o resultado do fechamento vem em
+   * `estornoConfirmado`.
+   */
+  confirmarEstorno?: boolean;
+  /** Desfecho do fechamento do ledger de estorno (RN-350). */
+  estornoConfirmado?: ResultadoConfirmacaoEstorno;
 }
 
 /** Erro de webhook com status HTTP mapeado (mensagem pública, sem internals). */
@@ -185,7 +199,7 @@ export async function processarWebhookPagamento(
 
   const pedidoRef = db.collection('pedidos').doc(orderId);
 
-  return db.runTransaction(async (tx) => {
+  const resultadoEntrega = await db.runTransaction(async (tx) => {
     // ── FASE DE LEITURA (toda leitura antes de qualquer escrita) ──────────
     const pedidoSnap = await tx.get(pedidoRef);
     if (!pedidoSnap.exists) {
@@ -248,18 +262,28 @@ export async function processarWebhookPagamento(
       });
     };
 
+    // ESTORNO (RN-350 · decisão 46): a entrega de estorno é a AUTORIDADE do
+    // desfecho — ela vem ANTES da guarda de estado final de propósito, porque
+    // o pagamento de um estorno está 'confirmado', nunca 'pendente' (era
+    // exatamente aí que ela caía em 'ignorado_estado_final' e sumia). O
+    // efeito financeiro roda FORA desta transação, contra o ledger de
+    // estornos, e é idempotente por lá (ledger 'aprovado' = replay).
+    if (resultado.status === 'refunded') {
+      gravarLedger('estorno_confirmado_gateway');
+      return {
+        ...base,
+        duplicado: false,
+        ignorado: true,
+        motivo: 'estorno_confirmado_gateway',
+        confirmarEstorno: true,
+      };
+    }
+
     // b. Guarda de transição única: só 'pendente' muda de estado. Estado
     //    final não re-aplica efeito (receita nunca duplica) nem retrocede.
     if (statusPagamento !== 'pendente') {
       gravarLedger('ignorado_estado_final');
       return { ...base, duplicado: false, ignorado: true, motivo: 'estado_ja_final' };
-    }
-
-    // Estorno é máquina própria POR INSCRITO (RN-341/S904) — fora da
-    // fundação E12. Registra a entrega e não aplica efeito.
-    if (resultado.status === 'refunded') {
-      gravarLedger('ignorado_estorno_fora_de_escopo');
-      return { ...base, duplicado: false, ignorado: true, motivo: 'estorno_s904' };
     }
 
     if (resultado.status === 'failed') {
@@ -584,6 +608,41 @@ export async function processarWebhookPagamento(
 
     return { ...base, duplicado: false, ignorado: false };
   });
+
+  // ── FECHAMENTO DO ESTORNO (RN-350) — fora da transação da entrega ────────
+  // A entrega já está registrada no ledger de webhooks (exactly-once por
+  // eventId). O efeito do estorno mora no ledger de ESTORNOS e é idempotente
+  // lá; separar as duas transações mantém a resposta do webhook rápida (a
+  // fila do Asaas pausa com 15 falhas) e evita transação gigante.
+  if (resultadoEntrega.confirmarEstorno === true) {
+    const estornoConfirmado = await confirmarEstornoPorWebhook(
+      db,
+      resultadoEntrega.pagamentoId,
+      {
+        ...(resultado.refund?.refundId !== undefined
+          ? { refundId: resultado.refund.refundId }
+          : {}),
+        ...(resultado.refund?.amountCentavos !== undefined
+          ? { amountCentavos: resultado.refund.amountCentavos }
+          : {}),
+      }
+    );
+    if (
+      estornoConfirmado.inscritoId !== undefined &&
+      estornoConfirmado.eventoId !== undefined
+    ) {
+      // Fecha também a máquina de reembolso do organizador (RN-341), quando o
+      // estorno nasceu por lá — a mesma autoridade, um só desfecho.
+      await fecharReembolsoPorEstorno(
+        db,
+        estornoConfirmado.eventoId,
+        estornoConfirmado.inscritoId
+      );
+    }
+    return { ...resultadoEntrega, estornoConfirmado };
+  }
+
+  return resultadoEntrega;
 }
 
 // ---------------------------------------------------------------------------

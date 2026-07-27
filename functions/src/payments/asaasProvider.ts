@@ -60,6 +60,7 @@ import type {
   RefundResult,
   WebhookPayload,
   WebhookResult,
+  WebhookRefundInfo,
   GetPayoutParams,
   PayoutResult,
 } from '@leela/core';
@@ -505,6 +506,43 @@ const REFUND_STATUS_MAP: Record<string, RefundResult['status']> = {
   CANCELLED: 'rejected',
 };
 
+/**
+ * Extrai de um `payment` de webhook QUAL estorno a entrega confirma (RN-350):
+ * o item mais recente de `refunds[]` com status DONE — a confirmação. Sem
+ * DONE, sem array ou com shape fora do contrato devolve `undefined`: nunca
+ * lança, porque 4xx em entrega autêntica pausa a fila de webhooks do Asaas.
+ * @pure
+ */
+export function extrairRefundDaEntrega(
+  payment: Record<string, unknown>
+): WebhookRefundInfo | undefined {
+  const refunds = payment['refunds'];
+  if (!Array.isArray(refunds) || refunds.length === 0) return undefined;
+  let escolhido: Record<string, unknown> | undefined;
+  let escolhidoData = '';
+  for (const item of refunds) {
+    if (item === null || typeof item !== 'object' || Array.isArray(item)) continue;
+    const rec = item as Record<string, unknown>;
+    if (REFUND_STATUS_MAP[String(rec['status'])] !== 'approved') continue;
+    const dataCriacao = optString(rec, 'dateCreated') ?? '';
+    if (escolhido === undefined || dataCriacao >= escolhidoData) {
+      escolhido = rec;
+      escolhidoData = dataCriacao;
+    }
+  }
+  if (escolhido === undefined) return undefined;
+  const valor = escolhido['value'];
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return undefined;
+  const refundId =
+    optString(escolhido, 'id') ?? optString(escolhido, 'endToEndIdentifier');
+  if (refundId === undefined) return undefined;
+  return {
+    refundId,
+    amountCentavos: centavosFromReais(Math.abs(valor)),
+    status: 'approved',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Timestamp estrutural (idêntico ao padrão do mockProvider — sem Firebase)
 // ---------------------------------------------------------------------------
@@ -606,6 +644,12 @@ export interface AsaasWebhookDetails {
   orderId?: string;
   /** Presente na confirmação de cartão (PIX não exige — brief). */
   cartao?: AsaasWebhookCartao;
+  /**
+   * Presente em `PAYMENT_REFUNDED` com `payment.refunds[]` — diz QUAL estorno
+   * a entrega confirma (RN-350). É o que permite fechar a saga do estorno
+   * certo num pedido de GRUPO, onde há vários parciais na mesma cobrança.
+   */
+  refund?: WebhookRefundInfo;
 }
 
 // ---------------------------------------------------------------------------
@@ -1404,6 +1448,19 @@ export class AsaasProvider implements PaymentProvider {
       }
     }
 
+    // Bloco de ESTORNO (RN-350): em PAYMENT_REFUNDED o payment traz
+    // `refunds[]` — o mais recente DIZ qual estorno esta entrega confirma.
+    // Shape fora do contrato aqui NUNCA derruba a entrega (responder 4xx a
+    // webhook autêntico pausa a fila do Asaas): sem bloco, o domínio decide
+    // pelo carimbo vivo do ledger.
+    let refund: WebhookRefundInfo | undefined;
+    if (status === 'refunded') {
+      refund = extrairRefundDaEntrega(payment);
+      if (refund === undefined) {
+        this.logRefundIndecifravel(chargeId);
+      }
+    }
+
     return {
       eventId,
       event,
@@ -1413,7 +1470,15 @@ export class AsaasProvider implements PaymentProvider {
       ...(externalReference !== undefined ? { externalReference } : {}),
       ...(parsedRef !== undefined ? { orderId: parsedRef.orderId } : {}),
       ...(cartao !== undefined ? { cartao } : {}),
+      ...(refund !== undefined ? { refund } : {}),
     };
+  }
+
+  /** Telemetria isolada (mantém o parse puro e testável). */
+  private logRefundIndecifravel(chargeId: string): void {
+    console.warn('[asaas] PAYMENT_REFUNDED sem refunds[] decifrável', {
+      chargeId,
+    });
   }
 
   /**
@@ -1433,6 +1498,9 @@ export class AsaasProvider implements PaymentProvider {
       status: detalhes.status,
       amount: detalhes.amount,
       processedAt: timestampDe(this.now()),
+      // RN-350: o bloco de estorno atravessa até o core, que casa com o
+      // carimbo do ledger. Ausente em toda entrega que não é estorno.
+      ...(detalhes.refund !== undefined ? { refund: detalhes.refund } : {}),
     };
     this.webhooksPorEntrega.set(detalhes.eventId, resultado);
     return resultado;

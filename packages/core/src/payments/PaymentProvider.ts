@@ -207,6 +207,24 @@ export interface RefundResult {
 }
 
 /**
+ * Bloco de ESTORNO extraído de uma entrega de webhook (RN-350 · decisão 46
+ * do dono: "estorno só é feito utilizando via API do ASAAS, a solicitação é
+ * feita e pode cair; dependemos desse retorno do webhook deles").
+ *
+ * Presente SÓ quando o gateway informa qual estorno a entrega confirma —
+ * `PAYMENT_REFUNDED` com `payment.refunds[]` no Asaas, `refundId`/`refundAmount`
+ * no mock. Ausente = a entrega não identifica o estorno, e o domínio decide
+ * pelo carimbo vivo do ledger (nunca por adivinhação de valor).
+ */
+export interface WebhookRefundInfo {
+  /** Id do estorno no gateway — casa com o `refundId` carimbado no ledger. */
+  refundId: string;
+  /** Valor ESTORNADO em centavos (não confundir com o valor da cobrança). */
+  amountCentavos: number;
+  status: RefundStatus;
+}
+
+/**
  * Payload bruto recebido do gateway via webhook.
  * Assinatura DEVE ser verificada antes de processar (invariante de segurança).
  */
@@ -225,6 +243,12 @@ export interface WebhookResult {
   /** Valor confirmado em centavos */
   amount: number;
   processedAt: Timestamp;
+  /**
+   * Estorno que ESTA entrega confirma (RN-350). Opcional: ausente em toda
+   * entrega que não é de estorno e em gateway que não informa o refund —
+   * campo novo não muda byte nenhum do fluxo de confirmação de pagamento.
+   */
+  refund?: WebhookRefundInfo;
 }
 
 /** Parâmetros para consulta de repasses */

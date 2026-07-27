@@ -112,6 +112,13 @@ export interface RefundResult {
   /** Presentes quando o estado alcançou 'estornado'. */
   refundId?: string;
   valorEstornado?: number;
+  /**
+   * RN-350: o gateway ACEITOU a solicitação de estorno e ainda não a
+   * concluiu. O reembolso continua no estado executável (aprovado/
+   * aprovado_auto) e é o webhook `PAYMENT_REFUNDED` que o fecha. Não é erro
+   * e NÃO pede nova tentativa — uma segunda chamada não manda segundo POST.
+   */
+  aguardandoConfirmacao?: boolean;
 }
 
 /** Valida o input bruto de abertura. @pure */
@@ -405,6 +412,32 @@ async function executarEstorno(
     caller
   );
 
+  // RN-350: o gateway aceitou e ainda não concluiu. O reembolso NÃO vira
+  // 'estornado' aqui — quem fecha é o webhook `PAYMENT_REFUNDED`
+  // (fecharReembolsoPorEstorno). Carimba a solicitação para a fila mostrar
+  // "aguardando o gateway" em vez de "estornado" mentiroso.
+  if (estorno.aguardandoConfirmacao) {
+    await reembolsoRef.update({
+      refundId: estorno.refundId,
+      aguardandoGateway: true,
+      solicitadoAoGatewayEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    logger.info('reembolso_aguardando_gateway', {
+      eventoId,
+      inscritoId: input.inscritoId,
+      refundId: estorno.refundId,
+    });
+    return {
+      eventoId,
+      inscritoId: input.inscritoId,
+      estado: estadoPre,
+      replay: false,
+      refundId: estorno.refundId,
+      aguardandoConfirmacao: true,
+    };
+  }
+
   // Transiciona o reembolso → estornado com a prova (guarda contra corrida:
   // relê o estado dentro da transação).
   await db.runTransaction(async (tx) => {
@@ -441,6 +474,46 @@ async function executarEstorno(
     refundId: estorno.refundId,
     valorEstornado: estorno.valorEstornado,
   };
+}
+
+/**
+ * Fecha o `reembolsos/{inscritoId}` quando o ESTORNO foi confirmado pelo
+ * webhook (RN-350). Chamado pela porta única do webhook, nunca por cliente.
+ * Idempotente: reembolso já `estornado` (ou em estado não-executável) sai
+ * sem escrita; reembolso inexistente (estorno aberto direto pelo primitivo)
+ * é no-op silencioso.
+ */
+export async function fecharReembolsoPorEstorno(
+  db: Db,
+  eventoId: string,
+  inscritoId: string
+): Promise<boolean> {
+  const reembolsoRef = db
+    .collection('eventos')
+    .doc(eventoId)
+    .collection(REEMBOLSOS_SUBCOL)
+    .doc(inscritoId);
+  const fechou = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(reembolsoRef);
+    if (!snap.exists) return false;
+    const estado = snap.get('estado') as EstadoReembolso;
+    if (estado === 'estornado') return false;
+    if (!transitionReembolso(estado, 'estornado').ok) return false;
+    tx.update(reembolsoRef, {
+      estado: 'estornado',
+      aguardandoGateway: false,
+      transicoes: FieldValue.arrayUnion(
+        novaTransicao(estado, 'estornado', 'webhook', 'gateway')
+      ),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    return true;
+  });
+  if (fechou) {
+    logger.info('reembolso_fechado_por_webhook', { eventoId, inscritoId });
+    await notificarTransicaoReembolso(db, eventoId, inscritoId, 'estornado');
+  }
+  return fechou;
 }
 
 // ---------------------------------------------------------------------------

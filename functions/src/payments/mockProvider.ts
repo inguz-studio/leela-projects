@@ -31,7 +31,21 @@ import type {
   PayoutResult,
   SplitRecipient,
   ResolvedSplitRecipient,
+  WebhookRefundInfo,
 } from '@leela/core';
+
+/**
+ * Recusa EXPLÍCITA do mock no `refund` — a chamada foi validada e negada
+ * ANTES de qualquer efeito (equivalente ao 4xx do gateway real). Classe
+ * própria porque quem chama precisa distinguir "não saiu nada" de "pode ter
+ * saído" sem farejar mensagem de erro (RN-349 · `falhaRefundSemEfeito`).
+ */
+export class MockRefundRecusadoError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MockRefundRecusadoError';
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Timestamp utilitário (sem dep do Firebase Admin para testabilidade)
@@ -77,6 +91,8 @@ interface StoredWebhookResult {
   status: 'confirmed' | 'failed' | 'refunded';
   amount: number;
   processedAt: ReturnType<typeof nowTimestamp>;
+  /** Bloco de estorno da entrega (RN-350) — só em `charge.refunded`. */
+  refund?: WebhookRefundInfo;
 }
 
 // ---------------------------------------------------------------------------
@@ -130,6 +146,23 @@ interface StoredRefund {
   chargeId: string;
   amount: number;
   idempotencyKey: string;
+  /**
+   * Status devolvido ao chamador. 'pending' = o gateway ACEITOU e ainda não
+   * concluiu (é o que o Asaas faz com PIX — REFUND_STATUS_MAP PENDING). Sem
+   * isso o mock provava a garantia DELE, não a do Asaas (achado da review).
+   */
+  status: 'pending' | 'approved';
+}
+
+/** Opções do mock — default = comportamento vigente byte a byte. */
+export interface MockPaymentProviderOptions {
+  /**
+   * Desfecho do `refund`:
+   *   'approved' (default) — conclui na resposta (DONE do Asaas);
+   *   'pending'            — aceita e devolve 'pending', deixando a conclusão
+   *                          para o webhook `charge.refunded` (RN-350).
+   */
+  refundStatus?: 'approved' | 'pending';
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +277,19 @@ export class MockPaymentProvider implements PaymentProvider {
   private readonly refunds = new Map<string, StoredRefund>();
   private chargeCounter = 0;
   private refundCounter = 0;
+  private readonly refundStatus: 'pending' | 'approved';
+
+  constructor(options: MockPaymentProviderOptions = {}) {
+    this.refundStatus = options.refundStatus ?? 'approved';
+  }
+
+  /**
+   * Estorno registrado por chave — o teste do webhook precisa do refundId
+   * que o gateway devolveu para montar a entrega `charge.refunded`.
+   */
+  refundPorChave(idempotencyKey: string): Readonly<StoredRefund> | undefined {
+    return this.refunds.get(idempotencyKey);
+  }
 
   // ── createCharge ────────────────────────────────────────────────────────
 
@@ -394,7 +440,9 @@ export class MockPaymentProvider implements PaymentProvider {
       return {
         refundId: existing.refundId,
         chargeId: existing.chargeId,
-        status: 'approved',
+        // Replay devolve o MESMO desfecho registrado — um estorno 'pending'
+        // não vira 'approved' porque alguém perguntou duas vezes.
+        status: existing.status,
         amount: existing.amount,
         processedAt: nowTimestamp(),
       };
@@ -405,30 +453,34 @@ export class MockPaymentProvider implements PaymentProvider {
     // passava sem limite.
     const charge = this.charges.get(params.chargeId);
     if (!charge) {
-      throw new Error(
+      throw new MockRefundRecusadoError(
         `[mock] Estorno rejeitado: cobrança inexistente (${params.chargeId})`
       );
     }
 
     const refundable = charge.amount - charge.refundedAmount;
     if (refundable <= 0) {
-      throw new Error(
+      throw new MockRefundRecusadoError(
         `[mock] Estorno rejeitado: cobrança ${params.chargeId} já integralmente estornada`
       );
     }
 
     const refundAmount = params.amount ?? refundable;
     if (!Number.isInteger(refundAmount) || refundAmount <= 0) {
-      throw new Error(`[mock] Estorno rejeitado: amount inválido (${refundAmount})`);
+      throw new MockRefundRecusadoError(
+        `[mock] Estorno rejeitado: amount inválido (${refundAmount})`
+      );
     }
     if (refundAmount > refundable) {
-      throw new Error(
+      throw new MockRefundRecusadoError(
         `[mock] Estorno rejeitado: ${refundAmount} excede o estornável (${refundable}) da cobrança ${params.chargeId}`
       );
     }
 
+    // O valor sai do estornável assim que o gateway ACEITA (é o que impede o
+    // estorno duplo sobre a mesma cobrança), mesmo com desfecho 'pending'.
     charge.refundedAmount += refundAmount;
-    if (charge.refundedAmount >= charge.amount) {
+    if (charge.refundedAmount >= charge.amount && this.refundStatus === 'approved') {
       charge.status = 'refunded';
     }
 
@@ -440,12 +492,13 @@ export class MockPaymentProvider implements PaymentProvider {
       chargeId: params.chargeId,
       amount: refundAmount,
       idempotencyKey: params.idempotencyKey,
+      status: this.refundStatus,
     });
 
     return {
       refundId,
       chargeId: params.chargeId,
-      status: 'approved',
+      status: this.refundStatus,
       amount: refundAmount,
       processedAt: nowTimestamp(),
     };
@@ -487,6 +540,7 @@ export class MockPaymentProvider implements PaymentProvider {
         status: cached.status,
         amount: cached.amount,
         processedAt: cached.processedAt,
+        ...(cached.refund !== undefined ? { refund: cached.refund } : {}),
       };
     }
 
@@ -498,13 +552,35 @@ export class MockPaymentProvider implements PaymentProvider {
       charge.status = status;
     }
 
-    this.webhookResults.set(eventId, { chargeId, status, amount, processedAt });
+    // Bloco de ESTORNO (RN-350): a entrega diz QUAL estorno ela confirma. O
+    // Asaas manda `payment.refunds[]`; aqui o teste passa refundId/refundAmount
+    // no data. Sem eles a entrega é genérica e o domínio decide pelo carimbo.
+    const refundIdEntrega = payload.data['refundId'];
+    const refundAmountEntrega = payload.data['refundAmount'];
+    const refund: WebhookRefundInfo | undefined =
+      status === 'refunded' && typeof refundIdEntrega === 'string'
+        ? {
+            refundId: refundIdEntrega,
+            amountCentavos:
+              typeof refundAmountEntrega === 'number' ? refundAmountEntrega : amount,
+            status: 'approved',
+          }
+        : undefined;
+
+    this.webhookResults.set(eventId, {
+      chargeId,
+      status,
+      amount,
+      processedAt,
+      ...(refund !== undefined ? { refund } : {}),
+    });
 
     return {
       chargeId,
       status,
       amount,
       processedAt,
+      ...(refund !== undefined ? { refund } : {}),
     };
   }
 

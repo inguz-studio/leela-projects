@@ -19,23 +19,36 @@
 // (`valorFace` no ledger): a taxa nunca foi receita dele. Em 'incorporada'
 // os dois valores coincidem — zero mudança de comportamento.
 //
-// SAGA EM 2 TRANSAÇÕES + REFUND IDEMPOTENTE (mesmo desenho at-least-once do
-// createInscricaoCharge — Kleppmann "idempotency tokens em toda mutation"):
+// SAGA EM 3 FASES + CARIMBO DURÁVEL DE ENVIO (RN-348/349/350 · decisão 46 do
+// dono: "estorno só é feito utilizando via API do ASAAS, a solicitação é feita
+// e pode cair; dependemos desse retorno do webhook deles"):
 //   TX1 (COMPROMISSO): guards (papel/tenant/estado) + cria o ledger
 //       `pagamentos/{pagamentoId}/estornos/{inscritoId}` com status
 //       'pendente' e o VALOR CONGELADO em centavos. DocId determinístico
 //       (= inscritoId): um estorno INTEGRAL por inscrito, nunca dois.
-//   REFUND: `provider.refund` com chave determinística
-//       `refund-{pedidoId}-{inscritoId}` — retry NUNCA duplica o refund no
-//       gateway (contrato ADR-006; MockPaymentProvider cumpre). O valor vem
-//       do LEDGER persistido, nunca recomputado nem do cliente.
+//   CARIMBO + REFUND: o ledger vai a 'enviando' ANTES do POST (RN-348) e o
+//       POST só sai de 'pendente' (compare-and-set). Resposta do gateway:
+//       'approved' (DONE) → efeito na hora; 'pending' → ledger 'solicitado'
+//       com o refundId e a AUTORIDADE passa para o webhook (RN-350);
+//       timeout/erro sem resposta → 'gateway_sem_resposta' e NENHUMA nova
+//       tentativa automática (RN-349 — o adapter marca `efeitoPossivel`).
 //   TX2 (EFEITO, atômico): flip do inscrito + reversão da receita
 //       (read-modify-write com roundMoney — nunca increment de float) +
 //       `pagamentos.estornadoTotal` acumulado + ledger 'aprovado'.
-// Crash em QUALQUER ponto + retry da mesma chamada COMPLETA a saga sem
-// duplicar efeito: ledger 'aprovado' → replay devolve `duplicado: true` sem
-// escrita; ledger 'pendente' → refund (idempotente) + TX2. Reexecutar o
-// estorno já aplicado NÃO re-estorna, NÃO re-reverte, NÃO re-flipa.
+//
+// POR QUE O CARIMBO (prova, não teoria — ASAASTETO-REV §V4): com o ledger
+// parando em 'pendente', um timeout no POST era indistinguível de "crash
+// antes do POST", e a segunda tentativa mandava um SEGUNDO estorno parcial
+// que o Asaas aceita — dois POSTs medidos, comprador recebendo duas vezes e
+// o livro registrando uma. O carimbo VIVO ('enviando'/'solicitado'/
+// 'gateway_sem_resposta'/'divergencia_valor'/'rejeitado_gateway') bloqueia o
+// re-envio: quem decide repetir é humano, contra o extrato (RN-349).
+//
+// Crash em QUALQUER ponto + retry da mesma chamada NUNCA duplica efeito:
+// ledger 'aprovado' → replay devolve `duplicado: true` sem escrita; ledger
+// 'solicitado' → devolve `aguardandoConfirmacao` sem novo POST; ledger
+// 'pendente' → carimba e envia. Reexecutar o estorno já aplicado NÃO
+// re-estorna, NÃO re-reverte, NÃO re-flipa.
 //
 // GUARDS (Schneier): só ORGANIZADOR (tenant_owner/tenant_staff do tenant DO
 // PEDIDO — assertTenantWriter; athlete/promoter negados) dispara; só
@@ -77,6 +90,12 @@ import {
   type EventoCaller,
 } from '../eventos/criarEvento';
 import { selectPaymentProvider } from '../payments/selectProvider';
+import {
+  AsaasApiError,
+  AsaasTimeoutError,
+  AsaasValidationError,
+} from '../payments/asaasProvider';
+import { MockRefundRecusadoError } from '../payments/mockProvider';
 
 type Db = admin.firestore.Firestore;
 
@@ -109,10 +128,124 @@ export interface EstornarInscricaoResult {
   duplicado: boolean;
   /** true = com este estorno o pagamento ficou INTEGRALMENTE estornado. */
   pagamentoEstornadoIntegral: boolean;
+  /** Estado do LEDGER durável depois desta chamada (RN-348). */
+  estado: StatusEstornoLedger;
+  /**
+   * true = o gateway ACEITOU a solicitação mas ainda não a concluiu
+   * ('pending'): o dinheiro ainda não foi dado por devolvido e NENHUM efeito
+   * local foi aplicado. Quem fecha a saga é o webhook `PAYMENT_REFUNDED`
+   * (RN-350) — não é erro, não pede retry.
+   */
+  aguardandoConfirmacao: boolean;
 }
 
 /** Nome da subcoleção-ledger de estornos por inscrito (write só Function). */
 export const ESTORNOS_SUBCOL = 'estornos';
+
+// ---------------------------------------------------------------------------
+// Máquina do LEDGER de estorno (RN-348/349/350) — durável, não em memória
+// ---------------------------------------------------------------------------
+
+/**
+ * Estados do ledger `pagamentos/{id}/estornos/{inscritoId}`.
+ *
+ * - `pendente`             compromisso criado, NENHUM POST saiu. Retentável.
+ * - `enviando`             carimbo gravado ANTES do POST: se a Function morrer
+ *                          aqui, o efeito no gateway é DESCONHECIDO.
+ * - `solicitado`           o gateway aceitou e devolveu refundId com status
+ *                          'pending' — a conclusão vem pelo webhook (RN-350).
+ * - `gateway_sem_resposta` timeout/erro sem resposta: `efeitoPossivel` do
+ *                          adapter (RN-349). O POST pode ter estornado.
+ * - `divergencia_valor`    o gateway devolveu valor ≠ do congelado — dinheiro
+ *                          se moveu fora do combinado, jamais re-enviar.
+ * - `rejeitado_gateway`    o gateway respondeu com estorno recusado/cancelado
+ *                          DEPOIS de aceitá-lo: estado ambíguo, confere-se no
+ *                          extrato antes de qualquer nova tentativa.
+ * - `aprovado`             efeito local aplicado (terminal).
+ */
+export const STATUS_ESTORNO_LEDGER = [
+  'pendente',
+  'enviando',
+  'solicitado',
+  'gateway_sem_resposta',
+  'divergencia_valor',
+  'rejeitado_gateway',
+  'aprovado',
+] as const;
+
+export type StatusEstornoLedger = (typeof STATUS_ESTORNO_LEDGER)[number];
+
+/**
+ * Carimbo VIVO: um `POST /refund` desta chave já saiu (ou pode ter saído) e o
+ * efeito no gateway não está fechado. Enviar de novo por cima é o ESTORNO
+ * DUPLO provado em ASAASTETO-REV §V4 — proibido (RN-349). @pure
+ */
+export const STATUS_ESTORNO_CARIMBO_VIVO: readonly StatusEstornoLedger[] = [
+  'enviando',
+  'solicitado',
+  'gateway_sem_resposta',
+  'divergencia_valor',
+  'rejeitado_gateway',
+] as const;
+
+/** O ledger tem carimbo vivo? (proíbe novo POST — RN-349). @pure */
+export function carimboEstornoVivo(status: string): boolean {
+  return (STATUS_ESTORNO_CARIMBO_VIVO as readonly string[]).includes(status);
+}
+
+/**
+ * Único estado do qual um `POST /refund` pode sair. Tudo o mais é replay
+ * ('aprovado') ou carimbo vivo. @pure
+ */
+export function podeEnviarRefund(status: string): boolean {
+  return status === 'pendente';
+}
+
+/**
+ * Estados em que o ledger AGUARDA a palavra do gateway e um webhook
+ * `PAYMENT_REFUNDED` pode fechar a saga (RN-350). `enviando` entra porque a
+ * Function pode ter morrido logo depois do POST bem-sucedido. @pure
+ */
+export const STATUS_ESTORNO_CONFIRMAVEL: readonly StatusEstornoLedger[] = [
+  'enviando',
+  'solicitado',
+  'gateway_sem_resposta',
+] as const;
+
+/** Mensagem honesta de bloqueio por carimbo vivo (sem prometer desfecho). */
+export function motivoCarimboVivo(status: string): string {
+  switch (status) {
+    case 'enviando':
+      return (
+        'Um pedido de estorno desta inscrição saiu para o gateway e a resposta ' +
+        'não foi registrada — o efeito é desconhecido. Confira o extrato do ' +
+        'gateway antes de qualquer nova tentativa (RN-349).'
+      );
+    case 'solicitado':
+      return (
+        'Estorno já solicitado ao gateway — aguardando a confirmação dele ' +
+        '(RN-350). Nenhuma nova solicitação é enviada.'
+      );
+    case 'gateway_sem_resposta':
+      return (
+        'O gateway não respondeu ao pedido de estorno e a devolução PODE ter ' +
+        'acontecido. Nenhuma nova tentativa é enviada automaticamente: ' +
+        'confira o extrato do gateway e trate manualmente (RN-349).'
+      );
+    case 'divergencia_valor':
+      return (
+        'O gateway devolveu um valor diferente do congelado neste estorno — ' +
+        'conferência manual obrigatória (RN-349).'
+      );
+    case 'rejeitado_gateway':
+      return (
+        'O gateway recusou/cancelou este estorno depois de aceitá-lo — ' +
+        'conferência manual antes de tentar de novo (RN-349).'
+      );
+    default:
+      return 'Estorno com carimbo vivo no ledger — conferência manual (RN-349).';
+  }
+}
 
 /** Limites do motivo (auditoria útil, sem virar canal de payload). */
 export const MOTIVO_MIN = 3;
@@ -182,9 +315,13 @@ interface CompromissoEstorno {
   valorFace: number;
   /** true = ledger já 'aprovado' (replay integral — nenhum efeito novo). */
   jaAprovado: boolean;
+  /** Estado do ledger lido/gravado por TX1 (RN-348). */
+  statusLedger: StatusEstornoLedger;
   /** Presentes só quando jaAprovado (dados de auditoria do replay). */
   refundId: string | null;
   pagamentoEstornadoIntegral: boolean;
+  /** Motivo persistido no ledger (fonte do replay e do webhook). */
+  motivo: string;
 }
 
 function lerCompromissoDoLedger(
@@ -212,6 +349,15 @@ function lerCompromissoDoLedger(
   // onde o pago pelo inscrito == face da linha (fallback exato, não chute).
   const valorFaceRaw = ledger.get('valorFace') as number | undefined;
   const valorFace = typeof valorFaceRaw === 'number' ? valorFaceRaw : valor;
+  // Ledger PRÉ-RN348 (ou doc de crash antigo) só conhece 'pendente'/'aprovado':
+  // status fora do enum novo cai em 'pendente' quando não é aprovado — nunca
+  // inventa carimbo vivo em doc legado (o pior caso legado é o que já existia).
+  const statusRaw = ledger.get('status');
+  const statusLedger: StatusEstornoLedger =
+    typeof statusRaw === 'string' &&
+    (STATUS_ESTORNO_LEDGER as readonly string[]).includes(statusRaw)
+      ? (statusRaw as StatusEstornoLedger)
+      : 'pendente';
   return {
     pagamentoId,
     eventoId,
@@ -219,9 +365,11 @@ function lerCompromissoDoLedger(
     valor,
     valorCentavos,
     valorFace,
-    jaAprovado: ledger.get('status') === 'aprovado',
+    jaAprovado: statusLedger === 'aprovado',
+    statusLedger,
     refundId: (ledger.get('refundId') as string | undefined) ?? null,
     pagamentoEstornadoIntegral: ledger.get('pagamentoEstornadoIntegral') === true,
+    motivo: (ledger.get('motivo') as string | undefined) ?? '',
   };
 }
 
@@ -398,10 +546,97 @@ async function comprometerEstorno(
       valorCentavos,
       valorFace,
       jaAprovado: false,
+      statusLedger: 'pendente',
       refundId: null,
       pagamentoEstornadoIntegral: false,
+      motivo: input.motivo.trim(),
     };
   });
+}
+
+// ---------------------------------------------------------------------------
+// CARIMBO DE ENVIO (RN-348) — o ledger sabe que um POST saiu, ANTES dele sair
+// ---------------------------------------------------------------------------
+
+/**
+ * Compare-and-set 'pendente' → 'enviando' numa transação própria, ANTES do
+ * `POST /refund`. Devolve `false` quando outro caller já carimbou (corrida) ou
+ * quando o ledger saiu de 'pendente' — nos dois casos ESTE caller não envia.
+ *
+ * A transação é separada de propósito: ela precisa estar COMMITADA antes do
+ * POST, senão o carimbo não sobrevive ao timeout que ele existe para cobrir.
+ */
+async function carimbarEnvio(
+  db: Db,
+  pagamentoId: string,
+  inscritoId: string
+): Promise<boolean> {
+  const ledgerRef = db
+    .collection('pagamentos')
+    .doc(pagamentoId)
+    .collection(ESTORNOS_SUBCOL)
+    .doc(inscritoId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ledgerRef);
+    if (!snap.exists) {
+      throw new https.HttpsError(
+        'internal',
+        'Ledger do estorno desapareceu antes do envio — intervenção manual.'
+      );
+    }
+    if (!podeEnviarRefund(String(snap.get('status')))) return false;
+    const tentativas =
+      typeof snap.get('tentativasEnvio') === 'number'
+        ? (snap.get('tentativasEnvio') as number)
+        : 0;
+    tx.update(ledgerRef, {
+      status: 'enviando',
+      envioIniciadoEm: FieldValue.serverTimestamp(),
+      tentativasEnvio: tentativas + 1,
+    });
+    return true;
+  });
+}
+
+/** Move o carimbo para um estado terminal-de-envio, com a trilha do porquê. */
+async function marcarCarimbo(
+  db: Db,
+  pagamentoId: string,
+  inscritoId: string,
+  status: StatusEstornoLedger,
+  extras: Record<string, unknown> = {}
+): Promise<void> {
+  await db
+    .collection('pagamentos')
+    .doc(pagamentoId)
+    .collection(ESTORNOS_SUBCOL)
+    .doc(inscritoId)
+    .update({
+      status,
+      ...extras,
+      carimboAtualizadoEm: FieldValue.serverTimestamp(),
+    });
+}
+
+/**
+ * A falha do `provider.refund` prova que NENHUM estorno foi criado no gateway?
+ *
+ * Só devolve `true` para falhas em que o gateway (ou o próprio adapter) deu
+ * resposta explícita ANTES de qualquer efeito:
+ *   - validação local do adapter/mock (a chamada nem saiu);
+ *   - HTTP 4xx que não é 429 (o gateway leu e recusou — ex.: PIX sem saldo).
+ * TODO o resto — timeout (`efeitoPossivel`), 5xx, 429, rede caída, erro
+ * desconhecido — é tratado como EFEITO POSSÍVEL (RN-349). Default conservador
+ * de propósito: em dinheiro, "não sei" vale como "pode ter acontecido".
+ */
+export function falhaRefundSemEfeito(err: unknown): boolean {
+  if (err instanceof AsaasValidationError) return true;
+  if (err instanceof MockRefundRecusadoError) return true;
+  if (err instanceof AsaasTimeoutError) return !err.efeitoPossivel;
+  if (err instanceof AsaasApiError) {
+    return err.httpStatus >= 400 && err.httpStatus < 500 && err.httpStatus !== 429;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -725,38 +960,160 @@ export async function estornarInscricaoCore(
       refundId: compromisso.refundId ?? '',
       duplicado: true,
       pagamentoEstornadoIntegral: compromisso.pagamentoEstornadoIntegral,
+      estado: 'aprovado',
+      aguardandoConfirmacao: false,
     };
   }
 
+  // ── CARIMBO VIVO (RN-349): um POST desta chave já saiu — NUNCA re-enviar ──
+  if (carimboEstornoVivo(compromisso.statusLedger)) {
+    if (compromisso.statusLedger === 'solicitado') {
+      // Caminho normal do assíncrono: já pedimos, o gateway aceitou, a
+      // confirmação é do webhook. Não é erro — é estado.
+      logger.info('estorno_aguardando_webhook', {
+        pedidoId: input.pedidoId,
+        inscritoId: input.inscritoId,
+        refundId: compromisso.refundId,
+      });
+      return {
+        ...base,
+        refundId: compromisso.refundId ?? '',
+        duplicado: true,
+        pagamentoEstornadoIntegral: false,
+        estado: 'solicitado',
+        aguardandoConfirmacao: true,
+      };
+    }
+    logger.error('estorno_bloqueado_carimbo_vivo', {
+      pedidoId: input.pedidoId,
+      inscritoId: input.inscritoId,
+      pagamentoId: compromisso.pagamentoId,
+      statusLedger: compromisso.statusLedger,
+    });
+    throw new https.HttpsError(
+      'failed-precondition',
+      motivoCarimboVivo(compromisso.statusLedger)
+    );
+  }
+
+  // ── CARIMBO ANTES DO POST (RN-348): compare-and-set 'pendente'→'enviando' ──
+  const carimbou = await carimbarEnvio(
+    db,
+    compromisso.pagamentoId,
+    input.inscritoId
+  );
+  if (!carimbou) {
+    // Corrida: outro caller carimbou entre TX1 e aqui. Ninguém envia dois.
+    throw new https.HttpsError(
+      'failed-precondition',
+      'Outro pedido de estorno desta inscrição já está em andamento — ' +
+        'nenhuma segunda solicitação foi enviada (RN-349).'
+    );
+  }
+
   // ── REFUND no gateway — chave determinística, valor CONGELADO do ledger ──
-  const refund = await provider.refund({
-    chargeId: compromisso.chargeId,
-    tenantId,
-    amount: compromisso.valorCentavos,
-    reason: input.motivo.trim(),
-    idempotencyKey: refundIdempotencyKey(input.pedidoId, input.inscritoId),
-  });
+  let refund;
+  try {
+    refund = await provider.refund({
+      chargeId: compromisso.chargeId,
+      tenantId,
+      amount: compromisso.valorCentavos,
+      reason: input.motivo.trim(),
+      idempotencyKey: refundIdempotencyKey(input.pedidoId, input.inscritoId),
+    });
+  } catch (err) {
+    const semEfeito = falhaRefundSemEfeito(err);
+    const detalhe = err instanceof Error ? err.message : String(err);
+    // Prova de que o gateway recusou ANTES de mover dinheiro ⇒ o carimbo
+    // volta a 'pendente' e uma nova tentativa é legítima. Sem essa prova, o
+    // carimbo VIRA bloqueio (RN-349) — nada de retry automático.
+    await marcarCarimbo(
+      db,
+      compromisso.pagamentoId,
+      input.inscritoId,
+      semEfeito ? 'pendente' : 'gateway_sem_resposta',
+      { ultimaFalhaEnvio: detalhe.slice(0, 500) }
+    );
+    if (semEfeito) throw err;
+    logger.error('estorno_gateway_sem_resposta', {
+      pedidoId: input.pedidoId,
+      inscritoId: input.inscritoId,
+      pagamentoId: compromisso.pagamentoId,
+      erro: detalhe.slice(0, 200),
+    });
+    throw new https.HttpsError(
+      'failed-precondition',
+      motivoCarimboVivo('gateway_sem_resposta')
+    );
+  }
+
   // Integridade cruzada (Schneier): o gateway devolveu EXATAMENTE a linha do
-  // inscrito? Divergência de dinheiro NUNCA passa — ledger fica 'pendente'
-  // para intervenção manual (nenhum efeito aplicado).
+  // inscrito? Divergência de dinheiro NUNCA passa — e agora TRAVA o ledger
+  // ('divergencia_valor'), porque re-enviar por cima de um estorno de valor
+  // errado é somar erro a erro.
   if (refund.amount !== compromisso.valorCentavos) {
+    await marcarCarimbo(
+      db,
+      compromisso.pagamentoId,
+      input.inscritoId,
+      'divergencia_valor',
+      { refundId: refund.refundId, valorDevolvidoCentavos: refund.amount }
+    );
     throw new https.HttpsError(
       'internal',
       `Refund do gateway (${refund.amount}) diverge do valor da linha ` +
         `(${compromisso.valorCentavos}) — efeito NÃO aplicado.`
     );
   }
-  if (refund.status !== 'approved') {
-    // Gateway não aprovou (pending/rejected): sem efeito local — retry da
-    // MESMA chamada retoma a saga quando o gateway aprovar.
+
+  if (refund.status === 'rejected') {
+    // O gateway aceitou a chamada e recusou/cancelou o estorno: estado
+    // ambíguo (o Asaas usa CANCELLED). Carimbo vivo, conferência humana.
+    await marcarCarimbo(
+      db,
+      compromisso.pagamentoId,
+      input.inscritoId,
+      'rejeitado_gateway',
+      { refundId: refund.refundId }
+    );
     throw new https.HttpsError(
       'failed-precondition',
-      `Estorno não aprovado pelo gateway (status '${refund.status}') — ` +
-        `nenhum efeito aplicado; tente novamente.`
+      motivoCarimboVivo('rejeitado_gateway')
     );
   }
 
-  // ── TX2: efeito atômico ───────────────────────────────────────────────────
+  // Aceito pelo gateway: o refundId é a prova do envio e vai para o ledger
+  // ANTES de qualquer efeito local (é ele que o webhook usa para casar).
+  await marcarCarimbo(
+    db,
+    compromisso.pagamentoId,
+    input.inscritoId,
+    'solicitado',
+    { refundId: refund.refundId, solicitadoEm: FieldValue.serverTimestamp() }
+  );
+
+  if (refund.status !== 'approved') {
+    // 'pending' — o Asaas processa o estorno de PIX de forma assíncrona
+    // (decisão 46): a AUTORIDADE do desfecho é o webhook PAYMENT_REFUNDED.
+    // Nenhum efeito local, nenhum erro, nenhuma nova tentativa.
+    logger.info('estorno_solicitado_aguardando_webhook', {
+      pedidoId: input.pedidoId,
+      inscritoId: input.inscritoId,
+      pagamentoId: compromisso.pagamentoId,
+      refundId: refund.refundId,
+      valorSolicitado: compromisso.valor,
+    });
+    return {
+      ...base,
+      refundId: refund.refundId,
+      duplicado: false,
+      pagamentoEstornadoIntegral: false,
+      estado: 'solicitado',
+      aguardandoConfirmacao: true,
+    };
+  }
+
+  // ── TX2: efeito atômico (gateway já concluiu — 'approved'/DONE) ───────────
   const efeito = await aplicarEfeitoEstorno(db, input, compromisso, refund.refundId);
 
   // Sem PII no log (LGPD) — só ids e valores agregados
@@ -775,6 +1132,122 @@ export async function estornarInscricaoCore(
     refundId: efeito.refundId,
     duplicado: efeito.duplicado,
     pagamentoEstornadoIntegral: efeito.pagamentoEstornadoIntegral,
+    estado: 'aprovado',
+    aguardandoConfirmacao: false,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CONFIRMAÇÃO PELO WEBHOOK (RN-350) — a autoridade do desfecho do estorno
+// ---------------------------------------------------------------------------
+
+/** O que a entrega de webhook diz sobre o estorno (do WebhookResult.refund). */
+export interface ConfirmacaoEstornoWebhook {
+  refundId?: string;
+  amountCentavos?: number;
+}
+
+export interface ResultadoConfirmacaoEstorno {
+  /** Ledger fechado por esta entrega (ausente = nada a fechar). */
+  inscritoId?: string;
+  /** Evento do ledger fechado (para a máquina de reembolso — RN-341). */
+  eventoId?: string;
+  aplicado: boolean;
+  motivo:
+    | 'confirmado'
+    | 'ja_aprovado'
+    | 'sem_carimbo_vivo'
+    | 'ambiguo'
+    | 'sem_pagamento';
+}
+
+/**
+ * Fecha a saga de estorno a partir do webhook `PAYMENT_REFUNDED` (decisão 46:
+ * "dependemos desse retorno do webhook deles").
+ *
+ * Casamento do ledger, nesta ordem — nunca por adivinhação:
+ *   1. `refundId` da entrega × `refundId` carimbado ('solicitado');
+ *   2. valor estornado da entrega × `valorCentavos` congelado, quando o
+ *      casamento é ÚNICO entre os carimbos vivos;
+ *   3. carimbo vivo ÚNICO no pagamento (não há o que confundir).
+ * Mais de um candidato sem desempate ⇒ NENHUM efeito + alerta (`ambiguo`):
+ * aplicar o estorno errado num pedido de grupo é dinheiro errado no livro.
+ *
+ * Idempotente: TX2 já barra ledger 'aprovado' (replay devolve `duplicado`).
+ */
+export async function confirmarEstornoPorWebhook(
+  db: Db,
+  pagamentoId: string,
+  confirmacao: ConfirmacaoEstornoWebhook = {}
+): Promise<ResultadoConfirmacaoEstorno> {
+  const pagamentoRef = db.collection('pagamentos').doc(pagamentoId);
+  const ledgerSnaps = await pagamentoRef.collection(ESTORNOS_SUBCOL).get();
+  if (ledgerSnaps.empty) {
+    return { aplicado: false, motivo: 'sem_carimbo_vivo' };
+  }
+
+  const vivos = ledgerSnaps.docs.filter((d) =>
+    (STATUS_ESTORNO_CONFIRMAVEL as readonly string[]).includes(
+      String(d.get('status'))
+    )
+  );
+  if (vivos.length === 0) {
+    const jaAprovado = ledgerSnaps.docs.some((d) => d.get('status') === 'aprovado');
+    return {
+      aplicado: false,
+      motivo: jaAprovado ? 'ja_aprovado' : 'sem_carimbo_vivo',
+    };
+  }
+
+  let alvo = confirmacao.refundId
+    ? vivos.find((d) => d.get('refundId') === confirmacao.refundId)
+    : undefined;
+  if (alvo === undefined && typeof confirmacao.amountCentavos === 'number') {
+    const porValor = vivos.filter(
+      (d) => d.get('valorCentavos') === confirmacao.amountCentavos
+    );
+    if (porValor.length === 1) alvo = porValor[0];
+  }
+  if (alvo === undefined && vivos.length === 1) alvo = vivos[0];
+  if (alvo === undefined) {
+    logger.error('estorno_webhook_ambiguo', {
+      pagamentoId,
+      carimbosVivos: vivos.length,
+      refundIdEntrega: confirmacao.refundId ?? null,
+    });
+    return { aplicado: false, motivo: 'ambiguo' };
+  }
+
+  const compromisso = lerCompromissoDoLedger(alvo, pagamentoId);
+  const inscritoId = alvo.id;
+  const pedidoId = alvo.get('pedidoId') as string;
+  const refundId =
+    confirmacao.refundId ??
+    compromisso.refundId ??
+    `webhook:${pagamentoId}:${inscritoId}`;
+
+  const efeito = await aplicarEfeitoEstorno(
+    db,
+    { pedidoId, inscritoId, motivo: compromisso.motivo },
+    compromisso,
+    refundId
+  );
+
+  logger.info('estorno_confirmado_por_webhook', {
+    pagamentoId,
+    pedidoId,
+    inscritoId,
+    refundId,
+    valorEstornado: compromisso.valor,
+    duplicado: efeito.duplicado,
+    integral: efeito.pagamentoEstornadoIntegral,
+  });
+
+  return {
+    inscritoId,
+    eventoId: compromisso.eventoId,
+    aplicado: !efeito.duplicado,
+    motivo: efeito.duplicado ? 'ja_aprovado' : 'confirmado',
   };
 }
 
