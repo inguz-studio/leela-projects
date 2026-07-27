@@ -25,7 +25,7 @@
 // =============================================================================
 
 import { useState } from 'react';
-import { Button, FileInput } from '@leela/design-system';
+import { Button, FileInput, Thumb, type ThumbProps } from '@leela/design-system';
 import { problemaDoArquivoImagem, IMAGEM_UPLOAD_MAX_BYTES } from '@leela/api-client';
 import { ajustarProporcaoImagem } from './ajustarProporcao';
 
@@ -59,6 +59,18 @@ export interface ImageUploadFieldProps {
    */
   permiteRemover?: boolean;
   removerLabel?: string;
+  /**
+   * Renderiza a prévia como MINIATURA (`Thumb` do DS) na razão indicada, em vez
+   * do bloco de largura cheia. Pedido recorrente do Vitor na edição do evento
+   * (RN-236): a pessoa quer saber QUAL capa está lá antes de trocar, e um hero
+   * de 400px de altura empurra o resto do formulário para fora da tela.
+   *
+   * A razão vem EXPLÍCITA do chamador, não derivada de `aspecto`, para não
+   * quebrar o WYSIWYG por aproximação: só opte pela miniatura quando a razão
+   * publicada pelo `Thumb` for a MESMA do `aspecto` desta superfície ('wide' =
+   * 1.9:1 da capa do evento). Quem não casa segue no bloco, sem mudança.
+   */
+  previewMiniatura?: ThumbProps['ratio'];
 }
 
 /**
@@ -92,6 +104,7 @@ export function ImageUploadField({
   maxBytes,
   permiteRemover = false,
   removerLabel = 'Remover imagem',
+  previewMiniatura,
 }: ImageUploadFieldProps): JSX.Element {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -146,16 +159,29 @@ export function ImageUploadField({
         onFileSelected={(file) => void aoSelecionar(file)}
       />
       {temImagem ? (
-        <div className={previewCls}>
-          <img
-            src={value.trim()}
+        previewMiniatura ? (
+          // Miniatura da imagem ATUAL ao lado do campo (RN-236). `lazy={false}`:
+          // é uma imagem só e já visível na abertura do formulário — adiar aqui
+          // atrasaria justamente o que a pessoa veio conferir.
+          <Thumb
+            src={value}
             alt={previewAlt}
-            className="h-full w-full object-cover"
-            // Proporção dinâmica por superfície (RN-170) — razão sem unidade,
-            // permitida pela governança §2. Círculo já é 1:1 via `size-20`.
-            {...(forma === 'retangulo' ? { style: { aspectRatio: razao } } : {})}
+            ratio={previewMiniatura}
+            size="lg"
+            lazy={false}
           />
-        </div>
+        ) : (
+          <div className={previewCls}>
+            <img
+              src={value.trim()}
+              alt={previewAlt}
+              className="h-full w-full object-cover"
+              // Proporção dinâmica por superfície (RN-170) — razão sem unidade,
+              // permitida pela governança §2. Círculo já é 1:1 via `size-20`.
+              {...(forma === 'retangulo' ? { style: { aspectRatio: razao } } : {})}
+            />
+          </div>
+        )
       ) : null}
       {temImagem && permiteRemover ? (
         <div>
