@@ -20,6 +20,7 @@ import { SolicitarRepasseModal } from './_components/SolicitarRepasseModal';
 import { HistoricoRepasses } from './_components/HistoricoRepasses';
 import { RepasseErro } from './_components/RepasseErro';
 import {
+  abaterRepassesVivos,
   associarRepassesPorEvento,
   type LinhaRepasseEvento,
 } from './_lib/repassesPorEvento';
@@ -100,6 +101,15 @@ export function RepassesView({
     () => associarRepassesPorEvento(historico),
     [historico],
   );
+  // DEC-0727 — o disponível por evento abate os repasses vivos daquele evento.
+  // A junção acontece aqui porque as linhas vêm do fan-out financeiro e a
+  // associação vem do histórico: dois readers que só se encontram nesta view.
+  // A conta em si é pura (`abaterRepassesVivos` → `computeDisponivelPorEvento`),
+  // a mesma que a Caixa do evento usa — as duas telas descontam o mesmo.
+  const porEventoAbatido = React.useMemo(
+    () => abaterRepassesVivos(porEvento, associacao),
+    [porEvento, associacao],
+  );
   const eventosAssociaveis = React.useMemo(
     () => porEvento.map((l) => ({ id: l.eventoId, nome: l.nome })),
     [porEvento],
@@ -135,9 +145,10 @@ export function RepassesView({
         )}
 
         {/* Por evento (RN-349) — quebra vendido/retido/disponível estimado por
-            evento. Os cards acima seguem como saldo autoritativo (∑ do servidor). */}
+            evento, já abatidos os repasses vivos de cada um (DEC-0727). Os cards
+            acima seguem como saldo autoritativo (∑ do servidor). */}
         <RepassesPorEvento
-          linhas={porEvento}
+          linhas={porEventoAbatido}
           associacao={associacao}
           loading={porEventoLoading}
           error={porEventoError}

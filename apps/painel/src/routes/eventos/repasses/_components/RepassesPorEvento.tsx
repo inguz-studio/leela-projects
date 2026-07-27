@@ -5,8 +5,9 @@
 // heurística). Presentational puro.
 //
 // HONESTIDADE DO DINHEIRO (§2.12): o "disponível estimado" é por-evento e NÃO é
-// o saldo autoritativo (não abate repasses já solicitados nem a janela D+N) —
-// uma nota explícita aponta o card "Disponível" agregado como número oficial.
+// o saldo autoritativo — ele já abate os repasses vivos do evento (DEC-0727),
+// mas não a janela D+N, que é grandeza do tenant; uma nota explícita aponta o
+// card "Disponível" agregado como número oficial.
 // Evento sem termo comercial mostra "—" em retido/disponível (líquido
 // indeterminado — nunca fabrica um valor). Repasses SEM `eventoId` (legado
 // pré-RN-349) NÃO são atribuídos a evento nenhum: aparecem numa nota "sem
@@ -109,8 +110,9 @@ export function RepassesPorEvento({
           Por evento
         </h2>
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Estimativa por evento. O <strong>disponível</strong> oficial — que já desconta os repasses
-          solicitados e a janela de liberação — é o card &ldquo;Disponível&rdquo; acima.
+          Estimativa por evento, já descontados os repasses de cada um. O{' '}
+          <strong>disponível</strong> oficial — que aplica também a janela de liberação — é o card
+          &ldquo;Disponível&rdquo; acima.
         </p>
       </div>
 

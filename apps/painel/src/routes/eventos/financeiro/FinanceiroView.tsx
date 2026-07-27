@@ -8,11 +8,12 @@
 // fix-tema-clube): sem card de "Taxa Leela", sem % de taxa, sem nota RN-406.
 //
 // "Valor repassado" (RN-235 · IAM-T7) vem do LEDGER de repasse deste evento,
-// não do agregado — `derivarRepasse().repassado` segue cravado em 0 porque o
-// agregado não conhece transferências. Consequência que a review antagonista
-// cobrou: o disponível derivado NÃO abate esse repasse, então o card declara a
-// estimativa quando há repasse vivo, e o CSV exporta a MESMA Σ que a tela
-// mostra (nunca dois números para a mesma linha).
+// não do agregado. Desde a DEC-0727 o disponível ABATE esse repasse: a Σ do
+// ledger entra na própria `derivarRepasse`, então os quatro números da Caixa
+// fecham entre si e o CSV sai da mesma derivação (nunca dois números para a
+// mesma linha). O aviso de "estimativa que não abate o repasse" era o contorno
+// da review anterior — morto o motivo, morreu o aviso; ficou uma nota que diz o
+// que o número JÁ desconta, e só quando há repasse para descontar.
 // =============================================================================
 
 import {
@@ -88,7 +89,13 @@ export function FinanceiroView({
   }
 
   const fin = financeiro;
-  const rep = derivarRepasse(fin);
+  // Σ de repasse EXIBIDA nesta tela (null = nenhum repasse associado). Uma só
+  // fonte para o card, para a nota, para o disponível e para o CSV — a review
+  // antagonista da IA-MENU cobrou o export que contradizia a tela (A-1) e o
+  // disponível que ignorava a saída (A-2); as duas se fecham entrando aqui.
+  const repasseExibido =
+    repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento : null;
+  const rep = derivarRepasse(fin, repasseExibido);
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -97,12 +104,6 @@ export function FinanceiroView({
     fin.inscritos.porModalidade,
     fin.receitaPorModalidade,
   );
-
-  // Σ de repasse EXIBIDA nesta tela (null = nenhum repasse associado). Uma só
-  // fonte para o card, para a nota do disponível e para o CSV — achado A-1 da
-  // review antagonista: o export não pode contradizer o número lido na tela.
-  const repasseExibido =
-    repasseDoEvento && repasseDoEvento.qtd > 0 ? repasseDoEvento : null;
 
   function exportar(): void {
     baixarTexto(gerarCsvFinanceiro(fin, repasseExibido), `financeiro-${slug}.csv`);
@@ -159,20 +160,17 @@ export function FinanceiroView({
           }
           tom="primary"
         />
-        {/* Achado A-2 da review antagonista: `derivarRepasse` calcula o
-            disponível com `repassado = 0` (E09 ausente no agregado). Enquanto
-            o card ao lado mostrava R$ 0,00, os quatro números fechavam entre
-            si; com o repasse REAL do ledger ao lado (IAM-T7) eles deixaram de
-            fechar. A nota repõe a honestidade — mesma disciplina já ratificada
-            na visão macro, onde "disponível estimado" declara não abater os
-            repasses solicitados. Só aparece quando a incoerência é visível. */}
+        {/* DEC-0727 (achado A-2 da review antagonista, resolvido): o disponível
+            abate os repasses vivos deste evento. A nota diz o que ele JÁ
+            desconta — some quando não há repasse, porque aí não há o que
+            declarar e os quatro números fecham sozinhos. O caminho para o saldo
+            consolidado do servidor é o botão "Ver todos os repasses" acima: um
+            atalho, não um aviso de que este número não presta. */}
         <CardValor
           rotulo="Valor disponível"
           valor={formatBRL(rep.disponivel)}
           {...(repasseExibido
-            ? {
-                nota: 'Estimativa deste evento: não desconta os repasses já solicitados. O disponível oficial está em Eventos › Repasses.',
-              }
+            ? { nota: `Já desconta ${formatBRL(repasseExibido.total)} em repasse deste evento.` }
             : {})}
           tom="success"
         />
