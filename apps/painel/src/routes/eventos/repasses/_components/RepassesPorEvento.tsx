@@ -8,14 +8,17 @@
 // o saldo autoritativo — ele já abate os repasses vivos ASSOCIADOS àquele evento
 // (DEC-0727), mas não a janela D+N, que é grandeza do tenant; uma nota explícita
 // aponta o card "Disponível" agregado como número oficial. O qualificador
-// "associados" não é preciosismo (review CAIXADISP-REV, R-6): a associação a
-// evento é campo OPCIONAL do modal de solicitação e o default é "sem associação",
-// então repasse sem evento escolhido não abate linha nenhuma desta tabela — e a
-// Σ da coluna fica ACIMA do card agregado exatamente por esse valor.
+// "associados" não é preciosismo (review CAIXADISP-REV, R-6): existem repasses
+// que não abatem linha nenhuma desta tabela, e a Σ da coluna fica ACIMA do card
+// agregado exatamente por esse valor.
+//
+// O que MUDOU na DEC-0727C (RN-369): esse conjunto parou de crescer. A
+// associação a evento virou obrigatória, então "sem associação" é agora um fato
+// do PASSADO — repasses criados antes da regra, ou pelo default morto do modal.
+// A nota diz isso: é legado, não uma escolha ainda disponível.
 // Evento sem termo comercial mostra "—" em retido/disponível (líquido
-// indeterminado — nunca fabrica um valor). Repasses SEM `eventoId` (legado
-// pré-RN-349) NÃO são atribuídos a evento nenhum: aparecem numa nota "sem
-// associação" declarada. Sem eventos com movimento → EmptyState.
+// indeterminado — nunca fabrica um valor). Sem eventos com movimento →
+// EmptyState.
 // =============================================================================
 
 import { Badge, Skeleton, Table, type TableColumn } from '@leela/design-system';
@@ -147,8 +150,8 @@ export function RepassesPorEvento({
               {semAssociacao.qtd === 1
                 ? `1 repasse (${formatBRL(semAssociacao.total)}) sem associação a evento`
                 : `${semAssociacao.qtd} repasses (${formatBRL(semAssociacao.total)}) sem associação a evento`}
-              {' '}— solicitados sobre o saldo geral (anteriores à associação por evento ou sem
-              evento escolhido) e por isso <strong>não descontados</strong> de nenhuma linha acima.
+              {' '}— legado, solicitados antes de o repasse passar a ser sempre amarrado a um
+              evento, e por isso <strong>não descontados</strong> de nenhuma linha acima.
             </p>
           )}
         </>

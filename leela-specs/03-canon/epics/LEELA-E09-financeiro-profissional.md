@@ -971,3 +971,69 @@ o Vitor abrir a visibilidade de carrinhos abandonados, o histórico já estará
 lá — é exatamente por isso que o dado nasceu antes da tela.
 
 ⚔ Review antagonista da lane: **pendente**.
+
+---
+
+## Regras de negócio novas (CAIXA-SIMPLES · Vitor 2026-07-27, rodada DEC-0727C)
+
+Verbatim dele: *"o que devemos mostrar: Receita Total, Disponível para
+Repasse, Valor Repassado. 38, nao complica essa porra. Faz o simples. TUdo que
+entrou, menos tudo que foi repassado, e o que tem por repassar. Evento nao pode
+repassar mais do que tá liberado. Valor Repassado."*
+
+A rodada fecha os itens 37, 38, 40 e 41 do painel de decisões e responde três
+dos cinco escalados da review antagonista CAIXADISP-REV (E-1, E-2 e E-4 por
+consequência). Registro da rodada: `01-produto/DECISOES-ABERTAS.md`; report da
+review: `outputs/leela-build-2d6ee98d/CAIXADISP-REV-REPORT.md`.
+
+- **RN-367 · Base única do "Disponível para Repasse".** A Caixa do evento
+  mostra **três** números — Receita Total, Disponível para Repasse, Valor
+  Repassado — e o disponível sai da **mesma base do saque autoritativo**:
+  `liberado = encerrado ? líquido : líquido − líquido × pct/100` (RN-350),
+  `disponível = max(0, liberado − Σ repasses vivos do evento)` (RN-351/349). A
+  base é o **líquido do produtor**, nunca a receita bruta: a taxa da plataforma
+  nunca foi dinheiro do organizador e não é repassável, então "tudo que entrou
+  menos tudo que saiu" não se literaliza para dentro dela. A diferença entre a
+  receita e os outros dois números é retido + taxa, e fica **implícita** — a
+  taxa segue invisível ao organizador (RN-404). O card de retenção ("a ser
+  disponibilizado") **sai** da tela e do CSV. Sem termo comercial o disponível é
+  **indeterminado** (`—`), nunca zero (decisão #7). Fonte única no core:
+  `computeDisponivelDoEvento`, consumida pela Caixa, pelo eixo por-evento e pelo
+  guard da RN-368. **Fecha o item 37 e o escalado E-1:** até aqui a Caixa retinha
+  15% do BRUTO enquanto o saque calculava sobre o LÍQUIDO — no mock canônico do
+  repo (bruto 12.000 · líquido 10.000 · repasse vivo 500) a tela dizia **9.700**
+  onde o modal aceitava **8.000**, e a divergência media R$ 4.774,45 no evento do
+  seed.
+- **RN-368 · Teto por evento na solicitação de repasse.** `requestRepasse` nega
+  a solicitação cujo valor exceda `liberado − comprometido` **daquele evento**,
+  na mesma base da RN-367. A validação de tenant (RN-352) **continua e compõe**:
+  a do tenant carrega a janela D+N (RN-348), que é grandeza do tenant e não do
+  evento; a do evento impede que um evento consuma o liberado de outro. O erro é
+  **tipado** (`details.motivo = 'repasse_excede_evento'` com `eventoId` e
+  `disponivelDoEvento`), para o painel dizer quanto aquele evento comporta em vez
+  de mandar o organizador adivinhar entre dois tetos. **Fecha o item 40 e o
+  escalado E-4:** antes, com a validação só contra o saldo do tenant, um evento
+  com 8.500 liberados aceitava um repasse de 9.000 desde que outro evento
+  tivesse saldo — e a Caixa mostrava disponível 0 sem dizer por quê.
+- **RN-369 · Repasse sempre amarrado a um evento.** `eventoId` passa a ser
+  **obrigatório** em toda nova solicitação, no modal e no callable. A opção "Sem
+  associação (saldo geral)" morre — era o **default** do modal, e quem não
+  mexesse no campo criava um repasse que não abatia evento nenhum. Repasses
+  **antigos** sem `eventoId` continuam válidos como dado: comprometem o saldo do
+  tenant (RN-351) e **não** abatem evento nenhum — atribuí-los agora seria
+  adivinhação —, e a visão macro os declara como **legado** numa nota. **Fecha o
+  item 38 e o escalado E-2** (o R$ 500 fantasma do §P-IAMENU-2).
+- *Ampliada · RN-235:* o card de repasse da Caixa passa a se chamar **"Valor
+  Repassado"** (item 41). Ele soma os estados **vivos** {solicitado, aprovado,
+  pago} — a nota de contagem ("N repasses solicitados") é o que declara que nem
+  todo esse dinheiro já saiu. O escalado **E-5** da review (renomear para
+  "Repasse comprometido") foi respondido pelo dono com o nome acima.
+
+**Escalados da CAIXADISP-REV que seguem ABERTOS:** **E-3** (o que a planilha
+exportada faz quando o extrato de repasses não pode ser lido) — é o item **39**
+do painel de decisões, ainda do Vitor.
+
+**Entrega.** Lane `CAIXA-SIMPLES` (trace `leela-build-2d6ee98d`), 4 commits:
+`15c7121` (T1 · Caixa + core), `74b855d` (T2 · guard e associação obrigatória),
+`49b44b8` (T3 · modal), e o T4 de reconciliação de testes.
+⚔ Review antagonista da lane: **pendente**.

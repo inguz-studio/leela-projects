@@ -113,6 +113,11 @@ describe('RepassesPorEvento', () => {
     // já desconta os repasses. Estes NÃO entram em linha nenhuma — a Σ da coluna
     // fica acima do card agregado exatamente por este valor, e a nota diz isso.
     expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('não descontados');
+    // RN-369 (DEC-0727C): o conjunto parou de crescer — a nota declara PASSADO,
+    // não uma opção ainda disponível no modal ("solicitados sobre o saldo geral"
+    // descrevia o default que morreu).
+    expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('legado');
+    expect((nota.textContent ?? '').replace(/\s/g, ' ')).not.toContain('saldo geral');
   });
 
   it('a seção declara que desconta os repasses ASSOCIADOS (não "os repasses")', () => {

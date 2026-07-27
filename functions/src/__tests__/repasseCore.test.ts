@@ -21,6 +21,8 @@ import {
   COMPROVANTE_PREFIXO,
   comprometeSaldo,
   computeDentroJanelaDN,
+  computeDisponivelDoEvento,
+  computeDisponivelPorEvento,
   computeLiberadoPorEvento,
   computeLiquidoProdutor,
   computeReceitaLiquida,
@@ -131,6 +133,148 @@ describe('computeLiquidoProdutor — RN-347 (modo como parâmetro explícito)', 
 });
 
 // ── 3. computeSaldoRepasse (RN-351) ────────────────────────────────────────
+// ── 2b. computeDisponivelDoEvento (RN-367/368 · DEC-0727C) ─────────────────
+//
+// A review CAIXADISP-REV (vetor 5) registrou como dívida que
+// `computeDisponivelPorEvento` só era exercitada pelo consumidor (painel). A
+// função nova nasce coberta AQUI, na suíte que cobre o core — e a asserção que
+// importa é a CONVERGÊNCIA com `computeSaldoRepasse`: se as duas divergirem, a
+// Caixa volta a prometer um número que o saque recusa.
+describe('computeDisponivelDoEvento — RN-367 (a base única do disponível)', () => {
+  /** Mock canônico do repo: bruto 12.000 · líquido 10.000 · retenção 15%. */
+  const LIQUIDO = 10000;
+
+  it('em andamento retém; encerrado libera o líquido inteiro (RN-350)', () => {
+    expect(
+      computeDisponivelDoEvento({
+        receitaLiquida: LIQUIDO,
+        encerrado: false,
+        repassadoVivo: 0,
+      }),
+    ).toEqual({ liberado: 8500, disponivel: 8500, absorvido: 0, semTermo: false });
+
+    expect(
+      computeDisponivelDoEvento({ receitaLiquida: LIQUIDO, encerrado: true, repassadoVivo: 0 })
+        .disponivel,
+    ).toBe(10000);
+  });
+
+  it('CONVERGE com o saldo autoritativo do tenant de um evento só', () => {
+    for (const repassadoVivo of [0, 500, 3200.35, 8500]) {
+      const doEvento = computeDisponivelDoEvento({
+        receitaLiquida: LIQUIDO,
+        encerrado: false,
+        repassadoVivo,
+      });
+      const doTenant = computeSaldoRepasse({
+        eventos: [evento({ receitaLiquida: LIQUIDO })],
+        repasses: repassadoVivo > 0 ? [{ valor: repassadoVivo, estado: 'solicitado' }] : [],
+      });
+      expect(doEvento.disponivel).toBe(doTenant.disponivel);
+    }
+  });
+
+  it('a base BRUTA, que a Caixa usava, divergia — e a divergência era fechada', () => {
+    // 15% do bruto (12.000) contra 15% do líquido (10.000): 10.200 × 8.500.
+    // Esta é a conta que a DEC-0727C matou; o teste existe para que voltar a
+    // ela seja um vermelho, não uma regressão silenciosa.
+    const baseBruta = 12000 * 0.85;
+    expect(baseBruta).toBe(10200);
+    expect(
+      computeDisponivelDoEvento({ receitaLiquida: LIQUIDO, encerrado: false, repassadoVivo: 0 })
+        .disponivel,
+    ).toBe(8500);
+    expect(baseBruta - 8500).toBe(1700); // 0,85 × taxa da plataforma
+  });
+
+  it('abate o repasse vivo e trava em 0 — nunca negativo (RN-351)', () => {
+    expect(
+      computeDisponivelDoEvento({
+        receitaLiquida: LIQUIDO,
+        encerrado: false,
+        repassadoVivo: 500,
+      }).disponivel,
+    ).toBe(8000);
+    const estourado = computeDisponivelDoEvento({
+      receitaLiquida: LIQUIDO,
+      encerrado: false,
+      repassadoVivo: 9000,
+    });
+    expect(estourado.disponivel).toBe(0);
+    // `absorvido` é o que o clamp de fato descontou — a nota da Caixa não pode
+    // afirmar 9.000 (review CAIXADISP-REV, R-2).
+    expect(estourado.absorvido).toBe(8500);
+  });
+
+  it('é a composição EXATA dos dois helpers que já existiam (nenhuma conta nova)', () => {
+    for (const [liquido, pct, encerrado, vivo] of [
+      [10000, 15, false, 500],
+      [76627.21, 15, false, 3200.35],
+      [10000, 0, false, 0],
+      [10000, 100, false, 0],
+      [9999.99, 7.5, true, 1],
+    ] as const) {
+      const liberado = computeLiberadoPorEvento(liquido, pct, encerrado);
+      expect(
+        computeDisponivelDoEvento({
+          receitaLiquida: liquido,
+          encerrado,
+          retencaoPct: pct,
+          repassadoVivo: vivo,
+        }),
+      ).toEqual({
+        liberado,
+        disponivel: computeDisponivelPorEvento(liberado, vivo),
+        absorvido: Math.min(vivo, liberado),
+        semTermo: false,
+      });
+    }
+  });
+
+  it('sem termo: null nos dois valores — indeterminado, nunca zero (decisão #7)', () => {
+    expect(
+      computeDisponivelDoEvento({ receitaLiquida: null, encerrado: false, repassadoVivo: 500 }),
+    ).toEqual({ liberado: null, disponivel: null, absorvido: 0, semTermo: true });
+  });
+
+  it('% ausente cai no default 15 do core (RN-350)', () => {
+    expect(
+      computeDisponivelDoEvento({ receitaLiquida: LIQUIDO, encerrado: false, repassadoVivo: 0 }),
+    ).toEqual(
+      computeDisponivelDoEvento({
+        receitaLiquida: LIQUIDO,
+        encerrado: false,
+        retencaoPct: RETENCAO_REPASSE_PCT_DEFAULT,
+        repassadoVivo: 0,
+      }),
+    );
+  });
+
+  it('entrada inválida LANÇA — dinheiro falha cedo, não devolve número torto', () => {
+    expect(() =>
+      computeDisponivelDoEvento({ receitaLiquida: 100, encerrado: false, repassadoVivo: -1 }),
+    ).toThrow(RangeError);
+    expect(() =>
+      computeDisponivelDoEvento({
+        receitaLiquida: 100,
+        encerrado: false,
+        repassadoVivo: Number.NaN,
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      computeDisponivelDoEvento({ receitaLiquida: -1, encerrado: false, repassadoVivo: 0 }),
+    ).toThrow(RangeError);
+    expect(() =>
+      computeDisponivelDoEvento({
+        receitaLiquida: 100,
+        encerrado: false,
+        retencaoPct: 101,
+        repassadoVivo: 0,
+      }),
+    ).toThrow(RangeError);
+  });
+});
+
 describe('computeSaldoRepasse — RN-351', () => {
   it('aceite L2-T1 antecipado: líquido 10000 não encerrado @ 15% ⇒ retido 1500, disponível 8500', () => {
     const saldo = computeSaldoRepasse({ eventos: [evento()], repasses: [] });

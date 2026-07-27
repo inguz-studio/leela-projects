@@ -188,7 +188,7 @@ Registro completo: `02-rodadas/2026-07-26-decisoes/01-decisoes.md` e `02-rodadas
 - **Item 28 · 2026-07-27 (DEC-0727):** teto de 15 segundos por chamada ao gateway e "processando pagamento" na tela, em cartão e PIX. Lane ASAAS-TETO entregue, aguarda review antagonista.
 - **P-IAMENU-1 · 2026-07-27 (DEC-0727):** separar quem vê o agregado de quem vê a ficha do CRM saiu do pré-go-live; volta quando o modelo de acessos admin em Configurações existir.
 - **P-IAMENU-2 · 2026-07-27 (DEC-0727):** o disponível por evento abate os repasses vivos, e a reconciliação da função de derivação foi autorizada. Lane CAIXA-DISPONIVEL entregue e revisada. RN-351.
-- **Itens 37, 38, 40 e 41 · 2026-07-27 (DEC-0727C):** a Caixa mostra três números (Receita Total, Disponível para Repasse, Valor Repassado); repasse sempre amarrado a um evento; evento não repassa mais do que está liberado; o nome é "Valor Repassado". Lane CAIXA-SIMPLES armada.
+- **Itens 37, 38, 40 e 41 · 2026-07-27 (DEC-0727C):** a Caixa mostra três números (Receita Total, Disponível para Repasse, Valor Repassado); repasse sempre amarrado a um evento; evento não repassa mais do que está liberado; o nome é "Valor Repassado". Lane CAIXA-SIMPLES entregue, aguarda review antagonista. RN-367, RN-368 e RN-369 em [[LEELA-E09-financeiro-profissional]]. O disponível da Caixa passou a sair da mesma base do saque: no mock canônico do repo a tela dizia R$ 9.700 onde o modal aceitava R$ 8.000, e agora os dois dizem 8.000.
 
 ### Rodadas anteriores
 
