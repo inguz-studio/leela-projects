@@ -1694,7 +1694,8 @@ Stories de lacuna (gap) encaixam após o núcleo: `S209` (tamanho por inscrito �
 ## Regras de negócio novas (R9 · revisão UX do Vitor 2026-07-18)
 
 - **RN-227 · Kit tem imagem quadrada 1:1.** `Kit.imagemUrl?` opcional (`packages/core/src/eventos/kit.ts` — hoje sem campo de imagem), 1:1, ≤5MB, allowlist ADR-016 (SVG banido). Exibida na dobra de kits da landing (`KitsSection.tsx`) e na gestão de eventos (`KitEditor`/`KitsCadastroView`); ausência = placeholder do DS. Storage `eventos/{eventoId}/kits/{kitId}` (regra com `firestore.get` do tenant, padrão clube). Story `S-R9-08`.
-  **✅ Backend construído (lote R9-C · trace leela-build-2d6ee98d · 2026-07-18):** modelo `Kit.imagemUrl?` + `isUrlImagemKitValida` + `parseKit` (`20f1e80`, 24/24 unit) · Rules de shape (`dab8238`, 40/40 emulator) · Storage path RN-227 + `uploadImagemKit` 1:1 no api-client (`79c4535`, 41/41) · leitura pública do checkout com fallback (`62bd7ba`). **Pendente:** UI de upload no painel (`KitEditor`) — lane UI.
+  **✅ Backend construído (lote R9-C · trace leela-build-2d6ee98d · 2026-07-18):** modelo `Kit.imagemUrl?` + `isUrlImagemKitValida` + `parseKit` (`20f1e80`, 24/24 unit) · Rules de shape (`dab8238`, 40/40 emulator) · Storage path RN-227 + `uploadImagemKit` 1:1 no api-client (`79c4535`, 41/41) · leitura pública do checkout com fallback (`62bd7ba`).
+  **✅ FECHADA ponta a ponta:** upload no `KitEditor` (LP-VENDAS-KIT `1134da4`) · exibição pública na LP e no checkout com placeholder padrão Leela (KIT-IMG-LANDING) · **exibição na `KitsCadastroView`, a última metade, em THUMBS-LISTAS `dbda6cd` (RN-236)** — era o pedaço que a RN sempre previu e que fazia o organizador abrir kit por kit para saber qual era qual.
 - **RN-230 · Visão de compra do kit no checkout** (gap R13; nasceu no código como "RN-229", renumerada — RN-229 é das divisórias terciárias/E01). `Kit.descricao?` (≤280) + `Kit.itens[]` ("o que está incluso", ≤30×≤140), opcionais e decorativos: normalização Postel no parse (doc envenenado nunca derruba o checkout público); ausentes ⇒ fallback mock rico na UI (nunca vazio). Seed do preview deriva `itens[]` do catálogo canônico de `itensKit` (uma fonte só; marca no rótulo quando `exibirLogo` — RN-214); imagem NÃO é semeada (mock rico app-side — lição R14). Story `S-R9-08`.
   **✅ Backend+seed construídos (R9-C):** core+Rules+api-client (commits acima) · seed canônico+preview `0ec9181` (idempotente, aditivo, parseKit 20/20 no :8180). **Pendente:** edição de descricao/itens no `KitEditor` — lane UI.
 - **RN-228 · Capa/banner horizontal do evento editável/persistida na página de vendas.** `Evento.imagemUrl` (já no modelo, já persistido por `atualizarConfiguracoesEvento`) ganha edição real na página de vendas — hoje o `EventoForm` coleta e descarta. **Spec RATIFICADA (Vitor 2026-07-18, adendo 6 — fonte: spec da Cheers): 1600×838 px, proporção 1.9:1, arquivo ≤2MB, formatos JPEG/GIF/PNG.** Validação de upload app-level (≤2MB + formato); compatível com a allowlist R5 (`image/(jpeg|png|webp|gif|avif)` — JPEG/PNG/GIF já cobertos, sem mudança de Rules; cap 2MB mais estrito que os 5MB das Rules). Ajustar `aspect-[16/10]`→1.9:1 no `HeroSection`/`EventoForm`. Sem capa = gradiente (RN-166). Story `S-R9-09`. Spec: `02-rodadas/2026-07-18-ux-review/`.
@@ -1745,3 +1746,121 @@ A S207 (Financeiro do evento) já vive aqui, e é a decisão certa: o E03 é a *
 **O atalho.** "Ver todos os repasses" leva a `/eventos/repasses`, e a visibilidade deriva da **matriz única** (`podeAcessar(papel, 'financeiro')`, RN-320) — a mesma que o `RequirePapel` consulta, nunca uma segunda regra de acesso. Testado nos dois sentidos e com espelho célula a célula da matriz (organizador ✅ · financeiro ✅ · administrador ❌ · operador ❌).
 
 **Uma asserção mudou de propósito.** O hint genérico "Disponível com o módulo de repasses" saiu de `FinanceiroView.test.tsx`. Isso é mudança de comportamento **deliberada** desta RN, ratificada em `00-decisao` §6 — **não** é o gate transversal de "move sem asserção reescrita", que vale para as telas que se mudaram de pasta (esta não se mudou). Ponto explícito para a review antagonista confirmar.
+
+---
+
+## Regra de negócio nova (THUMBS-LISTAS · Vitor 2026-07-27)
+
+Pedido verbatim dele, **em recorrência** (já havia pedido antes e não tinha sido
+fechado): *"Ao visualizar kits e marcas, quero que o usuário já visualize as
+imagens dentro do sistema, para facilitar a identificação, no menu, antes de
+entrar para editar alguma informação. As imagens devem ser miniaturas. De logos
+de marcas, a kits. Já na edição de um evento, deve aparecer a miniatura da capa
+do evento."​
+
+O job não é decoração: é reconhecer o item **de vista**, antes de clicar, para
+não abrir o kit errado só para descobrir qual era.
+
+- **RN-236 · Listagem de entidade com imagem exibe a miniatura dessa imagem; a
+  edição exibe a miniatura da imagem atual.** Onde a entidade tem imagem
+  própria, a listagem mostra essa imagem reduzida ao lado do nome, na razão que
+  o dado contrata: **kit 1:1** (RN-227), **logo de marca 1:1** (RN-171, E10),
+  **capa de evento 1.9:1** (RN-228). Na tela de **edição**, a miniatura mostra a
+  imagem **vigente** junto do campo, para a pessoa saber o que está lá antes de
+  trocar. É **exibição reduzida da URL que já existe** — nenhum pipeline de
+  resize no servidor nasce aqui (os uploads já têm teto de tamanho). Ausência de
+  imagem, **e também URL quebrada**, caem num fallback digno (a sigla do nome);
+  o quadrado quebrado do navegador nunca é estado aceitável. Miniatura em lista
+  carrega adiada (`loading="lazy"`); miniatura única ao lado de campo carrega de
+  saída. A caixa é o primitivo **`Thumb`** do DS (E01) — nenhuma tela monta a
+  sua à mão.
+
+**Dona:** este épico (2 das 3 superfícies são dele: kits do evento e capa do
+evento). **Referenciam:** E10 (lista de marcas) e E01 (o primitivo).
+
+### Apêndice de execução (2026-07-27 · lane THUMBS-LISTAS · trace leela-build-2d6ee98d)
+
+**RN-236 está construída.** Worktree `lane/thumbs`, base `0705ccc`.
+
+**T1 `2e48d28` — o primitivo.** `Thumb` nasce no DS porque três superfícies
+pediam a mesma caixa e nenhuma existia: o `Avatar` é circular e representa
+PESSOA (aria-label derivado de `name`), e o thumb híbrido do `EventRow` vive
+dentro dele com fallback de gradiente semântico por modalidade. Governança §7 —
+o que a tela precisa e o DS não tem nasce no DS. A largura vem do token do
+tamanho e a altura sai da razão, então uma medida serve às duas proporções.
+Tokens novos no tier component (família `--thumb-*`, ao lado dos gradientes de
+modalidade que já viviam no semantic). 19 testes.
+
+**T2 `dbda6cd` — kits.** Fecha a metade que faltava da **RN-227**: o backend e o
+upload no `KitEditor` já existiam, e a RN sempre disse que a imagem aparece
+também na `KitsCadastroView` — lá o card mostrava só texto. A miniatura entra
+antes do nome, que é a ordem em que se lê a grade. `siglaDe` virou função em
+`lib/` em vez de segunda cópia: a regra da letra já existia embutida na
+`LogoCell` de `/marcas`.
+
+**T3 `430e72c` — marcas.** `/marcas` já mostrava o logo, mas por um par
+`img`/`div` montado à mão na tela. Trocado pelo `Thumb`: ganhou o
+`loading="lazy"` que faltava, medida por token no lugar de `h-10 w-10` cru, e
+degradação para a sigla quando a URL morre (antes o fallback só cobria "nunca
+teve logo", não "a URL foi revogada").
+
+**T4 `7434cd5` — capa na edição do evento. Achado que muda o recorte:** a capa
+atual **já aparecia** na edição (dois testes cobriam). O que não existia era a
+**miniatura** — a prévia era bloco de largura cheia que, num formulário de 768px
+em 1.9:1, passa de 400px de altura e empurra o resto dos campos para fora da
+tela. Era essa a reclamação, não a ausência da imagem. `previewMiniatura` no
+`ImageUploadField` é **opt-in** e recebe a razão **explícita** do chamador: as
+outras três superfícies do componente (avatar e capa do perfil público, capa do
+clube) seguem byte-idênticas. A razão não é derivada de `aspecto` de propósito —
+16/9 do clube cairia em 1.9/1 e quebraria o WYSIWYG que o componente promete.
+
+**Onde o Vitor confere:** `/eventos/{slug}/kits` · `/marcas` ·
+`/eventos/{slug}/configuracoes`.
+
+### ⚔ Review antagonista (lane THUMBS-REV, 2026-07-27) — APROVADO COM FIXES
+
+Quatro defeitos provados, quatro commits. Dois no DS estão no E01; os dois do
+painel:
+
+**A capa com URL morta virava caixa VAZIA, não fallback (`8f4b999`).** Das três
+superfícies, a capa era a única que não passava `fallback` ao `Thumb` — nem no
+ramo editável nem no de leitura. A RN-236 promete o contrário ("ausência de
+imagem, **e também URL quebrada**, caem num fallback digno") e o `LLM.txt` do
+Thumb é categórico no mesmo ponto. Era o pior lugar para falhar: a miniatura da
+capa só monta quando `imagemUrl` está preenchida, então cair no fallback ali
+significa exatamente "existe capa salva e o navegador não baixou" — e a caixa
+vazia lia como "não tem capa". Agora cai no ícone `ImageOff`.
+
+**As duas asserções de fallback das listagens passavam a vazio (`e2cca94`).**
+Arranquei a prop `fallback` de `/marcas` e da grade de kits e rodei: 22/22
+verdes. `toHaveTextContent('C')` casava com o 'C' de "CDL Wellness" na célula ao
+lado, e `toHaveTextContent('K')` com o 'K' de "Kit Ouro" no `<h3>` ao lado. A
+sigla nunca foi olhada. Escopo estreitado para a célula do logo e para a caixa da
+miniatura; agora os dois morrem sem o fallback.
+
+**O que sobreviveu ao ataque.** A fiação das três superfícies morde de verdade
+(removi o `Thumb` do `KitCard`, o `Thumb` da `LogoCell` e o `previewMiniatura` do
+`ConfigGeraisForm`: 3, 2 e 2 testes caem, respectivamente). O `loading="lazy"`
+está provado por atributo nas três, com `false` correto nas duas caixas de capa.
+O `onError` aguenta troca de URL, ida e volta para a URL que já morreu, rerender
+com o mesmo `src` e `src` vazio×nulo. O `previewMiniatura` opt-in não tocou as
+outras três superfícies do `ImageUploadField`.
+
+**O número dos 400px, aterrissado.** O formulário é `max-w-3xl` (768px) e o
+preview antigo era bloco de largura cheia com `aspect-ratio: 1600/838`: no
+máximo da coluna dá **402px** de altura. A conta fecha. Só que a miniatura nova é
+`size="lg"` — 96px de largura, **~50px de altura**. A oscilação foi de 402px para
+50px, e `lg` já é o maior tamanho que o `Thumb` publica. Se 50px for pequeno
+demais para reconhecer a capa, o caminho é token novo no DS, não ajuste na tela.
+**Fica para o olho do Vitor.**
+
+**Ponta solta de fidelidade:** a razão do `Thumb` é 1.9:1 e o `CAPA_EVENTO_ASPECTO`
+é 1600×838, que é 1.909:1. O JSDoc do `previewMiniatura` diz "a MESMA razão"; são
+0,5% de diferença (0,25px na caixa de 96px), invisível, mas "a mesma" não é
+literal. A RN-228 fala em 1.9:1, então quem está fora é o par de pixels, não o
+componente.
+
+Suítes após os fixes: DS **1090/1090** · painel **1492/1494** (os 2 vermelhos —
+sidebar de `/plataforma` e mutations de termos comerciais — foram reproduzidos
+idênticos no base `0705ccc`, são anteriores a esta lane e não têm relação com
+miniatura).

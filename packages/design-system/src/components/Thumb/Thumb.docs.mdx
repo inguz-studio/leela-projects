@@ -1,0 +1,36 @@
+import { Meta, Canvas, Controls } from '@storybook/blocks';
+import * as Stories from './Thumb.stories';
+import { HandoffButton } from '../../../.storybook/HandoffButton';
+import contract from './LLM.txt?raw';
+
+<Meta of={Stories} />
+
+# Thumb
+
+Miniatura de mídia de entidade para reconhecer o item de vista antes de clicar: imagem de kit, logo de marca, capa do evento. A largura vem do token do tamanho e a altura sai da razão contratada pelo dado (1:1 para logo e kit, 1.9:1 para capa). Sem imagem — ou com a URL quebrada — cai sozinho num fallback digno.
+
+<Canvas of={Stories.ComImagem} />
+
+<Controls />
+
+## Sem imagem
+
+O fallback recebe uma sigla curta ou um ícone. É ele que separa "esta entidade não tem imagem" de "a imagem quebrou": nos dois casos a tela mostra a mesma caixa íntegra, nunca o quadrado partido do navegador.
+
+<Canvas of={Stories.SemImagem} />
+
+## Proporções
+
+<Canvas of={Stories.Proporcoes} />
+
+## Na listagem
+
+<Canvas of={Stories.NaListagem} />
+
+## Handoff para IA
+
+<HandoffButton
+  componentName="Thumb"
+  snippet={`import { Thumb } from '@leela/design-system';\n\n<Thumb src={kit.imagemUrl} fallback="K" />`}
+  contract={contract}
+/>

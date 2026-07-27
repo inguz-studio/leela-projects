@@ -173,3 +173,78 @@ A task de Shell foi escrita com "Sidebar OPERAÇÃO (Visão Geral, Eventos badge
 **Achado que vale a lição:** a primeira versão exportava `<RotasLegadas />` como componente React. O `<Routes>` do react-router só aceita `<Route>` ou `React.Fragment` e **lança em runtime** diante de qualquer outro componente — teria derrubado o painel inteiro na primeira renderização, e nem `tsc` nem `eslint` pegariam. **Quem pegou foi o gate orientado a tabela**, antes do commit. É a prova prática do argumento que travou a rota do T6: falha silenciosa é ausência de gate, e o gate se paga na primeira vez que roda.
 
 **Divergência de catálogo ainda aberta (fora do território do T1):** `packages/design-system/showcase/src/sections/IconsPage.tsx` descreve "os 8 ícones de `DEFAULT_SIDEBAR_SECTIONS`" com Financeiro e Analytics na lista hardcoded. Não quebra build nem teste — e é exatamente a classe de problema que a RN-233 existe para fechar. Merece card próprio.
+
+---
+
+## Thumb — miniatura de mídia de entidade (RN-236 · lane THUMBS-LISTAS 2026-07-27)
+
+Componente novo no DS, `2e48d28`. A **RN-236** é do **E03**; aqui fica o
+primitivo que ela exige.
+
+**Por que nasceu no DS e não na tela.** Três superfícies do painel pediam a mesma
+caixa — imagem de kit 1:1 (RN-227), logo de marca 1:1 (RN-171), capa de evento
+1.9:1 (RN-228) — e o DS não publicava nenhuma. Governança §7: o que a tela
+precisa e o DS não tem nasce no DS.
+
+**Por que não é duplicata.** O `Avatar` representa **pessoa**: é circular por
+contrato, `aspect-square` fixo, exige `name` e o publica como
+`role="img"`/`aria-label`, e deriva iniciais e gradiente desse nome. O thumb
+híbrido do `EventRow` **fica onde está**: o fallback dele é semântico (gradiente
+`--thumb-{modalidade}` + ícone da modalidade) e o mesmo elemento carrega a
+colocação no grid responsivo da linha (`max-lg:row-span-3`) — migrar acoplaria em
+vez de deduplicar. Os dois compartilham a família de tokens `--thumb-*`.
+
+**Anatomia.** A **largura** vem do token do tamanho (sm 40 · md 64 · lg 96) e a
+**altura** sai da razão (`aspect-[1/1]` / `aspect-[1.9/1]`, razões sem unidade
+permitidas pela §2). Uma medida por tamanho serve às duas proporções.
+`object-cover` sempre. `loading="lazy"` **por default**, porque o componente
+nasceu para lista; `lazy={false}` na miniatura única ao lado de campo, já visível
+na abertura.
+
+**Fallback é o ponto, não o detalhe.** Cai nele sem `src` **e também quando a URL
+morre** (`onError`) — é o que impede o quadrado quebrado do navegador de aparecer
+quando uma URL de Storage é revogada. Engine de imagem própria (`img` +
+`onError`), a mesma decisão já registrada no `Avatar`: o `AvatarImage` do Radix
+espera o evento de load e nunca renderiza em jsdom.
+
+**A11y e AA.** Mídia decorativa por default (`alt=''`): nas três superfícies o
+nome fica ao lado e já é o rótulo — mesma decisão do `EventRow`. O componente não
+tem estado interativo (caixa passiva, sem hover/focus/pressed), então o único par
+de texto é o do fallback, `text-tertiary × surface-sunken`, já provado na matriz.
+Nenhum par novo.
+
+**Tokens novos** (tier component, família `--thumb-*`): `size-sm/md/lg`, `radius`,
+`fallback-icon-size` — todos referenciando a escala, e por isso os 5 entraram de
+graça no teste de resolução dos dois temas (+10 casos gerados).
+
+**Gates:** tsc 0 · eslint 0 · 19 testes do componente · suíte do DS **1089/1089**
+(baseline 1060 + 19 + 10 de resolução de token). Showroom, `stories`, `docs.mdx` e
+`LLM.txt` no mesmo commit, como a disciplina do DS exige.
+
+### Review antagonista (lane THUMBS-REV, 2026-07-27) — dois achados no DS
+
+**`ratio`/`size` nulos apagavam a caixa (`537d613`).** `VariantProps` do cva
+publica `null` como valor legal de toda variante e `defaultVariants` só cobre
+`undefined`. Nos outros componentes do DS isso degrada a estilo; aqui degradava a
+**tamanho zero**, porque as duas únicas medidas da caixa saem justamente dessas
+variantes. `<Thumb ratio={null} />` passava em tsc e eslint e sumia da tela. E o
+`null` já estava exposto ao painel: o `ImageUploadField` publica
+`previewMiniatura?: ThumbProps['ratio']`. Corrigido por coerção para o default,
+com teste que falha se a coerção sair.
+
+**O `Thumb` não entrou no índice de contratos do package (`589950a`).** O
+componente nasceu com `LLM.txt` próprio, mas `packages/design-system/LLM.txt` —
+a porta de entrada que a governança §8 manda consultar — não ganhou a linha. Sem
+ela, o próximo agente que precisar de miniatura lê a tabela, não acha nada e
+refaz o `<img className="h-10 w-10">` à mão. O cabeçalho também estava com a
+contagem errada; agora confere com o disco (48 diretórios, 36 com contrato).
+
+**O que sobreviveu ao ataque:** a decisão de não migrar o thumb do `EventRow`
+(conferida na fonte: gradiente `--thumb-{modalidade}` e `max-lg:row-span-3` estão
+lá, o contrato de fallback é mesmo outro); os 5 tokens novos nos dois temas
+(regerei `generate-tokens` e o diff dos gerados veio **vazio** — CSS e
+`rn-themes.ts` estão em sincronia com o JSON, o que a suíte por si só não prova);
+o par AA do fallback (`text-tertiary × surface-sunken` = **6.95:1** brasa,
+**4.89:1** wine); e o `LLM.txt` do componente, fiel ao `.tsx` prop a prop.
+
+Suíte do DS após os fixes: **1090/1090** (1089 + 1 do teste de variante nula).

@@ -14,7 +14,8 @@ trace: leela-build-2d6ee98d (gate GATE-DS-W1 · squad magic-ds + mind brad-frost
 - Governança §8 (PERMANENTE, leela-specs/04-engenharia/governanca-design.md): filtros, seleções ricas e calendários abrem painel do DS — use Combobox (Popover+Command) e DatePicker/DateRangePicker (react-day-picker em Popover). O <select> nativo (componente Select) só em formulário simples de baixa cardinalidade; <input type="date"> do SO é proibido.
 - Cada componente tem um contrato LLM.txt no próprio diretório: props exatas, tokens consumidos, do/don't e exemplos válidos. O contrato do componente prevalece sobre qualquer memória de treinamento (shadcn stock, MUI, antd). Componentes marcados "(contrato pendente)" ainda não têm LLM.txt — leia o .tsx e o showroom antes de usar.
 
-## Componentes (46 diretórios em src/components; 35 com contrato)
+## Componentes (48 diretórios em src/components; 36 com contrato)
+Contagem conferida no disco em 2026-07-27. A tabela tem 47 linhas, uma por diretório: falta só `src/components/Dialog` (entrada Radix-free do ADR-017, consumida pela landing), que ainda não tem linha nem contrato.
 | Componente | Contrato | Resumo |
 |---|---|---|
 | AppShell | src/components/AppShell/LLM.txt | Layout raiz: Sidebar fixa + main landmark |
@@ -60,6 +61,7 @@ trace: leela-build-2d6ee98d (gate GATE-DS-W1 · squad magic-ds + mind brad-frost
 | Table | src/components/Table/LLM.txt | Tabela densa declarativa com EmptyState e renderActions |
 | Tabs | src/components/Tabs/LLM.txt | Troca de conteúdo in-page (tablist) com underline e forceMount |
 | Textarea | (contrato pendente) src/components/Textarea | Área de texto multi-linha com label/erro (flat default) — nunca <textarea> cru |
+| Thumb | src/components/Thumb/LLM.txt | Miniatura de mídia de ENTIDADE (kit, logo, capa) 1:1 ou 1.9:1, lazy em lista e fallback digno — PESSOA é Avatar |
 | Toast | src/components/Toast/LLM.txt | Feedback de escrita via ToastProvider/useToast; danger persiste |
 | Toolbar | src/components/Toolbar/LLM.txt | Barra de ações/filtros acima de tabelas e listas |
 | Tooltip | src/components/Tooltip/LLM.txt | Dica flutuante composicional (Radix), única API stock exposta |

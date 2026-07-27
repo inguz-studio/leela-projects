@@ -194,6 +194,14 @@
     "metric-col-min-w":    "88px",
     "metric-gap":          "{spacing.4}"
   },
+  "thumb": {
+    "$description": "Miniatura de midia de ENTIDADE (Thumb): kit e logo de marca 1:1, capa de evento 1.9:1. Dimensiona a LARGURA por token e deriva a altura pela razao (sem unidade, permitida pela governanca §2) — uma medida por tamanho serve as duas proporcoes. sm 40 = mesmo ritmo de lista do eventrow-thumb-size (linha densa); md 64 = card de grade; lg 96 = previa ao lado de campo de formulario. Fallback usa o par text-tertiary x surface-sunken, ja provado AA na matriz (contrast.test.ts). Os gradientes --thumb-{modalidade} do tier semantic sao da mesma familia, mas de OUTRO papel (fallback semantico de modalidade do EventRow).",
+    "size-sm":       "{spacing.10}",
+    "size-md":       "{spacing.16}",
+    "size-lg":       "{spacing.24}",
+    "radius":        "{radius.md}",
+    "fallback-icon-size": "{spacing.5}"
+  },
   "section": {
     "$description": "Section head do mockup `.section-head`/`.h3`/`.section-link`: titulo 24px display italic -.01em; link 12px tertiary com chevron 14 (hover brand).",
     "title-size":     "{font.size.xl}",

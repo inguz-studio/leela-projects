@@ -11,7 +11,8 @@
 // =============================================================================
 
 import * as React from 'react';
-import { Badge, Button, Input, Switch, useToast } from '@leela/design-system';
+import { ImageOff } from 'lucide-react';
+import { Badge, Button, Input, Switch, Thumb, useToast } from '@leela/design-system';
 import { CAPA_EVENTO_MAX_BYTES, type AtualizarConfiguracoesEventoInput } from '@leela/api-client';
 import { temVenda, type Evento } from '@leela/core';
 import { ImageUploadField } from '@/components/upload';
@@ -194,20 +195,25 @@ export function ConfigGeraisForm({
             previewAlt="Prévia da capa do evento"
             permiteRemover
             removerLabel="Remover capa"
+            previewMiniatura="wide"
           />
         ) : values.imagemUrl.trim().length > 0 ? (
           <div className="flex flex-col gap-[var(--spacing-2)]">
             <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
               Imagem de capa
             </span>
-            <div className="overflow-hidden rounded-[var(--card-radius)] bg-[var(--surface-sunken)]">
-              <img
-                src={values.imagemUrl.trim()}
-                alt="Prévia da capa do evento"
-                className="h-full w-full object-cover"
-                style={{ aspectRatio: `${CAPA_EVENTO_ASPECTO.w}/${CAPA_EVENTO_ASPECTO.h}` }}
-              />
-            </div>
+            {/* `fallback` obrigatório pelo mesmo motivo do ramo editável: esta
+                miniatura só monta com `imagemUrl` preenchida, então cair no
+                fallback significa URL morta — e caixa vazia leria como "sem
+                capa" justamente quando existe capa salva. */}
+            <Thumb
+              src={values.imagemUrl}
+              alt="Prévia da capa do evento"
+              ratio="wide"
+              size="lg"
+              lazy={false}
+              fallback={<ImageOff />}
+            />
           </div>
         ) : null}
         {podeEditar ? (

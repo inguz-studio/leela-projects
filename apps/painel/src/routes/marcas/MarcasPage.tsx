@@ -26,10 +26,12 @@ import {
   SearchInput,
   Skeleton,
   Table,
+  Thumb,
   useToast,
   type TableColumn,
 } from '@leela/design-system';
 import type { Marca } from '@leela/core';
+import { siglaDe } from '@/lib/sigla';
 import { useMarcasSession } from './_data/session';
 import {
   excluirMarcaDoProfissional,
@@ -57,23 +59,23 @@ function normalizar(s: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
+/**
+ * Miniatura do logo 1:1 na linha da marca (RN-171 · RN-236). Era um par
+ * `img`/`div` à mão aqui dentro; virou o `Thumb` do DS, que traz de graça o
+ * `loading="lazy"` que faltava (a lista é do profissional, mas cresce), a
+ * medida por token e a degradação para a sigla quando a URL do Storage morre —
+ * antes uma URL revogada deixava o quadrado quebrado do navegador na tabela.
+ *
+ * O `alt` continua nomeando a marca porque aqui a coluna do logo vem ANTES da
+ * coluna do nome e o cabeçalho dela é vazio: sem `alt` a célula seria muda.
+ */
 function LogoCell({ marca }: { marca: Marca }): JSX.Element {
-  if (marca.logoUrl) {
-    return (
-      <img
-        src={marca.logoUrl}
-        alt={`Logo de ${marca.nome}`}
-        className="h-10 w-10 rounded-[var(--radius-md)] object-cover"
-      />
-    );
-  }
   return (
-    <div
-      aria-hidden="true"
-      className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-raised)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-tertiary)]"
-    >
-      {marca.nome.trim().charAt(0).toUpperCase() || '—'}
-    </div>
+    <Thumb
+      src={marca.logoUrl}
+      alt={marca.logoUrl ? `Logo de ${marca.nome}` : ''}
+      fallback={siglaDe(marca.nome)}
+    />
   );
 }
 

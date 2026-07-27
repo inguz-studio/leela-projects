@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Evento, Timestamp } from '@leela/core';
@@ -202,5 +202,61 @@ describe('ConfigGeraisForm (S304-T2)', () => {
     });
     expect(screen.queryByLabelText('Imagem de capa')).not.toBeInTheDocument();
     expect(screen.getByAltText('Prévia da capa do evento')).toBeInTheDocument();
+  });
+
+  // ── Miniatura da capa ATUAL (RN-228 · RN-236) ────────────────────────────
+  // O pedido do Vitor: saber QUAL capa está lá antes de trocar. A capa já
+  // aparecia; o que muda é que ela aparece como MINIATURA na razão 1.9:1, sem
+  // empurrar o resto do formulário para fora da tela.
+  describe('miniatura da capa atual (RN-228 · RN-236)', () => {
+    it('a capa atual aparece como miniatura 1.9:1, carregada de saída', () => {
+      setup({ evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }) });
+      const img = screen.getByAltText('Prévia da capa do evento');
+      expect(img).toHaveAttribute('src', 'https://cdn.x/capa-atual.jpg');
+      // Fora de lista: adiar a única imagem que a pessoa veio conferir seria
+      // atrasar justamente o alvo da tela.
+      expect(img).not.toHaveAttribute('loading');
+      // A caixa é o Thumb do DS na razão da capa (RN-228), não um bloco solto.
+      const caixa = img.parentElement as HTMLElement;
+      expect(caixa.className).toContain('aspect-[1.9/1]');
+      expect(caixa.className).toContain('w-[var(--thumb-size-lg)]');
+    });
+
+    it('a miniatura NÃO carrega estilo cru — a medida vem de token', () => {
+      setup({ evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }) });
+      const caixa = screen.getByAltText('Prévia da capa do evento').parentElement as HTMLElement;
+      expect(caixa.getAttribute('style')).toBeNull();
+    });
+
+    it('papel sem edição também vê a capa atual como miniatura', () => {
+      setup({
+        podeEditar: false,
+        evento: fakeEvento({ imagemUrl: 'https://cdn.x/capa-atual.jpg' }),
+      });
+      const img = screen.getByAltText('Prévia da capa do evento');
+      expect(img).toHaveAttribute('src', 'https://cdn.x/capa-atual.jpg');
+      expect((img.parentElement as HTMLElement).className).toContain('aspect-[1.9/1]');
+    });
+
+    it('evento SEM capa não inventa miniatura (a landing usa o gradiente)', () => {
+      setup({ evento: fakeEvento() });
+      expect(screen.queryByAltText('Prévia da capa do evento')).not.toBeInTheDocument();
+    });
+
+    it.each([true, false])(
+      'capa com URL morta degrada para o fallback em vez de deixar caixa vazia (podeEditar=%s)',
+      (podeEditar) => {
+        setup({ podeEditar, evento: fakeEvento({ imagemUrl: 'https://cdn.x/revogada.jpg' }) });
+        const img = screen.getByAltText('Prévia da capa do evento');
+        const caixa = img.parentElement as HTMLElement;
+        fireEvent.error(img);
+        expect(screen.queryByAltText('Prévia da capa do evento')).not.toBeInTheDocument();
+        // Sumir a img não basta: sem `fallback` o Thumb renderiza caixa VAZIA, e
+        // a pessoa lê "não tem capa" bem quando existe uma capa salva que o
+        // navegador não baixou. Esta miniatura só monta com imagemUrl
+        // preenchida, então o fallback aqui significa exatamente "URL morta".
+        expect(caixa.querySelector('svg')).not.toBeNull();
+      },
+    );
   });
 });

@@ -238,3 +238,30 @@ S811 está entregue em duas camadas: o registro reutilizável com autocomplete (
 ### Sem decisão aberta
 
 Este épico não tem nada para o Vitor decidir. RN-112, RN-123, RN-213 e RN-214 já estão cravadas e a semântica de exclusão foi documentada no lote anterior.
+
+---
+
+## Miniatura do logo na lista (RN-236 · lane THUMBS-LISTAS 2026-07-27)
+
+A **RN-236** é do **E03** (dona; especificada lá). Aqui vale a parte de marcas do
+pedido do Vitor: reconhecer a marca **de vista** em `/marcas`, antes de abrir
+para editar.
+
+A lista já mostrava o logo 1:1 desde a S811, mas por um par `img`/`div` montado à
+mão dentro da própria `MarcasPage`. Passou a usar o primitivo **`Thumb`** do DS
+(`430e72c`), e o que a troca corrigiu de verdade:
+
+- **`loading="lazy"`**, que não existia — a lista é do profissional e curta hoje,
+  mas cresce, e toda imagem era baixada de saída.
+- **Medida por token** no lugar de `h-10 w-10` cru.
+- **URL morta degrada para a sigla.** O fallback anterior só cobria "esta marca
+  nunca teve logo"; um `logoUrl` com URL de Storage revogada deixava o quadrado
+  quebrado do navegador na tabela. Agora os dois casos caem na mesma caixa
+  íntegra.
+
+O `alt` continua nomeando a marca aqui — diferente da listagem de kits, onde a
+miniatura é decorativa: a coluna do logo vem **antes** da coluna do nome e o
+cabeçalho dela é vazio, então sem `alt` a célula seria muda para leitor de tela.
+
+Nenhuma asserção da `MarcasPage` foi tocada. O logo não tinha teste; agora tem
+três (logo próprio por linha, logos distintos entre marcas, fallback sem logo).
