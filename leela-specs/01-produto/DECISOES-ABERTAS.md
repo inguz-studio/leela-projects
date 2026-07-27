@@ -202,11 +202,11 @@ Nenhum item desta seção é decisão de produto fechada nem lote em execução:
 
 **O que destrava.** Duas respostas de dono: (a) o disponível por evento abate os repasses vivos, ou permanece estimativa declarada? (b) autorização para reconciliar a função de derivação e a asserção do teste que ainda descrevem o mundo anterior. Fonte: [[LEELA-E09-financeiro-profissional]] §P-IAMENU-2 · `outputs/leela-build-2d6ee98d/IAMENU-REV-REPORT.md`. **→ ✅ RESOLVIDO (DEC-0727): (a) abate os repasses vivos ("isso é muito importante") e (b) autorizada a reconciliação**; lane CAIXA-DISPONIVEL ENTREGUE (`7e8c3cd`+`05948f1`+`fe81a1c`) e **review antagonista PAGA — APROVADO-COM-FIXES** (6 fixes `5ea0bd3..1c9efb7`: Σ do ledger cent-exata até no CSV, falha de leitura do ledger deixou de virar "nada saiu" com disponível cheio, nota cent-exata que declara o que absorveu e aponta o número oficial). A conta em si sobreviveu a todos os ataques. **5 decisões novas da review nos itens 37-41 abaixo.**
 
-37. **🆕 [CAIXA-REV · E-1, ALTA] Caixa em bruto × saque em líquido — quem manda?** Mesmo evento, mesmo instante: a Caixa mostra 9.700 e o saque autoritativo 8.000 (no mock canônico a diferença é R$ 4.774,45 — a Caixa lidera em ~8,5% do bruto). Ou a Caixa passa a calcular sobre o líquido e libera a retenção no encerramento (os 4 cards deixam de somar a receita total), ou ela assume ser visão de bruto e o card MUDA DE NOME pra parar de disputar autoridade com o saque.
-38. **🆕 [CAIXA-REV · E-2, ALTA] Repasse sem evento é o DEFAULT do modal.** Solicitação "Sem associação (saldo geral)" não abate Caixa nenhuma — o R$ 500 fantasma volta pelo caminho padrão. Continua permitido? Se sim, a Caixa declara "há R$ X não atribuídos a nenhum evento"?
+37. **✅ RESOLVIDO (DEC-0727C — ver rodada) · [CAIXA-REV · E-1, ALTA] Caixa em bruto × saque em líquido — quem manda?** Mesmo evento, mesmo instante: a Caixa mostra 9.700 e o saque autoritativo 8.000 (no mock canônico a diferença é R$ 4.774,45 — a Caixa lidera em ~8,5% do bruto). Ou a Caixa passa a calcular sobre o líquido e libera a retenção no encerramento (os 4 cards deixam de somar a receita total), ou ela assume ser visão de bruto e o card MUDA DE NOME pra parar de disputar autoridade com o saque.
+38. **✅ RESOLVIDO (DEC-0727C: "faz o simples"; associação vira obrigatória) · [CAIXA-REV · E-2, ALTA] Repasse sem evento é o DEFAULT do modal.** Solicitação "Sem associação (saldo geral)" não abate Caixa nenhuma — o R$ 500 fantasma volta pelo caminho padrão. Continua permitido? Se sim, a Caixa declara "há R$ X não atribuídos a nenhum evento"?
 39. **🆕 [CAIXA-REV · E-3] Ledger em falha: o Exportar CSV bloqueia, ou o CSV leva linha declarando que o repassado não pôde ser lido?**
-40. **🆕 [CAIXA-REV · E-4] Evento sobre-sacado** (repasse associado maior que o liberado — possível porque o modal valida contra o saldo do tenant): a Caixa declara "este evento já repassou mais do que liberou"?
-41. **🆕 [CAIXA-REV · E-5, menor] "Valor repassado" soma {solicitado, aprovado, pago}** — renomear para "Repasse comprometido"?
+40. **✅ RESOLVIDO (DEC-0727C: guard duro por evento) · [CAIXA-REV · E-4] Evento sobre-sacado** (repasse associado maior que o liberado — possível porque o modal valida contra o saldo do tenant): a Caixa declara "este evento já repassou mais do que liberou"?
+41. **✅ RESOLVIDO (DEC-0727C: o nome é "Valor Repassado") · [CAIXA-REV · E-5, menor] "Valor repassado" soma {solicitado, aprovado, pago}** — renomear para "Repasse comprometido"? Não — fica "Valor Repassado".
 
 ### T5 · o observador de sessão está copiado cinco vezes
 
@@ -284,6 +284,17 @@ Formato curto de propósito. O detalhe de cada frente mora no card do backlog em
 - Logos: entregues e aplicadas (sidebar, landing). · Homepage/catálogo: no ar (E12). · Checkout sandbox: no ar, marco "vender ponta a ponta" fechado. · D3 middle-action "Comunicar": aplicado (`c555e93`). · Divergências do cupom brief×kernel: reconciliadas no épico E04 (kernel é a autoridade). · S300-T6 PercursoModal: superseded por ADR-012.
 
 ## ✅ Ratificadas recentemente (referência rápida)
+
+### 🟢 Rodada DEC-0727C (Vitor, 2026-07-27) — a Caixa simples (fecha os itens 37, 38, 40 e 41)
+
+Verbatim integral: *"o que devemos mostrar: Receita Total, Disponível para Repasse, Valor Repassado. 38, nao complica essa porra. Faz o simples. TUdo que entrou, menos tudo que foi repassado, e o que tem por repassar. Evento nao pode repassar mais do que tá liberado. Valor Repassado."*
+
+- **Item 37 ✅ · A Caixa mostra TRÊS números:** Receita Total · Disponível para Repasse · Valor Repassado. O Disponível para Repasse é o que dá para repassar DE VERDADE — a mesma base do saque autoritativo, acabando com a disputa bruto×líquido (o card de "a disponibilizar"/retenção sai da conta visível; a diferença entre Receita e os outros dois é o retido+taxa, implícita).
+- **Item 38 ✅ · "Faz o simples":** a conta é tudo que entrou, menos tudo que foi repassado, e o que tem por repassar. Consequência de engenharia: repasse SEMPRE amarrado a um evento (o default "sem associação" morre — sem amarra, a conta simples não fecha e o R$ 500 fantasma volta).
+- **Item 40 ✅ · Guard duro:** evento NÃO pode repassar mais do que está liberado — a validação do repasse passa a ser POR EVENTO (hoje valida só contra o saldo do tenant; era o furo do clamp achado pela review).
+- **Item 41 ✅ · O nome é "Valor Repassado"** (não "Repasse comprometido").
+- Item 39 (CSV com ledger em falha) segue aberto.
+- **Implementação:** lane CAIXA-SIMPLES armada; dispara na retomada (pausa vigente). Toca painel + `requestRepasse` (functions) — sequenciada após a ASAAS-TETO aterrissar.
 
 ### 🟢 Rodada DEC-0727 (Vitor, 2026-07-27 madrugada) — estornos, teto do gateway e Caixa
 
