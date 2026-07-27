@@ -130,13 +130,14 @@ describe('A-2 · o disponível ABATE o repasse (DEC-0727)', () => {
       />,
     );
     expect(screen.getByText('Valor disponível')).toBeInTheDocument();
-    // Regex por causa do NBSP do Intl entre "R$" e o número (e o card do
-    // dashboard formata sem centavos — `formatBRL`). A nota diz o que o número
-    // desconta E onde está o número oficial de saque (review CAIXADISP-REV,
-    // R-3: o botão "Ver todos os repasses" é condicional, a nota não).
+    // Regex por causa do NBSP do Intl entre "R$" e o número. O card formata sem
+    // centavos (`formatBRL` do dashboard); a NOTA, que afirma um valor
+    // descontado, sai com centavos (`formatDinheiro` — R-5). Ela diz o que o
+    // número desconta E onde está o número oficial de saque (R-3: o botão "Ver
+    // todos os repasses" é navegação, não declaração de autoridade).
     expect(
       screen.getByText(
-        /^Já desconta R\$\s*1\.200 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
+        /^Já desconta R\$\s*1\.200,00 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(AVISO_MORTO)).not.toBeInTheDocument();
@@ -159,13 +160,32 @@ describe('A-2 · o disponível ABATE o repasse (DEC-0727)', () => {
     );
     // Disponível travado em 0 (nunca negativo) …
     expect(screen.getByText(/^R\$\s*0$/)).toBeInTheDocument();
-    // … e a nota diz 8.500 (o liberado deste evento), não 9.000.
+    // … e a nota diz 8.500,00 (o liberado deste evento), não 9.000.
     expect(
       screen.getByText(
-        /^Já desconta R\$\s*8\.500 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
+        /^Já desconta R\$\s*8\.500,00 em repasse deste evento\. O disponível oficial de saque está em Eventos › Repasses\.$/,
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Já desconta R\$\s*9\.000/)).not.toBeInTheDocument();
+  });
+
+  // R-5: o card arredonda (convenção do dashboard, mantida), mas a NOTA afirma
+  // um valor descontado e é lida contra o extrato — e a MESMA Σ aparece com
+  // centavos na tabela por evento de /eventos/repasses e no CSV.
+  it('a nota do disponível é cent-exata: R$ 3.200,55 não vira "R$ 3.201"', () => {
+    render(
+      <FinanceiroView
+        slug="e1"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        repasseDoEvento={{ qtd: 2, total: 3200.55 }}
+      />,
+    );
+    expect(screen.getByText(/^Já desconta R\$\s*3\.200,55 em repasse/)).toBeInTheDocument();
+    expect(screen.queryByText(/Já desconta R\$\s*3\.201/)).not.toBeInTheDocument();
+    // O card do KPI segue arredondado — a convenção do dashboard não mudou.
+    expect(screen.getByText(/^R\$\s*3\.201$/)).toBeInTheDocument();
   });
 
   it('sem repasse, os quatro números fecham entre si — nada a declarar', () => {

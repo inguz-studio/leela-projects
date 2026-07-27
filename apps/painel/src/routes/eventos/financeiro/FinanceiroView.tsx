@@ -35,7 +35,7 @@ import {
   type LinhaBreakdown,
 } from '../_lib/financeiro';
 import { prepararModalidades } from '../evento/overview/modalidades';
-import { formatBRL, formatInt } from '../_lib/format';
+import { formatBRL, formatDinheiro, formatInt } from '../_lib/format';
 import { baixarTexto } from '../_lib/download';
 
 export interface FinanceiroViewProps {
@@ -119,10 +119,15 @@ export function FinanceiroView({
   const ledgerIlegivel = !repasseLoading && repasseErro !== null;
   // Nota do disponível: o que ele abateu (e onde está o oficial), ou o aviso de
   // que ele PODE não ter abatido. Sem repasse e sem falha, nada a declarar.
+  // `formatDinheiro` (com centavos), não `formatBRL`: os quatro CARDS seguem a
+  // convenção arredondada do dashboard, mas esta frase AFIRMA um valor descontado
+  // e é lida contra o extrato — R$ 3.200,55 virava "Já desconta R$ 3.201", 45
+  // centavos que ninguém descontou, e a MESMA Σ aparece com centavos na tabela
+  // de /eventos/repasses e no CSV (review CAIXADISP-REV, R-5).
   const notaDisponivel = ledgerIlegivel
     ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
     : repasseExibido
-      ? `Já desconta ${formatBRL(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
+      ? `Já desconta ${formatDinheiro(abatidoNoDisponivel)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
       : null;
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
