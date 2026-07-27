@@ -6,11 +6,13 @@
 // DINHEIRO — por que isto pode derivar no cliente (e o saldo NÃO): os 3 cards do
 // topo continuam lendo SÓ `saldo/current` (∑ AUTORITATIVO do servidor —
 // RN-350/351/357). Esta seção é uma ESTIMATIVA por-evento, reusando os MESMOS
-// helpers puros e canônicos do core (`computeRetido`/`computeLiberadoPorEvento`)
-// que a Function usa — nunca uma matemática paralela. Por isso a coluna se chama
-// "disponível estimado": a estimativa por-evento NÃO abate o comprometido
-// (repasses já solicitados) nem a janela D+N (RN-348) — esses são grandezas do
-// tenant, não do evento. O número autoritativo é o card agregado.
+// helpers puros e canônicos do core (`computeRetido`/`computeLiberadoPorEvento`/
+// `computeDisponivelPorEvento`) que a Function usa — nunca uma matemática
+// paralela. A coluna segue chamada "disponível estimado" porque a janela D+N
+// (RN-348) é grandeza do TENANT, não do evento, e o número autoritativo é o card
+// agregado. O que ela deixou de ignorar (DEC-0727): os repasses VIVOS daquele
+// evento, que agora abate — mesma regra e mesma função da Caixa do evento, para
+// as duas telas não contarem histórias diferentes do mesmo dinheiro.
 //
 // Sem termo comercial (RN-406/decisão #7): evento com `receitaLiquida === null`
 // (tenant sem termo) conta no VENDIDO, mas NÃO estima retido/disponível — a
@@ -18,7 +20,13 @@
 // espelhando `eventosSemTermo` do core (nunca fabrica um líquido).
 // =============================================================================
 
-import { computeLiberadoPorEvento, computeRetido, RETENCAO_REPASSE_PCT_DEFAULT } from '@leela/core';
+import {
+  comprometeSaldo,
+  computeDisponivelPorEvento,
+  computeLiberadoPorEvento,
+  computeRetido,
+  RETENCAO_REPASSE_PCT_DEFAULT,
+} from '@leela/core';
 import type { Repasse } from '@leela/core';
 import type { EventoFinanceiroRow } from '../../../../lib/query/queries';
 
@@ -33,7 +41,12 @@ export interface LinhaRepasseEvento {
   vendido: number;
   /** Retenção estimada; null = evento sem termo (líquido indeterminado). */
   retido: number | null;
-  /** Disponível ESTIMADO do evento (líquido − retido); null = sem termo. */
+  /**
+   * Disponível ESTIMADO do evento (líquido − retido − repasses vivos do
+   * evento, DEC-0727); null = sem termo. O abatimento só existe depois de
+   * `abaterRepassesVivos` — `derivarRepassesPorEvento` sozinha não conhece o
+   * histórico de repasses (ele vem de outro reader).
+   */
   disponivelEstimado: number | null;
   /** true = tenant sem termo comercial p/ este evento (RN-406) — retido/disp = "—". */
   semTermo: boolean;
@@ -120,9 +133,13 @@ export interface AssociacaoRepasses {
 
 /**
  * Agrupa o histórico de repasses pelo campo EXATO `eventoId` (RN-349 —
- * nenhuma heurística de período/valor). Conta só os estados VIVOS
- * ({solicitado, aprovado, pago} — o mesmo conjunto do `comprometido`+pago de
- * RN-351): cancelado/recusado devolveram o valor e não representam saque.
+ * nenhuma heurística de período/valor). Conta só os estados VIVOS, e a
+ * definição de vivo é a do core (`comprometeSaldo` — {solicitado, aprovado,
+ * pago}, RN-351), não uma lista repetida aqui: cancelado/recusado devolveram o
+ * valor e não representam saque. Um estado novo na máquina do repasse (RN-353)
+ * passa a contar — ou não — pela decisão do core, em um lugar só; era a lista
+ * paralela que deixava a Caixa e a macro divergirem por descuido.
+ *
  * Doc sem `eventoId` (legado) cai em `semAssociacao` — a UI o declara,
  * honesto, em vez de atribuí-lo a um evento por adivinhação. @pure
  */
@@ -133,7 +150,7 @@ export function associarRepassesPorEvento(
   const semAssociacao: RepassesAssociados = { qtd: 0, total: 0 };
 
   for (const r of historico) {
-    if (r.estado === 'cancelado' || r.estado === 'recusado') continue;
+    if (!comprometeSaldo(r.estado)) continue; // estornado (cancelado/recusado) devolve
     if (r.eventoId === undefined) {
       semAssociacao.qtd += 1;
       semAssociacao.total += r.valor;
@@ -144,6 +161,35 @@ export function associarRepassesPorEvento(
   }
 
   return { porEvento, semAssociacao };
+}
+
+/**
+ * Abate de cada linha o repasse VIVO daquele evento (DEC-0727 · RN-349), via
+ * `computeDisponivelPorEvento` — a MESMA função que a Caixa do evento usa.
+ *
+ * Por que a composição mora aqui e não em `derivarRepassesPorEvento`: as linhas
+ * vêm do fan-out de `financeiro/current` e a associação vem do histórico de
+ * repasses, dois readers independentes que só se encontram na view. Manter a
+ * junção PURA (em vez de fazê-la dentro do componente) é o que deixa o
+ * abatimento testável sem render.
+ *
+ * Evento sem termo (`disponivelEstimado === null`) continua "—": não há líquido
+ * para abater de, e inventar zero seria pior que declarar indeterminado.
+ * Retido/vendido não mudam — a retenção segue como está (RN-350). @pure
+ */
+export function abaterRepassesVivos(
+  linhas: readonly LinhaRepasseEvento[],
+  associacao: AssociacaoRepasses,
+): LinhaRepasseEvento[] {
+  return linhas.map((l) => {
+    if (l.disponivelEstimado === null) return l;
+    const assoc = associacao.porEvento.get(l.eventoId);
+    if (assoc === undefined || assoc.qtd === 0) return l;
+    return {
+      ...l,
+      disponivelEstimado: computeDisponivelPorEvento(l.disponivelEstimado, assoc.total),
+    };
+  });
 }
 
 /** Soma as linhas (eventos sem termo entram só no vendido). @pure */

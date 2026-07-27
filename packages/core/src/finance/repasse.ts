@@ -136,6 +136,43 @@ export function computeLiberadoPorEvento(
   return roundMoney(liquido - computeRetido(liquido, pct, encerrado));
 }
 
+/**
+ * Disponível de UM evento DEPOIS de abater os repasses vivos daquele evento
+ * (DEC-0727 · RN-349/RN-351): `max(0, liberado − repassadoVivo)`.
+ *
+ * Repasse VIVO é o MESMO conjunto de `comprometeSaldo` — {solicitado,
+ * aprovado, pago} (RN-351): dinheiro que já saiu ou está a caminho de sair.
+ * Estorno de repasse (`cancelRepasse` → 'cancelado', `rejectRepasse` →
+ * 'recusado') tira o doc desse conjunto, e o valor volta ao disponível POR
+ * CONSTRUÇÃO — não existe um caminho de devolução separado para manter em
+ * sincronia (RN-353).
+ *
+ * `liberado` é o disponível do evento ANTES do abatimento; cada tela entra com
+ * a própria base (a Caixa do evento parte da receita total menos a retenção
+ * que ela exibe; a visão macro parte de `computeLiberadoPorEvento` sobre o
+ * líquido). Este helper NÃO escolhe a base: crava num lugar só o que abate e
+ * o clamp, para as duas telas não divergirem na semântica — a incoerência que
+ * a DEC-0727 fechou nasceu de subtração faltando numa delas.
+ *
+ * Clamp em 0 como em RN-351 — disponível nunca é negativo. Repasse vivo maior
+ * que o liberado é estado alcançável (a retenção volta a incidir quando um
+ * evento encerrado é reaberto), e nesse caso a resposta honesta é zero, não
+ * um negativo que a tela formataria como "-R$ 120,00".
+ * @pure
+ */
+export function computeDisponivelPorEvento(
+  liberado: number,
+  repassadoVivo: number
+): number {
+  if (!Number.isFinite(liberado) || liberado < 0) {
+    throw new RangeError('liberado deve ser um número ≥ 0.');
+  }
+  if (!Number.isFinite(repassadoVivo) || repassadoVivo < 0) {
+    throw new RangeError('repassadoVivo deve ser um número ≥ 0 (Σ dos repasses vivos).');
+  }
+  return Math.max(0, roundMoney(liberado - repassadoVivo));
+}
+
 // ---------------------------------------------------------------------------
 // RN-351 — saldo consolidado (∑ do tenant)
 // ---------------------------------------------------------------------------

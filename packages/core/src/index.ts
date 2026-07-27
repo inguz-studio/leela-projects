@@ -820,7 +820,8 @@ export {
 
 // Núcleo puro do repasse (E09s-L1-T3): retenção RN-350, saldo RN-351,
 // solicitação RN-352, máquina RN-353, comprovante RN-355, líquido com modo
-// de taxa RN-347 e janela D+N em dias úteis RN-348.
+// de taxa RN-347 e janela D+N em dias úteis RN-348. O disponível POR EVENTO
+// abate os repasses vivos daquele evento (DEC-0727 · computeDisponivelPorEvento).
 export type {
   ComputeSaldoRepasseParams,
   SaldoRepasseComputado,
@@ -836,6 +837,7 @@ export {
   computeLiquidoProdutor,
   computeRetido,
   computeLiberadoPorEvento,
+  computeDisponivelPorEvento,
   ESTADOS_REPASSE_COMPROMETIDOS,
   comprometeSaldo,
   computeSaldoRepasse,
