@@ -83,10 +83,11 @@ describe('EventosRoutes — precedência da subdivisão Repasses (risco #3)', ()
     montarEm('/eventos/repasses');
     const subnav = screen.getByRole('navigation', { name: 'Seções de Eventos' });
     expect(subnav).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Repasses' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    // LEELA-DEBT-T4: a aba virou âncora — role 'link' e href de verdade. Sem
+    // afrouxar nada: o par href↔destino entra como asserção nova.
+    const aba = screen.getByRole('link', { name: 'Repasses' });
+    expect(aba).toHaveAttribute('aria-current', 'page');
+    expect(aba).toHaveAttribute('href', '/eventos/repasses');
   });
 
   it('a moldura do hub NÃO envolve a criação nem as abas de um evento', () => {

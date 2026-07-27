@@ -85,8 +85,11 @@ describe('CrmRoutes — as 3 subdivisões (risco #2: ordem de rotas)', () => {
       const { unmount } = montarEm(rota);
       const subnav = screen.getByRole('navigation', { name: 'Seções de CRM' });
       expect(subnav, `rota ${rota}`).toBeInTheDocument();
+      // LEELA-DEBT-T4: as abas do CRM viraram âncoras — o role mudou de
+      // 'button' para 'link' e o href passou a existir. A asserção de "onde
+      // estou" segue idêntica.
       expect(
-        screen.getByRole('button', { name: ativa }).getAttribute('aria-current'),
+        screen.getByRole('link', { name: ativa }).getAttribute('aria-current'),
         `rota ${rota}`,
       ).toBe('page');
       unmount();
