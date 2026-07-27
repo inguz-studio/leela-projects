@@ -109,6 +109,20 @@ describe('RepassesPorEvento', () => {
     expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('2 repasses');
     expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('R$ 3.000,00');
     expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('sem associação');
+    // R-6 (review CAIXADISP-REV): desde a DEC-0727 a seção afirma que a coluna
+    // já desconta os repasses. Estes NÃO entram em linha nenhuma — a Σ da coluna
+    // fica acima do card agregado exatamente por este valor, e a nota diz isso.
+    expect((nota.textContent ?? '').replace(/\s/g, ' ')).toContain('não descontados');
+  });
+
+  it('a seção declara que desconta os repasses ASSOCIADOS (não "os repasses")', () => {
+    render(
+      <RepassesPorEvento linhas={LINHAS} associacao={SEM_ASSOCIACAO} loading={false} error={null} onRetry={vi.fn()} />,
+    );
+    const secao = screen.getByRole('region', { name: 'Repasse por evento' });
+    expect((secao.textContent ?? '').replace(/\s/g, ' ')).toContain(
+      'já descontados os repasses associados a cada um',
+    );
   });
 
   it('sem repasse legado → nota NÃO aparece (ruído zero)', () => {

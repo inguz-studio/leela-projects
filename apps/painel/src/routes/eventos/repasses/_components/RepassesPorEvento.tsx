@@ -5,9 +5,13 @@
 // heurística). Presentational puro.
 //
 // HONESTIDADE DO DINHEIRO (§2.12): o "disponível estimado" é por-evento e NÃO é
-// o saldo autoritativo — ele já abate os repasses vivos do evento (DEC-0727),
-// mas não a janela D+N, que é grandeza do tenant; uma nota explícita aponta o
-// card "Disponível" agregado como número oficial.
+// o saldo autoritativo — ele já abate os repasses vivos ASSOCIADOS àquele evento
+// (DEC-0727), mas não a janela D+N, que é grandeza do tenant; uma nota explícita
+// aponta o card "Disponível" agregado como número oficial. O qualificador
+// "associados" não é preciosismo (review CAIXADISP-REV, R-6): a associação a
+// evento é campo OPCIONAL do modal de solicitação e o default é "sem associação",
+// então repasse sem evento escolhido não abate linha nenhuma desta tabela — e a
+// Σ da coluna fica ACIMA do card agregado exatamente por esse valor.
 // Evento sem termo comercial mostra "—" em retido/disponível (líquido
 // indeterminado — nunca fabrica um valor). Repasses SEM `eventoId` (legado
 // pré-RN-349) NÃO são atribuídos a evento nenhum: aparecem numa nota "sem
@@ -110,7 +114,7 @@ export function RepassesPorEvento({
           Por evento
         </h2>
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-          Estimativa por evento, já descontados os repasses de cada um. O{' '}
+          Estimativa por evento, já descontados os repasses <strong>associados</strong> a cada um. O{' '}
           <strong>disponível</strong> oficial — que aplica também a janela de liberação — é o card
           &ldquo;Disponível&rdquo; acima.
         </p>
@@ -143,7 +147,8 @@ export function RepassesPorEvento({
               {semAssociacao.qtd === 1
                 ? `1 repasse (${formatBRL(semAssociacao.total)}) sem associação a evento`
                 : `${semAssociacao.qtd} repasses (${formatBRL(semAssociacao.total)}) sem associação a evento`}
-              {' '}— solicitados sobre o saldo geral (anteriores à associação por evento ou sem evento escolhido).
+              {' '}— solicitados sobre o saldo geral (anteriores à associação por evento ou sem
+              evento escolhido) e por isso <strong>não descontados</strong> de nenhuma linha acima.
             </p>
           )}
         </>
