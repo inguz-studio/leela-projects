@@ -507,7 +507,7 @@ const REFUND_STATUS_MAP: Record<string, RefundResult['status']> = {
 };
 
 /**
- * Extrai de um `payment` de webhook QUAL estorno a entrega confirma (RN-350):
+ * Extrai de um `payment` de webhook QUAL estorno a entrega confirma (RN-372):
  * o item mais recente de `refunds[]` com status DONE — a confirmação. Sem
  * DONE, sem array ou com shape fora do contrato devolve `undefined`: nunca
  * lança, porque 4xx em entrega autêntica pausa a fila de webhooks do Asaas.
@@ -646,7 +646,7 @@ export interface AsaasWebhookDetails {
   cartao?: AsaasWebhookCartao;
   /**
    * Presente em `PAYMENT_REFUNDED` com `payment.refunds[]` — diz QUAL estorno
-   * a entrega confirma (RN-350). É o que permite fechar a saga do estorno
+   * a entrega confirma (RN-372). É o que permite fechar a saga do estorno
    * certo num pedido de GRUPO, onde há vários parciais na mesma cobrança.
    */
   refund?: WebhookRefundInfo;
@@ -1448,7 +1448,7 @@ export class AsaasProvider implements PaymentProvider {
       }
     }
 
-    // Bloco de ESTORNO (RN-350): em PAYMENT_REFUNDED o payment traz
+    // Bloco de ESTORNO (RN-372): em PAYMENT_REFUNDED o payment traz
     // `refunds[]` — o mais recente DIZ qual estorno esta entrega confirma.
     // Shape fora do contrato aqui NUNCA derruba a entrega (responder 4xx a
     // webhook autêntico pausa a fila do Asaas): sem bloco, o domínio decide
@@ -1498,7 +1498,7 @@ export class AsaasProvider implements PaymentProvider {
       status: detalhes.status,
       amount: detalhes.amount,
       processedAt: timestampDe(this.now()),
-      // RN-350: o bloco de estorno atravessa até o core, que casa com o
+      // RN-372: o bloco de estorno atravessa até o core, que casa com o
       // carimbo do ledger. Ausente em toda entrega que não é estorno.
       ...(detalhes.refund !== undefined ? { refund: detalhes.refund } : {}),
     };

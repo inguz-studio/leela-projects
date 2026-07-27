@@ -25,7 +25,7 @@ export interface PoliticaVendasValues {
   corteHoras: string;
   slaAnaliseDias: string;
   /**
-   * RN-352: fora da janela de arrependimento, a taxa de serviço volta ao
+   * RN-374: fora da janela de arrependimento, a taxa de serviço volta ao
    * comprador? DENTRO da janela ela volta sempre (art. 49) e isso não aparece
    * no form — não é do organizador desligar a lei.
    */

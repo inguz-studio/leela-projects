@@ -541,7 +541,7 @@ export {
   validarPoliticaVendas,
   parsePoliticaVendas,
   rotearReembolso,
-  // RN-351/352 — o que volta e o que fica no estorno (decisão 42)
+  // RN-373/374 — o que volta e o que fica no estorno (decisão 42)
   dentroDaJanelaArrependimento,
   calcularDevolucaoEstorno,
   transferenciaAberta,
@@ -824,9 +824,9 @@ export {
   isTipoContaBancaria,
 } from './finance/repasse-types';
 
-// Núcleo puro do repasse (E09s-L1-T3): retenção RN-350, saldo RN-351,
-// solicitação RN-352, máquina RN-353, comprovante RN-355, líquido com modo
-// de taxa RN-347 e janela D+N em dias úteis RN-348. O disponível POR EVENTO
+// Núcleo puro do repasse (E09s-L1-T3): retenção RN-372, saldo RN-373,
+// solicitação RN-374, máquina RN-375, comprovante RN-355, líquido com modo
+// de taxa RN-347 e janela D+N em dias úteis RN-370. O disponível POR EVENTO
 // abate os repasses vivos daquele evento (DEC-0727 · computeDisponivelPorEvento)
 // e sai da base ÚNICA do saque — líquido, retenção que libera no encerramento
 // (RN-367 · DEC-0727C · computeDisponivelDoEvento), a mesma da Caixa, da coluna

@@ -1,5 +1,5 @@
 /**
- * politicaForm.test.ts — LEELA-ESTORNO-T2 (RN-352)
+ * politicaForm.test.ts — LEELA-ESTORNO-T2 (RN-374)
  *
  * O form da política é conversão pura (form ⇄ domínio). O que estas provas
  * prendem é o caminho de ida e volta do campo NOVO da taxa: um flag que o
@@ -25,7 +25,7 @@ function politicaGravada(devolveTaxaForaDaJanela: boolean): PoliticaVendas {
   };
 }
 
-describe('politicaForm — a taxa fora da janela (RN-352)', () => {
+describe('politicaForm — a taxa fora da janela (RN-374)', () => {
   it('sem política gravada, o form nasce com o default do kernel (retém)', () => {
     expect(valoresDaPolitica(null).devolveTaxaForaDaJanela).toBe(false);
   });

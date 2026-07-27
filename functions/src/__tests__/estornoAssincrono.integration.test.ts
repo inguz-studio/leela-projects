@@ -1,5 +1,5 @@
 /**
- * estornoAssincrono.integration.test.ts — LEELA-ESTORNO-T1 (RN-348/349/350)
+ * estornoAssincrono.integration.test.ts — LEELA-ESTORNO-T1 (RN-370/371/372)
  *
  * ⚠️ EXIGE Firestore Emulator (8080). Nenhuma rede real: o gateway é um espião
  * em memória que CONTA os `POST /refund` emitidos.
@@ -132,7 +132,7 @@ async function criarPedidoPago(
   valorLinha = 189.9,
   /** Fatia de taxa repassada POR LINHA (evento 'repassada' — RN-347). */
   taxaLinha = 0,
-  /** Quantos dias ATRÁS a compra aconteceu (RN-351 — janela do art. 49). */
+  /** Quantos dias ATRÁS a compra aconteceu (RN-373 — janela do art. 49). */
   diasDesdeCompra = 0
 ): Promise<Fixture> {
   seq += 1;
@@ -223,7 +223,7 @@ async function criarPedidoPago(
   };
 }
 
-/** Grava a política de vendas do evento (RN-352 — o flag da taxa). */
+/** Grava a política de vendas do evento (RN-374 — o flag da taxa). */
 async function gravarPolitica(devolveTaxaForaDaJanela: boolean): Promise<void> {
   await db
     .collection('eventos')
@@ -316,7 +316,7 @@ beforeEach(async () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. PENDING não derruba a saga e não aplica efeito (RN-350)
+// 1. PENDING não derruba a saga e não aplica efeito (RN-372)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('refund PENDING — o gateway aceitou e ainda não concluiu', () => {
@@ -352,7 +352,7 @@ describe('refund PENDING — o gateway aceitou e ainda não concluiu', () => {
     expect(gateway.posts.length).toBe(1);
   }, 60_000);
 
-  it('SEGUNDA chamada sobre carimbo vivo NÃO emite segundo POST (RN-349)', async () => {
+  it('SEGUNDA chamada sobre carimbo vivo NÃO emite segundo POST (RN-371)', async () => {
     const fx = await criarPedidoPago(1);
     gateway.roteiro = [{ tipo: 'pending' }];
     const input = { pedidoId: fx.pedidoId, inscritoId: fx.inscritoIds[0]!, motivo: 'PIX assíncrono' };
@@ -505,7 +505,7 @@ describe('webhook PAYMENT_REFUNDED fecha a saga — uma vez só', () => {
 // 3. Timeout com efeito possível — o estorno duplo provado, agora morto
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('timeout no POST de estorno (efeitoPossivel — RN-349)', () => {
+describe('timeout no POST de estorno (efeitoPossivel — RN-371)', () => {
   it('carimba gateway_sem_resposta e BLOQUEIA a segunda tentativa', async () => {
     const fx = await criarPedidoPago(1);
     gateway.roteiro = [{ tipo: 'timeout' }, { tipo: 'approved' }];
@@ -622,7 +622,7 @@ describe('desfechos do gateway que não são "concluído"', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. T2 · a taxa de serviço nos 7 dias (RN-351/352 — decisão 42)
+// 5. T2 · a taxa de serviço nos 7 dias (RN-373/374 — decisão 42)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('taxa de serviço no estorno — dentro e fora da janela', () => {

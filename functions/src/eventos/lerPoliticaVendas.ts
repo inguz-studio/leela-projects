@@ -3,7 +3,7 @@
 //
 // Leitura transacional da política de vendas do evento (E04-S305). Mora aqui,
 // e não em `finance/requestRefund`, porque DOIS donos precisam dela e um deles
-// é o primitivo de dinheiro: `estornarInscricao` (RN-351/352 — quanto da taxa
+// é o primitivo de dinheiro: `estornarInscricao` (RN-373/374 — quanto da taxa
 // volta) e a máquina de reembolso (RN-338/339/340 — para onde a solicitação
 // vai). Importar uma da outra fecharia ciclo.
 //
@@ -48,7 +48,7 @@ export async function lerPoliticaVendasTx(
   return parsePoliticaVendas(POLITICA_VENDAS_DOC_ID, { tenantId, ...data });
 }
 
-/** Bloco de reembolso da política (RN-338/339/340/351/352). */
+/** Bloco de reembolso da política (RN-338/339/340/373/374). */
 export async function lerPoliticaReembolsoTx(
   tx: Tx,
   db: Db,

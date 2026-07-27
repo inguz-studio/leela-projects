@@ -1,10 +1,10 @@
 /**
- * estornoLedger.test.ts — LEELA-ESTORNO-T1 (RN-348/349/350)
+ * estornoLedger.test.ts — LEELA-ESTORNO-T1 (RN-370/371/372)
  *
  * Derivações PURAS do carimbo durável de estorno (sem Emulator, sem rede):
- *   - quais estados proíbem um segundo `POST /refund` (RN-349);
+ *   - quais estados proíbem um segundo `POST /refund` (RN-371);
  *   - qual falha do gateway PROVA que nada saiu (e portanto libera retry);
- *   - qual estorno uma entrega `PAYMENT_REFUNDED` confirma (RN-350).
+ *   - qual estorno uma entrega `PAYMENT_REFUNDED` confirma (RN-372).
  *
  * Estas três decisões são o que separa "estorno enviado e não registrado" de
  * "estorno duplo" — ASAASTETO-REV §V4 mediu 2 POSTs sem elas.
@@ -29,7 +29,7 @@ import {
 } from '../payments/asaasProvider';
 import { MockRefundRecusadoError } from '../payments/mockProvider';
 
-describe('carimbo do ledger de estorno (RN-348/349)', () => {
+describe('carimbo do ledger de estorno (RN-370/371)', () => {
   it('SÓ "pendente" autoriza um POST de estorno', () => {
     const autorizados = STATUS_ESTORNO_LEDGER.filter((s) => podeEnviarRefund(s));
     expect(autorizados).toEqual(['pendente']);
@@ -79,7 +79,7 @@ describe('carimbo do ledger de estorno (RN-348/349)', () => {
   });
 });
 
-describe('falhaRefundSemEfeito — o que PROVA que nada saiu (RN-349)', () => {
+describe('falhaRefundSemEfeito — o que PROVA que nada saiu (RN-371)', () => {
   it('validação local e recusa explícita do mock: nada saiu ⇒ retry liberado', () => {
     expect(falhaRefundSemEfeito(new AsaasValidationError('[asaas] amount inválido'))).toBe(true);
     expect(falhaRefundSemEfeito(new MockRefundRecusadoError('[mock] recusado'))).toBe(true);
@@ -110,7 +110,7 @@ describe('falhaRefundSemEfeito — o que PROVA que nada saiu (RN-349)', () => {
   });
 });
 
-describe('extrairRefundDaEntrega — qual estorno o webhook confirma (RN-350)', () => {
+describe('extrairRefundDaEntrega — qual estorno o webhook confirma (RN-372)', () => {
   it('pega o DONE mais recente de refunds[] e converte para centavos', () => {
     const info = extrairRefundDaEntrega({
       id: 'pay_1',

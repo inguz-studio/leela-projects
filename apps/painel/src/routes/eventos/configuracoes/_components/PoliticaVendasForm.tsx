@@ -136,7 +136,7 @@ export function PoliticaVendasForm({
             onChange={(v) => set('slaAnaliseDias', v)}
           />
         </div>
-        {/* RN-352 (decisão 42): dentro da janela a taxa volta SEMPRE — não há
+        {/* RN-374 (decisão 42): dentro da janela a taxa volta SEMPRE — não há
             switch para desligar o art. 49. O que se decide é o de fora. */}
         <Switch
           id="pol-devolve-taxa-fora"

@@ -19,19 +19,19 @@
 // (`valorFace` no ledger): a taxa nunca foi receita dele. Em 'incorporada'
 // os dois valores coincidem — zero mudança de comportamento.
 //
-// SAGA EM 3 FASES + CARIMBO DURÁVEL DE ENVIO (RN-348/349/350 · decisão 46 do
+// SAGA EM 3 FASES + CARIMBO DURÁVEL DE ENVIO (RN-370/371/372 · decisão 46 do
 // dono: "estorno só é feito utilizando via API do ASAAS, a solicitação é feita
 // e pode cair; dependemos desse retorno do webhook deles"):
 //   TX1 (COMPROMISSO): guards (papel/tenant/estado) + cria o ledger
 //       `pagamentos/{pagamentoId}/estornos/{inscritoId}` com status
 //       'pendente' e o VALOR CONGELADO em centavos. DocId determinístico
 //       (= inscritoId): um estorno INTEGRAL por inscrito, nunca dois.
-//   CARIMBO + REFUND: o ledger vai a 'enviando' ANTES do POST (RN-348) e o
+//   CARIMBO + REFUND: o ledger vai a 'enviando' ANTES do POST (RN-370) e o
 //       POST só sai de 'pendente' (compare-and-set). Resposta do gateway:
 //       'approved' (DONE) → efeito na hora; 'pending' → ledger 'solicitado'
-//       com o refundId e a AUTORIDADE passa para o webhook (RN-350);
+//       com o refundId e a AUTORIDADE passa para o webhook (RN-372);
 //       timeout/erro sem resposta → 'gateway_sem_resposta' e NENHUMA nova
-//       tentativa automática (RN-349 — o adapter marca `efeitoPossivel`).
+//       tentativa automática (RN-371 — o adapter marca `efeitoPossivel`).
 //   TX2 (EFEITO, atômico): flip do inscrito + reversão da receita
 //       (read-modify-write com roundMoney — nunca increment de float) +
 //       `pagamentos.estornadoTotal` acumulado + ledger 'aprovado'.
@@ -42,7 +42,7 @@
 // que o Asaas aceita — dois POSTs medidos, comprador recebendo duas vezes e
 // o livro registrando uma. O carimbo VIVO ('enviando'/'solicitado'/
 // 'gateway_sem_resposta'/'divergencia_valor'/'rejeitado_gateway') bloqueia o
-// re-envio: quem decide repetir é humano, contra o extrato (RN-349).
+// re-envio: quem decide repetir é humano, contra o extrato (RN-371).
 //
 // Crash em QUALQUER ponto + retry da mesma chamada NUNCA duplica efeito:
 // ledger 'aprovado' → replay devolve `duplicado: true` sem escrita; ledger
@@ -132,13 +132,13 @@ export interface EstornarInscricaoResult {
   duplicado: boolean;
   /** true = com este estorno o pagamento ficou INTEGRALMENTE estornado. */
   pagamentoEstornadoIntegral: boolean;
-  /** Estado do LEDGER durável depois desta chamada (RN-348). */
+  /** Estado do LEDGER durável depois desta chamada (RN-370). */
   estado: StatusEstornoLedger;
   /**
    * true = o gateway ACEITOU a solicitação mas ainda não a concluiu
    * ('pending'): o dinheiro ainda não foi dado por devolvido e NENHUM efeito
    * local foi aplicado. Quem fecha a saga é o webhook `PAYMENT_REFUNDED`
-   * (RN-350) — não é erro, não pede retry.
+   * (RN-372) — não é erro, não pede retry.
    */
   aguardandoConfirmacao: boolean;
 }
@@ -147,7 +147,7 @@ export interface EstornarInscricaoResult {
 export const ESTORNOS_SUBCOL = 'estornos';
 
 // ---------------------------------------------------------------------------
-// Máquina do LEDGER de estorno (RN-348/349/350) — durável, não em memória
+// Máquina do LEDGER de estorno (RN-370/371/372) — durável, não em memória
 // ---------------------------------------------------------------------------
 
 /**
@@ -157,9 +157,9 @@ export const ESTORNOS_SUBCOL = 'estornos';
  * - `enviando`             carimbo gravado ANTES do POST: se a Function morrer
  *                          aqui, o efeito no gateway é DESCONHECIDO.
  * - `solicitado`           o gateway aceitou e devolveu refundId com status
- *                          'pending' — a conclusão vem pelo webhook (RN-350).
+ *                          'pending' — a conclusão vem pelo webhook (RN-372).
  * - `gateway_sem_resposta` timeout/erro sem resposta: `efeitoPossivel` do
- *                          adapter (RN-349). O POST pode ter estornado.
+ *                          adapter (RN-371). O POST pode ter estornado.
  * - `divergencia_valor`    o gateway devolveu valor ≠ do congelado — dinheiro
  *                          se moveu fora do combinado, jamais re-enviar.
  * - `rejeitado_gateway`    o gateway respondeu com estorno recusado/cancelado
@@ -182,7 +182,7 @@ export type StatusEstornoLedger = (typeof STATUS_ESTORNO_LEDGER)[number];
 /**
  * Carimbo VIVO: um `POST /refund` desta chave já saiu (ou pode ter saído) e o
  * efeito no gateway não está fechado. Enviar de novo por cima é o ESTORNO
- * DUPLO provado em ASAASTETO-REV §V4 — proibido (RN-349). @pure
+ * DUPLO provado em ASAASTETO-REV §V4 — proibido (RN-371). @pure
  */
 export const STATUS_ESTORNO_CARIMBO_VIVO: readonly StatusEstornoLedger[] = [
   'enviando',
@@ -192,7 +192,7 @@ export const STATUS_ESTORNO_CARIMBO_VIVO: readonly StatusEstornoLedger[] = [
   'rejeitado_gateway',
 ] as const;
 
-/** O ledger tem carimbo vivo? (proíbe novo POST — RN-349). @pure */
+/** O ledger tem carimbo vivo? (proíbe novo POST — RN-371). @pure */
 export function carimboEstornoVivo(status: string): boolean {
   return (STATUS_ESTORNO_CARIMBO_VIVO as readonly string[]).includes(status);
 }
@@ -207,7 +207,7 @@ export function podeEnviarRefund(status: string): boolean {
 
 /**
  * Estados em que o ledger AGUARDA a palavra do gateway e um webhook
- * `PAYMENT_REFUNDED` pode fechar a saga (RN-350). `enviando` entra porque a
+ * `PAYMENT_REFUNDED` pode fechar a saga (RN-372). `enviando` entra porque a
  * Function pode ter morrido logo depois do POST bem-sucedido. @pure
  */
 export const STATUS_ESTORNO_CONFIRMAVEL: readonly StatusEstornoLedger[] = [
@@ -223,31 +223,31 @@ export function motivoCarimboVivo(status: string): string {
       return (
         'Um pedido de estorno desta inscrição saiu para o gateway e a resposta ' +
         'não foi registrada — o efeito é desconhecido. Confira o extrato do ' +
-        'gateway antes de qualquer nova tentativa (RN-349).'
+        'gateway antes de qualquer nova tentativa (RN-371).'
       );
     case 'solicitado':
       return (
         'Estorno já solicitado ao gateway — aguardando a confirmação dele ' +
-        '(RN-350). Nenhuma nova solicitação é enviada.'
+        '(RN-372). Nenhuma nova solicitação é enviada.'
       );
     case 'gateway_sem_resposta':
       return (
         'O gateway não respondeu ao pedido de estorno e a devolução PODE ter ' +
         'acontecido. Nenhuma nova tentativa é enviada automaticamente: ' +
-        'confira o extrato do gateway e trate manualmente (RN-349).'
+        'confira o extrato do gateway e trate manualmente (RN-371).'
       );
     case 'divergencia_valor':
       return (
         'O gateway devolveu um valor diferente do congelado neste estorno — ' +
-        'conferência manual obrigatória (RN-349).'
+        'conferência manual obrigatória (RN-371).'
       );
     case 'rejeitado_gateway':
       return (
         'O gateway recusou/cancelou este estorno depois de aceitá-lo — ' +
-        'conferência manual antes de tentar de novo (RN-349).'
+        'conferência manual antes de tentar de novo (RN-371).'
       );
     default:
-      return 'Estorno com carimbo vivo no ledger — conferência manual (RN-349).';
+      return 'Estorno com carimbo vivo no ledger — conferência manual (RN-371).';
   }
 }
 
@@ -319,7 +319,7 @@ interface CompromissoEstorno {
   valorFace: number;
   /** true = ledger já 'aprovado' (replay integral — nenhum efeito novo). */
   jaAprovado: boolean;
-  /** Estado do ledger lido/gravado por TX1 (RN-348). */
+  /** Estado do ledger lido/gravado por TX1 (RN-370). */
   statusLedger: StatusEstornoLedger;
   /** Presentes só quando jaAprovado (dados de auditoria do replay). */
   refundId: string | null;
@@ -514,7 +514,7 @@ async function comprometerEstorno(
           `decomposição RN-347 corrompida.`
       );
     }
-    // RN-351/352 (decisão 42 do dono — "aceito a proposta dos 7 dias"): a
+    // RN-373/374 (decisão 42 do dono — "aceito a proposta dos 7 dias"): a
     // taxa de serviço volta DENTRO da janela de arrependimento (art. 49) e
     // segue a política fora dela (default: retida). A janela é do relógio da
     // COMPRA — um estorno autorizado na véspera dentro dos 7 dias devolve a
@@ -567,7 +567,7 @@ async function comprometerEstorno(
       valorCentavos,
       // Porção FACE (organizador) — ver CompromissoEstorno (RN-347)
       valorFace,
-      // Trilha da RN-351/352: o que voltou de taxa, o que ficou, e por quê.
+      // Trilha da RN-373/374: o que voltou de taxa, o que ficou, e por quê.
       taxaDevolvida: devolucao.taxaDevolvida,
       taxaRetida: devolucao.taxaRetida,
       dentroDaJanelaArrependimento: devolucao.dentroDaJanela,
@@ -594,7 +594,7 @@ async function comprometerEstorno(
 }
 
 // ---------------------------------------------------------------------------
-// CARIMBO DE ENVIO (RN-348) — o ledger sabe que um POST saiu, ANTES dele sair
+// CARIMBO DE ENVIO (RN-370) — o ledger sabe que um POST saiu, ANTES dele sair
 // ---------------------------------------------------------------------------
 
 /**
@@ -665,7 +665,7 @@ async function marcarCarimbo(
  *   - validação local do adapter/mock (a chamada nem saiu);
  *   - HTTP 4xx que não é 429 (o gateway leu e recusou — ex.: PIX sem saldo).
  * TODO o resto — timeout (`efeitoPossivel`), 5xx, 429, rede caída, erro
- * desconhecido — é tratado como EFEITO POSSÍVEL (RN-349). Default conservador
+ * desconhecido — é tratado como EFEITO POSSÍVEL (RN-371). Default conservador
  * de propósito: em dinheiro, "não sei" vale como "pode ter acontecido".
  */
 export function falhaRefundSemEfeito(err: unknown): boolean {
@@ -962,7 +962,7 @@ export async function estornarInscricaoCore(
   provider: PaymentProvider,
   rawInput: unknown,
   caller: EventoCaller,
-  /** Relógio INJETADO (RN-351: a janela de arrependimento é derivação pura). */
+  /** Relógio INJETADO (RN-373: a janela de arrependimento é derivação pura). */
   agora: Date = new Date()
 ): Promise<EstornarInscricaoResult> {
   // GUARD de papel: só organizador (tenant_owner/tenant_staff) estorna —
@@ -1012,7 +1012,7 @@ export async function estornarInscricaoCore(
     };
   }
 
-  // ── CARIMBO VIVO (RN-349): um POST desta chave já saiu — NUNCA re-enviar ──
+  // ── CARIMBO VIVO (RN-371): um POST desta chave já saiu — NUNCA re-enviar ──
   if (carimboEstornoVivo(compromisso.statusLedger)) {
     if (compromisso.statusLedger === 'solicitado') {
       // Caminho normal do assíncrono: já pedimos, o gateway aceitou, a
@@ -1043,7 +1043,7 @@ export async function estornarInscricaoCore(
     );
   }
 
-  // ── CARIMBO ANTES DO POST (RN-348): compare-and-set 'pendente'→'enviando' ──
+  // ── CARIMBO ANTES DO POST (RN-370): compare-and-set 'pendente'→'enviando' ──
   const carimbou = await carimbarEnvio(
     db,
     compromisso.pagamentoId,
@@ -1054,7 +1054,7 @@ export async function estornarInscricaoCore(
     throw new https.HttpsError(
       'failed-precondition',
       'Outro pedido de estorno desta inscrição já está em andamento — ' +
-        'nenhuma segunda solicitação foi enviada (RN-349).'
+        'nenhuma segunda solicitação foi enviada (RN-371).'
     );
   }
 
@@ -1073,7 +1073,7 @@ export async function estornarInscricaoCore(
     const detalhe = err instanceof Error ? err.message : String(err);
     // Prova de que o gateway recusou ANTES de mover dinheiro ⇒ o carimbo
     // volta a 'pendente' e uma nova tentativa é legítima. Sem essa prova, o
-    // carimbo VIRA bloqueio (RN-349) — nada de retry automático.
+    // carimbo VIRA bloqueio (RN-371) — nada de retry automático.
     await marcarCarimbo(
       db,
       compromisso.pagamentoId,
@@ -1185,7 +1185,7 @@ export async function estornarInscricaoCore(
 }
 
 // ---------------------------------------------------------------------------
-// CONFIRMAÇÃO PELO WEBHOOK (RN-350) — a autoridade do desfecho do estorno
+// CONFIRMAÇÃO PELO WEBHOOK (RN-372) — a autoridade do desfecho do estorno
 // ---------------------------------------------------------------------------
 
 /** O que a entrega de webhook diz sobre o estorno (do WebhookResult.refund). */

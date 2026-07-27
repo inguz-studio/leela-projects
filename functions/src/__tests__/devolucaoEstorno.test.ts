@@ -1,5 +1,5 @@
 /**
- * devolucaoEstorno.test.ts — LEELA-ESTORNO-T2 (RN-351/352)
+ * devolucaoEstorno.test.ts — LEELA-ESTORNO-T2 (RN-373/374)
  *
  * A política dos 7 dias, pura (decisão 42 do dono: "aceito a proposta dos 7
  * dias"). Duas perguntas separadas de propósito:
@@ -33,7 +33,7 @@ const politicaRetem: PoliticaReembolso = {
 };
 const politicaDevolve: PoliticaReembolso = { ...politicaRetem, devolveTaxaForaDaJanela: true };
 
-describe('política padrão — o default é o do dono (RN-352)', () => {
+describe('política padrão — o default é o do dono (RN-374)', () => {
   it('nasce retendo a taxa FORA da janela (padrão de mercado)', () => {
     expect(politicaVendasPadrao().reembolso.devolveTaxaForaDaJanela).toBe(false);
   });
@@ -42,7 +42,7 @@ describe('política padrão — o default é o do dono (RN-352)', () => {
   });
 });
 
-describe('dentroDaJanelaArrependimento — relógio da COMPRA (RN-351)', () => {
+describe('dentroDaJanelaArrependimento — relógio da COMPRA (RN-373)', () => {
   const compra = ts('2026-03-01T12:00:00Z');
 
   it('4 dias depois da compra: dentro', () => {
@@ -71,7 +71,7 @@ describe('dentroDaJanelaArrependimento — relógio da COMPRA (RN-351)', () => {
   });
 });
 
-describe('calcularDevolucaoEstorno — o que volta e o que fica (RN-352)', () => {
+describe('calcularDevolucaoEstorno — o que volta e o que fica (RN-374)', () => {
   const FACE = 170.91;
   const TAXA = 17.95;
 

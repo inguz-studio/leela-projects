@@ -76,13 +76,13 @@ export interface ResultadoWebhookPagamento {
   ignorado: boolean;
   motivo?: string;
   /**
-   * Interno da porta (RN-350): a entrega é de ESTORNO e a confirmação do
+   * Interno da porta (RN-372): a entrega é de ESTORNO e a confirmação do
    * ledger roda FORA da transação do webhook. Preenchido pelo core e
    * consumido logo em seguida; o resultado do fechamento vem em
    * `estornoConfirmado`.
    */
   confirmarEstorno?: boolean;
-  /** Desfecho do fechamento do ledger de estorno (RN-350). */
+  /** Desfecho do fechamento do ledger de estorno (RN-372). */
   estornoConfirmado?: ResultadoConfirmacaoEstorno;
 }
 
@@ -262,7 +262,7 @@ export async function processarWebhookPagamento(
       });
     };
 
-    // ESTORNO (RN-350 · decisão 46): a entrega de estorno é a AUTORIDADE do
+    // ESTORNO (RN-372 · decisão 46): a entrega de estorno é a AUTORIDADE do
     // desfecho — ela vem ANTES da guarda de estado final de propósito, porque
     // o pagamento de um estorno está 'confirmado', nunca 'pendente' (era
     // exatamente aí que ela caía em 'ignorado_estado_final' e sumia). O
@@ -609,7 +609,7 @@ export async function processarWebhookPagamento(
     return { ...base, duplicado: false, ignorado: false };
   });
 
-  // ── FECHAMENTO DO ESTORNO (RN-350) — fora da transação da entrega ────────
+  // ── FECHAMENTO DO ESTORNO (RN-372) — fora da transação da entrega ────────
   // A entrega já está registrada no ledger de webhooks (exactly-once por
   // eventId). O efeito do estorno mora no ledger de ESTORNOS e é idempotente
   // lá; separar as duas transações mantém a resposta do webhook rápida (a

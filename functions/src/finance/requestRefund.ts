@@ -112,7 +112,7 @@ export interface RefundResult {
   refundId?: string;
   valorEstornado?: number;
   /**
-   * RN-350: o gateway ACEITOU a solicitação de estorno e ainda não a
+   * RN-372: o gateway ACEITOU a solicitação de estorno e ainda não a
    * concluiu. O reembolso continua no estado executável (aprovado/
    * aprovado_auto) e é o webhook `PAYMENT_REFUNDED` que o fecha. Não é erro
    * e NÃO pede nova tentativa — uma segunda chamada não manda segundo POST.
@@ -342,7 +342,7 @@ async function executarEstorno(
   eventoId: string,
   input: RequestRefundInput,
   caller: EventoCaller,
-  /** Mesmo relógio do roteamento (RN-351: a janela de arrependimento que
+  /** Mesmo relógio do roteamento (RN-373: a janela de arrependimento que
    * decide a taxa tem de ser a MESMA que decidiu a rota). */
   agora: Date
 ): Promise<RefundResult> {
@@ -384,7 +384,7 @@ async function executarEstorno(
     agora
   );
 
-  // RN-350: o gateway aceitou e ainda não concluiu. O reembolso NÃO vira
+  // RN-372: o gateway aceitou e ainda não concluiu. O reembolso NÃO vira
   // 'estornado' aqui — quem fecha é o webhook `PAYMENT_REFUNDED`
   // (fecharReembolsoPorEstorno). Carimba a solicitação para a fila mostrar
   // "aguardando o gateway" em vez de "estornado" mentiroso.
@@ -450,7 +450,7 @@ async function executarEstorno(
 
 /**
  * Fecha o `reembolsos/{inscritoId}` quando o ESTORNO foi confirmado pelo
- * webhook (RN-350). Chamado pela porta única do webhook, nunca por cliente.
+ * webhook (RN-372). Chamado pela porta única do webhook, nunca por cliente.
  * Idempotente: reembolso já `estornado` (ou em estado não-executável) sai
  * sem escrita; reembolso inexistente (estorno aberto direto pelo primitivo)
  * é no-op silencioso.

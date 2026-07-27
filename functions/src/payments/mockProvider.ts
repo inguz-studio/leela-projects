@@ -38,7 +38,7 @@ import type {
  * Recusa EXPLÍCITA do mock no `refund` — a chamada foi validada e negada
  * ANTES de qualquer efeito (equivalente ao 4xx do gateway real). Classe
  * própria porque quem chama precisa distinguir "não saiu nada" de "pode ter
- * saído" sem farejar mensagem de erro (RN-349 · `falhaRefundSemEfeito`).
+ * saído" sem farejar mensagem de erro (RN-371 · `falhaRefundSemEfeito`).
  */
 export class MockRefundRecusadoError extends Error {
   constructor(message: string) {
@@ -91,7 +91,7 @@ interface StoredWebhookResult {
   status: 'confirmed' | 'failed' | 'refunded';
   amount: number;
   processedAt: ReturnType<typeof nowTimestamp>;
-  /** Bloco de estorno da entrega (RN-350) — só em `charge.refunded`. */
+  /** Bloco de estorno da entrega (RN-372) — só em `charge.refunded`. */
   refund?: WebhookRefundInfo;
 }
 
@@ -160,7 +160,7 @@ export interface MockPaymentProviderOptions {
    * Desfecho do `refund`:
    *   'approved' (default) — conclui na resposta (DONE do Asaas);
    *   'pending'            — aceita e devolve 'pending', deixando a conclusão
-   *                          para o webhook `charge.refunded` (RN-350).
+   *                          para o webhook `charge.refunded` (RN-372).
    */
   refundStatus?: 'approved' | 'pending';
 }
@@ -552,7 +552,7 @@ export class MockPaymentProvider implements PaymentProvider {
       charge.status = status;
     }
 
-    // Bloco de ESTORNO (RN-350): a entrega diz QUAL estorno ela confirma. O
+    // Bloco de ESTORNO (RN-372): a entrega diz QUAL estorno ela confirma. O
     // Asaas manda `payment.refunds[]`; aqui o teste passa refundId/refundAmount
     // no data. Sem eles a entrega é genérica e o domínio decide pelo carimbo.
     const refundIdEntrega = payload.data['refundId'];

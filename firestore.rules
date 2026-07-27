@@ -1596,7 +1596,7 @@ service cloud.firestore {
             && request.resource.data.reembolso.slaAnaliseDias is int
             && request.resource.data.reembolso.slaAnaliseDias >= 0
             && request.resource.data.reembolso.slaAnaliseDias <= 30
-            // RN-352 (decisão 42): campo NOVO — ausente é válido (política
+            // RN-374 (decisão 42): campo NOVO — ausente é válido (política
             // legada ⇒ false na leitura, taxa retida fora da janela);
             // presente tem de ser bool. DENTRO da janela a taxa volta sempre
             // e não há campo para desligar isso (art. 49).

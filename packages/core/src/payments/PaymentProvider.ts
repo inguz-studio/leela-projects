@@ -207,7 +207,7 @@ export interface RefundResult {
 }
 
 /**
- * Bloco de ESTORNO extraído de uma entrega de webhook (RN-350 · decisão 46
+ * Bloco de ESTORNO extraído de uma entrega de webhook (RN-372 · decisão 46
  * do dono: "estorno só é feito utilizando via API do ASAAS, a solicitação é
  * feita e pode cair; dependemos desse retorno do webhook deles").
  *
@@ -244,7 +244,7 @@ export interface WebhookResult {
   amount: number;
   processedAt: Timestamp;
   /**
-   * Estorno que ESTA entrega confirma (RN-350). Opcional: ausente em toda
+   * Estorno que ESTA entrega confirma (RN-372). Opcional: ausente em toda
    * entrega que não é de estorno e em gateway que não informa o refund —
    * campo novo não muda byte nenhum do fluxo de confirmação de pagamento.
    */

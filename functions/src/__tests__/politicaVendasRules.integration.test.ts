@@ -203,7 +203,7 @@ describe('politicaVendas — payload direto (a Rule segura SOZINHA)', () => {
     );
   });
 
-  // RN-352 (ESTORNO-T2 · decisão 42): campo NOVO da taxa fora da janela.
+  // RN-374 (ESTORNO-T2 · decisão 42): campo NOVO da taxa fora da janela.
   it('devolveTaxaForaDaJanela: ausente OK (legado), bool OK, lixo NEGA', async () => {
     const db = ownerA().firestore();
     // Ausente = política legada; a leitura assume false (taxa retida).
