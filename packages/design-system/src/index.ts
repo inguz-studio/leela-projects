@@ -52,6 +52,9 @@ export { Field, type FieldProps } from './components/Field';
 export { Badge, badgeVariants, type BadgeProps } from './components/Badge';
 export { Chip, type ChipProps } from './components/Chip';
 export { Avatar, type AvatarProps } from './components/Avatar';
+// Thumb — miniatura de mídia de ENTIDADE (kit, logo, capa). Não é o Avatar
+// (pessoa, circular, iniciais por nome): a razão aqui vem do dado.
+export { Thumb, type ThumbProps } from './components/Thumb';
 export { Divider, type DividerProps } from './components/Divider';
 export { IconButton, type IconButtonProps } from './components/IconButton';
 export { Sparkline, type SparklineProps } from './components/Sparkline';

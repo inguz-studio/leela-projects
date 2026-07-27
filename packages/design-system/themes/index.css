@@ -347,6 +347,11 @@
   --eventrow-count-label-spacing: 0.08em;
   --eventrow-metric-col-min-w: 88px;
   --eventrow-metric-gap: var(--spacing-4);
+  --thumb-size-sm: var(--spacing-10);
+  --thumb-size-md: var(--spacing-16);
+  --thumb-size-lg: var(--spacing-24);
+  --thumb-radius: var(--radius-md);
+  --thumb-fallback-icon-size: var(--spacing-5);
   --section-title-size: var(--font-size-xl);
   --section-title-spacing: -0.01em;
   --section-link-size: var(--font-size-sm);
@@ -798,6 +803,11 @@
   --eventrow-count-label-spacing: 0.08em;
   --eventrow-metric-col-min-w: 88px;
   --eventrow-metric-gap: var(--spacing-4);
+  --thumb-size-sm: var(--spacing-10);
+  --thumb-size-md: var(--spacing-16);
+  --thumb-size-lg: var(--spacing-24);
+  --thumb-radius: var(--radius-md);
+  --thumb-fallback-icon-size: var(--spacing-5);
   --section-title-size: var(--font-size-xl);
   --section-title-spacing: -0.01em;
   --section-link-size: var(--font-size-sm);

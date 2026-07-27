@@ -50,6 +50,7 @@ import {
   Table,
   Tabs,
   Textarea,
+  Thumb,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -668,7 +669,7 @@ export function ComponentsPage(): JSX.Element {
       {/* ── Data display ──────────────────────────────────────────────── */}
       <Section
         title="Data display"
-        description="Table, Badge, Avatar, Card, CardEvento, CardDesafio, EmptyState e Pagination."
+        description="Table, Badge, Avatar, Thumb, Card, CardEvento, CardDesafio, EmptyState e Pagination."
       >
         <DemoCard
           title="Table"
@@ -727,6 +728,17 @@ export function ComponentsPage(): JSX.Element {
               <Avatar size="md" name="Carlos Drummond" />
               <Avatar size="lg" name="Marina Silva" />
               <Avatar size="lg" name="Vip Runner" vip />
+            </div>
+          </DemoCard>
+
+          <DemoCard
+            title="Thumb"
+            description="Miniatura de mídia de ENTIDADE (kit, logo de marca, capa de evento) — reconhecer de vista antes de clicar. Largura por token, altura pela razão do dado (1:1 · 1.9:1); object-cover, lazy em lista e fallback digno sem imagem ou com URL quebrada. Para PESSOA use o Avatar."
+          >
+            <div className="flex flex-wrap items-end gap-[var(--spacing-4)]">
+              <Thumb size="sm" fallback="K" />
+              <Thumb size="md" fallback="CDL" />
+              <Thumb size="lg" fallback="Sem capa" ratio="wide" lazy={false} />
             </div>
           </DemoCard>
 

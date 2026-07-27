@@ -1,0 +1,51 @@
+# Thumb — Contrato de reuso para IA
+schema: llm-txt/1.0
+component: Thumb
+version: 0.0.1
+generated_at: "2026-07-27"
+source: src/components/Thumb
+verdict: APPROVE (lane THUMBS-LISTAS, trace leela-build-2d6ee98d)
+
+## Import canônico
+import { Thumb, type ThumbProps } from '@leela/design-system'
+
+## Quando usar
+Miniatura de mídia de ENTIDADE para reconhecer o item de vista antes de clicar: imagem de kit na listagem de kits do evento (RN-227), logo de marca em `/marcas` (RN-171) e prévia da capa atual ao lado do campo na edição do evento (RN-228). Sem imagem — ou com URL quebrada — cai sozinho num fallback digno, nunca deixa quadrado quebrado.
+
+## Quando NÃO usar
+Não use para representar PESSOA: o componente de usuário é o `Avatar` (circular, iniciais e aria-label derivados do nome). Não use como card de mídia com título/meta/ação — isso é `CardEvento`/`CardDesafio`. Não use como placeholder de carregamento: use `Skeleton`. Não use para o thumb de modalidade da linha de evento: o `EventRow` já traz o próprio, com fallback de gradiente semântico por modalidade.
+
+## Props válidas
+- src: string | null | undefined   (default: undefined) — URL da imagem; vazia, só espaços, nula ou quebrada ⇒ fallback
+- alt: string   (default: '') — vazio = decorativa (o nome ao lado é o rótulo); preencha só quando a miniatura for a única identificação
+- fallback: React.ReactNode   (default: undefined) — sigla curta ou ícone lucide; renderizado sempre com aria-hidden
+- size: 'sm' | 'md' | 'lg'   (default: 'sm') — largura 40px | 64px | 96px (a altura sai da razão)
+- ratio: 'square' | 'wide'   (default: 'square') — 1:1 (logo, kit) | 1.9:1 (capa de evento)
+- lazy: boolean   (default: true) — `loading="lazy"`; passe false só na miniatura única já visível de saída
+- ...todas as props nativas de React.HTMLAttributes<HTMLSpanElement> EXCETO children (Omit<..., 'children'>)
+
+## Tokens consumidos (nenhum valor cru permitido)
+- --thumb-size-sm / --thumb-size-md / --thumb-size-lg
+- --thumb-radius
+- --thumb-fallback-icon-size
+- --surface-sunken (caixa) · --text-tertiary (fallback) · --font-size-sm · --font-weight-semibold · --icon-stroke
+Razões `aspect-[1/1]` e `aspect-[1.9/1]` são sem unidade — permitidas pela governança §2.
+AA: par do fallback = text-tertiary × surface-sunken, já provado na matriz (contrast.test.ts). O componente não tem estado interativo.
+
+## Proibido (do/don't)
+DON'T: passar children (o tipo omite children; a imagem vem de `src` e o vazio de `fallback`).
+DON'T: montar a miniatura à mão com `<img className="h-10 w-10 object-cover">` numa tela — o primitivo existe para isso.
+DON'T: `size="xs"` ou `size="xl"` — só existem sm|md|lg. `ratio` só aceita square|wide.
+DON'T: hex, rgb, px, rem em style inline ou em arbitrary value.
+DON'T: usar `alt` repetindo o nome que já está escrito ao lado (leitor de tela ouviria duas vezes).
+DO: sempre ofereça um `fallback` (sigla ou ícone) — é ele que separa "sem imagem" de "quebrado".
+DO: `lazy={false}` apenas fora de lista.
+
+## Exemplo mínimo (válido, copiável)
+<Thumb src={kit.imagemUrl} fallback="K" />
+
+## Exemplo completo (válido, copiável)
+<Thumb src={evento.imagemUrl} ratio="wide" size="lg" lazy={false} alt="Capa atual do evento" fallback="Sem capa" />
+
+## Instrução para o modelo (colar no system prompt)
+Use o componente Thumb apenas com as props e valores listados acima. Qualquer prop ou valor fora desta lista é inválido. Nunca aplique cor, tamanho ou espaço via literal; use somente tokens do design system.
