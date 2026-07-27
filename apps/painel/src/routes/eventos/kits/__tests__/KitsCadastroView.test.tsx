@@ -165,7 +165,12 @@ describe('KitsCadastroView (RN-211/213/215/216)', () => {
       view();
       const card = cardDoKit('Kit Ouro');
       expect(card.querySelector('img')).toBeNull();
-      expect(card).toHaveTextContent('K');
+      // Escopo na CAIXA da miniatura (primeiro filho do header), não no card
+      // inteiro: 'K' também é a primeira letra de "Kit Ouro", que está escrita
+      // no <h3> ao lado — a asserção no card passava mesmo com o `fallback`
+      // arrancado do Thumb, e não travava nada.
+      const caixa = card.querySelector('header')?.firstElementChild as HTMLElement;
+      expect(caixa).toHaveTextContent('K');
     });
 
     it('a miniatura é decorativa: o nome do kit segue sendo o rótulo da linha', () => {

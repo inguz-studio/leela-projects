@@ -214,7 +214,12 @@ describe('MarcasPage', () => {
 
       const linha = linhaDaMarca('CDL Wellness');
       expect(linha.querySelector('img')).toBeNull();
-      expect(linha).toHaveTextContent('C');
+      // Escopo na CÉLULA do logo (primeira coluna, header vazio), não na linha
+      // inteira: 'C' também é a primeira letra de "CDL Wellness", que está
+      // escrita na célula ao lado — a asserção na linha passava mesmo com o
+      // `fallback` arrancado do Thumb, e não travava nada.
+      const celulaLogo = linha.querySelector('td') as HTMLElement;
+      expect(celulaLogo).toHaveTextContent('C');
     });
   });
 });
