@@ -6,15 +6,28 @@
 //
 // requestRepasse (tenant_owner):
 //   1. exige `dadosBancarios/current` (failed-precondition sem cadastro);
-//   2. RELÊ o disponível NO SERVIDOR dentro da transação — recompute
+//   2. exige `eventoId` (RN-369 · DEC-0727C — "repasse SEMPRE amarrado a um
+//      evento"); o evento é validado fail-closed (existe + é do tenant);
+//   3. RELÊ o disponível NO SERVIDOR dentro da transação — recompute
 //      integral via lerInputsSaldoRepasse + computeSaldoRepasse (core),
 //      nunca o número que o cliente mandou;
-//   3. aplica `validarSolicitacao` (RN-352) — valor ≤ 0, não cent-exato ou
-//      > disponível ⇒ REJEITA sem criar NADA;
-//   4. cria `repasses/{id}` em 'solicitado' com `dadosBancariosSnapshot`
+//   4. aplica DUAS validações que COMPÕEM: `validarSolicitacao` contra o
+//      disponível do TENANT (RN-352) e o teto DAQUELE evento (RN-368 —
+//      liberado − comprometido do evento). Qualquer uma REJEITA sem criar
+//      nada;
+//   5. cria `repasses/{id}` em 'solicitado' com `dadosBancariosSnapshot`
 //      MASCARADO congelado (RN-354) + 1ª entrada de `transicoes[]`;
-//   5. grava o saldo RECOMPUTADO (com o novo repasse em comprometido) na
+//   6. grava o saldo RECOMPUTADO (com o novo repasse em comprometido) na
 //      MESMA transação.
+//
+// POR QUE O TETO POR EVENTO (RN-368): até a DEC-0727C a única validação era
+// contra o saldo do TENANT, então um evento com R$ 8.500 liberados aceitava um
+// repasse de R$ 9.000 desde que OUTRO evento tivesse saldo — o furo do clamp
+// que a review CAIXADISP-REV mediu (vetor 1). Verbatim do dono: *"Evento nao
+// pode repassar mais do que tá liberado."* As duas validações compõem: a do
+// tenant continua sendo a que protege o caixa consolidado (ela carrega a
+// janela D+N, que é grandeza do tenant), a do evento impede que um evento
+// consuma o liberado de outro.
 //
 // PROVA DA CORRIDA (aceite T3): o write de `saldo/current` é COMPARTILHADO
 // entre solicitações concorrentes — dois requestRepasse simultâneos
@@ -39,7 +52,10 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
+  comprometeSaldo,
+  computeDisponivelDoEvento,
   computeSaldoRepasse,
+  roundMoney,
   transitionRepasse,
   validarSolicitacao,
   type AuthClaims,
@@ -65,12 +81,14 @@ export interface RequestRepasseInput {
   /** Valor solicitado (R$, 2 casas) — o servidor valida contra RN-352. */
   valor: number;
   /**
-   * RN-349 (LEELA-BEPEND-T2) — associação EXATA repasse↔evento. OPCIONAL:
-   * ausente = repasse do saldo geral (sem associação). Presente, o SERVIDOR
-   * valida (fail-closed): evento inexistente ou de OUTRO tenant ⇒ rejeita
-   * sem criar nada — associação forjada nunca entra no doc.
+   * RN-349 (LEELA-BEPEND-T2) + RN-369 (DEC-0727C) — associação EXATA
+   * repasse↔evento, agora OBRIGATÓRIA: "repasse SEMPRE amarrado a um evento".
+   * O SERVIDOR valida fail-closed — ausente, inexistente ou de OUTRO tenant ⇒
+   * rejeita sem criar nada. Docs ANTIGOS sem o campo continuam válidos como
+   * dado (legado); o que morreu foi o caminho de CRIAÇÃO sem evento, que era
+   * o default do modal e devolvia inteiro o repasse-fantasma do §P-IAMENU-2.
    */
-  eventoId?: string;
+  eventoId: string;
 }
 
 export interface RequestRepasseResult {
@@ -79,8 +97,24 @@ export interface RequestRepasseResult {
   valor: number;
   /** Disponível APÓS comprometer esta solicitação (RN-351). */
   disponivel: number;
-  /** Evento associado (RN-349) — null quando o repasse é do saldo geral. */
-  eventoId: string | null;
+  /** Evento associado (RN-349/369) — sempre presente em repasses novos. */
+  eventoId: string;
+  /** Disponível DAQUELE evento após esta solicitação (RN-368). */
+  disponivelDoEvento: number;
+}
+
+/**
+ * Payload do `details` quando o teto POR EVENTO barra a solicitação (RN-368).
+ * Erro TIPADO de propósito: o painel precisa dizer ao organizador QUANTO
+ * aquele evento comporta, e uma frase genérica ("o valor excede o disponível")
+ * mandaria ele adivinhar entre dois números diferentes.
+ */
+export interface RepasseExcedeEventoDetails {
+  motivo: 'repasse_excede_evento';
+  eventoId: string;
+  /** Liberado − comprometido daquele evento, no instante da tentativa. */
+  disponivelDoEvento: number;
+  valorSolicitado: number;
 }
 
 export interface CancelRepasseInput {
@@ -122,6 +156,44 @@ function gravarSaldo(
   return computado;
 }
 
+/**
+ * Disponível DAQUELE evento (RN-368) na base ÚNICA do saque — a MESMA função
+ * do core que a Caixa do evento usa para pintar o card (RN-367). `null` =
+ * evento sem termo comercial ou sem agregado financeiro: indeterminado, nunca
+ * zero por conveniência.
+ *
+ * O comprometido do evento é a Σ dos repasses VIVOS com este `eventoId`, pela
+ * definição do core (`comprometeSaldo` — cancelado/recusado devolvem, RN-353).
+ * Repasses LEGADOS sem `eventoId` não entram: eles comprometem o saldo do
+ * tenant (e a validação de tenant acima já os viu), mas nunca foram atribuídos
+ * a evento nenhum e atribuí-los agora seria adivinhação.
+ */
+function calcularDisponivelDoEvento(
+  inputs: SaldoRepasseInputs,
+  eventoId: string
+): number | null {
+  const evento = inputs.eventos.find((e) => e.eventoId === eventoId);
+  if (evento === undefined) {
+    // Evento sem `financeiro/current` — nenhuma receita confirmada ainda.
+    // Zero é o número CERTO aqui (não há dinheiro), não uma aproximação.
+    return 0;
+  }
+  let repassadoVivo = 0;
+  for (const rep of inputs.repasses) {
+    if (rep.eventoId !== eventoId) continue;
+    if (!comprometeSaldo(rep.estado)) continue;
+    repassadoVivo = roundMoney(repassadoVivo + rep.valor);
+  }
+  return computeDisponivelDoEvento({
+    receitaLiquida: evento.receitaLiquida,
+    encerrado: evento.encerrado,
+    repassadoVivo,
+    ...(inputs.retencaoPct !== undefined
+      ? { retencaoPct: inputs.retencaoPct }
+      : {}),
+  }).disponivel;
+}
+
 /** Projeta o snapshot MASCARADO congelado no repasse (RN-354). */
 function snapshotDadosBancarios(
   tenantId: string,
@@ -156,17 +228,14 @@ export async function requestRepasseCore(
   if (typeof valor !== 'number') {
     throw new https.HttpsError('invalid-argument', '"valor" (número) é obrigatório.');
   }
-  // RN-349 — eventoId OPCIONAL, mas quando presente precisa ser string não
-  // vazia (payload malformado é rejeitado, nunca silenciosamente descartado:
-  // o organizador que PEDIU associação não pode receber um repasse "geral").
+  // RN-369 (DEC-0727C) — eventoId OBRIGATÓRIO. Ausente já não significa
+  // "saldo geral": significa payload incompleto, e aceitar seria recriar pelo
+  // callable o caminho que o modal acabou de perder.
   const eventoId = input?.eventoId;
-  if (
-    eventoId !== undefined &&
-    (typeof eventoId !== 'string' || eventoId.length === 0)
-  ) {
+  if (typeof eventoId !== 'string' || eventoId.length === 0) {
     throw new https.HttpsError(
       'invalid-argument',
-      '"eventoId" deve ser string não vazia quando presente (RN-349).'
+      '"eventoId" é obrigatório: todo repasse é associado a um evento (RN-369).'
     );
   }
 
@@ -188,20 +257,18 @@ export async function requestRepasseCore(
     // da transação: evento inexistente ou de OUTRO tenant ⇒ rejeita sem
     // criar NADA (cross-tenant não vira associação; o claim decide o tenant,
     // nunca o payload).
-    if (eventoId !== undefined) {
-      const eventoSnap = await tx.get(db.doc(`eventos/${eventoId}`));
-      if (!eventoSnap.exists) {
-        throw new https.HttpsError(
-          'failed-precondition',
-          `Evento '${eventoId}' não existe — associação de repasse rejeitada (RN-349).`
-        );
-      }
-      if (eventoSnap.get('tenantId') !== tenantId) {
-        throw new https.HttpsError(
-          'permission-denied',
-          'Evento pertence a outro tenant — associação de repasse rejeitada (RN-349/RN-400).'
-        );
-      }
+    const eventoSnap = await tx.get(db.doc(`eventos/${eventoId}`));
+    if (!eventoSnap.exists) {
+      throw new https.HttpsError(
+        'failed-precondition',
+        `Evento '${eventoId}' não existe — associação de repasse rejeitada (RN-349).`
+      );
+    }
+    if (eventoSnap.get('tenantId') !== tenantId) {
+      throw new https.HttpsError(
+        'permission-denied',
+        'Evento pertence a outro tenant — associação de repasse rejeitada (RN-349/RN-400).'
+      );
     }
 
     const inputs = await lerInputsSaldoRepasse(tx, db, tenantId, agora);
@@ -232,6 +299,33 @@ export async function requestRepasseCore(
       );
     }
 
+    // RN-368 — teto DAQUELE evento, na MESMA base da Caixa (RN-367). Compõe
+    // com a validação de tenant acima: passar no consolidado não autoriza
+    // consumir o liberado de outro evento.
+    const disponivelDoEvento = calcularDisponivelDoEvento(inputs, eventoId);
+    if (disponivelDoEvento === null) {
+      // Evento sem termo comercial: o líquido é indeterminado, então não há
+      // teto para comparar. Rejeitar é a resposta honesta (o caminho da
+      // decisão #7 acima já cobre o tenant inteiro; este cobre o evento).
+      throw new https.HttpsError(
+        'failed-precondition',
+        `Evento '${eventoId}' sem termo comercial — repasse bloqueado (RN-368/decisão #7).`
+      );
+    }
+    if (valor > disponivelDoEvento) {
+      const details: RepasseExcedeEventoDetails = {
+        motivo: 'repasse_excede_evento',
+        eventoId,
+        disponivelDoEvento,
+        valorSolicitado: valor,
+      };
+      throw new https.HttpsError(
+        'failed-precondition',
+        `Este evento tem R$ ${disponivelDoEvento.toFixed(2)} disponíveis para repasse — o valor pedido excede o liberado dele (RN-368).`,
+        details
+      );
+    }
+
     // Cria o repasse — SEMPRE 'solicitado', snapshot mascarado congelado.
     // Nenhum campo do payload entra no doc além do `valor` validado.
     const repasseRef = db
@@ -249,10 +343,9 @@ export async function requestRepasseCore(
     tx.create(repasseRef, {
       id: repasseRef.id,
       tenantId,
-      // RN-349: eventoId SÓ quando validado acima (docs sem associação ficam
-      // idênticos ao vigente — schema evolution; a listagem trata ausência
-      // como "sem associação", honesto).
-      ...(eventoId !== undefined ? { eventoId } : {}),
+      // RN-349/RN-369: o evento validado acima entra SEMPRE. Docs antigos sem
+      // o campo continuam existindo como legado; nenhum doc NOVO nasce assim.
+      eventoId,
       valor,
       estado: 'solicitado',
       dadosBancariosSnapshot: snapshotDadosBancarios(tenantId, dadosSnap),
@@ -266,15 +359,16 @@ export async function requestRepasseCore(
     // a 2ª solicitação concorrente falhar na releitura (aceite T3).
     const saldo = gravarSaldo(tx, db, tenantId, inputs, [
       ...inputs.repasses,
-      { id: repasseRef.id, valor, estado: 'solicitado' },
+      { id: repasseRef.id, valor, estado: 'solicitado', eventoId },
     ]);
 
     logger.info('repasse_solicitado', {
       tenantId,
       repasseId: repasseRef.id,
       valor,
-      eventoId: eventoId ?? null,
+      eventoId,
       disponivelRestante: saldo.disponivel,
+      disponivelDoEventoRestante: roundMoney(disponivelDoEvento - valor),
     });
 
     return {
@@ -282,7 +376,10 @@ export async function requestRepasseCore(
       estado: 'solicitado' as const,
       valor,
       disponivel: saldo.disponivel,
-      eventoId: eventoId ?? null,
+      eventoId,
+      // O teto DAQUELE evento DEPOIS desta solicitação (RN-368) — o painel
+      // reflete sem um segundo round-trip, pelo mesmo número que autorizou.
+      disponivelDoEvento: roundMoney(disponivelDoEvento - valor),
     };
   });
 }

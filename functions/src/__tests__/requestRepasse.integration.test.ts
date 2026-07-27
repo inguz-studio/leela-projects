@@ -166,7 +166,7 @@ afterAll(async () => {
 describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
   it('sem dadosBancarios ⇒ failed-precondition e NADA criado', async () => {
     await seedCenario({ comDados: false });
-    await expect(requestRepasseCore(db, { valor: 100 }, owner)).rejects.toMatchObject(
+    await expect(requestRepasseCore(db, { valor: 100, eventoId: EVENTO_ID }, owner)).rejects.toMatchObject(
       { code: 'failed-precondition' }
     );
     expect(await contarRepasses()).toBe(0);
@@ -174,7 +174,7 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
 
   it('happy path: cria solicitado com snapshot mascarado + trilha; saldo compromete na MESMA tx; trigger T1 no-opa', async () => {
     await seedCenario();
-    const resultado = await requestRepasseCore(db, { valor: 5000 }, owner);
+    const resultado = await requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner);
 
     expect(resultado.estado).toBe('solicitado');
     expect(resultado.valor).toBe(5000);
@@ -208,7 +208,7 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
   it('valor > disponível ⇒ rejeita e NUNCA cria (RN-352)', async () => {
     await seedCenario();
     await expect(
-      requestRepasseCore(db, { valor: 8500.01 }, owner)
+      requestRepasseCore(db, { valor: 8500.01, eventoId: EVENTO_ID }, owner)
     ).rejects.toMatchObject({ code: 'failed-precondition' });
     expect(await contarRepasses()).toBe(0);
   });
@@ -216,12 +216,12 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
   it('valores inválidos (0, negativo, 3 casas, não-número) ⇒ rejeita sem criar', async () => {
     await seedCenario();
     for (const valor of [0, -50, 10.005]) {
-      await expect(requestRepasseCore(db, { valor }, owner)).rejects.toMatchObject({
+      await expect(requestRepasseCore(db, { valor, eventoId: EVENTO_ID }, owner)).rejects.toMatchObject({
         code: 'failed-precondition',
       });
     }
     await expect(
-      requestRepasseCore(db, { valor: '5000' }, owner)
+      requestRepasseCore(db, { valor: '5000', eventoId: EVENTO_ID }, owner)
     ).rejects.toMatchObject({ code: 'invalid-argument' });
     expect(await contarRepasses()).toBe(0);
   });
@@ -229,8 +229,8 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
   it('ACEITE DA CORRIDA: 2 solicitações concorrentes somando > disponível ⇒ a 2ª FALHA', async () => {
     await seedCenario(); // disponível 8500; 5000 + 5000 > 8500
     const resultados = await Promise.allSettled([
-      requestRepasseCore(db, { valor: 5000 }, owner),
-      requestRepasseCore(db, { valor: 5000 }, owner),
+      requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner),
+      requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner),
     ]);
 
     const ok = resultados.filter((r) => r.status === 'fulfilled');
@@ -250,7 +250,7 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
 
   it('decisão #7: tenant sem termo ⇒ failed-precondition (repasse bloqueado)', async () => {
     await seedCenario({ comTermo: false });
-    await expect(requestRepasseCore(db, { valor: 10 }, owner)).rejects.toMatchObject({
+    await expect(requestRepasseCore(db, { valor: 10, eventoId: EVENTO_ID }, owner)).rejects.toMatchObject({
       code: 'failed-precondition',
     });
     expect(await contarRepasses()).toBe(0);
@@ -260,7 +260,12 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
     await seedCenario();
     const resultado = await requestRepasseCore(
       db,
-      { valor: 100, estado: 'pago', comprovanteNumero: 'REP-2026-9999' },
+      {
+        valor: 100,
+        eventoId: EVENTO_ID,
+        estado: 'pago',
+        comprovanteNumero: 'REP-2026-9999',
+      },
       owner
     );
     const repasse = (
@@ -272,13 +277,13 @@ describe('requestRepasse — RN-352/354/357 (aceite T3)', () => {
 
   it('ATAQUE — staff não solicita (owner-only)', async () => {
     await seedCenario();
-    await expect(requestRepasseCore(db, { valor: 100 }, staff)).rejects.toMatchObject({
+    await expect(requestRepasseCore(db, { valor: 100, eventoId: EVENTO_ID }, staff)).rejects.toMatchObject({
       code: 'permission-denied',
     });
   });
 });
 
-describe('requestRepasse — eventoId (RN-349 · LEELA-BEPEND-T2)', () => {
+describe('requestRepasse — eventoId (RN-349 · RN-369/DEC-0727C)', () => {
   it('com eventoId do PRÓPRIO tenant: doc nasce com a associação exata', async () => {
     await seedCenario();
     const resultado = await requestRepasseCore(
@@ -293,14 +298,51 @@ describe('requestRepasse — eventoId (RN-349 · LEELA-BEPEND-T2)', () => {
     expect(repasse['eventoId']).toBe(EVENTO_ID);
   });
 
-  it('sem eventoId: doc NÃO tem o campo (sem associação — retrocompat honesta)', async () => {
+  // RN-369 (DEC-0727C): a asserção anterior cravava o oposto — "sem eventoId, o
+  // doc NÃO tem o campo, retrocompat honesta". Aquele caminho era o DEFAULT do
+  // modal e devolvia inteiro o repasse-fantasma do §P-IAMENU-2 (o escalado E-2
+  // da review CAIXADISP-REV). O dono fechou o item 38: repasse SEMPRE amarrado
+  // a um evento. A asserção substituta é mais forte — não só o doc não nasce
+  // sem o campo, a solicitação inteira é recusada, e nada é criado.
+  it('SEM eventoId ⇒ invalid-argument e NADA criado (RN-369)', async () => {
     await seedCenario();
-    const resultado = await requestRepasseCore(db, { valor: 1000 }, owner);
-    expect(resultado.eventoId).toBeNull();
-    const repasse = (
-      await db.doc(`tenants/${CASTELO_ID}/repasses/${resultado.repasseId}`).get()
-    ).data()!;
-    expect('eventoId' in repasse).toBe(false);
+    await expect(
+      requestRepasseCore(db, { valor: 1000 }, owner)
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    await expect(
+      requestRepasseCore(db, { valor: 1000, eventoId: undefined }, owner)
+    ).rejects.toMatchObject({ code: 'invalid-argument' });
+    expect(await contarRepasses()).toBe(0);
+  });
+
+  it('LEGADO: repasse antigo sem eventoId continua contando no saldo do tenant', async () => {
+    await seedCenario();
+    // Doc como os criados ANTES da RN-369 — sem o campo. Nenhuma migração o
+    // reescreve; a leitura tem de aguentá-lo.
+    await db.collection(`tenants/${CASTELO_ID}/repasses`).doc('legado-1').set({
+      id: 'legado-1',
+      tenantId: CASTELO_ID,
+      valor: 1000,
+      estado: 'solicitado',
+      dadosBancariosSnapshot: dadosBancariosMascarados(),
+      transicoes: [],
+      criadoEm: new Date(),
+      atualizadoEm: new Date(),
+    });
+
+    // Ele compromete o saldo do TENANT (RN-351) …
+    const saldo = await recomputarSaldoRepasse(db, CASTELO_ID);
+    expect(saldo.comprometido).toBe(1000);
+    expect(saldo.disponivel).toBe(7500);
+
+    // … e NÃO abate o evento, porque nunca foi atribuído a nenhum: o teto do
+    // evento segue 8500. Adivinhar a associação seria inventar dado.
+    const resultado = await requestRepasseCore(
+      db,
+      { valor: 7500, eventoId: EVENTO_ID },
+      owner
+    );
+    expect(resultado.disponivelDoEvento).toBe(1000); // 8500 − 7500
   });
 
   it('ATAQUE — eventoId inexistente ⇒ rejeita FAIL-CLOSED, nada criado', async () => {
@@ -335,10 +377,169 @@ describe('requestRepasse — eventoId (RN-349 · LEELA-BEPEND-T2)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// RN-368 (DEC-0727C) — evento não repassa mais do que está liberado
+// ---------------------------------------------------------------------------
+
+const EVENTO_B = 'trail-serra-2026';
+
+/** 2º evento com agregado próprio — o tenant passa a ter folga que o evento não tem. */
+async function seedSegundoEvento(opts: { encerrado?: boolean } = {}) {
+  await withTriggersPaused(() =>
+    seedVerified(
+      db,
+      testEnv,
+      async () => {
+        await db.collection('eventos').doc(EVENTO_B).set({
+          id: EVENTO_B, tenantId: CASTELO_ID, organizadorId: MARINA_UID,
+          nome: 'Trail da Serra 2026',
+          status: opts.encerrado === true ? 'encerrado' : 'publicado',
+          criadoEm: new Date(), atualizadoEm: new Date(),
+        });
+        await db.doc(`eventos/${EVENTO_B}/financeiro/current`).set({
+          tenantId: CASTELO_ID,
+          receitaBruta: 12000,
+          taxaPct: 10.5,
+          taxaValor: 2000,
+          receitaLiquida: 10000,
+          inscritos: { total: 0, porStatus: {}, porKit: {}, porModalidade: {} },
+          atualizadoEm: new Date(),
+        });
+      },
+      [`eventos/${EVENTO_B}`, `eventos/${EVENTO_B}/financeiro/current`]
+    )
+  );
+}
+
+describe('requestRepasse — teto POR EVENTO (RN-368)', () => {
+  it('O FURO FECHADO: com folga no TENANT, o evento ainda recusa acima do liberado dele', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+
+    // Tenant: 8.500 + 8.500 = 17.000 disponíveis. O evento: 8.500.
+    const saldo = await recomputarSaldoRepasse(db, CASTELO_ID);
+    expect(saldo.disponivel).toBe(17000);
+
+    // 9.000 CABE no tenant (a validação de RN-352 passaria) e NÃO cabe no
+    // evento — era exatamente assim que um repasse consumia o liberado do
+    // vizinho e a Caixa mostrava disponível 0 com a soma não fechando
+    // (review CAIXADISP-REV, vetor 1).
+    await expect(
+      requestRepasseCore(db, { valor: 9000, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: {
+        motivo: 'repasse_excede_evento',
+        eventoId: EVENTO_ID,
+        disponivelDoEvento: 8500,
+        valorSolicitado: 9000,
+      },
+    });
+    expect(await contarRepasses()).toBe(0);
+  });
+
+  it('no limite exato do evento PASSA; um centavo acima não', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+
+    await expect(
+      requestRepasseCore(db, { valor: 8500.01, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    expect(await contarRepasses()).toBe(0);
+
+    const ok = await requestRepasseCore(db, { valor: 8500, eventoId: EVENTO_ID }, owner);
+    expect(ok.disponivelDoEvento).toBe(0);
+    expect(await contarRepasses()).toBe(1);
+  });
+
+  it('o teto é POR EVENTO: esgotar um não impede o outro', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+
+    await requestRepasseCore(db, { valor: 8500, eventoId: EVENTO_ID }, owner);
+    // O evento A está zerado …
+    await expect(
+      requestRepasseCore(db, { valor: 1, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    // … e o B, intacto.
+    const noB = await requestRepasseCore(db, { valor: 8500, eventoId: EVENTO_B }, owner);
+    expect(noB.disponivelDoEvento).toBe(0);
+    expect(await contarRepasses()).toBe(2);
+  });
+
+  it('repasses VIVOS do evento abatem o teto; cancelado devolve (RN-351/353)', async () => {
+    await seedCenario();
+    // O 2º evento dá folga ao TENANT: sem ela as duas validações barrariam no
+    // mesmo número e este teste não isolaria o guard por evento.
+    await seedSegundoEvento();
+    const primeiro = await requestRepasseCore(
+      db,
+      { valor: 5000, eventoId: EVENTO_ID },
+      owner
+    );
+    expect(primeiro.disponivelDoEvento).toBe(3500);
+
+    // 4.000 já não cabe: 8.500 − 5.000 vivos.
+    await expect(
+      requestRepasseCore(db, { valor: 4000, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { disponivelDoEvento: 3500 },
+    });
+
+    // Cancelar tira o doc do conjunto vivo — o teto volta por construção.
+    await cancelRepasseCore(db, { repasseId: primeiro.repasseId }, owner);
+    const depois = await requestRepasseCore(
+      db,
+      { valor: 8500, eventoId: EVENTO_ID },
+      owner
+    );
+    expect(depois.disponivelDoEvento).toBe(0);
+  });
+
+  it('o teto do evento usa a MESMA base do saque: encerrar libera a retenção (RN-350/367)', async () => {
+    await seedCenario();
+    await seedSegundoEvento(); // folga no tenant — o teto testado é o do evento
+    // Em andamento, 10.000 (o líquido inteiro) excede o liberado de 8.500 …
+    await expect(
+      requestRepasseCore(db, { valor: 10000, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { disponivelDoEvento: 8500 },
+    });
+
+    // … encerrado, o mesmo valor passa: a retenção liberou nos DOIS lados.
+    await db.doc(`eventos/${EVENTO_ID}`).update({ status: 'encerrado' });
+    const ok = await requestRepasseCore(
+      db,
+      { valor: 10000, eventoId: EVENTO_ID },
+      owner
+    );
+    expect(ok.valor).toBe(10000);
+    expect(ok.disponivelDoEvento).toBe(0);
+  });
+
+  it('evento SEM agregado financeiro: teto 0 — nada confirmado, nada a repassar', async () => {
+    await seedCenario();
+    await db.collection('eventos').doc('evento-vazio').set({
+      id: 'evento-vazio', tenantId: CASTELO_ID, organizadorId: MARINA_UID,
+      nome: 'Evento sem venda', status: 'publicado',
+      criadoEm: new Date(), atualizadoEm: new Date(),
+    });
+    await expect(
+      requestRepasseCore(db, { valor: 1, eventoId: 'evento-vazio' }, owner)
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { motivo: 'repasse_excede_evento', disponivelDoEvento: 0 },
+    });
+    expect(await contarRepasses()).toBe(0);
+  });
+});
+
 describe('cancelRepasse — decisão #11 + RN-351/353', () => {
   it('owner cancela solicitado: devolve ao disponível, trilha com 2 entradas; retry = replay sem duplicar', async () => {
     await seedCenario();
-    const { repasseId } = await requestRepasseCore(db, { valor: 5000 }, owner);
+    const { repasseId } = await requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner);
 
     const cancelado = await cancelRepasseCore(db, { repasseId }, owner);
     expect(cancelado).toEqual({ repasseId, estado: 'cancelado', replay: false });
@@ -368,7 +569,7 @@ describe('cancelRepasse — decisão #11 + RN-351/353', () => {
 
   it('repasse aprovado NÃO cancela (matriz RN-353)', async () => {
     await seedCenario();
-    const { repasseId } = await requestRepasseCore(db, { valor: 1000 }, owner);
+    const { repasseId } = await requestRepasseCore(db, { valor: 1000, eventoId: EVENTO_ID }, owner);
     await db.doc(`tenants/${CASTELO_ID}/repasses/${repasseId}`).update({
       estado: 'aprovado', // simula approveRepasse (T4)
     });

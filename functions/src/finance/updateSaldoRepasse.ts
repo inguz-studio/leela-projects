@@ -80,9 +80,16 @@ type Tx = admin.firestore.Transaction;
 // transacional da corrida usa EXATAMENTE esta leitura dentro da MESMA tx)
 // ---------------------------------------------------------------------------
 
-/** Projeção de repasse COM id (o cancel/reject substitui o estado do alvo). */
+/**
+ * Projeção de repasse COM id (o cancel/reject substitui o estado do alvo) e
+ * COM a associação a evento (RN-349), que o guard por evento do
+ * `requestRepasse` (RN-368) precisa para somar o comprometido DAQUELE evento.
+ * `computeSaldoRepasse` ignora o campo — o ∑ do tenant não olha para evento.
+ */
 export interface RepasseSaldoInputComId extends RepasseSaldoInput {
   id: string;
+  /** Evento associado; ausente = repasse LEGADO, anterior à RN-369. */
+  eventoId?: string;
 }
 
 /** Inputs do recompute lidos num snapshot transacional único. */
@@ -176,7 +183,15 @@ export async function lerInputsSaldoRepasse(
         `repasse '${doc.id}' com valor inválido — dado corrompido.`
       );
     }
-    return { id: doc.id, estado, valor };
+    // RN-349/RN-369: docs LEGADOS (anteriores à associação obrigatória) não
+    // têm o campo. Ausência é fato, não corrupção — o repasse continua
+    // comprometendo o saldo do tenant, só não abate nenhum evento.
+    const eventoIdRaw = doc.get('eventoId');
+    const eventoId =
+      typeof eventoIdRaw === 'string' && eventoIdRaw.length > 0
+        ? eventoIdRaw
+        : undefined;
+    return { id: doc.id, estado, valor, ...(eventoId !== undefined ? { eventoId } : {}) };
   });
 
   // 4. Termo comercial do tenant (decisão #4 — % retenção e D+N por tenant)

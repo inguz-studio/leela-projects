@@ -94,7 +94,7 @@ async function seedCenarioComRepasseAprovado(): Promise<string> {
     tipo: 'corrente', pix: PIX_CLARO, titular: 'Marina Castelo',
     cpfCnpj: '123.456.789-12',
   }, owner);
-  const { repasseId } = await requestRepasseCore(db, { valor: 5000 }, owner);
+  const { repasseId } = await requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner);
   await approveRepasseCore(db, { tenantId: CASTELO_ID, repasseId }, platformAdmin);
   return repasseId;
 }
@@ -174,7 +174,7 @@ describe('getBankDetailsForPayout — RN-354 auditado (aceite T5)', () => {
   it('repasse fora de aprovado (solicitado) ⇒ failed-precondition + registro negado_estado', async () => {
     await seedCenarioComRepasseAprovado();
     const { repasseId: solicitadoId } = await requestRepasseCore(
-      db, { valor: 100 }, owner
+      db, { valor: 100, eventoId: EVENTO_ID }, owner
     );
     await expect(
       getBankDetailsForPayoutCore(

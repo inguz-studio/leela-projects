@@ -105,7 +105,7 @@ async function seedCenario(): Promise<void> {
 }
 
 async function solicitar(valor: number): Promise<string> {
-  const { repasseId } = await requestRepasseCore(db, { valor }, owner);
+  const { repasseId } = await requestRepasseCore(db, { valor, eventoId: EVENTO_ID }, owner);
   return repasseId;
 }
 
