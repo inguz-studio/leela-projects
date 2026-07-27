@@ -776,6 +776,9 @@ describe('cancelCharge — cancelamento no gateway (RN-157 · PIXBE-T3)', () => 
     );
   });
 
+  // ⚠️ INTOCADO em PIXCARRINHO-REV, e isso é uma asserção: a reconciliação do
+  // A1-REV NÃO roda em 5xx (gateway sem resposta é gateway sem resposta), então
+  // o 5xx segue custando exatamente uma chamada e a contagem continua 2.
   it('falha de rede/5xx NÃO fica cacheada: a tentativa seguinte volta ao gateway', async () => {
     const { provider, chamadas } = novoProvider([
       { method: 'DELETE', url: '/payments/pay_1', status: 502, json: {} },
@@ -1244,5 +1247,221 @@ describe('createCharge PIX — pixExpiraEmSegundos (RN-157 · CK2-T5)', () => {
         paramsPix({ paymentMethod: 'credit_card', pixExpiraEmSegundos: 1800 })
       )
     ).rejects.toThrow(/só existe no PIX/);
+  });
+});
+
+// =============================================================================
+// cancelCharge · CONTRATO DO DELETE SOBRE COBRANÇA JÁ MORTA
+// (LEELA-PIXCARRINHO-REV · achado A1-REV)
+//
+// POR QUE ESTA MATRIZ EXISTE. O PIX-CARRINHO-T1 pôs o cancelamento DENTRO do
+// caminho de criação: gateway que não confirma a morte da cobrança anterior
+// ⇒ a compra é NEGADA. A negativa foi declarada temporária ("tente de novo em
+// alguns instantes"), e isso vale enquanto a recusa do gateway for
+// TRANSITÓRIA (fora do ar, 5xx, timeout).
+//
+// Só que "não confirmei a morte" e "ela JÁ está morta" chegam pelo MESMO
+// canal — um erro HTTP. Uma recusa PERMANENTE (a cobrança já foi removida, ou
+// o gateway não a conhece mais) devolve o mesmo erro em toda tentativa, para
+// sempre: a negativa deixa de ser temporária e o comprador nunca mais compra
+// aquele carrinho, porque a chave da sentinela é determinística. A mensagem
+// mandaria ele tentar de novo eternamente.
+//
+// A LINHA QUE NÃO SE ATRAVESSA: nada aqui devolve sucesso OTIMISTA. Sucesso
+// só sai com LEITURA POSITIVA do gateway (GET /payments/{id}) dizendo que a
+// cobrança está DELETED — ou que ela não existe mais. Cobrança RECEBIDA,
+// CONFIRMADA, PENDENTE ou RESTAURADA continua LEVANTANDO, que é o que impede
+// o timer de matar pedido cujo dinheiro entrou (invariante do PaymentProvider).
+// =============================================================================
+describe('cancelCharge — DELETE sobre cobrança JÁ morta (PIXCARRINHO-REV · A1-REV)', () => {
+  const cancelParams = (over: Partial<CancelChargeParams> = {}): CancelChargeParams => ({
+    chargeId: 'pay_1',
+    tenantId: 'tenant-1',
+    reason: 'Expiração do PIX por prazo (RN-157)',
+    idempotencyKey: 'cancel-ped-x',
+    ...over,
+  });
+
+  /** Erro 4xx/5xx do Asaas no formato do corpo real. */
+  const erro = (
+    status: number,
+    code: string,
+    description: string
+  ): { status: number; json: unknown } => ({
+    status,
+    json: { errors: [{ code, description }] },
+  });
+
+  it('C1 · DELETE devolve deleted=true ⇒ cancelled sem nenhuma leitura extra (caminho feliz intocado)', async () => {
+    const { provider, chamadas } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: true, id: 'pay_1' } },
+    ]);
+    const r = await provider.cancelCharge(cancelParams());
+    expect(r.status).toBe('cancelled');
+    expect(r.jaCancelada).toBe(false);
+    // O custo de rede do caminho quente NÃO subiu: 1 chamada, como antes.
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('C2 · 400 invalid_action "já removida" + GET status DELETED ⇒ cancelled/jaCancelada (destrava)', async () => {
+    const { provider, chamadas } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(400, 'invalid_action', 'A cobrança já foi removida.'),
+      },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'DELETED' } },
+    ]);
+    const r = await provider.cancelCharge(cancelParams());
+    expect(r.status).toBe('cancelled');
+    expect(r.jaCancelada).toBe(true);
+    expect(chamadas).toHaveLength(2);
+  });
+
+  it('C3 · 404 not_found + GET 404 ⇒ cancelled/jaCancelada (o gateway não conhece a cobrança: nada é pagável)', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(404, 'not_found', 'Não foi possível encontrar a cobrança.'),
+      },
+      {
+        method: 'GET',
+        url: '/payments/pay_1',
+        ...erro(404, 'not_found', 'Não foi possível encontrar a cobrança.'),
+      },
+    ]);
+    const r = await provider.cancelCharge(cancelParams());
+    expect(r.status).toBe('cancelled');
+    expect(r.jaCancelada).toBe(true);
+  });
+
+  it('C4 · ⛔ 400 "já recebida" + GET RECEIVED ⇒ LANÇA — dinheiro que entrou nunca vira cancelamento', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(400, 'invalid_action', 'Não é possível remover uma cobrança já recebida.'),
+      },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'RECEIVED' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+  });
+
+  it('C4b · ⛔ CONFIRMED também LANÇA (pago sem liquidar é pago)', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(400, 'invalid_action', 'Cobrança já confirmada.'),
+      },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'CONFIRMED' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+  });
+
+  it('C5 · ⛔ 200 sem deleted=true + GET PENDING ⇒ LANÇA (a cobrança segue viva e pagável)', async () => {
+    const { provider } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { id: 'pay_1' } },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'PENDING' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasMappingError
+    );
+  });
+
+  it('C6 · 200 sem deleted=true + GET DELETED ⇒ cancelled (corpo divergente não trava a venda)', async () => {
+    const { provider } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: false, id: 'pay_1' } },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'DELETED' } },
+    ]);
+    const r = await provider.cancelCharge(cancelParams());
+    expect(r.status).toBe('cancelled');
+    expect(r.jaCancelada).toBe(true);
+  });
+
+  it('C7 · ⛔ 5xx ⇒ LANÇA SEM leitura extra (transitório: a próxima tentativa destrava, e o comprador não espera duas viagens)', async () => {
+    const { provider, chamadas } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_1', status: 502, json: {} },
+      { method: 'DELETE', url: '/payments/pay_1', json: { deleted: true, id: 'pay_1' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+    // Gateway de volta: a MESMA chamada encerra. Nada ficou cacheado do erro.
+    const ok = await provider.cancelCharge(cancelParams());
+    expect(ok.status).toBe('cancelled');
+    expect(ok.jaCancelada).toBe(false);
+    // 2 chamadas, não 3: o 5xx não paga o pedágio da reconciliação.
+    expect(chamadas).toHaveLength(2);
+  });
+
+  it('C8 · ⛔ 429 rate limit ⇒ LANÇA SEM leitura extra (transitório; insistir agravaria o rate limit)', async () => {
+    const { provider, chamadas } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        status: 429,
+        json: { errors: [{ code: 'rate_limit', description: 'Muitas requisições.' }] },
+        headers: { 'RateLimit-Reset': '30' },
+      },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+    expect(chamadas).toHaveLength(1);
+  });
+
+  it('C9 · ⛔ RESTORED depois do DELETE ⇒ LANÇA (cobrança ressuscitada está VIVA)', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(400, 'invalid_action', 'Ação inválida.'),
+      },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1', status: 'RESTORED' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
+  });
+
+  it('C10 · ⛔ rede CAI no DELETE e no GET ⇒ LANÇA e o erro original sobe (transitório)', async () => {
+    const provider = new AsaasProvider({
+      apiKey: SANDBOX_KEY,
+      webhookAuthToken: WEBHOOK_TOKEN,
+      fetchFn: () => Promise.reject(new Error('ECONNRESET')),
+      now: () => AGORA,
+    });
+    await expect(provider.cancelCharge(cancelParams())).rejects.toThrow(/ECONNRESET/);
+  });
+
+  it('C11 · o GET de reconciliação NÃO é tentado quando o DELETE vinga (custo zero no caminho feliz)', async () => {
+    const { provider, chamadas, pendentes } = novoProvider([
+      { method: 'DELETE', url: '/payments/pay_a', json: { deleted: true, id: 'pay_a' } },
+      { method: 'DELETE', url: '/payments/pay_b', json: { deleted: true, id: 'pay_b' } },
+    ]);
+    await provider.cancelCharge(cancelParams({ chargeId: 'pay_a', idempotencyKey: 'k-a' }));
+    await provider.cancelCharge(cancelParams({ chargeId: 'pay_b', idempotencyKey: 'k-b' }));
+    expect(chamadas).toHaveLength(2);
+    expect(pendentes()).toBe(0);
+  });
+
+  it('C12 · corpo do GET sem `status` ⇒ LANÇA (ausência de prova não é prova de morte)', async () => {
+    const { provider } = novoProvider([
+      {
+        method: 'DELETE',
+        url: '/payments/pay_1',
+        ...erro(400, 'invalid_action', 'Ação inválida.'),
+      },
+      { method: 'GET', url: '/payments/pay_1', json: { id: 'pay_1' } },
+    ]);
+    await expect(provider.cancelCharge(cancelParams())).rejects.toBeInstanceOf(
+      AsaasApiError
+    );
   });
 });

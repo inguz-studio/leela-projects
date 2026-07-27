@@ -853,9 +853,29 @@ export class AsaasProvider implements PaymentProvider {
    * cancelado por timer.
    *
    * IDEMPOTÊNCIA: dedup best-effort por chave no processo (mesmo padrão do
-   * `refund` — o Asaas não tem idempotency-key HTTP), e o DELETE repetido
-   * de uma cobrança já removida devolve `deleted: true`, que já é a
-   * resposta idempotente correta.
+   * `refund` — o Asaas não tem idempotency-key HTTP).
+   *
+   * ── PIXCARRINHO-REV · A1-REV: "não confirmei" ≠ "já está morta" ──────────
+   * O dedup por chave só vale DENTRO do processo. Numa instância nova (o caso
+   * normal em Cloud Functions), o DELETE repetido sobre uma cobrança JÁ
+   * removida volta a bater no Asaas — e ali "já removida" chega pelo MESMO
+   * canal que "recusei": um erro HTTP. Tratar os dois como falha era
+   * defensável enquanto o cancelamento era um caminho isolado; o
+   * PIX-CARRINHO-T1 o pôs DENTRO da criação da próxima cobrança, e aí a
+   * confusão vira DEADLOCK DE COMPRA: a chave da sentinela é determinística,
+   * então toda tentativa daquele carrinho repete o mesmo erro para sempre e
+   * a negativa "tente de novo em alguns instantes" vira mentira permanente.
+   *
+   * RECONCILIAÇÃO POR LEITURA, não por otimismo: quando o DELETE não prova a
+   * morte, o adapter PERGUNTA ao gateway (`GET /payments/{id}`) em que estado
+   * a cobrança está. Sucesso só sai com resposta POSITIVA — `DELETED`, ou a
+   * ausência da cobrança. `RECEIVED`/`CONFIRMED`/`PENDING`/`RESTORED`, corpo
+   * sem `status` ou GET que também falha continuam LEVANTANDO: o invariante
+   * do PaymentProvider ("nunca sucesso otimista") fica intacto, e é ele que
+   * impede o timer de matar pedido cujo dinheiro entrou.
+   *
+   * Custo: o GET só existe no caminho de FALHA. O caminho feliz segue com uma
+   * chamada só — nada foi acrescentado ao caminho quente do checkout.
    *
    * ⚠️ PREMISSA (a mesma disciplina do createCharge): o shape `{deleted,
    * id}` vem da doc do Asaas e NÃO foi confirmado contra a conta real nesta
@@ -874,19 +894,62 @@ export class AsaasProvider implements PaymentProvider {
       return { ...cacheado, jaCancelada: true, processedAt: timestampDe(this.now()) };
     }
 
-    const resposta = asRecord(
-      await this.request('DELETE', `/payments/${params.chargeId}`),
-      'resposta de DELETE /payments/{id}'
-    );
+    let resposta: Record<string, unknown>;
+    try {
+      resposta = asRecord(
+        await this.request('DELETE', `/payments/${params.chargeId}`),
+        'resposta de DELETE /payments/{id}'
+      );
+    } catch (err) {
+      // O DELETE não vingou. Antes de negar a venda de quem chamou, PERGUNTA
+      // ao gateway se a cobrança já não estava morta — é a diferença entre
+      // uma recusa transitória e um deadlock permanente.
+      //
+      // MAS SÓ QUANDO A PERGUNTA PODE SER RESPONDIDA: um 4xx é um veredito do
+      // gateway sobre ESTA cobrança e pode esconder "ela já morreu"; 5xx, 429
+      // e queda de rede são o gateway não respondendo, e nesse estado o GET
+      // também não responderia — insistir só somaria espera ao comprador, que
+      // está no caminho quente do checkout desde o T1.
+      if (
+        this.erroMereceReconciliacao(err) &&
+        (await this.cobrancaConfirmadamenteMorta(params.chargeId))
+      ) {
+        return this.registrarCancelamento(params, true);
+      }
+      throw err;
+    }
     if (resposta['deleted'] !== true) {
-      // Sem `deleted: true` não há prova de que a cobrança morreu. Devolver
-      // sucesso aqui seria a mentira mais cara desta lane.
+      // Sem `deleted: true` não há prova de que a cobrança morreu no corpo do
+      // DELETE. Devolver sucesso aqui seria a mentira mais cara desta lane —
+      // mas a prova pode existir do outro lado, e só a leitura decide.
+      if (await this.cobrancaConfirmadamenteMorta(params.chargeId)) {
+        return this.registrarCancelamento(params, true);
+      }
       throw new AsaasMappingError(
         `[asaas] DELETE /payments/${params.chargeId} sem deleted=true — ` +
           'cancelamento NÃO confirmado'
       );
     }
 
+    return this.registrarCancelamento(params, false);
+  }
+
+  /**
+   * O erro do DELETE é um VEREDITO do gateway sobre esta cobrança (4xx, menos
+   * 429), ou é o gateway não respondendo (5xx, 429, rede)? Só o primeiro caso
+   * merece a leitura de reconciliação: no segundo, a resposta seria a mesma
+   * ausência de resposta, e a espera extra cairia no colo do comprador.
+   */
+  private erroMereceReconciliacao(err: unknown): boolean {
+    if (!(err instanceof AsaasApiError)) return false;
+    return err.httpStatus >= 400 && err.httpStatus < 500 && err.httpStatus !== 429;
+  }
+
+  /** Resultado de cancelamento + dedup por chave (uma escrita, um lugar). */
+  private registrarCancelamento(
+    params: CancelChargeParams,
+    jaCancelada: boolean
+  ): CancelChargeResult {
     const resultado: CancelChargeResult = {
       chargeId: params.chargeId,
       status: 'cancelled',
@@ -894,7 +957,43 @@ export class AsaasProvider implements PaymentProvider {
       processedAt: timestampDe(this.now()),
     };
     this.cancelamentosPorChave.set(params.idempotencyKey, resultado);
-    return resultado;
+    return { ...resultado, jaCancelada };
+  }
+
+  /**
+   * O gateway CONFIRMA que esta cobrança não é mais pagável? (A1-REV)
+   *
+   * Só duas respostas contam como prova, e as duas são leituras positivas:
+   *
+   *   - `status === 'DELETED'` — o caminho ESPERADO. O Asaas mantém a
+   *     cobrança removida recuperável (é por isso que `DELETED` é um status
+   *     no `PAYMENT_STATUS_TO_CHARGE`, e não um sumiço), então "já removida"
+   *     se prova por leitura sem depender de interpretar texto de erro.
+   *
+   *   - `404` no próprio GET — a conta deste `apiKey` não conhece a cobrança.
+   *     ⚠️ Note o limite honesto desta leitura: ela prova que a cobrança não
+   *     é alcançável POR NÓS, não que nenhum QR exista no mundo. O caso em
+   *     que a diferença importaria é a chave apontando para OUTRA conta
+   *     Asaas — e nesse cenário a cobrança antiga já é inalcançável de todo
+   *     jeito (não cancelamos, não lemos, e o webhook dela não chega),
+   *     então recusar a compra nova não protegeria ninguém: só somaria um
+   *     comprador travado a um estado que já está quebrado. Registrado como
+   *     escalado da review (item 32 do painel de decisões).
+   *
+   * Qualquer outra coisa é `false` — inclusive o GET falhando por 5xx/rede
+   * (não saber não é saber que morreu) e `RESTORED` (o Asaas permite
+   * ressuscitar uma cobrança removida, e ressuscitada ela está VIVA).
+   */
+  private async cobrancaConfirmadamenteMorta(chargeId: string): Promise<boolean> {
+    try {
+      const payment = asRecord(
+        await this.request('GET', `/payments/${chargeId}`),
+        'resposta de GET /payments/{id}'
+      );
+      return payment['status'] === 'DELETED';
+    } catch (err) {
+      return err instanceof AsaasApiError && err.httpStatus === 404;
+    }
   }
 
   // ── refund ────────────────────────────────────────────────────────────────
