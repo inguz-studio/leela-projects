@@ -92,12 +92,14 @@ export interface RequestRepasseInput {
    *  o servidor relê o disponível e é autoritativo (failed-precondition). */
   valor: number;
   /**
-   * RN-349 (LEELA-BEPEND-T2) — associa o repasse a UM evento do tenant.
-   * OPCIONAL: ausente = repasse do saldo geral. O SERVIDOR valida (evento
-   * inexistente/de outro tenant ⇒ rejeita); o campo gravado é congelado
-   * pelas Rules — o cliente nunca escreve o doc.
+   * RN-349 (LEELA-BEPEND-T2) + RN-369 (DEC-0727C) — associa o repasse a UM
+   * evento do tenant, e é OBRIGATÓRIO: "repasse sempre amarrado a um evento".
+   * O caminho "saldo geral" (ausente) MORREU — a callable devolve
+   * `invalid-argument`. O SERVIDOR valida fail-closed (inexistente/de outro
+   * tenant ⇒ rejeita); o campo gravado é congelado pelas Rules — o cliente
+   * nunca escreve o doc.
    */
-  eventoId?: string;
+  eventoId: string;
 }
 
 export interface RequestRepasseResult {
@@ -106,8 +108,13 @@ export interface RequestRepasseResult {
   valor: number;
   /** Disponível APÓS comprometer esta solicitação (RN-351). */
   disponivel: number;
-  /** Evento associado (RN-349) — null quando o repasse é do saldo geral. */
-  eventoId: string | null;
+  /** Evento associado (RN-349/369) — sempre presente em repasses novos. */
+  eventoId: string;
+  /**
+   * Disponível DAQUELE evento DEPOIS desta solicitação (RN-368) — o mesmo
+   * número que autorizou o saque, para a tela refletir sem um 2º round-trip.
+   */
+  disponivelDoEvento: number;
 }
 
 /** Solicita um repasse (tenant_owner). Servidor valida contra o saldo. */
