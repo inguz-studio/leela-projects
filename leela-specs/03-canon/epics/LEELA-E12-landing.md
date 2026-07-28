@@ -1615,3 +1615,94 @@ de 19/07 pedia contra a exibição de taxa já está paga, porque o bloco A da t
 aterrissou em 2026-07-26. A fronteira viva agora é entre lanes que escrevem em
 `functions/src/checkout`: o pacote de estorno e o pacote de ingressos com QR. Serializar
 por lane, não por task.
+
+---
+
+## Delta ingresso com QR · código identificador e conteúdo do e-mail (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-ingresso-qr/`. DEC-0728E refinada. Este épico é dono da
+**emissão** do ingresso e do **e-mail ao responsável**; o E03 é dono da tabela do
+organizador e da virada de credenciamento. A RN-218, o `qrToken` assinado e a idempotência
+da RN-219 ficam como estão.
+
+### Regras de negócio novas (INGRESSO-QR)
+
+- **RN-396 · Código identificador do ingresso (dona = E12).** Todo inscrito com ingresso
+  emitido recebe, além do `qrToken` opaco assinado, um **código legível**: curto, único
+  **por evento**, em alfabeto sem `0`, `O`, `1`, `I` e `L`, porque ele vai ser ditado em voz
+  alta e digitado de manhã cedo. Gerado no servidor no mesmo ponto de emissão do ingresso e
+  **idempotente por inscrito** — reprocessar o webhook não troca o código. O código **não é
+  credencial**: a validação de presença continua sendo a verificação de assinatura do
+  `qrToken`, e nenhuma superfície aceita o código como prova de entrada.
+- **RN-398 · Conteúdo e degradação do e-mail de compra (dona = E12).** O e-mail que a RN-219
+  já manda ao responsável passa a carregar, para **cada inscrito do pedido**, o QR e o
+  código. O **código vai como texto**, sempre, ao lado da imagem e do link do ingresso.
+  Cliente de e-mail que bloqueia imagem remota é o caso comum, e ingresso não pode depender
+  de imagem carregar na véspera da prova. Idempotência inalterada (RN-219).
+
+**Fora deste delta:** o QR de pagamento PIX segue como está — o gateway emite, o checkout
+mostra. Nada é gerado do nosso lado.
+
+---
+
+### LEELA-S1206 · complemento de prontidão (SPECS-0728)
+
+Os critérios de aceite já escritos acima seguem válidos. Acrescentam-se estes.
+
+**Critérios de aceite acrescentados (Given/When/Then):**
+
+- **Dado** um pedido de 3 inscritos confirmado, **quando** o webhook emite os ingressos,
+  **então** cada inscrito ganha, além do `qrToken`, um código identificador distinto e
+  legível (RN-396).
+- **Dado** o mesmo webhook reprocessado, **quando** ele roda de novo, **então** nem o token
+  nem o código mudam.
+- **Dado** dois inscritos do mesmo evento, **quando** os códigos são gerados, **então** eles
+  nunca colidem; a unicidade é garantida por evento.
+- **Dado** um código identificador, **quando** alguém tenta usá-lo para registrar presença,
+  **então** a operação é recusada, porque presença só se prova por assinatura de token
+  (RN-396).
+- **Dado** o e-mail de confirmação, **quando** o responsável abre com imagens bloqueadas,
+  **então** ele ainda lê o código de cada inscrito em texto e tem o link do ingresso
+  (RN-398).
+- **Dado** o e-mail de confirmação, **quando** o responsável abre com imagens liberadas,
+  **então** vê o QR de cada inscrito ao lado do respectivo código.
+- **Dado** o PDF sob demanda, **quando** ele é gerado, **então** traz o código junto do QR
+  (RN-220 ampliada).
+
+**Tasks acrescentadas:** `S1206-T5` (geração do código no core e na emissão), `S1206-T6`
+(conteúdo do e-mail com QR, código em texto e link), `S1206-T7` (código no PDF).
+
+#### LEELA-S1206-T5 · Código identificador por inscrito
+- **Tipo:** api/function · **Depende de:** S1206-T1 · **Bloqueia:** S1206-T6, S1206-T7, S211-T1 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Arquivos (criar/editar)**
+- `packages/core/src/tickets/` — geração e validação do formato, alfabeto e tamanho como
+  constante única no padrão de fonte única.
+- ponto de emissão do ingresso em `functions/src` — grava o código junto do `qrToken`.
+
+**Testes a escrever**
+- unit: formato e alfabeto; caractere ambíguo nunca sai.
+- integração: emissão idempotente por inscrito; colisão dentro do mesmo evento não acontece
+  numa amostra grande; código não é aceito em nenhum caminho de validação de presença.
+
+#### LEELA-S1206-T6 · E-mail de compra com QR e código por inscrito
+- **Tipo:** api/function · **Depende de:** S1206-T5 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Arquivos (editar)**
+- `functions/src/email/templates.ts` e o template do e-mail de confirmação.
+
+**Passos**
+1. Bloco por inscrito com nome, modalidade, código em texto e QR.
+2. Link do ingresso ao lado, para o caso de imagem e texto não bastarem.
+3. Reuso do disparo e da idempotência da RN-219; nenhum controle de envio novo.
+
+**Fronteira.** `functions/src/email` também recebe os dois templates de aviso ao afiliado
+(`S706-T2`, pacote E08). Arquivo comum, blocos distintos: quem aterrissar depois faz rebase
+e acrescenta.
+
+#### LEELA-S1206-T7 · Código identificador no PDF sob demanda
+- **Tipo:** api/function · **Depende de:** S1206-T5 · **Estimativa:** XS · **Rota:** opus
+
+Traz o código ao lado do QR no PDF, pelo mesmo motivo de degradação.
+
+**Fila completa do pacote:** `02-rodadas/2026-07-28-ingresso-qr/03-fila-codigo.md`.

@@ -1864,3 +1864,70 @@ Suítes após os fixes: DS **1090/1090** · painel **1492/1494** (os 2 vermelhos
 sidebar de `/plataforma` e mutations de termos comerciais — foram reproduzidos
 idênticos no base `0705ccc`, são anteriores a esta lane e não têm relação com
 miniatura).
+
+---
+
+## Delta ingresso e credenciamento (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-ingresso-qr/`. DEC-0728E refinada e DEC-0728G. Este épico é
+dono da **tabela de inscritos do organizador** e do **balcão**, e por isso é dono da virada
+de vocabulário. A emissão do código e o e-mail são do E12.
+
+### Regras de negócio novas (INGRESSO-QR)
+
+- **RN-397 · Código na tabela, QR sob demanda (dona = E03).** A lista de inscritos exibe o
+  código identificador (RN-396) como coluna, e o QR do inscrito abre por ação na linha. O QR
+  **não** é renderizado em massa na tabela: quatrocentas imagens numa lista é peso sem uso.
+  O código entra como campo da busca que a tela já tem.
+- **RN-399 · "Entrega" vira "credenciamento" no vocabulário (dona = E03).** Toda superfície
+  que a pessoa lê passa a dizer credenciamento: SubNav do evento, títulos, textos do balcão e
+  dos estados, mensagens, colunas e copy. A **rota** `/eventos/:slug/entrega` vira
+  `/eventos/:slug/credenciamento`, com redirecionamento garantido da antiga pela RN-234, que
+  já tem tabela, teste por linha e guarda anti-laço. **Não mudam nesta virada:** o campo
+  persistido `kitEntregueEm`, com 75 ocorrências no código, e o id da área de permissão
+  `entrega`, usado em `RequirePapel area="entrega"` e na matriz de papéis testada. Renomear
+  dado gravado é migração; renomear área de permissão mexe numa matriz que já carrega um
+  teste vermelho conhecido na lista de dívida técnica. **A mecânica é intocada:** RN-205,
+  RN-221 e RN-222 seguem exatamente como estão.
+
+---
+
+### LEELA-S211 · Código do ingresso na tabela e credenciamento no vocabulário · (de-para novo · INGRESSO-QR)
+
+**Como** organizador, **quero** enxergar o código do ingresso direto na lista e abrir o QR
+quando precisar, **para** achar a pessoa certa no balcão sem depender do celular dela.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Painel (Eventos › Inscritos e Credenciamento) · **RNs:** RN-397, RN-399, RN-396, RN-234; mecânica RN-205, RN-221, RN-222 intacta
+- **JTBD servido:** T · "identificar quem chegou sem depender do aparelho do atleta". Dimensão **Transacional**.
+- **Origem:** DEC-0728E refinada e DEC-0728G (2026-07-28).
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** a lista de inscritos de um evento, **quando** ela carrega, **então** existe uma
+  coluna com o código identificador de cada inscrito com ingresso emitido (RN-397).
+- **Dado** um inscrito sem ingresso emitido, **quando** vejo a linha dele, **então** a célula
+  do código mostra vazio honesto, e não um traço que pareça código.
+- **Dado** uma linha da lista, **quando** aciono ver QR, **então** o QR daquele inscrito abre
+  sobre a tela; a tabela em si nunca renderiza QR em massa (RN-397).
+- **Dado** a busca da lista, **quando** digito um código, **então** a linha correspondente é
+  encontrada, com o mesmo comportamento de contador "mostrando X de Y" que a tela já tem.
+- **Dado** qualquer superfície que hoje diz entrega no sentido de balcão, **quando** a leio
+  depois da virada, **então** ela diz credenciamento (RN-399).
+- **Dado** o endereço antigo `/eventos/:slug/entrega`, **quando** alguém o abre, **então** ele
+  redireciona para `/credenciamento` em no máximo um salto, pela tabela da RN-234.
+- **Dado** o fluxo do balcão, **quando** o kit é retirado, **então** a presença continua sendo
+  registrada exatamente como antes: RN-205, RN-221 e RN-222 não mudam de comportamento e a
+  matriz de papéis passa sem edição.
+
+**Tasks:** `S211-T1` (coluna do código e QR por linha), `S211-T2` (virada de vocabulário nas
+superfícies lidas), `S211-T3` (rota nova com o redirecionamento da RN-234).
+
+**Ordem interna.** `S211-T2` antes de `S211-T3`. Trocar o endereço antes dos rótulos deixa a
+tela dizendo entrega dentro de um endereço de credenciamento, que é pior do que qualquer um
+dos dois estados puros.
+
+**Fora de escopo**
+Alinhar os identificadores internos (`kitEntregueEm` e a área de permissão `entrega`). Volta
+como card próprio, com o custo declarado, e não de carona numa troca de rótulo.
+
+**Fila completa do pacote:** `02-rodadas/2026-07-28-ingresso-qr/03-fila-codigo.md`.
