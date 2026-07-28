@@ -248,3 +248,33 @@ o par AA do fallback (`text-tertiary × surface-sunken` = **6.95:1** brasa,
 **4.89:1** wine); e o `LLM.txt` do componente, fiel ao `.tsx` prop a prop.
 
 Suíte do DS após os fixes: **1090/1090** (1089 + 1 do teste de variante nula).
+
+---
+
+## O menu principal ganha a sétima área (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-formbuilder-templates/`. A DEC-0728B pediu os formulários no
+menu principal, como templates reutilizáveis. A **RN-389** (dona no E04) é supersede
+parcial do **inventário** da RN-233: o menu passa de seis para sete áreas, com
+**Formulários** entrando em OPERAÇÃO.
+
+**O que a RN-233 protege e continua protegido:**
+
+- item de menu sem rota permanece proibido, e o item novo nasce com destino real;
+- o catálogo do design system continua sendo a **fonte** da lista, sem filtro no
+  consumidor, que foi exatamente o ganho da IAM-T1 quando `IDS_SUPRIMIDOS` foi deletado.
+
+**O custo, declarado.** A RN-233 foi construída com um teste de inventário exato e ordenado
+por ids e rótulos, mais uma varredura que exige destino para todo item. Acrescentar a
+sétima área obriga a mexer, **no mesmo lote**, em `DEFAULT_SIDEBAR_SECTIONS`,
+`Sidebar.stories.tsx`, `Sidebar.docs.mdx`, `LLM.txt` e na suíte do Sidebar. Metade da lista
+atualizada é pior do que nenhuma, porque o catálogo volta a poder mentir em silêncio.
+
+**Dívida conhecida a fechar junto.** A `IconsPage.tsx` do showcase ainda descreve "os 8
+ícones de `DEFAULT_SIDEBAR_SECTIONS`", com Financeiro e Analytics numa lista fixa. A
+divergência foi registrada na entrega da RN-233 e continua aberta. Ela deve ser corrigida
+na mesma task da sétima área; caso contrário o catálogo passa a errar por dois motivos
+diferentes ao mesmo tempo.
+
+Task: `S313-T1`, especificada no E04. Fila em
+`02-rodadas/2026-07-28-formbuilder-templates/03-fila-codigo.md`.

@@ -32,3 +32,8 @@ Declaração para permitir paralelismo seguro ou mandar serializar, por territó
 
 - **Anexo de arquivo (fase 2)** — fora do v1. Uma linha de backlog na história dona (E04/S310); detalhar quando for priorizado. Sem escopo de Storage/retenção/compliance nesta rodada.
 - **Resposta no CRM** — o CRM (RN-172) não agrega respostas por default (P-FB-4); incluir exige decisão explícita do Vitor (mesma disciplina do endereço, P-CKMOD-1/E19).
+
+> **SUPERSEDE PARCIAL (2026-07-28 · DEC-0728B).** A superfície do builder mudou: o
+> formulário virou template com casa própria no menu principal. A fila revisada vive em
+> `02-rodadas/2026-07-28-formbuilder-templates/03-fila-codigo.md`. Esta fila continua
+> correta em corte de v1, tetos, fence de obrigatoriedade, gravação da resposta e export.

@@ -1470,3 +1470,36 @@ Rodada `02-rodadas/2026-07-19-formbuilder-analise/`. O construtor de formulário
 ---
 
 *Fim do épico LEELA-E05 · Módulo Clubs.*
+
+---
+
+## Delta FormBuilder · o clube passa a escolher um template (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-formbuilder-templates/`. A DEC-0728B tirou o construtor da
+configuração do clube. RNs novas (RN-389 a RN-392) consolidadas no épico dono, o E04.
+
+**O que muda na S112:**
+
+- **`S112-T1` deixa de ser o builder do clube** e passa a ser o **seletor de template** na
+  configuração do clube, com a versão vinculada visível e o aviso de versão mais nova
+  disponível (RN-390). É o mesmo componente do seletor do evento; nada é escrito duas
+  vezes.
+- **`S112-T2` permanece inteira**: render na inscrição e na entrada de clube, gravação da
+  resposta **no membro** na mesma transação (RN-185), gate de obrigatoriedade no fence
+  server-side (RN-186) e carimbo da versão exibida (RN-188, agora a versão do template).
+
+**Critérios de aceite acrescentados (Given/When/Then):**
+
+- **Dado** a configuração de um clube, **quando** abro a seção de formulário, **então** vejo
+  um seletor dos templates publicados do tenant, e não um construtor (RN-389).
+- **Dado** um clube vinculado à versão 1 de um template, **quando** o tenant publica a
+  versão 2, **então** o clube continua na 1 até alguém atualizar por ação explícita
+  (RN-390).
+- **Dado** um clube sem nenhum template publicado no tenant, **quando** abro a seção,
+  **então** vejo estado vazio que leva à biblioteca, e não um construtor de emergência
+  embutido (P-FBT-2).
+- **Dado** um usuário sem papel de configuração daquele clube, **quando** abro a seção,
+  **então** o seletor aparece em leitura (RN-391).
+
+**O que não muda:** RN-185, RN-186, RN-187, RN-188 e a leitura/export pela lista de
+membros que já existe. O corte de v1 segue o mesmo, com anexo em fase 2.

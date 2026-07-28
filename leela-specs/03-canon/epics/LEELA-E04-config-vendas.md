@@ -1536,3 +1536,108 @@ Rodada `02-rodadas/2026-07-19-ia-menu/`. Na reorganização do menu, o evento ga
 **A linha divisória:** o E04 define **sob quais regras** o dinheiro entra (lotes, preços, cupons, política de vendas, taxa por meio de pagamento — RN-178 a RN-183); o E03 mostra **o que entrou** depois que as regras rodaram. Caixa é resultado de operação, não configuração. A aba já vivia sob `EventoLayout` com a matriz de papéis da operação do evento, o que confirma a fronteira na prática.
 
 O que este épico **continua** possuindo e que alimenta aquela tela: o congelamento da taxa na cotação (RN-179), o modo da taxa por evento (RN-347, fio no E09) e a tabela por meio de pagamento (RN-178). Mudança na aba de Caixa nunca é motivo para tocar essas regras — e mudança nessas regras precisa checar o efeito na Caixa.
+
+---
+
+## Delta FormBuilder · o formulário vira template (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-formbuilder-templates/`. A DEC-0728B tirou o construtor da
+configuração do evento e deu a ele uma biblioteca própria no menu principal. Este épico
+**continua dono** do modelo, do core e agora da biblioteca; o que muda é onde a tela mora.
+Delta completo em `01-decisoes-delta.md` e `02-rns-delta.md` da rodada.
+
+### Regras de negócio novas (FORMBUILDER-TEMPLATES)
+
+- **RN-389 · Formulário é template com casa própria no menu principal (dona = E04).** A
+  biblioteca vive em `profissionais/{profId}/formularios/{formularioId}` e é alcançada por
+  item próprio do menu. O construtor **sai** da config do evento e da config do clube, que
+  passam a **escolher** um template pronto. Supersede parcial da RN-184 na superfície e da
+  RN-189 na parte de builder; o corte de v1, a fonte única no core e o export pela lista de
+  inscritos permanecem. Supersede parcial do inventário da RN-233 (seis áreas viram sete),
+  com os dois invariantes dela preservados: item de menu sem rota segue proibido e o
+  catálogo do design system segue sendo a fonte, sem filtro no consumidor.
+- **RN-390 · Vínculo por versão publicada (dona = E04).** O template tem rascunho e versões
+  publicadas. Evento e clube guardam `formularioId` **e** a versão vigente no ato do
+  vínculo. Publicar versão nova **não** migra vínculo existente; a config sinaliza que há
+  versão mais nova e oferece atualizar por ação explícita. A resposta segue carimbando a
+  versão exibida (RN-188, agora a do template).
+- **RN-391 · Navegação e permissão da biblioteca (dona = E04).** Criar, editar, publicar e
+  arquivar template é de quem administra o tenant; **vincular** é de quem já configura
+  aquele evento ou clube, pelos mesmos quatro papéis da RN-320. Sem papel de configuração,
+  o seletor aparece em leitura. Nenhum papel novo.
+- **RN-392 · Ciclo de vida do template (dona = E04).** Estados `rascunho`, `publicado`,
+  `arquivado`. Template vinculado **não** se exclui; arquivar tira do seletor de novos
+  vínculos e não toca em vínculo vivo nem em resposta gravada. Exclusão só com zero
+  vínculos.
+
+### O que a DEC-0728B **não** mudou
+
+RN-185 (resposta no inscrito e no membro), RN-186 (fence de obrigatoriedade), RN-187
+(tetos, agora por versão), RN-188 (carimbo de versão), a parte de leitura e export da
+RN-189, e o corte de v1 com anexo em fase 2. O E12 continua consumidor e o desenho do
+render não muda; só a origem do que ele lê.
+
+---
+
+### LEELA-S313 · Biblioteca de formulários no menu principal · (de-para novo · FORMBUILDER-TEMPLATES)
+
+**Como** organizador, **quero** montar formulários uma vez e reusar em vários eventos,
+**para** parar de recriar as mesmas perguntas a cada prova.
+
+- **MoSCoW:** Should · **Estimativa:** L · **Superfície:** Painel (área nova) · **RNs:** RN-389, RN-390, RN-391, RN-392, RN-184, RN-187, RN-188
+- **JTBD servido:** T · "reaproveitar o que já montei em vez de recomeçar". Dimensão **Transacional**.
+- **Origem:** DEC-0728B (2026-07-28).
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** o menu principal, **quando** olho a barra lateral, **então** existe um item
+  Formulários com rota real, e o catálogo do design system é a fonte dessa lista (RN-389).
+- **Dado** a biblioteca vazia, **quando** entro, **então** vejo estado vazio com a ação de
+  criar o primeiro template, e não uma tabela em branco.
+- **Dado** um template em rascunho, **quando** publico, **então** nasce a versão 1 e ele
+  passa a aparecer no seletor de evento e de clube (RN-390).
+- **Dado** um template publicado na versão 1 e vinculado a um evento, **quando** edito e
+  publico a versão 2, **então** o evento continua na versão 1 e a config dele mostra que
+  há versão mais nova, com ação explícita para atualizar (RN-390).
+- **Dado** um template vinculado a pelo menos um evento, **quando** tento excluir, **então**
+  a exclusão é negada e a caixa oferece arquivar, explicando que vínculos vivos e respostas
+  gravadas não são tocados (RN-392).
+- **Dado** um template arquivado, **quando** abro o seletor de um evento novo, **então** ele
+  não aparece; e o evento que já o usava continua funcionando (RN-392).
+- **Dado** um usuário sem papel de administração do tenant, **quando** abro a biblioteca,
+  **então** vejo os templates em leitura e as ações de criar, publicar e arquivar não estão
+  disponíveis (RN-391).
+- **Dado** um template com 20 perguntas, **quando** tento acrescentar a vigésima primeira,
+  **então** a validação bloqueia pelo teto do core (RN-187).
+
+**Tasks:** `S313-T1` (item de menu e rota, com catálogo do design system, stories, docs,
+`LLM.txt` e suíte do Sidebar reconciliados no mesmo lote), `S313-T2` (biblioteca: lista,
+criar, editar, duplicar, publicar versão, arquivar, excluir só sem vínculo).
+
+**Fora de escopo**
+Compartilhar template entre tenants, e biblioteca de modelos prontos da Leela. Se for
+desejado, volta como card.
+
+---
+
+### LEELA-S310 · reescrita pela DEC-0728B
+
+A história continua existindo, com o mesmo objetivo de produto, e muda de conteúdo:
+
+- **`S310-T1` (modelo e core) permanece**, acrescido de versão publicada e estado de ciclo
+  de vida (RN-390, RN-392). O endereço do dado muda: sai a subcoleção de formulário sob o
+  evento, entra a biblioteca `profissionais/{profId}/formularios/{id}` com subcoleção de
+  versões.
+- **`S310-T2` deixa de ser o construtor** e passa a ser o **seletor de template na
+  configuração do evento**, mostrando a versão vinculada e o aviso de versão mais nova
+  disponível.
+- **`S310-T3` (novo)** — a resposta viaja como coluna do inscrito na lista e no export que
+  já existem (RN-189, parte preservada).
+
+O construtor propriamente dito virou a `S313`. Os critérios de aceite originais da S310
+que falavam de criar e ordenar perguntas passam a valer na S313; os que falavam de
+obrigatoriedade, tetos e versionamento continuam válidos e agora são provados lá.
+
+**Nota de migração:** não há. O construtor nunca foi construído, então não existe
+formulário gravado sob evento ou clube para mover. É por isso que este delta cabe antes do
+código e não depois (P-FBT-3).

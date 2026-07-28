@@ -1580,3 +1580,38 @@ Este épico entra na **Onda 4 · item 1** (caminho do dinheiro em curso) e é on
 - **S1210** (exibição da taxa por meio) — ✅ entregue na TAXA-FLEX.
 
 **Ordem de despacho desta tela:** `S1209-T1 → S1209-T2 → S1209-T4 → S1212-T2`, com `S1209-T3` em paralelo (arquivo distinto).
+
+---
+
+## Delta FormBuilder · o render muda de origem, não de desenho (SPECS-0728 · 2026-07-28)
+
+Rodada `02-rodadas/2026-07-28-formbuilder-templates/`. A DEC-0728B moveu o construtor para
+uma biblioteca de templates no menu principal. Este épico é **consumidor** e sai quase
+intacto. RNs novas (RN-389 a RN-392) consolidadas no épico dono, o E04.
+
+**O que muda na S1212:** uma linha só. O checkout deixa de ler a subcoleção de formulário
+sob o evento e passa a ler a **versão de template vinculada ao evento** (RN-390). Tudo o
+mais fica: a resposta vive no inscrito e nunca no pedido (RN-185), pergunta obrigatória
+bloqueia o pagar no mesmo fence server-side dos aceites (RN-186), a resposta carimba a
+versão exibida (RN-188) e o export continua sendo o da lista de inscritos (RN-189).
+
+**Critérios de aceite acrescentados (Given/When/Then):**
+
+- **Dado** um evento vinculado à versão 1 de um template, **quando** o comprador abre o
+  checkout, **então** ele vê exatamente as perguntas da versão 1, mesmo que a versão 2 já
+  esteja publicada na biblioteca (RN-390).
+- **Dado** que o comprador responde e paga, **quando** a inscrição é gravada, **então** a
+  resposta carimba o id do template **e** a versão exibida, e não apenas um número de
+  versão solto (RN-188 sobre RN-390).
+- **Dado** um evento sem template vinculado, **quando** o checkout monta, **então** nenhuma
+  seção de perguntas aparece e o fluxo de compra segue idêntico ao de hoje.
+- **Dado** um template arquivado depois de o evento já estar vinculado, **quando** o
+  checkout monta, **então** as perguntas continuam sendo exibidas normalmente, porque
+  arquivar não toca em vínculo vivo (RN-392).
+
+**Ordem de despacho.** A fila revisada está em
+`02-rodadas/2026-07-28-formbuilder-templates/03-fila-codigo.md`. A serialização que a fila
+de 19/07 pedia contra a exibição de taxa já está paga, porque o bloco A da tela de checkout
+aterrissou em 2026-07-26. A fronteira viva agora é entre lanes que escrevem em
+`functions/src/checkout`: o pacote de estorno e o pacote de ingressos com QR. Serializar
+por lane, não por task.
