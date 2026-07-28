@@ -58,11 +58,12 @@ import {
   type StatusPedido,
   type TransicaoReembolso,
 } from '@leela/core';
+import { type EventoCaller, type OperadorDoTenant } from '../eventos/criarEvento';
 import {
-  assertTenantAtivo,
-  assertTenantWriter,
-  type EventoCaller,
-} from '../eventos/criarEvento';
+  assertPapelDeEscritaOuAdmin,
+  assertTenantAtivoSeOrganizador,
+  resolverOperador,
+} from './operador';
 import {
   lerPoliticaReembolsoTx,
   lerPoliticaVendasTx,
@@ -91,6 +92,15 @@ export interface RequestRefundInput {
   inscritoId: string;
   /** Motivo (auditoria — obrigatório, 3–500 caracteres). */
   motivo: string;
+  /**
+   * FURAR o corte de véspera (decisão 44 — RN-376). Só `platform_admin`, e só
+   * com `motivoOverride`. Organizador que mandar isto leva permission-denied:
+   * a exceção existe para o dono da plataforma responder por ela, não para
+   * virar a regra normal do painel do organizador.
+   */
+  overrideCorte?: boolean;
+  /** Justificativa do furo (obrigatória quando `overrideCorte` — vai à trilha). */
+  motivoOverride?: string;
 }
 
 export interface DecideRefundInput {
@@ -138,6 +148,22 @@ export function validarRequestRefundInput(raw: unknown): string[] {
     erros.push(`"motivo" é obrigatório (mínimo ${MOTIVO_REFUND_MIN} caracteres).`);
   } else if (motivo.trim().length > MOTIVO_REFUND_MAX) {
     erros.push(`"motivo" excede ${MOTIVO_REFUND_MAX} caracteres.`);
+  }
+  const override = input['overrideCorte'];
+  if (override !== undefined && typeof override !== 'boolean') {
+    erros.push('"overrideCorte" deve ser boolean.');
+  }
+  if (override === true) {
+    // RN-376: furar a véspera SEM justificativa é o mesmo que não ter trilha.
+    const mo = input['motivoOverride'];
+    if (typeof mo !== 'string' || mo.trim().length < MOTIVO_REFUND_MIN) {
+      erros.push(
+        `"motivoOverride" é obrigatório ao furar o corte de véspera ` +
+          `(mínimo ${MOTIVO_REFUND_MIN} caracteres — RN-376).`
+      );
+    } else if (mo.trim().length > MOTIVO_REFUND_MAX) {
+      erros.push(`"motivoOverride" excede ${MOTIVO_REFUND_MAX} caracteres.`);
+    }
   }
   return erros;
 }
@@ -203,10 +229,11 @@ interface AberturaReembolso {
 async function abrirReembolso(
   db: Db,
   input: RequestRefundInput,
-  tenantId: string,
+  operador: OperadorDoTenant,
   caller: EventoCaller,
   agora: Date
 ): Promise<AberturaReembolso> {
+  const tenantId = operador.tenantId;
   const pedidoRef = db.collection('pedidos').doc(input.pedidoId);
 
   return db.runTransaction(async (tx) => {
@@ -281,14 +308,24 @@ async function abrirReembolso(
 
     // ── ROTEAMENTO pela política (S305 · RN-338/339/340) ────────────────────
     const politica = await lerPoliticaReembolsoTx(tx, db, eventoId, tenantId);
-    const rota = rotearReembolso(politica, compradoEm, dataEvento, agora);
-    if (rota === 'bloqueado_corte') {
+    const rotaBruta = rotearReembolso(politica, compradoEm, dataEvento, agora);
+    // Corte de véspera (RN-339). O admin PODE furar (decisão 44 · RN-376) —
+    // com justificativa e trilha. Ao furar, a decisão de estornar JÁ FOI
+    // TOMADA por quem responde pela plataforma: a rota é a executável, não a
+    // fila de análise. A TAXA não segue a rota; segue a janela do art. 49
+    // (`dentroDaJanelaArrependimento`, RN-373), que o primitivo recalcula.
+    const furou = rotaBruta === 'bloqueado_corte' && input.overrideCorte === true;
+    if (rotaBruta === 'bloqueado_corte' && !furou) {
       throw new https.HttpsError(
         'failed-precondition',
         `Solicitação bloqueada: faltam ${politica.corteHoras}h ou menos para o evento (RN-339). ` +
-          'Reabertura excepcional é decisão manual do organizador.'
+          'Furar o corte é ação do admin da plataforma, com motivo registrado.'
       );
     }
+    // Só se chega aqui com `bloqueado_corte` quando `furou` (o guard acima
+    // lança no outro caso) — a narrow do TS não atravessa a variável.
+    const rota: EstadoReembolso =
+      rotaBruta === 'bloqueado_corte' ? 'aprovado_auto' : rotaBruta;
 
     const itens = (pedidoSnap.get('itens') as ItemPedido[]) ?? [];
     const valorSolicitado = valorPagoDaLinha(itens, input.inscritoId);
@@ -308,11 +345,23 @@ async function abrirReembolso(
       inscritoId: input.inscritoId,
       motivo: input.motivo.trim(),
       estado: rota,
-      origem: 'organizador',
+      // A trilha vira a ORIGEM do doc: quem abriu foi o organizador do tenant
+      // ou o admin da plataforma agindo sobre ele. A fila mostra a diferença.
+      origem: operador.trilha,
       valorSolicitado,
       transicoes: [novaTransicao('solicitado', rota, caller.uid, caller.claims.role ?? 'desconhecido')],
       criadoEm: agoraTs,
       atualizadoEm: agoraTs,
+      // Furo do corte de véspera (RN-376): o motivo fica NO DOC, não só no log
+      // — a fila e a auditoria precisam ler isso sem abrir o Cloud Logging.
+      ...(furou
+        ? {
+            overrideCorte: true,
+            motivoOverride: (input.motivoOverride ?? '').trim(),
+            overridePor: caller.uid,
+            corteHorasNoOverride: politica.corteHoras,
+          }
+        : {}),
     });
 
     logger.info('reembolso_aberto', {
@@ -321,6 +370,8 @@ async function abrirReembolso(
       pedidoId: input.pedidoId,
       rota,
       valorSolicitado,
+      trilha: operador.trilha,
+      overrideCorte: furou,
     });
 
     return { eventoId, estado: rota, jaExistia: false };
@@ -499,7 +550,9 @@ export async function requestRefundCore(
   caller: EventoCaller,
   agora: Date = new Date()
 ): Promise<RefundResult> {
-  const tenantId = assertTenantWriter(caller.claims);
+  // Papel antes de payload: athlete/promoter continuam levando
+  // permission-denied, não uma dica de formato.
+  assertPapelDeEscritaOuAdmin(caller.claims);
   const erros = validarRequestRefundInput(rawInput);
   if (erros.length > 0) {
     throw new https.HttpsError('invalid-argument', `RequestRefundInput inválido: ${erros.join(' ')}`);
@@ -507,9 +560,22 @@ export async function requestRefundCore(
   const input = rawInput as unknown as RequestRefundInput;
   input.motivo = input.motivo.trim();
 
-  await assertTenantAtivo(db, tenantId);
+  const operador = await resolverOperador(db, caller, {
+    colecao: 'pedidos',
+    docId: input.pedidoId,
+  });
+  // RN-376: furar a véspera é poder do dono da plataforma. O organizador que
+  // manda a flag não recebe silêncio — recebe a negativa explícita.
+  if (input.overrideCorte === true && operador.trilha !== 'plataforma') {
+    throw new https.HttpsError(
+      'permission-denied',
+      'Furar o corte de véspera é ação exclusiva do admin da plataforma (RN-376).'
+    );
+  }
 
-  const abertura = await abrirReembolso(db, input, tenantId, caller, agora);
+  await assertTenantAtivoSeOrganizador(db, operador);
+
+  const abertura = await abrirReembolso(db, input, operador, caller, agora);
 
   // Notificações da ABERTURA (RN-342 · T3): idempotentes por docId do log —
   // replay recompleta registro perdido por crash sem renotificar.
@@ -569,7 +635,7 @@ export async function decideRefundCore(
   caller: EventoCaller,
   agora: Date = new Date()
 ): Promise<RefundResult> {
-  const tenantId = assertTenantWriter(caller.claims);
+  assertPapelDeEscritaOuAdmin(caller.claims);
   const input = rawInput as Partial<DecideRefundInput> | null;
   if (
     typeof input?.eventoId !== 'string' || input.eventoId.length === 0 ||
@@ -581,13 +647,25 @@ export async function decideRefundCore(
       '"eventoId", "inscritoId" e "decisao" (aprovar|recusar) são obrigatórios.'
     );
   }
-  await assertTenantAtivo(db, tenantId);
 
   const reembolsoRef = db
     .collection('eventos')
     .doc(input.eventoId)
     .collection(REEMBOLSOS_SUBCOL)
     .doc(input.inscritoId);
+
+  // O tenant da DECISÃO vem do doc (o admin não tem tenantId no claim). A
+  // leitura pré-transação só serve para autorizar; o estado que decide a
+  // transição é relido DENTRO da transação abaixo.
+  const preSnap = await reembolsoRef.get();
+  if (!preSnap.exists) {
+    throw new https.HttpsError('not-found', `Reembolso do inscrito '${input.inscritoId}' não existe.`);
+  }
+  const operador = await resolverOperador(db, caller, {
+    tenantId: preSnap.get('tenantId') as string,
+  });
+  const tenantId = operador.tenantId;
+  await assertTenantAtivoSeOrganizador(db, operador);
 
   // Transição de estado (em_analise → aprovado|recusado) numa transação.
   const { pedidoId, estadoDestino, replay } = await db.runTransaction(async (tx) => {

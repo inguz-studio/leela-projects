@@ -191,6 +191,13 @@ export { requestRepasse, cancelRepasse } from './finance/requestRepasse';
 // reabre a RN-346.
 export { requestRefund, decideRefund } from './finance/requestRefund';
 
+// CANCELAR SEM ESTORNAR (decisão 45 · T4 · RN-377/378) — a porta que faltava
+// para cortesia/no-show/fraude. Transição auditada `confirmado|pendente →
+// cancelado` com trilha própria em `eventos/{id}/cancelamentos/{inscritoId}`;
+// NÃO toca gateway, pagamento, receita nem comissão. Admin da plataforma
+// cancela qualquer coisa; organizador só fora do corte de véspera (RN-339).
+export { cancelarInscricao } from './finance/cancelarInscricao';
+
 // Finance — TRANSFERÊNCIA de titularidade / troca de ingresso (E09 ·
 // S904-T4 · RN-343/344/345). Titularidade executa (kit/chip/check-in
 // guardados, trilha titularHistorico[]); troca de ingresso SÓ REGISTRA

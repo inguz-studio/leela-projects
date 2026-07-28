@@ -54,6 +54,19 @@ export interface AuthClaims {
   eventos?: Record<string, PapelEvento>;
 }
 
+/**
+ * Por qual PORTA uma escrita de gestão entrou (decisão 43-b · T4). Vive no
+ * core porque atravessa as três camadas: a Function carimba, o api-client
+ * transporta e a tela mostra de quem foi a mão.
+ *
+ *   organizador — owner/staff escrevendo no PRÓPRIO tenant;
+ *   plataforma  — `platform_admin` agindo cross-tenant sobre tenant alheio.
+ *
+ * Confundir as duas apaga a única prova de quem mandou mexer na inscrição (ou
+ * no dinheiro) de outra empresa.
+ */
+export type TrilhaOperacao = 'organizador' | 'plataforma';
+
 // ---------------------------------------------------------------------------
 // Guards puros — sem efeitos colaterais, seguros para testes
 // ---------------------------------------------------------------------------

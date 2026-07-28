@@ -60,6 +60,10 @@ const marina = { role: 'tenant_owner', tenantId: CASTELO_ID }; // writer
 const promoter = { role: 'promoter', tenantId: CASTELO_ID }; // membro, não-writer
 const athlete = { role: 'athlete', tenantId: CASTELO_ID }; // atleta COM claim de tenant
 const passo = { role: 'tenant_owner', tenantId: PASSO_ID }; // cross-tenant
+// Admin da plataforma: cross-tenant POR CONSTRUÇÃO e SEM tenantId no claim
+// (roles.ts) — é exatamente a forma do token que o T4 passou a autorizar.
+const ADMIN_UID = 'uid-platform-admin';
+const platformAdmin = { role: 'platform_admin' };
 
 let testEnv: RulesTestEnvironment;
 let adminDb: admin.firestore.Firestore;
@@ -162,6 +166,15 @@ beforeAll(async () => {
   // catch-all ALLOWLIST (re-review A-T2 A2): nasce ilegível para o cliente.
   await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/reembolsos/reemb-1`).set({
     tenantId: CASTELO_ID, valor: 100, atualizadoEm: FieldValue.serverTimestamp(),
+  });
+
+  // Trilha do cancelamento SEM estorno (T4 · RN-377/378) — escrita só de
+  // Function na vida real; semeada aqui para atacar as Rules de LEITURA.
+  await adminDb.doc(`eventos/${MEIA_FLORIPA_ID}/cancelamentos/insc-cancelado`).set({
+    tenantId: CASTELO_ID, eventoId: MEIA_FLORIPA_ID, inscritoId: 'insc-cancelado',
+    motivo: 'cortesia', statusAnterior: 'confirmado', dinheiroDevolvido: false,
+    trilha: 'plataforma', por: ADMIN_UID, papel: 'platform_admin',
+    criadoEm: FieldValue.serverTimestamp(),
   });
 }, 30_000); // seed completo (tenants + eventos + kernel E04) leva ~9,4s — folga sobre o default de 10s
 
@@ -323,6 +336,38 @@ describe('catch-all de eventos é ALLOWLIST (re-review A-T2 A2)', () => {
       doc(db, 'eventos', MEIA_FLORIPA_ID, 'reembolsos', 'reemb-1');
     await assertFails(getDoc(reemb(dbAs(PROMOTER_UID, promoter))));
     await assertSucceeds(getDoc(reemb(dbAs(MARINA_UID, marina))));
+  });
+
+  it('cancelamentos (T4): gestão e admin leem; promoter/atleta/cross-tenant não', async () => {
+    const canc = (db: Firestore) =>
+      doc(db, 'eventos', MEIA_FLORIPA_ID, 'cancelamentos', 'insc-cancelado');
+    // Quem opera o evento vê de quem foi a decisão…
+    await assertSucceeds(getDoc(canc(dbAs(MARINA_UID, marina))));
+    await assertSucceeds(getDoc(canc(dbAs(ADMIN_UID, platformAdmin))));
+    // …e quem não opera não vê que fulano foi tirado do evento, nem por quê.
+    await assertFails(getDoc(canc(dbAs(PROMOTER_UID, promoter))));
+    await assertFails(getDoc(canc(dbAs(ATHLETE_UID, athlete))));
+    await assertFails(getDoc(canc(dbAs(PASSO_OWNER_UID, passo))));
+  });
+
+  it('cancelamentos: NINGUÉM escreve pelo cliente — nem o admin da plataforma', async () => {
+    // A trilha é a prova de quem mandou cancelar. Se o cliente pudesse
+    // escrevê-la, forjaria o autor; se pudesse sobrescrevê-la, apagaria o
+    // autor. Escrita é exclusiva da Function (Admin SDK bypassa Rules).
+    const novo = (db: Firestore) =>
+      doc(db, 'eventos', MEIA_FLORIPA_ID, 'cancelamentos', 'insc-forjado');
+    const existente = (db: Firestore) =>
+      doc(db, 'eventos', MEIA_FLORIPA_ID, 'cancelamentos', 'insc-cancelado');
+    const payload = {
+      tenantId: CASTELO_ID, eventoId: MEIA_FLORIPA_ID, inscritoId: 'insc-forjado',
+      motivo: 'forjado', statusAnterior: 'confirmado', dinheiroDevolvido: false,
+      trilha: 'organizador', por: MARINA_UID, papel: 'tenant_owner',
+    };
+    await assertFails(setDoc(novo(dbAs(MARINA_UID, marina)), payload));
+    await assertFails(setDoc(novo(dbAs(ADMIN_UID, platformAdmin)), payload));
+    await assertFails(
+      setDoc(existente(dbAs(MARINA_UID, marina)), { motivo: 'reescrito' }, { merge: true })
+    );
   });
 
   it('regressão da allowlist: membro segue lendo lotes e paginaVendas', async () => {

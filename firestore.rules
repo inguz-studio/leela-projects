@@ -1266,6 +1266,21 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // `cancelamentos/{inscritoId}` — trilha do CANCELAMENTO SEM ESTORNO
+      // (decisão 45 · T4 · RN-377/378). docId = inscritoId (uma trilha por
+      // inscrito, espelhando `reembolsos`). O doc NÃO move dinheiro, mas
+      // revela quem tirou quem do evento e por quê — e é a prova de que a
+      // plataforma (não o organizador) mandou, quando foi o caso. MESMA
+      // superfície de leitura de `reembolsos`. ESCRITA: NUNCA pelo cliente —
+      // exclusiva da Function `cancelarInscricao`; forjar a trilha ou apagá-la
+      // deixaria a inscrição cancelada sem dono da decisão.
+      match /cancelamentos/{inscritoId} {
+        allow read: if isPlatformAdmin()
+                    || isTenantWriter(tenantDoEventoPai())
+                    || papelEventoAtivo(['organizador', 'financeiro']);
+        allow write: if false;
+      }
+
       // `transferencias/{transferenciaId}` — transferência de titularidade /
       // troca de ingresso (E09 · S904-T4 · RN-343/344/345). O doc carrega PII
       // do novo titular (`novoTitular.dadosPessoais`) e valor a cobrar —

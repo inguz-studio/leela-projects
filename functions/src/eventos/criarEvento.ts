@@ -38,6 +38,7 @@ import {
   MODO_TAXA_DEFAULT,
   REGULAMENTO_MAX,
   type AuthClaims,
+  type TrilhaOperacao,
   type ModoTaxa,
   type PercursoEvento,
 } from '@leela/core';
@@ -255,6 +256,48 @@ export function assertTenantWriter(claims: AuthClaims): string {
     );
   }
   return claims.tenantId;
+}
+
+/** Quem opera e sobre qual tenant (resultado do ramo admin). */
+export interface OperadorDoTenant {
+  /** Tenant EFETIVO da operação (do claim, ou do doc alvo quando é admin). */
+  tenantId: string;
+  trilha: TrilhaOperacao;
+}
+
+/**
+ * Ramo ADMIN de `assertTenantWriter` (decisão 43, opção b).
+ *
+ * `platform_admin` não carrega `tenantId` no claim (roles.ts) — é cross-tenant
+ * por construção —, então o guard normal o recusa com `permission-denied` e o
+ * back-office fica sem porta. Aqui o tenant vem do DOCUMENTO ALVO, não do
+ * token: quem chama informa sobre qual tenant está agindo ao apontar para um
+ * pedido/inscrito, e a operação sai carimbada com a trilha `plataforma`.
+ *
+ * Para o organizador nada muda: continua sendo owner/staff COM tenantId, e o
+ * alvo tem de ser do tenant dele (RN-400 — cross-tenant segue negado).
+ */
+export function assertTenantWriterOuAdmin(
+  claims: AuthClaims,
+  tenantIdAlvo: string
+): OperadorDoTenant {
+  if (typeof tenantIdAlvo !== 'string' || tenantIdAlvo.length === 0) {
+    throw new https.HttpsError(
+      'internal',
+      'Autorização sem tenant alvo resolvido — o doc precisa ser lido ANTES do guard.'
+    );
+  }
+  if (claims.role === 'platform_admin') {
+    return { tenantId: tenantIdAlvo, trilha: 'plataforma' };
+  }
+  const tenantId = assertTenantWriter(claims);
+  if (tenantId !== tenantIdAlvo) {
+    throw new https.HttpsError(
+      'permission-denied',
+      'Alvo pertence a outro tenant (RN-400).'
+    );
+  }
+  return { tenantId, trilha: 'organizador' };
 }
 
 /**

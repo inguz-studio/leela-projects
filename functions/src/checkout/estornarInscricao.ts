@@ -88,11 +88,12 @@ import {
   type Timestamp,
 } from '@leela/core';
 import { lerPoliticaReembolsoTx } from '../eventos/lerPoliticaVendas';
+import { type EventoCaller } from '../eventos/criarEvento';
 import {
-  assertTenantAtivo,
-  assertTenantWriter,
-  type EventoCaller,
-} from '../eventos/criarEvento';
+  assertPapelDeEscritaOuAdmin,
+  assertTenantAtivoSeOrganizador,
+  resolverOperador,
+} from '../finance/operador';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import {
   AsaasApiError,
@@ -965,9 +966,11 @@ export async function estornarInscricaoCore(
   /** Relógio INJETADO (RN-373: a janela de arrependimento é derivação pura). */
   agora: Date = new Date()
 ): Promise<EstornarInscricaoResult> {
-  // GUARD de papel: só organizador (tenant_owner/tenant_staff) estorna —
-  // athlete/promoter caem aqui com permission-denied (RN-401).
-  const tenantId = assertTenantWriter(caller.claims);
+  // GUARD de papel: organizador (tenant_owner/tenant_staff) do tenant DO
+  // PEDIDO, ou o admin da plataforma agindo cross-tenant (decisão 43-b · T4).
+  // athlete/promoter caem aqui com permission-denied (RN-401), antes de
+  // qualquer leitura.
+  assertPapelDeEscritaOuAdmin(caller.claims);
 
   const erros = validarEstornarInscricaoInput(rawInput);
   if (erros.length > 0) {
@@ -978,7 +981,12 @@ export async function estornarInscricaoCore(
   }
   const input = rawInput as unknown as EstornarInscricaoInput;
 
-  await assertTenantAtivo(db, tenantId);
+  const operador = await resolverOperador(db, caller, {
+    colecao: 'pedidos',
+    docId: input.pedidoId,
+  });
+  const tenantId = operador.tenantId;
+  await assertTenantAtivoSeOrganizador(db, operador);
 
   // ── TX1: compromisso (ou leitura do compromisso existente) ───────────────
   const compromisso = await comprometerEstorno(
