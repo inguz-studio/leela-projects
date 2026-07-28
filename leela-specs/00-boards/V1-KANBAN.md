@@ -14,14 +14,6 @@ tags:
 - [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]
 - [ ] **[E12] Fontes do site embarcadas, como no painel do organizador** — Exo 2 e JetBrains Mono deixam o provedor externo e passam a morar no próprio site, desde que o carregamento não piore; a diretriz de busca e velocidade da landing vale como aceite 📋 [[LEELA-E12-landing]]
 - [ ] **[E16/E04] Preço do SaaS e acréscimo por parcela** — Leela+ sem mensalidade por ora, SaaS a R$ 249,00 e 2,5% acrescidos a cada parcela, tudo editável depois 📋 [[LEELA-E04-config-vendas]]
-- [ ] **[E08] Afiliados — pagar metade da comissão sem o extrato mentir** 🔄 posição 2 da fila, autorizada por você em 28/07; backend, painel do promotor e UI de comissão já entregues. A auditoria encolheu o que falta: o servidor **já** aceita valor parcial com guarda de saldo na mesma transação, então a lacuna é a tela e uma prova que falta. O aviso ao afiliado deixou de estar travado quando o Brevo passou a entregar 📋 [[LEELA-E08-influenciador]]
-    - [ ] **S705 · Repasse parcial da comissão registrada**
-        - [ ] S705-T1 prova dos dois parciais consecutivos contra o mesmo saldo
-        - [ ] S705-T2 campo de valor no modal, iniciado no saldo e editável para baixo ⚔
-        - [ ] S705-T3 extrato com uma linha por repasse, nos dois lados
-    - [ ] **S706 · Aviso ao afiliado no repasse e no marco de comissão**
-        - [ ] S706-T1 gatilho e chave de idempotência dos dois avisos ⚔
-        - [ ] S706-T2 os dois textos no catálogo de templates que já existe
 - [ ] **[E10] Marcas — saber em quantos patrocínios cada marca é usada** 🔄 posição 3 da fila; registro reutilizável, logo 1:1, autocomplete e a tela `/marcas` já entregues. A auditoria achou um bloqueio: nenhum vínculo guarda o id da marca, só o nome, e o id é fixo na renomeação — casar por nome perde o vínculo no primeiro rename. Por isso entra uma tarefa antes de todas 📋 [[LEELA-E10-marcas]]
     - [ ] **S812 · Ativações da marca**
         - [ ] S812-T0 chave `marcaId` gravada nos três vínculos de patrocínio ⚔
@@ -76,6 +68,15 @@ tags:
 
 
 ## ✅ Feito
+
+- [x] **[E08] Dá para adiantar metade da comissão, e o afiliado fica sabendo (E08-REPASSE)** — o Téo acumula R$ 1.200, você adianta R$ 500 por fora e os dois lados ficavam com o número errado: o modal só sabia quitar o saldo inteiro. Agora o campo de valor nasce com o saldo — quem quer pagar tudo continua a um clique — e você edita para baixo; o resto continua a receber, e o modal conta a consequência exata ("R$ 200,00 do saldo em aberto, restam R$ 300,00") em vez de prometer que zera. Cada adiantamento virou uma linha própria com valor, data e a sua observação, na tela do afiliado e na sua — antes de decidir o próximo pedaço você vê o que já pagou. E o afiliado deixou de precisar abrir o painel: recebe e-mail quando você registra um repasse (com quanto ainda falta) e quando a comissão dele cruza um marco, sem repetir aviso se um estorno derrubar e uma venda nova recruzar a mesma faixa. Nada de dinheiro no servidor foi reescrito: ele já aceitava valor parcial e já era provado — entrou a prova que faltava, a dos dois adiantamentos seguidos ✅ [[LEELA-E08-influenciador]]
+    - [x] **S705 · Repasse parcial da comissão registrada**
+        - [x] S705-T1 prova dos dois parciais consecutivos contra o mesmo saldo (`1cd6274`)
+        - [x] S705-T2 campo de valor no modal, iniciado no saldo e editável para baixo ⚔ (`3b063d4`)
+        - [x] S705-T3 extrato com uma linha por repasse, nos dois lados (`8be358b`)
+    - [x] **S706 · Aviso ao afiliado no repasse e no marco de comissão**
+        - [x] S706-T1 gatilho e chave de idempotência dos dois avisos ⚔ (`444effc`)
+        - [x] S706-T2 os dois textos no catálogo de templates que já existe (`684501e`)
 
 - [x] **[E09/E01] As telas do dinheiro passaram a dizer o número que o dinheiro tem (POLIMENTO-0728)** — as três reviews da madrugada aprovaram com ressalvas, e as ressalvas viraram quatro coisas que você via na tela. **(1)** O card "Disponível para Repasse" da Caixa prometia R$ 8.500 onde o saque aceitava R$ 4.025: a Caixa é por evento e a janela de liberação é do produtor. Agora o card mostra o menor dos dois, e uma nota diz de onde veio o corte — número menor não pode parecer venda menor. **(2)** Quando a leitura do termo negociado falhava, o card caía nos 15% padrão calado; com um termo de 30% ele voltava a prometer acima do saque. Agora o card declara a falha, em vermelho e com aviso de leitor de tela. **(3)** A fila admin de estorno lia os 100 produtores mais recentes e 50 eventos de cada um, e cortava em silêncio — um estorno do produtor 101 nunca aparecia, nem com a lista vazia dizendo "nada pendente". Agora a fila diz o que não está mostrando, inclusive nomeando o produtor cortado; e uma leitura que falha deixou de derrubar a lista inteira. **(4)** A coluna "Valor" da mesma fila mostrava face + taxa mesmo quando a política retém a taxa: o admin aprovava vendo mais do que o comprador recebe. Ela virou "Volta ao comprador", com a taxa retida discriminada, e o mesmo número aparece na confirmação. Junto foram o teto de estoque que você escolheu (999.999) e a frase que faltava na regra do retardatário: ali a devolução é integral porque não houve serviço nenhum ✅ [[LEELA-E09-financeiro-profissional]]
     - [x] **S025 · A fila admin de estorno é honesta sobre o que não mostra**
