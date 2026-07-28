@@ -23,6 +23,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 // IDs canônicos — fixos para os seeds serem idempotentes
 export const CASTELO_TENANT_ID = 'castelo-producoes';
@@ -69,17 +70,10 @@ export const TENANT_SEEDS: TenantSeed[] = [
  * claramente de demo (prefixo 'demo-').
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedTenants só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedTenants');
 }
 
 /**

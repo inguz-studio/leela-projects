@@ -30,6 +30,7 @@ import type {
 import { COLECAO_CAMPANHAS } from '@leela/core';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 import { MEIA_FLORIPA_ID, seedEventos } from './eventos.seed';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 /** Totais canônicos (para teste) */
 export const TOTAL_CAMPANHAS_SEED = 3;
@@ -46,17 +47,10 @@ const DIA_MS = 24 * 60 * 60 * 1000;
  * Guard anti-produção (padrão F5 — review S1600): seed SÓ roda no Emulator.
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedCampanhas só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedCampanhas');
 }
 
 interface CampanhaSeedSpec {

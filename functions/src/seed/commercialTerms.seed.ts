@@ -22,6 +22,7 @@ import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { DEFAULT_COMMERCIAL_TERMS } from '@leela/core';
 import { CASTELO_TENANT_ID } from './tenants.seed';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 /** uid sintético do platform_admin no ambiente de seed. */
 export const SEED_ADMIN_UID = 'uid-platform-admin';
@@ -30,17 +31,10 @@ export const SEED_ADMIN_UID = 'uid-platform-admin';
  * Guard anti-produção (mesmo padrão F5 de tenants.seed.ts).
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedCommercialTerms só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedCommercialTerms');
 }
 
 /**

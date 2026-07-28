@@ -37,6 +37,7 @@ import {
   PARCERIA_CDL_ID,
   PARCERIA_SECRETARIA_ID,
 } from './desafios.seed';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 /** Totais canônicos (para teste) */
 export const TOTAL_PARCERIAS_SEED = 8;
@@ -47,17 +48,10 @@ export const TOTAL_PATROCINADORES_SEED = 3;
  * Guard anti-produção (padrão F5 — review S1600): seed SÓ roda no Emulator.
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedParcerias só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedParcerias');
 }
 
 interface EventoAfiliadoSeedSpec {

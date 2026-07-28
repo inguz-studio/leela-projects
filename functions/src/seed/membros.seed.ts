@@ -30,6 +30,7 @@ import {
   FELIPE_MARTINS_UID,
   seedClubes,
 } from './clubes.seed';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 /** Total de membros canônicos semeados */
 export const TOTAL_MEMBROS_SEED = 6;
@@ -43,17 +44,10 @@ const DIA_MS = 24 * 60 * 60 * 1000;
  * Guard anti-produção (padrão F5 — review S1600): seed SÓ roda no Emulator.
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedMembros só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedMembros');
 }
 
 interface MembroSeedSpec {

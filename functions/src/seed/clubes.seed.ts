@@ -21,6 +21,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { assertEmulatorOnly as guardEmulatorOnly } from './emulator-guard';
 
 // IDs canônicos — fixos para o seed ser idempotente
 export const CORRIDA_PERFEITA_TENANT_ID = 'corrida-perfeita';
@@ -34,17 +35,10 @@ export const CLUBE_CPS_CODIGO_CONVITE = '8A3K9';
  * Guard anti-produção (padrão F5 — review S1600): seed SÓ roda no Emulator.
  */
 function assertEmulatorOnly(): void {
-  const emulatorHost = process.env['FIRESTORE_EMULATOR_HOST'];
-  const projectId =
-    process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
-
-  if (!emulatorHost && !projectId.startsWith('demo-')) {
-    throw new Error(
-      '[seed] BLOQUEADO: seedClubes só roda no Emulator. ' +
-        'Defina FIRESTORE_EMULATOR_HOST (ou use um projectId demo-*). ' +
-        'NUNCA execute este seed contra produção.'
-    );
-  }
+  // Delegado ao guard COMPARTILHADO de emulator-guard.ts (mesmo contrato
+  // F5 + escape nominal de producao da lane DEPLOY-PREVIEW). Antes: copia
+  // local identica - consolidada para o escape valer em todos os seeds.
+  guardEmulatorOnly('seedClubes');
 }
 
 /**

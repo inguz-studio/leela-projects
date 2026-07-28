@@ -42,6 +42,21 @@ export function assertAuthEmulatorOnly(): void {
   const projectId =
     process.env['GCLOUD_PROJECT'] ?? process.env['GOOGLE_CLOUD_PROJECT'] ?? '';
 
+  // Escape nominal de produção (lane DEPLOY-PREVIEW) — mesmo contrato do
+  // emulator-guard.ts, mantido inline porque ESTE guard vigia o Auth host
+  // (não o Firestore host): ack POR EXTENSO igual ao projectId + nenhum
+  // Emulator de Auth apontado. O aviso de "operação manual" abaixo segue
+  // valendo para qualquer caminho fora do runner dedicado da lane.
+  const ack = process.env['LEELA_SEED_PROD_ACK'];
+  if (
+    ack !== undefined &&
+    ack.length > 0 &&
+    ack === projectId &&
+    !authEmulatorHost
+  ) {
+    return;
+  }
+
   if (!authEmulatorHost && !projectId.startsWith('demo-')) {
     throw new Error(
       '[seed] BLOQUEADO: seedPlatformAdmin só roda no Emulator. ' +
