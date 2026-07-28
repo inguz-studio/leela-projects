@@ -52,6 +52,12 @@ Verbatim do Vitor: *"criei uma chave API em produção. aonde posso colocá-la p
 
 - Fila de construção atualizada: posições 1 a 3 autorizadas (DEC-0728A), FormBuilder puxado com o delta de templates (DEC-0728B), linha nova de prioridade baixa para o cadastro de marcas (DEC-0728C), posição 1 estendida com ingresso QR + item 15 (DEC-0728D/E), frente paralela DEPLOY-PREVIEW criada (DEC-0728F).
 - Itens 8 e 9 saem das ações externas; viram linhas em ✅. Item 10 reformulado (só falta desativar a antiga). Item 12b segue adiado, agora sozinho no bloco.
+
+## Quarta leva — vereditos das lanes (madrugada de 28/07)
+
+- **ESTORNO-ADMIN aterrissou completa** (T4-frontend `e67edd6`, T5 `867f7dc`, T6 `2a39a7e`): fila admin cross-tenant no painel, item 27 (estorno automático do retardatário com extrato e varredura), RN-370 a RN-380 consolidadas. Todos os gates exit 0. Aguarda ESTORNO-REV.
+- **SPECS-0728 aterrissou completa** (T1-T6): filas de código prontas para as posições 1-5, RN-385 a RN-399, dono do cadastro de marcas = E16, leitura de "cupons" como benefício de comunidade registrada para veto barato do dono.
+- **CAIXASIMPLES-REV: APROVADA COM RESSALVAS.** A regra de dinheiro sobreviveu a todos os vetores — corrida no mesmo evento provada com teste de concorrência (o perdedor leva erro tipado e a invariante segura), guards mordem na falsificação (9 e 4 vermelhos ao neutralizá-los), bordas refutadas. Três fixes de contrato/teste: `db76363` (api-client volta a espelhar a callable), `aa75a03` (guarda de entrada do core volta a ter rede de teste), `2595465` (8 casos de ataque). Dois achados escalados viraram os itens 49 e 50 do painel (Caixa × janela D+N; erro de termo engolido). Gates: 158 testes de functions + 701 do painel verdes, tsc/eslint 0.
 - Item 15 sai do menu e do detalhe; vira linha em ✅ (DEC-0728D).
 - Item 34 reformulado: de "conferir a página pública" para "revisar a jornada completa" após a fila aterrissar (DEC-0728E).
 - Nenhum item aberto novo que dependa do Vitor além da ação externa do Blaze (DEC-0728F).
