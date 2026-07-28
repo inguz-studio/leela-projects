@@ -49,8 +49,8 @@ O valor entregue é fechar o ciclo "atleta descobre → inscreve → paga → or
 - **RN-201** (herdada de E03) — Publicar gera URL pública (`{DOMINIO_LEELA}/{slug}`) + QR.
 - **RN-216** (herdada de E03) — "kit" nunca "tier" em toda a nomenclatura.
 - **RN-338** (S305) — Janela de arrependimento: reembolso integral automático em até 7 dias corridos da compra, desde que faltem mais de 48h para o evento (CDC Art. 49).
-- **RN-339** (S305) — Corte de 48h: solicitações a menos de 48h do evento são bloqueadas por padrão, salvo override explícito e registrado do organizador.
-- **RN-340** (S305) — Fora da janela de arrependimento e antes do corte: reembolso depende de decisão do organizador (em análise → aprovado/recusado), dentro de um SLA configurável.
+- **RN-339** (S305) — Corte de 48h: solicitações a menos de 48h do evento são bloqueadas por padrão, salvo override explícito e registrado do organizador. **➕ ESTORNO-ADMIN (decisão 44 · RN-376, canônica em E09):** o `platform_admin` pode FURAR o corte, sempre com motivo obrigatório gravado no doc do reembolso (`overrideCorte`/`motivoOverride`/`overridePor`) e trilha `plataforma`; organizador que mandar a flag leva permission-denied. A execução vive na porta única `requestRefund` (RN-375).
+- **RN-340** (S305) — Fora da janela de arrependimento e antes do corte: reembolso depende de decisão do organizador (em análise → aprovado/recusado), dentro de um SLA configurável. **➕ ESTORNO-ADMIN (decisões 42/43):** dentro da política a rota é AUTOMÁTICA (sem humano) e a taxa repassada VOLTA; em análise a taxa fica RETIDA (RN-373/374, canônicas em E09); a fila cross-tenant do admin decide o que ficou em análise.
 - **RN-343** (S305) — Troca de titularidade habilitada por flag do evento; janela default 72h; taxa de transferência configurável (default 0).
 - **RN-344** (S305) — Troca de ingresso (mesmo titular): diferença cobrada no upgrade pelo lote vigente (RN-200/301); sem reembolso no downgrade salvo política; janela até 48h.
 - **RN-146** (S306) — Dados de saúde plenos (atestado/PAR-Q) são opcionais, ativados por flag do evento; nunca coletados por padrão (minimização LGPD).
