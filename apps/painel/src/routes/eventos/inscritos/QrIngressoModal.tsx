@@ -21,7 +21,6 @@
 // =============================================================================
 
 import * as React from 'react';
-import QRCode from 'qrcode';
 import { Modal } from '@leela/design-system';
 import type { Inscrito } from '@leela/core';
 
@@ -48,7 +47,17 @@ export function QrIngressoModal({
     let vivo = true;
     setDataUri(null);
     setFalhou(false);
-    QRCode.toDataURL(token, { errorCorrectionLevel: 'M', margin: 2, width: 320 })
+    // O encoder entra por import DINÂMICO: ele só pesa quando alguém pede um
+    // QR. O painel inteiro carrega num chunk só, e `qrcode` é a maior peça
+    // que a lista de inscritos não usa até a ação da linha acontecer.
+    import('qrcode')
+      .then((mod) =>
+        mod.default.toDataURL(token, {
+          errorCorrectionLevel: 'M',
+          margin: 2,
+          width: 320,
+        })
+      )
       .then((uri) => {
         if (vivo) setDataUri(uri);
       })
