@@ -11,11 +11,20 @@
 //
 // As telas-folha são trocadas por marcadores: o que está sob teste é o
 // ROTEAMENTO, não o conteúdo (que tem suíte própria, intocada por esta rodada).
+//
+// O dublê do EventoLayout tem `<Outlet/>` (achado 5 da INGQR-REV): sem ele, o
+// dublê é um beco sem saída e QUALQUER asserção futura sobre rota filha de
+// `:slug` nasceria falso-verde — a rota casaria, a filha não renderizaria e o
+// teste não notaria. As filhas que este arquivo alcança viram marcadores pelo
+// mesmo motivo das folhas de primeiro nível, e a guarda de papel entra como
+// passa-direto: `RequirePapel` lê o Outlet context do layout REAL e sessão de
+// verdade, que é conteúdo de outra suíte, não roteamento.
 // =============================================================================
 
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes, useParams } from 'react-router-dom';
 
 vi.mock('../repasses/RepassesPage', () => ({
   RepassesPage: () => <div data-testid="alvo">subdivisao-repasses</div>,
@@ -28,12 +37,32 @@ vi.mock('../hub/HubRoute', () => ({
 vi.mock('../evento/EventoLayout', () => ({
   EventoLayout: () => {
     const { slug } = useParams();
-    return <div data-testid="alvo">{`evento:${slug ?? ''}`}</div>;
+    // O Outlet é IRMÃO do marcador, não filho: `resolverEm` lê o
+    // `textContent` do marcador, e a filha dentro dele mudaria o texto que as
+    // asserções de precedência comparam. Nenhuma asserção atual muda.
+    return (
+      <>
+        <div data-testid="alvo">{`evento:${slug ?? ''}`}</div>
+        <Outlet />
+      </>
+    );
   },
 }));
 
 vi.mock('../novo/NovoEventoRoute', () => ({
   NovoEventoRoute: () => <div data-testid="alvo">novo-evento</div>,
+}));
+
+vi.mock('../evento/overview/OverviewPage', () => ({
+  OverviewPage: () => <span data-testid="filha">overview</span>,
+}));
+
+vi.mock('../inscritos/InscritosPage', () => ({
+  InscritosPage: () => <span data-testid="filha">inscritos</span>,
+}));
+
+vi.mock('../../_system/RequirePapel', () => ({
+  RequirePapel: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 const { EventosRoutes } = await import('../EventosRoutes');
@@ -88,6 +117,21 @@ describe('EventosRoutes — precedência da subdivisão Repasses (risco #3)', ()
     const aba = screen.getByRole('link', { name: 'Repasses' });
     expect(aba).toHaveAttribute('aria-current', 'page');
     expect(aba).toHaveAttribute('href', '/eventos/repasses');
+  });
+
+  it('a rota filha de :slug RENDERIZA dentro do layout (o dublê não é beco sem saída)', () => {
+    // Achado 5 da INGQR-REV: sem `<Outlet/>` no dublê, a rota filha casava e
+    // não renderizava — asserção nova sobre conteúdo de aba nasceria
+    // falso-verde. Esta é a asserção que torna o Outlet load-bearing: remova
+    // o Outlet e ela cai, em vez de o arquivo seguir verde sem provar nada.
+    const { unmount } = montarEm('/eventos/corrida-da-serra');
+    expect(screen.getByTestId('alvo')).toHaveTextContent('evento:corrida-da-serra');
+    expect(screen.getByTestId('filha')).toHaveTextContent('overview');
+    unmount();
+
+    montarEm('/eventos/corrida-da-serra/inscritos');
+    expect(screen.getByTestId('alvo')).toHaveTextContent('evento:corrida-da-serra');
+    expect(screen.getByTestId('filha')).toHaveTextContent('inscritos');
   });
 
   it('a moldura do hub NÃO envolve a criação nem as abas de um evento', () => {
