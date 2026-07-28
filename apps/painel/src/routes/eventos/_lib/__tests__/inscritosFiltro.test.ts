@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  codigoCasaBusca,
   contadorInscritos,
   contarPendentesAntigos,
   contarPorStatus,
@@ -105,5 +106,64 @@ describe('contarPendentesAntigos', () => {
       criadoEm: ts(new Date('2026-02-26T12:00:00Z')),
     });
     expect(contarPendentesAntigos([naFronteira], agora)).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Código do ingresso na busca (S211-T1 · RN-397)
+// ---------------------------------------------------------------------------
+
+const comCodigo = [
+  mkInscrito({ id: '1', atletaNome: 'Marina Silva', codigoIngresso: 'AB2CD3' }),
+  mkInscrito({ id: '2', atletaNome: 'João Pereira', codigoIngresso: 'XY7ZK9' }),
+  // Ingresso ainda não emitido — sem código.
+  mkInscrito({ id: '3', atletaNome: 'Ana Costa' }),
+];
+
+describe('busca por código do ingresso (RN-397)', () => {
+  it('acha a linha pelo código exato', () => {
+    expect(filtrarInscritos(comCodigo, { busca: 'XY7ZK9' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('acha por prefixo — o operador digita enquanto a pessoa fala', () => {
+    expect(filtrarInscritos(comCodigo, { busca: 'AB2' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('ignora caixa, espaço e hífen do que foi digitado', () => {
+    expect(filtrarInscritos(comCodigo, { busca: ' ab2-cd3 ' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCodigo, { busca: 'xy7 zk9' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('NÃO adivinha caractere ambíguo — acharia a inscrição de outra pessoa', () => {
+    // 'AB0CD3' (zero) não pode casar 'AB2CD3' nem 'ABOCD3'.
+    expect(filtrarInscritos(comCodigo, { busca: 'AB0CD3' })).toEqual([]);
+  });
+
+  it('nome continua funcionando lado a lado com o código, na MESMA caixa', () => {
+    expect(filtrarInscritos(comCodigo, { busca: 'marina' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCodigo, { busca: 'joao' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('inscrito SEM código nunca é achado por busca de código', () => {
+    expect(filtrarInscritos(comCodigo, { busca: 'AB2CD3' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCodigo, { busca: 'ANA' }).map((i) => i.id)).toEqual(['3']);
+  });
+
+  it('busca de código respeita os demais filtros (composição intacta)', () => {
+    const r = filtrarInscritos(comCodigo, { busca: 'AB2CD3', status: 'pendente' });
+    expect(r).toEqual([]);
+  });
+
+  it('contador "mostrando X de Y" continua derivado do mesmo resultado', () => {
+    const r = filtrarInscritos(comCodigo, { busca: 'AB2' });
+    expect(contadorInscritos(r.length, comCodigo.length)).toBe('Mostrando 1 de 3');
+  });
+});
+
+describe('codigoCasaBusca', () => {
+  it('sem código, sem match; busca vazia não casa tudo', () => {
+    expect(codigoCasaBusca(undefined, 'AB2')).toBe(false);
+    expect(codigoCasaBusca('AB2CD3', '')).toBe(false);
+    expect(codigoCasaBusca('AB2CD3', '   ')).toBe(false);
   });
 });

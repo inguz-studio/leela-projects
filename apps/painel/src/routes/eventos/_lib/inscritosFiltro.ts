@@ -5,7 +5,7 @@
 // =============================================================================
 
 import type { Inscrito, KitInscrito, StatusInscrito } from '@leela/core';
-import { STATUS_INSCRITO } from '@leela/core';
+import { STATUS_INSCRITO, normalizarCodigoIngresso } from '@leela/core';
 
 export interface FiltroInscritos {
   /** Texto de busca por nome do atleta (opcional) */
@@ -25,14 +25,44 @@ export function normalizarBusca(texto: string): string {
     .replace(/[̀-ͯ]/g, '');
 }
 
-/** Aplica busca + filtros. Ordem preservada (já vem ordenado por nome). @pure */
+/**
+ * O texto digitado casa o CÓDIGO do ingresso (RN-397)?
+ *
+ * O código é ditado no balcão e digitado na mesma caixa de busca do nome —
+ * então a comparação normaliza caixa, espaço e hífen (`ab2-cd3` acha `AB2CD3`)
+ * e casa por PREFIXO: o operador digita enquanto a pessoa fala. Não é fuzzy e
+ * não conserta caractere ambíguo — `AB0CD3` nunca vira `ABOCD3`, porque
+ * adivinhar acharia a inscrição de outra pessoa. @pure
+ */
+export function codigoCasaBusca(
+  codigo: string | undefined,
+  busca: string,
+): boolean {
+  if (typeof codigo !== 'string' || codigo.length === 0) return false;
+  const alvo = normalizarCodigoIngresso(busca);
+  return alvo.length > 0 && codigo.startsWith(alvo);
+}
+
+/**
+ * Aplica busca + filtros. Ordem preservada (já vem ordenado por nome).
+ *
+ * A busca casa NOME **ou** CÓDIGO do ingresso (RN-397) — uma caixa só, como a
+ * tela já tinha, porque no balcão ninguém escolhe aba antes de procurar. O
+ * contador "mostrando X de Y" segue derivado deste mesmo resultado.
+ * @pure
+ */
 export function filtrarInscritos(
   inscritos: readonly Inscrito[],
   filtro: FiltroInscritos,
 ): Inscrito[] {
   const alvo = filtro.busca ? normalizarBusca(filtro.busca) : '';
   return inscritos.filter((i) => {
-    if (alvo && !normalizarBusca(i.atletaNome).includes(alvo)) return false;
+    if (
+      alvo &&
+      !normalizarBusca(i.atletaNome).includes(alvo) &&
+      !codigoCasaBusca(i.codigoIngresso, filtro.busca ?? '')
+    )
+      return false;
     if (filtro.status && i.status !== filtro.status) return false;
     if (filtro.kit && i.kit !== filtro.kit) return false;
     if (filtro.modalidade && i.modalidade !== filtro.modalidade) return false;

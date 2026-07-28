@@ -55,14 +55,14 @@ describe('InscritosView', () => {
 
   it('busca "Marina" filtra e atualiza o contador', async () => {
     renderView({ inscritos: muitosInscritos(50), loading: false, error: null, modalidades: ['10k'] });
-    await userEvent.type(screen.getByLabelText('Buscar atleta'), 'Marina');
+    await userEvent.type(screen.getByLabelText('Buscar atleta pelo nome ou código do ingresso'), 'Marina');
     expect(screen.getByText('Mostrando 1 de 50')).toBeInTheDocument();
     expect(screen.getByText('Marina Silva')).toBeInTheDocument();
   });
 
   it('filtro sem correspondência mostra EmptyState', async () => {
     renderView({ inscritos: muitosInscritos(20), loading: false, error: null, modalidades: ['10k'] });
-    await userEvent.type(screen.getByLabelText('Buscar atleta'), 'Zzzzz');
+    await userEvent.type(screen.getByLabelText('Buscar atleta pelo nome ou código do ingresso'), 'Zzzzz');
     expect(screen.getByText('Nenhum inscrito encontrado')).toBeInTheDocument();
   });
 
@@ -174,5 +174,95 @@ describe('InscritosView', () => {
     expect(screen.getByText(/exportado\(s\) em CSV/i)).toBeInTheDocument();
 
     clickSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Código do ingresso e QR sob demanda (S211-T1 · RN-397)
+// ---------------------------------------------------------------------------
+
+describe('InscritosView — código do ingresso e QR (RN-397)', () => {
+  const comIngresso = [
+    mkInscrito({
+      id: 'i1',
+      atletaNome: 'Marina Silva',
+      codigoIngresso: 'AB2CD3',
+      qrToken: 'LLQR1.k1.payload.assinatura',
+    }),
+    mkInscrito({
+      id: 'i2',
+      atletaNome: 'João Pereira',
+      codigoIngresso: 'XY7ZK9',
+      qrToken: 'LLQR1.k1.outro.assinatura',
+    }),
+    // Ingresso NÃO emitido: sem código e sem token.
+    mkInscrito({ id: 'i3', atletaNome: 'Ana Costa' }),
+  ];
+
+  it('a coluna Código existe e mostra o código de quem tem ingresso emitido', () => {
+    renderView({ inscritos: comIngresso, loading: false, error: null, modalidades: ['10k'] });
+    expect(screen.getByRole('columnheader', { name: 'Código' })).toBeInTheDocument();
+    expect(screen.getByText('AB2CD3')).toBeInTheDocument();
+    expect(screen.getByText('XY7ZK9')).toBeInTheDocument();
+  });
+
+  it('inscrito SEM ingresso emitido mostra vazio honesto, nunca um traço', () => {
+    renderView({ inscritos: comIngresso, loading: false, error: null, modalidades: ['10k'] });
+    // A linha da Ana não pode oferecer nada que pareça um código.
+    const linha = screen.getByText('Ana Costa').closest('tr') as HTMLElement;
+    expect(within(linha).getByText('Ingresso ainda não emitido')).toBeInTheDocument();
+    // E ela não ganha a ação de QR (abriria um modal vazio no atendimento).
+    expect(
+      within(linha).queryByRole('button', { name: /Ver QR/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('a TABELA nunca renderiza QR em massa — nenhuma imagem antes da ação', () => {
+    const { container } = renderView({
+      inscritos: comIngresso,
+      loading: false,
+      error: null,
+      modalidades: ['10k'],
+    });
+    const tabela = container.querySelector('table') as HTMLElement;
+    expect(tabela.querySelectorAll('img')).toHaveLength(0);
+  });
+
+  it('a busca acha pelo código, com o contador coerente', async () => {
+    const user = userEvent.setup();
+    renderView({ inscritos: comIngresso, loading: false, error: null, modalidades: ['10k'] });
+    await user.type(
+      screen.getByRole('searchbox', { name: /código do ingresso/i }),
+      'xy7zk9',
+    );
+    expect(screen.getByText('João Pereira')).toBeInTheDocument();
+    expect(screen.queryByText('Marina Silva')).not.toBeInTheDocument();
+    expect(screen.getByText('Mostrando 1 de 3')).toBeInTheDocument();
+  });
+
+  it('a ação da linha abre o QR daquele inscrito, com o código junto', async () => {
+    const user = userEvent.setup();
+    renderView({ inscritos: comIngresso, loading: false, error: null, modalidades: ['10k'] });
+
+    await user.click(screen.getByRole('button', { name: 'Ver QR do ingresso de João Pereira' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Ingresso de João Pereira/)).toBeInTheDocument();
+    expect(within(dialog).getByText('XY7ZK9')).toBeInTheDocument();
+    // A promessa que o balcão precisa ouvir: o código não vale como entrada.
+    expect(within(dialog).getByText(/não vale como entrada/)).toBeInTheDocument();
+    // O QR aparece — desenhado a partir do token, sem ida ao servidor.
+    const img = await within(dialog).findByRole('img', {
+      name: 'QR do ingresso de João Pereira',
+    });
+    expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('abrir o QR NÃO abre o slide-in junto (a linha inteira também é clicável)', async () => {
+    const user = userEvent.setup();
+    renderView({ inscritos: comIngresso, loading: false, error: null, modalidades: ['10k'] });
+    await user.click(screen.getByRole('button', { name: 'Ver QR do ingresso de Marina Silva' }));
+    const dialogs = await screen.findAllByRole('dialog');
+    expect(dialogs).toHaveLength(1);
   });
 });

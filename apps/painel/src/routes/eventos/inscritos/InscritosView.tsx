@@ -58,6 +58,7 @@ import {
   paginar,
 } from '../_lib/inscritosFiltro';
 import { InscritoSlideInConnected } from './InscritoSlideInConnected';
+import { QrIngressoModal } from './QrIngressoModal';
 
 export interface InscritosViewProps {
   inscritos: Inscrito[];
@@ -103,6 +104,8 @@ export function InscritosView({
   const [modalidade, setModalidade] = React.useState<string | null>(null);
   const [pagina, setPagina] = React.useState(1);
   const [selecionado, setSelecionado] = React.useState<Inscrito | null>(null);
+  // RN-397 — o QR aberto por ação na linha; null = nenhum na tela.
+  const [qrAberto, setQrAberto] = React.useState<Inscrito | null>(null);
   const [marcados, setMarcados] = React.useState<ReadonlySet<string>>(new Set());
 
   const contagem = React.useMemo(() => contarPorStatus(inscritos), [inscritos]);
@@ -209,6 +212,22 @@ export function InscritosView({
         </span>
       ),
     },
+    {
+      // RN-397: o código do ingresso é a coluna que faz o balcão achar a
+      // pessoa sem depender do celular dela. Ingresso não emitido mostra
+      // VAZIO HONESTO — nada de traço, que a essa altura da tabela pareceria
+      // um código curto (aceite literal da S211).
+      key: 'codigoIngresso',
+      header: 'Código',
+      render: (r) =>
+        r.codigoIngresso !== undefined ? (
+          <span className="font-mono font-[var(--font-weight-semibold)] tracking-[var(--table-header-spacing)] text-[var(--text-primary)]">
+            {r.codigoIngresso}
+          </span>
+        ) : (
+          <span className="sr-only">Ingresso ainda não emitido</span>
+        ),
+    },
     { key: 'modalidade', header: 'Modalidade', render: (r) => r.modalidade || '—' },
     {
       key: 'kit',
@@ -261,14 +280,33 @@ export function InscritosView({
         emptyDescription="Ajuste a busca ou os filtros para ver resultados."
         onRowClick={setSelecionado}
         renderActions={(r) => (
-          <button
-            type="button"
-            onClick={() => setSelecionado(r)}
-            aria-label={`Ver detalhe de ${r.atletaNome}`}
-            className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-brand)] hover:underline"
-          >
-            Detalhe
-          </button>
+          <span className="flex items-center gap-[var(--spacing-3)]">
+            {/* RN-397: QR SOB DEMANDA. A ação só existe para quem tem
+                ingresso emitido — oferecer "ver QR" sem token abriria um
+                modal vazio no meio do atendimento. `stopPropagation` porque
+                a linha inteira abre o slide-in. */}
+            {r.qrToken !== undefined && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQrAberto(r);
+                }}
+                aria-label={`Ver QR do ingresso de ${r.atletaNome}`}
+                className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-brand)] hover:underline"
+              >
+                Ver QR
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelecionado(r)}
+              aria-label={`Ver detalhe de ${r.atletaNome}`}
+              className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-brand)] hover:underline"
+            >
+              Detalhe
+            </button>
+          </span>
         )}
       />
     );
@@ -308,8 +346,8 @@ export function InscritosView({
       <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-3)]">
         <div className="flex flex-wrap items-end gap-[var(--spacing-3)]">
           <SearchInput
-            aria-label="Buscar atleta"
-            placeholder="Buscar atleta pelo nome"
+            aria-label="Buscar atleta pelo nome ou código do ingresso"
+            placeholder="Buscar por nome ou código"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             className="w-[var(--sidebar-width)] max-w-full"
@@ -456,6 +494,9 @@ export function InscritosView({
         inscrito={selecionado}
         onClose={() => setSelecionado(null)}
       />
+
+      {/* RN-397: um QR por vez, sob demanda — a tabela nunca renderiza QR. */}
+      <QrIngressoModal inscrito={qrAberto} onClose={() => setQrAberto(null)} />
     </div>
   );
 }
