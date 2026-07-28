@@ -20,9 +20,29 @@ fonte: ordem do Vitor no chat (verbatim abaixo)
 
 **DEC-0728C · cadastro de marcas no painel admin geral (prioridade baixa).** Como administrador Leela (nível plataforma, não tenant), cadastrar: cupons de desconto e parceiros presenciais com endereço, descritivo de benefícios, capa, logo e fotos. Épicos candidatos: E10 (marcas) e E16 (plataforma-superadmin); a spec decide o dono e a costura entre os dois. Prioridade baixa declarada pelo dono — entra na fila depois do FormBuilder e não bloqueia nada.
 
+## Segunda leva da mesma rodada (itens 15, 34, QR, deploy)
+
+Verbatim do Vitor:
+
+> *"ponto 15, nao entendi. o que é teto de quantidade e limiar de estoque baixo? Teto de quantidade é quantidade de itens? Se sim, pode ser 999.999 e limiar de baixa, pode ser menos que 20, nao pecisa ser configuração. Sobre a página pública do evento, após voce finalizar tudo, eu reviso, a jornada do checkout, da página de inicio com os eventos, de um organizador, selecionadno um evento e comprando o ingresso dele até o final. Quero poder fazer essa jornada do inicio ao fim. E gostaria que tivéssemos a geração de um QR code para isso. Outro ponto é para colocar o projeto no ar. Nao conseguimos fazer um link provisório para subir no vite e eu ver o sistema no ar? O que precisamos fazer além disso? E o firebase? precisamos de algum plano contratado?"*
+
+E o refinamento dos QR Codes, na sequência:
+
+> *"Sobre os QR Codes. Precisamos gerar os qr codes para pagamento pix, mas atmbém gerar o dos ingressos, com código identificador. Que deverá poder ser visualizado na área do organizador, ou visualizar apenas o código da tabela. Sempre que uma compra for realizada, enviaremos para o comprador responsável os QR Codes e identificadores. No campo "entrega" que temos no sistema, podermos mudar anomenclatura para "credenciamento"."*
+
+**DEC-0728D · item 15 fechado.** Teto de movimentação de estoque e limiar de baixa não viram configuração. O teto (hoje `MAX_QTD_TRANSICAO_APROVISIONAMENTO = 1.000.000` em `functions/src/eventos/agregarEstoque.ts`) ajusta para 999.999 por escolha dele; o limiar (`LIMIAR_BAIXA_SKU_DEFAULT = 10` no core) segue em 10, abaixo dos 20 citados. Ajuste entra como task na próxima lane de functions.
+
+**DEC-0728E · jornada completa com ingresso QR, refinada.** A revisão do Vitor vira um passeio único quando a fila aterrissar: home com eventos → organizador → página do evento → compra → ingresso. Para isso o pacote do caminho do dinheiro ganha o ingresso digital (S1206, RN-218, `qrToken`) com os refinamentos: (a) QR do PIX segue como está (o gateway emite, o checkout mostra); (b) ingresso ganha QR **e código identificador legível**; (c) área do organizador mostra o QR do inscrito ou apenas o código na tabela; (d) toda compra realizada dispara envio ao comprador responsável com os QR Codes e identificadores (e-mail transacional, Brevo — item 13 resolvido viabiliza); (e) spec delta na lane SPECS-0728 (T6 nova), donos E03/E12.
+
+**DEC-0728F · frente DEPLOY-PREVIEW.** Link provisório no ar via canal de preview do Firebase Hosting, sem domínio. Pré-requisito externo: ativar o plano Blaze (as Cloud Functions e as chamadas a Asaas/Brevo exigem; pré-pago por uso com cota gratuita, custo de teste perto de zero). Itens 10 (rotação da chave Asaas) e 11 (segredos no Secret Manager) executam na hora do deploy. Ele ativa o Blaze; o maestro despacha a lane e entrega o link.
+
+**DEC-0728G · nomenclatura: "entrega" vira "credenciamento".** O campo/área "entrega" do sistema muda de nome para "credenciamento" em todas as superfícies. A mecânica não muda (RN-205, RN-221 e RN-222 intactas); é virada de vocabulário. Entra na spec delta da SPECS-0728 e nas lanes de código seguintes.
+
 ## Efeitos no painel
 
-- Fila de construção atualizada: posições 1 a 3 autorizadas (DEC-0728A), FormBuilder puxado com o delta de templates (DEC-0728B), linha nova de prioridade baixa para o cadastro de marcas (DEC-0728C).
-- Nenhum item aberto novo que dependa do Vitor: os dois escopos entram como spec e fila, não como decisão pendente.
+- Fila de construção atualizada: posições 1 a 3 autorizadas (DEC-0728A), FormBuilder puxado com o delta de templates (DEC-0728B), linha nova de prioridade baixa para o cadastro de marcas (DEC-0728C), posição 1 estendida com ingresso QR + item 15 (DEC-0728D/E), frente paralela DEPLOY-PREVIEW criada (DEC-0728F).
+- Item 15 sai do menu e do detalhe; vira linha em ✅ (DEC-0728D).
+- Item 34 reformulado: de "conferir a página pública" para "revisar a jornada completa" após a fila aterrissar (DEC-0728E).
+- Nenhum item aberto novo que dependa do Vitor além da ação externa do Blaze (DEC-0728F).
 
 Fonte: chat do maestro, 2026-07-28.
