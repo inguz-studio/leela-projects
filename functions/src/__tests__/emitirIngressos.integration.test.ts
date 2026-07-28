@@ -360,6 +360,40 @@ describe.skipIf(!hasEmulator)('emitirIngressosDoPedido — S1206-T5 (RN-218/396)
     expect((await lerInscrito('insc-1'))['qrToken']).toBeUndefined();
   });
 
+  it('inscrito de OUTRO pedido na lista não sai com ingresso (defesa em profundidade)', async () => {
+    // Achado 4 da INGQR-REV: a emissão varria `inscritoRefs` sem conferir o
+    // `pedidoRef` de volta. Hoje inexplorável pela borda (`pedidos` é
+    // `write: false` para cliente e a lista só é escrita pela Function do
+    // checkout), mas uma lista corrompida faria o inscrito alheio sair com
+    // ingresso emitido E com o QR dentro do e-mail de um terceiro.
+    await semear(['insc-1', 'insc-2'], {
+      'insc-2': { pedidoRef: 'ped-de-outra-pessoa' },
+    });
+
+    const r = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+
+    expect(r.emitidos).toBe(1);
+    expect(r.rejeitados).toBe(1);
+    // Recusa NÃO é falha: falha é pendência que a varredura re-tenta, e
+    // re-tentar não conserta lista corrompida (item 54 · RN-382).
+    expect(r.falhas).toBe(0);
+
+    // Nem ingresso, nem lugar no e-mail: `ingressos` é o insumo do template.
+    expect(r.ingressos.map((i) => i.inscritoId)).toEqual(['insc-1']);
+    const alheio = await lerInscrito('insc-2');
+    expect(alheio['qrToken']).toBeUndefined();
+    expect(alheio['codigoIngresso']).toBeUndefined();
+    expect(alheio['ingressoEmitidoEm']).toBeUndefined();
+
+    // E nenhuma reserva de código foi queimada em nome dele.
+    const reservas = await adminDb
+      .collection('eventos')
+      .doc(EVENTO_ID)
+      .collection(INGRESSO_CODIGOS_SUBCOL)
+      .get();
+    expect(reservas.size).toBe(1);
+  });
+
   it('SEM keyring: nada é emitido e a compra segue intocada (fail-closed)', async () => {
     await semear(['insc-1']);
     const r = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, null);

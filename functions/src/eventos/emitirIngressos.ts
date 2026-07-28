@@ -101,6 +101,8 @@ export interface ResultadoEmissaoIngressos {
   jaEmitidos: number;
   /** Inscritos elegíveis que ficaram SEM ingresso (falha de reserva). */
   falhas: number;
+  /** Inscritos RECUSADOS por não pertencerem a este pedido (defesa em profundidade). */
+  rejeitados: number;
   /** Todos os ingressos vivos do pedido, na ordem de `inscritoRefs`. */
   ingressos: IngressoEmitido[];
   motivo?: string;
@@ -112,12 +114,19 @@ export interface ResultadoEmissaoIngressos {
 
 interface EmissaoInscritoResult {
   ingresso: IngressoEmitido | null;
-  motivo: 'emitido' | 'ja_emitido' | 'nao_confirmado' | 'inexistente' | 'sem_codigo_livre';
+  motivo:
+    | 'emitido'
+    | 'ja_emitido'
+    | 'nao_confirmado'
+    | 'inexistente'
+    | 'pedido_divergente'
+    | 'sem_codigo_livre';
 }
 
 async function emitirIngressoDoInscrito(
   db: Db,
   eventoId: string,
+  pedidoId: string,
   tenantId: string,
   inscritoId: string,
   keyring: QrKeyring,
@@ -131,6 +140,17 @@ async function emitirIngressoDoInscrito(
     const snap = await tx.get(inscritoRef);
     if (!snap.exists) {
       return { ingresso: null, motivo: 'inexistente' as const };
+    }
+    // DEFESA EM PROFUNDIDADE (achado 4 da INGQR-REV): a relação pedido↔inscrito
+    // é conferida DOS DOIS LADOS. A emissão varre `pedido.inscritoRefs`; aqui o
+    // inscrito tem de apontar de volta para ESTE pedido. Hoje inexplorável —
+    // `pedidos` é `write: false` para cliente e `inscritoRefs` só é escrito pela
+    // Function do checkout —, mas o custo é uma condição e o que ela impede é
+    // grave: um inscrito de outro pedido na lista sairia com ingresso emitido E
+    // com o QR dentro do e-mail de um terceiro. Vem ANTES do status de
+    // propósito: identidade primeiro, estado depois.
+    if (snap.get('pedidoRef') !== pedidoId) {
+      return { ingresso: null, motivo: 'pedido_divergente' as const };
     }
     // RN-218: ingresso é pós-pagamento. Inscrito que não flipou para
     // confirmado (cancelado antes de pagar, estornado) não recebe nada.
@@ -244,6 +264,7 @@ export async function emitirIngressosDoPedido(
     emitidos: 0,
     jaEmitidos: 0,
     falhas: 0,
+    rejeitados: 0,
     ingressos: [],
     motivo,
   });
@@ -276,12 +297,14 @@ export async function emitirIngressosDoPedido(
   let emitidos = 0;
   let jaEmitidos = 0;
   let falhas = 0;
+  let rejeitados = 0;
 
   for (const inscritoId of inscritoRefs) {
     try {
       const r = await emitirIngressoDoInscrito(
         db,
         eventoId,
+        pedidoId,
         tenantId,
         inscritoId,
         keyring,
@@ -294,6 +317,17 @@ export async function emitirIngressosDoPedido(
       } else if (r.motivo === 'sem_codigo_livre') {
         falhas++;
         logger.error('ingresso_sem_codigo_livre', { eventoId, inscritoId });
+      } else if (r.motivo === 'pedido_divergente') {
+        // NÃO conta como falha: falha é pendência que a varredura re-tenta, e
+        // re-tentar não conserta uma lista corrompida. Conta como recusa, e
+        // grita — inscrito de outro pedido em `inscritoRefs` é anomalia de
+        // dado, não estado normal do sistema.
+        rejeitados++;
+        logger.error('ingresso_inscrito_de_outro_pedido', {
+          eventoId,
+          pedidoId,
+          inscritoId,
+        });
       }
     } catch (err) {
       // Um inscrito que falha não derruba os irmãos; o reprocesso cura.
@@ -312,6 +346,7 @@ export async function emitirIngressosDoPedido(
     emitidos,
     jaEmitidos,
     falhas,
+    rejeitados,
     ingressos,
   };
 }
@@ -356,6 +391,7 @@ export async function dispararEmissaoIngressosPosConfirmacao(
       emitidos: r.emitidos,
       jaEmitidos: r.jaEmitidos,
       falhas: r.falhas,
+      rejeitados: r.rejeitados,
       ...(r.motivo !== undefined ? { motivo: r.motivo } : {}),
     });
     // S1206-T6 (RN-398): o e-mail ao responsável sai NA MESMA janela, com os
