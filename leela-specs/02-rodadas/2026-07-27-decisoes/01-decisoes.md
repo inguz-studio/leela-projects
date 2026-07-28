@@ -173,9 +173,11 @@ Em 2026-07-27 o painel [[DECISOES-ABERTAS]] absorveu a camada descrita (o que é
 
 Na mesma janela ele avisou *"IP autorizado"* no Brevo (item 13). O re-teste rodou na hora e o 401 morreu: a API aceitou a chamada e devolveu `messageId` às 23:12. O fechamento do item foi declarado — e desfeito 20 minutos depois, pelo relato dele: *"na breevo apareceu o e-mail de convite. mas no meu e-mail real não."* O log de eventos da Brevo (`GET /v3/smtp/statistics/events`) provou o que aconteceu: evento `requests` seguido de `error` com a razão `"Sending has been rejected because the sender you used vitoreldp@gmail.com is not valid. Validate your sender or authenticate your domain"`. A Brevo aceita o pedido e recusa o envio na sequência; o `messageId` nasce antes da decisão. Duas consequências: (a) o item 13 REABRE com um passo só, validar `vitoreldp@gmail.com` em `app.brevo.com/senders` pelo link de confirmação; (b) lição de gate — o e2e que assere só o `messageId` dá verde falso; ganha checagem do evento de entrega na próxima passada de functions. O remetente ficou persistido em `functions/.env` e estará correto assim que a validação acontecer. Produção com destinatários reais segue pedindo domínio próprio autenticado (item 12).
 
+O desfecho veio ainda na mesma noite. Verbatim: *"liberei o e-mail da bevo, pode rodar outro teste?"* — ele validou o remetente em `app.brevo.com/senders` e o re-teste rodou às 23:49. O `messageId` veio de novo, e desta vez o log de eventos da Brevo confirmou o passo que faltava: evento `delivered` às 23:49:13 para a caixa dele. O item 13 FECHA com a prova certa (evento de entrega, não `messageId`). As duas ressalvas seguem de pé: produção com destinatários reais pede domínio próprio autenticado, anotado no item 12; e o e2e ganha a checagem do evento de entrega na próxima passada de functions, para que o verde do teste passe a ser o mesmo verde da caixa de entrada.
+
 ### Efeitos no painel
 
 - Item 29 sai do menu e do detalhe; vira linha em ✅ (DEC-0727E).
-- Item 13 volta ao menu reformulado: a trava de IPs saiu do caminho (linha em ✅), falta só validar o remetente. A ponta de produção (domínio próprio) fica anotada dentro do item 12, que segue aberto.
+- Item 13 sai do menu e do detalhe de vez: trava de IPs resolvida, remetente validado e entrega real provada pelo evento `delivered`; vira linha em ✅ (DEC-0727E). A ponta de produção (domínio próprio) fica anotada dentro do item 12, que segue aberto.
 
 Fonte: `PIXCARRINHO-REV-REPORT.md` §A4-REV.
