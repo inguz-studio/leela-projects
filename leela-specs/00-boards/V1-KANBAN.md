@@ -52,14 +52,14 @@ tags:
         - [ ] S1212-T1 resposta no inscrito na transação da confirmação, carimbando template e versão ⚔
         - [ ] S1212-T2 perguntas no checkout com o gate no fence dos aceites ⚔
 - [ ] **[E12/E03] Ingresso com QR e código legível, e "entrega" vira "credenciamento"** — o ingresso ganha, ao lado do QR assinado, um código curto que dá para ler na tabela e ditar no telefone; o organizador vê o código na lista e abre o QR quando precisa; toda compra manda ao responsável o QR e o código de cada inscrito, com o código em texto para o caso de o cliente de e-mail bloquear imagem. O QR do PIX segue como está, emitido pelo gateway. Junto vem a virada de vocabulário que você pediu, sem tocar na mecânica do balcão 📋 posição 1 estendida [[LEELA-E12-landing]]
-    - [ ] **S1206 · Emissão e e-mail (E12)**
-        - [ ] S1206-T5 código identificador por inscrito, único no evento e idempotente ⚔
-        - [ ] S1206-T6 e-mail de compra com QR e código de cada inscrito ⚔
-        - [ ] S1206-T7 código identificador no PDF sob demanda
-    - [ ] **S211 · Tabela do organizador e credenciamento (E03)**
-        - [ ] S211-T1 coluna do código na lista e QR por ação na linha
-        - [ ] S211-T2 vocabulário de credenciamento em toda superfície lida
-        - [ ] S211-T3 rota `/credenciamento` com o redirecionamento garantido da antiga
+    - [ ] **S1206 · Emissão e e-mail (E12)** — construído em 28/07 pela lane INGRESSO-QR; aguarda a review antagonista (INGQR-REV)
+        - [x] S1206-T5 código identificador por inscrito, único no evento e idempotente ⚔ · `182bc99` — entregou também a emissão do `qrToken` na confirmação (o S1206-T1 nunca tinha sido construído)
+        - [x] S1206-T6 e-mail de compra com QR e código de cada inscrito ⚔ · `a58ee35` — entregou também o disparo ao responsável (o S1206-T3 nunca tinha sido construído)
+        - [ ] S1206-T7 código identificador no PDF sob demanda 🧊 **bloqueado**: não existe geração de PDF no repo (o S1206-T4 é que cria a superfície); nada a acrescentar antes dela
+    - [ ] **S211 · Tabela do organizador e credenciamento (E03)** — construído em 28/07 pela lane INGRESSO-QR; aguarda a review antagonista (INGQR-REV)
+        - [x] S211-T1 coluna do código na lista e QR por ação na linha · `bf2ec05`
+        - [x] S211-T2 vocabulário de credenciamento em toda superfície lida · `ca6baf2`
+        - [x] S211-T3 rota `/credenciamento` com o redirecionamento garantido da antiga · `a089ba2`
 - [ ] **[E16] Catálogo de benefícios da plataforma** — como administrador Leela você cadastra cupons de benefício e parceiros presenciais, com endereço, descritivo, capa, logo e fotos. O cupom aqui **não** é o cupom de venda do organizador e não encosta em preço, taxa nem repasse. Publicar deixa pronto para exibir, mas a vitrine para o atleta é decisão de outra hora, e a tela diz isso 📋 **prioridade baixa declarada por você**; não bloqueia nada [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S1607 · Catálogo de benefícios da plataforma**
         - [ ] S1607-T1 modelo, core e Rules com escrita exclusiva do admin da plataforma ⚔
