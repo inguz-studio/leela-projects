@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-leela"
+    "default": "demo-leela",
+    "prod": "leela-hub"
   }
 }
