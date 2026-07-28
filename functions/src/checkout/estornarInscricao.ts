@@ -1223,8 +1223,11 @@ export interface ResultadoConfirmacaoEstorno {
  * Casamento do ledger, nesta ordem — nunca por adivinhação:
  *   1. `refundId` da entrega × `refundId` carimbado ('solicitado');
  *   2. valor estornado da entrega × `valorCentavos` congelado, quando o
- *      casamento é ÚNICO entre os carimbos vivos;
- *   3. carimbo vivo ÚNICO no pagamento (não há o que confundir).
+ *      casamento é ÚNICO entre os carimbos CANDIDATOS;
+ *   3. carimbo candidato ÚNICO no pagamento (não há o que confundir).
+ * CANDIDATO (ESTORNO-REV V5): entrega COM refundId só desempata contra
+ * carimbos que ainda não têm refundId próprio — quem já carrega outro id é de
+ * outro refund, e fechá-lo pagaria uma vez e baixaria duas no livro.
  * Mais de um candidato sem desempate ⇒ NENHUM efeito + alerta (`ambiguo`):
  * aplicar o estorno errado num pedido de grupo é dinheiro errado no livro.
  *
@@ -1257,17 +1260,35 @@ export async function confirmarEstornoPorWebhook(
   let alvo = confirmacao.refundId
     ? vivos.find((d) => d.get('refundId') === confirmacao.refundId)
     : undefined;
+  // FIX review antagonista ESTORNO-REV (V5): quando a entrega DIZ de qual
+  // refund ela é, um carimbo que já carrega OUTRO refundId está PROVADAMENTE
+  // fora — e não pode ser escolhido pelos desempates de valor/unicidade. Sem
+  // este filtro, a re-entrega do `PAYMENT_REFUNDED` de um estorno já aprovado
+  // (o Asaas manda `refunds[]` e o adapter extrai o DONE mais recente) fechava
+  // o carimbo vivo de OUTRO inscrito do mesmo pedido: o gateway devolveu uma
+  // vez, o livro registrava duas (inscrito flipado + receita revertida em
+  // dobro). Carimbo SEM refundId ('enviando'/'gateway_sem_resposta' — o POST
+  // saiu e a resposta se perdeu) continua candidato: é exatamente o caso que a
+  // confirmação do webhook existe para fechar.
+  const candidatos =
+    alvo !== undefined || confirmacao.refundId === undefined
+      ? vivos
+      : vivos.filter((d) => {
+          const carimbado = d.get('refundId');
+          return typeof carimbado !== 'string' || carimbado.length === 0;
+        });
   if (alvo === undefined && typeof confirmacao.amountCentavos === 'number') {
-    const porValor = vivos.filter(
+    const porValor = candidatos.filter(
       (d) => d.get('valorCentavos') === confirmacao.amountCentavos
     );
     if (porValor.length === 1) alvo = porValor[0];
   }
-  if (alvo === undefined && vivos.length === 1) alvo = vivos[0];
+  if (alvo === undefined && candidatos.length === 1) alvo = candidatos[0];
   if (alvo === undefined) {
     logger.error('estorno_webhook_ambiguo', {
       pagamentoId,
       carimbosVivos: vivos.length,
+      candidatos: candidatos.length,
       refundIdEntrega: confirmacao.refundId ?? null,
     });
     return { aplicado: false, motivo: 'ambiguo' };
