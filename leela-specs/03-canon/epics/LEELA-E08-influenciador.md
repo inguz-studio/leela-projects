@@ -418,8 +418,11 @@ impede construir nem provar em preview.
 **O log de comunicação serve os dois avisos sem canal novo.**
 `packages/core/src/comms/logComunicacao.ts` é o agregado único, com docId determinístico
 no formato destinatário mais chave mais canal: a existência do doc é o "já enviei". Um
-aviso de repasse com chave `repasse_{repasseId}` nasce idempotente por construção, sem
-tabela de controle nova.
+aviso de repasse com chave própria nasce idempotente por construção, sem tabela de
+controle nova. **Atenção ao formato da chave (corrigido pela E08-REV):**
+`CHAVE_LOG_COMUNICACAO_RE` PROÍBE `_` — ele é o separador do docId — e limita a chave a
+64 caracteres, enquanto `REPASSE_ID_RE` aceita `_` e até 64. Chave com `_` é impossível
+de gravar; ver RN-386 para o formato que vale.
 
 ### Regras de negócio novas (SPECS-0728)
 
@@ -439,8 +442,23 @@ tabela de controle nova.
   depois **cada múltiplo de R$ 100 de comissão acumulada**, com o número em constante
   única no core, no padrão do `PIX_EXPIRACAO_SEGUNDOS` (RN-157), para o Vitor ajustar num
   lugar só. O aviso **reusa o log de comunicação e o disparo existentes**, sem canal
-  novo: chaves determinísticas `repasse_{repasseId}` e `marco_{faixa}`, o que faz a não
-  duplicação nascer do modelo em vez de um controle paralelo. O conteúdo respeita a
+  novo: chaves determinísticas, o que faz a não duplicação nascer do modelo em vez de um
+  controle paralelo. **Formato das chaves (corrigido pela E08-REV — a redação original
+  pedia `repasse_{repasseId}` e `marco_{faixa}`, impossíveis de gravar porque
+  `CHAVE_LOG_COMUNICACAO_RE` proíbe `_`, o separador do docId `{ref}_{chave}_{canal}`, e
+  limita a 64 caracteres):**
+  - **marco** — `marco-{faixa}` (`marco-100`, `marco-300`) e `marco-primeira` para a
+    primeira comissão do afiliado no evento (`chaveAvisoMarco`, no core).
+  - **repasse** — `repasse-{digest}`, com `digest` = 32 primeiros hex do sha256 do
+    `repasseId` (`chaveAvisoRepasse`, em `functions/src/affiliation/avisoAfiliado.ts`).
+    O `repasseId` NÃO entra cru: ele aceita `_` e até 64 caracteres, e sanear `_`→`-`
+    colapsaria `a_b` e `a-b` na MESMA chave, matando o aviso do segundo repasse — num
+    campo de dinheiro, inaceitável. O digest é determinístico, sempre válido, sempre de
+    40 caracteres e **recomputável** por quem tem o repasseId (o suporte deriva a chave,
+    não adivinha). **Custo aceito:** o docId do log deixa de ser legível de bate-pronto;
+    nenhuma consulta do produto filtra ou exibe essa chave, então o custo é só de
+    depuração. **NÃO reintroduzir a chave com `_`.**
+  O conteúdo respeita a
   RN-318, ou seja, só o número do próprio afiliado, nunca dado de terceiro nem do evento
   além do nome. Marco **atravessado para baixo** por estorno **não** avisa e **não**
   rearma a faixa já avisada: aviso de comissão é boa notícia, não cobrança.
@@ -567,7 +585,7 @@ minha comissão cruza um marco, **para** acompanhar sem precisar abrir o painel.
 
 - **Dado** um afiliado com e-mail conhecido, **quando** o organizador registra um repasse
   para ele, **então** ele recebe um aviso com o valor repassado, o evento e o saldo que
-  restou, e o log de comunicação ganha o registro com chave `repasse_{repasseId}`.
+  restou, e o log de comunicação ganha o registro com chave `repasse-{digest}` (RN-386).
 - **Dado** o mesmo repasse reprocessado com o mesmo `repasseId`, **quando** o disparo é
   avaliado de novo, **então** nenhum segundo aviso sai, porque o docId determinístico do
   log já existe.
@@ -607,9 +625,10 @@ controle de envio paralelos.
 **Passos de implementação**
 1. Constante única do passo de marco no core, com a função pura que decide se houve
    cruzamento **para cima** entre dois valores.
-2. No repasse, depois da transação, enfileirar o aviso com chave `repasse_{repasseId}`.
+2. No repasse, depois da transação, enfileirar o aviso com chave `repasse-{digest}`
+   (`chaveAvisoRepasse` — ver RN-386; a chave com `_` não é gravável).
 3. Na confirmação de comissão, comparar acumulada anterior e posterior pela função pura;
-   se cruzou, enfileirar com chave `marco_{faixa}`.
+   se cruzou, enfileirar com chave `marco-{faixa}` (ou `marco-primeira`).
 4. Falha de envio degrada para registro de falha no log, sem tocar no resultado do
    callable nem do webhook.
 
