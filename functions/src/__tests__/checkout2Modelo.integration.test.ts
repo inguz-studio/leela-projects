@@ -45,7 +45,18 @@ import {
 } from '../checkout/contaSemFriccao';
 import { confirmarPagamentoSandboxCore } from '../checkout/confirmarPagamentoSandbox';
 import { expirarPixPendenteCore } from '../checkout/expirarPixPendente';
-import { processarWebhookPagamento } from '../checkout/webhookPagamento';
+import {
+  processarWebhookPagamento,
+  WEBHOOK_EVENTOS_SUBCOL,
+} from '../checkout/webhookPagamento';
+// T5 · contrato do retardatário (item 27 · RN-379/380) — a confirmação que
+// chega depois da EXPIRAÇÃO devolve o dinheiro; ver o bloco de expiração.
+import {
+  ESTORNOS_ORFAOS_SUBCOL,
+  ESTORNO_ORFAO_DOC_ID,
+  ORFAOS_PENDENTES_COL,
+  refundOrfaoIdempotencyKey,
+} from '../checkout/estornarPagamentoOrfao';
 import {
   buildMockWebhookPayload,
   MockPaymentProvider,
@@ -842,10 +853,23 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
     expect(res2.jaFinal).toBe(true);
     expect(res2.expirado).toBe(false);
 
-    // Webhook de confirmação chegando APÓS o cancelamento: registrado no
-    // ledger SEM efeito (estado final não retrocede — guarda vigente).
+    // Webhook de confirmação chegando APÓS o cancelamento por EXPIRAÇÃO.
+    //
+    // CONTRATO ATUALIZADO (E08-REV · triagem): até o item 27 este ramo era
+    // `estado_ja_final` — a entrega ficava no ledger sem efeito e o dinheiro
+    // que o comprador pagou pelo QR vencido FICAVA na plataforma. A RN-379
+    // (lane ESTORNO-ADMIN, `867f7dc`) trocou o contrato: expiração É
+    // cancelamento, e confirmação sobre pedido cancelado vira
+    // `retardatario_pos_cancelamento` com estorno TOTAL automático. O E12
+    // (linha "pagamento retardatário sobre pedido EXPIRADO") já declara este
+    // caminho superado — o que segue é a asserção do contrato VIVO: o pedido
+    // continua cancelado, a receita continua zerada e o dinheiro VOLTA, uma
+    // vez só.
     const chargeId = pagSnap.get('gatewayChargeId') as string;
     const amount = pagSnap.get('gatewayAmountCentavos') as number;
+    const receitaAntes = (await db.collection('eventos').doc(EVENTO_ID).get()).get(
+      'receitaConfirmada'
+    ) as number;
     const tardio = await processarWebhookPagamento(
       db, provider,
       buildMockWebhookPayload('charge.confirmed', {
@@ -853,10 +877,74 @@ describe('CK2-T5 — RN-157: PIX expira em 30 min', () => {
       })
     );
     expect(tardio.ignorado).toBe(true);
-    expect(tardio.motivo).toBe('estado_ja_final');
+    expect(tardio.motivo).toBe('retardatario_pos_cancelamento');
+    expect(tardio.estornoOrfao).toBe(true);
+    // A entrega fica no ledger com o efeito HONESTO (não "ignorado").
+    expect(
+      (await db.collection('pagamentos').doc(r.pagamentoId)
+        .collection(WEBHOOK_EVENTOS_SUBCOL).doc(`tardio-${r.pedidoId}`).get())
+        .get('efeito')
+    ).toBe('retardatario_pos_cancelamento');
+    // Extrato do órfão (RN-380) — nasce na MESMA tx da entrega.
+    const extrato = await db.collection(ORFAOS_PENDENTES_COL).doc(r.pagamentoId).get();
+    expect(extrato.exists).toBe(true);
+    expect(extrato.get('entregas')).toBe(1);
+    // O DINHEIRO VOLTA — uma vez, integral, chave determinística (RN-379).
+    const ledgerOrfao = await db.collection('pagamentos').doc(r.pagamentoId)
+      .collection(ESTORNOS_ORFAOS_SUBCOL).doc(ESTORNO_ORFAO_DOC_ID).get();
+    expect(ledgerOrfao.exists).toBe(true);
+    // O MockPaymentProvider aprova o refund na hora, então aqui o livro já
+    // fecha: ledger 'aprovado' + extrato resolvido. Com o gateway real o
+    // desfecho vem 'pending' e quem fecha é o webhook (RN-372) — esse caminho
+    // é provado em `estornoOrfao.integration.test.ts`.
+    expect(ledgerOrfao.get('status')).toBe('aprovado');
+    expect(extrato.get('resolvido')).toBe(true);
+    expect(ledgerOrfao.get('valorCentavos')).toBe(amount);
+    // O POST saiu com a chave determinística do órfão (RN-379) — o mock guarda
+    // o refund por idempotencyKey, então repetir a chave devolve o MESMO id.
+    const refundIdPrimeiro = ledgerOrfao.get('refundId') as string;
+    expect(
+      (
+        await provider.refund({
+          chargeId,
+          tenantId: TENANT_ID,
+          reason: 'reconferência da review',
+          idempotencyKey: refundOrfaoIdempotencyKey(r.pagamentoId),
+        })
+      ).refundId
+    ).toBe(refundIdPrimeiro);
+    expect(typeof refundIdPrimeiro).toBe('string');
+    // Nada retrocedeu: pedido cancelado, receita intocada.
     expect(
       (await db.collection('pedidos').doc(r.pedidoId).get()).get('status')
     ).toBe('cancelado');
+    expect(
+      (await db.collection('pagamentos').doc(r.pagamentoId).get()).get('status')
+    ).toBe('cancelado');
+    expect(
+      (await db.collection('eventos').doc(EVENTO_ID).get()).get('receitaConfirmada')
+    ).toBe(receitaAntes);
+
+    // SEGUNDA entrega retardatária (redelivery do gateway): o extrato conta
+    // mais uma, o dinheiro NÃO volta duas vezes.
+    const tardio2 = await processarWebhookPagamento(
+      db, provider,
+      buildMockWebhookPayload('charge.confirmed', {
+        chargeId, orderId: r.pedidoId, amount, eventId: `tardio2-${r.pedidoId}`,
+      })
+    );
+    expect(tardio2.motivo).toBe('retardatario_pos_cancelamento');
+    expect(
+      (await db.collection(ORFAOS_PENDENTES_COL).doc(r.pagamentoId).get()).get('entregas')
+    ).toBe(2);
+    const ledgerOrfao2 = await db.collection('pagamentos').doc(r.pagamentoId)
+      .collection(ESTORNOS_ORFAOS_SUBCOL).doc(ESTORNO_ORFAO_DOC_ID).get();
+    expect(ledgerOrfao2.get('refundId')).toBe(refundIdPrimeiro);
+    expect(ledgerOrfao2.get('valorCentavos')).toBe(amount);
+    expect(
+      (await db.collection('pagamentos').doc(r.pagamentoId)
+        .collection(ESTORNOS_ORFAOS_SUBCOL).get()).size
+    ).toBe(1); // docId fixo: no máximo UM estorno órfão por pagamento
 
     // Retry do comprador = NOVA cotação/pedido (idempotencyKey nova) — a
     // máquina existente já cobre (novo pedido nasce limpo).
