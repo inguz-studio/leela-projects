@@ -30,6 +30,7 @@ import {
   parseTamanhos,
   type DadosPessoaisInscrito,
 } from './dadosPessoais';
+import { isCodigoIngressoValido } from '../tickets/codigoIngresso';
 
 // ---------------------------------------------------------------------------
 // Enums de domínio
@@ -189,6 +190,16 @@ export interface Inscrito {
   /** Emissão do ingresso digital (S1206) */
   ingressoEmitidoEm?: Timestamp;
   /**
+   * Código identificador LEGÍVEL do ingresso (RN-396 · S1206-T5) — 6 chars
+   * do alfabeto sem ambíguos, ÚNICO POR EVENTO, gravado na MESMA emissão do
+   * `qrToken` e idempotente por inscrito. É o que a pessoa dita no balcão e
+   * o que a lista do organizador exibe como coluna (RN-397).
+   *
+   * NÃO é credencial: presença só se prova por assinatura do `qrToken`
+   * (RN-218/221/222). Escrita SÓ por Function (emitirIngressos).
+   */
+  codigoIngresso?: string;
+  /**
    * Carimbo do estorno (RN-341/ADR-011 · FABLE-B) — presente SE E SOMENTE SE
    * `status === 'estornado'` (escritos na MESMA transação pela Function
    * `estornarInscricao`). A trilha de auditoria completa (quem/quando/
@@ -245,6 +256,10 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   'checkinEm',
   'qrToken',
   'ingressoEmitidoEm',
+  // RN-396 (S1206-T5): o código do ingresso nasce na emissão do servidor e é
+  // único por evento. Cliente escrevê-lo permitiria plantar o código de
+  // outra pessoa na própria linha e ser chamado no balcão no lugar dela.
+  'codigoIngresso',
   'pedidoRef',
   'ehResponsavel',
   'dadosPessoais',
@@ -428,6 +443,13 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   }
   if (data['ingressoEmitidoEm'] !== undefined) {
     inscrito.ingressoEmitidoEm = data['ingressoEmitidoEm'] as Timestamp;
+  }
+  // RN-396: leitura Postel — doc anterior à emissão simplesmente não tem o
+  // campo, e um valor fora do formato canônico é DESCARTADO em vez de
+  // propagado: melhor a coluna vazia (aceite S211: "vazio honesto") do que a
+  // lista exibir um código que a busca nunca acha.
+  if (isCodigoIngressoValido(data['codigoIngresso'])) {
+    inscrito.codigoIngresso = data['codigoIngresso'];
   }
   if (data['estornadoEm'] !== undefined) {
     inscrito.estornadoEm = data['estornadoEm'] as Timestamp;

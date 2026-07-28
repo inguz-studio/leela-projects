@@ -126,6 +126,8 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       'checkinEm',
       'qrToken',
       'ingressoEmitidoEm',
+      // S1206-T5 (RN-396): código legível do ingresso — Function-only
+      'codigoIngresso',
       'pedidoRef',
       'ehResponsavel',
       'dadosPessoais',

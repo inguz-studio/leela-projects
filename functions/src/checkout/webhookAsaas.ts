@@ -49,6 +49,7 @@ import {
 } from '../payments/asaasProvider';
 import { selectPaymentProvider } from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
+import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
 import {
   processarWebhookPagamento,
   WebhookRejeitadoError,
@@ -223,6 +224,8 @@ export const asaasWebhook = https.onRequest(async (req, res) => {
     }
     // CK2-T3 (RN-155): conta sem fricção pós-confirmação (best-effort).
     await dispararContaSemFriccaoPosConfirmacao(admin.firestore(), r.resultado);
+    // S1206-T5 (RN-218/396): ingresso digital + código identificador.
+    await dispararEmissaoIngressosPosConfirmacao(admin.firestore(), r.resultado);
     logger.info('webhook_asaas_processado', {
       pedidoId: r.resultado.pedidoId,
       chargeId: r.resultado.chargeId,

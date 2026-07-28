@@ -51,6 +51,7 @@ import {
 } from '@leela/core';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
+import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
 import {
   confirmarEstornoPorWebhook,
   type ResultadoConfirmacaoEstorno,
@@ -782,6 +783,9 @@ export const pagamentoWebhook = https.onRequest(async (req, res) => {
     // CK2-T3 (RN-155): conta sem fricção pós-confirmação (best-effort —
     // roda ANTES da resposta; Functions encerra após o res.json).
     await dispararContaSemFriccaoPosConfirmacao(admin.firestore(), resultado);
+    // S1206-T5 (RN-218/396): ingresso digital + código identificador —
+    // best-effort, fora da transação do dinheiro, idempotente por inscrito.
+    await dispararEmissaoIngressosPosConfirmacao(admin.firestore(), resultado);
     logger.info('webhook_pagamento_processado', {
       pedidoId: resultado.pedidoId,
       chargeId: resultado.chargeId,

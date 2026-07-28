@@ -36,6 +36,7 @@ import type { PaymentProvider } from '@leela/core';
 import { buildMockWebhookPayload } from '../payments/mockProvider';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
+import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
 import { processarWebhookPagamento, WebhookRejeitadoError } from './webhookPagamento';
 
 type Db = admin.firestore.Firestore;
@@ -161,6 +162,9 @@ export async function confirmarPagamentoSandboxCore(
   // CK2-T3 (RN-155): conta sem fricção PÓS-confirmação, best-effort — fora
   // da tx de dinheiro; falha aqui NUNCA quebra a confirmação.
   await dispararContaSemFriccaoPosConfirmacao(db, resultado);
+  // S1206-T5 (RN-218/396): mesma janela pós-confirmação — é aqui que a
+  // jornada de compra do preview passa a terminar com ingresso na mão.
+  await dispararEmissaoIngressosPosConfirmacao(db, resultado);
 
   const statusPedido = (await pedidoRef.get()).get('status') as string;
 

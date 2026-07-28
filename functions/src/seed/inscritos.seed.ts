@@ -22,6 +22,31 @@ import { assertEmulatorOnly } from './emulator-guard';
 import { CASTELO_TENANT_ID } from './tenants.seed';
 import { MEIA_FLORIPA_ID } from './eventos.seed';
 import { assinarQrToken, obterQrKeyring } from '../eventos/qrToken';
+import { INGRESSO_CODIGOS_SUBCOL } from '../eventos/emitirIngressos';
+import { gerarCodigoIngresso } from '@leela/core';
+
+/**
+ * RNG determinístico por semente textual (S1206-T5 · RN-396) — o código do
+ * ingresso no seed tem de ser IDÊNTICO a cada rerun, senão o preview do dono
+ * troca o número da linha a cada `seed` e a coluna vira ruído. FNV-1a + xorshift
+ * é o mínimo que dá boa dispersão sem dependência nova.
+ */
+function rngDeterministico(semente: string): () => number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < semente.length; i++) {
+    h ^= semente.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  let estado = h || 0x9e3779b9;
+  return () => {
+    estado ^= estado << 13;
+    estado >>>= 0;
+    estado ^= estado >>> 17;
+    estado ^= estado << 5;
+    estado >>>= 0;
+    return estado / 0x100000000;
+  };
+}
 
 export const TOTAL_INSCRITOS_MEIA_FLORIPA = 453;
 
@@ -153,10 +178,33 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
     );
   }
 
-  // Batches de 400 (limite Firestore: 500 writes por batch)
-  for (let inicio = 0; inicio < inscritos.length; inicio += 400) {
+  // Código identificador do ingresso (S1206-T5 · RN-396). Único POR EVENTO:
+  // o seed é o único escritor deste evento no momento em que roda, então a
+  // unicidade se resolve em memória (Set) — e as reservas em
+  // `ingressoCodigos` são gravadas junto, para que uma emissão real posterior
+  // no mesmo evento nunca sorteie um código que o seed já usou.
+  const reservas = db
+    .collection('eventos')
+    .doc(MEIA_FLORIPA_ID)
+    .collection(INGRESSO_CODIGOS_SUBCOL);
+  const codigosUsados = new Set<string>();
+  const codigoDoInscrito = new Map<string, string>();
+  for (const inscrito of inscritos) {
+    if (keyring === null || inscrito.status === 'pendente') continue;
+    const random = rngDeterministico(`${MEIA_FLORIPA_ID}:${inscrito.id}`);
+    let codigo = gerarCodigoIngresso(random);
+    // Determinístico também na colisão: o mesmo RNG continua de onde parou.
+    while (codigosUsados.has(codigo)) codigo = gerarCodigoIngresso(random);
+    codigosUsados.add(codigo);
+    codigoDoInscrito.set(inscrito.id, codigo);
+  }
+
+  // Batches de 200 (limite Firestore: 500 writes por batch). Eram 400 até o
+  // ingresso ganhar código: agora cada inscrito emitido gasta DOIS writes —
+  // o doc e a reserva do código — e 400 estouraria o limite.
+  for (let inicio = 0; inicio < inscritos.length; inicio += 200) {
     const batch = db.batch();
-    for (const inscrito of inscritos.slice(inicio, inicio + 400)) {
+    for (const inscrito of inscritos.slice(inicio, inicio + 200)) {
       const ts = Timestamp.fromMillis(inscrito.criadoEmMillis);
       const doc: Record<string, unknown> = {
         id: inscrito.id,
@@ -185,6 +233,16 @@ export async function seedInscritos(db: admin.firestore.Firestore): Promise<void
           keyring
         );
         doc['ingressoEmitidoEm'] = ts;
+        const codigo = codigoDoInscrito.get(inscrito.id);
+        if (codigo !== undefined) {
+          doc['codigoIngresso'] = codigo;
+          batch.set(reservas.doc(codigo), {
+            inscritoId: inscrito.id,
+            eventoId: MEIA_FLORIPA_ID,
+            tenantId: inscrito.tenantId,
+            criadoEm: ts,
+          });
+        }
       }
       batch.set(col.doc(inscrito.id), doc);
     }

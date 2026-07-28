@@ -744,6 +744,7 @@ service cloud.firestore {
         function semCamposDeFunctionInscrito() {
           return !request.resource.data.keys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm',
+             'codigoIngresso',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
              'estornadoEm', 'titularHistorico', 'pessoaRef']
           );
@@ -768,6 +769,7 @@ service cloud.firestore {
         function camposDeFunctionIntocados() {
           return !request.resource.data.diff(resource.data).affectedKeys().hasAny(
             ['kitEntregueEm', 'checkinEm', 'qrToken', 'ingressoEmitidoEm', 'chipNumero',
+             'codigoIngresso',
              'pedidoRef', 'ehResponsavel', 'dadosPessoais', 'tamanhos', 'kitId',
              'estornadoEm', 'titularHistorico', 'atletaNome', 'atletaId', 'modalidade',
              'pessoaRef']

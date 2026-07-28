@@ -507,6 +507,35 @@ describe('rules de escrita em inscritos (S203-T1)', () => {
     );
   });
 
+  // RN-396 (S1206-T5): o código do ingresso é ditado no balcão e é o que a
+  // busca da lista casa. Cliente escrevê-lo — no create ou depois — plantaria
+  // o código de outra pessoa na própria linha e faria o operador chamar a
+  // pessoa errada. Papel REAL do organizador (marinaClaims, tenant writer):
+  // quem passa em todo o resto tem de parar exatamente aqui.
+  it('cliente NÃO cria inscrito com codigoIngresso (RN-396)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      setDoc(
+        refInscrito(db, MEIA_FLORIPA_ID, 'insc-codigo'),
+        inscritoValido({ codigoIngresso: 'AB2CD3' })
+      )
+    );
+  });
+
+  it('cliente NÃO escreve codigoIngresso em update, nem limpa (RN-396)', async () => {
+    const db = dbAs(MARINA_UID, marinaClaims);
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        codigoIngresso: 'AB2CD3',
+      })
+    );
+    await assertFails(
+      updateDoc(refInscrito(db, MEIA_FLORIPA_ID, 'insc-castelo-1'), {
+        codigoIngresso: null,
+      })
+    );
+  });
+
   it('cliente NÃO escreve kitEntregueEm (entrega é via Function — RN-205)', async () => {
     const db = dbAs(MARINA_UID, marinaClaims);
     await assertFails(

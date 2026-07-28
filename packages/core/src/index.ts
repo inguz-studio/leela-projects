@@ -363,6 +363,17 @@ export {
   parseInscrito,
 } from './eventos/inscrito';
 
+// Código identificador do ingresso (S1206-T5 · RN-396) — fonte única do
+// alfabeto e do tamanho; a unicidade por evento é do servidor, não daqui.
+export {
+  ALFABETO_CODIGO_INGRESSO,
+  TAMANHO_CODIGO_INGRESSO,
+  CARACTERES_AMBIGUOS_INGRESSO,
+  isCodigoIngressoValido,
+  normalizarCodigoIngresso,
+  gerarCodigoIngresso,
+} from './tickets/codigoIngresso';
+
 // Exigências de saúde + regulamento (E04 · LEELA-S306 · RN-146/147/149)
 export type { ExigenciasSaude } from './eventos/exigenciasSaude';
 export {

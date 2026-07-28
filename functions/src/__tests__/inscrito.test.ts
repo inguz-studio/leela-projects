@@ -145,6 +145,10 @@ describe('derivações puras de Inscrito', () => {
       'checkinEm',
       'qrToken',
       'ingressoEmitidoEm',
+      // S1206-T5 (RN-396): + codigoIngresso — o código legível do ingresso
+      // nasce na emissão do servidor e é único por evento; cliente escrevê-lo
+      // plantaria o código de outra pessoa na própria linha.
+      'codigoIngresso',
       'pedidoRef',
       'ehResponsavel',
       'dadosPessoais',
