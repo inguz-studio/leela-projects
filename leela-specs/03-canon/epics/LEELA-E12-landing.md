@@ -1639,6 +1639,25 @@ da RN-219 ficam como estão.
   código. O **código vai como texto**, sempre, ao lado da imagem e do link do ingresso.
   Cliente de e-mail que bloqueia imagem remota é o caso comum, e ingresso não pode depender
   de imagem carregar na véspera da prova. Idempotência inalterada (RN-219).
+- **RN-382 · Extrato e varredura do ingresso órfão (dona = E12 · item 54).** Pedido **pago**
+  cuja emissão de ingresso não fechou — código sem espaço livre, ring de assinatura ausente,
+  erro no meio da varredura de inscritos — grava um **extrato de pendência no ponto da
+  falha** (`ingressosPendentes/{pedidoId}`, sem Rule de cliente: deny-by-default), e uma
+  **varredura agendada de 15 em 15 minutos** re-tenta a emissão, fecha o e-mail e **alerta**
+  quando a re-tentativa esgota. Detecção nunca des-resolve extrato resolvido. Existe porque
+  a re-entrega do gateway **não** reabre a janela de emissão: ela volta antes de olhar o
+  pedido (duplicada, ou estado já final), então sem varredura a primeira entrega era a única
+  chance e a falha ali era permanente e silenciosa. Mesmo desenho da RN-380 (retardatário do
+  dinheiro, item 27); o que muda é o remédio — em vez de um POST no gateway, a própria
+  emissão, que já é idempotente por inscrito. **O e-mail espera a emissão fechar:** a
+  idempotência da RN-219 é at-most-once por pedido, e queimar a chave sobre uma lista parcial
+  condenaria o inscrito que ficou de fora a nunca receber o QR; ao esgotar as re-tentativas a
+  varredura manda o que existe, para que o comprador nunca fique sem nada.
+- **RN-396 (ampliada)** — a emissão confere a relação pedido↔inscrito **dos dois lados**:
+  varre `pedido.inscritoRefs` e exige que o inscrito aponte de volta para o mesmo pedido.
+  Inscrito de outro pedido na lista não recebe ingresso nem entra no e-mail de terceiro; a
+  recusa é contada e registrada, e **não** conta como pendência (re-tentar não conserta lista
+  corrompida).
 
 **Fora deste delta:** o QR de pagamento PIX segue como está — o gateway emite, o checkout
 mostra. Nada é gerado do nosso lado.
