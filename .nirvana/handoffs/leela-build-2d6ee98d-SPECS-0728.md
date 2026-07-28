@@ -81,3 +81,16 @@ ESTORNO crescer.
 - `git fetch` e rebase só quando `HEAD..origin/main` > 0 (o `pull --rebase` falha com a
   árvore suja da outra lane).
 - Épicos compartilhados: só ACRESCENTAR seção.
+
+## Fecho da lane (2026-07-28)
+
+Buffer validado: a lane ESTORNO-ADMIN consumiu `RN-381` e `RN-384` na aterrissagem dela
+(`2a39a7e`), dentro da folga que esta lane deixou de propósito. **Zero colisão** com
+`RN-385` a `RN-399`. Próxima faixa realmente livre: `RN-382`, `RN-383` e `RN-411` em
+diante.
+
+Todas as seções desta lane sobreviveram às aterrissagens concorrentes nos épicos
+compartilhados (E03, E04, E05, E12), porque foram acréscimos e não edições.
+
+Report: `outputs/leela-build-2d6ee98d/SPECS-0728-REPORT.md` (a pasta `outputs/` é
+ignorada pelo git, como já acontece com os demais reports do trace).
