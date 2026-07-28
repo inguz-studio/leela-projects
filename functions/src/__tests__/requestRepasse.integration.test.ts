@@ -588,3 +588,205 @@ describe('cancelRepasse — decisão #11 + RN-351/353', () => {
     ).rejects.toMatchObject({ code: 'permission-denied' });
   });
 });
+
+// ---------------------------------------------------------------------------
+// REVIEW CAIXASIMPLES-REV — ataques de contexto fresco ao guard da DEC-0727C.
+//
+// O que a lane CAIXA-SIMPLES declarou SEM prova, e o que esta bateria cobra:
+//   V1 — a corrida no MESMO evento COM folga no tenant. A prova da lane
+//        (`ACEITE DA CORRIDA`) roda sem folga: quem barra o 2º pedido lá é a
+//        validação de TENANT (RN-352), não o guard novo. Com um 2º evento
+//        dando folga ao consolidado, só o teto por evento (RN-368) sobra — e é
+//        ele que precisa serializar dentro da transação, ou dois pedidos de
+//        5.000 nascem num evento de 8.500 e o dinheiro sai duas vezes;
+//   V6 — a ORDEM documentada das validações (tenant ANTES do evento) tem de
+//        chegar ao painel com a mensagem CERTA nos dois casos: genérica quando
+//        o consolidado barra, TIPADA com número quando o evento barra;
+//   V4 — Σ dos disponíveis por evento × disponível do tenant: o card da Caixa
+//        é por EVENTO e não conhece a janela D+N, que é do tenant. O resíduo
+//        E-2 deixa de ser hipótese e vira número medido.
+// ---------------------------------------------------------------------------
+
+/** Σ dos repasses VIVOS de um evento — a grandeza que o teto RN-368 limita. */
+async function somaVivosDoEvento(eventoId: string): Promise<number> {
+  const snap = await db.collection(`tenants/${CASTELO_ID}/repasses`).get();
+  return snap.docs
+    .filter((d) => d.get('eventoId') === eventoId)
+    .filter((d) => ['solicitado', 'aprovado', 'pago'].includes(d.get('estado') as string))
+    .reduce((acc, d) => acc + (d.get('valor') as number), 0);
+}
+
+describe('CAIXASIMPLES-REV V1 — corrida no MESMO evento com folga no TENANT', () => {
+  it('dois pedidos simultâneos que somam acima do teto do EVENTO: só um nasce', async () => {
+    await seedCenario();
+    await seedSegundoEvento(); // tenant 17.000 — a validação RN-352 NÃO barra
+    expect((await recomputarSaldoRepasse(db, CASTELO_ID)).disponivel).toBe(17000);
+
+    // 5.000 + 5.000 = 10.000 > 8.500 (teto do evento A) e < 17.000 (tenant).
+    const resultados = await Promise.allSettled([
+      requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner),
+      requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner),
+    ]);
+
+    const ok = resultados.filter((r) => r.status === 'fulfilled');
+    const falhou = resultados.filter((r) => r.status === 'rejected');
+    expect(ok).toHaveLength(1);
+    expect(falhou).toHaveLength(1);
+    expect((falhou[0] as PromiseRejectedResult).reason).toMatchObject({
+      code: 'failed-precondition',
+      details: { motivo: 'repasse_excede_evento', eventoId: EVENTO_ID },
+    });
+
+    // A INVARIANTE de dinheiro: a Σ dos vivos do evento nunca passa do liberado.
+    expect(await somaVivosDoEvento(EVENTO_ID)).toBeLessThanOrEqual(8500);
+    expect(await contarRepasses()).toBe(1);
+  });
+
+  it('três pedidos simultâneos: entram só os que cabem no liberado do evento', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+
+    // 3 × 4.000 = 12.000 contra 8.500 liberados: no máximo DOIS cabem.
+    const resultados = await Promise.allSettled([
+      requestRepasseCore(db, { valor: 4000, eventoId: EVENTO_ID }, owner),
+      requestRepasseCore(db, { valor: 4000, eventoId: EVENTO_ID }, owner),
+      requestRepasseCore(db, { valor: 4000, eventoId: EVENTO_ID }, owner),
+    ]);
+    const ok = resultados.filter((r) => r.status === 'fulfilled');
+    expect(ok.length).toBeLessThanOrEqual(2);
+    expect(await somaVivosDoEvento(EVENTO_ID)).toBeLessThanOrEqual(8500);
+  });
+});
+
+describe('CAIXASIMPLES-REV V6 — a ordem das validações chega ao painel', () => {
+  it('excede o TENANT mas cabe no evento ⇒ erro GENÉRICO, sem details tipado', async () => {
+    await seedCenario();
+    // Repasse LEGADO (sem eventoId) consome o consolidado sem abater evento
+    // nenhum: tenant 8.500 − 8.000 = 500; teto do evento continua 8.500.
+    await db.collection(`tenants/${CASTELO_ID}/repasses`).doc('legado-tenant').set({
+      id: 'legado-tenant', tenantId: CASTELO_ID, valor: 8000, estado: 'solicitado',
+      dadosBancariosSnapshot: dadosBancariosMascarados(), transicoes: [],
+      criadoEm: new Date(), atualizadoEm: new Date(),
+    });
+    expect((await recomputarSaldoRepasse(db, CASTELO_ID)).disponivel).toBe(500);
+
+    const erro = await requestRepasseCore(db, { valor: 1000, eventoId: EVENTO_ID }, owner)
+      .then(() => null)
+      .catch((e: unknown) => e as { code?: string; message?: string; details?: unknown });
+    expect(erro?.code).toBe('failed-precondition');
+    expect(erro?.message).toContain('excede o disponível');
+    // O painel só monta a frase COM número quando o motivo é do evento — aqui
+    // ele tem de cair na genérica, ou diria "este evento tem R$ X" para um
+    // estouro que foi da CONTA.
+    expect(erro?.details).toBeUndefined();
+    expect(await contarRepasses()).toBe(1); // só o legado
+  });
+
+  it('cabe no tenant e excede o EVENTO ⇒ details tipado com o número certo', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+    const erro = await requestRepasseCore(db, { valor: 9000, eventoId: EVENTO_ID }, owner)
+      .then(() => null)
+      .catch((e: unknown) => e as { code?: string; details?: unknown });
+    expect(erro?.details).toMatchObject({
+      motivo: 'repasse_excede_evento',
+      eventoId: EVENTO_ID,
+      disponivelDoEvento: 8500,
+      valorSolicitado: 9000,
+    });
+  });
+});
+
+describe('CAIXASIMPLES-REV V3 — bordas adversariais da convergência', () => {
+  it('termo NEGOCIADO (30%, não o default 15) move os DOIS lados juntos', async () => {
+    await seedCenario();
+    await db
+      .doc(`tenants/${CASTELO_ID}/commercialTerms/current`)
+      .update({ retencaoRepassePct: 30 });
+
+    // Líquido 10.000, retenção 30% ⇒ liberado 7.000 nos dois cálculos.
+    expect((await recomputarSaldoRepasse(db, CASTELO_ID)).disponivel).toBe(7000);
+    await expect(
+      requestRepasseCore(db, { valor: 7000.01, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({ code: 'failed-precondition' });
+    const ok = await requestRepasseCore(db, { valor: 7000, eventoId: EVENTO_ID }, owner);
+    expect(ok.disponivelDoEvento).toBe(0);
+  });
+
+  it('CENTAVOS: o teto do evento é cent-exato, e um centavo acima não passa', async () => {
+    await seedCenario();
+    await seedSegundoEvento(); // folga no tenant — isola o teto do evento
+    // Líquido 10.000,01 · 15% = 1.500,00 (half-up sobre 1.500,0015) ⇒ 8.500,01.
+    await db
+      .doc(`eventos/${EVENTO_ID}/financeiro/current`)
+      .update({ receitaBruta: 12000.01, receitaLiquida: 10000.01 });
+
+    await expect(
+      requestRepasseCore(db, { valor: 8500.02, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({
+      code: 'failed-precondition',
+      details: { disponivelDoEvento: 8500.01 },
+    });
+    const ok = await requestRepasseCore(db, { valor: 8500.01, eventoId: EVENTO_ID }, owner);
+    expect(ok.disponivelDoEvento).toBe(0);
+  });
+
+  it('LEGADO no MEIO dos vivos do MESMO evento: só o associado abate o teto', async () => {
+    await seedCenario();
+    await seedSegundoEvento();
+    // Um vivo associado (2.000) e um LEGADO (3.000, sem eventoId) convivendo.
+    await requestRepasseCore(db, { valor: 2000, eventoId: EVENTO_ID }, owner);
+    await db.collection(`tenants/${CASTELO_ID}/repasses`).doc('legado-meio').set({
+      id: 'legado-meio', tenantId: CASTELO_ID, valor: 3000, estado: 'solicitado',
+      dadosBancariosSnapshot: dadosBancariosMascarados(), transicoes: [],
+      criadoEm: new Date(), atualizadoEm: new Date(),
+    });
+    // Teto do evento = 8.500 − 2.000 = 6.500 (o legado NÃO abate o evento).
+    await expect(
+      requestRepasseCore(db, { valor: 6500.01, eventoId: EVENTO_ID }, owner)
+    ).rejects.toMatchObject({ details: { disponivelDoEvento: 6500 } });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V4 — RESÍDUO E-2 MEDIDO: o card da Caixa é POR EVENTO e não conhece a janela
+// D+N (RN-348), que é grandeza do TENANT. Com fundos recém-confirmados presos
+// na janela, o número que a Caixa exibe como "Disponível para Repasse" fica
+// ACIMA do que o saque aceita — a MESMA classe de defeito que a DEC-0727C
+// fechou (item 37), agora por outra porta e sem depender de repasse legado.
+//
+// Este teste MEDE o resíduo; não o abençoa. Se alguém decidir que a Caixa passa
+// a exibir min(teto do evento, saldo do tenant), ele fica vermelho e força a
+// decisão explícita em vez de deixar a mudança passar calada.
+// ---------------------------------------------------------------------------
+describe('CAIXASIMPLES-REV V4 — Σ por evento × disponível do tenant', () => {
+  it('janela D+N segura fundos do TENANT e o teto do EVENTO não enxerga', async () => {
+    await seedCenario();
+    // Pagamento confirmado HOJE: dentro da janela D+2 úteis (RN-348).
+    await db.collection('pagamentos').doc('pg-recente').set({
+      id: 'pg-recente', tenantId: CASTELO_ID, eventoId: EVENTO_ID,
+      status: 'confirmado', valorFinal: 5000,
+      pagoEm: admin.firestore.Timestamp.fromDate(new Date()),
+      criadoEm: new Date(), atualizadoEm: new Date(),
+    });
+
+    // Tenant: 8.500 − 4.475 (líquido de 5.000 a 10,5%) = 4.025.
+    const saldo = await recomputarSaldoRepasse(db, CASTELO_ID);
+    expect(saldo.dentroJanelaDN).toBe(4475);
+    expect(saldo.disponivel).toBe(4025);
+
+    // O teto do EVENTO segue 8.500 — é o número que a Caixa pinta no card.
+    // Pedir 5.000 passa no evento e é RECUSADO pelo consolidado, com a frase
+    // genérica: a tela prometeu mais do que o saque aceita.
+    const erro = await requestRepasseCore(db, { valor: 5000, eventoId: EVENTO_ID }, owner)
+      .then(() => null)
+      .catch((e: unknown) => e as { code?: string; details?: unknown });
+    expect(erro?.code).toBe('failed-precondition');
+    expect(erro?.details).toBeUndefined(); // barrou no TENANT, não no evento
+    expect(await contarRepasses()).toBe(0);
+
+    // A medida do resíduo: 8.500 exibidos × 4.025 sacáveis = R$ 4.475 de gap.
+    const ok = await requestRepasseCore(db, { valor: 4025, eventoId: EVENTO_ID }, owner);
+    expect(ok.disponivelDoEvento).toBe(4475); // 8.500 − 4.025 "sobra" inalcançável
+  });
+});
