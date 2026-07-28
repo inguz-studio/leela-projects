@@ -25,7 +25,7 @@ import {
   decideRefund,
   encerrarEncomendasItem,
   despublicarPaginaVendas,
-  estornarInscricao,
+  requestRefund,
   getLeelaDb,
   getLeelaFunctions,
   provisionTenant,
@@ -57,8 +57,8 @@ import {
   type CriarPatrocinadorInput,
   type DecideRefundInput,
   type DecideRefundResult,
-  type EstornarInscricaoInput,
-  type EstornarInscricaoResult,
+  type RequestRefundInput,
+  type RequestRefundResult,
   type ProvisionResult,
   type PublicarPaginaVendasResult,
   type RemoverMembroResult,
@@ -571,32 +571,45 @@ export function useCriarPatrocinador(
 }
 
 // =============================================================================
-// Mutation de ESTORNO por inscrito (E04 · FABLE-B · ADR-011/RN-341). Escrita
-// EXCLUSIVA de Cloud Function (`estornarInscricao`) — o VALOR é decisão do
-// servidor (RN-337): o cliente nunca o envia nem o calcula. No onSuccess
-// invalida (a) o join [pag] do inscrito — o status do pagamento reflete; (b) a
-// lista de inscritos do evento — o badge do inscrito flipa p/ Estornado; (c) o
-// financeiro do evento — a receita revertida reflete. Read-your-writes (ADR-010).
-// O erro do callable sobe INTACTO para a UI (§2.12 — mensagem honesta do gate).
+// Mutation de ESTORNO por inscrito (E04/E09 · RN-341/375). Escrita EXCLUSIVA de
+// Cloud Function (`requestRefund` — a máquina COM política, não o primitivo de
+// dinheiro): o VALOR é decisão do servidor (RN-337/373), o cliente nunca o
+// envia nem o calcula. No onSuccess invalida (a) o join [pag] do inscrito — o
+// status do pagamento reflete; (b) a lista de inscritos do evento — o badge
+// flipa p/ Estornado quando a rota foi automática; (c) o financeiro do evento —
+// a receita revertida reflete; (d) a fila de reembolsos — é ela que recebe o
+// que caiu em análise. Read-your-writes (ADR-010). O erro do callable sobe
+// INTACTO para a UI (§2.12 — mensagem honesta do gate).
 // =============================================================================
 
 /**
- * Estorna um inscrito do pedido (callable — saga idempotente do FABLE-B) e
- * invalida as chaves de leitura afetadas. `eventoId` fixa o alvo das
- * invalidações; `inscritoId` vem das variáveis (chave do join [pag]).
+ * Abre o reembolso do inscrito pela máquina COM POLÍTICA (`requestRefund` —
+ * RN-375) e invalida as chaves afetadas.
+ *
+ * MUDANÇA DE PORTA (ESTORNO-T3): a ficha do inscrito chamava
+ * `estornarInscricao`, o primitivo de dinheiro, direto. Passava por FORA da
+ * política: não checava a janela de arrependimento, não checava o corte de
+ * véspera (RN-339), não criava `reembolsos/{inscritoId}`, não aparecia na fila
+ * financeira e não notificava ninguém. Agora entra pela máquina: dentro da
+ * regra o estorno sai na hora (rota automática), fora dela a solicitação vai
+ * para a fila de análise, e na véspera a abertura é recusada com motivo.
+ *
+ * `reembolsos.doEvento` entra nas invalidações porque a fila passa a nascer
+ * cheia por este caminho.
  */
 export function useEstornarInscrito(
   eventoId: string,
-): UseMutationResult<EstornarInscricaoResult, Error, EstornarInscricaoInput> {
+): UseMutationResult<RequestRefundResult, Error, RequestRefundInput> {
   const queryClient = useQueryClient();
-  return useMutation<EstornarInscricaoResult, Error, EstornarInscricaoInput>({
-    mutationFn: (input) => estornarInscricao(input),
+  return useMutation<RequestRefundResult, Error, RequestRefundInput>({
+    mutationFn: (input) => requestRefund(input),
     onSuccess: (_res, input) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.pedidos.ePagamentoDoInscrito(eventoId, input.inscritoId),
       });
       void queryClient.invalidateQueries({ queryKey: queryKeys.inscritos.todos(eventoId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.financeiro.current(eventoId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.reembolsos.doEvento(eventoId) });
     },
   });
 }

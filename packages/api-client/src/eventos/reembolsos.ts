@@ -162,6 +162,55 @@ export async function listTransferencias(
 }
 
 // ---------------------------------------------------------------------------
+// Abertura (callable — a porta ÚNICA do estorno pelo painel · RN-375)
+// ---------------------------------------------------------------------------
+
+export interface RequestRefundInput {
+  pedidoId: string;
+  inscritoId: string;
+  /** Motivo (auditoria — obrigatório, 3–500 caracteres). */
+  motivo: string;
+}
+
+export interface RequestRefundResult {
+  eventoId: string;
+  inscritoId: string;
+  /**
+   * Onde a solicitação parou. `estornado` = dinheiro devolvido;
+   * `em_analise` = fora da janela, aguarda decisão do organizador;
+   * `aprovado_auto`/`aprovado` com `aguardandoConfirmacao` = enviado ao
+   * gateway, aguardando a confirmação dele (RN-372).
+   */
+  estado: EstadoReembolso;
+  /** true = a chamada não produziu efeito novo (replay idempotente). */
+  replay: boolean;
+  refundId?: string;
+  valorEstornado?: number;
+  /** RN-372: o gateway aceitou e ainda não concluiu — não é erro. */
+  aguardandoConfirmacao?: boolean;
+}
+
+/**
+ * Abre o reembolso de UM inscrito pela máquina com POLÍTICA (callable
+ * `requestRefund` — só organizador/owner do tenant do pedido).
+ *
+ * É por aqui que o painel estorna (RN-375): dentro da política a rota é
+ * automática e o estorno sai na hora; fora dela a solicitação entra na fila
+ * de análise; na véspera (RN-339) a abertura é recusada. O VALOR é decisão do
+ * servidor (RN-337/373) — nunca enviado daqui. O erro sobe INTACTO (§2.12).
+ */
+export async function requestRefund(
+  input: RequestRefundInput
+): Promise<RequestRefundResult> {
+  const fn = httpsCallable<RequestRefundInput, RequestRefundResult>(
+    getLeelaFunctions(),
+    'requestRefund'
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
 // Decisão do organizador (callable — aprovar/recusar)
 // ---------------------------------------------------------------------------
 

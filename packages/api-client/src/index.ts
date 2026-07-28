@@ -524,8 +524,20 @@ export type { EstornarInscricaoInput, EstornarInscricaoResult } from './checkout
 // organizador (LEELA-E09 · S904-T5 · RN-341/342/343/344). Escrita EXCLUSIVA de
 // Function; o cliente só LÊ a fila e TRANSPORTA a decisão (valor = servidor).
 // ---------------------------------------------------------------------------
-export { listReembolsos, listTransferencias, decideRefund } from './eventos/reembolsos';
-export type { DecideRefundInput, DecideRefundResult } from './eventos/reembolsos';
+export {
+  listReembolsos,
+  listTransferencias,
+  decideRefund,
+  // RN-375: a ABERTURA é a porta única do estorno pelo painel (a política
+  // decide a rota; o primitivo direto não é chamado da tela).
+  requestRefund,
+} from './eventos/reembolsos';
+export type {
+  DecideRefundInput,
+  DecideRefundResult,
+  RequestRefundInput,
+  RequestRefundResult,
+} from './eventos/reembolsos';
 
 // ---------------------------------------------------------------------------
 // Repasse do organizador — callables E09-slim (LEELA-E09s-L2 · RN-350..357)

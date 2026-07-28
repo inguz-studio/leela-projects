@@ -457,14 +457,15 @@ function AcaoEstorno({
         Estornar inscrição
       </Button>
       <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
-        Devolve {valorLabel} ao pagador. Os demais inscritos do pedido não são afetados.
+        Devolve a partir de {valorLabel} ao pagador. Os demais inscritos do pedido
+        não são afetados.
       </span>
 
       <ConfirmModal
         open={aberto}
         onOpenChange={(o) => !o && setAberto(false)}
         title="Estornar inscrição"
-        description="O valor da linha deste inscrito volta ao pagador. Os demais inscritos do pedido não são afetados (estorno por inscrito, ADR-011)."
+        description="O valor da linha deste inscrito volta ao pagador. Dentro da janela de arrependimento o estorno sai na hora e a taxa de serviço volta junto; fora dela o pedido entra na fila de análise do organizador e a taxa fica retida. Quem decide a rota é o servidor, pela política do evento. Os demais inscritos do pedido não são afetados (estorno por inscrito)."
         target={
           <div className="flex flex-col gap-[var(--spacing-1)]">
             <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
@@ -477,12 +478,13 @@ function AcaoEstorno({
           </div>
         }
         loses={[
-          `Devolução de ${valorLabel} ao pagador`,
+          `Devolução de ${valorLabel} ao pagador (mais a taxa de serviço, dentro da janela de arrependimento)`,
           'A inscrição do atleta (deixa de correr e de receber o kit)',
         ]}
         keeps={[
           'Os demais inscritos do mesmo pedido',
           'O cadastro do atleta na Be Hero',
+          'A vaga no lote — ela NÃO volta sozinha (ajuste a capacidade se quiser revender)',
         ]}
         reasonLabel="Motivo do estorno (obrigatório — registrado na auditoria)"
         confirmLabel={`Estornar ${valorLabel}`}
