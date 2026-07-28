@@ -375,3 +375,310 @@ Backend completo: atribuição por link (RN-313), registro de conversões (RN-31
 ### Decisão que volta para o Vitor
 
 **Como o influenciador chega ao evento: por convite ou por descoberta?** Hoje o modelo é convite (o organizador cadastra via modal, RN-317, e convida a PF por e-mail, RN-316). A story S702 do épico original assume o oposto — uma vitrine de eventos com programa aberto, onde o promotor aceita sozinho e o link nasce na hora. São dois produtos diferentes; o segundo é um marketplace de afiliação. Detalhe em `02-rodadas/2026-07-19-espec-sweep/01-decisoes-abertas.md`.
+
+---
+
+## Prontidão de build · posição 2 da fila (SPECS-0728 · 2026-07-28)
+
+Autorizada em DEC-0728A. Esta seção transforma as duas linhas soltas do plano de
+2026-07-19 (`S704-T2` e `S-E08-NOTIF`) em histórias com aceite e tarefas, para que a
+lane de código não precise decidir nada de produto.
+
+**Rastreabilidade dos nomes antigos:** `S704-T2` corresponde a `S705-T2`; `S-E08-NOTIF`
+corresponde a `S706`. O painel de decisões aponta para os nomes antigos, que seguem
+válidos como apelido.
+
+### Inventário antes de especificar
+
+A auditoria mudou o tamanho da posição 2, e para menos.
+
+**O parcial já está no servidor.** `registrarRepasseComissaoCore`
+(`functions/src/affiliation/registrarRepasse.ts`) recebe `valor` como parâmetro desde a
+COMF2. Ele valida cent-exatidão, recusa zero e negativo, e compara contra o saldo lido
+**dentro da mesma transação** que grava o ledger e incrementa `comissaoRepassada`. A
+idempotência por `repasseId` é estrutural: o id vira o docId, e o replay volta
+`duplicado: true` sem segundo débito. A suíte F5 de `afiliados.integration.test.ts` já
+prova valor acima do saldo negado, valor não cent-exato negado, valor negativo negado,
+replay sem segundo débito e saldo negativo honesto depois de estorno pós-repasse.
+
+O que quita o saldo inteiro é a **tela**: `InfluenciadoresPage.tsx` manda
+`valor: alvoRepasse.saldoComissao` fixo e o texto do modal diz "(saldo atual)". A lacuna
+é de interface e de prova, não de contabilidade.
+
+Consequência de rota: a parte de dinheiro que justificava opus com review antagonista já
+foi escrita e revisada. O que resta no servidor é um teste que ainda não existe, o de
+dois parciais consecutivos contra o mesmo saldo, mais a fronteira de entrada na tela.
+
+**O aviso deixou de estar bloqueado.** O plano de 19/07 pendurava `S-E08-NOTIF` na chave
+do Brevo. O item 13 fechou em 2026-07-27 (DEC-0727E) com prova de entrega real, e o
+próprio registro lista o convite de influenciador PF do E08 entre o que destrava. A
+dependência que resta é o remetente de domínio próprio para produção (item 12), que não
+impede construir nem provar em preview.
+
+**O log de comunicação serve os dois avisos sem canal novo.**
+`packages/core/src/comms/logComunicacao.ts` é o agregado único, com docId determinístico
+no formato destinatário mais chave mais canal: a existência do doc é o "já enviei". Um
+aviso de repasse com chave `repasse_{repasseId}` nasce idempotente por construção, sem
+tabela de controle nova.
+
+### Regras de negócio novas (SPECS-0728)
+
+- **RN-385 · Repasse parcial da comissão.** O organizador registra um repasse de
+  **qualquer valor cent-exato entre zero (exclusive) e o saldo de comissão vigente**, e
+  não só o saldo inteiro. A guarda de saldo roda **na mesma transação** que grava o
+  ledger e incrementa `comissaoRepassada`; a idempotência continua sendo o `repasseId`
+  gerado pelo cliente. Consequências fixadas: **saldo negativo não aceita repasse**,
+  porque dívida honesta pós-estorno não se quita por registro e a comparação
+  `valor > saldo` já reprova qualquer valor positivo; **o resto do saldo permanece a
+  receber** e cada parcial vira uma linha própria no extrato dos dois lados; o formulário
+  **propõe o saldo integral como valor inicial**, para que o caminho de hoje continue
+  sendo um clique.
+- **RN-386 · Aviso ao afiliado em repasse e em marco de comissão.** O afiliado é avisado
+  quando um repasse é registrado para ele e quando a comissão acumulada dele **cruza um
+  marco**. Marco, default proposto: **a primeira comissão do afiliado naquele evento** e
+  depois **cada múltiplo de R$ 100 de comissão acumulada**, com o número em constante
+  única no core, no padrão do `PIX_EXPIRACAO_SEGUNDOS` (RN-157), para o Vitor ajustar num
+  lugar só. O aviso **reusa o log de comunicação e o disparo existentes**, sem canal
+  novo: chaves determinísticas `repasse_{repasseId}` e `marco_{faixa}`, o que faz a não
+  duplicação nascer do modelo em vez de um controle paralelo. O conteúdo respeita a
+  RN-318, ou seja, só o número do próprio afiliado, nunca dado de terceiro nem do evento
+  além do nome. Marco **atravessado para baixo** por estorno **não** avisa e **não**
+  rearma a faixa já avisada: aviso de comissão é boa notícia, não cobrança.
+
+---
+
+### LEELA-S705 · Repasse parcial da comissão registrada · (de-para novo · SPECS-0728)
+
+**Como** organizador, **quero** registrar um repasse de valor menor que o saldo,
+**para** adiantar parte da comissão sem que o extrato passe a mentir sobre o resto.
+
+- **MoSCoW:** Should · **Estimativa:** S · **Superfície:** Painel (Clubes › Influenciadores) + Functions · **RNs:** RN-385, RN-310, RN-318
+- **JTBD servido:** T · "pagar o que combinei agora e continuar enxergando o que ainda devo". Dimensão **Transacional**.
+- **Origem:** fila de construção posição 2 (DEC-0728A); lacuna declarada no lote CRM-COMISSAO-UI.
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** um afiliado com saldo de R$ 1.200,00, **quando** registro um repasse de
+  R$ 500,00, **então** o registro é aceito, o extrato ganha uma linha de R$ 500,00 e o
+  saldo passa a exibir R$ 700,00 para o organizador e para o afiliado.
+- **Dado** o mesmo afiliado com saldo de R$ 700,00, **quando** registro um segundo
+  repasse de R$ 700,00, **então** é aceito e o saldo vai a zero, com duas linhas
+  distintas no extrato.
+- **Dado** um saldo de R$ 700,00, **quando** informo R$ 700,01, **então** o servidor
+  recusa por exceder o saldo e nada é gravado.
+- **Dado** um afiliado com saldo **negativo** por estorno depois de repasse, **quando**
+  tento registrar qualquer valor positivo, **então** o servidor recusa e a tela explica
+  que dívida não se quita por registro.
+- **Dado** um repasse já registrado, **quando** a mesma chave `repasseId` chega de novo
+  por clique duplo ou retentativa de rede, **então** nada é debitado uma segunda vez e a
+  tela mostra o mesmo resultado.
+- **Dado** o modal de repasse aberto, **quando** ele monta, **então** o campo de valor já
+  vem preenchido com o saldo integral e é editável para baixo.
+- **Dado** um valor com mais de duas casas decimais, **quando** tento confirmar,
+  **então** a validação de tela bloqueia antes da chamada, com a mesma regra que o
+  servidor aplica.
+
+**Tasks:** `S705-T1`, `S705-T2`, `S705-T3`.
+
+#### LEELA-S705-T1 · Prova de integração dos dois parciais consecutivos
+- **Tipo:** test · **Depende de:** COMF2 (entregue) · **Bloqueia:** S705-T2 · **Estimativa:** XS · **Rota:** opus
+
+**Objetivo**
+Fechar o único buraco de prova do servidor antes de mexer na tela. Hoje a F5 prova o teto
+e o replay, mas não prova que **dois parciais consecutivos** contra o mesmo saldo somam
+corretamente e que o segundo respeita o saldo **já decrementado** pelo primeiro.
+
+**Arquivos (editar)**
+- `functions/src/__tests__/afiliados.integration.test.ts` — casos novos dentro do bloco F5.
+
+**Critérios de aceite (testáveis)**
+- Saldo 30, repasse 10, repasse 15, então saldo 5, dois docs no ledger e
+  `comissaoRepassada` 25.
+- Saldo 30, repasse 10, repasse 21, então o segundo é recusado e o saldo continua 20.
+- Estorno depois de um parcial recomputa pela config congelada e o saldo pode ficar
+  negativo sem clamp. O comportamento já é o vigente; o teste apenas o trava contra
+  regressão.
+
+**Fora de escopo**
+Qualquer alteração de comportamento no `registrarRepasse.ts`. Se um caso falhar, o achado
+sobe como bug e não como refactor silencioso.
+
+#### LEELA-S705-T2 · Campo de valor no modal de repasse (antigo `S704-T2`)
+- **Tipo:** screen · **Depende de:** S705-T1 · **Estimativa:** S · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Trocar o repasse de saldo integral por um repasse de valor informado, sem perder o
+caminho de um clique.
+
+**Arquivos (editar)**
+- `apps/painel/src/routes/clubes/influenciadores/InfluenciadoresPage.tsx` — campo de valor
+  no `ConfirmModal` do repasse, hoje com `valor: alvoRepasse.saldoComissao` fixo.
+- `apps/painel/src/routes/clubes/influenciadores/__tests__/InfluenciadoresPage.test.tsx`.
+
+**Passos de implementação**
+1. Campo de valor no modal, inicializado com o saldo e editável para baixo. A observação
+   já aceita pelo callable passa a ser oferecida na mesma caixa.
+2. Validação de tela **espelhando** a regra do servidor: cent-exato, maior que zero, não
+   maior que o saldo. A validação de tela é conveniência; o servidor continua sendo o
+   fence.
+3. Saldo negativo desabilita a ação e a tela diz por quê.
+4. O `repasseId` continua sendo gerado uma vez por tentativa e reusado na retentativa,
+   mantendo a idempotência amigável já em vigor.
+
+**Critérios de aceite (testáveis)**
+- Os sete critérios da história, cobertos por RTL na camada de tela e pelos casos de
+  integração do T1 na camada de servidor.
+- Nenhuma asserção existente da suíte de influenciadores muda de valor.
+
+**Definition of Done**
+- [ ] Checklist padrão (`definition-of-done.md`, DoD Tela) e review antagonista em
+      contexto fresco, porque o campo é de dinheiro mesmo com a guarda no servidor.
+
+#### LEELA-S705-T3 · Extrato com uma linha por repasse nos dois lados
+- **Tipo:** screen · **Depende de:** S705-T2 · **Estimativa:** XS · **Rota:** opus
+
+**Objetivo**
+Garantir que o parcial apareça como evento próprio para quem paga e para quem recebe.
+
+**Arquivos (editar)**
+- `apps/painel/src/routes/clubes/influenciadores/MinhasAfiliacoesPage.tsx` — extrato do
+  afiliado, onde `ultimosRepasses` já vem projetado pelo reader.
+- `apps/painel/src/routes/clubes/influenciadores/InfluenciadoresPage.tsx` — visão do
+  organizador.
+
+**Critérios de aceite (testáveis)**
+- Dois parciais no mesmo evento aparecem como duas linhas com valor e data próprios, e
+  não como um total somado.
+- A projeção do afiliado continua fechada na RN-318, com a prova de não vazamento no DOM
+  permanecendo verde.
+
+---
+
+### LEELA-S706 · Aviso ao afiliado no repasse e no marco de comissão · (de-para novo · SPECS-0728 · antigo `S-E08-NOTIF`)
+
+**Como** afiliado, **quero** ser avisado quando registram um repasse para mim e quando
+minha comissão cruza um marco, **para** acompanhar sem precisar abrir o painel.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Functions (notificação) · **RNs:** RN-386, RN-318, RN-137
+- **JTBD servido:** T · "saber que entrou dinheiro sem ter de conferir". Dimensão **Transacional**.
+- **Origem:** fila de construção posição 2 (DEC-0728A). Destravado pelo item 13 (DEC-0727E).
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** um afiliado com e-mail conhecido, **quando** o organizador registra um repasse
+  para ele, **então** ele recebe um aviso com o valor repassado, o evento e o saldo que
+  restou, e o log de comunicação ganha o registro com chave `repasse_{repasseId}`.
+- **Dado** o mesmo repasse reprocessado com o mesmo `repasseId`, **quando** o disparo é
+  avaliado de novo, **então** nenhum segundo aviso sai, porque o docId determinístico do
+  log já existe.
+- **Dado** um afiliado sem comissão, **quando** a primeira conversão comissionada dele
+  confirma, **então** ele recebe o aviso de primeira comissão.
+- **Dado** um afiliado com R$ 90,00 acumulados, **quando** uma conversão o leva a
+  R$ 130,00, **então** ele recebe o aviso da faixa de R$ 100,00, uma vez só.
+- **Dado** um afiliado que já cruzou a faixa de R$ 100,00, **quando** um estorno o devolve
+  a R$ 80,00 e uma venda nova o traz de volta a R$ 110,00, **então** **nenhum** aviso novo
+  sai para a mesma faixa.
+- **Dado** o conteúdo do aviso, **quando** ele é montado, **então** ele carrega só o
+  número do próprio afiliado e o nome do evento, nunca dado de outro afiliado nem a
+  identidade do comprador (RN-318, RN-172).
+- **Dado** que o provedor de e-mail falha, **quando** o disparo tenta, **então** o log
+  registra a falha e o repasse **continua válido**. O aviso nunca é pré-condição do
+  registro de dinheiro.
+
+**Tasks:** `S706-T1`, `S706-T2`.
+
+#### LEELA-S706-T1 · Gatilho e chave de idempotência dos dois avisos
+- **Tipo:** api/function · **Depende de:** COMF2 (entregue), log de comunicação (entregue) · **Bloqueia:** S706-T2 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Disparar os dois avisos a partir dos pontos que já existem, sem criar contabilidade nem
+controle de envio paralelos.
+
+**Arquivos (criar/editar)**
+- `functions/src/affiliation/registrarRepasse.ts` — enfileirar o aviso **depois** da
+  transação confirmar, nunca dentro dela.
+- `functions/src/checkout/webhookPagamento.ts` — ponto onde `comissaoAcumulada` avança;
+  avaliar cruzamento de faixa. **Território compartilhado com a lane ESTORNO-ADMIN:
+  serializar, não paralelizar.**
+- `packages/core/src/affiliation/marcoComissao.ts` (novo) — função pura
+  `faixaCruzada(anterior, atual)` e a constante única do passo de marco (RN-386).
+- `packages/core/src/comms/logComunicacao.ts` — só consumo; chaves novas.
+
+**Passos de implementação**
+1. Constante única do passo de marco no core, com a função pura que decide se houve
+   cruzamento **para cima** entre dois valores.
+2. No repasse, depois da transação, enfileirar o aviso com chave `repasse_{repasseId}`.
+3. Na confirmação de comissão, comparar acumulada anterior e posterior pela função pura;
+   se cruzou, enfileirar com chave `marco_{faixa}`.
+4. Falha de envio degrada para registro de falha no log, sem tocar no resultado do
+   callable nem do webhook.
+
+**Regras de negócio a respeitar**
+- RN-386 (marco e chaves), RN-318 (projeção fechada), RN-137 (EmailProvider),
+  RN-172 (minimização).
+
+**Testes a escrever**
+- unit: `faixaCruzada` com subida simples, subida que pula duas faixas (avisa só a maior
+  alcançada), descida, e subida de volta à mesma faixa sem avisar.
+- integração: repasse dispara um aviso e o replay não dispara segundo; falha de provedor
+  não reverte o repasse.
+
+**Definition of Done**
+- [ ] Checklist padrão (DoD API/Function) e review antagonista em contexto fresco, porque
+      o gatilho encosta no webhook de pagamento.
+
+#### LEELA-S706-T2 · Conteúdo dos dois avisos no catálogo de templates
+- **Tipo:** api/function · **Depende de:** S706-T1 · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Escrever os dois textos no catálogo que já existe, sem canal novo.
+
+**Arquivos (editar)**
+- `functions/src/email/templates.ts` — dois templates novos.
+
+**Critérios de aceite (testáveis)**
+- O corpo do aviso de repasse traz valor, evento e saldo restante; o de marco traz a faixa
+  alcançada e o evento.
+- Nenhum dos dois carrega identidade de comprador nem número de outro afiliado.
+- O log grava assunto e referência de template, nunca o corpo, mantendo a disciplina de
+  PII já vigente no `logComunicacao`.
+
+**Fora de escopo**
+Canal push, preferência de frequência e cancelamento de aviso. Se o afiliado quiser
+desligar, isso é decisão de produto e volta como card.
+
+---
+
+### Fila de código pronta · lane E08 (posição 2)
+
+Ordem de despacho. Nada aqui precisa de decisão do Vitor.
+
+| # | Task | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|
+| 1 | `S705-T1` prova dos dois parciais consecutivos | `functions/src/__tests__` | — | opus | — |
+| 2 | `S705-T2` campo de valor no modal | `apps/painel/src/routes/clubes/influenciadores` | 1 | opus | ⚔ |
+| 3 | `S705-T3` extrato com uma linha por repasse | `apps/painel/src/routes/clubes/influenciadores` | 2 | opus | — |
+| 4 | `S706-T1` gatilho e chave dos avisos | `functions/src/affiliation`, `functions/src/checkout`, `packages/core` | — | opus | ⚔ |
+| 5 | `S706-T2` textos no catálogo de templates | `functions/src/email` | 4 | opus | — |
+
+**Paralelismo.** A trilha 1 a 3 e a trilha 4 a 5 são disjuntas em território e podem
+correr juntas. A única fronteira é `webhookPagamento.ts`, que a lane ESTORNO-ADMIN tem
+aberto agora: **`S706-T1` só entra depois que a ESTORNO aterrissar**, ou o conflito é
+certo.
+
+### Critério de pronto da posição 2
+
+- [ ] dois parciais consecutivos provados por integração, com o segundo respeitando o
+      saldo já decrementado
+- [ ] valor acima do saldo negado, saldo negativo não quitável, replay sem segundo débito
+- [ ] o afiliado continua vendo só o dele depois de qualquer mudança (RN-318)
+- [ ] um repasse gera exatamente um aviso, provado por replay
+- [ ] marco cruzado para baixo e recruzado não gera aviso novo
+- [ ] falha de e-mail não reverte dinheiro registrado
+- [ ] review antagonista em contexto fresco em `S705-T2` e `S706-T1`
+
+### O que continua fora, por decisão
+
+Nada mudou aqui. O split automático segue fechado (item 23 ratificado), a RN-315 segue
+parada, a HIP-R9-01 segue hipótese, e a pergunta "convite ou descoberta" da S702 continua
+com o Vitor. A posição 2 não depende de nenhuma das quatro.
