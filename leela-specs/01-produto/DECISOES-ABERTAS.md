@@ -28,11 +28,14 @@
 
 ### 🧭 Fila de construção
 
-- **Posição 1 · fechar o caminho do dinheiro.** O pacote de estorno, agora com as cinco decisões da rodada de 27/07, mais os cards de carrinho e temporizador. Vem antes de qualquer frente nova.
+> Posições 1 a 3 e o FormBuilder autorizados por você em 2026-07-28 (DEC-0728): rodam em sequência sem nova consulta. Registro: `02-rodadas/2026-07-28-decisoes/01-decisoes.md`.
+
+- **Posição 1 · fechar o caminho do dinheiro — EM VOO.** O pacote de estorno, agora com as cinco decisões da rodada de 27/07, mais os cards de carrinho e temporizador. Lane ESTORNO-ADMIN rodando; reviews CAIXASIMPLES-REV, DEBT e ESTORNO-REV na esteira.
 - **Posição 2 · E08, repasse parcial da comissão e aviso ao afiliado.** *O Téo acumula R$ 1.200, o Castelo adianta R$ 500 por fora e os dois lados ficam com o número errado.*
 - **Posição 3 · E10, consolidação das ativações de marcas.** *A Marina apaga "Café Rota" sem saber que era o patrocinador de um desafio.*
-- **Posição 4 · FORMBUILDER, perguntas personalizadas na compra e na inscrição.** *Hoje o Castelo monta formulário fora do sistema e cruza duas planilhas na véspera.*
-- **Posição 5 · E11, análise em CRM › Visão geral.** *A Marina troca o seletor de período para comparar 30 dias com os 30 anteriores e os números não mudam.*
+- **Posição 4 · FORMBUILDER, puxado por você em DEC-0728.** Formato da rodada de 19/07 (só perguntas no v1) mais o delta novo: formulários viram templates no menu principal, reutilizáveis em eventos; a config de evento e clube referencia o template. Delta de spec na lane SPECS-0728 antes do código. *Hoje o Castelo monta formulário fora do sistema e cruza duas planilhas na véspera.*
+- **Posição 5 · cadastro de marcas no painel admin geral — prioridade baixa (DEC-0728).** Você, como administrador Leela, cadastra cupons de desconto e parceiros presenciais com endereço, descritivo de benefícios, capa, logo e fotos. Épicos E10 e E16; a spec decide o dono. Não bloqueia nada.
+- **Posição 6 · E11, análise em CRM › Visão geral.** *A Marina troca o seletor de período para comparar 30 dias com os 30 anteriores e os números não mudam.*
 - **Depois da fila · app v1 como PWA.** *Ana chega ao ginásio sem sinal e hoje o ingresso dela precisa de rede.*
 
 ## Adiados por você
