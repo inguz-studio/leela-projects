@@ -5,8 +5,13 @@ Executor: sf-cto (software-forge). Brief: `.nirvana/briefs/leela-build-2d6ee98d-
 ## Estado
 
 - [x] **Gate Blaze** — `leela-hub` com `billingEnabled: true` (Cloud Billing API via token do CLI local; nenhum token impresso/persistido). CLI logado: conta do dono. gcloud NÃO instalado na máquina.
-- [ ] Task 1 — `.firebaserc` alias `prod: leela-hub` (default `demo-leela` intocado) — EM ANDAMENTO
-- [ ] Task 2 — provisionamento mínimo (Firestore southamerica-east1, Auth, Hosting, web app)
+- [x] Task 1 — `.firebaserc` alias `prod: leela-hub` (default `demo-leela` intocado) — commit `98cc775`
+- [x] Task 2 — provisionamento mínimo FEITO:
+  - Firestore `(default)` CRIADO em **southamerica-east1** (não existia; API estava desligada — liguei via serviceusage e criei via `firestore:databases:create`). Rules nascem fechadas até o deploy.
+  - Auth INICIALIZADO via `identityPlatform:initializeAuth` (mesmo caminho do Terraform; console mostraria "Get started" — subtype IDENTITY_PLATFORM, sem custo no free tier de e-mail/senha) + provider **e-mail/senha HABILITADO** (o que `EntrarPage` usa). Google/Apple popup existem no api-client mas NÃO foram habilitados (exigem consent/config — PENDENTE-DONO se quiser).
+  - Hosting: site default `leela-hub` já existia (https://leela-hub.web.app).
+  - Web app `painel` REGISTRADO: appId `1:76126035891:web:d858cdf41199c7103575c6`; config web (pública) commitada em `apps/painel/.env.leela-hub` (exceção cirúrgica no .gitignore).
+  - `firebase.prod.json` criado (deploy-only; sem bloco emulators; storage FORA — bucket default não existe; uploads do painel = pendência).
 - [ ] Task 3 — segredos no Secret Manager (item 11)
 - [ ] Task 4 — deploy functions
 - [ ] Task 5 — painel no canal de preview do Hosting

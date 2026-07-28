@@ -1,0 +1,21 @@
+{
+  "_comment": "Config EXCLUSIVA de deploy ao projeto real (alias prod = leela-hub). O firebase.json canônico segue intocado para a suíte/emuladores (default = demo-leela). Sem bloco `emulators` de propósito: esta config nunca sobe emulador. Storage fica FORA até existir bucket default no projeto (uploads do painel = pendência registrada no handoff da lane DEPLOY-PREVIEW).",
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "**/*.log"],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    }
+  ],
+  "hosting": {
+    "site": "leela-hub",
+    "public": "apps/painel/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}
