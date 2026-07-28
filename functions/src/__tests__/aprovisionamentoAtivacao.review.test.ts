@@ -249,12 +249,39 @@ describe('qtd absurda (teto sanitário S210-T4)', () => {
     expect(snap.get('estoqueFisico')).toBe(0); // NÃO carimbou 1e9
   });
 
-  it('o teto exato (1.000.000) ainda é aceito — guarda de sanidade, não regra de negócio', () => {
+  it('o teto exato ainda é aceito — guarda de sanidade, não regra de negócio', () => {
     const erros = validarTransicaoAprovisionamentoInput({
       eventoId: EVENTO_A, sku: SKU_A_M, novoEstado: 'encomendado',
       qtd: MAX_QTD_TRANSICAO_APROVISIONAMENTO,
     });
     expect(erros).toEqual([]);
+  });
+
+  // DEC-0728D · item 15. O dono escolheu o teto: *"pode ser 999.999"*. O número
+  // é decisão dele, então ele fica CRAVADO aqui — a constante sozinha não prova
+  // escolha nenhuma (mudar as duas juntas passaria calado). O teto redondo
+  // anterior (1.000.000) passa a ser rejeitado, que é a virada em uma linha.
+  it('o teto é 999.999 por decisão do dono, e 1.000.000 passou a ser recusado', () => {
+    expect(MAX_QTD_TRANSICAO_APROVISIONAMENTO).toBe(999_999);
+    const noTeto = validarTransicaoAprovisionamentoInput({
+      eventoId: EVENTO_A, sku: SKU_A_M, novoEstado: 'encomendado', qtd: 999_999,
+    });
+    expect(noTeto).toEqual([]);
+    const umAcima = validarTransicaoAprovisionamentoInput({
+      eventoId: EVENTO_A, sku: SKU_A_M, novoEstado: 'encomendado', qtd: 1_000_000,
+    });
+    expect(umAcima.some((e) => e.includes('teto'))).toBe(true);
+  });
+
+  it('a transição com o teto velho (1.000.000) NÃO escreve no SKU', async () => {
+    await expect(
+      transicaoAprovisionamentoCore(db, {
+        eventoId: EVENTO_A, sku: SKU_A_M, novoEstado: 'encomendado', qtd: 1_000_000,
+      }, organizador)
+    ).rejects.toThrow(/teto|qtd/);
+    const snap = await aprovRef(EVENTO_A, SKU_A_M).get();
+    expect(snap.get('estado')).toBe('estimativa');
+    expect(snap.get('estoqueFisico')).toBe(0);
   });
 });
 

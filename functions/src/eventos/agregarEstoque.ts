@@ -276,8 +276,15 @@ export interface TransicaoAprovisionamentoResult {
  * de unidades de UM tamanho já é ordem de grandeza absurda para um evento —
  * acima disso é entrada inválida, rejeitada como `invalid-argument`. NÃO é regra
  * de negócio congelada; é guarda contra input sem sentido físico.
+ *
+ * DEC-0728D (item 15, verbatim do dono: *"Teto de quantidade é quantidade de
+ * itens? Se sim, pode ser 999.999"*): 999.999, o maior número de 6 dígitos. O
+ * dono trocou o teto redondo por um que cabe no campo — a natureza da guarda
+ * não mudou, o número é escolha dele. O limiar de baixa (`LIMIAR_BAIXA_SKU_
+ * DEFAULT`, no core) segue em 10 pela mesma decisão, e nenhum dos dois vira
+ * configuração.
  */
-export const MAX_QTD_TRANSICAO_APROVISIONAMENTO = 1_000_000;
+export const MAX_QTD_TRANSICAO_APROVISIONAMENTO = 999_999;
 
 /**
  * Valida o input bruto de `transicaoAprovisionamento`. Retorna a lista de

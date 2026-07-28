@@ -755,9 +755,15 @@ describe('CAIXASIMPLES-REV V3 — bordas adversariais da convergência', () => {
 // ACIMA do que o saque aceita — a MESMA classe de defeito que a DEC-0727C
 // fechou (item 37), agora por outra porta e sem depender de repasse legado.
 //
-// Este teste MEDE o resíduo; não o abençoa. Se alguém decidir que a Caixa passa
-// a exibir min(teto do evento, saldo do tenant), ele fica vermelho e força a
-// decisão explícita em vez de deixar a mudança passar calada.
+// Este teste MEDE o resíduo; não o abençoa.
+//
+// DECIDIDO em 2026-07-28 (item 49, default do dono em vigor): a Caixa passou a
+// exibir `min(teto do evento, saldo do tenant)` — lane POLIMENTO-0728, commit
+// `ad08243`. O que este arquivo prova segue valendo palavra por palavra, porque
+// é sobre o SERVIDOR: o teto do evento continua 8.500 e o consolidado continua
+// recusando 5.000. O que mudou é só o número que a TELA pinta (agora 4.025), e
+// a prova disso vive no painel (`CaixaCoerencia.test.tsx` · `financeiro.test.ts`).
+// Se alguém reverter a decisão na tela, é lá que fica vermelho.
 // ---------------------------------------------------------------------------
 describe('CAIXASIMPLES-REV V4 — Σ por evento × disponível do tenant', () => {
   it('janela D+N segura fundos do TENANT e o teto do EVENTO não enxerga', async () => {

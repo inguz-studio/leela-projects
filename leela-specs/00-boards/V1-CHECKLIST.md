@@ -401,7 +401,7 @@ Pacote ESTORNO-ADMIN (E09-S904 continuação · decisões 42–46 + item 27 · R
 - [x] LEELA-S904-T8 — Porta única `requestRefund` roteando por política; botão da ficha entra POR ela (RN-375) — **Fable** ⚔ · *functions/finance+painel* · **✅ `20e0075`**
 - [x] LEELA-S904-T9 — Porta cross-tenant da plataforma: ramo admin resolve tenant pelo DOC, trilha "plataforma", furar véspera com motivo NO DOC (RN-376), cancelar sem estornar auditado (RN-377/378), RN-402 liberada p/ admin — **Fable** ⚔ · *functions+rules+core* · **✅ `c209ff1`** (Rules atacadas com uid real; 622 linhas de teste)
 - [x] LEELA-S904-T10 — Fila admin `/plataforma/estornos` no painel: fan-out cross-tenant, coluna "aberto por" denuncia o furo, ação direta (furar véspera · cancelar sem devolver), "aguardando gateway" SEM botão — **Fable** · *painel+api-client* · **✅ `e67edd6`** (retomada 2: inventário aprovou o diff interrompido e pagou o parser que APAGAVA origem/furo na leitura)
-- [x] LEELA-S904-T11 — Item 27: retardatário detectado (`retardatario_pos_cancelamento`), extrato na MESMA tx, estorno TOTAL automático via máquina do T6 com ledger próprio, varredura 15 min conta/alerta/re-dispara (RN-379/380) — **Fable** ⚔ · *functions/checkout* · **✅ `867f7dc`** (órfão 5/5 + pixArbitragem 44 re-provados no contrato novo)
+- [x] LEELA-S904-T11 — Item 27: retardatário detectado (`retardatario_pos_cancelamento`), extrato na MESMA tx, estorno TOTAL automático via máquina do T6 com ledger próprio, varredura 15 min conta/alerta/re-dispara (RN-379/380) — **Fable** ⚔ · *functions/checkout* · **✅ `867f7dc`** (órfão 5/5 + pixArbitragem 44 re-provados no contrato novo) · POLIMENTO-0728 escreveu a regra que faltava: a devolução do órfão é INTEGRAL, taxa inclusa, fora da régua da RN-374 (não houve serviço)
 
 > Gate do lote: adr-conformance **ADR-011** (por inscrito) + **ADR-014** (cifra onde tocar repasse).
 
@@ -617,6 +617,37 @@ Registro dos deltas de dependência/rota desta trilha (já anotados in-line nas 
 - [x] LEELA-CHECKOUT-UX — Revisão UX do checkout (mind Don Norman) ponta a ponta vs wireframes: 18 fricções priorizadas (2 travam a compra, 5 altas), 6 divergências para decisão, spec ratificada dos campos novos (telefone/nascimento/endereço via CEP) + aceites no pagar — **✅ auditoria** (`CHECKOUT-UX-REPORT.md`; virou os lotes CKFIX e CKMOD)
 - [x] LEELA-COMF2 (COMISSIONAMENTO-F2) — Comissão do influenciador fase 2: organizador define % ou valor fixo, acumula cent-exato a cada venda confirmada na MESMA tx do webhook, estorno decrementa, afiliado vê saldo/extrato, repasse manual registrado (split automático = decisão) — **✅** (`a1771ba` webhook COMF2-T2 · `COMF2-REPORT.md`; UI de comissão no painel = lote CRM-COMISSAO-UI, em voo)
 - [x] LEELA-S8FIX (PAINEL-S8-FIX) — Varredura §8 no painel: telas antigas trocam date pickers nativos, buscas, campos de texto, radios, kebabs "⋯" e filtros à mão pelos componentes oficiais do DS; divisória fantasma (3× mais grossa) corrigida; seed com regulamento em 3 eventos do preview → modal da landing aparece — **✅** (`a72a9ca` T1 date pickers · `bd29c7d` T2 primitivos · `375eab9` T4 seed · boards `1e7aade`)
+
+### POLIMENTO 2026-07-28 — as ressalvas das três reviews da madrugada, pagas (backend/painel Opus · POLIMENTO-0728)
+
+> Lane de fecho: CAIXASIMPLES-REV, DEBT-REV e ESTORNO-REV aprovaram com ressalvas, e as ressalvas viraram os itens 49, 50, 52 e 53 do painel do Vitor mais as tasks E-2, E-4 e E-5 da ESTORNO-REV. Todos com **default proposto em vigor** — nada aqui é feature nova, é verdade na tela, isolamento e spec. Vetar segue barato. Registro: `02-rodadas/2026-07-28-decisoes/01-decisoes.md` · handoff `…-POLIMENTO-0728.md`.
+
+**S025 · A fila admin de estorno é honesta sobre o que não mostra** — **JTBD:** o admin da plataforma abre a fila para decidir estorno e precisa saber se está vendo tudo
+
+- [x] LEELA-POLISH-T1a — **Isolamento por ramo no fan-out** — `Promise.all` puro virou `allSettled` nos dois níveis (tenants → eventos): um produtor sem permissão, um evento apagado no meio da leitura ou uma subcoleção indisponível derrubava a fila INTEIRA. Agora o ramo que falha vira contagem e aviso; o que foi lido, aparece (`e963426`)
+- [x] LEELA-POLISH-T1b — **`criadoEm` corrompido não estoura o sort** — `parseReembolso` carimba o campo com cast cego, então doc sem `criadoEm` explodia DENTRO do sort, depois de todas as leituras terem dado certo. `millisDoCriadoEm` (pura, exportada) devolve 0 para o que não sabe dizer as horas: a linha vai para o fim e continua VISÍVEL — sumir com ela seria esconder um pedido de dinheiro (`e963426`)
+- [x] LEELA-POLISH-T1c — **Teto de leitura declarado (item 52)** — os limites viraram constantes com nome (100 produtores / 50 eventos), passadas explicitamente aos leitores, e a fila diz o que não está mostrando, inclusive NOMEANDO o produtor cortado. O aviso aparece TAMBÉM com a lista vazia, que era o caso perigoso. **Paginação honesta NÃO é desta lane** — segue como card da próxima leva (`e963426`)
+
+**S026 · Os números da Caixa param de prometer mais que o saque** — **JTBD:** Organizador lê o "Disponível para Repasse" e pede o saque sem levar recusa
+
+- [x] LEELA-POLISH-T2a — **Card = `min(evento, tenant)` (item 49)** — a Caixa é por evento; a janela D+N é do tenant. Cenário medido pela review: card R$ 8.500 × saque R$ 4.025. O teto entra pelo `saldo/current` que a visão macro e o modal JÁ leem (mesma chave de cache, zero soma nova). Teto ausente NÃO limita — `null` é "não sei", e virar 0 seria pior que o defeito. A nota diz de onde veio o corte (`ad08243`)
+- [x] LEELA-POLISH-T2b — **Erro de leitura vira estado visível (item 50)** — `termos.error` era ignorado e o core caía nos 15%: com termo negociado de 30%, o card volta a prometer acima do saque, calado. Agora declara, com `role="status"` e cor de perigo (a11y nunca só por cor); o erro do saldo do tenant ganhou a frase própria (`ad08243`)
+- [x] LEELA-POLISH-T2c — **`Number.isFinite` no pct do termo** — `NaN` É `number` e passava direto para o core, que lançava RangeError no render. As duas guardas saíram da tela e viraram `contextoDaCaixa`, pura e testada — conta de dinheiro não depende de alguém lembrar da guarda na próxima tela (`ad08243`)
+
+**S027 · A coluna do estorno mostra o que volta ao comprador** — **JTBD:** o admin aprova um estorno vendo o número que o comprador vai receber
+
+- [x] LEELA-POLISH-T2d — **"Valor" virou "Volta ao comprador" (item 53)** — a coluna mostrava face + taxa SEMPRE, mesmo quando a política retém (RN-374). A conta NÃO foi reinventada: é a MESMA composição do servidor — linha do pedido (RN-347) → `dentroDaJanelaArrependimento` (RN-373) → `calcularDevolucaoEstorno` (RN-374). Taxa retida discriminada na linha e como `loses` explícito no ConfirmModal. Só para `em_analise`, por CORREÇÃO: `aprovado_auto` saiu DENTRO da janela e devolveu a taxa integral — recalcular hoje diria "taxa retida" sobre um refund que devolveu tudo (`ad08243`)
+
+**S028 · A recusa do servidor chega ao operador em todas as telas de plataforma** — **JTBD:** enabler de operação; toast vermelho sem motivo faz o operador tentar de novo no lugar errado
+
+- [x] LEELA-POLISH-T3 — **`RepassesAdminRoute` e `PlanosRoute` recebem o fix do `8f82588` (E-4)** — dois defeitos empilhados: leitura de `acoes.error` do render VELHO (primeira falha = descrição vazia; seguintes = erro anterior) e a frase do servidor trocada pelo texto genérico de plataforma. `ultimoErro()` nos dois hooks e `mensagemDaRecusa` SUBIU para `plataforma/_lib/errors.ts` — era código de uma tela só, e a segunda cópia seria a dívida seguinte. `platformErrorMessage` INTACTO, com o teste próprio verde (`f8d6859`)
+
+**S029 · Miudezas decididas por você** — **JTBD:** enabler; número escolhido pelo dono que só vive numa constante não é decisão registrada
+
+- [x] LEELA-POLISH-T4a — **Teto de estoque 1.000.000 → 999.999 (item 15 · DEC-0728D)** — verbatim: *"pode ser 999.999"*. O número ficou CRAVADO em teste ao lado da constante: mudar as duas juntas passaria calado, e este é um número que o dono escolheu. O teto redondo anterior passou a ser recusado, com prova de que não escreve no SKU
+- [x] LEELA-POLISH-T4b — **RN-379/380 ganham a frase da taxa integral (E-5)** — o estorno do retardatário devolve TUDO, taxa inclusa, e fica FORA da régua da RN-374: ali a taxa remunera serviço prestado, e aqui não houve serviço — a inscrição já estava cancelada quando o dinheiro entrou. O código sempre fez assim; a regra não estava escrita em lugar nenhum
+
+**Gates literais da lane** — painel `tsc --noEmit` 0 · `eslint --max-warnings 0` 0 · `vitest run src/routes/eventos src/routes/plataforma src/lib/query` → 103 arquivos, **907/907**. functions `tsc --noEmit` 0 · `eslint` 0 · build 0 · emulador `emulators:exec --project demo-leela --only firestore,auth` → `aprovisionamentoAtivacao.review` + `requestRepasse.integration` = **45/45**, exit 0. **Falsificação de todo teste novo antes de entrar:** T1 → 6/8 vermelhos, T2 → 11 vermelhos, T3 → 7/11 vermelhos.
 
 ### DEBT 2026-07-27/28 — dívida técnica do painel liquidada + review antagonista (frontend Opus · DEBT-SWEEP → DEBT-REV)
 
