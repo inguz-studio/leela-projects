@@ -33,8 +33,12 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { afterAll, beforeAll, describe, it } from 'vitest';
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  query,
+  where,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -446,5 +450,104 @@ describe('lotes — ataques antagonistas de payload direto (review S300-T4)', ()
     await assertFails(
       updateDoc(lote(dbAs(MARINA_UID, marina), '5k-lote-3'), { tenantId: PASSO_ID })
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FAN-OUT da fila admin de estornos (T4 · review ESTORNO-REV, vetor 1)
+//
+// A tela `/plataforma/estornos` não usa collectionGroup: ela COMPÕE três
+// leituras (tenants → eventos do tenant → reembolsos do evento). O guard da
+// tela é de UI (PlatformShell devolve 403); quem tem de barrar de verdade é a
+// Rule, porque a mesma composição pode ser feita fora do painel com o token de
+// um staff. As provas abaixo exercitam as TRÊS leituras como LISTA (query), e
+// não por documento — é assim que a fila lê.
+// ---------------------------------------------------------------------------
+
+describe('fan-out da fila admin de estornos — Rules com papel real', () => {
+  it('tenants: só o admin da plataforma lista a base inteira', async () => {
+    await assertSucceeds(getDocs(collection(dbAs(ADMIN_UID, platformAdmin), 'tenants')));
+    // Membro de um tenant não lista a base: a lista traria o tenant alheio.
+    await assertFails(getDocs(collection(dbAs(MARINA_UID, marina), 'tenants')));
+    await assertFails(getDocs(collection(dbAs(PROMOTER_UID, promoter), 'tenants')));
+    await assertFails(getDocs(collection(dbAs(ATHLETE_UID, athlete), 'tenants')));
+  });
+
+  it('eventos por tenant: o admin lê o alheio; o organizador só o próprio', async () => {
+    // Um evento REAL do outro tenant — sem doc, a query vazia passaria por
+    // vacuidade e a prova não valeria nada.
+    await adminDb.collection('eventos').doc('rev-evento-passo').set({
+      id: 'rev-evento-passo',
+      tenantId: PASSO_ID,
+      nome: 'Corrida do Passo (review)',
+      status: 'publicado',
+      criadoEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    const doPasso = (db: Firestore) =>
+      getDocs(query(collection(db, 'eventos'), where('tenantId', '==', PASSO_ID)));
+
+    await assertSucceeds(doPasso(dbAs(ADMIN_UID, platformAdmin)));
+    await assertSucceeds(doPasso(dbAs(PASSO_OWNER_UID, passo)));
+    // O organizador de OUTRO tenant não entra pela porta do fan-out (RN-400).
+    await assertFails(doPasso(dbAs(MARINA_UID, marina)));
+    await assertFails(doPasso(dbAs(PROMOTER_UID, promoter)));
+  });
+
+  it('reembolsos do evento: admin e gestão listam; promoter/atleta/cross-tenant não', async () => {
+    const fila = (db: Firestore) =>
+      getDocs(collection(db, 'eventos', MEIA_FLORIPA_ID, 'reembolsos'));
+    await assertSucceeds(fila(dbAs(ADMIN_UID, platformAdmin)));
+    await assertSucceeds(fila(dbAs(MARINA_UID, marina)));
+    await assertFails(fila(dbAs(PROMOTER_UID, promoter)));
+    await assertFails(fila(dbAs(ATHLETE_UID, athlete)));
+    await assertFails(fila(dbAs(PASSO_OWNER_UID, passo)));
+  });
+
+  it('ledger de estorno: leitura de gestão (owner/admin), escrita de ninguém', async () => {
+    // O ledger POR INSCRITO tem Rule própria e deliberada (rules:2413): é
+    // trilha de auditoria de dinheiro do tenant. Quem opera o dinheiro lê;
+    // promoter/atleta/cross-tenant não; escrever é só da Function.
+    await adminDb.doc('pagamentos/rev-pag/estornos/rev-insc').set({
+      tenantId: CASTELO_ID,
+      status: 'solicitado',
+      valorCentavos: 18990,
+      refundId: 'rev_refund_1',
+    });
+    const ledger = (db: Firestore) => doc(db, 'pagamentos/rev-pag/estornos/rev-insc');
+    await assertSucceeds(getDoc(ledger(dbAs(MARINA_UID, marina))));
+    await assertSucceeds(getDoc(ledger(dbAs(ADMIN_UID, platformAdmin))));
+    await assertFails(getDoc(ledger(dbAs(PROMOTER_UID, promoter))));
+    await assertFails(getDoc(ledger(dbAs(ATHLETE_UID, athlete))));
+    await assertFails(getDoc(ledger(dbAs(PASSO_OWNER_UID, passo))));
+    // Forjar o carimbo é fabricar devolução de dinheiro — negado até ao admin.
+    await assertFails(
+      setDoc(ledger(dbAs(MARINA_UID, marina)), { status: 'pendente' }, { merge: true })
+    );
+    await assertFails(
+      setDoc(ledger(dbAs(ADMIN_UID, platformAdmin)), { status: 'pendente' }, { merge: true })
+    );
+  });
+
+  it('ledger ÓRFÃO e extrato de retardatários: nem o admin lê pelo cliente (T5)', async () => {
+    // `estornosOrfaos` e `estornosOrfaosPendentes` nasceram SEM Rule — o
+    // deny-by-default é a garantia declarada no cabeçalho do módulo T5.
+    await adminDb.doc('pagamentos/rev-pag/estornosOrfaos/total').set({
+      tenantId: CASTELO_ID,
+      status: 'solicitado',
+      valorCentavos: 18990,
+    });
+    await adminDb.doc('estornosOrfaosPendentes/rev-pag').set({
+      tenantId: CASTELO_ID,
+      resolvido: false,
+      entregas: 1,
+    });
+    for (const [uid, claims] of [
+      [ADMIN_UID, platformAdmin],
+      [MARINA_UID, marina],
+    ] as const) {
+      await assertFails(getDoc(doc(dbAs(uid, claims), 'pagamentos/rev-pag/estornosOrfaos/total')));
+      await assertFails(getDoc(doc(dbAs(uid, claims), 'estornosOrfaosPendentes/rev-pag')));
+    }
   });
 });
