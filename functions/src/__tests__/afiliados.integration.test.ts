@@ -33,7 +33,12 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import type { AuthClaims } from '@leela/core';
+import type {
+  AuthClaims,
+  EmailProvider,
+  SendTransactionalParams,
+} from '@leela/core';
+import { chaveAvisoMarco, logComunicacaoDocId } from '@leela/core';
 import {
   clearFirestoreDrained,
   deleteAllUsersDrained,
@@ -53,6 +58,7 @@ import {
   getMinhasAfiliacoesCore,
 } from '../affiliation/readers';
 import { registrarRepasseComissaoCore } from '../affiliation/registrarRepasse';
+import { chaveAvisoRepasse } from '../affiliation/avisoAfiliado';
 import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
@@ -211,7 +217,13 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
 
   const caller = { uid: 'uid-ana' };
 
-  async function confirmarPedido(pedidoId: string, eventId: string): Promise<void> {
+  async function confirmarPedido(
+    pedidoId: string,
+    eventId: string,
+    // S706-T1: provedor de e-mail INJETADO (zero rede real). Ausente = null,
+    // que é o estado fail-closed de produção hoje (sem BREVO_API_KEY).
+    emailProvider: EmailProvider | null = null
+  ): Promise<void> {
     const pagamentoId = (
       await db.doc(`pedidos/${pedidoId}`).get()
     ).get('pagamentoRef') as string;
@@ -222,7 +234,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
       amount: pagSnap.get('gatewayAmountCentavos') as number,
       eventId,
     });
-    await processarWebhookPagamento(db, provider, payload);
+    await processarWebhookPagamento(db, provider, payload, { emailProvider });
   }
 
   // ── A · salvarAfiliado ───────────────────────────────────────────────────
@@ -1231,5 +1243,228 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     await assertFails(
       updateDoc(clientDoc(dioney, path), { comissao: { tipo: 'percentual', percentual: 90 } })
     );
+  });
+
+  // ── G · S706-T1 · RN-386 — avisos ao afiliado ────────────────────────────
+  // Zero rede real: o EmailProvider é INJETADO. `BREVO_API_KEY` segue apagada
+  // no beforeAll, então o caminho de produção de hoje continua fail-closed.
+
+  /** Provider espião — captura o que teria saído. */
+  function providerEspiao(): {
+    provider: EmailProvider;
+    enviados: SendTransactionalParams[];
+  } {
+    const enviados: SendTransactionalParams[] = [];
+    return {
+      enviados,
+      provider: {
+        name: 'espiao',
+        async sendTransactional(params) {
+          enviados.push(params);
+          return { ok: true, messageId: `msg-${enviados.length}` };
+        },
+      },
+    };
+  }
+
+  /** Provider que SEMPRE falha — prova que o dinheiro não depende do e-mail. */
+  const providerQuebrado: EmailProvider = {
+    name: 'quebrado',
+    async sendTransactional() {
+      throw new Error('SMTP fora do ar');
+    },
+  };
+
+  const logDoc = (chave: string, ref = 'AVISADO1'): string =>
+    logComunicacaoDocId(ref, chave, 'email');
+
+  async function afiliadoComComissao(
+    refCodigo: string,
+    uid: string,
+    valorPorInscricao: number
+  ): Promise<void> {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Teo Avisado',
+      refCodigo, responsavelEmail: 'teo@exemplo.com',
+      comissao: { tipo: 'valor_fixo', valorPorInscricao },
+    }, marina);
+    await db.doc(`eventos/${EVENTO_ID}/afiliados/${refCodigo}`).update({
+      responsavelUid: uid, status: 'ativo',
+    });
+  }
+
+  it('G1: repasse dispara UM aviso; replay do mesmo repasseId não dispara segundo', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 30);
+    const r = await createInscricaoChargeCore(
+      db, provider, chargeInput('chave-avi-00000001', { ref: { codigo: 'AVISADO1' } }), caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-avi-1');
+
+    const { provider: espiao, enviados } = providerEspiao();
+    const ok = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rep-aviso-0001',
+      valor: 10, observacao: 'Pix 28/07',
+    }, marina, espiao);
+    expect(ok.duplicado).toBe(false);
+    expect(enviados).toHaveLength(1);
+
+    // Conteúdo: valor repassado, evento e o que RESTA (o parcial sem o resto
+    // faria o afiliado achar que a conta fechou).
+    const corpo = `${enviados[0]!.assunto} ${enviados[0]!.texto}`;
+    expect(corpo).toContain('10,00');
+    expect(corpo).toContain('Meia dos Afiliados');
+    expect(corpo).toContain('20,00'); // saldo restante (30 − 10)
+    expect(enviados[0]!.to.email).toBe('teo@exemplo.com');
+
+    // O log guarda assunto e templateRef — NUNCA o corpo (PII mínima).
+    const chave = chaveAvisoRepasse('rep-aviso-0001');
+    const logSnap = await db.doc(
+      `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chave)}`
+    ).get();
+    expect(logSnap.exists).toBe(true);
+    expect(logSnap.get('destinatario')).toEqual({ tipo: 'afiliado', ref: 'AVISADO1' });
+    expect(logSnap.get('templateRef')).toBe('avisoRepasseComissao');
+    expect(logSnap.get('assunto')).toContain('Repasse de comissão registrado');
+    for (const proibido of ['corpo', 'conteudo', 'html', 'body']) {
+      expect(logSnap.get(proibido)).toBeUndefined();
+    }
+
+    // Replay do MESMO repasseId: nenhum segundo aviso (o docId já existe).
+    const replay = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rep-aviso-0001', valor: 10,
+    }, marina, espiao);
+    expect(replay.duplicado).toBe(true);
+    expect(enviados).toHaveLength(1);
+
+    // Um repasse DIFERENTE avisa de novo — a chave é por repasse, não por afiliado.
+    await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rep-aviso-0002', valor: 5,
+    }, marina, espiao);
+    expect(enviados).toHaveLength(2);
+  });
+
+  it('G2: provedor de e-mail fora do ar NÃO reverte o repasse; a falha fica no log', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 30);
+    const r = await createInscricaoChargeCore(
+      db, provider, chargeInput('chave-avi-00000002', { ref: { codigo: 'AVISADO1' } }), caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-avi-2');
+
+    const ok = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rep-aviso-0003', valor: 12,
+    }, marina, providerQuebrado);
+
+    // O dinheiro registrado é o mesmo: o aviso é consequência, não etapa.
+    expect(ok.ok).toBe(true);
+    expect(ok.saldoComissao).toBe(18);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/AVISADO1`).get()).get('comissaoRepassada')
+    ).toBe(12);
+    expect(
+      (await db.collection(`eventos/${EVENTO_ID}/afiliados/AVISADO1/repasses`).get()).size
+    ).toBe(1);
+
+    const logSnap = await db.doc(
+      `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoRepasse('rep-aviso-0003'))}`
+    ).get();
+    expect(logSnap.get('status')).toBe('falhou');
+    expect(logSnap.get('falhaMotivo')).toBe('provider_erro');
+
+    // Sem chave de e-mail (produção hoje): NADA é registrado — registrar
+    // queimaria a chave de um envio que nunca existiu.
+    await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rep-aviso-0004', valor: 1,
+    }, marina, null);
+    expect(
+      (await db.doc(
+        `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoRepasse('rep-aviso-0004'))}`
+      ).get()).exists
+    ).toBe(false);
+  });
+
+  it('G3: marco — primeira comissão avisa; dentro da faixa não; faixa cruzada avisa uma vez; recruzar NÃO reavisa', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 40);
+    const { provider: espiao, enviados } = providerEspiao();
+
+    const venda = async (
+      chave: string,
+      eventId: string
+    ): Promise<{ pedidoId: string; inscritoIds: string[] }> => {
+      const r = await createInscricaoChargeCore(
+        db, provider, chargeInput(chave, { ref: { codigo: 'AVISADO1' } }), caller
+      );
+      await confirmarPedido(r.pedidoId, eventId, espiao);
+      return { pedidoId: r.pedidoId, inscritoIds: r.inscritoIds };
+    };
+
+    // 0 → 40: primeira comissão do afiliado no evento.
+    await venda('chave-mar-00000001', 'evt-mar-1');
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0]!.assunto).toContain('primeira comissão');
+    expect(
+      (await db.doc(
+        `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoMarco(0))}`
+      ).get()).exists
+    ).toBe(true);
+
+    // 40 → 80: mesma faixa, nenhuma notícia.
+    await venda('chave-mar-00000002', 'evt-mar-2');
+    expect(enviados).toHaveLength(1);
+
+    // 80 → 120: cruza os R$ 100 — avisa uma vez.
+    const terceira = await venda('chave-mar-00000003', 'evt-mar-3');
+    expect(enviados).toHaveLength(2);
+    expect(enviados[1]!.assunto).toContain('100,00');
+    expect(enviados[1]!.texto).toContain('120,00'); // acumulado
+    expect(
+      (await db.doc(
+        `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoMarco(100))}`
+      ).get()).exists
+    ).toBe(true);
+
+    // Estorno derruba para 80: marco atravessado PARA BAIXO não avisa nada.
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: terceira.pedidoId, inscritoId: terceira.inscritoIds[0]!,
+      motivo: 'Estorno pós-marco',
+    }, marina);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/AVISADO1`).get()).get('comissaoAcumulada')
+    ).toBe(80);
+    expect(enviados).toHaveLength(2);
+
+    // Venda nova traz de volta a 120: a faixa já foi avisada e NÃO rearma.
+    await venda('chave-mar-00000004', 'evt-mar-4');
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/AVISADO1`).get()).get('comissaoAcumulada')
+    ).toBe(120);
+    expect(enviados).toHaveLength(2);
+
+    // Nenhum aviso carrega identidade de comprador (RN-318/RN-172).
+    const tudo = JSON.stringify(enviados);
+    expect(tudo).not.toContain('ana@exemplo.com');
+    expect(tudo).not.toContain('Ana Souza');
+    expect(tudo).not.toContain('529.982.247-25');
+  });
+
+  it('G4: afiliado sem e-mail (clube) não gera aviso nem registro — e a venda segue', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Floripa Run',
+      clubeRef: 'floripa-run', refCodigo: 'CLUBEAVI',
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 40 },
+    }, marina);
+    await db.doc(`eventos/${EVENTO_ID}/afiliados/CLUBEAVI`).update({ status: 'ativo' });
+    const { provider: espiao, enviados } = providerEspiao();
+    const r = await createInscricaoChargeCore(
+      db, provider, chargeInput('chave-avi-00000009', { ref: { codigo: 'CLUBEAVI' } }), caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-avi-9', espiao);
+
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/CLUBEAVI`).get()).get('comissaoAcumulada')
+    ).toBe(40);
+    expect(enviados).toHaveLength(0);
+    expect(
+      (await db.collection(`eventos/${EVENTO_ID}/comunicacoes`).get()).size
+    ).toBe(0);
   });
 });

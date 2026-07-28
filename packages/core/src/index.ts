@@ -1291,6 +1291,14 @@ export type {
   TipoComissaoAfiliado,
   ComissaoAfiliado,
 } from './affiliation/afiliado';
+// Marco de comissão (RN-386 · S706-T1) — a régua do aviso ao afiliado.
+export {
+  PASSO_MARCO_COMISSAO,
+  MARCO_PRIMEIRA_COMISSAO,
+  faixaDoAcumulado,
+  faixaCruzada,
+  chaveAvisoMarco,
+} from './affiliation/marcoComissao';
 export {
   COLECAO_AFILIADOS,
   SUBCOLECAO_CONVERSOES_AFILIADO,

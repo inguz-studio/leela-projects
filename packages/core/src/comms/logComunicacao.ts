@@ -158,11 +158,19 @@ const RANK_STATUS: Readonly<Record<StatusLogComunicacao, number>> = {
 /** A quem a comunicação foi enviada. V1 usa `inscrito` (evento); `membro`
  *  existe no TIPO para o mesmo modelo servir o clube depois (reuso);
  *  `organizador` (S904-T3 · RN-342) cobre notificações transacionais ao
- *  dono do evento (ref = uid) — a abertura de reembolso é obrigatória. */
-export type TipoDestinatarioComunicacao = 'inscrito' | 'membro' | 'organizador';
+ *  dono do evento (ref = uid) — a abertura de reembolso é obrigatória;
+ *  `afiliado` (S706-T1 · RN-386) cobre os avisos de repasse e de marco de
+ *  comissão (ref = refCodigo do afiliado, que É o docId dele no evento).
+ *  ACRÉSCIMO, não reorganização: o log continua sendo o agregado único e
+ *  nenhum destinatário existente muda de nome. */
+export type TipoDestinatarioComunicacao =
+  | 'inscrito'
+  | 'membro'
+  | 'organizador'
+  | 'afiliado';
 
 export const TIPOS_DESTINATARIO_COMUNICACAO: readonly TipoDestinatarioComunicacao[] =
-  ['inscrito', 'membro', 'organizador'];
+  ['inscrito', 'membro', 'organizador', 'afiliado'];
 
 export function isTipoDestinatarioComunicacao(
   v: unknown

@@ -42,13 +42,17 @@ import {
   SUBCOLECAO_CONVERSOES_AFILIADO,
   computeComissaoConversao,
   dentroDaJanelaAtribuicao,
+  faixaCruzada,
   isComissaoAfiliadoValida,
   roundMoney,
   type ComissaoAfiliado,
+  type EmailProvider,
   type PaymentProvider,
   type WebhookPayload,
   type WebhookResult,
 } from '@leela/core';
+import { avisarMarcoComissao } from '../affiliation/avisoAfiliado';
+import { selectEmailProvider } from '../email/selectEmailProvider';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
 import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
@@ -98,6 +102,19 @@ export interface ResultadoWebhookPagamento {
    * transação da entrega, best-effort (a varredura RN-380 re-tenta).
    */
   estornoOrfao?: boolean;
+  /**
+   * Interno da porta (S706-T1 · RN-386): a confirmação fez a comissão do
+   * afiliado avançar. O aviso de MARCO é avaliado e disparado FORA da
+   * transação — nunca dentro, e nunca como pré-condição da venda.
+   */
+  comissaoAvancou?: {
+    eventoId: string;
+    afiliadoId: string;
+    /** Acumulada ANTES desta conversão. */
+    anterior: number;
+    /** Acumulada DEPOIS desta conversão. */
+    atual: number;
+  };
   /** Desfecho do fechamento do ledger ÓRFÃO (quando o T1 não tinha carimbo). */
   estornoOrfaoConfirmado?: ResultadoConfirmacaoOrfao;
 }
@@ -137,6 +154,12 @@ export interface EfeitosExtrasWebhook {
    * nunca do payload do gateway (integridade: o gateway não dita valores).
    */
   cartao?: { bandeira: string; ultimos4: string; parcelas?: number };
+  /**
+   * Provedor de e-mail do aviso de MARCO de comissão (S706-T1 · RN-386).
+   * Injetável para teste; ausente, sai do ambiente e é `null` sem
+   * `BREVO_API_KEY` (fail-closed RN-137 — a venda confirma do mesmo jeito).
+   */
+  emailProvider?: EmailProvider | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -386,6 +409,9 @@ export async function processarWebhookPagamento(
       afiliadoBloco.afiliadoId.length > 0
         ? afiliadoBloco.afiliadoId
         : null;
+    // Declarado DENTRO do callback de propósito: a transação pode re-rodar, e
+    // um acumulador de fora sobreviveria à tentativa abortada.
+    let avancoComissao: ResultadoWebhookPagamento['comissaoAvancou'];
     let registrarConversaoAfiliado: {
       afiliadoRef: admin.firestore.DocumentReference;
       conversaoRef: admin.firestore.DocumentReference;
@@ -634,6 +660,18 @@ export async function processarWebhookPagamento(
         valorConversao,
         r.qtdInscricoes
       );
+      // Marco de comissão (S706-T1 · RN-386): a comparação "antes × depois"
+      // sai daqui de dentro, onde os dois números são os que a transação
+      // realmente gravou; o disparo acontece depois do commit. Comissão zero
+      // não move nada e não vira aviso.
+      if (comissaoConversao > 0) {
+        avancoComissao = {
+          eventoId,
+          afiliadoId: afiliadoId as string,
+          anterior: r.comissaoAcumuladaAtual,
+          atual: roundMoney(r.comissaoAcumuladaAtual + comissaoConversao),
+        };
+      }
       tx.create(r.conversaoRef, {
         id: orderId,
         pedidoRef: orderId,
@@ -655,8 +693,43 @@ export async function processarWebhookPagamento(
       });
     }
 
-    return { ...base, duplicado: false, ignorado: false };
+    return {
+      ...base,
+      duplicado: false,
+      ignorado: false,
+      ...(avancoComissao !== undefined ? { comissaoAvancou: avancoComissao } : {}),
+    };
   });
+
+  // ── AVISO DE MARCO DE COMISSÃO (S706-T1 · RN-386) — fora da transação ────
+  // A venda já está confirmada e gravada. O aviso é consequência, não etapa:
+  // qualquer coisa que dê errado daqui para baixo não pode desfazer a
+  // confirmação. `faixaCruzada` é pura e só devolve marco em SUBIDA; a
+  // não-duplicação do envio é o docId determinístico do log, não um contador.
+  if (resultadoEntrega.comissaoAvancou !== undefined) {
+    const avanco = resultadoEntrega.comissaoAvancou;
+    const faixa = faixaCruzada(avanco.anterior, avanco.atual);
+    if (faixa !== null) {
+      try {
+        await avisarMarcoComissao(
+          db,
+          {
+            eventoId: avanco.eventoId,
+            afiliadoId: avanco.afiliadoId,
+            faixa,
+            acumulada: avanco.atual,
+          },
+          extras.emailProvider ?? selectEmailProvider()
+        );
+      } catch (err) {
+        logger.error('webhook_aviso_marco_ignorado', {
+          pagamentoId: resultadoEntrega.pagamentoId,
+          afiliadoId: avanco.afiliadoId,
+          err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+        });
+      }
+    }
+  }
 
   // ── FECHAMENTO DO ESTORNO (RN-372) — fora da transação da entrega ────────
   // A entrega já está registrada no ledger de webhooks (exactly-once por

@@ -67,6 +67,8 @@ const DESTINATARIO_LABEL: Record<TipoDestinatarioComunicacao, string> = {
   // S904-T3 (RN-342): notificação transacional ao organizador (abertura de
   // reembolso). O tipo entrou no kernel com o backend do Lote 1 (0ff90ee).
   organizador: 'Organizador',
+  // S706-T1 (RN-386): avisos de repasse e de marco de comissão ao afiliado.
+  afiliado: 'Influenciador',
 };
 
 export interface ComunicacaoViewProps {

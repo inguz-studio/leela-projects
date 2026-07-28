@@ -443,3 +443,121 @@ export function renderCampanhaEmail(input: CampanhaEmailInput): EmailRenderizado
     `${corpo}\n\n—\nEnviado pelo organizador de ${evento} pela plataforma Leela.`;
   return { assunto: assuntoLimpo, html, texto };
 }
+
+// ---------------------------------------------------------------------------
+// Avisos ao AFILIADO (S706-T2 · RN-386 — consumidor `avisoAfiliado.ts`)
+//
+// ACRÉSCIMO ao catálogo, não reorganização: os blocos acima seguem intactos.
+//
+// O que estes dois textos podem carregar (RN-318 + RN-172 — minimização): o
+// número do PRÓPRIO afiliado, o nome do evento e nada mais. Nenhuma
+// identidade de comprador, nenhum número de outro afiliado, nenhum agregado do
+// evento. Quem lê o e-mail não descobre nada que já não veja na tela dele.
+// ---------------------------------------------------------------------------
+
+/** Reais em pt-BR para dentro do corpo do e-mail. @pure */
+function formatBRLEmail(valor: number): string {
+  const seguro = Number.isFinite(valor) ? valor : 0;
+  return seguro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+export interface AvisoRepasseComissaoEmailInput {
+  nomeAfiliado: string;
+  nomeEvento: string;
+  /** Valor repassado agora. */
+  valor: number;
+  /** O que continua a receber depois deste repasse. */
+  saldoRestante: number;
+}
+
+/**
+ * "Registraram um repasse de comissão para você" (RN-386).
+ * O saldo restante é parte do conteúdo de propósito: com repasse PARCIAL, o
+ * aviso sem o resto deixaria o afiliado achando que a conta fechou.
+ */
+export function renderAvisoRepasseComissaoEmail(
+  input: AvisoRepasseComissaoEmailInput
+): EmailRenderizado {
+  const nome = limparCampoCurto(input.nomeAfiliado, TEMPLATE_NOME_MAX);
+  const evento = limparCampoCurto(input.nomeEvento, TEMPLATE_NOME_MAX) || 'seu evento';
+  const valor = formatBRLEmail(input.valor);
+  const restante = formatBRLEmail(input.saldoRestante);
+  const devendo = Number.isFinite(input.saldoRestante) && input.saldoRestante < 0;
+
+  const assunto = `Repasse de comissão registrado — ${evento}`.slice(
+    0,
+    TEMPLATE_ASSUNTO_MAX
+  );
+  const saudacao = nome.length > 0 ? `Olá, ${nome}.` : 'Olá.';
+  const linhaRestante = devendo
+    ? `Seu saldo de comissão ficou negativo (${restante}) porque houve estorno ` +
+      `depois de um repasse. Fale com o organizador.`
+    : Number.isFinite(input.saldoRestante) && input.saldoRestante > 0
+      ? `Você ainda tem ${restante} de comissão a receber neste evento.`
+      : `Com isso, sua comissão deste evento está toda repassada.`;
+
+  const html = layoutBase(
+    escapeHtml('Repasse de comissão registrado'),
+    `<p style="margin:0 0 12px;">${escapeHtml(saudacao)}</p>` +
+      `<p style="margin:0 0 12px;">O organizador de <strong>${escapeHtml(evento)}` +
+      `</strong> registrou um repasse de <strong>${escapeHtml(valor)}</strong> ` +
+      `da sua comissão.</p>` +
+      `<p style="margin:0 0 12px;">${escapeHtml(linhaRestante)}</p>` +
+      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O pagamento é ` +
+      `feito pelo organizador fora da plataforma — este e-mail é o registro de ` +
+      `que ele o informou.</p>`
+  );
+  const texto =
+    `${saudacao}\n\n` +
+    `O organizador de ${evento} registrou um repasse de ${valor} da sua ` +
+    `comissão.\n\n${linhaRestante}\n\n—\nO pagamento é feito pelo organizador ` +
+    `fora da plataforma; este e-mail é o registro de que ele o informou.`;
+  return { assunto, html, texto };
+}
+
+export interface AvisoMarcoComissaoEmailInput {
+  nomeAfiliado: string;
+  nomeEvento: string;
+  /** Marco alcançado; `0` = primeira comissão do afiliado no evento. */
+  faixa: number;
+  /** Comissão acumulada depois da conversão que cruzou o marco. */
+  acumulada: number;
+}
+
+/**
+ * "Sua comissão cruzou um marco" (RN-386). Boa notícia, nunca cobrança: o
+ * texto não fala de dívida nem de marco perdido por estorno.
+ */
+export function renderAvisoMarcoComissaoEmail(
+  input: AvisoMarcoComissaoEmailInput
+): EmailRenderizado {
+  const nome = limparCampoCurto(input.nomeAfiliado, TEMPLATE_NOME_MAX);
+  const evento = limparCampoCurto(input.nomeEvento, TEMPLATE_NOME_MAX) || 'seu evento';
+  const primeira = !Number.isFinite(input.faixa) || input.faixa <= 0;
+  const acumulada = formatBRLEmail(input.acumulada);
+  const faixaFmt = formatBRLEmail(input.faixa);
+
+  const assunto = (
+    primeira
+      ? `Sua primeira comissão em ${evento}`
+      : `Sua comissão passou de ${faixaFmt} em ${evento}`
+  ).slice(0, TEMPLATE_ASSUNTO_MAX);
+  const saudacao = nome.length > 0 ? `Olá, ${nome}.` : 'Olá.';
+  const manchete = primeira
+    ? `Sua primeira comissão em ${evento} entrou.`
+    : `Sua comissão em ${evento} passou de ${faixaFmt}.`;
+
+  const html = layoutBase(
+    escapeHtml(primeira ? 'Sua primeira comissão' : 'Sua comissão cresceu'),
+    `<p style="margin:0 0 12px;">${escapeHtml(saudacao)}</p>` +
+      `<p style="margin:0 0 12px;">${escapeHtml(manchete)}</p>` +
+      `<p style="margin:0 0 12px;">Total acumulado até agora: ` +
+      `<strong>${escapeHtml(acumulada)}</strong>.</p>` +
+      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O repasse é ` +
+      `combinado com o organizador do evento.</p>`
+  );
+  const texto =
+    `${saudacao}\n\n${manchete}\n\nTotal acumulado até agora: ${acumulada}.\n\n` +
+    `—\nO repasse é combinado com o organizador do evento.`;
+  return { assunto, html, texto };
+}

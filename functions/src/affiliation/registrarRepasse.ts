@@ -40,12 +40,15 @@ import {
   saldoComissaoAfiliado,
   roundMoney,
   type AuthClaims,
+  type EmailProvider,
 } from '@leela/core';
 import {
   assertTenantAtivo,
   assertTenantWriter,
   type EventoCaller,
 } from '../eventos/criarEvento';
+import { selectEmailProvider } from '../email/selectEmailProvider';
+import { avisarRepasseRegistrado } from './avisoAfiliado';
 
 /** Mesma tolerância de comparação monetária do kernel de estorno (ADR-011). */
 const TOL = 0.005;
@@ -81,7 +84,13 @@ export interface RegistrarRepasseComissaoResult {
 export async function registrarRepasseComissaoCore(
   db: admin.firestore.Firestore,
   rawInput: unknown,
-  caller: EventoCaller
+  caller: EventoCaller,
+  /**
+   * Provedor de e-mail do aviso ao afiliado (S706-T1 · RN-386). Injetável para
+   * teste; em produção sai do ambiente e é `null` sem `BREVO_API_KEY`
+   * (fail-closed RN-137 — o repasse continua funcionando sem e-mail).
+   */
+  emailProvider: EmailProvider | null = selectEmailProvider()
 ): Promise<RegistrarRepasseComissaoResult> {
   const tenantId = assertTenantWriter(caller.claims);
 
@@ -211,6 +220,47 @@ export async function registrarRepasseComissaoCore(
     repasseId: resultado.repasseId,
     duplicado: resultado.duplicado,
   });
+
+  // ── Aviso ao afiliado (S706-T1 · RN-386) — DEPOIS da transação, nunca
+  // dentro dela: dinheiro registrado não espera provedor de e-mail, e uma
+  // chamada de rede dentro de uma transação do Firestore é convite a retry
+  // com efeito colateral duplicado.
+  //
+  // O replay TAMBÉM tenta avisar, de propósito. A idempotência do aviso é o
+  // docId determinístico do log (`repasse-{digest}`), não este `if`: se a
+  // primeira passagem morreu entre a transação e o envio, a retentativa do
+  // cliente é a única chance de o afiliado ficar sabendo. Pular no
+  // `duplicado` transformaria uma falha recuperável em silêncio permanente.
+  //
+  // `avisarRepasseRegistrado` não lança — mas o `catch` fica como cinto: o
+  // resultado do dinheiro não pode depender de nada disto.
+  try {
+    // No replay, o valor do AVISO sai do ledger, não do input: um cliente que
+    // reenvia o mesmo repasseId com outro valor não muda o que foi registrado,
+    // e o e-mail não pode contar uma história diferente do extrato.
+    let valorAvisado = valor;
+    if (resultado.duplicado) {
+      const gravado = (await repasseRef.get()).get('valor');
+      if (typeof gravado === 'number') valorAvisado = gravado;
+    }
+    await avisarRepasseRegistrado(
+      db,
+      {
+        eventoId: input.eventoId,
+        afiliadoId: input.afiliadoId,
+        repasseId: resultado.repasseId,
+        valor: valorAvisado,
+        saldoRestante: resultado.saldoComissao,
+      },
+      emailProvider
+    );
+  } catch (err) {
+    logger.error('repasse_aviso_afiliado_ignorado', {
+      eventoId: input.eventoId,
+      afiliadoId: input.afiliadoId,
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+  }
 
   return resultado;
 }
