@@ -38,9 +38,20 @@ E o refinamento dos QR Codes, na sequência:
 
 **DEC-0728G · nomenclatura: "entrega" vira "credenciamento".** O campo/área "entrega" do sistema muda de nome para "credenciamento" em todas as superfícies. A mecânica não muda (RN-205, RN-221 e RN-222 intactas); é virada de vocabulário. Entra na spec delta da SPECS-0728 e nas lanes de código seguintes.
 
+## Terceira leva — chaves do Asaas e teste real (madrugada de 28/07)
+
+Verbatim do Vitor: *"criei uma chave API em produção. aonde posso colocá-la para testarmos ? nao tem problema utilizarmos diretamente em produção."* — depois *"feito"*, *"SIm, eu quero."* (teste com dinheiro real) e *"os pontos 11, 8, 9 e 12b, ainda estao pendentes?"*.
+
+- **Chave de produção validada.** Gravada em `functions/.env` (`ASAAS_API_KEY`, gitignored; o código detecta produção pelo prefixo). Prova sem mover dinheiro: `GET /v3/finance/balance` HTTP 200. A conta é viva: 601 clientes cadastrados, beneficiário PIX "Farol Soluções Universitá" (Curitiba).
+- **Item 9 resolvido com prova de API.** `GET /v3/myAccount/status` respondeu `APPROVED` em comercial, bancária, documentação e geral.
+- **Item 8 resolvido de fato.** Chave de sandbox presente no `.env` com prefixo `$aact_hmlg_` correto e autenticando (HTTP 200). Destrava as três provas pré-go-live (status real de refund PIX, refund parcial em grupo, payload do `PAYMENT_REFUNDED`) sem dinheiro real; entram na esteira após a lane ESTORNO-ADMIN aterrissar.
+- **Item 10 FECHADO na sequência.** A chave nova validada completou metade da rotação, e o Vitor desativou a antiga (vazada em 2026-07-12) minutos depois — verbatim: *"já desativei a chave antiga do asaas."* Rotação completa; a trava pré-deploy caiu.
+- **Teste com dinheiro real autorizado e em curso.** Cobrança PIX de R$ 5,00 criada em produção no cadastro do próprio Vitor (`pay_pfv19mnq5y3h16yv`, cliente `cus_000087098597`); QR + copia-e-cola entregues; vigia de status por consulta (o webhook não alcança máquina local — a reconciliação por GET cobre o teste).
+
 ## Efeitos no painel
 
 - Fila de construção atualizada: posições 1 a 3 autorizadas (DEC-0728A), FormBuilder puxado com o delta de templates (DEC-0728B), linha nova de prioridade baixa para o cadastro de marcas (DEC-0728C), posição 1 estendida com ingresso QR + item 15 (DEC-0728D/E), frente paralela DEPLOY-PREVIEW criada (DEC-0728F).
+- Itens 8 e 9 saem das ações externas; viram linhas em ✅. Item 10 reformulado (só falta desativar a antiga). Item 12b segue adiado, agora sozinho no bloco.
 - Item 15 sai do menu e do detalhe; vira linha em ✅ (DEC-0728D).
 - Item 34 reformulado: de "conferir a página pública" para "revisar a jornada completa" após a fila aterrissar (DEC-0728E).
 - Nenhum item aberto novo que dependa do Vitor além da ação externa do Blaze (DEC-0728F).

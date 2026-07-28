@@ -17,9 +17,8 @@
 
 ### 🟠 Ações externas suas
 
-- **10 · rotacionar a chave de produção do Asaas.** Ela apareceu num transcript de chat em 2026-07-12. Continua obrigatória antes do primeiro deploy real, mesmo com o assunto Asaas adiado.
-- **11 · três segredos técnicos antes do primeiro deploy.** Nada aqui tem a ver com estrangeiro nem com identidade de ninguém: são três valores de configuração que precisam existir no servidor antes do primeiro deploy real. Nada a fazer agora.
-- **8 · 9 · 12b · adiados por você em 2026-07-26.** Chave de teste do Asaas, verificação de identidade da conta e liberação para pagador estrangeiro. Ninguém está cobrando esses três; ficam listados só para você saber que o checkout de estrangeiro segue parado enquanto isso.
+- **11 · três segredos técnicos antes do primeiro deploy.** Nada aqui tem a ver com estrangeiro nem com identidade de ninguém: são três valores de configuração que precisam existir no servidor antes do primeiro deploy real. Execução é da lane DEPLOY-PREVIEW, não sua. Nada a fazer agora.
+- **12b · adiado por você em 2026-07-26.** Liberação para pagador estrangeiro (conversa com o gerente de contas do Asaas). Ninguém está cobrando; fica listado só para você saber que o checkout de estrangeiro segue parado enquanto isso.
 
 ### 🔧 Dívida técnica — em execução
 
@@ -64,7 +63,7 @@ Default conservador enquanto não valida: RN-315, o link do clube só ativa o de
 
 ## 🟠 Ações externas suas
 
-> **Bloco Asaas adiado por você em 2026-07-26.** Os itens 8, 9, 10 e 12b saíram da fila de cobrança e ninguém vai lembrá-los a cada retomada. Duas consequências mantidas: o lote `ESTRANGEIRO-CHECKOUT` segue parado, sem nem contato com o gerente de contas, e a rotação da chave de produção continua obrigatória antes do primeiro deploy real.
+> **Bloco Asaas, atualizado em 2026-07-28.** Os itens 8, 9 e 10 resolveram: chaves nova e de sandbox criadas e validadas, identidade da conta APPROVED pela própria API, e a chave antiga desativada por você. Resta só o item 12b, adiado (pagador estrangeiro; o lote `ESTRANGEIRO-CHECKOUT` segue parado, sem nem contato com o gerente de contas).
 
 **10 · Rotacionar a chave de produção do Asaas.** Ela apareceu em transcript de chat em 2026-07-12. Só existe em `functions/.env` e o simulador está ativo, então não é urgente, mas regenere no painel do Asaas quando puder. Continua obrigatória antes do primeiro deploy real.
 
@@ -146,6 +145,8 @@ Registro completo: `02-rodadas/2026-07-26-decisoes/01-decisoes.md` e `02-rodadas
 - **P-IAMENU-2 · 2026-07-27 (DEC-0727):** o disponível por evento abate os repasses vivos, e a reconciliação da função de derivação foi autorizada. Lane CAIXA-DISPONIVEL entregue e revisada. RN-351.
 - **Itens 37, 38, 40 e 41 · 2026-07-27 (DEC-0727C):** a Caixa mostra três números (Receita Total, Disponível para Repasse, Valor Repassado); repasse sempre amarrado a um evento; evento não repassa mais do que está liberado; o nome é "Valor Repassado". Lane CAIXA-SIMPLES entregue, aguarda review antagonista. RN-367, RN-368 e RN-369 em [[LEELA-E09-financeiro-profissional]]. O disponível da Caixa passou a sair da mesma base do saque: no mock canônico do repo a tela dizia R$ 9.700 onde o modal aceitava R$ 8.000, e agora os dois dizem 8.000.
 - **Item 29 · 2026-07-27 (DEC-0727E):** o simulador de pagamento pode responder "já cancelada" para cobrança desconhecida, apenas quando o pedido correspondente já venceu — afrouxamento restrito ao simulador, para teste no preview; a guarda continua lançando erro nos demais casos e a produção (`AsaasProvider`) fica intocada. Implementação como T7 da lane ESTORNO-ADMIN.
+- **Item 10 · 2026-07-28:** rotação da chave de produção do Asaas COMPLETA. Você criou a chave nova (validada por leitura de saldo, HTTP 200, sem mover dinheiro) e desativou a antiga, que tinha vazado num transcript em 2026-07-12. Verbatim: *"já desativei a chave antiga do asaas."* A trava pré-deploy que este item segurava está liberada.
+- **Itens 8 e 9 · 2026-07-28:** resolvidos de fato pelas chaves que você criou. Item 8: a chave de sandbox do Asaas está no `functions/.env` e autentica (saldo de teste consultado, HTTP 200) — destrava as três provas do pacote pré-go-live sem dinheiro real. Item 9: a verificação de identidade da conta está completa — a própria API respondeu `APPROVED` em todas as frentes (comercial, bancária, documentação e geral).
 - **Item 15 · 2026-07-28 (DEC-0728D):** teto de movimentação de estoque e limiar de baixa NÃO viram configuração. O teto ajusta de 1.000.000 para 999.999 por escolha sua, e o limiar segue em 10 unidades (abaixo dos 20 que você citou). O ajuste do número entra como task na próxima lane de functions.
 - **Item 13 · 2026-07-27 (DEC-0727E):** envio de e-mail pela Brevo funcionando ponta a ponta, com prova de entrega real. A trava de IPs caiu com o "IP autorizado" do Vitor, o remetente `vitoreldp@gmail.com` foi validado por ele em `app.brevo.com/senders`, e o re-teste das 23:49 fechou o ciclo: evento `delivered` às 23:49:13 no log da própria Brevo, não só `messageId`. Destravam sem código novo: convite de assessoria (E18), convite de influenciador PF (E08) e campanhas do E06. Duas pontas anotadas: remetente de domínio próprio para produção vive no item 12, e o e2e ganha checagem do evento de entrega na próxima passada de functions. No deploy, a chave migra ao Secret Manager.
 
