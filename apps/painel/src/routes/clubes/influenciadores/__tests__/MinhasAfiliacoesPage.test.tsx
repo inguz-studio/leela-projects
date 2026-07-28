@@ -194,8 +194,39 @@ describe('MinhasAfiliacoesPage', () => {
     const cartao = (await screen.findAllByRole('article'))[0] as HTMLElement;
     expect(within(cartao).getByText('Comissão acumulada')).toBeInTheDocument();
     expect(within(cartao).getByText('R$ 260,00')).toBeInTheDocument(); // saldo
-    expect(within(cartao).getByText('Repasses registrados')).toBeInTheDocument();
+    expect(within(cartao).getByText('Repasses que você recebeu')).toBeInTheDocument();
     expect(within(cartao).getByText('PIX')).toBeInTheDocument();
+    expect(within(cartao).getByText('1 repasse · R$ 100,00')).toBeInTheDocument();
+  });
+
+  // ── S705-T3 · RN-385 — o parcial é um evento próprio também para quem recebe
+  it('dois parciais viram DUAS linhas no extrato do afiliado, não um total somado', async () => {
+    mocks.getMinhasAfiliacoes.mockResolvedValue({
+      afiliacoes: [
+        afiliacao({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 1200,
+          comissaoRepassada: 800,
+          saldoComissao: 400,
+          ultimosRepasses: [
+            { valor: 500, observacao: 'Pix 18/07', criadoEmMillis: Date.UTC(2026, 6, 18, 15, 0) },
+            { valor: 300, observacao: 'Pix 25/07', criadoEmMillis: Date.UTC(2026, 6, 25, 15, 0) },
+          ],
+        }),
+      ],
+    });
+    renderPage();
+    const cartao = (await screen.findAllByRole('article'))[0] as HTMLElement;
+    const tabelaRepasses = within(cartao).getByRole('table', {
+      name: /Repasses de/,
+    });
+    expect(within(tabelaRepasses).getAllByRole('row')).toHaveLength(3); // 2 + cabeçalho
+    expect(within(tabelaRepasses).getByText('R$ 500,00')).toBeInTheDocument();
+    expect(within(tabelaRepasses).getByText('R$ 300,00')).toBeInTheDocument();
+    expect(within(tabelaRepasses).queryByText('R$ 800,00')).not.toBeInTheDocument();
+    expect(within(cartao).getByText('2 repasses · R$ 800,00 no total')).toBeInTheDocument();
+    // RN-318: o extrato do afiliado continua fechado no que é dele.
+    expect(cartao.textContent).not.toMatch(/@/);
   });
 
   it('saldo negativo (estorno pós-repasse) aparece como dívida — sem clamp', async () => {

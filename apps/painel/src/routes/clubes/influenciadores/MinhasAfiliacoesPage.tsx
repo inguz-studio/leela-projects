@@ -24,8 +24,8 @@ import {
   getMinhasAfiliacoes,
   type ConversaoProjetada,
   type MinhaAfiliacao,
-  type RepasseProjetado,
 } from '@leela/api-client';
+import { ExtratoRepasses } from './_components/ExtratoRepasses';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -40,12 +40,6 @@ function formatData(millis: number | null): string {
     minute: '2-digit',
   });
 }
-
-const COLUNAS_REPASSE: TableColumn<RepasseProjetado>[] = [
-  { key: 'quando', header: 'Registrado em', render: (r) => formatData(r.criadoEmMillis) },
-  { key: 'valor', header: 'Valor', align: 'right', render: (r) => formatBRL(r.valor) },
-  { key: 'obs', header: 'Observação', render: (r) => r.observacao ?? '—' },
-];
 
 function CartaoAfiliacao({
   a,
@@ -132,18 +126,15 @@ function CartaoAfiliacao({
         </p>
       )}
 
-      {temComissao && a.ultimosRepasses.length > 0 ? (
-        <div className="flex flex-col gap-[var(--spacing-2)]">
-          <h3 className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-secondary)]">
-            Repasses registrados
-          </h3>
-          <Table
-            columns={COLUNAS_REPASSE}
-            data={a.ultimosRepasses}
-            keyExtractor={(r) => `${a.refCodigo}-repasse-${r.criadoEmMillis ?? 'sem-data'}-${r.valor}`}
-            caption={`Repasses de ${a.eventoNome}`}
-          />
-        </div>
+      {/* Cada parcial é um evento próprio, com valor e data (S705-T3 · RN-385)
+          — o mesmo componente que o organizador vê do lado dele. */}
+      {temComissao ? (
+        <ExtratoRepasses
+          repasses={a.ultimosRepasses}
+          chaveBase={a.refCodigo}
+          caption={`Repasses de ${a.eventoNome}`}
+          titulo="Repasses que você recebeu"
+        />
       ) : null}
     </article>
   );

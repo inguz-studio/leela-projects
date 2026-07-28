@@ -5,7 +5,7 @@
 // de repasse manual de comissão (FASE 2 · idempotência amigável).
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
@@ -245,5 +245,64 @@ describe('InfluenciadoresPage', () => {
     const [primeira, segunda] = mocks.registrarRepasseComissao.mock.calls;
     expect(segunda![0].repasseId).toBe(primeira![0].repasseId);
     expect(await screen.findByText('Repasse já estava registrado')).toBeInTheDocument();
+  });
+
+  // ── S705-T3 · RN-385 — extrato com uma linha por repasse (lado de quem paga)
+
+  it('dois parciais aparecem como DUAS linhas com valor e data próprios, não como total somado', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({
+      afiliados: [
+        afiliado({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 1200,
+          comissaoRepassada: 800,
+          saldoComissao: 400,
+          ultimosRepasses: [
+            { valor: 500, observacao: 'Pix 18/07', criadoEmMillis: Date.UTC(2026, 6, 18, 15, 0) },
+            { valor: 300, observacao: 'Pix 25/07', criadoEmMillis: Date.UTC(2026, 6, 25, 15, 0) },
+          ],
+        }),
+      ],
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver repasses de Dioney Galharte' }));
+    const dialogo = await screen.findByRole('dialog');
+    // Duas linhas próprias — e NÃO uma linha de R$ 800,00.
+    expect(within(dialogo).getByText('R$ 500,00')).toBeInTheDocument();
+    expect(within(dialogo).getByText('R$ 300,00')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Pix 18/07')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Pix 25/07')).toBeInTheDocument();
+    expect(within(dialogo).getByText('2 repasses · R$ 800,00 no total')).toBeInTheDocument();
+    // Uma linha de tabela por repasse (+1 do cabeçalho).
+    expect(within(dialogo).getAllByRole('row')).toHaveLength(3);
+  });
+
+  it('afiliado sem repasse não oferece extrato', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(500)] });
+    renderPage();
+    await screen.findByRole('button', { name: 'Registrar repasse' });
+    expect(screen.queryByRole('button', { name: /Ver repasses/ })).not.toBeInTheDocument();
+  });
+
+  it('o modal de repasse mostra o que já foi adiantado antes de pedir o próximo valor', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({
+      afiliados: [
+        afiliado({
+          comissao: { tipo: 'percentual', percentual: 10 },
+          comissaoAcumulada: 1200,
+          comissaoRepassada: 500,
+          saldoComissao: 700,
+          ultimosRepasses: [
+            { valor: 500, observacao: 'Pix 18/07', criadoEmMillis: Date.UTC(2026, 6, 18, 15, 0) },
+          ],
+        }),
+      ],
+    });
+    renderPage();
+    await abrirModal();
+    expect(screen.getByText('Já repassado antes')).toBeInTheDocument();
+    expect(screen.getByText('1 repasse · R$ 500,00')).toBeInTheDocument();
+    // O campo continua propondo o SALDO (700), não o total acumulado.
+    expect(campoValor()).toHaveValue('700,00');
   });
 });

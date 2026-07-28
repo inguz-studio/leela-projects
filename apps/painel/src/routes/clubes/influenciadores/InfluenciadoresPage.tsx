@@ -20,6 +20,7 @@ import {
   ConfirmModal,
   EmptyState,
   Input,
+  Modal,
   SearchInput,
   KpiCard,
   PageHeader,
@@ -34,6 +35,7 @@ import {
   type AfiliadoDoTenant,
 } from '@leela/api-client';
 import { avaliarRepasse, textoInicialRepasse } from './_lib/repasseForm';
+import { ExtratoRepasses } from './_components/ExtratoRepasses';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -70,6 +72,9 @@ export function InfluenciadoresPage(): JSX.Element {
   const [repasseId, setRepasseId] = useState('');
   const [valorTexto, setValorTexto] = useState('');
   const [processando, setProcessando] = useState(false);
+  // Extrato do lado de QUEM PAGA (S705-T3): antes de adiantar mais um pedaço,
+  // o organizador precisa ver o que já adiantou.
+  const [alvoExtrato, setAlvoExtrato] = useState<AfiliadoDoTenant | null>(null);
 
   // Identidade ESTÁVEL de propósito, não estética: o focus trap do Modal
   // (`useDialogBehavior`) tem `onClose` na lista de dependências do efeito e
@@ -83,6 +88,10 @@ export function InfluenciadoresPage(): JSX.Element {
     },
     [processando],
   );
+
+  const fecharExtrato = useCallback((aberto: boolean) => {
+    if (!aberto) setAlvoExtrato(null);
+  }, []);
 
   const carregar = useCallback(async () => {
     try {
@@ -278,17 +287,28 @@ export function InfluenciadoresPage(): JSX.Element {
                 data={filtrados}
                 keyExtractor={(a) => `${a.eventoId}:${a.refCodigo}`}
                 caption="Influenciadores do tenant"
-                renderActions={(a) =>
-                  a.saldoComissao > 0 ? (
-                    <Button variant="ghost" onClick={() => abrirRepasse(a)}>
-                      Registrar repasse
-                    </Button>
-                  ) : (
-                    <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
-                      {a.saldoComissao < 0 ? 'Em dívida' : 'Sem saldo'}
-                    </span>
-                  )
-                }
+                renderActions={(a) => (
+                  <div className="flex items-center justify-end gap-[var(--spacing-2)]">
+                    {a.ultimosRepasses.length > 0 ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setAlvoExtrato(a)}
+                        aria-label={`Ver repasses de ${a.nome}`}
+                      >
+                        Ver repasses ({a.ultimosRepasses.length})
+                      </Button>
+                    ) : null}
+                    {a.saldoComissao > 0 ? (
+                      <Button variant="ghost" onClick={() => abrirRepasse(a)}>
+                        Registrar repasse
+                      </Button>
+                    ) : (
+                      <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+                        {a.saldoComissao < 0 ? 'Em dívida' : 'Sem saldo'}
+                      </span>
+                    )}
+                  </div>
+                )}
               />
             )}
           </>
@@ -332,6 +352,13 @@ export function InfluenciadoresPage(): JSX.Element {
                 disabled={processando}
                 {...(avaliacao.hint !== null ? { errorMessage: avaliacao.hint } : {})}
               />
+              {/* O que já foi adiantado, na hora de decidir o próximo parcial. */}
+              <ExtratoRepasses
+                repasses={alvoRepasse.ultimosRepasses}
+                chaveBase={`modal-${alvoRepasse.refCodigo}`}
+                caption={`Repasses já registrados para ${alvoRepasse.nome}`}
+                titulo="Já repassado antes"
+              />
             </div>
           ) : undefined
         }
@@ -352,6 +379,33 @@ export function InfluenciadoresPage(): JSX.Element {
         loading={processando}
         onConfirm={(d) => void confirmarRepasse(d.reason)}
       />
+
+      <Modal
+        open={alvoExtrato !== null}
+        onOpenChange={fecharExtrato}
+        title="Repasses registrados"
+        description={
+          alvoExtrato !== null
+            ? `${alvoExtrato.nome} · ${alvoExtrato.eventoNome}`
+            : undefined
+        }
+      >
+        {alvoExtrato !== null ? (
+          <div className="flex flex-col gap-[var(--spacing-4)]">
+            <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+              Acumulada {formatBRL(alvoExtrato.comissaoAcumulada)} · repassada{' '}
+              {formatBRL(alvoExtrato.comissaoRepassada)} · saldo{' '}
+              {formatBRL(alvoExtrato.saldoComissao)}
+            </p>
+            <ExtratoRepasses
+              repasses={alvoExtrato.ultimosRepasses}
+              chaveBase={`org-${alvoExtrato.refCodigo}`}
+              caption={`Repasses de ${alvoExtrato.nome} em ${alvoExtrato.eventoNome}`}
+              titulo="Cada registro, uma linha"
+            />
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }
