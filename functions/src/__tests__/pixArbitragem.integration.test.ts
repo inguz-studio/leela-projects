@@ -546,7 +546,12 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
       expect(provider.getCharge(r.chargeId)?.status).toBe('cancelled');
     });
 
-    it('REPLAY do webhook retardatário sobre pedido expirado: ignorado por estado final, sem efeito e sem duplicar', async () => {
+    // LEELA-ESTORNO-T5 (item 27 · RN-379/380): o retardatário deixou de ser
+    // só "ignorado" — a entrega é detectada, entra no extrato e dispara o
+    // estorno TOTAL automático. As asserções abaixo são o contrato NOVO
+    // (substituta mais forte: além de nenhuma receita nascer, o dinheiro
+    // VOLTA, exatamente uma vez).
+    it('webhook retardatário sobre pedido expirado: detectado, estornado UMA vez e sem duplicar', async () => {
       const t0 = T0();
       const r = await createImpl('uid-t3-d', 'pixbe-t3-tardio-01', t0);
       await expirarPixPendenteCore(
@@ -563,12 +568,14 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
         eventId: `tardio-${r.pedidoId}`,
       };
 
-      // 1ª entrega do pagamento retardatário
+      // 1ª entrega do pagamento retardatário: DETECTADA (RN-379) — o mock
+      // aprova o refund na resposta, então o ledger órfão já fecha aqui.
       const tardio = await processarWebhookPagamento(
         db, provider, buildMockWebhookPayload('charge.confirmed', entrega)
       );
       expect(tardio.ignorado).toBe(true);
-      expect(tardio.motivo).toBe('estado_ja_final');
+      expect(tardio.motivo).toBe('retardatario_pos_cancelamento');
+      expect(tardio.estornoOrfao).toBe(true);
 
       // REDELIVERY da MESMA entrega (a máquina de replay existente): mesmo
       // desfecho, zero efeito novo — nada de receita nascendo no retry.
@@ -576,8 +583,10 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
         db, provider, buildMockWebhookPayload('charge.confirmed', entrega)
       );
       expect(replay.ignorado).toBe(true);
+      expect(replay.duplicado).toBe(true);
 
-      // Entrega NOVA (outro eventId) do mesmo pagamento: idem.
+      // Entrega NOVA (outro eventId) do mesmo pagamento: detectada de novo,
+      // mas o ledger órfão (docId fixo) barra o SEGUNDO estorno (RN-371).
       const outra = await processarWebhookPagamento(
         db, provider,
         buildMockWebhookPayload('charge.confirmed', {
@@ -586,14 +595,27 @@ describe.skipIf(!hasEmulator)('S1209-PIXBE — arbitragem server-side do PIX', (
         })
       );
       expect(outra.ignorado).toBe(true);
+      expect(outra.motivo).toBe('retardatario_pos_cancelamento');
 
-      // Estado do dinheiro intocado pelos três.
+      // Estado do dinheiro pelos três: pedido/pagamento seguem cancelados,
+      // NENHUMA receita nasceu, e o estorno TOTAL saiu exatamente UMA vez.
       const pedidoDepois = await db.collection('pedidos').doc(r.pedidoId).get();
       expect(pedidoDepois.get('status')).toBe('cancelado');
       const pagDepois = await db.collection('pagamentos').doc(r.pagamentoId).get();
       expect(pagDepois.get('status')).toBe('cancelado');
       const evento = await db.collection('eventos').doc(EVENTO_ID).get();
       expect(evento.get('receitaConfirmada')).toBe(0);
+      const ledgerOrfao = await db
+        .collection('pagamentos').doc(r.pagamentoId)
+        .collection('estornosOrfaos').doc('total').get();
+      expect(ledgerOrfao.get('status')).toBe('aprovado');
+      expect(ledgerOrfao.get('valorCentavos')).toBe(amount);
+      // O mock desconta o estornável na aceitação: cobrança 100% estornada.
+      expect(provider.getCharge(r.chargeId)?.refundedAmount).toBe(amount);
+      const extrato = await db
+        .collection('estornosOrfaosPendentes').doc(r.pagamentoId).get();
+      expect(extrato.get('resolvido')).toBe(true);
+      expect(extrato.get('entregas')).toBe(2);
     });
 
     it('IDEMPOTENTE: expirar 2× devolve jaFinal e NÃO toca o gateway de novo', async () => {

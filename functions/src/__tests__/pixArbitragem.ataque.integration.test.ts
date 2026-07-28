@@ -671,23 +671,34 @@ describe.skipIf(!hasEmulator)('S1209-PIXREV — ataque à arbitragem server-side
       buildMockWebhookPayload('charge.confirmed', await entregaDe(r))
     );
     expect(res.ignorado).toBe(true);
-    expect(res.motivo).toBe('estado_ja_final');
+    // LEELA-ESTORNO-T5 (item 27 · RN-379): o que este ataque cobrava como
+    // lacuna ("alerta/fila não existe") foi PAGO — o retardatário agora é
+    // detectado com efeito próprio, entra no extrato e dispara o estorno.
+    expect(res.motivo).toBe('retardatario_pos_cancelamento');
+    expect(res.estornoOrfao).toBe(true);
 
     // O pedido não ressuscita e a receita não se move sozinha.
     const evento = await db.collection('eventos').doc(EVENTO_ID).get();
     expect(evento.get('receitaConfirmada')).toBe(0);
 
     // ⚠️ O QUE ESTE TESTE FIXA: o dinheiro NÃO é silencioso — existe um doc
-    // durável, por entrega, com o VALOR e o efeito. É o insumo mínimo de
-    // reconciliação. O que NÃO existe (e está escalado) é alerta/fila: quem
-    // não for procurar por esta subcoleção não fica sabendo.
+    // durável, por entrega, com o VALOR e o efeito honesto; o EXTRATO
+    // top-level (RN-380) registra a pendência na MESMA tx; e o estorno TOTAL
+    // sai pela máquina de carimbo (aqui o mock aprova na resposta).
     const ledger = await db
       .collection('pagamentos').doc(r.pagamentoId)
       .collection('webhookEventos').get();
     expect(ledger.size).toBe(1);
     const entrega = ledger.docs[0];
-    expect(entrega?.get('efeito')).toBe('ignorado_estado_final');
+    expect(entrega?.get('efeito')).toBe('retardatario_pos_cancelamento');
     expect(entrega?.get('amountCentavos')).toBeGreaterThan(0);
     expect(entrega?.get('chargeId')).toBe(r.chargeId);
+    const extrato = await db
+      .collection('estornosOrfaosPendentes').doc(r.pagamentoId).get();
+    expect(extrato.exists).toBe(true);
+    const ledgerOrfao = await db
+      .collection('pagamentos').doc(r.pagamentoId)
+      .collection('estornosOrfaos').doc('total').get();
+    expect(ledgerOrfao.get('status')).toBe('aprovado');
   }, 60_000);
 });

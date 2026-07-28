@@ -55,6 +55,13 @@ import {
   confirmarEstornoPorWebhook,
   type ResultadoConfirmacaoEstorno,
 } from './estornarInscricao';
+import {
+  ORFAOS_PENDENTES_COL,
+  confirmarEstornoOrfaoPorWebhook,
+  estornarPagamentoOrfaoCore,
+  registrarRetardatarioNaTx,
+  type ResultadoConfirmacaoOrfao,
+} from './estornarPagamentoOrfao';
 import { fecharReembolsoPorEstorno } from '../finance/requestRefund';
 
 type Db = admin.firestore.Firestore;
@@ -84,6 +91,14 @@ export interface ResultadoWebhookPagamento {
   confirmarEstorno?: boolean;
   /** Desfecho do fechamento do ledger de estorno (RN-372). */
   estornoConfirmado?: ResultadoConfirmacaoEstorno;
+  /**
+   * Interno da porta (item 27 · RN-379): a entrega é um pagamento RETARDATÁRIO
+   * (confirmação após cancelamento) — o estorno órfão dispara FORA da
+   * transação da entrega, best-effort (a varredura RN-380 re-tenta).
+   */
+  estornoOrfao?: boolean;
+  /** Desfecho do fechamento do ledger ÓRFÃO (quando o T1 não tinha carimbo). */
+  estornoOrfaoConfirmado?: ResultadoConfirmacaoOrfao;
 }
 
 /** Erro de webhook com status HTTP mapeado (mensagem pública, sem internals). */
@@ -282,6 +297,39 @@ export async function processarWebhookPagamento(
     // b. Guarda de transição única: só 'pendente' muda de estado. Estado
     //    final não re-aplica efeito (receita nunca duplica) nem retrocede.
     if (statusPagamento !== 'pendente') {
+      // RETARDATÁRIO (item 27 · RN-379): confirmação que chega DEPOIS do
+      // cancelamento. O dinheiro entrou e ninguém tem inscrição — este ramo
+      // deixa de ser só "ignorado": o extrato registra (RN-380, mesma tx) e
+      // o estorno órfão dispara FORA desta transação (o webhook responde
+      // rápido; a fila do Asaas pausa com 15 falhas).
+      if (statusPagamento === 'cancelado' && resultado.status === 'confirmed') {
+        // Leitura ANTES das escritas (disciplina da tx): o extrato pode já
+        // existir (segunda entrega retardatária) e detecção nunca des-resolve.
+        const extratoSnap = await tx.get(
+          db.collection(ORFAOS_PENDENTES_COL).doc(pagamentoId)
+        );
+        gravarLedger('retardatario_pos_cancelamento');
+        registrarRetardatarioNaTx(
+          tx,
+          db,
+          {
+            pagamentoId,
+            pedidoId: orderId,
+            chargeId: resultado.chargeId,
+            entregaEventId: eventId,
+            amountCentavos: resultado.amount,
+            tenantId: (pagamentoSnap.get('tenantId') as string | null) ?? '',
+          },
+          extratoSnap.exists
+        );
+        return {
+          ...base,
+          duplicado: false,
+          ignorado: true,
+          motivo: 'retardatario_pos_cancelamento',
+          estornoOrfao: true,
+        };
+      }
       gravarLedger('ignorado_estado_final');
       return { ...base, duplicado: false, ignorado: true, motivo: 'estado_ja_final' };
     }
@@ -615,17 +663,18 @@ export async function processarWebhookPagamento(
   // lá; separar as duas transações mantém a resposta do webhook rápida (a
   // fila do Asaas pausa com 15 falhas) e evita transação gigante.
   if (resultadoEntrega.confirmarEstorno === true) {
+    const confirmacao = {
+      ...(resultado.refund?.refundId !== undefined
+        ? { refundId: resultado.refund.refundId }
+        : {}),
+      ...(resultado.refund?.amountCentavos !== undefined
+        ? { amountCentavos: resultado.refund.amountCentavos }
+        : {}),
+    };
     const estornoConfirmado = await confirmarEstornoPorWebhook(
       db,
       resultadoEntrega.pagamentoId,
-      {
-        ...(resultado.refund?.refundId !== undefined
-          ? { refundId: resultado.refund.refundId }
-          : {}),
-        ...(resultado.refund?.amountCentavos !== undefined
-          ? { amountCentavos: resultado.refund.amountCentavos }
-          : {}),
-      }
+      confirmacao
     );
     if (
       estornoConfirmado.inscritoId !== undefined &&
@@ -639,7 +688,44 @@ export async function processarWebhookPagamento(
         estornoConfirmado.inscritoId
       );
     }
+    if (estornoConfirmado.motivo === 'sem_carimbo_vivo') {
+      // O T1 não tinha carimbo para este refund: pode ser o estorno ÓRFÃO
+      // (item 27 · RN-379) — a MESMA autoridade de webhook fecha o ledger
+      // próprio dele. O T1 tem precedência porque casa por refundId/valor.
+      const estornoOrfaoConfirmado = await confirmarEstornoOrfaoPorWebhook(
+        db,
+        resultadoEntrega.pagamentoId,
+        confirmacao
+      );
+      return { ...resultadoEntrega, estornoConfirmado, estornoOrfaoConfirmado };
+    }
     return { ...resultadoEntrega, estornoConfirmado };
+  }
+
+  // GATILHO do estorno órfão (item 27 · RN-379) — fora da transação da
+  // entrega, best-effort: se morrer aqui, o retardatário JÁ está no extrato
+  // (RN-380, gravado na mesma tx) e a varredura agendada re-dispara. A
+  // máquina de carimbo (RN-370/371) torna o re-disparo inofensivo.
+  if (resultadoEntrega.estornoOrfao === true) {
+    try {
+      const orfao = await estornarPagamentoOrfaoCore(
+        db,
+        provider,
+        resultadoEntrega.pagamentoId
+      );
+      logger.info('estorno_orfao_disparado_pelo_webhook', {
+        pagamentoId: resultadoEntrega.pagamentoId,
+        pedidoId: resultadoEntrega.pedidoId,
+        refundId: orfao.refundId,
+        estado: orfao.estado,
+        aguardandoConfirmacao: orfao.aguardandoConfirmacao,
+      });
+    } catch (err) {
+      logger.error('estorno_orfao_dispatch_falhou', {
+        pagamentoId: resultadoEntrega.pagamentoId,
+        erro: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      });
+    }
   }
 
   return resultadoEntrega;

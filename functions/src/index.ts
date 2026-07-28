@@ -155,6 +155,11 @@ export { expirarPixPendente } from './checkout/expirarPixPendente';
 // 15 min sem virar pedido. O cron NÃO decide a venda — quem recusa a
 // conclusão fora do prazo é o gate transacional de createInscricaoCharge.
 export { expirarCarrinhosAbandonados } from './checkout/expirarCarrinhosAbandonados';
+// Estorno ÓRFÃO (item 27 · RN-379/380): pagamento confirmado APÓS o
+// cancelamento devolve TUDO automaticamente pela mesma máquina de carimbo do
+// estorno (RN-370/371/372); a varredura (15 min) conta, alerta e re-dispara o
+// que o gatilho inline do webhook não fechou.
+export { varrerEstornosOrfaos } from './checkout/estornarPagamentoOrfao';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via
