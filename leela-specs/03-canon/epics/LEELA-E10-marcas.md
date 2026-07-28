@@ -265,3 +265,249 @@ cabeçalho dela é vazio, então sem `alt` a célula seria muda para leitor de t
 
 Nenhuma asserção da `MarcasPage` foi tocada. O logo não tinha teste; agora tem
 três (logo próprio por linha, logos distintos entre marcas, fallback sem logo).
+
+---
+
+## Prontidão de build · posição 3 da fila (SPECS-0728 · 2026-07-28)
+
+Autorizada em DEC-0728A. O plano de 2026-07-19 já tinha a ordem certa das quatro
+tarefas; o que faltava era a auditoria de viabilidade. Ela encontrou um bloqueio real, e
+por isso esta seção acrescenta uma tarefa **antes** da que estava em primeiro lugar.
+
+### Inventário antes de especificar
+
+**O que existe e não se reescreve.** `packages/core/src/brands/marca.ts` com o tipo e as
+validações condicionais por modelo comercial. `packages/api-client/src/brands.ts` com o
+CRUD, o `listarMarcas` do autocomplete e o `upsertMarcaDoPatrocinio`. A rota `/marcas`
+com lista, modal de criar e editar, exclusão com consequências e o `Thumb` do design
+system no logo. O campo `exibirLogo` já existe no item de kit
+(`packages/core/src/eventos/kit.ts`), com helper de decisão, então o T3 é uma tela sobre
+um campo que já está no modelo, e não um campo novo.
+
+**O bloqueio.** A tarefa `S812-T1` foi escrita assumindo que o gatilho consegue ir do
+vínculo até a marca. Nenhuma das três fontes carrega essa chave hoje:
+
+| Fonte do vínculo | O que ela guarda da marca | Dá para chegar em `marcaId`? |
+|---|---|---|
+| `clubes/{id}/parcerias` tipo patrocinador | `nome` (cópia independente, `ParceriaPatrocinador`) | não, só o texto |
+| `clubes/{id}/desafios` | `patrocinioId`, que aponta para a parceria | não, a parceria também não tem |
+| `itensKit/{id}` com `origem = patrocinador` | `marca`, uma string livre | não, só o texto |
+
+Existe um atalho tentador e errado: o `marcaId` é derivado do nome normalizado
+(`marcaIdDoNome` em `packages/api-client/src/brands.ts`), então dá para calcular a chave
+a partir do texto do vínculo. O modo de falha é exatamente o que a própria tela já
+documentou. Na edição, o docId é **fixo** de propósito, para renomear não criar órfão.
+Logo, depois de um "CDL Wellness" virar "CDL Wellness Brasil", o texto do vínculo antigo
+deriva para uma chave que não existe mais, e o vínculo some do índice sem ninguém
+perceber. Casar por nome também funde duas marcas parecidas numa só.
+
+**Consequência de escopo.** A chave precisa ser **gravada no vínculo**, no instante em
+que o autocomplete já sabe qual marca foi escolhida e hoje descarta o id. Isso é uma
+tarefa nova, `S812-T0`, e ela bloqueia todas as outras. Sem ela, o índice conta errado, e
+número errado numa conversa com patrocinador é o dano que este épico existe para evitar.
+
+**Fronteira de escrita.** O índice mora sob `profissionais/{profId}/marcas/{marcaId}`,
+que é do profissional, enquanto as três fontes são de clube e de evento. O gatilho tem de
+resolver o dono a partir do `tenantId` do documento de origem, nunca de um parâmetro do
+cliente (RN-400). É a parte que mais merece o olho do review antagonista.
+
+### Regras de negócio novas (SPECS-0728)
+
+- **RN-387 · Chave da ativação é gravada, não adivinhada.** Todo vínculo que patrocina
+  algo (parceria de patrocínio, desafio patrocinado, item de kit de origem patrocinador)
+  grava o **`marcaId` explícito** do registro reutilizável no momento em que o vínculo é
+  criado ou editado pela seleção do autocomplete (RN-171). O índice de ativações e a
+  contagem **só consideram vínculos com `marcaId` gravado**. Casar ativação por nome é
+  **proibido**: o docId é fixo na renomeação (por decisão do lote MARCAS-TELA) e a
+  derivação por texto passa a apontar para o vazio depois do primeiro rename, além de
+  fundir marcas homônimas. Vínculo legado sem a chave não conta e não é adivinhado; ele
+  aparece na tela como pendência de revínculo, com o nome que tem.
+- **RN-388 · Contagem de ativação vem do índice ou não vem.** O número de ativações de
+  uma marca é lido do índice mantido por Function e do agregado `qtdAtivacoes`; nunca de
+  varredura no cliente, nunca estimado. Enquanto o índice não existir para uma marca, a
+  tela **omite o número** em vez de exibir zero, porque zero e desconhecido são coisas
+  diferentes para quem vai sentar com o patrocinador. Formaliza como regra a omissão
+  deliberada que o lote MARCAS-TELA já praticava.
+
+---
+
+### LEELA-S812 · Ativações da marca · complemento de prontidão (SPECS-0728)
+
+Os critérios de aceite da história seguem os já escritos acima nesta mesma página. Esta
+seção acrescenta os que a auditoria descobriu e a quebra de tarefas que faltava.
+
+**Critérios de aceite acrescentados (Given/When/Then):**
+
+- **Dado** um patrocínio criado pela seleção de uma marca no autocomplete, **quando** o
+  vínculo é gravado, **então** ele carrega o `marcaId` escolhido, e não só o nome
+  (RN-387).
+- **Dado** uma marca renomeada depois de já ter vínculos, **quando** abro suas ativações,
+  **então** todos os vínculos anteriores continuam listados, porque a ligação é por chave
+  e não por texto.
+- **Dado** um vínculo legado sem `marcaId`, **quando** abro as ativações da marca de mesmo
+  nome, **então** ele **não** aparece como ativação e a tela mostra, em separado, quantos
+  vínculos aguardam revínculo.
+- **Dado** que o índice de uma marca ainda não foi construído, **quando** vejo a lista de
+  marcas, **então** a coluna de ativações fica vazia com explicação, e não com zero
+  (RN-388).
+- **Dado** um vínculo de patrocínio removido, **quando** o gatilho processa, **então** a
+  ativação some do índice e `qtdAtivacoes` decrementa.
+- **Dado** o mesmo evento de vínculo reprocessado, **quando** o gatilho roda de novo,
+  **então** nada duplica e a contagem não incrementa duas vezes.
+
+**Tasks:** `S812-T0`, `S812-T1`, `S812-T2`, `S812-T3`, `S812-T4`.
+
+#### LEELA-S812-T0 · Chave `marcaId` nos três vínculos de patrocínio
+- **Tipo:** data-model · **Depende de:** S811 (entregue) · **Bloqueia:** S812-T1 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Dar ao índice uma chave confiável, gravando no vínculo o id da marca que o autocomplete
+já conhece no instante da escolha.
+
+**Arquivos (criar/editar)**
+- `packages/core/src/clubs/parceria.ts` — campo `marcaId?` em `ParceriaPatrocinador`.
+- `packages/core/src/clubs/desafio.ts` — o desafio já aponta para a parceria por
+  `patrocinioId`; decidir e documentar se ele herda a chave da parceria em vez de guardar
+  a própria (herdar é o default proposto, uma fonte só).
+- `packages/core/src/eventos/kit.ts` — campo `marcaId?` ao lado do `marca` textual, que
+  permanece para exibição e para item sem registro.
+- `apps/painel/src/routes/**` — os pontos de criação e edição dos três vínculos passam a
+  propagar o id que o autocomplete devolve.
+- `firestore.rules` — o campo entra na validação de escrita dos vínculos.
+
+**Passos de implementação**
+1. Campo opcional nos três shapes do core, com o textual preservado. Opcional de
+   propósito: documento legado continua válido, só não conta como ativação.
+2. Telas de criação e edição passam a gravar o id vindo da seleção; digitar um nome livre
+   que não existe no registro continua permitido e grava sem chave.
+3. Migração dos legados: **nenhuma adivinhação automática**. A tela de ativações mostra os
+   pendentes e oferece revincular um a um, com a marca escolhida por quem sabe.
+
+**Regras de negócio a respeitar**
+- RN-387 (chave gravada), RN-171 (registro reutilizável e autocomplete), RN-123 (modelo
+  comercial), RN-400 (escopo por tenant).
+
+**Testes a escrever**
+- unit: parse dos três shapes com e sem `marcaId`; documento legado normaliza sem erro.
+- integração: criar patrocínio pelo autocomplete grava a chave; digitar nome livre grava
+  sem chave e não quebra.
+
+**Definition of Done**
+- [ ] Checklist padrão (DoD API/Function) e review antagonista, porque é mudança de
+      modelo em documento que já existe em produção de teste.
+
+**Fora de escopo**
+Backfill automático por nome. Está proibido pela RN-387.
+
+#### LEELA-S812-T1 · Function de índice inverso e agregado por gatilho
+- **Tipo:** api/function · **Depende de:** S812-T0 · **Bloqueia:** S812-T2, S812-T3 · **Estimativa:** L · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Manter `profissionais/{profId}/marcas/{marcaId}/ativacoes` e o agregado `qtdAtivacoes` a
+partir dos três gatilhos, de forma idempotente.
+
+**Arquivos (criar/editar)**
+- `functions/src/brands/indexBrandActivations.ts` (novo).
+- `packages/core/src/brands/activation.ts` (novo) — tipo `Ativacao` e normalização das
+  três origens numa forma só.
+- `firestore.rules` — leitura pelo dono, escrita só por Function.
+
+**Passos de implementação**
+1. Um docId **determinístico** por ativação, derivado da origem e do id do vínculo. Assim
+   a idempotência nasce da chave, no mesmo padrão que o log de comunicação já usa, em vez
+   de depender de leitura antes da escrita.
+2. `onWrite` das três fontes: criação grava, remoção apaga, e a troca de marca num vínculo
+   apaga da antiga e grava na nova, na mesma passagem.
+3. `qtdAtivacoes` recomputado por contagem de escopo de coleção, no espelho do
+   `agregarFinanceiro`, e não por incremento cego.
+4. Resolver o `profId` dono pelo `tenantId` do documento de origem, nunca por parâmetro.
+
+**Critérios de aceite (testáveis)**
+- Reprocessar o mesmo vínculo duas vezes não duplica ativação nem conta duas vezes.
+- Remover o vínculo remove a ativação e decrementa a contagem.
+- Trocar a marca de um vínculo move a ativação, sem deixar a antiga para trás.
+- Um vínculo de outro tenant nunca escreve no índice do profissional errado.
+
+**Testes a escrever**
+- integração no emulador para os quatro critérios acima, um a um.
+- ataque de Rules: cliente tenta escrever em `ativacoes` e em `qtdAtivacoes` e falha nos
+  dois.
+
+#### LEELA-S812-T2 · Tela de ativações com abas por tipo
+- **Tipo:** screen · **Depende de:** S812-T1 · **Estimativa:** M · **Rota:** opus
+
+**Objetivo**
+Mostrar onde a marca está ativa, separado por tipo, com estado vazio honesto.
+
+**Arquivos (criar/editar)**
+- `apps/painel/src/routes/marcas/**` — rota de ativações da marca.
+
+**Critérios de aceite (testáveis)**
+- Abas Desafios, Itens de kit e Eventos, todas no DOM (§2.7), com contador "mostrando X
+  de Y" em cada uma.
+- Marca sem nenhuma ativação mostra estado vazio com texto próprio.
+- Vínculos legados sem chave aparecem numa faixa separada de pendências, com a ação de
+  revincular, e **não** somam na contagem.
+
+#### LEELA-S812-T3 · Exibir logo ao atleta por item patrocinado
+- **Tipo:** screen · **Depende de:** S812-T2 · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Expor na aba de itens o toggle que grava `itensKit.exibirLogo`, campo que já existe no
+modelo.
+
+**Arquivos (editar)**
+- `apps/painel/src/routes/marcas/**` e `firestore.rules`.
+
+**Critérios de aceite (testáveis)**
+- Desligar persiste `exibirLogo = false` e o atleta deixa de ver a logo (RN-214).
+- Quem não é dono do item não consegue gravar, provado por Rules e não por interface.
+
+#### LEELA-S812-T4 · Fechar as duas dívidas declaradas pela tela de marcas
+- **Tipo:** screen · **Depende de:** S812-T1, S812-T2 · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Pagar o que o lote MARCAS-TELA registrou como omissão deliberada.
+
+**Critérios de aceite (testáveis)**
+- A lista de marcas passa a exibir `qtdAtivacoes`, vindo do índice, e omite quando o
+  índice ainda não existe (RN-388).
+- O `ConfirmModal` de exclusão troca o texto genérico pelas ativações realmente afetadas,
+  mantendo a frase de que patrocínios já cadastrados são cópias independentes e
+  permanecem intactos.
+
+---
+
+### Fila de código pronta · lane E10 (posição 3)
+
+| # | Task | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|
+| 1 | `S812-T0` chave `marcaId` nos três vínculos | `packages/core`, `apps/painel/src/routes`, `firestore.rules` | — | opus | ⚔ |
+| 2 | `S812-T1` índice inverso e agregado por gatilho | `functions/src/brands`, `packages/core/src/brands`, `firestore.rules` | 1 | opus | ⚔ |
+| 3 | `S812-T2` tela de ativações com abas | `apps/painel/src/routes/marcas` | 2 | opus | — |
+| 4 | `S812-T3` toggle de logo por item | `apps/painel/src/routes/marcas`, `firestore.rules` | 3 | opus | — |
+| 5 | `S812-T4` contagem na lista e preview real da exclusão | `apps/painel/src/routes/marcas` | 2, 3 | opus | — |
+
+**Serialização.** A fila é uma linha só, sem paralelismo interno: cada tarefa depende do
+dado que a anterior grava. `firestore.rules` é tocado pela T0, T1 e T3, então o rebase
+antes de cada aterrissagem é obrigatório enquanto outra lane estiver viva.
+
+**Fronteira com o E03 e o E05.** A T0 toca o modelo de item de kit (E03) e o de parceria e
+desafio (E05). São campos acrescentados, não alterados, mas o dono do modelo continua
+sendo o épico de origem; o E10 é consumidor. Qualquer mudança de semântica nesses campos
+volta para o épico dono.
+
+### Critério de pronto da posição 3
+
+- [ ] os quatro critérios de idempotência e remoção do T1 provados no emulador
+- [ ] renomear uma marca não perde nenhuma ativação
+- [ ] nenhum vínculo é casado por nome em lugar nenhum do código
+- [ ] nenhum número da tela vem de varredura no cliente
+- [ ] a exclusão continua honesta sobre cópias independentes
+- [ ] review antagonista em contexto fresco em `S812-T0` e `S812-T1`
+
+### Sem decisão aberta
+
+Continua valendo o que o plano de 19/07 registrou: o Vitor não tem nada a decidir aqui.
+A escolha de proibir o casamento por nome é técnica, com o modo de falha nomeado, e
+segue a disciplina que a própria tela já adotou de não exibir número inventado.
