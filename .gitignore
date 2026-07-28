@@ -47,8 +47,9 @@ storybook-static/
 .env.*
 !.env.example
 # Exceção CIRÚRGICA (lane DEPLOY-PREVIEW): config web pública do Firebase do
-# painel — não é segredo (vai para qualquer navegador). SÓ este path.
-!/apps/painel/.env.leela-hub
+# painel — não é segredo (vai para qualquer navegador). SÓ este path (na
+# raiz porque o vite.config.ts do painel fixa envDir na raiz do monorepo).
+!/.env.leela-hub
 # Valores locais dos secrets declarados (Functions Emulator) — NUNCA commitar
 .secret.local
 
