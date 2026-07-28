@@ -27,10 +27,10 @@ import { FinanceiroView } from './FinanceiroView';
 import { useFinanceiroRealtime } from '../../../lib/query/realtime';
 import { commercialTermsQuery } from '../../../lib/query/queries';
 import { useTenantSession } from '../../../lib/session/tenantSession';
-import { useHistoricoRepasses } from '../repasses/_data/repasses';
+import { useHistoricoRepasses, useSaldoRepasse } from '../repasses/_data/repasses';
 import { associarRepassesPorEvento } from '../repasses/_lib/repassesPorEvento';
 import { usePapelEvento } from '../_data/papelEvento';
-import type { ContextoRepasseEvento } from '../_lib/financeiro';
+import { contextoDaCaixa, type ContextoRepasseEvento } from '../_lib/financeiro';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 
 export function FinanceiroPage(): JSX.Element {
@@ -40,6 +40,12 @@ export function FinanceiroPage(): JSX.Element {
 
   const session = useTenantSession();
   const historico = useHistoricoRepasses(session.tenantId);
+  // Item 49: o teto de verdade do saque. O disponível do EVENTO não conhece a
+  // janela D+N (RN-348), que é grandeza do TENANT — é o MESMO `saldo/current`
+  // que a visão macro e o modal de repasse leem, com a MESMA chave de cache
+  // (quente se o organizador já passou por Eventos › Repasses). Nenhuma soma
+  // nova: o consolidado é ∑ do servidor (RN-350/351).
+  const saldo = useSaldoRepasse(session.tenantId);
   const { papel } = usePapelEvento(evento);
 
   // Termo comercial — AUXILIAR, exatamente como em `useRepassesPorEvento`:
@@ -52,13 +58,17 @@ export function FinanceiroPage(): JSX.Element {
     enabled: !!session.tenantId,
   });
 
-  const contexto = useMemo<ContextoRepasseEvento>(() => {
-    const pct = termos.data?.retencaoRepassePct;
-    return {
-      encerrado: evento.status === 'encerrado',
-      ...(typeof pct === 'number' ? { retencaoPct: pct } : {}),
-    };
-  }, [evento.status, termos.data]);
+  // As guardas do termo (NaN) e do teto do tenant (item 49) vivem na função
+  // pura, não aqui: é conta de dinheiro, e conta de dinheiro tem teste.
+  const contexto = useMemo<ContextoRepasseEvento>(
+    () =>
+      contextoDaCaixa({
+        encerrado: evento.status === 'encerrado',
+        retencaoPct: termos.data?.retencaoRepassePct,
+        disponivelTenant: saldo.data?.disponivel,
+      }),
+    [evento.status, termos.data, saldo.data],
+  );
 
   // Σ dos repasses vivos ({solicitado, aprovado, pago}) associados a ESTE
   // evento. `undefined` (evento sem repasse) vira `null` = estado honesto.
@@ -85,6 +95,13 @@ export function FinanceiroPage(): JSX.Element {
       // agora ele é a diferença entre um valor abatido e um valor cheio com
       // cara de final (review CAIXADISP-REV, R-4).
       repasseErro={historico.error}
+      // Item 50: o erro do termo deixa de ser engolido. A MESMA lane que fez o
+      // erro do histórico chegar à tela não aplicou aqui, e a leitura falhando
+      // com termo negociado de 30% volta a prometer mais que o saque aceita.
+      termoErro={termos.error}
+      // Item 49: sem o consolidado do tenant o card volta ao número do evento,
+      // que é exatamente o que o item corrige. Declarado, não silencioso.
+      tetoTenantErro={saldo.error}
       contexto={contexto}
       podeVerRepasses={podeVerRepasses}
       onVerRepasses={() => navigate('/eventos/repasses')}

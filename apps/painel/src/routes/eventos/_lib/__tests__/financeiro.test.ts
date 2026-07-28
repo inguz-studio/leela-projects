@@ -31,6 +31,7 @@ import {
 } from '@leela/core';
 import {
   breakdownFinanceiro,
+  contextoDaCaixa,
   derivarRepasse,
   gerarCsvFinanceiro,
   SEM_VALOR,
@@ -362,5 +363,105 @@ describe('gerarCsvFinanceiro', () => {
       const csv = gerarCsvFinanceiro(mkFin());
       expect(csv).toContain('Modalidade,5k,100');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Item 49 · o card não pode prometer mais do que o saque aceita
+//
+// A CAIXASIMPLES-REV mediu o gap no emulador: pagamento confirmado hoje segura
+// R$ 4.475 na janela D+N (RN-348, grandeza do TENANT), o card dizia R$ 8.500 e
+// o modal aceitava R$ 4.025. Default do dono em vigor: exibir o MENOR dos dois.
+// ---------------------------------------------------------------------------
+describe('item 49 · disponível exibido = min(evento, tenant)', () => {
+  it('teto do tenant ABAIXO do evento manda no número exibido — o cenário medido', () => {
+    const rep = derivarRepasse(mkFin(), null, { encerrado: false, disponivelTenant: 4025 });
+    expect(rep.disponivel).toBe(4025);
+    expect(rep.disponivelDoEvento).toBe(8500);
+    expect(rep.limitadoPeloTenant).toBe(true);
+  });
+
+  it('teto do tenant ACIMA do evento não infla nada — o evento continua o teto', () => {
+    const rep = derivarRepasse(mkFin(), null, { encerrado: false, disponivelTenant: 99_000 });
+    expect(rep.disponivel).toBe(8500);
+    expect(rep.limitadoPeloTenant).toBe(false);
+  });
+
+  it('teto AUSENTE (leitura não chegou) não limita nada — "não sei" nunca vira zero', () => {
+    // Omitido de vez e explicitamente nulo: os dois são "ainda não sei".
+    expect(derivarRepasse(mkFin(), null, { encerrado: false }).disponivel).toBe(8500);
+    const comNull = derivarRepasse(mkFin(), null, {
+      encerrado: false,
+      disponivelTenant: null,
+    });
+    expect(comNull.disponivel).toBe(8500);
+    expect(comNull.limitadoPeloTenant).toBe(false);
+  });
+
+  it('tenant ZERADO exibe zero — é o número que o saque aceita, não um bug', () => {
+    const rep = derivarRepasse(mkFin(), null, { encerrado: false, disponivelTenant: 0 });
+    expect(rep.disponivel).toBe(0);
+    expect(rep.limitadoPeloTenant).toBe(true);
+  });
+
+  it('sem termo comercial o teto do tenant não inventa número: segue "—"', () => {
+    const rep = derivarRepasse(mkFin({ receitaLiquida: null }), null, {
+      encerrado: false,
+      disponivelTenant: 4025,
+    });
+    expect(rep.disponivel).toBeNull();
+    expect(rep.semTermo).toBe(true);
+    expect(rep.limitadoPeloTenant).toBe(false);
+  });
+
+  it('o CSV sai do MESMO número — nunca duas contas para a mesma linha', () => {
+    const csv = gerarCsvFinanceiro(mkFin(), null, { encerrado: false, disponivelTenant: 4025 });
+    expect(csv).toContain('Resumo,Disponível para Repasse (R$),4025');
+    expect(csv).not.toContain('8500');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Guardas da borda (contextoDaCaixa) — item 50 "de carona" + item 49
+// ---------------------------------------------------------------------------
+describe('contextoDaCaixa · o que entra na conta de dinheiro', () => {
+  it('NaN no termo cai no DEFAULT do core, não estoura o render', () => {
+    // `typeof NaN === 'number'` passava direto e o core lançava RangeError.
+    const ctx = contextoDaCaixa({ encerrado: false, retencaoPct: Number.NaN });
+    expect(ctx.retencaoPct).toBeUndefined();
+    const rep = derivarRepasse(mkFin(), null, ctx);
+    expect(rep.disponivel).toBe(8500); // 15% do core, o default declarado
+  });
+
+  it.each([Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, '30', null, undefined, {}])(
+    'termo %p não vira retenção — só número finito atravessa',
+    (pct) => {
+      expect(contextoDaCaixa({ encerrado: false, retencaoPct: pct }).retencaoPct).toBeUndefined();
+    },
+  );
+
+  it('termo finito atravessa intacto (inclusive 0 e o negociado de 30%)', () => {
+    expect(contextoDaCaixa({ encerrado: false, retencaoPct: 30 }).retencaoPct).toBe(30);
+    expect(contextoDaCaixa({ encerrado: false, retencaoPct: 0 }).retencaoPct).toBe(0);
+  });
+
+  it.each([Number.NaN, null, undefined, '4025'])(
+    'teto do tenant %p vira null — teto que não dá para ler não limita',
+    (teto) => {
+      expect(contextoDaCaixa({ encerrado: false, disponivelTenant: teto }).disponivelTenant).toBeNull();
+    },
+  );
+
+  it('teto finito atravessa, inclusive zero', () => {
+    expect(contextoDaCaixa({ encerrado: false, disponivelTenant: 4025 }).disponivelTenant).toBe(4025);
+    expect(contextoDaCaixa({ encerrado: false, disponivelTenant: 0 }).disponivelTenant).toBe(0);
+  });
+
+  it('termo negociado de 30% com o teto do tenant: os dois efeitos convivem', () => {
+    // 10.000 líquido − 30% = 7.000 no evento; tenant só libera 4.025.
+    const ctx = contextoDaCaixa({ encerrado: false, retencaoPct: 30, disponivelTenant: 4025 });
+    const rep = derivarRepasse(mkFin(), null, ctx);
+    expect(rep.disponivelDoEvento).toBe(7000);
+    expect(rep.disponivel).toBe(4025);
   });
 });

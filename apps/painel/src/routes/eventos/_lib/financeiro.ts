@@ -47,6 +47,47 @@ export interface ContextoRepasseEvento {
   encerrado: boolean;
   /** % de retenção do termo do tenant; ausente ⇒ default 15 do core (RN-350). */
   retencaoPct?: number;
+  /**
+   * Disponível CONSOLIDADO do tenant (`saldo/current.disponivel` — RN-351), o
+   * número que o saque de fato aceita. Ausente/`null` = ainda não lido (o card
+   * fica só com o número do evento). Item 49: o disponível do EVENTO não
+   * conhece a janela D+N (RN-348), que é grandeza do TENANT — com um pagamento
+   * confirmado hoje o card prometia R$ 8.500 onde o modal aceitava R$ 4.025.
+   */
+  disponivelTenant?: number | null;
+}
+
+/**
+ * Monta o contexto da Caixa a partir do que os readers entregam — a borda onde
+ * dado de I/O vira parâmetro de conta. Pura porque é aqui que moram DUAS
+ * guardas de dinheiro que não podem depender de alguém lembrar delas na tela:
+ *
+ *   1. `Number.isFinite`, não `typeof === 'number'` (achado BAIXA da
+ *      CAIXASIMPLES-REV): `NaN` É `number` e passava direto para o core, que
+ *      então lançava RangeError no render em vez de cair no default de 15%. O
+ *      consumidor irmão (`useRepassesPorEvento`) sempre usou `Number.isFinite`
+ *      — os dois caminhos da MESMA conta agora concordam.
+ *   2. teto do tenant ausente/ilegível NÃO limita nada (item 49): `null` é
+ *      "não sei", e transformar "não sei" em 0 seria pior que o defeito que o
+ *      teto corrige.
+ * @pure
+ */
+export function contextoDaCaixa(params: {
+  encerrado: boolean;
+  /** `commercialTerms.retencaoRepassePct` cru, do jeito que o reader entrega. */
+  retencaoPct?: unknown;
+  /** `saldo/current.disponivel` cru — `null`/`undefined` = ainda não lido. */
+  disponivelTenant?: unknown;
+}): ContextoRepasseEvento {
+  return {
+    encerrado: params.encerrado,
+    ...(Number.isFinite(params.retencaoPct)
+      ? { retencaoPct: params.retencaoPct as number }
+      : {}),
+    disponivelTenant: Number.isFinite(params.disponivelTenant)
+      ? (params.disponivelTenant as number)
+      : null,
+  };
 }
 
 /** Visão de repasse do organizador (sem taxa/margem da plataforma). */
@@ -56,10 +97,15 @@ export interface RepasseEvento {
   /** Σ dos repasses VIVOS deste evento (ledger — RN-349 · DEC-0727). */
   repassado: number;
   /**
-   * Disponível para repasse na base do saque (RN-367); `null` = tenant sem
-   * termo comercial — indeterminado, nunca zero (decisão #7).
+   * Disponível EXIBIDO: o menor entre o do evento e o do tenant (item 49);
+   * `null` = tenant sem termo comercial — indeterminado, nunca zero (decisão
+   * #7).
    */
   disponivel: number | null;
+  /** Disponível do EVENTO, antes do teto do tenant (base do texto da nota). */
+  disponivelDoEvento: number | null;
+  /** O número exibido veio do TETO DO TENANT, não do evento (item 49). */
+  limitadoPeloTenant: boolean;
   /** Quanto da Σ o disponível ABSORVEU (clamp RN-351 — review R-2). */
   absorvido: number;
   /** Sem termo comercial: disponível indeterminado ("—" honesto). */
@@ -98,10 +144,23 @@ export function derivarRepasse(
       ? { retencaoPct: contexto.retencaoPct }
       : {}),
   });
+  // Item 49 · teto do TENANT. O disponível do evento não conhece a janela D+N
+  // (RN-348), que vive no saldo consolidado do tenant: o card prometia mais do
+  // que o modal de saque aceita. Exibir o MENOR dos dois nunca promete demais;
+  // a explicação da janela continua na recusa do modal. Teto ausente (leitura
+  // não chegou) NÃO limita nada — inventar 0 seria pior que o defeito.
+  const tetoTenant = contexto.disponivelTenant;
+  const limitadoPeloTenant =
+    doCore.disponivel !== null &&
+    typeof tetoTenant === 'number' &&
+    Number.isFinite(tetoTenant) &&
+    tetoTenant < doCore.disponivel;
   return {
     receitaTotal: fin.receitaBruta,
     repassado,
-    disponivel: doCore.disponivel,
+    disponivel: limitadoPeloTenant ? (tetoTenant as number) : doCore.disponivel,
+    disponivelDoEvento: doCore.disponivel,
+    limitadoPeloTenant,
     absorvido: doCore.absorvido,
     semTermo: doCore.semTermo,
   };

@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   listTenants: vi.fn(),
   listarEventosDoTenant: vi.fn(),
   listReembolsos: vi.fn(),
+  getPoliticaVendas: vi.fn(),
+  getPedido: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', async (importOriginal) => {
@@ -32,6 +34,8 @@ vi.mock('@leela/api-client', async (importOriginal) => {
     listTenants: mocks.listTenants,
     listarEventosDoTenant: mocks.listarEventosDoTenant,
     listReembolsos: mocks.listReembolsos,
+    getPoliticaVendas: mocks.getPoliticaVendas,
+    getPedido: mocks.getPedido,
   };
 });
 
@@ -84,6 +88,10 @@ async function rodarFila(): Promise<FilaEstornosAdmin> {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  // Defaults neutros: sem política gravada (⇒ defaults legais do kernel) e sem
+  // pedido legível. Cada caso sobrescreve o que interessa a ele.
+  mocks.getPoliticaVendas.mockResolvedValue(null);
+  mocks.getPedido.mockResolvedValue(null);
 });
 
 describe('fan-out da fila admin — isolamento por ramo (E-2)', () => {
@@ -207,5 +215,149 @@ describe('tetos de leitura declarados (E-1 · item 52)', () => {
       tenantsComEventosNoTeto: [],
     });
     expect(fila.itens).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Item 53 · o que VOLTA ao comprador, calculado pelos primitivos do core
+//
+// A coluna mostrava `valorSolicitado` (face + taxa) SEMPRE, mesmo quando a
+// política reteria a taxa (RN-374). A conta agora é a MESMA composição do
+// servidor: linha do pedido (RN-347) → janela do art. 49 (RN-373) →
+// `calcularDevolucaoEstorno` (RN-374).
+// ---------------------------------------------------------------------------
+
+const MS_DIA = 24 * 60 * 60 * 1000;
+
+/** Pedido com UMA linha: face 170,00 + 18,86 de taxa repassada (RN-347). */
+function pedido(compradoHaDias: number) {
+  return {
+    id: 'ped-insc-1',
+    itens: [{ inscritoRef: 'insc-1', valorBase: 170, desconto: 0, valorFinal: 170, taxaRepassada: 18.86 }],
+    criadoEm: ts(Date.now() - compradoHaDias * MS_DIA),
+  };
+}
+
+async function filaComUmPedido(estado: string, doPedido: unknown) {
+  mocks.listTenants.mockResolvedValue([tenant('castelo')]);
+  mocks.listarEventosDoTenant.mockResolvedValue([evento('ev-1')]);
+  mocks.listReembolsos.mockResolvedValue([reembolso('insc-1', ts(1_000), estado)]);
+  mocks.getPedido.mockResolvedValue(doPedido);
+  return rodarFila();
+}
+
+describe('devolução prevista na fila (item 53 · RN-374)', () => {
+  it('FORA da janela do art. 49: volta o face e a taxa fica retida', async () => {
+    const fila = await filaComUmPedido('em_analise', pedido(30));
+    expect(fila.itens[0]?.devolucao).toMatchObject({
+      valorDevolvido: 170,
+      valorFace: 170,
+      taxaDevolvida: 0,
+      taxaRetida: 18.86,
+      dentroDaJanela: false,
+    });
+    // O valor pago segue no doc, intacto — o que muda é o que a tela promete.
+    expect(fila.itens[0]?.reembolso.valorSolicitado).toBe(188.86);
+  });
+
+  it('DENTRO da janela: volta face + taxa integral, nada retido', async () => {
+    const fila = await filaComUmPedido('em_analise', pedido(2));
+    expect(fila.itens[0]?.devolucao).toMatchObject({
+      valorDevolvido: 188.86,
+      taxaDevolvida: 18.86,
+      taxaRetida: 0,
+      dentroDaJanela: true,
+    });
+  });
+
+  it('política que DEVOLVE a taxa fora da janela é respeitada (a régua é do organizador)', async () => {
+    mocks.getPoliticaVendas.mockResolvedValue({
+      id: 'config',
+      tenantId: 'castelo',
+      reembolso: {
+        janelaArrependimentoDias: 7,
+        corteHoras: 48,
+        slaAnaliseDias: 5,
+        devolveTaxaForaDaJanela: true,
+      },
+    });
+    const fila = await filaComUmPedido('em_analise', pedido(30));
+    expect(fila.itens[0]?.devolucao).toMatchObject({ taxaRetida: 0, valorDevolvido: 188.86 });
+  });
+
+  it('taxa AUSENTE (evento com taxa incorporada) devolve só o face, sem inventar taxa', async () => {
+    const semTaxa = {
+      id: 'ped-insc-1',
+      itens: [{ inscritoRef: 'insc-1', valorBase: 170, desconto: 0, valorFinal: 170 }],
+      criadoEm: ts(Date.now() - 30 * MS_DIA),
+    };
+    const fila = await filaComUmPedido('em_analise', semTaxa);
+    expect(fila.itens[0]?.devolucao).toMatchObject({ valorDevolvido: 170, taxaRetida: 0 });
+  });
+
+  it('pedido SEM `criadoEm` conta como DENTRO — o mesmo lado seguro do servidor', async () => {
+    const semData = {
+      id: 'ped-insc-1',
+      itens: [{ inscritoRef: 'insc-1', valorBase: 170, desconto: 0, valorFinal: 170, taxaRepassada: 18.86 }],
+    };
+    const fila = await filaComUmPedido('em_analise', semData);
+    expect(fila.itens[0]?.devolucao).toMatchObject({ dentroDaJanela: true, taxaRetida: 0 });
+  });
+
+  it('pedido ILEGÍVEL não derruba a linha nem inventa número — devolve null', async () => {
+    mocks.listTenants.mockResolvedValue([tenant('castelo')]);
+    mocks.listarEventosDoTenant.mockResolvedValue([evento('ev-1')]);
+    mocks.listReembolsos.mockResolvedValue([reembolso('insc-1', ts(1_000))]);
+    mocks.getPedido.mockRejectedValue(new Error('permission-denied'));
+
+    const fila = await rodarFila();
+
+    expect(fila.itens).toHaveLength(1);
+    expect(fila.itens[0]?.devolucao).toBeNull();
+    expect(fila.ramosComFalha).toBe(0);
+  });
+
+  it('linha do inscrito ausente no pedido (decomposição corrompida) devolve null', async () => {
+    const outraLinha = {
+      id: 'ped-insc-1',
+      itens: [{ inscritoRef: 'OUTRO', valorBase: 170, desconto: 0, valorFinal: 170 }],
+      criadoEm: ts(Date.now()),
+    };
+    const fila = await filaComUmPedido('em_analise', outraLinha);
+    expect(fila.itens[0]?.devolucao).toBeNull();
+  });
+
+  it.each(['aprovado', 'aprovado_auto'])(
+    'estado %s NÃO é recalculado: o dinheiro já saiu com a régua daquele momento',
+    async (estado) => {
+      const fila = await filaComUmPedido(estado, pedido(30));
+      expect(fila.itens[0]?.devolucao).toBeNull();
+      // E nem lê o pedido: recalcular seria produzir uma segunda verdade.
+      expect(mocks.getPedido).not.toHaveBeenCalled();
+    },
+  );
+
+  it('a política é lida UMA vez por evento, não uma por pedido', async () => {
+    mocks.listTenants.mockResolvedValue([tenant('castelo')]);
+    mocks.listarEventosDoTenant.mockResolvedValue([evento('ev-1')]);
+    mocks.listReembolsos.mockResolvedValue([
+      reembolso('insc-1', ts(1_000)),
+      reembolso('insc-2', ts(2_000)),
+      reembolso('insc-3', ts(3_000)),
+    ]);
+
+    await rodarFila();
+
+    expect(mocks.getPoliticaVendas).toHaveBeenCalledTimes(1);
+  });
+
+  it('evento SEM pendência não paga leitura de política nenhuma', async () => {
+    mocks.listTenants.mockResolvedValue([tenant('castelo')]);
+    mocks.listarEventosDoTenant.mockResolvedValue([evento('ev-1'), evento('ev-2')]);
+    mocks.listReembolsos.mockResolvedValue([]);
+
+    await rodarFila();
+
+    expect(mocks.getPoliticaVendas).not.toHaveBeenCalled();
   });
 });

@@ -20,6 +20,7 @@
 
 import { useState } from 'react';
 import { Button, ConfirmModal, Field, Input, useToast } from '@leela/design-system';
+import { formatBRL } from '../../eventos/repasses/_lib/format';
 import { EstornosFilaView } from './EstornosFilaView';
 import { useEstornoAdminActions, useFilaEstornos } from './_data/estornosAdmin';
 import { platformErrorMessage } from '../_lib/errors';
@@ -297,11 +298,28 @@ export function EstornosAdminRoute(): JSX.Element {
               <span className="text-[var(--text-secondary)]">
                 {confirmFila.item.eventoNome} · {confirmFila.item.reembolso.inscritoId}
               </span>
+              {/* Item 53: o número que o comprador RECEBE, no ponto exato da
+                  decisão. Confirmar um estorno sem ver quanto volta era o
+                  mesmo defeito da coluna, um clique adiante. */}
+              <span className="text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] text-[var(--text-primary)] [font-variant-numeric:tabular-nums]">
+                {formatBRL(
+                  confirmFila.item.devolucao?.valorDevolvido ??
+                    confirmFila.item.reembolso.valorSolicitado,
+                )}
+              </span>
             </div>
           }
           loses={
             confirmFila.kind === 'aprovar'
-              ? ['O valor sai da conta do produtor', 'A vaga NÃO volta ao lote sozinha']
+              ? [
+                  'O valor sai da conta do produtor',
+                  'A vaga NÃO volta ao lote sozinha',
+                  ...(confirmFila.item.devolucao && confirmFila.item.devolucao.taxaRetida > 0
+                    ? [
+                        `O comprador NÃO recebe ${formatBRL(confirmFila.item.devolucao.taxaRetida)} de taxa de serviço (fora da janela de arrependimento — RN-374)`,
+                      ]
+                    : []),
+                ]
               : ['O atleta não recebe o dinheiro de volta']
           }
           keeps={

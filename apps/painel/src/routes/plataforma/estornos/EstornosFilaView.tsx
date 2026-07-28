@@ -123,9 +123,34 @@ export function EstornosFilaView({
     },
     {
       key: 'valor',
-      header: 'Valor',
+      // Item 53: o cabeçalho promete o que a coluna entrega. Era "Valor" com
+      // face + taxa mesmo quando a política reteria a taxa — o admin aprovava
+      // vendo mais do que o comprador receberia.
+      header: 'Volta ao comprador',
       align: 'right',
-      render: (r) => formatBRL(r.reembolso.valorSolicitado),
+      render: (r) => {
+        const dev = r.devolucao ?? null;
+        if (dev === null) {
+          return (
+            <div className="flex flex-col items-end">
+              <span>{formatBRL(r.reembolso.valorSolicitado)}</span>
+              <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+                valor pago
+              </span>
+            </div>
+          );
+        }
+        return (
+          <div className="flex flex-col items-end">
+            <span>{formatBRL(dev.valorDevolvido)}</span>
+            {dev.taxaRetida > 0 && (
+              <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+                {formatBRL(dev.taxaRetida)} de taxa retida
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'criadoEm',

@@ -65,10 +65,25 @@ export interface FinanceiroViewProps {
    */
   repasseErro?: Error | null;
   /**
+   * Falha na leitura do TERMO comercial (item 49/50 · review CAIXASIMPLES-REV).
+   * Sem o termo o core cai no default de 15% — e com um termo negociado de 30%
+   * o card volta a prometer mais do que o saque aceita, EM SILÊNCIO, que é
+   * exatamente o defeito que esta tela existiu para matar. O histórico da mesma
+   * tela já declara o erro dele; o card passa a fazer igual.
+   */
+  termoErro?: Error | null;
+  /**
+   * Falha na leitura do SALDO consolidado do tenant (item 49). Sem ele o card
+   * volta ao número do evento, que não conhece a janela D+N — o defeito que o
+   * item corrige. A tela declara em vez de exibir o número cheio calado.
+   */
+  tetoTenantErro?: Error | null;
+  /**
    * Contexto do evento que a base do saque exige (RN-367): encerramento
-   * (RN-350 — libera a retenção) e a % do termo do tenant. Omitido, vale o
-   * default do core (15%, evento em andamento) — o mesmo fallback da coluna
-   * por evento quando o termo não pôde ser lido.
+   * (RN-350 — libera a retenção), a % do termo do tenant e o teto consolidado
+   * do tenant (item 49). Omitido, vale o default do core (15%, evento em
+   * andamento) — o mesmo fallback da coluna por evento quando o termo não pôde
+   * ser lido.
    */
   contexto?: ContextoRepasseEvento;
   /** Atalho para a visão macro — só para quem tem acesso a repasse (RN-320). */
@@ -84,6 +99,8 @@ export function FinanceiroView({
   repasseDoEvento = null,
   repasseLoading = false,
   repasseErro = null,
+  termoErro = null,
+  tetoTenantErro = null,
   contexto,
   podeVerRepasses = false,
   onVerRepasses,
@@ -139,13 +156,30 @@ export function FinanceiroView({
   // e é lida contra o extrato — R$ 3.200,55 virava "Já desconta R$ 3.201", 45
   // centavos que ninguém descontou, e a MESMA Σ aparece com centavos na tabela
   // de /eventos/repasses e no CSV (review CAIXADISP-REV, R-5).
+  //
+  // Item 50: termo ILEGÍVEL entra ANTES do resto. Sem o termo o core aplica
+  // 15%; se o negociado for 30%, o número exibido é MAIOR que o saque — o
+  // mesmo modo de falha do item 49, agora em silêncio. Não é cosmético: é a
+  // diferença entre um número conferível e um chute com cara de final.
+  const termoIlegivel = termoErro !== null;
+  const tetoIlegivel = tetoTenantErro !== null;
+  const disponivelComRessalva = termoIlegivel || tetoIlegivel || ledgerIlegivel;
   const notaDisponivel = rep.semTermo
     ? 'Sem termo comercial cadastrado: o disponível deste evento ainda não pode ser calculado.'
-    : ledgerIlegivel
-      ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
-      : repasseExibido
-        ? `Já desconta ${formatDinheiro(rep.absorvido)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
-        : null;
+    : termoIlegivel
+      ? 'Não foi possível ler o termo comercial: este valor usa a retenção padrão de 15% e pode estar acima do que o saque aceita. O disponível oficial de saque está em Eventos › Repasses.'
+      : tetoIlegivel
+        ? 'Não foi possível ler o saldo do produtor: este valor é o caixa deste evento e pode estar acima do que o saque aceita. O disponível oficial de saque está em Eventos › Repasses.'
+        : ledgerIlegivel
+          ? 'Não foi possível ler os repasses deste evento: este valor pode não estar abatido. O disponível oficial de saque está em Eventos › Repasses.'
+          : // Item 49: o número exibido é o teto do TENANT, não o do evento.
+            // Dizer de onde ele veio evita a leitura de que o evento vendeu
+            // menos do que vendeu.
+            rep.limitadoPeloTenant
+            ? `Limitado pelo saldo disponível do produtor: o caixa deste evento soma ${formatDinheiro(rep.disponivelDoEvento ?? 0)}, e o restante ainda está na janela de liberação. O disponível oficial de saque está em Eventos › Repasses.`
+            : repasseExibido
+              ? `Já desconta ${formatDinheiro(rep.absorvido)} em repasse deste evento. O disponível oficial de saque está em Eventos › Repasses.`
+              : null;
   const linhas = breakdownFinanceiro(fin);
   // Reusa a derivação do Overview: MESMA cor por modalidade no bar e no donut
   // (a cor segue a entidade, não o rank — regra dataviz). Per-evento, sobre o
@@ -208,6 +242,7 @@ export function FinanceiroView({
           rotulo="Disponível para Repasse"
           valor={rep.disponivel === null ? SEM_VALOR : formatBRL(rep.disponivel)}
           {...(notaDisponivel !== null ? { nota: notaDisponivel } : {})}
+          notaTom={disponivelComRessalva ? 'alerta' : 'neutro'}
           tom="success"
         />
         <CardValor
@@ -325,11 +360,18 @@ function CardValor({
   rotulo,
   valor,
   nota,
+  notaTom = 'neutro',
   tom,
 }: {
   rotulo: string;
   valor: string;
   nota?: string;
+  /**
+   * `alerta` = a nota NÃO é rodapé, é ressalva sobre o número acima (item 50).
+   * Cor de perigo (a mesma do erro da tela, contraste já provado sobre a
+   * superfície) MAIS `role="status"`: a a11y não pode depender só de cor.
+   */
+  notaTom?: 'neutro' | 'alerta';
   tom: 'primary' | 'warning' | 'success';
 }): JSX.Element {
   const cor =
@@ -342,7 +384,17 @@ function CardValor({
     <div className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-lg)] bg-[var(--surface-raised)] p-[var(--spacing-5)]">
       <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">{rotulo}</span>
       <span className={`text-[length:var(--font-size-lg)] font-[var(--font-weight-bold)] ${cor}`}>{valor}</span>
-      {nota && <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">{nota}</span>}
+      {nota &&
+        (notaTom === 'alerta' ? (
+          <span
+            role="status"
+            className="text-[length:var(--font-size-xs)] font-[var(--font-weight-semibold)] text-[var(--text-danger)]"
+          >
+            {nota}
+          </span>
+        ) : (
+          <span className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">{nota}</span>
+        ))}
     </div>
   );
 }

@@ -33,6 +33,7 @@ import {
   listarCampanhas,
   getCampanha,
   getPaginaVendas,
+  getPedido,
   getPoliticaVendas,
   getPedidoEPagamentoDoInscrito,
   getPlatformRollups,
@@ -66,6 +67,11 @@ import {
   type PedidoEPagamentoDoInscrito,
   type TenantComOwner,
 } from '@leela/api-client';
+import {
+  calcularDevolucaoEstorno,
+  dentroDaJanelaArrependimento,
+  politicaVendasPadrao,
+} from '@leela/core';
 import type {
   Aprovisionamento,
   Campanha,
@@ -75,6 +81,7 @@ import type {
   Cupom,
   DadosBancarios,
   Desafio,
+  DevolucaoEstorno,
   EstadoRepasse,
   Evento,
   Inscrito,
@@ -87,6 +94,7 @@ import type {
   PaginaVendas,
   Parceria,
   PlanoCobranca,
+  PoliticaReembolso,
   PoliticaVendas,
   PlatformRollups,
   Reembolso,
@@ -718,6 +726,19 @@ export interface EstornoFilaItem {
   tenantNome: string;
   eventoId: string;
   eventoNome: string;
+  /**
+   * O que o comprador RECEBE se este pedido for aprovado, com a taxa
+   * discriminada (item 53 · RN-374). `null` = não dá para afirmar, e aí a
+   * coluna volta ao valor pago, DECLARADO como tal.
+   *
+   * Só existe para `em_analise`, e por um motivo de correção, não de custo:
+   * `em_analise` é, por construção (`rotearReembolso`), o pedido que caiu FORA
+   * da janela do art. 49 — e o tempo só anda, então ele continuará fora quando
+   * o admin aprovar. Já um `aprovado_auto` saiu DENTRO da janela e devolveu a
+   * taxa integral: recalcular hoje diria "taxa retida" sobre um refund que já
+   * devolveu tudo. Trocar uma mentira por outra não é conserto.
+   */
+  devolucao: DevolucaoEstorno | null;
 }
 
 /**
@@ -770,6 +791,66 @@ export function millisDoCriadoEm(criadoEm: unknown): number {
 }
 
 /**
+ * Política de reembolso VIGENTE do evento. Doc ausente ⇒ defaults legais do
+ * kernel (`politicaVendasPadrao`) — a MESMA queda de `lerPoliticaReembolsoTx`
+ * no servidor. Leitura que falha também cai no default: a régua da RN-374 não
+ * pode depender de a tela conseguir ler um doc de config.
+ */
+async function politicaDeReembolsoDoEvento(
+  db: ReturnType<typeof getLeelaDb>,
+  eventoId: string,
+): Promise<PoliticaReembolso> {
+  try {
+    const politica = await getPoliticaVendas(db, eventoId);
+    return politica?.reembolso ?? politicaVendasPadrao().reembolso;
+  } catch (err) {
+    console.error(`[estornosFilaAdmin] política de "${eventoId}" ilegível — defaults`, err);
+    return politicaVendasPadrao().reembolso;
+  }
+}
+
+/**
+ * Quanto VOLTA ao comprador se este pedido for aprovado, com a taxa
+ * discriminada (item 53 · RN-374). A coluna "Valor" mostrava
+ * `valorSolicitado` — face + taxa SEMPRE — mesmo quando a política reteria a
+ * taxa: o admin aprovava vendo um número maior que o que o comprador receberia.
+ *
+ * A conta NÃO é reinventada aqui. É a mesma composição que
+ * `estornarInscricaoCore` executa no servidor: a linha do inscrito em
+ * `pedido.itens[]` (face + fatia da taxa repassada, RN-347),
+ * `dentroDaJanelaArrependimento` (RN-373, relógio da COMPRA) e
+ * `calcularDevolucaoEstorno` (RN-374) — três primitivos do core, na mesma
+ * ordem. Pedido sem `criadoEm` conta como DENTRO, igual ao servidor (o lado
+ * seguro juridicamente).
+ *
+ * Qualquer tropeço (pedido ilegível, linha ausente) devolve `null`: a tela
+ * volta ao valor pago e DIZ que é o valor pago. Um número inventado numa fila
+ * de estorno é pior que um número declaradamente incompleto.
+ */
+async function devolucaoPrevista(
+  db: ReturnType<typeof getLeelaDb>,
+  reembolso: Reembolso,
+  politica: PoliticaReembolso,
+): Promise<DevolucaoEstorno | null> {
+  if (reembolso.estado !== 'em_analise') return null;
+  try {
+    const pedido = await getPedido(db, reembolso.pedidoId);
+    const linha = pedido?.itens?.find((i) => i.inscritoRef === reembolso.inscritoId);
+    if (!linha || !Number.isFinite(linha.valorFinal)) return null;
+    const taxa = Number.isFinite(linha.taxaRepassada) ? (linha.taxaRepassada as number) : 0;
+    const compradoEm = pedido?.criadoEm;
+    const dentro =
+      compradoEm === undefined || compradoEm === null
+        ? true
+        : dentroDaJanelaArrependimento(politica, compradoEm, new Date());
+    return calcularDevolucaoEstorno(politica, linha.valorFinal, taxa, dentro);
+  } catch (err) {
+    console.error(`[estornosFilaAdmin] pedido "${reembolso.pedidoId}" ilegível`, err);
+    return null;
+  }
+}
+
+/**
  * Estornos que ainda pedem mão humana, de TODOS os tenants: `em_analise`
  * (aguardam decisão) e os executáveis que ficaram presos aguardando o gateway
  * (RN-372 — o webhook não fechou). `estornado`/`recusado` ficam fora: são
@@ -800,21 +881,27 @@ export function estornosFilaAdminQuery(reloadKey = 0) {
           }
           const porEvento = await Promise.allSettled(
             eventos.map(async (ev): Promise<EstornoFilaItem[]> => {
-              const reembolsos = await listReembolsos(db, ev.id);
-              return reembolsos
-                .filter(
-                  (r) =>
-                    r.estado === 'em_analise' ||
-                    r.estado === 'aprovado' ||
-                    r.estado === 'aprovado_auto',
-                )
-                .map((reembolso) => ({
+              const reembolsos = (await listReembolsos(db, ev.id)).filter(
+                (r) =>
+                  r.estado === 'em_analise' ||
+                  r.estado === 'aprovado' ||
+                  r.estado === 'aprovado_auto',
+              );
+              if (reembolsos.length === 0) return [];
+              // Política do evento: UMA leitura por evento com pendência (item
+              // 53). Ausente ⇒ os defaults legais do kernel, exatamente como
+              // `lerPoliticaReembolsoTx` faz no servidor.
+              const politica = await politicaDeReembolsoDoEvento(db, ev.id);
+              return Promise.all(
+                reembolsos.map(async (reembolso): Promise<EstornoFilaItem> => ({
                   reembolso,
                   tenantId: t.id,
                   tenantNome: t.nome,
                   eventoId: ev.id,
                   eventoNome: ev.nome,
-                }));
+                  devolucao: await devolucaoPrevista(db, reembolso, politica),
+                })),
+              );
             }),
           );
           const linhas: EstornoFilaItem[] = [];

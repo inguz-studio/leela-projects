@@ -20,12 +20,16 @@ import type { EstornoFilaItem, FilaEstornosAdmin } from '../../../../lib/query/q
 
 const ts = { toMillis: () => 1_700_000_000_000, toDate: () => new Date(1_700_000_000_000) };
 
-function item(over: Record<string, unknown> = {}): EstornoFilaItem {
+function item(
+  over: Record<string, unknown> = {},
+  devolucao: EstornoFilaItem['devolucao'] = null,
+): EstornoFilaItem {
   return {
     tenantId: 'castelo',
     tenantNome: 'Castelo Produções',
     eventoId: 'meia-floripa-2026',
     eventoNome: 'Meia Floripa 2026',
+    devolucao,
     reembolso: {
       id: 'insc-1',
       tenantId: 'castelo',
@@ -239,5 +243,71 @@ describe('ação direta — o que o formulário exige', () => {
     expect(
       formularioCompleto('cancelar', { ...base, motivo: 'x', motivoOverride: '' }),
     ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Item 53 · a coluna do dinheiro promete o que o comprador recebe
+//
+// A ESTORNO-REV (E-3): `valorSolicitado` é face + taxa SEMPRE, mesmo quando a
+// política vai RETER a taxa (RN-374). O admin aprovava vendo um número maior
+// do que o que volta ao comprador. O cálculo é do core; a tela consome.
+// ---------------------------------------------------------------------------
+describe('item 53 · a coluna "Volta ao comprador"', () => {
+  /** Fora da janela do art. 49: face 170,00 volta, 18,86 de taxa fica retida. */
+  const RETIDA = {
+    valorDevolvido: 170,
+    valorFace: 170,
+    taxaDevolvida: 0,
+    taxaRetida: 18.86,
+    dentroDaJanela: false,
+  };
+  /** Dentro da janela: face + taxa integral (RN-373/374). */
+  const INTEGRAL = {
+    valorDevolvido: 188.86,
+    valorFace: 170,
+    taxaDevolvida: 18.86,
+    taxaRetida: 0,
+    dentroDaJanela: true,
+  };
+
+  function renderFila(itens: EstornoFilaItem[]): void {
+    render(
+      <EstornosFilaView
+        fila={fila(itens)}
+        loading={false}
+        error={null}
+        running={false}
+        onRetry={vi.fn()}
+        onAprovar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+  }
+
+  it('política que RETÉM mostra o líquido e discrimina a taxa — não o valor pago', () => {
+    renderFila([item({}, RETIDA)]);
+    expect(screen.getByText('R$ 170,00')).toBeInTheDocument();
+    expect(screen.getByText(/R\$ 18,86 de taxa retida/)).toBeInTheDocument();
+    // O valor cheio (face + taxa) NÃO aparece: era ele que mentia.
+    expect(screen.queryByText('R$ 188,86')).not.toBeInTheDocument();
+  });
+
+  it('dentro da janela do art. 49 volta tudo e NÃO há linha de taxa retida', () => {
+    renderFila([item({}, INTEGRAL)]);
+    expect(screen.getByText('R$ 188,86')).toBeInTheDocument();
+    expect(screen.queryByText(/taxa retida/)).not.toBeInTheDocument();
+  });
+
+  it('sem devolução calculável, o número exibido é DECLARADO como valor pago', () => {
+    renderFila([item({ estado: 'aprovado_auto' }, null)]);
+    expect(screen.getByText('R$ 188,86')).toBeInTheDocument();
+    expect(screen.getByText('valor pago')).toBeInTheDocument();
+    expect(screen.queryByText(/taxa retida/)).not.toBeInTheDocument();
+  });
+
+  it('o cabeçalho não promete "Valor" genérico — diz de quem é o dinheiro', () => {
+    renderFila([item({}, RETIDA)]);
+    expect(screen.getByRole('columnheader', { name: /volta ao comprador/i })).toBeInTheDocument();
   });
 });

@@ -368,3 +368,117 @@ describe('o caso do Castelo (R$ 500 repassados) — antes × depois', () => {
     expect(csv).toContain('Resumo,Disponível para Repasse (R$),8500');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Itens 49 e 50 · a Caixa não promete mais do que o saque aceita, e não engole
+// o erro que faria ela prometer
+//
+// 49: a Caixa é POR EVENTO; a janela D+N (RN-348) é do TENANT. A review mediu:
+//     card R$ 8.500 × saque R$ 4.025. Default do dono: exibir o menor.
+// 50: leitura do termo falhando cai no default de 15% EM SILÊNCIO — com um
+//     termo negociado de 30% o card volta a prometer acima do saque. O
+//     histórico da mesma tela já declara o erro dele; o card passa a fazer
+//     igual.
+// ---------------------------------------------------------------------------
+describe('item 49 · o card exibe o menor entre evento e tenant', () => {
+  it('o cenário MEDIDO: card 4.025 (o saque), não 8.500 (o evento)', async () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        contexto={{ encerrado: false, disponivelTenant: 4025 }}
+      />,
+    );
+    expect(screen.getByText(/^R\$\s*4\.025$/)).toBeInTheDocument();
+    expect(screen.queryByText(/^R\$\s*8\.500$/)).not.toBeInTheDocument();
+    // E o CSV, que é o que vai para a conciliação, sai do MESMO número.
+    const csv = await exportar();
+    expect(csv).toContain('Resumo,Disponível para Repasse (R$),4025');
+  });
+
+  it('a nota diz DE ONDE veio o corte — senão parece que o evento vendeu menos', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        contexto={{ encerrado: false, disponivelTenant: 4025 }}
+      />,
+    );
+    expect(screen.getByText(/limitado pelo saldo disponível do produtor/i)).toBeInTheDocument();
+    // O número do evento aparece NA FRASE (contexto), nunca como o valor do card.
+    expect(screen.getByText(/R\$ 8\.500,00/)).toBeInTheDocument();
+  });
+
+  it('sem teto do tenant (leitura ainda não chegou) o card segue o evento, sem nota de corte', () => {
+    render(
+      <FinanceiroView slug="castelo" financeiro={mkFin()} loading={false} error={null} />,
+    );
+    expect(screen.getByText(/^R\$\s*8\.500$/)).toBeInTheDocument();
+    expect(screen.queryByText(/limitado pelo saldo disponível/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('item 50 · erro de leitura não pode ser silêncio no card do dinheiro', () => {
+  it('termo ilegível: o card DECLARA que usou 15% e pode estar acima do saque', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        termoErro={new Error('permission-denied')}
+      />,
+    );
+    const nota = screen.getByText(/não foi possível ler o termo comercial/i);
+    expect(nota).toBeInTheDocument();
+    // Estado de ERRO, não rodapé cinza: a a11y não depende só da cor.
+    expect(nota).toHaveAttribute('role', 'status');
+    expect(nota.className).toContain('--text-danger');
+  });
+
+  it('saldo do tenant ilegível: o card DECLARA que o número é o do evento', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        tetoTenantErro={new Error('unavailable')}
+      />,
+    );
+    expect(screen.getByText(/não foi possível ler o saldo do produtor/i)).toBeInTheDocument();
+  });
+
+  it('sem termo cadastrado ainda ganha a frase de sempre — ausência ≠ falha de leitura', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin({ receitaLiquida: null })}
+        loading={false}
+        error={null}
+        termoErro={new Error('boom')}
+      />,
+    );
+    expect(screen.getByText(/sem termo comercial cadastrado/i)).toBeInTheDocument();
+  });
+
+  it('tudo lido: a nota do card NÃO vira alerta à toa', () => {
+    render(
+      <FinanceiroView
+        slug="castelo"
+        financeiro={mkFin()}
+        loading={false}
+        error={null}
+        repasseDoEvento={{ qtd: 1, total: 500 }}
+        contexto={{ encerrado: false, disponivelTenant: 99000 }}
+      />,
+    );
+    const nota = screen.getByText(/já desconta/i);
+    expect(nota).not.toHaveAttribute('role', 'status');
+    expect(nota.className).toContain('--text-tertiary');
+  });
+});
