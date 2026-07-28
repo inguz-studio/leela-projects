@@ -14,9 +14,9 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Timestamp } from '@leela/core';
 import { parseReembolso } from '@leela/api-client';
-import { EstornosFilaView, rotuloEstadoFila, rotuloOrigem } from '../EstornosFilaView';
+import { EstornosFilaView, avisosDaFila, rotuloEstadoFila, rotuloOrigem } from '../EstornosFilaView';
 import { formularioCompleto } from '../EstornosAdminRoute';
-import type { EstornoFilaItem } from '../../../../lib/query/queries';
+import type { EstornoFilaItem, FilaEstornosAdmin } from '../../../../lib/query/queries';
 
 const ts = { toMillis: () => 1_700_000_000_000, toDate: () => new Date(1_700_000_000_000) };
 
@@ -44,11 +44,25 @@ function item(over: Record<string, unknown> = {}): EstornoFilaItem {
   } as unknown as EstornoFilaItem;
 }
 
+/** Fila completa (nada cortado, nada falhou) — o caso feliz das provas antigas. */
+function fila(
+  itens: EstornoFilaItem[],
+  over: Partial<FilaEstornosAdmin> = {},
+): FilaEstornosAdmin {
+  return {
+    itens,
+    ramosComFalha: 0,
+    tenantsNoTeto: false,
+    tenantsComEventosNoTeto: [],
+    ...over,
+  };
+}
+
 describe('fila de estornos da plataforma', () => {
   it('em análise oferece decisão; aguardando o gateway NÃO oferece botão', () => {
     render(
       <EstornosFilaView
-        itens={[item(), item({ id: 'insc-2', inscritoId: 'insc-2', estado: 'aprovado_auto' })]}
+        fila={fila([item(), item({ id: 'insc-2', inscritoId: 'insc-2', estado: 'aprovado_auto' })])}
         loading={false}
         error={null}
         running={false}
@@ -113,7 +127,7 @@ describe('fila de estornos da plataforma', () => {
   it('fila vazia diz que não há pendência, não mostra zero ambíguo', () => {
     render(
       <EstornosFilaView
-        itens={[]}
+        fila={fila([])}
         loading={false}
         error={null}
         running={false}
@@ -123,6 +137,86 @@ describe('fila de estornos da plataforma', () => {
       />,
     );
     expect(screen.getByText(/nenhum estorno pendente/i)).toBeInTheDocument();
+    // Fila completa: nada de aviso inventado.
+    expect(screen.queryByText(/esta fila pode estar incompleta/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('a fila declara o que NÃO está mostrando (item 52 · E-1/E-2)', () => {
+  it('lista VAZIA com corte ainda avisa — "nada pendente" mudo era a mentira', () => {
+    render(
+      <EstornosFilaView
+        fila={fila([], { tenantsNoTeto: true })}
+        loading={false}
+        error={null}
+        running={false}
+        onRetry={vi.fn()}
+        onAprovar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/esta fila pode estar incompleta/i)).toBeInTheDocument();
+    expect(screen.getByText(/100 produtores mais recentes/i)).toBeInTheDocument();
+  });
+
+  it('ramo que falhou aparece no topo, junto com as linhas que carregaram', () => {
+    render(
+      <EstornosFilaView
+        fila={fila([item()], { ramosComFalha: 2 })}
+        loading={false}
+        error={null}
+        running={false}
+        onRetry={vi.fn()}
+        onAprovar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/2 leituras falharam/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Aprovar' })).toHaveLength(1);
+  });
+
+  it('avisosDaFila cobre as três omissões e cala quando a lista é completa', () => {
+    expect(avisosDaFila(fila([]))).toEqual([]);
+    expect(avisosDaFila(fila([], { ramosComFalha: 1 }))[0]).toMatch(/uma leitura falhou/i);
+    expect(avisosDaFila(fila([], { tenantsNoTeto: true }))[0]).toMatch(/produtores mais recentes/i);
+    const porEvento = avisosDaFila(fila([], { tenantsComEventosNoTeto: ['Castelo Produções'] }));
+    expect(porEvento[0]).toMatch(/50 eventos por produtor/i);
+    expect(porEvento[0]).toMatch(/Castelo Produções/);
+    // As três omissões são independentes: acumulam, não se sobrescrevem.
+    expect(
+      avisosDaFila(
+        fila([], { ramosComFalha: 3, tenantsNoTeto: true, tenantsComEventosNoTeto: ['Arena'] }),
+      ),
+    ).toHaveLength(3);
+  });
+
+  it('o corte NÃO é dito enquanto carrega nem por cima do erro da tela', () => {
+    const cortada = fila([], { tenantsNoTeto: true });
+    const { rerender } = render(
+      <EstornosFilaView
+        fila={cortada}
+        loading
+        error={null}
+        running={false}
+        onRetry={vi.fn()}
+        onAprovar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/esta fila pode estar incompleta/i)).not.toBeInTheDocument();
+    rerender(
+      <EstornosFilaView
+        fila={cortada}
+        loading={false}
+        error={new Error('boom')}
+        running={false}
+        onRetry={vi.fn()}
+        onAprovar={vi.fn()}
+        onRecusar={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/esta fila pode estar incompleta/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });
 

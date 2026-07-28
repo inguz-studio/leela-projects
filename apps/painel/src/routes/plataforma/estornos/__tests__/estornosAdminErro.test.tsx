@@ -58,9 +58,16 @@ const ITEM = {
 
 // A fila em si não é o alvo aqui — o alvo é o caminho do erro da AÇÃO.
 vi.mock('../../../../lib/query/queries', () => ({
+  TETO_TENANTS_FILA_ADMIN: 100,
+  TETO_EVENTOS_POR_TENANT_FILA_ADMIN: 50,
   estornosFilaAdminQuery: () => ({
     queryKey: ['reembolsos', 'fila-admin', 'test'],
-    queryFn: async () => [ITEM],
+    queryFn: async () => ({
+      itens: [ITEM],
+      ramosComFalha: 0,
+      tenantsNoTeto: false,
+      tenantsComEventosNoTeto: [],
+    }),
   }),
 }));
 

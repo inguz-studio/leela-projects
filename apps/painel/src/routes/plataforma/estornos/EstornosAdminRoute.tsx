@@ -178,7 +178,7 @@ export function EstornosAdminRoute(): JSX.Element {
     <>
       <div className="flex flex-col gap-[var(--spacing-8)] pb-[var(--spacing-8)]">
         <EstornosFilaView
-          itens={fila.data}
+          fila={fila.data}
           loading={fila.loading}
           error={fila.error}
           running={acoes.running}

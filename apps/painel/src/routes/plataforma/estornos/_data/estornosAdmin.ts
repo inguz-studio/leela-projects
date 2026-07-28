@@ -18,7 +18,7 @@ import {
   type DecideRefundResult,
   type RequestRefundResult,
 } from '@leela/api-client';
-import { estornosFilaAdminQuery, type EstornoFilaItem } from '../../../../lib/query/queries';
+import { estornosFilaAdminQuery, type FilaEstornosAdmin } from '../../../../lib/query/queries';
 
 export interface AsyncQuery<T> {
   data: T;
@@ -27,11 +27,26 @@ export interface AsyncQuery<T> {
   refetch: () => void;
 }
 
-/** Fila cross-tenant de estornos que ainda pedem mão humana. */
-export function useFilaEstornos(reloadKey = 0): AsyncQuery<EstornoFilaItem[]> {
+/**
+ * Fila vazia estável (mesma referência a cada render enquanto o dado não
+ * chega) — um literal novo por render remontaria a tabela à toa.
+ */
+const FILA_VAZIA: FilaEstornosAdmin = {
+  itens: [],
+  ramosComFalha: 0,
+  tenantsNoTeto: false,
+  tenantsComEventosNoTeto: [],
+};
+
+/**
+ * Fila cross-tenant de estornos que ainda pedem mão humana. O resultado carrega
+ * o que a leitura NÃO viu (ramo que falhou, teto batido) junto com as linhas:
+ * a tela precisa dos dois para não mentir por omissão (itens 52 e E-2).
+ */
+export function useFilaEstornos(reloadKey = 0): AsyncQuery<FilaEstornosAdmin> {
   const query = useQuery(estornosFilaAdminQuery(reloadKey));
   return {
-    data: query.data ?? [],
+    data: query.data ?? FILA_VAZIA,
     loading: query.isPending,
     error: query.error ?? null,
     refetch: () => {

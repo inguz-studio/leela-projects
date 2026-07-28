@@ -721,25 +721,93 @@ export interface EstornoFilaItem {
 }
 
 /**
+ * Tetos de leitura do fan-out. Não são números escondidos no meio da query: a
+ * fila DECLARA quando bate neles (item 52 — a review antagonista mostrou que um
+ * estorno do tenant #101, ou do evento #51, sumia sem aviso nenhum, que é a
+ * mesma classe de defeito que o item 27 existiu para matar). Paginação honesta
+ * é card da próxima leva; enquanto ela não vem, o corte é dito na tela.
+ */
+export const TETO_TENANTS_FILA_ADMIN = 100;
+export const TETO_EVENTOS_POR_TENANT_FILA_ADMIN = 50;
+
+/** Resultado da fila: as linhas + o que a leitura NÃO conseguiu ver. */
+export interface FilaEstornosAdmin {
+  itens: EstornoFilaItem[];
+  /**
+   * Ramos do fan-out (um tenant, ou um evento dentro dele) cuja leitura
+   * falhou. `Promise.all` puro derrubava a fila inteira por causa de um ramo
+   * (E-2): numa tela que decide dinheiro alheio, ver 40 pendências e saber que
+   * 1 ramo não respondeu é estritamente melhor que ver a tela de erro.
+   */
+  ramosComFalha: number;
+  /** A leitura de produtores encheu o teto — pode haver produtor fora. */
+  tenantsNoTeto: boolean;
+  /** Produtores cuja leitura de eventos encheu o teto (nome para a tela). */
+  tenantsComEventosNoTeto: string[];
+}
+
+/**
+ * Millis de um `criadoEm` que pode NÃO ser um Timestamp. O parser de reembolso
+ * carimba o campo com um cast cego (`v as Timestamp`), então um doc sem
+ * `criadoEm` — ou com o campo corrompido — chegava aqui como `undefined` e
+ * `criadoEm.toMillis()` estourava DENTRO do sort, derrubando a fila inteira
+ * depois de todas as leituras terem dado certo (E-2).
+ *
+ * Inválido vale 0: a linha vai para o fim da lista (mais antiga) e continua
+ * VISÍVEL — a data já aparece como "—" pelo `formatData`, que sempre teve
+ * guarda. Sumir com a linha seria esconder um pedido de dinheiro. @pure
+ */
+export function millisDoCriadoEm(criadoEm: unknown): number {
+  if (
+    criadoEm === null ||
+    criadoEm === undefined ||
+    typeof (criadoEm as { toMillis?: unknown }).toMillis !== 'function'
+  ) {
+    return 0;
+  }
+  const millis = (criadoEm as { toMillis: () => unknown }).toMillis();
+  return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
+}
+
+/**
  * Estornos que ainda pedem mão humana, de TODOS os tenants: `em_analise`
  * (aguardam decisão) e os executáveis que ficaram presos aguardando o gateway
  * (RN-372 — o webhook não fechou). `estornado`/`recusado` ficam fora: são
  * terminais e a fila é de trabalho pendente, não de histórico.
+ *
+ * Fan-out ISOLADO POR RAMO (`allSettled`, não `all`): um tenant sem permissão,
+ * um evento apagado no meio da leitura ou uma subcoleção indisponível vira UM
+ * aviso no topo da fila, não a tela de erro inteira. O que foi lido, aparece.
  */
 export function estornosFilaAdminQuery(reloadKey = 0) {
   return queryOptions({
     queryKey: queryKeys.reembolsos.filaAdmin(reloadKey),
-    queryFn: async (): Promise<EstornoFilaItem[]> => {
+    queryFn: async (): Promise<FilaEstornosAdmin> => {
       const db = getLeelaDb();
-      const tenants = await listTenants(db);
-      const porTenant = await Promise.all(
+      const tenants = await listTenants(db, { pageLimit: TETO_TENANTS_FILA_ADMIN });
+      let ramosComFalha = 0;
+      const tenantsComEventosNoTeto: string[] = [];
+
+      const porTenant = await Promise.allSettled(
         tenants.map(async (t): Promise<EstornoFilaItem[]> => {
-          const eventos = await listarEventosDoTenant(db, t.id);
-          const porEvento = await Promise.all(
+          const eventos = await listarEventosDoTenant(
+            db,
+            t.id,
+            TETO_EVENTOS_POR_TENANT_FILA_ADMIN,
+          );
+          if (eventos.length >= TETO_EVENTOS_POR_TENANT_FILA_ADMIN) {
+            tenantsComEventosNoTeto.push(t.nome);
+          }
+          const porEvento = await Promise.allSettled(
             eventos.map(async (ev): Promise<EstornoFilaItem[]> => {
               const reembolsos = await listReembolsos(db, ev.id);
               return reembolsos
-                .filter((r) => r.estado === 'em_analise' || r.estado === 'aprovado' || r.estado === 'aprovado_auto')
+                .filter(
+                  (r) =>
+                    r.estado === 'em_analise' ||
+                    r.estado === 'aprovado' ||
+                    r.estado === 'aprovado_auto',
+                )
                 .map((reembolso) => ({
                   reembolso,
                   tenantId: t.id,
@@ -749,12 +817,36 @@ export function estornosFilaAdminQuery(reloadKey = 0) {
                 }));
             }),
           );
-          return porEvento.flat();
+          const linhas: EstornoFilaItem[] = [];
+          for (const r of porEvento) {
+            if (r.status === 'fulfilled') linhas.push(...r.value);
+            else {
+              ramosComFalha += 1;
+              console.error('[estornosFilaAdmin] leitura de evento falhou', r.reason);
+            }
+          }
+          return linhas;
         }),
       );
-      const itens = porTenant.flat();
-      itens.sort((a, b) => b.reembolso.criadoEm.toMillis() - a.reembolso.criadoEm.toMillis());
-      return itens;
+
+      const itens: EstornoFilaItem[] = [];
+      for (const r of porTenant) {
+        if (r.status === 'fulfilled') itens.push(...r.value);
+        else {
+          ramosComFalha += 1;
+          console.error('[estornosFilaAdmin] leitura de produtor falhou', r.reason);
+        }
+      }
+      itens.sort(
+        (a, b) =>
+          millisDoCriadoEm(b.reembolso.criadoEm) - millisDoCriadoEm(a.reembolso.criadoEm),
+      );
+      return {
+        itens,
+        ramosComFalha,
+        tenantsNoTeto: tenants.length >= TETO_TENANTS_FILA_ADMIN,
+        tenantsComEventosNoTeto,
+      };
     },
   });
 }

@@ -14,16 +14,52 @@
 import { Badge, Button, EmptyState, PageHeader, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
 import { formatBRL, formatData } from '../../eventos/repasses/_lib/format';
-import type { EstornoFilaItem } from '../../../lib/query/queries';
+import {
+  TETO_EVENTOS_POR_TENANT_FILA_ADMIN,
+  TETO_TENANTS_FILA_ADMIN,
+  type EstornoFilaItem,
+  type FilaEstornosAdmin,
+} from '../../../lib/query/queries';
 
 export interface EstornosFilaViewProps {
-  itens: EstornoFilaItem[];
+  fila: FilaEstornosAdmin;
   loading: boolean;
   error: Error | null;
   running: boolean;
   onRetry: () => void;
   onAprovar: (item: EstornoFilaItem) => void;
   onRecusar: (item: EstornoFilaItem) => void;
+}
+
+/**
+ * O que esta fila NÃO está mostrando, em frases de operador (item 52 · E-2).
+ *
+ * Uma fila de dinheiro que corta em silêncio é pior que uma fila curta: o admin
+ * lê "nada pendente" e vai embora. As três frases cobrem as três formas de
+ * omissão que a leitura tem hoje — ramo que falhou, teto de produtores e teto
+ * de eventos por produtor. Vazio = a lista é completa dentro dos tetos. @pure
+ */
+export function avisosDaFila(fila: FilaEstornosAdmin): string[] {
+  const avisos: string[] = [];
+  if (fila.ramosComFalha > 0) {
+    avisos.push(
+      fila.ramosComFalha === 1
+        ? 'Uma leitura falhou: há pedido que não entrou nesta lista. Tente novamente para completar a fila.'
+        : `${fila.ramosComFalha} leituras falharam: há pedidos que não entraram nesta lista. Tente novamente para completar a fila.`,
+    );
+  }
+  if (fila.tenantsNoTeto) {
+    avisos.push(
+      `Mostrando os ${TETO_TENANTS_FILA_ADMIN} produtores mais recentes. Um estorno de produtor mais antigo não aparece aqui.`,
+    );
+  }
+  if (fila.tenantsComEventosNoTeto.length > 0) {
+    avisos.push(
+      `Mostrando até ${TETO_EVENTOS_POR_TENANT_FILA_ADMIN} eventos por produtor: ` +
+        `${fila.tenantsComEventosNoTeto.join(', ')} tem mais eventos que isso, e um estorno deles pode estar de fora.`,
+    );
+  }
+  return avisos;
 }
 
 /**
@@ -55,7 +91,7 @@ export function rotuloOrigem(item: EstornoFilaItem): { texto: string; furou: boo
 }
 
 export function EstornosFilaView({
-  itens,
+  fila,
   loading,
   error,
   running,
@@ -63,6 +99,8 @@ export function EstornosFilaView({
   onAprovar,
   onRecusar,
 }: EstornosFilaViewProps): JSX.Element {
+  const itens = fila.itens;
+  const avisos = avisosDaFila(fila);
   const columns: TableColumn<EstornoFilaItem>[] = [
     { key: 'tenantNome', header: 'Produtor', render: (r) => r.tenantNome },
     { key: 'eventoNome', header: 'Evento', render: (r) => r.eventoNome },
@@ -102,6 +140,29 @@ export function EstornosFilaView({
         title="Estornos da plataforma"
         subtitle="Pedidos de reembolso de todos os produtores que ainda dependem de uma decisão, ou que já saíram para o gateway e não voltaram."
       />
+
+      {/* Corte declarado (item 52 · E-2). Aparece ANTES da tabela e TAMBÉM com
+          a lista vazia — "nenhum estorno pendente" enquanto a leitura cortou é
+          exatamente a mentira por omissão que o item existe para matar. Fora do
+          ramo de erro: aqui a fila carregou, só não carregou inteira. */}
+      {!loading && !error && avisos.length > 0 && (
+        <div
+          role="status"
+          className="flex flex-col gap-[var(--spacing-1)] rounded-[var(--radius-md)] border-[length:var(--input-border-width)] border-[var(--feedback-warning-fg)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-3)]"
+        >
+          <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--feedback-warning-fg)]">
+            Esta fila pode estar incompleta
+          </span>
+          {avisos.map((aviso) => (
+            <span
+              key={aviso}
+              className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]"
+            >
+              {aviso}
+            </span>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div className="flex flex-col gap-[var(--spacing-2)]">
