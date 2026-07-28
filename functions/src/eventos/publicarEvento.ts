@@ -76,12 +76,23 @@ export function camposFaltantesParaPublicar(
   return faltam;
 }
 
-/** Gera o QR (PNG data URI) cuja carga é a URL pública do evento (RN-201). */
-export async function gerarQrDataUrl(url: string): Promise<string> {
-  return QRCode.toDataURL(url, {
+/**
+ * Gera o QR (PNG data URI) de uma carga qualquer.
+ *
+ * Nasceu para a URL pública do evento (RN-201) e o S1206-T6 passou a usá-lo
+ * para o `qrToken` do ingresso no e-mail — mesmo gerador, nenhuma segunda
+ * implementação de QR. `largura` é parâmetro porque o e-mail precisa de uma
+ * imagem pequena (data URI entra no corpo da mensagem) e a página do evento
+ * de uma grande; o default preserva o comportamento do chamador original.
+ */
+export async function gerarQrDataUrl(
+  carga: string,
+  largura = 512
+): Promise<string> {
+  return QRCode.toDataURL(carga, {
     errorCorrectionLevel: 'M',
     margin: 2,
-    width: 512,
+    width: largura,
   });
 }
 

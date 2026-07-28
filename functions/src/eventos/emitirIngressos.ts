@@ -52,6 +52,8 @@ import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { gerarCodigoIngresso, isCodigoIngressoValido } from '@leela/core';
 import { assinarQrToken, obterQrKeyring, type QrKeyring } from './qrToken';
+import { enviarEmailIngressos } from '../email/enviarIngressos';
+import { selectEmailProvider } from '../email/selectEmailProvider';
 
 type Db = admin.firestore.Firestore;
 
@@ -349,6 +351,21 @@ export async function dispararEmissaoIngressosPosConfirmacao(
       falhas: r.falhas,
       ...(r.motivo !== undefined ? { motivo: r.motivo } : {}),
     });
+    // S1206-T6 (RN-398): o e-mail ao responsável sai NA MESMA janela, com os
+    // ingressos que acabaram de existir. A idempotência é a da RN-219 (log de
+    // comunicação), independente da idempotência da emissão — reprocessar o
+    // webhook não reenvia, e uma emissão que completou depois não duplica.
+    if (r.eventoId !== null && r.ingressos.length > 0) {
+      await enviarEmailIngressos(
+        db,
+        {
+          pedidoId: resultado.pedidoId,
+          eventoId: r.eventoId,
+          ingressos: r.ingressos,
+        },
+        selectEmailProvider()
+      );
+    }
     return r;
   } catch (err) {
     logger.error('ingressos_emissao_disparo_falhou', {

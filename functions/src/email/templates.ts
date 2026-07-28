@@ -255,6 +255,154 @@ export function renderContaCriadaEmail(
 }
 
 // ---------------------------------------------------------------------------
+// Ingressos da compra (S1206-T6 · RN-398 — consumidor `enviarEmailIngressos`)
+//
+// A regra que manda neste bloco: o CÓDIGO VAI COMO TEXTO, SEMPRE. Cliente que
+// bloqueia imagem é o caso comum, e ingresso não pode depender de imagem
+// carregar na véspera da prova. A imagem do QR é o confortável; o texto é o
+// que sustenta a manhã do evento.
+//
+// Por que data URI e não imagem remota: hospedar o PNG do QR numa URL pública
+// colocaria a CREDENCIAL (o `qrToken` assinado é a prova de presença) num
+// endereço que vaza por log de servidor, referrer e histórico. Data URI fica
+// dentro da caixa de quem comprou. O custo é conhecido e assumido — Gmail e o
+// Outlook desktop não renderizam data URI —, e é exatamente por isso que a
+// RN-398 escreve o código em texto: o caminho degradado É o caminho principal.
+// ---------------------------------------------------------------------------
+
+/** Ingresso de um inscrito, pronto para o template (já emitido). */
+export interface IngressoDoEmail {
+  nome: string;
+  modalidade: string;
+  /** Código canônico da RN-396 — validado pelo chamador. */
+  codigo: string;
+  /** Data URI PNG do QR; string vazia quando não foi possível gerar. */
+  qrDataUri: string;
+}
+
+export interface IngressosCompraEmailInput {
+  nomeComprador: string;
+  nomeEvento: string;
+  /** Página pública do evento — montada pelo servidor (nunca do organizador). */
+  linkEvento: string;
+  ingressos: readonly IngressoDoEmail[];
+}
+
+/** Quantos QR o e-mail embute antes de virar só texto (peso da mensagem). */
+export const QR_POR_EMAIL_MAX = 10;
+
+/** Formato canônico do código no template (espelha core/tickets). */
+const CODIGO_EMAIL_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+
+/**
+ * Data URI de PNG bem-formado — SÓ base64 de image/png, nada de `svg+xml`
+ * (que carrega script) nem de URL externa. Vale para o `src` de `<img>`.
+ * @pure
+ */
+export function isQrDataUriValido(valor: unknown): valor is string {
+  return (
+    typeof valor === 'string' &&
+    valor.length > 0 &&
+    valor.length <= 40_000 &&
+    /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(valor)
+  );
+}
+
+export function renderIngressosCompraEmail(
+  input: IngressosCompraEmailInput
+): EmailRenderizado {
+  if (!isLinkDeAppValido(input.linkEvento)) {
+    throw new Error('linkEvento inválido para template (montagem do servidor).');
+  }
+  const nome = limparCampoCurto(input.nomeComprador, TEMPLATE_NOME_MAX) || 'Olá';
+  const evento =
+    limparCampoCurto(input.nomeEvento, TEMPLATE_NOME_MAX) || 'seu evento';
+  const nomeEsc = escapeHtml(nome);
+  const eventoEsc = escapeHtml(evento);
+  const linkEsc = escapeHtml(input.linkEvento);
+
+  const blocos: string[] = [];
+  const linhasTexto: string[] = [];
+  let comQr = 0;
+
+  for (const ingresso of input.ingressos) {
+    // Código fora do formato canônico NÃO vira "código" no e-mail: melhor a
+    // ausência honesta do que um número que o balcão não acha.
+    const codigo = CODIGO_EMAIL_RE.test(ingresso.codigo) ? ingresso.codigo : '';
+    const nomeInsc =
+      limparCampoCurto(ingresso.nome, TEMPLATE_NOME_MAX) || 'Inscrito';
+    const modalidade = limparCampoCurto(ingresso.modalidade, TEMPLATE_NOME_MAX);
+    const nomeInscEsc = escapeHtml(nomeInsc);
+    const modalidadeEsc = escapeHtml(modalidade);
+    const codigoEsc = escapeHtml(codigo);
+
+    const embuteQr =
+      codigo !== '' &&
+      comQr < QR_POR_EMAIL_MAX &&
+      isQrDataUriValido(ingresso.qrDataUri);
+    if (embuteQr) comQr++;
+
+    blocos.push(
+      `<div style="border:1px solid #e4e0d8;border-radius:12px;padding:16px;` +
+        `margin:0 0 12px;">` +
+        `<p style="margin:0 0 4px;font-size:16px;font-weight:bold;">${nomeInscEsc}</p>` +
+        (modalidadeEsc !== ''
+          ? `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">${modalidadeEsc}</p>`
+          : '') +
+        (codigo !== ''
+          ? `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">` +
+            `Código do ingresso<br>` +
+            `<span style="font-size:24px;letter-spacing:3px;font-weight:bold;` +
+            `color:#1e1b16;">${codigoEsc}</span></p>`
+          : `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">` +
+            `Ingresso ainda sendo emitido — o código chega em seguida.</p>`) +
+        // `alt` GENÉRICO de propósito: nome de pessoa dentro de atributo é
+        // dado do checkout num lugar onde só o escape separa texto de markup.
+        // Aqui não separa nada — o nome já está visível logo acima, e o leitor
+        // de tela lê os dois na ordem. Um atributo a menos com dado de fora.
+        (embuteQr
+          ? `<img src="${ingresso.qrDataUri}" width="180" height="180" ` +
+            `alt="QR do ingresso" ` +
+            `style="display:block;width:180px;height:180px;">`
+          : '') +
+        `</div>`
+    );
+
+    linhasTexto.push(
+      `- ${nomeInsc}${modalidade !== '' ? ` (${modalidade})` : ''}: ` +
+        (codigo !== ''
+          ? `código ${codigo}`
+          : 'ingresso ainda sendo emitido')
+    );
+  }
+
+  const assunto = limparCampoCurto(
+    `Seu ingresso para ${evento}`,
+    TEMPLATE_ASSUNTO_MAX
+  );
+  const html = layoutBase(
+    `Seu ingresso para ${eventoEsc}`,
+    `<p style="margin:0 0 16px;">${nomeEsc}, sua compra foi confirmada. ` +
+      `Abaixo está o ingresso de cada inscrito do pedido.</p>` +
+      (blocos.length > 0
+        ? blocos.join('')
+        : `<p style="margin:0 0 12px;">Os ingressos estão sendo emitidos e ` +
+          `chegam em seguida.</p>`) +
+      `<p style="margin:16px 0 0;font-size:13px;color:#6f675c;">` +
+      `No credenciamento basta apresentar o QR. Se a imagem não abrir no seu ` +
+      `e-mail, o código acima identifica a inscrição.</p>` +
+      botaoLink(linkEsc, 'Ver a página do evento')
+  );
+  const texto =
+    `${nome}, sua compra em ${evento} foi confirmada.\n\n` +
+    `Ingressos do pedido:\n${linhasTexto.join('\n')}\n\n` +
+    `No credenciamento basta apresentar o QR que está neste e-mail. Se a ` +
+    `imagem não abrir, o código acima identifica a inscrição.\n\n` +
+    `Página do evento: ${input.linkEvento}`;
+  return { assunto, html, texto };
+}
+
+// ---------------------------------------------------------------------------
 // Campanha por e-mail (E06 — consumidor `executarDisparoCampanha`)
 // ---------------------------------------------------------------------------
 
