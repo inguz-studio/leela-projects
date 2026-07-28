@@ -1467,4 +1467,172 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
       (await db.collection(`eventos/${EVENTO_ID}/comunicacoes`).get()).size
     ).toBe(0);
   });
+
+  // ── H · E08-REV (review antagonista) — o que a G1..G4 não cobria ────────
+  // Três buracos de prova que a review encontrou nos vetores de ataque: o
+  // replay ADULTERADO (o e-mail podia contar uma história diferente do
+  // extrato), o recruzamento REPETIDO da mesma faixa (um e-mail por venda
+  // seria ruído em cima de dinheiro), e o servidor SOZINHO contra valores
+  // adversariais (a tela é conveniência; a lei é a transação).
+
+  it('H1: replay com input ADULTERADO avisa com o valor do LEDGER, não do input', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 30);
+    const r = await createInscricaoChargeCore(
+      db, provider, chargeInput('chave-rev-00000001', { ref: { codigo: 'AVISADO1' } }), caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-rev-1');
+
+    // 1ª passagem SEM provedor: o dinheiro entra, o aviso não acontece e —
+    // crucial — a chave NÃO é queimada.
+    const p1 = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rev-replay-0001',
+      valor: 10, observacao: 'Pix real',
+    }, marina, null);
+    expect(p1.duplicado).toBe(false);
+    expect(p1.saldoComissao).toBe(20);
+    expect(
+      (await db.doc(
+        `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoRepasse('rev-replay-0001'))}`
+      ).get()).exists
+    ).toBe(false);
+
+    // 2ª passagem: MESMO repasseId, valor ADULTERADO para 25.
+    const { provider: espiao, enviados } = providerEspiao();
+    const p2 = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rev-replay-0001',
+      valor: 25, observacao: 'Pix adulterado',
+    }, marina, espiao);
+    expect(p2.duplicado).toBe(true);
+    expect(p2.saldoComissao).toBe(20); // o ledger não mudou
+
+    expect(enviados).toHaveLength(1);
+    const corpo = `${enviados[0]!.assunto} ${enviados[0]!.texto}`;
+    expect(corpo).toContain('10,00');  // valor do LEDGER
+    expect(corpo).not.toContain('25,00'); // NUNCA o do input
+    expect(corpo).toContain('20,00');  // saldo restante real
+
+    // Ledger continua com o valor original e uma linha só.
+    const led = await db.collection(
+      `eventos/${EVENTO_ID}/afiliados/AVISADO1/repasses`
+    ).get();
+    expect(led.size).toBe(1);
+    expect(led.docs[0]!.get('valor')).toBe(10);
+    expect(led.docs[0]!.get('observacao')).toBe('Pix real');
+
+    // 3ª passagem: já avisado ⇒ nenhum segundo e-mail.
+    await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rev-replay-0001',
+      valor: 25,
+    }, marina, espiao);
+    expect(enviados).toHaveLength(1);
+  });
+
+  it('H2: recruzar a MESMA faixa 3× cala; um marco NOVO ainda avisa', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 40);
+    const { provider: espiao, enviados } = providerEspiao();
+    let n = 0;
+    const venda = async (): Promise<{ pedidoId: string; inscritoIds: string[] }> => {
+      n += 1;
+      const r = await createInscricaoChargeCore(
+        db, provider,
+        chargeInput(`chave-revb-0000000${n}`, { ref: { codigo: 'AVISADO1' } }),
+        caller
+      );
+      await confirmarPedido(r.pedidoId, `evt-revb-${n}`, espiao);
+      return r;
+    };
+    const acumulada = async (): Promise<number> =>
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/AVISADO1`).get())
+        .get('comissaoAcumulada') as number;
+
+    await venda();                    // 40  → marco-primeira
+    expect(enviados).toHaveLength(1);
+    await venda();                    // 80  → silêncio
+    const v3 = await venda();         // 120 → marco-100
+    expect(enviados).toHaveLength(2);
+
+    // 1º recruzamento
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: v3.pedidoId, inscritoId: v3.inscritoIds[0]!, motivo: 'recruz 1',
+    }, marina);
+    expect(await acumulada()).toBe(80);
+    const v4 = await venda();         // 120 de novo
+    expect(enviados).toHaveLength(2);
+
+    // 2º recruzamento
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: v4.pedidoId, inscritoId: v4.inscritoIds[0]!, motivo: 'recruz 2',
+    }, marina);
+    expect(await acumulada()).toBe(80);
+    const v5 = await venda();         // 120
+    expect(enviados).toHaveLength(2);
+
+    // 3º recruzamento
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: v5.pedidoId, inscritoId: v5.inscritoIds[0]!, motivo: 'recruz 3',
+    }, marina);
+    await venda();                    // 120
+    expect(enviados).toHaveLength(2);
+
+    // Marco NOVO: 120 → 160 → 200 cruza os R$ 200 e avisa UMA vez.
+    await venda();                    // 160
+    expect(enviados).toHaveLength(2);
+    await venda();                    // 200
+    expect(await acumulada()).toBe(200);
+    expect(enviados).toHaveLength(3);
+    expect(enviados[2]!.assunto).toContain('200,00');
+    expect(
+      (await db.doc(
+        `eventos/${EVENTO_ID}/comunicacoes/${logDoc(chaveAvisoMarco(200))}`
+      ).get()).exists
+    ).toBe(true);
+    // Exatamente 3 comunicações no evento — uma por faixa única.
+    expect((await db.collection(`eventos/${EVENTO_ID}/comunicacoes`).get()).size).toBe(3);
+  });
+
+  it('H3: com a tela FORA do circuito, o core recusa sozinho e não deixa rastro', async () => {
+    await afiliadoComComissao('AVISADO1', 'uid-teo', 30);
+    const r = await createInscricaoChargeCore(
+      db, provider, chargeInput('chave-revc-00000001', { ref: { codigo: 'AVISADO1' } }), caller
+    );
+    await confirmarPedido(r.pedidoId, 'evt-revc-1');
+
+    const ataques: [string, unknown, RegExp][] = [
+      ['zero', 0, /cent-exato maior que zero/],
+      ['negativo', -10, /cent-exato maior que zero/],
+      ['tres casas', 10.005, /cent-exato maior que zero/],
+      ['acima do teto', 30.01, /excede o saldo/],
+      ['muito acima do teto', 999999, /excede o saldo/],
+      ['NaN', Number.NaN, /cent-exato maior que zero/],
+      ['string', '10', /cent-exato maior que zero/],
+      ['nulo', null, /cent-exato maior que zero/],
+      ['infinito', Number.POSITIVE_INFINITY, /cent-exato maior que zero/],
+    ];
+    let i = 0;
+    for (const [nome, valor, esperado] of ataques) {
+      i += 1;
+      await expect(
+        registrarRepasseComissaoCore(db, {
+          eventoId: EVENTO_ID, afiliadoId: 'AVISADO1',
+          repasseId: `rev-ataque-000${i}`, valor,
+        } as never, marina, null),
+        nome
+      ).rejects.toThrow(esperado);
+    }
+    // Nenhuma recusa deixou linha no ledger nem mexeu no ∑.
+    expect(
+      (await db.collection(`eventos/${EVENTO_ID}/afiliados/AVISADO1/repasses`).get()).size
+    ).toBe(0);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/afiliados/AVISADO1`).get()).get('comissaoRepassada')
+    ).toBe(0);
+
+    // O ATAQUE A da tela (1.500 → 1.5): o core ACEITA, porque 1,50 é dinheiro
+    // legítimo. O servidor não pode salvar de erro de digitação — só a tela.
+    const ok = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'AVISADO1', repasseId: 'rev-ataque-mil5', valor: 1.5,
+    }, marina, null);
+    expect(ok.duplicado).toBe(false);
+    expect(ok.saldoComissao).toBe(28.5);
+  });
 });
