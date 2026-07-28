@@ -6,10 +6,13 @@
   },
   "functions": [
     {
-      "source": "functions",
+      "source": "functions-deploy",
       "codebase": "default",
       "ignore": ["node_modules", ".git", "**/*.log"],
-      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+      "predeploy": [
+        "npm --prefix functions run build",
+        "node functions/scripts/bundle-deploy.mjs"
+      ]
     }
   ],
   "hosting": {

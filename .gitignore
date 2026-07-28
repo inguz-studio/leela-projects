@@ -53,6 +53,9 @@ storybook-static/
 # Valores locais dos secrets declarados (Functions Emulator) — NUNCA commitar
 .secret.local
 
+# Artefato de deploy das Functions (gerado por bundle-deploy.mjs)
+functions-deploy/
+
 # Snapshot local do Emulator Suite (emulators:export / --import)
 .emulator-data/
 
