@@ -1057,6 +1057,135 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(depois.afiliacoes[0]?.saldoComissao).toBe(-10);
   });
 
+  // ── S705-T1 · RN-385 — o buraco de prova que a F5 não cobria ─────────────
+  // A F5 prova UM repasse contra o saldo (teto, cent-exatidão, replay). O que
+  // faltava é a composição: DOIS parciais consecutivos contra o MESMO saldo,
+  // onde o segundo tem de enxergar o saldo JÁ decrementado pelo primeiro.
+  // Sem esta prova, um repasse que lê o saldo original passaria despercebido
+  // e o afiliado receberia duas vezes o que o organizador devia uma.
+  it('F5b (S705-T1 · RN-385): dois parciais consecutivos — o 2º respeita o saldo JÁ decrementado; teto recalculado; estorno pós-parcial sem clamp', async () => {
+    // Saldo 30 por afiliado: valor_fixo de 30 × 1 inscrição do pedido.
+    async function afiliadoComSaldo30(
+      refCodigo: string,
+      uid: string,
+      chaveCharge: string,
+      eventId: string
+    ): Promise<{ pedidoId: string; inscritoIds: string[] }> {
+      await salvarAfiliadoCore(db, {
+        eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: `PF ${refCodigo}`,
+        refCodigo, responsavelEmail: `${refCodigo.toLowerCase()}@exemplo.com`,
+        comissao: { tipo: 'valor_fixo', valorPorInscricao: 30 },
+      }, marina);
+      await db.doc(`eventos/${EVENTO_ID}/afiliados/${refCodigo}`).update({
+        responsavelUid: uid, status: 'ativo',
+      });
+      const r = await createInscricaoChargeCore(
+        db, provider, chargeInput(chaveCharge, { ref: { codigo: refCodigo } }), caller
+      );
+      await confirmarPedido(r.pedidoId, eventId);
+      const afil = await db.doc(`eventos/${EVENTO_ID}/afiliados/${refCodigo}`).get();
+      expect(afil.get('comissaoAcumulada')).toBe(30);
+      return { pedidoId: r.pedidoId, inscritoIds: r.inscritoIds };
+    }
+
+    // ── Caso 1 · 30 → parcial 10 → parcial 15 = saldo 5, ∑ 25, DUAS linhas ──
+    await afiliadoComSaldo30('PARCIALA', 'uid-parcial-a', 'chave-par-00000001', 'evt-par-a1');
+
+    const p1 = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'PARCIALA', repasseId: 'rep-parcial-a-01',
+      valor: 10, observacao: 'Pix 1/2',
+    }, marina);
+    expect(p1.duplicado).toBe(false);
+    expect(p1.saldoComissao).toBe(20);
+
+    const p2 = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'PARCIALA', repasseId: 'rep-parcial-a-02',
+      valor: 15, observacao: 'Pix 2/2',
+    }, marina);
+    expect(p2.duplicado).toBe(false);
+    expect(p2.saldoComissao).toBe(5);
+
+    const afilA = await db.doc(`eventos/${EVENTO_ID}/afiliados/PARCIALA`).get();
+    expect(afilA.get('comissaoAcumulada')).toBe(30);
+    expect(afilA.get('comissaoRepassada')).toBe(25);
+
+    // Ledger: DUAS linhas próprias (o parcial não vira um total somado) —
+    // é a projeção que o extrato dos dois lados consome (S705-T3).
+    const ledgerA = await db
+      .collection(`eventos/${EVENTO_ID}/afiliados/PARCIALA/repasses`)
+      .get();
+    expect(ledgerA.size).toBe(2);
+    expect(ledgerA.docs.map((d) => d.get('valor')).sort((a, b) => a - b)).toEqual([10, 15]);
+    expect(ledgerA.docs.map((d) => d.id).sort()).toEqual([
+      'rep-parcial-a-01', 'rep-parcial-a-02',
+    ]);
+
+    // O reader do PRÓPRIO afiliado enxerga as duas linhas com valor e nota
+    // próprios — e nada de terceiro (RN-318).
+    const minhasA = await getMinhasAfiliacoesCore(db, 'uid-parcial-a');
+    expect(minhasA.afiliacoes[0]).toMatchObject({
+      comissaoAcumulada: 30, comissaoRepassada: 25, saldoComissao: 5,
+    });
+    expect(minhasA.afiliacoes[0]?.ultimosRepasses).toHaveLength(2);
+    expect(
+      minhasA.afiliacoes[0]?.ultimosRepasses.map((r) => r.valor).sort((a, b) => a - b)
+    ).toEqual([10, 15]);
+    expect(JSON.stringify(minhasA)).not.toContain('ana@exemplo.com');
+
+    // Um 3º parcial de 5 fecha o saldo em ZERO (o caminho de aceite da
+    // história: "segundo repasse do resto é aceito e o saldo vai a zero").
+    const p3 = await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'PARCIALA', repasseId: 'rep-parcial-a-03', valor: 5,
+    }, marina);
+    expect(p3.saldoComissao).toBe(0);
+
+    // ── Caso 2 · 30 → parcial 10 → 21 RECUSADO (teto = saldo decrementado) ──
+    const pedidoB = await afiliadoComSaldo30(
+      'PARCIALB', 'uid-parcial-b', 'chave-par-00000002', 'evt-par-b1'
+    );
+    await registrarRepasseComissaoCore(db, {
+      eventoId: EVENTO_ID, afiliadoId: 'PARCIALB', repasseId: 'rep-parcial-b-01', valor: 10,
+    }, marina);
+    // 21 cabia no saldo ORIGINAL (30) e NÃO cabe no vigente (20): se a guarda
+    // lesse o saldo pré-parcial, este repasse passaria e o organizador pagaria
+    // 31 por uma dívida de 30.
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'PARCIALB', repasseId: 'rep-parcial-b-02', valor: 21,
+      }, marina)
+    ).rejects.toThrow(/excede o saldo/);
+    const afilB = await db.doc(`eventos/${EVENTO_ID}/afiliados/PARCIALB`).get();
+    expect(afilB.get('comissaoRepassada')).toBe(10);
+    const ledgerB = await db
+      .collection(`eventos/${EVENTO_ID}/afiliados/PARCIALB/repasses`)
+      .get();
+    expect(ledgerB.size).toBe(1); // a recusa não deixa rastro no ledger
+    const minhasB = await getMinhasAfiliacoesCore(db, 'uid-parcial-b');
+    expect(minhasB.afiliacoes[0]?.saldoComissao).toBe(20);
+
+    // ── Caso 3 · estorno DEPOIS do parcial: config CONGELADA, sem clamp ─────
+    // Trocar a config de comissão antes do estorno é a armadilha: o estorno
+    // tem de decrementar os 30 CONGELADOS na conversão, não os 5 de agora.
+    await db.doc(`eventos/${EVENTO_ID}/afiliados/PARCIALB`).update({
+      comissao: { tipo: 'valor_fixo', valorPorInscricao: 5 },
+    });
+    await estornarInscricaoCore(db, provider, {
+      pedidoId: pedidoB.pedidoId, inscritoId: pedidoB.inscritoIds[0]!,
+      motivo: 'Estorno pós-parcial',
+    }, marina);
+    const depoisB = await getMinhasAfiliacoesCore(db, 'uid-parcial-b');
+    // 30 congelados saem inteiros; os 10 já repassados viram dívida honesta.
+    expect(depoisB.afiliacoes[0]?.comissaoAcumulada).toBe(0);
+    expect(depoisB.afiliacoes[0]?.comissaoRepassada).toBe(10);
+    expect(depoisB.afiliacoes[0]?.saldoComissao).toBe(-10);
+    // Dívida NÃO se quita por registro: saldo negativo recusa qualquer valor.
+    await expect(
+      registrarRepasseComissaoCore(db, {
+        eventoId: EVENTO_ID, afiliadoId: 'PARCIALB', repasseId: 'rep-parcial-b-03', valor: 1,
+      }, marina)
+    ).rejects.toThrow(/excede o saldo/);
+  });
+
   it('F6: Rules — repasses/∑ de comissão Function-only; leitura só organizador do tenant + o PRÓPRIO afiliado', async () => {
     await salvarAfiliadoCore(db, {
       eventoId: EVENTO_ID, tipo: 'pessoa_fisica', nome: 'Dioney', refCodigo: 'DIONEY10',
