@@ -42,6 +42,29 @@ const FORM_VAZIO: FormDireto = {
 };
 
 /**
+ * Mensagem de recusa que o operador lê (FIX ESTORNO-REV · vetor 6).
+ *
+ * As guardas de dinheiro do servidor escrevem em português DE OPERADOR e
+ * dizem o que fazer: a RN-371 manda conferir o extrato do gateway ANTES de
+ * tentar de novo, a RN-376 diz de quem é o poder de furar a véspera. O
+ * mapeador genérico de plataforma trocava essas frases por "e-mail com papel
+ * conflitante ou transição de status inválida" — texto de outra tela, que
+ * numa fila de estorno manda o admin procurar no lugar errado.
+ *
+ * Regra: a frase do servidor quando ela existe; `platformErrorMessage` como
+ * rede (callable que estoura em 'internal' chega com message 'INTERNAL', que
+ * não é frase de operador). @pure
+ */
+export function mensagemDaRecusa(err: unknown): string {
+  const bruta =
+    err !== null && typeof err === 'object' && 'message' in err
+      ? String((err as { message?: unknown }).message ?? '').trim()
+      : '';
+  const generica = platformErrorMessage(err);
+  return bruta.length > 0 && bruta.toUpperCase() !== 'INTERNAL' ? bruta : generica;
+}
+
+/**
  * O formulário está completo para a ação escolhida? Estornar furando a véspera
  * exige DUAS justificativas: o motivo do reembolso e o motivo do furo — a
  * segunda é a que responde "por que a plataforma passou por cima da regra do
@@ -106,7 +129,7 @@ export function EstornosAdminRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: kind === 'aprovar' ? 'Não foi possível aprovar' : 'Não foi possível recusar',
-        description: platformErrorMessage(acoes.error),
+        description: mensagemDaRecusa(acoes.ultimoErro()),
       });
     }
   }
@@ -146,7 +169,7 @@ export function EstornosAdminRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: acao === 'estornar' ? 'Não foi possível estornar' : 'Não foi possível cancelar',
-        description: platformErrorMessage(acoes.error),
+        description: mensagemDaRecusa(acoes.ultimoErro()),
       });
     }
   }

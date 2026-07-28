@@ -8,7 +8,7 @@
 // estado, nenhum valor e nenhuma política decididos no cliente.
 // =============================================================================
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   cancelarInscricao,
@@ -43,6 +43,15 @@ export function useFilaEstornos(reloadKey = 0): AsyncQuery<EstornoFilaItem[]> {
 export interface EstornoAdminActions {
   running: boolean;
   error: Error | null;
+  /**
+   * Erro da ÚLTIMA ação, lido de um ref (FIX ESTORNO-REV · vetor 6). O
+   * `error` de estado só existe no render SEGUINTE ao da falha, e o handler
+   * que chamou a ação foi criado no render ANTERIOR: ler `error` logo depois
+   * do `await` devolve o valor velho — na primeira falha, `null`, e o toast
+   * de dinheiro saía sem descrição nenhuma. O ref é escrito na mesma volta
+   * do `catch`, então o handler enxerga o erro que ele próprio provocou.
+   */
+  ultimoErro: () => Error | null;
   decidir: (
     eventoId: string,
     inscritoId: string,
@@ -70,14 +79,20 @@ export interface EstornoAdminActions {
 export function useEstornoAdminActions(): EstornoAdminActions {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  // Espelho síncrono do erro (ver `ultimoErro` no contrato): estado de React
+  // não volta a tempo para quem já está dentro do handler.
+  const erroRef = useRef<Error | null>(null);
 
   const executar = useCallback(async function executar<T>(fn: () => Promise<T>): Promise<T | null> {
     setRunning(true);
     setError(null);
+    erroRef.current = null;
     try {
       return await fn();
     } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
+      const erro = err instanceof Error ? err : new Error(String(err));
+      erroRef.current = erro;
+      setError(erro);
       return null;
     } finally {
       setRunning(false);
@@ -87,6 +102,7 @@ export function useEstornoAdminActions(): EstornoAdminActions {
   return {
     running,
     error,
+    ultimoErro: useCallback(() => erroRef.current, []),
     decidir: useCallback(
       (eventoId, inscritoId, decisao, motivo) =>
         executar(() =>
