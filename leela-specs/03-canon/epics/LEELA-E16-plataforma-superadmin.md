@@ -1057,3 +1057,179 @@ Este épico **não tem lacuna aberta na Onda 4**. A última peça do caminho do 
 O que segue fora da fila, por recorte e não por lacuna: **S1603** (recorrência da comunidade) e **S1604** (recorrência SaaS), ambos pós-V1; **S1605** entregue em fatia slim.
 
 Ação de operação pendente, herdada e não-código: provisionar `CRM_ID_PEPPER` no Secret Manager antes do primeiro deploy com dado real (ver E19). Trocar o pepper depois de haver dado real obriga migração de todas as chaves.
+
+---
+
+## Catálogo de benefícios da plataforma (SPECS-0728 · 2026-07-28) · prioridade baixa
+
+DEC-0728C. **Prioridade baixa declarada pelo dono**: entra na fila depois do FormBuilder e
+não bloqueia nenhuma das posições 1 a 4.
+
+### Decisão do épico dono: é o E16, não o E10
+
+O verbatim pede o cadastro "como administrador Leela", e a frase decide sozinha. Três
+razões, na ordem de peso:
+
+1. **O ator.** É `platform_admin`, não `tenant_owner`. A RN-401 e a RN-404 já dizem que o
+   que o dono da plataforma escreve mora em coleção de plataforma, com escrita exclusiva
+   dele.
+2. **O escopo do dado.** Um cupom de parceiro e um parceiro presencial valem para a
+   comunidade inteira, atravessando tenants. O registro do E10 vive em
+   `profissionais/{profId}/marcas`, com Rules de dono único: pendurar um catálogo
+   cross-tenant ali fura a RN-400, que é a regra fundacional de isolamento e cujo retrofit
+   o épico chama de proibitivo.
+3. **O trabalho servido.** O E10 existe para o organizador chegar na reunião com o
+   patrocinador com dados na mão. Isso é outro emprego. Marca de patrocínio e parceiro de
+   benefício se parecem no formulário e não se parecem em nada no propósito.
+
+**A costura com o E10.** É de vocabulário e de componente, não de dado. O tipo `Marca`
+(`packages/core/src/brands/marca.ts`) e o primitivo `Thumb` do design system são
+reaproveitados como referência de forma; o registro do profissional e o catálogo da
+plataforma permanecem **duas coleções separadas**, sem sincronização e sem chave
+compartilhada. Uma marca que seja ao mesmo tempo patrocinadora de um organizador e
+parceira da Leela existe duas vezes, de propósito — a mesma semântica de cópia
+independente que a exclusão de marca já explica na própria caixa de confirmação.
+
+### A leitura do pedido, com o default em vigor
+
+"Cupons de desconto" e "parceiros presenciais" aparecem na mesma frase, junto de endereço,
+descritivo de benefícios, capa, logo e fotos. Lidos juntos, são **um catálogo de benefícios
+da comunidade**: vantagens que a Leela oferece a quem usa a plataforma, uma parte resgatável
+por código e outra atendida em endereço físico.
+
+**Não** é o cupom de venda. O cupom de desconto do checkout já existe, é do organizador, tem
+tipo `percentual|fixo`, janela obrigatória e modo de venda fechada (E04, RN-303). Misturar os
+dois criaria uma segunda fonte de desconto sobre o preço, que é a classe de erro mais cara
+que este produto pode cometer.
+
+O default fica **em vigor**, não volta como pergunta. Se a leitura estiver errada, o item é
+de prioridade baixa e nada foi construído em cima dele.
+
+### Regras de negócio novas (SPECS-0728)
+
+- **RN-393 · Catálogo de benefícios da plataforma.** O `platform_admin` mantém um catálogo
+  cross-tenant com dois tipos de benefício: **cupom de benefício** (código resgatável em
+  parceiro, com descritivo e vigência) e **parceiro presencial** (com endereço, descritivo de
+  benefícios, capa, logo e galeria de fotos). Escrita **exclusiva** do `platform_admin`, no
+  mesmo padrão da RN-404; leitura conforme a RN-395. O **cupom de benefício não é o cupom de
+  venda** da RN-303: ele nunca toca preço, total, taxa nem repasse, e não existe caminho de
+  código entre os dois. Coleção de plataforma, nunca sob `profissionais/{profId}` (RN-400).
+- **RN-394 · Mídia do parceiro presencial.** Capa, logo e galeria seguem o padrão já
+  decidido, sem inventar caminho novo: Firebase Storage (ADR-016), upload obrigatório com
+  trocar e ajuste de proporção (RN-168 e RN-170), capa na proporção e no teto já fixados
+  (RN-228) e exibição pelo primitivo `Thumb` do design system (RN-236), com carga tardia e
+  degradação para a sigla quando a URL morre. A galeria tem **teto de fotos como constante
+  única no core**, default proposto **8**. Rules de Storage fail-closed, com teto de tamanho
+  e lista de formatos permitidos, no mesmo desenho das capas.
+- **RN-395 · Estado e vigência do benefício.** Todo benefício tem estado `rascunho` ou
+  `publicado` e uma janela de vigência com início e fim. Publicado significa **pronto para
+  ser exibido**, e não exibido: **a vitrine para o atleta é decisão futura** e não é aberta
+  aqui. Enquanto ela não existir, o catálogo é back-office puro, e essa honestidade fica
+  escrita na própria tela para ninguém achar que publicou e nada aconteceu. Benefício fora da
+  vigência não é apagado; ele sai da leitura publicada e continua no back-office.
+
+---
+
+### LEELA-S1607 · Catálogo de benefícios da plataforma · (de-para novo · DEC-0728C) · prioridade baixa
+
+**Como** administrador Leela, **quero** cadastrar cupons de benefício e parceiros presenciais
+num lugar só, **para** montar a oferta de vantagens da comunidade sem depender de ninguém.
+
+- **MoSCoW:** Could · **Estimativa:** M · **Superfície:** Painel (back-office da plataforma) · **RNs:** RN-393, RN-394, RN-395, RN-401, RN-404, RN-400
+- **JTBD servido:** "montar a oferta de vantagens da plataforma sem intervenção técnica".
+- **Origem:** DEC-0728C (2026-07-28), com prioridade baixa declarada pelo dono.
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** que sou `platform_admin`, **quando** abro a área de plataforma, **então** existe
+  Benefícios ao lado de Tenants, Termos, Planos, Taxa, Repasses e Estornos, com as duas abas
+  Cupons e Parceiros.
+- **Dado** que **não** sou `platform_admin`, **quando** tento abrir a rota por endereço
+  direto, **então** o acesso é negado pela mesma guarda que já protege a área, e a leitura
+  também falha nas Rules, e não só na tela (RN-401).
+- **Dado** um cupom de benefício, **quando** o cadastro, **então** informo código, descritivo,
+  parceiro associado e janela de vigência, e o sistema deixa explícito que este cupom não
+  interfere em preço, total, taxa nem repasse (RN-393).
+- **Dado** o cadastro de um cupom de benefício, **quando** procuro um campo de percentual ou
+  de valor de desconto sobre a inscrição, **então** ele não existe — o desconto de venda vive
+  no cupom do organizador (RN-303).
+- **Dado** um parceiro presencial, **quando** o cadastro, **então** informo nome, endereço,
+  descritivo de benefícios, capa, logo e fotos, com a capa e o logo obrigatórios e as fotos
+  opcionais (RN-394).
+- **Dado** a galeria de um parceiro, **quando** tento subir a nona foto, **então** a validação
+  bloqueia pelo teto do core (RN-394).
+- **Dado** um arquivo fora do formato ou acima do tamanho permitido, **quando** tento subir,
+  **então** as Rules do Storage recusam, e não só a tela.
+- **Dado** um benefício em rascunho, **quando** vejo a lista, **então** ele aparece marcado
+  como rascunho e a tela explica que publicar ainda não o mostra a ninguém, porque a vitrine
+  do atleta não existe (RN-395).
+- **Dado** um benefício com vigência encerrada, **quando** vejo a lista, **então** ele
+  continua listado no back-office com o estado de vencido, e não desaparece.
+- **Dado** a lista de parceiros, **quando** filtro e nada casa, **então** vejo estado vazio e
+  contador "mostrando 0 de N", como em toda lista da casa.
+- **Dado** um parceiro com cupons associados, **quando** tento excluí-lo, **então** a caixa de
+  confirmação mostra os cupons que ficam órfãos antes de confirmar (§2.15).
+
+**Tasks:** `S1607-T1`, `S1607-T2`, `S1607-T3`, `S1607-T4`.
+
+#### LEELA-S1607-T1 · Modelo do catálogo e Rules
+- **Tipo:** data-model · **Bloqueia:** T2, T3, T4 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+Coleções de plataforma para cupom de benefício e parceiro presencial, tipos e validações no
+core, teto de fotos como constante única, Rules com escrita exclusiva do `platform_admin` e
+leitura conforme a RN-395, mais Rules de Storage fail-closed para capa, logo e galeria.
+
+**Testes:** ataque de Rules — `tenant_owner` e atleta tentam escrever e ler, e falham nos
+casos que devem falhar; upload de formato e de tamanho proibidos é recusado no Storage.
+
+#### LEELA-S1607-T2 · Aba de cupons de benefício
+- **Tipo:** screen · **Depende de:** T1 · **Estimativa:** S · **Rota:** opus
+
+Lista densa com busca, contador e estado vazio; criar e editar por modal do design system;
+vigência com início e fim; nenhum campo que toque preço.
+
+#### LEELA-S1607-T3 · Aba de parceiros presenciais com endereço e galeria
+- **Tipo:** screen · **Depende de:** T1 · **Estimativa:** M · **Rota:** opus
+
+Cadastro com endereço, descritivo, capa, logo e galeria, reusando o componente de upload
+com trocar e ajuste de proporção que já existe (RN-168 e RN-170) e o `Thumb` na lista.
+Exclusão com preview das consequências.
+
+#### LEELA-S1607-T4 · Leitura publicada, sem vitrine
+- **Tipo:** api/function · **Depende de:** T1 · **Estimativa:** S · **Rota:** opus
+
+Projeção de leitura dos benefícios publicados e vigentes, pronta para quando a vitrine
+existir. Nenhuma tela de atleta é criada aqui, e a tela de back-office diz isso com todas as
+letras.
+
+---
+
+### Fila de código pronta · lane MARCAS-ADMIN (posição 5, prioridade baixa)
+
+| # | Task | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|
+| 1 | `S1607-T1` modelo, core e Rules | `packages/core`, `firestore.rules`, `storage.rules` | — | opus | ⚔ |
+| 2 | `S1607-T2` aba de cupons | `apps/painel/src/routes/plataforma/beneficios` | 1 | opus | — |
+| 3 | `S1607-T3` aba de parceiros com galeria | `apps/painel/src/routes/plataforma/beneficios` | 1 | opus | — |
+| 4 | `S1607-T4` projeção de leitura publicada | `packages/api-client`, `firestore.rules` | 1 | opus | — |
+
+Itens 2, 3 e 4 são disjuntos entre si e correm juntos depois do 1. A rota nasce dentro da
+área de plataforma que já existe, ao lado de Tenants, Termos, Planos, Taxa, Repasses e
+Estornos: nenhum item novo no menu principal, porque a área de plataforma tem navegação
+própria (§2.1) e não passa pelo catálogo de seis, agora sete, do menu do organizador.
+
+### Critério de pronto
+
+- [ ] `platform_admin` escreve, e mais ninguém — provado por Rules, não por tela
+- [ ] nenhum caminho de código liga o cupom de benefício ao cálculo de preço, taxa ou repasse
+- [ ] upload fora de formato ou de tamanho é recusado no Storage
+- [ ] o teto de fotos vem de constante única no core
+- [ ] a tela diz, sem rodeio, que publicar ainda não exibe a ninguém
+- [ ] review antagonista em contexto fresco no T1
+
+### Decisão que pode voltar para o Vitor
+
+**Se "cupons de desconto" quisesse dizer cupom de venda no nível da plataforma**, esta spec
+está no caminho errado e o item é barato de refazer, porque não bloqueia nada. O default em
+vigor é o catálogo de benefícios, pelas razões escritas acima. Nenhuma linha de código foi
+escrita em cima dele.

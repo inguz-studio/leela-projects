@@ -511,3 +511,26 @@ volta para o épico dono.
 Continua valendo o que o plano de 19/07 registrou: o Vitor não tem nada a decidir aqui.
 A escolha de proibir o casamento por nome é técnica, com o modo de falha nomeado, e
 segue a disciplina que a própria tela já adotou de não exibir número inventado.
+
+---
+
+## Nota de fronteira · o cadastro de marcas do admin geral é do E16 (SPECS-0728 · 2026-07-28)
+
+A DEC-0728C pediu, "como administrador Leela", o cadastro de cupons de desconto e de
+parceiros presenciais com endereço, descritivo de benefícios, capa, logo e fotos. O dono
+**não** é este épico.
+
+O ator é `platform_admin` e o dado atravessa tenants, então ele mora em coleção de
+plataforma, com escrita exclusiva do dono da plataforma (RN-401, RN-404). Pendurar um
+catálogo cross-tenant sob `profissionais/{profId}/marcas`, que tem Rules de dono único,
+furaria a RN-400. Além disso, o emprego é outro: o E10 serve o organizador que vai sentar
+com o patrocinador dele; o catálogo serve a comunidade da Leela.
+
+A costura entre os dois é de forma, não de dado. O tipo `Marca` e o primitivo `Thumb` são
+referência de componente; as coleções seguem **separadas, sem sincronização e sem chave
+compartilhada**. Uma marca que seja patrocinadora de um organizador e parceira da Leela
+existe duas vezes, de propósito, na mesma semântica de cópia independente que a exclusão de
+marca já explica.
+
+Spec completa em `LEELA-E16-plataforma-superadmin` §"Catálogo de benefícios da plataforma".
+Prioridade baixa declarada pelo dono; não bloqueia nada deste épico.
