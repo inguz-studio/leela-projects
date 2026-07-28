@@ -54,7 +54,7 @@ describe('derivarCountdown (S602-T1)', () => {
     expect(view!.quando).toBe('27 Abr · Florianópolis/SC');
     expect(view!.qtdInscritos).toBe(453);
     expect(view!.vagasRestantes).toBe(47);
-    expect(view!.checkinHref).toBe('/eventos/meia-floripa-2026/entrega');
+    expect(view!.checkinHref).toBe('/eventos/meia-floripa-2026/credenciamento');
     expect(view!.gerenciarHref).toBe('/eventos/meia-floripa-2026');
     expect(view!.inscritosHref).toBe('/eventos/meia-floripa-2026/inscritos');
   });

@@ -21,7 +21,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { MemoryRouter, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { rotasLegadas } from '../RotasLegadas';
 
 vi.mock('../../crm/visao-geral/AnaliseVendasPage', () => ({
@@ -42,8 +42,16 @@ vi.mock('../../eventos/repasses/RepassesPage', () => ({
 vi.mock('../../eventos/hub/HubRoute', () => ({
   HubRoute: () => <div data-testid="alvo">eventos:lista</div>,
 }));
+// O layout do evento é uma MOLDURA com <Outlet/>: sem ele no dublê, as rotas
+// filhas de `:slug` casam mas nunca renderizam — e um redirect declarado lá
+// dentro (o `/entrega` → `/credenciamento` da RN-399) passaria em silêncio.
 vi.mock('../../eventos/evento/EventoLayout', () => ({
-  EventoLayout: () => <div data-testid="alvo">eventos:evento</div>,
+  EventoLayout: () => (
+    <div data-testid="alvo">
+      eventos:evento
+      <Outlet />
+    </div>
+  ),
 }));
 vi.mock('../../eventos/novo/NovoEventoRoute', () => ({
   NovoEventoRoute: () => <div data-testid="alvo">eventos:novo</div>,
@@ -258,6 +266,64 @@ describe('RN-234 · o salto preserva querystring e fragmento', () => {
     ]) {
       const trilha = resolverCompleto(entrada);
       expect(trilha.length, `trilha: ${trilha.join(' → ')}`).toBeLessThanOrEqual(2);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S211-T3 (RN-399 sobre RN-234) — o balcão mudou de endereço
+//
+// A linha nova da tabela DE→PARA. O destino depende do `:slug`, então o
+// redirect vive dentro do `EventosRoutes` (mesma escolha do `/crm/:clienteKey`)
+// — e é aqui, no mesmo gate orientado a tabela, que ele é cobrado.
+// ---------------------------------------------------------------------------
+
+describe('RN-234 · /eventos/:slug/entrega → /credenciamento (RN-399)', () => {
+  it.each([
+    ['/eventos/meia-floripa-2026/entrega', '/eventos/meia-floripa-2026/credenciamento'],
+    [
+      '/eventos/meia-floripa-2026/entrega/estados',
+      '/eventos/meia-floripa-2026/credenciamento/estados',
+    ],
+    // Slug com hífen e número não é caso especial, mas é o formato real.
+    ['/eventos/trail-ratones-2026/entrega', '/eventos/trail-ratones-2026/credenciamento'],
+  ])('%s → %s', (entrada, destino) => {
+    const { trilha } = resolver(entrada);
+    expect(trilha.at(-1)).toBe(destino);
+  });
+
+  it('o endereço NOVO não redireciona — é destino, não origem', () => {
+    const { trilha } = resolver('/eventos/meia-floripa-2026/credenciamento');
+    expect(trilha).toEqual(['/eventos/meia-floripa-2026/credenciamento']); // zero salto
+  });
+
+  it('no máximo UM salto, ida e volta (guarda anti-laço)', () => {
+    for (const entrada of [
+      '/eventos/meia-floripa-2026/entrega',
+      '/eventos/meia-floripa-2026/entrega/estados',
+      '/eventos/meia-floripa-2026/credenciamento',
+      '/eventos/meia-floripa-2026/credenciamento/estados',
+    ]) {
+      const { trilha } = resolver(entrada);
+      expect(trilha.length, `trilha: ${trilha.join(' → ')}`).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('o `?preview=` do preview local sobrevive ao salto', () => {
+    expect(resolverCompleto('/eventos/meia-floripa-2026/entrega?preview=corrida').at(-1)).toBe(
+      '/eventos/meia-floripa-2026/credenciamento?preview=corrida',
+    );
+    expect(resolverCompleto('/eventos/meia-floripa-2026/entrega#kits').at(-1)).toBe(
+      '/eventos/meia-floripa-2026/credenciamento#kits',
+    );
+  });
+
+  it('a virada NÃO sequestra irmãs do mesmo nível', () => {
+    // `entrega` era um segmento estático entre outros; trocá-lo não pode
+    // arrastar `inscritos`, `kits` ou `financeiro` para o redirect.
+    for (const irma of ['inscritos', 'kits', 'financeiro', 'configuracoes']) {
+      const { trilha } = resolver(`/eventos/meia-floripa-2026/${irma}`);
+      expect(trilha).toEqual([`/eventos/meia-floripa-2026/${irma}`]);
     }
   });
 });

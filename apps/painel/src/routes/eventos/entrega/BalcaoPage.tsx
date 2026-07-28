@@ -1,5 +1,7 @@
 // =============================================================================
-// BalcaoPage — container da rota `/eventos/:slug/entrega` (S204-T1).
+// BalcaoPage — container da rota `/eventos/:slug/credenciamento` (S204-T1;
+// endereço trocado pela RN-399, a pasta segue `entrega/` porque mover arquivo
+// não é o que a virada pede).
 // Pega o evento do Outlet context, carrega o pool de inscritos (busca) e liga
 // os callers das Functions de chip/presença.
 //

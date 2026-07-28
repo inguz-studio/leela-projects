@@ -11,7 +11,8 @@
 // L4/L5 — quando existirem, entram como <Route> aqui sob EventoLayout.
 // =============================================================================
 
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useParams } from 'react-router-dom';
+import { RedirectLegado } from '../_system/RotasLegadas';
 import { ToastProvider } from '@leela/design-system';
 import { HubRoute } from './hub/HubRoute';
 import { EventosHubLayout } from './EventosHubLayout';
@@ -45,6 +46,18 @@ import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
 import { RequirePapel } from '../_system/RequirePapel';
 
+/**
+ * Salto do endereço antigo do balcão para o novo (RN-234 · RN-399),
+ * preservando querystring e fragmento pelo `RedirectLegado` compartilhado —
+ * o `?preview=` do preview local do dono viaja junto.
+ */
+function RedirectCredenciamento({ sufixo = '' }: { sufixo?: string }): JSX.Element {
+  const { slug } = useParams();
+  return <RedirectLegado para={`/eventos/${slug ?? ''}/credenciamento${sufixo}`} />;
+}
+
+RedirectCredenciamento.displayName = 'RedirectCredenciamento';
+
 export function EventosRoutes(): JSX.Element {
   return (
     <ToastProvider>
@@ -77,8 +90,12 @@ export function EventosRoutes(): JSX.Element {
               </RequirePapel>
             }
           />
+          {/* RN-399 · o balcão passou a se chamar credenciamento e o endereço
+              acompanhou. A área de permissão continua sendo `entrega` de
+              propósito: renomear o id mexeria na matriz de papéis, e a RN-399
+              é troca de palavra, não de autorização. */}
           <Route
-            path="entrega"
+            path="credenciamento"
             element={
               <RequirePapel area="entrega">
                 <BalcaoPage />
@@ -86,13 +103,22 @@ export function EventosRoutes(): JSX.Element {
             }
           />
           <Route
-            path="entrega/estados"
+            path="credenciamento/estados"
             element={
               <RequirePapel area="entrega">
                 <GaleriaEstados />
               </RequirePapel>
             }
           />
+          {/* RN-234 · o endereço antigo NUNCA quebra. Vive aqui, e não na
+              tabela do `RotasLegadas`, porque o destino depende do `:slug`
+              desta subárvore — a tabela de lá é de destinos absolutos. Um
+              salto só: `/credenciamento` é destino e não redireciona de novo.
+              O redirect fica FORA do `RequirePapel` de propósito: quem não tem
+              a área recebe o 403 no endereço novo, e não um 403 no endereço
+              morto (que faria a pessoa achar que a URL é que estava errada). */}
+          <Route path="entrega" element={<RedirectCredenciamento />} />
+          <Route path="entrega/estados" element={<RedirectCredenciamento sufixo="/estados" />} />
           <Route path="kits" element={<KitsLayout />}>
             <Route index element={<KitsCadastroPage />} />
             <Route path="distribuicao" element={<DistribuicaoPage />} />

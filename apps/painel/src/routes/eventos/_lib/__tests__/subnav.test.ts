@@ -12,7 +12,7 @@ describe('abaAtiva', () => {
   it('casa o segmento da sub-rota', () => {
     expect(abaAtiva(`/eventos/${SLUG}/inscritos`, SLUG)).toBe('inscritos');
     expect(abaAtiva(`/eventos/${SLUG}/kits`, SLUG)).toBe('kits');
-    expect(abaAtiva(`/eventos/${SLUG}/entrega`, SLUG)).toBe('entrega');
+    expect(abaAtiva(`/eventos/${SLUG}/credenciamento`, SLUG)).toBe('entrega');
     expect(abaAtiva(`/eventos/${SLUG}/financeiro`, SLUG)).toBe('financeiro');
   });
 

@@ -48,7 +48,7 @@ describe('Countdown (S602-T1 · T6 card fiel)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Comunicar' }));
     expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/comunicacao');
     await userEvent.click(screen.getByRole('button', { name: 'Check-in' }));
-    expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/entrega');
+    expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/credenciamento');
   });
 
   it('bloco "Ações rápidas" geral saiu (Novo evento vive na Toolbar)', () => {

@@ -45,7 +45,7 @@ export interface CountdownView {
   vagasRestantes: number | null;
   /** /eventos/:slug (quick-action "Gerenciar") */
   gerenciarHref: string;
-  /** /eventos/:slug/entrega — balcão de check-in (E03) */
+  /** /eventos/:slug/credenciamento — balcão de credenciamento (E03 · RN-399) */
   checkinHref: string;
   /** /eventos/:slug/inscritos (quick-action "Ver inscritos") */
   inscritosHref: string;
@@ -122,7 +122,7 @@ export function derivarCountdown(
     qtdInscritos: evento.qtdInscritos,
     vagasRestantes: vagasRestantesDoEvento(evento),
     gerenciarHref: `/eventos/${evento.slug}`,
-    checkinHref: `/eventos/${evento.slug}/entrega`,
+    checkinHref: `/eventos/${evento.slug}/credenciamento`,
     inscritosHref: `/eventos/${evento.slug}/inscritos`,
     comunicacaoHref: `/eventos/${evento.slug}/comunicacao`,
   };

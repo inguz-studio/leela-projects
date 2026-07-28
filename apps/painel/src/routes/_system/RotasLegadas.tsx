@@ -21,6 +21,15 @@
 // declarada, porque depende da PRECEDÊNCIA sobre as subdivisões nomeadas
 // (`clientes`, `comunicacao`, `visao-geral`) — separá-lo do lugar que declara
 // essa ordem é como o laço de redirecionamento nasce.
+//
+// FORA daqui pelo MESMO motivo (S211-T3 · RN-399): `/eventos/:slug/entrega` →
+// `/eventos/:slug/credenciamento` e o `/estados` embaixo dele. O destino
+// depende do `:slug` da URL, que só existe dentro do `EventosRoutes` — a
+// tabela deste arquivo é de destinos ABSOLUTOS. `RedirectLegado` é exportado
+// para os dois casos usarem a MESMA preservação de querystring e fragmento, em
+// vez de cada subárvore reinventar o salto. Os dois são cobertos pelo mesmo
+// teste orientado a tabela (`__tests__/RotasLegadas.test.tsx`), que monta as
+// subárvores reais.
 // =============================================================================
 
 import { Navigate, Route, useLocation } from 'react-router-dom';
@@ -60,7 +69,7 @@ export const REDIRECTS_LEGADOS: readonly RedirectLegado[] = [
  * na identidade padrão, silenciosamente. Preservar também é o que impede um
  * filtro futuro em querystring de morrer num redirect que ninguém revisita.
  */
-function RedirectLegado({ para }: { para: string }): JSX.Element {
+export function RedirectLegado({ para }: { para: string }): JSX.Element {
   const { search, hash } = useLocation();
   return <Navigate to={`${para}${search}${hash}`} replace />;
 }
