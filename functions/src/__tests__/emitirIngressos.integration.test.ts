@@ -20,10 +20,12 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import {
+  assertFails,
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import {
@@ -364,10 +366,210 @@ describe.skipIf(!hasEmulator)('emitirIngressosDoPedido — S1206-T5 (RN-218/396)
     expect(r.processado).toBe(false);
     expect(r.motivo).toBe('sem_keyring');
 
-    const doc = await lerInscrito('insc-1');
+    const inscrito = await lerInscrito('insc-1');
     // Nem meio ingresso: código sem token não é ingresso, é enfeite.
-    expect(doc['qrToken']).toBeUndefined();
-    expect(doc['codigoIngresso']).toBeUndefined();
-    expect(doc['status']).toBe('confirmado');
+    expect(inscrito['qrToken']).toBeUndefined();
+    expect(inscrito['codigoIngresso']).toBeUndefined();
+    expect(inscrito['status']).toBe('confirmado');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ INGQR-REV — o que a lane declarou como "não provado"
+// ---------------------------------------------------------------------------
+
+/** Semeia N pedidos de UM inscrito cada, todos no mesmo evento. */
+async function semearPedidosIndividuais(qtd: number): Promise<string[]> {
+  const now = FieldValue.serverTimestamp();
+  const batch = adminDb.batch();
+  batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
+    id: CASTELO_ID,
+    nome: 'Castelo Produções',
+    slug: CASTELO_ID,
+    status: 'ativo',
+    ownerUid: MARINA_UID,
+    tipo: 'produtor',
+    criadoEm: now,
+    atualizadoEm: now,
+  });
+  batch.set(adminDb.collection('eventos').doc(EVENTO_ID), {
+    id: EVENTO_ID,
+    tenantId: CASTELO_ID,
+    nome: 'Meia Maratona Floripa 2026',
+    slug: EVENTO_ID,
+    status: 'publicado',
+    usaChip: false,
+    criadoEm: now,
+    atualizadoEm: now,
+  });
+  const pedidos: string[] = [];
+  for (let i = 0; i < qtd; i++) {
+    const pedidoId = `ped-conc-${i}`;
+    const inscritoId = `insc-conc-${i}`;
+    pedidos.push(pedidoId);
+    batch.set(adminDb.collection('pedidos').doc(pedidoId), {
+      id: pedidoId,
+      tenantId: CASTELO_ID,
+      eventoId: EVENTO_ID,
+      status: 'pago',
+      inscritoRefs: [inscritoId],
+      responsavel: {
+        nome: `Comprador ${i}`,
+        email: `comprador${i}@exemplo.test`,
+        atletaId: `atleta-${inscritoId}`,
+      },
+      criadoEm: now,
+      atualizadoEm: now,
+    });
+    batch.set(
+      adminDb.collection('eventos').doc(EVENTO_ID).collection('inscritos').doc(inscritoId),
+      inscritoDoc(inscritoId, { pedidoRef: pedidoId, ehResponsavel: true })
+    );
+  }
+  await batch.commit();
+  return pedidos;
+}
+
+/**
+ * RNG que devolve `fixo` nas 6 primeiras chamadas — ou seja, o MESMO código no
+ * primeiro sorteio de toda emissão que o receba — e cai para aleatório depois.
+ * É o que põe N transações concorrentes disputando o MESMO doc de reserva.
+ */
+function rngPrimeiroSorteioFixo(fixo: number): () => number {
+  let n = 0;
+  return () => (n++ < 6 ? fixo : Math.random());
+}
+
+describe.skipIf(!hasEmulator)('contenção REAL da reserva de código (⚔ INGQR-REV)', () => {
+  it('OITO emissões CONCORRENTES disputando o mesmo código: zero duplicata', async () => {
+    // O risco nº 1 declarado pela lane: o teste do RNG viciado força a colisão
+    // sequencialmente, sem contenção de verdade. Aqui as oito transações estão
+    // EM VOO ao mesmo tempo e todas sorteiam o mesmo código primeiro — quem
+    // perde a corrida tem de perceber e re-sortear, nunca gravar o código
+    // alheio. Duplicata aqui é o balcão chamando a pessoa errada.
+    const N = 8;
+    const pedidos = await semearPedidosIndividuais(N);
+    const resultados = await Promise.all(
+      pedidos.map((p) =>
+        emitirIngressosDoPedido(adminDb, p, RING, rngPrimeiroSorteioFixo(0.5))
+      )
+    );
+
+    const codigos: string[] = [];
+    for (let i = 0; i < N; i++) {
+      const d = await lerInscrito(`insc-conc-${i}`);
+      if (typeof d['codigoIngresso'] === 'string') codigos.push(d['codigoIngresso']);
+    }
+    // Ninguém saiu com o código de ninguém.
+    expect(new Set(codigos).size).toBe(codigos.length);
+    for (const c of codigos) expect(isCodigoIngressoValido(c)).toBe(true);
+    // Toda emissão que reportou sucesso tem código no doc.
+    expect(codigos).toHaveLength(resultados.reduce((s, r) => s + r.emitidos, 0));
+
+    // Reservas e códigos gravados são o MESMO conjunto: nem reserva órfã
+    // (código queimado que ninguém carrega), nem código sem reserva.
+    const reservas = await adminDb
+      .collection('eventos')
+      .doc(EVENTO_ID)
+      .collection(INGRESSO_CODIGOS_SUBCOL)
+      .get();
+    expect(new Set(reservas.docs.map((d) => d.id))).toEqual(new Set(codigos));
+  });
+
+  it('o MESMO pedido confirmado em paralelo emite UM token e UM código', async () => {
+    // Re-entrega concorrente do webhook (o Asaas entrega at-least-once e nada
+    // impede duas entregas ao mesmo tempo): a idempotência por inscrito tem de
+    // valer sob corrida, não só em sequência.
+    const [pedido] = await semearPedidosIndividuais(1);
+    const rs = await Promise.all([
+      emitirIngressosDoPedido(adminDb, pedido as string, RING),
+      emitirIngressosDoPedido(adminDb, pedido as string, RING),
+      emitirIngressosDoPedido(adminDb, pedido as string, RING),
+    ]);
+    expect(rs.reduce((s, r) => s + r.emitidos, 0)).toBe(1);
+
+    const d = await lerInscrito('insc-conc-0');
+    expect(isCodigoIngressoValido(d['codigoIngresso'])).toBe(true);
+    const reservas = await adminDb
+      .collection('eventos')
+      .doc(EVENTO_ID)
+      .collection(INGRESSO_CODIGOS_SUBCOL)
+      .get();
+    // Uma reserva só — e é a do código que está no doc (sem código queimado).
+    expect(reservas.docs.map((r) => r.id)).toEqual([d['codigoIngresso']]);
+  });
+});
+
+describe.skipIf(!hasEmulator)('rotação de chave não mata ingresso emitido (⚔ INGQR-REV)', () => {
+  const RING_ROTACIONADO: QrKeyring = {
+    ativo: 'k2',
+    chaves: { k1: Buffer.alloc(32, 7), k2: Buffer.alloc(32, 9) },
+  };
+  const RING_SEM_K1: QrKeyring = { ativo: 'k2', chaves: { k2: Buffer.alloc(32, 9) } };
+
+  it('QR assinado com k1 ainda credencia depois da virada para k2', async () => {
+    await semear(['insc-1']);
+    await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const tokenK1 = (await lerInscrito('insc-1'))['qrToken'] as string;
+    expect(tokenK1.startsWith('LLQR1.k1.')).toBe(true);
+
+    // Rotação: k2 assina as emissões novas, k1 continua no ring. Reprocesso
+    // NÃO pode re-assinar — re-assinar trocaria o token do celular da pessoa.
+    await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING_ROTACIONADO);
+    expect((await lerInscrito('insc-1'))['qrToken']).toBe(tokenK1);
+
+    // E o balcão, já com o ring novo, aceita o QR que a pessoa tem na mão.
+    await registrarCheckinCore(
+      adminDb,
+      { eventoId: EVENTO_ID, qrToken: tokenK1 },
+      MARINA,
+      RING_ROTACIONADO
+    );
+    expect((await lerInscrito('insc-1'))['checkinEm']).toBeTruthy();
+  });
+
+  it('tirar k1 do ring REVOGA o que k1 assinou (o outro lado da rotação)', async () => {
+    await semear(['insc-1']);
+    await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const tokenK1 = (await lerInscrito('insc-1'))['qrToken'] as string;
+    await expect(
+      registrarCheckinCore(
+        adminDb,
+        { eventoId: EVENTO_ID, qrToken: tokenK1 },
+        MARINA,
+        RING_SEM_K1
+      )
+    ).rejects.toThrow();
+    expect((await lerInscrito('insc-1'))['checkinEm']).toBeUndefined();
+  });
+});
+
+describe.skipIf(!hasEmulator)('ingressoCodigos é server-only de verdade (⚔ INGQR-REV)', () => {
+  it('tenant_owner NÃO lê e NÃO escreve a reserva de código', async () => {
+    // A coleção não tem `match` em Rules DE PROPÓSITO (deny-by-default). O
+    // teste existe porque "não escrevi regra" não é prova: LER daria o mapa
+    // código→inscrito de um evento inteiro, e ESCREVER seria pré-queimar
+    // códigos até a emissão alheia esgotar as tentativas e desistir.
+    await semear(['insc-1']);
+    await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const codigo = (await lerInscrito('insc-1'))['codigoIngresso'] as string;
+
+    const db = testEnv
+      .authenticatedContext(MARINA_UID, {
+        role: 'tenant_owner',
+        tenantId: CASTELO_ID,
+      })
+      .firestore() as unknown as Firestore;
+
+    await assertFails(
+      getDoc(doc(db, 'eventos', EVENTO_ID, INGRESSO_CODIGOS_SUBCOL, codigo))
+    );
+    await assertFails(
+      setDoc(doc(db, 'eventos', EVENTO_ID, INGRESSO_CODIGOS_SUBCOL, 'AB2CD3'), {
+        inscritoId: 'forjado',
+        eventoId: EVENTO_ID,
+        tenantId: CASTELO_ID,
+      })
+    );
   });
 });
