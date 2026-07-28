@@ -23,7 +23,7 @@ import { Button, ConfirmModal, Field, Input, useToast } from '@leela/design-syst
 import { formatBRL } from '../../eventos/repasses/_lib/format';
 import { EstornosFilaView } from './EstornosFilaView';
 import { useEstornoAdminActions, useFilaEstornos } from './_data/estornosAdmin';
-import { platformErrorMessage } from '../_lib/errors';
+import { mensagemDaRecusa } from '../_lib/errors';
 import type { EstornoFilaItem } from '../../../lib/query/queries';
 
 type AcaoDireta = 'estornar' | 'cancelar';
@@ -41,29 +41,6 @@ const FORM_VAZIO: FormDireto = {
   motivo: '',
   motivoOverride: '',
 };
-
-/**
- * Mensagem de recusa que o operador lê (FIX ESTORNO-REV · vetor 6).
- *
- * As guardas de dinheiro do servidor escrevem em português DE OPERADOR e
- * dizem o que fazer: a RN-371 manda conferir o extrato do gateway ANTES de
- * tentar de novo, a RN-376 diz de quem é o poder de furar a véspera. O
- * mapeador genérico de plataforma trocava essas frases por "e-mail com papel
- * conflitante ou transição de status inválida" — texto de outra tela, que
- * numa fila de estorno manda o admin procurar no lugar errado.
- *
- * Regra: a frase do servidor quando ela existe; `platformErrorMessage` como
- * rede (callable que estoura em 'internal' chega com message 'INTERNAL', que
- * não é frase de operador). @pure
- */
-export function mensagemDaRecusa(err: unknown): string {
-  const bruta =
-    err !== null && typeof err === 'object' && 'message' in err
-      ? String((err as { message?: unknown }).message ?? '').trim()
-      : '';
-  const generica = platformErrorMessage(err);
-  return bruta.length > 0 && bruta.toUpperCase() !== 'INTERNAL' ? bruta : generica;
-}
 
 /**
  * O formulário está completo para a ação escolhida? Estornar furando a véspera

@@ -17,7 +17,7 @@ import { AplicarPlanoModal } from './_components/AplicarPlanoModal';
 import { usePlanosCobranca, usePlanoActions } from './_data/planos';
 import { planoIdFromNome } from './_lib/resumo';
 import { useTenants } from '../_data/tenants';
-import { platformErrorMessage } from '../_lib/errors';
+import { mensagemDaRecusa } from '../_lib/errors';
 
 export function PlanosRoute(): JSX.Element {
   const { toast } = useToast();
@@ -67,7 +67,7 @@ export function PlanosRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: 'Não foi possível salvar o plano',
-        description: platformErrorMessage(actions.error),
+        description: mensagemDaRecusa(actions.ultimoErro()),
       });
     }
   }
@@ -99,7 +99,7 @@ export function PlanosRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: 'Não foi possível aplicar o plano',
-        description: platformErrorMessage(actions.error),
+        description: mensagemDaRecusa(actions.ultimoErro()),
       });
     }
   }

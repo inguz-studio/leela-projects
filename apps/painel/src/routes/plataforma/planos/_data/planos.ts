@@ -8,7 +8,7 @@
 // a validação vem do core (savePlanoCobranca revalida com validarPlanoCobranca).
 // =============================================================================
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   aplicarPlano,
@@ -46,36 +46,52 @@ export interface PlanoActionsState {
  */
 export function usePlanoActions() {
   const [state, setState] = useState<PlanoActionsState>({ running: false, error: null });
+  // Espelho síncrono do erro (E-4 · fix `8f82588`): `error` de estado só existe
+  // no render SEGUINTE ao da falha, e quem lê é um handler criado no render
+  // ANTERIOR — na primeira falha o toast saía com descrição VAZIA. A validação
+  // do plano vem do core com o campo que recusou; era essa frase que sumia.
+  const erroRef = useRef<Error | null>(null);
+
+  const registrarFalha = useCallback((err: unknown): void => {
+    const erro = err instanceof Error ? err : new Error(String(err));
+    erroRef.current = erro;
+    setState({ running: false, error: erro });
+  }, []);
 
   const salvar = useCallback(
     async (planoId: string, input: PlanoCobrancaInput): Promise<boolean> => {
       setState({ running: true, error: null });
+      erroRef.current = null;
       try {
         await savePlanoCobranca(getLeelaDb(), planoId, input);
         setState({ running: false, error: null });
         return true;
       } catch (err) {
-        setState({ running: false, error: err as Error });
+        registrarFalha(err);
         return false;
       }
     },
-    [],
+    [registrarFalha],
   );
 
   const aplicar = useCallback(
     async (tenantId: string, planoId: string): Promise<AplicarPlanoResult | null> => {
       setState({ running: true, error: null });
+      erroRef.current = null;
       try {
         const result = await aplicarPlano(getLeelaFunctions(), { tenantId, planoId });
         setState({ running: false, error: null });
         return result;
       } catch (err) {
-        setState({ running: false, error: err as Error });
+        registrarFalha(err);
         return null;
       }
     },
-    [],
+    [registrarFalha],
   );
 
-  return { ...state, salvar, aplicar };
+  /** Erro da ÚLTIMA ação, legível de dentro do próprio handler. */
+  const ultimoErro = useCallback((): Error | null => erroRef.current, []);
+
+  return { ...state, ultimoErro, salvar, aplicar };
 }

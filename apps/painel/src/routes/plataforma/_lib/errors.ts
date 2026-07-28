@@ -36,3 +36,29 @@ export function platformErrorMessage(err: unknown): string {
       return 'Não foi possível concluir a ação. Tente novamente em instantes.';
   }
 }
+
+/**
+ * Mensagem de recusa que o OPERADOR lê (fix ESTORNO-REV · vetor 6, agora
+ * partilhado — E-4).
+ *
+ * As guardas do servidor escrevem em português de operador e dizem o que
+ * fazer: a RN-371 manda conferir o extrato do gateway antes de tentar de novo,
+ * a RN-351 explica por que o saldo não cobre o repasse, a validação do plano
+ * diz qual campo recusou. `platformErrorMessage` trocava essas frases pelo
+ * texto genérico de plataforma ("e-mail com papel conflitante ou transição de
+ * status inválida") — texto de OUTRA tela, que numa fila de dinheiro manda o
+ * operador procurar no lugar errado.
+ *
+ * Regra: a frase do servidor quando ela existe; o mapeador genérico como rede
+ * (callable que estoura em 'internal' chega com message 'INTERNAL', que não é
+ * frase de operador). O mapeador segue INTACTO — as telas que dependem do
+ * texto genérico continuam chamando ele direto. @pure
+ */
+export function mensagemDaRecusa(err: unknown): string {
+  const bruta =
+    err !== null && typeof err === 'object' && 'message' in err
+      ? String((err as { message?: unknown }).message ?? '').trim()
+      : '';
+  const generica = platformErrorMessage(err);
+  return bruta.length > 0 && bruta.toUpperCase() !== 'INTERNAL' ? bruta : generica;
+}

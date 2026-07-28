@@ -7,7 +7,7 @@
 // escrita de estado/valor no cliente; nenhuma soma de dinheiro aqui.
 // =============================================================================
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   approveRepasse,
@@ -90,24 +90,38 @@ export interface AdminActionsState {
  * nega o resto com permission-denied, RN-357). Cada uma devolve o resultado
  * tipado da Function ou null em falha; o erro fica no estado para a UI mostrar
  * Toast/mensagem clara. NUNCA transiciona estado direto no cliente.
+ *
+ * `ultimoErro()` existe pelo mesmo motivo que existe na fila de estornos
+ * (E-4 · fix `8f82588`): `error` é estado de React do render em que o handler
+ * FOI CRIADO. O `setState` do catch só aparece no render seguinte, então ler
+ * `error` logo depois do `await` devolve o valor velho — na PRIMEIRA falha,
+ * `null`, e o toast de dinheiro saía sem uma linha de motivo. O ref é escrito
+ * na mesma volta do catch.
  */
 export function useRepasseAdminActions() {
   const [state, setState] = useState<AdminActionsState>({ running: false, error: null });
+  const erroRef = useRef<Error | null>(null);
 
   const run = useCallback(
     async <T>(fn: () => Promise<T>): Promise<T | null> => {
       setState({ running: true, error: null });
+      erroRef.current = null;
       try {
         const result = await fn();
         setState({ running: false, error: null });
         return result;
       } catch (err) {
-        setState({ running: false, error: err as Error });
+        const erro = err instanceof Error ? err : new Error(String(err));
+        erroRef.current = erro;
+        setState({ running: false, error: erro });
         return null;
       }
     },
     [],
   );
+
+  /** Erro da ÚLTIMA ação, legível de dentro do próprio handler. */
+  const ultimoErro = useCallback((): Error | null => erroRef.current, []);
 
   const approve = useCallback(
     (tenantId: string, repasseId: string): Promise<TransicaoRepasseAdminResult | null> =>
@@ -133,5 +147,5 @@ export function useRepasseAdminActions() {
     [run],
   );
 
-  return { ...state, approve, reject, markPago, setRetencao };
+  return { ...state, ultimoErro, approve, reject, markPago, setRetencao };
 }

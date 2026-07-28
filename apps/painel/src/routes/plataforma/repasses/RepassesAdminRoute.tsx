@@ -24,7 +24,7 @@ import {
   useRetencaoTenant,
 } from './_data/repassesAdmin';
 import { useTenants } from '../_data/tenants';
-import { platformErrorMessage } from '../_lib/errors';
+import { mensagemDaRecusa } from '../_lib/errors';
 import type { EstadoFilaFilter, TenantFilaFilter } from './_lib/fila';
 import type { RepasseFilaItem } from '../../../lib/query/queries';
 
@@ -79,7 +79,7 @@ export function RepassesAdminRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: kind === 'aprovar' ? 'Não foi possível aprovar' : 'Não foi possível recusar',
-        description: platformErrorMessage(filaActions.error),
+        description: mensagemDaRecusa(filaActions.ultimoErro()),
       });
     }
   }
@@ -93,7 +93,7 @@ export function RepassesAdminRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: 'Não foi possível salvar a retenção',
-        description: platformErrorMessage(retencaoActions.error),
+        description: mensagemDaRecusa(retencaoActions.ultimoErro()),
       });
     }
   }
@@ -115,7 +115,7 @@ export function RepassesAdminRoute(): JSX.Element {
       toast({
         variant: 'danger',
         title: 'Não foi possível registrar o pagamento',
-        description: platformErrorMessage(filaActions.error),
+        description: mensagemDaRecusa(filaActions.ultimoErro()),
       });
     }
   }
