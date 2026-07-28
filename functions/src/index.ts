@@ -160,6 +160,11 @@ export { expirarCarrinhosAbandonados } from './checkout/expirarCarrinhosAbandona
 // estorno (RN-370/371/372); a varredura (15 min) conta, alerta e re-dispara o
 // que o gatilho inline do webhook não fechou.
 export { varrerEstornosOrfaos } from './checkout/estornarPagamentoOrfao';
+// Ingresso ÓRFÃO (item 54 · RN-382): pedido PAGO cuja emissão de ingresso
+// falhou entra no extrato `ingressosPendentes` no ponto da falha; a varredura
+// (15 min, mesmo molde do item 27) re-tenta a emissão, fecha o e-mail sobre a
+// idempotência da RN-219 e alerta quando a re-tentativa esgota.
+export { varrerIngressosOrfaos } from './eventos/varrerIngressosOrfaos';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via

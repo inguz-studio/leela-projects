@@ -42,6 +42,12 @@
 // criar no meio. A reserva também dá, de graça, o caminho código→inscrito
 // para o balcão futuro.
 //
+// QUANDO A EMISSÃO FALHA (item 54 · RN-382): o disparo pós-confirmação grava
+// a pendência em `ingressosPendentes` e a varredura de 15 minutos
+// (`varrerIngressosOrfaos`) re-tenta a emissão e fecha o e-mail. Sem ela, um
+// pedido pago sem ingresso ficava órfão para sempre — nenhuma re-entrega do
+// gateway volta a chamar este caminho (vetor 3 da INGQR-REV).
+//
 // A coleção `ingressoCodigos` NÃO tem `match` em firestore.rules DE
 // PROPÓSITO: cai no deny-by-default. Nenhum cliente lê (a lista do
 // organizador lê o código do próprio doc do inscrito) e nenhum cliente
@@ -52,6 +58,7 @@ import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { gerarCodigoIngresso, isCodigoIngressoValido } from '@leela/core';
 import { assinarQrToken, obterQrKeyring, type QrKeyring } from './qrToken';
+import { registrarIngressoPendente } from './ingressosPendentes';
 import { enviarEmailIngressos } from '../email/enviarIngressos';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 
@@ -355,7 +362,15 @@ export async function dispararEmissaoIngressosPosConfirmacao(
     // ingressos que acabaram de existir. A idempotência é a da RN-219 (log de
     // comunicação), independente da idempotência da emissão — reprocessar o
     // webhook não reenvia, e uma emissão que completou depois não duplica.
-    if (r.eventoId !== null && r.ingressos.length > 0) {
+    //
+    // MAS só com a emissão FECHADA (item 54 · RN-382). A RN-219 é at-most-once
+    // por pedido: queimar a chave sobre uma lista PARCIAL condenaria quem ficou
+    // de fora a nunca receber o ingresso por e-mail — a segunda passagem
+    // derivaria o mesmo docId e seria suprimida. Com pendência aberta, quem
+    // manda o e-mail é a varredura, depois de completar a emissão; e se a
+    // re-tentativa esgotar, ela manda o que existe em vez de deixar o
+    // comprador sem nada. A espera é limitada por construção.
+    if (r.falhas === 0 && r.eventoId !== null && r.ingressos.length > 0) {
       await enviarEmailIngressos(
         db,
         {
@@ -366,12 +381,48 @@ export async function dispararEmissaoIngressosPosConfirmacao(
         selectEmailProvider()
       );
     }
+
+    // O PONTO DA FALHA (item 54 · RN-382): pedido pago que não saiu com o
+    // ingresso completo entra no extrato AQUI, na única janela em que o
+    // sistema sabe que ele existe — nenhuma re-entrega do gateway volta a
+    // chamar este caminho (vetor 3 da INGQR-REV). O registro é total de
+    // propósito: qualquer desfecho que não seja "emissão processada e sem
+    // falha" vira pendência, e é a varredura que separa o que se cura do que
+    // nem era órfão. Nada não-tratado fica invisível.
+    if (!r.processado || r.falhas > 0) {
+      await registrarIngressoPendente(db, {
+        pedidoId: resultado.pedidoId,
+        eventoId: r.eventoId,
+        motivo: r.processado ? 'emissao_incompleta' : 'emissao_nao_processada',
+        falhas: r.falhas,
+        ...(r.motivo !== undefined ? { detalhe: r.motivo } : {}),
+      });
+    }
     return r;
   } catch (err) {
     logger.error('ingressos_emissao_disparo_falhou', {
       pedidoId: resultado.pedidoId,
       err: err instanceof Error ? err.message.slice(0, 200) : String(err),
     });
+    // O erro continua engolido (a resposta do webhook não falha por causa de
+    // ingresso), mas deixa de ser silencioso: vira pendência para a varredura.
+    try {
+      await registrarIngressoPendente(db, {
+        pedidoId: resultado.pedidoId,
+        eventoId: null,
+        motivo: 'disparo_falhou',
+        falhas: 0,
+        detalhe: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      });
+    } catch (erroExtrato) {
+      logger.error('ingresso_pendencia_nao_registrada', {
+        pedidoId: resultado.pedidoId,
+        err:
+          erroExtrato instanceof Error
+            ? erroExtrato.message.slice(0, 200)
+            : String(erroExtrato),
+      });
+    }
     return null;
   }
 }
