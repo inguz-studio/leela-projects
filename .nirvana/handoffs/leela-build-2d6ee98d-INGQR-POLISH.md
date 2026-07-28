@@ -15,7 +15,7 @@
 | T1 · varredura de ingressos órfãos (item 54 · RN-382) | ✅ | `45c4722` |
 | T2 · guarda de `pedidoRef` em `emitirIngressosDoPedido` | ✅ | `2e14d39` |
 | T3 · dublê de layout com `<Outlet/>` | ✅ | `d7cd6b5` |
-| Boards + épico E12 (RN-382) | ✅ | `d3a8a3c` |
+| Boards + épico E12 (RN-382) | ✅ | `dfc1967` |
 
 ## T1 — o órfão de ingresso ganhou extrato, varredura e alerta
 
