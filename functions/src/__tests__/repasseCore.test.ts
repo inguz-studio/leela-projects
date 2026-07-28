@@ -273,6 +273,26 @@ describe('computeDisponivelDoEvento — RN-367 (a base única do disponível)', 
       }),
     ).toThrow(RangeError);
   });
+
+  // REVIEW CAIXASIMPLES-REV (vetor 8) — a auditoria de asserções achou uma
+  // proteção que ficou SEM rede. As duas RangeError de
+  // `computeDisponivelPorEvento` eram cobradas em
+  // `apps/painel/.../_lib/__tests__/financeiro.test.ts` e saíram no 15c7121
+  // junto com o mundo dos 4 cards; nenhuma substituta nasceu. Elas NÃO são
+  // alcançáveis pelo bloco acima: `computeDisponivelDoEvento` valida o
+  // `repassadoVivo` no próprio corpo e nunca chega a delegar com lixo, e o
+  // `liberado` que ele passa vem de `computeLiberadoPorEvento`, que não devolve
+  // negativo. Medido: com as duas guardas apagadas do core, esta suíte ficava
+  // 55/55 VERDE. O outro consumidor é o painel (`abaterRepassesVivos`), que
+  // entra com Σ vinda do histórico de repasses — é exatamente ali que um dado
+  // corrompido chegaria, e a função tem de falhar cedo em vez de devolver um
+  // disponível torto.
+  it('computeDisponivelPorEvento falha cedo com entrada inválida (guarda direta)', () => {
+    expect(() => computeDisponivelPorEvento(100, -1)).toThrow(RangeError);
+    expect(() => computeDisponivelPorEvento(100, Number.NaN)).toThrow(RangeError);
+    expect(() => computeDisponivelPorEvento(-1, 0)).toThrow(RangeError);
+    expect(() => computeDisponivelPorEvento(Number.NaN, 0)).toThrow(RangeError);
+  });
 });
 
 describe('computeSaldoRepasse — RN-351', () => {
