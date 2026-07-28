@@ -102,7 +102,14 @@ export function ReembolsosView({
       align: 'right',
       render: (r) => formatDinheiro(valorReembolso(r)),
     },
-    { key: 'origem', header: 'Origem', render: (r) => (r.origem === 'atleta' ? 'Atleta' : 'Organizador') },
+    {
+      key: 'origem',
+      header: 'Origem',
+      // T4 (RN-376): a plataforma também abre reembolso no tenant — o
+      // organizador vê a mão de quem foi, não um "Organizador" mentiroso.
+      render: (r) =>
+        r.origem === 'atleta' ? 'Atleta' : r.origem === 'plataforma' ? 'Plataforma' : 'Organizador',
+    },
     { key: 'motivo', header: 'Motivo', render: (r) => r.motivo || '—' },
   ];
 

@@ -39,6 +39,7 @@ import {
   getTenant,
   getTenantComOwner,
   listarEventosDoOrganizador,
+  listarEventosDoTenant,
   listarAprovisionamento,
   listarCupons,
   listarEquipe,
@@ -700,6 +701,63 @@ export function repassesHistoricoQuery(tenantId: string) {
 // novo, zero mudança de Rules, zero soma de dinheiro no cliente (valor/estado
 // vêm dos docs; a máquina é do servidor — RN-353/357).
 // =============================================================================
+
+// =============================================================================
+// Fila de ESTORNOS do platform_admin (T4 · decisão 43-b). Mesmo princípio do
+// fan-out de repasses, um nível mais fundo: tenants → eventos → reembolsos.
+// Não existe regra de collectionGroup para `reembolsos`, e criar uma abriria
+// leitura de dinheiro por um caminho novo — o fan-out compõe leituras
+// tenant-scoped que as Rules JÁ liberam ao admin. Custo assumido e declarado:
+// O(tenants × eventos) leituras de subcoleção pequena, em tela de back-office.
+// =============================================================================
+
+/** Uma linha da fila cross-tenant de estornos. */
+export interface EstornoFilaItem {
+  reembolso: Reembolso;
+  tenantId: string;
+  tenantNome: string;
+  eventoId: string;
+  eventoNome: string;
+}
+
+/**
+ * Estornos que ainda pedem mão humana, de TODOS os tenants: `em_analise`
+ * (aguardam decisão) e os executáveis que ficaram presos aguardando o gateway
+ * (RN-372 — o webhook não fechou). `estornado`/`recusado` ficam fora: são
+ * terminais e a fila é de trabalho pendente, não de histórico.
+ */
+export function estornosFilaAdminQuery(reloadKey = 0) {
+  return queryOptions({
+    queryKey: queryKeys.reembolsos.filaAdmin(reloadKey),
+    queryFn: async (): Promise<EstornoFilaItem[]> => {
+      const db = getLeelaDb();
+      const tenants = await listTenants(db);
+      const porTenant = await Promise.all(
+        tenants.map(async (t): Promise<EstornoFilaItem[]> => {
+          const eventos = await listarEventosDoTenant(db, t.id);
+          const porEvento = await Promise.all(
+            eventos.map(async (ev): Promise<EstornoFilaItem[]> => {
+              const reembolsos = await listReembolsos(db, ev.id);
+              return reembolsos
+                .filter((r) => r.estado === 'em_analise' || r.estado === 'aprovado' || r.estado === 'aprovado_auto')
+                .map((reembolso) => ({
+                  reembolso,
+                  tenantId: t.id,
+                  tenantNome: t.nome,
+                  eventoId: ev.id,
+                  eventoNome: ev.nome,
+                }));
+            }),
+          );
+          return porEvento.flat();
+        }),
+      );
+      const itens = porTenant.flat();
+      itens.sort((a, b) => b.reembolso.criadoEm.toMillis() - a.reembolso.criadoEm.toMillis());
+      return itens;
+    },
+  });
+}
 
 /** Um item da fila cross-tenant: o repasse + o NOME do tenant (para exibição). */
 export interface RepasseFilaItem {

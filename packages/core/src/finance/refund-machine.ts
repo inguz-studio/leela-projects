@@ -118,8 +118,13 @@ export function transitionReembolso(
 // Entidade & trilha
 // ---------------------------------------------------------------------------
 
-/** Origem da solicitação — quem pediu (auditoria RN-341). */
-export type OrigemReembolso = 'organizador' | 'atleta';
+/**
+ * Origem da solicitação — quem pediu (auditoria RN-341). `plataforma` entrou
+ * com a porta cross-tenant (T4 · decisão 43-b): o admin abre reembolso no
+ * tenant alheio e o doc carrega a trilha do operador como origem — a fila
+ * mostra a diferença em vez de fingir que foi o organizador.
+ */
+export type OrigemReembolso = 'organizador' | 'atleta' | 'plataforma';
 
 /** Registro append-only de uma transição (trilha RN-341). */
 export interface TransicaoReembolso {
@@ -154,6 +159,17 @@ export interface Reembolso {
   refundId?: string;
   /** uid do organizador que decidiu (aprovou/recusou) — RN-340. */
   decididoPor?: string;
+  /**
+   * RN-376: o pedido entrou FURANDO o corte de véspera. Só a plataforma pode,
+   * e o furo fica NO DOC — a fila e a auditoria leem daqui, não do log.
+   */
+  overrideCorte?: boolean;
+  /** Justificativa do furo (obrigatória quando `overrideCorte` — RN-376). */
+  motivoOverride?: string;
+  /** uid do admin que furou o corte (RN-376). */
+  overridePor?: string;
+  /** Corte (em horas) vigente no momento do furo — congela a régua furada. */
+  corteHorasNoOverride?: number;
   /** Trilha append-only (RN-341). */
   transicoes: TransicaoReembolso[];
   criadoEm: Timestamp;

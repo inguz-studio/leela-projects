@@ -148,7 +148,9 @@ describe('shellSidebarSections', () => {
   // pagamento), então quem se move é a tabela do teste. O ícone, esse era gap
   // de verdade e foi consertado no código: `items.every(i => i.icon)` já
   // cobrava, mas caía depois desta linha e nunca chegava a ser avaliada.
-  it('/plataforma: nav própria com 7 itens, ícones e ativo por sub-rota', () => {
+  // LEELA-ESTORNO-T4 (decisão 43-b): `estornos` entra DEPOIS de repasses — a
+  // fila cross-tenant de estornos e a ação direta do admin, com ícone próprio.
+  it('/plataforma: nav própria com 8 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
@@ -158,6 +160,7 @@ describe('shellSidebarSections', () => {
       'planos',
       'taxa',
       'repasses',
+      'estornos',
       'billing',
       'macro',
     ]);

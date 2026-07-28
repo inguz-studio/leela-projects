@@ -28,6 +28,7 @@ import {
   type TipoTransferencia,
   type Timestamp,
   type Transferencia,
+  type TrilhaOperacao,
 } from '@leela/core';
 import { getLeelaFunctions } from '../firebase';
 
@@ -59,11 +60,20 @@ function isEstadoTransferenciaLike(v: unknown): v is Transferencia['estado'] {
 /**
  * Parseia um reembolso (id = inscritoId). `estado` fora da união ⇒ null (doc
  * corrompido — não mascara dinheiro). Trilha e valores passam do servidor.
+ *
+ * Exportado como PROVA EXECUTÁVEL do contrato de leitura (RN-376): o teste da
+ * fila admin verifica que `origem: 'plataforma'` e o furo do corte sobrevivem
+ * à leitura — antes o parser coagia tudo para 'organizador' e a coluna
+ * "aberto por" mentiria em produção. Não é API de tela; a tela usa
+ * `listReembolsos`.
  */
-function parseReembolso(id: string, raw: Record<string, unknown>): Reembolso | null {
+export function parseReembolso(id: string, raw: Record<string, unknown>): Reembolso | null {
   const estado = raw['estado'];
   if (!isEstadoReembolso(estado)) return null;
-  const origem = raw['origem'] === 'atleta' ? 'atleta' : 'organizador';
+  // T4 · decisão 43-b: a plataforma também abre reembolso (cross-tenant); o
+  // default continua 'organizador' para doc antigo sem o campo.
+  const origem =
+    raw['origem'] === 'atleta' ? 'atleta' : raw['origem'] === 'plataforma' ? 'plataforma' : 'organizador';
   const transicoesRaw = raw['transicoes'];
   const transicoes = Array.isArray(transicoesRaw)
     ? transicoesRaw.flatMap((t): Reembolso['transicoes'] => {
@@ -92,6 +102,14 @@ function parseReembolso(id: string, raw: Record<string, unknown>): Reembolso | n
   if (typeof raw['valorEstornado'] === 'number') base.valorEstornado = raw['valorEstornado'];
   if (typeof raw['refundId'] === 'string') base.refundId = raw['refundId'];
   if (typeof raw['decididoPor'] === 'string') base.decididoPor = raw['decididoPor'];
+  // RN-376: o furo do corte fica NO DOC — apagar na leitura seria esconder a
+  // mão da plataforma da fila e da auditoria.
+  if (raw['overrideCorte'] === true) base.overrideCorte = true;
+  if (typeof raw['motivoOverride'] === 'string') base.motivoOverride = raw['motivoOverride'];
+  if (typeof raw['overridePor'] === 'string') base.overridePor = raw['overridePor'];
+  if (typeof raw['corteHorasNoOverride'] === 'number') {
+    base.corteHorasNoOverride = raw['corteHorasNoOverride'];
+  }
   return base;
 }
 
@@ -162,6 +180,63 @@ export async function listTransferencias(
 }
 
 // ---------------------------------------------------------------------------
+// Trilha de CANCELAMENTO SEM ESTORNO (T4 · RN-377/378) — leitura de gestão
+// ---------------------------------------------------------------------------
+
+/** Uma linha da trilha de cancelamento (docId = inscritoId). */
+export interface CancelamentoInscricao {
+  id: string;
+  tenantId: string;
+  eventoId: string;
+  pedidoId: string;
+  inscritoId: string;
+  motivo: string;
+  statusAnterior: string;
+  /** Sempre false hoje — o nome do campo é a promessa da ação. */
+  dinheiroDevolvido: boolean;
+  trilha: TrilhaOperacao;
+  por: string;
+  papel: string;
+  criadoEm: Timestamp;
+}
+
+function parseCancelamento(id: string, raw: Record<string, unknown>): CancelamentoInscricao | null {
+  const trilha = raw['trilha'];
+  if (trilha !== 'organizador' && trilha !== 'plataforma') return null;
+  return {
+    id,
+    tenantId: str(raw['tenantId']),
+    eventoId: str(raw['eventoId']),
+    pedidoId: str(raw['pedidoId']),
+    inscritoId: str(raw['inscritoId']),
+    motivo: str(raw['motivo']),
+    statusAnterior: str(raw['statusAnterior']),
+    dinheiroDevolvido: raw['dinheiroDevolvido'] === true,
+    trilha,
+    por: str(raw['por']),
+    papel: str(raw['papel']),
+    criadoEm: ts(raw['criadoEm']),
+  };
+}
+
+/** Lista os cancelamentos sem estorno do evento (mais recentes primeiro). */
+export async function listCancelamentos(
+  db: Firestore,
+  eventoId: string
+): Promise<CancelamentoInscricao[]> {
+  const snap = await getDocs(
+    query(collection(db, 'eventos', eventoId, 'cancelamentos'), orderBy('criadoEm', 'desc'))
+  );
+  const out: CancelamentoInscricao[] = [];
+  for (const d of snap.docs) {
+    const c = parseCancelamento(d.id, d.data());
+    if (c) out.push(c);
+    else console.error(`[listCancelamentos] cancelamento "${d.id}" corrompido — omitido`);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Abertura (callable — a porta ÚNICA do estorno pelo painel · RN-375)
 // ---------------------------------------------------------------------------
 
@@ -170,6 +245,14 @@ export interface RequestRefundInput {
   inscritoId: string;
   /** Motivo (auditoria — obrigatório, 3–500 caracteres). */
   motivo: string;
+  /**
+   * FURAR o corte de véspera (RN-376). Só `platform_admin`, e só com
+   * `motivoOverride`. Organizador que mandar isto leva permission-denied do
+   * servidor — a tela do organizador não deve nem oferecer.
+   */
+  overrideCorte?: boolean;
+  /** Justificativa do furo (obrigatória quando `overrideCorte`). */
+  motivoOverride?: string;
 }
 
 export interface RequestRefundResult {
@@ -205,6 +288,45 @@ export async function requestRefund(
   const fn = httpsCallable<RequestRefundInput, RequestRefundResult>(
     getLeelaFunctions(),
     'requestRefund'
+  );
+  const res = await fn(input);
+  return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Cancelar SEM estornar (callable — T4 · RN-377/378)
+// ---------------------------------------------------------------------------
+
+export interface CancelarInscricaoInput {
+  pedidoId: string;
+  inscritoId: string;
+  /** Motivo (auditoria — obrigatório, 3–500 caracteres). */
+  motivo: string;
+}
+
+export interface CancelarInscricaoResult {
+  eventoId: string;
+  inscritoId: string;
+  estado: 'cancelado';
+  replay: boolean;
+  trilha: TrilhaOperacao;
+  statusAnterior: string;
+}
+
+/**
+ * Tira o inscrito do evento SEM devolver dinheiro (callable
+ * `cancelarInscricao` — RN-377). Cortesia, no-show e fraude entram por aqui;
+ * quem quer devolver dinheiro usa `requestRefund`, que é outra porta.
+ *
+ * Admin da plataforma cancela qualquer coisa (decisão 45); organizador só
+ * fora do corte de véspera (RN-339). O erro sobe INTACTO (§2.12).
+ */
+export async function cancelarInscricao(
+  input: CancelarInscricaoInput
+): Promise<CancelarInscricaoResult> {
+  const fn = httpsCallable<CancelarInscricaoInput, CancelarInscricaoResult>(
+    getLeelaFunctions(),
+    'cancelarInscricao'
   );
   const res = await fn(input);
   return res.data;

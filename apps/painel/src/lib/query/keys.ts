@@ -63,6 +63,12 @@ export const queryKeys = {
      * recusar via callable) a invalida → read-your-writes (ADR-010).
      */
     doEvento: (eventoId: string) => ['reembolsos', 'do-evento', eventoId] as const,
+    /**
+     * Fila cross-tenant do platform_admin (T4). `reloadKey` entra na chave: as
+     * ações incrementam um contador e a fila revalida sem tocar a tela — o
+     * mesmo contrato da fila de repasses.
+     */
+    filaAdmin: (reloadKey: number) => ['reembolsos', 'fila-admin', reloadKey] as const,
   },
 
   transferencias: {

@@ -21,6 +21,9 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
   // TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio de pagamento
   { id: 'taxa', label: 'Taxa', href: '/plataforma/taxa' },
   { id: 'repasses', label: 'Repasses', href: '/plataforma/repasses' },
+  // T4 · decisão 43-b: o suporte age no tenant alheio por AQUI, não pegando
+  // emprestado um login de organizador.
+  { id: 'estornos', label: 'Estornos', href: '/plataforma/estornos' },
   { id: 'billing', label: 'Billing', badge: 'em breve' },
   { id: 'macro', label: 'Macro', href: '/plataforma/macro' },
 ];
@@ -31,6 +34,7 @@ export function activeNavId(pathname: string): string | null {
   if (pathname.startsWith('/plataforma/planos')) return 'planos';
   if (pathname.startsWith('/plataforma/taxa')) return 'taxa';
   if (pathname.startsWith('/plataforma/repasses')) return 'repasses';
+  if (pathname.startsWith('/plataforma/estornos')) return 'estornos';
   if (pathname.startsWith('/plataforma/tenants')) {
     return pathname.includes('/termos') ? 'termos' : 'tenants';
   }

@@ -19,6 +19,7 @@ import { TenantDetailRoute } from './tenants/TenantDetailRoute';
 import { TermsEditorRoute } from './tenants/termos/TermsEditorRoute';
 import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
+import { EstornosAdminRoute } from './estornos/EstornosAdminRoute';
 import { PlanosRoute } from './planos/PlanosRoute';
 import { TaxaGlobalRoute } from './taxa/TaxaGlobalRoute';
 import { NotFound } from '../_system/NotFound';
@@ -39,6 +40,10 @@ export function PlataformaRoutes(): JSX.Element {
           {/* TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio */}
           <Route path="taxa" element={<TaxaGlobalRoute />} />
           <Route path="repasses" element={<RepassesAdminRoute />} />
+          {/* T4 · decisão 43-b: fila cross-tenant de estornos + a ação direta
+              sobre o que nunca chega à fila (corte de véspera, cancelamento
+              sem estorno). */}
+          <Route path="estornos" element={<EstornosAdminRoute />} />
           <Route path="macro" element={<MacroDashboardRoute />} />
           {/* 404 dentro do PlatformShell (sidebar de plataforma preservada). S500-T2. */}
           <Route path="*" element={<NotFound />} />

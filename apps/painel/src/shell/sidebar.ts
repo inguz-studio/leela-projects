@@ -23,7 +23,7 @@ import {
   type SidebarItem,
   type SidebarSection,
 } from '@leela/design-system';
-import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, type LucideIcon } from 'lucide-react';
+import { Banknote, Building2, CreditCard, FileText, Gauge, Percent, Tags, Undo2, type LucideIcon } from 'lucide-react';
 import { PLATFORM_NAV, activeNavId } from '../routes/plataforma/_lib/nav';
 import { onClickSpa, type NavegarSpa } from '../lib/navSpa';
 
@@ -59,6 +59,8 @@ const PLATFORM_NAV_ICONS: Record<string, LucideIcon> = {
   // ela ficava atrás da comparação da lista, que caía antes.
   taxa: Percent,
   repasses: Banknote,
+  // T4 · decisão 43-b: fila cross-tenant de estornos + ação direta do admin.
+  estornos: Undo2,
   billing: CreditCard,
   macro: Gauge,
 };

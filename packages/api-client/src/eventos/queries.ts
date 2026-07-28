@@ -51,6 +51,35 @@ export async function getEvento(
   return parseEvento(snap.id, snap.data());
 }
 
+/**
+ * Lista TODOS os eventos de um tenant, sem filtrar por organizador (T4 —
+ * back-office da plataforma). O admin não sabe quem organiza o quê; ele entra
+ * pelo tenant.
+ *
+ * SEM `orderBy` de propósito: a query fica no índice de campo único que já
+ * existe (`tenantId`), sem índice composto novo — a mesma disciplina do
+ * fan-out de repasses. A ordenação é do chamador, sobre uma lista pequena.
+ *
+ * Rules: só o tenant dono ou `platform_admin` lê.
+ */
+export async function listarEventosDoTenant(
+  db: Firestore,
+  tenantId: string,
+  pageLimit = 50
+): Promise<Evento[]> {
+  const snap = await getDocs(
+    query(collection(db, 'eventos'), where('tenantId', '==', tenantId), firestoreLimit(pageLimit))
+  );
+  return snap.docs.map((d) => {
+    try {
+      return parseEvento(d.id, d.data());
+    } catch (err) {
+      console.error(`[listarEventosDoTenant] evento "${d.id}" corrompido — placeholder`, err);
+      return eventoDegradado(d.id, d.data(), tenantId, '');
+    }
+  });
+}
+
 /** Parâmetros de listagem de eventos do organizador */
 export interface ListarEventosDoOrganizadorParams {
   /** Tenant do claim do usuário (ADR-009 — obrigatório) */

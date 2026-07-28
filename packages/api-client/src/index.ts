@@ -225,6 +225,8 @@ export type { DeletarClubeResult, ExportarDadosClubeResult } from './clubs';
 // S207-T1 — leitura do agregado financeiro/current (lê S207-T2)
 export {
   listarEventosDoOrganizador,
+  // T4 · back-office: o admin entra pelo TENANT, não pelo organizador.
+  listarEventosDoTenant,
   getEvento,
   getFinanceiroEvento,
   observarFinanceiroEvento,
@@ -531,12 +533,20 @@ export {
   // RN-375: a ABERTURA é a porta única do estorno pelo painel (a política
   // decide a rota; o primitivo direto não é chamado da tela).
   requestRefund,
+  // T4 · RN-377/378: cancelar SEM devolver dinheiro + a trilha que isso deixa.
+  cancelarInscricao,
+  listCancelamentos,
+  // Prova executável do contrato de leitura (RN-376) — não é API de tela.
+  parseReembolso,
 } from './eventos/reembolsos';
 export type {
   DecideRefundInput,
   DecideRefundResult,
   RequestRefundInput,
   RequestRefundResult,
+  CancelarInscricaoInput,
+  CancelarInscricaoResult,
+  CancelamentoInscricao,
 } from './eventos/reembolsos';
 
 // ---------------------------------------------------------------------------
