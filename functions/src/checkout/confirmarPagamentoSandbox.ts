@@ -30,7 +30,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { PaymentProvider } from '@leela/core';
 import { buildMockWebhookPayload } from '../payments/mockProvider';
@@ -192,7 +192,11 @@ export async function confirmarPagamentoSandboxCore(
 // ---------------------------------------------------------------------------
 
 /** `confirmarPagamentoSandbox` — disparo do webhook de confirmação (sandbox). */
-export const confirmarPagamentoSandbox = https.onCall(async (data: unknown, context) => {
+// Item 11 (DEPLOY-PREVIEW): binding para o fail-safe hasAsaasKey do core
+// recusar o disparo sandbox quando há gateway real configurado (produção).
+export const confirmarPagamentoSandbox = runWith({
+  secrets: ['ASAAS_API_KEY'],
+}).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }

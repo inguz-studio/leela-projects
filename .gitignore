@@ -49,6 +49,8 @@ storybook-static/
 # Exceção CIRÚRGICA (lane DEPLOY-PREVIEW): config web pública do Firebase do
 # painel — não é segredo (vai para qualquer navegador). SÓ este path.
 !/apps/painel/.env.leela-hub
+# Valores locais dos secrets declarados (Functions Emulator) — NUNCA commitar
+.secret.local
 
 # Snapshot local do Emulator Suite (emulators:export / --import)
 .emulator-data/

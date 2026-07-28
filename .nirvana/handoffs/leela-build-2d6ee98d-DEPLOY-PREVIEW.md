@@ -12,7 +12,12 @@ Executor: sf-cto (software-forge). Brief: `.nirvana/briefs/leela-build-2d6ee98d-
   - Hosting: site default `leela-hub` já existia (https://leela-hub.web.app).
   - Web app `painel` REGISTRADO: appId `1:76126035891:web:d858cdf41199c7103575c6`; config web (pública) commitada em `apps/painel/.env.leela-hub` (exceção cirúrgica no .gitignore).
   - `firebase.prod.json` criado (deploy-only; sem bloco emulators; storage FORA — bucket default não existe; uploads do painel = pendência).
-- [ ] Task 3 — segredos no Secret Manager (item 11)
+- [x] Task 3 — segredos no Secret Manager (item 11) FEITO:
+  - 4 secrets criados no `leela-hub` (versions/1): `ASAAS_API_KEY` (← valor da chave de produção que morava em ASAAS_PROD_API_KEY local), `ASAAS_WEBHOOK_AUTH_TOKEN` (mesmo token local — o cadastro do webhook usa ele), `BREVO_API_KEY`, `CRM_ID_PEPPER` (**valor NOVO forte, 96 hex** — o comentário do .env exige pepper próprio de produção; nunca gravado em arquivo).
+  - Bindings v1 `runWith({secrets})` CIRÚRGICOS: `asaasWebhook` (3 secrets — cadeia real completa: auth do webhook + provider + e-mail de ingresso/conta), `pagamentoWebhook` (ASAAS_API_KEY **para fechar a porta mock** — 410 com chave presente), `confirmarPagamentoSandbox` (idem — fail-safe hasAsaasKey recusa), `onInscritoWriteCrm` (CRM_ID_PEPPER, fail-closed).
+  - **Superfície de chave real = SÓ o webhook.** `createInscricaoCharge`/estornos/campanhas SEM binding → Mock/fail-closed null em produção, igual ao local. Ligar checkout real no painel = decisão do dono (cria cobrança de verdade), registrada como PENDENTE-DONO.
+  - Arquivos locais reorganizados (gitignored, nada em commit): `functions/.env` = SÓ BREVO_SENDER_* (deploy sobe como env var); segredos migraram p/ `functions/.env.local` (deploy NÃO lê; Emulator lê); `functions/.secret.local` criado (Emulator resolve secrets declarados offline; ASAAS_API_KEY vazia = item 51 preservado); backup `.env.bak-deploypreview`. `.secret.local` adicionado ao .gitignore.
+  - `npm run build` + `npm run lint` das functions: verdes após os bindings.
 - [ ] Task 4 — deploy functions
 - [ ] Task 5 — painel no canal de preview do Hosting
 - [ ] Task 6 — seed de produção re-datado (com codigoIngresso)

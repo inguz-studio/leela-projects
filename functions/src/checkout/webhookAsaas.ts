@@ -39,7 +39,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { https } from 'firebase-functions/v1';
+import { runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { PaymentProvider, WebhookPayload } from '@leela/core';
 import {
@@ -182,7 +182,14 @@ export async function processarWebhookAsaas(
  * em tempo constante pelo adapter; erros respondem mensagens públicas
  * genéricas — detalhes só no log estruturado (NUNCA o token, nunca PII).
  */
-export const asaasWebhook = https.onRequest(async (req, res) => {
+// Item 11 (DEPLOY-PREVIEW): em produção estes valores vêm do Secret Manager
+// (binding v1 via runWith). No Emulator seguem vindo de functions/.env(.local)
+// e functions/.secret.local — o código lê process.env igual nos dois mundos.
+// BREVO_API_KEY entra porque a cadeia pós-confirmação (ingresso digital +
+// conta sem fricção) envia e-mail DENTRO desta function.
+export const asaasWebhook = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN', 'BREVO_API_KEY'],
+}).https.onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Método não suportado.' });
     return;

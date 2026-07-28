@@ -35,7 +35,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
@@ -815,7 +815,12 @@ export async function processarWebhookPagamento(
  * provider antes de qualquer efeito); erros respondem mensagens públicas
  * genéricas — detalhes só no log estruturado (sem PII).
  */
-export const pagamentoWebhook = https.onRequest(async (req, res) => {
+// Item 11 (DEPLOY-PREVIEW): o binding do secret existe para o guard
+// hasAsaasKey ENXERGAR a chave em produção e FECHAR esta porta (410).
+// Sem o binding a porta mock ficaria aberta no projeto real.
+export const pagamentoWebhook = runWith({
+  secrets: ['ASAAS_API_KEY'],
+}).https.onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Método não suportado.' });
     return;

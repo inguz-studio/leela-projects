@@ -422,8 +422,11 @@ export async function aplicarWriteInscritoNoCrm(
  * At-least-once safe (entrada sobrescrita por chave determinística; no-op
  * quando nada muda). Convive com os demais gatilhos do mesmo path.
  */
-export const onInscritoWriteCrm = functions.firestore
-  .document('eventos/{eventoId}/inscritos/{inscritoId}')
+// Item 11 (DEPLOY-PREVIEW): CRM_ID_PEPPER via Secret Manager em produção
+// (fail-closed sem ele — hardening A3/COMF2). Emulator: .env/.secret.local.
+export const onInscritoWriteCrm = functions
+  .runWith({ secrets: ['CRM_ID_PEPPER'] })
+  .firestore.document('eventos/{eventoId}/inscritos/{inscritoId}')
   .onWrite(async (change, context) => {
     const eventoId = context.params['eventoId'] as string;
     const inscritoId = context.params['inscritoId'] as string;
