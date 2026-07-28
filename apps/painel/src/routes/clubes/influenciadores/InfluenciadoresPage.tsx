@@ -5,6 +5,11 @@
 // comissão acumulada/repassada/saldo por afiliado + registro de repasse MANUAL
 // (registrarRepasseComissao — pagamento feito FORA da plataforma, idempotente).
 // Dados via reader server-side (getAfiliadosDoTenant — escopo da claim).
+//
+// S705-T2 · RN-385 — repasse PARCIAL: o modal deixou de mandar o saldo inteiro
+// e passou a mandar um VALOR informado, que nasce igual ao saldo (um clique
+// continua quitando tudo) e é editável para baixo. A guarda de tela é espelho,
+// não autoridade: quem compara valor × saldo é a transação do servidor.
 // =============================================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -14,6 +19,7 @@ import {
   Button,
   ConfirmModal,
   EmptyState,
+  Input,
   SearchInput,
   KpiCard,
   PageHeader,
@@ -27,6 +33,7 @@ import {
   registrarRepasseComissao,
   type AfiliadoDoTenant,
 } from '@leela/api-client';
+import { avaliarRepasse, textoInicialRepasse } from './_lib/repasseForm';
 
 function formatBRL(v: number): string {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -61,7 +68,21 @@ export function InfluenciadoresPage(): JSX.Element {
   // o modal e é REUSADO em qualquer retry (replay não debita 2×).
   const [alvoRepasse, setAlvoRepasse] = useState<AfiliadoDoTenant | null>(null);
   const [repasseId, setRepasseId] = useState('');
+  const [valorTexto, setValorTexto] = useState('');
   const [processando, setProcessando] = useState(false);
+
+  // Identidade ESTÁVEL de propósito, não estética: o focus trap do Modal
+  // (`useDialogBehavior`) tem `onClose` na lista de dependências do efeito e
+  // devolve o foco ao botão de fechar toda vez que ele roda. Com um handler
+  // inline (nova função a cada render) o efeito re-roda a cada tecla e o campo
+  // de valor perde o foco depois do PRIMEIRO caractere — só "2" de "200"
+  // entraria. Achado desta lane, provado pelo teste de repasse parcial.
+  const fecharRepasse = useCallback(
+    (aberto: boolean) => {
+      if (!aberto && !processando) setAlvoRepasse(null);
+    },
+    [processando],
+  );
 
   const carregar = useCallback(async () => {
     try {
@@ -102,11 +123,27 @@ export function InfluenciadoresPage(): JSX.Element {
 
   function abrirRepasse(a: AfiliadoDoTenant): void {
     setRepasseId(crypto.randomUUID());
+    // RN-385: o campo já nasce com o saldo integral — quem quer quitar tudo
+    // continua a um clique; quem quer adiantar parte edita para baixo.
+    setValorTexto(textoInicialRepasse(a.saldoComissao));
     setAlvoRepasse(a);
   }
 
+  // Espelho da guarda do servidor (`_lib/repasseForm`) — UX, nunca autoridade:
+  // `registrarRepasseComissaoCore` reconfere o teto DENTRO da transação.
+  const avaliacao = avaliarRepasse(valorTexto, alvoRepasse?.saldoComissao ?? 0);
+
   async function confirmarRepasse(observacao: string): Promise<void> {
     if (alvoRepasse === null) return;
+    if (!avaliacao.podeEnviar || avaliacao.valor === null) {
+      // Bloqueia ANTES da chamada. O hint já está sob o campo; o toast existe
+      // para que o clique nunca seja silencioso.
+      toast({
+        variant: 'danger',
+        title: avaliacao.hint ?? 'Informe um valor válido para o repasse.',
+      });
+      return;
+    }
     setProcessando(true);
     try {
       const obs = observacao.trim();
@@ -114,7 +151,7 @@ export function InfluenciadoresPage(): JSX.Element {
         eventoId: alvoRepasse.eventoId,
         afiliadoId: alvoRepasse.refCodigo,
         repasseId,
-        valor: alvoRepasse.saldoComissao,
+        valor: avaliacao.valor,
         ...(obs !== '' ? { observacao: obs } : {}),
       });
       toast({
@@ -260,25 +297,55 @@ export function InfluenciadoresPage(): JSX.Element {
 
       <ConfirmModal
         open={alvoRepasse !== null}
-        onOpenChange={(o) => !o && !processando && setAlvoRepasse(null)}
+        onOpenChange={fecharRepasse}
         title="Registrar repasse de comissão"
-        description="Registra que você PAGOU a comissão fora da plataforma (nenhum dinheiro é movido aqui). O saldo do afiliado zera. A ação é idempotente — reenviar não debita duas vezes."
+        description="Registra que você PAGOU a comissão fora da plataforma (nenhum dinheiro é movido aqui). Pode ser o saldo inteiro ou parte dele — o resto continua a receber. A ação é idempotente: reenviar não debita duas vezes."
         target={
           alvoRepasse ? (
-            <div className="flex flex-col gap-[var(--spacing-1)]">
+            <div className="flex flex-col gap-[var(--spacing-3)]">
               <span className="font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
                 {alvoRepasse.nome} · {alvoRepasse.eventoNome}
               </span>
               <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-                Repasse de {formatBRL(alvoRepasse.saldoComissao)} (saldo atual)
+                Saldo de comissão: {formatBRL(alvoRepasse.saldoComissao)}
               </span>
+              {/* `errorMessage` do DS já entrega o pacote de estado inválido:
+                  aria-invalid, borda-danger (a11y do erro não depende só de
+                  cor) e a mensagem com role="alert" associada por id. */}
+              {/* `type="text"` de propósito, e não `number` como no repasse do
+                  organizador: num campo de CENTAVOS o controlled number input
+                  perde o texto no meio da digitação — "700." não é número
+                  válido, o `value` volta vazio e o campo se apaga quando a
+                  pessoa digita o separador decimal. Com texto o que foi
+                  digitado sobrevive, o parse aceita vírgula e ponto, e a
+                  terceira casa chega inteira para ser reprovada (que é o que
+                  a S705-T2 pede). O teclado numérico segue por `inputMode`. */}
+              <Input
+                id="repasse-comissao-valor"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                label="Valor do repasse (R$)"
+                value={valorTexto}
+                onChange={(e) => setValorTexto(e.target.value)}
+                placeholder="0,00"
+                disabled={processando}
+                {...(avaliacao.hint !== null ? { errorMessage: avaliacao.hint } : {})}
+              />
             </div>
           ) : undefined
         }
-        loses={['O saldo de comissão em aberto deste afiliado (vai a zero)']}
+        loses={[
+          alvoRepasse !== null && avaliacao.valor !== null && avaliacao.podeEnviar
+            ? `${formatBRL(avaliacao.valor)} do saldo em aberto (restam ${formatBRL(
+                Math.round((alvoRepasse.saldoComissao - avaliacao.valor) * 100) / 100,
+              )})`
+            : 'A parte do saldo em aberto que você informar',
+        ]}
         keeps={[
           'O histórico de conversões e a comissão acumulada',
-          'O extrato do repasse (registrado no acompanhamento do afiliado)',
+          'O resto do saldo, que continua a receber',
+          'O extrato deste repasse (uma linha própria nos dois lados)',
         ]}
         reasonLabel="Observação (opcional) — ex.: comprovante/PIX"
         confirmLabel="Confirmar repasse"

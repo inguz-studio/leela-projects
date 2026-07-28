@@ -50,6 +50,26 @@ function afiliado(over: Partial<AfiliadoDoTenant> = {}): AfiliadoDoTenant {
   };
 }
 
+/** Afiliado com comissão e saldo POSITIVO — a porta do modal de repasse. */
+function comSaldo(saldo: number): AfiliadoDoTenant {
+  return afiliado({
+    comissao: { tipo: 'percentual', percentual: 10 },
+    comissaoAcumulada: saldo,
+    comissaoRepassada: 0,
+    saldoComissao: saldo,
+  });
+}
+
+/** Campo de valor do modal (S705-T2). */
+function campoValor(): HTMLInputElement {
+  return screen.getByLabelText('Valor do repasse (R$)') as HTMLInputElement;
+}
+
+async function abrirModal(): Promise<void> {
+  await userEvent.click(await screen.findByRole('button', { name: 'Registrar repasse' }));
+  await screen.findByRole('button', { name: 'Confirmar repasse' });
+}
+
 function renderPage(): void {
   render(
     <ToastProvider>
@@ -135,14 +155,7 @@ describe('InfluenciadoresPage', () => {
 
   it('registra repasse do saldo com idempotência e atualiza o toast', async () => {
     mocks.getAfiliadosDoTenant.mockResolvedValue({
-      afiliados: [
-        afiliado({
-          comissao: { tipo: 'percentual', percentual: 10 },
-          comissaoAcumulada: 500,
-          comissaoRepassada: 0,
-          saldoComissao: 500,
-        }),
-      ],
+      afiliados: [comSaldo(500)],
     });
     mocks.registrarRepasseComissao.mockResolvedValue({
       ok: true,
@@ -151,9 +164,11 @@ describe('InfluenciadoresPage', () => {
       saldoComissao: 0,
     });
     renderPage();
-    await userEvent.click(await screen.findByRole('button', { name: 'Registrar repasse' }));
-    // ConfirmModal aberto com o valor do saldo.
-    expect(await screen.findByText(/Repasse de R\$\s*500,00/)).toBeInTheDocument();
+    await abrirModal();
+    // ConfirmModal aberto mostrando o saldo E com o campo JÁ preenchido com
+    // ele (S705-T2 · RN-385 — o caminho de um clique continua existindo).
+    expect(await screen.findByText(/Saldo de comissão:\s*R\$\s*500,00/)).toBeInTheDocument();
+    expect(campoValor()).toHaveValue('500,00');
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
     await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(1));
     const arg = mocks.registrarRepasseComissao.mock.calls[0]![0];
@@ -161,5 +176,74 @@ describe('InfluenciadoresPage', () => {
     expect(typeof arg.repasseId).toBe('string');
     expect(arg.repasseId.length).toBeGreaterThanOrEqual(8);
     expect(await screen.findByText('Repasse registrado')).toBeInTheDocument();
+  });
+
+  // ── S705-T2 · RN-385 — repasse PARCIAL ────────────────────────────────────
+
+  it('registra PARCIAL: 500 de saldo, 200 informados, e o resto continua a receber', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(500)] });
+    mocks.registrarRepasseComissao.mockResolvedValue({
+      ok: true, repasseId: 'r1', duplicado: false, saldoComissao: 300,
+    });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '200');
+    // O modal conta a consequência exata do parcial, não "vai a zero".
+    expect(screen.getByText(/R\$\s*200,00 do saldo em aberto \(restam R\$\s*300,00\)/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(1));
+    expect(mocks.registrarRepasseComissao.mock.calls[0]![0]).toMatchObject({ valor: 200 });
+    expect(await screen.findByText('Novo saldo de comissão: R$ 300,00')).toBeInTheDocument();
+  });
+
+  it('valor acima do saldo é barrado ANTES da chamada, com motivo no campo', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(700)] });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '700.01');
+    expect(await screen.findByRole('alert')).toHaveTextContent('excede o saldo de comissão');
+    expect(campoValor()).toHaveAttribute('aria-invalid', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
+  });
+
+  it('mais de duas casas decimais é barrado ANTES da chamada (mesma régua do servidor)', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(700)] });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '10.005');
+    expect(await screen.findByRole('alert')).toHaveTextContent('duas casas decimais');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
+  });
+
+  it('valor zerado não vira chamada de repasse', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(700)] });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
+  });
+
+  it('retentativa depois de falha REUSA o mesmo repasseId (idempotência amigável)', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(500)] });
+    mocks.registrarRepasseComissao
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce({ ok: true, repasseId: 'r1', duplicado: true, saldoComissao: 300 });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '200');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(1));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    await vi.waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalledTimes(2));
+    const [primeira, segunda] = mocks.registrarRepasseComissao.mock.calls;
+    expect(segunda![0].repasseId).toBe(primeira![0].repasseId);
+    expect(await screen.findByText('Repasse já estava registrado')).toBeInTheDocument();
   });
 });
