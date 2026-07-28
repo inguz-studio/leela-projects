@@ -14,8 +14,21 @@ tags:
 - [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]
 - [ ] **[E12] Fontes do site embarcadas, como no painel do organizador** — Exo 2 e JetBrains Mono deixam o provedor externo e passam a morar no próprio site, desde que o carregamento não piore; a diretriz de busca e velocidade da landing vale como aceite 📋 [[LEELA-E12-landing]]
 - [ ] **[E16/E04] Preço do SaaS e acréscimo por parcela** — Leela+ sem mensalidade por ora, SaaS a R$ 249,00 e 2,5% acrescidos a cada parcela, tudo editável depois 📋 [[LEELA-E04-config-vendas]]
-- [ ] **[E08] Afiliados** — influenciador tem link próprio e vê as próprias vendas 🔄 backend, painel do promotor e UI de comissão entregues; falta o repasse parcial (hoje só quita o saldo inteiro) e o aviso ao afiliado 📋 plano em [[LEELA-E08-influenciador]]
-- [ ] **[E10] Marcas** — gerenciar patrocinadores reutilizáveis num lugar só 🔄 registro reutilizável + logo 1:1 + autocomplete (R9-E) + tela dedicada `/marcas` no painel entregue (lista/criar/editar/excluir); falta a consolidação de ativações (S812), planejada em 4 tarefas [[LEELA-E10-marcas]]
+- [ ] **[E08] Afiliados — pagar metade da comissão sem o extrato mentir** 🔄 posição 2 da fila, autorizada por você em 28/07; backend, painel do promotor e UI de comissão já entregues. A auditoria encolheu o que falta: o servidor **já** aceita valor parcial com guarda de saldo na mesma transação, então a lacuna é a tela e uma prova que falta. O aviso ao afiliado deixou de estar travado quando o Brevo passou a entregar 📋 [[LEELA-E08-influenciador]]
+    - [ ] **S705 · Repasse parcial da comissão registrada**
+        - [ ] S705-T1 prova dos dois parciais consecutivos contra o mesmo saldo
+        - [ ] S705-T2 campo de valor no modal, iniciado no saldo e editável para baixo ⚔
+        - [ ] S705-T3 extrato com uma linha por repasse, nos dois lados
+    - [ ] **S706 · Aviso ao afiliado no repasse e no marco de comissão**
+        - [ ] S706-T1 gatilho e chave de idempotência dos dois avisos ⚔
+        - [ ] S706-T2 os dois textos no catálogo de templates que já existe
+- [ ] **[E10] Marcas — saber em quantos patrocínios cada marca é usada** 🔄 posição 3 da fila; registro reutilizável, logo 1:1, autocomplete e a tela `/marcas` já entregues. A auditoria achou um bloqueio: nenhum vínculo guarda o id da marca, só o nome, e o id é fixo na renomeação — casar por nome perde o vínculo no primeiro rename. Por isso entra uma tarefa antes de todas 📋 [[LEELA-E10-marcas]]
+    - [ ] **S812 · Ativações da marca**
+        - [ ] S812-T0 chave `marcaId` gravada nos três vínculos de patrocínio ⚔
+        - [ ] S812-T1 índice inverso e contagem por gatilho, idempotentes ⚔
+        - [ ] S812-T2 tela de ativações com abas por tipo
+        - [ ] S812-T3 exibir logo ao atleta por item patrocinado
+        - [ ] S812-T4 contagem na lista e preview real da exclusão
 - [ ] **[E11] Analytics** — análise de vendas e público unificada 📋 planejado em 6 tarefas; o histórico diário já é coletado e destrava o seletor de período; a tela passa a viver em CRM › Visão geral [[LEELA-E11-analytics]]
 - [ ] **[E19] CRM** — conhecer e reter a base de contatos do organizador 🔄 backend pronto + lista cross-evento com LTV e ficha individual entregues; vira área do menu com três subdivisões; falta o disparo a segmentos, planejado em 4 tarefas e travado na chave do Brevo [[LEELA-E19-crm]]
 - [ ] **[E17] Social no app** — feed, perfil e tema dinâmico por conta 📋 4 histórias-âncora planejadas; sai junto do feed do clube (mesmo modelo) e depois do app [[LEELA-E17-perfil-social]]
@@ -25,7 +38,35 @@ tags:
 - [ ] **[E04/E12/E19] Estrangeiro sem CPF compra com passaporte** — decidido no modelo Doity/Sympla sobre o Asaas: o organizador liga um botão por evento "aceitar estrangeiros"; com ele ligado, o checkout pergunta a nacionalidade e o estrangeiro entra por passaporte (sem CPF) pagando só no cartão internacional à vista. Espera a liberação da conta Asaas para pagador estrangeiro (contato com o gerente, ~6 dias úteis) antes de virar código; enquanto isso, um brasileiro já pode comprar pelo estrangeiro 🧊 GATED · ⏸️ adiado por decisão do Vitor (DEC-0726, 2026-07-26): sem contato com o gerente Asaas por ora · histórias S309 (toggle/E04) · S1211 (checkout/E12) · S1903 (documento tipado/E19) · rodada DEC-0719-ret (i) · RN-175/176/177 · report `ESTRANGEIRO-PAGAMENTO-REPORT.md` [[LEELA-E12-landing]]
 - [ ] **[E08] Desconto retroativo do clube-influenciador** — desconto retroativo ao bater o mínimo (todos passam a ter desconto); aguarda o Vitor revisar como funciona na Ticketsports; é dinheiro (rota Fable + antagonista) 🧊 PARKED · sem história executável (direção decidida, implementação adiada) · rodada DEC-0719 (g) · RN-315 [[LEELA-E08-influenciador]]
 - [ ] **[E13] App do atleta** — descobrir, inscrever, ingresso com QR e clube no celular 📋 re-especificado como PWA: de 9 histórias sobraram 6, o bloqueio das lojas morreu e o ingresso passa a funcionar sem rede; aguarda a decisão de arquitetura [[LEELA-E13-app-atleta]]
-- [ ] **[E04/E05/E12] Construtor de formulário de perguntas personalizadas** — o organizador monta perguntas próprias (seleção única, múltipla, sim-não) que aparecem na compra do evento e na inscrição em clubes; a resposta fica com o inscrito/membro (não com o pedido), pergunta obrigatória bloqueia o pagar, editar uma pergunta versiona sem reescrever resposta antiga, e as respostas saem junto da lista de inscritos que já existe. O Vitor destravou (2026-07-19); v1 é só perguntas — anexo de arquivo fica para a fase 2 📋 executável · histórias S310 (construtor no evento/E04) · S112 (clube + inscrição/E05) · S1212 (render na compra/E12) · rodada FORMBUILDER (k) · RN-184/185/186/187/188/189 [[LEELA-E04-config-vendas]]
+- [ ] **[E04/E05/E12] Formulário virou template: monte uma vez, use em vários eventos** — o organizador monta perguntas próprias (seleção única, múltipla, sim-não) numa biblioteca com casa no menu principal, e cada evento ou clube só **escolhe** um template. Publicar versão nova não mexe em quem já usa; template vinculado não se exclui, arquiva. A resposta continua com o inscrito e o membro, pergunta obrigatória continua bloqueando o pagar, e as respostas continuam saindo na lista de inscritos que já existe. Você puxou a frente em 28/07; v1 segue só perguntas, anexo fica na fase 2 📋 executável [[LEELA-E04-config-vendas]]
+    - [ ] **S313 · Biblioteca de formulários no menu principal**
+        - [ ] S313-T1 sétima área do menu, com catálogo do design system, stories, docs e suíte no mesmo lote
+        - [ ] S313-T2 lista, criar, editar, duplicar, publicar versão, arquivar
+    - [ ] **S310 · Modelo, core e vínculo no evento**
+        - [ ] S310-T1 core do formulário com versão publicada e ciclo de vida ⚔
+        - [ ] S310-T2 seletor de template na config do evento, com aviso de versão mais nova
+        - [ ] S310-T3 resposta como coluna do inscrito na lista e no export que já existem
+    - [ ] **S112 · Vínculo e render no clube**
+        - [ ] S112-T1 seletor de template na config do clube
+        - [ ] S112-T2 render na inscrição e resposta gravada no membro
+    - [ ] **S1212 · Render na compra**
+        - [ ] S1212-T1 resposta no inscrito na transação da confirmação, carimbando template e versão ⚔
+        - [ ] S1212-T2 perguntas no checkout com o gate no fence dos aceites ⚔
+- [ ] **[E12/E03] Ingresso com QR e código legível, e "entrega" vira "credenciamento"** — o ingresso ganha, ao lado do QR assinado, um código curto que dá para ler na tabela e ditar no telefone; o organizador vê o código na lista e abre o QR quando precisa; toda compra manda ao responsável o QR e o código de cada inscrito, com o código em texto para o caso de o cliente de e-mail bloquear imagem. O QR do PIX segue como está, emitido pelo gateway. Junto vem a virada de vocabulário que você pediu, sem tocar na mecânica do balcão 📋 posição 1 estendida [[LEELA-E12-landing]]
+    - [ ] **S1206 · Emissão e e-mail (E12)**
+        - [ ] S1206-T5 código identificador por inscrito, único no evento e idempotente ⚔
+        - [ ] S1206-T6 e-mail de compra com QR e código de cada inscrito ⚔
+        - [ ] S1206-T7 código identificador no PDF sob demanda
+    - [ ] **S211 · Tabela do organizador e credenciamento (E03)**
+        - [ ] S211-T1 coluna do código na lista e QR por ação na linha
+        - [ ] S211-T2 vocabulário de credenciamento em toda superfície lida
+        - [ ] S211-T3 rota `/credenciamento` com o redirecionamento garantido da antiga
+- [ ] **[E16] Catálogo de benefícios da plataforma** — como administrador Leela você cadastra cupons de benefício e parceiros presenciais, com endereço, descritivo, capa, logo e fotos. O cupom aqui **não** é o cupom de venda do organizador e não encosta em preço, taxa nem repasse. Publicar deixa pronto para exibir, mas a vitrine para o atleta é decisão de outra hora, e a tela diz isso 📋 **prioridade baixa declarada por você**; não bloqueia nada [[LEELA-E16-plataforma-superadmin]]
+    - [ ] **S1607 · Catálogo de benefícios da plataforma**
+        - [ ] S1607-T1 modelo, core e Rules com escrita exclusiva do admin da plataforma ⚔
+        - [ ] S1607-T2 aba de cupons de benefício
+        - [ ] S1607-T3 aba de parceiros presenciais com endereço e galeria
+        - [ ] S1607-T4 projeção de leitura publicada, sem vitrine
 
 
 ## 🔄 Em execução
