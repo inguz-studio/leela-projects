@@ -414,6 +414,41 @@ describe.skipIf(!hasEmulator)('enviarEmailIngressos — S1206-T6 (RN-398/219)', 
     expect((await logsDoEvento()).size).toBe(1);
   });
 
+  // ⚔ INGQR-REV vetor 2. A chave da RN-219 tem de sair do PEDIDO. Quando ela
+  // saía dos ingressos EMITIDOS, uma primeira passagem que falhasse justamente
+  // no responsável carimbava o log em OUTRO inscrito; a passagem seguinte
+  // derivava um docId diferente, não colidia e mandava um SEGUNDO e-mail — com
+  // o QR e o código de todo mundo dentro. Vermelho antes do fix: 2 envios.
+  it('primeira passagem PARCIAL (sem o responsável) não libera um segundo e-mail', async () => {
+    const ids = ['insc-1', 'insc-2', 'insc-3'];
+    await semear(ids); // `ehResponsavel` é do insc-2 — o do MEIO
+    const emissao = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const { provider, enviados } = providerEspiao();
+
+    // O responsável ficou de fora desta passagem (é o que `falhas > 0` produz).
+    const parcial = emissao.ingressos.filter((i) => i.inscritoId !== 'insc-2');
+    expect(parcial).toHaveLength(2);
+    const r1 = await enviarEmailIngressos(
+      adminDb,
+      { pedidoId: PEDIDO_ID, eventoId: EVENTO_ID, ingressos: parcial },
+      provider
+    );
+    // Segunda passagem (sweeper/reconfirmação): agora todo mundo tem ingresso.
+    const r2 = await enviarEmailIngressos(
+      adminDb,
+      { pedidoId: PEDIDO_ID, eventoId: EVENTO_ID, ingressos: emissao.ingressos },
+      provider
+    );
+
+    expect(r1.status).toBe('enviado');
+    expect(r2.status).toBe('ja_enviado');
+    expect(enviados).toHaveLength(1);
+    const logs = await logsDoEvento();
+    expect(logs.size).toBe(1);
+    // E a chave é a do PEDIDO (o responsável), não a do primeiro que emitiu.
+    expect(logs.docs[0]?.get('destinatario').ref).toBe('insc-2');
+  });
+
   it('SEM chave de e-mail: nada enviado E nada registrado (a idempotência não queima)', async () => {
     await semear(['insc-1', 'insc-2']);
     const emissao = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);

@@ -20,6 +20,14 @@
 // de um pedido — um inscrito pertence a exatamente um pedido —, então a chave
 // nunca colapsa dois pedidos num só registro.
 //
+// A chave sai do PEDIDO (`inscritoRefs`), NUNCA da lista de ingressos que esta
+// passagem conseguiu emitir (review INGQR-REV, vetor 2). Derivá-la dos
+// emitidos a fazia MUDAR quando a primeira passagem falhava justamente no
+// responsável: a segunda passagem calculava outro docId, não colidia e mandava
+// um SEGUNDO e-mail com as credenciais de todo mundo. `inscritoRefs` é escrito
+// pela Function do checkout e fechado a cliente (`pedidos`: write false), então
+// é a única parte deste cálculo que não depende do desfecho da emissão.
+//
 // FAIL-CLOSED (RN-137): sem `BREVO_API_KEY` o `selectEmailProvider` devolve
 // null e este módulo não envia nem registra. A compra segue intocada e a
 // pendência fica no log — a prova do envio real é pós-deploy, com a chave.
@@ -99,8 +107,14 @@ export async function enviarEmailIngressos(
   const nomeEvento = (eventoSnap.get('nome') as string | undefined) ?? 'seu evento';
   const slug = (eventoSnap.get('slug') as string | undefined) ?? eventoId;
 
-  // Chave do registro: responsável, senão o primeiro inscrito (ver cabeçalho).
-  const responsavel = await encontrarInscritoResponsavel(db, eventoId, ingressos);
+  // Chave do registro: responsável, senão o primeiro inscrito DO PEDIDO —
+  // função só do pedido, nunca do que esta passagem emitiu (ver cabeçalho).
+  const responsavel = await encontrarInscritoResponsavel(
+    db,
+    eventoId,
+    (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [],
+    ingressos
+  );
 
   // markSent ANTES do envio (at-most-once — RN-219).
   const registro = await registrarComunicacao(db, eventoId, {
@@ -180,16 +194,26 @@ export async function enviarEmailIngressos(
   }
 }
 
-/** Inscrito responsável do pedido; senão o primeiro (ver cabeçalho). */
+/**
+ * Inscrito responsável DO PEDIDO; senão o primeiro da lista do pedido.
+ *
+ * Varre `inscritoRefs` (a composição do pedido, imutável para cliente), não os
+ * ingressos emitidos: o docId de idempotência tem de ser o mesmo quer a
+ * emissão tenha completado, quer tenha parado no meio. `ingressos` só entra
+ * como último recurso, para pedido sem `inscritoRefs` legível.
+ */
 async function encontrarInscritoResponsavel(
   db: Db,
   eventoId: string,
+  inscritoRefs: readonly string[],
   ingressos: readonly IngressoEmitido[]
 ): Promise<string> {
   const col = db.collection('eventos').doc(eventoId).collection('inscritos');
-  for (const ingresso of ingressos) {
-    const snap = await col.doc(ingresso.inscritoId).get();
-    if (snap.get('ehResponsavel') === true) return ingresso.inscritoId;
+  for (const inscritoId of inscritoRefs) {
+    const snap = await col.doc(inscritoId).get();
+    if (snap.get('ehResponsavel') === true) return inscritoId;
   }
+  const primeiro = inscritoRefs[0];
+  if (typeof primeiro === 'string' && primeiro.length > 0) return primeiro;
   return (ingressos[0] as IngressoEmitido).inscritoId;
 }
