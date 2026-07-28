@@ -164,3 +164,18 @@ Em 2026-07-27 o painel [[DECISOES-ABERTAS]] absorveu a camada descrita (o que é
 ## Fontes
 
 `outputs/leela-build-2d6ee98d/INV-CANCEL-ESTORNO-REPORT.md` · `PIXCARRINHO-REV-REPORT.md` · `IAMENU-REV-REPORT.md` · `CAIXADISP-REV-REPORT.md` · `BENCHMARK-REEMBOLSO-REPORT.md` · [[LEELA-E09-financeiro-profissional]] · [[LEELA-E19-crm]] · [[LEELA-E12-landing]] · [[V1-KANBAN]]
+
+## Rodada DEC-0727E (noite — item 29)
+
+> Verbatim: *"autorizo o afrouxamento, só para a simulação, para eu testar."*
+
+- **Item 29 · o simulador trava o preview depois que o emulador reinicia.** Autorizado o caminho honesto que a review propôs: o `MockPaymentProvider` responde "já cancelada" para cobrança desconhecida **apenas** quando o pedido correspondente já está vencido. Fora desse caso a guarda continua lançando erro, porque é ela que pega bug de quem chama — um tratamento genérico a devolveria ao ponto em que deixa de pegar bug de verdade. Produção (`AsaasProvider`) intocada; o afrouxamento existe para o Vitor testar no preview sem ficar refém da memória do simulador. Implementação: task T7 da lane ESTORNO-ADMIN, com teste das duas pontas (pedido vencido ⇒ "já cancelada"; pedido vivo ⇒ erro, como hoje).
+
+Na mesma mensagem ele avisou *"IP autorizado"* no Brevo (item 13): a trava de Authorised IPs foi tratada por ele; o re-teste `BREVO_E2E=1` decide se o item avança — o que resta do item 13 depois de um re-teste verde é só o remetente verificado.
+
+### Efeitos no painel
+
+- Item 29 sai do menu e do detalhe; vira linha em ✅ (DEC-0727E).
+- Item 13 segue aberto até o re-teste confirmar e o remetente verificado ser informado.
+
+Fonte: `PIXCARRINHO-REV-REPORT.md` §A4-REV.
