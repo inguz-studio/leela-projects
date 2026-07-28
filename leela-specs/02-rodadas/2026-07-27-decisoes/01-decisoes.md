@@ -171,11 +171,11 @@ Em 2026-07-27 o painel [[DECISOES-ABERTAS]] absorveu a camada descrita (o que é
 
 - **Item 29 · o simulador trava o preview depois que o emulador reinicia.** Autorizado o caminho honesto que a review propôs: o `MockPaymentProvider` responde "já cancelada" para cobrança desconhecida **apenas** quando o pedido correspondente já está vencido. Fora desse caso a guarda continua lançando erro, porque é ela que pega bug de quem chama — um tratamento genérico a devolveria ao ponto em que deixa de pegar bug de verdade. Produção (`AsaasProvider`) intocada; o afrouxamento existe para o Vitor testar no preview sem ficar refém da memória do simulador. Implementação: task T7 da lane ESTORNO-ADMIN, com teste das duas pontas (pedido vencido ⇒ "já cancelada"; pedido vivo ⇒ erro, como hoje).
 
-Na mesma mensagem ele avisou *"IP autorizado"* no Brevo (item 13): a trava de Authorised IPs foi tratada por ele; o re-teste `BREVO_E2E=1` decide se o item avança — o que resta do item 13 depois de um re-teste verde é só o remetente verificado.
+Na mesma janela ele avisou *"IP autorizado"* no Brevo (item 13). O re-teste rodou na hora e **passou verde às 23:12**: `brevoSandbox.e2e.test.ts` com `BREVO_E2E=1` enviou 1 convite transacional real e recebeu `messageId`, com remetente `vitoreldp@gmail.com` — o e-mail do dono da conta, verificado por padrão no Brevo. O remetente foi persistido em `functions/.env` (`BREVO_SENDER_EMAIL` + `BREVO_SENDER_NAME`), então os três consumidores (convite de assessoria do E18, convite de influenciador PF do E08, campanhas do E06) destravam sem código novo. Ressalva honesta: remetente gmail basta para teste e preview; produção com destinatários reais pede remetente de domínio próprio, que volta junto com a escolha do domínio (item 12). No deploy, a chave migra ao Secret Manager.
 
 ### Efeitos no painel
 
 - Item 29 sai do menu e do detalhe; vira linha em ✅ (DEC-0727E).
-- Item 13 segue aberto até o re-teste confirmar e o remetente verificado ser informado.
+- Item 13 sai do menu e do detalhe; vira linha em ✅ (DEC-0727E). A ponta de produção (remetente de domínio próprio) fica anotada dentro do item 12, que segue aberto.
 
 Fonte: `PIXCARRINHO-REV-REPORT.md` §A4-REV.
