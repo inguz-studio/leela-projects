@@ -49,7 +49,7 @@ export function derivaAlertas(
       severidade: dias <= 2 ? 'critico' : 'aviso',
       mensagem:
         dias === 0
-          ? 'O evento é hoje. Prepare o balcão de entrega.'
+          ? 'O evento é hoje. Prepare o balcão de credenciamento.'
           : `Faltam ${dias} ${dias === 1 ? 'dia' : 'dias'} para o evento.`,
     });
   }

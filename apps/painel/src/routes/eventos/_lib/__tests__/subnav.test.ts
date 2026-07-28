@@ -56,3 +56,41 @@ describe('eventoSubNavTabs', () => {
     expect(ids.slice(0, 5)).toEqual(['overview', 'inscritos', 'kits', 'lotes', 'pagina-vendas']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Virada de vocabulário (S211-T2 · RN-399)
+// ---------------------------------------------------------------------------
+
+describe('RN-399 — a aba diz credenciamento, o identificador não muda', () => {
+  it('a SubNav do evento mostra "Credenciamento", nunca "Entrega"', () => {
+    const tabs = eventoSubNavTabs(SLUG, 'overview');
+    const aba = tabs.find((t) => t.id === 'entrega');
+    expect(aba?.label).toBe('Credenciamento');
+    expect(tabs.map((t) => t.label)).not.toContain('Entrega');
+  });
+
+  it('o id da aba continua `entrega` — renomear o id mexeria na matriz de papéis', () => {
+    // RN-399 é troca de PALAVRA. O id da área de permissão (`RequirePapel
+    // area="entrega"`) e o campo persistido `kitEntregueEm` ficam fora da
+    // virada de propósito: o primeiro mexe numa matriz testada, o segundo é
+    // migração de dado gravado.
+    const tabs = eventoSubNavTabs(SLUG, 'overview');
+    expect(tabs.map((t) => t.id)).toContain('entrega');
+  });
+
+  it('a ordem canônica das abas não mudou com a virada', () => {
+    const ids = eventoSubNavTabs(SLUG, 'overview').map((t) => t.id);
+    expect(ids).toEqual([
+      'overview',
+      'inscritos',
+      'kits',
+      'lotes',
+      'pagina-vendas',
+      'comunicacao',
+      'afiliados',
+      'entrega',
+      'financeiro',
+      'configuracoes',
+    ]);
+  });
+});

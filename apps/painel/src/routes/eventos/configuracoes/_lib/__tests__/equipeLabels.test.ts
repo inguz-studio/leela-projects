@@ -30,10 +30,34 @@ describe('perdeAoRemover', () => {
     expect(perde).toHaveLength(6);
     expect(perde).not.toContain('Acesso a Financeiro');
   });
-  it('operador perde só Entrega e Inscritos', () => {
-    expect(perdeAoRemover('operador')).toEqual(['Acesso a Entrega', 'Acesso a Inscritos']);
+  it('operador perde só Credenciamento e Inscritos', () => {
+    expect(perdeAoRemover('operador')).toEqual(['Acesso a Credenciamento', 'Acesso a Inscritos']);
   });
   it('financeiro perde só Financeiro', () => {
     expect(perdeAoRemover('financeiro')).toEqual(['Acesso a Financeiro']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Virada de vocabulário (S211-T2 · RN-399)
+// ---------------------------------------------------------------------------
+
+describe('RN-399 — rótulo da área vira Credenciamento, id fica `entrega`', () => {
+  it('o rótulo lido pelo organizador é Credenciamento', () => {
+    expect(LABEL_AREA.entrega).toBe('Credenciamento');
+  });
+
+  it('o ID da área segue `entrega` na matriz canônica do core', () => {
+    // Se este teste quebrar, alguém renomeou a área de permissão junto com o
+    // rótulo — o que a RN-399 proíbe explicitamente (mexe na matriz de papéis
+    // e no `RequirePapel area="entrega"`).
+    expect(AREAS_EVENTO).toContain('entrega');
+    expect(AREAS_EVENTO).not.toContain('credenciamento');
+  });
+
+  it('a matriz de acesso do operador não mudou de comportamento', () => {
+    // RN-205/221/222 intactas: quem acessava o balcão continua acessando.
+    expect(podeAcessar('operador', 'entrega')).toBe(true);
+    expect(podeAcessar('financeiro', 'entrega')).toBe(false);
   });
 });

@@ -3,7 +3,7 @@
 // cronograma de entrega REAL do evento (F-T1: `janelasEntrega`) e as derivações
 // PURAS do core (`janelaEntregaAtiva`, `diaDaEntrega`, `proximaJanelaEntrega`).
 // Quatro estados honestos — nenhum fabrica "Dia N":
-//   • ATIVA agora    → "Entrega ativa · Dia N de M · até HH:mm · <local>" (brand)
+//   • ATIVA agora    → "Credenciamento ativo · Dia N de M · até HH:mm · <local>" (brand)
 //   • fechada c/ prox → "Próxima janela: <dia> · HH:mm · <local>" (alerta)
 //   • encerrada       → todas as janelas já passaram (neutro)
 //   • sem cronograma  → EmptyState honesto (nenhuma janela configurada)
@@ -29,8 +29,8 @@ export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps):
   if (janelas.length === 0) {
     return (
       <EmptyState
-        title="Cronograma de entrega não configurado"
-        description="Defina as janelas de entrega do evento (dia, horário e local) para o balcão exibir a contagem de dias e liberar os atendimentos."
+        title="Cronograma de credenciamento não configurado"
+        description="Defina as janelas de credenciamento do evento (dia, horário e local) para o balcão exibir a contagem de dias e liberar os atendimentos."
       />
     );
   }
@@ -38,7 +38,7 @@ export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps):
   const ativa = janelaEntregaAtiva(janelas, agora);
   const dia = diaDaEntrega(janelas, agora);
 
-  // (a) Janela ATIVA agora → "Entrega ativa · Dia N de M · até HH:mm · <local>".
+  // (a) Janela ATIVA agora → "Credenciamento ativo · Dia N de M · até HH:mm · <local>".
   if (ativa) {
     const diaLabel = dia ? ` · Dia ${dia.dia} de ${dia.total}` : '';
     return (
@@ -49,7 +49,7 @@ export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps):
         <Badge variant="brand">Ativa</Badge>
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <span className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-            Entrega ativa{diaLabel}
+            Credenciamento ativo{diaLabel}
           </span>
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
             até {ativa.horaFim} · {ativa.local}
@@ -71,7 +71,7 @@ export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps):
         <Badge variant="alerta">Fechada</Badge>
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <span className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--feedback-warning-fg)]">
-            Janela de entrega fechada
+            Janela de credenciamento fechada
           </span>
           <span className="text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
             Próxima janela: {formatDiaCronograma(proxima.dia)} · {proxima.horaInicio} · {proxima.local}
@@ -90,10 +90,10 @@ export function BalcaoBanner({ evento, agora = new Date() }: BalcaoBannerProps):
       <Badge variant="neutro">Encerrada</Badge>
       <div className="flex flex-col gap-[var(--spacing-1)]">
         <span className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
-          Entrega encerrada
+          Credenciamento encerrado
         </span>
         <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
-          Todas as janelas de entrega deste evento já passaram.
+          Todas as janelas de credenciamento deste evento já passaram.
         </span>
       </div>
     </div>

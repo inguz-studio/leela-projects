@@ -40,7 +40,7 @@ const ABAS: readonly AbaDef[] = [
   // R9-E (E08 antecipado · S-R9-11-T4): afiliados/influenciadores do evento —
   // acrescentada após Comunicação, sem reordenar as existentes.
   { id: 'afiliados', label: 'Afiliados', segmento: 'afiliados' },
-  { id: 'entrega', label: 'Entrega', segmento: 'entrega' },
+  { id: 'entrega', label: 'Credenciamento', segmento: 'entrega' },
   { id: 'financeiro', label: 'Financeiro', segmento: 'financeiro' },
   // Configurações (E04 · S304-T2/T3) segue o financeiro — acrescentada por
   // último, sem reordenar as existentes (ordem canônica do consolidador).

@@ -26,7 +26,7 @@ export function KitsLayout(): JSX.Element {
       { id: 'cadastro', label: 'Cadastro', href: base, active: ativa === 'cadastro' },
       { id: 'distribuicao', label: 'Distribuição', href: `${base}/distribuicao`, active: ativa === 'distribuicao' },
       { id: 'estoque', label: 'Estoque', href: `${base}/estoque`, active: ativa === 'estoque' },
-      { id: 'entrega', label: 'Entrega', href: `/eventos/${slug}/entrega`, active: false },
+      { id: 'entrega', label: 'Credenciamento', href: `/eventos/${slug}/entrega`, active: false },
     ],
     navigate,
     pathname,

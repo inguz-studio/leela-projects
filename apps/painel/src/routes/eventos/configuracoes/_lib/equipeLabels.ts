@@ -27,7 +27,7 @@ export const LABEL_AREA: Record<AreaEvento, string> = {
   pagina_vendas: 'Página de vendas',
   comunicacao: 'Comunicação',
   financeiro: 'Financeiro',
-  entrega: 'Entrega',
+  entrega: 'Credenciamento',
   inscritos: 'Inscritos',
   configuracoes: 'Configurações',
   equipe: 'Equipe',

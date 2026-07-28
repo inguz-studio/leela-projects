@@ -114,7 +114,7 @@ export function EstadoConflito(): JSX.Element {
   );
 }
 
-/** 5 · Fora da janela — entrega ainda não abriu (card crítico Vulcão). */
+/** 5 · Fora da janela — credenciamento ainda não abriu (card crítico Vulcão). */
 export function EstadoForaJanela(): JSX.Element {
   return (
     <div
@@ -122,7 +122,7 @@ export function EstadoForaJanela(): JSX.Element {
       className="rounded-[var(--radius-md)] border-l-[var(--card-critical-border)] border-l-[var(--border-danger)] bg-[var(--feedback-warning-surface)] p-[var(--spacing-5)]"
     >
       <h3 className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-[var(--feedback-warning-fg)]">
-        Entrega ainda não abriu
+        Credenciamento ainda não abriu
       </h3>
       <p className="mt-[var(--spacing-2)] text-[length:var(--font-size-sm)] text-[var(--feedback-warning-fg)]">
         A prova está distante. Os atendimentos do balcão liberam a partir de 2 dias
@@ -143,7 +143,7 @@ const BANNER_JANELAS: JanelaEntrega[] = [
   { dia: '2026-04-25', horaInicio: '08:00', horaFim: '20:00', local: 'Arena da prova — tenda 3' },
 ];
 
-/** 6 · Banner ATIVO — "Entrega ativa · Dia N de M · até HH:mm · local". */
+/** 6 · Banner ATIVO — "Credenciamento ativo · Dia N de M · até HH:mm · local". */
 export function EstadoBannerAtivo(): JSX.Element {
   return (
     <BalcaoBanner
@@ -182,7 +182,7 @@ export const ESTADOS_BALCAO: readonly EstadoGaleria[] = [
   { id: 'completo', titulo: 'Completo (já atendido)', Componente: EstadoCompleto },
   { id: 'conflito', titulo: 'Conflito de chip', Componente: EstadoConflito },
   { id: 'fora-janela', titulo: 'Fora da janela', Componente: EstadoForaJanela },
-  { id: 'banner-ativo', titulo: 'Banner · Entrega ativa (Dia N de M)', Componente: EstadoBannerAtivo },
+  { id: 'banner-ativo', titulo: 'Banner · Credenciamento ativo (Dia N de M)', Componente: EstadoBannerAtivo },
   { id: 'banner-proxima', titulo: 'Banner · Próxima janela', Componente: EstadoBannerProxima },
   {
     id: 'banner-sem-cronograma',

@@ -12,7 +12,7 @@ describe('GaleriaEstados (§2.9 / RN-208)', () => {
       'Completo (já atendido)',
       'Conflito de chip',
       'Fora da janela',
-      'Banner · Entrega ativa (Dia N de M)',
+      'Banner · Credenciamento ativo (Dia N de M)',
       'Banner · Próxima janela',
       'Banner · Sem cronograma',
     ]) {
@@ -22,18 +22,18 @@ describe('GaleriaEstados (§2.9 / RN-208)', () => {
 
   it('banner ativo mostra "Dia N de M" a partir do cronograma real', async () => {
     render(<GaleriaEstados />);
-    await userEvent.click(screen.getByRole('button', { name: 'Banner · Entrega ativa (Dia N de M)' }));
-    expect(screen.getByText('Entrega ativa · Dia 2 de 2')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Banner · Credenciamento ativo (Dia N de M)' }));
+    expect(screen.getByText('Credenciamento ativo · Dia 2 de 2')).toBeInTheDocument();
   });
 
   it('mostra apenas um estado por vez (nunca empilhados)', async () => {
     render(<GaleriaEstados />);
     // estado inicial = Vazio
     expect(screen.getByText('Nenhum atleta identificado')).toBeInTheDocument();
-    expect(screen.queryByText('Entrega ainda não abriu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Credenciamento ainda não abriu')).not.toBeInTheDocument();
     // troca para Fora da janela
     await userEvent.click(screen.getByRole('button', { name: 'Fora da janela' }));
-    expect(screen.getByText('Entrega ainda não abriu')).toBeInTheDocument();
+    expect(screen.getByText('Credenciamento ainda não abriu')).toBeInTheDocument();
     expect(screen.queryByText('Nenhum atleta identificado')).not.toBeInTheDocument();
   });
 

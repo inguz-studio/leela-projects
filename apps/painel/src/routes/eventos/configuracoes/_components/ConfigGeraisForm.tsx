@@ -227,7 +227,7 @@ export function ConfigGeraisForm({
       <Switch
         id="config-usa-chip"
         label="Usa chip de cronometragem"
-        description="Desligado, o balcão de entrega pula o passo de vincular chip (RN-207)."
+        description="Desligado, o balcão de credenciamento pula o passo de vincular chip (RN-207)."
         checked={values.usaChip}
         disabled={disabled}
         onCheckedChange={(checked) => set('usaChip', checked)}
