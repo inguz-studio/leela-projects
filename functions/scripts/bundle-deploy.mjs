@@ -120,10 +120,12 @@ writeFileSync(
   ) + '\n'
 );
 
-// .env NÃO-SECRETO acompanha o deploy (dotenv do firebase-tools).
-// .env.local / .secret.local NUNCA são copiados (segredos ficam no Secret
-// Manager; ver commit da Task 3 da lane).
+// .env NÃO-SECRETO acompanha o deploy (dotenv do firebase-tools), assim
+// como o dotenv POR PROJETO .env.leela-hub (flag de ativação deliberada —
+// só o deploy ao leela-hub o carrega). .env.local / .secret.local NUNCA
+// são copiados (segredos ficam no Secret Manager; ver Task 3 da lane).
 cpSync(join(FUNCTIONS_DIR, '.env'), join(OUT_DIR, '.env'));
+cpSync(join(FUNCTIONS_DIR, '.env.leela-hub'), join(OUT_DIR, '.env.leela-hub'));
 
 // node_modules local para o CLI conseguir carregar/analisar o código.
 console.log('[bundle-deploy] npm install (externals) em functions-deploy/ ...');

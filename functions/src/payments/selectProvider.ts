@@ -71,10 +71,22 @@ function asaasProviderDoEnv(env: ProviderEnv): AsaasProvider {
     return asaasCache.provider;
   }
   // Construção valida: prefixo da chave → ambiente; produção sem
-  // permitirProducao=true LANÇA (nunca passamos o flag aqui); token de
-  // webhook fraco/igual à chave LANÇA. Qualquer erro propaga — com chave
-  // presente NÃO existe fallback para Mock.
-  const provider = createAsaasProvider(config);
+  // permitirProducao=true LANÇA; token de webhook fraco/igual à chave
+  // LANÇA. Qualquer erro propaga — com chave presente NÃO existe fallback
+  // para Mock.
+  //
+  // Ativação DELIBERADA de produção (DEC-0728F · lane DEPLOY-PREVIEW): o
+  // flag nominal ASAAS_PERMITIR_PRODUCAO === 'true' é a ÚNICA forma de o
+  // seletor construir contra produção. O valor vive em
+  // functions/.env.leela-hub (dotenv POR PROJETO — só o deploy ao
+  // leela-hub o carrega; o Emulator roda demo-leela e nunca o lê) e é
+  // commitado com racional: a ativação fica versionada e revisável, nunca
+  // um default de pipeline. Sem o flag, chave de produção segue LANÇANDO
+  // (fail-safe R6 intacto). ⚔ marcar na próxima review de dinheiro.
+  const permitirProducao = env['ASAAS_PERMITIR_PRODUCAO'] === 'true';
+  const provider = createAsaasProvider(
+    permitirProducao ? { ...config, permitirProducao: true } : config
+  );
   asaasCache = { fingerprint, provider };
   return provider;
 }
