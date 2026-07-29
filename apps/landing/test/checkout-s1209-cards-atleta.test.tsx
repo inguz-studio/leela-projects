@@ -222,15 +222,13 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
       fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
     });
 
-    // Step 2: resumo cotado → pagamento.
+    // Step 2 (PAGAR): resumo cotado + meio de pagamento + aceites, uma tela só
+    // desde a DEC-0729 (achados 3, 12 e 17).
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ir para pagamento/i })).toBeTruthy();
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
+      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
     });
 
-    // Step 3: os dois aceites destravam a geração automática do PIX.
+    // Os dois aceites destravam a geração automática do PIX.
     const checks = screen.getAllByRole('checkbox');
     await act(async () => {
       for (const c of checks) fireEvent.click(c);

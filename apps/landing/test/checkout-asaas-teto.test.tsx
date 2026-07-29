@@ -198,17 +198,17 @@ async function irAtePagamento(forma: 'pix' | 'cartao'): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
   });
+  // DEC-0729: resumo e pagamento viraram UMA etapa (PAGAR) — o botão "Ir para
+  // pagamento" deixou de existir. O segundo "Continuar" já aterrissa aqui, com
+  // o resumo, o meio de pagamento e os aceites na mesma tela.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /ir para pagamento/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
   });
   if (forma === 'cartao') {
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
     });
   }
-  await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
-  });
   await act(async () => {
     for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
   });

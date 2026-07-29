@@ -163,8 +163,6 @@ function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]>
       confirmando={false}
       erroConfirmar={null}
       onConfirmar={noop}
-      cartao={{ nome: '', numero: '', validade: '', cvv: '' }}
-      onCartao={noop}
       politica={politicaFixture}
       termoSaudeVersao={1}
       eventoNome="Corrida Teste"

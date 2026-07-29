@@ -1,11 +1,13 @@
 'use client';
 
-import { Button, Select } from '@/app/_ds/ds';
+import { Pencil } from 'lucide-react';
+import { Button, Field, Input, Select } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CotarInscricaoCheckoutResult } from '@leela/api-client';
 import type { FormaUI } from './tipos';
 import { CupomCampo } from './CupomCampo';
 import { SeletorForma } from './SeletorForma';
+import type { CartaoForm } from './StepPagamento';
 
 /** Uma linha do resumo (metadados do inscrito — o preço vem da cotação). */
 export interface LinhaResumo {
@@ -14,9 +16,17 @@ export interface LinhaResumo {
 }
 
 /**
- * Etapa 3 — Resumo. TODOS os números vêm da cotação (`cotarInscricaoCheckout`
- * → computeSaleState no servidor). O componente NÃO soma nada: só renderiza
- * base → desconto → total e as opções de parcelamento derivadas do termo.
+ * Metade de cima do passo PAGAR — resumo do pedido, cupom e escolha do meio.
+ * TODOS os números vêm da cotação (`cotarInscricaoCheckout` → computeSaleState
+ * no servidor). O componente NÃO soma nada: só renderiza base → desconto →
+ * total e as opções de parcelamento derivadas do termo.
+ *
+ * DEC-0729 · o que mudou aqui:
+ *   · achado 12 / D-0729-3 — cada linha do pedido ganhou "Alterar", que leva
+ *     ao card daquele atleta com o formulário inteiro preservado;
+ *   · achado 17 / D-0729-6 — os campos do cartão e o seletor de parcelas
+ *     moram DENTRO da opção "Cartão de crédito" e aparecem no 1º clique;
+ *   · achado 5 — as parcelas deixaram de ser um `<select>` da cor do fundo.
  */
 export function StepResumo({
   cotacao,
@@ -24,6 +34,7 @@ export function StepResumo({
   erroCotacao,
   onTentarCotacao,
   linhas,
+  onEditarItem,
   cupomInput,
   onCupomInput,
   onAplicarCupom,
@@ -34,6 +45,8 @@ export function StepResumo({
   onForma,
   parcelas,
   onParcelas,
+  cartao,
+  onCartao,
 }: {
   cotacao: CotarInscricaoCheckoutResult | null;
   cotando: boolean;
@@ -41,6 +54,8 @@ export function StepResumo({
   /** BC-1 · re-dispara a cotação a partir do bloco de erro (sem beco). */
   onTentarCotacao: () => void;
   linhas: LinhaResumo[];
+  /** D-0729-3 · corrigir kit/tamanho da linha `i` sem recomeçar a jornada. */
+  onEditarItem?: (index: number) => void;
   cupomInput: string;
   onCupomInput: (v: string) => void;
   onAplicarCupom: () => void;
@@ -52,6 +67,9 @@ export function StepResumo({
   onForma: (f: FormaUI) => void;
   parcelas: number;
   onParcelas: (n: number) => void;
+  /** D-0729-6 · os campos do cartão vivem na própria opção "Cartão". */
+  cartao?: CartaoForm;
+  onCartao?: (patch: Partial<CartaoForm>) => void;
 }): React.JSX.Element {
   const cupomAtivo = cotacao?.cupomAplicado ?? null;
   const parcelado = forma === 'cartao_credito' && parcelas > 1;
@@ -80,24 +98,40 @@ export function StepResumo({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Itens do pedido */}
+      {/* Itens do pedido — D-0729-3: visível na hora de pagar e EDITÁVEL. */}
       <section className="rounded-ds-lg border border-border-subtle bg-surface-raised">
-        <h2 className="border-b border-border-subtle px-4 py-3 text-sm font-semibold text-text-primary sm:px-5">
+        <h2 className="border-b border-border-subtle px-4 py-3 text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-text-primary sm:px-5">
           Seu pedido
         </h2>
         <ul className="divide-y divide-border-subtle">
           {linhas.map((linha, i) => {
             const item = cotacao?.itens[i];
             return (
-              <li key={i} className="flex items-start justify-between gap-4 px-4 py-3 sm:px-5">
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{linha.titulo}</p>
-                  <p className="text-sm text-text-secondary">
+              <li
+                key={i}
+                className="flex items-start justify-between gap-[var(--spacing-4)] px-4 py-[var(--spacing-3)] sm:px-5"
+              >
+                <div className="min-w-0">
+                  <p className="text-[length:var(--font-size-sm)] font-[var(--font-weight-medium)] text-text-primary">
+                    {linha.titulo}
+                  </p>
+                  <p className="text-[length:var(--font-size-sm)] text-text-secondary">
                     {item ? item.modalidade : '—'}
                     {item?.loteNome ? ` · ${item.loteNome}` : ''} · {linha.kitLabel}
                   </p>
+                  {onEditarItem ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 mt-[var(--spacing-1)]"
+                      onClick={() => onEditarItem(i)}
+                    >
+                      <Pencil size={14} strokeWidth={2} aria-hidden className="mr-1.5" />
+                      Alterar modalidade, kit ou tamanho
+                    </Button>
+                  ) : null}
                 </div>
-                <p className="shrink-0 text-sm font-semibold text-text-primary">
+                <p className="shrink-0 text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-text-primary">
                   {item ? formatarPreco(item.preco) : '—'}
                 </p>
               </li>
@@ -122,31 +156,95 @@ export function StepResumo({
         bloqueio={null}
       />
 
-      {/* Forma de pagamento — D-5: BOTÕES (RadioCard do DS), sem toggle. */}
-      <section className="flex flex-col gap-3">
+      {/* Forma de pagamento — D-5: BOTÕES (RadioCard do DS), sem toggle.
+          D-0729-6: escolher "cartão" abre os campos do cartão AQUI, no 1º
+          clique — antes eles só existiam na tela seguinte. */}
+      <section className="flex flex-col gap-[var(--spacing-3)]">
         <SeletorForma
           forma={forma}
           onForma={onForma}
           labelPix={labelPix}
           labelCartao={labelCartao}
-        />
+          conteudoCartao={
+            <div className="flex flex-col gap-[var(--spacing-4)]">
+              {cotacao ? (
+                <div className="max-w-xs">
+                  {/* Achado 5 · contraste do seletor de parcelas.
+                      A variante `flat` (default) pinta o controle com
+                      `--surface-sunken` (#0A0A0A) e borda
+                      `--input-border-flat: transparent` — sobre a página, que é
+                      `--surface-base` (#0C0C0C), isso dá ~1,03:1: o seletor
+                      literalmente não tinha contorno. A variante `bordered` traz
+                      a borda `border-input` (= `--border-strong`, #737373),
+                      que fica em ~3,9:1 contra o cartão e ~4,2:1 contra a
+                      página — acima do piso de 3:1 da WCAG 1.4.11 para
+                      contorno de componente, em repouso, hover e foco. */}
+                  <Select
+                    variant="bordered"
+                    label="Parcelas"
+                    value={String(parcelas)}
+                    onChange={(e) => onParcelas(Number.parseInt(e.target.value, 10))}
+                    options={cotacao.opcoesParcelamento.map((o) => ({
+                      value: String(o.parcelas),
+                      label:
+                        o.parcelas === 1
+                          ? `À vista — ${formatarPreco(o.valorTotal)}`
+                          : `${o.parcelas}x de ${formatarPreco(o.valorParcela)} (total ${formatarPreco(o.valorTotal)})`,
+                    }))}
+                  />
+                </div>
+              ) : null}
 
-        {forma === 'cartao_credito' && cotacao ? (
-          <div className="max-w-xs">
-            <Select
-              label="Parcelas"
-              value={String(parcelas)}
-              onChange={(e) => onParcelas(Number.parseInt(e.target.value, 10))}
-              options={cotacao.opcoesParcelamento.map((o) => ({
-                value: String(o.parcelas),
-                label:
-                  o.parcelas === 1
-                    ? `À vista — ${formatarPreco(o.valorTotal)}`
-                    : `${o.parcelas}x de ${formatarPreco(o.valorParcela)} (total ${formatarPreco(o.valorTotal)})`,
-              }))}
-            />
-          </div>
-        ) : null}
+              {cartao && onCartao ? (
+                <div className="grid gap-[var(--spacing-4)]">
+                  <Field label="Nome no cartão">
+                    <Input
+                      variant="bordered"
+                      value={cartao.nome}
+                      autoComplete="cc-name"
+                      onChange={(e) => onCartao({ nome: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Número do cartão">
+                    <Input
+                      variant="bordered"
+                      value={cartao.numero}
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                      placeholder="0000 0000 0000 0000"
+                      onChange={(e) => onCartao({ numero: e.target.value })}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-[var(--spacing-4)]">
+                    <Field label="Validade">
+                      <Input
+                        variant="bordered"
+                        value={cartao.validade}
+                        inputMode="numeric"
+                        autoComplete="cc-exp"
+                        placeholder="MM/AA"
+                        onChange={(e) => onCartao({ validade: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="CVV">
+                      <Input
+                        variant="bordered"
+                        value={cartao.cvv}
+                        inputMode="numeric"
+                        autoComplete="cc-csc"
+                        placeholder="123"
+                        onChange={(e) => onCartao({ cvv: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                  <p className="text-[length:var(--font-size-xs)] text-text-tertiary">
+                    Ambiente de simulação: os dados do cartão não são enviados nem cobrados.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          }
+        />
       </section>
 
       {/* Totais — renderizados da cotação, sem cálculo local */}

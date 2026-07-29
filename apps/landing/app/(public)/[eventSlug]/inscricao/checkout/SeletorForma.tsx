@@ -27,6 +27,8 @@ export function SeletorForma({
   labelPix,
   labelCartao,
   disabled = false,
+  conteudoPix,
+  conteudoCartao,
 }: {
   forma: FormaUI;
   onForma: (f: FormaUI) => void;
@@ -35,6 +37,16 @@ export function SeletorForma({
   /** Rótulo do cartão (idem). */
   labelCartao: string;
   disabled?: boolean;
+  /**
+   * D-0729-6 · conteúdo revelado DENTRO da opção quando ela é a escolhida.
+   * O `RadioCard` do DS já tem esse contrato (`children` = painel condicional,
+   * com `aria-expanded`/`aria-controls` de fábrica) — a alternativa seria
+   * pendurar o formulário do cartão fora do grupo e reinventar a fiação de
+   * a11y. Verbatim do dono: "quando clico em cartao de crédito já é para
+   * aparecer imediatamente a opção de inputar o cartao, nao clicar novamente."
+   */
+  conteudoPix?: React.ReactNode;
+  conteudoCartao?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <RadioGroup
@@ -42,7 +54,10 @@ export function SeletorForma({
       label="Forma de pagamento"
       value={forma}
       onValueChange={(v) => onForma(v as FormaUI)}
-      orientation="horizontal"
+      // Com formulário revelado dentro da opção, lado a lado espremeria os
+      // campos do cartão numa coluna estreita. Empilhado, cada opção tem a
+      // largura inteira quando abre.
+      orientation="vertical"
       disabled={disabled}
     >
       <RadioCard
@@ -50,15 +65,17 @@ export function SeletorForma({
         title={labelPix}
         description="Aprovação na hora. O código vale por 30 minutos."
         icon={<QrCode size={20} strokeWidth={2} />}
-        className="flex-1 basis-full sm:basis-0"
-      />
+      >
+        {conteudoPix}
+      </RadioCard>
       <RadioCard
         value="cartao_credito"
         title={labelCartao}
         description="À vista ou parcelado, com aprovação imediata."
         icon={<CreditCard size={20} strokeWidth={2} />}
-        className="flex-1 basis-full sm:basis-0"
-      />
+      >
+        {conteudoCartao}
+      </RadioCard>
     </RadioGroup>
   );
 }

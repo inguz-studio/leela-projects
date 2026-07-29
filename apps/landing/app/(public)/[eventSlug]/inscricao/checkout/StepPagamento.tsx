@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Field, Input } from '@/app/_ds/ds';
+import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import type { PoliticaVendasPublica } from '@/lib/tipos';
@@ -43,8 +43,6 @@ export function StepPagamento({
   confirmando,
   erroConfirmar,
   onConfirmar,
-  cartao,
-  onCartao,
   politica,
   termoSaudeVersao,
   eventoNome,
@@ -70,8 +68,6 @@ export function StepPagamento({
   confirmando: boolean;
   erroConfirmar: string | null;
   onConfirmar: () => void;
-  cartao: CartaoForm;
-  onCartao: (patch: Partial<CartaoForm>) => void;
   politica: PoliticaVendasPublica;
   termoSaudeVersao: number;
   eventoNome: string;
@@ -203,47 +199,10 @@ export function StepPagamento({
       ) : (
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-text-primary">Pagamento com cartão</h2>
-          <div className="grid gap-4">
-            <Field label="Nome no cartão">
-              <Input
-                value={cartao.nome}
-                autoComplete="cc-name"
-                onChange={(e) => onCartao({ nome: e.target.value })}
-              />
-            </Field>
-            <Field label="Número do cartão">
-              <Input
-                value={cartao.numero}
-                inputMode="numeric"
-                autoComplete="cc-number"
-                placeholder="0000 0000 0000 0000"
-                onChange={(e) => onCartao({ numero: e.target.value })}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Validade">
-                <Input
-                  value={cartao.validade}
-                  autoComplete="cc-exp"
-                  placeholder="MM/AA"
-                  onChange={(e) => onCartao({ validade: e.target.value })}
-                />
-              </Field>
-              <Field label="CVV">
-                <Input
-                  value={cartao.cvv}
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  placeholder="123"
-                  onChange={(e) => onCartao({ cvv: e.target.value })}
-                />
-              </Field>
-            </div>
-          </div>
-          <p className="text-xs text-text-tertiary">
-            Ambiente de simulação: os dados do cartão não são enviados nem cobrados. O
-            MockPaymentProvider confirma a cobrança e dispara o webhook.
-          </p>
+          {/* D-0729-6: os campos do cartão são revelados dentro da própria
+              opção "Cartão de crédito" (SeletorForma), no 1º clique — não
+              existe mais uma segunda tela para digitá-los. Aqui fica o que
+              pertence ao ATO de pagar: os aceites e o botão. */}
           {/* §5.3: aceites ACIMA do botão de pagar. */}
           {blocoAceites}
           <div>

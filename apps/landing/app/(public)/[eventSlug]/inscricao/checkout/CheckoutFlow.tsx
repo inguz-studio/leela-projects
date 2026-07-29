@@ -58,13 +58,30 @@ const COPY_ERRO_AUTH =
 // pedir ação manual ao comprador. Mantém erro transitório invisível.
 const MAX_AUTH_RETRY_AUTO = 1;
 
-// Etapas INTERNAS (5), na ordem do mockup/TicketSports (o dono):
-//   [0] modalidade+kit · [1] dados · [2] resumo · [3] pagamento · [4] confirmação
+// Etapas INTERNAS (4), na ordem do mockup/TicketSports (o dono):
+//   [0] modalidade+kit · [1] dados · [2] PAGAR · [3] confirmação
 // Modalidade e kit ficam juntos na etapa 0 (o kit é filtrado pela modalidade);
 // os dados vêm depois (job vence o pixel: o wireframe do Figma põe dados antes
-// do kit). O comprador VÊ só 3 macro-etapas — o agrupamento 5→3 mora em
-// `CheckoutStepper`/`macroDaEtapa` (LEELA-R13 · adendo 10). As validações e o
-// fluxo abaixo seguem por índice interno 0-4, intactos.
+// do kit). O comprador VÊ 3 macro-etapas — o agrupamento 4→3 mora em
+// `CheckoutStepper`/`macroDaEtapa` (LEELA-R13 · adendo 10).
+//
+// DEC-0729 · achados 3, 12 e 17 — o PAGAR era DUAS telas internas (resumo e
+// pagamento) dentro da MESMA macro-etapa "Pagamento". Consequências que o dono
+// encontrou na compra real:
+//   · escolher "cartão de crédito" não abria campo nenhum: era preciso um
+//     segundo clique em "Ir para pagamento" para o formulário aparecer, e a
+//     barra de progresso não se mexia (achado 17 / D-0729-6);
+//   · ao chegar no pagamento, o que estava na frente dele eram os dois aceites,
+//     não o meio de pagamento (achado 3);
+//   · o resumo do pedido ficava na tela anterior, longe da hora de pagar
+//     (achado 12 / D-0729-3).
+// As duas viraram UMA: resumo → instrumento → aceites → botão de pagar, na
+// ordem em que a decisão acontece. O indicador de progresso não mudou.
+//
+// O que NÃO mudou, e não pode mudar: a cobrança continua nascendo com a prova
+// dos dois aceites (flip F-4a — o servidor recusa `createInscricaoCharge` sem
+// eles, antes de qualquer escrita). Por isso o QR do PIX não pode preceder o
+// aceite; o que se corrigiu foi a ORDEM da tela, não a regra do dinheiro.
 
 /** Chave de idempotência do cliente (RN-333): [A-Za-z0-9_-]{8,64}. */
 function novaChaveIdempotencia(): string {
@@ -727,7 +744,7 @@ export function CheckoutFlow({
     try {
       const data = await confirmarPagamentoSandbox({ pedidoId });
       setConfirmacao(data);
-      setStep(4);
+      setStep(3);
     } catch (err) {
       // DEC-0727 · cartão: o teto vale para os dois meios. O comprador de
       // cartão passa por aqui na mesma tacada do `pagarCartao`, e um "não foi
@@ -754,7 +771,7 @@ export function CheckoutFlow({
   // "Gerar código PIX" fica como fallback se der erro (idempotência RN-333).
   useEffect(() => {
     if (
-      step === 3 &&
+      step === 2 &&
       forma === 'pix' &&
       authPronto &&
       aceitesOk &&
@@ -837,7 +854,7 @@ export function CheckoutFlow({
       setErroCharge(null);
       setErroConfirmar(null);
       setPixEstado('vivo');
-      setStep(3);
+      setStep(2);
     };
 
     if (charge === null || pixFimConfirmadoRef.current) {
@@ -930,15 +947,60 @@ export function CheckoutFlow({
       setStep(2);
       return;
     }
-    if (step === 2) {
-      if (cotacao === null || erroCotacao !== null) return;
-      setStep(3);
-      return;
-    }
-  }, [step, evento.kits, evento.itensTamanhados, responsavel, inscritos, euCorro, endereco, cotacao, erroCotacao, erroAuth]);
+    // Do step 2 não se "avança": paga-se. A ação de pagar vive no próprio
+    // instrumento (Gerar código PIX / Pagar), com os aceites como gate.
+  }, [step, evento.kits, evento.itensTamanhados, responsavel, inscritos, euCorro, endereco, erroAuth]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
+  }, []);
+
+  // ── B6/B7 (achados 10 e 12) · para onde a tela olha ao trocar de etapa ─────
+  //
+  // Achado 10: passando de inscrição para pagamento, a página continuava na
+  // posição de rolagem anterior — o comprador aterrissava no rodapé de uma tela
+  // cujo primeiro campo está no topo. Toda troca de etapa passa a levar ao topo.
+  //
+  // Exceção deliberada: quando a troca veio de "Alterar" no resumo (achado 12 /
+  // D-0729-3), o destino não é o topo, é o card do atleta que a pessoa quer
+  // corrigir. Ir ao topo ali seria devolvê-la ao começo do formulário — perto
+  // demais de "recomeçar", que é exatamente o que a decisão proíbe.
+  const alvoScrollRef = useRef<string | null>(null);
+  const jaMontouRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const alvo = alvoScrollRef.current;
+    alvoScrollRef.current = null;
+    // A primeira renderização não é "troca de etapa": a página já está onde
+    // deve, e rolar aqui atropelaria uma âncora vinda da URL.
+    if (!jaMontouRef.current) {
+      jaMontouRef.current = true;
+      return;
+    }
+    // Rolagem é enfeite, nunca pré-condição: ambiente sem as APIs (jsdom, ou
+    // navegador com a implementação capada) apenas não rola. A jornada de
+    // compra não pode quebrar por causa de uma animação.
+    if (alvo !== null) {
+      const el = document.getElementById(alvo);
+      if (el !== null && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    if (typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
+
+  /**
+   * D-0729-3 · "Alterar" no resumo do pedido. Volta ao passo da escolha com o
+   * card DAQUELE atleta na frente — todo o resto do formulário (dados,
+   * endereço, cupom, forma de pagamento) continua preenchido, porque é estado
+   * do fluxo e nada é remontado. Corrigir um tamanho custa dois cliques.
+   */
+  const editarItem = useCallback((index: number) => {
+    alvoScrollRef.current = `atleta-${index}`;
+    setStep(0);
   }, []);
 
   // ── Linhas do resumo/confirmação (metadados; preço vem da cotação/cobrança) ─
@@ -984,7 +1046,8 @@ export function CheckoutFlow({
     apoio: 'Tem um código? Aplique agora — o desconto entra no total do resumo.',
   };
 
-  const mostraNav = step <= 2;
+  // Nav de "Continuar" só nas etapas de coleta — no PAGAR a ação é pagar.
+  const mostraNav = step <= 1;
 
   return (
     // ToastProvider do DS (Radix-free, ADR-017): a fila de feedback do
@@ -1059,60 +1122,63 @@ export function CheckoutFlow({
           />
         ) : null}
 
+        {/* PAGAR — uma tela só: resumo (editável) → instrumento → aceites →
+            botão de pagar. O resumo e o pagamento eram duas telas internas
+            dentro da mesma macro-etapa (DEC-0729 · achados 3, 12 e 17). */}
         {step === 2 ? (
-          <StepResumo
-            cotacao={cotacao}
-            cotando={cotando}
-            erroCotacao={erroCotacao}
-            onTentarCotacao={tentarCotarNovamente}
-            linhas={linhasResumo}
-            cupomInput={cupomInput}
-            onCupomInput={setCupomInput}
-            onAplicarCupom={aplicarCupom}
-            onRemoverCupom={removerCupom}
-            aplicandoCupom={aplicandoCupom}
-            erroCupomUrl={erroCupom ?? erroCupomUrl}
-            forma={forma}
-            onForma={setForma}
-            parcelas={parcelas}
-            onParcelas={setParcelas}
-          />
+          <div className="flex flex-col gap-6">
+            <StepResumo
+              cotacao={cotacao}
+              cotando={cotando}
+              erroCotacao={erroCotacao}
+              onTentarCotacao={tentarCotarNovamente}
+              linhas={linhasResumo}
+              onEditarItem={editarItem}
+              cupomInput={cupomInput}
+              onCupomInput={setCupomInput}
+              onAplicarCupom={aplicarCupom}
+              onRemoverCupom={removerCupom}
+              aplicandoCupom={aplicandoCupom}
+              erroCupomUrl={erroCupom ?? erroCupomUrl}
+              forma={forma}
+              onForma={setForma}
+              parcelas={parcelas}
+              onParcelas={setParcelas}
+              cartao={cartao}
+              onCartao={(patch) => setCartao((c) => ({ ...c, ...patch }))}
+            />
+            <StepPagamento
+              forma={forma}
+              total={cotacao?.totalCobrado ?? null}
+              charge={charge}
+              criandoCharge={criandoCharge}
+              erroCharge={erroCharge}
+              onGerarCobranca={() => void gerarCobranca()}
+              onPagarCartao={() => void pagarCartao()}
+              confirmando={confirmando}
+              erroConfirmar={erroConfirmar}
+              onConfirmar={() => {
+                if (charge) void confirmar(charge.pedidoId);
+              }}
+              politica={evento.politicaVendas}
+              termoSaudeVersao={evento.termoSaudeVersao}
+              eventoNome={evento.nome}
+              organizadorNome={evento.organizador?.nome ?? null}
+              aceiteTermos={aceiteTermos}
+              aceiteSaude={aceiteSaude}
+              onAceiteTermos={setAceiteTermos}
+              onAceiteSaude={setAceiteSaude}
+              pixExpirado={pixExpirado}
+              pixVivoPeloServidor={pixContestado}
+              pixDesvioRelogioMs={desvioRelogioMs}
+              onPixExpirar={aoExpirarPix}
+              onNovaCobranca={novaCobrancaPix}
+              gatewaySemResposta={gatewaySemResposta}
+            />
+          </div>
         ) : null}
 
-        {step === 3 ? (
-          <StepPagamento
-            forma={forma}
-            total={cotacao?.totalCobrado ?? null}
-            charge={charge}
-            criandoCharge={criandoCharge}
-            erroCharge={erroCharge}
-            onGerarCobranca={() => void gerarCobranca()}
-            onPagarCartao={() => void pagarCartao()}
-            confirmando={confirmando}
-            erroConfirmar={erroConfirmar}
-            onConfirmar={() => {
-              if (charge) void confirmar(charge.pedidoId);
-            }}
-            cartao={cartao}
-            onCartao={(patch) => setCartao((c) => ({ ...c, ...patch }))}
-            politica={evento.politicaVendas}
-            termoSaudeVersao={evento.termoSaudeVersao}
-            eventoNome={evento.nome}
-            organizadorNome={evento.organizador?.nome ?? null}
-            aceiteTermos={aceiteTermos}
-            aceiteSaude={aceiteSaude}
-            onAceiteTermos={setAceiteTermos}
-            onAceiteSaude={setAceiteSaude}
-            pixExpirado={pixExpirado}
-            pixVivoPeloServidor={pixContestado}
-            pixDesvioRelogioMs={desvioRelogioMs}
-            onPixExpirar={aoExpirarPix}
-            onNovaCobranca={novaCobrancaPix}
-            gatewaySemResposta={gatewaySemResposta}
-          />
-        ) : null}
-
-        {step === 4 && charge ? (
+        {step === 3 && charge ? (
           <StepConfirmacao
             charge={charge}
             confirmacao={confirmacao}
@@ -1136,14 +1202,11 @@ export function CheckoutFlow({
             <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
             Voltar
           </Button>
-          <Button
-            onClick={avancar}
-            disabled={erroAuth !== null || (step === 2 && (cotacao === null || erroCotacao !== null))}
-          >
-            {step === 2 ? 'Ir para pagamento' : 'Continuar'}
+          <Button onClick={avancar} disabled={erroAuth !== null}>
+            Continuar
           </Button>
         </div>
-      ) : step === 3 ? (
+      ) : step === 2 ? (
         <div className="mt-10 flex items-center justify-between gap-3 border-t border-border-subtle pt-6">
           <Button variant="ghost" onClick={voltar} disabled={confirmando}>
             <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />

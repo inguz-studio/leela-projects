@@ -184,11 +184,9 @@ async function irAtePagamentoPix(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
   });
+  // DEC-0729: PAGAR é uma etapa só — sem "Ir para pagamento" no caminho.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /ir para pagamento/i })).toBeTruthy();
-  });
-  await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
+    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
   });
   await act(async () => {
     for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
@@ -555,18 +553,14 @@ describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "con
     const chave1 = (createInscricaoCharge.mock.calls[0]?.[0] as { idempotencyKey: string })
       .idempotencyKey;
 
-    // A pessoa volta ao resumo e mexe na forma de pagamento — nada proibido.
-    await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /voltar/i }).at(-1)!);
-    });
+    // A pessoa mexe na forma de pagamento e volta ao PIX — nada proibido.
+    // DEC-0729: os dois controles vivem na MESMA tela do pagamento, então o
+    // vaivém não passa mais por outra etapa. O vetor de ataque é idêntico.
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /ir para pagamento/i }));
     });
 
     // A tela PEDE a cobrança nova (chave de idempotência nova) — isso não

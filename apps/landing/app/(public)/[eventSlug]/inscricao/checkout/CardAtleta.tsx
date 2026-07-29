@@ -26,15 +26,25 @@ export function CardAtleta({
   podeRemover,
   onRemover,
   children,
+  id,
 }: {
   /** Rótulo humano do card ("Você", "Atleta 2") — também nomeia o remover. */
   titulo: string;
   podeRemover: boolean;
   onRemover: () => void;
   children: React.ReactNode;
+  /**
+   * Âncora do card (D-0729-3). O "Alterar" do resumo precisa levar a pessoa
+   * ao card DAQUELE atleta; sem um alvo estável a única opção seria rolar ao
+   * topo do formulário, que é perto demais de recomeçar.
+   */
+  id?: string;
 }): React.JSX.Element {
   return (
-    <div className="rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5">
+    <div
+      id={id}
+      className="scroll-mt-[var(--spacing-6)] rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-text-primary">
           {titulo}

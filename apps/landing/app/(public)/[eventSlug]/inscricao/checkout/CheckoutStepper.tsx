@@ -9,10 +9,17 @@
 // do progresso, para reduzir o viés cognitivo de esforço. Nenhuma lógica de
 // checkout/dinheiro passa por aqui.
 //
-// Agrupamento 5→3 (registrado no R13-CHECKOUT-REPORT):
+// Agrupamento 4→3 (DEC-0729 · achados 3, 12 e 17):
 //   Inscrição   = [0] modalidade+kit · [1] dados
-//   Pagamento   = [2] resumo · [3] pagamento
-//   Confirmação = [4] confirmação
+//   Pagamento   = [2] pagar (resumo + instrumento + aceites, uma tela só)
+//   Confirmação = [3] confirmação
+//
+// Era 5→3, com resumo e pagamento em telas internas separadas — as duas dentro
+// da MESMA macro-etapa "Pagamento". O comprador escolhia a forma de pagamento
+// numa tela e só via o instrumento (campos do cartão / QR do PIX) depois de
+// clicar "Ir para pagamento", com a barra de progresso parada no mesmo passo.
+// Esse clique era literalmente invisível no indicador — e é o "clicar
+// novamente" do achado 17. As duas telas viraram uma; o indicador não mudou.
 //
 // Por que NÃO usar o <Stepper> do DS: o Stepper do design-system não aceita
 // ícone por etapa (o Figma 112-4622 tem um ícone por etapa do checkout) e o DS
@@ -33,12 +40,12 @@ const MACRO_ETAPAS: { id: string; label: string; icone: LucideIcon }[] = [
 ];
 
 /**
- * Mapeia o índice da etapa INTERNA (0-4) para a macro-etapa VISÍVEL (0-2).
- * Fonte única do agrupamento 5→3 — usada só para pintar o indicador.
+ * Mapeia o índice da etapa INTERNA (0-3) para a macro-etapa VISÍVEL (0-2).
+ * Fonte única do agrupamento 4→3 — usada só para pintar o indicador.
  */
 export function macroDaEtapa(step: number): number {
   if (step <= 1) return 0; // modalidade+kit, dados → Inscrição
-  if (step <= 3) return 1; // resumo, pagamento → Pagamento
+  if (step === 2) return 1; // pagar (resumo + instrumento + aceites) → Pagamento
   return 2; // confirmação
 }
 

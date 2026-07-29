@@ -188,6 +188,7 @@ export function StepModalidadeKit({
         return (
           <CardAtleta
             key={i}
+            id={`atleta-${i}`}
             titulo={titulo}
             podeRemover={podeRemover}
             onRemover={() => onRemoveInscrito(i)}
