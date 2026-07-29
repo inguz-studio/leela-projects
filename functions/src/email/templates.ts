@@ -278,13 +278,29 @@ export interface IngressoDoEmail {
   codigo: string;
   /** Data URI PNG do QR; string vazia quando não foi possível gerar. */
   qrDataUri: string;
+  /**
+   * Página do ingresso DESTE inscrito (S1214-T3 · RN-423). Um link por
+   * INSCRITO, não um por pedido: o token é por inscrito, e é isso que resolve
+   * o QR invisível para cada pessoa da compra (o Gmail e o Outlook não
+   * renderizam o data URI embutido).
+   *
+   * Ausente quando não há base pública configurada ou quando o inscrito ainda
+   * não tem ingresso emitido. **Ausência é a degradação certa** — link
+   * quebrado, ou link para domínio de terceiro, gasta a confiança de quem
+   * acabou de pagar (D-ING-8).
+   */
+  linkIngresso?: string;
 }
 
 export interface IngressosCompraEmailInput {
   nomeComprador: string;
   nomeEvento: string;
-  /** Página pública do evento — montada pelo servidor (nunca do organizador). */
-  linkEvento: string;
+  /**
+   * Página pública do evento — montada pelo servidor (nunca do organizador).
+   * OPCIONAL desde o S1214-T3: sem base pública configurada o e-mail sai sem
+   * link nenhum, com o código em texto, em vez de sair com URL inventada.
+   */
+  linkEvento?: string;
   ingressos: readonly IngressoDoEmail[];
 }
 
@@ -311,7 +327,9 @@ export function isQrDataUriValido(valor: unknown): valor is string {
 export function renderIngressosCompraEmail(
   input: IngressosCompraEmailInput
 ): EmailRenderizado {
-  if (!isLinkDeAppValido(input.linkEvento)) {
+  // Link AUSENTE é caso legítimo (sem base pública — RN-423); link PRESENTE e
+  // torto continua sendo erro alto, porque a montagem é do servidor.
+  if (input.linkEvento !== undefined && !isLinkDeAppValido(input.linkEvento)) {
     throw new Error('linkEvento inválido para template (montagem do servidor).');
   }
   const nome = limparCampoCurto(input.nomeComprador, TEMPLATE_NOME_MAX) || 'Olá';
@@ -319,7 +337,8 @@ export function renderIngressosCompraEmail(
     limparCampoCurto(input.nomeEvento, TEMPLATE_NOME_MAX) || 'seu evento';
   const nomeEsc = escapeHtml(nome);
   const eventoEsc = escapeHtml(evento);
-  const linkEsc = escapeHtml(input.linkEvento);
+  const linkEsc =
+    input.linkEvento !== undefined ? escapeHtml(input.linkEvento) : '';
 
   const blocos: string[] = [];
   const linhasTexto: string[] = [];
@@ -341,6 +360,14 @@ export function renderIngressosCompraEmail(
       comQr < QR_POR_EMAIL_MAX &&
       isQrDataUriValido(ingresso.qrDataUri);
     if (embuteQr) comQr++;
+
+    // ACRÉSCIMO ao bloco, nunca reescrita (S1214-T3): o código em texto e o QR
+    // embutido continuam exatamente onde estavam. O link é a DEGRADAÇÃO para
+    // quem usa cliente que não renderiza data URI, não a troca.
+    const linkIngresso = isLinkDeAppValido(ingresso.linkIngresso)
+      ? ingresso.linkIngresso
+      : '';
+    const linkIngressoEsc = escapeHtml(linkIngresso);
 
     blocos.push(
       `<div style="border:1px solid #e4e0d8;border-radius:12px;padding:16px;` +
@@ -365,6 +392,16 @@ export function renderIngressosCompraEmail(
             `alt="QR do ingresso" ` +
             `style="display:block;width:180px;height:180px;">`
           : '') +
+        // Rótulo GENÉRICO, pela mesma razão do `alt` do QR logo acima: o nome
+        // já está visível no topo do bloco, e cada repetição de dado do
+        // checkout dentro de markup é uma superfície a mais para o escape ter
+        // de segurar. O endereço vai abaixo em texto para quem precisa copiar.
+        (linkIngresso !== ''
+          ? `<p style="margin:12px 0 0;font-size:13px;">` +
+            `<a href="${linkIngressoEsc}" style="color:#5b2333;font-weight:bold;">` +
+            `Abrir este ingresso</a><br>` +
+            `<span style="font-size:12px;color:#6f675c;">${linkIngressoEsc}</span></p>`
+          : '') +
         `</div>`
     );
 
@@ -372,7 +409,8 @@ export function renderIngressosCompraEmail(
       `- ${nomeInsc}${modalidade !== '' ? ` (${modalidade})` : ''}: ` +
         (codigo !== ''
           ? `código ${codigo}`
-          : 'ingresso ainda sendo emitido')
+          : 'ingresso ainda sendo emitido') +
+        (linkIngresso !== '' ? `\n  ${linkIngresso}` : '')
     );
   }
 
@@ -391,14 +429,14 @@ export function renderIngressosCompraEmail(
       `<p style="margin:16px 0 0;font-size:13px;color:#6f675c;">` +
       `No credenciamento basta apresentar o QR. Se a imagem não abrir no seu ` +
       `e-mail, o código acima identifica a inscrição.</p>` +
-      botaoLink(linkEsc, 'Ver a página do evento')
+      (linkEsc !== '' ? botaoLink(linkEsc, 'Ver a página do evento') : '')
   );
   const texto =
     `${nome}, sua compra em ${evento} foi confirmada.\n\n` +
     `Ingressos do pedido:\n${linhasTexto.join('\n')}\n\n` +
     `No credenciamento basta apresentar o QR que está neste e-mail. Se a ` +
-    `imagem não abrir, o código acima identifica a inscrição.\n\n` +
-    `Página do evento: ${input.linkEvento}`;
+    `imagem não abrir, o código acima identifica a inscrição.` +
+    (input.linkEvento !== undefined ? `\n\nPágina do evento: ${input.linkEvento}` : '');
   return { assunto, html, texto };
 }
 

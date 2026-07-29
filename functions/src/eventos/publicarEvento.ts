@@ -3,10 +3,14 @@
 //
 // Cloud Function callable: publica um rascunho de evento (LEELA-S201-T2 · E03).
 //
-// RN-201: publicar gera URL pública (`beh.ro/{slug}`) + QR automaticamente.
+// RN-201: publicar gera URL pública (`{base}/{slug}`) + QR automaticamente.
 // Contrato: `publicarEvento({ eventoId }) -> { url, qrUrl, replay }`.
 //
-//   - `url`   — página pública do evento: https://beh.ro/{slug}
+//   - `url`   — página pública do evento: `{base}/{slug}`, com a base vinda do
+//     AMBIENTE (RN-423 · ver ./basePublica.ts). O domínio de terceiro que
+//     estava cravado aqui morreu no S1214-T3. Sem base configurada a
+//     publicação falha alto: a `url` é PERSISTIDA e lida depois pelo painel e
+//     pelo QR do evento — URL errada gravada no banco sobrevive ao fix.
 //   - `qrUrl` — data URI (image/png, base64) do QR cuja carga é a `url`.
 //     Gerado server-side com a lib `qrcode` (puro JS, offline) — nenhum
 //     serviço externo recebe a URL do evento; o painel renderiza direto em
@@ -30,30 +34,23 @@ import * as logger from 'firebase-functions/logger';
 import QRCode from 'qrcode';
 import type { AuthClaims } from '@leela/core';
 import { assertTenantAtivo, assertTenantWriter, type EventoCaller } from './criarEvento';
+import { basePublica, ENV_BASE_PUBLICA, urlPublicaDoEvento } from './basePublica';
 
 // ---------------------------------------------------------------------------
 // Contratos
 // ---------------------------------------------------------------------------
-
-/** Base pública das páginas de evento (RN-201). */
-export const EVENTO_URL_BASE = 'https://beh.ro';
 
 export interface PublicarEventoInput {
   eventoId: string;
 }
 
 export interface PublicarEventoResult {
-  /** URL pública da página do evento (beh.ro/{slug}) */
+  /** URL pública da página do evento (`{base}/{slug}` — RN-423) */
   url: string;
   /** Data URI (image/png) do QR com a URL como payload */
   qrUrl: string;
   /** true quando o evento já estava publicado (retry idempotente) */
   replay: boolean;
-}
-
-/** URL pública do evento a partir do slug. @pure */
-export function urlPublicaDoEvento(slug: string): string {
-  return `${EVENTO_URL_BASE}/${slug}`;
 }
 
 /**
@@ -115,6 +112,18 @@ export async function publicarEventoCore(
 
   await assertTenantAtivo(db, tenantId);
 
+  // Base pública conferida ANTES da transação (RN-423). Depois dela o evento já
+  // estaria com `status: publicado` gravado e a chamada morreria mesmo assim —
+  // publicado no banco e com erro na tela é o pior dos dois mundos. Config
+  // quebrada tem de barrar a operação inteira, não a metade final dela.
+  if (basePublica() === null) {
+    throw new https.HttpsError(
+      'failed-precondition',
+      `Base pública não configurada — defina ${ENV_BASE_PUBLICA} no ambiente ` +
+        'das Functions (o mesmo valor da superfície pública) antes de publicar.'
+    );
+  }
+
   const ref = db.collection('eventos').doc(eventoId);
 
   const { slug, replay } = await db.runTransaction(async (tx) => {
@@ -166,7 +175,9 @@ export async function publicarEventoCore(
     return { slug: slugDoc, replay: false };
   });
 
-  const url = urlPublicaDoEvento(slug);
+  // A guarda de verdade está lá em cima, antes da transação; este `??` só
+  // fecha o tipo (a base não some entre uma linha e outra).
+  const url = urlPublicaDoEvento(slug) ?? '';
   const qrUrl = await gerarQrDataUrl(url);
 
   // Sem PII no log — só ids (LGPD); erro observável sem dado sensível

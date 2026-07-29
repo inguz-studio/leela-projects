@@ -31,13 +31,24 @@
 // FAIL-CLOSED (RN-137): sem `BREVO_API_KEY` o `selectEmailProvider` devolve
 // null e este módulo não envia nem registra. A compra segue intocada e a
 // pendência fica no log — a prova do envio real é pós-deploy, com a chave.
+//
+// LINK DO INGRESSO (S1214-T3 · RN-423): cada bloco de inscrito ganha o link da
+// PRÓPRIA página do ingresso — um por INSCRITO, não um por pedido, porque o
+// token é por inscrito. O código em texto e o QR embutido continuam onde
+// estavam: o link é a degradação para quem usa cliente que não renderiza data
+// URI (Gmail e Outlook), não a troca. Sem base pública, ou sem keyring, o
+// e-mail sai SEM link — link quebrado gasta a confiança de quem acabou de
+// pagar. A chave de idempotência da RN-219 não é tocada por nada disto.
 // =============================================================================
 
 import type * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { isCodigoIngressoValido, validarEmail, type EmailProvider } from '@leela/core';
 import { registrarComunicacao } from '../eventos/logComunicacao';
-import { gerarQrDataUrl, urlPublicaDoEvento } from '../eventos/publicarEvento';
+import { gerarQrDataUrl } from '../eventos/publicarEvento';
+import { urlIngressoPorLink, urlPublicaDoEvento } from '../eventos/basePublica';
+import { assinarLinkIngresso } from '../eventos/linkIngresso';
+import { obterQrKeyring } from '../eventos/qrToken';
 import {
   renderIngressosCompraEmail,
   type IngressoDoEmail,
@@ -138,6 +149,12 @@ export async function enviarEmailIngressos(
     };
   }
 
+  // Keyring do processo — o mesmo do QR (S1214 · RN-419). Ausente ⇒ nenhum
+  // link é assinado e o e-mail sai como sempre saiu. Nunca "link sem
+  // assinatura".
+  const keyring = obterQrKeyring();
+  const tenantId = (eventoSnap.get('tenantId') as string | undefined) ?? '';
+
   // QR por inscrito. Falha de geração de UMA imagem não derruba o e-mail: o
   // código em texto continua lá, que é o que a RN-398 promete.
   const paraTemplate: IngressoDoEmail[] = [];
@@ -153,19 +170,48 @@ export async function enviarEmailIngressos(
         err: err instanceof Error ? err.name : 'erro',
       });
     }
+
+    // UM LINK POR INSCRITO (RN-423 · P8), não um por pedido: o token é por
+    // inscrito, e é isso que resolve o QR invisível para cada pessoa da
+    // compra. O link é amarrado ao `qrToken` que ACABOU de ser emitido, então
+    // re-emitir o ingresso mata este link (RN-420).
+    let linkIngresso: string | undefined;
+    if (keyring !== null && tenantId.length > 0 && ingresso.qrToken.length > 0) {
+      try {
+        const token = assinarLinkIngresso(
+          { inscritoId: ingresso.inscritoId, eventoId, tenantId },
+          ingresso.qrToken,
+          keyring
+        );
+        // `?? undefined`: sem base pública o link NÃO é renderizado — nunca
+        // uma URL com `undefined` no meio, nunca o domínio antigo (D-ING-8).
+        linkIngresso = urlIngressoPorLink(token) ?? undefined;
+      } catch (err) {
+        // Assinatura de UM link não derruba o e-mail de todo mundo.
+        logger.warn('email_ingressos_link_falhou', {
+          pedidoId,
+          eventoId,
+          inscritoId: ingresso.inscritoId,
+          err: err instanceof Error ? err.name : 'erro',
+        });
+      }
+    }
+
     paraTemplate.push({
       nome: ingresso.nome,
       modalidade: ingresso.modalidade,
       codigo: isCodigoIngressoValido(ingresso.codigo) ? ingresso.codigo : '',
       qrDataUri,
+      ...(linkIngresso !== undefined ? { linkIngresso } : {}),
     });
   }
 
   try {
+    const linkEvento = urlPublicaDoEvento(slug);
     const rendered = renderIngressosCompraEmail({
       nomeComprador,
       nomeEvento,
-      linkEvento: urlPublicaDoEvento(slug),
+      ...(linkEvento !== null ? { linkEvento } : {}),
       ingressos: paraTemplate,
     });
     await emailProvider.sendTransactional({

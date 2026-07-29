@@ -65,7 +65,7 @@ export interface CriarEventoResult {
 }
 
 export interface PublicarEventoResult {
-  /** URL pública da página do evento (beh.ro/{slug} — RN-201) */
+  /** URL pública da página do evento ({base}/{slug} — RN-201/RN-423) */
   url: string;
   /** Data URI (image/png) do QR com a URL como payload (RN-201) */
   qrUrl: string;

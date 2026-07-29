@@ -91,7 +91,7 @@ describe('renderIngressosCompraEmail — RN-398', () => {
   const base = {
     nomeComprador: 'Marina',
     nomeEvento: 'Meia Floripa 2026',
-    linkEvento: 'https://beh.ro/meia-floripa-2026',
+    linkEvento: 'https://leela.example/meia-floripa-2026',
   };
 
   it('com imagem BLOQUEADA o código de cada inscrito continua legível', () => {
@@ -106,14 +106,14 @@ describe('renderIngressosCompraEmail — RN-398', () => {
     // A parte TEXTO é o que sobra quando o cliente bloqueia tudo.
     expect(email.texto).toContain('AB2CD3');
     expect(email.texto).toContain('XY7ZK9');
-    expect(email.texto).toContain('https://beh.ro/meia-floripa-2026');
+    expect(email.texto).toContain('https://leela.example/meia-floripa-2026');
 
     // E no HTML o código não vive dentro de nenhum <img>: removendo todas as
     // imagens, os dois códigos continuam de pé.
     const semImagens = email.html.replace(/<img[^>]*>/g, '');
     expect(semImagens).toContain('AB2CD3');
     expect(semImagens).toContain('XY7ZK9');
-    expect(semImagens).toContain('https://beh.ro/meia-floripa-2026');
+    expect(semImagens).toContain('https://leela.example/meia-floripa-2026');
   });
 
   it('com imagem LIBERADA o QR aparece ao lado do respectivo código', () => {

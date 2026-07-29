@@ -15,7 +15,7 @@
 /** Máximo de sufixos tentados antes de desistir (colisão patológica). */
 export const MAX_TENTATIVAS_SLUG = 30;
 
-/** Comprimento máximo do slug (legibilidade de URL beh.ro/{slug}). */
+/** Comprimento máximo do slug (legibilidade de URL {base}/{slug}). */
 export const MAX_SLUG_LENGTH = 60;
 
 /**

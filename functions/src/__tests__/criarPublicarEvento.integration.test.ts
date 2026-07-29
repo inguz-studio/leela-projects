@@ -10,7 +10,7 @@
  *   - criarEvento REJEITA input inválido no servidor (nunca confia na UI)
  *   - autorização: athlete/promoter/sem-claim → permission-denied;
  *     tenant suspenso → failed-precondition (RN-402)
- *   - publicarEvento: rascunho completo → { url: beh.ro/slug, qrUrl } e
+ *   - publicarEvento: rascunho completo → { url: {base}/slug, qrUrl } e
  *     status vira `publicado` (RN-201); QR é data URI PNG gerado server-side
  *   - idempotência de publicação: retry devolve o MESMO resultado (replay)
  *     sem alterar `publicadoEm`
@@ -18,7 +18,7 @@
  *
  * Pré-requisito: Firestore Emulator (8080) via emulators:exec.
  */
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, beforeAll, beforeEach } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { https } from 'firebase-functions/v1';
@@ -31,8 +31,8 @@ import {
 import {
   camposFaltantesParaPublicar,
   publicarEventoCore,
-  urlPublicaDoEvento,
 } from '../eventos/publicarEvento';
+import { ENV_BASE_PUBLICA, urlPublicaDoEvento } from '../eventos/basePublica';
 import { slugCandidato, slugify } from '../eventos/slug';
 import {
   clearFirestoreRest,
@@ -324,12 +324,27 @@ describe('criarEventoCore — criação de rascunho (S201-T2)', () => {
 // ── publicarEvento (integração · RN-201) ──────────────────────────────────
 
 describe('publicarEventoCore — RN-201', () => {
-  it('rascunho completo → { url beh.ro/slug, qrUrl } e status publicado', async () => {
+  // A base pública sai do AMBIENTE desde o S1214-T3 (RN-423). O domínio de
+  // terceiro que estava cravado no código morreu; o teste agora prova que a
+  // URL DERIVA da variável, e o bloco no fim prova o fail-closed sem ela.
+  const BASE_TESTE = 'https://leela-teste.example';
+  const baseOriginal = process.env[ENV_BASE_PUBLICA];
+  beforeAll(() => {
+    process.env[ENV_BASE_PUBLICA] = BASE_TESTE;
+  });
+  afterAll(() => {
+    if (baseOriginal === undefined) delete process.env[ENV_BASE_PUBLICA];
+    else process.env[ENV_BASE_PUBLICA] = baseOriginal;
+  });
+
+  it('rascunho completo → { url {base}/slug, qrUrl } e status publicado', async () => {
     const { eventoId } = await criarEventoCore(db, inputValido(), marina);
     const res = await publicarEventoCore(db, { eventoId }, marina);
 
-    expect(res.url).toBe(`https://beh.ro/${eventoId}`);
+    expect(res.url).toBe(`${BASE_TESTE}/${eventoId}`);
     expect(res.url).toBe(urlPublicaDoEvento(eventoId));
+    // O domínio dos mocks Be Hero não sai mais daqui em nenhuma hipótese.
+    expect(res.url).not.toContain('beh.ro');
     expect(res.replay).toBe(false);
     // QR gerado server-side, payload = url (asset renderizável em <img>)
     expect(res.qrUrl.startsWith('data:image/png;base64,')).toBe(true);
@@ -381,6 +396,30 @@ describe('publicarEventoCore — RN-201', () => {
       'failed-precondition',
       'encerrado'
     );
+  });
+
+  it('SEM base pública configurada, publicar falha alto e NÃO grava URL torta', async () => {
+    // Fail-closed deliberado (RN-423): a `url` é persistida e lida depois pelo
+    // painel e pelo QR do evento. Gravar a errada espalha o defeito pelo banco
+    // e sobrevive ao fix; recusar morre na hora, na frente de quem conserta.
+    const { eventoId } = await criarEventoCore(db, inputValido(), marina);
+    delete process.env[ENV_BASE_PUBLICA];
+    const semLanding = process.env['NEXT_PUBLIC_LEELA_URL'];
+    delete process.env['NEXT_PUBLIC_LEELA_URL'];
+    try {
+      await expectHttpsError(
+        publicarEventoCore(db, { eventoId }, marina),
+        'failed-precondition',
+        ENV_BASE_PUBLICA
+      );
+    } finally {
+      process.env[ENV_BASE_PUBLICA] = BASE_TESTE;
+      if (semLanding !== undefined) process.env['NEXT_PUBLIC_LEELA_URL'] = semLanding;
+    }
+    // E o evento continua RASCUNHO: a guarda barra antes da transação, então
+    // não existe o estado "publicado no banco e com erro na tela".
+    const snap = await db.doc(`eventos/${eventoId}`).get();
+    expect(snap.get('status')).toBe('rascunho');
   });
 
   it('cross-tenant: owner de B NÃO publica evento de A (RN-400)', async () => {

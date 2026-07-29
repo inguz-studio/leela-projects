@@ -14,7 +14,9 @@ Autoridade de escopo: `leela-specs/02-rodadas/2026-07-29-pagina-ingresso/03-fila
       de tokens do DS), **24 testes** da landing + **38** das functions (slug + criarEvento),
       `next build` verde com a rota `ƒ /ingresso/[token]` em **146 B** — o mesmo peso do
       `_not-found`, ou seja **nenhuma dependência nova no bundle público**
-- [ ] **T3 · `S1214-T3`** — base pública por ambiente + link por inscrito no e-mail + morte do `beh.ro`
+- [x] **T3 · `S1214-T3`** — base pública por ambiente + link por inscrito no e-mail + morte do `beh.ro`
+      · gate VERDE: `tsc --noEmit`, ESLint zero-warning, **68 testes** (base pública + template +
+      `criarPublicarEvento` + `emailIngressos`, os dois últimos reescritos para a base nova)
 - [ ] **T4 · `S1214-T4`** — versão imprimível A4
 - [ ] **T5 · `S1206-T7`** — fecho de board + épico
 - [ ] Deploy de preview (landing + functions tocadas) com provas curl
@@ -154,6 +156,68 @@ saber quais palavras a landing usa.
 **Título genérico de propósito.** `metadata.title` é "Seu ingresso · Leela", sem nome de pessoa:
 título com nome vaza no histórico do navegador e na aba compartilhada em tela.
 
+### T3 · `S1214-T3`
+
+```
+cd functions && npx firebase-tools@13 emulators:exec --project demo-leela \
+  "npx vitest run src/__tests__/basePublicaEmailLink.test.ts \
+   src/__tests__/criarPublicarEvento.integration.test.ts \
+   src/__tests__/emailIngressos.integration.test.ts"
+ Test Files  3 passed (3)
+      Tests  68 passed (68)
+```
+
+**Varredura de `beh.ro` depois da T3** (`grep -rn "beh\.ro" --include=*.ts functions/src apps
+packages/*/src`): **zero** ocorrências em caminho de código que produz URL. O que sobra:
+
+| Onde | O que é | Veredito |
+|---|---|---|
+| `functions/src/eventos/basePublica.ts` (2×) | o comentário que EXPLICA o que morreu | fica |
+| `functions/src/__tests__/basePublicaEmailLink.test.ts` (3×) | asserções `not.toContain('beh.ro')` | fica — é a guarda |
+| `functions/src/seed/parcerias.seed.ts` + testes de parceria (9×) | campo `linkMaster` de AFILIADO, outro domínio de dados (E08) | **fora do escopo desta fila** — registrado, não tocado |
+| `apps/painel/.../configForm.test.ts` | asserção `not.toContain('beh.ro')` que já existia | fica |
+
+**⚔ 8 coberto.** `basePublicaEmailLink.test.ts` prova, sobre o template de verdade: um link por
+INSCRITO (cada um no bloco do seu dono, tanto no HTML quanto no texto); o link é ACRÉSCIMO (código
+em texto e os dois `<img>` de QR continuam lá); e, sem base, o e-mail sai sem link nenhum e **sem
+`undefined`, sem `null` e sem o domínio antigo** em nenhuma das duas partes. Link de ingresso torto
+não vira link; `linkEvento` presente e torto continua sendo erro alto.
+
+### P-INGPAGE-3 · Publicar evento FALHA ALTO sem base pública, e a guarda vem antes da transação
+
+O e-mail degrada (sai sem link) e a publicação recusa. As duas escolhas são opostas de propósito:
+a `url` da publicação é **persistida** e depois lida pelo painel e virada em QR do evento. URL
+errada gravada no banco se espalha e sobrevive ao fix; recusa com mensagem acionável morre na hora,
+na frente de quem pode consertar. É a disciplina de `carregarQrKeyring` — config quebrada grita na
+carga.
+
+A guarda ficou **antes** de `runTransaction`, não depois: com ela no fim, o evento já teria
+`status: publicado` gravado e a chamada morreria mesmo assim. "Publicado no banco e com erro na
+tela" é o pior dos dois mundos. Há teste para isso — depois da recusa o evento continua `rascunho`.
+
+**Se o dono vetar:** publicar volta a funcionar sem base e grava `url` vazia, e o painel precisa
+tratar evento publicado sem URL.
+
+### P-INGPAGE-4 · O backfill vem como ferramenta, não como execução
+
+`functions/scripts/backfill-url-eventos.mjs` reescreve a `url` dos eventos publicados antes do fix.
+**Default é `--dry-run`: lista e não escreve.** Aplicar exige `--apply`.
+
+**A lane NÃO rodou o script contra produção.** Reescrever documento em produção é operação, não
+build, e o dono é quem decide. A recomendação, herdada da LANDING-PREVIEW e mantida: **fazer o
+backfill** — o campo é lido pelo painel e vira o QR do evento, então deixá-lo apontando para
+`beh.ro` mantém o defeito visível para o organizador mesmo com o código já limpo.
+
+```
+LEELA_PUBLIC_URL=https://leela-landing.web.app \
+  node functions/scripts/backfill-url-eventos.mjs --project prod          # dry-run
+LEELA_PUBLIC_URL=https://leela-landing.web.app \
+  node functions/scripts/backfill-url-eventos.mjs --project prod --apply  # aplica
+```
+
+O script é idempotente (a `url` é função de `base + slug`), pula o que já está certo e não inventa
+`url` para evento nunca publicado.
+
 ## Reaproveitado vs criado
 
 **T1 · reaproveitado:** keyring inteiro (`carregarQrKeyring`/`obterQrKeyring`/`QrKeyring`) — nenhum
@@ -181,3 +245,14 @@ como referência de forma; `slugify`/`slugCandidato`/`MAX_TENTATIVAS_SLUG`; `rob
 `app/(public)/ingresso/[token]/page.tsx` e `IngressoView.tsx`; bloco `headers()` no
 `next.config.js`; `SLUGS_RESERVADOS`/`slugReservado` em `functions/src/eventos/slug.ts`; três
 arquivos de teste.
+
+**T3 · reaproveitado:** `renderIngressosCompraEmail` inteiro — o bloco de cada inscrito ganhou um
+parágrafo e nada mais foi reescrito; `isLinkDeAppValido`, `escapeHtml`, `limparCampoCurto` e
+`botaoLink` do próprio `templates.ts`; `assinarLinkIngresso` e `obterQrKeyring` da T1 (o link do
+e-mail usa o mesmo token da página); `gerarQrDataUrl`; a chave de idempotência da RN-219, **não
+tocada**; as suítes `criarPublicarEvento` e `emailIngressos`, adaptadas em vez de substituídas.
+
+**T3 · criado:** `functions/src/eventos/basePublica.ts` (`basePublica`, `urlPublicaDoEvento`,
+`urlIngressoPorLink`); `functions/scripts/backfill-url-eventos.mjs`;
+`functions/src/__tests__/basePublicaEmailLink.test.ts`; o campo `linkIngresso` em
+`IngressoDoEmail` e a opcionalidade de `linkEvento`.
