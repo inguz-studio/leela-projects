@@ -165,6 +165,13 @@ export { varrerEstornosOrfaos } from './checkout/estornarPagamentoOrfao';
 // (15 min, mesmo molde do item 27) re-tenta a emissão, fecha o e-mail sobre a
 // idempotência da RN-219 e alerta quando a re-tentativa esgota.
 export { varrerIngressosOrfaos } from './eventos/varrerIngressosOrfaos';
+// Página do ingresso (S1214-T1 · RN-418/419/421/422): endpoint HTTP que
+// verifica o token `LLIP1` do link e devolve a projeção mínima com o QR já
+// renderizado. Somente leitura — não credencia, não emite, não muda estado.
+// A chave de assinatura fica AQUI e nunca desce para o runtime da landing
+// (D-ING-3): com ela lá, uma falha de dependência da superfície pública
+// permitiria cunhar QR de check-in offline sem tocar no banco.
+export { ingressoPorLink } from './http/ingressoPorLink';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via

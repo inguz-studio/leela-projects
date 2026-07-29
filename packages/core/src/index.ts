@@ -374,6 +374,26 @@ export {
   gerarCodigoIngresso,
 } from './tickets/codigoIngresso';
 
+// Token do LINK da página do ingresso (S1214-T1 · RN-419/RN-421) — parte pura.
+// A verificação criptográfica vive nas Functions; aqui só formato, parse e a
+// matriz de estados que a página renderiza.
+export {
+  VERSAO_LINK_INGRESSO,
+  LINK_INGRESSO_MAX_CHARS,
+  LINK_INGRESSO_ASSINATURA_BYTES,
+  codificarPayloadLinkIngresso,
+  conteudoVisivelLinkIngresso,
+  montarLinkIngressoToken,
+  parseLinkIngressoToken,
+  dominiosDeTokenSeparados,
+  estadoMostraQr,
+} from './tickets/linkIngresso';
+export type {
+  LinkIngressoPayload,
+  ParseLinkIngressoResult,
+  EstadoIngressoPagina,
+} from './tickets/linkIngresso';
+
 // Exigências de saúde + regulamento (E04 · LEELA-S306 · RN-146/147/149)
 export type { ExigenciasSaude } from './eventos/exigenciasSaude';
 export {
