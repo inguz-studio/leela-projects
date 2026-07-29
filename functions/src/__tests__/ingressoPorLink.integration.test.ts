@@ -239,6 +239,52 @@ describe.skipIf(!hasEmulator)('ingressoPorLink — S1214-T1', () => {
     expect(new Set(respostas.map((r) => JSON.stringify(r))).size).toBe(1);
   });
 
+  it('⚔ 2 — id que o Firestore RECUSA colapsa na mesma negativa, sem 503 (INGPAGE-REV)', async () => {
+    // O buraco que este caso fecha: `ingressoPorLinkCore` monta o caminho do
+    // documento com `eventoId`/`inscritoId` vindos do payload ANTES de poder
+    // verificar a assinatura (o binding da RN-420 exige ler o `qrToken`
+    // gravado). Um id com número ímpar de segmentos, ou com `//`, fazia
+    // `.doc()` LANÇAR de forma síncrona; o endpoint traduzia a exceção em 503
+    // com corpo próprio, e a página renderizava "indisponível" em vez de "não
+    // encontrado". Quem forja o link escolhia qual das duas telas sai — o
+    // oráculo que a RN-419 proíbe.
+    const qrToken = (await semear()) as string;
+
+    const idsQueOFirestoreRecusa = ['a/b', 'a//b', '..', '.', '__proto__'];
+    const respostas: (unknown | null)[] = [];
+
+    for (const idTorto of idsQueOFirestoreRecusa) {
+      // Torto no EVENTO…
+      respostas.push(
+        await ingressoPorLinkCore(
+          adminDb,
+          assinarLinkIngresso(
+            { inscritoId: INSCRITO_ID, eventoId: idTorto, tenantId: TENANT_ID },
+            qrToken,
+            RING_K1
+          ),
+          RING_K1
+        )
+      );
+      // …e torto no INSCRITO.
+      respostas.push(
+        await ingressoPorLinkCore(
+          adminDb,
+          assinarLinkIngresso(
+            { inscritoId: idTorto, eventoId: EVENTO_ID, tenantId: TENANT_ID },
+            qrToken,
+            RING_K1
+          ),
+          RING_K1
+        )
+      );
+    }
+
+    // Nenhuma exceção escapou (seria 503) e todas são a MESMA negativa.
+    for (const r of respostas) expect(r).toBeNull();
+    expect(new Set(respostas.map((r) => JSON.stringify(r))).size).toBe(1);
+  });
+
   it('⚔ 3 — rotação de kid NÃO mata link já enviado', async () => {
     const qrToken = (await semear()) as string; // token e link assinados com k1
     const link = linkDe(qrToken);

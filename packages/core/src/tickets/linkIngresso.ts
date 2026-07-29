@@ -195,10 +195,45 @@ export function parseLinkIngressoToken(token: unknown): ParseLinkIngressoResult 
   };
 }
 
+/**
+ * Id bem-formado E utilizável como id de documento do Firestore.
+ *
+ * POR QUE A SEGUNDA METADE EXISTE (review INGPAGE-REV, achado 1). No check-in
+ * (`registrarCheckin.ts`) a ordem é "criptografia PRIMEIRO — o payload só
+ * existe após assinatura válida", então o id que vira caminho de documento já
+ * foi assinado pelo servidor. O link INVERTE essa ordem por necessidade: o
+ * binding da RN-420 cobre o `qrToken` GRAVADO, então é preciso LER o doc antes
+ * de poder verificar — e, nesse intervalo, `inscritoId`/`eventoId` são entrada
+ * NÃO CONFIÁVEL vinda de um token que ainda não foi verificado.
+ *
+ * Sem esta guarda, um id com número ímpar de segmentos (`"a/b"`) ou com `//`
+ * faz `collection('eventos').doc(id)` LANÇAR de forma síncrona, antes de
+ * qualquer verificação. O endpoint transforma essa exceção em `503` com corpo
+ * `{"ok":false,"erro":"indisponivel"}` — diferente, byte a byte, da negativa
+ * única `{"ok":false}` da RN-419. Ou seja: uma propriedade do token escolhida
+ * por quem forja o link seleciona qual das duas respostas sai, e a página
+ * renderiza telas diferentes para cada uma. Isso é exatamente o oráculo que a
+ * RN-419 proíbe, além de virar um 5xx e um `logger.error` por request num
+ * endpoint público e não autenticado.
+ *
+ * O critério é o do próprio Firestore para id de documento: sem `/`, nunca
+ * `.` nem `..`, e fora do espaço reservado `__*__`. Nenhum id legítimo (auto-id
+ * ou slug do produto) é recusado por isto — o que ele recusa é só o que o SDK
+ * recusaria lançando.
+ * @pure
+ */
 function idValido(valor: unknown): valor is string {
-  return (
-    typeof valor === 'string' && valor.length > 0 && valor.length <= ID_MAX_CHARS
-  );
+  if (
+    typeof valor !== 'string' ||
+    valor.length === 0 ||
+    valor.length > ID_MAX_CHARS
+  ) {
+    return false;
+  }
+  if (valor.includes('/')) return false;
+  if (valor === '.' || valor === '..') return false;
+  if (/^__.*__$/.test(valor)) return false;
+  return true;
 }
 
 // ---------------------------------------------------------------------------
