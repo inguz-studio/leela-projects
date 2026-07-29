@@ -158,8 +158,11 @@ export function StepResumo({
 
       {/* Forma de pagamento — D-5: BOTÕES (RadioCard do DS), sem toggle.
           D-0729-6: escolher "cartão" abre os campos do cartão AQUI, no 1º
-          clique — antes eles só existiam na tela seguinte. */}
-      <section className="flex flex-col gap-[var(--spacing-3)]">
+          clique — antes eles só existiam na tela seguinte.
+          C3 (achado 13): a `<section>` com gap-[var(--spacing-3)] envolvia
+          um ÚNICO filho — gap sem efeito (nada para espaçar). Removida; o
+          ritmo com os vizinhos (Seu pedido/Cupom/Totais) já é o gap-6 do
+          stack externo, o mesmo critério usado por eles. */}
         <SeletorForma
           forma={forma}
           onForma={onForma}
@@ -245,7 +248,6 @@ export function StepResumo({
             </div>
           }
         />
-      </section>
 
       {/* Totais — renderizados da cotação, sem cálculo local */}
       <section className="rounded-ds-lg border border-border-default bg-surface-sunken p-4 sm:p-5">

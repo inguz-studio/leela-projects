@@ -36,7 +36,10 @@ export function KitDetalhe({ kit }: { kit: KitPublico }): React.JSX.Element {
   );
 
   return (
-    <div className="mt-4 rounded-ds-md border border-border-subtle bg-surface-sunken p-4">
+    // C3 (achado 13): margem própria removida — o único consumidor
+    // (StepModalidadeKit, "seleção de kits") já stacka este painel num gap-4
+    // com o picker/grade acima; um mt-4 aqui duplicava a distância.
+    <div className="rounded-ds-md border border-border-subtle bg-surface-sunken p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
         <div className="w-full shrink-0 sm:w-36">
           <KitImagem src={img.src} alt={rotuloKit(kit.nome)} ampliavel={img.ampliavel} />

@@ -55,7 +55,10 @@ function SeletorGradeItem({
   const linhaAtiva = corteAtivo ? (item.grade.find((g) => g.corte === corteAtivo) ?? null) : null;
 
   return (
-    <div className="mt-4 flex flex-col gap-3">
+    // C3: margem própria removida — o pai (StepModalidadeKit) já stacka os
+    // itens de grade num gap-4; um mt-4 aqui dobraria a distância quando há
+    // 2+ itens tamanhados no mesmo kit.
+    <div className="flex flex-col gap-3">
       {!soUnissex ? (
         <RadioGroup
           name={`corte-${inscritoIndex}-${item.id}`}
@@ -193,103 +196,113 @@ export function StepModalidadeKit({
             podeRemover={podeRemover}
             onRemover={() => onRemoveInscrito(i)}
           >
-            {/* Modalidade — trocar a modalidade zera o kit (a oferta muda). */}
-            <RadioGroup
-              name={`modalidade-${i}`}
-              label="Modalidade"
-              value={inscrito.modalidade}
-              onValueChange={(v) => onInscrito(i, { modalidade: v, kitId: '', tamanhos: {} })}
-              errorMessage={errosModalidade[i] ?? ''}
-            >
-              {modalidades.map((m) => {
-                const indisponivel = m.precoVigente === null;
-                return (
-                  <RadioCard
-                    key={m.nome}
-                    value={m.nome}
-                    disabled={indisponivel}
-                    title={m.nome}
-                    description={indisponivel ? 'Sem lote disponível no momento' : 'Percurso oficial'}
-                    badge={
-                      <Badge variant={indisponivel ? 'neutro' : 'brand'}>
-                        {indisponivel ? 'Indisponível' : formatarPreco(m.precoVigente)}
-                      </Badge>
-                    }
-                  />
-                );
-              })}
-            </RadioGroup>
-
-            {/* Kit — filtrado pela modalidade escolhida (RN-210). */}
-            <div className="mt-5">
-              {!modalidadeEscolhida ? (
-                <div>
-                  <p className="text-sm font-medium text-text-primary">Kit</p>
-                  <p className="mt-1 text-sm text-text-tertiary">
-                    Escolha a modalidade para ver os kits disponíveis.
-                  </p>
-                </div>
-              ) : kitsOfertados.length === 0 ? (
-                <div>
-                  <p className="text-sm font-medium text-text-primary">Kit</p>
-                  <p className="mt-1 text-sm text-text-tertiary">
-                    Nenhum kit para a modalidade {inscrito.modalidade} — a inscrição vai sem kit.
-                  </p>
-                </div>
-              ) : (
-                <RadioGroup
-                  name={`kit-${i}`}
-                  label="Kit"
-                  value={inscrito.kitId}
-                  onValueChange={(v) => onInscrito(i, { kitId: v, tamanhos: {} })}
-                  errorMessage={errosKit[i] ?? ''}
-                >
-                  {kitsOfertados.map((k) => (
+            {/* Achado 13 · C3: ritmo vertical por UM stack gap-6 (blocos
+                distintos: Modalidade × Kit), com Kit sendo seu próprio
+                gap-4 interno (picker → tamanho → detalhe) — dois degraus
+                coerentes, nada de mt-* ad hoc por vizinho. */}
+            <div className="flex flex-col gap-6">
+              {/* Modalidade — trocar a modalidade zera o kit (a oferta muda). */}
+              <RadioGroup
+                name={`modalidade-${i}`}
+                label="Modalidade"
+                value={inscrito.modalidade}
+                onValueChange={(v) => onInscrito(i, { modalidade: v, kitId: '', tamanhos: {} })}
+                errorMessage={errosModalidade[i] ?? ''}
+              >
+                {modalidades.map((m) => {
+                  const indisponivel = m.precoVigente === null;
+                  return (
                     <RadioCard
-                      key={k.id}
-                      value={k.id}
-                      title={k.nome}
-                      description="Retirado nas janelas do evento, mediante documento."
+                      key={m.nome}
+                      value={m.nome}
+                      disabled={indisponivel}
+                      title={m.nome}
+                      description={indisponivel ? 'Sem lote disponível no momento' : 'Percurso oficial'}
                       badge={
-                        <Badge variant={k.preco < 0 ? 'vitoria' : k.preco === 0 ? 'neutro' : 'brand'}>
-                          {labelDeltaKit(k.preco)}
+                        <Badge variant={indisponivel ? 'neutro' : 'brand'}>
+                          {indisponivel ? 'Indisponível' : formatarPreco(m.precoVigente)}
                         </Badge>
                       }
                     />
-                  ))}
-                </RadioGroup>
-              )}
-              {/* RN-231: com grade configurada o tamanho é escolhido AQUI
-                  (corte → tamanho, por atleta); sem grade, mantém a nota do
-                  fluxo antigo (confirmação na retirada). */}
-              {itensDoKitEscolhido.length === 0 ? (
-                <p className="mt-2 text-xs text-text-tertiary">
-                  O tamanho do kit é confirmado na retirada, nas janelas do evento.
-                </p>
-              ) : (
-                itensDoKitEscolhido.map((item) => (
-                  <SeletorGradeItem
-                    key={item.id}
-                    item={item}
-                    inscritoIndex={i}
-                    valor={inscrito.tamanhos[item.id] ?? ''}
-                    onChange={(sufixo) => {
-                      // Corte trocado (sufixo '') REMOVE a escolha do item —
-                      // nunca fica um tamanho de corte antigo no payload.
-                      const { [item.id]: _fora, ...resto } = inscrito.tamanhos;
-                      onInscrito(i, {
-                        tamanhos:
-                          sufixo.length > 0 ? { ...resto, [item.id]: sufixo } : resto,
-                      });
-                    }}
-                    errorMessage={errosTamanhos[i]?.[item.id] ?? ''}
-                  />
-                ))
-              )}
+                  );
+                })}
+              </RadioGroup>
 
-              {/* Frente 7: visão do kit escolhido — imagem 1:1, descrição e o
-                  que está incluso, com hierarquia de H's/textos do DS. */}
-              {kitSelecionado ? <KitDetalhe kit={kitSelecionado} /> : null}
+              {/* Kit — filtrado pela modalidade escolhida (RN-210). */}
+              <div className="flex flex-col gap-4">
+                {!modalidadeEscolhida ? (
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Kit</p>
+                    <p className="mt-1 text-sm text-text-tertiary">
+                      Escolha a modalidade para ver os kits disponíveis.
+                    </p>
+                  </div>
+                ) : kitsOfertados.length === 0 ? (
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Kit</p>
+                    <p className="mt-1 text-sm text-text-tertiary">
+                      Nenhum kit para a modalidade {inscrito.modalidade} — a inscrição vai sem kit.
+                    </p>
+                  </div>
+                ) : (
+                  <RadioGroup
+                    name={`kit-${i}`}
+                    label="Kit"
+                    value={inscrito.kitId}
+                    onValueChange={(v) => onInscrito(i, { kitId: v, tamanhos: {} })}
+                    errorMessage={errosKit[i] ?? ''}
+                  >
+                    {kitsOfertados.map((k) => (
+                      <RadioCard
+                        key={k.id}
+                        value={k.id}
+                        title={k.nome}
+                        description="Retirado nas janelas do evento, mediante documento."
+                        badge={
+                          <Badge variant={k.preco < 0 ? 'vitoria' : k.preco === 0 ? 'neutro' : 'brand'}>
+                            {labelDeltaKit(k.preco)}
+                          </Badge>
+                        }
+                      />
+                    ))}
+                  </RadioGroup>
+                )}
+                {/* RN-231: com grade configurada o tamanho é escolhido AQUI
+                    (corte → tamanho, por atleta); sem grade, mantém a nota do
+                    fluxo antigo (confirmação na retirada). Nota e grade são os
+                    DOIS ramos do MESMO slot — mesma margem nos dois, nunca uma
+                    diferente da outra (era mt-2 × mt-4 antes do C3). */}
+                {itensDoKitEscolhido.length === 0 ? (
+                  <p className="text-xs text-text-tertiary">
+                    O tamanho do kit é confirmado na retirada, nas janelas do evento.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {itensDoKitEscolhido.map((item) => (
+                      <SeletorGradeItem
+                        key={item.id}
+                        item={item}
+                        inscritoIndex={i}
+                        valor={inscrito.tamanhos[item.id] ?? ''}
+                        onChange={(sufixo) => {
+                          // Corte trocado (sufixo '') REMOVE a escolha do item —
+                          // nunca fica um tamanho de corte antigo no payload.
+                          const { [item.id]: _fora, ...resto } = inscrito.tamanhos;
+                          onInscrito(i, {
+                            tamanhos:
+                              sufixo.length > 0 ? { ...resto, [item.id]: sufixo } : resto,
+                          });
+                        }}
+                        errorMessage={errosTamanhos[i]?.[item.id] ?? ''}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Frente 7: visão do kit escolhido — imagem 1:1, descrição e o
+                    que está incluso, com hierarquia de H's/textos do DS. */}
+                {kitSelecionado ? <KitDetalhe kit={kitSelecionado} /> : null}
+              </div>
             </div>
           </CardAtleta>
         );
