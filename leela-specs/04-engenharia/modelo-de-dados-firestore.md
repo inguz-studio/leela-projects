@@ -25,6 +25,7 @@ Auth: doc criado no primeiro login (Firebase Auth uid = atletaId).
 ### `profissionais/{profId}`
 Campos: `nome`, `email` (único), `papeis[]` (coordenador/organizador/admin via custom claims).
 Relações: 1:N owner de `clubes`; ⇄ N:N parceiro de clube (ver `clubes/{id}/parceiros`).
+➕ Onboarding self-service (SPEC-ONBOARD · RN-411/412): `statusOnboarding` (`aguardando_convite`/`ativo`), `telefone?`, `nomeOrganizacao?` (semente do tenant — P7), `consentimentoLgpd{ versao, aceitoEm, finalidade }`. O doc nasce no cadastro (create do próprio uid, shape validado por Rule); o resgate do código (RN-414) o promove a `ativo` via `provisionTenant` (RN-403 já previa "criar se não existir"). PII vive só aqui, nunca em claims.
 
 ### `clubes/{clubId}`  (docId = slug)
 Campos: `nome`(≤60), `descricao`(≤280), `slug`(único), `categoria`, `modalidade`, `localizacao`, `ownerId→profissionais`, `codigoConvite`(5 chars, exclui 0/O/1/I/L — RN-101), `visibilidade`(publica/indexavel/privada — RN-140), `aprovacaoManual`(bool — RN-141), `modeloEntrada`(gratuito/pago_em_breve — RN-104), `criadoEm`.
@@ -227,6 +228,14 @@ Fluxo de saque do produtor SEM afiliação, SEM reembolso (S904 vive em E04-S305
 
 ### Auth / papéis (custom claims)
 `role` ∈ {`platform_admin`, `tenant_owner`, `tenant_staff`, `promoter`, `athlete`} + `tenantId`. Security Rules: dado tenant-scoped só acessível por membros do tenant (claim `tenantId` bate) ou `platform_admin`; `atletas` lê o próprio doc.
+
+### ➕ Convites de organizador (onboarding self-service · SPEC-ONBOARD 2026-07-28)
+
+Convite de **organizador para a plataforma** — não confundir com `clubes.codigoConvite` (RN-101, atleta→clube) nem com `clubes/{id}/convites` (S104, e-mail de clube). RNs: RN-413/414/415.
+
+- ➕ `convitesOrganizador/{codigo}` (coleção raiz da plataforma; **docId = código normalizado**: 8 chars, alfabeto maiúsculo sem `0 O 1 I L` — constante única no core) — `status` (`ativo`/`usado`/`revogado`/`expirado`), `nota?` (rótulo livre do admin, p/ organizar), `expiraEm?` (opcional; avaliada no resgate contra o relógio do servidor, sem cron), `criadoPor` (uid `platform_admin`), `criadoEm`, `usadoPor?` (uid), 🔁`usadoPorEmail?`, `usadoEm?`, `tenantId?→tenants` (provisionado no resgate), `atualizadoEm`. **Uso único** (P2).
+- **Rules:** leitura E escrita de cliente **só** `platform_admin`; o candidato **nunca** lê a coleção (anti-enumeração — RN-414). O resgate acontece exclusivamente pela Function `resgatarConviteOrganizador` (Admin SDK), que na MESMA transação carimba o uso e provisiona o tenant via `provisionTenant` (RN-403). Rate-limit de resgate: 5 tentativas/hora por conta autenticada (RN-415; contador server-side).
+- Config do CTA de contato: `platform/config.contatoOnboarding` `{ tipo: 'whatsapp'|'email', valor }` (RN-417) — escrita só `platform_admin`, mesmo padrão do restante de `platform/config`.
 
 ---
 
