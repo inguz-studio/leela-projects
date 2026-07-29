@@ -61,12 +61,18 @@ tags:
         - [x] S1206-T6 e-mail de compra com QR e código de cada inscrito ⚔ · `a58ee35` — entregou também o disparo ao responsável (o S1206-T3 nunca tinha sido construído)
         - [x] S1206-T8 pedido pago sem ingresso deixa de ser órfão em silêncio: extrato de pendência no ponto da falha, varredura de 15 em 15 minutos que re-tenta a emissão e fecha o e-mail, alerta contável quando a re-tentativa esgota (item 54 · RN-382, reusando o desenho do item 27) · `45c4722` — tarefa nova, criada pela lane INGQR-POLISH
         - [x] S1206-T9 a emissão confere o `pedidoRef` de volta em cada inscrito antes de emitir — inscrito de outro pedido não sai com ingresso nem entra no e-mail de terceiro (achado 4 da INGQR-REV) · `2e14d39` — tarefa nova, criada pela lane INGQR-POLISH
-        - [ ] S1206-T7 código identificador no PDF sob demanda 🧊 **bloqueado**: não existe geração de PDF no repo (o S1206-T4 é que cria a superfície); nada a acrescentar antes dela
+        - [ ] S1206-T7 código identificador no PDF sob demanda 🔓 **desbloqueado em 29/07 pela SPEC-INGPAGE**: a superfície que faltava é a versão imprimível da página do ingresso (`S1214-T4` · RN-424), não um gerador de PDF; depende agora do `S1214-T4`
     - [ ] **S211 · Tabela do organizador e credenciamento (E03)** — construído em 28/07 pela lane INGRESSO-QR; INGQR-REV aprovou; a INGQR-POLISH fechou o achado 5
         - [x] S211-T1 coluna do código na lista e QR por ação na linha · `bf2ec05`
         - [x] S211-T2 vocabulário de credenciamento em toda superfície lida · `ca6baf2`
         - [x] S211-T3 rota `/credenciamento` com o redirecionamento garantido da antiga · `a089ba2`
         - [x] S211-T4 o dublê de layout do teste de precedência ganhou `<Outlet/>`: asserção sobre rota filha de `:slug` deixa de nascer falso-verde (achado 5 da INGQR-REV) · `d7cd6b5` — tarefa nova, criada pela lane INGQR-POLISH
+- [ ] **[E12] Página própria do ingresso — o QR que o Gmail não mostra passa a ter endereço** — hoje o QR vai dentro do corpo do e-mail por privacidade, e Gmail e Outlook simplesmente não desenham imagem assim; anexo embutido morreu por prova (o provedor de e-mail não tem esse campo). A saída é dar ao ingresso uma página da Leela: cada inscrito da compra ganha no e-mail um link só dele, que abre sem login e mostra o QR, o código e o essencial do ingresso. O link não carrega a credencial de entrada — carrega um bilhete próprio, assinado, que o servidor confere; trocar a chave de assinatura não mata link já enviado, e re-emitir o ingresso mata o link antigo daquela pessoa. Ingresso estornado ou cancelado abre sem QR, para ninguém viajar até a prova e ser barrado na fila. E a mesma página em versão para imprimir é o PDF do ingresso, sem instalar nada novo no sistema 📋 executável · item 55 · rodada `02-rodadas/2026-07-29-pagina-ingresso` · RN-418..424 [[LEELA-E12-landing]]
+    - [ ] **S1214 · Página própria do ingresso (E12)**
+        - [ ] S1214-T1 bilhete assinado do link e leitura do ingresso pelo servidor, com o QR já desenhado ⚔
+        - [ ] S1214-T2 a página `/ingresso/{link}` na landing, com o que aparece em cada estado do ingresso ⚔
+        - [ ] S1214-T3 endereço público único do produto e o link de cada inscrito dentro do e-mail da compra ⚔
+        - [ ] S1214-T4 versão para imprimir, que é o PDF do ingresso
 - [ ] **[E16] Catálogo de benefícios da plataforma** — como administrador Leela você cadastra cupons de benefício e parceiros presenciais, com endereço, descritivo, capa, logo e fotos. O cupom aqui **não** é o cupom de venda do organizador e não encosta em preço, taxa nem repasse. Publicar deixa pronto para exibir, mas a vitrine para o atleta é decisão de outra hora, e a tela diz isso 📋 **prioridade baixa declarada por você**; não bloqueia nada [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S1607 · Catálogo de benefícios da plataforma**
         - [ ] S1607-T1 modelo, core e Rules com escrita exclusiva do admin da plataforma ⚔
