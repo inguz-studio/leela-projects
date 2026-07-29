@@ -127,7 +127,7 @@ Capacidades transversais (referenciadas pelos épicos, não são épicos isolado
 >
 > **Estado em 2026-07-19:** Ondas 0 a 3 estão **entregues** (histórico e prova em `00-boards/BOARD-HISTORICO.md` e nos `outputs/leela-build-2d6ee98d/*-REPORT.md`). Ficam registradas abaixo como lastro de dependência. A onda **em execução** é a 4. Ondas 0-3 não voltam a ser fonte de despacho.
 >
-> **Rota de modelo (Regra L, Vitor 2026-07-19):** o teto é **opus**. Toda ocorrência de "ROTA FABLE" nos blocos históricos abaixo lê-se **opus effort xhigh**. Sonnet segue proibido no Leela. Classe mecânica com gate determinístico roteia **haiku**. Estourou opus no effort máximo ⇒ escala para o humano.
+> **Rota de modelo (Regra L, Vitor 2026-07-19; AMENDADA em 2026-07-29):** o teto segue **opus** (Fable não entra; estourou opus no effort máximo ⇒ escala para o humano). Toda ocorrência de "ROTA FABLE" nos blocos históricos abaixo lê-se **opus effort xhigh**. **Sonnet e haiku LIBERADOS pelo dono em 2026-07-29** ("se voce identificar que existem tarefas que podem ser feitas no sonnet e no haiku, após organizar via Opus, pode fazer"): tarefa mecânica/bem especificada pode rotear sonnet (volume/UI mecânica com spec fechada) ou haiku (transform com gate determinístico), DESDE QUE a organização — spec, fila, critérios de aceite — tenha saído de opus, e com gate executável por task. Crítico (dinheiro, segurança, rules, PII, review antagonista, veredito de gate, root-cause) permanece **opus**.
 
 **Onda 0 · Fundação (bloqueia tudo) — ✅ entregue**
 - LEELA-E00 — monorepo Turborepo, apps Next.js (painel+landing), Expo, projeto Firebase (Firestore + Auth + Functions), CI/CD GitHub Actions, Sentry, convenções de código.
