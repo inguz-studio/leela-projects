@@ -1738,3 +1738,40 @@ De 9 stories e 15 tasks (Expo), o recorte PWA fica em **6 stories**:
 ### O que volta para o Vitor
 
 Três perguntas, todas no ADR-proposta: a opção de arquitetura, se push sem garantia no iOS é aceitável na v1, e se o app instalável fica no mesmo domínio da landing. A segunda é a que pode reverter a decisão de 18/07.
+
+---
+
+## Delta fronteira com a página pública do ingresso (SPEC-INGPAGE · 2026-07-29)
+
+O item 55 do painel criou uma **página pública do ingresso** na landing, aberta por link
+tokenizado por inscrito (E12-S1214 · RN-418..424). Ela não é a área logada do atleta, e a
+fronteira está escrita aqui para não ser redescoberta quando o E13 for construído.
+
+**Por que ela não mora no E13.** O e-mail da compra vai ao **responsável do pedido**
+(ADR-011), que muitas vezes comprou para a família e não é inscrito de nada. Exigir conta
+para ver o ingresso trancaria justamente quem pagou. A página pública é o caminho **sem
+login**, e continua existindo depois que o app existir.
+
+**O que o E13 herda quando for construído.** O `S1306-PWA` ("meus ingressos + QR", o coração
+do recorte PWA) e o `S1314` consomem a **mesma projeção** que a `S1214-T1` cria, em vez de
+reimplementar a leitura do ingresso. O que muda é só a porta:
+
+| | Página pública (E12-S1214) | Meus ingressos (E13-S1306-PWA / S1314) |
+|---|---|---|
+| Quem entra | quem tem o link | quem está logado |
+| O que autoriza | token `LLIP1` verificado no servidor | sessão do atleta + Rules (RN-318) |
+| O que vê | UM ingresso | TODOS os ingressos daquela conta |
+| Estado de check-in | leitura (RN-421) | leitura (RN-221/222) |
+| Escrita | nenhuma | nenhuma |
+
+**O que NÃO muda no E13.** O espelho `atletas/{uid}/inscricoes` do `S1314-T1`, as Rules por
+dono e a proibição de o cliente escrever `checkinEm`/`qrToken` seguem exatamente como estão.
+O cache offline do ingresso, que o recorte PWA identificou como o único cache de conteúdo
+autorizado, continua sendo assunto do E13: a página pública é dinâmica e `no-store` por
+regra de privacidade (RN-422), então ela **não** resolve o QR sem rede — quem resolve é o
+service worker do app.
+
+**Uma ponta a mais para o ADR do PWA.** A terceira pergunta que volta para o Vitor ("se o
+app instalável fica no mesmo domínio da landing") agora tem um vizinho: a rota `/ingresso/*`
+já ocupa espaço nesse domínio e é `noindex` por regra. Quem responder o ADR precisa olhar as
+duas rotas juntas.

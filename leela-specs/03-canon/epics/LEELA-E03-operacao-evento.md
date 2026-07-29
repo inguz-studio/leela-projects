@@ -1931,3 +1931,30 @@ Alinhar os identificadores internos (`kitEntregueEm` e a área de permissão `en
 como card próprio, com o custo declarado, e não de carona numa troca de rótulo.
 
 **Fila completa do pacote:** `02-rodadas/2026-07-28-ingresso-qr/03-fila-codigo.md`.
+
+---
+
+## Delta fronteira com a página pública do ingresso (SPEC-INGPAGE · 2026-07-29)
+
+O item 55 criou uma **página pública do ingresso** (E12-S1214 · RN-418..424), aberta por link
+tokenizado que vai no e-mail da compra. Ela toca o vocabulário e a mecânica deste épico em um
+ponto só, e a fronteira está escrita para não ser redescoberta no balcão.
+
+**A página exibe; o balcão credencia.** Abrir a página **não escreve nada**: não seta
+`checkinEm`, não seta `kitEntregueEm`, não muda status. RN-205, RN-221, RN-222 e RN-399
+seguem intactas — quem registra presença é o operador, pelo scanner, no fluxo do `S208`, e o
+estado continua sendo decidido em transação no servidor.
+
+**O que a página faz com o estado do balcão.** Ela **lê**. Inscrito já credenciado abre a
+página com o credenciamento em destaque e o carimbo, e o QR continua visível (RN-421):
+esconder não protegeria nada, porque o servidor já responde `qr_ja_utilizado` no replay, e
+tiraria da pessoa a conferência de que aquele é o ingresso dela.
+
+**O código identificador não vira credencial por causa da página.** A RN-396 continua valendo
+palavra por palavra: nenhuma superfície aceita o código como prova de entrada, e a página
+também não. Ela mostra o código pelo mesmo motivo do e-mail — para a pessoa ditar no balcão e
+o operador achar na busca que a `S211-T1` entregou.
+
+**O que muda para o operador, na prática.** Quem chega sem celular carregado passa a ter uma
+saída a mais: a folha impressa da página (RN-424). O balcão lê o QR impresso pelo mesmo
+scanner, sem nada novo do lado do organizador.
