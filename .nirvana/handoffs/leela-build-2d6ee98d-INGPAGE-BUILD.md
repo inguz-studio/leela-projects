@@ -20,7 +20,11 @@ Autoridade de escopo: `leela-specs/02-rodadas/2026-07-29-pagina-ingresso/03-fila
 - [x] **T4 · `S1214-T4`** — versão imprimível A4
       · gate VERDE: `tsc --noEmit`, ESLint zero-warning (exit 0 conferido), **13 testes** novos,
       `next build` com `ƒ /ingresso/[token]/imprimir` também em **150 B**
-- [ ] **T5 · `S1206-T7`** — fecho de board + épico
+- [x] **T5 · `S1206-T7`** — fecho de board + épico
+      · `V1-KANBAN` (S1206-T7 marcado coberto, S1214-T1..T4 com commit por tarefa, PENDENTE-DONO
+      criado), `V1-CHECKLIST` (S1206-T7 e S1214 novos; S1206-T4 virou `[~]` com a metade paga
+      declarada), `BOARD-EPICOS` (linha do E12) e o épico `LEELA-E12-landing` (task S1206-T7 +
+      seção da S1214 com a ponta solta P-INGPAGE-1 registrada)
 - [ ] Deploy de preview (landing + functions tocadas) com provas curl
 
 ## Inventário do reconhecimento (o que existe e não se reescreve)

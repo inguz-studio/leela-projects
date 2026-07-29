@@ -1721,10 +1721,15 @@ e acrescenta.
 
 #### LEELA-S1206-T7 · Código identificador no PDF sob demanda
 - **Tipo:** api/function · **Depende de:** S1206-T5 · **Estimativa:** XS · **Rota:** opus
-- **🔓 Desbloqueado em 2026-07-29 (SPEC-INGPAGE):** a superfície que faltava é a **versão
-  imprimível da página do ingresso** (`S1214-T4` · RN-424), não um gerador de PDF. O código
-  está na página, e a página é o PDF. **Depende agora de `S1214-T4`.** Ver a seção
-  "Delta página própria do ingresso" no fim deste épico.
+- **✅ COBERTO em 2026-07-29 (INGPAGE-BUILD · `1d82127`):** a superfície que faltava era a
+  **versão imprimível da página do ingresso** (`S1214-T4` · RN-424), não um gerador de PDF.
+  O código identificador aparece no PDF porque aparece na página, e a página é o PDF —
+  `/ingresso/{token}/imprimir` entrega a mesma leitura em folha A4, com o código em texto ao
+  lado do QR. **Nenhuma dependência de geração de PDF entrou no repo.** Teste de cobertura:
+  `apps/landing/test/ingresso-imprimir.test.tsx` (a folha leva QR, código e dados mínimos, e
+  nada além do que a RN-422 permite).
+- **Continua fora:** PDF gerado no servidor e PDF anexado ao e-mail. Vira lane própria se o
+  dono pedir (D-ING-9).
 
 Traz o código ao lado do QR no PDF, pelo mesmo motivo de degradação.
 
@@ -1896,7 +1901,32 @@ de e-mail não mostra a imagem, e para imprimir se eu quiser.
   dependência nova entra no bundle público (o QR chega renderizado do servidor) e a landing
   segue Radix-free.
 
-**Tasks:** S1214-T1, S1214-T2, S1214-T3, S1214-T4
+**Tasks:** S1214-T1, S1214-T2, S1214-T3, S1214-T4 — **as quatro CONSTRUÍDAS em 2026-07-29**
+pela lane INGPAGE-BUILD (`82e3286`, `19eb42d`, `8cb17de`, `1d82127`), em série, com gate
+verde task a task. **Aguarda a review antagonista** em contexto fresco, sobre os oito vetores
+da fila. Handoff: `.nirvana/handoffs/leela-build-2d6ee98d-INGPAGE-BUILD.md`, com cinco
+premissas vetáveis (P-INGPAGE-1 a 5) e o backfill pendente de decisão do dono.
+
+**O que a lane entregou, por peça:**
+
+| Peça | Onde nasceu |
+|---|---|
+| Token `LLIP1` (formato, parse, matriz de estados como tipo) | `packages/core/src/tickets/linkIngresso.ts` |
+| Assinatura/verificação com binding ao `qrToken` vigente | `functions/src/eventos/linkIngresso.ts` |
+| Endpoint da projeção mínima com QR renderizado | `functions/src/http/ingressoPorLink.ts` |
+| Rota pública e os sete estados | `apps/landing/app/(public)/ingresso/[token]/` |
+| Base pública única por ambiente | `functions/src/eventos/basePublica.ts` |
+| Link por inscrito no e-mail | `functions/src/email/templates.ts` + `enviarIngressos.ts` |
+| Slug reservado | `functions/src/eventos/slug.ts` (`SLUGS_RESERVADOS`) |
+| Backfill da `url` dos eventos publicados | `functions/scripts/backfill-url-eventos.mjs` (dry-run por padrão) |
+
+**Achado da construção que vira ponta solta de produto (P-INGPAGE-1).** A linha *"`confirmado`,
+sem `qrToken` ⇒ estamos emitindo seu ingresso"* da RN-421 está implementada e testada na
+projeção e na página, mas **não é alcançável por um link real**: a assinatura cobre o `qrToken`
+vigente (D-ING-4), então sem ingresso emitido não há material de binding e o link não existe.
+Quem ainda não tem ingresso recebe, no e-mail, a frase de emissão em andamento que a RN-398 já
+escreve — fica sem LINK, não sem informação. Mudar isso exigiria um segundo material de binding
+por inscrito (campo novo + migração) e faria a re-emissão deixar de revogar de graça.
 
 #### LEELA-S1214-T1 · Token `LLIP1` e leitura do ingresso por capacidade
 - **Tipo:** api/function · **Depende de:** S1206-T5 (emissão) · **Bloqueia:** S1214-T2, S1214-T3 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
