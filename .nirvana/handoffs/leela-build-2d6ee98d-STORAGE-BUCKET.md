@@ -7,6 +7,7 @@ Autorização do dono: D-0729-8 ("POde criar o bucket do firebase") · achado 19
 
 - [x] **Task 1 — reconhecimento** (sem mutação; nada a criar ainda)
 - [x] **Task 2 — bucket default CRIADO** em `southamerica-east1`
+- [x] **Task 3 — `storage.rules` da casa DEPLOYADAS** no bucket (ruleset ativo byte-idêntico) + custo registrado
 
 ## Task 2 — o bucket
 
@@ -84,10 +85,89 @@ sem redeploy do painel, sem escalar mudança de código.**
    `gcloud`/`gsutil` NÃO estão instalados nesta máquina — as provas saem por API REST
    (storage.googleapis.com e firebasestorage.googleapis.com), que é a MESMA fonte que o gsutil consulta.
 
-## Próxima ação
+## Task 3 — as Rules
 
-Declarar `storage` no `firebase.prod.json` e deployar `storage.rules` no bucket.
+**Mudança de config (1 arquivo, 4 linhas):** `firebase.prod.json` ganhou
+`"storage": { "rules": "storage.rules" }` — **o MESMO arquivo que o `firebase.json` canônico já
+aponta**, sem uma linha editada. O `_comment` da config foi atualizado (dizia "Storage fica FORA
+até existir bucket default"; agora registra a lane e a data). `firebase.json` NÃO foi tocado — a
+suíte e os emuladores seguem intactos.
+
+**Deploy:** `npx firebase-tools@13 deploy --only storage --project prod --config firebase.prod.json`
+→ `rules file storage.rules compiled successfully` → `released rules storage.rules to firebase.storage`
+→ `Deploy complete!`. Nenhum predeploy de functions disparou (`--only storage`).
+
+**Prova 1 — ruleset ativo é byte-idêntico ao arquivo do repo:**
+- release `projects/leela-hub/releases/firebase.storage/leela-hub.firebasestorage.app`
+- ruleset `projects/leela-hub/rulesets/fc6cad14-ede0-4f26-abff-834901df6afe`, criado
+  `2026-07-29T15:22:05.652179Z`
+- `sha256` do source remoto == `sha256` do `storage.rules` local (LF-normalizado):
+  `a02c30f431b9c27c6429f44306a71183d6d331dad4ea0fa15c679d1ef9ff9537`, 11.991 bytes dos dois lados.
+  Não é "deploy que não deu erro": é o texto exato que está valendo.
+
+**Prova 2 — sondas ANÔNIMAS contra o endpoint real (`firebasestorage.googleapis.com/v0/b/…/o`),
+sem token, do jeito que um atacante bateria.** O que interessa aqui não é o 403 isolado: é o
+**contraste** entre os cinco resultados, que só existe se a rule estiver viva e discriminando path
+por path.
+
+| # | Sonda | Esperado | Resultado |
+|---|-------|----------|-----------|
+| P1 | READ `segredo.txt` (fora do contrato) | negar | **403** Permission denied |
+| P2 | READ `users/probe/foto-perfil` (contrato, objeto inexistente) | **permitir** e dar 404 | **404** Not Found |
+| P3 | READ `users/probe/senha` (dentro de `users/`, nome fora da allowlist) | negar | **403** |
+| P4 | WRITE `users/probe/foto-perfil` anônimo (path contratado) | negar (exige sessão) | **403** |
+| P5 | WRITE `payload.html` `text/html` na raiz | negar (catch-all) | **403** |
+
+P2 é a sonda que fecha o argumento: um bucket "aberto por acidente" ou uma rule inerte NÃO
+produziria 404 num path e 403 no path ao lado. E P3 prova a granularidade fina — a allowlist de
+NOME de objeto está sendo avaliada, não só o prefixo `users/`.
+
+**Prova 3 — nenhum resíduo:** `GET storage/v1/b/{bucket}/o` → `{"kind":"storage#objects"}`, lista
+vazia. As 5 sondas não criaram nada (as de escrita foram negadas), o bucket segue zerado.
+
+## Custo esperado
+
+Projeto está em **Blaze** (confirmado por API na lane DEPLOY-PREVIEW). Bucket default
+`*.firebasestorage.app` é o bucket **Spark-tier-eligible** — a franquia sem custo do Firebase
+Storage vale para ele:
+
+| Recurso | Franquia sem custo (bucket default) | Acima disso |
+|---------|-------------------------------------|-------------|
+| Armazenamento | 5 GB | ~US$ 0,026/GB/mês (Standard, região SA) |
+| Download | 1 GB/dia | ~US$ 0,12/GB |
+| Operações de upload | 20.000/dia | ~US$ 0,05/10 mil |
+| Operações de download | 50.000/dia | ~US$ 0,004/10 mil |
+
+**Projeção honesta para o uso real:** o que vive aqui são imagens de até 5 MB (2 MB na capa de
+evento) — avatar/capa de perfil, capa de clube, logo de marca, imagem de kit, capa de evento.
+Mesmo com 6 tenants × dezenas de eventos, o volume fica na casa de **centenas de MB**, uma ordem de
+grandeza abaixo dos 5 GB. **Custo esperado do bucket enquanto o produto está em preview: R$ 0,00.**
+O gasto só aparece se as imagens virarem tráfego de massa (1 GB/dia de download ≈ 200 mil
+visualizações de um avatar de 5 KB) — cenário de sucesso, não de operação.
+
+**Custo NÃO-óbvio, registrado como risco de conta (não de bucket):** 3 dos 5 paths validam posse
+por `firestore.get` cross-service. Cada upload de tenant dispara **uma leitura de documento no
+Firestore** faturada. Em volume de preview isso é ruído; fica anotado para quando o número de
+uploads crescer.
+
+**Soft delete:** o GCS liga `softDeletePolicy` de 7 dias por padrão. Objeto sobrescrito fica
+retido 7 dias e **é cobrado como armazenamento** nesse período. Com o padrão de re-upload que as
+Rules impõem (mesmo nome de objeto SOBRESCREVE), quem trocar a capa 10× numa semana paga 10 cópias
+por 7 dias. Irrelevante na escala atual; desligável a qualquer momento se algum dia pesar.
 
 ## Premissas assumidas
 
-(nenhuma ainda)
+1. **Região `southamerica-east1` escolhida por coerência com o Firestore**, não por medição de
+   latência real. O campo é **imutável** — mudar depois exige bucket novo + migração de objetos +
+   troca do config web. Vetável AGORA, caro depois.
+2. **`storageClass: STANDARD`.** Imagem de avatar/capa é lida a toda hora; Nearline/Coldline sairiam
+   mais caros no acesso do que economizariam no armazenamento.
+3. **Rules deployadas são as da casa, sem uma linha alterada.** A premissa vetável prevista no brief
+   ("escrever o mínimo seguro") não foi acionada porque `storage.rules` já existia, revisado
+   (ADR-016 + review antagonista R5 + CEV). Se o dono quiser rules diferentes, é lane de produto,
+   não de infra.
+4. **Não validei upload autenticado ponta a ponta pelo painel.** Isso exigiria sessão real de tenant
+   writer e um evento/clube no Firestore de produção — e o brief proíbe suíte/emulador. As sondas
+   anônimas provam o lado FECHADO (o que importa para segurança); o lado ABERTO está provado por
+   P2 (a rule de leitura contratada responde 404, não 403). O teste de upload real cabe no dono,
+   junto do teste de compra já pendente.

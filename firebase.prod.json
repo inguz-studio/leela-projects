@@ -1,8 +1,11 @@
 {
-  "_comment": "Config EXCLUSIVA de deploy ao projeto real (alias prod = leela-hub). O firebase.json canônico segue intocado para a suíte/emuladores (default = demo-leela). Sem bloco `emulators` de propósito: esta config nunca sobe emulador. Storage fica FORA até existir bucket default no projeto (uploads do painel = pendência registrada no handoff da lane DEPLOY-PREVIEW).",
+  "_comment": "Config EXCLUSIVA de deploy ao projeto real (alias prod = leela-hub). O firebase.json canônico segue intocado para a suíte/emuladores (default = demo-leela). Sem bloco `emulators` de propósito: esta config nunca sobe emulador. Storage ENTROU na lane STORAGE-BUCKET (2026-07-29, D-0729-8): o bucket default leela-hub.firebasestorage.app existe em southamerica-east1 e as rules da casa (storage.rules, as MESMAS do firebase.json) agora deployam aqui.",
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
   },
   "functions": [
     {
