@@ -26,9 +26,9 @@ update do handoff) — os commits provam o trabalho: `8c28f59` (B1/B2/B4/B6/B7) 
 `18a798a`+`0d83e7c` (B3/B5/B8/B9). Ver seções dedicadas abaixo.
 
 ### Fase C — superfície
-- [ ] C1 · vocabulário "participantes" no lugar de corrida
-- [ ] C2 · larguras de container unificadas na landing
-- [ ] C3 · ritmo vertical por tokens
+- [x] C1 · vocabulário "participantes" no lugar de corrida — `8588d27`
+- [x] C2 · larguras de container unificadas na landing — `fa8a2d8`
+- [x] C3 · ritmo vertical por tokens — `a2ac06b`
 
 ### Fechamento
 - [ ] Deploy da landing + provas curl
@@ -342,6 +342,113 @@ resposta, debounce de 200ms.
 
 ---
 
+## C1 (achado 11 / D-0729-1) · vocabulário de corrida vira "participante"
+
+Commit `8588d27`. Varredura da jornada de compra inteira (não só o texto citado no
+achado — "e afins"): checkbox "Eu também vou correr nesta prova" → "Eu também vou
+participar deste evento"; título de seção "Quem vai correr" → "Participantes"; apoio
+"Cada atleta tem os próprios dados" → "Cada participante..."; apoio do
+`StepModalidadeKit` "kit de cada atleta" → "...cada participante"; bloqueio do cupom
+"modalidade de cada atleta" → "...cada participante"; fallback de título do card/
+resumo/ticket "Atleta N" → "Participante N" (4 arquivos: StepDados, StepModalidadeKit,
+CheckoutFlow, StepConfirmacao); botão "+ Adicionar atleta" → "+ Adicionar participante".
+
+**Escopo deliberadamente contido ao texto que o comprador lê** — não tocado (registrado,
+não esquecido):
+- nomes internos (`CardAtleta`, `BotaoAdicionarAtleta`, variável `euCorro`), o DOM
+  `id="atleta-${i}"` e o anchor `#atleta-{i}` que o B7 usa pra rolar ao card certo,
+  `autoComplete="section-atleta{i}..."` — invisível ao usuário, risco de regressão no
+  scroll-to-card do B7 sem ganho nenhum de UX;
+- **texto legal de `AceitesCompra.tsx`** ("Termo do Atleta", "regulamento da prova",
+  "transferência de inscrição para outro atleta") — é declaração de saúde/termo de
+  compra modelada no benchmark real da Sympla Sports (comentário do próprio arquivo).
+  Mudar linguagem de aceite jurídico é decisão de peso fora do meu mandato de UX.
+  **ESCALO**: se o dono quiser esse texto também sem vocabulário de corrida, é uma
+  decisão sobre conteúdo legal que pede revisão own (talvez jurídica), não um find/
+  replace de tela;
+- **descrição de produto do kit** (`kitDetalheDados.ts`: "camiseta técnica premium/de
+  corrida") — descreve um item físico de um evento que É uma corrida (meia-floripa);
+  não é vocabulário de identidade do participante, é categoria real de produto (como
+  "tênis de corrida" é nome de categoria em qualquer loja, independente do
+  posicionamento do lugar que vende).
+
+**Achado FORA do escopo da fila, registrado para o maestro decidir**: a home page (`/`)
+tem vocabulário de corrida NA MARCA — eyebrow "Corrida de rua" e H1 "Ache sua próxima
+corrida e garanta a inscrição em minutos" (`app/(public)/page.tsx`). É mais visível que
+qualquer coisa dentro do checkout e não foi tocado (fora de "jornada de compra", que é o
+escopo literal do C1). Se D-0729-1 vale "para toda superfície pública" como o texto da
+decisão diz, esta é a maior pendência.
+
+Testes ajustados (mesmo comportamento, string nova): `checkout-s1209-cards-atleta`,
+`checkout-s1209-rev-ataque`, `checkout-s1209-cupom-forma` (3 arquivos).
+
+---
+
+## C2 (achado 14) · container público unificado (header, Hero, dobras)
+
+Commit `fa8a2d8`. Raiz NÃO era um número de `max-w` diferente sozinho — eram DUAS
+composições de padding+largura coexistindo com o MESMO valor nominal em alguns casos:
+`Dobra.tsx` (canônico) aplica o gutter no `<section>` externo e o `max-w-5xl` sozinho no
+`<div>` interno; como o `mx-auto` centraliza dentro da viewport inteira, o padding do pai
+não desloca o conteúdo em telas ≥1024px. `HeroSection.tsx` aplicava gutter E `max-w-5xl`
+no MESMO elemento — o padding mordia PARA DENTRO da caixa já centralizada, então o
+conteúdo do Hero nascia ~16-32px mais recuado que o das dobras vizinhas, mesmo com o
+"mesmo" `max-w-5xl` nominal. `PublicHeader.tsx` usava `max-w-6xl` (mais largo) na mesma
+composição de padding-no-mesmo-elemento, sem o degrau `lg:px-8`.
+
+Fix: `apps/landing/lib/containerPublico.ts` exporta `CONTAINER_GUTTER` +
+`CONTAINER_LARGURA` como fonte única; `Dobra`/`HeroSection`/`PublicHeader` e a home page
+passam a importar dela, todos na mesma composição de dois níveis.
+
+**Decisão de escopo (premissa vetável)**: a home page (rota `/`) não estava citada no
+achado 14, mas o header é COMPARTILHADO entre `/` e `/[eventSlug]` — alinhar só o header
+à página de evento e deixar a home com `max-w-6xl` teria trocado a divergência de rota,
+não eliminado. Convergi as duas rotas para `max-w-5xl` (valor mais usado no codebase,
+8+ seções já o usavam). **Se o maestro preferir a home mais larga**, o caminho é dar ao
+header uma largura configurável por rota — mais complexo, decisão do dono.
+
+Não tocado (decisão, não esquecimento): `HeroMinimo.tsx` (`max-w-3xl`) — já usa a
+composição de dois níveis correta; só aparece quando o evento não tem NENHUMA dobra
+(nada pra desalinhar contra); a medida mais estreita é escolha de tipografia para um
+hero solo, não bug de container.
+
+---
+
+## C3 (achado 13) · ritmo vertical em modalidade, kit e forma de pagamento
+
+Commit `a2ac06b`. Três defeitos concretos, um por área nomeada no achado:
+- **Modalidade → Kit** (`StepModalidadeKit`): separação era `mt-5` (20px) ad hoc, sem
+  relação com o resto do arquivo. Vira `gap-6` (24px) — o mesmo valor que `StepResumo`
+  já usa para separar seus próprios blocos maiores.
+- **Seleção de kits**: o slot "depois de escolher o kit" tinha DUAS margens diferentes
+  pro MESMO lugar dependendo do ramo — `mt-2` sem grade de tamanho, `mt-4` com grade
+  (`SeletorGradeItem`) e outro `mt-4` no `KitDetalhe`. Convergido para um `gap-4` (16px)
+  único cobrindo picker → nota/grade → detalhe.
+- **Forma de pagamento** (`StepResumo`): a `<section>` que envolvia o `SeletorForma`
+  tinha `gap-[var(--spacing-3)]` (12px) SEM EFEITO — um único filho, gap que não espaça
+  nada. Removida; `SeletorForma` passa a ser irmão direto de Seu-pedido/Cupom/Totais no
+  mesmo `gap-6` do stack externo.
+
+Resultado: hierarquia de dois degraus, citável — 24px entre blocos maiores, 16px dentro
+de um bloco entre peças relacionadas, 8px/4px em legendas coladas a um rótulo
+(inalterado). Nenhum valor novo inventado.
+
+Não mexido (fora do mandato de tela): o espaçamento INTERNO do `RadioGroup`/`RadioCard`
+do DS entre as próprias opções — é primitivo compartilhado por todo o app; mudança de
+design system, não fix de tela.
+
+### Nota operacional · flakiness da suíte cheia nesta máquina
+
+A suíte completa em modo default (threads paralelos) mostrou 4 falhas por TIMEOUT após
+o C3 — as 4 reproduzidas em isolamento (arquivo a arquivo) passaram limpas, e nenhum
+arquivo tocado pelo C3 tem lógica de PIX/relógio/cotação (mudança é só classe CSS).
+Rodei `npx vitest run --pool=forks --poolOptions.forks.singleFork=true`: **207/207 em
+63s, zero flakiness** (mais rápido que o modo paralelo — 94-138s — nesta máquina de
+8GB). Registrado como diretriz operacional: se a suíte cheia mostrar timeout numa
+retomada futura, re-rodar single-fork antes de assumir regressão.
+
+---
+
 ## Premissas assumidas
 
 1. **Fix por idempotência, não por remoção de patch (A1).** Decisão de peso, vetável: a
@@ -361,6 +468,19 @@ resposta, debounce de 200ms.
    nominalmente, mas o aceite escrito é "datas de clubes/extra voltam a +135 d" — e sem
    este fix elas voltariam a +136 d a partir do relógio errado, ou seja, ainda no futuro.
    Corrigi. Se o maestro achar que expandiu escopo, o revert são 3 linhas.
+4. **C1 não toca o texto legal de `AceitesCompra.tsx` nem a marca da home page.** Decisão
+   de peso, vetável — ESCALADA: "Termo do Atleta"/"regulamento da prova" é conteúdo
+   jurídico (benchmark Sympla Sports); "Corrida de rua"/"Ache sua próxima corrida" é a
+   marca da home (`/`, fora de "jornada de compra"). Ambos ficam para o maestro decidir
+   se entram numa lane própria.
+5. **C2 unifica a home page (`/`) para `max-w-5xl`, não só a página de evento (A1).**
+   Decisão de peso, vetável — o header é componente COMPARTILHADO entre as duas rotas;
+   alinhar só uma teria trocado a divergência de rota, não eliminado. Escolhi convergir
+   as duas para o valor mais usado no codebase (o das dobras do evento). Revert possível:
+   dar ao header uma largura por rota (mais complexo).
+6. **C3 não toca o espaçamento interno do `RadioGroup`/`RadioCard` do DS.** É primitivo
+   compartilhado por todo o app (painel do organizador incluído) — mudar lá é mudança de
+   design system, fora do mandato de uma task de tela.
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -372,4 +492,8 @@ resposta, debounce de 200ms.
 6. `0d83e7c` — B5 (T-CKUX-1) · coalescing da cotação.
 7. `ce7e30f` — handoff da pausa selada 29/07 ~13h20 (fase B completa em código, retomada = C1 + deploy).
 8. `0afe592` — docs(regras): Regra L amendada (sonnet/haiku liberados via opus com gate) — fora do escopo desta lane, herdado do trace.
-9. *(este)* — checklist do handoff corrigido (B3/B5/B8/B9 ✓) + seções B3/B8/B9 e B5 documentadas + suíte re-verificada (207/207).
+9. `5934a41` — checklist do handoff corrigido (B3/B5/B8/B9 ✓) + seções B3/B8/B9 e B5 documentadas + suíte re-verificada (207/207).
+10. `8588d27` — C1 · vocabulário de corrida vira participante na jornada de compra.
+11. `fa8a2d8` — C2 · container público unificado entre header, Hero e dobras.
+12. `a2ac06b` — C3 · ritmo vertical coerente em modalidade, kit e forma de pagamento.
+13. *(este)* — handoff das tasks C + premissas C1/C2/C3.
