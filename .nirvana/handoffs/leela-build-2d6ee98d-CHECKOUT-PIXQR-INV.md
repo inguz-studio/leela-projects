@@ -8,8 +8,8 @@ Natureza: **investigação de incidente em produção** (read-only por default).
 
 - [x] **Q1 · Por que o QR do PIX não renderiza** — root cause provado por log de produção
 - [x] **Q2 · "Calculando total" preso** — medido por log de produção (durações reais da chamada)
-- [ ] **Q3 · Taxa de serviço do meia-floripa-2026** — config real do evento
-- [ ] **Q4 · Cupons `FLORIPARUN10` / `RITMOFORTE10`** no checkout público
+- [x] **Q3 · Taxa de serviço do meia-floripa-2026** — config real lida no Firestore de produção
+- [x] **Q4 · Cupons `FLORIPARUN10` / `RITMOFORTE10`** — veredito provado pela API pública
 - [ ] Fix de config (se autorizado pela classificação) + prova
 - [ ] Resumo executivo + self-score
 
@@ -143,4 +143,165 @@ CHECKOUT-UX (ver tasks abaixo); esta lane só mede.
 
 ---
 
-*(Q3 e Q4 em andamento — este handoff é atualizado a cada pergunta respondida.)*
+## Q3 · Taxa de serviço do meia-floripa-2026 (achado 4 · média)
+
+**Veredito: taxa INCORPORADA no preço de face. A ausência da linha "Taxa de serviço" no checkout
+está CORRETA para este evento — o achado 4 não é defeito aqui.**
+
+### Config real lida no Firestore de produção
+
+Leitura pontual via Admin SDK read-only (ADC derivado do refresh token do firebase-tools, conforme
+receita do handoff DEPLOY-PREVIEW §Credenciais; **arquivo apagado ao fim da leitura**).
+
+`eventos/meia-floripa-2026`:
+
+```
+slug     = "meia-floripa-2026"
+nome     = "Meia Maratona Floripa 2026"
+tenantId = "castelo-producoes"
+chaves com taxa|fee|termo|comiss: (NENHUMA)
+```
+
+O evento **não tem campo `taxaModo`**. Por `packages/core/src/eventos/evento.ts:257`
+(`return evento.taxaModo ?? 'incorporada'`), o modo efetivo é **`'incorporada'`** — pelo default,
+não por configuração explícita.
+
+`tenants/castelo-producoes/commercialTerms/current` (versão 1):
+
+```
+platformFeePct    = 10.5
+installmentRules  = { maxParcelas: 12, jurosAoMes: 0, parcelaMinima: 10 }
+anticipation      = { disponivel: false }
+saasMonthlyFee    = 0
+```
+
+### Prova pela mesma API que a tela usa
+
+`cotarInscricaoCheckout` em produção (5k, Lote 2, PIX, 1x, sem cupom):
+
+```json
+{"itens":[{"modalidade":"5k","loteNome":"Lote 2","kitNome":null,"kitPreco":0,"preco":75}],
+ "valorBase":75,"desconto":0,"valorFinal":75,"cupomAplicado":null,
+ "taxaServico":0,"totalAVista":75,
+ "totalCobrado":75,"forma":"pix","totaisPorMeio":{"pix":75,"cartao_credito":75}}
+```
+
+`taxaServico: 0` e `totaisPorMeio.pix == totaisPorMeio.cartao_credito == valorFinal` é a assinatura
+exata de `'incorporada'` (RN-347). Em `'repassada'` os dois meios divergiriam (TAXAFLEX) e a UI
+mostraria a linha.
+
+### Os números, em reais
+
+Para uma inscrição 5k no Lote 2:
+
+| | valor |
+|---|---|
+| Preço de face (o que o comprador paga) | **R$ 75,00** |
+| Taxa de serviço cobrada do comprador | **R$ 0,00** (incorporada) |
+| Comissão da plataforma (10,5% do face) | R$ 7,88 |
+| Líquido do organizador | **R$ 67,13** |
+
+Bate com a decisão ratificada **DEC-0726 (comissão sobre o FACE)**: em `'incorporada'` o líquido é
+`face − taxa`, ou seja a comissão incide sobre o valor de face e sai do repasse do organizador.
+Config e decisão de produto estão coerentes.
+
+### O que continua em aberto (decisão do dono, não defeito)
+
+O modo `'incorporada'` está valendo **pelo default do core**, não por escolha registrada no evento.
+Nada quebra, mas o evento não declara o próprio modelo de taxa. Se o dono quiser o outro modelo
+(taxa por fora, visível ao comprador), basta gravar `taxaModo: 'repassada'` no evento — e aí a linha
+"Taxa de serviço" passa a aparecer sozinha, sem mudança de código. **Pergunta ao dono**, não task.
+
+---
+
+## Q4 · Cupons no checkout público (achado 6 · pedido)
+
+**Veredito: nenhum dos dois cupons do pedido funciona hoje. Mas existem DOIS cupons válidos em
+produção agora — `HEROI10` e `CORRA50` — provados aplicando de verdade.**
+
+Todas as chamadas abaixo em `cotarInscricaoCheckout` de produção, com token anônimo real (a mesma
+autenticação que a tela usa), evento `meia-floripa-2026`, 5k, PIX 1x. Nada foi comprado — cotação é
+read-only.
+
+| cupom | HTTP | resposta |
+|---|---|---|
+| `FLORIPARUN10` | 400 | `Cupom 'FLORIPARUN10' não existe.` |
+| `RITMOFORTE10` | 400 | `computeSaleState: cupom "RITMOFORTE10" fora da janela de validade` |
+| **`HEROI10`** | **200** | `desconto: 7.5` · R$ 75,00 → **R$ 67,50** (percentual 10%) |
+| **`CORRA50`** | **200** | `desconto: 50` · R$ 75,00 → **R$ 25,00** (fixo R$ 50) |
+
+### Cupom para o dono usar AGORA
+
+> **`HEROI10`** — 10% de desconto. R$ 75,00 → R$ 67,50 no 5k.
+> **`CORRA50`** — R$ 50 fixos. R$ 75,00 → R$ 25,00 no 5k (o mais barato para testar o fluxo real).
+
+Ambos com janela aberta até **08/09/2026** e teto folgado (`HEROI10` 37/100 usos; `CORRA50` sem teto).
+
+### Por que os dois do pedido falham
+
+Estado real das três coleções de cupom do evento em produção:
+
+| cupom | tipo | escopo | janela de validade | usos |
+|---|---|---|---|---|
+| `HEROI10` | percentual 10 | — | 2026-04-15 → **2026-09-08** | 37/100 |
+| `CORRA50` | fixo 50 | — | 2026-06-16 → **2026-09-08** | 8 / ilimitado |
+| `RITMOFORTE10` | percentual 10 | `club_parceiro` | **2026-09-28 → 2027-01-22** | 0 |
+| `FLORIPARUN10` | — | — | **documento inexistente** | — |
+
+**`FLORIPARUN10` — nunca foi criado como cupom.** O seed cria a parceria de afiliado
+`parceria-meia-floripa-frc` com o campo `cupom: 'FLORIPARUN10'`
+(`functions/scripts/preview-seed-clubes.ts:358`), mas **nenhum documento**
+`eventos/meia-floripa-2026/cupons/FLORIPARUN10` é escrito em lugar nenhum do repo. A parceria
+aponta para um código que não existe. Isso vale como defeito de dado: o afiliado tem cupom no
+contrato e não tem cupom no checkout.
+
+**`RITMOFORTE10` — existe, mas a janela abre daqui a dois meses** (28/09/2026). Não está expirado:
+ainda não começou. E o motivo é um bug real do seed de produção, descrito a seguir.
+
+### Achado colateral (sério): o seed de produção re-data DUAS VEZES parte dos documentos
+
+`functions/scripts/prod-seed-leela-hub.ts` desloca todas as datas na escrita (offset de 135 dias, do
+relógio de referência 2026-03-15 para o dia da rodada). Para isso ele monkey-patcha **três**
+protótipos (`instalarRedatePatch`, linhas 160-183): `DocumentReference.prototype.set`,
+`WriteBatch.prototype.set` e `CollectionReference.prototype.add`.
+
+O problema: no `@google-cloud/firestore@7.11.6`, `DocumentReference.set()` é implementado **por cima
+de** `WriteBatch.set()` —
+`node_modules/.pnpm/@google-cloud+firestore@7.11.6/.../reference/document-reference.js:341-351`:
+
+```js
+set(data, options) {
+    return this._firestore._traceUtil.startActiveSpan(SPAN_NAME_DOC_REF_SET, () => {
+        let writeBatch = new index_1.WriteBatch(this._firestore);
+        if (options) { writeBatch = writeBatch.set(this, data, options); }
+        else { writeBatch = writeBatch.set(this, data); }
+        return writeBatch.commit().then(([writeResult]) => writeResult);
+    });
+```
+
+Ou seja: quem escreve via `ref.set(...)` passa pelos **dois** patches e leva `redate()` **duas
+vezes** (+270 dias). Quem escreve via `batch.set(...)` direto passa por um só (+135 dias).
+
+Os dados de produção provam a aritmética exatamente:
+
+| cupom | caminho de escrita | data-fonte no código | data em produção | deslocamento |
+|---|---|---|---|---|
+| `HEROI10` início | `batch.set` (`eventos.seed.ts:258-274`) | 2025-12-01 | 2026-04-15 | **+135 d** |
+| `HEROI10` fim | `batch.set` | 2026-04-26 | 2026-09-08 | **+135 d** |
+| `CORRA50` início | `batch.set` | 2026-02-01 | 2026-06-16 | **+135 d** |
+| `CORRA50` fim | `batch.set` | 2026-04-26 | 2026-09-08 | **+135 d** |
+| `RITMOFORTE10` início | `upsert` → `ref.set` | 2026-01-01 | 2026-09-28 | **+270 d** |
+| `RITMOFORTE10` fim | `upsert` → `ref.set` | 2026-04-26 | 2027-01-22 | **+270 d** |
+
+Os quatro campos escritos por `batch.set` levaram 135; os dois escritos por `ref.set` levaram
+exatamente o dobro. Não é coincidência de tipo (todos os seis são `Timestamp`) — é o caminho de
+escrita.
+
+**Raio de explosão:** tudo que os seeds gravam por `upsert()`/`ref.set()` está com datas dobradas em
+produção — `preview-seed-clubes.ts` (2 `upsert` + 6 `ref.set`) e `preview-seed-extra.ts`
+(11 `upsert` + 3 `ref.set`). Clubes, desafios, comunicados, assessoria, parcerias, repasses e
+conversões seedados por esses dois arquivos merecem conferência de data. Vira task (abaixo); não é
+território desta lane.
+
+---
+
