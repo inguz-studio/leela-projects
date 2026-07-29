@@ -103,6 +103,18 @@ Rodada `02-rodadas/2026-07-19-taxa-flex/`. A taxa da plataforma vira **percentua
 - **D-4 · Campo de código/cupom no INÍCIO do fluxo** (step 0), em paridade com a referência — além do auto-apply do cupom vindo por URL.
 - **D-5 · Pix|Cartão na etapa de pagamento como BOTÕES, sem toggle.** Verbatim: *"pix e cartao na etapa de pagamento, mas em botões, sem toggle."*
 
+### Decisões de UI/fluxo do checkout · DEC-0729 (compra real do dono, sem RN — mecânica de tela)
+
+Rodada `02-rodadas/2026-07-29-checkout-ux/`, 19 achados verbatim + D-0729-1..8, pagas na lane `CHECKOUT-UX`/`CHECKOUT-UX-RET` (trace `leela-build-2d6ee98d`). Detalhe completo em `.nirvana/handoffs/leela-build-2d6ee98d-CHECKOUT-UX.md`.
+
+- **D-0729-1 · naming — Hub de Bem-Estar, não plataforma de corrida de rua.** Vocabulário de corrida sai da jornada de compra; quem se inscreve é **participante**, não "atleta"/"corredor". **Diretriz permanente**: todo texto NOVO na jornada de compra usa "participante". Escopo desta rodada foi contido ao texto que o comprador lê (títulos/labels/botões) — **fora, escalado ao dono**: texto legal de aceite (saúde/termos, benchmark Sympla Sports "Termo do Atleta") e a marca da home page (`/`, eyebrow "Corrida de rua" + H1 "Ache sua próxima corrida").
+- **D-0729-2 · endereço — progressive disclosure pelo CEP.** Só o CEP visível; os demais campos aparecem quando ele fica COMPLETO (8 dígitos), não quando o ViaCEP responde com sucesso — preserva o fail-open da spec 5.2 (API fora ou CEP rural não pode travar a revelação dos campos).
+- **D-0729-3 · resumo do pedido editável sem recomeçar.** Cada linha ganha "Alterar modalidade, kit ou tamanho", que leva ao card daquele participante (âncora estável) com o formulário preservado — nunca ao topo (perto demais de "recomeçar").
+- **D-0729-6 · cartão de crédito abre no 1º clique.** Sem segunda tela; os campos do cartão vivem DENTRO da própria opção (contrato `children` do `RadioCard` do DS).
+- **D-0729-7 · nascimento por teclado numérico, mobile-first.** Sem calendário obrigatório — `<input type="date">` exige navegação ano a ano no celular; vira campo com máscara `dd/mm/aaaa` + `inputMode="numeric"`.
+- **Ritmo vertical (achado 13, sem número D-)** — hierarquia de dois degraus fixada como convenção: **24px entre blocos maiores** de uma etapa (ex.: Modalidade × Kit; Seu pedido × Cupom × Forma de pagamento × Totais), **16px dentro de um bloco** entre peças relacionadas (picker → grade de tamanho → detalhe do kit). Fonte única em `apps/landing/lib/containerPublico.ts` (largura) — o ritmo vertical em si não ganhou módulo próprio, mas o padrão gap-6/gap-4 é o mesmo em toda a jornada.
+- **Container público único (achado 14, sem número D-)** — header, Hero e as dobras da página de evento (e a home) compartilham a MESMA composição de largura (`CONTAINER_GUTTER` + `CONTAINER_LARGURA`, `max-w-5xl`). Antes, três composições coexistiam com o mesmo valor nominal e ainda divergiam visualmente (padding no mesmo elemento do `max-w` desloca o conteúdo; padding no elemento pai, não).
+
 ## Modelo de dados tocado
 
 Ver `modelo-de-dados-firestore.md`. Leitura pública (server-side) e escrita transacional:
