@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { scrubSentryEvent } from './lib/sentryScrub';
 
 const DSN = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -9,5 +10,8 @@ if (DSN) {
     environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? 'development',
     release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
     tracesSampleRate: 1.0,
+    // Ver `sentry.server.config.ts`: o token do ingresso não sai daqui.
+    beforeSend: scrubSentryEvent,
+    beforeSendTransaction: scrubSentryEvent,
   });
 }
