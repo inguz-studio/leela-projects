@@ -16,8 +16,8 @@
 | T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ✅ | `e268cd0` |
 | T2 | Rodada · RNs (`03-rns-kitcupom.md`) | ✅ | `e450adb` |
 | T3 | Stories nos épicos (E03 galeria, E12 cupom) + deltas de fronteira | ✅ | `dd6419b` |
-| T4 | Fila de código com ⚔ + boards | ✅ | (este) |
-| T5 | Selo · resumo executivo + self-score | ⏳ | — |
+| T4 | Fila de código com ⚔ + boards | ✅ | `398ac51` |
+| T5 | Selo · resumo executivo + self-score | ✅ | (este) |
 
 ## Inventário antes de especificar (reaproveitado vs criado)
 
@@ -126,3 +126,115 @@ cache não segurar a lacuna volta como decisão, não como silêncio.
 - Épicos compartilhados: só ACRESCENTAR seção; edição cirúrgica apenas no ponteiro que evitaria
   contradição no canônico.
 - `DECISOES-ABERTAS.md` intocado.
+
+## Entregáveis (aceite do brief, item a item)
+
+| Aceite do brief | Onde |
+|---|---|
+| Stories GWT ancoradas em épico, galeria e cupom separadas | `S212` (+4 tasks, 9 critérios) na seção "Delta galeria do kit" do `LEELA-E03-operacao-evento.md`; `S1215` (+4 tasks, 16 critérios) na seção "Delta cupom pré-aplicado" do `LEELA-E12-landing.md` |
+| RNs com próximo número livre VERIFICADO (≥ RN-425) | RN-425 a RN-433, com o comando de varredura e o resultado literal em `03-rns-kitcupom.md`. Faixa RN-425..445 varrida na árvore inteira: único hit é a própria linha do brief |
+| Deltas nos épicos tocados, na mesma aterrissagem | E03 (story + RN-425/427 + fronteira), E12 (story + RN-426/428/430/431/432 + fronteira da galeria), E08 (RN-429/433), E18 (fronteira do `linkMaster` e do gate RN-364), E04 (o que NÃO muda no modelo de cupom) |
+| Rodada com premissas vetáveis P1..Pn | `02-spec-kitcupom.md` — D-KC-1 a D-KC-12 e P1 a P12, maior peso primeiro |
+| Fila de código com dependências e pontos ⚔ | `04-fila-kitcupom.md` — 8 tarefas, 2 frentes paralelas, 12 vetores, ⚔ obrigatório em `S1215-T1` e `S1215-T3` |
+| Cards no padrão épico→história→tarefa | `V1-KANBAN.md`: card `[E12]` → `S1215` → 4 tarefas + PENDENTE-DONO; card `[E03]` → `S212` → 4 tarefas. `BOARD-EPICOS.md`: 5 linhas acrescidas. `V1-CHECKLIST.md`: 10 itens |
+| Reaproveitamento primeiro: inventário antes de propor | Seção "Inventário antes de especificar" acima, com as tabelas reusa/cria e os sete achados |
+
+## Onde a spec responde cada pergunta do escopo
+
+**Galeria.** Shape e compat retroativa em D-KC-1 (RN-425): a principal fica onde já está e só as
+outras duas nascem, então nenhum documento migra e nenhuma leitura existente muda. Regra da
+principal em D-KC-1 e D-KC-3, com o fallback de "só uma foto" sendo o próprio estado de hoje.
+Superfícies em D-KC-2 (RN-426): listagem na principal, detalhe com a galeria inteira. Edição no
+painel em D-KC-3 (RN-427), incluindo promover como troca e a promoção ao remover a principal.
+Simulação no seed em D-KC-4 (RN-428), com a resposta honesta de que ela **não** pode ser no seed.
+Limites em D-KC-1 e D-KC-3, com a correção de que o 1:1 da RN-227 nunca foi validado em lugar
+nenhum: o que a spec promete é enquadramento, não verificação.
+
+**Cupom.** Formato do link em D-KC-6 (RN-429), convivendo com o `linkMaster` por substituí-lo: ele
+passa a ser derivado do mesmo gerador. Persistência da chegada até o checkout em D-KC-7 (RN-430),
+em simetria com o `?ref=`. Auto-apply e "(desconto aplicado)" em D-KC-8, com a constatação de que
+o auto-apply já existe e a garantia de que a marca é exibição. Conteúdo e estados do banner em
+D-KC-9 (RN-431), com o silêncio honesto no lugar do erro agressivo. Relação com comissão em
+D-KC-11 (RN-433), incluindo a resposta direta ao caso do cupom manual diferente do link.
+Anti-abuso em D-KC-12 e no vetor 12 da fila. O que muda e o que não muda em E08 e E18 está escrito
+nas seções novas dos dois épicos.
+
+## Envelope de custo
+
+- **Galeria:** zero infra nova. Duas URLs a mais no documento de kit que já é lido, dois objetos a
+  mais por kit, nenhuma leitura adicional. O acréscimo é de banda no navegador de quem abre o
+  detalhe, com carregamento tardio nas miniaturas. Menos de um centavo por evento.
+- **Cupom:** uma leitura de cupom e, quando resolvível, uma de afiliado por abertura de página de
+  evento **que traga cupom na URL**. Visita sem cupom não custa nada a mais. Com cache curto por
+  código, mil cliques na mesma campanha ficam na casa de dezenas de leituras. Nenhuma escrita,
+  coleção, índice ou Function nova. Cabe no free tier.
+- **O que não foi medido:** o custo real de uma raspagem sustentada da verificação do banner. A
+  estimativa assume que o cache segura, e o vetor 12 existe para isso virar número.
+- **Orçamento da lane:** só spec. Zero custo de execução até o build começar.
+
+## Self-score (contrato do sf-cto)
+
+| Critério | Peso | Limiar | Nota | Evidência |
+|---|---|---|---|---|
+| `technical_correctness` | 1,5 | 0,85 | **0,93** | Toda recomendação aponta para símbolo lido no repo: `imagemUrl`/`isUrlImagemKitValida`/`normalizarItensKit`/`parseKit`/`KIT_*_MAX` (`packages/core/src/eventos/kit.ts`), `kitObjetoValido`/`eventoDoMeuTenant`/`imagemValida` (`storage.rules`), `uploadImagemKit` (`packages/api-client/src/storage.ts`), `KitEditor.tsx`, `kitImagem.ts`/`KitDetalhe.tsx`/`kitDetalheDados.ts`/`KitsSection.tsx`/`StepModalidadeKit.tsx`, `Thumb` (`packages/design-system/src/components/Thumb`), o efeito A-2 com `cupomUrlPendente`/`erroCupomUrl` (`CheckoutFlow.tsx`), `CupomCampo.tsx`, `ATRIBUICAO_KEYS`/`CtaInscricao.tsx`, `RefTracker.tsx`, `normalizarCodigoCupom`/`cupomVigente`/`descontoDoCupom`/`EscopoCupom` (`cupom.ts`), `dentroDaJanelaAtribuicao`/`descontoAfiliadoAtivo`/`origem`/`clicadoEmMillis` (`createInscricaoCharge.ts`), `cotarInscricaoCheckout.ts`, `linkMaster`/`CAMPOS_ESPELHO_PARCERIA` (`parceria.ts`), `preview-seed-clubes.ts`, `preview-seed-r14.ts`, `leitor.ts`/`firebaseAdmin.ts`, RN-423. Não fica em 1,0 porque nada foi executado: a lane é spec e o contrato proíbe suíte e emulador |
+| `scalability_check` | 1,0 | 0,75 | **0,84** | Nenhuma coleção, índice ou Function nova nas duas frentes. A galeria não acrescenta leitura (as fotos vêm no documento já lido) e o cupom só custa em visita que traz código na URL. Modos de falha nomeados e virados em estado de tela: documento de kit envenenado (Postel descarta, o checkout não cai), foto que não carrega (a cascata cai no placeholder), cupom que não cola (faixa some, checkout avisa), armazenamento local indisponível (jornada segue, o servidor decide). O teto de três fotos é estrutural dos dois lados, modelo e Storage. Não fica mais alto porque a resistência da verificação do banner a raspagem sustentada é estimativa, não medição |
+| `security_posture` | 1,5 | 0,80 | **0,90** | É o eixo da metade do cupom. O achado que ordena a spec é que a leitura de cupom é fechada por design, então o banner **não pode** ler no cliente: a leitura vai para o servidor da landing, pelo padrão já doutrinado, com Rules intocadas como aceite. Ausência de oráculo exigida nas cinco causas de recusa, com resposta idêntica. Superfície de ataque declarada sem maquiagem: a cotação anônima já responde se um cupom cola, então o que nasce é canal mais barato e o nome do promotor, e o nome virou premissa vetável (P3) em vez de decisão silenciosa. Lista do que não pode sair do afiliado. Limite por origem declarado como **ausente** no ferramental, não fingido. No dinheiro, a decisão mais defensiva foi não tocar o kernel e ratificar o desempate por escrito, com prova exigida por diff e por teste nas duas direções. Não fica mais alto porque a mitigação de raspagem depende de um cache cuja eficácia ninguém mediu |
+| `cost_envelope` | 1,0 | 0,70 | **0,83** | Custo calculado por superfície e comparado ao free tier; zero infra nova nas duas frentes; a única variável real (raspagem) declarada como não medida e transformada em vetor de review. A dependência de bucket foi classificada como herdada, não nova, o que evita atribuir à galeria um custo de decisão que já era do produto. Não fica mais alto porque o número de aberturas por link é estimativa |
+
+**Média ponderada: 0,883.** Os quatro critérios acima do limiar; nenhuma iteração de revisão
+necessária (`on_below_threshold: revise` não disparou).
+
+## Resumo executivo
+
+**Lane SPEC-KITCUPOM fechada.** As duas features da segunda leva da DEC-0729 têm spec pronta para
+build, sem uma linha de código de aplicação.
+
+**O que o inventário mudou no tamanho do trabalho.** O pedido do cupom parecia máquina nova e não
+é: **o auto-apply de cupom por URL já roda**, no efeito A-2 do `CheckoutFlow`. O que falta é o
+link carregar o cupom e a comunicação em volta. Pior que isso: o link de hoje **não entrega nada**.
+O `linkMaster` que a assessoria compartilharia carrega a chave `c`, que o CTA preserva e nenhum
+arquivo do repositório lê, e aponta para `beh.ro`, o domínio dos mocks Be Hero que a RN-423 acabou
+de expulsar do e-mail da compra. E a pergunta do brief sobre quem ganha a comissão quando o cupom
+manual difere do link já tem resposta em produção, e ela não é neutra: o cupom vence o clique,
+então quem digita o cupom de outro afiliado por cima do link transfere a comissão.
+
+**O que foi decidido na galeria.** A principal continua exatamente onde está, no `imagemUrl` da
+RN-227, e nascem só as outras duas, num campo próprio. A alternativa natural, uma lista com
+sinalizador de principal, foi rejeitada por deixar representável o que o dono proibiu: zero
+principais, ou duas. Com um campo só para a principal, a invariante não é validada, é forma, e
+nenhuma tela pode violá-la por esquecimento. A compatibilidade vem de graça: **nenhum documento
+migra** e toda leitura de `imagemUrl` que existe hoje continua correta sem uma linha alterada. No
+painel são três posições, e "tornar principal" troca em vez de copiar; remover a principal promove
+a próxima. No Storage, dois slots literais fazem o teto de três ser estrutural também lá. E a
+simulação que o dono pediu **não pode** ser no seed: a guarda exige http(s) e a lição LEELA-R14 já
+decidiu que mock de imagem é app-side, então ela entra como quarto degrau da cascata que já existe,
+visível em preview e ausente em produção.
+
+**O que foi decidido no cupom.** O link passa a nascer de um gerador único, com a base pública da
+RN-423, o `ref` e o cupom dentro, o que mata o `beh.ro` em mais um lugar e aposenta o `linkMaster`
+digitado; a chave `c` segue aceita na entrada, porque link de afiliado circula impresso e
+desligá-la em silêncio custaria venda de quem já divulgou. O cupom passa a atravessar a jornada com
+a disciplina que o `?ref=` já tem, corrigindo a assimetria em que a comissão sobrevive à navegação
+e o desconto não. O banner anuncia quando o cupom se aplica e **cala** quando não se aplica, com o
+aviso honesto ficando no checkout, onde a pessoa efetivamente tenta usar. O banner não lê cupom no
+cliente, porque as Rules fecham essa leitura por design: a verificação vai para o servidor da
+landing, com resposta idêntica nas cinco causas de recusa. Sobre o kernel de atribuição, a decisão
+foi **não tocar** e ratificar por escrito o desempate que já existe.
+
+**Números.** 9 RNs mintadas (RN-425 a RN-433, faixa provada livre por varredura na árvore inteira),
+2 stories novas com id provado livre (`S212` no E03 e `S1215` no E12) e 8 tasks, 5 épicos tocados,
+12 decisões, 12 premissas vetáveis, 12 vetores ⚔, 5 commits mais este selo.
+
+**Veredito: ENTREGUE E PRONTA PARA BUILD**, condicionada ao veto do dono em P1, P2, P3 e P4, as
+quatro que mudam desenho se caírem. As outras oito podem ser vetadas sem refazer a spec. A frente
+da galeria e a do cupom são independentes e podem ser construídas em paralelo; só a do cupom exige
+review antagonista, nas tarefas `S1215-T1` e `S1215-T3`.
+
+**Riscos declarados que a lane não pôde fechar.** Nada foi executado: sem suíte e sem emulador, por
+contrato, então cada critério de aceite é promessa a provar no build. O upload real de foto de kit
+continua preso ao bucket de Storage que não existe no ambiente online, pendência do dono que já
+bloqueia a primeira foto e que a galeria não agrava. A resistência da verificação do banner a uma
+raspagem sustentada é estimativa, e por isso virou vetor de review em vez de afirmação. E a
+premissa P2 é a mais desconfortável da rodada: ela ratifica que um cupom digitado por cima do link
+transfere comissão. É o que o produto faz hoje, e mudar isso é mexer no kernel de dinheiro, o que
+esta lane não tinha mandato para propor sem o dono olhar.
