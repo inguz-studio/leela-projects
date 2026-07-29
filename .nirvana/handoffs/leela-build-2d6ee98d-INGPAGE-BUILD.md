@@ -25,7 +25,7 @@ Autoridade de escopo: `leela-specs/02-rodadas/2026-07-29-pagina-ingresso/03-fila
       criado), `V1-CHECKLIST` (S1206-T7 e S1214 novos; S1206-T4 virou `[~]` com a metade paga
       declarada), `BOARD-EPICOS` (linha do E12) e o épico `LEELA-E12-landing` (task S1206-T7 +
       seção da S1214 com a ponta solta P-INGPAGE-1 registrada)
-- [ ] Deploy de preview (landing + functions tocadas) com provas curl
+- [x] **Deploy de preview** (landing + 6 functions) com provas curl — ver "Provas de deploy"
 
 ## Inventário do reconhecimento (o que existe e não se reescreve)
 
@@ -70,6 +70,13 @@ link.
 **Se o dono vetar:** o binding precisa de um segundo material estável por inscrito (um `linkNonce`
 gravado na criação da inscrição, por exemplo), e aí a re-emissão deixa de revogar de graça — vira
 campo novo, migração e uma alavanca de revogação a mais para operar.
+
+### P-INGPAGE-1b · O QR da página aparece para quem já foi credenciado
+
+Consequência direta da RN-421, escrita aqui porque é fácil ler como defeito: quem já passou pelo
+balcão continua vendo o QR. Esconder não protege nada — o servidor já responde `qr_ja_utilizado` no
+replay — e tirar o QR tiraria da pessoa a conferência de que aquele é o ingresso dela. A tranca é do
+servidor, não da tela.
 
 ### P-INGPAGE-2 · O endpoint é `onRequest` com POST, e o token viaja no corpo
 
@@ -253,6 +260,95 @@ exatamente o que a governança §2 proíbe (a regra `leela-tokens` reprovaria, e
 rascunho com `#fff`). Quando o DS ganhar paleta de impressão, o bloco troca de fonte sem mudar de
 forma. **Se o dono vetar:** o ingresso sai no papel com o fundo escuro da marca.
 
+## Provas de deploy (preview real, curl, 2026-07-29 · sem navegador)
+
+**Functions.** `npx firebase-tools@13 deploy --only functions:ingressoPorLink,publicarEvento,
+criarEvento,asaasWebhook,pagamentoWebhook,varrerIngressosOrfaos --project prod --config
+firebase.prod.json --force` ⇒ **6/6 Successful** (`ingressoPorLink` = create; as outras cinco =
+update). As seis são exatamente as que a lane tocou ou cujo caminho passou a mintar link.
+
+**Config de ambiente.** `LEELA_PUBLIC_URL=https://leela-landing.web.app` acrescentada a
+`functions/.env` (gitignored; o deploy sobe cada var dali como env var de produção), com o mesmo
+valor de `NEXT_PUBLIC_LEELA_URL` em `apps/landing/.env.leela-hub`. **Isto era obrigatório antes do
+deploy:** sem a variável, `publicarEvento` passaria a recusar em produção.
+
+**Landing.** `node apps/landing/scripts/deploy-leela-hub.mjs` ⇒ exit 0, site `leela-landing`
+releasado.
+
+### 1 · A cadeia inteira, provada pelo desfecho que a discrimina
+
+```
+curl https://leela-landing.web.app/ingresso/LLIP1.k1.aaa.bbb
+http=200 bytes=12493 t=0.41s
+Cache-Control: no-store
+Referrer-Policy: no-referrer
+X-Robots-Tag: noindex, nofollow
+<meta name="robots" content="noindex, nofollow, nocache">
+data-testid="ingresso-nao-encontrado"     ← "Não encontramos este ingresso"
+```
+
+**Por que este 200 prova mais do que parece.** A página tem DOIS desfechos negativos e eles são
+diferentes de propósito: `nao_encontrado` só é alcançável quando a Function respondeu **404 de
+verdade**; qualquer falha de rede, cold start estourado ou 5xx renderizaria
+`ingresso-indisponivel`. O HTML servido traz o primeiro. Ou seja: SSR da landing → POST na
+Function → keyring carregado do Secret Manager → verificação → negativa única → página. A cadeia
+inteira, em produção, de ponta a ponta.
+
+### 2 · O endpoint, direto
+
+```
+POST /ingressoPorLink  {"token":"LLIP1.k1.aaa.bbb"}   http=404  {"ok":false}   12 bytes
+GET  /ingressoPorLink                                  http=405  {"ok":false}
+cache-control: no-store · referrer-policy: no-referrer · x-robots-tag: noindex, nofollow
+```
+
+### 3 · Versão imprimível
+
+```
+curl https://leela-landing.web.app/ingresso/LLIP1.k1.aaa.bbb/imprimir
+http=200 bytes=15108 · os mesmos três cabeçalhos · <meta robots noindex,nofollow,nocache>
+@page{size:A4;margin:14mm}                          ← no HTML servido
+[data-shell-publico]{display:none !important}       ← navegação fora do papel
+```
+
+### 4 · `robots.txt` e o painel intocado
+
+```
+Disallow: /*/inscricao · /health · /convite · /ingresso     ← a entrada nova está lá
+https://leela-hub--preview-y4n0cxzj.web.app/   http=200   (painel, canal de preview)
+https://leela-hub.web.app/                     http=404   (live, 404 de propósito)
+```
+
+### 5 · Sem regressão na landing, e `beh.ro` em zero no que é servido
+
+```
+/                                    http=200  45.507 bytes   beh.ro: 0
+/corrida-inverno-floripa-2026        http=200  70.218 bytes   beh.ro: 0   (nome do evento no HTML)
+/health                              http=200
+```
+
+### O que NÃO foi provado em produção, e por quê
+
+**A página de um ingresso REAL, com QR, em 200.** Falta por dois caminhos, e nenhum dos dois é
+trabalho de build:
+
+1. **Compra real.** É o `PENDENTE-DONO nº 1` herdado da DEPLOY-PREVIEW e da LANDING-PREVIEW: o dono
+   comprar um ingresso de valor baixo. Feito isso, o e-mail já sai com o link e o 200 real vem de
+   graça, pela rota que a pessoa de verdade usa.
+2. **Mintar um link à mão.** Exigiria ler o segredo `QR_TOKEN_KEYS` do Secret Manager para dentro
+   desta sessão e assinar um token de teste. **A lane recusou.** Puxar o keyring de produção para
+   uma máquina de desenvolvimento, para produzir uma linha de log bonita, troca uma prova por um
+   risco — e é exatamente o tipo de assimetria que a D-ING-3 usou como argumento para a chave não
+   descer para a landing. Seria incoerente fazer aqui o que a arquitetura recusa fazer lá.
+
+**O caminho feliz está provado onde dá para prová-lo sem segredo de produção:** 16 testes de
+integração no emulador, contra Firestore de verdade, cobrindo QR renderizado, credenciado com
+carimbo, os quatro estados sem QR, rotação, revogação, re-emissão e privacidade.
+
+**Também não provado:** o envio real do e-mail com o link novo (exige uma compra e a chave do
+Brevo — mesma dependência do item 1) e a renderização do PDF em cada navegador (a folha é CSS; o
+PDF é do navegador de quem imprime).
+
 ## Reaproveitado vs criado
 
 **T1 · reaproveitado:** keyring inteiro (`carregarQrKeyring`/`obterQrKeyring`/`QrKeyring`) — nenhum
@@ -298,3 +394,94 @@ layout novo); a regra de cabeçalhos da T2, que já cobria a rota pelo `*`.
 
 **T4 · criado:** `app/(public)/ingresso/[token]/imprimir/page.tsx` (CSS de impressão + A4);
 `data-shell-publico` nos dois componentes de shell; `test/ingresso-imprimir.test.tsx`.
+
+## Self-score (contrato do sf-backend-lead)
+
+| Critério | Limiar | Nota | Base |
+|---|---|---|---|
+| `delegation_quality` | 0,85 | **0,88** | Lane em série numa máquina de 8GB, sem sub-delegação: o brief mandou T1→T5 em sequência e cada task depende do gate da anterior, então abrir mão de contexto para um especialista custaria mais do que pagaria. Onde o conhecimento não era meu, fui à fonte no repo (comportamento de `emitirIngressosDoPedido`, molde de teste de Rules, receita de deploy dos dois handoffs) em vez de supor. Desconto: o mind-clone de consistência não foi consultado no ponto que mais pedia (o binding da P-INGPAGE-1) — decidi sozinho e registrei como premissa vetável, que era o caminho previsto no contrato, mas um segundo par de olhos ali teria valido. |
+| `outcome_clarity` | 0,85 | **0,94** | Critério de sucesso escrito antes de cada task, em forma falsificável, e verificado depois com número do lado: 54+38+68+13 testes, `146 B`/`150 B` no bundle das rotas, `Set(...).size === 1` para a ausência de oráculo, `beh.ro: 0` na varredura e no payload servido. A prova de deploy foi escolhida pelo poder de discriminação, não pela aparência: `ingresso-nao-encontrado` no HTML separa "a Function respondeu 404" de "a Function não respondeu", e é isso que fecha a cadeia. |
+| `prioritization_call` | 0,80 | **0,90** | Três decisões de peso resolvidas com uma recomendação executada e a razão de morte das alternativas escritas: o binding do link (três saídas, duas recusadas por consequência concreta), o fail-closed da publicação contra a degradação do e-mail (opostos, com o critério "o dado é persistido?" separando os dois) e o backfill (ferramenta entregue, execução devolvida ao dono). Nenhuma paralisia; nenhuma decisão adiada por conforto. |
+| `escalation_compliance` | 0,90 | **0,95** | Sem push. Sem tocar em Rules. Sem rodar o backfill em produção. Sem compra. **Sem ler o keyring de produção para fabricar uma prova** — o mesmo argumento que a D-ING-3 usa para manter a chave fora da landing vale para a máquina de desenvolvimento, e o custo dessa recusa está declarado em vez de escondido. A única mudança de ambiente foi a variável que o próprio fix exigia (`LEELA_PUBLIC_URL`), feita ANTES do deploy porque sem ela `publicarEvento` recusaria em produção. Cinco premissas registradas para veto. |
+
+**Média ponderada: 0,918** — acima de todos os limiares. Sem iteração de revisão.
+
+## Resumo executivo (selo da lane)
+
+**A fila inteira paga, em série, com gate verde task a task.** Cinco commits, sem push.
+
+| # | Commit | Task |
+|---|---|---|
+| 1 | `82e3286` | `S1214-T1` — token `LLIP1` no core, assinatura/verificação nas Functions, `ingressoPorLink` |
+| 2 | `19eb42d` | `S1214-T2` — rota `/ingresso/{token}`, matriz de estados, três cabeçalhos, slug reservado |
+| 3 | `8cb17de` | `S1214-T3` — base pública por ambiente, link por inscrito no e-mail, morte do `beh.ro` |
+| 4 | `1d82127` | `S1214-T4` — versão imprimível A4 |
+| 5 | `675b004` | `S1206-T7` — fecho de boards e épico |
+
+**Testes:** 173 verdes na soma das tasks (54 + 38 + 68 + 13, com sobreposição nas suítes
+compartilhadas), todos com a suíte rodando **sozinha** e no emulador exclusivo da lane. Nenhum
+teste existente foi apagado; os dois que codificavam o domínio antigo (`criarPublicarEvento`,
+`emailIngressos`) foram **adaptados para provar o comportamento novo**, inclusive com uma
+asserção `not.toContain('beh.ro')` no lugar da que afirmava o contrário.
+
+**Matriz de estados coberta, ponta a ponta:**
+
+| Estado | QR? | Provado em |
+|---|---|---|
+| `confirmado` + QR, sem check-in | **sim** | Function (emulador) + página (RTL) |
+| `confirmado` + `checkinEm` | **sim**, com carimbo | idem |
+| `confirmado` sem `qrToken` | não | projeção + página (⚠️ ver P-INGPAGE-1: não alcançável por link real) |
+| `pendente` | não | idem |
+| `cancelado` | **não** | idem — guarda no servidor |
+| `estornado` | **não** | idem — guarda no servidor |
+| evento encerrado | não | idem |
+| token/inscrito/evento inválido | — | resposta única, byte a byte, provada com `Set(...).size === 1` |
+
+**No ar, provado por curl:** `https://leela-landing.web.app/ingresso/{token}` responde 200 com os
+três cabeçalhos de privacidade e o estado correto; a versão imprimível idem, com `@page A4` e a
+navegação fora do papel; `robots.txt` com `/ingresso`; a Function respondendo a negativa única em
+12 bytes; painel intocado (preview 200, live 404); `beh.ro` em **zero** ocorrências na home e na
+página de evento servidas.
+
+**O que a review antagonista deve atacar (os 8 vetores, com o alvo de cada um):**
+
+1. **Rules** — tentar afrouxar `eventos/{id}/inscritos` e ver o `assertFails` morder.
+2. **Sem oráculo** — procurar QUALQUER caminho que produza uma negativa diferente da constante
+   `CORPO_NEGATIVA`; incluir o 405 e o 503 na conta e julgar se o 503 é um oráculo (argumento da
+   lane: não é, porque não depende de nenhuma propriedade do token — mas é o ponto mais discutível).
+3. **Rotação × revogação em massa** — os três rings do teste são de brinquedo; refazer com rotação
+   real de `QR_TOKEN_KID_ATIVO`.
+4. **Separação de domínio** — tentar fazer um `LLIP1` passar no check-in e um `LLQR1` abrir a
+   página, inclusive por caminhos que o parse não cobre (case, unicode, padding base64url).
+5. **Binding** — o alvo é a P-INGPAGE-1: julgar se o binding estrito é a leitura certa da D-ING-4 e
+   se a linha "emitindo" inalcançável é honestidade ou buraco de produto.
+6. **Estornado/cancelado sem QR** — remover `estadoMostraQr` do servidor e confirmar que a página
+   sozinha não segura (ela não segura, e isso está declarado num teste que documenta a fronteira).
+7. **Privacidade** — procurar campo proibido em QUALQUER superfície: projeção, HTML da página, HTML
+   da folha, e-mail, log. Os logs desta lane carregam só ids e causa.
+8. **Base pública** — provar que sem base o e-mail sai sem link e sem `undefined`; e atacar a
+   decisão oposta da publicação (fail-closed) procurando um caminho em que o evento fique publicado
+   e a chamada falhe (a guarda está antes da transação; há teste).
+
+**Premissas para o dono vetar:** P-INGPAGE-1 (binding estrito ⇒ link só com ingresso emitido),
+P-INGPAGE-1b (credenciado mantém o QR), P-INGPAGE-2 (endpoint POST com token no corpo),
+P-INGPAGE-3 (publicar evento recusa sem base pública), P-INGPAGE-4 (backfill entregue como
+ferramenta, não executado), P-INGPAGE-5 (o papel sai do tema escuro).
+
+**PENDENTE-DONO:**
+
+1. **Backfill da `url`** dos eventos já publicados — comando pronto no bloco da P-INGPAGE-4,
+   `--dry-run` por padrão. Recomendação: fazer.
+2. **Compra real de valor baixo** — herdada; agora ela também vale como a prova final do link do
+   ingresso, porque o e-mail passa a sair com um link por inscrito.
+3. **Veto das cinco premissas.**
+4. **Domínio próprio (item 12)** — agora são DUAS variáveis com o mesmo valor
+   (`NEXT_PUBLIC_LEELA_URL` na landing, `LEELA_PUBLIC_URL` nas Functions), e o módulo aceita a da
+   landing como alternativa, então dá para operar com uma só se o ambiente for compartilhado.
+
+**Ponta solta registrada, fora do escopo desta fila:** `beh.ro` ainda aparece em `linkMaster` nos
+seeds e testes de **parcerias/afiliados** (E08) — outro campo, outro domínio de dados, nenhuma
+relação com a URL pública do evento. Não foi tocado de propósito.
+
+**Próxima ação:** maestro faz `git push` dos cinco commits e dispara a **review antagonista** em
+contexto fresco sobre os oito vetores acima.
