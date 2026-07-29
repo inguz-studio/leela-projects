@@ -55,3 +55,23 @@ Commit da Task 1 e reconhecimento fino (env vars usadas pelas functions, provide
 ## Premissas (acumulando)
 
 1. Blaze confirmado por API de billing, não por deploy — chamada barata conforme brief.
+
+## Resumo executivo (selo da lane)
+
+**Link no ar:** https://leela-hub--preview-y4n0cxzj.web.app (canal `preview`; expira 2026-08-27, renovável com 1 comando; live `leela-hub.web.app` segue 404 de propósito). Logins: `marina@demo-leela.dev` / `felipe@demo-leela.dev` / `admin@demo-leela.dev`, senha `demo1234` (convenção do preview local, já pública no repo).
+
+**O que subiu:**
+- Functions: **86/86 ACTIVE** em us-central1 (gen1, node20), bundle esbuild autocontido; invoker público nas 56 HTTPS.
+- Secrets (Secret Manager): ASAAS_API_KEY, ASAAS_WEBHOOK_AUTH_TOKEN, BREVO_API_KEY, CRM_ID_PEPPER (novo, forte), QR_TOKEN_KEYS (keyring novo `prod1`), BANK_DATA_KEY (nova AES-256).
+- Hosting: painel Vite (build `--mode leela-hub`) no canal preview.
+- Firestore `(default)` southamerica-east1 + rules + índices; Auth (e-mail/senha + anônimo; domínio do preview autorizado); web app `painel`.
+- Seed re-datado (+135d) com codigoIngresso/qrToken assinados pelo keyring de produção; webhook Asaas id `38621f06-d73c-486a-b7ac-a06d6865b026` apontado ao `asaasWebhook` (8 eventos PAYMENT_*).
+- Task 8: caminho real do dinheiro ligado (checkout + estorno com secrets; flag deliberado `ASAAS_PERMITIR_PRODUCAO` em functions/.env.leela-hub).
+
+**Reaproveitado vs criado:** reaproveitados — seeds canônicos inteiros (runner só re-data na escrita), guard compartilhado (consolidação dos 9 inline), config web fail-closed do painel, padrão de config alternativa (firebase.preview.json→firebase.prod.json), token webhook local, e-mail Brevo verificado. Criados — bundle-deploy.mjs, prod-seed-leela-hub.ts, firebase.prod.json, .env.leela-hub (raiz + functions), escape nominal do guard, flag de ativação no selectProvider, bindings runWith (10 functions no total).
+
+**Premissas:** functions em us-central1 (código/api-client) com Firestore em São Paulo — latência cross-região aceita no preview; Storage SEM bucket (uploads do painel falham — pendência); landing NÃO subiu (rota de compra = landing local → produção, documentada acima); Google/Apple login não habilitados; canais de preview expiram (30d máx); senha demo1234 até o dono trocar; PIX avulso de R$ 5 vira no-op logado no webhook (sem pedido correspondente).
+
+**PENDENTE-DONO:** (1) compra real de valor baixo pela rota documentada = teste canônico do go-live; (2) trocar/desativar logins demo antes de divulgar o link; (3) decidir bucket de Storage se uploads entrarem no preview; (4) renovar/promover o canal em 27/08; (5) ⚔ próxima review de dinheiro deve cobrir `30c7b89`+`72432fa` (código de pagamento tocado em lane de infra); (6) defeito pré-existente `@leela/mobile#build` (Metro "r is not a function", falha idêntica no baseline 26009a8) — fora do escopo desta lane.
+
+**Suíte canônica:** build raiz VERDE (sem o mobile, quebrado pré-lane com prova no baseline); vitest (functions, 3310 testes) — rodada final em voo no fechamento deste selo; veredito na linha abaixo.
