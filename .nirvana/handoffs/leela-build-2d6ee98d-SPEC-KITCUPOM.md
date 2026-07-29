@@ -13,8 +13,8 @@
 | # | Task | Estado | Commit |
 |---|---|---|---|
 | T0 | Inventário + abertura do handoff | ✅ | `a1984f9` |
-| T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ✅ | (este) |
-| T2 | Rodada · RNs (`03-rns-kitcupom.md`) | ⏳ | — |
+| T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ✅ | `e268cd0` |
+| T2 | Rodada · RNs (`03-rns-kitcupom.md`) | ✅ | (este) |
 | T3 | Stories nos épicos (E03 galeria, E12 cupom) + deltas de fronteira | ⏳ | — |
 | T4 | Fila de código com ⚔ + boards | ⏳ | — |
 | T5 | Selo · resumo executivo + self-score | ⏳ | — |
