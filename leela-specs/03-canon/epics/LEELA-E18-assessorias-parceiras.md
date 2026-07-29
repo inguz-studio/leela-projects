@@ -197,3 +197,27 @@ Commits: `30cb9f2` (S1800) · `8e9c8e5` (S1801-T3) · `482ed54` (S1803 + suíte)
 8. **Risco aceito (review, MÉDIO):** o retorno de cadastro distingue vínculo-imediato de convite ⇒ oráculo de existência de conta para tenant writer — exigido pelos aceites de RN-362; mitigado por auditoria estruturada.
 
 **Pendências (fora do território O3-L3B):** S1800-T1 form (painel) · S1801-T2 página de aceite (landing; gated pelo EmailProvider) · S1802-T1 editor da condição (painel) · S1803-T1 lista/encerrar (painel) · wrappers api-client das 4 callables.
+
+---
+
+## Delta fronteira com o cupom pré-aplicado por link (SPEC-KITCUPOM · 2026-07-29)
+
+A **D-0729-5** vale igual para a assessoria parceira e para o afiliado do evento. A regra do link
+é a RN-429, que mora no E08; aqui ficam as três consequências específicas deste épico.
+
+**O `linkMaster` da parceria passa a ser derivado.** Ele é um dos campos espelhados do programa
+(`CAMPOS_ESPELHO_PARCERIA`) e hoje é texto livre: o seed grava `beh.ro/mfl26?c=frc`, que aponta
+para o domínio dos mocks Be Hero e usa uma chave que nenhum arquivo do repositório lê. Passa a
+nascer do mesmo gerador do afiliado, com a base pública única da RN-423, o `ref` e o cupom da
+parceria. O painel de parcerias copia o link gerado; ninguém digita.
+
+**O cupom de escopo de club parceiro continua com o gate que já tem.** O auto-apply não afrouxa a
+RN-364 em nada: o cupom criado pela Function de condição de desconto segue exigindo a parceria
+**ativa**, e a exigência é re-lida no servidor, inclusive dentro da transação de venda. Um link
+com o cupom da assessoria cuja parceria foi desativada simplesmente não aplica desconto, e a faixa
+da RN-431 não aparece. A pessoa não vê erro na landing e o checkout continua sendo quem recusa.
+
+**O nome exibido na faixa é o da entidade.** Quando a origem do cupom é assessoria ou clube, o
+banner nomeia a entidade, que já é pública, e não uma pessoa. A premissa de exibir nome de pessoa
+física vale só para o afiliado individual do E08, e está registrada como P3 na rodada, vetável
+sem refazer a spec.

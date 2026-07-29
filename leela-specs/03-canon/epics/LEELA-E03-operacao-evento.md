@@ -1958,3 +1958,140 @@ o operador achar na busca que a `S211-T1` entregou.
 **O que muda para o operador, na prática.** Quem chega sem celular carregado passa a ter uma
 saída a mais: a folha impressa da página (RN-424). O balcão lê o QR impresso pelo mesmo
 scanner, sem nada novo do lado do organizador.
+
+---
+
+## Delta galeria do kit (SPEC-KITCUPOM · 2026-07-29 · D-0729-4)
+
+O dono decidiu que o kit passa a ter até três fotos, uma marcada como principal, e que a
+principal é a que aparece nas listagens e no site. Hoje o kit tem uma foto só (`imagemUrl`,
+RN-227). Isto é feature nova, não regressão. RNs em
+`02-rodadas/2026-07-29-checkout-ux/03-rns-kitcupom.md`; decisões e premissas vetáveis em
+`02-spec-kitcupom.md` da mesma rodada.
+
+**RNs novas deste épico:** RN-425 (forma da galeria e principal por construção) e RN-427 (edição
+no painel e slots de Storage). A RN-426 (superfícies) e a RN-428 (simulação) são do E12 e estão
+referenciadas na fronteira abaixo.
+
+### LEELA-S212 · Galeria do kit (até três fotos, uma principal) · (de-para novo · SPEC-KITCUPOM)
+
+**Como** organizador, **quero** cadastrar até três fotos por kit e escolher qual é a principal,
+**para** mostrar o kit por mais de um ângulo sem perder o controle de qual foto representa o kit
+nas listagens e no site.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Core + Painel + Storage (+ E12 nas telas públicas)
+- **Tela(s) de referência:** `KitEditor` do painel; detalhe do kit no checkout
+- **RNs:** RN-425, RN-427; fronteira RN-426, RN-428; contexto RN-227, RN-230, RN-210/211
+- **Reuso obrigatório:** `isUrlImagemKitValida`, o padrão Postel de `normalizarItensKit`,
+  `uploadImagemKit`, o `FileInput` do DS, `kitObjetoValido`/`eventoDoMeuTenant`/`imagemValida`
+  das Rules de Storage, e o primitivo `Thumb` do DS. **Nenhum componente novo de DS.**
+- **Dependência herdada:** upload real exige bucket de Storage, que não existe no ambiente
+  online (pendência 3 do dono, handoff DEPLOY-PREVIEW). A mesma pendência já bloqueia a primeira
+  foto hoje; a galeria não acrescenta dependência.
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** um kit com uma foto só, gravado antes desta história, **quando** o produto lê o
+  documento, **então** ele parseia sem erro, aparece igual em toda superfície e nenhuma migração
+  roda (RN-425).
+- **Dado** um kit com principal e duas secundárias, **quando** qualquer superfície pede a
+  galeria, **então** o acessor devolve a principal primeiro e as secundárias na ordem gravada
+  (RN-425).
+- **Dado** um documento com `fotosSecundarias` contendo lixo, esquema perigoso, URL repetida da
+  principal, duplicata interna ou mais de duas entradas, **quando** o parse roda, **então** as
+  entradas inválidas são descartadas, a lista é cortada em duas e o checkout público não quebra
+  (RN-425).
+- **Dado** o editor de kit, **quando** abro um kit, **então** vejo três posições, a primeira
+  rotulada como principal, cada uma com enviar, trocar e remover (RN-427).
+- **Dado** uma foto na posição 2, **quando** peço "tornar principal", **então** ela troca de
+  lugar com a principal e nenhuma foto aparece duas vezes (RN-427).
+- **Dado** um kit com principal e secundárias, **quando** removo a principal, **então** a
+  primeira secundária é promovida e o kit nunca fica com galeria sem principal (RN-427).
+- **Dado** o upload de uma segunda foto, **quando** ele grava, **então** o objeto vai para o slot
+  literal 2 sob o kit, reenviar sobrescreve, não sobra órfão e não existe nome de arquivo livre
+  (RN-427).
+- **Dado** uma tentativa de gravar em um slot fora de 2 e 3, **quando** as Rules avaliam,
+  **então** ela é negada, e o teto de três fotos vale também no Storage (RN-427).
+- **Dado** um usuário de outro tenant, **quando** tenta gravar qualquer slot do kit, **então** as
+  Rules negam pelo mesmo caminho fail-closed da foto principal (RN-427).
+
+**Tasks:** S212-T1, S212-T2, S212-T3, S212-T4. Fila e ⚔ em
+`02-rodadas/2026-07-29-checkout-ux/04-fila-kitcupom.md`.
+
+#### LEELA-S212-T1 · Forma da galeria no core e nas Rules de Storage
+- **Tipo:** core/rules · **Depende de:** — · **Bloqueia:** S212-T2, S212-T3 · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Acrescentar `fotosSecundarias[]` ao `Kit`, o acessor canônico `fotosDoKit`, a troca pura
+`promoverFotoPrincipal` e os dois slots literais nas Rules de Storage.
+
+**Contexto & referências**
+`packages/core/src/eventos/kit.ts` já tem o molde inteiro: `normalizarItensKit` é o padrão Postel
+a copiar, `isUrlImagemKitValida` é a fronteira de URL a reusar, e `parseKit` é onde a
+normalização entra. `storage.rules` já tem `kitObjetoValido`, `eventoDoMeuTenant` e
+`imagemValida`; o bloco novo os reusa sem inventar guarda.
+
+**Modelo de dados / contratos**
+Campo opcional `fotosSecundarias?: string[]` (máximo 2 após filtro). `fotosDoKit(kit)` devolve
+principal primeiro. `promoverFotoPrincipal(kit, indice)` devolve o par trocado, sem copiar.
+Path novo: `eventos/{eventoId}/kits/{kitId}/fotos/{slot}` com `slot` restrito a 2 e 3.
+
+**Aceite**
+Testes unitários do parse defensivo (lixo, esquema perigoso, duplicata da principal, duplicata
+interna, estouro do teto), da troca e da promoção ao remover a principal. Teste de Rules cobrindo
+slot fora do enum, tenant errado e evento inexistente.
+
+#### LEELA-S212-T2 · Três posições no editor de kit
+- **Tipo:** ui/painel · **Depende de:** S212-T1 · **Bloqueia:** — · **Estimativa:** M · **Rota:** opus
+
+**Objetivo**
+Expor as três posições no `KitEditor`, com enviar, trocar, remover e "tornar principal".
+
+**Contexto & referências**
+`apps/painel/src/routes/eventos/kits/KitEditor.tsx` já tem o fluxo de upload, a prévia, o
+tratamento de erro e a semântica de payload do `salvarKit` (campo ausente = não tocado, nulo =
+removido). A task replica a posição existente, não reescreve o editor. `uploadImagemKit` ganha o
+parâmetro de slot.
+
+**Aceite**
+Teste de componente para promover, remover a principal com secundárias presentes, e o estado de
+kit sem nome (que já bloqueia upload hoje). Contraste por estado nos controles novos.
+
+#### LEELA-S212-T3 · Galeria no detalhe do kit e projeção pública
+- **Tipo:** ui/landing · **Depende de:** S212-T1 · **Bloqueia:** — · **Estimativa:** M · **Rota:** opus
+
+**Objetivo**
+Levar as fotos secundárias até o detalhe do kit no checkout, mantendo as listagens na principal.
+
+**Contexto & referências**
+`apps/landing/lib/tipos.ts` (`KitPublico`) e `lib/leitor.ts` projetam o kit; `KitDetalhe.tsx` já
+exibe a foto e já tem lightbox. `Thumb` do DS é o primitivo das miniaturas. `KitsSection` e
+`StepModalidadeKit` **não mudam** (RN-426).
+
+**Aceite**
+Teste de que a listagem exibe só a principal, de que a troca de miniatura muda a foto em destaque,
+de que o lightbox abre a foto em foco, e de que o enquadramento quadrado com recorte por cobertura
+não deforma foto fora de esquadro.
+
+#### LEELA-S212-T4 · Simulação de galeria no preview
+- **Tipo:** landing/preview · **Depende de:** S212-T3 · **Bloqueia:** — · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Fazer o dono ver kits com três fotos no meia-floripa, sem gravar URL no seed.
+
+**Contexto & referências**
+`apps/landing/lib/kitImagem.ts` já implementa a cascata real → mock de preview → placeholder
+Leela, com o motivo escrito no cabeçalho e a lição LEELA-R14 citada. A task acrescenta um degrau,
+não um mecanismo (RN-428).
+
+**Aceite**
+Teste do resolvedor: em preview, kit sem secundárias devolve duas extras determinísticas do acervo
+local; em produção, devolve só a principal. Zero alteração nos scripts de seed.
+
+### Fronteira com o E12 (telas públicas)
+
+O modelo, o painel e o Storage são deste épico. Quem decide **onde** cada foto aparece é a RN-426
+e quem decide a **simulação** é a RN-428, ambas do E12, porque vivem na superfície pública. A
+regra que atravessa os dois épicos é uma só: listagem e site usam a principal, o detalhe mostra a
+galeria, e nenhuma superfície precisa validar "exatamente uma principal", porque a forma da
+RN-425 não permite outra coisa.

@@ -701,3 +701,48 @@ certo.
 Nada mudou aqui. O split automático segue fechado (item 23 ratificado), a RN-315 segue
 parada, a HIP-R9-01 segue hipótese, e a pergunta "convite ou descoberta" da S702 continua
 com o Vitor. A posição 2 não depende de nenhuma das quatro.
+
+---
+
+## Delta cupom pré-aplicado por link (SPEC-KITCUPOM · 2026-07-29 · D-0729-5)
+
+A **D-0729-5** decidiu que o afiliado compartilha um link que chega no checkout com o desconto já
+computado. Este épico ganha duas RNs, uma que muda o link e uma que ratifica o que já acontece.
+A história de superfície é a `E12-S1215`.
+
+### RN-429 · O link é gerado, nunca digitado
+
+O link compartilhável passa a nascer de um gerador único, na forma
+`{base pública do ambiente}/{slug}?ref={refCodigo}&cupom={CÓDIGO}`, com a base única por ambiente
+que a RN-423 estabeleceu, o `refCodigo` que já é o docId do afiliado, e o `cupomCodigo` vinculado
+quando existe. Sem cupom vinculado, o link sai só com `ref` e continua rastreando conversão, que é
+o comportamento de hoje.
+
+O `linkMaster` deixa de ser texto livre. Isso corrige um defeito real que o inventário desta lane
+encontrou: o seed grava `parceria.linkMaster = 'beh.ro/mfl26?c=frc'`, e esse link **não entrega
+nada**. A chave `c` é preservada pelo CTA e não é lida por nenhum arquivo do repositório, então
+não aplica cupom; e o domínio é o dos mocks Be Hero, o mesmo que a RN-423 acabou de expulsar do
+e-mail da compra. A chave `c` continua aceita na entrada como apelido de `cupom`, porque link de
+afiliado circula impresso, mas nunca é gerada na saída.
+
+### RN-433 · A atribuição não muda; o desempate passa a estar escrito
+
+**O que não muda, item por item:** a precedência do cupom de afiliado sobre o `?ref=`; o registro
+de qual dos dois venceu; o gate da RN-315, em que o link rastreia a conversão mas o desconto só
+ativa depois do mínimo de inscrições, sem retroativo; o clamp do instante de clique declarado pelo
+cliente; a janela de atribuição em dias e a re-checagem autoritativa na confirmação; o contador de
+usos escrito só por Function; e o percentual de comissão da RN-310/314.
+
+**O que passa a estar escrito.** O desempate entre cupom digitado e link já é decidido pelo
+código, e não é neutro. Quem chega pelo link do afiliado A e digita à mão o cupom do afiliado B
+faz **B** levar a comissão, porque o cupom aplicado é sinal mais forte que o clique, e o instante
+do clique de A é descartado no processo. Quando o cupom digitado não pertence a afiliado nenhum, o
+`?ref=` de A sobrevive: A leva a comissão e não leva o crédito do desconto.
+
+A decisão da spec é **ratificar**, não alterar. Mudar o desempate significaria mexer no kernel de
+dinheiro para resolver um caso de borda que o produto ainda não observou, e o auto-apply não
+acrescenta nem tira nada dessa balança: ele preenche um campo que a pessoa poderia digitar.
+
+**Consequência prática para o organizador.** O link do afiliado agora entrega desconto de fato, o
+que aumenta a chance de a conversão ser atribuída por `origem: 'cupom'` em vez de `origem: 'ref'`.
+Nenhum valor muda; o que muda é qual dos dois caminhos registra a conversão com mais frequência.

@@ -2038,3 +2038,177 @@ além do que a RN-422 permite.
 Geração de PDF no servidor e PDF anexado ao e-mail.
 
 **Fila completa do pacote:** `02-rodadas/2026-07-29-pagina-ingresso/03-fila-codigo.md`.
+
+---
+
+## Delta cupom pré-aplicado por link e galeria do kit (SPEC-KITCUPOM · 2026-07-29)
+
+Duas decisões da segunda leva da DEC-0729 caem neste épico. A **D-0729-5** cria a história nova
+abaixo; a **D-0729-4** entra como fronteira, porque o modelo do kit é do E03 e só as telas
+públicas são daqui. RNs em `02-rodadas/2026-07-29-checkout-ux/03-rns-kitcupom.md`; decisões e
+premissas vetáveis em `02-spec-kitcupom.md`.
+
+**RNs novas deste épico:** RN-426 (onde cada foto do kit aparece), RN-428 (simulação de galeria),
+RN-430 (travessia do cupom pela jornada), RN-431 (banner pós-Hero) e RN-432 (verificação sem
+oráculo).
+
+### O que o inventário desta lane achou antes de especificar
+
+**O auto-apply de cupom por URL já existe.** O `CheckoutFlow` tem o efeito A-2: recebendo
+`?cupom=`, ele tenta o código na primeira cotação possível, e se o código não colar levanta o
+aviso honesto e segue sem cupom. A história abaixo **não reconstrói** isso. Ela alimenta o
+mecanismo com um link que finalmente carrega o cupom, e acrescenta a comunicação que falta.
+
+**A chave `c` é morta.** `ATRIBUICAO_KEYS` preserva `'c'` da página do evento até o checkout e
+nenhum arquivo do repositório a lê. O seed grava `parceria.linkMaster = 'beh.ro/mfl26?c=frc'`.
+Logo o link master da assessoria hoje não aplica cupom, não atribui conversão e ainda aponta para
+o domínio dos mocks Be Hero que a RN-423 acabou de expulsar do e-mail.
+
+**O cupom não sobrevive à navegação, mas a atribuição sobrevive.** O `RefTracker` guarda o `?ref=`
+por evento; o cupom só existe enquanto a querystring for copiada pelo CTA. Quem chega pelo link,
+abre o regulamento e volta, mantém a comissão do afiliado e perde o desconto.
+
+### LEELA-S1215 · Cupom pré-aplicado por link de afiliado ou assessoria · (de-para novo · SPEC-KITCUPOM)
+
+**Como** quem recebeu o link de um afiliado ou de uma assessoria parceira, **quero** chegar com o
+desconto já computado e ver que ele está aplicado, **para** não precisar descobrir, lembrar e
+digitar um código para pagar o preço que me prometeram.
+
+- **MoSCoW:** Should · **Estimativa:** M · **Superfície:** Landing (página do evento + checkout) + Painel (E08/E18)
+- **Tela(s) de referência:** página do evento (faixa após a Hero); step 0 do checkout da S1209
+- **RNs:** RN-430, RN-431, RN-432; fronteira RN-429 e RN-433 (E08); contexto RN-313, RN-315,
+  RN-364, RN-423, RN-347
+- **Reuso obrigatório:** o efeito A-2 do `CheckoutFlow`, o `CupomCampo` da S1209, o
+  `ATRIBUICAO_KEYS` do CTA, a disciplina inteira do `RefTracker`, a `cotarInscricaoCheckout` como
+  autoridade do número, o leitor server-side da landing e a base pública da RN-423.
+- **Não toca:** o kernel de atribuição do `createInscricaoCharge`, o cálculo de preço, o cálculo
+  de taxa, o contador de usos e o percentual de comissão.
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** um afiliado com cupom vinculado, **quando** o painel mostra o link compartilhável,
+  **então** ele vem gerado da base pública do ambiente com `?ref=` e `?cupom=`, e nenhum domínio
+  de terceiro aparece (RN-429).
+- **Dado** um afiliado sem cupom vinculado, **quando** o painel gera o link, **então** ele sai só
+  com `?ref=` e continua rastreando conversão, como já fazia (RN-429).
+- **Dado** um link antigo com `?c=`, **quando** a pessoa chega por ele, **então** o valor é lido
+  como cupom, e nenhum link novo é gerado com essa chave (RN-429).
+- **Dado** que cheguei pelo link, **quando** navego para outra página do evento e volto,
+  **então** o cupom continua valendo, como a atribuição já continuava (RN-430).
+- **Dado** que cheguei pelo link, **quando** o checkout monta e a primeira cotação é possível,
+  **então** o desconto já vem computado e a linha do resumo mostra a marca de desconto aplicado
+  (RN-430).
+- **Dado** que o número exibido veio da cotação, **quando** a tela renderiza, **então** a
+  interface não soma nem subtrai um centavo (RN-430).
+- **Dado** que digito à mão um cupom diferente do que veio no link, **quando** ele é aceito,
+  **então** o digitado prevalece (RN-430).
+- **Dado** um cupom de link que não cola, **quando** o checkout tenta, **então** o aviso honesto
+  aparece no checkout e a jornada segue sem cupom, exatamente como já acontece hoje (RN-430).
+- **Dado** um cupom de link que se aplica, **quando** abro a página do evento, **então** vejo a
+  faixa logo após a Hero com o código e, quando resolvível, o nome de quem indicou (RN-431).
+- **Dado** um cupom inexistente, expirado, esgotado, de escopo não satisfeito ou de outro evento,
+  **quando** abro a página do evento, **então** a faixa **não aparece** e nenhum erro é mostrado
+  na landing (RN-431).
+- **Dado** que o cupom veio de assessoria ou clube, **quando** a faixa monta, **então** o nome
+  exibido é o da entidade; **dado** que não há nome resolvível, **então** o texto degrada para o
+  código sozinho (RN-431).
+- **Dado** que a faixa depende da querystring, **quando** a página do evento é servida, **então**
+  ela continua estática e a faixa entra atrás de Suspense, como o rastreador e o CTA já fazem
+  (RN-432).
+- **Dado** qualquer causa de recusa, **quando** a verificação responde, **então** a resposta é a
+  mesma nos cinco casos e nenhum valor de desconto sai para código que não se aplica (RN-432).
+- **Dado** que a leitura de cupom é fechada a organizador, **quando** a faixa monta, **então**
+  nenhuma leitura de cupom acontece no cliente e nenhuma Security Rule foi afrouxada (RN-432).
+- **Dado** que cheguei pelo link do afiliado A e digitei o cupom do afiliado B, **quando** a
+  compra confirma, **então** B leva a comissão, que é o comportamento vigente ratificado
+  (RN-433).
+- **Dado** que cheguei pelo link do afiliado A e digitei um cupom sem afiliado, **quando** a
+  compra confirma, **então** A leva a comissão e não leva o crédito do desconto (RN-433).
+
+**Tasks:** S1215-T1, S1215-T2, S1215-T3, S1215-T4. Fila, dependências e ⚔ em
+`02-rodadas/2026-07-29-checkout-ux/04-fila-kitcupom.md`. **A T3 é ⚔ obrigatória** (superfície
+pública nova sobre dado que as Rules fecham); a T1 é ⚔ por tocar link de atribuição.
+
+#### LEELA-S1215-T1 · Gerador do link compartilhável, com cupom dentro
+- **Tipo:** core/painel · **Depende de:** — · **Bloqueia:** S1215-T4 · **Estimativa:** S · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Fazer o link de afiliado e o de assessoria nascerem de um gerador só, com base pública, `ref` e
+`cupom`, e aposentar o `linkMaster` digitado.
+
+**Contexto & referências**
+`packages/core/src/affiliation/afiliado.ts` já documenta a forma `{base}/{slug}?ref={refCodigo}`;
+`packages/core/src/clubs/parceria.ts` espelha `linkMaster` e `cupom` na parceria; a base única por
+ambiente é a da RN-423 (`basePublica.ts`). O `ATRIBUICAO_KEYS` ganha a leitura de `c` como apelido
+de `cupom`, sem passar a gerá-lo.
+
+**Aceite**
+Teste do gerador com e sem cupom vinculado, do apelido `c` na entrada, e da ausência de qualquer
+domínio de terceiro na saída. Painéis de afiliado (E08) e de parceria (E18) copiam o link gerado.
+
+#### LEELA-S1215-T2 · O cupom atravessa a jornada e a marca entra no valor
+- **Tipo:** ui/landing · **Depende de:** — · **Bloqueia:** S1215-T3 · **Estimativa:** M · **Rota:** opus
+
+**Objetivo**
+Capturar e guardar o cupom da URL com a mesma disciplina do `?ref=`, e marcar a linha de desconto
+do resumo com "(desconto aplicado)".
+
+**Contexto & referências**
+`RefTracker.tsx` é o molde exato, incluindo a normalização, a precedência de captura, o claim do
+cliente e a degradação quando o armazenamento não está disponível. O auto-apply já existe no
+`CheckoutFlow` (efeito A-2) e o `CupomCampo` já mostra o estado de cupom aplicado. A marca é
+exibição; o número continua vindo inteiro da cotação.
+
+**Aceite**
+Teste de ida e volta pela página do evento sem perder o cupom, de precedência do código digitado
+sobre o do link, e de que nenhuma soma acontece no cliente.
+
+#### LEELA-S1215-T3 · Banner pós-Hero e a verificação server-side que o alimenta
+- **Tipo:** ui/landing + leitura server-side · **Depende de:** S1215-T2 · **Bloqueia:** — · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Exibir a faixa de desconto após a Hero quando o cupom se aplica, e calar quando não se aplica,
+sem abrir um oráculo de cupons nem vazar dado do afiliado.
+
+**Contexto & referências**
+`apps/landing/lib/leitor.ts` e `lib/firebaseAdmin.ts` são o caminho já doutrinado (Admin SDK no
+servidor, gate no código, Rules intocadas, desde a S1200-T2). `RefTracker` e `CtaInscricao` são o
+precedente de componente de cliente atrás de Suspense sem tirar a página do estático. A mensagem
+opaca do `createInscricaoCharge` ("Cupom indisponível") é o tom da recusa.
+
+**Aceite**
+Resposta idêntica para as cinco causas de recusa; nenhum valor de desconto para código que não se
+aplica; nenhuma leitura de cupom no cliente; nenhuma Rule alterada; página do evento continua
+estática; cache curto por código na borda.
+
+#### LEELA-S1215-T4 · Demonstração ponta a ponta no meia-floripa
+- **Tipo:** preview/seed · **Depende de:** S1215-T1, S1215-T3 · **Bloqueia:** — · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+Dar ao dono dois links prontos para clicar, um de afiliado e um de assessoria, que abrem a página
+do evento com a faixa e chegam ao checkout com o desconto computado.
+
+**Contexto & referências**
+Os dois cupons já existem no seed: `FLORIPARUN10` no afiliado do meia-floripa e `RITMOFORTE10` na
+assessoria com escopo de club parceiro. A demonstração é de **link**, não de cupom novo. O
+`linkMaster` do seed sai de `beh.ro/mfl26?c=frc` e passa a ser gerado.
+
+**Aceite**
+Os dois links documentados no handoff; o de escopo de club parceiro demonstra também a faixa
+ausente quando a condição não é satisfeita.
+
+### Fronteira galeria do kit: as telas públicas (RN-426, RN-428)
+
+O modelo, o painel e o Storage da galeria são do E03 (`S212`). Deste épico são duas regras.
+
+**Onde cada foto aparece (RN-426).** `KitsSection` e `StepModalidadeKit` mostram **só a
+principal** e não mudam. `KitDetalhe` passa a mostrar a galeria: principal em destaque,
+secundárias como miniaturas no `Thumb` do DS, clique troca o destaque, e o lightbox que já existe
+amplia a foto em foco. Nenhum componente novo de DS entra. Sobre proporção, a regra é de
+enquadramento e não de validação, porque o produto não valida proporção em lugar nenhum: as fotos
+são renderizadas em moldura quadrada com recorte por cobertura.
+
+**Como o dono vê isso funcionando (RN-428).** Não pelo seed. A guarda exige http(s) e a lição
+LEELA-R14 já decidiu que mock de imagem é app-side. A cascata do `kitImagem.ts` ganha um degrau:
+em preview, kit sem fotos secundárias recebe duas extras determinísticas do acervo local; em
+produção, mostra só a principal. Página de verdade não exibe foto que o organizador não subiu.

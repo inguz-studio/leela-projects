@@ -1641,3 +1641,33 @@ obrigatoriedade, tetos e versionamento continuam válidos e agora são provados 
 **Nota de migração:** não há. O construtor nunca foi construído, então não existe
 formulário gravado sob evento ou clube para mover. É por isso que este delta cabe antes do
 código e não depois (P-FBT-3).
+
+---
+
+## Delta fronteira com o cupom pré-aplicado por link (SPEC-KITCUPOM · 2026-07-29)
+
+A **D-0729-5** cria uma segunda porta para o cupom, e é importante escrever o que ela **não** faz
+com o modelo deste épico.
+
+**O modelo do cupom não muda.** Nenhum campo novo, nenhum enum novo, nenhum índice novo. Código,
+tipo, valor, teto de uso, janela de validade, contador de usos e escopo continuam exatamente como
+estão. O auto-apply envia à cotação o mesmo código que o campo manual enviaria.
+
+**Não existe caminho de desconto paralelo.** O link e o campo manual do step 0 da S1209 terminam
+no mesmo lugar: o mesmo código, a mesma cotação, a mesma recusa e a mesma mensagem opaca. Quem
+decide se o cupom existe, se está vigente, se o gate do afiliado está aberto e quanto ele desconta
+continua sendo o servidor, na cotação e de novo na criação da cobrança. O código digitado à mão
+prevalece sobre o do link, por ser ação deliberada da pessoa.
+
+**A leitura fechada do cupom continua fechada.** A restrição de leitura ao organizador, com o
+motivo escrito no modelo ("enumerar cupons = vazar descontos"), permanece intacta. A faixa da
+RN-431 **não lê cupom no cliente**: ela é alimentada por leitura server-side na landing, pelo
+padrão de Admin SDK com gate no código que já é doutrina desde a S1200-T2, e nenhuma Security Rule
+é afrouxada para isso.
+
+**O que a RN-432 acrescenta em superfície de ataque, dito sem maquiagem.** A cotação pública já
+responde a chamador anônimo se um cupom cola, então a verificação da faixa não abre uma classe
+nova de vazamento. Ela abre um canal mais barato, porque dispensa montar uma cotação inteira, e
+acrescenta o nome de quem indicou. As mitigações declaradas são resposta uniforme para toda causa
+de recusa e cache curto por código na borda. Limite por endereço de origem não existe no
+ferramental atual e não é reivindicado.
