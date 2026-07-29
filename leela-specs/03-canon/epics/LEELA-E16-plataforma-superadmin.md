@@ -90,7 +90,7 @@ Ver `modelo-de-dados-firestore.md` (§Multi-tenancy). O épico **cria** as cole�
 
 - **Gateway de pagamento concreto** (Pagar.me/Asaas/Stripe Connect) para as recorrências → **ADR-006 posterior**; aqui só a interface `PaymentProvider` (assinatura + split, definida em E04-S301-T2) + provider mock/sandbox. A recorrência **impacta ADR-006** (exige suporte a assinatura) — registrar como requisito para a escolha do gateway.
 - **Mecânica de antecipação de recebíveis** (cálculo de custo, adiantamento efetivo) → pós-V1; nesta fase só o **campo** `anticipation` nos termos (RN-410).
-- **Onboarding self-service do produtor** (cadastro público + KYC) → futuro; nesta fase o `platform_admin` aprova/provisiona (o produtor-sócio é aprovado manualmente).
+- **Onboarding self-service do produtor** (cadastro público + KYC) → ⚠️ **SUPERADO EM PARTE (SPEC-ONBOARD · 2026-07-28, decisão do dono):** o cadastro público com código de convite entrou — ver a seção "Onboarding self-service por código de convite" no fim deste épico (S1608/S1609, RN-411..417). O **KYC** segue futuro; o caminho manual do `platform_admin` (S1601) segue existindo.
 - **Dashboards macro ricos** (séries temporais, coortes, funil de tenants, drill-down por evento) → pós-V1; a V1-slim entrega KPIs macro básicos.
 - **Onboarding/painel do promotor self-service** → **LEELA-E08** (o promotor como afiliado vive em E04/E08; aqui `promoter` é só papel/claim).
 - **Faturamento fiscal / nota da mensalidade SaaS**, conciliação bancária, cobrança de inadimplência avançada (dunning) → futuro.
@@ -1233,3 +1233,120 @@ própria (§2.1) e não passa pelo catálogo de seis, agora sete, do menu do org
 está no caminho errado e o item é barato de refazer, porque não bloqueia nada. O default em
 vigor é o catálogo de benefícios, pelas razões escritas acima. Nenhuma linha de código foi
 escrita em cima dele.
+
+---
+
+## Onboarding self-service por código de convite (SPEC-ONBOARD · 2026-07-28)
+
+Decisão do dono (verbatim na rodada `02-rodadas/2026-07-28-onboarding-organizador/`):
+**cadastro aberto, acesso travado**. Qualquer pessoa cria a conta de organizador sem
+código; a conta aterrissa na home do painel com um overlay bloqueante pedindo o código de
+convite ou o contato com o time Leela; o código, gerido pelo super-admin, destrava o uso.
+Supera EM PARTE o Won't deste épico (a parte "cadastro público"); o KYC segue futuro e o
+caminho manual (S1601) segue existindo — o resgate por código e a aprovação manual
+convergem no MESMO `provisionTenant` (RN-403), nunca em duas máquinas.
+
+**Distinção obrigatória:** este é o convite de **organizador para a plataforma**. O
+`clubes.codigoConvite` (RN-101, atleta→clube) e o convite por e-mail de clube (S104) são
+outras entidades, com outros donos e outras Rules — nada aqui os toca.
+
+**RNs novas (faixa RN-411..RN-417, série 4xx da plataforma):** RN-411 (cadastro aberto,
+acesso travado), RN-412 (dados do cadastro + LGPD — dona E00), RN-413 (formato e ciclo de
+vida do código), RN-414 (resgate server-side, atômico e anti-enumeração), RN-415
+(rate-limit), RN-416 (escopo da conta travada), RN-417 (canal do CTA configurável).
+Detalhe integral em `02-rodadas/2026-07-28-onboarding-organizador/02-rns-delta.md`.
+
+**Modelo de dados:** ➕ `convitesOrganizador/{codigo}` (docId = código normalizado; uso
+único; Rules: cliente só `platform_admin`, resgate só por Function) + delta em
+`profissionais/{uid}` (`statusOnboarding`, `consentimentoLgpd`) +
+`platform/config.contatoOnboarding`. Ver `modelo-de-dados-firestore.md` (§Convites de
+organizador).
+
+**Consumidores fora deste épico:** E00-S030 (cadastro completo no `/cadastrar`, upgrade da
+S020-T3 — o default "cadastro NÃO cria tenant" permanece) e E12-S1213 (entrada na landing:
+"Entrar" + "Criar conta de organizador" no `PublicHeader`).
+
+### LEELA-S1608 · Códigos de convite de organizador no super-admin · (de-para novo · SPEC-ONBOARD)
+
+**Como** super-admin, **quero** gerar e organizar códigos de convite de organizador, ver
+quem usou cada um e quando, e revogar os não usados, **para** controlar quem entra na
+plataforma sem intervenção técnica.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Painel (back-office) · **V1-slim:** ✅ (bloqueia o go-live controlado)
+- **Tela(s) de referência:** — (novo — back-office; reusa DS: Table densa §2.5, ConfirmModal §2.15, Toast, EmptyState §2.12, flat §2.16)
+- **RNs:** RN-413, RN-414 (Rules), RN-401 (guard por claim)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o super-admin, **quando** gero um código, **então** nasce `ativo`, único global, 8 chars no alfabeto sem ambíguos (constante única no core), com `nota?` e `expiraEm?` opcionais (P2/P3/P4).
+- **Dado** `/plataforma/convites`, **quando** abro, **então** vejo tabela densa com código, nota, status, quem usou (nome/e-mail 🔁) e quando, filtros por status, contador e EmptyState; ação de copiar o código por linha.
+- **Dado** um código `ativo`, **quando** revogo, **então** passo por ConfirmModal com preview e vira `revogado`; revogar não desfaz tenant já provisionado (RN-413).
+- **Dado** um cliente sem claim `platform_admin`, **quando** tenta ler/escrever `convitesOrganizador` ou acessar a rota, **então** Rule nega e a rota dá 403 (RN-414/401).
+
+**Tasks:**
+
+#### LEELA-S1608-T1 · Modelo `convitesOrganizador` + core + Rules + seed
+- **Tipo:** data-model · **Depende de:** S1600 (claims/Rules base) · **Bloqueia:** S1608-T2, S1609-T1 · **Estimativa:** S · **Rota:** opus · ⚔
+
+Tipos em `packages/core/src/platform/conviteOrganizador.ts` (`type ConviteOrganizador`,
+`type ConviteStatus`, gerador + `normalizarCodigo` puros, constantes ÚNICAS de alfabeto e
+tamanho — padrão RN-157); Rules deny-by-default para cliente que não seja `platform_admin`
+(leitura E escrita); seed com um código canônico de exemplo. Testes: unit do
+gerador/normalização (colisão, ambíguos, caixa/espaços/hífens) + ataque de Rules
+(`tenant_owner`, atleta e anônimo não leem nem escrevem).
+
+#### LEELA-S1608-T2 · Tela `/plataforma/convites`
+- **Tipo:** screen · **Depende de:** T1, E01 · **Estimativa:** M · **Rota:** opus
+
+Rota nova na área de plataforma (nav própria §2.1, ao lado de Tenants, Termos, Planos,
+Taxa, Repasses e Estornos — nenhum item no menu do organizador). Gerar (modal: nota +
+validade opcional) → Toast com o código e ação de copiar; lista com busca/filtros;
+revogar via ConfirmModal (§2.15). Estados §2.12; flat §2.16; a11y AA.
+
+### LEELA-S1609 · Resgate do código + overlay de acesso travado · (de-para novo · SPEC-ONBOARD)
+
+**Como** organizador recém-cadastrado, **quero** informar meu código de convite na tela
+inicial (ou falar com o time Leela), **para** destravar meu acesso e começar a operar.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Painel + Functions · **V1-slim:** ✅ (bloqueia o go-live controlado)
+- **Tela(s) de referência:** — (overlay sobre a home existente; Modal/Dialog do DS)
+- **RNs:** RN-411, RN-413 (normalização), RN-414, RN-415, RN-416, RN-417, RN-403 (reuso)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** conta `aguardando_convite`, **quando** aterrisso na home, **então** overlay bloqueante não-descartável (sem X/Esc/clique-fora) com campo de código + CTA "Falar com o time Leela" (RN-416).
+- **Dado** a conta travada, **quando** navego, **então** só alcanço overlay, `/conta` e sair; nenhum dado de tenant responde — provado por Rules (RN-400/401), não por tela.
+- **Dado** código válido (em qualquer caixa/com espaços ou hífens), **quando** resgato, **então** a Function carimba o uso E provisiona o tenant na MESMA transação (RN-414, via RN-403); token refresh traz as claims e o painel destrava sem novo login manual.
+- **Dado** código inexistente/usado/revogado/expirado, **quando** tento, **então** o MESMO erro genérico, sem distinguir o caso (RN-414).
+- **Dado** 5 tentativas erradas na última hora, **quando** tento a 6ª, **então** `resource-exhausted` com copy honesta; o CTA continua disponível (RN-415).
+- **Dado** dois resgates concorrentes do mesmo código, **quando** correm, **então** um vence e o outro recebe o erro genérico; falha no provisionamento não queima o código.
+- **Dado** o CTA, **quando** aciono, **então** o destino vem de `platform/config.contatoOnboarding`; sem config, mailto oficial (RN-417).
+
+**Tasks:**
+
+#### LEELA-S1609-T1 · Function `resgatarConviteOrganizador`
+- **Tipo:** api/function · **Depende de:** S1608-T1, S030-T2 (doc do profissional), S1601-T1 (`provisionTenant`) · **Bloqueia:** S1609-T2 · **Estimativa:** M · **Rota:** opus · ⚔
+
+Callable autenticada: normaliza (RN-413) → transação (código `ativo` + não expirado ⇒
+marca `usado` com `usadoPor/usadoEm/tenantId`) + provisionamento via `provisionTenant`
+(nome/slug derivados de `profissionais/{uid}.nomeOrganizacao` — P7; `tipo: 'produtor'`;
+slug colidido ganha sufixo) + `statusOnboarding: 'ativo'`. Rate-limit server-side 5/h por
+conta (RN-415). Se o input atual do `provisionTenant` não cobrir o caso, ESTENDE-SE o
+input — nunca nasce função irmã. Testes: integração (emulator) — resgate feliz; duplo
+resgate concorrente; erro genérico único nos 4 casos; rate-limit; rollback (falha no
+provisionamento não queima o código); anônimo negado.
+
+#### LEELA-S1609-T2 · Overlay bloqueante + conta travada + CTA
+- **Tipo:** screen · **Depende de:** T1, S030-T1 · **Estimativa:** M · **Rota:** opus
+
+Overlay na home para `statusOnboarding: 'aguardando_convite'` (sem claim de tenant):
+campo de código com normalização visual, submit → estados §2.12 (enviando/erro
+genérico/rate-limited), sucesso → refresh de token e entrada real; CTA lendo a config
+(RN-417). Copy da premissa P9 passa pelo gate de linguagem da casa. Testes: unit
+(render por status, não-descartável) + e2e (cadastro → travado → resgate → destravado).
+
+### Fila de código pronta · lane SPEC-ONBOARD (bloqueia o go-live controlado)
+
+Fila completa (com E00-S030 e E12-S1213) em
+`02-rodadas/2026-07-28-onboarding-organizador/03-fila-codigo.md`. Resumo: S1608-T1 ⚔ é a
+fundação; S1609-T1 ⚔ depende dela e do doc do profissional (S030-T2); S1608-T2 e a trilha
+de tela correm depois, em paralelo. `functions/**` está disputado com a lane
+DEPLOY-PREVIEW — serializar por lane.

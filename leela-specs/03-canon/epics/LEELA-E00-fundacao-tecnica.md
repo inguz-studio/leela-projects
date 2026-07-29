@@ -291,3 +291,48 @@ Login funcional com os provedores exigidos (Apple obrigatório p/ App Store) e c
 4. Teste que precisa de entrega REAL de trigger em background no corpo do teste não usa a pausa — invoca o handler manualmente (padrão `runTrigger`) ou drena a convergência (padrão `provisionarDrenado`).
 5. Suites sem `RulesTestEnvironment` limpam via `clearFirestoreRest` (bulk), nunca `recursiveDelete` doc-a-doc.
 6. Comando canônico do gate de suíte: `npm run build && npx firebase-tools@13 emulators:exec --project demo-leela "npx vitest run"` (build SEMPRE antes — lição RN-822/CLAIMFIX).
+
+## Delta cadastro completo do organizador (SPEC-ONBOARD · 2026-07-28)
+
+A "decisão de produto" que a S020-T3 previu chegou — e o default **sobreviveu**: o
+cadastro segue SEM criar tenant. O dono decidiu (verbatim na rodada
+`02-rodadas/2026-07-28-onboarding-organizador/`) o modelo **cadastro aberto, acesso
+travado**: quem cria o tenant é o resgate do código de convite (E16-S1609, RN-414). O que
+muda aqui é o formulário (dados completos + LGPD) e a aterrissagem (home do painel, onde o
+overlay do E16 recebe a conta travada). RNs: RN-411 (dona E16) e RN-412 (dona E00).
+
+### LEELA-S030 · Cadastro completo do organizador (upgrade do `/cadastrar` da S020-T3)
+
+**Como** organizador novo, **quero** me cadastrar informando todos os meus dados e
+aceitando os termos, **para** entrar no painel e pedir a liberação do acesso com o código
+de convite.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Painel · **V1-slim:** ✅ (bloqueia o go-live controlado)
+- **Tela(s) de referência:** `/cadastrar` existente (S020-T3, identidade DARK brasa)
+- **RNs:** RN-411, RN-412; disciplina S020 (erros sem enumeração de contas)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** o formulário, **quando** cadastro, **então** informo nome, e-mail, senha, telefone/WhatsApp e nome da organização/produtora — obrigatórios (RN-412, P8; CPF/CNPJ fora, KYC segue no Won't do E16).
+- **Dado** o consentimento LGPD, **quando** o formulário renderiza, **então** o checkbox nasce desmarcado, com finalidade declarada; o aceite é carimbado com `versao` + `aceitoEm` em `profissionais/{uid}.consentimentoLgpd` (RN-412).
+- **Dado** cadastro válido, **quando** concluo, **então** a conta Auth (e-mail/senha) existe, `profissionais/{uid}` nasce com `statusOnboarding: 'aguardando_convite'` (RN-411) e aterrisso LOGADO na home — onde o overlay da S1609 me recebe.
+- **Dado** que não há código, **quando** aterrisso, **então** nenhuma claim de tenant existe e nenhum dado de tenant responde (RN-400/401 — a tranca é Rules, não tela).
+- **Dado** e-mail já cadastrado, **quando** tento, **então** o erro não enumera contas (disciplina S020).
+
+**Tasks:**
+
+#### LEELA-S030-T1 · Formulário completo + LGPD + aterrissagem logada
+- **Tipo:** screen · **Depende de:** S020-T3 · **Bloqueia:** S030-T2, E16-S1609-T2 · **Estimativa:** M · **Rota:** opus
+
+Evolui o `/cadastrar`: campos novos (telefone/WhatsApp, nome da organização), checkbox
+LGPD desmarcado com finalidade, criação Auth + login automático + redirect para a home.
+Testes: unit (validação, checkbox obrigatório e desmarcado por default) + e2e (cadastro →
+home travada).
+
+#### LEELA-S030-T2 · Doc `profissionais/{uid}` no cadastro + Rule
+- **Tipo:** data-model · **Depende de:** S030-T1 · **Bloqueia:** E16-S1609-T1 · **Estimativa:** S · **Rota:** opus
+
+Grava `profissionais/{uid}` com `statusOnboarding: 'aguardando_convite'`, dados do form e
+consentimento carimbado (modelo em `modelo-de-dados-firestore.md` §profissionais). Rule:
+create do PRÓPRIO doc (`request.auth.uid == profId`) com shape validado; update de
+`statusOnboarding` NEGADO ao cliente (só Function — quem promove é o resgate, RN-414).
+Testes: ataque de Rules (criar doc de terceiro; auto-promover `statusOnboarding`).

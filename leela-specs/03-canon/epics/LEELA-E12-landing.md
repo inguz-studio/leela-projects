@@ -1725,3 +1725,39 @@ e acrescenta.
 Traz o código ao lado do QR no PDF, pelo mesmo motivo de degradação.
 
 **Fila completa do pacote:** `02-rodadas/2026-07-28-ingresso-qr/03-fila-codigo.md`.
+
+## Delta entrada do organizador na landing (SPEC-ONBOARD · 2026-07-28)
+
+Queixa do dono olhando o preview do go-live controlado: *"não temos a área de login. e nem
+aonde clicar na página inicial da Leela, para entrar no nosso painel do organizador."* As
+telas de conta do painel EXISTEM desde a S020 (`/entrar`, `/cadastrar` — E00); o que falta
+é a porta na superfície pública. Rodada completa (cadastro + código de convite + overlay)
+em `02-rodadas/2026-07-28-onboarding-organizador/`; donos E16 (código/overlay) e E00
+(cadastro). Aqui entra só o pedaço da landing.
+
+### LEELA-S1213 · Entrada do organizador na landing pública · (de-para novo · SPEC-ONBOARD)
+
+**Como** organizador (novo ou existente), **quero** encontrar na página inicial da Leela
+onde entrar no painel e onde criar minha conta, **para** acessar o sistema sem conhecer a
+URL do painel de cor.
+
+- **MoSCoW:** Must · **Estimativa:** S · **Superfície:** Landing · **V1-slim:** ✅ (bloqueia o go-live controlado)
+- **Tela(s) de referência:** — (evolução do `PublicHeader`/`PublicFooter` da S1200-T1)
+- **RNs:** RN-411 (contexto do fluxo); premissa P10 (URL do painel por env pública)
+
+**Critérios de aceite (Given/When/Then):**
+- **Dado** qualquer página pública, **quando** renderiza, **então** o `PublicHeader` mostra "Entrar" e "Criar conta de organizador", visíveis em desktop e mobile.
+- **Dado** "Entrar", **quando** clico, **então** caio no `/entrar` do painel (S020-T1); "Criar conta de organizador" leva ao `/cadastrar` (E00-S030).
+- **Dado** o destino, **quando** o link é montado, **então** a URL do painel vem de `NEXT_PUBLIC_PAINEL_URL` (P10), nunca de string fixa; sem a env, o link não renderiza quebrado — cai no caminho relativo documentado do deploy conjunto.
+- **Dado** o footer público, **quando** renderiza, **então** ecoa o link de entrada junto dos institucionais.
+- **Dado** o gate de SEO/perf da landing (S1200), **quando** os links entram, **então** nenhuma dependência nova entra no bundle e o CWV não regride (a landing segue Radix-free).
+
+**Tasks:**
+
+#### LEELA-S1213-T1 · "Entrar" + "Criar conta de organizador" no header/footer públicos
+- **Tipo:** screen · **Depende de:** S1200-T1 · **Estimativa:** S · **Rota:** opus
+
+Links no `PublicHeader` (desktop: canto direito; mobile: dentro do menu/estado compacto já
+existente — sem lib nova) e eco no `PublicFooter`. Destino por env pública (P10). Testes:
+unit (render dos links, montagem da URL com e sem env) + verificação de bundle (nenhuma
+dependência nova).
