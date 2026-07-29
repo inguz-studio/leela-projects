@@ -15,6 +15,12 @@
 // seeds usam) aplicando redate() ao payload antes de gravar. Ferramenta de
 // script, nunca código de produção (fora de src/ ⇒ fora de build/lint/vitest).
 //
+// A lógica de re-datação vive em `./redate` desde a lane CHECKOUT-UX (task A1 /
+// T-SEED-2): lá ela é IDEMPOTENTE, o que corrige o deslocamento DOBRADO de tudo
+// que os seeds escreviam por `ref.set` (a lib implementa `DocumentReference.set`
+// por cima de `WriteBatch.set`, e o payload atravessava os dois patches). Prova
+// re-rodável e offline em `./redate-dry-run.ts`.
+//
 // Guard: o escape nominal do emulator-guard exige LEELA_SEED_PROD_ACK igual
 // ao projectId POR EXTENSO — este runner define ambos de propósito. Também
 // ABORTA se qualquer *_EMULATOR_HOST estiver no ambiente (nunca misturar).
@@ -30,18 +36,10 @@
 /* eslint-disable no-console */
 
 import * as admin from 'firebase-admin';
-import {
-  DocumentReference,
-  CollectionReference,
-  WriteBatch,
-  Timestamp,
-} from 'firebase-admin/firestore';
 import type { AuthClaims } from '@leela/core';
+import { instalarRedatePatch, offsetDias } from './redate';
 
 const PROD_PROJECT_ID = 'leela-hub';
-
-/** Relógio de referência do dataset (o LEELA_CLOCK do preview local). */
-const REF_CLOCK_UTC = Date.UTC(2026, 2, 15); // 2026-03-15
 
 // ---------------------------------------------------------------------------
 // Trava de ambiente (ANTES de importar os seeds não é necessário — os guards
@@ -100,87 +98,11 @@ import { seedPreviewClubes } from './preview-seed-clubes';
 /* eslint-enable import/first */
 
 // ---------------------------------------------------------------------------
-// Re-datação
+// Re-datação (lógica em ./redate — idempotente desde T-SEED-2)
 // ---------------------------------------------------------------------------
-
-/** Offset em dias inteiros entre o relógio de referência do dataset e hoje. */
-function offsetDias(): number {
-  const hoje = new Date();
-  const hojeUtc = Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  return Math.round((hojeUtc - REF_CLOCK_UTC) / 86_400_000);
-}
 
 const OFFSET_DIAS = offsetDias();
 const OFFSET_MS = OFFSET_DIAS * 86_400_000;
-
-const RE_DATA_SO = /^\d{4}-\d{2}-\d{2}$/;
-const RE_DATA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:/;
-
-function shiftDataSo(s: string): string {
-  const [y, m, d] = s.split('-').map(Number);
-  const dt = new Date(Date.UTC(y as number, (m as number) - 1, d as number) + OFFSET_MS);
-  return dt.toISOString().slice(0, 10);
-}
-
-/** Desloca ISO datetime preservando representação -03:00 (padrão do seed). */
-function shiftDataHora(s: string): string | null {
-  const ms = Date.parse(s);
-  if (Number.isNaN(ms)) return null;
-  const local = new Date(ms + OFFSET_MS - 3 * 3_600_000);
-  return `${local.toISOString().slice(0, 19)}-03:00`;
-}
-
-function redate(value: unknown): unknown {
-  if (value instanceof Timestamp) {
-    return Timestamp.fromMillis(value.toMillis() + OFFSET_MS);
-  }
-  if (value instanceof Date) {
-    return new Date(value.getTime() + OFFSET_MS);
-  }
-  if (typeof value === 'string') {
-    if (RE_DATA_SO.test(value)) return shiftDataSo(value);
-    if (RE_DATA_HORA.test(value)) return shiftDataHora(value) ?? value;
-    return value;
-  }
-  if (Array.isArray(value)) return value.map(redate);
-  if (
-    value !== null &&
-    typeof value === 'object' &&
-    Object.getPrototypeOf(value) === Object.prototype
-  ) {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = redate(v);
-    return out;
-  }
-  // FieldValue (serverTimestamp/delete), DocumentReference, Buffer etc.:
-  // intocados — o Firestore resolve/serializa como sempre.
-  return value;
-}
-
-/** Patch de protótipo: toda escrita dos seeds passa por redate(). */
-function instalarRedatePatch(): void {
-  const dSet = DocumentReference.prototype.set;
-  (DocumentReference.prototype as unknown as Record<string, unknown>)['set'] =
-    function patchedSet(this: DocumentReference, data: unknown, opts?: unknown) {
-      return opts === undefined
-        ? (dSet as Function).call(this, redate(data))
-        : (dSet as Function).call(this, redate(data), opts);
-    };
-
-  const bSet = WriteBatch.prototype.set;
-  (WriteBatch.prototype as unknown as Record<string, unknown>)['set'] =
-    function patchedBatchSet(this: WriteBatch, ref: unknown, data: unknown, opts?: unknown) {
-      return opts === undefined
-        ? (bSet as Function).call(this, ref, redate(data))
-        : (bSet as Function).call(this, ref, redate(data), opts);
-    };
-
-  const cAdd = CollectionReference.prototype.add;
-  (CollectionReference.prototype as unknown as Record<string, unknown>)['add'] =
-    function patchedAdd(this: CollectionReference, data: unknown) {
-      return (cAdd as Function).call(this, redate(data));
-    };
-}
 
 // ---------------------------------------------------------------------------
 // Usuários de login (mesma convenção do preview local — senha pública do
@@ -228,7 +150,9 @@ async function main(): Promise<void> {
       `(ref 2026-03-15 → hoje)`
   );
   if (OFFSET_DIAS <= 0) {
-    throw new Error('[prod-seed] offset não-positivo — revisar REF_CLOCK_UTC.');
+    throw new Error(
+      '[prod-seed] offset não-positivo — revisar REF_CLOCK_UTC em ./redate.'
+    );
   }
 
   if (!admin.apps.length) {
@@ -237,7 +161,7 @@ async function main(): Promise<void> {
   const db = admin.firestore();
   const auth = admin.auth();
 
-  instalarRedatePatch();
+  instalarRedatePatch(OFFSET_MS);
 
   await seedPlatformAdmin(auth);
   const adminUser = await auth.getUserByEmail(DEFAULT_PLATFORM_ADMIN_EMAIL);
