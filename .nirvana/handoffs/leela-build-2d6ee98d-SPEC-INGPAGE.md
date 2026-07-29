@@ -10,11 +10,11 @@
 
 | # | Task | Estado | Commit |
 |---|---|---|---|
-| T0 | Inventário + abertura do handoff | ✅ | `a8bc836` |
-| T1 | Rodada `02-rodadas/2026-07-29-pagina-ingresso/` (decisões + RNs + fila) | ✅ | `71085e6` |
-| T2 | Story `S1214` no E12 + delta do `S1206`/`S1206-T7` | ✅ | `9091c2a` |
-| T3 | Deltas de fronteira nos épicos E13 e E03 | ✅ | `1ad7069` |
-| T4 | Boards (V1-KANBAN + BOARD-EPICOS) | ✅ | `9f9be03` |
+| T0 | Inventário + abertura do handoff | ✅ | `36fd7a3` |
+| T1 | Rodada `02-rodadas/2026-07-29-pagina-ingresso/` (decisões + RNs + fila) | ✅ | `a4e0535` |
+| T2 | Story `S1214` no E12 + delta do `S1206`/`S1206-T7` | ✅ | `41216dd` |
+| T3 | Deltas de fronteira nos épicos E13 e E03 | ✅ | `a4c9f5a` |
+| T4 | Boards (V1-KANBAN + BOARD-EPICOS) | ✅ | `d2d2c1d` |
 | T5 | Selo · resumo executivo + self-score | ✅ | este commit |
 
 ## Inventário antes de especificar (reaproveitado vs criado)
@@ -76,3 +76,104 @@ Tabela completa e vetável em `leela-specs/02-rodadas/2026-07-29-pagina-ingresso
 - `git commit --only <arquivos>` sempre; nunca `git add` amplo (outras lanes trabalham no repo).
 - Épicos compartilhados: só ACRESCENTAR seção; a única edição cirúrgica permitida é o ponteiro que evita contradição no canônico.
 - `DECISOES-ABERTAS.md` intocado.
+
+## Entregáveis (aceite do brief, item a item)
+
+| Aceite do brief | Onde |
+|---|---|
+| Stories Given/When/Then ancoradas em épico | `S1214` (+4 tasks) na seção "Delta página própria do ingresso" do `LEELA-E12-landing.md` |
+| RNs numeradas, próximo número livre VERIFICADO | RN-418 a RN-424, com o comando de varredura e o resultado literal em `02-rns-delta.md` |
+| Deltas nos épicos tocados, na mesma aterrissagem | E12 (RNs + story + ponteiro no `S1206-T7`), E13 (fronteira), E03 (fronteira) |
+| Rodada com premissas vetáveis P1..Pn | `02-rodadas/2026-07-29-pagina-ingresso/01-decisoes-delta.md` — P1..P12, maior peso primeiro |
+| Cards no padrão épico→história→tarefa | `V1-KANBAN.md`: card `[E12]` → `S1214` → 4 tarefas; `S1206-T7` de 🧊 para 🔓 |
+| Pontos ⚔ declarados | 8 vetores, neste handoff e em `03-fila-codigo.md` |
+| Reaproveitamento primeiro, reaproveitado vs criado | seção "Inventário antes de especificar" acima |
+
+## Onde a spec responde cada pergunta do escopo
+
+1. **Superfície** — D-ING-1: landing pública Next, com painel Vite, Function-HTML e área logada
+   do E13 rejeitados por motivo escrito. Consequência declarada: a landing ainda não está no
+   preview, e isso é sequência de operação, não arquitetura.
+2. **Segurança e privacidade do link** — D-ING-2, D-ING-3, D-ING-4, D-ING-5 e D-ING-7
+   (RN-419, RN-420, RN-422). Token `LLIP1` derivado do MESMO keyring com separação de domínio
+   pela versão; a chave não desce para a landing; Rules intocadas; sem prazo no token; três
+   cabeçalhos obrigatórios; dado mínimo.
+3. **Conteúdo e estados** — D-ING-6 (RN-421), matriz de sete linhas, incluindo estornado,
+   cancelado, credenciado, emissão em andamento (RN-382) e evento encerrado.
+4. **E-mail** — D-ING-8 (RN-423). Delta, não reescrita: o link entra por inscrito, o código em
+   texto e o QR embutido permanecem, a idempotência da RN-219 não é tocada.
+5. **PDF (S1206-T7)** — D-ING-9 (RN-424). A versão imprimível É o PDF; a task sai do gelo e
+   passa a depender do `S1214-T4`; PDF server-side segue fora.
+6. **Fronteiras** — D-ING-10 mais os deltas escritos no E03 (a página exibe, o balcão
+   credencia) e no E13 (a página pública não é a área logada; o app herda a mesma projeção).
+
+## Envelope de custo
+
+- **Por abertura de ingresso:** uma invocação de Function + duas leituras de documento
+  (inscrito e evento) + um render de QR de poucos milissegundos. Um evento de mil inscritos
+  com três aberturas por link fica em ~3 mil invocações e ~6 mil leituras, o que dá **menos de
+  um centavo de dólar por evento** e cabe inteiro no free tier mensal (2 M de invocações,
+  50 mil leituras/dia). Nenhuma escrita, nenhum campo novo, nenhuma coleção nova.
+- **Infra nova:** zero. A rota entra na landing que já existe e a Function entra no projeto que
+  já existe. Nenhuma dependência nova em nenhum dos dois (o QR chega renderizado do servidor
+  pelo `gerarQrDataUrl` que o e-mail já usa).
+- **Sobre o gerador de PDF rejeitado, com honestidade:** em dinheiro ele também seria barato
+  (uns poucos GiB-segundos por PDF). O custo que mata é **operacional**, e é esse o argumento:
+  Chromium na Function significa memória na casa do gigabyte, cold start na casa dos dez
+  segundos batendo justamente em quem clicou "imprimir", e mais uma imagem para manter. A
+  alternativa leve (`pdf-lib`) troca isso por um segundo layout do ingresso, que diverge da
+  página no primeiro ajuste de marca.
+- **Orçamento da lane:** só spec. Zero custo de execução até o build começar.
+
+## Self-score (contrato do sf-cto)
+
+| Critério | Peso | Limiar | Nota | Evidência |
+|---|---|---|---|---|
+| `technical_correctness` | 1,5 | 0,85 | **0,93** | Toda recomendação aponta para símbolo lido no repo: `obterQrKeyring`/`carregarQrKeyring`/`kidQrValido`/`assinarQrToken`/`verificarQrToken` (`functions/src/eventos/qrToken.ts`), `parseQrToken` e os helpers base64url (`packages/core/src/eventos/qrToken.ts`), `gerarQrDataUrl`/`urlPublicaDoEvento`/`EVENTO_URL_BASE` (`publicarEvento.ts`), `IngressoEmitido` (`emitirIngressos.ts`), `registrarComunicacao`/`CHAVE_EMAIL_INGRESSOS` (`enviarIngressos.ts`), `leitor.ts`/`firebaseAdmin.ts`/`baseUrl()` da landing, `StatusInscrito`, ADR-017. Não fica em 1,0 porque nada foi executado: a lane não roda código |
+| `scalability_check` | 1,0 | 0,75 | **0,85** | Sem campo novo, sem coleção nova, sem índice: o token é derivado e carrega os ids. Modos de falha nomeados e virados em estado de tela: cold start da Function, leitura que falha, emissão ainda aberta (RN-382), token que não verifica. O que não foi medido: latência real do salto no SSR, porque exigiria deploy |
+| `security_posture` | 1,5 | 0,80 | **0,94** | É o núcleo da spec. `qrToken` fora da URL com o motivo (quem lê, entra); separação de domínio por versão, provada nas duas direções; blast radius da chave tratado explicitamente (cunhar é silencioso e offline, ler o banco deixa rastro); Rules intocadas e declaradas como aceite; ausência de oráculo nas quatro causas de falha; três cabeçalhos com motivo; PII minimizada e lista do que não pode aparecer; revogação individual e em massa separadas; "encaminhar o link é encaminhar o ingresso" escrito como propriedade, não escondido |
+| `cost_envelope` | 1,0 | 0,70 | **0,82** | Custo por abertura calculado e comparado ao free tier; zero infra nova; o argumento contra o PDF server-side corrigido para o que ele realmente é (operacional, não financeiro). Não fica mais alto porque o número de aberturas por link é estimativa, não medição |
+
+**Média ponderada: 0,895.** Os quatro critérios acima do limiar; nenhuma iteração de revisão
+necessária.
+
+## Resumo executivo
+
+**Lane SPEC-INGPAGE fechada.** Item 55 tem spec pronta para build, sem uma linha de código de
+aplicação.
+
+**O que foi decidido.** A página do ingresso mora na landing pública, abre sem login e é
+alcançada por um link tokenizado por inscrito que vai no e-mail da compra. O link **nunca**
+carrega o `qrToken`: carrega um token próprio `LLIP1`, derivado do mesmo keyring, separado do
+QR pela constante de versão e verificado dentro de uma Function, porque pôr a chave de
+assinatura no runtime do Next transformaria qualquer falha de dependência daquela aplicação em
+capacidade de cunhar QR de check-in offline, para qualquer evento e tenant, sem tocar no banco.
+A assinatura do link cobre o `qrToken` vigente, e com isso re-emitir o ingresso revoga o link
+antigo daquele inscrito, reusando a semântica de revogação que o balcão já tem. Rotação de
+chave não mata link emitido, exatamente como o vetor 4 da INGQR-REV já provou para o ingresso.
+Não há prazo no token: o que expira é o estado, lido a cada abertura. Ingresso estornado ou
+cancelado abre sem QR; credenciado abre com o estado em destaque e o QR ainda visível. E o PDF
+do ingresso é a própria página em versão imprimível, o que tira o `S1206-T7` do gelo sem
+nenhuma dependência nova no repo.
+
+**Três achados do inventário que viraram regra.** O `EVENTO_URL_BASE` está cravado em
+`https://beh.ro`, domínio dos mocks Be Hero, e o e-mail da compra já manda hoje um link para
+domínio de terceiro, com a landing usando outra base — a RN-423 unifica e faz o e-mail sair sem
+link quando não houver base configurada, em vez de mandar link quebrado. Não existe lista de
+slug reservado, e um evento chamado "Convite" já sombrearia a rota `/convite` que existe. Não
+existe gerador de PDF no repo, o que confirma que o `S1206-T7` estava bloqueado por falta de
+superfície, não por falta de código.
+
+**Números.** 7 RNs mintadas (RN-418 a RN-424, faixa provada livre por varredura), 1 story nova
+(`S1214`, id provado livre) com 4 tasks, 3 épicos tocados (E12 com a spec, E13 e E03 com
+fronteira), 5 commits mais este selo, 8 pontos ⚔ e 12 premissas vetáveis.
+
+**Veredito: ENTREGUE E PRONTA PARA BUILD**, condicionada ao veto do dono nas premissas P1, P2,
+P4 e P10 — as quatro que mudam arquitetura se caírem. As outras oito podem ser vetadas sem
+refazer a spec.
+
+**Riscos declarados que a lane não pôde fechar.** Nada foi executado: a lane é spec, então a
+latência real do salto Function no SSR e o comportamento do e-mail com a chave Brevo ativa
+seguem sem prova. A superfície onde a página vive não está no preview hoje, então o dono só a
+percorre depois que a landing subir. E o valor do domínio público continua sendo o item 12, do
+dono; o que a spec entrega é a máquina, não a escolha.
