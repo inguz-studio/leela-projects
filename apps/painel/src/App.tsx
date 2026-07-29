@@ -11,6 +11,7 @@ import { MarcasRoutes } from './routes/marcas/MarcasRoutes';
 import { rotasLegadas } from './routes/_system/RotasLegadas';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
+import { RequireSessao } from './routes/_system/RequireSessao';
 import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
@@ -40,33 +41,38 @@ export function App() {
           </Route>
           {/* App autenticado — moldura padrão (Lote B3): sidebar fixa em TODAS
               as rotas (item 18 do DoD). Descendant Routes (pathnameBase `/`)
-              preserva o roteamento existente sem mudança de comportamento. */}
+              preserva o roteamento existente sem mudança de comportamento.
+              RequireSessao (FIX-AUTHGUARD): em produção, sem sessão → /entrar
+              com state.from; em modo Emulator (dev/preview mockado) é INERTE —
+              o preview "já logado" continua caindo em `/` intacto. */}
           <Route
             path="/*"
             element={
-              <RootShell>
-                <Routes>
-                  {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
-                  <Route path="/*" element={<OverviewRoutes />} />
-                  <Route path="/health" element={<HealthRoute />} />
-                  {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
-                  <Route path="/eventos/*" element={<EventosRoutes />} />
-                  {/* E05 · Clubs (hub, shell + overview + membros) */}
-                  <Route path="/clubes/*" element={<ClubesRoutes />} />
-                  {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
-                  <Route path="/crm/*" element={<CrmRoutes />} />
-                  {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
-                  <Route path="/marcas/*" element={<MarcasRoutes />} />
-                  {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
-                      antigas continuam abrindo, agora redirecionando para os
-                      endereços novos. Link salvo e favorito seguem vivos. */}
-                  {rotasLegadas()}
-                  {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
-                  <Route path="/plataforma/*" element={<PlataformaRoutes />} />
-                  {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
-                  <Route path="/conta/*" element={<ContaRoutes />} />
-                </Routes>
-              </RootShell>
+              <RequireSessao>
+                <RootShell>
+                  <Routes>
+                    {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
+                    <Route path="/*" element={<OverviewRoutes />} />
+                    <Route path="/health" element={<HealthRoute />} />
+                    {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
+                    <Route path="/eventos/*" element={<EventosRoutes />} />
+                    {/* E05 · Clubs (hub, shell + overview + membros) */}
+                    <Route path="/clubes/*" element={<ClubesRoutes />} />
+                    {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
+                    <Route path="/crm/*" element={<CrmRoutes />} />
+                    {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
+                    <Route path="/marcas/*" element={<MarcasRoutes />} />
+                    {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
+                        antigas continuam abrindo, agora redirecionando para os
+                        endereços novos. Link salvo e favorito seguem vivos. */}
+                    {rotasLegadas()}
+                    {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
+                    <Route path="/plataforma/*" element={<PlataformaRoutes />} />
+                    {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
+                    <Route path="/conta/*" element={<ContaRoutes />} />
+                  </Routes>
+                </RootShell>
+              </RequireSessao>
             }
           />
         </Routes>

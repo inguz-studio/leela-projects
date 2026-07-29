@@ -74,13 +74,24 @@ function readEmulatorPorts(): LeelaEmulatorPorts | undefined {
   };
 }
 
+/**
+ * Modo de ambiente do painel — FONTE ÚNICA da distinção Emulator × produção.
+ * Mesma regra que sempre decidiu o `initLeela` (acima): explícito vence;
+ * ausente cai em `import.meta.env.DEV`. Exportada para o guard de autenticação
+ * (`RequireSessao`) respeitar o preview local mockado: em modo Emulator o
+ * comportamento histórico ("já logado" na raiz) permanece; em produção o guard
+ * morde (LEELA-FIX-AUTHGUARD).
+ */
+export function isModoEmulador(): boolean {
+  const explicit = import.meta.env.VITE_USE_EMULATOR;
+  return explicit === undefined ? import.meta.env.DEV : explicit === 'true';
+}
+
 /** Inicializa o Firebase SDK. Idempotente — initLeela ignora chamadas extra. */
 export function initFirebase(): void {
-  const explicit = import.meta.env.VITE_USE_EMULATOR;
   // Sem valor explícito: dev usa Emulator; build de produção exige config
   // real (initLeela lança erro claro se VITE_FIREBASE_* estiver incompleto).
-  const useEmulator =
-    explicit === undefined ? import.meta.env.DEV : explicit === 'true';
+  const useEmulator = isModoEmulador();
 
   // exactOptionalPropertyTypes: nunca passar chaves com valor undefined
   const firebaseConfig = readFirebaseConfig();
