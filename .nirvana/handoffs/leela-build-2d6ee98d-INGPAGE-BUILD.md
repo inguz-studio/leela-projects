@@ -9,7 +9,11 @@ Autoridade de escopo: `leela-specs/02-rodadas/2026-07-29-pagina-ingresso/03-fila
       · gate VERDE: `tsup` do core, `tsc --noEmit` em core e functions, ESLint zero-warning,
       **54 testes passando** (38 unit + 16 no emulador) via
       `npx firebase-tools@13 emulators:exec --project demo-leela "npx vitest run …"`
-- [ ] **T2 · `S1214-T2`** — rota `/ingresso/{token}` na landing
+- [x] **T2 · `S1214-T2`** — rota `/ingresso/{token}` na landing
+      · gate VERDE: `tsc --noEmit` da landing e das functions, ESLint zero-warning (incl. a regra
+      de tokens do DS), **24 testes** da landing + **38** das functions (slug + criarEvento),
+      `next build` verde com a rota `ƒ /ingresso/[token]` em **146 B** — o mesmo peso do
+      `_not-found`, ou seja **nenhuma dependência nova no bundle público**
 - [ ] **T3 · `S1214-T3`** — base pública por ambiente + link por inscrito no e-mail + morte do `beh.ro`
 - [ ] **T4 · `S1214-T4`** — versão imprimível A4
 - [ ] **T5 · `S1206-T7`** — fecho de board + épico
@@ -109,6 +113,47 @@ byte a byte igual — asserção própria); kid herdado de `Object.prototype` n�
 herdado; adulteração de cada uma das quatro partes do token recusa; sem keyring é fail-closed e
 colapsa na mesma negativa; tenant divergente entre payload e doc recusa (ADR-009).
 
+### T2 · `S1214-T2`
+
+```
+cd apps/landing && npx vitest run test/ingresso-pagina.test.tsx test/ingresso-privacidade-rota.test.ts
+ ✓ test/ingresso-pagina.test.tsx (18 tests)
+ ✓ test/ingresso-privacidade-rota.test.ts (6 tests)
+ Tests  24 passed (24)
+
+cd functions && npx firebase-tools@13 emulators:exec --project demo-leela \
+  "npx vitest run src/__tests__/slugReservado.test.ts src/__tests__/criarPublicarEvento.integration.test.ts"
+ Tests  38 passed (38)          ← criarEvento continua verde com o slug reservado no laço
+
+cd apps/landing && npx next build
+├ ƒ /ingresso/[token]                    146 B           199 kB
+```
+
+**As duas linhas do build que são a prova, não enfeite.** O `ƒ` diz que a rota é
+server-rendered on demand — nunca pré-renderizada, nunca revalidada em cache (RN-418). Os
+**146 B** são o peso do JS de cliente da rota: o mesmo do `_not-found`, que não tem nada. O QR
+chega pronto do servidor, então nada de `qrcode` no bundle público e a landing segue Radix-free.
+
+**Onde cada cabeçalho da RN-422 mora, e por quê:**
+
+| Cabeçalho | Onde | Por que não podia ser em outro lugar |
+|---|---|---|
+| `noindex, nofollow` | `metadata.robots` da rota + `X-Robots-Tag` no `next.config.js` + `disallow: '/ingresso'` no `robots.txt` | três tranças: `<meta>` para quem lê o HTML, header para quem só lê o header, `robots.txt` para quem nem pede |
+| `Referrer-Policy: no-referrer` | `headers()` do `next.config.js` | é cabeçalho de RESPOSTA; não sai de dentro de um Server Component |
+| `Cache-Control: no-store` | idem | idem, e o token está na URL: CDN e proxy no caminho não podem guardar |
+
+O `source: '/ingresso/:token*'` cobre a rota e a versão imprimível da T4 de uma vez. O teste lê
+o `next.config.js` de verdade (`require`), não uma cópia da intenção.
+
+**Slug reservado (RN-418).** `SLUGS_RESERVADOS` nasceu em `functions/src/eventos/slug.ts` com as
+rotas estáticas que a landing já tem (`ingresso`, `convite`, `health`, `robots.txt`,
+`sitemap.xml`, `api`, `_next`) e `criarEvento` trata reservado como slug OCUPADO: um evento
+chamado "Ingresso" vira `ingresso-2`. Recusar a criação seria pior — o organizador não tem como
+saber quais palavras a landing usa.
+
+**Título genérico de propósito.** `metadata.title` é "Seu ingresso · Leela", sem nome de pessoa:
+título com nome vaza no histórico do navegador e na aba compartilhada em tela.
+
 ## Reaproveitado vs criado
 
 **T1 · reaproveitado:** keyring inteiro (`carregarQrKeyring`/`obterQrKeyring`/`QrKeyring`) — nenhum
@@ -123,3 +168,16 @@ enum `EstadoIngressoPagina` + `estadoMostraQr`); `functions/src/eventos/linkIngr
 verificar, material de binding); `functions/src/http/ingressoPorLink.ts` (projeção + endpoint);
 dois arquivos de teste; um export block no `packages/core/src/index.ts` e um no
 `functions/src/index.ts`.
+
+**T2 · reaproveitado:** entrada server-safe do DS (`Badge`, `Card`, `CardContent`) — nenhum
+componente novo nasceu na tela, como manda a governança §7; tokens semânticos do tema brasa (zero
+valor cru — a regra `leela-tokens/no-hardcoded-tokens` passou); molde de rota pública com token
+(`app/(public)/convite/page.tsx`: `force-dynamic` + `metadata.robots`); `Ticket.tsx` do checkout
+como referência de forma; `slugify`/`slugCandidato`/`MAX_TENTATIVAS_SLUG`; `robots.ts` existente
+(acréscimo de uma entrada, não reescrita); molde de teste RTL da landing, inclusive o
+`afterEach(cleanup)` que o `globals: false` exige.
+
+**T2 · criado:** `apps/landing/lib/ingresso.ts` (leitor server-side + formatação);
+`app/(public)/ingresso/[token]/page.tsx` e `IngressoView.tsx`; bloco `headers()` no
+`next.config.js`; `SLUGS_RESERVADOS`/`slugReservado` em `functions/src/eventos/slug.ts`; três
+arquivos de teste.

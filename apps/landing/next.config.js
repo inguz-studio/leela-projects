@@ -8,6 +8,31 @@ const nextConfig = {
     // Necessário no Next 14 para carregar instrumentation.ts (init do Sentry em server/edge)
     instrumentationHook: true,
   },
+
+  // Cabeçalhos de privacidade da página do ingresso (S1214-T2 · RN-422).
+  // Os três são REGRA, não detalhe de implementação, e dois deles são
+  // cabeçalho de RESPOSTA — não há como emiti-los de dentro de um Server
+  // Component, por isso a rota está declarada aqui:
+  //   - `Referrer-Policy: no-referrer` — sem ele o TOKEN sai no `Referer` de
+  //     todo link de saída da página;
+  //   - `Cache-Control: no-store` — o token está na URL, então CDN e proxy no
+  //     caminho não podem guardar a resposta;
+  //   - `X-Robots-Tag: noindex, nofollow` — o `<meta robots>` do
+  //     `generateMetadata` já cobre o HTML; o cabeçalho cobre também o
+  //     crawler que só olha o header. Sem isso, buscador indexa ingresso.
+  // O `:token*` casa a rota e a versão imprimível abaixo dela.
+  async headers() {
+    return [
+      {
+        source: '/ingresso/:token*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+    ];
+  },
 };
 
 // withSentryConfig é aplicado SEMPRE: é ele quem injeta sentry.client.config.ts

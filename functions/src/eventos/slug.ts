@@ -44,3 +44,36 @@ export function slugify(nome: string): string {
 export function slugCandidato(base: string, n: number): string {
   return n === 0 ? base : `${base}-${n + 1}`;
 }
+
+/**
+ * Slugs RESERVADOS pela superfície pública (S1214-T2 · RN-418).
+ *
+ * O slug do evento é o primeiro segmento da URL pública (`/{slug}`), então ele
+ * disputa espaço com toda rota estática da landing. Um evento chamado "Convite"
+ * já sombreava `/convite` hoje; "Ingresso" sombrearia a página do ingresso, que
+ * é onde a pessoa vê o QR na fila da largada.
+ *
+ * A lista é a das rotas ESTÁTICAS que existem na superfície pública, e cresce
+ * junto com elas — quem criar rota nova na landing acrescenta o segmento aqui.
+ * Reservar é barato (o evento ganha `-2` no slug); descobrir a colisão em
+ * produção custa a página inteira.
+ */
+export const SLUGS_RESERVADOS: readonly string[] = [
+  'ingresso',
+  'convite',
+  'health',
+  'robots.txt',
+  'sitemap.xml',
+  'api',
+  '_next',
+];
+
+/**
+ * O slug bate com uma rota estática da superfície pública? @pure
+ *
+ * Comparação sobre o slug já normalizado (`slugify` só produz minúsculas), e a
+ * defesa contra `Object.prototype` vem de graça por usar array, não mapa.
+ */
+export function slugReservado(slug: string): boolean {
+  return SLUGS_RESERVADOS.includes(slug);
+}

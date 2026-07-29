@@ -42,7 +42,7 @@ import {
   type ModoTaxa,
   type PercursoEvento,
 } from '@leela/core';
-import { MAX_TENTATIVAS_SLUG, slugCandidato, slugify } from './slug';
+import { MAX_TENTATIVAS_SLUG, slugCandidato, slugReservado, slugify } from './slug';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -364,6 +364,11 @@ export async function criarEventoCore(
     // Todas as leituras ANTES da escrita (contrato de transação Firestore)
     for (let n = 0; n < MAX_TENTATIVAS_SLUG; n++) {
       const candidato = slugCandidato(base, n);
+      // Slug reservado é tratado como slug OCUPADO (S1214-T2 · RN-418): o
+      // evento "Ingresso" vira `ingresso-2` e a rota `/ingresso` continua
+      // sendo a página do ingresso. Recusar a criação seria pior — o
+      // organizador não tem como saber quais palavras a landing usa.
+      if (slugReservado(candidato)) continue;
       const ref = db.collection('eventos').doc(candidato);
       const snap = await tx.get(ref);
       if (snap.exists) continue;

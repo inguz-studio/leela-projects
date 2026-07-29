@@ -23,7 +23,11 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       // `/convite` cobre também `/convite/afiliado` (prefixo) — páginas
       // transacionais de aceite com token na query (W2-F-02 · GATE-DS-W2).
-      disallow: ['/*/inscricao', '/health', '/convite'],
+      // `/ingresso` cobre a página do ingresso e a versão imprimível: é
+      // ingresso de gente, com token no caminho (S1214-T2 · RN-422). O
+      // `disallow` é a terceira tranca, junto do `<meta robots>` da rota e do
+      // `X-Robots-Tag` do next.config — crawler educado nem chega a pedir.
+      disallow: ['/*/inscricao', '/health', '/convite', '/ingresso'],
     },
     sitemap: `${base}/sitemap.xml`,
     host: base,
