@@ -53,7 +53,16 @@ O dono percorreu a compra real no site público e reportou os pontos abaixo. Ver
 - **D-0729-5 (cupom por link):** link de afiliado/assessoria aplica o cupom automaticamente; o comprador chega com o desconto computado, vê "(desconto aplicado)" nos valores e um banner após a Hero: "Você tem desconto neste evento — CUPOM XXXXXX de Fulano aplicado!".
 - **D-0729-6 (cartão):** selecionar "cartão de crédito" abre o formulário do cartão na hora, sem segundo clique.
 - **D-0729-7 (nascimento):** data de nascimento se preenche por digitação com teclado numérico (mobile-first); nada de calendário obrigatório.
-- **D-0729-8 (Storage):** bucket do Firebase Storage autorizado pelo dono em 2026-07-29 — upload real de imagens entra no caminho (fotos de kit da D-0729-4 dependem disto).
+- **D-0729-8 (Storage):** bucket do Firebase Storage autorizado pelo dono em 2026-07-29 — upload real de imagens entra no caminho (fotos de kit da D-0729-4 dependem disto). ENTREGUE no mesmo dia: `leela-hub.firebasestorage.app`, southamerica-east1, rules da casa (ADR-016) ativas.
+
+## Vetos P1..P4 da SPEC-KITCUPOM — respondidos pelo dono em 2026-07-29 (AskUserQuestion)
+
+- **P1 RATIFICADA:** principal fica no campo que existe + 2 slots novos; nada migra.
+- **P2 RATIFICADA:** cupom vence o clique (comportamento de produção mantido); kernel de dinheiro intocado.
+- **P3 CONFIRMADA COMO PEDIDO ORIGINAL:** o banner mostra o nome TAMBÉM para afiliado pessoa física ("CUPOM X de Fulano aplicado").
+- **P4 RATIFICADA:** cupom inválido/expirado ⇒ banner some, jornada segue normal, sem estado de erro público.
+
+Com os 4 respondidos, o build da galeria + cupom por link (fila `04-fila-kitcupom.md`) está DESBLOQUEADO — entra quando a CHECKOUT-UX aterrissar (suíte roda sozinha nesta máquina).
 
 ## Verbatim do dono — terceira leva (2026-07-29)
 
