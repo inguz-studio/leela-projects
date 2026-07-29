@@ -38,7 +38,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https, pubsub } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { PaymentProvider } from '@leela/core';
 import {
@@ -566,8 +566,13 @@ export async function varrerEstornosOrfaosCore(
 }
 
 /** Cron ADR-015 (molde `expirarCarrinhosAbandonados`) — fino de propósito. */
-export const varrerEstornosOrfaos = pubsub
-  .schedule('every 15 minutes')
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+export const varrerEstornosOrfaos = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+})
+  .pubsub.schedule('every 15 minutes')
   .timeZone('America/Sao_Paulo')
   .onRun(async () => {
     await varrerEstornosOrfaosCore(admin.firestore(), selectPaymentProvider());

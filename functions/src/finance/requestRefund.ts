@@ -44,7 +44,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   rotearReembolso,
@@ -742,10 +742,20 @@ function callerDe(context: https.CallableContext): EventoCaller {
   return { uid: context.auth.uid, claims: context.auth.token as unknown as AuthClaims };
 }
 
-export const requestRefund = https.onCall(async (data: unknown, context) =>
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+export const requestRefund = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+}).https.onCall(async (data: unknown, context) =>
   requestRefundCore(admin.firestore(), selectPaymentProvider(), data, callerDe(context))
 );
 
-export const decideRefund = https.onCall(async (data: unknown, context) =>
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+export const decideRefund = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+}).https.onCall(async (data: unknown, context) =>
   decideRefundCore(admin.firestore(), selectPaymentProvider(), data, callerDe(context))
 );

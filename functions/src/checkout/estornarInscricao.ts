@@ -68,7 +68,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   COLECAO_AFILIADOS,
@@ -1332,7 +1332,12 @@ export async function confirmarEstornoPorWebhook(
 // ---------------------------------------------------------------------------
 
 /** `estornarInscricao` — callable do organizador (estorno por inscrito). */
-export const estornarInscricao = https.onCall(async (data: unknown, context) => {
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+export const estornarInscricao = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+}).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }

@@ -54,7 +54,7 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { PaymentProvider } from '@leela/core';
 import { selectPaymentProvider } from '../payments/selectProvider';
@@ -257,7 +257,12 @@ export async function expirarPixPendenteCore(
 // ---------------------------------------------------------------------------
 
 /** `expirarPixPendente` — o dono materializa a expiração do PIX (RN-157). */
-export const expirarPixPendente = https.onCall(async (data: unknown, context) => {
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+export const expirarPixPendente = runWith({
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+}).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }

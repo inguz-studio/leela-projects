@@ -2131,8 +2131,12 @@ export const TETO_CALLABLE_CHECKOUT_SEGUNDOS =
   (ASAAS_TIMEOUT_MS / 1000) * CHAMADAS_ASAAS_PIOR_CASO + FOLGA_NAO_GATEWAY_SEGUNDOS;
 
 /** `createInscricaoCharge` — callable do checkout público (S1203). */
+// Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
+// dinheiro ligado - secrets do gateway em producao (Mock permanece no
+// emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
 export const createInscricaoCharge = runWith({
   timeoutSeconds: TETO_CALLABLE_CHECKOUT_SEGUNDOS,
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
 }).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
