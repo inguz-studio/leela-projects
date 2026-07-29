@@ -11,7 +11,15 @@ import Link from 'next/link';
  */
 export function PublicHeader(): React.JSX.Element {
   return (
-    <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur">
+    // `data-shell-publico`: marca de NAVEGAÇÃO. A versão imprimível do
+    // ingresso (S1214-T4 · RN-424) some com o header e o footer por este
+    // seletor — uma folha A4 de ingresso não leva menu nem rodapé
+    // institucional. Marcar aqui é mais barato e menos frágil que criar um
+    // segundo layout público só para uma rota.
+    <header
+      data-shell-publico
+      className="sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur"
+    >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link
           href="/"

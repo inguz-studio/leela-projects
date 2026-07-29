@@ -17,7 +17,9 @@ Autoridade de escopo: `leela-specs/02-rodadas/2026-07-29-pagina-ingresso/03-fila
 - [x] **T3 · `S1214-T3`** — base pública por ambiente + link por inscrito no e-mail + morte do `beh.ro`
       · gate VERDE: `tsc --noEmit`, ESLint zero-warning, **68 testes** (base pública + template +
       `criarPublicarEvento` + `emailIngressos`, os dois últimos reescritos para a base nova)
-- [ ] **T4 · `S1214-T4`** — versão imprimível A4
+- [x] **T4 · `S1214-T4`** — versão imprimível A4
+      · gate VERDE: `tsc --noEmit`, ESLint zero-warning (exit 0 conferido), **13 testes** novos,
+      `next build` com `ƒ /ingresso/[token]/imprimir` também em **150 B**
 - [ ] **T5 · `S1206-T7`** — fecho de board + épico
 - [ ] Deploy de preview (landing + functions tocadas) com provas curl
 
@@ -218,6 +220,35 @@ LEELA_PUBLIC_URL=https://leela-landing.web.app \
 O script é idempotente (a `url` é função de `base + slug`), pula o que já está certo e não inventa
 `url` para evento nunca publicado.
 
+### T4 · `S1214-T4`
+
+```
+cd apps/landing && npx vitest run test/ingresso-imprimir.test.tsx
+ Tests  13 passed (13)
+
+npx next build
+├ ƒ /ingresso/[token]                    150 B           199 kB
+├ ƒ /ingresso/[token]/imprimir           150 B           199 kB
+```
+
+A rota imprimível **reusa a mesma leitura e a mesma `IngressoView`** — estado sem QR continua sem
+QR no papel, sem um segundo conjunto de regras a divergir. Os três cabeçalhos já a cobrem: o
+`source` do `next.config.js` é `/ingresso/:token*`, com o `*`.
+
+**Sem navegação**, sem criar um segundo layout público: `PublicHeader` e `PublicFooter` ganharam
+`data-shell-publico` e o `<style>` da rota some com eles. É uma marca em dois arquivos contra um
+grupo de rotas inteiro duplicado.
+
+### P-INGPAGE-5 · O papel sai do tema escuro, com palavras-chave do CSS
+
+O tema `brasa` da superfície pública é escuro. Imprimi-lo como está gastaria um cartucho por
+ingresso e sairia ilegível na laser do trabalho, que é onde a maioria imprime. O bloco `@media
+print` força `white`/`black`/`transparent` — **palavras-chave do CSS, não valores de marca**: não
+existe token de impressão no DS hoje, e inventar um hex de marca no arquivo da tela seria
+exatamente o que a governança §2 proíbe (a regra `leela-tokens` reprovaria, e reprovou o primeiro
+rascunho com `#fff`). Quando o DS ganhar paleta de impressão, o bloco troca de fonte sem mudar de
+forma. **Se o dono vetar:** o ingresso sai no papel com o fundo escuro da marca.
+
 ## Reaproveitado vs criado
 
 **T1 · reaproveitado:** keyring inteiro (`carregarQrKeyring`/`obterQrKeyring`/`QrKeyring`) — nenhum
@@ -256,3 +287,10 @@ tocada**; as suítes `criarPublicarEvento` e `emailIngressos`, adaptadas em vez 
 `urlIngressoPorLink`); `functions/scripts/backfill-url-eventos.mjs`;
 `functions/src/__tests__/basePublicaEmailLink.test.ts`; o campo `linkIngresso` em
 `IngressoDoEmail` e a opcionalidade de `linkEvento`.
+
+**T4 · reaproveitado:** `IngressoView` inteira (a prop `paraImpressao` já existia desde a T2, para
+esta task); `buscarIngressoPorLink`; `PublicHeader`/`PublicFooter` (uma marca em cada, nenhum
+layout novo); a regra de cabeçalhos da T2, que já cobria a rota pelo `*`.
+
+**T4 · criado:** `app/(public)/ingresso/[token]/imprimir/page.tsx` (CSS de impressão + A4);
+`data-shell-publico` nos dois componentes de shell; `test/ingresso-imprimir.test.tsx`.

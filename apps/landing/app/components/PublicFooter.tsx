@@ -13,7 +13,9 @@ import Link from 'next/link';
 export function PublicFooter(): React.JSX.Element {
   const ano = new Date().getFullYear();
   return (
-    <footer className="mt-16 border-t border-border-subtle bg-surface-sunken">
+    // `data-shell-publico` — ver a nota no `PublicHeader`: é o seletor que a
+    // versão imprimível do ingresso usa para sumir com a navegação.
+    <footer data-shell-publico className="mt-16 border-t border-border-subtle bg-surface-sunken">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex flex-col gap-2">
           <Link
