@@ -11,13 +11,13 @@ Insumo: handoff `.nirvana/handoffs/leela-build-2d6ee98d-CHECKOUT-PIXQR-INV.md` (
 - [x] A2 (T-SEED-1) · documento do cupom `FLORIPARUN10` criado e vivo em produção
 
 ### Fase B — jornada de compra
-- [ ] B1 · aceites (termos + saúde) movem para o passo PAGAR
-- [ ] B2 · cartão de crédito abre o formulário no 1º clique
+- [x] B1 · PAGAR virou UMA tela; aceites colados no ato de pagar
+- [x] B2 · cartão de crédito abre o formulário no 1º clique
 - [ ] B3 · nascimento por teclado numérico (inputmode/máscara)
-- [ ] B4 · seletor de parcelas com contraste AA por estado
+- [x] B4 · seletor de parcelas com contraste AA por estado
 - [ ] B5 (T-CKUX-1) · coalescing das cotações
-- [ ] B6 · troca de etapa rola para o topo
-- [ ] B7 · resumo do pedido editável antes de pagar
+- [x] B6 · troca de etapa rola para o topo
+- [x] B7 · resumo do pedido editável antes de pagar
 - [ ] B8 · endereço CEP-first (progressive disclosure)
 - [ ] B9 · componente único de formulário (nome completo + endereço)
 
@@ -176,6 +176,91 @@ em 500 antes de gravar).
 
 ---
 
+## B1 + B2 + B4 + B6 + B7 · o PAGAR virou uma tela só
+
+Commit `8c28f59`. Quatro achados do dono tinham a mesma causa estrutural, e por isso
+vieram num lote: o PAGAR eram **duas telas internas** (resumo e pagamento) dentro da
+**mesma macro-etapa** do indicador de progresso. O comprador escolhia a forma de pagamento
+numa tela e só via o instrumento na outra, depois de clicar "Ir para pagamento" — um clique
+que não movia a barra de progresso. Era literalmente o "clicar novamente" do achado 17.
+
+### O que cada task virou
+
+**B1 (achado 3).** As duas telas viraram uma: resumo → instrumento → aceites → botão de
+pagar, na ordem em que a decisão acontece. O aceite fica colado no ato de pagar, como a
+decisão de 2026-07-18 ratificou.
+
+Vale registrar o que a leitura literal do brief dizia e o que o código mostrava: os aceites
+**já estavam** no passo de pagamento desde `e860b8e` (CKFORM-T2). O defeito real não era o
+passo, era a ordem dentro dele — o comprador chegava no pagamento e o que estava na frente
+dele eram dois checkboxes, sem QR, sem nada acontecendo. **A regra do dinheiro não
+afrouxou:** `createInscricaoCharge` recusa pedido sem os dois aceites antes de qualquer
+escrita (flip F-4a), então o QR não pode preceder o aceite. O que se corrigiu foi a ordem
+da tela e a eliminação do passo intermediário.
+
+**B2 (achado 17 / D-0729-6).** Os campos do cartão passam a ser revelados DENTRO da opção
+"Cartão de crédito", pelo contrato `children` do `RadioCard` do DS — que já existia
+exatamente para isso, com `aria-expanded`/`aria-controls` de fábrica. Um clique, sem
+navegação. Reaproveitado, não inventado.
+
+**B4 (achado 5) — root cause numérico.** O seletor de parcelas usava a variante `flat` do
+`Select`: fundo `--surface-sunken` (**#0A0A0A**) sobre a página `--surface-base`
+(**#0C0C0C**), com borda `--input-border-flat`, que no tema Brasa vale **`transparent`**.
+Contraste de superfície ≈ **1,03:1** e contorno nenhum — o controle era invisível, exatamente
+como o dono descreveu ("mesma cor do plano de fundo"). A variante `bordered` traz
+`border-input` (= `--border-strong`, **#737373**): **≈3,9:1** contra o cartão e **≈4,2:1**
+contra a página, acima do piso de 3:1 da WCAG 1.4.11 para contorno de componente, e em
+repouso — não só no foco.
+
+**B6 (achado 10).** Toda troca de etapa leva ao topo. A rolagem checa `typeof` antes de
+chamar: ambiente sem `scrollIntoView`/`scrollTo` (jsdom, navegador capado) apenas não rola.
+Uma animação não pode derrubar a jornada de compra — e não é hipótese: o teste novo caiu com
+`el.scrollIntoView is not a function` antes da guarda entrar.
+
+**B7 (achado 12 / D-0729-3).** Cada linha do pedido ganhou "Alterar modalidade, kit ou
+tamanho", que leva ao card daquele atleta (âncora `#atleta-{i}` no `CardAtleta`) com o
+formulário inteiro preservado — é estado do fluxo, nada é remontado. Exceção deliberada à
+regra do B6: esse caminho não rola ao topo, rola ao card. Ir ao topo do formulário seria
+perto demais de "recomeçar", que é o que a decisão proíbe.
+
+### Gates
+
+- `tsc --noEmit` da landing → **exit 0**.
+- `eslint app lib test --max-warnings 0` → **exit 0**.
+- `vitest run` da landing → **198/198 em 20 arquivos** (192 antes + 6 novos).
+
+### Testes novos (comportamento novo)
+
+`apps/landing/test/checkout-dec0729-pagar.test.tsx`, 6 casos, cada um amarrado ao achado:
+
+- não existe mais "Ir para pagamento"; resumo, meio e aceites coexistem na mesma tela;
+- **a regra do dinheiro não afrouxou**: sem os 2 aceites o botão fica desabilitado e
+  `createInscricaoCharge` não é chamado;
+- clicar "Cartão de crédito" revela os 4 campos do cartão sem navegação;
+- o radio do cartão anuncia `aria-expanded` `false → true` (é o painel do DS, não markup solto);
+- as parcelas usam `border-input` e não a borda transparente da variante flat;
+- "Alterar" volta à escolha com a modalidade marcada e, ao seguir, o nome e o número do
+  endereço continuam preenchidos — a prova de que não se recomeça nada.
+
+### Testes existentes ajustados (3 arquivos)
+
+`checkout-asaas-teto`, `checkout-s1209-cards-atleta` e `checkout-s1209-rev-ataque`
+navegavam por "Ir para pagamento". Passaram a ancorar no botão "Gerar código PIX" do passo
+PAGAR. Em `rev-ataque`, o vetor "trocar a forma de pagamento e voltar ao PIX" deixou de
+precisar de ida e volta entre etapas — os dois controles vivem na mesma tela; **o vetor de
+ataque e as asserções continuam idênticos**. `checkout-form-aceites` e
+`checkout-fixes-steps` só perderam as props `cartao`/`onCartao` do `StepPagamento`.
+
+### Reaproveitado vs criado
+
+Reaproveitado: `RadioCard` do DS (contrato `children` + a11y), variantes `bordered` de
+`Select`/`Input`, `CardAtleta`, `CupomCampo`, `SeletorForma`, `StepResumo`/`StepPagamento`
+inteiros (recompostos, não reescritos), `macroDaEtapa` como fonte única do agrupamento.
+Criado: `checkout-dec0729-pagar.test.tsx`, o prop `id` do `CardAtleta`, os props
+`conteudoPix`/`conteudoCartao` do `SeletorForma` e `onEditarItem` do `StepResumo`.
+
+---
+
 ## Premissas assumidas
 
 1. **Fix por idempotência, não por remoção de patch (A1).** Decisão de peso, vetável: a
@@ -198,4 +283,7 @@ em 500 antes de gravar).
 
 ## Commits desta lane (sem push — o maestro pusha)
 
-(a preencher)
+1. `574abaa` — A1 · re-datação idempotente + dry-run offline com controle negativo.
+2. `4c8fae8` — A2 · cupom `FLORIPARUN10` junto da parceria + relógio do dataset nos seeds relativos.
+3. `8c28f59` — B1+B2+B4+B7 (e B6) · PAGAR numa tela só, cartão no 1º clique, parcelas visíveis, resumo editável.
+4. *(este)* — handoff das tasks B.
