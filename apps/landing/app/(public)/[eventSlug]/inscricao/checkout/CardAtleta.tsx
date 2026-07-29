@@ -21,6 +21,49 @@ import { Button } from '@/app/_ds/ds';
 //     tem remover: quem remove o comprador do pedido é o checkbox, não o card.
 // =============================================================================
 
+/**
+ * Moldura dos blocos de formulário do checkout (achado 7 · B9).
+ *
+ * Verbatim do dono: "o mesmo componente de formulário em inscrição deve ser
+ * aplicado para endereço e Nome Completo". Os campos do atleta já viviam dentro
+ * desta superfície (`--surface-raised`, #161616); o bloco do responsável e o do
+ * endereço ficavam soltos sobre a página (`--surface-base`, #0C0C0C). Como o
+ * `Input` do DS é `flat` (fundo `--surface-sunken`, #0A0A0A, borda
+ * `--input-border-flat: transparent` no tema Brasa), a MESMA peça lia como
+ * campo dentro do card e como nada fora dele — ~1,03:1 contra a página. Não
+ * eram componentes diferentes: era a mesma peça em duas superfícies, e só uma
+ * delas funcionava.
+ *
+ * Uma moldura, três lugares (atleta, responsável, endereço) — o `CardAtleta`
+ * a consome também, para que "o mesmo componente" seja verdade por construção
+ * e não por disciplina.
+ */
+export function MolduraFormulario({
+  children,
+  id,
+  className,
+}: {
+  children: React.ReactNode;
+  /** Âncora opcional do bloco (usada pelo "Alterar" do resumo — D-0729-3). */
+  id?: string | undefined;
+  className?: string | undefined;
+}): React.JSX.Element {
+  return (
+    <div
+      id={id}
+      className={[
+        'scroll-mt-[var(--spacing-6)] rounded-ds-lg border border-border-subtle',
+        'bg-surface-raised p-4 sm:p-5',
+        className ?? '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function CardAtleta({
   titulo,
   podeRemover,
@@ -41,10 +84,7 @@ export function CardAtleta({
   id?: string;
 }): React.JSX.Element {
   return (
-    <div
-      id={id}
-      className="scroll-mt-[var(--spacing-6)] rounded-ds-lg border border-border-subtle bg-surface-raised p-4 sm:p-5"
-    >
+    <MolduraFormulario id={id}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-[length:var(--font-size-base)] font-[var(--font-weight-semibold)] text-text-primary">
           {titulo}
@@ -61,7 +101,7 @@ export function CardAtleta({
         ) : null}
       </div>
       {children}
-    </div>
+    </MolduraFormulario>
   );
 }
 

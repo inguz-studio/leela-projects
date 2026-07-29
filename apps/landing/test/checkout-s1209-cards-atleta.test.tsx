@@ -186,14 +186,14 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
     fireEvent.change(screen.getByLabelText(/telefone/i), { target: { value: '11988887777' } });
 
     fireEvent.change(cpfs[0]!, { target: { value: '529.982.247-25' } });
-    fireEvent.change(nascimentos[0]!, { target: { value: '1990-05-20' } });
+    fireEvent.change(nascimentos[0]!, { target: { value: '20/05/1990' } });
     fireEvent.change(generos[0]!, { target: { value: 'feminino' } });
 
     // 2º atleta: nome/e-mail próprios; gênero deliberadamente NÃO escolhido.
     fireEvent.change(nomes[1]!, { target: { value: 'Beto Corredor' } });
     fireEvent.change(emails[1]!, { target: { value: 'beto@example.com' } });
     fireEvent.change(cpfs[1]!, { target: { value: '111.444.777-35' } });
-    fireEvent.change(nascimentos[1]!, { target: { value: '1988-02-10' } });
+    fireEvent.change(nascimentos[1]!, { target: { value: '10/02/1988' } });
 
     fireEvent.change(screen.getByLabelText(/^cep/i), { target: { value: '01310100' } });
     fireEvent.change(screen.getByLabelText(/logradouro/i), {

@@ -164,7 +164,7 @@ function preencherDados(): void {
     target: { value: '529.982.247-25' },
   });
   fireEvent.change(screen.getAllByLabelText(/data de nascimento/i)[0]!, {
-    target: { value: '1990-05-20' },
+    target: { value: '20/05/1990' },
   });
   fireEvent.change(screen.getByLabelText(/^cep/i), { target: { value: '01310100' } });
   fireEvent.change(screen.getByLabelText(/logradouro/i), { target: { value: 'Av. Paulista' } });

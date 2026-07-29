@@ -8,6 +8,7 @@
 //     está fora ou o CEP não existe) — fetch mockado (nunca sai request real).
 // =============================================================================
 
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StepDados } from '../app/(public)/[eventSlug]/inscricao/checkout/StepDados';
@@ -15,6 +16,7 @@ import {
   enderecoVazio,
   inscritoVazio,
   type EnderecoForm,
+  type InscritoForm,
 } from '../app/(public)/[eventSlug]/inscricao/checkout/tipos';
 import {
   buscarEnderecoPorCep,
@@ -26,30 +28,66 @@ afterEach(cleanup);
 
 const noop = (): void => {};
 
-/** Render controlado: aplica patches de endereço num objeto vivo (como o flow). */
-function renderDados(over: {
-  endereco?: EnderecoForm;
+/**
+ * Harness COM ESTADO — como o `CheckoutFlow` de verdade.
+ *
+ * Antes o `endereco` era um prop congelado: digitar o CEP no teste não mudava
+ * o valor que o componente recebia de volta. Isso passou despercebido enquanto
+ * o formulário mostrava tudo de uma vez; com a revelação progressiva
+ * (D-0729-2) o congelamento vira mentira — em produção o estado sobe, os
+ * campos aparecem, e no teste não apareceriam. O harness passa a segurar o
+ * estado e a repassar cada patch, para o teste exercitar o mesmo caminho.
+ */
+function Harness({
+  enderecoInicial,
+  onEndereco,
+  onInscrito,
+}: {
+  enderecoInicial: EnderecoForm;
   onEndereco?: (patch: Partial<EnderecoForm>) => void;
-} = {}): { rerender: (endereco: EnderecoForm) => void } {
-  const props = {
-    responsavelNome: '',
-    responsavelEmail: '',
-    responsavelTelefone: '',
-    onResponsavel: noop,
-    euCorro: true,
-    onEuCorro: noop,
-    inscritos: [inscritoVazio()],
-    onInscrito: noop,
-    endereco: over.endereco ?? enderecoVazio(),
-    onEndereco: over.onEndereco ?? noop,
-    errosResponsavel: {},
-    errosInscritos: [],
-    errosEndereco: {},
-  };
-  const utils = render(<StepDados {...props} />);
-  return {
-    rerender: (endereco: EnderecoForm) => utils.rerender(<StepDados {...props} endereco={endereco} />),
-  };
+  onInscrito?: (index: number, patch: Partial<InscritoForm>) => void;
+}): React.JSX.Element {
+  const [endereco, setEndereco] = useState(enderecoInicial);
+  const [inscritos, setInscritos] = useState([inscritoVazio()]);
+  return (
+    <StepDados
+      responsavelNome=""
+      responsavelEmail=""
+      responsavelTelefone=""
+      onResponsavel={noop}
+      euCorro
+      onEuCorro={noop}
+      inscritos={inscritos}
+      onInscrito={(i, patch) => {
+        onInscrito?.(i, patch);
+        setInscritos((prev) => prev.map((ins, k) => (k === i ? { ...ins, ...patch } : ins)));
+      }}
+      endereco={endereco}
+      onEndereco={(patch) => {
+        onEndereco?.(patch);
+        setEndereco((prev) => ({ ...prev, ...patch }));
+      }}
+      errosResponsavel={{}}
+      errosInscritos={[]}
+      errosEndereco={{}}
+    />
+  );
+}
+
+function renderDados(
+  over: {
+    endereco?: EnderecoForm;
+    onEndereco?: (patch: Partial<EnderecoForm>) => void;
+    onInscrito?: (index: number, patch: Partial<InscritoForm>) => void;
+  } = {},
+): void {
+  render(
+    <Harness
+      enderecoInicial={over.endereco ?? enderecoVazio()}
+      {...(over.onEndereco ? { onEndereco: over.onEndereco } : {})}
+      {...(over.onInscrito ? { onInscrito: over.onInscrito } : {})}
+    />,
+  );
 }
 
 describe('máscaras (UX pura — validação segue no core)', () => {
@@ -71,19 +109,79 @@ describe('StepDados — campos novos (spec §5.1/§5.2)', () => {
     const tel = screen.getByLabelText(/telefone celular/i);
     expect(tel.getAttribute('autocomplete')).toBe('tel');
     expect(tel.getAttribute('inputmode')).toBe('tel');
+    // D-0729-7 (achado 18): nascimento por DIGITAÇÃO, teclado numérico. O
+    // `type="date"` abria o calendário do celular e custava dezenas de cliques
+    // para chegar a um ano de nascimento.
     const nasc = screen.getByLabelText(/data de nascimento/i);
-    expect(nasc.getAttribute('type')).toBe('date');
+    expect(nasc.getAttribute('type')).toBe('text');
+    expect(nasc.getAttribute('inputmode')).toBe('numeric');
+    expect(nasc.getAttribute('placeholder')).toBe('dd/mm/aaaa');
     expect(nasc.getAttribute('autocomplete')).toBe('bday');
   });
 
   it('CEP tem autoComplete=postal-code + inputMode numérico; logradouro/cidade/UF com tokens de endereço', () => {
-    renderDados();
+    // D-0729-2: os demais campos só existem com o CEP completo — a fixture
+    // entra com o CEP preenchido para exercitar os tokens de autofill.
+    renderDados({ endereco: { ...enderecoVazio(), cep: '01310-100' } });
     const cep = screen.getByLabelText(/^cep/i);
     expect(cep.getAttribute('autocomplete')).toBe('postal-code');
     expect(cep.getAttribute('inputmode')).toBe('numeric');
     expect(screen.getByLabelText(/logradouro/i).getAttribute('autocomplete')).toBe('address-line1');
     expect(screen.getByLabelText(/cidade/i).getAttribute('autocomplete')).toBe('address-level2');
     expect(screen.getByLabelText(/^uf/i).getAttribute('autocomplete')).toBe('address-level1');
+  });
+});
+
+describe('StepDados — D-0729-7 · nascimento por digitação (achado 18)', () => {
+  it('digitar só os números vira dd/mm/aaaa na tela e yyyy-mm-dd no estado', () => {
+    const recebidos: string[] = [];
+    renderDados({
+      onInscrito: (_i, patch) => {
+        if (patch.nascimento !== undefined) recebidos.push(patch.nascimento);
+      },
+    });
+    const nasc = screen.getByLabelText(/data de nascimento/i) as HTMLInputElement;
+    fireEvent.change(nasc, { target: { value: '20051990' } });
+    expect(nasc.value).toBe('20/05/1990');
+    // Data pela metade não vira data: o estado só recebe ISO quando completa.
+    expect(recebidos.at(-1)).toBe('1990-05-20');
+  });
+
+  it('data incompleta não inventa valor no estado', () => {
+    const recebidos: string[] = [];
+    renderDados({
+      onInscrito: (_i, patch) => {
+        if (patch.nascimento !== undefined) recebidos.push(patch.nascimento);
+      },
+    });
+    fireEvent.change(screen.getByLabelText(/data de nascimento/i), {
+      target: { value: '2005' },
+    });
+    expect(recebidos.at(-1)).toBe('');
+  });
+});
+
+describe('StepDados — D-0729-2 · endereço começa só com o CEP (achado 9)', () => {
+  it('sem CEP, o bloco de endereço mostra SÓ o campo de CEP', () => {
+    renderDados();
+    expect(screen.getByLabelText(/^cep/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/logradouro/i)).toBeNull();
+    expect(screen.queryByLabelText(/^número/i)).toBeNull();
+    expect(screen.queryByLabelText(/cidade/i)).toBeNull();
+    expect(screen.queryByLabelText(/^uf/i)).toBeNull();
+  });
+
+  it('CEP completo revela o restante MESMO sem sucesso do lookup (fail-open da §5.2)', () => {
+    renderDados({ endereco: { ...enderecoVazio(), cep: '01310-100' } });
+    expect(screen.getByLabelText(/logradouro/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^número/i)).toBeTruthy();
+  });
+
+  it('endereço vindo do prefill revela os campos mesmo sem o CEP digitado agora', () => {
+    renderDados({
+      endereco: { ...enderecoVazio(), logradouro: 'Av. Paulista', cidade: 'São Paulo' },
+    });
+    expect(screen.getByLabelText(/logradouro/i)).toBeTruthy();
   });
 });
 

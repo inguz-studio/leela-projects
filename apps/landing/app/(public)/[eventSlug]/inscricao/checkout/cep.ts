@@ -33,6 +33,51 @@ export function mascaraTelefone(value: string): string {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+// ---------------------------------------------------------------------------
+// Data de nascimento por digitação (D-0729-7 · achado 18)
+//
+// Verbatim do dono, testando no celular: "voce abre um calendário para colocar
+// a data de nascimento, mas isso demanda muitos cliques por parte do usuário.
+// DEixe apenas a opção dele preencher com teclado numérico."
+//
+// O `<input type="date">` do mobile abre o seletor de calendário e não tem como
+// desligá-lo — para chegar a 1990 a pessoa navega ano a ano. Trocamos por campo
+// de TEXTO com máscara `dd/mm/aaaa` e `inputMode="numeric"`: o teclado que sobe
+// é o numérico e a data se digita de uma vez.
+//
+// O ESTADO continua em `yyyy-mm-dd` (formato do core, o que o servidor valida e
+// persiste) — a máscara é só apresentação, como as de CEP e telefone. A
+// conversão é explícita nas duas direções e sem inventar dado: entrada
+// incompleta devolve string vazia, e o validador do core segue sendo a
+// autoridade sobre "é uma data civil no passado".
+// ---------------------------------------------------------------------------
+
+/** Máscara visual `dd/mm/aaaa` (aplica conforme digita; nunca valida). @pure */
+export function mascaraDataBr(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/**
+ * `dd/mm/aaaa` → `yyyy-mm-dd`. Devolve `''` enquanto a data não estiver
+ * completa: meia data não vira data, e o campo não pode "quase" ter valor.
+ * @pure
+ */
+export function dataBrParaIso(value: string): string {
+  const d = value.replace(/\D/g, '');
+  if (d.length !== 8) return '';
+  return `${d.slice(4, 8)}-${d.slice(2, 4)}-${d.slice(0, 2)}`;
+}
+
+/** `yyyy-mm-dd` → `dd/mm/aaaa` (para hidratar prefill/estado). @pure */
+export function isoParaDataBr(value: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (m === null) return mascaraDataBr(value);
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
 /** Endereço devolvido pelo lookup — SÓ os campos que o form autopreenche. */
 export interface EnderecoLookup {
   logradouro: string;

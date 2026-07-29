@@ -261,7 +261,7 @@ describe('S1209-T3 · RN-174 — prefill sem oráculo de CPF', () => {
 
     expect((screen.getByLabelText(/^cpf/i) as HTMLInputElement).value).toBe('52998224725');
     expect((screen.getByLabelText(/data de nascimento/i) as HTMLInputElement).value).toBe(
-      '1990-05-20',
+      '20/05/1990',
     );
     expect((screen.getByLabelText(/gênero/i) as HTMLSelectElement).value).toBe('feminino');
     expect((screen.getByLabelText(/telefone/i) as HTMLInputElement).value).toBe('(11) 98888-7777');

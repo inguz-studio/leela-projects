@@ -13,9 +13,16 @@ import {
 } from '@leela/core';
 import { Checkbox, Field, Input, Select } from '@/app/_ds/ds';
 import { GENERO_LABEL_FORM, type EnderecoForm, type InscritoForm } from './tipos';
-import { CardAtleta } from './CardAtleta';
+import { CardAtleta, MolduraFormulario } from './CardAtleta';
 import type { ErrosEndereco, ErrosInscrito, ErrosResponsavel } from './validacao';
-import { buscarEnderecoPorCep, mascaraCep, mascaraTelefone } from './cep';
+import {
+  buscarEnderecoPorCep,
+  dataBrParaIso,
+  isoParaDataBr,
+  mascaraCep,
+  mascaraDataBr,
+  mascaraTelefone,
+} from './cep';
 import { TituloEtapa, ApoioEtapa } from './tipografia';
 
 /**
@@ -37,6 +44,59 @@ import { TituloEtapa, ApoioEtapa } from './tipografia';
 
 /** Estado do lookup de CEP (spec §5.2 — 4 estados). */
 type LookupCep = 'inicial' | 'carregando' | 'sucesso' | 'falha';
+
+/**
+ * Data de nascimento por digitação (D-0729-7 · achado 18).
+ *
+ * Campo de TEXTO com máscara `dd/mm/aaaa` e `inputMode="numeric"` — o teclado
+ * que sobe no celular é o numérico e não existe calendário a navegar. O estado
+ * do fluxo continua em `yyyy-mm-dd`; a máscara é apresentação.
+ *
+ * O texto digitado é estado LOCAL de propósito: enquanto a data está pela
+ * metade não existe ISO para guardar, e derivar o texto do ISO apagaria o que a
+ * pessoa acabou de digitar. Quando o valor ISO muda por fora (prefill), o
+ * espelho se re-sincroniza — mas só nesse caso.
+ */
+function CampoNascimento({
+  valorIso,
+  onChangeIso,
+  autoComplete,
+  erro,
+}: {
+  valorIso: string;
+  onChangeIso: (iso: string) => void;
+  autoComplete: string;
+  erro: string;
+}): React.JSX.Element {
+  const [texto, setTexto] = useState(() => isoParaDataBr(valorIso));
+  const isoEspelhadoRef = useRef(valorIso);
+
+  // Prefill (ou qualquer escrita externa) chegou depois do primeiro paint.
+  if (valorIso !== isoEspelhadoRef.current && valorIso !== dataBrParaIso(texto)) {
+    isoEspelhadoRef.current = valorIso;
+    setTexto(isoParaDataBr(valorIso));
+  }
+
+  return (
+    <Field label="Data de nascimento" required errorMessage={erro}>
+      <Input
+        type="text"
+        value={texto}
+        inputMode="numeric"
+        autoComplete={autoComplete}
+        placeholder="dd/mm/aaaa"
+        maxLength={10}
+        onChange={(e) => {
+          const mascarado = mascaraDataBr(e.target.value);
+          setTexto(mascarado);
+          const iso = dataBrParaIso(mascarado);
+          isoEspelhadoRef.current = iso;
+          onChangeIso(iso);
+        }}
+      />
+    </Field>
+  );
+}
 
 function BlocoEndereco({
   endereco,
@@ -119,6 +179,29 @@ function BlocoEndereco({
 
   const carregando = lookup === 'carregando';
 
+  // ── D-0729-2 (achado 9) · progressive disclosure do endereço ──────────────
+  //
+  // Verbatim do dono: "ao preencher o endereço, quero que mostre apenas o campo
+  // CEP, e depois que validar, apareça o restante das informações, para o
+  // usuário ver menos campos necessários para preencher."
+  //
+  // O gatilho é o CEP COMPLETO (8 dígitos), não o sucesso do ViaCEP. Amarrar a
+  // revelação ao sucesso do lookup quebraria o fail-open que a spec §5.2 exige:
+  // com a API fora, ou num CEP novo/rural que ela não conhece, os campos nunca
+  // apareceriam e a compra morreria num beco. Assim, CEP completo revela sempre
+  // — preenchido pelo lookup quando ele responde, vazio para completar à mão
+  // quando ele não responde.
+  //
+  // O prefill (RN-174) também revela: quem já tem endereço na ficha vê o
+  // endereço, não um campo de CEP sozinho sobre dados que já existem.
+  const cepCompleto = normalizarCep(endereco.cep).length === 8;
+  const temEnderecoPreenchido =
+    endereco.logradouro.length > 0 ||
+    endereco.cidade.length > 0 ||
+    endereco.numero.length > 0 ||
+    endereco.uf.length > 0;
+  const mostrarDemaisCampos = cepCompleto || temEnderecoPreenchido;
+
   return (
     <section className="flex flex-col gap-4">
       <div>
@@ -128,6 +211,7 @@ function BlocoEndereco({
         </ApoioEtapa>
       </div>
 
+      <MolduraFormulario>
       <div className="flex flex-col gap-4">
         <Field label="CEP" required errorMessage={erroFormatoCep ?? erros.cep ?? ''}>
           <Input
@@ -155,6 +239,8 @@ function BlocoEndereco({
           </p>
         ) : null}
 
+        {mostrarDemaisCampos ? (
+          <>
         <Field label="Logradouro" required errorMessage={erros.logradouro ?? ''}>
           <Input
             value={endereco.logradouro}
@@ -214,7 +300,10 @@ function BlocoEndereco({
             onChange={(e) => onEndereco({ uf: e.target.value })}
           />
         </Field>
+          </>
+        ) : null}
       </div>
+      </MolduraFormulario>
     </section>
   );
 }
@@ -261,7 +350,10 @@ export function StepDados({
             Quem faz e paga a inscrição. O comprovante e os ingressos vão para este e-mail.
           </ApoioEtapa>
         </div>
-        {/* Vertical: campos empilhados (coluna única). */}
+        {/* Vertical: campos empilhados (coluna única).
+            B9 (achado 7): a MESMA moldura dos cards de atleta — sem ela o
+            `Input` flat do DS ficava invisível sobre a página. */}
+        <MolduraFormulario>
         <div className="flex flex-col gap-4">
           <Field label="Nome completo" required errorMessage={errosResponsavel.nome ?? ''}>
             <Input
@@ -294,6 +386,7 @@ export function StepDados({
             />
           </Field>
         </div>
+        </MolduraFormulario>
 
         <label className="flex cursor-pointer items-center gap-3 text-[length:var(--font-size-base)] text-text-primary">
           <Checkbox
@@ -370,16 +463,16 @@ export function StepDados({
                   />
                 </Field>
                 {/* CKFORM §5.1 item 2: nascimento POR ATLETA (categoria de
-                    prova + demografia são do titular — ADR-011). Input date
-                    nativo entrega `yyyy-mm-dd` direto (formato do core). */}
-                <Field label="Data de nascimento" required errorMessage={erros.nascimento ?? ''}>
-                  <Input
-                    type="date"
-                    value={inscrito.nascimento}
-                    autoComplete={ehVoce ? 'bday' : `section-atleta${i + 1} bday`}
-                    onChange={(e) => onInscrito(i, { nascimento: e.target.value })}
-                  />
-                </Field>
+                    prova + demografia são do titular — ADR-011).
+                    D-0729-7: por digitação com teclado numérico, sem
+                    calendário — o `type="date"` custava dezenas de cliques no
+                    celular para chegar a um ano de nascimento. */}
+                <CampoNascimento
+                  valorIso={inscrito.nascimento}
+                  onChangeIso={(iso) => onInscrito(i, { nascimento: iso })}
+                  autoComplete={ehVoce ? 'bday' : `section-atleta${i + 1} bday`}
+                  erro={erros.nascimento ?? ''}
+                />
                 {/* RN-154 (S1209-T3): gênero POR ATLETA, no vocabulário do
                     core (GENEROS_INSCRITO — o mesmo da demografia RN-820/822;
                     a lista NUNCA é redigitada aqui). Opcional: quem não
