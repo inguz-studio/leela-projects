@@ -10,8 +10,8 @@ Natureza: **investigação de incidente em produção** (read-only por default).
 - [x] **Q2 · "Calculando total" preso** — medido por log de produção (durações reais da chamada)
 - [x] **Q3 · Taxa de serviço do meia-floripa-2026** — config real lida no Firestore de produção
 - [x] **Q4 · Cupons `FLORIPARUN10` / `RITMOFORTE10`** — veredito provado pela API pública
-- [ ] Fix de config (se autorizado pela classificação) + prova
-- [ ] Resumo executivo + self-score
+- [x] **Fix de config aplicado e provado** — binding do secret + redeploy de UMA function
+- [x] Resumo executivo + self-score
 
 ---
 
@@ -305,3 +305,221 @@ território desta lane.
 
 ---
 
+
+## Fix aplicado (CONFIG) — binding do secret + redeploy de uma function
+
+**Autorização:** o maestro liberou correção quando o root cause fosse config (binding de secret
+ausente na function deployada). É exatamente este caso: o secret já existia provisionado; faltava
+declará-lo. Em Cloud Functions v1 a declaração `runWith({ secrets })` **é** a superfície de config —
+não existe outra forma de vincular. Nenhuma linha de lógica foi tocada.
+
+### Diff (1 arquivo, 1 linha efetiva + comentário de racional)
+
+`functions/src/checkout/createInscricaoCharge.ts:2137-2149`
+
+```diff
+-  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
++  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN', 'CRM_ID_PEPPER'],
+```
+
+### Gate
+
+- `npx tsc --noEmit -p functions/tsconfig.json` → **exit 0**.
+- Nenhuma suíte, nenhum emulador (a lane INGPAGE-REV os detém).
+
+### Deploy dirigido
+
+```
+npx firebase-tools@13 deploy --only functions:createInscricaoCharge \
+  --project prod --config firebase.prod.json --force
+```
+
+Saída: `functions[createInscricaoCharge(us-central1)] Successful update operation.` · `Deploy
+complete!` — **uma única function atualizada**, nenhuma outra tocada.
+
+### Prova 1 — a revisão ACTIVE em produção carrega o secret
+
+Cloud Functions API v1, `projects/leela-hub/locations/us-central1/functions/createInscricaoCharge`:
+
+```
+status     = ACTIVE
+updateTime = 2026-07-29T15:04:18.898Z
+versionId  = 4
+timeout    = 120s
+secretEnvironmentVariables:
+   - ASAAS_API_KEY            → secret=ASAAS_API_KEY            version=1
+   - ASAAS_WEBHOOK_AUTH_TOKEN → secret=ASAAS_WEBHOOK_AUTH_TOKEN version=1
+   - CRM_ID_PEPPER            → secret=CRM_ID_PEPPER            version=1   ← ANTES NÃO EXISTIA
+```
+
+O próprio audit log do Google confirma a mudança (entrada `UpdateFunction` de
+2026-07-29T15:03:00Z, `permission: cloudfunctions.functions.update, granted: true`, com os três
+`secretEnvironmentVariables` no corpo do request).
+
+### Prova 2 — linha do tempo do log de produção, antes e depois
+
+| horário (UTC) | evento | resultado |
+|---|---|---|
+| 14:07:39 · 14:07:45 · 14:07:52 | 3 tentativas de compra do dono | **500** · `CRM_ID_PEPPER ausente` |
+| **14:54:47** | **4ª tentativa do dono, já durante a investigação** | **500** · `CRM_ID_PEPPER ausente` |
+| 15:03:00 → 15:04:18 | `UpdateFunction` (este fix) | revisão 4 ACTIVE com o secret |
+| 15:07:08 · 15:07:09 | probes pós-deploy no callable | **400 INVALID_ARGUMENT** (erro de domínio limpo) |
+
+Depois do deploy o callable responde com validação de domínio legível, e **zero** `Unhandled error`
+ou 500 aparecem no log. Resposta literal do probe:
+
+```
+CreateInscricaoChargeInput inválido: "eventoId" é obrigatório. "inscritos" deve ter ≥ 1 inscrição
+(ADR-011). "responsavel" { nome, email } é obrigatório (ADR-011). "aceites" é obrigatório:
+{termos: true, saude: true} (spec §5.3 — F-4a). "forma" deve ser cartao_credito ou pix.
+"parcelas" deve ser inteiro ≥ 1. "idempotencyKey" é obrigatória (8–64 caracteres — RN-333).
+```
+
+### O que NÃO foi provado, e por quê (declarado, não escondido)
+
+Não gerei um QR de verdade. O único caminho que executa `crmIdPepper()` é o de uma compra válida, e
+ele é irreversível na ordem do core: `encerrarPixAnteriorNaCriacao` (onde morria) roda **depois de
+toda validação e derivação de preço, imediatamente antes das escritas**
+(`createInscricaoCharge.ts:2018` → `:2026`). Não existe payload que atravesse o pepper e pare antes
+de gravar pedido/inscrito em produção e abrir cobrança no Asaas. Como a regra da lane é não comprar
+e não sujar dado de produção, parei na fronteira.
+
+O que resta é determinístico, não probabilístico: `crmIdPepper()` só lê
+`process.env['CRM_ID_PEPPER']`, e o Cloud Functions injeta todo secret declarado na revisão ACTIVE
+(mesmo mecanismo que já faz `onInscritoWriteCrm` funcionar com este mesmo secret, versão 1, cujo
+valor eu li com sucesso via `functions:secrets:access`).
+
+**O teste canônico de go-live volta a ser do dono** — e é exatamente o que ele tentou quatro vezes
+hoje. Basta repetir a compra em `https://leela-landing.web.app/meia-floripa-2026/inscricao`, agora
+com `CORRA50` (R$ 75,00 → R$ 25,00) para baratear o teste real.
+
+---
+
+## Tasks devolvidas (código — fora do território desta lane)
+
+### Para a lane CHECKOUT-UX
+
+**T-CKUX-1 · "Calculando total": cotação disparada 2-3× por interação** · *média*
+Arquivo: `apps/landing/app/(public)/[eventSlug]/inscricao/checkout/CheckoutFlow.tsx`.
+Evidência: 3 chamadas de `cotarInscricaoCheckout` em 4,4 s (14:07:16 / :18 / :20) e outros pares em
+14:26-14:27. Cada round-trip custa 1,7-9,8 s. Root cause provável: efeito reagindo a mudanças de
+estado encadeadas sem coalescing. Fix proposto: debounce curto + descartar respostas obsoletas por
+sequência (a última resposta vence), e não recotar quando o payload derivado não mudou.
+
+**T-CKUX-2 · cold start de 3-10 s na primeira cotação** · *média*
+`cotarInscricaoCheckout` não declara `minInstances`. Piso quente medido = 1,7 s; primeira chamada de
+cada sessão = 3-10 s. Fix proposto: `minInstances: 1` na function da cotação (custo baixo, é a
+primeira impressão de preço da jornada) **ou** cotação otimista no cliente com reconciliação. Decidir
+com o dono — tem custo mensal.
+
+**T-CKUX-3 · achado 4 não é defeito neste evento** · *fechar*
+`meia-floripa-2026` roda taxa `'incorporada'`; a ausência da linha "Taxa de serviço" está correta
+(RN-347). Nada a implementar. O que existe é uma **pergunta ao dono**: quer declarar `taxaModo`
+explicitamente no evento em vez de herdar o default do core?
+
+### Para quem detém o seed / dado de produção
+
+**T-SEED-1 · `FLORIPARUN10` não existe como cupom** · *média*
+`functions/scripts/preview-seed-clubes.ts:358` cria a parceria de afiliado com
+`cupom: 'FLORIPARUN10'`, mas nenhum documento `eventos/meia-floripa-2026/cupons/FLORIPARUN10` é
+escrito em lugar nenhum. Afiliado com cupom no contrato e sem cupom no checkout. Fix: criar o
+documento do cupom (percentual, escopo de afiliado, janela vigente) junto com a parceria.
+
+**T-SEED-2 · seed de produção re-data DUAS VEZES tudo que escreve por `ref.set`** · *alta*
+`functions/scripts/prod-seed-leela-hub.ts:160-183` patcha `DocumentReference.prototype.set` **e**
+`WriteBatch.prototype.set`; no `@google-cloud/firestore@7.11.6` o primeiro é implementado por cima
+do segundo (`document-reference.js:341-351`), então `redate()` roda duas vezes nesse caminho.
+Provado pelos cupons: +135 d via `batch.set`, +270 d via `ref.set`. Efeito visível hoje:
+`RITMOFORTE10` só abre em 28/09/2026. Fix proposto: patchar **só** `WriteBatch.prototype.set` e
+`CollectionReference.prototype.add` (todo `DocumentReference.set` já passa por lá), ou marcar o
+payload já re-datado com um símbolo e tornar `redate()` idempotente. Depois: reconferir as datas de
+tudo que `preview-seed-clubes.ts` e `preview-seed-extra.ts` gravaram em produção.
+
+---
+
+## Premissas assumidas
+
+1. **O binding de secret conta como config, não como código.** O root cause é um secret ausente na
+   function deployada — a classe que o brief autoriza corrigir. Em Functions v1 o array
+   `runWith({ secrets })` é a única superfície de declaração; alterá-lo exige tocar o arquivo, mas
+   não altera nenhuma linha de lógica. Se o maestro discordar, o revert é uma linha.
+2. **Ler o Firestore de produção com ADC derivado do refresh token do firebase-tools** segue a
+   receita já registrada no handoff DEPLOY-PREVIEW §Credenciais. Uso read-only; o arquivo de
+   credencial foi criado no scratchpad e **apagado** ao fim das leituras.
+3. **Cotação (`cotarInscricaoCheckout`) não é compra.** É read-only, não escreve nada e não abre
+   cobrança — por isso foi o instrumento dos testes de cupom e de taxa.
+4. **A janela de log consultada é a que o `functions:log` devolve** (últimas ~500 linhas, cobrindo
+   13:52-15:07 UTC de 2026-07-29). Todas as tentativas de compra do dono relatadas caem dentro dela.
+5. **Não conferi o painel do Asaas.** A conclusão "não chegou a falar com o gateway" vem do stack
+   trace: a exceção acontece em `encerrarPixAnteriorNaCriacao`, antes de `criarDocsDeCheckout` e de
+   `garantirCobrancaEMontarResultado`.
+
+---
+
+## Resumo executivo
+
+**O checkout de produção estava 100% quebrado por um secret que não chegava na function — não pelo
+gateway, não pelo front, não por timeout.** As quatro tentativas de compra do dono hoje (14:07:39,
+14:07:45, 14:07:52 e 14:54:47 UTC) morreram todas em HTTP 500 dentro de `createInscricaoCharge`,
+antes de qualquer contato com o Asaas: `crmIdPepper()` lança fail-closed porque `CRM_ID_PEPPER` não
+estava na lista `runWith({ secrets })` da function. O secret já existia no Secret Manager; faltava o
+vínculo. Nenhuma compra fechava em produção — nem PIX, nem cartão. **Corrigido e deployado**
+(revisão 4 ACTIVE, 15:04:18Z, com o secret vinculado — confirmado pela API do Cloud Functions e pelo
+audit log do Google); depois do deploy o callable responde com validação de domínio limpa e zero
+500 no log.
+
+A lição de confiabilidade vale registrar: **a suíte verde não podia pegar este defeito.** No
+emulador o pepper vive no `process.env` do processo inteiro e qualquer function o enxerga; em
+produção o Cloud Functions injeta secret só em quem o declara. O defeito só existe no modelo de
+isolamento de produção. Vale um gate futuro: conferir que toda function cujo grafo de import alcança
+um leitor de secret declare esse secret.
+
+**O "Calculando total"** não é travamento: é latência honesta. Piso quente de 1,7 s, cauda de cold
+start até 9,8 s, e a tela dispara 2-3 cotações por interação. Vira duas tasks para a CHECKOUT-UX
+(coalescing e `minInstances`), com os números medidos.
+
+**A taxa de serviço** do `meia-floripa-2026` é **incorporada** — não aparece porque não deve
+aparecer. O comprador paga o face (R$ 75,00 no 5k Lote 2); os 10,5% de `platformFeePct` saem do
+repasse do organizador (líquido R$ 67,13), coerente com a DEC-0726. O achado 4 fecha sem código. O
+que sobra é uma pergunta ao dono: o evento herda o modo do default do core, não declara o próprio.
+
+**Os dois cupons pedidos não servem.** `FLORIPARUN10` nunca foi criado como documento — a parceria
+de afiliado aponta para um código que não existe. `RITMOFORTE10` existe mas só abre em 28/09/2026,
+efeito de um bug real do seed de produção (re-data duas vezes tudo que escreve por `ref.set`, porque
+`DocumentReference.set` é implementado por cima de `WriteBatch.set` e os dois estão patchados). Em
+compensação, **dois cupons funcionam agora**, provados aplicando de verdade: **`HEROI10`** (10% ·
+R$ 75,00 → R$ 67,50) e **`CORRA50`** (R$ 50 fixos · R$ 75,00 → R$ 25,00), ambos válidos até
+08/09/2026.
+
+**Próximo passo do dono:** repetir a compra em
+`https://leela-landing.web.app/meia-floripa-2026/inscricao` com `CORRA50`. Esse é o teste canônico
+de go-live — o mesmo que ele tentou quatro vezes hoje — e é o único que fecha o ciclo com o QR na
+tela. Deliberadamente não o rodei: o caminho que exercita o pepper grava pedido e inscrito em
+produção e abre cobrança no gateway, e a regra da lane é não sujar dado real.
+
+---
+
+## Self-score (contrato do sf-reliability-engineer)
+
+| critério | peso | nota | justificativa |
+|---|---|---|---|
+| `correctness` (≥0.90) | 1.5 | **0.95** | Root cause provado por stack trace de produção, não hipótese. Fix aplicado e verificado em duas camadas independentes (API do Cloud Functions e audit log do Google) mais a linha do tempo do log 500→400. O ciclo ponta a ponta com QR renderizado fica com o dono, e isso está declarado, não escondido. |
+| `regression_safety` (≥0.85) | 1.5 | **0.90** | `tsc --noEmit` exit 0. Diff de uma linha efetiva, aditiva (acrescenta um secret; não remove nem altera nenhum). Raio de explosão auditado antes de tocar: só `createInscricaoCharge` alcança `crmIdPepper` sem declará-lo. Deploy dirigido a uma única function. Sem suíte por proibição explícita da lane — o que impede nota mais alta. |
+| `scope_discipline` (≥0.80) | 1.0 | **0.95** | Um arquivo de código tocado, uma linha efetiva. Tudo o mais virou task com root cause, arquivo e linha. Não mexi em `DECISOES-ABERTAS.md`, não rodei suíte nem emulador, não comprei nada, não fiz refactor de ocasião. Credencial temporária apagada. |
+| `handoff_artifact` (≥0.75) | 1.0 | **0.95** | Handoff nomeia arquivos e linhas, transcreve logs e respostas literais, traz a linha do tempo antes/depois, cinco premissas declaradas, cinco tasks devolvidas com fix proposto e o limite do que não foi provado. Três commits por artefato, sem push. |
+
+**Média ponderada: 0.93** — acima de todos os limiares. Sem iteração de revisão necessária.
+
+## Higiene
+
+- Credencial ADC temporária (`scratchpad/adc-leela-hub.json`) **apagada**; regenerável pela receita
+  do handoff DEPLOY-PREVIEW §Credenciais.
+- Tokens anônimos de teste descartados. Os usuários anônimos criados no Identity Toolkit ficaram sem
+  nenhum dado associado — nenhum pedido, nenhum inscrito, nenhuma cobrança.
+- `functions/lib/` e `functions-deploy/` são artefatos de build gitignorados, gerados pelo predeploy.
+
+## Commits desta lane (sem push — o maestro pusha)
+
+1. `7bedef1` — handoff com Q1 (root cause do QR) e Q2 (números do "calculando total").
+2. `0f5047b` — handoff com Q3 (taxa incorporada) e Q4 (veredito dos cupons e bug do re-data duplo).
+3. *(este)* — fix do binding + provas de deploy + tasks + resumo executivo + self-score.

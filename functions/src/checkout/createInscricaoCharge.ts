@@ -2134,9 +2134,18 @@ export const TETO_CALLABLE_CHECKOUT_SEGUNDOS =
 // Task 8 (DEPLOY-PREVIEW, decisao do dono 2026-07-28): caminho REAL do
 // dinheiro ligado - secrets do gateway em producao (Mock permanece no
 // emulador, onde ASAAS_API_KEY e vazia por contrato - item 51).
+//
+// CRM_ID_PEPPER (lane CHECKOUT-PIXQR-INV, 2026-07-29): NAO e opcional aqui. O
+// caminho do dinheiro passa por travaCobrancaPix.impressaoDoCarrinho() e por
+// pessoaRegistry, e os dois derivam id por HMAC com o pepper do CRM
+// (crmIdPepper(), fail-closed). Sem o binding a function morre em 500 ANTES de
+// falar com o gateway: em producao o Cloud Functions so injeta o secret em quem
+// o declara. Foi exatamente o que derrubou as tres tentativas de compra do dono
+// (14:07 UTC de 2026-07-29) -- o QR nunca chegou a existir. O emulador nao pega
+// esse defeito: la a variavel vive no process.env do processo inteiro.
 export const createInscricaoCharge = runWith({
   timeoutSeconds: TETO_CALLABLE_CHECKOUT_SEGUNDOS,
-  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN', 'CRM_ID_PEPPER'],
 }).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
