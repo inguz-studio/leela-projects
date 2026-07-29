@@ -136,6 +136,15 @@ async function irAtePagar(): Promise<void> {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
   });
+  // T-CKUX-1: a cotação passou a ser coalescida com debounce curto, então ela
+  // aterrissa DEPOIS do primeiro paint do PAGAR. Esperar por ela aqui é o que
+  // deixa as asserções de contagem determinísticas.
+  await waitFor(() => {
+    expect(cotarInscricaoCheckout).toHaveBeenCalled();
+  });
+  await waitFor(() => {
+    expect(screen.getByText(/subtotal/i)).toBeTruthy();
+  });
 }
 
 describe('DEC-0729 · achado 3 — PAGAR é UMA tela: resumo, meio e aceites juntos', () => {
@@ -225,5 +234,64 @@ describe('DEC-0729 · achado 12 (D-0729-3) — resumo editável sem recomeçar',
       'Ana Corredora',
     );
     expect((screen.getByLabelText(/^número/i) as HTMLInputElement).value).toBe('1000');
+  });
+});
+
+describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
+  it('chegar ao PAGAR pede UMA cotação, não duas ou três', async () => {
+    await irAtePagar();
+    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it('editar um campo que não move preço NÃO recota', async () => {
+    await irAtePagar();
+    const antes = cotarInscricaoCheckout.mock.calls.length;
+
+    // Volta aos dados e digita: nome não muda preço nenhum. Antes do fix o
+    // efeito dependia de `cotarCom`, cuja identidade muda a cada tecla.
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /voltar/i }).at(-1)!);
+    });
+    await act(async () => {
+      fireEvent.change(screen.getAllByLabelText(/nome completo/i)[0]!, {
+        target: { value: 'Ana Corredora da Silva' },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    });
+    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes);
+  });
+
+  it('trocar para cartão e voltar para PIX dentro da janela não gera duas cotações', async () => {
+    await irAtePagar();
+    const antes = cotarInscricaoCheckout.mock.calls.length;
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 350));
+    });
+    // A assinatura voltou a ser a MESMA já cotada — nenhuma chamada nova, e a
+    // tela não pode ficar presa em "Calculando total".
+    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes);
+    expect(screen.queryByText(/calculando o total/i)).toBeNull();
+  });
+
+  it('aplicar cupom cota UMA vez (o efeito não repete a chamada do botão)', async () => {
+    await irAtePagar();
+    const antes = cotarInscricaoCheckout.mock.calls.length;
+    fireEvent.change(screen.getAllByLabelText(/cupom/i)[0]!, { target: { value: 'HEROI10' } });
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /aplicar/i })[0]!);
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 350));
+    });
+    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes + 1);
   });
 });

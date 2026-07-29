@@ -58,6 +58,14 @@ const COPY_ERRO_AUTH =
 // pedir ação manual ao comprador. Mantém erro transitório invisível.
 const MAX_AUTH_RETRY_AUTO = 1;
 
+/**
+ * Janela de coalescing da cotação (T-CKUX-1). Curta de propósito: o objetivo é
+ * juntar o vaivém de uma mesma decisão (trocar de kit e voltar, mexer nas
+ * parcelas), não fazer o comprador esperar. Cada round-trip de cotação custou
+ * 1,7-9,8 s em produção — 200 ms para evitar um deles é troca óbvia.
+ */
+const DEBOUNCE_COTACAO_MS = 200;
+
 // Etapas INTERNAS (4), na ordem do mockup/TicketSports (o dono):
 //   [0] modalidade+kit · [1] dados · [2] PAGAR · [3] confirmação
 // Modalidade e kit ficam juntos na etapa 0 (o kit é filtrado pela modalidade);
@@ -520,28 +528,78 @@ export function CheckoutFlow({
     [evento.slug, inscritos, forma, parcelas],
   );
 
-  // Recalcula o total ao entrar no Resumo e quando seleção/forma/parcelas mudam.
-  // Enquanto o cupom da URL ainda não resolveu (A-2), o efeito de auto-aplicação
-  // faz a 1ª cotação — este espera para não disparar duas cotações concorrentes.
+  // ── T-CKUX-1 · coalescing da cotação ──────────────────────────────────────
+  //
+  // Medido em produção na sessão do dono: TRÊS chamadas de
+  // `cotarInscricaoCheckout` em 4,4 s (14:07:16 / :18 / :20) e outros pares em
+  // 14:26-14:27, cada round-trip custando 1,7-9,8 s. Era isso que deixava
+  // "Calculando total" preso na tela.
+  //
+  // Duas causas somadas:
+  //
+  //   1. O efeito dependia de `cotarCom`, cuja identidade muda a cada edição de
+  //      QUALQUER campo de inscrito (o `useCallback` fecha sobre `inscritos`).
+  //      Digitar o nome de um atleta re-disparava a cotação, embora nome não
+  //      mude preço nenhum.
+  //   2. Aplicar cupom cotava DUAS vezes: uma direto no `aplicarCupom` e outra
+  //      pelo efeito, que reagia ao `cupomAplicado` recém-escrito.
+  //
+  // O remédio é uma ASSINATURA: a lista curta do que de fato move preço
+  // (evento, modalidade+kit de cada inscrito, forma, parcelas, cupom). O efeito
+  // só olha para ela; tudo o mais que muda de identidade passa por ref e não
+  // acorda ninguém. Quem já cotou uma assinatura registra qual foi, então o
+  // caminho manual do cupom não gera a segunda chamada.
+  //
+  // Debounce curto para o vaivém (trocar de kit A→B→A) e um número de sequência
+  // porque respostas de 1,7-9,8 s chegam fora de ordem: a última pedida vence,
+  // nunca a última a chegar — sem isso o comprador podia ver o preço de uma
+  // seleção que ele já abandonou.
+  const cotarComRef = useRef(cotarCom);
+  cotarComRef.current = cotarCom;
+
+  /** A lista curta do que move preço. Igualdade aqui = cotação igual. */
+  const assinaturaDe = useCallback(
+    (cupom: string | null): string =>
+      `${evento.slug}|${selecaoSig}|${forma}|${parcelasEfetivas}|${cupom ?? ''}`,
+    [evento.slug, selecaoSig, forma, parcelasEfetivas],
+  );
+  const assinaturaAtual = assinaturaDe(cupomAplicado);
+
+  /** Assinatura da última cotação BEM-SUCEDIDA — `null` quando não há. */
+  const assinaturaCotadaRef = useRef<string | null>(null);
+  /** Nº de sequência: só a resposta da chamada mais recente aterrissa. */
+  const cotacaoSeqRef = useRef(0);
+
   useEffect(() => {
     if (!precisaCotar || !podeCotar || cupomUrlPendente) return;
-    let vivo = true;
-    setCotando(true);
-    cotarCom(cupomAplicado).then((r) => {
-      if (!vivo) return;
+    // Nada que move preço mudou — inclusive o caso de o comprador voltar à
+    // seleção anterior no meio do debounce. Sem este `setCotando(false)` a
+    // tela ficaria com "Calculando total" para sempre numa cotação que foi
+    // cancelada e nunca precisou ser refeita.
+    if (assinaturaCotadaRef.current === assinaturaAtual) {
       setCotando(false);
-      if (r.ok) {
-        setCotacao(r.data);
-        setErroCotacao(null);
-      } else {
-        setCotacao(null);
-        setErroCotacao(r.error);
-      }
-    });
-    return () => {
-      vivo = false;
-    };
-  }, [precisaCotar, podeCotar, cupomAplicado, forma, parcelasEfetivas, selecaoSig, cupomUrlPendente, recotarNonce, cotarCom]);
+      return;
+    }
+    const seq = ++cotacaoSeqRef.current;
+    setCotando(true);
+    const timer = setTimeout(() => {
+      void cotarComRef.current(cupomAplicado).then((r) => {
+        // Resposta obsoleta: outra cotação foi pedida depois desta.
+        if (seq !== cotacaoSeqRef.current) return;
+        setCotando(false);
+        if (r.ok) {
+          assinaturaCotadaRef.current = assinaturaAtual;
+          setCotacao(r.data);
+          setErroCotacao(null);
+        } else {
+          assinaturaCotadaRef.current = null;
+          setCotacao(null);
+          setErroCotacao(r.error);
+        }
+      });
+    }, DEBOUNCE_COTACAO_MS);
+    return () => clearTimeout(timer);
+  }, [precisaCotar, podeCotar, cupomUrlPendente, assinaturaAtual, cupomAplicado, recotarNonce]);
 
   // A-2 · auto-aplica o cupom vindo da URL. Na 1ª cotação possível, tenta o
   // cupom do link: sucesso ⇒ vira `cupomAplicado` (o efeito acima recota e
@@ -565,6 +623,10 @@ export function CheckoutFlow({
       if (!vivo) return;
       setCotando(false);
       if (r.ok) {
+        // T-CKUX-1: esta chamada JÁ é a cotação com o cupom. Registrar a
+        // assinatura resultante impede que o efeito de cotação reaja ao
+        // `cupomAplicado` recém-escrito e peça a mesma coisa de novo.
+        assinaturaCotadaRef.current = assinaturaDe(codigo);
         setCupomAplicado(codigo);
         setCotacao(r.data);
         setErroCotacao(null);
@@ -602,6 +664,9 @@ export function CheckoutFlow({
     const r = await cotarCom(code);
     setAplicandoCupom(false);
     if (r.ok) {
+      // T-CKUX-1: mesma disciplina do cupom de link — o "Aplicar" já cotou; o
+      // efeito não precisa cotar de novo por causa do `cupomAplicado` novo.
+      assinaturaCotadaRef.current = assinaturaDe(code);
       setCupomAplicado(code);
       setCotacao(r.data);
       setErroCotacao(null);
@@ -623,6 +688,9 @@ export function CheckoutFlow({
   // (re-dispara `cotarCom(cupomAplicado)`) com o mesmo guard de cancelamento.
   const tentarCotarNovamente = useCallback(() => {
     setErroCotacao(null);
+    // T-CKUX-1: o retry manual é o ÚNICO caminho que precisa furar o dedupe —
+    // a assinatura não mudou, e é justamente a mesma cotação que se quer refazer.
+    assinaturaCotadaRef.current = null;
     setRecotarNonce((n) => n + 1);
   }, []);
 
