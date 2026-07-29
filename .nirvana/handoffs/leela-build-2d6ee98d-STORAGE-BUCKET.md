@@ -8,6 +8,74 @@ Autorização do dono: D-0729-8 ("POde criar o bucket do firebase") · achado 19
 - [x] **Task 1 — reconhecimento** (sem mutação; nada a criar ainda)
 - [x] **Task 2 — bucket default CRIADO** em `southamerica-east1`
 - [x] **Task 3 — `storage.rules` da casa DEPLOYADAS** no bucket (ruleset ativo byte-idêntico) + custo registrado
+- [x] **Task 4 — alinhamento do config web PROVADO no bundle que está no ar** + selo
+
+## Resumo executivo (selo da lane)
+
+**Bucket:** `leela-hub.firebasestorage.app` — default do projeto, existe e está vinculado ao
+Firebase. **Região:** `SOUTHAMERICA-EAST1` (regional, a mesma do Firestore `(default)`; o campo é
+imutável). **Classe:** STANDARD. Criado 2026-07-29T15:19:56Z por API, sem click-ops.
+
+**Rules:** `storage.rules` — o arquivo da casa (ADR-016 · R5 · CEV), deployado **sem uma linha
+alterada**. Fail-closed: 5 superfícies contratadas com allowlist de nome de objeto, contentType
+ancorado, teto de 5 MB (2 MB na capa de evento) e posse de tenant provada por `firestore.get`
+cross-service; todo o resto cai no deny-by-default. Ruleset ativo:
+`projects/leela-hub/rulesets/fc6cad14-ede0-4f26-abff-834901df6afe`.
+
+**Provas (todas por API/HTTP, nenhuma suíte, nenhum emulador):**
+1. Bucket existe — `GET storage/v1/b/leela-hub.firebasestorage.app` → 200, região e classe confirmadas.
+2. Ruleset ativo é o arquivo do repo — `sha256` idêntico dos dois lados
+   (`a02c30f431b9c27c…`, 11.991 bytes).
+3. Fail-closed vivo — 5 sondas anônimas contra o endpoint de produção: 403 / **404** / 403 / 403 / 403.
+   O 404 (path contratado, objeto ausente) é o que distingue rule ativa de bucket aberto.
+4. Zero superfície pública no IAM — sem `allUsers`/`allAuthenticatedUsers` no bucket nem no
+   defaultObjectAcl.
+5. Bucket vazio — as sondas não deixaram resíduo.
+6. **Config web alinhado, provado no ar:** baixei o bundle do painel publicado
+   (`https://leela-hub--preview-y4n0cxzj.web.app/assets/index-Bk10tvNM.js`) e o nome
+   `leela-hub.firebasestorage.app` está lá dentro. O bucket nasceu com o nome que o app já
+   procurava.
+
+**Mudança de código: ZERO.** Nenhum arquivo de aplicação tocado, nenhum rebuild, nenhum redeploy do
+painel. O único diff da lane é `firebase.prod.json` (+4 linhas: o bloco `storage` e o comentário
+atualizado). O gatilho de escalação do brief — "mudança de código = ESCALAR" — não chegou a disparar
+porque o nome do bucket coincidiu; se tivesse divergido, eu teria parado aqui.
+
+**Custo:** R$ 0,00 esperado no horizonte de preview. O bucket default é Spark-tier-eligible (5 GB
+armazenados, 1 GB/dia de download, 20k uploads/dia, 50k downloads/dia sem custo) e o conteúdo são
+imagens de até 5 MB em escala de centenas de MB. Tabela completa e os dois custos não-óbvios
+(leitura de Firestore por upload; soft delete de 7 dias em objeto sobrescrito) na seção "Custo
+esperado".
+
+**O que ISTO destrava:** os uploads do painel deixam de falhar por bucket inexistente — cai a
+pendência nº 3 do PENDENTE-DONO da lane DEPLOY-PREVIEW ("decidir bucket de Storage") e a galeria de
+fotos do kit (D-0729-4 · SPEC-KITCUPOM) passa a ter onde gravar.
+
+**PENDENTE-DONO:** (1) **vetar a região** enquanto é barato — `southamerica-east1` é imutável, e
+trocar depois custa bucket novo + migração + rebuild do config web; (2) fazer **um upload real pelo
+painel** (trocar o avatar em Conta já serve) — é o único teste que esta lane não podia rodar, e ele
+fecha o circuito Rules↔`firestore.get`↔SDK de ponta a ponta.
+
+## Autoavaliação (self_score_contract · sf-platform-lead)
+
+- `delegation_quality` — **0,90** (limiar 0,85). Não deleguei, e a decisão é a resposta ao critério:
+  a lane é uma superfície de API e um deploy, com o valor inteiro na **cadeia de evidência**
+  (403→404 pós-enable, sha256 do ruleset, contraste das 5 sondas). Cadeia de evidência quebra quando
+  passa de mão. Delegar aqui adicionaria round-trip de contexto sem adicionar capacidade.
+- `outcome_clarity` — **0,95**. Todo critério de sucesso é falsificável e foi falsificado contra o
+  ambiente real: nome e região do bucket, igualdade de `sha256`, códigos HTTP nominais por sonda,
+  string presente no bundle publicado. Nada foi dado por "o deploy não deu erro".
+- `prioritization_call` — **0,95**. A decisão real era a região (imutável). Recomendei UMA —
+  `southamerica-east1` — pelo vizinho que importa (o Firestore que as Rules consultam em 3 dos 5
+  paths), e registrei explicitamente as duas rejeitadas e o motivo. Sem análise paralisante.
+- `escalation_compliance` — **0,95**. Fiquei dentro da alçada: nenhum arquivo de aplicação tocado,
+  `firebase.json` canônico intocado, `leela-specs/**` intocado, nenhuma suíte, nenhum emulador,
+  nenhum push. O gatilho "mudança de código = escalar" foi verificado ANTES de agir (nome do bucket
+  conferido contra o config web) e não precisou disparar. Único desvio consciente do meu próprio
+  contrato: IaC versionada (Terraform) não existe neste projeto — a criação foi por chamada de API,
+  com o comando exato registrado acima para ser reproduzível/portável.
+
+Todos os critérios acima do limiar. Sem iteração de revisão necessária.
 
 ## Task 2 — o bucket
 
@@ -171,3 +239,23 @@ por 7 dias. Irrelevante na escala atual; desligável a qualquer momento se algum
    anônimas provam o lado FECHADO (o que importa para segurança); o lado ABERTO está provado por
    P2 (a rule de leitura contratada responde 404, não 403). O teste de upload real cabe no dono,
    junto do teste de compra já pendente.
+5. **Criação por chamada de API, não por Terraform.** Meu próprio contrato pede IaC versionada e
+   zero click-ops. Click-ops não houve; IaC também não existe neste projeto (não há Terraform/Pulumi
+   no repo, e introduzir um seria outra lane). O meio-termo aplicado: o comando exato — método, URL,
+   body e resposta — está transcrito neste handoff, então a criação é reproduzível à mão e portável
+   para IaC quando o projeto tiver uma.
+
+## Reprodutibilidade (nada disso em commit)
+
+- Transporte: access token OAuth via refresh token do `firebase-tools` logado
+  (`~/.config/configstore/firebase-tools.json`), client_id/secret públicos do próprio CLI.
+  Token nunca impresso, nunca gravado em arquivo. Scripts auxiliares ficaram no scratchpad da
+  sessão, fora do repo.
+- Recriar o bucket (idempotente — se já existir, a API re-vincula):
+  `POST https://firebasestorage.googleapis.com/v1beta/projects/leela-hub/defaultBucket`
+  body `{"location":"southamerica-east1","storageClass":"STANDARD"}`.
+- Re-deployar as rules:
+  `npx firebase-tools@13 deploy --only storage --project prod --config firebase.prod.json`.
+- Reconferir o ruleset ativo: `GET https://firebaserules.googleapis.com/v1/projects/leela-hub/releases`
+  → pegar `rulesetName` do release `firebase.storage/…` → `GET /v1/{rulesetName}` → comparar
+  `source.files[0].content` com `storage.rules`.
