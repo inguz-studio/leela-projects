@@ -37,7 +37,7 @@
 
 import * as admin from 'firebase-admin';
 import type { AuthClaims } from '@leela/core';
-import { instalarRedatePatch, offsetDias } from './redate';
+import { instalarRedatePatch, offsetDias, REF_CLOCK_UTC } from './redate';
 
 const PROD_PROJECT_ID = 'leela-hub';
 
@@ -103,6 +103,22 @@ import { seedPreviewClubes } from './preview-seed-clubes';
 
 const OFFSET_DIAS = offsetDias();
 const OFFSET_MS = OFFSET_DIAS * 86_400_000;
+
+/**
+ * Relógio que os seeds do preview devem usar como "agora".
+ *
+ * `preview-seed-extra` e `preview-seed-clubes` derivam datas RELATIVAS
+ * (`agora - 3 dias`, `agora + 8 dias`) e recebem o "agora" por parâmetro, com
+ * default `new Date()`. Sob este runner o default está errado: o payload ainda
+ * atravessa o `redate()`, então uma data calculada a partir do relógio REAL
+ * sai deslocada +OFFSET para o futuro. Era assim que um comunicado "enviado"
+ * aparecia com data de dezembro e a prova da Meia caía em 2027.
+ *
+ * Passando o relógio do dataset, `agora - 3 d` vira `2026-03-12`, o redate
+ * soma o offset e o documento aterrissa em "3 dias atrás" de verdade — que é
+ * exatamente o que o seed queria dizer.
+ */
+const RELOGIO_DO_DATASET = new Date(REF_CLOCK_UTC);
 
 // ---------------------------------------------------------------------------
 // Usuários de login (mesma convenção do preview local — senha pública do
@@ -184,8 +200,8 @@ async function main(): Promise<void> {
   await seedDesafios(db);
   await seedComunicados(db);
   await seedParcerias(db);
-  await seedPreviewExtra(db);
-  await seedPreviewClubes(db);
+  await seedPreviewExtra(db, RELOGIO_DO_DATASET);
+  await seedPreviewClubes(db, RELOGIO_DO_DATASET);
 
   await ensurePreviewUser(auth, MARINA_CASTELO_UID, MARINA_EMAIL, 'Marina Castelo', {
     role: 'tenant_owner',

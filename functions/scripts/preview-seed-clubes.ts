@@ -340,6 +340,65 @@ async function seedComunicadosDoClube(
   }
 }
 
+/**
+ * Código do cupom do afiliado. Fonte ÚNICA — o contrato da parceria e o
+ * documento do cupom saem daqui, e por isso não podem divergir (T-SEED-1).
+ */
+const CUPOM_AFILIADO_CODIGO = 'FLORIPARUN10';
+
+/**
+ * Cupom do afiliado no evento (T-SEED-1) — o documento que faltava.
+ *
+ * O defeito: a parceria de afiliado nascia com `cupom: 'FLORIPARUN10'` no
+ * contrato, mas NENHUM documento `eventos/{evento}/cupons/FLORIPARUN10` era
+ * escrito em lugar nenhum do repo. O afiliado tinha cupom no contrato e não
+ * tinha cupom no checkout: aplicar o código devolvia
+ * `Cupom 'FLORIPARUN10' não existe.` (HTTP 400, provado na CHECKOUT-PIXQR-INV).
+ *
+ * Escopo `geral` (== ausente), não `club_parceiro`: o escopo de clube exige
+ * `parceriaRef` apontando para `tenants/{t}/parceirosAssessoria/{id}` e o
+ * checkout re-lê esse documento dentro da transação de venda exigindo
+ * `status: 'ativa'` (RN-364). A parceria de afiliado vive em
+ * `clubes/{slug}/parcerias/{id}` — outro caminho, outra coleção. Escopar como
+ * `club_parceiro` faria o checkout ler um documento que não existe e derrubar
+ * a venda. A atribuição do afiliado já é feita pelo `linkMaster` + janela de
+ * 7 dias, que é o mecanismo correto e já modelado; o cupom aqui é só desconto.
+ *
+ * Janela idêntica à dos cupons canônicos (`HEROI10`/`CORRA50`): vale tanto no
+ * preview local (relógio 2026-03-15) quanto em produção depois do re-date.
+ */
+async function seedCupomAfiliado(db: Db): Promise<void> {
+  const ref = db
+    .collection('eventos')
+    .doc(MEIA_FLORIPA_ID)
+    .collection('cupons')
+    .doc(CUPOM_AFILIADO_CODIGO);
+  const snap = await ref.get();
+  const data: Record<string, unknown> = {
+    id: CUPOM_AFILIADO_CODIGO,
+    tenantId: CASTELO_TENANT_ID,
+    codigo: CUPOM_AFILIADO_CODIGO,
+    tipo: 'percentual',
+    valor: 10,
+    tetoUso: null,
+    inicioEm: ts(new Date('2025-12-01T00:00:00-03:00')),
+    fimEm: ts(new Date('2026-04-26T23:59:00-03:00')),
+    atualizadoEm: FieldValue.serverTimestamp(),
+  };
+  if (!snap.exists) {
+    data['criadoEm'] = FieldValue.serverTimestamp();
+    // `usos` é campo de escrita EXCLUSIVA da Function do checkout
+    // (CAMPOS_FUNCTION_CUPOM). Semeado SÓ na criação — um re-seed não pode
+    // zerar o contador de um cupom que já vendeu.
+    data['usos'] = 0;
+  }
+  await ref.set(data, { merge: true });
+  console.log(
+    `[seed-clubes] cupom do afiliado ${CUPOM_AFILIADO_CODIGO}: 10% · ` +
+      `${snap.exists ? 'atualizado' : 'criado'}`
+  );
+}
+
 async function seedParceriasDoClube(db: Db, clubeSlug: string, agora: Date): Promise<void> {
   const col = db.collection('clubes').doc(clubeSlug).collection('parcerias');
 
@@ -355,7 +414,7 @@ async function seedParceriasDoClube(db: Db, clubeSlug: string, agora: Date): Pro
     organizadorId: MARINA_CASTELO_UID,
     programaAfiliacaoRef: `eventos/${MEIA_FLORIPA_ID}/programaAfiliacao/atual`,
     comissaoPct: 8,
-    cupom: 'FLORIPARUN10',
+    cupom: CUPOM_AFILIADO_CODIGO,
     linkMaster: 'beh.ro/mfl26?c=frc',
     janelaAtribuicaoDias: 7,
     termosEspelho: {
@@ -366,6 +425,11 @@ async function seedParceriasDoClube(db: Db, clubeSlug: string, agora: Date): Pro
     conversoes: 0,
     valorAReceber: 0,
   });
+
+  // O cupom que o contrato acima referencia — sem ele o código não existe no
+  // checkout (T-SEED-1). Escrito no mesmo lugar de propósito: divergir de novo
+  // exigiria mudar as duas linhas.
+  await seedCupomAfiliado(db);
 
   // Conversões atribuídas (dentro da janela de 7 dias) — idempotentes por
   // conversaoId; registrarConversao reconta ∑ conversoes/valorAReceber.
@@ -447,7 +511,7 @@ async function seedClubeA(db: Db, agora: Date): Promise<void> {
 
 const CUPOM_ASSESSORIA_CODIGO = 'RITMOFORTE10';
 
-async function seedAssessoriaE18(db: Db): Promise<void> {
+async function seedAssessoriaE18(db: Db, agora: Date): Promise<void> {
   const parceriaRef = db
     .collection('tenants')
     .doc(CASTELO_TENANT_ID)
@@ -499,7 +563,7 @@ async function seedAssessoriaE18(db: Db): Promise<void> {
     { id: 'membro-ritmo-caio', atletaNome: 'Caio Bastos', papel: 'membro', entrouVia: 'codigo', entrouDiasAtras: 70, ultimaAtividadeDiasAtras: 6 },
     { id: 'membro-ritmo-julia', atletaNome: 'Júlia Rangel', papel: 'membro', entrouVia: 'link', entrouDiasAtras: 5, ultimaAtividadeDiasAtras: null },
   ];
-  await seedMembrosDoClube(db, ASSESSORIA_CLUBE_SLUG, membrosAssessoria, new Date());
+  await seedMembrosDoClube(db, ASSESSORIA_CLUBE_SLUG, membrosAssessoria, agora);
 
   // Cupom com ATRIBUIÇÃO ao clube parceiro (ADR-012) — fonte da verdade do
   // desconto; a condição na parceria é um espelho/refêrencia.
@@ -1000,7 +1064,7 @@ export async function seedPreviewClubes(
   assertEmulatorOnly('seedPreviewClubes');
 
   await seedClubeA(db, agora);
-  await seedAssessoriaE18(db);
+  await seedAssessoriaE18(db, agora);
   await seedCampanhasMeia(db, agora);
   await seedAutomacoesMeia(db);
   await seedComunicacoesMeia(db, agora);
