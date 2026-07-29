@@ -15,8 +15,8 @@
 | T0 | Inventário + abertura do handoff | ✅ | `a1984f9` |
 | T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ✅ | `e268cd0` |
 | T2 | Rodada · RNs (`03-rns-kitcupom.md`) | ✅ | `e450adb` |
-| T3 | Stories nos épicos (E03 galeria, E12 cupom) + deltas de fronteira | ✅ | (este) |
-| T4 | Fila de código com ⚔ + boards | ⏳ | — |
+| T3 | Stories nos épicos (E03 galeria, E12 cupom) + deltas de fronteira | ✅ | `dd6419b` |
+| T4 | Fila de código com ⚔ + boards | ✅ | (este) |
 | T5 | Selo · resumo executivo + self-score | ⏳ | — |
 
 ## Inventário antes de especificar (reaproveitado vs criado)
@@ -105,7 +105,20 @@ Tabela completa e vetável em `leela-specs/02-rodadas/2026-07-29-checkout-ux/02-
 
 ## Pontos ⚔ declarados para a review antagonista do build
 
-Ver `04-fila-kitcupom.md` da rodada.
+Doze vetores em `04-fila-kitcupom.md`. Obrigatórios nas tarefas `S1215-T1` e `S1215-T3`, porque o
+cupom por link toca dinheiro e atribuição. A frente da galeria não tem vetor de dinheiro.
+
+**Dinheiro e atribuição (S1215-T1):** (1) provar por diff que o kernel não mudou uma linha;
+(2) os dois desempates de comissão provados com teste, nas duas direções; (3) o gate do mínimo de
+inscrições continua fechando, sem retroativo, falsificado abrindo; (4) nenhum domínio de terceiro
+nem base ausente saindo do gerador; (5) o apelido `c` entra e nunca sai.
+
+**Superfície pública (S1215-T3):** (6) Rules intocadas e zero leitura de cupom no cliente,
+falsificado afrouxando; (7) sem oráculo, resposta idêntica nas cinco causas de recusa;
+(8) nada além do nome sai do afiliado; (9) parceria desativada não aplica nem mostra faixa
+(RN-364 intacta); (10) a página do evento continua estática e o bundle público não cresce;
+(11) nenhuma soma de valor no cliente; (12) custo de raspagem medido com o cache ligado, e se o
+cache não segurar a lacuna volta como decisão, não como silêncio.
 
 ## Disciplina em vigor
 
