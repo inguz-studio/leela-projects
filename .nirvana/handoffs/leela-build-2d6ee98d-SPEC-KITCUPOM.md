@@ -12,8 +12,8 @@
 
 | # | Task | Estado | Commit |
 |---|---|---|---|
-| T0 | Inventário + abertura do handoff | ✅ | (este) |
-| T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ⏳ | — |
+| T0 | Inventário + abertura do handoff | ✅ | `a1984f9` |
+| T1 | Rodada · decisões e premissas (`02-spec-kitcupom.md`) | ✅ | (este) |
 | T2 | Rodada · RNs (`03-rns-kitcupom.md`) | ⏳ | — |
 | T3 | Stories nos épicos (E03 galeria, E12 cupom) + deltas de fronteira | ⏳ | — |
 | T4 | Fila de código com ⚔ + boards | ⏳ | — |
@@ -93,7 +93,15 @@ Feito ANTES de qualquer proposta, lendo os arquivos — não por memória.
 
 ## Premissas assumidas
 
-Tabela completa e vetável em `leela-specs/02-rodadas/2026-07-29-checkout-ux/02-spec-kitcupom.md`.
+Tabela completa e vetável em `leela-specs/02-rodadas/2026-07-29-checkout-ux/02-spec-kitcupom.md`
+(P1..P12, maior peso primeiro). As quatro que mudam desenho se o dono vetar:
+
+- **P1** — a principal continua no campo `imagemUrl`; as outras duas vão num campo separado
+  (`fotosSecundarias[]`). Não existe `fotos[]` unificado nem sinalizador de principal.
+- **P2** — a comissão do desempate segue o que o código já faz: cupom manual de outro afiliado
+  rouba a atribuição do link.
+- **P3** — o nome da pessoa física afiliada aparece no banner público de quem tiver o código.
+- **P4** — o banner some quando o cupom não se aplica, em vez de avisar na landing.
 
 ## Pontos ⚔ declarados para a review antagonista do build
 
