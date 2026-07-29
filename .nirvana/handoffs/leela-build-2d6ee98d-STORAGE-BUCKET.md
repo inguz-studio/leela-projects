@@ -6,6 +6,51 @@ Autorização do dono: D-0729-8 ("POde criar o bucket do firebase") · achado 19
 ## Estado
 
 - [x] **Task 1 — reconhecimento** (sem mutação; nada a criar ainda)
+- [x] **Task 2 — bucket default CRIADO** em `southamerica-east1`
+
+## Task 2 — o bucket
+
+**Nome:** `leela-hub.firebasestorage.app` · **Região:** `SOUTHAMERICA-EAST1` (region, não multi-region)
+· **Classe:** `STANDARD` · **Criado:** 2026-07-29T15:19:56.991Z · `projectNumber` 76126035891.
+
+**Caminho usado** (não houve click-ops; tudo por API):
+1. `POST serviceusage.googleapis.com/v1/projects/leela-hub/services/firebasestorage.googleapis.com:enable`
+   → 200 (`operations/acat.p2-76126035891-687e58d6-...`). Antes disso o GET do defaultBucket
+   respondia **403 SERVICE_DISABLED**; depois passou a **404 NOT_FOUND** — a virada 403→404 é a
+   prova de que a API subiu e de que o bucket de fato não existia.
+2. `POST firebasestorage.googleapis.com/v1beta/projects/leela-hub/defaultBucket`
+   body `{"location":"southamerica-east1","storageClass":"STANDARD"}` → **200**.
+
+**Região — por que southamerica-east1:** é a MESMA do Firestore `(default)` da lane DEPLOY-PREVIEW.
+As Rules de Storage fazem `firestore.get` cross-service em 3 dos 5 paths (posse do clube, do evento,
+dos kits) — cada `create/update` dessas superfícies custa um round-trip ao Firestore. Colocar o bucket
+noutra região pagaria latência em TODO upload de tenant, além de espalhar dado de cliente brasileiro
+por outra jurisdição. `location` é **Immutable** na API: escolha de mão única, feita a favor da
+coerência com o banco. (As functions seguem em us-central1 — assimetria herdada e já registrada na
+DEPLOY-PREVIEW; ela não pesa aqui porque o upload é client→Storage direto, sem passar por function.)
+
+**Provas (API REST; `gcloud`/`gsutil` não existem nesta máquina — a JSON API é a MESMA fonte que o
+`gsutil ls -L` consulta):**
+- `GET storage.googleapis.com/storage/v1/b/leela-hub.firebasestorage.app` → **200**,
+  `"location":"SOUTHAMERICA-EAST1"`, `"locationType":"region"`, `"storageClass":"STANDARD"`,
+  `"timeCreated":"2026-07-29T15:19:56.991Z"`, `softDeletePolicy` 7 dias (default do GCS).
+- `GET firebasestorage…/defaultBucket` → **200** com
+  `bucket.name = projects/leela-hub/buckets/leela-hub.firebasestorage.app`.
+- `GET firebasestorage…/buckets` → lista com **exatamente 1** bucket vinculado ao Firebase.
+
+**Superfície pública = ZERO no plano IAM** (checado, não presumido):
+- `GET …/b/{bucket}/iam` → bindings só `legacyBucketOwner` (projectOwner/projectEditor) e
+  `legacyBucketReader` (projectViewer). **Nenhum `allUsers`, nenhum `allAuthenticatedUsers`.**
+- `GET …/b/{bucket}/defaultObjectAcl` → só project-owners/editors (OWNER) e project-viewers (READER).
+  Objeto novo NÃO nasce world-readable.
+- `publicAccessPrevention: "inherited"`, `uniformBucketLevelAccess: false` — defaults do bucket do
+  Firebase; o acesso do SDK web não passa por IAM, passa pelas Security Rules (Task 3).
+
+**Impacto em código: NENHUM.** O bucket nasceu com o nome que o config web já embute
+(`leela-hub.firebasestorage.app`, `.env.leela-hub` na raiz + `apps/landing/.env.leela-hub`), e o
+`api-client` chama `getStorage(_app)` sem bucket explícito. O painel que está no ar
+(https://leela-hub--preview-y4n0cxzj.web.app) já carrega esse nome no bundle → **sem rebuild,
+sem redeploy do painel, sem escalar mudança de código.**
 
 ## Reconhecimento (fatos, com fonte)
 
@@ -41,7 +86,7 @@ Autorização do dono: D-0729-8 ("POde criar o bucket do firebase") · achado 19
 
 ## Próxima ação
 
-Habilitar `firebasestorage.googleapis.com` e criar o default bucket em `southamerica-east1`.
+Declarar `storage` no `firebase.prod.json` e deployar `storage.rules` no bucket.
 
 ## Premissas assumidas
 
