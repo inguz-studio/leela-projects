@@ -28,12 +28,24 @@ O dono percorreu a compra real no site público e reportou os pontos abaixo. Ver
 | 12 | Resumo do pedido visível + poder editar tamanho/kit selecionado errado | ORDEM | — | CHECKOUT-UX |
 | 13 | Ritmo vertical: espaçamentos de "forma de pagamento", "modalidade", seleção de kits fora do ritmo | DEFEITO vs governança de design (tokens) | baixa | CHECKOUT-UX |
 
+## Segunda leva (mesmo dia, landing page)
+
+| # | Achado | Classe | Severidade | Destino |
+|---|---|---|---|---|
+| 14 | Alinhamento na landing web: header e Hero com padding/borda menores, dobras do evento mais largas — larguras de container divergem | DEFEITO (grid/tokens) | baixa | CHECKOUT-UX |
+| 15 | Kit com galeria: 3 fotos por kit, uma marcada como principal (a que aparece no site). Hoje o modelo tem UMA imagem só (`imagemUrl`, RN-227) — é feature nova, não regressão | ORDEM (feature) | — | SPEC-KITCUPOM (delta de spec) → build; simular no seed |
+| 16 | Afiliado/assessoria compartilham link com cupom JÁ aplicado: desconto computado ao chegar no checkout, marcado "(desconto aplicado)", e banner após a Hero: "Você tem desconto neste evento — CUPOM XXXXXX de Fulano aplicado!". A atribuição por link JÁ existe no modelo (linkMaster + janela de 7 dias); o auto-apply do cupom + banner são a extensão | ORDEM (feature; toca dinheiro/atribuição) | — | SPEC-KITCUPOM (delta de spec) → build com review antagonista |
+
 ## Decisões do dono registradas nesta rodada
 
 - **D-0729-1 (naming):** a Leela é um **Hub de Bem-Estar**, não plataforma de corrida de rua. Vocabulário de corrida ("quem vai correr") sai da jornada; quem se inscreve é **participante**. Vale como diretriz para toda superfície pública.
 - **D-0729-2 (endereço):** progressive disclosure no endereço — só o CEP visível; o restante aparece após validação, para o usuário ver menos campos.
 - **D-0729-3 (resumo):** o pedido tem resumo visível antes do pagamento, com edição de kit/tamanho sem recomeçar a jornada.
+- **D-0729-4 (kit):** kit passa a ter até 3 fotos, uma marcada como principal — a principal é a que aparece nas listagens e no site.
+- **D-0729-5 (cupom por link):** link de afiliado/assessoria aplica o cupom automaticamente; o comprador chega com o desconto computado, vê "(desconto aplicado)" nos valores e um banner após a Hero: "Você tem desconto neste evento — CUPOM XXXXXX de Fulano aplicado!".
 
 ## Verbatim do dono (2026-07-29)
+
+> (segunda leva) o alinhamento na landing page versao web, nao está igual, para o header, e o resto das informações, parace que o padding/bordas está reduzido na Hero, mas nos campos das dobras sobre o evento, estão com largura maior. Simule também kits que tenham mais de uma imagem, nao sei se demos essa opção, mas é importante que o usuário consiga ver 3 fotos por kit, sendo uma delasa principal que vai aparecer no site. Outro ponto que observei. O afiliado do evento, ou assesoria parceira vao compartilhar o slinks com cupons já aplicados, entao percisamos que os descontos já estejam computados quando o usuário for comprar, e que mostrem isso para o usuário também, algo como (desconto aplicado), e um pequeno banner após a Hero Section, informando "Você tem desconto neste evento - CUPOM XXXXXX de Fulano  apliacado!"
 
 > o que percebi. Nao consegui gerar o QR Code, os termos de aceite estão aparecendo antes do pagamento, e o QR Code não aparece após eu clicar para pagamento. O "calculando total" fica na tela, quebrando a experiencia de compra gerando fricção, por alguns segundos. Não estamos mostrando a taxa de serviço (nao sei se no evento em si ela etá sendo incorporada ou repassada), é o evento meia-floripa-2026. o Seletor de parcelas não está com boa visibilidade também, visto que ele está na mesma cor do plano de fundo. Quero também um exemplo de cupom de teste para eu aplicar. o mesmo componente de formulário em inscrição deve ser aplicado para endereço e Nome Completo. Duvida, temos a opção de utilizar dados de conta, caso a pessoa já tenha algum cadastro? E ao preencher o endereço, quero que mostre apenas o campo CEP, e depois que validar, apareça o erstante das informações, apra o usuário ver menos campos necessários para preencher. Ao passar a etapa de incrição para pagamento, a tela permanece na parte inferior da jornada, sendo que o usuário precisa preencher o campo na parte superior. (ficou claro?). Outr ponto, é o naming. A Leela não é plataforma de corridas de rua, e sim um Hub de Bem estar. Logo o "quem vai correr" em inscrição nao faz sentido, visto que são apenas participantes. é preciso que o usuário veja o resumo das informações. de pedido, e possa editar algum tamanho, e possa editar algum tamanho do kit, caso tenha selecioando errado. o Espaçamento de "forma de pagamento" , "modalidade", na hora de selecionar os kits, nao estao respeiando os espaçamentos devidos de ritmo vertical.
