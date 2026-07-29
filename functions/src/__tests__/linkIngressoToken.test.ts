@@ -20,13 +20,14 @@ import {
 import {
   VERSAO_QR_TOKEN,
   parseQrToken,
+  bytesParaBase64Url,
 } from '../../../packages/core/src/eventos/qrToken';
 import {
   assinarLinkIngresso,
   verificarLinkIngresso,
   materialAssinadoLinkIngresso,
 } from '../eventos/linkIngresso';
-import { assinarQrToken, type QrKeyring } from '../eventos/qrToken';
+import { assinarQrToken, carregarQrKeyring, type QrKeyring } from '../eventos/qrToken';
 import { estadoDaPagina } from '../http/ingressoPorLink';
 
 function keyring(kids: readonly string[], ativo?: string): QrKeyring {
@@ -274,5 +275,82 @@ describe('matriz de estados da página (RN-421)', () => {
       'encerrado',
     ] as const;
     expect(todos.filter((e) => estadoMostraQr(e))).toEqual(['valido', 'credenciado']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ 3 — rotação REAL (review INGPAGE-REV, item 3 do brief)
+//
+// A suíte de integração prova rotação com `QrKeyring` montado à mão. Isso pula
+// justamente a peça que o operador de verdade mexe no dia da virada:
+// `QR_TOKEN_KEYS` + `QR_TOKEN_KID_ATIVO` no ambiente, lidos por
+// `carregarQrKeyring`. Um ring montado à mão não pode reproduzir o erro que
+// mais assusta numa rotação — trocar o kid ativo e descobrir que os links já
+// enviados pararam de abrir. Aqui a cerimônia inteira roda pelo LOADER.
+// ---------------------------------------------------------------------------
+
+describe('⚔ 3 — a cerimônia de rotação, pelo carregador de verdade', () => {
+  const SEGREDO_K1 = bytesParaBase64Url(new Uint8Array(randomBytes(32)));
+  const SEGREDO_K2 = bytesParaBase64Url(new Uint8Array(randomBytes(32)));
+  const PAYLOAD = { inscritoId: 'insc-1', eventoId: 'ev-1', tenantId: 'ten-1' };
+  const QR_VIGENTE = 'LLQR1.k1.payload.assinatura';
+
+  /** Passo 1 da rotação: só k1 no ring, k1 ativo. */
+  const ENV_ANTES = {
+    QR_TOKEN_KEYS: JSON.stringify({ k1: SEGREDO_K1 }),
+    QR_TOKEN_KID_ATIVO: 'k1',
+  };
+  /** Passo 2: k2 ENTRA e vira ativo; k1 permanece (verificação aceita os dois). */
+  const ENV_ROTACIONADO = {
+    QR_TOKEN_KEYS: JSON.stringify({ k1: SEGREDO_K1, k2: SEGREDO_K2 }),
+    QR_TOKEN_KID_ATIVO: 'k2',
+  };
+  /** Passo 3: k1 SAI do ring — a alavanca de revogação em massa. */
+  const ENV_REVOGADO = {
+    QR_TOKEN_KEYS: JSON.stringify({ k2: SEGREDO_K2 }),
+    QR_TOKEN_KID_ATIVO: 'k2',
+  };
+
+  it('trocar QR_TOKEN_KID_ATIVO NÃO mata o link já enviado (RN-420, prop. 1)', () => {
+    const antes = carregarQrKeyring(ENV_ANTES) as QrKeyring;
+    const link = assinarLinkIngresso(PAYLOAD, QR_VIGENTE, antes);
+    expect(link.startsWith('LLIP1.k1.')).toBe(true);
+
+    // O operador roda a virada. O link da caixa de entrada de alguém continua.
+    const depois = carregarQrKeyring(ENV_ROTACIONADO) as QrKeyring;
+    expect(depois.ativo).toBe('k2');
+    expect(verificarLinkIngresso(link, QR_VIGENTE, depois).ok).toBe(true);
+  });
+
+  it('depois da virada, link NOVO sai assinado com o kid novo', () => {
+    const depois = carregarQrKeyring(ENV_ROTACIONADO) as QrKeyring;
+    const novo = assinarLinkIngresso(PAYLOAD, QR_VIGENTE, depois);
+    expect(novo.startsWith('LLIP1.k2.')).toBe(true);
+    expect(verificarLinkIngresso(novo, QR_VIGENTE, depois).ok).toBe(true);
+  });
+
+  it('tirar k1 do ring REVOGA em massa o que k1 assinou (RN-420, prop. 2)', () => {
+    const antes = carregarQrKeyring(ENV_ANTES) as QrKeyring;
+    const linkAntigo = assinarLinkIngresso(PAYLOAD, QR_VIGENTE, antes);
+
+    const revogado = carregarQrKeyring(ENV_REVOGADO) as QrKeyring;
+    const r = verificarLinkIngresso(linkAntigo, QR_VIGENTE, revogado);
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.causa).toBe('kid_desconhecido');
+
+    // …e o que k2 assinou sobrevive à mesma remoção.
+    const linkNovo = assinarLinkIngresso(PAYLOAD, QR_VIGENTE, revogado);
+    expect(verificarLinkIngresso(linkNovo, QR_VIGENTE, revogado).ok).toBe(true);
+  });
+
+  it('as três propriedades são INDEPENDENTES: re-emissão mata sem tocar no ring', () => {
+    const ring = carregarQrKeyring(ENV_ROTACIONADO) as QrKeyring;
+    const link = assinarLinkIngresso(PAYLOAD, QR_VIGENTE, ring);
+    expect(verificarLinkIngresso(link, QR_VIGENTE, ring).ok).toBe(true);
+
+    // Re-emissão troca o `qrToken` gravado. MESMO ring, MESMO kid ativo.
+    const r = verificarLinkIngresso(link, 'LLQR1.k2.outro.token', ring);
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.causa).toBe('assinatura');
   });
 });
