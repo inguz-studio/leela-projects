@@ -75,3 +75,10 @@ Commit da Task 1 e reconhecimento fino (env vars usadas pelas functions, provide
 **PENDENTE-DONO:** (1) compra real de valor baixo pela rota documentada = teste canônico do go-live; (2) trocar/desativar logins demo antes de divulgar o link; (3) decidir bucket de Storage se uploads entrarem no preview; (4) renovar/promover o canal em 27/08; (5) ⚔ próxima review de dinheiro deve cobrir `30c7b89`+`72432fa` (código de pagamento tocado em lane de infra); (6) defeito pré-existente `@leela/mobile#build` (Metro "r is not a function", falha idêntica no baseline 26009a8) — fora do escopo desta lane.
 
 **Suíte canônica:** build raiz VERDE (sem o mobile, quebrado pré-lane com prova no baseline); vitest (functions, 3310 testes) — rodada final em voo no fechamento deste selo; veredito na linha abaixo.
+
+## ROLLOVER (contexto ~teto) — o que falta EXATAMENTE
+
+1. Suíte canônica FINAL em voo: processo `emulators:exec --project demo-leela "npx vitest run"` rodando de `functions/` (lib JÁ contém a Task 8); log em `%LOCALAPPDATA%\Temp\claude\suite6-vitest.log`, marcador `vitest_exit=` sai no task-output do runner. Snapshot no selo: 410 linhas com ✓ e 442 linhas com × no grep cru — NÃO conclusivo (× pode ser glifo de log do emulador; a rodada saturada anterior teve só 14 fails). AO LANDAR: ler o sumário `Test Files/Tests`, decidir verde/investigar, atualizar a linha "[~] Suíte canônica" acima e commitar.
+   - Se houver falhas sistêmicas novas: suspeitar primeiro de contenção de máquina (padrão já provado: timeouts de 87s) e re-rodar SOZINHA com Java órfão morto (`tasklist | grep java` → taskkill; padrão já documentado). Rodadas desta lane nunca flagraram regressão de LÓGICA dos diffs (build+lint verdes 3×).
+2. Higiene: apagar `%LOCALAPPDATA%\Temp\claude\adc-leela-hub.json` ao encerrar de vez (receita de regeneração no §Credenciais).
+3. Nada mais pendente de código. SEM push (maestro pusha). Commits da lane: 98cc775..0fa4f27 + este.
