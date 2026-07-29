@@ -13,13 +13,17 @@ Insumo: handoff `.nirvana/handoffs/leela-build-2d6ee98d-CHECKOUT-PIXQR-INV.md` (
 ### Fase B — jornada de compra
 - [x] B1 · PAGAR virou UMA tela; aceites colados no ato de pagar
 - [x] B2 · cartão de crédito abre o formulário no 1º clique
-- [ ] B3 · nascimento por teclado numérico (inputmode/máscara)
+- [x] B3 · nascimento por teclado numérico (inputmode/máscara) — `18a798a`
 - [x] B4 · seletor de parcelas com contraste AA por estado
-- [ ] B5 (T-CKUX-1) · coalescing das cotações
+- [x] B5 (T-CKUX-1) · coalescing das cotações — `0d83e7c`
 - [x] B6 · troca de etapa rola para o topo
 - [x] B7 · resumo do pedido editável antes de pagar
-- [ ] B8 · endereço CEP-first (progressive disclosure)
-- [ ] B9 · componente único de formulário (nome completo + endereço)
+- [x] B8 · endereço CEP-first (progressive disclosure) — `18a798a`
+- [x] B9 · componente único de formulário (nome completo + endereço) — `18a798a`
+
+**Fase B COMPLETA (9/9).** Checklist estava defasado (queda de conexão antes do
+update do handoff) — os commits provam o trabalho: `8c28f59` (B1/B2/B4/B6/B7) e
+`18a798a`+`0d83e7c` (B3/B5/B8/B9). Ver seções dedicadas abaixo.
 
 ### Fase C — superfície
 - [ ] C1 · vocabulário "participantes" no lugar de corrida
@@ -261,6 +265,83 @@ Criado: `checkout-dec0729-pagar.test.tsx`, o prop `id` do `CardAtleta`, os props
 
 ---
 
+## B3 + B8 + B9 · nascimento por teclado, CEP-first e uma moldura de formulário só
+
+Commit `18a798a`. Três achados, três telas diferentes, mesma classe de defeito: campo cru
+fora do contrato do DS.
+
+**B3 (achado 18 / D-0729-7).** A data de nascimento era `<input type="date">` — no celular
+isso abre o calendário nativo, e para chegar a 1990 a pessoa navega ano a ano. Virou campo de
+texto com máscara `dd/mm/aaaa` e `inputMode` numérico. O estado do fluxo continua em
+`yyyy-mm-dd` (formato do core) — a máscara é só apresentação, como já acontecia com CEP e
+telefone. Data pela metade não vira data: o estado só recebe ISO quando os 8 dígitos estão lá.
+
+**B8 (achado 9 / D-0729-2).** O bloco de endereço nasce com o campo de CEP sozinho; os demais
+campos aparecem quando o CEP fica **completo** (8 dígitos), não quando o ViaCEP responde com
+sucesso — amarrar ao lookup quebraria o fail-open da spec 5.2, e com a API fora (ou num CEP
+rural sem match) os campos nunca apareceriam. O prefill também revela os campos: quem já tem
+endereço na ficha vê o endereço, sem esperar digitação.
+
+**B9 (achado 7).** O bloco do responsável e o do endereço passam a usar a mesma moldura dos
+cards de atleta (`MolduraFormulario`, extraída do `CardAtleta`). Não eram componentes
+diferentes — era a mesma peça em duas superfícies. Dentro do card (`--surface-raised`,
+`#161616`) o `Input` `flat` do DS lê como campo; solto sobre a página (`--surface-base`,
+`#0C0C0C`) o mesmo `Input` cai para ≈1,03:1 de contraste, com `--input-border-flat`
+transparente no tema Brasa — invisível, a mesma classe de bug do B4.
+
+### Gates
+
+- `tsc --noEmit` da landing → **exit 0**.
+- `eslint app lib test --max-warnings 0` → **exit 0**.
+- `vitest run` da landing → **207/207 em 20 arquivos** (re-executado nesta retomada,
+  29/07 15h33, 86,45s — número real supera a estimativa do checklist anterior).
+
+### Reaproveitado vs criado
+
+Reaproveitado: `CardAtleta` como origem da moldura (extraída, não reescrita), o padrão de
+máscara já usado em telefone/CEP, `cep.ts` (lookup ViaCEP já existente, fail-open da spec 5.2
+preservado). Criado: `MolduraFormulario` (componente extraído para os 3 lugares), lógica de
+máscara/parse de nascimento em `StepDados.tsx`, gate de revelação por CEP completo em `cep.ts`.
+
+---
+
+## B5 (T-CKUX-1) · coalescing da cotação — uma chamada por interação
+
+Commit `0d83e7c`. Medido em produção na sessão do dono: três chamadas de
+`cotarInscricaoCheckout` em 4,4s (14:07:16/:18/:20) e outros pares em 14:26-14:27, cada
+round-trip custando 1,7-9,8s. Era isso que deixava "Calculando total" preso na tela.
+
+Duas causas somadas: (1) o efeito dependia de `cotarCom`, cuja identidade muda a cada edição
+de QUALQUER campo de inscrito — digitar o nome de um atleta re-disparava a cotação, embora
+nome não mude preço; (2) aplicar cupom cotava duas vezes — uma no botão, outra pelo efeito
+reagindo ao `cupomAplicado` recém-escrito.
+
+**Fix.** Uma assinatura com a lista curta do que move preço (evento, modalidade+kit por
+inscrito, forma, parcelas, cupom); o efeito só olha para ela, o resto passa por `ref`. Quem
+cota registra a assinatura, então os caminhos manuais do cupom não geram a segunda chamada.
+Debounce de 200ms para o vaivém, e número de sequência porque respostas de até 9,8s chegam
+fora de ordem — a última PEDIDA vence, nunca a última a chegar. O retry manual é o único
+caminho que fura o dedupe (zera `assinaturaCotadaRef`); o early-return por assinatura igual
+zera `cotando` também, senão voltar à seleção anterior no meio do debounce travava
+"Calculando total" para sempre.
+
+**T-CKUX-2 segue aberta** (fora desta fila): cold start real de 3-10s é decisão de custo do
+dono — `minInstances` na function de cotação. Não decidido aqui.
+
+### Gates
+
+- `tsc --noEmit` + `eslint` da landing → **exit 0**.
+- `vitest run` → suíte completa verde; casos novos em `checkout-dec0729-pagar.test.tsx`
+  (mesmo arquivo do B1, cobrindo o cenário "editar nome não re-cota" e "cupom cota uma vez").
+
+### Reaproveitado vs criado
+
+Reaproveitado: `CheckoutFlow.tsx` como local único da orquestração de cotação (nenhum
+componente novo). Criado: assinatura de preço (string derivada), número de sequência de
+resposta, debounce de 200ms.
+
+---
+
 ## Premissas assumidas
 
 1. **Fix por idempotência, não por remoção de patch (A1).** Decisão de peso, vetável: a
@@ -286,4 +367,9 @@ Criado: `checkout-dec0729-pagar.test.tsx`, o prop `id` do `CardAtleta`, os props
 1. `574abaa` — A1 · re-datação idempotente + dry-run offline com controle negativo.
 2. `4c8fae8` — A2 · cupom `FLORIPARUN10` junto da parceria + relógio do dataset nos seeds relativos.
 3. `8c28f59` — B1+B2+B4+B7 (e B6) · PAGAR numa tela só, cartão no 1º clique, parcelas visíveis, resumo editável.
-4. *(este)* — handoff das tasks B.
+4. `f140530` — handoff das tasks B1/B2/B4/B6/B7.
+5. `18a798a` — B3+B8+B9 · nascimento por teclado numérico, endereço CEP-first, moldura única de formulário.
+6. `0d83e7c` — B5 (T-CKUX-1) · coalescing da cotação.
+7. `ce7e30f` — handoff da pausa selada 29/07 ~13h20 (fase B completa em código, retomada = C1 + deploy).
+8. `0afe592` — docs(regras): Regra L amendada (sonnet/haiku liberados via opus com gate) — fora do escopo desta lane, herdado do trace.
+9. *(este)* — checklist do handoff corrigido (B3/B5/B8/B9 ✓) + seções B3/B8/B9 e B5 documentadas + suíte re-verificada (207/207).
