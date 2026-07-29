@@ -71,7 +71,7 @@ export function CardAtleta({
   children,
   id,
 }: {
-  /** Rótulo humano do card ("Você", "Atleta 2") — também nomeia o remover. */
+  /** Rótulo humano do card ("Você", "Participante 2") — também nomeia o remover. */
   titulo: string;
   podeRemover: boolean;
   onRemover: () => void;
@@ -105,7 +105,7 @@ export function CardAtleta({
   );
 }
 
-/** Botão "+ Adicionar atleta" (D-2) — mesma peça onde quer que apareça. */
+/** Botão "+ Adicionar participante" (D-2) — mesma peça onde quer que apareça. */
 export function BotaoAdicionarAtleta({
   onClick,
   disabled = false,
@@ -116,7 +116,7 @@ export function BotaoAdicionarAtleta({
   return (
     <div>
       <Button variant="secondary" size="sm" onClick={onClick} disabled={disabled}>
-        <UserPlus size={16} strokeWidth={2} aria-hidden className="mr-1.5" />+ Adicionar atleta
+        <UserPlus size={16} strokeWidth={2} aria-hidden className="mr-1.5" />+ Adicionar participante
       </Button>
     </div>
   );

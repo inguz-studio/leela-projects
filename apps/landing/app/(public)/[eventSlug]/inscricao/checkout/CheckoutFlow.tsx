@@ -1076,7 +1076,7 @@ export function CheckoutFlow({
     () =>
       inscritos.map((ins, i) => ({
         titulo:
-          (euCorro && i === 0 ? 'Você' : `Atleta ${euCorro ? i : i + 1}`) +
+          (euCorro && i === 0 ? 'Você' : `Participante ${euCorro ? i : i + 1}`) +
           (ins.nome.trim() ? ` · ${ins.nome.trim()}` : ''),
         kitLabel: kitNomeFromId(evento.kits, ins.kitId),
       })),
@@ -1086,7 +1086,7 @@ export function CheckoutFlow({
   const linhasConfirmacao: LinhaConfirmacao[] = useMemo(
     () =>
       inscritos.map((ins, i) => ({
-        titulo: euCorro && i === 0 ? `Você${ins.nome.trim() ? ` · ${ins.nome.trim()}` : ''}` : ins.nome.trim() || `Atleta ${i + 1}`,
+        titulo: euCorro && i === 0 ? `Você${ins.nome.trim() ? ` · ${ins.nome.trim()}` : ''}` : ins.nome.trim() || `Participante ${i + 1}`,
         modalidade: ins.modalidade || '—',
         kitLabel: kitNomeFromId(evento.kits, ins.kitId),
       })),
@@ -1107,7 +1107,7 @@ export function CheckoutFlow({
       cotacao && cotacao.desconto > 0 ? `menos ${formatarPreco(cotacao.desconto)}` : '',
     erro: erroCupom ?? erroCupomUrl,
     bloqueio: !todasModalidades
-      ? 'Escolha a modalidade de cada atleta para validar o cupom.'
+      ? 'Escolha a modalidade de cada participante para validar o cupom.'
       : !authPronto
         ? 'Preparando sua sessão — o cupom pode ser aplicado em instantes.'
         : null,

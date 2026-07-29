@@ -123,40 +123,40 @@ describe('S1209-T4 · D-2 — um card por atleta e "+ adicionar atleta"', () => 
   it('começa com UM card (o comprador) e o botão de adicionar', async () => {
     await montar();
     expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você']);
-    expect(screen.getByRole('button', { name: /adicionar atleta/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /adicionar participante/i })).toBeTruthy();
   });
 
   it('adicionar cria um card novo por atleta', async () => {
     await montar();
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
-    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Atleta 1']);
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
+    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Participante 1']);
 
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
-    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Atleta 1', 'Atleta 2']);
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
+    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Participante 1', 'Participante 2']);
   });
 
   it('o card do comprador NÃO tem remover; os demais têm', async () => {
     await montar();
     expect(screen.queryByRole('button', { name: /remover você/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
-    expect(screen.getByRole('button', { name: /remover atleta 1/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
+    expect(screen.getByRole('button', { name: /remover participante 1/i })).toBeTruthy();
   });
 
   it('remover tira o card e renumera os que ficam', async () => {
     await montar();
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
     expect(cardsDeAtleta()).toHaveLength(3);
 
-    fireEvent.click(screen.getByRole('button', { name: /remover atleta 1/i }));
-    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Atleta 1']);
+    fireEvent.click(screen.getByRole('button', { name: /remover participante 1/i }));
+    expect(cardsDeAtleta().map((h) => h.textContent)).toEqual(['Você', 'Participante 1']);
   });
 
   it('remover NÃO deixa o erro de um atleta acusando outro (reindexa junto)', async () => {
     await montar();
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
 
     // O comprador escolhe a modalidade; os dois novos ficam sem. Avançar
     // acusa erro nos atletas 1 e 2.
@@ -166,7 +166,7 @@ describe('S1209-T4 · D-2 — um card por atleta e "+ adicionar atleta"', () => 
 
     // Remover o atleta 1 tem de levar o erro DELE embora — sobra 1 erro, o do
     // atleta que continua sem modalidade.
-    fireEvent.click(screen.getByRole('button', { name: /remover atleta 1/i }));
+    fireEvent.click(screen.getByRole('button', { name: /remover participante 1/i }));
     expect(screen.getAllByText(/escolha uma modalidade/i)).toHaveLength(1);
   });
 });
@@ -208,7 +208,7 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
     await montar();
 
     // Step 0: 2 atletas, ambos no 5k.
-    fireEvent.click(screen.getByRole('button', { name: /adicionar atleta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /adicionar participante/i }));
     for (const radio of screen.getAllByRole('radio', { name: /5k/i })) {
       fireEvent.click(radio);
     }

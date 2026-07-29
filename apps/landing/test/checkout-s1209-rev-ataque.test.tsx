@@ -463,9 +463,9 @@ describe('S1209-REV · ataque 5 — o CPF do comprador no card de um terceiro', 
       fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
     });
 
-    // A pessoa decide que NÃO vai correr: o card 1 passa a ser de um terceiro.
-    fireEvent.click(screen.getByLabelText(/eu também vou correr/i));
-    expect(screen.getByRole('heading', { level: 3, name: /atleta 1/i })).toBeTruthy();
+    // A pessoa decide que NÃO vai participar: o card 1 passa a ser de um terceiro.
+    fireEvent.click(screen.getByLabelText(/eu também vou participar/i));
+    expect(screen.getByRole('heading', { level: 3, name: /participante 1/i })).toBeTruthy();
 
     // Só AGORA a resposta do prefill chega (rede lenta).
     await act(async () => {

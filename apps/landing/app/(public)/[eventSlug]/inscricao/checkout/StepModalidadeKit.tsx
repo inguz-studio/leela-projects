@@ -151,7 +151,7 @@ export function StepModalidadeKit({
       <div>
         <TituloEtapa icone={PackageOpen}>Modalidade e kit</TituloEtapa>
         <ApoioEtapa>
-          Escolha o percurso e o kit de cada atleta. O total aparece no resumo.
+          Escolha o percurso e o kit de cada participante. O total aparece no resumo.
         </ApoioEtapa>
         {/* A-5 → CKFORM-T4 → TAXAFLEX (P-TAXAFLEX-6/RN-180): a nota é
             CONDICIONAL pelo flag real do evento (taxaRepassada do leitor —
@@ -173,7 +173,7 @@ export function StepModalidadeKit({
 
       {inscritos.map((inscrito, i) => {
         const ehVoce = euCorro && i === 0;
-        const titulo = ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`;
+        const titulo = ehVoce ? 'Você' : `Participante ${euCorro ? i : i + 1}`;
         const podeRemover = !ehVoce && inscritos.length > 1;
         const kitsOfertados = kitsDaModalidade(kits, inscrito.modalidade);
         const modalidadeEscolhida = inscrito.modalidade.length > 0;

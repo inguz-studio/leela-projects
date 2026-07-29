@@ -159,7 +159,7 @@ export function StepConfirmacao({
               <Ticket
                 key={id}
                 inscritoId={id}
-                titulo={linha?.titulo ?? `Atleta ${i + 1}`}
+                titulo={linha?.titulo ?? `Participante ${i + 1}`}
                 modalidade={linha?.modalidade ?? '—'}
                 kitLabel={linha?.kitLabel ?? 'Sem kit'}
               />

@@ -392,9 +392,9 @@ export function StepDados({
           <Checkbox
             checked={euCorro}
             onChange={(e) => onEuCorro(e.target.checked)}
-            aria-label="Eu também vou correr nesta prova"
+            aria-label="Eu também vou participar deste evento"
           />
-          <span>Eu também vou correr nesta prova</span>
+          <span>Eu também vou participar deste evento</span>
         </label>
       </section>
 
@@ -402,11 +402,11 @@ export function StepDados({
       <section className="flex flex-col gap-4">
         <div>
           <TituloEtapa icone={Users}>
-            {inscritos.length > 1 ? 'Quem vai correr' : 'Inscrição'}
+            {inscritos.length > 1 ? 'Participantes' : 'Inscrição'}
           </TituloEtapa>
           <ApoioEtapa>
-            Cada atleta tem os próprios dados. A modalidade e o kit já foram escolhidos na etapa
-            anterior.
+            Cada participante tem os próprios dados. A modalidade e o kit já foram escolhidos na
+            etapa anterior.
           </ApoioEtapa>
         </div>
 
@@ -416,7 +416,7 @@ export function StepDados({
           return (
             <CardAtleta
               key={i}
-              titulo={ehVoce ? 'Você' : `Atleta ${euCorro ? i : i + 1}`}
+              titulo={ehVoce ? 'Você' : `Participante ${euCorro ? i : i + 1}`}
               // D-2: o mesmo card do step 0. Remover é seguro aqui; ADICIONAR
               // não vive nesta etapa (o novo atleta nasceria sem modalidade).
               podeRemover={!ehVoce && inscritos.length > 1 && onRemoveInscrito !== undefined}

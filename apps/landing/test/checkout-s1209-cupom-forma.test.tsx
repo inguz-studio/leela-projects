@@ -113,7 +113,7 @@ describe('S1209-T1 · D-4 — cupom no STEP 0', () => {
     expect(screen.getByLabelText('Código do cupom')).toBeTruthy();
     // Sem modalidade escolhida ainda não há o que precificar — a razão fica à
     // vista e o botão desabilitado (nunca um "aplicado" falso).
-    expect(screen.getByText(/escolha a modalidade de cada atleta/i)).toBeTruthy();
+    expect(screen.getByText(/escolha a modalidade de cada participante/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /aplicar/i }).hasAttribute('disabled')).toBe(true);
   });
 
