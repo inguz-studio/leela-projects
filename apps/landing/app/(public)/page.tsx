@@ -5,6 +5,7 @@ import { rotuloEstadoVenda } from '../../lib/estadoVenda';
 import { capaDoEvento } from '../../lib/coverEvento';
 import type { EstadoVenda } from '../../lib/tipos';
 import { marketplaceJsonLd } from '../../lib/seo';
+import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '../../lib/containerPublico';
 import { JsonLd } from '../components/JsonLd';
 import { CoverImage } from '../components/CoverImage';
 // ADR-017: estáticos vêm do subpath SERVER-SAFE do DS — renderizam como
@@ -69,8 +70,8 @@ export default async function HomePage(): Promise<React.JSX.Element> {
       {/* Dados estruturados schema.org/ItemList dos eventos publicados */}
       <JsonLd data={marketplaceJsonLd(eventos)} />
       {/* ── Hero da marca ─────────────────────────────────────────────── */}
-      <section className="border-b border-border-subtle bg-surface-sunken">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+      <section className={`border-b border-border-subtle bg-surface-sunken ${CONTAINER_GUTTER}`}>
+        <div className={`${CONTAINER_LARGURA} py-16 sm:py-24`}>
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-text-brand">
             Corrida de rua
           </p>
@@ -93,7 +94,10 @@ export default async function HomePage(): Promise<React.JSX.Element> {
       </section>
 
       {/* ── Dobra de eventos ──────────────────────────────────────────── */}
-      <section id="eventos" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+      {/* Calha (achado 14 · C2): gutter no `<section>`, `max-w-5xl` sozinho no
+          `<div>` — mesma fonte que o header/Hero/dobras do evento. */}
+      <section id="eventos" className={CONTAINER_GUTTER}>
+        <div className={`${CONTAINER_LARGURA} py-14`}>
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
@@ -182,6 +186,7 @@ export default async function HomePage(): Promise<React.JSX.Element> {
             ))}
           </ul>
         )}
+        </div>
       </section>
     </>
   );

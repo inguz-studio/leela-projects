@@ -8,6 +8,7 @@ import { CoverImage } from '@/app/components/CoverImage';
 import { HeroCover } from './HeroCover';
 import { capaDoEvento } from '@/lib/coverEvento';
 import { SeloModalidade } from './marca';
+import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
 
 /**
  * Hero da página de evento (S1201-T2 · LEELA-R7 · R12): nome, MODALIDADE
@@ -55,7 +56,11 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-surface-base" />
       </div>
 
-      <div className="mx-auto grid max-w-5xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:px-8 lg:py-24">
+      {/* Calha (achado 14 · C2): gutter no elemento de largura TOTAL, `max-w`
+          sozinho no filho — mesma composição do `Dobra`/`lib/containerPublico`,
+          para o conteúdo do Hero nascer no MESMO x que a dobra seguinte. */}
+      <div className={`${CONTAINER_GUTTER} py-16 sm:py-20 lg:py-24`}>
+        <div className={`${CONTAINER_LARGURA} grid items-center gap-8 lg:grid-cols-2`}>
         {/* Conteúdo */}
         <div className="order-2 lg:order-1">
           <div className="mb-3">
@@ -130,6 +135,7 @@ export function HeroSection({ evento }: { evento: EventoPublico }): React.JSX.El
               </span>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </section>

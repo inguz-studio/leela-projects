@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
 
 /**
  * Header público (S1200-T1). Server Component. Sem navegação de painel
@@ -8,6 +9,11 @@ import Link from 'next/link';
  * (exportada do Figma `112:51`/`112:5`), que casa com o tema `brasa` (dark) do
  * header. SVG em `/leela-logo-brasa.svg` (public). `<img>` puro (não next/image)
  * porque é asset estático local sem allowlist de domínio.
+ *
+ * Calha (achado 14 · C2): `max-w-6xl` + padding no mesmo elemento divergia da
+ * calha das dobras (`max-w-5xl`, gutter no pai) — o conteúdo do header nascia
+ * num x diferente do Hero/dobras da página de evento. Passa a consumir
+ * `lib/containerPublico`, a MESMA fonte que `Dobra`/`HeroSection` usam.
  */
 export function PublicHeader(): React.JSX.Element {
   return (
@@ -18,9 +24,9 @@ export function PublicHeader(): React.JSX.Element {
     // segundo layout público só para uma rota.
     <header
       data-shell-publico
-      className="sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur"
+      className={`sticky top-0 z-40 border-b border-border-subtle bg-surface-base/90 backdrop-blur ${CONTAINER_GUTTER}`}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className={`${CONTAINER_LARGURA} flex h-16 items-center justify-between`}>
         <Link
           href="/"
           className="flex items-center gap-2 rounded-ds-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
