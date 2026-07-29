@@ -10,6 +10,18 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E16/E00/E12] Porta de entrada do organizador — login na landing, cadastro completo e código de convite** — a página inicial da Leela ganha "Entrar" e "Criar conta de organizador"; o cadastro passa a pedir todos os dados com consentimento LGPD e cai na tela inicial do sistema com um overlay que só sai com um código de convite válido ou falando com o time Leela; os códigos são seus: você gera, organiza, revoga e vê quem usou e quando, em `/plataforma/convites`. Código válido destrava criando a conta do organizador pelo MESMO provisionamento que você usa no caminho manual — uma máquina só. Erro de código nunca conta qual foi o problema (anti-adivinhação) e há teto de tentativas por conta 📋 executável; **bloqueia o go-live controlado** · rodada `02-rodadas/2026-07-28-onboarding-organizador` · RN-411..417 [[LEELA-E16-plataforma-superadmin]]
+    - [ ] **S1608 · Códigos de convite no super-admin**
+        - [ ] S1608-T1 modelo, core e Rules do código; cliente nunca lê a coleção ⚔
+        - [ ] S1608-T2 tela `/plataforma/convites` com geração, uso e revogação
+    - [ ] **S030 · Cadastro completo do organizador**
+        - [ ] S030-T1 formulário com todos os dados e consentimento LGPD desmarcado por default
+        - [ ] S030-T2 doc do profissional aguardando convite + Rule anti auto-promoção
+    - [ ] **S1609 · Resgate do código e overlay de acesso**
+        - [ ] S1609-T1 resgate atômico que provisiona o tenant, erro genérico e teto de tentativas ⚔
+        - [ ] S1609-T2 overlay bloqueante na home com CTA "Falar com o time Leela" configurável
+    - [ ] **S1213 · Entrada na landing**
+        - [ ] S1213-T1 "Entrar" e "Criar conta de organizador" no header e footer públicos
 - [ ] **[E12] O relógio do carrinho começa no clique de "Garantir inscrição"** — hoje os 15 minutos partem da primeira vez que o servidor calcula o preço; sua decisão de 2026-07-27 move o começo para o clique, o que pede um sinal de abertura na entrada da tela 📋 ajusta a RN-158 [[LEELA-E12-landing]]
 - [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]
 - [ ] **[E12] Fontes do site embarcadas, como no painel do organizador** — Exo 2 e JetBrains Mono deixam o provedor externo e passam a morar no próprio site, desde que o carregamento não piore; a diretriz de busca e velocidade da landing vale como aceite 📋 [[LEELA-E12-landing]]
