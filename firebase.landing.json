@@ -1,0 +1,15 @@
+{
+  "_comment": "Config EXCLUSIVA de deploy da LANDING pública (Next.js) ao site de Hosting `leela-landing` do projeto real (alias `prod` = leela-hub). Lane LANDING-PREVIEW. Declara UM site e mais nada: sem `functions`, sem `firestore`, sem `emulators`. É por construção que este deploy não consegue tocar o painel (site `leela-hub`, canal `preview`) nem as Functions/Rules já em produção. Mesmo padrão de config-por-propósito já usado no repo (firebase.preview.json / firebase.r6.json / firebase.prod.json). Exige o experimento `webframeworks` ligado — o script apps/landing/scripts/deploy-leela-hub.mjs cuida disso.",
+  "hosting": {
+    "site": "leela-landing",
+    "source": "apps/landing",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "frameworksBackend": {
+      "region": "us-central1",
+      "memory": "1GiB",
+      "minInstances": 0,
+      "maxInstances": 3,
+      "concurrency": 80
+    }
+  }
+}

@@ -7,6 +7,11 @@ de produção já deployado pela lane DEPLOY-PREVIEW, com o painel INTOCADO.
 ## Estado
 
 - [x] **Task 1 — reconhecimento + escolha do veículo de deploy** (decisão executada nas tasks seguintes)
+- [x] **Task 2 — site, config e env versionados** — site `leela-landing` CRIADO
+  (`https://leela-landing.web.app`); `firebase.landing.json` (um site, mais nada);
+  `apps/landing/.env.leela-hub` (config web pública + `NEXT_PUBLIC_LEELA_URL`, sem emulador, sem
+  `LEELA_CLOCK`); `apps/landing/scripts/deploy-leela-hub.mjs` (redeploy em 1 comando);
+  `.gitignore` com a exceção cirúrgica do env, `.firebase/` e `*.deploybak`.
 
 ## Reconhecimento (fatos, com prova)
 
@@ -64,6 +69,13 @@ segue 200 e `leela-hub.web.app` segue 404.
 
 1. Link **estável sem expiração** (canal live de um site novo) vale mais que canal de preview de 30 dias, já que
    o pedido do dono é navegar entre painel e site público. O painel continua no canal de preview como está.
+2. Os pacotes de workspace (`@leela/*`) **não** vão no `package.json` da função SSR. Base: o rastro de output
+   file tracing prova que o runtime só resolve `next` e `firebase-admin`; o resto entra bundlado pelo webpack. O
+   `deploy-leela-hub.mjs` faz o move para `devDependencies` de forma temporária (a integração do firebase-tools
+   apaga `devDependencies`) e restaura no `finally`. Se um dia algum `@leela/*` passar a ser `require`ado em
+   runtime (ex.: entrar em `serverExternalPackages`), esta premissa cai e o deploy quebra ruidosamente no boot.
+3. A landing **reusa a app web `painel`** já registrada (mesmo `appId`). Um appId a menos para divergir e
+   rotacionar. Se App Check entrar por app, aí vale registrar uma app web própria para a landing.
 
 ## Reaproveitado vs criado
 

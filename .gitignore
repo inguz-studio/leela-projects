@@ -52,11 +52,22 @@ storybook-static/
 !/.env.leela-hub
 # Idem: flag de ativação deliberada de produção do Asaas (sem segredos)
 !/functions/.env.leela-hub
+# Idem (lane LANDING-PREVIEW): config web pública + URL canônica da landing.
+# Fica no diretório do app porque o Next lê env do próprio app, não da raiz.
+!/apps/landing/.env.leela-hub
 # Valores locais dos secrets declarados (Functions Emulator) — NUNCA commitar
 .secret.local
 
 # Artefato de deploy das Functions (gerado por bundle-deploy.mjs)
 functions-deploy/
+
+# Cache/codegen do firebase-tools (inclui o backend SSR gerado pelo web
+# frameworks em .firebase/<site>/functions) — artefato de build, nunca fonte
+.firebase/
+
+# Backup transitório do package.json durante o deploy da landing
+# (apps/landing/scripts/deploy-leela-hub.mjs restaura no finally)
+*.deploybak
 
 # Snapshot local do Emulator Suite (emulators:export / --import)
 .emulator-data/
