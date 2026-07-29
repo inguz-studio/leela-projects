@@ -128,11 +128,19 @@ de superfície que o terceiro degrau da cascata já defende hoje.
 
 ### D-KC-5 · O bucket de Storage é dependência herdada, não nova
 
-O ambiente online não tem bucket (pendência 3 do dono no handoff DEPLOY-PREVIEW), então upload de
-imagem de kit já falha lá hoje, com uma foto. A galeria não cria dependência: herda a mesma. O
-que a spec fixa é o que vale enquanto a decisão não vem. Modelo, painel, superfícies públicas e
-a simulação de preview são construíveis e demonstráveis sem bucket; o que fica bloqueado é
-exclusivamente o upload real, para a primeira foto e para as outras duas, sem diferença.
+O ambiente online não tinha bucket (pendência 3 do dono no handoff DEPLOY-PREVIEW), então upload
+de imagem de kit já falhava lá, com uma foto. A galeria não cria dependência: herda a mesma.
+Modelo, painel, superfícies públicas e a simulação de preview são construíveis e demonstráveis
+sem bucket; o que ficava bloqueado era exclusivamente o upload real, para a primeira foto e para
+as outras duas, sem diferença.
+
+**Atualização durante esta lane (commit `78810ee`).** Outra lane criou o bucket padrão
+(`leela-hub.firebasestorage.app`, `southamerica-east1`, mesma região do Firestore). A pendência
+que esta decisão registrava está **resolvida**, e a frente da galeria deixa de nascer com upload
+bloqueado. Duas consequências entram na fila em vez de sumirem: o bucket recém-criado ainda não
+teve upload real provado ponta a ponta (o próprio commit declara isso), e a `S212-T1` acrescenta
+um bloco de Rules a um caminho que faz `firestore.get` cross-service, agora com latência real de
+região a favor. O que muda na spec é só o rótulo da dependência, de bloqueio para verificação.
 
 ---
 
@@ -282,8 +290,8 @@ As quatro primeiras mudam desenho se caírem. As outras oito podem ser vetadas s
 
 ## Dependências e o que fica fora
 
-- **Bucket de Storage no ambiente online:** decisão do dono, registrada na D-KC-5. Bloqueia
-  upload real, não bloqueia o build da galeria.
+- **Bucket de Storage no ambiente online:** era decisão do dono e foi RESOLVIDA em 29/07 pelo commit `78810ee` (bucket padrão em `southamerica-east1`). Registrada na D-KC-5. Deixou de bloquear
+  upload; nunca bloqueou o build da galeria. Resta provar um envio real no bucket novo.
 - **Base pública por ambiente:** já entregue pela RN-423; a geração do link a consome.
 - **Fora desta spec:** os treze achados da primeira leva da DEC-0729, que são da lane CHECKOUT-UX;
   o painel `DECISOES-ABERTAS.md`, que é do maestro; e qualquer alteração no cálculo de preço, de

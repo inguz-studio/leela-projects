@@ -686,7 +686,7 @@ Registro dos deltas de dependência/rota desta trilha (já anotados in-line nas 
 - [ ] LEELA-S212-T2 — **Três posições no `KitEditor`** — enviar, trocar, remover e "tornar principal" (que troca, nunca copia); remover a principal promove a primeira secundária
 - [ ] LEELA-S212-T3 — **Galeria no detalhe do kit e projeção pública** — `Thumb` do DS nas miniaturas e o lightbox que já existe; `KitsSection` e `StepModalidadeKit` **não mudam** (RN-426)
 - [ ] LEELA-S212-T4 — **Simulação no preview, app-side** — quarto degrau da cascata do `kitImagem.ts`; zero alteração nos scripts de seed (lição LEELA-R14)
-- [ ] LEELA-S212-DEP — 🧊 **Upload real depende do bucket de Storage** — pendência 3 do dono no DEPLOY-PREVIEW, a MESMA que já bloqueia a primeira foto hoje. A galeria não acrescenta dependência
+- [x] LEELA-S212-DEP — **Bucket de Storage: pendência RESOLVIDA em 29/07 (`78810ee`)** — criado em `southamerica-east1`, mesma região do Firestore. Era a pendência 3 do dono no DEPLOY-PREVIEW e já bloqueava a primeira foto; a galeria nunca acrescentou dependência. **Resta provar upload real ponta a ponta no bucket novo** — a `S212-T2` faz
 
 **S1215 · Cupom pré-aplicado por link de afiliado ou assessoria (E12 · SPEC-KITCUPOM · D-0729-5)** — **JTBD:** quem recebeu o link de um afiliado ou assessoria quer chegar com o desconto já computado e ver que ele está aplicado, sem precisar descobrir, lembrar e digitar um código. RNs 429 a 433; premissas P2, P3, P4, P6, P10 e P12 vetáveis. **Toca dinheiro e atribuição ⇒ review antagonista obrigatória nas T1 e T3.**
 

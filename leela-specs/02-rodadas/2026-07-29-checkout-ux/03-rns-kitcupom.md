@@ -107,8 +107,11 @@ secundárias ocupam dois slots literais em `eventos/{eventoId}/kits/{kitId}/foto
 sobrescreve e não deixa órfão, e não existe nome de arquivo livre. E o teto de três fotos passa a
 ser garantido também pelo Storage, não apenas combinado no aplicativo.
 
-Upload real depende do bucket, que não existe no ambiente online. A dependência é a mesma que já
-bloqueia a primeira foto hoje; a galeria não acrescenta nenhuma.
+Upload real depende do bucket. A dependência é a mesma que já bloqueava a primeira foto; a galeria
+não acrescenta nenhuma. **Resolvida durante esta rodada** (`78810ee`): o bucket padrão foi criado
+em `southamerica-east1`, mesma região do Firestore, o que também deixa o `firestore.get`
+cross-service destas Rules na região vizinha. O upload real ainda não foi provado ponta a ponta
+nesse bucket, então a construção da `S212-T1` e da `S212-T2` faz essa prova.
 
 ## RN-428 · Kit com galeria se demonstra app-side, e só em preview
 

@@ -1985,9 +1985,9 @@ nas listagens e no site.
 - **Reuso obrigatório:** `isUrlImagemKitValida`, o padrão Postel de `normalizarItensKit`,
   `uploadImagemKit`, o `FileInput` do DS, `kitObjetoValido`/`eventoDoMeuTenant`/`imagemValida`
   das Rules de Storage, e o primitivo `Thumb` do DS. **Nenhum componente novo de DS.**
-- **Dependência herdada:** upload real exige bucket de Storage, que não existe no ambiente
+- **Dependência herdada, resolvida na mesma data (`78810ee`):** upload real exige bucket de Storage, que não existia no ambiente
   online (pendência 3 do dono, handoff DEPLOY-PREVIEW). A mesma pendência já bloqueia a primeira
-  foto hoje; a galeria não acrescenta dependência.
+  foto; a galeria não acrescenta dependência. O bucket padrão foi criado em `southamerica-east1` durante esta rodada, então o que resta é PROVAR upload real ponta a ponta nele, o que a `S212-T2` faz.
 
 **Critérios de aceite (Given/When/Then):**
 

@@ -87,9 +87,13 @@ Feito ANTES de qualquer proposta, lendo os arquivos — não por memória.
 6. **Nada no repo valida 1:1 de imagem.** `isUrlImagemKitValida` só olha a URL, e as Rules
    registram a limitação ("Rules não decodificam imagem"). O "1:1" da RN-227 é dica de painel e
    enquadramento de CSS. A spec não pode fingir que existe validação de proporção.
-7. **O bucket de Storage não existe no ambiente online** (handoff DEPLOY-PREVIEW, pendência 3 do
-   dono). Isso já bloqueia a PRIMEIRA foto; a 2ª e a 3ª herdam a mesma pendência — a galeria não
-   cria dependência nova.
+7. **O bucket de Storage não existia no ambiente online** (handoff DEPLOY-PREVIEW, pendência 3 do
+   dono). Isso já bloqueava a PRIMEIRA foto; a 2ª e a 3ª herdam a mesma pendência — a galeria não
+   cria dependência nova. **RESOLVIDO durante esta lane** (`78810ee`, outra lane): bucket padrão
+   criado em `southamerica-east1`, mesma região do Firestore. A frente da galeria deixa de nascer
+   com upload bloqueado; o que resta é PROVAR upload real ponta a ponta no bucket novo, o que o
+   próprio commit declara como não testado. Correção propagada para D-KC-5, RN-427, o épico E03 e
+   os dois boards.
 
 ## Premissas assumidas
 
