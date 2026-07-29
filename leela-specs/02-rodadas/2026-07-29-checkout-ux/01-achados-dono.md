@@ -36,6 +36,14 @@ O dono percorreu a compra real no site público e reportou os pontos abaixo. Ver
 | 15 | Kit com galeria: 3 fotos por kit, uma marcada como principal (a que aparece no site). Hoje o modelo tem UMA imagem só (`imagemUrl`, RN-227) — é feature nova, não regressão | ORDEM (feature) | — | SPEC-KITCUPOM (delta de spec) → build; simular no seed |
 | 16 | Afiliado/assessoria compartilham link com cupom JÁ aplicado: desconto computado ao chegar no checkout, marcado "(desconto aplicado)", e banner após a Hero: "Você tem desconto neste evento — CUPOM XXXXXX de Fulano aplicado!". A atribuição por link JÁ existe no modelo (linkMaster + janela de 7 dias); o auto-apply do cupom + banner são a extensão | ORDEM (feature; toca dinheiro/atribuição) | — | SPEC-KITCUPOM (delta de spec) → build com review antagonista |
 
+## Terceira leva (mesmo dia, testes mobile + autorização de infra)
+
+| # | Achado | Classe | Severidade | Destino |
+|---|---|---|---|---|
+| 17 | Ao clicar em "cartão de crédito", o input do cartão deve abrir imediatamente — hoje exige segundo clique | ORDEM (UX) | — | CHECKOUT-UX |
+| 18 | Mobile: data de nascimento abre calendário (muitos cliques). Trocar por preenchimento direto com teclado numérico | ORDEM (UX) | — | CHECKOUT-UX |
+| 19 | Bucket do Firebase Storage AUTORIZADO pelo dono ("Pode criar o bucket do firebase") — destrava upload real de fotos (kit/capa) | AUTORIZAÇÃO DE INFRA | — | lane STORAGE-BUCKET (criar bucket + rules fail-closed + prova), na fila assim que houver vaga de agente |
+
 ## Decisões do dono registradas nesta rodada
 
 - **D-0729-1 (naming):** a Leela é um **Hub de Bem-Estar**, não plataforma de corrida de rua. Vocabulário de corrida ("quem vai correr") sai da jornada; quem se inscreve é **participante**. Vale como diretriz para toda superfície pública.
@@ -43,6 +51,13 @@ O dono percorreu a compra real no site público e reportou os pontos abaixo. Ver
 - **D-0729-3 (resumo):** o pedido tem resumo visível antes do pagamento, com edição de kit/tamanho sem recomeçar a jornada.
 - **D-0729-4 (kit):** kit passa a ter até 3 fotos, uma marcada como principal — a principal é a que aparece nas listagens e no site.
 - **D-0729-5 (cupom por link):** link de afiliado/assessoria aplica o cupom automaticamente; o comprador chega com o desconto computado, vê "(desconto aplicado)" nos valores e um banner após a Hero: "Você tem desconto neste evento — CUPOM XXXXXX de Fulano aplicado!".
+- **D-0729-6 (cartão):** selecionar "cartão de crédito" abre o formulário do cartão na hora, sem segundo clique.
+- **D-0729-7 (nascimento):** data de nascimento se preenche por digitação com teclado numérico (mobile-first); nada de calendário obrigatório.
+- **D-0729-8 (Storage):** bucket do Firebase Storage autorizado pelo dono em 2026-07-29 — upload real de imagens entra no caminho (fotos de kit da D-0729-4 dependem disto).
+
+## Verbatim do dono — terceira leva (2026-07-29)
+
+> POde criar o bucket do firebase. E outro ponto, quando clico em cartao de crédito já é para aparecer imediatamente a opção de inputar o cartao de crédito, nao clicar novamente. Nos testes mobile, vi que voce abre um calendário para colocar a data de nascimento, mas isso demanda muitos cliques por parte do usuário. DEixe apenas a opção dele preencher com teclado numérico.
 
 ## Verbatim do dono (2026-07-29)
 
