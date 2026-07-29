@@ -1721,6 +1721,10 @@ e acrescenta.
 
 #### LEELA-S1206-T7 · Código identificador no PDF sob demanda
 - **Tipo:** api/function · **Depende de:** S1206-T5 · **Estimativa:** XS · **Rota:** opus
+- **🔓 Desbloqueado em 2026-07-29 (SPEC-INGPAGE):** a superfície que faltava é a **versão
+  imprimível da página do ingresso** (`S1214-T4` · RN-424), não um gerador de PDF. O código
+  está na página, e a página é o PDF. **Depende agora de `S1214-T4`.** Ver a seção
+  "Delta página própria do ingresso" no fim deste épico.
 
 Traz o código ao lado do QR no PDF, pelo mesmo motivo de degradação.
 
@@ -1761,3 +1765,246 @@ Links no `PublicHeader` (desktop: canto direito; mobile: dentro do menu/estado c
 existente — sem lib nova) e eco no `PublicFooter`. Destino por env pública (P10). Testes:
 unit (render dos links, montagem da URL com e sem env) + verificação de bundle (nenhuma
 dependência nova).
+
+---
+
+## Delta página própria do ingresso (SPEC-INGPAGE · 2026-07-29)
+
+Item 55 do painel: *"o QR do e-mail não aparece no Gmail nem no Outlook."* O QR vai embutido
+no corpo por privacidade e esses dois clientes não renderizam imagem embutida assim; anexo
+inline morreu por prova na INGQR-REV (o port `EmailProvider` não tem superfície de anexo e o
+`POST /v3/smtp/email` do Brevo não expõe `Content-ID`). A recomendação (b) daquela review é
+esta página.
+
+Ela fecha três pontas de uma vez: o QR que não aparece, o "link do ingresso" da RN-398 que
+hoje aponta para a página do evento por falta de destino, e a superfície que o `S1206-T7`
+esperava. Rodada completa em `02-rodadas/2026-07-29-pagina-ingresso/`.
+
+### Regras de negócio novas (SPEC-INGPAGE)
+
+- **RN-418 · A página do ingresso é pública, tokenizada e somente leitura (dona = E12).** A
+  rota `/ingresso/{token}` exibe o ingresso de **um** inscrito, sem login, a quem apresentar
+  token válido. A leitura acontece no servidor e **nenhuma Security Rule é afrouxada**:
+  `eventos/{id}/inscritos` continua fechado a cliente anônimo (provado no vetor 6 da
+  INGQR-REV). A fronteira de autorização é a verificação criptográfica do token, na mesma
+  doutrina do leitor público de eventos, onde o gate mora no código. **A página não escreve
+  nada:** não credencia (RN-399, RN-221 e RN-222 intactas), não emite (quem cura ausência é a
+  RN-382) e não muda estado. A resposta é sempre dinâmica, nunca cacheada. `ingresso` entra
+  na lista de slugs reservados de evento, junto das demais rotas estáticas.
+- **RN-419 · O token do link é próprio, derivado do mesmo keyring, verificado no servidor de
+  negócio (dona = E12).** O link **nunca** carrega o `qrToken`: ele é a credencial de
+  presença e quem o lê entra no evento; numa URL vaza por histórico, `Referer`, log de proxy
+  e print. Formato `LLIP1.<kid>.<payloadB64url>.<assinatura>`, irmão do `LLQR1`: payload
+  mínimo `{i,e,t}` sem PII, HMAC-SHA256 com o segredo do keyring já existente, comparação em
+  tempo constante. **Separação de domínio pela constante de versão** — `LLQR1` não abre a
+  página, `LLIP1` não passa no check-in, e as duas constantes jamais podem ser iguais (é
+  asserção de teste). Kid inválido, assinatura inválida, inscrito inexistente e evento
+  inexistente devolvem **a mesma resposta**. **A chave de assinatura não mora no runtime da
+  superfície pública:** verificação e projeção acontecem numa Function, porque com a chave no
+  servidor de páginas uma falha de dependência ali permitiria cunhar QR de check-in offline,
+  para qualquer evento e tenant, sem tocar no banco. A projeção não devolve o `qrToken` em
+  texto (o QR vai renderizado como imagem); isso é higiene, e está escrito como higiene.
+- **RN-420 · Rotação não mata link emitido; re-emitir o ingresso mata (dona = E12).** Três
+  propriedades distintas: (1) rotacionar o kid ativo **não** invalida link já enviado, porque
+  o `kid` viaja no token e o ring guarda os antigos, exatamente como provado para o ingresso
+  emitido; (2) tirar o kid do ring **revoga em massa** o que ele assinou, e é a alavanca de
+  emergência; (3) re-emitir o ingresso de um inscrito **invalida o link antigo dele**, porque
+  a assinatura cobre o `qrToken` vigente — revogação individual sem campo novo, com a mesma
+  semântica que o balcão já aplica. **O link não tem prazo:** o ingresso é comprovante de
+  compra, aberto na fila da largada meses depois, e um prazo criaria "ingresso vencido no dia
+  do evento". O que muda com o tempo é o estado, lido a cada abertura.
+- **RN-421 · O que a página mostra em cada estado (dona = E12).** `confirmado` com `qrToken`
+  e sem `checkinEm` ⇒ QR, código e dados mínimos. `confirmado` com `checkinEm` ⇒ o mesmo, com
+  o credenciamento em destaque e o carimbo, **o QR continua visível**. `confirmado` sem
+  `qrToken` ⇒ aviso de emissão em andamento, nunca QR quebrado (é a face da RN-382).
+  `pendente` ⇒ sem QR. `cancelado` ou `estornado` ⇒ **sem QR**, com o que aconteceu em texto e
+  o código só para atendimento. Evento encerrado ⇒ histórico com aviso, sem QR. Token que não
+  verifica ⇒ resposta única e genérica. Estornado e cancelado não mostram QR porque mostrar
+  convida a pessoa a viajar até o evento e ser barrada na fila; credenciado mantém o QR porque
+  esconder não protege nada (o servidor já recusa o replay) e tira a conferência de quem
+  chegou. A página degrada com estado legível quando a leitura falha, nunca com erro de
+  framework.
+- **RN-422 · Dado mínimo e cabeçalhos de privacidade (dona = E12).** Exibe nome do titular,
+  evento com data e local, modalidade, kit e tamanho quando houver, código e estado. **Não
+  exibe** CPF, telefone, e-mail, nascimento, endereço, contato de emergência, resposta de
+  formulário, valor pago nem dado de outro inscrito do mesmo pedido. Três cabeçalhos
+  obrigatórios: `noindex, nofollow` (senão buscador indexa ingresso de gente),
+  `Referrer-Policy: no-referrer` (senão o token sai no `Referer` de todo link de saída) e
+  `Cache-Control: no-store` (o token está na URL). **Encaminhar o link é encaminhar o
+  ingresso**, a mesma propriedade que o e-mail já tinha; transferência formal de titularidade
+  é E13-S1316 e não passa por aqui.
+- **RN-423 · Base pública única por ambiente, e o link no e-mail (dona = E12).** A base
+  pública das URLs vem do ambiente, **uma só**, compartilhada por superfície pública e
+  Functions; o domínio hardcoded sai do código (o valor do domínio segue sendo o item 12). O
+  e-mail da compra ganha, **por inscrito**, o link do ingresso daquele inscrito — um por
+  inscrito, não um por pedido, porque o token é por inscrito. **O código em texto permanece
+  sempre** e **o QR embutido permanece**: o link é degradação, não troca. **Sem base
+  configurada, o e-mail sai sem link**, nunca com link quebrado nem para domínio de terceiro.
+- **RN-424 · A versão imprimível é o PDF do ingresso (amplia a RN-220, dona = E12).** A rota
+  imprimível de `/ingresso/{token}` entrega o mesmo ingresso em A4, com CSS de impressão e sem
+  navegação; o PDF sai do navegador de quem imprime. Isso satisfaz o `S1206-T7`. Nenhuma
+  dependência de geração de PDF entra no repo: um Chromium na Function custa memória na casa
+  do gigabyte e cold start na casa dos dez segundos, e uma biblioteca de desenho obriga a
+  manter um segundo layout que diverge da página no primeiro ajuste de marca. PDF anexado ao
+  e-mail, gerado no servidor, continua fora de escopo.
+
+### LEELA-S1214 · Página própria do ingresso (link tokenizado por inscrito) · (de-para novo · SPEC-INGPAGE)
+
+**Como** quem comprou (para mim ou para a família), **quero** abrir o ingresso de cada
+inscrito numa página da Leela pelo link do e-mail, **para** ver o QR mesmo quando meu cliente
+de e-mail não mostra a imagem, e para imprimir se eu quiser.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** Landing + Functions
+- **Tela(s) de referência:** greenfield; deriva do E01 e do ingresso do checkout (`Ticket.tsx`)
+- **RNs:** RN-418, RN-419, RN-420, RN-421, RN-422, RN-423, RN-424; contexto RN-218, RN-396,
+  RN-398, RN-382, RN-399, RN-221/222
+- **ADR:** ADR-017 (DS Radix-free na superfície pública)
+- **Pedido em grupo (ADR-011):** um link por INSCRITO. O responsável recebe N links no mesmo
+  e-mail, um por pessoa da compra.
+
+**Critérios de aceite (Given/When/Then):**
+
+- **Dado** um inscrito confirmado com ingresso emitido, **quando** abro o link do e-mail,
+  **então** vejo o QR renderizado, o código identificador em texto e os dados mínimos do
+  ingresso, sem precisar entrar em conta nenhuma (RN-418, RN-422).
+- **Dado** o mesmo link, **quando** a página monta, **então** nenhuma leitura de inscrito
+  acontece no cliente e nenhuma Security Rule foi afrouxada para isso funcionar (RN-418).
+- **Dado** um `qrToken` colado na URL no lugar do token do link, **quando** abro, **então** a
+  página recusa; e **dado** um token de link apresentado no scanner do balcão, **quando** o
+  check-in roda, **então** ele recusa (RN-419).
+- **Dado** um link emitido antes de uma rotação de chave, **quando** a chave ativa vira,
+  **então** o link continua abrindo (RN-420).
+- **Dado** um ingresso re-emitido, **quando** abro o link antigo, **então** ele não abre mais
+  (RN-420).
+- **Dado** um inscrito estornado ou cancelado, **quando** abro o link, **então** vejo o que
+  aconteceu e **não** vejo QR (RN-421).
+- **Dado** um inscrito já credenciado, **quando** abro o link, **então** vejo o estado de
+  credenciamento com o carimbo e o QR continua visível (RN-421).
+- **Dado** um pedido pago cuja emissão ainda não fechou, **quando** abro o link, **então**
+  vejo aviso de emissão em andamento e nenhum QR quebrado (RN-421 sobre RN-382).
+- **Dado** um token inválido, um inscrito inexistente ou um evento inexistente, **quando**
+  abro, **então** a resposta é a mesma nos três casos (RN-419).
+- **Dado** a rota do ingresso, **quando** a resposta sai, **então** ela carrega
+  `noindex, nofollow`, `Referrer-Policy: no-referrer` e `Cache-Control: no-store` (RN-422).
+- **Dado** o e-mail da compra, **quando** ele é montado, **então** cada inscrito ganha o link
+  do próprio ingresso, o código em texto permanece e o QR embutido permanece (RN-423).
+- **Dado** ambiente sem base pública configurada, **quando** o e-mail é montado, **então** ele
+  sai sem link e com o código (RN-423).
+- **Dado** a versão imprimível, **quando** imprimo, **então** sai uma folha A4 com QR, código
+  e dados mínimos, sem navegação (RN-424).
+- **Dado** o gate de SEO e peso da landing, **quando** a rota entra, **então** nenhuma
+  dependência nova entra no bundle público (o QR chega renderizado do servidor) e a landing
+  segue Radix-free.
+
+**Tasks:** S1214-T1, S1214-T2, S1214-T3, S1214-T4
+
+#### LEELA-S1214-T1 · Token `LLIP1` e leitura do ingresso por capacidade
+- **Tipo:** api/function · **Depende de:** S1206-T5 (emissão) · **Bloqueia:** S1214-T2, S1214-T3 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Criar o formato do token de link e o único ponto que o verifica, projetando o dado mínimo do
+ingresso com o QR já renderizado.
+
+**Contexto & referências**
+Reusa `obterQrKeyring`/`carregarQrKeyring`, `kidQrValido`, os helpers base64url e UTF-8 puros
+do core, o `timingSafeEqual` do caminho de verificação do QR e o `gerarQrDataUrl`. Nada de
+segundo keyring, nada de segundo gerador de QR.
+
+**Modelo de dados / contratos**
+Parte pura no core (formato, parse estrutural, constante de versão); parte com segredo nas
+Functions (assinar, verificar); endpoint que recebe o token e devolve a projeção
+`{ estado, evento, inscrito, codigo, qrDataUri?, credenciadoEm? }`. **Zero campo novo no
+Firestore:** o token é derivado, não armazenado.
+
+**Regras de negócio a respeitar**
+RN-419, RN-420, RN-422 (o que a projeção pode conter).
+
+**Testes a escrever**
+Unit: assina e verifica; token adulterado em cada uma das quatro partes recusa; `LLQR1`
+recusado pelo verificador do link e `LLIP1` recusado por `parseQrToken`; as duas constantes de
+versão são diferentes. Integração no emulador: rotação de kid não mata link; kid fora do ring
+revoga; re-emissão invalida link antigo; as quatro causas de falha devolvem resposta idêntica.
+
+**Fora de escopo**
+A página (T2), o e-mail (T3), a impressão (T4).
+
+#### LEELA-S1214-T2 · Rota `/ingresso/{token}` na landing
+- **Tipo:** screen · **Depende de:** S1214-T1 · **Bloqueia:** S1214-T4 · **Estimativa:** M · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+A página em si: Server Component que consome a projeção da T1 e renderiza a matriz de estados
+da RN-421 com o visual da casa.
+
+**Contexto & referências**
+DS pela entrada server-safe da ADR-017 (`@leela/design-system/server`), com o `Ticket.tsx` do
+checkout como referência de forma. Nenhuma dependência nova, e nenhum `qrcode` no bundle: a
+imagem chega pronta.
+
+**Passos de implementação**
+Os três cabeçalhos da RN-422; renderização sempre dinâmica; estado de erro legível quando a
+leitura falha, incluindo cold start da Function; `ingresso` acrescentado à lista de slugs
+reservados de evento, criada nesta task junto das rotas estáticas que já existem (`convite`
+entre elas).
+
+**Regras de negócio a respeitar**
+RN-418, RN-421, RN-422.
+
+**Testes a escrever**
+Unit por estado da matriz, incluindo a ausência de QR em estornado e cancelado e a presença
+dele em credenciado; asserção dos três cabeçalhos; asserção de que nenhum campo proibido pela
+RN-422 aparece no HTML; teste de que um slug de evento não sombreia a rota.
+
+**Fora de escopo**
+Impressão (T4); área logada do atleta (E13).
+
+#### LEELA-S1214-T3 · Base pública única e link por inscrito no e-mail
+- **Tipo:** api/function · **Depende de:** S1214-T1 · **Estimativa:** S · **Rota:** opus · ⚔ review antagonista
+
+**Objetivo**
+Tirar o domínio hardcoded do código e acrescentar ao e-mail da compra o link do ingresso de
+cada inscrito.
+
+**Contexto & referências**
+`EVENTO_URL_BASE = 'https://beh.ro'` está cravado em `functions/src/eventos/publicarEvento.ts`,
+e `beh.ro` é domínio dos mocks Be Hero; a landing usa outra base (`NEXT_PUBLIC_LEELA_URL`).
+Duas bases divergentes no mesmo produto, e o e-mail já manda hoje um link para domínio de
+terceiro.
+
+**Passos de implementação**
+Acréscimo ao template, nunca reescrita: o bloco de cada inscrito ganha o link; o código em
+texto e o QR embutido permanecem; a chave de idempotência da RN-219 não é tocada. Sem base
+configurada, o link não é renderizado.
+
+**Regras de negócio a respeitar**
+RN-423; RN-398 e RN-219 preservadas.
+
+**Testes a escrever**
+Unit do template com e sem base configurada; asserção de que o código em texto e o QR embutido
+continuam presentes nos dois casos; asserção de um link por inscrito; asserção de que nenhuma
+URL contém `undefined` nem o domínio antigo.
+
+**Fronteira**
+`functions/src/email/templates.ts` é arquivo disputado (avisos ao afiliado do pacote E08,
+`S706-T2`). Blocos distintos, rebase na aterrissagem.
+
+#### LEELA-S1214-T4 · Versão imprimível do ingresso
+- **Tipo:** screen · **Depende de:** S1214-T2 · **Bloqueia:** S1206-T7 · **Estimativa:** S · **Rota:** opus
+
+**Objetivo**
+A mesma página em folha A4, com CSS de impressão e sem navegação. O navegador gera o PDF.
+
+**Passos de implementação**
+Mesma leitura, mesma matriz de estados, mesmos cabeçalhos de privacidade. Estado sem QR
+continua sem QR na impressão.
+
+**Regras de negócio a respeitar**
+RN-424, que amplia a RN-220.
+
+**Testes a escrever**
+Unit do layout de impressão; asserção de que a folha carrega QR, código e dados mínimos e nada
+além do que a RN-422 permite.
+
+**Fora de escopo**
+Geração de PDF no servidor e PDF anexado ao e-mail.
+
+**Fila completa do pacote:** `02-rodadas/2026-07-29-pagina-ingresso/03-fila-codigo.md`.
