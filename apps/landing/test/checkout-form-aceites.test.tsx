@@ -147,6 +147,46 @@ describe('StepPagamento — §5.3 · modais dos termos (Dialog ADR-017)', () => 
   });
 });
 
+// =============================================================================
+// C1-LEGAL (D-0802-1, rodada 2026-08-02) — o texto legal da jornada de compra
+// fala de PARTICIPANTE e EXPERIÊNCIA, não de atleta e prova. A fronteira dura
+// que estes casos guardam: o vocabulário da PLATAFORMA muda, o conteúdo do
+// ORGANIZADOR não. Por isso o evento do fixture se chama "Corrida Teste" — o
+// nome dele continua saindo com "Corrida" no mesmo modal em que nenhuma
+// palavra da plataforma remete a corrida.
+// =============================================================================
+describe('StepPagamento — C1-LEGAL · vocabulário de participante no texto legal', () => {
+  it('termo de saúde: regulamento da experiência, participantes do pedido, zero "atleta"', () => {
+    renderPagamento();
+    fireEvent.click(
+      screen.getByRole('button', { name: /ler o termo de responsabilidade de saúde/i }),
+    );
+    const dialogo = screen.getByRole('dialog');
+
+    expect(screen.getByText(/regulamento da experiência/i)).toBeTruthy();
+    expect(screen.getByText(/vale para todos os participantes deste pedido/i)).toBeTruthy();
+    expect(screen.getByText(/me preparei adequadamente para a atividade/i)).toBeTruthy();
+
+    // Vocabulário de plataforma: nada de atleta/prova/treino no termo.
+    const texto = dialogo.textContent ?? '';
+    expect(/atleta/i.test(texto)).toBe(false);
+    expect(/\bprova\b/i.test(texto)).toBe(false);
+    expect(/treinei/i.test(texto)).toBe(false);
+
+    // ...e o conteúdo do ORGANIZADOR atravessa intacto no mesmo modal.
+    expect(screen.getByText(/apto\(a\) a participar do evento corrida teste/i)).toBeTruthy();
+  });
+
+  it('termos da compra: transferência é para outro participante, não para outro atleta', () => {
+    renderPagamento();
+    fireEvent.click(screen.getByRole('button', { name: /ler os termos da compra/i }));
+    const dialogo = screen.getByRole('dialog');
+
+    expect(screen.getByText(/transferência de inscrição para outro participante/i)).toBeTruthy();
+    expect(/atleta/i.test(dialogo.textContent ?? '')).toBe(false);
+  });
+});
+
 describe('StepPagamento — §5.3 · prova registrada trava os checkboxes', () => {
   it('com a cobrança criada, os 2 checkboxes ficam desabilitados', () => {
     renderPagamento({ charge: charge(), aceiteTermos: true, aceiteSaude: true });

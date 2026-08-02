@@ -6,11 +6,18 @@
 //   (a) termos da compra + política de cancelamento — texto renderizado da
 //       `politicaVendas` PÚBLICA do leitor (defaults legais CDC Art. 49
 //       quando o organizador não configurou), versão vigente exibida;
-//   (b) termo de responsabilidade de saúde — template do PRODUTO (benchmark
-//       Sympla Sports "Termo do Atleta"), versão vigente exibida
-//       (`termoSaudeVersao` do leitor). SEMPRE presente, todo evento
-//       (decisão CKMOD: declaração de aptidão = aceite; PAR-Q/atestado das
-//       flags de exigenciasSaude são superfície FUTURA — D-7).
+//   (b) termo de responsabilidade de saúde — template do PRODUTO, versão
+//       vigente exibida (`termoSaudeVersao` do leitor). SEMPRE presente, todo
+//       evento (decisão CKMOD: declaração de aptidão = aceite; PAR-Q/atestado
+//       das flags de exigenciasSaude são superfície FUTURA — D-7).
+//
+// VOCABULÁRIO (D-0802-1, rodada 2026-08-02 · task C1-LEGAL): este texto era
+// modelado no "Termo do Atleta" da Sympla Sports. O benchmark CAIU — a Sympla
+// Sports é plataforma de corrida e a Leela é hub de EXPERIÊNCIAS de bem-estar
+// (wellness, clubes, retiros). "Participante" e "experiência" são os termos
+// guarda-chuva que a PLATAFORMA emite; corrida, prova e atleta são instâncias
+// de um evento, nunca a categoria do produto. O conteúdo que o ORGANIZADOR
+// escreve (nome, descrição, distâncias, regulamento) segue intocado.
 //
 // Padrão de modal: MESMO do RegulamentoModal — primitivo `Dialog` do DS via
 // entrada Radix-free (ADR-017), 4 vias de fechamento + retorno de foco.
@@ -35,7 +42,7 @@ function paragrafosDaPolitica(p: PoliticaVendasPublica): string[] {
     `Corte de segurança: pedidos de cancelamento feitos a menos de ${reembolso.corteHoras} horas do evento não são aceitos.`,
     `Fora da janela de arrependimento, o pedido de reembolso entra em análise do organizador, com resposta em até ${reembolso.slaAnaliseDias} dias.`,
     transferencia.habilitada
-      ? `Transferência de inscrição para outro atleta: permitida até ${transferencia.janelaHoras} horas antes do evento${
+      ? `Transferência de inscrição para outro participante: permitida até ${transferencia.janelaHoras} horas antes do evento${
           transferencia.taxa > 0
             ? `, mediante taxa de ${formatarPreco(transferencia.taxa)}`
             : ', sem custo'
@@ -53,19 +60,19 @@ function paragrafosDaPolitica(p: PoliticaVendasPublica): string[] {
   return linhas;
 }
 
-/** Texto do termo de responsabilidade de saúde (template Leela, padrão Sympla Sports). */
+/** Texto do termo de responsabilidade de saúde (template Leela; vocabulário de participante — D-0802-1). */
 function paragrafosDoTermoSaude(eventoNome: string, organizadorNome: string | null): string[] {
   const organizacao =
     organizadorNome !== null && organizadorNome.length > 0
       ? `${organizadorNome} (organizador do evento)`
       : 'a organização do evento';
   return [
-    `Declaro, para todos os fins, que estou em boas condições de saúde e apto(a) a participar do evento ${eventoNome}, atividade que envolve esforço físico.`,
-    'Declaro que treinei adequadamente para a atividade e que não há qualquer recomendação médica que me impeça de praticar exercícios físicos.',
+    `Declaro, para todos os fins, que estou em boas condições de saúde e apto(a) a participar do evento ${eventoNome}, atividade que pode envolver esforço físico.`,
+    'Declaro que me preparei adequadamente para a atividade e que não há qualquer recomendação médica que me impeça de participar dela.',
     `Assumo a responsabilidade por qualquer condição de saúde pré-existente não declarada, isentando ${organizacao} e a plataforma Leela de responsabilidade por incidentes decorrentes de condição que eu tenha omitido.`,
-    'Estou ciente do regulamento da prova e das orientações de segurança, e me comprometo a segui-los durante todo o evento.',
+    'Estou ciente do regulamento da experiência e das orientações de segurança, e me comprometo a segui-los durante todo o evento.',
     'Autorizo o atendimento médico de emergência em meu favor durante o evento, caso necessário.',
-    'Esta declaração vale para todos os atletas deste pedido; ao aceitar em nome de terceiros, o responsável confirma ter obtido a concordância de cada um.',
+    'Esta declaração vale para todos os participantes deste pedido; ao aceitar em nome de terceiros, o responsável confirma ter obtido a concordância de cada um.',
   ];
 }
 
@@ -171,7 +178,7 @@ export function AceitesCompra({
         </div>
       </Dialog>
 
-      {/* Modal (b) — template do produto (benchmark Sympla Sports). */}
+      {/* Modal (b) — template do produto, vocabulário de participante (D-0802-1). */}
       <Dialog
         open={modalSaude}
         onOpenChange={setModalSaude}
