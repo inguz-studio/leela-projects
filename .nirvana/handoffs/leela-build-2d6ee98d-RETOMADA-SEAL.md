@@ -10,7 +10,7 @@ Base: `main` em `09009de`. Sem push — o maestro pusha.
 ## Estado da fila
 
 - [x] **R1 · C1-LEGAL** — texto legal da jornada de compra em vocabulário de participante/experiência
-- [ ] R2 · sugestões de vocabulário para a home (documento)
+- [x] **R2 · sugestões de vocabulário para a home** — documento, zero código
 - [ ] R3 · deploy da landing + provas curl
 - [ ] R4 · aterrissagem (boards, V1-CHECKLIST, épico E12, self-score)
 
@@ -92,3 +92,48 @@ texto de plataforma na jornada de compra.
    "Corredora comemorando a chegada da prova"). **Isto é vocabulário de PLATAFORMA** —
    quem escreve esses rótulos é a Leela, não o organizador — mas vive na landing, que
    D-0802-1 §2 reserva para o dono. Levado para o documento do R2 em vez de mudado aqui.
+
+---
+
+## R2 · sugestões de vocabulário para a home
+
+`leela-specs/02-rodadas/2026-08-02-retomada/02-sugestoes-home-experiencias.md`. **Zero linha de
+código tocada** — a task é documento, e a home continua exatamente como está até o dono editar.
+
+### O achado que abre o documento
+
+A home não precisa de argumento de posicionamento para justificar a mudança: ela já se contradiz
+sozinha, em dois lugares.
+
+1. **Contradição interna.** O rodapé diz "Inscrições para eventos de bem-estar, sem enrolação"
+   (mudou no C1, commit `bbae19c`) enquanto o H1 duas dobras acima diz "Ache sua próxima corrida".
+   A mesma página promete duas categorias diferentes.
+2. **Contradição com o catálogo.** Dos cinco eventos vigentes em produção agora, dois não são
+   corrida: `Desafio MTB Costa da Lagoa 2026` e `Retiro Bem-Estar Rio Vermelho 2026` (lidos do
+   HTML servido, ver R3). Quem chega pela promessa de corrida encontra um retiro na grade.
+
+### O que o documento entrega
+
+Inventário do texto vivo (10 superfícies com arquivo:linha), o critério de avaliação, **4
+direções** fechadas — cada uma com eyebrow, H1, subline, rótulos de nav/dobra/busca, estado vazio
+e um parágrafo de racional com o trade-off nomeado —, uma **recomendação única**, a tabela de
+rótulos de plataforma que valem em qualquer direção, e as 4 superfícies vizinhas escaladas do R1.
+
+As direções, pelo eixo em que se diferenciam: (1) troca só o substantivo da categoria; (2)
+enumeração no H1 com guarda-chuva na plataforma; (3) benefício antes da categoria; (4) hub
+declarado. A 4 é a que fala a linguagem exata do verbatim do dono e é a que **não** recomendei
+hoje, com o motivo escrito: "num lugar só" é promessa de inventário, e o inventário são cinco
+eventos de uma cidade. Ela fica no documento esperando o catálogo que a sustente.
+
+**Recomendação: direção 2 no hero + vocabulário da direção 1 no resto da plataforma.** A dobra de
+cima é onde reconhecimento vale mais que coerência de marca; a navegação é onde a categoria se
+define. A migração futura para a direção 4 troca só o H1, porque o resto do vocabulário já estará
+no lugar.
+
+### Achado de a11y que saiu de brinde
+
+`GaleriaSection.tsx:21,26,31` — os três `alt` da galeria descrevem corrida de rua ("Grupo de
+corredores na largada", "Corredora comemorando a chegada da prova"), e a galeria é servida a
+**qualquer** evento. Um leitor de tela hoje anuncia corredores na página de um retiro de
+bem-estar. É defeito de acessibilidade antes de ser de vocabulário, e é o item da lista de
+vizinhas que eu trataria primeiro.
