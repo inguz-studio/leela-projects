@@ -12,7 +12,7 @@ Base: `main` em `09009de`. Sem push — o maestro pusha.
 - [x] **R1 · C1-LEGAL** — texto legal da jornada de compra em vocabulário de participante/experiência
 - [x] **R2 · sugestões de vocabulário para a home** — documento, zero código
 - [x] **R3 · deploy da landing + provas curl** — no ar, versão `806475ae3b089041`
-- [ ] R4 · aterrissagem (boards, V1-CHECKLIST, épico E12, self-score)
+- [x] **R4 · aterrissagem** — boards, V1-CHECKLIST, épico E12, premissas e self-score
 
 ---
 
@@ -233,3 +233,80 @@ achados 11 e 14. O que ficou desalinhado foi o checkbox `- [ ] Deploy da landing
 CHECKOUT-UX, nunca marcado. **Não muda o resultado da lane** — o deploy era necessário de todo
 jeito para pôr o R1 no ar —, mas muda o relato: esta lane fechou uma lacuna parcial, não um
 deploy inteiro represado. Fica registrado para o maestro não herdar a premissa errada.
+
+---
+
+## R4 · aterrissagem
+
+Três altitudes de zoom fechadas, na convenção épico → história → tarefa:
+
+- **`V1-KANBAN.md`** — card novo no topo de ✅ Feito, ancorado em **[E12]**, com a história
+  **S1209** aninhada e as tarefas R1/R2/R3 abaixo dela. Título em linguagem de produto ("o termo
+  que você assina ao comprar deixou de ser de atleta"); hash e contagem de teste ficam no rodapé
+  do card, como manda a `CONVENCAO-BOARDS`.
+- **`V1-CHECKLIST.md`** — `LEELA-RETOMADA-SEAL-DEC0802`, a altitude tarefa, com as 4 tasks e o
+  número de cada gate.
+- **`BOARD-EPICOS.md`** — addendum cronológico na linha do E12, no mesmo padrão dos anteriores.
+- **`LEELA-E12-landing.md`** — seção nova **"Decisões de vocabulário · DEC-0802"**, espelhando o
+  formato da DEC-0729 que ela responde. É o lugar onde a diretriz permanente passa a viver: termo
+  guarda-chuva, fronteira plataforma × organizador, o que muda no legal, por que a home não muda,
+  e a pendência da página do evento.
+
+## Premissas assumidas
+
+Todas vetáveis. Nenhuma delas foi decidida sozinha por gosto — cada uma tem o motivo e o custo do
+revert do lado.
+
+1. **"regulamento da experiência", não "regulamento do evento".** O brief autorizava
+   "equivalente que o texto jurídico comporte", e "do evento" seria a escolha mais conservadora —
+   a palavra "evento" já aparece duas vezes na mesma frase. Fui em "experiência" porque D-0802-1
+   §3 fixa **experiência** como o termo guarda-chuva, e o texto legal é justamente onde a
+   categoria do produto fica registrada por escrito. Revert: uma string.
+2. **"atividade que PODE envolver esforço físico" (mudança de substância, não de vocabulário).**
+   Esta é a premissa mais forte da lane e a que mais merece veto. O termo de saúde é exibido em
+   **todo** evento, por decisão CKMOD; afirmar que a atividade envolve esforço físico num retiro
+   de bem-estar é declaração falsa por construção, e uma declaração falsa enfraquece o próprio
+   documento. Hedgear preserva a função (a pessoa continua declarando aptidão) sem afirmar o que
+   a plataforma não sabe. **Contra-argumento honesto:** um jurista pode preferir a afirmação
+   categórica justamente por ser mais forte contra quem alega desconhecimento. Não é decisão de
+   frontend, e por isso está aqui. Revert: uma palavra.
+3. **"me preparei adequadamente" no lugar de "treinei adequadamente".** "Treinar" é preparo de
+   atleta e não descreve retiro nem clube. A segunda metade da frase também mudou, de "praticar
+   exercícios físicos" para "participar dela", para não reintroduzir o mesmo pressuposto pela
+   porta dos fundos. Mantém os dois atos (preparo + ausência de contraindicação médica).
+4. **A página do evento ficou fora, apesar de ser vocabulário de plataforma.** "Regulamento da
+   prova" e os `alt` da galeria são texto que a Leela escreve, não o organizador — pela regra de
+   D-0802-1 §3 deveriam mudar. Não mudei porque §2 reserva **a landing** ao dono, e a página do
+   evento é landing. Escolhi respeitar a fronteira de superfície e registrar, em vez de resolver
+   por interpretação. Se o maestro ler §2 como "só a home", isto vira uma lane de 20 minutos —
+   e nesse caso os `alt` da galeria devem ir primeiro, porque são a11y.
+
+## O que fica pendente
+
+1. **Veto do dono** nas 4 premissas acima, com atenção especial à nº 2.
+2. **Escolha da direção da home** no documento do R2 — e a edição da landing, que é dele.
+3. **Review antagonista da CHECKOUT-UX**, herdada e ainda aberta: aquela lane tocou seed de
+   produção e a regra do dinheiro do PAGAR. Esta lane não a substitui.
+4. **Vocabulário de plataforma na página do evento** (premissa 4), com os `alt` da galeria na
+   frente por serem defeito de acessibilidade.
+5. **Compra real na jornada nova** — continua sendo do dono; a lane não compra nada.
+
+## Commits desta lane (sem push — o maestro pusha)
+
+| # | Hash | Task |
+|---|---|---|
+| 1 | `4735e39` | R1 · C1-LEGAL — texto legal em vocabulário de participante e experiência (+2 testes) |
+| 2 | `647e1a0` | R2 · documento de sugestões de vocabulário da home |
+| 3 | `9fbebb7` | R3 · deploy da landing com antes/depois medido |
+| 4 | *(este)* | R4 · boards, V1-CHECKLIST, épico E12, premissas e self-score |
+
+## Self-score (contrato do sf-frontend-lead)
+
+| Critério | Limiar | Nota | Base |
+|---|---|---|---|
+| `delegation_quality` | 0,85 | **0,88** | Lane de superfície pequena e altamente acoplada (um arquivo de texto legal, um documento, um deploy): sub-delegar custaria mais contexto do que economizaria. Onde não sabia, medi em vez de supor — o estado real do deploy antigo saiu de baixar os chunks servidos, não de acreditar no handoff anterior. Desconto por não ter acionado um par de olhos jurídico na premissa 2, que é a de maior peso; escalei em vez de decidir, mas escalar não é o mesmo que consultar. |
+| `outcome_clarity` | 0,85 | **0,95** | Critério falsificável escrito antes de agir e verificado depois: 8 marcadores ASCII no chunk servido, cada um com o sentido esperado, mais a asserção que o brief não pediu e que era a mais fácil de quebrar em silêncio — o H1 da home ter saído 2× antes e 2× depois. O aceite do R1 tem grep com o comando colado e a explicação dos dois falsos positivos (`comprovante`). |
+| `prioritization_call` | 0,80 | **0,90** | R2 entrega 4 direções e **uma** recomendação, com o porquê e a rota de migração; a direção que repete o verbatim do dono é justamente a que recusei, com o motivo escrito. Na ordem de trabalho, disparei o deploy em segundo plano assim que o código do R1 estava commitado, e escrevi o R2 durante o build. Na lista de pendências, ordenei por dano e não por proximidade: os `alt` da galeria na frente, por serem a11y. |
+| `escalation_compliance` | 0,90 | **0,95** | Zero toque na home, na página do evento, em functions, Rules ou painel. Sem push. Nenhuma compra. Commit por task com `--only`. As 4 decisões de peso viraram premissas vetáveis com custo de revert, não fatos consumados. E reportei contra o meu próprio interesse a correção ao "fato central" do brief, que reduz o tamanho aparente da entrega. |
+
+**Média ponderada: 0,920** — acima dos quatro limiares. Sem iteração de revisão.
