@@ -11,7 +11,7 @@ Base: `main` em `09009de`. Sem push — o maestro pusha.
 
 - [x] **R1 · C1-LEGAL** — texto legal da jornada de compra em vocabulário de participante/experiência
 - [x] **R2 · sugestões de vocabulário para a home** — documento, zero código
-- [ ] R3 · deploy da landing + provas curl
+- [x] **R3 · deploy da landing + provas curl** — no ar, versão `806475ae3b089041`
 - [ ] R4 · aterrissagem (boards, V1-CHECKLIST, épico E12, self-score)
 
 ---
@@ -137,3 +137,99 @@ corredores na largada", "Corredora comemorando a chegada da prova"), e a galeria
 **qualquer** evento. Um leitor de tela hoje anuncia corredores na página de um retiro de
 bem-estar. É defeito de acessibilidade antes de ser de vocabulário, e é o item da lista de
 vizinhas que eu trataria primeiro.
+
+---
+
+## R3 · deploy da landing, com o antes e o depois medidos
+
+Receita da LANDING-PREVIEW, um comando: `node apps/landing/scripts/deploy-leela-hub.mjs`.
+
+| | |
+|---|---|
+| Início / fim (UTC) | `2026-08-02T23:27:49Z` → `2026-08-02T23:40:36Z` (12 min 47 s) |
+| Exit do script | **0** |
+| Versão do Hosting | `projects/leela-hub/sites/leela-landing/versions/**806475ae3b089041**` · `FINALIZED` |
+| Release | `2026-08-02T23:40:32.520Z` · tipo `DEPLOY` · canal **live**, sem expiração |
+| Backend SSR | `ssrleelalanding` (gen2, Node 22, us-central1) — *Successful update operation* |
+| Payload | 89 arquivos no Hosting, 5 novos; pacote da função 278,06 MB |
+
+`package.json` do app restaurado pelo `finally` do script (`git status` limpo, sem `.deploybak`).
+
+### Prova 1 — códigos HTTP (pós-deploy, 23:40:58 UTC)
+
+```
+200   7,62 s   45.710 B   https://leela-landing.web.app/
+200   2,01 s   78.613 B   https://leela-landing.web.app/meia-floripa-2026
+200   1,34 s   39.932 B   https://leela-landing.web.app/meia-floripa-2026/inscricao
+200   0,53 s        15 B  https://leela-landing.web.app/health        {"status":"ok"}
+200   0,35 s       191 B  https://leela-landing.web.app/robots.txt
+```
+
+Os 7,6 s da home são cold start de `minInstances: 0` — mesmo número medido na LANDING-PREVIEW,
+comportamento esperado, não regressão.
+
+### Prova 2 — a jornada nova está SERVIDA (marcador que não existia antes)
+
+O texto do C1-LEGAL vive no chunk da rota de inscrição, não no HTML da primeira etapa. Baixei o
+chunk **antes** do deploy (janela curta, durante o build) e **depois**, e comparei. O nome do
+arquivo é content-addressed, então a troca de hash já é prova de build novo:
+
+- antes: `_next/static/chunks/app/(public)/[eventSlug]/inscricao/page-**c291bcdf2315974f**.js`
+- depois: `_next/static/chunks/app/(public)/[eventSlug]/inscricao/page-**79adbd49c17b6407**.js`
+
+| Marcador (ASCII, para o grep não tropeçar em acento) | Antes | Depois |
+|---|---|---|
+| `regulamento da prova` | **1** | **0** |
+| `regulamento da experi`ência | 0 | **1** |
+| `todos os atletas deste pedido` | **1** | **0** |
+| `todos os participantes deste pedido` | 0 | **1** |
+| `outro atleta` | **1** | **0** |
+| `outro participante` | 0 | **1** |
+| `treinei adequadamente` | **1** | **0** |
+| `me preparei adequadamente` | 0 | **1** |
+
+Oito marcadores, quatro que tinham de sumir e quatro que tinham de nascer, todos no sentido
+certo. Nenhum deles existia no deploy antigo: essa é a condição que o brief pediu.
+
+### Prova 3 — o que a home ganhou, e o que ela NÃO podia ganhar
+
+| Marcador na home | Antes | Depois | Leitura |
+|---|---|---|---|
+| `max-w-6xl` | 2 | **0** | C2 (container único) entrou no ar |
+| `max-w-5xl` | 6 | **8** | header e rodapé convergiram para a largura canônica |
+| rodapé "eventos de bem-estar" | 0 | **2** | residual do C1 (`bbae19c`) entrou no ar |
+| rodapé "Inscrições para corridas de rua" | 2 | **0** | vocabulário antigo saiu |
+| H1 "Ache sua próxima corrida" | 2 | **2** | **inalterado de propósito** — D-0802-1 §2 |
+
+A última linha é a que mais importa nesta lane. A marca da home **não** se mexeu, e agora isso
+está medido, não prometido.
+
+Cinco eventos vigentes servidos pelo Firestore de produção: Corrida de Inverno Floripa 2026,
+Desafio MTB Costa da Lagoa 2026, Meia Maratona Floripa 2026, Noturna da Beira-Mar 2026, Retiro
+Bem-Estar Rio Vermelho 2026. Dois deles não são corrida — é o dado que sustenta o R2.
+
+### Prova 4 — painel intocado
+
+```
+https://leela-hub--preview-y4n0cxzj.web.app/   200   (canal de preview do painel)
+https://leela-hub.web.app/                     404   (live, 404 de propósito)
+```
+
+Sites de Hosting são superfícies independentes e `firebase.landing.json` só declara
+`site: leela-landing`. Os dois estados atravessaram a lane sem mudar.
+
+### Correção de fato ao brief (achado, com prova)
+
+O brief afirma que "o site no ar ainda serve a jornada de compra ANTIGA" e que "todas as
+melhorias A/B/C estão só no repo". **A medição do estado pré-deploy desmente isso em parte.** O
+chunk antigo já continha `Adicionar participante` e `Alterar modalidade` e já **não** continha
+`Ir para pagamento` — ou seja, a fase B e o C1 do checkout **já estavam no ar** antes desta lane.
+O que faltava era um conjunto menor e bem definido: C2 (o header ainda em `max-w-6xl`), o
+residual do rodapé (`bbae19c`) e o texto legal (que só nasceu hoje, no R1).
+
+Onde isso já estava escrito: o card do V1-KANBAN da CHECKOUT-UX diz "deploy `leela-landing.web.app`
+provado por curl", e o comentário de `PublicFooter.tsx` fala em "varredura **pós-deploy**" para os
+achados 11 e 14. O que ficou desalinhado foi o checkbox `- [ ] Deploy da landing` do handoff da
+CHECKOUT-UX, nunca marcado. **Não muda o resultado da lane** — o deploy era necessário de todo
+jeito para pôr o R1 no ar —, mas muda o relato: esta lane fechou uma lacuna parcial, não um
+deploy inteiro represado. Fica registrado para o maestro não herdar a premissa errada.
