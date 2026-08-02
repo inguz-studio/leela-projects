@@ -577,6 +577,15 @@ export function CheckoutFlow({
     // tela ficaria com "Calculando total" para sempre numa cotação que foi
     // cancelada e nunca precisou ser refeita.
     if (assinaturaCotadaRef.current === assinaturaAtual) {
+      // CKUX-REV · o número de sequência sobe TAMBÉM aqui. Sem isto, a
+      // cotação da seleção ABANDONADA continua valendo enquanto está no ar:
+      // trocar PIX→cartão (a chamada sai), voltar a PIX (este ramo) e a
+      // resposta do cartão aterrissar depois deixava a tela com o total do
+      // cartão sobre uma seleção PIX — e o botão de pagar exibindo um valor
+      // que não é o que seria cobrado. Voltar à seleção já cotada é
+      // exatamente o momento de invalidar o que está em voo: o `cotacao` que
+      // a tela já tem É a resposta certa para esta assinatura.
+      cotacaoSeqRef.current++;
       setCotando(false);
       return;
     }
