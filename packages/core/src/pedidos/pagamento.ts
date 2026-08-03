@@ -18,9 +18,15 @@
 //
 // Gateway decidido = Asaas (D2, 2026-07-10) — enum canônico com 1 valor;
 // a integração real fica em functions/src/payments (fora desta task).
-// Parcelamento: juros 3,49% a.m. tabela Price REPASSADOS AO COMPRADOR
-// (decisão 2026-07-05) — por isso `cartao.valorTotalComJuros` ≥ `valorFinal`
-// ("à vista p/ organizador · parcelado p/ atleta").
+// Parcelamento: juros tabela Price REPASSADOS AO COMPRADOR, com a taxa vinda
+// do TERMO do tenant (`installmentRules.jurosAoMes` — nunca constante daqui) —
+// por isso `cartao.valorTotalComJuros` ≥ `valorFinal` ("à vista p/ organizador
+// · parcelado p/ participante").
+// S314-T2 (RN-436 · D-ACH-8): a decisão de 2026-07-05 fixava 3,49% a.m. neste
+// comentário; o veto do dono em 2026-08-02 SUPERSEDE o número por 2,89% a.m.
+// e ele passou a viver só no dado (`DEFAULT_COMMERCIAL_TERMS`/termo do tenant).
+// Documentação que contradiz a regra vigente é a próxima armadilha de quem for
+// mexer nisto, então nenhum percentual volta a ser citado aqui.
 // Taxa de serviço: percentual pura OU percentual + fixo por tenant (decisão
 // 2026-07-05) — `taxaPct`/`taxaFixa` opcionais + `taxaValor` total em R$.
 //

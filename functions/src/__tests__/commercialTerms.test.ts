@@ -11,6 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  buildInstallmentOptions,
   DEFAULT_COMMERCIAL_TERMS,
   validateCommercialTerms,
   isValidTermsVersionBump,
@@ -33,6 +34,28 @@ describe('validateCommercialTerms — ranges (RN-404/405/410)', () => {
     // Canônico Castelo Produções: 10,5% + SaaS 0 (produtor-sócio)
     expect(DEFAULT_COMMERCIAL_TERMS.platformFeePct).toBe(10.5);
     expect(DEFAULT_COMMERCIAL_TERMS.saasMonthlyFee).toBe(0);
+  });
+
+  // S314-T2 · RN-436 · D-ACH-8 — reprova a versão anterior (jurosAoMes 0) e a
+  // decisão de 2026-07-05 (3,49%), que o veto do dono em 2026-08-02 superseda.
+  it('o termo canônico traz 2,89% a.m. de juros — o motor deixou de estar desligado', () => {
+    expect(DEFAULT_COMMERCIAL_TERMS.installmentRules.jurosAoMes).toBe(2.89);
+    expect(DEFAULT_COMMERCIAL_TERMS.installmentRules.jurosAoMes).not.toBe(0);
+    expect(DEFAULT_COMMERCIAL_TERMS.installmentRules.jurosAoMes).not.toBe(3.49);
+    // O número é DADO: quem for vetá-lo troca este valor e nada mais.
+    expect(DEFAULT_COMMERCIAL_TERMS.installmentRules.maxParcelas).toBe(12);
+    expect(DEFAULT_COMMERCIAL_TERMS.installmentRules.parcelaMinima).toBe(10);
+  });
+
+  it('com o termo canônico, 12x de R$ 300 sai pela tabela Price', () => {
+    const opcoes = buildInstallmentOptions(300, DEFAULT_COMMERCIAL_TERMS.installmentRules);
+    // 1x nunca tem juros; 12x é Price sobre 2,89% a.m. (S314-T1).
+    expect(opcoes[0]).toEqual({ parcelas: 1, valorParcela: 300, valorTotal: 300 });
+    expect(opcoes.find((o) => o.parcelas === 12)).toEqual({
+      parcelas: 12,
+      valorParcela: 29.94,
+      valorTotal: 359.28,
+    });
   });
 
   it('platformFeePct nas bordas 0 e 100 é aceito', () => {

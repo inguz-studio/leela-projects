@@ -31,7 +31,13 @@
 
 import * as admin from 'firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
-import { montarItensDoPedido, roundMoney, type ItemPedido } from '@leela/core';
+import {
+  buildInstallmentOptions,
+  DEFAULT_COMMERCIAL_TERMS,
+  montarItensDoPedido,
+  roundMoney,
+  type ItemPedido,
+} from '@leela/core';
 import {
   GENEROS_INSCRITO,
   type DadosPessoaisInscrito,
@@ -47,8 +53,13 @@ import { gerarInscritosSeed, type InscritoSeed } from './inscritos.seed';
 /** Valor unitário da inscrição no lote vigente (slide-in S203: "R$ + Lote") */
 export const VALOR_INSCRICAO_MEIA = 189.0;
 export const LOTE_NOME_MEIA = 'Lote 2 — Regular';
-/** Juros a.m. repassados ao comprador (decisão 2026-07-05) */
-const JUROS_AM_PCT = 3.49;
+/**
+ * Juros a.m. repassados ao comprador. S314-T2 (RN-436 · D-ACH-8): o veto do
+ * dono em 2026-08-02 SUPERSEDE os 3,49% da decisão de 2026-07-05. O número
+ * não é escolha deste arquivo — ele espelha o termo canônico, para que o seed
+ * e a cotação nunca contem histórias diferentes sobre o mesmo pedido.
+ */
+const JUROS_AM_PCT = DEFAULT_COMMERCIAL_TERMS.installmentRules.jurosAoMes;
 /** Taxa Be Hero do seed (% sobre o valor final) — premissa de preview */
 const TAXA_BE_HERO_PCT = 8;
 /** Evento 2026-04-27 (eventos.seed) → repasse D+5 = 2026-05-02 (premissa) */
@@ -235,16 +246,33 @@ function gerarTamanhos(inscrito: InscritoSeed, i: number): Record<string, string
   return { [ITEM_TAMANHADO_ID]: TAMANHOS_CICLO[i % TAMANHOS_CICLO.length] as string };
 }
 
-/** Parcelamento coerente com as invariantes de parsePagamento (juros Price) */
+/**
+ * Parcelamento coerente com as invariantes de `parsePagamento`.
+ *
+ * S314-T2: este helper REIMPLEMENTAVA a fórmula (`valor × (1+i)^n`, parcela =
+ * total / n) — a mesma que a S314-T1 acabou de aposentar no core. Duas cópias
+ * da regra do dinheiro é como o seed passa a contar uma história diferente da
+ * cotação sobre o mesmo pedido. Agora ele CHAMA a fonte única.
+ */
 function parcelamento(valorFinal: number, parcelas: number, seq: number): CartaoSeed {
-  const fator = parcelas > 1 ? Math.pow(1 + JUROS_AM_PCT / 100, parcelas) : 1;
-  const valorTotalComJuros = roundMoney(valorFinal * fator);
+  const opcao = buildInstallmentOptions(valorFinal, {
+    maxParcelas: parcelas,
+    jurosAoMes: JUROS_AM_PCT,
+    // O seed precifica um pedido que JÁ existe: o corte por parcela mínima é
+    // regra de OFERTA e não pode reescrever histórico.
+    parcelaMinima: 0,
+  }).find((o) => o.parcelas === parcelas);
+  if (opcao === undefined) {
+    throw new Error(
+      `[seed] parcelamento: ${String(parcelas)}x indisponível para R$ ${String(valorFinal)}`
+    );
+  }
   return {
     bandeira: BANDEIRAS[seq % BANDEIRAS.length] as string,
     ultimos4: String(4_000 + seq * 97).slice(-4),
     parcelas,
-    valorParcela: roundMoney(valorTotalComJuros / parcelas),
-    valorTotalComJuros,
+    valorParcela: opcao.valorParcela,
+    valorTotalComJuros: opcao.valorTotal,
   };
 }
 

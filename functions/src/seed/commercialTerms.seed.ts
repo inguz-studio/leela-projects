@@ -5,8 +5,13 @@
 // NÃO executar em produção (guard idêntico ao de tenants.seed.ts — F5).
 //
 // Termo canônico — Castelo Produções (HANDOFF-05 / E04 / E09):
-//   platformFeePct 10,5% · até 12x sem juros · antecipação indisponível ·
+//   platformFeePct 10,5% · até 12x a 2,89% a.m. · antecipação indisponível ·
 //   comunidade off · saasMonthlyFee R$ 0 (produtor-sócio — RN-405).
+//
+// S314-T2 (RN-436 · D-ACH-8): o `jurosAoMes` do termo era 0 — o motor de
+// parcelamento existia e estava DESLIGADO. O dono pediu a simulação do painel
+// configurado em 2,89% a.m., e o número entra por aqui, como dado, herdado de
+// `DEFAULT_COMMERCIAL_TERMS`. Nenhum literal de percentual nasce no cálculo.
 //
 // Versionamento: grava `current` (versao 1) + snapshot imutável `v1`.
 // Idempotente: se `current` já existe, NÃO regrava (não infla versão).
@@ -73,7 +78,11 @@ export async function seedCommercialTerms(
   await batch.commit();
 
   console.log(
-    '[seed] commercialTerms: Castelo Produções — 10,5% · 12x sem juros · SaaS R$ 0 (versao 1)'
+    `[seed] commercialTerms: Castelo Produções — 10,5% · ${String(
+      DEFAULT_COMMERCIAL_TERMS.installmentRules.maxParcelas
+    )}x a ${String(
+      DEFAULT_COMMERCIAL_TERMS.installmentRules.jurosAoMes
+    )}% a.m. · SaaS R$ 0 (versao 1)`
   );
 }
 

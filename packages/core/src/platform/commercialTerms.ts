@@ -178,17 +178,35 @@ export type CommercialTermsInput = Omit<
 
 /**
  * Termo canônico da V1 (mock Castelo Produções — HANDOFF-05 / E04 / E09):
- * 10,5% de taxa, até 12x sem juros, antecipação indisponível, comunidade
- * desabilitada, SaaS R$ 0 (produtor-sócio — RN-405).
+ * 10,5% de taxa, até 12x com juros de 2,89% a.m., antecipação indisponível,
+ * comunidade desabilitada, SaaS R$ 0 (produtor-sócio — RN-405).
  *
  * Usado como default seguro no provisionamento (S1601-T1) quando o admin
  * não informa termos iniciais.
+ *
+ * ── S314-T2 · por que 2,89 mora AQUI e não no cálculo (RN-436 · D-ACH-8) ───
+ *
+ * O dono pediu para simular o painel administrativo configurado em 2,89% a.m.
+ * O número entra como DADO do termo — que é onde ele já morava, editável em
+ * `TermsEditor` — e nenhuma linha de cálculo ganha um literal. Isso importa
+ * duas vezes: quando o dono vetar o número, a mudança é de dado; e quando a
+ * tabela real negociada por organizador nascer (épico futuro), ela substitui
+ * um valor, não uma constante espalhada.
+ *
+ * O 0 anterior não era "sem juros por decisão": era o motor desligado. Com ele
+ * ligado, a diferença entre o composto do prazo inteiro e a tabela Price passa
+ * a valer dinheiro — ver `buildInstallmentOptions` (S314-T1).
+ *
+ * SUPERSEDE os 3,49% a.m. documentados na decisão de 2026-07-05 (registrada em
+ * `pedidos/pagamento.ts` e no seed de pedidos). Os dois comentários foram
+ * corrigidos na mesma aterrissagem: documentação que contradiz a regra vigente
+ * é a próxima armadilha de quem for mexer nisso.
  */
 export const DEFAULT_COMMERCIAL_TERMS: CommercialTermsInput = {
   platformFeePct: 10.5,
   installmentRules: {
     maxParcelas: 12,
-    jurosAoMes: 0,
+    jurosAoMes: 2.89,
     parcelaMinima: 10,
   },
   anticipation: { disponivel: false },
