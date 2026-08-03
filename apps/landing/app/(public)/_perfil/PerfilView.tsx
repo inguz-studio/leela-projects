@@ -15,12 +15,21 @@
 //   - Clubs: cards (RN-165); Feed: EmptyState (Onda 4 — RN-163);
 //   - compartilhar: ShareBlock reusado.
 //
+// S1707-T3 (RN-443): as três seções que se empilhavam viraram as abas Feed ·
+// Eventos · Clubs, num menu secundário logo abaixo da identidade. Elas seguem
+// RENDERIZADAS AQUI, no servidor, e entram no `Tabs` do design system como
+// conteúdo pronto — quem atravessa a fronteira de cliente é só a troca de aba
+// (`PerfilTabs`). A faixa de patrocinadores e o bloco de compartilhar ficam
+// FORA das abas: não são conteúdo do produtor, são moldura da página.
+//
 // Server Component: recebe a projeção já gateada pelo leitor (sem PII). O split
 // próximos/passados vem do leitor (`futuro`, relógio do servidor) — a view não
 // consulta relógio. Ícones Lucide são server-safe (SVG puro).
 // =============================================================================
 
-import { CalendarDays, Handshake, MapPin, Rss, Users } from 'lucide-react';
+// O `Rss` saiu com a S1707-T3: o título da aba Feed virou `sr-only` (quem
+// rotula na tela é a própria aba) e um ícone invisível não tem função.
+import { CalendarDays, Handshake, MapPin, Users } from 'lucide-react';
 // ADR-017: estático via subpath server-safe do DS (sem boundary de cliente).
 import { EmptyState } from '@leela/design-system/server';
 import { CoverImage } from '../../components/CoverImage';
@@ -29,6 +38,7 @@ import { formatarPreco } from '../../../lib/formato';
 import { rotuloEstadoVenda } from '../../../lib/estadoVenda';
 import { AVATAR_MOCK, mockLogoPara } from '../../../lib/mockImagem';
 import { IconeRede } from './IconesRede';
+import { PerfilTabs } from './PerfilTabs';
 import { inferirRede, nomeAcessivelDoLink } from './redes';
 import type {
   PerfilPublicoCompleto,
@@ -185,7 +195,16 @@ function FaixaPatrocinadores({
   );
 }
 
-/** Card de clube (aba Clubs — RN-165). */
+/**
+ * Card de clube (aba Clubs — RN-165).
+ *
+ * D-ACH-20: SEM afordância de clique enquanto não existir página pública de
+ * clube. Nada de `<a>`, de cursor de link, de realce de foco ou de elevação ao
+ * passar o ponteiro. Promover a lista a aba deixou estes cards mais visíveis, e
+ * visibilidade que promete um destino inexistente vira frustração. Quando a
+ * página de clube nascer, isto vira link numa linha — a regra existe para que
+ * ninguém o faça antes disso.
+ */
 function CardClube({ clube }: { clube: ClubeResumoPublico }): React.JSX.Element {
   return (
     <div className="overflow-hidden rounded-ds-lg border border-border-subtle bg-surface-raised">
@@ -207,6 +226,103 @@ function CardClube({ clube }: { clube: ClubeResumoPublico }): React.JSX.Element 
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Painel da aba Eventos (S1707-T3). Continua RENDERIZADO NO SERVIDOR: só
+ * atravessa a fronteira de cliente como conteúdo pronto.
+ *
+ * O título interno é "Próximos eventos", que não repete o nome da aba — ele
+ * nomeia a primeira das duas listas. As abas Feed e Clubs, cujo único título
+ * seria o próprio nome da aba, ficam com título `sr-only`: o leitor de tela e o
+ * buscador mantêm a estrutura do documento, e a tela não mostra o mesmo rótulo
+ * duas vezes coladas.
+ */
+function SecaoEventos({
+  futuros,
+  passados,
+}: {
+  futuros: EventoResumo[];
+  passados: EventoResumo[];
+}): React.JSX.Element {
+  return (
+    <section aria-labelledby="perfil-eventos">
+      <h2
+        id="perfil-eventos"
+        className="flex items-center gap-2 font-display text-xl font-bold text-text-primary"
+      >
+        <CalendarDays size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
+        Próximos eventos
+      </h2>
+      {futuros.length === 0 ? (
+        <div className="mt-5 rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+          <EmptyState
+            title="Nenhum evento à vista"
+            description="Quando este organizador publicar uma experiência, ela aparece aqui na linha do tempo."
+          />
+        </div>
+      ) : (
+        <TimelineEventos eventos={futuros} passado={false} />
+      )}
+
+      {passados.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-text-tertiary">
+            Já aconteceram
+          </h3>
+          <TimelineEventos eventos={passados} passado={true} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Painel da aba Clubs (S1707-T3 · RN-165). Cards sem clique — D-ACH-20. */
+function SecaoClubs({ clubes }: { clubes: ClubeResumoPublico[] }): React.JSX.Element {
+  return (
+    <section aria-labelledby="perfil-clubs">
+      <h2 id="perfil-clubs" className="sr-only">
+        Clubs
+      </h2>
+      {clubes.length === 0 ? (
+        <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+          <EmptyState
+            title="Nenhum club público"
+            description="Os clubs públicos deste organizador aparecem aqui."
+          />
+        </div>
+      ) : (
+        <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {clubes.map((clube) => (
+            <li key={clube.slug}>
+              <CardClube clube={clube} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Painel da aba Feed (S1707-T3 · RN-163). Leitura, sem publicação — a coleção
+ * de posts, suas Rules e sua escrita são épico futuro (D-ACH-21). Em produção
+ * o painel mostra estado vazio digno; o mock de preview entra na S1707-T4.
+ */
+function SecaoFeed(): React.JSX.Element {
+  return (
+    <section aria-labelledby="perfil-feed">
+      <h2 id="perfil-feed" className="sr-only">
+        Feed
+      </h2>
+      <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
+        <EmptyState
+          title="Ainda não há publicações"
+          description="As publicações deste perfil aparecem aqui."
+        />
+      </div>
+    </section>
   );
 }
 
@@ -299,82 +415,17 @@ export function PerfilView({
         </div>
       </section>
 
-      {/* ── Próximos eventos (timeline — padrão Luma) ───────────────────── */}
-      <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6" aria-labelledby="perfil-eventos">
-        <h2
-          id="perfil-eventos"
-          className="flex items-center gap-2 font-display text-xl font-bold text-text-primary"
-        >
-          <CalendarDays size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
-          Próximos eventos
-        </h2>
-        {futuros.length === 0 ? (
-          <div className="mt-5 rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
-            <EmptyState
-              title="Nenhum evento à vista"
-              description="Quando este organizador publicar uma corrida, ela aparece aqui na linha do tempo."
-            />
-          </div>
-        ) : (
-          <TimelineEventos eventos={futuros} passado={false} />
-        )}
-
-        {passados.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-text-tertiary">
-              Já aconteceram
-            </h3>
-            <TimelineEventos eventos={passados} passado={true} />
-          </div>
-        )}
-      </section>
+      {/* ── Menu secundário: Feed · Eventos · Clubs (S1707-T3 · RN-443) ─── */}
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <PerfilTabs
+          feed={<SecaoFeed />}
+          eventos={<SecaoEventos futuros={futuros} passados={passados} />}
+          clubs={<SecaoClubs clubes={clubes} />}
+        />
+      </div>
 
       {/* ── Patrocinadores (adendo Vitor — some quando vazio) ───────────── */}
       {patrocinadores.length > 0 && <FaixaPatrocinadores patrocinadores={patrocinadores} />}
-
-      {/* ── Clubs ───────────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-3xl px-4 pb-10 sm:px-6" aria-labelledby="perfil-clubs">
-        <h2
-          id="perfil-clubs"
-          className="mb-5 flex items-center gap-2 font-display text-xl font-bold text-text-primary"
-        >
-          <Users size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
-          Clubs
-        </h2>
-        {clubes.length === 0 ? (
-          <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
-            <EmptyState
-              title="Nenhum club público"
-              description="Os clubs públicos deste organizador aparecem aqui."
-            />
-          </div>
-        ) : (
-          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {clubes.map((clube) => (
-              <li key={clube.slug}>
-                <CardClube clube={clube} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ── Feed (Onda 4 — RN-163) ──────────────────────────────────────── */}
-      <section className="mx-auto max-w-3xl px-4 pb-10 sm:px-6" aria-labelledby="perfil-feed">
-        <h2
-          id="perfil-feed"
-          className="mb-5 flex items-center gap-2 font-display text-xl font-bold text-text-primary"
-        >
-          <Rss size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
-          Feed
-        </h2>
-        <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
-          <EmptyState
-            title="Ainda não há publicações"
-            description="As publicações deste perfil aparecem aqui."
-          />
-        </div>
-      </section>
 
       {/* ── Compartilhar (S1700-T3 — reusa ShareBlock E12) ──────────────── */}
       <section className="mx-auto max-w-3xl px-4 sm:px-6">

@@ -15,7 +15,7 @@ Gate de entrada medido antes de tocar em nada: tsc **0**, eslint **0**, suíte d
 
 - [x] **E1 · S1707-T1** — medir a consulta de eventos por tenant e status; índice só se reprovar
 - [x] **E2 · S1707-T2** — ícones de rede inferidos pelo endereço + os três SVGs que faltam
-- [ ] **E3 · S1707-T3** — menu secundário Feed · Eventos · Clubs com o `Tabs` do DS
+- [x] **E3 · S1707-T3** — menu secundário Feed · Eventos · Clubs com o `Tabs` do DS
 - [ ] **E4 · S1707-T4** — feed mockado e rotulado em preview, vazio digno em produção
 
 ---
@@ -164,3 +164,63 @@ exatamente o padrão que costuma reprovar ali.
 | `eslint app lib --max-warnings 0` | **0** |
 | Suíte da landing (processo único) | **402/402**, 35 arquivos (+26 no arquivo novo) |
 | Tokens do DS | zero hex, zero valor arbitrário — o `leela-tokens/no-hardcoded-tokens` roda em `apps/*/app/**` e passou |
+
+Commit: `f188f146`.
+
+---
+
+## E3 · as três seções empilhadas viraram abas
+
+Nenhum componente novo de design system. O `Tabs` já existia, já mantinha os painéis inativos no
+documento e já entregava a fiação de acessibilidade — o trabalho foi ligá-lo, não construí-lo.
+
+### A fronteira
+
+`PerfilView` continua Server Component puro. `app/(public)/_perfil/PerfilTabs.tsx` é a casca de
+cliente: recebe as três seções **já renderizadas no servidor** como props e as entrega ao `Tabs`. O
+que atravessa para o cliente é a troca de aba, e só ela. Mesmo padrão que o repositório já usa para
+o diálogo do regulamento.
+
+O `Tabs` entrou no boundary único `app/_ds/ds.ts`, junto dos outros componentes do DS — não ganhou
+import solto.
+
+### O que o teste segura
+
+`test/perfil-abas-s1707.test.tsx`, 9 casos. O que importa:
+
+- **As três seções ficam no documento com a aba fechada.** O teste conta três `role="tabpanel"` e
+  encontra o texto das três no `textContent` do container. É a asserção que reprova a troca de
+  `forceMount` por render condicional — que é o jeito "óbvio" de fazer abas e que esconderia os
+  eventos do produtor de quem chega por busca. Um link na bio existe exatamente para ser achado.
+- **A aba inicial é Eventos** (D-ACH-16), com `aria-selected` medido, não presumido.
+- **Setas e Home navegam.** O foco itinerante do Radix move o foco num `setTimeout`, então a
+  asserção espera; sem o `waitFor` o teste mediria o estado de antes da tecla e passaria por acaso.
+- **O card de clube não tem afordância de clique** (D-ACH-20): não é `<a>`, nenhum link da página
+  aponta para rota de clube, e as classes não têm `cursor-pointer`, `hover:` nem `focus-visible:`.
+  A regra estava só na spec; agora está no gate.
+
+### Duas decisões de detalhe
+
+**Títulos que repetiriam a aba viraram `sr-only`.** "Clubs" na aba e "Clubs" em `h2` logo abaixo é o
+mesmo rótulo duas vezes coladas. O título continua no documento (estrutura para leitor de tela e
+para buscador), só não na tela. A aba Eventos manteve o título visível "Próximos eventos", que não
+repete a aba: nomeia a primeira das duas listas, e a segunda é "Já aconteceram". O `Rss` saiu do
+import junto — ícone dentro de título invisível não tem função.
+
+**Patrocinadores e compartilhar ficaram FORA das abas.** Não são conteúdo do produtor, são moldura
+da página. A faixa de patrocinadores vem depois do bloco de abas e antes do compartilhar. Premissa
+vetável: mover a faixa para cima do menu empurraria as abas para longe da identidade, que é onde o
+dono pediu que elas ficassem.
+
+**Vocabulário D-0802-1 pago de passagem.** O estado vazio de eventos dizia "quando este organizador
+publicar uma **corrida**". Numa página de produtor de retiros, isso é a categoria errada. Virou
+"publicar uma **experiência**", e o teste reprova a volta da palavra.
+
+### Gate
+
+| | |
+|---|---|
+| `tsc --noEmit` (landing) | **0** |
+| `eslint app lib --max-warnings 0` | **0** |
+| Suíte da landing (processo único) | **411/411**, 36 arquivos (+9 no arquivo novo) |
+| `dist` do DS | já traz o `Tabs` restilizado — nenhum rebuild do pacote foi necessário |

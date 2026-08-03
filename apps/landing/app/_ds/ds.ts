@@ -47,10 +47,18 @@ export {
   useToast,
   // Estados de sistema (404/500 públicos) — LEELA-E07-web · S500-T3 / S502-T1.
   SystemStateScreen,
+  // Menu secundário da página do produtor (S1707-T3 · RN-443). O `Tabs` é
+  // Radix e é de CLIENTE — só a troca de aba. Os painéis continuam vindo
+  // renderizados do servidor e entram como `content`, então as três seções
+  // seguem no documento entregue (o `forceMount` do DS garante isso) e o
+  // conteúdo continua indexável e alcançável pela busca da página.
+  Tabs,
 } from '@leela/design-system';
 
 export type {
   SystemStateScreenProps,
   SystemStateAction,
   SystemStateVariant,
+  TabItem,
+  TabsProps,
 } from '@leela/design-system';
