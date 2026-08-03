@@ -202,6 +202,14 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
     fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
     fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
     fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+    // S1217-T1 · RN-438: os aceites passaram a fechar a etapa de
+    // INSCRIÇÃO e gateiam o "Continuar". Preencher os campos deixou de
+    // ser suficiente para avançar — este helper leva o fluxo até o PAGAR,
+    // então ele marca os dois. As asserções dos casos seguem intactas.
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: /termos da compra e a política de cancelamento/i }),
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: /boas condições de saúde/i }));
   }
 
   it('gênero escolhido sobe; gênero não escolhido NÃO vira "nao_informado" no caminho', async () => {
@@ -222,18 +230,11 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
       fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
     });
 
-    // Step 2 (PAGAR): resumo cotado + meio de pagamento + aceites, uma tela só
-    // desde a DEC-0729 (achados 3, 12 e 17).
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
-    });
-
-    // Os dois aceites destravam a geração automática do PIX.
-    const checks = screen.getAllByRole('checkbox');
-    await act(async () => {
-      for (const c of checks) fireEvent.click(c);
-    });
-
+    // Step 2 (PAGAR). S1217-T1 · RN-438: os aceites foram dados na etapa de
+    // inscrição, então a auto-geração do PIX (A-3) dispara na CHEGADA — não há
+    // mais um gesto humano nesta tela entre o pouso e a cobrança. Esse efeito
+    // é o que a D-ACH-12/RN-440 (task C2) vai desfazer tirando a pré-seleção
+    // do meio. Aqui o que importa é o payload, e ele já está no ar.
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
     });

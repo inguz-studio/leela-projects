@@ -130,6 +130,14 @@ function preencherDados(): void {
   fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
   fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
   fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+  // S1217-T1 · RN-438: os aceites passaram a fechar a etapa de
+  // INSCRIÇÃO e gateiam o "Continuar". Preencher os campos deixou de
+  // ser suficiente para avançar — este helper leva o fluxo até o PAGAR,
+  // então ele marca os dois. As asserções dos casos seguem intactas.
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: /termos da compra e a política de cancelamento/i }),
+  );
+  fireEvent.click(screen.getByRole('checkbox', { name: /boas condições de saúde/i }));
 }
 
 async function irAtePagar(): Promise<void> {
@@ -240,7 +248,8 @@ describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cob
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
     });
     await passarDebounce();
-    for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
+    // S1217-T1 · RN-438: os aceites deixaram de existir nesta etapa — eles são
+    // marcados na etapa de inscrição, dentro do `preencherDados`.
     const botaoPagar = (): HTMLButtonElement =>
       screen.getByRole('button', { name: /^pagar|processando|atualizando/i }) as HTMLButtonElement;
     expect(botaoPagar().textContent).toContain(brl(TOTAL_CARTAO));
@@ -259,10 +268,16 @@ describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cob
     const prometeuPrecoVelho = (botao.textContent ?? '').includes(brl(TOTAL_CARTAO));
     expect(prometeuPrecoVelho && !botao.disabled).toBe(false);
 
+    // S1217-T1 · RN-438: com os aceites dados na etapa anterior, a chegada ao
+    // PAGAR com PIX pré-selecionado já dispara a auto-geração (A-3) — é o
+    // efeito que a D-ACH-12/RN-440 (task C2) desfaz tirando a pré-seleção. A
+    // asserção passa a ser RELATIVA: o clique no botão de pagar defasado não
+    // acrescenta chamada nenhuma.
+    const antes = createInscricaoCharge.mock.calls.length;
     await act(async () => {
       fireEvent.click(botao);
     });
-    expect(createInscricaoCharge).not.toHaveBeenCalled();
+    expect(createInscricaoCharge.mock.calls.length).toBe(antes);
   });
 });
 
@@ -369,11 +384,18 @@ describe('CKUX-REV · B8 — CEP-first é fail-open: lookup fora não fecha o ca
       fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
       fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
       fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+      // S1217-T1 · RN-438: os aceites fecham a etapa de inscrição.
+      fireEvent.click(
+        screen.getByRole('checkbox', {
+          name: /termos da compra e a política de cancelamento/i,
+        }),
+      );
+      fireEvent.click(screen.getByRole('checkbox', { name: /boas condições de saúde/i }));
       await act(async () => {
         fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
       });
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+        expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
       });
     } finally {
       globalThis.fetch = fetchOriginal;

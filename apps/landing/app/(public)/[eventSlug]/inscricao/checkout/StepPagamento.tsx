@@ -3,9 +3,7 @@
 import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
-import type { PoliticaVendasPublica } from '@/lib/tipos';
 import type { FormaUI } from './tipos';
-import { AceitesCompra } from './AceitesCompra';
 import { PixCobranca, payloadPix } from './PixCobranca';
 import { ProcessandoPagamento } from './ProcessandoPagamento';
 
@@ -26,11 +24,12 @@ export interface CartaoForm {
  * Os campos de cartão são cosméticos no sandbox (o Mock não os processa) e NÃO
  * são enviados — sinalizado ao usuário.
  *
- * LEELA-CKFORM (spec §5.3): os DOIS aceites (termos da compra + termo de
- * saúde) gateiam o botão de pagar — sem os 2 checks, Gerar PIX/Pagar ficam
- * desabilitados (constraint, Norman princípio 3). A cobrança é criada JÁ com
- * os aceites no input (o servidor carimba versão+timestamp in-tx — CKMOD);
- * depois de criada, os checkboxes travam (prova registrada).
+ * S1217-T1 · RN-438 (supersede a CKFORM §5.3 de 2026-07-18): os DOIS aceites
+ * saíram desta etapa e passaram a fechar a etapa de INSCRIÇÃO, gateando o
+ * "Continuar". Aqui fica o que é de pagamento. O que NÃO mudou: a cobrança é
+ * criada já com os aceites no input, o servidor carimba versão + timestamp +
+ * hash dentro da transação (flip F-4a · CKMOD), e o botão de pagar continua
+ * desabilitado sem eles — a tela não oferece um ato que o servidor recusaria.
  */
 export function StepPagamento({
   forma,
@@ -43,14 +42,7 @@ export function StepPagamento({
   confirmando,
   erroConfirmar,
   onConfirmar,
-  politica,
-  termoSaudeVersao,
-  eventoNome,
-  organizadorNome,
-  aceiteTermos,
-  aceiteSaude,
-  onAceiteTermos,
-  onAceiteSaude,
+  aceitesOk,
   pixExpirado = false,
   pixVivoPeloServidor = false,
   pixDesvioRelogioMs = 0,
@@ -69,14 +61,13 @@ export function StepPagamento({
   confirmando: boolean;
   erroConfirmar: string | null;
   onConfirmar: () => void;
-  politica: PoliticaVendasPublica;
-  termoSaudeVersao: number;
-  eventoNome: string;
-  organizadorNome: string | null;
-  aceiteTermos: boolean;
-  aceiteSaude: boolean;
-  onAceiteTermos: (v: boolean) => void;
-  onAceiteSaude: (v: boolean) => void;
+  /**
+   * S1217-T1 · RN-438: os DOIS aceites já foram colhidos na etapa de
+   * inscrição, e esta etapa não os exibe mais. O booleano continua chegando
+   * porque o gate do botão de pagar é defesa em profundidade — o servidor
+   * recusa a cobrança sem aceite (flip F-4a) e a tela não oferece o ato.
+   */
+  aceitesOk: boolean;
   /** RN-157: cobrança PIX já expirada (timer zerou / servidor cancelou). */
   pixExpirado?: boolean;
   /** S1209-REV: o servidor RECUSOU a expiração — a cobrança segue viva. */
@@ -108,7 +99,6 @@ export function StepPagamento({
   totalDefasado?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
-  const aceitesOk = aceiteTermos && aceiteSaude;
   // DEC-0727 · a espera do gateway é UM estado com duas entradas: a chamada
   // ainda no ar (até 15s por chamada) e a chamada que estourou o teto. Os dois
   // falam a MESMA frase ao comprador — o que muda é o que vem depois dela.
@@ -118,21 +108,6 @@ export function StepPagamento({
   // qualquer alerta vermelho seria uma afirmação que ela não pode fazer.
   const mostrarErroCharge = erroCharge !== null && !processando;
   const mostrarErroConfirmar = erroConfirmar !== null && !processando;
-
-  const blocoAceites = (
-    <AceitesCompra
-      politica={politica}
-      termoSaudeVersao={termoSaudeVersao}
-      eventoNome={eventoNome}
-      organizadorNome={organizadorNome}
-      aceiteTermos={aceiteTermos}
-      aceiteSaude={aceiteSaude}
-      onAceiteTermos={onAceiteTermos}
-      onAceiteSaude={onAceiteSaude}
-      // Cobrança criada = prova de aceite já carimbada no servidor.
-      desabilitado={charge !== null}
-    />
-  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -151,7 +126,7 @@ export function StepPagamento({
                   </>
                 ) : (
                   <>
-                    Confirme os dois aceites abaixo para gerar o código PIX
+                    Volte à etapa de inscrição e confirme os aceites para gerar o código PIX
                     {totalLabel ? (
                       <>
                         {' '}
@@ -162,8 +137,6 @@ export function StepPagamento({
                   </>
                 )}
               </p>
-              {/* §5.3: aceites ACIMA do botão de pagar. */}
-              {blocoAceites}
               {/* Auto-gerado quando os aceites confirmam (A-3 + §5.3); o botão
                   fica como fallback se a geração automática falhar. */}
               <div>
@@ -194,9 +167,6 @@ export function StepPagamento({
                   </p>
                 }
               />
-              {/* Prova registrada com a cobrança — os checks ficam visíveis
-                  (e travados) enquanto a pessoa paga. */}
-              {blocoAceites}
               {/* Cobrança expirada não tem o que confirmar: o caminho é uma
                   cobrança nova (o botão vive dentro do bloco do PIX). */}
               {pixExpirado ? null : (
@@ -214,10 +184,8 @@ export function StepPagamento({
           <h2 className="text-lg font-semibold text-text-primary">Pagamento com cartão</h2>
           {/* D-0729-6: os campos do cartão são revelados dentro da própria
               opção "Cartão de crédito" (SeletorForma), no 1º clique — não
-              existe mais uma segunda tela para digitá-los. Aqui fica o que
-              pertence ao ATO de pagar: os aceites e o botão. */}
-          {/* §5.3: aceites ACIMA do botão de pagar. */}
-          {blocoAceites}
+              existe mais uma segunda tela para digitá-los. S1217-T1: os
+              aceites saíram daqui; o que resta é o ATO de pagar. */}
           <div>
             <Button
               onClick={onPagarCartao}

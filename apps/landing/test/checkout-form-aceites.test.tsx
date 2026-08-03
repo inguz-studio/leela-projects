@@ -1,18 +1,23 @@
 // =============================================================================
-// PROVA do lote CHECKOUT-FORM · T2 (trace leela-build-2d6ee98d) — os DOIS
-// aceites obrigatórios no StepPagamento (spec CHECKOUT-UX §5.3):
-//   - sem os 2 checks, Gerar PIX / Pagar ficam DESABILITADOS (constraint);
-//   - com os 2, destravam;
-//   - cada aceite abre o próprio modal (Dialog ADR-017, padrão
-//     RegulamentoModal) com o conteúdo da politicaVendas pública (a) e o
-//     termo de saúde do produto com a versão vigente (b);
-//   - cobrança criada ⇒ checkboxes travados (prova registrada no servidor).
+// PROVA dos DOIS aceites obrigatórios.
+//
+// Origem: lote CHECKOUT-FORM · T2 (spec CHECKOUT-UX §5.3), que os pôs no
+// StepPagamento. A S1217-T1 (RN-438) os MOVEU para a etapa de inscrição — o
+// veto do dono em 02/08 é explícito e vale para os dois. Este arquivo seguiu o
+// bloco: as asserções de conteúdo, modal e travamento passaram a mirar o
+// `AceitesCompra` diretamente, que é onde elas sempre pertenceram; o
+// StepPagamento fica com o que sobrou dele aqui — o gate do botão de pagar,
+// agora alimentado por um booleano que vem de fora.
+//
+// Nada de regra mudou: o servidor continua recusando a cobrança sem os dois
+// (flip F-4a) e o carimbo continua nascendo na transação da compra.
 // =============================================================================
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import { StepPagamento } from '../app/(public)/[eventSlug]/inscricao/checkout/StepPagamento';
+import { AceitesCompra } from '../app/(public)/[eventSlug]/inscricao/checkout/AceitesCompra';
 import { ToastProvider } from '../app/_ds/ds';
 
 afterEach(cleanup);
@@ -48,20 +53,30 @@ function charge(): CreateInscricaoChargeResult {
 
 function renderPagamento(over: Partial<Parameters<typeof StepPagamento>[0]> = {}): void {
   // S1209-T2: o bloco do PIX dispara o toast do auto-copy (RN-157) — o step
-  // declara dependência do ToastProvider do DS. Só o WRAPPER mudou aqui.
+  // declara dependência do ToastProvider do DS.
   render(
     <ToastProvider>
-    <StepPagamento
-      forma="pix"
-      total={5000}
-      charge={null}
-      criandoCharge={false}
-      erroCharge={null}
-      onGerarCobranca={noop}
-      onPagarCartao={noop}
-      confirmando={false}
-      erroConfirmar={null}
-      onConfirmar={noop}
+      <StepPagamento
+        forma="pix"
+        total={5000}
+        charge={null}
+        criandoCharge={false}
+        erroCharge={null}
+        onGerarCobranca={noop}
+        onPagarCartao={noop}
+        confirmando={false}
+        erroConfirmar={null}
+        onConfirmar={noop}
+        aceitesOk={false}
+        {...over}
+      />
+    </ToastProvider>,
+  );
+}
+
+function renderAceites(over: Partial<Parameters<typeof AceitesCompra>[0]> = {}): void {
+  render(
+    <AceitesCompra
       politica={politica}
       termoSaudeVersao={2}
       eventoNome="Corrida Teste"
@@ -71,54 +86,71 @@ function renderPagamento(over: Partial<Parameters<typeof StepPagamento>[0]> = {}
       onAceiteTermos={noop}
       onAceiteSaude={noop}
       {...over}
-    />
-    </ToastProvider>,
+    />,
   );
 }
 
-describe('StepPagamento — §5.3 · aceites gateiam o pagar', () => {
-  it('PIX sem os 2 aceites: "Gerar código PIX" desabilitado; com os 2, destrava', () => {
+describe('StepPagamento — RN-438 · o pagar continua gateado pelos aceites', () => {
+  it('PIX sem aceite: "Gerar código PIX" desabilitado; com aceite, destrava', () => {
     renderPagamento();
-    const gerar = screen.getByRole('button', { name: /gerar código pix/i });
-    expect((gerar as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement).disabled,
+    ).toBe(true);
 
     cleanup();
-    renderPagamento({ aceiteTermos: true, aceiteSaude: true });
-    const gerar2 = screen.getByRole('button', { name: /gerar código pix/i });
-    expect((gerar2 as HTMLButtonElement).disabled).toBe(false);
+    renderPagamento({ aceitesOk: true });
+    expect(
+      (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement).disabled,
+    ).toBe(false);
   });
 
-  it('apenas 1 dos 2 aceites NÃO destrava (os dois são obrigatórios juntos)', () => {
-    renderPagamento({ aceiteTermos: true, aceiteSaude: false });
-    const gerar = screen.getByRole('button', { name: /gerar código pix/i });
-    expect((gerar as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it('cartão sem aceites: "Pagar" desabilitado; com os 2, destrava', () => {
+  it('cartão sem aceite: "Pagar" desabilitado; com aceite, destrava', () => {
     renderPagamento({ forma: 'cartao_credito' });
-    const pagar = screen.getByRole('button', { name: /pagar/i });
-    expect((pagar as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /pagar/i }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
 
     cleanup();
-    renderPagamento({ forma: 'cartao_credito', aceiteTermos: true, aceiteSaude: true });
-    const pagar2 = screen.getByRole('button', { name: /^pagar/i });
-    expect((pagar2 as HTMLButtonElement).disabled).toBe(false);
+    renderPagamento({ forma: 'cartao_credito', aceitesOk: true });
+    expect((screen.getByRole('button', { name: /^pagar/i }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
   });
 
-  it('marcar um checkbox propaga o aceite (controlado pelo flow)', () => {
-    const onAceiteTermos = vi.fn();
-    renderPagamento({ onAceiteTermos });
-    const cb = screen.getByRole('checkbox', {
-      name: /termos da compra e a política de cancelamento/i,
-    });
-    fireEvent.click(cb);
-    expect(onAceiteTermos).toHaveBeenCalledWith(true);
+  it('S1217-T1: a etapa de pagamento NÃO exibe mais os checkboxes de aceite', () => {
+    renderPagamento({ aceitesOk: true });
+    expect(screen.queryAllByRole('checkbox').length).toBe(0);
+    expect(screen.queryByRole('button', { name: /ler os termos da compra/i })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /ler o termo de responsabilidade de saúde/i }),
+    ).toBeNull();
+  });
+
+  it('sem aceite, a tela aponta ONDE ele é dado — não deixa a pessoa no beco', () => {
+    renderPagamento();
+    expect(screen.getByText(/volte à etapa de inscrição e confirme os aceites/i)).toBeTruthy();
   });
 });
 
-describe('StepPagamento — §5.3 · modais dos termos (Dialog ADR-017)', () => {
+describe('AceitesCompra — §5.3 · os dois checkboxes e a propagação', () => {
+  it('marcar um checkbox propaga o aceite (controlado pelo flow)', () => {
+    const onAceiteTermos = vi.fn();
+    renderAceites({ onAceiteTermos });
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: /termos da compra e a política de cancelamento/i }),
+    );
+    expect(onAceiteTermos).toHaveBeenCalledWith(true);
+  });
+
+  it('são DOIS, e só dois', () => {
+    renderAceites();
+    expect(screen.getAllByRole('checkbox').length).toBe(2);
+  });
+});
+
+describe('AceitesCompra — §5.3 · modais dos termos (Dialog ADR-017)', () => {
   it('abre o modal dos termos com o conteúdo da politicaVendas pública + versão vigente', () => {
-    renderPagamento();
+    renderAceites();
     fireEvent.click(screen.getByRole('button', { name: /ler os termos da compra/i }));
     expect(screen.getByRole('dialog')).toBeTruthy();
     expect(
@@ -133,7 +165,7 @@ describe('StepPagamento — §5.3 · modais dos termos (Dialog ADR-017)', () => 
   });
 
   it('abre o modal do termo de saúde com o template do produto + versão vigente', () => {
-    renderPagamento();
+    renderAceites();
     fireEvent.click(
       screen.getByRole('button', { name: /ler o termo de responsabilidade de saúde/i }),
     );
@@ -155,9 +187,9 @@ describe('StepPagamento — §5.3 · modais dos termos (Dialog ADR-017)', () => 
 // nome dele continua saindo com "Corrida" no mesmo modal em que nenhuma
 // palavra da plataforma remete a corrida.
 // =============================================================================
-describe('StepPagamento — C1-LEGAL · vocabulário de participante no texto legal', () => {
+describe('AceitesCompra — C1-LEGAL · vocabulário de participante no texto legal', () => {
   it('termo de saúde: regulamento da experiência, participantes do pedido, zero "atleta"', () => {
-    renderPagamento();
+    renderAceites();
     fireEvent.click(
       screen.getByRole('button', { name: /ler o termo de responsabilidade de saúde/i }),
     );
@@ -178,7 +210,7 @@ describe('StepPagamento — C1-LEGAL · vocabulário de participante no texto le
   });
 
   it('termos da compra: transferência é para outro participante, não para outro atleta', () => {
-    renderPagamento();
+    renderAceites();
     fireEvent.click(screen.getByRole('button', { name: /ler os termos da compra/i }));
     const dialogo = screen.getByRole('dialog');
 
@@ -187,9 +219,12 @@ describe('StepPagamento — C1-LEGAL · vocabulário de participante no texto le
   });
 });
 
-describe('StepPagamento — §5.3 · prova registrada trava os checkboxes', () => {
+describe('AceitesCompra — §5.3/RN-438 · prova registrada trava os checkboxes', () => {
   it('com a cobrança criada, os 2 checkboxes ficam desabilitados', () => {
-    renderPagamento({ charge: charge(), aceiteTermos: true, aceiteSaude: true });
+    // O `desabilitado` é derivado de `charge !== null` no CheckoutFlow; aqui
+    // prova-se o efeito no bloco, onde quer que ele seja renderizado.
+    void charge();
+    renderAceites({ aceiteTermos: true, aceiteSaude: true, desabilitado: true });
     const cbs = screen.getAllByRole('checkbox');
     expect(cbs.length).toBe(2);
     for (const cb of cbs) {

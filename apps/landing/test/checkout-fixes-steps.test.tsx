@@ -153,14 +153,6 @@ function chargeFixture(over: Partial<CreateInscricaoChargeResult> = {}): CreateI
   };
 }
 
-/** Política pública mínima (defaults legais CDC — mesma shape do leitor). */
-const politicaFixture = {
-  versao: 1,
-  reembolso: { janelaArrependimentoDias: 7, corteHoras: 48, slaAnaliseDias: 3 },
-  transferencia: { habilitada: false, janelaHoras: 72, taxa: 0 },
-  trocaIngresso: { habilitada: false, janelaHoras: 48, permiteReembolsoDowngrade: false },
-};
-
 function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]> = {}): void {
   // S1209-T2: o bloco do PIX passou a disparar o toast do auto-copy (RN-157),
   // então o step declara dependência do ToastProvider do DS. Só o WRAPPER
@@ -178,14 +170,7 @@ function renderPagamento(overrides: Partial<Parameters<typeof StepPagamento>[0]>
       confirmando={false}
       erroConfirmar={null}
       onConfirmar={noop}
-      politica={politicaFixture}
-      termoSaudeVersao={1}
-      eventoNome="Corrida Teste"
-      organizadorNome={null}
-      aceiteTermos
-      aceiteSaude
-      onAceiteTermos={noop}
-      onAceiteSaude={noop}
+      aceitesOk
       {...overrides}
     />
     </ToastProvider>,

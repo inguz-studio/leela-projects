@@ -40,6 +40,7 @@ import {
   type ErrosResponsavel,
 } from './validacao';
 import type { CupomCampoProps } from './CupomCampo';
+import { AceitesCompra } from './AceitesCompra';
 import { StepDados } from './StepDados';
 import { StepModalidadeKit } from './StepModalidadeKit';
 import { StepResumo, type LinhaResumo } from './StepResumo';
@@ -258,12 +259,18 @@ export function CheckoutFlow({
   // significa "não consegui calcular o total") e ganha canal próprio.
   const [erroCupom, setErroCupom] = useState<string | null>(null);
 
-  // CKFORM §5.3 — os DOIS aceites do pagar (termos da compra + termo de
-  // saúde). Gateiam Gerar PIX/Pagar; entram no input do createInscricaoCharge
-  // como booleans (versão/timestamp/hash carimbados pelo servidor — CKMOD).
+  // S1217-T1 · RN-438 (supersede a CKFORM §5.3 de 2026-07-18) — os DOIS
+  // aceites saíram do PAGAR e passaram a fechar a etapa de INSCRIÇÃO: eles
+  // gateiam o "Continuar" do step 1, e chegar ao pagamento já significa aceite
+  // dado. Continuam entrando no input do `createInscricaoCharge` como
+  // booleans; versão, instante e hash seguem carimbados pelo SERVIDOR dentro
+  // da transação (CKMOD) — a coleta mudou de etapa, a prova não mudou de dono.
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [aceiteSaude, setAceiteSaude] = useState(false);
   const aceitesOk = aceiteTermos && aceiteSaude;
+  // Erro do gate: só aparece depois de a pessoa TENTAR avançar sem marcar —
+  // acusar antes da ação puniria quem ainda está preenchendo o formulário.
+  const [erroAceites, setErroAceites] = useState<string | null>(null);
 
   // Cobrança / confirmação
   const chaveRef = useRef<string | undefined>(undefined);
@@ -1127,13 +1134,30 @@ export function CheckoutFlow({
       setErrosResponsavel(eResp);
       setErrosInscritos(eIns);
       setErrosEndereco(eEnd);
+      // S1217-T1 · RN-438: os aceites gateiam o avanço junto com os campos.
+      // O erro é calculado sempre (não só quando o resto passa), senão a
+      // pessoa corrigiria o formulário e levaria um segundo "não" logo depois.
+      setErroAceites(
+        aceitesOk ? null : 'Confirme os dois aceites acima para continuar.',
+      );
       if (temErro(eResp) || eIns.some((e) => temErro(e)) || temErro(eEnd)) return;
+      if (!aceitesOk) return;
       setStep(2);
       return;
     }
     // Do step 2 não se "avança": paga-se. A ação de pagar vive no próprio
     // instrumento (Gerar código PIX / Pagar), com os aceites como gate.
-  }, [step, evento.kits, evento.itensTamanhados, responsavel, inscritos, euCorro, endereco, erroAuth]);
+  }, [
+    step,
+    evento.kits,
+    evento.itensTamanhados,
+    responsavel,
+    inscritos,
+    euCorro,
+    endereco,
+    erroAuth,
+    aceitesOk,
+  ]);
 
   const voltar = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
@@ -1303,6 +1327,36 @@ export function CheckoutFlow({
             errosResponsavel={errosResponsavel}
             errosInscritos={errosInscritos}
             errosEndereco={errosEndereco}
+            aceites={
+              <div className="flex flex-col gap-2">
+                <AceitesCompra
+                  politica={evento.politicaVendas}
+                  termoSaudeVersao={evento.termoSaudeVersao}
+                  eventoNome={evento.nome}
+                  organizadorNome={evento.organizador?.nome ?? null}
+                  aceiteTermos={aceiteTermos}
+                  aceiteSaude={aceiteSaude}
+                  onAceiteTermos={(v) => {
+                    setAceiteTermos(v);
+                    if (v) setErroAceites(null);
+                  }}
+                  onAceiteSaude={(v) => {
+                    setAceiteSaude(v);
+                    if (v) setErroAceites(null);
+                  }}
+                  // RN-438: prova já carimbada no servidor ⇒ o bloco fica
+                  // travado ONDE QUER QUE seja renderizado, inclusive quando o
+                  // comprador volta a esta etapa. A tela não pode sugerir que
+                  // um aceite registrado é reversível.
+                  desabilitado={charge !== null}
+                />
+                {erroAceites !== null ? (
+                  <p role="alert" className="text-sm text-feedback-danger-fg">
+                    {erroAceites}
+                  </p>
+                ) : null}
+              </div>
+            }
           />
         ) : null}
 
@@ -1346,14 +1400,7 @@ export function CheckoutFlow({
               onConfirmar={() => {
                 if (charge) void confirmar(charge.pedidoId);
               }}
-              politica={evento.politicaVendas}
-              termoSaudeVersao={evento.termoSaudeVersao}
-              eventoNome={evento.nome}
-              organizadorNome={evento.organizador?.nome ?? null}
-              aceiteTermos={aceiteTermos}
-              aceiteSaude={aceiteSaude}
-              onAceiteTermos={setAceiteTermos}
-              onAceiteSaude={setAceiteSaude}
+              aceitesOk={aceitesOk}
               pixExpirado={pixExpirado}
               pixVivoPeloServidor={pixContestado}
               pixDesvioRelogioMs={desvioRelogioMs}

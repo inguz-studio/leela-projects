@@ -171,6 +171,14 @@ function preencherDados(): void {
   fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
   fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
   fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+  // S1217-T1 · RN-438: os aceites passaram a fechar a etapa de
+  // INSCRIÇÃO e gateiam o "Continuar". Preencher os campos deixou de
+  // ser suficiente para avançar — este helper leva o fluxo até o PAGAR,
+  // então ele marca os dois. As asserções dos casos seguem intactas.
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: /termos da compra e a política de cancelamento/i }),
+  );
+  fireEvent.click(screen.getByRole('checkbox', { name: /boas condições de saúde/i }));
 }
 
 /** Leva o fluxo até o step 3 com os 2 aceites marcados (dispara o PIX). */
@@ -188,9 +196,8 @@ async function irAtePagamentoPix(): Promise<void> {
   await waitFor(() => {
     expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
   });
-  await act(async () => {
-    for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
-  });
+  // S1217-T1 · RN-438: os aceites deixaram de existir nesta etapa — eles são
+  // marcados na etapa de inscrição, dentro do `preencherDados`.
   await waitFor(() => {
     expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
   });

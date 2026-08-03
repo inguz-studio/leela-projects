@@ -118,6 +118,14 @@ function preencherDados(): void {
   fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
   fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
   fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+  // S1217-T1 · RN-438: os aceites passaram a fechar a etapa de
+  // INSCRIÇÃO e gateiam o "Continuar". Preencher os campos deixou de
+  // ser suficiente para avançar — este helper leva o fluxo até o PAGAR,
+  // então ele marca os dois. As asserções dos casos seguem intactas.
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: /termos da compra e a política de cancelamento/i }),
+  );
+  fireEvent.click(screen.getByRole('checkbox', { name: /boas condições de saúde/i }));
 }
 
 /** Leva o fluxo até o passo PAGAR (o único que existe depois dos dados). */
@@ -147,24 +155,58 @@ async function irAtePagar(): Promise<void> {
   });
 }
 
-describe('DEC-0729 · achado 3 — PAGAR é UMA tela: resumo, meio e aceites juntos', () => {
-  it('depois dos dados não existe mais "Ir para pagamento" — o aceite já está na mesma tela do meio de pagamento', async () => {
+// S1217-T1 · RN-438 supersede a parte "aceites" deste achado: eles saíram do
+// PAGAR e passaram a fechar a etapa de inscrição. O que a DEC-0729 conquistou e
+// continua de pé é a UNIFICAÇÃO de resumo e pagamento numa tela só — o clique
+// intermediário que o dono teve de dar não voltou.
+describe('DEC-0729 · achado 3 — PAGAR é UMA tela: resumo e meio de pagamento juntos', () => {
+  it('depois dos dados não existe mais "Ir para pagamento" — resumo e meio na mesma tela', async () => {
     await irAtePagar();
 
     // O clique intermediário que o dono precisava dar deixou de existir.
     expect(screen.queryByRole('button', { name: /ir para pagamento/i })).toBeNull();
 
-    // Resumo do pedido, escolha do meio e aceites coexistem.
+    // Resumo do pedido e escolha do meio coexistem.
     expect(screen.getByText(/seu pedido/i)).toBeTruthy();
     expect(screen.getByRole('radio', { name: /pix/i })).toBeTruthy();
-    expect(screen.getAllByRole('checkbox').length).toBeGreaterThanOrEqual(2);
+    // E os aceites NÃO estão mais aqui (RN-438).
+    expect(screen.queryAllByRole('checkbox').length).toBe(0);
   });
 
-  it('a regra do dinheiro NÃO afrouxou: sem os 2 aceites nenhuma cobrança nasce', async () => {
-    await irAtePagar();
-    expect((screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+  it('a regra do dinheiro NÃO afrouxou: sem os 2 aceites não se chega ao pagamento', async () => {
+    // Sem marcar os aceites, o "Continuar" da etapa de dados não avança — e a
+    // cobrança, que só nasce depois, nunca é pedida.
+    await act(async () => {
+      render(<CheckoutFlow evento={evento} atribuicao={{}} />);
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /5k/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    // Preenche os campos SEM tocar nos aceites.
+    fireEvent.change(screen.getAllByLabelText(/nome completo/i)[0]!, {
+      target: { value: 'Ana Corredora' },
+    });
+    fireEvent.change(screen.getAllByLabelText(/^e-mail/i)[0]!, {
+      target: { value: 'ana@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/telefone/i), { target: { value: '11988887777' } });
+    fireEvent.change(screen.getAllByLabelText(/^cpf/i)[0]!, {
+      target: { value: '529.982.247-25' },
+    });
+    fireEvent.change(screen.getAllByLabelText(/data de nascimento/i)[0]!, {
+      target: { value: '20/05/1990' },
+    });
+    fireEvent.change(screen.getByLabelText(/^cep/i), { target: { value: '01310100' } });
+    fireEvent.change(screen.getByLabelText(/logradouro/i), { target: { value: 'Av. Paulista' } });
+    fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
+    fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+
+    expect(screen.queryByText(/seu pedido/i)).toBeNull();
     expect(createInscricaoCharge).not.toHaveBeenCalled();
   });
 });

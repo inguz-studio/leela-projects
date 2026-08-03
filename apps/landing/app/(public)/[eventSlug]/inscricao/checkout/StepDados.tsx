@@ -323,6 +323,7 @@ export function StepDados({
   errosResponsavel,
   errosInscritos,
   errosEndereco,
+  aceites,
 }: {
   responsavelNome: string;
   responsavelEmail: string;
@@ -339,6 +340,12 @@ export function StepDados({
   errosResponsavel: ErrosResponsavel;
   errosInscritos: ErrosInscrito[];
   errosEndereco: ErrosEndereco;
+  /**
+   * S1217-T1 (RN-438): bloco de aceites renderizado ao FIM desta etapa. Sai do
+   * PAGAR e vem para cá — é aqui que as pessoas inscritas ficam identificadas
+   * com nome, CPF e nascimento, e é sobre elas que a declaração de saúde fala.
+   */
+  aceites?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-8">
@@ -503,6 +510,13 @@ export function StepDados({
       {/* CKFORM §5.1 item 3: endereço DEPOIS dos atletas — logística não
           compete com identificação. 1× por pedido (do responsável). */}
       <BlocoEndereco endereco={endereco} onEndereco={onEndereco} erros={errosEndereco} />
+
+      {/* S1217-T1 · RN-438 — os aceites fecham a etapa de INSCRIÇÃO. Slot em
+          vez de props porque o conteúdo é montado no `CheckoutFlow`, onde a
+          política, as versões e o travamento pela cobrança já moram: é o mesmo
+          arranjo do `conteudoCartao` do `SeletorForma`. Ausente = consumidor
+          que não colhe aceites (testes de outras frentes). */}
+      {aceites ?? null}
     </div>
   );
 }
