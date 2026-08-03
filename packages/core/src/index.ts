@@ -793,6 +793,29 @@ export {
 export type { ProvisionInput } from './platform/provisioning';
 export { validateProvisionInput, buildInitialTerms } from './platform/provisioning';
 
+// Convite de ORGANIZADOR para a plataforma (E16 · S1608 · RN-413/414/415).
+// Distinto do convite de atleta→clube (RN-101) e do convite por e-mail de
+// clube (S104): entidade, coleção e Rules próprias. Alfabeto compartilhado
+// com o RN-101 (constante única); tamanho 8 porque é porta de plataforma.
+export type {
+  StatusConviteOrganizador,
+  ConviteOrganizador,
+} from './platform/conviteOrganizador';
+export {
+  COLECAO_CONVITES_ORGANIZADOR,
+  ALFABETO_CODIGO_ORGANIZADOR,
+  TAMANHO_CODIGO_ORGANIZADOR,
+  LIMITE_RESGATE_CONVITE,
+  JANELA_RESGATE_CONVITE_MS,
+  ERRO_RESGATE_CONVITE,
+  NOTA_CONVITE_MAX,
+  normalizarCodigoOrganizador,
+  validarCodigoOrganizador,
+  gerarCodigoOrganizador,
+  conviteExpirado,
+  conviteResgatavel,
+} from './platform/conviteOrganizador';
+
 // Contrato de consumo dos termos — E04/E09 leem por aqui (E16-S1602-T3 · RN-406)
 export type { TermsProvider, TermsReader } from './platform/termsProvider';
 export {

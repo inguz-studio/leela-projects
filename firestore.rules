@@ -361,6 +361,78 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── `convitesOrganizador/{codigo}` — porta da PLATAFORMA ──────────────
+    // (E16 · S1608-T1 · RN-413/414). docId = o próprio código; uso único;
+    // validade opcional avaliada NO RESGATE contra o relógio do servidor.
+    //
+    // LEITURA: só platform_admin. O candidato NUNCA lê esta coleção — ler
+    // daria o dicionário inteiro de códigos válidos a qualquer conta logada
+    // (enumeração em uma query, sem sequer gastar o rate-limit do resgate).
+    // O caminho legítimo de quem tem um código é a callable
+    // `resgatarConviteOrganizador` (Admin SDK, bypassa Rules — RN-414).
+    //
+    // ESCRITA de cliente: só platform_admin, e só as DUAS transições que a
+    // tela do super-admin faz — GERAR (nasce `ativo`, sem carimbo de uso) e
+    // REVOGAR (`ativo → revogado`). Marcar `usado` é EXCLUSIVO da Function:
+    // se o cliente pudesse escrever `usado`/`usadoPor`/`tenantId`, um admin
+    // (ou um token dele) forjaria a prova de que um código gerou um tenant
+    // que nunca existiu — e a atomicidade do RN-414 viraria enfeite.
+    // Delete é negado: convite queimado é registro de auditoria de quem
+    // entrou na plataforma; some com o histórico de acesso do go-live.
+    match /convitesOrganizador/{codigo} {
+
+      /** Shape do convite — espelho das constantes do core (RN-413). */
+      function shapeConviteValido() {
+        return request.resource.data.codigo == codigo
+          && codigo.matches('^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$')
+          && request.resource.data.status in ['ativo', 'usado', 'revogado', 'expirado']
+          && request.resource.data.criadoPor is string
+          && (!('nota' in request.resource.data)
+              || (request.resource.data.nota is string
+                  && request.resource.data.nota.size() <= 200))
+          && (!('expiraEm' in request.resource.data)
+              || request.resource.data.expiraEm == null
+              || request.resource.data.expiraEm is timestamp);
+      }
+
+      /**
+       * Nasce ATIVO e sem carimbo algum de uso. Um convite criado já `usado`
+       * (ou com `tenantId` de brinde) seria uma linha de auditoria falsa no
+       * mesmo instante em que nasce.
+       */
+      function nasceAtivo() {
+        return request.resource.data.status == 'ativo'
+          && request.resource.data.criadoPor == request.auth.uid
+          && !('usadoPor' in request.resource.data)
+          && !('usadoEm' in request.resource.data)
+          && !('tenantId' in request.resource.data)
+          && !('revogadoPor' in request.resource.data)
+          && !('revogadoEm' in request.resource.data);
+      }
+
+      /**
+       * Única mutação de cliente: `ativo → revogado` (RN-413). Revogar não
+       * alcança código já `usado` — o tenant provisionado continua de pé, e
+       * reescrever o estado do código apagaria a prova de que ele foi usado.
+       * Identidade e autoria do convite são imutáveis aqui.
+       */
+      function apenasRevogacao() {
+        return resource.data.status == 'ativo'
+          && request.resource.data.status == 'revogado'
+          && request.resource.data.codigo == resource.data.codigo
+          && request.resource.data.criadoPor == resource.data.criadoPor
+          && request.resource.data.revogadoPor == request.auth.uid
+          && !('usadoPor' in request.resource.data)
+          && !('usadoEm' in request.resource.data)
+          && !('tenantId' in request.resource.data);
+      }
+
+      allow read: if isPlatformAdmin();
+      allow create: if isPlatformAdmin() && shapeConviteValido() && nasceAtivo();
+      allow update: if isPlatformAdmin() && shapeConviteValido() && apenasRevogacao();
+      allow delete: if false;
+    }
+
     // ── `planosCobranca/{planoId}` — planos de cobrança da PLATAFORMA ─────
     // (Onda 2 T2-L4 · CB-T1 · decisão #15). Catálogo PRIVADO do
     // platform_admin: read E write só dele — tenant NUNCA enxerga os

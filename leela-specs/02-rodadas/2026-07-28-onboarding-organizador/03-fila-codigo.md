@@ -44,6 +44,20 @@ data: 2026-07-28
 - **`PublicHeader` da landing** — a landing é Radix-free e tem gate de SEO/perf (S1200);
   o item 7 não adiciona dependência nova nem degrada CWV.
 
+## Tasks pagas (build `leela-build-2d6ee98d` · lane ONBOARD-BUILD)
+
+- [x] `S1608-T1` — modelo + core + Rules do convite
+- [ ] `S030-T1` + `S030-T2` — `/cadastrar` completo + doc `profissionais/{uid}`
+- [ ] `S1213-T1` — entrada do organizador na landing
+- [ ] `S1608-T2` — tela `/plataforma/convites`
+- [ ] `S1609-T1` — Function `resgatarConviteOrganizador`
+- [ ] `S1609-T2` — overlay bloqueante + CTA configurável
+- [ ] item 57 — roteamento pós-login por papel
+
+> `S030-T1` e `S030-T2` pagam num commit só: o doc do profissional é escrito
+> dentro do submit do `/cadastrar`, e separar produziria um commit intermediário
+> com o checkbox de LGPD carimbando lugar nenhum.
+
 ## Critério de pronto do pacote
 
 - [ ] conta sem código nunca alcança rota/dado de tenant — provado por Rules, não por tela
@@ -53,7 +67,7 @@ data: 2026-07-28
 - [ ] o erro de resgate nunca distingue inexistente × usado × revogado × expirado
 - [ ] 6ª tentativa na janela de uma hora é recusada (rate-limit provado por teste)
 - [ ] revogar código `ativo` funciona; revogar não desfaz tenant provisionado
-- [ ] cliente comum não lê nem escreve `convitesOrganizador` (ataque de Rules)
+- [x] cliente comum não lê nem escreve `convitesOrganizador` (ataque de Rules)
 - [ ] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
       no mailto oficial
 - [ ] consentimento LGPD carimbado com versão e instante; checkbox nasce desmarcado
