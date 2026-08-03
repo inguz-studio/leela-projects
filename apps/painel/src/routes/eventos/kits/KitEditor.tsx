@@ -21,19 +21,31 @@ import {
 } from '@leela/design-system';
 import {
   KIT_DESCRICAO_MAX,
+  KIT_FOTOS_SECUNDARIAS_MAX,
   KIT_ITEM_MAX,
   KIT_ITENS_MAX,
   MSG_PRECO_BLOQUEADO,
   precoBloqueado,
+  promoverFotoPrincipal,
+  removerFotoPrincipal,
   type Evento,
+  type GaleriaKit,
   type ItemKit,
   type Kit,
 } from '@leela/core';
-import { uploadImagemKit, type SalvarKitInput } from '@leela/api-client';
+import {
+  slotDeUploadFotoKit,
+  uploadImagemKit,
+  type SalvarKitInput,
+  type SlotFotoKit,
+} from '@leela/api-client';
 import { trilhaComNavSpa } from '../../../lib/navSpa';
 import type { ItemKitPayload } from './ItemKitModal';
 
 export type KitPayload = Omit<SalvarKitInput, 'tenantId'>;
+
+/** As três posições de foto, na ordem de exibição (S212-T2 · RN-425). */
+const SLOTS_POSICAO: readonly SlotFotoKit[] = [1, 2, 3];
 
 export interface KitEditorProps {
   evento: Evento;
@@ -77,10 +89,20 @@ export function KitEditor({
   const [descricao, setDescricao] = React.useState(kit?.descricao ?? '');
   const [itensKit, setItensKit] = React.useState<string[]>(kit?.itens ?? []);
   const [novoItem, setNovoItem] = React.useState('');
-  // `undefined` = campo não tocado (não mexe no doc no merge); `null` = imagem
-  // removida (limpa o campo); string = URL http(s) do upload (RN-227).
-  const [imagemUrl, setImagemUrl] = React.useState<string | null | undefined>(kit?.imagemUrl);
-  const [imgBusy, setImgBusy] = React.useState(false);
+  // GALERIA (S212-T2 · RN-425/427) — três posições: a 1 é a principal
+  // (`imagemUrl`, RN-227) e as outras duas são as secundárias. O estado tem a
+  // forma do core (`GaleriaKit`) de propósito: assim "tornar principal" é a
+  // função pura `promoverFotoPrincipal`, e não um rearranjo escrito à mão aqui
+  // — que é o único jeito de violar a forma da RN-425 por descuido.
+  const [galeria, setGaleria] = React.useState<GaleriaKit>(() => ({
+    ...(kit?.imagemUrl !== undefined ? { imagemUrl: kit.imagemUrl } : {}),
+    fotosSecundarias: kit?.fotosSecundarias ?? [],
+  }));
+  // A galeria inteira entra no payload só depois de tocada — `undefined` no
+  // merge significa "não mexe no doc", e é o que preserva o que o organizador
+  // já tinha. Um flag só para as duas posições, porque promover TROCA as duas.
+  const [galeriaTocada, setGaleriaTocada] = React.useState(false);
+  const [imgBusy, setImgBusy] = React.useState<SlotFotoKit | null>(null);
   const [imgErro, setImgErro] = React.useState<string | null>(null);
   const [itensSel, setItensSel] = React.useState<Set<string>>(
     () => new Set(kit ? itens.filter((i) => i.kits.includes(kit.id)).map((i) => i.id) : []),
@@ -120,30 +142,73 @@ export function KitEditor({
     setItensKit((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  // Upload 1:1 da imagem do kit (RN-227) — upload-only (sem URL colada, padrão
-  // R5): o seam valida tipo/tamanho + proporção 1:1 antes de subir e devolve a
-  // downloadURL, que vira `Kit.imagemUrl`. Path `eventos/{id}/kits/{kitId}`; para
-  // kit novo, o kitId é o slug do nome (mesmo id do save).
-  async function onImagemSelecionada(file: File): Promise<void> {
+  // As três posições, na ordem de exibição: principal primeiro. `null` = vaga
+  // livre. É esta lista que a UI desenha e que decide o slot do upload.
+  const posicoes: (string | null)[] = [
+    galeria.imagemUrl ?? null,
+    (galeria.fotosSecundarias ?? [])[0] ?? null,
+    (galeria.fotosSecundarias ?? [])[1] ?? null,
+  ];
+
+  /** Grava uma URL (ou a limpa) numa posição, preservando a forma da RN-425. */
+  function gravarNaPosicao(posicao: SlotFotoKit, url: string | null): void {
+    setGaleriaTocada(true);
+    setGaleria((atual) => {
+      if (posicao === 1) {
+        // Remover a PRINCIPAL promove a primeira secundária (RN-427) — o kit
+        // nunca fica com galeria e sem foto de listagem.
+        if (url === null) return removerFotoPrincipal(atual);
+        return { ...atual, imagemUrl: url };
+      }
+      const secundarias = [...(atual.fotosSecundarias ?? [])];
+      const idx = posicao - 2;
+      if (url === null) secundarias.splice(idx, 1);
+      else if (idx < secundarias.length) secundarias[idx] = url;
+      else secundarias.push(url);
+      return { ...atual, fotosSecundarias: secundarias.slice(0, KIT_FOTOS_SECUNDARIAS_MAX) };
+    });
+  }
+
+  // Upload 1:1 da foto do kit (RN-227/427) — upload-only (sem URL colada,
+  // padrão R5): o seam valida tipo/tamanho + proporção 1:1 antes de subir e
+  // devolve a downloadURL. Para kit novo, o kitId é o slug do nome (mesmo id do
+  // save).
+  //
+  // O SLOT não é a posição. "Tornar principal" troca as URLs no documento e não
+  // move byte nenhum no bucket, então depois de uma troca a posição 1 pode
+  // estar apontando para o objeto do slot 2 — e gravar ali por cima mataria a
+  // foto principal de uma tela que ninguém tocou. `slotDeUploadFotoKit`
+  // resolve: reenvia no objeto que a posição já usa (a propriedade
+  // "sobrescreve sem órfão" da RN-227) ou pega um slot que ninguém está usando.
+  async function onImagemSelecionada(posicao: SlotFotoKit, file: File): Promise<void> {
     const kitId = kit?.id ?? slugify(nome);
     if (kit === null && nome.trim().length === 0) {
       setImgErro('Informe o nome do kit antes de enviar a imagem.');
       return;
     }
-    setImgBusy(true);
+    setImgBusy(posicao);
     setImgErro(null);
     try {
-      const url = await uploadImagemKit(evento.id, kitId, file);
-      setImagemUrl(url);
-      toast({ title: 'Imagem do kit enviada', variant: 'success' });
+      const slot = slotDeUploadFotoKit(posicoes, posicao, evento.id, kitId);
+      const url = await uploadImagemKit(evento.id, kitId, file, slot);
+      gravarNaPosicao(posicao, url);
+      toast({ title: 'Foto do kit enviada', variant: 'success' });
     } catch (e) {
       setImgErro(e instanceof Error ? e.message : 'Falha ao enviar a imagem.');
     } finally {
-      setImgBusy(false);
+      setImgBusy(null);
     }
   }
-  function removerImagem(): void {
-    setImagemUrl(null);
+
+  function removerFoto(posicao: SlotFotoKit): void {
+    gravarNaPosicao(posicao, null);
+    setImgErro(null);
+  }
+
+  /** "Tornar principal" na posição 2 ou 3 — TROCA, nunca copia (RN-427). */
+  function tornarPrincipal(posicao: SlotFotoKit): void {
+    setGaleriaTocada(true);
+    setGaleria((atual) => promoverFotoPrincipal(atual, posicao - 2));
     setImgErro(null);
   }
 
@@ -172,7 +237,12 @@ export function KitEditor({
         descricao: descricao.trim().slice(0, KIT_DESCRICAO_MAX) || null,
         itens: itensKit,
       };
-      if (imagemUrl !== undefined) payload.imagemUrl = imagemUrl;
+      // Galeria: as DUAS posições viajam juntas, porque promover troca as duas.
+      // Sem toque nenhum, nenhuma das duas entra e o merge preserva o doc.
+      if (galeriaTocada) {
+        payload.imagemUrl = galeria.imagemUrl ?? null;
+        payload.fotosSecundarias = galeria.fotosSecundarias ?? [];
+      }
       await onSalvarKit(kitId, payload);
       // Sincroniza a pertinência N:N (RN-215): item.kits inclui/exclui este kit.
       await Promise.all(
@@ -334,42 +404,86 @@ export function KitEditor({
         )}
       </section>
 
-      {/* Imagem 1:1 do kit (RN-227) — upload-only (sem URL colada, padrão R5) */}
-      <section aria-label="Imagem do kit" className="flex flex-col gap-[var(--spacing-3)]">
+      {/* Galeria do kit (S212-T2 · RN-425/426/427) — três posições, upload-only
+          (sem URL colada, padrão R5). A posição 1 é a que aparece nas
+          listagens e no card; as outras duas só existem no detalhe do kit. */}
+      <section aria-label="Fotos do kit" className="flex flex-col gap-[var(--spacing-3)]">
         <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
-          Imagem do kit (quadrada 1:1)
+          Fotos do kit (quadradas 1:1 · até 3)
         </span>
-        <div className="flex items-start gap-[var(--spacing-4)]">
-          {imagemUrl !== null && imagemUrl !== undefined ? (
-            <img
-              src={imagemUrl}
-              alt={`Prévia da imagem do kit ${nome || ''}`.trim()}
-              className="aspect-square w-24 shrink-0 rounded-[var(--radius-md)] object-cover"
-            />
-          ) : (
-            <div
-              aria-hidden
-              className="flex aspect-square w-24 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-sunken)] text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]"
-            >
-              Sem imagem
-            </div>
-          )}
-          <div className="flex flex-col gap-[var(--spacing-2)]">
-            <FileInput
-              id="kit-imagem"
-              label="Enviar imagem (JPG, PNG, WebP, GIF ou AVIF · até 5MB)"
-              buttonLabel={imagemUrl ? 'Trocar imagem' : 'Escolher imagem'}
-              busy={imgBusy}
-              onFileSelected={(file) => void onImagemSelecionada(file)}
-              {...(imgErro ? { errorMessage: imgErro } : {})}
-              hint="A imagem deve ser quadrada (1:1). Aparece na página de vendas."
-            />
-            {imagemUrl !== null && imagemUrl !== undefined ? (
-              <Button variant="ghost" onClick={removerImagem} disabled={imgBusy}>
-                Remover imagem
-              </Button>
-            ) : null}
-          </div>
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">
+          A primeira é a principal: é ela que aparece na lista de kits e no card de
+          seleção. As outras duas aparecem só no detalhe do kit, como miniaturas.
+        </p>
+        <div className="grid grid-cols-1 gap-[var(--spacing-4)] sm:grid-cols-3">
+          {SLOTS_POSICAO.map((posicao) => {
+            const url = posicoes[posicao - 1] ?? null;
+            const principal = posicao === 1;
+            const rotulo = principal ? 'Foto principal' : `Foto ${posicao}`;
+            // A vaga 3 só abre depois da 2 — vaga vazia no meio produziria
+            // buraco na fita de miniaturas, e a ordem do array É a ordem de
+            // exibição (RN-425).
+            const bloqueada = url === null && posicao === 3 && posicoes[1] === null;
+            return (
+              <div
+                key={posicao}
+                className="flex flex-col gap-[var(--spacing-2)]"
+                data-posicao={posicao}
+              >
+                <span className="text-[length:var(--font-size-xs)] font-[var(--font-weight-semibold)] text-[var(--text-secondary)]">
+                  {rotulo}
+                </span>
+                {url !== null ? (
+                  <img
+                    src={url}
+                    alt={`Prévia da ${rotulo.toLowerCase()} do kit ${nome || ''}`.trim()}
+                    className="aspect-square w-full rounded-[var(--radius-md)] object-cover"
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    className="flex aspect-square w-full items-center justify-center rounded-[var(--radius-md)] bg-[var(--surface-sunken)] text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]"
+                  >
+                    {bloqueada ? 'Envie a foto 2 antes' : 'Sem foto'}
+                  </div>
+                )}
+                <FileInput
+                  id={`kit-foto-${posicao}`}
+                  label={`Enviar ${rotulo.toLowerCase()} (JPG, PNG, WebP, GIF ou AVIF · até 5MB)`}
+                  buttonLabel={url !== null ? 'Trocar foto' : 'Escolher foto'}
+                  busy={imgBusy === posicao}
+                  disabled={bloqueada}
+                  onFileSelected={(file) => void onImagemSelecionada(posicao, file)}
+                  {...(imgErro !== null && imgBusy === null && posicao === 1
+                    ? { errorMessage: imgErro }
+                    : {})}
+                  {...(principal
+                    ? { hint: 'Quadrada (1:1). Aparece na página de vendas.' }
+                    : {})}
+                />
+                {url !== null ? (
+                  <div className="flex flex-wrap gap-[var(--spacing-2)]">
+                    {!principal ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => tornarPrincipal(posicao)}
+                        disabled={imgBusy !== null}
+                      >
+                        Tornar principal
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      onClick={() => removerFoto(posicao)}
+                      disabled={imgBusy !== null}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
 

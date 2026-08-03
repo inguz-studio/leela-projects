@@ -70,6 +70,12 @@ export interface SalvarKitInput {
    * ou colada). `null` limpa; ausente não toca. Rules validam http(s) ≤2048.
    */
   imagemUrl?: string | null;
+  /**
+   * S212-T2 (RN-425) — as até duas fotos ADICIONAIS, na ordem de exibição.
+   * `[]` limpa a galeria e deixa o kit com a principal sozinha; ausente não
+   * toca. A principal continua sendo `imagemUrl`: aqui só entram as outras.
+   */
+  fotosSecundarias?: string[];
 }
 
 /**
@@ -96,6 +102,9 @@ export async function salvarKit(
   if (input.descricao !== undefined) payload['descricao'] = input.descricao;
   if (input.itens !== undefined) payload['itens'] = input.itens;
   if (input.imagemUrl !== undefined) payload['imagemUrl'] = input.imagemUrl;
+  if (input.fotosSecundarias !== undefined) {
+    payload['fotosSecundarias'] = input.fotosSecundarias;
+  }
   await setDoc(doc(db, 'eventos', eventoId, 'kits', kitId), payload, { merge: true });
 }
 

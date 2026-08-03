@@ -161,25 +161,119 @@ export async function uploadLogoMarca(marcaId: string, file: File): Promise<stri
 }
 
 /**
+ * As TRÊS posições de foto de um kit (S212-T2 · RN-427). A posição 1 é a
+ * principal e continua no objeto de nome fixo que já existe; as 2 e 3 são as
+ * secundárias e vivem em slots LITERAIS sob `.../fotos/`. Um union fechado, e
+ * não `number`, porque este valor vira segmento de path: as Rules só conhecem
+ * `2` e `3`, e um quarto slot não tem para onde ir.
+ */
+export type SlotFotoKit = 1 | 2 | 3;
+
+/** Lista canônica dos slots — única fonte para validação e UI. */
+export const SLOTS_FOTO_KIT: readonly SlotFotoKit[] = [1, 2, 3];
+
+/**
+ * Caminho do objeto de um slot. Slot 1 é o objeto de nome fixo da RN-227, que
+ * NÃO ganha sufixo — é o que mantém toda leitura antiga funcionando. @pure
+ */
+export function caminhoFotoKit(
+  eventoId: string,
+  kitId: string,
+  slot: SlotFotoKit
+): string {
+  return slot === 1
+    ? `eventos/${eventoId}/kits/${kitId}`
+    : `eventos/${eventoId}/kits/${kitId}/fotos/${slot}`;
+}
+
+/**
+ * O slot em que uma downloadURL mora, ou `null` quando a URL não é de nenhum
+ * dos três objetos deste kit (URL colada, kit antigo, string vazia).
+ *
+ * A downloadURL do Firebase carrega o path do objeto URL-encodado
+ * (`.../o/eventos%2F{ev}%2Fkits%2F{kit}%2Ffotos%2F2?alt=media&token=…`), então
+ * dá para ler o slot da própria URL sem guardar um segundo campo no doc.
+ * Comparação por SUFIXO do path (antes da query), e não `includes` solto, para
+ * `.../fotos/2` nunca casar como se fosse a principal. @pure
+ */
+export function slotDaUrlFotoKit(
+  url: string | null | undefined,
+  eventoId: string,
+  kitId: string
+): SlotFotoKit | null {
+  if (typeof url !== 'string' || url.length === 0) return null;
+  const semQuery = url.split('?')[0] ?? '';
+  for (const slot of SLOTS_FOTO_KIT) {
+    const alvo = encodeURIComponent(caminhoFotoKit(eventoId, kitId, slot));
+    if (semQuery.endsWith(alvo)) return slot;
+  }
+  return null;
+}
+
+/**
+ * Em QUAL slot gravar o arquivo que o organizador acabou de escolher para a
+ * posição `posicao` (1 = principal).
+ *
+ * Por que isto não é `slot = posicao`. "Tornar principal" (RN-427) troca as
+ * URLs DENTRO do documento e não move um byte no bucket — é função pura, por
+ * decisão da spec. Depois de uma troca, a URL que está na posição 1 pode ser a
+ * do objeto do slot 2. Gravar o upload seguinte da posição 2 em cima do slot 2
+ * invalidaria o token da URL que a PRINCIPAL está usando, e a foto grande
+ * morreria numa tela que ninguém tocou. Sequência de quatro cliques, alcançável
+ * sem malícia.
+ *
+ * Regra: se a posição já aponta para um objeto deste kit, reenvia NAQUELE
+ * objeto — que é exatamente a propriedade da RN-227 ("reenviar sobrescreve, sem
+ * órfão"). Se a posição está vazia (ou aponta para fora), pega o menor slot que
+ * NENHUMA das três posições esteja usando. Como há três slots e no máximo três
+ * fotos, e a posição de destino não conta, sempre sobra um. @pure
+ */
+export function slotDeUploadFotoKit(
+  posicoes: readonly (string | null | undefined)[],
+  posicao: SlotFotoKit,
+  eventoId: string,
+  kitId: string
+): SlotFotoKit {
+  const atual = slotDaUrlFotoKit(posicoes[posicao - 1], eventoId, kitId);
+  if (atual !== null) return atual;
+  const ocupados = new Set<SlotFotoKit>();
+  posicoes.forEach((url, i) => {
+    if (i === posicao - 1) return;
+    const s = slotDaUrlFotoKit(url, eventoId, kitId);
+    if (s !== null) ocupados.add(s);
+  });
+  return SLOTS_FOTO_KIT.find((s) => !ocupados.has(s)) ?? posicao;
+}
+
+/**
  * Imagem 1:1 do KIT do evento (R9-C · RN-227 · gap R13). Path RATIFICADO:
  * `eventos/{eventoId}/kits/{kitId}` — as Rules provam por firestore.get que
  * o EVENTO pertence ao tenant do caller (mesma guarda da capa de clube).
  * Valida tipo/tamanho + proporção 1:1 antes do upload; a downloadURL
  * alimenta `Kit.imagemUrl` via `salvarKit`. Ids canônicos usam underscore
  * (`kit_ouro` — chave Kit↔enum), por isso o padrão aceita `_`.
+ *
+ * S212-T2 (RN-427): o `slot` escolhe a posição. O default é `1` de propósito —
+ * toda chamada que já existia continua subindo a principal no MESMO objeto,
+ * sem uma linha de mudança. Nome de objeto FIXO nos três casos: reenviar
+ * sobrescreve e nunca deixa órfão, e não existe filename livre.
  */
 export async function uploadImagemKit(
   eventoId: string,
   kitId: string,
-  file: File
+  file: File,
+  slot: SlotFotoKit = 1
 ): Promise<string> {
   const id = kitId.trim();
   if (eventoId.trim().length === 0 || !/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id)) {
     throw new Error('Kit inválido para enviar a imagem.');
   }
+  if (!SLOTS_FOTO_KIT.includes(slot)) {
+    throw new Error('Posição de foto do kit inválida.');
+  }
   const problema1a1 = await problemaProporcaoQuadrada(file);
   if (problema1a1) throw new Error(problema1a1);
-  return uploadImagem(`eventos/${eventoId}/kits/${id}`, file);
+  return uploadImagem(caminhoFotoKit(eventoId, id, slot), file);
 }
 
 // ---------------------------------------------------------------------------

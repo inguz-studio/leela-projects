@@ -125,6 +125,11 @@ export {
   uploadLogoPatrocinadorClube,
   // Imagem 1:1 do kit (R9-C · RN-227 · gap R13)
   uploadImagemKit,
+  // Galeria de três fotos do kit (S212-T2 · RN-427)
+  SLOTS_FOTO_KIT,
+  caminhoFotoKit,
+  slotDaUrlFotoKit,
+  slotDeUploadFotoKit,
   // Capa do evento (CEV · RN-228 — fecha a pendência UPSW)
   CAPA_EVENTO_UPLOAD_TIPOS,
   CAPA_EVENTO_MAX_BYTES,
@@ -310,6 +315,7 @@ export {
   removerItemKit,
 } from './eventos/kits';
 export type { SalvarKitInput, SalvarItemKitInput } from './eventos/kits';
+export type { SlotFotoKit } from './storage';
 
 // S300 (E04 · ADR-012) — lotes por modalidade (kernel de vendas). CRUD direto
 // do organizador; `vendidos` é ∑ de Function (nunca enviado pelo cliente).
