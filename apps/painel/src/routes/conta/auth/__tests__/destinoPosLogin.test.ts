@@ -56,6 +56,33 @@ describe('destinoPosLogin — default por papel (item 57)', () => {
       destino: ROTA_VISAO_GERAL,
     });
   });
+
+  // Decisão do dono de 03/08 (ratificação do item 57): conta que acumula
+  // admin + organizador tem ACESSO ÚNICO — vai para `/plataforma` por
+  // PRECEDÊNCIA, sem seletor de papel e sem tela de escolha. O caso vive aqui
+  // porque a decisão é do dono e o comentário do arquivo sozinho não impede
+  // ninguém de trocar a precedência por um `if` novo.
+  //
+  // Nota de modelo: `setTenantClaims` põe `platform_admin` em
+  // ROLES_WITHOUT_TENANT, então a claim NUNCA carrega os dois ao mesmo tempo.
+  // O caso `platform_admin` + `tenantId` está aqui como defesa de contrato:
+  // se um dia o modelo aceitar os dois, a precedência tem de continuar valendo.
+  it('conta admin + organizador vai para /plataforma por PRECEDÊNCIA (acesso único)', () => {
+    expect(
+      destinoPosLogin(
+        { role: 'platform_admin', tenantId: 'castelo-producoes', temPerfilProfissional: true },
+        null,
+      ),
+    ).toEqual({ tipo: 'rota', destino: ROTA_PLATAFORMA });
+  });
+
+  it('o super-admin NUNCA é barrado na porta, com ou sem doc de profissional', () => {
+    for (const temPerfilProfissional of [true, false]) {
+      expect(
+        destinoPosLogin({ role: 'platform_admin', tenantId: null, temPerfilProfissional }, null),
+      ).toEqual({ tipo: 'rota', destino: ROTA_PLATAFORMA });
+    }
+  });
 });
 
 describe('destinoPosLogin — a conta travada ENTRA (RN-411 × item 57)', () => {
