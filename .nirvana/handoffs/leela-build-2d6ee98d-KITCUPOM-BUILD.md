@@ -17,8 +17,10 @@ Base: `main` em `8de6894`. Sem push — o maestro pusha.
 - [x] **B1 · S1215-T1** — gerador único do link + `linkMaster` derivado
 - [x] **B2 · S1215-T2** — captura e guarda do cupom por evento
 - [x] **B3 · S1215-T3** — faixa pós-Hero + verificação server-side
-- [ ] **B4 · S1215-T4** — dois links de demonstração no seed do meia-floripa
-- [ ] **X1** — vocabulário/a11y da página do evento
+- [x] **B4 · S1215-T4** — dois links de demonstração no seed do meia-floripa
+- [x] **FRENTE B FECHADA** — suíte da landing **295/295** ao fim da B3
+- [x] **X1** — vocabulário/a11y da página do evento
+- [x] **LANE FECHADA** — 9 tasks pagas, suíte da landing **301/301**
 
 ---
 
@@ -233,6 +235,51 @@ por causa da página publicada.
 Gates: landing `tsc` 0 · `eslint` 0 · `cupom-banner-s1215` **18/18** · suíte cheia da landing
 **295/295** em 25 arquivos (277 antes), single-fork, 30,30 s · `next build` exit **0**.
 
+### B4 — os dois links existem, e o `beh.ro` sai do seed
+
+O que faltava no preview: **nenhum** documento `eventos/{id}/afiliados/{ref}` era semeado em
+lugar nenhum do repo. O painel E08 nascia vazio, a parceria E18 não tinha de onde derivar link
+e a faixa do B3 não tinha promotor para nomear — a frente B inteira ficaria invisível.
+
+```
+Floripa Run Coletivo    …/meia-floripa-2026?ref=FLORIPARUN&cupom=FLORIPARUN10
+Ritmo Forte Assessoria  …/meia-floripa-2026?ref=RITMOFORTE
+```
+
+O segundo não tem cupom **de propósito**: é o caso que a RN-429 nomeia (sem vínculo, o link
+sai só com `ref` e continua rastreando conversão). O cupom `RITMOFORTE10` da assessoria não
+serve — é escopado `club_parceiro` e o próprio `salvarAfiliadoCore` recusa amarrar cupom
+escopado a afiliado ("um desconto, um dono").
+
+Os afiliados são criados pela **mesma função da produção**, não por `set` direto: é ela que
+amarra o cupom dentro da transação e estampa o `responsavelUid` do dono do clube (RN-319). O
+`cupons/FLORIPARUN10.afiliadoRef` de que a faixa do B3 depende nasce daí.
+
+Gates (emulator 8480/9598, `preview-seed.ts` completo): seed exit **0** · 2ª execução com
+saída **idêntica** (idempotente) · `afiliadoRef` = `"FLORIPARUN"` · dois afiliados `ativo` ·
+parceria com `refCodigo: "FLORIPARUN"` e `linkMaster: ""` · functions `tsc` 0 (com `scripts/`
+incluído por tsconfig estendido — o `type-check` padrão do repo não cobre `scripts/`).
+
+### X1 — a página do evento para de afirmar corrida
+
+O defeito de a11y era maior que o de vocabulário: os três `alt` da galeria afirmavam
+corredores, largada e prova numa galeria de **exemplo** servida a qualquer evento. Na página
+de um retiro, o leitor de tela anunciava corredores que não existem — informação falsa
+entregue justamente a quem só tem ela.
+
+As imagens viraram **decorativas** (`alt=""`), que é o que são. Descrever a foto com precisão
+seria pior: reintroduziria a afirmação de corrida, com mais detalhe. Rótulos passaram a
+"Antes/Durante/Depois"; o modal é "Regulamento da experiência"; a seção parou de prometer
+"categorias" e "premiação"; o tile da hora no Sobre era "Largada".
+
+Gates: landing `tsc` 0 · `eslint` 0 · `evento-vocabulario-x1` **6/6** · suíte **301/301** em
+26 arquivos · grep de aceite sem "corredor/largada/chegada/da prova" nos textos e alts das
+seções do evento.
+
+**Residual que NÃO foi tocado** (escalado, não decidido): o tile "Percursos · N distâncias" do
+Sobre. Renomear muda o **significado** do tile (é a contagem de modalidades), não só a
+palavra. E a home segue com vocabulário de corrida por D-0802-1 §2, que a reserva ao dono.
+
 ## Premissas assumidas (vetáveis)
 
 1. **O upload não usa `slot = posicao`** (A2). É a única premissa desta lane que muda
@@ -283,6 +330,17 @@ Gates: landing `tsc` 0 · `eslint` 0 · `cupom-banner-s1215` **18/18** · suíte
     seção e passar a admitir "faixa desativada" como estado.
 14. **TTL de 60 s** no cache do cupom. Curto para força bruta bater em cache; longo o bastante
     para um cupom recém-esgotado sumir da faixa em um minuto. Custo de vetar: uma constante.
+15. **O segundo link de demonstração é SEM cupom** (B4). É a outra forma que a RN-429 nomeia,
+    e evita inventar um desconto novo só para ter um link. Custo de vetar: criar um cupom
+    geral para a assessoria (o `RITMOFORTE10` dela é escopado e não serve).
+16. **`linkMaster` do seed vira string vazia** (B4), em vez de sumir ou de receber o link
+    derivado. O tipo exige o campo, e gravar o link derivado ali recriaria o dado duplicado
+    que a RN-429 veio matar. Custo de vetar: uma linha.
+17. **Os `alt` da galeria viraram `alt=""`** (X1), em vez de descrição neutra. Descrever a foto
+    com precisão reintroduziria a afirmação de corrida; descrever vagamente descreveria errado.
+    Custo de vetar: escrever três alts e aceitar um dos dois defeitos.
+18. **O tile "Largada" do Sobre virou "Início"** (X1) — está fora da lista literal da task, na
+    mesma classe e na mesma pasta. Custo de vetar: uma palavra.
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -296,6 +354,8 @@ Gates: landing `tsc` 0 · `eslint` 0 · `cupom-banner-s1215` **18/18** · suíte
 | 6 | `ae7538f` | B1 · gerador único do link, com o cupom dentro |
 | 7 | `ddb635d` | B2 · o cupom do link atravessa a jornada + marca no resumo |
 | 8 | `2651bb4` | B3 · faixa pós-Hero + verificação uniforme com cache curto |
+| 9 | `ac92f33` | B4 · dois links de demonstração no seed; `beh.ro` morre |
+| 10 | `e4b2e3d` | X1 · vocabulário e a11y da página do evento |
 
 ## Convivência de lanes (medido em 2026-08-02, durante a B1)
 
