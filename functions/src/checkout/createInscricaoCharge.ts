@@ -110,7 +110,12 @@ import {
 } from '../eventos/versionarPoliticaVendas';
 import { hashTermoSaude } from '../eventos/versionarTermoSaude';
 import { selectPaymentProvider } from '../payments/selectProvider';
-import { ASAAS_TIMEOUT_MS, AsaasTimeoutError } from '../payments/asaasProvider';
+import {
+  ASAAS_TIMEOUT_MS,
+  AsaasApiError,
+  AsaasError,
+  AsaasTimeoutError,
+} from '../payments/asaasProvider';
 import {
   lerPessoasNaTx,
   planejarPessoasDoCheckout,
@@ -149,6 +154,34 @@ export const MSG_GATEWAY_SEM_RESPOSTA =
   'Processando pagamento: o provedor não respondeu no tempo esperado e ' +
   'ainda não sabemos se a cobrança foi criada. Não abra outra — tentar de ' +
   'novo reaproveita a mesma cobrança, sem risco de cobrar duas vezes.';
+
+/**
+ * Motivo tipado da RECUSA do gateway (T3 · PIXFIX-EXTREF) — o par de
+ * `MOTIVO_GATEWAY_SEM_RESPOSTA` para o caso em que o provedor RESPONDEU e a
+ * resposta foi não.
+ *
+ * ⚠️ Mora aqui, e não no `@leela/core`, porque o território desta lane é
+ * `functions/**` (a KITCUPOM-BUILD é dona de `packages/**` agora). O cliente
+ * não precisa dele para se comportar: a UI já renderiza `error.message`, e a
+ * mensagem abaixo é escrita para ser lida crua. Promover ao core é follow-up,
+ * e só faz sentido se o dono quiser uma TELA diferente para este caso.
+ */
+export const MOTIVO_GATEWAY_RECUSOU = 'gateway_recusou_cobranca';
+
+/**
+ * O que o comprador lê quando o provedor recusa a criação da cobrança.
+ *
+ * O que ela NÃO diz, de propósito: "nada foi cobrado". Numa recusa 4xx isso é
+ * verdade, mas num 5xx do provedor não é provável nem provável — e a frase
+ * teria de mudar conforme o status, o que é exatamente o tipo de sutileza que
+ * se perde na próxima edição. A única coisa que vale para TODOS os casos é o
+ * contrato do retry, e é o que ela promete: repetir reaproveita a mesma
+ * cobrança (o `createCharge` faz lookup por `externalReference` antes do POST).
+ */
+export const MSG_GATEWAY_RECUSOU =
+  'Não conseguimos abrir a cobrança no provedor de pagamento agora. Não ' +
+  'abra outro pedido — tentar de novo reaproveita esta mesma cobrança, sem ' +
+  'risco de cobrar duas vezes. Se continuar, fale com a organização do evento.';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -1749,28 +1782,78 @@ async function garantirCobrancaEMontarResultado(
       // a MESMA idempotencyKey volta a este mesmo ponto e o `createCharge`
       // faz lookup por `externalReference` ANTES de qualquer POST, então
       // encontra a cobrança órfã em vez de criar a segunda.
-      if (!(err instanceof AsaasTimeoutError)) throw err;
-      logger.warn('checkout_gateway_sem_resposta', {
-        pedidoId,
-        pagamentoId,
-        // Sem PII e sem chave: só o que identifica a chamada abortada.
-        metodo: err.method,
-        path: err.path,
-        timeoutMs: err.timeoutMs,
-        efeitoPossivel: err.efeitoPossivel,
-      });
-      throw new https.HttpsError(
-        'deadline-exceeded',
-        MSG_GATEWAY_SEM_RESPOSTA,
-        {
-          motivo: MOTIVO_GATEWAY_SEM_RESPOSTA,
+      if (err instanceof AsaasTimeoutError) {
+        logger.warn('checkout_gateway_sem_resposta', {
           pedidoId,
           pagamentoId,
-          // O contrato do retry seguro, explícito no erro: repetir com esta
-          // chave NÃO cria segunda cobrança.
+          // Sem PII e sem chave: só o que identifica a chamada abortada.
+          metodo: err.method,
+          path: err.path,
+          timeoutMs: err.timeoutMs,
+          efeitoPossivel: err.efeitoPossivel,
+        });
+        throw new https.HttpsError(
+          'deadline-exceeded',
+          MSG_GATEWAY_SEM_RESPOSTA,
+          {
+            motivo: MOTIVO_GATEWAY_SEM_RESPOSTA,
+            pedidoId,
+            pagamentoId,
+            // O contrato do retry seguro, explícito no erro: repetir com esta
+            // chave NÃO cria segunda cobrança.
+            idempotencyKey: input.idempotencyKey,
+          }
+        );
+      }
+      // T3 · PIXFIX-EXTREF — o comentário acima previu o desfecho e a tradução
+      // só existia para o timeout. Em 02/08 o gateway recusou a cobrança com
+      // HTTP 400 `invalid_externalReference`, o AsaasApiError subiu cru, o
+      // wrapper do onCall o achatou em 'internal' e foi ISSO que o comprador
+      // leu na tela do próprio dinheiro. Nenhuma falha do adapter volta a sair
+      // daqui sem tradução — nem as do gateway, nem as nossas de validação.
+      if (err instanceof AsaasError) {
+        // O `code` conta ao cliente o que dá para fazer, não o que aconteceu:
+        // 429 = espere; 5xx = o provedor está fora; 4xx = recusa determinada.
+        const httpStatus = err instanceof AsaasApiError ? err.httpStatus : 0;
+        const code: https.FunctionsErrorCode =
+          httpStatus === 429
+            ? 'resource-exhausted'
+            : httpStatus >= 500
+              ? 'unavailable'
+              : 'failed-precondition';
+        const codigos =
+          err instanceof AsaasApiError && err.codes.length > 0
+            ? err.codes.join(', ')
+            : undefined;
+        // O código do provedor entra entre parênteses, no fim: o comprador lê
+        // a frase e ignora; quem for atender o chamado tem o campo exato sem
+        // precisar do log. `err.message` (que carrega o VALOR recusado, e o
+        // valor carrega o uid) nunca sai daqui.
+        const mensagem =
+          codigos === undefined
+            ? MSG_GATEWAY_RECUSOU
+            : `${MSG_GATEWAY_RECUSOU} (código do provedor: ${codigos})`;
+        logger.error('checkout_gateway_recusou', {
+          pedidoId,
+          pagamentoId,
+          erro: err.name,
+          // Server-side: aqui a mensagem CRUA vale, é ela que nomeia o campo.
+          detalhe: err.message,
+          ...(httpStatus > 0 ? { httpStatus } : {}),
+        });
+        throw new https.HttpsError(code, mensagem, {
+          motivo: MOTIVO_GATEWAY_RECUSOU,
+          pedidoId,
+          pagamentoId,
+          // Mesmo contrato de retry do timeout: o lookup por
+          // `externalReference` acontece ANTES do POST, então repetir com
+          // esta chave nunca cria a segunda cobrança.
           idempotencyKey: input.idempotencyKey,
-        }
-      );
+          ...(httpStatus > 0 ? { gatewayStatus: httpStatus } : {}),
+          ...(codigos !== undefined ? { gatewayCodigos: codigos } : {}),
+        });
+      }
+      throw err;
     }
 
     await db.runTransaction(async (tx) => {

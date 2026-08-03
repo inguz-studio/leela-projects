@@ -37,8 +37,11 @@ import {
   seedVerified,
   withTriggersPaused,
 } from './helpers/stability';
+import { https } from 'firebase-functions/v1';
 import {
   createInscricaoChargeCore,
+  MOTIVO_GATEWAY_RECUSOU,
+  MSG_GATEWAY_RECUSOU,
   MSG_GATEWAY_SEM_RESPOSTA,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
@@ -102,6 +105,20 @@ class ProviderComTeto extends MockPaymentProvider {
 class ProviderCom400 extends MockPaymentProvider {
   override async createCharge(): Promise<ChargeResult> {
     throw new AsaasApiError(400, ['invalid_action'], ['Cobrança inválida.']);
+  }
+}
+
+/** Idem, com status/códigos arbitrários (T3 — 429, 5xx, o erro de 02/08). */
+class ProviderComApiError extends MockPaymentProvider {
+  constructor(
+    private readonly status: number,
+    private readonly codes: string[],
+    private readonly descriptions: string[] = []
+  ) {
+    super();
+  }
+  override async createCharge(): Promise<ChargeResult> {
+    throw new AsaasApiError(this.status, this.codes, this.descriptions);
   }
 }
 
@@ -351,10 +368,23 @@ describe.skipIf(!hasEmulator)('DEC-0727 · teto de 15s na callable do checkout',
   });
 
   // -------------------------------------------------------------------------
-  // A tradução é ESTREITA: só o timeout
+  // A tradução do TIMEOUT é estreita — mas nenhum erro sai mais cru (T3)
   // -------------------------------------------------------------------------
 
-  it('erro que NÃO é timeout continua subindo cru (a tradução não engorda)', async () => {
+  /**
+   * ⚠️ Este teste NASCEU pinando o defeito. Na versão anterior ele exigia que
+   * um erro não-timeout "continuasse subindo cru", e foi exatamente isso que
+   * o comprador viu em 02/08: o `AsaasApiError` do
+   * `invalid_externalReference` subiu cru, o wrapper do onCall o achatou e a
+   * tela do dinheiro imprimiu a palavra `internal`.
+   *
+   * O que a intenção original acertou e segue valendo: um 400 é VEREDITO, e
+   * traduzi-lo para "processando pagamento" esconderia uma recusa real atrás
+   * de uma espera que nunca termina. Por isso a asserção que sobrevive é a
+   * SEPARAÇÃO — código e motivo distintos do caminho do timeout —, não a
+   * ausência de tradução.
+   */
+  it('recusa do gateway sai TIPADA e humana, nunca "internal"', async () => {
     const e = await capturar(() =>
       createInscricaoChargeCore(
         db, new ProviderCom400(), inputPix('teto-0007'),
@@ -362,10 +392,87 @@ describe.skipIf(!hasEmulator)('DEC-0727 · teto de 15s na callable do checkout',
       )
     );
 
-    // Um 400 do gateway é VEREDITO. Traduzi-lo para "processando pagamento"
-    // esconderia uma recusa real atrás de uma espera que nunca termina.
-    expect(e).toBeInstanceOf(AsaasApiError);
+    expect(e).toBeInstanceOf(https.HttpsError);
+    expect(e.code).toBe('failed-precondition');
+    expect(e.code).not.toBe('internal');
+    expect(e.message).toContain('Não conseguimos abrir a cobrança');
+    // O código do provedor viaja para quem for atender o chamado.
+    expect(e.message).toContain('invalid_action');
+    expect(e.details?.['gatewayCodigos']).toBe('invalid_action');
+    expect(e.details?.['gatewayStatus']).toBe(400);
+    // A separação do caminho do timeout, que é o acerto do teste original.
     expect(e.code).not.toBe('deadline-exceeded');
+    expect(e.details?.['motivo']).toBe(MOTIVO_GATEWAY_RECUSOU);
+    expect(e.details?.['motivo']).not.toBe(MOTIVO_GATEWAY_SEM_RESPOSTA);
+    // E o contrato de retry seguro continua explícito no erro.
+    expect(e.details?.['idempotencyKey']).toBe('teto-0007');
+    // Os docs seguem pendentes com a cobrança nula — o replay cura.
+    const pagamento = await db.collection('pagamentos').doc('pag-uid-teto-g-teto-0007').get();
+    expect(pagamento.get('status')).toBe('pendente');
+    expect(pagamento.get('gatewayChargeId')).toBeNull();
+  });
+
+  it('429 e 5xx do gateway ganham códigos próprios (o cliente sabe o que fazer)', async () => {
+    const e429 = await capturar(() =>
+      createInscricaoChargeCore(
+        db, new ProviderComApiError(429, ['rate_limit']), inputPix('teto-0009'),
+        { uid: 'uid-teto-i', ehAnonimo: true }, relogio(new Date())
+      )
+    );
+    expect(e429.code).toBe('resource-exhausted');
+    expect(e429.details?.['motivo']).toBe(MOTIVO_GATEWAY_RECUSOU);
+
+    const e500 = await capturar(() =>
+      createInscricaoChargeCore(
+        db, new ProviderComApiError(500, []), inputPix('teto-0010'),
+        { uid: 'uid-teto-j', ehAnonimo: true }, relogio(new Date())
+      )
+    );
+    expect(e500.code).toBe('unavailable');
+    // Sem código no corpo, a frase sai limpa — nada de parênteses vazio.
+    expect(e500.message).toBe(MSG_GATEWAY_RECUSOU);
+  });
+
+  /**
+   * ⛔ REENCENAÇÃO do defeito de produção (INV-PIXINTERNAL). Este é o erro
+   * exato, com o corpo verbatim do Asaas, que imprimiu `internal` na tela.
+   * Com o T1 ele não acontece mais; com o T3 ele deixaria de ser opaco mesmo
+   * se voltasse.
+   */
+  it('o erro de 02/08, verbatim, não volta a imprimir "internal"', async () => {
+    const e = await capturar(() =>
+      createInscricaoChargeCore(
+        db,
+        new ProviderComApiError(400, ['invalid_externalReference'], [
+          'Property [externalReference] of class [{1}] with value [...] ' +
+            'exceeds the maximum size of [100]',
+        ]),
+        inputPix('teto-0011'),
+        { uid: 'uid-teto-k', ehAnonimo: true }, relogio(new Date())
+      )
+    );
+
+    expect(e.code).not.toBe('internal');
+    expect(e.message).not.toBe('internal');
+    expect(e.details?.['gatewayCodigos']).toBe('invalid_externalReference');
+    // O VALOR recusado carrega o uid — ele fica no log do servidor, nunca na
+    // mensagem que atravessa a fronteira.
+    expect(e.message).not.toContain('exceeds the maximum size');
+  });
+
+  it('erro que não é do adapter continua subindo cru (a tradução não engorda)', async () => {
+    class ProviderQueEstoura extends MockPaymentProvider {
+      override async createCharge(): Promise<ChargeResult> {
+        throw new TypeError('bug nosso, não do gateway');
+      }
+    }
+    const e = await capturar(() =>
+      createInscricaoChargeCore(
+        db, new ProviderQueEstoura(), inputPix('teto-0012'),
+        { uid: 'uid-teto-l', ehAnonimo: true }, relogio(new Date())
+      )
+    );
+    expect(e).toBeInstanceOf(TypeError);
     expect(e.details?.['motivo']).toBeUndefined();
   });
 
