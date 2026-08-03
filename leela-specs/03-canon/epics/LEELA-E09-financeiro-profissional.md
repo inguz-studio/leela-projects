@@ -1054,3 +1054,94 @@ do painel de decisões, ainda do Vitor.
 `15c7121` (T1 · Caixa + core), `74b855d` (T2 · guard e associação obrigatória),
 `49b44b8` (T3 · modal), e o T4 de reconciliação de testes.
 ⚔ Review antagonista da lane: **pendente**.
+
+## Delta o juro não é receita, e o identificador do gateway cabia numa conta (DEC-0802B · 2026-08-02/03)
+
+Duas frentes da mesma rodada `02-rodadas/2026-08-02-retomada/` aterrissam neste épico: a **RN-437**,
+construída pela lane `ACHADOS-0802` e provada pela `ACHADOS-REV`, e o hotfix P0 do gateway, da lane
+`PIXFIX-EXTREF`. Trace `leela-build-2d6ee98d`.
+
+### RN-437 · O juro do parcelamento não é receita do organizador nem base de comissão
+
+O organizador recebe **o mesmo valor** quer a compra seja à vista ou parcelada. O líquido do produtor
+é calculado sobre o valor final da venda, o razão financeiro registra o valor de face, e a comissão
+do afiliado incide sobre o face. Nenhum dos três enxerga o juro.
+
+O juro compõe o valor cobrado do comprador e o valor enviado ao gateway, e aparece como linha própria
+no resumo e na confirmação (RN-435, E12). Não existe caminho em que ele se apresente como parte do
+"total" sem nome. A regra é **ratificação do que o código já faz**, e precisa estar escrita porque,
+com a taxa de juros em zero, a propriedade nunca valeu dinheiro; com ela ligada, passa a valer.
+
+**RN-310 e P-TAXAFLEX-3 reafirmadas:** a comissão do afiliado continua sobre o face, agora com juros
+na conta do comprador.
+
+**Prova executável, e onde ela quase ficou pela metade.** O caso puro do `computeSaleState` prova o
+líquido, e isso é metade: o que o organizador recebe passa pelo `webhookPagamento` e o que o afiliado
+comissiona passa pelo doc de conversão, e **nenhum dos dois consome `receitaLiquidaOrganizador`** —
+os dois leem `valorFinal` do doc de pagamento (`webhookPagamento.ts:621` e `:659`). Sob a
+falsificação que o vetor 5 pede (somar o juro à base de `receitaConfirmada` e `valorConversao`),
+**69 casos de integração financeira seguiram verdes**. O caso que fecha a lacuna compra o mesmo
+carrinho à vista e em 12x, confirma os dois pelo webhook e compara o delta da `receitaConfirmada`:
+R$ 189,90 nas duas, com totais de comprador diferentes (`dffab74`).
+
+`jurosParcelamento` é **congelado no ato da compra** pela mesma disciplina da RN-179: gravado no doc
+de pagamento quando maior que zero, e o replay lê dali em vez de recomputar. Pedido antigo nunca é
+reprecificado por mudança posterior da taxa de juros (vetor 11, PASS).
+
+### Identificador enviado ao gateway · o defeito que travava toda compra (lane PIXFIX-EXTREF)
+
+**Diagnóstico:** `createInscricaoCharge` nunca retornou 200 em produção. O `externalReference` era
+`${pedidoId}::charge-${pedidoId}` = **155 caracteres**, contra um limite de **100** do gateway. O
+sufixo nunca carregou informação (no único caller de produção a chave é função pura do prefixo); o
+que ele dá é **estabilidade**, porque a mesma chave tem de produzir sempre o mesmo valor, senão o
+lookup por `externalReference` deixa de achar o replay antes do POST e a segunda tentativa cria a
+**segunda cobrança**. Passou a ser um digest sha256 truncado em 16, que preserva a propriedade em
+tamanho fixo: **73 + 2 + 16 = 91**, com folga de 9 (`34ed0e7`).
+
+O **prefixo fica verbatim**. É dele que o `parseExternalReference` tira o `orderId`, e é o `orderId`
+que abre o pedido quando o webhook chega — digest no prefixo teria trocado um defeito que aparece
+ANTES do pagamento por um que aparece DEPOIS, com compra paga que nunca confirma. O separador `::`
+sobrevive porque é o discriminador que separa cobrança nossa de cobrança criada no painel do gateway.
+**Sem migração:** não existe cobrança no formato antigo, porque nenhuma jamais nasceu.
+
+**Guarda dura, por reconstrução (`3e056ec`).** `validarCreateCharge` reconstrói o valor com o mesmo
+construtor do envio — conta paralela poderia divergir do que é enviado — e recusa acima de 100 com
+erro nomeado, antes do POST e antes do lookup.
+
+> ⚠️ **Contradição registrada com a RN-333, e deixada para o dono (item 65 do painel).** A regra
+> publicada diz chave de **8 a 64 caracteres**; com o formato novo, chave de até **49** passa e de
+> **50 a 64 é recusada**. Ninguém esbarra nisso hoje — a única superfície que cria compra emite 40
+> por construção. Apertar contrato publicado num hotfix P0 não é decisão de lane: o default proposto
+> é apertar a RN-333 para 49 (uma linha na validação e uma frase na regra).
+
+**Nenhuma recusa do gateway imprime "internal" (`7b5ba3e`).** A família de erro do adapter sai
+tipada: 429 vira `resource-exhausted`, 5xx vira `unavailable`, 4xx e falha de validação viram
+`failed-precondition`, e erro que não é do adapter sobe cru. A mensagem **não** afirma "nada foi
+cobrado" — verdade num 4xx, indeterminado num 5xx; a única coisa verdadeira em todos os casos é o
+contrato do retry, e é o que ela promete. O texto cru do gateway não atravessa a fronteira, porque
+carrega o valor recusado e o valor carrega o uid: fica no log do servidor.
+
+**Deploy cirúrgico com prova (`2a8c536`).** Só a function de cobrança e os índices; as outras 70+
+intocadas, nenhuma mutação de dado. Marcadores contados no pacote antes e depois com um controle que
+não podia zerar, registro de atualização da function com os três segredos declarados, preflight sem
+executar o handler, e zero linhas de erro 500 depois contra quatro antes. **Não é a prova da
+compra** — percorrer a jornada uma vez segue sendo do dono.
+
+### Contadores do evento · parecer read-only (T6 · item 70 do painel)
+
+As quatro tentativas de compra que morreram no defeito acima deixaram **2 pedidos** com inscritos
+pendentes (as 4 tentativas foram 2 sessões × 2 cliques reusando a mesma `idempotencyKey`). O que
+**não** inflou: `demografia.totalConfirmados`, `financeiro.receitaBruta`, o aprovisionamento de kit e
+a virada de lote — os quatro filtram por status. O que **inflou**: `eventos.qtdInscritos`
+(`contarInscritos().total`, **sem filtro nenhum**) e o `financeiro.inscritos.total`, que são o
+"N inscritos" do cabeçalho do evento e do badge da sub-navegação e são lidos também pela landing.
+Evento afetado: `desafio-mtb-costa-lagoa-2026`.
+
+Nenhum dos 11 crons varre isso: `expirarCarrinhosAbandonados` age em carrinhos, `estornarPagamentoOrfao`
+trata do caso oposto (dinheiro que chegou depois do cancelamento) e `expirarPixPendente` é callable
+disparada pela tela do PIX, que o comprador nunca viu. E mesmo se disparada, o flip cancela pedido e
+pagamento e deixa os inscritos em `pendente` de propósito, pelo mesmo tratamento do caminho `falhou`
+do webhook. **Dano real: nenhum** — não segura vaga, não reserva kit, não vira lote, não entra em
+receita nem em demografia. **Recomendação em vigor: não limpar agora**; se limpar, só depois da
+primeira compra bem-sucedida, e a operação é apagar os inscritos dos 2 pedidos (`onInscritoWrite`
+recomputa sozinho no delete, por full recompute).

@@ -250,3 +250,94 @@ Dependências: `E12-S1200 ✅→ S1700`; `E01 ThemeProvider ✅→ S1701`; `E13 
 ### Reuso a respeitar
 
 O modelo de feed e a Function de agregado do clube são os mesmos do `S1311` do E13. Se os dois lotes forem despachados separados, um vai reimplementar o outro. **Despachar o feed do clube e o feed do perfil no mesmo lote**, ou nomear explicitamente qual dos dois é dono do modelo.
+
+## Delta a página do produtor ganha menu, ícones e feed (DEC-0802B · 2026-08-03 · D-ACH-15..21)
+
+Rodada `02-rodadas/2026-08-02-retomada/`, spec em `06-spec-produtor-page.md`, RNs em
+`05-rns-achados.md`, fila em `07-fila-achados.md`. Construído pela lane `PRODUTOR-PAGE` (4 tarefas,
+commits `c2fa043`, `f188f14`, `b120871`, `d9faa04`), trace `leela-build-2d6ee98d`. Deste épico é a
+história **S1707** e as regras **RN-443, RN-444 e RN-445**. É a fatia **pública** do épico — a fatia
+social dentro do app (S1701, S1703, S1704, S1705) segue na Onda 6 e não foi tocada.
+
+### RN-443 · A página do produtor organiza feed, eventos e clubs em menu secundário
+
+O perfil público passa a apresentar seu conteúdo em três abas nomeadas **Feed**, **Eventos** e
+**Clubs**, num menu secundário logo abaixo da identidade do perfil. A aba inicial é **Eventos**, que
+é o conteúdo com valor transacional e o que a página já entrega hoje.
+
+As três abas permanecem **renderizadas no servidor e presentes no documento**, para que o conteúdo
+continue indexável e alcançável por busca na página. A troca de aba é do cliente, não recarrega a
+rota e não tira a página do regime estático. É a propriedade que reprova a implementação "óbvia" de
+abas (render condicional), que esconderia os eventos de quem chega por busca — e um link na bio
+existe exatamente para ser achado.
+
+**Card de clube não oferece afordância de clique** enquanto não existir página de clube para onde
+levar (D-ACH-20): não é âncora, nenhum link da página aponta para rota de clube, e as classes não
+carregam `cursor-pointer`, `hover:` nem `focus-visible:`. Aba que promove o conteúdo não pode
+transformar um card informativo em beco.
+
+Implementação sem componente novo de design system: o `Tabs` já existia, já mantinha os painéis
+inativos no documento e já entregava a fiação de acessibilidade, e entrou pelo boundary único da
+landing. `PerfilView` continua Server Component puro; a casca de cliente recebe as três seções já
+renderizadas e entrega ao `Tabs`. Título que repetiria o nome da aba virou `sr-only` (P23);
+patrocinadores e compartilhar ficam **fora** das abas, porque são moldura da página e não conteúdo do
+produtor (P24).
+
+### RN-444 · Link externo do perfil vira ícone quando a rede é reconhecível pelo endereço
+
+Os links externos deixam de ser pílulas de texto de largura inteira e passam a ser uma **fileira de
+ícones**. A rede é inferida do endereço do link, **no servidor**, sem campo novo no modelo do perfil
+e sem alteração no editor do painel. O casamento é por igualdade ou por sufixo de rótulo, que é o que
+separa um subdomínio legítimo de um hostname de outro dono.
+
+O rótulo que o organizador digitou continua sendo o **nome acessível** do ícone: a âncora carrega o
+rótulo e o desenho é sempre escondido do leitor de tela — um nome só por alvo, porque dois fariam o
+anúncio duplicar. Endereço que não casa com nenhuma rede conhecida recebe ícone genérico de link e
+mantém o rótulo, em vez de sumir. O alvo tem 44×44px, contra o mínimo AA de 24 da WCAG 2.2 §2.5.8,
+que é onde fileira de ícones colados costuma reprovar.
+
+Inferir pelo endereço em vez de gravar a rede é **decisão de custo**: um campo novo atravessaria
+modelo, validação, projeção pública, Function de escrita e editor para produzir a mesma informação
+que o endereço já carrega. Três ícones não existem na biblioteca que a landing usa (WhatsApp, TikTok
+e Strava) e entraram como desenho local na mesma grade dos demais — são **simplificados, não os
+glifos oficiais** das três empresas (P22, vetável trocando cinco paths).
+
+### RN-445 · O feed do perfil nasce mockado em preview e vazio digno em produção
+
+O feed do perfil é **leitura**. Em preview ele exibe conteúdo de exemplo, **rotulado como exemplo**,
+pelo mesmo degrau de cascata que a galeria e os patrocinadores já usam. Em produção, sem publicação
+real, exibe estado vazio digno e nunca conteúdo inventado — página aberta pelo link na bio não pode
+exibir texto que o produtor não escreveu, e é a mesma honestidade de superfície da cascata de imagem.
+
+O rótulo de exemplo aparece **duas vezes de propósito**: uma nota no topo da seção e um selo em cada
+publicação. A nota explica; o selo de cada card sobrevive a um recorte de tela, que é exatamente como
+o mock vaza de contexto e vira "conteúdo real" na cabeça de quem vê. O carimbo de tempo é texto fixo
+e não conta do relógio (P26), porque valor calculado divergiria entre o render do servidor e o do
+cliente sem comprar nada num mock. A imagem entra decorativa, pela lição da X1: é imagem de exemplo
+servida a qualquer perfil, então descrevê-la seria afirmar ao leitor de tela algo que não está na
+página.
+
+**A composição e a publicação de posts não existem nesta regra.** O modelo do feed, suas Rules e sua
+escrita são **épico futuro** (D-ACH-21) — já esboçados neste épico em torno da RN-163 e da colisão
+declarada com o feed do clube do E13 —, e o estado vazio de produção é o comportamento correto até que
+ele exista. **Regra de reuso que continua valendo:** o modelo de post do perfil e o do clube saem no
+mesmo lote, ou um vai reimplementar o outro.
+
+### Índice de leitura da página · o que foi medido, e o que já tinha sido pago
+
+A fila mandava declarar índice composto para `eventos` por tenant e status **só se a medição
+reprovasse**, e ela não reprovou: `firestore.indexes.json` **não muda** (`c2fa043`). A regra prática
+que fica escrita, porque o código dizia o contrário e era palpite: consulta de **coleção** só com
+filtros de igualdade é servida pela combinação dos índices automáticos de campo único; em
+**collectionGroup** o Firestore não cria índice de campo único sozinho, e por isso a leitura de
+patrocinadores — que é a única `collectionGroup` das três — era a que reprovava, com 9 falhas
+registradas no log contra zero das outras duas no mesmo `Promise.all`. Esse índice foi criado pela
+lane `PIXFIX-EXTREF` (`597d499`), e com ele a faixa de patrocinadores volta à página; até então o
+`catch` devolvia lista vazia e a página mostrava o vazio como se fosse verdade. Os três comentários
+que mandavam criar índice desnecessário viraram medição, com data e razão (P21).
+
+### História
+
+| Story | Tarefas | Estado |
+|---|---|---|
+| **S1707 · A página do produtor** | T1 medição do índice, sem alteração no arquivo (`c2fa043`) · T2 ícones de rede inferidos pelo endereço (`f188f14`) · T3 menu secundário com o `Tabs` do DS (`b120871`) · T4 feed mockado em preview e vazio digno em produção (`d9faa04`) | ✅ **construída em 2026-08-03**; gate normal (a lane não toca preço nem prova legal). Suíte da landing 420/420 em 37 arquivos, `next build` PASS. **Aguarda conferência visual do dono** em `/@castelo` e o veto de P21..P26 |

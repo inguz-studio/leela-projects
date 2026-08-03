@@ -1671,3 +1671,69 @@ nova de vazamento. Ela abre um canal mais barato, porque dispensa montar uma cot
 acrescenta o nome de quem indicou. As mitigações declaradas são resposta uniforme para toda causa
 de recusa e cache curto por código na borda. Limite por endereço de origem não existe no
 ferramental atual e não é reivindicado.
+
+## Delta motor de juros do parcelamento (DEC-0802B · 2026-08-02/03 · RN-436 · história S314)
+
+Rodada `02-rodadas/2026-08-02-retomada/`, spec em `04-spec-achados.md`, RNs em `05-rns-achados.md`.
+Construído pela lane `ACHADOS-0802` (frente B) e revisado pela `ACHADOS-REV`, trace
+`leela-build-2d6ee98d`. Deste épico é a história **S314** e a regra **RN-436**. A exibição do juro no
+resumo é do E12 (RN-435) e a não-contaminação da receita é do E09 (RN-437).
+
+### RN-436 · Parcelamento com juros usa tabela Price, e a parcela única não tem juros
+
+A taxa de juros vem de `installmentRules.jurosAoMes` do **termo comercial do organizador**. Não
+existe literal de percentual em código de cálculo. A simulação pedida pelo dono entra como
+**2,89% a.m.** no dado semeado e substitui os 3,49% a.m. documentados na decisão de 2026-07-05, que
+passam a estar corrigidos onde estavam escritos.
+
+O cálculo é a tabela Price:
+
+```
+n = 1   →  parcela = PV                       (sem juros)
+n ≥ 2   →  parcela = PV × i ÷ (1 − (1+i)^−n)
+           total   = parcela × n
+```
+
+**A parcela única do cartão não carrega juros.** Price puro cobraria um mês, porque a fórmula assume
+pagamento ao fim do período, e no cartão à vista o pagamento é imediato. Sem essa exceção a opção
+"à vista" nasceria mais cara que o PIX com o mesmo rótulo, e o total à vista do resumo divergiria do
+primeiro item da lista de parcelamento na mesma tela.
+
+**O arredondamento é meio para cima em centavos inteiros, aplicado à parcela**, e o total é a parcela
+multiplicada pelo número de parcelas. A ordem é normativa: como o gateway recebe o número de parcelas
+mais o total e faz a própria divisão, um total múltiplo exato da parcela garante que a divisão dele
+reproduz o número que a tela mostrou. **Piso do principal (fix DEF-1):** quando `parcela × n` ficaria
+abaixo do valor, a parcela sobe um centavo — sem ele, com juros zero, R$ 35,00 em 6x cobrava
+R$ 34,98 e o bloco de totais não fechava. Com juros ligados o piso nunca dispara, e os números desta
+regra ficam byte a byte.
+
+O cálculo é do servidor, com **fonte única no core**: a interface renderiza a lista recebida e não
+faz nenhuma aritmética de dinheiro. Pedido já criado nunca é reprecificado por mudança posterior da
+taxa de juros, pela mesma disciplina de congelamento da RN-179. O teto de parcelas e a parcela mínima
+continuam do termo; com juros ligados a parcela sobe, então o corte pela parcela mínima passa a
+acontecer antes, o que é comportamento correto e não vira exceção.
+
+**RN-183 ampliada:** o arredondamento meio para cima em centavos passa a valer sobre a **parcela**, e
+o total é a parcela multiplicada.
+
+**Números de referência, medidos (PB-1, endossada pela review).** R$ 300,00 a 2,89% a.m. em 12x:
+parcela R$ 29,94 e total **R$ 359,28**; o modelo antigo (`300 × 1,0289^12`, principal corrigido pelo
+juro do prazo inteiro, sem amortização) cobrava **R$ 422,28**, 17,5% a mais contra o comprador. Os
+valores fechados que a spec da rodada trazia (422,03 / 359,90) eram erro aritmético e foram
+reconciliados; o código implementa a fórmula, e nenhum literal de valor entrou nele.
+
+**PB-3, registrada para não virar surpresa.** O seed de `commercialTerms` é idempotente por design:
+ambiente que já tem `current` **não** é regravado, então o termo dele continua com `jurosAoMes: 0`
+até alguém versionar. O 2,89 vale para provisionamento novo e para re-seed limpo — e foi exatamente
+esse fato que tornou o DEF-1 um defeito vivo em produção.
+
+**Épico futuro nomeado, não especificado:** a **configuração real da tabela de juros por
+organizador**. O campo existe no editor da plataforma; o que falta é a negociação por organizador,
+com congelamento no ato da compra pela mesma disciplina da taxa. Nasce em E04/E16 quando o dono
+decidir o modelo comercial.
+
+### História
+
+| Story | Tarefas | Estado |
+|---|---|---|
+| **S314 · Motor de juros do parcelamento** | T1 tabela Price real em `buildInstallmentOptions` ⚔ (`e0ef9a5`) · T2 2,89% a.m. no termo semeado e no default, com a cópia da fórmula no seed morta ⚔ (`5568f33`) | ✅ **construída em 2026-08-03**; review antagonista PASS nos vetores 1, 2, 3 e 11, com o DEF-1 corrigido por cima (`4c3b998`) |

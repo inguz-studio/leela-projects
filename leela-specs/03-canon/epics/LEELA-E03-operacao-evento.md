@@ -2095,3 +2095,33 @@ e quem decide a **simulação** é a RN-428, ambas do E12, porque vivem na super
 regra que atravessa os dois épicos é uma só: listagem e site usam a principal, o detalhe mostra a
 galeria, e nenhuma superfície precisa validar "exatamente uma principal", porque a forma da
 RN-425 não permite outra coisa.
+
+## Ponta solta nomeada · o "N inscritos" do evento conta qualquer status (2026-08-03 · lane PIXFIX-EXTREF, T6)
+
+Parecer read-only da rodada `02-rodadas/2026-08-02-retomada/` (trace `leela-build-2d6ee98d`), colhido
+ao investigar as quatro tentativas de compra que morreram no defeito do gateway. Nada foi escrito,
+nada foi apagado e nenhuma query rodou contra produção — a resposta sai da leitura dos agregadores.
+
+**O contador do cabeçalho do evento e o badge da sub-navegação vêm de `eventos.qtdInscritos`, que é
+`contarInscritos().total` e não filtra status nenhum.** Ele soma inscrito pendente, e por isso um
+pedido que nunca virou cobrança fica visível como inscrição. O mesmo número é lido pela landing.
+Superfícies: `EventoShell.tsx:97` e `:174`, e `apps/landing/lib/leitor.ts:495`.
+
+O que **não** infla, e é o que importa para decisão: `demografia.totalConfirmados` filtra por
+`status == 'confirmado'`; `financeiro.receitaBruta` só se move pelo webhook de confirmação; o
+aprovisionamento de kit filtra por confirmado; e a virada de lote usa `STATUS_QUE_CONTAM_VENDA`.
+Nenhum dos 11 crons varre o estado, e a callable de expiração do PIX deixaria os inscritos em
+`pendente` de propósito, pelo mesmo tratamento do caminho `falhou` do webhook — ou seja, a expiração
+não conserta o contador.
+
+**Dano real: nenhum.** Não segura vaga, não reserva kit, não vira lote, não entra em receita nem em
+demografia; o prejuízo é um número errado na tela do organizador. Evento afetado hoje:
+`desafio-mtb-costa-lagoa-2026`, com 2 pedidos órfãos. **Recomendação em vigor: não limpar agora** —
+apagar inscrito em produção é escrita irreversível sobre dado de comprador, e o mesmo estado se
+repetiria enquanto a compra não fosse provada ponta a ponta. Se o dono decidir limpar, o momento é
+depois da primeira compra bem-sucedida, e a operação é apagar os inscritos dos 2 pedidos, porque o
+gatilho de escrita de inscrito recomputa o contador sozinho no delete. Registro no item 70 do painel
+de decisões; detalhe em `.nirvana/handoffs/leela-build-2d6ee98d-PIXFIX-EXTREF.md`.
+
+**Se um dia virar regra:** a decisão a tomar é se o "N inscritos" público conta pendente ou só
+confirmado. Hoje ele conta tudo por construção, e isso nunca foi escrito.

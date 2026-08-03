@@ -278,3 +278,38 @@ diferentes ao mesmo tempo.
 
 Task: `S313-T1`, especificada no E04. Fila em
 `02-rodadas/2026-07-28-formbuilder-templates/03-fila-codigo.md`.
+
+## O grupo de escolha ganha respiro e área de clique (DEC-0802B · 2026-08-03 · lane ACHADOS-0802, frente D)
+
+Dois achados do dono no checkout foram medidos antes de consertados, e os dois eram do design system,
+não da tela que os expôs. Valem para **todo `RadioGroup` do produto**, no painel e na landing.
+Commits `cc93309` e `dde8182`, trace `leela-build-2d6ee98d`.
+
+**O rótulo do grupo estava colado no primeiro cartão, e a separação era zero por construção.** O
+`<fieldset>` é `flex flex-col` com `gap` por token, e a `<legend>` é a *rendered legend* do HTML: o
+navegador a tira do formatting context para desenhá-la sobre a borda, então **o `gap` nunca a
+alcança**. Não havia margem em lugar nenhum, e o consumidor não contribuía com um pixel. O conserto é
+a margem inferior da legend — que **é** honrada, porque ela é um bloco dentro da área de borda do
+fieldset — usando o **mesmo token do `gap`**, para o ritmo do grupo continuar sendo um número só.
+⚠️ jsdom não faz layout: o teste asserta o mecanismo (a legend carrega a margem, e a margem é o mesmo
+token), e a prova visual é do olho do dono.
+
+**O card inteiro passou a selecionar.** O `<label>` cobria só a linha do título; a descrição e o
+painel revelado ficam fora dele por regra de acessibilidade (`aria-describedby` não entra no nome
+acessível, e conteúdo interativo não mora dentro de `label`), e o padding do card não era de ninguém —
+enquanto o card inteiro mostrava `cursor-pointer`. A mão prometia um clique que metade da área não
+entregava. O handler tem duas guardas, **cada uma com caso próprio que morde**:
+
+| Guarda | O que ela impede |
+|---|---|
+| `checked` — card marcado não reprocessa | o painel revelado só existe quando marcado; sem ela, escolher um tamanho dentro do card do kit borbulharia até o card e chamaria o `onValueChange` do PAI com o mesmo valor, e no checkout esse handler zera kit e tamanhos |
+| `label.contains(target)` | clique no título dispararia `onValueChange` duas vezes (nativo mais handler), e handler de consumidor não é obrigado a ser idempotente |
+
+**Caminho rejeitado, com razão declarada:** o pseudo-elemento `before:inset-0` era a solução mais
+limpa em CSS e ficaria **sem prova executável**, porque jsdom não faz hit-test — o aceite de
+interação que a fila exigia seria impossível. E o overlay ainda precisaria de exceção para o painel
+revelado continuar operável.
+
+**Falsificação executada:** `Radio.tsx` restaurado do HEAD ⇒ 3 vermelhos em 30 (a margem da legend e
+os dois cliques novos); os demais passam nos dois mundos e estão declarados como guardas no arquivo.
+Suíte do design system **1098/1098** em 59 arquivos, tsc/eslint/tsup 0.

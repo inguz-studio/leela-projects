@@ -2234,3 +2234,176 @@ são renderizadas em moldura quadrada com recorte por cobertura.
 LEELA-R14 já decidiu que mock de imagem é app-side. A cascata do `kitImagem.ts` ganha um degrau:
 em preview, kit sem fotos secundárias recebe duas extras determinísticas do acervo local; em
 produção, mostra só a principal. Página de verdade não exibe foto que o organizador não subiu.
+
+## Delta os achados da jornada real · o total, os juros e os aceites (DEC-0802B · 2026-08-02/03)
+
+Rodada `02-rodadas/2026-08-02-retomada/`: verbatim do dono em `03-achados-dono.md`, spec em
+`04-spec-achados.md` (D-ACH-1..14), RNs em `05-rns-achados.md`, fila em `07-fila-achados.md`.
+**Construído** pela lane `ACHADOS-0802` (16 tarefas, 16 commits `e0ef9a5`..`1d777fb`) e **revisado
+em contexto fresco** pela `ACHADOS-REV` (19 vetores, 2 defeitos corrigidos), trace
+`leela-build-2d6ee98d`. Deste épico são as histórias **S1216**, **S1217** e **S1218** e as regras
+**RN-434, RN-435, RN-438, RN-439, RN-440, RN-441 e RN-442**; a RN-436 é do E04 e a RN-437 é do E09.
+
+### RN-434 · O total do pedido está pronto quando o comprador chega ao pagamento
+
+A cotação é disparada a partir da **etapa de dados**, não da etapa de pagamento: assim que a sessão
+está pronta e todo participante tem modalidade escolhida, a primeira cotação sai, e o round-trip
+acontece enquanto a pessoa preenche nome, documento e endereço. Ao entrar no pagamento a assinatura
+de preço não mudou, então nenhuma chamada nova sai e o total já está renderizado. A etapa de escolha
+de modalidade e kit **não** cota — a assinatura inclui a seleção de cada participante, e cotar ali
+transformaria a exploração da oferta numa chamada por clique.
+
+O pré-aquecimento é silencioso: sem indicador próprio, sem erro no meio do formulário e sem
+bloquear o avanço. Falha na cotação antecipada é indistinguível de não ter cotado, e o estado de
+erro com o "Tentar novamente" continua morando no bloco de totais.
+
+Todo caminho que pede cotação passa pelo mesmo número de sequência, **inclusive os dois caminhos
+manuais de cupom**. Resposta que chega depois de outra ter sido pedida é descartada, sem exceção de
+origem. Construída em `fdd3918`; a review provou (DEF-2, `e309c3c`) que o número de sequência não
+basta sozinho — no step 0 ninguém pede cotação e o campo de cupom mora ali, então a régua definitiva
+é a **assinatura de preço** conferida na volta, com o contador seguindo como primeira guarda.
+
+### RN-435 · O resumo declara a composição do total nos dois modos de taxa
+
+O bloco de totais exibe, nesta ordem e cada linha só quando tem conteúdo: subtotal, desconto, taxa
+de serviço, juros do parcelamento e total.
+
+**Taxa repassada.** A linha mostra o valor em reais e **nomeia o meio de pagamento** a que ele
+pertence; o comprador lê na própria linha que aquela taxa é a do PIX ou a do cartão. Taxa zero num
+evento repassado continua **sem linha**, porque não há o que discriminar.
+
+**Taxa incorporada.** A linha existe e não tem valor: diz que a taxa está inclusa no valor exibido.
+Não se escreve "R$ 0,00", porque isso afirma ausência de taxa, e não se escreve o valor real, porque
+ele é o termo comercial do organizador e é confidencial em superfície pública.
+
+**Percentual nunca aparece**, em nenhuma superfície pública e em nenhum dos dois modos. O modo é
+lido do **flag do evento** (`taxaRepassada`), nunca inferido de `taxaServico > 0` — evento que
+repassa pode ter taxa zerada no meio escolhido, e chamar isso de "inclusa" seria falso.
+
+O total de cada opção de pagamento aparece no rótulo da opção **sempre que os dois totais
+existirem**, inclusive quando forem iguais: totais iguais informam que a escolha do meio não muda o
+que se paga. Quando a derivação do meio alternativo falha, aquela opção volta ao rótulo genérico sem
+número e a opção principal nunca é afetada. A nota da etapa de escolha ganha a contraparte do modo
+incorporada, dizendo que não há taxa adicional e que o valor exibido é o final. Construída em
+`ecb5188` e `7427b3e`.
+
+### RN-438 · Os dois aceites são colhidos na inscrição e carimbados na compra
+
+Os aceites de termos da compra e de declaração de saúde são apresentados e confirmados na etapa de
+**inscrição**, ao fim da coleta de dados dos participantes, e gateiam o avanço para o pagamento. A
+etapa de pagamento não os exibe mais.
+
+A prova continua nascendo na compra: o cliente envia apenas booleanos de confirmação, e o servidor
+lê a versão vigente e o hash do material dentro da transação e carimba com o próprio relógio. Não há
+canal para o cliente informar versão, instante ou hash. Depois de a cobrança existir, o bloco fica
+travado onde quer que seja renderizado, **inclusive quando o comprador volta à etapa de inscrição** —
+a prova já foi registrada e a tela não pode sugerir que ela é reversível.
+
+**Esta regra supersede a colocação decidida em 18/07** (spec do lote CKFORM §5.3, construída em
+`e860b8e`, mantida pela DEC-0729 ao fundir resumo e pagamento numa tela só). O que **não** é
+superseded, e continua palavra por palavra: o flip F-4a, que faz o servidor recusar
+`createInscricaoCharge` sem os dois booleanos antes de qualquer escrita; o carimbo dentro da
+transação com versão e `materialHash` lidos ali (padrão RN-149); a regra anti-forja; o travamento
+pós-cobrança; e a completude da prova no replay, que nunca reescreve prova existente.
+
+**Convergência com a RN-148**, não colisão: o aceite de regulamento **por inscrito** já era previsto
+na etapa de dados e segue não construído. Quando a S1207 nascer, os dois moram na mesma etapa por
+regra, e não por coincidência. Construída em `9abf1a6`.
+
+### RN-439 · O aceite carrega a versão exibida, e divergência recusa em vez de carimbar
+
+A tela envia, junto dos booleanos, a versão de cada termo que ela exibiu; o servidor compara com a
+vigente lida na transação. Divergência **recusa a compra** com motivo próprio, e a tela repõe o
+aceite com o texto novo, explicando em uma frase o que aconteceu. Nada é carimbado sob material que
+a pessoa não leu.
+
+A versão exibida é dado de **conferência, nunca de gravação**: o que fica no pedido continua sendo a
+versão vigente lida pelo servidor. A recusa é muda — nem o texto novo, nem o hash, nem a versão
+nova, nem o instante da publicação atravessam; só o motivo passa. A regra nasce da RN-438: colher o
+aceite na inscrição afasta o gesto do carimbo em minutos, e nesse intervalo cabe a publicação de uma
+versão nova pelo organizador. Construída em `e57ce3b`.
+
+**Buraco medido e deixado aberto por decisão (PB-11 · item 68 do painel).** A conferência vale no
+caminho de **criação**, não no `garantirAceitesNoReplay`. No retry de um pedido que já existe e já
+foi pago, o carimbo usa a vigente sem conferir a exibida — medido: pedido sem bloco, política na
+versão 3, retry declarando a 1, e o servidor carimba a 3. Recusar ali deixaria a compra **sem
+prova** em vez de proteger alguém, e a escolha entre prova ausente e prova de material que a pessoa
+não leu é do dono. O caso de teste está no lugar exato onde a decisão vira código.
+
+### RN-440 · Nenhuma cobrança nasce sem escolha deliberada de meio de pagamento
+
+Nenhuma forma de pagamento vem pré-selecionada. A cobrança PIX é gerada automaticamente quando o
+comprador **escolhe** PIX, e não pela simples chegada à tela. A criação da cobrança grava pedido,
+pagamento e inscritos como pendentes antes de falar com o gateway e recomputa os contadores do
+evento no caminho — uma tela que cria cobrança só por ser aberta transforma toda visita ao pagamento
+em inscrição pendente e em cobrança real.
+
+A fronteira entre **cotar** e **cobrar** é explícita no código: a cotação usa PIX como referência
+quando ainda não há escolha (é leitura, não grava e não cobra), e a cobrança só aceita a forma
+efetivamente escolhida, com guard que devolve erro em vez de criar nada. Sem meio escolhido a tela
+continua informando: o bloco de totais mostra a composição da cotação vigente e cada opção carrega o
+próprio total no rótulo. O ganho de não pedir clique extra para ver o código PIX permanece — a
+escolha do meio é o único gesto. Construída em `590226b`, que fecha o buraco aberto pela RN-438
+(com o aceite dado antes, o default `pix` passava a criar cobrança na chegada).
+
+### RN-441 · O termo de saúde do organizador é coletado na tela antes de ser exigido
+
+Quando o evento tem termo de saúde próprio ativo, ele aparece como um **terceiro aceite** na etapa
+de inscrição, com o mesmo padrão de leitura em modal e de exibição de versão dos outros dois, e
+gateia o avanço junto com eles. O envio reflete o que a pessoa marcou: nenhum aceite é afirmado como
+verdadeiro pelo cliente por construção.
+
+A regra fecha um defeito vivo: o servidor já exigia a confirmação do termo custom
+(`createInscricaoCharge.ts:1409`) e a tela nunca a coletou nem a enviou, o que **reprovava a compra
+em todo evento com o termo ativo**. O texto do organizador é renderizado como veio — o vocabulário
+D-0802-1 governa o que a plataforma escreve, e o que o organizador escreveu atravessa intacto
+(PB-7). Construída em `5e17cc1`; a leitura do gate é Postel (`?? null`), porque projeção sem o campo
+devolve `undefined` e `undefined !== null` exigiria um aceite que a tela não renderiza.
+
+### RN-442 · A prova de aceite registra a origem da requisição
+
+O bloco de aceites do pedido passa a guardar, além de versão, instante e hash do material, o
+identificador da origem: o **endereço em forma de hash**, com o mesmo tratamento de segredo já usado
+para identificadores de pessoa, e o agente do navegador. Os dois são lidos pelo servidor a partir da
+própria requisição; o cliente não participa e não pode influenciar nenhum dos dois.
+
+O endereço nunca é gravado em claro — a derivação é HMAC com pepper secreto, e não hash puro, porque
+IPv4 reverte por força bruta em segundos. Requisição sem endereço **omite** a origem em vez de
+gravar o hash de vazio: prova sem origem é prova incompleta, não prova falsa. Atrás de proxy vale o
+primeiro endereço da lista encaminhada; cabeçalho forjado pode mentir sobre o valor, e por isso a
+prova diz "origem declarada pela requisição" — o que a regra impede é o cliente escolher o que fica
+gravado. O replay carimba a origem **deste** retry, que é quando o aceite chegou ao servidor;
+antedatar seria forja. É dado pessoal, coletado com base na prova do aceite e na execução do
+contrato, retido pelo mesmo ciclo do pedido. Construída em `1d0611a`.
+
+### RNs deste épico que a rodada AMPLIA (nenhuma é substituída)
+
+| RN | O que muda |
+|---|---|
+| RN-180 | A condição de exibir o total por opção deixa de ser "os totais diferem" e passa a ser "os dois totais existem" (RN-435) |
+| RN-347 | O modo `incorporada` deixa de ser silêncio na tela: ganha enunciado sem valor (RN-435) |
+| RN-149 | Inalterada no carimbo; a RN-439 acrescenta a conferência da versão exibida antes de carimbar |
+| RN-157, RN-158, RN-333 | Inalteradas. Nenhuma decisão desta rodada toca expiração do PIX, prazo do carrinho ou idempotência |
+
+### Vocabulário: o que a rodada pagou e o que ficou mapeado
+
+**Pago (S1218-T3, `ed16e33`).** Na página do evento, "Escolha seu percurso" virou **"Modalidades
+disponíveis"**, o apoio passou a contar modalidades em vez de distâncias, "Percurso oficial" virou
+"Modalidade oficial" e o apoio da etapa 0 do checkout acompanhou. O veredito foi **medido no bundle
+servido em produção** antes de editar: a X1 da KITCUPOM não tinha pago esta frente. As asserções são
+negativas de propósito, para reprovar a volta do vocabulário.
+
+**Ponta solta nomeada, fora do território e NÃO tocada** — entra na próxima varredura de
+vocabulário: `CheckoutCtaSection.tsx` ("você escolhe o percurso e o kit"), `SobreSection.tsx` (tile
+"Percursos · N distâncias"), `GaleriaSection.tsx` (nome de arquivo `leela-galeria-percurso.jpg`) e a
+âncora `id="percursos"` da dobra. A âncora é **decisão, não conserto**: mudá-la quebra link externo.
+A home segue reservada ao dono por D-0802-1 §2.
+
+### Acervo de imagem de kit (S1218-T4, `1d777fb`)
+
+A cascata de `kitImagem.ts` ganhou três fotos reais sob licença livre, versionadas no repositório,
+com proveniência ao lado dos arquivos. Nenhuma superfície aponta para CDN de terceiro em execução, e
+há caso que varre o acervo inteiro exigindo caminho local. **Defeito que o acervo escondia:** ioga e
+treino caíam no mesmo balaio `wellness` e recebiam a MESMA foto genérica — os dois ganharam foto
+própria, com teste assertando que os três arquivos são distintos. A RN-428 (demonstração app-side, só
+em preview) segue inalterada.

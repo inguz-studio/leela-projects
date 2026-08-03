@@ -746,3 +746,26 @@ acrescenta nem tira nada dessa balança: ele preenche um campo que a pessoa pode
 **Consequência prática para o organizador.** O link do afiliado agora entrega desconto de fato, o
 que aumenta a chance de a conversão ser atribuída por `origem: 'cupom'` em vez de `origem: 'ref'`.
 Nenhum valor muda; o que muda é qual dos dois caminhos registra a conversão com mais frequência.
+
+## Delta o juro do parcelamento não entra na base da comissão (DEC-0802B · 2026-08-03 · RN-437)
+
+Rodada `02-rodadas/2026-08-02-retomada/`; a regra é do E09 e chega aqui como fronteira. Construída
+pela lane `ACHADOS-0802` e **provada** pela `ACHADOS-REV` (vetor 5), trace `leela-build-2d6ee98d`.
+
+Com o motor de juros ligado (RN-436, E04), o valor cobrado do comprador passa a ser maior que o valor
+de face numa compra parcelada. **A comissão do afiliado continua incidindo sobre o face**, e o
+kernel de atribuição não muda uma linha: precedência do cupom sobre o `?ref=`, gate do mínimo de
+inscrições, clamp do instante de clique, janela, re-checagem na confirmação, contador de usos e
+percentual de comissão seguem intactos. RN-310 e P-TAXAFLEX-3 reafirmadas.
+
+A prova estava pela metade e a review fechou. O caso puro provava o líquido do `computeSaleState`,
+mas quem alimenta a conversão do afiliado é o doc de pagamento pelo `webhookPagamento.ts:659`, que lê
+`valorFinal` e **não** `receitaLiquidaOrganizador`. Sob a falsificação que o vetor pede — somar o
+juro à base da conversão —, **69 casos de integração financeira seguiram verdes**. O caso que fecha a
+lacuna compra o mesmo carrinho à vista e em 12x, confirma os dois pelo webhook e compara os deltas:
+mesmo líquido do produtor, mesmo valor de face no razão e mesma comissão de afiliado, com totais de
+comprador diferentes (`dffab74`).
+
+Nada neste épico mudou de comportamento. A regra precisa estar escrita porque, com a taxa de juros em
+zero, a propriedade nunca valeu dinheiro; com ela ligada, passa a valer — e a próxima pessoa que
+mexer na base do repasse precisa saber que o juro fica de fora dos três lugares.
