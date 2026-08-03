@@ -12,6 +12,7 @@ import {
   loginAnonimo,
   type ConfirmarPagamentoSandboxResult,
   type CotarInscricaoCheckoutResult,
+  type CotarParcelaResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
 import {
@@ -189,6 +190,108 @@ function mensagemErro(err: unknown, fallback: string): string {
   return fallback;
 }
 
+// ── C1-0803 · o total muda no ATO da escolha ────────────────────────────────
+//
+// Verbatim do dono (DEC-0803): *"sub total, nao altera imediatamente, quando eu
+// faço a seleção."* Ele trocava de parcela e o número ficava parado até o
+// round-trip da cotação nova voltar — 1,7-9,8 s medidos em produção, com o
+// botão de pagar travado em "Atualizando o total…" no meio do caminho.
+//
+// A causa não era a espera: era pedir de novo o que o servidor JÁ MANDOU. A
+// cotação chega com a ESCADA INTEIRA (`opcoesParcelamento`: parcelas,
+// valorParcela e valorTotal de cada opção ofertável) e com o total à vista de
+// cada meio (`totaisPorMeio`). Trocar entre opções já cotadas é, portanto,
+// troca de LEITURA — a resposta certa já está na mão.
+//
+// A disciplina de dinheiro fica intacta: NADA aqui é somado, subtraído ou
+// arredondado. Cada número exibido é um número que o servidor calculou e
+// enviou; a projeção só escolhe QUAL deles responde pela seleção atual. O que
+// não estiver na resposta não é inventado — a projeção devolve `null` e a
+// guarda do item 64 assume, exatamente como antes.
+
+/**
+ * A opção de parcelamento que responde por `forma × parcelas`, tirada do que o
+ * servidor já cotou. `null` = não dá para responder sem round-trip.
+ */
+function opcaoParcelamentoDe(
+  cot: CotarInscricaoCheckoutResult,
+  escadaCartao: readonly CotarParcelaResult[] | null,
+  forma: FormaUI,
+  parcelas: number,
+): CotarParcelaResult | null {
+  if (forma === 'pix') {
+    // RN-436: PIX é sempre à vista. A "opção" é o total à vista do comprador,
+    // que o servidor mandou pronto em `totalAVista` — nenhuma aritmética.
+    if (parcelas !== 1 || typeof cot.totalAVista !== 'number') return null;
+    return { parcelas: 1, valorParcela: cot.totalAVista, valorTotal: cot.totalAVista };
+  }
+  // A escada do CARTÃO: a que veio na cotação vigente quando ela é de cartão,
+  // ou a escada cotada à parte (C2-0803) para a mesma base de preço.
+  const escada =
+    escadaCartao ?? (cot.forma === 'cartao_credito' ? cot.opcoesParcelamento : null);
+  if (escada === null) return null;
+  return escada.find((o) => o.parcelas === parcelas) ?? null;
+}
+
+/**
+ * A cotação que responde pela seleção ATUAL, montada com valores que o servidor
+ * já enviou. `null` quando a resposta não está na mão — e aí quem manda é a
+ * guarda de cotação em voo (item 64 · CKUX-REV).
+ *
+ * O chamador garante que `cot` é da MESMA base de preço (itens + cupom) da
+ * seleção atual: mudar item ou cupom troca o valor de face e nada aqui projeta
+ * isso.
+ */
+function projetarCotacao(
+  cot: CotarInscricaoCheckoutResult | null,
+  escadaCartao: readonly CotarParcelaResult[] | null,
+  forma: FormaUI,
+  parcelas: number,
+): CotarInscricaoCheckoutResult | null {
+  if (cot === null) return null;
+  // A cotação vigente já É a da seleção — nada a projetar.
+  if (cot.forma === forma && cot.parcelamento.parcelas === parcelas) return cot;
+
+  if (cot.forma !== forma) {
+    // Trocar de MEIO só é projetável quando a composição do total não muda,
+    // isto é, quando os dois totais por meio existem e são IGUAIS (taxa
+    // incorporada, ou repassada com a mesma taxa nos dois meios). Com totais
+    // diferentes, a linha "Taxa de serviço" do resumo passaria a ser a do
+    // outro meio, e derivá-la aqui (total do meio − valorFinal) criaria a
+    // segunda autoridade sobre o dinheiro que a RN-437 proíbe. Nesse caso a
+    // projeção se recusa e a guarda de cotação em voo assume.
+    const tp = cot.totaisPorMeio;
+    if (tp === undefined) return null;
+    const alvo = tp[forma];
+    const vigente = tp[cot.forma];
+    if (alvo === null || vigente === null || alvo !== vigente) return null;
+  }
+
+  const opcao = opcaoParcelamentoDe(cot, escadaCartao, forma, parcelas);
+  if (opcao === null) return null;
+
+  // RN-437 · o juro continua sem ser derivado na tela. Ele só acompanha a
+  // projeção quando é um FATO do contrato (à vista não tem juro) ou quando a
+  // parcela projetada é a mesma que o servidor cotou (troca só de meio com
+  // total idêntico). Nos demais casos a linha some até a cotação nova chegar —
+  // preferível a exibir o juro de outra parcela ao lado do total certo.
+  const { jurosParcelamento: jurosCotado, ...semJuros } = cot;
+  const juros =
+    opcao.parcelas === 1
+      ? 0
+      : opcao.parcelas === cot.parcelamento.parcelas
+        ? jurosCotado
+        : undefined;
+
+  return {
+    ...semJuros,
+    forma,
+    parcelamento: opcao,
+    totalCobrado: opcao.valorTotal,
+    ...(juros !== undefined ? { jurosParcelamento: juros } : {}),
+  };
+}
+
 interface Atribuicao {
   cupom?: string;
   /** refCodigo do link de afiliado (R9-E · RN-313) — vindo da URL. */
@@ -297,6 +400,13 @@ export function CheckoutFlow({
   const [cupomInput, setCupomInput] = useState(atribuicao.cupom ?? '');
   const [cupomAplicado, setCupomAplicado] = useState<string | null>(null);
   const [cotacao, setCotacao] = useState<CotarInscricaoCheckoutResult | null>(null);
+  /**
+   * C1-0803 · a BASE de preço (evento + seleção + cupom) da cotação que está em
+   * `cotacao`. É a régua que autoriza a projeção do total: com a base igual à
+   * da tela, trocar parcela ou meio é releitura do que o servidor já mandou;
+   * com a base diferente, o valor de face mudou e só a cotação nova responde.
+   */
+  const [baseCotada, setBaseCotada] = useState<string | null>(null);
   const [cotando, setCotando] = useState(false);
   const [erroCotacao, setErroCotacao] = useState<string | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
@@ -675,12 +785,22 @@ export function CheckoutFlow({
   const cotarComRef = useRef(cotarCom);
   cotarComRef.current = cotarCom;
 
+  /**
+   * A BASE de preço: o que define o valor de face da venda (evento, seleção de
+   * cada inscrito, cupom). Mudar qualquer coisa daqui é uma cotação nova de
+   * verdade — nenhuma projeção de tela responde por isso (C1-0803).
+   */
+  const assinaturaBaseDe = useCallback(
+    (cupom: string | null): string => `${evento.slug}|${selecaoSig}|${cupom ?? ''}`,
+    [evento.slug, selecaoSig],
+  );
   /** A lista curta do que move preço. Igualdade aqui = cotação igual. */
   const assinaturaDe = useCallback(
     (cupom: string | null): string =>
-      `${evento.slug}|${selecaoSig}|${formaCotada}|${parcelasEfetivas}|${cupom ?? ''}`,
-    [evento.slug, selecaoSig, formaCotada, parcelasEfetivas],
+      `${assinaturaBaseDe(cupom)}|${formaCotada}|${parcelasEfetivas}`,
+    [assinaturaBaseDe, formaCotada, parcelasEfetivas],
   );
+  const baseAtual = assinaturaBaseDe(cupomAplicado);
   const assinaturaAtual = assinaturaDe(cupomAplicado);
 
   /** Assinatura da última cotação BEM-SUCEDIDA — `null` quando não há. */
@@ -695,6 +815,9 @@ export function CheckoutFlow({
    */
   const assinaturaDeRef = useRef(assinaturaDe);
   assinaturaDeRef.current = assinaturaDe;
+  /** Idem para a BASE de preço (C1-0803), usada nos caminhos assíncronos. */
+  const assinaturaBaseDeRef = useRef(assinaturaBaseDe);
+  assinaturaBaseDeRef.current = assinaturaBaseDe;
 
   useEffect(() => {
     if (!precisaCotar || !podeCotar || cupomUrlPendente) return;
@@ -724,17 +847,44 @@ export function CheckoutFlow({
         setCotando(false);
         if (r.ok) {
           assinaturaCotadaRef.current = assinaturaAtual;
+          setBaseCotada(baseAtual);
           setCotacao(r.data);
           setErroCotacao(null);
         } else {
           assinaturaCotadaRef.current = null;
+          setBaseCotada(null);
           setCotacao(null);
           setErroCotacao(r.error);
         }
       });
     }, DEBOUNCE_COTACAO_MS);
     return () => clearTimeout(timer);
-  }, [precisaCotar, podeCotar, cupomUrlPendente, assinaturaAtual, cupomAplicado, recotarNonce]);
+  }, [precisaCotar, podeCotar, cupomUrlPendente, baseAtual, assinaturaAtual, cupomAplicado, recotarNonce]);
+
+  // ── C1-0803 · a cotação que a TELA usa ────────────────────────────────────
+  //
+  // `cotacaoExibida` é a resposta do servidor relida para a seleção de AGORA —
+  // e é `null` quando essa resposta não está na mão. Daí saem duas coisas:
+  //
+  //   · o que a tela mostra (`cotacaoNaTela`): a projeção quando existe, senão
+  //     a última cotação boa, como antes;
+  //   · quem pode PROMETER preço (`totalDefasado`): só a projeção. Item 64
+  //     (CKUX-REV) continua exato — botão travado com cotação NOVA em voo —,
+  //     mas deixa de disparar onde não há cotação nova nenhuma a esperar: na
+  //     troca entre opções que o servidor já cotou.
+  const cotacaoExibida = useMemo(
+    () =>
+      baseCotada === baseAtual
+        ? projetarCotacao(cotacao, null, formaCotada, parcelasEfetivas)
+        : null,
+    [baseCotada, baseAtual, cotacao, formaCotada, parcelasEfetivas],
+  );
+  const cotacaoNaTela = cotacaoExibida ?? cotacao;
+  /**
+   * CKUX-REV (item 64) · a cotação em voo é de um preço que a tela ainda não
+   * tem. Com a projeção respondendo pela seleção atual, não é o caso.
+   */
+  const totalDefasado = cotando && cotacaoExibida === null;
 
   // S1215-T2 (RN-430) · o cupom do link SOBREVIVE à navegação. Sem cupom na URL
   // do checkout, procura o que o `CupomTracker` guardou na página do evento.
@@ -792,6 +942,7 @@ export function CheckoutFlow({
         // assinatura resultante impede que o efeito de cotação reaja ao
         // `cupomAplicado` recém-escrito e peça a mesma coisa de novo.
         assinaturaCotadaRef.current = assinaturaDe(codigo);
+        setBaseCotada(assinaturaBaseDe(codigo));
         setCupomAplicado(codigo);
         setOrigemCupom('link');
         setCotacao(r.data);
@@ -855,6 +1006,7 @@ export function CheckoutFlow({
       // T-CKUX-1: mesma disciplina do cupom de link — o "Aplicar" já cotou; o
       // efeito não precisa cotar de novo por causa do `cupomAplicado` novo.
       assinaturaCotadaRef.current = assinaturaDe(code);
+      setBaseCotada(assinaturaBaseDeRef.current(code));
       setCupomAplicado(code);
       // RN-430: o código digitado à mão PREVALECE sobre o do link — é ação
       // deliberada da pessoa. A marca do resumo passa a não ser "do link"
@@ -889,6 +1041,7 @@ export function CheckoutFlow({
     // voltar; no PAGAR o efeito recota na hora, e o botão de pagar já está
     // travado por `totalDefasado` (CKUX-REV) enquanto isso.
     assinaturaCotadaRef.current = null;
+    setBaseCotada(null);
     setCotacao(null);
     // S1215-T2: remover DESLIGA o cupom do link também. Sem isto, o efeito de
     // auto-apply poderia trazer de volta o que a pessoa acabou de tirar.
@@ -1117,12 +1270,13 @@ export function CheckoutFlow({
       // anterior. Nascer aqui produziria um código PIX do preço novo embaixo
       // de um total antigo — a mesma mentira do botão do cartão, só que já
       // com a cobrança criada. 200 ms de debounce mais o round-trip é o que
-      // se espera; o QR aparece sozinho logo depois.
-      !cotando
+      // se espera; o QR aparece sozinho logo depois. C1-0803: a guarda é a
+      // mesma do botão — cotação NOVA em voo, não qualquer chamada no ar.
+      !totalDefasado
     ) {
       void gerarCobranca();
     }
-  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, cotando, gerarCobranca]);
+  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, totalDefasado, gerarCobranca]);
 
   // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
   // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
@@ -1519,7 +1673,7 @@ export function CheckoutFlow({
         {step === 2 ? (
           <div className="flex flex-col gap-6">
             <StepResumo
-              cotacao={cotacao}
+              cotacao={cotacaoNaTela}
               cotando={cotando}
               erroCotacao={erroCotacao}
               onTentarCotacao={tentarCotarNovamente}
@@ -1542,7 +1696,7 @@ export function CheckoutFlow({
             />
             <StepPagamento
               forma={forma}
-              total={cotacao?.totalCobrado ?? null}
+              total={cotacaoNaTela?.totalCobrado ?? null}
               charge={charge}
               criandoCharge={criandoCharge}
               erroCharge={erroCharge}
@@ -1560,9 +1714,11 @@ export function CheckoutFlow({
               onPixExpirar={aoExpirarPix}
               onNovaCobranca={novaCobrancaPix}
               gatewaySemResposta={gatewaySemResposta}
-              // CKUX-REV: cotação nova no ar ⇒ o total desta renderização é o
-              // da seleção anterior. Nenhum botão de pagar oferece preço velho.
-              totalDefasado={cotando}
+              // CKUX-REV (item 64) · cotação NOVA no ar ⇒ o total desta
+              // renderização é o da seleção anterior. Nenhum botão de pagar
+              // oferece preço velho. C1-0803: a guarda vale onde há preço novo
+              // a esperar — não na troca entre opções que o servidor já cotou.
+              totalDefasado={totalDefasado}
             />
           </div>
         ) : null}
@@ -1602,9 +1758,9 @@ export function CheckoutFlow({
             <ArrowLeft size={16} strokeWidth={2} aria-hidden className="mr-1.5" />
             Voltar
           </Button>
-          {cotacao ? (
+          {cotacaoNaTela ? (
             <p className="text-[length:var(--font-size-base)] text-text-secondary">
-              Total: <span className="font-[var(--font-weight-semibold)] text-text-primary">{formatarPreco(cotacao.totalCobrado)}</span>
+              Total: <span className="font-[var(--font-weight-semibold)] text-text-primary">{formatarPreco(cotacaoNaTela.totalCobrado)}</span>
             </p>
           ) : null}
         </div>

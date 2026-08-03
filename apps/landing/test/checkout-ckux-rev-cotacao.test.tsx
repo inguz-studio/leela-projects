@@ -77,9 +77,13 @@ function cotacaoCom(total: number, forma: string): Record<string, unknown> {
     cupomAplicado: null,
     taxaServico: 0,
     totalAVista: total,
+    // DEC-0803 · C1-0803 — a escada tem o total DE CADA OPÇÃO, e eles diferem
+    // (é o juro do parcelamento). Antes o 3x repetia o total do 1x, o que
+    // tornava impossível distinguir "o botão promete o preço velho" de "o botão
+    // já leu o preço da opção nova" — os dois números eram o mesmo.
     opcoesParcelamento: [
       { parcelas: 1, valorParcela: total, valorTotal: total },
-      { parcelas: 3, valorParcela: Math.round(total / 3), valorTotal: total },
+      { parcelas: 3, valorParcela: total / 3 + 100, valorTotal: total + 300 },
     ],
     parcelamento: { parcelas: 1, valorParcela: total, valorTotal: total },
     totalCobrado: total,
@@ -242,6 +246,9 @@ describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cob
       pedidoId: 'ped-1',
       pixExpiraEmMillis: Date.now() + 1_800_000,
     });
+    // O que este caso mede acaba na criação da cobrança; a tela de confirmação
+    // tem contrato (e arquivo) próprios.
+    confirmarPagamentoSandbox.mockRejectedValue(new Error('sandbox fora'));
 
     await irAtePagar();
 
@@ -263,23 +270,31 @@ describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cob
     await passarDebounce();
     expect(resolverTresVezes).not.toBeNull();
 
-    // Enquanto o total novo não chega, o botão não pode prometer o antigo:
-    // clicar aqui manda `parcelas: 3` ao servidor, que cobra o total de 3x —
-    // não o valor que a pessoa leu no botão.
+    // DEC-0803 · C1-0803 — a exigência do B1 não mudou: o valor no botão é o
+    // valor que seria cobrado. O que mudou é COMO ela é cumprida. O total de
+    // 3x não precisa da cotação em voo para ser conhecido: ele veio na escada
+    // da cotação anterior (`opcoesParcelamento`), calculado pelo servidor. O
+    // botão passa a exibir ESSE número no mesmo gesto, em vez de travar em
+    // "Atualizando o total…" esperando a resposta que só repetiria a escada.
+    //
+    // O que continua proibido é o preço VELHO: clicar manda `parcelas: 3` ao
+    // servidor, que cobra o total de 3x.
     const botao = botaoPagar();
-    const prometeuPrecoVelho = (botao.textContent ?? '').includes(brl(TOTAL_CARTAO));
-    expect(prometeuPrecoVelho && !botao.disabled).toBe(false);
+    expect(botao.textContent).toContain(brl(TOTAL_CARTAO + 300));
+    expect(botao.textContent).not.toContain(brl(TOTAL_CARTAO));
+    expect(botao.disabled).toBe(false);
 
-    // S1217-T1 · RN-438: com os aceites dados na etapa anterior, a chegada ao
-    // PAGAR com PIX pré-selecionado já dispara a auto-geração (A-3) — é o
-    // efeito que a D-ACH-12/RN-440 (task C2) desfaz tirando a pré-seleção. A
-    // asserção passa a ser RELATIVA: o clique no botão de pagar defasado não
-    // acrescenta chamada nenhuma.
-    const antes = createInscricaoCharge.mock.calls.length;
+    // E o que vai ao servidor é a opção que o botão prometeu.
     await act(async () => {
       fireEvent.click(botao);
     });
-    expect(createInscricaoCharge.mock.calls.length).toBe(antes);
+    await waitFor(() => {
+      expect(createInscricaoCharge).toHaveBeenCalled();
+    });
+    expect(createInscricaoCharge.mock.calls.at(-1)?.[0]).toMatchObject({
+      forma: 'cartao_credito',
+      parcelas: 3,
+    });
   });
 });
 
