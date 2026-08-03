@@ -61,14 +61,46 @@ export interface InstallmentOption {
 
 /**
  * Monta as opções de parcelamento a partir das regras do TERMO do tenant
- * (RN-311/RN-406 — nunca de constante).
+ * (RN-311/RN-406/RN-436 — nunca de constante).
  *
  * Regras aplicadas:
  *   - até `maxParcelas`;
  *   - nenhuma parcela abaixo de `parcelaMinima`;
- *   - `jurosAoMes` composto por parcela quando > 0 (price simplificado:
- *     total = valor × (1 + juros%)^n); 0 = sem juros;
+ *   - juros pela **tabela Price** quando `jurosAoMes > 0`; 0 = sem juros;
+ *   - `n = 1` NUNCA tem juros;
  *   - à vista (1x) é sempre ofertada.
+ *
+ * ── S314-T1 · o que mudou, e por que é dinheiro (RN-436) ───────────────────
+ *
+ * O modelo anterior era `total = valor × (1 + i)^n` com `parcela = total / n`.
+ * Isso não é Price: é o principal corrigido pelo juro composto do PRAZO
+ * INTEIRO, sem amortização. Com R$ 300 a 2,89% a.m. em 12x ele cobra
+ * R$ 422,28; a tabela Price cobra R$ 359,28 — 17,5% de diferença na tela do
+ * dinheiro, contra o comprador. Enquanto `jurosAoMes` era 0 os dois modelos
+ * coincidiam e a diferença nunca valeu um centavo; ligar o número é o que a
+ * torna real.
+ *
+ * A forma canônica:
+ *
+ *     n = 1   →  parcela = PV                        (sem juros)
+ *     n ≥ 2   →  parcela = PV × i ÷ (1 − (1 + i)^−n)
+ *                total   = parcela × n
+ *
+ * **`n = 1` sem juros não é arredondamento de conveniência.** Price puro
+ * cobra um mês na parcela única, porque a fórmula assume pagamento ao FIM do
+ * período; no cartão à vista o pagamento é agora. Sem a exceção, a opção
+ * "À vista" do cartão nasceria 2,89% mais cara que o PIX com esse rótulo, e o
+ * `totalAVista` do resumo passaria a divergir do primeiro item da lista de
+ * parcelamento NA MESMA TELA.
+ *
+ * **A ordem do arredondamento é normativa (RN-183 ampliada).** Arredonda-se a
+ * PARCELA, e o total é a parcela multiplicada. Como o adapter manda
+ * `installmentCount` + `totalValue` e deixa o gateway dividir, um total que é
+ * múltiplo exato da parcela faz a divisão dele cair no MESMO número que a tela
+ * mostrou. Com o total arredondado primeiro (o que se fazia aqui), o gateway
+ * podia devolver centavos diferentes do que o comprador leu — e isso vale
+ * inclusive com juros ZERO, onde R$ 35 em 3x dava parcela 11,67 e total 35,00,
+ * três parcelas que não somam o total.
  */
 export function buildInstallmentOptions(
   valor: number,
@@ -78,11 +110,16 @@ export function buildInstallmentOptions(
     throw new RangeError('valor deve ser um número > 0.');
   }
 
+  const i = rules.jurosAoMes > 0 ? rules.jurosAoMes / 100 : 0;
+
   const options: InstallmentOption[] = [];
   for (let n = 1; n <= rules.maxParcelas; n++) {
-    const fator = rules.jurosAoMes > 0 ? Math.pow(1 + rules.jurosAoMes / 100, n) : 1;
-    const valorTotal = roundMoney(valor * fator);
-    const valorParcela = roundMoney(valorTotal / n);
+    // Parcela primeiro (RN-436), total depois — a ordem é a regra.
+    const valorParcela =
+      n === 1 || i === 0
+        ? roundMoney(valor / n)
+        : roundMoney((valor * i) / (1 - Math.pow(1 + i, -n)));
+    const valorTotal = roundMoney(valorParcela * n);
 
     // Parcela mínima do termo — exceto à vista, que é sempre válida
     if (n > 1 && valorParcela < rules.parcelaMinima) break;

@@ -241,16 +241,25 @@ describe('computeSaleState — parcelamento (RN-311 · Price repassado)', () => 
       parcelas: 3,
       installmentRules: RULES_COM_JUROS,
     });
-    const esperado = roundMoney(300 * Math.pow(1.0349, 3));
+    // S314-T1 (RN-436): tabela Price de verdade. O valor esperado era
+    // `300 × 1,0349³` = 332,52 — o composto do prazo inteiro, que cobrava do
+    // comprador 11,34 a mais do que a amortização Price (321,18) para o mesmo
+    // prazo e a mesma taxa. Enquanto `jurosAoMes` era 0 os dois modelos
+    // coincidiam; ligar o número é o que torna a diferença dinheiro.
+    const parcelaPrice = roundMoney((300 * 0.0349) / (1 - Math.pow(1.0349, -3)));
+    const esperado = roundMoney(parcelaPrice * 3);
     expect(sale.parcelamento.parcelas).toBe(3);
+    expect(sale.parcelamento.valorParcela).toBe(parcelaPrice);
     expect(sale.parcelamento.valorTotal).toBe(esperado);
     expect(sale.totalCobrado).toBe(esperado);
     // Juros REPASSADOS: comprador nunca paga menos que o valorFinal
     expect(sale.totalCobrado).toBeGreaterThanOrEqual(sale.valorFinal);
-    // Invariante de parsePagamento: n × parcela ≈ total (½ centavo/parcela)
-    expect(
-      Math.abs(3 * sale.parcelamento.valorParcela - sale.parcelamento.valorTotal)
-    ).toBeLessThanOrEqual(3 * 0.005 + 1e-9);
+    // RN-436: a soma fecha EXATO em centavos — a tolerância de ½ centavo por
+    // parcela morreu com o arredondamento na parcela (é ela que faz a divisão
+    // do gateway coincidir com o número que a tela mostrou).
+    expect(Math.round(sale.parcelamento.valorParcela * 100) * 3).toBe(
+      Math.round(sale.parcelamento.valorTotal * 100)
+    );
   });
 
   it('PIX com parcelas > 1 → lança (PIX é à vista)', () => {

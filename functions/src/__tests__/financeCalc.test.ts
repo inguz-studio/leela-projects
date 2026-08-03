@@ -77,21 +77,89 @@ describe('buildInstallmentOptions (RN-311 — regras do termo)', () => {
     expect(options).toEqual([{ parcelas: 1, valorParcela: 5, valorTotal: 5 }]);
   });
 
-  it('juros compostos por parcela quando jurosAoMes > 0', () => {
-    const comJuros: InstallmentRules = {
-      maxParcelas: 3,
-      jurosAoMes: 2,
-      parcelaMinima: 0,
-    };
-    const options = buildInstallmentOptions(100, comJuros);
-    expect(options[0]).toEqual({ parcelas: 1, valorParcela: 102, valorTotal: 102 });
-    expect(options[1]?.valorTotal).toBe(104.04); // 100 × 1,02²
-    expect(options[2]?.valorTotal).toBe(106.12); // 100 × 1,02³ = 106,1208
-  });
-
   it('rejeita valor ≤ 0 ou não-finito', () => {
     expect(() => buildInstallmentOptions(0, semJuros)).toThrow(RangeError);
     expect(() => buildInstallmentOptions(-10, semJuros)).toThrow(RangeError);
     expect(() => buildInstallmentOptions(Number.NaN, semJuros)).toThrow(RangeError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S314-T1 · RN-436 — a tabela Price de verdade
+//
+// Estes casos REPROVAM o modelo anterior (`total = valor × (1+i)^n`,
+// `parcela = total / n`). Falsificação medida com a fórmula antiga restaurada:
+// os quatro primeiros casos caem; o quinto (parcela mínima) passa nos dois
+// mundos de propósito — é a guarda de que a mudança de fórmula não mexeu no
+// corte do termo.
+// ---------------------------------------------------------------------------
+describe('buildInstallmentOptions · tabela Price (S314-T1 · RN-436)', () => {
+  /** O termo que o dono mandou simular (D-ACH-8): 2,89% a.m. */
+  const price289: InstallmentRules = {
+    maxParcelas: 12,
+    jurosAoMes: 2.89,
+    parcelaMinima: 0,
+  };
+
+  it('R$ 300 a 2,89% a.m. em 12x cobra Price, não o composto do prazo inteiro', () => {
+    const options = buildInstallmentOptions(300, price289);
+    const doze = options.find((o) => o.parcelas === 12);
+    // Price: 300 × 0,0289 ÷ (1 − 1,0289^−12) = 29,941065… → 29,94/parcela.
+    expect(doze).toEqual({ parcelas: 12, valorParcela: 29.94, valorTotal: 359.28 });
+    // O modelo antigo cobrava 300 × 1,0289^12 = 422,28 — 17,5% a mais.
+    expect(doze?.valorTotal).not.toBe(422.28);
+  });
+
+  it('a parcela única NUNCA carrega juros (1x = PV)', () => {
+    const options = buildInstallmentOptions(300, price289);
+    expect(options[0]).toEqual({ parcelas: 1, valorParcela: 300, valorTotal: 300 });
+    // É esta igualdade que faz "à vista" do cartão bater com o PIX à vista na
+    // mesma tela: `totalAVista` do resumo == valorTotal da 1ª opção.
+    expect(options[0]?.valorTotal).toBe(300);
+  });
+
+  it('para TODO n da lista, parcela × n === total, exato em centavos', () => {
+    for (const valor of [300, 137.4, 89.9, 1200, 35]) {
+      for (const juros of [0, 2.89, 3.49]) {
+        const options = buildInstallmentOptions(valor, {
+          maxParcelas: 12,
+          jurosAoMes: juros,
+          parcelaMinima: 0,
+        });
+        for (const o of options) {
+          // Centavos inteiros: comparar em reais deixaria 0,1+0,2 passar.
+          expect(Math.round(o.valorParcela * 100) * o.parcelas).toBe(
+            Math.round(o.valorTotal * 100),
+          );
+        }
+      }
+    }
+  });
+
+  it('a parcela cresce com o juro e o total nunca é menor que o principal', () => {
+    const semJuros = buildInstallmentOptions(300, {
+      maxParcelas: 12,
+      jurosAoMes: 0,
+      parcelaMinima: 0,
+    });
+    const comJuros = buildInstallmentOptions(300, price289);
+    for (let n = 2; n <= 12; n++) {
+      const a = semJuros.find((o) => o.parcelas === n)!;
+      const b = comJuros.find((o) => o.parcelas === n)!;
+      expect(b.valorParcela).toBeGreaterThan(a.valorParcela);
+      expect(b.valorTotal).toBeGreaterThan(300);
+    }
+  });
+
+  it('o corte pela parcela mínima do termo continua valendo com juros ligados', () => {
+    // Parcela mínima alta: com Price a parcela é MAIOR, então o corte cai
+    // depois — comportamento correto, e não exceção.
+    const options = buildInstallmentOptions(300, {
+      maxParcelas: 12,
+      jurosAoMes: 2.89,
+      parcelaMinima: 40,
+    });
+    expect(options.map((o) => o.parcelas)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(options[options.length - 1]?.valorParcela).toBeGreaterThanOrEqual(40);
   });
 });

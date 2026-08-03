@@ -204,19 +204,26 @@ describe('RN-347 · I5 — Price sobre o total correto', () => {
     expect(sale.opcoesParcelamento).toEqual(
       buildInstallmentOptions(totalComprador, RULES_COM_JUROS)
     );
-    // 1x do CARTÃO carrega 1 mês de juros Price (modelo do termo) — a base
-    // é o total do COMPRADOR (face + taxa), não o face (RN-347/I5).
-    expect(sale.opcoesParcelamento[0]?.valorTotal).toBe(
-      roundMoney(totalComprador * 1.0349)
+    // S314-T1 (RN-436) · a parcela única do CARTÃO deixou de carregar um mês
+    // de juros. O esperado era `totalComprador × 1,0349`; agora é o próprio
+    // total à vista. Sem isso, "À vista" no cartão nascia 3,49% acima do PIX
+    // com o MESMO rótulo, e o `totalAVista` do resumo divergia do primeiro
+    // item da lista de parcelamento na mesma tela.
+    expect(sale.opcoesParcelamento[0]?.valorTotal).toBe(totalComprador);
+    // 3x: Price sobre (face + taxa) — a base continua sendo o total do
+    // COMPRADOR, que é o que a I5 desta RN prova; só a fórmula mudou.
+    const parcela3x = roundMoney(
+      (totalComprador * 0.0349) / (1 - Math.pow(1.0349, -3))
     );
-    // 3x: juros Price sobre (face + taxa); parcelas fecham cent-a-cent
-    const esperado3x = roundMoney(totalComprador * Math.pow(1.0349, 3));
+    const esperado3x = roundMoney(parcela3x * 3);
     expect(sale.parcelamento.parcelas).toBe(3);
     expect(sale.parcelamento.valorTotal).toBe(esperado3x);
     expect(sale.totalCobrado).toBe(esperado3x);
-    expect(
-      Math.abs(3 * sale.parcelamento.valorParcela - sale.parcelamento.valorTotal)
-    ).toBeLessThanOrEqual(3 * 0.005 + 1e-9);
+    // RN-436: a soma fecha EXATO em centavos (a divisão do gateway reproduz
+    // o número da tela) — a tolerância de ½ centavo por parcela morreu.
+    expect(Math.round(sale.parcelamento.valorParcela * 100) * 3).toBe(
+      Math.round(sale.parcelamento.valorTotal * 100)
+    );
     // Juros nunca reduzem: total parcelado ≥ total à vista do comprador
     expect(sale.parcelamento.valorTotal).toBeGreaterThanOrEqual(totalComprador);
   });
