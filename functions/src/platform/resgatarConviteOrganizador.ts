@@ -20,6 +20,13 @@
 // seja platform_admin); esta Function é o único caminho, e ela roda com Admin
 // SDK, que bypassa Rules.
 //
+// A uniformidade vale para TODO chamador, não só para o candidato do caminho
+// feliz: a conta com papel conflitante (`platform_admin`, `tenant_staff`,
+// `promoter`, `athlete` demovido) atravessava até o provisionamento antes de
+// ser recusada, e a recusa de lá chegava como `internal` — diferente do
+// `permission-denied` do código morto. Era um oráculo de validade. Ver
+// `contaElegivelParaResgate`.
+//
 // -----------------------------------------------------------------------------
 // Rate-limit (RN-415)
 // -----------------------------------------------------------------------------
@@ -133,6 +140,54 @@ async function slugLivre(
   );
 }
 
+/**
+ * A conta pode virar dona de um tenant por ESTE caminho (fix ONBOARD-REV ·
+ * DEF-B)? Espelha, e só espelha, a guarda de papel do `provisionTenantCore`:
+ * conta sem papel algum e `athlete` LIMPO passam; `platform_admin`,
+ * `tenant_staff`, `promoter`, `tenant_owner` e o `athlete` com o marcador de
+ * demoção deliberada não.
+ *
+ * Existe por duas razões, e nenhuma delas é autorização — a autoridade segue
+ * sendo o `provisionTenantCore`:
+ *
+ *   1. **Anti-enumeração (RN-414).** Sem esta consulta, a conta com papel
+ *      conflitante recebia `permission-denied` quando o código não existia e
+ *      `internal` quando ele existia e estava vivo — o provisionamento só é
+ *      alcançado depois de um código VÁLIDO. Duas respostas para dois estados
+ *      é exatamente o oráculo que a RN-414 proíbe, e ele estava documentado
+ *      como contrato no `api-client` ("`internal` → falha APÓS um código
+ *      válido").
+ *   2. **O convite não pode piscar.** O caminho antigo RESERVAVA o código
+ *      (`ativo → usado`), descobria a recusa lá no provisionamento e
+ *      compensava. Quem nunca poderia ser dono queimava e devolvia convite
+ *      alheio a cada tentativa, e ainda lia "Tente de novo em instantes" — um
+ *      convite para repetir para sempre um pedido que jamais vai passar.
+ *
+ * O veredito é lido ANTES da transação (é I/O de Auth) e aplicado DENTRO dela,
+ * DEPOIS do ramo de replay: quem já resgatou é `tenant_owner` — inelegível por
+ * esta régua — e o retry idempotente dessa conta tem de continuar de pé.
+ */
+async function contaElegivelParaResgate(
+  auth: admin.auth.Auth,
+  callerUid: string
+): Promise<boolean> {
+  try {
+    const user = await auth.getUser(callerUid);
+    const claims = (user.customClaims ?? {}) as {
+      role?: string;
+      demotedFromRole?: unknown;
+    };
+    if (claims.role === undefined) return true;
+    return claims.role === 'athlete' && claims.demotedFromRole === undefined;
+  } catch {
+    // Ler o papel falhou: NÃO é motivo para barrar quem talvez seja legítimo.
+    // Fail-open aqui é seguro porque isto não autoriza nada — o
+    // `provisionTenantCore` continua sendo a guarda de verdade, e o pior caso
+    // é voltar ao comportamento anterior a este fix.
+    return true;
+  }
+}
+
 /** Semente do slug: organização do cadastro; nome; local-part do e-mail. */
 function sementeDoSlug(
   organizacao: unknown,
@@ -185,6 +240,11 @@ export async function resgatarConviteCore(
   const conviteRef = db.collection(COLECAO_CONVITES_ORGANIZADOR).doc(codigo);
   const profRef = db.collection('profissionais').doc(callerUid);
 
+  // Papel da conta, lido UMA vez (ver `contaElegivelParaResgate`). Fica aqui,
+  // antes da transação, porque é I/O de Auth — dentro dela seria reexecutado a
+  // cada retry do Firestore.
+  const elegivel = await contaElegivelParaResgate(auth, callerUid);
+
   // ── Dados do cadastro (semente do tenant — P7) ──────────────────────────
   const profSnap = await profRef.get();
   const organizacao = profSnap.get('organizacao') as unknown;
@@ -219,6 +279,12 @@ export async function resgatarConviteCore(
       if (!conviteResgatavel({ status, expiraEm: snap.get('expiraEm') }, agora)) {
         throw recusaGenerica();
       }
+
+      // Último gate antes de QUEIMAR o convite (DEF-B): a conta que o
+      // provisionamento vai recusar de qualquer forma não reserva o código e
+      // recebe a MESMA recusa de um código morto. Não é autorização — é a
+      // uniformidade da RN-414 e a integridade do convite.
+      if (!elegivel) throw recusaGenerica();
 
       tx.update(conviteRef, {
         status: 'usado' satisfies StatusConviteOrganizador,

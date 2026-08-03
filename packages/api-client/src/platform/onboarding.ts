@@ -54,8 +54,11 @@ export interface ResgatarConviteResult {
  *   - `functions/permission-denied` → recusa ÚNICA e genérica do código
  *     (inexistente × usado × revogado × expirado são indistinguíveis);
  *   - `functions/resource-exhausted` → teto de tentativas (RN-415);
- *   - `functions/internal` → falha de infra APÓS um código válido (o código
- *     não foi queimado; vale tentar de novo).
+ *   - `functions/internal` → falha de INFRA no provisionamento (o código não
+ *     foi queimado; vale tentar de novo). Não confunda com recusa: toda
+ *     recusa, seja do código, seja do papel da conta, sai como
+ *     `permission-denied` — `internal` não é sinal de código válido (o oráculo
+ *     que a REV fechou; ver `contaElegivelParaResgate` na Function).
  *
  * Depois do sucesso o chamador PRECISA forçar refresh do ID token: a claim de
  * tenant acabou de nascer e o token em cache ainda não a carrega.

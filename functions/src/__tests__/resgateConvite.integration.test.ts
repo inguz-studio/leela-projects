@@ -247,6 +247,64 @@ describe('resgate — recusa ÚNICA e genérica (RN-414 · anti-enumeração)', 
     expect([...mensagens][0]).toContain(ERRO_RESGATE_CONVITE);
   });
 
+  // ── DEF-B (ONBOARD-REV) ──────────────────────────────────────────────
+  // A recusa era única só para o candidato do caminho feliz. A conta com
+  // papel conflitante atravessava a reserva e ia morrer no
+  // `provisionTenantCore`, cuja falha chega como `internal` — e `internal`
+  // só acontece DEPOIS de um código válido. Medido antes do fix:
+  //   platform_admin → código vivo: internal · código morto: permission-denied
+  //   tenant_staff   → código vivo: internal · código morto: permission-denied
+  // Falsificação: apague o `if (!elegivel) throw recusaGenerica()` da
+  // transação e os dois casos abaixo morrem.
+  it('DEF-B: papel conflitante não distingue código VIVO de código MORTO', async () => {
+    for (const claims of [
+      { role: 'platform_admin' },
+      { role: 'tenant_staff', tenantId: 'algum-tenant' },
+      { role: 'athlete', demotedFromRole: 'tenant_owner' },
+    ]) {
+      const conta = await contaRecemCadastrada(`inelegivel-${claims.role}-${claims.tenantId ?? claims.demotedFromRole ?? ''}`);
+      await auth.setCustomUserClaims(conta.uid, claims);
+      await criarConvite(CODIGO_SEGUNDO);
+
+      const vivo = await erroDe(
+        resgatarConviteCore(db, auth, { codigo: CODIGO_SEGUNDO }, conta.uid, conta.email)
+      );
+      const morto = await erroDe(
+        resgatarConviteCore(db, auth, { codigo: 'ZZ23ZZ45' }, conta.uid, conta.email)
+      );
+
+      expect(vivo?.code).toBe('permission-denied');
+      expect(vivo?.message).toContain(ERRO_RESGATE_CONVITE);
+      expect(morto?.code).toBe(vivo?.code);
+      expect(morto?.message).toBe(vivo?.message);
+    }
+  });
+
+  it('DEF-B: papel conflitante não CHEGA a TOCAR o convite', async () => {
+    const conta = await contaRecemCadastrada('inelegivel-nao-queima');
+    await auth.setCustomUserClaims(conta.uid, { role: 'platform_admin' });
+    await criarConvite(CODIGO_OK);
+
+    const conviteRef = db.collection(COLECAO_CONVITES_ORGANIZADOR).doc(CODIGO_OK);
+    const antes = await conviteRef.get();
+
+    await erroDe(resgatarConviteCore(db, auth, { codigo: CODIGO_OK }, conta.uid, conta.email));
+
+    const depois = await conviteRef.get();
+    expect(depois.get('status')).toBe('ativo');
+    expect(depois.get('usadoPor')).toBeUndefined();
+    expect(depois.get('tenantId')).toBeUndefined();
+    // O estado final sozinho NÃO discrimina: a compensação já o restaurava.
+    // O que discrimina é o convite não ter sido ESCRITO — sem reserva, sem
+    // devolução, sem janela em que o código alheio aparece como `usado`.
+    expect(depois.updateTime?.isEqual(antes.updateTime!)).toBe(true);
+
+    // E o convite segue servindo a quem ele era destinado.
+    const legitimo = await contaRecemCadastrada('legitimo-depois', 'Producoes Legitimas');
+    const ok = await resgatarConviteCore(db, auth, { codigo: CODIGO_OK }, legitimo.uid, legitimo.email);
+    expect(ok.tenantId).toBe('producoes-legitimas');
+  });
+
   it('código de OUTRA conta não vira replay (só quem usou tem replay)', async () => {
     const dono = await contaRecemCadastrada('dono2');
     await criarConvite(CODIGO_OK);
