@@ -22,7 +22,7 @@
 | T2 | `05-rns-achados.md` — RN-434..445 + o que o B6 supersede | ✅ | (este) |
 | T3 | `06-spec-produtor-page.md` — B10 (D-ACH-15..21) | ✅ | (este) |
 | T4 | `07-fila-achados.md` — 16 tasks, 5 frentes, 19 vetores ⚔ | ✅ | (este) |
-| T5 | Selo · resumo executivo + self-score | ⏳ | — |
+| T5 | Selo · resumo executivo + self-score | ✅ | (este) |
 
 ## Autoridade de entrada lida
 
@@ -123,3 +123,102 @@ enquanto o build não começou.
 | V-13 | A **rede social é inferida pelo endereço do link**, sem campo novo no modelo do perfil? | Sim. O campo novo custaria seis arquivos, Function e editor do painel | Baixo |
 | V-14 | O **Feed mockado** do preview vem rotulado como exemplo? | Sim, como a galeria e os patrocinadores já fazem | Uma linha |
 | V-15 | Os assets de kit reais (B9) entram como **acervo local versionado**, sem link para fora? | Sim. Hotlink quebra no primeiro deploy | Baixo |
+
+## Dois defeitos vivos achados de passagem (não são do escopo pedido)
+
+Nenhum dos dois foi procurado; os dois apareceram no inventário do B6 e entraram na fila porque
+esta é a única lane que vai abrir esses arquivos.
+
+1. **Todo evento com termo de saúde próprio ativo está com a compra quebrada.** O servidor exige
+   `aceites.saudeCustom === true` (`createInscricaoCharge.ts:1367-1373`) e a tela nunca coleta nem
+   envia esse campo (`CheckoutFlow.tsx:784` manda `{termos: true, saude: true}` fixo). Não é
+   intermitente: é `failed-precondition` garantido. Task `S1217-T3`, RN-441.
+2. **A prova de aceite não tem origem.** Sem endereço e sem agente do navegador em nenhum ponto da
+   cadeia, num termo de isenção de responsabilidade por lesão. A RN-148 já previa `ipHash?` para o
+   irmão dele e nunca foi construída. Task `S1217-T5`, RN-442.
+
+## Entregáveis (aceite do brief, item a item)
+
+| Aceite do brief | Onde |
+|---|---|
+| `04-spec-achados.md` com mini-specs de B1/B2/B5/B6 e decisões D-ACH-n | D-ACH-1 a D-ACH-14, no padrão da `02-spec-kitcupom` |
+| `05-rns-achados.md` com RNs na sequência vigente e o que o B6 supersede | RN-434 a RN-445, faixa provada por varredura literal; seção "O que esta rodada SUPERSEDE" nomeia a decisão de 2026-07-18 (CKFORM §5.3, T2 `e860b8e`) e lista, item a item, o que **não** cai junto |
+| `06-spec-produtor-page.md` com recorte, mock e épico futuro nomeado | D-ACH-15 a D-ACH-21; o feed real aponta para o que o E17 já especifica, sem re-especificar |
+| `07-fila-achados.md` executável, com gates, ⚔ no dinheiro e territórios sem colisão | 16 tasks em 5 frentes, tabela de colisão arquivo a arquivo com KITCUPOM-BUILD e PIXFIX-EXTREF, 19 vetores, gates por task |
+| Ambiguidade vira pergunta de veto numerada, com default assumido | V-1 a V-15 acima; nenhuma delas bloqueia o build |
+| Vocabulário da D-0802-1 | Experiência e participante em toda superfície nova; a home e o texto do layout ficam intocados por decisão (D3 da fila) |
+| Padrão épico → história → tarefa | `S1216`, `S1217`, `S1218` (E12), `S314` (E04), `S1707` (E17), ids com varredura de colisão |
+| Commit por entregável, `--only`, sem push | `2ed18d1`, `f15f630`, `edd8866`, `73f75e4`, `194e883` e este |
+
+## Disciplina em vigor
+
+- `git commit --only <caminhos>` sempre; nunca `git add` amplo (duas lanes de build na árvore).
+- `DECISOES-ABERTAS.md` intocado. Os itens novos que o dono precisa ver estão nas perguntas de
+  veto acima, para o maestro levar ao painel (o próximo número livre do painel é **65**).
+- Épicos e boards **não** foram tocados nesta lane: o brief define o território como
+  `leela-specs/02-rodadas/2026-08-02-retomada/**` mais este handoff, e as duas lanes de build têm
+  os boards abertos. Os deltas de épico (E04, E09, E12, E17) e os cards de kanban estão
+  especificados na fila e são a primeira tarefa da aterrissagem da ACHADOS-0802.
+- Suítes, emulador e navegador: não rodados, por contrato.
+
+## Self-score (contrato do sf-cto)
+
+| Critério | Peso | Limiar | Nota | Evidência |
+|---|---|---|---|---|
+| `technical_correctness` | 1,5 | 0,85 | **0,94** | Toda decisão aponta para símbolo lido no repositório: `precisaCotar`/`assinaturaDe`/`cotacaoSeqRef`/`aplicarCupom` (`CheckoutFlow.tsx`), `buildInstallmentOptions` (`calc.ts:73`), `computeSaleState` (`saleState.ts:341`), `resolverTaxaMeio`/`computeTaxaPlataforma` (`taxaPlataforma.ts`), `modoTaxaDoEvento` (`evento.ts:256`), `totaisPorMeio` (`cotarInscricaoCheckout.ts:264`), o bloco `<dl>` de totais (`StepResumo.tsx:268-309`), `installmentRules` (`commercialTerms.ts:36`), `TermsEditor.tsx:273-282`, o carimbo (`createInscricaoCharge.ts:1516-1545`), o fence do termo custom (`:1367`), `AceitesCompra.tsx`, `macroDaEtapa` (`CheckoutStepper.tsx:46`), `PerfilView.tsx`, `leitorPerfil.ts`, `Tabs`/`SubNav` do design system e `ehPreview` (`mockImagem.ts:43`). A conta do Price foi fechada com números (R$ 359,90 × R$ 422,03). Não fica em 1,0 porque nada foi executado: o contrato da lane proíbe suíte e emulador |
+| `scalability_check` | 1,0 | 0,75 | **0,86** | Nenhuma coleção, índice novo (o do E1 é dívida existente), Function nova ou infra nova nas cinco frentes. O único acréscimo de chamada é uma cotação por sessão abandonada, e ele **reduz** a latência percebida ao mover o despertar frio para fora da tela do dinheiro. Modos de falha nomeados e virados em estado de tela: cotação antecipada que falha é indistinguível de não ter cotado; derivação do meio alternativo que falha volta ao rótulo genérico sem derrubar a opção principal; divergência de versão recusa em vez de carimbar; endereço de link desconhecido cai em ícone genérico; feed sem publicação mostra vazio digno. A propriedade `parcela × n === total` foi escolhida para eliminar divergência de centavos entre a tela e a divisão do gateway. Não fica mais alto porque o efeito real do pré-aquecimento sobre o despertar frio é raciocínio, não medição |
+| `security_posture` | 1,5 | 0,80 | **0,91** | Três eixos. **Confidencialidade:** percentual de taxa, taxa fixa e percentual de juros continuam proibidos em superfície pública, e a decisão do modo incorporada foi tomada para não vazar o termo do organizador — daí "inclusa" em vez do valor. **Prova legal:** a migração do B6 foi desenhada para não tocar o carimbo; o cliente segue mandando booleanos; a versão exibida entra como conferência e nunca como gravação; e a janela nova aberta pela própria migração (minutos entre o gesto e o carimbo) foi fechada pela RN-439 em vez de ficar em silêncio. **Superfície de escrita:** a RN-440 fecha um caminho em que abrir uma tela criava pedido, inscrito pendente e cobrança real no gateway sem ato humano — o inventário mostrou que o gate humano de hoje era acidental, não desenhado. Dois defeitos vivos foram nomeados sem maquiagem, incluindo um que reprova a compra hoje. O IP entra em hash, nunca em claro, alinhado ao que a RN-148 já tinha escolhido. Não fica mais alto porque a base legal do agente do navegador é enunciada e não passou por revisão jurídica |
+| `cost_envelope` | 1,0 | 0,70 | **0,85** | Custo calculado por frente e comparado ao free tier: uma callable de leitura a mais por sessão abandonada, dois campos a mais em documentos que já são escritos na mesma transação, uma leitura extra só nos eventos com termo custom, e um índice que já deveria existir. O B1 foi explicitamente posicionado como a resposta **barata** ao item 62 do painel, deixando `minInstances` como decisão que só volta com medida. A configuração real da tabela de juros por organizador foi mantida fora do escopo e nomeada como épico, evitando que a lane pague por uma decisão comercial que o dono ainda não tomou. Não fica mais alto porque o número de sessões que abandonam no preenchimento é estimativa |
+
+**Média ponderada: 0,896.** Os quatro critérios acima do limiar; `on_below_threshold: revise` não
+disparou.
+
+## Resumo executivo
+
+**Lane SPEC-ACHADOS-0802 fechada.** Os cinco achados que pedem regra (B1, B2, B5, B6 e B10) têm
+spec pronta para build, sem uma linha de código de aplicação, e os quatro que não pedem (B3, B4,
+B8, B9) entraram na fila com aceite curto.
+
+**O inventário mudou o tamanho de três dos quatro achados de checkout.** O motor de juros já
+existe e está configurado em zero: simular 2,89% a.m. é dado, não código. A taxa do meia-floripa é
+incorporada, então o resumo não escondeu a taxa por descuido — ele calou por desenho, e foi esse
+silêncio que o dono viu. E a prova de aceite é independente da tela, então mover os dois
+checkboxes de etapa não custa um byte do carimbo.
+
+**O que custa caro é outra coisa, e o inventário achou.** Ligar os juros como estão hoje cobraria
+**17% a mais** do comprador em 12x, porque `calc.ts` faz o principal corrigido pelo prazo inteiro e
+chama isso de parcelamento — não é tabela Price, e o próprio core documenta "tabela Price" a dois
+arquivos de distância. Ligar os juros também faria a opção "à vista" do cartão nascer 2,89% acima
+do PIX com esse rótulo. E migrar os aceites acenderia a auto-geração do PIX na chegada da tela:
+com os checkboxes fora do caminho e o PIX pré-selecionado, **abrir a tela de pagamento passaria a
+criar pedido, inscritos pendentes e cobrança real**, para quem só queria ver o preço. As três
+viraram decisão explícita, não efeito colateral.
+
+**Dois defeitos vivos apareceram de passagem.** Todo evento com termo de saúde próprio ativo está
+com a compra quebrada hoje, porque o servidor exige um aceite que a tela nunca coletou. E a prova
+de aceite não guarda endereço nem agente do navegador, num termo de isenção por lesão. Os dois
+entraram na fila porque esta lane é a única que vai abrir esses arquivos.
+
+**O B10 é menor do que parece.** As três abas que o dono pediu já são a task canônica
+`LEELA-S1700-T2` do E17, nunca executada; a entrega anterior achatou Feed, Eventos e Clubs em
+seções empilhadas. Os "botões de rede social" são links genéricos sem noção de rede, e a rede pode
+ser inferida do endereço sem tocar modelo, Rules, Function nem editor do painel.
+
+**Números.** 12 RNs mintadas (RN-434 a RN-445, faixa provada livre por varredura literal), 5
+stories com id conferido contra colisão em código de produção (`S1216`, `S1217`, `S1218`, `S314`,
+`S1707`), 21 decisões, 20 premissas vetáveis, 15 perguntas de veto ao dono com default assumido,
+16 tasks em 2 lanes, 19 vetores ⚔, 5 commits mais este selo.
+
+**Veredito: ENTREGUE E PRONTA PARA BUILD**, atrás de duas lanes que precisam aterrissar antes
+(PIXFIX-EXTREF em `functions/`, KITCUPOM-BUILD em `StepResumo.tsx` e em `sections/`). As seis
+premissas que mudam desenho se o dono vetar são P1 a P6; as outras catorze podem cair sem refazer
+a spec.
+
+**Riscos declarados que a lane não pôde fechar.** Nada foi executado, então cada critério de aceite
+é promessa a provar no build. A conta do Price foi fechada no papel e não numa suíte. O ganho real
+do pré-aquecimento sobre o despertar frio da function é raciocínio, não medição — e é justamente a
+medida que o item 62 do painel espera. A base legal do agente do navegador na prova de aceite é
+enunciada, não revisada por jurídico. E a premissa mais desconfortável da rodada é a P1: ela troca
+o modelo de juros que está no código por outro, e a diferença entre os dois é dinheiro do
+comprador. É por isso que ela é a primeira pergunta de veto e o primeiro vetor da review
+antagonista.
