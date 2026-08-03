@@ -687,6 +687,14 @@ export function CheckoutFlow({
   const assinaturaCotadaRef = useRef<string | null>(null);
   /** Nº de sequência: só a resposta da chamada mais recente aterrissa. */
   const cotacaoSeqRef = useRef(0);
+  /**
+   * ACHADOS-REV · DEF-2 — a assinatura SEMPRE fresca, para o "Aplicar" do
+   * cupom conferir na volta o que ele conferiu na ida. O `assinaturaDe` que o
+   * `aplicarCupom` fecha é o do instante do clique, e é justamente o que a
+   * guarda precisa comparar contra o AGORA.
+   */
+  const assinaturaDeRef = useRef(assinaturaDe);
+  assinaturaDeRef.current = assinaturaDe;
 
   useEffect(() => {
     if (!precisaCotar || !podeCotar || cupomUrlPendente) return;
@@ -826,12 +834,23 @@ export function CheckoutFlow({
     // tela. Era a ressalva R-2 da CKUX-REV, e o B1 alarga a janela dela porque
     // agora existe pré-aquecimento rodando ao lado em duas etapas.
     const seq = ++cotacaoSeqRef.current;
+    // ACHADOS-REV · DEF-2 — a assinatura PEDIDA, para conferir na volta.
+    //
+    // O número de sequência só sobe quando ALGUÉM pede outra cotação, e no
+    // step 0 ninguém pede: o efeito de cotação começa em `step >= 1` e sai
+    // pela porta de cima antes de tocar no contador. Como o campo do cupom
+    // vive no step 0 (D-4), aplicar o cupom e trocar de modalidade ou de kit
+    // ali deixava a resposta da seleção ABANDONADA aterrissar — a tela
+    // declarava "Cupom X aplicado — menos R$ Y" com o Y da escolha anterior.
+    // A assinatura é a régua que não depende de haver uma segunda chamada.
+    const assinaturaPedida = assinaturaDeRef.current(code);
     const r = await cotarCom(code);
     // O spinner do campo é DESTA ação e sai sempre — travá-lo por causa de uma
     // resposta obsoleta deixaria o cupom em "Aplicando…" para sempre. O que a
     // sequência descarta é o NÚMERO, não o estado da interação.
     setAplicandoCupom(false);
     if (seq !== cotacaoSeqRef.current) return;
+    if (assinaturaPedida !== assinaturaDeRef.current(code)) return;
     if (r.ok) {
       // T-CKUX-1: mesma disciplina do cupom de link — o "Aplicar" já cotou; o
       // efeito não precisa cotar de novo por causa do `cupomAplicado` novo.

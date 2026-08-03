@@ -247,6 +247,65 @@ describe('S1216-T1 · RN-434 — o cupom manual entra no mesmo número de sequê
     expect(screen.queryByText(/menos R\$/i)).toBeNull();
   });
 
+  // ---------------------------------------------------------------------------
+  // ACHADOS-REV · DEF-2 — o buraco que o número de sequência sozinho não fecha.
+  //
+  // O caso acima troca de seleção E VOLTA À ETAPA DE DADOS, o que faz o efeito
+  // de cotação pedir outra e subir o contador. No STEP 0 ninguém pede: o efeito
+  // começa em `step >= 1` e sai pela porta de cima antes de tocar no contador.
+  // E é no step 0 que o campo do cupom mora (D-4). Medido antes do fix, com
+  // este mesmo roteiro: a tela declarava "Cupom FLORIPA10 aplicado — menos
+  // R$ 500,00" sobre a 10k, com o desconto calculado para a 5k abandonada.
+  //
+  // A régua passou a ser a ASSINATURA de preço pedida × a vigente na volta —
+  // ela não depende de haver uma segunda chamada. RN-434: "resposta que chega
+  // depois de outra ter sido pedida é descartada, SEM EXCEÇÃO DE ORIGEM".
+  // ---------------------------------------------------------------------------
+  it('DEF-2: no step 0, trocar de modalidade descarta a resposta do cupom da seleção abandonada', async () => {
+    await montarNoStep0('5k');
+
+    let resolverCupom: ((v: unknown) => void) | undefined;
+    cotarInscricaoCheckout.mockImplementationOnce(
+      () =>
+        new Promise((res) => {
+          resolverCupom = res;
+        }),
+    );
+    fireEvent.change(screen.getByLabelText('Código do cupom'), {
+      target: { value: 'FLORIPA10' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Aplicar$/i }));
+    });
+    expect(resolverCupom).toBeDefined();
+
+    // A pessoa troca de modalidade e CONTINUA no step 0 — nenhuma outra
+    // cotação é pedida, porque cotar aqui é proibido (D-ACH-1).
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /10k/i }));
+    });
+    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(1);
+
+    // A resposta chega agora, calculada para a 5k que já não está selecionada.
+    await act(async () => {
+      resolverCupom?.(
+        cotacaoOk({
+          desconto: 500,
+          valorFinal: 4500,
+          totalCobrado: 4500,
+          cupomAplicado: { codigo: 'FLORIPA10', tipo: 'percentual', valor: 10 },
+        }),
+      );
+    });
+
+    // O número da seleção abandonada não pode estar na tela, e o cupom não
+    // pode se declarar aplicado por uma cotação que já não vale.
+    expect(screen.queryByText(/Cupom FLORIPA10 aplicado/i)).toBeNull();
+    expect(screen.queryByText(/menos R\$ 500,00/i)).toBeNull();
+    // O campo volta ao estado de digitação: a pessoa reaplica se quiser.
+    expect(screen.getByLabelText('Código do cupom')).toBeTruthy();
+  });
+
   it('sem concorrência, o cupom continua colando normalmente (a guarda não trava o caminho feliz)', async () => {
     cotarInscricaoCheckout.mockResolvedValue(cotacaoOk());
     await montarNoStep0('5k');
