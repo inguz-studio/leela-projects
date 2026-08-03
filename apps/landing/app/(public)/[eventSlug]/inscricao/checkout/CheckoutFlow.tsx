@@ -862,11 +862,17 @@ export function CheckoutFlow({
       // exista. A retomada é um clique, como no caminho de erro.
       !gatewaySemResposta &&
       // RN-157: PIX expirado NÃO regenera sozinho — a pessoa pede.
-      !pixExpirado
+      !pixExpirado &&
+      // CKUX-REV: cotação nova no ar ⇒ o total na tela ainda é o da seleção
+      // anterior. Nascer aqui produziria um código PIX do preço novo embaixo
+      // de um total antigo — a mesma mentira do botão do cartão, só que já
+      // com a cobrança criada. 200 ms de debounce mais o round-trip é o que
+      // se espera; o QR aparece sozinho logo depois.
+      !cotando
     ) {
       void gerarCobranca();
     }
-  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, gerarCobranca]);
+  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, cotando, gerarCobranca]);
 
   // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
   // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
@@ -1251,6 +1257,9 @@ export function CheckoutFlow({
               onPixExpirar={aoExpirarPix}
               onNovaCobranca={novaCobrancaPix}
               gatewaySemResposta={gatewaySemResposta}
+              // CKUX-REV: cotação nova no ar ⇒ o total desta renderização é o
+              // da seleção anterior. Nenhum botão de pagar oferece preço velho.
+              totalDefasado={cotando}
             />
           </div>
         ) : null}

@@ -57,6 +57,7 @@ export function StepPagamento({
   onPixExpirar,
   onNovaCobranca,
   gatewaySemResposta = false,
+  totalDefasado = false,
 }: {
   forma: FormaUI;
   total: number | null;
@@ -96,6 +97,15 @@ export function StepPagamento({
    * é "processando pagamento", em cartão e em PIX.
    */
   gatewaySemResposta?: boolean;
+  /**
+   * CKUX-REV · uma cotação NOVA está no ar: o `total` desta renderização é o
+   * da seleção ANTERIOR. O B1 pôs resumo, parcelas e botão de pagar na mesma
+   * tela, então mexer no que move preço passou a acontecer a um clique do ato
+   * de pagar — e a cotação nova custa o debounce mais o round-trip (1,7-9,8 s
+   * medidos em produção). Enquanto isso durar, o botão não pode prometer um
+   * valor que o servidor não vai cobrar.
+   */
+  totalDefasado?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
   const aceitesOk = aceiteTermos && aceiteSaude;
@@ -157,7 +167,10 @@ export function StepPagamento({
               {/* Auto-gerado quando os aceites confirmam (A-3 + §5.3); o botão
                   fica como fallback se a geração automática falhar. */}
               <div>
-                <Button onClick={onGerarCobranca} disabled={criandoCharge || !aceitesOk}>
+                <Button
+                  onClick={onGerarCobranca}
+                  disabled={criandoCharge || !aceitesOk || totalDefasado}
+                >
                   {criandoCharge ? 'Preparando código PIX…' : 'Gerar código PIX'}
                 </Button>
               </div>
@@ -206,10 +219,15 @@ export function StepPagamento({
           {/* §5.3: aceites ACIMA do botão de pagar. */}
           {blocoAceites}
           <div>
-            <Button onClick={onPagarCartao} disabled={criandoCharge || confirmando || !aceitesOk}>
+            <Button
+              onClick={onPagarCartao}
+              disabled={criandoCharge || confirmando || !aceitesOk || totalDefasado}
+            >
               {criandoCharge || confirmando
                 ? 'Processando…'
-                : `Pagar ${totalLabel}`.trim()}
+                : totalDefasado
+                  ? 'Atualizando o total…'
+                  : `Pagar ${totalLabel}`.trim()}
             </Button>
           </div>
         </section>

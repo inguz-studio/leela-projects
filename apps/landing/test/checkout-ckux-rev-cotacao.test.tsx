@@ -77,7 +77,10 @@ function cotacaoCom(total: number, forma: string): Record<string, unknown> {
     cupomAplicado: null,
     taxaServico: 0,
     totalAVista: total,
-    opcoesParcelamento: [{ parcelas: 1, valorParcela: total, valorTotal: total }],
+    opcoesParcelamento: [
+      { parcelas: 1, valorParcela: total, valorTotal: total },
+      { parcelas: 3, valorParcela: Math.round(total / 3), valorTotal: total },
+    ],
     parcelamento: { parcelas: 1, valorParcela: total, valorTotal: total },
     totalCobrado: total,
     forma,
@@ -202,5 +205,63 @@ describe('CKUX-REV · B5 — a resposta de uma seleção ABANDONADA não pode at
     expect((screen.getByRole('radio', { name: /^pix/i }) as HTMLInputElement).checked).toBe(true);
     expect(totalNaTela()).not.toContain(brl(TOTAL_CARTAO));
     expect(totalNaTela()).toContain(brl(TOTAL_PIX));
+  });
+});
+
+describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cobrado', () => {
+  it('com a cotação nova no ar, o botão não oferece o preço velho', async () => {
+    // O B1 pôs resumo, escolha de parcelas e botão de pagar na MESMA tela. A
+    // consequência é que mexer no que move preço passou a acontecer a um
+    // clique do ato de pagar — e a cotação nova leva 200 ms de debounce mais
+    // o round-trip (1,7-9,8 s medidos em produção) para chegar.
+    let resolverTresVezes: ((v: unknown) => void) | null = null;
+    cotarInscricaoCheckout.mockImplementation(
+      (args: { forma?: string; parcelas?: number }) => {
+        if (args.forma === 'cartao_credito' && args.parcelas === 3) {
+          return new Promise((resolve) => {
+            resolverTresVezes = resolve;
+          });
+        }
+        if (args.forma === 'cartao_credito') {
+          return Promise.resolve(cotacaoCom(TOTAL_CARTAO, 'cartao_credito'));
+        }
+        return Promise.resolve(cotacaoCom(TOTAL_PIX, 'pix'));
+      },
+    );
+    createInscricaoCharge.mockResolvedValue({
+      pedidoId: 'ped-1',
+      pixExpiraEmMillis: Date.now() + 1_800_000,
+    });
+
+    await irAtePagar();
+
+    // Cartão à vista, cotado e estável.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
+    });
+    await passarDebounce();
+    for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
+    const botaoPagar = (): HTMLButtonElement =>
+      screen.getByRole('button', { name: /^pagar|processando|atualizando/i }) as HTMLButtonElement;
+    expect(botaoPagar().textContent).toContain(brl(TOTAL_CARTAO));
+
+    // Muda para 3x — o preço MUDA (juros) e a cotação nova fica no ar.
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox'), { target: { value: '3' } });
+    });
+    await passarDebounce();
+    expect(resolverTresVezes).not.toBeNull();
+
+    // Enquanto o total novo não chega, o botão não pode prometer o antigo:
+    // clicar aqui manda `parcelas: 3` ao servidor, que cobra o total de 3x —
+    // não o valor que a pessoa leu no botão.
+    const botao = botaoPagar();
+    const prometeuPrecoVelho = (botao.textContent ?? '').includes(brl(TOTAL_CARTAO));
+    expect(prometeuPrecoVelho && !botao.disabled).toBe(false);
+
+    await act(async () => {
+      fireEvent.click(botao);
+    });
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
   });
 });

@@ -208,6 +208,13 @@ async function irAtePagamento(forma: 'pix' | 'cartao'): Promise<void> {
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
     });
+    // CKUX-REV: trocar de meio pede uma cotação NOVA, e enquanto ela está no
+    // ar o botão de pagar não oferece o total antigo (ele diz "Atualizando o
+    // total…" e fica desabilitado). Esperar aqui é o que o comprador faz: só
+    // dá para pagar depois que o valor está na tela.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^pagar/i })).toBeTruthy();
+    });
   }
   await act(async () => {
     for (const c of screen.getAllByRole('checkbox')) fireEvent.click(c);
