@@ -161,12 +161,16 @@ export function StepModalidadeKit({
             RN-347) e agora reflete que o VALOR varia por forma de pagamento
             (PIX vs cartão — o total de cada opção aparece no resumo). Nunca
             revela percentual nem soma nada local (valores da cotação). */}
-        {taxaRepassada ? (
-          <p className="mt-2 text-xs text-text-tertiary">
-            Este evento repassa a taxa de serviço: ela varia conforme a forma de pagamento e entra
-            no total exibido por opção no resumo, antes do pagamento.
-          </p>
-        ) : null}
+        {/* S1216-T4 · RN-435/D-ACH-7: a nota deixou de existir só num dos
+            modos. Em taxa incorporada o silêncio dizia, por omissão, que a
+            pergunta "e a taxa?" não tinha resposta — e é dela que o achado do
+            dono nasceu. Uma frase, dois ramos, o mesmo lugar. Nenhum dos dois
+            revela percentual (703db9c). */}
+        <p className="mt-2 text-xs text-text-tertiary">
+          {taxaRepassada
+            ? 'Este evento repassa a taxa de serviço: ela varia conforme a forma de pagamento e entra no total exibido por opção no resumo, antes do pagamento.'
+            : 'Não há taxa adicional neste evento: a taxa de serviço já está inclusa e o valor exibido é o valor final.'}
+        </p>
       </div>
 
       {/* D-4 · cupom LOGO NO COMEÇO (paridade com a referência): quem chega com

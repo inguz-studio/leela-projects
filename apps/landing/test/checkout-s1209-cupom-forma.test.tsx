@@ -217,9 +217,12 @@ describe('S1209-T1 · D-5 — Pix e Cartão são BOTÕES, sem toggle', () => {
   }
 
   it('renderiza as duas opções como cartões de decisão clicáveis (role radio)', () => {
+    // S1216-T4: o rótulo passou a carregar o total da opção sempre que ele
+    // existe — inclusive com os dois iguais. O que este caso guarda é o
+    // PAPEL (radio), não a copy exata.
     renderResumo();
-    expect(screen.getByRole('radio', { name: 'PIX (à vista)' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Cartão de crédito' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /PIX \(à vista\)/ })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /Cartão de crédito/ })).toBeTruthy();
   });
 
   it('SEM toggle: nenhum switch/checkbox na escolha da forma', () => {
@@ -237,7 +240,7 @@ describe('S1209-T1 · D-5 — Pix e Cartão são BOTÕES, sem toggle', () => {
   it('clicar no botão do cartão troca a forma escolhida', () => {
     const onForma = vi.fn();
     renderResumo({ onForma });
-    fireEvent.click(screen.getByRole('radio', { name: 'Cartão de crédito' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Cartão de crédito/ }));
     expect(onForma).toHaveBeenCalledWith('cartao_credito');
   });
 });

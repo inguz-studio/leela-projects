@@ -74,7 +74,11 @@ describe('StepResumo — TAXAFLEX/RN-180 · total por opção de meio (S1210)', 
     expect(screen.getByRole('radio', { name: /cartão de crédito.*110,30/i })).toBeTruthy();
   });
 
-  it('incorporada (taxaServico 0): rótulos vigentes, sem total por opção', () => {
+  // S1216-T4 · RN-435/D-ACH-6 — este caso documentava a regra ANTIGA ("só
+  // quando os totais DIFEREM"), que deixava a feature inteira invisível
+  // justamente no evento de taxa incorporada que o dono testou. Totais iguais
+  // são informação: dizem que a escolha do meio não muda o que se paga.
+  it('incorporada: os totais IGUAIS aparecem nas duas opções (era o caso mudo)', () => {
     renderResumo({
       cotacao: cotacaoFixture({
         taxaServico: 0,
@@ -83,8 +87,18 @@ describe('StepResumo — TAXAFLEX/RN-180 · total por opção de meio (S1210)', 
         totaisPorMeio: { pix: 100, cartao_credito: 100 },
       }),
     });
-    expect(screen.getByRole('radio', { name: 'PIX (à vista)' })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Cartão de crédito' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /pix \(à vista\).*100,00/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /cartão de crédito.*100,00/i })).toBeTruthy();
+  });
+
+  it('derivação parcial: o meio sem total volta ao genérico e o outro não é afetado', () => {
+    renderResumo({
+      cotacao: cotacaoFixture({ totaisPorMeio: { pix: 108, cartao_credito: null } }),
+    });
+    expect(screen.getByRole('radio', { name: /pix \(à vista\).*108,00/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /cartão de crédito/i })).toBeTruthy();
+    // A opção sem derivação NÃO ganha número — e a principal não é afetada.
+    expect(screen.queryByRole('radio', { name: /cartão de crédito.*R\$/i })).toBeNull();
   });
 
   it('servidor antigo (sem totaisPorMeio): rótulos vigentes — nunca quebra', () => {
@@ -230,9 +244,14 @@ describe('StepModalidadeKit — A-5/CKFORM-T4 · nota de taxa CONDICIONAL (RN-34
     expect(screen.getByText(/repassa a taxa de serviço/i)).toBeTruthy();
   });
 
-  it('evento em modo incorporada: SEM nota de taxa (a antiga nota fixa saiu)', () => {
+  // S1216-T4 · D-ACH-7 — a nota deixou de existir só num dos modos. O caso
+  // anterior exigia SILÊNCIO em taxa incorporada, e o silêncio foi o achado.
+  it('evento em modo incorporada: a nota diz que não há taxa adicional', () => {
     renderKit(false);
-    expect(screen.queryByText(/taxa de serviço/i)).toBeNull();
-    expect(screen.queryByText(/eventuais taxas/i)).toBeNull();
+    expect(screen.getByText(/não há taxa adicional/i)).toBeTruthy();
+    expect(screen.getByText(/valor exibido é o valor final/i)).toBeTruthy();
+    expect(screen.queryByText(/repassa a taxa de serviço/i)).toBeNull();
+    // Nenhum dos dois ramos revela percentual (703db9c).
+    expect(screen.queryByText(/%/)).toBeNull();
   });
 });

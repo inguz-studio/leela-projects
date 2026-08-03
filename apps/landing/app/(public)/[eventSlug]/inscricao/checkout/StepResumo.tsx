@@ -105,26 +105,28 @@ export function StepResumo({
   // caminho barato que a regra proíbe. Ausente = servidor antigo ⇒ sem linha.
   const jurosParcelamento = cotacao?.jurosParcelamento ?? 0;
 
-  // TAXAFLEX (RN-180 · S1210): quando o total VARIA por meio (taxa
-  // repassada com linhas distintas), exibir o total à vista EM CADA OPÇÃO
-  // antes de pagar (PIX R$ 108,00 · Cartão R$ 110,30). Critério = totais
-  // DIFERENTES (review F6: cobre override zero num meio — a forma atual
-  // pode ter taxa 0 e a outra não); iguais (incorporada ou mesma linha) =
-  // rótulos vigentes sem ruído. Valores prontos do servidor — o componente
-  // nunca soma; servidor antigo sem o campo cai nos rótulos vigentes.
-  const totaisPorMeio = cotacao?.totaisPorMeio;
-  const totalPorOpcao =
-    totaisPorMeio !== undefined &&
-    totaisPorMeio.pix !== null &&
-    totaisPorMeio.cartao_credito !== null &&
-    totaisPorMeio.pix !== totaisPorMeio.cartao_credito;
+  // TAXAFLEX (RN-180 · S1210) → S1216-T4 (RN-435 · D-ACH-6): o total à vista
+  // de CADA opção aparece no rótulo dela.
+  //
+  // O critério era "os totais DIFEREM". Em taxa incorporada eles nunca diferem,
+  // então a feature inteira ficava invisível — e foi exatamente esse o evento
+  // que o dono testou. O critério passa a ser "o total daquela opção existe",
+  // por opção. Totais iguais nas duas opções são INFORMAÇÃO: o comprador
+  // aprende que a escolha do meio não muda o que ele paga, que era a dúvida
+  // dele.
+  //
+  // Por opção, e não um gate único, porque a RN-180 já prometia que falha
+  // parcial na derivação do meio alternativo nunca derruba a opção principal:
+  // `null` num meio devolve o rótulo genérico DAQUELE meio e só. Servidor
+  // antigo sem o campo cai nos dois rótulos genéricos. Valores prontos do
+  // servidor — o componente nunca soma.
+  const totalPix = cotacao?.totaisPorMeio?.pix ?? null;
+  const totalCartao = cotacao?.totaisPorMeio?.cartao_credito ?? null;
   const labelPix =
-    totalPorOpcao && totaisPorMeio.pix !== null
-      ? `PIX (à vista) — ${formatarPreco(totaisPorMeio.pix)}`
-      : 'PIX (à vista)';
+    totalPix !== null ? `PIX (à vista) — ${formatarPreco(totalPix)}` : 'PIX (à vista)';
   const labelCartao =
-    totalPorOpcao && totaisPorMeio.cartao_credito !== null
-      ? `Cartão de crédito — ${formatarPreco(totaisPorMeio.cartao_credito)}`
+    totalCartao !== null
+      ? `Cartão de crédito — ${formatarPreco(totalCartao)}`
       : 'Cartão de crédito';
 
   return (
