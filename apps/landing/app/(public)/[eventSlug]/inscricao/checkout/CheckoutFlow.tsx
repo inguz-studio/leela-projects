@@ -731,6 +731,21 @@ export function CheckoutFlow({
     setCupomAplicado(null);
     setCupomInput('');
     setOrigemCupom(null);
+    // KITCUPOM-REV (defeito herdado da S1209) · a cotação que está na tela foi
+    // calculada COM o cupom. Mantê-la depois do "Remover" fazia o campo do
+    // step 0 continuar exibindo "Cupom X aplicado — menos R$ Y" para SEMPRE:
+    // ali o efeito de cotação não roda (`precisaCotar` é `step >= 2`), então
+    // nada nunca substituía o número velho. E como o campo de digitação só
+    // aparece quando NÃO há código aplicado, a pessoa também não conseguia
+    // reaplicar — desligava o desconto, a tela seguia prometendo desconto, e
+    // não havia caminho de volta sem recarregar a página.
+    //
+    // Descartar a cotação velha é o que faz a tela voltar a dizer a verdade.
+    // No step 0 não há bloco de totais, então o efeito visível é só o campo
+    // voltar; no PAGAR o efeito recota na hora, e o botão de pagar já está
+    // travado por `totalDefasado` (CKUX-REV) enquanto isso.
+    assinaturaCotadaRef.current = null;
+    setCotacao(null);
     // S1215-T2: remover DESLIGA o cupom do link também. Sem isto, o efeito de
     // auto-apply poderia trazer de volta o que a pessoa acabou de tirar.
     setCupomDoLink(null);
