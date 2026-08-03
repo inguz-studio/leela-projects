@@ -194,7 +194,7 @@ exatamente uma vez. É um teste mais forte que o anterior, não mais frouxo.
 
 ## C3-0803 · estados do PIX na ordem do dono — PAGA
 
-**Commit:** `PENDENTE` · `fix(checkout): a cobranca PIX nasce no clique, com o loader do dono [leela-build-2d6ee98d]`
+**Commit:** `9cbf520f` · `fix(checkout): a cobranca PIX nasce no clique, com o loader do dono [leela-build-2d6ee98d]`
 
 ### O que estava errado
 
@@ -279,3 +279,71 @@ com o gateway, recomputa contadores do evento no caminho e cria cobrança real n
    dois cliques para a mesma decisão seria a queixa do dono ao contrário.
 6. **A copy do estado sem cobrança mudou** ("Ao clicar abaixo, geramos o código PIX de
    R$ X à vista"). É texto de tela do dinheiro — cabe veto.
+
+---
+
+## Deploy da landing — FEITO
+
+`node apps/landing/scripts/deploy-leela-hub.mjs` · **exit 0** · `Deploy complete!` ·
+Hosting `https://leela-landing.web.app` · função SSR `ssrleelalanding` atualizada
+(Node 22, gen2) · `[deploy-landing] package.json restaurado.`
+
+Functions do backend **não** foram tocadas: o script usa `firebase.landing.json`, que
+declara um site e mais nada. Zero compra, zero mutação de produção — toda a verificação é
+`GET`.
+
+### Lição da DEPLOY-FINAL aplicada
+
+`apps/landing/next.config.js` não declara `transpilePackages`, então o webpack resolve os
+`@leela/*` pelo `exports` do `package.json` — isto é, **pelo `dist`**, e nenhum script de
+deploy o constrói. Os três pacotes foram reconstruídos com `tsup` **antes** do build,
+pelo binário local (`packages/<pacote>/node_modules/.bin/tsup`; `pnpm --filter build`
+continua sujando o `pnpm-workspace.yaml` nesta máquina):
+
+| Pacote | Build |
+|---|---|
+| `@leela/core` | CJS + DTS, success |
+| `@leela/api-client` | ESM + DTS, success |
+| `@leela/design-system` | ESM + DTS (incl. `server`, `dialog`, `rn`), success |
+
+`git status packages/ pnpm-workspace.yaml` limpo depois.
+
+### Prova D0
+
+**Rota medida:** `/[eventSlug]/inscricao` (é ela que renderiza o `CheckoutFlow`; não
+existe rota `/checkout`). **Chunk:**
+`_next/static/chunks/app/(public)/%5BeventSlug%5D/inscricao/page-*.js`.
+
+| | Antes (D0) | Depois (D1) |
+|---|---|---|
+| chunk | `page-13d465bf52ee3eac.js` | `page-65aa11039a033624.js` |
+| sha1 | `ed59aa9b30685ced` | `9c81d3054c1c39a0` |
+| bytes | 99 659 | 101 850 |
+
+**Marcadores** (acentos saem escapados no bundle — `ó` vira `\xf3`):
+
+| Marcador | D0 | D1 | Lê-se |
+|---|---|---|---|
+| `Preparando c\xf3digo PIX…` (com reticências, rótulo do botão) | 1 | 0 | o rótulo antigo saiu |
+| `Preparando c\xf3digo PIX` (frase exata, nó próprio) | 0 | 1 | **o loader do dono está no ar** |
+| `Estamos preparando o c\xf3digo PIX` | 1 | 0 | a copy que afirmava preparação em curso saiu |
+| `Ao clicar abaixo` | 0 | 1 | a copy nova entrou |
+| `Calculando as op…` (escada) | 0 | 1 | C2 no ar |
+| `checkout-parcelas` (id do select) | 0 | 1 | a11y do select no ar |
+| `opcoesParcelamento` | 1 | 5 | projeção + escada no ar |
+| `role:"status"` | 7 | 9 | +2 regiões vivas (loader do PIX + escada) |
+| `Atualizando o total` | 1 | 1 | **controle intacto** |
+| `Pagar ` | 1 | 1 | **controle intacto** |
+| `Processando pagamento` | 2 | 2 | **controle intacto** |
+
+**Fumaça HTTP:** `/` → 200 · `/meia-floripa-2026/inscricao` → 200 ·
+`/desafio-mtb-costa-lagoa-2026` → 200.
+
+### O que o dono confere na tela
+
+1. `https://leela-landing.web.app/meia-floripa-2026/inscricao` → escolher modalidade →
+   preencher dados + aceites → **Continuar**.
+2. **Cartão de crédito**: o select de parcelas abre com a escada inteira na PRIMEIRA vez.
+3. Trocar 1x → 3x → 6x: o total muda no ato, sem "Atualizando o total…".
+4. **PIX**: escolher não faz nada acontecer. Clicar em "Gerar código PIX" mostra
+   "Preparando código PIX" e o código aparece na sequência.
