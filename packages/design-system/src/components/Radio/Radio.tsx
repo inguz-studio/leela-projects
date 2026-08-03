@@ -290,9 +290,38 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
     const describedBy = [ariaDescribedBy, descId].filter(Boolean).join(' ') || undefined;
     // Alinha descrição e conteúdo revelado sob o título (largura do dot + gap).
     const indent = 'pl-[calc(var(--spacing-5)+var(--spacing-3))]';
+    const labelRef = React.useRef<HTMLLabelElement>(null);
+
+    // S1218-T2 · B4 — o card inteiro seleciona, não só o círculo.
+    //
+    // O <label> cobre a linha do título. A descrição e o painel revelado ficam
+    // FORA dele por regra de a11y (aria-describedby não pode entrar no nome
+    // acessível; conteúdo interativo não mora dentro de label), e o padding do
+    // card não era de ninguém. Só que o card já dizia `cursor-pointer` no
+    // corpo todo: a mão prometia um clique que metade da área não entregava.
+    //
+    // Duas guardas fazem este handler ser seguro, e nenhuma é cerimônia:
+    //
+    //   `checked` — card marcado NÃO reprocessa. É o que protege o conteúdo
+    //   revelado, que só existe quando marcado: sem ela, escolher um tamanho
+    //   dentro do card do kit borbulharia até aqui e chamaria o
+    //   `onValueChange` do PAI com o mesmo valor. No checkout esse handler
+    //   zera kit e tamanhos ao trocar de modalidade — a escolha da pessoa
+    //   morreria no clique seguinte.
+    //
+    //   `label.contains(target)` — clique que veio do label já foi tratado
+    //   pelo caminho nativo (o navegador o encaminha ao input). Sem ela, um
+    //   clique no título dispararia `onValueChange` duas vezes, e handler de
+    //   consumidor não é obrigado a ser idempotente.
+    const aoClicarNoCard = (evento: React.MouseEvent<HTMLDivElement>): void => {
+      if (isDisabled || checked) return;
+      if (labelRef.current?.contains(evento.target as Node)) return;
+      ctx.onChange(value);
+    };
 
     return (
       <div
+        onClick={aoClicarNoCard}
         className={cn(
           'flex flex-col gap-[var(--spacing-2)]',
           'rounded-[var(--card-radius)] border-[length:var(--input-border-width)]',
@@ -316,6 +345,7 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
         )}
       >
         <label
+          ref={labelRef}
           className={cn(
             'flex items-start gap-[var(--spacing-3)]',
             isDisabled ? 'cursor-not-allowed' : 'cursor-pointer',
@@ -392,6 +422,11 @@ const RadioCard = React.forwardRef<HTMLInputElement, RadioCardProps>(
           </p>
         ) : null}
 
+        {/* S1218-T2: `relative` põe o painel ACIMA do alvo estendido do label
+            (mesma pilha, e o que vem depois no DOM pinta por cima). Sem isto o
+            sub-seletor revelado ficaria debaixo da área de clique do card e
+            deixaria de ser operável. A descrição fica DE PROPÓSITO por baixo:
+            clicar nela seleciona, que é o que a pessoa espera. */}
         {checked && children ? (
           <div id={panelId} className={indent}>
             {children}

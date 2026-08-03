@@ -172,3 +172,67 @@ describe('RadioCard', () => {
     expect(document.getElementById(ids[ids.length - 1]!)).toHaveTextContent('Cada ação tem sua meta.');
   });
 });
+
+// =============================================================================
+// S1218-T2 · B4 — o clique em QUALQUER ponto do card seleciona
+//
+// O achado do dono: só o círculo (e a linha do título) selecionava, embora o
+// card inteiro mostrasse `cursor-pointer`. A descrição e o padding ficam fora
+// do <label> por regra de a11y — e ficavam fora do alvo de clique junto.
+//
+// O aceite desta task é INTERAÇÃO, não inspeção: cada caso abaixo clica num
+// ponto REAL fora do círculo e cobra a seleção.
+// =============================================================================
+describe('RadioCard — área de clique (S1218-T2 · B4)', () => {
+  it('clicar na DESCRIÇÃO seleciona o card', async () => {
+    const onValueChange = vi.fn();
+    render(<Grupo value="A" onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByText('Meta total + mínimo por pilar.'));
+    expect(onValueChange).toHaveBeenCalledWith('C');
+  });
+
+  it('clicar no PADDING do card (fora de todo texto) seleciona', async () => {
+    const onValueChange = vi.fn();
+    const { container } = render(<Grupo value="A" onValueChange={onValueChange} />);
+    // O card é o ancestral do input que não é o <label> nem o <span> do dot.
+    const alvo = container.querySelectorAll('input[type="radio"]')[1]!.closest('div');
+    await userEvent.click(alvo as HTMLElement);
+    expect(onValueChange).toHaveBeenCalledWith('C');
+  });
+
+  it('o círculo continua funcionando, e SEM disparar duas vezes', async () => {
+    const onValueChange = vi.fn();
+    render(<Grupo value="A" onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByRole('radio', { name: /Equilíbrio mínimo/ }));
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith('C');
+  });
+
+  it('o TÍTULO seleciona pelo caminho nativo, também uma vez só', async () => {
+    const onValueChange = vi.fn();
+    render(<Grupo value="A" onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByText('Equilíbrio mínimo'));
+    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledWith('C');
+  });
+
+  it('card JÁ marcado não reprocessa — é o que protege o conteúdo revelado', async () => {
+    // Sem esta guarda, escolher algo dentro do sub-seletor borbulharia até o
+    // card e chamaria o `onValueChange` do PAI com o mesmo valor. No checkout
+    // esse handler zera kit e tamanhos ao trocar de modalidade: a escolha da
+    // pessoa morreria no clique seguinte.
+    const onValueChange = vi.fn();
+    render(<Grupo value="C" onValueChange={onValueChange} />);
+    await userEvent.click(screen.getByText('Sub-seletor revelado'));
+    expect(onValueChange).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText('Meta total + mínimo por pilar.'));
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  it('card DESABILITADO não seleciona por clique em ponto nenhum', async () => {
+    const onValueChange = vi.fn();
+    render(<Grupo value="A" onValueChange={onValueChange} disabled />);
+    await userEvent.click(screen.getByText('Meta total + mínimo por pilar.'));
+    expect(onValueChange).not.toHaveBeenCalled();
+  });
+});
