@@ -18,7 +18,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
 - [x] **C2 · S1217-T2** — nenhuma forma pré-selecionada
 - [x] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
-- [ ] **C4 · S1217-T4** — versão exibida conferida pelo servidor
+- [x] **C4 · S1217-T4** — versão exibida conferida pelo servidor
 - [ ] **C5 · S1217-T5** — origem da requisição na prova de aceite
 - [ ] **D1 · S1218-T1** — rótulo do grupo grudado no primeiro cartão
 - [ ] **D2 · S1218-T2** — clique em qualquer ponto do cartão seleciona
@@ -594,6 +594,68 @@ anti-forja (que a task não afrouxou).
 
 ---
 
+## C4 · S1217-T4 · a versão que a pessoa viu passa a valer alguma coisa
+
+Commit `e57ce3b`. Território: `packages/core/src/pedidos/aceites.ts` (+ `index.ts`),
+`functions/src/checkout/createInscricaoCharge.ts`, `packages/api-client/src/checkout.ts`,
+`.../checkout/CheckoutFlow.tsx` + dois arquivos de teste novos e um corrigido.
+
+A tela passa a mandar `aceites.versoesExibidas`; o servidor compara com a vigente lida **dentro da
+tx** e recusa com motivo tipado (`MOTIVO_ACEITE_VERSAO_DIVERGENTE`) antes de qualquer escrita.
+
+**O número exibido morre no gate.** O bloco carimbado continua lendo só fontes do servidor
+(`versaoTermosVigente`, `TERMO_SAUDE_VERSAO_VIGENTE`, `termoCustomStamp`) — provado pelo avesso: o
+doc do pedido é serializado e varrido atrás de `versoesExibidas`, e não há ocorrência.
+
+**A recusa é muda.** Nem o texto novo, nem o hash, nem a versão nova, nem o instante da publicação
+atravessam. O caso V3 publica a versão **7** com um parâmetro de material mudado para **29** e
+varre a mensagem + os `details` atrás dos dois números, de padrão de data e de qualquer palavra de
+carimbo. Só o motivo passa.
+
+**O campo é opcional por evolução de schema, e isso não é um buraco.** Quem omite perde a própria
+guarda e não ganha nada — a versão gravada nunca veio dali. Exigi-lo quebraria replay e chamada
+direta sem comprar segurança.
+
+### O beco que a regra abriria, e o seam que o fecha
+
+Recusar sem trazer material novo seria laço infinito: `evento.politicaVendas` é prop renderizada no
+servidor, então reconfirmar mandaria a MESMA versão velha e levaria a MESMA recusa. A tela repõe o
+aceite (desmarca os três, volta ao step 1, uma frase) **e** chama `recarregarMaterial()`, prop nova
+com default `() => window.location.reload()`. Ver premissa **PB-10**.
+
+### Duas falsificações, uma de cada lado
+
+| Lado | Como | Resultado |
+|---|---|---|
+| Servidor (`if (exibidas !== undefined)` desligado) | emulator, mesmo arquivo | **4 failed \| 4 passed (8)** |
+| Cliente (`CheckoutFlow` restaurado do HEAD) | jsdom, mesmo arquivo | **5 failed \| 2 passed (7)** |
+
+Os 4 que sobrevivem no servidor são guardas declaradas (compra conclui com versão igual; a exibida
+não é gravada — verdade nos dois mundos; cliente legado sem o campo; termo custom com a versão
+certa). Os 2 do cliente são o caso do payload sem `saudeCustom` inventado e a guarda de que outra
+recusa `failed-precondition` não desmarca aceite nenhum.
+
+### Gates
+
+| | |
+|---|---|
+| core `tsc` / `eslint` / `tsup` | **0** / **0** / exit 0 |
+| api-client `tsc` / `eslint` / build | **0** / **0** / exit 0 |
+| functions `tsc` / `eslint` | **0** / **0** |
+| landing `tsc` / `eslint` (checkout + test) | **0** / **0** |
+| Integração no emulator (`@13`, Java 17) | **8/8** · `emulators:exec` exit **0** |
+| 4 suítes puras de functions (checkoutCore, pedido, inscritoPedido, politicaVendas) | **145/145** |
+| Suíte da landing, processo único | **366/366** em 34 arquivos (era 359/359 em 33) |
+
+### Um teste que carimbava o payload inteiro — reescrito, não removido
+
+`checkout-s1217-termo-saude-custom.test.tsx` casava `payload.aceites` por igualdade EXATA de
+objeto, e a RN-439 acrescentou um campo a ele. Os dois casos passaram a asserir os BOOLEANOS, que é
+o que eles guardam; a asserção NEGATIVA (`'saudeCustom' in payload.aceites === false`) continua
+exata, porque ela é o contrato do caso.
+
+---
+
 ## Onde a lane parou
 
 Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1, C2**. O par C1+C2 está fechado — o aviso de "não
@@ -665,4 +727,6 @@ delas contra o documento persistido devem rodar sob este comando, trocando o arq
 | PB-8 | Sem meio escolhido, o rótulo da linha de taxa diz "(PIX)", porque a cotação exibida É uma cotação de PIX à vista. A alternativa (rótulo genérico até a escolha) nomearia menos do que a RN-435 pede | C2 | Baixo — é uma expressão ternária |
 | PB-5 | O modo da taxa entra na tela pelo flag do EVENTO (`taxaRepassada` do leitor), não por `taxaServico > 0`. Custa uma prop nos dois componentes e duas linhas de fiação no `CheckoutFlow` — arquivo fora do território declarado da A3, tocado no mínimo | A3 | Nenhum — o proxy pelo valor é que estaria errado; vetar seria escolher a versão falsa |
 | PB-6 | Evento com taxa REPASSADA e taxa zero no meio escolhido continua sem linha de taxa (não vira "inclusa"). "Inclusa" é enunciado do modo incorporada; ali a taxa realmente sai do repasse do organizador | A3 | Baixo — é um ramo de três linhas; a alternativa é dizer "inclusa" onde não é verdade |
+| PB-10 | A tela busca o material novo por `recarregarMaterial()`, prop com default `() => window.location.reload()`, em vez de `router.refresh()`. O recarregamento perde o formulário preenchido; o `refresh` do Next preservaria, mas custaria mock de `next/navigation` em 16 arquivos de teste que hoje não o mockam | C4 | Baixo — é uma linha no default da prop, mais os mocks de teste |
+| PB-11 | A conferência de versão vale no caminho de CRIAÇÃO, não no `garantirAceitesNoReplay`. O replay completa prova de um pedido que JÁ existe (e já foi pago): recusar ali deixaria a compra sem prova em vez de proteger alguém | C4 | Baixo — é o mesmo bloco de comparação num segundo lugar |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
