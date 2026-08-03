@@ -39,6 +39,7 @@ import {
   AsaasApiError,
   AsaasConfigError,
   AsaasError,
+  AsaasExternalReferenceTooLongError,
   AsaasMappingError,
   AsaasOperacaoNaoSuportadaError,
   AsaasTimeoutError,
@@ -655,6 +656,89 @@ describe('createCharge — idempotência via externalReference', () => {
       provider.createCharge(paramsPix({ idempotencyKey: '  ' }))
     ).rejects.toThrow(AsaasValidationError);
     expect(chamadas).toHaveLength(0);
+  });
+
+  // ⛔ T2 · PIXFIX-EXTREF — a guarda que faltava. O gateway valida o tamanho
+  // SERVER-SIDE, então nenhum teste com HTTP mockado jamais pegaria isso: a
+  // única forma de o defeito aparecer na bancada é a plataforma medir sozinha.
+  describe('guarda dura do teto de 100 chars do externalReference', () => {
+    it('pedidoId REAL (73) passa e vai ao gateway com 91 chars', async () => {
+      const { provider, chamadas, pendentes } = novoProvider([
+        {
+          method: 'GET',
+          url: `/payments?externalReference=${encodeURIComponent(
+            `${PEDIDO_ID_REAL}::${digestIdempotencyKey(CHAVE_CHARGE_REAL)}`
+          )}`,
+          json: { data: [] },
+        },
+        { method: 'GET', url: '/customers?', json: { data: [{ id: 'cus_1' }] } },
+        {
+          method: 'POST',
+          url: '/payments',
+          json: { id: 'pay_r', status: 'PENDING', billingType: 'PIX', value: 99.99 },
+        },
+        {
+          method: 'GET',
+          url: '/pixQrCode',
+          json: { payload: 'pix-r', expirationDate: '2026-07-13 23:59:59' },
+        },
+      ]);
+
+      await provider.createCharge(
+        paramsPix({
+          orderId: PEDIDO_ID_REAL,
+          idempotencyKey: CHAVE_CHARGE_REAL,
+        })
+      );
+
+      expect(pendentes()).toBe(0);
+      const ref = chamadas[2]?.body?.['externalReference'];
+      expect(ref).toHaveLength(91);
+      expect(String(ref).startsWith(PEDIDO_ID_REAL)).toBe(true);
+    });
+
+    it('orderId de 82 chars é o limite exato e ainda passa', async () => {
+      const { provider, chamadas } = novoProvider([]);
+      const noLimite = `ped-${'x'.repeat(78)}`; // 82 → ref = 100
+      expect(buildExternalReference(noLimite, 'k')).toHaveLength(
+        EXTERNAL_REF_MAX_LEN
+      );
+      // Não lança na validação: morre depois, na fila de HTTP vazia.
+      await expect(
+        provider.createCharge(paramsPix({ orderId: noLimite }))
+      ).rejects.toThrow(/Chamada HTTP inesperada/);
+      expect(chamadas).toHaveLength(0);
+    });
+
+    it('um char além do limite → erro NOMEADO, ZERO HTTP', async () => {
+      const { provider, chamadas } = novoProvider([]);
+      const acima = `ped-${'x'.repeat(79)}`; // 83 → ref = 101
+      await expect(
+        provider.createCharge(paramsPix({ orderId: acima }))
+      ).rejects.toThrow(AsaasExternalReferenceTooLongError);
+      // Continua sendo erro de validação para quem já tratava a família.
+      await expect(
+        provider.createCharge(paramsPix({ orderId: acima }))
+      ).rejects.toThrow(AsaasValidationError);
+      // A mensagem carrega os DOIS números — é o que faz o diagnóstico ser
+      // imediato em vez de virar um `internal` opaco na tela do dinheiro.
+      await expect(
+        provider.createCharge(paramsPix({ orderId: acima }))
+      ).rejects.toThrow(/101 chars excede o limite de 100/);
+      expect(chamadas).toHaveLength(0);
+    });
+
+    it('o formato ANTIGO (chave inteira no sufixo) seria barrado aqui', async () => {
+      const { provider, chamadas } = novoProvider([]);
+      // 155 chars — exatamente o valor que o Asaas recusou em produção.
+      const refAntigo = `${PEDIDO_ID_REAL}::${CHAVE_CHARGE_REAL}`;
+      expect(refAntigo).toHaveLength(155);
+      // Reencena o estouro por um orderId longo (o sufixo agora é fixo em 16):
+      await expect(
+        provider.createCharge(paramsPix({ orderId: refAntigo.replace(/::/g, '--') }))
+      ).rejects.toThrow(AsaasExternalReferenceTooLongError);
+      expect(chamadas).toHaveLength(0);
+    });
   });
 
   it('taxId ausente → erro claro (Asaas exige cpfCnpj no cliente)', async () => {

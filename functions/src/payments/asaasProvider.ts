@@ -448,6 +448,28 @@ export const EXTERNAL_REF_MAX_LEN = 100;
 const EXTERNAL_REF_DIGEST_LEN = 16;
 
 /**
+ * Erro NOMEADO do estouro do teto — a guarda que faltava (T2 · PIXFIX-EXTREF).
+ *
+ * Subclasse de `AsaasValidationError` de propósito: quem já tratava validação
+ * do adapter continua tratando, e quem quiser a causa exata testa por
+ * `instanceof`. Existe para que o defeito apareça na BANCADA, com o número na
+ * mensagem, em vez de virar um 400 opaco do gateway em cima do comprador.
+ */
+export class AsaasExternalReferenceTooLongError extends AsaasValidationError {
+  readonly tamanho: number;
+  readonly limite: number;
+  constructor(tamanho: number, limite: number, orderIdLen: number) {
+    super(
+      `[asaas] externalReference com ${tamanho} chars excede o limite de ` +
+        `${limite} do gateway (orderId tem ${orderIdLen} chars) — a cobrança ` +
+        'seria recusada com invalid_externalReference'
+    );
+    this.tamanho = tamanho;
+    this.limite = limite;
+  }
+}
+
+/**
  * Digest curto e determinístico da chave de idempotência (sha256 hex, 16).
  *
  * Por que digest e não a chave inteira: o sufixo NUNCA carregou informação
@@ -954,6 +976,22 @@ export class AsaasProvider implements PaymentProvider {
   private validarCreateCharge(params: CreateChargeParams): void {
     if (params.orderId.trim().length === 0) {
       throw new AsaasValidationError('[asaas] orderId vazio');
+    }
+    // Guarda dura do teto do gateway (T2 · PIXFIX-EXTREF). Roda ANTES do POST
+    // e antes do lookup: um externalReference longo demais não serve nem para
+    // consultar. O `buildExternalReference` aqui é o MESMO que o createCharge
+    // usa adiante — validar por reconstrução é o que impede a guarda de
+    // divergir do valor realmente enviado.
+    const refCandidato = buildExternalReference(
+      params.orderId,
+      params.idempotencyKey
+    );
+    if (refCandidato.length > EXTERNAL_REF_MAX_LEN) {
+      throw new AsaasExternalReferenceTooLongError(
+        refCandidato.length,
+        EXTERNAL_REF_MAX_LEN,
+        params.orderId.length
+      );
     }
     if (params.idempotencyKey.trim().length === 0) {
       throw new AsaasValidationError('[asaas] idempotencyKey vazia (RN-333)');
