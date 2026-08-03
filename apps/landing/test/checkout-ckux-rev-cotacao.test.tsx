@@ -265,3 +265,118 @@ describe('CKUX-REV · B1 — o valor no botão de pagar é o valor que seria cob
     expect(createInscricaoCharge).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cobertura secundária do contrato: B3 (nascimento numérico, datas inválidas) e
+// B8 (CEP-first com o lookup fora). Nenhum defeito encontrado aqui — os testes
+// ficam como guarda, porque os dois são caminhos onde um afrouxamento futuro
+// passaria despercebido.
+// ---------------------------------------------------------------------------
+
+describe('CKUX-REV · B3 — a máscara de nascimento não deixa passar data que não existe', () => {
+  it('31/02 é recusada no gate do avanço e nunca chega ao servidor', async () => {
+    await act(async () => {
+      render(<CheckoutFlow evento={evento} atribuicao={{}} />);
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /5k/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    preencherDados();
+    // 31 de fevereiro: 8 dígitos, máscara feliz, dia que não existe.
+    fireEvent.change(screen.getAllByLabelText(/data de nascimento/i)[0]!, {
+      target: { value: '31/02/2000' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+
+    // Continua no passo de dados, com erro à vista — e sem cotação nenhuma
+    // pedida (o gate barrou antes de o fluxo chegar ao PAGAR).
+    expect(screen.getAllByLabelText(/data de nascimento/i).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /gerar código pix/i })).toBeNull();
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
+  });
+
+  it('data pela metade não vira data: o texto digitado sobrevive à re-renderização', async () => {
+    await act(async () => {
+      render(<CheckoutFlow evento={evento} atribuicao={{}} />);
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /5k/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    const campo = screen.getAllByLabelText(/data de nascimento/i)[0] as HTMLInputElement;
+    await act(async () => {
+      fireEvent.change(campo, { target: { value: '20' } });
+    });
+    // O estado do fluxo é ISO e ainda está vazio; se o texto fosse derivado
+    // dele, o dígito recém-digitado desapareceria da tela.
+    expect((screen.getAllByLabelText(/data de nascimento/i)[0] as HTMLInputElement).value).toBe(
+      '20',
+    );
+    await act(async () => {
+      fireEvent.change(campo, { target: { value: '2005' } });
+    });
+    expect((screen.getAllByLabelText(/data de nascimento/i)[0] as HTMLInputElement).value).toBe(
+      '20/05',
+    );
+  });
+});
+
+describe('CKUX-REV · B8 — CEP-first é fail-open: lookup fora não fecha o caminho', () => {
+  it('com o ViaCEP indisponível os campos aparecem mesmo assim e a compra segue', async () => {
+    const fetchOriginal = globalThis.fetch;
+    // Rede fora — o pior caso do lookup (a spec 5.2 exige fail-open).
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('sem rede')) as unknown as typeof fetch;
+    try {
+      await act(async () => {
+        render(<CheckoutFlow evento={evento} atribuicao={{}} />);
+      });
+      fireEvent.click(screen.getByRole('radio', { name: /5k/i }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+      });
+
+      // Antes do CEP completo, o bloco de endereço mostra só o CEP.
+      expect(screen.queryByLabelText(/logradouro/i)).toBeNull();
+
+      await act(async () => {
+        fireEvent.change(screen.getByLabelText(/^cep/i), { target: { value: '01310100' } });
+      });
+      await passarDebounce();
+
+      // 8 dígitos revelam os campos — a revelação não depende do lookup.
+      expect(screen.getByLabelText(/logradouro/i)).toBeTruthy();
+      const logradouro = screen.getByLabelText(/logradouro/i) as HTMLInputElement;
+      expect(logradouro.disabled).toBe(false);
+
+      // E dá para completar à mão e seguir até o PAGAR.
+      fireEvent.change(screen.getAllByLabelText(/nome completo/i)[0]!, {
+        target: { value: 'Ana Corredora' },
+      });
+      fireEvent.change(screen.getAllByLabelText(/^e-mail/i)[0]!, {
+        target: { value: 'ana@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/telefone/i), { target: { value: '11988887777' } });
+      fireEvent.change(screen.getAllByLabelText(/^cpf/i)[0]!, {
+        target: { value: '529.982.247-25' },
+      });
+      fireEvent.change(screen.getAllByLabelText(/data de nascimento/i)[0]!, {
+        target: { value: '20/05/1990' },
+      });
+      fireEvent.change(logradouro, { target: { value: 'Av. Paulista' } });
+      fireEvent.change(screen.getByLabelText(/^número/i), { target: { value: '1000' } });
+      fireEvent.change(screen.getByLabelText(/cidade/i), { target: { value: 'São Paulo' } });
+      fireEvent.change(screen.getByLabelText(/^uf/i), { target: { value: 'SP' } });
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+      });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+      });
+    } finally {
+      globalThis.fetch = fetchOriginal;
+    }
+  });
+});
