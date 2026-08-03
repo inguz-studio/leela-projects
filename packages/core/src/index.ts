@@ -793,6 +793,16 @@ export {
 export type { ProvisionInput } from './platform/provisioning';
 export { validateProvisionInput, buildInitialTerms } from './platform/provisioning';
 
+// Canal do CTA "Falar com o time Leela" (E16 · S1609-T2 · RN-417 · P1).
+export type { TipoContatoOnboarding, ContatoOnboarding } from './platform/contatoOnboarding';
+export {
+  PLATFORM_CONFIG_ONBOARDING_DOC,
+  CONTATO_ONBOARDING_DOC_PATH,
+  CONTATO_ONBOARDING_PADRAO,
+  resolverContatoOnboarding,
+  hrefContatoOnboarding,
+} from './platform/contatoOnboarding';
+
 // Cadastro do organizador + consentimento LGPD (E00 · S030 · RN-411/412).
 export type {
   ConsentimentoLgpd,

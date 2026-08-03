@@ -12,6 +12,7 @@ import { rotasLegadas } from './routes/_system/RotasLegadas';
 import { PlataformaRoutes } from './routes/plataforma/PlataformaRoutes';
 import { RootShell } from './shell/RootShell';
 import { RequireSessao } from './routes/_system/RequireSessao';
+import { ContaTravadaGate } from './routes/onboarding/ContaTravadaGate';
 import { ContaRoutes } from './routes/conta/perfil/ContaRoutes';
 import { AuthLayout } from './routes/conta/auth/AuthLayout';
 import { EntrarPage } from './routes/conta/auth/EntrarPage';
@@ -50,27 +51,35 @@ export function App() {
             element={
               <RequireSessao>
                 <RootShell>
-                  <Routes>
-                    {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
-                    <Route path="/*" element={<OverviewRoutes />} />
-                    <Route path="/health" element={<HealthRoute />} />
-                    {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
-                    <Route path="/eventos/*" element={<EventosRoutes />} />
-                    {/* E05 · Clubs (hub, shell + overview + membros) */}
-                    <Route path="/clubes/*" element={<ClubesRoutes />} />
-                    {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
-                    <Route path="/crm/*" element={<CrmRoutes />} />
-                    {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
-                    <Route path="/marcas/*" element={<MarcasRoutes />} />
-                    {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
-                        antigas continuam abrindo, agora redirecionando para os
-                        endereços novos. Link salvo e favorito seguem vivos. */}
-                    {rotasLegadas()}
-                    {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
-                    <Route path="/plataforma/*" element={<PlataformaRoutes />} />
-                    {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
-                    <Route path="/conta/*" element={<ContaRoutes />} />
-                  </Routes>
+                  {/* S1609-T2 · RN-416 — conta sem convite não passa daqui. A
+                      tranca de DADO é das Rules (sem claim de tenant não há
+                      leitura); este gate é a experiência: overlay bloqueante
+                      por cima e a rota de destino não montada, para nenhuma
+                      query tenant-scoped sair só para voltar negada atrás do
+                      véu. Conta com tenant e platform_admin passam reto. */}
+                  <ContaTravadaGate>
+                    <Routes>
+                      {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}
+                      <Route path="/*" element={<OverviewRoutes />} />
+                      <Route path="/health" element={<HealthRoute />} />
+                      {/* E03 · Operação do evento (hub, criação, layout + Overview) */}
+                      <Route path="/eventos/*" element={<EventosRoutes />} />
+                      {/* E05 · Clubs (hub, shell + overview + membros) */}
+                      <Route path="/clubes/*" element={<ClubesRoutes />} />
+                      {/* RN-233 · área CRM: Visão geral | Clientes | Comunicação */}
+                      <Route path="/crm/*" element={<CrmRoutes />} />
+                      {/* E10 · S811 seed — módulo Marcas (patrocinadores reutilizáveis, RN-171) */}
+                      <Route path="/marcas/*" element={<MarcasRoutes />} />
+                      {/* RN-234 · o módulo `financeiro` deixou de existir; as URLs
+                          antigas continuam abrindo, agora redirecionando para os
+                          endereços novos. Link salvo e favorito seguem vivos. */}
+                      {rotasLegadas()}
+                      {/* E16 · Plataforma & super-admin (tenants, termos, macro) */}
+                      <Route path="/plataforma/*" element={<PlataformaRoutes />} />
+                      {/* S020-T4 · Configurações da conta do usuário logado (com shell) */}
+                      <Route path="/conta/*" element={<ContaRoutes />} />
+                    </Routes>
+                  </ContaTravadaGate>
                 </RootShell>
               </RequireSessao>
             }

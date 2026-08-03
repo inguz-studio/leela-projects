@@ -51,7 +51,7 @@ data: 2026-07-28
 - [x] `S1213-T1` — entrada do organizador na landing
 - [x] `S1608-T2` — tela `/plataforma/convites`
 - [x] `S1609-T1` — Function `resgatarConviteOrganizador`
-- [ ] `S1609-T2` — overlay bloqueante + CTA configurável
+- [x] `S1609-T2` — overlay bloqueante + CTA configurável
 - [ ] item 57 — roteamento pós-login por papel
 
 > `S030-T1` e `S030-T2` pagam num commit só: o doc do profissional é escrito
@@ -60,7 +60,7 @@ data: 2026-07-28
 
 ## Critério de pronto do pacote
 
-- [ ] conta sem código nunca alcança rota/dado de tenant — provado por Rules, não por tela
+- [x] conta sem código nunca alcança rota/dado de tenant — provado por Rules, não por tela
 - [x] resgate válido destrava em UMA ação: tenant + claims + código carimbado, atômico nos
       dois sentidos (falha não queima código; código usado sempre tem tenant)
 - [x] duplo resgate concorrente do mesmo código: um vence, o outro recebe o erro genérico
@@ -68,8 +68,10 @@ data: 2026-07-28
 - [x] 6ª tentativa na janela de uma hora é recusada (rate-limit provado por teste)
 - [x] revogar código `ativo` funciona; revogar não desfaz tenant provisionado
 - [x] cliente comum não lê nem escreve `convitesOrganizador` (ataque de Rules)
-- [ ] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
-      no mailto oficial
+- [x] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
+      no mailto oficial — **entregue em `platform/configOnboarding`** (doc próprio; abrir
+      `platform/config` à conta travada entregaria a tabela de taxa junto, porque Rules não
+      filtram campo — provado por `contatoOnboardingRules`)
 - [x] consentimento LGPD carimbado com versão e instante; checkbox nasce desmarcado
 - [x] a landing mostra "Entrar" e "Criar conta de organizador" em desktop e mobile, sem
       regressão de CWV

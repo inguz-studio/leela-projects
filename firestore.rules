@@ -356,6 +356,29 @@ service cloud.firestore {
     // ── `platform/{doc}` — dados macro da plataforma ──────────────────────
     // Leitura: apenas platform_admin.
     // Escrita: apenas Function/Admin SDK (client nunca escreve).
+    // `platform/configOnboarding` — canal do CTA da conta travada (RN-417).
+    //
+    // EXCEÇÃO DELIBERADA e ESTREITA ao bloco `platform/**` abaixo: a conta que
+    // ainda não tem tenant precisa ler PARA ONDE falar com o time Leela, e as
+    // Rules não filtram campo. Abrir `platform/config` (que guarda a tabela
+    // global de taxa) para isso entregaria a economia da plataforma junto —
+    // por isso o contato mora em doc PRÓPRIO, com só o que é público-por-
+    // natureza dentro. Escrita segue exclusiva do platform_admin, com shape.
+    match /platform/configOnboarding {
+
+      function shapeContatoValido() {
+        return request.resource.data.keys().hasOnly(['contatoOnboarding'])
+          && request.resource.data.contatoOnboarding.keys().hasOnly(['tipo', 'valor'])
+          && request.resource.data.contatoOnboarding.tipo in ['whatsapp', 'email']
+          && request.resource.data.contatoOnboarding.valor is string
+          && request.resource.data.contatoOnboarding.valor.size() > 0
+          && request.resource.data.contatoOnboarding.valor.size() <= 200;
+      }
+
+      allow read: if isSignedIn();
+      allow write: if isPlatformAdmin() && shapeContatoValido();
+    }
+
     match /platform/{doc=**} {
       allow read: if isPlatformAdmin();
       allow write: if false;

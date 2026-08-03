@@ -680,6 +680,11 @@ export {
 } from './platform/convites';
 export type { GerarConviteInput } from './platform/convites';
 
+// Onboarding da conta travada (S1609 · RN-414/417): canal do CTA "Falar com o
+// time Leela" + resgate do código (callable — o cliente nunca lê os convites).
+export { getContatoOnboarding, resgatarConviteOrganizador } from './platform/onboarding';
+export type { ResgatarConviteResult } from './platform/onboarding';
+
 // Marcas/patrocinadores reutilizáveis (R9-E · S-R9-12 · RN-171 — seed
 // E10-S811): CRUD owner-only + upsert a partir do cadastro de patrocínio.
 export {
