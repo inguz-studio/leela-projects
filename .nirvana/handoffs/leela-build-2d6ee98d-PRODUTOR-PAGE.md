@@ -16,7 +16,7 @@ Gate de entrada medido antes de tocar em nada: tsc **0**, eslint **0**, suíte d
 - [x] **E1 · S1707-T1** — medir a consulta de eventos por tenant e status; índice só se reprovar
 - [x] **E2 · S1707-T2** — ícones de rede inferidos pelo endereço + os três SVGs que faltam
 - [x] **E3 · S1707-T3** — menu secundário Feed · Eventos · Clubs com o `Tabs` do DS
-- [ ] **E4 · S1707-T4** — feed mockado e rotulado em preview, vazio digno em produção
+- [x] **E4 · S1707-T4** — feed mockado e rotulado em preview, vazio digno em produção
 
 ---
 
@@ -224,3 +224,80 @@ publicar uma **corrida**". Numa página de produtor de retiros, isso é a catego
 | `eslint app lib --max-warnings 0` | **0** |
 | Suíte da landing (processo único) | **411/411**, 36 arquivos (+9 no arquivo novo) |
 | `dist` do DS | já traz o `Tabs` restilizado — nenhum rebuild do pacote foi necessário |
+
+Commit: `b1208717`.
+
+---
+
+## E4 · o feed é exemplo declarado no preview e vazio digno em produção
+
+`app/(public)/_perfil/SecaoFeed.tsx` (novo) + três publicações de exemplo em `lib/mockImagem.ts`,
+pelo mesmo degrau de preview que a imagem de kit, o patrocinador e a galeria já usam: a função
+`ehPreview()`, nenhuma invenção nova de mecanismo.
+
+**Produção** mostra estado vazio digno — diz o que vai aparecer ali e não pede desculpa. Nenhuma
+publicação de exemplo cruza para lá. Página que alguém abre pelo link na bio não pode exibir texto
+que o produtor não escreveu; é a mesma honestidade de superfície da cascata de imagem.
+
+**Preview** mostra o formato: três publicações, uma delas com imagem, tudo reaproveitado do acervo de
+exemplo que a galeria já versiona — zero asset novo.
+
+O rótulo de exemplo aparece **duas vezes de propósito**: uma nota no topo da seção e um selo em cada
+publicação. A nota explica; o selo de cada card sobrevive a um recorte de tela, que é exatamente como
+o mock vaza para fora do contexto e vira "conteúdo real" na cabeça de quem vê.
+
+O carimbo de tempo de cada publicação é texto fixo ("há 2 dias"), não conta a partir do relógio: um
+valor calculado divergiria entre o render do servidor e o do cliente e não compraria nada num mock.
+
+A imagem entra decorativa (`alt=""`), pela lição da X1: é imagem de exemplo servida a qualquer
+perfil, então descrevê-la seria afirmar ao leitor de tela algo que não está na página.
+
+Vocabulário conferido por teste, não por leitura: nenhuma das três publicações usa corrida, prova ou
+atleta, e nenhuma usa "pequena vitória", que é termo interno e o cliente nunca lê.
+
+### Gate
+
+| | |
+|---|---|
+| `tsc --noEmit` (landing) | **0** |
+| `eslint app lib --max-warnings 0` | **0** |
+| Suíte da landing (processo único) | **420/420**, 37 arquivos (+9 no arquivo novo) |
+| `next build` | **PASS** — 10/10 páginas estáticas geradas, 12 rotas |
+
+O `next build` é o gate que os outros três não dão: ele é quem prova a fronteira de servidor/cliente
+das abas de verdade. Os erros de credencial do Firestore no log do build são os esperados (build sem
+emulator; o leitor os engole e devolve `[]`), e o build fecha.
+
+Custo de interface medido depois da mudança: rota `/[eventSlug]` — que é quem serve `/@handle` — em
+**10,6 kB** de bundle próprio e **222 kB** de primeiro carregamento. O `Tabs` traz Radix para o
+grafo do cliente, mas o Radix já estava nessa rota (o diálogo do regulamento). O delta antes/depois
+**não foi medido** e está listado nas pendências.
+
+---
+
+## Premissas assumidas, vetáveis
+
+Continuam a numeração da spec, que vai até P20.
+
+| # | Premissa | Custo de vetar |
+|---|---|---|
+| P21 | A E1 corrigiu os três comentários de índice nos leitores, além do território declarado (`firestore.indexes.json`) | Reverter três blocos de comentário; nenhuma linha de comportamento |
+| P22 | Os SVGs de WhatsApp, TikTok e Strava são desenhos simplificados na grade do lucide, não os glifos oficiais das marcas | Trocar o `d` de cinco paths em `IconesRede.tsx` |
+| P23 | Título que repetiria o nome da aba (Clubs, Feed) virou `sr-only` | Uma linha por aba, se o dono quiser o título visível |
+| P24 | Patrocinadores e compartilhar ficam FORA das abas, depois do bloco de abas | Mover dois blocos; se a faixa subir, as abas descem e saem de perto da identidade |
+| P25 | O feed de exemplo tem três publicações, uma com imagem, e reaproveita o acervo da galeria | Trocar textos e imagem em `lib/mockImagem.ts` |
+| P26 | O carimbo de tempo do mock é texto fixo, não conta do relógio | Uma função de data, se alguém quiser tempo real num conteúdo falso |
+
+## Pendências
+
+1. **Conferência visual do dono.** O gate desta lane é de código. O que precisa de olho humano:
+   a fileira de ícones (os três desenhos locais são a única peça visual autoral), o underline das
+   abas e o feed de exemplo. Onde conferir: preview local com emulator, em `/@castelo` — a receita
+   do preview está no handoff da rodada de compra.
+2. **Delta de bundle antes/depois não medido.** A rota ganhou Radix Tabs no grafo de cliente. O
+   número absoluto está acima; o comparativo com a base `4cc6a52d` exigiria um segundo build no
+   commit anterior e não foi feito.
+3. **Sem push e sem deploy.** Quatro commits em `main` local. O site no ar segue sendo o build da
+   ACHADOS-0802 — a página do produtor no `leela-landing.web.app` ainda é a versão empilhada.
+4. **Publicação real de feed segue épico futuro** (D-ACH-21), com o modelo de post do perfil e o do
+   clube saindo no mesmo lote para não colidirem. Nada disso entrou aqui.

@@ -59,3 +59,49 @@ export const ORGANIZADOR_MOCK = {
 
 /** Nomes de patrocinadores de exemplo (a logo 1:1 vem do mock por nome). */
 export const PATROCINADORES_MOCK_NOMES = ['Run+ Store', 'Hidrata Sports', 'Trilha Co'] as const;
+
+// -----------------------------------------------------------------------------
+// Feed de EXEMPLO do perfil (S1707-T4 · RN-445 · D-ACH-19)
+// -----------------------------------------------------------------------------
+
+/**
+ * Publicação de exemplo do feed do perfil. Não existe modelo de post, nem
+ * Rules, nem leitor: a coleção do feed é épico futuro (D-ACH-21). Isto aqui é
+ * o que o tester vê no preview para entender o formato — e só no preview.
+ */
+export interface PostFeedMock {
+  id: string;
+  /** Rótulo de tempo FIXO. Mock não consulta relógio: um "há 2 dias" calculado
+   *  mudaria entre o render do servidor e o do cliente, e ninguém ganha nada. */
+  quando: string;
+  texto: string;
+  /** Imagem opcional — reaproveita o acervo de exemplo que a galeria já usa. */
+  imagemUrl?: string;
+}
+
+/**
+ * Três publicações de exemplo. Vocabulário D-0802-1: experiência e
+ * participante, e corrida nunca como categoria — o mesmo texto é servido na
+ * página de quem organiza retiro de respiração e na de quem organiza travessia.
+ */
+export const FEED_MOCK: readonly PostFeedMock[] = [
+  {
+    id: 'exemplo-1',
+    quando: 'há 2 dias',
+    texto:
+      'As inscrições da próxima experiência abrem na quinta. Quem já participou de alguma nossa recebe o aviso antes.',
+    imagemUrl: '/gallery/leela-galeria-percurso.jpg',
+  },
+  {
+    id: 'exemplo-2',
+    quando: 'há 1 semana',
+    texto:
+      'Fechamos o encontro do mês com 42 participantes. O ponto de encontro do próximo já está definido e vai no grupo do club.',
+  },
+  {
+    id: 'exemplo-3',
+    quando: 'há 3 semanas',
+    texto:
+      'Abrimos um club novo para quem quer começar devagar: dois encontros por semana, sem cronômetro e sem exigência de ritmo.',
+  },
+];

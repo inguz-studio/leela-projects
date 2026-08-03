@@ -39,6 +39,7 @@ import { rotuloEstadoVenda } from '../../../lib/estadoVenda';
 import { AVATAR_MOCK, mockLogoPara } from '../../../lib/mockImagem';
 import { IconeRede } from './IconesRede';
 import { PerfilTabs } from './PerfilTabs';
+import { SecaoFeed } from './SecaoFeed';
 import { inferirRede, nomeAcessivelDoLink } from './redes';
 import type {
   PerfilPublicoCompleto,
@@ -301,27 +302,6 @@ function SecaoClubs({ clubes }: { clubes: ClubeResumoPublico[] }): React.JSX.Ele
           ))}
         </ul>
       )}
-    </section>
-  );
-}
-
-/**
- * Painel da aba Feed (S1707-T3 · RN-163). Leitura, sem publicação — a coleção
- * de posts, suas Rules e sua escrita são épico futuro (D-ACH-21). Em produção
- * o painel mostra estado vazio digno; o mock de preview entra na S1707-T4.
- */
-function SecaoFeed(): React.JSX.Element {
-  return (
-    <section aria-labelledby="perfil-feed">
-      <h2 id="perfil-feed" className="sr-only">
-        Feed
-      </h2>
-      <div className="rounded-ds-lg border border-border-subtle bg-surface-raised py-10">
-        <EmptyState
-          title="Ainda não há publicações"
-          description="As publicações deste perfil aparecem aqui."
-        />
-      </div>
     </section>
   );
 }
