@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
+import { painelUrl } from '@/lib/painel';
 
 /**
  * Header público (S1200-T1). Server Component. Sem navegação de painel
@@ -14,6 +15,17 @@ import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
  * calha das dobras (`max-w-5xl`, gutter no pai) — o conteúdo do header nascia
  * num x diferente do Hero/dobras da página de evento. Passa a consumir
  * `lib/containerPublico`, a MESMA fonte que `Dobra`/`HeroSection` usam.
+ *
+ * PORTA DO ORGANIZADOR (S1213-T1): até aqui não existia, em lugar nenhum da
+ * landing, um caminho até o painel — quem quisesse entrar precisava saber a
+ * URL de cor. "Entrar" e "Criar conta de organizador" vivem no header em
+ * desktop E mobile; destino por `lib/painel` (env pública — P10), nunca URL
+ * escrita à mão. `<a>` puro em vez de `next/link` porque o destino é OUTRA
+ * origem (deploy separado): o Link não prefetcha origem externa e ainda
+ * arrastaria o roteador para um caminho que ele não resolve.
+ *
+ * Mobile: "Eventos" some abaixo de `sm` — o wordmark já leva à home e a
+ * largura de 320px não comporta os três rótulos sem quebrar a linha.
  */
 export function PublicHeader(): React.JSX.Element {
   return (
@@ -43,12 +55,27 @@ export function PublicHeader(): React.JSX.Element {
         <nav className="flex items-center gap-1 sm:gap-2" aria-label="Ações">
           <Link
             href="/"
-            className="rounded-ds-sm px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            className="hidden rounded-ds-sm px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:inline-block"
           >
             Eventos
           </Link>
+          <a
+            href={painelUrl('/entrar')}
+            className="whitespace-nowrap rounded-ds-sm px-2 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3"
+          >
+            Entrar
+          </a>
+          <a
+            href={painelUrl('/cadastrar')}
+            className="whitespace-nowrap rounded-ds-pill border border-border-default px-2 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3 sm:text-sm"
+          >
+            Criar conta de organizador
+          </a>
+          {/* Placeholder pré-existente. Sobe de `sm` para `lg`: com os dois
+              rótulos de conta ao lado, um quarto item quebrava a linha do
+              header em tablet. */}
           <span
-            className="hidden rounded-ds-pill border border-border-default px-3 py-1.5 text-sm font-medium text-text-tertiary sm:inline-block"
+            className="hidden rounded-ds-pill border border-border-default px-3 py-1.5 text-sm font-medium text-text-tertiary lg:inline-block"
             title="Em breve"
           >
             Baixar o app

@@ -48,7 +48,7 @@ data: 2026-07-28
 
 - [x] `S1608-T1` — modelo + core + Rules do convite
 - [x] `S030-T1` + `S030-T2` — `/cadastrar` completo + doc `profissionais/{uid}`
-- [ ] `S1213-T1` — entrada do organizador na landing
+- [x] `S1213-T1` — entrada do organizador na landing
 - [ ] `S1608-T2` — tela `/plataforma/convites`
 - [ ] `S1609-T1` — Function `resgatarConviteOrganizador`
 - [ ] `S1609-T2` — overlay bloqueante + CTA configurável
@@ -71,7 +71,7 @@ data: 2026-07-28
 - [ ] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
       no mailto oficial
 - [x] consentimento LGPD carimbado com versão e instante; checkbox nasce desmarcado
-- [ ] a landing mostra "Entrar" e "Criar conta de organizador" em desktop e mobile, sem
+- [x] a landing mostra "Entrar" e "Criar conta de organizador" em desktop e mobile, sem
       regressão de CWV
 - [ ] review antagonista em contexto fresco nos itens 1 e 4 (Rules + Function de resgate:
       enumeração, corrida de uso único, bypass de rate-limit, claim forjada)

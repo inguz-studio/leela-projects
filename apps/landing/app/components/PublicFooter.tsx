@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
+import { painelUrl } from '@/lib/painel';
 
 /**
  * Footer público mínimo (S1200-T1 · LEELA-R12). Server Component. Sem links
@@ -48,7 +49,26 @@ export function PublicFooter(): React.JSX.Element {
             Inscrições para eventos de bem-estar, sem enrolação.
           </p>
         </div>
-        <p className="text-xs text-text-tertiary">© {ano} Leela</p>
+        {/* Eco da porta do organizador (S1213-T1). Quem chega ao fim da
+            página não precisa rolar de volta ao header para achar a entrada;
+            mesmo destino por env pública (P10). */}
+        <div className="flex flex-col gap-2 sm:items-end">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1" aria-label="Organizador">
+            <a
+              href={painelUrl('/entrar')}
+              className="rounded-ds-sm text-sm text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            >
+              Entrar
+            </a>
+            <a
+              href={painelUrl('/cadastrar')}
+              className="rounded-ds-sm text-sm text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            >
+              Criar conta de organizador
+            </a>
+          </nav>
+          <p className="text-xs text-text-tertiary">© {ano} Leela</p>
+        </div>
       </div>
     </footer>
   );
