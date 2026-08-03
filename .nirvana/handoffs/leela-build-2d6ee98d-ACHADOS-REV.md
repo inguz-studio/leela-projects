@@ -412,9 +412,11 @@ Movimento das suítes tocadas nesta lane:
 | `storageRules.integration.test.ts` | `ECONNREFUSED 127.0.0.1:9199` — exige o emulator de **Storage**, que o `--only firestore,auth` não sobe | **0** |
 | `estornarInscricao.e2e.review.test.ts` | `FirebaseError: auth/user-not-found` no `beforeAll` — exige usuário semeado no Auth por bootstrap separado | **0** |
 
-As duas morrem no `beforeAll`: **81 casos SKIPPED, zero asserções avaliadas**, então nenhuma
+As duas morrem no `beforeAll`: **zero asserções avaliadas** (81 casos SKIPPED), então nenhuma
 alteração desta lane participa do resultado. Nenhuma das duas importa `buildInstallmentOptions`,
-`jurosParcelamento` ou `versoesExibidas`.
+`jurosParcelamento` ou `versoesExibidas`, e o `git diff` das duas entre `36a6616` e o HEAD desta
+lane é VAZIO — os arquivos não foram tocados. Rodadas isoladas no commit-base falham com as
+MESMAS duas causas.
 
 ---
 
@@ -467,3 +469,33 @@ Sem push, como a lane manda.
    R$ 422,03 / R$ 359,90. Os corretos são **R$ 422,28** e **R$ 359,28** (PB-1).
 5. **Continua valendo do build:** nada disto está no ar. O último release é o do D0, que não contém
    C4, C5, a frente D nem os dois fix-commits desta lane.
+
+---
+
+## Incidente da própria lane · `node_modules` apagado e reconstruído
+
+Registro porque aconteceu dentro desta lane e o gate teve de ser refeito por causa dele.
+
+Para provar que as duas suítes do gate falham TAMBÉM no commit-base, criei um worktree
+(`/c/dev/LEELA-revbase` em `36a6616`) e, para não reinstalar 1.500 pacotes, apontei o
+`node_modules` dele para o do repositório principal. O `git worktree remove --force` seguiu esse
+atalho e apagou **através** dele: como o pnpm liga os pacotes do workspace de dentro do
+`node_modules`, a exclusão chegou a `packages/core/src` (92 arquivos) e corrompeu a `.pnpm`
+(o `package.json` do eslint sumiu).
+
+Reparo, na ordem:
+
+1. `git checkout -- packages/core` — os 92 arquivos voltaram do índice, nada estava staged e
+   nenhum commit desta lane foi afetado (`git fsck` limpo);
+2. `rmdir /S /Q` no diretório fantasma do worktree + `git worktree prune`;
+3. `node_modules` da raiz removido e `pnpm install --frozen-lockfile` (1.515 pacotes, `.pnpm`
+   reconstruída, links por workspace de volta);
+4. `pnpm-workspace.yaml` voltou ao HEAD — o install deixou uma linha de `allowBuilds` do
+   `@sentry/cli` que não é desta lane.
+
+**O gate inteiro foi re-executado depois do reparo** e reproduziu os mesmos números, arquivo por
+arquivo — é isso que a tabela do gate acima registra. A árvore rastreada terminou limpa.
+
+Lição para quem for repetir a comparação com o commit-base: worktree do pnpm ou reinstala as
+dependências dentro dele, ou não recebe `node_modules` emprestado. Atalho de link simbólico dentro
+de repositório com workspace transforma `--force` em exclusão do vizinho.
