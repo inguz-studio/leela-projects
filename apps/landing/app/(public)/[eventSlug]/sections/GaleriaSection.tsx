@@ -14,23 +14,24 @@ import { TituloSecao } from './marca';
  *
  * Rotulada como EXEMPLO (`figcaption`) para ser honesta: não são fotos reais do
  * evento. Server Component; `<img>` de asset local estático.
+ *
+ * X1 (D-0802-1 §3 · a11y antes do vocabulário). Os três `alt` afirmavam
+ * corredores, largada e prova — numa galeria de EXEMPLO servida a QUALQUER
+ * evento. Na página de um retiro de respiração, o leitor de tela anunciava
+ * corredores que não existem: isso não é vocabulário torto, é informação falsa
+ * entregue a quem só tem ela.
+ *
+ * A saída é tratar as imagens como DECORATIVAS (`alt=""`), que é o que elas
+ * são: placeholders sem relação com este evento. O conteúdo informativo já está
+ * no texto da seção ("Imagens de exemplo — as fotos do organizador aparecem
+ * aqui") e no rótulo de cada figura, agora em momentos que valem para qualquer
+ * experiência. Descrever a foto com precisão seria pior: reintroduziria a
+ * afirmação de corrida, só que mais detalhada.
  */
-const IMAGENS_EXEMPLO: readonly { src: string; alt: string; rotulo: string }[] = [
-  {
-    src: '/gallery/leela-galeria-largada.jpg',
-    alt: 'Grupo de corredores na largada de uma corrida de rua',
-    rotulo: 'Largada',
-  },
-  {
-    src: '/gallery/leela-galeria-percurso.jpg',
-    alt: 'Corredores durante o percurso de uma corrida de rua ao amanhecer',
-    rotulo: 'No percurso',
-  },
-  {
-    src: '/gallery/leela-galeria-chegada.jpg',
-    alt: 'Corredora comemorando a chegada da prova ao pôr do sol',
-    rotulo: 'Chegada',
-  },
+const IMAGENS_EXEMPLO: readonly { src: string; rotulo: string }[] = [
+  { src: '/gallery/leela-galeria-largada.jpg', rotulo: 'Antes' },
+  { src: '/gallery/leela-galeria-percurso.jpg', rotulo: 'Durante' },
+  { src: '/gallery/leela-galeria-chegada.jpg', rotulo: 'Depois' },
 ];
 
 export function GaleriaSection(): React.JSX.Element {
@@ -49,7 +50,9 @@ export function GaleriaSection(): React.JSX.Element {
                 {/* Abaixo da dobra → lazy; dimensão intrínseca 4:3 (zero CLS). */}
                 <img
                   src={img.src}
-                  alt={img.alt}
+                  // Decorativa: o `figcaption` rotula e a seção já declarou que
+                  // são imagens de exemplo. Ver a nota no topo do arquivo.
+                  alt=""
                   width={1200}
                   height={900}
                   loading="lazy"

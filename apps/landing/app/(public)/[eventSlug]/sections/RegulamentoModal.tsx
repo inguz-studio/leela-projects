@@ -44,7 +44,10 @@ export function RegulamentoModal({
       <Dialog
         open={aberto}
         onOpenChange={setAberto}
-        title="Regulamento da prova"
+        // D-0802-1 §3: "experiência" é o termo guarda-chuva; corrida/prova são
+        // instâncias, nunca a categoria. Este modal é servido em TODO evento —
+        // um retiro de respiração também tem regulamento, e não tem prova.
+        title="Regulamento da experiência"
         titleIcon={
           <FileText size={20} strokeWidth={1.75} aria-hidden className="shrink-0 text-text-brand" />
         }

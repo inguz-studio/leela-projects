@@ -15,7 +15,9 @@ export function SobreSection({ evento }: { evento: EventoPublico }): React.JSX.E
   const fatos: { rotulo: string; valor: string; icone: LucideIcon }[] = [
     { rotulo: 'Modalidade', valor: evento.modalidadeEsporte, icone: IconeEsporte },
     { rotulo: 'Data', valor: evento.dataLabel, icone: CalendarDays },
-    { rotulo: 'Largada', valor: evento.horaLabel, icone: Clock },
+    // X1 (D-0802-1 §3): era "Largada". O tile mostra a HORA de início e é
+    // servido em todo evento — um retiro de respiração não tem largada.
+    { rotulo: 'Início', valor: evento.horaLabel, icone: Clock },
     { rotulo: 'Local', valor: evento.local, icone: MapPin },
     {
       rotulo: 'Percursos',

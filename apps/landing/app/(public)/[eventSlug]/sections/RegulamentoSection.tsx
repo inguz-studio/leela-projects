@@ -1,5 +1,5 @@
 // =============================================================================
-// RegulamentoSection — regulamento da prova em MODAL (LP-VENDAS-KIT/T2).
+// RegulamentoSection — regulamento da experiência em MODAL (LP-VENDAS-KIT/T2).
 //
 // Pedido do Vitor: a página do evento expõe o regulamento da competição num
 // componente visível na página inicial do evento; o clique abre um MODAL com o
@@ -28,9 +28,12 @@ export function RegulamentoSection({ evento }: { evento: EventoPublico }): React
   return (
     <Dobra id="regulamento">
       <TituloSecao icone={FileText}>Regulamento</TituloSecao>
+      {/* D-0802-1 §3: esta seção é servida em TODO evento — "prova", "categorias"
+          e "premiação" descreviam uma corrida na página de um retiro. O que
+          vale para qualquer experiência é o que ficou. */}
       <p className="mt-2 max-w-2xl text-sm text-text-secondary">
-        Antes de se inscrever, leia o regulamento oficial da prova — regras de
-        participação, categorias, premiação e política de cancelamento.
+        Antes de se inscrever, leia o regulamento oficial desta experiência —
+        regras de participação, o que está incluído e política de cancelamento.
       </p>
 
       <RegulamentoModal

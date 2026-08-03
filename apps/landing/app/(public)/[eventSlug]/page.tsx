@@ -220,7 +220,7 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
         </>
       )}
 
-      {/* Regulamento da prova em MODAL (LP-VENDAS-KIT/T2). Self-gated: some sem
+      {/* Regulamento da experiência em MODAL (LP-VENDAS-KIT/T2). Self-gated: some sem
           costura quando o organizador não publicou regulamento (RN-153). */}
       <RegulamentoSection evento={evento} />
 
