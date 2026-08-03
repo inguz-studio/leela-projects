@@ -15,7 +15,7 @@ Base: `main` em `8de6894`. Sem push — o maestro pusha.
 - [x] **A4 · S212-T4** — quarto degrau da cascata do `kitImagem.ts`
 - [x] **FRENTE A FECHADA** — suíte da landing **260/260** (214 antes)
 - [x] **B1 · S1215-T1** — gerador único do link + `linkMaster` derivado
-- [ ] **B2 · S1215-T2** — captura e guarda do cupom por evento
+- [x] **B2 · S1215-T2** — captura e guarda do cupom por evento
 - [ ] **B3 · S1215-T3** — faixa pós-Hero + verificação server-side
 - [ ] **B4 · S1215-T4** — dois links de demonstração no seed do meia-floripa
 - [ ] **X1** — vocabulário/a11y da página do evento
@@ -177,6 +177,35 @@ Gates: core `tsc` 0 · `eslint` 0 · `tsup` 0 · painel `tsc` 0 · `eslint` 0 ·
 do painel **353/353** (349 antes) · `afiliados.integration` **38/38** + `afiliadoCore` **17/17**
 + `parceriaCore` **8/8** no emulator 8480/9598.
 
+### B2 — o desconto passa a sobreviver ao clique em "regulamento"
+
+O `?ref=` sobrevivia à navegação; o cupom não. Quem chegava pelo link do afiliado, abria o
+regulamento e voltava, mantinha a **atribuição** e perdia o **desconto** — pagava cheio num
+link que prometia desconto, e o afiliado levava a comissão de uma venda que a pessoa achou
+que estava barata.
+
+`CupomTracker` é o irmão do `RefTracker`, com a mesma disciplina (por evento; mesmo código
+revisitado preserva a captura mais antiga; código diferente sobrescreve; storage indisponível
+degrada em silêncio). **Chave separada** da do `ref`: link com cupom e sem `ref` existe, e
+escrever no registro da atribuição para guardar um cupom seria mexer no dado que decide
+comissão.
+
+No `CheckoutFlow` a leitura do storage é efeito de **montagem**, não inicializador de
+`useState` — o componente também renderiza no servidor, e ler storage no render desalinharia a
+hidratação na tela que cobra. A URL vence o storage; "Remover" desliga o cupom do link junto.
+
+A marca **"(desconto aplicado)"** acende na linha de desconto do resumo só quando o cupom veio
+do link, com o código junto ("cupom FLORIPA10 do seu link"). É texto: os três números do bloco
+continuam vindo inteiros da cotação, e há teste asserindo exatamente isso.
+
+Gates: landing `tsc` 0 · `eslint` 0 · `cupom-link-s1215` **17/17** · suíte cheia da landing
+**277/277** em 24 arquivos (260 antes), single-fork, 32,06 s.
+
+**Defeito pré-existente encontrado, NÃO corrigido aqui** (é da S1209, vale igual para o
+`?cupom=` da URL): no step 0 o "Remover" não re-cota, então o `CupomCampo` continua exibindo
+"Cupom X aplicado" com base na cotação velha. Fica para decisão — mexer nisso é mexer no
+caminho da cotação, que é território de dinheiro.
+
 ## Premissas assumidas (vetáveis)
 
 1. **O upload não usa `slot = posicao`** (A2). É a única premissa desta lane que muda
@@ -205,6 +234,16 @@ do painel **353/353** (349 antes) · `afiliados.integration` **38/38** + `afilia
 7. **A fixture de parceria do painel ganhou `refCodigo`** (B1), para as telas E18 testarem o
    caminho derivado. O `linkMaster` legado com `be-hero` continua na fixture de propósito: é o
    que os dois casos novos provam que não reaparece. Custo de vetar: nenhum fora de teste.
+8. **Chave de storage separada para o cupom** (B2): `leela:cupom:{slug}`, ao lado de
+   `leela:ref:{slug}`. A RN-430 diz "na mesma chave por evento" — li como "por evento", não
+   "no mesmo registro". Custo de vetar: fundir os dois registros e aceitar que guardar um
+   cupom escreva no dado que decide comissão.
+9. **A marca do resumo carrega o código do cupom** ("cupom FLORIPA10 do seu link · (desconto
+   aplicado)"). A spec fixa a string "(desconto aplicado)"; sozinha ela não diz QUAL cupom
+   entrou, e o campo do step 0 some assim que o cupom cola. Custo de vetar: uma string.
+10. **"Remover" desliga o cupom do link** (B2), além de limpar o aplicado. Sem isso o efeito
+    de auto-apply reaplicaria o que a pessoa acabou de tirar. Custo de vetar: uma linha, e o
+    cupom volta sozinho.
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -216,6 +255,7 @@ do painel **353/353** (349 antes) · `afiliados.integration` **38/38** + `afilia
 | 4 | `d63b703` | A3 · galeria no detalhe do kit; listagens intocadas |
 | 5 | `fd1c6f2` | A4 · quarto degrau da cascata (preview) |
 | 6 | `ae7538f` | B1 · gerador único do link, com o cupom dentro |
+| 7 | `ddb635d` | B2 · o cupom do link atravessa a jornada + marca no resumo |
 
 ## Convivência de lanes (medido em 2026-08-02, durante a B1)
 
