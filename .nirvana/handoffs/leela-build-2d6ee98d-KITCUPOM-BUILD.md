@@ -14,7 +14,7 @@ Base: `main` em `8de6894`. Sem push — o maestro pusha.
 - [x] **A3 · S212-T3** — `KitPublico`/leitor projetam as secundárias; galeria no `KitDetalhe`
 - [x] **A4 · S212-T4** — quarto degrau da cascata do `kitImagem.ts`
 - [x] **FRENTE A FECHADA** — suíte da landing **260/260** (214 antes)
-- [ ] **B1 · S1215-T1** — gerador único do link + `linkMaster` derivado
+- [x] **B1 · S1215-T1** — gerador único do link + `linkMaster` derivado
 - [ ] **B2 · S1215-T2** — captura e guarda do cupom por evento
 - [ ] **B3 · S1215-T3** — faixa pós-Hero + verificação server-side
 - [ ] **B4 · S1215-T4** — dois links de demonstração no seed do meia-floripa
@@ -138,6 +138,45 @@ impede a fita de repetir a foto grande quando a principal também é mock.
 
 ---
 
+## Frente B · o cupom pré-aplicado por link (E12 · S1215)
+
+### B1 — o link deixa de ser digitado, e o segundo gerador morre junto
+
+Retomada depois do crash do terminal: o diff do B1 estava vivo no worktree e foi
+avaliado contra a fila antes de qualquer edição. Três coisas faltavam.
+
+**O erro de tsc** (`linkPromocional.test.ts:118`, TS2379): o caso "sem vínculo" passava
+`{ cupomCodigo: undefined }`, e sob `exactOptionalPropertyTypes` campo omitido e campo
+escrito como `undefined` são coisas diferentes. Quem produz o caso real é o wrapper do
+painel, com spread condicional — o teste passou a montar `{}`.
+
+**O segundo gerador.** `montarLinkAfiliado` continuava no core: montava `{base}/{slug}?ref=`
+sem cupom e sem validar a base, então `montarLinkAfiliado('beh.ro', …)` devolvia string em
+vez de recusar. "Gerador único" com dois geradores morre no primeiro caminho novo que
+escolher o errado. Removido; estava sem chamador em app.
+
+**A feature nascia morta no painel real.** `.env.leela-hub` — o env do build de produção do
+painel — não tinha `VITE_LEELA_URL`. Sem base, o gerador recusa por design, e o botão de
+copiar link viraria "sem link" em todo lugar. A variável entrou apontando para a landing que
+o D0 provou no ar. De quebra o `PUBLIC_BASE` para de cair no fallback `https://be-hero.com.br`
+que estava cravado no código.
+
+Os dois desempates de comissão (⚔ vetor 2 da B1) viraram teste no emulator: link de A +
+cupom de B ⇒ **B** leva e o clique de A é descartado; cupom sem afiliado ⇒ **A** sobrevive
+com o clique preservado. O caso do descarte foi corrigido para asserir por **janela** e não
+por igualdade com um instante capturado no import — quem carimba é o relógio da chamada, e a
+igualdade falhava por ~30 s de suíte.
+
+⚔ **Vetor 1 (kernel intocado) medido:** `git diff --stat -- functions/src/checkout/` não
+tem uma linha desta lane. O arquivo aparece modificado no worktree por **outra lane viva na
+mesma árvore** (PIXFIX-EXTREF · T3), e ficou FORA do commit — `git commit --only` com a lista
+explícita de caminhos.
+
+Gates: core `tsc` 0 · `eslint` 0 · `tsup` 0 · painel `tsc` 0 · `eslint` 0 · functions `tsc` 0 ·
+`eslint` 0 · landing `tsc` 0 · `linkPromocional.test.ts` **18/18** · suíte clubes+afiliados+lib
+do painel **353/353** (349 antes) · `afiliados.integration` **38/38** + `afiliadoCore` **17/17**
++ `parceriaCore` **8/8** no emulator 8480/9598.
+
 ## Premissas assumidas (vetáveis)
 
 1. **O upload não usa `slot = posicao`** (A2). É a única premissa desta lane que muda
@@ -156,6 +195,16 @@ impede a fita de repetir a foto grande quando a principal também é mock.
    condição.
 4. **Alt posicional na foto grande** quando há mais de uma ("Kit Ouro — foto 2 de 3"). Com fita,
    "Kit Ouro" sozinho deixa de identificar o que está na tela. Custo de vetar: uma string.
+5. **`montarLinkAfiliado` foi REMOVIDO do core** (B1). A fila pede "gerador único"; ele era o
+   segundo, sem cupom e sem validação de base. Não tinha chamador em app. Custo de vetar:
+   ressuscitar a função e conviver com uma superfície futura copiando link sem desconto.
+6. **`VITE_LEELA_URL=https://leela-landing.web.app` entrou no `.env.leela-hub`** (B1). É a base
+   que o D0 provou no ar; o domínio definitivo continua sendo decisão do dono (item 12). Sem
+   ela o gerador recusa e o painel real fica sem copiar link. Custo de vetar: trocar uma linha
+   de env — e enquanto não houver base, a tela diz honestamente que não há link.
+7. **A fixture de parceria do painel ganhou `refCodigo`** (B1), para as telas E18 testarem o
+   caminho derivado. O `linkMaster` legado com `be-hero` continua na fixture de propósito: é o
+   que os dois casos novos provam que não reaparece. Custo de vetar: nenhum fora de teste.
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -166,3 +215,15 @@ impede a fita de repetir a foto grande quando a principal também é mock.
 | 3 | `637dd92` | A2 · três posições no `KitEditor`; promover é trocar |
 | 4 | `d63b703` | A3 · galeria no detalhe do kit; listagens intocadas |
 | 5 | `fd1c6f2` | A4 · quarto degrau da cascata (preview) |
+| 6 | `ae7538f` | B1 · gerador único do link, com o cupom dentro |
+
+## Convivência de lanes (medido em 2026-08-02, durante a B1)
+
+Outra lane está VIVA na mesma árvore, escrevendo em `functions/src/checkout/`
+(PIXFIX-EXTREF · T3 — o comentário dela declara a divisão: "a KITCUPOM-BUILD é dona de
+`packages/**` agora"). `createInscricaoCharge.ts` e `asaasTetoCheckout.integration.test.ts`
+apareceram modificados no worktree às 22:19 e 22:21, no meio da B1.
+
+Consequência operacional para o resto desta lane: **todo commit é `git commit --only` com a
+lista explícita de caminhos**. Nunca `git add -A`. A fila já previa a convivência (RN-433) e
+nenhuma task daqui escreve naquele território.
