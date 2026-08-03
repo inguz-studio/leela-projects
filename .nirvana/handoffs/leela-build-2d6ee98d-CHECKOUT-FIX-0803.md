@@ -98,7 +98,7 @@ que vai ao servidor.
 
 ## C2-0803 · select de parcelas nasce completo — PAGA
 
-**Commit:** `PENDENTE` · `fix(checkout): a escada do cartao esta na mao antes do clique [leela-build-2d6ee98d]`
+**Commit:** `b29e9719` · `fix(checkout): a escada do cartao esta na mao antes do clique [leela-build-2d6ee98d]`
 
 ### Reprodução (feita antes do fix)
 
@@ -189,3 +189,93 @@ exatamente uma vez. É um teste mais forte que o anterior, não mais frouxo.
    chegada ao PAGAR ainda vê "Calculando as opções de parcelamento…". Honesto, mas não é
    "nasce completo". Fechar isso exigiria pré-carregar já na etapa de DADOS — o que
    colocaria duas chamadas na janela que a T-CKUX-1 acabou de limpar.
+
+---
+
+## C3-0803 · estados do PIX na ordem do dono — PAGA
+
+**Commit:** `PENDENTE` · `fix(checkout): a cobranca PIX nasce no clique, com o loader do dono [leela-build-2d6ee98d]`
+
+### O que estava errado
+
+Duas coisas, na mesma tela:
+
+1. **A cobrança nascia sem clique.** A auto-geração (A-3) chamava
+   `createInscricaoCharge` num efeito, assim que `step === 2 && forma === 'pix' &&
+   aceitesOk`. Ela nasceu quando os aceites ainda eram marcados NESTA tela — havia um
+   gesto humano deliberado logo antes. A S1217-T1 (RN-438) mudou o chão levando os
+   aceites para a etapa anterior; desde então o único gesto entre chegar e criar cobrança
+   era ESCOLHER o meio.
+2. **A espera tinha o nome errado.** `criandoCharge` entrava em `emVoo`, e `emVoo`
+   acendia o bloco "Processando pagamento" (DEC-0727). Gerar o código PIX não é pagar: a
+   tela anunciava dinheiro em trânsito antes de existir pagamento nenhum.
+
+`createInscricaoCharge` grava pedido, pagamento e inscritos como PENDENTES antes de falar
+com o gateway, recomputa contadores do evento no caminho e cria cobrança real no provedor.
+
+### O que passou a valer
+
+- A auto-geração saiu. **RN-440 + C3-0803:** chegar não cria nada; escolher também não.
+- O clique em "Gerar código PIX" mostra um loader `role="status"` com a mensagem exata
+  **"Preparando código PIX"**, e o código aparece na sequência.
+- **"Processando pagamento" fica onde é verdade:** teto de 15s estourado
+  (`gatewaySemResposta`), confirmação do pagamento em voo (`confirmando`, PIX e cartão) e
+  criação da cobrança **no cartão** — ali criar É pagar, porque `pagarCartao` encadeia
+  criação e confirmação num gesto só.
+- A copy antes do clique parou de afirmar preparação em curso ("Estamos preparando o
+  código PIX…" → "Ao clicar abaixo, geramos o código PIX de R$ X à vista").
+- `gerarCobranca` foi partido em `criarCobranca` (produtor de escrita, sem o atalho de
+  cache) e `gerarCobranca` (com o atalho). O recomeço da RN-157 ("Gerar nova cobrança")
+  zera `charge` e chama `criarCobranca` no mesmo gesto — sem a separação, a closure leria
+  o `charge` antigo e devolveria a cobrança morta. Um clique, uma cobrança nova.
+
+### Gates
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` (landing) | 0 erros |
+| `eslint app lib --max-warnings 0` | 0 |
+| Suíte da landing (processo único) | **443/443** (40 arquivos) |
+| Regressão reprova a versão anterior | **6/9** casos do arquivo novo falham em `b29e9719` |
+
+### Falsificações (dinheiro)
+
+| Vetor | Resultado |
+|---|---|
+| Selecionar PIX + 500 ms ⇒ `createInscricaoCharge` **não** chamado | PASS |
+| Clicar em "Gerar código PIX" ⇒ chamado **1×**, com `forma: 'pix', parcelas: 1` | PASS |
+| Sair do PAGAR e voltar com PIX escolhido ⇒ nenhuma cobrança | PASS |
+| Teto de 15s na criação do PIX ⇒ "Processando pagamento" (não "Preparando") | PASS |
+| "Já paguei — confirmar" em voo ⇒ "Processando pagamento" | PASS |
+| Cartão: criação em voo ⇒ "Processando pagamento" | PASS |
+| Cotação nova em voo ⇒ botão "Gerar código PIX" desabilitado e clique sem efeito | PASS |
+
+### Arquivos
+
+- `apps/landing/app/(public)/[eventSlug]/inscricao/checkout/CheckoutFlow.tsx`
+- `apps/landing/app/(public)/[eventSlug]/inscricao/checkout/StepPagamento.tsx`
+- `apps/landing/test/checkout-dec0803-pix-estados.test.tsx` (novo, 9 casos)
+- Helpers de 6 arquivos passaram a dar o clique: `checkout-asaas-teto`,
+  `checkout-s1209-cards-atleta`, `checkout-s1209-rev-ataque`,
+  `checkout-s1217-aceites-inscricao`, `checkout-s1217-termo-saude-custom`,
+  `checkout-s1217-versao-exibida`
+
+### Supersedes registrados
+
+- `S1217-T2 · "escolher PIX gera a cobrança sem clique extra (o ganho da A-3 continua
+  inteiro)"` — o contrato virou o oposto por decisão do dono. O caso foi reescrito e
+  ganhou um irmão que prova a ausência da auto-geração com janela generosa.
+- `ACHADOS-REV · vetor 10` — a segunda metade ("o código nasce quando o total chega")
+  virou "o botão destrava quando o total chega, e é o clique que cria". A guarda que o
+  vetor protege continua medida, agora também pelo estado do botão.
+- `DEC-0727 · "a espera longa também é 'processando pagamento'"` — o caso do PIX foi para
+  o cartão (onde criar é pagar) e ganhou um irmão exigindo "Preparando código PIX" no
+  PIX. Nenhuma cobertura foi perdida.
+
+### Premissas vetáveis
+
+5. **"Gerar nova cobrança" (PIX expirado) cria a cobrança no próprio clique**, sem passar
+   pelo botão "Gerar código PIX" de novo. Leitura: o botão promete uma cobrança nova, e
+   dois cliques para a mesma decisão seria a queixa do dono ao contrário.
+6. **A copy do estado sem cobrança mudou** ("Ao clicar abaixo, geramos o código PIX de
+   R$ X à vista"). É texto de tela do dinheiro — cabe veto.

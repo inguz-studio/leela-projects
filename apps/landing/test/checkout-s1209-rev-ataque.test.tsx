@@ -201,6 +201,17 @@ async function irAtePagamentoPix(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
   });
+  // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+  // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+  await waitFor(() => {
+    expect(
+      (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
+  });
   // S1217-T1 · RN-438: os aceites deixaram de existir nesta etapa — eles são
   // marcados na etapa de inscrição, dentro do `preencherDados`.
   await waitFor(() => {
@@ -573,6 +584,17 @@ describe('S1209-PIXREV · ataque 6 — segunda cobrança nascendo do estado "con
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
     });
 
     // A tela PEDE a cobrança nova (chave de idempotência nova) — isso não

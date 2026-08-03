@@ -239,6 +239,17 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
     });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
+    });
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
     });

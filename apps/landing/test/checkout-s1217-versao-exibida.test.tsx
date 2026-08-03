@@ -204,6 +204,17 @@ async function escolherPix(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
   });
+  // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+  // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+  await waitFor(() => {
+    expect(
+      (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
+  });
 }
 
 type Payload = {

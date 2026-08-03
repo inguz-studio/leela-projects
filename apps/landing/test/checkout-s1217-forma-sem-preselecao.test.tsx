@@ -176,6 +176,18 @@ describe('S1217-T2 · RN-440 — nenhuma cobrança nasce na chegada ao pagamento
     expect(cartao.checked).toBe(false);
   });
 
+  it('C3-0803 · o botão continua sendo o único caminho: sem clique, nada nasce', async () => {
+    await irAtePagar();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    // Janela generosa: se a auto-geração (A-3) ainda existisse, ela já teria
+    // disparado. É este caso que reprova a versão anterior.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+  });
+
   it('sem meio escolhido não há instrumento na tela — nem botão de pagar', async () => {
     await irAtePagar();
     expect(screen.queryByRole('button', { name: /gerar código pix/i })).toBeNull();
@@ -191,13 +203,26 @@ describe('S1217-T2 · RN-440 — nenhuma cobrança nasce na chegada ao pagamento
   });
 });
 
-describe('S1217-T2 · RN-440 — a cobrança PIX nasce da ESCOLHA do PIX', () => {
-  it('escolher PIX gera a cobrança sem clique extra (o ganho da A-3 continua inteiro)', async () => {
+// C3-0803 (DEC-0803) SUPERSEDE o contrato deste bloco. A T2 tirou a
+// PRÉ-SELEÇÃO do PIX para que a escolha voltasse a ser um ato; o dono, testando
+// a compra, disse que nem a escolha basta — verbatim: *"o 'processando
+// pagamento' só deve aparecer depois de clicar em 'código pix'"*. A cobrança
+// passou a nascer no CLIQUE do botão. A regra que os dois protegem é a mesma
+// (`createInscricaoCharge` grava pedido, pagamento e inscritos pendentes antes
+// de falar com o gateway); o que mudou é onde fica a fronteira do gesto.
+describe('S1217-T2 · RN-440 + C3-0803 — a cobrança PIX nasce do CLIQUE, não da escolha', () => {
+  it('escolher PIX não cria cobrança; clicar em "Gerar código PIX" cria UMA', async () => {
     await irAtePagar();
     expect(createInscricaoCharge).not.toHaveBeenCalled();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
     });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
     expect(createInscricaoCharge.mock.calls[0]?.[0]).toMatchObject({ forma: 'pix', parcelas: 1 });

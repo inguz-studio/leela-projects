@@ -437,8 +437,14 @@ describe('CKUX-REV · B8 — CEP-first é fail-open: lookup fora não fecha o ca
 // gesto que falta, e é ele que a guarda precisa segurar.
 // =============================================================================
 
+// C3-0803 (DEC-0803): a segunda metade deste caso mudou de forma. A cobrança
+// deixou de nascer sozinha quando o total chega — ela nasce no CLIQUE em
+// "Gerar código PIX". O que o vetor 10 protege continua igual: com cotação NOVA
+// em voo, o código PIX não pode nascer nem por gesto nenhum, porque o total na
+// tela é o da seleção anterior. O que se prova agora é que nem o botão está
+// disponível ali.
 describe('ACHADOS-REV · vetor 10 — com cotação em voo o código PIX não nasce', () => {
-  it('escolher PIX antes da resposta não cria cobrança; ela nasce quando o total chega', async () => {
+  it('escolher PIX antes da resposta não cria cobrança; o botão só destrava com o total', async () => {
     let resolverPrimeira: ((v: unknown) => void) | null = null;
     // C2-0803: o PAGAR também pede a escada do cartão em segundo plano. Só a
     // PRIMEIRA chamada (a cotação visível, que sai antes) guarda o resolvedor —
@@ -479,13 +485,27 @@ describe('ACHADOS-REV · vetor 10 — com cotação em voo o código PIX não na
     });
     await passarDebounce();
     expect(createInscricaoCharge).not.toHaveBeenCalled();
+    // Com o total em voo, o botão nem oferece o ato: clicar aqui produziria um
+    // código PIX de um preço que a tela não sabe qual é.
+    const gerar = (): HTMLButtonElement =>
+      screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement;
+    expect(gerar().disabled).toBe(true);
+    await act(async () => {
+      fireEvent.click(gerar());
+    });
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
 
-    // O total chega: aí sim o código nasce, sem clique extra (o ganho do A-3).
+    // O total chega: o botão destrava, e é o CLIQUE que cria a cobrança.
     await act(async () => {
       resolverPrimeira!(cotacaoCom(TOTAL_PIX, 'pix'));
       await Promise.resolve();
     });
     await passarDebounce();
+    await waitFor(() => expect(gerar().disabled).toBe(false));
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(gerar());
+    });
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
     });

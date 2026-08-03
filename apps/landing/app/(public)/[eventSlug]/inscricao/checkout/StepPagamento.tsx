@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
@@ -103,14 +104,28 @@ export function StepPagamento({
   totalDefasado?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
-  // DEC-0727 · a espera do gateway é UM estado com duas entradas: a chamada
-  // ainda no ar (até 15s por chamada) e a chamada que estourou o teto. Os dois
-  // falam a MESMA frase ao comprador — o que muda é o que vem depois dela.
-  const emVoo = criandoCharge || confirmando;
+  // ── C3-0803 · cada espera com o nome dela ─────────────────────────────────
+  //
+  // Verbatim do dono (DEC-0803): *"o 'processando pagamento' só deve aparecer
+  // depois de clicar em 'código pix', com um loader aparecendo com a mensagem
+  // 'Preparando código pix', com o pix aparecendo na tela."*
+  //
+  // Gerar o código PIX NÃO é pagar: é preparar o instrumento. Chamar isso de
+  // "Processando pagamento" contava ao comprador que o dinheiro estava em
+  // trânsito antes de ele ter feito qualquer pagamento — e, com a
+  // auto-geração, antes mesmo de ele ter clicado em coisa alguma.
+  //
+  // "Processando pagamento" (DEC-0727 · teto de 15s) fica onde ela é verdade:
+  //   · `gatewaySemResposta` — o teto estourou, desfecho DESCONHECIDO;
+  //   · `confirmando` — a confirmação do pagamento está no ar (PIX e cartão);
+  //   · `criandoCharge` NO CARTÃO — ali criar a cobrança É o ato de pagar
+  //     (`pagarCartao` encadeia criação + confirmação num gesto só).
+  const preparandoPix = forma === 'pix' && criandoCharge;
+  const emVoo = (criandoCharge && forma !== 'pix') || confirmando;
   const processando = gatewaySemResposta || emVoo;
   // Erro e espera não coexistem: enquanto a plataforma não sabe o desfecho,
   // qualquer alerta vermelho seria uma afirmação que ela não pode fazer.
-  const mostrarErroCharge = erroCharge !== null && !processando;
+  const mostrarErroCharge = erroCharge !== null && !processando && !preparandoPix;
   const mostrarErroConfirmar = erroConfirmar !== null && !processando;
 
   return (
@@ -132,9 +147,14 @@ export function StepPagamento({
               <p className="text-sm text-text-secondary">
                 {aceitesOk ? (
                   <>
-                    Estamos preparando o código PIX para pagar{' '}
-                    {totalLabel ? <strong>{totalLabel}</strong> : null} à vista. Sua vaga fica
-                    reservada como pendente até a confirmação.
+                    Ao clicar abaixo, geramos o código PIX
+                    {totalLabel ? (
+                      <>
+                        {' '}
+                        de <strong>{totalLabel}</strong>
+                      </>
+                    ) : null}{' '}
+                    à vista. Sua vaga fica reservada como pendente até a confirmação.
                   </>
                 ) : (
                   <>
@@ -149,16 +169,37 @@ export function StepPagamento({
                   </>
                 )}
               </p>
-              {/* Auto-gerado quando os aceites confirmam (A-3 + §5.3); o botão
-                  fica como fallback se a geração automática falhar. */}
+              {/* C3-0803 · RN-440 — a cobrança nasce NESTE clique e em nenhum
+                  outro lugar. A auto-geração (A-3) saiu: ela fazia
+                  `createInscricaoCharge` — que grava pedido, pagamento e
+                  inscritos pendentes ANTES de falar com o gateway — disparar
+                  pela simples escolha do meio. */}
               <div>
                 <Button
                   onClick={onGerarCobranca}
                   disabled={criandoCharge || !aceitesOk || totalDefasado}
                 >
-                  {criandoCharge ? 'Preparando código PIX…' : 'Gerar código PIX'}
+                  Gerar código PIX
                 </Button>
               </div>
+              {/* O loader do dono, com a frase dele. Fica ABAIXO do botão, no
+                  lugar onde o código vai aparecer — a espera ocupa o espaço do
+                  que está sendo esperado. */}
+              {preparandoPix ? (
+                <section
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-raised p-4"
+                >
+                  <Loader2
+                    size={18}
+                    strokeWidth={2}
+                    aria-hidden
+                    className="shrink-0 animate-spin text-text-secondary"
+                  />
+                  <p className="text-sm font-medium text-text-primary">Preparando código PIX</p>
+                </section>
+              ) : null}
             </>
           ) : (
             <>

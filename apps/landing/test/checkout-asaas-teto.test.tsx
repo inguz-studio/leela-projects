@@ -218,8 +218,17 @@ async function irAtePagamento(forma: 'pix' | 'cartao'): Promise<void> {
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
     });
+    // C3-0803 · a cobrança PIX nasce no CLIQUE do botão: a auto-geração (A-3)
+    // saiu. O gesto entra no helper; o que cada caso deste arquivo mede — a
+    // face do teto de 15s — não mudou. O botão só destrava com o total na tela
+    // (item 64 · CKUX-REV), e esperar por isso é o que o comprador faz.
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement).disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
     });
   }
   if (forma === 'cartao') {
@@ -450,12 +459,16 @@ describe('DEC-0727 · cartão: o teto vale para o outro meio também', () => {
 // 3. A ESPERA LONGA (a chamada ainda no ar) fala a MESMA frase
 // ---------------------------------------------------------------------------
 
-describe('DEC-0727 · a espera longa (até 15s por chamada) também é "processando pagamento"', () => {
-  it('chamada em voo ⇒ status de processamento, e nenhum botão de retry (não duplica a requisição)', async () => {
+describe('DEC-0727 · a espera longa (até 15s por chamada) também é anunciada', () => {
+  it('cartão em voo ⇒ "processando pagamento", e nenhum botão de retry (não duplica a requisição)', async () => {
     // Chamada que não volta: é o que o comprador vive enquanto o gateway
-    // consome os 15s do teto.
+    // consome os 15s do teto. No cartão, criar a cobrança É o ato de pagar
+    // (`pagarCartao` encadeia criação + confirmação), então a frase é esta.
     createInscricaoCharge.mockReturnValue(new Promise<never>(() => {}));
-    await irAtePagamento('pix');
+    await irAtePagamento('cartao');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^pagar/i }));
+    });
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
     });
@@ -465,6 +478,24 @@ describe('DEC-0727 · a espera longa (até 15s por chamada) também é "processa
     expect(blocoProcessando()!.textContent ?? '').toMatch(/processando pagamento/i);
     // Oferecer "tentar novamente" com a requisição no ar convidaria a segunda
     // chamada — e duas criações concorrentes é o cenário do carrinho travado.
+    expect(screen.queryByRole('button', { name: /tentar novamente/i })).toBeNull();
+  });
+
+  it('PIX em voo ⇒ "Preparando código PIX" — gerar o código não é pagar (C3-0803)', async () => {
+    // A espera é a mesma; o nome dela não. Gerar o código PIX é preparar o
+    // instrumento, e o dono recusou chamar isso de pagamento em curso
+    // (DEC-0803). "Processando pagamento" fica para o teto estourado e para a
+    // confirmação — os dois casos deste arquivo que seguem intactos.
+    createInscricaoCharge.mockReturnValue(new Promise<never>(() => {}));
+    await irAtePagamento('pix');
+    await waitFor(() => {
+      expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(blocoProcessando()).not.toBeNull();
+    });
+    expect(blocoProcessando()!.textContent ?? '').toBe('Preparando código PIX');
+    expect(screen.queryByText(/processando pagamento/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /tentar novamente/i })).toBeNull();
   });
 });

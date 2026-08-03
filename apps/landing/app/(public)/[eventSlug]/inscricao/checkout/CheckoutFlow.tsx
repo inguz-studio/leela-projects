@@ -1150,8 +1150,13 @@ export function CheckoutFlow({
   }, []);
 
   // ── Cobrança + confirmação (produtor de escrita + webhook sandbox) ─────────
-  const gerarCobranca = useCallback(async (): Promise<CreateInscricaoChargeResult | null> => {
-    if (charge) return charge;
+  //
+  // C3-0803 · `criarCobranca` é o produtor de escrita SEM o atalho de cache;
+  // `gerarCobranca` é ele com o atalho. A separação existe porque o recomeço da
+  // RN-157 ("Gerar nova cobrança") acabou de zerar `charge` no mesmo tick e
+  // ainda leria o valor antigo pela closure — devolvendo a cobrança morta em
+  // vez de criar a nova.
+  const criarCobranca = useCallback(async (): Promise<CreateInscricaoChargeResult | null> => {
     if (!authPronto) {
       setErroCharge('Sessão de pagamento ainda não pronta. Aguarde um instante.');
       return null;
@@ -1305,7 +1310,19 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, evento.politicaVendas.versao, evento.termoSaudeVersao, termoSaudeCustom, recarregarMaterial, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, evento.politicaVendas.versao, evento.termoSaudeVersao, termoSaudeCustom, recarregarMaterial, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+
+  /**
+   * RN-333 · a cobrança deste carrinho já existe ⇒ devolve a mesma. É o atalho
+   * que faz de "pagar" um replay em vez de uma segunda compra.
+   */
+  const gerarCobranca = useCallback(async (): Promise<CreateInscricaoChargeResult | null> => {
+    if (charge) return charge;
+    return criarCobranca();
+  }, [charge, criarCobranca]);
+
+  const criarCobrancaRef = useRef(criarCobranca);
+  criarCobrancaRef.current = criarCobranca;
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
@@ -1335,38 +1352,30 @@ export function CheckoutFlow({
     if (c) await confirmar(c.pedidoId);
   }, [gerarCobranca, confirmar]);
 
-  // A-3 · PIX gera a cobrança automaticamente — o QR/copia-e-cola aparece sem
-  // clique extra. CKFORM §5.3: SÓ depois dos 2 aceites (a cobrança nasce com a
-  // prova de aceite no servidor — não existe cobrança sem aceite). O botão
-  // "Gerar código PIX" fica como fallback se der erro (idempotência RN-333).
-  useEffect(() => {
-    if (
-      step === 2 &&
-      forma === 'pix' &&
-      authPronto &&
-      aceitesOk &&
-      charge === null &&
-      !criandoCharge &&
-      erroCharge === null &&
-      // DEC-0727: teto estourado NÃO regenera sozinho. O efeito não olha para
-      // `gatewaySemResposta` como cortesia — sem este freio ele re-dispararia
-      // no mesmo instante (o erro não pousa em `erroCharge`), e cada volta
-      // gastaria outros 15s do gateway sobre uma cobrança que talvez JÁ
-      // exista. A retomada é um clique, como no caminho de erro.
-      !gatewaySemResposta &&
-      // RN-157: PIX expirado NÃO regenera sozinho — a pessoa pede.
-      !pixExpirado &&
-      // CKUX-REV: cotação nova no ar ⇒ o total na tela ainda é o da seleção
-      // anterior. Nascer aqui produziria um código PIX do preço novo embaixo
-      // de um total antigo — a mesma mentira do botão do cartão, só que já
-      // com a cobrança criada. 200 ms de debounce mais o round-trip é o que
-      // se espera; o QR aparece sozinho logo depois. C1-0803: a guarda é a
-      // mesma do botão — cotação NOVA em voo, não qualquer chamada no ar.
-      !totalDefasado
-    ) {
-      void gerarCobranca();
-    }
-  }, [step, forma, authPronto, aceitesOk, charge, criandoCharge, erroCharge, gatewaySemResposta, pixExpirado, totalDefasado, gerarCobranca]);
+  // ── C3-0803 · a cobrança PIX nasce no CLIQUE, e em nenhum outro lugar ──────
+  //
+  // Aqui morava a auto-geração (A-3): um efeito que chamava `gerarCobranca()`
+  // assim que `step === 2 && forma === 'pix' && aceitesOk`. Ela nasceu quando
+  // os aceites ainda eram marcados NESTA tela — a cobrança vinha logo depois de
+  // um gesto humano deliberado, e o ganho era não pedir um clique a mais.
+  //
+  // A S1217-T1 (RN-438) mudou o chão: os aceites passaram para a etapa de
+  // inscrição. Desde então o único gesto entre chegar ao pagamento e criar
+  // cobrança era ESCOLHER o meio. A S1217-T2 tirou a pré-seleção do PIX para
+  // que a escolha voltasse a ser um ato — e o dono, testando, disse o que
+  // faltava: nem a escolha basta.
+  //
+  // Verbatim (DEC-0803): *"o 'processando pagamento' só deve aparecer depois de
+  // clicar em 'código pix'"*. `createInscricaoCharge` grava pedido, pagamento e
+  // inscritos como PENDENTES antes de falar com o gateway, recomputa contadores
+  // do evento no caminho e cria cobrança real no Asaas. Escolher "PIX" para ver
+  // o preço não pode fazer nada disso. A RN-440 dizia que CHEGAR não cria nada;
+  // a C3-0803 acrescenta que ESCOLHER também não.
+  //
+  // O que continua: `gerarCobranca` segue recusando sem aceites e sem meio
+  // (defesa em profundidade — o servidor recusa antes, flip F-4a), o botão
+  // segue travado com cotação nova em voo, e a chave de idempotência continua
+  // fazendo do retry um replay.
 
   // ── Expiração do PIX (RN-157) ──────────────────────────────────────────────
   // O timer da UI zerou. A tela NÃO decide que a cobrança morreu: ela pede ao
@@ -1432,6 +1441,10 @@ export function CheckoutFlow({
       setErroConfirmar(null);
       setPixEstado('vivo');
       setStep(2);
+      // C3-0803 · "Gerar nova cobrança" JÁ é o clique. A cobrança nascer aqui
+      // não afrouxa a regra (nada nasce sem gesto) e evita pedir dois cliques
+      // pela mesma decisão — o botão promete uma cobrança nova, e ela vem.
+      void criarCobrancaRef.current();
     };
 
     if (charge === null || pixFimConfirmadoRef.current) {

@@ -225,6 +225,17 @@ describe('S1217-T3 · RN-441 — o terceiro aceite gateia o avanço junto com os
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
     });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
+    });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
     const payload = createInscricaoCharge.mock.calls[0]![0] as {
@@ -246,6 +257,17 @@ describe('S1217-T3 · RN-441 — o payload reflete o que a pessoa marcou', () =>
     await waitFor(() => expect(screen.getByText(/^Seu pedido$/)).toBeTruthy());
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
     });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
@@ -270,6 +292,17 @@ describe('S1217-T3 · RN-441 — o payload reflete o que a pessoa marcou', () =>
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
     });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
+    });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
     const payload = createInscricaoCharge.mock.calls[0]![0] as {
@@ -289,6 +322,17 @@ describe('S1217-T3 · RN-441 — o payload reflete o que a pessoa marcou', () =>
     await waitFor(() => expect(screen.getByText(/^Seu pedido$/)).toBeTruthy());
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    // C3-0803: a cobrança PIX nasce no CLIQUE do botão, não na escolha do meio.
+    // O botão só destrava com o total na tela (item 64 · CKUX-REV).
+    await waitFor(() => {
+      expect(
+        (screen.getByRole('button', { name: /gerar código pix/i }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(false);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /gerar código pix/i }));
     });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
