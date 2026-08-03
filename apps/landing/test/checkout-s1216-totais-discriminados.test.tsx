@@ -74,6 +74,7 @@ function renderResumo(over: Partial<Parameters<typeof StepResumo>[0]> = {}): voi
       onForma={noop}
       parcelas={1}
       onParcelas={noop}
+      opcoesParcelamento={null}
       {...over}
     />,
   );

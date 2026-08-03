@@ -440,10 +440,14 @@ describe('CKUX-REV · B8 — CEP-first é fail-open: lookup fora não fecha o ca
 describe('ACHADOS-REV · vetor 10 — com cotação em voo o código PIX não nasce', () => {
   it('escolher PIX antes da resposta não cria cobrança; ela nasce quando o total chega', async () => {
     let resolverPrimeira: ((v: unknown) => void) | null = null;
+    // C2-0803: o PAGAR também pede a escada do cartão em segundo plano. Só a
+    // PRIMEIRA chamada (a cotação visível, que sai antes) guarda o resolvedor —
+    // sem isto, a segunda sobrescrevia a referência e "resolver a primeira"
+    // passava a resolver a errada.
     cotarInscricaoCheckout.mockImplementation(
       () =>
         new Promise((resolve) => {
-          resolverPrimeira = resolve;
+          if (resolverPrimeira === null) resolverPrimeira = resolve;
         }),
     );
     createInscricaoCharge.mockResolvedValue({

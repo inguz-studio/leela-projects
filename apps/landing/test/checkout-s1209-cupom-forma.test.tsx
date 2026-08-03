@@ -211,6 +211,7 @@ describe('S1209-T1 · D-5 — Pix e Cartão são BOTÕES, sem toggle', () => {
         onForma={noop}
         parcelas={1}
         onParcelas={noop}
+        opcoesParcelamento={null}
         {...over}
       />,
     );

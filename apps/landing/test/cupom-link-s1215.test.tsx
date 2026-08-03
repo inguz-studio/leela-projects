@@ -326,6 +326,7 @@ describe('S1215-T2 · a marca "(desconto aplicado)" (D-KC-8)', () => {
     onForma: () => {},
     parcelas: 1,
     onParcelas: () => {},
+    opcoesParcelamento: null,
   };
 
   const cotacaoComDesconto = cotacaoOk({

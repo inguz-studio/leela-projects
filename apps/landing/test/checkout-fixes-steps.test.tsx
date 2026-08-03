@@ -42,6 +42,7 @@ function renderResumo(overrides: Partial<Parameters<typeof StepResumo>[0]> = {})
       onForma={noop}
       parcelas={1}
       onParcelas={noop}
+      opcoesParcelamento={null}
       {...overrides}
     />,
   );

@@ -251,6 +251,10 @@ describe('DEC-0729 · achado 5 — seletor de parcelas com contorno visível', (
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
     });
+    // C2-0803: o seletor só existe com a escada do CARTÃO na mão — a do PIX
+    // (uma opção) deixou de servir de recheio. O pré-carregamento aterrissa
+    // logo depois da chegada ao PAGAR.
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeTruthy());
     const parcelas = screen.getByRole('combobox');
     const classe = parcelas.getAttribute('class') ?? '';
     // `--input-border-flat` é `transparent` no tema Brasa: a variante flat
@@ -282,10 +286,47 @@ describe('DEC-0729 · achado 12 (D-0729-3) — resumo editável sem recomeçar',
   });
 });
 
+// ---------------------------------------------------------------------------
+// C2-0803 · a régua do coalescing passou a ser a ASSINATURA, não o total bruto
+// de chamadas. O que a T-CKUX-1 protege é o pedido REPETIDO — a mesma pergunta
+// saindo duas vezes porque a identidade de um callback mudou. Desde o
+// pré-carregamento da escada do cartão (uma chamada por BASE de preço, em
+// segundo plano), contar chamadas cruas confundiria "pediu duas vezes a mesma
+// coisa" com "pediu duas coisas diferentes uma vez cada".
+// ---------------------------------------------------------------------------
+
+interface PedidoCotacao {
+  forma: string;
+  parcelas: number;
+  cupomCodigo?: string;
+  itens: { modalidade: string; kitId?: string }[];
+}
+
+/** A pergunta que cada chamada fez ao servidor. */
+function assinaturasPedidas(): string[] {
+  return cotarInscricaoCheckout.mock.calls.map((c) => {
+    const a = c[0] as PedidoCotacao;
+    const itens = a.itens.map((i) => `${i.modalidade}:${i.kitId ?? ''}`).join(',');
+    return `${a.forma}|${a.parcelas}|${a.cupomCodigo ?? ''}|${itens}`;
+  });
+}
+
+/** Perguntas feitas mais de uma vez — é isso que o coalescing proíbe. */
+function assinaturasRepetidas(): string[] {
+  const vistas = new Set<string>();
+  const repetidas: string[] = [];
+  for (const s of assinaturasPedidas()) {
+    if (vistas.has(s)) repetidas.push(s);
+    vistas.add(s);
+  }
+  return repetidas;
+}
+
 describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
-  it('chegar ao PAGAR pede UMA cotação, não duas ou três', async () => {
+  it('chegar ao PAGAR pede UMA cotação da seleção vigente, não duas ou três', async () => {
     await irAtePagar();
-    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(1);
+    expect(assinaturasPedidas().filter((s) => s.startsWith('pix|1|'))).toHaveLength(1);
+    expect(assinaturasRepetidas()).toEqual([]);
   });
 
   it('editar um campo que não move preço NÃO recota', async () => {
@@ -313,7 +354,6 @@ describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
 
   it('trocar para cartão e voltar para PIX dentro da janela não gera duas cotações', async () => {
     await irAtePagar();
-    const antes = cotarInscricaoCheckout.mock.calls.length;
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));
       fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
@@ -321,15 +361,16 @@ describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 350));
     });
-    // A assinatura voltou a ser a MESMA já cotada — nenhuma chamada nova, e a
-    // tela não pode ficar presa em "Calculando total".
-    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes);
+    // A assinatura voltou a ser a MESMA já cotada — a pergunta do PIX não foi
+    // refeita, nenhuma pergunta saiu duas vezes, e a tela não pode ficar presa
+    // em "Calculando total".
+    expect(assinaturasPedidas().filter((s) => s.startsWith('pix|1|'))).toHaveLength(1);
+    expect(assinaturasRepetidas()).toEqual([]);
     expect(screen.queryByText(/calculando o total/i)).toBeNull();
   });
 
   it('aplicar cupom cota UMA vez (o efeito não repete a chamada do botão)', async () => {
     await irAtePagar();
-    const antes = cotarInscricaoCheckout.mock.calls.length;
     fireEvent.change(screen.getAllByLabelText(/cupom/i)[0]!, { target: { value: 'HEROI10' } });
     await act(async () => {
       fireEvent.click(screen.getAllByRole('button', { name: /aplicar/i })[0]!);
@@ -337,6 +378,10 @@ describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
     await act(async () => {
       await new Promise((r) => setTimeout(r, 350));
     });
-    expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes + 1);
+    // Uma pergunta com o cupom para a seleção VIGENTE, uma só: o efeito não
+    // repete a chamada que o botão já fez. (A base de preço mudou, então a
+    // escada do cartão é pré-carregada de novo — outra pergunta, não a mesma.)
+    expect(assinaturasPedidas().filter((s) => s.startsWith('pix|1|HEROI10|'))).toHaveLength(1);
+    expect(assinaturasRepetidas()).toEqual([]);
   });
 });

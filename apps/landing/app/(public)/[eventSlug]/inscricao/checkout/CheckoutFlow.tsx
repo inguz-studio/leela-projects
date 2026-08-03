@@ -77,6 +77,13 @@ const MAX_AUTH_RETRY_AUTO = 1;
  */
 const DEBOUNCE_COTACAO_MS = 200;
 
+/**
+ * Janela do pré-carregamento da escada do cartão (C2-0803). Um pouco maior que
+ * a da cotação visível, de propósito: a escada é dado de segundo plano e não
+ * pode disputar a vez com o número que o comprador está esperando ver.
+ */
+const DEBOUNCE_ESCADA_MS = DEBOUNCE_COTACAO_MS + 50;
+
 // Etapas INTERNAS (4), na ordem do mockup/TicketSports (o dono):
 //   [0] modalidade+kit · [1] dados · [2] PAGAR · [3] confirmação
 // Modalidade e kit ficam juntos na etapa 0 (o kit é filtrado pela modalidade);
@@ -731,9 +738,16 @@ export function CheckoutFlow({
   }, []);
 
   // ── Cotação (read-only; consome computeSaleState no servidor) ──────────────
-  const cotarCom = useCallback(
+  //
+  // C2-0803: a forma e as parcelas passaram a ser PARÂMETRO. A cotação que a
+  // tela exibe continua saindo de `cotarCom` (a seleção vigente); o
+  // pré-carregamento da escada do cartão usa a mesma função pedindo o meio que
+  // ele precisa conhecer, sem duplicar o mapeamento dos itens.
+  const cotarComForma = useCallback(
     async (
       cupom: string | null,
+      formaAlvo: FormaUI,
+      parcelasAlvo: number,
     ): Promise<{ ok: true; data: CotarInscricaoCheckoutResult } | { ok: false; error: string }> => {
       try {
         const data = await cotarInscricaoCheckout({
@@ -742,10 +756,8 @@ export function CheckoutFlow({
             modalidade: i.modalidade,
             ...(i.kitId.length > 0 ? { kitId: i.kitId } : {}),
           })),
-          // Sem escolha, a cotação assume PIX à vista (D-ACH-12) — é leitura,
-          // não compromisso: nada é gravado e nada é cobrado.
-          forma: formaCotada,
-          parcelas: formaCotada === 'pix' ? 1 : parcelas,
+          forma: formaAlvo,
+          parcelas: formaAlvo === 'pix' ? 1 : parcelasAlvo,
           ...(cupom ? { cupomCodigo: cupom } : {}),
         });
         return { ok: true, data };
@@ -753,7 +765,16 @@ export function CheckoutFlow({
         return { ok: false, error: mensagemErro(err, 'Não foi possível calcular o total.') };
       }
     },
-    [evento.slug, inscritos, formaCotada, parcelas],
+    [evento.slug, inscritos],
+  );
+  const cotarCom = useCallback(
+    (
+      cupom: string | null,
+    ): Promise<{ ok: true; data: CotarInscricaoCheckoutResult } | { ok: false; error: string }> =>
+      // Sem escolha, a cotação assume PIX à vista (D-ACH-12) — é leitura, não
+      // compromisso: nada é gravado e nada é cobrado.
+      cotarComForma(cupom, formaCotada, parcelasEfetivas),
+    [cotarComForma, formaCotada, parcelasEfetivas],
   );
 
   // ── T-CKUX-1 · coalescing da cotação ──────────────────────────────────────
@@ -861,6 +882,75 @@ export function CheckoutFlow({
     return () => clearTimeout(timer);
   }, [precisaCotar, podeCotar, cupomUrlPendente, baseAtual, assinaturaAtual, cupomAplicado, recotarNonce]);
 
+  // ── C2-0803 · a escada do cartão, pronta antes do clique ──────────────────
+  //
+  // Verbatim do dono: *"Na primeira vez que cliquei no select apareceu apenas a
+  // opção como valor do ingresso, e não o parcelamento, somente na segunda vez
+  // que apareciam as opções."*
+  //
+  // A causa era a escada da forma ERRADA. Enquanto ninguém escolheu meio, a
+  // cotação é pedida com `forma: 'pix'` (D-ACH-12), e cotação de PIX traz UMA
+  // opção por contrato do servidor (`saleState`: cartão constrói a escada do
+  // termo, PIX devolve `[{ parcelas: 1 }]`). O painel do cartão abre no 1º
+  // clique (D-0729-6) e encontrava lá dentro a escada do PIX; a de verdade só
+  // chegava com a cotação de cartão, um debounce e um round-trip depois.
+  //
+  // O remédio é o mesmo da RN-434 (o total pronto na chegada): pedir ANTES do
+  // gesto. Ao entrar no PAGAR, a escada do cartão é cotada em segundo plano —
+  // invisível (não acende `cotando`), sem tocar em `cotacao`, e atrás do
+  // debounce da cotação visível para nunca disputar a vez com ela. Uma chamada
+  // por BASE de preço, não por clique.
+  const [escadaCartao, setEscadaCartao] = useState<{
+    base: string;
+    opcoes: readonly CotarParcelaResult[];
+  } | null>(null);
+  /** Base já pedida — impede a segunda chamada enquanto a primeira está no ar. */
+  const escadaPedidaRef = useRef<string | null>(null);
+  const cotarComFormaRef = useRef(cotarComForma);
+  cotarComFormaRef.current = cotarComForma;
+
+  /**
+   * A escada de parcelamento do CARTÃO para a base de preço vigente. A cotação
+   * na tela serve quando ela própria é de cartão; senão vale a pré-carregada.
+   * Fora da base, nada serve — escada de outro preço não é escada.
+   */
+  const escadaCartaoAtual: readonly CotarParcelaResult[] | null =
+    baseCotada === baseAtual && cotacao !== null && cotacao.forma === 'cartao_credito'
+      ? cotacao.opcoesParcelamento
+      : escadaCartao !== null && escadaCartao.base === baseAtual
+        ? escadaCartao.opcoes
+        : null;
+
+  useEffect(() => {
+    // Só no PAGAR: é onde a escolha do meio acontece. Nas etapas de coleta a
+    // chamada seria gasto sem consumidor — e a T-CKUX-1 existe justamente para
+    // não cotar o que ninguém vai ler.
+    if (step !== 2 || !podeCotar || cupomUrlPendente) return;
+    if (escadaCartaoAtual !== null) return;
+    if (escadaPedidaRef.current === baseAtual) return;
+    escadaPedidaRef.current = baseAtual;
+    let vivo = true;
+    const timer = setTimeout(() => {
+      void cotarComFormaRef.current(cupomAplicado, 'cartao_credito', 1).then((r) => {
+        if (!vivo || !montadoRef.current) return;
+        if (r.ok) {
+          setEscadaCartao({ base: baseAtual, opcoes: r.data.opcoesParcelamento });
+        } else {
+          // Falha do pré-carregamento é SILENCIOSA (mesma disciplina da
+          // D-ACH-2): o comprador não levou erro nenhum, e escolher o cartão
+          // continua pedindo a cotação de cartão pelo caminho normal. Liberar
+          // a base permite a próxima tentativa sem virar laço — sem `setState`
+          // aqui, este efeito não re-roda sozinho.
+          escadaPedidaRef.current = null;
+        }
+      });
+    }, DEBOUNCE_ESCADA_MS);
+    return () => {
+      vivo = false;
+      clearTimeout(timer);
+    };
+  }, [step, podeCotar, cupomUrlPendente, baseAtual, escadaCartaoAtual, cupomAplicado]);
+
   // ── C1-0803 · a cotação que a TELA usa ────────────────────────────────────
   //
   // `cotacaoExibida` é a resposta do servidor relida para a seleção de AGORA —
@@ -875,9 +965,9 @@ export function CheckoutFlow({
   const cotacaoExibida = useMemo(
     () =>
       baseCotada === baseAtual
-        ? projetarCotacao(cotacao, null, formaCotada, parcelasEfetivas)
+        ? projetarCotacao(cotacao, escadaCartaoAtual, formaCotada, parcelasEfetivas)
         : null,
-    [baseCotada, baseAtual, cotacao, formaCotada, parcelasEfetivas],
+    [baseCotada, baseAtual, cotacao, escadaCartaoAtual, formaCotada, parcelasEfetivas],
   );
   const cotacaoNaTela = cotacaoExibida ?? cotacao;
   /**
@@ -1691,6 +1781,9 @@ export function CheckoutFlow({
               onForma={setForma}
               parcelas={parcelas}
               onParcelas={setParcelas}
+              // C2-0803 · a escada do CARTÃO, e só ela. Nunca a do PIX
+              // disfarçada de parcelamento.
+              opcoesParcelamento={escadaCartaoAtual}
               cartao={cartao}
               onCartao={(patch) => setCartao((c) => ({ ...c, ...patch }))}
             />

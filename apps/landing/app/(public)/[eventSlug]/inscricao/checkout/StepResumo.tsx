@@ -3,7 +3,7 @@
 import { Pencil } from 'lucide-react';
 import { Button, Field, Input, Select } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
-import type { CotarInscricaoCheckoutResult } from '@leela/api-client';
+import type { CotarInscricaoCheckoutResult, CotarParcelaResult } from '@leela/api-client';
 import type { FormaUI } from './tipos';
 import { CupomCampo } from './CupomCampo';
 import { SeletorForma } from './SeletorForma';
@@ -47,6 +47,7 @@ export function StepResumo({
   onForma,
   parcelas,
   onParcelas,
+  opcoesParcelamento,
   cartao,
   onCartao,
 }: {
@@ -89,6 +90,15 @@ export function StepResumo({
   onForma: (f: FormaUI) => void;
   parcelas: number;
   onParcelas: (n: number) => void;
+  /**
+   * C2-0803 · a escada de parcelamento do CARTÃO, calculada pelo servidor.
+   * `null` = ainda não está na mão, e aí a tela DIZ isso: o seletor não
+   * aparece com uma opção só. Ele saía de `cotacao.opcoesParcelamento`, que
+   * enquanto ninguém escolhe meio é a cotação de PIX — uma linha por contrato
+   * do servidor. Era essa linha única que o dono lia como "não tem
+   * parcelamento" na primeira abertura do select.
+   */
+  opcoesParcelamento: readonly CotarParcelaResult[] | null;
   /** D-0729-6 · os campos do cartão vivem na própria opção "Cartão". */
   cartao?: CartaoForm;
   onCartao?: (patch: Partial<CartaoForm>) => void;
@@ -208,7 +218,7 @@ export function StepResumo({
           labelCartao={labelCartao}
           conteudoCartao={
             <div className="flex flex-col gap-[var(--spacing-4)]">
-              {cotacao ? (
+              {opcoesParcelamento !== null && opcoesParcelamento.length > 0 ? (
                 <div className="max-w-xs">
                   {/* Achado 5 · contraste do seletor de parcelas.
                       A variante `flat` (default) pinta o controle com
@@ -220,12 +230,17 @@ export function StepResumo({
                       que fica em ~3,9:1 contra o cartão e ~4,2:1 contra a
                       página — acima do piso de 3:1 da WCAG 1.4.11 para
                       contorno de componente, em repouso, hover e foco. */}
+                  {/* C2-0803 · o `id` fecha o `htmlFor` do rótulo: sem ele o
+                      Select do DS renderiza um <label> solto e o controle fica
+                      SEM nome acessível (WCAG 1.3.1/4.1.2). O leitor de tela
+                      anunciava "combo box" e mais nada na tela do dinheiro. */}
                   <Select
+                    id="checkout-parcelas"
                     variant="bordered"
                     label="Parcelas"
                     value={String(parcelas)}
                     onChange={(e) => onParcelas(Number.parseInt(e.target.value, 10))}
-                    options={cotacao.opcoesParcelamento.map((o) => ({
+                    options={opcoesParcelamento.map((o) => ({
                       value: String(o.parcelas),
                       label:
                         o.parcelas === 1
@@ -234,7 +249,11 @@ export function StepResumo({
                     }))}
                   />
                 </div>
-              ) : null}
+              ) : (
+                <p role="status" className="text-[length:var(--font-size-sm)] text-text-secondary">
+                  Calculando as opções de parcelamento…
+                </p>
+              )}
 
               {cartao && onCartao ? (
                 <div className="grid gap-[var(--spacing-4)]">
