@@ -11,7 +11,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **D0** · redeploy da landing (os dois fix-commits de dinheiro da KITCUPOM-REV entram no ar)
 - [x] **B1t · S314-T1** — tabela Price real em `buildInstallmentOptions`
 - [x] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
-- [ ] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
+- [x] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
 - [ ] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
 - [ ] **A4 · S1216-T4** — total por opção sempre que os dois existirem
@@ -227,6 +227,40 @@ de oferta, não de histórico.
 | functions `tsc` / `eslint` | 0 / 0 |
 | 9 suítes (termo, plano, provisionamento, venda, parcelamento) | **182/182** |
 | Suíte da landing, processo único | **310/310** em 28 arquivos |
+
+---
+
+## A1 · S1216-T1 · a cotação começa na etapa de dados
+
+Commit `fdd3918`. Território: `.../checkout/CheckoutFlow.tsx` + teste novo
+`test/checkout-s1216-cotacao-antecipada.test.tsx`.
+
+`precisaCotar` passou de `step >= 2` para `step >= 1`. O round-trip (1,7 s a 9,8 s medidos em
+produção) passa a acontecer enquanto a pessoa preenche nome, CPF, nascimento e endereço. Ao chegar
+no PAGAR a assinatura não mudou, então o efeito cai no ramo já cotado e **nenhuma chamada nova
+sai**.
+
+O step 0 continua sem cotar (a assinatura muda a cada clique de modalidade/kit). O pré-aquecimento
+é silencioso: falha ali não pinta erro no formulário nem bloqueia o "Continuar".
+
+**Os dois caminhos manuais de cupom entraram no `cotacaoSeqRef`.** O `vivo` do auto-apply só cobria
+desmontagem do próprio efeito; ele não sabia nada de uma cotação pedida por outro caminho. O
+`setAplicandoCupom(false)` sai SEMPRE, antes do descarte por sequência — travá-lo por resposta
+obsoleta deixaria o campo em "Aplicando…" para sempre.
+
+### Falsificação
+
+Gatilho de volta a `step >= 2` e os dois descartes removidos: **4 failed | 2 passed (6)**. Caem a
+cotação na etapa de dados, o formulário na tela durante o round-trip, o silêncio do pré-aquecimento
+e a resposta obsoleta do cupom. Os dois que passam nos dois mundos são guardas de custo declaradas
+no arquivo ("o step 0 continua sem cotar" e "o cupom cola no caminho feliz").
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc` / `eslint` | 0 / 0 |
+| Suíte da landing, processo único | **316/316** em 29 arquivos (era 310/310 em 28) |
 
 ---
 
