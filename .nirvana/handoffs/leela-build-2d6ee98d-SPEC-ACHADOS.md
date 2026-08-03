@@ -20,7 +20,7 @@
 | T0 | Inventário + abertura do handoff | ✅ | `2ed18d1` |
 | T1 | `04-spec-achados.md` — B1/B2/B5/B6 (D-ACH-1..14) | ✅ | (este) |
 | T2 | `05-rns-achados.md` — RN-434..445 + o que o B6 supersede | ✅ | (este) |
-| T3 | `06-spec-produtor-page.md` — B10 | ⏳ | — |
+| T3 | `06-spec-produtor-page.md` — B10 (D-ACH-15..21) | ✅ | (este) |
 | T4 | `07-fila-achados.md` — filas ACHADOS-0802 e PRODUTOR-PAGE | ⏳ | — |
 | T5 | Selo · resumo executivo + self-score | ⏳ | — |
 
