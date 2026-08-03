@@ -14,6 +14,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { GaleriaSection } from '../app/(public)/[eventSlug]/sections/GaleriaSection';
+import { ModalidadesSection } from '../app/(public)/[eventSlug]/sections/ModalidadesSection';
 import { RegulamentoModal } from '../app/(public)/[eventSlug]/sections/RegulamentoModal';
 import { RegulamentoSection } from '../app/(public)/[eventSlug]/sections/RegulamentoSection';
 import type { EventoPublico } from '@/lib/tipos';
@@ -81,5 +82,39 @@ describe('X1 · a galeria de exemplo não anuncia corredores (a11y antes do voca
     expect(rotulos).toEqual(['Antes', 'Durante', 'Depois']);
     // A honestidade da seção não pode sumir junto com os rótulos antigos.
     expect(screen.getByText(/imagens de exemplo/i)).toBeTruthy();
+  });
+});
+
+// =============================================================================
+// S1218-T3 · B8 — a seção de modalidades para de dar a ordem "escolha seu
+// percurso" e passa a DESCREVER o que está ali.
+//
+// A X1 varreu a página do evento e deixou este título vivo: o veredito foi
+// MEDIDO no bundle servido em produção (2 ocorrências de "Escolha seu
+// percurso"), e é por isso que a D3 virou edição e não verificação.
+//
+// A asserção negativa é a que importa: ela reprova a VOLTA do vocabulário na
+// próxima edição de copy.
+// =============================================================================
+describe('S1218-T3 · a seção de modalidades não nomeia o produto pela corrida', () => {
+  const eventoComModalidades = {
+    ...evento,
+    modalidadeEsporte: 'Respiração consciente',
+    modalidades: [
+      { nome: 'Imersão 3h', precoVigente: 12000 },
+      { nome: 'Imersão 6h', precoVigente: 19000 },
+    ],
+  } as unknown as EventoPublico;
+
+  it('o título é "Modalidades disponíveis", e "percurso" não sobrevive nele', () => {
+    render(<ModalidadesSection evento={eventoComModalidades} />);
+    expect(screen.getByText('Modalidades disponíveis')).toBeTruthy();
+    expect(screen.queryByText(/escolha seu percurso/i)).toBeNull();
+  });
+
+  it('o apoio conta quantas MODALIDADES existem, não quantas distâncias', () => {
+    render(<ModalidadesSection evento={eventoComModalidades} />);
+    expect(screen.getByText(/2 modalidades/i)).toBeTruthy();
+    expect(screen.queryByText(/dist[âa]ncias/i)).toBeNull();
   });
 });

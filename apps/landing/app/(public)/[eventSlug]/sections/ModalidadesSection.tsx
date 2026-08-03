@@ -17,9 +17,14 @@ export function ModalidadesSection({ evento }: { evento: EventoPublico }): React
 
   return (
     <Dobra id="percursos">
-      <TituloSecao icone={Route}>Escolha seu percurso</TituloSecao>
+      {/* S1218-T3 · B8 · D-0802-1: "Escolha seu percurso" nomeava a página do
+          evento pela corrida. A Leela é hub de EXPERIÊNCIAS de bem-estar —
+          percurso é o que uma corrida tem, não o que a plataforma vende, e
+          esta seção lista as modalidades de QUALQUER experiência. O título
+          passa a DESCREVER o que está ali em vez de dar uma ordem. */}
+      <TituloSecao icone={Route}>Modalidades disponíveis</TituloSecao>
       <p className="mt-2 text-text-secondary">
-        {evento.modalidades.length} distâncias, cada uma com preço próprio por lote.
+        {evento.modalidades.length} modalidades, cada uma com preço próprio por lote.
       </p>
 
       <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -153,8 +153,12 @@ export function StepModalidadeKit({
     <div className="flex flex-col gap-6">
       <div>
         <TituloEtapa icone={PackageOpen}>Modalidade e kit</TituloEtapa>
+        {/* S1218-T3 · B8 · D-0802-1: o apoio acompanha o vocabulário da página
+            do evento. O rótulo do grupo logo abaixo já dizia "Modalidade" — o
+            apoio dizia "percurso", e a tela falava duas línguas sobre a mesma
+            escolha. */}
         <ApoioEtapa>
-          Escolha o percurso e o kit de cada participante. O total aparece no resumo.
+          Escolha a modalidade e o kit de cada participante. O total aparece no resumo.
         </ApoioEtapa>
         {/* A-5 → CKFORM-T4 → TAXAFLEX (P-TAXAFLEX-6/RN-180): a nota é
             CONDICIONAL pelo flag real do evento (taxaRepassada do leitor —
@@ -221,7 +225,10 @@ export function StepModalidadeKit({
                       value={m.nome}
                       disabled={indisponivel}
                       title={m.nome}
-                      description={indisponivel ? 'Sem lote disponível no momento' : 'Percurso oficial'}
+                      // S1218-T3 · D-0802-1: "Percurso oficial" era a mesma
+                      // troca de vocabulário do título, um nível abaixo — e
+                      // mora no território desta task.
+                      description={indisponivel ? 'Sem lote disponível no momento' : 'Modalidade oficial'}
                       badge={
                         <Badge variant={indisponivel ? 'neutro' : 'brand'}>
                           {indisponivel ? 'Indisponível' : formatarPreco(m.precoVigente)}
