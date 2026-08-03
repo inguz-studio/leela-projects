@@ -20,6 +20,11 @@
 // =============================================================================
 
 import {
+  cupomVigente,
+  descontoAfiliadoAtivo,
+  isCodigoCupomValido,
+  normalizarCodigoCupom,
+  parseCupom,
   exigenciasSaudePadrao,
   materialTermoSaude,
   TERMO_SAUDE_CUSTOM_DOC_ID,
@@ -626,6 +631,167 @@ export async function listarEventosPublicadosDoTenant(
   } catch (err) {
     console.error(`[leitor] listarEventosPublicadosDoTenant falhou`, err);
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Verificação do cupom do link (S1215-T3 · RN-431/432 · D-KC-10)
+// ---------------------------------------------------------------------------
+
+/**
+ * O que a faixa recebe. É TUDO o que sai daqui — e a lista curta é a regra,
+ * não uma coincidência de implementação.
+ *
+ * NÃO sai: valor do desconto, tipo, teto, janela, usos, escopo, id/uid do
+ * afiliado, percentual de comissão, mínimo de inscrições, contagem de
+ * conversões, estado do gate, documento, e-mail, telefone. A faixa anuncia
+ * que há desconto e quem indicou; quanto é continua sendo assunto da cotação.
+ */
+export interface CupomDoLinkPublico {
+  /** Código normalizado, para a faixa repetir o que a pessoa recebeu. */
+  codigo: string;
+  /** Nome de exibição de quem indicou; `null` quando não há resolvível. */
+  promotor: string | null;
+}
+
+/**
+ * TTL do cache por código. Curto de propósito (RN-432/D-KC-12): o objetivo é
+ * que força bruta bata em CACHE e não no Firestore, não guardar estado. Um
+ * cupom que esgota ou é encerrado some da faixa em no máximo este intervalo, e
+ * quem tentar usá-lo é recusado pelo servidor na hora — o número nunca vem
+ * daqui.
+ */
+export const CUPOM_LINK_CACHE_MS = 60_000;
+
+interface EntradaCacheCupom {
+  valor: CupomDoLinkPublico | null;
+  expiraEmMillis: number;
+}
+
+/**
+ * Cache POR INSTÂNCIA do servidor da landing, com resposta NEGATIVA cacheada
+ * junto — que é o caso que importa: quem raspa códigos gera sequência de
+ * inválidos, e é justamente ela que não pode virar sequência de leituras.
+ *
+ * Por que um Map e não `unstable_cache`: o efeito precisa ser MEDÍVEL (o
+ * contrato de review pede o número de leituras de Firestore para uma sequência
+ * de códigos inválidos), e um cache do framework não é observável em teste.
+ * A limitação fica escrita: com N instâncias quentes, o teto de leituras é N
+ * por código por janela, não 1.
+ */
+const cacheCupomLink = new Map<string, EntradaCacheCupom>();
+
+/** Só para teste — limpa o cache entre casos. */
+export function limparCacheCupomLink(): void {
+  cacheCupomLink.clear();
+}
+
+/**
+ * O cupom do link se aplica a este evento? Devolve o rótulo da faixa, ou
+ * `null` (S1215-T3 · RN-432 · doutrina S1200-T2: Admin SDK no servidor, gate
+ * de autorização no CÓDIGO, Rules intocadas — a leitura de cupom continua
+ * fechada ao cliente).
+ *
+ * RESPOSTA UNIFORME. Código inexistente, expirado, esgotado, de escopo não
+ * satisfeito, de outro evento, de evento não publicado, de afiliado com o gate
+ * da RN-315 fechado e erro de infraestrutura devolvem exatamente `null`, sem
+ * distinção. Não existe canal aqui para descobrir POR QUE não colou — é o que
+ * separa uma verificação de um oráculo de cupons.
+ *
+ * Nada é escrito, nenhuma coleção nova é lida além de cupom/afiliado/parceria,
+ * e visita sem cupom na URL nem chega a chamar esta função.
+ */
+export async function verificarCupomDoLink(
+  eventoSlug: string,
+  codigoBruto: string,
+): Promise<CupomDoLinkPublico | null> {
+  const codigo = normalizarCodigoCupom(codigoBruto);
+  // Código fora de forma NÃO custa uma leitura: a guarda é a mesma do core.
+  if (!isCodigoCupomValido(codigo) || eventoSlug.trim().length === 0) return null;
+
+  const chave = `${eventoSlug}|${codigo}`;
+  const agoraMs = Date.now();
+  const emCache = cacheCupomLink.get(chave);
+  if (emCache !== undefined && emCache.expiraEmMillis > agoraMs) return emCache.valor;
+
+  const valor = await resolverCupomDoLink(eventoSlug, codigo);
+  cacheCupomLink.set(chave, { valor, expiraEmMillis: agoraMs + CUPOM_LINK_CACHE_MS });
+  return valor;
+}
+
+/** O trabalho de verdade — sem cache, sem exceção escapando. */
+async function resolverCupomDoLink(
+  eventoSlug: string,
+  codigo: string,
+): Promise<CupomDoLinkPublico | null> {
+  try {
+    const db = getDb();
+    const agora = agoraDoServidor();
+
+    // Evento: o MESMO gate de publicação do resto do leitor. Rascunho não tem
+    // faixa, pelo mesmo motivo que não tem página.
+    const eventoRef = db.collection('eventos').doc(eventoSlug);
+    const eventoSnap = await eventoRef.get();
+    if (!eventoSnap.exists) return null;
+    const status = eventoSnap.get('status') as StatusEvento | undefined;
+    if (status === undefined || !statusEhPublico(status)) return null;
+    const tenantId = eventoSnap.get('tenantId') as string | undefined;
+    if (typeof tenantId !== 'string' || tenantId.length === 0) return null;
+
+    // Cupom — docId = código normalizado (unicidade por chave, E04).
+    const cupomSnap = await eventoRef.collection('cupons').doc(codigo).get();
+    if (!cupomSnap.exists) return null;
+    const cupom = parseCupom(cupomSnap.id, cupomSnap.data() ?? {});
+    if (cupom.tenantId !== tenantId) return null;
+
+    // Vigência: janela E teto de usos, pelas funções do core (RN-432 não tem
+    // regra própria de validade — seria uma segunda verdade sobre desconto).
+    if (!cupomVigente(cupom, agora)) return null;
+
+    // Escopo de club parceiro (RN-364): a exigência é RE-LIDA aqui. Parceria
+    // desativada ⇒ a faixa não aparece, e o checkout recusa do mesmo jeito.
+    // As guardas são as do kernel: path DENTRO do tenant e profundidade
+    // EXATA de doc (um path aninhado forjado não pode virar parceria).
+    if (cupom.escopo === 'club_parceiro') {
+      const parceriaPath = cupom.parceriaRef ?? '';
+      const prefixo = `tenants/${tenantId}/parceirosAssessoria/`;
+      if (!parceriaPath.startsWith(prefixo) || parceriaPath.split('/').length !== 4) return null;
+      const parceriaSnap = await db.doc(parceriaPath).get();
+      if (!parceriaSnap.exists || parceriaSnap.get('status') !== 'ativa') return null;
+    }
+
+    // Cupom de AFILIADO: o gate da RN-315 vale igual. Antes do mínimo de
+    // inscrições o link rastreia a conversão e o desconto NÃO aplica — então
+    // a faixa não pode prometer desconto que o checkout vai recusar.
+    const afiliadoRef = cupomSnap.get('afiliadoRef');
+    if (typeof afiliadoRef !== 'string' || afiliadoRef.length === 0) {
+      // Cupom geral do evento: vale, e não há promotor a nomear.
+      return { codigo, promotor: null };
+    }
+    const afiliadoSnap = await eventoRef.collection('afiliados').doc(afiliadoRef).get();
+    const dados = afiliadoSnap.data() ?? {};
+    const gateAberto =
+      afiliadoSnap.exists &&
+      dados['tenantId'] === tenantId &&
+      descontoAfiliadoAtivo({
+        status: dados['status'] as never,
+        minimoInscricoes:
+          typeof dados['minimoInscricoes'] === 'number' ? dados['minimoInscricoes'] : null,
+        conversoes: typeof dados['conversoes'] === 'number' ? dados['conversoes'] : 0,
+      });
+    if (!gateAberto) return null;
+
+    // O NOME, e só o nome (RN-431 · premissa P3 do dono: pessoa física
+    // aparece no banner). Nome vazio degrada para a faixa sem "de Fulano".
+    const nome = dados['nome'];
+    const promotor = typeof nome === 'string' && nome.trim().length > 0 ? nome.trim() : null;
+    return { codigo, promotor };
+  } catch (err) {
+    // Falha de infraestrutura responde IGUAL a cupom inexistente: um erro
+    // distinguível aqui seria um canal de sondagem, e a faixa é decoração —
+    // nunca vale quebrar a página do evento por causa dela.
+    console.error('[leitor] verificarCupomDoLink falhou', err);
+    return null;
   }
 }
 

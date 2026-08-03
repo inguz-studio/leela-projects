@@ -16,6 +16,7 @@ import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
 import { RefTracker } from './RefTracker';
 import { CupomTracker } from './CupomTracker';
+import { CupomLinkBanner } from './sections/CupomLinkBanner';
 import { ShareBlock } from './ShareBlock';
 import { PerfilView } from '../_perfil/PerfilView';
 
@@ -173,6 +174,17 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
 
   const vendaAberta = evento.estadoVenda === 'aberto';
 
+  // Faixa do cupom do link (S1215-T3 · RN-431), logo DEPOIS da Hero. Atrás de
+  // Suspense pelo mesmo motivo do RefTracker e do CTA: ela lê a querystring no
+  // cliente, então a página do evento continua estática. Quando o cupom não se
+  // aplica — ou quando não há cupom nenhum —, o componente devolve `null` e a
+  // página fica exatamente como está hoje.
+  const faixaCupom = (
+    <Suspense fallback={null}>
+      <CupomLinkBanner slug={evento.slug} />
+    </Suspense>
+  );
+
   return (
     <div className="pb-24">
       {/* Dados estruturados schema.org/Event (S1205-T1) — no HTML inicial */}
@@ -200,9 +212,12 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
           inativo) cai no HERO MÍNIMO — nome + data + status de vendas, nunca só
           share/QR (LEELA-R1 · JTBD do atleta que recebe o link). */}
       {evento.secoes.length > 0 ? (
-        <SectionRenderer evento={evento} />
+        <SectionRenderer evento={evento} aposHero={faixaCupom} />
       ) : (
-        <HeroMinimo evento={evento} />
+        <>
+          <HeroMinimo evento={evento} />
+          {faixaCupom}
+        </>
       )}
 
       {/* Regulamento da prova em MODAL (LP-VENDAS-KIT/T2). Self-gated: some sem
