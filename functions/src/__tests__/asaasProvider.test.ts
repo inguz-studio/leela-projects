@@ -47,10 +47,12 @@ import {
   ASAAS_PRODUCTION_BASE_URL,
   ASAAS_SANDBOX_BASE_URL,
   ASAAS_TIMEOUT_MS,
+  EXTERNAL_REF_MAX_LEN,
   buildExternalReference,
   centavosFromReais,
   createAsaasProvider,
   deriveAsaasEnvironment,
+  digestIdempotencyKey,
   parseExternalReference,
   reaisFromCentavos,
   type FetchLike,
@@ -81,6 +83,21 @@ const PROD_KEY = `$aact_prod_${'0'.repeat(40)}`;
 const WEBHOOK_TOKEN = 'leela-webhook-token-0123456789abcdef0123456789';
 
 const AGORA = new Date('2026-07-12T12:00:00.000Z');
+
+/**
+ * ⛔ FIXTURE CANÔNICA DE TAMANHO REAL (PIXFIX-EXTREF · achado 4 da
+ * INV-PIXINTERNAL). Toda fixture desta suíte usava `ped-1`, e foi essa
+ * miniatura que escondeu por 5 dias um `externalReference` de 155 chars.
+ *
+ * A aritmética é fechada, não é amostra: uid do Firebase Auth = 28 chars
+ * SEMPRE; a chave que a landing emite = `chk-` + `crypto.randomUUID()` = 40
+ * chars SEMPRE. Logo `pedidoId` = 4 + 28 + 1 + 40 = 73, invariável no cliente
+ * real. Quem mexer no formato do `externalReference` mede AQUI.
+ */
+const UID_REAL = 'wNXRTvMM3vc7Boyi91vRgx3DBQy2'; // 28
+const CHAVE_CHECKOUT_REAL = 'chk-1c675f35-3d12-4be4-adff-82bdd08a10fb'; // 40
+const PEDIDO_ID_REAL = `ped-${UID_REAL}-${CHAVE_CHECKOUT_REAL}`; // 73
+const CHAVE_CHARGE_REAL = `charge-${PEDIDO_ID_REAL}`; // 80
 
 interface Expectativa {
   // DELETE entrou com o cancelCharge (RN-157 · PIXBE-T3).
@@ -306,13 +323,31 @@ describe('conversão centavos↔reais (só na borda; valores não-redondos)', ()
 });
 
 describe('externalReference — idempotência + orderId num campo só', () => {
-  it('build/parse fazem round-trip', () => {
+  it('build/parse fazem round-trip do orderId (sufixo = digest)', () => {
     const ref = buildExternalReference('ped-1', 'charge-ped-1');
-    expect(ref).toBe('ped-1::charge-ped-1');
+    expect(ref).toBe('ped-1::60370f391911052d');
     expect(parseExternalReference(ref)).toEqual({
       orderId: 'ped-1',
-      idempotencyKey: 'charge-ped-1',
+      idempotencyDigest: '60370f391911052d',
     });
+  });
+
+  // Valor de OURO do formato de fio (PIXFIX-EXTREF · T1). Está literal, e não
+  // computado por `digestIdempotencyKey`, de propósito: se o digest mudar de
+  // algoritmo ou de tamanho, toda cobrança já criada no gateway deixa de ser
+  // encontrada pelo lookup de idempotência. Este teste é o alarme.
+  it('digest é sha256 hex truncado em 16, estável', () => {
+    expect(digestIdempotencyKey('charge-ped-1')).toBe('60370f391911052d');
+    expect(digestIdempotencyKey('charge-ped-9')).toBe('e3a5166b6ab0f605');
+    expect(digestIdempotencyKey('charge-ped-1')).toHaveLength(16);
+    // Determinístico: a MESMA chave sempre volta no mesmo lugar.
+    expect(digestIdempotencyKey('charge-ped-1')).toBe(
+      digestIdempotencyKey('charge-ped-1')
+    );
+    // Chaves distintas não colapsam (o lookup deixaria de distinguir replay).
+    expect(digestIdempotencyKey('charge-ped-1')).not.toBe(
+      digestIdempotencyKey('charge-ped-2')
+    );
   });
 
   it('orderId com "::" é rejeitado (quebraria o parse)', () => {
@@ -321,12 +356,26 @@ describe('externalReference — idempotência + orderId num campo só', () => {
     );
   });
 
-  it('parse separa no PRIMEIRO "::" (key pode conter "::")', () => {
+  it('parse separa no PRIMEIRO "::"', () => {
     expect(parseExternalReference('ped-1::k::v2')).toEqual({
       orderId: 'ped-1',
-      idempotencyKey: 'k::v2',
+      idempotencyDigest: 'k::v2',
     });
     expect(parseExternalReference('sem-separador')).toBeUndefined();
+  });
+
+  // ⛔ REGRESSÃO PIXFIX-EXTREF — o defeito que quebrou 100% das compras em
+  // produção (INV-PIXINTERNAL). As fixtures desta suíte usavam `ped-1`; o
+  // pedidoId REAL tem 73 chars e o formato antigo produzia 155.
+  it('com ids de tamanho REAL cabe no teto do gateway', () => {
+    const ref = buildExternalReference(PEDIDO_ID_REAL, CHAVE_CHARGE_REAL);
+    expect(PEDIDO_ID_REAL).toHaveLength(73);
+    expect(ref).toHaveLength(91); // 73 + 2 + 16
+    expect(ref.length).toBeLessThanOrEqual(EXTERNAL_REF_MAX_LEN);
+    // O formato ANTIGO — o que estava em produção — estourava:
+    expect(`${PEDIDO_ID_REAL}::${CHAVE_CHARGE_REAL}`).toHaveLength(155);
+    // E o orderId sobrevive VERBATIM: é dele que o webhook abre o pedido.
+    expect(parseExternalReference(ref)?.orderId).toBe(PEDIDO_ID_REAL);
   });
 });
 
@@ -339,7 +388,7 @@ describe('createCharge PIX — lookup → cliente → cobrança → QR', () => {
     const { provider, chamadas, pendentes } = novoProvider([
       {
         method: 'GET',
-        url: '/payments?externalReference=ped-1%3A%3Acharge-ped-1',
+        url: '/payments?externalReference=ped-1%3A%3A60370f391911052d',
         json: { object: 'list', data: [] },
       },
       {
@@ -403,7 +452,9 @@ describe('createCharge PIX — lookup → cliente → cobrança → QR', () => {
     expect(bodyCobranca?.['billingType']).toBe('PIX');
     expect(bodyCobranca?.['value']).toBe(99.99);
     expect(bodyCobranca?.['dueDate']).toBe('2026-07-13'); // now UTC + 1 dia
-    expect(bodyCobranca?.['externalReference']).toBe('ped-1::charge-ped-1');
+    expect(bodyCobranca?.['externalReference']).toBe(
+      'ped-1::60370f391911052d'
+    );
     expect(bodyCobranca?.['installmentCount']).toBeUndefined();
     expect(bodyCobranca?.['totalValue']).toBeUndefined();
   });
@@ -536,7 +587,7 @@ describe('createCharge — idempotência via externalReference', () => {
     const { provider, pendentes } = novoProvider([
       {
         method: 'GET',
-        url: '/payments?externalReference=ped-1%3A%3Acharge-ped-1',
+        url: '/payments?externalReference=ped-1%3A%3A60370f391911052d',
         json: {
           data: [
             {

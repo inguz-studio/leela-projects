@@ -433,9 +433,48 @@ export function centavosFromReais(reais: number): number {
 const EXTERNAL_REF_SEP = '::';
 
 /**
- * `externalReference = orderId::idempotencyKey`. O sufixo dá idempotência
- * por chave (lookup exato antes do POST); o prefixo carrega o orderId
- * (ADR-011) para reconciliação/webhook. @pure
+ * Teto do campo `externalReference` no Asaas. Acima disso o gateway responde
+ * HTTP 400 `invalid_externalReference` e a cobrança NÃO nasce.
+ *
+ * Este número não é folclore: ele veio do corpo do próprio erro em produção
+ * (`exceeds the maximum size of [100]`, INV-PIXINTERNAL) e é a razão de a
+ * compra ter ficado 100% quebrada entre 29/07 e 02/08 — a forma antiga
+ * (`orderId::idempotencyKey`, com a chave INTEIRA no sufixo) chegava a 155
+ * chars com ids reais. Nenhum doc da coleta mencionava o limite.
+ */
+export const EXTERNAL_REF_MAX_LEN = 100;
+
+/** Hex do digest do sufixo. 16 hex = 64 bits — colisão irrelevante aqui (v. abaixo). */
+const EXTERNAL_REF_DIGEST_LEN = 16;
+
+/**
+ * Digest curto e determinístico da chave de idempotência (sha256 hex, 16).
+ *
+ * Por que digest e não a chave inteira: o sufixo NUNCA carregou informação
+ * nova. No único caller de produção a chave é `charge-${orderId}` — função
+ * pura do prefixo, entropia adicional ZERO. O que o sufixo dá é estabilidade:
+ * a mesma chave produz sempre o mesmo `externalReference`, que é o que faz o
+ * lookup `GET /payments?externalReference=` encontrar o replay antes do POST.
+ * Um digest preserva essa propriedade e cabe em tamanho fixo.
+ *
+ * Colisão: o prefixo `orderId` já identifica o pedido sozinho, então duas
+ * chaves distintas só colidiriam DENTRO do mesmo pedido — e aí colidir é o
+ * comportamento certo (é o mesmo pedido, uma cobrança só). @pure
+ */
+export function digestIdempotencyKey(idempotencyKey: string): string {
+  return createHash('sha256')
+    .update(idempotencyKey, 'utf8')
+    .digest('hex')
+    .slice(0, EXTERNAL_REF_DIGEST_LEN);
+}
+
+/**
+ * `externalReference = orderId::digest16(idempotencyKey)`. O sufixo dá
+ * idempotência por chave (lookup exato antes do POST); o prefixo carrega o
+ * orderId VERBATIM (ADR-011) para reconciliação/webhook. @pure
+ *
+ * O prefixo é intocado de propósito: `parseExternalReference` e o desempate
+ * do webhook leem `orderId` dele, e é esse id que abre o pedido no Firestore.
  */
 export function buildExternalReference(
   orderId: string,
@@ -446,18 +485,23 @@ export function buildExternalReference(
       `[asaas] orderId não pode conter '${EXTERNAL_REF_SEP}': ${orderId}`
     );
   }
-  return `${orderId}${EXTERNAL_REF_SEP}${idempotencyKey}`;
+  return `${orderId}${EXTERNAL_REF_SEP}${digestIdempotencyKey(idempotencyKey)}`;
 }
 
-/** Inverso de buildExternalReference (separa no PRIMEIRO `::`). @pure */
+/**
+ * Inverso de buildExternalReference (separa no PRIMEIRO `::`). @pure
+ *
+ * O segundo campo é o DIGEST, não a chave: o inverso é total só para o
+ * `orderId` — que é o único lado que a reconciliação e o webhook consomem.
+ */
 export function parseExternalReference(
   ref: string
-): { orderId: string; idempotencyKey: string } | undefined {
+): { orderId: string; idempotencyDigest: string } | undefined {
   const idx = ref.indexOf(EXTERNAL_REF_SEP);
   if (idx <= 0) return undefined;
   return {
     orderId: ref.slice(0, idx),
-    idempotencyKey: ref.slice(idx + EXTERNAL_REF_SEP.length),
+    idempotencyDigest: ref.slice(idx + EXTERNAL_REF_SEP.length),
   };
 }
 

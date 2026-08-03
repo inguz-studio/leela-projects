@@ -30,7 +30,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { parsePagamento } from '@leela/core';
-import { AsaasProvider } from '../payments/asaasProvider';
+import {
+  AsaasProvider,
+  EXTERNAL_REF_MAX_LEN,
+  buildExternalReference,
+} from '../payments/asaasProvider';
 import {
   montarPayloadAsaas,
   processarWebhookAsaas,
@@ -458,6 +462,49 @@ describe('webhookAsaas — porta única com entrega real do Asaas', () => {
     expect(r.resultado.ignorado).toBe(true);
     const pedido = await db.collection('pedidos').doc('ped-r6-benigno').get();
     expect(pedido.get('status')).toBe('pendente');
+  });
+
+  // ⛔ T1 · PIXFIX-EXTREF — o caminho do webhook com o formato NOVO
+  // (`orderId::digest16`) e com um pedidoId de tamanho REAL (73 chars). Se o
+  // digest tivesse entrado no PREFIXO, o webhook deixaria de achar o pedido e
+  // toda compra ficaria pendente para sempre — o defeito seria pior que o
+  // original, e só apareceria depois de o comprador pagar.
+  it('formato NOVO com pedidoId real (73) resolve o pedido e confirma', async () => {
+    const uid = 'wNXRTvMM3vc7Boyi91vRgx3DBQy2'; // 28, como o Firebase Auth emite
+    const pedidoId = `ped-${uid}-chk-963e27d7-2ea7-453d-aeb3-b49faacf319f`; // 73
+    expect(pedidoId).toHaveLength(73);
+
+    const ref = buildExternalReference(pedidoId, `charge-${pedidoId}`);
+    expect(ref).toHaveLength(91);
+    expect(ref.length).toBeLessThanOrEqual(EXTERNAL_REF_MAX_LEN);
+
+    await seedPedidoPendente({
+      pedidoId,
+      chargeId: 'pay_r6_extref_1',
+      forma: 'pix',
+      valorFinal: 7,
+    });
+
+    const r = await processarWebhookAsaas(
+      db,
+      provider,
+      TOKEN,
+      corpoAsaas({
+        eventId: 'evt_r6_extref',
+        payment: {
+          id: 'pay_r6_extref_1',
+          value: 7,
+          externalReference: ref,
+        },
+      })
+    );
+
+    expect(r.tipo).toBe('processado');
+    if (r.tipo !== 'processado') return;
+    expect(r.resultado.pedidoId).toBe(pedidoId); // orderId VERBATIM
+    expect(r.resultado.ignorado).toBe(false);
+    const pedido = await db.collection('pedidos').doc(pedidoId).get();
+    expect(pedido.get('status')).toBe('pago');
   });
 
   it('shape inválido → 400; header ausente → 401 (assinatura vazia)', async () => {
