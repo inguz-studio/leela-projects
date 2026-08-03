@@ -134,6 +134,48 @@ describe('CadastrarPage', () => {
     expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
   });
 
+  // ── DEF-A (ONBOARD-REV) ────────────────────────────────────────────────
+  // O gate da tela tem de ser o MESMO da Rule `shapeAutoCadastroValido`
+  // (nome e organização de 2 a 80). Enquanto ele foi `length > 0` sem teto,
+  // `nome: 'F'` e uma organização de 81 caracteres passavam pelo botão, o
+  // servidor negava o `setDoc`, o `catch` vazio engolia — e a conta nascia
+  // sem `profissionais/{uid}`. No login seguinte o item 57 barra essa conta
+  // na porta e o e-mail já está em uso: beco sem saída.
+  //
+  // Falsificação: devolva o gate para `nome.trim().length > 0` e estes casos
+  // morrem (o botão volta a habilitar).
+  it('DEF-A: nome de 1 caractere NÃO passa do botão (a Rule exige 2)', async () => {
+    renderPage();
+    await preencher({ nome: 'F' });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+    expect(screen.getByText('Use de 2 a 80 caracteres.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mocks.criarContaComEmail).not.toHaveBeenCalled();
+  });
+
+  it('DEF-A: organização de 81 caracteres NÃO passa do botão (a Rule exige ≤ 80)', async () => {
+    renderPage();
+    await preencher({ organizacao: 'x'.repeat(81) });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mocks.criarContaComEmail).not.toHaveBeenCalled();
+  });
+
+  it('DEF-A: nome de 81 caracteres também é barrado', async () => {
+    renderPage();
+    await preencher({ nome: 'M'.repeat(81) });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+  });
+
+  it('DEF-A: o limite do servidor é o limite da tela — 2 e 80 passam', async () => {
+    mocks.criarContaComEmail.mockResolvedValue({ user: { uid: 'novo' } });
+    mocks.atualizarNomeExibicao.mockResolvedValue(undefined);
+    mocks.criarPerfilOrganizador.mockResolvedValue(undefined);
+    renderPage();
+    await preencher({ nome: 'Fê', organizacao: 'y'.repeat(80) });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeEnabled();
+  });
+
   it('não pede CPF/CNPJ — KYC segue fora (Won\'t do E16)', () => {
     renderPage();
     expect(screen.queryByLabelText(/cpf/i)).not.toBeInTheDocument();

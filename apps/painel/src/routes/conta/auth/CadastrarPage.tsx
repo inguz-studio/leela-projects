@@ -33,11 +33,19 @@ import {
   criarPerfilOrganizador,
   getLeelaDb,
 } from '@leela/api-client';
-import { TERMO_LGPD_FINALIDADE, telefoneValido } from '@leela/core';
+import {
+  NOME_ORGANIZADOR_MAX,
+  NOME_ORGANIZADOR_MIN,
+  ORGANIZACAO_MAX,
+  ORGANIZACAO_MIN,
+  TERMO_LGPD_FINALIDADE,
+  telefoneValido,
+  validarCadastroOrganizador,
+} from '@leela/core';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroCadastro } from './_lib/authErrors';
-import { SENHA_MIN, emailValido, senhaAtendeMinimo } from './_lib/authValidation';
+import { SENHA_MIN, senhaAtendeMinimo } from './_lib/authValidation';
 
 const LINK_CLASSE =
   'font-[var(--font-weight-medium)] text-[var(--action-brand-tint-fg)] hover:underline';
@@ -59,21 +67,43 @@ export function CadastrarPage(): JSX.Element {
   const [enviando, setEnviando] = useState(false);
 
   const senhasBatem = senha.length > 0 && senha === confirmar;
+  /**
+   * Gate do formulário = gate da Rule (fix ONBOARD-REV · DEF-A). O contrato dos
+   * dados é UM só e mora no core (`validarCadastroOrganizador`), que é o mesmo
+   * que a Rule `shapeAutoCadastroValido` espelha: nome e organização de 2 a 80
+   * caracteres. A régua ad-hoc que existia aqui (`length > 0`, sem teto) era
+   * MAIS FROUXA que a Rule — nome de 1 letra ou organização de 81 caracteres
+   * passavam pelo botão, o `setDoc` era negado pelo servidor e o `catch` vazio
+   * do submit engolia a negativa: a conta Auth nascia SEM o doc
+   * `profissionais/{uid}` e, no login seguinte, o item 57 barrava a pessoa na
+   * porta sem caminho de volta (o e-mail já está em uso). Senha e confirmação
+   * seguem locais — elas não vão para o doc.
+   */
+  const errosDoCadastro = validarCadastroOrganizador({
+    nome,
+    email,
+    telefone,
+    organizacao,
+    consentimentoLgpd: consentimento,
+  });
   const podeCadastrar =
-    nome.trim().length > 0 &&
-    emailValido(email) &&
-    telefoneValido(telefone) &&
-    organizacao.trim().length > 0 &&
-    senhaAtendeMinimo(senha) &&
-    senhasBatem &&
-    consentimento &&
-    !enviando;
+    errosDoCadastro.length === 0 && senhaAtendeMinimo(senha) && senhasBatem && !enviando;
 
   const senhaErro =
     senha.length > 0 && !senhaAtendeMinimo(senha) ? `Use pelo menos ${SENHA_MIN} caracteres.` : undefined;
   const confirmarErro = confirmar.length > 0 && !senhasBatem ? 'As senhas não conferem.' : undefined;
   const telefoneErro =
     telefone.length > 0 && !telefoneValido(telefone) ? 'Informe DDD e número.' : undefined;
+  // Botão desabilitado sem explicação é beco: o limite que o servidor aplica
+  // aparece no campo que o causou, com os números do core.
+  const foraDaFaixa = (valor: string, min: number, max: number): boolean =>
+    valor.trim().length > 0 && (valor.trim().length < min || valor.trim().length > max);
+  const nomeErro = foraDaFaixa(nome, NOME_ORGANIZADOR_MIN, NOME_ORGANIZADOR_MAX)
+    ? `Use de ${NOME_ORGANIZADOR_MIN} a ${NOME_ORGANIZADOR_MAX} caracteres.`
+    : undefined;
+  const organizacaoErro = foraDaFaixa(organizacao, ORGANIZACAO_MIN, ORGANIZACAO_MAX)
+    ? `Use de ${ORGANIZACAO_MIN} a ${ORGANIZACAO_MAX} caracteres.`
+    : undefined;
 
   async function cadastrar(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -133,6 +163,7 @@ export function CadastrarPage(): JSX.Element {
           autoFocus
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          {...(nomeErro ? { errorMessage: nomeErro } : {})}
         />
         <Input
           id="cadastrar-email"
@@ -158,6 +189,7 @@ export function CadastrarPage(): JSX.Element {
           autoComplete="organization"
           value={organizacao}
           onChange={(e) => setOrganizacao(e.target.value)}
+          {...(organizacaoErro ? { errorMessage: organizacaoErro } : {})}
         />
         <Input
           id="cadastrar-senha"
