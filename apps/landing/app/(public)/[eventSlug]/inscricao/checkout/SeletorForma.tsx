@@ -30,7 +30,12 @@ export function SeletorForma({
   conteudoPix,
   conteudoCartao,
 }: {
-  forma: FormaUI;
+  /**
+   * S1217-T2 · RN-440: `null` = nenhuma opção marcada. Não é estado de erro
+   * nem de carregamento — é a ausência de escolha, e ela precisa existir para
+   * que a escolha do PIX seja um ato deliberado.
+   */
+  forma: FormaUI | null;
   onForma: (f: FormaUI) => void;
   /** Rótulo do PIX (com o total da opção quando os totais diferem — S1210). */
   labelPix: string;
@@ -52,7 +57,10 @@ export function SeletorForma({
     <RadioGroup
       name="forma-pagamento"
       label="Forma de pagamento"
-      value={forma}
+      // `exactOptionalPropertyTypes`: ausência de escolha é a PROP AUSENTE, não
+      // `undefined` passado — o `RadioCard` compara `ctx.value === value` e
+      // nenhum casa, que é exatamente o estado sem seleção.
+      {...(forma !== null ? { value: forma } : {})}
       onValueChange={(v) => onForma(v as FormaUI)}
       // Com formulário revelado dentro da opção, lado a lado espremeria os
       // campos do cartão numa coluna estreita. Empilhado, cada opção tem a

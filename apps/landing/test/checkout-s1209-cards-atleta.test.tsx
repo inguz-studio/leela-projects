@@ -230,11 +230,15 @@ describe('S1209-T3/T4 · payload — gênero por inscrito chega ao servidor', ()
       fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
     });
 
-    // Step 2 (PAGAR). S1217-T1 · RN-438: os aceites foram dados na etapa de
-    // inscrição, então a auto-geração do PIX (A-3) dispara na CHEGADA — não há
-    // mais um gesto humano nesta tela entre o pouso e a cobrança. Esse efeito
-    // é o que a D-ACH-12/RN-440 (task C2) vai desfazer tirando a pré-seleção
-    // do meio. Aqui o que importa é o payload, e ele já está no ar.
+    // Step 2 (PAGAR). S1217-T1/T2 · RN-438/RN-440: os aceites vieram da etapa
+    // de inscrição e nenhuma forma vem pré-selecionada — a cobrança PIX nasce
+    // da ESCOLHA do PIX, que é o único gesto que falta aqui.
+    await waitFor(() => {
+      expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
     await waitFor(() => {
       expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
     });

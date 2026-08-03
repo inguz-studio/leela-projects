@@ -194,7 +194,12 @@ async function irAtePagamentoPix(): Promise<void> {
   });
   // DEC-0729: PAGAR é uma etapa só — sem "Ir para pagamento" no caminho.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
+  });
+  // S1217-T2 · RN-440: nenhuma forma vem pré-selecionada — a cobrança PIX
+  // nasce da ESCOLHA do PIX, que é o gesto que este helper passa a dar.
+  await act(async () => {
+    fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
   });
   // S1217-T1 · RN-438: os aceites deixaram de existir nesta etapa — eles são
   // marcados na etapa de inscrição, dentro do `preencherDados`.

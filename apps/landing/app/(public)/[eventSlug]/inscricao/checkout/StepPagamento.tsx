@@ -51,7 +51,11 @@ export function StepPagamento({
   gatewaySemResposta = false,
   totalDefasado = false,
 }: {
-  forma: FormaUI;
+  /**
+   * S1217-T2 · RN-440: `null` = nenhuma forma escolhida. Não há instrumento a
+   * mostrar, e é isso que impede a cobrança de nascer pela simples chegada.
+   */
+  forma: FormaUI | null;
   total: number | null;
   charge: CreateInscricaoChargeResult | null;
   criandoCharge: boolean;
@@ -111,7 +115,15 @@ export function StepPagamento({
 
   return (
     <div className="flex flex-col gap-6">
-      {forma === 'pix' ? (
+      {/* S1217-T2 · RN-440 — sem meio escolhido não há instrumento de
+          pagamento na tela, e nenhuma cobrança nasce. O preço já está acima:
+          o bloco de totais mostra a composição da cotação vigente e cada opção
+          carrega o próprio total no rótulo. A pessoa decide vendo os dois. */}
+      {forma === null ? (
+        <p className="text-sm text-text-secondary">
+          Escolha a forma de pagamento acima para continuar.
+        </p>
+      ) : forma === 'pix' ? (
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-text-primary">Pagamento via PIX</h2>
 

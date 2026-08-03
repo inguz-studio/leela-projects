@@ -152,8 +152,10 @@ async function irAtePagar(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
   });
+  // S1217-T2 · RN-440: o PAGAR não vem mais com meio pré-selecionado — o marco
+  // de "cheguei" passa a ser o resumo do pedido, não o botão de pagar.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
   });
   await waitFor(() => {
     expect(cotarInscricaoCheckout).toHaveBeenCalled();

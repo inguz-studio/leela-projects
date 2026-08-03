@@ -141,8 +141,11 @@ async function irAtePagar(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
   });
+  // S1217-T2 · RN-440: o PAGAR não vem mais com meio pré-selecionado, então
+  // não existe botão de pagar na chegada. O marco de "cheguei" passa a ser o
+  // resumo do pedido.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
   });
   // T-CKUX-1: a cotação passou a ser coalescida com debounce curto, então ela
   // aterrissa DEPOIS do primeiro paint do PAGAR. Esperar por ela aqui é o que
@@ -303,7 +306,7 @@ describe('DEC-0729 · T-CKUX-1 — coalescing da cotação (achado 2)', () => {
       fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
     });
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+      expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
     });
     expect(cotarInscricaoCheckout).toHaveBeenCalledTimes(antes);
   });

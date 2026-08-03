@@ -80,7 +80,12 @@ export function StepResumo({
    * mentira. Em `false` (incorporada) a linha existe SEM valor.
    */
   taxaRepassada: boolean;
-  forma: FormaUI;
+  /**
+   * S1217-T2 · RN-440: `null` = a pessoa ainda não escolheu o meio. O bloco de
+   * totais continua tendo o que mostrar — a composição da cotação vigente, que
+   * assume PIX à vista — e cada opção carrega o próprio total no rótulo.
+   */
+  forma: FormaUI | null;
   onForma: (f: FormaUI) => void;
   parcelas: number;
   onParcelas: (n: number) => void;

@@ -229,8 +229,27 @@ export function CheckoutFlow({
   // RN-231: erro por (inscrito × itemId) — tamanho obrigatório do item do kit.
   const [errosTamanhos, setErrosTamanhos] = useState<Record<string, string>[]>([]);
 
-  // Pagamento / cotação
-  const [forma, setForma] = useState<FormaUI>('pix');
+  // Pagamento / cotação.
+  //
+  // S1217-T2 · RN-440 · D-ACH-12 — `null` = NENHUMA forma pré-selecionada, e
+  // isso é decisão de dinheiro, não de UX. A auto-geração do PIX (A-3) dispara
+  // com `step === 2 && forma === 'pix' && aceitesOk`. Enquanto os aceites eram
+  // o último gesto humano antes disso, a cobrança nascia porque a pessoa
+  // marcava dois checkboxes nesta tela. Com a S1217-T1 os aceites vêm da etapa
+  // anterior: com `'pix'` no default, ENTRAR no pagamento passaria a criar
+  // cobrança sozinho — e `createInscricaoCharge` grava pedido, pagamento e
+  // inscritos como pendentes ANTES de falar com o gateway, recomputando os
+  // contadores do evento no caminho. Cada visita ao PAGAR viraria inscrição
+  // pendente e cobrança real no Asaas para quem só queria ver o preço.
+  const [forma, setForma] = useState<FormaUI | null>(null);
+  /**
+   * A forma que a COTAÇÃO assume enquanto ninguém escolheu: PIX à vista. O
+   * preço não depende dela para ser mostrado — o bloco de totais exibe essa
+   * composição e cada opção carrega o próprio total no rótulo (S1216-T4), então
+   * a pessoa vê os dois preços antes de decidir. Só o ATO de pagar exige uma
+   * escolha explícita.
+   */
+  const formaCotada: FormaUI = forma ?? 'pix';
   const [parcelas, setParcelas] = useState(1);
   const [cupomInput, setCupomInput] = useState(atribuicao.cupom ?? '');
   const [cupomAplicado, setCupomAplicado] = useState<string | null>(null);
@@ -449,7 +468,7 @@ export function CheckoutFlow({
       });
   }, [authPronto]);
 
-  const parcelasEfetivas = forma === 'pix' ? 1 : parcelas;
+  const parcelasEfetivas = formaCotada === 'pix' ? 1 : parcelas;
   // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
   const selecaoSig = inscritos.map((i) => `${i.modalidade}:${i.kitId}`).join('|');
   const todasModalidades = inscritos.every((i) => i.modalidade.length > 0);
@@ -558,8 +577,10 @@ export function CheckoutFlow({
             modalidade: i.modalidade,
             ...(i.kitId.length > 0 ? { kitId: i.kitId } : {}),
           })),
-          forma,
-          parcelas: forma === 'pix' ? 1 : parcelas,
+          // Sem escolha, a cotação assume PIX à vista (D-ACH-12) — é leitura,
+          // não compromisso: nada é gravado e nada é cobrado.
+          forma: formaCotada,
+          parcelas: formaCotada === 'pix' ? 1 : parcelas,
           ...(cupom ? { cupomCodigo: cupom } : {}),
         });
         return { ok: true, data };
@@ -567,7 +588,7 @@ export function CheckoutFlow({
         return { ok: false, error: mensagemErro(err, 'Não foi possível calcular o total.') };
       }
     },
-    [evento.slug, inscritos, forma, parcelas],
+    [evento.slug, inscritos, formaCotada, parcelas],
   );
 
   // ── T-CKUX-1 · coalescing da cotação ──────────────────────────────────────
@@ -602,8 +623,8 @@ export function CheckoutFlow({
   /** A lista curta do que move preço. Igualdade aqui = cotação igual. */
   const assinaturaDe = useCallback(
     (cupom: string | null): string =>
-      `${evento.slug}|${selecaoSig}|${forma}|${parcelasEfetivas}|${cupom ?? ''}`,
-    [evento.slug, selecaoSig, forma, parcelasEfetivas],
+      `${evento.slug}|${selecaoSig}|${formaCotada}|${parcelasEfetivas}|${cupom ?? ''}`,
+    [evento.slug, selecaoSig, formaCotada, parcelasEfetivas],
   );
   const assinaturaAtual = assinaturaDe(cupomAplicado);
 
@@ -732,7 +753,7 @@ export function CheckoutFlow({
     setErroCharge(null);
     setErroConfirmar(null);
     setPixEstado('vivo');
-  }, [cupomAplicado, forma, parcelasEfetivas, selecaoSig]);
+  }, [cupomAplicado, formaCotada, parcelasEfetivas, selecaoSig]);
 
   const aplicarCupom = useCallback(async () => {
     const code = cupomInput.trim().toUpperCase();
@@ -816,6 +837,13 @@ export function CheckoutFlow({
     if (charge) return charge;
     if (!authPronto) {
       setErroCharge('Sessão de pagamento ainda não pronta. Aguarde um instante.');
+      return null;
+    }
+    // S1217-T2 · RN-440: sem meio ESCOLHIDO não existe cobrança. O PIX que a
+    // cotação assume é preço na tela, nunca instrução de cobrar — e é aqui,
+    // no produtor de escrita, que a diferença entre os dois vira código.
+    if (forma === null) {
+      setErroCharge('Escolha a forma de pagamento para continuar.');
       return null;
     }
     // §5.3: defesa em profundidade — a UI já desabilita os botões, e o
@@ -1422,7 +1450,7 @@ export function CheckoutFlow({
             slug={evento.slug}
             responsavelEmail={responsavel.email.trim()}
             linhas={linhasConfirmacao}
-            forma={forma}
+            {...(forma !== null ? { forma } : {})}
             taxaRepassada={evento.taxaRepassada}
             pixExpirado={pixExpirado}
             pixVivoPeloServidor={pixContestado}

@@ -208,10 +208,20 @@ async function irAtePagamento(forma: 'pix' | 'cartao'): Promise<void> {
   });
   // DEC-0729: resumo e pagamento viraram UMA etapa (PAGAR) — o botão "Ir para
   // pagamento" deixou de existir. O segundo "Continuar" já aterrissa aqui, com
-  // o resumo, o meio de pagamento e os aceites na mesma tela.
+  // o resumo e o meio de pagamento na mesma tela.
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    expect(screen.getByText(/^Seu pedido$/)).toBeTruthy();
   });
+  // S1217-T2 · RN-440: nenhuma forma vem pré-selecionada — escolher é o gesto
+  // que faz o instrumento aparecer (e, no PIX, a cobrança nascer).
+  if (forma === 'pix') {
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /gerar código pix/i })).toBeTruthy();
+    });
+  }
   if (forma === 'cartao') {
     await act(async () => {
       fireEvent.click(screen.getByRole('radio', { name: /cartão de crédito/i }));

@@ -250,7 +250,11 @@ describe('S1217-T1 · RN-438 — voltar não destrava a prova', () => {
     marcarAceites();
     await continuar();
     await waitFor(() => expect(screen.getByText(/^Seu pedido$/)).toBeTruthy());
-    // A cobrança PIX nasce da escolha do meio (auto-geração A-3).
+    // S1217-T2 · RN-440: a cobrança PIX nasce da ESCOLHA do meio, não da
+    // chegada à tela (auto-geração A-3 depois do gesto).
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
     await act(async () => {
