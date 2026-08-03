@@ -1325,6 +1325,7 @@ export function CheckoutFlow({
               aplicandoCupom={aplicandoCupom}
               erroCupomUrl={erroCupom ?? erroCupomUrl}
               descontoVeioDoLink={origemCupom === 'link'}
+              taxaRepassada={evento.taxaRepassada}
               forma={forma}
               onForma={setForma}
               parcelas={parcelas}
@@ -1375,6 +1376,7 @@ export function CheckoutFlow({
             responsavelEmail={responsavel.email.trim()}
             linhas={linhasConfirmacao}
             forma={forma}
+            taxaRepassada={evento.taxaRepassada}
             pixExpirado={pixExpirado}
             pixVivoPeloServidor={pixContestado}
             pixDesvioRelogioMs={desvioRelogioMs}

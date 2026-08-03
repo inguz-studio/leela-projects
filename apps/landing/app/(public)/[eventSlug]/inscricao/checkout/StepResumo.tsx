@@ -42,6 +42,7 @@ export function StepResumo({
   aplicandoCupom,
   erroCupomUrl,
   descontoVeioDoLink = false,
+  taxaRepassada,
   forma,
   onForma,
   parcelas,
@@ -71,6 +72,14 @@ export function StepResumo({
    * aplicado" e repetir seria ruído.
    */
   descontoVeioDoLink?: boolean;
+  /**
+   * S1216-T3 (RN-435 · D-ACH-5): `true` = o evento REPASSA a taxa de serviço
+   * ao comprador (`taxaModo: 'repassada'` no leitor — RN-347). Vem do flag
+   * real do evento, não de `taxaServico > 0`: um meio pode ter taxa zerada
+   * por override num evento que repassa, e chamar isso de "inclusa" seria
+   * mentira. Em `false` (incorporada) a linha existe SEM valor.
+   */
+  taxaRepassada: boolean;
   forma: FormaUI;
   onForma: (f: FormaUI) => void;
   parcelas: number;
@@ -81,6 +90,20 @@ export function StepResumo({
 }): React.JSX.Element {
   const cupomAtivo = cotacao?.cupomAplicado ?? null;
   const parcelado = forma === 'cartao_credito' && parcelas > 1;
+
+  // S1216-T3 · RN-435/D-ACH-5 — a taxa repassada diz, na PRÓPRIA linha, de que
+  // meio ela é. Hoje o rótulo é mudo e a variação por forma de pagamento só
+  // apareceria se a pessoa trocasse de opção e comparasse dois totais que já
+  // sumiram da tela. Nome do meio, nunca percentual (confidencialidade
+  // 703db9c) e nunca o valor no modo incorporada (seria o termo do
+  // organizador vazando).
+  const meioDaTaxa = forma === 'cartao_credito' ? 'cartão' : 'PIX';
+  const taxaServico = cotacao?.taxaServico ?? 0;
+  // RN-437 · o juro do parcelamento chega PRONTO do servidor (S1216-T2). A
+  // tela renderiza; não subtrai. Derivar por `totalCobrado − totalAVista`
+  // aqui criaria uma segunda autoridade sobre o mesmo número — é exatamente o
+  // caminho barato que a regra proíbe. Ausente = servidor antigo ⇒ sem linha.
+  const jurosParcelamento = cotacao?.jurosParcelamento ?? 0;
 
   // TAXAFLEX (RN-180 · S1210): quando o total VARIA por meio (taxa
   // repassada com linhas distintas), exibir o total à vista EM CADA OPÇÃO
@@ -300,14 +323,42 @@ export function StepResumo({
                 </dd>
               </div>
             ) : null}
-            {/* RN-347: linha SÓ quando o evento repassa a taxa ao comprador
-                (taxaServico > 0). Sempre VALOR em R$ — nunca percentual do
-                termo (confidencialidade 703db9c). Cotação de servidor antigo
-                sem o campo (undefined) cai no ramo sem linha. */}
-            {(cotacao.taxaServico ?? 0) > 0 ? (
-              <div className="flex items-center justify-between">
+            {/* RN-347 + RN-435 (S1216-T3 · D-ACH-5): o resumo declara a
+                composição do total nos DOIS modos de taxa.
+
+                · repassada — valor em R$ e o MEIO no rótulo ("Taxa de serviço
+                  (PIX)"), porque é o meio que define quanto ela custa;
+                · incorporada — a linha EXISTE e não tem valor. "R$ 0,00"
+                  afirmaria ausência de taxa (mentira por outro caminho) e o
+                  valor real vazaria o termo comercial do organizador
+                  (confidencialidade 703db9c). "Inclusa no valor" é o único
+                  enunciado verdadeiro para o comprador e mudo sobre o
+                  contrato de terceiro.
+
+                Percentual não aparece em nenhum dos dois ramos. Evento
+                repassado com taxa 0 no meio escolhido continua sem linha: não
+                há o que discriminar, e chamar isso de "inclusa" seria falso. */}
+            {taxaRepassada ? (
+              taxaServico > 0 ? (
+                <div className="flex items-center justify-between">
+                  <dt className="text-text-secondary">Taxa de serviço ({meioDaTaxa})</dt>
+                  <dd className="text-text-primary">{formatarPreco(taxaServico)}</dd>
+                </div>
+              ) : null
+            ) : (
+              <div className="flex items-center justify-between gap-3">
                 <dt className="text-text-secondary">Taxa de serviço</dt>
-                <dd className="text-text-primary">{formatarPreco(cotacao.taxaServico)}</dd>
+                <dd className="whitespace-nowrap text-text-secondary">inclusa no valor</dd>
+              </div>
+            )}
+            {/* RN-437: o juro tem NOME próprio. Não existe caminho em que ele
+                se apresente como parte do "total" sem se declarar. Zero no
+                PIX, zero no cartão à vista e zero com termo sem juros ⇒ sem
+                linha, porque não há o que dizer. */}
+            {jurosParcelamento > 0 ? (
+              <div className="flex items-center justify-between">
+                <dt className="text-text-secondary">Juros do parcelamento</dt>
+                <dd className="text-text-primary">{formatarPreco(jurosParcelamento)}</dd>
               </div>
             ) : null}
             <div className="mt-1 flex items-center justify-between border-t border-border-subtle pt-2">

@@ -231,6 +231,7 @@ describe('S1209-T2 · tela do PEDIDO PENDENTE — o mesmo bloco vivo', () => {
           responsavelEmail="atleta@example.com"
           linhas={[{ titulo: 'Você', modalidade: '5k', kitLabel: 'Sem kit' }]}
           forma="pix"
+          taxaRepassada={false}
           {...over}
         />
       </ToastProvider>,

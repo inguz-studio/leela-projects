@@ -321,6 +321,7 @@ describe('S1215-T2 · a marca "(desconto aplicado)" (D-KC-8)', () => {
     onRemoverCupom: () => {},
     aplicandoCupom: false,
     erroCupomUrl: null,
+    taxaRepassada: true,
     forma: 'pix' as const,
     onForma: () => {},
     parcelas: 1,

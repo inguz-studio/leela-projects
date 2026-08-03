@@ -30,6 +30,7 @@ export function StepConfirmacao({
   responsavelEmail,
   linhas,
   forma,
+  taxaRepassada,
   pixExpirado = false,
   pixVivoPeloServidor = false,
   pixDesvioRelogioMs = 0,
@@ -44,6 +45,13 @@ export function StepConfirmacao({
   linhas: LinhaConfirmacao[];
   /** Forma escolhida — o bloco do PIX só existe quando a cobrança é PIX. */
   forma?: 'pix' | 'cartao_credito';
+  /**
+   * S1216-T3 (RN-435 · D-ACH-5): `true` = evento com taxa REPASSADA ao
+   * comprador. Mesma regra do resumo — a confirmação é a segunda superfície
+   * em que o comprador lê a composição do que pagou, e ela não pode contar
+   * uma história diferente da que ele leu antes de pagar.
+   */
+  taxaRepassada: boolean;
   /** RN-157: cobrança já expirada (timer zerou / servidor cancelou). */
   pixExpirado?: boolean;
   /** S1209-REV: o servidor RECUSOU a expiração — a cobrança segue viva. */
@@ -65,6 +73,13 @@ export function StepConfirmacao({
   // também AQUI — esta é a "tela do pedido pendente" do checkout. Pedido pago
   // não mostra cobrança: não há mais o que pagar.
   const mostraPix = !pago && forma === 'pix';
+  // S1216-T3 · RN-435/RN-437 — a mesma composição do resumo, agora sobre os
+  // valores CONGELADOS no pedido. `forma` é opcional aqui (a confirmação
+  // sobrevive sem ela): sem meio conhecido, o rótulo volta ao genérico em vez
+  // de inventar um. Juros ausente = pedido anterior a esta rodada ⇒ 0.
+  const meioDaTaxa = forma === 'cartao_credito' ? 'cartão' : forma === 'pix' ? 'PIX' : null;
+  const taxaServico = valores.taxaServico ?? 0;
+  const jurosParcelamento = valores.jurosParcelamento ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,12 +138,31 @@ export function StepConfirmacao({
               <dd className="text-feedback-success-fg">− {formatarPreco(valores.desconto)}</dd>
             </div>
           ) : null}
-          {/* RN-347: linha SÓ em evento com taxa repassada (taxaServico > 0);
-              sempre VALOR em R$, nunca percentual (703db9c). */}
-          {(valores.taxaServico ?? 0) > 0 ? (
-            <div className="flex items-center justify-between">
+          {/* RN-347 + RN-435 (S1216-T3): repassada nomeia o meio e mostra o
+              valor; incorporada diz "inclusa no valor" e NUNCA "R$ 0,00" nem
+              o valor real (termo comercial do organizador — 703db9c).
+              Percentual não aparece em nenhum ramo. */}
+          {taxaRepassada ? (
+            taxaServico > 0 ? (
+              <div className="flex items-center justify-between">
+                <dt className="text-text-secondary">
+                  {meioDaTaxa !== null ? `Taxa de serviço (${meioDaTaxa})` : 'Taxa de serviço'}
+                </dt>
+                <dd className="text-text-primary">{formatarPreco(taxaServico)}</dd>
+              </div>
+            ) : null
+          ) : (
+            <div className="flex items-center justify-between gap-3">
               <dt className="text-text-secondary">Taxa de serviço</dt>
-              <dd className="text-text-primary">{formatarPreco(valores.taxaServico)}</dd>
+              <dd className="whitespace-nowrap text-text-secondary">inclusa no valor</dd>
+            </div>
+          )}
+          {/* RN-437: o juro pago aparece com nome próprio também aqui — o que
+              o comprador leu antes de pagar é o que ele relê no comprovante. */}
+          {jurosParcelamento > 0 ? (
+            <div className="flex items-center justify-between">
+              <dt className="text-text-secondary">Juros do parcelamento</dt>
+              <dd className="text-text-primary">{formatarPreco(jurosParcelamento)}</dd>
             </div>
           ) : null}
           <div className="flex items-center justify-between border-t border-border-subtle pt-2">

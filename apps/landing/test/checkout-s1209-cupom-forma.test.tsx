@@ -206,6 +206,7 @@ describe('S1209-T1 · D-5 — Pix e Cartão são BOTÕES, sem toggle', () => {
         onRemoverCupom={noop}
         aplicandoCupom={false}
         erroCupomUrl={null}
+        taxaRepassada
         forma="pix"
         onForma={noop}
         parcelas={1}

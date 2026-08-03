@@ -37,6 +37,7 @@ function renderResumo(overrides: Partial<Parameters<typeof StepResumo>[0]> = {})
       onRemoverCupom={noop}
       aplicandoCupom={false}
       erroCupomUrl={null}
+      taxaRepassada
       forma="pix"
       onForma={noop}
       parcelas={1}
