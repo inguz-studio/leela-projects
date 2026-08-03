@@ -10,7 +10,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 
 - [x] **D0** · redeploy da landing (os dois fix-commits de dinheiro da KITCUPOM-REV entram no ar)
 - [x] **B1t · S314-T1** — tabela Price real em `buildInstallmentOptions`
-- [ ] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
+- [x] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
 - [ ] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
 - [ ] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
@@ -193,9 +193,47 @@ Os 6 arquivos são todos os que consomem `buildInstallmentOptions` ou `computeSa
 
 ---
 
+## B2t · S314-T2 · o número 2,89 entra como dado, e os 3,49 saem da documentação
+
+Commit . Território: ,
+, ,
+ + suíte do termo.
+
+O  do termo canônico era 0 — o motor existia e estava desligado. Passou a 2,89.
+Nenhum literal de percentual entrou em código de cálculo: o seed do termo herda de
+, e a linha de log dele deixou de dizer "12x sem juros" fixo (agora é
+derivada do próprio termo).
+
+**O conflito dos 3,49% foi resolvido de frente.** Dois lugares documentavam a decisão de 2026-07-05:
+o cabeçalho de  e a constante  do seed de pedidos. O
+comentário do core deixou de citar percentual nenhum (aponta para o termo); a constante do seed
+passou a ESPELHAR o termo em vez de ter valor próprio.
+
+**Uma cópia da regra do dinheiro morreu.** O  do seed reimplementava a fórmula
+antiga — a mesma que a B1t aposentou. Agora chama , com
+ porque o seed precifica pedido que JÁ existe e corte por parcela mínima é regra
+de oferta, não de histórico.
+
+### Falsificação
+
+ de volta a 0: **2 failed | 12 passed** — caem "o termo canônico traz 2,89% a.m."
+(expected 0 to be 2.89) e "12x de R$ 300 sai pela tabela Price".
+
+### Gates
+
+| | |
+|---|---|
+| core  /  /  | 0 / 0 / exit 0 |
+| functions  /  | 0 / 0 |
+| 9 suítes (termo, plano, provisionamento, venda, parcelamento) | **182/182** |
+| Suíte da landing, processo único | **310/310** em 28 arquivos |
+
+---
+
 ## Premissas registradas (vetáveis — o dono dorme)
 
 | # | Premissa | Onde | Custo de vetar |
 |---|---|---|---|
 | PB-1 | Os números fechados da spec (R$ 422,03 / R$ 359,90) são erro aritmético e foram substituídos pelos medidos (R$ 422,28 / R$ 359,28). O código implementa a FÓRMULA da RN-436; nenhum literal de valor entrou nele | B1t | Nenhum no código — é reconciliação de texto da spec |
+| PB-3 | O seed de `commercialTerms` é idempotente por design: ambiente que já tem `current` NÃO é regravado, então o termo dele continua com juros 0 até alguém versionar. O 2,89 vale para provisionamento novo e para re-seed limpo | B2t | Nenhum — é comportamento preexistente, registrado para não virar surpresa no emulador |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
