@@ -64,8 +64,14 @@ function texto(v: unknown): string {
 
 /**
  * Clubes PÚBLICOS do tenant (visibilidade publica/indexavel — RN-140/165).
- * `[]` honesto em falha. ⚠️ Deploy real exige índice composto
- * `clubes(tenantId, visibilidade)` — emulator cria automático.
+ * `[]` honesto em falha.
+ *
+ * ÍNDICE: não precisa de composto — medido junto com a consulta de eventos na
+ * S1707-T1. `leela-hub` não tem nenhum índice de `clubes` declarado e a página
+ * `/@castelo` lista os dois clubes do tenant em produção. Consulta de coleção
+ * só com igualdade é servida pela combinação dos índices automáticos de campo
+ * único; o aviso anterior ("deploy real exige `clubes(tenantId,
+ * visibilidade)`") era falso.
  */
 async function listarClubesPublicosDoTenant(
   tenantId: string,
@@ -111,8 +117,11 @@ async function listarClubesPublicosDoTenant(
  * explícita, nada comercial cruza. Dedup por nome (case-insensitive). `[]`
  * honesto em falha ⇒ a faixa some sem estado vazio. `logoUrl` passa pela mesma
  * guarda http(s) (RN-153) — logo inválida cai no monograma na UI.
- * ⚠️ Deploy real exige índice collectionGroup `parcerias(tenantId, tipo,
- * status)` — emulator cria automático; registrado como pendência operacional.
+ * ÍNDICE: esta é a única das três que exige composto de verdade, porque é
+ * `collectionGroup` — escopo em que o Firestore não cria índice de campo único
+ * sozinho. Ela reprovou em produção nove vezes entre 29/07 e 03/08
+ * (`FAILED_PRECONDITION`); o índice `parcerias(status, tenantId, tipo)` foi
+ * criado em `597d499` e já está no projeto `leela-hub`. Pendência encerrada.
  */
 async function listarPatrocinadoresPublicosDoTenant(
   tenantId: string,

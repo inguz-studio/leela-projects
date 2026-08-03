@@ -606,8 +606,17 @@ export async function listarEventosPublicados(): Promise<EventoResumo[]> {
 /**
  * Eventos publicados de UM tenant (aba Eventos do perfil público — S1700).
  * Mesmo gate de publicação da home (`publicado`/`ao_vivo`); `[]` honesto.
- * ⚠️ Deploy real exige índice composto `eventos(tenantId, status)` — o
- * emulator cria automático; registrado como pendência operacional.
+ *
+ * ÍNDICE: não precisa de composto, e isso foi MEDIDO em produção (S1707-T1),
+ * não deduzido. O aviso que estava aqui — "deploy real exige
+ * `eventos(tenantId, status)`" — era falso e foi retirado. Prova em
+ * `leela-hub`, 2026-08-03: a lista de índices compostos do projeto não tem
+ * `eventos(tenantId, status)`, e mesmo assim `/@castelo` renderiza os cinco
+ * eventos do tenant, com log da função limpo no mesmo request. Quem reprova
+ * por falta de índice é a consulta de `parcerias`, que é `collectionGroup` —
+ * escopo em que o Firestore NÃO cria índice de campo único sozinho. Esta aqui
+ * é de coleção, só com filtros de igualdade, e o Firestore a serve combinando
+ * os índices automáticos de campo único.
  */
 export async function listarEventosPublicadosDoTenant(
   tenantId: string,
