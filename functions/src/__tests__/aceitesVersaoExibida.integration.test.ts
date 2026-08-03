@@ -393,3 +393,67 @@ describe('RN-439 · versão exibida DIVERGE', () => {
     expect(typeof custom['materialHash']).toBe('string');
   });
 });
+
+// =============================================================================
+// ACHADOS-REV · o buraco que a PB-11 abre, MEDIDO.
+//
+// A PB-11 registra que a conferência de versão vale no caminho de CRIAÇÃO e
+// não no `garantirAceitesNoReplay`, com a justificativa de que recusar no
+// replay deixaria a compra SEM prova em vez de proteger alguém.
+//
+// O caso abaixo mede a consequência, que a premissa não enuncia: no replay a
+// prova não fica incompleta — ela fica AFIRMANDO uma versão que a pessoa não
+// viu, com o carimbo silencioso da vigente que a P6 da spec rejeitou para o
+// caminho de criação. Para um termo de isenção de responsabilidade por lesão,
+// prova errada é pior que prova ausente.
+//
+// O caso NÃO reprova o comportamento (ele é premissa declarada): ele o TRAVA,
+// para que a decisão do dono seja tomada sobre um número e não sobre uma
+// hipótese, e para que mudar isso sem querer acuse aqui.
+// =============================================================================
+describe('ACHADOS-REV · PB-11 — o replay carimba a vigente sem conferir a exibida', () => {
+  it('pedido sem bloco + política bumpada + retry ⇒ carimba a versão NOVA, que a pessoa não viu', async () => {
+    const key = 'achadosrev-pb11-0001';
+    // 1. Compra normal sob a versão 1, com a tela declarando que exibiu a 1.
+    const r = await createInscricaoChargeCore(
+      db,
+      provider,
+      entrada(EVENTO, key, {
+        termos: true,
+        saude: true,
+        versoesExibidas: { termos: 1, saude: TERMO_SAUDE_VERSAO_VIGENTE },
+      }),
+      comprador
+    );
+    // 2. O pedido é rebaixado ao estado LEGADO (sem bloco) — o mesmo estado
+    //    que o F-4b existe para consertar, e o mesmo do caso O7 da RN-442.
+    await db.doc(`pedidos/${r.pedidoId}`).update({ aceites: FieldValue.delete() });
+
+    // 3. O organizador publica a versão 3 ANTES do retry.
+    await db
+      .doc(`eventos/${EVENTO}/politicaVendas/config`)
+      .set({ versao: 3, atualizadoEm: FieldValue.serverTimestamp() }, { merge: true });
+
+    // 4. O retry chega dizendo que exibiu a 1 — e o replay não olha.
+    await createInscricaoChargeCore(
+      db,
+      provider,
+      entrada(EVENTO, key, {
+        termos: true,
+        saude: true,
+        versoesExibidas: { termos: 1, saude: TERMO_SAUDE_VERSAO_VIGENTE },
+      }),
+      comprador
+    );
+
+    const aceites = (await db.doc(`pedidos/${r.pedidoId}`).get()).get('aceites') as {
+      termos: { versao: number };
+    };
+    // O QUE FICA GRAVADO: a versão 3. A pessoa leu a 1 e declarou a 1.
+    expect(aceites.termos.versao).toBe(3);
+    // No caminho de CRIAÇÃO a mesma divergência recusa (caso V2). A assimetria
+    // é a premissa; o número é a consequência dela.
+
+    await db.doc(`eventos/${EVENTO}/politicaVendas/config`).set({ versao: 1 }, { merge: true });
+  });
+});

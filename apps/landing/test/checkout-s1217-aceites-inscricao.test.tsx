@@ -279,3 +279,56 @@ describe('S1217-T1 · RN-438 — voltar não destrava a prova', () => {
     expect(termos.getAttribute('readonly')).toBeNull();
   });
 });
+
+// =============================================================================
+// ACHADOS-REV · vetor 19 — nada de PII em log, em URL nem em armazenamento local.
+//
+// A C4 e a C5 acrescentaram três campos ao caminho da prova: `versoesExibidas`
+// (conferência), `origem.ipHash` e `origem.userAgent`. Os dois últimos nascem e
+// morrem no servidor; o primeiro sobe no payload da callable. O vetor pede que
+// NENHUM deles apareça em parâmetro de consulta nem em armazenamento local — os
+// dois canais que atravessam o dispositivo e sobrevivem à sessão.
+//
+// O único gravador de `localStorage` deste fluxo é a captura de afiliado
+// (`leela:ref:{slug}` · R9-E · RN-313), e o teste TRAVA isso: se um campo novo
+// da prova passar a ser persistido no dispositivo, este caso acusa.
+// =============================================================================
+describe('ACHADOS-REV · vetor 19 — os campos novos da prova não vazam para o dispositivo', () => {
+  it('depois da compra: nada de versão exibida, ipHash ou agente em storage ou na URL', async () => {
+    await irParaDados();
+    preencherDados();
+    marcarAceites();
+    await continuar();
+    await waitFor(() => expect(screen.getByText(/^Seu pedido$/)).toBeTruthy());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /pix/i }));
+    });
+    await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
+
+    // O payload da callable LEVA a versão exibida — é o contrato da RN-439.
+    const payload = createInscricaoCharge.mock.calls[0]?.[0] as {
+      aceites?: Record<string, unknown>;
+    };
+    expect(payload.aceites?.['versoesExibidas']).toBeDefined();
+    // …e não leva nada de origem: quem a deriva é o servidor, do rawRequest.
+    expect(payload.aceites?.['origem']).toBeUndefined();
+    expect(payload.aceites?.['ipHash']).toBeUndefined();
+    expect(payload.aceites?.['userAgent']).toBeUndefined();
+
+    // Armazenamento local: varredura de TODAS as chaves, valor a valor.
+    const proibidos = ['versoesExibidas', 'ipHash', 'userAgent', 'origem', 'saudeCustom'];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const chave = window.localStorage.key(i) ?? '';
+      const valor = window.localStorage.getItem(chave) ?? '';
+      for (const termo of proibidos) {
+        expect(chave).not.toContain(termo);
+        expect(valor).not.toContain(termo);
+      }
+    }
+    // E a URL não ganhou parâmetro nenhum no caminho.
+    for (const termo of proibidos) {
+      expect(window.location.search).not.toContain(termo);
+      expect(window.location.hash).not.toContain(termo);
+    }
+  });
+});
