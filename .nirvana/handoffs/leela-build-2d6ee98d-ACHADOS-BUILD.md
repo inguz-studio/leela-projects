@@ -195,36 +195,36 @@ Os 6 arquivos são todos os que consomem `buildInstallmentOptions` ou `computeSa
 
 ## B2t · S314-T2 · o número 2,89 entra como dado, e os 3,49 saem da documentação
 
-Commit . Território: ,
-, ,
- + suíte do termo.
+Commit `5568f33`. Território: `packages/core/src/platform/commercialTerms.ts`,
+`packages/core/src/pedidos/pagamento.ts`, `functions/src/seed/commercialTerms.seed.ts`,
+`functions/src/seed/pedidos.seed.ts` + suíte do termo.
 
-O  do termo canônico era 0 — o motor existia e estava desligado. Passou a 2,89.
+O `jurosAoMes` do termo canônico era 0 — o motor existia e estava desligado. Passou a 2,89.
 Nenhum literal de percentual entrou em código de cálculo: o seed do termo herda de
-, e a linha de log dele deixou de dizer "12x sem juros" fixo (agora é
+`DEFAULT_COMMERCIAL_TERMS`, e a linha de log dele deixou de dizer "12x sem juros" fixo (agora é
 derivada do próprio termo).
 
 **O conflito dos 3,49% foi resolvido de frente.** Dois lugares documentavam a decisão de 2026-07-05:
-o cabeçalho de  e a constante  do seed de pedidos. O
+o cabeçalho de `pedidos/pagamento.ts` e a constante `JUROS_AM_PCT` do seed de pedidos. O
 comentário do core deixou de citar percentual nenhum (aponta para o termo); a constante do seed
 passou a ESPELHAR o termo em vez de ter valor próprio.
 
-**Uma cópia da regra do dinheiro morreu.** O  do seed reimplementava a fórmula
-antiga — a mesma que a B1t aposentou. Agora chama , com
- porque o seed precifica pedido que JÁ existe e corte por parcela mínima é regra
+**Uma cópia da regra do dinheiro morreu.** O `parcelamento()` do seed reimplementava a fórmula
+antiga — a mesma que a B1t aposentou. Agora chama `buildInstallmentOptions`, com
+`parcelaMinima: 0` porque o seed precifica pedido que JÁ existe e corte por parcela mínima é regra
 de oferta, não de histórico.
 
 ### Falsificação
 
- de volta a 0: **2 failed | 12 passed** — caem "o termo canônico traz 2,89% a.m."
+`jurosAoMes` de volta a 0: **2 failed | 12 passed** — caem "o termo canônico traz 2,89% a.m."
 (expected 0 to be 2.89) e "12x de R$ 300 sai pela tabela Price".
 
 ### Gates
 
 | | |
 |---|---|
-| core  /  /  | 0 / 0 / exit 0 |
-| functions  /  | 0 / 0 |
+| core `tsc` / `eslint` / `tsup` | 0 / 0 / exit 0 |
+| functions `tsc` / `eslint` | 0 / 0 |
 | 9 suítes (termo, plano, provisionamento, venda, parcelamento) | **182/182** |
 | Suíte da landing, processo único | **310/310** em 28 arquivos |
 
