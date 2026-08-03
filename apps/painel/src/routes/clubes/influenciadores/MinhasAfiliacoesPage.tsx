@@ -19,7 +19,7 @@ import {
   useToast,
 } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
-import { PUBLIC_BASE } from '../../../lib/linkPublico';
+import { linkPromocional, MSG_SEM_LINK_PROMOCIONAL } from '../../../lib/linkPublico';
 import {
   getMinhasAfiliacoes,
   type ConversaoProjetada,
@@ -189,24 +189,27 @@ export function MinhasAfiliacoesPage(): JSX.Element {
   );
 
   // "Qual link uso": com o eventoSlug projetado pelo reader (E08-PROMOTOR ·
-  // T-extra TAMANHOS-GRADE), copia a URL COMPLETA `{landing}/{slug}?ref=` —
-  // o MESMO formato da AfiliadosPage do organizador (fonte única PUBLIC_BASE).
-  // Doc sem slug (função antiga em cache) degrada para copiar só o código.
+  // T-extra TAMANHOS-GRADE), copia a URL COMPLETA do gerador ÚNICO do core
+  // (S1215-T1 · RN-429) — a MESMA que a AfiliadosPage do organizador entrega,
+  // agora com o cupom vinculado dentro quando existe.
+  // Sem slug (função antiga em cache) ou sem base configurada, degrada para
+  // copiar só o código: um link torto distribuído é pior que código nu.
   function copiarLink(a: MinhaAfiliacao): void {
     const slug = (a as { eventoSlug?: string }).eventoSlug ?? '';
-    const completo = slug.length > 0;
-    const valor = completo
-      ? `${PUBLIC_BASE}/${slug}?ref=${encodeURIComponent(a.refCodigo)}`
-      : a.refCodigo;
+    const link = slug.length > 0 ? linkPromocional(slug, a.refCodigo, a.cupomCodigo) : null;
+    const valor = link ?? a.refCodigo;
     void navigator.clipboard
       .writeText(valor)
       .then(() =>
         toast({
           variant: 'success',
-          title: completo ? 'Link copiado' : 'Código copiado',
-          description: completo
-            ? 'Divulgue este link — as inscrições ficam atribuídas a você.'
-            : `Use ?ref=${a.refCodigo} no link do evento`,
+          title: link !== null ? 'Link copiado' : 'Código copiado',
+          description:
+            link !== null
+              ? 'Divulgue este link — as inscrições ficam atribuídas a você.'
+              : slug.length > 0
+                ? MSG_SEM_LINK_PROMOCIONAL
+                : `Use ?ref=${a.refCodigo} no link do evento`,
         }),
       )
       .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar' }));

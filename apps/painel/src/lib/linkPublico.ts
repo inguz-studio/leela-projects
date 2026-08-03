@@ -14,6 +14,8 @@
 // resolve os dois mundos).
 // =============================================================================
 
+import { montarLinkPromocional } from '@leela/core';
+
 /** Base do link público (landing), sem barra final. */
 export const PUBLIC_BASE: string =
   (import.meta.env.VITE_LEELA_URL as string | undefined)?.replace(/\/$/, '') ??
@@ -23,3 +25,45 @@ export const PUBLIC_BASE: string =
 export function linkEventoPublico(slug: string): string {
   return `${PUBLIC_BASE}/${slug}`;
 }
+
+// ---------------------------------------------------------------------------
+// Link compartilhável de afiliado e de assessoria (S1215-T1 · RN-429)
+// ---------------------------------------------------------------------------
+
+/**
+ * Base pública SÓ para o link promocional. Diferente do `PUBLIC_BASE` acima de
+ * propósito: aquele tem fallback para um domínio fixo porque serve o botão "Ver
+ * página pública", que é navegação interna do organizador — se a env faltar,
+ * ele abre a aba errada e a pessoa percebe na hora.
+ *
+ * Aqui não. Este link é COPIADO e DISTRIBUÍDO: vai para bio de influenciador,
+ * story e material impresso. Um fallback para domínio de terceiro produziria um
+ * link errado em massa, e quem clicasse cairia no site de outra empresa levando
+ * a comissão de ninguém. Sem env, o link não existe — é a mesma escolha que a
+ * RN-423 fez para o e-mail da compra, pelo mesmo motivo.
+ */
+function basePromocional(): string | undefined {
+  return import.meta.env.VITE_LEELA_URL as string | undefined;
+}
+
+/**
+ * O link compartilhável de um afiliado, ou `null` quando não dá para montar um
+ * honesto (sem base configurada, sem slug, ref fora do padrão). Wrapper fino do
+ * gerador ÚNICO do core — o painel não monta URL na mão. @pure
+ */
+export function linkPromocional(
+  eventoSlug: string,
+  refCodigo: string,
+  cupomCodigo?: string | null,
+): string | null {
+  return montarLinkPromocional({
+    baseUrl: basePromocional(),
+    eventoSlug,
+    refCodigo,
+    ...(cupomCodigo !== undefined ? { cupomCodigo } : {}),
+  });
+}
+
+/** Mensagem única de quando o link não pode ser gerado — honesta e acionável. */
+export const MSG_SEM_LINK_PROMOCIONAL =
+  'Link indisponível: a URL pública do produto não está configurada neste ambiente.';

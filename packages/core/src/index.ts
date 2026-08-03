@@ -1349,7 +1349,6 @@ export {
   ALFABETO_REF_CODIGO,
   REF_CODIGO_TAMANHO,
   gerarRefCodigo,
-  montarLinkAfiliado,
   JANELA_ATRIBUICAO_AFILIADO_DEFAULT_DIAS,
   JANELA_ATRIBUICAO_AFILIADO_MAX_DIAS,
   isJanelaAtribuicaoValida,
@@ -1360,6 +1359,18 @@ export {
   validarSalvarAfiliadoInput,
   parseAfiliado,
 } from './affiliation/afiliado';
+
+// Link compartilhável de afiliado e de assessoria (S1215-T1 · RN-429):
+// gerador ÚNICO — base pública + ref + cupom, `c` aceito na entrada e nunca
+// gerado, e `null` quando não dá para montar um link honesto.
+export type { LinkPromocionalInput } from './affiliation/linkPromocional';
+export {
+  CHAVE_CUPOM_URL,
+  CHAVE_CUPOM_URL_APELIDO,
+  normalizarBasePublica,
+  montarLinkPromocional,
+  cupomDaEntrada,
+} from './affiliation/linkPromocional';
 
 // ---------------------------------------------------------------------------
 // E-mail transacional (S-R9-14 · RN-137 · padrão ADR-006): port plugável;

@@ -83,6 +83,10 @@ export function mkEventoAfiliado(
     programaAfiliacaoRef: over.programaAfiliacaoRef ?? 'eventos/meia-maratona-floripa-2026/programaAfiliacao/current',
     comissaoPct: over.comissaoPct ?? 15,
     cupom: over.cupom ?? 'CLUBE10',
+    // S1215-T1 (RN-429): o `refCodigo` é o que permite DERIVAR o link master.
+    // O `linkMaster` abaixo continua na fixture de propósito — ele é o legado
+    // com domínio de terceiro que nenhuma superfície pode voltar a exibir.
+    refCodigo: over.refCodigo ?? 'CLUBECPS',
     linkMaster: over.linkMaster ?? 'be-hero.com.br/e/meia-floripa?ref=cps',
     janelaAtribuicaoDias: over.janelaAtribuicaoDias ?? 30,
     termosEspelho: over.termosEspelho ?? {

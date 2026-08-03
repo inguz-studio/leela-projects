@@ -107,7 +107,25 @@ export interface ParceriaEventoAfiliado extends ParceriaBase {
   comissaoPct: number;
   /** 🔁 Cupom exclusivo do clube — null quando o programa não oferece */
   cupom: string | null;
-  /** 🔁 Link master rastreável (RN-125) */
+  /**
+   * 🔁 `refCodigo` do afiliado que representa este clube no evento (S1215-T1 ·
+   * RN-429). É o que falta para o link master ser DERIVADO em vez de digitado:
+   * o gerador precisa de base + slug + ref, e a parceria já traz slug
+   * (`eventoId`, docId = slug) e cupom.
+   *
+   * OPCIONAL: parceria anterior à RN-429 não o tem, e nesse caso o painel
+   * mostra que não há link em vez de mostrar o texto legado — que aponta para
+   * `beh.ro`, domínio de terceiro que a RN-423 expulsou do produto.
+   */
+  refCodigo?: string;
+  /**
+   * 🔁 Link master rastreável (RN-125).
+   *
+   * LEGADO a partir da RN-429: o campo continua no documento porque parceria
+   * antiga ainda o carrega, mas NENHUMA superfície o exibe — o link exibido é
+   * derivado do gerador único. Ler daqui traria `beh.ro` de volta pela porta
+   * dos fundos.
+   */
   linkMaster: string;
   /** 🔁 Janela de atribuição da conversão, em dias */
   janelaAtribuicaoDias: number;
@@ -170,6 +188,10 @@ export const CAMPOS_ESPELHO_PARCERIA = [
   'comissaoPct',
   'cupom',
   'linkMaster',
+  // S1215-T1: o `refCodigo` entra no conjunto INTOCÁVEL pelo clube junto com o
+  // resto do espelho — quem atribui comissão é o organizador, e um clube que
+  // pudesse escrever o próprio `ref` escreveria o de outro.
+  'refCodigo',
   'janelaAtribuicaoDias',
   'termosEspelho',
   'programaAfiliacaoRef',

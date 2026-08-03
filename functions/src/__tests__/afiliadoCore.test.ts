@@ -14,7 +14,7 @@ import {
   gerarRefCodigo,
   isComissaoAfiliadoValida,
   isRefCodigoValido,
-  montarLinkAfiliado,
+  montarLinkPromocional,
   normalizarRefCodigo,
   parseAfiliado,
   REF_CODIGO_TAMANHO,
@@ -42,10 +42,20 @@ describe('refCodigo (unicidade por chave — padrão cupom E04)', () => {
     expect(isRefCodigoValido(42)).toBe(false);
   });
 
-  it('monta o link copiável {base}/{slug}?ref=', () => {
-    expect(montarLinkAfiliado('https://leela.dev/', 'meia-floripa', 'DIONEY10')).toBe(
-      'https://leela.dev/meia-floripa?ref=DIONEY10'
-    );
+  // S1215-T1 (RN-429): o link copiável passou a sair de `montarLinkPromocional`,
+  // gerador ÚNICO que valida a base e leva o cupom junto. O `montarLinkAfiliado`
+  // que este caso cobria foi REMOVIDO — ele aceitava qualquer string como base e
+  // devolvia `beh.ro/slug?ref=` sem reclamar. A cobertura cheia do gerador vive
+  // em `apps/painel/src/routes/clubes/_lib/__tests__/linkPromocional.test.ts`;
+  // aqui fica só o contrato que este arquivo já guardava: o `?ref=` sai do link.
+  it('monta o link copiável {base}/{slug}?ref= pelo gerador único', () => {
+    expect(
+      montarLinkPromocional({
+        baseUrl: 'https://leela.dev/',
+        eventoSlug: 'meia-floripa',
+        refCodigo: 'DIONEY10',
+      })
+    ).toBe('https://leela.dev/meia-floripa?ref=DIONEY10');
   });
 });
 

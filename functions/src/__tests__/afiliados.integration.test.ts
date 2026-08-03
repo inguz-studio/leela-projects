@@ -791,6 +791,99 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(afReplay.get('conversoes')).toBe(0);
   });
 
+  // ── D6/D7 · OS DOIS DESEMPATES DE COMISSÃO (S1215-T1 · RN-433) ───────────
+  //
+  // A RN-433 RATIFICA o comportamento vigente do kernel; não o altera. O que
+  // ela acrescenta é que o desempate deixa de existir só em código e passa a
+  // estar escrito — e escrito num teste, que é o único lugar onde uma regra de
+  // dinheiro não apodrece. O contrato de review antagonista da B1 pede as duas
+  // direções "provadas com teste, não com leitura", e é o que estes dois casos
+  // fazem, um para cada lado.
+  //
+  // Nenhuma linha de `createInscricaoCharge` foi tocada por esta lane (RN-433).
+
+  it('D6 (S1215-T1 · RN-433): link de A + cupom digitado de B ⇒ B leva a comissão', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Afiliado A', refCodigo: 'AFILIADOA',
+    }, marina);
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Afiliado B', refCodigo: 'AFILIADOB',
+      cupomCodigo: 'FLORIPA10OFF',
+    }, marina);
+
+    // A pessoa chegou pelo link de A (clique de ontem) e digitou o cupom de B.
+    const cliqueDeA = AGORA.getTime() - DIA_MS;
+    const antesDaChamada = Date.now();
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-desemp-0000001', {
+        ref: { codigo: 'AFILIADOA', clicadoEmMillis: cliqueDeA },
+        cupomCodigo: 'FLORIPA10OFF',
+      }),
+      caller
+    );
+
+    const pag = await db.doc(`pagamentos/${r.pagamentoId}`).get();
+    // B leva: o cupom aplicado é sinal MAIS FORTE que o clique.
+    expect(pag.get('afiliado')).toMatchObject({
+      afiliadoId: 'AFILIADOB', refCodigo: 'AFILIADOB', origem: 'cupom',
+    });
+    // …e o instante do clique de A é DESCARTADO no processo: o carimbo vira o
+    // AGORA DO SERVIDOR, não o clique declarado. A asserção é por janela (e não
+    // por igualdade com um instante capturado no import do arquivo) porque o
+    // relógio de quem carimba é o da chamada.
+    const carimbo = pag.get('afiliado.clicadoEmMillis') as number;
+    expect(carimbo).not.toBe(cliqueDeA);
+    expect(carimbo).toBeGreaterThanOrEqual(antesDaChamada);
+    expect(carimbo).toBeLessThanOrEqual(Date.now());
+    expect(r.valores.desconto).toBeGreaterThan(0);
+
+    // A confirmação carimba a conversão em B, e A fica com zero.
+    await confirmarPedido(r.pedidoId, 'evt-desemp-1');
+    const afA = await db.doc(`eventos/${EVENTO_ID}/afiliados/AFILIADOA`).get();
+    const afB = await db.doc(`eventos/${EVENTO_ID}/afiliados/AFILIADOB`).get();
+    expect(afA.get('conversoes')).toBe(0);
+    expect(afB.get('conversoes')).toBe(1);
+  });
+
+  it('D7 (S1215-T1 · RN-433): link de A + cupom SEM afiliado ⇒ A leva a comissão e não leva o crédito do desconto', async () => {
+    await salvarAfiliadoCore(db, {
+      eventoId: EVENTO_ID, tipo: 'clube', nome: 'Afiliado A', refCodigo: 'AFILIADOA',
+    }, marina);
+    // Cupom GERAL do evento — sem `afiliadoRef`, não pertence a ninguém.
+    await db.doc(`eventos/${EVENTO_ID}/cupons/GERAL10`).set({
+      id: 'GERAL10', tenantId: CASTELO_ID, codigo: 'GERAL10',
+      tipo: 'percentual', valor: 10, tetoUso: null, usos: 0,
+      inicioEm: tsRel(-30), fimEm: tsRel(30),
+    });
+
+    const clique = AGORA.getTime() - DIA_MS;
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      chargeInput('chave-desemp-0000002', {
+        ref: { codigo: 'AFILIADOA', clicadoEmMillis: clique },
+        cupomCodigo: 'GERAL10',
+      }),
+      caller
+    );
+
+    const pag = await db.doc(`pagamentos/${r.pagamentoId}`).get();
+    // A SOBREVIVE: o cupom não pertence a afiliado nenhum, então o `?ref=` vale.
+    expect(pag.get('afiliado')).toMatchObject({
+      afiliadoId: 'AFILIADOA', refCodigo: 'AFILIADOA', origem: 'ref',
+    });
+    // O clique de A é PRESERVADO aqui — nada o descartou (contraste com o D6).
+    expect(pag.get('afiliado.clicadoEmMillis')).toBe(clique);
+    // O desconto existe e é do cupom geral: A não leva o crédito dele.
+    expect(r.valores.desconto).toBeGreaterThan(0);
+    expect(pag.get('cupom.codigo')).toBe('GERAL10');
+    expect(pag.get('cupom.afiliadoId')).toBeUndefined();
+
+    await confirmarPedido(r.pedidoId, 'evt-desemp-2');
+    const afA = await db.doc(`eventos/${EVENTO_ID}/afiliados/AFILIADOA`).get();
+    expect(afA.get('conversoes')).toBe(1);
+  });
+
   // ── E · Readers (RN-318/319) ─────────────────────────────────────────────
 
   it('E1: getMinhasAfiliacoes devolve SÓ as afiliações do uid (projeção sem PII de comprador); organizador lista as do tenant', async () => {

@@ -5,7 +5,7 @@
 // RN-315, o RESUMO CONSOLIDADO cross-eventos (KPIs somados só das próprias
 // afiliações — RN-318) e o "copiar código de indicação" (JTBD "qual link uso").
 // =============================================================================
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ToastProvider } from '@leela/design-system';
 import { MinhasAfiliacoesPage } from '../MinhasAfiliacoesPage';
@@ -59,11 +59,19 @@ async function primeiroCartao(): Promise<HTMLElement> {
   return cartoes[0] as HTMLElement;
 }
 
+/** Base pública do ambiente (RN-423) — o gerador do link a exige (S1215-T1). */
+const BASE = 'https://leela-landing.web.app';
+
 beforeEach(() => {
   mocks.getMinhasAfiliacoes.mockReset();
   writeText.mockReset();
   writeText.mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText } });
+  vi.stubEnv('VITE_LEELA_URL', BASE);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('MinhasAfiliacoesPage', () => {
@@ -148,10 +156,40 @@ describe('MinhasAfiliacoesPage', () => {
     fireEvent.click(
       within(cartao).getByRole('button', { name: /copiar link de indicação/i }),
     );
-    expect(writeText).toHaveBeenCalledWith(
-      expect.stringMatching(/\/meia-floripa-2026\?ref=DIONEY10$/),
-    );
+    expect(writeText).toHaveBeenCalledWith(`${BASE}/meia-floripa-2026?ref=DIONEY10`);
     expect(await screen.findByText('Link copiado')).toBeInTheDocument();
+  });
+
+  // S1215-T1 · RN-429 — o cupom vinculado viaja DENTRO do link do promotor.
+  // É o ponto inteiro da feature: antes o influenciador copiava um link que
+  // atribuía a conversão e não aplicava desconto nenhum.
+  it('copiar link: o cupom vinculado entra no link (S1215-T1 · RN-429)', async () => {
+    mocks.getMinhasAfiliacoes.mockResolvedValue({
+      afiliacoes: [afiliacao({ refCodigo: 'DIONEY10', cupomCodigo: 'FLORIPA10' })],
+    });
+    renderPage();
+    const cartao = await primeiroCartao();
+    fireEvent.click(
+      within(cartao).getByRole('button', { name: /copiar link de indicação/i }),
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      `${BASE}/meia-floripa-2026?ref=DIONEY10&cupom=FLORIPA10`,
+    );
+  });
+
+  // Ambiente sem base configurada: degrada para o CÓDIGO, nunca para um link
+  // torto com domínio de terceiro (RN-423/429). O código nu ainda é usável —
+  // a pessoa cola o `?ref=` no link do evento.
+  it('sem base pública configurada, copia o código e diz o porquê (RN-429)', async () => {
+    vi.stubEnv('VITE_LEELA_URL', '');
+    mocks.getMinhasAfiliacoes.mockResolvedValue({ afiliacoes: [afiliacao({ refCodigo: 'DIONEY10' })] });
+    renderPage();
+    const cartao = await primeiroCartao();
+    fireEvent.click(
+      within(cartao).getByRole('button', { name: /copiar link de indicação/i }),
+    );
+    expect(writeText).toHaveBeenCalledWith('DIONEY10');
+    expect(await screen.findByText('Código copiado')).toBeInTheDocument();
   });
 
   it('gate de desconto RN-315: abaixo do mínimo mostra progresso e nota "sem retroativo"', async () => {

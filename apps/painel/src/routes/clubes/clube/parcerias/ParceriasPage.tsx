@@ -24,6 +24,8 @@ import {
   type VarianteDestrutiva,
 } from './ParceriaDestrutivaModal';
 import { TermosModal } from './TermosModal';
+import { linkDaParceria } from '../../_lib/linkParceria';
+import { MSG_SEM_LINK_PROMOCIONAL } from '../../../../lib/linkPublico';
 import { useParcerias } from '../../_data/parcerias';
 import { useCriarPatrocinador, useTransicionarParceria } from '../../../../lib/query/mutations';
 import type { PatrocinadorInput } from '../../_lib/parcerias';
@@ -79,10 +81,21 @@ export function ParceriasPage(): JSX.Element {
     }
   }
 
+  // S1215-T1 (RN-429): o link master é DERIVADO pelo gerador único do core, não
+  // mais lido de `p.linkMaster`. O campo legado guarda `beh.ro/mfl26?c=frc` — o
+  // domínio dos mocks Be Hero, que a RN-423 expulsou do e-mail da compra, mais
+  // uma chave `c` que nenhum arquivo do repo lê. Copiar aquilo é entregar à
+  // assessoria um link que não aplica cupom, não atribui conversão e leva quem
+  // clicar para o site de outra empresa.
   function copiarLink(p: ParceriaEventoAfiliado): void {
+    const link = linkDaParceria(p);
+    if (link === null) {
+      toast({ variant: 'danger', title: 'Sem link', description: MSG_SEM_LINK_PROMOCIONAL });
+      return;
+    }
     void navigator.clipboard
-      ?.writeText(p.linkMaster)
-      .then(() => toast({ variant: 'success', title: 'Link master copiado' }))
+      ?.writeText(link)
+      .then(() => toast({ variant: 'success', title: 'Link master copiado', description: link }))
       .catch(() => toast({ variant: 'danger', title: 'Não foi possível copiar o link' }));
   }
 

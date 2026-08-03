@@ -8,6 +8,8 @@
 import { Badge, Modal } from '@leela/design-system';
 import type { ParceriaEventoAfiliado } from '@leela/core';
 import { formatBRL } from '../../_lib/parcerias';
+import { linkDaParceria } from '../../_lib/linkParceria';
+import { MSG_SEM_LINK_PROMOCIONAL } from '../../../../lib/linkPublico';
 
 export interface TermosModalProps {
   open: boolean;
@@ -49,10 +51,13 @@ export function TermosModal({ open, onOpenChange, parceria }: TermosModalProps):
           <Linha rotulo="Prazo de repasse" valor={`${t.prazoRepasseDiasUteis} dias úteis`} />
           <Linha rotulo="Teto mensal" valor={t.tetoMensal !== null ? formatBRL(t.tetoMensal) : 'Sem limite'} />
         </div>
+        {/* S1215-T1 (RN-429): DERIVADO, nunca o `linkMaster` do doc — aquele
+            campo guarda `beh.ro`, domínio de terceiro. Sem derivar, o modal diz
+            que não há link em vez de exibir o legado. */}
         <div className="flex flex-col gap-[var(--spacing-1)]">
           <span className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">Link master</span>
           <span className="break-all text-[length:var(--font-size-sm)] text-[var(--text-primary)]">
-            {parceria.linkMaster}
+            {linkDaParceria(parceria) ?? MSG_SEM_LINK_PROMOCIONAL}
           </span>
         </div>
       </div>

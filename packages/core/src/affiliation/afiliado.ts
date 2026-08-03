@@ -109,18 +109,12 @@ export function gerarRefCodigo(random: () => number = Math.random): string {
   return codigo;
 }
 
-/**
- * Link de afiliado copiável: `{base}/{slug}?ref={refCodigo}` (RN-313 — o
- * `?ref=` é capturado na landing e atribuído na venda). @pure
- */
-export function montarLinkAfiliado(
-  baseUrl: string,
-  eventoSlug: string,
-  refCodigo: string
-): string {
-  const base = baseUrl.replace(/\/+$/, '');
-  return `${base}/${eventoSlug}?ref=${encodeURIComponent(refCodigo)}`;
-}
+// O link copiável do afiliado NÃO mora mais aqui. `montarLinkAfiliado` foi
+// removido na S1215-T1 (RN-429): ele montava `{base}/{slug}?ref=` sem cupom e
+// sem validar a base, então `montarLinkAfiliado('beh.ro', …)` devolvia uma
+// string com domínio de terceiro em vez de recusar. Dois geradores é o jeito de
+// "gerador único" morrer no primeiro caminho novo que escolher o errado.
+// O gerador é `montarLinkPromocional` em `./linkPromocional`.
 
 // ---------------------------------------------------------------------------
 // Janela de atribuição (reusa dentroDaJanelaAtribuicao do E05 no consumo)

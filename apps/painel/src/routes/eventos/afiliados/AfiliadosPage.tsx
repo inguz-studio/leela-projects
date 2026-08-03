@@ -25,7 +25,7 @@ import {
   type AfiliadoDoTenant,
   type SalvarAfiliadoClientInput,
 } from '@leela/api-client';
-import { PUBLIC_BASE } from '../../../lib/linkPublico';
+import { linkPromocional, MSG_SEM_LINK_PROMOCIONAL } from '../../../lib/linkPublico';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 import { AfiliadoModal } from './AfiliadoModal';
 
@@ -87,8 +87,15 @@ export function AfiliadosPage(): JSX.Element {
     );
   }, [afiliados, busca, filtroTipo]);
 
+  // S1215-T1 (RN-429): o link sai do gerador ÚNICO do core, com o cupom
+  // vinculado dentro. Deixou de ser montado à mão aqui — três superfícies
+  // montavam a mesma URL de três jeitos, e só uma delas levaria o cupom.
   function copiarLink(a: AfiliadoDoTenant): void {
-    const link = `${PUBLIC_BASE}/${evento.slug}?ref=${encodeURIComponent(a.refCodigo)}`;
+    const link = linkPromocional(evento.slug, a.refCodigo, a.cupomCodigo);
+    if (link === null) {
+      toast({ variant: 'danger', title: 'Sem link', description: MSG_SEM_LINK_PROMOCIONAL });
+      return;
+    }
     void navigator.clipboard
       .writeText(link)
       .then(() => toast({ variant: 'success', title: 'Link copiado', description: link }))
