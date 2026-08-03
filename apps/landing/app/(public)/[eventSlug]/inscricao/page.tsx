@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cupomDaEntrada } from '@leela/core';
 import { getEventoPublicado } from '@/lib/leitor';
 import { rotuloEstadoVenda } from '@/lib/estadoVenda';
 import { CheckoutFlow } from './checkout/CheckoutFlow';
@@ -32,10 +33,16 @@ export default async function InscricaoPage({ params, searchParams }: Props): Pr
   // Atribuição preservada pelo CTA: cupom pré-preenche o campo; `ref`
   // (R9-E · RN-313) segue para o checkout — o clique original (localStorage,
   // RefTracker) tem precedência de instante; utm_* ficam informativos.
-  const cupom = primeiro(searchParams['cupom']);
+  //
+  // S1215-T1/T2 (RN-429/430): o cupom sai do leitor ÚNICO do core, que aceita
+  // `cupom` e o apelido histórico `c` — link já impresso com `?c=` continua
+  // aplicando desconto. Código podre vira `null` aqui e não viaja até a
+  // cotação para ser recusado lá. Sem cupom na URL, o `CheckoutFlow` ainda
+  // procura o que o `CupomTracker` guardou na página do evento.
+  const cupom = cupomDaEntrada((chave) => primeiro(searchParams[chave]) ?? null);
   const ref = primeiro(searchParams['ref']);
   const atribuicao = {
-    ...(cupom !== undefined && cupom.length > 0 ? { cupom } : {}),
+    ...(cupom !== null ? { cupom } : {}),
     ...(ref !== undefined && ref.length > 0 ? { ref } : {}),
   };
 

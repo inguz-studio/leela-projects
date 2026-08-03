@@ -48,6 +48,7 @@ import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
 import { CheckoutStepper } from './CheckoutStepper';
 import { LeelaWordmark } from './LeelaWordmark';
 import { mascaraCep, mascaraTelefone } from './cep';
+import { lerCupomCapturado } from '../../CupomTracker';
 
 // Copy humana do erro de sessão (BC-2): o comprador NUNCA vê jargão de infra
 // ("Firebase Anonymous Auth", erro cru do SDK) — o detalhe técnico fica só no
@@ -243,6 +244,15 @@ export function CheckoutFlow({
   // o cupom do link; `erroCupomUrl` é o banner honesto quando ele não cola.
   const [cupomUrlPendente, setCupomUrlPendente] = useState<boolean>(Boolean(atribuicao.cupom));
   const [erroCupomUrl, setErroCupomUrl] = useState<string | null>(null);
+  // S1215-T2 (RN-430): o cupom do LINK, que pode vir da URL desta página OU do
+  // que o `CupomTracker` guardou na página do evento. Estado, e não constante,
+  // porque a leitura do storage só pode acontecer depois da montagem — este
+  // componente também renderiza no servidor.
+  const [cupomDoLink, setCupomDoLink] = useState<string | null>(atribuicao.cupom ?? null);
+  // Origem do cupom EFETIVAMENTE aplicado: alimenta a marca "(desconto
+  // aplicado)" na linha de desconto do resumo (D-KC-8). É exibição, nunca
+  // cálculo — o número continua vindo inteiro da cotação.
+  const [origemCupom, setOrigemCupom] = useState<'link' | 'manual' | null>(null);
   // D-4 (S1209-T1): o cupom agora é aplicável já no step 0, longe do bloco de
   // totais. A recusa do cupom deixa de se disfarçar de "erro de cotação" (que
   // significa "não consegui calcular o total") e ganha canal próprio.
@@ -610,6 +620,30 @@ export function CheckoutFlow({
     return () => clearTimeout(timer);
   }, [precisaCotar, podeCotar, cupomUrlPendente, assinaturaAtual, cupomAplicado, recotarNonce]);
 
+  // S1215-T2 (RN-430) · o cupom do link SOBREVIVE à navegação. Sem cupom na URL
+  // do checkout, procura o que o `CupomTracker` guardou na página do evento.
+  //
+  // Roda em efeito de montagem, e não no inicializador do `useState`, por dois
+  // motivos que não são estilo: este componente renderiza no SERVIDOR (a rota é
+  // `force-dynamic`, mas o Client Component ainda é pré-renderizado), onde
+  // `window` não existe; e ler storage durante o render produziria HTML de
+  // servidor diferente do primeiro render do cliente — hydration mismatch na
+  // tela do dinheiro.
+  //
+  // A URL VENCE o storage: é o clique de agora contra o clique de antes, a
+  // mesma precedência que o `refDaCompra` aplica na atribuição.
+  useEffect(() => {
+    if (atribuicao.cupom !== undefined) return;
+    const guardado = lerCupomCapturado(evento.slug);
+    if (guardado === null) return;
+    setCupomDoLink(guardado.codigo);
+    setCupomInput((atual) => (atual.length > 0 ? atual : guardado.codigo));
+    setCupomUrlPendente(true);
+    // Deps vazias DE PROPÓSITO: o storage é lido uma vez, na montagem, e daí em
+    // diante quem manda é o que a pessoa fizer na tela. Re-ler traria de volta
+    // um cupom que ela acabou de remover.
+  }, []);
+
   // A-2 · auto-aplica o cupom vindo da URL. Na 1ª cotação possível, tenta o
   // cupom do link: sucesso ⇒ vira `cupomAplicado` (o efeito acima recota e
   // exibe o desconto); falha ⇒ banner honesto e segue sem cupom (o servidor
@@ -621,7 +655,7 @@ export function CheckoutFlow({
   // o efeito de cima assumir, o que no step 0 travaria o "Calculando…").
   useEffect(() => {
     if (!cupomUrlPendente || !podeCotar) return;
-    const codigo = (atribuicao.cupom ?? '').trim().toUpperCase();
+    const codigo = (cupomDoLink ?? '').trim().toUpperCase();
     if (codigo.length === 0) {
       setCupomUrlPendente(false);
       return;
@@ -637,6 +671,7 @@ export function CheckoutFlow({
         // `cupomAplicado` recém-escrito e peça a mesma coisa de novo.
         assinaturaCotadaRef.current = assinaturaDe(codigo);
         setCupomAplicado(codigo);
+        setOrigemCupom('link');
         setCotacao(r.data);
         setErroCotacao(null);
         setErroCupomUrl(null);
@@ -648,7 +683,7 @@ export function CheckoutFlow({
     return () => {
       vivo = false;
     };
-  }, [cupomUrlPendente, podeCotar, atribuicao.cupom, cotarCom]);
+  }, [cupomUrlPendente, podeCotar, cupomDoLink, cotarCom]);
 
   // Qualquer mudança de preço invalida a cobrança já criada (evita replay com
   // valores antigos — a UI reflete sempre a seleção atual).
@@ -677,6 +712,10 @@ export function CheckoutFlow({
       // efeito não precisa cotar de novo por causa do `cupomAplicado` novo.
       assinaturaCotadaRef.current = assinaturaDe(code);
       setCupomAplicado(code);
+      // RN-430: o código digitado à mão PREVALECE sobre o do link — é ação
+      // deliberada da pessoa. A marca do resumo passa a não ser "do link"
+      // mesmo quando o texto digitado for igual ao que o link trazia.
+      setOrigemCupom('manual');
       setCotacao(r.data);
       setErroCotacao(null);
     } else {
@@ -691,6 +730,11 @@ export function CheckoutFlow({
     setErroCupom(null);
     setCupomAplicado(null);
     setCupomInput('');
+    setOrigemCupom(null);
+    // S1215-T2: remover DESLIGA o cupom do link também. Sem isto, o efeito de
+    // auto-apply poderia trazer de volta o que a pessoa acabou de tirar.
+    setCupomDoLink(null);
+    setCupomUrlPendente(false);
   }, []);
 
   // BC-1 · retry manual da cotação: bump do nonce → o efeito de cotação re-roda
@@ -1223,6 +1267,7 @@ export function CheckoutFlow({
               onRemoverCupom={removerCupom}
               aplicandoCupom={aplicandoCupom}
               erroCupomUrl={erroCupom ?? erroCupomUrl}
+              descontoVeioDoLink={origemCupom === 'link'}
               forma={forma}
               onForma={setForma}
               parcelas={parcelas}

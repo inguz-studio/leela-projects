@@ -15,6 +15,7 @@ import { OrganizadorSection } from './sections/OrganizadorSection';
 import { CtaInscricao } from './CtaInscricao';
 import { CtaFallback } from './CtaFallback';
 import { RefTracker } from './RefTracker';
+import { CupomTracker } from './CupomTracker';
 import { ShareBlock } from './ShareBlock';
 import { PerfilView } from '../_perfil/PerfilView';
 
@@ -183,6 +184,15 @@ export default async function EventoPage({ params }: PageProps): Promise<React.J
           padrão do CtaInscricao); zero efeito no HTML cacheado. */}
       <Suspense fallback={null}>
         <RefTracker slug={evento.slug} />
+      </Suspense>
+
+      {/* Captura do cupom do link (S1215-T2 · RN-430): guarda por evento com a
+          MESMA disciplina do `?ref=`, para o desconto sobreviver à navegação
+          (hoje ele morre no primeiro clique em "regulamento"). Mesmo padrão de
+          Suspense — client-only, `useSearchParams`, zero efeito no HTML
+          cacheado: a página do evento continua estática. */}
+      <Suspense fallback={null}>
+        <CupomTracker slug={evento.slug} />
       </Suspense>
 
       {/* Seções orientadas por configuração (ativas, na ordem publicada).

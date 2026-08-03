@@ -41,6 +41,7 @@ export function StepResumo({
   onRemoverCupom,
   aplicandoCupom,
   erroCupomUrl,
+  descontoVeioDoLink = false,
   forma,
   onForma,
   parcelas,
@@ -63,6 +64,13 @@ export function StepResumo({
   aplicandoCupom: boolean;
   /** A-2 · aviso honesto quando o cupom do link não pôde ser aplicado. */
   erroCupomUrl: string | null;
+  /**
+   * S1215-T2 (RN-430 · D-KC-8): o cupom aplicado chegou pelo LINK, não pelo
+   * campo manual. Só marca a linha de desconto — não muda um centavo. O
+   * digitado à mão não acende a marca: ali o `CupomCampo` já diz "Cupom X
+   * aplicado" e repetir seria ruído.
+   */
+  descontoVeioDoLink?: boolean;
   forma: FormaUI;
   onForma: (f: FormaUI) => void;
   parcelas: number;
@@ -271,9 +279,25 @@ export function StepResumo({
               <dd className="text-text-primary">{formatarPreco(cotacao.valorBase)}</dd>
             </div>
             {cotacao.desconto > 0 ? (
-              <div className="flex items-center justify-between">
-                <dt className="text-text-secondary">Desconto</dt>
-                <dd className="text-feedback-success-fg">− {formatarPreco(cotacao.desconto)}</dd>
+              <div className="flex items-center justify-between gap-3">
+                {/* S1215-T2 · RN-430/D-KC-8: quando o desconto veio do link, a
+                    linha DIZ isso. É marca de exibição — o número continua
+                    vindo inteiro da cotação, e a interface não soma um
+                    centavo. Com o código junto porque "(desconto aplicado)"
+                    sozinho não conta QUAL cupom entrou, e o campo manual do
+                    step 0 some assim que o cupom cola. */}
+                <dt className="text-text-secondary">
+                  Desconto
+                  {descontoVeioDoLink ? (
+                    <span className="block text-xs text-text-tertiary sm:inline sm:ml-1">
+                      {cupomAtivo !== null ? `· cupom ${cupomAtivo.codigo} do seu link ` : ''}
+                      (desconto aplicado)
+                    </span>
+                  ) : null}
+                </dt>
+                <dd className="whitespace-nowrap text-feedback-success-fg">
+                  − {formatarPreco(cotacao.desconto)}
+                </dd>
               </div>
             ) : null}
             {/* RN-347: linha SÓ quando o evento repassa a taxa ao comprador
