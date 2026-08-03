@@ -15,7 +15,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
 - [x] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
 - [x] **A4 · S1216-T4** — total por opção sempre que os dois existirem
-- [ ] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
+- [x] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
 - [ ] **C2 · S1217-T2** — nenhuma forma pré-selecionada
 - [ ] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
 - [ ] **C4 · S1217-T4** — versão exibida conferida pelo servidor
@@ -425,11 +425,89 @@ Os três: os totais iguais nas duas opções, a derivação parcial e a nota do 
 
 ---
 
+## C1 · S1217-T1 · o aceite muda de etapa, a prova não muda de dono
+
+Commit `9abf1a6`. Território: `.../checkout/CheckoutFlow.tsx`, `.../checkout/StepDados.tsx`,
+`.../checkout/StepPagamento.tsx` + o teste novo `checkout-s1217-aceites-inscricao.test.tsx` e oito
+arquivos de teste que atravessavam o PAGAR.
+
+O bloco `AceitesCompra` saiu do pagamento e passou a fechar a etapa de dados. Ele muda de LUGAR,
+não de conteúdo: os mesmos dois checkboxes, os mesmos dois modais, os mesmos rótulos de versão. O
+gate de constraint que morava sobre o botão de pagar passou a morar sobre o "Continuar" do step 1.
+
+**O `StepDados` recebeu um slot, não nove props.** `aceites?: React.ReactNode` — a política, as
+versões e o travamento pela cobrança já moram no `CheckoutFlow`, e é o mesmo arranjo que o
+`conteudoCartao` do `SeletorForma` usa. O `StepPagamento` perdeu sete props e ganhou uma
+(`aceitesOk`): o gate do botão continua de pé como defesa em profundidade — a tela não oferece um
+ato que o servidor recusaria.
+
+**O que NÃO mudou, e é o coração da regra.** O servidor continua recusando `createInscricaoCharge`
+sem os dois booleanos (flip F-4a), o carimbo continua nascendo na transação com versão e
+`materialHash` lidos ali dentro, e o cliente continua sem canal para forjar versão ou antedatar
+aceite. Nenhuma linha de `createInscricaoCharge.ts` foi tocada nesta task.
+
+**Travado no retorno (RN-438).** `desabilitado={charge !== null}` viaja com o bloco: como agora ele
+vive numa etapa para a qual a pessoa pode voltar, voltar com a cobrança criada mostra os dois
+marcados e travados. O caso não usa `fireEvent.click` para "provar" que não desmarca — clique
+sintético atravessa `disabled` no jsdom e provaria o contrário do que acontece na tela; a asserção
+é sobre o atributo, que é o guarda real.
+
+### ⚠️ O defeito que a migração produz, e que a C2 desfaz
+
+Com o aceite dado antes, **chegar ao PAGAR com PIX pré-selecionado passa a criar cobrança
+sozinho**. Isso não é hipótese: caiu de dois testes existentes no mesmo instante em que a C1
+entrou — `checkout-s1209-cards-atleta` deixou de achar o botão "Gerar código PIX" (a cobrança já
+tinha nascido) e `checkout-ckux-rev-cotacao` viu `createInscricaoCharge` chamado 1× onde esperava
+zero. É exatamente o que a D-ACH-12/RN-440 previu, e a **C2 é quem o desfaz tirando a
+pré-seleção**. Os dois casos ficaram com asserção relativa e comentário apontando para a C2.
+
+**C1 não vai ao ar sem C2.** Está escrito no `Directive:` do commit.
+
+### Falsificação
+
+Os três componentes restaurados do HEAD e o arquivo novo re-executado:
+
+```
+Tests  7 failed | 1 passed (8)
+```
+
+O único que passa nos dois mundos é a guarda "o step 0 NÃO os apresenta" — ela é sobre onde os
+aceites **não** vão, e era verdade antes e depois.
+
+### Oito arquivos de teste que atravessavam o PAGAR
+
+Nenhum foi apagado. Cinco `preencherDados()` ganharam os dois cliques de aceite (o helper leva o
+fluxo ao PAGAR, então ele agora marca o que a etapa exige); três laços
+`for (const c of getAllByRole('checkbox')) click(c)` no PAGAR foram removidos, porque lá não há
+mais checkbox. Dois casos que carimbavam a colocação antiga foram reescritos:
+
+- `checkout-form-aceites.test.tsx` — o arquivo inteiro seguiu o bloco. As asserções de modal,
+  versão e vocabulário C1-LEGAL (participante/experiência, zero "atleta") passaram a mirar
+  `AceitesCompra` diretamente, que é onde sempre pertenceram; o `StepPagamento` ficou com o gate do
+  botão e ganhou dois casos novos: a etapa não exibe mais checkbox, e sem aceite ela aponta ONDE
+  ele é dado em vez de deixar a pessoa no beco.
+- `checkout-dec0729-pagar.test.tsx` — o achado 3 da DEC-0729 tinha duas metades. A unificação de
+  resumo e pagamento numa tela só continua de pé e continua provada; a metade "aceites juntos" foi
+  superseded pela RN-438 e virou a asserção inversa (zero checkbox no PAGAR). O caso "sem os 2
+  aceites nenhuma cobrança nasce" foi reescrito para a etapa certa: sem aceite não se **chega** ao
+  pagamento, e a cobrança nunca é pedida.
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc` / `eslint` | **0** / **0** |
+| Suíte da landing, processo único | **344/344** em 31 arquivos (era 334/334 em 30) |
+
+---
+
 ## Onde a lane parou
 
-Fila paga: **D0, B1t, B2t, A1, A2, A3, A4** — a frente A inteira. Próxima: **C1** (`S1217-T1` — os
-aceites migram para a etapa de dados e gateiam o "Continuar"). Território dela:
-`.../checkout/CheckoutFlow.tsx`, `.../checkout/StepDados.tsx`, `.../checkout/StepPagamento.tsx`.
+Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1**. Próxima: **C2** (`S1217-T2` — nenhuma forma
+pré-selecionada; a cobrança PIX nasce na ESCOLHA do PIX). Território dela:
+`.../checkout/CheckoutFlow.tsx`, `.../checkout/StepResumo.tsx`, `.../checkout/SeletorForma.tsx`,
+`.../checkout/tipos.ts`. **Ela é obrigatória antes de qualquer deploy da C1** — ver o aviso na
+seção da C1.
 
 **Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
 push, como a lane manda.
