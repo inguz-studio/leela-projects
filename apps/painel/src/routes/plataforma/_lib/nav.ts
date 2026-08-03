@@ -18,6 +18,8 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
   { id: 'tenants', label: 'Tenants', href: '/plataforma/tenants' },
   { id: 'termos', label: 'Termos', href: '/plataforma/tenants' },
   { id: 'planos', label: 'Planos', href: '/plataforma/planos' },
+  // S1608-T2 · RN-413: os códigos que liberam conta de organizador.
+  { id: 'convites', label: 'Convites', href: '/plataforma/convites' },
   // TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio de pagamento
   { id: 'taxa', label: 'Taxa', href: '/plataforma/taxa' },
   { id: 'repasses', label: 'Repasses', href: '/plataforma/repasses' },
@@ -32,6 +34,7 @@ export const PLATFORM_NAV: PlatformNavItem[] = [
 export function activeNavId(pathname: string): string | null {
   if (pathname.startsWith('/plataforma/macro')) return 'macro';
   if (pathname.startsWith('/plataforma/planos')) return 'planos';
+  if (pathname.startsWith('/plataforma/convites')) return 'convites';
   if (pathname.startsWith('/plataforma/taxa')) return 'taxa';
   if (pathname.startsWith('/plataforma/repasses')) return 'repasses';
   if (pathname.startsWith('/plataforma/estornos')) return 'estornos';

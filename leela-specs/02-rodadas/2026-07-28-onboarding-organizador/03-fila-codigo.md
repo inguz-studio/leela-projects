@@ -49,7 +49,7 @@ data: 2026-07-28
 - [x] `S1608-T1` — modelo + core + Rules do convite
 - [x] `S030-T1` + `S030-T2` — `/cadastrar` completo + doc `profissionais/{uid}`
 - [x] `S1213-T1` — entrada do organizador na landing
-- [ ] `S1608-T2` — tela `/plataforma/convites`
+- [x] `S1608-T2` — tela `/plataforma/convites`
 - [ ] `S1609-T1` — Function `resgatarConviteOrganizador`
 - [ ] `S1609-T2` — overlay bloqueante + CTA configurável
 - [ ] item 57 — roteamento pós-login por papel
@@ -66,7 +66,7 @@ data: 2026-07-28
 - [ ] duplo resgate concorrente do mesmo código: um vence, o outro recebe o erro genérico
 - [ ] o erro de resgate nunca distingue inexistente × usado × revogado × expirado
 - [ ] 6ª tentativa na janela de uma hora é recusada (rate-limit provado por teste)
-- [ ] revogar código `ativo` funciona; revogar não desfaz tenant provisionado
+- [x] revogar código `ativo` funciona; revogar não desfaz tenant provisionado
 - [x] cliente comum não lê nem escreve `convitesOrganizador` (ataque de Rules)
 - [ ] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
       no mailto oficial

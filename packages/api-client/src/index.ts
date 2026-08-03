@@ -670,6 +670,16 @@ export type { TenantComOwner } from './platform/profissionais';
 export { criarPerfilOrganizador } from './platform/profissionais';
 export type { PerfilOrganizadorInput } from './platform/profissionais';
 
+// Convites de organizador do super-admin (S1608-T2 · RN-413): listar, gerar e
+// revogar pelo client SDK (Rules exigem platform_admin). Resgatar NÃO está
+// aqui — é callable, porque quem resgata nunca lê a coleção (RN-414).
+export {
+  listarConvitesOrganizador,
+  gerarConviteOrganizador,
+  revogarConviteOrganizador,
+} from './platform/convites';
+export type { GerarConviteInput } from './platform/convites';
+
 // Marcas/patrocinadores reutilizáveis (R9-E · S-R9-12 · RN-171 — seed
 // E10-S811): CRUD owner-only + upsert a partir do cadastro de patrocínio.
 export {

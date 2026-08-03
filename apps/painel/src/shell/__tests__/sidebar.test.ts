@@ -150,7 +150,7 @@ describe('shellSidebarSections', () => {
   // cobrava, mas caía depois desta linha e nunca chegava a ser avaliada.
   // LEELA-ESTORNO-T4 (decisão 43-b): `estornos` entra DEPOIS de repasses — a
   // fila cross-tenant de estornos e a ação direta do admin, com ícone próprio.
-  it('/plataforma: nav própria com 8 itens, ícones e ativo por sub-rota', () => {
+  it('/plataforma: nav própria com 9 itens, ícones e ativo por sub-rota', () => {
     const sections = shellSidebarSections('/plataforma/macro', vi.fn());
     expect(sections).toHaveLength(1);
     const items = sections[0]?.items ?? [];
@@ -158,6 +158,8 @@ describe('shellSidebarSections', () => {
       'tenants',
       'termos',
       'planos',
+      // S1608-T2 · RN-413: os códigos de convite de organizador.
+      'convites',
       'taxa',
       'repasses',
       'estornos',

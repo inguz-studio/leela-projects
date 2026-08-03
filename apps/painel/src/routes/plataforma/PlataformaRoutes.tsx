@@ -21,6 +21,7 @@ import { MacroDashboardRoute } from './macro/MacroDashboardRoute';
 import { RepassesAdminRoute } from './repasses/RepassesAdminRoute';
 import { EstornosAdminRoute } from './estornos/EstornosAdminRoute';
 import { PlanosRoute } from './planos/PlanosRoute';
+import { ConvitesRoute } from './convites/ConvitesRoute';
 import { TaxaGlobalRoute } from './taxa/TaxaGlobalRoute';
 import { NotFound } from '../_system/NotFound';
 import { AppErrorBoundary } from '../_system/AppErrorBoundary';
@@ -37,6 +38,9 @@ export function PlataformaRoutes(): JSX.Element {
           <Route path="tenants/:tenantId" element={<TenantDetailRoute />} />
           <Route path="tenants/:tenantId/termos" element={<TermsEditorRoute />} />
           <Route path="planos" element={<PlanosRoute />} />
+          {/* S1608-T2 · RN-413: gestão dos códigos que abrem a porta da
+              plataforma (gerar, ver uso, revogar). */}
+          <Route path="convites" element={<ConvitesRoute />} />
           {/* TAXAFLEX (S1606 · RN-178): tabela GLOBAL de taxa por meio */}
           <Route path="taxa" element={<TaxaGlobalRoute />} />
           <Route path="repasses" element={<RepassesAdminRoute />} />
