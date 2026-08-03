@@ -57,6 +57,24 @@ describe('OverlayConvite — bloqueio e copy', () => {
     expect(screen.getByRole('link', { name: /Minha conta/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Sair$/i })).toBeInTheDocument();
   });
+
+  // ── DEF-C (ONBOARD-REV) ──────────────────────────────────────────────
+  // O véu era `bg-[var(--surface-base)]/95` e essa classe não gera regra
+  // nenhuma: modificador de opacidade sobre valor arbitrário `var()` é
+  // descartado no build. Medido no `dist` do `vite build --mode leela-hub`,
+  // antes e depois: zero regra contendo `\/95`; a regra
+  // `.bg-\[var\(--surface-base\)\]` existe mas não casa com a classe do
+  // elemento. O blur pegava; a cor de fundo, não — véu transparente num
+  // overlay que se anuncia bloqueante. O véu do produto tem token no DS
+  // (`--modal-overlay-bg`), o mesmo do backdrop do Modal.
+  it('DEF-C: o véu usa o token de overlay do DS, não uma classe que não compila', () => {
+    montar();
+    const dialogo = screen.getByRole('dialog');
+    expect(dialogo.className).toContain('bg-[var(--modal-overlay-bg)]');
+    expect(dialogo.className).toContain('backdrop-blur-[var(--modal-overlay-blur)]');
+    // Modificador de opacidade sobre `var()` some no build — em nenhuma classe.
+    expect(dialogo.className).not.toMatch(/var\(--[a-z-]+\)\]\/\d/);
+  });
 });
 
 describe('OverlayConvite — resgate', () => {

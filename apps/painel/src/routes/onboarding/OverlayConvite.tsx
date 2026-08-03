@@ -86,7 +86,21 @@ export function OverlayConvite({
       aria-modal="true"
       aria-labelledby="overlay-convite-titulo"
       onKeyDown={prenderFoco}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--surface-base)]/95 p-[var(--spacing-5)] backdrop-blur"
+      // Véu pelos tokens do DS (`--modal-overlay-bg` = rgba(0,0,0,.6),
+      // `--modal-overlay-blur` = 4px), os MESMOS que o backdrop do Modal usa.
+      // O componente não é um Modal do DS de propósito (modal fecha; este não
+      // pode), mas o véu é o do produto e já vinha compilado no bundle.
+      //
+      // O que havia aqui era `bg-[var(--surface-base)]/95`, e o Tailwind NÃO
+      // compila isso: modificador de opacidade sobre valor arbitrário `var()`
+      // é descartado no build. Medido no `dist` do `vite build --mode
+      // leela-hub`: nenhuma regra com `\/95`, e a regra que existe
+      // (`.bg-\[var\(--surface-base\)\]`) não casa com a classe do elemento,
+      // que é outro token. O blur pegava (`.backdrop-blur` é a DEFAULT do
+      // Tailwind); a COR de fundo, não — o véu ficava transparente e a home
+      // seguia visível, desfocada, atrás de um overlay que se anuncia
+      // bloqueante.
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--modal-overlay-bg)] p-[var(--spacing-5)] backdrop-blur-[var(--modal-overlay-blur)]"
     >
       <div
         ref={painelRef}
