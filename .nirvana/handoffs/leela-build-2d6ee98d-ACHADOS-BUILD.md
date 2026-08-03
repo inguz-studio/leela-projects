@@ -264,10 +264,80 @@ no arquivo ("o step 0 continua sem cotar" e "o cupom cola no caminho feliz").
 
 ---
 
+## A2 · S1216-T2 · o juro do parcelamento ganha nome próprio
+
+Commit `13df11a`. Território: `functions/src/checkout/cotarInscricaoCheckout.ts`,
+`functions/src/checkout/createInscricaoCharge.ts`, `packages/api-client/src/checkout.ts` + duas
+suítes.
+
+`jurosParcelamento` entra no contrato da cotação e no da cobrança, em reais, derivado no servidor
+como `roundMoney(totalCobrado − totalComprador)`. `totalComprador` já é face + taxa repassada,
+então a subtração isola exatamente o custo de financiar.
+
+**Congelado no ato da compra** (mesma disciplina da RN-179): grava no doc de pagamento quando > 0,
+e o replay lê dali. Campo só quando existe — PIX, cartão à vista e termo sem juros continuam
+gravando o doc vigente byte a byte.
+
+**O juro não é receita do organizador (RN-437), e agora tem prova.** À vista e em 9x do mesmo
+carrinho produzem o MESMO líquido, a mesma base e a mesma taxa, com o total do comprador diferente.
+A falsificação está declarada no próprio caso: somar o juro à base faz as três asserções morderem.
+
+**Dois testes de integração carregavam a fórmula antiga** (`TOTAL_REP × 1,0349³`) e passaram a
+chamar a fonte única por um helper — teste que reimplementa a regra do dinheiro é a terceira cópia
+dela.
+
+### ⚠️ Limitação medida, não estimada
+
+A suíte de integração (`rn347Checkout.integration.test.ts`), onde moram as asserções contra o
+documento persistido, **não roda nesta máquina**: o emulator do Firestore exige JDK 21+ e o
+`emulators:start` morre com *"firebase-tools no longer supports Java version before 21"*. As
+asserções novas estão escritas e compilam (`tsc` 0); a prova executável do número mora na suíte
+PURA, que afirma a MESMA derivação com os mesmos insumos. Quem tiver JDK 21+ fecha isso rodando:
+
+```
+npx firebase emulators:exec --only firestore,auth --project demo-leela-s1203 \
+  "npx vitest run src/__tests__/rn347Checkout.integration.test.ts"
+```
+
+Isso também explica por que os gates das tasks anteriores citam suítes dirigidas e não a suíte
+inteira de `functions`: os arquivos `*.integration.test.ts` dependem do emulator.
+
+### Gates
+
+| | |
+|---|---|
+| api-client `tsc` / `eslint` / build | 0 / 0 / exit 0 |
+| functions `tsc` / `eslint` | 0 / 0 |
+| 9 suítes puras (termo, plano, provisionamento, venda, parcelamento) | **184/184** |
+| landing `tsc` + suíte, processo único | 0 · **316/316** |
+
+---
+
+## Onde a lane parou
+
+Fila paga: **D0, B1t, B2t, A1, A2**. Próxima: **A3** (`S1216-T3` — bloco de totais: taxa nomeada
+pelo meio, "inclusa no valor" no modo incorporada, linha própria de juros, no resumo e na
+confirmação). Território dela: `.../checkout/StepResumo.tsx` e `.../checkout/StepConfirmacao.tsx`.
+
+**Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
+push, como a lane manda.
+
+Avisos para quem retomar:
+
+- A **A3 não pode encostar na linha "(desconto aplicado)"** do `StepResumo` — ela é da KITCUPOM
+  (`S1215-T2`). Se a task "precisar" mexer nela, a spec errou: pare e registre.
+- A **D3 é edição, não verificação** (veredito medido no D0 — `Escolha seu percurso` continua vivo
+  em `ModalidadesSection.tsx:20` e o apoio da etapa 0 em `StepModalidadeKit.tsx:157`).
+- A A3 já tem o dado de que precisa: `jurosParcelamento` chega pronto da cotação (A2). A tela
+  **renderiza**; não subtrai.
+
+---
+
 ## Premissas registradas (vetáveis — o dono dorme)
 
 | # | Premissa | Onde | Custo de vetar |
 |---|---|---|---|
+| PB-4 | O juro é derivado na borda (callables), não acrescentado ao `SaleState` do core. É uma linha sobre dois campos que o `SaleState` já expõe, e o território da A2 é a borda | A2 | Baixo — mover para o core é mecânico, e o número não muda |
 | PB-1 | Os números fechados da spec (R$ 422,03 / R$ 359,90) são erro aritmético e foram substituídos pelos medidos (R$ 422,28 / R$ 359,28). O código implementa a FÓRMULA da RN-436; nenhum literal de valor entrou nele | B1t | Nenhum no código — é reconciliação de texto da spec |
 | PB-3 | O seed de `commercialTerms` é idempotente por design: ambiente que já tem `current` NÃO é regravado, então o termo dele continua com juros 0 até alguém versionar. O 2,89 vale para provisionamento novo e para re-seed limpo | B2t | Nenhum — é comportamento preexistente, registrado para não virar surpresa no emulador |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
