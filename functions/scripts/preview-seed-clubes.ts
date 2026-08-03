@@ -24,8 +24,9 @@
 
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { derivarStatus } from '@leela/core';
+import { derivarStatus, montarLinkPromocional, type AuthClaims } from '@leela/core';
 
+import { salvarAfiliadoCore } from '../src/affiliation/salvarAfiliado';
 import { assertEmulatorOnly } from '../src/seed/emulator-guard';
 import { CASTELO_TENANT_ID, MARINA_CASTELO_UID } from '../src/seed/tenants.seed';
 import { MEIA_FLORIPA_ID } from '../src/seed/eventos.seed';
@@ -399,6 +400,103 @@ async function seedCupomAfiliado(db: Db): Promise<void> {
   );
 }
 
+/**
+ * Os DOIS afiliados de demonstração do meia-floripa (S1215-T4 · RN-429).
+ *
+ * `refCodigo` É o docId em `eventos/{id}/afiliados/{ref}` e é o que o gerador
+ * único do link consome. Antes desta task não existia NENHUM documento de
+ * afiliado no preview: o painel E08 nascia vazio, a parceria E18 não tinha de
+ * onde derivar link, e a faixa do cupom não tinha promotor para nomear.
+ *
+ * As DUAS FORMAS do link, de propósito — é o par que demonstra o gerador:
+ *   - `FLORIPARUN` tem cupom vinculado ⇒ `…?ref=FLORIPARUN&cupom=FLORIPARUN10`;
+ *   - `RITMOFORTE` NÃO tem ⇒ `…?ref=RITMOFORTE`, que continua rastreando a
+ *     conversão sem prometer desconto (RN-429).
+ *
+ * O cupom `RITMOFORTE10` da assessoria NÃO entra aqui: ele é escopado
+ * `club_parceiro` (RN-364) e o próprio `salvarAfiliadoCore` recusa amarrar
+ * cupom escopado a afiliado ("um desconto, um dono"). Forçar a amarração
+ * mudaria a semântica de dinheiro de um cupom que já demonstra outra regra.
+ */
+const AFILIADOS_DEMO = [
+  {
+    refCodigo: 'FLORIPARUN',
+    nome: 'Floripa Run Coletivo',
+    clubeSlug: CLUBE_A_SLUG,
+    cupomCodigo: CUPOM_AFILIADO_CODIGO as string | null,
+    comissaoPct: 8,
+  },
+  {
+    refCodigo: 'RITMOFORTE',
+    nome: 'Ritmo Forte Assessoria',
+    clubeSlug: ASSESSORIA_CLUBE_SLUG,
+    cupomCodigo: null,
+    comissaoPct: 10,
+  },
+] as const;
+
+/**
+ * Cria os afiliados pela MESMA função da produção (`salvarAfiliadoCore`), e não
+ * por `set` direto: é ela que amarra o cupom ao afiliado dentro da transação,
+ * estampa o `responsavelUid` do dono do clube (RN-319) e recusa amarração
+ * inválida. Um `set` à mão criaria dado que a Function nunca produziria.
+ * Idempotente: `refCodigo` informado ⇒ upsert do mesmo documento.
+ */
+async function seedAfiliadosDoEvento(db: Db): Promise<void> {
+  const caller = {
+    uid: MARINA_CASTELO_UID,
+    claims: { role: 'tenant_owner', tenantId: CASTELO_TENANT_ID } as AuthClaims,
+  };
+  for (const a of AFILIADOS_DEMO) {
+    await salvarAfiliadoCore(
+      db,
+      {
+        eventoId: MEIA_FLORIPA_ID,
+        refCodigo: a.refCodigo,
+        tipo: 'clube',
+        nome: a.nome,
+        clubeRef: a.clubeSlug,
+        janelaAtribuicaoDias: 7,
+        minimoInscricoes: null,
+        cupomCodigo: a.cupomCodigo,
+        comissao: { tipo: 'percentual', percentual: a.comissaoPct },
+      },
+      caller
+    );
+  }
+  console.log(
+    `[seed-clubes] afiliados do meia-floripa: ${AFILIADOS_DEMO.map((a) => a.refCodigo).join(' · ')}`
+  );
+}
+
+/**
+ * Imprime os DOIS links compartilháveis, montados pelo gerador ÚNICO do core
+ * (RN-429) — a demonstração pedida pela S1215-T4.
+ *
+ * Sem base pública configurada o gerador devolve `null`, e o seed diz isso em
+ * vez de imprimir um link torto: é a mesma disciplina da RN-423, e serve de
+ * aviso operacional (o painel vai exibir "link indisponível" pelo mesmo motivo).
+ */
+function logLinksDeDemonstracao(): void {
+  const base =
+    process.env['LEELA_PUBLIC_URL'] ??
+    process.env['NEXT_PUBLIC_LEELA_URL'] ??
+    process.env['VITE_LEELA_URL'];
+  for (const a of AFILIADOS_DEMO) {
+    const link = montarLinkPromocional({
+      baseUrl: base,
+      eventoSlug: MEIA_FLORIPA_ID,
+      refCodigo: a.refCodigo,
+      ...(a.cupomCodigo !== null ? { cupomCodigo: a.cupomCodigo } : {}),
+    });
+    console.log(
+      `[seed-clubes] link de ${a.nome}: ${
+        link ?? 'INDISPONÍVEL (sem LEELA_PUBLIC_URL/NEXT_PUBLIC_LEELA_URL no ambiente)'
+      }`
+    );
+  }
+}
+
 async function seedParceriasDoClube(db: Db, clubeSlug: string, agora: Date): Promise<void> {
   const col = db.collection('clubes').doc(clubeSlug).collection('parcerias');
 
@@ -415,7 +513,18 @@ async function seedParceriasDoClube(db: Db, clubeSlug: string, agora: Date): Pro
     programaAfiliacaoRef: `eventos/${MEIA_FLORIPA_ID}/programaAfiliacao/atual`,
     comissaoPct: 8,
     cupom: CUPOM_AFILIADO_CODIGO,
-    linkMaster: 'beh.ro/mfl26?c=frc',
+    // S1215-T4 (RN-429): o que o painel E18 exibe agora é DERIVADO daqui —
+    // base do ambiente + `eventoId` (que É o slug) + este `refCodigo` + o
+    // cupom acima. É o campo que faltava para o link master parar de ser
+    // texto digitado.
+    refCodigo: AFILIADOS_DEMO[0].refCodigo,
+    // O `beh.ro/mfl26?c=frc` MORREU aqui. Ele apontava para o domínio dos mocks
+    // Be Hero — o mesmo que a RN-423 expulsou do e-mail da compra —, com uma
+    // chave `c` que nenhum arquivo do repo lia: um link que não aplicava
+    // cupom, não atribuía conversão e levava quem clicasse para o site de
+    // outra empresa. O campo continua no documento porque parceria antiga o
+    // carrega, e continua VAZIO porque nenhuma superfície o lê.
+    linkMaster: '',
     janelaAtribuicaoDias: 7,
     termosEspelho: {
       criterioLiberacao: 'Após 28 Abr 2026',
@@ -1065,6 +1174,9 @@ export async function seedPreviewClubes(
 
   await seedClubeA(db, agora);
   await seedAssessoriaE18(db, agora);
+  // Depois dos dois: o afiliado do clube precisa do cupom que o `seedClubeA`
+  // escreve, e o da assessoria precisa do clube-companheiro do `seedAssessoriaE18`.
+  await seedAfiliadosDoEvento(db);
   await seedCampanhasMeia(db, agora);
   await seedAutomacoesMeia(db);
   await seedComunicacoesMeia(db, agora);
@@ -1072,6 +1184,7 @@ export async function seedPreviewClubes(
   await seedRepassesCastelo(db, agora);
   await seedEstoqueMeia(db, agora);
 
+  logLinksDeDemonstracao();
   console.log('[seed-clubes] OK — clubes da Marina + satélites do sistema aplicados.');
 }
 
