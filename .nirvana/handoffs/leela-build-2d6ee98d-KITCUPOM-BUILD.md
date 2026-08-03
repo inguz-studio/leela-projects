@@ -367,3 +367,15 @@ apareceram modificados no worktree às 22:19 e 22:21, no meio da B1.
 Consequência operacional para o resto desta lane: **todo commit é `git commit --only` com a
 lista explícita de caminhos**. Nunca `git add -A`. A fila já previa a convivência (RN-433) e
 nenhuma task daqui escreve naquele território.
+
+Prova por commit, no fechamento: `git show --name-only` de `ae7538f`, `ddb635d`, `2651bb4`,
+`ac92f33` e `e4b2e3d` filtrado por `functions/src/checkout/`, `firestore.rules` e
+`storage.rules` devolve **0 arquivos** nos cinco.
+
+## Armadilha de porta nos testes de emulator (medida no fechamento)
+
+Nem todos os testes de integração honram `LEELA_FS_EMU_PORT`. `afiliados.integration` sim
+(a lane R9-E roda em 8480/9598); `parceriasAggregates` e `parceriasRules` **cravam 8080** no
+`initializeTestEnvironment`. Rodar tudo junto na porta da lane faz os dois últimos falharem
+com `ECONNREFUSED` que parece regressão e não é. Medido: **30/30** verdes no emulator da porta
+padrão (`firebase.json`), na mesma árvore.
