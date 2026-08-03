@@ -446,7 +446,32 @@ export function CheckoutFlow({
   // Assinatura de (modalidade, kit) por inscrito — recotar quando qualquer um muda.
   const selecaoSig = inscritos.map((i) => `${i.modalidade}:${i.kitId}`).join('|');
   const todasModalidades = inscritos.every((i) => i.modalidade.length > 0);
-  const precisaCotar = step >= 2;
+  // ── S1216-T1 · RN-434 · D-ACH-1 — o total está pronto na chegada ──────────
+  //
+  // Era `step >= 2`: o primeiro pedido de preço saía no instante em que a
+  // pessoa entrava no PAGAR, e ela assistia ao round-trip. Medido em produção
+  // pela lane anterior: de 1,7 s no piso a 9,8 s quando a function acorda fria.
+  //
+  // Agora a cotação sai na etapa de DADOS. Preencher nome, CPF, nascimento e
+  // endereço de cada participante leva dezenas de segundos; o round-trip cabe
+  // inteiro nessa janela, inclusive o despertar frio. Ao chegar no PAGAR a
+  // assinatura não mudou, então o efeito cai no ramo de
+  // `assinaturaCotadaRef.current === assinaturaAtual` e NENHUMA chamada nova
+  // sai — o número já está na tela.
+  //
+  // O step 0 continua sem cotar, e isso é decisão, não esquecimento: a
+  // assinatura de preço inclui `selecaoSig`, que muda a cada clique em
+  // modalidade ou kit. Cotar ali transformaria a exploração da oferta numa
+  // chamada por clique — o excesso que a T-CKUX-1 acabou de cortar. O step 1 é
+  // o primeiro momento em que a seleção está congelada.
+  //
+  // O pré-aquecimento é SILENCIOSO (D-ACH-2). No step 1 não existe bloco de
+  // totais, então `cotando` alto é invisível, e essa invisibilidade é a
+  // feature. Falha aqui não pinta erro no meio do formulário: o estado de erro
+  // e o "Tentar novamente" continuam morando no bloco de totais do PAGAR.
+  // Punir a pessoa por um problema que ela ainda não tem seria pior do que a
+  // espera que esta decisão elimina.
+  const precisaCotar = step >= 1;
   // Cotar exige sessão pronta + modalidade de TODO mundo (o servidor precifica
   // o item para dizer se o cupom cola). É o gate do "Aplicar" do step 0 (D-4).
   const podeCotar = authPronto && todasModalidades;
@@ -660,10 +685,16 @@ export function CheckoutFlow({
       setCupomUrlPendente(false);
       return;
     }
+    // S1216-T1 · RN-434 — o auto-apply do link entra no MESMO número de
+    // sequência do efeito. O `vivo` só cobre desmontagem/rerun DESTE efeito;
+    // ele não sabe nada de uma cotação pedida por outro caminho. Trocar de kit
+    // enquanto o cupom do link está no ar fazia a resposta dele aterrissar
+    // sobre a seleção nova — o preço da seleção abandonada na tela.
+    const seq = ++cotacaoSeqRef.current;
     let vivo = true;
     setCotando(true);
     cotarCom(codigo).then((r) => {
-      if (!vivo) return;
+      if (!vivo || seq !== cotacaoSeqRef.current) return;
       setCotando(false);
       if (r.ok) {
         // T-CKUX-1: esta chamada JÁ é a cotação com o cupom. Registrar a
@@ -705,8 +736,19 @@ export function CheckoutFlow({
     setErroCupomUrl(null);
     setErroCupom(null);
     setAplicandoCupom(true);
+    // S1216-T1 · RN-434 — o "Aplicar" manual entra no MESMO número de
+    // sequência. Esta função cota POR FORA do efeito e escreve `cotacao` na
+    // volta usando a assinatura da closure: aplicar o cupom e trocar de kit
+    // antes da resposta fazia o preço da seleção abandonada aterrissar na
+    // tela. Era a ressalva R-2 da CKUX-REV, e o B1 alarga a janela dela porque
+    // agora existe pré-aquecimento rodando ao lado em duas etapas.
+    const seq = ++cotacaoSeqRef.current;
     const r = await cotarCom(code);
+    // O spinner do campo é DESTA ação e sai sempre — travá-lo por causa de uma
+    // resposta obsoleta deixaria o cupom em "Aplicando…" para sempre. O que a
+    // sequência descarta é o NÚMERO, não o estado da interação.
     setAplicandoCupom(false);
+    if (seq !== cotacaoSeqRef.current) return;
     if (r.ok) {
       // T-CKUX-1: mesma disciplina do cupom de link — o "Aplicar" já cotou; o
       // efeito não precisa cotar de novo por causa do `cupomAplicado` novo.
