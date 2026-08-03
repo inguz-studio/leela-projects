@@ -83,28 +83,42 @@ function paragrafosDoTermoSaude(eventoNome: string, organizadorNome: string | nu
 export function AceitesCompra({
   politica,
   termoSaudeVersao,
+  termoSaudeCustom = null,
   eventoNome,
   organizadorNome,
   aceiteTermos,
   aceiteSaude,
+  aceiteSaudeCustom = false,
   onAceiteTermos,
   onAceiteSaude,
+  onAceiteSaudeCustom,
   desabilitado = false,
 }: {
   politica: PoliticaVendasPublica;
   termoSaudeVersao: number;
+  /**
+   * S1217-T3 · RN-441 — termo de saúde PRÓPRIO do organizador (aditivo ao
+   * base). `null` = evento sem termo custom ativo, e o bloco fica com dois
+   * aceites. O leitor público já projetava texto e versão desde a CK2; o que
+   * faltava era a tela COLHER a confirmação que o servidor já exigia.
+   */
+  termoSaudeCustom?: { texto: string; versao: number } | null;
   eventoNome: string;
   organizadorNome: string | null;
   aceiteTermos: boolean;
   aceiteSaude: boolean;
+  aceiteSaudeCustom?: boolean;
   onAceiteTermos: (v: boolean) => void;
   onAceiteSaude: (v: boolean) => void;
+  onAceiteSaudeCustom?: (v: boolean) => void;
   desabilitado?: boolean;
 }): React.JSX.Element {
   const [modalTermos, setModalTermos] = useState(false);
   const [modalSaude, setModalSaude] = useState(false);
+  const [modalSaudeCustom, setModalSaudeCustom] = useState(false);
   const gatilhoTermosRef = useRef<HTMLButtonElement | null>(null);
   const gatilhoSaudeRef = useRef<HTMLButtonElement | null>(null);
+  const gatilhoSaudeCustomRef = useRef<HTMLButtonElement | null>(null);
 
   const linkClasse =
     'font-[var(--font-weight-semibold)] text-text-brand underline underline-offset-2 hover:opacity-80';
@@ -158,6 +172,38 @@ export function AceitesCompra({
         Ler o termo de responsabilidade de saúde
       </button>
 
+      {/* (c) S1217-T3 · RN-441 — termo de saúde PRÓPRIO do organizador, só nos
+          eventos que o tenham ativo. Fecha um defeito vivo: o servidor já
+          lançava `failed-precondition` quando o evento tinha termo custom e o
+          input não trazia `saudeCustom === true`, e a tela nunca coletou nem
+          enviou esse campo — todo evento com termo próprio estava com a compra
+          quebrada, sempre, por construção. Mesmo padrão de modal e de versão
+          dos outros dois. */}
+      {termoSaudeCustom !== null ? (
+        <>
+          <label className="mt-1 flex cursor-pointer items-start gap-3 text-[length:var(--font-size-sm)] text-text-primary">
+            <Checkbox
+              checked={aceiteSaudeCustom}
+              disabled={desabilitado}
+              onChange={(e) => onAceiteSaudeCustom?.(e.target.checked)}
+              aria-label="Li e aceito o termo de saúde específico deste evento, definido pelo organizador"
+            />
+            <span>
+              Li e aceito o <strong>termo de saúde específico deste evento</strong>, definido pelo
+              organizador.
+            </span>
+          </label>
+          <button
+            ref={gatilhoSaudeCustomRef}
+            type="button"
+            onClick={() => setModalSaudeCustom(true)}
+            className={`self-start text-[length:var(--font-size-sm)] ${linkClasse}`}
+          >
+            Ler o termo de saúde do evento
+          </button>
+        </>
+      ) : null}
+
       {/* Modal (a) — conteúdo da politicaVendas pública (defaults legais CDC
           quando o organizador não configurou). Padrão RegulamentoModal. */}
       <Dialog
@@ -201,6 +247,38 @@ export function AceitesCompra({
           ))}
         </div>
       </Dialog>
+
+      {/* Modal (c) — texto do ORGANIZADOR, renderizado como veio. O
+          vocabulário da D-0802-1 governa o que a PLATAFORMA escreve; o que o
+          organizador escreveu atravessa intacto. */}
+      {termoSaudeCustom !== null ? (
+        <Dialog
+          open={modalSaudeCustom}
+          onOpenChange={setModalSaudeCustom}
+          title="Termo de saúde do evento"
+          titleIcon={
+            <HeartPulse
+              size={20}
+              strokeWidth={1.75}
+              aria-hidden
+              className="shrink-0 text-text-brand"
+            />
+          }
+          titleAs="h3"
+          description={`Versão ${termoSaudeCustom.versao} — definida pelo organizador.`}
+          returnFocusRef={gatilhoSaudeCustomRef}
+        >
+          <div className="flex flex-col gap-3 text-sm leading-relaxed text-text-secondary">
+            {termoSaudeCustom.texto
+              .split(/\n{2,}|\n/)
+              .map((p) => p.trim())
+              .filter((p) => p.length > 0)
+              .map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+          </div>
+        </Dialog>
+      ) : null}
     </section>
   );
 }

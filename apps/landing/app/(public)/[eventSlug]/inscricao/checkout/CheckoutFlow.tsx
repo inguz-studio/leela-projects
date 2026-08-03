@@ -286,7 +286,19 @@ export function CheckoutFlow({
   // da transação (CKMOD) — a coleta mudou de etapa, a prova não mudou de dono.
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [aceiteSaude, setAceiteSaude] = useState(false);
-  const aceitesOk = aceiteTermos && aceiteSaude;
+  // S1217-T3 · RN-441 — terceiro aceite, condicional ao evento. O servidor já
+  // exigia `saudeCustom === true` quando o evento tem termo próprio ativo e a
+  // tela nunca coletou nem enviou o campo: TODO evento com termo custom estava
+  // com a compra quebrada, sempre. O leitor público já projetava texto e
+  // versão desde a CK2 — faltava a coleta.
+  const [aceiteSaudeCustom, setAceiteSaudeCustom] = useState(false);
+  // Leitura Postel: `undefined` (projeção sem o campo) é AUSÊNCIA de termo,
+  // igual a `null`. Tratar os dois de forma diferente exigiria um aceite que a
+  // tela não renderiza — o gate travaria a compra em vez de protegê-la.
+  const termoSaudeCustom = evento.termoSaudeCustom ?? null;
+  const exigeSaudeCustom = termoSaudeCustom !== null;
+  const aceitesOk =
+    aceiteTermos && aceiteSaude && (!exigeSaudeCustom || aceiteSaudeCustom);
   // Erro do gate: só aparece depois de a pessoa TENTAR avançar sem marcar —
   // acusar antes da ação puniria quem ainda está preenchendo o formulário.
   const [erroAceites, setErroAceites] = useState<string | null>(null);
@@ -917,7 +929,17 @@ export function CheckoutFlow({
         ...(cupomAplicado ? { cupomCodigo: cupomAplicado } : {}),
         // CKFORM §5.3: SÓ os booleans confirmados cruzam — versão vigente,
         // timestamp e hash do material são carimbados pelo servidor (in-tx).
-        aceites: { termos: true, saude: true },
+        //
+        // S1217-T3 · RN-441: o payload REFLETE o que a pessoa marcou. Antes
+        // ele afirmava `{ termos: true, saude: true }` literal — um cliente
+        // dizendo ao servidor que houve aceite porque o código o escreveu
+        // assim, não porque alguém clicou. `saudeCustom` só cruza nos eventos
+        // que têm o termo próprio ativo (o servidor ignora nos demais).
+        aceites: {
+          termos: aceiteTermos,
+          saude: aceiteSaude,
+          ...(exigeSaudeCustom ? { saudeCustom: aceiteSaudeCustom } : {}),
+        },
         ...((): { ref?: { codigo: string; clicadoEmMillis?: number } } => {
           // Atribuição de afiliado (RN-313) — nunca bloqueia a compra: o
           // servidor descarta ref inválido/fora da janela em silêncio.
@@ -948,7 +970,7 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, aceitesOk, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [charge, authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);
@@ -1166,7 +1188,11 @@ export function CheckoutFlow({
       // O erro é calculado sempre (não só quando o resto passa), senão a
       // pessoa corrigiria o formulário e levaria um segundo "não" logo depois.
       setErroAceites(
-        aceitesOk ? null : 'Confirme os dois aceites acima para continuar.',
+        aceitesOk
+          ? null
+          : exigeSaudeCustom
+            ? 'Confirme os três aceites acima para continuar.'
+            : 'Confirme os dois aceites acima para continuar.',
       );
       if (temErro(eResp) || eIns.some((e) => temErro(e)) || temErro(eEnd)) return;
       if (!aceitesOk) return;
@@ -1185,6 +1211,7 @@ export function CheckoutFlow({
     endereco,
     erroAuth,
     aceitesOk,
+    exigeSaudeCustom,
   ]);
 
   const voltar = useCallback(() => {
@@ -1360,16 +1387,22 @@ export function CheckoutFlow({
                 <AceitesCompra
                   politica={evento.politicaVendas}
                   termoSaudeVersao={evento.termoSaudeVersao}
+                  termoSaudeCustom={termoSaudeCustom}
                   eventoNome={evento.nome}
                   organizadorNome={evento.organizador?.nome ?? null}
                   aceiteTermos={aceiteTermos}
                   aceiteSaude={aceiteSaude}
+                  aceiteSaudeCustom={aceiteSaudeCustom}
                   onAceiteTermos={(v) => {
                     setAceiteTermos(v);
                     if (v) setErroAceites(null);
                   }}
                   onAceiteSaude={(v) => {
                     setAceiteSaude(v);
+                    if (v) setErroAceites(null);
+                  }}
+                  onAceiteSaudeCustom={(v) => {
+                    setAceiteSaudeCustom(v);
                     if (v) setErroAceites(null);
                   }}
                   // RN-438: prova já carimbada no servidor ⇒ o bloco fica
