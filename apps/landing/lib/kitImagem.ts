@@ -43,6 +43,16 @@ export const KITS_MOCK = {
   apparelBundle: `${BASE}/leela-kit-apparel-bundle.jpg`,
   /** Camiseta limpa — o default de corrida (prata/básico/genérico). */
   tee: `${BASE}/leela-kit-tee.jpg`,
+  // S1218-T4 (B9) — três temas que o acervo não tinha e que o dono nomeou:
+  // camisetas, kit fitness e ioga. Fotos REAIS, licença livre, baixadas e
+  // versionadas no repositório (sem hotlink). Proveniência, licença e
+  // critérios de curadoria em `public/covers/kits/PROVENIENCIA.md`.
+  /** Camisetas de evento dobradas — o kit visto como peça de vestuário. */
+  camiseta: `${BASE}/leela-kit-camiseta-evento.jpg`,
+  /** Halteres, corda e toalha — o kit de uma experiência de treino. */
+  fitness: `${BASE}/leela-kit-fitness.jpg`,
+  /** Tapetes enrolados — o kit de uma prática de ioga. */
+  ioga: `${BASE}/leela-kit-ioga.jpg`,
 } as const;
 
 /**
@@ -60,8 +70,20 @@ export function temaKit(nome: string, modalidades: readonly string[]): keyof typ
   // Ordem importa: esporte específico antes do tier de vestuário de corrida.
   if (/\bmtb\b|mountain|\bbike\b|cicl|pedal|gravel|\bbtt\b|speed\b/.test(alvo)) return 'ciclismo';
   if (/trilha|trail|montanha|travessia|cross\b/.test(alvo)) return 'trail';
-  if (/yoga|bem-?estar|wellness|medita|caminhada|walk|retiro|respiro/.test(alvo)) return 'wellness';
-  // Tier premium ganha o bundle de várias peças; o resto, a camiseta limpa.
+  // S1218-T4 (B9): ioga e fitness saem de dentro do balaio "wellness" e ganham
+  // foto própria. Antes, um kit de ioga e um kit de treino funcional recebiam
+  // a MESMA imagem genérica de bem-estar — que é o que o dono viu ao testar. O
+  // `wellness` continua existindo para o que sobra (caminhada, retiro, respiro).
+  // `\bi?oga\b` NÃO serve: em "yoga" o `o` é precedido por `y`, que é caractere
+  // de palavra, então não há fronteira ali. As duas grafias entram inteiras.
+  if (/yoga|ioga|pilates|medita|mindful/.test(alvo)) return 'ioga';
+  if (/fitness|funcional|treino|academia|muscula|\bhiit\b|cardio|cross-?fit/.test(alvo)) {
+    return 'fitness';
+  }
+  if (/bem-?estar|wellness|caminhada|walk|retiro|respiro/.test(alvo)) return 'wellness';
+  // Camiseta nomeada explicitamente ganha a foto de camisetas; o tier premium
+  // ganha o bundle de várias peças; o resto, a camiseta limpa de sempre.
+  if (/camiseta|camisa|\btee\b|t-?shirt/.test(alvo)) return 'camiseta';
   if (/ouro|gold|premium|master|elite|full|completo|\btop\b|plus\b/.test(alvo)) return 'apparelBundle';
   return 'tee';
 }
@@ -119,7 +141,10 @@ export function imagemDoKit(
  */
 const ORDEM_ACERVO_KIT = [
   'tee',
+  'camiseta',
   'apparelBundle',
+  'fitness',
+  'ioga',
   'ciclismo',
   'trail',
   'wellness',
