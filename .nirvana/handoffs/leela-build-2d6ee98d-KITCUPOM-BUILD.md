@@ -16,7 +16,7 @@ Base: `main` em `8de6894`. Sem push — o maestro pusha.
 - [x] **FRENTE A FECHADA** — suíte da landing **260/260** (214 antes)
 - [x] **B1 · S1215-T1** — gerador único do link + `linkMaster` derivado
 - [x] **B2 · S1215-T2** — captura e guarda do cupom por evento
-- [ ] **B3 · S1215-T3** — faixa pós-Hero + verificação server-side
+- [x] **B3 · S1215-T3** — faixa pós-Hero + verificação server-side
 - [ ] **B4 · S1215-T4** — dois links de demonstração no seed do meia-floripa
 - [ ] **X1** — vocabulário/a11y da página do evento
 
@@ -206,6 +206,33 @@ Gates: landing `tsc` 0 · `eslint` 0 · `cupom-link-s1215` **17/17** · suíte c
 "Cupom X aplicado" com base na cotação velha. Fica para decisão — mexer nisso é mexer no
 caminho da cotação, que é território de dinheiro.
 
+### B3 — a faixa anuncia, e a verificação recusa contar por que não colou
+
+A faixa aparece depois da Hero quando o cupom da URL se aplica; quando não se aplica, por
+qualquer razão, ela não aparece — sem erro na landing. A verificação roda no servidor com
+Admin SDK e o gate no código (doutrina S1200-T2), com **resposta uniforme**: sete situações
+diferentes de recusa devolvem `null` byte a byte, e há teste que compara as sete.
+
+Como a rota é cacheada (`revalidate = 300`), a faixa é client component atrás de Suspense e
+busca a resposta por **ação de servidor** — nenhuma rota pública nova. `SectionRenderer`
+ganhou o slot `aposHero`, e não uma seção do registro: a faixa aparece por causa da URL, não
+por causa da página publicada.
+
+**Contrato ⚔ da review, medido:**
+
+| # | Vetor | Prova |
+|---|---|---|
+| 6 | Rules intocadas · cliente não lê cupom | `git diff --stat -- firestore.rules storage.rules` **vazio**; grep de `'cupons'` no cliente só acha chave de cache do painel |
+| 7 | Sem oráculo | 7 recusas distintas ⇒ `null` idêntico (`new Set(...).size === 1`); código fora de forma custa **0 leituras** |
+| 8 | Só o nome sai | resposta tem exatamente `{codigo, promotor}`; o teste serializa e procura documento, e-mail, telefone, uid, comissão, gate |
+| 9 | Escopo de club parceiro | parceria ativa aplica; inativa, de outro tenant e path aninhado ⇒ `null` |
+| 10 | Página continua estática | rota `/[eventSlug]` segue **`ƒ`**, o mesmo marcador de `.nirvana/landing-build.log`; `revalidate = 300` intocado; `package.json` sem diff |
+| 11 | O número é do servidor | a faixa não renderiza `R$` nem `%` — asserção no texto do `role="status"` |
+| 12 | Custo de raspagem | 50 tentativas no mesmo código inexistente ⇒ **2 leituras**; a resposta negativa é cacheada |
+
+Gates: landing `tsc` 0 · `eslint` 0 · `cupom-banner-s1215` **18/18** · suíte cheia da landing
+**295/295** em 25 arquivos (277 antes), single-fork, 30,30 s · `next build` exit **0**.
+
 ## Premissas assumidas (vetáveis)
 
 1. **O upload não usa `slot = posicao`** (A2). É a única premissa desta lane que muda
@@ -244,6 +271,18 @@ caminho da cotação, que é território de dinheiro.
 10. **"Remover" desliga o cupom do link** (B2), além de limpar o aplicado. Sem isso o efeito
     de auto-apply reaplicaria o que a pessoa acabou de tirar. Custo de vetar: uma linha, e o
     cupom volta sozinho.
+11. **O cache do B3 é um Map por instância, não `unstable_cache`.** O contrato de review pede
+    o NÚMERO de leituras que uma sequência de inválidos provoca, e cache de framework não é
+    observável em teste. Teto real: N leituras por código por janela com N instâncias quentes,
+    não 1. Custo de vetar: trocar por `unstable_cache` e perder a prova executável.
+12. **A faixa é alimentada por ação de servidor**, não por route handler nem por Server
+    Component lendo `searchParams` (que tiraria a rota do cache). Custo de vetar: uma rota
+    pública nova para revisar, com o mesmo grau de exposição.
+13. **`aposHero` é slot do `SectionRenderer`, não seção do registro** — a faixa não é
+    configurável no painel porque não depende da página publicada. Custo de vetar: virar
+    seção e passar a admitir "faixa desativada" como estado.
+14. **TTL de 60 s** no cache do cupom. Curto para força bruta bater em cache; longo o bastante
+    para um cupom recém-esgotado sumir da faixa em um minuto. Custo de vetar: uma constante.
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -256,6 +295,7 @@ caminho da cotação, que é território de dinheiro.
 | 5 | `fd1c6f2` | A4 · quarto degrau da cascata (preview) |
 | 6 | `ae7538f` | B1 · gerador único do link, com o cupom dentro |
 | 7 | `ddb635d` | B2 · o cupom do link atravessa a jornada + marca no resumo |
+| 8 | `2651bb4` | B3 · faixa pós-Hero + verificação uniforme com cache curto |
 
 ## Convivência de lanes (medido em 2026-08-02, durante a B1)
 
