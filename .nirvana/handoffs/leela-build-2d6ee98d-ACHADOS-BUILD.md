@@ -17,7 +17,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **A4 · S1216-T4** — total por opção sempre que os dois existirem
 - [x] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
 - [x] **C2 · S1217-T2** — nenhuma forma pré-selecionada
-- [ ] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
+- [x] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
 - [ ] **C4 · S1217-T4** — versão exibida conferida pelo servidor
 - [ ] **C5 · S1217-T5** — origem da requisição na prova de aceite
 - [ ] **D1 · S1218-T1** — rótulo do grupo grudado no primeiro cartão
@@ -286,21 +286,12 @@ A falsificação está declarada no próprio caso: somar o juro à base faz as t
 chamar a fonte única por um helper — teste que reimplementa a regra do dinheiro é a terceira cópia
 dela.
 
-### ⚠️ Limitação medida, não estimada
+### ~~⚠️ Limitação medida~~ → RESOLVIDA (ver "Estado do emulator" no fim)
 
-A suíte de integração (`rn347Checkout.integration.test.ts`), onde moram as asserções contra o
-documento persistido, **não roda nesta máquina**: o emulator do Firestore exige JDK 21+ e o
-`emulators:start` morre com *"firebase-tools no longer supports Java version before 21"*. As
-asserções novas estão escritas e compilam (`tsc` 0); a prova executável do número mora na suíte
-PURA, que afirma a MESMA derivação com os mesmos insumos. Quem tiver JDK 21+ fecha isso rodando:
-
-```
-npx firebase emulators:exec --only firestore,auth --project demo-leela-s1203 \
-  "npx vitest run src/__tests__/rn347Checkout.integration.test.ts"
-```
-
-Isso também explica por que os gates das tasks anteriores citam suítes dirigidas e não a suíte
-inteira de `functions`: os arquivos `*.integration.test.ts` dependem do emulator.
+A suíte de integração da A2 ficou sem rodar quando a task fechou, porque o `firebase-tools` global
+exige JDK 21+ e esta máquina tem Java 17. **O bloqueio caiu**: com `firebase-tools@13` o emulator
+sobe em Java 17, e `rn347Checkout.integration.test.ts` foi executada — **16/16 verdes**, com as
+asserções da A2 contra o documento persistido incluídas. Comando e provas na seção final.
 
 ### Gates
 
@@ -552,15 +543,71 @@ código PIX" para o resumo do pedido — porque na chegada não existe mais bot�
 
 ---
 
+## C3 · S1217-T3 · o aceite que o servidor exigia e a tela nunca pediu
+
+Commit `5e17cc1`. Território: `.../checkout/AceitesCompra.tsx`, `.../checkout/CheckoutFlow.tsx`
++ o teste novo `checkout-s1217-termo-saude-custom.test.tsx`.
+
+**O leitor e os tipos já estavam prontos.** `apps/landing/lib/leitor.ts` e `lib/tipos.ts` — dois dos
+quatro caminhos declarados no território da task — já projetavam `termoSaudeCustom { texto, versao }`
+desde a CK2, com `null` honesto para doc ausente, texto vazio, doc inválido ou leitura que falha.
+Nenhuma linha precisou mudar neles. O que faltava era a COLETA.
+
+O defeito era este: `createInscricaoCharge.ts:1409` lança `failed-precondition` quando o evento tem
+termo de saúde próprio ativo e o input não traz `aceites.saudeCustom === true`; o `CheckoutFlow`
+mandava `{ termos: true, saude: true }` fixo. Todo evento com termo custom ativo tinha a compra
+quebrada, sempre.
+
+**O payload parou de afirmar `true` literal.** Agora sobe `{ termos: aceiteTermos, saude:
+aceiteSaude }`, com `saudeCustom` só nos eventos que têm o termo — um cliente que diz "houve
+aceite" porque o código escreveu assim, e não porque alguém clicou, é uma afirmação que a prova não
+suporta. O que continua vindo só do servidor: versão, instante e hash (caso de anti-forja no
+arquivo varre o payload bruto atrás de `materialHash`, `aceitoEm`, `versao`).
+
+### Achado da própria task: `undefined !== null` travava a compra
+
+A primeira versão do gate era `evento.termoSaudeCustom !== null`. Projeção **sem o campo** devolve
+`undefined`, e `undefined !== null` é `true` em JavaScript: o gate passou a exigir um terceiro
+aceite que a tela não renderizava, e a compra travava em silêncio num evento que não tem termo
+próprio nenhum. **Derrubou 53 casos da suíte de uma vez** — foi assim que apareceu. Corrigido com
+leitura Postel (`?? null`) e travado por caso próprio, que deleta o campo do fixture.
+
+### Falsificação
+
+`CheckoutFlow` e `AceitesCompra` restaurados do HEAD:
+
+```
+Tests  4 failed | 3 passed (7)
+```
+
+Os quatro: o terceiro aceite existe com modal e versão, os dois base não bastam, a compra conclui
+com os três, e o payload traz `saudeCustom: true`. Os três que passam nos dois mundos são as
+guardas: evento sem termo segue com dois aceites, `saudeCustom` não é inventado no payload, e o
+anti-forja (que a task não afrouxou).
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc` / `eslint` (`app` + `test`) | **0** / **0** |
+| Suíte da landing, processo único | **359/359** em 33 arquivos (era 351/351 em 32) |
+
+---
+
 ## Onde a lane parou
 
 Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1, C2**. O par C1+C2 está fechado — o aviso de "não
 deployar C1 sem C2" está **cumprido** dentro da própria lane.
 
-Próxima: **C3** (`S1217-T3` — terceiro aceite condicional, o termo de saúde do organizador, ponta a
-ponta; e o payload deixa de afirmar `true` literal). Território dela:
-`.../checkout/AceitesCompra.tsx`, `.../checkout/CheckoutFlow.tsx`, `apps/landing/lib/leitor.ts`,
-`apps/landing/lib/tipos.ts`.
+**C3 paga.** Próxima: **C4** (`S1217-T4` — a tela envia a versão EXIBIDA e o servidor confere
+contra a vigente, recusando em vez de carimbar outra). Território dela:
+`packages/core/src/pedidos/aceites.ts`, `functions/src/checkout/createInscricaoCharge.ts`,
+`packages/api-client/src/checkout.ts`, `.../checkout/CheckoutFlow.tsx`. Depois dela, **C5**
+(origem da requisição na prova de aceite), e então a frente D (D1..D4), que é independente.
+
+⚠️ **A C4 e a C5 são de servidor.** A prova executável delas mora em
+`functions/src/__tests__/*.integration.test.ts`, que dependem do emulator — ver a seção
+"Estado do emulator" no fim deste handoff antes de começar.
 
 **Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
 push, como a lane manda.
@@ -576,6 +623,36 @@ Avisos para quem retomar:
 
 ---
 
+## Estado do emulator · o bloqueio caiu, e não custou tocar no sistema
+
+O handoff da A2 registrou que a suíte de integração não rodava nesta máquina: o `firebase-tools`
+global recusa Java abaixo de 21 e aqui roda **OpenJDK 17.0.19**. O diagnóstico estava certo e a
+conclusão estava larga demais — o corte de JDK 21 é do `firebase-tools` NOVO, não do emulator.
+
+**Com a versão 13 o emulator sobe em Java 17.** Medido, não estimado:
+
+```
+cd functions
+npx firebase-tools@13 emulators:exec --only firestore,auth --project demo-leela-s1203 \
+  "npx vitest run src/__tests__/rn347Checkout.integration.test.ts"
+```
+
+| | |
+|---|---|
+| Emulators | `auth` + `firestore` subiram (projeto demo, config emulada) |
+| Suíte de integração da A2 | **16/16** |
+| Exit do `emulators:exec` | **0** — *Script exited successfully* |
+
+Não há `firebase-tools` no `package.json` de lugar nenhum do repo (varredura em todos os
+`package.json` fora de `node_modules`): a versão vem do que estiver global, e é por isso que o
+comando **precisa** do `@13` explícito. Nada foi instalado e nada foi alterado no sistema — `npx`
+resolve a versão sob demanda.
+
+**Consequência para quem retomar:** a C4 e a C5 têm prova executável disponível. As asserções
+delas contra o documento persistido devem rodar sob este comando, trocando o arquivo de teste.
+
+---
+
 ## Premissas registradas (vetáveis — o dono dorme)
 
 | # | Premissa | Onde | Custo de vetar |
@@ -583,6 +660,9 @@ Avisos para quem retomar:
 | PB-4 | O juro é derivado na borda (callables), não acrescentado ao `SaleState` do core. É uma linha sobre dois campos que o `SaleState` já expõe, e o território da A2 é a borda | A2 | Baixo — mover para o core é mecânico, e o número não muda |
 | PB-1 | Os números fechados da spec (R$ 422,03 / R$ 359,90) são erro aritmético e foram substituídos pelos medidos (R$ 422,28 / R$ 359,28). O código implementa a FÓRMULA da RN-436; nenhum literal de valor entrou nele | B1t | Nenhum no código — é reconciliação de texto da spec |
 | PB-3 | O seed de `commercialTerms` é idempotente por design: ambiente que já tem `current` NÃO é regravado, então o termo dele continua com juros 0 até alguém versionar. O 2,89 vale para provisionamento novo e para re-seed limpo | B2t | Nenhum — é comportamento preexistente, registrado para não virar surpresa no emulador |
+| PB-9 | A **D4** (fotos reais de kit no acervo local) não pode ser paga por este executor sem material: a task pede FOTOGRAFIA de camiseta, kit fitness e ioga versionada em `apps/landing/public/mock/`, e a própria fila proíbe link para fora. Gerar imagem sintética e chamá-la de "foto real" seria mentir no nome do arquivo | D4 | Nenhum no código — é entrega de material pelo dono, ou a task vira "placeholder honesto rotulado como exemplo" |
+| PB-7 | O terceiro aceite entra no MESMO bloco dos outros dois, com o mesmo padrão de modal e versão, e o texto do organizador é renderizado como veio (quebras de linha viram parágrafos). O vocabulário D-0802-1 governa o que a PLATAFORMA escreve; o que o organizador escreveu atravessa intacto | C3 | Baixo — é copy e layout dentro de um bloco que já existe |
+| PB-8 | Sem meio escolhido, o rótulo da linha de taxa diz "(PIX)", porque a cotação exibida É uma cotação de PIX à vista. A alternativa (rótulo genérico até a escolha) nomearia menos do que a RN-435 pede | C2 | Baixo — é uma expressão ternária |
 | PB-5 | O modo da taxa entra na tela pelo flag do EVENTO (`taxaRepassada` do leitor), não por `taxaServico > 0`. Custa uma prop nos dois componentes e duas linhas de fiação no `CheckoutFlow` — arquivo fora do território declarado da A3, tocado no mínimo | A3 | Nenhum — o proxy pelo valor é que estaria errado; vetar seria escolher a versão falsa |
 | PB-6 | Evento com taxa REPASSADA e taxa zero no meio escolhido continua sem linha de taxa (não vira "inclusa"). "Inclusa" é enunciado do modo incorporada; ali a taxa realmente sai do repasse do organizador | A3 | Baixo — é um ramo de três linhas; a alternativa é dizer "inclusa" onde não é verdade |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
