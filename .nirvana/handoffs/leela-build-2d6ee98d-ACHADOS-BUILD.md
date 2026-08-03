@@ -16,7 +16,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
 - [x] **A4 · S1216-T4** — total por opção sempre que os dois existirem
 - [x] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
-- [ ] **C2 · S1217-T2** — nenhuma forma pré-selecionada
+- [x] **C2 · S1217-T2** — nenhuma forma pré-selecionada
 - [ ] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
 - [ ] **C4 · S1217-T4** — versão exibida conferida pelo servidor
 - [ ] **C5 · S1217-T5** — origem da requisição na prova de aceite
@@ -501,13 +501,66 @@ mais checkbox. Dois casos que carimbavam a colocação antiga foram reescritos:
 
 ---
 
+## C2 · S1217-T2 · a tela deixa de comprar sozinha
+
+Commit `590226b`. Território: `.../checkout/CheckoutFlow.tsx`, `.../checkout/StepResumo.tsx`,
+`.../checkout/StepPagamento.tsx`, `.../checkout/SeletorForma.tsx` + sete arquivos de teste.
+
+**Fecha o buraco que a C1 abriu.** `useState<FormaUI>('pix')` virou
+`useState<FormaUI | null>(null)`. A auto-geração do PIX dispara com
+`step === 2 && forma === 'pix' && aceitesOk`: com o aceite vindo da etapa anterior e `'pix'` no
+default, entrar no pagamento criava pedido, pagamento e inscritos pendentes e uma cobrança real no
+gateway — antes de a pessoa olhar o total.
+
+**A fronteira entre cotar e cobrar virou código.** `formaCotada = forma ?? 'pix'` alimenta a
+cotação; `forma` (que pode ser `null`) alimenta a cobrança, com um guard explícito no
+`gerarCobranca` que devolve erro em vez de criar nada. Cotar é leitura: nada é gravado, nada é
+cobrado, e a pessoa vê os dois preços no rótulo de cada opção (S1216-T4) antes de decidir.
+
+**`exactOptionalPropertyTypes` cobrou honestidade.** Ausência de escolha entra no `RadioGroup` e no
+`StepConfirmacao` como **prop ausente**, não como `undefined` passado — spread condicional. O
+`RadioCard` compara `ctx.value === value` e nenhum casa, que é exatamente o estado sem seleção.
+
+Sem meio escolhido o `StepPagamento` não renderiza instrumento nenhum: uma linha aponta para a
+escolha logo acima. Não há botão de pagar a desabilitar, porque não há o que pagar ainda.
+
+### Falsificação
+
+Os quatro componentes restaurados do HEAD (que já contém a C1) e o arquivo novo re-executado:
+
+```
+Tests  6 failed | 1 passed (7)
+```
+
+O único que passa nos dois mundos é "escolher CARTÃO não cria cobrança" — o cartão já era assim,
+porque o pagamento dele sempre exigiu o botão. Está declarado no arquivo como guarda.
+
+### Sete arquivos de teste que atravessavam o PAGAR
+
+O gesto que faltava passou a ser escrito nos helpers: quem tem contrato de "pagar com PIX"
+(`checkout-asaas-teto`, `checkout-s1209-rev-ataque`, `checkout-s1209-cards-atleta`, e o caso de
+retorno da C1) ganhou o clique na opção PIX; quem tem contrato de "chegar ao PAGAR"
+(`checkout-dec0729-pagar`, `checkout-ckux-rev-cotacao`) trocou o marco de chegada do botão "Gerar
+código PIX" para o resumo do pedido — porque na chegada não existe mais botão de pagar.
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc` / `eslint` | **0** / **0** |
+| Suíte da landing, processo único | **351/351** em 32 arquivos (era 344/344 em 31) |
+
+---
+
 ## Onde a lane parou
 
-Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1**. Próxima: **C2** (`S1217-T2` — nenhuma forma
-pré-selecionada; a cobrança PIX nasce na ESCOLHA do PIX). Território dela:
-`.../checkout/CheckoutFlow.tsx`, `.../checkout/StepResumo.tsx`, `.../checkout/SeletorForma.tsx`,
-`.../checkout/tipos.ts`. **Ela é obrigatória antes de qualquer deploy da C1** — ver o aviso na
-seção da C1.
+Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1, C2**. O par C1+C2 está fechado — o aviso de "não
+deployar C1 sem C2" está **cumprido** dentro da própria lane.
+
+Próxima: **C3** (`S1217-T3` — terceiro aceite condicional, o termo de saúde do organizador, ponta a
+ponta; e o payload deixa de afirmar `true` literal). Território dela:
+`.../checkout/AceitesCompra.tsx`, `.../checkout/CheckoutFlow.tsx`, `apps/landing/lib/leitor.ts`,
+`apps/landing/lib/tipos.ts`.
 
 **Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
 push, como a lane manda.
