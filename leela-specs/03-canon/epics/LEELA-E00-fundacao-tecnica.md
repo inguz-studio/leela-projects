@@ -336,3 +336,58 @@ consentimento carimbado (modelo em `modelo-de-dados-firestore.md` §profissionai
 create do PRÓPRIO doc (`request.auth.uid == profId`) com shape validado; update de
 `statusOnboarding` NEGADO ao cliente (só Function — quem promove é o resgate, RN-414).
 Testes: ataque de Rules (criar doc de terceiro; auto-promover `statusOnboarding`).
+
+## Delta o cadastro do organizador em produção, e o que a review provou (2026-08-03 · ONBOARD-BUILD → ONBOARD-REV)
+
+A S030 (cadastro completo) e o roteamento pós-login saíram do papel em 03/08. Duas RNs
+novas nascem aqui, com o E00 como dono, e as duas foram medidas antes de virar letra.
+
+### RN-446 · o aceite LGPD é carimbo do servidor, e a ausência dele não é fabricável
+
+O consentimento nasce com a **versão vigente** do termo (`TERMO_LGPD_VERSAO`, hoje
+`2026-07-28`), a finalidade declarada e o instante do **servidor**: a Rule exige
+`is timestamp`, que avalia `request.time`, então aceite datado pelo cliente é negado — caso
+verde na suíte. Mudou o texto do termo, sobe a constante no mesmo commit.
+
+A outra metade da regra é o que **não** se faz. Quando a escrita do perfil falha no
+cadastro, o doc é recriado mais adiante pelo resgate do convite, e nasce **sem**
+`consentimentoLgpd` — a pessoa marcou o checkbox, o registro nunca existiu. Preencher esse
+campo por dedução carimbaria um consentimento que ninguém registrou, que é exatamente a
+prova fabricada que a RN-412 recusa. Por isso a lacuna subiu como decisão do dono
+(**LGPD-1** no painel) em vez de ser consertada por conta própria, e o **seed do primeiro
+convite fica retido** até ela fechar.
+
+### RN-448 · acesso único por precedência: uma conta, uma casa
+
+Decisão do dono em 03/08, ratificada junto do item 57: a mesma pessoa pode acumular
+administração da plataforma e operação de painel numa conta só, e **não se constrói seletor
+de papel**. O destino pós-login sai por precedência:
+
+| Conta | Destino |
+|---|---|
+| `platform_admin` (com ou sem doc de profissional) | `/plataforma` |
+| organizador com tenant | `/` (Visão Geral) |
+| sem tenant, **com** doc `profissionais/{uid}` | `/` — encontra o overlay de convite (reconciliação com a RN-411) |
+| sem tenant e **sem** doc | barrada na tela de entrar, com aviso, e a sessão cai |
+| deep-link guardado | vence o default, inclusive para o super-admin |
+
+**Nota de modelo, para quem mexer:** `setTenantClaims` põe `platform_admin` em
+`ROLES_WITHOUT_TENANT`, então a claim nunca carrega papel de admin e `tenantId` ao mesmo
+tempo. Uma conta que "acumula" hoje é, na prática, uma conta `platform_admin` cujo tenant
+só é alcançável pelas Rules de admin. A precedência é a única forma possível com o modelo
+atual; o caso de teste (`d8d36697`) trava a decisão para o dia em que o modelo mudar.
+
+### O que a review corrigiu no território do E00
+
+O gate do `/cadastrar` era `nome.trim().length > 0` e `organizacao.trim().length > 0`, sem
+teto, enquanto a Rule `shapeAutoCadastroValido` — escrita pela mesma lane — exige de 2 a 80
+caracteres. O core já tinha `validarCadastroOrganizador` com a faixa exata e o comentário
+dizendo para que serve: a tela usa para habilitar o botão, a Function usa para não confiar
+na tela. A tela não usava. Nome de uma letra e organização de 81 caracteres passavam pelo
+botão, o servidor recusava, a recusa caía num `catch {}` vazio e a **conta Auth nascia sem
+`profissionais/{uid}`** — o que, pela RN-448, barra a pessoa no login seguinte sem caminho
+de volta. Fix em `52f27f76`, com falsificação executada (gate frouxo restaurado ⇒ três casos
+de limite morrem).
+
+Resíduo declarado: falha do `setDoc` por rede, quota ou indisponibilidade ainda produz a
+conta órfã. A recuperação self-service é história de fila; hoje só `platform_admin` resolve.

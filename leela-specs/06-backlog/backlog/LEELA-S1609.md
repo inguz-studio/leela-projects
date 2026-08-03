@@ -26,7 +26,7 @@ tags: [leela, story]
 - Dado um código válido, quando informo (aceitando variações de caixa/espaços/hífens — normalização RN-413), então a Function `resgatarConviteOrganizador` carimba o uso e provisiona o tenant na mesma transação (RN-414); meu token ganha as claims e o painel destrava sem novo login manual.
 - Dado um código inexistente, usado, revogado ou expirado, quando tento, então recebo o mesmo erro genérico ("código inválido ou já utilizado") sem distinguir o caso (RN-414).
 - Dado 5 tentativas erradas na última hora, quando tento a 6ª, então o servidor recusa com copy honesta e o CTA continua disponível (RN-415).
-- Dado o CTA, quando aciono, então o destino vem de `platform/config.contatoOnboarding` (WhatsApp ou mailto — RN-417, premissa P1); sem config, cai no mailto oficial.
+- Dado o CTA, quando aciono, então o destino vem de `platform/configOnboarding` (WhatsApp ou mailto — RN-417, letra reconciliada em 03/08; premissa P1); sem config, cai no mailto oficial.
 - Dado dois resgates concorrentes do mesmo código, quando correm, então um vence e o outro recebe o erro genérico; falha no provisionamento não queima o código (RN-414).
 
 ## Subtarefas

@@ -2407,3 +2407,21 @@ há caso que varre o acervo inteiro exigindo caminho local. **Defeito que o acer
 treino caíam no mesmo balaio `wellness` e recebiam a MESMA foto genérica — os dois ganharam foto
 própria, com teste assertando que os três arquivos são distintos. A RN-428 (demonstração app-side, só
 em preview) segue inalterada.
+
+## Ponta solta a vitrine e o servidor discordam sobre o que está à venda (2026-08-03 · achado QA-DATA-0803)
+
+Medido em produção enquanto a lane QA-DATA semeava o evento de teste com taxa repassada.
+**A landing deriva estado de venda só dos lotes** (`estadoVenda.ts`): evento publicado que
+não tem lote serve "Inscrições encerradas", mesmo quando o servidor tem preço legado válido
+e cotaria a compra sem reclamar. A tela e o motor discordam, e quem perde é o organizador
+que publicou.
+
+Não é hipótese. **`noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026` estão
+publicados e inacessíveis em produção agora.** Foi por isso que o evento de teste nasceu
+com lote obrigatório — sem ele, a prova não teria como rodar.
+
+A decisão embutida é qual das duas fontes manda: o lote continua sendo a única autoridade
+de venda (e então publicar sem lote deveria ser recusado, ou avisado no painel), ou a
+landing passa a cair no preço legado quando não há lote. Enquanto ninguém decide, publicar
+um evento pode não publicar nada. Está na fila do painel de decisões como card de
+prioridade alta; nenhuma linha de código foi tocada.

@@ -1259,8 +1259,8 @@ Detalhe integral em `02-rodadas/2026-07-28-onboarding-organizador/02-rns-delta.m
 **Modelo de dados:** ➕ `convitesOrganizador/{codigo}` (docId = código normalizado; uso
 único; Rules: cliente só `platform_admin`, resgate só por Function) + delta em
 `profissionais/{uid}` (`statusOnboarding`, `consentimentoLgpd`) +
-`platform/config.contatoOnboarding`. Ver `modelo-de-dados-firestore.md` (§Convites de
-organizador).
+`platform/configOnboarding` (doc próprio — ver a reconciliação da RN-417 no delta ao final
+deste épico). Ver `modelo-de-dados-firestore.md` (§Convites de organizador).
 
 **Consumidores fora deste épico:** E00-S030 (cadastro completo no `/cadastrar`, upgrade da
 S020-T3 — o default "cadastro NÃO cria tenant" permanece) e E12-S1213 (entrada na landing:
@@ -1318,7 +1318,7 @@ inicial (ou falar com o time Leela), **para** destravar meu acesso e começar a 
 - **Dado** código inexistente/usado/revogado/expirado, **quando** tento, **então** o MESMO erro genérico, sem distinguir o caso (RN-414).
 - **Dado** 5 tentativas erradas na última hora, **quando** tento a 6ª, **então** `resource-exhausted` com copy honesta; o CTA continua disponível (RN-415).
 - **Dado** dois resgates concorrentes do mesmo código, **quando** correm, **então** um vence e o outro recebe o erro genérico; falha no provisionamento não queima o código.
-- **Dado** o CTA, **quando** aciono, **então** o destino vem de `platform/config.contatoOnboarding`; sem config, mailto oficial (RN-417).
+- **Dado** o CTA, **quando** aciono, **então** o destino vem de `platform/configOnboarding`; sem config, mailto oficial (RN-417, letra reconciliada em 03/08).
 
 **Tasks:**
 
@@ -1350,3 +1350,64 @@ Fila completa (com E00-S030 e E12-S1213) em
 fundação; S1609-T1 ⚔ depende dela e do doc do profissional (S030-T2); S1608-T2 e a trilha
 de tela correm depois, em paralelo. `functions/**` está disputado com a lane
 DEPLOY-PREVIEW — serializar por lane.
+
+## Delta a porta de entrada do organizador construída e revisada (2026-08-03 · ONBOARD-BUILD → ONBOARD-REV)
+
+As sete histórias da SPEC-ONBOARD saíram do papel em 03/08: oito commits de construção
+(`d0b7cd49..aa0e2183`) e quatro de review antagonista (`52f27f76..37b9ec94`), esta última
+em contexto fresco, sem participação de quem construiu. Rastro completo em
+`.nirvana/handoffs/leela-build-2d6ee98d-ONBOARD-BUILD.md` e `-ONBOARD-REV.md`.
+
+### RN-447 (nova, dona) · convite queimado é auditoria
+
+`convitesOrganizador` **não aceita delete de ninguém**, nem de `platform_admin`. O convite
+é o registro de quem entrou na plataforma no go-live controlado; apagá-lo apagaria o rastro
+de admissão. Revogar (RN-413) continua sendo o caminho, e só alcança código `ativo`. A
+propriedade é medida por falsificação: abrir `allow delete: if isPlatformAdmin()` mata o
+caso `delete é negado até para platform_admin`.
+
+### RN-446 e RN-448 (novas, donas no E00) · o que este épico consome
+
+- **RN-446** — o aceite LGPD é carimbo do servidor, e a ausência dele não é fabricável. O
+  resgate do convite (S1609-T1) é justamente o caminho que recria `profissionais/{uid}`
+  quando ele falta, e o doc recriado nasce **sem** `consentimentoLgpd` e com
+  `statusOnboarding: 'ativo'`. A escolha de o que fazer nesse caso é do dono e está aberta
+  como **LGPD-1** no painel; até ela fechar, o **seed do primeiro convite fica retido**.
+- **RN-448** — acesso único por precedência. Vale para este épico porque a exceção de
+  `platform_admin` no `ContaTravadaGate` é o que mantém `/plataforma` alcançável para o
+  super-admin mesmo sem doc de profissional.
+
+### RN-417 · letra reconciliada, não decisão nova
+
+O CTA lê `platform/configOnboarding` (doc próprio) e não `platform/config.contatoOnboarding`
+(campo do doc global). Rules do Firestore não filtram campo: abrir o doc global para a conta
+travada entregaria junto a tabela global de taxa da plataforma. A review executou a
+falsificação e o veredito foi **premissa sustentada**. Detalhe em
+`02-rodadas/2026-07-28-onboarding-organizador/02-rns-delta.md §RN-417`.
+
+### Defeitos que a review achou e corrigiu
+
+| # | Defeito | Fix |
+|---|---|---|
+| DEF-A | O gate do `/cadastrar` era `length > 0` sem teto, enquanto a Rule `shapeAutoCadastroValido` exige de 2 a 80 — a tela aceitava o que o servidor recusa, a negativa caía num `catch` vazio e a conta Auth nascia sem `profissionais/{uid}` | `52f27f76` — a tela passa a usar `validarCadastroOrganizador`, a mesma régua do servidor |
+| DEF-B | A recusa única da RN-414 valia só para o candidato do caminho feliz: conta com papel conflitante atravessava a validação, **reservava o código** e morria depois como `internal`, que é oráculo — e queimava convite alheio a cada tentativa | `06ea10f8` — `contaElegivelParaResgate` decide dentro da transação, depois do ramo de replay e antes do CAS; recusa idêntica à do código morto e o convite não é sequer escrito |
+| DEF-C | O véu do overlay bloqueante (RN-416) não existia: `bg-[var(--surface-base)]/95` não compila no Tailwind (modificador de opacidade sobre valor arbitrário é descartado), então o painel ficava sobre a home visível e o contraste dependia do que estivesse por baixo | `37b9ec94` — reuso dos tokens `--modal-overlay-bg` e `--modal-overlay-blur` do Modal do DS, já presentes no bundle; zero byte novo de CSS |
+
+### Pontas técnicas nomeadas, sem decisão de produto pendente
+
+- **Borda volumétrica.** O teto de tentativas da RN-415 é estritamente **por conta**, e o
+  cadastro é aberto: o teto global é `5 × contas que o atacante criar`. Quem torna a
+  enumeração inviável é o espaço de busca (31⁸ ≈ 8,5 × 10¹¹), não o limitador. O próprio
+  `rateLimit.ts` já declara por escrito que o throttle volumétrico é da **borda** — e
+  **App Check e Cloud Armor não estão ligados**. É julgamento de custo e de infraestrutura,
+  isto é, pendência do CTO humano, e viaja junto do item 62 (`minInstances`).
+- **Assimetria de re-check no provisionamento.** `viaClaimRepair` ganhou, na review L2 #29,
+  um RE-CHECK da prova dentro da transação; `viaAutoCadastro` lê a claim fora dela e não
+  tem o equivalente. A janela é estreita e, com o DEF-B corrigido, o caminho que a
+  exploraria passa a ser recusado antes. Fica anotado para quem mexer — é dívida de
+  simetria, não defeito medido.
+- **Recuperação da conta órfã.** Se o `setDoc` do cadastro falhar por rede, quota ou
+  indisponibilidade, a conta nasce sem doc e o login seguinte a barra sem caminho de volta
+  (o resgate vive atrás do login; recadastrar esbarra em `auth/email-already-in-use`). A
+  única recuperação hoje é intervenção de `platform_admin`. Vira história de recuperação
+  self-service na fila do produto, não decisão do dono.
