@@ -57,6 +57,7 @@ import {
   PLATFORM_CONFIG_DOC_PATH,
   CAMPO_TAXA_PLATAFORMA,
   resolverTaxaMeio,
+  roundMoney,
   validarTabelaTaxaPlataforma,
   validarTaxaTabelaOverride,
   montarItensDoPedido,
@@ -362,6 +363,13 @@ export interface CreateInscricaoChargeResult {
      * nunca o `platformFeePct` do termo (fix 703db9c).
      */
     taxaServico: number;
+    /**
+     * Juros do parcelamento em R$ (S1216-T2 · RN-435/RN-437): o que o
+     * comprador paga A MAIS por financiar, já embutido em `totalCobrado`.
+     * 0 no PIX, 0 no cartão à vista e 0 com termo sem juros. Vem do doc
+     * PERSISTIDO no replay — a cobrança nunca é reprecificada.
+     */
+    jurosParcelamento: number;
     /** O que o comprador paga (com juros no cartão parcelado). */
     totalCobrado: number;
     parcelas: number;
@@ -1605,6 +1613,15 @@ async function criarDocsDeCheckout(
       if (sale.taxaRepassada > 0) {
         pagamentoDoc['taxaRepassada'] = sale.taxaRepassada;
       }
+      // S1216-T2 (RN-435/RN-437) · o juro do parcelamento CONGELADO no ato da
+      // compra, pela mesma disciplina da taxa (RN-179): mudar `jurosAoMes` no
+      // termo depois disto não reprecifica este pedido, e o replay lê daqui em
+      // vez de recomputar. Campo SÓ quando existe — à vista, PIX e termo sem
+      // juros continuam gravando o doc vigente byte a byte.
+      const jurosParcelamentoVenda = roundMoney(sale.totalCobrado - sale.totalComprador);
+      if (jurosParcelamentoVenda > 0) {
+        pagamentoDoc['jurosParcelamento'] = jurosParcelamentoVenda;
+      }
       // TAXAFLEX (RN-179): CONGELA a linha de taxa resolvida no ato da
       // compra (override > global > legado) na MESMA tx que cria o doc —
       // mudar a tabela NUNCA reprecifica este pedido; o replay lê daqui; a
@@ -1877,7 +1894,10 @@ async function garantirCobrancaEMontarResultado(
   const parcelas = (pedidoSnap.get('parcelas') as number | undefined) ?? 1;
   const totalCobrado =
     (pagamentoSnap.get('gatewayAmountCentavos') as number) / 100;
-  // Mesma fórmula de buildInstallmentOptions (valorParcela = round(total/n))
+  // A divisão reproduz a parcela EXATA desde a S314-T1 (RN-436): o core
+  // arredonda a PARCELA e faz `total = parcela × n`, então `total / n` cai de
+  // volta no mesmo centavo. Antes, com o total arredondado primeiro, esta
+  // linha podia devolver um valor diferente do que a tela mostrou.
   const valorParcela = Math.round((totalCobrado / parcelas) * 100) / 100;
 
   // RN-157: expiração do PIX — do doc PERSISTIDO (replay devolve a MESMA;
@@ -1910,6 +1930,10 @@ async function garantirCobrancaEMontarResultado(
       // RN-347 — do doc PERSISTIDO (replay nunca recomputa): ausente = 0
       // (evento 'incorporada' e docs pré-RN347).
       taxaServico: (pagamentoSnap.get('taxaRepassada') as number | undefined) ?? 0,
+      // S1216-T2 — do doc PERSISTIDO, mesma disciplina da taxa: ausente = 0
+      // (à vista, PIX, termo sem juros e docs anteriores a esta rodada).
+      jurosParcelamento:
+        (pagamentoSnap.get('jurosParcelamento') as number | undefined) ?? 0,
       totalCobrado,
       parcelas,
       valorParcela,

@@ -25,7 +25,7 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { roundMoney, type AuthClaims } from '@leela/core';
+import { buildInstallmentOptions, roundMoney, type AuthClaims } from '@leela/core';
 import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
@@ -34,6 +34,21 @@ import { cotarInscricaoCheckoutCore } from '../checkout/cotarInscricaoCheckout';
 import { estornarInscricaoCore, ESTORNOS_SUBCOL } from '../checkout/estornarInscricao';
 import { processarWebhookPagamento } from '../checkout/webhookPagamento';
 import { buildMockWebhookPayload, MockPaymentProvider } from '../payments/mockProvider';
+
+/**
+ * Total parcelado esperado pela tabela Price (S314-T1 · RN-436), com a taxa de
+ * juros do termo semeado por esta suíte. Existe para que o teste NÃO carregue
+ * a fórmula: ele afirma o resultado da fonte única, e a fonte é o core.
+ */
+function precoParcelado(principal: number, parcelas: number): number {
+  const opcao = buildInstallmentOptions(principal, {
+    maxParcelas: parcelas,
+    jurosAoMes: 3.49,
+    parcelaMinima: 0,
+  }).find((o) => o.parcelas === parcelas);
+  if (opcao === undefined) throw new Error('opção de parcelamento indisponível no teste');
+  return opcao.valorTotal;
+}
 
 const PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
 const HOST = 'localhost';
@@ -214,11 +229,41 @@ describe('RN-347 · cotação por modo (I2/I4)', () => {
     const r = await cotarInscricaoCheckoutCore(db, {
       eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'cartao_credito', parcelas: 3,
     });
-    const esperado = roundMoney(TOTAL_REP * Math.pow(1.0349, 3));
+    // S314-T1 (RN-436): tabela Price de verdade. O esperado era
+    // `TOTAL_REP × 1,0349³` — o composto do prazo inteiro, que esta rodada
+    // aposentou. A BASE, que é o que a I5 prova, continua sendo o total do
+    // COMPRADOR (face + taxa).
+    const esperado = precoParcelado(TOTAL_REP, 3);
     expect(r.parcelamento.valorTotal).toBe(esperado);
     expect(r.totalCobrado).toBe(esperado);
     // Sobre o face daria MENOS — provaria a base errada
-    expect(esperado).toBeGreaterThan(roundMoney(FACE * Math.pow(1.0349, 3)));
+    expect(esperado).toBeGreaterThan(precoParcelado(FACE, 3));
+  });
+
+  // S1216-T2 · RN-435/RN-437 — o juro tem nome próprio e vem do SERVIDOR.
+  it('a cotação devolve `jurosParcelamento`, e ele é zero à vista e no PIX', async () => {
+    const pix = await cotarInscricaoCheckoutCore(db, {
+      eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'pix', parcelas: 1,
+    });
+    expect(pix.jurosParcelamento).toBe(0);
+
+    const aVista = await cotarInscricaoCheckoutCore(db, {
+      eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'cartao_credito', parcelas: 1,
+    });
+    expect(aVista.jurosParcelamento).toBe(0);
+
+    const em3x = await cotarInscricaoCheckoutCore(db, {
+      eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'cartao_credito', parcelas: 3,
+    });
+    // O número é exatamente o que a tela vai exibir na linha "Juros do
+    // parcelamento" — e ela não o calcula: recebe pronto.
+    expect(em3x.jurosParcelamento).toBe(
+      roundMoney(em3x.totalCobrado - em3x.totalAVista),
+    );
+    expect(em3x.jurosParcelamento).toBeGreaterThan(0);
+    // E o juro NÃO mexe no que o organizador enxerga (RN-437).
+    expect(em3x.valorFinal).toBe(FACE);
+    expect(em3x.taxaServico).toBe(TAXA);
   });
 });
 
@@ -287,10 +332,15 @@ describe('RN-347 · createInscricaoCharge (I2/I3)', () => {
         forma: 'cartao_credito', parcelas: 3,
       },
       { uid: ANA_UID });
-    const esperado = roundMoney(TOTAL_REP * Math.pow(1.0349, 3));
+    // S314-T1 (RN-436): Price de verdade no lugar do composto do prazo inteiro.
+    const esperado = precoParcelado(TOTAL_REP, 3);
     expect(charge.valores.totalCobrado).toBe(esperado);
     const pag = await db.collection('pagamentos').doc(charge.pagamentoId).get();
     expect(pag.get('gatewayAmountCentavos')).toBe(Math.round(esperado * 100));
+    // S1216-T2 · o juro é CONGELADO no doc de pagamento no ato da compra
+    // (mesma disciplina da taxa, RN-179) e volta no contrato da cobrança.
+    expect(charge.valores.jurosParcelamento).toBe(roundMoney(esperado - TOTAL_REP));
+    expect(pag.get('jurosParcelamento')).toBe(roundMoney(esperado - TOTAL_REP));
   });
 });
 

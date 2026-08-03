@@ -68,6 +68,17 @@ export interface CotarInscricaoCheckoutResult {
    * "à vista sai por" do Resumo. Em 'incorporada' == valorFinal.
    */
   totalAVista: number;
+  /**
+   * Juros do parcelamento em R$ (S1216-T2 · RN-435/RN-437): o que o comprador
+   * paga A MAIS por financiar, já embutido em `totalCobrado`. 0 no PIX, 0 no
+   * cartão à vista e 0 com termo sem juros.
+   *
+   * Vem PRONTO do servidor, e é assim de propósito: derivar o juro na tela por
+   * `totalCobrado − totalAVista` criaria uma segunda autoridade sobre o mesmo
+   * número. Opcional no tipo porque servidor antigo não o envia — a UI cai no
+   * ramo sem linha de juros em vez de exibir `undefined`.
+   */
+  jurosParcelamento?: number;
   opcoesParcelamento: CotarParcelaResult[];
   parcelamento: CotarParcelaResult;
   totalCobrado: number;
@@ -212,6 +223,12 @@ export interface CreateInscricaoChargeResult {
     valorFinal: number;
     /** Taxa de serviço do COMPRADOR (RN-347): 0 em 'incorporada'; valor em R$. */
     taxaServico: number;
+    /**
+     * Juros do parcelamento em R$ (S1216-T2) — congelado no doc de pagamento
+     * no ato da compra; o replay devolve o MESMO valor. Opcional: pedido
+     * anterior a esta rodada não tem o campo, e ausente significa 0.
+     */
+    jurosParcelamento?: number;
     totalCobrado: number;
     parcelas: number;
     valorParcela: number;

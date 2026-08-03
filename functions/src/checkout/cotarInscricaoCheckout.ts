@@ -43,6 +43,7 @@ import {
   meioDaForma,
   normalizarCodigoCupom,
   resolverTaxaMeio,
+  roundMoney,
   type FormaPagamento,
   type SaleState,
 } from '@leela/core';
@@ -123,6 +124,22 @@ export interface CotarInscricaoCheckoutResult {
    * referência à vista. Em 'incorporada' == valorFinal.
    */
   totalAVista: number;
+  /**
+   * Juros do parcelamento em R$ (S1216-T2 · RN-435/RN-437 · D-ACH-10): o que
+   * o comprador paga A MAIS por financiar, já embutido em `totalCobrado`.
+   * 0 no PIX, 0 no cartão à vista e 0 quando o termo tem `jurosAoMes: 0`.
+   *
+   * CALCULADO NO SERVIDOR, de propósito. A interface renderiza este número e
+   * não faz nenhuma aritmética de dinheiro — o caminho barato de derivar o
+   * juro na tela por `totalCobrado − totalAVista` é exatamente o que esta
+   * decisão proíbe (uma segunda autoridade sobre o mesmo valor diverge no dia
+   * em que o servidor mudar a composição do total).
+   *
+   * NÃO é receita do organizador (RN-437): o líquido do produtor sai do
+   * `valorFinal`, o razão registra o valor de face e a comissão de afiliado
+   * incide sobre o face. Nenhum dos três enxerga este número.
+   */
+  jurosParcelamento: number;
   /** Opções de parcelamento ofertáveis (termo — RN-311). PIX: só 1x. */
   opcoesParcelamento: CotarParcelaResult[];
   /** Opção escolhida (parcelas do input). */
@@ -317,6 +334,12 @@ export async function cotarInscricaoCheckoutCore(
     // `taxa` (repasse do organizador) nem `platformFeePct` (fix 703db9c).
     taxaServico: sale.taxaRepassada,
     totalAVista: sale.totalComprador,
+    // S1216-T2 · o juro é a diferença entre o que se paga financiando e o que
+    // se pagaria à vista, derivada AQUI e não na tela. `totalComprador` já é
+    // face + taxa repassada, então a subtração isola exatamente o custo do
+    // parcelamento — e nunca fica negativa, porque `buildInstallmentOptions`
+    // não emite opção abaixo do principal (S314-T1).
+    jurosParcelamento: roundMoney(sale.totalCobrado - sale.totalComprador),
     opcoesParcelamento: sale.opcoesParcelamento.map((o) => ({
       parcelas: o.parcelas,
       valorParcela: o.valorParcela,

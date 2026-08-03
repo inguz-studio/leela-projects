@@ -228,6 +228,55 @@ describe('RN-347 · I5 — Price sobre o total correto', () => {
     expect(sale.parcelamento.valorTotal).toBeGreaterThanOrEqual(totalComprador);
   });
 
+  // ---------------------------------------------------------------------------
+  // S1216-T2 · RN-435/RN-437 — o juro do parcelamento tem nome e é do SERVIDOR
+  //
+  // Esta é a MESMA derivação que `cotarInscricaoCheckoutCore` e
+  // `createInscricaoChargeCore` usam para preencher `jurosParcelamento`:
+  // `roundMoney(totalCobrado − totalComprador)`. Ela vive aqui, no puro,
+  // porque é aritmética de venda — o teste da callable (que exige Emulator)
+  // afirma o mesmo número contra o documento persistido.
+  // ---------------------------------------------------------------------------
+  it('o juro é a diferença entre o total cobrado e o total à vista, e nunca é negativo', () => {
+    const totalComprador = roundMoney(FACE + TAXA_FACE);
+    for (const parcelas of [1, 2, 3, 6, 9]) {
+      const sale = venda({
+        modoTaxa: 'repassada',
+        forma: 'cartao_credito',
+        parcelas,
+        installmentRules: RULES_COM_JUROS,
+      });
+      const juros = roundMoney(sale.totalCobrado - sale.totalComprador);
+      expect(sale.totalComprador).toBe(totalComprador);
+      expect(juros).toBeGreaterThanOrEqual(0);
+      // 1x é o caso que a S314-T1 acabou de consertar: à vista não financia.
+      if (parcelas === 1) expect(juros).toBe(0);
+      else expect(juros).toBeGreaterThan(0);
+    }
+  });
+
+  it('o organizador não vê o juro: à vista e em 9x produzem o MESMO líquido e a mesma base', () => {
+    const comum = {
+      modoTaxa: 'repassada' as const,
+      forma: 'cartao_credito' as const,
+      installmentRules: RULES_COM_JUROS,
+    };
+    const aVista = venda({ ...comum, parcelas: 1 });
+    const parcelado = venda({ ...comum, parcelas: 9 });
+
+    // O que o comprador paga muda…
+    expect(parcelado.totalCobrado).toBeGreaterThan(aVista.totalCobrado);
+    // …e nada do lado do organizador muda com ele.
+    expect(parcelado.receitaLiquidaOrganizador).toBe(aVista.receitaLiquidaOrganizador);
+    expect(parcelado.valorFinal).toBe(aVista.valorFinal);
+    expect(parcelado.taxa).toBe(aVista.taxa);
+    expect(parcelado.taxaRepassada).toBe(aVista.taxaRepassada);
+    // Falsificação declarada: somar o juro à base faria as três asserções
+    // acima morderem — é exatamente o caminho que a RN-437 proíbe.
+    const jurosDe9x = roundMoney(parcelado.totalCobrado - parcelado.totalComprador);
+    expect(parcelado.valorFinal + jurosDe9x).not.toBe(aVista.valorFinal);
+  });
+
   it('repassada + PIX segue 1x sem juros (total = face + taxa)', () => {
     const sale = venda({ modoTaxa: 'repassada', installmentRules: RULES_COM_JUROS });
     expect(sale.opcoesParcelamento).toHaveLength(1);
