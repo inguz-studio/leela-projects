@@ -1,22 +1,39 @@
 // =============================================================================
-// CadastrarPage (S020-T3) — cria a conta + nome, pós-cadastro honesto (sem
-// tenant), erros mapeados sem afirmar existência categórica da conta.
+// CadastrarPage (S020-T3 · estendida pela S030-T1 — RN-411/412).
+//
+// O que esta suíte trava:
+//   - o formulário exige os dados do organizador (nome, e-mail, telefone,
+//     organização) e o consentimento LGPD EXPLÍCITO;
+//   - o checkbox de LGPD nasce DESMARCADO e sem ele o submit não vai;
+//   - o pós-cadastro ATERRISSA LOGADO na home (RN-411), não num beco;
+//   - erro de e-mail em uso orienta sem afirmar existência categórica.
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
+import type * as ReactRouter from 'react-router-dom';
 import { CadastrarPage } from '../CadastrarPage';
 
 const mocks = vi.hoisted(() => ({
   criarContaComEmail: vi.fn(),
   atualizarNomeExibicao: vi.fn(),
+  criarPerfilOrganizador: vi.fn(),
+  getLeelaDb: vi.fn(() => ({}) as unknown),
+  navigate: vi.fn(),
 }));
 
 vi.mock('@leela/api-client', () => ({
   criarContaComEmail: mocks.criarContaComEmail,
   atualizarNomeExibicao: mocks.atualizarNomeExibicao,
+  criarPerfilOrganizador: mocks.criarPerfilOrganizador,
+  getLeelaDb: mocks.getLeelaDb,
 }));
+
+vi.mock('react-router-dom', async () => {
+  const real = await vi.importActual<typeof ReactRouter>('react-router-dom');
+  return { ...real, useNavigate: () => mocks.navigate };
+});
 
 function renderPage(): void {
   render(
@@ -26,11 +43,37 @@ function renderPage(): void {
   );
 }
 
-async function preencher(nome = 'Marina Castelo', email = 'marina@demo.dev', senha = 'segredo123'): Promise<void> {
-  await userEvent.type(screen.getByLabelText('Nome'), nome);
-  await userEvent.type(screen.getByLabelText('E-mail'), email);
-  await userEvent.type(screen.getByLabelText('Senha'), senha);
-  await userEvent.type(screen.getByLabelText('Confirmar senha'), senha);
+async function preencher(
+  overrides: Partial<{
+    nome: string;
+    email: string;
+    telefone: string;
+    organizacao: string;
+    senha: string;
+    lgpd: boolean;
+  }> = {},
+): Promise<void> {
+  const {
+    nome = 'Marina Castelo',
+    email = 'marina@demo.dev',
+    telefone = '48999998888',
+    organizacao = 'Castelo Produções',
+    senha = 'segredo123',
+    lgpd = true,
+  } = overrides;
+  // `userEvent.type` recusa string vazia — campo deixado em branco de
+  // propósito (caso "obrigatório") simplesmente não é digitado.
+  const digitar = async (rotulo: string, valor: string): Promise<void> => {
+    if (valor.length === 0) return;
+    await userEvent.type(screen.getByLabelText(rotulo), valor);
+  };
+  await digitar('Nome', nome);
+  await digitar('E-mail', email);
+  await digitar('Telefone ou WhatsApp', telefone);
+  await digitar('Nome da organização', organizacao);
+  await digitar('Senha', senha);
+  await digitar('Confirmar senha', senha);
+  if (lgpd) await userEvent.click(screen.getByRole('checkbox'));
 }
 
 beforeEach(() => {
@@ -38,17 +81,63 @@ beforeEach(() => {
 });
 
 describe('CadastrarPage', () => {
-  it('cria a conta, grava o nome e cai no estado honesto (sem tenant)', async () => {
+  it('cria a conta, grava o nome, o perfil e ATERRISSA LOGADO na home (RN-411)', async () => {
     mocks.criarContaComEmail.mockResolvedValue({ user: { uid: 'novo' } });
     mocks.atualizarNomeExibicao.mockResolvedValue(undefined);
+    mocks.criarPerfilOrganizador.mockResolvedValue(undefined);
     renderPage();
     await preencher();
     await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
 
-    await waitFor(() => expect(mocks.criarContaComEmail).toHaveBeenCalledWith('marina@demo.dev', 'segredo123'));
+    await waitFor(() =>
+      expect(mocks.criarContaComEmail).toHaveBeenCalledWith('marina@demo.dev', 'segredo123'),
+    );
     expect(mocks.atualizarNomeExibicao).toHaveBeenCalledWith('Marina Castelo');
-    expect(await screen.findByRole('heading', { name: 'Conta criada' })).toBeInTheDocument();
-    expect(screen.getByText(/convite da equipe ou por provisionamento/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(mocks.criarPerfilOrganizador).toHaveBeenCalledWith(expect.anything(), 'novo', {
+        nome: 'Marina Castelo',
+        email: 'marina@demo.dev',
+        telefone: '48999998888',
+        organizacao: 'Castelo Produções',
+      }),
+    );
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/', { replace: true }));
+  });
+
+  it('falha ao gravar o perfil NÃO prende a pessoa fora da conta que já existe', async () => {
+    mocks.criarContaComEmail.mockResolvedValue({ user: { uid: 'novo' } });
+    mocks.atualizarNomeExibicao.mockResolvedValue(undefined);
+    mocks.criarPerfilOrganizador.mockRejectedValue(new Error('permission-denied'));
+    renderPage();
+    await preencher();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith('/', { replace: true }));
+  });
+
+  it('o consentimento LGPD nasce DESMARCADO (RN-412)', () => {
+    renderPage();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('sem consentimento LGPD o submit não vai', async () => {
+    renderPage();
+    await preencher({ lgpd: false });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mocks.criarContaComEmail).not.toHaveBeenCalled();
+  });
+
+  it('telefone e organização são obrigatórios (RN-412 · P8)', async () => {
+    renderPage();
+    await preencher({ telefone: '', organizacao: '' });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+  });
+
+  it('não pede CPF/CNPJ — KYC segue fora (Won\'t do E16)', () => {
+    renderPage();
+    expect(screen.queryByLabelText(/cpf/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/cnpj/i)).not.toBeInTheDocument();
   });
 
   it('senha curta e confirmação divergente travam o submit', async () => {
@@ -69,6 +158,6 @@ describe('CadastrarPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
     const alerta = await screen.findByRole('alert');
     expect(alerta).toHaveTextContent(/já tem uma conta/i);
-    expect(screen.queryByRole('heading', { name: 'Conta criada' })).not.toBeInTheDocument();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

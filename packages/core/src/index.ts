@@ -793,6 +793,23 @@ export {
 export type { ProvisionInput } from './platform/provisioning';
 export { validateProvisionInput, buildInitialTerms } from './platform/provisioning';
 
+// Cadastro do organizador + consentimento LGPD (E00 · S030 · RN-411/412).
+export type {
+  ConsentimentoLgpd,
+  StatusOnboarding,
+  CadastroOrganizadorInput,
+} from './platform/cadastroOrganizador';
+export {
+  TERMO_LGPD_VERSAO,
+  TERMO_LGPD_FINALIDADE,
+  NOME_ORGANIZADOR_MIN,
+  NOME_ORGANIZADOR_MAX,
+  ORGANIZACAO_MIN,
+  ORGANIZACAO_MAX,
+  derivarSlugOrganizacao,
+  validarCadastroOrganizador,
+} from './platform/cadastroOrganizador';
+
 // Convite de ORGANIZADOR para a plataforma (E16 · S1608 · RN-413/414/415).
 // Distinto do convite de atleta→clube (RN-101) e do convite por e-mail de
 // clube (S104): entidade, coleção e Rules próprias. Alfabeto compartilhado

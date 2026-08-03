@@ -47,7 +47,7 @@ data: 2026-07-28
 ## Tasks pagas (build `leela-build-2d6ee98d` · lane ONBOARD-BUILD)
 
 - [x] `S1608-T1` — modelo + core + Rules do convite
-- [ ] `S030-T1` + `S030-T2` — `/cadastrar` completo + doc `profissionais/{uid}`
+- [x] `S030-T1` + `S030-T2` — `/cadastrar` completo + doc `profissionais/{uid}`
 - [ ] `S1213-T1` — entrada do organizador na landing
 - [ ] `S1608-T2` — tela `/plataforma/convites`
 - [ ] `S1609-T1` — Function `resgatarConviteOrganizador`
@@ -70,7 +70,7 @@ data: 2026-07-28
 - [x] cliente comum não lê nem escreve `convitesOrganizador` (ataque de Rules)
 - [ ] o CTA lê o destino de `platform/config`, nunca de string no código; sem config, cai
       no mailto oficial
-- [ ] consentimento LGPD carimbado com versão e instante; checkbox nasce desmarcado
+- [x] consentimento LGPD carimbado com versão e instante; checkbox nasce desmarcado
 - [ ] a landing mostra "Entrar" e "Criar conta de organizador" em desktop e mobile, sem
       regressão de CWV
 - [ ] review antagonista em contexto fresco nos itens 1 e 4 (Rules + Function de resgate:

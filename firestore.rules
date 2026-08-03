@@ -2712,9 +2712,68 @@ service cloud.firestore {
 
     // ── `profissionais/{profId}` — tenant-scoped via claim ────────────────
     match /profissionais/{profId} {
+
+      /**
+       * Auto-cadastro do organizador (S030-T2 · RN-411/412). A ÚNICA escrita
+       * de cliente nesta coleção: a pessoa cria o PRÓPRIO doc no `/cadastrar`
+       * e mais nada.
+       *
+       * `hasOnly` fecha o shape de propósito — sem ele, o formulário podia
+       * mandar `tenantId`/`papeis` junto e o doc nasceria alegando vínculo com
+       * um tenant alheio. Claim continua sendo a fonte de papel (RN-401), mas
+       * o doc é lido por telas e por joins; um `tenantId` forjado aqui seria
+       * uma afirmação falsa circulando pelo produto.
+       *
+       * `statusOnboarding` nasce PRESO em `aguardando_convite`: quem promove
+       * para `ativo` é o resgate do código, server-side (RN-414).
+       *
+       * `email` tem de ser o da própria conta (case-insensitive) — sem isso a
+       * pessoa cadastraria o e-mail de terceiro no próprio doc, e o
+       * provisionamento resolve owner POR E-MAIL.
+       *
+       * Datas por `serverTimestamp()`: `is timestamp` avalia `request.time`.
+       * Data de cliente é relógio do usuário — aceite LGPD datado pelo próprio
+       * titular não prova quando ele consentiu.
+       */
+      function shapeAutoCadastroValido() {
+        return request.resource.data.keys().hasOnly([
+              'id', 'nome', 'email', 'telefone', 'organizacao',
+              'statusOnboarding', 'consentimentoLgpd', 'criadoEm', 'atualizadoEm'
+            ])
+          && request.resource.data.id == profId
+          && request.resource.data.nome is string
+          && request.resource.data.nome.size() >= 2
+          && request.resource.data.nome.size() <= 80
+          && request.resource.data.email is string
+          && request.auth.token.email is string
+          && request.resource.data.email.lower() == request.auth.token.email.lower()
+          && request.resource.data.telefone is string
+          && request.resource.data.telefone.matches('^[0-9]{10,13}$')
+          && request.resource.data.organizacao is string
+          && request.resource.data.organizacao.size() >= 2
+          && request.resource.data.organizacao.size() <= 80
+          && request.resource.data.statusOnboarding == 'aguardando_convite'
+          && request.resource.data.consentimentoLgpd.keys().hasOnly(
+              ['versao', 'finalidade', 'aceitoEm'])
+          && request.resource.data.consentimentoLgpd.versao is string
+          && request.resource.data.consentimentoLgpd.versao.size() > 0
+          && request.resource.data.consentimentoLgpd.finalidade is string
+          && request.resource.data.consentimentoLgpd.finalidade.size() > 0
+          && request.resource.data.consentimentoLgpd.aceitoEm is timestamp
+          && request.resource.data.criadoEm is timestamp
+          && request.resource.data.atualizadoEm is timestamp;
+      }
+
       allow read: if (isSignedIn() && request.auth.uid == profId)
                   || (isSignedIn() && isTenantMember(resource.data.tenantId))
                   || isPlatformAdmin();
+      // Auto-cadastro: só CREATE, só o próprio doc, só o shape acima. Update e
+      // delete seguem exclusivos de platform_admin/Function — reabrir o doc
+      // depois de criado deixaria a pessoa reescrever o carimbo do
+      // consentimento (ou o `statusOnboarding`) sobre o resgate já feito.
+      allow create: if isSignedIn()
+                    && request.auth.uid == profId
+                    && shapeAutoCadastroValido();
       allow write: if isPlatformAdmin();
 
       // `dashboard/{docId}` — agregado ∑ do painel do profissional

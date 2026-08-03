@@ -13,12 +13,27 @@
 // aqui não há fronteira nem amplificação de leitura (1 getDoc extra por
 // tela de detalhe).
 //
-// Nenhuma escrita neste módulo — `profissionais` é write-only de
-// platform_admin/Function (Rules).
+// ESCRITA (S030-T2 · RN-411/412): a ÚNICA escrita de cliente permitida aqui é
+// o auto-cadastro do organizador criando o PRÓPRIO doc, com shape fechado pela
+// Rule (`hasOnly`) — sem `tenantId`, sem `papeis`, `statusOnboarding` preso em
+// `aguardando_convite`. Tudo o mais em `profissionais` segue write-only de
+// platform_admin/Function.
 // =============================================================================
 
-import { doc, getDoc, type Firestore } from 'firebase/firestore';
-import type { Profissional, Tenant } from '@leela/core';
+import {
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+  type Firestore,
+} from 'firebase/firestore';
+import {
+  TERMO_LGPD_FINALIDADE,
+  TERMO_LGPD_VERSAO,
+  normalizarTelefone,
+  type Profissional,
+  type Tenant,
+} from '@leela/core';
 import { getTenant } from './tenants';
 
 // ---------------------------------------------------------------------------
@@ -62,4 +77,50 @@ export async function getTenantComOwner(
     : null;
 
   return { tenant, owner };
+}
+
+// ---------------------------------------------------------------------------
+// Escrita — auto-cadastro do organizador (S030-T2 · RN-411/412)
+// ---------------------------------------------------------------------------
+
+/** Dados que o `/cadastrar` grava no doc do próprio profissional. */
+export interface PerfilOrganizadorInput {
+  nome: string;
+  email: string;
+  /** Cru da tela; normalizado para só dígitos antes de gravar. */
+  telefone: string;
+  organizacao: string;
+}
+
+/**
+ * Cria `profissionais/{uid}` logo após o cadastro (RN-411/412).
+ *
+ * A conta nasce SEM tenant e SEM claim: o doc registra `statusOnboarding:
+ * 'aguardando_convite'` e carimba o consentimento LGPD com VERSÃO, FINALIDADE
+ * e INSTANTE DO SERVIDOR — data de cliente é relógio do usuário, e um aceite
+ * datado pelo próprio titular não vale como prova.
+ *
+ * O `tenantId` NÃO entra aqui de propósito: o vínculo com o tenant é escrito
+ * pelo resgate do convite (RN-414), server-side. A Rule recusa o campo.
+ */
+export async function criarPerfilOrganizador(
+  db: Firestore,
+  uid: string,
+  input: PerfilOrganizadorInput
+): Promise<void> {
+  await setDoc(doc(db, 'profissionais', uid), {
+    id: uid,
+    nome: input.nome.trim(),
+    email: input.email.trim(),
+    telefone: normalizarTelefone(input.telefone),
+    organizacao: input.organizacao.trim(),
+    statusOnboarding: 'aguardando_convite',
+    consentimentoLgpd: {
+      versao: TERMO_LGPD_VERSAO,
+      finalidade: TERMO_LGPD_FINALIDADE,
+      aceitoEm: serverTimestamp(),
+    },
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
 }

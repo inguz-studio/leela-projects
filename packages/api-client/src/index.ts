@@ -665,6 +665,10 @@ export type {
 // ---------------------------------------------------------------------------
 export { getProfissional, getTenantComOwner } from './platform/profissionais';
 export type { TenantComOwner } from './platform/profissionais';
+// Auto-cadastro do organizador (S030-T2 · RN-411/412): a única escrita de
+// cliente em `profissionais` — o próprio doc, shape fechado pela Rule.
+export { criarPerfilOrganizador } from './platform/profissionais';
+export type { PerfilOrganizadorInput } from './platform/profissionais';
 
 // Marcas/patrocinadores reutilizáveis (R9-E · S-R9-12 · RN-171 — seed
 // E10-S811): CRUD owner-only + upsert a partir do cadastro de patrocínio.
