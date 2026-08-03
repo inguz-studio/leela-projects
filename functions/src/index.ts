@@ -26,6 +26,12 @@ export { onItemKitWrite, onKitWrite } from './eventos/itemKitIndex';
 // Plataforma — provisionamento atômico do tenant (E16-S1601-T1 · RN-403)
 export { provisionTenant } from './platform/provisionTenant';
 
+// Plataforma — resgate do convite de organizador (E16-S1609-T1 · RN-414/415).
+// Único caminho de resgate: o cliente NUNCA lê `convitesOrganizador`. Recusa
+// genérica única, rate-limit 5/h por conta, e reuso da MESMA máquina de
+// provisionamento (provisionTenantCore).
+export { resgatarConviteOrganizador } from './platform/resgatarConviteOrganizador';
+
 // Plataforma — rollups macro cross-tenant (E16-S1605-T2 · RN-409)
 export { recomputePlatformRollups } from './platform/rollups';
 

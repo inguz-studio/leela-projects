@@ -89,12 +89,37 @@ interface TxOutcome {
   /** Snapshot anterior do tenant quando foi UPDATE (aprovação de pending) */
   previousTenantData: FirebaseFirestore.DocumentData | null;
   createdProfissional: boolean;
+  /** true quando o doc do profissional JÁ existia sem tenant e foi completado */
+  completedProfissional: boolean;
+  /** Snapshot anterior do profissional quando foi COMPLETADO (S030-T2) */
+  previousProfissionalData: FirebaseFirestore.DocumentData | null;
   createdTerms: boolean;
 }
 
 /** Dependências injetáveis — testes de rollback substituem setClaims. */
 export interface ProvisionDeps {
   setClaims: (uid: string, role: Role, tenantId?: string) => Promise<void>;
+}
+
+/**
+ * Opções do provisionamento (S1609-T1 · RN-414). Não confundir com o
+ * `ProvisionInput`: aqui vive AUTORIZAÇÃO do chamador, não dado do tenant.
+ */
+export interface ProvisionOptions {
+  /**
+   * uid da conta que está provisionando PARA SI MESMA — o resgate de convite
+   * (RN-414). Habilita, e SÓ para este uid, a promoção de uma conta com claim
+   * `athlete` a `tenant_owner`.
+   *
+   * Por que é preciso: `onCreateUser` dá `athlete` por default a TODA conta
+   * nova, inclusive à do organizador que acabou de se cadastrar (RN-411). A
+   * guarda de papel conflitante abaixo (review Onda1 #2) barraria todo resgate
+   * — o caso legítimo mais comum do produto viraria erro. A exceção continua
+   * estreita: papel `athlete` (o único que o trigger produz), SEM o marcador
+   * `demotedFromRole` (demoção deliberada do admin segue rejeitada) e SÓ para
+   * a própria conta. Nenhum caminho de admin passa por aqui.
+   */
+  autoCadastroUid?: string;
 }
 
 const defaultDeps: ProvisionDeps = { setClaims: setTenantClaimsAdmin };
@@ -112,7 +137,8 @@ export async function provisionTenantCore(
   auth: admin.auth.Auth,
   rawInput: unknown,
   callerUid: string,
-  deps: ProvisionDeps = defaultDeps
+  deps: ProvisionDeps = defaultDeps,
+  options: ProvisionOptions = {}
 ): Promise<ProvisionResult> {
   // ── Validação pura do input ────────────────────────────────────────────
   const input = rawInput as ProvisionInput;
@@ -190,15 +216,26 @@ export async function provisionTenantCore(
       // mensagem própria; o caminho suportado de re-elevação é
       // setTenantClaims (que limpa o marcador).
       const deliberatelyDemoted = claims.demotedFromRole !== undefined;
+      const athleteLimpo = claims.role === 'athlete' && !deliberatelyDemoted;
+      /**
+       * Auto-cadastro (S1609-T1 · RN-414): a conta está provisionando para SI
+       * MESMA pelo resgate do convite, e o `athlete` que ela carrega é o
+       * default que o `onCreateUser` acabou de pôr — não é papel de outra
+       * pessoa sendo convertido. Ver `ProvisionOptions.autoCadastroUid`.
+       */
+      const viaAutoCadastro =
+        athleteLimpo &&
+        options.autoCadastroUid !== undefined &&
+        options.autoCadastroUid === ownerUid;
       let docProvenOwner = false;
-      if (claims.role === 'athlete' && !deliberatelyDemoted) {
+      if (athleteLimpo && !viaAutoCadastro) {
         const tenantSnap = await db.collection('tenants').doc(tenantId).get();
         docProvenOwner =
           tenantSnap.exists &&
           tenantSnap.get('status') === 'ativo' &&
           tenantSnap.get('ownerUid') === ownerUid;
       }
-      if (!docProvenOwner) {
+      if (!docProvenOwner && !viaAutoCadastro) {
         if (claims.role === 'athlete' && deliberatelyDemoted) {
           throw new https.HttpsError(
             'failed-precondition',
@@ -217,12 +254,18 @@ export async function provisionTenantCore(
             'Use outro e-mail de owner ou trate a conta antes (RN-401).'
         );
       }
-      viaClaimRepair = true;
-      logger.warn('provision_tenant_claim_repair', {
-        tenantId,
-        ownerUid,
-        staleRole: claims.role,
-      });
+      if (viaAutoCadastro) {
+        // Não é claim repair: não há tenant ainda para provar coisa alguma.
+        // Log próprio para a auditoria distinguir os dois caminhos.
+        logger.info('provision_tenant_auto_cadastro', { tenantId, ownerUid });
+      } else {
+        viaClaimRepair = true;
+        logger.warn('provision_tenant_claim_repair', {
+          tenantId,
+          ownerUid,
+          staleRole: claims.role,
+        });
+      }
     }
   } else {
     const created = await auth.createUser({
@@ -296,6 +339,8 @@ export async function provisionTenantCore(
             createdTenant: false,
             previousTenantData: null,
             createdProfissional: false,
+            completedProfissional: false,
+            previousProfissionalData: null,
             createdTerms: false,
           };
         }
@@ -349,6 +394,8 @@ export async function provisionTenantCore(
 
       // Profissional owner (cria só se não existe — preserva perfil prévio)
       let createdProfissional = false;
+      let completedProfissional = false;
+      let previousProfissionalData: FirebaseFirestore.DocumentData | null = null;
       if (!profSnap.exists) {
         createdProfissional = true;
         tx.set(profRef, {
@@ -357,7 +404,29 @@ export async function provisionTenantCore(
           nome: input.ownerNome ?? input.nome,
           email: input.ownerEmail,
           papeis: ['organizador'],
+          statusOnboarding: 'ativo',
           criadoEm: now,
+          atualizadoEm: now,
+        });
+      } else if (typeof profSnap.get('tenantId') !== 'string') {
+        // Doc do AUTO-CADASTRO (S030-T2): existe, com os dados da pessoa e o
+        // consentimento carimbado, mas sem vínculo — `statusOnboarding:
+        // 'aguardando_convite'`. O provisionamento COMPLETA o vínculo (RN-403
+        // já previa "criar se não existir"; o que faltava era o caso do doc
+        // pré-existente SEM tenant). Deixá-lo intocado produzia um owner cujo
+        // próprio doc não sabe de que tenant ele é — e todo join/Rule que lê
+        // `resource.data.tenantId` desse doc falharia em silêncio.
+        // PII do cadastro é preservada: só os campos de vínculo são escritos.
+        completedProfissional = true;
+        previousProfissionalData = profSnap.data() ?? null;
+        const papeisAtuais = profSnap.get('papeis') as unknown;
+        tx.update(profRef, {
+          tenantId,
+          statusOnboarding: 'ativo',
+          papeis:
+            Array.isArray(papeisAtuais) && papeisAtuais.includes('organizador')
+              ? papeisAtuais
+              : ['organizador'],
           atualizadoEm: now,
         });
       }
@@ -381,6 +450,8 @@ export async function provisionTenantCore(
         createdTenant,
         previousTenantData,
         createdProfissional,
+        completedProfissional,
+        previousProfissionalData,
         createdTerms,
       };
     });
@@ -508,7 +579,15 @@ async function rollbackProvisioning(
       // Aprovação de pending → restaura o doc exatamente como estava
       batch.set(tenantRef, outcome.previousTenantData);
     }
-    if (outcome.createdProfissional) batch.delete(profRef);
+    if (outcome.createdProfissional) {
+      batch.delete(profRef);
+    } else if (outcome.completedProfissional && outcome.previousProfissionalData) {
+      // Doc do auto-cadastro completado por ESTE run: restaura EXATAMENTE o
+      // que havia antes (volta a `aguardando_convite`, sem tenantId). Apagar
+      // seria pior que não desfazer — leva junto o consentimento LGPD
+      // carimbado, que é prova, não conveniência.
+      batch.set(profRef, outcome.previousProfissionalData);
+    }
     if (outcome.createdTerms) {
       batch.delete(termsCol.doc('current'));
       batch.delete(termsCol.doc('v1'));
