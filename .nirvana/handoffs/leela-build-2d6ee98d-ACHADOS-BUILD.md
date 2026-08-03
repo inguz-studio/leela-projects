@@ -13,7 +13,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
 - [x] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
-- [ ] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
+- [x] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
 - [ ] **A4 · S1216-T4** — total por opção sempre que os dois existirem
 - [ ] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
 - [ ] **C2 · S1217-T2** — nenhuma forma pré-selecionada
@@ -313,11 +313,73 @@ inteira de `functions`: os arquivos `*.integration.test.ts` dependem do emulator
 
 ---
 
+## A3 · S1216-T3 · o total para de ser um número sem história
+
+Commit `ecb5188`. Território: `.../checkout/StepResumo.tsx`, `.../checkout/StepConfirmacao.tsx`,
+mais duas linhas de fiação em `CheckoutFlow.tsx` e quatro arranjos de teste.
+
+O bloco de totais ganhou duas linhas e um nome:
+
+```
+Subtotal                          R$ ___
+Desconto                        − R$ ___     (da KITCUPOM — NÃO tocada)
+Taxa de serviço (PIX|cartão)      R$ ___     (repassada)
+Taxa de serviço                   inclusa no valor   (incorporada, sem número)
+Juros do parcelamento             R$ ___     (só quando > 0)
+Total                             R$ ___
+```
+
+**O modo veio do flag do evento, não do valor.** `taxaRepassada` (leitor · RN-347) entrou como prop
+nos dois componentes. Usar `taxaServico > 0` como proxy seria mais barato e estaria errado: evento
+que repassa pode ter taxa zerada no meio escolhido, e chamar isso de "inclusa" é falso. Três
+ramos, cada um com um enunciado verdadeiro — repassada com valor nomeia o meio; repassada com zero
+não diz nada (não há o que discriminar); incorporada diz "inclusa no valor" e nunca um número.
+
+**A tela não subtrai.** `jurosParcelamento` é lido do campo que a A2 pôs na cotação e no doc de
+pagamento. O caso `A INTERFACE NÃO SOMA UM CENTAVO` prova isso pelo avesso: a cotação chega com
+`jurosParcelamento: 5` e `totalCobrado − totalAVista = 92`, de propósito. A tela mostra R$ 5,00 e
+o texto do bloco não contém "92,00". Qualquer implementação que derivasse o juro localmente morde.
+
+### Falsificação (11 dos 17 casos morrem na versão anterior)
+
+Os dois componentes restaurados do HEAD e o mesmo arquivo de teste re-executado:
+
+```
+Tests  11 failed | 6 passed (17)
+```
+
+Os 11 discriminantes: taxa nomeada no PIX, taxa nomeada no cartão, o rótulo mudo "Taxa de serviço"
+não sobrevive, "inclusa no valor" existe, o valor real não vaza em incorporada, a linha de juros
+existe, o juro exibido é o do servidor, a ordem das cinco linhas, e os três casos da confirmação.
+
+Os 6 que passam nos dois mundos são guardas declaradas: taxa zero em evento repassado segue sem
+linha, "R$ 0,00" nunca aparece, percentual nunca aparece, PIX/à vista sem linha de juros, servidor
+antigo sem o campo (nem `undefined` nem `NaN` na tela) e pedido antigo sem juros na confirmação.
+
+### Gate de marca (task de interface)
+
+Sem componente novo e sem classe nova. As classes acrescentadas são as MESMAS já usadas dentro do
+próprio bloco de totais: `flex items-center justify-between`, `gap-3`, `text-text-secondary`,
+`text-text-primary`. Varredura no diff dos dois componentes: zero hex, zero valor arbitrário, zero
+utilitário de cor fora dos tokens do DS. O "inclusa no valor" é renderizado em
+`text-text-secondary` de propósito — é enunciado, não número, e a hierarquia visual diz isso.
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc --noEmit` | **0** |
+| landing `eslint` (checkout + test, `--max-warnings 0`) | **0** |
+| Suíte da landing, processo único | **333/333** em 30 arquivos (era 316/316 em 29) |
+| Arquivo novo `checkout-s1216-totais-discriminados` | **17/17** |
+
+---
+
 ## Onde a lane parou
 
-Fila paga: **D0, B1t, B2t, A1, A2**. Próxima: **A3** (`S1216-T3` — bloco de totais: taxa nomeada
-pelo meio, "inclusa no valor" no modo incorporada, linha própria de juros, no resumo e na
-confirmação). Território dela: `.../checkout/StepResumo.tsx` e `.../checkout/StepConfirmacao.tsx`.
+Fila paga: **D0, B1t, B2t, A1, A2, A3**. Próxima: **A4** (`S1216-T4` — total por opção sempre que
+os dois existirem; a nota da etapa 0 ganha o ramo do modo incorporada). Território dela:
+`.../checkout/StepResumo.tsx` e `.../checkout/StepModalidadeKit.tsx`.
 
 **Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
 push, como a lane manda.
@@ -340,4 +402,6 @@ Avisos para quem retomar:
 | PB-4 | O juro é derivado na borda (callables), não acrescentado ao `SaleState` do core. É uma linha sobre dois campos que o `SaleState` já expõe, e o território da A2 é a borda | A2 | Baixo — mover para o core é mecânico, e o número não muda |
 | PB-1 | Os números fechados da spec (R$ 422,03 / R$ 359,90) são erro aritmético e foram substituídos pelos medidos (R$ 422,28 / R$ 359,28). O código implementa a FÓRMULA da RN-436; nenhum literal de valor entrou nele | B1t | Nenhum no código — é reconciliação de texto da spec |
 | PB-3 | O seed de `commercialTerms` é idempotente por design: ambiente que já tem `current` NÃO é regravado, então o termo dele continua com juros 0 até alguém versionar. O 2,89 vale para provisionamento novo e para re-seed limpo | B2t | Nenhum — é comportamento preexistente, registrado para não virar surpresa no emulador |
+| PB-5 | O modo da taxa entra na tela pelo flag do EVENTO (`taxaRepassada` do leitor), não por `taxaServico > 0`. Custa uma prop nos dois componentes e duas linhas de fiação no `CheckoutFlow` — arquivo fora do território declarado da A3, tocado no mínimo | A3 | Nenhum — o proxy pelo valor é que estaria errado; vetar seria escolher a versão falsa |
+| PB-6 | Evento com taxa REPASSADA e taxa zero no meio escolhido continua sem linha de taxa (não vira "inclusa"). "Inclusa" é enunciado do modo incorporada; ali a taxa realmente sai do repasse do organizador | A3 | Baixo — é um ramo de três linhas; a alternativa é dizer "inclusa" onde não é verdade |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
