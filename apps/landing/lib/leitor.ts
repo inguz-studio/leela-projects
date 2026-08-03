@@ -681,9 +681,63 @@ interface EntradaCacheCupom {
  */
 const cacheCupomLink = new Map<string, EntradaCacheCupom>();
 
+/**
+ * Teto de entradas do cache (KITCUPOM-REV).
+ *
+ * O cache nasceu como MITIGAÇÃO de raspagem e era, ele próprio, o caminho de
+ * exaustão: a chave é `{slug}|{código}` e ela vinha DIRETO do chamador. Como
+ * `verificarCupomLinkAction` é uma ação de servidor — endereçável por qualquer
+ * um, com os argumentos que quiser —, uma sequência de códigos distintos (ou de
+ * slugs distintos, que nem passavam por guarda de forma) fazia o `Map` crescer
+ * sem limite dentro do `ssrleelalanding`, que serve TAMBÉM a página de compra.
+ * Medido antes do teto: 4.000 chaves distintas custaram ~12,8 MB de heap, e um
+ * slug de 200 mil caracteres era aceito e guardado inteiro.
+ *
+ * 500 entradas cobrem com folga o tráfego real (uma campanha inteira usa um
+ * punhado de códigos por evento) e o custo de errar para baixo é uma leitura a
+ * mais, nunca um número errado — o valor da faixa não vem daqui.
+ */
+export const CUPOM_LINK_CACHE_MAX = 500;
+
+/**
+ * Forma aceitável do slug na chave do cache. Não é validação de evento (quem
+ * decide isso é o Firestore, logo abaixo): é a MESMA disciplina que o código do
+ * cupom já tinha — entrada fora de forma não custa leitura nem entrada de
+ * cache. Slug real é kebab curto (`meia-floripa-2026`); 100 chars é folga.
+ */
+const SLUG_CACHE_MAX_LEN = 100;
+
+function slugUsavel(slug: string): boolean {
+  return (
+    slug.length > 0 &&
+    slug.length <= SLUG_CACHE_MAX_LEN &&
+    !slug.includes('/') &&
+    slug.trim().length > 0
+  );
+}
+
+/**
+ * Guarda uma resposta respeitando o teto. Evicção pela entrada mais ANTIGA
+ * (o `Map` do JS preserva a ordem de inserção), que é o comportamento certo
+ * aqui: o sondador insere sempre chaves novas, então é ele quem é despejado
+ * primeiro quando o teto encosta.
+ */
+function guardarNoCacheCupom(chave: string, entrada: EntradaCacheCupom): void {
+  if (!cacheCupomLink.has(chave) && cacheCupomLink.size >= CUPOM_LINK_CACHE_MAX) {
+    const maisAntiga = cacheCupomLink.keys().next().value;
+    if (maisAntiga !== undefined) cacheCupomLink.delete(maisAntiga);
+  }
+  cacheCupomLink.set(chave, entrada);
+}
+
 /** Só para teste — limpa o cache entre casos. */
 export function limparCacheCupomLink(): void {
   cacheCupomLink.clear();
+}
+
+/** Só para teste — quantas entradas o cache guarda agora. */
+export function tamanhoCacheCupomLink(): number {
+  return cacheCupomLink.size;
 }
 
 /**
@@ -707,7 +761,10 @@ export async function verificarCupomDoLink(
 ): Promise<CupomDoLinkPublico | null> {
   const codigo = normalizarCodigoCupom(codigoBruto);
   // Código fora de forma NÃO custa uma leitura: a guarda é a mesma do core.
-  if (!isCodigoCupomValido(codigo) || eventoSlug.trim().length === 0) return null;
+  // O SLUG passa pela mesma régua (KITCUPOM-REV): esta função é alcançada por
+  // ação de servidor, então os dois argumentos são do chamador, e uma chave de
+  // cache sem forma nem tamanho era memória do SSR entregue de graça.
+  if (!isCodigoCupomValido(codigo) || !slugUsavel(eventoSlug)) return null;
 
   const chave = `${eventoSlug}|${codigo}`;
   const agoraMs = Date.now();
@@ -715,7 +772,7 @@ export async function verificarCupomDoLink(
   if (emCache !== undefined && emCache.expiraEmMillis > agoraMs) return emCache.valor;
 
   const valor = await resolverCupomDoLink(eventoSlug, codigo);
-  cacheCupomLink.set(chave, { valor, expiraEmMillis: agoraMs + CUPOM_LINK_CACHE_MS });
+  guardarNoCacheCupom(chave, { valor, expiraEmMillis: agoraMs + CUPOM_LINK_CACHE_MS });
   return valor;
 }
 
