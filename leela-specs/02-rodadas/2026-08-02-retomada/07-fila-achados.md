@@ -67,7 +67,7 @@ quais, um a um.
 
 | # | Task | O que é | Território | Dep | ⚔ |
 |---|---|---|---|---|---|
-| E1 | `S1707-T1` | Índice composto de eventos por tenant e status — pré-requisito declarado, hoje faltando em produção | `firestore.indexes.json` | — | — |
+| E1 | `S1707-T1` | Medir a consulta de eventos por tenant e status e declarar o índice composto **só se ela reprovar**. Hoje o arquivo tem índice de eventos por tenant, organizador e data, e nenhum por tenant e status; pode estar sendo servido por combinação de índices de campo único. O índice de parcerias, que era o defeito real da investigação do PIX, já foi criado (`597d499`) | `firestore.indexes.json` | — | — |
 | E2 | `S1707-T2` | Ícones de rede inferidos pelo endereço, com os três SVGs que o `lucide` não tem; rótulo vira nome acessível | `apps/landing/app/(public)/_perfil/` (mapa + ícones, arquivos novos), `.../_perfil/PerfilView.tsx` | — | — |
 | E3 | `S1707-T3` | Menu secundário Feed · Eventos · Clubs com o `Tabs` do design system atrás de fronteira de cliente; as três seções continuam vindas do servidor; card de clube sem afordância de clique | `apps/landing/app/_ds/ds.ts`, `.../_perfil/` (componente de abas, arquivo novo), `.../_perfil/PerfilView.tsx` | E2 | — |
 | E4 | `S1707-T4` | Feed mockado e rotulado em preview; estado vazio digno em produção | `.../_perfil/`, `apps/landing/lib/mockImagem.ts` | E3 | — |
@@ -189,9 +189,9 @@ número no termo semeado e aritmética pura no core.
 escreve. Nenhuma leitura nova: a política de vendas já é lida ali dentro. O termo custom acrescenta
 uma leitura por compra **só nos eventos que o tenham ativo**.
 
-**Página do produtor.** Um índice composto novo, que já deveria existir. Nenhuma leitura nova: as
-três abas consomem os dados que a página já carrega numa chamada só. Os ícones e o feed mockado
-são estáticos.
+**Página do produtor.** No máximo um índice composto, e só se a medição da E1 mostrar que ele
+falta. Nenhuma leitura nova: as três abas consomem os dados que a página já carrega numa chamada
+só. Os ícones e o feed mockado são estáticos.
 
 **Orçamento das lanes.** Só spec até aqui. Zero custo de execução até o build começar.
 

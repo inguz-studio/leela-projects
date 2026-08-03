@@ -144,12 +144,18 @@ modelo de feed do clube e o do perfil precisam sair no mesmo lote para não coli
 Também ficam fora: tema por conta, aba de feed no aplicativo, curtida, comentário, seguidor e
 qualquer escrita a partir da página pública. Nenhuma delas é pré-requisito do que o dono pediu.
 
-**Uma consequência a registrar sem resolver.** A página pública do perfil depende de uma consulta
-composta de eventos por tenant e status que, segundo a investigação do PIX, está **faltando índice
-em produção** e falhando agora no site. A frente do B10 não cria essa dependência, mas é a
-primeira a promover a lista de eventos a aba com nome próprio: uma aba "Eventos" vazia por falta de
-índice é pior do que uma seção vazia. A criação do índice entra na fila como pré-requisito
-declarado, não como parte do desenho.
+**Uma consequência a verificar, com o registro corrigido.** A investigação do PIX achou um índice
+composto faltando em produção, e a página do perfil era uma das vítimas. Esse índice era o de
+**parcerias**, que alimenta a faixa de patrocinadores, e ele foi criado por outra lane no meio
+desta rodada (`597d499`). O que **não** foi conferido é a outra consulta que a mesma página faz:
+eventos por tenant e por status, que hoje não tem índice composto declarado — o único índice de
+eventos no arquivo é por tenant, organizador e data.
+
+Isso pode estar funcionando por combinação de índices de campo único, que o Firestore faz para
+filtros de igualdade, e pode não estar. A frente do B10 não cria essa dependência, mas é a primeira
+a promover a lista de eventos a aba com nome próprio, e uma aba "Eventos" vazia por falta de índice
+é pior do que uma seção vazia. A fila trata isso como **verificação com correção condicional**, não
+como fato: medir a consulta e só declarar o índice se ela reprovar.
 
 ---
 
@@ -172,7 +178,8 @@ Continuam a numeração da rodada, que começa em `04-spec-achados.md`.
   com ela: o checkout e a página do evento ficam de um lado, o perfil do outro. O único arquivo
   compartilhado com outras lanes vivas é o leitor da landing, e a frente B da KITCUPOM-BUILD já o
   toca — por isso a PRODUTOR-PAGE não entra antes de ela aterrissar.
-- **Índice composto de eventos por tenant e status**, ausente em produção. Pré-requisito declarado,
-  detalhado na fila.
+- **Consulta de eventos por tenant e status**, sem índice composto declarado. Verificação
+  condicional na fila, não pré-requisito assumido. O índice de parcerias, que era o defeito real
+  apontado pela investigação do PIX, já foi criado por outra lane (`597d499`).
 - **Fora desta spec:** publicação de feed, tema por conta, página pública de clube e as abas no
   aplicativo. Todas nomeadas acima, nenhuma especificada aqui.

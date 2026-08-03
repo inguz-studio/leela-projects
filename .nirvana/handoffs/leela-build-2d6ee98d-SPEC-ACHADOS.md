@@ -137,6 +137,16 @@ esta é a única lane que vai abrir esses arquivos.
    cadeia, num termo de isenção de responsabilidade por lesão. A RN-148 já previa `ipHash?` para o
    irmão dele e nunca foi construída. Task `S1217-T5`, RN-442.
 
+## Correção aplicada durante a lane
+
+O rascunho do B10 tratava como fato um índice composto faltando em produção para a consulta de
+eventos por tenant e status. **Estava errado por atribuição.** O índice que a investigação do PIX
+apontou era o de `parcerias` (a faixa de patrocinadores), e ele foi criado por outra lane no meio
+desta rodada (`597d499`). A consulta de eventos por tenant e status realmente não tem índice
+composto declarado, mas pode estar sendo servida por combinação de índices de campo único, o que
+ninguém mediu. A task E1 virou **medição com correção condicional** em vez de pré-requisito
+assumido, nos dois documentos.
+
 ## Entregáveis (aceite do brief, item a item)
 
 | Aceite do brief | Onde |
