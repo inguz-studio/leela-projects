@@ -79,6 +79,11 @@ export function destinoPosLogin(
     return { tipo: 'rota', destino: from };
   }
 
+  // Papel acumulado (admin + organizador na MESMA conta) resolve aqui, e
+  // resolve por precedência: a conta vai para `/plataforma` e pronto. É a
+  // decisão do dono de 03/08 — ACESSO ÚNICO, sem seletor de papel; a UX de
+  // visualização multi-papel é item futuro, de outra lane.
+  // NÃO transforme este `if` num seletor nem numa tela de escolha.
   if (sessao.role === 'platform_admin') {
     return { tipo: 'rota', destino: ROTA_PLATAFORMA };
   }

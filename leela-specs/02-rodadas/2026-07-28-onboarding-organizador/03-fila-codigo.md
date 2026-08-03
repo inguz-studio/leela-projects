@@ -54,9 +54,19 @@ data: 2026-07-28
 - [x] `S1609-T2` — overlay bloqueante + CTA configurável
 - [x] item 57 — roteamento pós-login por papel
 
-> ⚠ O item 57 está PAGO no código, mas o painel `01-produto/DECISOES-ABERTAS.md` NÃO foi
-> marcado por esta lane: o arquivo estava sendo reescrito pela lane DECISOES-CLEAN em voo.
-> Fechar o item 57 lá é da DECISOES-CLEAN ou do maestro na volta.
+> O item 57 está PAGO e o dono **RATIFICOU o default em 03/08**: admin da plataforma vai
+> para `/plataforma`, organizador para a Visão Geral, conta sem papel recebe o aviso ainda
+> na tela de entrar — mantida a reconciliação com a RN-411 (conta em onboarding ENTRA).
+> Não há veto pendente sobre o desenho.
+>
+> ⚠ O painel `01-produto/DECISOES-ABERTAS.md` não foi marcado por esta lane: o arquivo
+> estava sendo reescrito pela lane DECISOES-CLEAN em voo. Fechar o item lá é da
+> DECISOES-CLEAN ou do maestro.
+>
+> Duas informações do dono que NÃO são desta lane (registradas para não serem inventadas):
+> conta pode acumular admin+organizador e a decisão é **acesso único, sem seletor de papel**
+> (já é o comportamento do `destinoPosLogin`, por precedência); e o login vira **overlay na
+> landing** num item futuro.
 
 > `S030-T1` e `S030-T2` pagam num commit só: o doc do profissional é escrito
 > dentro do submit do `/cadastrar`, e separar produziria um commit intermediário
