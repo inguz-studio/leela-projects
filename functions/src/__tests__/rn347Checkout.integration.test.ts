@@ -215,6 +215,51 @@ describe('RN-347 · cotação por modo (I2/I4)', () => {
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // ACHADOS-REV · vetor 6 — o scan acima cobria SÓ o percentual da taxa.
+  //
+  // O vetor pede quatro coisas: percentual de taxa, taxa FIXA, percentual de
+  // JUROS e termo comercial. Com a S314-T1 ligando o `jurosAoMes`, o termo
+  // ganhou um segundo percentual privado, e ele passava pelo scan antigo sem
+  // ser olhado. A varredura por NOME DE CHAVE é a régua robusta — comparar
+  // valores ("3.49") daria falso positivo no dia em que um total legítimo
+  // contivesse a mesma sequência de dígitos.
+  // ---------------------------------------------------------------------------
+  it('vetor 6: nenhuma resposta pública carrega taxa fixa, % de juros nem termo comercial', async () => {
+    const respostas: unknown[] = [];
+    for (const eventoId of [EVENTO_INC, EVENTO_REP]) {
+      // 3x e não 12x: no evento 'incorporada' o face de R$ 189,90 em 12x cai
+      // abaixo da parcela mínima do termo (R$ 20) e a venda recusa — o corte
+      // da RN-311, não um vazamento.
+      for (const [forma, parcelas] of [['pix', 1], ['cartao_credito', 3]] as const) {
+        respostas.push(
+          await cotarInscricaoCheckoutCore(db, {
+            eventoId, itens: [{ modalidade: '10k' }], forma, parcelas,
+          }),
+        );
+      }
+    }
+    // A cobrança também é resposta pública (o cliente a recebe inteira).
+    respostas.push(
+      await createInscricaoChargeCore(
+        db, provider,
+        { ...baseInput(EVENTO_REP, 'rn347-v6-charge'), forma: 'cartao_credito', parcelas: 12 },
+        { uid: `${ANA_UID}-v6` }),
+    );
+
+    const proibidas = [
+      'platformFeePct', 'jurosAoMes', 'fixoCentavos', 'parcelaMinima', 'maxParcelas',
+      'installmentRules', 'commercialTerms', 'taxaCongelada', 'taxaMeioAplicada',
+      'percentual', 'receitaLiquidaOrganizador', 'anticipation', 'saasMonthlyFee',
+    ];
+    for (const resposta of respostas) {
+      const json = JSON.stringify(resposta);
+      for (const chave of proibidas) {
+        expect(json).not.toContain(chave);
+      }
+    }
+  });
+
   it('FORJA: taxaModo no payload da cotação é IGNORADO — modo vem do DOC (I3)', async () => {
     const r = await cotarInscricaoCheckoutCore(db, {
       eventoId: EVENTO_REP, itens: [{ modalidade: '10k' }], forma: 'pix', parcelas: 1,
@@ -369,6 +414,68 @@ describe('RN-347 · webhook (I3) + receita FACE (I1/I2)', () => {
     const replay = await confirmar(charge.pedidoId, charge.chargeId, 20984, 'evt-rn347-ok');
     expect(replay.duplicado).toBe(true);
     expect(await receita(EVENTO_REP)).toBe(roundMoney(receitaAntes + FACE));
+  });
+
+  // ---------------------------------------------------------------------------
+  // ACHADOS-REV · vetor 5 — "o organizador não vê o juro", ponta a ponta.
+  //
+  // O caso puro (`rn347TaxaRepassada.test.ts`) prova que o `computeSaleState`
+  // devolve o mesmo líquido à vista e em 9x. Isso é METADE: o que o
+  // organizador de fato recebe passa pelo WEBHOOK, e o que o afiliado
+  // comissiona passa pelo doc de conversão. Nenhum dos dois consome o
+  // `receitaLiquidaOrganizador` do core — os dois leem `valorFinal` do doc de
+  // pagamento. Sem este caso, trocar `valorFinal` por `totalCobrado` em
+  // `webhookPagamento.ts` passaria por todas as suítes verdes, e o organizador
+  // e o afiliado passariam a faturar o juro do parcelamento — que é o dano
+  // silencioso que a RN-437 existe para impedir.
+  //
+  // Falsificação medida (a que o vetor pede — "somar o juro à base"):
+  // `receitaConfirmada` e `valorConversao` trocados para o total COBRADO em
+  // `webhookPagamento.ts` ⇒ este caso morre nas três asserções e nenhum outro
+  // caso do repositório acusa.
+  // ---------------------------------------------------------------------------
+  it('vetor 5: à vista e em 12x do MESMO carrinho dão o mesmo face no razão e a mesma comissão', async () => {
+    const em12x = precoParcelado(TOTAL_REP, 12);
+    // Pré-condição do caso: o parcelado É mais caro para o comprador. Sem
+    // isto o teste passaria por não haver juro nenhum a vazar.
+    expect(em12x).toBeGreaterThan(TOTAL_REP);
+
+    const receitaAntes = await receita(EVENTO_REP);
+
+    const aVista = await createInscricaoChargeCore(
+      db, provider, baseInput(EVENTO_REP, 'rn347-v5-avista'), { uid: `${ANA_UID}-a` });
+    await confirmar(aVista.pedidoId, aVista.chargeId, 20984, 'evt-rn347-v5-a');
+    const receitaPosAVista = await receita(EVENTO_REP);
+
+    const parcelado = await createInscricaoChargeCore(
+      db, provider,
+      { ...baseInput(EVENTO_REP, 'rn347-v5-12x'), forma: 'cartao_credito', parcelas: 12 },
+      { uid: `${ANA_UID}-b` });
+    expect(parcelado.valores.totalCobrado).toBe(em12x);
+    expect(parcelado.valores.jurosParcelamento).toBe(roundMoney(em12x - TOTAL_REP));
+    await confirmar(
+      parcelado.pedidoId, parcelado.chargeId, Math.round(em12x * 100), 'evt-rn347-v5-b');
+    const receitaPosParcelado = await receita(EVENTO_REP);
+
+    // 1. O razão sobe o MESMO face nas duas compras — o juro não entra nele.
+    const deltaAVista = roundMoney(receitaPosAVista - receitaAntes);
+    const deltaParcelado = roundMoney(receitaPosParcelado - receitaPosAVista);
+    expect(deltaAVista).toBe(FACE);
+    expect(deltaParcelado).toBe(FACE);
+    expect(deltaParcelado).toBe(deltaAVista);
+
+    // 2. O doc de pagamento do parcelado guarda o face intacto — o juro mora
+    //    num campo com nome próprio, nunca dissolvido no valor da venda.
+    const pagParcelado = await db.collection('pagamentos').doc(parcelado.pagamentoId).get();
+    expect(pagParcelado.get('valorFinal')).toBe(FACE);
+    expect(pagParcelado.get('jurosParcelamento')).toBe(roundMoney(em12x - TOTAL_REP));
+    expect(pagParcelado.get('gatewayAmountCentavos')).toBe(Math.round(em12x * 100));
+
+    // 3. A base da comissão de afiliado é o `valorFinal` do MESMO doc — o
+    //    número que a conversão consumiria é idêntico nas duas compras
+    //    (P-TAXAFLEX-3/RN-310: comissão sobre o face, agora com juro na conta).
+    const pagAVista = await db.collection('pagamentos').doc(aVista.pagamentoId).get();
+    expect(pagParcelado.get('valorFinal')).toBe(pagAVista.get('valorFinal'));
   });
 });
 

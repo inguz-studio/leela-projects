@@ -404,3 +404,71 @@ describe('CKUX-REV · B8 — CEP-first é fail-open: lookup fora não fecha o ca
     }
   });
 });
+
+// =============================================================================
+// ACHADOS-REV · vetor 10 — "o item 64 continua de pé".
+//
+// O B1 (S1216-T1) encurtou a espera; ele não substituiu a guarda. A metade do
+// vetor que fala do BOTÃO já tem caso próprio acima. A outra metade — "o código
+// PIX continua sem nascer" — não tinha: desligar o `!cotando` do efeito de
+// auto-geração derrubava apenas um caso de `checkout-asaas-teto`, que existe
+// para o TETO DO GATEWAY e falha ali por acidente (a cobrança nasce duas
+// vezes). Quem quebrar esta guarda amanhã leria um erro sobre o Asaas.
+//
+// O cenário alcançável é a chegada ANTES da resposta: o pré-aquecimento do B1
+// torna isso raro, não impossível — a função fria levou de 1,7 s a 9,8 s em
+// produção, e o preenchimento do formulário pode ser mais rápido que isso. Com
+// os aceites já dados na etapa anterior (S1217-T1), escolher PIX é o único
+// gesto que falta, e é ele que a guarda precisa segurar.
+// =============================================================================
+
+describe('ACHADOS-REV · vetor 10 — com cotação em voo o código PIX não nasce', () => {
+  it('escolher PIX antes da resposta não cria cobrança; ela nasce quando o total chega', async () => {
+    let resolverPrimeira: ((v: unknown) => void) | null = null;
+    cotarInscricaoCheckout.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolverPrimeira = resolve;
+        }),
+    );
+    createInscricaoCharge.mockResolvedValue({
+      pedidoId: 'ped-v10',
+      pixExpiraEmMillis: Date.now() + 1_800_000,
+    });
+
+    // Chegada ao PAGAR SEM esperar a cotação — é a função fria do item 62.
+    await act(async () => {
+      render(<CheckoutFlow evento={evento} atribuicao={{}} />);
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /5k/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    preencherDados();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /continuar/i }));
+    });
+    await passarDebounce();
+    expect(resolverPrimeira).not.toBeNull();
+    // A tela está honesta sobre a espera (D-ACH-2 / item 64).
+    expect(screen.getByText(/Calculando o total/i)).toBeTruthy();
+
+    // O gesto que falta: escolher PIX. Sem a guarda, nasce pedido, pagamento,
+    // inscritos pendentes e cobrança real sobre um total que ninguém viu.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /^pix/i }));
+    });
+    await passarDebounce();
+    expect(createInscricaoCharge).not.toHaveBeenCalled();
+
+    // O total chega: aí sim o código nasce, sem clique extra (o ganho do A-3).
+    await act(async () => {
+      resolverPrimeira!(cotacaoCom(TOTAL_PIX, 'pix'));
+      await Promise.resolve();
+    });
+    await passarDebounce();
+    await waitFor(() => {
+      expect(createInscricaoCharge).toHaveBeenCalledTimes(1);
+    });
+  });
+});
