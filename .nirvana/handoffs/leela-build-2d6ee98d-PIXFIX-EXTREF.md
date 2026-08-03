@@ -13,7 +13,7 @@ Território: `functions/**` + `firestore.indexes.json`. **Zero arquivo tocado em
 - [x] **T3 · fim do "internal"** — família `AsaasError` inteira sai tipada e humana
 - [x] **T4 · índice de `parcerias`** — collectionGroup `status+tenantId+tipo`
 - [x] **T5 · deploy cirúrgico + prova** — `createInscricaoCharge` + `firestore:indexes`, exit 0
-- [ ] **T6 · parecer read-only sobre os contadores**
+- [x] **T6 · parecer read-only** — os dois números da INV estão limpos; a inflação real é outra
 
 ---
 
@@ -226,6 +226,78 @@ carrega o índice codificado, e ele decodifica exatamente para
 Índice composto leva minutos para construir depois do deploy. A confirmação visual — a
 faixa de patrocinadores reaparecendo na página do organizador — é conferência do dono.
 
+## T6 · os pedidos órfãos e os contadores — parecer READ-ONLY
+
+Nada foi escrito, nada foi apagado, nenhuma query rodou contra produção. O parecer sai da
+leitura do código dos agregadores, que é onde a resposta é determinística.
+
+### Veredito curto
+
+**Os dois números que a INV citou não estão inflados.** A inflação existe, mas em outro
+campo — e esse é exibido no painel.
+
+| Campo | Fonte | Filtra status? | Inflado pelos órfãos? |
+|---|---|---|---|
+| `demografia.totalConfirmados` (**101**) | query de inscritos | `where('status','==','confirmado')` | **Não** |
+| `financeiro.receitaBruta` (**34800**) | `eventos.receitaConfirmada` | só o webhook de confirmação move | **Não** |
+| estoque / aprovisionamento de kit | query de inscritos | `where('status','==','confirmado')` | **Não** |
+| virada de lote | `STATUS_QUE_CONTAM_VENDA` = `['confirmado','estornado']` | sim | **Não** |
+| `eventos.qtdInscritos` | `contarInscritos().total` | **não filtra nada** | **SIM** |
+| `financeiro.inscritos.total` e `porStatus.pendente` | idem | **não filtra nada** | **SIM** |
+
+Referências: `functions/src/analytics/agregarDemografia.ts:136-144`,
+`functions/src/eventos/agregarFinanceiro.ts:177-182` e `:222-225` e `:321-327`,
+`functions/src/eventos/agregarEstoque.ts:167`, `functions/src/eventos/virarLote.ts:67`.
+
+### O que isso significa na tela
+
+`qtdInscritos` é o número que o painel imprime como **"N inscritos"** no cabeçalho do
+evento e no badge da sub-navegação (`apps/painel/.../EventoShell.tsx:97` e `:174`), e é
+lido também pela landing (`apps/landing/lib/leitor.ts:495`). Ele conta inscrito em
+**qualquer** status, então soma os inscritos dos 2 pedidos órfãos.
+
+O evento afetado é **`desafio-mtb-costa-lagoa-2026`**, não o `meia-floripa-2026`
+(divergência já registrada em §2.5 da INV).
+
+**Quantos inscritos?** Não sei o número exato e não fui buscar: ler isso exige credencial
+de Admin SDK contra produção, e o arquivo de ADC que a lane DEPLOY-PREVIEW usou já não
+existe nesta máquina. O limite inferior é 2 (um inscrito por pedido). São 2 pedidos, e não
+4: as 4 tentativas foram 2 sessões × 2 cliques, e o segundo clique de cada sessão reusou a
+mesma `idempotencyKey`, logo o mesmo `pedidoId` e os mesmos documentos.
+
+### Ninguém varre isso sozinho
+
+Confirmado lendo os 11 crons registrados:
+
+- `expirarCarrinhosAbandonados` (5 min) age em **`carrinhos`**, não em `pedidos`/`inscritos`.
+  Ele carimba o carrinho como `expirado_sem_concluir` e para aí.
+- `estornarPagamentoOrfao` (15 min) trata do caso oposto — dinheiro que **chegou** depois
+  do cancelamento. Aqui não houve cobrança, então não houve dinheiro.
+- `expirarPixPendente` **é uma callable**, não um cron: o comprador a dispara da tela do
+  PIX. Ela **funcionaria** nestes pedidos (o `pixExpiraEm` é gravado em
+  `criarDocsDeCheckout`, antes do `createCharge`, e o ramo `chargeId === null` está escrito
+  e comentado). Mas ninguém vai apertar: o comprador levou `internal` e nunca chegou à tela
+  do PIX.
+
+E mesmo se alguém disparasse: o flip cancela **pedido e pagamento**, e deixa os
+**inscritos em `pendente` de propósito** (mesmo tratamento do caminho `falhou` do webhook —
+nova tentativa é pedido NOVO, nada ressuscita). Ou seja, `qtdInscritos` continuaria
+inflado depois da expiração. O número só volta ao certo se alguém apagar os inscritos.
+
+### Recomendação
+
+Dano real: **nenhum**. Não segura vaga, não reserva kit, não vira lote, não entra em
+receita, não entra em demografia. O prejuízo é um número errado na tela do organizador,
+por um valor pequeno, num evento que não é o do teste.
+
+Recomendo **não limpar agora**. Duas razões: apagar inscrito em produção é escrita
+irreversível sobre dado de comprador real, e o mesmo estado vai se repetir enquanto a
+compra não for provada ponta a ponta. Se o dono quiser limpar, o momento certo é **depois**
+da compra bem-sucedida, e a operação é apagar os inscritos dos 2 pedidos órfãos (o
+`onInscritoWrite` recomputa `qtdInscritos` sozinho no delete — full recompute, não delta).
+
+Decisão é do maestro/dono. **Não toquei em nada.**
+
 ---
 
 ## Premissas assumidas (vetáveis)
@@ -268,7 +340,10 @@ faixa de patrocinadores reaparecendo na página do organizador — é conferênc
    por esta lane, por instrução do brief. Depois do T5, a jornada precisa ser percorrida
    uma vez para provar o primeiro `200` na história desta function.
 2. Decisão sobre a premissa 3 (apertar ou não a RN-333).
-3. Decisão sobre os dois pedidos órfãos (T6).
+3. Decisão sobre os dois pedidos órfãos (T6) — recomendação: **não limpar agora**, e se
+   limpar, só depois da primeira compra bem-sucedida.
+4. Conferir a faixa de patrocinadores na página do organizador depois que o índice novo
+   terminar de construir (minutos).
 
 ## Commits desta lane (sem push — o maestro pusha)
 
@@ -278,3 +353,5 @@ faixa de patrocinadores reaparecendo na página do organizador — é conferênc
 | 2 | `3e056ec` | T2 · guarda dura do teto de 100, com id de tamanho real |
 | 3 | `7b5ba3e` | T3 · nenhuma recusa do gateway volta a imprimir "internal" |
 | 4 | `597d499` | T4 · índice `parcerias` (collectionGroup) |
+| 5 | `2a8c536` | T5 · deploy cirúrgico no ar, com provas |
+| 6 | — | T6 · parecer read-only (este handoff) |
