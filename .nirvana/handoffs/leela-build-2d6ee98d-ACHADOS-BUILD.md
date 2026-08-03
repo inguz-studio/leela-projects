@@ -9,7 +9,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 ## Estado da fila
 
 - [x] **D0** · redeploy da landing (os dois fix-commits de dinheiro da KITCUPOM-REV entram no ar)
-- [ ] **B1t · S314-T1** — tabela Price real em `buildInstallmentOptions`
+- [x] **B1t · S314-T1** — tabela Price real em `buildInstallmentOptions`
 - [ ] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
 - [ ] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
@@ -107,3 +107,95 @@ E o veredito que a fila pediu: **`Escolha seu percurso` = 2 ocorrências, vivas*
 o B8 — a **D3 é edição, não verificação**.
 
 ---
+
+## B1t · S314-T1 · a tabela Price de verdade
+
+Commit `e0ef9a5`. Território: `packages/core/src/finance/calc.ts` + as suítes que documentavam o
+modelo antigo.
+
+### O que estava errado
+
+`buildInstallmentOptions` fazia `total = valor × (1 + i)^n` e `parcela = total / n`. Isso não é
+Price: é o principal corrigido pelo juro composto do prazo inteiro, sem amortização. Enquanto
+`jurosAoMes` era 0 os dois modelos coincidiam byte a byte e a diferença nunca valeu um centavo —
+por isso ninguém tropeçou nela. Ligar o número é o que a torna dinheiro.
+
+### Correção de número da spec (não é premissa: é aritmética)
+
+A spec ilustra a diferença com **R$ 422,03** (modelo antigo) e **R$ 359,90** (Price) para R$ 300 a
+2,89% a.m. em 12x. Os dois estão errados. Medido:
+
+| | Spec | Medido |
+|---|---|---|
+| Modelo antigo (`300 × 1,0289^12`) | R$ 422,03 | **R$ 422,28** |
+| Price (parcela 29,941065… → 29,94 × 12) | R$ 359,90 | **R$ 359,28** |
+
+A diferença que o dono paga a mais no modelo antigo é de **17,5%**, não 17% — a ordem de grandeza
+da spec está certa, os dois valores fechados não. O teste asserta o valor MEDIDO; quem for
+reconciliar a spec depois usa esta tabela.
+
+### As três propriedades provadas
+
+1. **A conta bate com Price.** 12x de R$ 300 a 2,89% = parcela 29,94, total 359,28 — e o teste
+   asserta explicitamente que o total **não** é 422,28.
+2. **A parcela única não tem juros.** `n = 1` devolve o próprio PV. É isto que faz "À vista" do
+   cartão bater com o PIX à vista na mesma tela, e o `totalAVista` do resumo bater com o primeiro
+   item da lista de parcelamento.
+3. **A soma fecha exato em centavos.** Para todo `n`, `round(parcela × 100) × n === round(total ×
+   100)`, varrido em 5 valores × 3 taxas (0 / 2,89 / 3,49). O arredondamento passou para a
+   **parcela**, e o total é a parcela multiplicada — é o que faz a divisão do gateway (que recebe
+   `installmentCount` + `totalValue`) cair no mesmo número que a tela mostrou. Vale inclusive com
+   juros ZERO, onde R$ 35 em 3x dava parcela 11,67 e total 35,00: três parcelas que não somavam o
+   total.
+
+### Falsificação (a fila exige: teste que REPROVA a versão anterior)
+
+Fórmula antiga restaurada, core reconstruído, suíte re-executada:
+
+```
+Tests  4 failed | 10 passed (14)
+```
+
+Os quatro que morrem são exatamente os discriminantes: o valor de 12x, a parcela única sem juros, a
+soma exata em centavos e o corte pela parcela mínima com juros ligados. O quinto caso novo ("a
+parcela cresce com o juro e o total nunca é menor que o principal") passa nos DOIS mundos de
+propósito — é guarda de sanidade, não discriminante, e está declarado como tal no arquivo.
+
+### Duas suítes que documentavam o modelo antigo e foram corrigidas
+
+Não são regressões: são os testes que **carimbavam** a fórmula velha, e cada um é uma prova a mais
+de que a mudança é de dinheiro.
+
+- `checkoutCore.test.ts:244` — esperava `roundMoney(300 × 1,0349³)` = **332,52**; Price dá
+  **321,18**. R$ 11,34 a menos para o comprador no mesmo prazo e na mesma taxa.
+- `rn347TaxaRepassada.test.ts:209` — esperava `opcoesParcelamento[0].valorTotal ===
+  totalComprador × 1,0349` (**217,16**), ou seja, a parcela única do cartão carregando um mês de
+  juros. Agora é o próprio total à vista (**209,84**), pela P2 da spec.
+
+Nos dois, a tolerância de "½ centavo por parcela" foi trocada por igualdade EXATA em centavos — ela
+existia justamente porque o total era arredondado antes da parcela.
+
+### Gates
+
+| | |
+|---|---|
+| `tsc --noEmit` core | **0** |
+| `eslint src --max-warnings 0` core | **0** |
+| `tsup` (build do core, ANTES das suítes — lição NAV-FIX) | exit 0 |
+| `tsc --noEmit` functions | **0** |
+| `eslint src --max-warnings 0` functions | **0** |
+| Suítes de venda/parcelamento (6 arquivos) | **148/148** |
+| Suíte da landing, processo único | **310/310** em 28 arquivos |
+
+Os 6 arquivos são todos os que consomem `buildInstallmentOptions` ou `computeSaleState`:
+`financeCalc`, `checkoutCore`, `pagamento`, `rn347TaxaRepassada`, `taxaFlexSaleState`,
+`termsProvider`.
+
+---
+
+## Premissas registradas (vetáveis — o dono dorme)
+
+| # | Premissa | Onde | Custo de vetar |
+|---|---|---|---|
+| PB-1 | Os números fechados da spec (R$ 422,03 / R$ 359,90) são erro aritmético e foram substituídos pelos medidos (R$ 422,28 / R$ 359,28). O código implementa a FÓRMULA da RN-436; nenhum literal de valor entrou nele | B1t | Nenhum no código — é reconciliação de texto da spec |
+| PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
