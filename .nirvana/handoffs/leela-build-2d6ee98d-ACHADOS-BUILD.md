@@ -12,7 +12,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **B1t · S314-T1** — tabela Price real em `buildInstallmentOptions`
 - [x] **B2t · S314-T2** — 2,89% a.m. no termo semeado e no default
 - [x] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
-- [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
+- [x] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
 - [x] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
 - [x] **A4 · S1216-T4** — total por opção sempre que os dois existirem
 - [x] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
@@ -20,10 +20,10 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
 - [x] **C4 · S1217-T4** — versão exibida conferida pelo servidor
 - [x] **C5 · S1217-T5** — origem da requisição na prova de aceite
-- [ ] **D1 · S1218-T1** — rótulo do grupo grudado no primeiro cartão
-- [ ] **D2 · S1218-T2** — clique em qualquer ponto do cartão seleciona
-- [ ] **D3 · S1218-T3** — "Escolha seu percurso" → "Modalidades disponíveis"
-- [ ] **D4 · S1218-T4** — fotos reais de kit no acervo local
+- [x] **D1 · S1218-T1** — rótulo do grupo grudado no primeiro cartão
+- [x] **D2 · S1218-T2** — clique em qualquer ponto do cartão seleciona
+- [x] **D3 · S1218-T3** — "Escolha seu percurso" → "Modalidades disponíveis"
+- [x] **D4 · S1218-T4** — fotos reais de kit no acervo local
 
 ---
 
@@ -715,32 +715,192 @@ lane; ele entrou no lote do emulator por isso.
 
 ---
 
+## Frente D · o polimento da escolha
+
+### D1 · S1218-T1 · o rótulo colado — e o veredito que a fila mandou medir antes
+
+Commit `cc93309`. Território: **`packages/design-system/src/components/Radio/`** + suíte.
+
+**Veredito: é do design system, não do checkout.** O `<fieldset>` do `RadioGroup` é
+`flex flex-col` com `gap-[var(--spacing-2)]`, e a `<legend>` é a *rendered legend* do HTML — o
+navegador a tira do formatting context para desenhá-la sobre a borda, então **o `gap` nunca a
+alcança**. Não havia margem em lugar nenhum: a separação era **zero, por construção**, em todo
+`RadioGroup` do produto. O `StepModalidadeKit` não contribui com um pixel — ele só consome o
+componente.
+
+Por isso o conserto mora no DS e vale para o produto inteiro. A margem inferior da legend **é**
+honrada (ela é um bloco dentro da área de borda do fieldset) e usa o **mesmo token do `gap`**, para
+o ritmo do grupo continuar sendo um número só.
+
+⚠️ **jsdom não faz layout.** O que o teste asserta é o MECANISMO (a legend carrega a margem; a
+margem é o mesmo token do gap). A prova visual é do olho do dono — está na lista do fim.
+
+### D2 · S1218-T2 · o card inteiro seleciona
+
+Commit `dde8182`. Território: o mesmo `Radio/` + suíte.
+
+O `<label>` cobre a linha do título. A descrição e o painel revelado ficam **fora** dele por regra
+de a11y (`aria-describedby` não entra no nome acessível; conteúdo interativo não mora dentro de
+`label`), e o padding do card não era de ninguém — enquanto o card inteiro mostrava
+`cursor-pointer`. A mão prometia um clique que metade da área não entregava.
+
+Duas guardas fazem o handler ser seguro, e **cada uma tem caso próprio que morde**:
+
+| Guarda | O que ela impede |
+|---|---|
+| `checked` — card marcado não reprocessa | O painel revelado só existe quando marcado. Sem ela, escolher um tamanho dentro do card do kit borbulharia até o card e chamaria o `onValueChange` do PAI com o mesmo valor — e no checkout esse handler zera kit e tamanhos. A escolha da pessoa morreria no clique seguinte |
+| `label.contains(target)` | Clique no título dispararia `onValueChange` DUAS vezes (nativo + handler), e handler de consumidor não é obrigado a ser idempotente |
+
+**Por que não o pseudo-elemento `before:inset-0`.** Era a solução mais limpa em CSS e ficaria **sem
+prova executável**: jsdom não faz hit-test de CSS, então o aceite de interação que a fila exige
+seria impossível. E o overlay ainda precisaria de exceção para o painel revelado ficar operável.
+
+### Falsificação da frente D no DS
+
+`Radio.tsx` restaurado do HEAD, as duas suítes re-executadas:
+
+```
+Tests  3 failed | 27 passed (30)
+```
+
+Os três discriminantes: a margem da legend (D1), o clique na descrição e o clique no padding (D2).
+Os demais passam nos dois mundos e estão declarados como guardas.
+
+### D3 · S1218-T3 · a copy que a X1 não pagou
+
+Commit `ed16e33`. Território: `.../sections/ModalidadesSection.tsx`, `.../checkout/StepModalidadeKit.tsx`.
+
+Era **edição**, não verificação — o veredito foi medido no bundle SERVIDO em produção durante o D0
+(`Escolha seu percurso` = 2 ocorrências vivas). Três trocas, todas no território declarado:
+
+| Onde | Antes | Depois |
+|---|---|---|
+| Título da seção | Escolha seu percurso | **Modalidades disponíveis** |
+| Apoio do título | *n* distâncias | *n* **modalidades** |
+| Apoio da etapa 0 | Escolha o **percurso** e o kit | Escolha a **modalidade** e o kit |
+| Descrição de cada modalidade (mesmo arquivo) | Percurso oficial | **Modalidade oficial** |
+
+O rótulo do grupo logo abaixo do apoio já dizia "Modalidade": a tela falava duas línguas sobre a
+mesma escolha.
+
+**Falsificação:** `ModalidadesSection.tsx` restaurado ⇒ **2 failed | 6 passed (8)**. As asserções
+são NEGATIVAS de propósito — elas reprovam a VOLTA do vocabulário na próxima edição de copy.
+
+**Fora do território, mapeado e NÃO tocado** (para quem for varrer depois): `CheckoutCtaSection.tsx`
+("você escolhe o percurso e o kit"), `SobreSection.tsx` (tile "Percursos" / "distâncias"),
+`GaleriaSection.tsx` (nome de arquivo `leela-galeria-percurso.jpg`), e o `id="percursos"` da âncora
+da dobra (mexer nele quebra link externo — é decisão, não conserto).
+
+### D4 · S1218-T4 · o acervo ganha o que o dono nomeou
+
+Commit `1d777fb`. Território: `apps/landing/lib/kitImagem.ts` + `public/covers/kits/`.
+
+**A PB-9 não precisou ser exercida.** A premissa registrada previa "sem material do dono, vira
+placeholder honesto". O acesso à web funcionou e as fotos são **reais**: três, sob **Unsplash
+License** (livre, inclusive comercial), baixadas uma vez e **versionadas no repositório**. Nenhuma
+superfície aponta para CDN de terceiro em execução — há caso de teste que varre o acervo inteiro
+atrás de `http`/`unsplash` e exige `/covers/kits/` em todos.
+
+| Arquivo | Tema | Origem | Fotógrafo | Bytes |
+|---|---|---|---|---|
+| `leela-kit-camiseta-evento.jpg` | camiseta | `images.unsplash.com/photo-1562157873-818bc0726f68` | Md Salman | 50.365 |
+| `leela-kit-fitness.jpg` | fitness | `images.unsplash.com/photo-1697129392091-d08875930fec` | Stavros Papadimitriou | 107.816 |
+| `leela-kit-ioga.jpg` | ioga | `images.unsplash.com/photo-1592432678016-e910b452f9a2` | não identificado (página JS) | 45.541 |
+
+Proveniência, licença, data e critérios de curadoria vivem em
+`apps/landing/public/covers/kits/PROVENIENCIA.md`, **ao lado dos arquivos** — o relatório de lote é
+histórico, o acervo é permanente. O documento também absorveu a tabela do lote KIT-IMG-LANDING, que
+só existia dentro de um report de outputs.
+
+**Curadoria com verificação visual de cada candidata**, e três classes descartadas:
+
+1. **Pessoa praticando** (mulher em postura de ioga; pés sobre o tapete): ilustra a experiência, não
+   o kit. O dono pediu para ilustrar **o kit**.
+2. **Marca de terceiro legível**: uma camiseta com estampa "connect" e etiqueta de marca, e um
+   tapete com logotipo grande — mesmo critério que a curadoria do lote anterior já usava.
+3. **Unsplash+** (licença paga, `plus.unsplash.com`): duas candidatas boas caíram aqui.
+
+**O defeito real que o acervo escondia.** `temaKit` mandava ioga E treino para o mesmo balaio
+`wellness` — os dois recebiam a MESMA foto genérica, e foi isso que o dono viu ao testar. Os dois
+saíram do balaio e ganharam foto própria; `wellness` continua valendo para caminhada, retiro e
+respiro. Um caso de teste asserta que os três arquivos são **distintos** — separação só no nome
+deixaria a tela igual.
+
+**Uma armadilha de regex custou uma rodada:** `\bi?oga\b` não casa "yoga", porque o `o` é precedido
+por `y`, que é caractere de palavra. As duas grafias entram inteiras, e está comentado no código.
+
+**Falsificação:** `kitImagem.ts` restaurado ⇒ **3 failed | 13 passed (16)**.
+
+**Um caso que carimbava o balaio antigo — reescrito, não removido:**
+`temaKit('Kit Yoga', []) === 'wellness'` virou dois casos: o `wellness` do que sobra, e a foto
+própria de ioga/fitness.
+
+### Gates da frente D
+
+| | |
+|---|---|
+| DS `tsc` / `eslint` / `tsup` | **0** / **0** / exit 0 |
+| Suíte do DS | **1098/1098** em 59 arquivos |
+| landing `tsc` / `eslint` (`lib`, `app/(public)/[eventSlug]`, `test`) | **0** / **0** |
+| painel `tsc` · suíte no **pool PADRÃO** | 0 · **1768/1768** em 190 arquivos |
+| Suíte da landing, processo único | **373/373** em 34 arquivos (era 359/359 em 33 no início da retomada) |
+
+---
+
 ## Onde a lane parou
 
-Fila paga: **D0, B1t, B2t, A1, A2, A3, A4, C1, C2**. O par C1+C2 está fechado — o aviso de "não
-deployar C1 sem C2" está **cumprido** dentro da própria lane.
+**A fila ACHADOS-0802 está COMPLETA.** As dezesseis entradas pagas: D0, B1t, B2t, A1, A2, A3, A4,
+C1, C2, C3, C4, C5, D1, D2, D3, D4. O par C1+C2 fechou dentro da própria lane (o aviso de "não
+deployar C1 sem C2" está cumprido).
 
-**C3 paga.** Próxima: **C4** (`S1217-T4` — a tela envia a versão EXIBIDA e o servidor confere
-contra a vigente, recusando em vez de carimbar outra). Território dela:
-`packages/core/src/pedidos/aceites.ts`, `functions/src/checkout/createInscricaoCharge.ts`,
-`packages/api-client/src/checkout.ts`, `.../checkout/CheckoutFlow.tsx`. Depois dela, **C5**
-(origem da requisição na prova de aceite), e então a frente D (D1..D4), que é independente.
+**Worktree limpo** — tudo o que foi tocado está commitado. **Sem push**, como a lane manda: o
+maestro pusha.
 
-⚠️ **A C4 e a C5 são de servidor.** A prova executável delas mora em
-`functions/src/__tests__/*.integration.test.ts`, que dependem do emulator — ver a seção
-"Estado do emulator" no fim deste handoff antes de começar.
+### Números finais das superfícies tocadas
 
-**Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
-push, como a lane manda.
+| Superfície | `tsc` | `eslint` | Suíte |
+|---|---|---|---|
+| `packages/core` | 0 | 0 | consumida pelas suítes de functions |
+| `packages/api-client` | 0 | 0 | build exit 0 |
+| `packages/design-system` | 0 | 0 | **1098/1098** em 59 arquivos |
+| `functions` | 0 | 0 | **145/145** puras + **61/61** no emulator (5 arquivos) |
+| `apps/landing` | 0 | 0 | **373/373** em 34 arquivos, processo único |
+| `apps/painel` | 0 | — | **1768/1768** em 190 arquivos, pool PADRÃO |
 
-Avisos para quem retomar:
+A landing saiu de 359/359 em 33 arquivos (fim da C3) para **373/373 em 34**.
 
-- A **A3 não pode encostar na linha "(desconto aplicado)"** do `StepResumo` — ela é da KITCUPOM
-  (`S1215-T2`). Se a task "precisar" mexer nela, a spec errou: pare e registre.
-- A **D3 é edição, não verificação** (veredito medido no D0 — `Escolha seu percurso` continua vivo
-  em `ModalidadesSection.tsx:20` e o apoio da etapa 0 em `StepModalidadeKit.tsx:157`).
-- A A3 já tem o dado de que precisa: `jurosParcelamento` chega pronto da cotação (A2). A tela
-  **renderiza**; não subtrai.
+### O que a lane NÃO fez, de propósito
+
+- **Sem deploy.** O último release no ar é o do D0, que não contém C4, C5 nem a frente D. A
+  landing servida está atrás do HEAD.
+- **Sem push.**
+- **Sem navegador.** Nenhuma prova visual foi tirada por iniciativa própria — a lista do que o dono
+  confere está abaixo.
+
+### O que precisa do olho do dono (VETO-DONO)
+
+1. **As três fotos novas de kit** (D4). São reais e livres, mas a leitura delas no card 1:1 é
+   julgamento de marca: `PROVENIENCIA.md` diz de onde vieram e por quê, e trocar qualquer uma é
+   substituir o arquivo e a linha da tabela. A de ioga (tapetes enrolados) é a mais escura das três.
+2. **O espaço entre o rótulo do grupo e o primeiro cartão** (D1). O conserto é do DS e vale para o
+   produto inteiro; jsdom não mede layout, então o número final é o olho dele — em qualquer
+   `RadioGroup` do painel ou do checkout.
+3. **O clique no cartão** (D2), no dedo, no telefone — que é como o achado nasceu.
+4. **A copy nova** (D3): "Modalidades disponíveis" e "Modalidade oficial".
+
+### Fora do território, mapeado para a próxima varredura de vocabulário
+
+`CheckoutCtaSection.tsx` ("você escolhe o percurso e o kit"), `SobreSection.tsx` (tile "Percursos" /
+"distâncias"), `GaleriaSection.tsx` (`leela-galeria-percurso.jpg`) e a âncora `id="percursos"` —
+esta última é decisão, não conserto: mudá-la quebra link externo.
+
+Avisos que continuam de pé:
+
+- A linha **"(desconto aplicado)"** do `StepResumo` é da KITCUPOM (`S1215-T2`) e segue intocada.
+- **C4/C5 são de servidor**: a prova executável delas mora nas `*.integration.test.ts` e depende do
+  emulator — ver "Estado do emulator" no fim deste handoff.
+- O `pedidosRules.test.ts` **exige o emulator**; fora dele o arquivo inteiro falha com
+  `ECONNREFUSED`. É preexistente, não regressão.
 
 ---
 
@@ -786,6 +946,9 @@ delas contra o documento persistido devem rodar sob este comando, trocando o arq
 | PB-8 | Sem meio escolhido, o rótulo da linha de taxa diz "(PIX)", porque a cotação exibida É uma cotação de PIX à vista. A alternativa (rótulo genérico até a escolha) nomearia menos do que a RN-435 pede | C2 | Baixo — é uma expressão ternária |
 | PB-5 | O modo da taxa entra na tela pelo flag do EVENTO (`taxaRepassada` do leitor), não por `taxaServico > 0`. Custa uma prop nos dois componentes e duas linhas de fiação no `CheckoutFlow` — arquivo fora do território declarado da A3, tocado no mínimo | A3 | Nenhum — o proxy pelo valor é que estaria errado; vetar seria escolher a versão falsa |
 | PB-6 | Evento com taxa REPASSADA e taxa zero no meio escolhido continua sem linha de taxa (não vira "inclusa"). "Inclusa" é enunciado do modo incorporada; ali a taxa realmente sai do repasse do organizador | A3 | Baixo — é um ramo de três linhas; a alternativa é dizer "inclusa" onde não é verdade |
+| PB-12 | As três fotos novas moram em `public/covers/kits/`, não em `public/mock/` como a fila escreveu. O acervo de kit inteiro já vive lá e o `BASE` do resolvedor aponta para lá — dois diretórios fariam da constante uma mentira e partiriam a tabela de proveniência em duas | D4 | Nenhum no código — é `git mv` mais três strings |
+| PB-13 | A foto de ioga são dois tapetes enrolados, escura e sem pessoas. Escolhida por ser GEAR (o que o participante recebe) e por casar com as superfícies dark-only; as alternativas claras mostravam pessoa praticando ou marca de terceiro | D4 | Nenhum — trocar o arquivo e a linha da tabela de proveniência |
+| PB-14 | "Percurso oficial" (descrição de cada modalidade no `StepModalidadeKit`) virou "Modalidade oficial" junto com a D3. É copy da plataforma, no arquivo do território da task, e sobreviveria dizendo corrida numa tela que passou a dizer modalidade | D3 | Nenhum — é uma string |
 | PB-10 | A tela busca o material novo por `recarregarMaterial()`, prop com default `() => window.location.reload()`, em vez de `router.refresh()`. O recarregamento perde o formulário preenchido; o `refresh` do Next preservaria, mas custaria mock de `next/navigation` em 16 arquivos de teste que hoje não o mockam | C4 | Baixo — é uma linha no default da prop, mais os mocks de teste |
 | PB-11 | A conferência de versão vale no caminho de CRIAÇÃO, não no `garantirAceitesNoReplay`. O replay completa prova de um pedido que JÁ existe (e já foi pago): recusar ali deixaria a compra sem prova em vez de proteger alguém | C4 | Baixo — é o mesmo bloco de comparação num segundo lugar |
 | PB-2 | O arredondamento na parcela vale também com juros ZERO. Consequência: R$ 35 em 3x passa a cobrar R$ 35,01 (três parcelas de 11,67) em vez de R$ 35,00 com parcelas que não fechavam | B1t | Volta a divergência entre o total da tela e a divisão do gateway, que é o vetor 3 da fila |
