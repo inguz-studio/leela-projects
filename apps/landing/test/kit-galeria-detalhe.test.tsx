@@ -14,7 +14,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { KitDetalhe } from '../app/(public)/[eventSlug]/inscricao/checkout/KitDetalhe';
-import { galeriaDoKit } from '../lib/kitImagem';
+import { extrasDePreview, galeriaDoKit, KITS_MOCK } from '../lib/kitImagem';
 import type { KitPublico } from '../lib/tipos';
 
 afterEach(cleanup);
@@ -117,5 +117,71 @@ describe('KitDetalhe — a fita de miniaturas (RN-426)', () => {
     expect(screen.getByText('Kit completo')).toBeTruthy();
     expect(screen.getByText('Camiseta')).toBeTruthy();
     expect(screen.getByText('O que está incluso')).toBeTruthy();
+  });
+});
+
+// =============================================================================
+// A4 (S212-T4 · RN-428) — o quarto degrau da cascata.
+//
+// A regra é a mesma honestidade de superfície dos três degraus de cima, agora
+// aplicada à galeria: página de verdade nunca exibe foto que o organizador não
+// subiu. O preview existe para o Vitor conseguir avaliar a fita de miniaturas
+// antes de haver upload real.
+// =============================================================================
+
+describe('galeriaDoKit — quarto degrau: extras SÓ em preview (RN-428)', () => {
+  const kit = { nome: 'Kit Ouro', modalidades: ['21k'] };
+
+  it('PRODUÇÃO: kit sem adicionais mostra só a principal', () => {
+    expect(galeriaDoKit({ ...kit, imagemUrl: P }, false)).toHaveLength(1);
+  });
+
+  it('PREVIEW: kit sem adicionais ganha duas fotos do acervo local', () => {
+    const fotos = galeriaDoKit({ ...kit, imagemUrl: P }, true);
+    expect(fotos).toHaveLength(3);
+    expect(fotos[0]!.src).toBe(P);
+    expect(fotos.slice(1).every((f) => f.origem === 'mock')).toBe(true);
+  });
+
+  it('extras são do ACERVO LOCAL — nunca URL fabricada nem serviço externo', () => {
+    const fotos = galeriaDoKit({ ...kit, imagemUrl: P }, true);
+    const acervo = Object.values(KITS_MOCK) as string[];
+    for (const f of fotos.slice(1)) {
+      expect(acervo).toContain(f.src);
+      expect(f.src.startsWith('/covers/kits/')).toBe(true);
+    }
+  });
+
+  it('foto REAL do organizador vence o degrau: com adicionais reais, zero mock', () => {
+    const fotos = galeriaDoKit({ ...kit, imagemUrl: P, fotosSecundarias: [S2] }, true);
+    expect(fotos.map((f) => f.src)).toEqual([P, S2]);
+    expect(fotos.every((f) => f.origem === 'real')).toBe(true);
+  });
+
+  it('determinístico: duas chamadas devolvem exatamente a mesma fita', () => {
+    const a = galeriaDoKit({ ...kit, imagemUrl: P }, true).map((f) => f.src);
+    const b = galeriaDoKit({ ...kit, imagemUrl: P }, true).map((f) => f.src);
+    expect(a).toEqual(b);
+  });
+
+  it('a fita nunca repete a foto grande, nem quando a principal também é mock', () => {
+    for (const nome of ['Kit Ouro', 'Kit Prata', 'Kit MTB', 'Kit Retiro', 'Kit Trilha']) {
+      const fotos = galeriaDoKit({ nome, modalidades: [] }, true);
+      const srcs = fotos.map((f) => f.src);
+      expect(new Set(srcs).size).toBe(srcs.length);
+    }
+  });
+
+  it('temas diferentes recebem pares diferentes — a demonstração não vira uma foto só', () => {
+    const ouro = extrasDePreview('Kit Ouro', []);
+    const mtb = extrasDePreview('Kit MTB', ['mtb']);
+    expect(ouro).not.toEqual(mtb);
+    expect(ouro).toHaveLength(2);
+    expect(new Set(ouro).size).toBe(2);
+  });
+
+  it('teto de três também no preview — nunca uma quarta foto', () => {
+    expect(galeriaDoKit({ ...kit, imagemUrl: P }, true)).toHaveLength(3);
+    expect(galeriaDoKit({ ...kit, imagemUrl: P, fotosSecundarias: [S2, S3] }, true)).toHaveLength(3);
   });
 });

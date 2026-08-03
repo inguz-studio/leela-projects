@@ -4,6 +4,13 @@
 // Resolve a IMAGEM 1:1 de cada kit nas superfícies públicas (seção de kits da
 // página de vendas + detalhe do kit no checkout) — LP-VENDAS-KIT / KIT-IMG.
 //
+// S212-T4 (RN-428): a cascata ganha um QUARTO degrau, que vale para a GALERIA
+// (`galeriaDoKit`) e não para a foto única — em preview, kit sem fotos
+// adicionais recebe duas do acervo local, determinísticas; em produção, kit sem
+// adicionais mostra só a principal. O seed NÃO grava URL de foto (lição
+// LEELA-R14 no cabeçalho do seed: URL absoluta amarraria a demonstração à porta
+// do ambiente e quebraria no primeiro deploy).
+//
 // Cascata em três níveis (padrão capas R14 "sem dado → nunca vazio", mas com a
 // honestidade de superfície do mockImagem/ehPreview — adendo 13):
 //   1. imagemUrl REAL (upload 1:1 do organizador pelo KitEditor, já validada
@@ -104,6 +111,34 @@ export function imagemDoKit(
   return { src: PLACEHOLDER_KIT, origem: 'placeholder', ampliavel: false };
 }
 
+/**
+ * Ordem fixa do acervo mock (S212-T4 · RN-428). Existe para o par extra de
+ * preview ser DETERMINÍSTICO: o mesmo kit mostra sempre as mesmas duas fotos, e
+ * kits de temas diferentes mostram pares diferentes — senão a fita ficaria
+ * piscando entre renders e a demonstração não provaria nada.
+ */
+const ORDEM_ACERVO_KIT = [
+  'tee',
+  'apparelBundle',
+  'ciclismo',
+  'trail',
+  'wellness',
+] as const satisfies readonly (keyof typeof KITS_MOCK)[];
+
+/**
+ * As duas fotos extras de PREVIEW de um kit: as duas seguintes ao tema dele na
+ * ordem do acervo. Começar depois do próprio tema é o que garante que a fita
+ * nunca repita a foto grande quando a principal também é mock. @pure
+ */
+export function extrasDePreview(nome: string, modalidades: readonly string[]): string[] {
+  const tema = temaKit(nome, modalidades);
+  const base = ORDEM_ACERVO_KIT.indexOf(tema);
+  return [1, 2].map((passo) => {
+    const chave = ORDEM_ACERVO_KIT[(base + passo) % ORDEM_ACERVO_KIT.length] as keyof typeof KITS_MOCK;
+    return KITS_MOCK[chave];
+  });
+}
+
 /** Kit visto pela galeria — a projeção pública mais as fotos adicionais. */
 export interface KitComGaleria {
   nome: string;
@@ -131,5 +166,20 @@ export function galeriaDoKit(kit: KitComGaleria, preview: boolean): ImagemKitRes
     .map((f) => f.trim())
     .filter((f) => f.length > 0 && f !== principal.src)
     .map<ImagemKitResolvida>((src) => ({ src, origem: 'real', ampliavel: true }));
-  return [principal, ...secundarias];
+  if (secundarias.length > 0) return [principal, ...secundarias];
+  // QUARTO DEGRAU (S212-T4 · RN-428) — a mesma honestidade de superfície dos
+  // três de cima, agora para a galeria: em PREVIEW, kit sem adicionais ganha
+  // duas fotos do acervo local para o Vitor conseguir avaliar a fita de
+  // miniaturas; em PRODUÇÃO, kit sem adicionais mostra só a principal.
+  if (preview) {
+    return [
+      principal,
+      ...extrasDePreview(kit.nome, kit.modalidades).map<ImagemKitResolvida>((src) => ({
+        src,
+        origem: 'mock',
+        ampliavel: true,
+      })),
+    ];
+  }
+  return [principal];
 }
