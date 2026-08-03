@@ -179,6 +179,14 @@ export interface CreateInscricaoChargeInput {
      * projeta `termoSaudeCustom`); o servidor rejeita fail-closed sem ele.
      */
     saudeCustom?: boolean;
+    /**
+     * S1217-T4 · RN-439: as versões que a TELA exibiu, para CONFERÊNCIA. O
+     * servidor compara com a vigente lida na transação e RECUSA a compra
+     * quando divergem (motivo tipado `aceite_versao_divergente`); o que fica
+     * carimbado no pedido continua sendo a versão que o servidor leu — este
+     * número nunca é gravado.
+     */
+    versoesExibidas?: { termos: number; saude: number; saudeCustom?: number };
   };
   forma: FormaPagamento;
   parcelas: number;

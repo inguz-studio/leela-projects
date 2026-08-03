@@ -249,10 +249,16 @@ describe('S1217-T3 · RN-441 — o payload reflete o que a pessoa marcou', () =>
     });
     await waitFor(() => expect(createInscricaoCharge).toHaveBeenCalledTimes(1));
 
+    // S1217-T4: a igualdade EXATA de objeto que estava aqui carimbava o
+    // payload inteiro, e a RN-439 acrescentou `versoesExibidas` a ele. O que
+    // este caso guarda são os BOOLEANOS de confirmação — a conferência de
+    // versão tem suíte própria (`checkout-s1217-versao-exibida`).
     const payload = createInscricaoCharge.mock.calls[0]![0] as {
       aceites: { termos: boolean; saude: boolean; saudeCustom?: boolean };
     };
-    expect(payload.aceites).toEqual({ termos: true, saude: true, saudeCustom: true });
+    expect(payload.aceites.termos).toBe(true);
+    expect(payload.aceites.saude).toBe(true);
+    expect(payload.aceites.saudeCustom).toBe(true);
   });
 
   it('evento SEM termo próprio: `saudeCustom` não é inventado no payload', async () => {
@@ -269,7 +275,9 @@ describe('S1217-T3 · RN-441 — o payload reflete o que a pessoa marcou', () =>
     const payload = createInscricaoCharge.mock.calls[0]![0] as {
       aceites: Record<string, unknown>;
     };
-    expect(payload.aceites).toEqual({ termos: true, saude: true });
+    expect(payload.aceites['termos']).toBe(true);
+    expect(payload.aceites['saude']).toBe(true);
+    // A asserção que importa continua sendo NEGATIVA e continua exata.
     expect('saudeCustom' in payload.aceites).toBe(false);
   });
 

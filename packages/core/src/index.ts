@@ -606,9 +606,14 @@ export {
   validarEnderecoPedido,
   parseEnderecoPedido,
 } from './pedidos/endereco';
-export type { AceiteVersionado, AceitesPedido } from './pedidos/aceites';
+export type {
+  AceiteVersionado,
+  AceitesPedido,
+  VersoesAceiteExibidas,
+} from './pedidos/aceites';
 export {
   TERMO_SAUDE_VERSAO_VIGENTE,
+  MOTIVO_ACEITE_VERSAO_DIVERGENTE,
   validarAceitesCheckoutInput,
   parseAceitesPedido,
 } from './pedidos/aceites';

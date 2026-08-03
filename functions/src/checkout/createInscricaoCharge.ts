@@ -103,6 +103,8 @@ import {
   type SaleState,
   type StatusPedido,
   type TabelaTaxaPlataforma,
+  type VersoesAceiteExibidas,
+  MOTIVO_ACEITE_VERSAO_DIVERGENTE,
 } from '@leela/core';
 import { assertTenantAtivo } from '../eventos/criarEvento';
 import {
@@ -290,6 +292,17 @@ export interface CreateInscricaoChargeInput {
      * termo custom ignora o campo (organizador pode desativar em voo).
      */
     saudeCustom?: boolean;
+    /**
+     * S1217-T4 · RN-439: as versões que a TELA exibiu. Dado de CONFERÊNCIA
+     * — o servidor compara com a vigente lida na tx e RECUSA a compra
+     * quando divergem; o que fica gravado no pedido continua sendo a versão
+     * que o servidor leu. Não existe caminho em que este número vire prova.
+     *
+     * Opcional por evolução de schema: sem ele vale o comportamento
+     * anterior (carimba a vigente em silêncio). Quem omite perde a guarda —
+     * não ganha nada, porque a versão gravada nunca vem daqui.
+     */
+    versoesExibidas?: VersoesAceiteExibidas;
   };
   forma: FormaPagamento;
   /** Parcelas escolhidas (1 = à vista; > 1 só cartão). */
@@ -393,6 +406,18 @@ export interface CheckoutCaller {
 // ---------------------------------------------------------------------------
 // Validação pura do input (fronteira de segurança do servidor)
 // ---------------------------------------------------------------------------
+
+/**
+ * S1217-T4 · RN-439 — mensagem da recusa por divergência de versão.
+ *
+ * Escrita para HUMANO (a UI decide pelo `details.motivo` tipado, nunca por
+ * este texto) e deliberadamente MUDA sobre o material novo: não diz qual é a
+ * versão nova, não diz o que mudou e não diz quando foi publicada. Diz o que
+ * a pessoa precisa fazer.
+ */
+export const MSG_ACEITE_VERSAO_DIVERGENTE =
+  'Os termos deste evento foram atualizados enquanto você preenchia a ' +
+  'inscrição — leia a versão nova e confirme o aceite para concluir a compra.';
 
 /** Chave de idempotência: docId-safe, sem '/', tamanho controlado. */
 export const IDEMPOTENCY_KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
@@ -1427,6 +1452,47 @@ async function criarDocsDeCheckout(
         // Termo INATIVO/inexistente: `saudeCustom` enviado é IGNORADO (o
         // organizador pode ter desativado entre o render e o pagar — aceite
         // de termo que não existe não vira prova).
+      }
+
+      // S1217-T4 · RN-439: CONFERÊNCIA das versões EXIBIDAS contra as
+      // VIGENTES, lidas nesta mesma tx. Recusa em vez de carimbar.
+      //
+      // Por que existe: a RN-438 tirou os aceites da tela de pagar e os pôs
+      // no fim da inscrição. A distância entre o gesto e o carimbo saiu de
+      // segundos para minutos — e nesse intervalo cabe o organizador
+      // publicar uma política nova. O `materialHash` da F-1 prova o que o
+      // SERVIDOR leu; ele nunca provou o que a PESSOA leu. Sem esta
+      // conferência, a compra seria carimbada sob material que ninguém viu.
+      //
+      // A recusa é MUDA sobre o material novo: nem texto, nem hash, nem o
+      // instante da publicação atravessam. Só o motivo tipado, que diz à
+      // tela para repor o aceite — o conteúdo ela relê pela porta pública.
+      //
+      // O número exibido é dado de CONFERÊNCIA: ele morre aqui e não entra
+      // em `pedidoDoc['aceites']` por nenhum caminho (o bloco carimbado
+      // abaixo lê `versaoTermosVigente` / `TERMO_SAUDE_VERSAO_VIGENTE` /
+      // `termoCustomStamp`, todos server-side).
+      const exibidas = input.aceites?.versoesExibidas;
+      if (exibidas !== undefined) {
+        const divergiu =
+          exibidas.termos !== versaoTermosVigente ||
+          exibidas.saude !== TERMO_SAUDE_VERSAO_VIGENTE ||
+          // Termo custom ATIVO: a versão exibida tem de ser a dele. Ausente
+          // (cliente que mandou `saudeCustom: true` sem dizer QUAL versão
+          // viu) diverge de propósito — `undefined !== number`.
+          (termoCustomStamp !== null &&
+            exibidas.saudeCustom !== termoCustomStamp.versao);
+        if (divergiu) {
+          throw new https.HttpsError(
+            'failed-precondition',
+            MSG_ACEITE_VERSAO_DIVERGENTE,
+            // Contrato tipado (padrão MOTIVO_GATEWAY_SEM_RESPOSTA): a UI
+            // decide sem parsear texto. Nenhum campo além do motivo — a
+            // versão nova, o texto novo e o instante da publicação ficam
+            // do lado de cá.
+            { motivo: MOTIVO_ACEITE_VERSAO_DIVERGENTE }
+          );
+        }
       }
 
       // RN-173 (CK2-T1): leitura dos docs de pessoa AINDA na fase de leitura

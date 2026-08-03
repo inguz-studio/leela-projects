@@ -14,7 +14,10 @@ import {
   type CotarInscricaoCheckoutResult,
   type CreateInscricaoChargeResult,
 } from '@leela/api-client';
-import { MOTIVO_GATEWAY_SEM_RESPOSTA } from '@leela/core';
+import {
+  MOTIVO_ACEITE_VERSAO_DIVERGENTE,
+  MOTIVO_GATEWAY_SEM_RESPOSTA,
+} from '@leela/core';
 import { Button, ToastProvider } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import { ensureLeela } from '@/lib/leelaClient';
@@ -56,6 +59,11 @@ import { lerCupomCapturado } from '../../CupomTracker';
 // console. Uma frase, ação clara, sem beco sem saída.
 const COPY_ERRO_AUTH =
   'Não conseguimos preparar seu pagamento. Verifique sua conexão e tente de novo.';
+// S1217-T4 · RN-439: uma frase, o fato e a ação. Nada sobre o que mudou no
+// texto novo nem sobre quando ele foi publicado — a tela não recebeu esses
+// dados do servidor, e não é ela quem os contaria.
+const COPY_ACEITE_DESATUALIZADO =
+  'Os termos deste evento foram atualizados enquanto você preenchia. Leia a versão nova e confirme os aceites para continuar.';
 // Quantas vezes a sessão anônima re-tenta sozinha (backoff curto) antes de
 // pedir ação manual ao comprador. Mantém erro transitório invisível.
 const MAX_AUTH_RETRY_AUTO = 1;
@@ -152,6 +160,27 @@ function ehGatewaySemResposta(err: unknown): boolean {
   return typeof code === 'string' && code.split('/').pop() === 'deadline-exceeded';
 }
 
+/**
+ * S1217-T4 · RN-439 — a compra foi recusada porque a versão que ESTA TELA
+ * exibiu envelheceu (o organizador publicou material novo enquanto a pessoa
+ * preenchia). Mesmos dois canais do `ehGatewaySemResposta`, na mesma ordem de
+ * confiança: o `details.motivo` tipado que a Function carimba, e o `code` do
+ * callable como rede de segurança.
+ *
+ * O `code` sozinho NÃO basta aqui, e isso é deliberado: `failed-precondition`
+ * é o código de meia dúzia de recusas do checkout (PIX anterior vivo, lote
+ * fechado, termo custom não aceito). Tratar todas elas como "termo
+ * desatualizado" desmarcaria os aceites de quem levou uma recusa por outro
+ * motivo — por isso o `code` só conta quando o motivo tipado veio junto.
+ */
+function ehVersaoDivergente(err: unknown): boolean {
+  if (err === null || typeof err !== 'object') return false;
+  const motivo = (err as { details?: { motivo?: unknown } }).details?.motivo;
+  return (
+    typeof motivo === 'string' && motivo === MOTIVO_ACEITE_VERSAO_DIVERGENTE
+  );
+}
+
 function mensagemErro(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'message' in err) {
     const m = (err as { message?: unknown }).message;
@@ -210,9 +239,23 @@ function refDaCompra(
 export function CheckoutFlow({
   evento,
   atribuicao,
+  recarregarMaterial = () => window.location.reload(),
 }: {
   evento: EventoPublico;
   atribuicao: Atribuicao;
+  /**
+   * S1217-T4 · RN-439 — como a tela vai buscar o TEXTO NOVO quando o
+   * servidor recusar a compra por divergência de versão.
+   *
+   * Existe porque a recusa, sozinha, seria um beco: `evento.politicaVendas`
+   * é prop renderizada no servidor, então reconfirmar sem recarregar
+   * mandaria a MESMA versão velha e levaria a MESMA recusa, em laço. O
+   * default recarrega a rota inteira, que é a única porta que esta árvore
+   * tem para o material fresco sem importar o roteador do Next (ver
+   * premissa registrada no handoff: `router.refresh()` preservaria o
+   * formulário, e a troca é de uma linha aqui).
+   */
+  recarregarMaterial?: () => void;
 }): React.JSX.Element {
   const [step, setStep] = useState(0);
 
@@ -935,10 +978,25 @@ export function CheckoutFlow({
         // dizendo ao servidor que houve aceite porque o código o escreveu
         // assim, não porque alguém clicou. `saudeCustom` só cruza nos eventos
         // que têm o termo próprio ativo (o servidor ignora nos demais).
+        //
+        // S1217-T4 · RN-439: junto dos booleans vai a VERSÃO QUE ESTA TELA
+        // EXIBIU. É conferência, não gravação: o servidor compara com a
+        // vigente lida na transação e recusa a compra quando divergem. A
+        // RN-438 tirou o aceite da tela de pagar e o pôs no fim da
+        // inscrição — a distância entre o gesto e o carimbo saiu de segundos
+        // para minutos, e nesse intervalo cabe o organizador publicar uma
+        // política nova.
         aceites: {
           termos: aceiteTermos,
           saude: aceiteSaude,
           ...(exigeSaudeCustom ? { saudeCustom: aceiteSaudeCustom } : {}),
+          versoesExibidas: {
+            termos: evento.politicaVendas.versao,
+            saude: evento.termoSaudeVersao,
+            ...(termoSaudeCustom !== null
+              ? { saudeCustom: termoSaudeCustom.versao }
+              : {}),
+          },
         },
         ...((): { ref?: { codigo: string; clicadoEmMillis?: number } } => {
           // Atribuição de afiliado (RN-313) — nunca bloqueia a compra: o
@@ -965,12 +1023,27 @@ export function CheckoutFlow({
         setGatewaySemResposta(true);
         return null;
       }
+      // S1217-T4 · RN-439: o organizador publicou versão nova entre o
+      // aceite e a compra. A tela REPÕE o aceite em vez de insistir: os
+      // checkboxes voltam a vazio, a pessoa volta à etapa de inscrição e uma
+      // frase diz o que aconteceu. Recarregar os dados do servidor é o que
+      // traz o TEXTO novo para os modais — sem isso ela reconfirmaria o
+      // mesmo material velho e levaria a mesma recusa em loop.
+      if (ehVersaoDivergente(err)) {
+        setAceiteTermos(false);
+        setAceiteSaude(false);
+        setAceiteSaudeCustom(false);
+        setErroAceites(COPY_ACEITE_DESATUALIZADO);
+        setStep(1);
+        recarregarMaterial();
+        return null;
+      }
       setErroCharge(mensagemErro(err, 'Não foi possível criar a cobrança.'));
       return null;
     } finally {
       setCriandoCharge(false);
     }
-  }, [charge, authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [charge, authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, evento.politicaVendas.versao, evento.termoSaudeVersao, termoSaudeCustom, recarregarMaterial, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
 
   const confirmar = useCallback(async (pedidoId: string) => {
     setConfirmando(true);

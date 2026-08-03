@@ -41,6 +41,38 @@ import type { Timestamp } from '../index';
  */
 export const TERMO_SAUDE_VERSAO_VIGENTE = 1;
 
+/**
+ * S1217-T4 · RN-439 — motivo TIPADO da recusa por divergência de versão.
+ *
+ * A UI reconhece a MESMA constante que a Function carimba em
+ * `details.motivo` (padrão `MOTIVO_GATEWAY_SEM_RESPOSTA`): comparar texto de
+ * mensagem seria ler para código o que é escrito para humano.
+ *
+ * A recusa é DELIBERADAMENTE muda sobre o material novo: nem o texto, nem o
+ * hash, nem o instante da publicação atravessam. O que a tela precisa saber é
+ * que a versão que ela exibiu envelheceu — o conteúdo novo ela relê pela
+ * porta pública de sempre.
+ */
+export const MOTIVO_ACEITE_VERSAO_DIVERGENTE = 'aceite_versao_divergente';
+
+/**
+ * S1217-T4 · RN-439 — versões que a TELA exibiu no instante do aceite.
+ *
+ * Dado de CONFERÊNCIA, nunca de gravação: o servidor compara com a vigente
+ * lida na tx e recusa a compra quando divergem; o que fica carimbado no
+ * pedido continua sendo a versão que o SERVIDOR leu. Sem isto, o intervalo
+ * que a RN-438 abriu (o aceite passou da tela de pagar para a de inscrição,
+ * e no meio cabem minutos de preenchimento) permitiria carimbar material que
+ * a pessoa não leu — o `materialHash` prova o que o servidor leu, não o que
+ * a pessoa viu.
+ */
+export interface VersoesAceiteExibidas {
+  termos: number;
+  saude: number;
+  /** Só nos eventos com termo de saúde próprio ativo (RN-441). */
+  saudeCustom?: number;
+}
+
 /** Um aceite versionado: qual versão do texto + quando (timestamp servidor). */
 export interface AceiteVersionado {
   /** Versão do texto aceita (monotônica — RN-149 pattern). */
@@ -97,6 +129,37 @@ export function validarAceitesCheckoutInput(raw: unknown): string[] {
   }
   if (a['saudeCustom'] !== undefined && a['saudeCustom'] !== true) {
     erros.push('"aceites.saudeCustom" quando enviado deve ser true (RN-156).');
+  }
+  // S1217-T4 · RN-439: versões EXIBIDAS pela tela — conferência, não
+  // gravação. OPCIONAL no shape por evolução de schema: cliente antigo (e a
+  // callable chamada direto) continua comprando com o comportamento de
+  // hoje, que carimba a vigente em silêncio. Omitir o campo só faz o
+  // OMITENTE perder a guarda — não é um portão que um atacante contorne
+  // para ganhar algo (a versão gravada nunca vem daqui).
+  erros.push(...validarVersoesExibidas(a['versoesExibidas']));
+  return erros;
+}
+
+/** Shape das versões exibidas (inteiros ≥ 1, como toda versão da RN-149). @pure */
+function validarVersoesExibidas(raw: unknown): string[] {
+  if (raw === undefined) return [];
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return ['"aceites.versoesExibidas" deve ser objeto {termos, saude} (RN-439).'];
+  }
+  const v = raw as Record<string, unknown>;
+  const erros: string[] = [];
+  for (const campo of ['termos', 'saude'] as const) {
+    const n = v[campo];
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 1) {
+      erros.push(`"aceites.versoesExibidas.${campo}" deve ser inteiro ≥ 1 (RN-439).`);
+    }
+  }
+  const custom = v['saudeCustom'];
+  if (
+    custom !== undefined &&
+    (typeof custom !== 'number' || !Number.isInteger(custom) || custom < 1)
+  ) {
+    erros.push('"aceites.versoesExibidas.saudeCustom" quando enviado deve ser inteiro ≥ 1 (RN-439).');
   }
   return erros;
 }
