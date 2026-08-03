@@ -32,6 +32,7 @@ const KIT_PRATA: KitPublico = {
   descricao: null,
   itens: [],
   imagemUrl: null,
+  fotosSecundarias: [],
 };
 
 const CAMISETA_GRADE: ItemTamanhadoPublico = {

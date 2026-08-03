@@ -33,11 +33,18 @@ export interface KitDetalheView {
    * `KitDetalhe.tsx` renderiza a arte mock rica inline (tokens do DS).
    */
   imagemUrl: string | null;
+  /**
+   * S212-T3 (RN-425/426) — as fotos ADICIONAIS reais do organizador. Sem
+   * fallback: o mock rico existe para o kit não nascer vazio, e uma galeria
+   * fabricada faria a página prometer fotos que não existem. `[]` é a resposta
+   * honesta, e o detalhe volta a ser a tela de uma foto só.
+   */
+  fotosSecundarias: string[];
 }
 
 // Catálogo FALLBACK por tier canônico (texto honesto do R13). Entra campo a
 // campo apenas onde o organizador ainda não preencheu o dado real.
-const DETALHE_FALLBACK: Record<string, Omit<KitDetalheView, 'imagemUrl'>> = {
+const DETALHE_FALLBACK: Record<string, Omit<KitDetalheView, 'imagemUrl' | 'fotosSecundarias'>> = {
   kit_ouro: {
     descricao: 'O kit mais completo — para quem quer levar a experiência inteira do evento.',
     itens: [
@@ -67,7 +74,7 @@ const DETALHE_FALLBACK: Record<string, Omit<KitDetalheView, 'imagemUrl'>> = {
   },
 };
 
-const FALLBACK_GENERICO: Omit<KitDetalheView, 'imagemUrl'> = {
+const FALLBACK_GENERICO: Omit<KitDetalheView, 'imagemUrl' | 'fotosSecundarias'> = {
   descricao: 'Kit do evento — confira os itens inclusos na retirada.',
   itens: ['Itens do kit confirmados na retirada, nas janelas do evento.'],
 };
@@ -87,5 +94,6 @@ export function detalheDoKit(kit: KitPublico): KitDetalheView {
     descricao: kit.descricao ?? fallback.descricao,
     itens: kit.itens.length > 0 ? kit.itens : fallback.itens,
     imagemUrl: kit.imagemUrl,
+    fotosSecundarias: kit.fotosSecundarias,
   };
 }

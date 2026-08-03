@@ -43,6 +43,15 @@ export interface KitPublico {
   descricao: string | null;
   itens: string[];
   imagemUrl: string | null;
+  /**
+   * S212-T3 (RN-425/426) — as até duas fotos ADICIONAIS, na ordem de exibição.
+   * `[]` = kit de uma foto, que é o que todo kit era antes desta RN.
+   *
+   * Só o DETALHE do kit no checkout lê este campo. Listagem, card e qualquer
+   * superfície onde o kit aparece ao lado de outros continuam usando somente
+   * `imagemUrl` (RN-426) — a galeria não muda nenhuma delas.
+   */
+  fotosSecundarias: string[];
 }
 
 

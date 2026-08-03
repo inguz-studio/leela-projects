@@ -103,3 +103,33 @@ export function imagemDoKit(
   }
   return { src: PLACEHOLDER_KIT, origem: 'placeholder', ampliavel: false };
 }
+
+/** Kit visto pela galeria — a projeção pública mais as fotos adicionais. */
+export interface KitComGaleria {
+  nome: string;
+  modalidades: readonly string[];
+  imagemUrl?: string | null;
+  fotosSecundarias?: readonly string[] | null;
+}
+
+/**
+ * GALERIA do kit para o DETALHE (S212-T3 · RN-425/426): a principal resolvida
+ * pela cascata de cima, seguida das fotos adicionais REAIS do organizador, na
+ * ordem em que ele as pôs.
+ *
+ * Uma lista, nunca vazia — a posição 0 é sempre a que a listagem também mostra.
+ * Kit de uma foto devolve uma entrada, e o detalhe volta a ser exatamente a
+ * tela que era antes desta RN.
+ *
+ * As secundárias são sempre `origem: 'real'` e ampliáveis: elas só existem
+ * quando o organizador subiu o arquivo. Só a posição 0 pode ser mock ou
+ * placeholder, porque só ela tem cascata.
+ */
+export function galeriaDoKit(kit: KitComGaleria, preview: boolean): ImagemKitResolvida[] {
+  const principal = imagemDoKit(kit, preview);
+  const secundarias = (kit.fotosSecundarias ?? [])
+    .map((f) => f.trim())
+    .filter((f) => f.length > 0 && f !== principal.src)
+    .map<ImagemKitResolvida>((src) => ({ src, origem: 'real', ampliavel: true }));
+  return [principal, ...secundarias];
+}

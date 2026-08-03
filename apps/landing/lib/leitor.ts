@@ -150,6 +150,9 @@ async function lerKits(db: Firestore, eventoId: string): Promise<KitPublico[]> {
         descricao: kit.descricao ?? null,
         itens: kit.itens,
         imagemUrl: kit.imagemUrl ?? null,
+        // S212-T3 (RN-425): já saem normalizadas do `parseKit` — sem URL de
+        // esquema perigoso, sem repetir a principal, cortadas em duas.
+        fotosSecundarias: kit.fotosSecundarias ?? [],
       };
     })
     .sort((a, b) => b.preco - a.preco);

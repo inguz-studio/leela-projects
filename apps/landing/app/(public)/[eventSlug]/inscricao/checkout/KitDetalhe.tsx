@@ -15,9 +15,11 @@
 // O SVG inline por tokens (ArteKitMock) saiu — o placeholder Leela é o default.
 // =============================================================================
 
+import { useState } from 'react';
 import { Check } from 'lucide-react';
+import { Thumb } from '@leela/design-system';
 import type { KitPublico } from '@/lib/tipos';
-import { imagemDoKit, rotuloKit } from '@/lib/kitImagem';
+import { galeriaDoKit, rotuloKit } from '@/lib/kitImagem';
 import { ehPreview } from '@/lib/mockImagem';
 import { KitImagem } from '@/app/components/KitImagem';
 import { detalheDoKit } from './kitDetalheDados';
@@ -30,10 +32,21 @@ import { detalheDoKit } from './kitDetalheDados';
 export function KitDetalhe({ kit }: { kit: KitPublico }): React.JSX.Element {
   const detalhe = detalheDoKit(kit);
   // Mesma cascata da LP; `ehPreview()` no client lê NEXT_PUBLIC_USE_EMULATOR.
-  const img = imagemDoKit(
-    { nome: kit.nome, modalidades: kit.modalidades, imagemUrl: detalhe.imagemUrl },
+  // S212-T3: a galeria devolve a principal resolvida + as adicionais reais.
+  const fotos = galeriaDoKit(
+    {
+      nome: kit.nome,
+      modalidades: kit.modalidades,
+      imagemUrl: detalhe.imagemUrl,
+      fotosSecundarias: detalhe.fotosSecundarias,
+    },
     ehPreview(),
   );
+  // Índice da foto EM DESTAQUE. Clicar numa miniatura troca a foto grande; o
+  // lightbox que já existe amplia a que estiver em foco, e não uma outra.
+  const [ativo, setAtivo] = useState(0);
+  const img = fotos[Math.min(ativo, fotos.length - 1)] ?? fotos[0]!;
+  const rotulo = rotuloKit(kit.nome);
 
   return (
     // C3 (achado 13): margem própria removida — o único consumidor
@@ -41,8 +54,40 @@ export function KitDetalhe({ kit }: { kit: KitPublico }): React.JSX.Element {
     // com o picker/grade acima; um mt-4 aqui duplicava a distância.
     <div className="rounded-ds-md border border-border-subtle bg-surface-sunken p-4">
       <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="w-full shrink-0 sm:w-36">
-          <KitImagem src={img.src} alt={rotuloKit(kit.nome)} ampliavel={img.ampliavel} />
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-36">
+          <KitImagem
+            key={img.src}
+            src={img.src}
+            alt={fotos.length > 1 ? `${rotulo} — foto ${ativo + 1} de ${fotos.length}` : rotulo}
+            ampliavel={img.ampliavel}
+          />
+          {/* Fita de miniaturas (RN-426) — só existe com mais de uma foto. O
+              `Thumb` é o primitivo do DS para mídia de ENTIDADE; nenhum
+              componente novo nasce por esta feature. A imagem do Thumb é
+              decorativa (`alt=""` default) porque o rótulo acessível está no
+              próprio botão, e repeti-lo faria o leitor de tela anunciar o kit
+              duas vezes por miniatura. */}
+          {fotos.length > 1 ? (
+            <ul aria-label={`Fotos do ${rotulo}`} className="flex list-none gap-2">
+              {fotos.map((foto, i) => (
+                <li key={foto.src}>
+                  <button
+                    type="button"
+                    onClick={() => setAtivo(i)}
+                    aria-current={i === ativo}
+                    aria-label={`Ver foto ${i + 1} de ${fotos.length} do ${rotulo}`}
+                    className={`block rounded-ds-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus ${
+                      i === ativo
+                        ? 'ring-2 ring-border-focus'
+                        : 'opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <Thumb src={foto.src} size="sm" ratio="square" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
         <div className="min-w-0 flex-1">
