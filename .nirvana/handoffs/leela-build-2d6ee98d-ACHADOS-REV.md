@@ -13,10 +13,10 @@ Alvo: os 16 commits da ACHADOS-0802 (`58fe76b` … `1d777fb`), base `main` em `3
 | Bloco | Vetores | Estado |
 |---|---|---|
 | 1 · motor do preço | 1, 2, 3, 11 | **FECHADO** — 2 defeitos confirmados, 2 fix-commits |
-| 2 · borda do preço | 4, 5, 6, 7 | em curso |
-| 3 · cotação e cupom | 8, 9, 10 | vetor 9 FECHADO com defeito; 8 e 10 pendentes |
-| 4 · prova de aceite | 12–19 | pendente |
-| Gate final | — | pendente |
+| 2 · borda do preço | 4, 5, 6, 7 | **FECHADO** — 3 lacunas de prova fechadas |
+| 3 · cotação e cupom | 8, 9, 10 | **FECHADO** — vetor 9 com defeito, 8 byte a byte, 10 com prova nova |
+| 4 · prova de aceite | 12–19 | **FECHADO** — 10 falsificações executadas, vetor 19 sem prova anterior |
+| Gate final | — | **VERDE** — 6 superfícies, ver o fim |
 
 ---
 
@@ -206,3 +206,264 @@ seleção abandonada`.
 | 7 suítes de venda/parcelamento | **167/167** (era 164/164 — 3 casos novos) |
 | `checkout-s1216-cotacao-antecipada` | **7/7** (era 6/6) |
 | Suíte da landing, processo único | **374/374** em 34 arquivos (era 373/373) |
+
+---
+
+## Bloco 2 · a borda do preço (vetores 4, 5, 6, 7) — commit `dffab74`
+
+### Vetor 4 · a interface não soma um centavo — **PASS**
+
+Varredura do `StepResumo` atrás de aritmética de dinheiro: zero. O juro chega pronto do campo
+`jurosParcelamento`.
+
+**Falsificação EXECUTADA.** `jurosParcelamento` trocado por
+`Math.max(0, totalCobrado − totalAVista)` no componente:
+
+```
+Tests 1 failed | 16 passed (17)
+```
+
+Morre `A INTERFACE NÃO SOMA UM CENTAVO: o valor exibido é o campo do servidor` — o caso que chega
+com `jurosParcelamento: 5` e `totalCobrado − totalAVista = 92` de propósito. Qualquer derivação
+local morde.
+
+### Vetor 5 · o organizador não vê o juro — **PASS, com lacuna de prova fechada**
+
+O caso puro (`rn347TaxaRepassada.test.ts`) prova o líquido do `computeSaleState`. **Isso é metade.**
+O que o organizador recebe passa pelo `webhookPagamento`, e o que o afiliado comissiona passa pelo
+doc de conversão — e nenhum dos dois consome `receitaLiquidaOrganizador`. Os dois leem `valorFinal`
+do doc de pagamento (`webhookPagamento.ts:621` e `:659`).
+
+**Falsificação EXECUTADA** — a que o vetor pede ("somar o juro à base"): `receitaConfirmada` e
+`valorConversao` trocados para `valorFinal + jurosParcelamento`.
+
+| Suítes | Sob a falsificação |
+|---|---|
+| `afiliados` + `checkoutS1203` + `estornarInscricao` (integração) | **69/69 VERDES** |
+| `rn347Checkout` (integração) | 1 failed \| 16 passed — só o caso NOVO |
+
+Sessenta e nove casos de integração financeira não enxergam o juro entrando na base do razão e da
+comissão. O caso novo (`vetor 5: à vista e em 12x do MESMO carrinho…`) compra o mesmo carrinho nas
+duas formas, confirma as duas pelo webhook e compara o delta da `receitaConfirmada`: R$ 189,90 nas
+duas, com `totalCobrado` de R$ 209,84 e o de 12x.
+
+### Vetor 6 · percentual não vaza — **PASS, com o scan ampliado**
+
+O scan que existia (`I4`) olhava `platformFeePct`, `"taxa":` e o literal `10.5`. Com a S314-T1
+ligando o `jurosAoMes`, **o termo ganhou um segundo percentual privado** e ele atravessava o scan
+sem ser olhado. O caso novo varre por NOME DE CHAVE (`jurosAoMes`, `fixoCentavos`, `parcelaMinima`,
+`maxParcelas`, `installmentRules`, `commercialTerms`, `taxaCongelada`, `taxaMeioAplicada`,
+`percentual`, `receitaLiquidaOrganizador`, `anticipation`, `saasMonthlyFee`) sobre **cotação e
+cobrança**, nos dois modos de taxa. Comparar valores literais foi rejeitado: `"3.49"` daria falso
+positivo no dia em que um total legítimo contivesse os mesmos dígitos.
+
+**Falsificação EXECUTADA** — `taxaMeioAplicada` plantada na resposta da cotação:
+
+```
+Tests 2 failed | 16 passed (18)
+```
+
+Verificado à parte: `taxaCongelada.percentual`/`.fixoCentavos` vivem em `pagamentos/{id}`, cuja
+Rule (`firestore.rules:2404`) restringe a leitura a `isTenantWriter` ou `isPlatformAdmin` — o
+comprador anônimo não alcança.
+
+**Não-achado registrado:** a mensagem de recusa de parcelamento inválido diz "termo oferta até 11x".
+É o teto EFETIVO, que a própria lista de opções já mostra — não o `maxParcelas` do termo.
+
+### Vetor 7 · o modo incorporada não inventa número — **PASS**
+
+Servidor: `incorporada: totalCobrado = face; taxaServico 0`. Tela: "inclusa no valor", sem
+"R$ 0,00" e sem o valor real (o caso manda `taxaServico: 8` num evento incorporado e exige que a
+tela siga muda sobre o número).
+
+**Falsificação EXECUTADA** — `StepResumo` e `StepConfirmacao` restaurados de `ecb5188^`:
+
+```
+Tests 11 failed | 6 passed (17)
+```
+
+Bate com o número que o builder declarou.
+
+---
+
+## Bloco 3 · a cotação (vetores 8, 9, 10)
+
+### Vetor 8 · a cotação antecipada não muda o número, só a hora — **PASS, byte a byte**
+
+Medido nos DOIS mundos, com o mesmo carrinho e o mesmo caminho, capturando o argumento da callable:
+
+```
+gatilho NOVO   (step >= 1)  {"eventoId":"experiencia-teste","itens":[{"modalidade":"5k"}],"forma":"pix","parcelas":1}   1 chamada
+gatilho ANTIGO (step >= 2)  {"eventoId":"experiencia-teste","itens":[{"modalidade":"5k"}],"forma":"pix","parcelas":1}   1 chamada
+```
+
+Strings idênticas. E preencher o formulário inteiro depois da primeira cotação **não** gera segunda
+chamada (1 → 1), que é a outra metade da promessa: chegar ao PAGAR não recota.
+
+### Vetor 9 · resposta obsoleta não aterrissa, inclusive pelo cupom — **FAIL ⇒ DEF-2** (bloco 1)
+
+### Vetor 10 · o item 64 continua de pé — **PASS, com lacuna de prova fechada**
+
+A metade do BOTÃO tinha caso próprio (`CKUX-REV · B1`). A metade do CÓDIGO PIX não: desligar o
+`!cotando` do efeito de auto-geração derrubava **um único caso**, e ele mora em
+`checkout-asaas-teto` para provar o TETO DO GATEWAY — falha ali por acidente (a cobrança nasce duas
+vezes), e quem quebrasse a guarda leria um erro sobre o Asaas.
+
+Caso novo: chegada ao PAGAR **antes** da resposta (a função fria mediu 9,8 s em produção), escolha
+do PIX, nenhuma cobrança; a resposta chega e o código nasce sozinho, sem clique extra.
+
+**Falsificação EXECUTADA** (`!cotando` desligado): `Tests 1 failed | 5 passed (6)`.
+
+**Caminho descartado, com medida.** A primeira versão do caso voltava a uma seleção JÁ cotada com
+outra no ar. Ela reprovava: o efeito cai no early-return, **invalida o que está no ar** e o total da
+tela passa a ser o certo — a cobrança nascer ali é correto. O teste teria provado o oposto do vetor.
+
+---
+
+## Bloco 4 · a prova de aceite (vetores 12–19) — commit `44c92b9`
+
+Todas as falsificações abaixo foram executadas uma a uma, com o estado restaurado depois de cada.
+
+| # | Vetor | Falsificação executada | Resultado |
+|---|---|---|---|
+| 12 | não existe compra sem os dois aceites | gate da TELA removido (`if (!aceitesOk) return`) | **5 failed** em 3 arquivos |
+| 12 | — servidor | `validarAceitesCheckoutInput` com os dois `!== true` desligados | **2 failed** (`checkoutModelo`) |
+| 13 | o cliente não forja nada | `versoesExibidas` gravada no doc do pedido | **1 failed** (V4) |
+| 14 | nenhuma cobrança nasce na chegada | `useState<FormaUI\|null>('pix')` — pré-seleção de volta | **6 failed** |
+| 15 | voltar não destrava a prova | `desabilitado={charge !== null}` → `{false}` | **1 failed** |
+| 16 | divergência recusa, e recusa por igual | bloco `if (exibidas !== undefined)` desligado | **4 failed** (V2, V3, V5, V7) |
+| 17 | o termo do organizador fecha o defeito | `saudeCustom` fora do payload | **2 failed** |
+| 18 | a origem é do servidor | origem lida de `input.aceites.origem` | **1 failed** (O4) |
+| 18 | — irreversibilidade | HMAC trocado por `sha256` puro | **1 failed** (O3) |
+| 19 | nada de PII em log nem em URL | campo novo persistido em `localStorage` | **1 failed** (caso NOVO) |
+
+### Armadilha de método que quase produziu um falso PASS
+
+A primeira falsificação do vetor 12 (gate da tela) devolveu **375/375 verdes** — e a conclusão
+"vetor 12 sem cobertura de tela" estava a um passo. O patch tinha sido um **no-op silencioso**: o
+arquivo está em CRLF e o `String.replace` casava por `\n`. Repetida por linha, ela derruba **5**
+casos. Toda falsificação multi-linha desta lane passou a ser aplicada por índice de linha, com o
+conteúdo da linha impresso antes da troca.
+
+### Vetor 19 · o que não tinha prova nenhuma
+
+Nenhum caso varria armazenamento local nem parâmetro de consulta atrás dos três campos que a C4 e a
+C5 acrescentaram. O caso novo faz a compra inteira e varre **todas** as chaves do `localStorage`
+(chave e valor) mais `search` e `hash` da URL, e trava o contrato do payload: `versoesExibidas`
+sobe (RN-439), `origem`/`ipHash`/`userAgent` **não** sobem (RN-442 — quem deriva é o servidor).
+
+Lado servidor, varredura das 4 chamadas de `logger` de `createInscricaoCharge.ts`
+(`taxaflex_override_invalido`, `checkout_gateway_sem_resposta`, `checkout_gateway_recusou`,
+`checkout_charge_criada`): nenhuma carrega endereço, agente ou bloco de aceites.
+
+---
+
+## Premissas PB-1..PB-14
+
+| # | Veredito | Linha de consequência |
+|---|---|---|
+| PB-1 | **ENDOSSADA** | Aritmética conferida fora do repositório: 359,28 e 422,28 são os certos. Falta reconciliar o texto da spec. |
+| PB-2 | **VETO-DONO** | Correta na direção que enuncia, **incompleta na outra**: o resíduo também descia (R$ 34,98 sobre R$ 35,00) e ninguém o via. O piso do DEF-1 fechou o lado de baixo; sobra a copy — num termo sem juros a tela chama de "Juros do parcelamento" um resíduo de arredondamento de um centavo. |
+| PB-3 | **ENDOSSADA, com peso maior do que a premissa dá** | "Ambiente já provisionado segue com juros 0" não é nota de emulador: é o estado de PRODUÇÃO, e foi ele que tornou o DEF-1 um defeito vivo em 73% das combinações (ticket, n). |
+| PB-4 | **ENDOSSADA** | Derivar o juro na borda não muda o número; o core segue com uma autoridade só. |
+| PB-5 | **ENDOSSADA** | O modo pelo flag do evento é a versão verdadeira; o proxy por `taxaServico > 0` chamaria de "inclusa" uma taxa zerada por meio. |
+| PB-6 | **ENDOSSADA** | Taxa zero em evento repassado sem linha é o enunciado honesto. |
+| PB-7 | **ENDOSSADA** | O texto do organizador atravessa intacto; o vocabulário D-0802-1 governa só o que a plataforma escreve. |
+| PB-8 | **ENDOSSADA** | Sem meio escolhido o rótulo diz "(PIX)" porque a cotação exibida É de PIX à vista. |
+| PB-9 | **SUPERADA** | Não precisou ser exercida — as fotos são reais e versionadas. |
+| PB-10 | **ENDOSSADA** | `window.location.reload()` perde o formulário; `router.refresh()` custaria mock em 16 arquivos. Trocar depois é uma linha. |
+| PB-11 | **VETO-DONO** | **Medido**: pedido sem bloco + política na versão 3 + retry declarando a 1 ⇒ **carimba a 3**. No caminho de criação a mesma divergência recusa. A prova não fica incompleta, fica afirmando material que a pessoa não leu — o carimbo silencioso que a P6 rejeitou. A escolha entre prova ausente e prova errada é do dono. |
+| PB-12 | **ENDOSSADA** | `public/covers/kits/` é onde o acervo e o `BASE` do resolvedor já vivem. |
+| PB-13 | **VETO-DONO** | Julgamento de marca — a foto de ioga (tapetes enrolados, escura, sem pessoas) precisa do olho do dono. |
+| PB-14 | **ENDOSSADA** | "Modalidade oficial" segue a D3, no arquivo do território da task. |
+
+---
+
+## Gate final
+
+| Superfície | `tsc` | `eslint` | Suíte |
+|---|---|---|---|
+| `packages/core` | **0** | **0** | `tsup` exit 0 · consumida pelas suítes de functions |
+| `packages/api-client` | **0** | **0** | — |
+| `packages/design-system` | **0** | **0** | **1098/1098** em 59 arquivos |
+| `functions` (emulator `@13`, Java 17) | **0** | **0** | **3354 passed · 91 skipped** em 194 arquivos |
+| `apps/landing` (processo único) | **0** | **0** | **376/376** em 34 arquivos |
+| `apps/painel` (pool PADRÃO) | **0** | — | **1768/1768** em 190 arquivos |
+
+Comando do emulator:
+`npx firebase-tools@13 emulators:exec --only firestore,auth --project demo-leela-s1203 "npx vitest run"`
+
+Movimento das suítes tocadas nesta lane:
+
+| Suíte | Antes | Depois |
+|---|---|---|
+| Venda/parcelamento (7 arquivos puros) | 164 | **167** (+3, DEF-1) |
+| `checkout-s1216-cotacao-antecipada` | 6 | **7** (+1, DEF-2) |
+| `rn347Checkout.integration` | 16 | **18** (+2, vetores 5 e 6) |
+| `checkout-ckux-rev-cotacao` | 5 | **6** (+1, vetor 10) |
+| `checkout-s1217-aceites-inscricao` | 8 | **9** (+1, vetor 19) |
+| `aceitesVersaoExibida.integration` | 8 | **9** (+1, PB-11) |
+| Landing (total) | 373 | **376** |
+
+### Duas suítes que não rodam neste comando — **preexistentes, não regressão**
+
+| Arquivo | Causa medida | Asserções executadas |
+|---|---|---|
+| `storageRules.integration.test.ts` | `ECONNREFUSED 127.0.0.1:9199` — exige o emulator de **Storage**, que o `--only firestore,auth` não sobe | **0** |
+| `estornarInscricao.e2e.review.test.ts` | `FirebaseError: auth/user-not-found` no `beforeAll` — exige usuário semeado no Auth por bootstrap separado | **0** |
+
+As duas morrem no `beforeAll`: **81 casos SKIPPED, zero asserções avaliadas**, então nenhuma
+alteração desta lane participa do resultado. Nenhuma das duas importa `buildInstallmentOptions`,
+`jurosParcelamento` ou `versoesExibidas`.
+
+---
+
+## Placar por vetor
+
+| # | Vetor | Veredito |
+|---|---|---|
+| 1 | a conta bate com Price | **PASS** |
+| 2 | a parcela única do cartão não tem juros | **PASS** |
+| 3 | a soma fecha | **PASS** |
+| 4 | a interface não soma um centavo | **PASS** |
+| 5 | o organizador não vê o juro | **PASS** (lacuna de prova fechada) |
+| 6 | percentual não vaza | **PASS** (scan ampliado) |
+| 7 | o modo incorporada não inventa número | **PASS** |
+| 8 | a cotação antecipada não muda o número | **PASS** (byte a byte) |
+| 9 | resposta obsoleta não aterrissa, inclusive pelo cupom | **FAIL → DEF-2 corrigido** |
+| 10 | o item 64 continua de pé | **PASS** (lacuna de prova fechada) |
+| 11 | pedido antigo não é reprecificado | **PASS** |
+| 12 | não existe compra sem os dois aceites | **PASS** |
+| 13 | o cliente não forja nada | **PASS** |
+| 14 | nenhuma cobrança nasce na chegada | **PASS** |
+| 15 | voltar não destrava a prova | **PASS** |
+| 16 | divergência de versão recusa, e recusa por igual | **PASS na criação** · buraco no replay medido (PB-11) |
+| 17 | o termo do organizador fecha o defeito | **PASS** |
+| 18 | a origem é do servidor e não é reversível | **PASS** |
+| 19 | nada de PII em log nem em URL | **PASS** (prova criada — não existia) |
+
+Fora dos 19, achado por sweep: **DEF-1**, o total parcelado abaixo do principal.
+
+## Commits desta lane
+
+| Hash | O que é |
+|---|---|
+| `4c3b998` | fix DEF-1 — piso do principal no `buildInstallmentOptions` + 3 casos + 2 comentários de contrato corrigidos |
+| `e309c3c` | fix DEF-2 — descarte por assinatura no "Aplicar" do cupom + 1 caso |
+| `dffab74` | prova dos vetores 5, 6 e 10 (3 casos novos, nenhum defeito) |
+| `44c92b9` | prova do vetor 19 + medida do buraco da PB-11 (2 casos novos) |
+
+Sem push, como a lane manda.
+
+## Pendências para o dono
+
+1. **PB-2 (copy):** com termo sem juros, R$ 50,00 em 3x cobra R$ 50,01 e a tela chama esse centavo
+   de "Juros do parcelamento". O número está certo e o bloco de totais fecha; o rótulo é impreciso.
+2. **PB-11 (jurídica):** no replay, a prova carimba a versão vigente sem conferir a exibida — pode
+   afirmar material que a pessoa não leu. Prova ausente × prova errada é decisão do dono; o caso de
+   teste está no lugar exato onde a decisão vira código.
+3. **PB-13:** a foto de ioga (D4) — julgamento de marca.
+4. **Reconciliar a spec:** `04-spec-achados.md` D-ACH-9 e `07-fila-achados.md` vetor 1 ainda trazem
+   R$ 422,03 / R$ 359,90. Os corretos são **R$ 422,28** e **R$ 359,28** (PB-1).
+5. **Continua valendo do build:** nada disto está no ar. O último release é o do D0, que não contém
+   C4, C5, a frente D nem os dois fix-commits desta lane.
