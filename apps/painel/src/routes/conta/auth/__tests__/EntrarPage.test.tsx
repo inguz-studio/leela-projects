@@ -1,6 +1,12 @@
 // =============================================================================
 // EntrarPage (S020-T1) — login, erros honestos sem enumeração e redirect
 // pós-login para a rota de origem (state.from).
+//
+// Estendida pelo item 57 do painel de decisões: o pós-login roteia POR PAPEL
+// quando não há origem guardada, e a conta órfã não passa da porta. A decisão
+// pura vive em `_lib/destinoPosLogin` (suíte própria); aqui se prova a FIAÇÃO —
+// que a página coleta claims com refresh forçado, consulta o doc só quando
+// precisa, derruba a sessão da conta órfã e navega para onde a decisão mandou.
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -8,10 +14,20 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { EntrarPage } from '../EntrarPage';
 
-const mocks = vi.hoisted(() => ({ loginComEmail: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  loginComEmail: vi.fn(),
+  getClaims: vi.fn(),
+  getProfissional: vi.fn(),
+  getLeelaDb: vi.fn(),
+  logout: vi.fn(),
+}));
 
 vi.mock('@leela/api-client', () => ({
   loginComEmail: mocks.loginComEmail,
+  getClaims: mocks.getClaims,
+  getProfissional: mocks.getProfissional,
+  getLeelaDb: mocks.getLeelaDb,
+  logout: mocks.logout,
 }));
 
 function renderEntrar(from?: string): void {
@@ -21,14 +37,26 @@ function renderEntrar(from?: string): void {
       <Routes>
         <Route path="/entrar" element={<EntrarPage />} />
         <Route path="/" element={<div>Visão Geral</div>} />
+        <Route path="/plataforma" element={<div>Plataforma</div>} />
         <Route path="/eventos/e1/inscritos" element={<div>Inscritos do e1</div>} />
       </Routes>
     </MemoryRouter>,
   );
 }
 
+async function submeter(): Promise<void> {
+  await userEvent.type(screen.getByLabelText('E-mail'), 'marina@demo.dev');
+  await userEvent.type(screen.getByLabelText('Senha'), 'segredo123');
+  await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default do ambiente: organizador com tenant. Cada teste do item 57
+  // sobrescreve o que precisa.
+  mocks.getClaims.mockResolvedValue({ role: 'tenant_owner', tenantId: 't1' });
+  mocks.getProfissional.mockResolvedValue({ id: 'u1' });
+  mocks.logout.mockResolvedValue(undefined);
 });
 
 describe('EntrarPage', () => {
@@ -98,5 +126,70 @@ describe('EntrarPage', () => {
     renderEntrar();
     expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '/recuperar-senha');
     expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute('href', '/cadastrar');
+  });
+});
+
+describe('EntrarPage — roteamento por papel (item 57)', () => {
+  beforeEach(() => {
+    mocks.loginComEmail.mockResolvedValue({ user: { uid: 'u1' } });
+  });
+
+  it('platform_admin sem origem aterrissa em /plataforma', async () => {
+    mocks.getClaims.mockResolvedValue({ role: 'platform_admin' });
+    renderEntrar();
+    await submeter();
+    expect(await screen.findByText('Plataforma')).toBeInTheDocument();
+  });
+
+  it('organizador com tenant sem origem aterrissa na Visão Geral', async () => {
+    renderEntrar();
+    await submeter();
+    expect(await screen.findByText('Visão Geral')).toBeInTheDocument();
+  });
+
+  it('a claim é lida com refresh FORÇADO (token em cache pode ser pré-resgate)', async () => {
+    renderEntrar();
+    await submeter();
+    await waitFor(() => expect(mocks.getClaims).toHaveBeenCalledWith(true));
+  });
+
+  it('quem já tem tenant não paga round-trip no doc do profissional', async () => {
+    renderEntrar();
+    await submeter();
+    await screen.findByText('Visão Geral');
+    expect(mocks.getProfissional).not.toHaveBeenCalled();
+  });
+
+  it('conta travada (sem tenant, COM doc) ENTRA e vai encontrar o overlay', async () => {
+    // Regressão da colisão que a premissa 9 resolveu: o item 57 não pode
+    // barrar quem a RN-411 manda entrar.
+    mocks.getClaims.mockResolvedValue({ role: 'athlete' });
+    mocks.getProfissional.mockResolvedValue({ id: 'u1', statusOnboarding: 'aguardando_convite' });
+    renderEntrar();
+    await submeter();
+    expect(await screen.findByText('Visão Geral')).toBeInTheDocument();
+    expect(mocks.logout).not.toHaveBeenCalled();
+  });
+
+  it('conta órfã (sem tenant, SEM doc) fica na porta, e a sessão cai', async () => {
+    mocks.getClaims.mockResolvedValue({ role: 'athlete' });
+    mocks.getProfissional.mockResolvedValue(null);
+    renderEntrar();
+    await submeter();
+
+    const alerta = await screen.findByRole('alert');
+    expect(alerta).toHaveTextContent(/não tem acesso ao painel do organizador/i);
+    // Deixar a conta órfã autenticada seria acesso sem tela.
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalled());
+    expect(screen.queryByText('Visão Geral')).not.toBeInTheDocument();
+  });
+
+  it('falha ao ler claims NÃO tranca ninguém do lado de fora', async () => {
+    // Erro de rede não pode virar veredito de "conta órfã".
+    mocks.getClaims.mockRejectedValue(new Error('offline'));
+    renderEntrar();
+    await submeter();
+    expect(await screen.findByText('Visão Geral')).toBeInTheDocument();
+    expect(mocks.logout).not.toHaveBeenCalled();
   });
 });

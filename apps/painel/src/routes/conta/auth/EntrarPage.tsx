@@ -10,16 +10,31 @@
 // SEGURANÇA: a senha vive só no estado controlado do input enquanto a tela
 // existe; nunca é logada nem persistida. Google/Apple ficam para um 2º passo
 // (helpers já existem no api-client; provedores dependem de config de produção).
+//
+// ROTEAMENTO POR PAPEL (item 57 do painel de decisões): a decisão de para onde
+// ir mora em `_lib/destinoPosLogin` (pura e testada). Aqui só se COLETA o que
+// ela precisa — claims com refresh forçado (o token em cache pode ser anterior
+// ao provisionamento) e a existência de `profissionais/{uid}`, que separa o
+// organizador em onboarding da conta órfã. Conta órfã não passa da porta: a
+// sessão cai e o aviso aparece nesta mesma tela.
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Input } from '@leela/design-system';
-import { loginComEmail } from '@leela/api-client';
+import {
+  getClaims,
+  getLeelaDb,
+  getProfissional,
+  loginComEmail,
+  logout,
+} from '@leela/api-client';
+import type { Role } from '@leela/core';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroLogin } from './_lib/authErrors';
 import { caminhoInternoSeguro, emailValido } from './_lib/authValidation';
+import { destinoPosLogin, type SessaoPosLogin } from './_lib/destinoPosLogin';
 
 interface EntrarLocationState {
   from?: string;
@@ -28,13 +43,46 @@ interface EntrarLocationState {
 const LINK_CLASSE =
   'font-[var(--font-weight-medium)] text-[var(--action-brand-tint-fg)] hover:underline';
 
+/**
+ * Coleta o que o item 57 precisa saber. O refresh é FORÇADO: o token em cache
+ * pode ser anterior ao provisionamento (a claim de tenant nasce server-side no
+ * resgate) e um token velho mandaria um organizador legítimo para o aviso de
+ * conta órfã.
+ *
+ * O doc só é lido quando não há tenant — quem já tem tenant não precisa do
+ * discriminante, e a leitura seria um round-trip por login de graça.
+ *
+ * Falha ao ler claims/doc NÃO barra ninguém: sem evidência de órfã, o pior
+ * caminho é deixar entrar e a conta encontrar o overlay (ou o painel). Barrar
+ * por erro de rede trancaria organizador legítimo do lado de fora.
+ */
+async function lerSessaoPosLogin(uid: string): Promise<SessaoPosLogin> {
+  try {
+    const claims = (await getClaims(true)) ?? {};
+    const role = (claims['role'] as Role | undefined) ?? null;
+    const tenantId = (claims['tenantId'] as string | undefined) ?? null;
+    if (tenantId !== null || role === 'platform_admin') {
+      return { role, tenantId, temPerfilProfissional: true };
+    }
+    const perfil = await getProfissional(getLeelaDb(), uid);
+    return { role, tenantId, temPerfilProfissional: perfil !== null };
+  } catch {
+    return { role: null, tenantId: null, temPerfilProfissional: true };
+  }
+}
+
 export function EntrarPage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   // Redirect pós-login: sanitiza o `from` para um caminho interno seguro
   // (anti open-redirect defensivo; hoje o RequirePapel só grava pathname
   // confiável, mas o sink não deve confiar cegamente na origem).
-  const destino = caminhoInternoSeguro((location.state as EntrarLocationState | null)?.from);
+  //
+  // Fallback VAZIO de propósito (não `/`): o item 57 precisa distinguir "veio
+  // de um deep-link" de "entrou pela porta da frente" — com `/` de fallback os
+  // dois casos ficariam indistinguíveis e o super-admin nunca cairia em
+  // `/plataforma`.
+  const origem = caminhoInternoSeguro((location.state as EntrarLocationState | null)?.from, '');
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -49,9 +97,20 @@ export function EntrarPage(): JSX.Element {
     setErro(null);
     setEnviando(true);
     try {
-      await loginComEmail(email.trim(), senha);
+      const credencial = await loginComEmail(email.trim(), senha);
+      const sessao = await lerSessaoPosLogin(credencial.user.uid);
+      const decisao = destinoPosLogin(sessao, origem.length > 0 ? origem : null);
+      if (decisao.tipo === 'barrar') {
+        // Sessão cai ANTES do aviso: deixar a conta órfã autenticada no
+        // navegador seria acesso sem tela, e a próxima rota que ela tentasse
+        // abriria um painel vazio em vez desta explicação.
+        await logout();
+        setErro(decisao.aviso);
+        setEnviando(false);
+        return;
+      }
       // replace: a tela de login não fica no histórico após autenticar.
-      navigate(destino, { replace: true });
+      navigate(decisao.destino, { replace: true });
     } catch (err) {
       setErro(mensagemErroLogin(err));
       setEnviando(false);

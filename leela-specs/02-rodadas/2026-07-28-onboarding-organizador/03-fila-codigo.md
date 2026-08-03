@@ -52,7 +52,11 @@ data: 2026-07-28
 - [x] `S1608-T2` — tela `/plataforma/convites`
 - [x] `S1609-T1` — Function `resgatarConviteOrganizador`
 - [x] `S1609-T2` — overlay bloqueante + CTA configurável
-- [ ] item 57 — roteamento pós-login por papel
+- [x] item 57 — roteamento pós-login por papel
+
+> ⚠ O item 57 está PAGO no código, mas o painel `01-produto/DECISOES-ABERTAS.md` NÃO foi
+> marcado por esta lane: o arquivo estava sendo reescrito pela lane DECISOES-CLEAN em voo.
+> Fechar o item 57 lá é da DECISOES-CLEAN ou do maestro na volta.
 
 > `S030-T1` e `S030-T2` pagam num commit só: o doc do profissional é escrito
 > dentro do submit do `/cadastrar`, e separar produziria um commit intermediário
