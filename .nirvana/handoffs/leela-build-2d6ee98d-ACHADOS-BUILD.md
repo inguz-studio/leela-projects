@@ -14,7 +14,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **A1 · S1216-T1** — gatilho da cotação na etapa de dados + sequência nos caminhos de cupom
 - [ ] **A2 · S1216-T2** — `jurosParcelamento` no contrato da cotação e da cobrança
 - [x] **A3 · S1216-T3** — bloco de totais (taxa nomeada, "inclusa", linha de juros)
-- [ ] **A4 · S1216-T4** — total por opção sempre que os dois existirem
+- [x] **A4 · S1216-T4** — total por opção sempre que os dois existirem
 - [ ] **C1 · S1217-T1** — aceites migram para a etapa de dados e gateiam o "Continuar"
 - [ ] **C2 · S1217-T2** — nenhuma forma pré-selecionada
 - [ ] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
@@ -375,11 +375,61 @@ utilitário de cor fora dos tokens do DS. O "inclusa no valor" é renderizado em
 
 ---
 
+## A4 · S1216-T4 · a feature que existia e não aparecia
+
+Commit `7427b3e`. Território: `.../checkout/StepResumo.tsx`, `.../checkout/StepModalidadeKit.tsx`
++ dois arquivos de teste.
+
+O `totaisPorMeio` da RN-180 chegava do servidor desde a S1210 e o rótulo só o exibia quando os dois
+totais **diferiam**. Em taxa incorporada eles nunca diferem — o dono testou exatamente o evento em
+que a feature inteira era invisível. O critério passa a ser **por opção**: existe total daquele
+meio, o rótulo o carrega.
+
+Por opção, e não um gate único para os dois, porque a RN-180 já prometia que falha parcial na
+derivação do meio alternativo não derruba a opção principal. `null` num meio devolve o rótulo
+genérico **daquele** meio e o outro segue com número — caso novo no teste, com a asserção negativa
+de que a opção sem derivação não ganha `R$` nenhum.
+
+A nota da etapa 0 ganhou o segundo ramo (D-ACH-7): em modo incorporada ela diz que não há taxa
+adicional e que o valor exibido é o valor final. Antes, o modo incorporada era silêncio — e o
+silêncio foi o achado.
+
+### Falsificação
+
+`StepResumo` e `StepModalidadeKit` restaurados do HEAD (que já contém a A3, então o que se mede
+aqui é só a A4):
+
+```
+Tests  3 failed | 9 passed (12)   (checkout-fixes-steps)
+```
+
+Os três: os totais iguais nas duas opções, a derivação parcial e a nota do modo incorporada.
+
+### Dois casos que carimbavam a regra antiga — reescritos, não removidos
+
+- `checkout-fixes-steps.test.tsx` — `"incorporada (taxaServico 0): rótulos vigentes, sem total por
+  opção"` exigia justamente o rótulo mudo. Virou `"os totais IGUAIS aparecem nas duas opções"`.
+- `checkout-fixes-steps.test.tsx` — `"evento em modo incorporada: SEM nota de taxa"` exigia o
+  silêncio. Virou `"a nota diz que não há taxa adicional"`, com a guarda de que percentual não
+  aparece em nenhum dos dois ramos.
+- `checkout-s1209-cupom-forma.test.tsx` — dois casos casavam o nome acessível do rádio por string
+  EXATA (`'PIX (à vista)'`). Passaram a casar por padrão: o que eles guardam é o papel de rádio e a
+  troca de forma, não a copy do total.
+
+### Gates
+
+| | |
+|---|---|
+| landing `tsc` / `eslint` | **0** / **0** |
+| Suíte da landing, processo único | **334/334** em 30 arquivos |
+
+---
+
 ## Onde a lane parou
 
-Fila paga: **D0, B1t, B2t, A1, A2, A3**. Próxima: **A4** (`S1216-T4` — total por opção sempre que
-os dois existirem; a nota da etapa 0 ganha o ramo do modo incorporada). Território dela:
-`.../checkout/StepResumo.tsx` e `.../checkout/StepModalidadeKit.tsx`.
+Fila paga: **D0, B1t, B2t, A1, A2, A3, A4** — a frente A inteira. Próxima: **C1** (`S1217-T1` — os
+aceites migram para a etapa de dados e gateiam o "Continuar"). Território dela:
+`.../checkout/CheckoutFlow.tsx`, `.../checkout/StepDados.tsx`, `.../checkout/StepPagamento.tsx`.
 
 **Worktree limpo** — nenhuma mudança de código pendente; tudo o que foi tocado está commitado. Sem
 push, como a lane manda.
