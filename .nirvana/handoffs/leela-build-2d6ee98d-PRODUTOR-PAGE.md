@@ -14,7 +14,7 @@ Gate de entrada medido antes de tocar em nada: tsc **0**, eslint **0**, suíte d
 ## Estado da fila
 
 - [x] **E1 · S1707-T1** — medir a consulta de eventos por tenant e status; índice só se reprovar
-- [ ] **E2 · S1707-T2** — ícones de rede inferidos pelo endereço + os três SVGs que faltam
+- [x] **E2 · S1707-T2** — ícones de rede inferidos pelo endereço + os três SVGs que faltam
 - [ ] **E3 · S1707-T3** — menu secundário Feed · Eventos · Clubs com o `Tabs` do DS
 - [ ] **E4 · S1707-T4** — feed mockado e rotulado em preview, vazio digno em produção
 
@@ -114,3 +114,53 @@ cortar: alguém lê, acredita e declara o índice "por via das dúvidas".
 | `eslint app lib --max-warnings 0` | **0** |
 | Suíte da landing (processo único) | **376/376**, 34 arquivos |
 | `firestore.indexes.json` | intocado (`git status` limpo para o caminho) |
+
+Commit: `c2fa043f`.
+
+---
+
+## E2 · os links viram ícones, e o rótulo digitado não se perde
+
+Dois arquivos novos e uma troca no hero. A fileira de pílulas de texto de largura inteira virou uma
+fileira de ícones de 44px.
+
+### A inferência
+
+`app/(public)/_perfil/redes.ts` — função pura `inferirRede(url)`, mapa de 17 domínios para 10 redes
+mais o genérico `site`. O casamento é por igualdade **ou por sufixo de rótulo** (`host === d` ou
+`host.endsWith('.' + d)`), que é o que separa `br.instagram.com` — legítimo — de
+`instagram.com.golpe.net`, que é hostname de outro dono. Endereço fora de http(s), endereço que não
+parseia e endereço não reconhecido caem todos em `site` e **continuam na fileira**, com ícone
+genérico de link (Postel na leitura, D-ACH-17).
+
+Nenhum campo novo entrou no modelo, na validação, na projeção pública, na Function ou no editor do
+painel. O organizador continua cadastrando rótulo e endereço.
+
+### Os ícones
+
+`app/(public)/_perfil/IconesRede.tsx` — sete vêm do `lucide` que a landing já usa (Instagram,
+Facebook, Twitter, YouTube, LinkedIn, GitHub, Twitch), o genérico é o `Link` do mesmo pacote, e os
+três que o `lucide` não tem entram como SVG local: **WhatsApp, TikTok e Strava** (D-ACH-18). Os três
+são desenhados na mesma grade do lucide — 24×24, `currentColor`, sem preenchimento, ponta
+arredondada, traço 1,75 — para a fileira ter um peso visual só.
+
+Eles são desenhos SIMPLIFICADOS, não os glifos oficiais das três empresas. Está escrito no topo do
+arquivo e é premissa vetável: trocar os `d` dos três paths não mexe em mais nada.
+
+### Onde o rótulo foi parar
+
+O `<a>` carrega `aria-label` e `title` com o rótulo que o organizador digitou; o `<svg>` é sempre
+`aria-hidden`. Um nome só por alvo — dois fariam o leitor de tela anunciar duas vezes. Rótulo vazio
+(que a projeção do core já não deixa passar) cai no hostname, nunca em link mudo.
+
+O alvo tem 44×44px. WCAG 2.2 §2.5.8 pede 24px como mínimo AA, e uma fileira de ícones colados é
+exatamente o padrão que costuma reprovar ali.
+
+### Gate
+
+| | |
+|---|---|
+| `tsc --noEmit` (landing) | **0** |
+| `eslint app lib --max-warnings 0` | **0** |
+| Suíte da landing (processo único) | **402/402**, 35 arquivos (+26 no arquivo novo) |
+| Tokens do DS | zero hex, zero valor arbitrário — o `leela-tokens/no-hardcoded-tokens` roda em `apps/*/app/**` e passou |

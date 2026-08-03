@@ -4,7 +4,9 @@
 // Perfil público / link-in-bio `/@{handle}` — S1700 (Onda 3) + LEELA-R12
 // (Frente 3): a página do organizador vira um CALENDÁRIO/linha do tempo dos
 // eventos, no padrão Luma (https://luma.com/foundersrc):
-//   - hero: capa + avatar + nome + @handle + bio + link-in-bio (inalterado);
+//   - hero: capa + avatar + nome + @handle + bio + link-in-bio — que em
+//     S1707-T2 (RN-444) deixou de ser pílula de texto de largura inteira e
+//     virou fileira de ÍCONES, com a rede inferida do endereço;
 //   - Próximos eventos: TIMELINE vertical por data (marcador dia/mês + card),
 //     mobile-first, brasa/dark; Já aconteceram: mesma linha do tempo, passados
 //     em ordem reversa e SEM link (a página do evento encerrado é 404 — honesto);
@@ -26,6 +28,8 @@ import { ShareBlock } from '../[eventSlug]/ShareBlock';
 import { formatarPreco } from '../../../lib/formato';
 import { rotuloEstadoVenda } from '../../../lib/estadoVenda';
 import { AVATAR_MOCK, mockLogoPara } from '../../../lib/mockImagem';
+import { IconeRede } from './IconesRede';
+import { inferirRede, nomeAcessivelDoLink } from './redes';
 import type {
   PerfilPublicoCompleto,
   ClubeResumoPublico,
@@ -266,21 +270,30 @@ export function PerfilView({
             <p className="mt-3 max-w-2xl text-base text-text-secondary">{perfil.bio}</p>
           )}
 
-          {/* Link-in-bio: os links externos do organizador */}
+          {/* Link-in-bio: os links externos do organizador, agora em ÍCONES
+              (S1707-T2 · RN-444). A rede sai do endereço; o rótulo digitado
+              vira nome acessível e dica. Alvo de 44px — acima do mínimo da
+              WCAG 2.2 (2.5.8), que é o que uma fileira de ícones colados
+              costuma perder. */}
           {perfil.linksExternos.length > 0 && (
-            <ul className="mt-5 flex flex-col gap-2 sm:max-w-md">
-              {perfil.linksExternos.map((link) => (
-                <li key={link.url}>
-                  <a
-                    href={link.url}
-                    rel="noopener noreferrer nofollow"
-                    target="_blank"
-                    className="flex w-full items-center justify-center rounded-ds-pill border border-border-subtle bg-surface-raised px-5 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-border-focus hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
+            <ul className="mt-5 flex flex-wrap items-center gap-2">
+              {perfil.linksExternos.map((link) => {
+                const nome = nomeAcessivelDoLink(link.label, link.url);
+                return (
+                  <li key={link.url}>
+                    <a
+                      href={link.url}
+                      rel="noopener noreferrer nofollow"
+                      target="_blank"
+                      aria-label={nome}
+                      title={nome}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-primary transition-colors hover:border-border-focus hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+                    >
+                      <IconeRede rede={inferirRede(link.url)} />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
