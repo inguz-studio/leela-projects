@@ -192,8 +192,10 @@ documentação que contradiz a regra vigente é a próxima armadilha de quem for
 O que `calc.ts:83` faz hoje é `valorTotal = valor × (1 + j)^n` e `valorParcela = valorTotal / n`.
 Isso não é tabela Price: é o principal corrigido pelo juro composto do prazo inteiro, sem
 amortização, dividido em partes iguais. A diferença não é acadêmica. Com R$ 300 e 2,89% a.m. em
-12x, o modelo de hoje cobra **R$ 422,03**; a tabela Price cobra **R$ 359,90**. São 17% de
-diferença na tela do dinheiro, contra o comprador.
+12x, o modelo de hoje cobra **R$ 422,28**; a tabela Price cobra **R$ 359,28**. São 17,5% de
+diferença na tela do dinheiro, contra o comprador. (Números corrigidos em 03/08 pela
+ACHADOS-0802/REV: a primeira versão desta spec trazia 422,03/359,90 por erro aritmético; o
+código implementa a fórmula e o teste asserta o valor medido.)
 
 A regra passa a ser a tabela Price, na forma canônica:
 

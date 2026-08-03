@@ -108,7 +108,8 @@ a prova legal da compra. As frentes D e a lane PRODUTOR-PAGE seguem o gate norma
 ### Vetores do preço (A1, A2, A3, B1t, B2t)
 
 1. ⚔ **A conta bate com Price, não com o modelo antigo.** Provar, com valores fechados, que
-   R$ 300,00 a 2,89% a.m. em 12x dá **R$ 359,90** e não R$ 422,03. Falsificar restaurando a
+   R$ 300,00 a 2,89% a.m. em 12x dá **R$ 359,28** e não R$ 422,28 (números medidos; a
+   primeira versão da spec trazia 359,90/422,03 por erro aritmético). Falsificar restaurando a
    fórmula antiga e ver a asserção morder.
 2. ⚔ **A parcela única do cartão não tem juros.** `1x` do cartão e o PIX à vista têm o mesmo valor
    quando a taxa por meio é a mesma. Provar com teste, e provar que `totalAVista` é igual ao
