@@ -93,7 +93,19 @@ function RadioGroup({
       aria-describedby={describedBy}
     >
       {label ? (
-        <legend className="text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
+        // S1218-T1 · RN-435/B3 — a MARGEM não é enfeite, é a única via.
+        //
+        // O `gap` do fieldset separa os filhos de flex. A `<legend>` de um
+        // fieldset é a "rendered legend" do HTML: o navegador a tira do
+        // formatting context e a desenha sobre a borda, então ela NÃO é item
+        // de flex e o `gap` não a alcança. Resultado até aqui: o rótulo do
+        // grupo nascia colado no primeiro cartão, em TODO RadioGroup do
+        // produto — foi o achado B3 do dono, e ele não é do checkout.
+        //
+        // A margem inferior da legend é honrada (ela é um bloco dentro da
+        // área de borda do fieldset) e vale o MESMO token do `gap`, para o
+        // ritmo do grupo continuar sendo um só número.
+        <legend className="mb-[var(--spacing-2)] text-[length:var(--font-size-sm)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
           {label}
         </legend>
       ) : null}

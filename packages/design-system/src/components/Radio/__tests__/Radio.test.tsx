@@ -86,3 +86,40 @@ describe('RadioGroup / Radio', () => {
     spy.mockRestore();
   });
 });
+
+// =============================================================================
+// S1218-T1 · B3 — o rótulo do grupo não nasce colado no primeiro cartão
+//
+// Diagnóstico medido antes do conserto: o espaço NÃO nascia na tela do
+// checkout. O `<fieldset>` do RadioGroup é `flex flex-col` com `gap`, e a
+// `<legend>` é a "rendered legend" do HTML — o navegador a tira do formatting
+// context para desenhá-la sobre a borda, então o `gap` nunca a alcança. Era
+// um defeito do design system, valendo para todo RadioGroup do produto, e é
+// por isso que o conserto mora AQUI e não em `StepModalidadeKit`.
+//
+// jsdom não faz layout: o que se pode asserir é o mecanismo (a legend carrega
+// a margem, e a margem usa o MESMO token do gap do grupo). A prova visual é do
+// olho do dono, e está apontada no handoff.
+// =============================================================================
+describe('RadioGroup — separação entre o rótulo e as opções (S1218-T1 · B3)', () => {
+  it('a legend carrega margem inferior no mesmo token do gap do grupo', () => {
+    const { container } = render(<Grupo value="organizador" />);
+    const legend = container.querySelector('legend');
+    expect(legend).not.toBeNull();
+    expect(legend?.className).toContain('mb-[var(--spacing-2)]');
+
+    // O gap do fieldset é o ritmo do grupo — a margem tem de ser o MESMO
+    // número, senão o rótulo passa a destoar das opções entre si.
+    const fieldset = container.querySelector('fieldset');
+    expect(fieldset?.className).toContain('gap-[var(--spacing-2)]');
+  });
+
+  it('sem rótulo não há legend — e nada de margem órfã', () => {
+    const { container } = render(
+      <RadioGroup name="origem" aria-label="Origem">
+        <Radio value="organizador" label="Organizador" />
+      </RadioGroup>,
+    );
+    expect(container.querySelector('legend')).toBeNull();
+  });
+});
