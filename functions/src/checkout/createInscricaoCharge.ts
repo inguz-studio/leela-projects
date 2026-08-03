@@ -32,6 +32,7 @@
 // gateway (`gatewayAmountCentavos` = Math.round(totalCobrado × 100)).
 // =============================================================================
 
+import { createHmac } from 'node:crypto';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { https, runWith } from 'firebase-functions/v1';
@@ -103,9 +104,12 @@ import {
   type SaleState,
   type StatusPedido,
   type TabelaTaxaPlataforma,
+  type OrigemAceite,
   type VersoesAceiteExibidas,
+  ACEITE_USER_AGENT_MAX,
   MOTIVO_ACEITE_VERSAO_DIVERGENTE,
 } from '@leela/core';
+import { crmIdPepper } from '../crm/agregarClientes';
 import { assertTenantAtivo } from '../eventos/criarEvento';
 import {
   hashPoliticaPadrao,
@@ -390,6 +394,21 @@ export interface CreateInscricaoChargeResult {
   };
 }
 
+/**
+ * S1217-T5 · RN-442 — origem CRUA da requisição, extraída pelo wrapper
+ * callable a partir do `rawRequest`. Chega até aqui em claro e sai daqui
+ * hasheada: `derivarOrigemAceite` é a única porta, e ela não devolve o
+ * endereço.
+ *
+ * Não é campo do input: o cliente não tem canal para escrever nenhum dos
+ * dois. Payload trazendo `origem`, `ip` ou `userAgent` é ignorado por
+ * construção — o servidor nunca olha para lá.
+ */
+export interface OrigemRequisicao {
+  ip?: string | undefined;
+  userAgent?: string | undefined;
+}
+
 /** Identidade do caller (extraída do context.auth pelo wrapper callable). */
 export interface CheckoutCaller {
   uid: string;
@@ -401,6 +420,71 @@ export interface CheckoutCaller {
    * dúvida, não vincular).
    */
   ehAnonimo?: boolean;
+  /**
+   * S1217-T5 · RN-442: origem da requisição, lida do `rawRequest` pelo
+   * wrapper. Ausente (chamada de teste, invocação interna) ⇒ o bloco de
+   * aceites nasce sem `origem`, que é honesto: prova sem origem é prova
+   * incompleta, não prova falsa.
+   */
+  origem?: OrigemRequisicao;
+}
+
+/**
+ * S1217-T5 · RN-442 — deriva o carimbo de origem a partir da requisição.
+ *
+ * O endereço entra e NÃO sai: vira HMAC-SHA256 com o mesmo pepper secreto
+ * dos identificadores de pessoa do CRM (hardening A3). Duas propriedades que
+ * o sha256 puro não daria: o espaço de endereços IPv4 tem 2^32 valores, e um
+ * hash sem segredo seria revertido por força bruta em segundos; e o pepper
+ * impede correlacionar a mesma origem entre bases distintas.
+ *
+ * Sem endereço na requisição a origem inteira é omitida — gravar
+ * `ipHash: hash('')` seria inventar prova de uma coisa que não se sabe.
+ */
+/** Cabeçalho da requisição em forma escalar (Node entrega array em repetição). */
+function cabecalho(
+  req: { headers?: Record<string, string | string[] | undefined> | undefined } | undefined,
+  nome: string
+): string | undefined {
+  const bruto = req?.headers?.[nome];
+  if (Array.isArray(bruto)) return bruto[0];
+  return typeof bruto === 'string' ? bruto : undefined;
+}
+
+/**
+ * S1217-T5 · RN-442 — endereço de origem da requisição.
+ *
+ * Atrás do proxy do Cloud Functions o `req.ip` é o do PRÓPRIO proxy, então o
+ * `x-forwarded-for` vem primeiro e vale o PRIMEIRO da lista (o cliente; os
+ * seguintes são os saltos). Sem cabeçalho, cai no `req.ip`, que é o que vale
+ * em chamada direta e no emulador.
+ */
+function origemDoRawRequest(
+  req:
+    | {
+        ip?: string | undefined;
+        headers?: Record<string, string | string[] | undefined> | undefined;
+      }
+    | undefined
+): string | undefined {
+  const encaminhado = cabecalho(req, 'x-forwarded-for');
+  const primeiro = encaminhado?.split(',')[0]?.trim();
+  if (primeiro !== undefined && primeiro.length > 0) return primeiro;
+  const direto = req?.ip;
+  return typeof direto === 'string' && direto.length > 0 ? direto : undefined;
+}
+
+export function derivarOrigemAceite(
+  origem: OrigemRequisicao | undefined
+): OrigemAceite | null {
+  const ip = origem?.ip;
+  if (typeof ip !== 'string' || ip.length === 0) return null;
+  return {
+    ipHash: createHmac('sha256', crmIdPepper()).update(ip).digest('hex'),
+    // Cabeçalho ausente vira string vazia em vez de sumir: o que se afirma é
+    // "a requisição não declarou agente", não "não houve requisição".
+    userAgent: (origem?.userAgent ?? '').slice(0, ACEITE_USER_AGENT_MAX),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1206,6 +1290,9 @@ async function criarDocsDeCheckout(
   const pagamentoRef = db.collection('pagamentos').doc(pagamentoId);
   const eventoRef = db.collection('eventos').doc(input.eventoId);
   const now = FieldValue.serverTimestamp();
+  // S1217-T5 · RN-442: origem da requisição — derivada do `caller` (que veio
+  // do `rawRequest`), NUNCA do input. Fora da tx porque é puro.
+  const origemAceite = derivarOrigemAceite(caller.origem);
 
   // Lote único da venda? → espelha loteId/loteNome no pagamento (slide-in
   // [pag] sem join). Multi-lote não cabe no campo singular — omite (honesto);
@@ -1648,6 +1735,12 @@ async function criarDocsDeCheckout(
                 },
               }
             : {}),
+          // S1217-T5 · RN-442: a ORIGEM da requisição, lida do `rawRequest`
+          // pelo wrapper e hasheada aqui. Para um termo de isenção de
+          // responsabilidade por lesão, "quem clicou" é metade da prova; a
+          // outra metade é "de onde". O cliente não participa: nenhum campo
+          // do input alimenta isto.
+          ...(origemAceite !== null ? { origem: origemAceite } : {}),
         };
       }
       tx.create(pedidoRef, pedidoDoc);
@@ -2022,7 +2115,10 @@ async function garantirCobrancaEMontarResultado(
 async function garantirAceitesNoReplay(
   db: Db,
   input: CreateInscricaoChargeInput,
-  pedidoId: string
+  pedidoId: string,
+  /** S1217-T5 · RN-442: origem desta requisição (a do retry, que é quando o
+   *  aceite de fato chegou ao servidor). Nunca a do pedido original. */
+  origemAceite: OrigemAceite | null = null
 ): Promise<void> {
   if (input.aceites === undefined) return;
   const pedidoRef = db.collection('pedidos').doc(pedidoId);
@@ -2066,6 +2162,7 @@ async function garantirAceitesNoReplay(
             : hashPoliticaPadrao(),
         },
         saude: { versao: TERMO_SAUDE_VERSAO_VIGENTE, aceiteEm: now },
+        ...(origemAceite !== null ? { origem: origemAceite } : {}),
         ...(termoAtivo && input.aceites.saudeCustom === true && termoData !== null
           ? {
               saudeCustom: {
@@ -2111,6 +2208,11 @@ export async function createInscricaoChargeCore(
   }
   const input = rawInput as unknown as CreateInscricaoChargeInput;
 
+  // S1217-T5 · RN-442: a origem é derivada UMA vez, do `caller` (que veio do
+  // `rawRequest`), e nunca do input. Fora da tx porque é puro — e antes dos
+  // dois caminhos porque o replay também carimba (F-4b).
+  const origemAceite = derivarOrigemAceite(caller.origem);
+
   const { pedidoId } = idsDoCheckout(caller.uid, input.idempotencyKey, 0);
   const pedidoSnap = await db.collection('pedidos').doc(pedidoId).get();
 
@@ -2132,7 +2234,7 @@ export async function createInscricaoChargeCore(
     // F-4b: retry trazendo aceites sobre pedido sem o bloco COMPLETA a
     // prova (nunca reescreve prova existente) — sem isto o replay engoliria
     // o aceite silenciosamente.
-    await garantirAceitesNoReplay(db, input, pedidoId);
+    await garantirAceitesNoReplay(db, input, pedidoId, origemAceite);
   } else {
     const {
       tenantId,
@@ -2335,6 +2437,18 @@ export const createInscricaoCharge = runWith({
     {
       uid: context.auth.uid,
       ehAnonimo: signInProvider === undefined || signInProvider === 'anonymous',
+      // S1217-T5 · RN-442: origem da requisição, lida do `rawRequest` que a
+      // callable já expõe e que ninguém lia. O `x-forwarded-for` vem antes
+      // porque atrás do proxy do Cloud Functions o `req.ip` é o do próprio
+      // proxy; o PRIMEIRO da lista é o cliente. Cabeçalho forjado pelo
+      // cliente pode mentir sobre o valor, e é por isso que a prova diz
+      // "origem declarada pela requisição", não "identidade do comprador" —
+      // o que ela impede é o cliente escolher o que fica GRAVADO, porque
+      // nenhum campo do payload chega aqui.
+      origem: {
+        ip: origemDoRawRequest(context.rawRequest),
+        userAgent: cabecalho(context.rawRequest, 'user-agent'),
+      },
     },
     // Relógio da venda: real em produção; honra LEELA_CLOCK SÓ no emulator
     // (demo contra o seed de datas fixas — ver relogioCheckout.ts). ⚠️ Fable.

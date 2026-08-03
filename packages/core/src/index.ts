@@ -609,11 +609,13 @@ export {
 export type {
   AceiteVersionado,
   AceitesPedido,
+  OrigemAceite,
   VersoesAceiteExibidas,
 } from './pedidos/aceites';
 export {
   TERMO_SAUDE_VERSAO_VIGENTE,
   MOTIVO_ACEITE_VERSAO_DIVERGENTE,
+  ACEITE_USER_AGENT_MAX,
   validarAceitesCheckoutInput,
   parseAceitesPedido,
 } from './pedidos/aceites';

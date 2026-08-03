@@ -90,6 +90,30 @@ export interface AceiteVersionado {
   materialHash?: string;
 }
 
+/**
+ * S1217-T5 · RN-442 — origem da requisição que produziu o aceite.
+ *
+ * Para um termo de isenção de responsabilidade por lesão, "quem clicou" é
+ * metade da prova; a outra metade é "de onde". A RN-438 aumentou a distância
+ * entre o gesto e o carimbo, que é exatamente o que uma contestação
+ * exploraria.
+ *
+ * O endereço NUNCA é gravado em claro: entra como HMAC com o mesmo pepper
+ * secreto dos identificadores de pessoa (a mesma escolha que a RN-148 fez
+ * para o aceite de regulamento por inscrito). Os dois campos são lidos pelo
+ * SERVIDOR a partir da própria requisição — o cliente não participa e não
+ * tem canal para influenciar nenhum dos dois.
+ */
+export interface OrigemAceite {
+  /** HMAC-SHA256 do endereço de origem (hex). Nunca o endereço em claro. */
+  ipHash: string;
+  /** Agente do navegador, truncado — identifica o dispositivo, não a pessoa. */
+  userAgent: string;
+}
+
+/** Teto do agente do navegador gravado (minimização — RN-172 pattern). */
+export const ACEITE_USER_AGENT_MAX = 256;
+
 /** Bloco de aceites do pedido (spec §5.3 — os DOIS são obrigatórios juntos). */
 export interface AceitesPedido {
   /** (a) Termos da compra + política de cancelamento (politicaVendas). */
@@ -104,6 +128,12 @@ export interface AceitesPedido {
    * evento sem termo custom (ou pedido pré-CK2 — schema evolution).
    */
   saudeCustom?: AceiteVersionado;
+  /**
+   * S1217-T5 · RN-442 — origem da requisição, carimbada pelo servidor no
+   * mesmo ato dos aceites. Opcional por evolução de schema: prova gravada
+   * antes desta rodada não a carrega, e prova antiga continua sendo prova.
+   */
+  origem?: OrigemAceite;
 }
 
 /**
@@ -217,5 +247,35 @@ export function parseAceitesPedido(contexto: string, raw: unknown): AceitesPedid
     ...(a['saudeCustom'] !== undefined
       ? { saudeCustom: parseAceite(contexto, 'saudeCustom', a['saudeCustom']) }
       : {}),
+    // S1217-T5 (RN-442): origem da requisição — opcional por evolução de
+    // schema. Prova gravada antes desta rodada não a carrega.
+    ...(a['origem'] !== undefined
+      ? { origem: parseOrigemAceite(contexto, a['origem']) }
+      : {}),
   };
+}
+
+/**
+ * Parsing defensivo da origem (mesmo fail-fast do resto do bloco: prova
+ * corrompida é pior que ausente). O `ipHash` tem de ser hex de HMAC-SHA256 —
+ * qualquer coisa que PAREÇA um endereço em claro reprova aqui, e é essa a
+ * intenção. @pure
+ */
+function parseOrigemAceite(contexto: string, raw: unknown): OrigemAceite {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`${contexto}: "aceites.origem" inválido (RN-442)`);
+  }
+  const o = raw as Record<string, unknown>;
+  const ipHash = o['ipHash'];
+  if (typeof ipHash !== 'string' || !/^[0-9a-f]{64}$/.test(ipHash)) {
+    throw new Error(
+      `${contexto}: "aceites.origem.ipHash" deve ser HMAC-SHA256 hex — ` +
+        'endereço em claro nunca é gravado (RN-442)'
+    );
+  }
+  const userAgent = o['userAgent'];
+  if (typeof userAgent !== 'string') {
+    throw new Error(`${contexto}: "aceites.origem.userAgent" deve ser string (RN-442)`);
+  }
+  return { ipHash, userAgent: userAgent.slice(0, ACEITE_USER_AGENT_MAX) };
 }
