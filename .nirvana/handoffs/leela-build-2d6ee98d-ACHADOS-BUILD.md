@@ -19,7 +19,7 @@ Base: `main` em `13a3f00`. Sem push — o maestro pusha. `git commit --only` por
 - [x] **C2 · S1217-T2** — nenhuma forma pré-selecionada
 - [x] **C3 · S1217-T3** — terceiro aceite condicional (termo de saúde do organizador)
 - [x] **C4 · S1217-T4** — versão exibida conferida pelo servidor
-- [ ] **C5 · S1217-T5** — origem da requisição na prova de aceite
+- [x] **C5 · S1217-T5** — origem da requisição na prova de aceite
 - [ ] **D1 · S1218-T1** — rótulo do grupo grudado no primeiro cartão
 - [ ] **D2 · S1218-T2** — clique em qualquer ponto do cartão seleciona
 - [ ] **D3 · S1218-T3** — "Escolha seu percurso" → "Modalidades disponíveis"
@@ -653,6 +653,65 @@ recusa `failed-precondition` não desmarca aceite nenhum.
 objeto, e a RN-439 acrescentou um campo a ele. Os dois casos passaram a asserir os BOOLEANOS, que é
 o que eles guardam; a asserção NEGATIVA (`'saudeCustom' in payload.aceites === false`) continua
 exata, porque ela é o contrato do caso.
+
+---
+
+## C5 · S1217-T5 · a prova passa a dizer de onde veio
+
+Commit `1d0611a`. Território: `packages/core/src/pedidos/aceites.ts` (+ `index.ts`),
+`functions/src/checkout/createInscricaoCharge.ts` + o teste novo
+`aceitesOrigem.integration.test.ts`.
+
+A prova de aceite guardava **o quê** (versão + `materialHash`) e **quando** (carimbo do servidor).
+Não guardava **de onde** — e o `context.rawRequest` estava disponível na callable desde sempre, sem
+ninguém lê-lo. O bloco ganha `origem { ipHash, userAgent }`.
+
+**O endereço nunca é gravado em claro.** Vira HMAC-SHA256 com o mesmo pepper secreto dos
+identificadores de pessoa do CRM (hardening A3). O sha256 puro não serviria: IPv4 tem 2³² valores e
+a força bruta offline reverte em segundos — o caso O3 asserta explicitamente que o hash gravado
+**não é** `sha256(ip)`.
+
+**O cliente não participa.** O caso O4 planta no payload tudo o que um cliente hostil tentaria
+(`origem`, `ipHash`, `userAgent`, `ip`) e prova duas coisas: o que fica gravado é o da requisição, e
+nenhum dos valores plantados sobrevive em ponto nenhum do documento.
+
+**Requisição sem endereço omite a origem em vez de inventá-la.** Gravar `hash('')` afirmaria
+conhecer uma coisa que não se sabe. Prova sem origem é prova incompleta, não prova falsa — e o
+parse defensivo do core aceita as duas.
+
+**Atrás do proxy, `req.ip` é o do proxy.** `x-forwarded-for` vem primeiro, e vale o PRIMEIRO da
+lista (o cliente; os seguintes são saltos). Cabeçalho forjado pode mentir sobre o VALOR, e é por
+isso que a prova diz "origem declarada pela requisição" — o que a regra impede é o cliente escolher
+o que fica gravado.
+
+**O replay (F-4b) carimba a origem DESTE retry**, que é quando o aceite chegou ao servidor;
+antedatar seria forja. E prova existente segue intocada (caso O7b).
+
+### Falsificação
+
+`origemAceite` fixado em `null` (a derivação desligada), mesma suíte no emulator:
+
+```
+Tests  5 failed | 4 passed (9)
+```
+
+Os 4 que sobrevivem são guardas declaradas: o hash puro (unidade da derivação, que não passa pelo
+documento), os dois casos de ausência de endereço e o `caller` sem origem.
+
+### Gates
+
+| | |
+|---|---|
+| core `tsc` / `eslint` / `tsup` | **0** / **0** / exit 0 |
+| functions `tsc` / `eslint` | **0** / **0** |
+| landing `tsc` | **0** |
+| Integração no emulator — 5 arquivos (os 2 novos + `pedidosRules` + `rn347Checkout` + `checkoutS1203`) | **61/61** · exit **0** |
+| 4 suítes puras de functions | **145/145** |
+| Suíte da landing, processo único | **366/366** em 34 arquivos |
+
+⚠️ `pedidosRules.test.ts` **exige o emulator** — fora dele o arquivo inteiro falha com
+`ECONNREFUSED 127.0.0.1:8080` e 21 casos pulados. É comportamento preexistente, não regressão desta
+lane; ele entrou no lote do emulator por isso.
 
 ---
 
