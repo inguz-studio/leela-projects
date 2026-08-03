@@ -101,6 +101,28 @@ export interface InstallmentOption {
  * podia devolver centavos diferentes do que o comprador leu — e isso vale
  * inclusive com juros ZERO, onde R$ 35 em 3x dava parcela 11,67 e total 35,00,
  * três parcelas que não somam o total.
+ *
+ * ── ACHADOS-REV · o piso do principal (defeito DEF-1) ──────────────────────
+ *
+ * Arredondar a parcela para o MAIS PRÓXIMO deixa o total cair ABAIXO do
+ * principal quando a divisão arredonda para baixo: R$ 35,00 em 6x dava
+ * 6 × R$ 5,83 = R$ 34,98. Com `jurosAoMes: 0` (o termo de todo ambiente já
+ * provisionado — PB-3) isso acontecia em 32% das combinações (ticket, n)
+ * medidas entre R$ 50 e R$ 500, e quebrava três promessas de uma vez:
+ *
+ *   · o contrato da cotação promete `jurosParcelamento ≥ 0` ("o que o
+ *     comprador paga A MAIS por financiar") e devolvia −R$ 0,02;
+ *   · o bloco de totais (RN-435) promete declarar a composição do total, e a
+ *     linha de juros só é renderizada quando > 0 — o comprador via
+ *     "Subtotal R$ 35,00 … Total R$ 34,98" sem nada explicando a diferença;
+ *   · o líquido do organizador (RN-437) é calculado sobre o `valorFinal`, que
+ *     o comprador não chegou a pagar.
+ *
+ * O piso é a correção mínima: quando `parcela × n` fica abaixo do principal, a
+ * parcela sobe UM centavo — o mesmo que arredondar para cima, e só nos casos
+ * em que o arredondamento para o mais próximo desceu. Com juros ligados o
+ * ramo nunca dispara (a parcela Price já é maior que `valor / n`), então os
+ * números da RN-436 ficam byte a byte.
  */
 export function buildInstallmentOptions(
   valor: number,
@@ -115,10 +137,17 @@ export function buildInstallmentOptions(
   const options: InstallmentOption[] = [];
   for (let n = 1; n <= rules.maxParcelas; n++) {
     // Parcela primeiro (RN-436), total depois — a ordem é a regra.
-    const valorParcela =
+    let valorParcela =
       n === 1 || i === 0
         ? roundMoney(valor / n)
         : roundMoney((valor * i) / (1 - Math.pow(1 + i, -n)));
+    // Piso do principal: o total parcelado NUNCA fica abaixo do que se paga
+    // à vista. Quando o half-up desceu, `ceil` é exatamente `round + 1
+    // centavo` (o erro do arredondamento é < meio centavo), então a correção
+    // é exata e sem `Math.ceil` sobre float.
+    if (n > 1 && roundMoney(valorParcela * n) < valor) {
+      valorParcela = roundMoney(valorParcela + 0.01);
+    }
     const valorTotal = roundMoney(valorParcela * n);
 
     // Parcela mínima do termo — exceto à vista, que é sempre válida

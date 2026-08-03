@@ -119,15 +119,28 @@ export interface CotarInscricaoCheckoutResult {
   taxaServico: number;
   /**
    * Total À VISTA do comprador SEM juros de parcelamento (RN-347):
-   * valorFinal + taxaServico. É o "à vista sai por" do Resumo — a opção 1x
-   * do CARTÃO carrega 1 mês de juros Price (modelo do termo) e não serve de
-   * referência à vista. Em 'incorporada' == valorFinal.
+   * valorFinal + taxaServico. É o "à vista sai por" do Resumo.
+   *
+   * ACHADOS-REV: este comentário afirmava que "a opção 1x do CARTÃO carrega 1
+   * mês de juros Price e não serve de referência à vista". A S314-T1 (RN-436)
+   * ACABOU com isso — `n = 1` nunca tem juros, e `totalAVista` é exatamente o
+   * `valorTotal` da primeira opção de parcelamento. Documentação que
+   * contradiz a regra vigente é a próxima armadilha (D-ACH-8).
+   * Em 'incorporada' == valorFinal.
    */
   totalAVista: number;
   /**
    * Juros do parcelamento em R$ (S1216-T2 · RN-435/RN-437 · D-ACH-10): o que
    * o comprador paga A MAIS por financiar, já embutido em `totalCobrado`.
-   * 0 no PIX, 0 no cartão à vista e 0 quando o termo tem `jurosAoMes: 0`.
+   * 0 no PIX e 0 no cartão à vista.
+   *
+   * ACHADOS-REV: com `jurosAoMes: 0` este número NÃO é necessariamente zero.
+   * O arredondamento da RN-436 é na PARCELA e o total é a parcela × n, então
+   * R$ 50,00 em 3x vira 3 × R$ 16,67 = R$ 50,01 — um centavo de resíduo que
+   * chega aqui. Ele é ≥ 0 por construção (piso do principal no
+   * `buildInstallmentOptions`), mas chamar de "juros" um resíduo de
+   * arredondamento num termo sem juros é impreciso: a copy da linha está na
+   * mesa do dono (VETO-DONO, lane ACHADOS-REV).
    *
    * CALCULADO NO SERVIDOR, de propósito. A interface renderiza este número e
    * não faz nenhuma aritmética de dinheiro — o caminho barato de derivar o
@@ -338,7 +351,8 @@ export async function cotarInscricaoCheckoutCore(
     // se pagaria à vista, derivada AQUI e não na tela. `totalComprador` já é
     // face + taxa repassada, então a subtração isola exatamente o custo do
     // parcelamento — e nunca fica negativa, porque `buildInstallmentOptions`
-    // não emite opção abaixo do principal (S314-T1).
+    // não emite opção abaixo do principal (S314-T1 + piso ACHADOS-REV/DEF-1;
+    // sem o piso a mesma linha devolvia −R$ 0,02 em R$ 35,00/6x sem juros).
     jurosParcelamento: roundMoney(sale.totalCobrado - sale.totalComprador),
     opcoesParcelamento: sale.opcoesParcelamento.map((o) => ({
       parcelas: o.parcelas,

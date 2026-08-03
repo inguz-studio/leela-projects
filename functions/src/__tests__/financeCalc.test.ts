@@ -151,6 +151,65 @@ describe('buildInstallmentOptions · tabela Price (S314-T1 · RN-436)', () => {
     }
   });
 
+  // -------------------------------------------------------------------------
+  // ACHADOS-REV · DEF-1 — o total parcelado NUNCA fica abaixo do principal
+  //
+  // Falsificação medida ANTES do fix (guarda de piso removida do
+  // `buildInstallmentOptions`): os três casos abaixo caem. R$ 35,00 em 6x
+  // devolvia 6 × R$ 5,83 = R$ 34,98, e a partir dele:
+  //   · `jurosParcelamento` (roundMoney(totalCobrado − totalComprador)) vinha
+  //     −0,02 num contrato que se documenta como "o que o comprador paga A
+  //     MAIS por financiar … e nunca fica negativa";
+  //   · o bloco de totais só renderiza a linha de juros quando > 0, então o
+  //     comprador lia "Subtotal R$ 35,00 … Total R$ 34,98" sem nada
+  //     explicando os dois centavos (RN-435 promete a composição do total);
+  //   · o líquido do organizador (RN-437) sai do `valorFinal`, que ninguém
+  //     pagou.
+  //
+  // Com `jurosAoMes: 0` — o termo de todo ambiente já provisionado (PB-3) —
+  // 32% das combinações (ticket, n) entre R$ 50 e R$ 500 caíam nesse ramo.
+  // -------------------------------------------------------------------------
+  it('DEF-1: com juros ZERO o total nunca fica abaixo do principal', () => {
+    const semJurosLivre: InstallmentRules = {
+      maxParcelas: 12,
+      jurosAoMes: 0,
+      parcelaMinima: 0,
+    };
+    // O caso que reproduz o defeito: 35/6 = 5,8333 → half-up 5,83 → 34,98.
+    const seisX = buildInstallmentOptions(35, semJurosLivre).find((o) => o.parcelas === 6);
+    expect(seisX).toEqual({ parcelas: 6, valorParcela: 5.84, valorTotal: 35.04 });
+    expect(seisX!.valorTotal).toBeGreaterThanOrEqual(35);
+  });
+
+  it('DEF-1: varredura — total ≥ principal para todo n e toda taxa', () => {
+    for (let centavos = 5000; centavos <= 5600; centavos++) {
+      const valor = centavos / 100;
+      for (const juros of [0, 2.89, 3.49]) {
+        for (const o of buildInstallmentOptions(valor, {
+          maxParcelas: 12,
+          jurosAoMes: juros,
+          parcelaMinima: 0,
+        })) {
+          // Em centavos inteiros: o piso é sobre dinheiro, não sobre float.
+          expect(Math.round(o.valorTotal * 100)).toBeGreaterThanOrEqual(
+            Math.round(valor * 100),
+          );
+          // E a soma continua fechando (vetor 3 não foi afrouxado pelo piso).
+          expect(Math.round(o.valorParcela * 100) * o.parcelas).toBe(
+            Math.round(o.valorTotal * 100),
+          );
+        }
+      }
+    }
+  });
+
+  it('DEF-1: o piso NÃO toca os números da RN-436 (juros ligados)', () => {
+    // Com Price a parcela já é maior que valor/n, então o ramo do piso nunca
+    // dispara — os valores fechados do vetor 1 ficam byte a byte.
+    const doze = buildInstallmentOptions(300, price289).find((o) => o.parcelas === 12);
+    expect(doze).toEqual({ parcelas: 12, valorParcela: 29.94, valorTotal: 359.28 });
+  });
+
   it('o corte pela parcela mínima do termo continua valendo com juros ligados', () => {
     // Parcela mínima alta: com Price a parcela é MAIOR, então o corte cai
     // depois — comportamento correto, e não exceção.
