@@ -194,6 +194,34 @@ service firebase.storage {
         && eventoDoMeuTenant(eventoId);
     }
 
+    // ── .../kits/{kitId}/fotos/{slot} — as DUAS secundárias (S212-T1 · RN-427)
+    // A principal continua no objeto acima; a galeria da RN-425 acrescenta
+    // dois SLOTS LITERAIS, `2` e `3`. Literais, e não um wildcard com regex de
+    // número, porque assim o TETO DE TRÊS FOTOS passa a ser garantido pelo
+    // Storage e não só combinado no aplicativo: não existe caminho para um
+    // quarto objeto nascer. As duas propriedades da RN-227 sobrevivem — nome
+    // de objeto fixo significa que reenviar SOBRESCREVE e nunca deixa órfão, e
+    // não existe filename livre.
+    // Mesmas guardas do irmão de cima, reusadas na íntegra (`kitObjetoValido`,
+    // `eventoDoMeuTenant` fail-closed, `imagemValida`). Read público pelo mesmo
+    // motivo: a miniatura aparece no checkout sem sessão (ADR-016).
+    function slotFotoKitValido(slot) {
+      return slot == '2' || slot == '3';
+    }
+
+    match /eventos/{eventoId}/kits/{kitId}/fotos/{slot} {
+      allow read: if kitObjetoValido(kitId) && slotFotoKitValido(slot);
+      allow create, update: if isTenantWriterRole()
+        && kitObjetoValido(kitId)
+        && slotFotoKitValido(slot)
+        && eventoDoMeuTenant(eventoId)
+        && imagemValida();
+      allow delete: if isTenantWriterRole()
+        && kitObjetoValido(kitId)
+        && slotFotoKitValido(slot)
+        && eventoDoMeuTenant(eventoId);
+    }
+
     // ── eventos/{eventoId}/capa — capa/hero do evento (CEV · RN-228) ──────
     // Fecha a ÚLTIMA superfície de imagem sem upload real (pendência UPSW ·
     // DEC-0719 item 19). Nome de objeto FIXO `capa` (segmento literal — sem

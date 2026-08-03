@@ -479,6 +479,91 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
     await assertSucceeds(getBytes(ref(anon, `eventos/${EVENTO_CASTELO}/kits/kit_ouro`)));
   });
 
+  // ── .../kits/{kitId}/fotos/{slot} — as DUAS secundárias (S212-T1 · RN-427) ─
+  //
+  // A promessa que estes casos cobram é a que a spec vendeu como ganho "de
+  // graça": com slots LITERAIS, o teto de três fotos deixa de ser combinado no
+  // aplicativo e passa a ser garantido pelo Storage. Se um dia alguém trocar
+  // `slot == '2' || slot == '3'` por uma regex de dígito para "facilitar", o
+  // caso do slot 4 morde.
+
+  it('tenant writer escreve as DUAS secundárias do kit (slots 2 e 3)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    for (const slot of ['2', '3']) {
+      const destino = ref(storage, `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/${slot}`);
+      await assertSucceeds(uploadBytes(destino, PNG_1KB, { contentType: 'image/png' }));
+      const url = await getDownloadURL(destino);
+      expect(url).toContain(`kits%2Fkit_ouro%2Ffotos%2F${slot}`);
+    }
+  });
+
+  it('QUARTA foto é impossível: slot fora de {2,3} NEGADO (teto estrutural)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    for (const slot of ['1', '4', '0', '10', 'principal', '2a', '']) {
+      await assertFails(
+        uploadBytes(
+          ref(storage, `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/${slot}`),
+          PNG_1KB,
+          { contentType: 'image/png' }
+        )
+      );
+    }
+  });
+
+  it('secundária herda as MESMAS guardas da principal (cross-tenant, promoter, evento fantasma, SVG, kitId torto)', async () => {
+    const alvo = `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/2`;
+    await assertFails(
+      uploadBytes(ref(storageDe(PASSO_OWNER_UID, passoClaims), alvo), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+    await assertFails(
+      uploadBytes(ref(storageDe(PROMOTER_UID, promoterClaims), alvo), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    await assertFails(
+      uploadBytes(ref(storage, 'eventos/evento-fantasma/kits/kit_ouro/fotos/2'), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+    await assertFails(
+      uploadBytes(ref(storage, alvo), PNG_1KB, { contentType: 'image/svg+xml' })
+    );
+    await assertFails(
+      uploadBytes(ref(storage, `eventos/${EVENTO_CASTELO}/kits/Kit_Ouro/fotos/2`), PNG_1KB, {
+        contentType: 'image/png',
+      })
+    );
+  });
+
+  it('nada mais nasce sob a galeria: aninhado abaixo do slot NEGADO (deny-by-default)', async () => {
+    const storage = storageDe(MARINA_UID, marinaClaims);
+    for (const path of [
+      `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos`,
+      `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/2/extra`,
+      `eventos/${EVENTO_CASTELO}/kits/kit_ouro/foto/2`,
+      `eventos/${EVENTO_CASTELO}/kits/kit_ouro/Fotos/2`,
+    ]) {
+      await assertFails(uploadBytes(ref(storage, path), PNG_1KB, { contentType: 'image/png' }));
+    }
+  });
+
+  it('anônimo LÊ a secundária (a miniatura aparece no checkout sem sessão)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await uploadBytes(
+        ref(ctx.storage(), `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/3`),
+        PNG_1KB,
+        { contentType: 'image/png' }
+      );
+    });
+    const anon = storageDe(null);
+    await assertSucceeds(
+      getBytes(ref(anon, `eventos/${EVENTO_CASTELO}/kits/kit_ouro/fotos/3`))
+    );
+  });
+
   // ── eventos/{eventoId}/capa — capa/hero do evento (CEV · RN-228) ────────
 
   it('tenant_owner do tenant DONO do evento escreve a capa (fluxo SDK completo)', async () => {

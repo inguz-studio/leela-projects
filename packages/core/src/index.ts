@@ -442,6 +442,7 @@ export type {
   ModeloEstoque,
   CorteItem,
   GradeCorte,
+  GaleriaKit,
 } from './eventos/kit';
 export {
   precoKitValido,
@@ -452,6 +453,13 @@ export {
   KIT_ITEM_MAX,
   normalizarItensKit,
   isUrlImagemKitValida,
+  // Galeria do kit (S212-T1 · RN-425/427) — `fotosDoKit` é o acessor canônico
+  // e `promoverFotoPrincipal` é a única operação que pode violar a forma.
+  KIT_FOTOS_SECUNDARIAS_MAX,
+  normalizarFotosSecundarias,
+  fotosDoKit,
+  promoverFotoPrincipal,
+  removerFotoPrincipal,
   ORIGENS_ITEM,
   isOrigemItem,
   MODELOS_ESTOQUE,

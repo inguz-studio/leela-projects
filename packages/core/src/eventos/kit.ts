@@ -29,6 +29,17 @@
 //         do maestro): organizador que não separa forma usa grade única;
 //         escolher M/F nunca é obrigatório por plataforma.
 //
+// RN-425 (S212-T1 · SPEC-KITCUPOM): o kit tem até TRÊS fotos e exatamente UMA
+//         principal — POR CONSTRUÇÃO, não por validação. A principal continua
+//         em `imagemUrl` (RN-227) e as outras duas vivem em
+//         `fotosSecundarias[]`. Um `fotos[]` com sinalizador de principal foi
+//         rejeitado na spec porque deixa representável o estado de zero e o de
+//         duas principais, e aí a invariante vira checagem repetida em cada
+//         superfície. Aqui não há o que checar: existe UM campo para a
+//         principal. Consequência de graça: doc legado parseia sem migração e
+//         TODA leitura de `imagemUrl` que já existe segue correta.
+//         Acessor canônico = `fotosDoKit` (principal primeiro).
+//
 // CHAVE CANÔNICA Kit↔enum (FABLE-E-T1): `Kit.id` dos kits canônicos do seed
 // É o próprio valor do enum `KitInscrito` (`kit_ouro`, não `kit-ouro`) — o
 // join `inscrito.kit === Kit.id` casa DIRETO, sem ponte de delimitador
@@ -86,6 +97,15 @@ export interface Kit {
    * `src` de <img> no checkout público).
    */
   imagemUrl?: string;
+  /**
+   * Fotos ADICIONAIS do kit (RN-425), até `KIT_FOTOS_SECUNDARIAS_MAX`. A ordem
+   * do array é a ordem de exibição. Ausente/`[]` = kit de uma foto, que é o
+   * que todo doc anterior a esta RN já era — sem migração.
+   *
+   * Detalhe de PERSISTÊNCIA: toda lógica nova lê por `fotosDoKit`, nunca
+   * daqui, porque só o acessor garante "principal primeiro".
+   */
+  fotosSecundarias?: string[];
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -125,6 +145,131 @@ export function normalizarItensKit(itens: unknown): string[] {
  */
 export function isUrlImagemKitValida(url: unknown): url is string {
   return isUrlCapaValida(url);
+}
+
+// ---------------------------------------------------------------------------
+// Galeria do kit (RN-425/426/427 · S212-T1)
+// ---------------------------------------------------------------------------
+
+/** Teto de fotos SECUNDÁRIAS: com a principal fecham as três da RN-425. */
+export const KIT_FOTOS_SECUNDARIAS_MAX = 2;
+
+/**
+ * Normaliza `fotosSecundarias` de um doc (RN-425). Postel de campo DECORATIVO,
+ * mesma disciplina de `normalizarItensKit` — mais duas regras que existem por
+ * um defeito VISÍVEL, não por gosto:
+ *
+ * - entrada que não é lista → `[]`;
+ * - entrada que não passa em `isUrlImagemKitValida` é descartada item a item
+ *   (a URL vira `src` de <img> público — `javascript:`/`data:` não passam);
+ * - entrada IGUAL à principal é descartada: repetir a foto grande na fita de
+ *   miniaturas é defeito que o visitante enxerga;
+ * - entrada repetida DENTRO da lista é descartada, pelo mesmo motivo;
+ * - a lista é cortada em `KIT_FOTOS_SECUNDARIAS_MAX` DEPOIS de filtrar, para
+ *   que uma URL podre no começo não roube a vaga de uma boa.
+ *
+ * Um doc envenenado nunca derruba o parse nem o checkout público. @pure
+ */
+export function normalizarFotosSecundarias(
+  fotos: unknown,
+  imagemUrl?: unknown
+): string[] {
+  if (!Array.isArray(fotos)) return [];
+  const principal = isUrlImagemKitValida(imagemUrl) ? imagemUrl : null;
+  const resultado: string[] = [];
+  const vistas = new Set<string>();
+  for (const foto of fotos) {
+    if (!isUrlImagemKitValida(foto)) continue;
+    if (foto === principal || vistas.has(foto)) continue;
+    vistas.add(foto);
+    resultado.push(foto);
+    if (resultado.length >= KIT_FOTOS_SECUNDARIAS_MAX) break;
+  }
+  return resultado;
+}
+
+/**
+ * ACESSOR CANÔNICO da galeria (RN-425): principal primeiro, secundárias na
+ * ordem do array; `[]` quando não há principal — kit com secundárias e sem
+ * principal é estado que as listagens não sabem exibir, e o acessor não o
+ * inventa.
+ *
+ * Toda superfície nova (galeria do detalhe, contagem, lightbox) lê por aqui;
+ * `fotosSecundarias` cru fica sendo detalhe de persistência. @pure
+ */
+export function fotosDoKit(
+  kit: Pick<Kit, 'imagemUrl' | 'fotosSecundarias'>
+): string[] {
+  if (!isUrlImagemKitValida(kit.imagemUrl)) return [];
+  const secundarias = Array.isArray(kit.fotosSecundarias)
+    ? kit.fotosSecundarias.filter(
+        (f) => isUrlImagemKitValida(f) && f !== kit.imagemUrl
+      )
+    : [];
+  return [kit.imagemUrl, ...secundarias.slice(0, KIT_FOTOS_SECUNDARIAS_MAX)];
+}
+
+/** As duas posições de foto de um kit, isoladas do resto do doc (RN-427). */
+export interface GaleriaKit {
+  imagemUrl?: string;
+  fotosSecundarias?: string[];
+}
+
+/**
+ * "Tornar principal" (RN-427): TROCA o conteúdo da secundária `indice` com a
+ * principal. Nunca copia — copiar produziria a mesma foto duas vezes, que é
+ * exatamente o defeito que a `normalizarFotosSecundarias` gasta uma regra para
+ * impedir na leitura.
+ *
+ * Sem principal, a secundária SOBE e sai da lista, em vez de trocar com o
+ * nada: um buraco na lista não é representável (`string[]`) e um `undefined`
+ * lá dentro vazaria para o `src` de um <img>.
+ *
+ * `indice` fora da faixa devolve a galeria inalterada. Função pura e sem
+ * mutação: é a ÚNICA operação capaz de violar a forma da RN-425 por descuido,
+ * então existe uma só, testada uma vez, reusada por toda superfície. @pure
+ */
+export function promoverFotoPrincipal(
+  galeria: GaleriaKit,
+  indice: number
+): GaleriaKit {
+  const secundarias = Array.isArray(galeria.fotosSecundarias)
+    ? [...galeria.fotosSecundarias]
+    : [];
+  if (!Number.isInteger(indice) || indice < 0 || indice >= secundarias.length) {
+    return { ...galeria };
+  }
+  const promovida = secundarias[indice] as string;
+  const anterior = galeria.imagemUrl;
+  if (typeof anterior === 'string' && anterior.length > 0) {
+    secundarias[indice] = anterior;
+  } else {
+    secundarias.splice(indice, 1);
+  }
+  return { ...galeria, imagemUrl: promovida, fotosSecundarias: secundarias };
+}
+
+/**
+ * Remover a PRINCIPAL (RN-427): quando há secundárias, a primeira sobe. Kit
+ * com galeria e sem principal não é exibível nas listagens (RN-426 manda a
+ * listagem usar só a principal), então esse estado não pode nascer de um
+ * clique em "remover".
+ *
+ * Sem secundárias, o kit fica sem foto — que é um estado legítimo e antigo
+ * (a cascata do `kitImagem` cobre). @pure
+ */
+export function removerFotoPrincipal(galeria: GaleriaKit): GaleriaKit {
+  const secundarias = Array.isArray(galeria.fotosSecundarias)
+    ? [...galeria.fotosSecundarias]
+    : [];
+  const promovida = secundarias.shift();
+  const proxima: GaleriaKit = { ...galeria, fotosSecundarias: secundarias };
+  if (promovida === undefined) {
+    delete proxima.imagemUrl;
+    return proxima;
+  }
+  proxima.imagemUrl = promovida;
+  return proxima;
 }
 
 /** Parsing defensivo de um doc Firestore em `Kit` (fail-fast). @pure */
@@ -170,6 +315,17 @@ export function parseKit(id: string, data: Record<string, unknown>): Kit {
   // propagada — o campo alimenta <img src> na landing pública.
   if (isUrlImagemKitValida(data['imagemUrl'])) {
     kit.imagemUrl = data['imagemUrl'] as string;
+  }
+  // RN-425: a galeria só existe DEPOIS da principal — a normalização precisa
+  // da `imagemUrl` já resolvida para descartar a repetição. Campo OMITIDO
+  // quando não sobra nada, para o doc de um kit de uma foto continuar
+  // exatamente o objeto que sempre foi.
+  const fotosSecundarias = normalizarFotosSecundarias(
+    data['fotosSecundarias'],
+    kit.imagemUrl
+  );
+  if (fotosSecundarias.length > 0) {
+    kit.fotosSecundarias = fotosSecundarias;
   }
 
   return kit;
