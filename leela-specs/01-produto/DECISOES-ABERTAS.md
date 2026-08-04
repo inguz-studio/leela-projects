@@ -155,7 +155,25 @@ Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra pre
 - **Opções:** cadastrar lotes e deixar vender · despublicar até ter preço · deixar como está.
 - **Onde aterrissa:** dado de produção. A lane não tocou em nada — a apuração inteira foi leitura.
 
+### POSPAG-1 · a área do cliente virou a rede de proteção que faltou no primeiro pagamento real
+
+O pagamento real de 04/08 provou o backend inteiro: webhook em segundos, pedido pago, conta criada, ingresso `T93N7F` emitido. Provou também que o e-mail é o único canal que conta isso ao comprador, e quando ele quebrou (trava de IP na Brevo, BREVO-1 abaixo) nenhuma superfície sobrou. As duas que segurariam a falha já estão especificadas e não construídas: Meus Ingressos (S1222) e o primeiro acesso com senha (S1223). *Você pagou, o ingresso nasceu em dez segundos, e você só soube pelo diagnóstico, não pelo produto.*
+
+- **O que fica com você:** só a posição da fila S1222/S1223. O conteúdo já está decidido nas specs de 04/08.
+- **Por que agora:** enquanto essa fila não roda, qualquer falha de envio repete o silêncio de 04/08, agora com compra real acontecendo.
+- **Opções:** puxar a frente para a próxima posição da fila (**default proposto**, porque a área deixou de ser desejo e virou pré-requisito da compra) · manter a posição atual e aceitar o e-mail como fio único até lá.
+- **Onde aterrissa:** S1222 e S1223 em [[LEELA-E12-landing]]; specs em `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md` e `11-fila-contas-e-area-cliente.md`; registro elo a elo em [[fluxo-pos-pagamento]].
+
 ## Ações que só você pode executar
+
+### BREVO-1 · a trava de IPs da conta Brevo está ativa e nenhum e-mail transacional sai
+
+Os dois e-mails do primeiro pagamento real, o do ingresso e o da conta nova, levaram 401 da Brevo antes de qualquer aceitação: a conta está com a lista de IPs autorizados ligada, e as functions saem para a internet com IP dinâmico, então todo envio de produção é recusado na porta. A chave é válida; a trava é da conta. É a mesma trava que você desativou em 27/07 — ela voltou, ou nunca saiu de fato, e foi medida ativa em 04/08 com a chave de produção, fora do GCP. *A Ana compra, o ingresso nasce em segundos, e o e-mail que a avisaria morre antes de entrar na fila da Brevo.*
+
+- **O que fica com você:** entrar em `app.brevo.com/security/authorised_ips` e desativar a lista de IPs autorizados. A própria API é bloqueada pela trava, então só o dashboard resolve.
+- **Por que agora:** sem isso nenhum e-mail transacional sai, e o e-mail é hoje o único canal que entrega o ingresso. O reenvio dos dois e-mails represados do seu pedido espera essa ação.
+- **Opções:** desativar a trava no dashboard (**default proposto**, custo zero e efeito imediato) · manter a trava e dar IP fixo às functions com VPC connector e Cloud NAT; essa alternativa é decisão de custo de infraestrutura e vai ao CTO humano, não a você.
+- **Onde aterrissa:** conta Brevo, operação de dashboard. Registro do incidente em [[fluxo-pos-pagamento]]; diagnóstico completo em `.nirvana/outputs/leela-pixreal-diag-20260804/DIAG-PIXREAL-REPORT.md`.
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
 
@@ -304,6 +322,7 @@ O e-mail da compra manda um link por inscrito e a página do ingresso existe, ma
 - **O que fica com você:** a posição na fila e o recorte da v1, se quiser apertá-lo.
 - **Por que agora:** o item 60 fechou a spec pelo lado barato, então o que sobra da promessa "estamos emitindo seu ingresso" é justamente esta área.
 - **Onde aterrissa:** S1222 em [[LEELA-E12-landing]], sobre o mesmo bilhete assinado da página do ingresso.
+- **+04/08 · a priorização subiu ao topo deste painel como item próprio, o POSPAG-1.** O primeiro pagamento real provou que o e-mail é fio único: quando ele quebrou, não havia outra superfície. O registro elo a elo está em [[fluxo-pos-pagamento]].
 
 ### Entrou em 03/08 · uma conta só para quem é admin e organizador
 

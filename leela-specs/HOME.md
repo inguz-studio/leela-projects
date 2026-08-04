@@ -35,6 +35,7 @@ Trilha completa para quem nunca viu o projeto e vai conferir o que foi construí
 - [[laudo-testes-2026-08-04]] — o que os gates não provam, medido
 - [[estado-real]] — o que está no ar, o que está fora do ar, e a dívida conhecida
 - [[catalogo-de-emails]] — os oito e-mails, com gatilho, destinatário e onde se mexe
+- [[fluxo-pos-pagamento]] — o caminho depois do pagamento, com o estado real de cada elo e o incidente de 04/08
 
 ## 🧭 Modelo do roadmap (leia primeiro)
 - [[MODELO-ROADMAP]] — **terminologia única + hierarquia canônica** (Onda → Épico → User Story → Task). Reconcilia "Wave/Onda/Épico" num modelo só. Se um termo confundir, este doc vence.
