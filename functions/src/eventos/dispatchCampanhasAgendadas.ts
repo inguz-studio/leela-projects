@@ -301,9 +301,13 @@ export async function dispatchCampanhasAgendadasCore(
  * teto de pubsub v1; rodada morta no meio é curada pela seguinte
  * (crash-safety do pipeline) e o lote é bounded (DISPATCH_LOTE_MAX).
  */
+// PIXREAL-FIX T5 (2026-08-04): BREVO_API_KEY faltava. O fan-out de automacao
+// envia e-mail dentro desta execucao; sem o binding o selectEmailProvider e
+// fail-closed (RN-137) e a automacao roda inteira sem nunca entregar nada.
 export const dispatchCampanhasAgendadas = runWith({
   timeoutSeconds: 540,
   memory: '256MB',
+  secrets: ['BREVO_API_KEY'],
 })
   .pubsub.schedule('every 5 minutes')
   .onRun(async () => {

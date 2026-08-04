@@ -31,7 +31,7 @@
 import * as admin from 'firebase-admin';
 import { createHash, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { COLECAO_AFILIADOS } from '@leela/core';
 import {
@@ -288,6 +288,11 @@ export async function provisionAfiliadoComRateLimit(
 // Callable (PÚBLICA — o influenciador ainda não tem conta; token é credencial)
 // ---------------------------------------------------------------------------
 
-export const provisionAfiliadoAccount = https.onCall(async (data: unknown) => {
+// PIXREAL-FIX T5 (2026-08-04): BREVO_API_KEY faltava no runWith. O
+// selectEmailProvider e fail-closed por contrato (RN-137), entao sem o binding
+// esta funcao degradava para 'pendente_chave' em SILENCIO -- a tela confirmava
+// a acao e o e-mail nunca saia. Guarda contra reincidencia:
+// __tests__/secretsBinding.contract.test.ts
+export const provisionAfiliadoAccount = runWith({ secrets: ['BREVO_API_KEY'] }).https.onCall(async (data: unknown) => {
   return provisionAfiliadoComRateLimit(admin.firestore(), admin.auth(), data);
 });

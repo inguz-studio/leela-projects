@@ -49,7 +49,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import {
   CHAVE_LOG_COMUNICACAO_RE,
@@ -464,7 +464,12 @@ async function resolverDestinatarios(
 // ---------------------------------------------------------------------------
 
 /** `enviarCampanha` — callable do editor/lista de campanhas (E06-L3 consome). */
-export const enviarCampanha = https.onCall(async (data: unknown, context) => {
+// PIXREAL-FIX T5 (2026-08-04): BREVO_API_KEY faltava no runWith. O
+// selectEmailProvider e fail-closed por contrato (RN-137), entao sem o binding
+// esta funcao degradava para 'pendente_chave' em SILENCIO -- a tela confirmava
+// a acao e o e-mail nunca saia. Guarda contra reincidencia:
+// __tests__/secretsBinding.contract.test.ts
+export const enviarCampanha = runWith({ secrets: ['BREVO_API_KEY'] }).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }

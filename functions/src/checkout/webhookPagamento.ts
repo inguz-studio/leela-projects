@@ -818,8 +818,21 @@ export async function processarWebhookPagamento(
 // Item 11 (DEPLOY-PREVIEW): o binding do secret existe para o guard
 // hasAsaasKey ENXERGAR a chave em produção e FECHAR esta porta (410).
 // Sem o binding a porta mock ficaria aberta no projeto real.
+// PIXREAL-FIX T5 · P1 (2026-08-04): os outros três bindings. Em PRODUÇÃO esta
+// porta responde 410 e nada abaixo roda — mas o 410 depende justamente de
+// `ASAAS_API_KEY` estar presente, e é a única razão pela qual a lacuna nunca
+// apareceu. Em SANDBOX ela é a porta de confirmação de verdade, e ali corria
+// sem `QR_TOKEN_KEYS` (ingresso não emitido) nem `BREVO_API_KEY` (e-mail não
+// enviado): uma rota que confirma a venda e não entrega nada.
+// `ASAAS_WEBHOOK_AUTH_TOKEN` entra porque `selectPaymentProvider()` logo
+// abaixo exige os dois para construir — mesma armadilha do T1.
 export const pagamentoWebhook = runWith({
-  secrets: ['ASAAS_API_KEY'],
+  secrets: [
+    'ASAAS_API_KEY',
+    'ASAAS_WEBHOOK_AUTH_TOKEN',
+    'BREVO_API_KEY',
+    'QR_TOKEN_KEYS',
+  ],
 }).https.onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Método não suportado.' });

@@ -187,8 +187,26 @@ export async function processarWebhookAsaas(
 // e functions/.secret.local — o código lê process.env igual nos dois mundos.
 // BREVO_API_KEY entra porque a cadeia pós-confirmação (ingresso digital +
 // conta sem fricção) envia e-mail DENTRO desta function.
+// ⚠️ QR_TOKEN_KEYS (PIXREAL-FIX T5 · P0, 2026-08-04): sem este binding o
+// primeiro PIX pago NÃO gera ingresso e o comprador não recebe nada — nem
+// erro. A cadeia é toda daqui para dentro: esta function chama
+// `dispararEmissaoIngressosPosConfirmacao` → `emitirIngressosDoPedido(db,
+// pedidoId, obterQrKeyring())`, e com o secret ausente o keyring vem `null`,
+// a emissão devolve lista vazia com motivo `sem_keyring` e o envio de e-mail,
+// que só acontece com `ingressos.length > 0`, nunca chega a ser chamado. O
+// dinheiro entra e a entrega some em silêncio.
+//
+// Mesma classe do `CRM_ID_PEPPER` (29/07) e do `ASAAS_WEBHOOK_AUTH_TOKEN`
+// (T1/T2 desta lane): o Emulator não pega, porque lá as variáveis vivem no
+// process.env do processo inteiro. A guarda que pega está em
+// `__tests__/secretsBinding.contract.test.ts`.
 export const asaasWebhook = runWith({
-  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN', 'BREVO_API_KEY'],
+  secrets: [
+    'ASAAS_API_KEY',
+    'ASAAS_WEBHOOK_AUTH_TOKEN',
+    'BREVO_API_KEY',
+    'QR_TOKEN_KEYS',
+  ],
 }).https.onRequest(async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'Método não suportado.' });

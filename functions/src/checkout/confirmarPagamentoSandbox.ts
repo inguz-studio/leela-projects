@@ -268,8 +268,19 @@ export async function confirmarPagamentoSandboxHandler(
 // frente, o par existe para que o caminho de sandbox continue construindo o
 // provider certo em ambiente de sandbox (chave `$aact_hmlg_` + token), sem
 // nunca abrir em produção.
+//
+// T5 · BREVO_API_KEY + QR_TOKEN_KEYS: esta porta é a confirmação REAL do
+// sandbox, e a cadeia pós-confirmação dela é a mesma do webhook do Asaas
+// (conta sem fricção + ingresso digital + e-mail). Sem os dois bindings, o
+// sandbox confirmava a venda sem emitir ingresso nem mandar e-mail — o mesmo
+// desfecho do P0 do `asaasWebhook`, só que no ambiente onde ele é testado.
 export const confirmarPagamentoSandbox = runWith({
-  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
+  secrets: [
+    'ASAAS_API_KEY',
+    'ASAAS_WEBHOOK_AUTH_TOKEN',
+    'BREVO_API_KEY',
+    'QR_TOKEN_KEYS',
+  ],
 }).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');

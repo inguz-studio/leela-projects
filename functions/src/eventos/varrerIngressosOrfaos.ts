@@ -26,7 +26,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { pubsub } from 'firebase-functions/v1';
+import { runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { EmailProvider } from '@leela/core';
 import { emitirIngressosDoPedido } from './emitirIngressos';
@@ -185,8 +185,17 @@ export async function varrerIngressosOrfaosCore(
 }
 
 /** Cron ADR-015 — mesma cadência do gêmeo do dinheiro (item 27). */
-export const varrerIngressosOrfaos = pubsub
-  .schedule('every 15 minutes')
+// ⚠️ PIXREAL-FIX T5 · P0 (2026-08-04): esta função subia com ZERO secrets
+// declarados, e ela é a REDE DE SEGURANÇA da emissão de ingressos. Sem os
+// bindings, `obterQrKeyring()` devolvia `null` e `selectEmailProvider()`
+// devolvia o provider fail-closed a cada 15 minutos, para sempre: a varredura
+// rodava, encontrava os pedidos pagos sem ingresso, tentava emitir, falhava
+// por `sem_keyring` e registrava o alerta — sem nunca poder consertar nada.
+// A rede que não pega é pior do que rede nenhuma, porque parece que existe.
+export const varrerIngressosOrfaos = runWith({
+  secrets: ['QR_TOKEN_KEYS', 'BREVO_API_KEY'],
+})
+  .pubsub.schedule('every 15 minutes')
   .timeZone('America/Sao_Paulo')
   .onRun(async () => {
     await varrerIngressosOrfaosCore(

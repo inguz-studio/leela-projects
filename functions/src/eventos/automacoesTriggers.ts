@@ -261,7 +261,13 @@ export async function processarNovoInscritoCore(
  * update pendente→confirmado). Redelivery at-least-once é inócua: o fan-out
  * colide no docId do log ('ja_registrada') e a recontagem é idempotente.
  */
-export const onInscritoWriteAutomacao = runWith({ memory: '256MB' })
+// PIXREAL-FIX T5 (2026-08-04): BREVO_API_KEY faltava. O fan-out de automacao
+// envia e-mail dentro desta execucao; sem o binding o selectEmailProvider e
+// fail-closed (RN-137) e a automacao roda inteira sem nunca entregar nada.
+export const onInscritoWriteAutomacao = runWith({
+  memory: '256MB',
+  secrets: ['BREVO_API_KEY'],
+})
   .firestore.document('eventos/{eventoId}/inscritos/{inscritoId}')
   .onWrite(async (change, context) => {
     const antes = change.before.exists ? change.before.get('status') : null;
@@ -428,9 +434,13 @@ export async function dispatchAutomacoesCore(
  * de relógio devidas. At-least-once safe — one-shot pelo carimbo 'enviado'
  * do template + fan-out curador + recontagem idempotente.
  */
+// PIXREAL-FIX T5 (2026-08-04): BREVO_API_KEY faltava. O fan-out de automacao
+// envia e-mail dentro desta execucao; sem o binding o selectEmailProvider e
+// fail-closed (RN-137) e a automacao roda inteira sem nunca entregar nada.
 export const dispatchAutomacoes = runWith({
   timeoutSeconds: 540,
   memory: '256MB',
+  secrets: ['BREVO_API_KEY'],
 })
   .pubsub.schedule('every 5 minutes')
   .onRun(async () => {
