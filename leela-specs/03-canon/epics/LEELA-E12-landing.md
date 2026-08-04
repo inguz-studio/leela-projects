@@ -58,6 +58,14 @@ O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois
 - **RN-151** (S1208) — captura de newsletter grava lead sob o tenant com registro de consentimento LGPD e finalidade declarada.
 - **RN-152** (S1208) — blocos do portal são ativáveis e ordenáveis; blocos desativados não aparecem.
 
+### RNs novas · lane VITRINE-FIX (2026-08-04) — a página e o servidor respondem a mesma coisa
+
+- **RN-449** — a página pública só pode declarar "não vende" quando o servidor também recusaria a venda. A régua é uma só e vive no núcleo (`packages/core/src/eventos/vitrine.ts`), espelhando os três ramos de `resolverItem`: lote ativo → preço-base do percurso **quando a modalidade não tem lote nenhum** → venda fechada. A vitrine decidia só pelos lotes e ignorava o preço legado, então evento publicado sem lote servia "Inscrições encerradas" com o servidor pronto para cobrar. Qualquer modelo de preço novo entra nos dois lugares na mesma mudança.
+- **RN-450** — evento cuja data já passou nunca está vendendo, qualquer que seja o preço configurado. O preço-base do percurso não tem janela de validade como o lote tem; sem esta regra, evento legado já realizado ficaria "Inscrições abertas" indefinidamente.
+- **RN-451** — evento publicado que não está vendendo é estado VISÍVEL ao organizador, nunca silencioso. O painel exibe alerta crítico nomeando as modalidades sem preço, derivado da mesma régua da página pública. Corolário: conselho de divulgação não é oferecido enquanto a página não vender.
+
+**Ponta solta declarada, escalada como VITRINE-1:** `publicarEvento` valida nome, data, local e modalidades — preço não entra na conta, em modelo nenhum. Publicar um evento que não pode vender continua permitido de propósito, porque `criarEvento` exige percursos e não cria lote, e exigir lote para publicar tornaria todo evento novo impublicável. Fechar essa porta é decisão de dono e pede migração dos eventos já publicados assim.
+
 ### RNs novas · rodada DEC-0719 (Vitor, 2026-07-19) — checkout
 
 - **RN-154 (nova · gênero no checkout)** — o **gênero** é coletado no checkout **por inscrito** (enum `GENEROS_INSCRITO` com opção "não informado", que respeita quem não declara) e **pré-preenchido automaticamente** quando a pessoa já comprou antes (reconhecida via CPF único, RN-173). Alimenta a demografia do organizador (RN-820/822). Entra junto dos campos novos já ratificados do checkout (telefone/nascimento/endereço) — lote `CHECKOUT-FORM-2`.

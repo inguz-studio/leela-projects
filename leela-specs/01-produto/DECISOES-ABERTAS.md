@@ -81,6 +81,24 @@ A conferência de versão vale na criação do pedido: se a tela declara uma ver
 - **Opções:** carimbar a vigente e manter a compra viva (**em vigor**) · recusar o retry divergente e ficar sem prova nesse pedido.
 - **Onde aterrissa:** `aceitesVersaoExibida.integration` e o caminho de replay de `createInscricaoCharge`.
 
+### VITRINE-1 · nada impede publicar um evento sem preço, e dois estão assim agora
+
+`publicarEvento` confere nome, data, local e modalidades. Preço não entra na conta, em modelo nenhum. `noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026` estão publicados em produção sem lote **e** sem percursos — o servidor recusa a venda tanto quanto a página. Não é a vitrine discordando do servidor: os dois concordam que não há o que cobrar. *O Castelo publica o evento, o painel diz "Publicado" em verde, e a página responde "Inscrições encerradas" para todo mundo que chega pelo Instagram.*
+
+- **O que fica com você:** decidir se publicar passa a exigir preço.
+- **Por que agora:** a lane VITRINE-FIX reconciliou a régua da página com a do servidor e entregou o alerta ao organizador, mas manteve deliberadamente a porta aberta — fechá-la muda o produto. `criarEvento` exige percursos e não cria lote nenhum, então exigir lote para publicar tornaria todo evento novo impublicável até alguém descobrir a aba Lotes.
+- **Opções:** manter livre e confiar no alerta crítico novo do painel (**em vigor**) · exigir ao menos um preço para publicar, o que pede migração dos dois eventos e revisão do fluxo de criação.
+- **Onde aterrissa:** `camposFaltantesParaPublicar` em `functions/src/eventos/publicarEvento.ts`. O handoff `.nirvana/handoffs/leela-build-2d6ee98d-VITRINE-FIX.md` tem o custo dos dois caminhos.
+
+### VITRINE-2 · os dois eventos sem preço seguem publicados e visíveis
+
+Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra preço, os dois continuam no ar dizendo que as inscrições acabaram. *Quem chega neles hoje conclui que a plataforma está quebrada.*
+
+- **O que fica com você:** cadastrar preço nos dois ou tirá-los do ar até que alguém cadastre.
+- **Por que agora:** são 60 e 28 inscritos já contabilizados, então despublicar tem efeito visível e não é decisão de máquina.
+- **Opções:** cadastrar lotes e deixar vender · despublicar até ter preço · deixar como está.
+- **Onde aterrissa:** dado de produção. A lane não tocou em nada — a apuração inteira foi leitura.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
