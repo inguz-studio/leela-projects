@@ -7,6 +7,13 @@
 // erros TÉCNICOS (rede/servidor, independentes da existência da conta) viram um
 // aviso de "tente de novo", que também não distingue conta existente de
 // inexistente. Nunca dizemos "esse e-mail não está cadastrado".
+//
+// A postura ganhou reforço do lado do servidor na lane IDENTIDADE-EMAIL: quem
+// atende agora é a callable `solicitarRedefinicaoSenha`, que devolve sempre
+// `{ ok: true }` e acolchoa o TEMPO de resposta até um piso fixo. Sem isso, o
+// caminho com conta (que paga uma chamada à Brevo) demoraria visivelmente mais
+// que o caminho sem conta, e o relógio seria um oráculo tão bom quanto uma
+// mensagem. Nada muda nesta tela — ela já tratava tudo como neutro.
 // =============================================================================
 
 import { useState, type FormEvent } from 'react';

@@ -14,6 +14,14 @@ if (!admin.apps.length) {
 // Auth
 export { onCreateUser } from './auth/onCreateUser';
 
+// Auth — "esqueci minha senha" com a cara da Leela (lane IDENTIDADE-EMAIL).
+// O Firebase só GERA o link (`generatePasswordResetLink`); quem envia somos
+// nós, pela Brevo, com o template da casa. Mata o último e-mail genérico do
+// produto (remetente `noreply@…firebaseapp.com`, layout padrão), que era
+// justamente o primeiro que um cliente novo via. Resposta e TEMPO idênticos
+// exista ou não a conta (anti-enumeração), rate limit por e-mail hasheado.
+export { solicitarRedefinicaoSenha } from './auth/solicitarRedefinicaoSenha';
+
 // Plataforma — multi-tenancy (E16-S1600-T2)
 export { setTenantClaims } from './platform/setTenantClaims';
 

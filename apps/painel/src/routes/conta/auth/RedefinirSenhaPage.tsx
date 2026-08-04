@@ -7,8 +7,12 @@
 // e-mail-alvo e o formulário de nova senha; se inválido/expirado, um estado
 // honesto que reconduz à solicitação. Efetivação por confirmarResetSenha.
 //
-// PRODUÇÃO: para o link cair NESTA rota (e não na página hospedada do Firebase),
-// configure o "Action URL" do template de e-mail no Firebase Console.
+// PRODUÇÃO (resolvido na lane IDENTIDADE-EMAIL): o link cai NESTA rota sem
+// depender de configuração de Console. A callable `solicitarRedefinicaoSenha`
+// gera o link oficial no servidor e o reescreve para cá
+// (`functions/src/auth/linkDeAcao.ts`), levando o `oobCode` junto. O `oobCode`
+// é a credencial e vale vindo de qualquer origem — é por isso que esta tela
+// funciona com ele sem nenhuma mudança.
 // =============================================================================
 
 import { useEffect, useState, type FormEvent } from 'react';

@@ -36,7 +36,8 @@ import {
   type Unsubscribe,
   type UserCredential,
 } from 'firebase/auth';
-import { getLeelaAuth } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { getLeelaAuth, getLeelaFunctions } from './firebase';
 
 // ---------------------------------------------------------------------------
 // Provedores OAuth
@@ -198,20 +199,73 @@ export async function getClaims(
 // ---------------------------------------------------------------------------
 
 /**
- * Dispara o e-mail de redefinição de senha.
+ * Rota do painel para onde o link de senha leva depois da ação. Espelha
+ * `ROTA_APOS_DEFINIR_SENHA` de `functions/src/auth/linkDeAcao.ts`, que é o
+ * PONTO ÚNICO DE DECISÃO da jornada de primeiro acesso.
+ */
+const ROTA_APOS_DEFINIR_SENHA = '/entrar';
+
+/**
+ * `actionCodeSettings` do fluxo de senha (lane IDENTIDADE-EMAIL).
  *
- * SEGURANÇA (anti-enumeração): o CHAMADOR deve tratar o resultado como neutro —
- * mostrar sempre a MESMA confirmação, exista ou não a conta. Com a "Email
- * Enumeration Protection" ligada no Firebase, esta chamada nem lança
- * `auth/user-not-found`; sem ela, o chamador engole esse erro específico e
- * ainda assim confirma de forma neutra (ver RecuperarSenhaPage).
+ * Sem isto, o link de ação do Auth caía no handler HOSPEDADO do Firebase, fora
+ * da marca e fora do painel. `handleCodeInApp: false` porque o fluxo é web: a
+ * `RedefinirSenhaPage` resolve o `oobCode` com o SDK do cliente.
  *
- * PRODUÇÃO: para a redefinição cair na tela do painel (`/redefinir-senha`) em
- * vez da página hospedada do Firebase, configure o "Action URL" do template de
- * e-mail no Firebase Console apontando para essa rota.
+ * A origem é a do PRÓPRIO painel (`window.location.origin`): o cliente já está
+ * rodando dentro dele, então preview, emulador e produção acertam sozinhos, sem
+ * mais uma variável de ambiente para alguém esquecer de setar.
+ */
+function actionCodeSettingsSenha(): { url: string; handleCodeInApp: false } {
+  // `globalThis` e não `window`: este módulo também é compilado pelo tsconfig
+  // das Functions (lib node, sem DOM), onde `window` nem é um nome conhecido.
+  const local = (globalThis as { location?: { origin?: string } }).location;
+  const origem =
+    typeof local?.origin === 'string' && local.origin.startsWith('http')
+      ? local.origin.replace(/\/+$/, '')
+      : 'https://leela-hub.web.app';
+  return { url: `${origem}${ROTA_APOS_DEFINIR_SENHA}`, handleCodeInApp: false };
+}
+
+/**
+ * Dispara o e-mail de redefinição de senha PELA NOSSA CALLABLE.
+ *
+ * POR QUE NÃO É MAIS `sendPasswordResetEmail` (lane IDENTIDADE-EMAIL): quem
+ * enviava era o Firebase, com o template padrão dele — remetente
+ * `noreply@leela-hub.firebaseapp.com` e layout genérico. Como esse é o e-mail
+ * que um cliente novo vê PRIMEIRO, virou o mais visível dos oito e o único sem
+ * marca nenhuma. A callable `solicitarRedefinicaoSenha` gera o link oficial no
+ * servidor (`generatePasswordResetLink`) e envia o NOSSO template pela Brevo.
+ *
+ * SEGURANÇA (anti-enumeração): a callable responde `{ ok: true }` sempre, com
+ * TEMPO acolchoado até um piso fixo, exista ou não a conta — nem a mensagem nem
+ * o relógio distinguem os dois casos. O chamador continua mostrando a MESMA
+ * confirmação (ver `RecuperarSenhaPage`); o `catch` de lá segue valendo para
+ * falha de rede, que também não distingue existência.
+ *
+ * FALLBACK: se a callable estiver indisponível (`internal`/`unavailable`/
+ * `not-found` — deploy ainda não propagado), caímos no caminho antigo do
+ * Firebase com `actionCodeSettings`. Feio é melhor que ninguém conseguir
+ * recuperar a conta, e o caminho antigo continua funcional.
  */
 export async function enviarResetSenha(email: string): Promise<void> {
-  return sendPasswordResetEmail(getLeelaAuth(), email);
+  try {
+    const fn = httpsCallable<{ email: string }, { ok: true }>(
+      getLeelaFunctions(),
+      'solicitarRedefinicaoSenha'
+    );
+    await fn({ email });
+    return;
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? '';
+    const indisponivel =
+      code.includes('internal') ||
+      code.includes('unavailable') ||
+      code.includes('not-found') ||
+      code.includes('deadline-exceeded');
+    if (!indisponivel) throw err;
+  }
+  await sendPasswordResetEmail(getLeelaAuth(), email, actionCodeSettingsSenha());
 }
 
 /**
