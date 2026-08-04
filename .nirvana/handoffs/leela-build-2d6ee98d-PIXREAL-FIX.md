@@ -265,3 +265,88 @@ Os quatro controles seguram a pergunta "este deploy desfez algum anterior?". Nen
 
 O backend da porta do organizador continua fora de produção. O `DEPLOY-1` segue com o dono no que
 diz respeito às Functions.
+
+---
+
+## Deploy da landing (T3) · `DEPLOY-1` liberado pelo maestro
+
+`node apps/landing/scripts/deploy-leela-hub.mjs` — um comando, receita do D0.
+
+| | |
+|---|---|
+| Janela | `2026-08-04T03:44Z` → `03:57Z` |
+| Exit | **0** — *Deploy complete!* · *release complete* |
+| Backend SSR | `ssrleelalanding` (gen2, Node 22, us-central1) — *Successful update operation* |
+| Hosting | 96 arquivos, 13 novos |
+| Pacote | 285,54 MB |
+| `package.json` | restaurado pelo `finally` |
+| Pré-condição | `@leela/core`, `@leela/api-client` e `@leela/design-system` reconstruídos com `tsup` ANTES do build (a armadilha do `dist` atrasado, D0/NAV-FIX) |
+| Convite de organizador semeado | **NENHUM**, em ambiente nenhum |
+
+### Prova 1 — o chunk do checkout trocou, e o antigo morreu
+
+| | |
+|---|---|
+| Antes | `inscricao/page-65aa11039a033624.js` · md5 `d43efbc3…` · 101.850 B |
+| Depois | `inscricao/page-be15db3874e23a91.js` · md5 `a09390a4…` · 102.179 B |
+| Chunk antigo | **404** |
+
+### Prova 2 — o sinal e a copy honesta estão no artefato SERVIDO
+
+| Marcador | Antes | Depois |
+|---|---|---|
+| `gatewayReal` | 0 | **1** |
+| `sai da sua conta` | 0 | **1** |
+| `dentro do prazo` | 0 | **1** |
+| `chega sozinha` | 0 | **1** |
+| `nenhum PIX real` (ramo do Mock) | 1 | 1 |
+
+### Prova 3 — o gate, lido do JavaScript minificado que está no ar
+
+```js
+S = null !== n && !1 === n.gatewayReal      // charge !== null && charge.gatewayReal === false
+nota: S ? ("Ambiente de simula\xe7\xe3o: nenhum PIX real \xe9 cobrado…") : (copy honesta)
+p || !S ? null : (botão "Já paguei — confirmar")
+```
+
+A polaridade fail-safe está em produção byte a byte: só um `false` EXPLÍCITO acende a simulação.
+(Os acentos viajam como `\xe7\xe3o` no bundle — é por isso que os marcadores com acento dão 0 no
+grep e os sem acento dão 1.)
+
+### Prova 4 — fumaça, sem mutação nenhuma
+
+| Rota | |
+|---|---|
+| `/` | 200 · 1,75 s |
+| `/teste-taxa-repassada` | 200 · 1,03 s |
+| `/teste-taxa-repassada/inscricao` | 200 · 1,09 s |
+| `/convite` | 200 · 0,57 s |
+| `/brand/leela-wordmark-email.png` | 200 · 0,07 s |
+
+**ZERO compra criada.** Não percorri o checkout até gerar o PIX: isso emitiria uma **quarta cobrança
+real** na conta do dono (mais pedido, inscrito e sentinela novos), e a lane tem ordem explícita de
+não mexer no dinheiro vivo dele. O comportamento já está provado por teste executado e o gate está
+lido no bundle servido; a confirmação com o olho é a primeira compra do dono, de manhã.
+
+### ⚠️ Duas lanes escreveram nesta worktree ao mesmo tempo
+
+Durante a lane, a IDENTIDADE-EMAIL editou e commitou `757a8ddd` (marca nos e-mails) no MESMO
+worktree. Medi o efeito nos dois artefatos, em vez de supor:
+
+- **Functions:** o bundle foi gerado às `00:41:14`; `functions/src/email/templates.ts` mudou às
+  `00:46:21` e `functions/package.json` às `00:48:26` — depois. Confirmado por marcador no artefato
+  deployado: `leela-wordmark-email` = **0**, `color-scheme` = **0**. A marca dos e-mails **não subiu**
+  com o meu deploy, e é dela a decisão de quando subir.
+- **Landing:** o build de `00:44` carregou as adições de `packages/design-system/themes/*.css`
+  daquele commit — `--brand-wordmark*` e `--email-*`, **puramente aditivas** (zero remoções) e com
+  **zero referências** em `apps/landing`. Efeito visual nulo. De brinde, o PNG
+  `/brand/leela-wordmark-email.png` que os e-mails deles apontam já está **200 no ar**.
+
+## Estado final da fila
+
+- [x] **T1** `9f48e288` · **T2** `9f48e288` · **T3** `a6ca463d` — deployados e provados
+- [x] **T5** `79bf0e49` — 16 functions no ar, P0 provado no audit log
+- [x] **T6** `79bf0e49` — guarda viva; já cobriu a `solicitarRedefinicaoSenha` que outra lane
+      escreveu depois dela (passou: eles declararam `BREVO_API_KEY` corretamente)
+- [~] **T4** — causa nomeada e hipóteses descartadas por verificação; conserto ESCALADO por conflito
+      com ordem direta; sentinelas não tocadas, com razão medida
