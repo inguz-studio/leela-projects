@@ -58,7 +58,7 @@
 
 // =============================================================================
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -74,6 +74,14 @@ const INDEX = join(SRC, 'index.ts');
 const SEGREDOS = [
   'ASAAS_API_KEY',
   'ASAAS_WEBHOOK_AUTH_TOKEN',
+  // ⚠ PIXREAL-REV V4 — o SEXTO segredo, e ele já estava em produção. Duas
+  // functions (`saveDadosBancarios`, `getBankDetailsForPayout`) sobem com
+  // `BANK_DATA_KEY` bindado na config DEPLOYADA e a guarda não sabia que ele
+  // existia, porque ele viaja pelo fonte como CONSTANTE (`secrets:
+  // [ENV_BANK_DATA_KEY]`) e não como literal. O caso de sanidade que prometia
+  // "falha no dia em que o sexto segredo aparecer" estava verde com o sexto
+  // segredo já no ar — ver a resolução de apelidos abaixo.
+  'BANK_DATA_KEY',
   'BREVO_API_KEY',
   'CRM_ID_PEPPER',
   'QR_TOKEN_KEYS',
@@ -203,11 +211,75 @@ function fechoDe(raiz: string): Set<string> {
  * literal de um segredo — e, se existisse, custaria uma linha de `secrets`
  * contra os três incidentes de dinheiro que o lado oposto já custou.
  */
-function leEnv(fonte: string, s: Segredo): boolean {
+function leEnvCom(fonte: string, s: Segredo, apelidos: readonly string[]): boolean {
   const colchete = new RegExp(`\\[\\s*(['"\`])${s}\\1\\s*\\]`);
   const ponto = new RegExp(`[A-Za-z0-9_$)\\]]\\s*\\.\\s*${s}\\b`);
   const desestrutura = new RegExp(`\\{[^{}]*\\b${s}\\b[^{}]*\\}\\s*=`);
-  return colchete.test(fonte) || ponto.test(fonte) || desestrutura.test(fonte);
+  // O segredo também viaja com nome de constante: `process.env[ENV_X]`.
+  const porApelido = apelidos.some((a) => new RegExp(`\\[\\s*${a}\\s*\\]`).test(fonte));
+  return colchete.test(fonte) || ponto.test(fonte) || desestrutura.test(fonte) || porApelido;
+}
+
+function leEnv(fonte: string, s: Segredo): boolean {
+  return leEnvCom(fonte, s, apelidosDe(s));
+}
+
+/**
+ * Todos os módulos de `src/` (menos os próprios testes). A varredura de
+ * apelidos não pode depender do fecho de imports: um `export const ENV_X =
+ * 'SEGREDO'` que ninguém importou ainda continua sendo o nome pelo qual o
+ * segredo entra num `runWith` amanhã.
+ */
+function todosOsModulos(): string[] {
+  const achados: string[] = [];
+  const andar = (dir: string): void => {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      const caminho = join(dir, entrada.name);
+      if (entrada.isDirectory()) {
+        if (entrada.name !== '__tests__' && entrada.name !== 'node_modules') andar(caminho);
+      } else if (entrada.name.endsWith('.ts')) {
+        achados.push(caminho);
+      }
+    }
+  };
+  andar(SRC);
+  return achados;
+}
+
+/**
+ * APELIDOS: `const ENV_BANK_DATA_KEY = 'BANK_DATA_KEY'`.
+ *
+ * ⚠ PIXREAL-REV V4 — esta resolução é o conserto de um ponto cego que já estava
+ * EXERCIDO em produção, não hipotético. `saveDadosBancarios` e
+ * `getBankDetailsForPayout` declaram `secrets: [ENV_BANK_DATA_KEY]` e leem
+ * `process.env[ENV_BANK_DATA_KEY]` — nenhuma das duas pontas usa o literal.
+ * Sem resolver a constante, a guarda não via NEM a declaração NEM a leitura: um
+ * segredo inteiro, com duas functions e o caminho dos dados bancários do
+ * organizador, vivia fora da análise. E o caso de sanidade que prometia gritar
+ * no sexto segredo continuava verde, porque ele também só olhava literais.
+ */
+const APELIDOS: ReadonlyMap<Segredo, readonly string[]> = (() => {
+  const mapa = new Map<Segredo, string[]>(SEGREDOS.map((s) => [s, []]));
+  for (const arquivo of todosOsModulos()) {
+    const fonte = semComentarios(ler(arquivo));
+    for (const m of fonte.matchAll(
+      /\bconst\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=\n]+)?=\s*(['"])([A-Z][A-Z0-9_]{2,})\2/g
+    )) {
+      const alvo = SEGREDOS.find((s) => s === (m[3] as string));
+      if (alvo !== undefined) mapa.get(alvo)?.push(m[1] as string);
+    }
+  }
+  return new Map([...mapa].map(([s, lista]) => [s, [...new Set(lista)].sort()]));
+})();
+
+function apelidosDe(s: Segredo): readonly string[] {
+  return APELIDOS.get(s) ?? [];
+}
+
+/** Identificadores nus dentro de um bloco `secrets: [...]`. */
+function identificadoresDe(bloco: string): string[] {
+  const semLiterais = bloco.replace(/(['"`])[^'"`]*\1/g, '');
+  return [...semLiterais.matchAll(/\b([A-Za-z_$][A-Za-z0-9_$.]*)\b/g)].map((m) => m[1] as string);
 }
 
 /**
@@ -275,6 +347,7 @@ const HERDADO_OK: {
     via: [
       'checkout/createInscricaoCharge.ts',
       'checkout/expirarPixPendente.ts',
+      'payments/asaasProvider.ts',
       'payments/selectProvider.ts',
     ],
     porque:
@@ -290,6 +363,7 @@ const HERDADO_OK: {
     via: [
       'checkout/createInscricaoCharge.ts',
       'checkout/expirarPixPendente.ts',
+      'payments/asaasProvider.ts',
       'payments/selectProvider.ts',
     ],
     porque:
@@ -312,11 +386,28 @@ const HERDADO_OK: {
       'aceite). A cotação não deriva aceite nem grava pessoa.',
   },
   {
+    // ⚠ PIXREAL-REV V4 — dispensa NOVA, e o motivo de ela nascer é o conserto
+    // funcionando: com a resolução de apelidos, `cifraDadosBancarios.ts` passou
+    // a ser visto lendo `process.env[ENV_BANK_DATA_KEY]`, e este import apareceu.
+    fn: 'ajustarCapacidadeLote',
+    segredo: 'BANK_DATA_KEY',
+    via: ['finance/cifraDadosBancarios.ts', 'finance/getBankDetailsForPayout.ts'],
+    porque:
+      'importa UMA constante — `AUDITORIA_ACESSOS_COL`, o nome da coleção de ' +
+      'auditoria — de getBankDetailsForPayout.ts, e com ela arrasta o módulo de ' +
+      'cifra inteiro para o fecho. Ajustar capacidade de lote não lê nem grava ' +
+      'dado bancário. A config DEPLOYADA confirma: a function sobe com ZERO ' +
+      'segredos e está ACTIVE. O conserto certo é mudar a constante de casa ' +
+      '(módulo neutro), não distribuir a chave dos dados bancários — fica ' +
+      'reportado ao maestro, porque finance/ e eventos/ são fora do meu mandato.',
+  },
+  {
     fn: 'requestTransfer',
     segredo: 'ASAAS_API_KEY',
     via: [
       'checkout/estornarInscricao.ts',
       'finance/requestRefund.ts',
+      'payments/asaasProvider.ts',
       'payments/selectProvider.ts',
     ],
     porque:
@@ -331,6 +422,7 @@ const HERDADO_OK: {
     via: [
       'checkout/estornarInscricao.ts',
       'finance/requestRefund.ts',
+      'payments/asaasProvider.ts',
       'payments/selectProvider.ts',
     ],
     porque:
@@ -381,7 +473,13 @@ function declaradosDe(arquivo: string, nome: string): Segredo[] {
   const janela = fim < 0 ? resto : resto.slice(0, fim + 1);
   const bloco = /secrets\s*:\s*\[([^\]]*)\]/.exec(janela);
   if (bloco === null) return [];
-  return SEGREDOS.filter((s) => (bloco[1] as string).includes(`'${s}'`));
+  const conteudo = bloco[1] as string;
+  const ids = identificadoresDe(conteudo);
+  // Literal (`'X'`) OU constante que resolve para o segredo (`ENV_X`) — as duas
+  // formas existem no repo, e ler só a primeira apagava um segredo inteiro.
+  return SEGREDOS.filter(
+    (s) => conteudo.includes(`'${s}'`) || apelidosDe(s).some((a) => ids.includes(a))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -452,16 +550,33 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
     // A análise é fechada sobre 5 nomes. Um segredo NOVO amarrado a um
     // `runWith` sem entrar aqui nasce fora da guarda: ninguém confere se quem
     // o lê o declarou. Este caso falha no dia em que o sexto segredo aparecer.
+    // ⚠ PIXREAL-REV V4 — este caso estava VERDE com o sexto segredo já no ar.
+    // Ele só lia literais, e `BANK_DATA_KEY` entra no `runWith` como constante
+    // (`secrets: [ENV_BANK_DATA_KEY]`). A promessa da guarda era falsa no dia
+    // em que foi escrita. Agora identificador nu também conta: ou resolve para
+    // um segredo conhecido, ou é declaração OPACA e derruba o teste — a guarda
+    // que não sabe o que está declarando precisa dizer isso em voz alta.
     const declarados = new Set<string>();
+    const opacos = new Set<string>();
+    const todosApelidos = new Map<string, Segredo>();
+    for (const s of SEGREDOS) for (const a of apelidosDe(s)) todosApelidos.set(a, s);
+
     for (const arquivo of fechoDeTodosOsExports()) {
       const fonte = semComentarios(ler(arquivo));
       for (const bloco of fonte.matchAll(/secrets\s*:\s*\[([^\]]*)\]/g)) {
-        for (const nome of (bloco[1] as string).matchAll(/'([A-Z][A-Z0-9_]{2,})'/g)) {
+        const conteudo = bloco[1] as string;
+        for (const nome of conteudo.matchAll(/'([A-Z][A-Z0-9_]{2,})'/g)) {
           declarados.add(nome[1] as string);
+        }
+        for (const id of identificadoresDe(conteudo)) {
+          const resolvido = todosApelidos.get(id);
+          if (resolvido === undefined) opacos.add(id);
+          else declarados.add(resolvido);
         }
       }
     }
     expect([...declarados].sort().filter((s) => !SEGREDOS.includes(s as Segredo))).toEqual([]);
+    expect([...opacos].sort()).toEqual([]);
   });
 
   it('a análise reconhece os bindings que já existem (controle positivo)', () => {
@@ -588,6 +703,23 @@ describe('A PRÓPRIA GUARDA · as portas que já estiveram abertas continuam fec
     expect(exportEstrelas("export * from './eventos/varreduras';")).toHaveLength(1);
     expect(exportEstrelas("export * as pagamentos from './payments/index';")).toHaveLength(1);
     expect(exportEstrelas("export { asaasWebhook } from './payments/webhook';")).toEqual([]);
+  });
+
+  it('PORTA 6 · o segredo que viaja como CONSTANTE não é invisível', () => {
+    // O ponto cego que já estava EXERCIDO em produção: `BANK_DATA_KEY` entra no
+    // `runWith` como `secrets: [ENV_BANK_DATA_KEY]` e é lido como
+    // `process.env[ENV_BANK_DATA_KEY]`. Nenhuma das duas pontas usa o literal,
+    // então a guarda não via a declaração NEM a leitura — e o caso de sanidade
+    // que prometia gritar no sexto segredo ficava verde com o sexto no ar.
+    expect(apelidosDe('BANK_DATA_KEY')).toContain('ENV_BANK_DATA_KEY');
+    expect(leEnv('const k = process.env[ENV_BANK_DATA_KEY];', 'BANK_DATA_KEY')).toBe(true);
+
+    // E a declaração por constante é reconhecida como declaração de verdade:
+    // as duas functions dos dados bancários batem com a config DEPLOYADA.
+    for (const nome of ['saveDadosBancarios', 'getBankDetailsForPayout']) {
+      const fn = exportadas.find((e) => e.nome === nome);
+      expect(fn?.declarados).toContain('BANK_DATA_KEY');
+    }
   });
 
   it('PORTA 5 · a dispensa não cobre caminho NOVO para o mesmo segredo', () => {
