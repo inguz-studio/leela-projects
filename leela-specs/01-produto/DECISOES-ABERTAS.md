@@ -18,6 +18,7 @@ O cadastro carimba o consentimento com a versão do termo, a finalidade e a hora
 - **Por que agora:** é decisão jurídica, não técnica, e ela trava a partida. O **seed do primeiro código de convite fica retido** até você responder, então nenhum organizador entra por convite enquanto isso.
 - **Opções:** recoletar no resgate, com o overlay pedindo o aceite junto do código quando o registro falta — custa uma linha na tela e um campo na chamada · recusar a ativação sem aceite, com mensagem própria mandando falar com o time — mais rígido, e tranca gente legítima na porta · marcar e varrer, com o registro nascendo com o consentimento explicitamente vazio e um relatório listando quem está sem — não resolve, mas para de esconder.
 - **Onde aterrissa:** `resgatarConviteOrganizador` e o overlay de convite; RN-412 e RN-446. Registro completo em `02-rodadas/2026-08-02-retomada/08-achados-dono-0803.md §ONBOARD-REV`.
+- **+04/08 · a porta segue fechada, e agora está medido depois de um deploy.** A lane DEPLOY-EMAIL subiu 18 functions e **re-provou as três da porta do organizador em 404** — `resgatarConviteOrganizador`, `gerarConviteOrganizador` e `revogarConviteOrganizador` —, com três controles positivos para que o 404 não seja sonda quebrada: uma function criada no mesmo deploy responde 204, o webhook responde 405, e o `provisionTenant` responde 204 com data de 28/07 intacta. Detalhe que vale registrar: das três, **só `resgatarConviteOrganizador` existe no código**; as outras duas nunca foram escritas. Produção tem 88 functions e o repositório exporta 89 — a diferença é exatamente ela.
 
 ### ADMINSEP-1 · até onde vai "ambientes separados"
 
@@ -37,14 +38,15 @@ Ao definir a área do cliente você pediu "um botão para entrar na área de adm
 - **Opções:** é a área do **organizador**, e o botão só aparece para quem também é organizador (**default proposto**, porque é a única leitura que produz um botão útil — sob a outra, como o painel de plataforma passa a viver em conta separada, o botão nunca apareceria para um cliente) · é o painel de plataforma, e aí o botão existe mas nasce morto.
 - **Onde aterrissa:** RN-451 em [[LEELA-E12-landing]]; task B5 em `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`.
 
-### SENHA-1 · o e-mail de "esqueci minha senha" é o único sem cara de Leela
+### SENHA-1 · o e-mail de "esqueci minha senha" já veio para a Brevo — falta você ratificar
 
-Vale primeiro desfazer uma confusão: o e-mail de **primeiro acesso**, o que a pessoa recebe depois da primeira compra, **já é nosso** — layout da Leela, remetente da Leela, enviado pela Brevo. O que sai com template genérico e remetente `noreply@leela-hub.firebaseapp.com` é o outro, o "esqueci minha senha" do painel, porque nesse caminho quem dispara é o Firebase. *A organizadora esquece a senha, pede recuperação, e recebe um e-mail que não parece ter vindo da Leela.*
+⚠️ **Este item mudou de natureza em 04/08 e não é mais escolha entre dois futuros.** Quando ele foi escrito, a opção "trazer para a Brevo" custava um template novo e um caminho de envio próprio. As duas coisas foram construídas na madrugada (lane IDENTIDADE-EMAIL) e **entraram em produção na lane DEPLOY-EMAIL**, junto com a moldura da marca nos oito e-mails: a function `solicitarRedefinicaoSenha` está no ar com a chave da Brevo amarrada, e o painel já a chama. *A organizadora que esquecer a senha hoje recebe o e-mail da Leela, não mais o do Firebase.*
 
-- **O que fica com você:** se vale trazer esse e-mail para a Brevo agora ou deixar para depois.
-- **Por que agora:** você já pediu logo e identidade nos e-mails, e o canal da Brevo acabou de ser desbloqueado. É o único e-mail do fluxo de conta que ficaria de fora.
-- **Opções:** deixar como está por ora, já que o e-mail que o cliente recebe é o nosso e este só aparece para quem esquece a senha (**default proposto**) · trazer para a Brevo no mesmo lote da correção do link, o que custa um template novo e um caminho de envio próprio.
-- **Onde aterrissa:** `packages/api-client/src/auth.ts`; RN-453 em [[LEELA-E12-landing]].
+Vale manter registrada a distinção que o item desfez: o e-mail de **primeiro acesso**, o que a pessoa recebe depois da primeira compra, **já era nosso** desde antes. O que saía com template genérico e remetente `noreply@leela-hub.firebaseapp.com` era só o "esqueci minha senha" do painel.
+
+- **O que fica com você:** ratificar — ou mandar voltar atrás. Nada aqui foi decidido no seu lugar; o que aconteceu é que a construção da outra frente atropelou o custo que sustentava o default.
+- **Por que agora:** o caminho antigo continua vivo como rede de proteção. Se a callable ficar indisponível, o `enviarResetSenha` cai no envio do Firebase com `actionCodeSettings` — feio é melhor que ninguém conseguir recuperar a conta. Voltar atrás é um deploy, não um resgate.
+- **Onde aterrissa:** `functions/src/auth/solicitarRedefinicaoSenha.ts` e `packages/api-client/src/auth.ts`; RN-453 em [[LEELA-E12-landing]].
 
 ### DEPLOY-1 · a porta de entrada do organizador está pronta e não está no ar
 
@@ -125,6 +127,7 @@ Sete coisas entraram no ar entre 02 e 03/08 e nenhuma delas tem gate de código 
 - **Por que agora:** tudo está servido em produção, incluindo a página do produtor, e os vetos ficam mais caros depois que houver compra real em cima.
 - **Onde aterrissa:** `https://leela-landing.web.app/@castelo` para o menu e os ícones; `.../meia-floripa-2026/inscricao` para o select de parcelas completo na primeira abertura, o total que muda no ato e o loader "Preparando código PIX" só depois do clique. A copy "Modalidades disponíveis" e "Modalidade oficial" está nas duas.
 - **Entra no mesmo passeio quando for ao ar:** as telas da porta de entrada do organizador, construídas e já revisadas, e que só sobem quando você responder o **DEPLOY-1**. O botão de pagar você confere depois da S1219, que troca a frase "Atualizando o total…" pelo spinner que você aprovou.
+- **+04/08 · os oito e-mails entraram nesta lista e agora estão em produção.** A moldura da marca subiu no deploy da lane DEPLOY-EMAIL, então o próximo e-mail que sair do sistema já vai com logo e fundo da identidade. A conferência é por arquivo, não por navegador: os oito renderizados com dados de exemplo estão em `.nirvana/outputs/leela-build-2d6ee98d/emails/` (`index.html` percorre os oito). O que vale olhar com cuidado é o **cabeçalho com a imagem bloqueada** — é o caso normal no Gmail, não a exceção, e é o `alt` estilizado que segura a marca ali.
 
 ### JUROS-1 · salvar os termos comerciais no painel, para selar o rastro
 
