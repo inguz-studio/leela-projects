@@ -55,6 +55,51 @@ export interface ModalidadeVitrine {
   precoLegado?: number;
 }
 
+/** Preço-base legado de uma modalidade, como vive em `evento.percursos`. */
+export interface PercursoPreco {
+  nome: string;
+  preco: number;
+}
+
+/**
+ * Junta os dois modelos de preço do evento numa entrada só por modalidade.
+ *
+ * Existe para que o encontro entre `lotes` e `percursos` aconteça em UM lugar:
+ * a vitrine pública e o painel do organizador precisam da mesma resposta, e
+ * foi justamente uma segunda montagem — a da landing, que não lia `percursos`
+ * — que produziu o defeito da VITRINE-FIX.
+ *
+ * Entrada já normalizada (quem lê o Firestore faz o parse defensivo antes):
+ * percurso sem preço numérico e lote de modalidade desconhecida ficam de fora.
+ * @pure
+ */
+export function modalidadesVitrine(params: {
+  modalidades: readonly string[];
+  percursos?: readonly PercursoPreco[] | undefined;
+  lotes: readonly (LoteVitrine & { modalidade: string })[];
+}): ModalidadeVitrine[] {
+  const legado = new Map<string, number>();
+  for (const p of params.percursos ?? []) {
+    if (typeof p.preco === 'number' && Number.isFinite(p.preco) && p.preco >= 0) {
+      legado.set(p.nome, p.preco);
+    }
+  }
+  const porModalidade = new Map<string, LoteVitrine[]>();
+  for (const l of params.lotes) {
+    const arr = porModalidade.get(l.modalidade) ?? [];
+    arr.push(l);
+    porModalidade.set(l.modalidade, arr);
+  }
+  return params.modalidades.map((nome) => {
+    const preco = legado.get(nome);
+    return {
+      modalidade: nome,
+      lotes: porModalidade.get(nome) ?? [],
+      ...(preco !== undefined ? { precoLegado: preco } : {}),
+    };
+  });
+}
+
 /**
  * O preço que a vitrine deve anunciar para esta modalidade agora, ou `null`
  * quando não há venda. Delega 100% a `precoVigente` — é a mesma conta que o

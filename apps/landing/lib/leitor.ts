@@ -40,6 +40,7 @@ import {
   parseKit,
   parseLote,
   parsePaginaVendas,
+  modalidadesVitrine,
   politicaVendasPadrao,
   precoVitrine,
   projetarPerfilPublico,
@@ -51,6 +52,7 @@ import {
   TERMO_SAUDE_VERSAO_VIGENTE,
   type Lote,
   type ModalidadeVitrine,
+  type PercursoPreco,
   type StatusEvento,
 } from '@leela/core';
 import { esporteDoEvento } from './esporte';
@@ -128,38 +130,35 @@ function inteiro(v: unknown): number {
  * torto ou preço não-finito simplesmente não entram no mapa (sem preço legado
  * a modalidade cai no comportamento anterior). Nunca fabrica preço.
  */
-function lerPrecoLegadoPorModalidade(data: Record<string, unknown>): Map<string, number> {
-  const mapa = new Map<string, number>();
+function lerPercursos(data: Record<string, unknown>): PercursoPreco[] {
   const percursos = data['percursos'];
-  if (!Array.isArray(percursos)) return mapa;
+  if (!Array.isArray(percursos)) return [];
+  const out: PercursoPreco[] = [];
   for (const p of percursos as unknown[]) {
     if (p === null || typeof p !== 'object') continue;
     const { nome, preco } = p as { nome?: unknown; preco?: unknown };
     if (typeof nome !== 'string' || nome.trim().length === 0) continue;
     if (typeof preco !== 'number' || !Number.isFinite(preco) || preco < 0) continue;
-    mapa.set(nome, preco);
+    out.push({ nome, preco });
   }
-  return mapa;
+  return out;
 }
 
 /**
  * Monta a entrada da régua de vitrine para cada modalidade do evento: os lotes
- * dela MAIS o preço-base legado quando existe. É o único ponto onde os dois
- * modelos de preço se encontram na landing — a decisão de qual vale é do core
- * (`precoVitrine`/`precoVigente`), igual ao checkout.
+ * dela MAIS o preço-base legado quando existe. A junção dos dois modelos é do
+ * core (`modalidadesVitrine`) — o painel do organizador chama a MESMA função,
+ * e é isso que impede vitrine e painel de voltarem a divergir.
  */
 function montarModalidadesVitrine(
   nomes: readonly string[],
   lotesPorModalidade: Map<string, Lote[]>,
-  precoLegadoPorModalidade: Map<string, number>,
+  percursos: readonly PercursoPreco[],
 ): ModalidadeVitrine[] {
-  return nomes.map((nome) => {
-    const legado = precoLegadoPorModalidade.get(nome);
-    return {
-      modalidade: nome,
-      lotes: lotesPorModalidade.get(nome) ?? [],
-      ...(legado !== undefined ? { precoLegado: legado } : {}),
-    };
+  return modalidadesVitrine({
+    modalidades: nomes,
+    percursos,
+    lotes: [...lotesPorModalidade.values()].flat(),
   });
 }
 
@@ -462,7 +461,7 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
     const modalidadesVitrine = montarModalidadesVitrine(
       modalidadesNomes,
       lotesPorModalidade,
-      lerPrecoLegadoPorModalidade(data),
+      lerPercursos(data),
     );
     const modalidades: ModalidadePublica[] = modalidadesVitrine.map((m) => ({
       nome: m.modalidade,
@@ -595,7 +594,7 @@ async function montarResumoEvento(
   const modalidadesVitrine = montarModalidadesVitrine(
     modalidadesNomes,
     lotesPorModalidade,
-    lerPrecoLegadoPorModalidade(data),
+    lerPercursos(data),
   );
   const modalidades: ModalidadePublica[] = modalidadesVitrine.map((m) => ({
     nome: m.modalidade,

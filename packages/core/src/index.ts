@@ -540,8 +540,10 @@ export type {
   ModalidadeVitrine,
   MotivoVitrineFechada,
   DiagnosticoVitrine,
+  PercursoPreco,
 } from './eventos/vitrine';
 export {
+  modalidadesVitrine,
   precoVitrine,
   modalidadeVendavel,
   deriveEstadoVenda,
