@@ -134,6 +134,18 @@ Zero execuções em produção não é uma falha: é a consequência exata de ni
 parado na tela de pagamento. Nada quebrou; a função faz precisamente o que foi construída para
 fazer, e o que foi construída para fazer não cobre o caso real.
 
+### As quatro hipóteses do brief, descartadas por verificação executada
+
+| Hipótese | Veredito |
+|---|---|
+| deploy | **descartada** — `expirarPixPendente` está em produção: `UpdateFunction` em 2026-07-29T00:31:18Z e 01:09:24Z |
+| nome do job | **descartada** — deployada sob esse nome exato, é como o audit log a encontra |
+| região | **descartada** — `us-central1`, a mesma de todas as outras |
+| agendamento | **não se aplica** — não existe agendamento nenhum a configurar |
+
+A função está no ar, saudável, e nunca foi chamada. Não é um job que falhou: é uma porta que
+ninguém bateu.
+
 ### O que isso significa para o dinheiro
 
 Não existe varredura server-side de PIX vencido. `varrerEstornosOrfaos` cuida de estorno,
