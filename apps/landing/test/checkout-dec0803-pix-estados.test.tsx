@@ -120,6 +120,12 @@ beforeEach(() => {
     qrCode: 'PIX-PAYLOAD-0803',
     chargeId: 'ch-0803',
     pixExpiraEmMillis: Date.now() + 1_800_000,
+    // PIXREAL-FIX T3: este arquivo descreve o SANDBOX (ele clica em "Já
+    // paguei"), e a partir de agora é o servidor que diz se aquele botão pode
+    // existir. Sem este `false` a cobrança seria lida como real e o botão
+    // sumiria — que é exatamente o comportamento novo, provado no arquivo
+    // `checkout-pixreal-banner-simulacao.test.tsx`.
+    gatewayReal: false,
   });
 });
 

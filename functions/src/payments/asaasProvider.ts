@@ -723,6 +723,15 @@ export interface AsaasWebhookDetails {
 // ---------------------------------------------------------------------------
 
 export class AsaasProvider implements PaymentProvider {
+  /**
+   * PIXREAL-FIX T3: dinheiro de verdade, inclusive no ambiente `sandbox` do
+   * Asaas. Explícito e não por omissão porque a leitura desta linha é o que
+   * responde "a tela pode oferecer 'simular confirmação' aqui?" — e a resposta
+   * é não mesmo com chave `$aact_hmlg_`: quem confirma uma cobrança do Asaas
+   * é o webhook do Asaas, nas duas contas.
+   */
+  readonly simulado = false;
+
   private readonly apiKey: string;
   private readonly webhookAuthToken: string;
   readonly environment: AsaasEnvironment;

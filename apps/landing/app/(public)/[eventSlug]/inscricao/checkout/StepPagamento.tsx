@@ -16,9 +16,15 @@ export interface CartaoForm {
 }
 
 /**
- * Etapa 4 — Pagamento (via MockPaymentProvider). Chama `createInscricaoCharge`
- * (produtor de escrita) e fecha contra o Mock: PIX mostra o QR/código simulado;
- * cartão coleta os campos. A confirmação dispara o webhook assinado (sandbox).
+ * Etapa 4 — Pagamento. Chama `createInscricaoCharge` (produtor de escrita) e
+ * mostra o instrumento: PIX exibe o QR/copia-e-cola; cartão coleta os campos.
+ *
+ * DOIS MUNDOS desde a PIXREAL-FIX (T3): contra o MockPaymentProvider a
+ * confirmação é um disparo de webhook assinado que a própria tela oferece;
+ * contra o gateway REAL quem confirma é o webhook do Asaas, e a tela não
+ * oferece ato nenhum de confirmação. Qual dos dois vale não é palpite do
+ * cliente — vem do campo `gatewayReal` da cobrança (ver `gatewaySimulado`
+ * abaixo).
  *
  * Idempotência VISÍVEL: a chave de idempotência é gerada UMA vez por tentativa e
  * reusada — reenviar "pagar" devolve o MESMO pedido (o servidor não duplica).
@@ -128,6 +134,28 @@ export function StepPagamento({
   const mostrarErroCharge = erroCharge !== null && !processando && !preparandoPix;
   const mostrarErroConfirmar = erroConfirmar !== null && !processando;
 
+  // ── PIXREAL-FIX T3 · a tela para de mentir sobre o ambiente ───────────────
+  //
+  // Incidente de 04/08: o dono chegou nesta etapa com um PIX de PRODUÇÃO na
+  // mão — chave `$aact_prod_`, cobrança viva no Asaas, BR Code que o banco
+  // dele aceitava — e leu, logo abaixo do QR, "Ambiente de simulação: nenhum
+  // PIX real é cobrado", com um botão "Já paguei — confirmar" ao lado. As duas
+  // peças eram INCONDICIONAIS: nasceram no sandbox, quando o Mock era o único
+  // gateway possível, e nunca ganharam guarda de ambiente. Clicar devolvia
+  // `internal` (a callable de sandbox quebrava antes do próprio fail-safe —
+  // T1/T2 desta lane), o que só tornou o defeito visível; ele já era grave em
+  // silêncio, porque a frase estava errada sobre dinheiro de verdade.
+  //
+  // O sinal vem do SERVIDOR, e é o provider que criou ESTA cobrança quem o
+  // emite (`gatewayReal`). Nenhuma `NEXT_PUBLIC_*`: uma variável de build da
+  // landing pode divergir do que o backend fez em runtime, que é a fonte dupla
+  // que produziu o incidente.
+  //
+  // Polaridade fail-safe: a simulação só aparece com um `false` EXPLÍCITO.
+  // Campo ausente (servidor antigo, resposta truncada) ⇒ tratamos como real ⇒
+  // nenhum convite a "simular" sobre uma cobrança que o banco aceita.
+  const gatewaySimulado = charge !== null && charge.gatewayReal === false;
+
   return (
     <div className="flex flex-col gap-6">
       {/* S1217-T2 · RN-440 — sem meio escolhido não há instrumento de
@@ -214,15 +242,33 @@ export function StepPagamento({
                 onExpirar={onPixExpirar}
                 onNovaCobranca={onNovaCobranca}
                 nota={
-                  <p className="text-xs text-text-tertiary">
-                    Ambiente de simulação: nenhum PIX real é cobrado. Clique abaixo para simular a
-                    confirmação do pagamento (o gateway dispara o webhook).
-                  </p>
+                  gatewaySimulado ? (
+                    <p className="text-xs text-text-tertiary">
+                      Ambiente de simulação: nenhum PIX real é cobrado. Clique abaixo para simular a
+                      confirmação do pagamento (o gateway dispara o webhook).
+                    </p>
+                  ) : (
+                    // Com gateway real a tela conta ao comprador as três coisas
+                    // que ele precisa saber e que o banner antigo negava: o
+                    // dinheiro sai de verdade, o código tem prazo (o relógio
+                    // acima é o mesmo do servidor) e ninguém precisa avisar a
+                    // plataforma — quem confirma é o webhook do gateway.
+                    <p className="text-xs text-text-tertiary">
+                      Este é um PIX real: o valor sai da sua conta assim que você pagar. Pague dentro
+                      do prazo acima e a confirmação chega sozinha, em segundos — não é preciso
+                      avisar aqui. Sua inscrição está reservada como pendente até lá.
+                    </p>
+                  )
                 }
               />
               {/* Cobrança expirada não tem o que confirmar: o caminho é uma
-                  cobrança nova (o botão vive dentro do bloco do PIX). */}
-              {pixExpirado ? null : (
+                  cobrança nova (o botão vive dentro do bloco do PIX).
+
+                  T3: com gateway REAL o botão não existe. Quem confirma é o
+                  webhook do Asaas (de pé, respondendo 200) — e um "Já paguei"
+                  aqui seria, na melhor das hipóteses, um botão que erra, e na
+                  pior um convite a marcar como pago o que não foi. */}
+              {pixExpirado || !gatewaySimulado ? null : (
                 <div>
                   <Button onClick={onConfirmar} disabled={confirmando}>
                     {confirmando ? 'Confirmando…' : 'Já paguei — confirmar'}

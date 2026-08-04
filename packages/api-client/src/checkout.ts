@@ -224,6 +224,21 @@ export interface CreateInscricaoChargeResult {
    * pelo relógio local) em vez de quebrar a tela do dinheiro.
    */
   servidorAgoraMillis?: number;
+  /**
+   * O gateway que emitiu esta cobrança move dinheiro de verdade?
+   * (PIXREAL-FIX T3 · incidente de 04/08 — um PIX de produção exibido sob o
+   * banner "Ambiente de simulação: nenhum PIX real é cobrado".)
+   *
+   * OPCIONAL aqui e obrigatório no servidor, de propósito — mas a leitura
+   * Postel deste campo é o INVERSO da do `servidorAgoraMillis`. Lá, ausente
+   * significa "caia no comportamento vigente". Aqui, ausente significa
+   * **REAL**: só um `false` explícito, vindo de um servidor que sabe ter
+   * construído o simulador, libera a interface de simulação. Servidor antigo,
+   * resposta truncada ou campo perdido em qualquer camada ⇒ a tela trata como
+   * dinheiro de verdade. É o erro seguro: esconder a simulação de um sandbox
+   * atrapalha um teste; mostrá-la sobre um PIX real é o incidente.
+   */
+  gatewayReal?: boolean;
   statusPedido: string;
   valores: {
     valorBase: number;

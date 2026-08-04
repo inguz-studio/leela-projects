@@ -297,8 +297,21 @@ export function StepResumo({
                       />
                     </Field>
                   </div>
+                  {/* PIXREAL-FIX T3 · esta tela não pode afirmar ambiente.
+                      A frase antiga abria com "Ambiente de simulação:" — em
+                      produção isso é falso, e é a mesma mentira que o banner
+                      do PIX contava sobre uma cobrança real. Lá o conserto foi
+                      o sinal `gatewayReal` do servidor; aqui ele não existe:
+                      os campos de cartão são desenhados ANTES de qualquer
+                      cobrança, e nada nesta etapa sabe qual provider será
+                      construído. Inventar um segundo sinal (env de build,
+                      palpite pela cotação) seria recriar a fonte dupla que
+                      produziu o incidente. Então a tela diz só o que é
+                      verdade nos dois ambientes — e o que fazer com o próprio
+                      formulário de cartão em produção está ESCALADO no
+                      relatório da lane, porque é decisão de produto. */}
                   <p className="text-[length:var(--font-size-xs)] text-text-tertiary">
-                    Ambiente de simulação: os dados do cartão não são enviados nem cobrados.
+                    Os dados do cartão não são enviados por esta tela.
                   </p>
                 </div>
               ) : null}

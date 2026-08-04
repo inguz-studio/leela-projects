@@ -295,6 +295,25 @@ export interface PayoutResult {
  *   - Suporte a assinatura + split obrigatório (RN-104).
  */
 export interface PaymentProvider {
+  /**
+   * Este provider SIMULA dinheiro? (PIXREAL-FIX T3 · incidente de 04/08)
+   *
+   * Quem sabe se a cobrança é real é quem a criou — não a tela, e não uma
+   * `NEXT_PUBLIC_*` do build da landing. O incidente foi exatamente uma fonte
+   * dupla: o backend construiu o `AsaasProvider` de PRODUÇÃO e emitiu um PIX
+   * pagável enquanto a tela, sem sinal nenhum de ambiente, exibia por cima
+   * dele "Ambiente de simulação: nenhum PIX real é cobrado" e um botão de
+   * confirmar. O marcador viaja daqui até o resultado da cobrança
+   * (`gatewayReal`), e a tela obedece ao servidor.
+   *
+   * POLARIDADE (fail-safe, Schneier — o modo de falha decide o design):
+   * opcional e afirmativo só no SIMULADOR. Ausente significa REAL, então
+   * qualquer implementação nova, dublê de teste ou adapter futuro que
+   * esqueça o campo faz a tela tratar o dinheiro como verdadeiro — some a
+   * interface de simulação e ninguém é convidado a "simular" uma cobrança
+   * que o banco aceita. O erro por omissão é o erro seguro.
+   */
+  readonly simulado?: boolean;
   createCharge(params: CreateChargeParams): Promise<ChargeResult>;
   /**
    * Cancela cobrança AINDA NÃO PAGA no gateway (RN-157). Cobrança já paga

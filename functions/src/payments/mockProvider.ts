@@ -271,6 +271,14 @@ export function calcularSplit(
 // ---------------------------------------------------------------------------
 
 export class MockPaymentProvider implements PaymentProvider {
+  /**
+   * PIXREAL-FIX T3: o único provider do repo que se declara simulador. É este
+   * `true` que autoriza a tela do checkout a mostrar o banner de simulação e o
+   * botão "Já paguei — confirmar"; sem ele, a interface de simulação não
+   * aparece em lugar nenhum.
+   */
+  readonly simulado = true;
+
   // Stores in-memory para idempotência
   private readonly charges = new Map<string, StoredCharge>();
   private readonly webhookResults = new Map<string, StoredWebhookResult>();

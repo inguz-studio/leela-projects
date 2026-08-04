@@ -140,6 +140,12 @@ function chargeFixture(over: Partial<CreateInscricaoChargeResult> = {}): CreateI
     inscritoIds: ['ins_1'],
     chargeId: 'chg_1',
     qrCode: 'PIX-COPIA-E-COLA-PAYLOAD',
+    // PIXREAL-FIX T3: fixture de SANDBOX, e agora ela precisa dizer isso. O
+    // campo `gatewayReal` passou a governar a interface de simulação, com
+    // polaridade fail-safe: ausente = gateway real = nada de "Já paguei". As
+    // asserções deste arquivo são sobre o mundo do Mock, então o `false` aqui
+    // é o que as mantém falando do cenário que elas sempre descreveram.
+    gatewayReal: false,
     statusPedido: 'pendente',
     valores: {
       valorBase: 5000,

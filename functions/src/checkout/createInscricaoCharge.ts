@@ -370,6 +370,22 @@ export interface CreateInscricaoChargeResult {
    * é isso que faz a tela de pedido pendente recontar certo ao reabrir.
    */
   servidorAgoraMillis: number;
+  /**
+   * O gateway que emitiu ESTA cobrança move dinheiro de verdade?
+   * (PIXREAL-FIX T3 · incidente de 04/08.)
+   *
+   * `true` = a cobrança é pagável pelo banco do comprador e quem confirma é o
+   * webhook do gateway. `false` = MockPaymentProvider, e só então a tela pode
+   * oferecer a confirmação simulada.
+   *
+   * Por que o SERVIDOR responde isto: ele é o único que sabe qual provider
+   * construiu. O incidente foi uma fonte dupla — um PIX de produção com o
+   * banner "Ambiente de simulação: nenhum PIX real é cobrado" ao lado, porque
+   * a tela não tinha sinal nenhum e assumia sandbox. Uma `NEXT_PUBLIC_*` na
+   * landing seria a mesma doença com outro nome: ela é congelada no build e
+   * pode divergir do que o backend fez em runtime.
+   */
+  gatewayReal: boolean;
   valores: {
     valorBase: number;
     desconto: number;
@@ -2081,6 +2097,11 @@ async function garantirCobrancaEMontarResultado(
     // subtrai um do outro e nunca mais consulta o relógio do aparelho para
     // saber QUANTO falta (achado #6 · S1209-REV).
     servidorAgoraMillis: agora().getTime(),
+    // T3 (PIXREAL-FIX): do PROVIDER que emitiu esta cobrança — não do env, não
+    // de um flag de build. Marcador ausente conta como REAL (ver a polaridade
+    // em `PaymentProvider.simulado`): a tela só ganha a interface de simulação
+    // quando o simulador se declara.
+    gatewayReal: provider.simulado !== true,
     statusPedido: pedidoSnap.get('status') as StatusPedido,
     valores: {
       valorBase: pagamentoSnap.get('valorBase') as number,
