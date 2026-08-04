@@ -332,3 +332,73 @@ Detalhe nos boards; a conferência visual é o item 69 do painel.
   Check no painel antes do go-live, ou aceitar o custo faturado de cada tentativa (uma
   invocação de função mais uma transação de banco). Viaja junto do item 62 (`minInstances`),
   que já está registrado acima.
+
+---
+
+## Apêndice DEC-0803B (2) · a correção do dono sobre "acesso único"
+
+Registro de erro meu, corrigido pelo dono na virada de 03 para 04/08, depois de o código já
+ter sido escrito e empurrado. Fica aqui porque a leva DEC-0803B é onde o registro errado
+nasceu, e emenda tem de morar ao lado do que ela emenda.
+
+### O que eu registrei, e estava errado
+
+Na seção "57 · roteamento pós-login, mais dois desdobramentos", primeiro desdobramento, eu
+escrevi que uma pessoa pode ser administradora da plataforma e usuária ao mesmo tempo, com
+a decisão sendo acesso único numa conta só. Escrevi errado. O dono nunca disse isso sobre a
+conta de administração.
+
+### A correção do dono, verbatim
+
+> "É uma conta só somente para quem é organizador e cliente. A conta do painel admin, deve
+> ser outra. os ambientes devem ser separados, por questões de segurança."
+
+A conta única vale para o par organizador e cliente. A conta do painel administrativo é
+outra, e os ambientes ficam separados por segurança.
+
+### Onde o registro errado aterrissou
+
+Quatro lugares, nesta ordem, e nenhum deles é uma regra de autorização:
+
+| Onde | O que ficou escrito | Custo de desfazer |
+|---|---|---|
+| `apps/painel/src/routes/conta/auth/_lib/destinoPosLogin.ts:82-86` (`aa0e2183`) | Cinco linhas de comentário dizendo que papel acumulado resolve por precedência e proibindo quem mexer de construir seletor | Cinco linhas. O commit declara "nenhuma linha de comportamento muda" e o `numstat` confirma: `5 0` no arquivo de código |
+| `apps/painel/src/routes/conta/auth/__tests__/destinoPosLogin.test.ts` (`d8d36697`) | Dois casos novos, um deles afirmando que `platform_admin` com `tenantId` preenchido cai em `/plataforma` por precedência | Um caso morre, o outro sobrevive reescrito. Ver a fila |
+| `RN-448`, nos épicos E00 e E16 e no delta da rodada de onboarding | "Acesso único por precedência: uma conta, uma casa" | A RN é superada pela RN-449, não apagada |
+| Boards (`V1-KANBAN`, `V1-CHECKLIST`, `BOARD-EPICOS`) | Card "Uma conta só para quem é admin e organizador", congelado de propósito | Card trocado |
+
+### A consequência, medida antes de escrever
+
+O código de autorização nunca chegou a permitir o acúmulo. Todo caminho de escrita de papel
+já recusa transformar uma conta `platform_admin` em organizadora: o `provisionTenantCore`
+rejeita papel conflitante (`functions/src/platform/provisionTenant.ts:196-256`), o resgate de
+convite rejeita `platform_admin` como chamador (`resgatarConviteOrganizador.ts:180-181`), e
+a claim é um escalar que nem carrega os dois valores ao mesmo tempo
+(`packages/core/src/platform/roles.ts:22-27`). O que o `aa0e2183` fez foi escrever a decisão
+errada como intenção, no lugar exato onde alguém a leria para não desfazê-la.
+
+O acúmulo que está aberto de verdade é o outro, e ninguém o tinha olhado: **administrador e
+cliente**. O `contaSemFriccao` resolve a conta do comprador pelo e-mail da compra, sem olhar
+papel nenhum (`functions/src/checkout/contaSemFriccao.ts:153-160`), e amarra a compra àquela
+conta. Comprar um ingresso com o e-mail do super-admin faz do super-admin um cliente, em
+silêncio e sem ninguém decidir nada.
+
+Diagnóstico completo, com a superfície de risco medida no próprio sistema, em
+`09-spec-contas-e-area-cliente.md`. Regras novas em `10-rns-contas-e-area-cliente.md`. Fila
+executável em `11-fila-contas-e-area-cliente.md`.
+
+### A leva que veio junto: a área do cliente
+
+No mesmo despacho o dono definiu a área do cliente, que deixou de ser item de backlog e
+virou pré-requisito da compra: o e-mail manda o comprador ver o ingresso dentro do sistema.
+
+> "se vamos enviar o usuário para visualizar o ingresso dentro do sistema, precisamos da área
+> do cliente bem definida. E ela precisa ter um botão para entrar na área de administrador.
+> Ela deve ser simples, apenas com histórico de compras, convites (para ser
+> promotor/influenciador), Meus Clubes, Meus Ingressos (próximos eventos e passados), meus
+> dados, opção de trocar senha. Opção de criar uma conta de organizador também."
+
+As duas levas são o mesmo assunto: quem é quem numa conta, e que porta cada um atravessa.
+Por isso foram especificadas juntas, e o card `S1222` do backlog foi absorvido em vez de
+ganhar identidade nova. Uma ambiguidade da frase do dono subiu ao painel como
+**ADMINSEP-2**, e está declarada como premissa na spec.

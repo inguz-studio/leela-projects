@@ -1375,7 +1375,46 @@ caso `delete é negado até para platform_admin`.
   como **LGPD-1** no painel; até ela fechar, o **seed do primeiro convite fica retido**.
 - **RN-448** — acesso único por precedência. Vale para este épico porque a exceção de
   `platform_admin` no `ContaTravadaGate` é o que mantém `/plataforma` alcançável para o
-  super-admin mesmo sem doc de profissional.
+  super-admin mesmo sem doc de profissional. **⚠ Superada pela RN-449 em 2026-08-04** na
+  parte que dizia que administração e operação de painel cabiam na mesma conta; a exceção do
+  `ContaTravadaGate` continua valendo e é a única parte que este épico consumia.
+
+### RN-449 · a conta do painel de plataforma é outra (nova, dona no E00) · 2026-08-04
+
+Correção do dono sobre um registro errado do maestro. Verbatim: *"É uma conta só somente para
+quem é organizador e cliente. A conta do painel admin, deve ser outra. os ambientes devem ser
+separados, por questões de segurança."*
+
+Este é o épico do super-admin, então é aqui que a consequência pesa mais.
+
+**O que muda no território do E16:**
+
+- Conceder `platform_admin` passa a exigir conta limpa dos dois outros lados e e-mail em
+  allowlist de doc próprio, `platform/configAdmin`. O doc é próprio pela mesma razão que
+  moveu o contato do CTA na RN-417: Rules do Firestore não filtram campo, e a alternativa
+  penduraria a allowlist ao lado da tabela global de taxa.
+- As três recusas que já existiam neste território ganham caso citando a regra, para que
+  ninguém as desfaça achando que são acidente: papel conflitante no `provisionTenantCore`
+  (`provisionTenant.ts:196-256`), `platform_admin` rejeitado como chamador do resgate
+  (`resgatarConviteOrganizador.ts:180-181`) e a recusa de `tenantId` junto de administração
+  (`setTenantClaims.ts:46`, `:127-132`).
+- O menu de plataforma deixa de aparecer para quem não é administrador. Hoje ele é escolhido
+  pelo caminho da URL e não pelo papel (`apps/painel/src/shell/sidebar.ts:148-157`), então uma
+  conta `tenant_owner` que digitar `/plataforma` recebe o 403 correto com o menu inteiro de
+  super-admin desenhado em volta. Vaza taxonomia, não dado.
+
+**Achado de produção que sobe ao dono como ADMINSEP-3:** a conta de super-admin de produção é
+a conta de demonstração. O `prod-seed-leela-hub.ts` chama `seedPlatformAdmin` contra o projeto
+real e grava a senha `demo1234`, publicada no repositório (`:127`, `:182-188`), e o login foi
+provado por REST na lane FIX-AUTHGUARD. Fator único, senha pública, e alcance cross-tenant de
+PII, dinheiro e elevação de papel.
+
+**Pendência do CTO humano**, no molde do item 62: segundo fator para `platform_admin` exige
+subir para Identity Platform, que é tier pago. Não há MFA em lugar nenhum do repositório
+hoje.
+
+Detalhe medido em `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md`; fila
+executável em `11-fila-contas-e-area-cliente.md`.
 
 ### RN-417 · letra reconciliada, não decisão nova
 

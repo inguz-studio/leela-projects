@@ -357,7 +357,18 @@ prova fabricada que a RN-412 recusa. Por isso a lacuna subiu como decisão do do
 (**LGPD-1** no painel) em vez de ser consertada por conta própria, e o **seed do primeiro
 convite fica retido** até ela fechar.
 
-### RN-448 · acesso único por precedência: uma conta, uma casa
+### RN-448 · acesso único por precedência: uma conta, uma casa · ⚠ SUPERADA pela RN-449
+
+> **Superada em 2026-08-04 (lane SPEC-ADMINSEP).** A premissa de que administração da
+> plataforma e operação de painel cabem na mesma conta era **registro errado do maestro**, e
+> o dono corrigiu: "É uma conta só somente para quem é organizador e cliente. A conta do
+> painel admin, deve ser outra. os ambientes devem ser separados, por questões de
+> segurança." A regra fica aqui, e não é apagada, porque apagar regra registrada apaga o
+> histórico do erro. **O que sobrevive** dela está na tabela de destino abaixo, que continua
+> valendo integralmente: o item 57 foi ratificado pelo dono e não foi revogado. **O que
+> morre** é a leitura de "papel acumulado resolvido por precedência" — sob a RN-449 a conta
+> de administração não tem outro papel a acumular, e vai para `/plataforma` por ser a única
+> casa dela. Ver RN-449 e RN-450 abaixo.
 
 Decisão do dono em 03/08, ratificada junto do item 57: a mesma pessoa pode acumular
 administração da plataforma e operação de painel numa conta só, e **não se constrói seletor
@@ -376,6 +387,65 @@ de papel**. O destino pós-login sai por precedência:
 tempo. Uma conta que "acumula" hoje é, na prática, uma conta `platform_admin` cujo tenant
 só é alcançável pelas Rules de admin. A precedência é a única forma possível com o modelo
 atual; o caso de teste (`d8d36697`) trava a decisão para o dia em que o modelo mudar.
+
+### RN-449 · a conta do painel de plataforma é outra (nova, dona · 2026-08-04)
+
+Correção do dono, verbatim: *"É uma conta só somente para quem é organizador e cliente. A
+conta do painel admin, deve ser outra. os ambientes devem ser separados, por questões de
+segurança."* Supera a RN-448.
+
+Uma conta nunca acumula `platform_admin` com organizador nem com cliente. Conceder
+administração a uma conta que já tem `profissionais/{uid}`, `atletas/{uid}`, vínculo de
+compra em `pessoas.contaUid` ou papel de tenant vigente é **recusado** com
+`failed-precondition` e mensagem própria citando a regra, nunca `internal`. O caminho inverso
+segue aberto: rebaixar ou promover um administrador para outro papel é troca de lado, não
+acúmulo, e o marcador `demotedFromRole` já distingue a demoção deliberada.
+
+Do lado cliente, o escritor único do vínculo passa a olhar papel: comprar com o e-mail da
+conta de administração **confirma a compra e não cria vínculo**, com a pendência carimbada no
+pedido. Dinheiro fail-open, identidade fail-closed.
+
+**Por que isso é de segurança e não de organização.** `isPlatformAdmin()` não recebe
+`tenantId` e não avalia predicado de tenant (`firestore.rules:44-46`), então toda cláusula
+que o cita é cross-tenant por construção, e são 129 delas. O papel alcança PII e dado de
+saúde de participante de todos os tenants, com índice de `collectionGroup` que torna a
+varredura uma consulta; dados bancários em claro; as máquinas de repasse e de estorno; a
+tabela global de taxa; e `setTenantClaims` sem teto, que permite cunhar mais administradores
+e derrubar todas as reservas desenhadas contra esse papel. Misturar esse token com a sessão
+que abre e-mail de compra, na mesma origem e sem segundo fator, faz da recuperação de senha
+do cliente o caminho de tomada da plataforma.
+
+Detalhe medido em `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md`; forma
+testável e a allowlist de administração (premissa vetável) em `10-rns-contas-e-area-cliente.md`.
+
+### RN-450 · organizador e cliente cabem na mesma conta (nova, dona · 2026-08-04)
+
+A outra metade da frase do dono, e é afirmativa. Uma conta carrega ao mesmo tempo o perfil de
+organizador (`profissionais/{uid}`) e a identidade de cliente (`atletas/{uid}` mais o vínculo
+de compra). São documentos **diferentes**, nenhum sobrescreve o outro, e cada tela edita o
+seu: `/conta` no painel para o organizador, área do cliente na landing para o cliente.
+
+A identidade de cliente de quem já é organizador nasce **sob demanda**, na primeira compra ou
+na primeira visita à área. O gatilho de criação de conta segue sem criar doc de atleta para
+papel profissional (`onCreateUser.ts:88-95`). Continua não existindo seletor de papel: a
+pessoa está nas duas casas e navega entre elas por link.
+
+### RN-453 · primeiro acesso: o link define a senha e entra no sistema (nova · 2026-08-04)
+
+Dona no E12, consumida aqui porque encosta no roteamento por papel. Decisão do dono, verbatim:
+*"sobre o primeiro acesso da pessoa, ela precisa definir a senha neste acesso, ok? Enviamos o
+link, ela entra define a senha e entra no sistema."*
+
+O destino do link é decidido pela **origem**, e essa é a parte que toca o E00: link de compra
+aterrissa na landing e termina na área do cliente; link de "esqueci minha senha" do painel
+aterrissa no painel e termina no roteamento por papel do item 57, inalterado. Mandar o
+comprador para o `/redefinir-senha` do painel o faria ser expulso pela guarda de conta órfã
+(`destinoPosLogin.ts:67-73`) logo depois de definir a senha, que é o oposto do que o dono
+descreveu.
+
+Defeito medido que a regra endereça: `actionCodeSettings` não existe em lugar nenhum do
+código, então hoje o link cai no handler hospedado padrão do Firebase e a
+`RedefinirSenhaPage` nunca é alcançada.
 
 ### O que a review corrigiu no território do E00
 

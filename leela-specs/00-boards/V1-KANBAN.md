@@ -30,13 +30,30 @@ tags:
 - [ ] **[E00] A limpeza das imagens de build entra no fechamento de sprint** — cada deploy de function guarda uma imagem no Artifact Registry e a fatura cresce sem nada avisando; a janela de 7 dias está decidida por default e a execução entra na esteira, sem voltar a você. Regra permanente da mesma leva: limpeza não interrompe o dono 📋 higiene · item 58 [[LEELA-E00-fundacao-tecnica]]
     - [ ] **S031 · Retenção das imagens de build**
         - [ ] S031-T1 limpeza religada com janela de 7 dias no Artifact Registry do `leela-hub`
-- [ ] **[E12/E00] Entrar vira um overlay no meio da landing** — hoje "Entrar" leva a uma página própria e tira a pessoa de onde ela estava; passa a ser um componente overlay central na landing inicial 📋 entrou na fila em 03/08, sem posição ratificada · item 57 (b) [[LEELA-E12-landing]]
+- [ ] **[E12/E00] Entrar vira um overlay no meio da landing** — hoje "Entrar" leva a uma página própria e tira a pessoa de onde ela estava; passa a ser um componente overlay central na landing inicial 📋 entrou na fila em 03/08 · item 57 (b) · **deixou de ser card solto: a área do cliente depende dele, porque o site não tem login nenhum hoje** [[LEELA-E12-landing]]
     - [ ] **S1221 · Login como overlay central da landing**
         - [ ] S1221-T1 overlay de entrar na home, reusando a tela de login que a porta de entrada construiu
-- [ ] **[E12] A área do cliente no web, com os próprios ingressos** — o e-mail manda um link por inscrito e a página do ingresso existe, mas não há lugar no site onde a compradora entre e veja tudo o que já comprou; você nomeou a lacuna ao decidir que a tela "estamos emitindo seu ingresso" é aviso, e não garantia de emissão 📋 entrou na fila em 03/08, sem posição ratificada · item 60 [[LEELA-E12-landing]]
-    - [ ] **S1222 · Meus ingressos no site**
-        - [ ] S1222-T1 área do cliente com os ingressos da conta, sobre o mesmo bilhete assinado da página do ingresso ⚔
-- [ ] **[E16] Uma conta só para quem é admin e organizador** — a mesma pessoa pode ser administradora da plataforma e usuária do painel com uma conta única; ver e trocar entre os papéis fica para depois, por decisão sua 🧊 adiado de propósito em 03/08 · item 57 (a) [[LEELA-E16-plataforma-superadmin]]
+- [ ] **[E12] A área do cliente, simples, com tudo o que é dela** — histórico de compras, ingressos separados em próximos e passados, clubes, convites para virar promotor, meus dados, trocar senha e a porta para criar conta de organizador; deixou de ser desejo e virou pré-requisito da compra, porque o e-mail manda a pessoa ver o ingresso dentro do sistema 📋 definida por você em 04/08 · absorve o item 60 [[LEELA-E12-landing]]
+    - [ ] **S1222 · A área do cliente**
+        - [ ] S1222-T1 histórico e ingressos vindo por consulta do próprio dono da conta, sem abrir dado de organizador ⚔
+        - [ ] S1222-T2 a casa autenticada na landing, com ingressos em próximos e passados
+        - [ ] S1222-T3 meus dados e trocar senha, sem encostar no perfil de organizador
+        - [ ] S1222-T4 meus clubes e a caixa de convites
+        - [ ] S1222-T5 a porta para o painel do organizador e a de criar conta de organizador ⚔
+- [ ] **[E12] Primeiro acesso: o link do e-mail define a senha e já entra** — hoje o link cai numa tela genérica do Google e a pessoa não entra em lugar nenhum; passa a abrir tela da Leela, definir a senha e aterrissar já logada nos ingressos dela 📋 decidido por você em 04/08 · a frente mais curta das três [[LEELA-E12-landing]]
+    - [ ] **S1223 · O primeiro acesso do comprador**
+        - [ ] S1223-T1 tela de definir senha na landing, com saída para link usado e para quem já definiu ⚔
+        - [ ] S1223-T2 o link passa a apontar para a tela da Leela, e cada origem para a sua casa ⚔
+        - [ ] S1223-T3 domínio da continuação autorizado no Auth
+- [ ] **[E00/E16] A conta do painel admin é outra, e os ambientes se separam** — uma conta só continua valendo para organizador e cliente, e a de administração da plataforma passa a ser separada, com o servidor recusando o acúmulo; corrige um registro errado meu que já tinha virado código 📋 correção sua de 03/08 · substitui o card do item 57 (a) [[LEELA-E16-plataforma-superadmin]]
+    - [ ] **S032 · A conta do painel de plataforma é outra**
+        - [ ] S032-T1 o roteamento pós-login para de dizer que os papéis se acumulam
+        - [ ] S032-T2 conceder administração a quem já é organizador ou cliente passa a ser recusado ⚔
+        - [ ] S032-T3 as três recusas que já existiam ganham caso em nome da regra ⚔
+        - [ ] S032-T4 comprar com o e-mail da administração confirma a compra e não vincula a conta ⚔
+        - [ ] S032-T5 varredura das contas de produção, só leitura
+        - [ ] S032-T6 a conta de administração de produção deixa de ser a de demonstração ⚔
+        - [ ] S032-T7 o menu de plataforma some para quem não é administrador
 - [ ] **[E09/E16] Antecipação de recebíveis sob demanda pelo admin** — juntar custo de parcelamento e custo de antecipação, aplicar markup e enxergar o faturamento da plataforma ao longo do tempo; a antecipação seria sob demanda, nunca automática, antecipando só o necessário para cobrir repasses 🧊 visão de produto declarada em 03/08, depois da S1610 · JUROS-2 [[LEELA-E09-financeiro-profissional]]
 - [ ] **[E12] O relógio do carrinho começa no clique de "Garantir inscrição"** — hoje os 15 minutos partem da primeira vez que o servidor calcula o preço; sua decisão de 2026-07-27 move o começo para o clique, o que pede um sinal de abertura na entrada da tela 📋 ajusta a RN-158 [[LEELA-E12-landing]]
 - [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]

@@ -19,6 +19,33 @@ O cadastro carimba o consentimento com a versão do termo, a finalidade e a hora
 - **Opções:** recoletar no resgate, com o overlay pedindo o aceite junto do código quando o registro falta — custa uma linha na tela e um campo na chamada · recusar a ativação sem aceite, com mensagem própria mandando falar com o time — mais rígido, e tranca gente legítima na porta · marcar e varrer, com o registro nascendo com o consentimento explicitamente vazio e um relatório listando quem está sem — não resolve, mas para de esconder.
 - **Onde aterrissa:** `resgatarConviteOrganizador` e o overlay de convite; RN-412 e RN-446. Registro completo em `02-rodadas/2026-08-02-retomada/08-achados-dono-0803.md §ONBOARD-REV`.
 
+### ADMINSEP-1 · até onde vai "ambientes separados"
+
+Você corrigiu um registro meu que já tinha virado código: a conta única vale para organizador e cliente, e a conta do painel admin é outra, com os ambientes separados por segurança. A parte das contas está fechada e entra na fila sem você. A palavra "ambientes" admite duas profundidades, e a segunda custa tempo de produto. *Hoje operar um evento e operar a plataforma é a mesma tela, no mesmo endereço, no mesmo pacote — `/plataforma` é uma rota do painel do organizador, e não existe fronteira nenhuma entre as duas.*
+
+- **O que fica com você:** dizer se para em contas distintas ou vai até endereço próprio para o painel de administração.
+- **Por que agora:** enquanto for a mesma origem, qualquer falha de tela no painel do organizador alcança o token que abre a plataforma inteira. Decidir depois custa o mesmo; decidir agora deixa a fila inteira coerente de uma vez.
+- **Opções:** contas distintas apenas, que já atende a sua frase na letra (**default proposto**, e é o que entra na fila de qualquer forma) · somar um endereço próprio para o painel admin, saindo do mesmo repositório, que compra fronteira de origem de verdade e permite ligar App Check só nele — segunda onda, não bloqueia nada · projeto Firebase separado, que eu **recomendo recusar**, porque o administrador opera sobre o mesmo banco cross-tenant e a fronteira que importa é o token, não o projeto.
+- **Onde aterrissa:** `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md` §Parte 3; RN-449 em [[LEELA-E00-fundacao-tecnica]] e [[LEELA-E16-plataforma-superadmin]].
+
+### ADMINSEP-2 · o botão da área do cliente leva ao painel do organizador, não ao de plataforma
+
+Ao definir a área do cliente você pediu "um botão para entrar na área de administrador". A frase tem duas leituras e elas mudam o desenho, então prefiro perguntar a presumir: presumir a sua intenção em silêncio foi exatamente o que produziu o erro que você acabou de corrigir. *Você abre a área do cliente e clica no botão: ou ele te leva ao painel de quem produz eventos, ou ele te leva ao painel da plataforma, que você acabou de mandar viver em outra conta.*
+
+- **O que fica com você:** ratificar a leitura, ou trocar.
+- **Por que agora:** é uma linha na tela e uma linha na spec agora; depois de construída é retrabalho.
+- **Opções:** é a área do **organizador**, e o botão só aparece para quem também é organizador (**default proposto**, porque é a única leitura que produz um botão útil — sob a outra, como o painel de plataforma passa a viver em conta separada, o botão nunca apareceria para um cliente) · é o painel de plataforma, e aí o botão existe mas nasce morto.
+- **Onde aterrissa:** RN-451 em [[LEELA-E12-landing]]; task B5 em `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`.
+
+### SENHA-1 · o e-mail de "esqueci minha senha" é o único sem cara de Leela
+
+Vale primeiro desfazer uma confusão: o e-mail de **primeiro acesso**, o que a pessoa recebe depois da primeira compra, **já é nosso** — layout da Leela, remetente da Leela, enviado pela Brevo. O que sai com template genérico e remetente `noreply@leela-hub.firebaseapp.com` é o outro, o "esqueci minha senha" do painel, porque nesse caminho quem dispara é o Firebase. *A organizadora esquece a senha, pede recuperação, e recebe um e-mail que não parece ter vindo da Leela.*
+
+- **O que fica com você:** se vale trazer esse e-mail para a Brevo agora ou deixar para depois.
+- **Por que agora:** você já pediu logo e identidade nos e-mails, e o canal da Brevo acabou de ser desbloqueado. É o único e-mail do fluxo de conta que ficaria de fora.
+- **Opções:** deixar como está por ora, já que o e-mail que o cliente recebe é o nosso e este só aparece para quem esquece a senha (**default proposto**) · trazer para a Brevo no mesmo lote da correção do link, o que custa um template novo e um caminho de envio próprio.
+- **Onde aterrissa:** `packages/api-client/src/auth.ts`; RN-453 em [[LEELA-E12-landing]].
+
 ### DEPLOY-1 · a porta de entrada do organizador está pronta e não está no ar
 
 O pacote inteiro foi construído, revisado por antagonista em contexto fresco e está verde: cadastro aberto, tela de convites no super-admin, resgate atômico, overlay bloqueante e o roteamento pós-login que você ratificou. Nada disso foi para produção. *Você abre o site hoje e não existe onde um organizador novo clique para entrar.*
@@ -55,6 +82,14 @@ A conferência de versão vale na criação do pedido: se a tela declara uma ver
 - **Onde aterrissa:** `aceitesVersaoExibida.integration` e o caminho de replay de `createInscricaoCharge`.
 
 ## Ações que só você pode executar
+
+### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
+
+Achado enquanto eu apurava a separação de contas que você pediu. A conta que administra a plataforma em produção é `admin@demo-leela.dev`, com a senha `demo1234` — a mesma senha de vitrine que está publicada no repositório. O seed de produção a criou de propósito, junto com as contas de demonstração, e o login já foi provado funcionando contra `leela-hub`. *Qualquer pessoa que abra o repositório tem, hoje, a senha da conta que enxerga o CPF e o telefone de todos os inscritos de todos os organizadores, lê dados bancários em claro, aprova repasse, estorna compra, muda a tabela de taxa e cria outros administradores.*
+
+- **O que fica com você:** escolher o e-mail real do administrador da plataforma e definir uma senha de verdade. Só você pode fazer as duas coisas.
+- **Por que agora:** é fator único, sem segundo fator, com App Check desligado, e o produto já está no ar com dado real de compra. Não depende de nenhuma decisão de arquitetura, e não espera o ADMINSEP-1.
+- **Onde aterrissa:** a conta nova recebe a claim pelo caminho manual, que já é o declarado para produção; o seed para de semear administrador contra o projeto real; e a conta de demonstração é revogada. O passo a passo está na task A6 de `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`. As contas de organizador de demonstração podem ficar: elas não alcançam a plataforma.
 
 ### 34 · a jornada completa no ar, com a compra real
 
@@ -199,7 +234,7 @@ O cadastro grava a conta de login e o registro do organizador em dois passos. Se
 
 - **O que fica com você:** a posição na fila. A causa que o formulário produzia sozinho já foi fechada pela review de 03/08; o que sobra é falha de rede, quota ou indisponibilidade.
 - **Por que agora:** hoje a única recuperação é intervenção manual no super-admin, e isso não escala nem para o beta. Duas saídas possíveis, ambas de produto: o cadastro tentar de novo e mostrar na tela que faltou algo antes de a pessoa sair, ou a tela de entrar oferecer o campo de código quando barra — o que transforma o aviso em porta.
-- **Onde aterrissa:** `CadastrarPage` e `EntrarPage`; RN-411, RN-446 e RN-448 em [[LEELA-E00-fundacao-tecnica]].
+- **Onde aterrissa:** `CadastrarPage` e `EntrarPage`; RN-411, RN-446 e RN-449 em [[LEELA-E00-fundacao-tecnica]].
 
 ### Entrou em 03/08 · a borda que segura força bruta não está ligada (pendência do CTO)
 

@@ -2425,3 +2425,116 @@ de venda (e então publicar sem lote deveria ser recusado, ou avisado no painel)
 landing passa a cair no preço legado quando não há lote. Enquanto ninguém decide, publicar
 um evento pode não publicar nada. Está na fila do painel de decisões como card de
 prioridade alta; nenhuma linha de código foi tocada.
+
+---
+
+## Delta a área do cliente e o primeiro acesso (SPEC-ADMINSEP · 2026-08-04)
+
+O dono definiu a área do cliente e fechou a jornada de primeiro acesso na virada de 03 para
+04/08. A área deixou de ser card de backlog e virou pré-requisito da compra, porque o e-mail
+manda o comprador ver o ingresso dentro do sistema. Ela chegou junto com a correção sobre
+contas separadas (RN-449), e foi especificada na mesma lane de propósito: são o mesmo assunto,
+que é quem é quem dentro de uma conta.
+
+Rodada em `02-rodadas/2026-08-02-retomada/`, arquivos `09-spec`, `10-rns` e `11-fila`.
+
+### RN-451 (nova, dona) · a área do cliente
+
+Verbatim do dono: *"Ela deve ser simples, apenas com histórico de compras, convites (para ser
+promotor/influenciador), Meus Clubes, Meus Ingressos (próximos eventos e passados), meus
+dados, opção de trocar senha. Opção de criar uma conta de organizador também."* Mais o botão
+para a área de administrador, tratado abaixo.
+
+Escopo fechado nessas oito coisas. Ele frisou simples.
+
+**O furo que a spec teve de contornar:** o cliente **não lê** as próprias compras nem as
+próprias inscrições pelo SDK. `pedidos` exige `isTenantWriter` ou `platform_admin`
+(`firestore.rules:2542`) e `inscritos` exige administrador, escritor do tenant ou papel de
+equipe (`:900`). Um token `athlete` não lê nenhum dos dois, e isso é deliberado: são coleções
+tenant-scoped com PII. **A saída não é abrir Rule.** É o molde que a casa já usa em
+`getCheckoutPrefill` (`prefillCheckout.ts:99`, `:170-180`): callable que devolve só o registro
+da própria conta. Abrir `pedidos` ao atleta entregaria dado de tenant a um token de
+participante, que é o erro que a RN-417 já teve de desfazer uma vez.
+
+Consequência de experiência que precisa estar escrita: o vínculo conta↔compra é
+`pessoas/{ref}.contaUid`, e o leitor exige e-mail verificado. **A área mostra as compras de
+quem verificou o e-mail**, e a conta nasce não verificada. Quem comprou para terceiros sem
+CPF de pagador não tem vínculo, limitação já documentada em `contaSemFriccao.ts`.
+
+**Premissa que subiu ao painel como ADMINSEP-2:** "botão para entrar na área de
+administrador" é lido como a área do **organizador**, não o painel de plataforma. Racional: no
+mesmo despacho o dono determinou que o painel `platform_admin` vive em conta separada, então
+um botão da área do cliente para lá reconstruiria na tela o acúmulo que a outra metade da
+frase proíbe; e o vocabulário do produto chama o painel do organizador de "painel admin" em
+vários lugares, incluindo a ADR-009. Sob a outra leitura o botão seria um botão morto. A
+premissa aguarda ratificação.
+
+**Duas portas para virar organizador, e elas convivem.** "Criar conta de organizador" a partir
+da área **não** provisiona tenant: cria `profissionais/{uid}` com `statusOnboarding:
+'aguardando_convite'` (RN-411) e entrega a pessoa no overlay bloqueante que a ONBOARD-BUILD
+construiu (RN-416). Uma máquina só, dois botões, e o go-live segue controlado pelo convite. A
+alternativa, aprovação self-service sem convite, revogaria a decisão do dono e não foi pedida.
+
+**S1222 absorvido.** O card de backlog "área do cliente com os próprios ingressos" ganha corpo
+aqui e não nasce identidade nova. **Bloqueado por `S1221-T1`**: a landing não tem autenticação
+nenhuma hoje. Uma varredura por `signIn`, `createUserWithEmailAndPassword`, `useAuth` e
+`onAuthStateChanged` em `apps/landing` devolve zero, e o único login existente é o anônimo do
+checkout. A `S1221`, que o dono pediu em 03/08 como overlay de login na landing, deixa de ser
+card solto e vira pré-requisito desta área.
+
+### RN-452 (nova, dona) · ver o ingresso continua não exigindo conta
+
+A página `/ingresso/{token}` fica pública e sem login. A razão está escrita no próprio arquivo
+e não é conveniência: quem recebe o e-mail é o comprador, que frequentemente não é o inscrito,
+porque o pagador compra para a família (ADR-011). O inscrito que ganhou a inscrição de presente
+**nunca** terá conta ligada àquela compra, e trancar o ingresso atrás de login o deixaria sem
+ingresso.
+
+A área do cliente é **porta adicional**, nunca substituta. Pelo link, a pessoa vê aquele
+ingresso, com QR e imprimível. Pela área, quem tem conta e verificou o e-mail vê todos os
+ingressos, em próximos e passados, mais o histórico. RN-418, RN-422 e D-ING-10 ficam intactas.
+
+### RN-453 (nova, dona) · o primeiro acesso define a senha e entra no sistema
+
+Verbatim do dono: *"sobre o primeiro acesso da pessoa, ela precisa definir a senha neste
+acesso, ok? Enviamos o link, ela entra define a senha e entra no sistema."*
+
+Ratifica o que já existe: a conta nasce na **confirmação do pagamento** (RN-155), sem senha, e
+o e-mail da Leela leva o link oficial do Firebase, de uso único. Vale uma correção de leitura
+que circulou: **o e-mail de primeiro acesso já é nosso**, com layout e remetente da Leela, pela
+Brevo (`renderContaCriadaEmail`). O `generatePasswordResetLink` apenas gera o link. O template
+genérico do Firebase aparece no outro fluxo, o "esqueci minha senha" do painel, e a decisão de
+trazê-lo para a Brevo subiu ao painel como **SENHA-1**.
+
+**O defeito medido:** `actionCodeSettings` não existe em lugar nenhum do código. Varredura em
+`functions/src`, `apps` e `packages` devolve zero fora de artefatos de build, e os dois pontos
+de origem chamam a API sem o parâmetro (`contaSemFriccao.ts:107`,
+`packages/api-client/src/auth.ts:214`). O link cai no handler hospedado padrão do Firebase, a
+pessoa define a senha numa tela genérica e não entra em sistema nenhum. A `RedefinirSenhaPage`
+do painel, que existe e funciona, nunca é alcançada.
+
+**O destino se decide pela origem**, e essa é a parte que mais importa aqui. Link de compra
+continua na landing, numa `/definir-senha` própria, e termina em Meus Ingressos. Link do painel
+continua no painel e termina no roteamento por papel do item 57. Mandar o comprador para o
+`/redefinir-senha` do painel o faria ser expulso logo depois de definir a senha, pela guarda de
+conta órfã (`destinoPosLogin.ts:67-73`), que é o oposto do que o dono descreveu.
+
+O Action URL global do Console do Firebase **não** resolve e não deve ser usado como atalho: é
+único para o projeto e não distingue comprador de organizador. O comentário em
+`auth.ts:209-212`, que o propunha, fica superado e é corrigido junto.
+
+Link usado duas vezes, expirado, ou de quem já definiu a senha tem três estados
+distinguíveis, cada um com saída própria, e o caminho de volta reenvia em vez de mandar pedir
+ajuda. A confirmação do reenvio é neutra, pela mesma disciplina anti-enumeração que o painel
+já pratica.
+
+**Conferência operacional que não se presume:** o domínio de continuação precisa estar nos
+Authorized Domains do Auth. `leela-landing.web.app` é um segundo site de Hosting e pode não
+estar na lista; sem isso o Firebase recusa com `auth/unauthorized-continue-uri`.
+
+### RN-450 (nova, dona no E00) · o que este épico consome
+
+Organizador e cliente cabem na mesma conta, e é assim que tem de ser. Para o E12 isso vira
+uma propriedade de tela: editar "meus dados" na área do cliente escreve em `atletas/{uid}` e
+**não** toca `profissionais/{uid}`, que é o perfil do organizador e já tem casa em `/conta` no
+painel. Uma conta que acumula os dois tem os dois documentos, e cada tela edita o seu.
