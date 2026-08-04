@@ -225,14 +225,29 @@ dela; confere com o que se vê daqui:
 O saldo é bom: a logo está viva antes dos e-mails que a apontam, e não o contrário. Se a
 ordem tivesse sido inversa, o primeiro lote de e-mails sairia com imagem quebrada.
 
-### Um artefato de outra lane suja o `tsc` das Functions
+### Um artefato de outra lane suja o `tsc` e a suíte das Functions
 
 `functions/src/__probe__/` é uma cópia de `functions/src` deixada pela PIXREAL-FIX (sondagem
-do bundle). Está **sem rastreio e fora do `.gitignore`**, e como o `tsconfig` das Functions
-inclui `src/**`, ela quebra `tsc --noEmit` do pacote inteiro com erros de import que não
-existem no código de verdade. O gate desta lane foi verificado excluindo esse diretório
-(zero erros). Duas coisas para quem fechar a rodada: apagar a pasta, e decidir se ela entra
-no `.gitignore` — enquanto estiver assim, um `git add -A` distraído a versiona.
+do bundle). Está **sem rastreio e fora do `.gitignore`**, e atrapalha em dois lugares, porque
+tanto o `tsconfig` quanto o `vitest.config` das Functions varrem `src/**`:
+
+- `tsc --noEmit` do pacote quebra com erros de import que não existem no código de verdade;
+- `vitest run` coleta `src/__probe__/src/__tests__/secretsBinding.contract.test.ts`, a cópia
+  do teste, que falha pelo mesmo motivo.
+
+Os gates desta lane foram rodados excluindo esse diretório. Duas coisas para quem fechar a
+rodada: apagar a pasta, e decidir se ela entra no `.gitignore` — enquanto estiver assim, um
+`git add -A` distraído a versiona.
+
+### `FIREBASE_AUTH_EMULATOR_HOST` não é global, e vale registrar
+
+`platformAdminSeed.test.ts` recusa rodar sem `FIREBASE_AUTH_EMULATOR_HOST` (guarda proposital
+contra rodar o bootstrap de `platform_admin` em produção). Só que setar a variável para a
+suíte INTEIRA reprova três outros arquivos que passam sem ela — `equipeRules.integration`,
+`inscritosRules` e `setClaimsEquipe.integration`, 102 testes que dependem de gerir a própria
+ligação com o Auth. Medido nos dois sentidos nesta lane. A configuração da casa é rodar a
+suíte **sem** a variável e dar a variável só ao arquivo que a exige. Nenhum dos dois casos
+tem relação com esta lane; fica registrado para não custar meia hora de novo.
 
 ### Boards
 
