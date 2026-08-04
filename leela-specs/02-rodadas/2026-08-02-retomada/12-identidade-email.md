@@ -120,6 +120,10 @@ Os oito e-mails renderizados em HTML, com dados de exemplo, em
 `index.html` na mesma pasta percorre os oito. Cada um tem um `.txt` ao lado com a versão em
 texto puro que acompanha toda mensagem. Regerar: `npm --prefix functions run email:render`.
 
+Dois links de senha diferentes nas amostras, e a diferença é o estado real: o nº 8 já sai
+reescrito para a tela do painel, e o nº 2 ainda cai no handler do Firebase pelo motivo
+explicado mais abaixo. A amostra conta a verdade sobre cada um.
+
 Nenhum navegador foi aberto e nenhum screenshot foi tirado. **A conferência visual é do
 dono, por esses arquivos.**
 
@@ -202,6 +206,33 @@ Zero deploy foi feito nesta lane. O que o deploy precisa saber:
   `leela-hub.web.app` já é. Se um domínio novo entrar sem ser autorizado, o adapter degrada
   para o link sem `continueUrl` e loga `reset_senha_continue_uri_recusada` — a recuperação
   de conta continua funcionando, mas alguém precisa consertar.
+
+## Colisão com a PIXREAL-FIX, medida dos dois lados
+
+As duas lanes rodaram na mesma worktree. A PIXREAL-FIX mediu o efeito e registrou no handoff
+dela; confere com o que se vê daqui:
+
+- **A landing subiu com a logo do e-mail de brinde.** O build de `00:44` daquela lane levou
+  junto `apps/landing/public/brand/leela-wordmark-email.png`, e é por isso que o endereço já
+  responde 200 sem que esta lane tenha feito deploy nenhum. Os tokens novos
+  (`--brand-wordmark*`, `--email-*`) também subiram: são puramente aditivos e não têm nenhuma
+  referência em `apps/landing`, então o efeito visual é nulo.
+- **As Functions NÃO subiram com a marca.** O bundle daquela lane foi gerado `00:41:14` e
+  `templates.ts` só mudou `00:46:21`. Está confirmado por marcador no artefato deployado:
+  `leela-wordmark-email` = 0, `color-scheme` = 0. Ou seja, o e-mail com a marca ainda espera
+  um deploy de Functions coordenado — que é o combinado.
+
+O saldo é bom: a logo está viva antes dos e-mails que a apontam, e não o contrário. Se a
+ordem tivesse sido inversa, o primeiro lote de e-mails sairia com imagem quebrada.
+
+### Um artefato de outra lane suja o `tsc` das Functions
+
+`functions/src/__probe__/` é uma cópia de `functions/src` deixada pela PIXREAL-FIX (sondagem
+do bundle). Está **sem rastreio e fora do `.gitignore`**, e como o `tsconfig` das Functions
+inclui `src/**`, ela quebra `tsc --noEmit` do pacote inteiro com erros de import que não
+existem no código de verdade. O gate desta lane foi verificado excluindo esse diretório
+(zero erros). Duas coisas para quem fechar a rodada: apagar a pasta, e decidir se ela entra
+no `.gitignore` — enquanto estiver assim, um `git add -A` distraído a versiona.
 
 ### Boards
 
