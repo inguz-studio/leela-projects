@@ -170,6 +170,46 @@ function fechoDe(raiz: string): Set<string> {
   return visto;
 }
 
+/**
+ * As formas de LER um segredo do ambiente que a análise reconhece.
+ *
+ * ⚠ PIXREAL-REV (2026-08-04) — a versão original desta função procurava DUAS
+ * strings literais (`process.env['X']` e `env['X']`), e três sondas plantadas
+ * numa cópia isolada de `functions/src` atravessaram a guarda inteira sem
+ * arranhão: `process.env.X` (ponto), `const { X } = process.env`
+ * (desestruturação) e `ambiente['X']` (parâmetro de env com outro nome). Todas
+ * compilam — o `tsconfig` não liga `noPropertyAccessFromIndexSignature` —, e
+ * qualquer uma delas reintroduziria em silêncio a classe de defeito que já
+ * custou três incidentes. Aqui o reconhecimento é por FORMA, não por literal:
+ *
+ *   1. colchete sobre QUALQUER identificador — `process.env['X']`, `env['X']`,
+ *      `ambiente['X']`. O nome do parâmetro não pode ser a diferença entre
+ *      pegar e não pegar;
+ *   2. ponto sobre algo que termina em `env`/`Env` — `process.env.X`;
+ *   3. desestruturação a partir de env — `const { X, Y } = process.env`.
+ *
+ * Erra para o lado seguro (binding a mais) por construção: uma menção em
+ * string de log casa o padrão 1 se estiver entre colchetes, e não casa nada
+ * fora disso.
+ */
+function leEnv(fonte: string, s: Segredo): boolean {
+  const colchete = new RegExp(`\\[\\s*(['"\`])${s}\\1\\s*\\]`);
+  const ponto = new RegExp(`[A-Za-z0-9_$]*[eE]nv\\s*\\.\\s*${s}\\b`);
+  const desestrutura = new RegExp(
+    `\\{[^{}]*\\b${s}\\b[^{}]*\\}\\s*=\\s*[A-Za-z0-9_$.]*[eE]nv\\b`
+  );
+  return colchete.test(fonte) || ponto.test(fonte) || desestrutura.test(fonte);
+}
+
+/** União dos fechos de todos os exports do index (+ o próprio index). */
+function fechoDeTodosOsExports(): Set<string> {
+  const todos = new Set<string>([INDEX]);
+  for (const fn of exportsDoIndex()) {
+    for (const modulo of fechoDe(fn.arquivo)) todos.add(modulo);
+  }
+  return todos;
+}
+
 /** Segredos que ESTE módulo pode ler (chamadas de acessor + env direto). */
 function segredosDoModulo(arquivo: string): Set<Segredo> {
   const fonte = semComentarios(ler(arquivo));
@@ -181,9 +221,7 @@ function segredosDoModulo(arquivo: string): Set<Segredo> {
     }
   }
   for (const s of SEGREDOS) {
-    if (fonte.includes(`process.env['${s}']`) || fonte.includes(`env['${s}']`)) {
-      precisa.add(s);
-    }
+    if (leEnv(fonte, s)) precisa.add(s);
   }
   return precisa;
 }
@@ -196,11 +234,32 @@ function segredosDoModulo(arquivo: string): Set<Segredo> {
  * por isso que a dispensa é estreita — ela não cobre uma chamada escrita no
  * módulo da própria function, então a próxima pessoa que precisar do segredo
  * de verdade encontra o teste vermelho, não uma exceção pronta.
+ *
+ * ⚠ PIXREAL-REV (2026-08-04) — a dispensa passou a nomear a ORIGEM, e não só
+ * o par (function, segredo). Sem isso ela era um cheque em branco vitalício:
+ * plantei um helper novo com `selectPaymentProvider()` no caminho de execução
+ * do `requestTransfer` (uma necessidade REAL de chave de gateway numa function
+ * que sobe sem nenhum segredo) e a guarda seguiu VERDE, porque a dispensa
+ * antiga cobria "requestTransfer + ASAAS_API_KEY" viesse de onde viesse.
+ * Agora ela cobre exatamente os módulos listados em `via`: qualquer caminho
+ * NOVO para o mesmo segredo volta a ser reportado, e uma via que deixou de
+ * existir derruba o teste em vez de virar exceção órfã.
  */
-const HERDADO_OK: { fn: string; segredo: Segredo; porque: string }[] = [
+const HERDADO_OK: {
+  fn: string;
+  segredo: Segredo;
+  /** Módulos (sufixo do caminho em `src/`) que produzem a necessidade herdada. */
+  via: string[];
+  porque: string;
+}[] = [
   {
     fn: 'cotarInscricaoCheckout',
     segredo: 'ASAAS_API_KEY',
+    via: [
+      'checkout/createInscricaoCharge.ts',
+      'checkout/expirarPixPendente.ts',
+      'payments/selectProvider.ts',
+    ],
     porque:
       'importa `carregarInsumos` de createInscricaoCharge.ts, onde o ' +
       '`selectPaymentProvider()` mora DENTRO da callable de cobrança. Cotar é ' +
@@ -211,6 +270,11 @@ const HERDADO_OK: { fn: string; segredo: Segredo; porque: string }[] = [
   {
     fn: 'cotarInscricaoCheckout',
     segredo: 'ASAAS_WEBHOOK_AUTH_TOKEN',
+    via: [
+      'checkout/createInscricaoCharge.ts',
+      'checkout/expirarPixPendente.ts',
+      'payments/selectProvider.ts',
+    ],
     porque:
       'viaja em par com o ASAAS_API_KEY porque `asaasConfigFromEnv` exige os ' +
       'dois para construir o provider — e a cotação não constrói provider ' +
@@ -219,6 +283,12 @@ const HERDADO_OK: { fn: string; segredo: Segredo; porque: string }[] = [
   {
     fn: 'cotarInscricaoCheckout',
     segredo: 'CRM_ID_PEPPER',
+    via: [
+      'checkout/createInscricaoCharge.ts',
+      'checkout/pessoaRegistry.ts',
+      'checkout/travaCobrancaPix.ts',
+      'crm/agregarClientes.ts',
+    ],
     porque:
       'o `crmIdPepper()` de createInscricaoCharge.ts é chamado em ' +
       '`derivarOrigemAceite`, que só roda no caminho de CRIAÇÃO (hash do IP do ' +
@@ -227,6 +297,11 @@ const HERDADO_OK: { fn: string; segredo: Segredo; porque: string }[] = [
   {
     fn: 'requestTransfer',
     segredo: 'ASAAS_API_KEY',
+    via: [
+      'checkout/estornarInscricao.ts',
+      'finance/requestRefund.ts',
+      'payments/selectProvider.ts',
+    ],
     porque:
       'importa `lerPoliticaVendasTx` de requestRefund.ts, cujo ' +
       '`selectPaymentProvider()` vive nas callables de estorno. O saque é uma ' +
@@ -236,6 +311,11 @@ const HERDADO_OK: { fn: string; segredo: Segredo; porque: string }[] = [
   {
     fn: 'requestTransfer',
     segredo: 'ASAAS_WEBHOOK_AUTH_TOKEN',
+    via: [
+      'checkout/estornarInscricao.ts',
+      'finance/requestRefund.ts',
+      'payments/selectProvider.ts',
+    ],
     porque:
       'par obrigatório do ASAAS_API_KEY na construção do provider, e o saque ' +
       'não constrói provider. Quem fala com o gateway na cadeia de repasse é ' +
@@ -293,6 +373,32 @@ function declaradosDe(arquivo: string, nome: string): Segredo[] {
 
 const exportadas = exportsDoIndex();
 
+/** Caminho do módulo relativo a `src/`, com barras normais (chave de `via`). */
+function relSrc(arquivo: string): string {
+  return arquivo.replace(/\\/g, '/').split('/src/').pop() as string;
+}
+
+/**
+ * Origem de cada necessidade HERDADA: segredo → módulos do fecho que o leem.
+ * Necessidade PRÓPRIA (chamada no módulo da própria function) fica de fora —
+ * ela nunca é dispensável.
+ */
+function origensHerdadas(fn: Exportada): Map<Segredo, string[]> {
+  const propria = segredosDoModulo(fn.arquivo);
+  const origens = new Map<Segredo, string[]>();
+  for (const modulo of fechoDe(fn.arquivo)) {
+    if (modulo === fn.arquivo) continue;
+    for (const s of segredosDoModulo(modulo)) {
+      if (propria.has(s)) continue;
+      const lista = origens.get(s) ?? [];
+      lista.push(relSrc(modulo));
+      origens.set(s, lista);
+    }
+  }
+  for (const [s, lista] of origens) origens.set(s, [...new Set(lista)].sort());
+  return origens;
+}
+
 describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
   it('a leitura do index encontrou a superfície deployável inteira', () => {
     // Sanidade da própria análise: um regex que para de casar transformaria
@@ -300,6 +406,33 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
     expect(exportadas.length).toBeGreaterThan(60);
     expect(exportadas.map((e) => e.nome)).toContain('createInscricaoCharge');
     expect(exportadas.map((e) => e.nome)).toContain('asaasWebhook');
+  });
+
+  it('o index não esconde function nenhuma atrás de `export *`', () => {
+    // ⚠ PIXREAL-REV: a leitura acima só enxerga `export { … } from './x'`. Uma
+    // function exportada por `export * from './x'` some da análise INTEIRA — e
+    // some em silêncio, porque o total continua acima do piso de sanidade.
+    // Plantei uma sonda assim numa cópia isolada: ela lia `QR_TOKEN_KEYS` sem
+    // declarar e a guarda ficou verde. Enquanto a análise for por nome, a
+    // forma que a esconde é proibida no index.
+    const estrelas = [...semComentarios(ler(INDEX)).matchAll(/^export\s*\*.*$/gm)];
+    expect(estrelas.map((m) => m[0])).toEqual([]);
+  });
+
+  it('a lista SEGREDOS cobre todo secret que algum runWith declara', () => {
+    // A análise é fechada sobre 5 nomes. Um segredo NOVO amarrado a um
+    // `runWith` sem entrar aqui nasce fora da guarda: ninguém confere se quem
+    // o lê o declarou. Este caso falha no dia em que o sexto segredo aparecer.
+    const declarados = new Set<string>();
+    for (const arquivo of fechoDeTodosOsExports()) {
+      const fonte = semComentarios(ler(arquivo));
+      for (const bloco of fonte.matchAll(/secrets\s*:\s*\[([^\]]*)\]/g)) {
+        for (const nome of (bloco[1] as string).matchAll(/'([A-Z][A-Z0-9_]{2,})'/g)) {
+          declarados.add(nome[1] as string);
+        }
+      }
+    }
+    expect([...declarados].sort().filter((s) => !SEGREDOS.includes(s as Segredo))).toEqual([]);
   });
 
   it('a análise reconhece os bindings que já existem (controle positivo)', () => {
@@ -316,19 +449,23 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
       // HERDADA (veio do resto do fecho de imports). A dispensa só alcança a
       // segunda — chamada própria nunca é dispensável.
       const propria = segredosDoModulo(fn.arquivo);
-      const herdada = new Set<Segredo>();
-      for (const modulo of fechoDe(fn.arquivo)) {
-        if (modulo === fn.arquivo) continue;
-        for (const s of segredosDoModulo(modulo)) {
-          if (!propria.has(s)) herdada.add(s);
-        }
-      }
-      const dispensado = (s: Segredo): boolean =>
-        HERDADO_OK.some((d) => d.fn === fn.nome && d.segredo === s);
+      const herdada = origensHerdadas(fn);
+
+      // A dispensa vale POR ORIGEM: ela cobre o segredo enquanto TODOS os
+      // módulos que o produzem estiverem na lista `via` que alguém leu e
+      // assinou. Caminho novo para o mesmo segredo ⇒ volta a ser reportado.
+      const dispensado = (s: Segredo, origens: string[]): boolean => {
+        const permitidas = new Set(
+          HERDADO_OK.filter((d) => d.fn === fn.nome && d.segredo === s).flatMap((d) => d.via)
+        );
+        return permitidas.size > 0 && origens.every((o) => permitidas.has(o));
+      };
 
       const ausentes = [
         ...[...propria].filter((s) => !fn.declarados.includes(s)),
-        ...[...herdada].filter((s) => !fn.declarados.includes(s) && !dispensado(s)),
+        ...[...herdada]
+          .filter(([s, origens]) => !fn.declarados.includes(s) && !dispensado(s, origens))
+          .map(([s]) => s),
       ];
       if (ausentes.length > 0) {
         faltando.push(`${fn.nome} → falta ${[...new Set(ausentes)].sort().join(', ')}`);
@@ -344,6 +481,26 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
     for (const d of HERDADO_OK) {
       expect(exportadas.map((e) => e.nome)).toContain(d.fn);
       expect(d.porque.length).toBeGreaterThan(60);
+      expect(d.via.length).toBeGreaterThan(0);
     }
+  });
+
+  it('toda dispensa é EXERCIDA hoje, e nenhuma via dela é caminho morto', () => {
+    // O outro lado da dispensa por origem: uma `via` que deixou de produzir a
+    // necessidade (import removido, módulo renomeado) é uma autorização que
+    // sobreviveu ao fato. Ela não incomoda ninguém até o dia em que um caminho
+    // NOVO para o mesmo segredo cai debaixo dela — e aí silencia um defeito
+    // real. Este caso obriga a lista a descrever o repo de hoje.
+    const sobrando: string[] = [];
+    for (const d of HERDADO_OK) {
+      const fn = exportadas.find((e) => e.nome === d.fn);
+      if (fn === undefined) continue; // já reportado pelo caso anterior
+      const origens = origensHerdadas(fn).get(d.segredo) ?? [];
+      for (const via of d.via) {
+        if (!origens.includes(via)) sobrando.push(`${d.fn}/${d.segredo} → via morta: ${via}`);
+      }
+      if (origens.length === 0) sobrando.push(`${d.fn}/${d.segredo} → dispensa sem necessidade`);
+    }
+    expect(sobrando.sort()).toEqual([]);
   });
 });
