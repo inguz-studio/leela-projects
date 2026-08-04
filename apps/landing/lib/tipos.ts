@@ -8,10 +8,14 @@
 // pt-BR (fuso America/Sao_Paulo) para evitar recomputo/serialização no render.
 // =============================================================================
 
-import type { CanalSecao, GradeCorte } from '@leela/core';
+import type { CanalSecao, EstadoVenda, GradeCorte } from '@leela/core';
 
-/** Estado público de venda derivado (S1201-T3). */
-export type EstadoVenda = 'aberto' | 'encerrado' | 'esgotado';
+/**
+ * Estado público de venda derivado (S1201-T3). A definição mora no core desde
+ * a VITRINE-FIX — vitrine e painel do organizador leem a MESMA régua; aqui só
+ * re-exportamos para não quebrar quem já importava daqui.
+ */
+export type { EstadoVenda };
 
 /** Modalidade/percurso com preço vigente derivado (RN-301 / ADR-012). */
 export interface ModalidadePublica {

@@ -2,18 +2,41 @@
 // apps/landing/lib/estadoVenda.ts
 //
 // Derivações PURAS da superfície pública (S1201-T3), compostas 100% sobre os
-// primitivos de `@leela/core` (loteAtivo/loteEsgotado/loteEncerrado) — nada de
-// aritmética de preço ou regra de virada reimplementada aqui (reuso-first).
+// primitivos de `@leela/core` — nada de aritmética de preço ou regra de virada
+// reimplementada aqui (reuso-first).
 //
-// Também concentra o "relógio do servidor" (`agoraDoServidor`): o instante de
-// observação passado a `precoVigente`/`loteAtivo`. Default = relógio real. Um
-// override opcional `LEELA_CLOCK` (ISO) permite observar o seed no estado para
-// o qual foi escrito (Lote 2 vigente na janela fev–abr/2026) sem FABRICAR
-// preço — o preço continua derivado dos lotes reais no instante escolhido.
+// VITRINE-FIX: a régua de "está vendendo?" SAIU daqui e foi para o core
+// (`eventos/vitrine.ts`). Ela vivia neste arquivo decidindo só pelos lotes,
+// enquanto o servidor (`resolverItem`) também aceita o preço-base legado do
+// percurso quando a modalidade não tem lote nenhum — e é assim que nasce todo
+// evento criado pelo painel, porque `criarEvento` exige `percursos` e não cria
+// lote. O resultado era evento publicado servindo "Inscrições encerradas" com
+// o servidor pronto para cobrar. Uma régua só, no core, lida pela vitrine E
+// pelo painel do organizador. `deriveEstadoVenda` segue re-exportada daqui
+// para não quebrar quem já a importava.
+//
+// O que continua sendo daqui: o "relógio do servidor" (`agoraDoServidor`) — o
+// instante de observação passado a `precoVigente`/`loteAtivo`. Default =
+// relógio real. Um override opcional `LEELA_CLOCK` (ISO) permite observar o
+// seed no estado para o qual foi escrito (Lote 2 vigente na janela fev–abr/
+// 2026) sem FABRICAR preço — o preço continua derivado do dado real no
+// instante escolhido.
 // =============================================================================
 
-import { loteAtivo, loteEsgotado, type Lote, type StatusEvento } from '@leela/core';
-import type { EstadoVenda } from './tipos';
+import {
+  deriveEstadoVenda,
+  type EstadoVenda,
+  type ModalidadeVitrine,
+  type StatusEvento,
+} from '@leela/core';
+
+export { deriveEstadoVenda };
+
+/**
+ * Lotes (e preço-base legado) agrupados por modalidade — entrada da régua.
+ * Alias do tipo do core, mantido pelo nome que a landing já usava.
+ */
+export type ModalidadeLotes = ModalidadeVitrine;
 
 /**
  * Instante de observação do servidor. Override honesto por `LEELA_CLOCK` (ISO);
@@ -36,50 +59,6 @@ export function agoraDoServidor(): Date {
  */
 export function statusEhPublico(status: StatusEvento): boolean {
   return status === 'publicado' || status === 'ao_vivo';
-}
-
-/** Lotes agrupados por modalidade — entrada da derivação de estado. */
-export interface ModalidadeLotes {
-  modalidade: string;
-  lotes: Lote[];
-}
-
-/**
- * Estado público de venda do evento (S1201-T3):
- * - `aberto`   → existe pelo menos uma modalidade com lote ATIVO no instante.
- * - `esgotado` → prova ainda não passou, mas a janela corrente de toda
- *                modalidade está sem lote ativo POR QUANTIDADE (vendidos ≥ limite).
- * - `encerrado`→ demais casos (data passada ou janelas encerradas por tempo).
- *
- * Composição pura de `loteAtivo`/`loteEsgotado` — a virada RN-300/ADR-012 mora
- * no core, não aqui.
- */
-export function deriveEstadoVenda(
-  modalidades: readonly ModalidadeLotes[],
-  dataEvento: Date,
-  agora: Date,
-): EstadoVenda {
-  const algumAtivo = modalidades.some((m) => loteAtivo(m.lotes, agora) !== null);
-  if (algumAtivo) return 'aberto';
-
-  const eventoPassou = agora.getTime() >= dataEvento.getTime();
-  if (eventoPassou) return 'encerrado';
-
-  // Sem lote ativo e prova no futuro: é esgotado se, em toda modalidade com
-  // lotes, a janela que cobre `agora` existe e está esgotada por quantidade.
-  const temLotes = modalidades.some((m) => m.lotes.length > 0);
-  if (!temLotes) return 'encerrado';
-
-  const esgotadoPorQuantidade = modalidades.every((m) => {
-    if (m.lotes.length === 0) return true;
-    return m.lotes.some((l) => {
-      const cobreAgora =
-        agora.getTime() >= l.inicioEm.toMillis() && agora.getTime() < l.fimEm.toMillis();
-      return cobreAgora && loteEsgotado(l);
-    });
-  });
-
-  return esgotadoPorQuantidade ? 'esgotado' : 'encerrado';
 }
 
 /** A inscrição está disponível? (só quando a venda está aberta). */

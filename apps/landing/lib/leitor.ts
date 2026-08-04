@@ -41,7 +41,7 @@ import {
   parseLote,
   parsePaginaVendas,
   politicaVendasPadrao,
-  precoVigente,
+  precoVitrine,
   projetarPerfilPublico,
   validarPoliticaVendas,
   versaoPoliticaVendas,
@@ -50,18 +50,14 @@ import {
   POLITICA_VENDAS_DOC_ID,
   TERMO_SAUDE_VERSAO_VIGENTE,
   type Lote,
+  type ModalidadeVitrine,
   type StatusEvento,
 } from '@leela/core';
 import { esporteDoEvento } from './esporte';
 import { ehPreview, ORGANIZADOR_MOCK } from './mockImagem';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDb } from './firebaseAdmin';
-import {
-  agoraDoServidor,
-  deriveEstadoVenda,
-  statusEhPublico,
-  type ModalidadeLotes,
-} from './estadoVenda';
+import { agoraDoServidor, deriveEstadoVenda, statusEhPublico } from './estadoVenda';
 import type {
   EventoPublico,
   EventoResumo,
@@ -116,6 +112,55 @@ function texto(v: unknown): string {
 
 function inteiro(v: unknown): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+/**
+ * Preço-base LEGADO por modalidade, lido de `evento.percursos` (S201).
+ *
+ * VITRINE-FIX — por que a vitrine precisa disto. O checkout (`resolverItem`)
+ * cobra pelo lote ativo e, quando a modalidade não tem lote NENHUM, pelo
+ * `percurso.preco`. A landing não lia `percursos`, então anunciava "Inscrições
+ * encerradas" para evento que o servidor venderia. E esse não é um caso raro:
+ * `criarEvento` exige `percursos` (mínimo 1) e não cria lote — todo evento
+ * nascido pelo painel entra exatamente nesse estado.
+ *
+ * Leitura defensiva no mesmo padrão do resto do leitor: campo ausente, item
+ * torto ou preço não-finito simplesmente não entram no mapa (sem preço legado
+ * a modalidade cai no comportamento anterior). Nunca fabrica preço.
+ */
+function lerPrecoLegadoPorModalidade(data: Record<string, unknown>): Map<string, number> {
+  const mapa = new Map<string, number>();
+  const percursos = data['percursos'];
+  if (!Array.isArray(percursos)) return mapa;
+  for (const p of percursos as unknown[]) {
+    if (p === null || typeof p !== 'object') continue;
+    const { nome, preco } = p as { nome?: unknown; preco?: unknown };
+    if (typeof nome !== 'string' || nome.trim().length === 0) continue;
+    if (typeof preco !== 'number' || !Number.isFinite(preco) || preco < 0) continue;
+    mapa.set(nome, preco);
+  }
+  return mapa;
+}
+
+/**
+ * Monta a entrada da régua de vitrine para cada modalidade do evento: os lotes
+ * dela MAIS o preço-base legado quando existe. É o único ponto onde os dois
+ * modelos de preço se encontram na landing — a decisão de qual vale é do core
+ * (`precoVitrine`/`precoVigente`), igual ao checkout.
+ */
+function montarModalidadesVitrine(
+  nomes: readonly string[],
+  lotesPorModalidade: Map<string, Lote[]>,
+  precoLegadoPorModalidade: Map<string, number>,
+): ModalidadeVitrine[] {
+  return nomes.map((nome) => {
+    const legado = precoLegadoPorModalidade.get(nome);
+    return {
+      modalidade: nome,
+      lotes: lotesPorModalidade.get(nome) ?? [],
+      ...(legado !== undefined ? { precoLegado: legado } : {}),
+    };
+  });
 }
 
 /** Lê os lotes de um evento e agrupa por modalidade (parse fail-fast do core). */
@@ -413,19 +458,17 @@ export async function getEventoPublicado(slug: string): Promise<EventoPublico | 
       lerTermoSaudeCustomPublico(db, slug),
     ]);
 
-    const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
-      nome,
-      precoVigente: precoVigente({
-        lotesDaModalidade: lotesPorModalidade.get(nome) ?? [],
-        agora,
-      }),
+    // VITRINE-FIX: lotes E preço-base legado entram na mesma régua do checkout.
+    const modalidadesVitrine = montarModalidadesVitrine(
+      modalidadesNomes,
+      lotesPorModalidade,
+      lerPrecoLegadoPorModalidade(data),
+    );
+    const modalidades: ModalidadePublica[] = modalidadesVitrine.map((m) => ({
+      nome: m.modalidade,
+      precoVigente: precoVitrine(m, agora),
     }));
-
-    const modalidadeLotes: ModalidadeLotes[] = modalidadesNomes.map((nome) => ({
-      modalidade: nome,
-      lotes: lotesPorModalidade.get(nome) ?? [],
-    }));
-    const estadoVenda = deriveEstadoVenda(modalidadeLotes, dataEvento, agora);
+    const estadoVenda = deriveEstadoVenda(modalidadesVitrine, dataEvento, agora);
 
     const janelasRetirada: JanelaRetiradaPublica[] = Array.isArray(data['janelasEntrega'])
       ? (data['janelasEntrega'] as Record<string, unknown>[]).map((j) => ({
@@ -547,13 +590,16 @@ async function montarResumoEvento(
     : [];
 
   const lotesPorModalidade = await lerLotesPorModalidade(db, doc.id);
-  const modalidades: ModalidadePublica[] = modalidadesNomes.map((nome) => ({
-    nome,
-    precoVigente: precoVigente({ lotesDaModalidade: lotesPorModalidade.get(nome) ?? [], agora }),
-  }));
-  const modalidadeLotes: ModalidadeLotes[] = modalidadesNomes.map((nome) => ({
-    modalidade: nome,
-    lotes: lotesPorModalidade.get(nome) ?? [],
+  // VITRINE-FIX: o card da home usa a MESMA régua da página do evento — sem
+  // isso a home listava "encerrado"/sem preço um evento que o servidor vende.
+  const modalidadesVitrine = montarModalidadesVitrine(
+    modalidadesNomes,
+    lotesPorModalidade,
+    lerPrecoLegadoPorModalidade(data),
+  );
+  const modalidades: ModalidadePublica[] = modalidadesVitrine.map((m) => ({
+    nome: m.modalidade,
+    precoVigente: precoVitrine(m, agora),
   }));
 
   // Mesma guarda de capa http(s) da página do evento (RN-153)
@@ -570,7 +616,7 @@ async function montarResumoEvento(
     local: texto(data['local']),
     modalidades: modalidadesNomes,
     precoMinimo: precoMinimo(modalidades),
-    estadoVenda: deriveEstadoVenda(modalidadeLotes, dataEvento, agora),
+    estadoVenda: deriveEstadoVenda(modalidadesVitrine, dataEvento, agora),
     ...(imagemUrl.length > 0 ? { imagemUrl } : {}),
   };
 }

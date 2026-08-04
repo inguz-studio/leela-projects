@@ -529,6 +529,25 @@ export {
   parseLote,
 } from './eventos/lote';
 
+// ---------------------------------------------------------------------------
+// Régua de vitrine (VITRINE-FIX) — "este evento está vendendo?" respondido num
+// lugar só, pela mesma conta do checkout (`precoVigente`), para a página
+// pública e para o painel do organizador. Ver eventos/vitrine.ts.
+// ---------------------------------------------------------------------------
+export type {
+  EstadoVenda,
+  LoteVitrine,
+  ModalidadeVitrine,
+  MotivoVitrineFechada,
+  DiagnosticoVitrine,
+} from './eventos/vitrine';
+export {
+  precoVitrine,
+  modalidadeVendavel,
+  deriveEstadoVenda,
+  diagnosticoVitrine,
+} from './eventos/vitrine';
+
 export type { Cupom, TipoCupom, EscopoCupom } from './eventos/cupom';
 export {
   TIPOS_CUPOM,
