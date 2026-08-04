@@ -203,3 +203,64 @@ Duas ressalvas honestas, nenhuma no caminho do pagamento:
    desta lane: o e-mail de definir senha não tem function deployada (VETO 1) e o
    painel não está no canal de produção (PAINEL-404, outra lane). O dinheiro
    entra e o ingresso sai; o que trava é a conta.
+
+---
+
+## Adendo · o gate de lote, e um erro meu que quase virou laudo
+
+O run único das 204 suítes de `functions` fechou **vermelho**: 29 arquivos, 136
+testes, 931s, exit 1.
+
+**Nenhum dos arquivos que eu toquei falhou.** Mas isso é necessário e não
+suficiente — o meu fix mexe no documento de pagamento (campo novo
+`gatewaySimulado`), e entre os vermelhos havia suítes de regras e do caminho do
+PIX. Fui verificar.
+
+### O erro
+
+Rodei um A/B e afirmei, aqui mesmo, "meu fix quebrou a suíte, regressão minha":
+sem o fix 19/19, com o fix 6 falhas. **Estava errado.** Repetindo com o MESMO
+código o resultado virou 1 falha em vez de 6 — e a falha era
+`seedVerified: canários ausentes (seed engolido pelo emulator?)`, um erro de
+infraestrutura, não uma asserção. A variância provava que o experimento não era
+controlado: o emulator estava degradado depois de levar 204 arquivos.
+
+Tirar conclusão de experimento não controlado é a mesma classe de erro que eu
+cobrei da sessão anterior. Registrei no audit.
+
+### A verificação de verdade
+
+Refeita com **emulator limpo por arquivo** (`emulators:exec`, que sobe e derruba
+o próprio):
+
+| suíte | resultado |
+|---|---|
+| `pixArbitragem.integration` | 19/19 |
+| `pixArbitragem.ataque` | 20/20 |
+| `pixCarrinhoRev.ataque` | 13/13 |
+| `carrinhoPrazo` | 16/16 |
+| `asaasTetoCheckout` | 11/11 |
+| `inscritoPedidoRules` | 9/9 |
+| `ingressoPorLink` | 17/17 |
+| `precoBloqueado` | 21/21 |
+| `checkoutModelo` (meu) | 15/15 |
+| `webhookAsaas` (meu) | 15/15 |
+
+**Todas as suítes do caminho do dinheiro que caíram no lote passam em emulator
+limpo.** O fix do V1 não causa regressão.
+
+### O mecanismo do vermelho
+
+204 arquivos de integração dividem UM emulator com 13 workers em paralelo, vários
+sob o mesmo `projectId` (`demo-leela`) — o `clearFirestore()` de um arquivo apaga
+o seed de outro no meio do teste, e o emulator degrada sob carga. É exatamente o
+problema que o cabeçalho de `helpers/stability.ts` documenta, e a razão de cada
+suíte carregar seu próprio comando `emulators:exec`.
+
+Confound adicional: **outra lane escreveu no repo durante o lote**
+(`salvarAfiliado.ts`, `cadastrarAssessoria.ts`, `contaSemFriccao.ts`,
+`linkDosEmails.contract.test.ts`) — arquivos mudando no meio do run.
+
+Isto reforça o **VETO 3** com mecanismo medido em vez de suposto: a suíte de
+functions não tem gate de lote confiável hoje. Quem for ler `29 failed` sem
+re-rodar arquivo a arquivo vai concluir defeito de produto onde não há.
