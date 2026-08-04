@@ -475,4 +475,80 @@ describe('CKMOD — versionarPoliticaVendasCore (bump material, idempotente)', (
     const r2 = await versionarPoliticaVendasCore(db, EVT_LEG, antesHash);
     expect(r2).toEqual({ bumpado: true, versao: 2 });
   });
+
+});
+
+// ---------------------------------------------------------------------------
+// PIXREAL-REV V1 · a cobranca nao muda de mundo depois de nascer
+// ---------------------------------------------------------------------------
+
+describe('PIXREAL-REV V1 — polaridade do gatewayReal atravessa o deploy', () => {
+  //
+  // O DEFEITO QUE ESTE CASO TRANCA. O retorno da cobranca carrega `gatewayReal`,
+  // e e ele que decide se a tela mostra o banner "ambiente de simulacao" e o
+  // botao "Ja paguei" por cima do PIX. O comentario no fonte prometia "do
+  // PROVIDER que emitiu esta cobranca"; a linha lia o provider VIVO, o da
+  // invocacao atual.
+  //
+  // No caminho de REPLAY (a cobranca ja existe, nada e criado) isso julga uma
+  // cobranca velha pelo mundo de agora -- e a cobranca sobrevive ao deploy que
+  // troca o provider. A troca aconteceu as 00h47 de 2026-08-04. Um PIX REAL
+  // emitido antes, reaberto com o mock ativo, voltava a exibir o banner de
+  // simulacao sobre dinheiro de verdade: o incidente original entrando por
+  // outra porta.
+  //
+  // Nenhum teste do lado do servidor olhava `gatewayReal` antes deste bloco.
+
+  /** Dublê com a polaridade do provider REAL: `simulado` AUSENTE. */
+  // Mesmo adapter, mesma mecânica de cobrança — só a POLARIDADE muda: o
+  // provider real não declara `simulado` (ausente = real, por contrato de
+  // `PaymentProvider.simulado`). É o dublê mais honesto possível do que estava
+  // no ar às 00h47.
+  const providerReal = new MockPaymentProvider();
+  Object.defineProperty(providerReal, 'simulado', { value: undefined });
+
+  it('nascida REAL e relida com o simulador vivo: NAO volta a ser simulacao', async () => {
+    const key = 'pixrev-v1-real-depois-mock';
+    const r1 = await createInscricaoChargeCore(db, providerReal, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    expect(r1.gatewayReal).toBe(true);
+
+    // Mesmo pedido, mesma chave -- so o provider vivo mudou (deploy no meio).
+    const r2 = await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    expect(r2.pedidoId).toBe(r1.pedidoId);
+    // A asserção do dinheiro: o banner de simulacao NAO pode nascer aqui.
+    expect(r2.gatewayReal).toBe(true);
+  });
+
+  it('nascida SIMULADA e relida com o gateway real vivo: segue simulacao', async () => {
+    const key = 'pixrev-v1-mock-depois-real';
+    const r1 = await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    expect(r1.gatewayReal).toBe(false);
+
+    const r2 = await createInscricaoChargeCore(db, providerReal, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    expect(r2.pedidoId).toBe(r1.pedidoId);
+    // O outro lado: um QR de mentira nao pode ser apresentado como real.
+    expect(r2.gatewayReal).toBe(false);
+  });
+
+  it('o marcador fica GRAVADO na cobranca, nao derivado do processo que le', async () => {
+    const key = 'pixrev-v1-persistido';
+    const r = await createInscricaoChargeCore(db, provider, inputCkmod(EVENTO_ID, key), {
+      uid: ANA_UID,
+    });
+    const pagamentos = await db
+      .collection('pagamentos')
+      .where('pedidoRef', '==', r.pedidoId)
+      .get();
+    expect(pagamentos.empty).toBe(false);
+    expect(pagamentos.docs[0]?.get('gatewaySimulado')).toBe(true);
+  });
+
 });

@@ -2055,6 +2055,11 @@ async function garantirCobrancaEMontarResultado(
         gatewayChargeId: charge.chargeId,
         gatewayPaymentUrl: charge.paymentUrl ?? null,
         gatewayQrCode: charge.qrCode ?? null,
+        // PIXREAL-REV V1: o ambiente é atributo DESTA cobrança, e fica gravado
+        // junto do chargeId dela — no mesmo instante, na mesma transação, pelo
+        // provider que a emitiu. Uma cobrança não muda de mundo depois de
+        // nascer; o processo que a relê, sim (ver `gatewayReal` no retorno).
+        gatewaySimulado: provider.simulado === true,
         atualizadoEm: FieldValue.serverTimestamp(),
       });
     });
@@ -2085,6 +2090,16 @@ async function garantirCobrancaEMontarResultado(
       ? pixExpiraEm.toMillis()
       : undefined;
 
+  // PIXREAL-REV V1 · o mundo em que ESTA cobrança nasceu, lido do documento.
+  // `undefined` = doc anterior a esta rodada (o campo não existia); qualquer
+  // outra coisa é resposta do provider que a emitiu, e vale mais que o provider
+  // que por acaso está vivo nesta invocação.
+  const simuladoPersistido = pagamentoSnap.get('gatewaySimulado') as
+    | boolean
+    | undefined;
+  const gatewayRealPersistido =
+    simuladoPersistido === undefined ? undefined : simuladoPersistido !== true;
+
   return {
     pedidoId,
     pagamentoId,
@@ -2101,7 +2116,22 @@ async function garantirCobrancaEMontarResultado(
     // de um flag de build. Marcador ausente conta como REAL (ver a polaridade
     // em `PaymentProvider.simulado`): a tela só ganha a interface de simulação
     // quando o simulador se declara.
-    gatewayReal: provider.simulado !== true,
+    //
+    // ⚠ PIXREAL-REV V1 — "o provider que emitiu" era o que o comentário dizia e
+    // NÃO o que a linha fazia: ela lia o provider VIVO, o desta invocação. No
+    // caminho de replay (cobrança já existe, `chargeId` truthy, nada é criado)
+    // isso julga uma cobrança velha pelo mundo de agora. A cobrança sobrevive
+    // ao deploy que troca o provider — e a troca aconteceu às 00h47 desta noite.
+    // Um PIX REAL emitido antes, reaberto com o mock ativo, ganhava de volta o
+    // banner de simulação e o botão "Já paguei" sobre dinheiro de verdade: o
+    // defeito original voltando por outra porta.
+    //
+    // Agora o ambiente é lido do documento, onde foi gravado pelo provider que
+    // de fato emitiu (ver `gatewaySimulado` na transação acima). Ausente = doc
+    // anterior a esta rodada: cai no provider vivo, que é o comportamento de
+    // hoje — e em produção o provider vivo é o real, então a direção do erro
+    // continua sendo "não mostrar simulação", nunca o contrário.
+    gatewayReal: gatewayRealPersistido ?? provider.simulado !== true,
     statusPedido: pedidoSnap.get('status') as StatusPedido,
     valores: {
       valorBase: pagamentoSnap.get('valorBase') as number,
