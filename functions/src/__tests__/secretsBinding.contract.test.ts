@@ -182,23 +182,40 @@ function fechoDe(raiz: string): Set<string> {
  * qualquer uma delas reintroduziria em silêncio a classe de defeito que já
  * custou três incidentes. Aqui o reconhecimento é por FORMA, não por literal:
  *
- *   1. colchete sobre QUALQUER identificador — `process.env['X']`, `env['X']`,
+ *   1. colchete sobre QUALQUER portador — `process.env['X']`, `env['X']`,
  *      `ambiente['X']`. O nome do parâmetro não pode ser a diferença entre
  *      pegar e não pegar;
- *   2. ponto sobre algo que termina em `env`/`Env` — `process.env.X`;
- *   3. desestruturação a partir de env — `const { X, Y } = process.env`.
+ *   2. ponto sobre QUALQUER portador — `process.env.X`, `cfg.X`;
+ *   3. desestruturação de QUALQUER portador — `const { X, Y } = process.env`,
+ *      `const { X } = cfg`.
  *
- * Erra para o lado seguro (binding a mais) por construção: uma menção em
- * string de log casa o padrão 1 se estiver entre colchetes, e não casa nada
- * fora disso.
+ * ⚠ PIXREAL-REV, SEGUNDA PASSAGEM — o primeiro conserto ancorou os padrões 2 e
+ * 3 no NOME do portador (`…env`/`…Env`), e com isso repetiu, em duas das três
+ * formas, exatamente o defeito que dizia estar consertando: `const cfg =
+ * process.env; cfg.QR_TOKEN_KEYS` e `const { QR_TOKEN_KEYS } = cfg` passavam
+ * verdes. O nome de uma variável local não pode ser a diferença entre pegar e
+ * não pegar — foi essa a lição do `ambiente[…]`, e ela vale para as três
+ * formas ou para nenhuma. Agora o portador é irrelevante nas três.
+ *
+ * O CUSTO DE ALARGAR, MEDIDO (não estimado): sobre os 339 arquivos de
+ * `functions/src`, a regra larga não produz UMA detecção a mais que a estreita.
+ * Falso positivo aqui exigiria uma propriedade de objeto batizada com o nome
+ * literal de um segredo — e, se existisse, custaria uma linha de `secrets`
+ * contra os três incidentes de dinheiro que o lado oposto já custou.
  */
 function leEnv(fonte: string, s: Segredo): boolean {
   const colchete = new RegExp(`\\[\\s*(['"\`])${s}\\1\\s*\\]`);
-  const ponto = new RegExp(`[A-Za-z0-9_$]*[eE]nv\\s*\\.\\s*${s}\\b`);
-  const desestrutura = new RegExp(
-    `\\{[^{}]*\\b${s}\\b[^{}]*\\}\\s*=\\s*[A-Za-z0-9_$.]*[eE]nv\\b`
-  );
+  const ponto = new RegExp(`[A-Za-z0-9_$)\\]]\\s*\\.\\s*${s}\\b`);
+  const desestrutura = new RegExp(`\\{[^{}]*\\b${s}\\b[^{}]*\\}\\s*=`);
   return colchete.test(fonte) || ponto.test(fonte) || desestrutura.test(fonte);
+}
+
+/**
+ * Linhas `export *` do index. Extraída para que o caso que a proíbe possa ser
+ * exercido sobre fixture — ver o bloco `A PRÓPRIA GUARDA` no fim do arquivo.
+ */
+function exportEstrelas(fonte: string): string[] {
+  return [...semComentarios(fonte).matchAll(/^export\s*\*.*$/gm)].map((m) => m[0]);
 }
 
 /** União dos fechos de todos os exports do index (+ o próprio index). */
@@ -399,6 +416,19 @@ function origensHerdadas(fn: Exportada): Map<Segredo, string[]> {
   return origens;
 }
 
+/**
+ * A dispensa cobre o segredo enquanto TODOS os módulos que o produzem
+ * estiverem na lista `via` que alguém leu e assinou. Caminho novo para o mesmo
+ * segredo ⇒ volta a ser reportado. Extraída do caso de contrato para poder ser
+ * exercida com origens sintéticas — era ela que silenciava um caso REAL.
+ */
+function dispensaCobre(fnNome: string, s: Segredo, origens: string[]): boolean {
+  const permitidas = new Set(
+    HERDADO_OK.filter((d) => d.fn === fnNome && d.segredo === s).flatMap((d) => d.via)
+  );
+  return permitidas.size > 0 && origens.every((o) => permitidas.has(o));
+}
+
 describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
   it('a leitura do index encontrou a superfície deployável inteira', () => {
     // Sanidade da própria análise: um regex que para de casar transformaria
@@ -415,8 +445,7 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
     // Plantei uma sonda assim numa cópia isolada: ela lia `QR_TOKEN_KEYS` sem
     // declarar e a guarda ficou verde. Enquanto a análise for por nome, a
     // forma que a esconde é proibida no index.
-    const estrelas = [...semComentarios(ler(INDEX)).matchAll(/^export\s*\*.*$/gm)];
-    expect(estrelas.map((m) => m[0])).toEqual([]);
+    expect(exportEstrelas(ler(INDEX))).toEqual([]);
   });
 
   it('a lista SEGREDOS cobre todo secret que algum runWith declara', () => {
@@ -454,12 +483,8 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
       // A dispensa vale POR ORIGEM: ela cobre o segredo enquanto TODOS os
       // módulos que o produzem estiverem na lista `via` que alguém leu e
       // assinou. Caminho novo para o mesmo segredo ⇒ volta a ser reportado.
-      const dispensado = (s: Segredo, origens: string[]): boolean => {
-        const permitidas = new Set(
-          HERDADO_OK.filter((d) => d.fn === fn.nome && d.segredo === s).flatMap((d) => d.via)
-        );
-        return permitidas.size > 0 && origens.every((o) => permitidas.has(o));
-      };
+      const dispensado = (s: Segredo, origens: string[]): boolean =>
+        dispensaCobre(fn.nome, s, origens);
 
       const ausentes = [
         ...[...propria].filter((s) => !fn.declarados.includes(s)),
@@ -502,5 +527,93 @@ describe('CONTRATO · todo segredo usado está declarado no runWith', () => {
       if (origens.length === 0) sobrando.push(`${d.fn}/${d.segredo} → dispensa sem necessidade`);
     }
     expect(sobrando.sort()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A PRÓPRIA GUARDA SOB ATAQUE
+// ---------------------------------------------------------------------------
+//
+// POR QUE ESTE BLOCO EXISTE (PIXREAL-REV · 2026-08-04). Os casos acima rodam
+// sobre o repositório real, e o repositório real não contém ataque nenhum —
+// então eles ficam verdes tanto com a guarda boa quanto com a guarda porosa.
+// Medido, não suposto: reintroduzi a `leEnv` de duas strings literais (a versão
+// de antes do conserto) e os sete casos de contrato passaram, 7/7, sem um
+// arranhão. O conserto das quatro portas estava, ele próprio, sem rede: bastava
+// alguém "simplificar" o reconhecimento num refactor futuro para reabrir em
+// silêncio a classe de defeito que já custou três incidentes de dinheiro.
+//
+// Aqui a guarda é exercida sobre FIXTURE. Cada caso vermelho é uma porta que já
+// esteve aberta; cada caso verde é um falso positivo que tornaria a guarda
+// ruidosa — e guarda que grita à toa é guarda que ninguém lê.
+
+describe('A PRÓPRIA GUARDA · as portas que já estiveram abertas continuam fechadas', () => {
+  // Cada entrada: [apelido, fonte]. Todas LEEM QR_TOKEN_KEYS sem declará-lo.
+  const ATAQUES: [string, string][] = [
+    ['colchete literal em process.env', "const k = process.env['QR_TOKEN_KEYS'];"],
+    ['PORTA 1 · notação de ponto', 'const k = process.env.QR_TOKEN_KEYS;'],
+    ['PORTA 2 · desestruturação', 'const { QR_TOKEN_KEYS } = process.env;'],
+    ['PORTA 2b · desestruturação com rename', 'const { QR_TOKEN_KEYS: kk } = process.env;'],
+    ['PORTA 3 · colchete sobre parâmetro de outro nome',
+      "function f(ambiente: NodeJS.ProcessEnv) { return ambiente['QR_TOKEN_KEYS']; }"],
+    ['PORTA 3b · ponto sobre alias que não se chama env',
+      'const cfg = process.env;\nconst k = cfg.QR_TOKEN_KEYS;'],
+    ['PORTA 3c · desestruturação de alias que não se chama env',
+      'const cfg = process.env;\nconst { QR_TOKEN_KEYS } = cfg;'],
+    ['colchete sobre resultado de chamada', "const k = obterEnv()['QR_TOKEN_KEYS'];"],
+    ['ponto sobre caminho longo', 'const k = globalThis.process.env.QR_TOKEN_KEYS;'],
+  ];
+
+  it.each(ATAQUES)('reconhece a leitura: %s', (_apelido, fonte) => {
+    expect(leEnv(fonte, 'QR_TOKEN_KEYS')).toBe(true);
+  });
+
+  // O outro lado: a guarda precisa continuar CALADA onde não há leitura, senão
+  // vira ruído e alguém a desliga.
+  const INOCENTES: [string, string][] = [
+    ['menção em prosa de string', "logger.info('faltou configurar QR_TOKEN_KEYS no projeto');"],
+    ['nome de campo em tipo', 'interface Cfg { QR_TOKEN_KEYS_ROTACIONADO: string }'],
+    ['outro segredo', "const k = process.env['BREVO_API_KEY'];"],
+    ['prefixo que apenas começa igual', 'const k = process.env.QR_TOKEN_KEYS_ANTIGO;'],
+  ];
+
+  it.each(INOCENTES)('não inventa leitura onde não há: %s', (_apelido, fonte) => {
+    expect(leEnv(fonte, 'QR_TOKEN_KEYS')).toBe(false);
+  });
+
+  it('PORTA 4 · `export *` no index é caso vermelho, não silêncio', () => {
+    // A análise é por NOME: ela lê `export { x } from './y'`. Uma function
+    // exportada por `export *` sumia da varredura INTEIRA e sumia em silêncio,
+    // porque o piso de sanidade (>60 exports) continuava satisfeito.
+    expect(exportEstrelas("export * from './eventos/varreduras';")).toHaveLength(1);
+    expect(exportEstrelas("export * as pagamentos from './payments/index';")).toHaveLength(1);
+    expect(exportEstrelas("export { asaasWebhook } from './payments/webhook';")).toEqual([]);
+  });
+
+  it('PORTA 5 · a dispensa não cobre caminho NOVO para o mesmo segredo', () => {
+    // Este é o buraco que silenciava um caso REAL: a dispensa nominal cobria o
+    // par (function, segredo) viesse a necessidade de onde viesse. Plantei um
+    // helper novo com `selectPaymentProvider()` no caminho de execução do
+    // `requestTransfer` — necessidade REAL de chave de gateway numa function que
+    // sobe sem segredo nenhum — e a guarda seguiu verde.
+    const viaAssinada = [
+      'checkout/estornarInscricao.ts',
+      'finance/requestRefund.ts',
+      'payments/selectProvider.ts',
+    ];
+    expect(dispensaCobre('requestTransfer', 'ASAAS_API_KEY', viaAssinada)).toBe(true);
+
+    // O helper novo entra na lista de origens ⇒ a dispensa DEIXA de cobrir.
+    expect(
+      dispensaCobre('requestTransfer', 'ASAAS_API_KEY', [
+        ...viaAssinada,
+        'finance/escolherProvedorDeRepasse.ts',
+      ])
+    ).toBe(false);
+
+    // E uma function sem dispensa nenhuma nunca é coberta por tabela vazia.
+    expect(dispensaCobre('asaasWebhook', 'ASAAS_API_KEY', ['payments/selectProvider.ts'])).toBe(
+      false
+    );
   });
 });
