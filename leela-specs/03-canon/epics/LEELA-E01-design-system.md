@@ -313,3 +313,50 @@ revelado continuar operável.
 **Falsificação executada:** `Radio.tsx` restaurado do HEAD ⇒ 3 vermelhos em 30 (a margem da legend e
 os dois cliques novos); os demais passam nos dois mundos e estão declarados como guardas no arquivo.
 Suíte do design system **1098/1098** em 59 arquivos, tsc/eslint/tsup 0.
+
+## Delta o painel passa a se chamar Painel Profissional (2026-08-04 · SPEC-QUALIFICACAO)
+
+Spec e inventário completo em
+`02-rodadas/2026-08-04-qualificacao-profissional/01-spec-conta-profissional.md` §Parte 9.
+
+### RN-468 · Painel Profissional é o nome da superfície, e o rebatismo é de rótulo (nova, dona · 2026-08-04)
+
+Decisão do dono, verbatim: *"Chamaremos também o nosso painel de Painel Profissional."*
+
+O nome aparece hoje em três alturas, e só a primeira muda:
+
+| Altura | Exemplo | Muda? |
+|---|---|---|
+| Rótulo visível | "Painel do Organizador" (`apps/painel/src/shell/RootShell.tsx:63`), `<title>Leela Painel</title>` (`apps/painel/index.html:7`), CTAs da landing | **sim** |
+| Identificador técnico | diretório `apps/painel`, pacote `@leela/painel`, site `leela-hub`, `PAINEL_URL_PADRAO`, `LEELA_PAINEL_URL`, projeto Sentry `leela-painel` | **não** |
+| Vocabulário de domínio | coleção `profissionais/{uid}`, campo `papeis[]`, claim `tenant_owner` | **não, já está certo** |
+
+Renomear identificador produziria um diff enorme, quebraria caminho de import e não mudaria uma
+letra do que a pessoa vê. É a mesma disciplina que o produto já pratica ao manter coleções em
+PT-BR camelCase sem renomeá-las quando a copy muda
+(`04-engenharia/convencoes-codigo.md:58`).
+
+**Por que o nome fortalece o enquadramento durável, e não é rebatismo cosmético.** A D-0802-1
+cravou que a Leela é hub de experiências de bem-estar e que corrida é instância, nunca
+categoria. "Organizador" contradiz isso na raiz: descreve quem produz um evento e deixa de fora
+o professor de ioga que vende a própria aula, a assessoria que vende plano de treino e o clube
+que cobra mensalidade. "Profissional" cobre os quatro, e não é palavra nova: a coleção
+`profissionais/{uid}` se chama assim desde o começo, `papeis[]` já é lista, e `marcas`,
+`dashboard` e `analyticsSnapshots` já penduram nela. O código sempre soube que eram
+profissionais; a copy é que ficou presa em organizador. A troca alinha a superfície ao modelo
+que já existe embaixo dela.
+
+Colisão nula, medida: "profissional" aparece hoje como rótulo visível em **um único ponto** do
+produto inteiro (`apps/painel/src/routes/marcas/MarcasPage.tsx:350`), e nenhuma rota contém a
+palavra. `profissionais/{uid}` passa a ser o nome canônico, o que já era verdade de fato.
+
+**"Organizador" não morre.** Continua sendo o papel de quem produz eventos, e continua correto
+no convite de organizador, no `PapelEvento` e em `evento.organizadorId`. Deixa de ser o nome do
+lugar. Painel Profissional é a casa; organizador é uma das coisas que se é dentro dela.
+
+Ponta que acompanha: `packages/core/src/perfil/perfil.ts:79-80` reserva os handles públicos
+`organizador` e `organizadores` e **não reserva `profissional`**. A reserva entra junto, senão
+alguém registra `@profissional` no dia seguinte.
+
+**Ordem obrigatória:** o rebatismo entra no mesmo lote da reescopagem do `/cadastrar` (RN-461),
+porque toca os mesmos arquivos. Separados, a segunda passada conflita com a primeira.

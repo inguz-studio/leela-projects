@@ -74,7 +74,7 @@ Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no templat
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 459, depois de a rodada de 04/08 consumir 454 a 459. O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a 468, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem e 461 a 468 na SPEC-QUALIFICACAO. O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito nas duas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 

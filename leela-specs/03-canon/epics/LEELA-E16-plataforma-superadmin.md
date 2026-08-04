@@ -1555,3 +1555,51 @@ não encosta na escada de parcelas.
 
 Nada nesta história exige deploy para mudar número. Exige deploy só a chegada do bloco novo na
 tela, uma vez.
+
+## Delta a qualificação do profissional (2026-08-04 · SPEC-QUALIFICACAO)
+
+Spec completa em `02-rodadas/2026-08-04-qualificacao-profissional/01-spec-conta-profissional.md`.
+
+### RN-462 · a qualificação É a promoção (nova, dona · 2026-08-04)
+
+Decisão do dono, verbatim: *"Vejo que é legal termos um breve formulário de qualificação. […]
+Para entrar e fazer o acesso, perguntaremos se a pessoa é profissional de bem-estar, (qual),
+organizador de eventos, quais modalidades a pessoa trabalha, tamanho de eventos, telefone de
+contato, CPF ou CNPJ e nome."*
+
+Sob a RN-461 a frase "para entrar e fazer o acesso" deixa de ser ambígua: o momento de fazer o
+acesso profissional é a promoção, e a promoção é o formulário de qualificação. Não são dois
+passos, são o mesmo passo. É isso que reconcilia a coleta com a palavra **breve** que o dono
+frisou: a qualificação não é um questionário enfiado num cadastro, é o próprio ato de virar
+profissional, e por isso não disputa conversão com a porta.
+
+O formulário, com obrigatoriedade e origem do vocabulário:
+
+| Campo | Obrigatório | Vocabulário |
+|---|---|---|
+| Atuação (bem-estar, organizo eventos) | pelo menos uma, **acumuláveis** | enum novo no core |
+| Qual profissão | só com bem-estar marcado | texto livre ≤ 60 |
+| Modalidades | sim | lista fechada, **reusa `MODALIDADES_CLUBE`**, com "Outra" abrindo sugestão que não é modalidade |
+| Porte dos eventos | só com eventos marcado | quatro faixas, sobre o **maior evento já feito** |
+| Organização | não | 2 a 80; opcional porque autônomo não tem uma |
+| Telefone | sim | reusa `telefoneValido` |
+| CPF | só quando a conta não tem pessoa vinculada | reusa `validarDocumento` |
+| Vai operar como pessoa jurídica | sim | enum `tipoPessoa`; "sim" abre o CNPJ |
+| Uso para recomendação e curadoria | **não**, e recusar não bloqueia | consentimento próprio (RN-466) |
+
+Quem já comprou e só organiza eventos responde cinco. Quem nunca comprou e só é profissional de
+bem-estar responde seis. Nenhum caminho passa de sete.
+
+Atuação é acumulável porque quem organiza também pratica, e porque o modelo já aceitava:
+`profissionais/{uid}.papeis[]` é lista desde sempre (`packages/core/src/index.ts:69`).
+Modalidade é lista fechada porque o dono já tomou essa decisão uma vez, no clube, e a razão
+está registrada no módulo: *"o dono decidiu tirar o texto livre"*
+(`packages/core/src/clubs/clube-opcoes.ts:5`).
+
+**A qualificação não substitui o convite.** Ao fim dela o doc nasce em `aguardando_convite`
+(RN-411) e a pessoa cai no overlay bloqueante que a S1609 construiu. O go-live controlado não é
+afrouxado. O que a qualificação compra é o time decidir a liberação com algo além do nome da
+organização.
+
+**Won't do preservado.** Coletar documento para identificar não é KYC. Verificação de identidade
+contra base oficial segue fora do escopo deste épico.

@@ -274,4 +274,53 @@ A área junta, sob a mesma casca, duas categorias de dado que o épico sempre tr
 
 **Sessão.** A Visão geral passou a usar o `useCrmSession` que já existia no módulo (contrato idêntico `status`/`uid`/`tenantId`); o `useFinanceiroSession` viajou com Repasses. Nenhum arquivo órfão, nenhuma cópia nova.
 
+## Delta a chave do documento tipado, especificada (2026-08-04 · SPEC-QUALIFICACAO)
+
+A RN-177 cravou que o registry passa a chavear por documento tipado e que "CPF único"
+generaliza para "documento único", e a S1903 mandou **especificar sem implementar**. A rodada
+SPEC-QUALIFICACAO fecha o **como**, sem tocar código. O gate externo continua: a implementação
+segue condicionada à liberação da conta Asaas (item 12b no painel, adiado pelo dono em 26/07).
+
+### A derivação, por tipo
+
+| Tipo | Domínio assinado no HMAC | Prefixo do docId |
+|---|---|---|
+| CPF | `pessoa:cpf:{11 dígitos}` | `cpf_` (`PESSOA_ID_PREFIXO_CPF`) |
+| Passaporte | `pessoa:passaporte:{ISO-3166-1 alpha-2}:{número normalizado}` | `pass_` |
+
+Normalização do passaporte: maiúsculas, só alfanuméricos, descartando espaço, hífen e ponto.
+Passaporte é alfanumérico e a máscara varia por país, então sem normalização a chave
+determinística deixa de ser determinística.
+
+**Nenhuma migração é necessária, e isso é medido.** A derivação de hoje já assina
+`pessoa:cpf:{cpf}` (`functions/src/checkout/pessoaRegistry.ts:64`), com o **tipo dentro do
+domínio da mensagem**. Quem escreveu já separou o espaço de nomes. Consequências: nenhum id
+existente muda, bit por bit, e quem já está no registro fica onde está; documentos de tipos
+diferentes nunca colidem, que é o critério de aceite literal da S1903; e o país entra **dentro**
+da chave, porque passaporte `A1234567` da Argentina e `A1234567` de Portugal são duas pessoas.
+A frase "migração `cpf-unico` → `documento-unico`" descreve, na prática, uma extensão aditiva
+sem reescrita de dado.
+
+### O que a RN-177 não cobria: passaporte não tem dígito verificador
+
+CPF e CNPJ se autovalidam. Passaporte não: o formato varia por país, não há algoritmo universal
+e a Leela não vai integrar base consular. **Erro de digitação vira pessoa nova, em silêncio**, e
+isso contamina o registro, o CRM e o controle de inscritos.
+
+Tratamento em três camadas, e nenhuma promete o que não dá:
+
+1. **País emissor obrigatório**, lista fechada ISO 3166-1 alpha-2. Reduz o espaço de colisão e
+   é dado que a operação precisa de qualquer forma.
+2. **Confirmação dupla do número** no formulário, campo repetido que não aceita colar. É a
+   mitigação padrão de quem não tem dígito verificador.
+3. **Tolerar a duplicata em vez de negá-la.** O registro aceita e a fusão é operação
+   administrativa posterior, com trilha. Bloquear na entrada recusaria passaporte legítimo
+   parecido com outro.
+
+**O que não dá para garantir, dito com todas as letras:** a plataforma garante unicidade de
+**documento informado**, não de **ser humano**. Duas grafias do mesmo passaporte são duas
+pessoas até que alguém funda as duas. É limitação do dado, não do desenho, e escondê-la
+produziria um CRM em que ninguém confia. Atenuante real: o caminho inteiro está atrás do toggle
+por evento da RN-175, que nasce desligado.
+
 ⚠️ **A fronteira de PII é o único dos 8 riscos da rodada SEM prova executável.** Visão geral (agregado, k=5, RN-820/822) e Clientes (identidade individual, RN-172) passaram a dividir a casca de menu. A fronteira está declarada como diretriz de código no `CrmSubNav` e no `AnaliseVendasPage`, e nenhum recorte demográfico foi adicionado à lista — mas **nada no código impede** que alguém acrescente um "filtro de clientes por faixa etária", que reintroduziria exatamente a diferenciação que o k-anonimato fecha. Isso é vigilância, não garantia: segue como gatilho de bloqueio do gate antagonista de PII deste épico, e é o item que a review antagonista tem de atacar primeiro.

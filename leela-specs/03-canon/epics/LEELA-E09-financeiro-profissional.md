@@ -1218,3 +1218,58 @@ apenas estimada.
   `custoGateway(n)`. Sem a linha do meio e da parcela, a margem **não é calculada**.
 - **RN-456** (dona no E04) — a divisão exata em centavos, que faz o `markup` de um termo sem
   juros ser exatamente zero em vez de um resíduo.
+
+## Delta onde mora o documento do profissional (2026-08-04 · SPEC-QUALIFICACAO)
+
+Spec completa em `02-rodadas/2026-08-04-qualificacao-profissional/01-spec-conta-profissional.md`.
+
+### RN-465 · CPF identifica a pessoa, CNPJ identifica a entidade (nova, dona · 2026-08-04)
+
+Decisão do dono, verbatim: *"O que podemos colocar no painel profissional, é perguntar se a
+pessoa tem CNPJ. e se tiver, pedir, para criar o painel."*
+
+São dois documentos com naturezas diferentes. O CPF identifica a **pessoa**; o CNPJ identifica a
+**entidade sob a qual ela opera**. A mesma pessoa pode ter CNPJ e continuar operando como
+física. Tratá-los como um campo só, "CPF ou CNPJ", é o que produz a impossibilidade de responder
+depois quem é o titular de um repasse.
+
+| Documento | Onde | Rule |
+|---|---|---|
+| CPF | `pessoas/{id}.cpf`, onde já vive | `read, write: if false` para todo cliente (`firestore.rules:2557-2559`) |
+| CNPJ, número | `profissionais/{uid}/documentoSecret/current` | leitura só do dono do uid; escrita negada a cliente |
+| CNPJ, máscara | `profissionais/{uid}.documentoMascarado` | a Rule do doc pai |
+| Tipo de pessoa | `profissionais/{uid}.tipoPessoa` | a Rule do doc pai |
+
+**Documento nunca é campo do doc que o tenant lê.** `profissionais/{profId}` libera leitura a
+qualquer membro do tenant (`firestore.rules:2790-2792`), e Rules do Firestore não filtram campo:
+um `cnpj` gravado ali seria legível por staff, promoter e atleta com claim daquele tenant no
+mesmo instante em que fosse escrito. É a armadilha que a RN-417 já teve de desfazer uma vez.
+
+O par "completo no doc restrito, mascarado no doc de superfície ampla" não é invenção: é o que
+`cadastrarAssessoria` faz com o CPF/CNPJ do parceiro
+(`functions/src/assessorias/cadastrarAssessoria.ts:352-355`), e a subcoleção owner-only é a Rule
+que `profissionais/{profId}/marcas` (`firestore.rules:2876`) e `dashboard` (`:2815`) já usam.
+
+**Cifrar, não.** O `BANK_DATA_KEY` cifra `{ conta, pix }` porque conta e chave PIX são
+instrumentos de movimentação: com eles se move dinheiro. Um CNPJ é dado que a Receita publica;
+um CPF não é público, mas também não movimenta nada sozinho. Cifrar somaria gestão de chave,
+rotação e um caminho de decifra novo para comprar proteção que a Rule owner-only já dá. A
+minimização da ADR-014 continua valendo e esta RN não a revoga: o número completo existe num
+único documento de leitura restrita, e a máscara continua sendo o que a operação confere.
+
+**Correção de vocabulário que não é cosmética:** a pergunta não é se a pessoa *tem* CNPJ, é se
+ela *vai operar* como pessoa jurídica na Leela. Muita gente tem CNPJ de outra atividade e vai
+operar como física aqui.
+
+**Estado medido:** o produto não tem noção nenhuma de pessoa jurídica. Varredura por
+`tipoPessoa`, `pessoaJuridica` e `companyType` devolve zero. O `cpfCnpj` do recebimento aceita
+11 ou 14 dígitos sem ramificar (`saveDadosBancarios.ts:136-144`) e **sem dígito verificador**,
+enquanto o core exporta `validarDocumento` desde o E18. A virada de física para jurídica, hoje,
+é a troca de um campo, e a RN fixa que continue barata. Quando existir emissão fiscal, a virada
+exigirá corte por data, porque documento fiscal emitido não muda retroativamente.
+
+**Profissional estrangeiro fica fora do escopo**, e o bloqueio não é a identidade: é o repasse.
+`saveDadosBancarios` valida o titular por comprimento de 11 ou 14 dígitos, e passaporte não tem
+nem um nem outro; antes disso, o repasse da V1 é transferência manual para conta bancária
+brasileira (RN-356). Aceitar um profissional estrangeiro produziria alguém que vende e nunca
+saca, o que é pior que recusar na porta.

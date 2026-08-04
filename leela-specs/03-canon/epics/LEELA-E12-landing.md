@@ -2596,3 +2596,60 @@ documentação que contradiz a regra vigente é a próxima armadilha de quem for
   e a frase nunca aparece se o total diferir do à vista, nem por um centavo.
 - **RN-435** — inalterada. O bloco de totais continua declarando a composição do total; o que
   some é uma linha que não deveria existir.
+
+## Delta o documento é pedido uma vez, e quem não tem CPF (2026-08-04 · SPEC-QUALIFICACAO)
+
+Spec completa em `02-rodadas/2026-08-04-qualificacao-profissional/01-spec-conta-profissional.md`.
+
+### RN-464 · o documento é pedido uma vez, no primeiro momento em que trabalha (nova, dona · 2026-08-04)
+
+O dono presumiu, ao tirar o CPF do formulário, que *"já temos o CPF da pessoa"* de quem tem
+conta na Leela. **A premissa foi falsificada**, e a falsificação está medida:
+
+1. Conta criada pelo `/cadastrar` não tem CPF em lugar nenhum. `atletas/{uid}` nasce com
+   `{ id, nome, email, avatarInit, criadoEm }` (`functions/src/auth/onCreateUser.ts:102-108`);
+   o shape de `profissionais/{uid}` é fechado por `hasOnly` sem campo de documento
+   (`firestore.rules:2762-2765`); as claims carregam `role`, `tenantId`, `demotedFromRole` e
+   `eventos` (`packages/core/src/platform/roles.ts:35-55`).
+2. O CPF só existe quando houve **compra confirmada**: pedido não pago aborta em
+   `contaSemFriccao.ts:143`.
+3. Mesmo tendo comprado, ler de volta exige e-mail verificado e igual ao carimbo
+   (`prefillCheckout.ts:92-95`), e a conta sem fricção **nasce não verificada**.
+4. O CPF gravado é o do responsável-inscrito, não o do pagador (`contaSemFriccao.ts:177-179`).
+
+A leva seguinte do dono quase conserta a premissa, ao propor CPF como identificador de
+cadastro, e o login social a quebra de novo: nem Google nem Apple devolvem documento.
+
+Não existe ponto único que sirva a todos os caminhos, então a regra é temporal em vez de
+espacial: **o documento é pedido uma vez, no primeiro momento em que ele trabalha, e nunca
+antes.** Quem compra informa no checkout, que já pede e já valida. Quem vira profissional sem
+ter comprado informa na promoção, em campo condicional. Quem só navega nunca informa. O
+cadastro de recebimento **para de pedir** e passa a pré-preencher.
+
+A conclusão do dono de tirar o CPF da porta continua certa, por um motivo melhor: ele não sai
+porque já o temos, sai porque na porta ainda não trabalha.
+
+### Delta da RN-176 · refino da leitura de UI, sem tocar a regra
+
+Decisão do dono, verbatim: *"mas a regra pode ser se a pessoa for brasileira pegar CPF, e se
+for gringa, informar o documento (passaporte)."* Isso **eleva a regra que já existia**: a
+RN-175 (toggle por evento), a RN-176 (passaporte, CPF oculto, cartão internacional à vista) e a
+RN-177 (documento tipado no registry) já cobriam a ideia como paliativo de inscrição.
+
+A RN-176 permanece integral. O que se refina é como se chega lá. Em vez de perguntar
+nacionalidade na frente de todo mundo, **o campo de documento nasce CPF com uma saída
+discreta**, "não tenho CPF", que troca o campo por passaporte mais país emissor mais
+confirmação dupla. Três razões: a maioria é brasileira e cobrar um passo de todos para servir
+uma fração é imposto de formulário; nacionalidade é a pergunta errada, porque brasileiro
+naturalizado e estrangeiro residente têm CPF, e o que o sistema precisa saber é **qual documento
+a pessoa tem**; e o link só aparece com o toggle da RN-175 ligado, então no default desligado a
+tela é exatamente a de hoje.
+
+Premissa vetável, não decisão tomada, porque a RN-176 carrega verbatim do dono.
+
+**O passaporte resolve a inscrição, não o pagamento.** O Asaas exige CPF ou CNPJ para cobrar e
+lança `AsaasValidationError` sem `taxId` (`functions/src/payments/asaasProvider.ts:1086-1089`).
+É por isso que o **item 12b** existe no painel, adiado pelo dono em 26/07. Enquanto a liberação
+não sai, o que funciona é o paliativo já registrado: comprador brasileiro paga pelo estrangeiro
+inscrito com passaporte. Estrangeiro pagando ele mesmo só depois da liberação, e só por cartão
+internacional à vista, nunca PIX, boleto ou parcelado.

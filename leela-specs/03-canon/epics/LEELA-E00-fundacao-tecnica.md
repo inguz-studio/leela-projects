@@ -461,3 +461,96 @@ de limite morrem).
 
 Resíduo declarado: falha do `setDoc` por rede, quota ou indisponibilidade ainda produz a
 conta órfã. A recuperação self-service é história de fila; hoje só `platform_admin` resolve.
+
+## Delta a conta profissional vira promoção, e a identidade ganha três camadas (2026-08-04 · SPEC-QUALIFICACAO)
+
+Quatro levas do dono no mesmo dia redesenharam a porta de entrada. Spec completa em
+`02-rodadas/2026-08-04-qualificacao-profissional/01-spec-conta-profissional.md`; delta de RNs
+em `02-rns-delta.md` da mesma pasta. Quatro RNs nascem com o E00 como dono.
+
+**A S030 é reescopada, não substituída.** O critério de aceite que dizia "informo nome, e-mail,
+senha, telefone/WhatsApp e nome da organização — obrigatórios (RN-412, P8; CPF/CNPJ fora, KYC
+segue no Won't do E16)" passa a valer só para nome, e-mail e senha. Telefone e organização
+migram para a promoção, e a organização vira opcional. A frase sobre CPF/CNPJ deixa de ser
+verdade universal: o documento não entra no cadastro, mas entra na promoção quando a conta
+ainda não tem pessoa vinculada. **O KYC segue fora**, e a distinção importa: coletar documento
+para identificar não é verificar identidade contra base oficial. O Won't do E16 continua de pé.
+
+### RN-461 · conta profissional é promoção de conta existente (nova, dona · 2026-08-04)
+
+Decisão do dono, verbatim: *"só pode criar uma conta profissional, quem tem uma conta na Leela."*
+
+O `/cadastrar` deixa de criar "conta de organizador" e passa a criar conta na Leela: nome,
+e-mail, senha e o termo, mais os provedores sociais. Virar profissional é um segundo momento,
+sobre uma conta que já existe.
+
+A regra criava uma circularidade, porque o único formulário de criação de conta era o do
+organizador e a landing não tem rota de autenticação nenhuma. A saída adotada é reescopar o
+`/cadastrar`, e ela tem efeito colateral favorável: a porta cai de sete interações para quatro.
+
+Medido antes de decidir: `resgatarConviteOrganizador` lê `organizacao` do doc
+`profissionais/{uid}` (`:250`), não do formulário, e já tem cadeia de fallback para nome e
+e-mail (`:197`). Mover a organização não quebra a semente do slug do tenant.
+
+### RN-463 · credencial, conta e pessoa são três camadas (nova, dona · 2026-08-04)
+
+Decisão do dono, verbatim: *"E-mail ou CPF, para se cadastrar. Com a opção de login social,
+sendo Apple ID ou gmail."*
+
+Credencial é plural (senha, Google, Apple); conta é o uid; pessoa é `pessoas/{documento_hmac}`.
+Uma pessoa nunca fica com duas contas.
+
+**Defeito que a regra existe para impedir, medido antes de ligar o login social.** O recurso
+"Ocultar meu e-mail" da Apple entrega um endereço de relay. A conta sem fricção resolve o
+comprador por igualdade de e-mail (`contaSemFriccao.ts:165-168`), e o vínculo
+`pessoas/{ref}.contaUid` é first-claim que nunca é sobrescrito (`:194-207`, RN-174). Somados:
+quem compra com o e-mail real e depois entra pela Apple ganha uma segunda conta que **nunca**
+alcança as próprias compras, em silêncio e para sempre.
+
+Quando uma conta autenticada informa um documento cuja pessoa pertence a outro uid, o produto
+não funde automaticamente, porque merge automático seria sequestro por digitação de documento
+alheio. Ele oferece entrar pela credencial que detém a outra conta e vincular a nova ali. A
+resposta é **uniforme** e passa por `consumirRateLimit`, porque documento é adivinhável e a
+mensagem viraria oráculo de quem tem conta. O anti-hijack da RN-174 não é afrouxado; nasce o
+caminho de vinculação que ele pressupõe.
+
+Estado do código: `loginComGoogle` e `loginComApple` existem e são exportados
+(`packages/api-client/src/index.ts:409-410`), e **nenhuma tela os consome**. O Apple exige App
+ID, Service ID, chave `.p8` e verificação de domínio, pendência declarada em `auth.ts:9-13`.
+
+### RN-466 · dois termos, duas finalidades, e a base legal partida (nova, dona · 2026-08-04)
+
+`TERMO_LGPD_FINALIDADE` cobre hoje "criação e gestão da conta de organizador e contato sobre a
+liberação do acesso". Dados de qualificação não cabem nessa frase, e a finalidade também fica
+errada por outro motivo: sob a RN-461 o `/cadastrar` não cria mais conta de organizador.
+
+Passam a existir dois termos. O **da conta**, no `/cadastrar`, cobre criar e gerir a conta na
+Leela. O **do profissional**, na promoção, tem constante e versão próprias e cobre avaliar e
+liberar o acesso profissional; é carimbado em `profissionais/{uid}.consentimentoProfissional`
+com versão, finalidade e instante do servidor, no molde da RN-446.
+
+A base legal se divide, e é isso que mantém o formulário breve. Qualificar para **decidir o
+acesso** é procedimento preliminar de contrato (art. 7º, V) e por isso pode ser obrigatório sem
+consentimento, que se fosse exigido seria consentimento não livre. Usar a qualificação para
+**recomendar, segmentar e exibir em vitrine** é finalidade distinta, tem consentimento próprio,
+nasce desmarcado e **recusar não bloqueia o acesso**. Uma caixa, não seis.
+
+O CPF pedido na promoção tem finalidade própria declarada no termo: identificar a pessoa e
+evitar identidade duplicada. Não é lido do checkout para dentro do painel; o que a promoção faz
+é escrever na mesma identidade canônica quando a pessoa informa o próprio documento.
+
+### RN-467 · versão de termo que estreita não obriga recoleta (nova, dona · 2026-08-04)
+
+A RN-412 criou `TERMO_LGPD_VERSAO` e nunca disse quando o aumento dela custa alguma coisa. Fica
+escrito: **estreitar ou esclarecer a finalidade não obriga recoleta**, porque quem consentiu
+com o mais amplo já cobriu o mais restrito; **alargar obriga**, e quem não recoletou não é
+tratado sob a finalidade nova.
+
+O aumento do termo da conta é estreitamento, então ninguém recoleta. Quem já é profissional e
+nunca viu o termo do profissional encontra a qualificação na primeira entrada e carimba ali,
+o que não é retroativo: é a primeira vez que aquela finalidade existe.
+
+**O LGPD-1 não é resolvido por esta regra.** Ele segue aberto no painel, sem default, porque
+fabricar o carimbo ausente é exatamente a prova que a RN-412 recusa. O que muda é que a
+promoção cria o momento natural onde a recoleta caberia, se o dono escolher essa opção.
+
