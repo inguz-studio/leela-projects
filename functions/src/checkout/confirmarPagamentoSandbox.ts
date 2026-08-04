@@ -18,6 +18,17 @@
 // o gateway real que dispara o webhook, e um "confirmar sandbox" simularia
 // dinheiro em ambiente produtivo (pior modo de falha). Só roda em sandbox.
 //
+// ⚠️ PIXREAL-FIX T1 (2026-08-04) — A ORDEM É O CONSERTO. O fail-safe acima
+// existe desde a S1203 e sempre esteve correto; o que estava errado era QUANDO
+// ele rodava. A callable montava `selectPaymentProvider()` como ARGUMENTO do
+// core, então a construção do provider acontecia ANTES da primeira linha do
+// guard. Em produção, com chave `$aact_prod_` e sem `ASAAS_WEBHOOK_AUTH_TOKEN`
+// no `runWith`, essa construção levantava `AsaasConfigError` — que não é
+// `HttpsError` — e o comprador recebia `internal` diante de um PIX de verdade.
+// Agora o guard mora na PORTA (`confirmarPagamentoSandboxHandler`), antes de
+// qualquer provider, exatamente como `pagamentoWebhook` já fazia (410 antes de
+// tocar no selector). O guard do core permanece: defesa em profundidade.
+//
 // SEGURANÇA: exige auth (anon uid) e que o caller SEJA o responsável/pagador do
 // pedido (`responsavel.atletaId === uid`) — ninguém confirma o pedido de outro.
 // Idempotente por entrega: `eventId` determinístico por pedido → reenviar
@@ -34,7 +45,11 @@ import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import type { PaymentProvider } from '@leela/core';
 import { buildMockWebhookPayload } from '../payments/mockProvider';
-import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
+import {
+  hasAsaasKey,
+  selectPaymentProvider,
+  type ProviderEnv,
+} from '../payments/selectProvider';
 import { dispararContaSemFriccaoPosConfirmacao } from './contaSemFriccao';
 import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
 import { processarWebhookPagamento, WebhookRejeitadoError } from './webhookPagamento';
@@ -70,6 +85,34 @@ export interface ConfirmarSandboxCaller {
   uid: string;
 }
 
+/**
+ * A recusa de ambiente, escrita UMA vez (o guard da callable e o fail-safe do
+ * core dizem a mesma frase — duas mensagens para o mesmo fato foi como este
+ * incidente começou).
+ */
+export const MSG_SANDBOX_INDISPONIVEL =
+  'Confirmação sandbox indisponível: há chave Asaas configurada — o gateway ' +
+  'real dispara o webhook de confirmação.';
+
+/**
+ * GUARD DE AMBIENTE — a primeira coisa que a porta faz (PIXREAL-FIX T1).
+ *
+ * Espelha o que `pagamentoWebhook` já fazia (webhookPagamento.ts:832): fechar
+ * ANTES de tocar no provider. A ordem é o conserto, não a checagem: o
+ * `hasAsaasKey` do core sempre existiu, mas ele roda DEPOIS que a callable já
+ * construiu o provider — e com chave de produção a construção era o que
+ * levantava (`AsaasConfigError`, que não é `HttpsError`, logo `internal` na
+ * cara do comprador). Guard primeiro ⇒ a recusa é TIPADA em qualquer
+ * configuração de ambiente, inclusive nas quebradas.
+ *
+ * @throws HttpsError('failed-precondition') quando há gateway real. @pure-ish
+ */
+export function recusarSandboxComGatewayReal(env: ProviderEnv): void {
+  if (hasAsaasKey(env)) {
+    throw new https.HttpsError('failed-precondition', MSG_SANDBOX_INDISPONIVEL);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Núcleo (testável com Admin SDK contra o Emulator; callable é wrapper fino)
 // ---------------------------------------------------------------------------
@@ -84,14 +127,10 @@ export async function confirmarPagamentoSandboxCore(
   rawInput: unknown,
   caller: ConfirmarSandboxCaller
 ): Promise<ConfirmarPagamentoSandboxResult> {
-  // Fail-safe: sandbox NUNCA roda com chave real (o gateway real dispara o hook)
-  if (hasAsaasKey(process.env)) {
-    throw new https.HttpsError(
-      'failed-precondition',
-      'Confirmação sandbox indisponível: há chave Asaas configurada — o gateway ' +
-        'real dispara o webhook de confirmação.'
-    );
-  }
+  // Fail-safe: sandbox NUNCA roda com chave real (o gateway real dispara o
+  // hook). DEFESA EM PROFUNDIDADE desde o T1 — a porta já recusou antes de
+  // construir o provider; esta linha segura quem chamar o core direto.
+  recusarSandboxComGatewayReal(process.env);
 
   const pedidoId =
     rawInput && typeof rawInput === 'object'
@@ -191,22 +230,51 @@ export async function confirmarPagamentoSandboxCore(
 // Callable
 // ---------------------------------------------------------------------------
 
+/**
+ * O CORPO da porta, testável sem Firebase Functions em volta (PIXREAL-FIX T1).
+ *
+ * Existe porque a ORDEM é o contrato aqui, e ordem só se prova executando: o
+ * defeito de produção era o `selectPaymentProvider()` avaliado como ARGUMENTO
+ * do core, isto é, antes de qualquer linha do core rodar. Com o corpo em uma
+ * função nomeada, o teste que falsifica ("chave de produção ⇒ recusa tipada,
+ * não `internal`") roda contra o caminho de verdade, e não contra uma
+ * reencenação dele.
+ */
+export async function confirmarPagamentoSandboxHandler(
+  db: Db,
+  rawInput: unknown,
+  caller: ConfirmarSandboxCaller,
+  env: ProviderEnv = process.env
+): Promise<ConfirmarPagamentoSandboxResult> {
+  // PRIMEIRA linha, antes do provider: com gateway real esta porta não existe,
+  // e a recusa não pode depender de o provider conseguir ser construído.
+  recusarSandboxComGatewayReal(env);
+  return confirmarPagamentoSandboxCore(
+    db,
+    selectPaymentProvider(env),
+    rawInput,
+    caller
+  );
+}
+
 /** `confirmarPagamentoSandbox` — disparo do webhook de confirmação (sandbox). */
 // Item 11 (DEPLOY-PREVIEW): binding para o fail-safe hasAsaasKey do core
 // recusar o disparo sandbox quando há gateway real configurado (produção).
+//
+// PIXREAL-FIX T2 · ASAAS_WEBHOOK_AUTH_TOKEN: o binding que faltava. Ele NÃO é
+// o conserto (o conserto é a ordem, no T1) e não viaja sozinho — sozinho ele
+// apenas trocaria o `internal` por um provider real construído com sucesso
+// dentro da porta de simulação, que é o pior dos dois mundos. Com o guard na
+// frente, o par existe para que o caminho de sandbox continue construindo o
+// provider certo em ambiente de sandbox (chave `$aact_hmlg_` + token), sem
+// nunca abrir em produção.
 export const confirmarPagamentoSandbox = runWith({
-  secrets: ['ASAAS_API_KEY'],
+  secrets: ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_AUTH_TOKEN'],
 }).https.onCall(async (data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
-  // Pós-ativação R6 o selector devolve o AsaasProvider com chave presente —
-  // o fail-safe DESTE callable é a guarda hasAsaasKey do core (recusa antes
-  // de qualquer efeito: com gateway real, quem confirma é o webhook do Asaas).
-  return confirmarPagamentoSandboxCore(
-    admin.firestore(),
-    selectPaymentProvider(),
-    data,
-    { uid: context.auth.uid }
-  );
+  return confirmarPagamentoSandboxHandler(admin.firestore(), data, {
+    uid: context.auth.uid,
+  });
 });

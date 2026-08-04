@@ -14,12 +14,16 @@ import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import * as admin from 'firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { https } from 'firebase-functions/v1';
 import {
   createInscricaoChargeCore,
   type CreateInscricaoChargeInput,
 } from '../checkout/createInscricaoCharge';
 import { cotarInscricaoCheckoutCore } from '../checkout/cotarInscricaoCheckout';
-import { confirmarPagamentoSandboxCore } from '../checkout/confirmarPagamentoSandbox';
+import {
+  confirmarPagamentoSandboxCore,
+  confirmarPagamentoSandboxHandler,
+} from '../checkout/confirmarPagamentoSandbox';
 import { processarWebhookPagamento, WebhookRejeitadoError } from '../checkout/webhookPagamento';
 import { agoraCheckout } from '../checkout/relogioCheckout';
 import { hasAsaasKey, selectPaymentProvider } from '../payments/selectProvider';
@@ -288,6 +292,69 @@ describe('ATAQUE H4 · simular pagamento com chave Asaas REAL presente', () => {
     // O pedido NÃO foi confirmado nem a receita mexeu enquanto a chave existia.
     expect(await statusPedido(charge.pedidoId)).toBe('pendente');
     expect(await receita()).toBe(rAntes);
+  });
+
+  // ---------------------------------------------------------------------------
+  // PIXREAL-FIX T1 — a ORDEM, não a checagem
+  //
+  // O incidente de 04/08 (lane INV-PIX-INTERNAL): o dono viu um PIX REAL na
+  // tela e recebeu `internal` ao clicar em "Já paguei — confirmar". O guard
+  // acima (H4) já existia e sempre esteve certo; ele só nunca chegava a rodar,
+  // porque a callable avaliava `selectPaymentProvider()` como ARGUMENTO do
+  // core. Com chave de produção sem `ASAAS_WEBHOOK_AUTH_TOKEN` bindado, a
+  // CONSTRUÇÃO levantava `AsaasConfigError` — que não é `HttpsError` — e o
+  // comprador recebia `internal` no caminho do dinheiro.
+  //
+  // Este teste falsifica a versão anterior: ele exercita a PORTA
+  // (`confirmarPagamentoSandboxHandler`), no ambiente EXATO do incidente, e
+  // exige um código tipado. Contra o código de `f37b8187` ele falha —
+  // `selectPaymentProvider(env)` levanta antes de qualquer guard.
+  // ---------------------------------------------------------------------------
+  it('T1 · a PORTA recusa com código TIPADO no ambiente que produziu `internal`', async () => {
+    const key = 'chk-h4-t1-ordem-0001';
+    const charge = await createInscricaoChargeCore(db, provider, baseInput(key), { uid: ANA_UID });
+    const rAntes = await receita();
+
+    // Ambiente do incidente: chave de PRODUÇÃO presente e o token do webhook
+    // AUSENTE (era o binding que faltava no runWith — T2).
+    const envDoIncidente: Record<string, string | undefined> = {
+      ASAAS_API_KEY: '$aact_prod_teste000000000000000000000000000000000000000000',
+    };
+    // A premissa do teste, executada e não suposta: construir o provider NESSE
+    // ambiente realmente quebra. É por aqui que o caminho antigo passava.
+    expect(() => selectPaymentProvider(envDoIncidente)).toThrow();
+
+    const erro = await confirmarPagamentoSandboxHandler(
+      db,
+      { pedidoId: charge.pedidoId },
+      { uid: ANA_UID },
+      envDoIncidente,
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    // Tipado: `failed-precondition`, com mensagem honesta. NUNCA `internal`.
+    expect(erro).toBeInstanceOf(https.HttpsError);
+    expect((erro as https.HttpsError).code).toBe('failed-precondition');
+    expect((erro as https.HttpsError).code).not.toBe('internal');
+    expect((erro as https.HttpsError).message).toMatch(/gateway/i);
+
+    // E a recusa não move dinheiro nenhum.
+    expect(await statusPedido(charge.pedidoId)).toBe('pendente');
+    expect(await receita()).toBe(rAntes);
+  });
+
+  it('T1 · sem chave a MESMA porta segue funcionando (o sandbox não foi fechado)', async () => {
+    const key = 'chk-h4-t1-sandbox-0001';
+    const charge = await createInscricaoChargeCore(db, provider, baseInput(key), { uid: ANA_UID });
+    const r = await confirmarPagamentoSandboxHandler(
+      db,
+      { pedidoId: charge.pedidoId },
+      { uid: ANA_UID },
+      {}, // ambiente de sandbox: nenhuma chave Asaas
+    );
+    expect(r.statusPedido).toBe('pago');
   });
 });
 
