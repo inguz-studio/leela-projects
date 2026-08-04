@@ -2,6 +2,11 @@
 
 Plano executável por IA (Fable 5) para construir o ecossistema **Leela** — ingressos + clubs + comunicação + desafios gameficados + controle de vendas, em 3 superfícies (Painel web, Landing web, App mobile Expo).
 
+> [!warning] Este arquivo está desatualizado
+> Ele foi escrito na fase de planejamento e não acompanhou a construção. A contagem de épicos abaixo diverge da que ele mesmo dá mais adiante, e a seção "Decisões em aberto" lista questões resolvidas há semanas, entre elas a escolha do gateway de pagamento, que já está em produção com o Asaas.
+>
+> Comece por [[HOME]] se você trabalha no projeto, ou por [[onboarding-externo]] se chegou de fora para validar o trabalho. O que ainda depende de decisão do dono está em [[DECISOES-ABERTAS]], que é o painel único e vivo.
+
 ## Como o Fable 5 deve ler
 
 1. `01-produto/ROADMAP.md` — visão, stack, horizontes, mapa de épicos, ondas de execução.
