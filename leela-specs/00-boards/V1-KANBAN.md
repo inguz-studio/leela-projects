@@ -10,6 +10,23 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E00/E16] Virar profissional deixa de ser cadastro e vira um passo de quem já tem conta** — hoje o `/cadastrar` pede sete coisas e cria uma conta de organizador; passa a criar conta na Leela com quatro, com entrar por Google e Apple, e a qualificação vira o próprio ato de virar profissional. Você pediu breve: quem já comprou responde cinco perguntas 📋 especificado em 04/08 · QUALIF-1 a QUALIF-5 · lane SPEC-QUALIFICACAO [[LEELA-E00-fundacao-tecnica]]
+    - [ ] **S033 · Criar conta na Leela, com Google e Apple** — o cadastro encolhe e a porta serve cliente e profissional
+        - [ ] S033-T1 o contrato do cadastro encolhe e o da promoção nasce, com os dois termos ⚔
+        - [ ] S033-T2 as faixas de porte e a lista de atuação entram no core, reusando modalidade e documento
+        - [ ] S033-T3 o `/cadastrar` perde telefone e organização e ganha os dois botões sociais ⚔ · Apple só sobe com as chaves (QUALIF-5)
+    - [ ] **S1611 · Tornar-se profissional** — a qualificação que decide a liberação, sem virar questionário
+        - [ ] S1611-T1 o shape do doc do profissional cresce e o documento fica fora dele ⚔
+        - [ ] S1611-T2 a promoção vira Function, com vínculo de pessoa e recusa uniforme ⚔
+        - [ ] S1611-T3 a tela de tornar-se profissional, com campos condicionais de verdade ⚔
+        - [ ] S1611-T4 o botão da área do cliente passa a apontar para a promoção · amarra com ADMINSEP-2
+- [ ] **[E01] O painel passa a se chamar Painel Profissional** — o nome que você deu alinha a tela ao banco, que já chama a coleção de `profissionais` desde o começo; troca o que se vê e não mexe em diretório, pacote nem endereço 📋 QUALIF-3 · entra no mesmo lote da porta, porque toca os mesmos arquivos [[LEELA-E01-design-system]]
+    - [ ] **S034 · Painel Profissional na superfície**
+        - [ ] S034-T1 o nome novo na sidebar, no título da aba, nas telas de entrada e nos botões da landing
+        - [ ] S034-T2 o handle `profissional` entra na lista de reservados, ao lado de `organizador`
+- [ ] **[E09] O documento do repasse passa a conferir os dígitos** — o cadastro de recebimento aceita qualquer sequência de 11 ou 14 dígitos como CPF ou CNPJ, e o core tem o validador oficial desde o E18; documento errado ali é dinheiro parado no banco 📋 defeito achado pela SPEC-QUALIFICACAO, independente do resto [[LEELA-E09-financeiro-profissional]]
+    - [ ] **S906 · Dígito verificador no documento do repasse**
+        - [ ] S906-T1 `validarDocumento` no servidor e no formulário, e o documento passa a vir do registro de pessoa
 - [ ] **[E12] O pagamento abre com o total pronto** — hoje o botão diz "Atualizando o total…" enquanto a conta viaja, e você aprovou trocar a frase por um spinner pequeno de load. O alvo é maior que o paliativo: a cotação já dispara na etapa de dados e o servidor já sabe o que será cobrado, então a escada de parcelas tem de estar calculada quando o painel de pagamento abre, sem espera perceptível 📋 executável · item 64 [[LEELA-E12-landing]]
     - [ ] **S1219 · A escada de parcelas pronta antes do painel abrir**
         - [ ] S1219-T1 spinner de load no lugar da frase, com a guarda de cotação em voo intacta
