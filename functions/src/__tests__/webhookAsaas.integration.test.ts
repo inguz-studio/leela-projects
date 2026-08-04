@@ -39,6 +39,7 @@ import {
   montarPayloadAsaas,
   processarWebhookAsaas,
 } from '../checkout/webhookAsaas';
+import { dispararEmissaoIngressosPosConfirmacao } from '../eventos/emitirIngressos';
 import {
   pagamentoWebhook,
   WebhookRejeitadoError,
@@ -514,5 +515,131 @@ describe('webhookAsaas — porta única com entrega real do Asaas', () => {
     await expect(
       processarWebhookAsaas(db, provider, undefined, corpoAsaas({ eventId: 'evt_r6_semtoken' }))
     ).rejects.toMatchObject({ httpStatus: 401 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A COSTURA · webhook → emissão do ingresso (PIXREAL-REV V5)
+// ---------------------------------------------------------------------------
+//
+// POR QUE ESTE BLOCO EXISTE. A emissão do ingresso não mora dentro de
+// `processarWebhookAsaas` — ela acontece DEPOIS, no handler HTTP
+// (`webhookAsaas.ts`), que passa o `r.resultado` para
+// `dispararEmissaoIngressosPosConfirmacao`. Os dois lados eram testados; a
+// COSTURA entre eles, não.
+//
+// E a costura é um contrato estreito e silencioso: o disparo só emite se
+// `statusGateway === 'confirmed'` e se `ignorado` e `duplicado` forem falsos.
+// Qualquer divergência — um 'CONFIRMED' maiúsculo, um 'received', um campo
+// renomeado — faz a emissão retornar `null` SEM ERRO, e o comprador paga sem
+// receber ingresso nem aviso. É exatamente a forma da falha de 2026-08-04
+// (keyring nulo ⇒ lista vazia ⇒ e-mail nunca chamado).
+//
+// A suíte de órfãos, que é quem exercita o disparo, monta o `resultado` À MÃO
+// (`{ statusGateway: 'confirmed', ignorado: false, duplicado: false, … }`) —
+// então ela provaria o disparo mesmo que o webhook real devolvesse outra
+// coisa. Aqui o objeto vem do webhook DE VERDADE, e é ele que atravessa.
+
+describe('costura webhook → emissão do ingresso (PIXREAL-REV V5)', () => {
+  const PEDIDO_COSTURA = 'ped-r6-costura';
+  const CHARGE_COSTURA = 'pay_r6_costura_1';
+  const envAntes: Record<string, string | undefined> = {};
+
+  beforeAll(() => {
+    // Keyring sintético. Precisa entrar ANTES da primeira chamada de
+    // `obterQrKeyring()` — o keyring é cacheado por instância e não tem reset.
+    for (const k of ['QR_TOKEN_KEYS', 'QR_TOKEN_KID_ATIVO']) {
+      envAntes[k] = process.env[k];
+    }
+    process.env['QR_TOKEN_KEYS'] = JSON.stringify({
+      k1: Buffer.alloc(32, 7).toString('base64url'),
+    });
+    process.env['QR_TOKEN_KID_ATIVO'] = 'k1';
+  });
+
+  afterAll(() => {
+    for (const [k, v] of Object.entries(envAntes)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  });
+
+  it('o `resultado` do webhook REAL atravessa o disparo e o ingresso existe', async () => {
+    await seedPedidoPendente({
+      pedidoId: PEDIDO_COSTURA,
+      chargeId: CHARGE_COSTURA,
+      forma: 'pix',
+      valorFinal: 5,
+    });
+
+    const r = await processarWebhookAsaas(
+      db,
+      provider,
+      TOKEN,
+      corpoAsaas({
+        eventId: 'evt_r6_costura',
+        payment: {
+          id: CHARGE_COSTURA,
+          externalReference: `${PEDIDO_COSTURA}::charge-${PEDIDO_COSTURA}`,
+        },
+      })
+    );
+    expect(r.tipo).toBe('processado');
+    if (r.tipo !== 'processado') return;
+
+    // O objeto que o handler HTTP entrega ao disparo — sem retoque.
+    const emissao = await dispararEmissaoIngressosPosConfirmacao(db, r.resultado);
+
+    // NÃO pulou pela guarda de elegibilidade: este é o contrato da costura.
+    expect(emissao).not.toBeNull();
+    expect(emissao?.emitidos).toBe(1);
+    expect(emissao?.falhas).toBe(0);
+    expect(emissao?.eventoId).toBe(EVENTO_ID);
+
+    // E o ingresso EXISTE no inscrito — token assinado + código legível.
+    const inscrito = await db
+      .collection('eventos').doc(EVENTO_ID)
+      .collection('inscritos').doc(`${PEDIDO_COSTURA}-i1`).get();
+    expect(typeof inscrito.get('qrToken')).toBe('string');
+    expect((inscrito.get('qrToken') as string).startsWith('LLQR1.k1.')).toBe(true);
+    expect(inscrito.get('codigoIngresso')).toMatch(/^[0-9A-Z]{6}$/);
+    expect(inscrito.get('ingressoEmitidoEm')).toBeTruthy();
+
+    // A condição EXATA que libera o e-mail no disparo (r.falhas === 0 &&
+    // eventoId !== null && ingressos.length > 0) está satisfeita. O provider de
+    // e-mail é `null` aqui (sem BREVO_API_KEY) — de propósito: o caminho de
+    // rede nunca é tocado num teste, e o envio em si já tem suíte própria.
+    expect(emissao?.ingressos.length).toBeGreaterThan(0);
+  });
+
+  it('entrega DUPLICADA não emite segunda vez (a guarda segura pelo `duplicado`)', async () => {
+    const r = await processarWebhookAsaas(
+      db,
+      provider,
+      TOKEN,
+      corpoAsaas({
+        eventId: 'evt_r6_costura',
+        payment: {
+          id: CHARGE_COSTURA,
+          externalReference: `${PEDIDO_COSTURA}::charge-${PEDIDO_COSTURA}`,
+        },
+      })
+    );
+    expect(r.tipo).toBe('processado');
+    if (r.tipo !== 'processado') return;
+    expect(r.resultado.duplicado).toBe(true);
+
+    const antes = await db
+      .collection('eventos').doc(EVENTO_ID)
+      .collection('inscritos').doc(`${PEDIDO_COSTURA}-i1`).get();
+
+    const emissao = await dispararEmissaoIngressosPosConfirmacao(db, r.resultado);
+    expect(emissao).toBeNull();
+
+    const depois = await db
+      .collection('eventos').doc(EVENTO_ID)
+      .collection('inscritos').doc(`${PEDIDO_COSTURA}-i1`).get();
+    expect(depois.get('qrToken')).toBe(antes.get('qrToken'));
+    expect(depois.get('codigoIngresso')).toBe(antes.get('codigoIngresso'));
   });
 });
