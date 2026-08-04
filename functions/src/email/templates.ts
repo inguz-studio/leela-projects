@@ -448,7 +448,8 @@ export function renderIngressosCompraEmail(
               `font-weight:600;text-decoration:underline;">Abrir este ingresso</a><br>` +
               `<span style="font-size:12px;line-height:18px;color:${PALETA.tintaSuave};` +
               `word-break:break-all;">${linkIngressoEsc}</span></p>`
-            : '')
+            : ''),
+        'ingresso'
       )
     );
 

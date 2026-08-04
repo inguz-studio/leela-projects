@@ -336,12 +336,20 @@ export function botao(linkEsc: string, rotuloEsc: string): string {
 /**
  * Bloco de destaque (o cartão dentro do cartão). Usado pelo ingresso e por
  * qualquer conteúdo que precise se separar do corpo.
+ *
+ * @param slot nome do papel do bloco, publicado como `data-slot` — a MESMA
+ *        convenção que `data-slot="brand-logo"` já usa no painel e na landing.
+ *        Cliente de e-mail ignora atributo que não conhece, e em troca existe
+ *        uma costura ESTÁVEL para separar um bloco do outro. Sem ela, quem
+ *        precisa dessa fronteira acaba fatiando o HTML por um pedaço de CSS
+ *        (era `'<div style="border:1px solid'`), que quebra na primeira vez
+ *        que alguém mexe no visual.
  */
-export function blocoDestaque(conteudoHtml: string): string {
+export function blocoDestaque(conteudoHtml: string, slot = 'destaque'): string {
   return (
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" ` +
     `style="margin:0 0 ${MEDIDAS.blocoGap}px;"><tr>` +
-    `<td bgcolor="${PALETA.destaque}" ` +
+    `<td data-slot="${slot}" bgcolor="${PALETA.destaque}" ` +
     `style="background-color:${PALETA.destaque};border-radius:${MEDIDAS.raio}px;` +
     `padding:20px;">${conteudoHtml}</td></tr></table>`
   );

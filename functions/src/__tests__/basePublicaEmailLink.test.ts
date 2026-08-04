@@ -15,6 +15,14 @@ import {
   urlPublicaDoEvento,
 } from '../eventos/basePublica';
 import { renderIngressosCompraEmail } from '../email/templates';
+/**
+ * Só os QR. A moldura da marca (lane IDENTIDADE-EMAIL) acrescentou UM <img>
+ * legítimo ao topo de todo e-mail — a logo —, então contar `<img>` genérico
+ * passou a contar a marca junto. O que estas asserções sempre quiseram dizer
+ * é "QR embutido", e QR é o único data URI do documento.
+ */
+const QR_IMG = /<img[^>]*src="data:image\/png[^>]*>/g;
+
 
 const QR_FAKE =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -105,7 +113,7 @@ describe('e-mail da compra com o link por inscrito (RN-423 · ⚔ 8)', () => {
       linkEvento: 'https://leela.example/meia-floripa-2026',
       ingressos: doisInscritos,
     });
-    const blocos = email.html.split('<div style="border:1px solid');
+    const blocos = email.html.split('data-slot="ingresso"');
     expect(blocos[1]).toContain('LLIP1.k1.aaa.bbb');
     expect(blocos[1]).toContain('AB2CD3');
     expect(blocos[1]).not.toContain('LLIP1.k1.ccc.ddd');
@@ -127,7 +135,7 @@ describe('e-mail da compra com o link por inscrito (RN-423 · ⚔ 8)', () => {
     expect(semImagens).toContain('AB2CD3');
     expect(semImagens).toContain('XY7ZK9');
     // E o QR embutido continua lá, um por inscrito.
-    expect(email.html.match(/<img[^>]*>/g) ?? []).toHaveLength(2);
+    expect(email.html.match(QR_IMG) ?? []).toHaveLength(2);
     expect(email.texto).toContain('AB2CD3');
   });
 

@@ -42,6 +42,14 @@ import { emitirIngressosDoPedido } from '../eventos/emitirIngressos';
 import { gerarQrDataUrl } from '../eventos/publicarEvento';
 import type { QrKeyring } from '../eventos/qrToken';
 import { clearFirestoreDrained, withTriggersPaused } from './helpers/stability';
+/**
+ * Só os QR. A moldura da marca (lane IDENTIDADE-EMAIL) acrescentou UM <img>
+ * legítimo ao topo de todo e-mail — a logo —, então contar `<img>` genérico
+ * passou a contar a marca junto. O que estas asserções sempre quiseram dizer
+ * é "QR embutido", e QR é o único data URI do documento.
+ */
+const QR_IMG = /<img[^>]*src="data:image\/png[^>]*>/g;
+
 
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
@@ -124,10 +132,10 @@ describe('renderIngressosCompraEmail — RN-398', () => {
         { nome: 'João', modalidade: '10k', codigo: 'XY7ZK9', qrDataUri: QR_FAKE },
       ],
     });
-    const imagens = email.html.match(/<img[^>]*>/g) ?? [];
+    const imagens = email.html.match(QR_IMG) ?? [];
     expect(imagens).toHaveLength(2);
     // Cada QR está no MESMO bloco do seu código (o bloco é a fronteira).
-    const blocos = email.html.split('<div style="border:1px solid');
+    const blocos = email.html.split('data-slot="ingresso"');
     expect(blocos[1]).toContain('AB2CD3');
     expect(blocos[1]).toContain('<img');
     expect(blocos[2]).toContain('XY7ZK9');
@@ -154,7 +162,7 @@ describe('renderIngressosCompraEmail — RN-398', () => {
         },
       ],
     });
-    expect(email.html.match(/<img[^>]*>/g)).toBeNull();
+    expect(email.html.match(QR_IMG)).toBeNull();
     expect(email.html).toContain('AB2CD3');
     expect(email.html).toContain('XY7ZK9');
     expect(email.html).toContain('QW4RT5');
@@ -170,7 +178,7 @@ describe('renderIngressosCompraEmail — RN-398', () => {
     expect(email.html).not.toContain('ab2cd3');
     expect(email.html).toContain('Ingresso ainda sendo emitido');
     // Sem código, também não embute QR: imagem sem número é adivinhação.
-    expect(email.html.match(/<img[^>]*>/g)).toBeNull();
+    expect(email.html.match(QR_IMG)).toBeNull();
   });
 
   it('embute no máximo QR_POR_EMAIL_MAX imagens; o resto vai só em texto', () => {
@@ -181,7 +189,7 @@ describe('renderIngressosCompraEmail — RN-398', () => {
       qrDataUri: QR_FAKE,
     }));
     const email = renderIngressosCompraEmail({ ...base, ingressos });
-    expect(email.html.match(/<img[^>]*>/g)).toHaveLength(QR_POR_EMAIL_MAX);
+    expect(email.html.match(QR_IMG)).toHaveLength(QR_POR_EMAIL_MAX);
     // Todos os inscritos continuam na parte texto — ninguém some.
     expect(email.texto.split('\n').filter((l) => l.startsWith('- '))).toHaveLength(
       QR_POR_EMAIL_MAX + 3
@@ -209,7 +217,7 @@ describe('renderIngressosCompraEmail — RN-398', () => {
     expect(email.html).not.toMatch(/<script/i);
     expect(email.html).not.toMatch(/<img[^>]*onerror/i);
     // A única imagem do corpo é o QR que o servidor montou.
-    expect(email.html.match(/<img[^>]*>/g)).toHaveLength(1);
+    expect(email.html.match(QR_IMG)).toHaveLength(1);
     // Nenhum atributo carrega dado de fora — nem o `alt` do QR.
     expect(email.html).toMatch(/<img [^>]*alt="QR do ingresso"/);
   });
@@ -384,7 +392,7 @@ describe.skipIf(!hasEmulator)('enviarEmailIngressos — S1206-T6 (RN-398/219)', 
       expect(enviado.html).toContain(ingresso.codigo);
     }
     // Três QR embutidos.
-    expect(enviado.html.match(/<img[^>]*>/g)).toHaveLength(3);
+    expect(enviado.html.match(QR_IMG)).toHaveLength(3);
     // O log RN-219 foi carimbado no responsável (o SEGUNDO inscrito).
     const logs = await logsDoEvento();
     expect(logs.size).toBe(1);
