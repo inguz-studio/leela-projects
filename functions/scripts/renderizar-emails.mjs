@@ -62,7 +62,20 @@ try {
   });
 
   const BASE = 'https://leela-landing.web.app';
-  const LINK_SENHA = `${BASE}/__/auth/action?mode=resetPassword&oobCode=EXEMPLO-oob-code-123`;
+  const PAINEL = 'https://leela-hub.web.app';
+
+  // Dois links de senha DIFERENTES, e a diferença é o estado real do produto:
+  //   · o de "conta criada" ainda sai como o Firebase gera, porque o ponto de
+  //     origem dele vive em functions/src/checkout/ — território da lane
+  //     PIXREAL-FIX nesta rodada. Falta um argumento lá (ver handoff).
+  //   · o de "redefinição" já sai reescrito para a nossa tela, que é o que a
+  //     callable solicitarRedefinicaoSenha faz hoje.
+  const LINK_SENHA_FIREBASE =
+    'https://leela-hub.firebaseapp.com/__/auth/action' +
+    '?mode=resetPassword&oobCode=EXEMPLO-oob-code-123&lang=pt-BR';
+  const LINK_SENHA_NOSSO =
+    `${PAINEL}/redefinir-senha` +
+    '?mode=resetPassword&oobCode=EXEMPLO-oob-code-123&lang=pt-BR';
 
   // Vocabulário da marca (D-0802-1): experiência e participante. Corrida nunca
   // é a categoria — é uma das experiências do hub.
@@ -99,12 +112,12 @@ try {
     {
       arquivo: '2-conta-criada-defina-a-senha.html',
       titulo: 'Conta criada, defina a senha',
-      quando: 'Primeira compra de um e-mail que ainda não tinha conta.',
+      quando: 'Primeira compra de um e-mail que ainda não tinha conta. O link ainda cai no handler do Firebase — falta um argumento em functions/src/checkout/contaSemFriccao.ts, território de outra lane nesta rodada.',
       render: () =>
         t.renderContaCriadaEmail({
           nomeComprador: 'Marina Alves',
           nomeEvento: EVENTO,
-          linkDefinirSenha: LINK_SENHA,
+          linkDefinirSenha: LINK_SENHA_FIREBASE,
         }),
     },
     {
@@ -173,12 +186,12 @@ try {
       arquivo: '8-redefinicao-de-senha.html',
       titulo: 'Redefinição de senha',
       quando:
-        'Alguém pede "esqueci minha senha", e no primeiro acesso de todo ' +
-        'cliente novo. ERA o template genérico do Firebase.',
+          'Alguém pede "esqueci minha senha". ERA o template genérico do ' +
+          'Firebase; agora é nosso, e o link já cai na tela do painel.',
       render: () =>
         t.renderRedefinirSenhaEmail({
           nomeUsuario: 'Marina Alves',
-          linkRedefinirSenha: LINK_SENHA,
+          linkRedefinirSenha: LINK_SENHA_NOSSO,
         }),
     },
   ];

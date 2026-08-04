@@ -258,7 +258,7 @@ export function renderContaCriadaEmail(
   const linkEsc = escapeHtml(input.linkDefinirSenha);
 
   const assunto = limparCampoCurto(
-    'Sua conta na Leela foi criada — defina sua senha',
+    'Sua conta na Leela foi criada: defina sua senha',
     TEMPLATE_ASSUNTO_MAX
   );
   const html = layoutBase(
@@ -573,7 +573,7 @@ export function renderAvisoRepasseComissaoEmail(
   const restante = formatBRLEmail(input.saldoRestante);
   const devendo = Number.isFinite(input.saldoRestante) && input.saldoRestante < 0;
 
-  const assunto = `Repasse de comissão registrado — ${evento}`.slice(
+  const assunto = `Repasse de comissão registrado · ${evento}`.slice(
     0,
     TEMPLATE_ASSUNTO_MAX
   );
