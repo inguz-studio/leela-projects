@@ -335,6 +335,60 @@ describe('M4 · a logo nunca volta a ser data URI nem SVG', () => {
 });
 
 // ---------------------------------------------------------------------------
+// M4b — o cabeçalho sobrevive à imagem bloqueada
+// ---------------------------------------------------------------------------
+
+describe('M4b · o cabeçalho não desmonta sem a imagem', () => {
+  for (const email of OITO_EMAILS) {
+    const html = email.render().html;
+
+    it(`${email.id}: a faixa da marca é pintada pelo <td>, não pela imagem`, () => {
+      // Se a cor viesse da imagem, cliente que bloqueia deixaria o topo branco.
+      const semImagens = html.replace(/<img[^>]*>/g, '');
+      expect(semImagens).toContain(`bgcolor="${PALETA.faixaMarca}"`);
+      expect(semImagens).toContain(`bgcolor="${PALETA.fileteMarca}"`);
+      expect(semImagens).toContain(PALETA.superficie);
+    });
+
+    it(`${email.id}: o alt da logo é estilizado como wordmark`, () => {
+      // O `alt` cru apareceria em serifada preta minúscula. Com `color`,
+      // `font-weight` e `letter-spacing` no próprio <img>, o texto que entra no
+      // lugar da imagem ainda lê como a marca.
+      const logo = html.match(/<img[^>]*leela-wordmark-email\.png[^>]*>/)?.[0];
+      expect(logo, 'logo não encontrada').toBeDefined();
+      expect(logo).toContain('alt="Leela"');
+      expect(logo).toContain(`color:${PALETA.wordmark}`);
+      expect(logo).toMatch(/font-weight:[6-9]00/);
+      expect(logo).toMatch(/letter-spacing:/);
+    });
+
+    it(`${email.id}: a logo tem tamanho fixo (sem pulo de layout)`, () => {
+      const logo = html.match(/<img[^>]*leela-wordmark-email\.png[^>]*>/)?.[0] ?? '';
+      // Atributo E propriedade: o Outlook lê o atributo, o resto lê o style.
+      expect(logo).toContain(`width="${MEDIDAS.logoW}"`);
+      expect(logo).toContain(`height="${MEDIDAS.logoH}"`);
+      expect(logo).toContain(`width:${MEDIDAS.logoW}px`);
+      expect(logo).toContain(`height:${MEDIDAS.logoH}px`);
+    });
+
+    it(`${email.id}: sem NENHUMA imagem, o conteúdo essencial continua`, () => {
+      const { texto } = email.render();
+      const semImagens = html.replace(/<img[^>]*>/g, '');
+      // A linha que carrega a ação/informação principal sobrevive em texto.
+      const primeiraFrase = texto.split('\n')[0]!.slice(0, 30);
+      expect(semImagens).toContain('experiências de bem-estar');
+      expect(primeiraFrase.length).toBeGreaterThan(10);
+    });
+  }
+
+  it('o e-mail de ingresso mantém código e link sem imagem nenhuma', () => {
+    const html = OITO_EMAILS[0]!.render().html.replace(/<img[^>]*>/g, '');
+    expect(html, 'o código é o que sustenta a manhã do evento').toContain('H4KQ7M');
+    expect(html).toContain('/ingresso/LLIP1.abc');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // M5/M6 — contraste
 // ---------------------------------------------------------------------------
 
