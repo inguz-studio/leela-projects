@@ -210,21 +210,28 @@ try {
     console.log(`${email.arquivo.padEnd(34)} ${r.html.length} bytes`);
   }
 
-  // Índice: uma página só para o dono percorrer os oito.
+  // Índice: uma página só para o dono percorrer os oito. As cores vêm da MESMA
+  // paleta dos e-mails (que espelha os tokens do design system) — a página que
+  // apresenta a marca não podia ser a única coisa aqui com hex escolhido na
+  // hora.
+  const { PALETA, MEDIDAS, FONTE_UI } = require(join(temp, 'identidade.js'));
   const indice =
     `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>Os 8 e-mails da Leela</title>` +
-    `<style>body{margin:0;background:#0A0A0A;color:#F9F9F9;` +
-    `font-family:'Exo 2','Segoe UI',Roboto,Helvetica,Arial,sans-serif;` +
-    `padding:40px 24px;}main{max-width:760px;margin:0 auto;}` +
-    `h1{font-size:28px;margin:0 0 8px;}p.sub{color:#BFBFBF;margin:0 0 32px;}` +
-    `ol{padding:0;margin:0;list-style:none;counter-reset:e;}` +
-    `li{counter-increment:e;background:#161616;border-radius:12px;padding:20px 24px;` +
-    `margin:0 0 12px;}li a{color:#C8E84A;font-size:19px;font-weight:600;` +
+    `<style>body{margin:0;background:${PALETA.canvas};color:${PALETA.tinta};` +
+    `font-family:${FONTE_UI};padding:40px 24px;}` +
+    `main{max-width:760px;margin:0 auto;}` +
+    `h1{font-size:28px;margin:0 0 8px;}p.sub{color:${PALETA.tintaSuave};margin:0 0 32px;}` +
+    `ol{padding:0;margin:0;list-style:none;}` +
+    `li{background:${PALETA.superficie};border-radius:${MEDIDAS.raio}px;` +
+    `padding:20px 24px;margin:0 0 12px;}` +
+    `li a{color:${PALETA.wordmark};font-size:19px;font-weight:600;` +
     `text-decoration:none;}li a:hover{text-decoration:underline;}` +
-    `li .n{color:#999;font-size:13px;}li .q{color:#BFBFBF;font-size:14px;margin:6px 0 0;}` +
-    `li .a{color:#BFBFBF;font-size:13px;margin:8px 0 0;}` +
-    `code{background:#1C1C1C;padding:2px 6px;border-radius:4px;font-size:12px;}` +
+    `li .n{color:${PALETA.tintaFraca};font-size:13px;}` +
+    `li .q{color:${PALETA.tintaSuave};font-size:14px;margin:6px 0 0;}` +
+    `li .a{color:${PALETA.tintaSuave};font-size:13px;margin:8px 0 0;}` +
+    `code{background:${PALETA.destaque};padding:2px 6px;border-radius:4px;font-size:12px;}` +
     `</style></head><body><main>` +
     `<h1>Os 8 e-mails da Leela</h1>` +
     `<p class="sub">Renderizados com dados de exemplo. Cada item abre o HTML ` +
