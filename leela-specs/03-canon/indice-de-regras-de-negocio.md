@@ -47,6 +47,7 @@ O terceiro formato cobre sozinho a faixa RN-425 a RN-453, que é a mais nova e a
 | 418-424 | [[LEELA-E12-landing]] |
 | 425-445 | E03, E04, E08, E09, E12 e E17, pelas rodadas de 29/07 e 02/08 |
 | 446-453 | [[LEELA-E00-fundacao-tecnica]], [[LEELA-E12-landing]] e [[LEELA-E16-plataforma-superadmin]] |
+| 454-459 | E04, E09, E12 e E16, pela rodada de 04/08 (economia do parcelamento) |
 | 820-823 | [[LEELA-E11-analytics]] |
 
 As faixas 178-189, 385-392 e 425-445 atravessam mais de um épico porque nasceram em rodadas que tocaram várias frentes no mesmo dia. Para essas, o caminho curto é o arquivo de delta da rodada, que aponta para o épico de cada uma.
@@ -73,7 +74,7 @@ Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no templat
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 453. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a 459, depois de a rodada de 04/08 consumir 454 a 459. O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 

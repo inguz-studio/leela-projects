@@ -1145,3 +1145,76 @@ do webhook. **Dano real: nenhum** — não segura vaga, não reserva kit, não v
 receita nem em demografia. **Recomendação em vigor: não limpar agora**; se limpar, só depois da
 primeira compra bem-sucedida, e a operação é apagar os inscritos dos 2 pedidos (`onInscritoWrite`
 recomputa sozinho no delete, por full recompute).
+
+## Delta custo, markup e margem viram três números com nome (SPEC-JUROS-MARGEM · 2026-08-04)
+
+O dono pediu para ver, na tabela que já existe no admin, quanto custa parcelar contra o que
+ele cobra por parcelar. Verbatim: *"Inclua o custo de parcelamento também para que eu veja
+quanto custa e quanto preciso colocar de markup, para saber nossa margem exata a ser cobrada,
+por parcela."* Rodada em `02-rodadas/2026-08-04-juros-margem/`.
+
+### RN-454 (nova, dona) · custo, markup e margem, com fonte única no core
+
+Três números se confundiam porque um deles nunca tinha sido escrito em lugar nenhum.
+
+| Nome | O que é | Quem paga |
+|---|---|---|
+| **Custo** | O que o gateway cobra da Leela para processar aquela venda naquele número de parcelas | A Leela, descontado do que entra |
+| **Markup** | O que a Leela acrescenta ao preço por financiar a compra. Hoje é o juro do parcelamento | A compradora, embutido no total |
+| **Margem** | O que sobra: markup menos o custo **incremental** sobre a venda em 1x | Resultado, não insumo |
+
+```
+markup(n)           = totalParcelado(n) − totalAVista
+custoGateway(n)     = round(totalParcelado(n) × custo[n].percentual) + custo[n].fixoCentavos
+custoIncremental(n) = custoGateway(n) − custoGateway(1)
+margem(n)           = markup(n) − custoIncremental(n)
+margemPorParcela(n) = margem(n) ÷ n
+```
+
+Tudo em centavos inteiros com half-up, a convenção da RN-183. As funções vivem em
+`packages/core/src/finance/economiaParcelamento.ts` e **compõem** `buildInstallmentOptions` e
+`computeTaxaPlataforma` sem reimplementar nenhuma das duas. Nenhuma tela, Function ou
+relatório recalcula dinheiro por conta própria: é a mesma disciplina que
+`cotarInscricaoCheckout` já impõe ao juro, e pela mesma razão, que é duas autoridades sobre o
+mesmo valor divergirem no dia em que uma delas mudar.
+
+Três invariantes: `markup(1) = 0`, porque a parcela única do cartão nunca tem juros (RN-436);
+`margem(1) = 0`, porque o custo incremental de 1x é zero por definição; e **`margem(n)` pode
+ser negativa**, quando o custo de parcelar supera o juro cobrado. A margem negativa aparece na
+tela, com destaque, e nunca é zerada nem escondida.
+
+A palavra "taxa" fica reservada à taxa da plataforma sobre a venda (RN-178). Ela é outra
+conta, incide no face, não depende do número de parcelas e nunca é somada ao markup.
+
+**Par com a RN-437:** o juro do parcelamento não é receita do organizador, e por simetria o
+custo de parcelar não é despesa dele. É esse par que sustenta o default proposto no item
+JUROS-3 do painel.
+
+### RN-459 (nova, dona) · o custo é carimbado na venda, como a taxa já é
+
+Espelha a RN-179 e existe pela mesma razão. A tabela de custo vive em `platform/config`, que
+não é versionado; sem carimbo, trocar a tabela reescreveria retroativamente a margem de toda
+venda passada, e o dono leria o faturamento de junho com o custo de agosto.
+
+No ato da compra, o par `{percentual, fixoCentavos}` do meio e do número de parcelas
+escolhidos é resolvido e carimbado em `conciliacao`, ao lado de `taxaPct`/`taxaFixa`/
+`taxaValor`, junto de `custoOrigem` (`'estimativa' | 'contrato'`), na mesma transação da
+confirmação. **Mudança da tabela nunca reprecifica nem re-margina pedido existente**, e replay
+não recomputa contra tabela nova.
+
+**Junto vem a captura do custo real, e ela fecha uma lacuna que ninguém tinha olhado.** O
+webhook do Asaas traz `netValue`, o valor já descontadas as taxas do gateway, e o adapter
+descarta o campo de propósito para proteger o cross-check de integridade
+(`asaasProvider.ts:1506-1508`). A decisão está certa no que protege, mas a diferença entre
+`value` e `netValue` **é o custo real daquela venda**, e ela era jogada fora sem registro:
+não existe uma única venda na história do sistema cujo custo real seja conhecido. O `netValue`
+passa a ser gravado como campo de **observação**, ao lado do valor de cobrança, sem entrar no
+cross-check, que continua lendo `payment.value`. É o que torna a margem apurável em vez de
+apenas estimada.
+
+### O que este épico consome
+
+- **RN-455** (dona no E16) — a tabela de custo do gateway, global e configurável, que alimenta
+  `custoGateway(n)`. Sem a linha do meio e da parcela, a margem **não é calculada**.
+- **RN-456** (dona no E04) — a divisão exata em centavos, que faz o `markup` de um termo sem
+  juros ser exatamente zero em vez de um resíduo.

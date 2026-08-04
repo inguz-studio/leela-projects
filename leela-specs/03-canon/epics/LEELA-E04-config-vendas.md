@@ -1737,3 +1737,52 @@ decidir o modelo comercial.
 | Story | Tarefas | Estado |
 |---|---|---|
 | **S314 · Motor de juros do parcelamento** | T1 tabela Price real em `buildInstallmentOptions` ⚔ (`e0ef9a5`) · T2 2,89% a.m. no termo semeado e no default, com a cópia da fórmula no seed morta ⚔ (`5568f33`) | ✅ **construída em 2026-08-03**; review antagonista PASS nos vetores 1, 2, 3 e 11, com o DEF-1 corrigido por cima (`4c3b998`) |
+
+## Delta o centavo que nascia do arredondamento (SPEC-JUROS-MARGEM · 2026-08-04)
+
+A régua de parcelas ganhou tabela Price real em 03/08 e, junto, um resíduo que ninguém tinha
+medido no ramo sem juros. Rodada em `02-rodadas/2026-08-04-juros-margem/`, arquivos `01-spec`,
+`02-rns` e `03-fila`.
+
+### RN-456 (nova, dona) · o total parcelado é dividido em centavos exatos
+
+Com `jurosAoMes = 0`, `totalParcelado(n)` é **exatamente** `totalAVista` para todo `n`
+ofertável. Não há o que financiar, então nenhum centavo pode nascer do arredondamento. A
+divisão passa a ser exata:
+
+```
+base    = floor(totalCentavos ÷ n)
+resto   = totalCentavos − base × n          (0 ≤ resto < n)
+parcelas 1..n−1 = base
+parcela n       = base + resto
+```
+
+A soma fecha no total por construção, e a maior parcela é a última. A escolha da última não é
+estética: o adapter manda `installmentCount` mais `totalValue` e deixa o Asaas dividir
+ajustando a última parcela (`05-discovery/asaas-api-reference.md:119`). Fazer diferente na
+tela criaria divergência entre o que a compradora leu e o que a fatura dela vai dizer.
+
+**A RN-436 fica intacta no ramo com juros.** A ordem normativa continua sendo arredondar a
+parcela e multiplicar; `R$ 300,00` em 12x a 2,89% continua dando `12 × R$ 29,94 = R$ 359,28`,
+byte a byte. O que a RN-456 acrescenta é o ramo de juros zero, que a RN-436 nunca tratou
+explicitamente, e é lá que o resíduo nascia.
+
+**O defeito, medido.** Com o termo em juros zero, `R$ 35,00` em 3x dava `round(35 ÷ 3) =
+11,67` e `11,67 × 3 = R$ 35,01`. Um centavo apareceu do nada e chegou ao resumo como linha de
+juros num termo sem juros. O piso do principal que a ACHADOS-REV instituiu contra o DEF-1
+**agrava o resíduo em vez de eliminá-lo**: em 6x, `5,83 × 6 = R$ 34,98` ficava abaixo do
+principal, o piso sobe um centavo em cada parcela e `5,84 × 6 = R$ 35,04`. Dois centavos para
+baixo viraram quatro para cima. Conferido em `packages/core/src/finance/calc.ts:144-151`.
+
+**O piso do principal não é removido** (premissa P6 da spec). No ramo de juros zero ele passa
+a ser inalcançável, porque o total já é o principal por definição; no ramo com juros ele nunca
+disparava. Fica como última linha de defesa da invariante, e apagá-lo trocaria uma trava viva
+por uma suposição.
+
+Duas consequências de contrato. `InstallmentOption` ganha a parcela final, e os consumidores
+que a ignorarem continuam corretos no caso uniforme. E a **parcela mínima do termo passa a ser
+conferida contra a menor parcela**, não contra a uniforme (premissa P8): com a divisão exata
+as parcelas diferem em um centavo, e conferir a menor é a leitura conservadora.
+
+Invariante server-side: uma opção cujo somatório de parcelas difira do `valorTotal` é defeito
+do servidor, não erro do cliente, e a cotação recusa com `internal`.

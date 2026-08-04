@@ -1450,3 +1450,108 @@ falsificação e o veredito foi **premissa sustentada**. Detalhe em
   (o resgate vive atrás do login; recadastrar esbarra em `auth/email-already-in-use`). A
   única recuperação hoje é intervenção de `platform_admin`. Vira história de recuperação
   self-service na fila do produto, não decisão do dono.
+
+## Delta a economia do parcelamento entra na tela dos termos (SPEC-JUROS-MARGEM · 2026-08-04)
+
+O dono apontou a tabela alvo pelas próprias palavras: *"a tabela de configuração no admin que
+gerencia os tenants"*. Existem três telas de taxa no painel de plataforma, e só uma é por
+tenant — `/plataforma/tenants/:tenantId/termos`, onde os 2,89% a.m. já são editáveis. O bloco
+novo entra **dentro** dela, logo abaixo do fieldset de parcelamento, sem rota nova e sem
+tabela irmã. Rodada em `02-rodadas/2026-08-04-juros-margem/`.
+
+### RN-455 (nova, dona) · a tabela de custo do gateway é dado, nunca constante
+
+Vive em `platform/config.custoGateway`, por meio de pagamento e por número de parcelas, no par
+`{percentual, fixoCentavos}` que a RN-178 já usa, mais `origem: 'estimativa' | 'contrato'` e
+`atualizadoEm`. **Nenhum valor de custo em constante de código**, pela mesma razão da RN-183 e
+pela mesma disciplina que a S314-T2 registrou por escrito quando o 2,89% entrou como dado:
+quando o dono vetar o número, a mudança tem de ser de dado.
+
+Escrita exclusiva do `platform_admin` (RN-404). Escrita vinda de `tenant_owner` ou de cliente
+é negada pelas Rules com `permission-denied`, e percentual fora de `[0, 100]` ou fixo negativo
+é recusado na validação com `invalid-argument`.
+
+**Sem dado não há margem.** Quando a linha do meio e da parcela está ausente, a tela declara
+"custo não configurado" e a coluna Margem fica **vazia** — nunca zero, nunca estimativa
+silenciosa. Isso não é defeito de tela: **o custo real que o Asaas cobra por parcela não
+existe em lugar nenhum do sistema hoje** (lacuna L1 da spec). O que existe é benchmark de
+discovery de 02/07, com cartão à vista a 2,99% + R$ 0,49 e a coluna de parcelado **vazia** para
+o Asaas, sob a recomendação explícita de não fechar taxa sem cotação por volume. O dono vai
+usar estes números para decidir preço, então nenhum número inventado entra na conta.
+
+A tabela é **global e não tem override por tenant** (premissa P3 da spec): o custo é o
+contrato da Leela com o gateway e não muda porque o produtor mudou. Diferente da taxa da
+plataforma, que tem override negociado por organizador pela RN-178.
+
+**A armadilha que quem construir vai encontrar.** `commercialTerms.tabelaTaxasParcela` existe
+no modelo, tem validação, tem Rules e tem interface completa de 2x a 12x no modal de planos,
+com a legenda "Taxa por parcela (%)" — e o checkout **nunca a consome**. É tela de
+administração mostrando número que não move preço nenhum. A economia nova **não** é pendurada
+nela; a grade ganha aviso de campo inerte na mesma aterrissagem, e a aposentadoria entra como
+dívida.
+
+### RN-458 (nova, dona) · "sem juros" é liberação do admin, por tenant
+
+Restrição do dono, na letra: "pagamento sem juros" não existe hoje e, quando existir, será
+**ferramenta do admin da plataforma** liberada por tenant, nunca escolha do produtor.
+
+```
+parcelamentoSemJuros?: {
+  ateParcelas: number          // inteiro ≥ 2 e ≤ maxParcelas; ausência do campo = desligado
+  custoAbsorvidoPor: 'plataforma' | 'produtor'
+}
+```
+
+Ausente significa desligado, que é o estado de todo tenant hoje. `ateParcelas: 6` zera o juro
+de 2x a 6x e devolve o `jurosAoMes` do termo de 7x em diante. Escrita exclusiva do
+`platform_admin` (RN-404): tentativa vinda de `tenant_owner` é negada com `permission-denied`,
+e `ateParcelas` não inteiro ou fora de `[2, maxParcelas]` é recusado com `invalid-argument`.
+
+**Não existe campo equivalente no evento, no lote nem em tela alguma do organizador**, e a
+ausência desse caminho de escrita é a regra, não um detalhe de implementação.
+
+Na tela do comprador, o total das opções sem juro é **exatamente** o total à vista pela
+RN-456, e a frase "sem juros" nunca aparece quando o total difere do à vista, nem por um
+centavo. Nenhuma linha de juros é renderizada nessas opções.
+
+**Contrato especificado, construção não priorizada.** Não há tarefa na fila da S1610. A regra
+existe para que a primeira vez que alguém pedir não vire improviso. Quem paga o custo quando o
+juro é zero é decisão do dono e está no painel como **JUROS-3**, com o default proposto de a
+plataforma absorver.
+
+### O bloco novo na tela, e o que ele não é
+
+Uma tabela de **leitura**, derivada, com uma linha por número de parcelas ofertável pelo
+termo. Colunas: parcelas, parcela, total do comprador, custo, markup e margem, com a margem
+por parcela abaixo do valor. Um rodapé fecha a conta cheia da venda, somando a taxa da
+plataforma sobre o face.
+
+Ele **não acrescenta campo editável nenhum** (premissa P2 da spec): os três controles que
+governam a escada — `maxParcelas`, `jurosAoMes` e `parcelaMinima` — já existem acima no mesmo
+formulário, e a tabela reage a eles. Duplicá-los criaria duas autoridades sobre a mesma
+escada. Acima da tabela fica só um campo de **valor simulado**, começando em R$ 300,00, que
+recalcula na hora sem salvar nada e sem ida ao servidor.
+
+Tabela, e não cards nem lista, porque a tarefa dominante é comparar atributos entre muitos
+itens homogêneos: o dono varre doze linhas procurando onde a margem cai. Números alinhados à
+direita, sem ordenação de coluna (a escada por número de parcelas é a única ordem que faz
+sentido) e sem ação por linha. `Table`, `Badge`, `formatBRL` e `formatPct` já estão no bundle;
+nenhum componente novo de design system.
+
+### Quem edita o quê, e o que o produtor nunca toca
+
+| O quê | Quem edita | Efeito |
+|---|---|---|
+| Juros ao mês, máximo de parcelas, parcela mínima | `platform_admin` | Novo termo, `versao + 1`, com snapshot imutável |
+| Override de taxa por meio, e "sem juros" quando existir | `platform_admin` | Mesmo save, mesma versão |
+| Tabela global de taxa por meio | `platform_admin` | Imediato, sem versão |
+| Tabela de custo do gateway | `platform_admin` | Imediato; carimbado por venda (RN-459) |
+| Valor simulado da tabela | Quem estiver olhando | Nenhum. Não persiste |
+
+**O produtor não mexe em nada disso**, e a regra já é fail-closed pela RN-404: a tela de
+termos abre em modo leitura para `tenant_owner`, sem botão de salvar, e as Rules negam o
+resto. O único controle vizinho que o produtor tem é o modo da taxa por evento (RN-347), que
+não encosta na escada de parcelas.
+
+Nada nesta história exige deploy para mudar número. Exige deploy só a chegada do bloco novo na
+tela, uma vez.

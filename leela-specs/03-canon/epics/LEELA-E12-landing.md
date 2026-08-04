@@ -2546,3 +2546,53 @@ Organizador e cliente cabem na mesma conta, e é assim que tem de ser. Para o E1
 uma propriedade de tela: editar "meus dados" na área do cliente escreve em `atletas/{uid}` e
 **não** toca `profissionais/{uid}`, que é o perfil do organizador e já tem casa em `/conta` no
 painel. Uma conta que acumula os dois tem os dois documentos, e cada tela edita o seu.
+
+## Delta o preço exato para a compradora (SPEC-JUROS-MARGEM · 2026-08-04)
+
+Decisão PB-2 (a) do dono: a compradora vê o **preço exato**, nunca um resíduo de arredondamento
+rotulado como juros. Trocar o rótulo da linha não resolve, e era essa a opção que o painel
+oferecia. Rodada em `02-rodadas/2026-08-04-juros-margem/`.
+
+### RN-457 (nova, dona) · a linha de juros mostra juro contratado, nunca resíduo
+
+`jurosParcelamento` continua sendo `totalCobrado − totalComprador`, calculado no **servidor** e
+não na tela, pela decisão que a S1216-T2 já registrou. Continua não sendo receita do
+organizador (RN-437). O que muda é que, pela RN-456, ele passa a ser **zero por construção**
+sempre que o juro contratado é zero.
+
+**A guarda de renderização já existe e nunca foi o problema.** As duas telas só desenham a
+linha quando o valor é maior que zero (`StepResumo.tsx:397`, `StepConfirmacao.tsx:162`). O
+defeito estava a montante, no cálculo, e mexer na tela seria consertar o lugar errado.
+
+Falsificação: qualquer par `(valor, n)` com `jurosAoMes = 0` que devolva `jurosParcelamento >
+0` reprova a regra.
+
+**O que a pessoa vê e o que ela paga:**
+
+| Caso | Hoje | Depois |
+|---|---|---|
+| R$ 35,00 em 3x, juros 0 | `3x de R$ 11,67` · total **R$ 35,01** · linha "Juros do parcelamento R$ 0,01" | `3x de R$ 11,66 (última R$ 11,68)` · total **R$ 35,00** · sem linha de juros |
+| R$ 35,00 em 6x, juros 0 | `6x de R$ 5,84` · total **R$ 35,04** · linha de juros R$ 0,04 | `6x de R$ 5,83 (última R$ 5,85)` · total **R$ 35,00** · sem linha de juros |
+| R$ 300,00 em 12x, juros 2,89% | `12x de R$ 29,94` · total R$ 359,28 · juros R$ 59,28 | idêntico |
+
+Apresentação, nas três superfícies que hoje escrevem `n x de R$ X,XX` (a lista de opções, a
+linha da opção escolhida no resumo e o bloco de totais da confirmação):
+
+- Quando todas as parcelas são iguais, a opção diz `n x de R$ X,XX` e mais nada.
+- Quando a última difere, diz `n x de R$ X,XX (última R$ Y,YY)`. Sem asterisco, sem nota de
+  rodapé, sem "aproximadamente".
+- O **total é a promessa**. É ele que a compradora compara com o preço anunciado, e é ele que
+  precisa bater na casa do centavo.
+
+O comentário `ACHADOS-REV` que hoje deixa a copy da linha na mesa do dono
+(`cotarInscricaoCheckout.ts:137-144`) é substituído pela decisão PB-2 na mesma aterrissagem:
+documentação que contradiz a regra vigente é a próxima armadilha de quem for mexer nisso.
+
+### O que este épico consome
+
+- **RN-456** (dona no E04) — a divisão exata em centavos e o resíduo na última parcela. É ela
+  que faz o total sem juros fechar no preço anunciado.
+- **RN-458** (dona no E16) — quando "sem juros" existir, a escada mostra `em até 6x sem juros`
+  e a frase nunca aparece se o total diferir do à vista, nem por um centavo.
+- **RN-435** — inalterada. O bloco de totais continua declarando a composição do total; o que
+  some é uma linha que não deveria existir.
