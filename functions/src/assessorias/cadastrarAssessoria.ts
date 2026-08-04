@@ -72,6 +72,7 @@ import {
 import { slugify, slugCandidato, MAX_TENTATIVAS_SLUG } from '../eventos/slug';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderConviteAssessoriaEmail } from '../email/templates';
+import { basePublica } from '../eventos/basePublica';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -432,9 +433,11 @@ export async function cadastrarAssessoriaCore(
     resultado.tokenAceite !== undefined &&
     emailProvider !== null
   ) {
-    const baseUrl = (
-      process.env['NEXT_PUBLIC_LEELA_URL'] ?? 'http://localhost:3000'
-    ).replace(/\/+$/, '');
+    // DEPLOY-EMAIL · RN-423: mesma correção do `salvarAfiliado` — a base sai de
+    // `basePublica()`, que resolve `LEELA_PUBLIC_URL` primeiro e
+    // `NEXT_PUBLIC_LEELA_URL` como alias. Ler o env cru enxergava só o alias e
+    // o convite de assessoria saía com link para `localhost` em produção.
+    const baseUrl = (basePublica() ?? 'http://localhost:3000').replace(/\/+$/, '');
     const linkAceite =
       `${baseUrl}/convite` +
       `?tenantId=${encodeURIComponent(tenantId)}` +

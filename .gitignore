@@ -61,6 +61,13 @@ storybook-static/
 # Artefato de deploy das Functions (gerado por bundle-deploy.mjs)
 functions-deploy/
 
+# Sondagem descartável do bundle das Functions (cópia de functions/src). A lane
+# PIXREAL-FIX deixou uma sem rastreio e ela quebrou o `tsc` do pacote e fez o
+# vitest coletar uma CÓPIA do teste da guarda de segredos — vermelho que não
+# vinha do código de verdade. A pasta já foi apagada; a linha fica para que um
+# `git add -A` distraído nunca a versione (lane DEPLOY-EMAIL).
+functions/src/__probe__/
+
 # Cache/codegen do firebase-tools (inclui o backend SSR gerado pelo web
 # frameworks em .firebase/<site>/functions) — artefato de build, nunca fonte
 .firebase/

@@ -54,6 +54,7 @@ import {
 import { mascararDocumento } from '../assessorias/cadastrarAssessoria';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderConviteAfiliadoEmail } from '../email/templates';
+import { basePublica } from '../eventos/basePublica';
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -460,7 +461,12 @@ export async function salvarAfiliadoCore(
   // re-emite token). Token NUNCA logado.
   if (resultado.status === 'convite_pendente' && emailProvider !== null) {
     const eventoNome = (eventoSnap.get('nome') ?? input.eventoId) as string;
-    const baseUrl = process.env['NEXT_PUBLIC_LEELA_URL'] ?? 'http://localhost:3000';
+    // DEPLOY-EMAIL · RN-423: a base pública é UMA SÓ e vem de `basePublica()`,
+    // que aceita `LEELA_PUBLIC_URL` (a variável desta camada, a que está setada
+    // em produção) e `NEXT_PUBLIC_LEELA_URL` como alias. Ler o env cru aqui
+    // enxergava só o alias e caía no `localhost` — todo convite de afiliado
+    // emitido em produção saía com link para a máquina de quem enviou.
+    const baseUrl = basePublica() ?? 'http://localhost:3000';
     const linkAceite =
       `${baseUrl.replace(/\/+$/, '')}/convite/afiliado` +
       `?e=${encodeURIComponent(input.eventoId)}` +

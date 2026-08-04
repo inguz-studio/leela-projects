@@ -40,6 +40,7 @@ import * as logger from 'firebase-functions/logger';
 import { COLECAO_PESSOAS, validarEmail, type EmailProvider } from '@leela/core';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderContaCriadaEmail } from '../email/templates';
+import { actionCodeSettingsSenha, reescreverParaOPainel } from '../auth/linkDeAcao';
 
 type Db = admin.firestore.Firestore;
 
@@ -103,8 +104,18 @@ export function contaSemFriccaoAuthAdmin(): ContaSemFriccaoAuth {
         throw err;
       }
     },
+    // DEPLOY-EMAIL · o link do e-mail nº 2 ("conta criada, defina a senha") é a
+    // PRIMEIRA tela do produto para quem acabou de pagar. Sem estes dois
+    // argumentos ele caía no handler HOSPEDADO do Firebase — layout genérico,
+    // domínio `leela-hub.firebaseapp.com`. `actionCodeSettingsSenha()` fixa o
+    // `continueUrl`; `reescreverParaOPainel` troca a página que recebe o clique
+    // por `/redefinir-senha` do painel, levando o `oobCode` (a credencial é o
+    // código, não a URL que o entregou). Ponto único de decisão da jornada:
+    // `functions/src/auth/linkDeAcao.ts`.
     async gerarLinkDefinirSenha(email) {
-      return admin.auth().generatePasswordResetLink(email);
+      return reescreverParaOPainel(
+        await admin.auth().generatePasswordResetLink(email, actionCodeSettingsSenha())
+      );
     },
   };
 }
