@@ -61,7 +61,10 @@ describe('renderAvisoRepasseComissaoEmail — RN-386', () => {
       ...base,
       nomeEvento: '<img src=x onerror=alert(1)>Corrida',
     });
-    expect(r.html).not.toContain('<img');
+    // A moldura da marca (lane IDENTIDADE-EMAIL) traz um <img> legítimo: a
+    // logo. O que não pode sobreviver é a TAG INJETADA pelo organizador.
+    expect(r.html).not.toContain('<img src=x');
+    expect(r.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(r.html).toContain('&lt;img');
   });
 

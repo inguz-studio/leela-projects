@@ -171,5 +171,9 @@
   "icon": {
     "size":   "24px",
     "stroke": "1.75"
+  },
+  "brand": {
+    "wordmark":     "#C8E84A",
+    "wordmark-box": "#2A1018"
   }
 }

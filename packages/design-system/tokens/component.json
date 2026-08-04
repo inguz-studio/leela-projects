@@ -296,5 +296,19 @@
   },
   "skeleton": {
     "radius":        "{radius.xs}"
+  },
+  "email": {
+    "$description": "Superficie de e-mail transacional (lane IDENTIDADE-EMAIL). Cliente de e-mail NAO resolve var() nem carrega folha externa: o HTML sai com valor literal inline. Estes tokens sao a FONTE que functions/src/email/identidade.ts espelha, e o teste emailIdentidade.test.ts reprova se os dois divergirem. Postura DARK-FIRST: a identidade do produto e o tema brasa, e fundo escuro e o que menos sofre com a inversao de cor dos clientes em modo escuro.",
+    "width-max":     "600px",
+    "gutter":        "{spacing.8}",
+    "block-gap":     "{spacing.6}",
+    "radius":        "{radius.lg}",
+    "header-py":     "{spacing.6}",
+    "header-rule":   "3px",
+    "logo-w":        "150px",
+    "logo-h":        "44px",
+    "wordmark-ink":  "{brand.wordmark}",
+    "code-size":     "{font.size.2xl}",
+    "code-spacing":  "0.18em"
   }
 }

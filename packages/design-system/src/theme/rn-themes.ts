@@ -135,6 +135,8 @@ export const brasaTheme: FlatTokens = {
   "motion-easing-exit": "cubic-bezier(0.3, 0.7, 0, 1)",
   "icon-size": "24px",
   "icon-stroke": "1.75",
+  "brand-wordmark": "#C8E84A",
+  "brand-wordmark-box": "#2A1018",
   "surface-base": "#0C0C0C",
   "surface-raised": "#161616",
   "surface-overlay": "#1C1C1C",
@@ -417,7 +419,18 @@ export const brasaTheme: FlatTokens = {
   "sidepanel-meta-size": "0.6875rem",
   "sidepanel-meta-mt": "3px",
   "stepper-step-size": "32px",
-  "skeleton-radius": "4px"
+  "skeleton-radius": "4px",
+  "email-width-max": "600px",
+  "email-gutter": "32px",
+  "email-block-gap": "24px",
+  "email-radius": "12px",
+  "email-header-py": "24px",
+  "email-header-rule": "3px",
+  "email-logo-w": "150px",
+  "email-logo-h": "44px",
+  "email-wordmark-ink": "#C8E84A",
+  "email-code-size": "2rem",
+  "email-code-spacing": "0.18em"
 };
 
 export const wineTheme: FlatTokens = {
@@ -571,6 +584,8 @@ export const wineTheme: FlatTokens = {
   "motion-easing-exit": "cubic-bezier(0.3, 0.7, 0, 1)",
   "icon-size": "24px",
   "icon-stroke": "1.75",
+  "brand-wordmark": "#C8E84A",
+  "brand-wordmark-box": "#2A1018",
   "surface-base": "#FDFAF7",
   "surface-raised": "#FFFFFF",
   "surface-overlay": "#F5F1EC",
@@ -853,5 +868,16 @@ export const wineTheme: FlatTokens = {
   "sidepanel-meta-size": "0.6875rem",
   "sidepanel-meta-mt": "3px",
   "stepper-step-size": "32px",
-  "skeleton-radius": "4px"
+  "skeleton-radius": "4px",
+  "email-width-max": "600px",
+  "email-gutter": "32px",
+  "email-block-gap": "24px",
+  "email-radius": "12px",
+  "email-header-py": "24px",
+  "email-header-rule": "3px",
+  "email-logo-w": "150px",
+  "email-logo-h": "44px",
+  "email-wordmark-ink": "#C8E84A",
+  "email-code-size": "2rem",
+  "email-code-spacing": "0.18em"
 };

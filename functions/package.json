@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "vitest run src/__tests__/rules.test.ts",
+    "email:render": "node scripts/renderizar-emails.mjs",
     "serve": "npm run build && firebase emulators:start --only functions",
     "logs": "firebase functions:log"
   },

@@ -83,34 +83,53 @@ export interface EmailRenderizado {
 }
 
 // ---------------------------------------------------------------------------
-// Layout base (inline, sem assets externos — e-mail transacional enxuto)
+// Layout base — a moldura da marca (lane IDENTIDADE-EMAIL)
+//
+// Até aqui cada template desenhava a própria caixa: fundo bege, cartão branco,
+// botão vinho. Nada disso vinha do design system, e o resultado era um e-mail
+// que não parecia da Leela. A moldura passou a ser UMA, em `identidade.ts`,
+// com cabeçalho de marca, tipografia e cores espelhando os tokens do tema
+// `brasa`. O contrato está provado em `__tests__/emailIdentidade.test.ts`.
+//
+// `layoutBase` sobrevive como a costura fina entre os templates e a moldura:
+// os sete render() abaixo seguem chamando a mesma função com os mesmos
+// argumentos, então a troca de identidade não mexeu na lógica de nenhum deles.
 // ---------------------------------------------------------------------------
 
-function layoutBase(tituloEsc: string, corpoHtml: string): string {
-  return (
-    `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:24px;` +
-    `background:#f6f5f2;font-family:Arial,Helvetica,sans-serif;color:#1e1b16;">` +
-    `<div style="max-width:560px;margin:0 auto;background:#ffffff;` +
-    `border-radius:12px;padding:32px;">` +
-    `<h1 style="margin:0 0 16px;font-size:20px;">${tituloEsc}</h1>` +
-    corpoHtml +
-    `<p style="margin:24px 0 0;font-size:12px;color:#6f675c;">` +
-    `Este é um e-mail transacional da plataforma Leela. Se você não esperava ` +
-    `este convite, ignore esta mensagem.</p>` +
-    `</div></body></html>`
-  );
+import {
+  botao,
+  blocoDestaque,
+  FONTE_UI,
+  layoutEmail,
+  nota,
+  paragrafo,
+  PALETA,
+  RODAPE_TEXTO,
+} from './identidade';
+
+/**
+ * @param tituloEsc título JÁ ESCAPADO.
+ * @param corpoHtml corpo JÁ ESCAPADO.
+ * @param preheader prévia da caixa de entrada, em texto CRU (o layout escapa).
+ *        Obrigatória: sem ela o cliente completa a linha de preview com o
+ *        começo do corpo, que quase sempre só repete o título. Cru e não
+ *        escapado de propósito — passar o `tituloEsc` aqui escaparia duas
+ *        vezes e a prévia sairia com `&amp;lt;` na cara do destinatário.
+ */
+function layoutBase(
+  tituloEsc: string,
+  corpoHtml: string,
+  preheader: string
+): string {
+  return layoutEmail({ tituloEsc, corpoHtml, preheader });
 }
 
 function botaoLink(linkEsc: string, rotuloEsc: string): string {
-  return (
-    `<p style="margin:24px 0;">` +
-    `<a href="${linkEsc}" style="display:inline-block;background:#5b2333;` +
-    `color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:999px;` +
-    `font-weight:bold;">${rotuloEsc}</a></p>` +
-    `<p style="margin:0;font-size:12px;color:#6f675c;">Se o botão não abrir, ` +
-    `copie e cole este endereço no navegador:<br>${linkEsc}</p>`
-  );
+  return botao(linkEsc, rotuloEsc);
 }
+
+/** Pilha monoespaçada — espelha `--font-family-mono` com fallback de e-mail. */
+const FONTE_MONO = "'JetBrains Mono',Consolas,'Courier New',monospace";
 
 // ---------------------------------------------------------------------------
 // Convite de afiliado/influenciador PF (RN-316)
@@ -144,19 +163,22 @@ export function renderConviteAfiliadoEmail(
   );
   const html = layoutBase(
     `Convite para divulgar ${eventoEsc}`,
-    `<p style="margin:0 0 12px;">${nomeEsc}, você foi convidado(a) a divulgar ` +
-      `<strong>${eventoEsc}</strong> como influenciador(a) parceiro(a).</p>` +
-      `<p style="margin:0 0 12px;">Ao aceitar, você cria sua conta e passa a ` +
-      `acompanhar as conversões do seu link de divulgação.</p>` +
+    paragrafo(
+      `${nomeEsc}, você foi convidado a divulgar <strong>${eventoEsc}</strong> ` +
+        `como influenciador parceiro.`
+    ) +
+      paragrafo(
+        'Ao aceitar, você cria sua conta e passa a acompanhar as conversões do ' +
+          'seu link de divulgação.'
+      ) +
       botaoLink(linkEsc, 'Aceitar convite') +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O convite ` +
-      `expira em ${dias} dias.</p>`
+      nota(`O convite expira em ${dias} dias.`),
+    `${nome}, o convite para divulgar ${evento} expira em ${dias} dias.`
   );
   const texto =
-    `${nome}, você foi convidado(a) a divulgar ${evento} como influenciador(a) ` +
-    `parceiro(a) na Leela.\n\nAceite o convite: ${input.linkAceite}\n\n` +
-    `O convite expira em ${dias} dias. Se você não esperava este convite, ` +
-    `ignore esta mensagem.`;
+    `${nome}, você foi convidado a divulgar ${evento} como influenciador ` +
+    `parceiro na Leela.\n\nAceite o convite: ${input.linkAceite}\n\n` +
+    `O convite expira em ${dias} dias.${RODAPE_TEXTO}`;
   return { assunto, html, texto };
 }
 
@@ -190,18 +212,22 @@ export function renderConviteAssessoriaEmail(
   );
   const html = layoutBase(
     `Parceria com ${nomeEsc}`,
-    `<p style="margin:0 0 12px;">Um organizador de eventos convidou ` +
-      `<strong>${nomeEsc}</strong> para ser assessoria parceira na Leela.</p>` +
-      `<p style="margin:0 0 12px;">Ao aceitar, você cria sua conta de ` +
-      `responsável e ativa a parceria (clube + condição de desconto).</p>` +
+    paragrafo(
+      `Um organizador convidou <strong>${nomeEsc}</strong> para ser assessoria ` +
+        `parceira na Leela.`
+    ) +
+      paragrafo(
+        'Ao aceitar, você cria sua conta de responsável e ativa a parceria, com ' +
+          'o clube e a condição de desconto já valendo.'
+      ) +
       botaoLink(linkEsc, 'Aceitar parceria') +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O convite ` +
-      `expira em ${dias} dias.</p>`
+      nota(`O convite expira em ${dias} dias.`),
+    `O convite de parceria para ${nome} expira em ${dias} dias.`
   );
   const texto =
     `Um organizador convidou ${nome} para ser assessoria parceira na Leela.\n\n` +
     `Aceite o convite: ${input.linkAceite}\n\nO convite expira em ${dias} ` +
-    `dias. Se você não esperava este convite, ignore esta mensagem.`;
+    `dias.${RODAPE_TEXTO}`;
   return { assunto, html, texto };
 }
 
@@ -237,20 +263,25 @@ export function renderContaCriadaEmail(
   );
   const html = layoutBase(
     'Sua conta na Leela foi criada',
-    `<p style="margin:0 0 12px;">${nomeEsc}, sua inscrição em ` +
-      `<strong>${eventoEsc}</strong> foi confirmada e criamos uma conta para ` +
-      `você acompanhar a compra.</p>` +
-      `<p style="margin:0 0 12px;">Defina uma senha para acessar sua conta e ` +
-      `visualizar a inscrição quando quiser.</p>` +
+    paragrafo(
+      `${nomeEsc}, sua inscrição em <strong>${eventoEsc}</strong> foi ` +
+        `confirmada e criamos uma conta para você acompanhar a compra.`
+    ) +
+      paragrafo(
+        'Defina uma senha para entrar e ver a inscrição quando quiser.'
+      ) +
       botaoLink(linkEsc, 'Definir minha senha') +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">Se você não ` +
-      `fez esta compra, ignore esta mensagem — nenhuma senha foi definida.</p>`
+      nota(
+        'Se você não fez esta compra, pode ignorar esta mensagem. Nenhuma senha ' +
+          'foi definida.'
+      ),
+    `${nome}, defina sua senha para acessar sua conta na Leela.`
   );
   const texto =
     `${nome}, sua inscrição em ${evento} foi confirmada e criamos uma conta ` +
     `para você acompanhar a compra.\n\nDefina sua senha: ` +
-    `${input.linkDefinirSenha}\n\nSe você não fez esta compra, ignore esta ` +
-    `mensagem — nenhuma senha foi definida.`;
+    `${input.linkDefinirSenha}\n\nSe você não fez esta compra, pode ignorar ` +
+    `esta mensagem. Nenhuma senha foi definida.${RODAPE_TEXTO}`;
   return { assunto, html, texto };
 }
 
@@ -369,40 +400,56 @@ export function renderIngressosCompraEmail(
       : '';
     const linkIngressoEsc = escapeHtml(linkIngresso);
 
+    // O bloco de destaque da identidade substitui a caixa com borda bege. A
+    // ORDEM e o CONTEÚDO seguem intactos: nome, modalidade, código em texto
+    // grande, QR embutido e link com o endereço copiável embaixo.
     blocos.push(
-      `<div style="border:1px solid #e4e0d8;border-radius:12px;padding:16px;` +
-        `margin:0 0 12px;">` +
-        `<p style="margin:0 0 4px;font-size:16px;font-weight:bold;">${nomeInscEsc}</p>` +
-        (modalidadeEsc !== ''
-          ? `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">${modalidadeEsc}</p>`
-          : '') +
-        (codigo !== ''
-          ? `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">` +
-            `Código do ingresso<br>` +
-            `<span style="font-size:24px;letter-spacing:3px;font-weight:bold;` +
-            `color:#1e1b16;">${codigoEsc}</span></p>`
-          : `<p style="margin:0 0 12px;font-size:13px;color:#6f675c;">` +
-            `Ingresso ainda sendo emitido — o código chega em seguida.</p>`) +
-        // `alt` GENÉRICO de propósito: nome de pessoa dentro de atributo é
-        // dado do checkout num lugar onde só o escape separa texto de markup.
-        // Aqui não separa nada — o nome já está visível logo acima, e o leitor
-        // de tela lê os dois na ordem. Um atributo a menos com dado de fora.
-        (embuteQr
-          ? `<img src="${ingresso.qrDataUri}" width="180" height="180" ` +
-            `alt="QR do ingresso" ` +
-            `style="display:block;width:180px;height:180px;">`
-          : '') +
-        // Rótulo GENÉRICO, pela mesma razão do `alt` do QR logo acima: o nome
-        // já está visível no topo do bloco, e cada repetição de dado do
-        // checkout dentro de markup é uma superfície a mais para o escape ter
-        // de segurar. O endereço vai abaixo em texto para quem precisa copiar.
-        (linkIngresso !== ''
-          ? `<p style="margin:12px 0 0;font-size:13px;">` +
-            `<a href="${linkIngressoEsc}" style="color:#5b2333;font-weight:bold;">` +
-            `Abrir este ingresso</a><br>` +
-            `<span style="font-size:12px;color:#6f675c;">${linkIngressoEsc}</span></p>`
-          : '') +
-        `</div>`
+      blocoDestaque(
+        `<p style="margin:0 0 2px;font-family:${FONTE_UI};font-size:17px;` +
+          `font-weight:700;line-height:24px;color:${PALETA.tinta};">${nomeInscEsc}</p>` +
+          (modalidadeEsc !== ''
+            ? `<p style="margin:0 0 16px;font-family:${FONTE_UI};font-size:13px;` +
+              `line-height:20px;color:${PALETA.tintaSuave};">${modalidadeEsc}</p>`
+            : '<div style="height:16px;line-height:16px;font-size:0;">&nbsp;</div>') +
+          (codigo !== ''
+            ? `<p style="margin:0 0 16px;font-family:${FONTE_UI};font-size:12px;` +
+              `line-height:18px;letter-spacing:0.08em;text-transform:uppercase;` +
+              `color:${PALETA.tintaSuave};">Código do ingresso</p>` +
+              `<p style="margin:0 0 16px;font-family:${FONTE_MONO};font-size:32px;` +
+              `letter-spacing:0.18em;font-weight:700;line-height:40px;` +
+              `color:${PALETA.tinta};">${codigoEsc}</p>`
+            : `<p style="margin:0 0 16px;font-family:${FONTE_UI};font-size:13px;` +
+              `line-height:20px;color:${PALETA.tintaSuave};">Ingresso ainda sendo ` +
+              `emitido. O código chega em seguida.</p>`) +
+          // `alt` GENÉRICO de propósito: nome de pessoa dentro de atributo é
+          // dado do checkout num lugar onde só o escape separa texto de markup.
+          // Aqui não separa nada — o nome já está visível logo acima, e o leitor
+          // de tela lê os dois na ordem. Um atributo a menos com dado de fora.
+          //
+          // O QR CONTINUA DATA URI, e isto NÃO contradiz a regra da logo: o
+          // `qrToken` é credencial, e hospedá-lo numa URL pública o vazaria por
+          // log, referrer e histórico. A logo é pública por natureza e por isso
+          // vai por URL. As duas decisões têm a mesma raiz — o que é público vai
+          // para a rede, o que prova presença fica na caixa de quem comprou.
+          (embuteQr
+            ? `<img src="${ingresso.qrDataUri}" width="180" height="180" ` +
+              `alt="QR do ingresso" border="0" ` +
+              `style="display:block;width:180px;height:180px;border:0;` +
+              `background-color:${PALETA.acaoTinta};border-radius:8px;">`
+            : '') +
+          // Rótulo GENÉRICO, pela mesma razão do `alt` do QR logo acima: o nome
+          // já está visível no topo do bloco, e cada repetição de dado do
+          // checkout dentro de markup é uma superfície a mais para o escape ter
+          // de segurar. O endereço vai abaixo em texto para quem precisa copiar.
+          (linkIngresso !== ''
+            ? `<p style="margin:16px 0 0;font-family:${FONTE_UI};font-size:15px;` +
+              `line-height:22px;">` +
+              `<a href="${linkIngressoEsc}" style="color:${PALETA.wordmark};` +
+              `font-weight:600;text-decoration:underline;">Abrir este ingresso</a><br>` +
+              `<span style="font-size:12px;line-height:18px;color:${PALETA.tintaSuave};` +
+              `word-break:break-all;">${linkIngressoEsc}</span></p>`
+            : '')
+      )
     );
 
     linhasTexto.push(
@@ -420,23 +467,31 @@ export function renderIngressosCompraEmail(
   );
   const html = layoutBase(
     `Seu ingresso para ${eventoEsc}`,
-    `<p style="margin:0 0 16px;">${nomeEsc}, sua compra foi confirmada. ` +
-      `Abaixo está o ingresso de cada inscrito do pedido.</p>` +
+    paragrafo(
+      `${nomeEsc}, sua compra foi confirmada. Abaixo está o ingresso de cada ` +
+        `participante do pedido.`
+    ) +
       (blocos.length > 0
         ? blocos.join('')
-        : `<p style="margin:0 0 12px;">Os ingressos estão sendo emitidos e ` +
-          `chegam em seguida.</p>`) +
-      `<p style="margin:16px 0 0;font-size:13px;color:#6f675c;">` +
-      `No credenciamento basta apresentar o QR. Se a imagem não abrir no seu ` +
-      `e-mail, o código acima identifica a inscrição.</p>` +
-      (linkEsc !== '' ? botaoLink(linkEsc, 'Ver a página do evento') : '')
+        : paragrafo(
+            'Os ingressos estão sendo emitidos e chegam em seguida.'
+          )) +
+      nota(
+        'No credenciamento basta apresentar o QR. Se a imagem não abrir no seu ' +
+          'e-mail, o código acima identifica a inscrição.'
+      ) +
+      (linkEsc !== '' ? botaoLink(linkEsc, 'Ver a página do evento') : ''),
+    `${nome}, sua compra em ${evento} está confirmada.`
   );
   const texto =
     `${nome}, sua compra em ${evento} foi confirmada.\n\n` +
     `Ingressos do pedido:\n${linhasTexto.join('\n')}\n\n` +
     `No credenciamento basta apresentar o QR que está neste e-mail. Se a ` +
     `imagem não abrir, o código acima identifica a inscrição.` +
-    (input.linkEvento !== undefined ? `\n\nPágina do evento: ${input.linkEvento}` : '');
+    (input.linkEvento !== undefined
+      ? `\n\nPágina do evento: ${input.linkEvento}`
+      : '') +
+    RODAPE_TEXTO;
   return { assunto, html, texto };
 }
 
@@ -463,22 +518,18 @@ export function renderCampanhaEmail(input: CampanhaEmailInput): EmailRenderizado
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter((p) => p.length > 0)
-    .map(
-      (p) =>
-        `<p style="margin:0 0 12px;">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`
-    )
+    .map((p) => paragrafo(escapeHtml(p).replace(/\n/g, '<br>')))
     .join('');
 
   const html = layoutBase(
     escapeHtml(assuntoLimpo),
-    (paragrafos.length > 0
-      ? paragrafos
-      : `<p style="margin:0 0 12px;">(sem conteúdo)</p>`) +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">Enviado pelo ` +
-      `organizador de ${eventoEsc} pela plataforma Leela.</p>`
+    (paragrafos.length > 0 ? paragrafos : paragrafo('(sem conteúdo)')) +
+      nota(`Enviado pelo organizador de ${eventoEsc} pela plataforma Leela.`),
+    assuntoLimpo
   );
   const texto =
-    `${corpo}\n\n—\nEnviado pelo organizador de ${evento} pela plataforma Leela.`;
+    `${corpo}\n\n—\nEnviado pelo organizador de ${evento} pela plataforma ` +
+    `Leela.${RODAPE_TEXTO}`;
   return { assunto: assuntoLimpo, html, texto };
 }
 
@@ -536,20 +587,24 @@ export function renderAvisoRepasseComissaoEmail(
 
   const html = layoutBase(
     escapeHtml('Repasse de comissão registrado'),
-    `<p style="margin:0 0 12px;">${escapeHtml(saudacao)}</p>` +
-      `<p style="margin:0 0 12px;">O organizador de <strong>${escapeHtml(evento)}` +
-      `</strong> registrou um repasse de <strong>${escapeHtml(valor)}</strong> ` +
-      `da sua comissão.</p>` +
-      `<p style="margin:0 0 12px;">${escapeHtml(linhaRestante)}</p>` +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O pagamento é ` +
-      `feito pelo organizador fora da plataforma — este e-mail é o registro de ` +
-      `que ele o informou.</p>`
+    paragrafo(escapeHtml(saudacao)) +
+      paragrafo(
+        `O organizador de <strong>${escapeHtml(evento)}</strong> registrou um ` +
+          `repasse de <strong>${escapeHtml(valor)}</strong> da sua comissão.`
+      ) +
+      paragrafo(escapeHtml(linhaRestante)) +
+      nota(
+        'O pagamento é feito pelo organizador fora da plataforma. Este e-mail é ' +
+          'o registro de que ele o informou.'
+      ),
+    `Repasse de ${valor} registrado em ${evento}.`
   );
   const texto =
     `${saudacao}\n\n` +
     `O organizador de ${evento} registrou um repasse de ${valor} da sua ` +
     `comissão.\n\n${linhaRestante}\n\n—\nO pagamento é feito pelo organizador ` +
-    `fora da plataforma; este e-mail é o registro de que ele o informou.`;
+    `fora da plataforma; este e-mail é o registro de que ele o informou.` +
+    RODAPE_TEXTO;
   return { assunto, html, texto };
 }
 
@@ -587,15 +642,79 @@ export function renderAvisoMarcoComissaoEmail(
 
   const html = layoutBase(
     escapeHtml(primeira ? 'Sua primeira comissão' : 'Sua comissão cresceu'),
-    `<p style="margin:0 0 12px;">${escapeHtml(saudacao)}</p>` +
-      `<p style="margin:0 0 12px;">${escapeHtml(manchete)}</p>` +
-      `<p style="margin:0 0 12px;">Total acumulado até agora: ` +
-      `<strong>${escapeHtml(acumulada)}</strong>.</p>` +
-      `<p style="margin:16px 0 0;font-size:12px;color:#6f675c;">O repasse é ` +
-      `combinado com o organizador do evento.</p>`
+    paragrafo(escapeHtml(saudacao)) +
+      paragrafo(escapeHtml(manchete)) +
+      paragrafo(
+        `Total acumulado até agora: <strong>${escapeHtml(acumulada)}</strong>.`
+      ) +
+      nota('O repasse é combinado com o organizador do evento.'),
+    manchete
   );
   const texto =
     `${saudacao}\n\n${manchete}\n\nTotal acumulado até agora: ${acumulada}.\n\n` +
-    `—\nO repasse é combinado com o organizador do evento.`;
+    `—\nO repasse é combinado com o organizador do evento.${RODAPE_TEXTO}`;
+  return { assunto, html, texto };
+}
+
+// ---------------------------------------------------------------------------
+// Redefinição de senha (lane IDENTIDADE-EMAIL — consumidor
+// `auth/solicitarRedefinicaoSenha`)
+//
+// O OITAVO e-mail do produto, e o único que até aqui NÃO era nosso: quem
+// mandava era o Firebase Auth, com o template padrão dele, remetente
+// `noreply@leela-hub.firebaseapp.com` e layout sem marca nenhuma. É o e-mail
+// que um cliente novo vê PRIMEIRO, no primeiro acesso, e era o mais genérico
+// dos oito.
+//
+// A partir daqui o Firebase só GERA o link (`generatePasswordResetLink` —
+// oobCode single-use, nunca token inventado por nós) e quem envia somos nós,
+// pela Brevo, com a mesma moldura dos outros sete. É exatamente o padrão que
+// `renderContaCriadaEmail` já usava e que prova que o caminho funciona.
+// ---------------------------------------------------------------------------
+
+export interface RedefinirSenhaEmailInput {
+  /** Nome de exibição da conta; vazio vira saudação neutra. */
+  nomeUsuario: string;
+  /** Link OFICIAL do Firebase Auth (`generatePasswordResetLink`). */
+  linkRedefinirSenha: string;
+}
+
+export function renderRedefinirSenhaEmail(
+  input: RedefinirSenhaEmailInput
+): EmailRenderizado {
+  if (!isLinkDeAppValido(input.linkRedefinirSenha)) {
+    throw new Error(
+      'linkRedefinirSenha inválido para template (montagem do servidor).'
+    );
+  }
+  const nome = limparCampoCurto(input.nomeUsuario, TEMPLATE_NOME_MAX);
+  const nomeEsc = escapeHtml(nome);
+  const linkEsc = escapeHtml(input.linkRedefinirSenha);
+  const saudacao =
+    nome.length > 0
+      ? `${nomeEsc}, recebemos um pedido para redefinir a senha da sua conta na Leela.`
+      : 'Recebemos um pedido para redefinir a senha da sua conta na Leela.';
+
+  const assunto = limparCampoCurto(
+    'Redefinir a senha da sua conta na Leela',
+    TEMPLATE_ASSUNTO_MAX
+  );
+  const html = layoutBase(
+    'Redefinir sua senha',
+    paragrafo(saudacao) +
+      paragrafo('Escolha uma senha nova pelo botão abaixo.') +
+      botaoLink(linkEsc, 'Criar nova senha') +
+      nota(
+        'O link vale por uma hora e serve uma vez só. Se você não pediu a ' +
+          'troca, pode ignorar esta mensagem: sua senha atual continua valendo.'
+      ),
+    'Escolha uma senha nova para entrar na Leela.'
+  );
+  const texto =
+    `${nome.length > 0 ? `${nome}, r` : 'R'}ecebemos um pedido para redefinir ` +
+    `a senha da sua conta na Leela.\n\nEscolha uma senha nova: ` +
+    `${input.linkRedefinirSenha}\n\nO link vale por uma hora e serve uma vez ` +
+    `só. Se você não pediu a troca, pode ignorar esta mensagem: sua senha ` +
+    `atual continua valendo.${RODAPE_TEXTO}`;
   return { assunto, html, texto };
 }

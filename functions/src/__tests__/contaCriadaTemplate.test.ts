@@ -32,7 +32,10 @@ describe('renderContaCriadaEmail (RN-155)', () => {
       linkDefinirSenha: LINK_OK,
     });
     expect(r.html).not.toContain('<script>');
-    expect(r.html).not.toContain('<img');
+    // A moldura da marca (lane IDENTIDADE-EMAIL) traz um <img> legítimo: a
+    // logo. O que não pode sobreviver é a TAG INJETADA pelo comprador.
+    expect(r.html).not.toContain('<img src=x');
+    expect(r.html).toContain('&lt;img src=x onerror=1&gt;');
     expect(r.html).toContain('&lt;script&gt;');
   });
 
