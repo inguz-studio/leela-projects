@@ -23,10 +23,15 @@ tags:
     - [ ] **S708 · Máscara de dinheiro pt-BR no campo de repasse**
         - [ ] S708-T1 máscara no campo, com o contrato de "10.005 é três casas" declarado na mesma linha ⚔
 - [ ] **[E16/E09] A tabela de juros do admin mostra custo, markup e margem por parcela** — a compradora passa a ver o preço exato, sem resíduo de um centavo com nome de juros; os 2,89% a.m. entram como estimativa na tabela que já existe no admin dos tenants; e a tabela ganha o custo de parcelamento ao lado, para você ver custo contra markup e a margem de cada parcela. "Pagamento sem juros" não existe por ora e, quando existir, é ferramenta do admin da plataforma por tenant, nunca escolha do produtor 📋 executável · PB-2 e JUROS-2 · lane ADMIN-JUROS [[LEELA-E16-plataforma-superadmin]]
-    - [ ] **S1610 · Custo, markup e margem do parcelamento no admin**
+    - [ ] **S1610 · Custo, markup e margem do parcelamento no admin** — especificada em 04/08 pela SPEC-JUROS-MARGEM; três tarefas viraram oito
         - [ ] S1610-T1 o resíduo de arredondamento some da tela do comprador: preço exato, sem linha de um centavo ⚔
         - [ ] S1610-T2 2,89% a.m. preenchidos como estimativa na tabela de configuração dos tenants
-        - [ ] S1610-T3 coluna de custo de parcelamento na mesma tabela, com markup e margem por parcela ⚔
+        - [ ] S1610-T3 a tabela de custo do gateway nasce configurável e vazia, sem número inventado ⚔
+        - [ ] S1610-T4 o custo é carimbado na venda, para a margem de ontem não ser reescrita hoje ⚔
+        - [ ] S1610-T5 o custo real que o gateway cobra passa a ser registrado em vez de descartado ⚔
+        - [ ] S1610-T6 custo, markup e margem viram funções do core, com margem negativa à mostra ⚔
+        - [ ] S1610-T7 a economia do parcelamento aparece na tela de termos, linha a linha
+        - [ ] S1610-T8 a grade de taxa por parcela dos planos avisa que não move preço nenhum
 - [ ] **[E00] A limpeza das imagens de build entra no fechamento de sprint** — cada deploy de function guarda uma imagem no Artifact Registry e a fatura cresce sem nada avisando; a janela de 7 dias está decidida por default e a execução entra na esteira, sem voltar a você. Regra permanente da mesma leva: limpeza não interrompe o dono 📋 higiene · item 58 [[LEELA-E00-fundacao-tecnica]]
     - [ ] **S031 · Retenção das imagens de build**
         - [ ] S031-T1 limpeza religada com janela de 7 dias no Artifact Registry do `leela-hub`
