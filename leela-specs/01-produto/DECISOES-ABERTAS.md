@@ -183,6 +183,15 @@ O default adotado é que a Arena Social é uma **seção da área do cliente**: 
 - **Opções:** seção da área do cliente, com dados próprios e privados, e a convergência futura mapeada — a bio e a foto podem alimentar o perfil público depois, nunca o contrário automático (**default proposto**) · fatia do perfil social E17, o que obriga a decidir o público×privado de cada campo desde já.
 - **Onde aterrissa:** RN-471 em [[LEELA-E12-landing]]; nota de fronteira no [[LEELA-E17-perfil-social]].
 
+### CODPED-1 · o prefixo do número da compra
+
+Você pediu prefixo e cinco dígitos, e o resto da conversa é engenharia — onde o código nasce, como a unicidade é garantida, o que acontece com as compras antigas — e já está decidido, com as alternativas rejeitadas escritas. Sobra o prefixo, e ele volta para você por um motivo só: **é a única parte que o cliente lê.** *A pessoa recebe o e-mail da compra e encontra dois códigos ali dentro: o do ingresso dela, `T93N7F`, e o da compra. O prefixo é o que faz um não ser confundido com o outro no instante em que ela olha.*
+
+- **O que fica com você:** ratificar `PED-` ou trocar por outra coisa. Este é veto leve: o default já vale e a construção não espera resposta.
+- **Por que agora:** para você responder junto do resto, não porque trave alguma coisa. Trocar depois custa uma constante e um redeploy — o código é gravado sem o prefixo justamente para que a sua opinião continue barata, inclusive depois de construído. E-mail antigo com o prefixo velho continua encontrando a compra, porque a busca ignora o prefixo.
+- **Opções:** `PED-` (**default proposto** — é o que "pedido" vira em três letras, e nenhuma outra coisa no produto começa assim) · `LEE-`, que assina a plataforma em vez do objeto e fica igual em compra, ingresso e qualquer coisa futura, o que devolve a confusão que o prefixo existe para evitar · sem prefixo, e aí os dois códigos do e-mail viram duas sequências parecidas, uma de cinco e outra de seis símbolos, distinguíveis só pelo rótulo ao lado.
+- **Onde aterrissa:** RN-474 em [[LEELA-E12-landing]]; spec em `02-rodadas/2026-08-04-pos-pagamento/06-spec-codigo-pedido.md`.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração

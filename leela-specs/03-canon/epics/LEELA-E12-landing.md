@@ -2724,8 +2724,9 @@ PODE ler o próprio pedido (houve erro de interpretação quanto ao E12 — o TO
 sequenciamento, não intenção de produto), o feedback pós-pagamento passa a existir em tela
 para PIX e cartão, e nasce a Arena Social. Rodada em `02-rodadas/2026-08-04-pos-pagamento/`
 (verbatim em `01-decisoes-dono.md`, spec em `02-…`, fila em `04-fila-codigo.md`). Contexto
-do incidente em [[fluxo-pos-pagamento]]. Em 05/08 a mesma rodada recebeu uma **quarta**
-decisão, de outro assunto: o botão que salva o ingresso em PDF (D-0804-4 · RN-473 · S1214-T5).
+do incidente em [[fluxo-pos-pagamento]]. Em 05/08 a mesma rodada recebeu mais duas decisões,
+de outros assuntos: o botão que salva o ingresso em PDF (D-0804-4 · RN-473 · S1214-T5) e o
+código curto da compra (D-0804-5 · RN-474 e RN-475 · S1228).
 
 ### RN-469 (nova, dona) · o comprador lê o próprio pedido, após concluir a compra e na área do cliente
 
@@ -2891,3 +2892,103 @@ nunca no navegador, nunca por diálogo de impressão.
 
 Story: **S1214**, task **S1214-T5**. Spec e análise de engenharia (com as três alternativas
 rejeitadas) em `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.
+
+### RN-474 (nova, dona) · a compra tem um código curto próprio, gerado no servidor
+
+Verbatim do dono, em 05/08, em duas mensagens — a segunda corrigindo o alvo da primeira:
+*"nossos identificadores dos ingressos também estao muito grandes, como poderiamos resolver
+isso com prefixos, e 5 dígitos alfanumericos?"* / *"identificadores de compras, na verdade\*\*"*.
+É a **D-0804-5**. O que encolhe é o identificador da **compra**; o do ingresso já é curto
+(RN-396) e fica.
+
+Todo pedido nasce com um **`codigoPedido`**: cinco símbolos maiúsculos do alfabeto anti-ambíguo
+da casa (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`, sem `0`, `O`, `1`, `I` e `L`), sorteados no
+servidor no ato da criação do pedido.
+
+- **Único globalmente, por chave primária.** A garantia é o doc de reserva
+  `pedidoCodigos/{codigo}`, lido e criado com `create` dentro da mesma transação que cria o
+  pedido, com re-sorteio limitado e motivo de falha nomeado quando nenhuma tentativa pega —
+  o mecanismo da emissão de ingressos, pela mesma razão escrita lá: sorteio não é unicidade, e
+  query dentro de transação não trava faixa vazia. **Global, e não por tenant ou por evento**,
+  porque o código é dito fora de qualquer sala: a área do cliente lista compras de produtoras
+  diferentes na mesma tela, e dois códigos iguais ali é a falha que o código existe para não
+  ter. A coleção de reserva não tem `match` em `firestore.rules` e cai no deny-by-default,
+  como a `ingressoCodigos`.
+- **O replay não sorteia de novo.** A transação de venda já sai cedo quando o pedido existe. Um
+  pedido tem um código, para sempre, e ele nunca muda depois de criado.
+- **Gravam-se os cinco símbolos, sem prefixo.** O prefixo é apresentação e vive numa constante
+  única do core, aplicada só na exibição — é isso que faz o veto do dono (CODPED-1) custar uma
+  constante em vez de uma migração.
+- **Contrato tipado**: `codigoPedido` entra na interface `Pedido` e em `parsePedido` (não é
+  campo de evolução de schema como `emailIngressos` e `reenvioEmails`, que são estado
+  operacional que ninguém digita), e é espelhado em cada inscrito do pedido na mesma transação
+  — desnormalização segura porque o valor é imutável, e é ela que dá a busca do painel de graça.
+- **O código não é credencial.** Nenhuma porta o aceita como chave de leitura, de acesso ou de
+  ação; a autorização do pedido continua sendo a da RN-469, por campo, pelo motivo que as
+  Rules já escrevem em `firestore.rules:2572`. Alfabeto e comprimento vêm de módulo próprio no
+  core, não de constante compartilhada com o `codigoIngresso`: a propriedade comum é provada
+  por teste sobre o conjunto ambíguo, na doutrina que o core já declarou.
+
+**Crockford base32 foi recusado** — ele mantém `0` e `1` e derruba as letras parecidas,
+enquanto a casa derruba os dois lados do par em quatro códigos já existentes, um deles com
+exatamente cinco símbolos (convite de clube, RN-101). Dois alfabetos no mesmo produto obrigam
+o operador a saber de qual código se fala antes de decidir se ouviu letra ou dígito. O alias
+de decodificação de Crockford, que é a parte que pagaria por manter `0` e `1`, também está
+recusado pela casa desde a RN-396: consertar caractere ambíguo por conta própria devolve a
+compra de outra pessoa.
+
+### RN-475 (nova, dona) · o código é o que humano lê; o id interno sai das telas
+
+Toda superfície de produto que identifica uma compra para uma pessoa mostra o **código**, com
+o prefixo. O id do documento **não é exibido** em tela de comprador nem em e-mail.
+
+- **A razão é maior que o tamanho.** O id é `ped-{uid}-{chave}` por construção — ele é a
+  idempotência do checkout —, então exibi-lo publica o **uid da conta do comprador** numa tela
+  que ela fotografa e num texto que ela encaminha. Setenta e três caracteres é o sintoma; o uid
+  viajando é o dano.
+- **Onde ele aparece hoje**, o código o substitui: a tela de confirmação do checkout nos dois
+  ramos (`StepConfirmacao.tsx:129` e `:138`) e o campo "Pedido" do slide-in do inscrito
+  (`InscritoSlideIn.tsx:361`), onde o id interno sai da vista e continua disponível para copiar.
+- **O e-mail da compra passa a carregar o código**, com rótulo próprio, ao lado dos códigos de
+  ingresso que ele já imprime. Hoje a compra não tem referência nenhuma no e-mail, e é por isso
+  que quem escreve ao atendimento não tem o que citar.
+- **A busca do operador aceita o código**, pelo caminho da RN-397: filtro em memória sobre a
+  lista de inscritos do evento, sem query nova e sem índice novo.
+- **A área do cliente nasce certa** (S1222): Meus Pedidos e o histórico exibem o código desde a
+  primeira versão.
+- **Ausência é ausência.** Pedido sem código não exibe o id no lugar. Compras anteriores ganham
+  código por **backfill**, entregue como ferramenta com `--dry-run` por default e executado
+  como operação registrada, nunca como efeito colateral de deploy. Fallback permanente foi
+  recusado porque a única coisa que ele teria para mostrar é justamente o id.
+- **Continua sendo id interno onde é interno**: log, alerta de incidente, `externalReference`
+  do gateway, corpo de callable e o formulário de estorno da plataforma — este último age
+  cross-tenant, e aceitar o código ali criaria uma consulta sem sala que responde "existe" a
+  qualquer palpite de cinco símbolos.
+
+Story: **S1228**. Spec, inventário das superfícies e as escolhas de engenharia com as
+rejeitadas em `02-rodadas/2026-08-04-pos-pagamento/06-spec-codigo-pedido.md`.
+
+### S1228 · o código que a pessoa consegue ditar (nova)
+
+**Como** quem comprou, **quero** um número de compra curto que eu consiga ler, ditar e digitar
+**para** conseguir falar da minha compra sem colar um parágrafo de código.
+
+Critérios (Given/When/Then):
+
+- **Dado** um checkout concluído, **quando** a tela de confirmação aparece, **então** ela mostra
+  o código com prefixo e nenhum caractere do id do documento.
+- **Dado** o e-mail da compra, **quando** ele chega, **então** o código do pedido está lá, com
+  rótulo próprio, distinguível dos códigos de ingresso.
+- **Dado** que digito o código na busca de inscritos do painel, **quando** ele pertence a uma
+  compra daquele evento, **então** os inscritos daquela compra aparecem — e o rótulo do campo
+  diz que ele busca por código de pedido também.
+- **Dado** dois pedidos criados ao mesmo tempo, **quando** sorteiam o mesmo código, **então**
+  um dos dois re-sorteia e nenhum commit sobrescreve reserva alheia.
+- **Dado** um retry do cliente com a mesma chave de idempotência, **quando** o pedido já existe,
+  **então** nenhum código novo é sorteado e o código do pedido é byte a byte o mesmo.
+- **Dado** um pedido anterior ao backfill, **quando** alguma superfície o exibe, **então** ela
+  não escreve o id interno no lugar do código.
+
+**Tasks:** S1228-T1 (core + geração + reserva, ⚔) · S1228-T2 (superfícies do comprador:
+tela e e-mail) · S1228-T3 (superfícies do operador: slide-in e busca) · S1228-T4 (ferramenta de
+backfill, execução registrada). Detalhe e ordem na Frente 5 da fila da rodada.

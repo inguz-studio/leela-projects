@@ -1,16 +1,17 @@
 ---
-tags: [leela, fila, rodada, checkout, pos-pagamento, area-do-cliente, arena-social]
+tags: [leela, fila, rodada, checkout, pos-pagamento, area-do-cliente, arena-social, codigo-pedido]
 trace: leela-pixreal-diag-20260804
 lote: SPEC-POSPAG
 data: 2026-08-04
 ---
 
-# 04-fila-codigo · O pedido responde na tela, a Arena Social, e o PDF do ingresso
+# 04-fila-codigo · O pedido responde na tela, a Arena Social, o PDF do ingresso e o código da compra
 
-> Quatro frentes em ordem, mais o paralelo técnico do diagnóstico. Regras em
-> `03-rns-delta.md` e, para a Frente 4, em `05-spec-pdf-ingresso.md` (todas canônicas no
-> [[LEELA-E12-landing]]); spec em `02-spec-pos-pagamento-e-arena-social.md` e
-> `05-spec-pdf-ingresso.md`. A fila da rodada ADMINSEP
+> Cinco frentes em ordem, mais o paralelo técnico do diagnóstico. Regras em
+> `03-rns-delta.md`, para a Frente 4 em `05-spec-pdf-ingresso.md` e para a Frente 5 em
+> `06-spec-codigo-pedido.md` (todas canônicas no
+> [[LEELA-E12-landing]]); spec em `02-spec-pos-pagamento-e-arena-social.md`,
+> `05-spec-pdf-ingresso.md` e `06-spec-codigo-pedido.md`. A fila da rodada ADMINSEP
 > (`../2026-08-02-retomada/11-fila-contas-e-area-cliente.md`) continua valendo linha a
 > linha — esta fila só a posiciona e acrescenta as frentes novas.
 
@@ -87,6 +88,46 @@ mover qualquer verificação de token para dentro da landing (a chave da RN-419 
 duas mudam a fronteira de segurança, e fronteira de segurança nova não passa sem contexto
 fresco.
 
+## Frente 5 · o código curto da compra (E12 · S1228) — o miolo parte já, as superfícies atrás dos territórios
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 5a | `S1228-T1` | O módulo do código no core (alfabeto, tamanho, predicado, normalização, prefixo), `codigoPedido` no contrato do pedido, sorteio + reserva `pedidoCodigos/{codigo}` dentro da transação que já cria o pedido, e o espelho do código em cada inscrito | `packages/core/src/pedidos`, `functions/src/checkout`, testes de rules | — | opus | ⚔ |
+| 5b | `S1228-T4` | A ferramenta de backfill das compras existentes: `--dry-run` por default, `--apply` explícito, `--project` obrigatório, idempotente por comparação, reservando o código na mesma transação em que carimba | `functions/scripts` | 5a | opus | ⚔ |
+| 5c | `S1228-T2` | As superfícies do comprador: a tela de confirmação troca o id pelo código nos dois ramos, e o e-mail da compra passa a carregar o código com rótulo próprio | `apps/landing/.../checkout`, `functions/src/email` | 5a, **Frente 4** | opus | — |
+| 5d | `S1228-T3` | As superfícies do operador: o campo "Pedido" do slide-in mostra o código, e a busca de inscritos passa a casar o código do pedido (molde RN-397) | `apps/painel` | 5a | opus | — |
+
+**5a parte agora e não espera ninguém desta rodada.** Ela não encosta em `apps/landing` nem em
+`apps/painel`; o que ela ocupa é `functions/src/checkout`, e ali a regra de serialização por
+lane vale contra os itens RF2 abaixo — quem entrar primeiro segura o outro, e não há
+dependência lógica entre eles em nenhuma direção. O arquivo que ela toca
+(`createInscricaoCharge.ts`) não é o mesmo do RF2-1 (o webhook de emissão), mas a árvore é.
+
+**Por que 5a é ⚔.** Ela mexe na transação do caminho do dinheiro, cria uma coleção nova e
+acrescenta um campo ao doc `pedidos/{id}` — que, desde a RN-469, nasce visível ao comprador. A
+review antagonista tem três alvos nomeados: que o replay do checkout **não** sorteie um segundo
+código (a mesma chave de idempotência tem de devolver o código byte a byte); que a reserva use
+`create` e não `set`, com a corrida provada por teste; e que a coleção de reserva permaneça sem
+`match` nas Rules, com o teste de negação que a `ingressoCodigos` já tem de molde.
+
+**Por que 5b também é ⚔, mesmo sendo script.** Ele reescreve documento em produção e semeia a
+mesma coleção de reservas que o checkout consome — um backfill que carimbe o pedido sem reservar
+o código planta colisão contra o sorteio de amanhã. A prova exigida é a do precedente
+(`backfill-url-eventos.mjs`): dry-run que imprime contadores antes de qualquer escrita, e rerun
+convergindo para zero atualizações. **A execução contra produção não é da esteira** — ela entra
+no kanban como pendência do dono, ao lado da que já está lá.
+
+**5c espera a Frente 4 pelo território, não por lógica.** As duas mexem em `apps/landing` e a
+serialização por lane vale; os subdiretórios são disjuntos (`.../checkout` contra
+`.../ingresso`), então soltar as duas juntas é decisão de quem conduz, não regra da fila. A
+metade de e-mail da 5c é a única coisa desta frente que toca um caminho já incidentado, e o
+critério que ela paga é o inverso do da S1225-T2: lá a varredura de copy virou teste; aqui o
+teste é que **nenhuma superfície de comprador imprime `pedidoId`** — executável, e é ele que
+segura a volta silenciosa do id numa tela futura.
+
+**5d não disputa território com ninguém** nesta rodada: `apps/painel` está livre. Ela pode
+correr em paralelo com 5c.
+
 ## Paralelo técnico · F2 e F5 do diagnóstico correm fora desta fila
 
 | # | O quê | Por que em paralelo |
@@ -131,11 +172,17 @@ A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
 1. **Agora:** 1a + 1b (S1225-T1/T2). Depois 1c.
 2. **Assim que a REV-S1225 aterrissar:** 4a (o PDF do ingresso), que destrava sozinha e não
    espera nada além do território.
-3. **Na sequência (resposta da POSPAG-1):** a fila S1222/S1223 inteira, na ordem da
+3. **Também agora, em outra árvore:** 5a (o código da compra no core e na criação do pedido),
+   que não espera nenhuma frente desta rodada — só se serializa com os itens RF2 em
+   `functions/`. Depois dela, 5b (a ferramenta de backfill), e então 5d em paralelo com 5c,
+   esta última atrás da Frente 4 pelo território de `apps/landing`. A ordem interna importa
+   numa coisa só: o backfill roda antes de 5c e 5d irem ao ar, para que nenhuma superfície
+   estreie encontrando compra sem código.
+4. **Na sequência (resposta da POSPAG-1):** a fila S1222/S1223 inteira, na ordem da
    ADMINSEP (S1221-T1 antes da B2). Quando a B2 subir: 1d (o CTA) e a aterrissagem da C1
-   passa a Meus Ingressos.
-4. **Depois dos vetos ARENA-1/2/3:** 3a → 3b ∥ 3c.
-5. **Em paralelo, lanes técnicas próprias:** F2 (após BREVO-1) e F5.
+   passa a Meus Ingressos. A B1/B2 nasce exibindo o código do pedido, nunca o id (RN-475).
+5. **Depois dos vetos ARENA-1/2/3:** 3a → 3b ∥ 3c.
+6. **Em paralelo, lanes técnicas próprias:** F2 (após BREVO-1) e F5.
 
 ## Fronteiras
 
@@ -148,6 +195,11 @@ A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
   houver lane em voo na mesma árvore (regra da fila ADMINSEP).
 - **Dado sensível da Arena nunca em projeção pública** — se alguma task parecer pedir isso,
   a task está errada (RN-472).
+- **O id do documento do pedido não se move.** Ele é a idempotência do checkout e a
+  `externalReference` do gateway, com teto de 100 caracteres. A Frente 5 acrescenta um código
+  ao lado; task que parecer pedir um id mais curto está errada (RN-474).
+- **O código da compra não é chave de acesso.** A autorização do pedido continua sendo a
+  RN-469, por campo. Superfície que aceitar o código como credencial está errada (RN-475).
 
 ## Critério de pronto do pacote
 
@@ -163,4 +215,12 @@ A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
       e default só-a-própria-pessoa
 - [ ] a página do ingresso oferece "Salvar como PDF" onde há QR, o arquivo desce com o nome
       `ingresso-<codigo>.pdf` e não carrega o token dentro dele; estado sem QR não gera
-- [ ] review antagonista em contexto fresco em 1a, 1b, 3a e 3c
+- [ ] toda compra nova nasce com código de cinco símbolos, único por reserva, e o retry da
+      mesma chave de idempotência devolve o mesmo código
+- [ ] nenhuma tela de comprador e nenhum e-mail imprime `pedidoId`, e o teste que cobra isso é
+      executável
+- [ ] a busca de inscritos acha a compra pelo código, e o rótulo do campo diz que ela busca
+      por ele
+- [ ] o backfill roda em dry-run com contadores antes de qualquer escrita, e o rerun converge
+      para zero atualizações
+- [ ] review antagonista em contexto fresco em 1a, 1b, 3a, 3c, 5a e 5b

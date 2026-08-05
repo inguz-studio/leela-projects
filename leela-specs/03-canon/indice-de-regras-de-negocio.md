@@ -1,6 +1,6 @@
 ---
 tags: [leela, rn, regras-de-negocio, indice, canon, validacao-externa]
-atualizado: 2026-08-04
+atualizado: 2026-08-05
 ---
 
 # Leela · índice das regras de negócio
@@ -48,8 +48,10 @@ O terceiro formato cobre sozinho a faixa RN-425 a RN-453, que é a mais nova e a
 | 425-445 | E03, E04, E08, E09, E12 e E17, pelas rodadas de 29/07 e 02/08 |
 | 446-453 | [[LEELA-E00-fundacao-tecnica]], [[LEELA-E12-landing]] e [[LEELA-E16-plataforma-superadmin]] |
 | 454-459 | E04, E09, E12 e E16, pela rodada de 04/08 (economia do parcelamento) |
+| 461-468 | E00, E01, E09, E12 e E16, pela rodada de 04/08 (qualificação profissional) |
 | 469-472 | [[LEELA-E12-landing]], pela rodada de 04/08 (pós-pagamento em tela e Arena Social) |
 | 473 | [[LEELA-E12-landing]], pela mesma rodada em 05/08 (PDF do ingresso como download) |
+| 474-475 | [[LEELA-E12-landing]], pela mesma rodada em 05/08 (código curto da compra) |
 | 820-823 | [[LEELA-E11-analytics]] |
 
 As faixas 178-189, 385-392 e 425-445 atravessam mais de um épico porque nasceram em rodadas que tocaram várias frentes no mesmo dia. Para essas, o caminho curto é o arquivo de delta da rodada, que aponta para o épico de cada uma.
@@ -76,7 +78,7 @@ Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no templat
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 473, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social) e a 473 na SPEC-PDF, já em 05/08 (o PDF do ingresso como download). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito nas três: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a 475, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social), a 473 na SPEC-PDF e as 474 e 475 na SPEC-CODPEDIDO, as duas últimas já em 05/08 (o PDF do ingresso como download e o código curto da compra). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito em todas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 

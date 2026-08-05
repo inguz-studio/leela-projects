@@ -1,5 +1,5 @@
 ---
-tags: [leela, decisoes, rodada, checkout, pos-pagamento, area-do-cliente, arena-social, ingresso, pdf]
+tags: [leela, decisoes, rodada, checkout, pos-pagamento, area-do-cliente, arena-social, ingresso, pdf, codigo-pedido]
 trace: leela-pixreal-diag-20260804
 lote: SPEC-POSPAG
 data: 2026-08-04
@@ -9,7 +9,7 @@ data: 2026-08-04
 
 O dono leu o diagnóstico do primeiro pagamento real (`.nirvana/outputs/leela-pixreal-diag-20260804/DIAG-PIXREAL-REPORT.md`; registro elo a elo em [[fluxo-pos-pagamento]]) e devolveu duas mensagens. A primeira corrige uma leitura minha sobre o E12 e define o feedback pós-compra em tela; a segunda responde a pergunta de esclarecimento sobre a Arena Social. As três primeiras decisões abaixo saem delas.
 
-Em 05/08, depois de percorrer a página do ingresso já no ar, ele devolveu uma quarta decisão, de outro assunto: o botão que salva o ingresso em PDF. Ela entra aqui como **D-0804-4** porque a rodada é a unidade de registro e esta ainda está aberta.
+Em 05/08, depois de percorrer a página do ingresso já no ar, ele devolveu uma quarta decisão, de outro assunto: o botão que salva o ingresso em PDF. Ela entra aqui como **D-0804-4** porque a rodada é a unidade de registro e esta ainda está aberta. No mesmo dia veio a **D-0804-5**, sobre o tamanho dos identificadores de compra, pelo mesmo motivo.
 
 ## Verbatim do dono
 
@@ -67,6 +67,24 @@ O que a frase **supera**: a premissa **P10** da rodada de 29/07 (`../2026-07-29-
 
 **Como o PDF é gerado é decisão de engenharia**, não de dono, e já está tomada — com a alternativa rejeitada nomeada — em `05-spec-pdf-ingresso.md`. Nada disso sobe ao painel. Regra canônica: **RN-473** em [[LEELA-E12-landing]]. Story: **S1214**, task nova **S1214-T5**.
 
+### D-0804-5 · o identificador da compra encolhe e ganha prefixo
+
+Verbatim do dono, em 05/08, nas duas mensagens que formam a decisão:
+
+> "nossos identificadores dos ingressos também estao muito grandes, como poderiamos resolver isso com prefixos, e 5 dígitos alfanumericos?"
+
+> "identificadores de compras, na verdade\*\*"
+
+A segunda mensagem corrige o alvo da primeira e é ela que vale: o que encolhe é o identificador da **compra**, o pedido. O código do ingresso já é curto (`T93N7F`, seis símbolos, RN-396) e fica como está.
+
+O que a frase decide, sem interpretação por cima: o identificador da compra que a pessoa lê passa a ter **prefixo** e **cinco símbolos alfanuméricos**. O que ela não decide, e por isso não foi inventado aqui: qual prefixo, onde o código nasce, como a unicidade é garantida e o que acontece com as compras que já existem.
+
+**O que o dono viu.** O identificador da compra hoje tem **73 caracteres** e aparece na tela de confirmação do checkout, embaixo de "Inscrição confirmada!", em fonte mono (`StepConfirmacao.tsx:129` e `:138`). O da compra real de 04/08 é `ped-wNXRTvMM3vc7Boyi91vRgx3DBQy2-chk-ed77a161-…`. Não é só comprido: o pedaço do meio é o **uid da conta do comprador**, porque o id do documento é `ped-{uid}-{chave}` por construção, para que um retry do cliente colida no próprio id em vez de criar um segundo pedido. Comprido é o sintoma; o identificador da conta viajando numa tela que a pessoa fotografa e manda no WhatsApp é o problema maior, e ele só é visível de perto.
+
+**O que não se toca, e por quê.** O id do documento continua exatamente como está: ele é a idempotência do checkout por construção (lição PIXFIX-EXTREF) e a referência que viaja ao gateway. O código curto **acompanha** o pedido, não o substitui — é o que humano lê, dita e digita, enquanto o id continua sendo o que a máquina endereça. O `codigoIngresso` da RN-396 e o token assinado do link da página (RN-419) também ficam intocados: um já é curto, o outro é credencial e credencial não encurta.
+
+**O resto é engenharia**, tomada com as alternativas rejeitadas nomeadas em `06-spec-codigo-pedido.md`. Só uma coisa sobe ao painel, porque é vocabulário que o cliente lê: o **prefixo** (item **CODPED-1**, com `PED-` como default que já vale). Regras canônicas: **RN-474** e **RN-475** em [[LEELA-E12-landing]]. Story: **S1228**.
+
 ## Dependência dura, declarada
 
 **O CTA "ver meus pedidos" só tem destino quando a área do cliente existir.** O destino é o Meus Ingressos/histórico da S1222, atrás do login da S1221 e do primeiro acesso da S1223. Enquanto a área não sobe, o CTA não pode nascer apontando para um 404 — mesma lição da ordem C1→C2 da fila ADMINSEP. A fila S1222/S1223 vira, portanto, **pré-requisito ou entrega conjunta** do CTA: a tela v1 pode subir antes com mensagem + orientação de e-mail, e o CTA entra quando a rota existir. A ordem executável está em `04-fila-codigo.md`.
@@ -76,9 +94,12 @@ O que a frase **supera**: a premissa **P10** da rodada de 29/07 (`../2026-07-29-
 - **POSPAG-1 · RESPONDIDA.** O item perguntava só a posição da fila S1222/S1223, e a resposta do dono foi além dela: a área do cliente é confirmada como destino do CTA ("a área do cliente já foi especificada"), o feedback em tela entra na frente, e a fila S1222/S1223 sobe para logo atrás dele — na prática, o default proposto ("puxar a frente para a próxima posição") ratificado e ampliado. O item sai do painel pela disciplina de limpeza; este arquivo é o registro completo.
 - **BREVO-1 · RESOLVIDA em 05/08.** O dono desativou a trava de IPs no dashboard ("liberei o brevo") e a prova veio na hora: `GET /v3/account` com a chave de produção respondeu 200, na conta certa (Inguz Digital). O item saiu do painel pela disciplina de limpeza; este arquivo é o registro. Efeito imediato: os e-mails transacionais de produção voltam a sair no próximo envio, sem redeploy — a trava era da conta Brevo, não do código. Os dois e-mails represados do pedido do dono (ingresso `T93N7F` + conta) continuam esperando a ferramenta de reenvio (F2, em build na lane BUILD-F2F5, com review antagonista antes de executar).
 - **Nascem ARENA-1, ARENA-2 e ARENA-3** — os três vetáveis da Arena Social, no painel com contexto, default e destino.
+- **Nasce CODPED-1** — o prefixo do código da compra, único resíduo de dono da D-0804-5. Veto leve: `PED-` vale enquanto ele não responder, e trocar depois custa uma constante, não uma migração.
 
 ## O que esta rodada NÃO decide
 
 - Nada de F1 (trava Brevo), F2 (reenvio idempotente), F5 (alerta de falha de e-mail) e F6 (expiração da cobrança QA) do diagnóstico: são técnicas e correm nas lanes delas, em paralelo (registrado na fila).
 - **PDF anexado ao e-mail da compra.** A frase do dono pede um botão na página, e só. O anexo continua fora de escopo desde a D-ING-9 e continua sendo lane própria se ele pedir — a existência do gerador (D-0804-4) torna o anexo mais barato, não decidido.
+- **Encurtar o id do documento do pedido.** A D-0804-5 acrescenta um código; não troca o endereço. Mexer no id quebraria a idempotência do checkout e a referência que viaja ao gateway, e nada na frase do dono pede isso.
+- **Código curto para inscrito, pagamento, estorno ou evento.** A frase fala de compra. Cada um desses tem identificador próprio e ciclo próprio; se algum precisar de código ditável, é lane com decisão própria.
 - Nenhuma linha de código, Rule ou function: esta lane é de specs.
