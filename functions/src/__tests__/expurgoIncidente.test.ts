@@ -94,13 +94,50 @@ describe('incidenteExpurgo · formato que a política de alerta casa', () => {
       tipo: 'saude',
       erro: new Error('falhou com atestadoUrl=https://x/atestado.pdf de fulano@x.com'),
     });
-    const serializado = JSON.stringify(p);
-    // O `err` é do provedor e é copiado como veio (truncado). O contrato é
-    // sobre o que o NOSSO código acrescenta: nenhuma chave de conteúdo.
+    // O contrato sobre o que o NOSSO código acrescenta: nenhuma chave de
+    // conteúdo. (Sozinha, esta metade não prova nada — as chaves são
+    // constantes nossas. A metade que prova é a de baixo, sobre o VALOR.)
     for (const proibido of ['atestadoUrl', 'parqRespostas', 'consentimentoSaudeEm']) {
       expect(Object.keys(p)).not.toContain(proibido);
     }
-    expect(serializado).not.toContain('"email"');
+    expect(JSON.stringify(p)).not.toContain('"email"');
+  });
+
+  // REV-EXPURGO · defeito D1 desta review: `err` copiava a mensagem do
+  // provedor VERBATIM (só truncada em 200), enquanto o cabeçalho do módulo, o
+  // commit e o runbook prometiam "PII nunca entra". Truncar não é redigir —
+  // corta o FIM, não o conteúdo. O teste que guardava a promessa só olhava as
+  // CHAVES do payload, que são constantes nossas: não podia falhar.
+  it('e-mail na mensagem do provedor NÃO chega ao log', () => {
+    const p = montarIncidenteExpurgo({
+      tipo: 'saude',
+      erro: new Error('falha ao apagar saude de ana.souza@exemplo.com.br'),
+    });
+    expect(JSON.stringify(p)).not.toContain('ana.souza@exemplo.com.br');
+    expect(p['err'], 'o que sobra ainda diz o que aconteceu').toContain(
+      'falha ao apagar saude'
+    );
+  });
+
+  it('URL de dado (atestado) NÃO chega ao log; o link do índice continua chegando', () => {
+    const p = montarIncidenteExpurgo({
+      tipo: 'saude',
+      erro: new Error(
+        'delete falhou: https://storage.googleapis.com/leela/atestado-ana-souza.pdf'
+      ),
+    });
+    const serializado = JSON.stringify(p);
+    expect(serializado).not.toContain('atestado-ana-souza.pdf');
+    expect(serializado).not.toContain('storage.googleapis.com');
+
+    // O console do Google é a exceção: é o link do índice, é a única coisa
+    // acionável da linha, e não carrega dado de participante.
+    const comIndice = montarIncidenteExpurgo({
+      tipo: 'saude',
+      erro: new Error(ERRO_REAL),
+    });
+    expect(comIndice['err'] as string).toContain('console.firebase.google.com');
+    expect((comIndice['err'] as string).length).toBe(200);
   });
 });
 

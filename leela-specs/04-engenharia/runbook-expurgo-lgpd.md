@@ -30,13 +30,15 @@ Toda falha do expurgo grava um log de erro com estes campos:
 | `tipo` | `saude` |
 | `causa` | `indice_ausente` ou `desconhecida` |
 | `indiceUrl` | link de criação do índice, quando o Firestore o manda (campo próprio, inteiro) |
-| `err` | mensagem do erro, truncada em 200 caracteres |
+| `err` | mensagem do erro, higienizada e truncada em 200 caracteres |
 
 O nome do evento no log é `expurgo_saude_falhou`. A política de alerta, quando existir, casa o **campo** `alerta`, nunca a mensagem — texto de erro de provedor muda, campo estruturado não. É a mesma doutrina de [[runbook-email-transacional]], de propósito: uma política, um formato.
 
 O `err` é truncado em 200 caracteres e o link do índice passa disso com folga. Por isso o link tem campo próprio: truncá-lo junto do erro destruiria a única coisa acionável da linha.
 
-Conteúdo de saúde nunca entra no log. Seria o inverso do que o expurgo existe para fazer.
+Conteúdo de saúde nunca entra no log, e isso não é confiança na mensagem do provedor: antes de virar `err`, ela passa por `higienizarMensagem`, que troca e-mail por `[email-redigido]` e qualquer URL http(s) por `[url-redigida]`. O link do console do Google é a exceção — é o link do índice, é a única coisa acionável da linha e não carrega dado de participante. Se o plantão ler `[url-redigida]` numa causa `desconhecida`, o caminho é reproduzir o erro fora do log, não afrouxar a higienização.
+
+Truncar não redige: `slice(200)` corta o fim da frase, não o conteúdo dela. Essa distinção custou um defeito nesta mesma rodada — a promessa existia no cabeçalho do módulo e o teste que a guardava só olhava as chaves do payload, que são constantes nossas e nunca poderiam falhar.
 
 ## O gancho de alerta, e por que ele está desligado
 

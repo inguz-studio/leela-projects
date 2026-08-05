@@ -34,9 +34,13 @@
 // link de criação do índice, ele vai INTEIRO num campo próprio: truncá-lo
 // junto do erro destruiria a única coisa acionável da linha.
 //
-// PII NUNCA entra: ids de evento, contagens e a mensagem do erro TRUNCADA.
-// Conteúdo de dado de saúde não é logado em lugar nenhum — seria o inverso do
-// que o expurgo existe para fazer.
+// PII NUNCA entra: ids de evento, contagens e a mensagem do erro HIGIENIZADA
+// (e só então truncada). Truncar não é redigir — `slice(200)` corta o FIM, não
+// o conteúdo, e a mensagem de erro é texto de TERCEIRO que vai inteiro para o
+// log. Se um dia ela citar o `atestadoUrl` ou o e-mail de um participante, o
+// incidente de LGPD passaria a VAZAR exatamente o dado que o expurgo existe
+// para apagar — o inverso do que este módulo defende. Ver `higienizarMensagem`
+// (REV-EXPURGO · 2026-08-05).
 // =============================================================================
 
 import * as logger from 'firebase-functions/logger';
@@ -65,8 +69,32 @@ export interface IncidenteExpurgo {
 /** Máximo do link de criação de índice — a URL do Firestore passa de 200. */
 const MAX_URL = 500;
 
+/** Console do Google: a única URL acionável, e a única sem dado de gente. */
+const URL_CONSOLE = /^https:\/\/console\.(?:firebase|cloud)\.google\.com\//i;
+
 function mensagemDoErro(erro: unknown): string {
   return erro instanceof Error ? erro.message : String(erro);
+}
+
+/**
+ * Higieniza a mensagem do provedor ANTES de ela virar `err`. PURO.
+ *
+ * O `err` é texto de terceiro copiado para o log de um incidente de LGPD.
+ * Truncar em 200 não protege nada: corta o fim, não o conteúdo. Some daqui:
+ *
+ *   - e-mail (o participante é identificável por ele);
+ *   - qualquer URL http(s) que não seja o console do Google — `atestadoUrl`
+ *     aponta para o atestado médico, que é o dado sensível em pessoa.
+ *
+ * O link do índice sobrevive de propósito: é a única coisa acionável da linha
+ * e carrega só projeto + definição do índice em base64.
+ */
+export function higienizarMensagem(msg: string): string {
+  return msg
+    .replace(/[^\s<>()[\]"']+@[^\s<>()[\]"']+\.[a-z]{2,}/gi, '[email-redigido]')
+    .replace(/https?:\/\/\S+/gi, (url) =>
+      URL_CONSOLE.test(url) ? url : '[url-redigida]'
+    );
 }
 
 /**
@@ -113,7 +141,9 @@ export function montarIncidenteExpurgo(
     tipo: incidente.tipo,
     causa: classificarCausaExpurgo(erro),
     ...(indiceUrl !== null ? { indiceUrl } : {}),
-    err: mensagemDoErro(erro).slice(0, 200),
+    // Higieniza ANTES de truncar. A extração do link acima usa a mensagem
+    // CRUA de propósito — o console é exceção declarada em `URL_CONSOLE`.
+    err: higienizarMensagem(mensagemDoErro(erro)).slice(0, 200),
   };
 }
 
