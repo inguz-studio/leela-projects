@@ -55,10 +55,42 @@ interface FieldOverride {
   ttl?: boolean;
 }
 
-function lerOverrides(): FieldOverride[] {
+interface CampoComposto {
+  fieldPath: string;
+  order?: string;
+  arrayConfig?: string;
+}
+interface IndiceComposto {
+  collectionGroup: string;
+  queryScope?: string;
+  fields: CampoComposto[];
+}
+
+function lerArquivo(): {
+  indexes?: IndiceComposto[];
+  fieldOverrides?: FieldOverride[];
+} {
   const bruto = readFileSync(resolve(RAIZ, 'firestore.indexes.json'), 'utf8');
-  const doc = JSON.parse(bruto) as { fieldOverrides?: FieldOverride[] };
-  return doc.fieldOverrides ?? [];
+  return JSON.parse(bruto) as {
+    indexes?: IndiceComposto[];
+    fieldOverrides?: FieldOverride[];
+  };
+}
+
+function lerOverrides(): FieldOverride[] {
+  return lerArquivo().fieldOverrides ?? [];
+}
+
+function lerCompostos(): IndiceComposto[] {
+  return lerArquivo().indexes ?? [];
+}
+
+/** Assinatura estável de um composto: coleção, escopo e campos EM ORDEM. */
+function assinatura(i: IndiceComposto): string {
+  const campos = i.fields
+    .map((f) => `${f.fieldPath}:${f.order ?? f.arrayConfig ?? '?'}`)
+    .join(',');
+  return `${i.collectionGroup}|${i.queryScope ?? 'COLLECTION'}|${campos}`;
 }
 
 const chave = (o: FieldOverride): string => `${o.collectionGroup}.${o.fieldPath}`;
@@ -147,6 +179,91 @@ describe('firestore.indexes.json · fieldOverride não apaga índice existente',
           (i) => i.queryScope === 'COLLECTION_GROUP' && i.order === 'ASCENDING'
         ),
         `${k} precisa de COLLECTION_GROUP ASCENDING — getMeusClubesEConvites usa collectionGroup`
+      ).toBe(true);
+    }
+  });
+
+  it('nenhum composto duplicado (o arquivo é a lista completa do servidor)', () => {
+    const assinaturas = lerCompostos().map(assinatura);
+    const repetidos = assinaturas.filter((a, i) => assinaturas.indexOf(a) !== i);
+    expect(repetidos, 'composto declarado duas vezes').toEqual([]);
+  });
+});
+
+// =============================================================================
+// O CRON DE LGPD QUE FALHAVA TODO DIA POR FALTA DE ÍNDICE
+// (BUILD-EXPURGO · 2026-08-05)
+//
+// Outra classe de defeito que o mesmo arquivo produz: aqui nada foi APAGADO,
+// simplesmente nunca foi DECLARADO. `expurgarSaude` (LGPD Art. 11 · RN-147)
+// falhou 8 madrugadas seguidas em produção com `FAILED_PRECONDITION` porque a
+// varredura de eventos vencidos exige um composto que ninguém escreveu.
+//
+// A falta de índice é INVISÍVEL para todo teste de execução deste repositório
+// — o Emulator não cobra índice nenhum. A única prova possível antes do deploy
+// é sobre o ARQUIVO, ancorada na query que está no código. É o que segue.
+// =============================================================================
+describe('firestore.indexes.json · o expurgo de saúde (LGPD) tem índice declarado', () => {
+  const FONTE = resolve(RAIZ, 'functions/src/eventos/expurgarSaude.ts');
+
+  it('a query de varredura continua sendo eventos(status ==, data <)', () => {
+    const fonte = readFileSync(FONTE, 'utf8');
+    expect(fonte, 'expurgarSaude deveria varrer a coleção eventos').toContain(
+      ".collection('eventos')"
+    );
+    expect(fonte, 'o filtro de status saiu do código — reveja o índice').toContain(
+      ".where('status', '==', 'encerrado')"
+    );
+    expect(fonte, 'o filtro de data saiu do código — reveja o índice').toContain(
+      ".where('data', '<', corte)"
+    );
+  });
+
+  it('o composto eventos(status ASC, data ASC) está declarado', () => {
+    // Assinatura idêntica à que o próprio Firestore pediu no erro de produção:
+    // collectionGroups/eventos/indexes/_  status  data  __name__
+    expect(
+      lerCompostos().map(assinatura),
+      'sem `eventos|COLLECTION|status:ASCENDING,data:ASCENDING` o cron de LGPD ' +
+        'falha com FAILED_PRECONDITION em TODA execução e nenhum dado de saúde ' +
+        'é apagado. Igualdade + desigualdade em campos diferentes exige composto.'
+    ).toContain('eventos|COLLECTION|status:ASCENDING,data:ASCENDING');
+  });
+
+  it('a busca dos docs de saúde é por collectionGroup e o override existe', () => {
+    const fonte = readFileSync(FONTE, 'utf8');
+    expect(fonte, 'a localização dos docs de saúde é por collection group').toContain(
+      '.collectionGroup(SAUDE_SUBCOL)'
+    );
+    expect(fonte, 'o filtro do collection group é por eventoId').toContain(
+      ".where('eventoId', '==', evento.id)"
+    );
+    const o = lerOverrides().find((x) => chave(x) === 'saude.eventoId');
+    expect(
+      o,
+      'override `saude.eventoId` ausente: query de collection group com ' +
+        'igualdade NÃO é coberta pelo índice automático (que é COLLECTION). ' +
+        'Sem ele o expurgo estoura no segundo passo, depois de o primeiro passar.'
+    ).toBeDefined();
+    expect(
+      o?.indexes?.some(
+        (i) => i.queryScope === 'COLLECTION_GROUP' && i.order === 'ASCENDING'
+      ),
+      'saude.eventoId precisa de COLLECTION_GROUP ASCENDING'
+    ).toBe(true);
+  });
+
+  it('o override de saude.eventoId não apaga o escopo COLLECTION (regra D1)', () => {
+    const o = lerOverrides().find((x) => chave(x) === 'saude.eventoId');
+    // A coleta (E12-S1207/E13) ainda não existe; quando existir, ela vai ler
+    // `inscritos/{i}/saude` em escopo COLLECTION. Re-listar aqui custa
+    // armazenamento de um doc por inscrito e evita repetir o defeito D1 — com
+    // a diferença de que ninguém estaria olhando, porque não há query hoje.
+    for (const ordem of ['ASCENDING', 'DESCENDING']) {
+      expect(
+        o?.indexes?.some((i) => i.queryScope === 'COLLECTION' && i.order === ordem),
+        `saude.eventoId precisa manter COLLECTION ${ordem} — fieldOverride ` +
+          'substitui a política automática, não soma a ela'
       ).toBe(true);
     }
   });
