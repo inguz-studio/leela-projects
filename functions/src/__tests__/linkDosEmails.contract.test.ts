@@ -79,10 +79,14 @@ describe('conta criada · o link de definir senha é NOSSO (contaSemFriccao)', (
     const chamada = espiao.gerarLink.mock.calls[0];
     expect(chamada?.[0]).toBe('quem.pagou@example.com');
     // A versão anterior chamava com UM argumento só.
-    expect(chamada?.[1]).toEqual(actionCodeSettingsSenha());
+    // S1223-T2: a origem é `comprador` — quem acabou de pagar aterrissa na
+    // LANDING, não no painel. Sem `LEELA_PUBLIC_URL` no ambiente deste teste a
+    // origem degrada para o painel, e o caso de domínio vive em
+    // `linkSenhaPorOrigem.test.ts`, onde a env é declarada.
+    expect(chamada?.[1]).toEqual(actionCodeSettingsSenha('comprador'));
   });
 
-  it('reescreve o link para `/redefinir-senha` do painel, levando o `oobCode`', async () => {
+  it('sem base pública, o comprador degrada INTEIRO para o painel (S1223-T2)', async () => {
     const { contaSemFriccaoAuthAdmin } = await import('../checkout/contaSemFriccao');
     espiao.gerarLink.mockClear();
 

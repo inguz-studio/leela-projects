@@ -419,6 +419,8 @@ export {
   verificarCodigoResetSenha,
   confirmarResetSenha,
 } from './auth';
+// S1223-T2 · RN-453: a origem decide a casa em que o link aterrissa.
+export type { OrigemLinkSenha } from './auth';
 
 // Copy honesta de erro de Auth + validação de cliente (S1221-T1). Puro, sem
 // SDK: a landing e o painel precisam da MESMA regra anti-enumeração e nenhuma

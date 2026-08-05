@@ -26,7 +26,11 @@ aterrissar.
 | Task | O quê | Estado | Commit |
 |---|---|---|---|
 | `S1221-T1` | O login vira overlay no meio da landing | ✅ | `20bd6874` |
-| `C1 · S1223-T1` | `/definir-senha` na landing, com os três estados | ✅ | (abaixo) |
+| `C1 · S1223-T1` | `/definir-senha` na landing, com os três estados | ✅ | `2d7f24d7` |
+| `C2 · S1223-T2` | O destino do link passa a ser decidido pela origem | ✅ | (abaixo) |
+| `C3 · S1223-T3` | Autorizar o domínio de continuação no Auth | ⛔ operação | — |
+| `B1 · S1222-T1` | Callables do próprio dono da conta | ⛔ não feita | — |
+| `B2..B5`, `S1225-T4` | A área na landing e o CTA do checkout | ⛔ não feitas | — |
 
 **A BUILD-COD5A aterrissou** em `3acc6877` no meio desta lane, o que liberou
 `functions/`. A árvore tem, porém, trabalho de terceiro não versionado em
@@ -144,6 +148,95 @@ jornadas (esta e a `S1225-T4`) passam a apontar para Meus Ingressos de uma vez s
 entrou aqui: a ordem da fila é inegociável e a C2 só sobe **depois** da C1 estar no ar.
 Enquanto isso, o link continua caindo no painel — o comprador ainda não é mandado para
 esta tela. A rota existe e está provada; falta o servidor apontar para ela.
+
+---
+
+## `C2 · S1223-T2` — o link do e-mail passa a cair na tela da Leela
+
+**O que mudou.** `functions/src/auth/linkDeAcao.ts` era o ponto único de decisão com UMA
+resposta (o painel). Passou a ter **duas**, e quem escolhe é a origem: `comprador` →
+landing `/definir-senha`; `organizador` → painel `/redefinir-senha`. Os dois pontos de
+origem declaram a sua.
+
+**Arquivos**
+
+- `functions/src/auth/linkDeAcao.ts` — `OrigemLinkSenha`, `baseDaOrigem`,
+  `rotaDaOrigem`, `reescreverParaTelaDeSenha`. `reescreverParaOPainel` continua vivo
+  como alias do caminho do organizador (um alias, não uma segunda máquina).
+- `functions/src/checkout/contaSemFriccao.ts` — o link de "conta criada, defina a
+  senha" nasce com origem `comprador`.
+- `functions/src/auth/solicitarRedefinicaoSenha.ts` — o "esqueci minha senha" aceita
+  `origem` no payload; ausente ou desconhecida cai no default (organizador), que é o
+  comportamento anterior.
+- `packages/api-client/src/auth.ts` — `enviarResetSenha(email, origem)`, e o
+  `actionCodeSettings` do FALLBACK também virou por origem: a landing não tem `/entrar`,
+  e casar o domínio dela com a rota do painel produziria um 404 no caminho de recuperar
+  conta — o defeito que a RN-453 existe para fechar.
+- `apps/landing/.../DefinirSenhaFlow.tsx` — o reenvio declara `comprador`.
+- `functions/src/__tests__/linkSenhaPorOrigem.test.ts` (novo) — 11 casos.
+- `functions/src/__tests__/{redefinirSenhaProprio,linkDosEmails.contract}.test.ts` —
+  ajustados à assinatura nova, sem afrouxar nenhuma asserção.
+
+**Base e rota andam juntas (decisão que a review deve atacar).** Sem `LEELA_PUBLIC_URL`
+o comprador degrada **inteiro** para o painel: base E rota. Meia degradação —
+`/definir-senha` no domínio do painel — seria 404 garantido, pior que o estado de hoje.
+Há caso de teste para isso.
+
+**A origem é dica de destino, nunca credencial.** Ela chega no payload da callable
+pública. Errar a origem só troca a casa em que a pessoa aterrissa; o `oobCode` continua
+sendo o que autoriza, e valor desconhecido cai no default em vez de escolher domínio
+novo. Caso de teste nomeando a propriedade.
+
+**Gates**
+
+- `tsc --noEmit`: functions, api-client, painel e landing — zero em todos.
+- `eslint app lib --max-warnings 0` (landing) — zero.
+- Suíte da landing **2× seguidas**: `50 arquivos · 618 testes` verdes nas duas.
+- `functions`: rodados **só** os três arquivos tocados — `linkSenhaPorOrigem` (11/11),
+  `redefinirSenhaProprio` (23/23), `linkDosEmails.contract` (6/6). A suíte completa de
+  functions **não** foi executada, por gate do brief.
+- `firestore.rules` intocado.
+
+---
+
+## O que ficou de fora, e por quê
+
+### `C3 · S1223-T3` — passo de OPERAÇÃO, não de código
+
+O Firebase recusa `actionCodeSettings` com `auth/unauthorized-continue-uri` quando o
+domínio não está nos Authorized Domains do Auth. **`leela-landing.web.app` é um segundo
+site de Hosting e pode não estar na lista** — e a partir da C2 é ele que aparece no
+`continueUrl` do comprador. Conferir e autorizar antes do deploy. Sem isso o adapter
+degrada para o link SEM `continueUrl` (o `catch` de `auth/unauthorized-continue-uri` em
+`solicitarRedefinicaoSenha.ts` já faz isso e loga `reset_senha_continue_uri_recusada`) —
+mas o `contaSemFriccao` **não tem esse catch**, então lá a falha seria a exceção que o
+best-effort engole, e o comprador ficaria sem e-mail de conta criada. **Este é o item
+mais urgente do que sobra desta lane.**
+
+### `B1..B5` e `S1225-T4` — a área do cliente não foi construída
+
+A `B1` (callables do próprio dono da conta) não foi iniciada: a lane chegou ao teto de
+contexto e a regra é parar em task inteira, nunca no meio. Nada de meia-área ficou no
+repo. O que já está estudado e vale para quem pegar:
+
+- **O caminho do dado existe e é o do `getCheckoutPrefill`**: `pessoas` com
+  `contaUid == caller.uid`, atrás do gate RN-174 completo (e-mail do token verificado E
+  `pessoa.contaEmail` igual ao e-mail do token). Copiar o gate inteiro, não parte dele.
+- **A ligação pedido↔conta tem DOIS caminhos** e eles não são equivalentes:
+  `pedidos/{id}.contaSemFriccao.contaUid` (carimbado sempre que o e-mail da compra
+  resolve uma conta) e `pessoas/{ref}.contaUid` (que o anti-hijack de primeiro-vínculo
+  pode ter RECUSADO). A RN-451 nomeia o segundo. Usar o primeiro sozinho mostraria a
+  compra a uma conta cujo vínculo de pessoa foi negado — e encostaria no POSSE-EMAIL-1,
+  que o brief proíbe piorar.
+- **O link do ingresso na lista** pode ser cunhado dentro da callable com
+  `assinarLinkIngresso` + `urlIngressoPorLink`, exatamente como
+  `functions/src/email/enviarIngressos.ts` já faz por inscrito. A chave NÃO desce para o
+  cliente, e o link entregue é o mesmo que já está no e-mail da pessoa — nenhuma
+  superfície de segurança nova.
+- **`apps/landing/lib/areaDoCliente.ts` é o interruptor**: quando a `S1222-T2` subir,
+  `AREA_CLIENTE_NO_AR` vira `true` e as duas jornadas (o fim da `/definir-senha` e o CTA
+  da `S1225-T4`) passam a apontar para Meus Ingressos de uma vez só. A `S1225-T4` é
+  literalmente um CTA consumindo esse módulo.
 
 ## Para o maestro selar (não editei `leela-specs/`)
 

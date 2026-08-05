@@ -33,15 +33,44 @@
 //      `oobCode`, não a URL que o entregou.
 //
 // -----------------------------------------------------------------------------
-// O que está DECIDIDO e o que está PARADO esperando spec
+// O DESTINO É DECIDIDO PELA ORIGEM (S1223-T2 · RN-453)
 // -----------------------------------------------------------------------------
-// DECIDIDO: o clique cai em `/redefinir-senha` no painel.
-// PARADO: para onde a pessoa vai DEPOIS de definir a senha. A lane
-// SPEC-ADMINSEP está especificando a jornada de primeiro acesso e onde o
-// cliente novo aterrissa. Até ela aterrissar, `ROTA_APOS_DEFINIR_SENHA` fica
-// em `/entrar` (o comportamento de hoje da `RedefinirSenhaPage`) e é a ÚNICA
-// linha a mexer quando a spec chegar. Não inventamos a jornada aqui.
+// A SPEC-ADMINSEP aterrissou e destravou o que este módulo tinha deixado
+// parado. A resposta não é uma rota, são DUAS — e quem escolhe é a ORIGEM:
+//
+//   - `comprador`   → a landing, em `/definir-senha`. Quem acabou de comprar
+//                     não tem tenant nem `profissionais/{uid}`; mandá-lo para
+//                     a tela do painel o faria definir a senha e ser EXPULSO
+//                     no passo seguinte pela guarda de conta órfã do
+//                     `destinoPosLogin`. É o oposto da frase do dono: "ela
+//                     entra, define a senha e entra no sistema".
+//   - `organizador` → o painel, em `/redefinir-senha`, como sempre foi.
+//
+// Por que NÃO o "Action URL" global do Console: ele é único para o projeto
+// inteiro e não distingue comprador de organizador, que precisam aterrissar em
+// casas diferentes. O comentário que propunha esse atalho fica superado pela
+// RN-453.
+//
+// DEGRADAÇÃO: sem `LEELA_PUBLIC_URL` configurada, o comprador cai no
+// comportamento do organizador em vez de num link torto. Link feio recupera
+// conta; link quebrado não.
 // =============================================================================
+
+import { basePublica } from '../eventos/basePublica';
+
+/**
+ * Quem vai clicar no link. O comprador vem da confirmação da compra; o
+ * organizador, do "esqueci minha senha" do painel.
+ */
+export type OrigemLinkSenha = 'comprador' | 'organizador';
+
+/** Origem default — preserva o comportamento anterior à S1223-T2. */
+export const ORIGEM_PADRAO: OrigemLinkSenha = 'organizador';
+
+/** É uma origem que este módulo conhece? @pure */
+export function origemDeLinkValida(valor: unknown): valor is OrigemLinkSenha {
+  return valor === 'comprador' || valor === 'organizador';
+}
 
 /** Canal live do site de Hosting do painel — espelha `PAINEL_URL_PADRAO`. */
 export const PAINEL_URL_PADRAO = 'https://leela-hub.web.app';
@@ -50,14 +79,18 @@ export const PAINEL_URL_PADRAO = 'https://leela-hub.web.app';
 export const ENV_PAINEL = 'LEELA_PAINEL_URL';
 export const ENV_PAINEL_LANDING = 'NEXT_PUBLIC_PAINEL_URL';
 
-/** Onde o clique do link de senha aterrissa. */
+/** Onde o clique do link de senha aterrissa, no PAINEL. */
 export const ROTA_REDEFINIR_SENHA = '/redefinir-senha';
 
+/** Onde o clique do link de senha aterrissa, na LANDING (S1223-T1). */
+export const ROTA_DEFINIR_SENHA_LANDING = '/definir-senha';
+
 /**
- * Para onde a pessoa segue DEPOIS de definir a senha.
+ * Para onde o ORGANIZADOR segue depois de definir a senha — o comportamento
+ * que a `RedefinirSenhaPage` do painel sempre teve.
  *
- * ⚠️ PONTO ÚNICO DE DECISÃO, esperando a lane SPEC-ADMINSEP. Trocar este valor
- * (e só ele) move o destino de primeiro acesso do produto inteiro.
+ * O comprador não usa esta rota: a tela dele autentica e o entrega na conta na
+ * mesma ação, sem segundo login (RN-453 item 3).
  */
 export const ROTA_APOS_DEFINIR_SENHA = '/entrar';
 
@@ -88,12 +121,44 @@ export function basePainel(
  * @pure
  */
 export function actionCodeSettingsSenha(
+  origem: OrigemLinkSenha = ORIGEM_PADRAO,
   env: Record<string, string | undefined> = process.env
 ): { url: string; handleCodeInApp: false } {
   return {
-    url: `${basePainel(env)}${ROTA_APOS_DEFINIR_SENHA}`,
+    url: `${baseDaOrigem(origem, env)}${rotaDaOrigem(origem, env)}`,
     handleCodeInApp: false,
   };
+}
+
+/**
+ * A base de cada origem. O comprador usa a base PÚBLICA (`LEELA_PUBLIC_URL`, a
+ * mesma que já serve o link do ingresso nas functions deployadas); o
+ * organizador usa a do painel. Sem base pública, o comprador degrada para o
+ * painel — que é o comportamento anterior a esta task, e funciona.
+ * @pure
+ */
+export function baseDaOrigem(
+  origem: OrigemLinkSenha,
+  env: Record<string, string | undefined> = process.env
+): string {
+  if (origem !== 'comprador') return basePainel(env);
+  return basePublica(env) ?? basePainel(env);
+}
+
+/**
+ * A rota de cada origem, coerente com a base escolhida: se o comprador
+ * degradou para o painel, a rota tem de ser a do painel — apontar
+ * `/definir-senha` no domínio do painel seria um 404 garantido.
+ * @pure
+ */
+export function rotaDaOrigem(
+  origem: OrigemLinkSenha,
+  env: Record<string, string | undefined> = process.env
+): string {
+  if (origem === 'comprador' && basePublica(env) !== null) {
+    return ROTA_DEFINIR_SENHA_LANDING;
+  }
+  return ROTA_APOS_DEFINIR_SENHA;
 }
 
 /**
@@ -105,23 +170,43 @@ export function actionCodeSettingsSenha(
  * feio, e o handler hospedado do Firebase pelo menos funciona.
  * @pure
  */
+export function reescreverParaTelaDeSenha(
+  linkDoFirebase: string,
+  origem: OrigemLinkSenha = ORIGEM_PADRAO,
+  env: Record<string, string | undefined> = process.env
+): string {
+  let doFirebase: URL;
+  try {
+    doFirebase = new URL(linkDoFirebase);
+  } catch {
+    return linkDoFirebase;
+  }
+  const oobCode = doFirebase.searchParams.get('oobCode');
+  if (oobCode === null || oobCode.length === 0) return linkDoFirebase;
+
+  // Base e rota vêm do MESMO par: o comprador que degradou por falta de
+  // `LEELA_PUBLIC_URL` recebe a tela do painel inteira, nunca meia.
+  const publica = basePublica(env);
+  const alvo =
+    origem === 'comprador' && publica !== null
+      ? `${publica}${ROTA_DEFINIR_SENHA_LANDING}`
+      : `${basePainel(env)}${ROTA_REDEFINIR_SENHA}`;
+
+  const destino = new URL(alvo);
+  for (const chave of ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl']) {
+    const valor = doFirebase.searchParams.get(chave);
+    if (valor !== null && valor.length > 0) destino.searchParams.set(chave, valor);
+  }
+  return destino.toString();
+}
+
+/**
+ * Nome antigo, preservado para os call sites do organizador. É um alias, não
+ * uma segunda máquina.
+ */
 export function reescreverParaOPainel(
   linkDoFirebase: string,
   env: Record<string, string | undefined> = process.env
 ): string {
-  let origem: URL;
-  try {
-    origem = new URL(linkDoFirebase);
-  } catch {
-    return linkDoFirebase;
-  }
-  const oobCode = origem.searchParams.get('oobCode');
-  if (oobCode === null || oobCode.length === 0) return linkDoFirebase;
-
-  const destino = new URL(`${basePainel(env)}${ROTA_REDEFINIR_SENHA}`);
-  for (const chave of ['mode', 'oobCode', 'apiKey', 'lang', 'continueUrl']) {
-    const valor = origem.searchParams.get(chave);
-    if (valor !== null && valor.length > 0) destino.searchParams.set(chave, valor);
-  }
-  return destino.toString();
+  return reescreverParaTelaDeSenha(linkDoFirebase, 'organizador', env);
 }

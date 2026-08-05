@@ -206,25 +206,44 @@ export async function getClaims(
 const ROTA_APOS_DEFINIR_SENHA = '/entrar';
 
 /**
+ * Quem está pedindo o link (S1223-T2 · RN-453). O destino do `continueUrl` é
+ * decidido pela ORIGEM, no servidor: comprador aterrissa na landing
+ * (`/definir-senha`), organizador no painel (`/redefinir-senha`).
+ *
+ * Espelha `OrigemLinkSenha` de `functions/src/auth/linkDeAcao.ts`. A escolha é
+ * uma DICA de destino, nunca credencial: errar a origem só troca a casa em que
+ * a pessoa aterrissa, e o `oobCode` continua sendo o que autoriza.
+ */
+export type OrigemLinkSenha = 'comprador' | 'organizador';
+
+/**
  * `actionCodeSettings` do fluxo de senha (lane IDENTIDADE-EMAIL).
  *
  * Sem isto, o link de ação do Auth caía no handler HOSPEDADO do Firebase, fora
  * da marca e fora do painel. `handleCodeInApp: false` porque o fluxo é web: a
  * `RedefinirSenhaPage` resolve o `oobCode` com o SDK do cliente.
  *
- * A origem é a do PRÓPRIO painel (`window.location.origin`): o cliente já está
- * rodando dentro dele, então preview, emulador e produção acertam sozinhos, sem
- * mais uma variável de ambiente para alguém esquecer de setar.
+ * O DOMÍNIO é o da PRÓPRIA app que está rodando (`window.location.origin`):
+ * preview, emulador e produção acertam sozinhos, sem mais uma variável de
+ * ambiente para alguém esquecer de setar.
+ *
+ * A ROTA, porém, é por origem (S1223-T2): a landing não tem `/entrar` — a casa
+ * dela é `/definir-senha`. Combinar o domínio da landing com a rota do painel
+ * produziria um 404 no caminho de recuperar conta, que é exatamente o defeito
+ * que a RN-453 existe para fechar.
  */
-function actionCodeSettingsSenha(): { url: string; handleCodeInApp: false } {
+function actionCodeSettingsSenha(
+  origem: OrigemLinkSenha
+): { url: string; handleCodeInApp: false } {
   // `globalThis` e não `window`: este módulo também é compilado pelo tsconfig
   // das Functions (lib node, sem DOM), onde `window` nem é um nome conhecido.
   const local = (globalThis as { location?: { origin?: string } }).location;
-  const origem =
+  const dominio =
     typeof local?.origin === 'string' && local.origin.startsWith('http')
       ? local.origin.replace(/\/+$/, '')
       : 'https://leela-hub.web.app';
-  return { url: `${origem}${ROTA_APOS_DEFINIR_SENHA}`, handleCodeInApp: false };
+  const rota = origem === 'comprador' ? '/definir-senha' : ROTA_APOS_DEFINIR_SENHA;
+  return { url: `${dominio}${rota}`, handleCodeInApp: false };
 }
 
 /**
@@ -248,13 +267,16 @@ function actionCodeSettingsSenha(): { url: string; handleCodeInApp: false } {
  * Firebase com `actionCodeSettings`. Feio é melhor que ninguém conseguir
  * recuperar a conta, e o caminho antigo continua funcional.
  */
-export async function enviarResetSenha(email: string): Promise<void> {
+export async function enviarResetSenha(
+  email: string,
+  origem: OrigemLinkSenha = 'organizador'
+): Promise<void> {
   try {
-    const fn = httpsCallable<{ email: string }, { ok: true }>(
+    const fn = httpsCallable<{ email: string; origem: OrigemLinkSenha }, { ok: true }>(
       getLeelaFunctions(),
       'solicitarRedefinicaoSenha'
     );
-    await fn({ email });
+    await fn({ email, origem });
     return;
   } catch (err) {
     const code = (err as { code?: string }).code ?? '';
@@ -265,7 +287,7 @@ export async function enviarResetSenha(email: string): Promise<void> {
       code.includes('deadline-exceeded');
     if (!indisponivel) throw err;
   }
-  await sendPasswordResetEmail(getLeelaAuth(), email, actionCodeSettingsSenha());
+  await sendPasswordResetEmail(getLeelaAuth(), email, actionCodeSettingsSenha(origem));
 }
 
 /**

@@ -45,7 +45,13 @@ import { validarEmail, type EmailProvider } from '@leela/core';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderRedefinirSenhaEmail } from '../email/templates';
 import { consumirRateLimit, hashChave, type JanelaRateLimit } from '../shared/rateLimit';
-import { actionCodeSettingsSenha, reescreverParaOPainel } from './linkDeAcao';
+import {
+  actionCodeSettingsSenha,
+  ORIGEM_PADRAO,
+  origemDeLinkValida,
+  reescreverParaTelaDeSenha,
+  type OrigemLinkSenha,
+} from './linkDeAcao';
 
 /**
  * Piso de tempo de resposta, em ms. Cobre com folga o caminho caro (Auth +
@@ -69,8 +75,17 @@ export function janelaDoEmail(email: string): JanelaRateLimit {
 
 /** Porta mínima do Auth que o fluxo usa (injetável nos testes). */
 export interface RedefinicaoAuth {
-  /** Link oficial de redefinição; `null` quando a conta não existe. */
-  gerarLinkRedefinicao(email: string): Promise<string | null>;
+  /**
+   * Link oficial de redefinição; `null` quando a conta não existe.
+   *
+   * A ORIGEM entra aqui (S1223-T2 · RN-453) porque é ela que decide o domínio
+   * do `continueUrl`: o comprador aterrissa na landing, o organizador no
+   * painel. O mesmo e-mail de "esqueci minha senha" sai das duas casas.
+   */
+  gerarLinkRedefinicao(
+    email: string,
+    origem: OrigemLinkSenha
+  ): Promise<string | null>;
   /** Nome de exibição da conta, quando houver. */
   nomeDaConta(email: string): Promise<string>;
 }
@@ -80,11 +95,11 @@ export function redefinicaoAuthAdmin(
   env: Record<string, string | undefined> = process.env
 ): RedefinicaoAuth {
   return {
-    async gerarLinkRedefinicao(email) {
+    async gerarLinkRedefinicao(email, origem) {
       try {
         return await admin
           .auth()
-          .generatePasswordResetLink(email, actionCodeSettingsSenha(env));
+          .generatePasswordResetLink(email, actionCodeSettingsSenha(origem, env));
       } catch (err) {
         const code = (err as { code?: string }).code;
         if (code === 'auth/user-not-found' || code === 'auth/email-not-found') {
@@ -149,7 +164,14 @@ export async function solicitarRedefinicaoCore(
   rawInput: unknown,
   agora: Date = new Date()
 ): Promise<DesfechoRedefinicao> {
-  const input = rawInput as { email?: unknown } | null;
+  const input = rawInput as { email?: unknown; origem?: unknown } | null;
+  // Origem desconhecida ou ausente cai no default (organizador), que é o
+  // comportamento anterior a esta task. O campo é uma DICA de destino, nunca
+  // uma credencial: escolher errado só troca a casa em que a pessoa aterrissa,
+  // e o `oobCode` continua sendo o que autoriza.
+  const origem: OrigemLinkSenha = origemDeLinkValida(input?.origem)
+    ? input.origem
+    : ORIGEM_PADRAO;
   const bruto = typeof input?.email === 'string' ? input.email.trim() : '';
   if (bruto.length === 0 || bruto.length > 254 || !validarEmail(bruto)) {
     return 'email_invalido';
@@ -166,7 +188,7 @@ export async function solicitarRedefinicaoCore(
     return 'limite_estourado';
   }
 
-  const link = await auth.gerarLinkRedefinicao(email);
+  const link = await auth.gerarLinkRedefinicao(email, origem);
   if (link === null) return 'conta_inexistente';
   if (emailProvider === null) {
     // Fail-closed RN-137: pendência observável, resposta intocada.
@@ -178,7 +200,7 @@ export async function solicitarRedefinicaoCore(
   try {
     const rendered = renderRedefinirSenhaEmail({
       nomeUsuario: nome,
-      linkRedefinirSenha: reescreverParaOPainel(link),
+      linkRedefinirSenha: reescreverParaTelaDeSenha(link, origem),
     });
     await emailProvider.sendTransactional({
       to: { email, ...(nome.length > 0 ? { nome } : {}) },

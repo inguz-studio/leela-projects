@@ -291,7 +291,10 @@ function ReenviarLink(): React.JSX.Element {
     setEnviando(true);
     ensureLeela();
     try {
-      await enviarResetSenha(email.trim());
+      // A ORIGEM é declarada (S1223-T2): quem pede daqui é comprador, e o
+      // link novo tem de voltar para ESTA tela — não para o `/entrar` do
+      // painel, onde a guarda de conta órfã o expulsaria.
+      await enviarResetSenha(email.trim(), 'comprador');
     } catch {
       // Engolido de propósito: `auth/user-not-found` (e qualquer outra falha)
       // não pode virar sinal de existência. Falha de rede também não distingue.

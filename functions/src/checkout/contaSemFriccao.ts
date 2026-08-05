@@ -41,7 +41,7 @@ import { COLECAO_PESSOAS, validarEmail, type EmailProvider } from '@leela/core';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { renderContaCriadaEmail } from '../email/templates';
-import { actionCodeSettingsSenha, reescreverParaOPainel } from '../auth/linkDeAcao';
+import { actionCodeSettingsSenha, reescreverParaTelaDeSenha } from '../auth/linkDeAcao';
 
 type Db = admin.firestore.Firestore;
 
@@ -113,9 +113,17 @@ export function contaSemFriccaoAuthAdmin(): ContaSemFriccaoAuth {
     // por `/redefinir-senha` do painel, levando o `oobCode` (a credencial é o
     // código, não a URL que o entregou). Ponto único de decisão da jornada:
     // `functions/src/auth/linkDeAcao.ts`.
+    // S1223-T2 · RN-453: a origem é `comprador`. Quem acabou de pagar não tem
+    // tenant nem `profissionais/{uid}`, então a tela do painel o expulsaria
+    // pela guarda de conta órfã logo depois de ele definir a senha. O destino
+    // passa a ser `/definir-senha` da LANDING, que autentica e entrega a pessoa
+    // na conta sem segundo login.
     async gerarLinkDefinirSenha(email) {
-      return reescreverParaOPainel(
-        await admin.auth().generatePasswordResetLink(email, actionCodeSettingsSenha())
+      return reescreverParaTelaDeSenha(
+        await admin
+          .auth()
+          .generatePasswordResetLink(email, actionCodeSettingsSenha('comprador')),
+        'comprador'
       );
     },
   };

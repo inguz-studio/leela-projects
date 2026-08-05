@@ -365,7 +365,9 @@ describe('S5 · o link do e-mail aterrissa numa tela da Leela', () => {
 
 describe('S6 · actionCodeSettings existe e aponta para o painel', () => {
   it('monta a URL de continuação na base do painel', () => {
-    expect(actionCodeSettingsSenha(ENV)).toEqual({
+    // S1223-T2: a assinatura ganhou a ORIGEM na frente do env. Sem origem, o
+    // default é `organizador` — o comportamento que este caso sempre afirmou.
+    expect(actionCodeSettingsSenha('organizador', ENV)).toEqual({
       url: `${PAINEL}${ROTA_APOS_DEFINIR_SENHA}`,
       handleCodeInApp: false,
     });
