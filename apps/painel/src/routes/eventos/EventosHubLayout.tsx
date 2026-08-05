@@ -49,10 +49,22 @@ export function EventosHubSubNav(): JSX.Element {
 
 EventosHubSubNav.displayName = 'EventosHubSubNav';
 
-/** Moldura com a SubNav sobre o conteúdo da subdivisão. */
+/**
+ * Moldura com a SubNav sobre o conteúdo da subdivisão.
+ *
+ * RESPIRO DO TOPO (REV-PAINEL, achado da review do Adendo 13): esta área é uma
+ * das duas cujo PRIMEIRO elemento na área de rolagem é uma SubNav, não um
+ * PageHeader. Com a barra superior suprimida, o argumento que dispensou a
+ * recomposição de espaço — "o `min-h` de 96px do PageHeader é o respiro, e
+ * `/plataforma` já vive assim" — NÃO alcança aqui: a SubNav do DS tem 48px de
+ * altura e zero padding vertical, então a aba encostava a ~12px do topo do
+ * contêiner, contra ~32px das telas que abrem com PageHeader. O `pt` é próprio
+ * da moldura (mesmo token e mesma razão do `pt-5` do EventoShell, cujo primeiro
+ * elemento também é baixo) e não volta a ser barra invisível no shell.
+ */
 export function EventosHubLayout(): JSX.Element {
   return (
-    <div className="flex flex-col gap-[var(--spacing-4)]">
+    <div className="flex flex-col gap-[var(--spacing-4)] pt-[var(--spacing-5)]">
       <EventosHubSubNav />
       <Outlet />
     </div>

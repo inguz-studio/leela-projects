@@ -53,10 +53,19 @@ function RedirectFichaLegada(): JSX.Element {
 
 RedirectFichaLegada.displayName = 'RedirectFichaLegada';
 
-/** Moldura com a SubNav (Visão geral | Clientes | Comunicação). */
+/**
+ * Moldura com a SubNav (Visão geral | Clientes | Comunicação).
+ *
+ * RESPIRO DO TOPO (REV-PAINEL, achado da review do Adendo 13): o CRM é a outra
+ * área cujo PRIMEIRO elemento na área de rolagem é uma SubNav de 48px sem
+ * padding vertical, e não um PageHeader de 96px. Com a barra superior suprimida
+ * do shell, a aba passava a encostar a ~12px do topo — metade do respiro das
+ * telas que abrem com PageHeader (`/plataforma`, `/`, `/clubes`, `/marcas`). O
+ * `pt` mora na moldura da área, igual ao `pt-5` do EventoShell.
+ */
 export function CrmLayout(): JSX.Element {
   return (
-    <div className="flex flex-col gap-[var(--spacing-4)]">
+    <div className="flex flex-col gap-[var(--spacing-4)] pt-[var(--spacing-5)]">
       <CrmSubNav />
       <Outlet />
     </div>
