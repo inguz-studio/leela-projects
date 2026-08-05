@@ -37,6 +37,10 @@ vi.mock('@leela/api-client', () => ({
   senhaAtendeMinimo: (s: string) => s.length >= 6,
   SENHA_MIN: 6,
   mensagemErroRedefinicao: () => 'Não foi possível redefinir a senha. Tente novamente.',
+  // BUILD-MOTION: a fase `usado` passou a montar o `EntrarOverlay` (a pessoa
+  // entra AQUI, sem ser mandada caçar o botão do header). O overlay consome a
+  // frase única anti-enumeração — sem esta chave o mock não resolve o import.
+  mensagemErroLogin: () => 'E-mail ou senha inválidos.',
 }));
 
 vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));

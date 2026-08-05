@@ -7,7 +7,8 @@
  *
  * O que trava aqui:
  *   - o header mostra "Criar conta de organizador" e o rodapé repete os dois
- *     caminhos do organizador ("Entrar" e "Criar conta de organizador");
+ *     caminhos do organizador ("Entrar como organizador" e "Criar conta de
+ *     organizador");
  *   - os rótulos ficam visíveis também no mobile (nenhuma classe `hidden` sem
  *     contraparte responsiva os esconde);
  *   - o destino sai de `NEXT_PUBLIC_PAINEL_URL` — nunca de URL fixa.
@@ -119,12 +120,22 @@ describe('PublicFooter — eco da porta', () => {
     await renderFooter();
     const nav = screen.getByRole('navigation', { name: 'Organizador' });
     expect(
-      within(nav).getByRole('link', { name: 'Entrar' }).getAttribute('href'),
+      within(nav).getByRole('link', { name: 'Entrar como organizador' }).getAttribute('href'),
     ).toBe('https://painel.exemplo.dev/entrar');
     expect(
       within(nav)
         .getByRole('link', { name: 'Criar conta de organizador' })
         .getAttribute('href'),
     ).toBe('https://painel.exemplo.dev/cadastrar');
+  });
+
+  // BUILD-MOTION · decisão do dono de 04/08 ("acesso de cliente e acesso admin
+  // separados"). O rodapé é a casa das portas PROFISSIONAIS, e nenhuma delas
+  // pode se chamar só "Entrar": esse rótulo é do cliente, e é do header. Um
+  // "Entrar" nu aqui, navegando para outra origem, é exatamente o defeito que
+  // o dono apontou — se alguém encurtar o rótulo, este caso morre.
+  it('nenhuma porta do rodapé se chama só "Entrar"', async () => {
+    await renderFooter();
+    expect(screen.queryByRole('link', { name: 'Entrar' })).toBeNull();
   });
 });

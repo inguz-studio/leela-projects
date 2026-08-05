@@ -43,7 +43,7 @@
 // comprou.
 // =============================================================================
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   confirmarResetSenha,
   emailValido,
@@ -55,6 +55,7 @@ import {
   verificarCodigoResetSenha,
 } from '@leela/api-client';
 import { Button, Input } from '@/app/_ds/ds';
+import { EntrarOverlay } from '@/app/components/EntrarOverlay';
 import { ensureLeela } from '@/lib/leelaClient';
 import { destinoPosEntrada } from '@/lib/areaDoCliente';
 
@@ -114,6 +115,9 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  // Entrada da fase `usado` — o mesmo overlay do header, aberto daqui.
+  const [entrarAberto, setEntrarAberto] = useState(false);
+  const botaoEntrar = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -223,6 +227,16 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
   }
 
   if (fase === 'usado') {
+    // UNIFICAÇÃO DO "ENTRAR" (BUILD-MOTION · ordem do dono de 04/08). Esta tela
+    // dizia "é só entrar pelo botão Entrar no topo da página" e oferecia como
+    // única ação um link para a HOME. Ou seja: mandava a pessoa embora e depois
+    // pedia que ela caçasse um botão. A entrada agora acontece AQUI, no mesmo
+    // overlay do header — quem já tem senha entra sem sair do lugar.
+    //
+    // O destino pós-entrada NÃO é decidido aqui: é o mesmo
+    // `destinoPosEntrada()` que a fase `concluido` usa, que é o ponto único do
+    // projeto. Uma segunda opinião sobre onde a pessoa aterrissa seria a
+    // primeira coisa a divergir na próxima mudança da área do cliente.
     return (
       <section aria-labelledby="definir-senha-usado">
         <h1
@@ -233,14 +247,27 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
         </h1>
         <p className="mt-3 text-text-secondary">
           Este link já foi usado. Não precisa criar outra senha — é só entrar com a que você
-          definiu, pelo botão “Entrar” no topo da página.
+          definiu.
         </p>
-        <a
-          href="/"
-          className="mt-6 inline-flex rounded-ds-pill border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-        >
-          Ir para a página inicial
-        </a>
+        <div className="mt-6">
+          <Button
+            ref={botaoEntrar}
+            type="button"
+            data-slot="abrir-entrar-definir-senha"
+            onClick={() => setEntrarAberto(true)}
+          >
+            Entrar
+          </Button>
+        </div>
+        <EntrarOverlay
+          open={entrarAberto}
+          onOpenChange={setEntrarAberto}
+          returnFocusRef={botaoEntrar}
+          description="Entre com a senha que você acabou de definir."
+          aoEntrar={() => {
+            window.location.assign(destinoPosEntrada().href);
+          }}
+        />
       </section>
     );
   }

@@ -51,14 +51,29 @@ export function PublicFooter(): React.JSX.Element {
         </div>
         {/* Eco da porta do organizador (S1213-T1). Quem chega ao fim da
             página não precisa rolar de volta ao header para achar a entrada;
-            mesmo destino por env pública (P10). */}
+            mesmo destino por env pública (P10).
+
+            RÓTULO EXPLÍCITO (BUILD-MOTION · decisão do dono de 04/08: "podemos
+            deixar separado o acesso de cliente e o acesso admin mesmo"). Este
+            link dizia só "Entrar" e navegava para OUTRA origem — a mesma coisa
+            que o dono mandou virar overlay no header. Ele NÃO virou overlay,
+            porque o destino é o painel PROFISSIONAL: converter aqui tiraria do
+            organizador a única porta direta para a casa dele (o header só tem
+            "Criar conta de organizador", que é /cadastrar).
+
+            O que estava errado não era o destino, era o rótulo. O grupo se
+            chama "Organizador" num `aria-label`, que ninguém VÊ: na tela havia
+            dois links soltos, e um deles era um "Entrar" nu que levava embora.
+            Nomeando a porta, a separação que o dono pediu fica visível para
+            quem enxerga, e não só para o leitor de tela. */}
         <div className="flex flex-col gap-2 sm:items-end">
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1" aria-label="Organizador">
             <a
               href={painelUrl('/entrar')}
+              data-slot="entrar-organizador"
               className="rounded-ds-sm text-sm text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
             >
-              Entrar
+              Entrar como organizador
             </a>
             <a
               href={painelUrl('/cadastrar')}
