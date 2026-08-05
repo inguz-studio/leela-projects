@@ -56,11 +56,21 @@ let testEnv: RulesTestEnvironment;
 let db: admin.firestore.Firestore;
 
 /** Endereço novo por caso: um código vivo por endereço é a regra sob teste. */
+/**
+ * Sufixo único por EXECUÇÃO (REV-CONTAS-MOTOR).
+ *
+ * Sem ele a suíte não é idempotente contra um emulator vivo: `seq` reinicia
+ * em zero a cada processo, e o segundo `npm test` reencontra a conta do Auth
+ * (`auth/email-already-exists`) e o balde de `rateLimits` da execução
+ * anterior. Rodar duas vezes seguidas reprovava por estado, não por regressão.
+ */
+const EXEC = Date.now().toString(36);
+
 let seq = 0;
 let email = '';
 beforeEach(() => {
   seq += 1;
-  email = `ana+rn476-${seq}@leela.com`;
+  email = `ana+rn476-${seq}-${EXEC}@leela.com`;
 });
 
 beforeAll(async () => {
@@ -248,19 +258,19 @@ describe('RN-476 · as cinco causas devolvem a mesma negativa', () => {
   it('inexistente, morto, já usado, vencido e esgotado são indistinguíveis', async () => {
     // O que a tela recebe: `ok: false` e `restantes: 0`. O `motivo` existe
     // para log e para este teste, e nunca sai daqui.
-    const inexistente = await consumirCodigoDeAcesso(db, `nunca-pediu-${seq}@leela.com`, '123456');
+    const inexistente = await consumirCodigoDeAcesso(db, `nunca-pediu-${seq}-${EXEC}@leela.com`, '123456');
 
-    const emailMorto = `morto-${seq}@leela.com`;
+    const emailMorto = `morto-${seq}-${EXEC}@leela.com`;
     const { codigo: cMorto } = await emitirCodigoDeAcesso(db, emailMorto);
     await matarCodigoDeAcesso(db, emailMorto, 'envio_falhou');
     const morto = await consumirCodigoDeAcesso(db, emailMorto, cMorto);
 
-    const emailUsado = `usado-${seq}@leela.com`;
+    const emailUsado = `usado-${seq}-${EXEC}@leela.com`;
     const { codigo: cUsado } = await emitirCodigoDeAcesso(db, emailUsado);
     await consumirCodigoDeAcesso(db, emailUsado, cUsado);
     const jaUsado = await consumirCodigoDeAcesso(db, emailUsado, cUsado);
 
-    const emailVencido = `vencido-${seq}@leela.com`;
+    const emailVencido = `vencido-${seq}-${EXEC}@leela.com`;
     const { codigo: cVencido } = await emitirCodigoDeAcesso(db, emailVencido, new Date(0));
     const vencido = await consumirCodigoDeAcesso(
       db,
@@ -269,7 +279,7 @@ describe('RN-476 · as cinco causas devolvem a mesma negativa', () => {
       new Date(CODIGO_ACESSO_TTL_MS + 1)
     );
 
-    const emailEsgotado = `esgotado-${seq}@leela.com`;
+    const emailEsgotado = `esgotado-${seq}-${EXEC}@leela.com`;
     const { codigo: cEsgotado } = await emitirCodigoDeAcesso(db, emailEsgotado);
     for (let i = 0; i < CODIGO_ACESSO_MAX_TENTATIVAS; i++) {
       await consumirCodigoDeAcesso(db, emailEsgotado, outroCodigo(cEsgotado));
@@ -286,8 +296,8 @@ describe('RN-476 · as cinco causas devolvem a mesma negativa', () => {
     // A propriedade da RN-477 medida no núcleo: nada aqui consulta "existe
     // conta?". Os dois endereços percorrem o mesmo caminho, gravam o mesmo
     // formato de documento e devolvem a mesma negativa para um código errado.
-    const comConta = `tem-conta-${seq}@leela.com`;
-    const semConta = `nao-tem-${seq}@leela.com`;
+    const comConta = `tem-conta-${seq}-${EXEC}@leela.com`;
+    const semConta = `nao-tem-${seq}-${EXEC}@leela.com`;
 
     const a = await emitirCodigoDeAcesso(db, comConta);
     const b = await emitirCodigoDeAcesso(db, semConta);
@@ -324,7 +334,7 @@ describe('RN-476 · a prova de continuação', () => {
 
     expect(await consumirProvaDeAcesso(db, email, '')).toBe(false);
     expect(await consumirProvaDeAcesso(db, email, 'a'.repeat(64))).toBe(false);
-    expect(await consumirProvaDeAcesso(db, `outro-${seq}@leela.com`, prova)).toBe(false);
+    expect(await consumirProvaDeAcesso(db, `outro-${seq}-${EXEC}@leela.com`, prova)).toBe(false);
     // A prova legítima continua intacta depois das três negativas.
     expect(await consumirProvaDeAcesso(db, email, prova)).toBe(true);
   });

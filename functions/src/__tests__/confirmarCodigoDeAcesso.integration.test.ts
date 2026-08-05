@@ -64,6 +64,16 @@ let testEnv: RulesTestEnvironment;
 let db: admin.firestore.Firestore;
 let auth: admin.auth.Auth;
 
+/**
+ * Sufixo único por EXECUÇÃO (REV-CONTAS-MOTOR).
+ *
+ * Sem ele a suíte não é idempotente contra um emulator vivo: `seq` reinicia
+ * em zero a cada processo, e o segundo `npm test` reencontra a conta do Auth
+ * (`auth/email-already-exists`) e o balde de `rateLimits` da execução
+ * anterior. Rodar duas vezes seguidas reprovava por estado, não por regressão.
+ */
+const EXEC = Date.now().toString(36);
+
 let seq = 0;
 let email = '';
 beforeEach(() => {
@@ -171,14 +181,14 @@ describe('RN-476 · as cinco causas devolvem a MESMA negativa', () => {
     };
 
     // (1) errado
-    const alvo1 = `errado-${seq}@leela.com`;
+    const alvo1 = `errado-${seq}-${EXEC}@leela.com`;
     const c1 = await codigoVivo(alvo1);
     await pegar('errado', () =>
       confirmarCodigoDeAcessoCore(db, auth, { email: alvo1, codigo: outroCodigo(c1) })
     );
 
     // (2) vencido
-    const alvo2 = `vencido-${seq}@leela.com`;
+    const alvo2 = `vencido-${seq}-${EXEC}@leela.com`;
     const c2 = await codigoVivo(alvo2, new Date(0));
     await pegar('vencido', () =>
       confirmarCodigoDeAcessoCore(
@@ -190,7 +200,7 @@ describe('RN-476 · as cinco causas devolvem a MESMA negativa', () => {
     );
 
     // (3) já usado
-    const alvo3 = `usado-${seq}@leela.com`;
+    const alvo3 = `usado-${seq}-${EXEC}@leela.com`;
     const c3 = await codigoVivo(alvo3);
     await confirmarCodigoDeAcessoCore(db, auth, { email: alvo3, codigo: c3 });
     await pegar('ja_usado', () =>
@@ -200,13 +210,13 @@ describe('RN-476 · as cinco causas devolvem a MESMA negativa', () => {
     // (4) inexistente — endereço que nunca pediu nada
     await pegar('inexistente', () =>
       confirmarCodigoDeAcessoCore(db, auth, {
-        email: `nunca-${seq}@leela.com`,
+        email: `nunca-${seq}-${EXEC}@leela.com`,
         codigo: '123456',
       })
     );
 
     // (5) esgotado
-    const alvo5 = `esgotado-${seq}@leela.com`;
+    const alvo5 = `esgotado-${seq}-${EXEC}@leela.com`;
     const c5 = await codigoVivo(alvo5);
     for (let i = 0; i < CODIGO_ACESSO_MAX_TENTATIVAS; i++) {
       await confirmarCodigoDeAcessoCore(db, auth, {
@@ -227,7 +237,7 @@ describe('RN-476 · as cinco causas devolvem a MESMA negativa', () => {
   }, 60_000);
 
   it('as quatro causas de MORTE são indistinguíveis entre si (restam 0)', async () => {
-    const alvo = `morto-${seq}@leela.com`;
+    const alvo = `morto-${seq}-${EXEC}@leela.com`;
     const c = await codigoVivo(alvo);
     await matarCodigoDeAcesso(db, alvo, 'envio_falhou');
 
@@ -237,13 +247,13 @@ describe('RN-476 · as cinco causas devolvem a MESMA negativa', () => {
     expect(erro.details?.tentativasRestantes).toBe(0);
 
     const inexistente = await erroDe(() =>
-      confirmarCodigoDeAcessoCore(db, auth, { email: `nada-${seq}@leela.com`, codigo: '123456' })
+      confirmarCodigoDeAcessoCore(db, auth, { email: `nada-${seq}-${EXEC}@leela.com`, codigo: '123456' })
     );
     expect(inexistente.details?.tentativasRestantes).toBe(0);
   });
 
   it('forma inválida NÃO é a negativa de credencial e não gasta tentativa', async () => {
-    const alvo = `forma-${seq}@leela.com`;
+    const alvo = `forma-${seq}-${EXEC}@leela.com`;
     const c = await codigoVivo(alvo);
     for (const ruim of ['', '12345', 'abcdef', null]) {
       await expect(
@@ -284,10 +294,10 @@ describe('RN-477 · a divergência só existe DEPOIS da prova', () => {
   });
 
   it('ANTES da prova, a negativa é igual com conta e sem conta', async () => {
-    const comConta = `com-${seq}@leela.com`;
+    const comConta = `com-${seq}-${EXEC}@leela.com`;
     await contaDaCompra(comConta);
     const cA = await codigoVivo(comConta);
-    const semConta = `sem-${seq}@leela.com`;
+    const semConta = `sem-${seq}-${EXEC}@leela.com`;
     const cB = await codigoVivo(semConta);
 
     const eA = await erroDe(() =>

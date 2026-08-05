@@ -43,11 +43,21 @@ process.env['CODIGO_ACESSO_PEPPER'] = 'pepper-teste-contas-rn476';
 let testEnv: RulesTestEnvironment;
 let db: admin.firestore.Firestore;
 
+/**
+ * Sufixo único por EXECUÇÃO (REV-CONTAS-MOTOR).
+ *
+ * Sem ele a suíte não é idempotente contra um emulator vivo: `seq` reinicia
+ * em zero a cada processo, e o segundo `npm test` reencontra a conta do Auth
+ * (`auth/email-already-exists`) e o balde de `rateLimits` da execução
+ * anterior. Rodar duas vezes seguidas reprovava por estado, não por regressão.
+ */
+const EXEC = Date.now().toString(36);
+
 let seq = 0;
 let email = '';
 beforeEach(() => {
   seq += 1;
-  email = `ana+t3-${seq}@leela.com`;
+  email = `ana+t3-${seq}-${EXEC}@leela.com`;
 });
 
 beforeAll(async () => {
@@ -152,8 +162,8 @@ describe('RN-477 · o oráculo está fechado', () => {
     // Auth. O caso existe para ficar vermelho no dia em que alguém acrescentar
     // a consulta — e ele é o par do caso de latência abaixo.
     const { provider, enviados } = provedorEspiao();
-    const comConta = `com-conta-${seq}@leela.com`;
-    const semConta = `sem-conta-${seq}@leela.com`;
+    const comConta = `com-conta-${seq}-${EXEC}@leela.com`;
+    const semConta = `sem-conta-${seq}-${EXEC}@leela.com`;
 
     const a = await solicitarCodigoDeAcessoCore(db, provider, { email: comConta });
     const b = await solicitarCodigoDeAcessoCore(db, provider, { email: semConta });
@@ -225,7 +235,7 @@ describe('RN-482 · a falha de envio não é silêncio', () => {
   it('a recusa por falta de provedor não depende do endereço', async () => {
     // Fail-closed de configuração NÃO é oráculo: é igual para todo mundo.
     await expect(
-      solicitarCodigoDeAcessoCore(db, null, { email: `outro-${seq}@leela.com` })
+      solicitarCodigoDeAcessoCore(db, null, { email: `outro-${seq}-${EXEC}@leela.com` })
     ).rejects.toMatchObject({ code: 'failed-precondition' });
   });
 });
@@ -252,8 +262,8 @@ describe('RN-476 · o limitador é por ALVO', () => {
   it('o balde de um endereço não pune o outro', async () => {
     const { provider } = provedorEspiao();
     const base = new Date();
-    const vitima = `vitima-${seq}@leela.com`;
-    const vizinho = `vizinho-${seq}@leela.com`;
+    const vitima = `vitima-${seq}-${EXEC}@leela.com`;
+    const vizinho = `vizinho-${seq}-${EXEC}@leela.com`;
     for (let i = 0; i < 3; i++) {
       await solicitarCodigoDeAcessoCore(db, provider, { email: vitima }, base);
     }
