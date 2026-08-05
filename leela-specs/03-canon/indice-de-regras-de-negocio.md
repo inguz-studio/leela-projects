@@ -5,7 +5,7 @@ atualizado: 2026-08-05
 
 # Leela · índice das regras de negócio
 
-As regras de negócio da Leela são numeradas `RN-###` e citadas mais de cinco mil vezes ao longo da documentação. Existem 256 regras realmente definidas. Não havia, até aqui, nenhum lugar que dissesse onde cada uma mora, e cada rodada de trabalho redescobria isso na base do grep.
+As regras de negócio da Leela são numeradas `RN-###` e citadas mais de cinco mil vezes ao longo da documentação. Existem 258 regras realmente definidas. Não havia, até aqui, nenhum lugar que dissesse onde cada uma mora, e cada rodada de trabalho redescobria isso na base do grep.
 
 Este índice é mapa, não cópia. **O texto canônico de uma regra vive no épico dono dela**, e é lá que ele deve ser lido e alterado. Repetir o enunciado aqui criaria uma segunda definição, que é exatamente o problema que este arquivo existe para evitar.
 
@@ -55,6 +55,7 @@ O terceiro formato cobre sozinho a faixa RN-425 a RN-453, que é a mais nova e a
 | 476-480 | [[LEELA-E00-fundacao-tecnica]], pela rodada de 05/08 (o código de seis dígitos, a criação de conta e a fronteira entre tipos de conta) |
 | 481-482 | [[LEELA-E12-landing]], pela mesma rodada de 05/08 (as duas portas do modal e o nono e-mail) |
 | 486-496 | E03, E04, E09, E11 e E12, pela rodada de 05/08 (o inscrito pagante e o piso do Serviço) |
+| 497-498 | [[LEELA-E04-config-vendas]], pela rodada de 05/08 (o que congela num lote vendido e o estouro de vaga) |
 | 820-823 | [[LEELA-E11-analytics]] |
 
 As faixas 178-189, 385-392 e 425-445 atravessam mais de um épico porque nasceram em rodadas que tocaram várias frentes no mesmo dia. Para essas, o caminho curto é o arquivo de delta da rodada, que aponta para o épico de cada uma.
@@ -83,7 +84,7 @@ Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no templat
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 496, depois de a SPEC-METRICAS-SERVICO consumir 486 a 496 em 05/08 (o inscrito pagante, a conversão sem denominador e o piso do Serviço), deixando 483 a 485 vagas de propósito pela reserva descrita nas armadilhas de busca. Antes dela, a rodada de 04/08 consumiu 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social), a 473 na SPEC-PDF e as 474 e 475 na SPEC-CODPEDIDO, as duas últimas já em 05/08 (o PDF do ingresso como download e o código curto da compra); e a SPEC-CONTAS-LANDING consumiu 476 a 482 no mesmo 05/08 (o código de seis dígitos, a criação de conta na landing e as duas portas do modal). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito em todas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a **498**, depois de a SEAL-LOTES consumir 497 e 498 em 05/08 (o que congela num lote vendido, e o estouro de vaga que a tela escondia). Antes dela, a SPEC-METRICAS-SERVICO consumiu 486 a 496 no mesmo 05/08 (o inscrito pagante, a conversão sem denominador e o piso do Serviço), deixando 483 a 485 vagas de propósito pela reserva descrita nas armadilhas de busca. Antes disso, a rodada de 04/08 consumiu 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social), a 473 na SPEC-PDF e as 474 e 475 na SPEC-CODPEDIDO, as duas últimas já em 05/08 (o PDF do ingresso como download e o código curto da compra); e a SPEC-CONTAS-LANDING consumiu 476 a 482 no mesmo 05/08 (o código de seis dígitos, a criação de conta na landing e as duas portas do modal). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito em todas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 

@@ -2187,3 +2187,33 @@ RN-487 — a RN-486 para de contaminar a tela, e não conserta isso.
 Fica **em aberto**, como item **INSCR-1** do painel. O dono falou do painel profissional; a
 landing lê o mesmo campo (`apps/landing/lib/leitor.ts:542`, `lib/tipos.ts:147-149`) com a exibição
 hoje suprimida. O default proposto é que as duas telas digam a mesma verdade.
+
+## Delta a RN-200 vale como está escrita (SEAL-LOTES · 2026-08-05)
+
+Este épico define a **RN-200**, e ela não muda de enunciado. O que muda é o código que a
+implementava a mais do que ela pede, e o registro precisa existir aqui porque a divergência
+sobreviveu meses justamente por não estar escrita em lugar nenhum que se lesse.
+
+**O enunciado, intacto:** *"Após a 1ª venda, edição de **preço** (evento/kit/lote) é bloqueada."*
+Só preço.
+
+**A divergência medida.** A Rule `loteComercialImutavelSeVendido` (`firestore.rules:1118-1123`)
+congela seis campos do lote: `preco`, `inicioEm`, `fimEm`, `quantidadeLimite`, `ordem` e
+`modalidade`. Cinco deles não estão na RN-200, e a extensão nunca teve enunciado — ela existia
+como comentário `"RN-200/300 (registrado)"` na Rule, no `api-client` e no `loteForm` do painel.
+Comentário registra intenção; ele não é regra, e não é lido por quem confere a regra.
+
+**Como isso apareceu.** O dono tentou editar um lote em vigência, não conseguiu mexer em
+quantidade nem em datas, e reportou. A leitura da fala contra a regra escrita mostrou que **ele
+estava pedindo a RN-200 como ela é**, e que a resposta correta não era negociar com ele: era
+alinhar o código.
+
+**Onde o delta foi selado.** A regra que declara campo a campo o que congela num lote vendido é a
+**RN-497**, em [[LEELA-E04-config-vendas]], porque o objeto é o lote e o épico dono do lote é o
+E04. A RN-200 permanece aqui, inalterada, e passa a ser exigível na letra. Registro completo em
+`02-rodadas/2026-08-05-lotes-ux/`.
+
+**Lição de método que vale para todo o canon:** extensão de regra que só existe em comentário de
+código é extensão que ninguém pode contestar, porque ninguém a encontra. Quando o código for além
+da regra escrita, ou a regra ganha o enunciado novo na mesma aterrissagem, ou o código volta para
+o tamanho dela.

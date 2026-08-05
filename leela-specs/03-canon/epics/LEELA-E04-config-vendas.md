@@ -1871,3 +1871,80 @@ inerte com a tabela vazia.
 Efeito de segunda ordem no parcelamento: em `repassada` a base do cálculo de parcelas é
 `face + Serviço`, então uma venda de R$ 10,00 passa a ter base R$ 13,00 e a escada ofertada muda
 sob a `parcelaMinima` do termo. O cálculo em si não muda de forma.
+
+## Delta o que congela num lote vendido, e o estouro de vaga (SEAL-LOTES · 2026-08-05)
+
+Duas regras nascidas dos seis achados do dono na tela de lotes e da review antagonista que os
+atacou. Este épico as possui porque as duas governam o lote: uma diz o que a primeira venda
+congela nele, a outra diz o que acontece quando a venda passa da capacidade. Relato e verbatim em
+`02-rodadas/2026-08-05-lotes-ux/01-achados-dono.md`; delta e prova de não colisão em
+`02-rns-delta.md`; fila em `03-fila-codigo.md`.
+
+### RN-497 (nova, dona) · o congelamento pós-venda do lote é o preço, mais a ordem e a modalidade
+
+O dono declarou, verbatim: *"Fui editar o lote em vigencia, porém nao consegui ajustar quantidades
+disponiveis, e datas de inicio e fim, isso eu posso editar, só nao posso editar os valores."* A
+apuração mostrou que **ele estava pedindo a RN-200 como ela está escrita**, e que o divergente é o
+código: a Rule `loteComercialImutavelSeVendido` (`firestore.rules:1118-1123`) congela seis campos,
+e a extensão para além do preço nunca teve enunciado — vivia em comentário
+(`"RN-200/300 (registrado)"`) na Rule, no `api-client` e no `loteForm`.
+
+| Campo | Congela pós-venda? | Por quê |
+|---|---|---|
+| `preco` | **Sim** | RN-200, inalterada. |
+| `quantidadeLimite` | **Sim na Rule, aberto pela Function** | RN-304. A escrita direta do cliente segue fechada; a porta é `ajustarCapacidadeLote`, com motivo obrigatório e auditoria. |
+| `inicioEm` / `fimEm` | **Não** | Revogado. O dono pediu, e a RN-200 nunca travou janela. |
+| `ordem` | **Sim** | Enunciado próprio: reordenar a sequência de virada de um lote que já vendeu. Ninguém pediu. |
+| `modalidade` | **Sim** | Enunciado próprio: órfãna o inscrito que comprou sob a modalidade anterior. Ninguém pediu. |
+
+A janela editável **não afrouxa a RN-300**: a não sobreposição entre lotes irmãos continua sendo
+invariante, e a validação passa a rodar no servidor porque ela decide **quando o preço vira** e,
+portanto, qual preço o próximo comprador paga. A Rule sozinha não a checa — `shapeLoteValido`
+exige apenas `fimEm > inicioEm`, e quem varre a sequência é `validarLotesModalidade`, hoje só no
+cliente.
+
+**Falsificação:** um lote com `vendidos > 0` aceita um `fimEm` novo que não pisa em irmão, recusa
+um que pisa, e recusa qualquer alteração de `preco`, `ordem` ou `modalidade` no mesmo gesto.
+
+**Estado:** regra selada, código **não** construído. Tarefas 1a e 1b da fila da rodada.
+
+### RN-498 (nova, dona) · vender além da capacidade é possível, e nunca pode ser silencioso
+
+A vaga do lote só é contada na **confirmação** do pagamento. Duas cobranças PIX em voo pela mesma
+última vaga passam as duas pela cotação, e a RN-158 já declara que carrinho aberto não segura
+estoque. Quando as duas pagam, `webhookPagamento` vira as duas para `confirmado` sem revalidar
+lote nem capacidade, e `virarLote` recomputa `vendidos = max(atual, tally)` sem teto
+(`functions/src/eventos/virarLote.ts:215`). O painel esconde o resultado, porque
+`capacidadeDoLote` corta o disponível em zero (`packages/core/src/eventos/capacidadeLote.ts:43`) e
+a tela exibe "20 vendidos · 0 disponíveis · 19 no total" como se estivesse tudo certo.
+
+Três exigências, e elas valem com ou sem reserva de vaga:
+
+1. **O ingresso pago nunca é recusado nem estornado por causa do estouro.** O dinheiro entrou e a
+   entrega é devida; bloquear a confirmação seria tomar dinheiro sem entregar.
+2. **`virarLote` expõe e loga o excedente.** `ResultadoVirarLote` passa a carregar os lotes com
+   `vendidos > quantidadeLimite`, com log `lote_excedido` e `{eventoId, loteId, vendidos,
+   quantidadeLimite}`.
+3. **Toda superfície de vagas diz "N acima do configurado"** em vez de "0 disponíveis". Zero
+   disponível e estouro são estados diferentes, e quem opera precisa saber em qual está.
+
+**O que a regra não decide:** se a vaga passa a ser reservada, fechando a venda dupla na origem.
+É mudança de modelo e é do dono — item **ESTOURO-1** de [[DECISOES-ABERTAS]]. Se ele escolher a
+reserva, o delta é na RN-158, não aqui.
+
+**Sem interseção com a RN-487.** Aquela governa `qtdInscritos`, o contador que congela a
+configuração comercial e conta qualquer status. Este estouro é de `vendidos`, escrito só por
+`virarLote` e contando `confirmado` e `estornado` (`STATUS_QUE_CONTAM_VENDA`). Métrica e
+capacidade nunca foram o mesmo número.
+
+**Falsificação:** forçar `vendidos = 21` num lote de 20 produz a linha de log e o aviso na tela, e
+nenhuma superfície exibe "0 disponíveis" sobre lote estourado.
+
+**Estado:** regra selada, código **não** construído. Tarefas 2a e 2b da fila da rodada.
+
+### História nova · S315 · o editor de lote diz a verdade
+
+Cobre as duas regras acima mais a fila técnica que a review deixou. As frentes A, B, D, E e F já
+estão no repositório (`fd6e5e69`, `41ac6bbb`, `d4ce8d12`, `1357163a`, `2a97a592`, `08a09465`,
+`c2b19244`); **nada foi deployado**. As tarefas T1 a T9 estão em
+`02-rodadas/2026-08-05-lotes-ux/03-fila-codigo.md`.
