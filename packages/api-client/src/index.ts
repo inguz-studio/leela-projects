@@ -445,6 +445,13 @@ export { trocarSenha } from './auth';
 // exige `email_verified`, e a saída honesta de quem não tem é reenviar.
 export { enviarVerificacaoEmail } from './auth';
 
+// Código de seis dígitos das duas portas da landing (S1229/S1230 · RN-476 a
+// RN-482). "É meu primeiro acesso" e "Criar conta" são a MESMA máquina: as
+// duas chamam estas funções com o mesmo payload, e a divergência só existe
+// depois da prova de posse do e-mail.
+export { solicitarCodigoDeAcesso } from './codigoDeAcesso';
+export type { SolicitarCodigoResultado } from './codigoDeAcesso';
+
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
 // ---------------------------------------------------------------------------

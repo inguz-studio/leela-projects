@@ -22,6 +22,15 @@ export { onCreateUser } from './auth/onCreateUser';
 // exista ou não a conta (anti-enumeração), rate limit por e-mail hasheado.
 export { solicitarRedefinicaoSenha } from './auth/solicitarRedefinicaoSenha';
 
+// Auth — o código de seis dígitos das duas portas da landing (SPEC-CONTAS-
+// LANDING · RN-476 a RN-480). "É meu primeiro acesso" e "Criar conta" são a
+// MESMA máquina: as duas pedem o endereço, dizem a mesma frase e o servidor faz
+// o mesmo trabalho — sem consulta a "existe conta?" antes de enviar, para que
+// nem a resposta nem o tempo distingam. A divergência só existe DEPOIS da
+// prova, e aí ela é livre: não é vazamento contar sobre a caixa de e-mail de
+// quem acabou de provar que a tem.
+export { solicitarCodigoDeAcesso } from './auth/solicitarCodigoDeAcesso';
+
 // Plataforma — multi-tenancy (E16-S1600-T2)
 export { setTenantClaims } from './platform/setTenantClaims';
 
