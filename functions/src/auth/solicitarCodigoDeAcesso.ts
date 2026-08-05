@@ -63,6 +63,7 @@ import {
   normalizarEmailCodigo,
   type EmailProvider,
 } from '@leela/core';
+import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderCodigoDeAcessoEmail } from '../email/templates';
 import { consumirRateLimit } from '../shared/rateLimit';
@@ -144,8 +145,15 @@ export async function solicitarCodigoDeAcessoCore(
     // pessoa pede de novo — não há repetição automática, pela mesma política
     // dos outros oito e-mails (no máximo uma vez).
     await matarCodigoDeAcesso(db, email, 'envio_falhou');
-    logger.error('codigo_acesso_envio_falhou', {
-      err: err instanceof Error ? err.message : String(err),
+    // INCIDENTE, não linha de log (REV-CONTAS-MOTOR · DEF-3). Esta lane nasceu
+    // com um `logger.error` cru aqui — sem o campo `alerta` que a política da
+    // rodada casa —, e este é o ÚNICO e-mail da casa cuja falha deixa a pessoa
+    // sem conseguir entrar. Era o incidente de 04/08 pronto para se repetir em
+    // silêncio, agora com uma credencial no meio. Sem PII: nem endereço, nem
+    // nome, nem o código.
+    registrarIncidenteEmail('codigo_acesso_envio_falhou', {
+      tipo: 'codigo_de_acesso',
+      erro: err,
     });
     throw new https.HttpsError(
       'unavailable',

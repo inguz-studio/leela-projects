@@ -39,11 +39,25 @@ export type TipoEmailTransacional =
   | 'ingressos'
   | 'conta_sem_friccao'
   | 'reenvio_ingressos'
-  | 'reenvio_conta';
+  | 'reenvio_conta'
+  /**
+   * O NONO e-mail (RN-476 · S1229-T2). Entrou na doutrina pela review
+   * REV-CONTAS-MOTOR: ele nasceu com `logger.error` cru, sem o campo que a
+   * política casa, e é o ÚNICO e-mail da casa cuja falha deixa a pessoa sem
+   * conseguir entrar — o incidente de 04/08 servido de novo, com uma
+   * credencial no meio.
+   */
+  | 'codigo_de_acesso';
 
 export interface IncidenteEmail {
   tipo: TipoEmailTransacional;
-  pedidoId: string;
+  /**
+   * OPCIONAL desde a REV-CONTAS-MOTOR: o e-mail do código de acesso não nasce
+   * de um pedido — ele é pedido por quem não consegue entrar, antes de haver
+   * compra nenhuma. Ausente, a chave simplesmente não entra no payload; o
+   * campo `alerta`, que é o que a política casa, não depende dela.
+   */
+  pedidoId?: string;
   eventoId?: string | null;
   erro: unknown;
 }
@@ -61,7 +75,7 @@ export function montarIncidenteEmail(
     severidade: 'critico',
     canal: 'email',
     tipo: incidente.tipo,
-    pedidoId: incidente.pedidoId,
+    ...(incidente.pedidoId !== undefined ? { pedidoId: incidente.pedidoId } : {}),
     ...(incidente.eventoId !== undefined && incidente.eventoId !== null
       ? { eventoId: incidente.eventoId }
       : {}),
