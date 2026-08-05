@@ -12,7 +12,7 @@
 // exporta e o painel já consome: `verificarCodigoResetSenha`,
 // `confirmarResetSenha` e o login (`loginComEmail`).
 //
-// OS QUATRO ESTADOS, e por que cada um existe
+// OS CINCO ESTADOS, e por que cada um existe
 //  - `verificando` — o código é validado antes de pedir senha. Pedir senha
 //    primeiro e recusar depois faria a pessoa digitar duas vezes para nada.
 //  - `pronto` — formulário. Ao salvar, confirma E autentica: sem segundo login,
@@ -20,9 +20,14 @@
 //    terminar em tela de entrar, exatamente o que o dono chamou de errado).
 //  - `usado` — o link JÁ foi usado neste navegador. Estado próprio que oferece
 //    ENTRAR, não redefinir. Mandar quem já resolveu de volta para "link
-//    inválido" é tecnicamente certo e humanamente errado.
+//    inválido" é tecnicamente certo e humanamente errado. É também onde
+//    aterrissa quem gravou a senha mas não conseguiu entrar (ver `salvar`).
 //  - `invalido` — inválido ou expirado, com REENVIO na própria tela. Nunca
 //    "peça ajuda".
+//  - `sem_codigo` — a rota SEM `oobCode` na query (REV-AREACLIENTE). É a porta
+//    de quem nunca teve link e veio pedir um, pelo "Não sei minha senha" do
+//    overlay. Mesmo formulário do `invalido`, moldura honesta: quem nunca teve
+//    link não teve link expirado.
 //
 // COMO SE SABE QUE O LINK JÁ FOI USADO. O Firebase não distingue "consumido" de
 // "malformado": os dois voltam `auth/invalid-action-code`. Então o sinal é
@@ -53,7 +58,7 @@ import { Button, Input } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 import { destinoPosEntrada } from '@/lib/areaDoCliente';
 
-type Fase = 'verificando' | 'pronto' | 'usado' | 'invalido' | 'concluido';
+type Fase = 'verificando' | 'pronto' | 'usado' | 'invalido' | 'sem_codigo' | 'concluido';
 
 const CHAVE_MARCA = 'leela:definir-senha:usados';
 
@@ -113,7 +118,12 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
   useEffect(() => {
     let vivo = true;
     if (oobCode.length === 0) {
-      setFase('invalido');
+      // REV-AREACLIENTE · chegar AQUI sem código não é "seu link expirou": é
+      // alguém que veio pedir um link, pelo "Não sei minha senha" do overlay.
+      // Dizer "este link não vale mais" a quem nunca teve link inventa um
+      // fracasso que não aconteceu — e é a primeira tela de quem ficou sem
+      // e-mail em 04/08. O formulário é o mesmo; a moldura é honesta.
+      setFase('sem_codigo');
       return () => {
         vivo = false;
       };
@@ -153,14 +163,30 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
       // A marca vai ANTES do login: se o login falhar por rede, o código já
       // foi consumido de verdade e voltar para "link inválido" seria mentira.
       gravarMarca(oobCode);
-      await loginComEmail(email, senha);
-      setSenha('');
-      setSalvando(false);
-      setFase('concluido');
     } catch (err) {
       setSenha('');
       setSalvando(false);
       setErro(mensagemErroRedefinicao(err));
+      return;
+    }
+
+    // REV-AREACLIENTE · daqui para baixo A SENHA JÁ ESTÁ GRAVADA e o `oobCode`
+    // JÁ FOI QUEIMADO. Um `catch` único cobrindo as duas chamadas deixava a
+    // pessoa no MESMO formulário com uma mensagem de erro, e o botão "Salvar e
+    // entrar" a levava a `auth/invalid-action-code` — "este link expirou" sobre
+    // uma senha que existe. Beco, e da pior espécie: o certo a fazer (entrar) é
+    // exatamente o que a tela não oferecia. A marca sozinha só resolvia isso
+    // depois de um recarregamento que ninguém tem motivo para fazer.
+    try {
+      await loginComEmail(email, senha);
+      setSenha('');
+      setSalvando(false);
+      setFase('concluido');
+    } catch {
+      setSenha('');
+      setSalvando(false);
+      setErro(null);
+      setFase('usado');
     }
   }
 
@@ -220,7 +246,21 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
   }
 
   if (fase === 'invalido') {
-    return <ReenviarLink />;
+    return (
+      <ReenviarLink
+        titulo="Este link não vale mais"
+        descricao="Links de acesso valem por pouco tempo e só podem ser usados uma vez. Informe seu e-mail que a gente manda outro."
+      />
+    );
+  }
+
+  if (fase === 'sem_codigo') {
+    return (
+      <ReenviarLink
+        titulo="Receba seu link de acesso"
+        descricao="Se você já comprou alguma vez, sua conta existe — ela foi criada com o e-mail da compra. Informe esse e-mail que a gente manda um link para você definir a senha e entrar."
+      />
+    );
   }
 
   return (
@@ -277,10 +317,22 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
 }
 
 /**
- * O estado honesto do link que não presta, com saída própria. A confirmação é
- * NEUTRA por contrato: mesma frase exista ou não a conta.
+ * O pedido de link, com saída própria. A confirmação é NEUTRA por contrato:
+ * mesma frase exista ou não a conta.
+ *
+ * A MOLDURA É PARAMETRIZADA, o miolo não. Duas portas chegam aqui — o link que
+ * não presta mais e a pessoa que nunca teve link nenhum (REV-AREACLIENTE) — e
+ * elas precisam de frases diferentes. O formulário, a origem `comprador`, o
+ * `catch` que engole e a frase neutra continuam sendo UM só: é ali que mora a
+ * anti-enumeração, e duas cópias divergiriam na primeira revisão de copy.
  */
-function ReenviarLink(): React.JSX.Element {
+function ReenviarLink({
+  titulo,
+  descricao,
+}: {
+  titulo: string;
+  descricao: string;
+}): React.JSX.Element {
   const [email, setEmail] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
@@ -309,12 +361,9 @@ function ReenviarLink(): React.JSX.Element {
         id="definir-senha-invalido"
         className="font-display text-3xl font-extrabold tracking-tight text-text-primary"
       >
-        Este link não vale mais
+        {titulo}
       </h1>
-      <p className="mt-3 text-text-secondary">
-        Links de acesso valem por pouco tempo e só podem ser usados uma vez. Informe seu e-mail
-        que a gente manda outro.
-      </p>
+      <p className="mt-3 text-text-secondary">{descricao}</p>
       {confirmado ? (
         <p role="status" className="mt-6 text-text-secondary">
           {CONFIRMACAO_NEUTRA}

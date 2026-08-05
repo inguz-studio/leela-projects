@@ -128,11 +128,19 @@ describe('S1223-T1 · os três estados são distinguíveis', () => {
     expect(verificarCodigoResetSenha).not.toHaveBeenCalled();
   });
 
-  it('sem `oobCode` na URL a tela não pede senha nenhuma', async () => {
+  // ⚔ REV-AREACLIENTE — REESCRITO, não apagado. A propriedade que importava
+  // (sem código não se pede senha, e o Auth não é tocado) continua provada; o
+  // que muda é a MOLDURA: quem chega aqui sem código veio PEDIR um link — é o
+  // destino do "Não sei minha senha" do overlay — e não teve link nenhum
+  // expirado. Chamar isso de "este link não vale mais" inventa um fracasso.
+  it('sem `oobCode` na URL a tela OFERECE o link, e não acusa um link que nunca existiu', async () => {
     await renderFluxo('');
-    await waitFor(() => expect(screen.getByText(/este link não vale mais/i)).not.toBeNull());
+    await waitFor(() => expect(screen.getByText(/receba seu link de acesso/i)).not.toBeNull());
+    expect(screen.queryByText(/este link não vale mais/i)).toBeNull();
     expect(verificarCodigoResetSenha).not.toHaveBeenCalled();
     expect(screen.queryByLabelText(/nova senha/i)).toBeNull();
+    // A saída é executável na própria tela — o mesmo formulário neutro.
+    expect(screen.getByRole('form', { name: 'Reenviar link de acesso' })).not.toBeNull();
   });
 
   // A marca grava ANTES do login: o código já foi consumido de verdade, e
@@ -149,13 +157,40 @@ describe('S1223-T1 · os três estados são distinguíveis', () => {
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });
-    await waitFor(() => expect(screen.getByRole('alert')).not.toBeNull());
-    // A senha digitada não sobrevive ao erro.
-    expect((screen.getByLabelText(/nova senha/i) as HTMLInputElement).value).toBe('');
+    await waitFor(() => expect(screen.getByText(/sua senha já foi definida/i)).not.toBeNull());
     cleanup();
 
     await renderFluxo('codigo-bom');
     await waitFor(() => expect(screen.getByText(/sua senha já foi definida/i)).not.toBeNull());
+  });
+
+  // ⚔ REV-AREACLIENTE · o beco que a lane não viu. A senha JÁ ESTÁ GRAVADA e o
+  // `oobCode` JÁ FOI QUEIMADO quando o login falha. Deixar a pessoa no MESMO
+  // formulário com uma mensagem de erro a empurra para reenviar — e a segunda
+  // tentativa bate em `auth/invalid-action-code`, dizendo "este link expirou"
+  // sobre uma senha que existe. A marca sozinha só a salvava depois de um
+  // recarregamento que ninguém tem motivo para fazer.
+  it('⚔ senha gravada e login falho NÃO deixa a pessoa no formulário — a tela oferece entrar', async () => {
+    verificarCodigoResetSenha.mockResolvedValue('ana@exemplo.dev');
+    confirmarResetSenha.mockResolvedValue(undefined);
+    loginComEmail.mockRejectedValue(
+      Object.assign(new Error('x'), { code: 'auth/network-request-failed' }),
+    );
+    await renderFluxo('codigo-bom');
+    await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
+    });
+
+    // SEM recarregar: a tela já tem de dizer a verdade — a senha está definida.
+    await waitFor(() => expect(screen.getByText(/sua senha já foi definida/i)).not.toBeNull());
+    // O formulário sumiu: reenviar a mesma senha só produziria "link inválido".
+    expect(screen.queryByRole('form', { name: 'Definir senha' })).toBeNull();
+    // E a tela NÃO mente dizendo que o link não presta.
+    expect(screen.queryByText(/este link não vale mais/i)).toBeNull();
+    // A senha digitada não sobrevive ao erro.
+    expect(screen.queryByLabelText(/nova senha/i)).toBeNull();
   });
 });
 
