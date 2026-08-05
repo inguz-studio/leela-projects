@@ -9,6 +9,7 @@ import type {
 } from '@leela/api-client';
 import { Ticket } from './Ticket';
 import { PixCobranca, payloadPix } from './PixCobranca';
+import { AvisoPedidoEmConfirmacao } from './AvisoPedidoEmConfirmacao';
 
 /** Metadados por inscrito, na MESMA ordem de `charge.inscritoIds`. */
 export interface LinhaConfirmacao {
@@ -83,29 +84,28 @@ export function StepConfirmacao({
 
   return (
     <div className="flex flex-col gap-6">
-      <section
-        className={
-          pago
-            ? 'rounded-ds-lg border border-border-subtle bg-feedback-success-surface p-5'
-            : 'rounded-ds-lg border border-border-subtle bg-feedback-warning-surface p-5'
-        }
-      >
-        <h2
-          className={
-            pago
-              ? 'text-lg font-bold text-feedback-success-fg'
-              : 'text-lg font-bold text-feedback-warning-fg'
-          }
-        >
-          {pago ? 'Inscrição confirmada!' : 'Pagamento pendente'}
-        </h2>
-        <p className="mt-1 text-sm text-text-primary">
-          {pago
-            ? `${linhas.length === 1 ? 'Sua vaga está garantida' : 'As vagas estão garantidas'} em ${eventoNome}.`
-            : `Assim que o pagamento for confirmado, ${linhas.length === 1 ? 'sua inscrição' : 'as inscrições'} de ${eventoNome} ${linhas.length === 1 ? 'fica' : 'ficam'} confirmada${linhas.length === 1 ? '' : 's'}.`}
-        </p>
-        <p className="mt-2 font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
-      </section>
+      {/* S1225-T2 · RN-470 — o estado NÃO-FINAL deixa de ser um rótulo
+          ("Pagamento pendente") e passa a ser a resposta que o dono pediu:
+          a mensagem dele, com a orientação de e-mail junto. O que saiu daqui
+          era honesto mas mudo — dizia o estado e não dizia o que fazer com
+          ele, e foi essa mudez que o comprador do primeiro PIX real encontrou.
+          O CTA "ver meus pedidos" entra na S1225-T4, quando a área do cliente
+          existir (dependência dura da S1222-T2). */}
+      {pago ? (
+        <section className="rounded-ds-lg border border-border-subtle bg-feedback-success-surface p-5">
+          <h2 className="text-lg font-bold text-feedback-success-fg">Inscrição confirmada!</h2>
+          <p className="mt-1 text-sm text-text-primary">
+            {linhas.length === 1 ? 'Sua vaga está garantida' : 'As vagas estão garantidas'} em{' '}
+            {eventoNome}.
+          </p>
+          <p className="mt-2 font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
+        </section>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <AvisoPedidoEmConfirmacao email={responsavelEmail} />
+          <p className="font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
+        </div>
+      )}
 
       {/* PIX pendente: a chave continua à mão (D-6) com a MESMA contagem da
           tela de pagamento — quem fechou o app e voltou paga daqui. */}
@@ -202,13 +202,19 @@ export function StepConfirmacao({
         </div>
       </section>
 
-      {/* E-mail ao responsável — stub honesto */}
+      {/* S1225-T2 · RN-470 — o stub que vivia aqui dizia "o envio de e-mail
+          ainda não está ativo neste ambiente". Isso deixou de ser verdade
+          (`emitirIngressos` + Brevo estão no ar desde a DEPLOY-EMAIL,
+          `abf4b794`) e, pior, contradizia frontalmente a orientação que a
+          mesma tela agora dá — mandar conferir a caixa de entrada e, dois
+          blocos abaixo, avisar que ninguém vai escrever. Uma tela, uma
+          história. O aviso de guardar a tela continua, porque o QR aqui é
+          verdadeiro e útil, e agora ele é conselho, não substituto do canal. */}
       <p className="text-sm text-text-secondary">
         {responsavelEmail
-          ? `Um comprovante iria para ${responsavelEmail}. `
-          : ''}
-        O envio de e-mail ainda não está ativo neste ambiente — guarde esta tela; cada ingresso tem
-        seu QR de check-in.
+          ? `O acesso do ingresso vai para ${responsavelEmail}. `
+          : 'O acesso do ingresso vai para o e-mail informado na compra. '}
+        Guarde também esta tela: cada ingresso tem seu QR de check-in.
       </p>
 
       <div className="flex flex-wrap gap-3 pt-2">

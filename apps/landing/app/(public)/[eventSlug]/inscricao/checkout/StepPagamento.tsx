@@ -248,15 +248,24 @@ export function StepPagamento({
                       confirmação do pagamento (o gateway dispara o webhook).
                     </p>
                   ) : (
-                    // Com gateway real a tela conta ao comprador as três coisas
-                    // que ele precisa saber e que o banner antigo negava: o
-                    // dinheiro sai de verdade, o código tem prazo (o relógio
-                    // acima é o mesmo do servidor) e ninguém precisa avisar a
-                    // plataforma — quem confirma é o webhook do gateway.
+                    // S1225-T2 · RN-470 — a frase que estava aqui prometia um
+                    // canal que não existe: *"a confirmação chega sozinha, em
+                    // segundos — não é preciso avisar aqui"*. Não chega. Não há
+                    // `onSnapshot` nem polling em `apps/landing`, então nada
+                    // nesta tela ia mudar sozinho, em segundo nenhum. Quem
+                    // cumpriria a promessa era o e-mail, e no incidente de
+                    // 04/08 ele quebrou na trava de IPs da Brevo — o comprador
+                    // ficou olhando um QR pago sem uma palavra de ninguém.
+                    //
+                    // A versão honesta mantém as duas verdades do T3 (o
+                    // dinheiro sai de verdade; o código tem prazo, e o relógio
+                    // acima é o do servidor), tira a promessa de canal e nomeia
+                    // o canal que a plataforma REALMENTE tem: o e-mail.
                     <p className="text-xs text-text-tertiary">
                       Este é um PIX real: o valor sai da sua conta assim que você pagar. Pague dentro
-                      do prazo acima e a confirmação chega sozinha, em segundos — não é preciso
-                      avisar aqui. Sua inscrição está reservada como pendente até lá.
+                      do prazo acima — quem confirma o pagamento é o gateway, e isso pode levar
+                      alguns instantes. O acesso do seu ingresso vai para o e-mail da compra. Sua
+                      inscrição está reservada como pendente até lá.
                     </p>
                   )
                 }

@@ -254,7 +254,11 @@ describe('S1209-T2 · tela do PEDIDO PENDENTE — o mesmo bloco vivo', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(screen.getByText(/pagamento pendente/i)).toBeTruthy();
+    // S1225-T2 · RN-470: o assert era `/pagamento pendente/i`. O rótulo mudo
+    // virou a resposta que o dono pediu — a mensagem e a orientação de e-mail.
+    // O que esta suíte prova segue igual: no estado não-final, o QR, o
+    // copia-e-cola e a contagem continuam à mão.
+    expect(screen.getByText('Estamos confirmando o seu pedido')).toBeTruthy();
     expect(await screen.findByAltText(/qr code para pagamento via pix/i)).toBeTruthy();
     expect(screen.getByText('PIX-COPIA-E-COLA-PAYLOAD')).toBeTruthy();
     expect(screen.getByTestId('pix-timer').textContent).toMatch(/30:00/);

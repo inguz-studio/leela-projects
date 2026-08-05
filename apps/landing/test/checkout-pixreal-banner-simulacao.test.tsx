@@ -89,8 +89,13 @@ describe('T3 · com gateway REAL a tela não oferece simulação', () => {
     expect(screen.getByText(/sai da sua conta/i)).toBeTruthy();
     // Há prazo, e ele é o do relógio que já está na tela.
     expect(screen.getByText(/dentro do prazo/i)).toBeTruthy();
-    // Ninguém precisa avisar a plataforma — quem confirma é o webhook.
-    expect(screen.getByText(/confirmação chega sozinha/i)).toBeTruthy();
+    // S1225-T2 · RN-470: aqui o assert era `/confirmação chega sozinha/i` — a
+    // frase que o T3 escreveu e que a S1225-T2 apagou por ser falsa (não há
+    // escuta automática no checkout). O que a tela deve dizer no lugar é quem
+    // confirma (o gateway) e por onde o acesso chega (o e-mail).
+    expect(screen.getByText(/quem confirma o pagamento é o gateway/i)).toBeTruthy();
+    expect(screen.getByText(/vai para o e-mail da compra/i)).toBeTruthy();
+    expect(screen.queryByText(/confirmação chega sozinha/i)).toBeNull();
   });
 
   it('campo AUSENTE ⇒ tratado como REAL (fail-safe: servidor antigo não reabre o buraco)', () => {
