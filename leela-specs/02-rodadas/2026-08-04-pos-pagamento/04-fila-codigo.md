@@ -58,6 +58,35 @@ ARENA-3 (onde mora) voltarem do painel.** O miolo da área do cliente não esper
 F1 (trava de IPs da Brevo) segue sendo a BREVO-1 do painel; F6 (expiração da cobrança QA de
 05/08) é observação. Nenhuma das quatro entra nas frentes acima nem as bloqueia.
 
+### Saída da review antagonista REV-F2F5 (`e6c96a1d`)
+
+F2 e F5 voltaram **aprovadas com fixes**: quatro defeitos reais consertados no mesmo commit
+da review, com teste que os teria pegado (`reenvioEmailsPedido.ataque.test.ts`). O que
+sobrou é fila, não bloqueio.
+
+| # | O quê | Por que ficou de fora do fix |
+|---|---|---|
+| RF2-1 | **O caminho automático queima a chave da RN-219 com lista parcial.** `emitirIngressosDoPedido` não conta inscrito `nao_confirmado` nem como falha nem como recusa, então `dispararEmissaoIngressosPosConfirmacao` fecha com `falhas: 0`, manda o e-mail com a lista incompleta e não abre pendência — o oposto do que o cabeçalho do módulo promete. Reprodução pronta no vetor 6 do teste de ataque | Muda o comportamento do **webhook**; pede lane e review próprias. O beco do lado do reenvio já foi fechado (a pendência passa a ser aberta ali) |
+| RF2-2 | **Callable sem rate limit.** Qualquer autenticado força escrita em `auditoriaAcessos` pela negação de papel (trilha inundável + custo), e `forcar: true` não tem teto por admin. `shared/rateLimit.ts` existe e é fail-closed | Padrão do repo, não regressão da F2: `getBankDetailsForPayout` é idêntico. Fechar nos dois na mesma passada — janela por `uid`, ~10/10 min, antes do gate de papel |
+| RF2-3 | **Projeção do pedido para o comprador** — ver abaixo, fecha junto com a review da S1225 | Decisão conjunta das duas lanes |
+
+**Cross-lane com a S1225-T1 (RN-469).** A F2/F5 acrescentou ao doc do pedido `emailIngressos`
+(`status`, `falhas`, `falhaEm`, `comunicacaoId`) e `reenvioEmails` (`ultimoEm`,
+`ultimoReenvioId`, `total`) — e a RN-469 abre o doc inteiro ao comprador. Nada disso é PII
+nem credencial, e `emailIngressos.status` é legitimamente sobre o pedido dele. Os dois que
+não são: **`reenvioEmails.ultimoReenvioId`** (string opaca escolhida pelo OPERADOR — vaza
+vocabulário interno se alguém nomear a chave por chamado) e **`emailIngressos.comunicacaoId`**
+(handle de coleção server-only). Recomendação da review, em ordem de custo:
+
+1. **Mínimo para o gate da S1225:** tirar `ultimoReenvioId` e `comunicacaoId` do doc do
+   pedido. Custo zero de função — nenhum caminho os lê, a janela só usa `ultimoEm`, e o
+   extrato `reenviosEmail` (server-only) já guarda os dois.
+2. **Forma durável:** estado operacional em subcoleção server-only (`pedidos/{id}/operacao`),
+   deixando o doc do pedido com dado do comprador e mais nada. Troca a consulta "quem pagou e
+   não recebeu" por `collectionGroup` (índice de campo único, ainda sem composto).
+
+A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
+
 ## Ordem executável, resumida
 
 1. **Agora:** 1a + 1b (S1225-T1/T2). Depois 1c.
