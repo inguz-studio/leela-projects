@@ -50,6 +50,51 @@ A porta nova de criação de conta nasce na landing. O `/cadastrar` do painel, s
 - **Opções:** **uma porta, na landing** (**default proposto**) — o `/cadastrar` do painel passa a apontar para ela quando a fila da SPEC-QUALIFICACAO rodar, e o rótulo "Criar conta de organizador" do header sai junto, porque sob a RN-461 ele já está errado · **duas portas**, cada uma na sua origem, o que mantém o organizador entrando por onde ele já entra e deixa em pé a metade do POSSE-EMAIL-1 que a porta nova fecharia, porque o `/cadastrar` continuaria criando conta sem verificar o e-mail.
 - **Onde aterrissa:** RN-461 e RN-478 em [[LEELA-E00-fundacao-tecnica]]; `PublicHeader.tsx:74-79`; a onda A de `02-rodadas/2026-08-04-qualificacao-profissional/03-fila-codigo.md`.
 
+### SERV-1 · o piso de R$ 3,00 é 30% da face numa experiência de R$ 10,00
+
+Você fixou o piso do Serviço em R$ 3,00 e disse "a priori". A conta foi feita, e ela morde mais fundo do que a frase sugere: com a linha vigente de 10,5%, **o piso vale em toda compra de até R$ 28,52**, e nesse trecho o percentual efetivo sobe conforme o preço cai. *Uma aula de ioga a R$ 10,00 paga R$ 3,00 de Serviço em vez de R$ 1,05 — e como o modo padrão é a taxa incorporada, quem absorve isso é a professora, que recebe R$ 7,00 no lugar de R$ 8,95.*
+
+- **O que fica com você:** ratificar os R$ 3,00, ou trocar o número. O mecanismo não depende disso — a tabela nasce vazia e nada muda em produção enquanto o valor não for configurado na tela.
+- **Por que agora:** a fila que constrói o piso pode subir inteira sem você, mas o dia em que alguém digitar o valor é o dia em que o preço de toda venda pequena muda. Melhor ver a tabela antes.
+- **Opções:** **R$ 3,00 como você escreveu** (**default proposto**, porque é o seu número e o efeito está medido) · um valor menor, que encolhe a faixa mordida · um piso **por modo de taxa**, cobrando o piso cheio quando o comprador paga e um menor quando o organizador absorve — mais justo e mais uma regra para explicar.
+- **Onde aterrissa:** RN-491 em [[LEELA-E04-config-vendas]]; a tabela de efeito em `02-rodadas/2026-08-05-metricas-e-servico/02-spec-metricas-e-servico.md` §"O piso, em números".
+
+### SERV-2 · numa venda de R$ 2,00 o piso é maior que a venda inteira
+
+Sua frase tratou de taxa pequena, não de venda pequena. Numa venda abaixo de R$ 3,00 com a taxa incorporada, o organizador receberia **valor negativo** — o líquido dele é a face menos o Serviço. Nada no produto sabe representar isso: o clamp em zero existe só uma camada acima, no agregado, e ele esconde a divergência em vez de resolvê-la, fazendo o repasse deixar de bater com a soma das vendas. Hoje nada impede uma venda de R$ 2,00: o único mínimo que existe recusa preço zero. *O Castelo publica um ingresso simbólico de R$ 2,00 para um mutirão, vende trinta, e a plataforma calcula que ele deve R$ 30,00.*
+
+- **O que fica com você:** escolher entre limitar o Serviço ou limitar o preço.
+- **Por que agora:** é uma linha de código na aritmética se decidida antes, e uma migração de dado financeiro se decidida depois.
+- **Opções:** **o Serviço nunca ultrapassa a face** (**default proposto** e já em vigor na spec) — numa venda de R$ 2,00 o organizador recebe R$ 0,00 e a plataforma fica com os R$ 2,00; nada quebra, mas a venda vira trabalho de graça para ele · **preço mínimo de venda** acima do piso, que resolve na origem e cria uma regra a explicar para quem quiser vender barato · deixar negativo e mostrar como dívida, que eu **recomendo recusar**, porque nenhuma tela do produto sabe desenhar saldo devedor de organizador.
+- **Onde aterrissa:** RN-494 em [[LEELA-E09-financeiro-profissional]].
+
+### SERV-3 · até onde vai a palavra "Serviço"
+
+Você escreveu a palavra entre aspas, e a leitura literal tira duas palavras do rótulo, não uma. Isso muda o tamanho do trabalho, porque **o comprador já lê "Taxa de serviço" no checkout** — se o alvo fosse só apagar a marca, o checkout não teria tarefa nenhuma. E há uma segunda pergunta embutida: o painel que **você** opera chama a mesma coisa de "Taxa da plataforma", e ali quem lê precisa distinguir esta cobrança das outras. *A Ana vê "Serviço (PIX) · R$ 3,00" no resumo da compra; você abre `/plataforma/taxa` e vê "Serviço da plataforma" ou "Taxa da plataforma", dependendo da sua resposta.*
+
+- **O que fica com você:** confirmar a leitura literal, e dizer se o super-admin acompanha.
+- **Por que agora:** são 34 strings em três aplicações, e trocá-las duas vezes é o desperdício que a pergunta evita. A fila do renome está retida esperando esta resposta.
+- **Opções:** **"Serviço" para comprador e organizador, "Serviço da plataforma" no super-admin** (**default proposto**, porque segue a sua letra onde o público é externo e mantém a desambiguação onde o público é você) · "Serviço" em tudo, inclusive no super-admin · manter "Taxa de serviço" para o comprador e trocar só onde diz "Leela", que é a leitura mínima da sua frase.
+- **Onde aterrissa:** RN-495 em [[LEELA-E12-landing]]; tarefas 4a, 4b e 4c de `02-rodadas/2026-08-05-metricas-e-servico/04-fila-codigo.md`.
+
+### INSCR-1 · o "N inscritos" da página pública acompanha o painel, ou fica como está
+
+Você falou do painel profissional. O mesmo número alimenta a página pública do evento, e lá ele já está lido mas com a exibição suprimida — a prova social ficou desligada numa rodada anterior. Se ela voltar um dia, a pergunta de qual verdade ela conta já está respondida ou ainda não, dependendo de você. *A página do evento diz "já somos 40" contando doze pessoas que geraram PIX e nunca pagaram.*
+
+- **O que fica com você:** dizer se as duas telas contam a mesma coisa.
+- **Por que agora:** custa uma linha enquanto a fila da métrica está aberta, e custa uma investigação depois que a prova social voltar.
+- **Opções:** **a mesma verdade nas duas telas** (**default proposto** — o número que você acabou de corrigir é o número, e ter duas definições de "inscrito" é como este item nasceu) · a página pública conta todo mundo, porque prova social se beneficia do número maior, o que eu **recomendo recusar** por ser exatamente a distorção que você mandou consertar.
+- **Onde aterrissa:** RN-486 em [[LEELA-E03-operacao-evento]]; `apps/landing/lib/leitor.ts:542`.
+
+### CONV-1 · o card de conversão fica em branco ou some
+
+Você estava certo nas duas pontas: o denominador certo é visitantes sobre pagantes, e não contabilizamos visitantes. Fui conferir o quanto: **não existe contagem de visitas em lugar nenhum** — nenhum SDK de analytics instalado, nenhum contador no banco, nada fora dele. O card existe e sempre mostrou um traço. O que ele não deveria estar fazendo é manter o rótulo "visitantes → inscritos" na tela, porque ele promete uma medição que não acontece. *A Marina lê "visitantes → inscritos: —" e conclui que a plataforma mede o tráfego dela e ainda não juntou dados suficientes.*
+
+- **O que fica com você:** escolher o que ocupa aquele quarto da faixa de KPIs até existir denominador.
+- **Por que agora:** enquanto o rótulo estiver lá, cada organizador novo aprende a esperar um número que não vem.
+- **Opções:** **esconder o card** até haver contagem de visitas (**default proposto**, porque card vazio ensina expectativa errada) · manter o traço com uma frase curta dizendo que ainda não medimos visitas — mais honesto e mais ruidoso · construir a contagem de visitas agora, que é frente própria e não estava no seu pedido; o contrato dela já está escrito para o dia em que você pedir.
+- **Onde aterrissa:** RN-489 e RN-490 em [[LEELA-E11-analytics]]; tarefa 4d de `02-rodadas/2026-08-05-metricas-e-servico/04-fila-codigo.md`.
+
 ### SENHA-1 · o e-mail de "esqueci minha senha" já veio para a Brevo — falta você ratificar
 
 ⚠️ **Este item mudou de natureza em 04/08 e não é mais escolha entre dois futuros.** Quando ele foi escrito, a opção "trazer para a Brevo" custava um template novo e um caminho de envio próprio. As duas coisas foram construídas na madrugada (lane IDENTIDADE-EMAIL) e **entraram em produção na lane DEPLOY-EMAIL**, junto com a moldura da marca nos oito e-mails: a function `solicitarRedefinicaoSenha` está no ar com a chave da Brevo amarrada, e o painel já a chama. *A organizadora que esquecer a senha hoje recebe o e-mail da Leela, não mais o do Firebase.*

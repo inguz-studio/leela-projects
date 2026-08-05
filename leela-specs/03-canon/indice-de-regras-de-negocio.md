@@ -54,6 +54,7 @@ O terceiro formato cobre sozinho a faixa RN-425 a RN-453, que é a mais nova e a
 | 474-475 | [[LEELA-E12-landing]], pela mesma rodada em 05/08 (código curto da compra) |
 | 476-480 | [[LEELA-E00-fundacao-tecnica]], pela rodada de 05/08 (o código de seis dígitos, a criação de conta e a fronteira entre tipos de conta) |
 | 481-482 | [[LEELA-E12-landing]], pela mesma rodada de 05/08 (as duas portas do modal e o nono e-mail) |
+| 486-496 | E03, E04, E09, E11 e E12, pela rodada de 05/08 (o inscrito pagante e o piso do Serviço) |
 | 820-823 | [[LEELA-E11-analytics]] |
 
 As faixas 178-189, 385-392 e 425-445 atravessam mais de um épico porque nasceram em rodadas que tocaram várias frentes no mesmo dia. Para essas, o caminho curto é o arquivo de delta da rodada, que aponta para o épico de cada uma.
@@ -76,11 +77,13 @@ Sete tokens que parecem RN não são: `RN-4`, `RN-17`, `RN-18`, `RN-19`, `RN-42`
 
 Seis números existem apenas para reservar faixa e nunca receberam enunciado: RN-381, RN-383, RN-384, RN-460, RN-499 e RN-819.
 
+Três números nunca nasceram e o buraco é deliberado: **RN-483, RN-484 e RN-485**. Em 05/08 duas lanes trabalharam ao mesmo tempo em `leela-specs/`, a faixa 476-485 foi reservada à SPEC-CONTAS-LANDING para evitar colisão, e ela consumiu só até a 482. A SPEC-METRICAS-SERVICO começou na 486 porque a reserva ainda estava de pé. Não são regras perdidas: são o preço de duas lanes no mesmo território.
+
 Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no template de spec. A RN-333 é citada 56 vezes, o que a coloca entre as mais referenciadas do projeto, e não tem linha de definição em lugar nenhum: existe só em prosa.
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 482, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social), a 473 na SPEC-PDF e as 474 e 475 na SPEC-CODPEDIDO, as duas últimas já em 05/08 (o PDF do ingresso como download e o código curto da compra), e de a SPEC-CONTAS-LANDING consumir 476 a 482 no mesmo 05/08 (o código de seis dígitos, a criação de conta na landing e as duas portas do modal). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito em todas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a 496, depois de a SPEC-METRICAS-SERVICO consumir 486 a 496 em 05/08 (o inscrito pagante, a conversão sem denominador e o piso do Serviço), deixando 483 a 485 vagas de propósito pela reserva descrita nas armadilhas de busca. Antes dela, a rodada de 04/08 consumiu 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social), a 473 na SPEC-PDF e as 474 e 475 na SPEC-CODPEDIDO, as duas últimas já em 05/08 (o PDF do ingresso como download e o código curto da compra); e a SPEC-CONTAS-LANDING consumiu 476 a 482 no mesmo 05/08 (o código de seis dígitos, a criação de conta na landing e as duas portas do modal). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito em todas: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 

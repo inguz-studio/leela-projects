@@ -3381,3 +3381,75 @@ Não liga login social (QUALIF-5). Não apaga o `/definir-senha` nem o link do e
 (CONTA-1). Não redireciona o `/cadastrar` do painel nem rebatiza o botão do header (CONTA-2 e a
 fila da SPEC-QUALIFICACAO). Não decide o POSSE-EMAIL-1, apenas recomenda e remove o custo
 colateral da correção.
+
+## Delta o nome que o comprador lê é Serviço (SPEC-METRICAS-SERVICO · 2026-08-05)
+
+Uma frase do dono, na mesma fala que corrigiu a métrica de inscritos e criou o piso: *"nao devemos
+chamar ela de Taxa leela, e sim chamar de 'Serviço'."* Verbatim integral em
+`02-rodadas/2026-08-05-metricas-e-servico/01-decisoes-dono.md`; inventário com arquivo e linha em
+`02-spec-metricas-e-servico.md`.
+
+### RN-495 (nova, dona) · o nome é Serviço em toda superfície humana, e o gateway fica de fora
+
+"Taxa Leela", "Taxa Be Hero" e "taxa da plataforma" saem do texto visível. O rótulo passa a ser
+**Serviço**, com o meio de pagamento entre parênteses onde ele já aparece — `Serviço (PIX)`,
+`Serviço (cartão)`.
+
+**A palavra alvo está entre aspas na fala do dono, e a leitura literal tira duas palavras do
+rótulo, não uma.** Isso importa porque o comprador já lê "Taxa de serviço" desde a rodada S1216:
+se o alvo fosse só remover a marca, o checkout não teria trabalho nenhum. Como o alvo é a palavra
+"Serviço", o checkout muda também. Item **SERV-3** do painel, com default de seguir a letra.
+
+São 34 strings a trocar e uma a suprimir. As superfícies do comprador, que este épico possui:
+
+| Onde | Quantas | Arquivos |
+|---|---|---|
+| Resumo e confirmação do checkout | 4 | `StepResumo.tsx:383, 389`; `StepConfirmacao.tsx:254, 261` |
+| Explicação do modo da taxa | 2 | `StepModalidadeKit.tsx:175, 176` |
+| Página do evento | 5 | `LotesSection.tsx:36`; `HeroMinimo.tsx:77`; `HeroSection.tsx:114`; `CheckoutCtaSection.tsx:45`; `page.tsx:255` (metadata e SEO) |
+
+As 23 restantes vivem no painel do organizador e no super-admin, e estão inventariadas na spec da
+rodada. Para o super-admin a recomendação é **manter a palavra "plataforma"** — "Serviço da
+plataforma" —, porque quem opera aquela tela precisa distinguir esta cobrança de qualquer outra e o
+público é interno.
+
+**Quatro superfícies estão limpas e não têm tarefa nenhuma:** e-mail, PDF do ingresso, CSV
+(financeiro e de inscritos) e área do cliente. A varredura de `functions/src/email/*`,
+`packages/core/src/email/*`, `apps/landing/app/(public)/ingresso/**`,
+`apps/landing/app/(public)/minha-conta/**`, `_lib/financeiro.ts` e `_lib/inscritosCsv.ts` devolveu
+zero menções. O CSV financeiro exclui a taxa de propósito por RN-404, com guarda de teste em
+`financeiro.test.ts:273-275`.
+
+**A taxa do gateway não muda de nome porque não tem nome no produto.** A varredura por `asaas`,
+`gateway`, `MDR`, `adquirente`, `custoGateway` e `gatewayFee` sobre `apps/`, `packages/` e
+`functions/src` devolveu **zero strings visíveis**: tudo que existe são comentários técnicos,
+códigos de erro (`MOTIVO_GATEWAY_SEM_RESPOSTA`, `gatewaySemResposta`) e configuração de ambiente.
+O custo do gateway é hoje deliberadamente descartado —
+`functions/src/payments/asaasProvider.ts:1505-1507` usa sempre `payment.value` e nunca `netValue`
+—, e o modelo dele (RN-455 e RN-459) está especificado e não construído. Não há o que preservar nem
+o que confundir.
+
+**Renome é de texto, nunca de campo.** `platformFeePct`, `taxaModo`, `taxaCongelada`,
+`taxaRepassada`, `taxaTabela`, `taxaPct`, `taxaValor`, `taxaServico` e a rota `/plataforma/taxa`
+ficam como estão. A razão é dura: `platformFeePct` vive em `commercialTerms/v{n}`, que são
+snapshots imutáveis e create-only, e renomear exigiria backfill de histórico de dinheiro;
+`taxaModo` é validado por enum fechado nas Rules (`firestore.rules:666, 680`); `taxaCongelada` é
+carimbo imutável por transação. Nenhum ganho de leitura justifica migrar dado financeiro.
+
+Três famílias homônimas ficam de fora do renome, e confundi-las seria o erro mais fácil da tarefa:
+
+| Onde | Texto | O que é |
+|---|---|---|
+| `OverviewKpis.tsx:96`; `KpiRow.tsx:213` | "Taxa de conversão" | métrica, não dinheiro |
+| `PoliticaVendasForm.tsx:181`; `AceitesCompra.tsx:47` | "Taxa de transferência" | transferência de titularidade |
+| `planos/_lib/resumo.ts:30`; `PlanoFormModal.tsx:150, 161` | "Sem taxa", `taxaCartaoAVista`, `taxaPix` | juros de parcelamento |
+
+E dois identificadores casam com `fee` ou `custo` e são outra coisa: `saasMonthlyFee`
+(mensalidade) e `anticipation.custoPct` (antecipação de recebíveis).
+
+### O que este delta não faz
+
+Não muda o valor exibido na linha do Serviço, que é assunto da RN-491 e da RN-494 em
+[[LEELA-E04-config-vendas]] e [[LEELA-E09-financeiro-profissional]]. Não decide se o "N inscritos"
+da página pública passa a contar só pagante, que é o item **INSCR-1** do painel e a RN-486 em
+[[LEELA-E03-operacao-evento]]. Não renomeia campo de dado nem rota.

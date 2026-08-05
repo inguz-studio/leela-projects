@@ -10,6 +10,32 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E03/E09] O painel conta quem pagou** — você comprou por PIX, não pagou e apareceu como inscrito; a contagem exibida passa a ser só de pagante, e o ticket médio deixa de dividir receita confirmada por gente que nunca pagou. O contador antigo fica de pé porque ele também é a fechadura que congela preço, percurso, kit e modo da taxa 📋 especificado em 05/08 · lane SPEC-METRICAS-SERVICO [[LEELA-E03-operacao-evento]]
+    - [ ] **S221 · O contador de pagantes, separado do que congela a configuração**
+        - [ ] S221-T1 o número de pagantes nasce no agregado, projetado do que a transação já conta ⚔
+        - [ ] S221-T2 as dezenove telas de exibição passam a ler o número novo
+        - [ ] S221-T3 prova de que percurso, modalidade, kit, preço e modo da taxa seguem congelados por PIX pendente ⚔ · bloqueia o fechamento
+        - [ ] S221-T4 o histórico diário carrega o número novo sem perder o antigo
+    - [ ] **S908 · O ticket médio e o repasse previsto na tela do organizador**
+        - [ ] S908-T1 o "Repasse previsto" perde a descrição da taxa, e o aviso de liberação fica
+        - [ ] S908-T2 o campo "Taxa Be Hero" sai do inscrito — marca antiga e taxa exposta ao produtor
+        - [ ] S908-T3 a guarda que impede o rótulo de voltar passa a cobrir as duas telas novas
+        - [ ] S908-T4 o ticket médio sai do navegador e vira campo do agregado, com o denominador certo ⚔
+- [ ] **[E04/E09] O Serviço ganha piso de R$ 3,00 por pedido** — o valor mínimo que a plataforma cobra por venda passa a existir, congelado na compra como a taxa já é, e por pedido, não por ingresso. A tabela nasce vazia: nada muda em produção até você digitar o número 📋 especificado em 05/08 · **aguarda SERV-1 e SERV-2 para o valor entrar** [[LEELA-E04-config-vendas]]
+    - [ ] **S907 · O piso do Serviço na aritmética, no carimbo e no estorno**
+        - [ ] S907-T1 o piso entra na tabela de taxa por meio de pagamento, e a semente sobe vazia ⚔
+        - [ ] S907-T2 a aritmética do piso na única função que calcula taxa, com o teto na face da venda ⚔
+        - [ ] S907-T3 o carimbo da venda passa a dizer que o piso mordeu, para o replay reproduzir o número ⚔
+        - [ ] S907-T4 prova de que estornar as linhas uma a uma devolve exatamente o piso ⚔
+        - [ ] S907-T5 a receita da plataforma deixa de ser estimada por percentual e passa a somar o carimbo ⚔
+        - [ ] S907-T6 a coluna do piso na tela da tabela global, com vazio significando sem piso
+- [ ] **[E12/E11] O nome que se lê é Serviço, e a conversão para de prometer o que não medimos** — "Taxa Leela" sai de toda tela; e-mail, PDF, CSV e área do cliente já estão limpos. O card de conversão mantém o rótulo "visitantes → inscritos" sem que exista contagem de visitas em lugar nenhum do sistema 📋 especificado em 05/08 · **aguarda SERV-3 e CONV-1** [[LEELA-E12-landing]]
+    - [ ] **S1231 · O nome Serviço nas três aplicações**
+        - [ ] S1231-T1 onze rótulos no checkout, na confirmação e na página do evento
+        - [ ] S1231-T2 dez rótulos na configuração do evento, na política de vendas, no estorno e no CRM
+        - [ ] S1231-T3 doze rótulos no super-admin; o endereço `/plataforma/taxa` não muda
+    - [ ] **S824 · O card de conversão sem denominador**
+        - [ ] S824-T1 o rótulo "visitantes → inscritos" deixa de aparecer enquanto não houver contagem de visitas
 - [ ] **[E00/E16] Virar profissional deixa de ser cadastro e vira um passo de quem já tem conta** — hoje o `/cadastrar` pede sete coisas e cria uma conta de organizador; passa a criar conta na Leela com quatro, com entrar por Google e Apple, e a qualificação vira o próprio ato de virar profissional. Você pediu breve: quem já comprou responde cinco perguntas 📋 especificado em 04/08 · QUALIF-1 a QUALIF-5 · lane SPEC-QUALIFICACAO [[LEELA-E00-fundacao-tecnica]]
     - [ ] **S033 · Criar conta na Leela, com Google e Apple** — o cadastro encolhe e a porta serve cliente e profissional
         - [ ] S033-T1 o contrato do cadastro encolhe e o da promoção nasce, com os dois termos ⚔
