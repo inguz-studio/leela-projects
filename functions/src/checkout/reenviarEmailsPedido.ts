@@ -551,16 +551,25 @@ async function reenviarIngresso(
     //
     // ⚠ REV-F2F5: "a varredura resolve" só era verdade quando existia
     // `ingressosPendentes/{pedidoId}` — e o gerador mais provável deste estado
-    // NÃO abre pendência nenhuma. `emitirIngressosDoPedido` não conta inscrito
-    // `nao_confirmado` nem como falha nem como recusa, então
-    // `dispararEmissaoIngressosPosConfirmacao` fecha a janela com `falhas: 0` e
-    // nada é registrado; se o inscrito confirmar DEPOIS (transferência, acerto
-    // manual, reprocesso), ele fica confirmado e sem ingresso, o cron varre uma
-    // coleção que não tem o pedido, e o reenvio recusa PARA SEMPRE apontando
-    // para uma ferramenta que não vai agir. A pendência é aberta AQUI, no ponto
-    // em que o sistema descobre o buraco — mesmo padrão do "registro no ponto
-    // da falha" do item 54. É best-effort de propósito (Directive da F5: o
-    // acessório não derruba o principal) e idempotente por `pedidoId`.
+    // NÃO abria pendência nenhuma. `emitirIngressosDoPedido` não contava
+    // inscrito não-confirmado nem como falha nem como recusa, então
+    // `dispararEmissaoIngressosPosConfirmacao` fechava a janela com `falhas: 0`
+    // e nada era registrado; se o inscrito confirmasse DEPOIS (transferência,
+    // acerto manual, reprocesso), ele ficava confirmado e sem ingresso, o cron
+    // varria uma coleção que não tinha o pedido, e o reenvio recusava PARA
+    // SEMPRE apontando para uma ferramenta que não ia agir. A pendência é
+    // aberta AQUI, no ponto em que o sistema descobre o buraco — mesmo padrão
+    // do "registro no ponto da falha" do item 54. É best-effort de propósito
+    // (Directive da F5: o acessório não derruba o principal) e idempotente por
+    // `pedidoId`.
+    //
+    // A OUTRA PONTA JÁ ESTÁ FECHADA (RF2-1, lane BUILD-RF2-1): o caminho
+    // automático passou a contar o inscrito que ainda pode confirmar
+    // (`aguardando`), a segurar o e-mail e a abrir a pendência na própria
+    // janela da confirmação. Este registro aqui continua sendo necessário e
+    // não vira redundância: ele cobre o pedido que ficou incompleto ANTES do
+    // fix, e qualquer buraco que a emissão não tenha como enxergar. Duas
+    // detecções do mesmo pedido acumulam em `deteccoes`, nunca duplicam.
     logger.warn('reenvio_ingresso_incompleto', {
       pedidoId,
       eventoId,

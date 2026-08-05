@@ -436,9 +436,16 @@ describe.skipIf(!hasEmulator)('REV-F2F5 · ataque ao reenvio de e-mails', () => 
   // ── VETOR 6 ────────────────────────────────────────────────────────────
   it('vetor 6: `ingresso_incompleto` manda o operador para uma varredura que não tem o pedido', async () => {
     // O gerador REAL: um inscrito que não estava `confirmado` na janela da
-    // emissão. `emitirIngressosDoPedido` não conta isso como falha nem como
-    // recusa, então `dispararEmissaoIngressosPosConfirmacao` NÃO registra
-    // pendência — e o e-mail sai com a lista pela metade, queimando a RN-219.
+    // emissão. Quando esta review rodou, `emitirIngressosDoPedido` não contava
+    // isso como falha nem como recusa: o disparo pós-confirmação fechava com
+    // `falhas: 0`, NÃO registrava pendência, e o e-mail saía com a lista pela
+    // metade queimando a RN-219.
+    //
+    // ⚠ A outra ponta foi fechada pela lane BUILD-RF2-1 (item RF2-1 da fila):
+    // o inscrito que ainda pode confirmar passou a contar em `aguardando`, a
+    // segurar o e-mail e a abrir a pendência na PRÓPRIA janela da confirmação.
+    // O vetor continua valendo como vetor — o que ele mede agora é que o beco
+    // não volta por nenhuma das duas portas.
     await semear(['insc-1', 'insc-2'], {
       statusInscritos: { 'insc-2': 'pendente' },
     });
@@ -449,8 +456,10 @@ describe.skipIf(!hasEmulator)('REV-F2F5 · ataque ao reenvio de e-mails', () => 
       pedidoId: PEDIDO_ID,
     });
     expect(r?.falhas).toBe(0);
-    // Nenhuma pendência foi aberta.
-    expect((await adminDb.collection(INGRESSOS_PENDENTES_COL).get()).size).toBe(0);
+    expect(r?.aguardando).toBe(1);
+    expect(r?.listaCompleta).toBe(false);
+    // A pendência agora nasce AQUI (era 0 — o buraco desta review).
+    expect((await adminDb.collection(INGRESSOS_PENDENTES_COL).get()).size).toBe(1);
 
     // O inscrito confirma DEPOIS (transferência, acerto manual, reprocesso).
     await adminDb

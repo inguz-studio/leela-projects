@@ -324,6 +324,16 @@ describe.skipIf(!hasEmulator)('emitirIngressosDoPedido — S1206-T5 (RN-218/396)
     expect((await lerInscrito('insc-2'))['codigoIngresso']).toBeUndefined();
     expect((await lerInscrito('insc-2'))['qrToken']).toBeUndefined();
     expect((await lerInscrito('insc-3'))['codigoIngresso']).toBeUndefined();
+
+    // RF2-1: "não recebe" tem DOIS significados, e o resultado separa os dois.
+    // `pendente` ainda pode confirmar ⇒ a lista está PARCIAL e o e-mail espera;
+    // `cancelado` é terminal ⇒ a lista sem ele está completa. O detalhe de
+    // quem segura o quê está em `emissaoListaParcial.integration.test.ts`.
+    expect(r.aguardando).toBe(1);
+    expect(r.naoElegiveis).toBe(1);
+    expect(r.falhas).toBe(0);
+    expect(r.rejeitados).toBe(0);
+    expect(r.listaCompleta).toBe(false);
   });
 
   it('doc que já tem token e não tem código recebe SÓ o código, e o token é preservado', async () => {
@@ -378,6 +388,10 @@ describe.skipIf(!hasEmulator)('emitirIngressosDoPedido — S1206-T5 (RN-218/396)
     // Recusa NÃO é falha: falha é pendência que a varredura re-tenta, e
     // re-tentar não conserta lista corrompida (item 54 · RN-382).
     expect(r.falhas).toBe(0);
+    // E recusa também não segura o e-mail do comprador (RF2-1): o inscrito
+    // alheio não é deste pedido, então a lista SEM ele é a lista completa.
+    expect(r.aguardando).toBe(0);
+    expect(r.listaCompleta).toBe(true);
 
     // Nem ingresso, nem lugar no e-mail: `ingressos` é o insumo do template.
     expect(r.ingressos.map((i) => i.inscritoId)).toEqual(['insc-1']);

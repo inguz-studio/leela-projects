@@ -48,6 +48,27 @@
 // pedido pago sem ingresso ficava órfão para sempre — nenhuma re-entrega do
 // gateway volta a chamar este caminho (vetor 3 da INGQR-REV).
 //
+// QUEM NÃO SAI COM INGRESSO — DUAS COISAS DIFERENTES (RF2-1 · REV-F2F5): um
+// inscrito que não está `confirmado` na janela da emissão pode ser
+//   (a) TERMINAL — `cancelado`/`estornado`: a matriz da RN-204/RN-341 não tem
+//       aresta de volta para `confirmado`, então ele NUNCA terá ingresso e a
+//       lista SEM ele está COMPLETA; ou
+//   (b) REVERSÍVEL — `pendente` (e qualquer status que a matriz não conheça):
+//       o organizador ainda pode confirmar (acerto manual, transferência,
+//       reprocesso), e a lista sem ele é PARCIAL.
+// A distinção decide se a chave at-most-once da RN-219 pode ser queimada, e é
+// por isso que ela sai da matriz canônica do core (`podeTransicionarStatusInscrito`)
+// em vez de uma lista de status escrita aqui — status novo no core não pode
+// nascer valendo como "terminal" por omissão. O caso (b) conta em `aguardando`,
+// abre pendência e SEGURA o e-mail; o (a) conta em `naoElegiveis` e não segura
+// nada. Antes desta lane os dois eram o mesmo `nao_confirmado` invisível: o
+// e-mail saía pela metade, a chave queimava e ninguém abria pendência.
+//
+// `listaCompleta` é o predicado que autoriza o envio automático. Ele existe no
+// RESULTADO, e não na cabeça de cada chamador, porque são dois (o disparo do
+// webhook e a varredura) e o defeito acima nasceu exatamente de um chamador
+// re-derivando "está fechado" a partir de `falhas === 0`.
+//
 // A coleção `ingressoCodigos` NÃO tem `match` em firestore.rules DE
 // PROPÓSITO: cai no deny-by-default. Nenhum cliente lê (a lista do
 // organizador lê o código do próprio doc do inscrito) e nenhum cliente
@@ -56,7 +77,12 @@
 
 import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
-import { gerarCodigoIngresso, isCodigoIngressoValido } from '@leela/core';
+import {
+  gerarCodigoIngresso,
+  isCodigoIngressoValido,
+  isStatusInscrito,
+  podeTransicionarStatusInscrito,
+} from '@leela/core';
 import { assinarQrToken, obterQrKeyring, type QrKeyring } from './qrToken';
 import { registrarIngressoPendente } from './ingressosPendentes';
 import { enviarEmailIngressos } from '../email/enviarIngressos';
@@ -74,6 +100,28 @@ export const INGRESSO_CODIGOS_SUBCOL = 'ingressoCodigos';
  * seguir é melhor que travar o pedido inteiro.
  */
 export const TENTATIVAS_CODIGO_INGRESSO = 8;
+
+/**
+ * O inscrito ainda PODE virar `confirmado` — e portanto ainda pode ter
+ * ingresso? (RF2-1)
+ *
+ * Sai da matriz canônica do core (`TRANSICOES_STATUS_INSCRITO`), nunca de uma
+ * lista local: a disciplina que o próprio módulo do inscrito impõe é
+ * "Functions que mudam status DEVEM consultar esta matriz — nunca re-derivar
+ * transições localmente", e ler dela vale o mesmo. Hoje isso é `pendente` sim,
+ * `cancelado`/`estornado` não (os dois são terminais desde a RN-341).
+ *
+ * FAIL-CLOSED no desconhecido: status fora do enum (dado corrompido, campo
+ * ausente, status novo que ainda não desceu para cá) conta como REVERSÍVEL. O
+ * erro barato é segurar um e-mail que a varredura manda 15 minutos depois; o
+ * caro é queimar a chave at-most-once da RN-219 sobre uma lista pela metade,
+ * que não tem volta. @pure
+ */
+export function inscritoAindaPodeConfirmar(status: unknown): boolean {
+  return (
+    !isStatusInscrito(status) || podeTransicionarStatusInscrito(status, 'confirmado')
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Contratos
@@ -101,8 +149,31 @@ export interface ResultadoEmissaoIngressos {
   jaEmitidos: number;
   /** Inscritos elegíveis que ficaram SEM ingresso (falha de reserva). */
   falhas: number;
-  /** Inscritos RECUSADOS por não pertencerem a este pedido (defesa em profundidade). */
+  /**
+   * Inscritos RECUSADOS: não pertencem a este pedido (defesa em profundidade)
+   * ou o doc não existe mais. Anomalia de dado — re-tentar não conserta.
+   */
   rejeitados: number;
+  /**
+   * Inscritos que ainda PODEM confirmar e por isso não têm ingresso AGORA
+   * (RF2-1). A lista de `ingressos` está parcial enquanto isto for > 0.
+   */
+  aguardando: number;
+  /**
+   * Inscritos em status TERMINAL (`cancelado`/`estornado`): nunca terão
+   * ingresso, e a lista sem eles está completa. Contados para que "sumiram do
+   * e-mail" seja um número, não um silêncio.
+   */
+  naoElegiveis: number;
+  /**
+   * `ingressos` cobre TODO inscrito que ainda pode ter ingresso?
+   *
+   * É ESTE o predicado que autoriza queimar a chave at-most-once da RN-219 —
+   * nunca `falhas === 0`, que foi como o e-mail parcial saiu (RF2-1). Recusa
+   * NÃO entra: inscrito de outro pedido não é deste e-mail, e inscrito
+   * apagado não tem cura nem destinatário.
+   */
+  listaCompleta: boolean;
   /** Todos os ingressos vivos do pedido, na ordem de `inscritoRefs`. */
   ingressos: IngressoEmitido[];
   motivo?: string;
@@ -117,7 +188,10 @@ interface EmissaoInscritoResult {
   motivo:
     | 'emitido'
     | 'ja_emitido'
-    | 'nao_confirmado'
+    /** Status TERMINAL (cancelado/estornado): não recebe, e está certo. */
+    | 'nao_elegivel'
+    /** Status REVERSÍVEL (pendente/desconhecido): pode receber DEPOIS. */
+    | 'aguardando_confirmacao'
     | 'inexistente'
     | 'pedido_divergente'
     | 'sem_codigo_livre';
@@ -153,9 +227,16 @@ async function emitirIngressoDoInscrito(
       return { ingresso: null, motivo: 'pedido_divergente' as const };
     }
     // RN-218: ingresso é pós-pagamento. Inscrito que não flipou para
-    // confirmado (cancelado antes de pagar, estornado) não recebe nada.
-    if (snap.get('status') !== 'confirmado') {
-      return { ingresso: null, motivo: 'nao_confirmado' as const };
+    // confirmado não recebe nada — mas o que isso SIGNIFICA depende do status,
+    // e a diferença é a que decide se o e-mail do pedido pode sair (RF2-1).
+    const status = snap.get('status') as unknown;
+    if (status !== 'confirmado') {
+      return {
+        ingresso: null,
+        motivo: inscritoAindaPodeConfirmar(status)
+          ? ('aguardando_confirmacao' as const)
+          : ('nao_elegivel' as const),
+      };
     }
 
     const nome = (snap.get('atletaNome') as string | undefined) ?? '';
@@ -265,6 +346,11 @@ export async function emitirIngressosDoPedido(
     jaEmitidos: 0,
     falhas: 0,
     rejeitados: 0,
+    aguardando: 0,
+    naoElegiveis: 0,
+    // Emissão que nem rodou não fecha lista nenhuma: `processado: false` já
+    // segura o e-mail nos dois chamadores, e o predicado concorda com eles.
+    listaCompleta: false,
     ingressos: [],
     motivo,
   });
@@ -298,6 +384,8 @@ export async function emitirIngressosDoPedido(
   let jaEmitidos = 0;
   let falhas = 0;
   let rejeitados = 0;
+  let aguardando = 0;
+  let naoElegiveis = 0;
 
   for (const inscritoId of inscritoRefs) {
     try {
@@ -317,6 +405,36 @@ export async function emitirIngressosDoPedido(
       } else if (r.motivo === 'sem_codigo_livre') {
         falhas++;
         logger.error('ingresso_sem_codigo_livre', { eventoId, inscritoId });
+      } else if (r.motivo === 'aguardando_confirmacao') {
+        // NÃO é falha de emissão (não há o que re-tentar enquanto o inscrito
+        // não confirmar) e NÃO é recusa (ele ainda pode ter ingresso). É a
+        // terceira coisa, e é ela que SEGURA o e-mail: mandar agora queimaria
+        // a chave at-most-once da RN-219 sobre uma lista pela metade, e quem
+        // ficou de fora nunca mais receberia (RF2-1). A pendência aberta pelo
+        // chamador leva o caso à varredura, que fecha o e-mail quando a
+        // emissão completar — e, se esgotar, manda o que existe com alerta.
+        aguardando++;
+        logger.warn('ingresso_inscrito_aguardando_confirmacao', {
+          eventoId,
+          pedidoId,
+          inscritoId,
+        });
+      } else if (r.motivo === 'nao_elegivel') {
+        // Terminal (cancelado/estornado): a lista SEM ele está completa. Conta
+        // só para o e-mail sem ele ser um número, e não um silêncio.
+        naoElegiveis++;
+      } else if (r.motivo === 'inexistente') {
+        // Mesmo juízo do `pedido_divergente`: re-tentar não faz nascer doc que
+        // o organizador apagou (`allow delete` de inscrito existe nas Rules), e
+        // não há a quem entregar. Recusa, com grito — a transação da
+        // confirmação recusa pedido com inscrito inexistente (409), então
+        // chegar aqui é dado que mudou DEPOIS do dinheiro.
+        rejeitados++;
+        logger.error('ingresso_inscrito_inexistente', {
+          eventoId,
+          pedidoId,
+          inscritoId,
+        });
       } else if (r.motivo === 'pedido_divergente') {
         // NÃO conta como falha: falha é pendência que a varredura re-tenta, e
         // re-tentar não conserta uma lista corrompida. Conta como recusa, e
@@ -347,6 +465,9 @@ export async function emitirIngressosDoPedido(
     jaEmitidos,
     falhas,
     rejeitados,
+    aguardando,
+    naoElegiveis,
+    listaCompleta: falhas === 0 && aguardando === 0,
     ingressos,
   };
 }
@@ -378,6 +499,16 @@ export interface IngressosVivosDoPedido {
  * `semIngresso` existe para que o chamador NUNCA mande um e-mail de compra com
  * a lista pela metade: emissão incompleta é caso da varredura
  * (`varrerIngressosOrfaos`), não do reenvio.
+ *
+ * ASSIMETRIA DELIBERADA com a emissão (RF2-1) — não "conserte" sem ler: aqui
+ * inscrito que ainda pode confirmar (`pendente`) é SILÊNCIO, não `semIngresso`.
+ * As duas funções respondem perguntas diferentes. A emissão pergunta "posso
+ * gastar a chave at-most-once da RN-219?" e responde fail-closed, porque
+ * gastá-la sobre lista parcial não tem volta. Esta pergunta é "o que existe
+ * para entregar AGORA, a pedido explícito de um admin, sob a chave da PRÓPRIA
+ * operação?" — e ali a resposta certa é entregar o que existe, porque nenhuma
+ * chave de uso único é queimada e o caso segue aberto em `ingressosPendentes`
+ * até a emissão completar.
  */
 export async function lerIngressosVivosDoPedido(
   db: Db,
@@ -471,6 +602,9 @@ export async function dispararEmissaoIngressosPosConfirmacao(
       jaEmitidos: r.jaEmitidos,
       falhas: r.falhas,
       rejeitados: r.rejeitados,
+      aguardando: r.aguardando,
+      naoElegiveis: r.naoElegiveis,
+      listaCompleta: r.listaCompleta,
       ...(r.motivo !== undefined ? { motivo: r.motivo } : {}),
     });
     // S1206-T6 (RN-398): o e-mail ao responsável sai NA MESMA janela, com os
@@ -485,7 +619,12 @@ export async function dispararEmissaoIngressosPosConfirmacao(
     // manda o e-mail é a varredura, depois de completar a emissão; e se a
     // re-tentativa esgotar, ela manda o que existe em vez de deixar o
     // comprador sem nada. A espera é limitada por construção.
-    if (r.falhas === 0 && r.eventoId !== null && r.ingressos.length > 0) {
+    //
+    // ⚠ RF2-1: a guarda era `r.falhas === 0`, e `falhas` NÃO contava o inscrito
+    // que ainda podia confirmar. O predicado agora vem do resultado
+    // (`listaCompleta`), que é o único lugar onde a conta de "quem ainda pode
+    // ter ingresso" é feita — chamador não re-deriva fecho de emissão.
+    if (r.listaCompleta && r.eventoId !== null && r.ingressos.length > 0) {
       await enviarEmailIngressos(
         db,
         {
@@ -504,13 +643,24 @@ export async function dispararEmissaoIngressosPosConfirmacao(
     // propósito: qualquer desfecho que não seja "emissão processada e sem
     // falha" vira pendência, e é a varredura que separa o que se cura do que
     // nem era órfão. Nada não-tratado fica invisível.
-    if (!r.processado || r.falhas > 0) {
+    //
+    // ⚠ RF2-1: `aguardando > 0` entra aqui pelo mesmo motivo que entra na
+    // guarda do e-mail — é inscrito que ainda pode ter ingresso e não tem.
+    // Sem esta linha, o único gerador provável do estado ficava fora da
+    // coleção que a varredura enxerga, e o reenvio administrativo recusava
+    // `ingresso_incompleto` apontando para uma ferramenta que não ia agir
+    // (o beco que a REV-F2F5 fechou do lado do reenvio — a doutrina é a
+    // mesma: pendência aberta NO PONTO DA DESCOBERTA).
+    if (!r.processado || r.falhas > 0 || r.aguardando > 0) {
+      const detalhe =
+        r.motivo ?? (r.aguardando > 0 ? 'aguardando_confirmacao' : undefined);
       await registrarIngressoPendente(db, {
         pedidoId: resultado.pedidoId,
         eventoId: r.eventoId,
         motivo: r.processado ? 'emissao_incompleta' : 'emissao_nao_processada',
         falhas: r.falhas,
-        ...(r.motivo !== undefined ? { detalhe: r.motivo } : {}),
+        aguardando: r.aguardando,
+        ...(detalhe !== undefined ? { detalhe } : {}),
       });
     }
     return r;

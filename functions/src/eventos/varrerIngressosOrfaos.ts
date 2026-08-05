@@ -127,10 +127,15 @@ export async function varrerIngressosOrfaosCore(
         continue;
       }
 
-      if (r.falhas === 0 && r.eventoId !== null && r.ingressos.length > 0) {
+      if (r.listaCompleta && r.eventoId !== null && r.ingressos.length > 0) {
         // Emissão FECHADA: agora o e-mail pode queimar a chave da RN-219 com a
         // lista completa. `ja_enviado` aqui é sucesso — significa que o envio
         // inline já tinha saído e a idempotência do `291d4f9` segurou.
+        //
+        // `listaCompleta` (RF2-1) e não `falhas === 0`: fechado inclui "nenhum
+        // inscrito ainda por confirmar". Enquanto houver, é este ramo que a
+        // varredura NÃO toma — e é por isso que o pedido do inscrito que
+        // confirmou tarde sai daqui com a lista inteira.
         const mail = await enviarEmailIngressos(
           db,
           { pedidoId, eventoId: r.eventoId, ingressos: r.ingressos },
@@ -144,9 +149,11 @@ export async function varrerIngressosOrfaosCore(
         continue;
       }
 
-      // Ainda incompleta (`sem_codigo_livre` persistente, erro por inscrito).
+      // Ainda incompleta (`sem_codigo_livre` persistente, erro por inscrito, ou
+      // inscrito que a operação ainda não confirmou — RF2-1).
       const carimbo = await carimbarTentativaIngresso(db, pedidoId, {
         falhas: r.falhas,
+        aguardando: r.aguardando,
         ...(r.eventoId !== null ? { eventoId: r.eventoId } : {}),
       });
       if (!carimbo.esgotado) continue;
@@ -154,6 +161,12 @@ export async function varrerIngressosOrfaosCore(
       // ESGOTOU: o comprador não pode ficar sem nada. Manda o que existe (o
       // ingresso de quem saiu) e deixa o alerta contável para o humano fechar
       // o resto — o oposto de esperar para sempre por uma emissão completa.
+      //
+      // É AQUI, e só aqui, que uma lista parcial vira e-mail no caminho
+      // automático (RF2-1): depois de oito passagens, com a pendência seguindo
+      // ABERTA em `ingressosPendentes` e com `ingresso_orfao_esgotado` no log.
+      // Duas horas de espera limitada, alerta e extrato — não é o envio calado
+      // que fechava a janela na primeira passagem.
       resultado.esgotados += 1;
       if (r.eventoId !== null && r.ingressos.length > 0) {
         const mail = await enviarEmailIngressos(
@@ -168,6 +181,7 @@ export async function varrerIngressosOrfaosCore(
         eventoId: r.eventoId,
         tentativas: carimbo.tentativas,
         falhas: r.falhas,
+        aguardando: r.aguardando,
         emitidos: r.ingressos.length,
       });
     } catch (err) {

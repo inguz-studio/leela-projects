@@ -63,6 +63,14 @@ export interface RegistroIngressoPendente {
   motivo: MotivoPendenciaIngresso;
   /** Inscritos elegíveis que ficaram sem ingresso (0 = a emissão nem rodou). */
   falhas: number;
+  /**
+   * Inscritos que ainda PODEM confirmar e por isso não têm ingresso (RF2-1).
+   * Separado de `falhas` de propósito: falha é emissão que não fechou e a
+   * varredura re-tenta; isto é gente que a operação ainda não confirmou, e o
+   * que destrava é o flip do status, não a re-tentativa. Quem lê o extrato
+   * precisa saber qual dos dois está segurando o e-mail do pedido.
+   */
+  aguardando?: number;
   /** Texto curto do porquê — `motivo` do resultado ou mensagem do erro. */
   detalhe?: string;
 }
@@ -90,6 +98,10 @@ export async function registrarIngressoPendente(
       ref,
       {
         ...registro,
+        // Normalizado, nunca espalhado como opcional: `merge: true` não apaga
+        // campo ausente, então a segunda detecção herdaria o contador da
+        // primeira e o extrato mentiria sobre o que segura o pedido HOJE.
+        aguardando: registro.aguardando ?? 0,
         ...(snap.exists
           ? {}
           : {
