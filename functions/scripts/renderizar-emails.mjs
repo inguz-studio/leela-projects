@@ -1,7 +1,7 @@
 // =============================================================================
 // functions/scripts/renderizar-emails.mjs
 //
-// Renderiza os 8 e-mails do produto em HTML, com dados de exemplo, para
+// Renderiza os 9 e-mails do produto em HTML, com dados de exemplo, para
 // `.nirvana/outputs/leela-build-2d6ee98d/emails/` (lane IDENTIDADE-EMAIL).
 //
 // POR QUE ISTO É ENTREGÁVEL, e não subproduto: gate de código não prova
@@ -9,9 +9,20 @@
 // aprova ou reprova a cara dos e-mails. Nenhum navegador é aberto aqui e
 // nenhum screenshot é tirado — o script produz o HTML e para.
 //
-// Compila só `email/identidade.ts` e `email/templates.ts` (os dois não importam
-// nada fora de si) para um diretório temporário em CommonJS e carrega dali.
-// Evita depender do build inteiro das Functions só para ver um e-mail.
+// Compila `email/identidade.ts`, `email/templates.ts` e o entry do `@leela/core`
+// para um diretório temporário em CommonJS e carrega dali. Evita depender do
+// build inteiro das Functions só para ver um e-mail.
+//
+// ⚠ POR QUE O CORE ENTRA NA COMPILAÇÃO (conserto · SPEC-CONTAS-LANDING,
+// 2026-08-05): o cabeçalho antigo dizia que os dois módulos "não importam nada
+// fora de si", e isso deixou de ser verdade em `6993a36a` (S1228-T2), quando o
+// template do ingresso passou a importar `formatarCodigoPedido` do core. Desde
+// então o script morria com `MODULE_NOT_FOUND` — o entregável que existe para
+// o dono conferir a estética dos e-mails simplesmente não rodava, e nenhum
+// teste cobria isso porque nenhum teste chama o script. O conserto compila o
+// core junto e planta um `node_modules/@leela/core` no temporário, para que a
+// resolução do Node encontre o mesmo código que a produção usa em vez de um
+// stub que mentiria sobre o formato do código da compra.
 //
 // USO: npm --prefix functions run email:render
 // =============================================================================
@@ -49,9 +60,58 @@ try {
     { cwd: FUNCTIONS, stdio: 'inherit' }
   );
 
+  // O core vai em invocação PRÓPRIA, com o tsconfig DELE. Compilá-lo junto dos
+  // dois templates, com flags soltas na linha de comando, produz erros de tipo
+  // que só existem porque as opções do pacote (`exactOptionalPropertyTypes` e
+  // companhia) não estariam ligadas — o código está certo, a compilação é que
+  // estaria errada.
+  execFileSync(
+    process.execPath,
+    [
+      resolve(FUNCTIONS, 'node_modules/typescript/bin/tsc'),
+      '-p',
+      resolve(RAIZ, 'packages/core/tsconfig.json'),
+      '--outDir',
+      join(temp, 'core'),
+      '--module',
+      'commonjs',
+      // `moduleResolution: bundler` do tsconfig.base é incompatível com
+      // `module: commonjs` (TS5095) — a resolução volta para a do Node, que é
+      // a que este carregamento em CommonJS de fato usa.
+      '--moduleResolution',
+      'node10',
+      '--declaration',
+      'false',
+      '--declarationMap',
+      'false',
+      '--sourceMap',
+      'false',
+    ],
+    { cwd: FUNCTIONS, stdio: 'inherit' }
+  );
+
+  // `rootDir` inferido é `src/email`, então os dois .js dos templates caem na
+  // raiz do outDir; o core cai em `temp/core/` pelo `rootDir: src` do pacote.
+  const TEMPLATES_JS = join(temp, 'templates.js');
+  const CORE_JS = join(temp, 'core/index.js');
+
+  // A ponte de resolução: `require('@leela/core')` dentro do templates.js
+  // compilado sobe a árvore de diretórios procurando `node_modules`, e é este
+  // pacotinho que ele encontra. Ele reexporta o core REAL compilado — nada de
+  // stub, porque um stub esconderia divergência de formato do código da compra.
+  const SHIM = join(temp, 'node_modules/@leela/core');
+  mkdirSync(SHIM, { recursive: true });
+  writeFileSync(
+    join(SHIM, 'package.json'),
+    JSON.stringify({ name: '@leela/core', main: 'index.js' })
+  );
+  writeFileSync(
+    join(SHIM, 'index.js'),
+    `module.exports = require(${JSON.stringify(CORE_JS)});\n`
+  );
+
   const require = createRequire(import.meta.url);
-  // `rootDir` inferido é `src/email`, então os dois .js caem na raiz do outDir.
-  const t = require(join(temp, 'templates.js'));
+  const t = require(TEMPLATES_JS);
   const QRCode = require(resolve(FUNCTIONS, 'node_modules/qrcode'));
 
   // Um QR de verdade, para o e-mail de ingresso sair como sai na caixa.
@@ -194,6 +254,22 @@ try {
           linkRedefinirSenha: LINK_SENHA_NOSSO,
         }),
     },
+    {
+      arquivo: '9-codigo-de-acesso.html',
+      titulo: 'Código de acesso',
+      quando:
+        'Alguém pede o código de seis dígitos no "É meu primeiro acesso" ou ' +
+        'no "Criar conta" da landing. O texto serve os QUATRO desfechos da ' +
+        'RN-477 e NÃO revela se existe conta no endereço — é a única peça do ' +
+        'catálogo cuja copy tem restrição de segurança, não de estética.',
+      render: () =>
+        t.renderCodigoDeAcessoEmail({
+          // Zeros à esquerda de propósito no exemplo: é o caso que uma
+          // conversão descuidada para número apagaria.
+          codigo: '048213',
+          validadeMinutos: 10,
+        }),
+    },
   ];
 
   mkdirSync(SAIDA, { recursive: true });
@@ -210,7 +286,7 @@ try {
     console.log(`${email.arquivo.padEnd(34)} ${r.html.length} bytes`);
   }
 
-  // Índice: uma página só para o dono percorrer os oito. As cores vêm da MESMA
+  // Índice: uma página só para o dono percorrer os nove. As cores vêm da MESMA
   // paleta dos e-mails (que espelha os tokens do design system) — a página que
   // apresenta a marca não podia ser a única coisa aqui com hex escolhido na
   // hora.
@@ -218,7 +294,7 @@ try {
   const indice =
     `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
-    `<title>Os 8 e-mails da Leela</title>` +
+    `<title>Os 9 e-mails da Leela</title>` +
     `<style>body{margin:0;background:${PALETA.canvas};color:${PALETA.tinta};` +
     `font-family:${FONTE_UI};padding:40px 24px;}` +
     `main{max-width:760px;margin:0 auto;}` +
@@ -233,7 +309,7 @@ try {
     `li .a{color:${PALETA.tintaSuave};font-size:13px;margin:8px 0 0;}` +
     `code{background:${PALETA.destaque};padding:2px 6px;border-radius:4px;font-size:12px;}` +
     `</style></head><body><main>` +
-    `<h1>Os 8 e-mails da Leela</h1>` +
+    `<h1>Os 9 e-mails da Leela</h1>` +
     `<p class="sub">Renderizados com dados de exemplo. Cada item abre o HTML ` +
     `como o cliente de e-mail recebe; o <code>.txt</code> ao lado é a versão ` +
     `em texto puro que acompanha toda mensagem.</p><ol>` +

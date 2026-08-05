@@ -751,6 +751,90 @@ export interface RedefinirSenhaEmailInput {
   linkRedefinirSenha: string;
 }
 
+// ---------------------------------------------------------------------------
+// 9. Código de acesso de seis dígitos (S1229-T2 · RN-482 · RN-477)
+//
+// O NONO e-mail do catálogo, e o único cujo texto tem uma restrição de
+// SEGURANÇA em vez de estética: ele serve os QUATRO desfechos da RN-477 e não
+// pode revelar se existe conta no endereço.
+//
+// O que isso proíbe, em letra: "sua conta", "bem-vindo de volta", "conclua seu
+// cadastro" e qualquer frase que sirva a um desfecho e não aos outros. Alguém
+// que digitou o endereço errado recebe um código para um cadastro que não vai
+// completar, e isso é TUDO o que a mensagem revela.
+//
+// O código vai como TEXTO, nunca como link. Um link no e-mail do código seria
+// uma terceira superfície de credencial ao lado do próprio código e do link do
+// e-mail 2 — e seria clicável por qualquer varredor de caixa corporativa, que
+// consumiria a credencial antes da pessoa.
+// ---------------------------------------------------------------------------
+
+export interface CodigoDeAcessoEmailInput {
+  /** Os seis dígitos, já sorteados pelo servidor. */
+  codigo: string;
+  /** Validade em minutos, para o texto não divergir da RN-476. */
+  validadeMinutos: number;
+}
+
+/** Só dígitos, comprimento fixo — a guarda do formato, no molde do ingresso. */
+const CODIGO_ACESSO_EMAIL_RE = /^[0-9]{6}$/;
+
+export function renderCodigoDeAcessoEmail(
+  input: CodigoDeAcessoEmailInput
+): EmailRenderizado {
+  // Montagem do SERVIDOR: valor fora do formato é defeito nosso, não entrada
+  // de pessoa. Falhar alto aqui é melhor que mandar um e-mail com lixo no
+  // lugar da credencial — e impede que um código truncado (zeros à esquerda
+  // perdidos numa conversão) chegue à caixa de alguém.
+  if (
+    typeof input.codigo !== 'string' ||
+    !CODIGO_ACESSO_EMAIL_RE.test(input.codigo)
+  ) {
+    throw new Error('codigo inválido para template (montagem do servidor).');
+  }
+  const minutos =
+    Number.isInteger(input.validadeMinutos) && input.validadeMinutos > 0
+      ? input.validadeMinutos
+      : 10;
+  const codigoEsc = escapeHtml(input.codigo);
+
+  // Assunto NEUTRO e sem o endereço: o assunto é a linha que mais viaja (fica
+  // em notificação de tela bloqueada, em prévia de caixa compartilhada), e
+  // ecoar o destinatário ali é PII gratuita.
+  const assunto = limparCampoCurto(
+    'Seu código de acesso à Leela',
+    TEMPLATE_ASSUNTO_MAX
+  );
+
+  const html = layoutBase(
+    'Seu código de acesso',
+    paragrafo('Use o código abaixo para continuar na tela em que você estava.') +
+      blocoDestaque(
+        `<p style="margin:0 0 2px;font-family:${FONTE_UI};font-size:12px;` +
+          `line-height:18px;letter-spacing:0.08em;text-transform:uppercase;` +
+          `color:${PALETA.tintaSuave};">Código de acesso</p>` +
+          `<p data-slot="codigo-acesso-valor" style="margin:0;font-family:${FONTE_MONO};` +
+          `font-size:32px;letter-spacing:0.18em;font-weight:700;line-height:40px;` +
+          `color:${PALETA.tinta};">${codigoEsc}</p>`,
+        'codigo-acesso'
+      ) +
+      nota(
+        `O código vale por ${minutos} minutos e serve uma vez só. Se não foi ` +
+          'você quem pediu, pode ignorar esta mensagem — nada acontece sem ' +
+          'que alguém digite o código.'
+      ),
+    'Use este código para continuar.'
+  );
+
+  const texto =
+    'Use o código abaixo para continuar na tela em que você estava.\n\n' +
+    `${input.codigo}\n\nO código vale por ${minutos} minutos e serve uma vez ` +
+    'só. Se não foi você quem pediu, pode ignorar esta mensagem — nada ' +
+    `acontece sem que alguém digite o código.${RODAPE_TEXTO}`;
+
+  return { assunto, html, texto };
+}
+
 export function renderRedefinirSenhaEmail(
   input: RedefinirSenhaEmailInput
 ): EmailRenderizado {
