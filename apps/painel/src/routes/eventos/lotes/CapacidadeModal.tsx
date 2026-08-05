@@ -12,6 +12,7 @@ import * as React from 'react';
 import { Button, Input, Modal, Textarea, useToast } from '@leela/design-system';
 import { capacidadeDoLote, validarAjusteCapacidade, type Lote } from '@leela/core';
 import { formatInt } from '../_lib/format';
+import { capacidadePrevista } from './_lib/loteForm';
 
 /** Espelho do teto de motivo do callable (functions ajustarCapacidadeLote). */
 const MOTIVO_MIN = 3;
@@ -48,9 +49,21 @@ export function CapacidadeModal({
     return <Modal open={open} onOpenChange={onOpenChange} title="Ajustar capacidade" />;
   }
 
-  const painel = capacidadeDoLote(lote);
   const nova = Number(capacidade.trim());
   const capacidadeParseavel = capacidade.trim().length > 0 && Number.isInteger(nova);
+  // REV-LOTES · frente D (achado #1): o painel acompanha o total DIGITADO, não
+  // o gravado. Esta é a ÚNICA tela onde a vaga de um lote COM VENDA é editável
+  // (no LoteModal o campo está `disabled` justamente quando `vendidos > 0`), e
+  // era aqui que o caso verbatim do dono aparecia errado: 50 configurados com
+  // 19 vendidos, digitando 20, o painel seguia mostrando "Disponível 31" — o
+  // número que ele reclamou. A aritmética é a do kernel (`capacidadePrevista`
+  // → `capacidadeDoLote`): disponível = configurado − vendido, nunca negativo.
+  // Total ilegível (vazio, meio-digitado, negativo) cai no gravado, então o
+  // painel nunca pisca em branco nem exibe dívida de vaga.
+  const painel = capacidadeParseavel
+    ? capacidadePrevista(lote, String(nova))
+    : capacidadeDoLote(lote);
+  const previa = capacidadeParseavel && nova !== lote.quantidadeLimite;
   // Espelho client-side do veredito do kernel (o callable é a autoridade).
   const erroCapacidade = capacidadeParseavel
     ? validarAjusteCapacidade(lote, nova)
@@ -103,6 +116,12 @@ export function CapacidadeModal({
           <PainelItem rotulo="Vendido" valor={painel.vendido} tom="neutral" />
           <PainelItem rotulo="Disponível" valor={painel.disponivel} tom="success" />
         </div>
+        {previa && (
+          <p role="status" className="text-[length:var(--font-size-xs)] text-[var(--text-tertiary)]">
+            {`Prévia do total digitado (${formatInt(painel.configurado)}). Ainda não salvo — ` +
+              `o gravado hoje é ${formatInt(lote.quantidadeLimite)}.`}
+          </p>
+        )}
 
         <Input
           id="capacidade-nova"

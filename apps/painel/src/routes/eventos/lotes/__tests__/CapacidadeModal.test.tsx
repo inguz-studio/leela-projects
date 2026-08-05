@@ -62,6 +62,69 @@ describe('CapacidadeModal · aritmética e recusa (frente D)', () => {
     expect(onAjustar).toHaveBeenCalledWith('5k-lote-2', 20, 'Fechando as vagas que sobraram.');
   });
 
+  // ---------------------------------------------------------------------------
+  // REV-LOTES · achado #1 (frente D) — a ARITMÉTICA NA TELA, não só no payload.
+  //
+  // O teste acima provava que o 20 chega no callable. O dono não reclamou do
+  // payload: ele reclamou do NÚMERO NA TELA ("editar total de 50 para 20 com 19
+  // vendidos ⇒ 1 disponível, não 31"). Esta é a única tela onde a vaga de um
+  // lote COM VENDA é editável — no LoteModal o campo fica `disabled` exatamente
+  // quando `vendidos > 0` —, e o painel daqui lia só o valor GRAVADO. Sem estes
+  // testes, o 31 continuava na cara dele com a suíte verde.
+  // ---------------------------------------------------------------------------
+  it('o painel acompanha o total digitado: 50 → 20 com 19 vendidos mostra 1, não 31', async () => {
+    renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('31');
+
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+    await usuario.clear(campo);
+    await usuario.type(campo, '20');
+
+    expect(screen.getByText('Configurado').nextSibling).toHaveTextContent('20');
+    expect(screen.getByText('Vendido').nextSibling).toHaveTextContent('19');
+    expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('1');
+    // A prévia diz que ainda não está salvo, e lembra o número gravado.
+    expect(screen.getByRole('status')).toHaveTextContent(/ainda não salvo/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/50/);
+  });
+
+  it('total igual ao vendido zera o disponível na prévia (sem negativo)', async () => {
+    renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+    await usuario.clear(campo);
+    await usuario.type(campo, '19');
+    expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('0');
+  });
+
+  it('nenhum caminho de tela mostra disponível negativo — nem abaixo do vendido, nem negativo digitado', async () => {
+    renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    const campo = screen.getByLabelText(/Nova capacidade/i);
+
+    // Abaixo do vendido: recusado, e o disponível fica em 0 — nunca −9.
+    await usuario.clear(campo);
+    await usuario.type(campo, '10');
+    expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('0');
+    expect(screen.getByText('Disponível').nextSibling).not.toHaveTextContent('-');
+
+    // Total negativo digitado: ilegível para a prévia, cai no gravado.
+    await usuario.clear(campo);
+    await usuario.type(campo, '-5');
+    expect(screen.getByText('Disponível').nextSibling).not.toHaveTextContent('-');
+    expect(screen.getByRole('button', { name: 'Salvar capacidade' })).toBeDisabled();
+  });
+
+  it('campo vazio ou meio-digitado não pisca o painel em branco', async () => {
+    renderModal();
+    const usuario = userEvent.setup({ delay: null });
+    await usuario.clear(screen.getByLabelText(/Nova capacidade/i));
+    expect(screen.getByText('Configurado').nextSibling).toHaveTextContent('50');
+    expect(screen.getByText('Disponível').nextSibling).toHaveTextContent('31');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('baixar ABAIXO do vendido é recusado com o limite à mostra, e nada é chamado', async () => {
     const onAjustar = renderModal();
     const usuario = userEvent.setup({ delay: null });
