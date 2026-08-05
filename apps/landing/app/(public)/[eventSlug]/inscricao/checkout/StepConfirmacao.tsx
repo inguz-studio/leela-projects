@@ -117,8 +117,15 @@ export function StepConfirmacao({
           a mensagem dele, com a orientação de e-mail junto. O que saiu daqui
           era honesto mas mudo — dizia o estado e não dizia o que fazer com
           ele, e foi essa mudez que o comprador do primeiro PIX real encontrou.
-          O CTA "ver meus pedidos" entra na S1225-T4, quando a área do cliente
-          existir (dependência dura da S1222-T2). */}
+          O CTA "ver meus pedidos" fechou o trio na S1225-T4, dentro do próprio
+          `AvisoPedidoEmConfirmacao` — ali ele vive junto da mensagem e da
+          orientação, que é como o dono os descreveu.
+
+          O estado PAGO segue sem o CTA, e é escolha: aqui embaixo já vem o
+          ingresso com QR por inscrito, e mandar a pessoa para uma lista no
+          exato momento em que ela tem o ingresso na tela é tirá-la de onde ela
+          queria chegar. Quem entra depois, de outro aparelho, chega pela
+          `/minha-conta` — que é o caminho que a S1222-T2 abriu. */}
       {pago ? (
         <section className="rounded-ds-lg border border-border-subtle bg-feedback-success-surface p-5">
           <h2 className="text-lg font-bold text-feedback-success-fg">Inscrição confirmada!</h2>

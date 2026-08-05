@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { Mail } from 'lucide-react';
+import { ctaMeusPedidos } from '@/lib/areaDoCliente';
 
 /**
  * "Estamos confirmando o seu pedido" — a v1 do feedback pós-pagamento
@@ -19,12 +21,12 @@ import { Mail } from 'lucide-react';
  * de confirmação). Duas cópias da mesma frase divergem na primeira revisão de
  * copy — e esta é a frase que o dono escreveu.
  *
- * O CTA "ver meus pedidos" NÃO está aqui, e a ausência é deliberada: ele
- * aterrissa no Meus Ingressos da S1222, que ainda não existe. É a S1225-T4, e
- * a dependência é dura (`04-fila-codigo.md`) — apontar CTA para rota
- * inexistente repetiria o erro que a ordem C1→C2 da fila ADMINSEP já proibiu,
- * trocar tela feia por 404. Enquanto isso a v1 vive de mensagem + orientação
- * de e-mail, que é exatamente o que o dono pediu "de início".
+ * O CTA "ver meus pedidos" CHEGOU (S1225-T4). Ele esperava a área do cliente
+ * (S1222-T2) existir, porque a dependência é dura (`04-fila-codigo.md`):
+ * apontar CTA para rota inexistente repetiria o erro que a ordem C1→C2 da fila
+ * ADMINSEP já proibiu, trocar tela feia por 404. Quem responde se ele pode
+ * aparecer é `ctaMeusPedidos()`, sobre a MESMA trava que decide o destino do
+ * `/definir-senha` — uma constante, não três telas opinando.
  *
  * O QUE ESTE BLOCO NUNCA DIZ: que a confirmação chega sozinha nesta tela.
  * Não há `onSnapshot` nem polling no checkout (v2, RN-470), então prometer
@@ -65,6 +67,7 @@ export function AvisoPedidoEmConfirmacao({
    */
   children?: React.ReactNode;
 }): React.JSX.Element {
+  const cta = ctaMeusPedidos();
   return (
     <section
       role="status"
@@ -96,6 +99,27 @@ export function AvisoPedidoEmConfirmacao({
           Se não encontrar em alguns minutos, olhe também no spam.
         </p>
       </div>
+      {/* S1225-T4 · o terceiro elemento que o dono fixou, e o último a chegar:
+          "um CTA para ele visualizar os próprios pedidos dentro do sistema".
+          Ele esperava a área do cliente (S1222-T2) existir — apontar CTA para
+          rota inexistente trocaria tela genérica por 404, e a trava que
+          segurava isso é `AREA_CLIENTE_NO_AR`, consultada por
+          `ctaMeusPedidos()`. `null` = área fora do ar ⇒ nenhum botão, nunca um
+          botão quebrado.
+
+          É um LINK com cara de botão, não um `<button>` com `router.push`: o
+          destino é uma rota, e quem quiser abrir em outra aba (para não perder
+          o QR do PIX desta tela) precisa do menu de contexto que só um `<a>`
+          oferece. */}
+      {cta !== null ? (
+        <Link
+          href={cta.href}
+          data-slot="cta-meus-pedidos"
+          className="inline-flex w-fit items-center rounded-ds-pill border border-feedback-info px-4 py-2 text-sm font-semibold text-feedback-info-fg transition-colors hover:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+        >
+          {cta.rotulo}
+        </Link>
+      ) : null}
       {children}
     </section>
   );

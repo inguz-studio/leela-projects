@@ -40,3 +40,22 @@ export function destinoPosEntrada(): DestinoPosEntrada {
   if (AREA_CLIENTE_NO_AR) return { href: ROTA_AREA_CLIENTE, rotulo: 'Ver meus ingressos' };
   return { href: '/', rotulo: 'Ir para a página inicial' };
 }
+
+/**
+ * O CTA do feedback pós-compra (S1225-T4 · D-0804-2), na frase do dono: "um
+ * CTA para ele visualizar os próprios pedidos dentro do sistema".
+ *
+ * `null` quando a área não está no ar — e é por isso que ele é uma função e
+ * não um `<Link>` solto na tela do checkout: CTA apontando para rota
+ * inexistente troca tela genérica por 404, que é pior que o estado de hoje. A
+ * mesma trava que segurou este botão até a S1222-T2 subir.
+ *
+ * O RÓTULO diz "ingressos", não "pedidos", e a diferença é deliberada: é para
+ * a lista de ingressos que o botão aterrissa, e a de compras está na aba ao
+ * lado. Prometer "pedidos" e entregar ingressos seria uma promessa torta na
+ * primeira tela que a pessoa vê depois de pagar.
+ */
+export function ctaMeusPedidos(): DestinoPosEntrada | null {
+  if (!AREA_CLIENTE_NO_AR) return null;
+  return { href: ROTA_AREA_CLIENTE, rotulo: 'Ver meus ingressos' };
+}

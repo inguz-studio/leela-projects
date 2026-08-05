@@ -11,9 +11,9 @@
 //
 // A v1 do dono (verbatim, DEC-0804): mensagem "Estamos confirmando o seu
 // pedido", CTA para os próprios pedidos e orientação de conferir o e-mail.
-// **O CTA está fora desta lane de propósito** (S1225-T4, dep. dura da S1222-T2
-// — a área do cliente não existe), e há teste para essa ausência: um CTA
-// apontando para rota inexistente trocaria tela feia por 404.
+// O CTA CHEGOU na S1225-T4, depois que a área do cliente (S1222-T2) subiu
+// — a dependência era dura. O que os casos provam agora é que ele existe E
+// tem destino: um CTA apontando para rota inexistente trocaria tela feia por 404.
 //
 // Sem Firebase — os três componentes só importam TIPOS do api-client.
 // =============================================================================
@@ -21,11 +21,17 @@
 import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import { StepConfirmacao } from '../app/(public)/[eventSlug]/inscricao/checkout/StepConfirmacao';
 import { AvisoPedidoEmConfirmacao } from '../app/(public)/[eventSlug]/inscricao/checkout/AvisoPedidoEmConfirmacao';
 import { ToastProvider } from '../app/_ds/ds';
+import {
+  AREA_CLIENTE_NO_AR,
+  ROTA_AREA_CLIENTE,
+  ctaMeusPedidos,
+  destinoPosEntrada,
+} from '../lib/areaDoCliente';
 
 afterEach(cleanup);
 
@@ -131,19 +137,56 @@ describe('S1225-T2 · resposta já conhecida não vira espera', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// O CTA é gated — e a ausência é o teste
+// O CTA é gated — e agora o gate está ABERTO (S1225-T4)
 // ─────────────────────────────────────────────────────────────────────────
-describe('S1225-T2 · o CTA "ver meus pedidos" NÃO nasce sem destino', () => {
-  it('nenhum caminho para "meus pedidos" enquanto a área do cliente não existe', () => {
+//
+// Este bloco afirmava a AUSÊNCIA do CTA, e a afirmação era temporária por
+// contrato: a fila (`04-fila-codigo.md` §Frente 2) escreve que "quando a B2
+// subir, a S1225-T4 destrava". A B2 subiu. O que o bloco prova agora é a outra
+// metade da mesma regra — o CTA existe E aponta para a rota que existe. A
+// propriedade que NÃO mudou é a que importa: o botão nunca nasce sem destino, e
+// quem decide isso continua sendo uma constante só (`AREA_CLIENTE_NO_AR`).
+describe('S1225-T4 · o CTA "ver meus pedidos" fecha o trio que o dono pediu', () => {
+  it('o CTA aparece no bloco de confirmação e leva à área do cliente', () => {
     renderConfirmacao('pendente', 'pix');
-    expect(screen.queryByText(/meus pedidos/i)).toBeNull();
-    expect(screen.queryByText(/meus ingressos/i)).toBeNull();
-    const links = screen.queryAllByRole('link');
-    for (const l of links) {
-      const href = l.getAttribute('href') ?? '';
-      expect(href.includes('/pedidos')).toBe(false);
-      expect(href.includes('/meus-')).toBe(false);
-    }
+    const cta = screen.getByRole('link', { name: /ver meus ingressos/i });
+    expect(cta.getAttribute('href')).toBe(ROTA_AREA_CLIENTE);
+  });
+
+  it('os três elementos do verbatim do dono estão no MESMO bloco', () => {
+    renderConfirmacao('pendente', 'pix');
+    const bloco = screen.getByRole('status');
+    const dentro = within(bloco);
+    expect(dentro.getByText(/estamos confirmando o seu pedido/i)).toBeTruthy();
+    expect(dentro.getByRole('link', { name: /ver meus ingressos/i })).toBeTruthy();
+    expect(dentro.getByText(/o acesso do seu ingresso vai por lá/i)).toBeTruthy();
+  });
+
+  it('o destino do CTA é a MESMA constante do fim do `/definir-senha`', () => {
+    // Duas jornadas, um destino. Se algum dia elas divergirem, é porque
+    // alguém cravou a rota numa tela em vez de consultar o módulo.
+    expect(ctaMeusPedidos()?.href).toBe(destinoPosEntrada().href);
+  });
+
+  it('com a área FORA do ar, nenhum botão é desenhado — nunca um link quebrado', () => {
+    // A falsificação da trava, sem mexer no estado global: o contrato de
+    // `ctaMeusPedidos` é devolver `null`, e o componente só desenha quando não
+    // é `null`. Provar o `null` prova a ausência do botão.
+    expect(AREA_CLIENTE_NO_AR).toBe(true);
+    const fonte = readFileSync(
+      resolve(__dirname, '../app/(public)/[eventSlug]/inscricao/checkout/AvisoPedidoEmConfirmacao.tsx'),
+      'utf8'
+    );
+    expect(fonte).toContain('ctaMeusPedidos()');
+    expect(fonte).toContain('cta !== null');
+    // E o destino NÃO está cravado na tela: ele vem do módulo.
+    expect(fonte).not.toContain(`"${ROTA_AREA_CLIENTE}"`);
+    expect(fonte).not.toContain(`'${ROTA_AREA_CLIENTE}'`);
+  });
+
+  it('o estado PAGO segue sem o CTA — o ingresso já está na tela', () => {
+    renderConfirmacao('pago', 'pix');
+    expect(screen.queryByRole('link', { name: /ver meus ingressos/i })).toBeNull();
   });
 });
 
