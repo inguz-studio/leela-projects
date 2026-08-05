@@ -21,18 +21,21 @@
 // número e quem reprova é o core.
 // =============================================================================
 
-import { validarSolicitacao } from '@leela/core';
+import { mensagemValorInvalido, parseValorPtBr, validarSolicitacao } from '@leela/core';
 
 /**
  * Converte o texto do campo em reais SEM arredondar — "10,005" continua
  * 10.005 para que a checagem de cent-exatidão tenha o que reprovar.
- * `null` = campo vazio ou ilegível. @pure
+ * `null` = campo vazio, ilegível ou ambíguo. @pure
+ *
+ * Lê pelo `parseValorPtBr` do core (FIX-PARSE-DINHEIRO), usando o campo
+ * `valor`, que é o decimal exato sem arredondamento — é exatamente o que esta
+ * tela precisa. O `centavos` do mesmo resultado existe para quem quer o
+ * cent-exato; aqui ele seria a mentira que o cabeçalho recusa.
  */
 export function parseValorRepasse(texto: string): number | null {
-  const t = texto.trim();
-  if (t === '') return null;
-  const n = Number(t.replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
+  const lido = parseValorPtBr(texto);
+  return lido.ok ? lido.valor : null;
 }
 
 /**
@@ -64,7 +67,8 @@ export interface AvaliacaoRepasse {
  * em vez de deixar a pessoa caçar o erro do servidor.
  */
 export function avaliarRepasse(texto: string, saldo: number): AvaliacaoRepasse {
-  const valor = parseValorRepasse(texto);
+  const lido = parseValorPtBr(texto);
+  const valor = lido.ok ? lido.valor : null;
 
   if (!Number.isFinite(saldo) || saldo < 0) {
     return {
@@ -76,26 +80,33 @@ export function avaliarRepasse(texto: string, saldo: number): AvaliacaoRepasse {
   if (saldo === 0) {
     return { valor, podeEnviar: false, hint: 'Não há saldo de comissão a repassar.' };
   }
-  if (valor === null) {
+  if (!lido.ok) {
     // Campo vazio é começo de digitação, não erro — não acusar antes da hora.
-    return { valor: null, podeEnviar: false, hint: null };
+    // Texto ILEGÍVEL é outra coisa: antes o botão só ficava morto e a pessoa
+    // não tinha como saber por quê. Agora a recusa diz o nome dela.
+    return {
+      valor: null,
+      podeEnviar: false,
+      hint: lido.motivo === 'vazio' ? null : mensagemValorInvalido(lido.motivo),
+    };
   }
 
-  const veredito = validarSolicitacao(valor, saldo);
-  if (veredito.ok) return { valor, podeEnviar: true, hint: null };
+  const valorLido = lido.valor;
+  const veredito = validarSolicitacao(valorLido, saldo);
+  if (veredito.ok) return { valor: valorLido, podeEnviar: true, hint: null };
 
-  if (valor > saldo) {
+  if (valorLido > saldo) {
     return {
       valor,
       podeEnviar: false,
       hint: 'O valor excede o saldo de comissão deste afiliado.',
     };
   }
-  if (valor <= 0) {
-    return { valor, podeEnviar: false, hint: 'Informe um valor maior que zero.' };
+  if (valorLido <= 0) {
+    return { valor: valorLido, podeEnviar: false, hint: 'Informe um valor maior que zero.' };
   }
   return {
-    valor,
+    valor: valorLido,
     podeEnviar: false,
     hint: 'Informe um valor em reais e centavos (no máximo duas casas decimais).',
   };

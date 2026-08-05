@@ -9,6 +9,7 @@ import {
   formatarDocumento,
   isCodigoCupomValido,
   normalizarCodigoCupom,
+  parseValorPtBr,
   valorCupomValido,
   validarDocumento,
   validarEmail,
@@ -113,6 +114,21 @@ export function millisDeInputLocal(valor: string): number | null {
   return Number.isFinite(ms) ? ms : null;
 }
 
+/**
+ * Valor da condição de desconto conforme o tipo, ou `null` quando o texto é
+ * ilegível/ambíguo. @pure
+ *
+ * Uma função só para a validação e para o submit: antes cada lado fazia o seu
+ * próprio `Number(valor.replace(',', '.'))`, e os dois liam "1.234,56" como
+ * 1.234 — a validação aprovava R$ 1,23 e a página gravava R$ 1,23
+ * (FIX-PARSE-DINHEIRO). Percentual usa o decimal exato; fixo usa o cent-exato.
+ */
+export function parseValorCondicao(tipo: TipoCupom, bruto: string): number | null {
+  const lido = parseValorPtBr(bruto);
+  if (!lido.ok) return null;
+  return tipo === 'fixo' ? lido.centavos / 100 : lido.valor;
+}
+
 /** Erros de forma da condição de desconto (vazio = pronto). @pure */
 export function validarCondicaoDesconto(v: CondicaoDescontoValues): string[] {
   const erros: string[] = [];
@@ -121,7 +137,7 @@ export function validarCondicaoDesconto(v: CondicaoDescontoValues): string[] {
   if (!isCodigoCupomValido(codigo)) {
     erros.push('Código do cupom fora do padrão A-Z0-9 (3–20 caracteres).');
   }
-  const valorNum = Number(v.valor.replace(',', '.'));
+  const valorNum = parseValorCondicao(v.tipo, v.valor);
   if (!valorCupomValido(v.tipo, valorNum)) {
     erros.push(
       v.tipo === 'percentual'

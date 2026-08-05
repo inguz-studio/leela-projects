@@ -10,9 +10,35 @@ import {
   estadoCupomBadge,
   labelDesconto,
   labelUsos,
+  parseValorCupom,
   validarFormCupom,
   type CupomFormValues,
 } from '../cupomForm';
+
+describe('parseValorCupom (FIX-PARSE-DINHEIRO)', () => {
+  it('desconto fixo com milhar: "1.234,56" é R$ 1.234,56, não R$ 1,23', () => {
+    expect(parseValorCupom('fixo', '1.234,56')).toBe(1234.56);
+    expect(Math.round(parseValorCupom('fixo', '1.234,56')! * 100)).toBe(123456);
+    expect(parseValorCupom('fixo', 'R$ 1.234,56')).toBe(1234.56);
+  });
+
+  it('percentual mantém a fração exata', () => {
+    expect(parseValorCupom('percentual', '12,5')).toBe(12.5);
+    expect(parseValorCupom('percentual', '10')).toBe(10);
+  });
+
+  it('fixo sai cent-exato', () => {
+    expect(parseValorCupom('fixo', '50,00')).toBe(50);
+    expect(parseValorCupom('fixo', '99,999')).toBe(100);
+  });
+
+  it('ilegível e ambíguo viram null', () => {
+    expect(parseValorCupom('fixo', '')).toBeNull();
+    expect(parseValorCupom('fixo', 'abc')).toBeNull();
+    expect(parseValorCupom('fixo', '1.500')).toBeNull();
+    expect(parseValorCupom('percentual', '1e3')).toBeNull();
+  });
+});
 
 /** Timestamp-like mínimo (toMillis/toDate) para os fixtures. */
 function ts(ms: number): Timestamp {

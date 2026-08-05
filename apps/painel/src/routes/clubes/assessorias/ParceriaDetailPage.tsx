@@ -29,6 +29,7 @@ import {
   CONDICAO_VALORES_INICIAIS,
   formatarDocumentoValor,
   millisDeInputLocal,
+  parseValorCondicao,
   statusParceriaBadge,
   tetoUsoParaNumero,
   validarCondicaoDesconto,
@@ -99,6 +100,10 @@ export function ParceriaDetailPage(): JSX.Element {
     const inicio = millisDeInputLocal(values.inicio);
     const fim = millisDeInputLocal(values.fim);
     if (inicio === null || fim === null) return;
+    // O MESMO parse que `validarCondicaoDesconto` usou para liberar o botão —
+    // não um segundo `Number(...)` que pode discordar dele (FIX-PARSE-DINHEIRO).
+    const valor = parseValorCondicao(values.tipo, values.valor);
+    if (valor === null) return;
     setErro(null);
     setEnviando(true);
     try {
@@ -107,7 +112,7 @@ export function ParceriaDetailPage(): JSX.Element {
         eventoId: values.eventoId,
         codigo: values.codigo,
         tipo: values.tipo,
-        valor: Number(values.valor.replace(',', '.')),
+        valor,
         tetoUso: tetoUsoParaNumero(values.tetoUso),
         inicioEmMillis: inicio,
         fimEmMillis: fim,

@@ -14,6 +14,18 @@ describe('parseValorReais', () => {
     expect(parseValorReais('   ')).toBeNull();
     expect(parseValorReais('abc')).toBeNull();
   });
+
+  it('separador de milhar sobrevive: pede-se 1.234,56 e sai 1234,56', () => {
+    // FIX-PARSE-DINHEIRO: o `replace(',', '.')` pedia R$ 1,23 de repasse.
+    expect(parseValorReais('1.234,56')).toBe(1234.56);
+    expect(Math.round(parseValorReais('1.234,56')! * 100)).toBe(123456);
+    expect(parseValorReais('R$ 8.500,00')).toBe(8500);
+  });
+
+  it('ponto ambíguo vira null em vez de um pedido mil vezes menor', () => {
+    expect(parseValorReais('1.500')).toBeNull();
+    expect(parseValorReais('1e3')).toBeNull();
+  });
 });
 
 // A assinatura antiga (texto, disponivelDoTenant) descrevia o mundo em que o

@@ -25,6 +25,8 @@ import {
   KIT_ITEM_MAX,
   KIT_ITENS_MAX,
   MSG_PRECO_BLOQUEADO,
+  mensagemValorInvalido,
+  parseValorPtBr,
   precoBloqueado,
   promoverFotoPrincipal,
   removerFotoPrincipal,
@@ -108,6 +110,11 @@ export function KitEditor({
     () => new Set(kit ? itens.filter((i) => i.kits.includes(kit.id)).map((i) => i.id) : []),
   );
   const [erro, setErro] = React.useState<string | null>(null);
+  // Recusa do preço em campo PRÓPRIO: o `erro` acima só é renderizado no campo
+  // de nome (e só quando o nome está vazio), então uma recusa de preço ficava
+  // no estado sem nunca chegar à tela — o botão "Salvar kit" simplesmente não
+  // fazia nada. Numa tela de dinheiro isso não pode ficar mudo.
+  const [precoErro, setPrecoErro] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   const disponiveis = evento.modalidades.filter((m) => !modalidades.includes(m));
@@ -217,11 +224,17 @@ export function KitEditor({
       setErro('Informe o nome do kit.');
       return;
     }
-    const preco = Number.parseFloat(precoStr.replace(',', '.'));
-    if (!Number.isFinite(preco)) {
-      setErro('Preço inválido.');
+    // Preço pelo parser único do core (FIX-PARSE-DINHEIRO): "1.234,56" virava
+    // 1.234 no `parseFloat` e o kit era gravado a R$ 1,23. Negativo continua
+    // válido aqui (RN-211), e a recusa agora diz o que fazer em vez de repetir
+    // "inválido" para todo texto que ela não entendeu.
+    const lido = parseValorPtBr(precoStr);
+    if (!lido.ok) {
+      setPrecoErro(mensagemValorInvalido(lido.motivo));
       return;
     }
+    setPrecoErro(null);
+    const preco = lido.centavos / 100;
     const capacidade = Number.parseInt(capacidadeStr, 10);
     setBusy(true);
     try {
@@ -360,9 +373,16 @@ export function KitEditor({
           type="text"
           inputMode="decimal"
           value={precoStr}
-          onChange={(e) => setPrecoStr(e.target.value)}
+          onChange={(e) => {
+            setPrecoStr(e.target.value);
+            setPrecoErro(null);
+          }}
           disabled={bloqueado}
-          {...(bloqueado ? { errorMessage: MSG_PRECO_BLOQUEADO } : {})}
+          {...(bloqueado
+            ? { errorMessage: MSG_PRECO_BLOQUEADO }
+            : precoErro !== null
+              ? { errorMessage: precoErro }
+              : {})}
         />
         <Input
           id="kit-capacidade"

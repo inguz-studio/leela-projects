@@ -17,18 +17,20 @@
 // RN-369: sem evento escolhido não há solicitação — o "sem associação" morreu.
 // =============================================================================
 
-import { validarSolicitacao } from '@leela/core';
+import { mensagemValorInvalido, parseValorPtBr, validarSolicitacao } from '@leela/core';
 
 /**
- * Converte o texto do campo (input numérico, decimal com "." ou ",") em reais
- * cent-exatos, ou `null` quando vazio/inválido. @pure
+ * Converte o texto do campo em reais cent-exatos, ou `null` quando
+ * vazio/ilegível/ambíguo. @pure
+ *
+ * Lê pelo `parseValorPtBr` do core (FIX-PARSE-DINHEIRO): o `replace(',', '.')`
+ * anterior lia uma solicitação de "1.234,56" como R$ 1,23 e o organizador
+ * pedia mil reais a menos do que quis. O cent-exato sai dos DÍGITOS, então
+ * `Math.round(n * 100)` sobre float saiu junto.
  */
 export function parseValorReais(texto: string): number | null {
-  const t = texto.trim();
-  if (t === '') return null;
-  const n = Number(t.replace(',', '.'));
-  if (!Number.isFinite(n)) return null;
-  return Math.round(n * 100) / 100; // cent-exato (evita ruído de float)
+  const lido = parseValorPtBr(texto);
+  return lido.ok ? lido.centavos / 100 : null;
 }
 
 export interface AvaliacaoSolicitacao {
@@ -73,7 +75,15 @@ export function avaliarSolicitacao(
     };
   }
   if (valor === null) {
-    return { valor: null, podeEnviar: false, hint: null };
+    // Vazio é começo de digitação e não acusa nada. Texto ILEGÍVEL passava por
+    // aqui calado também: o botão morria sem dizer por quê. Agora a recusa do
+    // parser vira hint (FIX-PARSE-DINHEIRO).
+    const lido = parseValorPtBr(texto);
+    return {
+      valor: null,
+      podeEnviar: false,
+      hint: lido.ok || lido.motivo === 'vazio' ? null : mensagemValorInvalido(lido.motivo),
+    };
   }
   if (disponivelDoEvento === null) {
     return {

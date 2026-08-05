@@ -57,6 +57,21 @@ describe('parsePrecoReais + arredondarCentavos (money-config cent-exato)', () =>
     expect(parsePrecoReais('abc')).toBeNull();
     expect(parsePrecoReais('')).toBeNull();
   });
+
+  it('separador de milhar sobrevive: "1.234,56" é o preço inteiro do lote', () => {
+    // FIX-PARSE-DINHEIRO: o `replace(',', '.')` fazia "1.234.56", o parseFloat
+    // parava no segundo ponto e o lote era gravado a R$ 1,23.
+    expect(parsePrecoReais('1.234,56')).toBe(1234.56);
+    expect(Math.round(parsePrecoReais('1.234,56')! * 100)).toBe(123456);
+    expect(parsePrecoReais('R$ 1.234,56')).toBe(1234.56);
+    expect(parsePrecoReais('1.234.567,89')).toBe(1234567.89);
+  });
+
+  it('ponto ambíguo vira recusa, nunca um preço mil vezes menor', () => {
+    expect(parsePrecoReais('1.500')).toBeNull();
+    expect(parsePrecoReais('1.234')).toBeNull();
+    expect(parsePrecoReais('1e3')).toBeNull();
+  });
 });
 
 describe('datetime-local ↔ Date/Timestamp (PINADO em FUSO_EVENTO — review S300-T4 #2)', () => {

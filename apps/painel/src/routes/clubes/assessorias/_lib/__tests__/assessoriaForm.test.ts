@@ -8,6 +8,7 @@ import {
   CADASTRO_VALORES_INICIAIS,
   CONDICAO_VALORES_INICIAIS,
   millisDeInputLocal,
+  parseValorCondicao,
   problemaDoDocumento,
   statusParceriaBadge,
   tetoUsoParaNumero,
@@ -88,6 +89,42 @@ describe('validarCondicaoDesconto', () => {
   it('reprova teto de usos não inteiro', () => {
     const erros = validarCondicaoDesconto({ ...base, tetoUso: '1.5' });
     expect(erros.some((e) => e.toLowerCase().includes('teto'))).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // FIX-PARSE-DINHEIRO: a validação e o submit da ParceriaDetailPage tinham cada
+  // um o seu `Number(valor.replace(',', '.'))`, e os dois liam "1.234,56" como
+  // 1.234 — a tela aprovava e gravava R$ 1,23 de desconto sem dizer nada.
+  // ---------------------------------------------------------------------------
+
+  it('aprova desconto fixo escrito com separador de milhar', () => {
+    expect(
+      validarCondicaoDesconto({ ...base, tipo: 'fixo', valor: '1.234,56' }),
+    ).toEqual([]);
+  });
+
+  it('recusa o ponto ambíguo em vez de aprovar um desconto mil vezes menor', () => {
+    const erros = validarCondicaoDesconto({ ...base, tipo: 'fixo', valor: '1.500' });
+    expect(erros.some((e) => e.toLowerCase().includes('valor fixo'))).toBe(true);
+  });
+});
+
+describe('parseValorCondicao — o valor que a página envia (FIX-PARSE-DINHEIRO)', () => {
+  it('desconto fixo com milhar chega inteiro no payload', () => {
+    expect(parseValorCondicao('fixo', '1.234,56')).toBe(1234.56);
+    expect(Math.round(parseValorCondicao('fixo', '1.234,56')! * 100)).toBe(123456);
+    expect(parseValorCondicao('fixo', 'R$ 1.234,56')).toBe(1234.56);
+  });
+
+  it('percentual mantém a fração exata; fixo sai cent-exato', () => {
+    expect(parseValorCondicao('percentual', '12,5')).toBe(12.5);
+    expect(parseValorCondicao('fixo', '99,999')).toBe(100);
+  });
+
+  it('ilegível e ambíguo viram null (a página não envia)', () => {
+    expect(parseValorCondicao('fixo', '')).toBeNull();
+    expect(parseValorCondicao('fixo', 'abc')).toBeNull();
+    expect(parseValorCondicao('fixo', '1.500')).toBeNull();
   });
 });
 

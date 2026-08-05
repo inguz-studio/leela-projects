@@ -19,16 +19,36 @@ import type {
   SalvarAfiliadoClientResult,
 } from '@leela/api-client';
 import type { AfiliadoDoTenant } from '@leela/api-client';
-import { isComissaoAfiliadoValida } from '@leela/core';
+import { isComissaoAfiliadoValida, parseValorPtBr } from '@leela/core';
 
 type TipoComissao = 'nenhuma' | 'percentual' | 'valor_fixo';
 
-/** Reconstrói a config de comissão do formulário (null = sem comissão). */
-function montarComissao(tipo: TipoComissao, valor: string): ComissaoAfiliadoClient | null {
+/**
+ * Reconstrói a config de comissão do formulário (null = sem comissão).
+ *
+ * Lê pelo `parseValorPtBr` do core (FIX-PARSE-DINHEIRO): comissão fixa de
+ * "R$ 1.234,56" por inscrição virava R$ 1,23 pelo `replace(',', '.')`, e o
+ * afiliado seria pago mil vezes menos. Texto ilegível vira `NaN` de propósito —
+ * é o que `isComissaoAfiliadoValida` já reprovava antes, então o botão continua
+ * desabilitado pelo mesmo caminho.
+ *
+ * Exportada para teste de mesa: o campo é `type="number"`, e o jsdom (como o
+ * browser) higieniza para "" tudo que não seja número de ponto flutuante, então
+ * pelo teclado o teste não alcança o parse. A tabela de casos entra direto.
+ */
+export function montarComissao(
+  tipo: TipoComissao,
+  valor: string
+): ComissaoAfiliadoClient | null {
   if (tipo === 'nenhuma') return null;
-  const n = Number(valor.replace(',', '.'));
-  if (tipo === 'percentual') return { tipo: 'percentual', percentual: n };
-  return { tipo: 'valor_fixo', valorPorInscricao: n };
+  const lido = parseValorPtBr(valor);
+  if (tipo === 'percentual') {
+    return { tipo: 'percentual', percentual: lido.ok ? lido.valor : Number.NaN };
+  }
+  return {
+    tipo: 'valor_fixo',
+    valorPorInscricao: lido.ok ? lido.centavos / 100 : Number.NaN,
+  };
 }
 
 export interface AfiliadoModalProps {

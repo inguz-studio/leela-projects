@@ -24,7 +24,7 @@ import {
   isCodigoCupomValido,
   isDataHoraLocalISO,
   normalizarCodigoCupom,
-  roundMoney,
+  parseValorPtBr,
   valorCupomValido,
   type Cupom,
   type TipoCupom,
@@ -69,14 +69,19 @@ export type ResultadoValidacaoCupom =
 // ---------------------------------------------------------------------------
 
 /**
- * Parse do valor conforme o tipo. Percentual: número (aceita fração, ex. 12,5);
- * fixo: R$ cent-exato (roundMoney — condição de `moneyCentExato` na Rule).
- * `null` quando não-finito. @pure
+ * Parse do valor conforme o tipo. Percentual: número exato (aceita fração, ex.
+ * 12,5); fixo: R$ cent-exato (condição de `moneyCentExato` na Rule).
+ * `null` quando ilegível ou ambíguo. @pure
+ *
+ * Lê pelo `parseValorPtBr` do core (FIX-PARSE-DINHEIRO). O `replace(',', '.')`
+ * anterior fazia "R$ 1.234,56" de desconto virar R$ 1,23 no cupom, calado. O
+ * cent-exato do fixo agora sai dos DÍGITOS e não de `roundMoney` sobre float:
+ * é a mesma regra half-up, sem o erro binário que ela precisava compensar.
  */
 export function parseValorCupom(tipo: TipoCupom, s: string): number | null {
-  const n = Number.parseFloat(s.trim().replace(',', '.'));
-  if (!Number.isFinite(n)) return null;
-  return tipo === 'fixo' ? roundMoney(n) : n;
+  const lido = parseValorPtBr(s);
+  if (!lido.ok) return null;
+  return tipo === 'fixo' ? lido.centavos / 100 : lido.valor;
 }
 
 /** Date → valor de `<input type="datetime-local">` pinado em FUSO_EVENTO. @pure */

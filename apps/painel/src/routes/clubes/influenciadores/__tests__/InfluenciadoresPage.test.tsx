@@ -5,7 +5,7 @@
 // de repasse manual de comissão (FASE 2 · idempotência amigável).
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
@@ -214,8 +214,36 @@ describe('InfluenciadoresPage', () => {
     renderPage();
     await abrirModal();
     await userEvent.clear(campoValor());
-    await userEvent.type(campoValor(), '10.005');
+    // Vírgula: é como se escreve centavo em pt-BR, e é a forma que preserva a
+    // terceira casa viva para o core reprovar. (Com PONTO, "10.005" é a forma
+    // ambígua — coberta no caso abaixo.)
+    await userEvent.type(campoValor(), '10,005');
     expect(await screen.findByRole('alert')).toHaveTextContent('duas casas decimais');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
+  });
+
+  it('valor com milhar chega inteiro na chamada (FIX-PARSE-DINHEIRO)', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(5000)] });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '1.234,56');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
+    await waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalled());
+    const [input] = mocks.registrarRepasseComissao.mock.calls[0]!;
+    // O defeito registrava R$ 1,23 e dava mil reais de comissão por pagos.
+    expect(input.valor).toBe(1234.56);
+    expect(Math.round(input.valor * 100)).toBe(123456);
+  });
+
+  it('ponto ambíguo não vira repasse mil vezes menor: diz o que está errado', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(5000)] });
+    renderPage();
+    await abrirModal();
+    await userEvent.clear(campoValor());
+    await userEvent.type(campoValor(), '1.500');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/ambíguo/i);
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
     expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
   });

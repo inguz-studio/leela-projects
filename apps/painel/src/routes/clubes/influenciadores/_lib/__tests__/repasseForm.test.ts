@@ -25,6 +25,19 @@ describe('parseValorRepasse', () => {
     expect(parseValorRepasse('   ')).toBeNull();
     expect(parseValorRepasse('abc')).toBeNull();
   });
+
+  it('separador de milhar sobrevive: "1.234,56" é o repasse inteiro', () => {
+    // FIX-PARSE-DINHEIRO: o `replace(',', '.')` registrava R$ 1,23 de repasse
+    // ao influenciador e dava o resto por pago.
+    expect(parseValorRepasse('1.234,56')).toBe(1234.56);
+    expect(Math.round(parseValorRepasse('1.234,56')! * 100)).toBe(123456);
+    expect(parseValorRepasse('R$ 1.234,56')).toBe(1234.56);
+  });
+
+  it('ponto ambíguo vira null — e o não-arredondar continua valendo', () => {
+    expect(parseValorRepasse('1.500')).toBeNull();
+    expect(parseValorRepasse('1.234,005')).toBe(1234.005);
+  });
 });
 
 describe('textoInicialRepasse', () => {

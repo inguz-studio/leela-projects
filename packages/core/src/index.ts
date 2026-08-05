@@ -938,6 +938,16 @@ export {
   buildInstallmentOptions,
 } from './finance/calc';
 
+// Leitura de valor digitado em pt-BR (texto → número) — fonte ÚNICA do painel
+// para preço, cupom, comissão e repasse. Fecha o corte silencioso do separador
+// de milhar ("1.234,56" virava R$ 1,23 pelo `replace(',', '.')`).
+export type {
+  MotivoValorInvalido,
+  ValorLido,
+  ResultadoValorLido,
+} from './finance/parseValorPtBr';
+export { parseValorPtBr, mensagemValorInvalido } from './finance/parseValorPtBr';
+
 // Taxa-flex da plataforma — tabela por meio de pagamento (TAXAFLEX ·
 // RN-178/179/180/182/183): global + override, resolução e cálculo half-up
 // em centavos inteiros (fonte única — nunca constante).

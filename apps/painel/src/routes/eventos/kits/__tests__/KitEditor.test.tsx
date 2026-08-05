@@ -96,6 +96,30 @@ describe('KitEditor (RN-200/211/216/217)', () => {
     expect(input.preco).toBe(-30);
   });
 
+  it('preço com separador de milhar salva o valor inteiro (FIX-PARSE-DINHEIRO)', async () => {
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 0 }) });
+    const preco = screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)');
+    await userEvent.clear(preco);
+    await userEvent.type(preco, '1.234,56');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    // O defeito gravava 1.234 aqui — R$ 1,23 no lugar de mil duzentos e trinta
+    // e quatro reais, sem erro nenhum na tela.
+    expect(input.preco).toBe(1234.56);
+    expect(Math.round(input.preco * 100)).toBe(123456);
+  });
+
+  it('preço ambíguo não salva: "1.500" vira erro de campo, não R$ 1,50', async () => {
+    const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 0 }) });
+    const preco = screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)');
+    await userEvent.clear(preco);
+    await userEvent.type(preco, '1.500');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    expect(onSalvarKit).not.toHaveBeenCalled();
+    expect(await screen.findByText(/ambíguo/i)).toBeInTheDocument();
+  });
+
   it('evento com venda bloqueia o preço (RN-200)', () => {
     setup({ evento: { qtdInscritos: 453 }, kit: mkKit() });
     const preco = screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)');

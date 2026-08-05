@@ -6,7 +6,30 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AfiliadoModal } from '../AfiliadoModal';
+import { AfiliadoModal, montarComissao } from '../AfiliadoModal';
+
+describe('montarComissao (FIX-PARSE-DINHEIRO)', () => {
+  it('valor fixo com milhar: R$ 1.234,56 por inscrição, não R$ 1,23', () => {
+    const c = montarComissao('valor_fixo', '1.234,56');
+    expect(c).toEqual({ tipo: 'valor_fixo', valorPorInscricao: 1234.56 });
+    expect(Math.round((c as { valorPorInscricao: number }).valorPorInscricao * 100)).toBe(123456);
+  });
+
+  it('percentual mantém a fração exata', () => {
+    expect(montarComissao('percentual', '12,5')).toEqual({ tipo: 'percentual', percentual: 12.5 });
+  });
+
+  it('sem comissão continua null', () => {
+    expect(montarComissao('nenhuma', '10')).toBeNull();
+  });
+
+  it('texto ilegível/ambíguo vira NaN — o gate de validade reprova, como antes', () => {
+    for (const bruto of ['', 'abc', '1.500', '1e3']) {
+      const c = montarComissao('valor_fixo', bruto) as { valorPorInscricao: number };
+      expect(Number.isNaN(c.valorPorInscricao)).toBe(true);
+    }
+  });
+});
 
 function renderModal(over: Record<string, unknown> = {}) {
   return render(

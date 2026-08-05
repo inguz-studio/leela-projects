@@ -27,6 +27,7 @@ import {
   loteEncerrado,
   loteEsgotado,
   loteShapeValido,
+  parseValorPtBr,
   validarLotesModalidade,
   type CapacidadeLote,
   type Lote,
@@ -200,14 +201,18 @@ export function arredondarCentavos(n: number): number {
 }
 
 /**
- * Parse de preço em R$ vindo do input ("99,90" ou "99.90") → número cent-exato.
- * `null` quando não-finito ou negativo. Mesma convenção do editor de kit
- * (vírgula→ponto), mais o arredondamento a centavo. @pure
+ * Parse de preço em R$ vindo do input ("99,90", "1.234,56", "99.90") → número
+ * cent-exato. `null` quando ilegível, ambíguo ou negativo. @pure
+ *
+ * Lê pelo `parseValorPtBr` do core (FIX-PARSE-DINHEIRO): o `replace(',', '.')`
+ * que morava aqui transformava "1.234,56" em "1.234.56", e o `parseFloat`
+ * parava no segundo ponto e devolvia 1.234 — R$ 1,23 no lugar de mil duzentos e
+ * trinta e quatro reais, sem erro nenhum na tela.
  */
 export function parsePrecoReais(s: string): number | null {
-  const n = Number.parseFloat(s.trim().replace(',', '.'));
-  if (!Number.isFinite(n) || n < 0) return null;
-  return arredondarCentavos(n);
+  const lido = parseValorPtBr(s);
+  if (!lido.ok || lido.valor < 0) return null;
+  return lido.centavos / 100;
 }
 
 // ---------------------------------------------------------------------------
