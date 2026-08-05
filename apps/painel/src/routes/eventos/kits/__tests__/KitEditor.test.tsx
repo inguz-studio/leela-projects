@@ -85,6 +85,60 @@ describe('KitEditor (RN-200/211/216/217)', () => {
     expect(container.textContent?.toLowerCase()).not.toContain('tier');
   });
 
+  // REV-PARSE · defeito achado na review antagonista. O campo de preço é lido
+  // pelo `parseValorPtBr`, onde ponto com grupo final de três dígitos é MILHAR
+  // (decisão do dono, FIX-PARSE-MILHAR). O campo nascia com `String(kit.preco)`,
+  // que para um preço de três casas produz exatamente esse texto — e o kit
+  // era regravado mil vezes maior sem ninguém tocar no campo. Preço de três
+  // casas existe no acervo: até FIX-PARSE-DINHEIRO esta tela gravava
+  // `parseFloat(texto)` cru, e nem `precoKitValido` nem a Rule do kit exigem
+  // cent-exatidão (só `is number`, porque RN-211 admite negativo).
+  it('kit com preço de três casas não vira mil vezes maior ao reabrir e salvar', async () => {
+    const { onSalvarKit } = setup({
+      evento: { qtdInscritos: 0 },
+      kit: mkKit({ preco: 12.345 }),
+    });
+    // Salvar sem tocar em nada: o preço é o mesmo, arredondado ao centavo.
+    // Esta é a asserção que pega o defeito — sem o conserto grava 12345.
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.preco).toBe(12.35);
+    expect(input.preco).not.toBe(12345);
+    // E o campo se apresenta com a vírgula decimal do pt-BR, como o LoteModal.
+    expect(screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)')).toHaveValue(
+      '12,345',
+    );
+  });
+
+  it('kit com preço negativo de três casas também não escala (RN-211)', async () => {
+    const { onSalvarKit } = setup({
+      evento: { qtdInscritos: 0 },
+      kit: mkKit({ preco: -12.345, nome: 'Sem kit' }),
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.preco).toBe(-12.35);
+    expect(screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)')).toHaveValue(
+      '-12,345',
+    );
+  });
+
+  it('preço de duas casas segue intacto no round-trip', async () => {
+    const { onSalvarKit } = setup({
+      evento: { qtdInscritos: 0 },
+      kit: mkKit({ preco: 1234.56 }),
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.preco).toBe(1234.56);
+    expect(screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)')).toHaveValue(
+      '1234,56',
+    );
+  });
+
   it('preço aceita negativo (RN-211) e salva', async () => {
     const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 0, nome: 'Sem kit' }) });
     const preco = screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)');

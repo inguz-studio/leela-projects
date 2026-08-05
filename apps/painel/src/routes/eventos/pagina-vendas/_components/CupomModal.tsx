@@ -81,8 +81,15 @@ export function CupomModal({
       setValues({
         codigo: cupom.codigo,
         tipo: cupom.tipo,
-        valor:
-          cupom.tipo === 'fixo' ? String(cupom.valor).replace('.', ',') : String(cupom.valor),
+        // VÍRGULA decimal nos DOIS tipos. O ramo `fixo` já se protegia assim;
+        // o `percentual` vinha cru e se contradizia com o parser que o lê:
+        // `String(12.345)` é "12.345", que a regra de milhar (grupo final de
+        // três dígitos — FIX-PARSE-MILHAR) lê como doze mil trezentos e
+        // quarenta e cinco. `valorCupomValido` não limita casa decimal no
+        // percentual, então 12,345% é gravável — e ao reabrir o cupom o form
+        // recusava o próprio valor guardado ("Valor de desconto inconsistente
+        // com o tipo"), travando qualquer edição de janela ou teto.
+        valor: String(cupom.valor).replace('.', ','),
         tetoUso: cupom.tetoUso === null ? '' : String(cupom.tetoUso),
         inicioEm: timestampParaInputLocal(cupom.inicioEm),
         fimEm: timestampParaInputLocal(cupom.fimEm),

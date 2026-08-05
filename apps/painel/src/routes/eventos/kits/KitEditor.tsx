@@ -85,7 +85,19 @@ export function KitEditor({
   const bloqueado = precoBloqueado(evento);
 
   const [nome, setNome] = React.useState(kit?.nome ?? '');
-  const [precoStr, setPrecoStr] = React.useState(String(kit?.preco ?? 0));
+  // O campo nasce com VÍRGULA decimal, como o `LoteModal` já faz (`String(
+  // lote.preco).replace('.', ',')`). Sem isso o campo se contradiz com o parser
+  // que o lê: `String(12.345)` é "12.345", e "12.345" é MIL duzentos e quarenta
+  // e cinco pela regra de milhar (grupo final de três dígitos — decisão do dono
+  // em FIX-PARSE-MILHAR). Abrir um kit desses e salvar sem tocar no preço
+  // gravava R$ 12.345,00 no lugar de R$ 12,35 — mil vezes mais, calado, porque
+  // `precoKitValido` só exige número finito (RN-211 admite negativo) e a Rule
+  // do kit só exige `preco is number`, sem `moneyCentExato`. Preço de três
+  // casas EXISTE no acervo: até FIX-PARSE-DINHEIRO esta tela gravava
+  // `parseFloat(texto)` cru. Com vírgula não há leitura de milhar possível.
+  const [precoStr, setPrecoStr] = React.useState(
+    String(kit?.preco ?? 0).replace('.', ','),
+  );
   const [capacidadeStr, setCapacidadeStr] = React.useState(String(kit?.capacidade ?? 0));
   const [modalidades, setModalidades] = React.useState<string[]>(kit?.modalidades ?? []);
   const [novaModalidade, setNovaModalidade] = React.useState('');

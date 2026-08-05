@@ -106,6 +106,61 @@ describe('CupomModal (S300-T5)', () => {
     expect(screen.getByText('O código não pode ser alterado depois de criado.')).toBeInTheDocument();
   });
 
+  // REV-PARSE · defeito achado na review antagonista. `valorCupomValido` não
+  // limita casa decimal no percentual (só 0 < v ≤ 100), então 12,345% é
+  // gravável. O form semeava o percentual com `String(cupom.valor)` cru —
+  // "12.345" — e o `parseValorPtBr` lê ponto com grupo final de três dígitos
+  // como MILHAR (FIX-PARSE-MILHAR): 12345%, que a própria validação recusa.
+  // O organizador reabria um cupom seu e o form acusava um campo que ele não
+  // tinha tocado, travando qualquer edição de janela ou de teto. O ramo `fixo`
+  // já se protegia com a vírgula; o percentual não.
+  it('cupom percentual de três casas reabre editável e salva o mesmo valor', async () => {
+    const cupom: Cupom = {
+      id: 'PCT3',
+      tenantId: 't1',
+      codigo: 'PCT3',
+      tipo: 'percentual',
+      valor: 12.345,
+      tetoUso: null,
+      inicioEm: ts(Date.parse('2026-08-01T00:00:00Z')),
+      fimEm: ts(Date.parse('2026-09-01T00:00:00Z')),
+      usos: 0,
+      criadoEm: ts(0),
+      atualizadoEm: ts(0),
+    };
+    const { onSalvar } = setup({ cupom });
+    // Salvar sem tocar em nada. Sem o conserto o form recusa aqui, com
+    // "Valor de desconto inconsistente com o tipo", e `onSalvar` nunca corre.
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar cupom' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    const [, input] = onSalvar.mock.calls[0]!;
+    expect(input.valor).toBe(12.345);
+    expect(input.valor).not.toBe(12345);
+    expect(screen.getByLabelText('Desconto (%)')).toHaveValue('12,345');
+  });
+
+  it('cupom fixo de milhar reabre com vírgula e salva o mesmo valor', async () => {
+    const cupom: Cupom = {
+      id: 'FIX1234',
+      tenantId: 't1',
+      codigo: 'FIX1234',
+      tipo: 'fixo',
+      valor: 1234.56,
+      tetoUso: null,
+      inicioEm: ts(Date.parse('2026-08-01T00:00:00Z')),
+      fimEm: ts(Date.parse('2026-09-01T00:00:00Z')),
+      usos: 0,
+      criadoEm: ts(0),
+      atualizadoEm: ts(0),
+    };
+    const { onSalvar } = setup({ cupom });
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar cupom' }));
+    await waitFor(() => expect(onSalvar).toHaveBeenCalledTimes(1));
+    const [, input] = onSalvar.mock.calls[0]!;
+    expect(input.valor).toBe(1234.56);
+    expect(screen.getByLabelText('Desconto (R$)')).toHaveValue('1234,56');
+  });
+
   it('fecha pelo Cancelar (uma das 4 vias)', async () => {
     const { onOpenChange } = setup();
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
