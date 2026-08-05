@@ -74,6 +74,27 @@ describe('EventoShell', () => {
     expect(screen.getByRole('navigation', { name: 'Seções do evento' })).toHaveClass('border-b');
   });
 
+  it('o menu secundário do evento não mostra barra de rolagem em tablet/celular (frente F)', () => {
+    // O dono pegou barra horizontal E vertical justamente NESTE menu ao
+    // encolher o navegador — e já tinha pedido o conserto uma vez. A trava da
+    // causa vive no primitivo (packages/design-system SubNav, com a nota da
+    // cascata que fabricava a barra vertical); esta aqui garante que a barra
+    // que ELE vê é a que recebeu o conserto — se alguém trocar o SubNav por
+    // outro container nesta casca, o defeito volta sem tocar no DS.
+    render(
+      <MemoryRouter>
+        <EventoShell evento={mkEvento()} ativa="overview">
+          <p>c</p>
+        </EventoShell>
+      </MemoryRouter>,
+    );
+    const subnav = screen.getByRole('navigation', { name: 'Seções do evento' });
+    expect(subnav).toHaveClass('overflow-x-auto');
+    expect(subnav).toHaveClass('[scrollbar-width:none]');
+    expect(subnav).toHaveClass('[&::-webkit-scrollbar]:hidden');
+    expect(subnav).toHaveClass('overflow-y-hidden');
+  });
+
   it('mostra o breadcrumb "Eventos › {nome}" com link de volta', () => {
     render(
       <MemoryRouter>
