@@ -1304,8 +1304,12 @@ async function criarDocsDeCheckout(
   /**
    * RNG INJETADO do sorteio do código da compra (RN-474) — os testes forçam
    * colisão com ele, como os da emissão do ingresso já fazem.
+   *
+   * ⚠ SEM DEFAULT: `Math.random` aqui apagava a fonte criptográfica do core
+   * (`d36afb64`). Ausente, o `undefined` desce até `gerarCodigoPedido`, que
+   * sorteia com a entropia do sistema.
    */
-  random: () => number = Math.random
+  random?: () => number
 ): Promise<void> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -2331,8 +2335,14 @@ export async function createInscricaoChargeCore(
   /**
    * RNG do sorteio do código da compra (RN-474) — injetável só para teste,
    * como o `random` da emissão do ingresso. A callable nunca o passa.
+   *
+   * ⚠ SEM DEFAULT: a callable nunca passa nada, então o default de
+   * `Math.random` era, na prática, A FONTE DE TODA VENDA — e ele apagava o
+   * sorteio criptográfico que o core adotou em `d36afb64`. Ausente, o
+   * `undefined` atravessa até `gerarCodigoPedido` e o sorteio volta a ser o do
+   * sistema. Este é o ponto que o caminho de produção realmente usa.
    */
-  random: () => number = Math.random
+  random?: () => number
 ): Promise<CreateInscricaoChargeResult> {
   // CKMOD: hojeISO do RELÓGIO INJETADO (dia civil do fuso do produto) —
   // gate "nascimento no passado" testável sem relógio de máquina.

@@ -89,11 +89,19 @@ export interface ReservaCodigoPedido {
  * correto é abortar a venda.
  *
  * @param random RNG injetável — os testes forçam colisão com ele.
+ *
+ * ⚠ SEM DEFAULT, e isso é a correção: enquanto o default aqui era
+ * `Math.random`, ele VENCIA a fonte criptográfica que o core passou a usar
+ * (`d36afb64` · `aleatorio.ts`), e toda venda continuava sorteando com o PRNG
+ * do V8 — cujo estado é recuperável a partir de poucas saídas, e o código é o
+ * que a pessoa DITA no telefone. Ausente, `undefined` chega ao
+ * `gerarCodigoPedido`, que cai no sorteio do sistema. A injeção continua
+ * intacta para quem prega o sorteio no teste.
  */
 export async function sortearCodigoPedidoNaTx(
   db: Db,
   tx: Tx,
-  random: () => number = Math.random
+  random?: () => number
 ): Promise<ReservaCodigoPedido | null> {
   const col = db.collection(PEDIDO_CODIGOS_COL);
   for (let i = 0; i < TENTATIVAS_CODIGO_PEDIDO; i++) {
