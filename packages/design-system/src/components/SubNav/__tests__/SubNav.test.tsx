@@ -48,6 +48,41 @@ describe('SubNav', () => {
     expect(screen.getByRole('list')).toHaveClass('w-max');
   });
 
+  // -------------------------------------------------------------------------
+  // TRAVA DE REGRESSÃO — barras de rolagem no menu secundário (frente F).
+  //
+  // Este é o SEGUNDO pedido do mesmo defeito: a primeira rodada (Adendo 12)
+  // consertou a quebra de layout e deixou as barras. Elas nascem em cascata —
+  // a lista `w-max` estoura a largura → `overflow-x: auto` desenha a barra
+  // horizontal → no Windows/Chrome ela é clássica e come altura → a lista de
+  // altura fixa sobra no eixo Y → o eixo `visible` restante vira `auto` e
+  // aparece a barra vertical.
+  //
+  // jsdom não faz layout, então a trava é de CONTRATO DE ESTILO: no dia em que
+  // alguém tirar uma destas quatro classes, este teste cai e diz por quê. Ler
+  // junto com a nota da causa-raiz em SubNav.tsx.
+  // -------------------------------------------------------------------------
+  it('não mostra barra de rolagem nenhuma em tablet/celular — nem horizontal, nem vertical (frente F)', () => {
+    render(<SubNav tabs={tabs} />);
+    const nav = screen.getByRole('navigation');
+
+    // 1. o scroll horizontal CONTINUA existindo (as abas que não cabem seguem
+    //    alcançáveis por gesto/trackpad e pelas setas ←/→);
+    expect(nav).toHaveClass('overflow-x-auto');
+    // 2. mas sem cromo: `scrollbar-width: none` (padrão/Firefox) e
+    //    `::-webkit-scrollbar { display: none }` (Chrome/Edge/Safari). Sem a
+    //    barra clássica, nenhum pixel de altura é roubado;
+    expect(nav).toHaveClass('[scrollbar-width:none]');
+    expect(nav).toHaveClass('[&::-webkit-scrollbar]:hidden');
+    // 3. e o eixo vertical é fechado explicitamente, para nunca voltar a ser
+    //    promovido a `auto` pelo eixo horizontal.
+    expect(nav).toHaveClass('overflow-y-hidden');
+
+    // Guarda contra o "conserto" errado: esconder o eixo X cortaria as abas que
+    // não cabem — exatamente o que o Adendo 12 existiu para evitar.
+    expect(nav).not.toHaveClass('overflow-x-hidden');
+  });
+
   it('active tab has aria-current="page"', () => {
     render(<SubNav tabs={tabs} />);
     const active = screen.getByRole('button', { name: /Visão Geral/i });

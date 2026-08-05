@@ -94,10 +94,32 @@ function SubNav({
         // Adendo 12 (R9-A · tablet/mobile): a barra de sub-navegação de eventos
         // tem N abas (Visão/Inscritos/Kits/…/Financeiro/Config) que estouravam a
         // largura em tablet/mobile ("slider horizontal quebrando"). Scroll
-        // horizontal INTERNO: em telas estreitas a barra rola em vez de quebrar;
-        // no desktop o conteúdo cabe e nenhuma scrollbar aparece (overflow-x auto).
+        // horizontal INTERNO: em telas estreitas a barra rola em vez de quebrar.
         // `overscroll-x-contain` evita que o gesto de scroll da barra role a página.
         'overflow-x-auto overscroll-x-contain',
+        // BUILD-LOTES-UX · frente F (REINCIDÊNCIA — o dono já tinha pedido isto).
+        //
+        // O Adendo 12 resolveu a QUEBRA de layout e deixou as duas barras de
+        // rolagem na tela. Elas nascem em cascata:
+        //   1. `w-max` na lista faz o conteúdo ficar mais largo que a barra em
+        //      tablet/celular → o `overflow-x: auto` desenha a barra horizontal.
+        //      No Windows/Chrome ela é CLÁSSICA (ocupa espaço), não overlay —
+        //      "no desktop nenhuma scrollbar aparece" era verdade só no desktop;
+        //   2. essa barra come ~15px da ALTURA de conteúdo do nav, e a lista tem
+        //      altura fixa (`h-[--subnav-height]`) → sobra vertical de exatamente
+        //      a espessura da barra;
+        //   3. pelo CSS de overflow, um eixo não-`visible` promove o outro de
+        //      `visible` a `auto` → a sobra do passo 2 vira a barra VERTICAL.
+        // Ou seja: a barra horizontal fabricava a vertical.
+        //
+        // Conserto na causa: some com o CROMO da barra — o scroll continua
+        // (gesto, trackpad, arrastar, e as setas ←/→ que já movem o foco), então
+        // nenhum pixel de altura é roubado e o passo 2 deixa de existir.
+        // `overflow-y-hidden` fecha o passo 3 de vez, e nunca corta conteúdo: a
+        // lista tem a altura exata do nav. NÃO usar `overflow-x: hidden` — isso
+        // esconderia as abas que não cabem, que é o que o Adendo 12 evitou.
+        '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+        'overflow-y-hidden',
         // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
         divider && 'border-b border-b-[var(--border-subtle)]',
         className,
