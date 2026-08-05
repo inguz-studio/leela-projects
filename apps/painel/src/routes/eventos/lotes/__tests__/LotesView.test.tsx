@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { Lote } from '@leela/core';
 import { LotesView } from '../LotesView';
 import { mkEvento, ts } from '../../_test/fixtures';
@@ -46,6 +47,7 @@ function renderView(over: Partial<Parameters<typeof LotesView>[0]> = {}) {
       onEditarLote={vi.fn()}
       onRemoverLote={vi.fn()}
       onAjustarCapacidade={vi.fn()}
+      onDesativarLote={vi.fn()}
       agora={AGORA}
       {...over}
     />,
@@ -83,5 +85,45 @@ describe('LotesView', () => {
   it('estado de carregamento mostra skeleton', () => {
     renderView({ loading: true });
     expect(screen.getByRole('status', { name: /Carregando lotes/i })).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // Frente D — os três números da vaga, na tabela
+  // -------------------------------------------------------------------------
+  it('mostra vendidas · disponíveis · total por lote (sem obrigar a subtração de cabeça)', () => {
+    renderView();
+    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    expect(
+      within(bloco).getByRole('columnheader', { name: /Vagas \(vendidas · disponíveis · total\)/i }),
+    ).toBeInTheDocument();
+    const linhas = within(bloco).getAllByRole('row');
+    // L1 esgotado: 150 vendidas, 0 disponíveis, 150 no total.
+    expect(linhas[1]).toHaveTextContent('150 · 0 · 150');
+    // L2 ativo: 120 de 300 → 180 disponíveis.
+    expect(linhas[2]).toHaveTextContent('120 · 180 · 300');
+  });
+
+  // -------------------------------------------------------------------------
+  // Frente E — ação rápida de desativar
+  // -------------------------------------------------------------------------
+  it('oferece Desativar no lote vigente, mesmo com data e hora dentro da janela', async () => {
+    const onDesativarLote = vi.fn();
+    renderView({ onDesativarLote });
+    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const linhas = within(bloco).getAllByRole('row');
+    // L2 é o lote ATIVO no instante de referência (fev–abr, agora = 01/03).
+    const desativarL2 = within(linhas[2] as HTMLElement).getByRole('button', { name: 'Desativar' });
+    expect(desativarL2).toBeEnabled();
+    await userEvent.click(desativarL2);
+    expect(onDesativarLote).toHaveBeenCalledWith(expect.objectContaining({ ordem: 2 }));
+  });
+
+  it('não oferece Desativar em lote que já não vende (esgotado ou agendado)', () => {
+    renderView();
+    const bloco = screen.getByRole('region', { name: /Lotes da modalidade 5k/i });
+    const linhas = within(bloco).getAllByRole('row');
+    // L1 esgotado (150/150) e L3 agendado (janela em abril) não têm venda a parar.
+    expect(within(linhas[1] as HTMLElement).getByRole('button', { name: 'Desativar' })).toBeDisabled();
+    expect(within(linhas[3] as HTMLElement).getByRole('button', { name: 'Desativar' })).toBeDisabled();
   });
 });

@@ -12,6 +12,11 @@ import type { Lote } from '@leela/core';
 import { LotesView } from './LotesView';
 import { LoteModal } from './LoteModal';
 import { CapacidadeModal } from './CapacidadeModal';
+import {
+  MOTIVO_DESATIVACAO_LOTE,
+  payloadDesativarPelaJanela,
+  viaDesativacao,
+} from './_lib/loteForm';
 import { useLoteMutations, useLotes } from '../_data/lotes';
 import { useAjustarCapacidadeLote } from '../../../lib/query/mutations';
 import type { EventoOutletContext } from '../evento/EventoLayout';
@@ -35,6 +40,10 @@ export function LotesPage(): JSX.Element {
   const [loteParaRemover, setLoteParaRemover] = React.useState<Lote | null>(null);
   const [removendo, setRemovendo] = React.useState(false);
 
+  // Estado do ConfirmModal de desativação (frente E — encerrar a venda agora).
+  const [loteParaDesativar, setLoteParaDesativar] = React.useState<Lote | null>(null);
+  const [desativando, setDesativando] = React.useState(false);
+
   const todosLotes = lotes ?? [];
 
   async function aplicarCapacidade(
@@ -55,6 +64,42 @@ export function LotesPage(): JSX.Element {
     setModalidadeCtx(lote.modalidade);
     setLoteEmEdicao(lote);
     setModalAberto(true);
+  }
+
+  /**
+   * Desativa o lote: a venda dele para AGORA (frente E). O caminho depende da
+   * existência de venda, porque o lote não tem flag `ativo` — sem venda, fecha
+   * a janela (`fimEm = agora`); com venda, a janela está congelada pela Rule e
+   * a porta autorizada é a capacidade (RN-304, `ajustarCapacidadeLote`, que
+   * carimba o motivo na auditoria). Nos dois casos quem já comprou segue
+   * comprado: nada aqui escreve em inscrito.
+   */
+  async function confirmarDesativacao(): Promise<void> {
+    if (!loteParaDesativar) return;
+    const alvo = loteParaDesativar;
+    setDesativando(true);
+    try {
+      if (viaDesativacao(alvo) === 'capacidade') {
+        await ajustarCapacidade.mutateAsync({
+          eventoId: evento.id,
+          loteId: alvo.id,
+          novaCapacidade: alvo.vendidos,
+          motivo: MOTIVO_DESATIVACAO_LOTE,
+        });
+      } else {
+        await salvar(alvo.id, payloadDesativarPelaJanela(alvo, new Date()), false);
+      }
+      toast({ title: 'Lote desativado', variant: 'success' });
+      setLoteParaDesativar(null);
+    } catch {
+      toast({
+        title: 'Não foi possível desativar o lote',
+        description: 'Tente de novo; se persistir, ajuste a capacidade ou a janela na edição.',
+        variant: 'danger',
+      });
+    } finally {
+      setDesativando(false);
+    }
   }
 
   async function confirmarRemocao(): Promise<void> {
@@ -82,6 +127,7 @@ export function LotesPage(): JSX.Element {
         onEditarLote={abrirEdicao}
         onRemoverLote={setLoteParaRemover}
         onAjustarCapacidade={setLoteCapacidade}
+        onDesativarLote={setLoteParaDesativar}
       />
 
       <CapacidadeModal
@@ -100,6 +146,40 @@ export function LotesPage(): JSX.Element {
         lote={loteEmEdicao}
         lotesDoEvento={todosLotes}
         onSalvar={salvar}
+        onAjustarCapacidade={(lote) => {
+          // Lote com venda: a vaga só se ajusta pela porta auditada (RN-304).
+          // O modal de edição fecha para não empilhar dois diálogos.
+          setModalAberto(false);
+          setLoteCapacidade(lote);
+        }}
+      />
+
+      <ConfirmModal
+        open={loteParaDesativar !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setLoteParaDesativar(null);
+        }}
+        title="Desativar lote"
+        {...(loteParaDesativar
+          ? {
+              description:
+                `${loteParaDesativar.nome} · ${loteParaDesativar.modalidade} — a venda deste lote para agora, ` +
+                'mesmo com a janela ainda vigente.',
+            }
+          : {})}
+        loses={[
+          'A venda deste lote para imediatamente',
+          'Se houver lote seguinte na modalidade, ele assume o preço vigente',
+        ]}
+        keeps={[
+          'As inscrições já vendidas continuam válidas',
+          viaDesativacao(loteParaDesativar ?? { vendidos: 0 }) === 'capacidade'
+            ? 'Dá para reabrir depois aumentando a capacidade do lote'
+            : 'Dá para reabrir depois editando o fim da janela',
+        ]}
+        confirmLabel="Desativar lote"
+        loading={desativando}
+        onConfirm={() => void confirmarDesativacao()}
       />
 
       <ConfirmModal

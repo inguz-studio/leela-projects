@@ -13,10 +13,10 @@
 
 import { Badge, Button, EmptyState, Skeleton, Table } from '@leela/design-system';
 import type { TableColumn } from '@leela/design-system';
-import { loteAtivo, precoVigente, type Evento, type Lote } from '@leela/core';
+import { capacidadeDoLote, loteAtivo, precoVigente, type Evento, type Lote } from '@leela/core';
 import { Plus } from 'lucide-react';
 import { formatDataHoraCurta, formatDinheiro, formatInt } from '../_lib/format';
-import { estadoLoteBadge, loteImutavel } from './_lib/loteForm';
+import { estadoLoteBadge, loteDesativavel, loteImutavel } from './_lib/loteForm';
 
 export interface LotesViewProps {
   evento: Evento;
@@ -28,6 +28,8 @@ export interface LotesViewProps {
   onRemoverLote: (lote: Lote) => void;
   /** Abre o ajuste de capacidade (reabrir vagas — S307-T2). */
   onAjustarCapacidade: (lote: Lote) => void;
+  /** Ação rápida: encerrar a venda deste lote agora (frente E). */
+  onDesativarLote: (lote: Lote) => void;
   /** Instante de referência (default `new Date()`) — injetável para teste. */
   agora?: Date;
 }
@@ -41,6 +43,7 @@ export function LotesView({
   onEditarLote,
   onRemoverLote,
   onAjustarCapacidade,
+  onDesativarLote,
   agora = new Date(),
 }: LotesViewProps): JSX.Element {
   if (loading) {
@@ -90,6 +93,7 @@ export function LotesView({
             onEditarLote={onEditarLote}
             onRemoverLote={onRemoverLote}
             onAjustarCapacidade={onAjustarCapacidade}
+            onDesativarLote={onDesativarLote}
           />
         ))
       )}
@@ -105,6 +109,7 @@ interface ModalidadeBlocoProps {
   onEditarLote: (lote: Lote) => void;
   onRemoverLote: (lote: Lote) => void;
   onAjustarCapacidade: (lote: Lote) => void;
+  onDesativarLote: (lote: Lote) => void;
 }
 
 function ModalidadeBloco({
@@ -115,6 +120,7 @@ function ModalidadeBloco({
   onEditarLote,
   onRemoverLote,
   onAjustarCapacidade,
+  onDesativarLote,
 }: ModalidadeBlocoProps): JSX.Element {
   const ordenados = [...lotes].sort((a, b) => a.ordem - b.ordem);
   // Preço vigente e lote ativo: DERIVAÇÃO do kernel (RN-300/301) — sem
@@ -132,10 +138,27 @@ function ModalidadeBloco({
       render: (l) => `${formatDataHoraCurta(l.inicioEm)} → ${formatDataHoraCurta(l.fimEm)}`,
     },
     {
+      // Os TRÊS números pedidos pelo dono, sempre juntos: sozinho, o par
+      // "vendidos / total" obrigava a fazer a subtração de cabeça para saber
+      // quanto ainda está em pé. `capacidadeDoLote` é a aritmética do kernel
+      // (disponível = configurado − vendido, nunca negativo).
       key: 'vaga',
-      header: 'Vaga',
+      header: 'Vagas (vendidas · disponíveis · total)',
       align: 'right',
-      render: (l) => `${formatInt(l.vendidos)} / ${formatInt(l.quantidadeLimite)}`,
+      render: (l) => {
+        const c = capacidadeDoLote(l);
+        return (
+          <span className="[font-variant-numeric:tabular-nums]">
+            <span className="text-[var(--text-secondary)]">{formatInt(c.vendido)}</span>
+            {' · '}
+            <strong className="font-[var(--font-weight-semibold)] text-[var(--text-success)]">
+              {formatInt(c.disponivel)}
+            </strong>
+            {' · '}
+            <span className="text-[var(--text-secondary)]">{formatInt(c.configurado)}</span>
+          </span>
+        );
+      },
     },
     {
       key: 'preco',
@@ -192,25 +215,45 @@ function ModalidadeBloco({
         caption={`Lotes de ${modalidade}`}
         emptyTitle="Nenhum lote nesta modalidade"
         emptyDescription="Configure o primeiro lote para abrir a venda desta modalidade."
-        renderActions={(lote) => (
-          <div className="flex items-center gap-[var(--spacing-2)]">
-            <Button variant="ghost" size="sm" onClick={() => onEditarLote(lote)}>
-              Editar
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onAjustarCapacidade(lote)}>
-              Capacidade
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onRemoverLote(lote)}
-              disabled={loteImutavel(lote)}
-              title={loteImutavel(lote) ? 'Lote com venda não pode ser removido' : undefined}
-            >
-              Remover
-            </Button>
-          </div>
-        )}
+        renderActions={(lote) => {
+          // Desativar = encerrar a venda AGORA, mesmo com a janela vigente
+          // (frente E). Só aparece habilitado enquanto o lote ainda vende: um
+          // lote já encerrado não tem venda para interromper, e um lote
+          // agendado (janela não aberta) sai por Remover.
+          const desativavel = loteDesativavel(lote, agora);
+          return (
+            <div className="flex items-center gap-[var(--spacing-2)]">
+              <Button variant="ghost" size="sm" onClick={() => onEditarLote(lote)}>
+                Editar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onAjustarCapacidade(lote)}>
+                Capacidade
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDesativarLote(lote)}
+                disabled={!desativavel}
+                title={
+                  desativavel
+                    ? 'Encerra a venda deste lote agora; as inscrições já vendidas continuam válidas'
+                    : 'Este lote já não está vendendo'
+                }
+              >
+                Desativar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemoverLote(lote)}
+                disabled={loteImutavel(lote)}
+                title={loteImutavel(lote) ? 'Lote com venda não pode ser removido' : undefined}
+              >
+                Remover
+              </Button>
+            </div>
+          );
+        }}
       />
     </section>
   );
