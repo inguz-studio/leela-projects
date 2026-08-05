@@ -70,7 +70,9 @@ import type { AuthClaims, EmailProvider } from '@leela/core';
 import {
   entregarEmailIngressos,
   lerDestinatarioEmailIngressos,
+  registrarStatusEmailIngressos,
 } from '../email/enviarIngressos';
+import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { lerIngressosVivosDoPedido } from '../eventos/emitirIngressos';
 import { registrarAcessoAuditado } from '../shared/auditoriaAcessos';
@@ -461,13 +463,18 @@ async function reenviarIngresso(
       { pedidoId, eventoId, ingressos: vivos.ingressos, destinatario },
       emailProvider
     );
+    // O carimbo do pedido passa a contar a verdade (F5): o mesmo campo que a
+    // consulta "quem pagou e não recebeu" lê.
+    await registrarStatusEmailIngressos(db, pedidoId, 'enviado');
     return { status: 'enviado', ingressos: vivos.ingressos.length };
   } catch (err) {
-    logger.error('reenvio_ingresso_falhou', {
+    registrarIncidenteEmail('reenvio_ingresso_falhou', {
+      tipo: 'reenvio_ingressos',
       pedidoId,
       eventoId,
-      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      erro: err,
     });
+    await registrarStatusEmailIngressos(db, pedidoId, 'falha_envio');
     return { status: 'falha_envio', ingressos: 0 };
   }
 }
@@ -520,9 +527,11 @@ async function reenviarContaCriada(
     });
     return 'enviado';
   } catch (err) {
-    logger.error('reenvio_conta_falhou', {
+    registrarIncidenteEmail('reenvio_conta_falhou', {
+      tipo: 'reenvio_conta',
       pedidoId,
-      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      eventoId,
+      erro: err,
     });
     return 'falha_envio';
   }

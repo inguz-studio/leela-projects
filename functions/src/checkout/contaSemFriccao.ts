@@ -39,6 +39,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { COLECAO_PESSOAS, validarEmail, type EmailProvider } from '@leela/core';
 import { selectEmailProvider } from '../email/selectEmailProvider';
+import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { renderContaCriadaEmail } from '../email/templates';
 import { actionCodeSettingsSenha, reescreverParaOPainel } from '../auth/linkDeAcao';
 
@@ -271,10 +272,13 @@ export async function garantirContaSemFriccao(
       );
       emailStatus = 'enviado';
     } catch (err) {
-      // Envio é acessório — falha registrada, compra intocada.
-      logger.error('conta_sem_friccao_email_falhou', {
+      // Envio é acessório — falha registrada, compra intocada. F5: registrada
+      // como INCIDENTE (campo `alerta` que a política casa), no MESMO nome de
+      // evento de sempre — o diagnóstico de 04/08 cita este nome.
+      registrarIncidenteEmail('conta_sem_friccao_email_falhou', {
+        tipo: 'conta_sem_friccao',
         pedidoId,
-        err: err instanceof Error ? err.message : String(err),
+        erro: err,
       });
       emailStatus = 'falha_envio';
     }

@@ -54,6 +54,7 @@
 // =============================================================================
 
 import type * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import { isCodigoIngressoValido, validarEmail, type EmailProvider } from '@leela/core';
 import { registrarComunicacao } from '../eventos/logComunicacao';
@@ -65,6 +66,7 @@ import {
   renderIngressosCompraEmail,
   type IngressoDoEmail,
 } from './templates';
+import { registrarIncidenteEmail } from './incidenteEmail';
 import type { IngressoEmitido } from '../eventos/emitirIngressos';
 
 type Db = admin.firestore.Firestore;
@@ -84,6 +86,52 @@ export interface ResultadoEmailIngressos {
   status: StatusEmailIngressos;
   /** docId do log de comunicação (RN-219) quando houve registro. */
   comunicacaoId?: string;
+}
+
+/**
+ * Carimba o desfecho do e-mail de ingressos NO PEDIDO (F5 · RN-382).
+ *
+ * Antes disto, só a conta sem fricção gravava `emailStatus`: um pedido cujo
+ * e-mail de INGRESSO falhou ficava idêntico, no banco, a um pedido entregue —
+ * a falha vivia só no log, e log ninguém lê antes de o cliente reclamar. Com o
+ * carimbo, "quem pagou e não recebeu" vira consulta
+ * (`pedidos.emailIngressos.status == "falha_envio"`) e o operador tem onde
+ * conferir o resultado do reenvio.
+ *
+ * Caminho pontilhado + `update`: nunca cria o doc do pedido, nunca clobbera
+ * campo irmão. O carimbo é ACESSÓRIO — falhar aqui não pode derrubar o envio
+ * que talvez tenha dado certo, então o erro é engolido com log.
+ */
+export async function registrarStatusEmailIngressos(
+  db: Db,
+  pedidoId: string,
+  status: StatusEmailIngressos,
+  comunicacaoId?: string
+): Promise<void> {
+  try {
+    await db
+      .collection('pedidos')
+      .doc(pedidoId)
+      .update({
+        'emailIngressos.status': status,
+        'emailIngressos.atualizadoEm': FieldValue.serverTimestamp(),
+        ...(comunicacaoId !== undefined
+          ? { 'emailIngressos.comunicacaoId': comunicacaoId }
+          : {}),
+        ...(status === 'falha_envio'
+          ? {
+              'emailIngressos.falhaEm': FieldValue.serverTimestamp(),
+              'emailIngressos.falhas': FieldValue.increment(1),
+            }
+          : {}),
+      });
+  } catch (err) {
+    logger.warn('email_ingressos_status_nao_carimbado', {
+      pedidoId,
+      status,
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+  }
 }
 
 /** Tudo que a MONTAGEM do e-mail precisa saber do pedido e do evento. */
@@ -266,10 +314,13 @@ export async function enviarEmailIngressos(
   if (destinatario === null) return { status: 'sem_destinatario' };
 
   if (emailProvider === null) {
-    // Fail-closed: NÃO registra. Registrar aqui gravaria "enfileirado" para
-    // um envio que nunca existiu, e o dia em que a chave chegasse o e-mail
-    // seria suprimido pela própria idempotência.
+    // Fail-closed: NÃO registra no log de comunicação. Registrar ali gravaria
+    // "enfileirado" para um envio que nunca existiu, e o dia em que a chave
+    // chegasse o e-mail seria suprimido pela própria idempotência. O CARIMBO
+    // no pedido é outra coisa: pendência de chave é estado que precisa ser
+    // consultável, não só logável (F5).
     logger.info('email_ingressos_pendente_chave', { pedidoId, eventoId });
+    await registrarStatusEmailIngressos(db, pedidoId, 'pendente_chave');
     return { status: 'pendente_chave' };
   }
 
@@ -298,10 +349,17 @@ export async function enviarEmailIngressos(
       eventoId,
       motivo: registro.motivo,
     });
-    return {
-      status: registro.motivo === 'ja_registrada' ? 'ja_enviado' : 'sem_destinatario',
-      comunicacaoId: registro.comunicacaoId,
-    };
+    const status =
+      registro.motivo === 'ja_registrada' ? 'ja_enviado' : 'sem_destinatario';
+    if (status === 'ja_enviado') {
+      await registrarStatusEmailIngressos(
+        db,
+        pedidoId,
+        status,
+        registro.comunicacaoId
+      );
+    }
+    return { status, comunicacaoId: registro.comunicacaoId };
   }
 
   try {
@@ -309,16 +367,34 @@ export async function enviarEmailIngressos(
       { pedidoId, eventoId, ingressos, destinatario },
       emailProvider
     );
+    await registrarStatusEmailIngressos(
+      db,
+      pedidoId,
+      'enviado',
+      registro.comunicacaoId
+    );
     return { status: 'enviado', comunicacaoId: registro.comunicacaoId };
   } catch (err) {
     // O registro fica como `enfileirado` — pendência VISÍVEL no log de
     // comunicação, que é o estado que a RN-219 previu para o crash entre o
     // markSent e o envio. Reenvio é decisão do organizador, não retry cego.
-    logger.error('email_ingressos_falhou', {
+    //
+    // F5: a partir daqui isto é INCIDENTE, não linha de log. O campo `alerta`
+    // é o que uma política casa, e o carimbo no pedido é o que torna a falha
+    // consultável — antes, um pedido com e-mail recusado era indistinguível,
+    // no banco, de um pedido entregue.
+    registrarIncidenteEmail('email_ingressos_falhou', {
+      tipo: 'ingressos',
       pedidoId,
       eventoId,
-      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      erro: err,
     });
+    await registrarStatusEmailIngressos(
+      db,
+      pedidoId,
+      'falha_envio',
+      registro.comunicacaoId
+    );
     return { status: 'falha_envio', comunicacaoId: registro.comunicacaoId };
   }
 }
