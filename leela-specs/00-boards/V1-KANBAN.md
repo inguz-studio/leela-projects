@@ -150,7 +150,10 @@ tags:
 
 ## 🔄 Em execução
 
-
+- [ ] **[E12] Pedido cujo e-mail não chegou deixa de ser beco sem saída** — o primeiro pagamento real entregou tudo no banco e nenhum dos dois e-mails saiu; até agora não havia como reentregar a mensagem nem como saber que ela falhou. Passa a haver uma porta de reenvio para o admin da plataforma, que devolve o mesmo ingresso sem reemitir nada, e a falha de envio vira estado consultável no pedido em vez de linha de log 🔄 código no repositório, **fora do ar** — espera review antagonista, deploy e a BREVO-1 [[LEELA-E12-landing]]
+    - [ ] **S1227 · O e-mail que falhou tem como voltar, e não passa mais em silêncio**
+        - [ ] S1227-T1 reenvio por pedido, só do admin da plataforma, que não reemite ingresso e não sai duas vezes ⚔
+        - [ ] S1227-T2 falha de envio vira incidente: estado no pedido, campo de alerta e runbook ⚔
 
 ## ✅ Feito
 
