@@ -4,7 +4,7 @@
 - **Trace:** leela-pixreal-diag-20260804
 - **Employee:** sf-frontend-lead (software-forge)
 - **Repo:** C:\dev\LEELA · branch `main`
-- **Commit:** `de6c4a3` — `refactor(painel): suprime a barra superior do shell (Adendo 13)`
+- **Commit:** `2332bebb` — `refactor(painel): suprime a barra superior do shell (Adendo 13)`
 
 ## A ordem
 
