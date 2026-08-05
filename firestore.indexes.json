@@ -269,6 +269,20 @@
       ]
     },
     {
+      "collectionGroup": "inscritos",
+      "fieldPath": "pessoaRef",
+      "indexes": [
+        {
+          "queryScope": "COLLECTION",
+          "order": "ASCENDING"
+        },
+        {
+          "queryScope": "COLLECTION_GROUP",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "afiliados",
       "fieldPath": "tenantId",
       "indexes": [

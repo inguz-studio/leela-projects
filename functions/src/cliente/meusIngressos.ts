@@ -1,0 +1,268 @@
+// =============================================================================
+// functions/src/cliente/meusIngressos.ts
+//
+// `getMeusIngressos` — os ingressos do PRÓPRIO dono da conta, já separados em
+// próximos e passados (S1222-T1 · RN-451 · RN-452).
+//
+// O RECORTE É DO SERVIDOR, e a fila escreve isso com todas as letras. Não é
+// preciosismo: a data do evento é `Timestamp` do Firestore, e deixar o
+// navegador decidir "já passou?" põe o fuso e o relógio da máquina da pessoa
+// dentro de uma regra de negócio. Duas pessoas veriam listas diferentes do
+// mesmo dado, e a que estivesse com o relógio adiantado perderia a corrida da
+// manhã seguinte da lista de "próximos".
+//
+// DUAS FONTES, PORQUE UMA SÓ MENTE:
+//
+//   (1) os inscritos dos pedidos DESTA conta — quem comprou vê o que comprou,
+//       inclusive os ingressos das outras pessoas da compra (é ele quem tem de
+//       repassar o QR da família);
+//   (2) os inscritos cuja `pessoaRef` é uma ficha REIVINDICADA por esta conta
+//       — quem RECEBEU um ingresso comprado por outra pessoa vê o próprio
+//       ingresso mesmo sem nunca ter pago nada.
+//
+// Só (1) apagaria o participante presenteado. Só (2) apagaria o pagador que
+// não se inscreveu (compra para terceiros não amarra ficha de pessoa — está
+// escrito como limitação no `contaSemFriccao`). A união é a lista honesta; a
+// deduplicação é por `{eventoId}/{inscritoId}`, que é a chave real do doc.
+//
+// A FONTE (2) EXIGE ÍNDICE DE GRUPO. `collectionGroup('inscritos')` filtrando
+// `pessoaRef` precisa de um `fieldOverride` COLLECTION_GROUP em
+// `firestore.indexes.json` — que esta task acrescenta. O Emulator não cobra
+// índice, então o teste NÃO prova o deploy: sem `firebase deploy --only
+// firestore:indexes` a query lança `FAILED_PRECONDITION` em produção. Por isso
+// ela é isolada num try/catch que NÃO engole o problema: a lista continua com
+// a fonte (1) e o resultado vem marcado `listaCompleta: false`, para a tela
+// dizer que pode estar faltando coisa. Silenciar viraria a lista vazia que
+// mente, e é justamente o que a RN-451 proíbe.
+//
+// O LINK DO INGRESSO É CUNHADO AQUI DENTRO (RN-452 · RN-423). Mesmo token
+// assinado que o e-mail já entrega, mesma amarração ao `qrToken` vigente — a
+// chave NUNCA desce para o cliente, e nenhuma superfície de credencial nova
+// nasce. Sem keyring ou sem base pública o link vem `null` e a tela mostra o
+// ingresso sem link: link quebrado gasta a confiança de quem já pagou.
+// =============================================================================
+
+import * as admin from 'firebase-admin';
+import { https } from 'firebase-functions/v1';
+import * as logger from 'firebase-functions/logger';
+import { isCodigoIngressoValido, isStatusInscrito, type StatusInscrito } from '@leela/core';
+import { urlIngressoPorLink } from '../eventos/basePublica';
+import { assinarLinkIngresso } from '../eventos/linkIngresso';
+import { obterQrKeyring } from '../eventos/qrToken';
+import {
+  callerDoToken,
+  resolverContaDoCliente,
+  type CallerAreaCliente,
+  type Db,
+  type EstadoAreaCliente,
+} from './gateAreaCliente';
+import { lerPedidosDaConta, lerResumoDosEventos, type ResumoEventoArea } from './leituraArea';
+
+/** Um ingresso na lista da área do cliente. */
+export interface IngressoDaConta {
+  inscritoId: string;
+  eventoId: string;
+  eventoNome: string;
+  eventoSlug: string;
+  /** Data da experiência em ISO 8601. null = evento sem data legível. */
+  eventoDataIso: string | null;
+  eventoLocal: string;
+  /** Nome do TITULAR do ingresso (pode não ser o dono da conta). */
+  titular: string;
+  modalidade: string;
+  status: StatusInscrito;
+  /** Código legível do ingresso (RN-396). null = ainda não emitido. */
+  codigoIngresso: string | null;
+  /** true = `qrToken` gravado, ingresso emitido. */
+  emitido: boolean;
+  /** URL assinada da página do ingresso (RN-452). null = sem link possível. */
+  linkIngresso: string | null;
+}
+
+export interface GetMeusIngressosResult {
+  estado: EstadoAreaCliente;
+  /** Data do evento no futuro (ou sem data legível), da mais próxima adiante. */
+  proximos: IngressoDaConta[];
+  /** Data do evento no passado, do mais recente para trás. */
+  passados: IngressoDaConta[];
+  /**
+   * false = a busca por ficha de pessoa falhou (índice de grupo ausente) e a
+   * lista pode estar incompleta. A tela DIZ isso; não finge lista cheia.
+   */
+  listaCompleta: boolean;
+}
+
+/** Teto de fichas por consulta `in` (limite do Firestore é 30; a conta tem ≤10). */
+const TETO_IN_PESSOAS = 30;
+
+interface InscritoLocalizado {
+  eventoId: string;
+  snap: admin.firestore.DocumentSnapshot;
+}
+
+// ---------------------------------------------------------------------------
+// Núcleo (testável com Admin SDK contra o Emulator)
+// ---------------------------------------------------------------------------
+
+export async function getMeusIngressosCore(
+  db: Db,
+  caller: CallerAreaCliente,
+  agoraMillis: number = Date.now()
+): Promise<GetMeusIngressosResult> {
+  const resolucao = await resolverContaDoCliente(db, caller);
+  if (resolucao.estado !== 'ok') {
+    return { estado: resolucao.estado, proximos: [], passados: [], listaCompleta: true };
+  }
+  const conta = resolucao.conta;
+
+  // ── Fonte (1): os inscritos dos pedidos desta conta ───────────────────────
+  const pedidos = await lerPedidosDaConta(db, conta);
+  const porChave = new Map<string, InscritoLocalizado>();
+  const refs: admin.firestore.DocumentReference[] = [];
+  const chavesEsperadas: string[] = [];
+  for (const pedido of pedidos) {
+    const inscritoRefs = pedido.snap.get('inscritoRefs') as unknown;
+    if (!Array.isArray(inscritoRefs)) continue;
+    for (const inscritoId of inscritoRefs) {
+      if (typeof inscritoId !== 'string' || inscritoId.length === 0) continue;
+      const chave = `${pedido.eventoId}/${inscritoId}`;
+      if (chavesEsperadas.includes(chave)) continue;
+      chavesEsperadas.push(chave);
+      refs.push(db.doc(`eventos/${pedido.eventoId}/inscritos/${inscritoId}`));
+    }
+  }
+  if (refs.length > 0) {
+    const snaps = await db.getAll(...refs);
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const eventoId = snap.ref.parent.parent?.id;
+      if (eventoId === undefined) continue;
+      porChave.set(`${eventoId}/${snap.id}`, { eventoId, snap });
+    }
+  }
+
+  // ── Fonte (2): os inscritos das fichas reivindicadas por esta conta ───────
+  let listaCompleta = true;
+  if (conta.pessoaIds.length > 0) {
+    try {
+      const grupo = await db
+        .collectionGroup('inscritos')
+        .where('pessoaRef', 'in', conta.pessoaIds.slice(0, TETO_IN_PESSOAS))
+        .get();
+      for (const snap of grupo.docs) {
+        const eventoId = snap.ref.parent.parent?.id;
+        if (eventoId === undefined) continue;
+        porChave.set(`${eventoId}/${snap.id}`, { eventoId, snap });
+      }
+    } catch (err) {
+      // Índice de grupo ausente (deploy pendente) ou indisponibilidade: a
+      // lista degrada para a fonte (1) e DECLARA que degradou.
+      listaCompleta = false;
+      logger.error('area_cliente_ingressos_por_pessoa_falhou', {
+        uid: caller.uid,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  const eventos = await lerResumoDosEventos(
+    db,
+    [...porChave.values()].map((i) => i.eventoId)
+  );
+  const keyring = obterQrKeyring();
+
+  const proximos: Array<{ ordem: number; item: IngressoDaConta }> = [];
+  const passados: Array<{ ordem: number; item: IngressoDaConta }> = [];
+  for (const { eventoId, snap } of porChave.values()) {
+    const evento = eventos.get(eventoId);
+    const item = montarIngresso(eventoId, snap, evento, keyring, caller.uid);
+    const quando = evento?.dataMillis ?? null;
+    // Sem data legível o ingresso entra em PRÓXIMOS: um ingresso que talvez
+    // ainda valha não pode ser arquivado por falta de carimbo.
+    if (quando === null || quando >= agoraMillis) {
+      proximos.push({ ordem: quando ?? Number.MAX_SAFE_INTEGER, item });
+    } else {
+      passados.push({ ordem: quando, item });
+    }
+  }
+  proximos.sort((a, b) => a.ordem - b.ordem);
+  passados.sort((a, b) => b.ordem - a.ordem);
+
+  logger.info('area_cliente_ingressos', {
+    uid: caller.uid,
+    proximos: proximos.length,
+    passados: passados.length,
+    listaCompleta,
+  }); // sem PII
+
+  return {
+    estado: 'ok',
+    proximos: proximos.map((p) => p.item),
+    passados: passados.map((p) => p.item),
+    listaCompleta,
+  };
+}
+
+function montarIngresso(
+  eventoId: string,
+  snap: admin.firestore.DocumentSnapshot,
+  evento: ResumoEventoArea | undefined,
+  keyring: ReturnType<typeof obterQrKeyring>,
+  uid: string
+): IngressoDaConta {
+  const qrToken = snap.get('qrToken') as unknown;
+  const emitido = typeof qrToken === 'string' && qrToken.length > 0;
+  const codigo = snap.get('codigoIngresso') as unknown;
+  const statusBruto = snap.get('status') as unknown;
+  const tenantId = (snap.get('tenantId') as string | undefined) ?? evento?.tenantId ?? '';
+
+  let linkIngresso: string | null = null;
+  if (emitido && keyring !== null && tenantId.length > 0) {
+    try {
+      const token = assinarLinkIngresso(
+        { inscritoId: snap.id, eventoId, tenantId },
+        qrToken as string,
+        keyring
+      );
+      linkIngresso = urlIngressoPorLink(token);
+    } catch (err) {
+      // Assinatura de UM link não derruba a lista de todo mundo — mesma
+      // disciplina do e-mail de ingressos.
+      logger.warn('area_cliente_link_ingresso_falhou', {
+        uid,
+        eventoId,
+        err: err instanceof Error ? err.name : 'erro',
+      });
+    }
+  }
+
+  return {
+    inscritoId: snap.id,
+    eventoId,
+    eventoNome: evento?.nome ?? '',
+    eventoSlug: evento?.slug ?? eventoId,
+    eventoDataIso: evento?.dataIso ?? null,
+    eventoLocal: evento?.local ?? '',
+    titular: (snap.get('atletaNome') as string | undefined) ?? '',
+    modalidade: (snap.get('modalidade') as string | undefined) ?? '',
+    status: isStatusInscrito(statusBruto) ? statusBruto : 'pendente',
+    codigoIngresso: isCodigoIngressoValido(codigo) ? (codigo as string) : null,
+    emitido,
+    linkIngresso,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Callable
+// ---------------------------------------------------------------------------
+
+/** Ingressos do próprio dono da conta, em próximos e passados (RN-451). */
+export const getMeusIngressos = https.onCall(async (_data: unknown, context) => {
+  if (!context.auth) {
+    throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
+  }
+  return getMeusIngressosCore(
+    admin.firestore(),
+    callerDoToken(context.auth as Parameters<typeof callerDoToken>[0])
+  );
+});

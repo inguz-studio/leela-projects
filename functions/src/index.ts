@@ -197,6 +197,15 @@ export { varrerIngressosOrfaos } from './eventos/varrerIngressosOrfaos';
 // permitiria cunhar QR de check-in offline sem tocar no banco.
 export { ingressoPorLink } from './http/ingressoPorLink';
 
+// Área do cliente (S1222-T1 · RN-451): os dois callables do PRÓPRIO dono da
+// conta — histórico de compras e ingressos, com o recorte próximos/passados
+// feito no servidor. Molde do getCheckoutPrefill: nenhuma Rule de `pedidos` ou
+// de `inscritos` é aberta ao papel `athlete`; o gate é o da RN-174 (e-mail do
+// token verificado E igual ao carimbo da compra que efetivou o claim), que é
+// estritamente mais fechado que a leitura de pedido próprio da RN-469.
+export { getMinhasCompras } from './cliente/minhasCompras';
+export { getMeusIngressos } from './cliente/meusIngressos';
+
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via
 // computeSaldoRepasse (@leela/core). Gatilhos: financeiro/current (E03

@@ -478,6 +478,20 @@ export type {
 } from './checkout';
 
 // ---------------------------------------------------------------------------
+// Área do cliente — callables do próprio dono da conta (S1222-T1 · RN-451)
+// ---------------------------------------------------------------------------
+export { getMinhasCompras, getMeusIngressos } from './cliente';
+export type {
+  EstadoAreaCliente,
+  StatusCompraCliente,
+  StatusIngressoCliente,
+  CompraDaConta,
+  IngressoDaConta,
+  GetMinhasComprasResult,
+  GetMeusIngressosResult,
+} from './cliente';
+
+// ---------------------------------------------------------------------------
 // Plataforma — tenants, mutações, termos e rollups (LEELA-E16 · S1601/S1602/S1605)
 // ---------------------------------------------------------------------------
 export { getTenant, listTenants, getMyTenant } from './platform/tenants';
