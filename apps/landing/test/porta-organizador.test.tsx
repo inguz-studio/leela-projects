@@ -6,13 +6,42 @@
  * caminho até o painel: a URL era conhecimento oral.
  *
  * O que trava aqui:
- *   - header e footer mostram "Entrar" e "Criar conta de organizador";
- *   - os dois rótulos ficam visíveis também no mobile (nenhuma classe
- *     `hidden` sem contraparte responsiva os esconde);
+ *   - o header mostra "Criar conta de organizador" e o rodapé repete os dois
+ *     caminhos do organizador ("Entrar" e "Criar conta de organizador");
+ *   - os rótulos ficam visíveis também no mobile (nenhuma classe `hidden` sem
+ *     contraparte responsiva os esconde);
  *   - o destino sai de `NEXT_PUBLIC_PAINEL_URL` — nunca de URL fixa.
+ *
+ * ATUALIZADO PELA S1221-T1: o "Entrar" do HEADER deixou de ser link para o
+ * painel e virou o botão que abre o overlay de login da própria landing. A
+ * porta direta do organizador não morreu — ela ficou onde o rodapé já a
+ * repetia, e é isso que este arquivo passa a travar. O overlay tem prova
+ * própria em `entrar-overlay-s1221.test.tsx`.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
+
+// O header passou a puxar o barrel do DS pelo `ContaHeader`; com o teto
+// default de 5s o primeiro render do arquivo estoura por IMPORT, não por
+// comportamento — e um caso que estoura pula o `cleanup`, contaminando o
+// seguinte com o DOM anterior.
+vi.setConfig({ testTimeout: 20_000 });
+
+// S1221-T1: o header passou a montar o `ContaHeader`, que assina o estado de
+// autenticação. O teste da PORTA não sobe Firebase — o SDK fica mockado numa
+// sessão deslogada, que é o estado em que os rótulos do organizador aparecem.
+vi.mock('@leela/api-client', () => ({
+  onSessionChange: (cb: (u: unknown) => void) => {
+    cb(null);
+    return () => undefined;
+  },
+  logout: async () => undefined,
+  loginComEmail: async () => undefined,
+  emailValido: (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim()),
+  mensagemErroLogin: () => 'E-mail ou senha inválidos.',
+}));
+
+vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));
 
 const ENV_PAINEL = 'NEXT_PUBLIC_PAINEL_URL';
 
@@ -63,20 +92,25 @@ describe('painelUrl (P10)', () => {
 });
 
 describe('PublicHeader — porta do organizador', () => {
-  it('mostra Entrar e Criar conta de organizador apontando para o painel', async () => {
+  it('mostra Criar conta de organizador apontando para o painel', async () => {
     await renderHeader();
-    const entrar = screen.getByRole('link', { name: 'Entrar' });
     const criar = screen.getByRole('link', { name: 'Criar conta de organizador' });
-    expect(entrar.getAttribute('href')).toBe('https://painel.exemplo.dev/entrar');
     expect(criar.getAttribute('href')).toBe('https://painel.exemplo.dev/cadastrar');
   });
 
-  it('os dois rótulos sobrevivem ao mobile (sem `hidden` puro)', async () => {
+  it('o rótulo sobrevive ao mobile (sem `hidden` puro)', async () => {
     await renderHeader();
-    for (const nome of ['Entrar', 'Criar conta de organizador']) {
-      const classes = screen.getByRole('link', { name: nome }).className;
-      expect(classes.split(/\s+/)).not.toContain('hidden');
-    }
+    const classes = screen.getByRole('link', { name: 'Criar conta de organizador' }).className;
+    expect(classes.split(/\s+/)).not.toContain('hidden');
+  });
+
+  // S1221-T1: nenhum LINK "Entrar" no header — a entrada virou botão. Se
+  // alguém restaurar o link para o painel, este caso morre e a regressão
+  // aparece antes do deploy.
+  it('não existe mais link "Entrar" no header (a entrada virou overlay)', async () => {
+    await renderHeader();
+    expect(screen.queryByRole('link', { name: 'Entrar' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Entrar' })).not.toBeNull();
   });
 });
 

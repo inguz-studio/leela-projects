@@ -420,6 +420,19 @@ export {
   confirmarResetSenha,
 } from './auth';
 
+// Copy honesta de erro de Auth + validação de cliente (S1221-T1). Puro, sem
+// SDK: a landing e o painel precisam da MESMA regra anti-enumeração e nenhuma
+// das duas apps importa da outra.
+export {
+  getAuthErrorCode,
+  mensagemErroLogin,
+  mensagemErroRedefinicao,
+  emailValido,
+  senhaAtendeMinimo,
+  CREDENCIAL_INVALIDA,
+  SENHA_MIN,
+} from './authMensagens';
+
 // Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações · T5 foto).
 export { atualizarNomeExibicao, atualizarFotoPerfil } from './auth';
 

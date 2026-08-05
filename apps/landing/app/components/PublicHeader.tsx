@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CONTAINER_GUTTER, CONTAINER_LARGURA } from '@/lib/containerPublico';
 import { painelUrl } from '@/lib/painel';
+import { ContaHeader } from './ContaHeader';
 
 /**
  * Header público (S1200-T1). Server Component. Sem navegação de painel
@@ -18,11 +19,17 @@ import { painelUrl } from '@/lib/painel';
  *
  * PORTA DO ORGANIZADOR (S1213-T1): até aqui não existia, em lugar nenhum da
  * landing, um caminho até o painel — quem quisesse entrar precisava saber a
- * URL de cor. "Entrar" e "Criar conta de organizador" vivem no header em
- * desktop E mobile; destino por `lib/painel` (env pública — P10), nunca URL
- * escrita à mão. `<a>` puro em vez de `next/link` porque o destino é OUTRA
- * origem (deploy separado): o Link não prefetcha origem externa e ainda
- * arrastaria o roteador para um caminho que ele não resolve.
+ * URL de cor. "Criar conta de organizador" vive no header em desktop E mobile;
+ * destino por `lib/painel` (env pública — P10), nunca URL escrita à mão. `<a>`
+ * puro em vez de `next/link` porque o destino é OUTRA origem (deploy
+ * separado): o Link não prefetcha origem externa e ainda arrastaria o roteador
+ * para um caminho que ele não resolve.
+ *
+ * ENTRADA (S1221-T1): "Entrar" saiu daqui como link para o painel e virou o
+ * `ContaHeader` — botão que abre o overlay de login da PRÓPRIA landing, sem
+ * tirar a pessoa da página. A porta direta do organizador segue viva no
+ * rodapé, sob a navegação "Organizador", que continua apontando para
+ * `painelUrl('/entrar')`.
  *
  * Mobile: "Eventos" some abaixo de `sm` — o wordmark já leva à home e a
  * largura de 320px não comporta os três rótulos sem quebrar a linha.
@@ -59,12 +66,11 @@ export function PublicHeader(): React.JSX.Element {
           >
             Eventos
           </Link>
-          <a
-            href={painelUrl('/entrar')}
-            className="whitespace-nowrap rounded-ds-sm px-2 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3"
-          >
-            Entrar
-          </a>
+          {/* S1221-T1: "Entrar" deixou de ser link para OUTRA origem (o painel)
+              e virou o overlay da própria landing — a pessoa entra sem perder
+              a página que estava lendo. A porta direta do organizador continua
+              no rodapé, sob a navegação "Organizador". */}
+          <ContaHeader />
           <a
             href={painelUrl('/cadastrar')}
             className="whitespace-nowrap rounded-ds-pill border border-border-default px-2 py-1.5 text-xs font-medium text-text-primary transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3 sm:text-sm"
