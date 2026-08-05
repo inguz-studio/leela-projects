@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsup",
     "lint": "eslint src --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "node scripts/auditar-indices-firestore.mjs"
   },
   "dependencies": {
     "@leela/core": "workspace:*",

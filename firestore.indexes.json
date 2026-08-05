@@ -15,6 +15,20 @@
       ]
     },
     {
+      "collectionGroup": "clubes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tenantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "eventos",
       "queryScope": "COLLECTION",
       "fields": [
@@ -189,6 +203,20 @@
         {
           "fieldPath": "ordem",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "tenants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "criadoEm",
+          "order": "DESCENDING"
         }
       ]
     },

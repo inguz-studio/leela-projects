@@ -69,6 +69,12 @@ export async function getClube(
 /**
  * Lista os clubes do tenant (hub de clubes — zona "próprios" + "parceiros").
  * ADR-009: filtro obrigatório por tenantId.
+ *
+ * ⚠️ `where(tenantId) + orderBy(criadoEm desc)` EXIGE o índice composto
+ * `clubes: tenantId ASC, criadoEm DESC` (firestore.indexes.json). Sem ele o
+ * Firestore rejeita com FAILED_PRECONDITION e a rota de clubes nasce vazia —
+ * foi exatamente o defeito da lane DIAG-CLUBES. O emulador NÃO cobra índice,
+ * então só produção (ou `scripts/auditar-indices-firestore.mjs`) acusa.
  */
 export async function listClubesByTenant(
   db: Firestore,

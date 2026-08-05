@@ -42,6 +42,12 @@ export async function getTenant(
 /**
  * Lista tenants (só platform_admin consegue listar todos via Rules).
  * Filtro opcional por status para a tela de lista de tenants (S1601-T3).
+ *
+ * ⚠️ O filtro é OPCIONAL, e é aí que mora a armadilha: sem `status` a query
+ * ordena por um campo só (índice automático), COM `status` ela vira
+ * `where + orderBy` e passa a exigir o composto `tenants: status ASC,
+ * criadoEm DESC`. A variante sem filtro funcionando esconde a com filtro
+ * quebrada. Achado junto com o defeito de `clubes` na lane DIAG-CLUBES.
  */
 export async function listTenants(
   db: Firestore,
