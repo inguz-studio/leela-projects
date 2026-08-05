@@ -55,6 +55,7 @@ import { StepModalidadeKit } from './StepModalidadeKit';
 import { StepResumo, type LinhaResumo } from './StepResumo';
 import { StepPagamento, type CartaoForm } from './StepPagamento';
 import { StepConfirmacao, type LinhaConfirmacao } from './StepConfirmacao';
+import { pedidoEncerradoSemPagamento } from './AvisoPedidoEncerrado';
 import { CheckoutStepper } from './CheckoutStepper';
 import { LeelaWordmark } from './LeelaWordmark';
 import { mascaraCep, mascaraTelefone } from './cep';
@@ -485,6 +486,11 @@ export function CheckoutFlow({
   const [statusPedidoConsultado, setStatusPedidoConsultado] = useState<string | null>(null);
   const [consultandoPedido, setConsultandoPedido] = useState(false);
   const [pedidoEmConfirmacao, setPedidoEmConfirmacao] = useState(false);
+  // REV-S1225 · a consulta do GESTO falhou. Engolir a falha para não derrubar
+  // a tela é certo; engoli-la SEM DIZER NADA transforma "Atualizar estado do
+  // pedido" num botão que pisca e não faz nada — e devolve o comprador ao
+  // escuro do incidente de 04/08 por outro caminho.
+  const [erroConsultaPedido, setErroConsultaPedido] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [erroConfirmar, setErroConfirmar] = useState<string | null>(null);
   const [cartao, setCartao] = useState<CartaoForm>({ nome: '', numero: '', validade: '', cvv: '' });
@@ -1383,7 +1389,10 @@ export function CheckoutFlow({
     async (origem: 'carregamento' | 'gesto'): Promise<void> => {
       const pedidoId = charge?.pedidoId;
       if (pedidoId === undefined || !authPronto) return;
-      if (origem === 'gesto') setConsultandoPedido(true);
+      if (origem === 'gesto') {
+        setConsultandoPedido(true);
+        setErroConsultaPedido(false);
+      }
       try {
         const pedido = await getPedido(getLeelaDb(), pedidoId);
         if (!montadoRef.current) return;
@@ -1396,14 +1405,31 @@ export function CheckoutFlow({
           setStep(3);
           return;
         }
-        // Ainda não pago. "Estamos confirmando o seu pedido" só aparece depois
-        // do GESTO: na chegada, o comprador pode nem ter pagado ainda, e a
-        // frase afirmaria uma confirmação em curso que não existe.
+        // REV-S1225 · o desfecho também pode ter chegado NEGATIVO. `falhou` e
+        // `cancelado` são TERMINAIS (`TRANSICOES_STATUS_PEDIDO` do core): não
+        // há confirmação em curso a anunciar, e prometer o e-mail do ingresso
+        // sobre um pedido morto é a mentira que esta rodada veio matar. Quem
+        // desenha esse estado é o `AvisoPedidoEncerrado`, por
+        // `statusPedidoConsultado`.
+        if (pedidoEncerradoSemPagamento(status)) {
+          setPedidoEmConfirmacao(false);
+          return;
+        }
+        // Ainda não pago e ainda vivo. "Estamos confirmando o seu pedido" só
+        // aparece depois do GESTO: na chegada, o comprador pode nem ter pagado
+        // ainda, e a frase afirmaria uma confirmação em curso que não existe.
         if (origem === 'gesto') setPedidoEmConfirmacao(true);
       } catch (err) {
         if (typeof console !== 'undefined') {
           console.error('[checkout] Falha ao consultar o estado do pedido.', err);
         }
+        // REV-S1225 · a falha continua ACESSÓRIA (nada na tela cai, o QR segue
+        // à mão), mas quem PEDIU a leitura merece saber que ela não veio. Só
+        // no gesto: a consulta de carregamento é silenciosa de propósito, e um
+        // aviso na chegada falaria de um problema que o comprador não causou
+        // nem pediu para ver. O aviso não afirma NADA sobre o pagamento — a
+        // plataforma não sabe mais do que sabia antes do clique.
+        if (montadoRef.current && origem === 'gesto') setErroConsultaPedido(true);
       } finally {
         if (montadoRef.current && origem === 'gesto') setConsultandoPedido(false);
       }
@@ -1512,6 +1538,7 @@ export function CheckoutFlow({
       // confirmando" dele para a cobrança nova seria falar do pedido errado.
       setStatusPedidoConsultado(null);
       setPedidoEmConfirmacao(false);
+      setErroConsultaPedido(false);
       setErroCharge(null);
       setErroConfirmar(null);
       setPixEstado('vivo');
@@ -1905,6 +1932,8 @@ export function CheckoutFlow({
               onConsultarPedido={() => void consultarPedido('gesto')}
               consultandoPedido={consultandoPedido}
               pedidoEmConfirmacao={pedidoEmConfirmacao}
+              pedidoEncerrado={pedidoEncerradoSemPagamento(statusPedidoConsultado)}
+              erroConsultaPedido={erroConsultaPedido}
             />
           </div>
         ) : null}

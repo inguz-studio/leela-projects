@@ -10,6 +10,10 @@ import type {
 import { Ticket } from './Ticket';
 import { PixCobranca, payloadPix } from './PixCobranca';
 import { AvisoPedidoEmConfirmacao } from './AvisoPedidoEmConfirmacao';
+import {
+  AvisoPedidoEncerrado,
+  pedidoEncerradoSemPagamento,
+} from './AvisoPedidoEncerrado';
 
 /** Metadados por inscrito, na MESMA ordem de `charge.inscritoIds`. */
 export interface LinhaConfirmacao {
@@ -80,6 +84,19 @@ export function StepConfirmacao({
   // leitura do próprio pedido (PIX real, RN-469) respondem à MESMA pergunta —
   // e basta uma delas dizer `pago` para a tela parar de esperar.
   const pago = confirmacao?.statusPedido === 'pago' || statusPedidoConsultado === 'pago';
+  // REV-S1225 · o terceiro estado, que faltava. "Não pago" não é sinônimo de
+  // "em confirmação": `falhou` e `cancelado` são TERMINAIS (a matriz
+  // `TRANSICOES_STATUS_PEDIDO` do core não os deixa voltar a `pendente`), e a
+  // cobrança EXPIRADA pelo servidor (`pixExpirado`, que só é `true` quando o
+  // servidor materializou a expiração — `pixVivoPeloServidor` é o outro ramo)
+  // fecha o mesmo caminho. Sobre qualquer um deles, "Estamos confirmando o seu
+  // pedido" + "o acesso do ingresso vai por lá" prometem um ingresso que não
+  // vem — a mentira que esta rodada existe para matar.
+  const encerrado =
+    !pago &&
+    (pedidoEncerradoSemPagamento(statusPedidoConsultado) ||
+      pedidoEncerradoSemPagamento(confirmacao?.statusPedido) ||
+      pixExpirado);
   const { valores } = charge;
   // D-6 · RN-157: enquanto o PIX está PENDENTE, o QR e o copia-e-cola valem
   // também AQUI — esta é a "tela do pedido pendente" do checkout. Pedido pago
@@ -113,7 +130,11 @@ export function StepConfirmacao({
         </section>
       ) : (
         <div className="flex flex-col gap-2">
-          <AvisoPedidoEmConfirmacao email={responsavelEmail} />
+          {encerrado ? (
+            <AvisoPedidoEncerrado />
+          ) : (
+            <AvisoPedidoEmConfirmacao email={responsavelEmail} />
+          )}
           <p className="font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
         </div>
       )}

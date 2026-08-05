@@ -8,6 +8,7 @@ import type { FormaUI } from './tipos';
 import { PixCobranca, payloadPix } from './PixCobranca';
 import { ProcessandoPagamento } from './ProcessandoPagamento';
 import { AvisoPedidoEmConfirmacao } from './AvisoPedidoEmConfirmacao';
+import { AvisoPedidoEncerrado } from './AvisoPedidoEncerrado';
 
 export interface CartaoForm {
   nome: string;
@@ -62,6 +63,8 @@ export function StepPagamento({
   onConsultarPedido,
   consultandoPedido = false,
   pedidoEmConfirmacao = false,
+  pedidoEncerrado = false,
+  erroConsultaPedido = false,
 }: {
   /**
    * S1217-T2 · RN-440: `null` = nenhuma forma escolhida. Não há instrumento a
@@ -137,6 +140,19 @@ export function StepPagamento({
    * chegada, antes de qualquer pagamento, seria confirmar o que ninguém pagou.
    */
   pedidoEmConfirmacao?: boolean;
+  /**
+   * REV-S1225 · a consulta voltou com um estado TERMINAL não-pago (`falhou` ou
+   * `cancelado` — `TRANSICOES_STATUS_PEDIDO` do core não os move mais). É
+   * resposta JÁ CONHECIDA: nem espera, nem promessa de e-mail com ingresso.
+   * Também some o botão de atualizar, que não tem estado novo a buscar.
+   */
+  pedidoEncerrado?: boolean;
+  /**
+   * REV-S1225 · a consulta do GESTO falhou (Rules, rede, ou parse recusando um
+   * doc que as Rules deixam ler). A falha segue acessória e nada cai da tela —
+   * mas o botão precisa responder ao clique, ou vira controle morto.
+   */
+  erroConsultaPedido?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
   // ── C3-0803 · cada espera com o nome dela ─────────────────────────────────
@@ -329,17 +345,34 @@ export function StepPagamento({
                   do PIX. */}
               {gatewaySimulado || pixExpirado || onConsultarPedido === undefined ? null : (
                 <>
-                  <div>
-                    <Button
-                      variant="secondary"
-                      onClick={onConsultarPedido}
-                      disabled={consultandoPedido}
-                    >
-                      {consultandoPedido ? 'Consultando…' : 'Atualizar estado do pedido'}
-                    </Button>
-                  </div>
-                  {pedidoEmConfirmacao ? (
+                  {/* REV-S1225: pedido em estado TERMINAL não tem estado novo
+                      a buscar — o botão sai junto com a espera, pelo mesmo
+                      motivo que ele já sai na cobrança expirada. */}
+                  {pedidoEncerrado ? null : (
+                    <div>
+                      <Button
+                        variant="secondary"
+                        onClick={onConsultarPedido}
+                        disabled={consultandoPedido}
+                      >
+                        {consultandoPedido ? 'Consultando…' : 'Atualizar estado do pedido'}
+                      </Button>
+                    </div>
+                  )}
+                  {pedidoEncerrado ? (
+                    <AvisoPedidoEncerrado />
+                  ) : pedidoEmConfirmacao ? (
                     <AvisoPedidoEmConfirmacao email={emailDaCompra} />
+                  ) : null}
+                  {/* REV-S1225 · a consulta pedida NÃO voltou. Uma linha, sem
+                      alarme e sem afirmar nada sobre o dinheiro: a plataforma
+                      não sabe mais do que sabia antes do clique, e é isso
+                      exatamente o que ela diz. */}
+                  {erroConsultaPedido && !pedidoEncerrado ? (
+                    <p role="status" className="text-sm text-text-secondary">
+                      Não conseguimos ler o estado do seu pedido agora. Isso não muda o seu
+                      pagamento. Tente de novo em instantes.
+                    </p>
                   ) : null}
                 </>
               )}
