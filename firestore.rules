@@ -2585,6 +2585,42 @@ service cloud.firestore {
        * O que continua NEGADO, com teste: qualquer outro token — anônimo,
        * `athlete` nomeado, comprador de OUTRO pedido, conta vinculada a
        * outro pedido — e o promoter, que segue sem ver dinheiro.
+       *
+       * ─────────────────────────────────────────────────────────────────
+       * POSSE-EMAIL-1 (S1230-T4 · 2026-08-05) — a POSSE DO ENDEREÇO ENTRA,
+       * E SÓ NO RAMO (b).
+       * ─────────────────────────────────────────────────────────────────
+       * O vínculo do ramo (b) sai de IGUALDADE DE E-MAIL, sem prova de que
+       * quem digitou é dono do endereço (`contaSemFriccao.ts:203`). A
+       * cadeia medida pela REV-AREACLIENTE: alguém registra o endereço da
+       * vítima num cadastro aberto e nunca verifica; a vítima compra com o
+       * próprio endereço; o servidor acha a conta do primeiro e carimba o
+       * vínculo NELA; a área do cliente NEGA (ela exige e-mail verificado)
+       * e a Rule PERMITE, entregando o pedido inteiro.
+       *
+       * A condição de posse fecha a ponta da Rule. O que a destravou foi a
+       * RN-476: até 05/08, exigir `email_verified` tirava leitura de quem
+       * comprou e nunca verificou, e essa pessoa dependia de um e-mail para
+       * conseguir verificar. Com o código de seis dígitos ela tem caminho
+       * próprio, e o servidor carimba `emailVerified` no mesmo gesto em que
+       * ela define a senha — toda sessão NOMEADA da landing passa a ter o
+       * endereço verificado.
+       *
+       * ⛔ O RAMO (a) NÃO PODE RECEBER A CONDIÇÃO, E ISSO NÃO É DETALHE.
+       * Ali o uid é o da sessão ANÔNIMA do checkout, que por construção não
+       * tem e-mail nenhum no token — `email_verified` é sempre falso. Pôr a
+       * condição lá tranca o comprador recém-pago fora do próprio pedido e
+       * quebra a S1225-T3, que está EM PRODUÇÃO. Existe caso de teste que
+       * fica vermelho se alguém mover a fronteira, nos dois sentidos.
+       *
+       * Quem fica de fora depois disto: ninguém. Quem comprou e ainda não
+       * fez o primeiro acesso continua lendo pelo ramo (a), que não muda, e
+       * continua abrindo o ingresso pelo link assinado (RN-452).
+       *
+       * O que SOBRA do POSSE-EMAIL-1: o vínculo em si continua saindo de
+       * igualdade de endereço, e erro de digitação no checkout continua
+       * carimbando a compra na conta errada. O que muda é que essa conta só
+       * lê se TAMBÉM tiver provado posse daquele endereço.
        */
       function ehCompradorDoPedido() {
         return isSignedIn()
@@ -2595,7 +2631,8 @@ service cloud.firestore {
             ||
             ('contaSemFriccao' in resource.data
               && 'contaUid' in resource.data.contaSemFriccao
-              && resource.data.contaSemFriccao.contaUid == request.auth.uid)
+              && resource.data.contaSemFriccao.contaUid == request.auth.uid
+              && request.auth.token.email_verified == true)
           );
       }
 

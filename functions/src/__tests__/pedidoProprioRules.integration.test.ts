@@ -99,6 +99,13 @@ function dbAs(uid: string, claims: Record<string, unknown> = {}): Firestore {
   return testEnv.authenticatedContext(uid, claims).firestore() as unknown as Firestore;
 }
 
+/**
+ * O token de uma sessão NOMEADA da landing depois da RN-476: papel `athlete` e
+ * endereço PROVADO. É o que o `concluirAcessoComProva` produz — ele carimba
+ * `emailVerified: true` no mesmo gesto em que a senha é definida.
+ */
+const CLIENTE_VERIFICADO = { role: 'athlete', email_verified: true } as const;
+
 function anonDb(uid: string): Firestore {
   // A sessão anônima do checkout É autenticada (Firebase Anonymous Auth):
   // tem uid, não tem claim de papel. É exatamente este contexto.
@@ -266,9 +273,60 @@ describe('RN-469 · o comprador lê o PRÓPRIO pedido', () => {
     await assertSucceeds(getDoc(doc(anonDb(ANA_ANON_UID), 'pedidos', PEDIDO_ANA_PENDENTE)));
   });
 
-  it('(b) a conta VINCULADA pela confirmação lê o pedido (área do cliente)', async () => {
+  it('(b) a conta VINCULADA, COM o e-mail verificado, lê o pedido (área do cliente)', async () => {
+    // POSSE-EMAIL-1 (S1230-T4 · 05/08): o ramo (b) passou a exigir posse
+    // PROVADA do endereço. Depois da RN-476, toda sessão NOMEADA da landing
+    // tem `email_verified` — não existe caminho até uma senha que não passe
+    // pelo código de seis dígitos, e o servidor carimba a verificação no
+    // mesmo gesto.
     await assertSucceeds(
+      getDoc(doc(dbAs(ANA_CONTA_UID, CLIENTE_VERIFICADO), 'pedidos', PEDIDO_ANA))
+    );
+  });
+
+  it('POSSE-EMAIL-1 · a conta vinculada SEM e-mail verificado NÃO lê mais', async () => {
+    // O ATAQUE que o item mediu, na cadeia inteira: alguém registra o
+    // endereço da vítima num cadastro aberto e nunca verifica; a vítima
+    // compra com o próprio endereço; a confirmação acha a conta do primeiro
+    // por IGUALDADE DE E-MAIL e carimba o vínculo NELA. A área do cliente já
+    // negava (ela exige `email_verified`); a Rule é que permitia, e entregava
+    // o pedido inteiro — endereço, aceites e valor.
+    await assertFails(
       getDoc(doc(dbAs(ANA_CONTA_UID, { role: 'athlete' }), 'pedidos', PEDIDO_ANA))
+    );
+    // E `email_verified` explicitamente falso também nega — a condição é
+    // `== true`, não "campo presente".
+    await assertFails(
+      getDoc(
+        doc(
+          dbAs(ANA_CONTA_UID, { role: 'athlete', email_verified: false }),
+          'pedidos',
+          PEDIDO_ANA
+        )
+      )
+    );
+  });
+
+  it('POSSE-EMAIL-1 · a FRONTEIRA entre os ramos não se move (a S1225-T3 continua viva)', async () => {
+    // ⛔ O ramo (a) NÃO pode receber a condição: ali o uid é o da sessão
+    // ANÔNIMA do checkout, que por construção não tem e-mail no token. Este
+    // caso fica vermelho no dia em que alguém "uniformizar" os dois ramos —
+    // e o que ele protege é o comprador recém-pago lendo o próprio pedido,
+    // que está EM PRODUÇÃO.
+    await assertSucceeds(getDoc(doc(anonDb(ANA_ANON_UID), 'pedidos', PEDIDO_ANA)));
+    await assertSucceeds(
+      getDoc(doc(anonDb(ANA_ANON_UID), 'pedidos', PEDIDO_ANA_PENDENTE))
+    );
+  });
+
+  it('POSSE-EMAIL-1 · e-mail verificado NÃO é passe livre: terceiro segue negado', async () => {
+    // A condição é um E, nunca um OU. Um token verificado de outra pessoa não
+    // ganha nada com ela.
+    await assertFails(
+      getDoc(doc(dbAs('uid-terceiro-verificado', CLIENTE_VERIFICADO), 'pedidos', PEDIDO_ANA))
+    );
+    await assertFails(
+      getDoc(doc(dbAs(BRUNO_CONTA_UID, CLIENTE_VERIFICADO), 'pedidos', PEDIDO_ANA))
     );
   });
 
@@ -384,8 +442,10 @@ describe('RN-469 · escrita segue NEGADA ao próprio comprador', () => {
   });
 
   it('a conta vinculada também não escreve o pedido que lê', async () => {
+    // Token VERIFICADO de propósito: com o token sem posse provada, a negativa
+    // viria da leitura e o caso deixaria de falar do `write: if false`.
     await assertFails(
-      updateDoc(doc(dbAs(ANA_CONTA_UID, { role: 'athlete' }), 'pedidos', PEDIDO_ANA), {
+      updateDoc(doc(dbAs(ANA_CONTA_UID, CLIENTE_VERIFICADO), 'pedidos', PEDIDO_ANA), {
         status: 'cancelado',
       })
     );
@@ -409,8 +469,11 @@ describe('RN-469 · a abertura não vazou para as coleções vizinhas', () => {
   });
 
   it('a conta vinculada NÃO lê o registro `pessoas` dela (RN-173 fechada como antes)', async () => {
+    // Também com o token verificado: a RN-173 continua fechada mesmo para
+    // quem provou posse do endereço — a posse abriu o PEDIDO, não a coleção
+    // global de identidade.
     await assertFails(
-      getDoc(doc(dbAs(ANA_CONTA_UID, { role: 'athlete' }), 'pessoas', 'hmac-cpf-da-ana'))
+      getDoc(doc(dbAs(ANA_CONTA_UID, CLIENTE_VERIFICADO), 'pessoas', 'hmac-cpf-da-ana'))
     );
   });
 });

@@ -116,6 +116,18 @@ function dbAs(uid: string, claims: Record<string, unknown> = {}): Firestore {
   return testEnv.authenticatedContext(uid, claims).firestore() as unknown as Firestore;
 }
 
+/**
+ * A sessão NOMEADA com posse do endereço PROVADA (POSSE-EMAIL-1 · S1230-T4).
+ *
+ * Depois de 05/08 o ramo (b) da `ehCompradorDoPedido` exige
+ * `email_verified == true`, e é assim que toda sessão nomeada da landing nasce
+ * — o `concluirAcessoComProva` carimba a verificação no mesmo gesto em que a
+ * senha é definida (RN-476/RN-478).
+ */
+function dbAsVerificado(uid: string): Firestore {
+  return dbAs(uid, { email_verified: true });
+}
+
 function pedidoBase(
   compradorUid: string,
   overrides: Record<string, unknown> = {}
@@ -369,6 +381,19 @@ describe('REV-S1225 · A capacidade de LISTAR os próprios pedidos', () => {
     await assertSucceeds(
       getDocs(
         query(
+          collection(dbAsVerificado(CLARA_CONTA_UID), 'pedidos'),
+          where('contaSemFriccao.contaUid', '==', CLARA_CONTA_UID)
+        )
+      )
+    );
+  });
+
+  it('POSSE-EMAIL-1 · a MESMA query, sem e-mail verificado, é negada', async () => {
+    // A condição vale para a query como vale para o `get`: a Rule é avaliada
+    // documento a documento, e sem posse provada nenhum deles passa.
+    await assertFails(
+      getDocs(
+        query(
           collection(dbAs(CLARA_CONTA_UID), 'pedidos'),
           where('contaSemFriccao.contaUid', '==', CLARA_CONTA_UID)
         )
@@ -506,19 +531,41 @@ describe('REV-S1225 · campo a campo, o que a RN-469 entrega ao comprador', () =
 // ═════════════════════════════════════════════════════════════════════════
 // D. `contaSemFriccao.contaUid` VIROU fronteira de autorização (vetor 3)
 // ═════════════════════════════════════════════════════════════════════════
-describe('REV-S1225 · o vínculo por e-mail agora AUTORIZA leitura', () => {
+describe('REV-S1225 · o vínculo por e-mail autoriza leitura, agora COM posse provada', () => {
   it('quem controla a conta do e-mail da compra lê o pedido inteiro, sem ter comprado', async () => {
     // `contaSemFriccao.contaUid` sai de `auth.getUidPorEmail(email)`
     // (`contaSemFriccao.ts:203`): a conta é resolvida PELO E-MAIL digitado no
     // checkout, e uma conta preexistente é REUSADA sem prova de posse. Antes
     // da RN-469 esse campo era um vínculo administrativo; agora ele é chave de
-    // leitura de PII (endereço, aceites, composição financeira). O código já
-    // trata hijack como risco no lado da `pessoa` ("First-claim: vínculo
-    // divergente NUNCA sobrescrito"), e não há guarda equivalente aqui.
-    await assertSucceeds(getDoc(doc(dbAs(CLARA_CONTA_UID), 'pedidos', PED_CLARA_A)));
+    // leitura de PII (endereço, aceites, composição financeira).
+    //
+    // ⚠ ATUALIZADO EM 05/08 (POSSE-EMAIL-1 · S1230-T4): a leitura passou a
+    // exigir `email_verified == true`. O que SOBRA do vetor está no caso
+    // seguinte — e é bem mais estreito do que era.
+    await assertSucceeds(
+      getDoc(doc(dbAsVerificado(CLARA_CONTA_UID), 'pedidos', PED_CLARA_A))
+    );
     // E o mesmo uid NÃO alcança o pedido de terceiro — a fronteira é o vínculo,
     // e é exatamente por isso que o vínculo precisa ser confiável.
-    await assertFails(getDoc(doc(dbAs(CLARA_CONTA_UID), 'pedidos', PED_DAVI)));
+    await assertFails(getDoc(doc(dbAsVerificado(CLARA_CONTA_UID), 'pedidos', PED_DAVI)));
+  });
+
+  it('POSSE-EMAIL-1 fechado · conta vinculada e NÃO verificada não lê mais nada', async () => {
+    // O vetor que a REV-AREACLIENTE mediu tinha duas metades. A do ATACANTE
+    // morre na origem sob a RN-478 (nenhuma conta nasce antes do código
+    // provado, pela porta da landing). A da RULE morre aqui.
+    await assertFails(getDoc(doc(dbAs(CLARA_CONTA_UID), 'pedidos', PED_CLARA_A)));
+  });
+
+  it('o que SOBRA do item, escrito para não virar surpresa', async () => {
+    // O vínculo em si continua saindo de IGUALDADE DE ENDEREÇO, e erro de
+    // digitação no checkout continua carimbando a compra na conta errada. O
+    // que mudou é que essa conta só lê se TAMBÉM tiver provado posse daquele
+    // endereço — e nesse cenário o e-mail com o ingresso já teria chegado na
+    // mesma caixa de qualquer forma.
+    await assertSucceeds(
+      getDoc(doc(dbAsVerificado(CLARA_CONTA_UID), 'pedidos', PED_CLARA_A))
+    );
   });
 });
 
