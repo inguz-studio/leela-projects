@@ -29,7 +29,7 @@ O valor entregue é operar a Meia Maratona Floripa 2026 (453 inscritos, R$ 85.61
 - Organizador cria e publica um evento gerando URL pública + QR (RN-201) em uma sessão.
 - Lista de 453 inscritos navegável com paginação obrigatória, busca e filtros, sem travar (RN-202/203/204).
 - Balcão entrega kit + vincula chip + registra presença num fluxo único; conflito de chip e evento fora da janela tratados como estados dedicados (RN-205/206/207/208).
-- Kits configuráveis (0..N), com item reutilizado em múltiplos kits e "Sem kit" como kit válido com desconto (RN-210…217).
+- Kits configuráveis (0..N), com item reutilizado em múltiplos kits e "Sem kit" como kit válido de preço zero ou positivo (RN-210…217, com a RN-211 revogada pela RN-506 em 05/08 — kit não tem preço negativo).
 - Financeiro do evento legível (bruto/taxa/líquido, breakdown, repasses) e exportável em CSV (BH-207).
 - Nomenclatura "kit" em todo o produto — nunca "tier" (RN-216).
 - Fluxo demonstrável ponta a ponta com os mocks canônicos de HANDOFF-05, sem inventar dados.
@@ -46,7 +46,7 @@ O valor entregue é operar a Meia Maratona Floripa 2026 (453 inscritos, R$ 85.61
 - **RN-207** — Quando `evento.usaChip=false`, o passo de vínculo de chip é suprimido.
 - **RN-208** — Estados de tela vão para galeria separada, nunca empilhados (§2.9).
 - **RN-210** — Evento oferece 0 a N kits (não kit único).
-- **RN-211** — "Sem kit" é kit válido e aceita preço negativo (desconto).
+- ~~**RN-211** — "Sem kit" é kit válido e aceita preço negativo (desconto).~~ **⛔ REVOGADA em 2026-08-05 por decisão do dono (D-0805-7 · lane SPEC-SEM-KIT).** Verbatim: *"isso é um problema, pois nao existe essa opção de 'dar desconto sem o kit' pois é interessante para os organizadores e patrocinadores que os participantes tenham os kits com os brindes deles."* A primeira metade do enunciado sobrevive dentro da **RN-506**, que a substitui: um kit chamado "Sem kit" continua sendo kit válido; o que morre é o **preço abaixo de zero**. O texto original fica legível de propósito, porque `kitEhDesconto` e o ramo negativo de `labelDeltaKit` continuam no código enquanto houver documento legado. Registro completo em `02-rodadas/2026-08-05-sem-kit/01-decisoes-dono.md`.
 - **RN-212** — Item é tamanhado (camiseta) ou único (sacochila, amostra).
 - **RN-213** — Item tem origem: `organizador` ou `patrocinador`.
 - **RN-214** — Item patrocinado tem toggle "Exibir logo ao atleta".
@@ -754,7 +754,7 @@ Modelar `eventos/{id}/kits`, `itensKit` e a relação N:N Kit↔Item (array de r
 
 **Critérios de aceite (testáveis)**
 - **Dado** um item em 2 kits, **quando** consulto, **então** "usado em" lista os 2 (RN-215).
-- **Dado** um kit "Sem kit" com preço negativo, **quando** salvo, **então** persiste (RN-211).
+- **Dado** um kit "Sem kit" com preço **zero**, **quando** salvo, **então** persiste (RN-506; substitui o aceite de preço negativo da RN-211, revogada em 05/08). **Dado** o mesmo kit com preço negativo, **quando** salvo, **então** a Rule recusa.
 
 **Testes a escrever**
 - unit: tipos/derivações.
@@ -901,7 +901,7 @@ Ajuste manual de estoque (fora desta fase).
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** um kit, **quando** clico em "Editar" no card ou em "+ Adicionar kit", **então** abro a tela cheia (2 pontos de entrada — RN-217) com breadcrumb nível 4 (Eventos / [evento] / Kits / Cadastro / [Kit]).
-- **Dado** a tela, **quando** edito, **então** configuro identidade (nome, descrição, cor/badge), modalidades (chips + select), preço (aceita negativo — RN-211), capacidade e checklist de itens.
+- **Dado** a tela, **quando** edito, **então** configuro identidade (nome, descrição, cor/badge), modalidades (chips + select), preço (**piso zero** — RN-506; a RN-211, que aceitava negativo, foi revogada em 05/08), capacidade e checklist de itens.
 - **Dado** que altero itens/modalidades, **quando** interajo, **então** chip fade-out, contador e save com Toast funcionam (§2.12).
 - **Dado** um evento com venda, **quando** tento editar preço, **então** o campo está bloqueado (RN-200).
 - **Dado** toda a nomenclatura, **quando** leio, **então** é "kit", nunca "tier" (RN-216).
@@ -929,7 +929,7 @@ Substituir o antigo modal de "tier" por uma tela cheia de edição de kit, com b
 1. Breadcrumb nível 4.
 2. Card de identidade (nome, descrição, cor/badge).
 3. Modalidades como chips removíveis (fade-out) + select para adicionar.
-4. Preço (decimal, aceita negativo — RN-211); bloqueado se houver venda (RN-200).
+4. Preço (decimal, **≥ 0** — RN-506, que revogou a RN-211); bloqueado se houver venda (RN-200).
 5. Capacidade + checklist de itens (marca itens do catálogo — reusa N:N de S205-T1).
 6. Salvar → Toast; contador de itens ao vivo (§2.12).
 
@@ -937,7 +937,7 @@ Substituir o antigo modal de "tier" por uma tela cheia de edição de kit, com b
 - Lê/escreve `kits/{kitId}` e `itensKit.kits[]` (S205-T1).
 
 **Regras de negócio a respeitar**
-- RN-211 (preço negativo), RN-217 (2 entradas), RN-200 (bloqueio), RN-216 (nomenclatura).
+- RN-506 (piso zero no preço; revoga a RN-211), RN-217 (2 entradas), RN-200 (bloqueio), RN-216 (nomenclatura).
 
 **Critérios de aceite (testáveis)**
 - **Dado** "+ Adicionar kit" e "Editar" no card, **quando** clico, **então** ambos abrem a tela cheia (RN-217).
@@ -949,7 +949,7 @@ Substituir o antigo modal de "tier" por uma tela cheia de edição de kit, com b
 - e2e: editar kit → salvar → Toast.
 
 **Definition of Done**
-- [ ] 2 pontos de entrada (RN-217) · [ ] Preço negativo (RN-211) · [ ] Bloqueio RN-200 · [ ] "kit" (RN-216) · [ ] (ver `definition-of-done.md`)
+- [ ] 2 pontos de entrada (RN-217) · [ ] Preço com piso zero (RN-506) · [ ] Bloqueio RN-200 · [ ] "kit" (RN-216) · [ ] (ver `definition-of-done.md`)
 
 **Fora de escopo**
 Modal antigo `Kits-Modal-Tier` (removido).
@@ -2280,3 +2280,198 @@ regras que governam a edição dessa lista (RN-500 a RN-505) vivem em
 [[LEELA-E04-config-vendas]], e o que este épico consome delas é o efeito no kit — renomear migra
 `Kit.modalidades[]` no mesmo commit (RN-501), e remover é recusado enquanto um kit apontar
 (RN-502).
+
+## Delta o kit não vende desconto (SPEC-SEM-KIT · 2026-08-05)
+
+> Rodada `02-rodadas/2026-08-05-sem-kit/`. Decisão **D-0805-7** do dono, que **revoga a RN-211**.
+> Este épico é o dono das quatro regras novas, porque o kit é entidade dele (faixa 200-236).
+
+### A revogação, e o que sobrevive dela
+
+A RN-211 dizia que *"Sem kit" é kit válido e aceita preço negativo (desconto)*. O dono revogou a
+segunda metade em 05/08, com a razão de negócio dita na mesma frase: o brinde do patrocinador
+precisa chegar à mão do participante, e uma opção de abrir mão dele por dinheiro trabalha contra
+isso. O enunciado original continua legível na seção "Regras de negócio aplicáveis", **marcado**,
+porque `kitEhDesconto` e o ramo negativo de `labelDeltaKit` seguem no código enquanto existir
+documento legado. A primeira metade sobrevive dentro da RN-506: um kit chamado "Sem kit" continua
+sendo kit válido.
+
+### O brinde é contrapartida de patrocinador · diretriz durável
+
+> *"é interessante para os organizadores e patrocinadores que os participantes tenham os kits com
+> os brindes deles."* — o dono, 05/08.
+
+Isto não é regra técnica e não tem número: é a razão pela qual as regras de kit são como são, e
+serve para decidir os próximos casos sem precisar perguntar de novo. **Um item de patrocinador que
+não chega à mão do participante é contrapartida não entregue**, e a plataforma vive de vender essa
+contrapartida (RN-213, RN-214, e a ativação de marcas que o rodapé da S205 já contabiliza).
+
+Consequência operacional: **nenhum desenho pode oferecer ao comprador um caminho para declinar o
+kit em troca de dinheiro.** Colidem com a diretriz, e por isso nascem recusados até que o dono diga
+outra coisa: o desconto por dispensar o kit (que é o caso desta rodada), o kit vendido à parte da
+inscrição, o cupom que zera apenas o delta do kit, e qualquer variante de "inscrição sem brinde
+mais barata". Não colide, e segue permitido: a modalidade que não oferece kit nenhum, o kit de
+preço zero, e o lote que dispensa a oferta inteira (RN-503).
+
+### RN-506 · o preço do kit tem piso zero, e a fronteira é a Rule
+
+**O preço de um kit é valor monetário em centavos exatos, maior ou igual a zero.** A regra revoga a
+RN-211 e vale no create e no update. Um kit chamado "Sem kit" continua legítimo; o que a plataforma
+não vende é desconto por dispensar o brinde.
+
+**A proibição mora na Rule antes de morar em qualquer outro lugar**, e a razão é medida: o kit é
+**escrita direta do cliente** (`packages/api-client/src/eventos/kits.ts:85-109` faz `setDoc` com
+merge, e **nenhuma Cloud Function cria ou atualiza kit** — as Functions só leem), então o
+`SalvarKitInput` é tipo TypeScript e tipo não recusa payload. Validação só na tela seria sugestão.
+
+**O molde já existe no arquivo e é o do lote.** `shapeKitValido` (`firestore.rules:959-966`) exige
+hoje `preco is number` e nada mais; o lote exige as duas coisas certas, `moneyCentExato` e
+`preco >= 0` (`:1060-1061`). O kit passa a espelhar o lote. Isso fecha, de graça, uma segunda porta
+que a apuração encontrou aberta: sem `moneyCentExato`, `preco: 75.001` e `Infinity` passam pela
+Rule do kit hoje, porque `is number` é verdadeiro para float infinito.
+
+**O predicado do core se divide em dois, e isso não é preciosismo.** `precoKitValido`
+(`packages/core/src/eventos/kit.ts:113-116`) é chamado em dois papéis opostos: como escrita, diz o
+que pode ser gravado; como leitura, é chamado pelo `parseKit` (`:289`) e dentro de
+`computeSaleState` (`packages/core/src/checkout/saleState.ts:265-269`), onde **lança**. Apertá-lo
+num lugar só faria toda cotação que envolva um kit legado negativo ser recusada, derrubando o
+checkout de eventos vivos que ninguém tocou. Por isso `precoKitValido` **fica liberal** (leitura,
+Postel, o mesmo padrão do `gradeEfetivaDoItem` neste arquivo) e nasce `precoKitGravavel`, que é o
+espelho exato da Rule e é o que a tela e o contrato chamam.
+
+**Quem já tem kit negativo continua vendendo, e não continua editando.** Vender continua porque o
+predicado de leitura não mudou. Editar para de funcionar por efeito de segunda ordem: o payload do
+`salvarKit` carrega `preco` incondicionalmente (`kits.ts:88-95`), então mexer na descrição de um
+kit legado passa a bater na Rule com uma recusa que fala de preço. **Essa recusa precisa de
+endereço na tela** — é o mesmo defeito que a review da SEAL-LOTES corrigiu no `LoteModal`
+(`2a97a592`). Migração automática está **recusada**: reescrever preço em varredura contraria a
+RN-200 em evento com venda e muda configuração de organizador sem ele saber. O reparo é operação
+nomeada (RN-509).
+
+**O que a regra deliberadamente não remove.** `kitEhDesconto` (`kit.ts:119-121`) fica, e vira o
+detector do legado que a operação de reparo usa. `guardPrecoNaoNegativo`
+(`saleState.ts:230-245`, chamado em `:288` e `:314`) fica, perde a causa viva e passa a ser última
+linha de defesa, exatamente como o piso do principal na RN-456 — remover defesa porque a causa
+sumiu é como o resíduo de juros zero nasceu. **Nenhum número de receita já apurado muda**, porque
+`agregarFinanceiro` declara por escrito que nunca deriva receita de preço de kit
+(`functions/src/eventos/agregarFinanceiro.ts:24-25`).
+
+Falsificação: gravar um kit com `preco: -1` tem de ser recusado **pela Rule**, com a tela intacta e
+com payload montado à mão; `preco: 75.001` também; e uma cotação sobre um evento que ainda tenha
+kit negativo no banco tem de continuar fechando normalmente.
+
+### RN-507 · o valor `sem_kit` do enum é rótulo, e não é o kit que a RN-506 elimina
+
+**Duas coisas se chamam "sem kit" e só uma morre.** O que a RN-506 elimina é um **kit vendável**:
+documento em `eventos/{id}/kits/{kitId}` com preço abaixo de zero. O que **continua existindo e é
+necessário** é o valor `sem_kit` do enum `KitInscrito`
+(`packages/core/src/eventos/inscrito.ts:41`, RN-202), que é **rótulo de fallback** do inscrito:
+`kitEnumFromId` (`checkout/tipos.ts:66-72`) o devolve tanto para kit fora do conjunto canônico do
+seed quanto para ausência de kit, e o preço **nunca** depende dele.
+
+**Cinco superfícies vivas dependem do valor existir**, nenhuma delas ligada a desconto: o stepper
+do credenciamento (`packages/core/src/eventos/entrega.ts:36-46`, `kitJaConcluido`), o carimbo de
+`kitEntregueEm` (`AtendimentoPanel.tsx:121-123`), o denominador de kits a retirar
+(`_lib/balcao.ts:130, 148`), o checklist do balcão (`_lib/balcao.ts:247, 258`) e o rótulo mais a
+chave `porKit.sem_kit` do financeiro (`_lib/kitLabels.ts:19-24`).
+
+**A confusão tem tamanho medido.** Em produção, 32 inscritos carregam `kit == 'sem_kit'` — 24 na
+Meia Floripa e 8 na São Silvestre — e **nenhum deles carrega `kitId`**. São o rótulo, não a compra
+do kit de desconto. Uma leitura apressada contaria esses 32 como "gente que comprou o Sem kit", e
+não é isso que eles são.
+
+**Modalidade que não oferece kit nenhum é caso legítimo e permanece.** O checkout já tem o ramo
+(`StepModalidadeKit.tsx:251-257`), o inscrito nasce com `sem_kit`, o balcão trata e o
+aprovisionamento ignora.
+
+Esta regra existe por razão operacional declarada: sem ela, "tirar o Sem kit do produto" tem duas
+leituras, e a errada apaga o enum e derruba o credenciamento no dia da prova. Falsificação: uma
+varredura que remova o valor `sem_kit` do enum tem de deixar vermelha a suíte do credenciamento, e
+não apenas a do checkout.
+
+### RN-508 · escolher kit é obrigatório onde a modalidade oferece kits, e a saída é um kit de preço zero
+
+**A obrigatoriedade não nasce nesta rodada: ela já é o código.** `CheckoutFlow.tsx:1706-1715`
+recusa avançar quando `kitsDaModalidade(...).length > 0` e `kitId` está vazio. Não existe botão de
+"não quero kit". O que fazia o gate parecer suave era o "Sem kit" estar **dentro** da lista:
+escolhê-lo satisfazia o gate, e o comprador achava que estava recusando quando estava comprando. O
+que a RN-506 muda é o conteúdo da lista, não a regra de avanço.
+
+**A saída, onde o organizador quiser abrir uma, é um kit de preço zero.** É o único desenho
+compatível com a diretriz do patrocinador: a pessoa escolhe um kit, o kit pode não conter nada, e
+ninguém ganha dinheiro por dispensar brinde. O acervo já usa esse padrão para outra finalidade —
+seis dos quinze kits de produção custam zero, todos chamados "Kit básico" ou "Kit trilha" —, mas
+**nenhum kit de preço zero chamado "Sem kit" existe hoje**: o padrão da saída teria de ser criado.
+Se a plataforma **garante** essa saída ou deixa a decisão com o organizador é juízo de dono, aberto
+como **SEMKIT-2**; o default em vigor é deixar com o organizador, porque forçar a saída em toda
+modalidade contraria a razão que o dono deu.
+
+**Não há beco por esgotamento hoje, e a razão é desconfortável.** `Kit.capacidade` não gateia venda
+nenhuma: varredura por `capacidade` sobre `functions/src/checkout/` e sobre
+`apps/landing/app/(public)/[eventSlug]/inscricao/` devolve **zero ocorrências**. O campo é
+carregado pela projeção pública (`leitor.ts:196`) e nunca lido para decidir compra. **Kit esgotado
+não é um estado que o produto alcança.**
+
+**E é aí que a regra vira condição sobre o futuro.** No dia em que a capacidade do kit passar a
+recusar escolha, a modalidade com todos os kits esgotados vira beco fechado: o gate exige `kitId`,
+a lista vem vazia e nenhum gesto satisfaz a etapa. **Toda tarefa que faça `capacidade` gatear tem
+de trazer junto o que a etapa faz quando a lista esvazia** — cair no ramo de "não inclui kit" e
+deixar avançar, ou fechar a modalidade com a mesma honestidade do lote esgotado. Ligar a
+capacidade sem isso é ligar um beco.
+
+**Vocabulário.** A frase única da RN-504 vale e ganha um terceiro caso: **"Esta inscrição não
+inclui kit."** cobre modalidade sem kit, lote com o interruptor desligado e qualquer outro caminho
+sem kit. Fica proibida, além do que a RN-504 já proibia, qualquer copy que ofereça **abrir mão** do
+kit, sugira desconto por dispensá-lo ou apresente a ausência de kit como escolha econômica. O nome
+"Sem kit" **não** é proibido; o preço é. E há um defeito de copy a corrigir: `labelDeltaKit`
+renderiza `preco === 0` como "Incluso" (`StepModalidadeKit.tsx:16-17`) e "Incluso no valor"
+(`KitsSection.tsx:9-10`), que lê como "você ganha isto" no exato kit criado para ser a saída — o
+rótulo tem de sair do conteúdo do kit, não do sinal do preço. As duas cópias da função são a mesma
+dívida.
+
+Falsificação: numa modalidade com dois kits pagos e nenhum de preço zero, o checkout não oferece
+nenhum caminho de avanço sem kit, e isso é o comportamento esperado; numa modalidade com um kit de
+preço zero e sem itens, o rótulo dele não diz "Incluso".
+
+### RN-509 · os dois kits negativos de produção são reparados na fonte e no banco, por operação nomeada
+
+**Existem dois, estão medidos, e nenhum deles foi vendido.** `meia-floripa-2026` tem um kit
+`sem_kit` a **−15** e `sao-silvestre-floripa-2025` tem um a **−10**. Os treze restantes vão de 0 a
+89. Os dois nasceram do **seed**, não de configuração de organizador:
+`functions/src/seed/kits.seed.ts:64` e `functions/scripts/preview-seed-extra.ts:457`, aplicados em
+produção pelo runner `functions/scripts/prod-seed-leela-hub.ts:194,203`, que escapa do
+`assertEmulatorOnly` de propósito com `LEELA_SEED_PROD_ACK`. Os quinze kits do banco batem 1:1 com
+o seed, sem preço editado.
+
+**Nenhum pedido pago referencia qualquer um dos dois**, e a medição é direta em `leela-hub`: zero
+inscritos com `kitId == 'sem_kit'`, zero itens de pedido apontando para eles, e zero pagamentos na
+São Silvestre. Mais que isso, **`ItemPedido` não tem campo de kit**
+(`packages/core/src/pedidos/pedido.ts:123-145`): não existe caminho no modelo para um pedido
+apontar para um kit. Os 32 inscritos com `kit == 'sem_kit'` são o rótulo enum da RN-507, todos de
+seed, todos sem `pedidoRef`. **Mexer nesses dois kits não mexe em dinheiro já cobrado**, e é essa
+medição que torna o reparo seguro.
+
+**O organizador não consegue reparar, e isso não é falha da RN-506.** Os dois eventos têm inscritos
+(462 e 40), então `eventoPaiTemVenda()` é verdadeiro: `precoEditavel` (`firestore.rules:999-1003`)
+congela o campo `preco`, e o `delete` é negado (`:1025`). A tela reflete isso com
+`MSG_PRECO_BLOQUEADO` (`KitEditor.tsx:85`). **O reparo é necessariamente operação de plataforma**,
+por `isPlatformAdmin()` ou por Function declarada, e por isso é uma exceção **declarada** à RN-200,
+não um contorno dela. A exceção se sustenta porque a medição acima prova que não há comprador para
+proteger; sem essa prova, a RN-200 valeria e o reparo não aconteceria.
+
+**O reparo tem duas metades e a ordem importa.** Corrigir só o banco não resolve: o runner de seed
+já rodou duas vezes em produção, e uma terceira ressuscita os dois kits. **A fonte vem primeiro**
+(`kits.seed.ts:64` e `preview-seed-extra.ts:457`), o banco depois. Um reparo que inverta a ordem
+tem janela para regredir sozinho.
+
+**A escolha entre apagar, zerar e renomear é do dono** (item **SEMKIT-1**), com o default proposto
+sendo **zerar o preço nos dois**: é o movimento mínimo que satisfaz a regra nova, preserva a saída
+que as modalidades 5k e 10k já oferecem, mantém `Kit.capacidade` estável para os dois consumidores
+que somam por documento (`aggregateProfessionalDashboard.ts:97`, `distribuicao.ts:199-209`), e
+produz exatamente o padrão de que a RN-508 fala. Apagar removeria configuração e deixaria 32
+inscritos rotulados "Sem kit" sem kit correspondente no evento — estado legítimo pela RN-507, e
+ainda assim uma demonstração incoerente. Renomear acrescenta churn sem resolver nada que zerar não
+resolva.
+
+Falsificação: depois do reparo, uma varredura por `kitEhDesconto` sobre os kits de `leela-hub`
+devolve zero, e uma execução limpa do seed de produção **não** recria nenhum preço negativo.

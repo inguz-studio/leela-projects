@@ -63,7 +63,7 @@ Ferramentas: **Playwright** (web painel + landing), **Detox** ou **Maestro** (mo
 - Push trunca em 160 e bloqueia 5º push na semana (RN-133/134).
 - Ações destrutivas exigem confirmação com preview; export de dados por 90 dias (RN-144).
 - Preço de evento bloqueado após 1ª venda (RN-200).
-- "Sem kit" é kit válido, aceita preço negativo/desconto (RN-211); passo do chip suprimido quando `usaChip=false` (RN-207).
+- "Sem kit" é kit válido com preço **zero ou positivo** (RN-506; a RN-211, que aceitava negativo, foi revogada em 05/08). Dois casos que não podem faltar: a Rule recusa `preco < 0` e `preco` fora de centavo exato; e uma cotação sobre documento **legado** negativo continua fechando, porque `precoKitValido` é predicado de leitura e não pode apertar. O valor `sem_kit` do enum do inscrito é rótulo e continua vivo (RN-507) — removê-lo tem de deixar vermelha a suíte do credenciamento. Passo do chip suprimido quando `usaChip=false` (RN-207).
 
 ---
 

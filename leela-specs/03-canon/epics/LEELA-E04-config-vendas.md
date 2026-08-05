@@ -2109,11 +2109,19 @@ sem kit e para lote com o interruptor desligado, porque para quem compra os dois
 Proibidas em superfície de comprador: "kit desligado", "kit desativado", "kit indisponível neste
 lote", e qualquer frase que exponha a palavra lote a quem está comprando.
 
-**A exceção que vale dinheiro.** "Sem kit" é um kit de verdade, com preço negativo (RN-211,
+~~**A exceção que vale dinheiro.** "Sem kit" é um kit de verdade, com preço negativo (RN-211,
 `kitEhDesconto` em `packages/core/src/eventos/kit.ts:118-120`). Num evento que use esse desenho,
 desligar o interruptor tira o desconto do cardápio e o comprador daquele lote passa a pagar
 **mais**, sem que o `preco` do lote mude. É o único caminho pelo qual este campo mexe no que alguém
-paga, e ele tem de aparecer ao organizador **no gesto**, com o número.
+paga, e ele tem de aparecer ao organizador **no gesto**, com o número.~~
+
+**⛔ Este parágrafo está REVOGADO em 2026-08-05, junto com a RN-211 (D-0805-7 · lane SPEC-SEM-KIT).**
+Ele descrevia um efeito que só existia enquanto o kit podia ter preço negativo. Com o piso zero da
+**RN-506**, todo delta de kit é maior ou igual a zero, e desligar o interruptor **só pode baratear
+ou empatar** para o próximo comprador — nunca encarecer. **Some junto o requisito de tela** de
+mostrar o número ao organizador no gesto: não há número a mostrar, e a tarefa `S317-T4` perde esse
+requisito e o aceite correspondente. As outras três afirmações da RN-504 ficam intactas. Registro
+em `02-rodadas/2026-08-05-sem-kit/02-spec-sem-kit.md` §Parte 5.
 
 **Falsificação:** desligar o interruptor num lote com vendas não altera nenhum `inscrito.kitId`,
 nenhum documento de aprovisionamento e nenhum valor de pedido.
@@ -2161,3 +2169,55 @@ sincronia por um único lugar do produto, e a segunda é preço legado consultad
 checkout. A duplicação é anterior a esta rodada e não tem enunciado próprio. Esta spec passa a
 tratá-las como uma só em toda operação, o que contém o risco sem resolver a deriva. Unificar é
 rodada própria, com migração de documento vivo.
+
+## Delta o interruptor do kit fica simples (SPEC-SEM-KIT · 2026-08-05)
+
+> Rodada `02-rodadas/2026-08-05-sem-kit/`. A decisão **D-0805-7** do dono revoga a **RN-211**, e o
+> efeito neste épico é subtrativo: uma ressalva some, um vetável fecha, uma tarefa fica mais
+> barata. As regras novas (RN-506 a RN-509) vivem em [[LEELA-E03-operacao-evento]], porque o kit é
+> entidade de lá.
+
+### A RN-503 fica inteira
+
+O interruptor `incluiKitDaModalidade?` continua exatamente como o dono escolheu: ausente
+equivalendo a ligado, tudo ou nada, recusa no servidor e fora do congelamento da RN-497. Nada nela
+dependia do preço negativo. **Lote sem kit é lote sem kit, e a diferença de preço, se houver, vive
+no preço do lote** — que é o campo que existe para isso e que a RN-497 já governa.
+
+### A RN-504 perde o último parágrafo
+
+Três das quatro afirmações ficam: quem comprou não muda, estoque não é liberado, o comprador nunca
+lê "kit desligado". A quarta, *"a exceção que vale dinheiro"*, está **revogada** e marcada acima,
+com a razão. Depois da RN-506 desligar o interruptor só pode baratear ou empatar, e o requisito de
+tela que mandava mostrar o número ao organizador no gesto morre por falta de número.
+
+### O KITLOTE-1 fecha, sem resposta do dono
+
+O item de painel existia para decidir duas coisas.
+
+A segunda — **se o kit de desconto merecia exceção quando o interruptor desliga** — deixa de
+existir junto com o kit de desconto. A alternativa que o painel já recomendava recusar, preservar
+os kits de desconto ao desligar, perde até o objeto de recusa.
+
+A primeira — **se o interruptor congela depois da primeira venda** — sobrevive tecnicamente e perde
+o argumento que a tornava dúvida. O que a sustentava era a possibilidade de um organizador
+encarecer a inscrição sem tocar em preço; sem isso, o caso pós-venda é o banal que a RN-503 já
+descrevia (o kit acabou no meio do lote), e congelar tiraria uma correção operacional legítima em
+troca de nada. **O default da RN-503 fica em vigor sem ressalva**, e o item sai do painel pela
+disciplina de limpeza.
+
+Isto não é decidir no lugar do dono. É constatar que a pergunta que ele receberia já foi respondida
+pela decisão que ele acabou de tomar.
+
+### O que a S317 ganha e perde
+
+Perde requisito, não ganha nenhum. A `S317-T4` fica com o rótulo, o default ligado e a ausência do
+controle quando a modalidade não tem kit, e continua `sonnet` com folga. A `S317-T1` e a `S317-T3`
+ficam idênticas.
+
+A `S317-T2` ganha uma **ordem, não um requisito**: ela reordena o bloco do kit dentro de
+`computeSaleState` (`saleState.ts:265-274`), e a tarefa `S318-T1` da rodada de 05/08 mexe no
+predicado que aquele mesmo bloco chama (`precoKitValido`, `:265-269`). São linhas vizinhas no mesmo
+arquivo. **`S318-T1` antes de `S317-T2`**; em paralelo, colidem.
+
+Nenhuma tarefa da S316 é tocada.

@@ -18,12 +18,20 @@ tags:
         - [ ] S316-T4 a seção de modalidades na tela de configurações do evento
         - [ ] S316-T5 o evento com dado inválido ganha caminho de conserto pela listagem ⚔
         - [ ] S316-T6 o identificador do lote para de embutir o nome da modalidade
-- [ ] **[E04] O lote pode não incluir o kit da modalidade** — o kit continua sendo da modalidade e valendo em todos os lotes dela; o que muda é que um lote específico pode dispensar a oferta inteira, com o liga ligado por padrão para nenhum lote existente mudar de comportamento. Quem já comprou recebe o kit do mesmo jeito 📋 especificado em 05/08 · lane SPEC-MODALIDADE-KIT · **fica com você:** **KITLOTE-1** [[LEELA-E04-config-vendas]]
+- [ ] **[E04] O lote pode não incluir o kit da modalidade** — o kit continua sendo da modalidade e valendo em todos os lotes dela; o que muda é que um lote específico pode dispensar a oferta inteira, com o liga ligado por padrão para nenhum lote existente mudar de comportamento. Quem já comprou recebe o kit do mesmo jeito 📋 especificado em 05/08 · lane SPEC-MODALIDADE-KIT · ✅ **KITLOTE-1 fechado em 05/08** pela decisão que revogou o preço negativo do kit: sem ele, desligar o liga só pode baratear ou empatar [[LEELA-E04-config-vendas]]
     - [ ] **S317 · O lote que não inclui o kit**
         - [ ] S317-T1 o campo no lote, ausente equivalendo a incluir, sem migração ⚔
-        - [ ] S317-T2 o servidor recusa comprar kit num lote que não o inclui ⚔
+        - [ ] S317-T2 o servidor recusa comprar kit num lote que não o inclui ⚔ — **rodar depois de S318-T1**, que mexe em linha vizinha do mesmo arquivo
         - [ ] S317-T3 o checkout diz "esta inscrição não inclui kit", a mesma frase nos dois casos
-        - [ ] S317-T4 o liga na tela do lote, com aviso quando desligar tirar um desconto
+        - [ ] S317-T4 o liga na tela do lote — o aviso do desconto **saiu** em 05/08 junto com o preço negativo
+- [ ] **[E03] O kit não vende desconto** — "Sem kit" era um kit de verdade com preço negativo, e o dono revogou isso: organizador e patrocinador querem o brinde na mão do participante, então a plataforma para de vender desconto por dispensá-lo. O preço do kit ganha piso zero na regra do servidor, o rótulo `sem_kit` do inscrito continua vivo porque é outra coisa, e dois kits de produção que nasceram do seed precisam de reparo 📋 especificado em 05/08 · lane SPEC-SEM-KIT · **fica com você:** **SEMKIT-1** e **SEMKIT-2** [[LEELA-E03-operacao-evento]]
+    - [ ] **S318 · O kit não vende desconto**
+        - [ ] S318-T1 o piso zero na regra do servidor, com o predicado do core dividido em leitura e escrita ⚔
+        - [ ] S318-T2 a tela do kit para de dizer "aceita negativo", e a recusa ganha endereço
+        - [ ] S318-T3 o rótulo do kit de preço zero sai do conteúdo, não do sinal do preço
+        - [ ] S318-T4 o teste que fixa o rótulo `sem_kit` vivo, para ninguém apagar o que sustenta o credenciamento
+        - [ ] S318-T5 o seed para de semear preço negativo — **antes** do reparo em produção ⚔
+        - [ ] S318-T6 o reparo dos dois kits em produção ⚔⚔ — **retido por SEMKIT-1**
 - [ ] **[E03/E09] O painel conta quem pagou** — você comprou por PIX, não pagou e apareceu como inscrito; a contagem exibida passa a ser só de pagante, e o ticket médio deixa de dividir receita confirmada por gente que nunca pagou. O contador antigo fica de pé porque ele também é a fechadura que congela preço, percurso, kit e modo da taxa 📋 especificado em 05/08 · lane SPEC-METRICAS-SERVICO [[LEELA-E03-operacao-evento]]
     - [ ] **S221 · O contador de pagantes, separado do que congela a configuração**
         - [ ] S221-T1 o número de pagantes nasce no agregado, projetado do que a transação já conta ⚔

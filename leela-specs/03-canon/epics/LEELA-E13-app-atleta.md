@@ -57,7 +57,7 @@ O app é React Native via Expo (EAS Build/Submit), reusa `packages/core` (regras
 - **RN-202/216** — Kit tem tipos (kit_ouro/kit_prata/kit_basico/sem_kit); nomenclatura "kit" **nunca** "tier".
 - **RN-204** — Inscrição tem status confirmado/pendente/cancelado (o app reflete o estado do pagamento).
 - **RN-207** — Passo do chip suprimido quando `usaChip=false` (o app não coleta chip nesse caso).
-- **RN-211** — "Sem kit" é kit válido e aceita preço negativo (desconto).
+- ~~**RN-211** — "Sem kit" é kit válido e aceita preço negativo (desconto).~~ **⛔ REVOGADA em 2026-08-05 (D-0805-7 · lane SPEC-SEM-KIT); substituída pela RN-506**, que dá piso zero ao preço do kit. Cópia herdada — o enunciado canônico e a revogação vivem em [[LEELA-E03-operacao-evento]].
 - **RN-125/311** — Link master de afiliação atribui a conversão dentro da janela (o app propaga `?c=[clube]` na inscrição).
 - **RN-221** (herdada de E03/S208) — QR do ingresso é token de identificação/presença, não status de check-in concorrente: o app lê `qrToken`/`checkinEm` e exibe, nunca escreve status.
 - **RN-222** (herdada de E03/S208) — Kit entregue antecipadamente: o QR na largada registra apenas `checkinEm` (presença), sem reabrir a entrega de kit; o app só reflete o estado.
@@ -523,7 +523,7 @@ Página do evento (S1305); descoberta de clubes (S1310).
 
 **Critérios de aceite (Given/When/Then):**
 - **Dado** a página do evento, **quando** carrega, **então** vejo Banner Hero, nome, data, local, modalidades e a lista de **kits** (nunca "tier" — RN-216) com preço vigente.
-- **Dado** um kit, **quando** vejo, **então** mostra o que inclui e a capacidade; "Sem kit" aparece como opção válida (RN-211).
+- **Dado** um kit, **quando** vejo, **então** mostra o que inclui e a capacidade; um kit chamado "Sem kit" continua sendo opção válida, com preço zero ou positivo (RN-506, que revogou a RN-211).
 - **Dado** que cheguei por link master de clube (`?c=corrida-perfeita-sul`), **quando** abro, **então** o contexto de afiliação/cupom é preservado para o checkout (RN-125).
 - **Dado** o botão "Inscrever-se", **quando** toco, **então** vou para o checkout com a modalidade/kit selecionados.
 
@@ -627,7 +627,7 @@ Implementar o fluxo transacional server-side de **pedido em grupo** (ADR-011): c
 
 **Critérios de aceite (testáveis)**
 - **Dado** cupom válido dentro da janela, **quando** o pagamento confirma, **então** a conversão é atribuída ao clube uma única vez (webhook reprocessado não duplica).
-- **Dado** "Sem kit" com preço negativo, **quando** cobro, **então** o total aplica o desconto (RN-211).
+- **Dado** um kit de preço zero, **quando** cobro, **então** o total é o do lote, sem delta (RN-506; substitui o aceite de desconto da RN-211, revogada em 05/08).
 - **Dado** um pedido com 3 inscritos, **quando** o pagamento único confirma, **então** os 3 `inscritos` viram confirmado sob o mesmo `pedidoRef` e reprocessar o webhook não duplica inscritos nem conversão (ADR-011).
 
 **Testes a escrever**

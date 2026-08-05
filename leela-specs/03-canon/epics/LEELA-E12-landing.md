@@ -39,7 +39,7 @@ O que o organizador edita em `PaginaVendas-Conteudo.html` é renderizado em dois
 - **RN-201** — publicar evento gera URL pública + QR automaticamente (a landing consome a URL/QR; publicação em si é do E03).
 - **RN-200** — preço bloqueado após 1ª venda (a landing sempre lê o preço vigente do lote/kit; nunca recalcula).
 - **RN-202 / RN-216** — inscrito escolhe um `kit` (`kit_ouro`/`kit_prata`/`kit_basico`/`sem_kit`); "kit" nunca "tier".
-- **RN-211** — "Sem kit" é kit válido e pode ter preço negativo (desconto).
+- ~~**RN-211** — "Sem kit" é kit válido e pode ter preço negativo (desconto).~~ **⛔ REVOGADA em 2026-08-05 (D-0805-7 · lane SPEC-SEM-KIT); substituída pela RN-506**, que dá piso zero ao preço do kit. Cópia herdada — o enunciado canônico e a revogação vivem em [[LEELA-E03-operacao-evento]]. Este épico consome também a **RN-508**: escolher kit já é obrigatório onde a modalidade oferece kits (`CheckoutFlow.tsx:1706-1715`), e a saída, onde houver, é um kit de preço zero.
 - **RN-204** — inscrito nasce `pendente`, vira `confirmado` no webhook de pagamento aprovado.
 - **RN-207** — o passo de chip não existe no checkout público (chip é preenchido na entrega); nada a suprimir aqui, apenas não coletar.
 - **RN-140** — visibilidade da página do clube: `publica` (link direto), `indexavel` (aparece em buscadores), `privada` (404 público).
@@ -638,7 +638,7 @@ Permitir escolher a modalidade e um kit (incluindo "Sem kit") com preços vigent
 **Passos de implementação**
 1. Selecionar modalidade → filtra kits disponíveis para a modalidade (RN-210).
 2. Selecionar kit (rótulo "kit"; "Sem kit" válido, RN-211/216).
-3. Calcular subtotal com preço vigente (RN-200/301); kit "Sem kit" pode aplicar desconto (preço negativo).
+3. Calcular subtotal com preço vigente (RN-200/301); o delta do kit é sempre maior ou igual a zero (RN-506, que revogou a RN-211 em 05/08 — kit não aplica desconto).
 
 **Modelo de dados / contratos**
 - Produz `{ modalidade, kitId, subtotal }` (memória).
@@ -3506,13 +3506,18 @@ interna a quem só quer se inscrever. A frase anterior nomeava a modalidade
 indisponível neste lote", e qualquer frase que exponha a palavra **lote** a quem está comprando. O
 comprador não sabe o que é um lote e não precisa saber.
 
-### O preço não muda, com uma exceção
+### O preço não muda, e a exceção morreu em 05/08
 
-O kit é delta sobre o preço da inscrição (RN-211); sem kit, o delta é zero e o preço é o do lote,
-intacto. A exceção é o "Sem kit" de preço negativo: onde ele existe, desligar o interruptor tira o
+O kit é delta sobre o preço da inscrição; sem kit, o delta é zero e o preço é o do lote, intacto.
+
+~~A exceção é o "Sem kit" de preço negativo: onde ele existe, desligar o interruptor tira o
 desconto do cardápio e o comprador daquele lote passa a pagar **mais**, sem que o `preco` do lote
-mude. O aviso disso é do organizador, no painel, no momento do gesto. Nunca do comprador, que só vê
-o preço que vale para ele.
+mude. O aviso disso é do organizador, no painel, no momento do gesto.~~
+
+**⛔ Exceção REVOGADA em 2026-08-05 (D-0805-7 · lane SPEC-SEM-KIT).** A **RN-506** dá piso zero ao
+preço do kit e revoga a RN-211, então todo delta é maior ou igual a zero e desligar o interruptor
+**só pode baratear ou empatar**, nunca encarecer. O aviso com o número sai da `S317-T4` junto com a
+exceção. Fica valendo, sem ressalva: o preço que o comprador vê é o preço que vale para ele.
 
 ### A recusa é do servidor
 

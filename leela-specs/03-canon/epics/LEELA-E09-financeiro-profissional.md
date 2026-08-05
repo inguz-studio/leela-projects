@@ -36,7 +36,7 @@ Reaproveitadas do backlog:
 - **RN-123** — patrocínio tem modelo comercial financeiro ou permuta; só o financeiro entra em valores a receber.
 - **RN-125 / RN-311** — o link master atribui a conversão a um afiliado apenas **dentro da janela de atribuição**; fora dela não há split.
 - **RN-204** — status da inscrição: confirmado / pendente / cancelado (dirige o que entra em receita confirmada vs. prevista).
-- **RN-211** — "sem kit" é válido e o preço aceita valor negativo (desconto); a soma financeira respeita valores negativos.
+- ~~**RN-211** — "sem kit" é válido e o preço aceita valor negativo (desconto); a soma financeira respeita valores negativos.~~ **⛔ REVOGADA em 2026-08-05 (D-0805-7 · lane SPEC-SEM-KIT); substituída pela RN-506**, que dá piso zero ao preço do kit. Cópia herdada — o enunciado canônico e a revogação vivem em [[LEELA-E03-operacao-evento]]. **Nenhum número já apurado muda**: `agregarFinanceiro` declara por escrito que nunca deriva receita de preço de kit (`functions/src/eventos/agregarFinanceiro.ts:24-25`), e lê `eventos.receitaConfirmada`, que nasce no fluxo de pagamento.
 - **RN-310 / RN-312** — organizador define o programa de afiliação; clube e promotor individual são tipos de afiliado (ambos geram split).
 - **RN-144** — LGPD: export de dados por 90 dias; retenção do extrato financeiro segue a mesma janela.
 
@@ -364,7 +364,7 @@ Isolar e testar em `packages/core` as funções puras de cálculo financeiro reu
 **Passos de implementação**
 1. `computeTaxa(bruto, pct)`, `computeLiquido(bruto, taxa, split)`, `computeTicketMedio(receita, qtdPagas)`.
 2. Tratar arredondamento em centavos (pt-BR) e divisão por zero (ticket com 0 pagas → 0).
-3. Suportar valor negativo (desconto "sem kit" — RN-211).
+3. Suportar valor negativo na **leitura** de documento legado (a RN-211 foi revogada em 05/08 pela RN-506, que dá piso zero ao preço de kit novo; o predicado de leitura continua liberal por Postel).
 
 **Regras de negócio a respeitar**
 - RN-330, RN-336, RN-211.
