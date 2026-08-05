@@ -472,6 +472,50 @@ export function CheckoutFlow({
   // Cobrança / confirmação
   const chaveRef = useRef<string | undefined>(undefined);
   const [charge, setCharge] = useState<CreateInscricaoChargeResult | null>(null);
+  /**
+   * REV-5C · o pedido a que a tela está COMPROMETIDA agora — a régua de
+   * obsolescência das duas leituras do doc (a consulta de status do PIX e a
+   * leitura dedicada do cartão).
+   *
+   * As duas respondem de forma assíncrona, e a cobrança pode ter sido
+   * invalidada no meio do caminho: trocar de meio, de parcela, de kit ou de
+   * cupom zera `charge` e `codigoPedido`, e "Gerar nova cobrança" faz o mesmo.
+   * Sem esta régua a resposta do pedido ABANDONADO aterrissa DEPOIS do zero e
+   * o ressuscita — e o código é justamente o que a pessoa DITA ao atendimento:
+   * o balcão abriria uma compra que não é a dela.
+   *
+   * O caminho não exige corrida de rede nem condição rara. Gerar o PIX e
+   * escolher cartão em seguida basta: a invalidação por preço e o efeito da
+   * leitura dedicada rodam no MESMO flush, e a leitura ainda enxerga, na sua
+   * closure, a cobrança que a invalidação acabou de derrubar.
+   *
+   * ⚠️ POR QUE É REF ESCRITA À MÃO E NÃO `charge?.pedidoId` LIDO NO RENDER:
+   * atribuir no render deixa a régua um passo atrás. A leitura obsoleta volta
+   * num microtask que corre ANTES de a re-renderização com `charge: null`
+   * comitar, e nesse instante a régua ainda apontaria para o pedido velho — o
+   * guard passaria e o código ressuscitaria do mesmo jeito. Foi assim que a
+   * primeira tentativa de conserto continuou verde para o bug. Ela tem de
+   * mudar no INSTANTE em que a cobrança muda, e é isso que `definirCharge` faz.
+   *
+   * Mesma disciplina do `cotacaoSeqRef` da cotação, e pela mesma razão: vence
+   * a última PEDIDA, nunca a última a chegar. `montadoRef` não substitui isto
+   * — ele só sabe de desmontagem, e aqui a tela continua viva.
+   */
+  const pedidoNaTelaRef = useRef<string | null>(null);
+  /**
+   * A ÚNICA porta para trocar a cobrança da tela. Ela move a régua acima junto,
+   * de forma síncrona.
+   *
+   * ⚠️ Não chame `setCharge` direto: sem a régua, toda leitura em voo volta a
+   * poder escrever sobre a cobrança seguinte.
+   */
+  const definirCharge = useCallback(
+    (proxima: CreateInscricaoChargeResult | null): void => {
+      pedidoNaTelaRef.current = proxima?.pedidoId ?? null;
+      setCharge(proxima);
+    },
+    [],
+  );
   const [criandoCharge, setCriandoCharge] = useState(false);
   const [erroCharge, setErroCharge] = useState<string | null>(null);
   // DEC-0727 (item 28): o provedor estourou o teto de 15s. Estado PRÓPRIO, e
@@ -1074,7 +1118,11 @@ export function CheckoutFlow({
   // valores antigos — a UI reflete sempre a seleção atual).
   useEffect(() => {
     chaveRef.current = undefined;
-    setCharge(null);
+    // REV-5C · `definirCharge` e não `setCharge`: a régua do pedido cai AQUI,
+    // de forma síncrona, antes de o efeito da leitura dedicada rodar no mesmo
+    // flush. É o que impede a leitura do pedido abandonado de ressuscitar o
+    // código depois do zero logo abaixo.
+    definirCharge(null);
     setConfirmacao(null);
     // S1228-T2: sem cobrança não há pedido, e código de pedido invalidado é
     // pior que código nenhum — quem o ditasse citaria uma compra que não é a
@@ -1084,7 +1132,7 @@ export function CheckoutFlow({
     setErroCharge(null);
     setErroConfirmar(null);
     setPixEstado('vivo');
-  }, [cupomAplicado, formaCotada, parcelasEfetivas, selecaoSig]);
+  }, [cupomAplicado, formaCotada, parcelasEfetivas, selecaoSig, definirCharge]);
 
   const aplicarCupom = useCallback(async () => {
     const code = cupomInput.trim().toUpperCase();
@@ -1307,7 +1355,7 @@ export function CheckoutFlow({
           ? data.servidorAgoraMillis - antesDaChamada
           : 0,
       );
-      setCharge(data);
+      definirCharge(data);
       return data;
     } catch (err) {
       // DEC-0727: teto estourado ⇒ "processando pagamento", nunca alerta de
@@ -1337,7 +1385,7 @@ export function CheckoutFlow({
     } finally {
       setCriandoCharge(false);
     }
-  }, [authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, evento.politicaVendas.versao, evento.termoSaudeVersao, termoSaudeCustom, recarregarMaterial, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref]);
+  }, [authPronto, aceitesOk, aceiteTermos, aceiteSaude, aceiteSaudeCustom, exigeSaudeCustom, evento.slug, evento.politicaVendas.versao, evento.termoSaudeVersao, termoSaudeCustom, recarregarMaterial, inscritos, euCorro, responsavel, endereco, forma, parcelas, cupomAplicado, atribuicao.ref, definirCharge]);
 
   /**
    * RN-333 · a cobrança deste carrinho já existe ⇒ devolve a mesma. É o atalho
@@ -1407,6 +1455,8 @@ export function CheckoutFlow({
       try {
         const pedido = await getPedido(getLeelaDb(), pedidoId);
         if (!montadoRef.current) return;
+        // REV-5C · a cobrança trocou enquanto esta leitura estava no ar.
+        if (pedidoNaTelaRef.current !== pedidoId) return;
         // S1228-T2 · o código da compra vem DE GRAÇA nesta leitura — o mesmo
         // doc, o mesmo `parsePedido`, nenhuma chamada a mais. Ele é captado
         // ANTES da porta do status: `codigoPedido` é imutável e não depende de
@@ -1483,12 +1533,22 @@ export function CheckoutFlow({
   useEffect(() => {
     if (!authPronto || charge === null || forma === 'pix') return;
     const pedidoId = charge.pedidoId;
+    // REV-5C · a invalidação por preço roda ANTES deste efeito, no mesmo
+    // flush, e a `charge` desta closure é a que ela acabou de derrubar. Sem
+    // esta linha, trocar PIX por cartão dispara uma leitura do pedido
+    // ABANDONADO — leitura a mais no caminho do dinheiro, e o código dele
+    // aterrissando sobre a compra seguinte.
+    if (pedidoNaTelaRef.current !== pedidoId) return;
     if (codigoLidoRef.current === pedidoId) return;
     codigoLidoRef.current = pedidoId;
     void (async () => {
       try {
         const pedido = await getPedido(getLeelaDb(), pedidoId);
         if (!montadoRef.current) return;
+        // REV-5C · a cobrança trocou enquanto esta leitura estava no ar. É o
+        // caminho PIX → cartão: a invalidação por preço já zerou tudo, e esta
+        // resposta traz o código do pedido que a pessoa abandonou.
+        if (pedidoNaTelaRef.current !== pedidoId) return;
         if (pedido?.codigoPedido !== undefined) setCodigoPedido(pedido.codigoPedido);
       } catch (err) {
         if (typeof console !== 'undefined') {
@@ -1581,7 +1641,9 @@ export function CheckoutFlow({
       pixExpirandoRef.current = false;
       pixFimConfirmadoRef.current = false;
       chaveRef.current = undefined;
-      setCharge(null);
+      // REV-5C · a régua do pedido cai junto: a consulta de status da cobrança
+      // ANTERIOR pode estar no ar, e o pedido dela acabou de ser cancelado.
+      definirCharge(null);
       setConfirmacao(null);
       // S1225-T3: cobrança NOVA, estado do pedido antigo não vale mais — o
       // pedido anterior foi cancelado (pix_expirado) e carregar o "Estamos
@@ -1633,7 +1695,7 @@ export function CheckoutFlow({
           'Não conseguimos encerrar a cobrança anterior. Tente de novo em alguns instantes.',
         );
       });
-  }, [charge]);
+  }, [charge, definirCharge]);
 
   // ── Navegação com gate de validação ────────────────────────────────────────
   const avancar = useCallback(() => {
