@@ -6,6 +6,7 @@
 
 import {
   AUTOMACAO_OFFSET_HORAS_DEFAULT,
+  parseContagemPtBr,
   validarAutomacao,
   type AutomacaoInput,
   type CanalCampanha,
@@ -81,8 +82,11 @@ export function paraAutomacaoInput(v: AutomacaoFormValues): AutomacaoInput {
     ativa: v.ativa,
   };
   if (gatilhoUsaOffset(v.gatilho)) {
-    const n = Number(v.offsetHoras);
-    if (Number.isInteger(n) && n >= 1) base.offsetHoras = n;
+    // Mesmo parser de vaga e capacidade (FIX-PARSE-MILHAR): "1.000" era lido
+    // como UMA hora e a campanha saía no dia errado sem ninguém ser avisado.
+    // Fora da faixa o campo continua saindo do input, e o core acusa.
+    const lido = parseContagemPtBr(v.offsetHoras);
+    if (lido.ok && lido.valor >= 1) base.offsetHoras = lido.valor;
   }
   return base;
 }

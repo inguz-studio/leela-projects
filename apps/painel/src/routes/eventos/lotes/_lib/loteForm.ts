@@ -27,6 +27,7 @@ import {
   loteEncerrado,
   loteEsgotado,
   loteShapeValido,
+  parseContagemPtBr,
   parseValorPtBr,
   validarLotesModalidade,
   type CapacidadeLote,
@@ -280,9 +281,12 @@ export function capacidadePrevista(
   totalDigitado: string,
 ): CapacidadeLote {
   const vendidos = lote?.vendidos ?? 0;
-  const digitado = Number.parseInt(totalDigitado, 10);
-  const configurado = Number.isInteger(digitado) && digitado >= 0
-    ? digitado
+  // A prévia lê a MESMA pontuação do submit (FIX-PARSE-MILHAR): com
+  // `parseInt` o painel mostrava "1 disponível" para quem digitava "1.000" e
+  // gravava outra coisa — a tela e o payload precisam contar a mesma história.
+  const digitado = parseContagemPtBr(totalDigitado);
+  const configurado = digitado.ok && digitado.valor >= 0
+    ? digitado.valor
     : (lote?.quantidadeLimite ?? 0);
   return capacidadeDoLote({ quantidadeLimite: configurado, vendidos });
 }
@@ -436,12 +440,19 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
   // TODAS as pendências de campo são coletadas na mesma passada: o organizador
   // vê de uma vez tudo o que falta, cada aviso no seu próprio campo, em vez de
   // corrigir um, salvar, e descobrir o próximo (frente A).
-  const ordem = Number.parseInt(values.ordem, 10);
+  // Ordem e vaga pelo parser único de contagem (FIX-PARSE-MILHAR): com
+  // `parseInt` o separador de milhar não sobrevivia — "1.000" virava 1, um
+  // inteiro que a guarda abaixo aprovava, e o lote nascia com UMA vaga. Texto
+  // ilegível vira NaN de propósito: a régua de faixa segue sendo esta guarda,
+  // que não afrouxou em nada.
+  const ordemLida = parseContagemPtBr(values.ordem);
+  const ordem = ordemLida.ok ? ordemLida.valor : Number.NaN;
   if (!Number.isInteger(ordem) || ordem < 1) {
     erros.push({ campo: 'ordem', mensagem: 'A ordem deve ser um inteiro ≥ 1.' });
   }
 
-  const quantidadeLimite = Number.parseInt(values.quantidadeLimite, 10);
+  const vagaLida = parseContagemPtBr(values.quantidadeLimite);
+  const quantidadeLimite = vagaLida.ok ? vagaLida.valor : Number.NaN;
   if (!Number.isInteger(quantidadeLimite) || quantidadeLimite < 1) {
     erros.push({
       campo: 'quantidadeLimite',

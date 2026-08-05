@@ -76,4 +76,23 @@ describe('validarAutomacaoForm', () => {
     });
     expect(erros.length).toBeGreaterThan(0);
   });
+
+  // -------------------------------------------------------------------------
+  // FIX-PARSE-MILHAR — o offset lê a mesma pontuação de vaga e capacidade.
+  //
+  // O teto do campo é 720, então mil horas não é um offset legítimo. O que
+  // muda é a POSTURA: "1.000" era lido como UMA hora e disparava a campanha no
+  // dia errado sem avisar; agora bate na faixa e o organizador vê o problema.
+  // -------------------------------------------------------------------------
+
+  it('"1.000" horas não vira 1 hora calada — bate na faixa e acusa', () => {
+    expect(Number('1.000')).toBe(1);
+    const erros = validarAutomacaoForm({
+      ...AUTOMACAO_VALORES_INICIAIS,
+      gatilho: 'vespera_evento',
+      templateRef: 'camp-1',
+      offsetHoras: '1.000',
+    });
+    expect(erros.length).toBeGreaterThan(0);
+  });
 });

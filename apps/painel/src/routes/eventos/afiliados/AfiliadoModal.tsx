@@ -19,7 +19,7 @@ import type {
   SalvarAfiliadoClientResult,
 } from '@leela/api-client';
 import type { AfiliadoDoTenant } from '@leela/api-client';
-import { isComissaoAfiliadoValida, parseValorPtBr } from '@leela/core';
+import { isComissaoAfiliadoValida, parseContagemPtBr, parseValorPtBr } from '@leela/core';
 
 type TipoComissao = 'nenhuma' | 'percentual' | 'valor_fixo';
 
@@ -49,6 +49,20 @@ export function montarComissao(
     tipo: 'valor_fixo',
     valorPorInscricao: lido.ok ? lido.centavos / 100 : Number.NaN,
   };
+}
+
+/**
+ * Contagem de um campo do form (janela em dias, mínimo de inscrições), ou `NaN`
+ * quando o texto é ilegível. @pure
+ *
+ * Fonte única dos dois campos: a validação e o submit liam cada um o seu
+ * `Number(...)`, e os dois truncavam o milhar — um mínimo de "1.000" inscrições
+ * virava 1 e liberava a comissão do afiliado mil vezes antes da hora
+ * (FIX-PARSE-MILHAR). A faixa (1..90, ≥ 1) continua sendo guarda de quem chama.
+ */
+function contagemDoCampo(texto: string): number {
+  const lido = parseContagemPtBr(texto);
+  return lido.ok ? lido.valor : Number.NaN;
 }
 
 export interface AfiliadoModalProps {
@@ -106,10 +120,10 @@ export function AfiliadoModal({
 
   const valido = useMemo(() => {
     if (nome.trim().length === 0) return false;
-    const j = Number(janela);
+    const j = contagemDoCampo(janela);
     if (!Number.isInteger(j) || j < 1 || j > 90) return false;
     if (minimo.trim() !== '') {
-      const m = Number(minimo);
+      const m = contagemDoCampo(minimo);
       if (!Number.isInteger(m) || m < 1) return false;
     }
     if (tipo === 'pessoa_fisica' && !editando && !/^\S+@\S+\.\S+$/.test(email.trim())) {
@@ -132,8 +146,8 @@ export function AfiliadoModal({
         eventoId,
         tipo,
         nome: nome.trim(),
-        janelaAtribuicaoDias: Number(janela),
-        minimoInscricoes: minimo.trim() === '' ? null : Number(minimo),
+        janelaAtribuicaoDias: contagemDoCampo(janela),
+        minimoInscricoes: minimo.trim() === '' ? null : contagemDoCampo(minimo),
         cupomCodigo: cupomCodigo.trim() === '' ? null : cupomCodigo.trim(),
         // FASE 2: null = sem comissão (ou remover a vigente). Como o form
         // inicia da config atual, não-tocar reenvia a mesma (idempotente).

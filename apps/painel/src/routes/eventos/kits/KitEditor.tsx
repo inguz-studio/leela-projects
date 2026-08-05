@@ -26,6 +26,8 @@ import {
   KIT_ITENS_MAX,
   MSG_PRECO_BLOQUEADO,
   mensagemValorInvalido,
+  mensagemContagemInvalida,
+  parseContagemPtBr,
   parseValorPtBr,
   precoBloqueado,
   promoverFotoPrincipal,
@@ -115,6 +117,7 @@ export function KitEditor({
   // no estado sem nunca chegar à tela — o botão "Salvar kit" simplesmente não
   // fazia nada. Numa tela de dinheiro isso não pode ficar mudo.
   const [precoErro, setPrecoErro] = React.useState<string | null>(null);
+  const [capacidadeErro, setCapacidadeErro] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   const disponiveis = evento.modalidades.filter((m) => !modalidades.includes(m));
@@ -235,7 +238,21 @@ export function KitEditor({
     }
     setPrecoErro(null);
     const preco = lido.centavos / 100;
-    const capacidade = Number.parseInt(capacidadeStr, 10);
+    // Capacidade pelo parser único de contagem (FIX-PARSE-MILHAR). Duas coisas
+    // mudam: "1.000" passa a ser mil (era 1 pelo `parseInt`) e texto ilegível
+    // acusa em vez de virar ZERO calado — o `Number.isFinite(...) ? ... : 0`
+    // que estava aqui gravava um kit sem capacidade nenhuma sem dizer nada.
+    // Campo em branco segue valendo 0, como antes.
+    let capacidade = 0;
+    if (capacidadeStr.trim().length > 0) {
+      const lidaCap = parseContagemPtBr(capacidadeStr);
+      if (!lidaCap.ok) {
+        setCapacidadeErro(mensagemContagemInvalida(lidaCap.motivo));
+        return;
+      }
+      capacidade = lidaCap.valor;
+    }
+    setCapacidadeErro(null);
     setBusy(true);
     try {
       const kitId = kit?.id ?? slugify(nome);
@@ -245,7 +262,7 @@ export function KitEditor({
       const payload: KitPayload = {
         nome: nome.trim(),
         preco,
-        capacidade: Number.isFinite(capacidade) ? capacidade : 0,
+        capacidade,
         modalidades,
         descricao: descricao.trim().slice(0, KIT_DESCRICAO_MAX) || null,
         itens: itensKit,
@@ -389,7 +406,11 @@ export function KitEditor({
           label="Capacidade"
           type="number"
           value={capacidadeStr}
-          onChange={(e) => setCapacidadeStr(e.target.value)}
+          onChange={(e) => {
+            setCapacidadeStr(e.target.value);
+            setCapacidadeErro(null);
+          }}
+          {...(capacidadeErro !== null ? { errorMessage: capacidadeErro } : {})}
         />
       </section>
 

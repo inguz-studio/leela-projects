@@ -7,7 +7,7 @@
 // criação/lotes) — exibidos read-only na tela.
 // =============================================================================
 
-import { modoTaxaDoEvento, type ModoTaxa } from '@leela/core';
+import { modoTaxaDoEvento, parseContagemPtBr, type ModoTaxa } from '@leela/core';
 import { DOMINIO_LEELA } from '../../pagina-vendas/_lib/paginaVendasView';
 
 /** Estado controlado do form (capacidade como string do input; converte no submit). */
@@ -57,12 +57,16 @@ export function urlPublicaEvento(slug: string): string {
 /**
  * Converte o campo de capacidade (string do input) para o valor do model:
  * inteiro > 0 ou `null` (vazio/desconhecida — RN-210). @pure
+ *
+ * Fonte única da capacidade — a validação da tela chama esta mesma função.
+ * Pelo parser de contagem "1.000" são mil pessoas; com o `Number(...)` que
+ * estava aqui era 1, aprovado por `Number.isInteger` (FIX-PARSE-MILHAR).
  */
 export function capacidadeParaNumero(capacidade: string): number | null {
   const cap = capacidade.trim();
   if (cap.length === 0) return null;
-  const n = Number(cap);
-  return Number.isInteger(n) && n > 0 ? n : null;
+  const lido = parseContagemPtBr(cap);
+  return lido.ok && lido.valor > 0 ? lido.valor : null;
 }
 
 /** Preenche o form a partir de um evento (capacidade `null` → campo vazio). @pure */
@@ -120,12 +124,10 @@ export function validaConfigGerais(v: ConfigGeraisValues): {
   if (v.nome.trim().length === 0) {
     erros.nome = 'Informe o nome do evento.';
   }
-  const cap = v.capacidade.trim();
-  if (cap.length > 0) {
-    const n = Number(cap);
-    if (!Number.isInteger(n) || n <= 0) {
-      erros.capacidade = 'Capacidade deve ser um número inteiro maior que zero.';
-    }
+  // A capacidade passa pela MESMA função que monta o payload — validar por um
+  // caminho e gravar por outro é como o defeito de milhar sobrevivia calado.
+  if (v.capacidade.trim().length > 0 && capacidadeParaNumero(v.capacidade) === null) {
+    erros.capacidade = 'Capacidade deve ser um número inteiro maior que zero.';
   }
   return { valido: Object.keys(erros).length === 0, erros };
 }

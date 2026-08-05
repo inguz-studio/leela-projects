@@ -41,6 +41,7 @@ import {
   LIMIAR_BAIXA_SKU_DEFAULT,
   TRANSICOES_APROVISIONAMENTO,
   gradeEfetivaDoItem,
+  parseContagemPtBr,
   tamanhosDoCorte,
   type Aprovisionamento,
   type EstadoAprovisionamento,
@@ -640,14 +641,16 @@ function TransicaoSkuModal({
   }, [transicao]);
 
   async function confirmar(): Promise<void> {
-    const valor = Number(qtd);
-    if (qtd.trim().length === 0 || !Number.isInteger(valor) || valor < 0) {
+    // Estoque pelo parser único de contagem (FIX-PARSE-MILHAR): encomendar
+    // "1.000" camisetas registrava UMA, e 1 passava na guarda de inteiro.
+    const lido = parseContagemPtBr(qtd);
+    if (!lido.ok || lido.valor < 0) {
       setErro('Informe um número inteiro maior ou igual a zero.');
       return;
     }
     setBusy(true);
     try {
-      await onConfirmar(valor);
+      await onConfirmar(lido.valor);
     } finally {
       setBusy(false);
     }

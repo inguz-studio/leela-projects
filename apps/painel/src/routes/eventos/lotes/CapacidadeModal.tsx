@@ -10,7 +10,13 @@
 
 import * as React from 'react';
 import { Button, Input, Modal, Textarea, useToast } from '@leela/design-system';
-import { capacidadeDoLote, validarAjusteCapacidade, type Lote } from '@leela/core';
+import {
+  capacidadeDoLote,
+  mensagemContagemInvalida,
+  parseContagemPtBr,
+  validarAjusteCapacidade,
+  type Lote,
+} from '@leela/core';
 import { formatInt } from '../_lib/format';
 import { capacidadePrevista } from './_lib/loteForm';
 
@@ -49,8 +55,13 @@ export function CapacidadeModal({
     return <Modal open={open} onOpenChange={onOpenChange} title="Ajustar capacidade" />;
   }
 
-  const nova = Number(capacidade.trim());
-  const capacidadeParseavel = capacidade.trim().length > 0 && Number.isInteger(nova);
+  // Capacidade pelo parser único de contagem (FIX-PARSE-MILHAR): esta é a
+  // única tela onde a vaga de um lote COM VENDA muda, e `Number("1.000")` é 1.
+  // Um ajuste de mil lugares entrava aqui como um — aprovado por
+  // `Number.isInteger`, e o kernel não tinha por que reprovar reduzir.
+  const lida = parseContagemPtBr(capacidade);
+  const nova = lida.ok ? lida.valor : Number.NaN;
+  const capacidadeParseavel = lida.ok;
   // REV-LOTES · frente D (achado #1): o painel acompanha o total DIGITADO, não
   // o gravado. Esta é a ÚNICA tela onde a vaga de um lote COM VENDA é editável
   // (no LoteModal o campo está `disabled` justamente quando `vendidos > 0`), e
@@ -65,9 +76,14 @@ export function CapacidadeModal({
     : capacidadeDoLote(lote);
   const previa = capacidadeParseavel && nova !== lote.quantidadeLimite;
   // Espelho client-side do veredito do kernel (o callable é a autoridade).
-  const erroCapacidade = capacidadeParseavel
-    ? validarAjusteCapacidade(lote, nova)
-    : 'Informe uma capacidade inteira.';
+  // Recusa que EXPLICA: campo em branco segue com o pedido de sempre, e o
+  // resto (casa decimal, pontuação torta) diz o que fazer em vez de repetir
+  // "inteira" para todo texto que a tela não entendeu.
+  const erroCapacidade = lida.ok
+    ? validarAjusteCapacidade(lote, lida.valor)
+    : lida.motivo === 'vazio'
+      ? 'Informe uma capacidade inteira.'
+      : mensagemContagemInvalida(lida.motivo);
   const motivoTrim = motivo.trim();
   const motivoValido = motivoTrim.length >= MOTIVO_MIN && motivoTrim.length <= MOTIVO_MAX;
   const semAlteracao = capacidadeParseavel && nova === lote.quantidadeLimite;

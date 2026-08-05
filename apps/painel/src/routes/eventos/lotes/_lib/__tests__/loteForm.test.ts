@@ -505,3 +505,92 @@ describe('lote VENDIDO — payload SÓ-NOME (RN-200/300 · review S300-T4 #1)', 
     expect(r.ok).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// FIX-PARSE-MILHAR — a vaga lida pelo parser único de contagem
+//
+// `Number.parseInt("1.000", 10)` é 1, e 1 é um inteiro perfeitamente válido:
+// a guarda `Number.isInteger` aprovava, o lote nascia com UMA vaga e o
+// organizador só descobria quando o evento "esgotava" no primeiro inscrito.
+// ---------------------------------------------------------------------------
+
+describe('vaga e ordem com separador de milhar (FIX-PARSE-MILHAR)', () => {
+  const base: LoteFormValues = {
+    nome: 'Lote 1',
+    ordem: '1',
+    inicioEm: '2026-02-01T00:00',
+    fimEm: '2026-04-01T00:00',
+    quantidadeLimite: '300',
+    preco: '75,00',
+  };
+
+  it('"1.000" abre mil lugares, não um', () => {
+    const r = validarFormLote({
+      values: { ...base, quantidadeLimite: '1.000' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok && 'quantidadeLimite' in r.input) {
+      expect(r.input.quantidadeLimite).toBe(1000);
+    } else {
+      expect.fail('esperava payload completo com a vaga lida');
+    }
+    // Fica no registro o que o caminho antigo devolvia para o mesmo texto.
+    expect(Number.parseInt('1.000', 10)).toBe(1);
+  });
+
+  it('casa decimal na vaga é recusa de campo, nunca arredondamento calado', () => {
+    for (const q of ['1,000', '2,5', '1.5']) {
+      const r = validarFormLote({
+        values: { ...base, quantidadeLimite: q },
+        modalidade: '5k',
+        loteId: null,
+        lotesDoEvento: [],
+      });
+      expect(r.ok).toBe(false);
+      expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
+    }
+  });
+
+  it('a ordem lê a mesma pontuação da vaga', () => {
+    const r = validarFormLote({
+      values: { ...base, ordem: '1.000' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok && 'ordem' in r.input) {
+      expect(r.input.ordem).toBe(1000);
+    } else {
+      expect.fail('esperava payload completo com a ordem lida');
+    }
+  });
+
+  it('a guarda de faixa continua de pé (vaga ≥ 1)', () => {
+    for (const q of ['0', '-5', '', 'abc']) {
+      const r = validarFormLote({
+        values: { ...base, quantidadeLimite: q },
+        modalidade: '5k',
+        loteId: null,
+        lotesDoEvento: [],
+      });
+      expect(r.ok).toBe(false);
+      expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
+    }
+  });
+});
+
+describe('capacidadePrevista lê a MESMA pontuação do submit (FIX-PARSE-MILHAR)', () => {
+  it('a prévia de "1.000" mostra mil — o mesmo número que será gravado', () => {
+    expect(capacidadePrevista(null, '1.000').configurado).toBe(1000);
+    expect(capacidadePrevista(null, '1.000').disponivel).toBe(1000);
+  });
+
+  it('total com casa decimal cai no gravado, como qualquer texto ilegível', () => {
+    const lote = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 50, vendidos: 19 });
+    expect(capacidadePrevista(lote, '2,5').configurado).toBe(50);
+  });
+});

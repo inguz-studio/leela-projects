@@ -104,4 +104,24 @@ describe('validaConfigGerais', () => {
     expect(validaConfigGerais({ ...base, capacidade: '' }).valido).toBe(true);
     expect(validaConfigGerais({ ...base, capacidade: '500' }).valido).toBe(true);
   });
+
+  // -------------------------------------------------------------------------
+  // FIX-PARSE-MILHAR — a capacidade do evento é lida duas vezes (validação e
+  // submit) e as duas precisam concordar sobre o que "1.000" quer dizer.
+  // -------------------------------------------------------------------------
+
+  it('"1.000" é capacidade para mil pessoas nas duas leituras', () => {
+    expect(validaConfigGerais({ ...base, capacidade: '1.000' }).valido).toBe(true);
+    expect(capacidadeParaNumero('1.000')).toBe(1000);
+    expect(capacidadeParaNumero('12.500')).toBe(12500);
+    // O caminho antigo: `Number("1.000")` é 1 e passa em `Number.isInteger`.
+    expect(Number('1.000')).toBe(1);
+  });
+
+  it('casa decimal na capacidade continua recusada nas duas leituras', () => {
+    for (const c of ['1,000', '12.5', '2,5']) {
+      expect(validaConfigGerais({ ...base, capacidade: c }).valido).toBe(false);
+      expect(capacidadeParaNumero(c)).toBeNull();
+    }
+  });
 });

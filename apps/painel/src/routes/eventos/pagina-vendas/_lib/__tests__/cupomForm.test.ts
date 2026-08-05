@@ -207,3 +207,31 @@ describe('estadoCupomBadge / labels — derivação do kernel', () => {
     expect(labelUsos({ usos: 3, tetoUso: null })).toContain('ilimitado');
   });
 });
+
+describe('teto de usos com separador de milhar (FIX-PARSE-MILHAR)', () => {
+  /** Atalho: o teto que o form entrega para um texto digitado. */
+  function teto(digitado: string): number | null | 'recusa' {
+    const r = validarFormCupom({
+      values: values({ tetoUso: digitado }),
+      codigosExistentes: [],
+      cupomEmEdicaoId: null,
+    });
+    return r.ok ? r.input.tetoUso : 'recusa';
+  }
+
+  it('"1.000" é um teto de mil usos', () => {
+    expect(teto('1.000')).toBe(1000);
+    expect(teto('12.500')).toBe(12500);
+  });
+
+  it('a vírgula não vira milhar: "1,000" é recusado, não lido como 1', () => {
+    // Os dois textos têm os mesmos dígitos e diferem por mil vezes. O parser
+    // recusa pelo tipo da entrada em vez de escolher um lado no escuro.
+    expect(teto('1,000')).toBe('recusa');
+  });
+
+  it('o teto vazio segue ilimitado e a faixa ≥ 1 segue de pé', () => {
+    expect(teto('')).toBeNull();
+    for (const t of ['0', '-3', '1,5', 'abc']) expect(teto(t)).toBe('recusa');
+  });
+});

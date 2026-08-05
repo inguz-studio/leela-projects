@@ -24,6 +24,7 @@ import {
   isCodigoCupomValido,
   isDataHoraLocalISO,
   normalizarCodigoCupom,
+  parseContagemPtBr,
   parseValorPtBr,
   valorCupomValido,
   type Cupom,
@@ -175,8 +176,13 @@ export function validarFormCupom(params: ValidarFormCupomParams): ResultadoValid
   let tetoUso: number | null = null;
   const tetoBruto = values.tetoUso.trim();
   if (tetoBruto.length > 0) {
-    const n = Number.parseInt(tetoBruto, 10);
-    if (!Number.isInteger(n) || n < 1 || String(n) !== tetoBruto) {
+    // Teto pelo parser único de contagem (FIX-PARSE-MILHAR). Ele substitui o
+    // round-trip `String(n) !== tetoBruto`, que era a defesa certa contra o
+    // truncamento do `parseInt` mas recusava junto o milhar legítimo: "1.000"
+    // caía como texto sujo em vez de virar mil usos.
+    const lido = parseContagemPtBr(tetoBruto);
+    const n = lido.ok ? lido.valor : Number.NaN;
+    if (!Number.isInteger(n) || n < 1) {
       return {
         ok: false,
         campo: 'tetoUso',

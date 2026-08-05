@@ -9,6 +9,7 @@ import {
   formatarDocumento,
   isCodigoCupomValido,
   normalizarCodigoCupom,
+  parseContagemPtBr,
   parseValorPtBr,
   valorCupomValido,
   validarDocumento,
@@ -145,11 +146,12 @@ export function validarCondicaoDesconto(v: CondicaoDescontoValues): string[] {
         : 'Valor fixo inválido (maior que zero).'
     );
   }
-  if (v.tetoUso.trim().length > 0) {
-    const teto = Number(v.tetoUso);
-    if (!Number.isInteger(teto) || teto < 1) {
-      erros.push('Teto de usos deve ser inteiro ≥ 1 (ou vazio para ilimitado).');
-    }
+  // O teto passa pela MESMA função que monta o payload (FIX-PARSE-MILHAR).
+  // Enquanto eram dois `Number(...)` independentes, a validação e o submit
+  // podiam discordar — e a discordância caía do lado ruim: `tetoUsoParaNumero`
+  // devolve `null` para texto ilegível, e `null` aqui significa ILIMITADO.
+  if (v.tetoUso.trim().length > 0 && tetoUsoParaNumero(v.tetoUso) === null) {
+    erros.push('Teto de usos deve ser inteiro ≥ 1 (ou vazio para ilimitado).');
   }
   const inicio = millisDeInputLocal(v.inicio);
   const fim = millisDeInputLocal(v.fim);
@@ -161,9 +163,16 @@ export function validarCondicaoDesconto(v: CondicaoDescontoValues): string[] {
   return erros;
 }
 
-/** Teto de usos parseado (`null` = ilimitado). @pure */
+/**
+ * Teto de usos parseado (`null` = ilimitado). @pure
+ *
+ * Fonte única do teto — a validação chama esta mesma função. Pelo parser de
+ * contagem "1.000" são mil usos; com o `Number(...)` que estava aqui era 1, e
+ * `Number.isInteger(1)` aprovava sem nenhum sintoma até o cupom morrer no
+ * primeiro resgate (FIX-PARSE-MILHAR).
+ */
 export function tetoUsoParaNumero(tetoUso: string): number | null {
   if (tetoUso.trim().length === 0) return null;
-  const n = Number(tetoUso);
-  return Number.isInteger(n) && n >= 1 ? n : null;
+  const lido = parseContagemPtBr(tetoUso);
+  return lido.ok && lido.valor >= 1 ? lido.valor : null;
 }

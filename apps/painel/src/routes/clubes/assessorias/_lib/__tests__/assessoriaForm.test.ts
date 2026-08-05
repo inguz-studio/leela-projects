@@ -145,3 +145,46 @@ describe('millisDeInputLocal / tetoUsoParaNumero', () => {
     expect(tetoUsoParaNumero('0')).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// FIX-PARSE-MILHAR — o teto de usos, que aqui é lido DUAS vezes
+//
+// `validarCondicaoDesconto` acusa o erro e `tetoUsoParaNumero` monta o payload.
+// Enquanto cada uma tinha o seu `Number(...)`, um teto ilegível virava `null` no
+// submit — ou seja, cupom ILIMITADO — sem que a validação tivesse reprovado.
+// As duas leem o mesmo parser agora, e este bloco cobra as duas juntas.
+// ---------------------------------------------------------------------------
+
+describe('teto de usos com separador de milhar (FIX-PARSE-MILHAR)', () => {
+  const base = {
+    ...CONDICAO_VALORES_INICIAIS,
+    eventoId: 'evt-1',
+    codigo: 'PARCEIRO10',
+    tipo: 'percentual' as const,
+    valor: '10',
+    inicio: '2026-01-01T10:00',
+    fim: '2026-02-01T10:00',
+  };
+
+  it('"1.000" é um teto de mil usos nas duas leituras', () => {
+    expect(validarCondicaoDesconto({ ...base, tetoUso: '1.000' })).toEqual([]);
+    expect(tetoUsoParaNumero('1.000')).toBe(1000);
+    // O caminho antigo aprovava e gravava 1 — um cupom de mil usos que morria
+    // no primeiro resgate.
+    expect(Number('1.000')).toBe(1);
+  });
+
+  it('recusa e payload andam juntos: o que a validação reprova não vira ilimitado', () => {
+    for (const t of ['1,000', '2,5', 'abc', '0', '-3']) {
+      const erros = validarCondicaoDesconto({ ...base, tetoUso: t });
+      expect(erros.some((e) => e.toLowerCase().includes('teto'))).toBe(true);
+      expect(tetoUsoParaNumero(t)).toBeNull();
+    }
+  });
+
+  it('a mesma pontuação do cupom do evento — as duas telas não divergem mais', () => {
+    expect(tetoUsoParaNumero('12.500')).toBe(12500);
+    // "1e3" era 1000 aqui e recusa no cupom do evento. Agora é recusa nos dois.
+    expect(tetoUsoParaNumero('1e3')).toBeNull();
+  });
+});
