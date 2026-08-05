@@ -537,4 +537,32 @@ describe('REV-A4 · o que a recusa da RN-449d faz com o resto do sistema', () =>
       motivo: MOTIVO_CONTA_ADMIN,
     });
   });
+
+  it('8 · a recusa NÃO fecha a outra perna da Rule: comprando LOGADO, o pedido continua legível pela conta', async () => {
+    // ⚔ O handoff da BUILD-A4 afirma que "a Rule da RN-469 também não a abre
+    // (nenhum `request.auth.uid` é igual a `null`)". A afirmação é verdadeira
+    // para a perna do `contaSemFriccao.contaUid` e FALSA para a Rule inteira:
+    // `ehCompradorDoPedido()` tem DUAS pernas (`firestore.rules:2589`), e a
+    // outra é `responsavel.atletaId == request.auth.uid` — carimbada de
+    // `caller.uid` DENTRO da transação de venda.
+    const r = await createInscricaoChargeCore(
+      db, provider,
+      inputSolo('reva4-admin-logado', { ...ADMIN, cpf: '246.813.570-90' }),
+      { uid: ADMIN.uid, ehAnonimo: false }
+    );
+    await db.collection('pedidos').doc(r.pedidoId).update({ status: 'pago' });
+    const recusa = await garantirContaSemFriccao(
+      db, r.pedidoId, contaSemFriccaoAuthAdmin(), providerEspiao()
+    );
+    expect(recusa.motivo).toBe(MOTIVO_CONTA_ADMIN);
+
+    // O vínculo foi recusado…
+    const snap = await db.collection('pedidos').doc(r.pedidoId).get();
+    expect((snap.get('contaSemFriccao') as Record<string, unknown>)['contaUid'])
+      .toBeNull();
+    // …e mesmo assim a conta de administração satisfaz a Rule pela SEGUNDA
+    // perna. Ler o próprio pedido não é vazamento, mas "nenhuma chave de
+    // leitura é concedida" não é o que o dado diz.
+    expect(snap.get('responsavel.atletaId')).toBe(ADMIN.uid);
+  });
 });
