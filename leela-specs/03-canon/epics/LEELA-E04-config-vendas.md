@@ -1948,3 +1948,216 @@ Cobre as duas regras acima mais a fila técnica que a review deixou. As frentes 
 estão no repositório (`fd6e5e69`, `41ac6bbb`, `d4ce8d12`, `1357163a`, `2a97a592`, `08a09465`,
 `c2b19244`); **nada foi deployado**. As tarefas T1 a T9 estão em
 `02-rodadas/2026-08-05-lotes-ux/03-fila-codigo.md`.
+
+## Delta a lista de modalidades vira editável, e o lote pode dispensar o kit (SPEC-MODALIDADE-KIT · 2026-08-05)
+
+Seis regras nascidas de duas falas do dono na mesma conversa. Este épico as possui porque as duas
+governam a configuração comercial do evento: uma diz como a lista de modalidades pode mudar sem
+quebrar o que aponta para ela, a outra acrescenta um campo ao lote. Relato e verbatim em
+`02-rodadas/2026-08-05-modalidade-e-kit/01-decisoes-dono.md`; apuração completa em
+`02-spec-modalidade-e-kit.md`; delta e prova de não colisão em `03-rns-delta.md`; fila em
+`04-fila-codigo.md`.
+
+**O fato que organiza as seis.** A modalidade não tem entidade, não tem id e não tem documento: é
+uma string num array do doc do evento, e o nome fica gravado em **onze** lugares, dois deles dentro
+do próprio documento (`modalidades[]` e `percursos[].nome`) e um deles dentro da chave primária do
+lote (`apps/painel/.../lotes/_lib/loteForm.ts:254-255`, que constrói o docId como
+`modalidade-lote-ordem`). O inventário com arquivo e linha está em `02-spec-modalidade-e-kit.md`
+§"O mapa do nome".
+
+### RN-500 (nova, dona) · a lista é editável enquanto o evento não vendeu
+
+Verbatim do dono: *"E precisamos editar as modalidades."* Hoje não existe caminho nenhum.
+`evento.modalidades[]` é escrito uma única vez, na criação (`functions/src/eventos/criarEvento.ts:389`),
+e o contrato de atualização exclui o campo por escrito
+(`packages/api-client/src/eventos/configuracoesEvento.ts:13-15`). A trava é de produto:
+`firestore.rules:550-561` (`percursosEditaveis`) **já autoriza** o cliente enquanto
+`qtdInscritos == 0`.
+
+**A fronteira é "sem venda", e não "sem venda e rascunho".** Três medições a sustentam:
+
+1. `qtdInscritos` conta qualquer status (RN-487), então uma cobrança PIX viva já fecha a lista
+   antes de qualquer pagamento. A única pessoa que a edição pode pegar no caminho é a que ainda
+   não gerou cobrança.
+2. O modo de falha dessa pessoa é **recusa**, nunca preço errado. Sem lote para o nome antigo a
+   venda vem fechada (`packages/core/src/checkout/saleState.ts:281`); um kit fora da modalidade
+   lança (`:271-273`). Fail-closed já está lá.
+3. Exigir rascunho pioraria o produto no caso exato do dono. Ele descobre o erro olhando a página
+   pública, e `status` é escrita de Function (ADR-005): consertar um nome passaria a exigir tirar a
+   página do ar, por uma porta que o organizador pode nem ter.
+
+**A lista é duas listas.** `modalidades[]` e `percursos[].nome`
+(`packages/core/src/eventos/evento.ts:87-90, 127`) são cópias do mesmo fato no mesmo documento,
+sincronizadas por um único lugar do produto (`EventoForm.tsx:203-206`), e a segunda é o preço
+legado consultado por nome no checkout (`createInscricaoCharge.ts:929`). Toda operação trata as
+duas como uma só.
+
+**Requisito de tela:** editar a lista de um evento **publicado** exige confirmação que nomeie a
+consequência antes do gesto, não depois.
+
+**Falsificação:** um evento publicado com zero inscritos aceita a edição; o mesmo evento com uma
+cobrança PIX pendente e nenhum pagamento a recusa.
+
+**Estado:** regra selada, código **não** construído. Frente 1 da fila da rodada.
+
+### RN-501 (nova, dona) · renomear é migração atômica, nunca edição de campo
+
+Cinco referências do próprio evento mudam juntas: `modalidades[]`, `percursos[].nome`,
+`Lote.modalidade`, `Kit.modalidades[]` e `campanha.segmento.referencia`. Uma Function transacional
+as migra **num único commit**, com o pai antes dos filhos, porque a Rule do lote consulta o
+documento do evento (`firestore.rules:1067-1076`, chamada no create **e no update**, `:1134` e
+`:1142`).
+
+**Duas escritas separadas não são uma versão mais barata.** Entre elas, todo lote da modalidade
+aponta para um nome fora da lista, e a `modalidadeExisteNoEventoPai` transforma isso em
+**documento inutilizado**: nenhuma escrita passa mais, inclusive a que fecharia a janela.
+
+**Proibir a renomeação foi recusado.** "Criar nova e migrar na mão" é a mesma operação, com a
+mesma janela, sem transação nenhuma protegendo o meio dela. Proibir não impede: garante que seja
+feita pior.
+
+**Renomear para um nome já presente na lista é recusado.** Isso é fusão de modalidades, com dois
+conjuntos de lotes disputando a sequência de virada e a invariante da RN-300. Ninguém pediu.
+
+**O docId do lote fica com o nome antigo.** Uma renomeação não reescreve docId; apagar e recriar
+moveria uma chave primária que `pedidos/{id}.itens[].loteId` referencia
+(`packages/core/src/pedidos/pedido.ts:123-127`) e por onde `virarLote` reconta
+(`functions/src/eventos/virarLote.ts:165-201`). Hoje isso é inofensivo, porque a operação só existe
+antes da primeira venda; construí-la como "recria o documento" ensinaria ao código um gesto que
+fica errado no dia em que alguém relaxar a fronteira. O resíduo é cosmético — nenhuma tela mostra
+docId de lote — e que lotes novos parem de embutir o nome é dívida registrada (tarefa 3a).
+
+**Falsificação:** renomear com um lote e um kit apontando para o nome antigo deixa os dois
+apontando para o novo no mesmo commit; falhar no meio não deixa nada escrito.
+
+**Estado:** regra selada, código **não** construído. Tarefa 1b, marcada ⚔⚔.
+
+### RN-502 (nova, dona) · remover só quando nada aponta, e a recusa nomeia quem impede
+
+Remover é a única das três operações sem destino. Renomear leva as referências junto; remover as
+deixa apontando para o vazio, e o vazio não é benigno pela mesma Rule da RN-501: tirar o nome da
+lista **inutiliza** os lotes daquela modalidade, inclusive para a escrita que corrigiria a
+modalidade deles. A única saída restante seria apagar o lote, permitido apenas com `vendidos == 0`
+(`firestore.rules:1146-1149`).
+
+A remoção é recusada enquanto existir lote, kit ou campanha referenciando o nome, e a recusa lista
+**cada um pelo nome**, nunca com frase genérica. O organizador tem caminho reversível: apaga os
+lotes, tira a modalidade do kit ou apaga o kit (permitido sem venda no evento,
+`firestore.rules:1017-1027`), e então remove. Remover tira o nome das duas listas.
+
+**A alternativa recusada** é remover em cascata num gesto só. Apagar um lote é apagar preço e
+janela que alguém configurou, e o botão que faz isso a reboque de outra ação não deixa a pessoa
+medir o que perdeu. Item **MODAL-2** de [[DECISOES-ABERTAS]], com este default.
+
+**Falsificação:** remover uma modalidade com um lote apontando devolve recusa nomeando o lote;
+remover a mesma depois de o lote ser apagado passa.
+
+**Estado:** regra selada, código **não** construído. Tarefa 1c.
+
+### RN-503 (nova, dona) · o lote declara se inclui o kit da modalidade, e o default é incluir
+
+Verbatim do dono, escolhendo entre três desenhos: *"nao, na verdade é na modalidade mesmo! mas pode
+acontecer de determinado lote nao ter o Kit."* Ele escolheu o **interruptor no lote**, e viu e
+aceitou a limitação declarada: é tudo ou nada, não permite escolher um kit entre três.
+
+`Lote` ganha `incluiKitDaModalidade?: boolean`, e **ausente equivale a ligado**. Nenhum documento
+no banco tem o campo, todo leitor usa `get(campo, true)`, e por isso nenhum lote existente muda de
+comportamento e não há migração — escrever `true` onde já se lê `true` é escrita sem efeito e com
+risco.
+
+O campo **não** cria vínculo entre kit e lote. `Kit.modalidades[]` continua sendo o único vínculo e
+o kit continua valendo em todos os lotes da modalidade; o lote apenas inclui ou não a oferta
+inteira.
+
+**A recusa é do servidor.** Esconder a etapa é interface; um payload montado à mão declara um
+`kitId` da modalidade e compra o kit num lote que não o inclui. A validação mora onde a irmã dela
+já mora: `computeSaleState` já refuta kit fora da modalidade
+(`packages/core/src/checkout/saleState.ts:271-274`) e já resolve o lote ativo (`:281`). Detalhe que
+a fila carrega: o bloco do kit roda **antes** da resolução do lote, então a checagem nova exige
+reordenação dentro da mesma função pura.
+
+**O campo não entra no congelamento da RN-497**, porque o `preco` do lote não se move quando ele
+vira e porque o caso pós-venda é banal: o kit acabou no meio do lote. A escolha tem consequência de
+dinheiro, declarada na RN-504, e o congelamento sobe como alternativa em **KITLOTE-1**.
+
+**Falsificação:** uma cotação que declare um kit da modalidade sobre um lote com o interruptor
+desligado é recusada pelo servidor, e não apenas ausente da tela.
+
+**Estado:** regra selada, código **não** construído. Frente 2 da fila da rodada.
+
+### RN-504 (nova, dona) · desligar não mexe em quem comprou, não libera estoque, e o comprador nunca lê "kit desligado"
+
+Três afirmações, e nenhuma é promessa: as três são o que o código faz hoje, escritas para que
+nenhum caminho futuro as contrarie.
+
+**Quem comprou.** A cotação está congelada no pedido (RN-179) e o kit está gravado duas vezes no
+inscrito: como enum em `inscrito.kit` (RN-202) e como id real em `inscrito.kitId`
+(`packages/core/src/eventos/inscrito.ts:139-147`, escrito em `createInscricaoCharge.ts:1704-1707`).
+O balcão e a página do ingresso leem o inscrito, nunca o lote. A entrega é devida.
+
+**Estoque.** Não existe reserva para liberar. O aprovisionamento é movido pela demanda,
+`aEncomendar = max(0, qtdVendida − estoqueFisico)` (RN-224,
+`packages/core/src/eventos/aprovisionamento.ts:266-269`), com `qtdVendida` recomputado a partir de
+inscritos confirmados. Desligar o interruptor só faz esse número **parar de crescer** pelas vendas
+daquele lote; nada retrocede e nenhum documento de aprovisionamento é tocado. `Kit.capacidade`
+também não se move: os dois consumidores dela somam por documento de kit
+(`functions/src/overview/aggregateProfessionalDashboard.ts:86`,
+`apps/painel/src/routes/eventos/_lib/distribuicao.ts:199-209`), e o documento continua lá.
+
+**Vocabulário.** O comprador lê **"Esta inscrição não inclui kit."**, a mesma frase para modalidade
+sem kit e para lote com o interruptor desligado, porque para quem compra os dois são o mesmo fato.
+Proibidas em superfície de comprador: "kit desligado", "kit desativado", "kit indisponível neste
+lote", e qualquer frase que exponha a palavra lote a quem está comprando.
+
+**A exceção que vale dinheiro.** "Sem kit" é um kit de verdade, com preço negativo (RN-211,
+`kitEhDesconto` em `packages/core/src/eventos/kit.ts:118-120`). Num evento que use esse desenho,
+desligar o interruptor tira o desconto do cardápio e o comprador daquele lote passa a pagar
+**mais**, sem que o `preco` do lote mude. É o único caminho pelo qual este campo mexe no que alguém
+paga, e ele tem de aparecer ao organizador **no gesto**, com o número.
+
+**Falsificação:** desligar o interruptor num lote com vendas não altera nenhum `inscrito.kitId`,
+nenhum documento de aprovisionamento e nenhum valor de pedido.
+
+**Estado:** regra selada, código **não** construído. Tarefas 2c e 2d.
+
+### RN-505 (nova, dona) · a edição nunca escreve a partir da projeção degradada, e a recuperação é alcançável
+
+`eventoDegradado` devolve `modalidades: []` e `percursos: []` **incondicionalmente**
+(`packages/api-client/src/eventos/queries.ts:186-187`), sem olhar o campo bruto. Um evento que
+degradou por `janelasEntrega` ou `faixaChips` — que o próprio arquivo aponta como fontes mais
+prováveis do defeito — tem a lista perfeita no banco e vazia na projeção. Um editor que grave "a
+lista que eu vi" apaga modalidades boas, e a escrita passa em todas as Rules, porque lista vazia é
+lista válida.
+
+Por isso as três operações são da Function, que lê o documento direto, e o acréscimo é `arrayUnion`,
+que não apaga o que outra aba escreveu.
+
+**E há um beco a abrir.** A degradação só existe na listagem: a leitura pontual mantém o fail-fast
+de propósito (`queries.ts:117-123`), então o organizador vê o evento degradado na lista, clica, e a
+tela de detalhe não abre. A porta de conserto está atrás da porta quebrada. A recuperação precisa
+de ação própria **na listagem**; afrouxar `getEvento` foi recusado, porque aquele fail-fast protege
+toda tela que assume evento válido. A tela do reparo nomeia o campo inválido, porque publicar exige
+modalidade não vazia (`functions/src/eventos/publicarEvento.ts:69-71`) e recuperar a lista é
+necessário sem ser suficiente.
+
+**Falsificação:** um evento com `modalidades: ['5k','10k']` no banco e um campo inválido em outro
+lugar, aberto pelo reparo, mostra as duas modalidades e nunca grava lista vazia sobre elas.
+
+**Estado:** regra selada, código **não** construído. Tarefa 1e.
+
+### História nova · S316 · a lista de modalidades passa a ter dono
+
+Cobre RN-500, RN-501, RN-502 e RN-505 mais a dívida do docId. Seis tarefas, `S316-T1` a `S316-T6`,
+em `02-rodadas/2026-08-05-modalidade-e-kit/04-fila-codigo.md`. **Nada construído.**
+
+### História nova · S317 · o lote que não inclui o kit
+
+Cobre RN-503 e RN-504. Quatro tarefas, `S317-T1` a `S317-T4`, no mesmo arquivo. **Nada construído.**
+
+### Ponta solta nomeada · duas listas para o mesmo fato
+
+`modalidades[]` e `percursos[].nome` duplicam a modalidade dentro do mesmo documento, mantidas em
+sincronia por um único lugar do produto, e a segunda é preço legado consultado por nome no
+checkout. A duplicação é anterior a esta rodada e não tem enunciado próprio. Esta spec passa a
+tratá-las como uma só em toda operação, o que contém o risco sem resolver a deriva. Unificar é
+rodada própria, com migração de documento vivo.

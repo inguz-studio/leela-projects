@@ -2217,3 +2217,66 @@ E04. A RN-200 permanece aqui, inalterada, e passa a ser exigível na letra. Regi
 código é extensão que ninguém pode contestar, porque ninguém a encontra. Quando o código for além
 da regra escrita, ou a regra ganha o enunciado novo na mesma aterrissagem, ou o código volta para
 o tamanho dela.
+
+## Delta o kit fica na modalidade, e o lote pode dispensá-lo (SPEC-MODALIDADE-KIT · 2026-08-05)
+
+Este épico define o kit (RN-210 a RN-217), e nenhuma dessas regras muda. O que muda é a vizinhança,
+e o registro precisa existir aqui porque a pergunta que abriu a rodada era exatamente sobre este
+épico: *"estamos sem opções no painel profissional de vincular um kit a um lote."*
+
+**A ratificação do dono, verbatim:** *"nao, na verdade é na modalidade mesmo!"*
+
+O vínculo fica onde está. `Kit.modalidades[]` (`packages/core/src/eventos/kit.ts:84-85`) continua
+sendo o único vínculo do kit, o kit continua valendo em todos os lotes da modalidade, e o desenho
+`Kit.lotes[]` está **recusado** — não adiado. A fronteira que o diagnóstico de 04/08 descreveu se
+confirma: o lote é degrau de preço da inscrição dentro de uma modalidade, o kit é oferta paralela
+com delta que aceita negativo (RN-211).
+
+**O que muda, e mora no E04.** O lote ganha `incluiKitDaModalidade?`, ausente equivalendo a ligado,
+e passa a poder dispensar a oferta inteira da modalidade dele. A regra é a **RN-503**, em
+[[LEELA-E04-config-vendas]], porque o campo é do lote e o épico dono do lote é o E04. A tudo-ou-nada
+foi apresentada ao dono e aceita: três kits na modalidade somem juntos.
+
+### O que o interruptor não muda neste épico
+
+Medido, não presumido. As quatro afirmações vieram da varredura registrada em
+`02-rodadas/2026-08-05-modalidade-e-kit/02-spec-modalidade-e-kit.md`.
+
+**O balcão não muda.** O kit entregue é lido do inscrito, que carrega o enum em `inscrito.kit`
+(RN-202) e o id real em `inscrito.kitId` (`packages/core/src/eventos/inscrito.ts:139-147`). Nenhum
+caminho da entrega consulta o lote, e nenhum pode passar a consultar.
+
+**O aprovisionamento não muda** (RN-224/RN-225/RN-226). A conta é
+`aEncomendar = max(0, qtdVendida − estoqueFisico)`
+(`packages/core/src/eventos/aprovisionamento.ts:266-269`), com `qtdVendida` recomputado a partir de
+inscritos confirmados por SKU `itemId__[corte__]tamanho`. Não há reserva: desligar o interruptor
+não libera estoque porque nada estava preso, e o único efeito é `qtdVendida` parar de crescer pelas
+vendas daquele lote.
+
+**`Kit.capacidade` não muda, e vale registrar o que ela é.** Os dois consumidores dela somam por
+documento de kit — a capacidade derivada do evento
+(`functions/src/overview/aggregateProfessionalDashboard.ts:86, 102`) e a matriz de estoque do
+painel, onde `saldo = capacidade − totalRetirados`
+(`apps/painel/src/routes/eventos/_lib/distribuicao.ts:199-209`). O documento continua existindo com
+a mesma capacidade. E, contra a leitura intuitiva da palavra, **`Kit.capacidade` não bloqueia venda
+nenhuma**: ela não é lida no checkout nem decrementada em lugar algum. O único estoque que gateia é
+a vaga do lote, e mesmo ela é recontada, nunca reservada.
+
+**O e-mail do ingresso não muda**, e por uma razão que já era verdade: ele nunca mostrou kit. O
+template carrega nome, modalidade, código, QR e link (`functions/src/email/templates.ts:311-330`).
+
+### O comentário de follow-up que pode morrer
+
+`apps/landing/.../checkout/tipos.ts:64-66` ainda diz que *"persistir o kitId real no inscrito é
+follow-up (hoje o doc guarda só o enum canônico)"*. Isso deixou de ser verdade: o `kitId` real é
+gravado em `createInscricaoCharge.ts:1704-1707`. O comentário é dívida de documentação, sai junto da
+tarefa 2c da fila da rodada, e é o mesmo defeito que a SEAL-LOTES nomeou em 05/08 — comentário que
+registra intenção e envelhece sem que ninguém perceba.
+
+### Fronteira registrada
+
+A modalidade não é entidade deste épico nem de nenhum: é string em array do doc do evento. As seis
+regras que governam a edição dessa lista (RN-500 a RN-505) vivem em
+[[LEELA-E04-config-vendas]], e o que este épico consome delas é o efeito no kit — renomear migra
+`Kit.modalidades[]` no mesmo commit (RN-501), e remover é recusado enquanto um kit apontar
+(RN-502).

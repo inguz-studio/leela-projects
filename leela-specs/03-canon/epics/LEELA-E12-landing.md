@@ -3473,3 +3473,62 @@ Não muda o valor exibido na linha do Serviço, que é assunto da RN-491 e da RN
 [[LEELA-E04-config-vendas]] e [[LEELA-E09-financeiro-profissional]]. Não decide se o "N inscritos"
 da página pública passa a contar só pagante, que é o item **INSCR-1** do painel e a RN-486 em
 [[LEELA-E03-operacao-evento]]. Não renomeia campo de dado nem rota.
+
+## Delta a etapa de kit quando o lote não o inclui (SPEC-MODALIDADE-KIT · 2026-08-05)
+
+O checkout consome duas regras novas do [[LEELA-E04-config-vendas]]: a **RN-503**, que cria o
+`incluiKitDaModalidade?` no lote, e a **RN-504**, que fixa o vocabulário que o comprador lê. Este
+épico não define nenhuma das duas; ele registra o que muda na compra, e o que não muda.
+
+### O checkout já sabe fazer isto
+
+O filtro é `kitsDaModalidade` (`apps/landing/.../checkout/tipos.ts:81-88`) e a etapa já tem um ramo
+para lista vazia (`StepModalidadeKit.tsx:251-257`). Com o interruptor desligado o filtro devolve
+vazio e a etapa cai nesse ramo. **Não há etapa nova, não há tela nova e não há condição nova de
+layout.**
+
+A obrigatoriedade acompanha sem nenhuma linha nova, porque ela já é condicional ao mesmo filtro
+(`CheckoutFlow.tsx:1711-1715`): *"escolha um kit"* só é exigido quando a lista de ofertados não é
+vazia.
+
+### A frase única
+
+O texto do ramo vazio muda e passa a valer para os dois casos:
+
+> **"Esta inscrição não inclui kit."**
+
+A unificação é deliberada. Para quem compra, "a modalidade não tem kit" e "este lote não inclui o
+kit da modalidade" são o mesmo fato, e distinguir os dois obrigaria a explicar uma configuração
+interna a quem só quer se inscrever. A frase anterior nomeava a modalidade
+(*"Nenhum kit para a modalidade {X} — a inscrição vai sem kit"*) e sai.
+
+**Proibidas em qualquer superfície de comprador:** "kit desligado", "kit desativado", "kit
+indisponível neste lote", e qualquer frase que exponha a palavra **lote** a quem está comprando. O
+comprador não sabe o que é um lote e não precisa saber.
+
+### O preço não muda, com uma exceção
+
+O kit é delta sobre o preço da inscrição (RN-211); sem kit, o delta é zero e o preço é o do lote,
+intacto. A exceção é o "Sem kit" de preço negativo: onde ele existe, desligar o interruptor tira o
+desconto do cardápio e o comprador daquele lote passa a pagar **mais**, sem que o `preco` do lote
+mude. O aviso disso é do organizador, no painel, no momento do gesto. Nunca do comprador, que só vê
+o preço que vale para ele.
+
+### A recusa é do servidor
+
+Esconder a etapa é interface. A validação nova mora onde a irmã dela já mora: `computeSaleState` já
+refuta kit fora da modalidade (`packages/core/src/checkout/saleState.ts:271-274`) e já resolve o
+lote ativo (`:281`). Um payload montado à mão que declare um `kitId` legítimo da modalidade sobre um
+lote que não o inclui tem de ser recusado ali, e não apenas ausente da tela.
+
+### O que a edição de modalidades faz com quem está no meio da compra
+
+A **RN-500** libera a edição da lista de modalidades enquanto o evento não vendeu, e a fronteira foi
+escolhida sabendo deste efeito. Quem estiver com o checkout aberto sob o nome antigo manda esse
+nome ao servidor; sem lote para ele, a venda vem fechada (`saleState.ts:281`), e um kit fora da
+modalidade lança (`:271-273`). Nos dois caminhos a compra é **recusada**, e nenhum caminho cobra um
+preço que a tela não mostrou. Fail-closed é o comportamento certo para dinheiro e já está lá.
+
+O que a fronteira fecha antes disso: `qtdInscritos` conta qualquer status (RN-487), então quem já
+gerou uma cobrança PIX travou a configuração do evento inteiro. A única pessoa alcançável é a que
+ainda não gerou cobrança.

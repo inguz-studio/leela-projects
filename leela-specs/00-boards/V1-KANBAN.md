@@ -10,6 +10,20 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E04] A lista de modalidades passa a ter dono** — hoje ela nasce na criação do evento e morre lá, então uma modalidade digitada errada só se conserta refazendo o evento. Passa a dar para acrescentar, renomear e remover enquanto o evento não vendeu, com a renomeação levando junto lotes, kits e campanhas num gesto só, e a remoção dizendo quem impede em vez de quebrar 📋 especificado em 05/08 · lane SPEC-MODALIDADE-KIT · **fica com você:** **MODAL-1** e **MODAL-2** [[LEELA-E04-config-vendas]]
+    - [ ] **S316 · A lista de modalidades passa a ter dono**
+        - [ ] S316-T1 a porta única no servidor, com motivo e trilha ⚔
+        - [ ] S316-T2 renomear migra lote, kit e campanha num commit só ⚔⚔
+        - [ ] S316-T3 remover recusa nomeando cada lote e cada kit que impedem ⚔
+        - [ ] S316-T4 a seção de modalidades na tela de configurações do evento
+        - [ ] S316-T5 o evento com dado inválido ganha caminho de conserto pela listagem ⚔
+        - [ ] S316-T6 o identificador do lote para de embutir o nome da modalidade
+- [ ] **[E04] O lote pode não incluir o kit da modalidade** — o kit continua sendo da modalidade e valendo em todos os lotes dela; o que muda é que um lote específico pode dispensar a oferta inteira, com o liga ligado por padrão para nenhum lote existente mudar de comportamento. Quem já comprou recebe o kit do mesmo jeito 📋 especificado em 05/08 · lane SPEC-MODALIDADE-KIT · **fica com você:** **KITLOTE-1** [[LEELA-E04-config-vendas]]
+    - [ ] **S317 · O lote que não inclui o kit**
+        - [ ] S317-T1 o campo no lote, ausente equivalendo a incluir, sem migração ⚔
+        - [ ] S317-T2 o servidor recusa comprar kit num lote que não o inclui ⚔
+        - [ ] S317-T3 o checkout diz "esta inscrição não inclui kit", a mesma frase nos dois casos
+        - [ ] S317-T4 o liga na tela do lote, com aviso quando desligar tirar um desconto
 - [ ] **[E03/E09] O painel conta quem pagou** — você comprou por PIX, não pagou e apareceu como inscrito; a contagem exibida passa a ser só de pagante, e o ticket médio deixa de dividir receita confirmada por gente que nunca pagou. O contador antigo fica de pé porque ele também é a fechadura que congela preço, percurso, kit e modo da taxa 📋 especificado em 05/08 · lane SPEC-METRICAS-SERVICO [[LEELA-E03-operacao-evento]]
     - [ ] **S221 · O contador de pagantes, separado do que congela a configuração**
         - [ ] S221-T1 o número de pagantes nasce no agregado, projetado do que a transação já conta ⚔
