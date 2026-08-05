@@ -14,13 +14,27 @@
 //
 // LOCALIZAÇÃO dos docs: collectionGroup('saude') filtrado por eventoId —
 // cada doc de saúde é SELF-LOCATING (carrega tenantId/eventoId/inscritoId,
-// ver saudeInscrito.ts). ⚠️ PENDÊNCIA OPERACIONAL (deploy): collectionGroup
-// com filtro de igualdade exige habilitar o índice de collection group do
-// campo `eventoId` no console/firestore.indexes.json — o Emulator não exige.
+// ver saudeInscrito.ts).
+//
+// ÍNDICES — as DUAS queries daqui exigem declaração explícita, e a falta
+// derruba o cron inteiro com `FAILED_PRECONDITION` (BUILD-EXPURGO ·
+// 2026-08-05, depois de 8 execuções seguidas falhando em produção):
+//   1. `eventos(status ASC, data ASC)` — composto, escopo COLLECTION, para a
+//      varredura de eventos encerrados vencidos;
+//   2. `saude.eventoId` — fieldOverride com escopo COLLECTION_GROUP, para as
+//      duas `collectionGroup(SAUDE_SUBCOL).where('eventoId', ...)`.
+// Ambos vivem em `firestore.indexes.json` e são provados por
+// `__tests__/firestoreIndexes.contract.test.ts`. ⚠️ O Emulator NÃO cobra
+// índice: nenhum teste de execução pega a falta, só o contrato sobre o
+// arquivo — e só o deploy de índices prova o servidor.
 //
 // AUDITORIA SEM PII: loga contagens e ids de evento — NUNCA o conteúdo.
 // O carimbo `saudeExpurgadaEm` no evento fecha o ciclo (prova de expurgo,
 // e evita revarrer evento já expurgado a cada madrugada).
+//
+// FALHA NUNCA É SILENCIOSA: o wrapper transforma erro em INCIDENTE
+// observável (`incidenteExpurgo.ts`) e RELANÇA — expurgo é obrigação legal,
+// e cron de obrigação legal que falha calado é o defeito, não o sintoma.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -28,6 +42,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { pubsub } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { RETENCAO_SAUDE_DIAS_POS_EVENTO, SAUDE_SUBCOL } from '@leela/core';
+import { registrarIncidenteExpurgo } from './incidenteExpurgo';
 
 type Db = admin.firestore.Firestore;
 
@@ -97,6 +112,34 @@ export async function expurgarSaudeCore(
   return { eventosVarridos: eventos.size, eventosExpurgados, docsApagados };
 }
 
+/**
+ * Executa o expurgo e garante que a falha seja OBSERVÁVEL.
+ *
+ * Está separado do wrapper de cron de propósito: o `onRun` do pubsub v1 não é
+ * chamável de teste sem `firebase-functions-test`, e o caminho de erro é
+ * justamente o que precisa de prova. Aqui ele é uma função comum, testável
+ * com um `db` que estoura.
+ *
+ * RELANÇA depois de registrar. Engolir o erro deixaria a execução VERDE no
+ * Cloud Scheduler, que é exatamente o defeito que este conserto ataca:
+ * trocaríamos uma falha silenciosa por uma falha invisível.
+ *
+ * Progresso parcial não se perde: `expurgarSaudeCore` loga `saude_expurgada`
+ * por evento ANTES de seguir, então um erro no meio da varredura deixa a
+ * trilha do que já foi apagado no próprio log.
+ */
+export async function executarExpurgoSaude(
+  db: Db,
+  agora?: Date
+): Promise<ExpurgarSaudeResult> {
+  try {
+    return await expurgarSaudeCore(db, agora);
+  } catch (erro) {
+    registrarIncidenteExpurgo('expurgo_saude_falhou', { tipo: 'saude', erro });
+    throw erro;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Cron (ADR-015 — wrapper v1 fino; 03:20, escalonado após 03:00/03:05/03:10)
 // ---------------------------------------------------------------------------
@@ -105,7 +148,7 @@ export const expurgarSaude = pubsub
   .schedule('every day 03:20')
   .timeZone('America/Sao_Paulo')
   .onRun(async () => {
-    const resultado = await expurgarSaudeCore(admin.firestore());
+    const resultado = await executarExpurgoSaude(admin.firestore());
     logger.info('expurgo_saude_diario', { ...resultado });
     return null;
   });
