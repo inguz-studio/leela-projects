@@ -26,6 +26,8 @@
 // (`functions/src/eventos/emitirIngressos.ts`).
 // =============================================================================
 
+import { sorteioUniforme } from '../aleatorio';
+
 /**
  * Alfabeto do código do ingresso (RN-396): A–Z sem `O`, `I` e `L`; dígitos
  * 2–9 (sem `0` e `1`). 23 letras + 8 dígitos = 31 símbolos.
@@ -73,16 +75,25 @@ export function normalizarCodigoIngresso(valor: unknown): string {
 }
 
 /**
+ * Fonte default do sorteio: entropia do sistema (Web Crypto), uniforme sobre
+ * os 31 símbolos — ver `aleatorio.ts` para o porquê de não ser `Math.random`.
+ * O tamanho vem do alfabeto, nunca escrito à mão.
+ */
+const SORTEIO_PADRAO = sorteioUniforme(ALFABETO_CODIGO_INGRESSO.length);
+
+/**
  * Sorteia um código do alfabeto (RN-396).
  *
- * @param random fonte em [0, 1); default `Math.random`. Injetável para teste
- *   determinístico e para o servidor forçar colisão em prova.
+ * @param random fonte em [0, 1); default = entropia do sistema (Web Crypto,
+ *   uniforme sobre o alfabeto). Injetável para teste determinístico e para o
+ *   servidor forçar colisão em prova — a injeção é o que os testes usam para
+ *   pregar o sorteio, e ela continua intacta.
  *
  * ⚠️ Sorteio NÃO é unicidade. O chamador tem de reservar o código contra uma
  * chave primária por evento antes de gravá-lo (ver cabeçalho).
  */
 export function gerarCodigoIngresso(
-  random: () => number = Math.random
+  random: () => number = SORTEIO_PADRAO
 ): string {
   let codigo = '';
   for (let i = 0; i < TAMANHO_CODIGO_INGRESSO; i++) {

@@ -190,3 +190,32 @@ describe('RNG hostil — o gerador não produz código torto', () => {
     expect(gerarCodigoPedido(fixo)).toBe(gerarCodigoPedido(fixo));
   });
 });
+
+describe('sorteio default — entropia do sistema, uniforme sobre o alfabeto', () => {
+  it('os 31 símbolos aparecem; nenhum índice cai fora da faixa', () => {
+    // O default deixou de ser `Math.random` (PRNG do V8, estado recuperável a
+    // partir de poucas saídas — quem compra prevê os códigos seguintes) e
+    // passou a ser a entropia do sistema com rejeição de viés. O que este
+    // teste prende é o efeito OBSERVÁVEL: a faixa continua sendo o alfabeto
+    // inteiro e nada indexa fora dele. Numa amostra de 20 mil × 5 símbolos, a
+    // chance de um símbolo faltar é ~31 · (30/31)^100000 — zero na prática, e
+    // um símbolo faltando significa faixa quebrada, não azar.
+    const vistos = new Set<string>();
+    for (let i = 0; i < 20_000; i++) {
+      for (const ch of gerarCodigoPedido()) vistos.add(ch);
+    }
+    expect(vistos.size).toBe(ALFABETO_CODIGO_PEDIDO.length);
+    for (const ch of vistos) {
+      expect(ALFABETO_CODIGO_PEDIDO.includes(ch)).toBe(true);
+    }
+  });
+
+  it('dois códigos seguidos do default não são iguais (a fonte não travou)', () => {
+    // Rede contra o modo de falha mais burro de uma troca de RNG: uma fonte
+    // que devolve sempre o mesmo valor produziria `AAAAA` para todo mundo e
+    // faria toda venda colidir na reserva.
+    const amostra = new Set<string>();
+    for (let i = 0; i < 50; i++) amostra.add(gerarCodigoPedido());
+    expect(amostra.size).toBe(50);
+  });
+});

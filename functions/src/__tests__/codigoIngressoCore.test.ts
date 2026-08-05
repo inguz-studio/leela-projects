@@ -96,6 +96,22 @@ describe('formato (RN-396)', () => {
     };
     expect(gerar()).toBe(gerar());
   });
+
+  it('sorteio default (entropia do sistema): cobre os 31 símbolos e não trava', () => {
+    // O default deixou de ser `Math.random` junto com o do código da compra —
+    // a doutrina é a mesma nos dois. O que se prende aqui é o observável:
+    // faixa igual ao alfabeto inteiro, e fonte que de fato varia (uma fonte
+    // travada geraria o mesmo código para todo ingresso do evento).
+    const vistos = new Set<string>();
+    const amostra = new Set<string>();
+    for (let i = 0; i < 20_000; i++) {
+      const codigo = gerarCodigoIngresso();
+      if (i < 50) amostra.add(codigo);
+      for (const ch of codigo) vistos.add(ch);
+    }
+    expect(vistos.size).toBe(ALFABETO_CODIGO_INGRESSO.length);
+    expect(amostra.size).toBe(50);
+  });
 });
 
 describe('normalização da busca (RN-397)', () => {
