@@ -67,9 +67,12 @@ describe('parsePrecoReais + arredondarCentavos (money-config cent-exato)', () =>
     expect(parsePrecoReais('1.234.567,89')).toBe(1234567.89);
   });
 
-  it('ponto ambíguo vira recusa, nunca um preço mil vezes menor', () => {
-    expect(parsePrecoReais('1.500')).toBeNull();
-    expect(parsePrecoReais('1.234')).toBeNull();
+  it('ponto sem vírgula é o milhar que o organizador quis dizer', () => {
+    // Decisão do dono: "1.500" num campo de preço de lote é mil e quinhentos.
+    expect(parsePrecoReais('1.500')).toBe(1500);
+    expect(parsePrecoReais('1.234')).toBe(1234);
+    // O ponto decimal do teclado numérico segue lido como decimal.
+    expect(parsePrecoReais('1234.56')).toBe(1234.56);
     expect(parsePrecoReais('1e3')).toBeNull();
   });
 });

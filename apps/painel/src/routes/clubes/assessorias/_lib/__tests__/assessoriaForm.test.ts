@@ -103,9 +103,8 @@ describe('validarCondicaoDesconto', () => {
     ).toEqual([]);
   });
 
-  it('recusa o ponto ambíguo em vez de aprovar um desconto mil vezes menor', () => {
-    const erros = validarCondicaoDesconto({ ...base, tipo: 'fixo', valor: '1.500' });
-    expect(erros.some((e) => e.toLowerCase().includes('valor fixo'))).toBe(true);
+  it('aprova o ponto de milhar sem vírgula: "1.500" é um desconto de mil e quinhentos', () => {
+    expect(validarCondicaoDesconto({ ...base, tipo: 'fixo', valor: '1.500' })).toEqual([]);
   });
 });
 
@@ -121,10 +120,13 @@ describe('parseValorCondicao — o valor que a página envia (FIX-PARSE-DINHEIRO
     expect(parseValorCondicao('fixo', '99,999')).toBe(100);
   });
 
-  it('ilegível e ambíguo viram null (a página não envia)', () => {
+  it('ilegível vira null (a página não envia)', () => {
     expect(parseValorCondicao('fixo', '')).toBeNull();
     expect(parseValorCondicao('fixo', 'abc')).toBeNull();
-    expect(parseValorCondicao('fixo', '1.500')).toBeNull();
+  });
+
+  it('ponto sem vírgula chega como milhar no payload', () => {
+    expect(parseValorCondicao('fixo', '1.500')).toBe(1500);
   });
 });
 

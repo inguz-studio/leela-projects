@@ -23,11 +23,18 @@ describe('montarComissao (FIX-PARSE-DINHEIRO)', () => {
     expect(montarComissao('nenhuma', '10')).toBeNull();
   });
 
-  it('texto ilegível/ambíguo vira NaN — o gate de validade reprova, como antes', () => {
-    for (const bruto of ['', 'abc', '1.500', '1e3']) {
+  it('texto ilegível vira NaN — o gate de validade reprova, como antes', () => {
+    for (const bruto of ['', 'abc', '1e3']) {
       const c = montarComissao('valor_fixo', bruto) as { valorPorInscricao: number };
       expect(Number.isNaN(c.valorPorInscricao)).toBe(true);
     }
+  });
+
+  it('ponto sem vírgula é milhar: comissão de "1.500" são mil e quinhentos reais', () => {
+    expect(montarComissao('valor_fixo', '1.500')).toEqual({
+      tipo: 'valor_fixo',
+      valorPorInscricao: 1500,
+    });
   });
 });
 

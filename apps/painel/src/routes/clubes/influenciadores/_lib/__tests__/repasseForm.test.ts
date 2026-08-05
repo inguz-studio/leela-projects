@@ -34,8 +34,8 @@ describe('parseValorRepasse', () => {
     expect(parseValorRepasse('R$ 1.234,56')).toBe(1234.56);
   });
 
-  it('ponto ambíguo vira null — e o não-arredondar continua valendo', () => {
-    expect(parseValorRepasse('1.500')).toBeNull();
+  it('ponto sem vírgula é milhar — e o não-arredondar continua valendo', () => {
+    expect(parseValorRepasse('1.500')).toBe(1500);
     expect(parseValorRepasse('1.234,005')).toBe(1234.005);
   });
 });

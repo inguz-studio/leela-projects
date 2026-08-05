@@ -237,15 +237,16 @@ describe('InfluenciadoresPage', () => {
     expect(Math.round(input.valor * 100)).toBe(123456);
   });
 
-  it('ponto ambíguo não vira repasse mil vezes menor: diz o que está errado', async () => {
+  it('ponto sem vírgula é milhar: "1.500" registra mil e quinhentos', async () => {
     mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(5000)] });
     renderPage();
     await abrirModal();
     await userEvent.clear(campoValor());
     await userEvent.type(campoValor(), '1.500');
-    expect(await screen.findByRole('alert')).toHaveTextContent(/ambíguo/i);
     await userEvent.click(screen.getByRole('button', { name: 'Confirmar repasse' }));
-    expect(mocks.registrarRepasseComissao).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocks.registrarRepasseComissao).toHaveBeenCalled());
+    const [input] = mocks.registrarRepasseComissao.mock.calls[0]!;
+    expect(input.valor).toBe(1500);
   });
 
   it('valor zerado não vira chamada de repasse', async () => {

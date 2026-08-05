@@ -110,14 +110,18 @@ describe('KitEditor (RN-200/211/216/217)', () => {
     expect(Math.round(input.preco * 100)).toBe(123456);
   });
 
-  it('preço ambíguo não salva: "1.500" vira erro de campo, não R$ 1,50', async () => {
+  it('preço "1.500" salva mil e quinhentos, não R$ 1,50', async () => {
+    // Decisão do dono: ponto sozinho com grupo de três é o milhar do hábito
+    // pt-BR. A leitura de R$ 1,50 é a que ficou perdida, e o aviso mora no
+    // texto de ajuda do campo.
     const { onSalvarKit } = setup({ evento: { qtdInscritos: 0 }, kit: mkKit({ preco: 0 }) });
     const preco = screen.getByLabelText('Preço (delta sobre a inscrição, aceita negativo)');
     await userEvent.clear(preco);
     await userEvent.type(preco, '1.500');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar kit' }));
-    expect(onSalvarKit).not.toHaveBeenCalled();
-    expect(await screen.findByText(/ambíguo/i)).toBeInTheDocument();
+    await waitFor(() => expect(onSalvarKit).toHaveBeenCalled());
+    const [, input] = onSalvarKit.mock.calls[0]!;
+    expect(input.preco).toBe(1500);
   });
 
   it('evento com venda bloqueia o preço (RN-200)', () => {

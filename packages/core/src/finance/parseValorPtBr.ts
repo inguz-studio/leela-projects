@@ -28,16 +28,29 @@
 // Sem vírgula, o ponto sozinho decide pelo tamanho do grupo que vem depois
 // dele. Um grupo com número de dígitos DIFERENTE de três só pode ser decimal
 // ("1234.56", que é o teclado numérico e o `String(kit.preco)` do editor). Um
-// grupo com exatamente três dígitos e agrupamento válido ("1.234") é
-// genuinamente indecidível: mil duzentos e trinta e quatro e um vírgula
-// duzentos e trinta e quatro são leituras igualmente legítimas, e a diferença
-// entre elas é mil vezes o valor.
+// grupo com exatamente três dígitos e agrupamento válido ("1.234") é MILHAR:
+// R$ 1.234,00.
 //
-// Nesse caso o parser RECUSA. Não existe escolha conservadora entre duas
-// leituras que diferem por três ordens de grandeza: qualquer default acerta
-// metade das vezes e erra a outra metade calado, que é exatamente o defeito que
-// este módulo veio fechar. Recusar devolve a decisão para quem digitou, ao
-// custo de uma vírgula: "1.234,00" e "1234" passam sem ambiguidade nenhuma.
+// ── por que milhar, e o que essa escolha custa (decisão do dono · 2026-08-05)
+//
+// "1.234" tem duas leituras legítimas — mil duzentos e trinta e quatro, e um
+// real e vinte e três — e elas diferem por mil vezes. A primeira versão deste
+// módulo RECUSAVA a entrada e devolvia a decisão para quem digitou. O dono
+// desfez isso: o hábito pt-BR é o milhar, e é isso que quase todo brasileiro
+// quer dizer ao digitar assim num campo de preço. Recusar cobra um passo a
+// mais de quem digitou do jeito certo, para proteger quem digitou do jeito
+// menos comum.
+//
+// O custo é declarado, não descoberto. Quem usa ponto como decimal por hábito
+// de teclado numérico e escreve TRÊS casas grava mil vezes mais do que quis:
+//
+//     "1.23"   →  R$ 1,23      (grupo final de dois: decimal, continua atendido)
+//     "1.234"  →  R$ 1.234,00  (grupo final de três: milhar, era R$ 1,23 na
+//                               intenção de quem digitou com teclado numérico)
+//
+// A mitigação combinada é o TEXTO DE AJUDA do campo, que diz qual leitura o
+// sistema faz — não uma recusa. Quem quiser um real e vinte e três em três
+// casas escreve "1,234" com vírgula, e o parser lê o decimal exato.
 //
 // ── por que centavos inteiros saem daqui, e não de `roundMoney`
 //
@@ -63,8 +76,6 @@ export type MotivoValorInvalido =
   | 'vazio'
   /** Caracteres fora de dígitos/separadores, sinal repetido, notação exponencial. */
   | 'formato'
-  /** Ponto indecidível entre milhar e decimal (ex.: "1.234"). */
-  | 'ambiguo'
   /** Pontuação de milhar malformada (ex.: "1.23,45", "1,234.56"). */
   | 'agrupamento'
   /** Parte inteira longa demais para caber em centavos seguros. */
@@ -149,13 +160,12 @@ function montar(
 /**
  * Lê um valor digitado em pt-BR. @pure
  *
- * Aceita: "1234", "1234,56", "1.234,56", "1.234.567,89", "1234.56", "R$ 99,90",
- * espaços em volta e entre os grupos, sinal à esquerda, e separador decimal
- * pendurado no fim ("1234,").
+ * Aceita: "1234", "1234,56", "1.234,56", "1.234.567,89", "1234.56", "1.234"
+ * (milhar), "R$ 99,90", espaços em volta e entre os grupos, sinal à esquerda, e
+ * separador decimal pendurado no fim ("1234,").
  *
  * Recusa: vazio, letra (o que mata "1e3" — mil por exponencial nunca acontece),
- * vírgula repetida, "1,234.56" no estilo en-US, agrupamento torto e o ponto
- * ambíguo de "1.234".
+ * vírgula repetida, "1,234.56" no estilo en-US e agrupamento torto.
  */
 export function parseValorPtBr(entrada: string): ResultadoValorLido {
   if (typeof entrada !== 'string') return { ok: false, motivo: 'formato' };
@@ -212,11 +222,12 @@ export function parseValorPtBr(entrada: string): ResultadoValorLido {
 
   // --- sem vírgula, um ponto: o tamanho do grupo final decide -------------
   //
-  // Três dígitos com agrupamento válido é a fronteira indecidível ("1.234" pode
-  // ser mil duzentos e trinta e quatro ou um vírgula duzentos e trinta e
-  // quatro). Recusa em vez de chutar — ver o cabeçalho.
+  // Três dígitos com agrupamento válido é MILHAR por decisão do dono ("1.234" é
+  // R$ 1.234,00), porque é o que o hábito pt-BR quer dizer. Qualquer outro
+  // tamanho de grupo só pode ser decimal ("1234.56", "1.23"). Ver o cabeçalho
+  // para o caso que essa escolha custa.
   if (ultimo.length === 3 && agrupamentoValido(partes)) {
-    return { ok: false, motivo: 'ambiguo' };
+    return montar(negativo, partes.join(''), '');
   }
   return montar(negativo, partes[0] ?? '', ultimo);
 }
@@ -226,8 +237,6 @@ export function mensagemValorInvalido(motivo: MotivoValorInvalido): string {
   switch (motivo) {
     case 'vazio':
       return 'Informe um valor.';
-    case 'ambiguo':
-      return 'Valor ambíguo: use vírgula para os centavos (1.234,00 são mil duzentos e trinta e quatro reais; 1,234 não é um valor em reais).';
     case 'agrupamento':
       return 'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).';
     case 'magnitude':

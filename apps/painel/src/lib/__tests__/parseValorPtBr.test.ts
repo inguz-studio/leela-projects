@@ -44,6 +44,14 @@ describe('parseValorPtBr — o defeito que este módulo veio fechar', () => {
     expect(centavos('12.345,00')).toBe(1234500);
     expect(centavos('123.456,78')).toBe(12345678);
   });
+
+  it('"1.234" sem vírgula também são mil duzentos e trinta e quatro', () => {
+    // A decisão do dono: ponto sozinho com grupo de três é o milhar do hábito
+    // pt-BR, não um decimal. Sem isso o campo cobrava uma vírgula de quem
+    // digitou do jeito que se escreve preço no Brasil.
+    expect(centavos('1.234')).toBe(123400);
+    expect(centavos('1.234.567')).toBe(123456700);
+  });
 });
 
 describe('parseValorPtBr — formas que um brasileiro digita', () => {
@@ -51,6 +59,8 @@ describe('parseValorPtBr — formas que um brasileiro digita', () => {
     ['1234,56', 123456],
     ['1.234,56', 123456],
     ['1234.56', 123456], // ponto decimal do teclado numérico
+    ['1.234', 123400], // ponto de milhar sem vírgula: mil duzentos e trinta e quatro
+    ['1.234.567', 123456700],
     ['1234', 123400],
     ['99,90', 9990],
     ['99.90', 9990],
@@ -121,31 +131,48 @@ describe('parseValorPtBr — o que ele RECUSA (e nunca arredonda calado)', () =>
   });
 });
 
-describe('parseValorPtBr — a fronteira ambígua do ponto', () => {
-  // "1.234" é indecidível: mil duzentos e trinta e quatro (milhar) e um vírgula
-  // duzentos e trinta e quatro (decimal) são leituras igualmente legítimas, e a
-  // diferença entre elas é mil vezes o valor. Chutar acerta metade das vezes e
-  // erra a outra metade calado — que é o defeito de origem. Recusa.
-  it.each([['1.234'], ['1.500'], ['12.345'], ['999.999']])(
-    '%s é ambíguo e vira erro de campo, não um número torto',
-    (entrada) => {
-      expect(motivo(entrada)).toBe('ambiguo');
-    },
-  );
-
-  it('a vírgula desfaz a ambiguidade — é o conserto de um caractere', () => {
-    expect(centavos('1.500,00')).toBe(150000);
-    expect(centavos('1500')).toBe(150000);
+describe('parseValorPtBr — o ponto sem vírgula: grupo de três é milhar', () => {
+  // A decisão do dono (ver cabeçalho do módulo): grupo final de exatamente três
+  // dígitos com agrupamento válido é MILHAR, porque é o que quase todo
+  // brasileiro quer dizer ao digitar assim num campo de preço.
+  it.each([
+    ['1.234', 123400],
+    ['1.500', 150000],
+    ['12.345', 1234500],
+    ['999.999', 99999900],
+    ['1.000', 100000],
+  ])('%s é milhar → %i centavos', (entrada, esperado) => {
+    expect(centavos(entrada)).toBe(esperado);
   });
 
-  it('grupo com tamanho diferente de três é decimal, sem ambiguidade', () => {
+  it('a vírgula continua sendo a forma sem discussão nenhuma', () => {
+    expect(centavos('1.500,00')).toBe(150000);
+    expect(centavos('1500')).toBe(150000);
+    // As três formas de escrever mil e quinhentos concordam.
+    expect(centavos('1.500')).toBe(centavos('1500'));
+  });
+
+  it('grupo com tamanho diferente de três continua sendo DECIMAL', () => {
+    // Esta leitura convive com a nova: é o teclado numérico e o
+    // `String(kit.preco)` do editor, e não pode ter sido levada junto.
     expect(centavos('1234.56')).toBe(123456);
     expect(centavos('1234.5')).toBe(123450);
     expect(centavos('1234.567')).toBe(123457); // 4 dígitos antes: não é milhar
+    expect(centavos('99.90')).toBe(9990);
+    expect(centavos('0.5')).toBe(50);
   });
 
   it('zero à esquerda não é milhar: "0.500" é meio real', () => {
     expect(centavos('0.500')).toBe(50);
+  });
+
+  it('o caso que a decisão do dono escolheu perder', () => {
+    // Quem quer um real e vinte e três e digita duas casas continua atendido.
+    expect(centavos('1.23')).toBe(123);
+    // Quem quer um real e vinte e três e digita TRÊS casas grava mil duzentos e
+    // trinta e quatro. É o custo declarado: o hábito pt-BR é o milhar, e o
+    // aviso mora no texto de ajuda do campo, não numa recusa.
+    expect(centavos('1.234')).toBe(123400);
   });
 });
 

@@ -22,8 +22,8 @@ describe('parseValorReais', () => {
     expect(parseValorReais('R$ 8.500,00')).toBe(8500);
   });
 
-  it('ponto ambíguo vira null em vez de um pedido mil vezes menor', () => {
-    expect(parseValorReais('1.500')).toBeNull();
+  it('ponto sem vírgula é milhar: pedir "1.500" pede mil e quinhentos', () => {
+    expect(parseValorReais('1.500')).toBe(1500);
     expect(parseValorReais('1e3')).toBeNull();
   });
 });

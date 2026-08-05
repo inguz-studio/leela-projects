@@ -32,11 +32,16 @@ describe('parseValorCupom (FIX-PARSE-DINHEIRO)', () => {
     expect(parseValorCupom('fixo', '99,999')).toBe(100);
   });
 
-  it('ilegível e ambíguo viram null', () => {
+  it('ilegível vira null', () => {
     expect(parseValorCupom('fixo', '')).toBeNull();
     expect(parseValorCupom('fixo', 'abc')).toBeNull();
-    expect(parseValorCupom('fixo', '1.500')).toBeNull();
     expect(parseValorCupom('percentual', '1e3')).toBeNull();
+  });
+
+  it('ponto sem vírgula é milhar: um cupom de "1.500" desconta mil e quinhentos', () => {
+    expect(parseValorCupom('fixo', '1.500')).toBe(1500);
+    // Percentual lê o mesmo texto pelo decimal exato — e "12.5" segue 12,5%.
+    expect(parseValorCupom('percentual', '12.5')).toBe(12.5);
   });
 });
 
