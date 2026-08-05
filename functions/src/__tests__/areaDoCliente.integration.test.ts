@@ -34,7 +34,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   collection,
   collectionGroup,
@@ -443,11 +443,47 @@ describe('RN-451 · meus ingressos, com o recorte feito no servidor', () => {
     expect(r.listaCompleta).toBe(true);
   });
 
+  it('`linksDisponiveis` é verdadeiro quando o keyring está no runtime', async () => {
+    const r = await getMeusIngressosCore(db, caller(), AGORA);
+    expect(r.linksDisponiveis).toBe(true);
+  });
+
   it('sessão anônima devolve o estado próprio, com as duas listas vazias', async () => {
     const r = await getMeusIngressosCore(db, caller({ ehAnonimo: true }), AGORA);
     expect(r.estado).toBe('sessao_anonima');
     expect(r.proximos).toEqual([]);
     expect(r.passados).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ O secret que falta NÃO pode passar calado (PIXREAL-FIX T5)
+// ---------------------------------------------------------------------------
+
+describe('⚔ sem `QR_TOKEN_KEYS` no runtime, a resposta DIZ que não há link', () => {
+  it('lista os ingressos, marca `linksDisponiveis: false` e não inventa link', async () => {
+    // O ring é cacheado por instância da Function (`keyringCache`), então o
+    // caso precisa de um registro de módulos novo — é a única forma de
+    // exercitar a carga com o ambiente sem o segredo.
+    const guardado = process.env['QR_TOKEN_KEYS'];
+    delete process.env['QR_TOKEN_KEYS'];
+    vi.resetModules();
+    try {
+      const modulo = await import('../cliente/meusIngressos');
+      const r = await modulo.getMeusIngressosCore(db, caller(), AGORA);
+      // Os ingressos que a pessoa pagou continuam na tela: derrubar a leitura
+      // inteira por uma variável de ambiente seria o incidente de 04/08 visto
+      // do outro lado.
+      expect(r.estado).toBe('ok');
+      expect(r.proximos.length).toBeGreaterThan(0);
+      expect(r.linksDisponiveis).toBe(false);
+      for (const i of [...r.proximos, ...r.passados]) {
+        expect(i.linkIngresso).toBeNull();
+      }
+    } finally {
+      if (guardado !== undefined) process.env['QR_TOKEN_KEYS'] = guardado;
+      vi.resetModules();
+    }
   });
 });
 

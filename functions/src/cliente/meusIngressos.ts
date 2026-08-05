@@ -43,7 +43,7 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { https } from 'firebase-functions/v1';
+import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { isCodigoIngressoValido, isStatusInscrito, type StatusInscrito } from '@leela/core';
 import { urlIngressoPorLink } from '../eventos/basePublica';
@@ -90,6 +90,14 @@ export interface GetMeusIngressosResult {
    * lista pode estar incompleta. A tela DIZ isso; não finge lista cheia.
    */
   listaCompleta: boolean;
+  /**
+   * false = o keyring de assinatura não estava no runtime, então NENHUM link
+   * de ingresso pôde ser cunhado nesta resposta. Verdade DIFERENTE de
+   * `listaCompleta`: ali faltam linhas, aqui falta o caminho até o ingresso.
+   * Existe para que a falha de configuração seja visível na tela, e não só num
+   * log que ninguém lê — foi assim que o `asaasWebhook` engoliu 04/08.
+   */
+  linksDisponiveis: boolean;
 }
 
 /** Teto de fichas por consulta `in` (limite do Firestore é 30; a conta tem ≤10). */
@@ -111,7 +119,13 @@ export async function getMeusIngressosCore(
 ): Promise<GetMeusIngressosResult> {
   const resolucao = await resolverContaDoCliente(db, caller);
   if (resolucao.estado !== 'ok') {
-    return { estado: resolucao.estado, proximos: [], passados: [], listaCompleta: true };
+    return {
+      estado: resolucao.estado,
+      proximos: [],
+      passados: [],
+      listaCompleta: true,
+      linksDisponiveis: true,
+    };
   }
   const conta = resolucao.conta;
 
@@ -169,7 +183,26 @@ export async function getMeusIngressosCore(
     db,
     [...porChave.values()].map((i) => i.eventoId)
   );
+  // O ring vem do binding declarado no `runWith` abaixo. `null` AQUI não é
+  // caso degradado de dado: é o segredo faltando no runtime, e é o defeito que
+  // custou o primeiro PIX real (o `asaasWebhook` de 04/08 subiu verde, leu
+  // `null` e não emitiu ingresso nem erro). Por isso não é `warn` de rodapé:
+  // é ERRO nomeado, e a resposta CARREGA o fato até a tela.
+  //
+  // O que este caminho NÃO faz, e a review deve atacar a escolha: não lança
+  // `failed-precondition`. Derrubar a leitura inteira apagaria da tela os
+  // ingressos que a pessoa pagou por causa de uma variável de ambiente — seria
+  // o incidente de 04/08 visto do outro lado. A pessoa vê o ingresso e o
+  // código; o que falta é o atalho, e a tela diz que falta.
   const keyring = obterQrKeyring();
+  const linksDisponiveis = keyring !== null;
+  if (!linksDisponiveis) {
+    logger.error('area_cliente_qr_keyring_ausente', {
+      uid: caller.uid,
+      alerta: true,
+      detalhe: 'QR_TOKEN_KEYS ausente no runtime — nenhum link de ingresso foi assinado.',
+    });
+  }
 
   const proximos: Array<{ ordem: number; item: IngressoDaConta }> = [];
   const passados: Array<{ ordem: number; item: IngressoDaConta }> = [];
@@ -193,6 +226,7 @@ export async function getMeusIngressosCore(
     proximos: proximos.length,
     passados: passados.length,
     listaCompleta,
+    linksDisponiveis,
   }); // sem PII
 
   return {
@@ -200,6 +234,7 @@ export async function getMeusIngressosCore(
     proximos: proximos.map((p) => p.item),
     passados: passados.map((p) => p.item),
     listaCompleta,
+    linksDisponiveis,
   };
 }
 
@@ -256,8 +291,20 @@ function montarIngresso(
 // Callable
 // ---------------------------------------------------------------------------
 
-/** Ingressos do próprio dono da conta, em próximos e passados (RN-451). */
-export const getMeusIngressos = https.onCall(async (_data: unknown, context) => {
+/**
+ * Ingressos do próprio dono da conta, em próximos e passados (RN-451).
+ *
+ * ⚠️ `QR_TOKEN_KEYS` (PIXREAL-FIX T5 · a classe de defeito que originou esta
+ * rodada). Esta function ASSINA o link do ingresso, e no Cloud Functions o
+ * secret só chega a quem o declara. Sem este binding a function sobe verde, o
+ * `obterQrKeyring()` devolve `null` e a tela do dono mostra ingresso sem
+ * caminho — exatamente o `asaasWebhook` de 04/08, que engoliu o dinheiro sem
+ * emitir ingresso NEM erro. O Emulator não pega isto (lá tudo enxerga tudo);
+ * quem pega é `secretsBinding.contract.test.ts`.
+ */
+export const getMeusIngressos = runWith({
+  secrets: ['QR_TOKEN_KEYS'],
+}).https.onCall(async (_data: unknown, context) => {
   if (!context.auth) {
     throw new https.HttpsError('unauthenticated', 'Requer autenticação.');
   }
