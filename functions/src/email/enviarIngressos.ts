@@ -101,12 +101,24 @@ export interface ResultadoEmailIngressos {
  * Caminho pontilhado + `update`: nunca cria o doc do pedido, nunca clobbera
  * campo irmão. O carimbo é ACESSÓRIO — falhar aqui não pode derrubar o envio
  * que talvez tenha dado certo, então o erro é engolido com log.
+ *
+ * ⚠ O QUE NÃO ENTRA AQUI (lane FIX-PROJECAO, reconciliando REV-F2F5 com
+ * REV-S1225): `comunicacaoId`. Desde a RN-469 o COMPRADOR lê o próprio doc de
+ * `pedidos/{id}` inteiro, e as Rules não filtram campo — elas decidem o
+ * documento, não a projeção. Logo, todo campo novo aqui NASCE VISÍVEL ao
+ * comprador, e a consequência disso é a regra: estado operacional interno não
+ * mora no doc do pedido. `comunicacaoId` é handle da coleção server-only
+ * `eventos/{id}/comunicacoes` (Rules: leitura só de gestão), e o valor continua
+ * vivo lá — o docId é determinístico (`{destinatario}_{chave}_{canal}`) e o
+ * resultado da função ainda o devolve a quem chamou. Nenhum caminho o lia a
+ * partir do pedido. O que FICA é o que é legitimamente do comprador: `status`,
+ * `atualizadoEm`, `falhaEm`, `falhas` — a consulta "quem pagou e não recebeu"
+ * (F5) usa `status`, não o handle.
  */
 export async function registrarStatusEmailIngressos(
   db: Db,
   pedidoId: string,
-  status: StatusEmailIngressos,
-  comunicacaoId?: string
+  status: StatusEmailIngressos
 ): Promise<void> {
   try {
     await db
@@ -115,9 +127,6 @@ export async function registrarStatusEmailIngressos(
       .update({
         'emailIngressos.status': status,
         'emailIngressos.atualizadoEm': FieldValue.serverTimestamp(),
-        ...(comunicacaoId !== undefined
-          ? { 'emailIngressos.comunicacaoId': comunicacaoId }
-          : {}),
         ...(status === 'falha_envio'
           ? {
               'emailIngressos.falhaEm': FieldValue.serverTimestamp(),
@@ -352,12 +361,7 @@ export async function enviarEmailIngressos(
     const status =
       registro.motivo === 'ja_registrada' ? 'ja_enviado' : 'sem_destinatario';
     if (status === 'ja_enviado') {
-      await registrarStatusEmailIngressos(
-        db,
-        pedidoId,
-        status,
-        registro.comunicacaoId
-      );
+      await registrarStatusEmailIngressos(db, pedidoId, status);
     }
     return { status, comunicacaoId: registro.comunicacaoId };
   }
@@ -367,12 +371,7 @@ export async function enviarEmailIngressos(
       { pedidoId, eventoId, ingressos, destinatario },
       emailProvider
     );
-    await registrarStatusEmailIngressos(
-      db,
-      pedidoId,
-      'enviado',
-      registro.comunicacaoId
-    );
+    await registrarStatusEmailIngressos(db, pedidoId, 'enviado');
     return { status: 'enviado', comunicacaoId: registro.comunicacaoId };
   } catch (err) {
     // O registro fica como `enfileirado` — pendência VISÍVEL no log de
@@ -389,12 +388,7 @@ export async function enviarEmailIngressos(
       eventoId,
       erro: err,
     });
-    await registrarStatusEmailIngressos(
-      db,
-      pedidoId,
-      'falha_envio',
-      registro.comunicacaoId
-    );
+    await registrarStatusEmailIngressos(db, pedidoId, 'falha_envio');
     return { status: 'falha_envio', comunicacaoId: registro.comunicacaoId };
   }
 }

@@ -243,7 +243,24 @@ describe.skipIf(!hasEmulator)('emailStatus da emissão persiste no pedido (F5)',
     expect(carimbo?.['status']).toBe('falha_envio');
     expect(carimbo?.['falhas']).toBe(1);
     expect(carimbo?.['falhaEm']).toBeTruthy();
-    expect(carimbo?.['comunicacaoId']).toBe(r.comunicacaoId);
+
+    // ⚠ GUARDIÃO DA REGRA DURÁVEL (FIX-PROJECAO): `comunicacaoId` NÃO vai para
+    // o doc do pedido. Desde a RN-469 o comprador lê esse doc inteiro e as
+    // Rules não filtram campo — decidem o documento, não a projeção —, então
+    // todo campo aqui nasce visível a ele. Este `toBeUndefined` é o que impede
+    // o handle server-only de voltar por descuido.
+    expect(carimbo?.['comunicacaoId']).toBeUndefined();
+    // E o valor não foi perdido: ele continua sendo o docId do log de
+    // comunicação, na coleção que só a gestão lê.
+    expect(r.comunicacaoId).toBeTruthy();
+    const log = await adminDb
+      .collection('eventos')
+      .doc(EVENTO_ID)
+      .collection('comunicacoes')
+      .doc(r.comunicacaoId as string)
+      .get();
+    expect(log.exists).toBe(true);
+
     // O carimbo é acessório: não pode ter mexido no estado do dinheiro.
     const pedido = await adminDb.collection('pedidos').doc(PEDIDO_ID).get();
     expect(pedido.get('status')).toBe('pago');

@@ -60,6 +60,15 @@
 // deny-by-default, como `ingressosPendentes`. É registro operacional sem
 // leitor cliente, e um cliente que escrevesse aqui poderia inventar um
 // reenvio "já processado" e bloquear o reenvio de verdade.
+//
+// ONDE MORA O ESTADO DESTA OPERAÇÃO (regra durável — lane FIX-PROJECAO): a
+// RN-469 abriu `pedidos/{id}` ao COMPRADOR, e Rules decidem o DOCUMENTO, não a
+// projeção. Logo, TODO campo novo no doc do pedido nasce visível a ele. O
+// carimbo daqui carrega só o que o próprio código precisa ler do pedido
+// (`ultimoEm`, para a janela) mais um contador opaco (`total`); a identidade da
+// operação — a chave, quem disparou, o desfecho — fica no extrato e na
+// auditoria, que nenhum cliente lê. Campo operacional novo vai para lá, não
+// para cá.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -268,9 +277,19 @@ async function reservarReenvio(
       criadoEm: FieldValue.serverTimestamp(),
     });
     // Caminho de campo pontilhado: carimba SEM sobrescrever o resto do doc.
+    //
+    // ⚠ `ultimoReenvioId` NÃO entra aqui (lane FIX-PROJECAO). O doc do pedido é
+    // lido pelo COMPRADOR desde a RN-469, e as Rules decidem o DOCUMENTO, não a
+    // projeção — não existe filtrar campo. `reenvioId` é string escolhida pelo
+    // OPERADOR: quem nomear a chave por chamado ("reenvio-ticket-4471",
+    // "reenvio-reclamacao-procon") publica vocabulário interno na tela de quem
+    // comprou. A chave já vive onde precisa viver, duas vezes: no docId E no
+    // campo `reenvioId` do extrato `reenviosEmail/{pedidoId}__{reenvioId}`
+    // (server-only, sem `match` nas Rules) e em `auditoriaAcessos`. O que fica
+    // no pedido é o mínimo do qual o próprio código depende: `ultimoEm`, que a
+    // janela da tranca 2 lê na transação, e `total`, contador opaco.
     tx.update(pedidoRef, {
       'reenvioEmails.ultimoEm': FieldValue.serverTimestamp(),
-      'reenvioEmails.ultimoReenvioId': args.reenvioId,
       'reenvioEmails.total': FieldValue.increment(1),
       atualizadoEm: FieldValue.serverTimestamp(),
     });

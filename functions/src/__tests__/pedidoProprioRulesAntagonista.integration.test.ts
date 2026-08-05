@@ -289,6 +289,11 @@ beforeAll(async () => {
         processadoEm: now,
       },
       // BUILD-F2F5 (`9d980bae`): o incidente de e-mail vira estado NO PEDIDO.
+      //
+      // ⚠ Este seed espelha EXATAMENTE o que a plataforma grava hoje — sem
+      // `comunicacaoId` e sem `ultimoReenvioId`, removidos pela FIX-PROJECAO
+      // (ver o `toBeUndefined` no bloco C). Um seed que inventasse campos
+      // mediria uma projeção que não existe.
       emailIngressos: {
         status: 'falha_envio',
         atualizadoEm: now,
@@ -298,7 +303,6 @@ beforeAll(async () => {
       // BUILD-F2F5 (`9abe8396`): o carimbo do reenvio admin-only.
       reenvioEmails: {
         ultimoEm: now,
-        ultimoReenvioId: 'reenvio-op-marina-01',
         total: 2,
       },
     }),
@@ -454,19 +458,41 @@ describe('REV-S1225 · campo a campo, o que a RN-469 entrega ao comprador', () =
     expect(snap.get('aceites.origem.userAgent')).toBe(UA_DA_COMPRA);
   });
 
-  it('⚠ entrega `emailIngressos` — o comprador lê que o e-mail dele FALHOU 3 vezes', async () => {
+  it('entrega `emailIngressos` — o comprador lê que o e-mail DELE falhou 3 vezes', async () => {
     // Campo criado pela lane paralela BUILD-F2F5 (`9d980bae`) para virar
     // INCIDENTE OPERACIONAL do organizador. A RN-469 abriu a leitura do doc
-    // INTEIRO, então ele chega junto. Decisão cross-lane: filtrar ou aceitar.
+    // INTEIRO, então ele chega junto — e chegar junto está certo: é o estado do
+    // e-mail que ele comprou e não recebeu, dito para ele.
     const snap = await getDoc(doc(dbAs(CLARA_UID), 'pedidos', PED_CAMPO_A_CAMPO));
     expect(snap.get('emailIngressos.status')).toBe('falha_envio');
     expect(snap.get('emailIngressos.falhas')).toBe(3);
   });
 
-  it('⚠ entrega `reenvioEmails` — quantas vezes o operador reenviou, e o id da operação', async () => {
+  it('entrega `reenvioEmails` — só o contador e o carimbo de tempo', async () => {
     const snap = await getDoc(doc(dbAs(CLARA_UID), 'pedidos', PED_CAMPO_A_CAMPO));
     expect(snap.get('reenvioEmails.total')).toBe(2);
-    expect(snap.get('reenvioEmails.ultimoReenvioId')).toBe('reenvio-op-marina-01');
+    expect(snap.get('reenvioEmails.ultimoEm')).toBeTruthy();
+  });
+
+  it('⚠ REGRA DURÁVEL: o que a projeção NÃO entrega, porque não é gravado', async () => {
+    // A REV-S1225 mediu que Rules não filtram campo: elas decidem o DOCUMENTO,
+    // não a projeção. A conclusão correta disso NÃO é "aceitar a exposição" — é
+    // que o doc do pedido deixou de ser lugar de estado operacional interno.
+    // Os dois campos abaixo saíram do código (lane FIX-PROJECAO):
+    //
+    //   `reenvioEmails.ultimoReenvioId` — string escolhida pelo OPERADOR; quem
+    //   nomear a chave por chamado publica vocabulário interno na tela de quem
+    //   comprou. Vive no extrato `reenviosEmail` e em `auditoriaAcessos`.
+    //
+    //   `emailIngressos.comunicacaoId` — handle da coleção server-only
+    //   `eventos/{id}/comunicacoes`, que o comprador não lê. Vive lá, como
+    //   docId determinístico.
+    //
+    // Este teste é o guardião: se um deles voltar ao doc, ele reprova aqui
+    // antes de a projeção reabrir.
+    const snap = await getDoc(doc(dbAs(CLARA_UID), 'pedidos', PED_CAMPO_A_CAMPO));
+    expect(snap.get('reenvioEmails.ultimoReenvioId')).toBeUndefined();
+    expect(snap.get('emailIngressos.comunicacaoId')).toBeUndefined();
   });
 
   it('a fronteira SEGUE fechada nos vizinhos: pagamentos, inscritos e pessoas', async () => {

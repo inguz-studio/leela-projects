@@ -360,7 +360,19 @@ describe.skipIf(!hasEmulator)('reenvio idempotente dos e-mails do pedido (F2)', 
     expect(
       (pedido?.['contaSemFriccao'] as Record<string, unknown>)['emailStatus']
     ).toBe('enviado');
-    expect((pedido?.['reenvioEmails'] as Record<string, unknown>)['total']).toBe(1);
+    const carimboReenvio = pedido?.['reenvioEmails'] as Record<string, unknown>;
+    expect(carimboReenvio['total']).toBe(1);
+    // `ultimoEm` FICA: é o que a janela da tranca 2 lê dentro da transação.
+    expect(carimboReenvio['ultimoEm']).toBeTruthy();
+
+    // ⚠ GUARDIÃO DA REGRA DURÁVEL (FIX-PROJECAO): a chave da operação NÃO é
+    // gravada no doc do pedido. Desde a RN-469 o comprador lê esse doc inteiro,
+    // e Rules decidem o DOCUMENTO, não a projeção — não há como filtrar campo.
+    // `reenvioId` é string escolhida pelo operador; nomeá-la por chamado
+    // ("reenvio-ticket-4471") publicaria vocabulário interno na tela de quem
+    // comprou. Se alguém a reintroduzir, este teste reprova antes do deploy.
+    expect(carimboReenvio['ultimoReenvioId']).toBeUndefined();
+    expect(JSON.stringify(pedido)).not.toContain('reenvio-t93n7f-001');
 
     // O extrato guarda quem/quando/o quê — sem PII.
     const extrato = (
@@ -372,6 +384,9 @@ describe.skipIf(!hasEmulator)('reenvio idempotente dos e-mails do pedido (F2)', 
     expect(extrato?.['estado']).toBe('concluido');
     expect(extrato?.['solicitadoPor']).toBe(ADMIN_UID);
     expect(extrato?.['papel']).toBe('platform_admin');
+    // O valor não sumiu do sistema: ele mora AQUI, na coleção server-only —
+    // duas vezes, no docId e no campo. É onde a auditoria vai procurar.
+    expect(extrato?.['reenvioId']).toBe('reenvio-t93n7f-001');
     expect(JSON.stringify(extrato)).not.toContain('marina@exemplo.test');
     expect(JSON.stringify(extrato)).not.toContain(antes['qrToken'] as string);
   });
