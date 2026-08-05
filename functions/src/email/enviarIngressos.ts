@@ -39,6 +39,18 @@
 // URI (Gmail e Outlook), não a troca. Sem base pública, ou sem keyring, o
 // e-mail sai SEM link — link quebrado gasta a confiança de quem acabou de
 // pagar. A chave de idempotência da RN-219 não é tocada por nada disto.
+//
+// DUAS CAMADAS, DE PROPÓSITO (F2 · lane BUILD-F2F5): a MONTAGEM+ENTREGA
+// (`entregarEmailIngressos`) foi separada da GUARDA de idempotência
+// (`enviarEmailIngressos`). O caminho automático — webhook e varredura —
+// continua entrando pela guarda e é at-most-once por pedido (RN-219). O
+// REENVIO ADMINISTRATIVO precisa da mesma mensagem sem a guarda, porque a
+// chave já foi queimada por um envio que o provedor recusou (o 401 de
+// allowlist da Brevo em 04/08 é o caso concreto): ele carrega a PRÓPRIA
+// idempotência, por chave de operação, e reusa a camada de baixo em vez de
+// montar um segundo e-mail de ingresso em outro lugar do código. Separar não
+// enfraqueceu nada: a guarda continua sendo o ÚNICO caminho automático, e
+// quem chama a camada de baixo tem de ser admin autenticado.
 // =============================================================================
 
 import type * as admin from 'firebase-admin';
@@ -74,86 +86,80 @@ export interface ResultadoEmailIngressos {
   comunicacaoId?: string;
 }
 
+/** Tudo que a MONTAGEM do e-mail precisa saber do pedido e do evento. */
+export interface DestinatarioEmailIngressos {
+  /** E-mail do responsável, já normalizado (trim + lowercase). */
+  email: string;
+  nomeComprador: string;
+  nomeEvento: string;
+  slug: string;
+  /** tenantId do EVENTO (ADR-009) — entra na assinatura do link. */
+  tenantId: string;
+  /** `inscritoRefs` do pedido — insumo da chave de idempotência da RN-219. */
+  inscritoRefs: string[];
+}
+
 /**
- * Envia o e-mail de compra com os ingressos do pedido.
+ * Lê o destinatário do e-mail de ingressos (pedido + evento).
  *
- * @param ingressos saída de `emitirIngressosDoPedido` — na ordem do pedido.
+ * @returns `null` quando o pedido não existe ou o e-mail do responsável não é
+ *   endereço válido — os dois desfechos que a RN-398 trata como
+ *   `sem_destinatario`.
  */
-export async function enviarEmailIngressos(
+export async function lerDestinatarioEmailIngressos(
   db: Db,
-  args: {
-    pedidoId: string;
-    eventoId: string;
-    ingressos: readonly IngressoEmitido[];
-  },
-  emailProvider: EmailProvider | null
-): Promise<ResultadoEmailIngressos> {
-  const { pedidoId, eventoId, ingressos } = args;
-
-  // Sem ingresso não há e-mail de ingresso. Mandar "sua compra foi
-  // confirmada" com a lista vazia seria pior que o silêncio: o registro de
-  // idempotência queimaria e o envio de verdade nunca mais aconteceria.
-  if (ingressos.length === 0) return { status: 'sem_ingresso' };
-
+  pedidoId: string,
+  eventoId: string
+): Promise<DestinatarioEmailIngressos | null> {
   const pedidoSnap = await db.collection('pedidos').doc(pedidoId).get();
-  if (!pedidoSnap.exists) return { status: 'sem_destinatario' };
+  if (!pedidoSnap.exists) return null;
   const emailRaw = pedidoSnap.get('responsavel.email') as string | undefined;
   const nomeComprador =
     (pedidoSnap.get('responsavel.nome') as string | undefined) ?? '';
   if (typeof emailRaw !== 'string' || !validarEmail(emailRaw)) {
     logger.warn('email_ingressos_sem_destinatario', { pedidoId, eventoId });
-    return { status: 'sem_destinatario' };
-  }
-  const email = emailRaw.trim().toLowerCase();
-
-  if (emailProvider === null) {
-    // Fail-closed: NÃO registra. Registrar aqui gravaria "enfileirado" para
-    // um envio que nunca existiu, e o dia em que a chave chegasse o e-mail
-    // seria suprimido pela própria idempotência.
-    logger.info('email_ingressos_pendente_chave', { pedidoId, eventoId });
-    return { status: 'pendente_chave' };
+    return null;
   }
 
   const eventoSnap = await db.collection('eventos').doc(eventoId).get();
-  const nomeEvento = (eventoSnap.get('nome') as string | undefined) ?? 'seu evento';
-  const slug = (eventoSnap.get('slug') as string | undefined) ?? eventoId;
+  return {
+    email: emailRaw.trim().toLowerCase(),
+    nomeComprador,
+    nomeEvento: (eventoSnap.get('nome') as string | undefined) ?? 'seu evento',
+    slug: (eventoSnap.get('slug') as string | undefined) ?? eventoId,
+    tenantId: (eventoSnap.get('tenantId') as string | undefined) ?? '',
+    inscritoRefs: (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [],
+  };
+}
 
-  // Chave do registro: responsável, senão o primeiro inscrito DO PEDIDO —
-  // função só do pedido, nunca do que esta passagem emitiu (ver cabeçalho).
-  const responsavel = await encontrarInscritoResponsavel(
-    db,
-    eventoId,
-    (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [],
-    ingressos
-  );
-
-  // markSent ANTES do envio (at-most-once — RN-219).
-  const registro = await registrarComunicacao(db, eventoId, {
-    destinatario: { tipo: 'inscrito', ref: responsavel },
-    canal: 'email',
-    tipo: 'transacional',
-    chaveRef: CHAVE_EMAIL_INGRESSOS,
-    assunto: `Seu ingresso para ${nomeEvento}`.slice(0, 150),
-    templateRef: 'ingressosCompra',
-  });
-  if (!registro.registrada) {
-    // 'ja_registrada' É o sinal de hasSent: reprocesso não reenvia.
-    logger.info('email_ingressos_nao_reenviado', {
-      pedidoId,
-      eventoId,
-      motivo: registro.motivo,
-    });
-    return {
-      status: registro.motivo === 'ja_registrada' ? 'ja_enviado' : 'sem_destinatario',
-      comunicacaoId: registro.comunicacaoId,
-    };
-  }
+/**
+ * MONTA e ENTREGA o e-mail de compra — sem nenhuma guarda de idempotência.
+ *
+ * Camada de baixo (ver cabeçalho): quem chama já decidiu que PODE enviar. O
+ * caminho automático decide pela RN-219 (`enviarEmailIngressos`); o reenvio
+ * administrativo decide pela chave da operação. QR e link continuam por
+ * INSCRITO (RN-423) e falha de UMA imagem/assinatura não derruba a mensagem
+ * de todo mundo.
+ *
+ * @throws o erro do provedor — quem chama é que sabe como registrar a falha
+ *   (log de comunicação no caminho automático, extrato no reenvio).
+ */
+export async function entregarEmailIngressos(
+  args: {
+    pedidoId: string;
+    eventoId: string;
+    ingressos: readonly IngressoEmitido[];
+    destinatario: DestinatarioEmailIngressos;
+  },
+  emailProvider: EmailProvider
+): Promise<void> {
+  const { pedidoId, eventoId, ingressos, destinatario } = args;
 
   // Keyring do processo — o mesmo do QR (S1214 · RN-419). Ausente ⇒ nenhum
   // link é assinado e o e-mail sai como sempre saiu. Nunca "link sem
   // assinatura".
   const keyring = obterQrKeyring();
-  const tenantId = (eventoSnap.get('tenantId') as string | undefined) ?? '';
+  const tenantId = destinatario.tenantId;
 
   // QR por inscrito. Falha de geração de UMA imagem não derruba o e-mail: o
   // código em texto continua lá, que é o que a RN-398 promete.
@@ -206,26 +212,103 @@ export async function enviarEmailIngressos(
     });
   }
 
-  try {
-    const linkEvento = urlPublicaDoEvento(slug);
-    const rendered = renderIngressosCompraEmail({
-      nomeComprador,
-      nomeEvento,
-      ...(linkEvento !== null ? { linkEvento } : {}),
-      ingressos: paraTemplate,
-    });
-    await emailProvider.sendTransactional({
-      to: { email, ...(nomeComprador.length > 0 ? { nome: nomeComprador } : {}) },
-      assunto: rendered.assunto,
-      html: rendered.html,
-      texto: rendered.texto,
-      tag: 'ingressos-compra',
-    });
-    logger.info('email_ingressos_enviado', {
+  const linkEvento = urlPublicaDoEvento(destinatario.slug);
+  const rendered = renderIngressosCompraEmail({
+    nomeComprador: destinatario.nomeComprador,
+    nomeEvento: destinatario.nomeEvento,
+    ...(linkEvento !== null ? { linkEvento } : {}),
+    ingressos: paraTemplate,
+  });
+  await emailProvider.sendTransactional({
+    to: {
+      email: destinatario.email,
+      ...(destinatario.nomeComprador.length > 0
+        ? { nome: destinatario.nomeComprador }
+        : {}),
+    },
+    assunto: rendered.assunto,
+    html: rendered.html,
+    texto: rendered.texto,
+    tag: 'ingressos-compra',
+  });
+  logger.info('email_ingressos_enviado', {
+    pedidoId,
+    eventoId,
+    inscritos: paraTemplate.length,
+  });
+}
+
+/**
+ * Envia o e-mail de compra com os ingressos do pedido.
+ *
+ * Caminho AUTOMÁTICO (webhook e varredura), guardado pela RN-219: at-most-once
+ * por pedido. Reprocesso e re-entrega do gateway não reenviam.
+ *
+ * @param ingressos saída de `emitirIngressosDoPedido` — na ordem do pedido.
+ */
+export async function enviarEmailIngressos(
+  db: Db,
+  args: {
+    pedidoId: string;
+    eventoId: string;
+    ingressos: readonly IngressoEmitido[];
+  },
+  emailProvider: EmailProvider | null
+): Promise<ResultadoEmailIngressos> {
+  const { pedidoId, eventoId, ingressos } = args;
+
+  // Sem ingresso não há e-mail de ingresso. Mandar "sua compra foi
+  // confirmada" com a lista vazia seria pior que o silêncio: o registro de
+  // idempotência queimaria e o envio de verdade nunca mais aconteceria.
+  if (ingressos.length === 0) return { status: 'sem_ingresso' };
+
+  const destinatario = await lerDestinatarioEmailIngressos(db, pedidoId, eventoId);
+  if (destinatario === null) return { status: 'sem_destinatario' };
+
+  if (emailProvider === null) {
+    // Fail-closed: NÃO registra. Registrar aqui gravaria "enfileirado" para
+    // um envio que nunca existiu, e o dia em que a chave chegasse o e-mail
+    // seria suprimido pela própria idempotência.
+    logger.info('email_ingressos_pendente_chave', { pedidoId, eventoId });
+    return { status: 'pendente_chave' };
+  }
+
+  // Chave do registro: responsável, senão o primeiro inscrito DO PEDIDO —
+  // função só do pedido, nunca do que esta passagem emitiu (ver cabeçalho).
+  const responsavel = await encontrarInscritoResponsavel(
+    db,
+    eventoId,
+    destinatario.inscritoRefs,
+    ingressos
+  );
+
+  // markSent ANTES do envio (at-most-once — RN-219).
+  const registro = await registrarComunicacao(db, eventoId, {
+    destinatario: { tipo: 'inscrito', ref: responsavel },
+    canal: 'email',
+    tipo: 'transacional',
+    chaveRef: CHAVE_EMAIL_INGRESSOS,
+    assunto: `Seu ingresso para ${destinatario.nomeEvento}`.slice(0, 150),
+    templateRef: 'ingressosCompra',
+  });
+  if (!registro.registrada) {
+    // 'ja_registrada' É o sinal de hasSent: reprocesso não reenvia.
+    logger.info('email_ingressos_nao_reenviado', {
       pedidoId,
       eventoId,
-      inscritos: paraTemplate.length,
+      motivo: registro.motivo,
     });
+    return {
+      status: registro.motivo === 'ja_registrada' ? 'ja_enviado' : 'sem_destinatario',
+      comunicacaoId: registro.comunicacaoId,
+    };
+  }
+
+  try {
+    await entregarEmailIngressos(
+      { pedidoId, eventoId, ingressos, destinatario },
+      emailProvider
+    );
     return { status: 'enviado', comunicacaoId: registro.comunicacaoId };
   } catch (err) {
     // O registro fica como `enfileirado` — pendência VISÍVEL no log de

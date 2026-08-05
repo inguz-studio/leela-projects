@@ -121,6 +121,43 @@ export function contaSemFriccaoAuthAdmin(): ContaSemFriccaoAuth {
 }
 
 // ---------------------------------------------------------------------------
+// Entrega do e-mail da conta (camada de baixo — sem guarda)
+// ---------------------------------------------------------------------------
+
+/**
+ * MONTA e ENTREGA o e-mail "sua conta foi criada, defina a senha".
+ *
+ * Separado de `garantirContaSemFriccao` (F2 · lane BUILD-F2F5) porque o
+ * REENVIO administrativo precisa da mesma mensagem sem passar pelo carimbo de
+ * `ja_processado` — que existe para não repetir EFEITO (criar conta, vincular
+ * pessoa), não para proibir uma segunda ENTREGA quando a primeira morreu no
+ * provedor. O link é gerado de novo de propósito: `generatePasswordResetLink`
+ * devolve um `oobCode` single-use e com validade, então reenviar o link ANTIGO
+ * entregaria uma credencial provavelmente já expirada.
+ *
+ * @throws o erro do Auth ou do provedor — quem chama registra a falha.
+ */
+export async function entregarEmailContaCriada(
+  args: { email: string; nome: string; nomeEvento: string },
+  auth: ContaSemFriccaoAuth,
+  emailProvider: EmailProvider
+): Promise<void> {
+  const link = await auth.gerarLinkDefinirSenha(args.email);
+  const rendered = renderContaCriadaEmail({
+    nomeComprador: args.nome,
+    nomeEvento: args.nomeEvento,
+    linkDefinirSenha: link,
+  });
+  await emailProvider.sendTransactional({
+    to: { email: args.email, ...(args.nome.length > 0 ? { nome: args.nome } : {}) },
+    assunto: rendered.assunto,
+    html: rendered.html,
+    texto: rendered.texto,
+    tag: 'conta-sem-friccao',
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Núcleo (testável com Admin SDK contra o Emulator)
 // ---------------------------------------------------------------------------
 
@@ -224,22 +261,14 @@ export async function garantirContaSemFriccao(
     emailStatus = 'pendente_chave';
   } else {
     try {
-      const link = await auth.gerarLinkDefinirSenha(email);
       const eventoSnap = await db.collection('eventos').doc(eventoId).get();
       const nomeEvento =
         (eventoSnap.get('nome') as string | undefined) ?? 'seu evento';
-      const rendered = renderContaCriadaEmail({
-        nomeComprador: nome,
-        nomeEvento,
-        linkDefinirSenha: link,
-      });
-      await emailProvider.sendTransactional({
-        to: { email, ...(nome.length > 0 ? { nome } : {}) },
-        assunto: rendered.assunto,
-        html: rendered.html,
-        texto: rendered.texto,
-        tag: 'conta-sem-friccao',
-      });
+      await entregarEmailContaCriada(
+        { email, nome, nomeEvento },
+        auth,
+        emailProvider
+      );
       emailStatus = 'enviado';
     } catch (err) {
       // Envio é acessório — falha registrada, compra intocada.

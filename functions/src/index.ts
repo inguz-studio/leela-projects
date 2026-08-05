@@ -169,6 +169,16 @@ export { expirarPixPendente } from './checkout/expirarPixPendente';
 // 15 min sem virar pedido. O cron NÃO decide a venda — quem recusa a
 // conclusão fora do prazo é o gate transacional de createInscricaoCharge.
 export { expirarCarrinhosAbandonados } from './checkout/expirarCarrinhosAbandonados';
+// Checkout — REENVIO dos e-mails de um pedido (F2 · P0 do DIAG-PIXREAL): a
+// ferramenta que faltava quando o provedor RECUSA a entrega e o pedido fica
+// pago, com ingresso emitido, sem ninguém conseguir reentregar a mensagem (o
+// 401 de allowlist da Brevo no primeiro pagamento real). NÃO emite ingresso —
+// entrega os `qrToken` que já existem; NÃO manda lista pela metade; só
+// `platform_admin` (o e-mail carrega a credencial do QR); idempotente por
+// chave de operação + janela de 10 min por pedido; todo desfecho auditado.
+// ⚠️ Fable (entrega de credencial).
+export { reenviarEmailsDoPedido } from './checkout/reenviarEmailsPedido';
+
 // Estorno ÓRFÃO (item 27 · RN-379/380): pagamento confirmado APÓS o
 // cancelamento devolve TUDO automaticamente pela mesma máquina de carimbo do
 // estorno (RN-370/371/372); a varredura (15 min) conta, alerta e re-dispara o

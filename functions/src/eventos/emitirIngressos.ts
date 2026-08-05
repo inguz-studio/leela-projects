@@ -352,6 +352,85 @@ export async function emitirIngressosDoPedido(
 }
 
 // ---------------------------------------------------------------------------
+// Leitura pura (F2 · reenvio) — NUNCA emite
+// ---------------------------------------------------------------------------
+
+/** Fotografia dos ingressos que JÁ existem num pedido. */
+export interface IngressosVivosDoPedido {
+  eventoId: string | null;
+  /** Ingressos já emitidos, na ordem de `inscritoRefs`. `novo` é sempre false. */
+  ingressos: IngressoEmitido[];
+  /** Inscritos CONFIRMADOS que ainda NÃO têm ingresso (emissão pendente). */
+  semIngresso: string[];
+  motivo?: string;
+}
+
+/**
+ * Lê os ingressos vivos de um pedido — SEM emitir, SEM assinar, SEM escrever.
+ *
+ * É o insumo do reenvio administrativo (F2): reenviar tem de entregar o MESMO
+ * `qrToken` que está no celular da pessoa. Re-assinar produziria um token
+ * diferente depois de uma rotação de chave e mataria o ingresso no balcão por
+ * `qr_divergente` (a mesma razão do replay puro lá em cima) — e o link do
+ * e-mail é amarrado ao token, então re-emitir também mataria o link antigo
+ * (RN-420).
+ *
+ * `semIngresso` existe para que o chamador NUNCA mande um e-mail de compra com
+ * a lista pela metade: emissão incompleta é caso da varredura
+ * (`varrerIngressosOrfaos`), não do reenvio.
+ */
+export async function lerIngressosVivosDoPedido(
+  db: Db,
+  pedidoId: string
+): Promise<IngressosVivosDoPedido> {
+  const vazio = (motivo: string): IngressosVivosDoPedido => ({
+    eventoId: null,
+    ingressos: [],
+    semIngresso: [],
+    motivo,
+  });
+
+  const pedidoSnap = await db.collection('pedidos').doc(pedidoId).get();
+  if (!pedidoSnap.exists) return vazio('pedido_inexistente');
+  const eventoId = pedidoSnap.get('eventoId') as string | undefined;
+  if (typeof eventoId !== 'string' || eventoId.length === 0) {
+    return vazio('pedido_sem_evento');
+  }
+  const inscritoRefs = (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [];
+
+  const col = db.collection('eventos').doc(eventoId).collection('inscritos');
+  const ingressos: IngressoEmitido[] = [];
+  const semIngresso: string[] = [];
+  for (const inscritoId of inscritoRefs) {
+    const snap = await col.doc(inscritoId).get();
+    // Mesma defesa em profundidade da emissão: inscrito de OUTRO pedido na
+    // lista nunca tem o QR entregue no e-mail de um terceiro.
+    if (!snap.exists || snap.get('pedidoRef') !== pedidoId) continue;
+    if (snap.get('status') !== 'confirmado') continue;
+    const qrToken = snap.get('qrToken') as string | undefined;
+    const codigo = snap.get('codigoIngresso') as string | undefined;
+    if (
+      typeof qrToken !== 'string' ||
+      qrToken.length === 0 ||
+      !isCodigoIngressoValido(codigo)
+    ) {
+      semIngresso.push(inscritoId);
+      continue;
+    }
+    ingressos.push({
+      inscritoId,
+      nome: (snap.get('atletaNome') as string | undefined) ?? '',
+      modalidade: (snap.get('modalidade') as string | undefined) ?? '',
+      qrToken,
+      codigo,
+      novo: false,
+    });
+  }
+
+  return { eventoId, ingressos, semIngresso };
+}
+
+// ---------------------------------------------------------------------------
 // Disparo pós-confirmação (os 3 confirmadores chamam — best-effort)
 // ---------------------------------------------------------------------------
 

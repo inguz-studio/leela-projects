@@ -51,6 +51,7 @@ import { clearFirestoreDrained, withTriggersPaused } from './helpers/stability';
 const QR_IMG = /<img[^>]*src="data:image\/png[^>]*>/g;
 
 
+const FIRESTORE_PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
 const PROJECT_ID = 'demo-leela';
 const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 
@@ -279,11 +280,11 @@ beforeAll(async () => {
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: 8080,
+      port: FIRESTORE_PORT,
     },
   });
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] ??= 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] ??= `localhost:${FIRESTORE_PORT}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();

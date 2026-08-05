@@ -26,11 +26,10 @@
 // =============================================================================
 
 import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
 import { https, runWith } from 'firebase-functions/v1';
-import * as logger from 'firebase-functions/logger';
 import type { AuthClaims, EstadoRepasse } from '@leela/core';
 import type { FinanceCaller } from './atores';
+import { registrarAcessoAuditado } from '../shared/auditoriaAcessos';
 import {
   decifrarDadosBancarios,
   ENV_BANK_DATA_KEY,
@@ -43,7 +42,9 @@ type Db = admin.firestore.Firestore;
 // Contratos
 // ---------------------------------------------------------------------------
 
-export const AUDITORIA_ACESSOS_COL = 'auditoriaAcessos';
+// A constante mora em `shared/auditoriaAcessos` desde que ganhou um segundo
+// consumidor (F2); o re-export mantém o import histórico deste módulo válido.
+export { AUDITORIA_ACESSOS_COL } from '../shared/auditoriaAcessos';
 
 export type ResultadoAcessoAuditado =
   | 'concedido'
@@ -91,13 +92,13 @@ async function registrarAcesso(
     resultado: ResultadoAcessoAuditado;
   }
 ): Promise<void> {
-  await db.collection(AUDITORIA_ACESSOS_COL).add({
-    tipo: 'acesso_dados_bancarios',
-    ...registro,
-    em: FieldValue.serverTimestamp(),
-  });
   // Observabilidade sem dado sensível — só ids/resultado (ADR-014 §5)
-  logger.info('acesso_dados_bancarios', registro);
+  await registrarAcessoAuditado(
+    db,
+    'acesso_dados_bancarios',
+    registro,
+    'acesso_dados_bancarios'
+  );
 }
 
 // ---------------------------------------------------------------------------
