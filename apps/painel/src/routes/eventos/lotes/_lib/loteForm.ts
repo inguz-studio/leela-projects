@@ -19,6 +19,7 @@
 // =============================================================================
 
 import {
+  capacidadeDoLote,
   dataHoraLocalISO,
   dataHoraLocalParaDate,
   isDataHoraLocalISO,
@@ -27,10 +28,12 @@ import {
   loteEsgotado,
   loteShapeValido,
   validarLotesModalidade,
+  type CapacidadeLote,
   type Lote,
   type Timestamp,
 } from '@leela/core';
 import type { SalvarLoteInput } from '@leela/api-client';
+import { formatDataHoraCurta } from '../../_lib/format';
 
 /** Campos comerciais que a Rule CONGELA quando o lote já vendeu (espelho). */
 export const CAMPOS_CONGELADOS_APOS_VENDA = [
@@ -41,9 +44,20 @@ export const CAMPOS_CONGELADOS_APOS_VENDA = [
   'ordem',
 ] as const;
 
-/** Mensagem exibida quando o lote está congelado por já ter vendido (RN-200/300). */
+/**
+ * Mensagem exibida quando o lote está congelado por já ter vendido.
+ *
+ * HONESTIDADE DO ESTADO (BUILD-LOTES-UX · frente C): a mensagem antiga dizia
+ * que "preço, janela, vaga e ordem ficam bloqueados" e parava aí — o
+ * organizador via quatro portas fechadas sem saber que UMA delas tem chave. A
+ * vaga TEM caminho autorizado pós-venda (`ajustarCapacidadeLote` — RN-304, com
+ * motivo na auditoria); o preço é o único bloqueio que a RN-200 canônica
+ * enuncia; janela e ordem estão travadas por uma extensão que só existe na Rule
+ * (`loteComercialImutavelSeVendido`) e aguarda selo do dono da regra.
+ */
 export const MSG_LOTE_VENDIDO =
-  'Lote com venda: preço, janela, vaga e ordem ficam bloqueados (RN-200/300). O nome ainda pode ser ajustado.';
+  'Lote com venda: o preço fica bloqueado (RN-200). A vaga se ajusta em "Ajustar capacidade", ' +
+  'com motivo na auditoria (RN-304). Janela e ordem seguem bloqueadas — mudança pendente de selo da regra.';
 
 /** Valores brutos do formulário (strings dos inputs). */
 export interface LoteFormValues {
@@ -70,9 +84,83 @@ export type LotePayloadVendido = Pick<LotePayloadCompleto, 'nome'>;
 
 export type LotePayload = LotePayloadCompleto | LotePayloadVendido;
 
+// ---------------------------------------------------------------------------
+// Erro POR CAMPO (BUILD-LOTES-UX · frente A)
+// ---------------------------------------------------------------------------
+//
+// CAUSA-RAIZ que isto conserta: `validarFormLote` devolvia UMA string e o
+// `LoteModal` pendurava essa string no `errorMessage` do input de PREÇO — o
+// último campo do formulário. Qualquer erro (vaga vazia, ordem inválida,
+// janela invertida) acendia "Preço da inscrição". O organizador que deixou a
+// vaga em branco com o preço 120,00 preenchido via o erro no campo certo do
+// ponto de vista do código e no campo errado do ponto de vista dele.
+//
+// Agora a validação devolve a LISTA de pendências, uma por campo, ordenada
+// pela ordem VISUAL do formulário. O modal acende cada campo com o seu texto
+// (`aria-invalid` + `aria-describedby` vêm do primitivo Input do DS) e move o
+// foco para o primeiro. `erro` continua exposto como a 1ª mensagem para quem
+// só quer o resumo.
+
+/** Campos editáveis do formulário de lote — chaves de erro. */
+export type CampoLote =
+  | 'nome'
+  | 'ordem'
+  | 'quantidadeLimite'
+  | 'inicioEm'
+  | 'fimEm'
+  | 'preco';
+
+/** Alvo de um erro: um campo, ou o formulário (invariante sem campo único). */
+export type AlvoErroLote = CampoLote | 'formulario';
+
+export interface ErroLote {
+  campo: AlvoErroLote;
+  mensagem: string;
+}
+
+/**
+ * ORDEM VISUAL dos campos no `LoteModal` — define qual pendência o usuário vê
+ * primeiro e para onde o foco vai. Mudou o layout do modal? Mude aqui junto.
+ */
+export const ORDEM_CAMPOS_LOTE: readonly CampoLote[] = [
+  'nome',
+  'ordem',
+  'quantidadeLimite',
+  'inicioEm',
+  'fimEm',
+  'preco',
+];
+
 export type ResultadoValidacao =
   | { ok: true; input: LotePayload }
-  | { ok: false; erro: string };
+  | {
+      ok: false;
+      /** Uma pendência por campo, em ordem visual (erros de formulário por último). */
+      erros: readonly ErroLote[];
+      /** 1ª mensagem — resumo/compatibilidade. */
+      erro: string;
+    };
+
+/** Índice de ordenação de um alvo de erro (formulário sempre por último). @pure */
+function pesoDoAlvo(alvo: AlvoErroLote): number {
+  const i = ORDEM_CAMPOS_LOTE.indexOf(alvo as CampoLote);
+  return i === -1 ? ORDEM_CAMPOS_LOTE.length : i;
+}
+
+/** Fecha o resultado de falha: ordena por ordem visual e expõe a 1ª mensagem. @pure */
+function falha(erros: readonly ErroLote[]): ResultadoValidacao {
+  const ordenados = [...erros].sort((a, b) => pesoDoAlvo(a.campo) - pesoDoAlvo(b.campo));
+  return { ok: false, erros: ordenados, erro: ordenados[0]?.mensagem ?? 'Formulário inválido.' };
+}
+
+/** Mensagem de um campo no resultado de validação (null quando o campo está ok). @pure */
+export function erroDoCampo(
+  resultado: ResultadoValidacao,
+  campo: AlvoErroLote,
+): string | null {
+  if (resultado.ok) return null;
+  return resultado.erros.find((e) => e.campo === campo)?.mensagem ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Dinheiro
@@ -138,6 +226,34 @@ export function proximaOrdem(lotesDaModalidade: readonly Pick<Lote, 'ordem'>[]):
   return lotesDaModalidade.reduce((max, l) => Math.max(max, l.ordem), 0) + 1;
 }
 
+// ---------------------------------------------------------------------------
+// Capacidade PREVISTA (BUILD-LOTES-UX · frente D)
+// ---------------------------------------------------------------------------
+
+/**
+ * Painel `configurado / vendido / disponível` do lote considerando o total que
+ * o organizador ESTÁ DIGITANDO agora, não o que está gravado.
+ *
+ * A aritmética é a do kernel (`capacidadeDoLote`): disponível = configurado −
+ * vendido, nunca negativo. É o caso que o dono descreveu: 50 configurados com
+ * 19 vendidos; ao trocar o total para 20, o disponível vira 1 — não 31. O
+ * número que muda é o TOTAL, e o disponível é consequência dele.
+ *
+ * `lote` null = lote novo (nada vendido ainda). Total ilegível cai no total
+ * gravado — o painel nunca pisca em branco enquanto se digita. @pure
+ */
+export function capacidadePrevista(
+  lote: Pick<Lote, 'quantidadeLimite' | 'vendidos'> | null,
+  totalDigitado: string,
+): CapacidadeLote {
+  const vendidos = lote?.vendidos ?? 0;
+  const digitado = Number.parseInt(totalDigitado, 10);
+  const configurado = Number.isInteger(digitado) && digitado >= 0
+    ? digitado
+    : (lote?.quantidadeLimite ?? 0);
+  return capacidadeDoLote({ quantidadeLimite: configurado, vendidos });
+}
+
 export interface EstadoLoteBadge {
   label: string;
   /** Variante do Badge do DS. */
@@ -159,6 +275,75 @@ export function estadoLoteBadge(
   if (loteEncerrado(lote, agora)) return { label: 'Encerrado', variant: 'neutro' };
   if (agora.getTime() < lote.inicioEm.toMillis()) return { label: 'Agendado', variant: 'alerta' };
   return { label: 'Aguardando', variant: 'neutro' };
+}
+
+// ---------------------------------------------------------------------------
+// Desativar o lote — encerrar a venda AGORA (BUILD-LOTES-UX · frente E)
+// ---------------------------------------------------------------------------
+//
+// O modelo de lote NÃO tem flag `ativo` (ver `Lote` no core): o estado
+// ativo/encerrado é DERIVADO da janela e do contador (`loteEncerrado` =
+// `agora ≥ fimEm` OU `vendidos ≥ quantidadeLimite`). Inventar um campo novo
+// exigiria core + Rules + Function, e criaria uma SEGUNDA fonte de verdade
+// para um estado que já se computa. Então desativar usa as duas portas que a
+// derivação já abre, escolhendo pela existência de venda:
+//
+//   vendidos = 0  → grava `fimEm = agora`. A janela fecha, o lote encerra por
+//                   data. Reversível: sem venda o lote é editável inteiro, é
+//                   só pôr um fim novo no futuro.
+//   vendidos > 0  → `ajustarCapacidadeLote(capacidade = vendidos)` (RN-304, a
+//                   única porta autorizada pós-venda). O lote encerra por
+//                   quantidade, no mesmo instante. Reversível: subir a
+//                   capacidade reabre as vagas.
+//
+// Em nenhum dos dois caminhos algo toca inscrito: `vendidos`, `encerradoEm` e
+// `encerradoMotivo` são escrita exclusiva da Function de virada, que só conta
+// inscritos confirmados/estornados e carimba o lote — ela não escreve na
+// inscrição. Quem já comprou continua comprado; o próximo lote da modalidade
+// assume por hand-off (`loteAtivo`), se houver.
+
+/** Motivo carimbado na auditoria quando a desativação passa pela capacidade (RN-304). */
+export const MOTIVO_DESATIVACAO_LOTE =
+  'Desativação do lote pelo organizador: venda encerrada antes do fim da janela.';
+
+/** Como a desativação será executada neste lote (decide pela existência de venda). */
+export type ViaDesativacao = 'janela' | 'capacidade';
+
+/**
+ * Desativar faz sentido neste lote agora? Só enquanto ele ainda vende — lote
+ * já encerrado (por data ou esgotamento) não tem venda para interromper.
+ *
+ * Sem venda, a via é a janela, e ela exige `fimEm > inicioEm` (shape do kernel
+ * e da Rule): um lote AGENDADO, cuja janela ainda nem abriu, não pode receber
+ * `fimEm = agora`. Ele também não está vendendo nada — quem quiser tirá-lo do
+ * caminho usa Remover, que a Rule libera justamente por não haver venda. @pure
+ */
+export function loteDesativavel(lote: Lote, agora: Date): boolean {
+  if (loteEncerrado(lote, agora)) return false;
+  if (lote.vendidos > 0) return true;
+  return agora.getTime() > lote.inicioEm.toMillis();
+}
+
+/** Via de desativação deste lote (venda existente manda no caminho). @pure */
+export function viaDesativacao(lote: Pick<Lote, 'vendidos'>): ViaDesativacao {
+  return lote.vendidos > 0 ? 'capacidade' : 'janela';
+}
+
+/**
+ * Payload que fecha a janela do lote AGORA (via `janela`, lote sem venda).
+ * Encurtar o fim nunca cria sobreposição com irmão — a janela só diminui —,
+ * por isso este caminho não repassa pelo invariante de sequência. @pure
+ */
+export function payloadDesativarPelaJanela(lote: Lote, agora: Date): LotePayloadCompleto {
+  return {
+    modalidade: lote.modalidade,
+    ordem: lote.ordem,
+    nome: lote.nome,
+    inicioEm: lote.inicioEm.toDate(),
+    fimEm: agora,
+    quantidadeLimite: lote.quantidadeLimite,
+    preco: lote.preco,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -201,9 +386,10 @@ export interface ValidarFormParams {
  */
 export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
   const { values, modalidade, loteId, lotesDoEvento, congelado = false } = params;
+  const erros: ErroLote[] = [];
 
   const nome = values.nome.trim();
-  if (nome.length === 0) return { ok: false, erro: 'Informe o nome do lote.' };
+  if (nome.length === 0) erros.push({ campo: 'nome', mensagem: 'Informe o nome do lote.' });
 
   // Lote VENDIDO: payload mínimo — só o nome (review S300-T4 #1). Os campos
   // comerciais estão desabilitados na UI e congelados na Rule; validar/enviar
@@ -211,28 +397,43 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
   // diff dar vazio e (b) bloquear um rename por problema pré-existente nos
   // irmãos (sobreposição legada travaria até a troca de nome).
   if (congelado) {
-    return { ok: true, input: { nome } };
+    return erros.length > 0 ? falha(erros) : { ok: true, input: { nome } };
   }
 
+  // TODAS as pendências de campo são coletadas na mesma passada: o organizador
+  // vê de uma vez tudo o que falta, cada aviso no seu próprio campo, em vez de
+  // corrigir um, salvar, e descobrir o próximo (frente A).
   const ordem = Number.parseInt(values.ordem, 10);
   if (!Number.isInteger(ordem) || ordem < 1) {
-    return { ok: false, erro: 'A ordem deve ser um inteiro ≥ 1.' };
+    erros.push({ campo: 'ordem', mensagem: 'A ordem deve ser um inteiro ≥ 1.' });
   }
 
   const quantidadeLimite = Number.parseInt(values.quantidadeLimite, 10);
   if (!Number.isInteger(quantidadeLimite) || quantidadeLimite < 1) {
-    return { ok: false, erro: 'A vaga (quantidade limite) deve ser um inteiro ≥ 1.' };
+    erros.push({
+      campo: 'quantidadeLimite',
+      mensagem: 'A vaga (quantidade limite) deve ser um inteiro ≥ 1.',
+    });
   }
-
-  const preco = parsePrecoReais(values.preco);
-  if (preco === null) return { ok: false, erro: 'Preço inválido (use R$ ≥ 0).' };
 
   const inicioEm = inputLocalParaDate(values.inicioEm);
   const fimEm = inputLocalParaDate(values.fimEm);
-  if (!inicioEm || !fimEm) return { ok: false, erro: 'Informe início e fim da janela.' };
-  if (fimEm.getTime() <= inicioEm.getTime()) {
-    return { ok: false, erro: 'O fim da janela deve ser depois do início.' };
+  if (!inicioEm) {
+    erros.push({ campo: 'inicioEm', mensagem: 'Informe o início da janela de venda.' });
   }
+  if (!fimEm) {
+    erros.push({ campo: 'fimEm', mensagem: 'Informe o fim da janela de venda.' });
+  }
+  if (inicioEm && fimEm && fimEm.getTime() <= inicioEm.getTime()) {
+    erros.push({ campo: 'fimEm', mensagem: 'O fim da janela deve ser depois do início.' });
+  }
+
+  const preco = parsePrecoReais(values.preco);
+  if (preco === null) {
+    erros.push({ campo: 'preco', mensagem: 'Preço inválido (use R$ ≥ 0).' });
+  }
+
+  if (erros.length > 0 || !inicioEm || !fimEm || preco === null) return falha(erros);
 
   // Shape do lote pelo KERNEL (mesma checagem que a Rule faz no shape).
   const shapeOk = loteShapeValido({
@@ -244,7 +445,7 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
     quantidadeLimite,
     preco,
   });
-  if (!shapeOk) return { ok: false, erro: 'Dados do lote inconsistentes.' };
+  if (!shapeOk) return falha([{ campo: 'formulario', mensagem: 'Dados do lote inconsistentes.' }]);
 
   // Invariante de sequência da modalidade (ADR-012 · RN-300) contra os irmãos
   // já carregados — a Rule NÃO itera coleção, por isso este pré-check vive aqui.
@@ -260,11 +461,96 @@ export function validarFormLote(params: ValidarFormParams): ResultadoValidacao {
     })),
     { modalidade, ordem, inicioEm: tsLike(inicioEm), fimEm: tsLike(fimEm) },
   ];
+  // O KERNEL continua sendo o juiz (nenhuma regra de lote é reinventada aqui);
+  // o que a camada de tela acrescenta é o ENDEREÇO do conflito — qual lote e
+  // qual vigência (frente B).
   const erroSequencia = validarLotesModalidade(projetado);
-  if (erroSequencia) return { ok: false, erro: erroSequencia };
+  if (erroSequencia) {
+    const conflito = conflitoDeJanela(irmaos, ordem, inicioEm, fimEm);
+    if (conflito) {
+      return falha([{ campo: 'inicioEm', mensagem: mensagemConflitoJanela(conflito) }]);
+    }
+    // Conflito que NÃO envolve a janela projetada (ex.: ordem duplicada, ou
+    // sobreposição pré-existente entre dois irmãos): a mensagem do kernel é a
+    // mais honesta que temos — nomear um lote aqui seria apontar o culpado errado.
+    return falha([{ campo: 'formulario', mensagem: erroSequencia }]);
+  }
 
   return {
     ok: true,
     input: { modalidade, ordem, nome, inicioEm, fimEm, quantidadeLimite, preco },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Endereço do conflito de janela (BUILD-LOTES-UX · frente B)
+// ---------------------------------------------------------------------------
+//
+// A regra estava certa e a mensagem era cega: `validarLotesModalidade` diz
+// "lotes 1 e 2 têm janelas sobrepostas" sem dizer ONDE começa e termina a
+// vigência do lote que está no caminho — o organizador tinha de sair da tela,
+// abrir o outro lote e anotar as datas. Aqui a camada de tela pega o irmão que
+// o kernel reprovou e escreve a janela dele por extenso, no fuso do produto.
+//
+// Vazamento: o irmão é um lote do MESMO evento e da MESMA modalidade, lido
+// pela mesma tela com a mesma permissão (Rules: membro do tenant / papel
+// organizador-administrador). Nome e janela já estão na tabela atrás do modal
+// — a mensagem não revela nada novo.
+
+export type TipoConflitoJanela = 'sobreposicao' | 'cronologia';
+
+export interface ConflitoJanela {
+  irmao: Lote;
+  tipo: TipoConflitoJanela;
+}
+
+/**
+ * Acha o irmão cuja vigência entra em conflito com a janela projetada.
+ * `sobreposicao` = as janelas se cruzam. `cronologia` = não se cruzam, mas a
+ * sequência anda para trás (lote de ordem maior terminando antes de um de
+ * ordem menor começar). `null` quando a janela projetada não é a culpada. @pure
+ */
+export function conflitoDeJanela(
+  irmaos: readonly Lote[],
+  ordem: number,
+  inicioEm: Date,
+  fimEm: Date,
+): ConflitoJanela | null {
+  const inicio = inicioEm.getTime();
+  const fim = fimEm.getTime();
+
+  const sobreposto = irmaos.find(
+    (l) => inicio < l.fimEm.toMillis() && l.inicioEm.toMillis() < fim,
+  );
+  if (sobreposto) return { irmao: sobreposto, tipo: 'sobreposicao' };
+
+  const foraDeOrdem = irmaos.find(
+    (l) =>
+      (l.ordem < ordem && fim <= l.inicioEm.toMillis()) ||
+      (l.ordem > ordem && l.fimEm.toMillis() <= inicio),
+  );
+  if (foraDeOrdem) return { irmao: foraDeOrdem, tipo: 'cronologia' };
+
+  return null;
+}
+
+/** Vigência de um lote por extenso, no fuso do produto. @pure */
+export function janelaPorExtenso(lote: Pick<Lote, 'inicioEm' | 'fimEm'>): string {
+  return `${formatDataHoraCurta(lote.inicioEm)} até ${formatDataHoraCurta(lote.fimEm)}`;
+}
+
+/** Mensagem de conflito COM o endereço: nome do lote + vigência exata. @pure */
+export function mensagemConflitoJanela(conflito: ConflitoJanela): string {
+  const { irmao, tipo } = conflito;
+  const vigencia = `${janelaPorExtenso(irmao)} (horário de Brasília)`;
+  if (tipo === 'sobreposicao') {
+    return (
+      `A janela fica sobreposta à do lote "${irmao.nome}" (L${irmao.ordem}), que vende de ` +
+      `${vigencia}. Comece depois do fim dele, ou termine antes do início dele.`
+    );
+  }
+  return (
+    `A sequência da modalidade andaria para trás: o lote "${irmao.nome}" (L${irmao.ordem}) vende de ` +
+    `${vigencia}. Na modalidade, quem tem ordem maior vende depois — ajuste a janela ou a ordem.`
+  );
 }

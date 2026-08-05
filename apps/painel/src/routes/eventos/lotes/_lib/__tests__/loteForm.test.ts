@@ -3,14 +3,19 @@ import type { Lote } from '@leela/core';
 import { ts } from '../../../_test/fixtures';
 import {
   arredondarCentavos,
+  capacidadePrevista,
   dateParaInputLocal,
+  erroDoCampo,
   estadoLoteBadge,
   inputLocalParaDate,
+  loteDesativavel,
   loteImutavel,
   parsePrecoReais,
+  payloadDesativarPelaJanela,
   proximaOrdem,
   timestampParaInputLocal,
   validarFormLote,
+  viaDesativacao,
   type LoteFormValues,
 } from '../loteForm';
 
@@ -189,6 +194,246 @@ describe('validarFormLote (shape do core + invariante cross-lote)', () => {
     const values = { ...base, ordem: '1', inicioEm: '2025-12-01T00:00', fimEm: '2026-02-01T00:00' };
     const r = validarFormLote({ values, modalidade: '5k', loteId: l1.id, lotesDoEvento: [l1] });
     expect(r.ok).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frente A — o erro acende no campo pendente, e só nele
+// ---------------------------------------------------------------------------
+
+describe('erro POR CAMPO (frente A — o defeito que acusava "preço" pela vaga vazia)', () => {
+  const l1 = mkLote({ modalidade: '5k', ordem: 1 });
+  const base: LoteFormValues = {
+    nome: 'Lote 2',
+    ordem: '2',
+    inicioEm: '2026-02-01T00:00',
+    fimEm: '2026-04-01T00:00',
+    quantidadeLimite: '300',
+    preco: '75,00',
+  };
+
+  it('reproduz o caso do dono: preço 120,00 preenchido e vaga vazia acusa a VAGA, não o preço', () => {
+    const r = validarFormLote({
+      values: { ...base, preco: '120,00', quantidadeLimite: '' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [l1],
+    });
+    expect(r.ok).toBe(false);
+    expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
+    // O ponto do conserto: o preço, que está válido, não acende.
+    expect(erroDoCampo(r, 'preco')).toBeNull();
+  });
+
+  it('dois campos pendentes ao mesmo tempo: cada um recebe o SEU aviso', () => {
+    const r = validarFormLote({
+      values: { ...base, quantidadeLimite: '', preco: 'abc' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [l1],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erros).toHaveLength(2);
+    expect(erroDoCampo(r, 'quantidadeLimite')).toMatch(/vaga/i);
+    expect(erroDoCampo(r, 'preco')).toMatch(/pre.o inv/i);
+    // Ordem VISUAL do formulário: a vaga vem antes do preço, então é ela que
+    // recebe o foco.
+    expect(r.erros[0]?.campo).toBe('quantidadeLimite');
+  });
+
+  it('quatro campos pendentes saem na ordem visual (nome → ordem → vaga → janela)', () => {
+    const r = validarFormLote({
+      values: { nome: '  ', ordem: '0', quantidadeLimite: '', inicioEm: '', fimEm: '', preco: '' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [l1],
+    });
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erros.map((e) => e.campo)).toEqual([
+      'nome',
+      'ordem',
+      'quantidadeLimite',
+      'inicioEm',
+      'fimEm',
+      'preco',
+    ]);
+  });
+
+  it('início e fim ausentes acendem cada um o seu campo (não um aviso só para os dois)', () => {
+    const r = validarFormLote({
+      values: { ...base, inicioEm: '', fimEm: '' },
+      modalidade: '5k',
+      loteId: null,
+      lotesDoEvento: [l1],
+    });
+    expect(erroDoCampo(r, 'inicioEm')).toMatch(/in.cio/i);
+    expect(erroDoCampo(r, 'fimEm')).toMatch(/fim/i);
+    expect(erroDoCampo(r, 'nome')).toBeNull();
+  });
+
+  it('formulário inteiro válido não devolve erro nenhum', () => {
+    const r = validarFormLote({ values: base, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
+    expect(r.ok).toBe(true);
+    expect(erroDoCampo(r, 'preco')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frente B — a mensagem de sobreposição diz QUAL janela está no caminho
+// ---------------------------------------------------------------------------
+
+describe('conflito de janela com endereço (frente B)', () => {
+  const l1 = mkLote({
+    modalidade: '5k',
+    ordem: 1,
+    nome: 'Lote Promocional',
+    inicioEm: ts(inputLocalParaDate('2025-12-01T08:00')!),
+    fimEm: ts(inputLocalParaDate('2026-02-01T23:30')!),
+  });
+  const base: LoteFormValues = {
+    nome: 'Lote 2',
+    ordem: '2',
+    inicioEm: '2026-01-15T00:00',
+    fimEm: '2026-03-01T00:00',
+    quantidadeLimite: '300',
+    preco: '75,00',
+  };
+
+  it('nomeia o lote conflitante e escreve a vigência dele com data E hora', () => {
+    const r = validarFormLote({ values: base, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
+    expect(r.ok).toBe(false);
+    const msg = erroDoCampo(r, 'inicioEm') ?? '';
+    expect(msg).toMatch(/sobrepost/i);
+    expect(msg).toContain('Lote Promocional');
+    expect(msg).toContain('L1');
+    // Janela EXATA nas duas pontas, com hora, no fuso do produto.
+    expect(msg).toContain('01 de dez. de 2025 · 08:00');
+    expect(msg).toContain('01 de fev. de 2026 · 23:30');
+    expect(msg).toMatch(/Bras[íi]lia/);
+  });
+
+  it('o aviso vai para o campo de janela, não para o de preço', () => {
+    const r = validarFormLote({ values: base, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
+    expect(erroDoCampo(r, 'preco')).toBeNull();
+    expect(erroDoCampo(r, 'inicioEm')).not.toBeNull();
+  });
+
+  it('conflito que não é da janela (ordem duplicada) mantém a mensagem do kernel no formulário', () => {
+    const values = { ...base, ordem: '1', inicioEm: '2026-02-02T00:00', fimEm: '2026-03-01T00:00' };
+    const r = validarFormLote({ values, modalidade: '5k', loteId: null, lotesDoEvento: [l1] });
+    expect(r.ok).toBe(false);
+    expect(erroDoCampo(r, 'formulario')).toMatch(/ordem 1 duplicada/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frente D — a aritmética de vagas que o dono descreveu
+// ---------------------------------------------------------------------------
+
+describe('capacidadePrevista (frente D — disponível segue o total DIGITADO)', () => {
+  it('o caso verbatim: 50 configurados, 19 vendidos, total editado para 20 → 1 disponível', () => {
+    const lote = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 50, vendidos: 19 });
+    expect(capacidadePrevista(lote, '20')).toEqual({
+      configurado: 20,
+      vendido: 19,
+      disponivel: 1,
+    });
+  });
+
+  it('nunca devolve disponível negativo — mostra zero em vez de dívida de vaga', () => {
+    const lote = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 50, vendidos: 19 });
+    expect(capacidadePrevista(lote, '10').disponivel).toBe(0);
+  });
+
+  it('total ilegível enquanto se digita cai no total gravado (o painel não pisca em branco)', () => {
+    const lote = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 50, vendidos: 19 });
+    expect(capacidadePrevista(lote, '').configurado).toBe(50);
+    expect(capacidadePrevista(lote, 'abc').disponivel).toBe(31);
+  });
+
+  it('lote novo (nada vendido): disponível = total digitado', () => {
+    expect(capacidadePrevista(null, '80')).toEqual({
+      configurado: 80,
+      vendido: 0,
+      disponivel: 80,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Frente E — desativar interrompe a venda sem desfazer venda nenhuma
+// ---------------------------------------------------------------------------
+
+describe('desativar lote (frente E)', () => {
+  const AGORA = inputLocalParaDate('2026-03-01T10:00')!;
+  const vigenteComVenda = mkLote({
+    modalidade: '5k',
+    ordem: 2,
+    quantidadeLimite: 300,
+    vendidos: 120,
+    inicioEm: ts(inputLocalParaDate('2026-02-01T00:00')!),
+    fimEm: ts(inputLocalParaDate('2026-04-01T00:00')!),
+  });
+  const vigenteSemVenda = mkLote({
+    modalidade: '10k',
+    ordem: 1,
+    quantidadeLimite: 300,
+    vendidos: 0,
+    inicioEm: ts(inputLocalParaDate('2026-02-01T00:00')!),
+    fimEm: ts(inputLocalParaDate('2026-04-01T00:00')!),
+  });
+
+  it('lote vigente é desativável — inclusive com data e hora dentro da janela', () => {
+    expect(loteDesativavel(vigenteComVenda, AGORA)).toBe(true);
+    expect(loteDesativavel(vigenteSemVenda, AGORA)).toBe(true);
+  });
+
+  it('lote já encerrado (esgotado ou fora da janela) não é desativável — não há venda a parar', () => {
+    const esgotado = mkLote({ modalidade: '5k', ordem: 1, quantidadeLimite: 150, vendidos: 150 });
+    const encerrado = mkLote({
+      modalidade: '5k',
+      ordem: 1,
+      inicioEm: ts(inputLocalParaDate('2025-12-01T00:00')!),
+      fimEm: ts(inputLocalParaDate('2026-02-01T00:00')!),
+    });
+    expect(loteDesativavel(esgotado, AGORA)).toBe(false);
+    expect(loteDesativavel(encerrado, AGORA)).toBe(false);
+  });
+
+  it('lote agendado (janela ainda não abriu) não é desativável: fechar a janela quebraria fim > início', () => {
+    const agendado = mkLote({
+      modalidade: '5k',
+      ordem: 3,
+      inicioEm: ts(inputLocalParaDate('2026-04-01T00:00')!),
+      fimEm: ts(inputLocalParaDate('2026-04-26T23:59')!),
+    });
+    expect(loteDesativavel(agendado, AGORA)).toBe(false);
+  });
+
+  it('a via depende da venda: com venda vai pela capacidade (RN-304), sem venda pela janela', () => {
+    expect(viaDesativacao(vigenteComVenda)).toBe('capacidade');
+    expect(viaDesativacao(vigenteSemVenda)).toBe('janela');
+  });
+
+  it('desativar pela janela só encurta o fim — preço, vaga, ordem e início ficam de pé', () => {
+    const payload = payloadDesativarPelaJanela(vigenteSemVenda, AGORA);
+    expect(payload.fimEm.getTime()).toBe(AGORA.getTime());
+    expect(payload.inicioEm.getTime()).toBe(vigenteSemVenda.inicioEm.toMillis());
+    expect(payload.quantidadeLimite).toBe(vigenteSemVenda.quantidadeLimite);
+    expect(payload.preco).toBe(vigenteSemVenda.preco);
+    expect(payload.ordem).toBe(vigenteSemVenda.ordem);
+    // `vendidos` nunca viaja no payload: é ∑ exclusivo da Function de virada.
+    expect(payload).not.toHaveProperty('vendidos');
+    // E a janela continua válida para o shape do kernel e da Rule.
+    expect(payload.fimEm.getTime()).toBeGreaterThan(payload.inicioEm.getTime());
+  });
+
+  it('a janela encurtada encerra o lote no mesmo instante (derivação do kernel)', () => {
+    const payload = payloadDesativarPelaJanela(vigenteSemVenda, AGORA);
+    const depois = { ...vigenteSemVenda, fimEm: ts(payload.fimEm) };
+    expect(loteDesativavel(depois, AGORA)).toBe(false);
   });
 });
 
