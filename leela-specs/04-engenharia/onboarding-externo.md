@@ -71,7 +71,7 @@ Duas coisas convém saber antes de abrir qualquer tela. O painel do organizador 
 
 ## O que este corpus não tem
 
-Vale saber onde não procurar. Não existe glossário consolidado. Não existe runbook nem guia de troubleshooting. Não existe documento de contribuição que descreva como abrir uma rodada, além do que está explicado acima.
+Vale saber onde não procurar. Não existe glossário consolidado. Não existe documento de contribuição que descreva como abrir uma rodada, além do que está explicado acima. De runbook há dois, ambos nesta pasta e ambos nascidos de incidente real: [[runbook-email-transacional]] e [[runbook-expurgo-lgpd]]. Guia de troubleshooting geral continua não existindo.
 
 O `README.md` de `leela-specs/` está desatualizado e se contradiz dentro do próprio arquivo sobre a contagem de épicos; a seção de decisões em aberto dele lista questões resolvidas há semanas, entre elas a escolha do gateway de pagamento, que já está em produção. O `KICKOFF-BUILD.md` é um prompt de construção de projeto novo, escrito antes da reorganização de 18/07, e aponta para caminhos que já não existem. Ambos ficam no lugar por enquanto; nenhum dos dois deve ser usado como fonte.
 
