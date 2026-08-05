@@ -18,18 +18,17 @@
 // e devolve 1.234 — um número perfeitamente finito, que passa por qualquer
 // `Number.isFinite`. O defeito não tinha sintoma até a fatura.
 //
-// ── a regra de ponto vs vírgula
+// ── a regra de ponto vs vírgula mora em `pontuacaoPtBr`
 //
-// A vírgula, quando existe, é o decimal: é assim que se escreve dinheiro em
-// pt-BR e é o que `toFixed(2).replace('.', ',')` produz nas telas. O ponto é o
-// separador de milhar nesse caso, e precisa estar agrupado de três em três para
-// ser aceito.
+// A vírgula, quando existe, é o decimal e o ponto é milhar agrupado de três em
+// três. Sem vírgula, o tamanho do grupo final decide: diferente de três é
+// decimal ("1234.56", que é o teclado numérico e o `String(kit.preco)` do
+// editor), exatamente três é milhar ("1.234" é R$ 1.234,00).
 //
-// Sem vírgula, o ponto sozinho decide pelo tamanho do grupo que vem depois
-// dele. Um grupo com número de dígitos DIFERENTE de três só pode ser decimal
-// ("1234.56", que é o teclado numérico e o `String(kit.preco)` do editor). Um
-// grupo com exatamente três dígitos e agrupamento válido ("1.234") é MILHAR:
-// R$ 1.234,00.
+// Essa regra é a MESMA de `parseContagemPtBr` e vive em `pontuacaoPtBr.ts`, um
+// lugar só: dinheiro e contagem lendo "1.000" de formas diferentes é um defeito
+// esperando data. Aqui fica o que é de dinheiro — magnitude, centavos e
+// arredondamento.
 //
 // ── por que milhar, e o que essa escolha custa (decisão do dono · 2026-08-05)
 //
@@ -70,6 +69,8 @@
 // reprovar. Cada tela decide se usa `valor` cru ou `centavos / 100`.
 // =============================================================================
 
+import { separarPtBr } from './pontuacaoPtBr';
+
 /** Por que a leitura falhou. Cada motivo tem uma mensagem própria ao usuário. */
 export type MotivoValorInvalido =
   /** Campo em branco (só espaços conta como branco). */
@@ -105,23 +106,6 @@ export type ResultadoValorLido = ValorLido | { ok: false; motivo: MotivoValorInv
 
 /** Dígitos inteiros aceitos: R$ 999.999.999.999,99 cabe com folga em centavos seguros. */
 const MAX_DIGITOS_INTEIROS = 12;
-
-/** Um grupo de milhar é sempre três dígitos. */
-const GRUPO = /^\d{3}$/;
-
-/**
- * O agrupamento de milhar está bem formado?
- *
- * Primeiro grupo de 1 a 3 dígitos, os demais de exatamente 3, e nenhum zero à
- * esquerda quando há mais de um grupo — "0.500" não é meio milhar, é alguém
- * escrevendo meio real com ponto decimal.
- */
-function agrupamentoValido(partes: readonly string[]): boolean {
-  if (partes.length < 2) return false;
-  const primeiro = partes[0] ?? '';
-  if (!/^[1-9]\d{0,2}$/.test(primeiro)) return false;
-  return partes.slice(1).every((g) => GRUPO.test(g));
-}
 
 /** Monta o resultado a partir dos dígitos já separados. @pure */
 function montar(
@@ -168,68 +152,9 @@ function montar(
  * vírgula repetida, "1,234.56" no estilo en-US e agrupamento torto.
  */
 export function parseValorPtBr(entrada: string): ResultadoValorLido {
-  if (typeof entrada !== 'string') return { ok: false, motivo: 'formato' };
-
-  // Espaço em qualquer forma sai fora, inclusive o NBSP que o `Intl` põe depois
-  // do "R$" e o espaço fino que alguns teclados usam como milhar.
-  let s = entrada.replace(/[\s  ]/g, '');
-  if (s === '') return { ok: false, motivo: 'vazio' };
-
-  // Símbolo da moeda colado ou não, em qualquer caixa.
-  s = s.replace(/^r\$/i, '');
-  if (s === '') return { ok: false, motivo: 'vazio' };
-
-  let negativo = false;
-  if (s.startsWith('-')) {
-    negativo = true;
-    s = s.slice(1);
-  } else if (s.startsWith('+')) {
-    s = s.slice(1);
-  }
-  if (s === '') return { ok: false, motivo: 'formato' };
-
-  // Daqui para baixo só pode existir dígito, ponto e vírgula. Letra, segundo
-  // sinal, "%" ou "e" caem aqui — e é por isso que "1e3" nunca vira mil.
-  if (!/^[\d.,]+$/.test(s)) return { ok: false, motivo: 'formato' };
-
-  const virgulas = (s.match(/,/g) ?? []).length;
-  const pontos = (s.match(/\./g) ?? []).length;
-
-  // --- com vírgula: ela é o decimal, o ponto é milhar ---------------------
-  if (virgulas > 0) {
-    if (virgulas > 1) return { ok: false, motivo: 'formato' };
-    const [inteiro = '', fracao = ''] = s.split(',');
-    if (fracao.includes('.')) return { ok: false, motivo: 'agrupamento' };
-
-    if (pontos === 0) return montar(negativo, inteiro, fracao);
-
-    const partes = inteiro.split('.');
-    if (!agrupamentoValido(partes)) return { ok: false, motivo: 'agrupamento' };
-    return montar(negativo, partes.join(''), fracao);
-  }
-
-  // --- sem vírgula e sem ponto: inteiro puro ------------------------------
-  if (pontos === 0) return montar(negativo, s, '');
-
-  const partes = s.split('.');
-  const ultimo = partes[partes.length - 1] ?? '';
-
-  // --- sem vírgula, dois ou mais pontos: só pode ser milhar ---------------
-  if (pontos > 1) {
-    if (!agrupamentoValido(partes)) return { ok: false, motivo: 'agrupamento' };
-    return montar(negativo, partes.join(''), '');
-  }
-
-  // --- sem vírgula, um ponto: o tamanho do grupo final decide -------------
-  //
-  // Três dígitos com agrupamento válido é MILHAR por decisão do dono ("1.234" é
-  // R$ 1.234,00), porque é o que o hábito pt-BR quer dizer. Qualquer outro
-  // tamanho de grupo só pode ser decimal ("1234.56", "1.23"). Ver o cabeçalho
-  // para o caso que essa escolha custa.
-  if (ultimo.length === 3 && agrupamentoValido(partes)) {
-    return montar(negativo, partes.join(''), '');
-  }
-  return montar(negativo, partes[0] ?? '', ultimo);
+  const lido = separarPtBr(entrada);
+  if (!lido.ok) return lido;
+  return montar(lido.negativo, lido.inteiro, lido.fracao);
 }
 
 /** Mensagem de campo para cada recusa — o texto que a tela mostra. @pure */

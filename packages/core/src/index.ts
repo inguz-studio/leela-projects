@@ -948,6 +948,18 @@ export type {
 } from './finance/parseValorPtBr';
 export { parseValorPtBr, mensagemValorInvalido } from './finance/parseValorPtBr';
 
+// Leitura de CONTAGEM digitada em pt-BR (texto → inteiro) — fonte ÚNICA do
+// painel para teto de usos, vaga, capacidade e estoque. Lê a MESMA pontuação do
+// dinheiro (`pontuacaoPtBr`), então "1.000" é mil nos dois; casa decimal aqui é
+// recusa de campo, nunca arredondamento calado. Fecha o corte que fazia mil
+// vagas virarem uma (`Number("1.000") === 1`, aprovado por `Number.isInteger`).
+export type {
+  MotivoContagemInvalida,
+  ContagemLida,
+  ResultadoContagemLida,
+} from './finance/parseContagemPtBr';
+export { parseContagemPtBr, mensagemContagemInvalida } from './finance/parseContagemPtBr';
+
 // Taxa-flex da plataforma — tabela por meio de pagamento (TAXAFLEX ·
 // RN-178/179/180/182/183): global + override, resolução e cálculo half-up
 // em centavos inteiros (fonte única — nunca constante).
