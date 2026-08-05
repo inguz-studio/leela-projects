@@ -110,6 +110,12 @@ function authEspiao(): ContaSemFriccaoAuth {
     async criarConta() {
       return 'uid-conta-comprador';
     },
+    async papelDaConta() {
+      // O reenvio administrativo NUNCA lê papel de conta — ele só re-entrega a
+      // mensagem que a confirmação já decidiu mandar. Lançar aqui trava a
+      // fronteira: se algum caminho passar a ler, este espião fica vermelho.
+      throw new Error('reenvio não lê papel de conta (S032-T4)');
+    },
     async gerarLinkDefinirSenha() {
       return 'https://painel.leela.test/redefinir-senha?oobCode=oob-1';
     },

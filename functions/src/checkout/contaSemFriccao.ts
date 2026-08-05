@@ -32,6 +32,21 @@
 // emailVerified) — é exigida no LEITOR (getCheckoutPrefill): exigi-la no
 // escritor travaria o claim para sempre (a conta nasce não-verificada).
 // First-claim: vínculo divergente NUNCA é sobrescrito (anti-hijack).
+//
+// CONTA DE ADMINISTRAÇÃO NÃO É CONTA DE COMPRADOR (S032-T4 · RN-449d): a
+// conta do painel de plataforma é OUTRA, e uma conta nunca acumula
+// `platform_admin` com cliente. Quando o e-mail da compra resolve uma conta
+// com esse papel, o vínculo é RECUSADO — a ficha da pessoa fica intocada, o
+// carimbo do pedido sai com `contaUid: null` e o motivo
+// `conta_admin_nao_vinculavel`, e nenhum e-mail de senha é disparado. A VENDA
+// não muda: dinheiro fail-open, identidade fail-closed. Comprar continua
+// permitido a qualquer pessoa, inclusive a quem administra — o que a regra
+// proíbe é o VÍNCULO, e quem administra e quer comprar usa o outro e-mail.
+//
+// FRONTEIRA QUE ESTA GUARDA **NÃO** MOVE: a conta preexistente continua sendo
+// reusada sem prova de posse do e-mail. Exigir posse é o default do item
+// POSSE-EMAIL-1, que está no painel do dono aguardando ratificação, e não é
+// decisão de código. A guarda daqui é só a de ADMINISTRAÇÃO.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -55,9 +70,21 @@ export interface ContaSemFriccaoAuth {
   getUidPorEmail(email: string): Promise<string | null>;
   /** Cria a conta SEM senha; devolve o uid. */
   criarConta(params: { email: string; displayName?: string }): Promise<string>;
+  /**
+   * Papel da conta (claim `role`), ou null quando não há claim (RN-401 — a
+   * claim é a fonte ÚNICA de papel; ler Firestore aqui daria uma segunda
+   * verdade). É o insumo da recusa da RN-449d.
+   */
+  papelDaConta(uid: string): Promise<string | null>;
   /** Link oficial de definição de senha (generatePasswordResetLink). */
   gerarLinkDefinirSenha(email: string): Promise<string>;
 }
+
+/** O papel que a RN-449d proíbe de virar conta de comprador. */
+export const PAPEL_ADMIN_PLATAFORMA = 'platform_admin';
+
+/** Motivo carimbado no pedido quando o vínculo é recusado (RN-449d). */
+export const MOTIVO_CONTA_ADMIN = 'conta_admin_nao_vinculavel';
 
 export type EmailStatusContaSemFriccao =
   | 'enviado'
@@ -104,6 +131,17 @@ export function contaSemFriccaoAuthAdmin(): ContaSemFriccaoAuth {
         }
         throw err;
       }
+    },
+    // Uma leitura por confirmação, no caminho pós-pagamento e best-effort —
+    // nunca na transação de dinheiro. Falha de Auth aqui PROPAGA, igual à do
+    // `getUidPorEmail`: sem saber o papel não se pode afirmar que a conta não
+    // é de administração, e o desfecho seguro é não carimbar nada (o pedido
+    // fica sem carimbo, que é a pendência observável de sempre).
+    async papelDaConta(uid) {
+      const claims = (await admin.auth().getUser(uid)).customClaims as
+        | { role?: unknown }
+        | undefined;
+      return typeof claims?.role === 'string' ? claims.role : null;
     },
     // DEPLOY-EMAIL · o link do e-mail nº 2 ("conta criada, defina a senha") é a
     // PRIMEIRA tela do produto para quem acabou de pagar. Sem estes dois
@@ -170,6 +208,31 @@ export async function entregarEmailContaCriada(
 // Núcleo (testável com Admin SDK contra o Emulator)
 // ---------------------------------------------------------------------------
 
+/**
+ * Carimba o resultado no pedido (replay-proof): grava UMA vez e nunca
+ * sobrescreve um carimbo que já exista. Corrida entre dois confirmadores é
+ * teórica (a confirmação é exactly-once via ledger) e o pior caso é benigno
+ * (mesmo uid, mesmo estado).
+ *
+ * Um só escritor para os DOIS desfechos — o vínculo feito e o vínculo recusado
+ * (RN-449d) —, porque o que os separa é o conteúdo da marca, nunca a
+ * disciplina de escrita.
+ */
+async function carimbarNoPedido(
+  db: Db,
+  pedidoRef: admin.firestore.DocumentReference,
+  marca: Record<string, unknown>
+): Promise<void> {
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(pedidoRef);
+    if (!snap.exists || snap.get('contaSemFriccao') !== undefined) return;
+    tx.update(pedidoRef, {
+      contaSemFriccao: { ...marca, processadoEm: FieldValue.serverTimestamp() },
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
 export async function garantirContaSemFriccao(
   db: Db,
   pedidoId: string,
@@ -215,6 +278,42 @@ export async function garantirContaSemFriccao(
       email,
       ...(nome.length > 0 ? { displayName: nome } : {}),
     });
+  }
+
+  // 1b. RN-449d — a conta de ADMINISTRAÇÃO nunca vira conta de comprador.
+  //     A leitura do papel é do uid que ACABOU de ser resolvido, e não do que
+  //     o e-mail devolveu antes de criar: o re-read de corrida do `criarConta`
+  //     (`auth/email-already-exists`) devolve uma conta ALHEIA, e a guarda
+  //     tem de valer para o uid que seria escrito, não para o que foi lido.
+  if ((await auth.papelDaConta(contaUid)) === PAPEL_ADMIN_PLATAFORMA) {
+    // OBSERVÁVEL: recusa silenciosa deixaria alguém que PAGOU sem acesso e
+    // sem rastro. Mesmo formato de incidente da rodada (`alerta`), e sem PII
+    // — o `pedidoId` acha o resto; o e-mail e o nome ficam fora (LGPD).
+    logger.error('conta_sem_friccao_vinculo_recusado', {
+      alerta: true,
+      motivo: MOTIVO_CONTA_ADMIN,
+      pedidoId,
+    });
+    // `contaCriada: false` é a VERDADE deste ramo, não um arredondamento:
+    // conta com claim de administração já existia, e o único caminho em que
+    // `criarConta` a devolveria é o re-read de corrida, que reusa em vez de
+    // criar. O `false` também é o que impede o reenvio administrativo de
+    // mandar "defina sua senha" para a conta de administração — ele gateia
+    // por `contaCriada === true` (`reenviarEmailsPedido.ts`).
+    await carimbarNoPedido(db, pedidoRef, {
+      contaUid: null,
+      contaCriada: false,
+      emailStatus: 'nao_aplicavel',
+      pessoaVinculada: false,
+      motivo: MOTIVO_CONTA_ADMIN,
+    });
+    return {
+      processado: true,
+      contaUid: null,
+      contaCriada: false,
+      emailStatus: 'nao_aplicavel',
+      motivo: MOTIVO_CONTA_ADMIN,
+    };
   }
 
   // 2. Vínculo pessoa↔conta (RN-173 + RN-174, ESCRITOR ÚNICO do claim): a
@@ -292,22 +391,12 @@ export async function garantirContaSemFriccao(
     }
   }
 
-  // 4. Carimbo no pedido (replay-proof): grava UMA vez; corrida entre dois
-  //    confirmadores é teórica (confirmação é exactly-once via ledger) e o
-  //    pior caso é benigno (mesmo uid, mesmo estado).
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(pedidoRef);
-    if (!snap.exists || snap.get('contaSemFriccao') !== undefined) return;
-    tx.update(pedidoRef, {
-      contaSemFriccao: {
-        contaUid,
-        contaCriada,
-        emailStatus,
-        pessoaVinculada,
-        processadoEm: FieldValue.serverTimestamp(),
-      },
-      atualizadoEm: FieldValue.serverTimestamp(),
-    });
+  // 4. Carimbo no pedido (replay-proof) — ver `carimbarNoPedido`.
+  await carimbarNoPedido(db, pedidoRef, {
+    contaUid,
+    contaCriada,
+    emailStatus,
+    pessoaVinculada,
   });
 
   // Sem PII no log (LGPD) — nunca o e-mail/nome.
