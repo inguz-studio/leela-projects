@@ -253,10 +253,11 @@ muda em `portaOrganizador.ts` e em nenhum outro lugar.
 
 - `packages/api-client` — **zero**.
 - `apps/landing` — **zero**.
-- `functions` — **1 erro, e ele não é desta lane**:
-  `../packages/core/src/aleatorio.ts(52,28): error TS2304: Cannot find name 'Crypto'.`
-  O arquivo é **não versionado** (`??` no `git status`) e pertence a outra lane
-  em voo. Nenhuma linha de `functions/src/cliente/**` aparece na saída.
+- `functions` — **zero** na medição final. Durante a lane a saída teve 1 erro,
+  e ele não era desta lane: `../packages/core/src/aleatorio.ts(52,28): error
+  TS2304: Cannot find name 'Crypto'`, num arquivo **não versionado** de outra
+  lane em voo. Ele sumiu quando aquela lane aterrissou. Em nenhum momento uma
+  linha de `functions/src/cliente/**` apareceu na saída.
 
 **`eslint --max-warnings 0`**
 
