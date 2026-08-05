@@ -34,6 +34,13 @@ function renderView(
   );
 }
 
+/**
+ * O rótulo da caixa de busca nomeia os TRÊS campos que ela casa (RN-397 +
+ * RN-475). Ele mora numa constante aqui porque é aceite, não detalhe: busca
+ * que ninguém sabe que existe não é busca.
+ */
+const LABEL_BUSCA = 'Buscar atleta pelo nome, código do ingresso ou código da compra';
+
 function muitosInscritos(n: number, status: StatusInscrito = 'confirmado') {
   return Array.from({ length: n }, (_, i) =>
     mkInscrito({
@@ -55,14 +62,29 @@ describe('InscritosView', () => {
 
   it('busca "Marina" filtra e atualiza o contador', async () => {
     renderView({ inscritos: muitosInscritos(50), loading: false, error: null, modalidades: ['10k'] });
-    await userEvent.type(screen.getByLabelText('Buscar atleta pelo nome ou código do ingresso'), 'Marina');
+    await userEvent.type(screen.getByLabelText(LABEL_BUSCA), 'Marina');
     expect(screen.getByText('Mostrando 1 de 50')).toBeInTheDocument();
     expect(screen.getByText('Marina Silva')).toBeInTheDocument();
   });
 
+  // A ponte que a spec do código da compra exige: quem recebe um `PED-` do
+  // comprador acha a compra na busca que já existe, sem query, índice ou tela
+  // nova — o espelho do código no inscrito é o que paga isso (RN-475).
+  it('busca acha a compra pelo código que a pessoa dita, com prefixo e em minúsculas', async () => {
+    const inscritos = [
+      mkInscrito({ id: 'a', atletaNome: 'Marina Silva', modalidade: '10k', codigoPedido: 'A2B3C' }),
+      mkInscrito({ id: 'b', atletaNome: 'João Pereira', modalidade: '10k', codigoPedido: 'K7MPQ' }),
+    ];
+    renderView({ inscritos, loading: false, error: null, modalidades: ['10k'] });
+    await userEvent.type(screen.getByLabelText(LABEL_BUSCA), 'ped-k7mpq');
+    expect(screen.getByText('Mostrando 1 de 2')).toBeInTheDocument();
+    expect(screen.getByText('João Pereira')).toBeInTheDocument();
+    expect(screen.queryByText('Marina Silva')).not.toBeInTheDocument();
+  });
+
   it('filtro sem correspondência mostra EmptyState', async () => {
     renderView({ inscritos: muitosInscritos(20), loading: false, error: null, modalidades: ['10k'] });
-    await userEvent.type(screen.getByLabelText('Buscar atleta pelo nome ou código do ingresso'), 'Zzzzz');
+    await userEvent.type(screen.getByLabelText(LABEL_BUSCA), 'Zzzzz');
     expect(screen.getByText('Nenhum inscrito encontrado')).toBeInTheDocument();
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   codigoCasaBusca,
+  codigoPedidoCasaBusca,
   contadorInscritos,
   contarPendentesAntigos,
   contarPorStatus,
@@ -165,5 +166,83 @@ describe('codigoCasaBusca', () => {
     expect(codigoCasaBusca(undefined, 'AB2')).toBe(false);
     expect(codigoCasaBusca('AB2CD3', '')).toBe(false);
     expect(codigoCasaBusca('AB2CD3', '   ')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Código da COMPRA na busca (S1228-T3 · RN-474/RN-475)
+//
+// O que estes casos prendem: quem liga para o atendimento dita `PED-A2B3C`, e o
+// operador digita isso na MESMA caixa em que já digita nome e código de
+// ingresso. Sem query nova, sem índice novo — o espelho `Inscrito.codigoPedido`
+// é o que faz a busca custar zero (RN-397 é o molde).
+// ---------------------------------------------------------------------------
+
+const comCompra = [
+  mkInscrito({ id: '1', atletaNome: 'Marina Silva', codigoIngresso: 'AB2CD3', codigoPedido: 'A2B3C' }),
+  mkInscrito({ id: '2', atletaNome: 'João Pereira', codigoIngresso: 'XY7ZK9', codigoPedido: 'K7MPQ' }),
+  // Compra anterior à S1228 — o backfill (5b) ainda não rodou nela.
+  mkInscrito({ id: '3', atletaNome: 'Ana Costa' }),
+  // Código que COMEÇA com a raiz do prefixo: `P`, `E` e `D` estão no alfabeto,
+  // então `PEDXY` é um código legítimo e não pode ser decepado.
+  mkInscrito({ id: '4', atletaNome: 'Bruno Lima', codigoPedido: 'PEDXY' }),
+];
+
+describe('busca por código da compra (RN-475)', () => {
+  it('acha a linha pelo código exato, sem o prefixo', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'A2B3C' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('acha COM o prefixo, do jeito que a pessoa lê no e-mail', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'PED-K7MPQ' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('caixa não importa — `ped-a2b3c` acha `A2B3C`', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'ped-a2b3c' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCompra, { busca: 'k7mpq' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('ignora espaço e hífen colados pelo operador', () => {
+    expect(filtrarInscritos(comCompra, { busca: ' PED - A2 B3 C ' }).map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('acha por prefixo — o operador digita enquanto a pessoa fala', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'K7M' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('NÃO adivinha caractere ambíguo — acharia a COMPRA de outra pessoa', () => {
+    // 'A0B3C' (zero) não vira 'AOB3C' nem 'A2B3C'.
+    expect(filtrarInscritos(comCompra, { busca: 'A0B3C' })).toEqual([]);
+  });
+
+  it('código que começa com a raiz do prefixo não é decepado', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'PEDXY' }).map((i) => i.id)).toEqual(['4']);
+    // E com o prefixo de apresentação por cima, o mesmo código continua achável.
+    expect(filtrarInscritos(comCompra, { busca: 'PED-PEDXY' }).map((i) => i.id)).toEqual(['4']);
+  });
+
+  it('inscrito SEM código de compra nunca é achado por código', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'A2B3C' }).map((i) => i.id)).toEqual(['1']);
+    // A linha sem código continua achável pelo NOME, como sempre foi.
+    expect(filtrarInscritos(comCompra, { busca: 'ana' }).map((i) => i.id)).toEqual(['3']);
+  });
+
+  it('nome e código do ingresso continuam funcionando na MESMA caixa', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'marina' }).map((i) => i.id)).toEqual(['1']);
+    expect(filtrarInscritos(comCompra, { busca: 'XY7ZK9' }).map((i) => i.id)).toEqual(['2']);
+  });
+
+  it('busca por compra respeita os demais filtros (composição intacta)', () => {
+    expect(filtrarInscritos(comCompra, { busca: 'A2B3C', status: 'pendente' })).toEqual([]);
+  });
+});
+
+describe('codigoPedidoCasaBusca', () => {
+  it('sem código, sem match; busca vazia não casa tudo', () => {
+    expect(codigoPedidoCasaBusca(undefined, 'A2B')).toBe(false);
+    expect(codigoPedidoCasaBusca('A2B3C', '')).toBe(false);
+    expect(codigoPedidoCasaBusca('A2B3C', '   ')).toBe(false);
+    // Só o prefixo digitado não pode casar a compra de todo mundo.
+    expect(codigoPedidoCasaBusca('A2B3C', 'PED-')).toBe(false);
   });
 });

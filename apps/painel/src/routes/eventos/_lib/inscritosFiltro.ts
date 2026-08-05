@@ -5,7 +5,11 @@
 // =============================================================================
 
 import type { Inscrito, KitInscrito, StatusInscrito } from '@leela/core';
-import { STATUS_INSCRITO, normalizarCodigoIngresso } from '@leela/core';
+import {
+  STATUS_INSCRITO,
+  normalizarCodigoIngresso,
+  normalizarCodigoPedido,
+} from '@leela/core';
 
 export interface FiltroInscritos {
   /** Texto de busca por nome do atleta (opcional) */
@@ -44,11 +48,43 @@ export function codigoCasaBusca(
 }
 
 /**
+ * O texto digitado casa o CÓDIGO da COMPRA (RN-474/RN-475)?
+ *
+ * Mesmo molde da RN-397, e de propósito: quem liga para o atendimento dita o
+ * código da compra, e o operador digita na MESMA caixa em que já digita nome e
+ * código de ingresso. O espelho do código no inscrito (`Inscrito.codigoPedido`)
+ * é o que faz isso custar zero — nenhuma query, nenhum índice, nenhuma tela.
+ *
+ * A normalização vem do core (`normalizarCodigoPedido`): caixa, espaço, hífen
+ * e o PREFIXO de apresentação. O prefixo NUNCA é reescrito aqui — ele vive numa
+ * constante única do core justamente para o veto do dono (CODPED-1) custar um
+ * redeploy, e não uma varredura de telas.
+ *
+ * Duas recusas herdadas, ambas deliberadas:
+ *  • **Não conserta caractere ambíguo** — `A0B3C` jamais vira `AOB3C`. Aqui o
+ *    palpite errado devolve a COMPRA de outra pessoa, não uma linha só.
+ *  • **O prefixo só cai no código inteiro** (`PED-A2B3C`), porque `PEDXY` é um
+ *    código legítimo. Consequência visível no balcão: digitando COM o prefixo,
+ *    a linha aparece quando o quinto símbolo entra; digitando SEM ele, aparece
+ *    já no primeiro. Quem dita lê o código todo, então o caminho progressivo é
+ *    o de sempre. @pure
+ */
+export function codigoPedidoCasaBusca(
+  codigoPedido: string | undefined,
+  busca: string,
+): boolean {
+  if (typeof codigoPedido !== 'string' || codigoPedido.length === 0) return false;
+  const alvo = normalizarCodigoPedido(busca);
+  return alvo.length > 0 && codigoPedido.startsWith(alvo);
+}
+
+/**
  * Aplica busca + filtros. Ordem preservada (já vem ordenado por nome).
  *
- * A busca casa NOME **ou** CÓDIGO do ingresso (RN-397) — uma caixa só, como a
- * tela já tinha, porque no balcão ninguém escolhe aba antes de procurar. O
- * contador "mostrando X de Y" segue derivado deste mesmo resultado.
+ * A busca casa NOME, **ou** CÓDIGO do ingresso (RN-397), **ou** CÓDIGO da
+ * compra (RN-475) — uma caixa só, como a tela já tinha, porque no balcão
+ * ninguém escolhe aba antes de procurar. O contador "mostrando X de Y" segue
+ * derivado deste mesmo resultado.
  * @pure
  */
 export function filtrarInscritos(
@@ -60,7 +96,8 @@ export function filtrarInscritos(
     if (
       alvo &&
       !normalizarBusca(i.atletaNome).includes(alvo) &&
-      !codigoCasaBusca(i.codigoIngresso, filtro.busca ?? '')
+      !codigoCasaBusca(i.codigoIngresso, filtro.busca ?? '') &&
+      !codigoPedidoCasaBusca(i.codigoPedido, filtro.busca ?? '')
     )
       return false;
     if (filtro.status && i.status !== filtro.status) return false;

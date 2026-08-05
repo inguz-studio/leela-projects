@@ -36,6 +36,9 @@ function inscritoComDados(over: Partial<Inscrito> = {}): Inscrito {
 function pedidoPago(): Pedido {
   return {
     id: 'ped-abc123',
+    // Código da compra (RN-474) — os cinco símbolos, SEM prefixo, como o doc
+    // grava. O `PED-` é apresentação e entra na hora de exibir.
+    codigoPedido: 'A2B3C',
     tenantId: 'castelo',
     eventoId: 'meia-floripa-2026',
     responsavel: { atletaId: 'atl-1', nome: 'Marina Silva', email: 'm@x.com' },
@@ -162,9 +165,87 @@ describe('InscritoSlideIn — Aba Pagamento [pag]', () => {
     const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
     renderSlide({ pedidoEPagamento: dados });
     await abrirPagamento();
-    expect(screen.getByText('ped-abc123')).toBeInTheDocument();
+    expect(screen.getByText('PED-A2B3C')).toBeInTheDocument();
     expect(screen.getByText('R$ 189,00 · Lote 2 — Regular')).toBeInTheDocument();
     expect(screen.getByText('Visa •••• 4821 · 12× de R$ 16,99')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Campo "Pedido" — o operador lê o CÓDIGO da compra (S1228-T3 · RN-475)
+//
+// O que estes casos prendem, e por quê: o id do documento é `ped-{uid}-{chave}`,
+// então imprimi-lo publica o uid da conta do comprador numa tela que o operador
+// fotografa e cola em chamado. O código o substitui; a ausência dele vira
+// travessão, NUNCA o id de volta; e o id continua copiável, porque o estorno da
+// plataforma segue pedindo o id interno digitado.
+// ---------------------------------------------------------------------------
+
+describe('InscritoSlideIn — campo Pedido (RN-475)', () => {
+  function abrirPagamento() {
+    return userEvent.click(screen.getByRole('tab', { name: 'Pagamento' }));
+  }
+
+  it('mostra o código COM o prefixo e NÃO imprime o id interno', async () => {
+    const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+    renderSlide({ pedidoEPagamento: dados });
+    await abrirPagamento();
+    expect(screen.getByText('PED-A2B3C')).toBeInTheDocument();
+    expect(screen.queryByText('ped-abc123')).not.toBeInTheDocument();
+  });
+
+  it('compra sem código (pré-backfill) → travessão, nunca o id no lugar', async () => {
+    const { codigoPedido: _semCodigo, ...semCodigo } = pedidoPago();
+    const dados: PedidoEPagamentoDoInscrito = { pedido: semCodigo, pagamento: pagamentoCartao() };
+    renderSlide({ pedidoEPagamento: dados });
+    await abrirPagamento();
+    expect(screen.queryByText('ped-abc123')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^PED-/)).not.toBeInTheDocument();
+    const campo = screen.getByText('Pedido').parentElement;
+    expect(campo).not.toBeNull();
+    expect(within(campo as HTMLElement).getByText('—')).toBeInTheDocument();
+    expect(within(campo as HTMLElement).getByText('Compra sem código')).toBeInTheDocument();
+  });
+
+  it('código fora do formato é tratado como ausência (não vaza dado cru na tela)', async () => {
+    const dados: PedidoEPagamentoDoInscrito = {
+      // Zero e `O` não existem no alfabeto — dado corrompido não vira código.
+      pedido: { ...pedidoPago(), codigoPedido: 'A0B3C' },
+      pagamento: pagamentoCartao(),
+    };
+    renderSlide({ pedidoEPagamento: dados });
+    await abrirPagamento();
+    expect(screen.queryByText(/A0B3C/)).not.toBeInTheDocument();
+    expect(screen.queryByText('ped-abc123')).not.toBeInTheDocument();
+  });
+
+  it('copiar leva o id interno ao clipboard sem exibi-lo', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    try {
+      const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+      renderSlide({ pedidoEPagamento: dados });
+      await abrirPagamento();
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar id interno' }));
+      expect(writeText).toHaveBeenCalledWith('ped-abc123');
+      expect(await screen.findByText('Id interno copiado.')).toBeInTheDocument();
+      expect(screen.queryByText('ped-abc123')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('sem clipboard disponível → diz que não copiou, em vez de fingir sucesso', async () => {
+    vi.stubGlobal('navigator', { ...navigator, clipboard: undefined });
+    try {
+      const dados: PedidoEPagamentoDoInscrito = { pedido: pedidoPago(), pagamento: pagamentoCartao() };
+      renderSlide({ pedidoEPagamento: dados });
+      await abrirPagamento();
+      await userEvent.click(screen.getByRole('button', { name: 'Copiar id interno' }));
+      expect(await screen.findByText('Não foi possível copiar o id interno.')).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

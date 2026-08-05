@@ -345,8 +345,14 @@ export function InscritosView({
       {/* Barra de filtros consolidada */}
       <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-3)]">
         <div className="flex flex-wrap items-end gap-[var(--spacing-3)]">
+          {/*
+            RN-475: o rótulo nomeia os TRÊS campos que a caixa casa, porque
+            quem recebe um `PED-` no telefone precisa saber que ele serve aqui —
+            a busca já casa o código da compra (espelho no inscrito), e busca
+            que ninguém sabe que existe não é busca.
+          */}
           <SearchInput
-            aria-label="Buscar atleta pelo nome ou código do ingresso"
+            aria-label="Buscar atleta pelo nome, código do ingresso ou código da compra"
             placeholder="Buscar por nome ou código"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}

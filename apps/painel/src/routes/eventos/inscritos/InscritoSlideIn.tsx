@@ -38,6 +38,7 @@ import {
 } from '@leela/design-system';
 import {
   FUSO_EVENTO,
+  formatarCodigoPedido,
   idadeNaData,
   pedidoDeGrupo,
   type GeneroInscrito,
@@ -358,7 +359,7 @@ function AbaPagamento({
   return (
     <div className="flex flex-col gap-[var(--spacing-4)]">
       <dl className="flex flex-col gap-[var(--spacing-4)]">
-        <Campo termo="Pedido" valor={<span className="font-mono text-[length:var(--font-size-sm)]">{pedido.id}</span>} />
+        <CampoPedido pedido={pedido} />
         <Campo
           termo="Status do pedido"
           valor={<Badge variant={STATUS_PEDIDO_VARIANT[pedido.status]}>{STATUS_PEDIDO_LABEL[pedido.status]}</Badge>}
@@ -588,6 +589,80 @@ function Campo({ termo, valor }: { termo: string; valor: React.ReactNode }): JSX
     <div className="flex flex-col gap-[var(--spacing-1)]">
       <dt className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">{termo}</dt>
       <dd className="text-[length:var(--font-size-base)] text-[var(--text-primary)]">{valor}</dd>
+    </div>
+  );
+}
+
+/**
+ * Campo "Pedido" (RN-475 · S1228-T3) — o operador lê o CÓDIGO da compra.
+ *
+ * POR QUE O ID INTERNO SAI DA VISTA. O id do documento é `ped-{uid}-{chave}`
+ * por construção, então imprimi-lo publica o **uid da conta do comprador** —
+ * o identificador que correlaciona a pessoa no sistema inteiro — numa tela que
+ * o operador fotografa e cola em chamado. Setenta e três caracteres era o
+ * sintoma; o uid viajando é o dano.
+ *
+ * AUSÊNCIA É AUSÊNCIA. Compra anterior à S1228 (o backfill da 5b ainda não
+ * rodou) não tem código, e o que aparece é um travessão — nunca o id no lugar.
+ * Um fallback aqui seria um ramo permanente para reintroduzir o vazamento em
+ * condição rara, que é a pior forma de mantê-lo. Quem decide é
+ * `formatarCodigoPedido`, do core: string vazia quando não há código válido.
+ *
+ * O ID CONTINUA DISPONÍVEL PARA COPIAR, e essa é a ponte que a spec exige: o
+ * estorno da plataforma (`EstornosAdminRoute`) age cross-tenant e segue pedindo
+ * o id interno digitado, porque aceitar o código curto ali criaria um oráculo
+ * de cinco símbolos. Quem recebe um `PED-` do comprador acha a compra pela
+ * busca desta tela e copia o id daqui. Copiar não é exibir: o valor vai ao
+ * clipboard sem entrar no DOM.
+ */
+function CampoPedido({ pedido }: { pedido: Pedido }): JSX.Element {
+  const codigo = formatarCodigoPedido(pedido.codigoPedido);
+  const [aviso, setAviso] = React.useState('');
+
+  async function copiarIdInterno(): Promise<void> {
+    // Sem clipboard (jsdom, http sem contexto seguro, permissão negada) o
+    // honesto é dizer que não copiou — nunca fingir sucesso e deixar o
+    // operador colar o conteúdo anterior da área de transferência.
+    const escrever = navigator.clipboard?.writeText.bind(navigator.clipboard);
+    if (!escrever) {
+      setAviso('Não foi possível copiar o id interno.');
+      return;
+    }
+    try {
+      await escrever(pedido.id);
+      setAviso('Id interno copiado.');
+    } catch {
+      setAviso('Não foi possível copiar o id interno.');
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-[var(--spacing-1)]">
+      <dt className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">Pedido</dt>
+      <dd className="flex flex-wrap items-center gap-[var(--spacing-2)] text-[length:var(--font-size-base)] text-[var(--text-primary)]">
+        {codigo ? (
+          <span className="font-mono text-[length:var(--font-size-sm)]">{codigo}</span>
+        ) : (
+          <>
+            <span aria-hidden>—</span>
+            <span className="sr-only">Compra sem código</span>
+          </>
+        )}
+        <Button variant="ghost" size="sm" onClick={() => void copiarIdInterno()}>
+          Copiar id interno
+        </Button>
+        {/*
+          Região viva SEMPRE montada (anúncio de região recém-inserida é
+          silencioso em parte dos leitores) e DENTRO da linha do campo: vazia
+          ela não gera caixa nenhuma, então não abre buraco embaixo do valor.
+        */}
+        <span
+          aria-live="polite"
+          className="text-[length:var(--font-size-xs)] text-[var(--text-secondary)]"
+        >
+          {aviso}
+        </span>
+      </dd>
     </div>
   );
 }
