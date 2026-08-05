@@ -204,7 +204,10 @@ async function emitirIngressoDoInscrito(
   tenantId: string,
   inscritoId: string,
   keyring: QrKeyring,
-  random: () => number
+  // Sem default aqui TAMBÉM, e por opção: o `undefined` que vem de cima tem de
+  // chegar inteiro ao `gerarCodigoIngresso`. Um default nesta escala apagaria o
+  // do core exatamente como o de cima apagava.
+  random: (() => number) | undefined
 ): Promise<EmissaoInscritoResult> {
   const eventoRef = db.collection('eventos').doc(eventoId);
   const inscritoRef = eventoRef.collection('inscritos').doc(inscritoId);
@@ -332,12 +335,22 @@ async function emitirIngressoDoInscrito(
  * duplicar nada — que é a definição operacional de idempotente por inscrito.
  *
  * @param random RNG injetável — os testes forçam colisão com ele.
+ *
+ * ⚠ SEM DEFAULT, e isso é a correção (REV-A4 · gêmeo da RN-474): enquanto o
+ * default aqui era `Math.random`, ele VENCIA a fonte criptográfica que o core
+ * passou a usar (`d36afb64` · `aleatorio.ts`) — o último default a falar vence
+ * — e TODO ingresso continuava sorteando com o PRNG do V8, cujo estado é
+ * recuperável a partir de poucas saídas. O código do ingresso é o que a pessoa
+ * DITA no balcão (RN-397), e prever o de outra pessoa é ser atendido como ela.
+ * Ausente o default, `undefined` atravessa até `gerarCodigoIngresso`, que cai
+ * no sorteio uniforme com entropia do sistema. A injeção continua intacta —
+ * é ela que os testes de colisão usam.
  */
 export async function emitirIngressosDoPedido(
   db: Db,
   pedidoId: string,
   keyring: QrKeyring | null,
-  random: () => number = Math.random
+  random?: () => number
 ): Promise<ResultadoEmissaoIngressos> {
   const vazio = (motivo: string): ResultadoEmissaoIngressos => ({
     processado: false,
