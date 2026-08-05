@@ -83,6 +83,13 @@ const SEGREDOS = [
   // segredo já no ar — ver a resolução de apelidos abaixo.
   'BANK_DATA_KEY',
   'BREVO_API_KEY',
+  // ⚠ SPEC-CONTAS-LANDING (2026-08-05) — o SÉTIMO segredo, e ele nasce COM a
+  // guarda em vez de depois dela. `CODIGO_ACESSO_PEPPER` é o pepper do HMAC do
+  // código de seis dígitos (RN-476): sem ele o digest de 10⁶ valores seria
+  // enumerável offline em milissegundos. Fail-closed no acessor — em produção,
+  // a function que o lê sem declarar no `runWith` levanta na primeira chamada,
+  // que é exatamente a forma de falha dos três incidentes acima.
+  'CODIGO_ACESSO_PEPPER',
   'CRM_ID_PEPPER',
   'QR_TOKEN_KEYS',
 ] as const;
@@ -125,6 +132,15 @@ const ACESSORES: { chamada: string; defineEm: string; exige: Segredo[] }[] = [
     chamada: 'crmIdPepper(',
     defineEm: 'crm/agregarClientes.ts',
     exige: ['CRM_ID_PEPPER'],
+  },
+  {
+    // O acessor do pepper do código de seis dígitos (RN-476). Quem chama
+    // `emitirCodigoDeAcesso`/`consumirCodigoDeAcesso` chama este acessor por
+    // baixo, e o fecho de imports pega isso — por isso a chamada nominal aqui
+    // cobre também quem só usa as funções de alto nível do módulo.
+    chamada: 'codigoAcessoPepper(',
+    defineEm: 'auth/codigoDeAcesso.ts',
+    exige: ['CODIGO_ACESSO_PEPPER'],
   },
 ];
 

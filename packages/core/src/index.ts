@@ -839,6 +839,31 @@ export {
   hrefContatoOnboarding,
 } from './platform/contatoOnboarding';
 
+// Código de acesso de seis dígitos — parte PURA (E00 · S1229 · RN-476).
+// O digest, o pepper e a transação de consumo NÃO estão aqui: eles vivem em
+// `functions/src/auth/codigoDeAcesso.ts`, porque este pacote entra no bundle
+// de cliente e o pepper não pode chegar ao navegador.
+export {
+  TAMANHO_CODIGO_ACESSO,
+  ALFABETO_CODIGO_ACESSO,
+  CODIGO_ACESSO_RE,
+  CODIGO_ACESSO_TTL_MS,
+  CODIGO_ACESSO_MAX_TENTATIVAS,
+  CODIGO_ACESSO_LIMITE_CURTO,
+  CODIGO_ACESSO_JANELA_CURTA_MS,
+  CODIGO_ACESSO_LIMITE_LONGO,
+  CODIGO_ACESSO_JANELA_LONGA_MS,
+  EMAIL_CODIGO_MAX,
+  MENSAGEM_CODIGO_NEGADO,
+  MENSAGEM_CODIGO_MORTO,
+  normalizarEmailCodigo,
+  emailDeCodigoValido,
+  normalizarCodigoDeAcesso,
+  codigoDeAcessoValido,
+  gerarCodigoDeAcesso,
+  tentativasRestantes,
+} from './auth/codigoDeAcesso';
+
 // Cadastro do organizador + consentimento LGPD (E00 · S030 · RN-411/412).
 export type {
   ConsentimentoLgpd,
