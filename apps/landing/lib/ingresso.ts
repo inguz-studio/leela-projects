@@ -45,6 +45,57 @@ export type ResultadoIngresso =
   | { situacao: 'nao_encontrado' }
   | { situacao: 'indisponivel' };
 
+/**
+ * Rótulo, tom e aviso de cada estado (RN-421) — a COPY, numa fonte só.
+ *
+ * Morava dentro do `IngressoView` até a S1214-T5, quando o arquivo PDF virou a
+ * TERCEIRA superfície a renderizar o mesmo ingresso (página, folha A4 e agora
+ * arquivo). Copy repetida em três lugares diverge no primeiro ajuste de texto,
+ * e a spec do PDF nomeia exatamente esse risco. Vive aqui, e não no
+ * componente, porque o gerador de PDF não é React e não pode importar `.tsx`
+ * de dentro de um Route Handler sem arrastar o DS junto.
+ */
+export const ESTADO_INGRESSO_UI: Record<
+  EstadoIngressoPagina,
+  { rotulo: string; variante: 'vitoria' | 'alerta' | 'vulcao' | 'neutro'; aviso: string }
+> = {
+  valido: {
+    rotulo: 'Ingresso válido',
+    variante: 'vitoria',
+    aviso: 'Apresente este QR no credenciamento. Se a imagem não abrir, o código abaixo identifica a inscrição.',
+  },
+  credenciado: {
+    rotulo: 'Credenciado',
+    variante: 'vitoria',
+    aviso: 'A presença já foi registrada. O ingresso continua aqui para você conferir.',
+  },
+  emitindo: {
+    rotulo: 'Emitindo',
+    variante: 'alerta',
+    aviso: 'Estamos emitindo seu ingresso. Assim que ele ficar pronto, o QR aparece nesta mesma página.',
+  },
+  pendente: {
+    rotulo: 'Pagamento pendente',
+    variante: 'alerta',
+    aviso: 'O pagamento ainda não foi confirmado. O ingresso é emitido assim que a confirmação chegar.',
+  },
+  cancelado: {
+    rotulo: 'Inscrição cancelada',
+    variante: 'vulcao',
+    aviso: 'Esta inscrição foi cancelada e não dá acesso ao evento. O código continua aqui para atendimento.',
+  },
+  estornado: {
+    rotulo: 'Inscrição estornada',
+    variante: 'vulcao',
+    aviso: 'O valor desta inscrição foi devolvido, então ela não dá acesso ao evento. O código continua aqui para atendimento.',
+  },
+  encerrado: {
+    rotulo: 'Evento encerrado',
+    variante: 'neutro',
+    aviso: 'Este evento já aconteceu. A página fica como histórico da sua participação.',
+  },
+};
+
 /** Quanto esperamos pela Function antes de degradar (cold start cabe aqui). */
 export const TIMEOUT_INGRESSO_MS = 12_000;
 

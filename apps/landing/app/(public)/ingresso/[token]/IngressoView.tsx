@@ -28,52 +28,11 @@
 
 import { Badge, Card, CardContent } from '@leela/design-system/server';
 import {
+  ESTADO_INGRESSO_UI,
   formatarCarimbo,
   formatarDataEvento,
   type IngressoProjetado,
 } from '../../../../lib/ingresso';
-
-/** Cabeçalho de estado: rótulo, tom do badge e a frase que explica. */
-const ESTADO_UI: Record<
-  IngressoProjetado['estado'],
-  { rotulo: string; variante: 'vitoria' | 'alerta' | 'vulcao' | 'neutro'; aviso: string }
-> = {
-  valido: {
-    rotulo: 'Ingresso válido',
-    variante: 'vitoria',
-    aviso: 'Apresente este QR no credenciamento. Se a imagem não abrir, o código abaixo identifica a inscrição.',
-  },
-  credenciado: {
-    rotulo: 'Credenciado',
-    variante: 'vitoria',
-    aviso: 'A presença já foi registrada. O ingresso continua aqui para você conferir.',
-  },
-  emitindo: {
-    rotulo: 'Emitindo',
-    variante: 'alerta',
-    aviso: 'Estamos emitindo seu ingresso. Assim que ele ficar pronto, o QR aparece nesta mesma página.',
-  },
-  pendente: {
-    rotulo: 'Pagamento pendente',
-    variante: 'alerta',
-    aviso: 'O pagamento ainda não foi confirmado. O ingresso é emitido assim que a confirmação chegar.',
-  },
-  cancelado: {
-    rotulo: 'Inscrição cancelada',
-    variante: 'vulcao',
-    aviso: 'Esta inscrição foi cancelada e não dá acesso ao evento. O código continua aqui para atendimento.',
-  },
-  estornado: {
-    rotulo: 'Inscrição estornada',
-    variante: 'vulcao',
-    aviso: 'O valor desta inscrição foi devolvido, então ela não dá acesso ao evento. O código continua aqui para atendimento.',
-  },
-  encerrado: {
-    rotulo: 'Evento encerrado',
-    variante: 'neutro',
-    aviso: 'Este evento já aconteceu. A página fica como histórico da sua participação.',
-  },
-};
 
 export interface IngressoViewProps {
   ingresso: IngressoProjetado;
@@ -85,7 +44,7 @@ export function IngressoView({
   ingresso,
   paraImpressao = false,
 }: IngressoViewProps): React.JSX.Element {
-  const ui = ESTADO_UI[ingresso.estado];
+  const ui = ESTADO_INGRESSO_UI[ingresso.estado];
   const dataEvento = formatarDataEvento(ingresso.evento.dataISO);
   const carimbo = formatarCarimbo(ingresso.credenciadoEm);
 

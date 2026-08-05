@@ -28,7 +28,10 @@
 // =============================================================================
 
 import type { Metadata } from 'next';
+import { estadoMostraQr } from '@leela/core';
+import { buttonVariants } from '@leela/design-system/server';
 import { buscarIngressoPorLink } from '../../../../lib/ingresso';
+import { cn } from '../../../../lib/utils';
 import {
   IngressoIndisponivel,
   IngressoNaoEncontrado,
@@ -65,14 +68,45 @@ export default async function IngressoPage({ params }: Props): Promise<React.JSX
       )}
 
       {resultado.situacao === 'ok' ? (
-        <p className="mx-auto mt-[var(--spacing-6)] w-full max-w-2xl text-center text-sm">
-          <a
-            href={`/ingresso/${encodeURIComponent(params.token)}/imprimir`}
-            className="font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary"
-          >
-            Versão para imprimir
-          </a>
-        </p>
+        <div className="mx-auto mt-[var(--spacing-6)] flex w-full max-w-2xl flex-col items-center gap-[var(--spacing-4)]">
+          {/* O BOTÃO SÓ EXISTE ONDE O QR EXISTE (RN-473 sobre RN-421). Nos cinco
+              estados sem QR ele não é renderizado — e quem chegar na rota do
+              arquivo mesmo assim volta para cá, onde o estado é lido de novo.
+
+              É `<a href>` DE VERDADE, não `<button>` com JavaScript: link
+              nativo é focável por teclado, abre com Enter, aceita ctrl+clique e
+              "copiar endereço", funciona sem JavaScript e mantém esta rota com
+              ZERO cliente. Quem força o download é o `Content-Disposition` do
+              servidor; o atributo `download` entra como reforço, nunca como o
+              mecanismo. Sem indicador próprio de progresso, pelo mesmo motivo:
+              é trade-off declarado na spec (PDF-5), e quem dá o retorno visual
+              é o indicador de download do navegador.
+
+              `aria-label` com o texto visível DENTRO dele e na mesma ordem —
+              é o que satisfaz o critério de rótulo no nome (WCAG 2.5.3) em vez
+              de quebrá-lo. Altura `lg` = 48px de alvo de toque (o mínimo é 44),
+              e o anel de foco vem do token do DS. */}
+          {estadoMostraQr(resultado.ingresso.estado) ? (
+            <a
+              href={`/ingresso/${encodeURIComponent(params.token)}/pdf`}
+              download
+              aria-label="Salvar ingresso como PDF"
+              data-testid="ingresso-baixar-pdf"
+              className={cn(buttonVariants({ variant: 'secondary', size: 'lg' }), 'w-full sm:w-auto')}
+            >
+              Salvar como PDF
+            </a>
+          ) : null}
+
+          <p className="text-center text-sm">
+            <a
+              href={`/ingresso/${encodeURIComponent(params.token)}/imprimir`}
+              className="font-medium text-text-secondary underline underline-offset-4 hover:text-text-primary"
+            >
+              Versão para imprimir
+            </a>
+          </p>
+        </div>
       ) : null}
     </div>
   );

@@ -100,7 +100,15 @@ export default async function ImprimirIngressoPage({
         data-print-esconder
         className="mx-auto mt-[var(--spacing-6)] w-full max-w-2xl text-center text-sm text-text-secondary"
       >
-        <p>Use o comando de impressão do navegador e escolha “Salvar como PDF”.</p>
+        {/* A COPY PAROU DE DISPUTAR O NOME (RN-473). Até 05/08 esta linha dizia
+            "escolha 'Salvar como PDF'" no menu de impressão — a mesma frase que
+            hoje nomeia o botão da página, apontando para outra coisa. Duas
+            instruções com o mesmo nome e resultados diferentes ensinam errado:
+            aqui é papel, o arquivo é lá. */}
+        <p>Esta é a folha para imprimir: use o comando de impressão do navegador.</p>
+        <p className="mt-[var(--spacing-2)]">
+          Se o que você quer é o arquivo, volte ao ingresso e use o botão “Salvar como PDF”.
+        </p>
         <p className="mt-[var(--spacing-2)]">
           <a
             href={`/ingresso/${encodeURIComponent(params.token)}`}
