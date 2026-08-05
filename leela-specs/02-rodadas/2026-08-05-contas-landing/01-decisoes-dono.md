@@ -1,15 +1,16 @@
 ---
-tags: [leela, decisoes, rodada, contas, primeiro-acesso, cadastro, adminsep]
+tags: [leela, decisoes, rodada, contas, primeiro-acesso, cadastro, adminsep, posse-email]
 trace: leela-pixreal-diag-20260804
 lote: SPEC-CONTAS-LANDING
 data: 2026-08-05
 ---
 
-# 01-decisões · As duas portas do modal de entrada, e o fechamento do ADMINSEP-1
+# 01-decisões · As duas portas do modal de entrada, e os fechamentos do ADMINSEP-1 e do POSSE-EMAIL-1
 
-> Três falas do dono na mesma conversa. As duas primeiras abrem uma frente: a landing passa a
-> ter criação de conta e um primeiro acesso que não depende de link de e-mail. A terceira
-> fecha um item que estava no painel desde 04/08.
+> Cinco falas do dono na mesma conversa. As duas primeiras abrem uma frente: a landing passa a
+> ter criação de conta e um primeiro acesso que não depende de link de e-mail. A terceira e a
+> quarta fecham itens que estavam no painel desde 04/08 e 05/08. A quinta ratifica de passagem
+> a unidade da taxa mínima.
 >
 > Zero código. O território desta lane foi `leela-specs/`, e toda afirmação sobre o repositório
 > foi medida com o caminho citado.
@@ -33,6 +34,14 @@ data: 2026-08-05
 
 > "Acho que podemos deixar separado o acesso de cliente e o acesso admin mesmo."
 
+**Sobre a posse do e-mail, respondendo ao POSSE-EMAIL-1, verbatim:**
+
+> "pode aplicar o POSSE-EMAIL-1 na mesma onda."
+
+**Sobre a unidade da taxa mínima, de passagem, verbatim:**
+
+> "a taxa minima ficou por pedido mesmo né? nao por ingresso"
+
 ## O que cada fala decide
 
 A primeira fala tem duas partes e só uma delas é desta lane. A logo no modal já está sendo
@@ -54,7 +63,15 @@ participante, com a mesma verificação por código, e a fala fecha a fronteira 
 palavras: "sem ser a profissional". A conta profissional continua nascendo pela promoção que a
 RN-461 já definiu, sobre uma conta que já existe.
 
-A terceira fala responde ao ADMINSEP-1 e está registrada na seção própria abaixo.
+A terceira e a quarta falas respondem ao ADMINSEP-1 e ao POSSE-EMAIL-1, e cada uma tem seção
+própria abaixo. A quinta é confirmação: a taxa mínima é **por pedido**, e é assim que ela
+nasceu. A RN-491 já diz que a unidade é o pedido, e diz por medição, não por escolha nova — a
+taxa é calculada uma vez sobre o `valorFinal` do pedido depois do cupom
+(`packages/core/src/checkout/saleState.ts:369-371`), então uma compra de dez ingressos paga um
+piso e não dez. A correção que originou isso é do próprio dono, em 05/08, e está registrada em
+`../2026-08-05-metricas-e-servico/01-decisoes-dono.md` §D-0805-3. Nada muda; o registro existe
+porque pergunta respondida em conversa desaparece, e esta volta sozinha na primeira tela de
+configuração de taxa.
 
 ## A referência que o dono citou, e o que ela devolveu
 
@@ -101,9 +118,87 @@ e o **ADMINSEP-3** (a conta de super-admin de produção é a conta de demonstra
 dois depende desta resposta. O ADMINSEP-3, aliás, tinha escrito no próprio corpo que não
 esperava o ADMINSEP-1.
 
+## Fechamento do POSSE-EMAIL-1
+
+O item estava no painel desde 05/08, saído da review antagonista da S1225. Ele perguntava se o
+vínculo por e-mail continuava valendo como chave de leitura do pedido enquanto ninguém provasse
+posse daquele endereço.
+
+**A resposta, verbatim:** *"pode aplicar o POSSE-EMAIL-1 na mesma onda."*
+
+A onda são os dois fluxos de conta com código de seis dígitos desta rodada. A tarefa **C2**
+(`S1230-T4`) sai do gate e passa a andar com a Onda A, atrás da A4.
+
+### A exposição, como a REV-AREACLIENTE a mediu
+
+A cadeia inteira foi percorrida e ela fecha assim. Alguém registra `vitima@x.com` no
+`/cadastrar`, que é aberto, e **nunca verifica** o endereço. A vítima compra usando o próprio
+e-mail. Na confirmação, o `contaSemFriccao.ts:203` acha a conta do primeiro pela busca de
+e-mail e carimba `contaUid` nela. A **área do cliente nega**, porque o callable exige e-mail
+verificado e o gate segurou. E a **Rule permite**, entregando o pedido inteiro: nome, e-mail,
+telefone, endereço, aceites, itens e valores.
+
+Duas medidas vão junto do fato, porque sem elas o tamanho do caso vira opinião. **Atenuante:**
+é preciso conhecer o `pedidoId`, que é `ped-{uid}-chk-{chave}` e não é enumerável, o que põe a
+severidade real em **média**. **Agravante que não dependia de conhecer nada:** a vítima ficava
+trancada fora da própria compra, porque não criava conta com o endereço tomado, não recebia o
+e-mail de "conta criada" (ele é `nao_aplicavel` de propósito nesse caso) e não tinha caminho
+até uma senha. Essa metade **já tinha sido removida** pelo fix D1 da mesma review, que ligou o
+"Não sei minha senha": a vítima pede o link, o Firebase prova a posse e ela retoma a conta.
+
+A medição está em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-AREACLIENTE.md`, e o fato
+de a área ser estritamente mais fechada que a Rule é o que localiza a exposição do lado da
+Rule, não do lado da tela.
+
+### A correção exata
+
+Uma linha: acrescentar `&& request.auth.token.email_verified == true` **só no ramo (b)** de
+`ehCompradorDoPedido()`, o do vínculo por conta (`contaSemFriccao.contaUid`).
+
+⛔ **O ramo (a) não pode recebê-la.** Ele é o `responsavel.atletaId`, que é o uid da sessão
+**anônima** do checkout, e sessão anônima nunca tem `email_verified`. Exigi-la ali quebraria a
+consulta do próprio pedido logo depois de pagar — a **S1225-T3**, que está em produção e é a
+primeira metade do conserto de 04/08. A fronteira continua imóvel nos dois sentidos, e o caso 6
+da suíte da BUILD-A4 fica vermelho se alguém a mover.
+
+### O argumento que destravou
+
+É o que faz a decisão fazer sentido daqui a três meses, e por isso fica escrito por extenso.
+
+**A hesitação nunca foi sobre o tamanho da exposição — era sobre o custo colateral.** Exigir
+`email_verified` hoje trancaria quem comprou e nunca verificou o endereço, e essa pessoa
+dependia de um link por e-mail para conseguir verificar. Cobrar a prova de alguém sem lhe dar
+caminho até ela é remédio que produz a própria doença.
+
+**Com o código de seis dígitos, essa pessoa passa a ter caminho próprio.** Ela pede, digita,
+define a senha, e o servidor carimba `emailVerified` no mesmo gesto (RN-476, tarefa A4). Depois
+disso, **toda sessão nomeada da landing tem o e-mail verificado**, porque não existe caminho até
+uma senha que não passe pela prova. O remédio deixa de ter efeito colateral, e é só isso que
+mudou.
+
+**A metade do atacante morre na origem, pela RN-478:** nenhuma conta nasce antes do código
+provado, então digitar o endereço de terceiro na porta da landing não cria conta, não ocupa o
+endereço e não impede nada.
+
+Conferido quem ficaria de fora, que é o teste da afirmação: quem comprou e ainda não fez o
+primeiro acesso continua lendo o próprio pedido pela sessão do checkout, que é o ramo que não
+muda, e continua abrindo o ingresso pelo link assinado (RN-452). Ninguém fica trancado.
+
+### O que sobra depois desta decisão
+
+Sobra o vínculo em si. O `contaSemFriccao.ts:203` continua escolhendo a conta por igualdade de
+endereço, e um erro de digitação no checkout continua carimbando a compra na conta errada. O
+que muda é que essa conta só lê o pedido se **também** tiver provado posse daquele endereço, o
+que reduz o caso a alguém que de fato controla a caixa para a qual a compra foi endereçada — e,
+nesse cenário, o e-mail com o ingresso já teria chegado nessa mesma caixa de qualquer forma.
+
+Sobra também a outra porta: o `/cadastrar` do painel continua criando conta sem verificar o
+e-mail, e enquanto ele existir a metade do atacante fica de pé por ali. É matéria do
+**CONTA-2**, que continua no painel.
+
 ## O que esta rodada devolve ao painel
 
-Três coisas sobem, e nenhuma delas foi decidida por conta própria.
+Duas coisas sobem, e nenhuma delas foi decidida por conta própria.
 
 **CONTA-1** pergunta se o código de seis dígitos substitui o link do e-mail da compra ou se os
 dois convivem. É pergunta de verdade porque a casa tem doutrina escrita contra duas
@@ -114,11 +209,10 @@ de 05/08.
 ganha a dela e o `/cadastrar` do painel, sob a RN-461, deixa de criar conta de organizador e
 passa a criar conta na Leela — que é exatamente a mesma coisa que a porta nova faz.
 
-**POSSE-EMAIL-1** não é item novo: é o item que já estava no painel, e esta rodada acrescenta a
-ele uma recomendação com o custo na mão. O código de seis dígitos é a prova de posse que
-faltava, e o parágrafo com o que sobra do item depois dela está em
-`02-spec-contas-landing.md` §"O encontro com o POSSE-EMAIL-1". A ratificação continua sendo do
-dono.
+**POSSE-EMAIL-1 desceu no mesmo dia.** Ele não era item novo, e esta rodada acrescentou a ele
+uma recomendação com o custo na mão — a análise está em `02-spec-contas-landing.md` §"O
+encontro com o POSSE-EMAIL-1". O dono respondeu na mesma conversa, o item saiu do painel pela
+disciplina de limpeza e o registro completo é a seção acima.
 
 ## Vizinhos
 

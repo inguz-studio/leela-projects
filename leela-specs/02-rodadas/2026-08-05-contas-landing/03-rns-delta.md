@@ -52,11 +52,13 @@ data: 2026-08-05
 - **RN-466** — inalterada, e é ela que fornece a constante de versão do termo da conta que a
   RN-479 consome. A partição de base legal continua exatamente como está: nada do termo do
   profissional entra na porta de participante.
-- **RN-469** — inalterada no enunciado. A recomendação de acrescentar
-  `request.auth.token.email_verified == true` ao ramo de vínculo por conta é **recomendação**,
-  registrada no POSSE-EMAIL-1 do painel, e depende da ratificação do dono. A RN-476 é o que
-  remove o custo colateral dessa condição, porque depois dela toda sessão nomeada da landing
-  tem o e-mail verificado.
+- **RN-469** — inalterada no enunciado. Acrescentar
+  `request.auth.token.email_verified == true` ao ramo **(b)** de `ehCompradorDoPedido`, o do
+  vínculo por conta, nasceu como recomendação e **foi autorizado pelo dono em 05/08** no
+  fechamento do POSSE-EMAIL-1 — a nota durável está ao lado da RN-469 no
+  [[LEELA-E12-landing]], e a tarefa é a C2. O ramo (a) não recebe a condição em hipótese
+  nenhuma. A RN-476 é o que remove o custo colateral, porque depois dela toda sessão nomeada da
+  landing tem o e-mail verificado.
 - **RN-452** — inalterada, e é o controle que prova que ninguém fica trancado: ver o ingresso
   continua não exigindo conta, então quem comprou e ainda não fez o primeiro acesso continua
   com o ingresso pelo link assinado.

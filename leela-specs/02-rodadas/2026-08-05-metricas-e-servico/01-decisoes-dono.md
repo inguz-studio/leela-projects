@@ -38,6 +38,12 @@ ingresso:
 A correção é do dono e vale sobre a primeira leitura. O piso é **um por compra**, não um por
 pessoa inscrita naquela compra.
 
+**Reconfirmação, verbatim, em 05/08:** *"a taxa minima ficou por pedido mesmo né? nao por
+ingresso"* — sim, por pedido. Nada mudou desde a correção acima: a RN-491 nasceu com a unidade
+certa, e ela é certa por medição e não por escolha, porque a taxa já é calculada uma vez sobre o
+`valorFinal` do pedido depois do cupom (`packages/core/src/checkout/saleState.ts:369-371`). Uma
+compra de dez ingressos paga um piso, não dez.
+
 ## As quatro decisões
 
 ### D-0805-1 · inscrito no painel é quem pagou

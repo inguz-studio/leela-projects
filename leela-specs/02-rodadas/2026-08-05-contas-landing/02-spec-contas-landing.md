@@ -439,7 +439,12 @@ errada só lê o pedido se **também** tiver provado posse daquele endereço, o 
 um cenário estreito: alguém que de fato controla a caixa para a qual a compra foi endereçada.
 Nesse cenário, o e-mail com o ingresso já teria chegado nessa mesma caixa de qualquer forma, e
 a leitura do pedido não acrescenta exposição nova. Esse é o argumento para eu recomendar
-fechar; a ratificação continua sendo do dono, no painel.
+fechar.
+
+**+05/08 · a recomendação foi aceita.** O dono respondeu na mesma conversa, verbatim: *"pode
+aplicar o POSSE-EMAIL-1 na mesma onda."* O item saiu do painel pela disciplina de limpeza e o
+registro completo está em `01-decisoes-dono.md` §"Fechamento do POSSE-EMAIL-1". A **C2**
+(`S1230-T4`) perdeu a marcação de gated e passa a depender apenas da A4.
 
 ## Parte 7 · As telas
 
@@ -521,14 +526,17 @@ rótulo "Criar conta de organizador" do header saindo junto. Manter as duas deix
 formulários criando a mesma coisa com réguas que vão divergir na primeira revisão de copy, e
 deixa em pé a metade do **POSSE-EMAIL-1** que esta rodada fecharia.
 
-**POSSE-EMAIL-1** · não é item novo. Ganha a recomendação da Parte 6 e o custo com ela.
+**POSSE-EMAIL-1** · não era item novo, ganhou a recomendação da Parte 6 e **foi respondido no
+mesmo dia**: *"pode aplicar o POSSE-EMAIL-1 na mesma onda."* Saiu do painel, e o registro está
+em `01-decisoes-dono.md` §"Fechamento do POSSE-EMAIL-1". A tarefa C2 deixou de ser gated.
 
 **Nota, não pergunta:** o item da borda que segura força bruta ganha um consumidor novo, o
 pedido de código, que é público, anônimo e dispara e-mail. Continua sendo do CTO humano.
 
 ## Vizinhos
 
-`01-decisoes-dono.md` tem o verbatim das três falas e o fechamento do ADMINSEP-1.
+`01-decisoes-dono.md` tem o verbatim das falas do dono e os fechamentos do ADMINSEP-1 e do
+POSSE-EMAIL-1.
 `03-rns-delta.md` tem as sete regras, canônicas nos épicos. `04-fila-codigo.md` tem a ordem de
 execução com as dependências reais. [[catalogo-de-emails]] recebe o nono e-mail.
 [[LEELA-E00-fundacao-tecnica]] é dono da mecânica e da fronteira de contas;

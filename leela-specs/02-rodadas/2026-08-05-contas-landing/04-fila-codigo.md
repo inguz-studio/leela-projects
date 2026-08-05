@@ -19,7 +19,9 @@ data: 2026-08-05
 Três ondas. A primeira constrói o motor de credencial e é onde mora todo o risco: o código de
 seis dígitos não existe no produto, o Firebase não o oferece, e errar mecânica de credencial é
 a categoria mais cara da casa. A segunda é tela e depende do motor inteiro. A terceira é
-fronteira, e uma das duas tarefas dela está **gated** por decisão do dono.
+fronteira, e as duas tarefas dela estão liberadas — a C2 esperava o dono e **foi autorizada em
+05/08**, verbatim *"pode aplicar o POSSE-EMAIL-1 na mesma onda"*; ela continua atrás da A4, que
+é dependência técnica e não gate.
 
 Quase tudo da Onda A leva **⚔**, e isso não é excesso de zelo. Cinco das sete regras novas são
 de credencial, autorização ou dado pessoal, que é exatamente o perfil que a casa manda revisar
@@ -214,16 +216,23 @@ e afirma o negativo: nenhum `profissionais/{uid}`, nenhum claim de tenant, nenhu
 É teste e é barato, e mesmo assim leva ⚔, porque teste de fronteira que passa por acidente é
 pior que teste ausente.
 
-### C2 · `S1230-T4` — a condição de e-mail verificado no ramo de vínculo por conta ⚔ · **GATED**
+### C2 · `S1230-T4` — a condição de e-mail verificado no ramo (b) de `ehCompradorDoPedido` ⚔ · **AUTORIZADA**
 **Superfície:** `firestore.rules` e a suíte de Rules · **Depende de:** A4 · **Rota:** opus
 
-Uma linha: `&& request.auth.token.email_verified == true` no ramo do vínculo por conta da regra
-do pedido. O outro ramo, o da sessão anônima do checkout, **não pode** recebê-la, e existe caso
-de teste que fica vermelho se alguém mover a fronteira.
+Uma linha: `&& request.auth.token.email_verified == true` **só no ramo (b)** de
+`ehCompradorDoPedido()`, o do vínculo por conta (`contaSemFriccao.contaUid`).
 
-**Não parte sem o veto do dono no POSSE-EMAIL-1.** A recomendação está escrita e o custo está
-medido; a decisão continua sendo dele. Depois da A4, aplicar isso deixa de tirar acesso de
-quem quer que seja, porque toda sessão nomeada da landing passa a ter o e-mail verificado.
+⛔ **O ramo (a) nunca.** O `responsavel.atletaId` é o uid da sessão **anônima** do checkout, que
+por construção não tem `email_verified`; a condição ali quebraria a `S1225-T3`, que está **em
+produção** e é a primeira metade do conserto de 04/08. O caso 6 da suíte da BUILD-A4 fica
+vermelho se alguém mover a fronteira, e ele é o que reprova a tarefa se o ramo errado for
+tocado.
+
+**O gate caiu em 05/08.** O dono autorizou, verbatim: *"pode aplicar o POSSE-EMAIL-1 na mesma
+onda."* O registro completo — exposição medida, correção exata e o argumento que destravou —
+está em `01-decisoes-dono.md` §"Fechamento do POSSE-EMAIL-1". O que resta é dependência
+técnica: **a C2 vai atrás da A4**, porque é o carimbo de `emailVerified` dela que faz esta
+condição parar de tirar acesso de quem comprou e nunca verificou.
 
 ## O que não está nesta fila
 
@@ -243,5 +252,6 @@ na mesma semana, sem o dono ter pedido.
 
 ## Estado
 
-**Nada executado.** Onda A com cinco tarefas, Onda B com três, Onda C com duas, sendo uma
-gated. A B1 espera a `BUILD-MOTION` aterrissar. A C2 espera o dono.
+**Nada executado.** Onda A com cinco tarefas, Onda B com três, Onda C com duas, **nenhuma
+gated**. A B1 espera a `BUILD-MOTION` aterrissar. A C2 espera a A4, que é dependência técnica —
+o gate do dono caiu em 05/08.

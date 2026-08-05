@@ -2800,7 +2800,8 @@ Ela está no painel do dono como **PROJPED-1** para ratificação; o default em 
 não são desta diretriz: a capacidade de **listar** os próprios pedidos atravessando tenants, que
 a autorização por campo cria (**PEDLIST-1**), e o fato de `contaSemFriccao.contaUid` sair de uma
 busca por e-mail sem prova de posse, o que faz um vínculo derivado de e-mail não verificado valer
-como chave de leitura desta RN (**POSSE-EMAIL-1**, fronteira RN-174).
+como chave de leitura desta RN (**POSSE-EMAIL-1**, fronteira RN-174 — **decidido pelo dono em
+05/08**, ver a nota da noite mais abaixo; o **PEDLIST-1** continua no painel).
 
 **+05/08 · a área do cliente foi construída e a diretriz NÃO é cumprida por ela (REV-AREACLIENTE).**
 A diretriz diz que todo campo novo em `pedidos/{id}` nasce **visível** ao comprador, e a medição
@@ -2839,6 +2840,23 @@ Custo do fix: a conta vinculada e ainda não verificada perde a leitura direta d
 confirmar o e-mail; ela já não vê nada na área hoje, então a perda é de superfície, não de função.
 **A fronteira continua imóvel**, e o caso 6 da suíte da BUILD-A4 fica vermelho se alguém a mover
 sem o dono.
+
+**+05/08 (noite) · o dono decidiu, e a fronteira de posse passa a ser exigida no ramo (b) a
+partir da onda do código de seis dígitos.** Verbatim: *"pode aplicar o POSSE-EMAIL-1 na mesma
+onda."* A diretriz permanente acima não muda de forma — a projeção do pedido continua sendo do
+comprador, e campo novo continua nascendo visível a ele. O que muda é **quem** é o comprador aos
+olhos da Rule pelo ramo (b): a partir desta onda, a conta vinculada por
+`contaSemFriccao.contaUid` só lê o documento se **também** tiver `email_verified` no token. O
+ramo (a), a sessão anônima do checkout, **permanece sem a condição para sempre** — é ele que
+sustenta a S1225-T3 em produção. O que destravou a decisão não foi a exposição mudar de tamanho,
+e sim o custo colateral desaparecer: sob a **RN-476** o primeiro acesso por código carimba
+`emailVerified` no mesmo gesto em que a pessoa define a senha, então quem comprou e nunca
+verificou deixa de ficar sem caminho; e sob a **RN-478** nenhuma conta nasce antes da prova, o
+que mata a metade do atacante na origem. Tarefa **C2 / `S1230-T4`** em
+`02-rodadas/2026-08-05-contas-landing/04-fila-codigo.md`, atrás da A4; registro da decisão em
+`02-rodadas/2026-08-05-contas-landing/01-decisoes-dono.md`. O resíduo que sobra e **não** é
+fechado por isto: o `contaSemFriccao.ts:203` continua escolhendo a conta por igualdade de
+e-mail, e o `/cadastrar` do painel continua criando conta sem verificação (**CONTA-2**).
 
 ### RN-470 (nova, dona) · feedback pós-pagamento em tela, para PIX e cartão
 
@@ -3372,15 +3390,17 @@ Leela antes de decidir participar de alguma coisa.
   existe `profissionais/{uid}`, claim de tenant nem `platform_admin`.
 
 **Tasks:** S1230-T1 (ramo de criação com consentimento, ⚔) · S1230-T2 (a rota `/criar-conta`) ·
-S1230-T3 (a prova da fronteira por teste, ⚔) · S1230-T4 (a condição de e-mail verificado na
-regra do pedido, ⚔), esta última **gated pelo POSSE-EMAIL-1** e sem partir sem o dono.
+S1230-T3 (a prova da fronteira por teste, ⚔) · S1230-T4 (a condição de e-mail verificado **só no
+ramo (b)** da regra do pedido, ⚔), esta última **autorizada pelo dono em 05/08** no fechamento do
+POSSE-EMAIL-1 e dependente apenas da S1229-T4, que é quem carimba `emailVerified`.
 
 ### O que este delta não faz
 
 Não liga login social (QUALIF-5). Não apaga o `/definir-senha` nem o link do e-mail da compra
 (CONTA-1). Não redireciona o `/cadastrar` do painel nem rebatiza o botão do header (CONTA-2 e a
-fila da SPEC-QUALIFICACAO). Não decide o POSSE-EMAIL-1, apenas recomenda e remove o custo
-colateral da correção.
+fila da SPEC-QUALIFICACAO). Sobre o POSSE-EMAIL-1: este delta não o decidiu — ele removeu o
+custo colateral da correção e recomendou; **a decisão veio do dono no mesmo dia**, e a nota
+durável está ao lado da RN-469, acima.
 
 ## Delta o nome que o comprador lê é Serviço (SPEC-METRICAS-SERVICO · 2026-08-05)
 

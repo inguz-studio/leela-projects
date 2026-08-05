@@ -748,9 +748,10 @@ Organizador e cliente continuam cabendo na mesma conta (RN-450).
   **CONTA-2**: quando a fila da SPEC-QUALIFICACAO rodar, o `/cadastrar` do painel fará o mesmo
   que a porta nova, e o rótulo "Criar conta de organizador" do header
   (`PublicHeader.tsx:74-79`) estará desatualizado.
-- **RN-469 inalterada.** Acrescentar `request.auth.token.email_verified == true` ao ramo de
-  vínculo por conta é **recomendação**, registrada no POSSE-EMAIL-1, e espera o dono. O que a
-  RN-476 muda é o custo: depois dela, toda sessão nomeada da landing tem o endereço verificado,
+- **RN-469 inalterada.** Acrescentar `request.auth.token.email_verified == true` ao ramo **(b)**
+  de `ehCompradorDoPedido`, o do vínculo por conta, nasceu como recomendação e **foi autorizado
+  pelo dono em 05/08** no fechamento do POSSE-EMAIL-1; o ramo (a), a sessão anônima do checkout,
+  nunca a recebe. O que a RN-476 muda é o custo: depois dela, toda sessão nomeada da landing tem o endereço verificado,
   então a condição deixa de tirar acesso de alguém. Quem comprou e ainda não fez o primeiro
   acesso continua lendo o próprio pedido pela sessão do checkout, que é o ramo que não muda, e
   continua abrindo o ingresso pelo link assinado (RN-452).
