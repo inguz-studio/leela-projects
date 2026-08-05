@@ -24,8 +24,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
+  getMeusClubesEConvites,
   getMeusIngressos,
   getMinhasCompras,
+  type GetMeusClubesEConvitesResult,
   type GetMeusIngressosResult,
   type GetMinhasComprasResult,
 } from '@leela/api-client';
@@ -33,6 +35,7 @@ import { Tabs } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 import { rotuloDaConta, useSessaoLeela } from '@/lib/sessao';
 import { EmailNaoVerificado, FalhaDeLeitura, PortaDeEntrada } from './EstadosDaArea';
+import { PainelClubes } from './PainelClubes';
 import { PainelCompras } from './PainelCompras';
 import { PainelIngressos } from './PainelIngressos';
 import { PainelMeusDados } from './PainelMeusDados';
@@ -41,6 +44,7 @@ import { PortasDaConta } from './PortasDaConta';
 interface Dados {
   ingressos: GetMeusIngressosResult;
   compras: GetMinhasComprasResult;
+  clubes: GetMeusClubesEConvitesResult;
 }
 
 export function AreaDoCliente(): React.JSX.Element {
@@ -60,9 +64,9 @@ export function AreaDoCliente(): React.JSX.Element {
     let vivo = true;
     setFalhou(false);
     ensureLeela();
-    void Promise.all([getMeusIngressos(), getMinhasCompras()])
-      .then(([ingressos, compras]) => {
-        if (vivo) setDados({ ingressos, compras });
+    void Promise.all([getMeusIngressos(), getMinhasCompras(), getMeusClubesEConvites()])
+      .then(([ingressos, compras, clubes]) => {
+        if (vivo) setDados({ ingressos, compras, clubes });
       })
       .catch(() => {
         // Estado próprio, nunca lista vazia: dizer "você não tem nada" quando
@@ -143,6 +147,22 @@ export function AreaDoCliente(): React.JSX.Element {
             label: 'Minhas compras',
             count: dados.compras.compras.length,
             content: <PainelCompras compras={dados.compras.compras} />,
+          },
+          {
+            // A contagem da aba é a dos CONVITES que ainda esperam a pessoa —
+            // clube não é pendência, e um número que soma as duas coisas viraria
+            // um aviso permanente para quem só faz parte de clubes.
+            id: 'clubes',
+            label: 'Clubes e convites',
+            count: dados.clubes.convites.filter((c) => c.estado === 'pendente').length,
+            content: (
+              <PainelClubes
+                clubes={dados.clubes.clubes}
+                convites={dados.clubes.convites}
+                clubesCompletos={dados.clubes.clubesCompletos}
+                convitesCompletos={dados.clubes.convitesCompletos}
+              />
+            ),
           },
           {
             id: 'dados',

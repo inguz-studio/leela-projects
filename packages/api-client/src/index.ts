@@ -485,6 +485,10 @@ export type {
 // Área do cliente — callables do próprio dono da conta (S1222-T1 · RN-451)
 // ---------------------------------------------------------------------------
 export { getMinhasCompras, getMeusIngressos } from './cliente';
+// Meus Clubes e a caixa de convites (S1222-T4): o vínculo de membro e as DUAS
+// máquinas de convite (influenciador · RN-316 e promotor · E18). A caixa
+// LISTA; o aceite continua sendo o link com token que chegou por e-mail.
+export { getMeusClubesEConvites } from './cliente';
 // Meus dados do cliente (S1222-T3 · RN-450): SOBRE `atletas/{uid}`, nunca
 // sobre `profissionais/{uid}` — quem acumula os dois papéis tem os dois docs,
 // e cada tela edita o seu.
@@ -498,6 +502,13 @@ export type {
   IngressoDaConta,
   GetMinhasComprasResult,
   GetMeusIngressosResult,
+  PapelNoClube,
+  StatusNoClube,
+  ClubeDaConta,
+  TipoConvite,
+  EstadoConvite,
+  ConviteDaConta,
+  GetMeusClubesEConvitesResult,
 } from './cliente';
 
 // ---------------------------------------------------------------------------

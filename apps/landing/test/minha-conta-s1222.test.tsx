@@ -29,6 +29,7 @@ vi.setConfig({ testTimeout: 20_000 });
 
 const getMeusIngressos = vi.fn();
 const getMinhasCompras = vi.fn();
+const getMeusClubesEConvites = vi.fn();
 const enviarVerificacaoEmail = vi.fn();
 const loginComEmail = vi.fn();
 let assinante: ((u: unknown) => void) | null = null;
@@ -36,6 +37,11 @@ let assinante: ((u: unknown) => void) | null = null;
 vi.mock('@leela/api-client', () => ({
   getMeusIngressos: () => getMeusIngressos(),
   getMinhasCompras: () => getMinhasCompras(),
+  // A aba "Clubes e convites" (S1222-T4) entra na MESMA leitura em paralelo:
+  // sem este seam no mock, o `Promise.all` rejeita e a área inteira cai no
+  // estado de falha — o que mataria os casos deste arquivo por um motivo que
+  // não é o deles.
+  getMeusClubesEConvites: () => getMeusClubesEConvites(),
   enviarVerificacaoEmail: () => enviarVerificacaoEmail(),
   loginComEmail: (...a: unknown[]) => loginComEmail(...a),
   logout: () => Promise.resolve(),
@@ -182,6 +188,17 @@ beforeEach(() => {
   assinante = null;
   getMeusIngressos.mockReset();
   getMinhasCompras.mockReset();
+  getMeusClubesEConvites.mockReset();
+  // Default NEUTRO: a conta deste arquivo não tem clube nem convite, e os
+  // casos daqui não falam sobre isso. Cada caso que precisar de outra coisa
+  // sobrescreve — o mesmo padrão dos outros dois seams.
+  getMeusClubesEConvites.mockResolvedValue({
+    estado: 'ok',
+    clubes: [],
+    convites: [],
+    clubesCompletos: true,
+    convitesCompletos: true,
+  });
   enviarVerificacaoEmail.mockReset();
   loginComEmail.mockReset();
 });

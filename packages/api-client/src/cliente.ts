@@ -118,3 +118,79 @@ export async function getMeusIngressos(): Promise<GetMeusIngressosResult> {
   const res = await fn({});
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// Meus Clubes e a caixa de convites (S1222-T4)
+// ---------------------------------------------------------------------------
+
+/** Papel dentro do clube (RN-103). */
+export type PapelNoClube = 'owner' | 'admin' | 'membro';
+
+/** Status do vínculo com o clube — DERIVADO por data no servidor (RN-102). */
+export type StatusNoClube = 'ativo' | 'novo' | 'inativo';
+
+/** Um clube em que esta conta é membro. */
+export interface ClubeDaConta {
+  /** Chave estável de render, opaca — não é caminho nem id de documento. */
+  chave: string;
+  nome: string;
+  papel: PapelNoClube;
+  status: StatusNoClube;
+  /** Desde quando, ISO 8601. null = carimbo ilegível. */
+  entrouEmIso: string | null;
+}
+
+/** De qual das duas máquinas de convite a linha veio. */
+export type TipoConvite = 'influenciador' | 'promotor';
+
+/**
+ * Em que pé está o convite. `expirado` e `aceito` existem porque sumir com
+ * eles produziria a lista vazia que mente: quem recebeu um convite e não o
+ * encontra na caixa conclui que ele nunca chegou.
+ */
+export type EstadoConvite = 'pendente' | 'expirado' | 'aceito';
+
+/**
+ * Uma linha da caixa de convites.
+ *
+ * O QUE NÃO EXISTE AQUI, E POR QUÊ: token, hash, `refCodigo` e `parceriaId`.
+ * O aceite continua sendo o link com token que chegou por e-mail
+ * (`/convite/afiliado` · RN-316 e `/convite` · E18), e os documentos guardam
+ * apenas o HASH — o link não é reconstituível nem no servidor. A caixa mostra
+ * que o convite existe; ela não é uma segunda superfície de credencial.
+ */
+export interface ConviteDaConta {
+  /** Chave estável de render, opaca. */
+  chave: string;
+  tipo: TipoConvite;
+  estado: EstadoConvite;
+  /** Nome da experiência (influenciador) ou do clube (promotor). */
+  origemNome: string;
+  convidadoEmIso: string | null;
+  expiraEmIso: string | null;
+}
+
+export interface GetMeusClubesEConvitesResult {
+  estado: EstadoAreaCliente;
+  clubes: ClubeDaConta[];
+  convites: ConviteDaConta[];
+  /** false = a lista de clubes foi cortada ou falhou; a tela precisa dizer. */
+  clubesCompletos: boolean;
+  /** false = a caixa de convites foi cortada ou falhou; a tela precisa dizer. */
+  convitesCompletos: boolean;
+}
+
+/**
+ * Os clubes em que a conta é membro e os convites endereçados ao e-mail
+ * VERIFICADO dela. O recorte de autorização é do servidor, pelo mesmo gate das
+ * outras leituras da área: `clubes/{id}/membros`, `eventos/{e}/afiliados` e
+ * `clubes/{id}/convites` são todas fechadas ao participante nas Rules.
+ */
+export async function getMeusClubesEConvites(): Promise<GetMeusClubesEConvitesResult> {
+  const fn = httpsCallable<Record<string, never>, GetMeusClubesEConvitesResult>(
+    getLeelaFunctions(),
+    'getMeusClubesEConvites'
+  );
+  const res = await fn({});
+  return res.data;
+}
