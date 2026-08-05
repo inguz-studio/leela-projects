@@ -19,6 +19,7 @@ O cadastro carimba o consentimento com a versão do termo, a finalidade e a hora
 - **Opções:** recoletar no resgate, com o overlay pedindo o aceite junto do código quando o registro falta — custa uma linha na tela e um campo na chamada · recusar a ativação sem aceite, com mensagem própria mandando falar com o time — mais rígido, e tranca gente legítima na porta · marcar e varrer, com o registro nascendo com o consentimento explicitamente vazio e um relatório listando quem está sem — não resolve, mas para de esconder.
 - **Onde aterrissa:** `resgatarConviteOrganizador` e o overlay de convite; RN-412 e RN-446. Registro completo em `02-rodadas/2026-08-02-retomada/08-achados-dono-0803.md §ONBOARD-REV`.
 - **+04/08 · a porta segue fechada, e agora está medido depois de um deploy.** A lane DEPLOY-EMAIL subiu 18 functions e **re-provou as três da porta do organizador em 404** — `resgatarConviteOrganizador`, `gerarConviteOrganizador` e `revogarConviteOrganizador` —, com três controles positivos para que o 404 não seja sonda quebrada: uma function criada no mesmo deploy responde 204, o webhook responde 405, e o `provisionTenant` responde 204 com data de 28/07 intacta. Detalhe que vale registrar: das três, **só `resgatarConviteOrganizador` existe no código**; as outras duas nunca foram escritas. Produção tem 88 functions e o repositório exporta 89 — a diferença é exatamente ela.
+- **+04/08 (tarde) · nasceu a segunda frente de LGPD, e ela pega carona na mesma conversa jurídica.** A Arena Social (rodada `02-rodadas/2026-08-04-pos-pagamento/`) tem um campo que pode inferir orientação sexual — dado sensível do art. 11: os gêneros de pessoas com quem a pessoa quer se conectar. O tratamento já está escrito como contrato, não como decisão sua (RN-472: campo sempre opcional, consentimento específico com finalidade declarada, visibilidade só da própria pessoa por default, apagar apaga e revoga) — fica registrado aqui para a revisão jurídica que este item já pede cobrir as duas frentes de uma vez, em vez de abrir um segundo item de painel.
 
 ### ADMINSEP-1 · até onde vai "ambientes separados"
 
@@ -155,14 +156,32 @@ Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra pre
 - **Opções:** cadastrar lotes e deixar vender · despublicar até ter preço · deixar como está.
 - **Onde aterrissa:** dado de produção. A lane não tocou em nada — a apuração inteira foi leitura.
 
-### POSPAG-1 · a área do cliente virou a rede de proteção que faltou no primeiro pagamento real
+### ARENA-1 · quem vê o que a pessoa preencheu na Arena Social
 
-O pagamento real de 04/08 provou o backend inteiro: webhook em segundos, pedido pago, conta criada, ingresso `T93N7F` emitido. Provou também que o e-mail é o único canal que conta isso ao comprador, e quando ele quebrou (trava de IP na Brevo, BREVO-1 abaixo) nenhuma superfície sobrou. As duas que segurariam a falha já estão especificadas e não construídas: Meus Ingressos (S1222) e o primeiro acesso com senha (S1223). *Você pagou, o ingresso nasceu em dez segundos, e você só soube pelo diagnóstico, não pelo produto.*
+Você pediu a Arena Social — mini bio, gênero, gêneros de interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta. A frase não diz quem vê, e visibilidade é a diferença entre um formulário e uma rede. *A Ana preenche a mini bio e os interesses; ou só ela vê (e a área ainda não conecta ninguém), ou outros participantes veem (e o produto precisa dizer isso a ela antes de ela preencher).*
 
-- **O que fica com você:** só a posição da fila S1222/S1223. O conteúdo já está decidido nas specs de 04/08.
-- **Por que agora:** enquanto essa fila não roda, qualquer falha de envio repete o silêncio de 04/08, agora com compra real acontecendo.
-- **Opções:** puxar a frente para a próxima posição da fila (**default proposto**, porque a área deixou de ser desejo e virou pré-requisito da compra) · manter a posição atual e aceitar o e-mail como fio único até lá.
-- **Onde aterrissa:** S1222 e S1223 em [[LEELA-E12-landing]]; specs em `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md` e `11-fila-contas-e-area-cliente.md`; registro elo a elo em [[fluxo-pos-pagamento]].
+- **O que fica com você:** dizer quem vê o perfil da Arena.
+- **Por que agora:** a resposta desenha as Rules e as telas antes de virar código; mudar visibilidade depois de dado preenchido é retrabalho com dado de gente real.
+- **Opções:** só a própria pessoa vê, e a abertura para outros participantes vem depois, junto da feature de conexão (**default proposto** — o dado nasce guardado e nenhuma promessa é feita antes da hora) · participantes de uma mesma experiência veem o perfil de quem optou por aparecer · organizador da experiência também vê. Em qualquer opção, o campo de gêneros de pessoas segue a régua própria da RN-472 e **nunca** fica visível por default.
+- **Onde aterrissa:** RN-471 e RN-472 em [[LEELA-E12-landing]]; S1226 em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`.
+
+### ARENA-2 · a lista dos pilares de bem-estar não existe em documento nenhum
+
+Você pediu interesses "dentro dos pilares de bem-estar", e nenhum doc do repositório define quais são os pilares. O vocabulário mais próximo é a lista de modalidades do clube (corrida, trail, yoga etc.), que é outra coisa. *A tela de interesses precisa de uma lista para mostrar, e inventá-la dentro de uma task viraria vocabulário de produto decidido por ninguém.*
+
+- **O que fica com você:** cravar a lista, ou editar a proposta.
+- **Por que agora:** a mesma lista serve os interesses da Arena e a categorização de experiências da home que você avisou que vai mexer (D-0802-1). Nascer uma vez, num lugar só, evita duas listas divergindo.
+- **Opções:** a esteira propõe uma lista curta a partir do posicionamento hub de bem-estar — movimento, mente e meditação, natureza e outdoor, comunidade, nutrição, descanso e retiro (ilustrativa) — e você corta e acrescenta (**default proposto**) · você entrega a lista pronta.
+- **Onde aterrissa:** RN-471 em [[LEELA-E12-landing]]; spec §Parte 3 em `02-rodadas/2026-08-04-pos-pagamento/02-spec-pos-pagamento-e-arena-social.md`.
+
+### ARENA-3 · onde a Arena Social mora — na área do cliente, ou no perfil social do E17
+
+O default adotado é que a Arena Social é uma **seção da área do cliente**: você a descreveu no mesmo fôlego dela, e "os dados da pessoa" já moram lá. O registro honesto: o E17 (perfil social) já especifica um perfil público de link-in-bio com mini bio e foto, e os campos se sobrepõem. *Construir as duas sem decidir a relação produz duas bios e duas fotos da mesma pessoa, editadas em lugares diferentes.*
+
+- **O que fica com você:** ratificar o default, ou mandar a Arena ser a fatia privada do perfil social.
+- **Por que agora:** é uma frase agora; depois de construída, é migração de dado.
+- **Opções:** seção da área do cliente, com dados próprios e privados, e a convergência futura mapeada — a bio e a foto podem alimentar o perfil público depois, nunca o contrário automático (**default proposto**) · fatia do perfil social E17, o que obriga a decidir o público×privado de cada campo desde já.
+- **Onde aterrissa:** RN-471 em [[LEELA-E12-landing]]; nota de fronteira no [[LEELA-E17-perfil-social]].
 
 ## Ações que só você pode executar
 
@@ -322,7 +341,7 @@ O e-mail da compra manda um link por inscrito e a página do ingresso existe, ma
 - **O que fica com você:** a posição na fila e o recorte da v1, se quiser apertá-lo.
 - **Por que agora:** o item 60 fechou a spec pelo lado barato, então o que sobra da promessa "estamos emitindo seu ingresso" é justamente esta área.
 - **Onde aterrissa:** S1222 em [[LEELA-E12-landing]], sobre o mesmo bilhete assinado da página do ingresso.
-- **+04/08 · a priorização subiu ao topo deste painel como item próprio, o POSPAG-1.** O primeiro pagamento real provou que o e-mail é fio único: quando ele quebrou, não havia outra superfície. O registro elo a elo está em [[fluxo-pos-pagamento]].
+- **+04/08 (tarde) · a posição está respondida, e o item POSPAG-1 saiu do painel resolvido.** Você confirmou a área como destino do CTA "ver meus pedidos" do feedback pós-compra e o feedback em tela entrou na frente da fila — a área vem logo atrás dele, e o CTA só nasce quando ela existir. Ordem executável em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`; registro completo, com o verbatim, em `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md`. O registro elo a elo do incidente segue em [[fluxo-pos-pagamento]].
 
 ### Entrou em 03/08 · uma conta só para quem é admin e organizador
 

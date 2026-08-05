@@ -2653,3 +2653,139 @@ lança `AsaasValidationError` sem `taxId` (`functions/src/payments/asaasProvider
 não sai, o que funciona é o paliativo já registrado: comprador brasileiro paga pelo estrangeiro
 inscrito com passaporte. Estrangeiro pagando ele mesmo só depois da liberação, e só por cartão
 internacional à vista, nunca PIX, boleto ou parcelado.
+
+## Delta o pedido responde na tela, e a Arena Social (DEC-0804 · 2026-08-04)
+
+O dono leu o diagnóstico do primeiro pagamento real e devolveu três decisões: o comprador
+PODE ler o próprio pedido (houve erro de interpretação quanto ao E12 — o TODO das rules era
+sequenciamento, não intenção de produto), o feedback pós-pagamento passa a existir em tela
+para PIX e cartão, e nasce a Arena Social. Rodada em `02-rodadas/2026-08-04-pos-pagamento/`
+(verbatim em `01-decisoes-dono.md`, spec em `02-…`, fila em `04-fila-codigo.md`). Contexto
+do incidente em [[fluxo-pos-pagamento]].
+
+### RN-469 (nova, dona) · o comprador lê o próprio pedido, após concluir a compra e na área do cliente
+
+Verbatim do dono: *"o usuário pode ver o proprio pedido sim, mas após concluir a compra e
+também na área do cliente"*. Fecha o TODO E12 de `firestore.rules:2528-2530` — que dizia
+*"o responsável/atleta lê o PRÓPRIO pedido só na story do checkout, com teste (…) NÃO abrir
+antes"* e sempre foi sequenciamento, não proibição. A story chegou (S1225), e a abertura
+entra nela, com teste.
+
+A forma testável, independente do mecanismo que a implementação escolher (campo de vínculo
+ou o uid embutido no docId `ped-{uid}-chk-{checkoutId}`):
+
+- lê o pedido **somente** a sessão cujo uid criou o pedido no checkout — inclusive a sessão
+  anônima da compra — e a conta vinculada pela confirmação (`contaSemFriccao.contaUid`);
+- qualquer outro token, anônimo ou nomeado, continua negado; o caso de ataque tem teste
+  obrigatório citando esta RN;
+- `write: if false` permanece; organizador e `platform_admin` continuam lendo como hoje;
+- nenhuma outra coleção abre: `inscritos` e `pessoas` seguem fechadas ao cliente, e a área
+  do cliente segue servida por callable (RN-451). Não há contradição com a RN-451: o que
+  ela proíbe é dado de tenant a token de participante; o pedido do próprio comprador é dado
+  dele, endereço e aceites incluídos.
+
+### RN-470 (nova, dona) · feedback pós-pagamento em tela, para PIX e cartão
+
+Verbatim do dono: *"precisamos dar uma resposta para ele ou em tela, no caso de pix ou em
+cartao também. Mas de inicio podemos colocar a mensagem 'Estamos confirmando o seu pedido' e
+abaixo, um CTA para ele visualizar os proprios pedidos dentro do sistema, e uma orientação
+para confirmar a caixa de e-mail pois enviaremos o acesso do ingresso por lá."*
+
+A v1, deliberadamente barata: **sem polling nem listener obrigatórios**, mas com a leitura
+da RN-469 disponível à tela (consulta no carregamento e num gesto explícito). Estados por
+meio: PIX pendente mostra os três elementos do dono (mensagem, CTA, orientação de e-mail);
+PIX com `status: "pago"` materializado vira a confirmação que a tela já sabe desenhar
+(`StepConfirmacao.tsx:70`, `:100`); cartão distingue confirmado, recusado e indeterminado —
+nunca "Estamos confirmando" sobre resposta já conhecida. A copy do PIX real que promete
+*"a confirmação chega sozinha, em segundos — não é preciso avisar aqui"*
+(`StepPagamento.tsx:256-260`) é corrigida na mesma entrega: nenhuma superfície promete canal
+que não existe. Escuta automática é v2 e não bloqueia nada.
+
+**O CTA é gated pela dependência dura:** "ver meus pedidos" aterrissa no Meus
+Ingressos/histórico da S1222 e só nasce quando a área existir — a fila S1222/S1223 vira
+pré-requisito ou entrega conjunta (é a resposta da POSPAG-1). A RN-421/item 60 fica
+reafirmada: a tela é aviso, nunca garantia de emissão. A RN-440 não se move: nada aqui cria
+pedido, inscrito ou cobrança em ponto novo.
+
+### RN-471 (nova, dona) · Arena Social — escopo e campos
+
+Verbatim do dono: *"Quero também ter uma área 'Arena Social', onde a pessoa pode informar os
+dados dela, como mini bio, genero, generos de interesse, interesses (dentro dos pilares de
+bem-estar), e uma foto. que é a mesma da conta."* E, sobre gêneros de interesse: *"sao duas
+coisas, experiencias e pessoas."*
+
+Seção da área do cliente (default vetável — ARENA-3 no painel; o E17 é a fronteira), com:
+mini bio; gênero da própria pessoa; **dois** campos de interesse distintos — gêneros de
+pessoas com quem quer se conectar nas experiências e tipos de experiência de interesse;
+interesses dentro dos pilares de bem-estar (a lista dos pilares não existe em doc nenhum e
+está no painel como ARENA-2); e a foto **da conta**, reaproveitada — a Arena não tem upload
+próprio, trocar a foto é ato da conta. Edição só pela própria pessoa, tudo opcional, Arena
+vazia é estado válido, vocabulário D-0802-1 (experiência/participante). Visibilidade:
+default restrito, só a própria pessoa, até o veto ARENA-1.
+
+### RN-472 (nova) · o dado sensível da Arena é opt-in, com consentimento específico e visibilidade restrita
+
+"Gêneros de pessoas com quem quer se conectar" permite inferir orientação sexual — dado
+sensível na LGPD (art. 11). Contrato: o campo é **sempre opcional**, nunca pré-selecionado,
+e o vazio não degrada nada; preencher exige **consentimento específico e destacado** no ato,
+com finalidade declarada em linguagem comum, carimbado com versão do texto e hora do
+servidor (o molde de prova que o checkout já pratica); **finalidade única** — conexão entre
+participantes dentro do produto, nunca projeção pública, export de organizador ou marketing;
+**visibilidade default = só a própria pessoa**, com qualquer exposição a terceiros sendo
+opt-in separado; e **apagar apaga** — remover o valor revoga o consentimento e não fica
+cópia em projeção. A revisão jurídica é a mesma conversa do LGPD-1 (nota +04/08 lá), sem
+item novo de painel.
+
+### S1225 · o feedback do pedido na tela do checkout (nova)
+
+**Como** comprador que acabou de pagar, **quero** que a tela me diga o estado do meu pedido
+e o caminho para acompanhá-lo, **para** não depender do e-mail para saber que deu certo.
+
+Critérios (Given/When/Then):
+
+- **Dado** um PIX real pago cujo webhook ainda não materializou o `pago`, **quando** estou
+  na tela de confirmação, **então** vejo "Estamos confirmando o seu pedido", a orientação de
+  conferir o e-mail (o acesso do ingresso vai por lá) e — com a área do cliente no ar — o
+  CTA "ver meus pedidos".
+- **Dado** o `status: "pago"` materializado, **quando** a tela consulta o pedido (RN-469),
+  **então** vejo "Inscrição confirmada!" com o que a tela de pedido pago já mostra.
+- **Dado** um cartão recusado, **quando** a resposta volta, **então** vejo a recusa honesta
+  com caminho de tentar de novo — nunca "Estamos confirmando" sobre recusa conhecida.
+- **Dado** qualquer outra conta ou sessão, **quando** tenta ler o pedido pelo SDK, **então**
+  as Rules negam (caso de ataque da RN-469).
+- **Dado** a v1 no ar, **quando** varro a copy do checkout, **então** nenhuma frase promete
+  confirmação automática em tela sem canal que a cumpra.
+
+**Tasks:** S1225-T1 (rules + teste, ⚔) · S1225-T2 (tela v1 + copy, ⚔) · S1225-T3 (estados
+por meio) · S1225-T4 (CTA, dep. S1222-T2). Detalhe na fila da rodada.
+
+### S1226 · a Arena Social (nova)
+
+**Como** participante, **quero** me apresentar — bio, gênero, interesses e com quem quero me
+conectar — **para** que as experiências também sejam encontro, não só inscrição.
+
+Critérios (Given/When/Then):
+
+- **Dado** a área do cliente, **quando** abro a Arena Social, **então** posso preencher os
+  campos da RN-471, todos opcionais, e a foto exibida é a da minha conta.
+- **Dado** o campo de gêneros de pessoas, **quando** decido preenchê-lo, **então** um
+  consentimento específico com finalidade declarada me é pedido no ato, e sem ele o campo
+  não grava (RN-472).
+- **Dado** qualquer outro usuário, **quando** tenta ler meu perfil da Arena, **então** nada
+  é visível até o veto ARENA-1 abrir o que o dono decidir — e o dado sensível nunca.
+- **Dado** que removo um valor, **quando** salvo, **então** o dado some e o consentimento
+  correspondente consta revogado.
+
+**Tasks:** S1226-T1 (modelo + Rules, ⚔) · S1226-T2 (a seção na área) · S1226-T3
+(consentimento e visibilidade, ⚔). **Gated pelos vetos ARENA-1/2/3** e pela B2 da fila
+ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3).
+
+### Reconciliações desta rodada
+
+- **S1222** ganha o papel de **destino do CTA** do feedback pós-compra; a fila ADMINSEP
+  continua valendo linha a linha, incluindo o bloqueio da B2 pela S1221-T1.
+- **S1223** reconciliada com a DEPLOY-EMAIL: `actionCodeSettings` já existe
+  (`linkDeAcao.ts`, `abf4b794`) com o painel como interim; resta a `/definir-senha` da
+  landing (C1) e a troca do destino (C2), terminando em Meus Ingressos.
+- **O TODO E12 das rules deixa de ser bloqueio** — fechado pela RN-469, dentro da S1225-T1,
+  com teste. Nenhuma abertura antes dela.

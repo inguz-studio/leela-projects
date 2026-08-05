@@ -251,6 +251,20 @@ Dependências: `E12-S1200 ✅→ S1700`; `E01 ThemeProvider ✅→ S1701`; `E13 
 
 O modelo de feed e a Function de agregado do clube são os mesmos do `S1311` do E13. Se os dois lotes forem despachados separados, um vai reimplementar o outro. **Despachar o feed do clube e o feed do perfil no mesmo lote**, ou nomear explicitamente qual dos dois é dono do modelo.
 
+## Fronteira com a Arena Social (DEC-0804 · 2026-08-04) — pergunta aberta, não construir em dobro
+
+O dono pediu em 04/08 uma "Arena Social" na área do cliente: mini bio, gênero, gêneros de
+interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta
+reaproveitada (RN-471 e RN-472, donas no [[LEELA-E12-landing]]; rodada
+`02-rodadas/2026-08-04-pos-pagamento/`). Ela NÃO é este épico: o perfil daqui é público, de
+link-in-bio, e a Arena é privada por default e carrega dado sensível de art. 11. Mas os
+campos se sobrepõem (bio, foto), e por isso a relação está no painel como **ARENA-3** — o
+default vetável é a Arena como seção da área do cliente, com dados próprios, sem escrever em
+`perfis/{handle}`; a convergência futura (bio/foto da Arena alimentando o perfil público,
+por opt-in, nunca o contrário automático) fica mapeada para quando as duas existirem. Quem
+for construir qualquer um dos dois lados lê a rodada antes, para não nascer duas bios e duas
+fotos da mesma pessoa.
+
 ## Delta a página do produtor ganha menu, ícones e feed (DEC-0802B · 2026-08-03 · D-ACH-15..21)
 
 Rodada `02-rodadas/2026-08-02-retomada/`, spec em `06-spec-produtor-page.md`, RNs em

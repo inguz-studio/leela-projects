@@ -55,7 +55,13 @@ tags:
 - [ ] **[E12/E00] Entrar vira um overlay no meio da landing** — hoje "Entrar" leva a uma página própria e tira a pessoa de onde ela estava; passa a ser um componente overlay central na landing inicial 📋 entrou na fila em 03/08 · item 57 (b) · **deixou de ser card solto: a área do cliente depende dele, porque o site não tem login nenhum hoje** [[LEELA-E12-landing]]
     - [ ] **S1221 · Login como overlay central da landing**
         - [ ] S1221-T1 overlay de entrar na home, reusando a tela de login que a porta de entrada construiu
-- [ ] **[E12] A área do cliente, simples, com tudo o que é dela** — histórico de compras, ingressos separados em próximos e passados, clubes, convites para virar promotor, meus dados, trocar senha e a porta para criar conta de organizador; deixou de ser desejo e virou pré-requisito da compra, porque o e-mail manda a pessoa ver o ingresso dentro do sistema 📋 definida por você em 04/08 · absorve o item 60 [[LEELA-E12-landing]]
+- [ ] **[E12] O pedido responde na tela do checkout** — quem pagou vê "Estamos confirmando o seu pedido", a orientação de conferir o e-mail e, quando a área do cliente existir, o caminho para os próprios pedidos; a copy para de prometer confirmação que nenhum canal cumpre 📋 decidido por você em 04/08 · primeiro da fila DEC-0804 [[LEELA-E12-landing]]
+    - [ ] **S1225 · O feedback do pedido na tela do checkout**
+        - [ ] S1225-T1 a leitura do próprio pedido abre nas rules, com o caso de ataque ⚔ · fecha o TODO E12
+        - [ ] S1225-T2 a tela v1 com a mensagem e a orientação de e-mail, e a copy do PIX para de mentir ⚔
+        - [ ] S1225-T3 estados por meio: PIX consulta o pedido, cartão distingue confirmado, recusado e indeterminado
+        - [ ] S1225-T4 o CTA "ver meus pedidos" entra quando a área do cliente subir · depende da S1222-T2
+- [ ] **[E12] A área do cliente, simples, com tudo o que é dela** — histórico de compras, ingressos separados em próximos e passados, clubes, convites para virar promotor, meus dados, trocar senha e a porta para criar conta de organizador; deixou de ser desejo e virou pré-requisito da compra, porque o e-mail manda a pessoa ver o ingresso dentro do sistema 📋 definida por você em 04/08 · absorve o item 60 · destino do CTA do feedback pós-compra (DEC-0804) [[LEELA-E12-landing]]
     - [ ] **S1222 · A área do cliente**
         - [ ] S1222-T1 histórico e ingressos vindo por consulta do próprio dono da conta, sem abrir dado de organizador ⚔
         - [ ] S1222-T2 a casa autenticada na landing, com ingressos em próximos e passados
@@ -65,8 +71,13 @@ tags:
 - [ ] **[E12] Primeiro acesso: o link do e-mail define a senha e já entra** — hoje o link cai numa tela genérica do Google e a pessoa não entra em lugar nenhum; passa a abrir tela da Leela, definir a senha e aterrissar já logada nos ingressos dela 📋 decidido por você em 04/08 · a frente mais curta das três [[LEELA-E12-landing]]
     - [ ] **S1223 · O primeiro acesso do comprador**
         - [ ] S1223-T1 tela de definir senha na landing, com saída para link usado e para quem já definiu ⚔
-        - [ ] S1223-T2 o link passa a apontar para a tela da Leela, e cada origem para a sua casa ⚔
+        - [ ] S1223-T2 o link passa a apontar para a tela da Leela, e cada origem para a sua casa ⚔ · o servidor já foi pago pela S1224; resta trocar o destino
         - [ ] S1223-T3 domínio da continuação autorizado no Auth
+- [ ] **[E12] Arena Social — a pessoa se apresenta e diz com quem e com o quê quer se conectar** — mini bio, gênero, gêneros de interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta reaproveitada; dado sensível com consentimento próprio e visível só para a própria pessoa por default 📋 pedido por você em 04/08 · **aguarda os vetos ARENA-1, ARENA-2 e ARENA-3** [[LEELA-E12-landing]]
+    - [ ] **S1226 · A Arena Social na área do cliente**
+        - [ ] S1226-T1 modelo e Rules, com o dado sensível fechado por construção e o carimbo de consentimento ⚔
+        - [ ] S1226-T2 a seção na área do cliente, com a foto da conta e a Arena vazia como estado válido
+        - [ ] S1226-T3 consentimento específico e visibilidade na tela: opt-in destacado, apagar apaga ⚔
 - [ ] **[E00/E16] A conta do painel admin é outra, e os ambientes se separam** — uma conta só continua valendo para organizador e cliente, e a de administração da plataforma passa a ser separada, com o servidor recusando o acúmulo; corrige um registro errado meu que já tinha virado código 📋 correção sua de 03/08 · substitui o card do item 57 (a) [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S032 · A conta do painel de plataforma é outra**
         - [ ] S032-T1 o roteamento pós-login para de dizer que os papéis se acumulam
