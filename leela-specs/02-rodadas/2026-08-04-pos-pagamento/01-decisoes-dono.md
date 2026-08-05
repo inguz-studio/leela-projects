@@ -60,7 +60,7 @@ Três coisas sobem ao painel como vetáveis, porque a frase do dono não as deci
 ## O que esta rodada fecha e abre no painel
 
 - **POSPAG-1 · RESPONDIDA.** O item perguntava só a posição da fila S1222/S1223, e a resposta do dono foi além dela: a área do cliente é confirmada como destino do CTA ("a área do cliente já foi especificada"), o feedback em tela entra na frente, e a fila S1222/S1223 sobe para logo atrás dele — na prática, o default proposto ("puxar a frente para a próxima posição") ratificado e ampliado. O item sai do painel pela disciplina de limpeza; este arquivo é o registro completo.
-- **BREVO-1 · segue aberta.** A trava de IPs da conta Brevo continua sendo ação do dono no dashboard, e o reenvio dos dois e-mails represados (F2 do diagnóstico) continua esperando por ela.
+- **BREVO-1 · RESOLVIDA em 05/08.** O dono desativou a trava de IPs no dashboard ("liberei o brevo") e a prova veio na hora: `GET /v3/account` com a chave de produção respondeu 200, na conta certa (Inguz Digital). O item saiu do painel pela disciplina de limpeza; este arquivo é o registro. Efeito imediato: os e-mails transacionais de produção voltam a sair no próximo envio, sem redeploy — a trava era da conta Brevo, não do código. Os dois e-mails represados do pedido do dono (ingresso `T93N7F` + conta) continuam esperando a ferramenta de reenvio (F2, em build na lane BUILD-F2F5, com review antagonista antes de executar).
 - **Nascem ARENA-1, ARENA-2 e ARENA-3** — os três vetáveis da Arena Social, no painel com contexto, default e destino.
 
 ## O que esta rodada NÃO decide

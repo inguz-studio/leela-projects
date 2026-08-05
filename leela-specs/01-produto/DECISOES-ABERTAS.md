@@ -185,15 +185,6 @@ O default adotado é que a Arena Social é uma **seção da área do cliente**: 
 
 ## Ações que só você pode executar
 
-### BREVO-1 · a trava de IPs da conta Brevo está ativa e nenhum e-mail transacional sai
-
-Os dois e-mails do primeiro pagamento real, o do ingresso e o da conta nova, levaram 401 da Brevo antes de qualquer aceitação: a conta está com a lista de IPs autorizados ligada, e as functions saem para a internet com IP dinâmico, então todo envio de produção é recusado na porta. A chave é válida; a trava é da conta. É a mesma trava que você desativou em 27/07 — ela voltou, ou nunca saiu de fato, e foi medida ativa em 04/08 com a chave de produção, fora do GCP. *A Ana compra, o ingresso nasce em segundos, e o e-mail que a avisaria morre antes de entrar na fila da Brevo.*
-
-- **O que fica com você:** entrar em `app.brevo.com/security/authorised_ips` e desativar a lista de IPs autorizados. A própria API é bloqueada pela trava, então só o dashboard resolve.
-- **Por que agora:** sem isso nenhum e-mail transacional sai, e o e-mail é hoje o único canal que entrega o ingresso. O reenvio dos dois e-mails represados do seu pedido espera essa ação.
-- **Opções:** desativar a trava no dashboard (**default proposto**, custo zero e efeito imediato) · manter a trava e dar IP fixo às functions com VPC connector e Cloud NAT; essa alternativa é decisão de custo de infraestrutura e vai ao CTO humano, não a você.
-- **Onde aterrissa:** conta Brevo, operação de dashboard. Registro do incidente em [[fluxo-pos-pagamento]]; diagnóstico completo em `.nirvana/outputs/leela-pixreal-diag-20260804/DIAG-PIXREAL-REPORT.md`.
-
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
 
 Achado enquanto eu apurava a separação de contas que você pediu. A conta que administra a plataforma em produção é `admin@demo-leela.dev`, com a senha `demo1234` — a mesma senha de vitrine que está publicada no repositório. O seed de produção a criou de propósito, junto com as contas de demonstração, e o login já foi provado funcionando contra `leela-hub`. *Qualquer pessoa que abra o repositório tem, hoje, a senha da conta que enxerga o CPF e o telefone de todos os inscritos de todos os organizadores, lê dados bancários em claro, aprova repasse, estorna compra, muda a tabela de taxa e cria outros administradores.*
