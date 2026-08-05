@@ -75,6 +75,7 @@ import {
 import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { lerIngressosVivosDoPedido } from '../eventos/emitirIngressos';
+import { registrarIngressoPendente } from '../eventos/ingressosPendentes';
 import { registrarAcessoAuditado } from '../shared/auditoriaAcessos';
 import type { FinanceCaller } from '../finance/atores';
 import {
@@ -140,6 +141,13 @@ export interface ReenviarEmailsResult {
   /** false = replay da mesma chave; nada foi enviado NESTA chamada. */
   executado: boolean;
   motivo?: 'ja_processado';
+  /**
+   * Estado do extrato da operação. `reservado` num REPLAY significa que a
+   * chamada anterior morreu entre o commit da reserva e a entrega — o
+   * operador precisa enxergar isso, senão "já processado" com `resultados`
+   * vazio é indistinguível de "terminou sem nada para enviar".
+   */
+  estado?: EstadoReenvio;
   /** Desfecho por alvo pedido. */
   resultados: Partial<Record<AlvoReenvio, StatusAlvoReenvio>>;
   /** Quantos ingressos foram para o e-mail (0 quando nada saiu). */
@@ -147,9 +155,13 @@ export interface ReenviarEmailsResult {
   forcado: boolean;
 }
 
+/** Estado do extrato `reenviosEmail/{pedidoId}__{reenvioId}`. */
+export type EstadoReenvio = 'reservado' | 'concluido' | 'falhou';
+
 export type ResultadoReenvioAuditado =
   | 'executado'
   | 'replay'
+  | 'falhou'
   | 'negado_papel'
   | 'negado_pedido_inexistente'
   | 'negado_pedido_nao_pago'
@@ -213,16 +225,30 @@ async function reservarReenvio(
 
     // Tranca 2: janela por PEDIDO, lida DENTRO da transação — duas chamadas
     // concorrentes com chaves diferentes não passam as duas.
+    //
+    // ⚠ REV-F2F5 (review antagonista): a comparação NÃO pode exigir
+    // `decorrido >= 0`. `agora` é o relógio de QUEM CHAMA, capturado ANTES da
+    // transação; `ultimoEm` é escrito pelo SERVIDOR no commit do PRIMEIRO
+    // reenvio. Na corrida de dois operadores — o caso exato que esta tranca
+    // existe para cobrir, porque a chave sozinha só protege contra retry — o
+    // perdedor re-lê o doc no retry e enxerga um `ultimoEm` POSTERIOR ao seu
+    // `agora`. Com o `>= 0`, `decorrido` negativo pulava a janela inteira e o
+    // segundo e-mail saía com a credencial de todo mundo (dois admins em
+    // paralelo = 2 envios, provado em `reenvioEmailsPedido.ataque.test.ts`).
+    // Relógio dessincronizado entre a instância e o Firestore produzia o mesmo
+    // bypass, sem corrida nenhuma. Timestamp no futuro agora conta como DENTRO
+    // da janela: fail-closed é a direção segura, e `forcar` segue sendo a
+    // saída consciente.
     const pedidoSnap = await tx.get(pedidoRef);
     const ultimo = pedidoSnap.get('reenvioEmails.ultimoEm') as
       | Timestamp
       | undefined;
     if (!args.forcar && ultimo instanceof Timestamp) {
       const decorrido = args.agora.getTime() - ultimo.toMillis();
-      if (decorrido >= 0 && decorrido < JANELA_REENVIO_MS) {
+      if (decorrido < JANELA_REENVIO_MS) {
         return {
           tipo: 'em_janela' as const,
-          faltamMs: JANELA_REENVIO_MS - decorrido,
+          faltamMs: JANELA_REENVIO_MS - Math.max(decorrido, 0),
         };
       }
     }
@@ -356,6 +382,7 @@ export async function reenviarEmailsDoPedidoCore(
         >) ?? {},
       ingressos: (reserva.doc['ingressos'] as number | undefined) ?? 0,
       forcado: reserva.doc['forcado'] === true,
+      estado: (reserva.doc['estado'] as EstadoReenvio | undefined) ?? 'reservado',
     };
   }
   if (reserva.tipo === 'em_janela') {
@@ -369,37 +396,59 @@ export async function reenviarEmailsDoPedidoCore(
   }
 
   // 4. Entrega (fora de transação — a reserva já garantiu at-most-once).
+  //
+  // ⚠ REV-F2F5: o bloco inteiro é guardado. A etapa de entrega faz quatro
+  // leituras do Firestore FORA dos try/catch de cada alvo (os ingressos vivos,
+  // o destinatário, o pedido e o evento do e-mail da conta), e um
+  // `UNAVAILABLE`/`DEADLINE_EXCEEDED` ali — rotina em Cloud Functions —
+  // escapava com a reserva JÁ commitada: o extrato ficava em `reservado` para
+  // sempre, sem `resultados` e sem `concluidoEm`, com a janela do pedido já
+  // queimada. O operador via um erro, o replay da mesma chave devolvia vazio,
+  // e o único caminho de volta era `forcar` com chave nova — que DUPLICA a
+  // credencial se a entrega tinha acontecido. Fechar o extrato com `falhou`
+  // antes de propagar transforma a adivinhação em leitura.
   const resultados: Partial<Record<AlvoReenvio, StatusAlvoReenvio>> = {};
   let ingressosEnviados = 0;
 
-  if (alvos.includes('ingresso')) {
-    const r = await reenviarIngresso(db, pedidoId, eventoId, deps.emailProvider);
-    resultados.ingresso = r.status;
-    ingressosEnviados = r.ingressos;
-  }
-  if (alvos.includes('conta')) {
-    resultados.conta = await reenviarContaCriada(
-      db,
+  try {
+    if (alvos.includes('ingresso')) {
+      const r = await reenviarIngresso(db, pedidoId, eventoId, deps.emailProvider);
+      resultados.ingresso = r.status;
+      ingressosEnviados = r.ingressos;
+    }
+    if (alvos.includes('conta')) {
+      resultados.conta = await reenviarContaCriada(
+        db,
+        pedidoId,
+        eventoId,
+        pedidoSnap.get('contaSemFriccao') as Record<string, unknown> | undefined,
+        deps
+      );
+    }
+  } catch (err) {
+    await fecharExtratoReenvio(db, pedidoId, reenvioId, {
+      estado: 'falhou',
+      resultados,
+      ingressos: ingressosEnviados,
+      erro: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+    await registrarAcessoReenvio(db, { ...base, resultado: 'falhou' });
+    logger.error('reenvio_emails_interrompido', {
       pedidoId,
       eventoId,
-      pedidoSnap.get('contaSemFriccao') as Record<string, unknown> | undefined,
-      deps
-    );
+      reenvioId,
+      ...resultados,
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+    throw err;
   }
 
   // 5. Desfecho no extrato + log estruturado (sem PII).
-  await db
-    .collection(REENVIOS_EMAIL_COL)
-    .doc(`${pedidoId}__${reenvioId}`)
-    .set(
-      {
-        estado: 'concluido',
-        resultados,
-        ingressos: ingressosEnviados,
-        concluidoEm: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+  await fecharExtratoReenvio(db, pedidoId, reenvioId, {
+    estado: 'concluido',
+    resultados,
+    ingressos: ingressosEnviados,
+  });
   await registrarAcessoReenvio(db, { ...base, resultado: 'executado' });
   logger.info('reenvio_emails_pedido', {
     pedidoId,
@@ -419,7 +468,47 @@ export async function reenviarEmailsDoPedidoCore(
     resultados,
     ingressos: ingressosEnviados,
     forcado: forcar,
+    estado: 'concluido',
   };
+}
+
+/**
+ * Fecha o extrato da operação. NUNCA lança: quando ele é chamado do caminho de
+ * erro, deixar uma segunda exceção por cima da primeira apagaria a causa real.
+ */
+async function fecharExtratoReenvio(
+  db: Db,
+  pedidoId: string,
+  reenvioId: string,
+  desfecho: {
+    estado: EstadoReenvio;
+    resultados: Partial<Record<AlvoReenvio, StatusAlvoReenvio>>;
+    ingressos: number;
+    erro?: string;
+  }
+): Promise<void> {
+  try {
+    await db
+      .collection(REENVIOS_EMAIL_COL)
+      .doc(`${pedidoId}__${reenvioId}`)
+      .set(
+        {
+          estado: desfecho.estado,
+          resultados: desfecho.resultados,
+          ingressos: desfecho.ingressos,
+          ...(desfecho.erro !== undefined ? { erro: desfecho.erro } : {}),
+          concluidoEm: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+  } catch (err) {
+    logger.error('reenvio_emails_extrato_nao_fechado', {
+      pedidoId,
+      reenvioId,
+      estado: desfecho.estado,
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -440,11 +529,39 @@ async function reenviarIngresso(
     // Lista parcial NUNCA sai (mesma razão da RN-219 no caminho automático):
     // quem ficou de fora nunca receberia o ingresso. A varredura emite o que
     // falta e fecha o e-mail; depois disso o reenvio funciona.
+    //
+    // ⚠ REV-F2F5: "a varredura resolve" só era verdade quando existia
+    // `ingressosPendentes/{pedidoId}` — e o gerador mais provável deste estado
+    // NÃO abre pendência nenhuma. `emitirIngressosDoPedido` não conta inscrito
+    // `nao_confirmado` nem como falha nem como recusa, então
+    // `dispararEmissaoIngressosPosConfirmacao` fecha a janela com `falhas: 0` e
+    // nada é registrado; se o inscrito confirmar DEPOIS (transferência, acerto
+    // manual, reprocesso), ele fica confirmado e sem ingresso, o cron varre uma
+    // coleção que não tem o pedido, e o reenvio recusa PARA SEMPRE apontando
+    // para uma ferramenta que não vai agir. A pendência é aberta AQUI, no ponto
+    // em que o sistema descobre o buraco — mesmo padrão do "registro no ponto
+    // da falha" do item 54. É best-effort de propósito (Directive da F5: o
+    // acessório não derruba o principal) e idempotente por `pedidoId`.
     logger.warn('reenvio_ingresso_incompleto', {
       pedidoId,
       eventoId,
       semIngresso: vivos.semIngresso.length,
     });
+    try {
+      await registrarIngressoPendente(db, {
+        pedidoId,
+        eventoId,
+        motivo: 'emissao_incompleta',
+        falhas: vivos.semIngresso.length,
+        detalhe: 'detectado_pelo_reenvio',
+      });
+    } catch (err) {
+      logger.error('reenvio_pendencia_nao_registrada', {
+        pedidoId,
+        eventoId,
+        err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+      });
+    }
     return { status: 'ingresso_incompleto', ingressos: 0 };
   }
   if (vivos.ingressos.length === 0) {
@@ -517,15 +634,6 @@ async function reenviarContaCriada(
       deps.auth,
       deps.emailProvider
     );
-    // O carimbo passa a contar a VERDADE: o e-mail que estava como
-    // `falha_envio` foi entregue. `garantirContaSemFriccao` não reescreve o
-    // carimbo depois do nascimento, então não há corrida com este update.
-    await db.collection('pedidos').doc(pedidoId).update({
-      'contaSemFriccao.emailStatus': 'enviado',
-      'contaSemFriccao.reenviadoEm': FieldValue.serverTimestamp(),
-      atualizadoEm: FieldValue.serverTimestamp(),
-    });
-    return 'enviado';
   } catch (err) {
     registrarIncidenteEmail('reenvio_conta_falhou', {
       tipo: 'reenvio_conta',
@@ -535,6 +643,28 @@ async function reenviarContaCriada(
     });
     return 'falha_envio';
   }
+
+  // ⚠ REV-F2F5: o carimbo fica FORA do try da entrega, e engole o próprio erro.
+  // Antes ele dividia o `catch` com o envio, então um `update` que falhasse
+  // depois de o e-mail ter SAÍDO devolvia `falha_envio` para uma credencial
+  // entregue — e `falha_envio` é o gatilho do incidente crítico da F5 e a
+  // deixa que leva o runbook a reenviar. Mentir para o lado do "não entregou"
+  // custa uma SEGUNDA entrega do link de definir senha. É a mesma postura já
+  // escolhida em `registrarStatusEmailIngressos` e a Directive do commit da
+  // F5: o carimbo é ACESSÓRIO e nunca decide o desfecho do envio.
+  try {
+    await db.collection('pedidos').doc(pedidoId).update({
+      'contaSemFriccao.emailStatus': 'enviado',
+      'contaSemFriccao.reenviadoEm': FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    logger.warn('reenvio_conta_status_nao_carimbado', {
+      pedidoId,
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+  }
+  return 'enviado';
 }
 
 // ---------------------------------------------------------------------------
