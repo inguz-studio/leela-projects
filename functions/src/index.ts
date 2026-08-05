@@ -205,6 +205,7 @@ export { ingressoPorLink } from './http/ingressoPorLink';
 // estritamente mais fechado que a leitura de pedido próprio da RN-469.
 export { getMinhasCompras } from './cliente/minhasCompras';
 export { getMeusIngressos } from './cliente/meusIngressos';
+export { getMeusClubesEConvites } from './cliente/meusClubes';
 
 // Finance — SALDO DE REPASSE do tenant (E09s-L2-T1 · RN-348/350/351/357):
 // full recompute idempotente de `tenants/{tid}/saldo/current` via
