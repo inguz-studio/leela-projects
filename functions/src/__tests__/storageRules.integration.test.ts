@@ -64,6 +64,15 @@ const PASSO_OWNER_UID = 'uid-passo-owner'; // tenant_owner de passo-certo
 const ATLETA_UID = 'uid-atleta-sem-tenant'; // autenticado sem claims de tenant
 const PLATFORM_ADMIN_UID = 'uid-platform-admin'; // claim mais poderoso do sistema
 
+// DIAG-STORAGE-CAPA: o evento REAL do defeito relatado em produção. Não é um
+// fixture novo por capricho — o objeto do erro do dono foi literalmente
+// `eventos/teste-taxa-repassada/capa`, e o doc de produção tem
+// tenantId=castelo-producoes / organizadorId=uid-marina-castelo (lido por REST
+// no Firestore de produção em 2026-08-05). Reproduzir com o id e o tenant
+// REAIS é o que transforma "a regra parece certa" em "a regra permite ESTE
+// upload"; qualquer outro id deixaria a dúvida de fixture no meio.
+const EVENTO_PROD = 'teste-taxa-repassada';
+
 const PNG_1KB = new Uint8Array(1024).fill(7);
 const CINCO_MB = 5 * 1024 * 1024;
 
@@ -81,18 +90,25 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
       projectId: PROJECT_ID,
       firestore: {
         rules: readFileSync(FIRESTORE_RULES_PATH, 'utf8'),
-        host: 'localhost',
+        host: '127.0.0.1',
         port: Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080),
       },
       storage: {
         rules: readFileSync(STORAGE_RULES_PATH, 'utf8'),
-        host: 'localhost',
-        port: 9199,
+        // IPv4 explícito: `localhost` resolve para ::1 primeiro no Node 18+
+        // (DNS verbatim) e o emulator de Storage sobe em 127.0.0.1 — o par
+        // host/porta tem de ser literal para a suíte não morrer em ECONNREFUSED
+        // quando outra lane já ocupa a porta padrão.
+        host: '127.0.0.1',
+        // Porta própria por lane (mesma disciplina do LEELA_FS_EMU_PORT do
+        // Firestore): duas suítes de Rules no mesmo relógio não podem disputar
+        // 9199 — colisão de emulator é indistinguível de regressão de Rule.
+        port: Number(process.env['LEELA_ST_EMU_PORT'] ?? 9199),
       },
     });
 
     if (!admin.apps.length) {
-      process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
+      process.env['FIRESTORE_EMULATOR_HOST'] = `127.0.0.1:${process.env['LEELA_FS_EMU_PORT'] ?? '8080'}`;
       admin.initializeApp({ projectId: PROJECT_ID });
     }
     adminDb = admin.firestore();
@@ -118,6 +134,13 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
       nome: 'Meia Maratona Floripa 2026',
       slug: EVENTO_CASTELO,
     });
+    // DIAG-STORAGE-CAPA: cópia fiel do doc de PRODUÇÃO do evento do defeito.
+    batch.set(adminDb.doc(`eventos/${EVENTO_PROD}`), {
+      tenantId: CASTELO_ID,
+      nome: '[TESTE] Taxa repassada — evento de teste da plataforma',
+      slug: EVENTO_PROD,
+      organizadorId: MARINA_UID,
+    });
     await batch.commit();
   }
 
@@ -129,6 +152,7 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
         `tenants/${CASTELO_ID}`,
         `clubes/${CLUBE_CASTELO}`,
         `eventos/${EVENTO_CASTELO}`,
+        `eventos/${EVENTO_PROD}`,
       ]);
     });
   }, 30_000);
@@ -751,5 +775,159 @@ describe.skipIf(!hasEmulator)('storage.rules — upload de imagens (LEELA-R5)', 
     await assertSucceeds(
       deleteObject(ref(storageDe(MARINA_UID, marinaClaims), `users/${MARINA_UID}/foto-perfil`))
     );
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // DIAG-STORAGE-CAPA — veredito CONDIÇÃO A CONDIÇÃO do `allow create` de
+  // `eventos/{eventoId}/capa`, sobre o evento e o tenant REAIS do defeito
+  // relatado em produção ("User does not have permission to access
+  // 'eventos/teste-taxa-repassada/capa'").
+  //
+  // As quatro condições do grant, na ordem em que a Rule as encadeia:
+  //   C1 isTenantWriterRole()        — claim: tenantId string + role writer
+  //   C2 eventoDoMeuTenant(eventoId) — CROSS-SERVICE firestore.get no doc
+  //   C3 imagemValida()              — payload 1B..5MB + contentType de imagem
+  //   C4 capaEventoFormatoValido()   — jpeg|png|gif + ≤2MB
+  //
+  // Cada teste abaixo mantém TRÊS condições satisfeitas e falseia UMA, para o
+  // veredito ser por condição e não pelo conjunto. O caso feliz vem primeiro:
+  // com as quatro satisfeitas o upload PASSA — logo a Rule não é a culpada do
+  // que o dono viu.
+  // ═══════════════════════════════════════════════════════════════════════
+  describe('DIAG-STORAGE-CAPA — condição a condição, com o evento de produção', () => {
+    const JPEG_500KB = new Uint8Array(500 * 1024).fill(1);
+    const DOIS_MB = 2 * 1024 * 1024;
+
+    /** Código do erro do SDK, ou null quando o upload passou. */
+    async function codigoDoErro(p: Promise<unknown>): Promise<string | null> {
+      try {
+        await p;
+        return null;
+      } catch (e) {
+        return (e as { code?: string }).code ?? String(e);
+      }
+    }
+
+    it('C1..C4 satisfeitas: a Marina de PRODUÇÃO sobe a capa de teste-taxa-repassada', async () => {
+      const storage = storageDe(MARINA_UID, marinaClaims);
+      const destino = ref(storage, `eventos/${EVENTO_PROD}/capa`);
+      await assertSucceeds(uploadBytes(destino, JPEG_500KB, { contentType: 'image/jpeg' }));
+      const url = await getDownloadURL(destino);
+      expect(url).toContain(`eventos%2F${EVENTO_PROD}%2Fcapa`);
+    }, 30_000);
+
+    it.each([
+      ['sem tenantId no claim', 'uid-sem-tenant', { role: 'tenant_owner' }],
+      ['role promoter', PROMOTER_UID, { tenantId: CASTELO_ID, role: 'promoter' }],
+      ['role platform_admin (não tem tenantId)', PLATFORM_ADMIN_UID, { role: 'platform_admin' }],
+      ['role athlete', 'uid-atleta', { role: 'athlete' }],
+    ])('C1 isTenantWriterRole FALSA (%s) → NEGA', async (_nome, uid, claims) => {
+      await assertFails(
+        uploadBytes(ref(storageDe(uid, claims), `eventos/${EVENTO_PROD}/capa`), JPEG_500KB, {
+          contentType: 'image/jpeg',
+        })
+      );
+    });
+
+    it('C2 eventoDoMeuTenant FALSA (claim de outro tenant) → NEGA', async () => {
+      await assertFails(
+        uploadBytes(
+          ref(storageDe(PASSO_OWNER_UID, passoClaims), `eventos/${EVENTO_PROD}/capa`),
+          JPEG_500KB,
+          { contentType: 'image/jpeg' }
+        )
+      );
+    });
+
+    // ESTE é o teste que reproduz o SINTOMA de produção. Com o doc do evento
+    // fora do alcance do firestore.get, a C2 não fica "falsa": ela ERRA — e o
+    // erro, por construção fail-closed, é NEGAR. O SDK devolve exatamente o
+    // mesmo `storage/unauthorized` que o dono viu, com claim perfeito e arquivo
+    // perfeito. Em produção a mesma indistinguibilidade acontece por outro
+    // motivo (o service agent do Storage não tem permissão de ler o Firestore),
+    // e é por isso que o erro cru na tela não é diagnóstico: ele cobre
+    // "você não pode" e "eu não consegui perguntar" com a mesma frase.
+    it('C2 INDISPONÍVEL (doc do evento ausente) → NEGA com storage/unauthorized — mesmo sintoma da produção', async () => {
+      await adminDb.doc(`eventos/${EVENTO_PROD}`).delete();
+      const storage = storageDe(MARINA_UID, marinaClaims);
+      const codigo = await codigoDoErro(
+        uploadBytes(ref(storage, `eventos/${EVENTO_PROD}/capa`), JPEG_500KB, {
+          contentType: 'image/jpeg',
+        })
+      );
+      expect(codigo).toBe('storage/unauthorized');
+    }, 30_000);
+
+    it.each([
+      ['payload vazio', new Uint8Array(0), 'image/jpeg'],
+      ['acima de 5MB', new Uint8Array(CINCO_MB + 1), 'image/jpeg'],
+    ])('C3 imagemValida FALSA (%s) → NEGA', async (_nome, bytes, contentType) => {
+      await assertFails(
+        uploadBytes(ref(storageDe(MARINA_UID, marinaClaims), `eventos/${EVENTO_PROD}/capa`), bytes, {
+          contentType,
+        })
+      );
+    }, 30_000);
+
+    it.each([
+      ['contentType image/webp', new Uint8Array(1024), 'image/webp'],
+      ['contentType image/avif', new Uint8Array(1024), 'image/avif'],
+      ['2MB + 1 byte', new Uint8Array(DOIS_MB + 1), 'image/jpeg'],
+    ])('C4 capaEventoFormatoValido FALSA (%s) → NEGA', async (_nome, bytes, contentType) => {
+      await assertFails(
+        uploadBytes(ref(storageDe(MARINA_UID, marinaClaims), `eventos/${EVENTO_PROD}/capa`), bytes, {
+          contentType,
+        })
+      );
+    }, 30_000);
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // GUARDA CONTRA REINCIDÊNCIA — o teto e a allowlist da capa estão escritos
+  // em DOIS lugares: na Rule (`capaEventoFormatoValido`, fronteira real) e no
+  // seam do cliente (`problemaDoArquivoCapaEvento`, a mensagem que a pessoa
+  // lê). Enquanto os dois coincidem, todo arquivo recusado sai com frase
+  // específica ("A capa deve ter no máximo 2MB") e NUNCA com o
+  // `storage/unauthorized` cru — que é reservado a problema de permissão.
+  //
+  // Se alguém afrouxar um lado, abre-se uma FAIXA em que a tela deixa passar e
+  // o Storage nega, e a pessoa recebe uma acusação de permissão por um
+  // problema de arquivo. É a mesma família de defeito que já custou caro nesta
+  // casa (validação duplicada divergindo entre camadas), e é barata de fechar:
+  // o teste lê os dois arquivos-fonte e compara os números.
+  // ═══════════════════════════════════════════════════════════════════════
+  describe('guarda: seam do cliente e Rule não podem divergir na capa', () => {
+    const SEAM_PATH = resolve(__dirname, '../../../packages/api-client/src/storage.ts');
+
+    it('o teto de bytes da capa é o MESMO na Rule e no seam', () => {
+      const rules = readFileSync(STORAGE_RULES_PATH, 'utf8');
+      const seam = readFileSync(SEAM_PATH, 'utf8');
+      const naRule = /request\.resource\.size <= (\d+) \* 1024 \* 1024/.exec(
+        rules.slice(rules.indexOf('function capaEventoFormatoValido'))
+      );
+      const noSeam = /CAPA_EVENTO_MAX_BYTES = (\d+) \* 1024 \* 1024/.exec(seam);
+      expect(naRule?.[1]).toBeDefined();
+      expect(noSeam?.[1]).toBeDefined();
+      expect(noSeam?.[1]).toBe(naRule?.[1]);
+    });
+
+    it('a allowlist de contentType da capa é a MESMA na Rule e no seam', () => {
+      const rules = readFileSync(STORAGE_RULES_PATH, 'utf8');
+      const seam = readFileSync(SEAM_PATH, 'utf8');
+      const naRule = /\^image\/\(([a-z|]+)\)\$/.exec(
+        rules.slice(rules.indexOf('function capaEventoFormatoValido'))
+      );
+      const noSeam = /CAPA_EVENTO_UPLOAD_TIPOS = \[([^\]]+)\]/.exec(seam);
+      expect(naRule?.[1]).toBeDefined();
+      expect(noSeam?.[1]).toBeDefined();
+      const daRule = (naRule?.[1] ?? '').split('|').sort();
+      const doSeam = (noSeam?.[1] ?? '')
+        .split(',')
+        .map((s) => s.trim().replace(/^'|'$/g, ''))
+        .filter((s) => s.startsWith('image/'))
+        .map((s) => s.replace('image/', ''))
+        .sort();
+      expect(doSeam).toEqual(daRule);
+    });
   });
 });
