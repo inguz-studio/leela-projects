@@ -65,7 +65,8 @@ tags:
         - [ ] S1228-T2 a tela de confirmação e o e-mail passam a mostrar o código, e o endereço interno some das duas
         - [ ] S1228-T3 o painel mostra o código no inscrito e acha a compra por ele na busca de sempre
 - [ ] **[E12] O pedido responde na tela do checkout** — quem pagou vê "Estamos confirmando o seu pedido", a orientação de conferir o e-mail e, quando a área do cliente existir, o caminho para os próprios pedidos; a copy para de prometer confirmação que nenhum canal cumpre 📋 decidido por você em 04/08 · primeiro da fila DEC-0804 [[LEELA-E12-landing]]
-    - [ ] **S1225 · O feedback do pedido na tela do checkout** — T1/T2/T3 construídas em 04/08 pela lane BUILD-S1225; **aguardam a review antagonista** (contexto fresco, ⚔ em T1 e T2) e não estão no ar
+    - [ ] **S1225 · O feedback do pedido na tela do checkout** — T1/T2/T3 construídas em 04/08 pela lane BUILD-S1225 e **revisadas por antagonista em 05/08** (aprovadas com fixes); nenhuma está no ar
+        - [x] S1225-REV a review antagonista aprovou com fixes e o que sobrou virou registro — `706d9b02`+`a769cfb9` · dois defeitos de tela consertados com teste (estado terminal virava "estamos confirmando"; gesto que falha não respondia), três itens novos no painel do dono (PEDLIST-1, POSSE-EMAIL-1, PROJPED-1), a projeção do pedido reconciliada entre as duas reviews e três itens na fila técnica (RS1-1 a RS1-3)
         - [x] S1225-T1 a leitura do próprio pedido abre nas rules, com o caso de ataque ⚔ · fecha o TODO E12 — `bdc9a531` · 26 testes, incluindo o vetor de PREFIXO de docId; `write: if false` intocado
         - [x] S1225-T2 a tela v1 com a mensagem e a orientação de e-mail, e a copy do PIX para de mentir ⚔ — `7f992e75` · a varredura de copy do checkout virou teste executável
         - [x] S1225-T3 estados por meio: PIX consulta o pedido, cartão distingue confirmado, recusado e indeterminado — carregamento + gesto explícito, sem polling

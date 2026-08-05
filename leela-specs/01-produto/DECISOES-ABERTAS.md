@@ -192,6 +192,33 @@ Você pediu prefixo e cinco dígitos, e o resto da conversa é engenharia — on
 - **Opções:** `PED-` (**default proposto** — é o que "pedido" vira em três letras, e nenhuma outra coisa no produto começa assim) · `LEE-`, que assina a plataforma em vez do objeto e fica igual em compra, ingresso e qualquer coisa futura, o que devolve a confusão que o prefixo existe para evitar · sem prefixo, e aí os dois códigos do e-mail viram duas sequências parecidas, uma de cinco e outra de seis símbolos, distinguíveis só pelo rótulo ao lado.
 - **Onde aterrissa:** RN-474 em [[LEELA-E12-landing]]; spec em `02-rodadas/2026-08-04-pos-pagamento/06-spec-codigo-pedido.md`.
 
+### PEDLIST-1 · o comprador passa a poder listar as próprias compras, atravessando produtoras
+
+A abertura da RN-469 autoriza por campo, e regra por campo autoriza **consulta**, não só a leitura de um documento que já se conhece pelo endereço. A review antagonista mediu isso e confirmou: quem comprou pode pedir "todas as compras minhas" e receber a lista, de todas as produtoras de uma vez. Só as dele — o teste de ataque prova que documento de terceiro não entra na resposta. A capacidade é útil e é exatamente a que Meus Pedidos vai usar; ela só não estava escrita em lugar nenhum, e capacidade que ninguém escreveu não deveria estrear em silêncio. *A Ana comprou no evento do Castelo e num retiro de outra produtora; com uma consulta só ela recebe as duas compras, sem nunca ter entrado em nenhum dos dois painéis.*
+
+- **O que fica com você:** manter a listagem, ou estreitar a abertura para um pedido de cada vez e deixar a lista nascer só com a área do cliente.
+- **Por que agora:** é a consulta que a S1222 vai fazer, e é uma linha nas Rules enquanto ninguém depende dela. Estreitar depois de a área do cliente estar construída custa a área do cliente.
+- **Opções:** manter (**default proposto** — o dado é dele, atravessar produtoras é o que faz a área do cliente ter sentido, e nenhum dado de terceiro entra na resposta) · estreitar para leitura por endereço, e a lista passa a ser servida por callable junto da S1222, como já acontece com inscritos e pessoas (RN-451) — mais fechado, e uma porta a mais para construir e manter.
+- **Onde aterrissa:** RN-469 em [[LEELA-E12-landing]]; `firestore.rules` e a S1222-T1 na fila `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-S1225.md`, vetor 1.
+
+### POSSE-EMAIL-1 · a conta que lê a compra é escolhida pelo e-mail digitado, sem prova de que a pessoa tem aquele e-mail
+
+Quando o pagamento confirma, o servidor liga a compra a uma conta e guarda o vínculo em `contaSemFriccao.contaUid`. O valor sai de uma busca pelo e-mail digitado no checkout (`contaSemFriccao.ts:203`): havendo conta com aquele endereço, ela é **reusada**, e nada confere se quem digitou é dono dele. Até esta rodada isso era vínculo administrativo, e errar custava uma compra no histórico errado. Desde a RN-469 o mesmo campo é **chave de leitura**: quem entra naquela conta abre a compra inteira, com endereço do comprador, composição do valor, aceites e o IP e o navegador de quem comprou. A assimetria é o ponto: a RN-174 já exige e-mail confirmado para vincular a **pessoa**, e o carimbo do **pedido** não tem o equivalente. *A Ana digita no checkout um e-mail com uma letra trocada, ou o endereço antigo de alguém da família, e a compra dela fica legível para quem entrar naquela outra conta.*
+
+- **O que fica com você:** dizer se o vínculo por e-mail continua valendo como chave de leitura enquanto não houver prova de posse.
+- **Por que agora:** o primeiro acesso (S1223) é o lugar natural de a confirmação nascer, e ele ainda não foi construído. Decidir antes dele evita subir a porta duas vezes. Nada disso é urgência de incidente: exige uma conta preexistente naquele endereço, e o caminho mais provável é engano de digitação, não ataque.
+- **Opções:** exigir e-mail confirmado antes de o vínculo virar chave de leitura, com a compra lida pela sessão do checkout até a pessoa confirmar o endereço (**default proposto** — fecha o caso sem tirar acesso de ninguém, e o e-mail de primeiro acesso já existe para carregar a confirmação) · vincular apenas conta com e-mail já confirmado, criando conta nova quando a existente não for, o que deixa dois cadastros com o mesmo endereço e empurra o problema para o atendimento · aceitar o risco documentado até a S1223 subir, com o fato registrado aqui e nada a construir agora.
+- **Onde aterrissa:** `functions/src/checkout/contaSemFriccao.ts`; a regra-mãe RN-174 em [[LEELA-E19-crm]] e a RN-469 em [[LEELA-E12-landing]]. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-S1225.md`, vetor 3.
+
+### PROJPED-1 · todo campo novo no documento da compra nasce visível ao comprador
+
+Este item não escolhe entre dois futuros: ele carimba uma regra que já está valendo, porque ela restringe o que a esteira pode fazer daqui para frente e isso não deveria ficar por conta de quem lembrar. As Rules do Firestore autorizam **documentos**, não seleção de campos — filtrar coluna não existe ali. Então, desde a RN-469, qualquer campo que alguém grave no pedido passa a ser lido pelo comprador no mesmo instante, sem decisão nova e sem aviso. A regra que fecha o buraco: campo novo em `pedidos/{id}` nasce público ao comprador, e estado operacional interno mora em extrato ou subcoleção que só o servidor lê. *A Marina reenvia o e-mail de uma compra pelo painel; o registro desse reenvio não pode virar campo do pedido, senão a Ana passa a ler o vocabulário interno do atendimento na tela dela.*
+
+- **O que fica com você:** ratificar a regra, ou dizer que campo interno pode conviver no documento desde que nenhuma tela o exiba.
+- **Por que agora:** ela já foi aplicada uma vez, em 05/08, quando as duas reviews desta rodada divergiram sobre dois campos e a decisão foi tirá-los do documento que o comprador lê. Ratificar transforma um precedente em critério; sem isso, a mesma discussão renasce a cada campo novo.
+- **Opções:** ratificada, com o teste campo a campo da review antagonista como o lugar onde a conta é feita a cada entrega (**default em vigor**) · conviver e confiar em não exibir, que a casa recusa por princípio já registrado: tela não é fronteira de segurança, Rule é.
+- **Onde aterrissa:** nota durável ao lado da RN-469 em [[LEELA-E12-landing]]; a reconciliação que a originou está em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`, e o teste vive em `functions/src/__tests__/pedidoProprioRulesAntagonista.integration.test.ts`.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração

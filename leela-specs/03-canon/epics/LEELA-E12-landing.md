@@ -2749,6 +2749,27 @@ ou o uid embutido no docId `ped-{uid}-chk-{checkoutId}`):
   ela proíbe é dado de tenant a token de participante; o pedido do próprio comprador é dado
   dele, endereço e aceites incluídos.
 
+**Diretriz permanente da RN-469 · a projeção do pedido é do comprador (REV-S1225 · 2026-08-05).**
+As Rules do Firestore autorizam **documentos**, não seleção de campos: não existe filtrar coluna
+na porta. A consequência é uma regra que vale para toda entrega futura, e não para uma story:
+**todo campo novo em `pedidos/{id}` nasce visível ao comprador**. Quem for gravar dado ali decide,
+no ato de gravar, se aceita que o cliente leia — e, se não aceitar, o dado não vai para o
+documento: **estado operacional interno mora em extrato ou em subcoleção server-only**. Não vale
+contar com a tela não exibir; tela não é fronteira de segurança, Rule é. O lugar onde essa conta
+é feita a cada entrega é o teste campo a campo de
+`functions/src/__tests__/pedidoProprioRulesAntagonista.integration.test.ts`.
+
+A diretriz nasceu de um caso concreto: a lane de reenvio de e-mails acrescentou ao pedido dois
+campos operacionais (`reenvioEmails.ultimoReenvioId` e `emailIngressos.comunicacaoId`), as duas
+reviews da rodada divergiram sobre aceitá-los, e a decisão foi **removê-los** — execução na lane
+FIX-PROJECAO, registro em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md` §Saída da
+review antagonista REV-S1225. Ela está no painel do dono como **PROJPED-1** para ratificação; o
+default em vigor é ratificada. A mesma review levantou duas fronteiras que continuam abertas e
+não são desta diretriz: a capacidade de **listar** os próprios pedidos atravessando tenants, que
+a autorização por campo cria (**PEDLIST-1**), e o fato de `contaSemFriccao.contaUid` sair de uma
+busca por e-mail sem prova de posse, o que faz um vínculo derivado de e-mail não verificado valer
+como chave de leitura desta RN (**POSSE-EMAIL-1**, fronteira RN-174).
+
 ### RN-470 (nova, dona) · feedback pós-pagamento em tela, para PIX e cartão
 
 Verbatim do dono: *"precisamos dar uma resposta para ele ou em tela, no caso de pix ou em

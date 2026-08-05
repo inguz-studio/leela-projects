@@ -167,6 +167,44 @@ vocabulário interno se alguém nomear a chave por chamado) e **`emailIngressos.
 
 A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
 
+### Saída da review antagonista REV-S1225 (`706d9b02` + `a769cfb9`)
+
+A S1225 voltou **aprovada com fixes**: dois defeitos reais na tela, consertados no commit da
+própria review, com teste que os pegaria (`checkout-s1225-rev-estados-terminais.test.tsx`).
+A abertura das Rules passou intacta — `firestore.rules` não foi tocado pela review. Handoff
+completo em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-S1225.md`.
+
+#### Reconciliação do RF2-3 — os dois campos saem do documento do comprador
+
+As duas reviews desta rodada chegaram a vereditos opostos sobre `reenvioEmails.ultimoReenvioId`
+e `emailIngressos.comunicacaoId` no doc do pedido. A REV-F2F5 pediu para **remover**; a
+REV-S1225, medindo campo a campo o que a leitura entrega, decidiu **aceitar a exposição** — o
+conteúdo é a história operacional da compra do próprio comprador, o `ultimoReenvioId` é validado
+server-side como slug (`reenviarEmailsPedido.ts:305`) e não cabe prosa de operador, e `uid` e
+papel de quem reenviou vivem no registro de auditoria separado.
+
+**O maestro decidiu REMOVER**, pelo argumento que a própria REV-S1225 usou para justificar a
+aceitação: filtrar por campo não é opção técnica nas Rules. Se a única defesa disponível é a
+disciplina de não gravar, então a regra tem de ser a disciplina — estado operacional interno não
+se grava na projeção que o comprador lê. Aceitar caso a caso transfere a decisão para o próximo
+campo, e o próximo campo pode não ser um slug validado. Isto é o caminho 1 da recomendação da
+REV-F2F5 (custo zero de função: nenhum caminho lê os dois, a janela usa só `ultimoEm`, e o
+extrato `reenviosEmail` server-only já os guarda).
+
+**Execução na lane FIX-PROJECAO**, em voo em `functions/` no momento deste registro; o commit
+entra aqui quando ela aterrissar. A forma geral disto é a regra durável **PROJPED-1**, no painel
+do dono para ratificação, e a nota ao lado da RN-469 em [[LEELA-E12-landing]].
+
+**RF2-3 está fechado.**
+
+#### Fila técnica da REV-S1225
+
+| # | O quê | Por que ficou de fora do fix |
+|---|---|---|
+| RS1-1 | **`isTenantMember` vaza texto interno do motor de rules.** A função compara `request.auth.token.tenantId` com o campo do doc; token **sem** claim de tenant faz a comparação **erroar**, e a negação chega ao cliente como mensagem interna do avaliador em vez de um `permission-denied` limpo | Pré-existente e vale para o arquivo inteiro, não é regressão da S1225-T1. Fechar em passada própria sobre `firestore.rules`, com teste de token sem claim em cada porta que usa a função |
+| RS1-2 | **O PIX expira só no relógio do navegador.** O timer interno do `PixCobranca` derruba a cobrança sem nenhuma ida ao servidor, então a tela de confirmação não sabe que o pedido morreu e continua oferecendo o gesto de atualizar sobre uma cobrança que não existe mais | Declarado no próprio fix da T3: a tela já trata estado terminal vindo do servidor, o que falta é a expiração local virar consulta. Pede desenho de quando consultar, não uma linha |
+| RS1-3 | **`/*` dentro de string cega a varredura de copy.** O gate que impede promessa de confirmação automática apaga tudo entre `/*` e `*/` ao tirar comentários, então uma string contendo `/*` esconde a copy seguinte. O furo do `//` **não** existe — o regex exige início de linha. Nenhuma ocorrência hoje | Zero incidência atual e o canário já está no teste. Fechar quando a varredura ganhar dono próprio, junto do teste de `nenhuma superfície imprime pedidoId` da 5c, que é da mesma família |
+
 ## Ordem executável, resumida
 
 1. **Agora:** 1a + 1b (S1225-T1/T2). Depois 1c.
