@@ -46,7 +46,7 @@ Três fix-commits aterrissados, cada um com o teste que o teria pegado.
 | 4 | Guarda de sessão da área (`AreaDoCliente.tsx`) | **PASSOU.** O `vivo` fecha a corrida, inclusive no `tentarDeNovo` |
 | 5 | `portaDaConta` (B5) | **PASSOU.** `__proto__` não vira papel; nenhum caminho até `/plataforma`. Ver F3 |
 | 6 | `salvarMeusDados` (B3) | **PASSOU** no seam (objeto literal fixo, uid da sessão). Ver F4 |
-| 7 | CTA do checkout (S1225-T4) | **PASSOU** tecnicamente. Ver P2 (juízo de dono) |
+| 7 | CTA do checkout (S1225-T4) | **PASSOU** tecnicamente (é `<a>`, o QR do PIX não se perde). Re-anúncio na live region: ver F6. Jornada: ver P2 |
 | 8 | Superfície pública nova (`/minha-conta`) | **PASSOU.** `noindex` + `no-store` + `no-referrer` + `disallow` |
 
 ### Vetores obrigatórios do brief
@@ -301,7 +301,14 @@ RN-451 proíbe. Distinguir exige um sinal novo do servidor.
   denormalizado adiante.
 - **F5 · `montarIngresso` fica em silêncio quando `tenantId` está vazio** (doc de
   inscrito sem tenant e evento inexistente): sem link, sem `warn`, sem sinal.
-- **F6 · Duplicação pendente** de `authErrors`/`authValidation` em `apps/painel`
+- **F6 · O CTA do checkout vive dentro de `role="status" aria-live="polite"`.**
+  Ele é estático, então é anunciado uma vez com o bloco. Mas o bloco recebe
+  `children` (a copy de segurança de dinheiro, o botão de retomada do cartão), e
+  toda mudança neles re-anuncia a região **inteira**, o rótulo do CTA junto. Não
+  é defeito de contraste nem de foco; é ruído de leitor de tela no momento em que
+  a pessoa mais precisa ouvir uma coisa só. Correção: tirar o CTA de dentro da
+  live region, mantendo-o no mesmo bloco visual.
+- **F7 · Duplicação pendente** de `authErrors`/`authValidation` em `apps/painel`
   — herdada, não desta lane.
 
 ---
@@ -328,11 +335,14 @@ RN-451 proíbe. Distinguir exige um sinal novo do servidor.
 |---|---|
 | Linha de base recebida | `53 · 660` |
 | Baseline confirmada antes de tocar em nada | **`53 · 660`** ✅ |
-| Depois dos fixes, 2× seguidas | **`53 · 665`** · **`53 · 665`** ← linha de base nova |
+| Depois dos fixes, 2× seguidas | **`53 · 665`** · **`53 · 665`** |
+| 3ª execução, já sobre a ÁRVORE COMMITADA | **`53 · 665`** ← linha de base nova |
 
 **O flake declarado pela lane anterior NÃO reapareceu** em nenhuma das execuções
-desta lane (3 execuções completas da suíte + 2 execuções dos arquivos tocados).
-Nome do caso segue **não capturado** — o achado da lane anterior continua aberto.
+desta lane — **4 execuções completas** da suíte (1 baseline + 3 pós-fix) mais 2
+execuções dos arquivos tocados, todas com o mesmo número de casos. Nome do caso
+segue **não capturado**; o achado da lane anterior continua aberto, e esta lane
+não conseguiu reproduzi-lo.
 
 **Functions — só os arquivos tocados**, emulator próprio desta lane
 (`firebase.revareacli.json`, `127.0.0.1:8584` / `9702`, IPv4 explícito, JDK 21):
