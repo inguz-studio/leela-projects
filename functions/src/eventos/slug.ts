@@ -65,6 +65,10 @@ export const SLUGS_RESERVADOS: readonly string[] = [
   // chamado "Definir senha" sombrearia a rota para onde o e-mail de conta
   // criada manda a pessoa — e ela ficaria sem caminho para entrar.
   'definir-senha',
+  // S1222-T2 · RN-451: a casa autenticada do comprador. Um evento com este
+  // slug ficaria inalcançável (a rota estática vence a dinâmica no App Router)
+  // e o organizador não teria como saber por quê.
+  'minha-conta',
   'health',
   'robots.txt',
   'sitemap.xml',

@@ -18,8 +18,14 @@ export const ROTA_AREA_CLIENTE = '/minha-conta';
 /**
  * A área do cliente já está construída? Enquanto for `false`, nenhuma jornada
  * aponta para `ROTA_AREA_CLIENTE` — é a trava que impede o 404.
+ *
+ * VIRADA em S1222-T2: a rota `/minha-conta` existe, com guarda de sessão
+ * nomeada, os dois recortes de ingresso e o histórico de compras. As duas
+ * jornadas que dependiam desta constante — o fim do `/definir-senha` e o CTA
+ * do checkout (S1225-T4) — passam a apontar para lá de uma vez só, que é
+ * exatamente o motivo de ela ser UMA constante e não três decisões espalhadas.
  */
-export const AREA_CLIENTE_NO_AR = false;
+export const AREA_CLIENTE_NO_AR = true;
 
 export interface DestinoPosEntrada {
   href: string;

@@ -30,7 +30,17 @@ export default function robots(): MetadataRoute.Robots {
       // `/definir-senha` carrega o `oobCode` do primeiro acesso na query —
       // credencial de uso único, mesma disciplina de `/convite` (S1223-T1 ·
       // RN-453).
-      disallow: ['/*/inscricao', '/health', '/convite', '/ingresso', '/definir-senha'],
+      // `/minha-conta` é a casa de UMA pessoa (S1222-T2 · RN-451): não é
+      // conteúdo de descoberta, e o crawler que a pedisse receberia sempre a
+      // porta de entrada — página vazia no índice, com nome de rota privada.
+      disallow: [
+        '/*/inscricao',
+        '/health',
+        '/convite',
+        '/ingresso',
+        '/definir-senha',
+        '/minha-conta',
+      ],
     },
     sitemap: `${base}/sitemap.xml`,
     host: base,

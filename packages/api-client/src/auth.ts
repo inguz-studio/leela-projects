@@ -25,6 +25,7 @@ import {
   sendPasswordResetEmail,
   verifyPasswordResetCode,
   confirmPasswordReset,
+  sendEmailVerification,
   updateProfile,
   updatePassword,
   reauthenticateWithCredential,
@@ -307,6 +308,26 @@ export async function confirmarResetSenha(oobCode: string, novaSenha: string): P
 // ---------------------------------------------------------------------------
 // Perfil do usuário logado (LEELA-S020-T3 cadastro · T4 configurações)
 // ---------------------------------------------------------------------------
+
+/**
+ * Reenvia o e-mail de VERIFICAÇÃO para o usuário autenticado (S1222-T2 ·
+ * RN-451).
+ *
+ * A área do cliente precisa disto porque a leitura dela exige `email_verified`
+ * (RN-174 condição c) e a alternativa seria a lista vazia que mente. Quem
+ * chegou pelo link de definir senha já tem o e-mail verificado — o Firebase
+ * carimba a verificação quando o `oobCode` é consumido, e possuir o código
+ * enviado ao endereço É a prova de posse. Este caminho existe para as contas
+ * que nasceram por outra porta.
+ *
+ * NÃO é anti-enumeração: exige sessão, então quem chama já sabe quem é. Lança
+ * se não houver sessão ativa.
+ */
+export async function enviarVerificacaoEmail(): Promise<void> {
+  const user = getLeelaAuth().currentUser;
+  if (!user) throw new Error('Sem sessão ativa para enviar a verificação.');
+  return sendEmailVerification(user);
+}
 
 /**
  * Atualiza o nome de exibição (displayName) do usuário AUTENTICADO. Usado no

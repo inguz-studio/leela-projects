@@ -441,6 +441,10 @@ export { atualizarNomeExibicao, atualizarFotoPerfil } from './auth';
 // Troca de senha autenticada (LEELA-S020-T4) — reauth OBRIGATÓRIA embutida.
 export { trocarSenha } from './auth';
 
+// Reenvio do e-mail de VERIFICAÇÃO (S1222-T2 · RN-451): a área do cliente
+// exige `email_verified`, e a saída honesta de quem não tem é reenviar.
+export { enviarVerificacaoEmail } from './auth';
+
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)
 // ---------------------------------------------------------------------------

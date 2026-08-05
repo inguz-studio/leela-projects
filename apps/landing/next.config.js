@@ -43,6 +43,18 @@ const nextConfig = {
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
+      // A área do cliente (S1222-T2 · RN-451). A resposta é de UMA pessoa: um
+      // cache de CDN aqui serviria a lista de alguém para o próximo visitante.
+      // O `no-referrer` acompanha porque a página tem links de saída (a
+      // experiência, o ingresso) e o caminho da conta não precisa viajar neles.
+      {
+        source: '/minha-conta',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
     ];
   },
 };
