@@ -507,8 +507,22 @@ describe('colisão forçada', () => {
     await semear({ id: 'ped-par-3', inscritos: ['insc-p4'] });
 
     const [a, b] = await Promise.all([backfill(['--apply']), backfill(['--apply'])]);
-    expect(a.code).toBe(0);
-    expect(b.code).toBe(0);
+
+    // ⚠ O código de saída das DUAS execuções não pode ser exigido como 0: sob
+    // concorrência deliberada, quem perde a corrida por um pedido recebe
+    // `ABORTED` do Firestore e deixa AQUELE pedido de fora — que é a saída
+    // honesta, porque a outra execução é que o atendeu. Exigir 0 dos dois era
+    // teste FLAKY (medido em REV-5B: uma reprovação a cada ~4 execuções), e
+    // teste flaky reprova. O que se exige é o contrato de verdade: o estado
+    // final está completo, e nada que ficou de fora exige gente.
+    for (const s of [a, b]) {
+      if (s.code !== 0) {
+        expect(s.stderr, 'concorrência só pode gerar trava temporária').toContain(
+          'TRAVA TEMPORÁRIA'
+        );
+        expect(s.stderr).not.toContain('precisa de gente');
+      }
+    }
 
     // Um código por pedido, uma reserva por código, nenhuma sobrando.
     const mapa = await reservas();
