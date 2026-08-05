@@ -166,30 +166,91 @@ describe('LoteModal · frente D — os lotes existentes ficam à vista enquanto 
     expect(l2).toHaveTextContent('50 no total');
   });
 
-  it('o caso verbatim do dono: baixar o total de 50 para 20 com 19 vendidos mostra 1 disponível, não 31', async () => {
-    // L2 sem venda registrada seria editável direto; aqui o que importa é a
-    // aritmética viva do painel enquanto se digita o total.
-    const editavel = mkLote({
-      modalidade: '5k',
-      ordem: 2,
-      quantidadeLimite: 50,
-      vendidos: 19,
-      inicioEm: ts(inputLocalParaDate('2026-02-02T00:00')!),
-      fimEm: ts(inputLocalParaDate('2026-04-01T00:00')!),
-    });
-    renderModal({ lote: { ...editavel, vendidos: 0 }, lotesDoEvento: [{ ...editavel, vendidos: 19 }] });
+  // ---------------------------------------------------------------------------
+  // REV-LOTES · achado #1. A versão anterior deste teste montava um estado que
+  // o produto NÃO alcança: o mesmo lote com `vendidos: 0` na prop `lote` (para
+  // destravar o campo) e `vendidos: 19` na lista (para o painel mostrar venda).
+  // Na LotesPage o lote em edição SAI da mesma lista (`abrirEdicao` recebe uma
+  // linha de `todosLotes`), então os dois números são sempre o mesmo — com 19
+  // vendidos o campo nasce `disabled` e nada podia ser digitado. O caso verbatim
+  // do dono foi para o CapacidadeModal, que é a porta real (RN-304). Aqui fica o
+  // que ESTA tela de fato faz: prévia viva do lote SEM venda.
+  // ---------------------------------------------------------------------------
+  it('lote COM venda: o campo de vaga é somente leitura e a prévia não se move (a porta é o ajuste de capacidade)', () => {
+    renderModal({ lote: L2, lotesDoEvento: [L1, L2], onAjustarCapacidade: vi.fn() });
+
+    const vaga = screen.getByLabelText('Vaga (quantidade limite)');
+    expect(vaga).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Ajustar capacidade/i })).toBeInTheDocument();
 
     const painel = screen.getByRole('region', { name: /Lotes já configurados em 5k/i });
     const linha = within(painel).getByRole('listitem', { name: 'Lote Lote 2' });
+    expect(linha).toHaveTextContent('19 vendidos');
     expect(linha).toHaveTextContent('31 disponíveis');
+  });
+
+  it('lote SEM venda: baixar o total move o disponível na hora (aritmética viva)', async () => {
+    const semVenda = mkLote({
+      modalidade: '5k',
+      ordem: 3,
+      nome: 'Lote 3',
+      quantidadeLimite: 50,
+      vendidos: 0,
+      inicioEm: ts(inputLocalParaDate('2026-04-02T00:00')!),
+      fimEm: ts(inputLocalParaDate('2026-05-01T00:00')!),
+    });
+    renderModal({ lote: semVenda, lotesDoEvento: [semVenda] });
+
+    const painel = screen.getByRole('region', { name: /Lotes já configurados em 5k/i });
+    const linha = within(painel).getByRole('listitem', { name: 'Lote Lote 3' });
+    expect(linha).toHaveTextContent('50 no total');
 
     const vaga = screen.getByLabelText('Vaga (quantidade limite)');
     await userEvent.clear(vaga);
     await userEvent.type(vaga, '20');
 
-    expect(linha).toHaveTextContent('19 vendidos');
-    expect(linha).toHaveTextContent('1 disponíveis');
+    expect(linha).toHaveTextContent('0 vendidos');
+    expect(linha).toHaveTextContent('20 disponíveis');
     expect(linha).toHaveTextContent('20 no total');
+  });
+
+  // ---------------------------------------------------------------------------
+  // REV-LOTES · achado #2 (frente A) — o erro do SERVIDOR também tem endereço.
+  //
+  // A frente A consertou o erro de VALIDAÇÃO. O outro caminho seguia cego: o
+  // `catch` do salvamento descartava o erro e só piscava um toast. É a mesma
+  // queixa do dono ("o erro não diz o que é") num lugar diferente.
+  // ---------------------------------------------------------------------------
+  it('recusa do servidor vira mensagem de formulário acionável, e o modal continua aberto', async () => {
+    // Lote COM venda: só o nome viaja, então o formulário já nasce válido e o
+    // único jeito de falhar é o servidor recusar — que é o caminho em teste.
+    const negado = Object.assign(new Error('Missing or insufficient permissions.'), {
+      code: 'permission-denied',
+    });
+    const onOpenChange = vi.fn();
+    renderModal({ lote: L2, lotesDoEvento: [L1, L2], onSalvar: vi.fn().mockRejectedValue(negado), onOpenChange });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    // A causa enumerada, não um "falhou" mudo.
+    expect(await screen.findAllByText(/servidor recusou a gravação/i)).not.toHaveLength(0);
+    expect(screen.getAllByText(/Ajustar capacidade/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/modalidade não existe mais no evento/i).length).toBeGreaterThan(0);
+    // Recusa não fecha o modal: o que foi digitado continua na tela.
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it('erro sem código conhecido preserva a mensagem original em vez de engoli-la', async () => {
+    renderModal({
+      lote: L2,
+      lotesDoEvento: [L1, L2],
+      onSalvar: vi.fn().mockRejectedValue(new Error('deadline-exceeded no gateway')),
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+
+    expect(await screen.findAllByText(/deadline-exceeded no gateway/i)).not.toHaveLength(0);
+    expect(screen.getAllByText(/Nada foi gravado/i).length).toBeGreaterThan(0);
   });
 
   it('modalidade ainda sem lote não mostra painel vazio', () => {

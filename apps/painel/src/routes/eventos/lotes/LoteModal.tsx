@@ -34,6 +34,7 @@ import {
   erroDoCampo,
   estadoLoteBadge,
   loteImutavel,
+  mensagemErroServidor,
   novoLoteId,
   proximaOrdem,
   timestampParaInputLocal,
@@ -165,8 +166,16 @@ export function LoteModal({
       toast({ title: criar ? 'Lote criado' : 'Lote atualizado', variant: 'success' });
       onSaved?.();
       onOpenChange(false);
-    } catch {
-      toast({ title: 'Falha ao salvar o lote', variant: 'danger' });
+    } catch (e) {
+      // REV-LOTES · achado #2: o erro do SERVIDOR também precisa de endereço.
+      // Antes o `catch` era cego (`catch {}`) e a causa morria aqui — o modal
+      // ficava aberto com todos os campos verdes e um toast que não dizia nada.
+      // Agora a recusa vira uma mensagem de FORMULÁRIO (não de campo: a Rule
+      // reprova o documento, não um input), e o modal segue aberto com o texto
+      // à vista depois que o toast some.
+      const mensagem = mensagemErroServidor(e);
+      setResultado({ ok: false, erros: [{ campo: 'formulario', mensagem }], erro: mensagem });
+      toast({ title: 'Falha ao salvar o lote', description: mensagem, variant: 'danger' });
     } finally {
       setBusy(false);
     }

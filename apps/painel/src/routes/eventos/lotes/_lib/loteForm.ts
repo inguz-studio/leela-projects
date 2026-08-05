@@ -153,6 +153,34 @@ function falha(erros: readonly ErroLote[]): ResultadoValidacao {
   return { ok: false, erros: ordenados, erro: ordenados[0]?.mensagem ?? 'Formulário inválido.' };
 }
 
+/**
+ * Erro vindo do SERVIDOR (Rule/Function), não do formulário — REV-LOTES ·
+ * achado #2 da frente A.
+ *
+ * A frente A deu endereço ao erro de VALIDAÇÃO e deixou o outro caminho como
+ * estava: o `catch` do salvamento engolia o erro inteiro e mostrava um toast
+ * "Falha ao salvar o lote". É a mesma queixa do dono num lugar diferente —
+ * a tela sabia o que houve e não contava. Recusa de Rule tem causa conhecida
+ * e enumerável (congelamento pós-venda, modalidade inexistente, tenant sem
+ * permissão), então ela vira texto acionável ancorado no formulário; o resto
+ * preserva a mensagem original em vez de descartá-la. @pure
+ */
+export function mensagemErroServidor(erro: unknown): string {
+  const codigo =
+    typeof erro === 'object' && erro !== null && 'code' in erro
+      ? String((erro as { code: unknown }).code)
+      : '';
+  if (codigo.includes('permission-denied')) {
+    return (
+      'O servidor recusou a gravação. As causas possíveis são: o lote já vendeu e preço, ' +
+      'janela e ordem estão congelados (RN-200/300 — a vaga se ajusta em "Ajustar capacidade"); ' +
+      'a modalidade não existe mais no evento; ou a sua conta não tem permissão de escrita neste evento.'
+    );
+  }
+  const detalhe = erro instanceof Error && erro.message.trim().length > 0 ? ` (${erro.message.trim()})` : '';
+  return `Não foi possível salvar o lote${detalhe}. Nada foi gravado — tente de novo.`;
+}
+
 /** Mensagem de um campo no resultado de validação (null quando o campo está ok). @pure */
 export function erroDoCampo(
   resultado: ResultadoValidacao,
