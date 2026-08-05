@@ -211,24 +211,15 @@ export interface Inscrito {
    * sem tela nova. A cópia não diverge da origem por conta própria: o código
    * NUNCA muda depois de criado.
    *
-   * Ausente = inscrito anterior à S1228 (leitura Postel).
+   * Ausente = inscrito anterior à S1228 (leitura Postel). Escrita SÓ por
+   * Function (o checkout, na tx da venda; o backfill da 5b) — as duas listas
+   * `hasAny` de `firestore.rules` negam create e update de cliente desde a
+   * lane FIX-D1, e o bloco A5 de `codigoPedidoReserva.attack.test.ts` prende
+   * a negativa contra o arquivo real.
    *
-   * ⚠️ AINDA NÃO É "escrita só por Function" — e quem for consumir este campo
-   * precisa saber disso ANTES de confiar nele. `codigoPedido` está fora das
-   * duas listas `hasAny` de `firestore.rules` (`semCamposDeFunctionInscrito` /
-   * `camposDeFunctionIntocados`) e fora de {@link CAMPOS_FUNCTION_INSCRITO},
-   * porque a lane que o criou não tinha mandato para editar as Rules. Hoje ele
-   * é o ÚNICO campo de Function do inscrito que um `isTenantWriter` consegue
-   * plantar no create e trocar no update — medido em
-   * `codigoPedidoReserva.attack.test.ts` (bloco A5), contra o arquivo real.
-   *
-   * Consequência para o consumidor: o espelho é pista de BUSCA do organizador
-   * dentro do próprio evento, não fonte de verdade. Quem precisar do código
-   * AUTORITATIVO de uma compra lê `Pedido.codigoPedido` — aquele sim nasce na
-   * transação da venda e mora numa coleção com `write: if false`. Quando a
-   * task com mandato acrescentar o campo às duas listas das Rules, ele entra
-   * JUNTO em {@link CAMPOS_FUNCTION_INSCRITO}, o bloco A5 fica vermelho de
-   * propósito e este aviso sai.
+   * Ainda assim, o AUTORITATIVO é `Pedido.codigoPedido`: este é a cópia que
+   * põe o código na busca em memória do organizador (RN-397/RN-475), e o
+   * pedido é que nasce na transação da venda, numa coleção `write: if false`.
    */
   codigoPedido?: string;
   /**
@@ -292,6 +283,12 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   // único por evento. Cliente escrevê-lo permitiria plantar o código de
   // outra pessoa na própria linha e ser chamado no balcão no lugar dela.
   'codigoIngresso',
+  // RN-474 (S1228-T1 · D-1 da REV-COD5A): o espelho do código da COMPRA. Era
+  // o ÚNICO campo de Function do inscrito que um `isTenantWriter` escrevia —
+  // e como o escopo do código é GLOBAL, o organizador plantava no próprio
+  // inscrito o código de uma compra de outra produtora, e a busca da RN-475
+  // devolvia a pessoa errada a quem ditou o código pelo telefone.
+  'codigoPedido',
   'pedidoRef',
   'ehResponsavel',
   'dadosPessoais',
@@ -309,17 +306,6 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   // checkout escreve. Cliente forjá-lo religaria a inscrição a outra
   // identidade (contaminaria CRM/prefill).
   'pessoaRef',
-  // ⚠️ `codigoPedido` (RN-474 · S1228-T1) NÃO entra aqui, e a ausência é
-  // deliberada: esta lista ESPELHA literalmente as duas listas `hasAny` de
-  // `firestore.rules` (`semCamposDeFunctionInscrito` /
-  // `camposDeFunctionIntocados`). Nomear aqui um campo que as Rules não
-  // conhecem faria a constante MENTIR sobre o que está de fato negado — e o
-  // teste que a compara com as Rules deixaria de significar alguma coisa. O
-  // par entra JUNTO, na task que tiver mandato para tocar as Rules; a lacuna
-  // está declarada no handoff da lane. Enquanto isso, o campo só é escrito
-  // por Function (a tx do checkout) e a escrita direta de cliente em
-  // `inscritos` já exige `isTenantWriter` — a exposição é o organizador
-  // dentro do próprio evento, não o comprador.
 ] as const;
 
 // ---------------------------------------------------------------------------

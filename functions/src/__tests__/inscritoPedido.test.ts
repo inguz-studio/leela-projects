@@ -128,6 +128,9 @@ describe('parseInscrito — link ao pedido (ADR-011)', () => {
       'ingressoEmitidoEm',
       // S1206-T5 (RN-396): código legível do ingresso — Function-only
       'codigoIngresso',
+      // S1228-T1 (RN-474) + D-1 da REV-COD5A: espelho do código da COMPRA —
+      // Function-only desde FIX-D1, que o pôs nas duas listas das Rules
+      'codigoPedido',
       'pedidoRef',
       'ehResponsavel',
       'dadosPessoais',

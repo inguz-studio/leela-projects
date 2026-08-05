@@ -20,9 +20,10 @@
  *       DEPOIS que a tx o leu como livre e ANTES do commit. Nenhuma linha de
  *       produção muda para isso.
  *   A5. A LACUNA DAS RULES do Achado 2, medida em vez de declarada: o
- *       organizador (isTenantWriter) planta `codigoPedido` num inscrito pelo
- *       client SDK. O teste documenta o buraco contra o arquivo REAL e vira
- *       vermelho no dia em que a task com mandato fechar as Rules.
+ *       organizador (isTenantWriter) tentava plantar `codigoPedido` num
+ *       inscrito pelo client SDK e conseguia. A lane FIX-D1 acrescentou o
+ *       campo às duas listas `hasAny` e o bloco virou o que prometia ser: o
+ *       TRIPWIRE das Rules do espelho, medido contra o arquivo REAL.
  *
  * ⚠ PRÉ-REQUISITO: Firestore Emulator próprio da lane de review
  * (`firebase.revcod5a.json` — firestore 8881, auth 9881, host IPv4).
@@ -546,7 +547,7 @@ describe('A6 — chaves DISTINTAS do mesmo comprador com a trava PIX no meio', (
 // A5 · a lacuna das Rules do Achado 2, MEDIDA contra o arquivo real
 // ---------------------------------------------------------------------------
 
-describe('A5 — `codigoPedido` do inscrito não está nas Rules (Achado 2)', () => {
+describe('A5 — `codigoPedido` do inscrito está nas Rules (D-1 fechado)', () => {
   const INSCRITO_ID = 'insc-a5-plantado';
 
   async function comoDono(): Promise<Firestore> {
@@ -566,17 +567,21 @@ describe('A5 — `codigoPedido` do inscrito não está nas Rules (Achado 2)', ()
     kit: 'sem_kit',
   };
 
-  it('o organizador CRIA inscrito com `codigoPedido` plantado — as Rules deixam (buraco aberto)', async () => {
+  it('o organizador NÃO cria inscrito com `codigoPedido` plantado — as Rules negam', async () => {
     const cli = await comoDono();
-    // Prova de contraste: `codigoIngresso` (que ESTÁ nas Rules) é negado…
+    // Prova de contraste: `codigoIngresso` (que sempre esteve nas Rules) é
+    // negado…
     await assertFails(
       setDoc(doc(cli, `eventos/${EVENTO_ID}/inscritos/${INSCRITO_ID}-ing`), {
         ...inscritoBase,
         codigoIngresso: 'ABCDE',
       })
     );
-    // …e `codigoPedido` PASSA. É a lacuna declarada no Achado 2, agora medida.
-    await assertSucceeds(
+    // …e `codigoPedido` é negado JUNTO desde a lane FIX-D1, que o acrescentou
+    // a `semCamposDeFunctionInscrito`. Este par de asserções é o TRIPWIRE das
+    // Rules: se o create de `codigoPedido` voltar a passar, alguém tirou o
+    // campo da lista e o espelho da busca (RN-475) virou adulterável de novo.
+    await assertFails(
       setDoc(doc(cli, `eventos/${EVENTO_ID}/inscritos/${INSCRITO_ID}`), {
         ...inscritoBase,
         codigoPedido: 'X2Y3Z',
@@ -584,13 +589,24 @@ describe('A5 — `codigoPedido` do inscrito não está nas Rules (Achado 2)', ()
     );
   });
 
-  it('e ALTERA o `codigoPedido` de um inscrito existente — o espelho é adulterável', async () => {
+  it('e NÃO altera o `codigoPedido` de um inscrito existente — o espelho é intocável', async () => {
+    // O doc entra pelo Admin SDK: o create de cliente agora é negado, e sem um
+    // inscrito REAL o `assertFails` do update passaria de graça (update em doc
+    // inexistente é negado por ausência, não pela regra que se quer medir).
+    const ref = db.doc(`eventos/${EVENTO_ID}/inscritos/${INSCRITO_ID}`);
+    await ref.set({
+      ...inscritoBase,
+      codigoPedido: 'X2Y3Z',
+      criadoEm: FieldValue.serverTimestamp(),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
     const cli = await comoDono();
-    await assertSucceeds(
-      updateDoc(doc(cli, `eventos/${EVENTO_ID}/inscritos/${INSCRITO_ID}`), {
-        codigoPedido: 'W9V8U',
-      })
-    );
+    const refCli = doc(cli, `eventos/${EVENTO_ID}/inscritos/${INSCRITO_ID}`);
+    // Controle positivo: o MESMO cliente escreve no MESMO doc quando não toca
+    // o campo — o `assertFails` abaixo mede `camposDeFunctionIntocados`, e não
+    // falta de permissão de escrita no inscrito.
+    await assertSucceeds(updateDoc(refCli, { status: 'confirmado' }));
+    await assertFails(updateDoc(refCli, { codigoPedido: 'W9V8U' }));
   });
 
   it('o teto de tentativas continua sendo 8 (fronteira da spec)', () => {

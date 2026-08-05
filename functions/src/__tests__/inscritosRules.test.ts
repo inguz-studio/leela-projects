@@ -68,17 +68,22 @@ let testEnv: RulesTestEnvironment;
 let adminDb: admin.firestore.Firestore;
 
 beforeAll(async () => {
+  // Porta da LANE (honra LEELA_FS_EMU_PORT — mesmo recorte do irmão
+  // inscritoPedidoRules); fallback 8080 preserva o gate consolidado. Sem
+  // isto, uma lane com emulator próprio não consegue rodar as Rules do
+  // inscrito sem subir um segundo emulator na porta compartilhada.
+  const FS_PORT = Number(process.env['LEELA_FS_EMU_PORT'] ?? 8080);
   testEnv = await initializeTestEnvironment({
     projectId: PROJECT_ID,
     firestore: {
       rules: readFileSync(RULES_PATH, 'utf8'),
       host: 'localhost',
-      port: 8080,
+      port: FS_PORT,
     },
   });
 
   if (!admin.apps.length) {
-    process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
+    process.env['FIRESTORE_EMULATOR_HOST'] = `localhost:${FS_PORT}`;
     admin.initializeApp({ projectId: PROJECT_ID });
   }
   adminDb = admin.firestore();

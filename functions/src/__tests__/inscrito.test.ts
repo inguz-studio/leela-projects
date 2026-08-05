@@ -149,6 +149,10 @@ describe('derivações puras de Inscrito', () => {
       // nasce na emissão do servidor e é único por evento; cliente escrevê-lo
       // plantaria o código de outra pessoa na própria linha.
       'codigoIngresso',
+      // S1228-T1 (RN-474) + D-1 da REV-COD5A: + codigoPedido — o espelho do
+      // código da COMPRA. Entrou nas Rules e aqui no MESMO commit (FIX-D1):
+      // a constante espelha as duas listas `hasAny` e não pode andar sozinha.
+      'codigoPedido',
       'pedidoRef',
       'ehResponsavel',
       'dadosPessoais',
