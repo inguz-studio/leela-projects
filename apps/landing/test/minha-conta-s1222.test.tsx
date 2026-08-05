@@ -55,6 +55,9 @@ vi.mock('@leela/api-client', () => ({
   trocarSenha: () => Promise.resolve(),
   senhaAtendeMinimo: (s: string) => s.length >= 6,
   SENHA_MIN: 6,
+  // As portas do fim da área (S1222-T5) leem o token para saber qual desenhar.
+  // Aqui a conta é só cliente — as portas têm arquivo de teste próprio.
+  getClaims: () => Promise.resolve({ role: 'athlete' }),
 }));
 
 vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));

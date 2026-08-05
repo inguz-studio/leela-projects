@@ -36,6 +36,7 @@ import { EmailNaoVerificado, FalhaDeLeitura, PortaDeEntrada } from './EstadosDaA
 import { PainelCompras } from './PainelCompras';
 import { PainelIngressos } from './PainelIngressos';
 import { PainelMeusDados } from './PainelMeusDados';
+import { PortasDaConta } from './PortasDaConta';
 
 interface Dados {
   ingressos: GetMeusIngressosResult;
@@ -150,6 +151,13 @@ export function AreaDoCliente(): React.JSX.Element {
           },
         ]}
       />
+
+      {/* S1222-T5 · as duas portas. Ficam FORA das abas, no fim da página: são
+          saídas para outro produto, não mais uma seção da conta. Conta de
+          administração da plataforma não vê nenhuma (RN-449). */}
+      <div className="mt-10">
+        <PortasDaConta />
+      </div>
     </div>
   );
 }
