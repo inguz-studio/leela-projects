@@ -69,6 +69,10 @@ export interface RegistroIngressoPendente {
    * varredura re-tenta; isto é gente que a operação ainda não confirmou, e o
    * que destrava é o flip do status, não a re-tentativa. Quem lê o extrato
    * precisa saber qual dos dois está segurando o e-mail do pedido.
+   *
+   * `undefined` = ESTE detector não mediu (o `disparo_falhou`, que só tem o
+   * erro; o reenvio, que lê ingressos vivos e não status de inscrito). Quem
+   * mediu passa o número — inclusive `0`. Ver `registrarIngressoPendente`.
    */
   aguardando?: number;
   /** Texto curto do porquê — `motivo` do resultado ou mensagem do erro. */
@@ -98,16 +102,26 @@ export async function registrarIngressoPendente(
       ref,
       {
         ...registro,
-        // Normalizado, nunca espalhado como opcional: `merge: true` não apaga
-        // campo ausente, então a segunda detecção herdaria o contador da
-        // primeira e o extrato mentiria sobre o que segura o pedido HOJE.
-        aguardando: registro.aguardando ?? 0,
+        // `aguardando` só é escrito por quem MEDIU (REV-RF2-1). Duas mentiras
+        // possíveis, e as duas custam o mesmo — o extrato dizendo o que NÃO
+        // segura o pedido hoje:
+        //   - herdar o contador da primeira detecção (`merge: true` não apaga
+        //     campo ausente) — resolvido porque o disparo pós-confirmação
+        //     SEMPRE passa o número medido, inclusive `0`;
+        //   - normalizar para `0` quem não mediu — o `disparo_falhou` (que só
+        //     tem o erro na mão) e o reenvio (que lê ingressos vivos, não
+        //     status de inscrito) zeravam um pedido que seguia esperando.
+        // Nascimento carimba `0` para que o campo nunca falte no extrato.
+        ...(registro.aguardando !== undefined
+          ? { aguardando: registro.aguardando }
+          : {}),
         ...(snap.exists
           ? {}
           : {
               resolvido: false,
               tentativasVarredura: 0,
               esgotado: false,
+              aguardando: registro.aguardando ?? 0,
               detectadoEm: FieldValue.serverTimestamp(),
             }),
         deteccoes: FieldValue.increment(1),
@@ -140,6 +154,54 @@ export async function resolverIngressoPendente(
         ...extras,
         resolvido: true,
         resolvidoEm: FieldValue.serverTimestamp(),
+        atualizadoEm: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return true;
+  });
+}
+
+/**
+ * RE-ARMA uma pendência ESGOTADA, a pedido explícito de um humano (REV-RF2-1).
+ *
+ * O buraco que isto fecha: `esgotado` faz a varredura PULAR o caso para sempre
+ * (`conferenciaManual`), e nada nunca o desarma. Com o RF2-1, a espera por um
+ * inscrito que ainda pode confirmar passou a ser um gerador rotineiro de
+ * pendência — e o que a destrava é uma ação HUMANA do organizador (acerto
+ * manual, transferência, reprocesso), que passa das duas horas das oito
+ * passagens sem esforço. Depois disso o inscrito confirmava, a varredura não
+ * olhava mais, `emitirIngressosDoPedido` nunca voltava a rodar e o reenvio
+ * administrativo recusava `ingresso_incompleto` apontando para uma ferramenta
+ * que não ia agir: a pessoa ficava CONFIRMADA e SEM INGRESSO EMITIDO, sem QR
+ * para o balcão e sem porta de volta. É o beco da REV-F2F5, reaberto 2h depois.
+ *
+ * A doutrina do "oito passagens e vira conferência humana" NÃO é relaxada: o
+ * gatilho aqui é o humano: a re-tentativa automática continua limitada por
+ * construção, e cada reabertura re-arma UMA janela de oito passagens, contada
+ * em `reaberturas`. Nunca ressuscita pendência já `resolvido`.
+ *
+ * @returns true se havia pendência esgotada e ela voltou para a fila.
+ */
+export async function reabrirIngressoPendente(
+  db: Db,
+  pedidoId: string,
+  extras: Record<string, unknown> = {}
+): Promise<boolean> {
+  const ref = db.collection(INGRESSOS_PENDENTES_COL).doc(pedidoId);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return false;
+    if (snap.get('resolvido') === true) return false;
+    if (snap.get('esgotado') !== true) return false;
+    tx.set(
+      ref,
+      {
+        ...extras,
+        esgotado: false,
+        tentativasVarredura: 0,
+        reaberturas: FieldValue.increment(1),
+        reabertoEm: FieldValue.serverTimestamp(),
         atualizadoEm: FieldValue.serverTimestamp(),
       },
       { merge: true }

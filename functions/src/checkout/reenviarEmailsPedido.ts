@@ -84,7 +84,10 @@ import {
 import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { lerIngressosVivosDoPedido } from '../eventos/emitirIngressos';
-import { registrarIngressoPendente } from '../eventos/ingressosPendentes';
+import {
+  reabrirIngressoPendente,
+  registrarIngressoPendente,
+} from '../eventos/ingressosPendentes';
 import { registrarAcessoAuditado } from '../shared/auditoriaAcessos';
 import type { FinanceCaller } from '../finance/atores';
 import {
@@ -583,6 +586,21 @@ async function reenviarIngresso(
         falhas: vivos.semIngresso.length,
         detalhe: 'detectado_pelo_reenvio',
       });
+      // ⚠ REV-RF2-1: registrar não bastava. Uma pendência que JÁ ESGOTOU as
+      // oito passagens é pulada pela varredura para sempre — e, com o RF2-1, a
+      // espera por um inscrito que ainda pode confirmar virou gerador rotineiro
+      // de pendência, destravada por uma ação humana que passa das duas horas
+      // sem esforço. O pedido do operador é a informação NOVA que a máquina não
+      // tinha: re-arma UMA janela de oito passagens para que
+      // `emitirIngressosDoPedido` volte a rodar e a pessoa saia com ingresso.
+      // Sem isto, esta mesma mensagem manda o operador para uma ferramenta que
+      // não vai agir — exatamente o beco que a REV-F2F5 fechou.
+      const reaberta = await reabrirIngressoPendente(db, pedidoId, {
+        detalhe: 'reaberta_pelo_reenvio',
+      });
+      if (reaberta) {
+        logger.warn('reenvio_pendencia_reaberta', { pedidoId, eventoId });
+      }
     } catch (err) {
       logger.error('reenvio_pendencia_nao_registrada', {
         pedidoId,
