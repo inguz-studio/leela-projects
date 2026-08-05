@@ -214,6 +214,21 @@ describe('S1222-T2 · a guarda de sessão', () => {
     expect(screen.queryByText(/meus ingressos/i)).toBeNull();
     expect(getMeusIngressos).not.toHaveBeenCalled();
   });
+
+  // ⚔ REV-AREACLIENTE · a porta de entrada AFIRMA "se você já comprou alguma
+  // vez, a conta existe" — e até aqui não dava nenhum caminho para quem não
+  // sabe a senha dessa conta. Quem chega nesta tela pelo CTA do checkout
+  // acabou de pagar e, se o e-mail falhou (04/08), NUNCA teve senha: a frase
+  // vira uma porta trancada com o aviso de que a chave existe.
+  it('⚔ a porta de entrada oferece saída a quem não sabe a senha', async () => {
+    await montar();
+    await sessao(null);
+    const saidas = document.querySelectorAll('[data-slot="esqueci-minha-senha"]');
+    expect(saidas.length).toBeGreaterThan(0);
+    for (const saida of saidas) {
+      expect((saida as HTMLAnchorElement).getAttribute('href')).toBe('/definir-senha');
+    }
+  });
 });
 
 describe('S1222-T2 · os ingressos, nos dois recortes', () => {

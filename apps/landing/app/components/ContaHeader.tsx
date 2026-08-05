@@ -22,8 +22,10 @@
 
 import { useRef, useState } from 'react';
 import { logout } from '@leela/api-client';
+import { ctaMeusPedidos } from '@/lib/areaDoCliente';
 import { rotuloDaConta, useSessaoLeela } from '@/lib/sessao';
 import { EntrarOverlay } from './EntrarOverlay';
+import { RodapeEsqueciSenha } from './RodapeEsqueciSenha';
 
 const CLASSE_ACAO =
   'whitespace-nowrap rounded-ds-sm px-2 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus sm:px-3';
@@ -34,14 +36,35 @@ export function ContaHeader(): React.JSX.Element {
   const botaoEntrar = useRef<HTMLButtonElement>(null);
 
   if (sessao.nomeado) {
+    // REV-AREACLIENTE · o rótulo é o CAMINHO para a área, não um enfeite. Até
+    // aqui `/minha-conta` só era alcançável logo depois de comprar (o CTA do
+    // checkout) ou logo depois de definir a senha — quem voltasse ao site no
+    // dia seguinte, já logado, não tinha por onde chegar na própria casa. A
+    // área existe justamente para o retorno de outro aparelho, sem depender de
+    // e-mail nenhum, e sem porta ela era uma casa sem rua.
+    //
+    // A trava é a MESMA das outras duas jornadas (`areaDoCliente.ts`), e por
+    // isso a decisão continua sendo UMA: se `AREA_CLIENTE_NO_AR` voltar a
+    // `false`, este rótulo volta a ser texto, e não vira o terceiro lugar do
+    // código com opinião própria sobre a rota.
+    const destino = ctaMeusPedidos();
+    const rotulo = rotuloDaConta(sessao);
+    const CLASSE_ROTULO = 'max-w-xs truncate rounded-ds-sm text-sm font-medium text-text-primary';
     return (
       <span className="flex items-center gap-1 sm:gap-2">
-        <span
-          className="max-w-xs truncate text-sm font-medium text-text-primary"
-          data-slot="conta-rotulo"
-        >
-          {rotuloDaConta(sessao)}
-        </span>
+        {destino !== null ? (
+          <a
+            href={destino.href}
+            className={`${CLASSE_ROTULO} transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus`}
+            data-slot="conta-rotulo"
+          >
+            {rotulo}
+          </a>
+        ) : (
+          <span className={CLASSE_ROTULO} data-slot="conta-rotulo">
+            {rotulo}
+          </span>
+        )}
         <button type="button" className={CLASSE_ACAO} onClick={() => void logout()}>
           Sair
         </button>
@@ -69,6 +92,7 @@ export function ContaHeader(): React.JSX.Element {
         onOpenChange={setAberto}
         returnFocusRef={botaoEntrar}
         description="Entre para ver seus ingressos e suas compras."
+        rodape={<RodapeEsqueciSenha />}
       />
     </>
   );

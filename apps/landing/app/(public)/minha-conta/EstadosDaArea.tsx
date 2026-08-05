@@ -16,6 +16,7 @@ import { useRef, useState } from 'react';
 import { enviarVerificacaoEmail } from '@leela/api-client';
 import { Button } from '@/app/_ds/ds';
 import { EntrarOverlay } from '@/app/components/EntrarOverlay';
+import { RodapeEsqueciSenha } from '@/app/components/RodapeEsqueciSenha';
 
 const TITULO = 'font-display text-3xl font-extrabold tracking-tight text-text-primary';
 const CORPO = 'mt-3 max-w-prose text-text-secondary';
@@ -35,16 +36,23 @@ export function PortaDeEntrada(): React.JSX.Element {
         Sua conta guarda os ingressos e as compras das experiências em que você se inscreveu.
         Se você já comprou alguma vez, a conta existe — use o mesmo e-mail da compra.
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col items-start gap-3">
         <Button ref={botao} type="button" onClick={() => setAberto(true)}>
           Entrar
         </Button>
+        {/* REV-AREACLIENTE · a conta criada pelo `contaSemFriccao` nasce SEM
+            senha, e o link chega por e-mail. Quando o e-mail falha — o
+            incidente de 04/08 — esta é a única tela que a pessoa alcança, e
+            até aqui ela terminava em parede: "a conta existe" sem nenhum
+            caminho até uma senha. */}
+        <RodapeEsqueciSenha />
       </div>
       <EntrarOverlay
         open={aberto}
         onOpenChange={setAberto}
         returnFocusRef={botao}
         description="Entre para ver seus ingressos e suas compras."
+        rodape={<RodapeEsqueciSenha />}
       />
     </section>
   );

@@ -195,6 +195,54 @@ describe('S1221-T1 · sessão anônima não é sessão de conta (RN-451)', () =>
   });
 });
 
+// ⚔ REV-AREACLIENTE — os dois buracos de NAVEGAÇÃO da área do cliente. Os dois
+// são invisíveis para quem lê o diff de cada task isolada: a área foi
+// construída inteira, o CTA do checkout aponta para ela e o fim do
+// `/definir-senha` também — mas quem simplesmente VOLTA ao site no dia seguinte
+// não tinha porta, e quem não sabe a senha não tinha saída.
+describe('⚔ REV-AREACLIENTE · a área do cliente é alcançável e a entrada tem saída', () => {
+  it('sessão nomeada: o rótulo da conta LEVA à área do cliente', async () => {
+    const { ROTA_AREA_CLIENTE } = await import('@/lib/areaDoCliente');
+    usuarioAtual = nomeado();
+    await renderConta();
+    const rotulo = document.querySelector('[data-slot="conta-rotulo"]');
+    expect(rotulo).not.toBeNull();
+    // Um `<span>` aqui é o defeito: a área existiria sem caminho até ela para
+    // quem já está logado e não acabou de comprar.
+    expect((rotulo as HTMLElement).tagName).toBe('A');
+    expect((rotulo as HTMLAnchorElement).getAttribute('href')).toBe(ROTA_AREA_CLIENTE);
+  });
+
+  it('o destino sai da MESMA trava das outras jornadas, e não de uma rota escrita à mão', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const fonte = readFileSync(
+      resolve(__dirname, '../app/components/ContaHeader.tsx'),
+      'utf8',
+    );
+    // Se `AREA_CLIENTE_NO_AR` voltar a `false`, o rótulo tem de voltar a ser
+    // texto junto com o CTA do checkout e o fim do `/definir-senha` — três
+    // jornadas, uma decisão.
+    expect(fonte).toContain('ctaMeusPedidos()');
+    expect(fonte).not.toContain("'/minha-conta'");
+    expect(fonte).not.toContain('"/minha-conta"');
+  });
+
+  it('o overlay oferece caminho para quem NÃO sabe a senha', async () => {
+    // A conta do comprador nasce SEM senha (`contaSemFriccao`) e o link vai por
+    // e-mail. Quando o e-mail falha — o incidente de 04/08 — esta é a única
+    // porta que resta, e sem este link ela é parede.
+    await renderConta();
+    await abrirOverlay();
+    const saida = document.querySelector('[data-slot="esqueci-minha-senha"]');
+    expect(saida).not.toBeNull();
+    expect((saida as HTMLAnchorElement).getAttribute('href')).toBe('/definir-senha');
+    // E ela vive DENTRO do modal — quem está com o foco preso no diálogo tem
+    // de alcançá-la sem fechar nada.
+    expect(screen.getByRole('dialog').contains(saida)).toBe(true);
+  });
+});
+
 describe('S1221-T1 · a credencial não sobrevive ao fechamento', () => {
   it('fechar e reabrir o overlay devolve o campo de senha vazio', async () => {
     await renderConta();
