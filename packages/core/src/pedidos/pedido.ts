@@ -27,6 +27,7 @@ import { roundMoney } from '../finance/calc';
 import { telefoneValido } from '../eventos/dadosPessoais';
 import { parseAceitesPedido, type AceitesPedido } from './aceites';
 import { parseEnderecoPedido, type EnderecoPedido } from './endereco';
+import { isCodigoPedidoValido } from './codigoPedido';
 import { isFormaPagamento, type FormaPagamento, type Pagamento } from './pagamento';
 import { parseMoney, parseTimestamp, TOLERANCIA_MEIO_CENTAVO } from './validacao';
 
@@ -205,6 +206,24 @@ export interface Pedido {
    * PIX; espelhar 1 fake violaria o espelho — re-review A5).
    */
   parcelas?: number;
+  /**
+   * Código identificador HUMANO da compra (RN-474 · S1228-T1) — cinco
+   * símbolos do alfabeto anti-ambíguo, SEM o prefixo (que é apresentação e
+   * vive numa constante do core: `formatarCodigoPedido`).
+   *
+   * Único GLOBALMENTE por chave primária `pedidoCodigos/{codigo}`, sorteado
+   * no servidor e criado na MESMA transação que cria este pedido. NUNCA muda
+   * depois de criado — é o que autoriza o espelho no inscrito e o que faz o
+   * e-mail já enviado continuar verdadeiro.
+   *
+   * Ausente = compra anterior à S1228 (schema evolution — leitura Postel). A
+   * ausência é AUSÊNCIA: nenhuma superfície exibe o id no lugar (RN-475); as
+   * compras antigas ganham código por backfill, nunca por fallback.
+   *
+   * NÃO é credencial: a autorização de leitura do pedido continua sendo a da
+   * RN-469, por campo.
+   */
+  codigoPedido?: string;
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
 }
@@ -227,6 +246,11 @@ export const CAMPOS_FUNCTION_PEDIDO = [
   // forjando aceite simularia consentimento que não houve.
   'endereco',
   'aceites',
+  // RN-474 (S1228-T1): o código da compra nasce do sorteio do servidor e é
+  // único globalmente contra a reserva `pedidoCodigos/{codigo}`. Cliente
+  // escrevê-lo plantaria na própria compra o código que outra pessoa dita no
+  // atendimento — e faria o doc discordar da reserva que o garante.
+  'codigoPedido',
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -608,6 +632,17 @@ export function parsePedido(id: string, data: Record<string, unknown>): Pedido {
   }
   if (data['aceites'] !== undefined) {
     pedido.aceites = parseAceitesPedido(ctx, data['aceites']);
+  }
+
+  // RN-474: leitura Postel, na mesma disciplina do `codigoIngresso` do
+  // inscrito — compra anterior à S1228 simplesmente não tem o campo, e um
+  // valor fora do formato canônico é DESCARTADO em vez de propagado. Não é
+  // fail-fast de propósito: `parsePedido` guarda DINHEIRO, e derrubar a
+  // leitura da compra inteira por causa de um identificador de exibição
+  // tiraria da pessoa o pedido que ela quer ver. Descartado ⇒ a superfície
+  // cai no "ausência é ausência" da RN-475, que já é o comportamento certo.
+  if (isCodigoPedidoValido(data['codigoPedido'])) {
+    pedido.codigoPedido = data['codigoPedido'];
   }
 
   if (data['formaPagamento'] !== undefined) {

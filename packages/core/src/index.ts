@@ -757,6 +757,21 @@ export {
   parsePedido,
 } from './pedidos/pedido';
 
+// Código identificador da COMPRA (S1228-T1 · RN-474/RN-475) — fonte própria do
+// alfabeto, do tamanho e do PREFIXO de apresentação. Alfabeto duplicado de
+// propósito (doutrina de `tickets/codigoIngresso.ts`); a unicidade GLOBAL é do
+// servidor, por reserva `pedidoCodigos/{codigo}`, não daqui.
+export {
+  ALFABETO_CODIGO_PEDIDO,
+  TAMANHO_CODIGO_PEDIDO,
+  CARACTERES_AMBIGUOS_PEDIDO,
+  PREFIXO_CODIGO_PEDIDO,
+  isCodigoPedidoValido,
+  normalizarCodigoPedido,
+  formatarCodigoPedido,
+  gerarCodigoPedido,
+} from './pedidos/codigoPedido';
+
 export type {
   Pagamento,
   Conciliacao,

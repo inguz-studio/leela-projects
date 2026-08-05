@@ -31,6 +31,7 @@ import {
   type DadosPessoaisInscrito,
 } from './dadosPessoais';
 import { isCodigoIngressoValido } from '../tickets/codigoIngresso';
+import { isCodigoPedidoValido } from '../pedidos/codigoPedido';
 
 // ---------------------------------------------------------------------------
 // Enums de domínio
@@ -200,6 +201,22 @@ export interface Inscrito {
    */
   codigoIngresso?: string;
   /**
+   * ESPELHO do código da COMPRA a que este inscrito pertence (RN-474 ·
+   * S1228-T1) — os cinco símbolos, sem prefixo, copiados do pedido na MESMA
+   * transação que cria os dois.
+   *
+   * Por que desnormalizar: a busca do organizador é um filtro EM MEMÓRIA
+   * sobre a lista de inscritos já carregada do evento (RN-397), então o
+   * espelho põe o código da compra na busca sem query nova, sem índice novo e
+   * sem tela nova. A objeção clássica à desnormalização não se aplica: o
+   * código NUNCA muda depois de criado, logo não há divergência possível
+   * entre a cópia e a origem.
+   *
+   * Ausente = inscrito anterior à S1228 (leitura Postel). Escrita SÓ por
+   * Function (o checkout, na tx da venda; o backfill da 5b).
+   */
+  codigoPedido?: string;
+  /**
    * Carimbo do estorno (RN-341/ADR-011 · FABLE-B) — presente SE E SOMENTE SE
    * `status === 'estornado'` (escritos na MESMA transação pela Function
    * `estornarInscricao`). A trilha de auditoria completa (quem/quando/
@@ -277,6 +294,17 @@ export const CAMPOS_FUNCTION_INSCRITO = [
   // checkout escreve. Cliente forjá-lo religaria a inscrição a outra
   // identidade (contaminaria CRM/prefill).
   'pessoaRef',
+  // ⚠️ `codigoPedido` (RN-474 · S1228-T1) NÃO entra aqui, e a ausência é
+  // deliberada: esta lista ESPELHA literalmente as duas listas `hasAny` de
+  // `firestore.rules` (`semCamposDeFunctionInscrito` /
+  // `camposDeFunctionIntocados`). Nomear aqui um campo que as Rules não
+  // conhecem faria a constante MENTIR sobre o que está de fato negado — e o
+  // teste que a compara com as Rules deixaria de significar alguma coisa. O
+  // par entra JUNTO, na task que tiver mandato para tocar as Rules; a lacuna
+  // está declarada no handoff da lane. Enquanto isso, o campo só é escrito
+  // por Function (a tx do checkout) e a escrita direta de cliente em
+  // `inscritos` já exige `isTenantWriter` — a exposição é o organizador
+  // dentro do próprio evento, não o comprador.
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -450,6 +478,12 @@ export function parseInscrito(id: string, data: Record<string, unknown>): Inscri
   // lista exibir um código que a busca nunca acha.
   if (isCodigoIngressoValido(data['codigoIngresso'])) {
     inscrito.codigoIngresso = data['codigoIngresso'];
+  }
+  // RN-474: espelho do código da compra — mesma leitura Postel do código do
+  // ingresso, pelo mesmo motivo (coluna/busca vazia é honesta; código torto
+  // propagado seria um alvo que a busca nunca acha).
+  if (isCodigoPedidoValido(data['codigoPedido'])) {
+    inscrito.codigoPedido = data['codigoPedido'];
   }
   if (data['estornadoEm'] !== undefined) {
     inscrito.estornadoEm = data['estornadoEm'] as Timestamp;

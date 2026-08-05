@@ -220,6 +220,9 @@ describe('derivações puras de Pedido', () => {
       // (espelho da lista canônica em pedidos/pedido.ts)
       'endereco',
       'aceites',
+      // RN-474 (S1228-T1): o código humano da compra — sorteado e reservado
+      // pelo servidor; cliente escrevê-lo faria o doc discordar da reserva.
+      'codigoPedido',
     ]);
   });
 });

@@ -144,6 +144,11 @@ import {
   MSG_PIX_PENDENTE_ATIVO,
   type CarrinhoParaTrava,
 } from './travaCobrancaPix';
+import {
+  gravarReservaCodigoPedidoNaTx,
+  MOTIVO_SEM_CODIGO_PEDIDO_LIVRE,
+  sortearCodigoPedidoNaTx,
+} from './codigoPedidoReserva';
 
 type Db = admin.firestore.Firestore;
 
@@ -1295,7 +1300,12 @@ async function criarDocsDeCheckout(
   cupomAfiliado: InsumosVenda['cupomAfiliado'] = null,
   afiliadoAtribuicao: InsumosVenda['afiliadoAtribuicao'] = null,
   /** Relógio INJETADO da venda (epoch-ms) — base do pixExpiraEm (RN-157). */
-  agoraMs: number = Date.now()
+  agoraMs: number = Date.now(),
+  /**
+   * RNG INJETADO do sorteio do código da compra (RN-474) — os testes forçam
+   * colisão com ele, como os da emissão do ingresso já fazem.
+   */
+  random: () => number = Math.random
 ): Promise<void> {
   const { pedidoId, pagamentoId, inscritoIds } = idsDoCheckout(
     caller.uid,
@@ -1603,6 +1613,34 @@ async function criarDocsDeCheckout(
       // MESMO CPF serializa por retry otimista, nunca duplica pessoa.
       const leiturasPessoa = await lerPessoasNaTx(db, tx, planosPessoa);
 
+      // RN-474 (S1228-T1): o código HUMANO da compra — sorteado e RESERVADO
+      // aqui, na última leitura da tx, antes de qualquer escrita.
+      //
+      // Por que nesta transação e não depois: ela já sai cedo quando o pedido
+      // existe (`jaExiste.exists`, lá em cima), e é ESSA porta que garante de
+      // graça o que a RN-474 exige — um pedido tem UM código, para sempre, e
+      // o replay do mesmo `idempotencyKey` não sorteia um segundo. Gerar no
+      // webhook de confirmação deixaria o pedido pendente sem referência
+      // justamente na tela e no e-mail em que a pessoa mais precisa dela (o
+      // PIX que não confirmou é o caso do incidente de 04/08); gerar sob
+      // demanda faria caminho de leitura escrever.
+      const reservaCodigo = await sortearCodigoPedidoNaTx(db, tx, random);
+      if (reservaCodigo === null) {
+        // Falha EXPLÍCITA: nada é escrito, a venda não acontece, e o motivo
+        // vai para o log nomeado. Silenciar seria gravar um pedido sem código
+        // — estado proibido pela RN-474 — e gravar mesmo assim seria duplicar
+        // o código de outra compra. O log é o sintoma que pede revisão do
+        // COMPRIMENTO, não do teto de tentativas.
+        logger.error('pedido_sem_codigo_livre', {
+          eventoId: input.eventoId,
+          motivo: MOTIVO_SEM_CODIGO_PEDIDO_LIVRE,
+        });
+        throw new https.HttpsError(
+          'internal',
+          'Não foi possível gerar o código da sua compra. Tente novamente.'
+        );
+      }
+
       // Inscritos — subcoleção do evento (ADR-011); nascem 'pendente'
       input.inscritos.forEach((inscrito, i) => {
         const inscritoId = inscritoIds[i];
@@ -1667,6 +1705,12 @@ async function criarDocsDeCheckout(
           status: 'pendente',
           modalidade: inscrito.modalidade,
           pedidoRef: pedidoId,
+          // RN-474: ESPELHO do código da compra, na mesma tx que cria os dois
+          // docs. É o que faz a busca do organizador custar zero — ela já é um
+          // filtro em memória sobre a lista de inscritos do evento (RN-397),
+          // então o campo entra na busca sem query, sem índice e sem tela nova.
+          // Desnormalização segura: o código nunca muda depois de criado.
+          codigoPedido: reservaCodigo.codigo,
           ehResponsavel,
           // RN-173 (CK2-T1): vínculo inscrição → pessoa (registry global de
           // CPF). Colisão de CPF = MESMA pessoa: inscrições distintas
@@ -1709,6 +1753,12 @@ async function criarDocsDeCheckout(
         valorTotal: sale.valorFinal,
         status: 'pendente',
         formaPagamento: sale.forma,
+        // RN-474: os CINCO SÍMBOLOS, sem o prefixo. O prefixo é apresentação e
+        // vive numa constante do core (`formatarCodigoPedido`) — é essa
+        // separação que torna o veto do dono sobre `PED-` uma troca de
+        // constante mais redeploy, em vez de migração de dados MAIS
+        // rechaveamento da coleção de reservas.
+        codigoPedido: reservaCodigo.codigo,
         criadoEm: now,
         atualizadoEm: now,
       };
@@ -1760,6 +1810,15 @@ async function criarDocsDeCheckout(
         };
       }
       tx.create(pedidoRef, pedidoDoc);
+
+      // RN-474: a RESERVA do código, no MESMO commit que grava o pedido que o
+      // carrega. É a atomicidade que a regra exige — pedido sem código e
+      // código sem pedido são estados proibidos, e aqui eles são
+      // irrepresentáveis: ou os dois docs nascem, ou nenhum nasce. `create`
+      // (nunca `set`) é a segunda tranca contra a corrida: reserva alheia
+      // criada entre a leitura e o commit derruba este commit, e o retry do
+      // Firestore re-executa o callback e sorteia outro código.
+      gravarReservaCodigoPedidoNaTx(tx, reservaCodigo, pedidoId);
 
       // Pagamento — transação 1:1 do pedido. `gateway*` são campos de BORDA
       // (fora do parse): chargeId nasce null e é gravado quando a cobrança
@@ -1877,10 +1936,32 @@ async function criarDocsDeCheckout(
       upsertPessoasNaTx(db, tx, leiturasPessoa);
     });
   } catch (err) {
-    // Corrida entre retries do MESMO key: create() colidiu — os docs já
-    // existem, o caminho de replay (ensureCharge) completa o fluxo.
     const code = (err as { code?: number }).code;
     if (code !== 6 /* ALREADY_EXISTS */) throw err;
+    // ALREADY_EXISTS tinha UM significado assumido — "corrida entre retries do
+    // MESMO key: os docs já existem e o replay (ensureCharge) completa o
+    // fluxo". Com a reserva da RN-474 dentro da tx ele passou a ter DOIS, e
+    // eles pedem desfechos opostos:
+    //
+    //   (a) o PEDIDO já existe → é o replay de sempre; engolir está certo;
+    //   (b) o pedido NÃO existe e quem colidiu foi a RESERVA do código —
+    //       alguém criou `pedidoCodigos/{codigo}` entre a leitura desta tx e
+    //       o commit dela. O Firestore não re-executa o callback nesse caso
+    //       (ALREADY_EXISTS não é ABORTED), então engolir devolveria "compra
+    //       criada" sobre um pedido que não existe.
+    //
+    // A conferência é UMA leitura, e só no caminho de erro. Em (b) o erro
+    // sobe: nada foi escrito (a tx é atômica) e a re-tentativa do comprador,
+    // com a MESMA chave, entra de novo e sorteia outro código — a
+    // idempotência continua sendo o docId, e nenhum código duplicado atravessa.
+    // Não há laço de re-sorteio aqui de propósito: a corrida exige duas
+    // compras concorrentes sorteando o MESMO código em 28,6 milhões, e o
+    // retry do cliente já é o caminho correto e idempotente.
+    const pedidoJaExiste = (await pedidoRef.get()).exists;
+    if (!pedidoJaExiste) {
+      logger.error('checkout_create_colidiu_sem_pedido', { pedidoId });
+      throw err;
+    }
   }
 }
 
@@ -2246,7 +2327,12 @@ export async function createInscricaoChargeCore(
   provider: PaymentProvider,
   rawInput: unknown,
   caller: CheckoutCaller,
-  agora: () => Date = () => new Date()
+  agora: () => Date = () => new Date(),
+  /**
+   * RNG do sorteio do código da compra (RN-474) — injetável só para teste,
+   * como o `random` da emissão do ingresso. A callable nunca o passa.
+   */
+  random: () => number = Math.random
 ): Promise<CreateInscricaoChargeResult> {
   // CKMOD: hojeISO do RELÓGIO INJETADO (dia civil do fuso do produto) —
   // gate "nascimento no passado" testável sem relógio de máquina.
@@ -2358,7 +2444,8 @@ export async function createInscricaoChargeCore(
       cupomParceria,
       cupomAfiliado,
       afiliadoAtribuicao,
-      agora().getTime()
+      agora().getTime(),
+      random
     );
   }
 
