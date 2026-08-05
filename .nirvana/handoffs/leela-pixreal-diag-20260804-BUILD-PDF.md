@@ -61,8 +61,8 @@ Como foi provado (`test/ingresso-pdf.test.tsx`, bloco `gate (a)`):
   alfabeto exclui (`0`, `1`, `I`, `O`, `L`), espaço, hífen → `ingresso.pdf`;
 - **caractere de controle e injeção** — `CRLF + X-Injetado:`, LF sozinho, CR sozinho, NUL, aspas
   fechando o `filename`, ponto-e-vírgula, `../../etc/passwd`, barra invertida, string de 10.000
-  caracteres → todos `attachment; filename="ingresso.pdf"`, e a asserção
-  `/[\r\n]/.test(cabecalho) === false`;
+  caracteres → todos `attachment; filename="ingresso.pdf"`, e a asserção de que
+  nenhum CR, LF ou NUL sobrevive no cabeçalho;
 - **forma única** — para uma bateria de entradas hostis, o cabeçalho sempre casa
   `^attachment; filename="ingresso(-[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6})?\.pdf"$`;
 - **a porta é a do core, não um regex local que concorda por acaso** — para cada valor da amostra,
