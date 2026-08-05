@@ -1786,3 +1786,88 @@ as parcelas diferem em um centavo, e conferir a menor é a leitura conservadora.
 
 Invariante server-side: uma opção cujo somatório de parcelas difira do `valorTotal` é defeito
 do servidor, não erro do cliente, e a cotação recusa com `internal`.
+
+## Delta a fechadura fica com o total, e o Serviço ganha piso (SPEC-METRICAS-SERVICO · 2026-08-05)
+
+Duas regras que nascem da mesma fala do dono de 05/08, e que este épico possui porque uma governa
+o congelamento da configuração de venda e a outra é campo da tabela de taxa. Verbatim em
+`02-rodadas/2026-08-05-metricas-e-servico/01-decisoes-dono.md`; contas e inventários em
+`02-spec-metricas-e-servico.md`.
+
+### RN-487 (nova, dona) · o contador que congela a configuração é o total, não o de pagantes
+
+`qtdInscritos > 0` é hoje a prova de "este evento já vendeu" em oito guardas:
+
+| Onde | O que congela |
+|---|---|
+| `firestore.rules:526-533` | a família de guardas de edição do evento |
+| `firestore.rules:557-561` (`percursosEditaveis`) | `percursos` e `modalidades` |
+| `firestore.rules:675-681` (`taxaModoEditavel`) | `taxaModo` — repassada × incorporada |
+| `firestore.rules:1002, 1015, 1025` | criar kit, apagar kit e mexer em preço de kit |
+| `functions/src/eventos/guardPreco.ts:41-44` | preço do evento (RN-200) |
+| `functions/src/eventos/guardPrecoLote.ts:63-82` | preço do lote |
+
+Essas oito **continuam lendo o total**, deliberadamente, mesmo depois de a RN-486 mudar o que a
+tela conta.
+
+O motivo é que a cotação do comprador está congelada (RN-179) mas o **produto** que ele comprou
+não. Descongelar com PIX vivo deixaria o organizador trocar percurso, modalidade, kit ou modo da
+taxa por baixo de uma compra em andamento: o dinheiro do comprador não mudaria, e ele pagaria por
+um percurso que deixou de existir ou por um kit apagado.
+
+O motivo operacional fecha a decisão: **Rules e painel são dois deploys**. Redefinir o campo faria
+a janela entre um e outro ser uma janela de configuração destravada em produção.
+
+A alternativa rejeitada é redefinir `qtdInscritos` e trocar as oito guardas por uma nova prova de
+venda. Ela é mais limpa no fim e mais cara e mais arriscada no caminho: mexe em Rules com efeito
+imediato sobre dinheiro e configuração, para um ganho que o campo novo da RN-486 entrega sem tocar
+em nada disso.
+
+**Nenhuma guarda de configuração pode passar a ler o contador de pagantes sem decisão explícita do
+dono.** É a regra, e é o critério de aceite: com um evento que só tem inscrito `pendente`, atacar
+as seis guardas tem de resultar em negativa nas seis.
+
+### RN-491 (nova, dona) · o Serviço tem piso, o piso é por pedido, e ele mora na tabela
+
+```
+Serviço = max( round(faceCentavos × percentualBp ÷ 10000) + fixoCentavos , pisoCentavos )
+```
+
+Em centavos inteiros com half-up, dentro da função canônica `computeTaxaPlataforma`
+(`packages/core/src/finance/taxaPlataforma.ts:253-272`), que continua sendo a única autoridade.
+O `min` com a face vem da RN-494.
+
+**A unidade já é o pedido, e isso não precisou ser inventado.** A taxa é calculada uma vez sobre o
+`valorFinal` do pedido inteiro depois do cupom
+(`packages/core/src/checkout/saleState.ts:369-371, 392, 413-415`), e o `fixoCentavos` já é
+documentado como componente por venda (`taxaPlataforma.ts:70`), somado uma única vez. Um pedido de
+dez ingressos paga um fixo, e passa a pagar um piso — não dez. É exatamente a correção que o dono
+fez: *"coloquei errado, É POR PEDIDO."*
+
+O valor é **campo da linha por meio de pagamento**, com a precedência que a RN-178 já estabelece:
+override do organizador, depois global, depois legado (`resolverTaxaMeio`,
+`taxaPlataforma.ts:214-238`). **Nenhum número de dinheiro em constante de código** (RN-183,
+RN-404), e a semente nasce vazia — sem piso configurado, a conta é a de hoje, byte a byte. Não há
+nível por evento, pela mesma decisão de 19/07 que fechou a RN-178.
+
+**Consequência declarada, e ela está aqui porque o dono precisa lê-la escrita.** Com a linha
+vigente de 10,5% e fixo zero, o piso morde em **toda compra de até R$ 28,52**; de R$ 28,53 em
+diante a fórmula já entrega R$ 3,00 por conta própria e o piso fica inerte.
+
+| Face do pedido | Serviço hoje | Serviço com piso | Efetivo sobre a face |
+|---|---|---|---|
+| R$ 5,00 | R$ 0,53 | R$ 3,00 | 60,0% |
+| **R$ 10,00** | **R$ 1,05** | **R$ 3,00** | **30,0%** |
+| R$ 20,00 | R$ 2,10 | R$ 3,00 | 15,0% |
+| R$ 28,52 | R$ 2,99 | R$ 3,00 | 10,52% |
+| R$ 100,00 | R$ 10,50 | R$ 10,50 | 10,5% |
+
+Quem absorve depende do `taxaModo` (RN-347), e o default é `incorporada`
+(`packages/core/src/finance/repasse.ts:50`): numa experiência de R$ 10,00, **em `incorporada` o
+organizador recebe R$ 7,00 em vez de R$ 8,95**, e em `repassada` o comprador paga R$ 13,00 em vez
+de R$ 11,05. Item **SERV-1** do painel, para ratificação do número — não do mecanismo, que sobe
+inerte com a tabela vazia.
+
+Efeito de segunda ordem no parcelamento: em `repassada` a base do cálculo de parcelas é
+`face + Serviço`, então uma venda de R$ 10,00 passa a ter base R$ 13,00 e a escada ofertada muda
+sob a `parcelaMinima` do termo. O cálculo em si não muda de forma.

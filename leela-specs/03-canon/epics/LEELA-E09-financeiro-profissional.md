@@ -1273,3 +1273,141 @@ exigirá corte por data, porque documento fiscal emitido não muda retroativamen
 nem um nem outro; antes disso, o repasse da V1 é transferência manual para conta bancária
 brasileira (RN-356). Aceitar um profissional estrangeiro produziria alguém que vende e nunca
 saca, o que é pior que recusar na porta.
+
+## Delta o Serviço ganha piso, e a métrica passa a contar quem pagou (SPEC-METRICAS-SERVICO · 2026-08-05)
+
+O dono comprou por PIX, não pagou, se viu contado como inscrito e escreveu a correção. Na mesma
+fala vieram o piso do Serviço e o renome. Verbatim integral e a correção da unidade do piso em
+`02-rodadas/2026-08-05-metricas-e-servico/01-decisoes-dono.md`; spec com as contas e os
+inventários em `02-spec-metricas-e-servico.md`.
+
+### RN-488 (nova, dona) · o ticket médio sai do servidor, com o denominador de pagantes
+
+A RN-336 já definia ticket médio como receita confirmada dividida por inscrições pagas. O código
+nunca a seguiu:
+
+```ts
+const ticketMedio = qtdInscritos > 0 ? receitaConfirmada / qtdInscritos : 0;
+```
+`apps/painel/src/routes/eventos/evento/overview/OverviewKpis.tsx:66`
+
+O numerador conta só pagamento confirmado; o denominador conta pendente, cancelado e estornado
+junto. A métrica é estruturalmente subestimada em qualquer evento com abandono — um evento com
+cem inscritos dos quais cinquenta pendentes mostra metade do ticket real. E a conta acontece no
+cliente, contra a disciplina que o cabeçalho do próprio arquivo declara.
+
+A regra passa a exigir duas coisas. O ticket é **campo do agregado**, computado na mesma
+transação de `recomputarFinanceiroEvento` que já tem numerador e denominador na mão. E o
+denominador é o da RN-486, o contador de pagantes.
+
+**O significado do ticket depende do `taxaModo`, e isso fica declarado em vez de corrigido:** em
+`incorporada` o `valorFinal` embute o Serviço e o ticket é bruto com ele dentro; em `repassada` o
+Serviço é cobrado por fora e nunca entra em `receitaConfirmada`. A mesma métrica muda de sentido
+conforme a configuração do evento, e nenhuma tela nova é pedida por isso.
+
+Falsificação: dez confirmados, cinco pendentes, receita de R$ 1.000,00 tem de mostrar R$ 100,00
+e não R$ 66,67.
+
+### RN-492 (nova, dona) · o piso é congelado na compra, e o carimbo diz que ele mordeu
+
+Espelha a RN-179 e existe por uma razão a mais que ela.
+
+O carimbo de hoje é `{meio, percentual, fixoCentavos, valor, origem}`
+(`packages/core/src/pedidos/pagamento.ts:250-261`), escrito na mesma transação que cria pedido e
+pagamento (`functions/src/checkout/createInscricaoCharge.ts:1869-1875`). Uma venda em que o piso
+mordeu fica **aritmeticamente impossível** de reproduzir a partir dele: `percentual: 10,5` com
+`valor: 3,00` sobre face de R$ 10,00 não fecha pela fórmula gravada. Quem auditar concluirá
+carimbo corrompido — que é exatamente a anomalia que `webhookPagamento.ts:581-590` já trata com
+telemetria `taxaflex_carimbo_corrompido_sem_conciliacao`.
+
+O carimbo passa a carregar `pisoCentavos` e `pisoAplicado`, escritos na mesma transação em que a
+taxa já é carimbada. Com isso o replay reproduz o número exato a partir do próprio documento, sem
+consultar tabela nenhuma, que é a promessa da RN-179. **Mudar o piso depois nunca reprecifica
+pedido existente.**
+
+Falsificação direta: fechar uma venda, alterar o piso na tabela e reler a taxa daquela venda tem
+de devolver o número anterior; apagar `pisoAplicado` e reler tem de quebrar o caso.
+
+Efeito colateral que entra junto: `functions/src/platform/rollups.ts:82-92` calcula
+`receitaLeela = computeTaxa(gmv, platformFeePct)`, uma estimativa macro por percentual que ignora
+o carimbo. Com o piso, ela passa a **subestimar** a receita da plataforma em qualquer base com
+muitas vendas pequenas. Ela já era estimativa; passa a ser estimativa enviesada, e o conserto é
+somar o carimbo.
+
+### RN-493 (nova, dona) · no estorno o piso não muda a mecânica, só o total a ratear
+
+A devolução pura continua sendo `calcularDevolucaoEstorno`
+(`packages/core/src/eventos/politicaVendas.ts:451-468`): dentro dos sete dias de arrependimento
+volta face mais Serviço integral e não parametrizável (RN-373/374, art. 49 do CDC); fora da
+janela volta a face e o Serviço segue `devolveTaxaForaDaJanela`, default reter.
+
+O rateio por linha continua sendo `montarItensDoPedido`
+(`packages/core/src/pedidos/pedido.ts:330-449`, rateio em `:388-428`): proporcional ao
+`valorFinal` da linha, piso proporcional mais maior resto, com a invariante
+`Σ itens.taxaRepassada === taxaRepassadaTotal` por construção. **O piso apenas aumenta o total a
+ratear**, e a invariante garante que estornar as N linhas uma a uma devolva exatamente o piso,
+sem centavo sobrando nem faltando.
+
+Duas leituras que ficam escritas. Estorno parcial de um pedido que pagou piso devolve a fração da
+linha, o que é a leitura correta de "o piso é do pedido" — três ingressos de R$ 3,00 pagam um
+piso sobre face de R$ 9,00, e estornar um devolve um terço dele. E em `incorporada` não existe
+decomposição do Serviço por ingresso (`pedido.ts:444-446`), então o piso segue a regra existente
+e não cria caminho novo.
+
+O piso do principal no parcelamento (`packages/core/src/finance/calc.ts:144-150`), corrigido em
+rodada anterior, é **outra coisa** e não interage: ele garante que a soma das parcelas não fique
+abaixo do total, e opera depois da taxa.
+
+### RN-494 (nova, dona) · o Serviço nunca ultrapassa a face da venda
+
+Borda que a fala do dono não previu. Numa venda de R$ 2,00 em modo `incorporada`, o líquido do
+organizador por `computeLiquidoProdutor` (`packages/core/src/finance/repasse.ts:88, 96`) seria
+**negativo**: dois reais menos três. O clamp em zero que existe uma camada acima
+(`functions/src/eventos/agregarFinanceiro.ts:123-155` usa `max(0, bruta − taxaValor)`) esconderia
+a divergência em vez de resolvê-la, e faria o repasse deixar de bater com a soma das vendas.
+
+A regra crava `Serviço = min( max(fórmula, piso), face )`, porque cobrar do organizador mais do
+que a venda inteira transforma uma venda em dívida e nenhuma tela do produto sabe representar
+isso.
+
+**É default em vigor, não decisão fechada.** A alternativa que resolve de verdade é um preço
+mínimo de venda acima do piso, que o produto hoje não tem:
+`packages/core/src/checkout/saleState.ts:393-397` só recusa `valorFinal ≤ 0`, porque pedido
+gratuito está fora do fluxo pago, e não existe nenhum mínimo positivo. Item **SERV-2** do painel.
+
+Falsificação: uma venda de R$ 2,00 em `incorporada` tem de deixar o líquido do organizador em
+R$ 0,00 e nunca em número negativo.
+
+### RN-496 (nova, dona) · o "Repasse previsto" não descreve a taxa que o organizador não deve ver
+
+A descrição sob o valor é suprimida —
+`apps/painel/src/routes/eventos/evento/overview/OverviewKpis.tsx:110`:
+
+```tsx
+{typeof taxaPct === 'number' ? `após taxa ${formatInt(taxaPct)}%` : 'após taxa Leela'}
+```
+
+Duas coisas que a leitura do arquivo revela. A string "após taxa 10,5%" **não existe como
+literal**: ela é composta em tempo de execução, e `formatInt(10.5)` produz `10,5` pelo
+`Intl.NumberFormat('pt-BR')` — procurar pelo texto no repositório não acha nada. E o fallback
+dessa mesma linha é a **única ocorrência visível de "Taxa Leela" no produto inteiro**.
+
+**O cálculo não muda**: `repassePrevisto` continua vindo de `financeiro/current.receitaLiquida`,
+computado no servidor por `computeFinanceiro`. O badge "Aguardando encerramento" **fica**, porque
+é a RN-331 e fala de quando o dinheiro libera, não de taxa. A prop `taxaPct` perde o consumidor e
+sai da assinatura.
+
+Como par, o campo `Taxa Be Hero` de
+`apps/painel/src/routes/eventos/inscritos/InscritoSlideIn.tsx:553` é **suprimido**, não
+renomeado: ele carrega a marca da plataforma anterior e, pior, exibe ao produtor o valor da taxa,
+que é o que a RN-404 proíbe. O resto do produto respeita a decisão com rigor — o CSV financeiro
+exclui a taxa de propósito com teste provando a ausência, e `FinanceiroView.test.tsx:38` guarda
+que a tela financeira não diga "Taxa Leela". Este slide-in passou por fora das duas guardas.
+
+### O que este delta não faz
+
+Não redefine `qtdInscritos` (RN-487, dona em [[LEELA-E04-config-vendas]]). Não constrói o contador
+de visitas (RN-490, dona em [[LEELA-E11-analytics]]). Não decide se o reembolso devolve o Serviço
+fora da janela, que segue sendo o item 23 do painel — o piso apenas aumenta o valor em disputa nas
+compras pequenas. Não toca RN-455 nem RN-459: o custo do gateway segue especificado e não
+construído, e o piso do Serviço não depende dele.

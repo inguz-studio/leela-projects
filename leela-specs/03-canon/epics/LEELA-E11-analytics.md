@@ -414,3 +414,76 @@ Território novo confirmado: **`apps/painel/src/routes/crm/visao-geral/**`**. Mi
 **Prova de que o move não mexeu em comportamento:** `git diff -M --stat` mostra **0 inserções e 0 deleções** nos 6 arquivos de teste movidos. A supressão k=5 do cohort, a linha companheira arrastada, a nota de cobertura honesta e a exclusão do `aguardandoReprocesso` chegaram intactas — nenhuma asserção foi reescrita, que era o gate.
 
 **Uma mudança de import, e só:** a página passou a usar o `useCrmSession` (mesmo contrato do `useFinanceiroSession`, que viajou com Repasses). Como o caminho relativo `../_data/session` é idêntico nos dois módulos, a troca foi de NOME do hook, não de topologia — e nenhuma cópia nova de sessão nasceu.
+
+## Delta a conversão sem denominador, e o visitante ganha dono (SPEC-METRICAS-SERVICO · 2026-08-05)
+
+O dono deu o exemplo da conversão com o denominador certo e, na mesma frase, declarou que não
+tinha contabilizado visitantes. Ele estava certo nas duas pontas. Verbatim em
+`02-rodadas/2026-08-05-metricas-e-servico/01-decisoes-dono.md`; varredura completa em
+`02-spec-metricas-e-servico.md`.
+
+### RN-489 (nova, dona) · sem denominador não há conversão, e a tela não promete o que não mede
+
+A taxa de conversão é **visitantes sobre pagantes**. A contagem de visitantes **não existe em
+lugar nenhum do sistema**, e isso foi medido, não presumido.
+
+Busca por `visitante`, `visitors`, `visitas`, `pageview`, `page_view`, `views`, `visualizacoes`,
+`acessos`, `sessions`, `analytics`, `GA4`, `gtag`, `firebase/analytics`, `logEvent`, `plausible`,
+`posthog`, `umami`, `measurementId` e `mixpanel` sobre `apps/`, `packages/`, `functions/src/`,
+`firestore.rules` e `firestore.indexes.json`:
+
+- **Nenhum SDK instrumentado.** `@firebase/analytics` aparece só no `pnpm-lock.yaml` como
+  dependência transitiva do pacote `firebase`; nenhum arquivo importa `getAnalytics` nem
+  `logEvent`. Zero `gtag`, zero `<Script>` na landing, zero provedor externo.
+- **Nenhum contador próprio no Firestore.** As cerca de 66 coleções declaradas em
+  `firestore.rules` não têm `visitas`, `pageviews` nem equivalente, e a landing não faz nenhuma
+  escrita de contador.
+
+O denominador não existe nem dentro nem fora do Firestore. Não é o caso de "o dado está no GA e o
+painel não alcança": o dado nunca foi coletado.
+
+A função existe e está correta — `derivarTaxaConversao`
+(`packages/core/src/overview/kpis.ts:155-161`) devolve `null` sem visitas — e a única chamada real
+passa `null` literal, com o motivo escrito no código
+(`functions/src/overview/aggregateProfessionalDashboard.ts:195-201`). **A tela nunca inventou
+número**, e é isso que salva o item: em produção o card sempre mostra `—`.
+
+A regra crava duas coisas. **Nenhuma superfície exibe conversão derivada de outra coisa** — e o
+numerador, quando ela existir, é o de pagantes (RN-486), não o total. E o rótulo
+`visitantes → inscritos` (`apps/painel/.../overview/OverviewKpis.tsx:100`) **não é renderizado
+enquanto o denominador não existir**: hoje ele aparece sempre, inclusive com valor `—`, e ensina o
+organizador a esperar um número que não vem. O que a tela faz no lugar é decisão do dono (item
+**CONV-1**), com default de esconder o card.
+
+**Duas conversões diferentes carregam o mesmo nome, e vale separá-las aqui.** Este épico promete
+conversão por **atribuição**: cliques em link master de clube contra tráfego direto, meta acima de
+3x (PRD 7.1, RN-125/RN-311). O painel exibe conversão por **tráfego**: visitantes sobre inscritos.
+São métricas distintas.
+
+**Achado de passagem, registrado como dívida:** quando a conversão aparece com número, ele é
+literal de mockup injetado por seed de preview. `functions/scripts/preview-seed-extra.ts:1170-1171`
+fixa `CONVERSAO_TAXA_MOCKUP = 68.2` e `:1282` fixa `taxaConversaoPct: 42`, escrevendo por cima do
+agregado real com `merge: true` num laço que reescreve até estabilizar; para o dashboard
+consolidado, ainda carimba `computadoEm` cerca de dez anos no futuro (`:1172-1174`) para que
+`getOverview` nunca recompute. **Rodado contra um projeto que não seja emulador, isso congela o
+dashboard daquele profissional permanentemente.**
+
+### RN-490 (nova, dona) · o visitante ganha dono e contrato, e a construção espera o pedido
+
+A conversão por tráfego nunca teve épico. O código atribui a lacuna a um "gap E12"
+(`OverviewPage.tsx:6`, `kpis.ts:17`, `queries.ts:232-237`), e o [[LEELA-E12-landing]] também não
+especifica coleta de visitas em lugar nenhum. **O visitante era órfão.** Ele passa a ser deste
+épico.
+
+Contrato mínimo, para que a primeira vez que alguém pedir não vire improviso:
+
+- **Agregado e por evento**, mantido por Cloud Function como todo agregado da casa, nunca escrito
+  pelo cliente. É a mesma governança que este épico já declara para os rollups.
+- **Conta sessão, não requisição**, para não inflar com recarga de página e robô. Conversão que
+  conta requisição não é conversão, é tráfego bruto.
+- **Nasce sem PII** — sem IP em claro, sem identificador de pessoa —, o que a mantém fora do
+  escopo do expurgo de retenção e da conversa jurídica aberta no painel.
+
+**Contrato especificado, construção não priorizada.** Não há tarefa na fila desta rodada, pelo
+mesmo molde da RN-458: o contador não existe, o dono não pediu para construí-lo, e a regra existe
+para que o pedido futuro não nasça improvisado.

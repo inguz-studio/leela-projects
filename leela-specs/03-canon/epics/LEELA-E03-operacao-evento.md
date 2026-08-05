@@ -2125,3 +2125,65 @@ de decisões; detalhe em `.nirvana/handoffs/leela-build-2d6ee98d-PIXFIX-EXTREF.m
 
 **Se um dia virar regra:** a decisão a tomar é se o "N inscritos" público conta pendente ou só
 confirmado. Hoje ele conta tudo por construção, e isso nunca foi escrito.
+
+## Delta o inscrito que a tela conta é quem pagou (SPEC-METRICAS-SERVICO · 2026-08-05)
+
+A ponta solta nomeada acima, de 03/08, terminava assim: *"se um dia virar regra: a decisão a tomar
+é se o N inscritos público conta pendente ou só confirmado. Hoje ele conta tudo por construção, e
+isso nunca foi escrito."* A decisão chegou dois dias depois, do dono, e depois de ele mesmo abrir
+uma compra por PIX e não pagá-la. Verbatim em
+`02-rodadas/2026-08-05-metricas-e-servico/01-decisoes-dono.md`; spec com o inventário completo em
+`02-spec-metricas-e-servico.md`.
+
+### RN-486 (nova, dona) · o contador exibido é o de pagantes, e ele é um número novo
+
+O número mostrado ao organizador passa a ser a contagem de inscritos com pagamento confirmado, e
+é a base de toda métrica derivada dele — ticket médio (RN-488), vagas restantes, ocupação e
+alertas.
+
+**Ele não substitui `eventos/{id}.qtdInscritos`.** Nasce como campo próprio no mesmo agregado,
+projetado de `financeiro/current.inscritos.porStatus.confirmado`, que a transação de
+`recomputarFinanceiroEvento` já computa hoje
+(`functions/src/eventos/agregarFinanceiro.ts:178-181`). A razão de não redefinir o campo antigo é
+a RN-487, dona em [[LEELA-E04-config-vendas]]: `qtdInscritos > 0` é a prova de "este evento já
+vendeu" em oito guardas de configuração, e redefini-la descongelaria a configuração comercial de
+qualquer evento que só tenha PIX pendente.
+
+Dezenove superfícies de exibição passam a ler o número novo. O inventário completo, com arquivo e
+linha, está na spec da rodada; a lista curta é cabeçalho e sub-nav do evento
+(`EventoShell.tsx:97, 174`), ticket médio (`OverviewKpis.tsx:66`), countdown
+(`CountdownHero.tsx:47-48`), hub de eventos (`hubRows.ts:59-91`), KPI de portfólio
+(`_lib/kpis.ts:26`), rótulo de esgotado (`_lib/status.ts:33-39`), alertas
+(`_lib/alertas.ts:47, 112`), vagas restantes e limiar de últimas vagas
+(`packages/core/src/overview/kpis.ts:120-133`), alerta de ocupação
+(`packages/core/src/overview/alerts.ts:123`), dashboard do profissional
+(`aggregateProfessionalDashboard.ts:142, 178-187`) e snapshot diário
+(`coletaDiaria.ts:112`).
+
+**Nada disso é o gate de lotação da venda.** Aquele lê `lotes/{loteId}.vendidos`, que já conta só
+`confirmado` e `estornado` desde sempre — `functions/src/eventos/virarLote.ts:67`:
+
+```ts
+export const STATUS_QUE_CONTAM_VENDA = ['confirmado', 'estornado'] as const;
+```
+
+Por isso **contar só pagante na tela não abre sobrevenda**: métrica e capacidade nunca foram o
+mesmo número. A janela em que N compradores com PIX pendente passam pelo `computeSaleState` é
+anterior a esta regra e vem da RN-158, que declara que carrinho aberto não segura estoque.
+
+Falsificação: um evento com uma cobrança PIX pendente e nenhum pagamento tem de exibir zero
+inscritos nas dezenove superfícies. O `desafio-mtb-costa-lagoa-2026`, com dois pedidos órfãos, é o
+caso real de conferência — **leitura apenas, sem apagar inscrito**, mantendo a recomendação de
+03/08.
+
+**O inscrito fantasma continua sendo outra frente.** PIX expirado ou falho deixa o inscrito em
+`pendente` para sempre (`expirarPixPendente.ts:243-245`, `webhookPagamento.ts:361-368`), nenhum
+código apaga doc de inscrito, e `expirarPixPendente` é callable de cliente sem cron de varredura.
+Uma cobrança gerada e nunca paga congela a configuração comercial do evento indefinidamente, pela
+RN-487 — a RN-486 para de contaminar a tela, e não conserta isso.
+
+### O que o "N inscritos" público faz
+
+Fica **em aberto**, como item **INSCR-1** do painel. O dono falou do painel profissional; a
+landing lê o mesmo campo (`apps/landing/lib/leitor.ts:542`, `lib/tipos.ts:147-149`) com a exibição
+hoje suprimida. O default proposto é que as duas telas digam a mesma verdade.

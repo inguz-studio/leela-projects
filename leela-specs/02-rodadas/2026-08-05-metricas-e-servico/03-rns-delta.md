@@ -1,0 +1,80 @@
+---
+tags: [leela, rn, regras-de-negocio, rodada, metricas, inscritos, conversao, servico, piso]
+trace: leela-pixreal-diag-20260804
+lote: SPEC-METRICAS-SERVICO
+data: 2026-08-05
+---
+
+# 03-rns-delta · o inscrito pagante e o piso do Serviço
+
+> Delta de RN da lane SPEC-METRICAS-SERVICO. O enunciado canônico de cada regra vive no épico
+> dono, consolidado na mesma aterrissagem ([[CONVENCAO-BOARDS]] §2). Este arquivo é o delta do
+> dia e diz para onde cada uma foi.
+
+## Prova de não colisão
+
+A faixa mais alta com enunciado é a **RN-475**, criada em 05/08 pela lane SPEC-CODPEDIDO e
+registrada em [[indice-de-regras-de-negocio]]. A faixa **476 a 485 está reservada à lane
+SPEC-CONTAS-LANDING**, em voo no mesmo território, e não foi tocada aqui.
+
+Varredura por `RN-48[6-9]` e `RN-49[0-9]` sobre `leela-specs/`, `apps/`, `packages/`,
+`functions/src/` e `firestore.rules`: o único hit é a **RN-499**, que é um dos seis números que
+existem só como marcador de faixa e nunca receberam enunciado. Ele fica de fora de propósito,
+pela mesma razão que manteve o RN-460 fora da rodada de juros: ressuscitar marcador quebra a
+leitura de quem confia no índice.
+
+**Esta lane consome RN-486 a RN-496.**
+
+## Novas
+
+| RN | Regra | Épico dono | Lane |
+|---|---|---|---|
+| **RN-486** | **O inscrito que o painel conta é quem pagou, e ele é um número diferente do que existe hoje.** O contador exibido ao organizador passa a ser a contagem de inscritos com pagamento confirmado, e é a base de toda métrica derivada. Ele **não** substitui `eventos/{id}.qtdInscritos`: nasce como campo próprio no mesmo agregado, projetado de `financeiro/current.inscritos.porStatus.confirmado`, que a transação de `recomputarFinanceiroEvento` já computa (`functions/src/eventos/agregarFinanceiro.ts:178-181`). A razão de não redefinir o campo antigo está na RN-487. Dezenove superfícies de exibição passam a ler o número novo — cabeçalho do evento, ticket médio, countdown, hub, KPI de portfólio, rótulo de esgotado, alertas, vagas restantes, limiar de "últimas vagas", dashboard do profissional e snapshot diário —, e o inventário completo com arquivo e linha está em `02-spec-metricas-e-servico.md` §"O inventário dos consumidores". Falsificação: um evento com uma cobrança PIX pendente e nenhum pagamento tem de exibir zero inscritos em todas as dezenove. | E03 (dona) · E02 e E09 (consomem) | SPEC-METRICAS-SERVICO |
+| **RN-487** | **O contador que congela a configuração comercial do evento é o total, e não o de pagantes.** `qtdInscritos > 0` é hoje a prova de "este evento já vendeu" em oito guardas: `firestore.rules:526-533, 557-561` (percursos e modalidades), `:675-681` (`taxaModo`), `:1002, 1015, 1025` (criar, apagar e precificar kit), `functions/src/eventos/guardPreco.ts:41-44` e `guardPrecoLote.ts:63-82` (RN-200). Essas oito **continuam lendo o total**, deliberadamente. O motivo é que a cotação do comprador está congelada (RN-179) mas o produto que ele comprou não: descongelar com PIX vivo deixaria o organizador trocar percurso, modalidade, kit ou modo da taxa por baixo de uma compra em andamento. Motivo operacional que fecha a decisão: Rules e painel são dois deploys, e a janela entre eles seria uma janela de configuração destravada em produção. **Nenhuma guarda de configuração pode passar a ler o contador de pagantes sem decisão explícita do dono.** | E04 (dona) · E03 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-488** | **O ticket médio sai do servidor, e o denominador é o de pagantes.** A RN-336 já definia ticket médio como receita confirmada dividida por inscrições pagas; o código nunca a seguiu — `apps/painel/.../overview/OverviewKpis.tsx:66` divide `receitaConfirmada` por `qtdInscritos`, que conta pendente, cancelado e estornado, e o faz **no cliente**, contra a disciplina declarada no cabeçalho do próprio arquivo. A regra passa a exigir duas coisas: o ticket é campo do agregado, computado na mesma transação que já tem numerador e denominador (`agregarFinanceiro.ts`), e o denominador é o da RN-486. **O significado do ticket depende de `taxaModo` e isso fica declarado, não corrigido:** em `incorporada` o `valorFinal` embute o Serviço e o ticket é bruto com ele dentro; em `repassada` o Serviço é cobrado por fora e nunca entra em `receitaConfirmada`. Falsificação: um evento com dez confirmados e cinco pendentes, receita de R$ 1.000,00, tem de mostrar R$ 100,00 e não R$ 66,67. | E09 (dona) · E03 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-489** | **Sem denominador não há conversão, e a tela não promete o que não mede.** A taxa de conversão é visitantes sobre pagantes. A contagem de visitantes **não existe em lugar nenhum do sistema** — nem SDK instrumentado, nem contador no Firestore, nem dado fora dele (varredura em `02-spec-metricas-e-servico.md` §"Visitantes não existem"). `derivarTaxaConversao` (`packages/core/src/overview/kpis.ts:155-161`) já devolve `null` sem visitas, e a única chamada real passa `null` literal (`functions/src/overview/aggregateProfessionalDashboard.ts:195-201`). A regra crava que **nenhuma superfície exibe número de conversão derivado de outra coisa**, e que o rótulo `visitantes → inscritos` não é renderizado enquanto o denominador não existir — hoje ele aparece sempre, inclusive com valor `—`, prometendo uma capacidade ausente. O que a tela faz no lugar é decisão do dono (item **CONV-1**), com default de esconder o card. **O numerador, quando a conversão existir, é o de pagantes (RN-486), e não o total.** | E11 (dona) · E02, E03 e E12 (consomem) | SPEC-METRICAS-SERVICO |
+| **RN-490** | **O visitante ganha dono e contrato, e a construção fica para quando o dono pedir.** A conversão por tráfego nunca teve épico: o E11 promete conversão por **atribuição** (link master de clube, PRD 7.1, RN-125/RN-311), que é outra métrica com o mesmo nome, e o código atribui a lacuna a um "gap E12" que o E12 também não cobre. O visitante passa a ser do **E11**. Contrato mínimo, para que a primeira vez que alguém pedir não vire improviso: a contagem é **agregada e por evento**, mantida por Function como todo agregado da casa, nunca escrita pelo cliente; ela conta **sessão**, não requisição, para não inflar com recarga e robô; e ela nasce **sem PII** — sem IP em claro, sem identificador de pessoa —, o que a mantém fora do escopo do expurgo de retenção. **Contrato especificado, construção não priorizada:** não há tarefa na fila desta rodada, pelo mesmo molde da RN-458. | E11 (dona) · E12 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-491** | **O Serviço tem piso, o piso é por pedido, e ele mora na tabela.** `Serviço = max( round(faceCentavos × percentualBp ÷ 10000) + fixoCentavos , pisoCentavos )`, em centavos inteiros com half-up, na mesma função canônica `computeTaxaPlataforma` (`packages/core/src/finance/taxaPlataforma.ts:253-272`). A unidade **já é o pedido**: a taxa é calculada uma vez sobre o `valorFinal` do pedido depois do cupom (`packages/core/src/checkout/saleState.ts:369-371, 392, 413-415`) e o `fixoCentavos` já é documentado como componente por venda — um pedido de dez ingressos paga um piso, não dez. O valor é **campo da linha por meio de pagamento**, com a precedência já existente override do organizador > global > legado (`resolverTaxaMeio`, `taxaPlataforma.ts:214-238`); **nenhum número de dinheiro em constante de código** (RN-183/RN-404), e a semente nasce vazia. Sem piso configurado, a conta é a de hoje. **Consequência declarada:** com a linha vigente de 10,5% e fixo zero, o piso morde em toda compra de até R$ 28,52; numa experiência de R$ 10,00 o Serviço passa de R$ 1,05 para R$ 3,00, que é 30% da face. | E04 (dona) · E09, E12 e E16 (consomem) | SPEC-METRICAS-SERVICO |
+| **RN-492** | **O piso é congelado na compra e o carimbo diz que ele mordeu.** Espelha a RN-179 e existe por uma razão a mais que ela: com o carimbo atual `{meio, percentual, fixoCentavos, valor, origem}` (`packages/core/src/pedidos/pagamento.ts:250-261`), uma venda em que o piso mordeu fica **aritmeticamente impossível** de reproduzir — `percentual: 10,5` com `valor: 3,00` sobre face de R$ 10,00 não fecha pela fórmula gravada, e quem auditar concluirá carimbo corrompido, que é exatamente a anomalia que `functions/src/checkout/webhookPagamento.ts:581-590` já trata com telemetria `taxaflex_carimbo_corrompido_sem_conciliacao`. O carimbo passa a carregar `pisoCentavos` e `pisoAplicado`, escritos na mesma transação em que a taxa já é carimbada (`createInscricaoCharge.ts:1869-1875`). Com isso o replay reproduz o número exato a partir do próprio documento, sem consultar tabela. **Mudar o piso depois nunca reprecifica pedido existente.** Falsificação direta: fechar uma venda, alterar o piso na tabela e reler a taxa daquela venda tem de devolver o número anterior. | E09 (dona) · E04 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-493** | **No estorno o piso não muda a mecânica, só o total a ratear.** A devolução pura continua sendo `calcularDevolucaoEstorno` (`packages/core/src/eventos/politicaVendas.ts:451-468`): dentro dos sete dias de arrependimento volta face mais Serviço integral e não parametrizável (RN-373/374, art. 49 do CDC); fora da janela volta a face e o Serviço segue `devolveTaxaForaDaJanela`, default reter. O rateio por linha continua sendo `montarItensDoPedido` (`packages/core/src/pedidos/pedido.ts:330-449`, rateio em `:388-428`): proporcional ao `valorFinal` da linha, piso proporcional mais maior resto, com a invariante `Σ itens.taxaRepassada === taxaRepassadaTotal` por construção. **O piso apenas aumenta o `taxaRepassadaTotal`**, e a invariante garante que estornar as N linhas uma a uma devolva exatamente o piso, sem centavo sobrando nem faltando. Duas leituras que ficam escritas: estorno parcial de um pedido que pagou piso devolve a fração da linha, o que é a leitura correta de "o piso é do pedido"; e em `incorporada` não existe decomposição do Serviço por ingresso (`pedido.ts:444-446`), então o piso segue a regra existente e não cria caminho novo. O piso do principal no parcelamento (`packages/core/src/finance/calc.ts:144-150`) é outra coisa e não interage. | E09 (dona) · E04 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-494** | **O Serviço nunca ultrapassa a face da venda.** Borda que a fala do dono não previu: numa venda de R$ 2,00 em modo `incorporada`, o líquido do organizador por `computeLiquidoProdutor` (`packages/core/src/finance/repasse.ts:88, 96`) seria **negativo**, e o clamp em zero que existe uma camada acima (`agregarFinanceiro.ts:123-155`) esconderia a divergência em vez de resolvê-la, fazendo o repasse deixar de bater com a soma das vendas. A regra crava `Serviço = min( max(fórmula, piso), face )`, porque cobrar do organizador mais do que a venda inteira transforma uma venda em dívida e nenhuma tela do produto sabe representar isso. **É default em vigor, não decisão fechada:** a alternativa que resolve de verdade é um preço mínimo de venda acima do piso, que o produto hoje não tem — `saleState.ts:393-397` só recusa `valorFinal ≤ 0`, e não existe nenhum mínimo positivo. Item **SERV-2** do painel. Falsificação: uma venda de R$ 2,00 em `incorporada` tem de deixar o líquido do organizador em R$ 0,00 e nunca em número negativo. | E09 (dona) · E04 (consome) | SPEC-METRICAS-SERVICO |
+| **RN-495** | **O nome é Serviço em toda superfície humana, e o gateway não entra no renome.** "Taxa Leela", "Taxa Be Hero" e "taxa da plataforma" saem do texto visível; o rótulo passa a ser **Serviço**, com o meio de pagamento entre parênteses onde ele já aparece. São 34 strings a trocar e uma a suprimir, inventariadas com arquivo e linha em `02-spec-metricas-e-servico.md` §"O inventário do renome". **Quatro superfícies estão limpas e não têm tarefa:** e-mail, PDF do ingresso, CSV (financeiro e de inscritos) e área do cliente. A **taxa do gateway não muda de nome porque não tem nome no produto**: a varredura por `asaas`, `gateway`, `MDR`, `adquirente` e `custoGateway` devolveu zero strings visíveis, e o custo do gateway é hoje deliberadamente descartado (`functions/src/payments/asaasProvider.ts:1505-1507` usa sempre `payment.value`). **Renome é de texto, nunca de campo:** `platformFeePct`, `taxaModo`, `taxaCongelada`, `taxaRepassada`, `taxaTabela`, `taxaPct`, `taxaValor`, `taxaServico` e a rota `/plataforma/taxa` ficam como estão — `platformFeePct` vive em snapshots imutáveis `commercialTerms/v{n}` e `taxaModo` é validado por enum fechado nas Rules, e nenhum ganho de leitura justifica migrar dado financeiro. Três famílias homônimas ficam de fora: taxa de conversão, taxa de transferência de titularidade e taxa de parcelamento. | E12 (dona) · E09 e E16 (consomem) | SPEC-METRICAS-SERVICO |
+| **RN-496** | **O "Repasse previsto" não descreve a taxa que o organizador não deve ver.** A descrição sob o valor é suprimida — `apps/painel/.../overview/OverviewKpis.tsx:110`, que compõe `após taxa 10,5%` em tempo de execução e cai em `após taxa Leela` quando o percentual é nulo. **O cálculo não muda**: `repassePrevisto` continua vindo de `financeiro/current.receitaLiquida`, computado no servidor por `computeFinanceiro`. O badge "Aguardando encerramento" **fica**, porque é a RN-331 e fala de liberação, não de taxa. A supressão fecha também a única ocorrência visível de "Taxa Leela" no produto inteiro, e alinha o card à mesma disciplina que o CSV financeiro e a tela de Financeiro já praticam com guarda de teste (RN-404). Como par, o campo "Taxa Be Hero" de `apps/painel/src/routes/eventos/inscritos/InscritoSlideIn.tsx:553` é **suprimido**, não renomeado: ele exibe ao produtor o valor da taxa, que é o que a RN-404 proíbe, além de carregar a marca da plataforma anterior. | E09 (dona) · E12 (consome) | SPEC-METRICAS-SERVICO |
+
+## Ampliadas e reconciliadas (sem número novo)
+
+- **RN-336** — inalterada no enunciado e finalmente exigível. Ela já dizia "receita confirmada ÷
+  inscrições pagas"; a RN-488 acrescenta de onde sai o denominador e onde a conta acontece.
+- **RN-335** — inalterada. Só pagamento confirmado entra em receita confirmada; a RN-486 traz o
+  denominador para a mesma régua que o numerador sempre teve.
+- **RN-178, RN-179, RN-180, RN-182 e RN-183** — inalteradas. A tabela por meio, o congelamento, o
+  fio do `taxaModo` e o rounding único seguem como estão; o piso é um terceiro termo na fórmula
+  existente e um campo a mais no carimbo existente, não um mecanismo novo.
+- **RN-181** — inalterada e reafirmada. O rateio do componente por linha, por maior resto, absorve
+  o piso sem mudar de forma. A RN-493 só declara o efeito.
+- **RN-200** — inalterada, e é ela que sustenta a RN-487: o preço congela quando o evento já
+  vendeu, e "já vendeu" continua significando "existe inscrito", não "existe pagante".
+- **RN-300 e RN-304** — inalteradas. A virada de lote e a capacidade seguem lendo `vendidos`, que
+  já conta só `confirmado` e `estornado` (`functions/src/eventos/virarLote.ts:67`). Nenhuma
+  mudança desta rodada as alcança.
+- **RN-158** — inalterada. O prazo do carrinho continua não sendo reserva de vaga, e nada aqui o
+  transforma em uma.
+- **RN-331** — inalterada. O badge de liberação do repasse sobrevive à supressão da descrição.
+- **RN-347** — inalterada e agora com consequência escrita: o modo da taxa decide quem absorve o
+  piso, e o número está na tabela de `02-spec-metricas-e-servico.md` §"O piso, em números".
+- **RN-373 e RN-374** — inalteradas. A janela de arrependimento devolve o Serviço integral; com o
+  piso, o valor devolvido nas compras pequenas cresce.
+- **RN-404 e RN-406** — inalteradas e reforçadas. A taxa não é exibida ao produtor, e a RN-496
+  fecha as duas superfícies que escapavam da guarda.
+- **RN-455 e RN-459** — inalteradas e não construídas. O custo do gateway segue especificado na
+  rodada de juros e margem, e o piso do Serviço não depende dele.
+
+## Onde cada uma foi consolidada
+
+| RN | Épico |
+|---|---|
+| RN-486 | [[LEELA-E03-operacao-evento]] |
+| RN-487, RN-491 | [[LEELA-E04-config-vendas]] |
+| RN-488, RN-492, RN-493, RN-494, RN-496 | [[LEELA-E09-financeiro-profissional]] |
+| RN-489, RN-490 | [[LEELA-E11-analytics]] |
+| RN-495 | [[LEELA-E12-landing]] |
