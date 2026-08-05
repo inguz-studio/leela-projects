@@ -27,6 +27,24 @@
 // A11y: o `Dialog` do DS já entrega role=dialog + aria-modal, focus trap
 // cíclico, Esc, clique no overlay e retorno de foco ao abridor. Aqui só se
 // declara o título e se põe o foco inicial no campo de e-mail.
+//
+// A MARCA NO MODAL (pedido do dono, 04/08). O wordmark é o MESMO asset do
+// `PublicHeader` (`/leela-logo-brasa.svg`) — nenhuma variante nova, nenhum SVG
+// inventado: a porta de entrada não pode ter uma Leela diferente da do header
+// que está logo atrás dela.
+//
+// Ela é DECORATIVA (`alt=""` + `aria-hidden`), e a razão é uma só: o nome
+// acessível deste diálogo já é "Entrar na Leela". Uma imagem com `alt="Leela"`
+// aqui faria o leitor de tela anunciar a marca duas vezes seguidas, sem
+// acrescentar informação nenhuma — e por não ser gráfico funcional, também não
+// entra no gate de contraste 1.4.11 (o wordmark lime sobre `surface-raised` é
+// alto contraste de qualquer forma).
+//
+// Alinhada à ESQUERDA, com o título e os campos: o `Dialog` alinha o cabeçalho
+// à esquerda, e uma marca centralizada sobre um formulário alinhado à esquerda
+// cria duas réguas na mesma caixa. Altura pela escala do DS (`h-8`), nunca px
+// cru — e por ser uma linha de 32px dentro do corpo com scroll, o bottom-sheet
+// do mobile (max-h 85vh) não muda de comportamento.
 // =============================================================================
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -103,6 +121,15 @@ export function EntrarOverlay({
       {...(description !== undefined ? { description } : {})}
       {...(returnFocusRef !== undefined ? { returnFocusRef } : {})}
     >
+      {/* Wordmark oficial — mesmo asset do PublicHeader. Decorativo: o nome
+          acessível do diálogo já diz "Entrar na Leela". */}
+      <img
+        src="/leela-logo-brasa.svg"
+        alt=""
+        aria-hidden
+        data-slot="brand-logo"
+        className="mb-5 h-8 w-auto"
+      />
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => void entrar(e)}

@@ -377,3 +377,30 @@ describe('S1221-T1 · a credencial não sobrevive ao fechamento', () => {
     expect((screen.getByLabelText(/^senha$/i) as HTMLInputElement).value).toBe('');
   });
 });
+
+describe('a marca dentro do modal (pedido do dono · 04/08)', () => {
+  it('o wordmark é o MESMO asset do header, e é decorativo', async () => {
+    await renderConta();
+    await abrirOverlay();
+    const dialogo = screen.getByRole('dialog');
+    const marca = dialogo.querySelector<HTMLImageElement>('[data-slot="brand-logo"]');
+    if (marca === null) throw new Error('wordmark ausente no modal de entrada');
+    // Mesmo arquivo do PublicHeader — nenhuma variante nova de logo.
+    expect(marca.getAttribute('src')).toBe('/leela-logo-brasa.svg');
+    // Decorativa: o nome acessível do diálogo já diz "Entrar na Leela", então
+    // um alt com a marca faria o leitor de tela repetir o nome duas vezes.
+    expect(marca.getAttribute('alt')).toBe('');
+    expect(marca.getAttribute('aria-hidden')).toBe('true');
+    // Altura pela escala do DS — px cru aqui reprovaria no lint de tokens.
+    expect(marca.className).toContain('h-8');
+    expect(marca.className).not.toMatch(/\[\d+px\]/);
+  });
+
+  it('a marca não vira um segundo nome acessível do diálogo', async () => {
+    await renderConta();
+    await abrirOverlay();
+    // Só UM elemento anuncia "Leela" como nome: o heading do título.
+    expect(screen.getAllByRole('heading', { name: 'Entrar na Leela' })).toHaveLength(1);
+    expect(screen.queryByRole('img', { name: /leela/i })).toBeNull();
+  });
+});
