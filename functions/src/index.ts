@@ -30,6 +30,14 @@ export { solicitarRedefinicaoSenha } from './auth/solicitarRedefinicaoSenha';
 // prova, e aí ela é livre: não é vazamento contar sobre a caixa de e-mail de
 // quem acabou de provar que a tem.
 export { solicitarCodigoDeAcesso } from './auth/solicitarCodigoDeAcesso';
+// E o que fica DEPOIS do código: consumir (uso único, em transação) e concluir
+// — senha primeiro, sessão depois (RN-453), com `emailVerified` carimbado no
+// mesmo gesto. A conta de participante que não existia nasce aqui, inteira ou
+// não nasce (RN-478), e nunca uma conta profissional (RN-480).
+export {
+  confirmarCodigoDeAcesso,
+  concluirAcessoComProva,
+} from './auth/confirmarCodigoDeAcesso';
 
 // Plataforma — multi-tenancy (E16-S1600-T2)
 export { setTenantClaims } from './platform/setTenantClaims';

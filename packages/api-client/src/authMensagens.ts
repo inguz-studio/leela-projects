@@ -21,7 +21,10 @@
 //   - Recuperação: a confirmação é sempre neutra (quem chama decide a copy);
 //     este módulo só mapeia falhas TÉCNICAS, nunca existência.
 // Funções puras, sem estado, sem dependência do SDK — testáveis célula a célula.
+// (A única dependência é `@leela/core`, que também é puro: ver `SENHA_MIN`.)
 // =============================================================================
+
+import { SENHA_CONTA_MIN } from '@leela/core';
 
 interface FirebaseAuthLikeError {
   code?: unknown;
@@ -76,8 +79,17 @@ export function mensagemErroRedefinicao(erro: unknown): string {
   }
 }
 
-/** Comprimento mínimo de senha exigido pela Firebase Auth. */
-export const SENHA_MIN = 6;
+/**
+ * Comprimento mínimo de senha exigido pela Firebase Auth.
+ *
+ * REEXPORTADO do core (SPEC-CONTAS-LANDING · 2026-08-05) em vez de escrito de
+ * novo: a porta nova do primeiro acesso define a senha da MESMA conta que este
+ * módulo valida, e o servidor precisa da régua sem depender de `api-client`
+ * (que é pacote de cliente). Duas constantes com o mesmo número são duas
+ * autoridades esperando para divergir — foi assim que `SENHA_MIN_AFILIADO` e
+ * `SENHA_MIN_ASSESSORIA` nasceram como "espelho de premissa" da Function.
+ */
+export const SENHA_MIN = SENHA_CONTA_MIN;
 
 /**
  * Aceita e-mail sintaticamente plausível. Deliberadamente leve — não tenta

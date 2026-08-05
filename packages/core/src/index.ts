@@ -881,6 +881,23 @@ export {
   validarCadastroOrganizador,
 } from './platform/cadastroOrganizador';
 
+// Conta de PARTICIPANTE criada pelas portas da landing (S1229/S1230 ·
+// RN-478/479/480). O `/cadastrar` do painel consome o MESMO contrato quando a
+// fila da SPEC-QUALIFICACAO rodar — dois contratos paralelos criando a mesma
+// conta é o CONTA-2 do painel.
+export type { ContaParticipanteInput } from './platform/contaParticipante';
+export {
+  SENHA_CONTA_MIN,
+  SENHA_CONTA_MAX,
+  NOME_PARTICIPANTE_MIN,
+  NOME_PARTICIPANTE_MAX,
+  TERMO_CONTA_VERSAO,
+  TERMO_CONTA_FINALIDADE,
+  senhaDeContaValida,
+  validarContaParticipante,
+  aceiteDatadoPeloCliente,
+} from './platform/contaParticipante';
+
 // Convite de ORGANIZADOR para a plataforma (E16 · S1608 · RN-413/414/415).
 // Distinto do convite de atleta→clube (RN-101) e do convite por e-mail de
 // clube (S104): entidade, coleção e Rules próprias. Alfabeto compartilhado

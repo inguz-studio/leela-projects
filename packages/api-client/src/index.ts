@@ -449,8 +449,17 @@ export { enviarVerificacaoEmail } from './auth';
 // RN-482). "É meu primeiro acesso" e "Criar conta" são a MESMA máquina: as
 // duas chamam estas funções com o mesmo payload, e a divergência só existe
 // depois da prova de posse do e-mail.
-export { solicitarCodigoDeAcesso } from './codigoDeAcesso';
-export type { SolicitarCodigoResultado } from './codigoDeAcesso';
+export {
+  solicitarCodigoDeAcesso,
+  confirmarCodigoDeAcesso,
+  concluirAcessoComProva,
+} from './codigoDeAcesso';
+export type {
+  SolicitarCodigoResultado,
+  ConfirmarCodigoResultado,
+  ConcluirAcessoInput,
+  ConcluirAcessoResultado,
+} from './codigoDeAcesso';
 
 // ---------------------------------------------------------------------------
 // Checkout público — callables do fluxo de 5 etapas (LEELA-S1203)

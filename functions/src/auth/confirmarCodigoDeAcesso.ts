@@ -1,0 +1,344 @@
+// =============================================================================
+// functions/src/auth/confirmarCodigoDeAcesso.ts
+//
+// As DUAS callables que ficam depois do código (S1229-T4 e S1230-T1 · RN-476 a
+// RN-480). Superfícies PÚBLICAS: quem chega aqui ainda não tem sessão.
+//
+// -----------------------------------------------------------------------------
+// POR QUE SÃO DUAS, E POR QUE ISSO NÃO É INVENÇÃO
+// -----------------------------------------------------------------------------
+// A tabela de estados da spec (§Parte 7) escreve o fluxo em letra: *"código
+// aceito → o formulário de senha, com o nome quando ele fizer falta"*. A senha
+// é pedida DEPOIS do código aceito, e o campo de nome só aparece para quem não
+// tem conta — informação que, pela RN-477, só pode existir DEPOIS da prova.
+// Logo há, por desenho da própria spec, uma volta ao servidor entre "provei que
+// tenho a caixa" e "defini a senha":
+//
+//   1. `confirmarCodigoDeAcesso` — consome o código na transação e devolve a
+//      PROVA de continuação e a divergência (precisa de nome? qual nome?).
+//   2. `concluirAcessoComProva` — define a senha (ou cria a conta), carimba
+//      `emailVerified` e devolve o token para a sessão nascer.
+//
+// A prova NÃO é uma segunda superfície de credencial: ela não prova posse de
+// e-mail nenhum, não pode ser pedida, não chega por e-mail e não vale nada sem
+// que alguém já tenha acertado o código. O código continua com uso único
+// literal — duas requisições com o mesmo código correto produzem um sucesso e
+// uma negativa. A separação está detalhada em `codigoDeAcesso.ts` §4.
+//
+// -----------------------------------------------------------------------------
+// A ORDEM É A DA RN-453, E ELA É ACEITE: SENHA PRIMEIRO, SESSÃO DEPOIS
+// -----------------------------------------------------------------------------
+// O token de sessão só nasce DEPOIS de a senha estar gravada. Um caminho que
+// abrisse sessão sem senha seria login por código — a jornada da Sympla, e não
+// a que o dono descreveu. Se a gravação da senha falha, ninguém entra.
+//
+// -----------------------------------------------------------------------------
+// A NEGATIVA É UMA SÓ
+// -----------------------------------------------------------------------------
+// Código errado, vencido, já usado, de endereço que nunca pediu nada e teto
+// esgotado saem daqui com o MESMO código de erro e a MESMA frase (RN-419
+// aplicada a cinco causas). O que acompanha é `tentativasRestantes`, que a spec
+// autorizou em letra e que não distingue conta: pedir um código sempre grava um
+// código, exista ou não a conta, e as quatro causas de morte devolvem `0`.
+//
+// ⚠ É FÁCIL UM DELES ESCAPAR com código de erro próprio — um `not-found` para
+// "nunca pediu", um `deadline-exceeded` para "vencido". Qualquer um desses é o
+// oráculo de volta. Por isso a negativa nasce numa função só (`negar`).
+//
+// -----------------------------------------------------------------------------
+// O TOKEN DEVOLVIDO É CREDENCIAL
+// -----------------------------------------------------------------------------
+// A resposta que o carrega merece o mesmo cuidado que o código: ele não vai
+// para log, não vai para URL e não é persistido em lugar nenhum do servidor.
+// Ele nasce, viaja uma vez e vira sessão no cliente.
+// =============================================================================
+
+import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { https, runWith } from 'firebase-functions/v1';
+import * as logger from 'firebase-functions/logger';
+import {
+  aceiteDatadoPeloCliente,
+  codigoDeAcessoValido,
+  emailDeCodigoValido,
+  MENSAGEM_CODIGO_NEGADO,
+  normalizarCodigoDeAcesso,
+  normalizarEmailCodigo,
+  senhaDeContaValida,
+  SENHA_CONTA_MIN,
+  TERMO_CONTA_FINALIDADE,
+  TERMO_CONTA_VERSAO,
+  validarContaParticipante,
+} from '@leela/core';
+import { consumirCodigoDeAcesso, consumirProvaDeAcesso } from './codigoDeAcesso';
+
+// ---------------------------------------------------------------------------
+// A negativa única
+// ---------------------------------------------------------------------------
+
+/**
+ * A ÚNICA negativa de credencial deste módulo (RN-476/RN-419).
+ *
+ * Nasce numa função só de propósito: espalhar `throw new HttpsError(...)` pelos
+ * ramos é como um dos cinco motivos ganha código de erro próprio sem ninguém
+ * perceber, e aí a tela vira oráculo por acidente.
+ */
+function negar(tentativasRestantes: number): https.HttpsError {
+  return new https.HttpsError('permission-denied', MENSAGEM_CODIGO_NEGADO, {
+    tentativasRestantes,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 1. Consumir o código
+// ---------------------------------------------------------------------------
+
+export interface ConfirmarCodigoResultado {
+  ok: true;
+  /** Credencial de continuação — uso único, mesmo prazo do código. */
+  prova: string;
+  /**
+   * A divergência da RN-477, e ela só existe DEPOIS da prova: não é vazamento
+   * contar sobre a caixa de e-mail de quem acabou de provar que a tem.
+   */
+  precisaCadastro: boolean;
+  /**
+   * Nome de exibição da conta, quando ela existe. É o que faz a tela de
+   * "Criar conta" pedir só a senha para quem já tem conta, sem nunca dizer
+   * "e-mail já cadastrado".
+   */
+  nome: string;
+}
+
+export async function confirmarCodigoDeAcessoCore(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  rawInput: unknown,
+  agora: Date = new Date()
+): Promise<ConfirmarCodigoResultado> {
+  const input = rawInput as { email?: unknown; codigo?: unknown } | null;
+
+  // Forma inválida NÃO é a negativa de credencial: ela não gasta tentativa e
+  // não toca o documento. A tela já barra antes, e um `permission-denied` aqui
+  // faria o contador da tela mentir.
+  if (!emailDeCodigoValido(input?.email) || !codigoDeAcessoValido(input?.codigo)) {
+    throw new https.HttpsError('invalid-argument', 'Informe o e-mail e o código.');
+  }
+  const email = normalizarEmailCodigo(input?.email);
+  const codigo = normalizarCodigoDeAcesso(input?.codigo);
+
+  const consumo = await consumirCodigoDeAcesso(db, email, codigo, agora);
+  if (!consumo.ok) {
+    // O motivo real vai para o LOG, nunca para a resposta.
+    logger.info('codigo_acesso_negado', { motivo: consumo.motivo });
+    throw negar(consumo.restantes);
+  }
+
+  // DAQUI PARA BAIXO a divergência é livre: a pessoa provou que tem a caixa.
+  const conta = await contaDoEmail(auth, email);
+  logger.info('codigo_acesso_confirmado', { temConta: conta !== null });
+
+  return {
+    ok: true,
+    prova: consumo.prova,
+    precisaCadastro: conta === null,
+    nome: conta?.displayName ?? '',
+  };
+}
+
+/** A conta daquele endereço, ou `null`. Só é chamada DEPOIS da prova. */
+async function contaDoEmail(
+  auth: admin.auth.Auth,
+  email: string
+): Promise<admin.auth.UserRecord | null> {
+  try {
+    return await auth.getUserByEmail(email);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'auth/user-not-found' || code === 'auth/email-not-found') return null;
+    throw err;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Concluir — define a senha (conta existente) ou cria a conta
+// ---------------------------------------------------------------------------
+
+export interface ConcluirAcessoResultado {
+  ok: true;
+  /** Token de sessão. CREDENCIAL — não logar, não persistir, não pôr em URL. */
+  token: string;
+  /** Só para a tela saber que caminho contar; nunca é erro. */
+  contaCriada: boolean;
+}
+
+export async function concluirAcessoComProvaCore(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  rawInput: unknown,
+  agora: Date = new Date()
+): Promise<ConcluirAcessoResultado> {
+  const input = rawInput as {
+    email?: unknown;
+    prova?: unknown;
+    senha?: unknown;
+    nome?: unknown;
+    consentimentoLgpd?: unknown;
+  } | null;
+
+  if (!emailDeCodigoValido(input?.email)) {
+    throw new https.HttpsError('invalid-argument', 'Informe um e-mail válido.');
+  }
+  const email = normalizarEmailCodigo(input?.email);
+
+  if (!senhaDeContaValida(input?.senha)) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      `Use uma senha de pelo menos ${SENHA_CONTA_MIN} caracteres.`
+    );
+  }
+  const senha = input?.senha as string;
+
+  // RN-446: aceite datado pelo CLIENTE é recusado, e a chamada inteira cai. O
+  // servidor não ignora o campo em silêncio — ignorar deixaria uma tela achando
+  // que datou, e a discrepância só apareceria numa auditoria seis meses depois.
+  if (aceiteDatadoPeloCliente(input)) {
+    throw new https.HttpsError(
+      'invalid-argument',
+      'O instante do aceite é carimbado pelo servidor.'
+    );
+  }
+
+  const prova = typeof input?.prova === 'string' ? input.prova : '';
+  if (!(await consumirProvaDeAcesso(db, email, prova, agora))) {
+    throw negar(0);
+  }
+
+  const existente = await contaDoEmail(auth, email);
+
+  if (existente !== null) {
+    // ── Ramo A · a conta já existe (S1229-T4) ────────────────────────────
+    // Senha primeiro, sessão depois (RN-453). O `emailVerified` é carimbado no
+    // MESMO gesto: é ele que faz o código valer como prova de posse, e é ele
+    // que destrava a recomendação do POSSE-EMAIL-1.
+    await auth.updateUser(existente.uid, { password: senha, emailVerified: true });
+    const token = await auth.createCustomToken(existente.uid);
+    logger.info('acesso_concluido', { contaCriada: false });
+    return { ok: true, token, contaCriada: false };
+  }
+
+  // ── Ramo B · a conta não existe (S1230-T1) ─────────────────────────────
+  return criarContaDeParticipante(db, auth, { email, senha, input }, agora);
+}
+
+// ---------------------------------------------------------------------------
+// 3. A criação — nasce inteira ou não nasce (RN-478)
+// ---------------------------------------------------------------------------
+
+async function criarContaDeParticipante(
+  db: admin.firestore.Firestore,
+  auth: admin.auth.Auth,
+  dados: { email: string; senha: string; input: { nome?: unknown } | null },
+  agora: Date
+): Promise<ConcluirAcessoResultado> {
+  const nome = typeof dados.input?.nome === 'string' ? dados.input.nome.trim() : '';
+  const bruto = dados.input as { consentimentoLgpd?: unknown } | null;
+  const erros = validarContaParticipante({
+    nome,
+    email: dados.email,
+    consentimentoLgpd: bruto?.consentimentoLgpd === true,
+  });
+  if (erros.length > 0) {
+    // NÃO é a negativa de credencial: a prova já foi consumida e a pessoa
+    // precisa saber que falta o nome ou o aceite. Dizer isso não é oráculo —
+    // ela acabou de provar que tem a caixa (RN-477).
+    throw new https.HttpsError('failed-precondition', erros.join(' '));
+  }
+
+  // A conta nasce JÁ VERIFICADA: o código é a prova de posse, e verificar
+  // depois seria pedir a mesma prova duas vezes.
+  let uid = '';
+  try {
+    const criado = await auth.createUser({
+      email: dados.email,
+      password: dados.senha,
+      emailVerified: true,
+      displayName: nome,
+    });
+    uid = criado.uid;
+  } catch (err) {
+    // Corrida de duas conclusões concorrentes para o mesmo endereço: o
+    // perdedor cai no ramo "conta existe" em vez de subir `internal`. Mesmo
+    // tratamento que o `provisionAssessoria` já aplica.
+    if ((err as { code?: unknown }).code === 'auth/email-already-exists') {
+      const conta = await contaDoEmail(auth, dados.email);
+      if (conta === null) throw err;
+      await auth.updateUser(conta.uid, { password: dados.senha, emailVerified: true });
+      const token = await auth.createCustomToken(conta.uid);
+      return { ok: true, token, contaCriada: false };
+    }
+    throw err;
+  }
+
+  try {
+    // MERGE, nunca sobrescrita (RN-478): o gatilho `onCreateUser` grava
+    // `atletas/{uid}` por conta própria e a corrida entre os dois é real.
+    // Sobrescrever apagaria o `criadoEm` do gatilho; o merge deixa os dois
+    // convivendo em qualquer ordem de chegada.
+    await db
+      .collection('atletas')
+      .doc(uid)
+      .set(
+        {
+          id: uid,
+          nome,
+          email: dados.email,
+          consentimentoLgpd: {
+            versao: TERMO_CONTA_VERSAO,
+            finalidade: TERMO_CONTA_FINALIDADE,
+            // Instante do SERVIDOR (RN-446). O relógio do cliente não carimba
+            // consentimento nesta casa.
+            aceitoEm: FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      );
+  } catch (err) {
+    // ── O DESFAZER (RN-478) ──────────────────────────────────────────────
+    // Este é o caminho que produziu a conta órfã do organizador, e ele
+    // precisa estar PROVADO, não descrito. Conta no Auth criada + gravação
+    // falhando = conta que ocupa o endereço de alguém sem documento nenhum
+    // por trás, e que ninguém consegue recriar porque o endereço "já existe".
+    await auth.deleteUser(uid).catch(() => undefined);
+    logger.error('conta_participante_rollback', {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    throw new https.HttpsError(
+      'internal',
+      'Não conseguimos criar a conta agora. Tente de novo em instantes.'
+    );
+  }
+
+  // Papel: o `onCreateUser` atribui `athlete` por default. NADA aqui eleva
+  // papel, cria `profissionais/{uid}` ou concede claim de tenant (RN-480) —
+  // e a fronteira é provada por teste, não presumida.
+  const token = await auth.createCustomToken(uid);
+  logger.info('acesso_concluido', { contaCriada: true, quando: agora.toISOString() });
+  return { ok: true, token, contaCriada: true };
+}
+
+// ---------------------------------------------------------------------------
+// Callables (PÚBLICAS — quem confirma o código ainda não tem sessão)
+// ---------------------------------------------------------------------------
+
+export const confirmarCodigoDeAcesso = runWith({
+  secrets: ['CODIGO_ACESSO_PEPPER'],
+}).https.onCall(async (data: unknown): Promise<ConfirmarCodigoResultado> => {
+  return confirmarCodigoDeAcessoCore(admin.firestore(), admin.auth(), data);
+});
+
+export const concluirAcessoComProva = runWith({
+  secrets: ['CODIGO_ACESSO_PEPPER'],
+}).https.onCall(async (data: unknown): Promise<ConcluirAcessoResultado> => {
+  return concluirAcessoComProvaCore(admin.firestore(), admin.auth(), data);
+});
