@@ -1,5 +1,5 @@
 ---
-tags: [leela, decisoes, rodada, checkout, pos-pagamento, area-do-cliente, arena-social]
+tags: [leela, decisoes, rodada, checkout, pos-pagamento, area-do-cliente, arena-social, ingresso, pdf]
 trace: leela-pixreal-diag-20260804
 lote: SPEC-POSPAG
 data: 2026-08-04
@@ -7,7 +7,9 @@ data: 2026-08-04
 
 # Rodada de decisões do dono — 2026-08-04 (DEC-0804) · pós-pagamento em tela e Arena Social
 
-O dono leu o diagnóstico do primeiro pagamento real (`.nirvana/outputs/leela-pixreal-diag-20260804/DIAG-PIXREAL-REPORT.md`; registro elo a elo em [[fluxo-pos-pagamento]]) e devolveu duas mensagens. A primeira corrige uma leitura minha sobre o E12 e define o feedback pós-compra em tela; a segunda responde a pergunta de esclarecimento sobre a Arena Social. As três decisões abaixo saem delas.
+O dono leu o diagnóstico do primeiro pagamento real (`.nirvana/outputs/leela-pixreal-diag-20260804/DIAG-PIXREAL-REPORT.md`; registro elo a elo em [[fluxo-pos-pagamento]]) e devolveu duas mensagens. A primeira corrige uma leitura minha sobre o E12 e define o feedback pós-compra em tela; a segunda responde a pergunta de esclarecimento sobre a Arena Social. As três primeiras decisões abaixo saem delas.
+
+Em 05/08, depois de percorrer a página do ingresso já no ar, ele devolveu uma quarta decisão, de outro assunto: o botão que salva o ingresso em PDF. Ela entra aqui como **D-0804-4** porque a rodada é a unidade de registro e esta ainda está aberta.
 
 ## Verbatim do dono
 
@@ -53,6 +55,18 @@ Vocabulário D-0802-1 vale integralmente: experiência e participante, nunca eve
 
 Três coisas sobem ao painel como vetáveis, porque a frase do dono não as decide: quem vê o perfil (**ARENA-1**), a lista dos pilares de bem-estar, que não existe em nenhum doc do repo (**ARENA-2**), e onde a Arena Social mora — o default é a área do cliente, mas o E17 (perfil social) é sinal de outra intenção possível e a premissa não vai em silêncio (**ARENA-3**).
 
+### D-0804-4 · o ingresso ganha um botão que gera o PDF como download (refina o P10 de 29/07)
+
+Verbatim do dono, em 05/08, com a página do ingresso aberta na frente dele:
+
+> "no ingresso quero que tenha um botão também, "salvar como PDF" , onde é gerado um pdf do ingresso como download, se o usuário quiser"
+
+O que a frase decide, sem nenhuma interpretação minha por cima: existe um **botão** na página do ingresso; ele se chama **"salvar como PDF"**; o que ele produz é um **PDF gerado, que desce como arquivo**; e ele é **opcional** — "se o usuário quiser" quer dizer que nada muda para quem não clicar.
+
+O que a frase **supera**: a premissa **P10** da rodada de 29/07 (`../2026-07-29-pagina-ingresso/01-decisoes-delta.md`) dizia *"o PDF é a página em versão imprimível; nenhum gerador server-side entra agora"*. A primeira metade continua de pé — a rota `/ingresso/{token}/imprimir` existe, sai em A4 e continua sendo o caminho do papel. A segunda metade cai, e cai pelo verbo que o dono usou: ele pediu um PDF **gerado**, baixado. O diálogo de impressão do navegador não é isso. Ele pede que a pessoa ache "Salvar como PDF" dentro de um menu de impressora que muda de lugar a cada navegador e a cada sistema, e que em boa parte dos celulares nem oferece a opção. **P10 fica refinada, não revogada**, e a RN-424 é emendada em vez de substituída: a versão imprimível é a forma de papel, o botão é a forma de arquivo, e as duas convivem.
+
+**Como o PDF é gerado é decisão de engenharia**, não de dono, e já está tomada — com a alternativa rejeitada nomeada — em `05-spec-pdf-ingresso.md`. Nada disso sobe ao painel. Regra canônica: **RN-473** em [[LEELA-E12-landing]]. Story: **S1214**, task nova **S1214-T5**.
+
 ## Dependência dura, declarada
 
 **O CTA "ver meus pedidos" só tem destino quando a área do cliente existir.** O destino é o Meus Ingressos/histórico da S1222, atrás do login da S1221 e do primeiro acesso da S1223. Enquanto a área não sobe, o CTA não pode nascer apontando para um 404 — mesma lição da ordem C1→C2 da fila ADMINSEP. A fila S1222/S1223 vira, portanto, **pré-requisito ou entrega conjunta** do CTA: a tela v1 pode subir antes com mensagem + orientação de e-mail, e o CTA entra quando a rota existir. A ordem executável está em `04-fila-codigo.md`.
@@ -66,4 +80,5 @@ Três coisas sobem ao painel como vetáveis, porque a frase do dono não as deci
 ## O que esta rodada NÃO decide
 
 - Nada de F1 (trava Brevo), F2 (reenvio idempotente), F5 (alerta de falha de e-mail) e F6 (expiração da cobrança QA) do diagnóstico: são técnicas e correm nas lanes delas, em paralelo (registrado na fila).
+- **PDF anexado ao e-mail da compra.** A frase do dono pede um botão na página, e só. O anexo continua fora de escopo desde a D-ING-9 e continua sendo lane própria se ele pedir — a existência do gerador (D-0804-4) torna o anexo mais barato, não decidido.
 - Nenhuma linha de código, Rule ou function: esta lane é de specs.

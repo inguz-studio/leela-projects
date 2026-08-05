@@ -5,11 +5,12 @@ lote: SPEC-POSPAG
 data: 2026-08-04
 ---
 
-# 04-fila-codigo · O pedido responde na tela, e a Arena Social
+# 04-fila-codigo · O pedido responde na tela, a Arena Social, e o PDF do ingresso
 
-> Três frentes em ordem, mais o paralelo técnico do diagnóstico. Regras em
-> `03-rns-delta.md` (canônicas no [[LEELA-E12-landing]]); spec em
-> `02-spec-pos-pagamento-e-arena-social.md`. A fila da rodada ADMINSEP
+> Quatro frentes em ordem, mais o paralelo técnico do diagnóstico. Regras em
+> `03-rns-delta.md` e, para a Frente 4, em `05-spec-pdf-ingresso.md` (todas canônicas no
+> [[LEELA-E12-landing]]); spec em `02-spec-pos-pagamento-e-arena-social.md` e
+> `05-spec-pdf-ingresso.md`. A fila da rodada ADMINSEP
 > (`../2026-08-02-retomada/11-fila-contas-e-area-cliente.md`) continua valendo linha a
 > linha — esta fila só a posiciona e acrescenta as frentes novas.
 
@@ -47,6 +48,44 @@ com as duas reconciliações desta rodada:
 
 **Nada da Frente 3 é despachável antes de ARENA-1 (visibilidade), ARENA-2 (pilares) e
 ARENA-3 (onde mora) voltarem do painel.** O miolo da área do cliente não espera por ela.
+
+## Frente 4 · o PDF do ingresso como download (E12 · S1214-T5) — depois que a REV-S1225 aterrissar
+
+| # | Task | O que faz | Território | Dep | Rota | ⚔ |
+|---|---|---|---|---|---|---|
+| 4a | `S1214-T5` | Botão "Salvar como PDF" na página do ingresso e a rota que gera o arquivo no servidor, com a matriz de estados espelhada e o nome `ingresso-<codigo>.pdf` | `apps/landing/.../ingresso` | **REV-S1225 aterrissada** | opus | — |
+
+**Por que ela não parte agora, mesmo sem depender de ninguém.** A task é aditiva e o código
+dela não encosta em nada da S1225, mas o **território `apps/landing` está ocupado**: a
+REV-S1225 está em voo sobre a mesma árvore e a serialização por lane vale enquanto isso durar
+(regra da fila ADMINSEP, repetida nas fronteiras abaixo). Ela entra assim que aquela review
+aterrissar, e entra sozinha — não espera a Frente 2 nem os vetos da Frente 3.
+
+**Por que sem ⚔, e o que isso custa.** A task é aditiva, não toca dinheiro, não toca
+`firestore.rules`, não cria credencial nem verificação nova: ela é a **terceira renderização
+da mesma projeção** que a S1214-T1 já entrega e que a página e a folha de impressão já
+consomem. O precedente é a `S1214-T4` (a versão imprimível), que tem exatamente essa forma e
+também não foi ⚔ — as três marcadas naquele pacote foram as que criaram o token, a superfície
+e o e-mail. A pergunta que justificaria a review antagonista é "dá para obter um PDF de
+ingresso que eu já não conseguiria ver?", e a resposta é não: mesmo token, mesma Function,
+mesma negativa única.
+
+Em troca, dois gates nomeados que o report da lane tem de exibir verdes, e sem os quais a task
+não aterrissa:
+
+1. **O cabeçalho não aceita dado cru.** `Content-Disposition` montado a partir do código do
+   Firestore, com o predicado `isCodigoIngressoValido` do core como porta e `ingresso.pdf`
+   como saída — teste com código ausente, com código fora do formato e com caractere de
+   controle. É a única superfície de ataque nova que a task cria.
+2. **O PDF para onde o QR para.** Um caso por estado: gera em `valido` e `credenciado`,
+   redireciona nos cinco restantes, botão ausente nos cinco. Mais o teste que cobra do arquivo
+   os campos da RN-422 e nenhum a mais — é ele que segura a deriva do segundo layout.
+
+**A marcação vira ⚔ automaticamente** se a implementação sair do caminho especificado em duas
+direções: criar uma **Function nova** em `functions/` (porta pública nova que verifica token) ou
+mover qualquer verificação de token para dentro da landing (a chave da RN-419 não desce). As
+duas mudam a fronteira de segurança, e fronteira de segurança nova não passa sem contexto
+fresco.
 
 ## Paralelo técnico · F2 e F5 do diagnóstico correm fora desta fila
 
@@ -90,11 +129,13 @@ A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
 ## Ordem executável, resumida
 
 1. **Agora:** 1a + 1b (S1225-T1/T2). Depois 1c.
-2. **Na sequência (resposta da POSPAG-1):** a fila S1222/S1223 inteira, na ordem da
+2. **Assim que a REV-S1225 aterrissar:** 4a (o PDF do ingresso), que destrava sozinha e não
+   espera nada além do território.
+3. **Na sequência (resposta da POSPAG-1):** a fila S1222/S1223 inteira, na ordem da
    ADMINSEP (S1221-T1 antes da B2). Quando a B2 subir: 1d (o CTA) e a aterrissagem da C1
    passa a Meus Ingressos.
-3. **Depois dos vetos ARENA-1/2/3:** 3a → 3b ∥ 3c.
-4. **Em paralelo, lanes técnicas próprias:** F2 (após BREVO-1) e F5.
+4. **Depois dos vetos ARENA-1/2/3:** 3a → 3b ∥ 3c.
+5. **Em paralelo, lanes técnicas próprias:** F2 (após BREVO-1) e F5.
 
 ## Fronteiras
 
@@ -120,4 +161,6 @@ A escolha é das duas lanes juntas; a review da S1225 fecha o ponto.
       Ingressos
 - [ ] a Arena Social só nasce depois dos três vetos, com consentimento específico carimbado
       e default só-a-própria-pessoa
+- [ ] a página do ingresso oferece "Salvar como PDF" onde há QR, o arquivo desce com o nome
+      `ingresso-<codigo>.pdf` e não carrega o token dentro dele; estado sem QR não gera
 - [ ] review antagonista em contexto fresco em 1a, 1b, 3a e 3c

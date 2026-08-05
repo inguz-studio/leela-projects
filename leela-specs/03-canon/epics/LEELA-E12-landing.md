@@ -1881,7 +1881,10 @@ esperava. Rodada completa em `02-rodadas/2026-07-29-pagina-ingresso/`.
   dependência de geração de PDF entra no repo: um Chromium na Function custa memória na casa
   do gigabyte e cold start na casa dos dez segundos, e uma biblioteca de desenho obriga a
   manter um segundo layout que diverge da página no primeiro ajuste de marca. PDF anexado ao
-  e-mail, gerado no servidor, continua fora de escopo.
+  e-mail, gerado no servidor, continua fora de escopo. **Refinada em 05/08 pela RN-473**
+  (D-0804-4): a versão imprimível continua sendo a forma de PAPEL e continua valendo linha a
+  linha; o que mudou é que existe também uma forma de ARQUIVO, gerada sob demanda, porque o dono
+  pediu um PDF baixado e não um diálogo de impressão. As duas convivem.
 
 ### LEELA-S1214 · Página própria do ingresso (link tokenizado por inscrito) · (de-para novo · SPEC-INGPAGE)
 
@@ -1927,11 +1930,24 @@ de e-mail não mostra a imagem, e para imprimir se eu quiser.
   sai sem link e com o código (RN-423).
 - **Dado** a versão imprimível, **quando** imprimo, **então** sai uma folha A4 com QR, código
   e dados mínimos, sem navegação (RN-424).
+- **Dado** um ingresso válido ou já credenciado, **quando** clico em "Salvar como PDF", **então**
+  o arquivo desce como download, com o mesmo conteúdo da página e sem o link nem o token dentro
+  dele (RN-473).
+- **Dado** um ingresso pendente, em emissão, cancelado, estornado ou de evento encerrado,
+  **quando** abro a página, **então** o botão de PDF não existe; e **quando** acesso a rota do
+  arquivo direto, **então** sou levado de volta à página, onde o estado é lido de novo (RN-473
+  sobre RN-421).
+- **Dado** o arquivo baixado, **quando** olho o nome, **então** ele é `ingresso-<codigo>.pdf`,
+  sem nome de pessoa (RN-473).
 - **Dado** o gate de SEO e peso da landing, **quando** a rota entra, **então** nenhuma
   dependência nova entra no bundle público (o QR chega renderizado do servidor) e a landing
   segue Radix-free.
 
-**Tasks:** S1214-T1, S1214-T2, S1214-T3, S1214-T4 — **as quatro CONSTRUÍDAS em 2026-07-29**
+**Tasks:** S1214-T1, S1214-T2, S1214-T3, S1214-T4 — **as quatro CONSTRUÍDAS em 2026-07-29** —
+mais a **S1214-T5** (botão "Salvar como PDF"), aberta em 05/08 pela D-0804-4 e ainda na fila.
+Detalhe da T5 no fim desta seção; spec em `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.
+
+As quatro primeiras foram construídas em 2026-07-29
 pela lane INGPAGE-BUILD (`82e3286`, `19eb42d`, `8cb17de`, `1d82127`), em série, com gate
 verde task a task. **Aguarda a review antagonista** em contexto fresco, sobre os oito vetores
 da fila. Handoff: `.nirvana/handoffs/leela-build-2d6ee98d-INGPAGE-BUILD.md`, com cinco
@@ -2065,9 +2081,56 @@ Unit do layout de impressão; asserção de que a folha carrega QR, código e da
 além do que a RN-422 permite.
 
 **Fora de escopo**
-Geração de PDF no servidor e PDF anexado ao e-mail.
+Geração de PDF no servidor e PDF anexado ao e-mail. **A primeira metade caiu em 05/08**
+(D-0804-4 · RN-473): o gerador entra, na S1214-T5. O anexo continua fora.
 
-**Fila completa do pacote:** `02-rodadas/2026-07-29-pagina-ingresso/03-fila-codigo.md`.
+#### LEELA-S1214-T5 · Botão "Salvar como PDF" e a rota que gera o arquivo
+- **Tipo:** screen + api · **Depende de:** S1214-T2 · **Estimativa:** M · **Rota:** opus
+- **Nasce da D-0804-4** (05/08), que refina a P10 de 29/07. Spec e análise de engenharia em
+  `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.
+
+**Objetivo**
+Um botão na página do ingresso que gera o PDF daquele ingresso e o entrega como download. O
+arquivo nasce no servidor, sob demanda, a partir da mesma projeção que a página consome.
+
+**Contexto & referências**
+Route Handler `/ingresso/{token}/pdf` na própria landing, reusando `buscarIngressoPorLink`
+(`apps/landing/lib/ingresso.ts`). Escolhido contra três alternativas, com o porquê registrado na
+spec: geração no navegador (quebraria o critério de bundle público da S1214, e o download de
+`Blob` é o caminho frágil dentro dos webviews de app de e-mail, que é por onde o link chega),
+Function nova em `functions/` (a biblioteca de PDF entraria no bundle de um codebase deployado
+inteiro, cobrando cold start das functions do caminho do dinheiro; e uma segunda porta pública
+verificando token é uma segunda fronteira para divergir) e `window.print()` (é o diálogo de
+impressão, exatamente o que o dono não pediu). Chromium na Function segue morto.
+
+**Passos de implementação**
+Biblioteca de PDF **só no servidor** — a rota do ingresso continua com zero JavaScript de
+cliente. O botão é `<a href>` de verdade, com o rótulo "Salvar como PDF" e nome acessível
+"Salvar ingresso como PDF" (texto visível contido no nome acessível, WCAG 2.5.3), alvo de toque
+de 44 px e foco visível por token do DS. `Content-Disposition: attachment` com
+`ingresso-<codigo>.pdf`, e o código passa por `isCodigoIngressoValido` do core (RN-396) antes de
+entrar no cabeçalho — sem sanitizador novo; sem código válido, `ingresso.pdf`. O estado é lido no
+ato da geração: estados sem QR não geram e a rota redireciona para a página. A copy da rota de
+impressão deixa de dizer "escolha 'Salvar como PDF'", que agora nomeia o botão.
+
+**Regras de negócio a respeitar**
+RN-473; RN-421 (a matriz de estados, espelhada), RN-422 (dado mínimo e os três cabeçalhos, que o
+`source: '/ingresso/:token*'` do `next.config.js` já cobre), RN-419 (o arquivo não carrega o
+token, e a chave não desce para a landing), RN-424 (a versão imprimível continua).
+
+**Testes a escrever**
+O PDF carrega os campos que a RN-422 permite e **nenhum a mais** — irmão do teste da folha de
+impressão, e é ele que segura a deriva do segundo layout. Ausência do token e da URL dentro do
+arquivo. Um caso por estado: gera em `valido` e `credenciado`, redireciona nos cinco restantes.
+Nome do arquivo com código válido, com código ausente e com código fora do formato (nenhum
+caractere de controle chega ao cabeçalho). Botão ausente nos estados sem QR. Nenhuma dependência
+nova no bundle público.
+
+**Fora de escopo**
+PDF anexado ao e-mail; carteira digital; qualquer mudança no que a página mostra.
+
+**Fila completa do pacote:** `02-rodadas/2026-07-29-pagina-ingresso/03-fila-codigo.md`; a T5
+está na fila de `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`.
 
 ---
 
@@ -2661,7 +2724,8 @@ PODE ler o próprio pedido (houve erro de interpretação quanto ao E12 — o TO
 sequenciamento, não intenção de produto), o feedback pós-pagamento passa a existir em tela
 para PIX e cartão, e nasce a Arena Social. Rodada em `02-rodadas/2026-08-04-pos-pagamento/`
 (verbatim em `01-decisoes-dono.md`, spec em `02-…`, fila em `04-fila-codigo.md`). Contexto
-do incidente em [[fluxo-pos-pagamento]].
+do incidente em [[fluxo-pos-pagamento]]. Em 05/08 a mesma rodada recebeu uma **quarta**
+decisão, de outro assunto: o botão que salva o ingresso em PDF (D-0804-4 · RN-473 · S1214-T5).
 
 ### RN-469 (nova, dona) · o comprador lê o próprio pedido, após concluir a compra e na área do cliente
 
@@ -2789,3 +2853,41 @@ ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3).
   landing (C1) e a troca do destino (C2), terminando em Meus Ingressos.
 - **O TODO E12 das rules deixa de ser bloqueio** — fechado pela RN-469, dentro da S1225-T1,
   com teste. Nenhuma abertura antes dela.
+
+### RN-473 (nova, dona) · o PDF do ingresso é gerado sob demanda e baixado como arquivo (refina a RN-424)
+
+Verbatim do dono, em 05/08, com a página do ingresso aberta na frente dele: *"no ingresso quero
+que tenha um botão também, "salvar como PDF" , onde é gerado um pdf do ingresso como download,
+se o usuário quiser"*. É a **D-0804-4**, que refina a premissa P10 de 29/07: a versão imprimível
+continua sendo a forma de papel, e nasce a forma de arquivo. Ele pediu um PDF **gerado**, não o
+diálogo de impressão do navegador.
+
+A página do ingresso oferece um botão que gera o PDF daquele ingresso e o entrega como download.
+O arquivo nasce **no servidor**, sob demanda, a partir da mesma projeção que a página consome —
+nunca no navegador, nunca por diálogo de impressão.
+
+- **Conteúdo idêntico ao da página, e a RN-422 governa os dois**: nome do titular, evento com
+  data e local, modalidade, kit com tamanho quando houver, código em texto, estado, QR e o aviso
+  daquele estado. **O arquivo não contém o link nem o token** — pela mesma lógica da RN-419, o
+  token é a capacidade de abrir o ingresso, e num arquivo que sobrevive fora do navegador ele
+  vira segunda credencial sem `no-store`, sem prazo e sem volta, enquanto quem tem o arquivo já
+  tem o QR. Nome de pessoa também não entra no nome do arquivo.
+- **O PDF existe onde o QR existe.** `valido` e `credenciado` geram; `emitindo`, `pendente`,
+  `cancelado`, `estornado` e `encerrado` não geram, e nesses o botão não é renderizado. A rota
+  acessada direto num estado sem QR **redireciona para a página**, onde o estado é lido de novo.
+  A razão é mais dura que a da RN-421: a página é relida a cada abertura, o arquivo congela — um
+  PDF de ingresso cancelado seria mostrado no credenciamento sem nenhuma superfície capaz de
+  corrigi-lo.
+- **O estado é lido no ato da geração**, não herdado da tela aberta. Token que não verifica,
+  inscrito ou evento inexistente devolvem a mesma resposta única da página. Os três cabeçalhos da
+  RN-422 valem para a rota do arquivo.
+- **Nome do arquivo `ingresso-<codigo>.pdf`**, com o código validado pelo predicado canônico do
+  core (RN-396) antes de entrar no cabeçalho, e `ingresso.pdf` sem código válido.
+- **Nenhuma dependência nova no bundle público**: a biblioteca de geração vive só no servidor, a
+  rota do ingresso segue sem JavaScript de cliente e a landing segue Radix-free. Chromium na
+  Function continua recusado.
+- **A RN-424 continua valendo** — esta regra acrescenta a forma de arquivo, não substitui a de
+  papel. PDF anexado ao e-mail segue fora de escopo (D-ING-9).
+
+Story: **S1214**, task **S1214-T5**. Spec e análise de engenharia (com as três alternativas
+rejeitadas) em `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.

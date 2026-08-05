@@ -49,6 +49,7 @@ O terceiro formato cobre sozinho a faixa RN-425 a RN-453, que é a mais nova e a
 | 446-453 | [[LEELA-E00-fundacao-tecnica]], [[LEELA-E12-landing]] e [[LEELA-E16-plataforma-superadmin]] |
 | 454-459 | E04, E09, E12 e E16, pela rodada de 04/08 (economia do parcelamento) |
 | 469-472 | [[LEELA-E12-landing]], pela rodada de 04/08 (pós-pagamento em tela e Arena Social) |
+| 473 | [[LEELA-E12-landing]], pela mesma rodada em 05/08 (PDF do ingresso como download) |
 | 820-823 | [[LEELA-E11-analytics]] |
 
 As faixas 178-189, 385-392 e 425-445 atravessam mais de um épico porque nasceram em rodadas que tocaram várias frentes no mesmo dia. Para essas, o caminho curto é o arquivo de delta da rodada, que aponta para o épico de cada uma.
@@ -75,7 +76,7 @@ Duas regras são citadas e nunca definidas. A RN-005 aparece uma vez, no templat
 
 ## Como escolher o próximo número
 
-A faixa mais alta em uso hoje é a 472, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO e 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito nas três: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
+A faixa mais alta em uso hoje é a 473, depois de a rodada de 04/08 consumir 454 a 459 na lane de juros e margem, 461 a 468 na SPEC-QUALIFICACAO, 469 a 472 na SPEC-POSPAG (pós-pagamento em tela e Arena Social) e a 473 na SPEC-PDF, já em 05/08 (o PDF do ingresso como download). O 460 continua sendo marcador de faixa sem enunciado e ficou de fora de propósito nas três: ressuscitá-lo quebraria a leitura de quem confia nesta lista. Antes de criar uma regra, vale conferir a faixa livre com uma busca sobre o corpus inteiro, e vale **não** deixar o comando da busca escrito na prosa do documento, que é como os sete tokens fantasma nasceram.
 
 ## Vizinhos
 
