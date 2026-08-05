@@ -171,19 +171,46 @@ function ehStatus(v: unknown): v is StatusNoClube {
  * visibilidade é pública ou indexável: um clube privado chegaria à tela sem
  * nome se a lista dependesse do SDK do navegador.
  */
+async function lerNomes(
+  db: Db,
+  colecao: 'clubes' | 'eventos',
+  ids: readonly string[]
+): Promise<Map<string, string>> {
+  const unicos = [...new Set(ids)].filter((id) => id.length > 0);
+  const mapa = new Map<string, string>();
+  if (unicos.length === 0) return mapa;
+  try {
+    const snaps = await db.getAll(...unicos.map((id) => db.collection(colecao).doc(id)));
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      mapa.set(snap.id, texto(snap.get('nome')));
+    }
+  } catch (err) {
+    // ⚔ REV-B4 · a resolução de NOME é enfeite; a lista é o dado. Este
+    // `getAll` estava FORA do `try` das três queries, então uma
+    // indisponibilidade de point read subia pelo `Promise.all` do núcleo, o
+    // callable devolvia `internal` e o `Promise.all` da tela
+    // (`AreaDoCliente.tsx`) mandava a ÁREA INTEIRA para o estado de falha —
+    // levando junto compras e ingressos, que não têm nada com isso. O desenho
+    // declarado é o oposto: "são leituras independentes, e derrubar as duas
+    // por causa de uma esconderia o convite que a pessoa precisa ver".
+    // Sem nome, a linha continua aparecendo com o rótulo genérico da tela.
+    logger.error('area_cliente_nomes_falhou', {
+      colecao,
+      qtd: unicos.length,
+      alerta: true,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return mapa;
+}
+
+/** Nomes de clube por id. */
 async function lerNomesDeClubes(
   db: Db,
   clubeIds: readonly string[]
 ): Promise<Map<string, string>> {
-  const unicos = [...new Set(clubeIds)].filter((id) => id.length > 0);
-  const mapa = new Map<string, string>();
-  if (unicos.length === 0) return mapa;
-  const snaps = await db.getAll(...unicos.map((id) => db.collection('clubes').doc(id)));
-  for (const snap of snaps) {
-    if (!snap.exists) continue;
-    mapa.set(snap.id, texto(snap.get('nome')));
-  }
-  return mapa;
+  return lerNomes(db, 'clubes', clubeIds);
 }
 
 /** Nomes de experiência por id — mesma disciplina, para o convite de afiliado. */
@@ -191,15 +218,7 @@ async function lerNomesDeEventos(
   db: Db,
   eventoIds: readonly string[]
 ): Promise<Map<string, string>> {
-  const unicos = [...new Set(eventoIds)].filter((id) => id.length > 0);
-  const mapa = new Map<string, string>();
-  if (unicos.length === 0) return mapa;
-  const snaps = await db.getAll(...unicos.map((id) => db.collection('eventos').doc(id)));
-  for (const snap of snaps) {
-    if (!snap.exists) continue;
-    mapa.set(snap.id, texto(snap.get('nome')));
-  }
-  return mapa;
+  return lerNomes(db, 'eventos', eventoIds);
 }
 
 /** Convite vencido? Sem prazo no doc, não se afirma vencimento. */
@@ -336,6 +355,15 @@ export async function lerConvitesDeInfluenciador(
 
     const status = doc.get('status');
     if (status !== 'convite_pendente' && status !== 'ativo') continue;
+    // ⚔ REV-B4 · `ativo` NÃO é sinônimo de "aceitou". O `salvarAfiliado`
+    // (RN-316) cria o afiliado PF já `ativo`, sem token e sem convite nenhum,
+    // quando o e-mail JÁ tem conta VERIFICADA — que é o caso comum de quem
+    // abre esta tela. Sem esta linha, a caixa dizia "Você já aceitou este
+    // convite" para quem nunca recebeu convite e nunca aceitou nada: a tela
+    // que mente, com outra roupa. `aceitoEm` é carimbado SÓ pelo aceite por
+    // token (`provisionAfiliado.ts`), então ele é a prova do ato. Vínculo
+    // direto continua visível onde ele é — `getMinhasAfiliacoes`.
+    if (status === 'ativo' && millisDoCampo(doc.get('aceitoEm')) === null) continue;
 
     const expiraEmMillis = millisDoCampo(doc.get('expiraEm'));
     const estado: EstadoConvite =

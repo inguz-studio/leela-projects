@@ -567,3 +567,124 @@ describe('S1222-T4 · corte de lista é DECLARADO (⚔ F1/D4 desta rodada)', () 
     expect(TETO_CLUBES_DA_CONTA).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ⚔ REV-B4 · os dois defeitos que esta review derrubou
+// ---------------------------------------------------------------------------
+
+describe('⚔ REV-B4 · "aceito" é um ATO, não um status', () => {
+  const DIEGO_UID = 'conta-diego-b4';
+  const DIEGO_EMAIL = 'diego@example.com';
+
+  beforeAll(async () => {
+    const b = db.batch();
+    // VÍNCULO DIRETO (RN-316): `salvarAfiliado` cria o afiliado PF já `ativo`,
+    // SEM token, SEM convite e SEM `aceitoEm`, quando o e-mail já tem conta
+    // VERIFICADA. Ninguém convidou o Diego e ninguém aceitou nada.
+    b.set(db.doc(`eventos/${EVENTO}/afiliados/DIEGODIR`), {
+      id: 'DIEGODIR',
+      tenantId: TENANT_ID,
+      eventoId: EVENTO,
+      tipo: 'pessoa_fisica',
+      status: 'ativo',
+      nome: 'Diego',
+      refCodigo: 'DIEGODIR',
+      janelaAtribuicaoDias: 7,
+      minimoInscricoes: null,
+      cupomCodigo: null,
+      responsavelEmail: DIEGO_EMAIL,
+      responsavelUid: DIEGO_UID,
+      conversoes: 0,
+      valorAtribuido: 0,
+      criadoEm: ts(AGORA - 10 * DIA_MS),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    // ACEITE DE VERDADE: `provisionAfiliado` carimba `aceitoEm` na mesma tx em
+    // que muda o status. Este continua na caixa — sumir com ele seria a lista
+    // que mente por omissão.
+    b.set(db.doc(`eventos/${EVENTO}/afiliados/DIEGOACE`), {
+      id: 'DIEGOACE',
+      tenantId: TENANT_ID,
+      eventoId: EVENTO,
+      tipo: 'pessoa_fisica',
+      status: 'ativo',
+      nome: 'Diego',
+      refCodigo: 'DIEGOACE',
+      janelaAtribuicaoDias: 7,
+      minimoInscricoes: null,
+      cupomCodigo: null,
+      responsavelEmail: DIEGO_EMAIL,
+      responsavelUid: DIEGO_UID,
+      aceitoEm: ts(AGORA - 5 * DIA_MS),
+      conversoes: 0,
+      valorAtribuido: 0,
+      criadoEm: ts(AGORA - 8 * DIA_MS),
+      atualizadoEm: FieldValue.serverTimestamp(),
+    });
+    await b.commit();
+  }, 60_000);
+
+  it('afiliado ATIVO sem `aceitoEm` (vínculo direto) NÃO vira cartão "aceito"', async () => {
+    const r = await getMeusClubesEConvitesCore(
+      db,
+      caller({ uid: DIEGO_UID, email: DIEGO_EMAIL }),
+      AGORA_DATE
+    );
+    const chaves = r.convites.map((c) => `${c.tipo}:${c.estado}`);
+    // Exatamente UM cartão: o que foi mesmo aceito. Sem o filtro, a tela dizia
+    // "Você já aceitou este convite" para quem nunca recebeu convite nenhum.
+    expect(chaves).toEqual(['influenciador:aceito']);
+    expect(r.convitesCompletos).toBe(true);
+  });
+
+  it('afiliado aceito POR TOKEN continua na caixa (não some por omissão)', async () => {
+    const r = await getMeusClubesEConvitesCore(
+      db,
+      caller({ uid: DIEGO_UID, email: DIEGO_EMAIL }),
+      AGORA_DATE
+    );
+    expect(r.convites.some((c) => c.estado === 'aceito')).toBe(true);
+  });
+});
+
+describe('⚔ REV-B4 · a degradação DECLARADA cobre também a resolução de nomes', () => {
+  /**
+   * O `getAll` dos nomes ficava FORA do `try` das três queries. Uma falha ali
+   * subia pelo `Promise.all` do núcleo, o callable devolvia `internal` e a
+   * ÁREA INTEIRA (compras e ingressos inclusive) caía no estado de falha.
+   *
+   * O Emulator não produz esta falha sob demanda — a prova é com um `Db` de
+   * mentira, que é o único jeito de FORÇAR o ramo de erro.
+   */
+  function dbQueFalhaNoGetAll(): admin.firestore.Firestore {
+    const docFalso = {
+      ref: {
+        path: `clubes/${CLUBE_ANA}/membros/m-x`,
+        parent: { parent: { id: CLUBE_ANA } },
+      },
+      get: (campo: string) => (campo === 'papel' ? 'membro' : campo === 'status' ? 'ativo' : null),
+    };
+    const query = {
+      where: () => query,
+      orderBy: () => query,
+      limit: () => query,
+      get: async () => ({ size: 1, docs: [docFalso] }),
+    };
+    return {
+      collectionGroup: () => query,
+      collection: () => ({ doc: (id: string) => ({ id }) }),
+      getAll: async () => {
+        throw new Error('DEADLINE_EXCEEDED no point read de nomes');
+      },
+    } as unknown as admin.firestore.Firestore;
+  }
+
+  it('nome que não resolve não derruba a lista — a linha fica, sem nome', async () => {
+    const { lerClubesDaConta } = await import('../cliente/meusClubes');
+    const r = await lerClubesDaConta(dbQueFalhaNoGetAll(), ANA_UID);
+    expect(r.clubes).toHaveLength(1);
+    expect(r.clubes[0]?.nome).toBe('');
+    // A lista está COMPLETA: o que faltou foi enfeite, não dado.
+    expect(r.completa).toBe(true);
+  });
+});
