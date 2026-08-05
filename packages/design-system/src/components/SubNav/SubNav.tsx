@@ -96,7 +96,22 @@ function SubNav({
         // largura em tablet/mobile ("slider horizontal quebrando"). Scroll
         // horizontal INTERNO: em telas estreitas a barra rola em vez de quebrar.
         // `overscroll-x-contain` evita que o gesto de scroll da barra role a página.
-        'overflow-x-auto overscroll-x-contain',
+        'overscroll-x-contain',
+        // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
+        divider && 'border-b border-b-[var(--border-subtle)]',
+        className,
+        // ---------------------------------------------------------------------
+        // TRAVA DE OVERFLOW — DEPOIS do `className` DE PROPÓSITO (REV-LOTES).
+        //
+        // `cn` é `twMerge`, que resolve conflito pelo ÚLTIMO da lista. Enquanto
+        // estas classes vinham antes do `className`, um consumidor passando
+        // `overflow-y-auto` (ou `overflow-auto`, ou `[scrollbar-width:auto]`,
+        // ou `overflow-x-hidden`) APAGAVA a trava silenciosamente e ressuscitava
+        // um defeito que o dono já reportou DUAS vezes — com o teste de contrato
+        // ainda verde, porque ele renderiza sem `className`. Vindo por último, a
+        // trava vence qualquer override: o eixo do SubNav não é configurável.
+        // Cor, fundo, padding e borda seguem sobrescrevíveis (outros grupos).
+        // ---------------------------------------------------------------------
         // BUILD-LOTES-UX · frente F (REINCIDÊNCIA — o dono já tinha pedido isto).
         //
         // O Adendo 12 resolveu a QUEBRA de layout e deixou as duas barras de
@@ -118,11 +133,9 @@ function SubNav({
         // `overflow-y-hidden` fecha o passo 3 de vez, e nunca corta conteúdo: a
         // lista tem a altura exata do nav. NÃO usar `overflow-x: hidden` — isso
         // esconderia as abas que não cabem, que é o que o Adendo 12 evitou.
+        'overflow-x-auto',
         '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
         'overflow-y-hidden',
-        // RN-229 (S-R9-10): divisória opcional das terciárias, igual a Comunicação.
-        divider && 'border-b border-b-[var(--border-subtle)]',
-        className,
       )}
     >
       <ul role="list" className="flex w-max items-end gap-[var(--spacing-1)] h-[var(--subnav-height)]">

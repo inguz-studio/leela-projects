@@ -83,6 +83,46 @@ describe('SubNav', () => {
     expect(nav).not.toHaveClass('overflow-x-hidden');
   });
 
+  // -------------------------------------------------------------------------
+  // REV-LOTES · o BURACO da trava acima (achado #3).
+  //
+  // O teste anterior renderiza SEM `className` e por isso passava por cima do
+  // caminho mais provável de reincidência: `cn` é `twMerge`, que resolve
+  // conflito pelo ÚLTIMO da lista. Com a trava vindo ANTES do `className`, um
+  // consumidor que passasse `overflow-y-auto` apagava `overflow-y-hidden` em
+  // silêncio — a barra vertical voltava e a suíte seguia verde. Provado com o
+  // próprio twMerge:
+  //   twMerge('… overflow-y-hidden', 'overflow-y-auto') → 'overflow-y-auto'
+  // A trava agora vem DEPOIS do `className` e vence. Estes testes são o que
+  // impede alguém de "arrumar o layout" de fora e ressuscitar o defeito.
+  // -------------------------------------------------------------------------
+  it.each([
+    ['overflow-y-auto', 'a barra vertical de volta'],
+    ['overflow-auto', 'as duas barras de volta'],
+    ['[scrollbar-width:auto]', 'o cromo da barra de volta'],
+    ['overflow-x-hidden', 'as abas que não cabem inalcançáveis'],
+  ])('className="%s" NÃO derruba a trava (senão: %s)', (override) => {
+    render(<SubNav tabs={tabs} className={override} />);
+    const nav = screen.getByRole('navigation');
+
+    expect(nav).toHaveClass('overflow-x-auto');
+    expect(nav).toHaveClass('[scrollbar-width:none]');
+    expect(nav).toHaveClass('[&::-webkit-scrollbar]:hidden');
+    expect(nav).toHaveClass('overflow-y-hidden');
+    expect(nav).not.toHaveClass('overflow-x-hidden');
+    expect(nav).not.toHaveClass('overflow-y-auto');
+    expect(nav).not.toHaveClass('[scrollbar-width:auto]');
+  });
+
+  it('o que NÃO é eixo continua sobrescrevível pelo consumidor', () => {
+    render(<SubNav tabs={tabs} className="px-[var(--spacing-6)]" />);
+    const nav = screen.getByRole('navigation');
+    expect(nav).toHaveClass('px-[var(--spacing-6)]');
+    expect(nav).not.toHaveClass('px-[var(--subnav-px)]');
+    // …e a trava segue de pé ao lado.
+    expect(nav).toHaveClass('overflow-y-hidden');
+  });
+
   it('active tab has aria-current="page"', () => {
     render(<SubNav tabs={tabs} />);
     const active = screen.getByRole('button', { name: /Visão Geral/i });
