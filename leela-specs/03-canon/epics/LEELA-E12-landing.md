@@ -1683,6 +1683,38 @@ da RN-219 ficam como estão.
   idempotência da RN-219 é at-most-once por pedido, e queimar a chave sobre uma lista parcial
   condenaria o inscrito que ficou de fora a nunca receber o QR; ao esgotar as re-tentativas a
   varredura manda o que existe, para que o comprador nunca fique sem nada.
+
+**Diretriz permanente da RN-382 · quem autoriza o e-mail é a lista fechada, e espera esgotada
+não é beco (RF2-1 · REV-F2F5 e REV-RF2-1 · 2026-08-05).** Duas regras que valem para toda
+entrega futura da emissão, não para uma story:
+
+1. **O predicado de autorização do envio mora no contrato da emissão, nunca na cabeça do
+   chamador.** `emitirIngressosDoPedido` devolvia `falhas: 0` para um pedido cuja lista estava
+   incompleta — inscrito não-confirmado não era contado nem como falha nem como recusa —, e o
+   disparo pós-confirmação lia isso como "emissão fechada", mandava o e-mail pela metade e
+   queimava a chave at-most-once. Os chamadores são **dois** (o disparo do webhook e a
+   varredura), e o defeito nasceu de um deles re-derivando "está fechado" por conta própria.
+   Passa a valer `listaCompleta`, calculado no resultado. **A distinção entre "ainda pode
+   confirmar" e "terminal" sai da matriz canônica do núcleo** (`TRANSICOES_STATUS_INSCRITO`,
+   RN-204/RN-341), nunca de uma lista de status escrita na Function: status novo no núcleo não
+   pode nascer valendo como terminal por omissão, e status desconhecido conta como reversível —
+   o erro barato é segurar um e-mail que a varredura manda 15 minutos depois, e o caro é queimar
+   a chave, que não tem volta. **Recusa fica fora do predicado de propósito:** inscrito de outro
+   pedido não é deste e-mail, e inscrito apagado não tem cura nem destinatário. Commit
+   `5b8e4a77`.
+2. **Espera esgotada não é estado final — gesto humano reabre.** As oito passagens de 15 minutos
+   existem para limitar a espera por construção, e a doutrina "duas horas e vira conferência
+   humana" não se relaxa. Mas a cura de uma espera por inscrito reversível é **uma ação humana
+   do organizador** (acerto manual, transferência, reprocesso), que passa das duas horas sem
+   esforço — e, esgotada, a varredura pulava a pendência **para sempre**, o reenvio recusava
+   apontando para a varredura, e a pessoa ficava confirmada e sem ingresso emitido. O gatilho da
+   reabertura é o humano: o reenvio, ao detectar ingresso faltando, re-arma **uma** janela e
+   conta a reabertura; pendência já resolvida nunca ressuscita. Commit `bf3179c1`.
+
+Efeito colateral que fica registrado, e que a review pinou em teste para não derivar em
+silêncio: o **reenvio manual** continua entregando o que existe (assimetria deliberada — ali
+nenhuma chave de uso único é gasta e um operador pediu explicitamente), e é isso que faz nascer
+o item de painel **REENVIO-PARCIAL-1**.
 - **RN-396 (ampliada)** — a emissão confere a relação pedido↔inscrito **dos dois lados**:
   varre `pedido.inscritoRefs` e exige que o inscrito aponte de volta para o mesmo pedido.
   Inscrito de outro pedido na lista não recebe ingresso nem entra no e-mail de terceiro; a
@@ -2761,10 +2793,10 @@ contar com a tela não exibir; tela não é fronteira de segurança, Rule é. O 
 
 A diretriz nasceu de um caso concreto: a lane de reenvio de e-mails acrescentou ao pedido dois
 campos operacionais (`reenvioEmails.ultimoReenvioId` e `emailIngressos.comunicacaoId`), as duas
-reviews da rodada divergiram sobre aceitá-los, e a decisão foi **removê-los** — execução na lane
-FIX-PROJECAO, registro em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md` §Saída da
-review antagonista REV-S1225. Ela está no painel do dono como **PROJPED-1** para ratificação; o
-default em vigor é ratificada. A mesma review levantou duas fronteiras que continuam abertas e
+reviews da rodada divergiram sobre aceitá-los, e a decisão foi **removê-los** — executada na lane
+FIX-PROJECAO em `946e41f4`, com registro em
+`02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md` §Saída da review antagonista REV-S1225.
+Ela está no painel do dono como **PROJPED-1** para ratificação; o default em vigor é ratificada. A mesma review levantou duas fronteiras que continuam abertas e
 não são desta diretriz: a capacidade de **listar** os próprios pedidos atravessando tenants, que
 a autorização por campo cria (**PEDLIST-1**), e o fato de `contaSemFriccao.contaUid` sair de uma
 busca por e-mail sem prova de posse, o que faz um vínculo derivado de e-mail não verificado valer
@@ -2845,6 +2877,11 @@ Critérios (Given/When/Then):
 **Tasks:** S1225-T1 (rules + teste, ⚔) · S1225-T2 (tela v1 + copy, ⚔) · S1225-T3 (estados
 por meio) · S1225-T4 (CTA, dep. S1222-T2). Detalhe na fila da rodada.
 
+**Estado em 2026-08-05: as quatro entregues, a story revisada por antagonista, nada no ar.**
+`bdc9a531` (T1), `7f992e75` (T2), T3 no mesmo pacote, review em `706d9b02`+`a769cfb9` e o CTA em
+`9fd12c74`, quando a área do cliente passou a existir para recebê-lo. A dependência dura da
+D-0804-2 está paga.
+
 ### S1226 · a Arena Social (nova)
 
 **Como** participante, **quero** me apresentar — bio, gênero, interesses e com quem quero me
@@ -2875,6 +2912,24 @@ ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3).
   landing (C1) e a troca do destino (C2), terminando em Meus Ingressos.
 - **O TODO E12 das rules deixa de ser bloqueio** — fechado pela RN-469, dentro da S1225-T1,
   com teste. Nenhuma abertura antes dela.
+- **+05/08 · as duas reconciliações acima foram pagas na mesma noite.** A S1221-T1 (o login como
+  overlay da landing, `20bd6874`) destravou a B2, e a área do cliente nasceu com as duas
+  primeiras tarefas: os callables do próprio dono da conta (`9acb8fb5`) e a casa autenticada em
+  `/minha-conta` (`3acfe7a8`). A S1223 fechou a metade de tela (`2d7f24d7`) e a troca de destino
+  (`6d092619`) — resta o passo de operação no Auth. **A RN-475 nasceu cumprida na área:** ela
+  exibe o código, nunca o id. Dois fatos que a construção mediu e que valem como registro:
+  a leitura da área exige o e-mail **verificado** do token, o que a deixa estritamente mais
+  fechada que a Rule da RN-469 e não piora o POSSE-EMAIL-1; e a segunda fonte dos ingressos
+  (inscrito de ficha reivindicada) depende de um índice de grupo em `inscritos.pessoaRef` que
+  está **declarado e não deployado** — sem ele a lista volta marcada como incompleta, em vez de
+  mentir por omissão. A dependência A4 da fila ADMINSEP (`S032-T4`) **não aterrissou** e a B1
+  seguiu assim mesmo: ela é higiene do vínculo, não autorização. Na sequência, a mesma lane
+  entregou meus dados (`cdef2987`, sobre `atletas/{uid}` e nunca sobre o perfil de organizador) e
+  as duas portas (`bdebe384`, com nenhum caminho da área alcançando `/plataforma`, que é a RN-449
+  virando tela). **Meus Clubes é o que sobra da frente**, e a frente inteira é ⚔ ainda não
+  revisada. **Premissa nova da spec:** a landing passou a ter uma área autenticada
+  (`/minha-conta`), com `noindex`, `no-store` e `disallow` — é rota nova sob o gate de busca e
+  velocidade da S1200.
 
 ### RN-473 (nova, dona) · o PDF do ingresso é gerado sob demanda e baixado como arquivo (refina a RN-424)
 
@@ -2914,6 +2969,19 @@ nunca no navegador, nunca por diálogo de impressão.
 Story: **S1214**, task **S1214-T5**. Spec e análise de engenharia (com as três alternativas
 rejeitadas) em `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.
 
+**Estado em 2026-08-05: entregue em `dadb10a1`, fora do ar.** A decisão de engenharia foi
+executada como está escrita (Route Handler na própria landing, reusando `buscarIngressoPorLink`;
+nenhuma Function nova, nenhuma verificação de token na landing — a task não virou ⚔). Os dois
+gates nomeados saíram verdes, com a porta do cabeçalho sendo o predicado do núcleo e não um
+sanitizador, e as sete negativas do arquivo tendo **uma** assinatura só. `pdf-lib` vive em três
+arquivos do bundle do servidor e em zero do cliente. Três coisas ficam registradas aqui porque
+sobrevivem à task: a copy dos estados do ingresso passou a morar numa fonte só
+(`apps/landing/lib/ingresso.ts`), agora que são **três** superfícies renderizando a mesma
+projeção; o texto que a WinAnsi não codifica vira espaço, então um nome inteiramente fora do
+Latin-1 sai em branco no arquivo (**premissa vetável**, e o conserto é embutir fonte Unicode a
+custo de centenas de quilobytes no servidor); e o layout é de uma folha só, sem paginação. A
+lacuna que teste nenhum fecha é a visual — ninguém abriu um arquivo gerado.
+
 ### RN-474 (nova, dona) · a compra tem um código curto próprio, gerado no servidor
 
 Verbatim do dono, em 05/08, em duas mensagens — a segunda corrigindo o alvo da primeira:
@@ -2949,6 +3017,36 @@ servidor no ato da criação do pedido.
   Rules já escrevem em `firestore.rules:2572`. Alfabeto e comprimento vêm de módulo próprio no
   core, não de constante compartilhada com o `codigoIngresso`: a propriedade comum é provada
   por teste sobre o conjunto ambíguo, na doutrina que o core já declarou.
+
+**Diretriz permanente da RN-474 · código que humano dita nasce de entropia do sistema, e o
+espelho é escrita de servidor (REV-COD5A e FIX-D1 · 2026-08-05).** Duas regras que valem para
+todo código legível da casa, não só para o do pedido:
+
+1. **O sorteio é criptográfico nos dois geradores, e a doutrina é uma só.** `Math.random` é o
+   xorshift128+ do V8: o estado interno é recuperável a partir de poucas saídas consecutivas,
+   então quem compra e vê o próprio código consegue prever os próximos. O código não é
+   credencial — a autorização continua sendo por campo (RN-469) —, mas ele é o que o **operador
+   busca** quando alguém dita um número pelo telefone, e prever o código de outra pessoa é
+   conseguir ser atendido como ela. Trocado em `codigoPedido` **e** em `codigoIngresso` no mesmo
+   commit, porque divergir os dois seria pior que não mexer. A fonte é **Web Crypto**
+   (`globalThis.crypto`) e não `node:crypto`: o núcleo é dependência de Next, de Vite e de Expo,
+   e a verificação foi feita no consumidor real — o mesmo Vite do painel falha o build ao
+   esbarrar num import de `crypto` e passa com o núcleo novo. Rejection sampling sobre uint32
+   (sem viés de módulo), acesso preguiçoso, injeção do parâmetro `random` preservada para teste,
+   e **ausência de fonte é erro, nunca queda para `Math.random`** — cair de volta esconderia o
+   defeito exatamente onde ele importa. Zero mudança de formato: mesmos alfabetos, mesmos
+   tamanhos, mesmos predicados. Isto é **decisão técnica do maestro, não juízo de dono**.
+   Commit `d36afb64`.
+2. **O espelho do código no inscrito é campo de Function, e as Rules dizem isso.** Ele nasceu
+   fora das duas listas `hasAny` do `firestore.rules` porque a constante do núcleo espelha essas
+   listas literalmente e nomear ali um campo que as Rules não conhecem faria a constante mentir.
+   A review mediu o custo: o mesmo `tenant_owner` que era NEGADO ao plantar `codigoIngresso`
+   **passava** ao plantar `codigoPedido`, e passava de novo ao trocá-lo — e, como o escopo do
+   código é global, o organizador plantava no próprio inscrito o código de uma compra de outra
+   produtora, fazendo a busca do operador responder certo a uma pergunta envenenada. Fechado em
+   `48fc7116`, com a constante, as duas listas e os dois testes de igualdade editados no mesmo
+   commit. **Quando o valor precisar ser autoritativo, a fonte é `Pedido.codigoPedido`** — ele
+   nasce na transação da venda e mora em coleção `write: if false`.
 
 **Crockford base32 foi recusado** — ele mantém `0` e `1` e derruba as letras parecidas,
 enquanto a casa derruba os dois lados do par em quatro códigos já existentes, um deles com
@@ -3013,3 +3111,16 @@ Critérios (Given/When/Then):
 **Tasks:** S1228-T1 (core + geração + reserva, ⚔) · S1228-T2 (superfícies do comprador:
 tela e e-mail) · S1228-T3 (superfícies do operador: slide-in e busca) · S1228-T4 (ferramenta de
 backfill, execução registrada). Detalhe e ordem na Frente 5 da fila da rodada.
+
+**Estado em 2026-08-05.** **T1 entregue e revisada** — `3acc6877`, review antagonista
+`b8c7c29e` (aprovada com fixes) e o defeito das Rules fechado em `48fc7116`+`d36afb64`. **T3
+entregue** — `3d666d40`, com o id interno saindo da vista do operador e a busca casando o código
+pelo caminho da RN-397. **T4 em execução** (a execução contra produção continua sendo ato do
+dono). **T2 pendente.** Nada disto está no ar, e a ordem da fila continua valendo numa coisa: o
+backfill roda antes de T2 e T3 irem ao ar, senão as telas estreiam mostrando ausência em toda
+compra que já existe. Duas ressalvas da review que a implementação **não** consertou de
+propósito, e que viraram fila técnica: `normalizarCodigoPedido` não come travessão nem
+meia-risca (o conserto entra nos DOIS normalizadores ou em nenhum, porque divergir quebra a
+única frase que o operador precisa aprender) e a coleção de reserva nunca é podada — o gatilho
+de "acrescentar um símbolo" tem de ser lido no **contador da coleção**, não no volume de vendas
+(**CODPED-PODA-1** no painel).

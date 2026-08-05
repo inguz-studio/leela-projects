@@ -28,6 +28,11 @@ data: 2026-08-04
 dura**: sem a área do cliente no ar, o CTA não nasce — a tela v1 vive de mensagem +
 orientação de e-mail até lá.
 
+**Estado em 05/08 · Frente 1 FECHADA, fora do ar.** 1a `bdc9a531` · 1b `7f992e75` · 1c no mesmo
+pacote · review antagonista `706d9b02`+`a769cfb9` (aprovada com fixes) · RF2-3 executado em
+`946e41f4` · **1d `9fd12c74`**, entregue pela lane BUILD-AREACLIENTE-2 assim que a B2 subiu. A
+dependência dura foi paga, não contornada.
+
 ## Frente 2 · a área do cliente e o primeiro acesso (S1222/S1223) — logo atrás, resposta da POSPAG-1
 
 Roda a fila ADMINSEP como está escrita (frentes B e C da `11-fila-contas-e-area-cliente.md`),
@@ -38,6 +43,40 @@ com as duas reconciliações desta rodada:
 - **C1/C2 com o interim da DEPLOY-EMAIL:** `actionCodeSettings` já existe no servidor
   (`abf4b794`) apontando para o painel; a C1 constrói a `/definir-senha` da landing e a C2
   vira a troca de uma linha do destino, terminando em Meus Ingressos.
+
+**Estado em 05/08 · Frente 2 pela metade, fora do ar.**
+
+| Task | Estado | Prova |
+|---|---|---|
+| `S1221-T1` · login como overlay da landing | **entregue** | `20bd6874` — destravou a B2; a landing não tinha autenticação nenhuma antes disto |
+| `B1 · S1222-T1` · callables do próprio dono da conta ⚔ | **entregue** | `9acb8fb5` — Rules intocadas; a leitura exige o e-mail **verificado** do token |
+| `B2 · S1222-T2` · a área na landing | **entregue** | `3acfe7a8` (+ `5ffb69e0`, o segredo que assina o link do ingresso passou a ser declarado) |
+| `B3 · S1222-T3` · meus dados e trocar senha | **entregue** | `cdef2987` — edita a identidade global (ADR-009), nunca o perfil de organizador |
+| `B4 · S1222-T4` · meus clubes e convites | **não iniciada** | é a única da frente B que sobra |
+| `B5 · S1222-T5` · as duas portas ⚔ | **entregue** | `bdebe384` — nenhum caminho da área alcança `/plataforma`; a leitura corrente do **ADMINSEP-2** foi implementada com ponto de mudança único |
+| `C1 · S1223-T1` · `/definir-senha` na landing ⚔ | **entregue** | `2d7f24d7` — nenhum seam novo, nenhum token inventado |
+| `C2 · S1223-T2` · destino por origem ⚔ | **entregue** | `6d092619` |
+| `C3 · S1223-T3` · domínio autorizado no Auth | **pendente** | passo de **operação**, fora da esteira — e agora mais urgente: é ele que faz a jornada de primeiro acesso terminar dentro da área |
+
+**A frente B está ⚔ e ainda não foi revisada.** A lane declarou oito vetores em ordem de risco, e
+os dois primeiros são de fronteira: o vínculo que autoriza o histórico (igualdade de uid é o
+isolamento, o e-mail é re-checagem em memória — existe combinação que devolva pedido de outra
+conta?) e a segunda fonte dos ingressos, cujo `in` corta silenciosamente acima de trinta fichas,
+sem marcar a lista como incompleta.
+
+**Pré-requisito de deploy que não é opcional:** `firebase deploy --only firestore:indexes`
+**antes** do deploy das functions. O emulador não cobra índice, então nenhum teste desta frente
+prova este passo; sem ele, `getMeusIngressos` degrada e quem foi presenteado não vê o próprio
+ingresso.
+
+**Dependência da fila que NÃO estava paga, e que a B1 atravessou por decisão declarada.** A fila
+ADMINSEP escreve a B1 como dependente da **A4** (`S032-T4` — o `contaSemFriccao` para de amarrar
+compra em conta de administração). A varredura no início da lane devolveu zero para
+`platform_admin` naquele arquivo: **a A4 não aterrissou** e não está em lane nenhuma. A B1 seguiu
+porque a dependência é de **higiene do vínculo**, não de autorização — sem a A4, uma conta de
+administração que comprasse veria a própria compra, o que é verdade e não vazamento. O que a A4
+conserta é o vínculo nascer errado, e isso acontece do lado do escritor. **Fica sequenciada para
+o maestro**, sem que a B1 a substitua.
 
 ## Frente 3 · a Arena Social (E12 · S1226) — só depois dos vetos
 
@@ -88,6 +127,15 @@ mover qualquer verificação de token para dentro da landing (a chave da RN-419 
 duas mudam a fronteira de segurança, e fronteira de segurança nova não passa sem contexto
 fresco.
 
+**Estado em 05/08 · Frente 4 ENTREGUE, fora do ar.** `dadb10a1` (lane BUILD-PDF). Os dois gates
+nomeados saíram verdes e estão no report; a implementação não saiu do caminho especificado, então
+**a task não virou ⚔** e a review antagonista segue opcional e não rodada. `pdf-lib` no bundle do
+servidor, zero byte novo no do cliente, rota do ingresso estável em 150 B / 199 kB. O que sobra é
+a prova visual: ninguém abriu um arquivo gerado. Duas premissas ficam vetáveis e estão no épico —
+nome fora do Latin-1 sai em branco no arquivo, e o layout é de uma folha só, sem paginação. **A
+ausência de indicador de progresso é a premissa PDF-5, não esquecimento**, e virou o item de
+painel **PDF-SPINNER-1**.
+
 ## Frente 5 · o código curto da compra (E12 · S1228) — o miolo parte já, as superfícies atrás dos territórios
 
 | # | Task | O que faz | Território | Dep | Rota | ⚔ |
@@ -128,6 +176,23 @@ segura a volta silenciosa do id numa tela futura.
 **5d não disputa território com ninguém** nesta rodada: `apps/painel` está livre. Ela pode
 correr em paralelo com 5c.
 
+**Estado em 05/08 · Frente 5 pela metade, fora do ar.**
+
+| # | Task | Estado | Prova |
+|---|---|---|---|
+| 5a | `S1228-T1` ⚔ | **entregue e revisada** | `3acc6877` · review `b8c7c29e` (APROVADA-COM-FIXES) · defeito D-1 fechado em `48fc7116`, sorteio criptográfico em `d36afb64` |
+| 5b | `S1228-T4` ⚔ | **em execução** | lane BUILD-5B, em voo em `functions/scripts` · a execução contra produção continua sendo ato do dono |
+| 5c | `S1228-T2` | **pendente** | território `apps/landing` livre agora que a Frente 4 aterrissou |
+| 5d | `S1228-T3` | **entregue** | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança |
+
+**A ordem da REV-COD5A foi cumprida.** A review escreveu que *"a 5d não deve ir para produção
+antes"* do fix das Rules, porque ela é a superfície que transforma um código plantado em resposta
+errada ao telefone. O `48fc7116` aterrissou **antes** da lane da 5d.
+
+**A ordem interna que continua valendo:** o backfill (5b) roda antes de 5c e 5d irem ao ar. Sem
+ele as duas estreiam mostrando ausência em toda compra que já existe — que é a RN-475 funcionando
+e parecendo defeito.
+
 ## Paralelo técnico · F2 e F5 do diagnóstico correm fora desta fila
 
 | # | O quê | Por que em paralelo |
@@ -146,7 +211,7 @@ sobrou é fila, não bloqueio.
 
 | # | O quê | Por que ficou de fora do fix |
 |---|---|---|
-| RF2-1 | **O caminho automático queima a chave da RN-219 com lista parcial.** `emitirIngressosDoPedido` não conta inscrito `nao_confirmado` nem como falha nem como recusa, então `dispararEmissaoIngressosPosConfirmacao` fecha com `falhas: 0`, manda o e-mail com a lista incompleta e não abre pendência — o oposto do que o cabeçalho do módulo promete. Reprodução pronta no vetor 6 do teste de ataque | Muda o comportamento do **webhook**; pede lane e review próprias. O beco do lado do reenvio já foi fechado (a pendência passa a ser aberta ali) |
+| RF2-1 | **O caminho automático queima a chave da RN-219 com lista parcial.** `emitirIngressosDoPedido` não conta inscrito `nao_confirmado` nem como falha nem como recusa, então `dispararEmissaoIngressosPosConfirmacao` fecha com `falhas: 0`, manda o e-mail com a lista incompleta e não abre pendência — o oposto do que o cabeçalho do módulo promete. Reprodução pronta no vetor 6 do teste de ataque | **FECHADO em 05/08** — `5b8e4a77`, review antagonista `bf3179c1` (APROVADA-COM-FIXES). Ver §Saída da review antagonista REV-RF2-1 abaixo |
 | RF2-2 | **Callable sem rate limit.** Qualquer autenticado força escrita em `auditoriaAcessos` pela negação de papel (trilha inundável + custo), e `forcar: true` não tem teto por admin. `shared/rateLimit.ts` existe e é fail-closed | Padrão do repo, não regressão da F2: `getBankDetailsForPayout` é idêntico. Fechar nos dois na mesma passada — janela por `uid`, ~10/10 min, antes do gate de papel |
 | RF2-3 | **Projeção do pedido para o comprador** — ver abaixo, fecha junto com a review da S1225 | Decisão conjunta das duas lanes |
 
@@ -205,6 +270,43 @@ do dono para ratificação, e a nota ao lado da RN-469 em [[LEELA-E12-landing]].
 | RS1-2 | **O PIX expira só no relógio do navegador.** O timer interno do `PixCobranca` derruba a cobrança sem nenhuma ida ao servidor, então a tela de confirmação não sabe que o pedido morreu e continua oferecendo o gesto de atualizar sobre uma cobrança que não existe mais | Declarado no próprio fix da T3: a tela já trata estado terminal vindo do servidor, o que falta é a expiração local virar consulta. Pede desenho de quando consultar, não uma linha |
 | RS1-3 | **`/*` dentro de string cega a varredura de copy.** O gate que impede promessa de confirmação automática apaga tudo entre `/*` e `*/` ao tirar comentários, então uma string contendo `/*` esconde a copy seguinte. O furo do `//` **não** existe — o regex exige início de linha. Nenhuma ocorrência hoje | Zero incidência atual e o canário já está no teste. Fechar quando a varredura ganhar dono próprio, junto do teste de `nenhuma superfície imprime pedidoId` da 5c, que é da mesma família |
 
+### Saída da review antagonista REV-RF2-1 (`bf3179c1`)
+
+O RF2-1 voltou **aprovado com fixes**. O desenho do `5b8e4a77` sobreviveu aos oito vetores que o
+construtor declarou, inclusive os dois que ele marcou `Not-tested`; os dois defeitos saíram do
+**não declarado**, e os dois no mesmo ponto — o extrato do RF2-1 não sobrevivia ao próprio
+caminho de recuperação. **Defeito 1 (ALTO, dinheiro + credencial):** pendência esgotada virava
+beco permanente, e a cura de uma espera por inscrito reversível é uma ação humana que passa das
+duas horas sem esforço — a pessoa ficava confirmada e **sem ingresso emitido**. **Defeito 2
+(MÉDIO):** o extrato zerava quem não mediu. Os dois fixes viraram a **diretriz permanente da
+RN-382** em [[LEELA-E12-landing]]. **RF2-1 está fechado.**
+
+**Achado de realismo que recalibra a prioridade, não o fix:** exercitando o caminho sandbox real,
+a transação de confirmação flipa **todo** inscrito `pendente` → `confirmado` na mesma transação
+que marca o pedido como pago, então no caminho feliz o ramo da espera não é alcançado. Ele nasce
+por duas portas: status fora do enum (dado corrompido, seed antigo, migração) e mutação do pedido
+depois do pagamento. O gerador dominante é **anomalia de dado**, e é exatamente por isso que o
+Defeito 1 importava.
+
+**Dois itens de dono saíram desta review** e estão no painel: **REENVIO-PARCIAL-1** (o reenvio
+manual no meio da espera entrega lista parcial e carimba o pedido como entregue) e
+**INSCRITO-APAGADO-1** (inscrito apagado não deixa extrato consultável). O RF2-2 (rate limit) e o
+RF2-3 não foram tocados por esta lane.
+
+### Fila técnica das reviews de 05/08 (REV-COD5A e REV-RF2-1)
+
+Nenhum destes pede juízo de dono. São os resíduos técnicos que as duas reviews da noite
+produziram, no molde dos RF2-*/RS1-* acima.
+
+| # | O quê | Por que ficou de fora do fix |
+|---|---|---|
+| RF2-4 | **A varredura lê a coleção inteira sem limite nem cursor.** `.where('resolvido','==',false).get()` num cron de 15 minutos, e pendência de espera **não se resolve sozinha**: esgotada, ela fica no result set para sempre. Com dez pedidos a passagem é trivial; com uma migração ruim em cima de um evento grande, é leitura ilimitada num agendado | Pré-existente ao RF2-1, mas o fix **multiplicou o gerador** — a espera por inscrito reversível virou rotina. Pede paginação por cursor e teto por passagem, com o que exceder voltando na próxima |
+| RF2-5 | **`logger.warn('ingresso_inscrito_aguardando_confirmacao')` sai por inscrito e por passagem** — oito passagens × N inscritos por pedido segurado, e o ruído cresce com o mesmo gerador do RF2-4 | Custo de observabilidade, não de correção. Fecha junto do RF2-4: um registro por pedido por passagem, com a contagem no lugar da enumeração |
+| RS1-4 | **O seed local não tem `codigoPedido`.** `functions/src/seed/pedidos.seed.ts` grava os onze pedidos sem código e sem reserva, e `inscritos.seed.ts` só espelha o código do ingresso. No emulador e no preview, **todo** campo "Pedido" mostra travessão e a busca por código não acha nada — a RN-475 funcionando e parecendo defeito na hora de validar | Território `functions/`, fora das lanes que precisavam dele (5d é `apps/painel`). **Bloqueia a conferência visual da 5c e da 5d**: sem rodar o backfill da 5b contra o emulador, ou sem dar código ao seed, a validação do dono não é conclusiva |
+| RS1-5 | **`normalizarCodigoPedido` não come travessão nem meia-risca.** Ela tira `[\s-]+`; `–` e `—` sobrevivem, e o operador que colar `PED–A2B3C` de um WhatsApp com autocorreção não acha a compra | Não corrigido **de propósito**: `normalizarCodigoIngresso` tem exatamente o mesmo recorte, e divergir os dois quebra a única frase que o operador precisa aprender. **Entra nos dois normalizadores no mesmo commit, ou em nenhum** |
+| RS1-6 | **A callable do reenvio não devolve o código.** `CreateInscricaoChargeResult` não carrega `codigoPedido`, então a 5c vai ter de reler o doc do pedido (a RN-469 autoriza) | Contrato para quem pegar a 5c, não defeito. Fica escrito para a task não descobrir isso no meio |
+| RS1-7 | **Config de emulador com `"host": "::"` produz falso-vermelho.** Testes que derivam o host de `FIRESTORE_EMULATOR_HOST` recebem um endereço IPv6 e falham com "client is offline", 25 de 26 vermelhos **sem nenhuma regressão real**; com `127.0.0.1` os 26 passam | Ruído de gate que pode **mascarar regressão de verdade** numa próxima lane. Padronizar IPv4 explícito em todas as configs de emulador do repositório, não só nas de lane. Três lanes desta noite já subiram com IPv4 por conta própria |
+
 ## Ordem executável, resumida
 
 1. **Agora:** 1a + 1b (S1225-T1/T2). Depois 1c.
@@ -241,24 +343,33 @@ do dono para ratificação, e a nota ao lado da RN-469 em [[LEELA-E12-landing]].
 
 ## Critério de pronto do pacote
 
-- [ ] comprador da sessão de compra e conta vinculada leem o próprio pedido; terceiro é
-      negado com teste nomeando a RN-469; `write: if false` intocado
-- [ ] a tela do PIX real mostra "Estamos confirmando o seu pedido" + orientação de e-mail, e
-      nenhuma copy promete confirmação automática sem canal
-- [ ] cartão distingue confirmado, recusado e indeterminado, sem "Estamos confirmando"
-      sobre resposta já conhecida
-- [ ] o CTA "ver meus pedidos" só existe com a área do cliente no ar, e aterrissa em Meus
-      Ingressos
+> Marcado em 05/08 pelo selo da noite. **Marcado quer dizer "provado por teste executável", não
+> "no ar"** — nada deste pacote foi deployado.
+
+- [x] comprador da sessão de compra e conta vinculada leem o próprio pedido; terceiro é
+      negado com teste nomeando a RN-469; `write: if false` intocado — `bdc9a531`
+- [x] a tela do PIX real mostra "Estamos confirmando o seu pedido" + orientação de e-mail, e
+      nenhuma copy promete confirmação automática sem canal — `7f992e75`, com a varredura de
+      copy virando teste
+- [x] cartão distingue confirmado, recusado e indeterminado, sem "Estamos confirmando"
+      sobre resposta já conhecida — e o estado terminal parou de dizê-lo, defeito achado pela
+      review (`a769cfb9`)
+- [x] o CTA "ver meus pedidos" só existe com a área do cliente no ar, e aterrissa em Meus
+      Ingressos — `9fd12c74`, com o destino decidido num lugar só
 - [ ] a Arena Social só nasce depois dos três vetos, com consentimento específico carimbado
       e default só-a-própria-pessoa
-- [ ] a página do ingresso oferece "Salvar como PDF" onde há QR, o arquivo desce com o nome
-      `ingresso-<codigo>.pdf` e não carrega o token dentro dele; estado sem QR não gera
-- [ ] toda compra nova nasce com código de cinco símbolos, único por reserva, e o retry da
-      mesma chave de idempotência devolve o mesmo código
+- [x] a página do ingresso oferece "Salvar como PDF" onde há QR, o arquivo desce com o nome
+      `ingresso-<codigo>.pdf` e não carrega o token dentro dele; estado sem QR não gera —
+      `dadb10a1`, os dois gates verdes
+- [x] toda compra nova nasce com código de cinco símbolos, único por reserva, e o retry da
+      mesma chave de idempotência devolve o mesmo código — `3acc6877`, provado com RNG trocado
+      de propósito no replay
 - [ ] nenhuma tela de comprador e nenhum e-mail imprime `pedidoId`, e o teste que cobra isso é
-      executável
-- [ ] a busca de inscritos acha a compra pelo código, e o rótulo do campo diz que ela busca
-      por ele
+      executável — **falta a 5c**; do lado do operador o id já saiu da vista (`3d666d40`)
+- [x] a busca de inscritos acha a compra pelo código, e o rótulo do campo diz que ela busca
+      por ele — `3d666d40`, as duas metades com teste
 - [ ] o backfill roda em dry-run com contadores antes de qualquer escrita, e o rerun converge
-      para zero atualizações
-- [ ] review antagonista em contexto fresco em 1a, 1b, 3a, 3c, 5a e 5b
+      para zero atualizações — **5b em execução**
+- [x] review antagonista em contexto fresco em 1a, 1b e 5a — as três rodaram e as três voltaram
+      aprovadas com fixes (`706d9b02`+`a769cfb9`, `b8c7c29e`). **Faltam 3a, 3c (gated pelos
+      vetos da Arena) e 5b (em execução)**

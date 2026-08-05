@@ -191,6 +191,7 @@ Você pediu prefixo e cinco dígitos, e o resto da conversa é engenharia — on
 - **Por que agora:** para você responder junto do resto, não porque trave alguma coisa. Trocar depois custa uma constante e um redeploy — o código é gravado sem o prefixo justamente para que a sua opinião continue barata, inclusive depois de construído. E-mail antigo com o prefixo velho continua encontrando a compra, porque a busca ignora o prefixo.
 - **Opções:** `PED-` (**default proposto** — é o que "pedido" vira em três letras, e nenhuma outra coisa no produto começa assim) · `LEE-`, que assina a plataforma em vez do objeto e fica igual em compra, ingresso e qualquer coisa futura, o que devolve a confusão que o prefixo existe para evitar · sem prefixo, e aí os dois códigos do e-mail viram duas sequências parecidas, uma de cinco e outra de seis símbolos, distinguíveis só pelo rótulo ao lado.
 - **Onde aterrissa:** RN-474 em [[LEELA-E12-landing]]; spec em `02-rodadas/2026-08-04-pos-pagamento/06-spec-codigo-pedido.md`.
+- **+05/08 · o código está construído e o `PED-` continua custando uma constante.** A review antagonista provou o que a spec prometia: o código é gravado sem prefixo, e ele vive num lugar só. Uma coisa mudou por decisão técnica do maestro e **não é juízo seu**, mas fica registrada porque mexe numa doutrina escrita: os dois códigos legíveis da casa — o da compra e o do ingresso — deixaram de ser sorteados por `Math.random` e passaram a usar a entropia do sistema. O motivo é a 5d: o operador busca **qualquer** código que lhe ditarem, e o gerador antigo permitia prever os próximos a partir do próprio. Zero mudança de formato, e a injeção continua existindo para teste.
 
 ### PEDLIST-1 · o comprador passa a poder listar as próprias compras, atravessando produtoras
 
@@ -219,6 +220,42 @@ Este item não escolhe entre dois futuros: ele carimba uma regra que já está v
 - **Opções:** ratificada, com o teste campo a campo da review antagonista como o lugar onde a conta é feita a cada entrega (**default em vigor**) · conviver e confiar em não exibir, que a casa recusa por princípio já registrado: tela não é fronteira de segurança, Rule é.
 - **Onde aterrissa:** nota durável ao lado da RN-469 em [[LEELA-E12-landing]]; a reconciliação que a originou está em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`, e o teste vive em `functions/src/__tests__/pedidoProprioRulesAntagonista.integration.test.ts`.
 
+### REENVIO-PARCIAL-1 · o reenvio manual no meio da espera entrega meia lista e fecha o chamado
+
+Quando um pedido pago tem um inscrito que ainda não confirmou, o caminho automático agora **segura** o e-mail e abre uma pendência — foi o conserto de 05/08, e ele existe porque a chave do e-mail da compra é de uso único e não tem volta. O reenvio manual do painel não segue a mesma régua, e isso é deliberado: ali nenhuma chave é gasta e um operador pediu explicitamente. A consequência é que ninguém tinha declarado: o inscrito que ainda espera simplesmente **some** da conta, então o reenvio devolve "enviado" ao operador com a pendência aberta, entrega ao comprador uma lista pela metade e carimba o pedido como entregue. Nada no retorno diz "parcial" — o único sinal é a contagem de ingressos ser menor que a de inscritos. *A Ana compra dois ingressos, um dos participantes fica pendurado num acerto manual, ela liga reclamando; a Marina clica em "reenviar", a tela responde "enviado", e a Ana recebe um ingresso de dois com o chamado fechado.*
+
+- **O que fica com você:** dizer se o reenvio recusa enquanto houver pendência aberta, ou se avisa a operadora e deixa seguir.
+- **Por que agora:** o dano é limitado — a chave de uso único não é queimada e a varredura manda a lista inteira depois —, mas é um atendimento de rotina fechando errado, e o comportamento já está pinado em teste para não derivar em silêncio. Trocar agora é uma linha; depois é retrabalho com chamado real em cima.
+- **Opções:** **avisar e deixar seguir** (**default proposto**) — o retorno passa a dizer que a lista está parcial e quantos faltam, o pedido não é carimbado como entregue, e a operadora decide com a informação na mão; recusar tiraria da Marina a única ferramenta que ela tem quando a compradora está no telefone · **recusar enquanto houver pendência aberta**, com mensagem própria apontando para a pendência — mais rígido, e transfere para a varredura de 15 minutos um caso em que a pessoa está esperando agora.
+- **Onde aterrissa:** `reenviarIngresso` e `lerIngressosVivosDoPedido` em `functions/`; diretriz permanente da RN-382 em [[LEELA-E12-landing]]. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-RF2-1.md`, vetor 6.
+
+### INSCRITO-APAGADO-1 · quem pagou por dois e recebeu um não deixa rastro consultável
+
+Se o organizador apaga um inscrito de um pedido já pago, a emissão trata isso como recusa e segue — o juízo está certo, porque não há cura nem destinatário, e segurar o e-mail do comprador por causa disso trocaria um defeito por outro. O que não existe é **extrato**: o fato só vive como uma linha de erro no registro do servidor. Não abre pendência, não vira campo no pedido, não conta em alerta nenhum. *A Ana pagou por dois ingressos e recebeu um; ela liga, a Marina abre a compra e não encontra nada explicando a diferença, porque o único lugar onde ela está escrita é um log que a Marina não lê.*
+
+- **O que fica com você:** dizer se anomalia de dado em pedido pago merece extrato consultável.
+- **Por que agora:** é barato e auto-resolve — a pendência se fecha sozinha na primeira passagem da varredura, porque recusa não entra na conta da lista completa, e o que fica é o registro para o humano. Depois de acontecer com uma compradora de verdade, o que falta é justamente o registro daquele caso.
+- **Opções:** **abrir pendência com o motivo** (**default proposto**) — mesmo mecanismo que já existe, com a anomalia nomeada, e o atendimento passa a ter o que ler · **manter só o registro do servidor**, aceitando que o caso é raro e que quem investiga tem acesso ao log · **campo no pedido**, que a regra PROJPED-1 recusa: o comprador leria o vocabulário interno da anomalia na tela dele.
+- **Onde aterrissa:** `emitirIngressosDoPedido` e `ingressosPendentes` em `functions/`; RN-382 em [[LEELA-E12-landing]]. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-RF2-1.md`, vetor 7.
+
+### PDF-SPINNER-1 · o botão do PDF não tem indicador de progresso próprio
+
+O botão "Salvar como PDF" que você pediu está construído, e ele é um link de verdade — não um botão com JavaScript. Isso é o que mantém a página do ingresso com **zero** JavaScript de cliente e o custo do bundle em nada, que era o critério de aceite da própria página. O preço é que, entre o clique e o arquivo, a única coisa que se mexe é o indicador de download do navegador. *A Ana clica em "Salvar como PDF" num celular com sinal ruim, não vê nada acontecer na página, e clica de novo.*
+
+- **O que fica com você:** nada, se o default servir. Este é veto leve.
+- **Por que agora:** a premissa **PDF-5** da spec ("sem JavaScript de cliente, sem indicador próprio de progresso") é trade-off declarado, não esquecimento — e reabri-la muda a forma da task, porque a rota ganha cliente e o critério de bundle cai junto. Melhor você saber que existe do que descobrir clicando.
+- **Opções:** **manter como está** (**default em vigor**) — o indicador do navegador, o teto de 12 segundos da leitura e o desfecho honesto do erro, que devolve à página em vez de 500 ou arquivo pela metade · **reabrir a PDF-5** e ganhar o spinner, com o custo declarado de JavaScript de cliente numa rota que hoje não tem nenhum.
+- **Onde aterrissa:** `apps/landing/app/(public)/ingresso/[token]`; RN-473 em [[LEELA-E12-landing]]; premissa PDF-5 em `02-rodadas/2026-08-04-pos-pagamento/05-spec-pdf-ingresso.md`.
+
+### CODPED-PODA-1 · o código da compra é reservado para sempre, e o alerta tem de olhar para o lugar certo
+
+Cada compra reserva um código numa coleção que **nunca é podada**: PIX vencido, venda cancelada e estorno seguram o código para sempre. Isso não é defeito — é o que garante que o código dito ao telefone nunca aponte para duas compras. O que a review corrigiu foi a conta: a saúde do sorteio depende do **tamanho acumulado da coleção de reservas**, não do volume de vendas do ano, e a diferença aparece de repente. Com 5 milhões de reservas, uma compra em 1,1 milhão é recusada e mandada tentar de novo; com 10 milhões, uma em **4.515**. *O Castelo vende bem por três anos, ninguém olha o número de reservas porque as vendas do ano parecem tranquilas, e um dia começam a chegar compradores dizendo que o pagamento falhou e funcionou na segunda tentativa.*
+
+- **O que fica com você:** ratificar o gatilho, ou mandar a coleção ser podada.
+- **Por que agora:** o Leela está muito longe desses números e nada empurra. Vale carimbar enquanto é uma frase, porque o remédio é barato (um símbolo a mais no código, não mais tentativas) e a única coisa que precisa existir de antemão é o alerta olhando para o contador certo.
+- **Opções:** **alerta no contador da coleção de reservas, sem poda** (**default proposto**) — a reserva é o que garante a unicidade, e podar código de compra cancelada devolveria o risco de dois códigos iguais em compras diferentes na mesma tela da área do cliente · **podar reservas de compras mortas**, o que segura o crescimento e reintroduz exatamente o problema que o código existe para não ter.
+- **Onde aterrissa:** `functions/src/checkout/codigoPedidoReserva.ts`; RN-474 em [[LEELA-E12-landing]]. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-REV-COD5A.md`, vetor 9 e ressalva R-2.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
@@ -228,6 +265,7 @@ Achado enquanto eu apurava a separação de contas que você pediu. A conta que 
 - **O que fica com você:** escolher o e-mail real do administrador da plataforma e definir uma senha de verdade. Só você pode fazer as duas coisas.
 - **Por que agora:** é fator único, sem segundo fator, com App Check desligado, e o produto já está no ar com dado real de compra. Não depende de nenhuma decisão de arquitetura, e não espera o ADMINSEP-1.
 - **Onde aterrissa:** a conta nova recebe a claim pelo caminho manual, que já é o declarado para produção; o seed para de semear administrador contra o projeto real; e a conta de demonstração é revogada. O passo a passo está na task A6 de `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`. As contas de organizador de demonstração podem ficar: elas não alcançam a plataforma.
+- **+05/08 · este item virou bloqueio de uma coisa concreta.** A ferramenta de reenvio existe desde 04/08 e a trava da Brevo caiu, mas a porta é **admin da plataforma** e a senha do super-admin foi rotacionada em 04/08 sem ficar registrada em lugar nenhum. Os **dois e-mails represados do seu pedido** (o ingresso `T93N7F` e o da conta) continuam sem sair por falta de credencial, não por falta de código. Escolher o e-mail real e definir a senha destrava o reenvio no mesmo gesto.
 
 ### 34 · a jornada completa no ar, com a compra real
 
@@ -312,6 +350,8 @@ Não é decisão a ratificar, é hipótese a testar com um organizador de verdad
 ## Fila de construção
 
 > Ordem ratificada por você em 28/07 (DEC-0728). Roda em sequência sem nova consulta, e o detalhe de cada frente vive no card do backlog em [[V1-KANBAN]] e no épico correspondente. As frentes que nasceram da sua leva de 03/08 estão no fim, ainda sem posição.
+>
+> **+05/08 · duas frentes desta lista saíram por estarem construídas:** o login no meio da landing e a área do cliente com os próprios ingressos. As duas perguntavam a posição na fila, e a pergunta ficou sem objeto — a noite de 05/08 construiu as duas, com o registro completo em `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md` §O que a noite de 05/08 executou. O que sobra delas não é seu: Meus Clubes, a review antagonista da frente e o deploy. **Nada disso está no ar.**
 
 ### Construída e revisada · porta de entrada do organizador
 
@@ -352,23 +392,6 @@ Você, como administrador Leela, cadastra cupons de benefício e parceiros prese
 - **O que fica com você:** confirmar essa leitura, se ela estiver errada. É barato refazer, porque nada foi construído em cima.
 - **Por que agora:** prioridade baixa declarada por você em 28/07, e não bloqueia nada. Ficou no E16 porque quem escreve é o administrador da plataforma e o dado atravessa produtores.
 - **Onde aterrissa:** [[LEELA-E16-plataforma-superadmin]] §"Catálogo de benefícios da plataforma".
-
-### Entrou em 03/08 · o login no meio da landing
-
-Hoje "Entrar" leva a uma página própria. Você pediu que a entrada vire um componente overlay no meio da landing inicial, sem tirar a pessoa do lugar onde ela estava. *A Marina clica em "Entrar" na home, perde a página que estava lendo e volta para ela depois de logar.*
-
-- **O que fica com você:** a posição na fila, quando quiser cravá-la. O desenho já está decidido.
-- **Por que agora:** a porta de entrada acabou de nascer e trocar a forma dela agora custa menos do que depois que houver organizador entrando todo dia.
-- **Onde aterrissa:** S1221 em [[LEELA-E12-landing]], com a tela de entrar que a lane da porta de entrada acabou de construir.
-
-### Entrou em 03/08 · a área do cliente no web, com os próprios ingressos
-
-O e-mail da compra manda um link por inscrito e a página do ingresso existe, mas não há lugar no site onde a compradora entre e veja tudo o que ela já comprou. Você nomeou a lacuna ao decidir o item 60. *A Ana perde o e-mail, tem o QR em algum lugar da caixa de entrada e não tem para onde ir no site.*
-
-- **O que fica com você:** a posição na fila e o recorte da v1, se quiser apertá-lo.
-- **Por que agora:** o item 60 fechou a spec pelo lado barato, então o que sobra da promessa "estamos emitindo seu ingresso" é justamente esta área.
-- **Onde aterrissa:** S1222 em [[LEELA-E12-landing]], sobre o mesmo bilhete assinado da página do ingresso.
-- **+04/08 (tarde) · a posição está respondida, e o item POSPAG-1 saiu do painel resolvido.** Você confirmou a área como destino do CTA "ver meus pedidos" do feedback pós-compra e o feedback em tela entrou na frente da fila — a área vem logo atrás dele, e o CTA só nasce quando ela existir. Ordem executável em `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md`; registro completo, com o verbatim, em `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md`. O registro elo a elo do incidente segue em [[fluxo-pos-pagamento]].
 
 ### Entrou em 03/08 · uma conta só para quem é admin e organizador
 

@@ -104,3 +104,33 @@ O que a frase decide, sem interpretação por cima: o identificador da compra qu
 - **Encurtar o id do documento do pedido.** A D-0804-5 acrescenta um código; não troca o endereço. Mexer no id quebraria a idempotência do checkout e a referência que viaja ao gateway, e nada na frase do dono pede isso.
 - **Código curto para inscrito, pagamento, estorno ou evento.** A frase fala de compra. Cada um desses tem identificador próprio e ciclo próprio; se algum precisar de código ditável, é lane com decisão própria.
 - Nenhuma linha de código, Rule ou function: esta lane é de specs.
+
+## O que a noite de 05/08 executou
+
+Nove lanes rodaram em paralelo sobre esta fila e sobre a fila ADMINSEP, serializadas por território e com commit `--only` arquivo a arquivo, porque em vários momentos havia três lanes vivas na mesma árvore. **Nenhuma delas tocou `leela-specs/`**, por ordem — este registro e o selo dos boards são a aterrissagem de todas. **Nada foi deployado.**
+
+| Lane | O que entregou | Prova |
+|---|---|---|
+| BUILD-PDF | S1214-T5 — o botão "Salvar como PDF" e a rota que gera o arquivo no servidor | `dadb10a1` · os dois gates nomeados verdes; 48 arquivos / 603 testes em duas execuções seguidas; `pdf-lib` em zero arquivo do bundle do cliente |
+| BUILD-COD5A | S1228-T1 — o código curto nasce na transação que já cria o pedido, com reserva por chave primária | `3acc6877` · atomicidade medida nos dois sentidos e nos dois desfechos; replay com sorteador trocado devolve o mesmo código |
+| REV-COD5A | Review antagonista do código da compra | `b8c7c29e` · APROVADA-COM-FIXES; dez vetores mais oito compras concorrentes com a mesma chave; três `Not-tested` de um caminho de dinheiro presos com teste; **defeito D-1** medido e sequenciado |
+| FIX-D1 | O espelho do código deixou de ser escrivível pelo organizador, e os dois sorteios viraram criptográficos | `48fc7116` e `d36afb64` · o teste que estava verde de propósito ficou vermelho com as Rules editadas e o teste intocado — é esse passo que prova que a edição pegou |
+| BUILD-RF2-1 | A lista parcial parou de queimar a chave do e-mail da compra | `5b8e4a77` · vermelho medido antes (9 falhas), verde depois; a distinção entre reversível e terminal passou a sair da matriz canônica do núcleo |
+| REV-RF2-1 | Review antagonista da trava de lista parcial | `bf3179c1` · APROVADA-COM-FIXES; oito vetores sobreviveram e os dois defeitos saíram do não declarado — pendência esgotada virava beco permanente, e o extrato zerava quem não mediu |
+| BUILD-5D | S1228-T3 — o operador lê o código e acha a compra por ele | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança; o id interno saiu da vista e virou um "copiar" que não escreve o valor na tela |
+| BUILD-AREACLIENTE | S1221-T1, S1223-T1 e S1223-T2 — o login vira overlay, o primeiro acesso termina dentro | `20bd6874`, `2d7f24d7`, `6d092619` · suíte da landing inteira duas vezes seguidas em cada task |
+| BUILD-AREACLIENTE-2 | S1222-T1, T2, T3 e T5 mais S1225-T4 — a área do cliente existe, tem meus dados e tem as duas portas, e o CTA finalmente tem destino | `9acb8fb5`, `3acfe7a8`, `cdef2987`, `bdebe384`, `9fd12c74` (+ `5ffb69e0`) · Rules intocadas; a leitura exige o e-mail verificado do token · **a B4 (Meus Clubes) não foi iniciada, e a frente é ⚔ ainda não revisada** |
+
+**As três reviews antagonistas da rodada voltaram aprovadas com fixes, e as três consertaram no commit da própria review.** Nenhuma delas foi feita por quem construiu. **A frente B da área do cliente é a quarta ⚔ e ainda não rodou** — os oito vetores estão declarados no handoff dela, e os dois primeiros são de fronteira.
+
+### Dois itens saíram do painel por estarem construídos
+
+A disciplina de limpeza mandou. **"Entrou em 03/08 · o login no meio da landing"** e **"Entrou em 03/08 · a área do cliente no web, com os próprios ingressos"** perguntavam a mesma coisa — a posição na fila — e a pergunta ficou sem objeto: as duas foram construídas nesta noite. O que sobra de cada uma não é decisão do dono e vive onde deve: a B4 (Meus Clubes) no card da S1222 em [[V1-KANBAN]], a review antagonista da frente e o deploy com o maestro. A ratificação do **ADMINSEP-2** continua no painel, porque essa é decisão e a B5 implementou apenas a leitura corrente, com ponto de mudança único.
+
+### Uma ordem de operação que não é opcional
+
+O deploy desta área tem sequência: **`firebase deploy --only firestore:indexes` antes do deploy das functions.** O índice de grupo em `inscritos.pessoaRef` é novo, o emulador não cobra índice e nenhum teste da frente prova este passo. Sem ele, quem foi presenteado — o caso do pagador que compra para a família — não vê o próprio ingresso, e a lista volta declarando que está incompleta em vez de mentir. Junto: a **C3** (autorizar o domínio da landing no Auth) ficou mais urgente do que era, porque agora é ela que faz a jornada de primeiro acesso terminar dentro da área.
+
+### O bloqueio que fica
+
+**Os dois e-mails represados do pedido do dono continuam sem sair, e agora não é mais por falta de ferramenta.** A trava de IPs da Brevo caiu em 05/08 (BREVO-1), a porta de reenvio existe desde 04/08 e a lista parcial deixou de ser risco. O que falta é **credencial**: a porta é `platform_admin`, a senha do super-admin foi rotacionada em 04/08 e não ficou registrada. Isso é o **ADMINSEP-3**, que já está no painel — nenhum item novo foi aberto para o bloqueio. Escolher o e-mail real do administrador e definir a senha destrava o reenvio no mesmo gesto.
