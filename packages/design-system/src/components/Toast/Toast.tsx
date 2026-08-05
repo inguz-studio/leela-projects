@@ -15,11 +15,12 @@
  * segura o item na fila até a animação terminar é o provider — o componente só
  * obedece ao `state` que recebe.
  *
- * ⛔ O toast é a peça em que os 800ms de `--motion-overlay-duration` mais
- * incomodam, e o motivo está registrado no handoff: ele já vive 4s na tela;
- * somar quase um segundo de saída em cada aviso de "salvo" faz o canto da tela
- * parecer ocupado o tempo todo. A recomendação técnica é 200-300ms. A decisão é
- * do dono e a troca é uma linha em `tokens/component.json`.
+ * ⛔ O toast era a peça em que os 800ms de saída mais incomodavam, e o motivo
+ * está registrado no handoff: ele já vive 4s na tela; somar quase um segundo de
+ * saída em cada aviso de "salvo" fazia o canto da tela parecer ocupado o tempo
+ * todo. Resolvido na raiz em 05/08: a saída passou a ter token próprio
+ * (`--motion-overlay-exit-duration`, 250ms), enquanto a entrada segue em 800ms.
+ * O toast lê os dois pelo `estiloMotion`, sem saber de nenhum número.
  *
  * Regras preservadas do E01:
  *   - Some em 4s; variante danger persiste até dismiss manual (ToastProvider).

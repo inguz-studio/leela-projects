@@ -39,11 +39,16 @@ const FOCUSABLE =
 // `document.body` é um recurso único e todo diálogo do DS o disputa. Enquanto o
 // fechamento era seco isso nunca apareceu: o nó saía do DOM no mesmo tick, e
 // nunca havia dois diálogos vivos ao mesmo tempo. Com a SAÍDA ANIMADA da
-// BUILD-MOTION o nó sobrevive `--motion-overlay-duration` (800ms) depois do
+// BUILD-MOTION o nó sobrevive `--motion-overlay-exit-duration` depois do
 // `open=false` — abriu-se uma janela em que o diálogo que SAI e o que ENTRA
 // coexistem. Cada um salvava e restaurava o `overflow` por conta própria, então
-// o desmonte do que SAI (800ms depois) devolvia `overflow: ''` com o outro
-// ainda aberto: a página voltava a rolar POR TRÁS de um modal na tela.
+// o desmonte do que SAI devolvia `overflow: ''` com o outro ainda aberto: a
+// página voltava a rolar POR TRÁS de um modal na tela.
+//
+// ⚠️ A janela ENCOLHEU de 800ms para 250ms em 05/08 (o dono separou abrir de
+// fechar), mas não fechou: 250ms de dois overlays vivos é a mesma disputa em
+// tempo menor. Encurtar duração nunca conserta corrida — só a torna mais rara,
+// que é o pior estado possível para um bug.
 //
 // O contador resolve a disputa sem cada componente saber do outro: o primeiro
 // que entra guarda o valor original e trava; o ÚLTIMO que sai destrava.

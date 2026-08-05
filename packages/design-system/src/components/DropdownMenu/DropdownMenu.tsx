@@ -45,12 +45,17 @@
  * do DOM antes do primeiro frame de saída.
  *
  * ⛔ A DURAÇÃO DELE É OUTRA, DE PROPÓSITO: `--motion-menu-duration` (120ms),
- * não os 800ms de `--motion-overlay-duration`. Menu não é superfície de leitura,
- * é affordance de PONTEIRO: a mão já está a caminho do item quando o menu
- * abre. Um menu que leva a mesma meia-segunda de um modal para assentar
- * significa que o alvo ainda está se movendo quando o clique chega — e o clique
- * erra. A regra que fica: superfície que a pessoa LÊ pode demorar; superfície
- * que a pessoa MIRA, não. Os dois números são token e trocam sozinhos.
+ * não os 800ms de abertura do overlay. Menu não é superfície de leitura, é
+ * affordance de PONTEIRO: a mão já está a caminho do item quando o menu abre.
+ * Um menu que leva a mesma meia-segunda de um modal para assentar significa que
+ * o alvo ainda está se movendo quando o clique chega — e o clique erra. A regra
+ * que fica: superfície que a pessoa LÊ pode demorar; superfície que a pessoa
+ * MIRA, não. Todos os números são token e trocam sozinhos.
+ *
+ * E é UM token só para as duas direções, enquanto o overlay virou PAR (800ms
+ * para abrir, 250ms para fechar · decisão do dono de 05/08). O motivo de o menu
+ * não ter sido dividido junto: o par existe para pagar a marca na abertura sem
+ * cobrar pedágio no fechamento, e em 120ms não há pedágio a cobrar.
  *
  * Durante a saída o painel recebe `pointer-events-none`: um menu meio
  * transparente que ainda engole clique é pior que um menu que some seco.
@@ -67,7 +72,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Slot } from '@radix-ui/react-slot';
 import { cn } from '../../utils/cn';
-import { estiloMotion, usePresencaOverlay, VAR_DURACAO_MENU } from '../../utils/overlayMotion';
+import { DURACAO_MENU, estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -164,7 +169,7 @@ function DropdownMenu({
   // `presente` segura o painel no DOM durante a saída. Só o RENDER usa; todo
   // o comportamento (foco, click-fora, Esc, re-âncora) segue amarrado ao `open`
   // cru — um menu em saída não é mais um menu, e não deve escutar nada.
-  const { presente, estado } = usePresencaOverlay(open, VAR_DURACAO_MENU);
+  const { presente, estado } = usePresencaOverlay(open, DURACAO_MENU);
 
   // Posição fixa ancorada no rect do trigger (menu vive em portal)
   const [position, setPosition] = React.useState<{
@@ -312,7 +317,7 @@ function DropdownMenu({
             top: position.top,
             left: position.left,
             right: position.right,
-            ...estiloMotion(estado, VAR_DURACAO_MENU),
+            ...estiloMotion(estado, DURACAO_MENU),
           }}
           className={cn(
             'fixed mt-[var(--spacing-1)] z-50',

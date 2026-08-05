@@ -4,10 +4,15 @@
  * O QUE ESTE ARQUIVO PROVA, e por que ele não existia antes. Enquanto o
  * fechamento era seco (`if (!open) return null`), nunca havia dois diálogos
  * vivos no mesmo instante: o que fechava saía do DOM no mesmo tick em que o
- * consumidor dizia `open=false`. A BUILD-MOTION segurou o nó por
- * `--motion-overlay-duration` (800ms, número do dono) para que a animação de
- * saída rodasse — e com isso abriu uma janela de até 800ms em que o diálogo
- * que SAI e o diálogo que ENTRA existem juntos.
+ * consumidor dizia `open=false`. A BUILD-MOTION segurou o nó pela duração de
+ * saída para que a animação rodasse — e com isso abriu uma janela em que o
+ * diálogo que SAI e o diálogo que ENTRA existem juntos.
+ *
+ * ⚠️ Essa janela ENCOLHEU (o dono separou abrir de fechar em 05/08: 800ms para
+ * abrir, 250ms para fechar) e NÃO fechou. Corrida em janela menor é a mesma
+ * corrida, só mais difícil de reproduzir à mão — motivo de sobra para os casos
+ * abaixo continuarem existindo. Eles leem a duração do token gerado, então
+ * seguem medindo a janela real qualquer que seja o número.
  *
  * `document.body` é único, e o retorno de foco também. Nessa janela os dois
  * disputavam ambos:
@@ -16,7 +21,7 @@
  *   2. o que SAI chamava `back.focus()` ao desmontar → arrancava o foco de
  *      dentro do diálogo que tinha aberto por cima dele.
  *
- * E um terceiro, que a espera de 800ms tornou provável em vez de raro: o
+ * E um terceiro, que a espera do desmonte tornou provável em vez de raro: o
  * gatilho pode ter sido re-renderizado para fora da árvore nesse meio-tempo.
  * `focus()` num nó desconectado não falha — não faz NADA, e o foco cai no
  * `<body>`. Quem navega por teclado recomeça do topo do documento (WCAG 2.4.3).
@@ -31,18 +36,22 @@ import { render, screen, act } from '@testing-library/react';
 import { Dialog } from '../../Dialog';
 import { Modal } from '../../Modal';
 import { Drawer } from '../../Drawer';
-import { VAR_DURACAO_OVERLAY } from '../../../utils/overlayMotion';
+import { brasaTheme } from '../../../theme/rn-themes';
+import { msDoValorCSS, VAR_DURACAO_OVERLAY_SAIDA } from '../../../utils/overlayMotion';
 
-const DURACAO = 800;
+// O valor real do produto, do tema gerado — jsdom não carrega `themes/*.css`.
+// É a duração de FECHAMENTO porque é ela que mede a janela de coexistência.
+const VALOR_SAIDA = brasaTheme['motion-overlay-exit-duration'] ?? '';
+const DURACAO = msDoValorCSS(VALOR_SAIDA);
 
 beforeEach(() => {
   vi.useFakeTimers();
-  document.documentElement.style.setProperty(VAR_DURACAO_OVERLAY, `${DURACAO}ms`);
+  document.documentElement.style.setProperty(VAR_DURACAO_OVERLAY_SAIDA, VALOR_SAIDA);
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  document.documentElement.style.removeProperty(VAR_DURACAO_OVERLAY);
+  document.documentElement.style.removeProperty(VAR_DURACAO_OVERLAY_SAIDA);
   document.body.style.removeProperty('overflow');
 });
 

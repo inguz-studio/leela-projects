@@ -10,12 +10,19 @@
  *     espera sem animar (tela travada). Sem prova nos cinco, três superfícies
  *     dependiam de leitura de código. Aqui os CINCO respondem.
  *
- *  2. O CUSTO DOS 800ms É UM NÚMERO, e ele não estava fixado em teste nenhum.
+ *  2. O CUSTO DO FECHAR É UM NÚMERO, e ele não estava fixado em teste nenhum.
  *     O commit registra o efeito colateral em prosa ("a cortina segue
  *     interceptando clique") e classifica como `Not-tested`. É justamente o
  *     dado que o dono precisa para decidir a duração, então ele vira medida:
- *     a página fica inerte por EXATAMENTE a duração do token, e nem 1ms a
- *     mais. Trocar o token move a medida junto — o teste não conhece o 800.
+ *     a página fica inerte por EXATAMENTE a duração do token de FECHAMENTO, e
+ *     nem 1ms a mais.
+ *
+ *     ⚠️ A MEDIDA VEM DO TOKEN GERADO, não de um literal. `brasaTheme` é a
+ *     saída de `pnpm generate-tokens`, ou seja, o número que o produto embarca
+ *     de verdade. Foi assim que a decisão de 05/08 (800ms para abrir, 250ms
+ *     para fechar) entrou aqui sem ninguém caçar `800` espalhado em teste — e
+ *     é assim que a próxima troca vai entrar. Um número solto neste arquivo
+ *     transformaria "mudar a duração" numa varredura.
  *
  *  3. O TIMER É ARTESANAL (`setTimeout` próprio, não biblioteca). Timer
  *     artesanal que sobrevive ao desmonte é vazamento clássico, e o caminho
@@ -31,9 +38,23 @@ import { Modal } from '../../components/Modal';
 import { Drawer } from '../../components/Drawer';
 import { DropdownMenu } from '../../components/DropdownMenu';
 import { ToastProvider, useToast } from '../../components/Toast';
-import { VAR_DURACAO_MENU, VAR_DURACAO_OVERLAY } from '../overlayMotion';
+import { brasaTheme } from '../../theme/rn-themes';
+import {
+  msDoValorCSS,
+  VAR_DURACAO_MENU,
+  VAR_DURACAO_OVERLAY_ENTRADA,
+  VAR_DURACAO_OVERLAY_SAIDA,
+} from '../overlayMotion';
 
-const DURACAO = 800;
+// Os valores REAIS do produto, lidos do tema gerado. jsdom não carrega
+// `themes/*.css`, então o teste planta os mesmos números no `documentElement`.
+const VALOR_ENTRADA = brasaTheme['motion-overlay-enter-duration'] ?? '';
+const VALOR_SAIDA = brasaTheme['motion-overlay-exit-duration'] ?? '';
+const VALOR_MENU = brasaTheme['motion-menu-duration'] ?? '';
+
+/** A janela de inércia da página: quanto tempo a cortina fica na frente. */
+const SAIDA = msDoValorCSS(VALOR_SAIDA);
+const ENTRADA = msDoValorCSS(VALOR_ENTRADA);
 
 function definirToken(variavel: string, valor: string): void {
   document.documentElement.style.setProperty(variavel, valor);
@@ -66,14 +87,16 @@ function DisparadorDeToast(): React.JSX.Element {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  definirToken(VAR_DURACAO_OVERLAY, `${DURACAO}ms`);
-  definirToken(VAR_DURACAO_MENU, '120ms');
+  definirToken(VAR_DURACAO_OVERLAY_ENTRADA, VALOR_ENTRADA);
+  definirToken(VAR_DURACAO_OVERLAY_SAIDA, VALOR_SAIDA);
+  definirToken(VAR_DURACAO_MENU, VALOR_MENU);
 });
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
-  document.documentElement.style.removeProperty(VAR_DURACAO_OVERLAY);
+  document.documentElement.style.removeProperty(VAR_DURACAO_OVERLAY_ENTRADA);
+  document.documentElement.style.removeProperty(VAR_DURACAO_OVERLAY_SAIDA);
   document.documentElement.style.removeProperty(VAR_DURACAO_MENU);
   document.body.style.removeProperty('overflow');
 });
@@ -219,7 +242,7 @@ describe('⛔ nenhuma classe de animação sem o gate motion-safe (os cinco)', (
 // 2 — o número: quanto tempo a página fica inerte depois do "fechar"
 // ---------------------------------------------------------------------------
 
-describe('o custo do fechar é EXATAMENTE a duração do token', () => {
+describe('o custo do fechar é EXATAMENTE a duração do token de FECHAMENTO', () => {
   it('cortina, trava de rolagem e aria-modal duram o token — nem 1ms a mais', () => {
     const { rerender } = render(
       <Modal open onOpenChange={vi.fn()} title="T">
@@ -233,7 +256,7 @@ describe('o custo do fechar é EXATAMENTE a duração do token', () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(DURACAO - 1);
+      vi.advanceTimersByTime(SAIDA - 1);
     });
     // A um milissegundo do fim a página AINDA está inerte: a cortina cobre a
     // tela inteira, o body não rola e o diálogo ainda se declara modal.
@@ -250,7 +273,9 @@ describe('o custo do fechar é EXATAMENTE a duração do token', () => {
   });
 
   it('a medida acompanha o token — trocar o número move os dois juntos', () => {
-    definirToken(VAR_DURACAO_OVERLAY, '250ms');
+    // Um valor que não é nem o de abertura nem o de fechamento embarcados: se
+    // o código lesse qualquer outra coisa, este teste não fecharia em 90ms.
+    definirToken(VAR_DURACAO_OVERLAY_SAIDA, '90ms');
     const { rerender } = render(
       <Modal open onOpenChange={vi.fn()} title="T">
         <p>c</p>
@@ -262,13 +287,46 @@ describe('o custo do fechar é EXATAMENTE a duração do token', () => {
       </Modal>,
     );
     act(() => {
-      vi.advanceTimersByTime(249);
+      vi.advanceTimersByTime(89);
     });
     expect(document.body.style.overflow).toBe('hidden');
     act(() => {
       vi.advanceTimersByTime(1);
     });
     expect(document.body.style.overflow).toBe('');
+  });
+
+  // -------------------------------------------------------------------------
+  // A decisão do dono de 05/08, virada em teste.
+  // -------------------------------------------------------------------------
+  // A REV-MOTION mediu o custo do token único e o dono respondeu separando os
+  // dois sentidos: a abertura é onde a marca aparece; o fechamento vem depois
+  // de a pessoa já ter decidido sair, e ali lentidão é pedágio. Se alguém
+  // religar a espera do desmonte no token de ABERTURA — o erro natural, já que
+  // era um token só —, a página volta a ficar inerte pelo tempo da entrada e é
+  // exatamente isto que reprova aqui.
+  it('⛔ a janela de inércia é a duração de FECHAMENTO, nunca a de abertura', () => {
+    expect(SAIDA).toBeLessThan(ENTRADA);
+
+    const { rerender } = render(
+      <Modal open onOpenChange={vi.fn()} title="T">
+        <p>c</p>
+      </Modal>,
+    );
+    rerender(
+      <Modal open={false} onOpenChange={vi.fn()} title="T">
+        <p>c</p>
+      </Modal>,
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(SAIDA);
+    });
+    // Passada a duração de FECHAMENTO a página já é da pessoa de novo, mesmo
+    // com o token de abertura valendo bem mais.
+    expect(screen.queryByTestId('modal-overlay')).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe('');
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
 
@@ -289,7 +347,7 @@ describe('o relógio da saída não sobrevive ao desmonte do pai', () => {
       </Modal>,
     );
     act(() => {
-      vi.advanceTimersByTime(DURACAO / 2);
+      vi.advanceTimersByTime(SAIDA / 2);
     });
     unmount();
 
@@ -299,7 +357,7 @@ describe('o relógio da saída não sobrevive ao desmonte do pai', () => {
     expect(document.body.style.overflow).toBe('');
 
     act(() => {
-      vi.advanceTimersByTime(DURACAO * 3);
+      vi.advanceTimersByTime(SAIDA * 3);
     });
     expect(vi.getTimerCount()).toBe(0);
   });

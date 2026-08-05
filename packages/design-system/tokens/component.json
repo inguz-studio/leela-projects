@@ -244,9 +244,10 @@
     "border-left":   "3px"
   },
   "motion": {
-    "$description": "Duracao de ENTRADA e SAIDA das superficies de sobreposicao (Dialog, Modal, Drawer, Toast, DropdownMenu). Mora no tier COMPARTILHADO de proposito: os dois temas usam o mesmo numero, entao trocar o ritmo do produto inteiro custa UMA linha aqui (mais `pnpm generate-tokens`). O easing continua em `motion.easing.*` do tier primitivo — enter/exit ja existiam. `overlay-duration` = 800ms por decisao do dono (04/08); a recomendacao tecnica registrada no handoff BUILD-MOTION e 200-300ms para dialogo e toast, porque acima disso a interface le como lenta e o custo dobra no FECHAR (a cortina ainda intercepta o clique enquanto sai). `menu-duration` e deliberadamente MENOR: menu e affordance de ponteiro — o item que voce esta mirando nao pode estar voando quando o dedo chega.",
-    "overlay-duration": "800ms",
-    "menu-duration":    "120ms"
+    "$description": "Duracao das superficies de sobreposicao (Dialog, Modal, Drawer, Toast, DropdownMenu). Mora no tier COMPARTILHADO de proposito: os dois temas usam o mesmo numero, entao trocar o ritmo do produto inteiro custa UMA linha aqui (mais `pnpm generate-tokens`). O easing continua em `motion.easing.*` do tier primitivo — `enter`/`exit` ja eram um PAR, e a duracao agora acompanha a mesma simetria. ⛔ ABRIR E FECHAR NAO SAO O MESMO MOVIMENTO (decisao do dono, 05/08, sobre a medida da REV-MOTION: com token unico de 800ms a pagina ficava 800ms exatos inerte a CADA fechamento — cortina interceptando clique, body sem rolar, dialogo ainda `aria-modal`). A abertura e onde a marca aparece, e 800ms compram esse tempo. O fechamento vem DEPOIS de a pessoa ja ter decidido sair: ali lentidao nao e marca, e pedagio — 250ms. `menu-duration` e um so para as duas direcoes e deliberadamente MENOR: menu e affordance de PONTEIRO, o item que voce esta mirando nao pode estar voando quando o dedo chega. ⚠️ `overlay-exit-duration` nao e so estetica: e ela que o JS le para segurar o no vivo (`usePresencaOverlay`), entao ela define a janela de inercia da pagina. Subir esse numero sem querer devolve o pedagio.",
+    "overlay-enter-duration": "800ms",
+    "overlay-exit-duration":  "250ms",
+    "menu-duration":          "120ms"
   },
   "card": {
     "radius":        "{radius.lg}",

@@ -79,8 +79,11 @@
  * início da saída deixaria a pessoa navegando por cima de um painel que ainda
  * está na tela.
  *
- * Duração por token (`--motion-overlay-duration`) e reduced-motion tratados em
- * `utils/overlayMotion` — ver o cabeçalho de lá.
+ * Duração por token — e são DOIS: `--motion-overlay-enter-duration` (800ms)
+ * para abrir e `--motion-overlay-exit-duration` (250ms) para fechar. A espera
+ * do desmonte lê a de FECHAR, porque é ela que mede quanto tempo a página fica
+ * coberta. Reduced-motion zera as duas. Tudo em `utils/overlayMotion` — ver o
+ * cabeçalho de lá.
  */
 
 import * as React from 'react';
