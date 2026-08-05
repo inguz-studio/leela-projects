@@ -208,12 +208,27 @@ export interface Inscrito {
    * Por que desnormalizar: a busca do organizador é um filtro EM MEMÓRIA
    * sobre a lista de inscritos já carregada do evento (RN-397), então o
    * espelho põe o código da compra na busca sem query nova, sem índice novo e
-   * sem tela nova. A objeção clássica à desnormalização não se aplica: o
-   * código NUNCA muda depois de criado, logo não há divergência possível
-   * entre a cópia e a origem.
+   * sem tela nova. A cópia não diverge da origem por conta própria: o código
+   * NUNCA muda depois de criado.
    *
-   * Ausente = inscrito anterior à S1228 (leitura Postel). Escrita SÓ por
-   * Function (o checkout, na tx da venda; o backfill da 5b).
+   * Ausente = inscrito anterior à S1228 (leitura Postel).
+   *
+   * ⚠️ AINDA NÃO É "escrita só por Function" — e quem for consumir este campo
+   * precisa saber disso ANTES de confiar nele. `codigoPedido` está fora das
+   * duas listas `hasAny` de `firestore.rules` (`semCamposDeFunctionInscrito` /
+   * `camposDeFunctionIntocados`) e fora de {@link CAMPOS_FUNCTION_INSCRITO},
+   * porque a lane que o criou não tinha mandato para editar as Rules. Hoje ele
+   * é o ÚNICO campo de Function do inscrito que um `isTenantWriter` consegue
+   * plantar no create e trocar no update — medido em
+   * `codigoPedidoReserva.attack.test.ts` (bloco A5), contra o arquivo real.
+   *
+   * Consequência para o consumidor: o espelho é pista de BUSCA do organizador
+   * dentro do próprio evento, não fonte de verdade. Quem precisar do código
+   * AUTORITATIVO de uma compra lê `Pedido.codigoPedido` — aquele sim nasce na
+   * transação da venda e mora numa coleção com `write: if false`. Quando a
+   * task com mandato acrescentar o campo às duas listas das Rules, ele entra
+   * JUNTO em {@link CAMPOS_FUNCTION_INSCRITO}, o bloco A5 fica vermelho de
+   * propósito e este aviso sai.
    */
   codigoPedido?: string;
   /**
