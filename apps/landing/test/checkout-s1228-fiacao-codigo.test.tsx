@@ -280,6 +280,47 @@ describe('S1228-T2 · o código chega à tela pelos DOIS caminhos de leitura', (
     expectSemIdInterno();
   });
 
+  // REV-5C · vetor 1, a lacuna que a lane declarou: *"tem teste de falha; não
+  // tem teste de lentidão"*. A leitura dedicada roda EM PARALELO ao
+  // `confirmar()`, então há uma janela real entre a tela de confirmação
+  // aparecer e o código chegar nela. O que a pessoa vê nessa janela é o
+  // contrato, e ele precisa estar preso.
+  it('a leitura LENTA: a confirmação aparece inteira e a linha do código só chega depois', async () => {
+    // A leitura fica PENDURADA — nem resolve, nem rejeita. É a rede ruim da
+    // fila da largada, não o `permission-denied` do caso de falha.
+    let liberar: (v: unknown) => void = () => {};
+    getPedido.mockReturnValue(
+      new Promise((resolve) => {
+        liberar = resolve;
+      }),
+    );
+
+    await irAtePagamento('cartao');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^pagar/i }));
+    });
+    await waitFor(() => expect(screen.getByText('Inscrição confirmada!')).toBeTruthy(), ESPERA);
+
+    // ENQUANTO a leitura não volta: a confirmação está completa e honesta —
+    // sem código, sem id, e sem erro. A ausência transitória é indistinguível
+    // da compra anterior ao backfill, e isso é decisão de produto (item do
+    // painel do dono), não defeito: a tela não afirma nada que não sabe.
+    expect(document.body.textContent).not.toContain('PED-');
+    expect(document.body.textContent).not.toContain('Pedido ');
+    expectSemIdInterno();
+    // O ingresso não espera pelo código — quem pagou já tem o que veio buscar.
+    expect(screen.getByText('Seu ingresso')).toBeTruthy();
+
+    // E quando ela volta, a linha entra sem tirar nada do lugar.
+    await act(async () => {
+      liberar({ id: PEDIDO_ID, status: 'pago', codigoPedido: CODIGO });
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(screen.getByText(CODIGO_EXIBIDO)).toBeTruthy(), ESPERA);
+    expect(screen.getByText('Inscrição confirmada!')).toBeTruthy();
+    expectSemIdInterno();
+  });
+
   it('a leitura do código que FALHA não derruba a confirmação de quem pagou', async () => {
     getPedido.mockRejectedValue(
       Object.assign(new Error('Missing or insufficient permissions.'), {

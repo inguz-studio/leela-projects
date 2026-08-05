@@ -225,6 +225,19 @@ describe('S1228-T2 · o cartão do ingresso não imprime mais o id do inscrito',
 //   `pedidoId={pedidoId}`                              → prop     (`=`)
 //   `{ pedidoId, eventoId }`                           → objeto   (`,`/`{`)
 //   `charge?.pedidoId`                                 → leitura  (sem chave)
+// REV-5C · O CANÁRIO ORIGINAL DEIXAVA PASSAR SETE DE NOVE FORMAS DE VAZAR, e
+// entre elas a EXATA que esta lane acabou de remover à mão do `Ticket.tsx`:
+// `title={charge.pedidoId}`. Um canário que não pega o vazamento que o próprio
+// commit encontrou não é gate, é decoração — e a Directive do commit prometia
+// que ele seguraria "a volta silenciosa do id numa tela futura".
+//
+// O que passava por baixo, medido: atributo de texto (`title`, `alt`,
+// `aria-label`), `dangerouslySetInnerHTML`, cadeia de membros mais funda
+// (`{a.b.pedidoId}`), `String(...)`, `.slice(...)` (o "conserto" errado que
+// acha que o problema era o tamanho) e arquivo em subdiretório ou `.ts`.
+//
+// Três detectores agora, porque são três posições diferentes onde o id chega a
+// olho humano — e a varredura passou a ser recursiva e a incluir `.ts`.
 describe('S1228-T2 · o id interno não volta ao checkout por arquivo nenhum', () => {
   const DIR_CHECKOUT = join(
     __dirname,
@@ -235,35 +248,118 @@ describe('S1228-T2 · o id interno não volta ao checkout por arquivo nenhum', (
     'inscricao',
     'checkout',
   );
-  //   `const { pedidoId } = charge`                    → desestruturação (`} =`)
-  const IMPRIME_ID =
-    /(?:^[ \t]*|[^=(,[:{\s][ \t]*)\{\s*(?:[A-Za-z_$][\w$]*\??\.)?pedidoId\s*\}(?!\s*(?:=[^=]|from\b))/m;
 
-  it('o canário morde: ele reconhece a forma que saiu e ignora as que ficaram', () => {
+  /**
+   * 1 · POSIÇÃO DE FILHO DE JSX — o id impresso como texto.
+   *
+   * O conteúdo da chave deixou de ser `pedidoId` ou `algo.pedidoId` e passou a
+   * ser QUALQUER expressão de uma linha que mencione `pedidoId`: é isso que
+   * pega `{String(x.pedidoId)}`, `{x.pedidoId.slice(0, 12)}` e a cadeia funda.
+   * Nenhum uso legítimo do checkout imprime o id, então a largura não custa
+   * ruído — custa só a impossibilidade de alguém alegar que "não era bem a
+   * forma que o regex procurava".
+   *
+   * O que separa imprimir de usar continua sendo o caractere ANTES da chave:
+   *   `>{charge.pedidoId}` / `Pedido {charge.pedidoId}` → imprime  (pega)
+   *   `expirarPixPendente({ pedidoId })`                → argumento (`(`)
+   *   `pedidoId={pedidoId}`                             → prop      (`=`)
+   *   `{ pedidoId, eventoId }`                          → objeto    (`,`/`{`)
+   *   `const { pedidoId } = charge`                     → desestrut. (`} =`)
+   *
+   * `[^{}\n]` e não `[^{}]`: sem o `\n` um literal de objeto multilinha que
+   * começasse em `{` no início da linha viraria falso positivo, e canário que
+   * grita à toa é canário que alguém desliga.
+   */
+  const IMPRIME_ID =
+    /(?:^[ \t]*|[^=(,[:{\s][ \t]*)\{[^{}\n]*\bpedidoId\b[^{}\n]*\}(?!\s*(?:=[^=]|from\b))/m;
+
+  /**
+   * 2 · ATRIBUTO QUE VIRA TEXTO OU FICA NO DOM.
+   *
+   * Era por aqui que o `Ticket` vazava: `title={inscritoId}` põe o valor
+   * inteiro no tooltip, e o id sobrevive num print e no "salvar página". O
+   * detector 1 NÃO pega esta forma por construção — o caractere antes da chave
+   * é `=`, que é justamente o que ele usa para ignorar prop legítima.
+   */
+  const ATRIBUTO_COM_ID =
+    /\b(?:title|alt|aria-label|aria-labelledby|aria-description|aria-describedby|placeholder|value|content|data-[\w-]+)\s*=\s*\{[^{}\n]*\bpedidoId\b/;
+
+  /** 3 · HTML cru: o escape some e o id entra no markup direto. */
+  const HTML_CRU_COM_ID = /dangerouslySetInnerHTML[^;]*?\bpedidoId\b/s;
+
+  const DETECTORES = [IMPRIME_ID, ATRIBUTO_COM_ID, HTML_CRU_COM_ID] as const;
+  const acusa = (fonte: string): boolean => DETECTORES.some((re) => re.test(fonte));
+
+  /** Varredura RECURSIVA — subdiretório era buraco declarado do canário. */
+  function fontesDoCheckout(dir: string): string[] {
+    const achados: string[] = [];
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      const caminho = join(dir, entrada.name);
+      if (entrada.isDirectory()) {
+        achados.push(...fontesDoCheckout(caminho));
+      } else if (entrada.name.endsWith('.tsx') || entrada.name.endsWith('.ts')) {
+        achados.push(caminho);
+      }
+    }
+    return achados;
+  }
+
+  it('o canário morde: ele reconhece as formas que vazam e ignora as que ficaram', () => {
     // Sem este caso, um refactor que quebre a expressão deixaria a suíte verde
     // para sempre — canário que não canta não vigia nada.
-    expect(IMPRIME_ID.test('<p>Pedido {charge.pedidoId}</p>')).toBe(true);
-    expect(IMPRIME_ID.test('<p>{pedidoId}</p>')).toBe(true);
-    expect(IMPRIME_ID.test('  {charge?.pedidoId}\n')).toBe(true);
-    expect(IMPRIME_ID.test('await confirmarPagamentoSandbox({ pedidoId });')).toBe(false);
-    expect(IMPRIME_ID.test('<Foo pedidoId={pedidoId} />')).toBe(false);
-    expect(IMPRIME_ID.test('const { pedidoId } = charge;')).toBe(false);
-    expect(IMPRIME_ID.test('expirarPixPendente({ pedidoId: charge.pedidoId })')).toBe(false);
+
+    // As que a lane removeu à mão, e que o canário TEM de pegar sozinho.
+    expect(acusa('<p>Pedido {charge.pedidoId}</p>')).toBe(true);
+    expect(acusa('<p>{pedidoId}</p>')).toBe(true);
+    expect(acusa('  {charge?.pedidoId}\n')).toBe(true);
+    // REV-5C · a forma EXATA do vazamento que o `Ticket` tinha. O canário
+    // original respondia `false` aqui — o achado da lane teria passado por ele.
+    expect(acusa('<p title={inscrito.pedidoId}>x</p>')).toBe(true);
+    expect(acusa('<img alt={charge.pedidoId} />')).toBe(true);
+    expect(acusa('<p aria-label={charge.pedidoId}>x</p>')).toBe(true);
+    expect(acusa('<div dangerouslySetInnerHTML={{ __html: charge.pedidoId }} />')).toBe(true);
+    // O "conserto" errado: encurtar o id achando que o problema era o tamanho.
+    // Não era — era o uid no meio, e ele sobrevive a qualquer corte.
+    expect(acusa('<p>{charge.pedidoId.slice(0, 12)}</p>')).toBe(true);
+    expect(acusa('<p>{String(charge.pedidoId)}</p>')).toBe(true);
+    expect(acusa('<p>{dados.charge.pedidoId}</p>')).toBe(true);
+    expect(acusa('<p>{`Pedido ${charge.pedidoId}`}</p>')).toBe(true);
+
+    // E os quinze usos legítimos continuam mudos.
+    expect(acusa('await confirmarPagamentoSandbox({ pedidoId });')).toBe(false);
+    expect(acusa('<Foo pedidoId={pedidoId} />')).toBe(false);
+    expect(acusa('const { pedidoId } = charge;')).toBe(false);
+    expect(acusa('expirarPixPendente({ pedidoId: charge.pedidoId })')).toBe(false);
+    expect(acusa('const pedidoId = charge?.pedidoId;')).toBe(false);
+    expect(acusa('if (pedidoNaTelaRef.current !== pedidoId) return;')).toBe(false);
   });
 
-  it('nenhum .tsx do checkout interpola o id em posição de texto', () => {
-    const arquivos = readdirSync(DIR_CHECKOUT).filter((f) => f.endsWith('.tsx'));
+  it('nenhuma fonte do checkout leva o id a olho humano', () => {
+    const arquivos = fontesDoCheckout(DIR_CHECKOUT);
     // Guarda da guarda: diretório vazio faria este teste passar sem olhar nada.
     expect(arquivos.length).toBeGreaterThan(5);
 
-    const culpados = arquivos.filter((f) => {
-      const fonte = readFileSync(join(DIR_CHECKOUT, f), 'utf8')
+    const culpados = arquivos.filter((caminho) => {
+      const fonte = readFileSync(caminho, 'utf8')
         // Comentários de linha ficam de fora: esta suíte tem de sobreviver a
         // um comentário que CITE o padrão para explicar por que ele saiu — e
-        // o `StepConfirmacao` tem exatamente um desses.
+        // o `StepConfirmacao` e o `Ticket` têm exatamente esses.
         .replace(/^\s*(\/\/|\*).*$/gm, '');
-      return IMPRIME_ID.test(fonte);
+      return acusa(fonte);
     });
     expect(culpados).toEqual([]);
+  });
+
+  // O LIMITE QUE FICA DECLARADO, porque regex não o alcança: uma variável
+  // intermediária (`const ref = charge.pedidoId;` … `<p>{ref}</p>`) some do
+  // alcance de qualquer varredura textual — pegá-la exigiria seguir o fluxo do
+  // valor, que é trabalho de lint com type-checker, não de teste.
+  //
+  // O outro limite é de ESCOPO: o canário varre `checkout/`, e o comprador já
+  // tem superfície fora dele (`minha-conta/PainelCompras.tsx`, que hoje exibe
+  // o código e está correta). Estendê-lo é item de fila técnica — mexer no
+  // território de outra lane em voo é como um gate vira bloqueio de terceiro.
+  it('o limite declarado: variável intermediária passa, e isso está escrito', () => {
+    expect(acusa('const ref = charge.pedidoId;\n  <p>{ref}</p>')).toBe(false);
   });
 });
