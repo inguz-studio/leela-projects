@@ -52,7 +52,23 @@ function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | n
             key={a.id}
             role="alert"
             className={
-              'flex items-center justify-between gap-[var(--spacing-3)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-4)] text-[var(--text-primary)]' +
+              // REFLUXO ESTREITO (REV-PAINEL): a linha era `flex` sem
+              // `flex-wrap`, com um único filho `shrink-0`. Quando o alerta
+              // ganhou o botão de destino, o grupo da direita passou a ocupar
+              // ~135px inegociáveis (botão + badge + gaps). A mensagem é texto
+              // e não encolhe abaixo da palavra mais longa, então em 320px a
+              // conta não fechava (240px úteis contra ~277px de mínimo) e a
+              // linha estourava a caixa — com o contêiner de rolagem em
+              // `overflow-y-auto`, o eixo x é promovido a `auto` e volta a
+              // barra horizontal que o dono já reportou duas vezes.
+              //
+              // O conserto é o MESMO par do PageHeader do DS: `flex-wrap` com
+              // `sm:flex-nowrap` aqui, e `basis-full sm:basis-auto` no grupo de
+              // ações. Abaixo de `sm` o grupo não cabe na linha da mensagem por
+              // construção e desce inteiro; de `sm` para cima nada muda e o
+              // desktop fica idêntico ao de antes. `min-w-0` na mensagem é o
+              // que a deixa encolher e quebrar em vez de empurrar a caixa.
+              'flex flex-wrap items-center justify-between gap-[var(--spacing-3)] sm:flex-nowrap rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-4)] text-[var(--text-primary)]' +
               (a.severidade === 'critico'
                 ? ' border-l-4 border-l-[var(--border-danger)]'
                 : a.severidade === 'aviso'
@@ -60,18 +76,26 @@ function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | n
                   : '')
             }
           >
-            <span>{a.mensagem}</span>
-            <div className="flex shrink-0 items-center gap-[var(--spacing-3)]">
+            <span className="min-w-0">{a.mensagem}</span>
+            <div className="flex shrink-0 items-center gap-[var(--spacing-3)] ml-auto basis-full sm:basis-auto">
               {/* O alerta que NOMEIA um lugar do painel também leva até ele
                   (DIAG-PAINEL-LACUNAS). `Link` do router, não `<a>` cru: a
                   casca do evento é SPA e um href puro recarregaria o
-                  documento inteiro — mesmo motivo do `navSpa` do EventoShell. */}
+                  documento inteiro — mesmo motivo do `navSpa` do EventoShell.
+
+                  ORDEM DO ANINHAMENTO (REV-PAINEL): é `Button asChild` POR
+                  FORA e `Link` por dentro, nunca o inverso. `<Link><Button>`
+                  gerava `<a><button>`, que o HTML proíbe (o `a` não admite
+                  descendente interativo) e que na prática entregava DOIS
+                  pontos de tabulação para uma ação só — o primeiro deles o
+                  `<a>` sem classe nenhuma, portanto sem anel de foco
+                  (WCAG 2.4.7). Com `asChild`, o Slot funde os dois: sai um
+                  `<a>` único, com o estilo e o `focus-visible:ring` do
+                  botão. É o mesmo par já usado na ContaPage. */}
               {a.acao ? (
-                <Link to={a.acao.href}>
-                  <Button variant="secondary" size="sm">
-                    {a.acao.label}
-                  </Button>
-                </Link>
+                <Button asChild variant="secondary" size="sm">
+                  <Link to={a.acao.href}>{a.acao.label}</Link>
+                </Button>
               ) : null}
               {a.severidade === 'critico' ? <Badge variant="vulcao">Atenção</Badge> : null}
             </div>

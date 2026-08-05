@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import { OverviewDashboard } from '../OverviewDashboard';
@@ -124,5 +125,74 @@ describe('OverviewDashboard', () => {
     };
     renderDashboard(<OverviewDashboard {...baseProps} alertas={[alerta]} />);
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // REV-PAINEL — o destino do alerta é UM controle, não dois empilhados.
+  //
+  // A primeira versão montou `<Link><Button/></Link>`, que gera `<a><button>`.
+  // O `getByRole('link', { name })` acima passa nas DUAS formas — o nome
+  // acessível do `<a>` vem do texto do botão de dentro —, então ele sozinho não
+  // protege nada. O que quebrava de verdade era o teclado: dois pontos de
+  // tabulação para uma ação só, e o PRIMEIRO deles um `<a>` sem classe alguma,
+  // portanto sem anel de foco (WCAG 2.4.7). Estes casos travam a forma certa.
+  // -------------------------------------------------------------------------
+  const alertaComAcao: AlertaOperacional = {
+    id: 'vitrine-nao-vende',
+    severidade: 'critico',
+    mensagem: 'A página pública está no ar mas NÃO vende.',
+    acao: { label: 'Configurar lotes', href: '/eventos/meia-floripa-2026/lotes' },
+  };
+
+  it('o destino do alerta é UM ponto de tabulação, não dois', async () => {
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alertaComAcao]} />);
+    const alerta = screen.getByRole('alert');
+    const user = userEvent.setup();
+
+    const paradas: Element[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      await user.tab();
+      const foco = document.activeElement;
+      if (foco && alerta.contains(foco) && !paradas.includes(foco)) paradas.push(foco);
+    }
+    expect(paradas).toHaveLength(1);
+  });
+
+  it('o destino do alerta não aninha controle dentro de controle (HTML válido)', () => {
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alertaComAcao]} />);
+    const link = screen.getByRole('link', { name: 'Configurar lotes' });
+    // `<a>` não admite descendente interativo — era `<a><button>`.
+    expect(link.querySelector('button, a, input, select, textarea')).toBeNull();
+  });
+
+  it('o destino do alerta carrega o anel de foco do botão (WCAG 2.4.7)', () => {
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alertaComAcao]} />);
+    const link = screen.getByRole('link', { name: 'Configurar lotes' });
+    // O elemento que RECEBE o foco é o mesmo que traz o estilo de foco.
+    expect(link.className).toMatch(/focus-visible:ring/);
+  });
+
+  // REV-PAINEL · refluxo estreito. O jsdom NÃO faz layout: este caso trava o
+  // CONTRATO que evita o estouro em 320px, não mede o pixel. O grupo de ações
+  // é `shrink-0` e passou a valer ~135px (botão + badge + gaps); a mensagem é
+  // texto e não encolhe abaixo da palavra mais longa. Sem o par
+  // `flex-wrap`/`basis-full` a linha estoura a caixa e o contêiner de rolagem
+  // devolve barra horizontal. A conferência em 320px real fica para o olho
+  // humano (está no handoff).
+  it('a linha do alerta refluí em tela estreita em vez de estourar a largura', () => {
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alertaComAcao]} />);
+    const linha = screen.getByRole('alert');
+    expect(linha.className).toMatch(/\bflex-wrap\b/);
+    expect(linha.className).toMatch(/\bsm:flex-nowrap\b/);
+
+    const mensagem = screen.getByText(alertaComAcao.mensagem);
+    // `min-width:auto` é o que trava o encolhimento de um filho flex com texto.
+    expect(mensagem.className).toMatch(/\bmin-w-0\b/);
+
+    // `basis-full` é o que GARANTE a descida do grupo para a própria linha
+    // abaixo de `sm` — mesmo mecanismo do slot de ações do PageHeader.
+    const grupoAcoes = screen.getByRole('link', { name: 'Configurar lotes' }).parentElement;
+    expect(grupoAcoes?.className).toMatch(/\bbasis-full\b/);
+    expect(grupoAcoes?.className).toMatch(/\bsm:basis-auto\b/);
   });
 });
