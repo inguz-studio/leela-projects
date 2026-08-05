@@ -61,6 +61,7 @@ import {
   aceiteDatadoPeloCliente,
   codigoDeAcessoValido,
   emailDeCodigoValido,
+  isPlatformAdmin,
   MENSAGEM_CODIGO_NEGADO,
   normalizarCodigoDeAcesso,
   normalizarEmailCodigo,
@@ -70,7 +71,12 @@ import {
   TERMO_CONTA_VERSAO,
   validarContaParticipante,
 } from '@leela/core';
-import { consumirCodigoDeAcesso, consumirProvaDeAcesso } from './codigoDeAcesso';
+import {
+  codigoAcessoPepper,
+  consumirCodigoDeAcesso,
+  consumirProvaDeAcesso,
+  provaConfere,
+} from './codigoDeAcesso';
 
 // ---------------------------------------------------------------------------
 // A negativa única
@@ -127,7 +133,46 @@ export async function confirmarCodigoDeAcessoCore(
   const email = normalizarEmailCodigo(input?.email);
   const codigo = normalizarCodigoDeAcesso(input?.codigo);
 
-  const consumo = await consumirCodigoDeAcesso(db, email, codigo, agora);
+  // FAIL-CLOSED do pepper ANTES do bloco protegido: a falta do segredo tem de
+  // subir alta e crua (é erro de provisionamento), e não pode ser confundida
+  // com contenção pelo tratamento abaixo.
+  codigoAcessoPepper();
+
+  // ─────────────────────────────────────────────────────────────────────
+  // A SEXTA CAUSA — a que escapava com código de erro próprio (REV · DEF-6).
+  //
+  // O cabeçalho deste módulo avisa: "É FÁCIL UM DELES ESCAPAR com código de
+  // erro próprio... por isso a negativa nasce numa função só". A review achou
+  // um que escapava sem ninguém ter escrito um `throw`: sob contenção alta no
+  // MESMO endereço (que é a condição de um ataque, não de um dia normal), o
+  // `runTransaction` esgota as retentativas e ABORTA, e o erro cru do
+  // Firestore atravessava a callable inteira. Medido: com 80 palpites
+  // simultâneos e o emulador sob carga, o número de comparações caiu de cinco
+  // para dois — as outras foram abortos, invisíveis no log.
+  //
+  // Abortar NÃO custa tentativa e NÃO produz veredito, então o teto continua
+  // exato (comparações == `tentativas`, provado por caso). O que estava errado
+  // era a RESPOSTA: um erro distinguível, numa tela que não tem estado para
+  // ele, e sem uma linha de log sob a única condição em que isso acontece.
+  //
+  // `unavailable` é a resposta honesta — "tente de novo", sem afirmar nada
+  // sobre o código nem sobre a conta. Ela não distingue endereço com conta de
+  // endereço sem: depende da carga no documento, não de quem é a pessoa.
+  // ─────────────────────────────────────────────────────────────────────
+  let consumo: Awaited<ReturnType<typeof consumirCodigoDeAcesso>>;
+  try {
+    consumo = await consumirCodigoDeAcesso(db, email, codigo, agora);
+  } catch (err) {
+    logger.error('codigo_acesso_consumo_abortado', {
+      alerta: true,
+      severidade: 'critico',
+      err: err instanceof Error ? err.message.slice(0, 200) : String(err),
+    });
+    throw new https.HttpsError(
+      'unavailable',
+      'Não conseguimos conferir o código agora. Tente de novo em instantes.'
+    );
+  }
   if (!consumo.ok) {
     // O motivo real vai para o LOG, nunca para a resposta.
     logger.info('codigo_acesso_negado', { motivo: consumo.motivo });
@@ -209,12 +254,58 @@ export async function concluirAcessoComProvaCore(
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────
+  // A ORDEM É DA REVIEW (REV-CONTAS-MOTOR · DEF-1): CONFERE, decide o ramo,
+  // valida o formulário — e SÓ ENTÃO consome.
+  //
+  // Consumindo primeiro, um formulário sem o nome ou sem o aceite queimava a
+  // prova E o código, e a pessoa tinha de pedir OUTRO código. Esse é
+  // literalmente o desfecho que a separação em duas callables foi justificada
+  // para evitar; ele só tinha mudado de lugar. O uso único não afrouxa: quem
+  // decide é `consumirProvaDeAcesso`, na transação, imediatamente antes da
+  // primeira mutação — duas conclusões simultâneas passam as duas pela
+  // conferência e só uma consome (há caso de concorrência).
+  // ─────────────────────────────────────────────────────────────────────
   const prova = typeof input?.prova === 'string' ? input.prova : '';
-  if (!(await consumirProvaDeAcesso(db, email, prova, agora))) {
+  if (!(await provaConfere(db, email, prova, agora))) {
     throw negar(0);
   }
 
   const existente = await contaDoEmail(auth, email);
+
+  // RN-449d — A CONTA DE ADMINISTRAÇÃO NÃO ENTRA PELA PORTA DO PARTICIPANTE.
+  //
+  // O `contaSemFriccao` recusa vincular uma conta `platform_admin` a um
+  // comprador (`contaSemFriccao.ts:288`) e a review achou a mesma fronteira
+  // ABERTA aqui: esta callable é pública, anônima e sem App Check, e trocava a
+  // senha da conta de administração, carimbava `emailVerified` nela e devolvia
+  // token de sessão. A prova de posse da caixa não é, e nunca foi, autorização
+  // para administrar a plataforma — a conta de administração tem a jornada de
+  // senha DELA, no painel.
+  //
+  // A recusa NÃO é oráculo: quem chega aqui já acertou o código, ou seja, já
+  // tem a caixa daquele endereço nas mãos. E ela vem ANTES do consumo — a
+  // pessoa não perde nem a prova nem o código por bater nesta porta.
+  if (existente !== null && (await ehContaDeAdministracao(auth, existente))) {
+    logger.error('codigo_acesso_conta_admin_recusada', {
+      alerta: true,
+      motivo: 'conta_admin',
+    });
+    throw new https.HttpsError(
+      'failed-precondition',
+      'Esta conta é de administração da plataforma. Entre pelo painel.'
+    );
+  }
+
+  const precisaNascer = existente === null;
+  if (precisaNascer) {
+    // Validação do formulário ANTES do consumo — ver o bloco de ordem acima.
+    validarFormularioDeConta(email, input);
+  }
+
+  if (!(await consumirProvaDeAcesso(db, email, prova, agora))) {
+    throw negar(0);
+  }
 
   if (existente !== null) {
     // ── Ramo A · a conta já existe (S1229-T4) ────────────────────────────
@@ -235,25 +326,62 @@ export async function concluirAcessoComProvaCore(
 // 3. A criação — nasce inteira ou não nasce (RN-478)
 // ---------------------------------------------------------------------------
 
+/** O nome tal como ele entra na conta — uma normalização só para os dois usos. */
+function nomeDoFormulario(input: { nome?: unknown } | null): string {
+  return typeof input?.nome === 'string' ? input.nome.trim() : '';
+}
+
+/**
+ * A régua do formulário de criação, SEM efeito colateral (REV · DEF-1).
+ *
+ * Roda antes do consumo da prova. Não é a negativa de credencial: quem chega
+ * aqui já provou que tem a caixa, e dizer "falta o nome" não é oráculo
+ * (RN-477). O que ela não pode mais fazer é custar o código à pessoa.
+ */
+function validarFormularioDeConta(
+  email: string,
+  input: { nome?: unknown; consentimentoLgpd?: unknown } | null
+): void {
+  const erros = validarContaParticipante({
+    nome: nomeDoFormulario(input),
+    email,
+    consentimentoLgpd: input?.consentimentoLgpd === true,
+  });
+  if (erros.length > 0) {
+    throw new https.HttpsError('failed-precondition', erros.join(' '));
+  }
+}
+
+/**
+ * "Isto é conta de administração?" — pelo guard PURO do core
+ * (`isPlatformAdmin`), que é a autoridade única do papel no repositório.
+ *
+ * ⚠ POR QUE NÃO O `PAPEL_ADMIN_PLATAFORMA` DO `contaSemFriccao`, que é onde a
+ * RN-449d já mora: importá-lo arrasta o módulo do checkout inteiro para dentro
+ * destas callables, e o `secretsBinding.contract` REPROVOU exatamente isso —
+ * `confirmarCodigoDeAcesso → falta BREVO_API_KEY`. O fecho de segredos é
+ * transitivo, então uma importação por conveniência daria a uma superfície
+ * pública de credencial acesso à chave do provedor de e-mail sem que ninguém
+ * tivesse pedido. O guard do core não carrega segredo nenhum.
+ */
+async function ehContaDeAdministracao(
+  auth: admin.auth.Auth,
+  conta: admin.auth.UserRecord
+): Promise<boolean> {
+  const claims = ((await auth.getUser(conta.uid)).customClaims ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return isPlatformAdmin(claims as never);
+}
+
 async function criarContaDeParticipante(
   db: admin.firestore.Firestore,
   auth: admin.auth.Auth,
   dados: { email: string; senha: string; input: { nome?: unknown } | null },
   agora: Date
 ): Promise<ConcluirAcessoResultado> {
-  const nome = typeof dados.input?.nome === 'string' ? dados.input.nome.trim() : '';
-  const bruto = dados.input as { consentimentoLgpd?: unknown } | null;
-  const erros = validarContaParticipante({
-    nome,
-    email: dados.email,
-    consentimentoLgpd: bruto?.consentimentoLgpd === true,
-  });
-  if (erros.length > 0) {
-    // NÃO é a negativa de credencial: a prova já foi consumida e a pessoa
-    // precisa saber que falta o nome ou o aceite. Dizer isso não é oráculo —
-    // ela acabou de provar que tem a caixa (RN-477).
-    throw new https.HttpsError('failed-precondition', erros.join(' '));
-  }
+  const nome = nomeDoFormulario(dados.input);
 
   // A conta nasce JÁ VERIFICADA: o código é a prova de posse, e verificar
   // depois seria pedir a mesma prova duas vezes.
@@ -309,8 +437,24 @@ async function criarContaDeParticipante(
     // precisa estar PROVADO, não descrito. Conta no Auth criada + gravação
     // falhando = conta que ocupa o endereço de alguém sem documento nenhum
     // por trás, e que ninguém consegue recriar porque o endereço "já existe".
-    await auth.deleteUser(uid).catch(() => undefined);
+    // O desfazer pode falhar TAMBÉM (REV-CONTAS-MOTOR · DEF-5). Quando falha,
+    // sobra no Auth uma conta VERIFICADA, com a senha que a pessoa acabou de
+    // digitar, e SEM o `atletas/{uid}` que carrega o consentimento — e a
+    // segunda volta dela cai no ramo "conta existe", que não grava
+    // consentimento nenhum. Ou seja: a conta fica usável e o aceite da LGPD
+    // some para sempre, em silêncio.
+    //
+    // Não há fila de compensação nesta casa, então o que esta lane pode
+    // entregar é a EVIDÊNCIA no formato que a política de alerta desta rodada
+    // casa (`alerta`/`severidade`) — sem PII, com o uid, que é o que um
+    // operador precisa para limpar a conta à mão.
+    const desfeito = await auth
+      .deleteUser(uid)
+      .then(() => true)
+      .catch(() => false);
     logger.error('conta_participante_rollback', {
+      desfeito,
+      ...(desfeito ? {} : { alerta: true, severidade: 'critico', uid }),
       err: err instanceof Error ? err.message : String(err),
     });
     throw new https.HttpsError(

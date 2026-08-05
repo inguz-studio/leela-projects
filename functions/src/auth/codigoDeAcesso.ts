@@ -61,7 +61,16 @@
 // própria spec, uma volta ao servidor.
 //
 // O que atravessa essa volta é a PROVA: 256 bits da entropia do sistema, com
-// digest guardado NO MESMO documento, uso único, e o mesmo prazo do código.
+// digest guardado NO MESMO documento e uso único.
+//
+// ⚠ CORREÇÃO DA REVIEW (REV-CONTAS-MOTOR · DEF-4): esta seção afirmava que a
+// prova tem "o mesmo prazo do código", e ISSO É FALSO. `provaExpiraEm` nasce
+// de `agora + CODIGO_ACESSO_TTL_MS` no INSTANTE DO CONSUMO, não do instante
+// da emissão — quem confirma o código aos 9min59s ganha dez minutos NOVOS, e
+// a cadeia código→prova vive até VINTE minutos depois da emissão. O prazo
+// fresco é deliberado (a pessoa ainda vai escolher uma senha, e herdar um
+// resto de dois segundos seria dead-end de tela), mas o número declarado
+// precisa ser o número real: a janela máxima da cadeia é 2 × TTL.
 // Ela não é um segundo caminho para provar posse do e-mail — é a continuação
 // da prova única que o código já fez, e ela não vale nada sozinha: quem não
 // passou pelo código não tem como fabricá-la. O código continua com uso único
@@ -411,6 +420,40 @@ export async function consumirCodigoDeAcesso(
     });
     return { ok: true, prova, restantes: tentativasRestantes(gastas) };
   });
+}
+
+/**
+ * CONFERE a prova sem consumi-la (REV-CONTAS-MOTOR · DEF-1).
+ *
+ * POR QUE ELA EXISTE, e por que não é um segundo caminho de credencial: o
+ * `concluirAcessoComProva` precisa saber QUE RAMO vai percorrer (conta existe
+ * ou conta nasce) antes de poder validar o formulário, e descobrir o ramo
+ * exige ter passado pela prova. Consumindo primeiro, um formulário sem o nome
+ * ou sem o aceite QUEIMA a prova E o código — e a pessoa precisa pedir outro
+ * código, que é exatamente o desfecho que a separação em duas callables foi
+ * justificada para evitar.
+ *
+ * A conferência é SÓ LEITURA. O uso único continua sendo decidido por
+ * `consumirProvaDeAcesso`, na transação, imediatamente antes da mutação: duas
+ * conclusões simultâneas passam as duas por aqui e só uma consome.
+ */
+export async function provaConfere(
+  db: admin.firestore.Firestore,
+  email: string,
+  prova: string,
+  agora: Date = new Date()
+): Promise<boolean> {
+  if (typeof prova !== 'string' || prova.length === 0) return false;
+  const snap = await db
+    .collection(COLECAO_CODIGOS_ACESSO)
+    .doc(docIdDoEmail(email))
+    .get();
+  if (!snap.exists) return false;
+  const dados = snap.data() ?? {};
+  if (paraDate(dados['provaConsumidaEm']) !== null) return false;
+  const expira = paraDate(dados['provaExpiraEm']);
+  if (expira === null || expira.getTime() <= agora.getTime()) return false;
+  return digestConfere(digestProva(email, prova), dados['provaDigest']);
 }
 
 /**
