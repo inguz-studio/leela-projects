@@ -31,7 +31,8 @@ entregues, e a B4 (Meus Clubes) ficou como a única da frente B que não foi ini
 | `00-boards/BOARD-EPICOS.md` | uma entrada `+2026-08-05` na linha do E12, na altitude de épico |
 | `01-produto/DECISOES-ABERTAS.md` | **quatro itens novos**, duas notas em itens existentes e **duas frentes da fila de construção removidas por estarem construídas** |
 | `02-rodadas/2026-08-04-pos-pagamento/04-fila-codigo.md` | estado por frente, RF2-1 fechado, a saída da REV-RF2-1 e **sete itens de fila técnica nova**; critério de pronto marcado |
-| `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md` | a seção "O que a noite de 05/08 executou", com o mapa lane→entrega→prova e o bloqueio do reenvio |
+| `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md` | a seção "O que a noite de 05/08 executou", com o mapa lane→entrega→prova, o bloqueio do reenvio e o que fica com o dono |
+| `02-rodadas/2026-08-04-pos-pagamento/06-spec-codigo-pedido.md` | correção de fato: o volume do retroativo é **17**, medido, e não os 12 que a spec estimava |
 | `03-canon/epics/LEELA-E12-landing.md` | **duas diretrizes permanentes novas** (RN-382 e RN-474), o estado de S1225/S1214-T5/S1228, a reconciliação das frentes B e C, e o commit que faltava na diretriz da RN-469 |
 
 ## Os cards, um a um
@@ -91,18 +92,33 @@ esperam credencial, não código.
 
 ## A fila técnica nova
 
-Sete itens, no molde RF2-*/RS1-* que a fila já usava — **RF2-4** (varredura sem limite nem cursor
+Dez itens, no molde RF2-*/RS1-* que a fila já usava — **RF2-4** (varredura sem limite nem cursor
 num cron de 15 minutos, com pendência esgotada no result set para sempre), **RF2-5** (o registro
 por inscrito e por passagem multiplicando ruído), **RS1-4** (o seed local sem código, que faz a
 conferência visual da 5d parecer quebrada), **RS1-5** (o travessão que o normalizador não come, a
 corrigir nos dois ou em nenhum), **RS1-6** (a callable que não devolve o código, contrato para a
-5c) e **RS1-7** (o `"host": "::"` das configs de emulador produzindo falso-vermelho).
+5c), **RS1-7** (o `"host": "::"` das configs de emulador produzindo falso-vermelho), **RS1-8** (o
+sorteio criptográfico que não chegou ao caminho da venda — em execução na BUILD-A4), **RS1-9**
+(dois pedidos cancelados apontando para inscrito que não existe, estado que a ADR-011 diz ser
+impossível) e **RS1-10** (o `pnpm build` da raiz que falha e muta o `pnpm-workspace.yaml`).
+
+**O RS1-8 obrigou uma correção no que este selo já tinha escrito.** A diretriz permanente da
+RN-474 dizia que o sorteio virou criptográfico nos dois geradores. É verdade do **default**, e
+falso do caminho da venda: a cadeia do checkout passa `random` explicitamente em três pontos, com
+`Math.random` no default de cada um, então toda compra nova continua com o gerador previsível. O
+épico e o painel foram corrigidos para dizer isso, em vez de deixar a diretriz parecer cumprida.
+
+**O RS1-9 não subiu ao painel de propósito** — é higiene de dados, e a regra permanente R-0803B-1
+diz que limpeza não importuna o dono. Ficou na fila com a nota de que investigação vem **antes** de
+qualquer limpeza: o estado impossível é o sintoma, e limpar sem entender apaga a evidência.
 
 ## O que eu NÃO consegui selar, e por quê
 
-1. **A 5b não tem prova para selar.** Nada em `functions/scripts` foi commitado; a lane estava em
-   voo. Ficou marcada como em execução em todos os quatro lugares, e a ordem que continua valendo
-   está escrita: o backfill roda antes de a 5c e a 5d irem ao ar.
+1. **A 5b foi selada num segundo passe.** Ela aterrissou (`d1d6582a` + `3a566f51`) segundos antes
+   do primeiro commit deste selo, e o segundo passe a marcou entregue na fila, no checklist, no
+   card e na rodada, com o comando do `--apply` verbatim no card do dono e a correção de fato na
+   spec (o volume medido é 17, não 12). **A review antagonista dela não rodou**, e ela escreve em
+   produção — está escrito nos quatro lugares.
 2. **A B4 (Meus Clubes) não foi iniciada** — o handoff da lane declara isso. É a única tarefa da
    frente B que sobra, e ficou marcada como não iniciada, não como pendente de deploy.
 3. **A frente B não foi revisada.** Ela é ⚔ e a review antagonista não rodou; o card e a fila

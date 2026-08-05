@@ -3036,7 +3036,16 @@ todo código legível da casa, não só para o do pedido:
    e **ausência de fonte é erro, nunca queda para `Math.random`** — cair de volta esconderia o
    defeito exatamente onde ele importa. Zero mudança de formato: mesmos alfabetos, mesmos
    tamanhos, mesmos predicados. Isto é **decisão técnica do maestro, não juízo de dono**.
-   Commit `d36afb64`.
+   Commit `d36afb64`. **⚠ A diretriz ainda NÃO está cumprida no caminho da venda.** A lane do
+   backfill mediu depois, ao tentar reusar o mecanismo: o default trocado **nunca é alcançado**
+   no checkout, porque a cadeia inteira passa `random` explicitamente —
+   `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx` →
+   `gerarCodigoPedido`, todos com `= Math.random` escrito no default. **Toda compra nova continua
+   sorteando com o PRNG do V8.** O conserto é de três linhas (trocar
+   `random: () => number = Math.random` por `random?: () => number` nos três pontos e continuar
+   repassando o argumento), não muda comportamento de teste nenhum, e está **em execução na lane
+   BUILD-A4**, em commit separado (RS1-8 na fila da rodada). O `codigoIngresso` e o backfill
+   **não** herdam o defeito.
 2. **O espelho do código no inscrito é campo de Function, e as Rules dizem isso.** Ele nasceu
    fora das duas listas `hasAny` do `firestore.rules` porque a constante do núcleo espelha essas
    listas literalmente e nomear ali um campo que as Rules não conhecem faria a constante mentir.

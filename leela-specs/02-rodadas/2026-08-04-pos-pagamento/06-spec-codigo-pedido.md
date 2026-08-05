@@ -79,6 +79,15 @@ ciclos de vida independentes faz uma mudança num reemitir o outro.
 `pedidos.seed.ts:164-187` define `ped-0001`…`ped-0011`) e um pedido real, o de 04/08. A ordem
 de grandeza é dezenas, e é ela que decide a pergunta do retroativo mais abaixo.
 
+**Corrigido em 05/08 pela medição, não pela contagem.** O ensaio do backfill rodou contra
+`leela-hub` em leitura pura e leu **17 pedidos, não 12**: os onze de seed mais **seis checkouts
+reais** de 03 e 04/08, todos do domínio do dono. Junto vieram três números que a spec não tinha:
+**22 espelhos** de inscrito a carimbar, **zero** pedido com código fora de formato ou com reserva
+alheia, e **`pedidoCodigos` com zero documentos** — a 5a não foi deployada, então o retroativo
+entra num espaço limpo, sem reserva viva com que colidir. A ordem de grandeza não muda e nenhuma
+decisão desta spec se move. A compra do incidente PIXREAL (a do ingresso `T93N7F`) está na lista,
+sem código, e ganha o dela na primeira execução real.
+
 ## As decisões de engenharia
 
 ### O alfabeto: o da casa, não Crockford
@@ -222,7 +231,8 @@ condição rara, que é a pior forma de mantê-lo.
 O que a ausência produz, então, é **ausência**: uma superfície que encontra pedido sem código
 não escreve nada no lugar, ou escreve um travessão. Nunca o id.
 
-A conta é barata porque a população é minúscula: onze pedidos de seed e um real. E a forma
+A conta é barata porque a população é minúscula: dezessete pedidos, medidos em 05/08 pelo ensaio
+contra produção (onze de seed e seis reais, contra os doze que este parágrafo estimava). E a forma
 segue o precedente da casa, que já tem um backfill de produção escrito —
 `functions/scripts/backfill-url-eventos.mjs`: script standalone, **`--dry-run` por default** e
 `--apply` explícito, `--project` obrigatório, idempotente por comparação (rerun converge para

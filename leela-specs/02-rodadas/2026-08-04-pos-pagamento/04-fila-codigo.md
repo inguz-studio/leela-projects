@@ -181,7 +181,7 @@ correr em paralelo com 5c.
 | # | Task | Estado | Prova |
 |---|---|---|---|
 | 5a | `S1228-T1` ⚔ | **entregue e revisada** | `3acc6877` · review `b8c7c29e` (APROVADA-COM-FIXES) · defeito D-1 fechado em `48fc7116`, sorteio criptográfico em `d36afb64` |
-| 5b | `S1228-T4` ⚔ | **em execução** | lane BUILD-5B, em voo em `functions/scripts` · a execução contra produção continua sendo ato do dono |
+| 5b | `S1228-T4` ⚔ | **entregue, aguardando review** | `d1d6582a` · 9/9 de integração com o script rodado como processo separado; **ensaio contra produção executado em leitura pura** — 17 pedidos, todos sem código, 22 espelhos a carimbar, zero fora de formato e zero reserva alheia · a execução com `--apply` continua sendo ato do dono |
 | 5c | `S1228-T2` | **pendente** | território `apps/landing` livre agora que a Frente 4 aterrissou |
 | 5d | `S1228-T3` | **entregue** | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança |
 
@@ -192,6 +192,19 @@ errada ao telefone. O `48fc7116` aterrissou **antes** da lane da 5d.
 **A ordem interna que continua valendo:** o backfill (5b) roda antes de 5c e 5d irem ao ar. Sem
 ele as duas estreiam mostrando ausência em toda compra que já existe — que é a RN-475 funcionando
 e parecendo defeito.
+
+**A conta do retroativo mudou, e a spec merece a correção.** A `06-spec-codigo-pedido.md` contou
+onze pedidos de seed mais a compra real; o ensaio contra produção leu **17** — os onze de seed
+mais **seis checkouts reais** de 03 e 04/08, todos do domínio do dono. A ordem de grandeza não
+muda. Dois fatos que valem para quem sequenciar a execução: **`pedidoCodigos` em produção tem zero
+documentos hoje** (a 5a não foi deployada, então o backfill entra num espaço limpo, sem reserva
+viva com que colidir), e **a compra do incidente PIXREAL está na lista** — a do ingresso `T93N7F`,
+paga em 04/08, ganha código na primeira execução real.
+
+**A 5b é ⚔ e ainda não foi revisada.** Ela escreve em produção e semeia a mesma coleção que o
+checkout consome, então a review não é opcional. Os quatro vetores de maior risco estão declarados
+no handoff da lane, e o primeiro deles é o que mais importa: provar que o ensaio realmente não
+escreve, atacando o caminho de leitura com `inscritoRefs` malformado.
 
 ## Paralelo técnico · F2 e F5 do diagnóstico correm fora desta fila
 
@@ -305,6 +318,9 @@ produziram, no molde dos RF2-*/RS1-* acima.
 | RS1-4 | **O seed local não tem `codigoPedido`.** `functions/src/seed/pedidos.seed.ts` grava os onze pedidos sem código e sem reserva, e `inscritos.seed.ts` só espelha o código do ingresso. No emulador e no preview, **todo** campo "Pedido" mostra travessão e a busca por código não acha nada — a RN-475 funcionando e parecendo defeito na hora de validar | Território `functions/`, fora das lanes que precisavam dele (5d é `apps/painel`). **Bloqueia a conferência visual da 5c e da 5d**: sem rodar o backfill da 5b contra o emulador, ou sem dar código ao seed, a validação do dono não é conclusiva |
 | RS1-5 | **`normalizarCodigoPedido` não come travessão nem meia-risca.** Ela tira `[\s-]+`; `–` e `—` sobrevivem, e o operador que colar `PED–A2B3C` de um WhatsApp com autocorreção não acha a compra | Não corrigido **de propósito**: `normalizarCodigoIngresso` tem exatamente o mesmo recorte, e divergir os dois quebra a única frase que o operador precisa aprender. **Entra nos dois normalizadores no mesmo commit, ou em nenhum** |
 | RS1-6 | **A callable do reenvio não devolve o código.** `CreateInscricaoChargeResult` não carrega `codigoPedido`, então a 5c vai ter de reler o doc do pedido (a RN-469 autoriza) | Contrato para quem pegar a 5c, não defeito. Fica escrito para a task não descobrir isso no meio |
+| RS1-8 | **O sorteio criptográfico não chegou ao caminho da venda.** `d36afb64` trocou o **default** de `gerarCodigoPedido`, mas o default nunca é alcançado: `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx` → `gerarCodigoPedido` passam `random` explicitamente, todos com `= Math.random` escrito. **Toda compra nova continua sorteando com o PRNG do V8** — que é exatamente a ressalva R-1 da REV-COD5A e o motivo declarado do próprio commit | Achado da lane do backfill ao tentar reusar o mecanismo, e o território (`functions/src/checkout`) tinha lane em voo. **Conserto de três linhas**: `random: () => number = Math.random` vira `random?: () => number` nos três pontos, continuando a repassar o argumento — `gerarCodigoPedido(undefined)` já cai no sorteio criptográfico, e a injeção dos testes fica intacta. **Em execução na lane BUILD-A4**, em commit separado. O `codigoIngresso` e o backfill não herdam o defeito |
+| RS1-9 | **Dois pedidos cancelados em produção apontam para inscrito que não existe.** Os dois PIX cancelados de 03/08 no `desafio-mtb-costa-lagoa-2026` listam em `inscritoRefs` um inscrito que não existe na coleção. É estado que a ADR-011 diz ser impossível — pedido e inscritos nascem no mesmo commit | Não é dano do backfill (ele lê antes de escrever e só carimba inscrito que existe **e** cujo `pedidoRef` bate; reporta "fora de alcance" e segue). **Higiene de dados, então não sobe ao dono** (R-0803B-1): pede investigação de quem tem o webhook de expiração e cancelamento na mão, **antes** de qualquer limpeza — o estado impossível é o sintoma, e limpar sem entender apaga a única evidência |
+| RS1-10 | **`pnpm build` na raiz falha e MUTA `pnpm-workspace.yaml`.** O gate de instalação quebra por `@sentry/cli` e, ao quebrar, escreve `'@sentry/cli': set this to true or false` dentro de `allowBuilds`. Duas lanes desta noite reverteram a linha à mão | Ruído de ferramenta que volta em toda lane que rodar o comando da raiz. O contorno em uso é build por pacote. Fechar decidindo o valor do `allowBuilds` de uma vez, em vez de reverter toda noite |
 | RS1-7 | **Config de emulador com `"host": "::"` produz falso-vermelho.** Testes que derivam o host de `FIRESTORE_EMULATOR_HOST` recebem um endereço IPv6 e falham com "client is offline", 25 de 26 vermelhos **sem nenhuma regressão real**; com `127.0.0.1` os 26 passam | Ruído de gate que pode **mascarar regressão de verdade** numa próxima lane. Padronizar IPv4 explícito em todas as configs de emulador do repositório, não só nas de lane. Três lanes desta noite já subiram com IPv4 por conta própria |
 
 ## Ordem executável, resumida
@@ -368,8 +384,10 @@ produziram, no molde dos RF2-*/RS1-* acima.
       executável — **falta a 5c**; do lado do operador o id já saiu da vista (`3d666d40`)
 - [x] a busca de inscritos acha a compra pelo código, e o rótulo do campo diz que ela busca
       por ele — `3d666d40`, as duas metades com teste
-- [ ] o backfill roda em dry-run com contadores antes de qualquer escrita, e o rerun converge
-      para zero atualizações — **5b em execução**
+- [x] o backfill roda em dry-run com contadores antes de qualquer escrita — `d1d6582a`, com o
+      ensaio contra produção executado em leitura pura. **A convergência do rerun para zero só
+      pode ser provada depois do `--apply`, que é ato do dono**; no emulador ela está presa por
+      teste de idempotência
 - [x] review antagonista em contexto fresco em 1a, 1b e 5a — as três rodaram e as três voltaram
-      aprovadas com fixes (`706d9b02`+`a769cfb9`, `b8c7c29e`). **Faltam 3a, 3c (gated pelos
-      vetos da Arena) e 5b (em execução)**
+      aprovadas com fixes (`706d9b02`+`a769cfb9`, `b8c7c29e`). **Faltam 3a e 3c (gated pelos
+      vetos da Arena) e a 5b, que aterrissou e ainda não foi revisada**

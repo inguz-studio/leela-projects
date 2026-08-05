@@ -119,9 +119,14 @@ Nove lanes rodaram em paralelo sobre esta fila e sobre a fila ADMINSEP, serializ
 | REV-RF2-1 | Review antagonista da trava de lista parcial | `bf3179c1` · APROVADA-COM-FIXES; oito vetores sobreviveram e os dois defeitos saíram do não declarado — pendência esgotada virava beco permanente, e o extrato zerava quem não mediu |
 | BUILD-5D | S1228-T3 — o operador lê o código e acha a compra por ele | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança; o id interno saiu da vista e virou um "copiar" que não escreve o valor na tela |
 | BUILD-AREACLIENTE | S1221-T1, S1223-T1 e S1223-T2 — o login vira overlay, o primeiro acesso termina dentro | `20bd6874`, `2d7f24d7`, `6d092619` · suíte da landing inteira duas vezes seguidas em cada task |
+| BUILD-5B | S1228-T4 — a ferramenta de backfill das compras que já existem, com ensaio por default | `d1d6582a` · 9/9 de integração com o script rodado como processo separado; **ensaio contra produção em leitura pura**: 17 pedidos, todos sem código, 22 espelhos a carimbar, zero fora de formato · **⚔ ainda não revisada** e a execução real é ato do dono |
 | BUILD-AREACLIENTE-2 | S1222-T1, T2, T3 e T5 mais S1225-T4 — a área do cliente existe, tem meus dados e tem as duas portas, e o CTA finalmente tem destino | `9acb8fb5`, `3acfe7a8`, `cdef2987`, `bdebe384`, `9fd12c74` (+ `5ffb69e0`) · Rules intocadas; a leitura exige o e-mail verificado do token · **a B4 (Meus Clubes) não foi iniciada, e a frente é ⚔ ainda não revisada** |
 
-**As três reviews antagonistas da rodada voltaram aprovadas com fixes, e as três consertaram no commit da própria review.** Nenhuma delas foi feita por quem construiu. **A frente B da área do cliente é a quarta ⚔ e ainda não rodou** — os oito vetores estão declarados no handoff dela, e os dois primeiros são de fronteira.
+**As três reviews antagonistas da rodada voltaram aprovadas com fixes, e as três consertaram no commit da própria review.** Nenhuma delas foi feita por quem construiu. **Duas frentes ⚔ ainda não foram revisadas:** a área do cliente e o backfill — os vetores das duas estão declarados nos handoffs, e no caso do backfill a review não é opcional, porque ele escreve em produção.
+
+### O que fica com o dono desta noite
+
+Uma coisa só, e ela é escrita em dado real: **rodar o backfill do código da compra contra produção**. O ensaio já rodou em leitura pura, a conta é exata e a compra do incidente PIXREAL está na lista. O comando, com o ensaio antes e a conferência depois, está no card da S1228 em [[V1-KANBAN]] e no handoff da lane. **A 5c e a 5d não vão ao ar antes disso.**
 
 ### Dois itens saíram do painel por estarem construídos
 
