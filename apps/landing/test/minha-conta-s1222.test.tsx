@@ -47,6 +47,14 @@ vi.mock('@leela/api-client', () => ({
       assinante = null;
     };
   },
+  // A aba "Meus dados" (S1222-T3) monta junto — o `Tabs` do DS usa
+  // `forceMount`, então os painéis das outras abas existem no documento desde
+  // o primeiro render e os seams deles precisam estar no mock.
+  lerMeusDados: () => Promise.resolve({ nome: 'Ana Souza', email: 'ana@exemplo.dev' }),
+  salvarMeusDados: () => Promise.resolve(),
+  trocarSenha: () => Promise.resolve(),
+  senhaAtendeMinimo: (s: string) => s.length >= 6,
+  SENHA_MIN: 6,
 }));
 
 vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));

@@ -485,6 +485,11 @@ export type {
 // Área do cliente — callables do próprio dono da conta (S1222-T1 · RN-451)
 // ---------------------------------------------------------------------------
 export { getMinhasCompras, getMeusIngressos } from './cliente';
+// Meus dados do cliente (S1222-T3 · RN-450): SOBRE `atletas/{uid}`, nunca
+// sobre `profissionais/{uid}` — quem acumula os dois papéis tem os dois docs,
+// e cada tela edita o seu.
+export { lerMeusDados, salvarMeusDados } from './atletas';
+export type { MeusDadosCliente } from './atletas';
 export type {
   EstadoAreaCliente,
   StatusCompraCliente,

@@ -35,6 +35,7 @@ import { rotuloDaConta, useSessaoLeela } from '@/lib/sessao';
 import { EmailNaoVerificado, FalhaDeLeitura, PortaDeEntrada } from './EstadosDaArea';
 import { PainelCompras } from './PainelCompras';
 import { PainelIngressos } from './PainelIngressos';
+import { PainelMeusDados } from './PainelMeusDados';
 
 interface Dados {
   ingressos: GetMeusIngressosResult;
@@ -141,6 +142,11 @@ export function AreaDoCliente(): React.JSX.Element {
             label: 'Minhas compras',
             count: dados.compras.compras.length,
             content: <PainelCompras compras={dados.compras.compras} />,
+          },
+          {
+            id: 'dados',
+            label: 'Meus dados',
+            content: <PainelMeusDados email={sessao.email} />,
           },
         ]}
       />
