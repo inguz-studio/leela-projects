@@ -381,6 +381,8 @@
   --modal-overlay-blur: 4px;
   --toast-width: 360px;
   --toast-border-left: 3px;
+  --motion-overlay-duration: 800ms;
+  --motion-menu-duration: 120ms;
   --card-radius: var(--radius-lg);
   --card-critical-border: 3px;
   --datebadge-px: var(--spacing-2-5);
@@ -850,6 +852,8 @@
   --modal-overlay-blur: 4px;
   --toast-width: 360px;
   --toast-border-left: 3px;
+  --motion-overlay-duration: 800ms;
+  --motion-menu-duration: 120ms;
   --card-radius: var(--radius-lg);
   --card-critical-border: 3px;
   --datebadge-px: var(--spacing-2-5);

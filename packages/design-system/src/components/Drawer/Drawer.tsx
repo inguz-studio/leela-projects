@@ -11,11 +11,17 @@
  * Diff vs Modal:
  *   - Content ANCORADO a uma borda (off-canvas), altura total, largura pelo
  *     conteúdo (o consumidor define; ex.: a Sidebar já é 240px), não centrado;
- *   - MOTION: slide da borda + fade no ENTER, gated por `motion-safe:` — sob
- *     `prefers-reduced-motion: reduce` NÃO há animação (gate Norman). Modal não
- *     gateia; o Drawer gateia por exigência do lote responsivo. O EXIT some com
- *     o unmount (trade-off Radix-free, como no Dialog público);
+ *   - MOTION: slide da borda + fade, gated por `motion-safe:` — sob
+ *     `prefers-reduced-motion: reduce` NÃO há animação (gate Norman). Desde a
+ *     BUILD-MOTION (04/08) o gate vale para os TRÊS (Dialog, Modal, Drawer);
  *   - overlay reusa --modal-overlay-bg + --modal-overlay-blur (mesma cortina).
+ *
+ * SAÍDA ANIMADA (BUILD-MOTION · 04/08). As classes `slide-out-to-*` existiam
+ * aqui desde o lote responsivo e nunca rodaram: o `if (!open) return null`
+ * matava o nó antes do primeiro frame. `usePresencaOverlay` segura o painel até
+ * a animação terminar. Num off-canvas isso é o dobro de importante que num
+ * modal: um drawer que aparece deslizando e some por corte revela que ele não
+ * é um painel, é um pedaço de DOM.
  *
  * Uso canônico no shell mobile: envolver a Sidebar do DS abaixo do breakpoint
  * `lg` (o AppShell faz isso internamente). Genérico: qualquer painel lateral.
@@ -34,6 +40,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
+import { estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
 import { useDialogBehavior } from '../Dialog/useDialogBehavior';
 
 // ---------------------------------------------------------------------------
@@ -88,17 +95,23 @@ function Drawer({
 
   const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
+  // `presente` continua true durante a SAÍDA — é o que dá tempo do
+  // `data-state="closed"` rodar o slide de volta antes do nó sumir.
+  const { presente, estado } = usePresencaOverlay(open);
+
   // Sem initialFocusRef: o hook foca o 1º focável do conteúdo (ex.: 1º item da
   // Sidebar) ou o próprio painel (tabIndex=-1) quando não há focável.
-  useDialogBehavior({ open, onClose: close, panelRef });
+  // Recebe `presente`: o foco volta ao abridor no desmonte.
+  useDialogBehavior({ open: presente, onClose: close, panelRef });
 
-  if (!open) return null;
+  if (!presente) return null;
 
   return createPortal(
     <>
       <div
         data-testid="drawer-overlay"
-        data-state="open"
+        data-state={estado}
+        style={estiloMotion(estado)}
         aria-hidden
         onClick={close}
         className={cn(
@@ -115,7 +128,8 @@ function Drawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        data-state="open"
+        data-state={estado}
+        style={estiloMotion(estado)}
         tabIndex={-1}
         className={cn(
           'fixed z-40 flex flex-col',

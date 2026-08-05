@@ -243,6 +243,11 @@
     "width":         "360px",
     "border-left":   "3px"
   },
+  "motion": {
+    "$description": "Duracao de ENTRADA e SAIDA das superficies de sobreposicao (Dialog, Modal, Drawer, Toast, DropdownMenu). Mora no tier COMPARTILHADO de proposito: os dois temas usam o mesmo numero, entao trocar o ritmo do produto inteiro custa UMA linha aqui (mais `pnpm generate-tokens`). O easing continua em `motion.easing.*` do tier primitivo — enter/exit ja existiam. `overlay-duration` = 800ms por decisao do dono (04/08); a recomendacao tecnica registrada no handoff BUILD-MOTION e 200-300ms para dialogo e toast, porque acima disso a interface le como lenta e o custo dobra no FECHAR (a cortina ainda intercepta o clique enquanto sai). `menu-duration` e deliberadamente MENOR: menu e affordance de ponteiro — o item que voce esta mirando nao pode estar voando quando o dedo chega.",
+    "overlay-duration": "800ms",
+    "menu-duration":    "120ms"
+  },
   "card": {
     "radius":        "{radius.lg}",
     "critical-border": "3px"

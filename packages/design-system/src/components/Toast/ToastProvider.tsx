@@ -5,11 +5,26 @@
  * - Auto-dismiss em 4s (DEFAULT_TOAST_DURATION); danger persiste até
  *   dismiss manual (regra T4), salvo `duration` explícito (opt-in).
  * - Viewport fixo no canto inferior direito; cada toast tem botão fechar.
+ *
+ * SAÍDA ANIMADA (BUILD-MOTION · 04/08). `dismiss(id)` não tira mais o item da
+ * fila na hora: marca o item como SAINDO (o `Toast` recebe `state="closed"` e
+ * roda a animação de saída) e só remove quando a duração do token termina. Sem
+ * isso o nó evapora e não há o que animar — mesma raiz do fechamento seco dos
+ * modais.
+ *
+ * DUAS FILAS DE TIMER, e a distinção importa: `timersRef` é o auto-dismiss
+ * (quanto tempo o aviso FICA), `saidaRef` é a animação (quanto tempo ele leva
+ * para SUMIR). Confundir os dois faria o toast danger — que não auto-dispensa —
+ * herdar um timer de remoção que ele nunca deveria ter.
+ *
+ * Sem token de motion (SSR, jsdom, tema não importado) a duração é 0 e o
+ * `dismiss` remove no mesmo tick, exatamente como antes desta lane.
  */
 
 import * as React from 'react';
 import { Toast, type ToastVariant } from './Toast';
 import { cn } from '../../utils/cn';
+import { duracaoDeSaidaMs } from '../../utils/overlayMotion';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,17 +71,46 @@ export interface ToastProviderProps {
 
 function ToastProvider({ children, viewportClassName }: ToastProviderProps): JSX.Element {
   const [items, setItems] = React.useState<ToastItem[]>([]);
+  // Ids em SAÍDA: seguem na fila (e na tela) até a animação terminar.
+  const [saindo, setSaindo] = React.useState<ReadonlySet<string>>(() => new Set());
   const timersRef = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const saidaRef = React.useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const counterRef = React.useRef(0);
 
-  const dismiss = React.useCallback((id: string) => {
-    const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
+  const remover = React.useCallback((id: string) => {
+    saidaRef.current.delete(id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+    setSaindo((prev) => {
+      if (!prev.has(id)) return prev;
+      const proximo = new Set(prev);
+      proximo.delete(id);
+      return proximo;
+    });
   }, []);
+
+  const dismiss = React.useCallback(
+    (id: string) => {
+      const timer = timersRef.current.get(id);
+      if (timer) {
+        clearTimeout(timer);
+        timersRef.current.delete(id);
+      }
+      // Já está saindo: um segundo clique no X não reinicia a animação.
+      if (saidaRef.current.has(id)) return;
+
+      const ms = duracaoDeSaidaMs();
+      if (ms <= 0) {
+        remover(id);
+        return;
+      }
+      setSaindo((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+      saidaRef.current.set(
+        id,
+        setTimeout(() => remover(id), ms),
+      );
+    },
+    [remover],
+  );
 
   const toast = React.useCallback(
     (options: ToastOptions): string => {
@@ -90,12 +134,15 @@ function ToastProvider({ children, viewportClassName }: ToastProviderProps): JSX
     [dismiss],
   );
 
-  // Limpa timers pendentes no unmount
+  // Limpa timers pendentes no unmount — os dois relógios (ficar e sumir).
   React.useEffect(() => {
     const timers = timersRef.current;
+    const saidas = saidaRef.current;
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
+      saidas.forEach((timer) => clearTimeout(timer));
+      saidas.clear();
     };
   }, []);
 
@@ -113,16 +160,22 @@ function ToastProvider({ children, viewportClassName }: ToastProviderProps): JSX
           viewportClassName,
         )}
       >
-        {items.map((item) => (
-          <div key={item.id} className="pointer-events-auto">
-            <Toast
-              title={item.title}
-              description={item.description}
-              variant={item.variant ?? 'info'}
-              onDismiss={() => dismiss(item.id)}
-            />
-          </div>
-        ))}
+        {items.map((item) => {
+          const saiu = saindo.has(item.id);
+          return (
+            // Toast em saída não engole clique: ele já não é alcançável, só
+            // ainda é visível.
+            <div key={item.id} className={saiu ? 'pointer-events-none' : 'pointer-events-auto'}>
+              <Toast
+                title={item.title}
+                description={item.description}
+                variant={item.variant ?? 'info'}
+                state={saiu ? 'closed' : 'open'}
+                onDismiss={() => dismiss(item.id)}
+              />
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

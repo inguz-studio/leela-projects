@@ -59,12 +59,35 @@
  * nascesse aberto rodaria o efeito de foco com o painel ainda fora do DOM e o
  * foco nunca entraria. Nenhum consumidor nasce aberto hoje; a trava é para que
  * o primeiro que nascer não descubra isso em produção.
+ *
+ * MOVIMENTO (BUILD-MOTION · ordem do dono de 04/08)
+ * ------------------------------------------------
+ * A REGRA DA SUPERFÍCIE, escrita para não ser reinventada tela a tela:
+ *   - a CORTINA sempre faz fade, nos dois breakpoints — ela não tem forma, só
+ *     presença;
+ *   - o PAINEL no mobile é bottom-sheet: já nasce encostado na borda de baixo
+ *     (`items-end`), então sobe de lá. Uma folha que aparece por fade no lugar
+ *     onde o polegar espera um gesto lê como bug de renderização;
+ *   - o PAINEL no desktop (sm+) é card CENTRADO: não há borda de onde vir, e
+ *     deslizar faria parecer que ele caiu. Fade + zoom curto, que é a gramática
+ *     do `Modal` do painel — as duas superfícies do produto se movem igual.
+ *
+ * A SAÍDA é animada de verdade: o nó só some do DOM depois que a animação
+ * termina (`usePresencaOverlay`). O `useDialogBehavior` recebe `presente`, não
+ * `open` — então o focus trap, o scroll-lock e o RETORNO DE FOCO ao abridor
+ * acontecem no desmonte, como no Radix. Um diálogo que devolvesse o foco no
+ * início da saída deixaria a pessoa navegando por cima de um painel que ainda
+ * está na tela.
+ *
+ * Duração por token (`--motion-overlay-duration`) e reduced-motion tratados em
+ * `utils/overlayMotion` — ver o cabeçalho de lá.
  */
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
 import { useDialogBehavior } from './useDialogBehavior';
 
 export interface DialogProps {
@@ -133,17 +156,23 @@ export function Dialog({
   // rodaria antes do portal existir.
   const aberto = open && montado;
 
+  // `presente` continua true durante a SAÍDA — é o que dá tempo do
+  // `data-state="closed"` rodar a animação antes do nó sumir.
+  const { presente, estado } = usePresencaOverlay(aberto);
+
   // Comportamento (Esc, focus trap cíclico, scroll-lock, retorno de foco) é
   // fonte ÚNICA no hook compartilhado — foco de entrada no X (closeRef).
+  // Recebe `presente`: o foco volta ao abridor no DESMONTE, não no início da
+  // saída (paridade com o Radix).
   useDialogBehavior({
-    open: aberto,
+    open: presente,
     onClose: close,
     panelRef,
     initialFocusRef: closeRef,
     returnFocusRef,
   });
 
-  if (!aberto) return null;
+  if (!presente) return null;
 
   const TitleTag = titleAs;
 
@@ -153,23 +182,42 @@ export function Dialog({
         'fixed inset-0 z-50 flex items-end justify-center sm:items-center',
         containerClassName,
       )}
+      data-state={estado}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
       aria-describedby={description !== undefined ? descriptionId : undefined}
     >
-      {/* Overlay — escurece + fecha ao clicar (via 1..4). Token com alpha. */}
+      {/* Overlay — escurece + fecha ao clicar (via 1..4). Token com alpha.
+          Motion: fade nos dois breakpoints, gated por motion-safe. */}
       <div
         aria-hidden
-        className={cn('absolute inset-0 bg-surface-base/80 backdrop-blur-sm', overlayClassName)}
+        data-state={estado}
+        style={estiloMotion(estado)}
+        className={cn(
+          'absolute inset-0 bg-surface-base/80 backdrop-blur-sm',
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0',
+          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
+          overlayClassName,
+        )}
         onClick={close}
       />
 
-      {/* Painel — surface-raised, radius e elevação do DS; scroll interno. */}
+      {/* Painel — surface-raised, radius e elevação do DS; scroll interno.
+          Motion: sobe do rodapé no mobile (bottom-sheet), fade+zoom centrado
+          no desktop — `slide-*-bottom-0` zera a translação a partir de `sm`. */}
       <div
         ref={panelRef}
+        data-state={estado}
+        style={estiloMotion(estado)}
         className={cn(
           'relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-t-ds-lg bg-surface-raised shadow-elev-3 sm:rounded-ds-lg',
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0',
+          'motion-safe:data-[state=open]:slide-in-from-bottom',
+          'motion-safe:sm:data-[state=open]:slide-in-from-bottom-0 motion-safe:sm:data-[state=open]:zoom-in-95',
+          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
+          'motion-safe:data-[state=closed]:slide-out-to-bottom',
+          'motion-safe:sm:data-[state=closed]:slide-out-to-bottom-0 motion-safe:sm:data-[state=closed]:zoom-out-95',
           panelClassName,
         )}
       >

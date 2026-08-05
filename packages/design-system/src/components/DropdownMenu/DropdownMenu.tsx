@@ -40,6 +40,21 @@
  * A11y: role="menu" + role="menuitem"/"menuitemcheckbox" + foco no primeiro
  * item ao abrir.
  *
+ * MOVIMENTO (BUILD-MOTION · 04/08). O menu entra e SAI com fade + zoom curto —
+ * antes ele entrava animado e sumia por corte, porque o `open &&` tirava o nó
+ * do DOM antes do primeiro frame de saída.
+ *
+ * ⛔ A DURAÇÃO DELE É OUTRA, DE PROPÓSITO: `--motion-menu-duration` (120ms),
+ * não os 800ms de `--motion-overlay-duration`. Menu não é superfície de leitura,
+ * é affordance de PONTEIRO: a mão já está a caminho do item quando o menu
+ * abre. Um menu que leva a mesma meia-segunda de um modal para assentar
+ * significa que o alvo ainda está se movendo quando o clique chega — e o clique
+ * erra. A regra que fica: superfície que a pessoa LÊ pode demorar; superfície
+ * que a pessoa MIRA, não. Os dois números são token e trocam sozinhos.
+ *
+ * Durante a saída o painel recebe `pointer-events-none`: um menu meio
+ * transparente que ainda engole clique é pior que um menu que some seco.
+ *
  * AA (matriz de contraste): item default = popover-foreground sobre popover
  * (text-primary/surface-overlay ✓); hover/focus = accent-foreground sobre
  * accent (action-ghost-fg/action-ghost-hover ✓); item destrutivo =
@@ -52,6 +67,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { Slot } from '@radix-ui/react-slot';
 import { cn } from '../../utils/cn';
+import { estiloMotion, usePresencaOverlay, VAR_DURACAO_MENU } from '../../utils/overlayMotion';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,6 +160,11 @@ function DropdownMenu({
   const menuRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLElement>(null);
   const menuId = React.useId();
+
+  // `presente` segura o painel no DOM durante a saída. Só o RENDER usa; todo
+  // o comportamento (foco, click-fora, Esc, re-âncora) segue amarrado ao `open`
+  // cru — um menu em saída não é mais um menu, e não deve escutar nada.
+  const { presente, estado } = usePresencaOverlay(open, VAR_DURACAO_MENU);
 
   // Posição fixa ancorada no rect do trigger (menu vive em portal)
   const [position, setPosition] = React.useState<{
@@ -279,17 +300,19 @@ function DropdownMenu({
 
       {/* Menu — portal no body: overflow de containers não clipa (F07).
           Painel shadcn dropdown-menu stock via aliases. */}
-      {open && createPortal(
+      {presente && createPortal(
         <div
           ref={menuRef}
           id={menuId}
           role="menu"
           aria-label={menuLabel}
           onKeyDown={handleMenuKeyDown}
+          data-state={estado}
           style={{
             top: position.top,
             left: position.left,
             right: position.right,
+            ...estiloMotion(estado, VAR_DURACAO_MENU),
           }}
           className={cn(
             'fixed mt-[var(--spacing-1)] z-50',
@@ -298,7 +321,11 @@ function DropdownMenu({
             'bg-popover text-popover-foreground',
             'shadow-elev-2',
             'p-[var(--spacing-1)]',
-            'animate-in fade-in-0 zoom-in-95',
+            // Motion (BUILD-MOTION): fade + zoom curto no enter E no exit,
+            // gated por motion-safe. Menu saindo não recebe clique.
+            'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95',
+            'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
+            'data-[state=closed]:pointer-events-none',
             className,
           )}
         >

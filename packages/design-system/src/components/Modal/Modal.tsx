@@ -26,8 +26,21 @@
  *     ring-offset-background (= surface-base);
  *   - larguras/radius/spacing por token de componente (--modal-*, --radius-lg);
  *   - MOTION tokenizado (A2): overlay fade in, conteúdo fade+zoom in via classes
- *     do tailwindcss-animate — `data-state="open"` dispara o enter (o exit some
- *     com o unmount, como no `Dialog` público; mesmo trade-off Radix-free).
+ *     do tailwindcss-animate — `data-state="open"` dispara o enter.
+ *
+ * MOVIMENTO NA SAÍDA (BUILD-MOTION · 04/08). As classes `data-[state=closed]:
+ * animate-out` estavam aqui desde a A2 e NUNCA rodaram um frame: o `if (!open)
+ * return null` tirava o nó do DOM no mesmo tick, e não há como animar o que já
+ * não existe. `usePresencaOverlay` segura o nó até a animação acabar, e só
+ * então desmonta. O `useDialogBehavior` passa a receber `presente` — foco volta
+ * ao abridor no DESMONTE, paridade com o Radix.
+ *
+ * Movimento CENTRADO: fade + zoom curto, sem slide — um card no meio da tela
+ * não tem borda de onde vir. É a mesma gramática do `Dialog` público em
+ * desktop; o bottom-sheet do mobile é dele, porque só ele encosta na borda.
+ * ⛔ Todas as classes ganharam `motion-safe:`: sob `prefers-reduced-motion:
+ * reduce` o modal aparece e some sem animação nenhuma. Antes desta lane só o
+ * `Drawer` respeitava isso — o `Modal` animava para todo mundo.
  *
  * 4 vias de fechamento:
  *   1. Botão X            3. Click no overlay
@@ -44,6 +57,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
+import { estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
 import { useDialogBehavior } from '../Dialog/useDialogBehavior';
 
 // ---------------------------------------------------------------------------
@@ -91,27 +105,32 @@ function Modal({
 
   const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
+  // `presente` continua true durante a SAÍDA — é o que dá tempo do
+  // `data-state="closed"` rodar a animação antes do nó sumir.
+  const { presente, estado } = usePresencaOverlay(open);
+
   // Comportamento (Esc, focus trap cíclico, scroll-lock, retorno de foco) da
   // fonte ÚNICA — foco de entrada no X (closeRef), paridade com o autofocus
-  // que o Radix Content dava.
-  useDialogBehavior({ open, onClose: close, panelRef, initialFocusRef: closeRef });
+  // que o Radix Content dava. Recebe `presente`: o foco volta no desmonte.
+  useDialogBehavior({ open: presente, onClose: close, panelRef, initialFocusRef: closeRef });
 
-  if (!open) return null;
+  if (!presente) return null;
 
   return createPortal(
     <>
       <div
         data-testid="modal-overlay"
-        data-state="open"
+        data-state={estado}
+        style={estiloMotion(estado)}
         aria-hidden
         onClick={close}
         className={cn(
           'fixed inset-0 z-50',
           'bg-[var(--modal-overlay-bg)]',
           'backdrop-blur-[var(--modal-overlay-blur)]',
-          // Motion (A2): fade tokenizado no enter/exit
-          'data-[state=open]:animate-in data-[state=open]:fade-in-0',
-          'data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
+          // Motion (A2 + BUILD-MOTION): fade tokenizado no enter/exit, gated.
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0',
+          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
         )}
       />
       <div
@@ -120,7 +139,8 @@ function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        data-state="open"
+        data-state={estado}
+        style={estiloMotion(estado)}
         tabIndex={-1}
         className={cn(
           'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
@@ -135,9 +155,9 @@ function Modal({
           'p-[var(--spacing-6)]',
           'flex flex-col gap-[var(--spacing-4)]',
           'focus:outline-none',
-          // Motion (A2): fade + zoom tokenizado, centrado (sem slide)
-          'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-          'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+          // Motion (A2 + BUILD-MOTION): fade + zoom, centrado (sem slide), gated
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95',
+          'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
           className,
         )}
       >
