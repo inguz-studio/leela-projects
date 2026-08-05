@@ -73,24 +73,26 @@ reportou: `parsePrecoReais('1.234,56')` devolve **R$ 1,23**, e o mesmo padrão d
 vírgula está em **oito** arquivos do painel que tratam dinheiro — lote, kit, cupom, afiliado,
 repasse, assessoria, parceria e solicitação de repasse. É `S315-T5`, ⚔.
 
-## Git — commit sim, push não
+## Git — commit e push, com a janela conferida duas vezes
 
-**Não empurrei, por regra da lane.** `git log origin/main..HEAD` mostra **quatro commits não
-publicados que não são meus**, todos da REV-LOTES:
+**A regra de não empurrar trabalho alheio quase mordeu, e vale registrar.** No começo desta lane,
+`git log origin/main..HEAD` trazia **quatro commits não publicados que não eram meus**, todos da
+REV-LOTES (`2a97a592`, `08a09465`, `c2b19244`, `35c051ef`). Empurrar ali teria publicado trabalho
+de outra lane sem o consentimento dela.
 
-```
-35c051ef chore(handoff): a REV-LOTES e o 31 que continuava na tela do dono
-c2b19244 fix(ds): a trava da barra de rolagem nao cai por um className de fora
-08a09465 fix(lotes): o painel da capacidade acompanha o total digitado
-2a97a592 fix(lotes): a recusa do servidor tambem diz o que houve
-```
+Enquanto esta lane escrevia, outra publicou: `origin/main` andou até `bc4f2304` (REV-MOTION), e os
+quatro da REV-LOTES entraram junto. Conferido de novo depois do `fetch`, `origin/main..HEAD`
+trazia **só o commit desta lane**, sem nada atrás dele. Foi com essa segunda conferência que o
+push saiu.
 
-Empurrar publicaria trabalho de outra lane sem o consentimento dela. **Fica para o maestro
-decidir** se publica os cinco de uma vez (os quatro acima mais o meu) ou se espera a REV-LOTES
-fechar. Os quatro commits da build já estão em `origin/main`.
+Commits desta lane feitos com `--only` sobre os caminhos de `leela-specs/` mais o handoff, sem
+tocar o index de nenhuma outra lane — a REV-5B seguiu com o handoff dela staged e as quatro
+modificações de `functions/src/auth` e `functions/src/email` seguiram intactas. Sem `--amend`, sem
+`stash`.
 
-Commit desta lane feito com `--only` sobre os dez caminhos de `leela-specs/`, sem tocar o index de
-nenhuma outra lane. Sem `--amend`, sem `stash`.
+**Lição operacional:** num worktree compartilhado, `origin/main..HEAD` é um retrato com validade
+de minutos. A conferência que autoriza o push é a que acontece **imediatamente antes dele**, com
+`fetch` na frente, e não a do início da lane.
 
 ## Três coisas para o maestro
 
