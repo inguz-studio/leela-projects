@@ -26,6 +26,7 @@ export interface LinhaConfirmacao {
 export function StepConfirmacao({
   charge,
   confirmacao,
+  statusPedidoConsultado,
   eventoNome,
   slug,
   responsavelEmail,
@@ -40,6 +41,13 @@ export function StepConfirmacao({
 }: {
   charge: CreateInscricaoChargeResult;
   confirmacao: ConfirmarPagamentoSandboxResult | null;
+  /**
+   * S1225-T3 · RN-469 — o status LIDO do próprio pedido nas Rules. Segunda
+   * fonte de verdade para o `pago` desta tela, e a única que existe no PIX
+   * real: ali ninguém chama `confirmarPagamentoSandbox` (quem confirma é o
+   * webhook do Asaas), então `confirmacao` é `null` e sempre foi.
+   */
+  statusPedidoConsultado?: string;
   eventoNome: string;
   slug: string;
   responsavelEmail: string;
@@ -68,7 +76,10 @@ export function StepConfirmacao({
   /** RN-157: recomeçar com uma cobrança NOVA. */
   onNovaCobranca?: () => void;
 }): React.JSX.Element {
-  const pago = confirmacao?.statusPedido === 'pago';
+  // S1225-T3: duas fontes, um estado. A confirmação (cartão e sandbox) e a
+  // leitura do próprio pedido (PIX real, RN-469) respondem à MESMA pergunta —
+  // e basta uma delas dizer `pago` para a tela parar de esperar.
+  const pago = confirmacao?.statusPedido === 'pago' || statusPedidoConsultado === 'pago';
   const { valores } = charge;
   // D-6 · RN-157: enquanto o PIX está PENDENTE, o QR e o copia-e-cola valem
   // também AQUI — esta é a "tela do pedido pendente" do checkout. Pedido pago

@@ -47,6 +47,7 @@ import { Mail } from 'lucide-react';
  */
 export function AvisoPedidoEmConfirmacao({
   email,
+  children,
 }: {
   /**
    * E-mail da compra. Vazio = não conhecido nesta tela; a orientação continua
@@ -54,6 +55,15 @@ export function AvisoPedidoEmConfirmacao({
    * pior do que não dizer X).
    */
   email?: string;
+  /**
+   * Conteúdo extra DENTRO do mesmo bloco (S1225-T3) — hoje: a copy de
+   * segurança de dinheiro e o botão de retomada do cartão de desfecho
+   * desconhecido. Entra como filho, e não como um segundo `<section
+   * role="status">` ao lado, porque duas live regions para um estado só
+   * anunciam a mesma coisa duas vezes ao leitor de tela e dão dois títulos à
+   * mesma história.
+   */
+  children?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <section
@@ -86,6 +96,7 @@ export function AvisoPedidoEmConfirmacao({
           Se não encontrar em alguns minutos, olhe também no spam.
         </p>
       </div>
+      {children}
     </section>
   );
 }

@@ -9,6 +9,11 @@ import {
   confirmarPagamentoSandbox,
   expirarPixPendente,
   getCheckoutPrefill,
+  // S1225-T3 · RN-469 — a leitura do PRÓPRIO pedido. Reaproveita o mesmo
+  // `getPedido` que o painel usa (packages/api-client/src/pedidos.ts): a
+  // query e o parse já são audit trail, não se reinventa leitor de dinheiro.
+  getLeelaDb,
+  getPedido,
   loginAnonimo,
   type ConfirmarPagamentoSandboxResult,
   type CotarInscricaoCheckoutResult,
@@ -475,6 +480,11 @@ export function CheckoutFlow({
   // sozinha em loop, cada volta custando outros 15s ao gateway e ao comprador.
   const [gatewaySemResposta, setGatewaySemResposta] = useState(false);
   const [confirmacao, setConfirmacao] = useState<ConfirmarPagamentoSandboxResult | null>(null);
+  // S1225-T3 · RN-469 — o estado do pedido LIDO das Rules (PIX real). Fonte
+  // paralela à `confirmacao`, que só existe quando houve chamada de confirmar.
+  const [statusPedidoConsultado, setStatusPedidoConsultado] = useState<string | null>(null);
+  const [consultandoPedido, setConsultandoPedido] = useState(false);
+  const [pedidoEmConfirmacao, setPedidoEmConfirmacao] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [erroConfirmar, setErroConfirmar] = useState<string | null>(null);
   const [cartao, setCartao] = useState<CartaoForm>({ nome: '', numero: '', validade: '', cvv: '' });
@@ -1352,6 +1362,66 @@ export function CheckoutFlow({
     if (c) await confirmar(c.pedidoId);
   }, [gerarCobranca, confirmar]);
 
+  // ── S1225-T3 · a tela consulta o PRÓPRIO pedido (RN-469 + RN-470) ──────────
+  //
+  // O incidente de 04/08: o PIX real foi pago, o webhook materializou `pago` em
+  // dez segundos, e a tela do comprador não tinha COMO saber — as Rules negavam
+  // a ele a leitura do próprio pedido (`firestore.rules`, TODO E12) e não há
+  // `onSnapshot` nem polling em `apps/landing`. A S1225-T1 abriu a leitura; é
+  // aqui que ela vira resposta na tela.
+  //
+  // Duas ocasiões, e SÓ duas (RN-470: v1 sem polling nem listener obrigatórios):
+  //   · o carregamento — quem fechou o app e voltou vê o estado de agora;
+  //   · o gesto explícito — "Atualizar estado do pedido".
+  //
+  // A leitura é ACESSÓRIA por construção: qualquer falha (Rules, rede, parse)
+  // é engolida com log no console. Uma consulta que quebra não pode derrubar a
+  // tela onde o comprador ainda tem um QR para pagar — o pior caso é a tela
+  // seguir mostrando o que já mostrava, que é exatamente o comportamento de
+  // antes desta task.
+  const consultarPedido = useCallback(
+    async (origem: 'carregamento' | 'gesto'): Promise<void> => {
+      const pedidoId = charge?.pedidoId;
+      if (pedidoId === undefined || !authPronto) return;
+      if (origem === 'gesto') setConsultandoPedido(true);
+      try {
+        const pedido = await getPedido(getLeelaDb(), pedidoId);
+        if (!montadoRef.current) return;
+        const status = pedido?.status ?? null;
+        if (status === null) return;
+        setStatusPedidoConsultado(status);
+        if (status === 'pago') {
+          // O desfecho chegou: a tela de confirmação sabe desenhar o resto.
+          setPedidoEmConfirmacao(false);
+          setStep(3);
+          return;
+        }
+        // Ainda não pago. "Estamos confirmando o seu pedido" só aparece depois
+        // do GESTO: na chegada, o comprador pode nem ter pagado ainda, e a
+        // frase afirmaria uma confirmação em curso que não existe.
+        if (origem === 'gesto') setPedidoEmConfirmacao(true);
+      } catch (err) {
+        if (typeof console !== 'undefined') {
+          console.error('[checkout] Falha ao consultar o estado do pedido.', err);
+        }
+      } finally {
+        if (montadoRef.current && origem === 'gesto') setConsultandoPedido(false);
+      }
+    },
+    [authPronto, charge],
+  );
+
+  // Consulta de CARREGAMENTO: uma por cobrança, silenciosa. Roda quando já há
+  // pedido para consultar — e não em cartão, que resolve o desfecho na própria
+  // chamada de pagar (CHECKOUT-FIX-0803) e não tem o que buscar depois.
+  useEffect(() => {
+    if (!authPronto || charge === null || forma !== 'pix') return;
+    void consultarPedido('carregamento');
+    // `consultarPedido` só muda de identidade quando `authPronto` ou `charge`
+    // mudam (são as suas ÚNICAS dependências), então este efeito dispara uma
+    // vez por cobrança — não é loop e não é polling disfarçado.
+  }, [authPronto, charge, forma, consultarPedido]);
+
   // ── C3-0803 · a cobrança PIX nasce no CLIQUE, e em nenhum outro lugar ──────
   //
   // Aqui morava a auto-geração (A-3): um efeito que chamava `gerarCobranca()`
@@ -1437,6 +1507,11 @@ export function CheckoutFlow({
       chaveRef.current = undefined;
       setCharge(null);
       setConfirmacao(null);
+      // S1225-T3: cobrança NOVA, estado do pedido antigo não vale mais — o
+      // pedido anterior foi cancelado (pix_expirado) e carregar o "Estamos
+      // confirmando" dele para a cobrança nova seria falar do pedido errado.
+      setStatusPedidoConsultado(null);
+      setPedidoEmConfirmacao(false);
       setErroCharge(null);
       setErroConfirmar(null);
       setPixEstado('vivo');
@@ -1825,6 +1900,11 @@ export function CheckoutFlow({
               // oferece preço velho. C1-0803: a guarda vale onde há preço novo
               // a esperar — não na troca entre opções que o servidor já cotou.
               totalDefasado={totalDefasado}
+              // S1225-T3 · RN-469/RN-470 — a consulta do PRÓPRIO pedido.
+              emailDaCompra={responsavel.email.trim()}
+              onConsultarPedido={() => void consultarPedido('gesto')}
+              consultandoPedido={consultandoPedido}
+              pedidoEmConfirmacao={pedidoEmConfirmacao}
             />
           </div>
         ) : null}
@@ -1837,6 +1917,11 @@ export function CheckoutFlow({
             slug={evento.slug}
             responsavelEmail={responsavel.email.trim()}
             linhas={linhasConfirmacao}
+            // S1225-T3 · o `pago` da tela passa a ter DUAS fontes: a resposta
+            // da confirmação (cartão e sandbox) e a leitura do próprio pedido
+            // (PIX real, RN-469). Quem chegou aqui por consulta não tem
+            // `ConfirmarPagamentoSandboxResult` nenhum — e não precisa ter.
+            {...(statusPedidoConsultado !== null ? { statusPedidoConsultado } : {})}
             {...(forma !== null ? { forma } : {})}
             taxaRepassada={evento.taxaRepassada}
             pixExpirado={pixExpirado}

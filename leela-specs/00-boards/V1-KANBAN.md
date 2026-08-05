@@ -56,11 +56,11 @@ tags:
     - [ ] **S1221 · Login como overlay central da landing**
         - [ ] S1221-T1 overlay de entrar na home, reusando a tela de login que a porta de entrada construiu
 - [ ] **[E12] O pedido responde na tela do checkout** — quem pagou vê "Estamos confirmando o seu pedido", a orientação de conferir o e-mail e, quando a área do cliente existir, o caminho para os próprios pedidos; a copy para de prometer confirmação que nenhum canal cumpre 📋 decidido por você em 04/08 · primeiro da fila DEC-0804 [[LEELA-E12-landing]]
-    - [ ] **S1225 · O feedback do pedido na tela do checkout**
-        - [ ] S1225-T1 a leitura do próprio pedido abre nas rules, com o caso de ataque ⚔ · fecha o TODO E12
-        - [ ] S1225-T2 a tela v1 com a mensagem e a orientação de e-mail, e a copy do PIX para de mentir ⚔
-        - [ ] S1225-T3 estados por meio: PIX consulta o pedido, cartão distingue confirmado, recusado e indeterminado
-        - [ ] S1225-T4 o CTA "ver meus pedidos" entra quando a área do cliente subir · depende da S1222-T2
+    - [ ] **S1225 · O feedback do pedido na tela do checkout** — T1/T2/T3 construídas em 04/08 pela lane BUILD-S1225; **aguardam a review antagonista** (contexto fresco, ⚔ em T1 e T2) e não estão no ar
+        - [x] S1225-T1 a leitura do próprio pedido abre nas rules, com o caso de ataque ⚔ · fecha o TODO E12 — `bdc9a531` · 26 testes, incluindo o vetor de PREFIXO de docId; `write: if false` intocado
+        - [x] S1225-T2 a tela v1 com a mensagem e a orientação de e-mail, e a copy do PIX para de mentir ⚔ — `7f992e75` · a varredura de copy do checkout virou teste executável
+        - [x] S1225-T3 estados por meio: PIX consulta o pedido, cartão distingue confirmado, recusado e indeterminado — carregamento + gesto explícito, sem polling
+        - [ ] S1225-T4 o CTA "ver meus pedidos" entra quando a área do cliente subir · depende da S1222-T2 — **fora da lane BUILD-S1225 por dependência dura**; a ausência do CTA tem teste
 - [ ] **[E12] A área do cliente, simples, com tudo o que é dela** — histórico de compras, ingressos separados em próximos e passados, clubes, convites para virar promotor, meus dados, trocar senha e a porta para criar conta de organizador; deixou de ser desejo e virou pré-requisito da compra, porque o e-mail manda a pessoa ver o ingresso dentro do sistema 📋 definida por você em 04/08 · absorve o item 60 · destino do CTA do feedback pós-compra (DEC-0804) [[LEELA-E12-landing]]
     - [ ] **S1222 · A área do cliente**
         - [ ] S1222-T1 histórico e ingressos vindo por consulta do próprio dono da conta, sem abrir dado de organizador ⚔

@@ -7,6 +7,7 @@ import type { CreateInscricaoChargeResult } from '@leela/api-client';
 import type { FormaUI } from './tipos';
 import { PixCobranca, payloadPix } from './PixCobranca';
 import { ProcessandoPagamento } from './ProcessandoPagamento';
+import { AvisoPedidoEmConfirmacao } from './AvisoPedidoEmConfirmacao';
 
 export interface CartaoForm {
   nome: string;
@@ -57,6 +58,10 @@ export function StepPagamento({
   onNovaCobranca,
   gatewaySemResposta = false,
   totalDefasado = false,
+  emailDaCompra = '',
+  onConsultarPedido,
+  consultandoPedido = false,
+  pedidoEmConfirmacao = false,
 }: {
   /**
    * S1217-T2 · RN-440: `null` = nenhuma forma escolhida. Não há instrumento a
@@ -108,6 +113,30 @@ export function StepPagamento({
    * valor que o servidor não vai cobrar.
    */
   totalDefasado?: boolean;
+  /** E-mail da compra — nomeia a caixa de entrada na orientação (RN-470). */
+  emailDaCompra?: string;
+  /**
+   * S1225-T3 · RN-469/RN-470 — o GESTO EXPLÍCITO do comprador: consultar o
+   * PRÓPRIO pedido nas Rules (leitura aberta pela S1225-T1). Não é polling e
+   * não é listener: a v1 é deliberadamente barata, e a consulta acontece no
+   * carregamento e neste clique, mais em lugar nenhum.
+   *
+   * Não confundir com o `onConfirmar` do sandbox: aquele DISPARA um webhook
+   * assinado e MOVE dinheiro de estado; este só LÊ. É por isso que ele pode
+   * existir com gateway real, onde o "Já paguei — confirmar" não pode (T3 da
+   * PIXREAL-FIX): a plataforma não passa a acreditar no comprador, ela vai
+   * olhar o próprio registro.
+   */
+  onConsultarPedido?: () => void;
+  /** Uma consulta está no ar — o botão não dispara a segunda. */
+  consultandoPedido?: boolean;
+  /**
+   * A consulta do gesto voltou e o pedido AINDA não está pago. É o estado que
+   * o dono descreveu: pagou no banco, o webhook ainda não materializou. Só
+   * então a tela diz "Estamos confirmando o seu pedido" — dizer isso na
+   * chegada, antes de qualquer pagamento, seria confirmar o que ninguém pagou.
+   */
+  pedidoEmConfirmacao?: boolean;
 }): React.JSX.Element {
   const totalLabel = total !== null ? formatarPreco(total) : '';
   // ── C3-0803 · cada espera com o nome dela ─────────────────────────────────
@@ -129,6 +158,11 @@ export function StepPagamento({
   const preparandoPix = forma === 'pix' && criandoCharge;
   const emVoo = (criandoCharge && forma !== 'pix') || confirmando;
   const processando = gatewaySemResposta || emVoo;
+  // S1225-T3 · RN-470 — o "indeterminado" DO CARTÃO, com a fronteira estreita:
+  // a cobrança já nasceu (então o pedido existe e o dinheiro pode ter saído) e
+  // o desfecho não voltou. Teto na criação, sem cobrança, NÃO é este estado.
+  const cartaoIndeterminado =
+    gatewaySemResposta && !emVoo && forma === 'cartao_credito' && charge !== null;
   // Erro e espera não coexistem: enquanto a plataforma não sabe o desfecho,
   // qualquer alerta vermelho seria uma afirmação que ela não pode fazer.
   const mostrarErroCharge = erroCharge !== null && !processando && !preparandoPix;
@@ -284,6 +318,31 @@ export function StepPagamento({
                   </Button>
                 </div>
               )}
+
+              {/* S1225-T3 · o gesto explícito do PIX real (RN-469 + RN-470).
+                  Ele LÊ o próprio pedido; não afirma nada ao servidor. O
+                  rótulo diz o que o clique faz, e de propósito não diz "já
+                  paguei": a plataforma não passa a acreditar na palavra do
+                  comprador (T3 da PIXREAL-FIX), ela vai olhar o registro.
+                  Cobrança expirada não tem estado novo a buscar — ali o
+                  caminho é uma cobrança nova, e o botão dela já está no bloco
+                  do PIX. */}
+              {gatewaySimulado || pixExpirado || onConsultarPedido === undefined ? null : (
+                <>
+                  <div>
+                    <Button
+                      variant="secondary"
+                      onClick={onConsultarPedido}
+                      disabled={consultandoPedido}
+                    >
+                      {consultandoPedido ? 'Consultando…' : 'Atualizar estado do pedido'}
+                    </Button>
+                  </div>
+                  {pedidoEmConfirmacao ? (
+                    <AvisoPedidoEmConfirmacao email={emailDaCompra} />
+                  ) : null}
+                </>
+              )}
             </>
           )}
         </section>
@@ -310,27 +369,56 @@ export function StepPagamento({
       )}
 
       {/* DEC-0727 · "processando pagamento" vale para PIX e cartão — o bloco
-          fica FORA do ramo por forma, de propósito: uma frase, um lugar. */}
+          fica FORA do ramo por forma, de propósito: uma frase, um lugar.
+
+          S1225-T3 · RN-470 abre UMA exceção, e só uma: o CARTÃO com a cobrança
+          JÁ CRIADA e desfecho desconhecido. É o "timeout/queda entre criar e
+          responder" da spec — no cartão criar a cobrança É pagar
+          (CHECKOUT-FIX-0803), então ali o pedido existe, o dinheiro pode ter
+          saído, e o que o dono mandou dizer nesse estado é "Estamos
+          confirmando o seu pedido" com a orientação de e-mail. A copy de
+          segurança que o DEC-0727 escreveu (não abra a segunda cobrança) não
+          se perde: ela entra DENTRO do mesmo bloco, com o botão de retomada.
+
+          O teto na CRIAÇÃO (charge === null) segue com "Processando
+          pagamento" — lá pode não haver cobrança nenhuma, e "estamos
+          confirmando o seu pedido" afirmaria um pedido em confirmação que
+          talvez nem tenha nascido. */}
       {processando ? (
-        <ProcessandoPagamento
-          estado={emVoo ? 'em-voo' : 'sem-resposta'}
-          tentando={emVoo}
-          {...(gatewaySemResposta && !emVoo
-            ? {
-                // A retomada é a MESMA ação que estourou, não uma ação nova:
-                // sem cobrança, re-tenta a criação (que é replay pela chave);
-                // com cobrança na mão, o que faltou foi a confirmação. Mandar
-                // "criar" aqui devolveria a cobrança de cache e a tela ficaria
-                // parada no mesmo aviso — um botão que não faz nada.
-                onTentarNovamente:
-                  charge === null
-                    ? forma === 'pix'
-                      ? onGerarCobranca
-                      : onPagarCartao
-                    : onConfirmar,
-              }
-            : {})}
-        />
+        cartaoIndeterminado ? (
+          <AvisoPedidoEmConfirmacao email={emailDaCompra}>
+            <p className="text-sm text-feedback-info-fg">
+              O provedor de pagamento não respondeu no tempo esperado, então ainda não sabemos
+              se a cobrança foi registrada. Não abra outra: tentar de novo reaproveita a mesma
+              cobrança e nunca cobra duas vezes.
+            </p>
+            <div className="pt-1">
+              <Button variant="secondary" onClick={onConfirmar} disabled={confirmando}>
+                {confirmando ? 'Processando pagamento…' : 'Tentar novamente'}
+              </Button>
+            </div>
+          </AvisoPedidoEmConfirmacao>
+        ) : (
+          <ProcessandoPagamento
+            estado={emVoo ? 'em-voo' : 'sem-resposta'}
+            tentando={emVoo}
+            {...(gatewaySemResposta && !emVoo
+              ? {
+                  // A retomada é a MESMA ação que estourou, não uma ação nova:
+                  // sem cobrança, re-tenta a criação (que é replay pela chave);
+                  // com cobrança na mão, o que faltou foi a confirmação. Mandar
+                  // "criar" aqui devolveria a cobrança de cache e a tela ficaria
+                  // parada no mesmo aviso — um botão que não faz nada.
+                  onTentarNovamente:
+                    charge === null
+                      ? forma === 'pix'
+                        ? onGerarCobranca
+                        : onPagarCartao
+                      : onConfirmar,
+                }
+              : {})}
+          />
+        )
       ) : null}
       {mostrarErroCharge ? (
         <p role="alert" className="text-sm font-medium text-feedback-danger-fg">
