@@ -240,13 +240,77 @@ repo. O que já está estudado e vale para quem pegar:
 
 ## Para o maestro selar (não editei `leela-specs/`)
 
-- **V1-KANBAN** · `S1221 · Login como overlay central da landing` → `S1221-T1` feito.
-- **V1-CHECKLIST** · linha 823 (`S1221 · Login como overlay central da landing (E12/E00
-  · item 57 b)`) → T1 entregue; a story só fecha com o resto da área.
-- **`LEELA-E12-landing`** · registrar que a landing passou a ter sessão nomeada, o que
-  desbloqueia a `S1222-T2` do lado do pré-requisito de login.
-- **DECISOES-ABERTAS** · a entrada de 03/08 "o login no meio da landing" tem a metade
-  construída.
+- **V1-KANBAN** · `S1221 · Login como overlay central da landing` → `S1221-T1` ✅
+  `20bd6874`. `S1223` → `T1` ✅ `2d7f24d7`, `T2` ✅ `6d092619`, `T3` **aberta** (operação).
+- **V1-CHECKLIST** · linha 823 (`S1221 · Login como overlay central da landing`) → T1
+  entregue. A `S1222` continua bloqueada, agora só pela `B1` — o pré-requisito de login
+  foi pago.
+- **`LEELA-E12-landing`** · a landing passou a ter sessão NOMEADA (a varredura da spec
+  que devolvia zero deixou de valer), e o destino do link de senha passou a ser decidido
+  pela origem. Registrar as duas, porque as duas são premissas escritas na spec.
+- **DECISOES-ABERTAS** · a entrada de 03/08 "o login no meio da landing" está construída
+  do lado do login; o que resta dela é a área.
+- **Painel do dono** · abrir item de operação para a **C3** (autorizar
+  `leela-landing.web.app` nos Authorized Domains do Auth) — ela virou pré-requisito de
+  deploy da C2, não follow-up.
+
+## Ordem sugerida para quem pegar a fila daqui
+
+1. **C3** (operação, minutos) — sem ela o deploy da C2 pode calar o e-mail de conta
+   criada.
+2. **B1** (`functions/src/cliente` + api-client) — está tudo mapeado acima.
+3. **B2**, e no mesmo commit virar `AREA_CLIENTE_NO_AR`.
+4. **S1225-T4** — o CTA, que passa a ter destino.
+5. B3/B4 em paralelo; B5 depois de B2 e A1.
+
+## Vetores para a review antagonista (contexto fresco)
+
+Esta lane é ⚔. Onde atacar, em ordem de risco:
+
+1. **A marca de código usado (`DefinirSenhaFlow`).** É `localStorage` e é por navegador.
+   Vetores: navegador com storage bloqueado; a mesma marca colidindo por FNV-1a; o teto
+   de 10 marcas expulsando a certa; o estado `usado` sendo alcançável por alguém que
+   NUNCA definiu senha (basta ter a marca?). Pergunta-mãe: existe algum caminho em que a
+   marca conceda acesso? A resposta pretendida é não — ela só escolhe qual das duas
+   telas sem-acesso aparece.
+2. **A origem no payload da callable pública (C2).** Qualquer um pode chamar
+   `solicitarRedefinicaoSenha({ email, origem })`. Vetor: forjar `origem` para fazer o
+   link de um organizador aterrissar na landing (ou o contrário). O dano pretendido é
+   zero (o `oobCode` é o que autoriza, e as duas telas resolvem o mesmo código), mas é
+   exatamente o tipo de "é só uma dica" que envelhece mal. Atacar também: valor não-string,
+   objeto, protótipo poluído.
+3. **A degradação sem `LEELA_PUBLIC_URL`.** Provar que não existe combinação de env que
+   produza domínio de uma casa com rota da outra. O caso existe; tentar quebrá-lo com
+   base pública `http://` (o `basePublica` aceita http, o `basePainel` não).
+4. **`contaSemFriccao` não tem catch de `unauthorized-continue-uri`.** A C2 acabou de
+   trocar o domínio do `continueUrl` desse caminho. Se a C3 não for feita antes do
+   deploy, o `generatePasswordResetLink` lança e o e-mail de conta criada não sai —
+   dentro de um bloco best-effort que engole. Vale medir se a exceção realmente não
+   derruba a confirmação da compra, e se ela produz pendência observável.
+5. **A sessão nomeada vs. anônima (`lib/sessao.ts`).** Vetor: um uid anônimo do checkout
+   passando por `nomeado`. E o inverso: alguém autenticado por provedor sem e-mail.
+6. **Anti-enumeração nas duas telas novas.** O overlay e o reenvio. Procurar qualquer
+   canal lateral: tempo de resposta, foco, `aria-live`, diferença de markup.
+7. **O boundary de cliente no header.** O `PublicHeader` é Server Component e agora monta
+   um filho de cliente. Vetor: alguma prop não-serializável, ou o slot arrastando o DS
+   inteiro para o bundle de toda página pública (custo de CWV — S1200 é gate próprio).
+8. **`porta-organizador.test.tsx` mudou.** Conferir que a porta do organizador não foi
+   enfraquecida, só mudou de lugar: o rodapé continua com os dois caminhos.
+
+## Conferência VISUAL do dono (nenhuma lane abriu navegador)
+
+1. **O overlay de entrar**, no header da home e de uma página de experiência: abre no
+   lugar, fecha com Esc / X / clique fora, e devolve o foco ao botão. Contraste AA nos
+   estados do formulário.
+2. **A troca do slot do header** depois de entrar: nome + "Sair", sem quebra de linha no
+   mobile (320px) — o header já tinha quatro itens disputando a linha.
+3. **`/definir-senha`** nas quatro telas: conferindo, formulário, "sua conta está
+   pronta", "sua senha já foi definida" e "este link não vale mais" com o reenvio.
+4. **A jornada real**, depois do deploy E da C3: comprar, receber o e-mail, clicar,
+   definir a senha e **estar dentro**. É o aceite que o dono está esperando desde o PIX
+   real de 04/08.
+5. **Clicar duas vezes no mesmo link** — a segunda vez tem de oferecer entrar, não
+   "link inválido".
 
 ## Pendência declarada (não é desta lane)
 
