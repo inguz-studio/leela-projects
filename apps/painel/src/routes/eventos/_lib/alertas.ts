@@ -10,10 +10,22 @@ import { diasParaEvento } from './format';
 
 export type SeveridadeAlerta = 'critico' | 'aviso' | 'info';
 
+/**
+ * Destino do alerta — o alerta que NOMEIA um lugar do painel também leva até
+ * ele (DIAG-PAINEL-LACUNAS). Sem isto, "Configure os lotes" era uma instrução
+ * que o organizador tinha de traduzir sozinho em qual aba abrir; a rota já
+ * existia e a tela não abria a porta. Ausente quando não há para onde mandar.
+ */
+export interface AcaoAlerta {
+  label: string;
+  href: string;
+}
+
 export interface AlertaOperacional {
   id: string;
   severidade: SeveridadeAlerta;
   mensagem: string;
+  acao?: AcaoAlerta;
 }
 
 /** Janela (em dias) a partir da qual "evento se aproxima" vira aviso. */
@@ -22,8 +34,17 @@ export const JANELA_PROXIMIDADE_DIAS = 7;
 /**
  * Frase do que falta cadastrar, sem despejar uma lista crua na cara de quem lê.
  * Até três modalidades por extenso; acima disso, a contagem.
+ *
+ * Lista VAZIA tem ramo próprio: `nomes[-1]` é `undefined` e a frase saía
+ * literalmente "As modalidades  e undefined estão" na tela do organizador.
+ * Não é caso hipotético — evento cujo doc não parseia cai em
+ * `eventoDegradado` (api-client), que devolve `modalidades: []`, e o
+ * diagnóstico da vitrine classifica isso como `sem_preco` (0 sem preço de 0
+ * modalidades). Quem chama trata o vazio ANTES desta função; o retorno aqui é
+ * a rede de segurança, nunca a frase que vai à tela.
  */
 function listarModalidades(nomes: readonly string[]): string {
+  if (nomes.length === 0) return 'Nenhuma modalidade está';
   if (nomes.length <= 3) {
     return nomes.length === 1
       ? `A modalidade ${nomes[0]} está`
@@ -42,13 +63,20 @@ function listarModalidades(nomes: readonly string[]): string {
  * evento, ver "Publicado" em verde, e a página não vender, sem nada avisando.
  * Opcional de propósito: telas que ainda não carregam lotes passam `null` e
  * seguem com os alertas de sempre.
+ *
+ * `slug` entrou no recorte (DIAG-PAINEL-LACUNAS) porque o alerta agora carrega
+ * o DESTINO junto da frase: quem lê "configure os lotes" clica e chega lá.
  */
 export function derivaAlertas(
-  evento: Pick<Evento, 'status' | 'data' | 'qtdInscritos'>,
+  evento: Pick<Evento, 'status' | 'data' | 'qtdInscritos' | 'slug'>,
   agora: Date = new Date(),
   vitrine: DiagnosticoVitrine | null = null,
 ): AlertaOperacional[] {
   const alertas: AlertaOperacional[] = [];
+  const irParaLotes: AcaoAlerta = {
+    label: 'Configurar lotes',
+    href: `/eventos/${evento.slug}/lotes`,
+  };
 
   // Publicado e a página não vende. É o alerta mais grave da tela: o
   // organizador acha que está vendendo. Só dispara com o evento ainda por
@@ -58,18 +86,36 @@ export function derivaAlertas(
     publicado && vitrine !== null && !vitrine.vende && vitrine.motivo !== 'evento_passou';
 
   if (vitrineMuda) {
-    alertas.push({
-      id: 'vitrine-nao-vende',
-      severidade: 'critico',
-      mensagem:
-        vitrine.motivo === 'sem_preco'
-          ? `A página pública está no ar mas NÃO vende: ${listarModalidades(
-              vitrine.modalidadesSemPreco,
-            )} sem preço. Configure os lotes para abrir as inscrições.`
-          : vitrine.motivo === 'esgotado'
-            ? 'A página pública está no ar mas não vende: todas as vagas acabaram. Abra um lote novo para voltar a vender.'
-            : 'A página pública está no ar mas não vende: as janelas dos lotes venceram. Abra um lote novo para voltar a vender.',
-    });
+    // Evento SEM modalidade nenhuma é outro problema, e mandá-lo para os lotes
+    // seria mandá-lo para uma tela que não tem o que oferecer: o lote pertence
+    // a uma modalidade (ADR-012) e a Rule exige que ela exista no doc do
+    // evento. A frase diz o que falta de verdade e não promete um caminho.
+    const semModalidadeNenhuma =
+      vitrine.motivo === 'sem_preco' && vitrine.modalidadesSemPreco.length === 0;
+
+    if (semModalidadeNenhuma) {
+      alertas.push({
+        id: 'vitrine-nao-vende',
+        severidade: 'critico',
+        mensagem:
+          'A página pública está no ar mas NÃO vende: este evento não tem nenhuma modalidade ' +
+          'cadastrada, e sem modalidade não há lote nem preço para vender.',
+      });
+    } else {
+      alertas.push({
+        id: 'vitrine-nao-vende',
+        severidade: 'critico',
+        mensagem:
+          vitrine.motivo === 'sem_preco'
+            ? `A página pública está no ar mas NÃO vende: ${listarModalidades(
+                vitrine.modalidadesSemPreco,
+              )} sem preço. Configure os lotes para abrir as inscrições.`
+            : vitrine.motivo === 'esgotado'
+              ? 'A página pública está no ar mas não vende: todas as vagas acabaram. Abra um lote novo para voltar a vender.'
+              : 'A página pública está no ar mas não vende: as janelas dos lotes venceram. Abra um lote novo para voltar a vender.',
+        acao: irParaLotes,
+      });
+    }
   } else if (publicado && vitrine !== null && vitrine.modalidadesSemPreco.length > 0) {
     // Vende, mas não tudo: uma modalidade sem preço some da página em silêncio.
     alertas.push({
@@ -78,6 +124,7 @@ export function derivaAlertas(
       mensagem: `${listarModalidades(
         vitrine.modalidadesSemPreco,
       )} sem preço e não aparecem à venda na página pública.`,
+      acao: irParaLotes,
     });
   }
 

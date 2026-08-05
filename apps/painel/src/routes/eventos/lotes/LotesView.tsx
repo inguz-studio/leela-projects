@@ -73,14 +73,24 @@ export function LotesView({
         <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
           Cada modalidade tem sua própria sequência de lotes (Lote 1 → 2 → 3), com janela,
           vaga e preço próprios. A virada é automática: por data ou por esgotamento da vaga
-          (o que ocorrer primeiro).
+          (o que ocorrer primeiro). As modalidades abaixo vêm da criação do evento — esta
+          tela configura os lotes de cada uma, não a lista de modalidades.
         </p>
       </div>
 
       {evento.modalidades.length === 0 ? (
+        // Texto HONESTO (DIAG-PAINEL-LACUNAS): a versão anterior mandava
+        // "cadastrar os percursos na edição do evento", e essa tela não
+        // existe — a lista de modalidades é escrita uma vez, pelo
+        // `criarEvento`, e nenhuma superfície do painel a edita depois
+        // (`atualizarConfiguracoesEvento` não envia `modalidades`). Junto com
+        // a dica das Configurações, que mandava de volta para cá, isso
+        // formava um círculo em que o organizador nunca chegava a lugar
+        // nenhum. Enquanto não existir a edição, o texto conta o estado real
+        // em vez de apontar uma porta fechada.
         <EmptyState
-          title="Este evento ainda não tem modalidades"
-          description="Cadastre os percursos (5k, 10k, 21k…) na edição do evento antes de configurar lotes."
+          title="Este evento não tem modalidades"
+          description="As modalidades (5k, 10k, 21k…) são definidas quando o evento é criado, e o painel ainda não edita essa lista. Sem modalidade não há lote para configurar."
         />
       ) : (
         evento.modalidades.map((modalidade) => (

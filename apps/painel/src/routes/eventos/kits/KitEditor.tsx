@@ -348,6 +348,17 @@ export function KitEditor({
         <span className="text-[length:var(--font-size-xs)] uppercase text-[var(--text-tertiary)]">
           Modalidades
         </span>
+        {/* A frase existe porque a pergunta chegou do dono (DIAG-PAINEL-LACUNAS):
+            "não temos como vincular um kit a um lote". O vínculo do kit é com a
+            MODALIDADE — `Kit.modalidades[]` no core, e o checkout filtra por
+            `kit.modalidades.includes(modalidade)`. O lote é degrau de PREÇO
+            dentro da modalidade e não entra nesse filtro em lugar nenhum. Sem
+            esta linha, quem procura "lote" nesta tela conclui que a opção
+            sumiu, em vez de descobrir que ela nunca existiu. */}
+        <p className="text-[length:var(--font-size-sm)] text-[var(--text-secondary)]">
+          O kit é oferecido por modalidade e vale em todos os lotes dela. Kit não se
+          vincula a lote: o lote define o preço da inscrição naquele momento da venda.
+        </p>
         <div className="flex flex-wrap gap-[var(--spacing-2)]">
           {modalidades.length === 0 ? (
             <span className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]">

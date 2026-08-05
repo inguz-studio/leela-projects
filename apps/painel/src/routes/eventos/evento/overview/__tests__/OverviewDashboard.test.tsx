@@ -1,8 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
 import { OverviewDashboard } from '../OverviewDashboard';
 import { OverviewKpis } from '../OverviewKpis';
 import type { AlertaOperacional } from '../../../_lib/alertas';
+
+/**
+ * O dashboard passou a levar o organizador ao destino nomeado pelo alerta
+ * (DIAG-PAINEL-LACUNAS), então precisa de um Router em volta — mesmo motivo
+ * do `EventoShell`, que navega e por isso monta em `MemoryRouter`.
+ */
+function renderDashboard(ui: ReactElement): ReturnType<typeof render> {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 const baseProps = {
   dias: 8,
@@ -62,7 +73,7 @@ describe('OverviewKpis', () => {
 
 describe('OverviewDashboard', () => {
   it('renderiza os 5 blocos: hero, KPIs, bar, donut e feed', () => {
-    render(<OverviewDashboard {...baseProps} />);
+    renderDashboard(<OverviewDashboard {...baseProps} />);
     // 1. hero de contagem regressiva
     expect(screen.getByRole('region', { name: 'Contagem regressiva' })).toBeInTheDocument();
     expect(screen.getByText('dias para o evento')).toBeInTheDocument();
@@ -80,12 +91,38 @@ describe('OverviewDashboard', () => {
   });
 
   it('mostra skeleton enquanto a atividade carrega', () => {
-    render(<OverviewDashboard {...baseProps} atividade={[]} atividadeLoading />);
+    renderDashboard(<OverviewDashboard {...baseProps} atividade={[]} atividadeLoading />);
     expect(screen.getByRole('status', { name: 'Carregando atividade' })).toBeInTheDocument();
   });
 
   it('hero sem capacidade esconde a barra de preenchimento', () => {
-    render(<OverviewDashboard {...baseProps} capacidade={null} />);
+    renderDashboard(<OverviewDashboard {...baseProps} capacidade={null} />);
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  // DIAG-PAINEL-LACUNAS — "configure os lotes" era uma instrução que o
+  // organizador tinha de traduzir sozinho em qual aba abrir.
+  it('o alerta que nomeia um lugar do painel leva até ele', () => {
+    const alerta: AlertaOperacional = {
+      id: 'vitrine-nao-vende',
+      severidade: 'critico',
+      mensagem: 'A página pública está no ar mas NÃO vende.',
+      acao: { label: 'Configurar lotes', href: '/eventos/meia-floripa-2026/lotes' },
+    };
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alerta]} />);
+    expect(screen.getByRole('link', { name: 'Configurar lotes' })).toHaveAttribute(
+      'href',
+      '/eventos/meia-floripa-2026/lotes',
+    );
+  });
+
+  it('alerta sem destino não inventa botão', () => {
+    const alerta: AlertaOperacional = {
+      id: 'rascunho',
+      severidade: 'aviso',
+      mensagem: 'Evento em rascunho.',
+    };
+    renderDashboard(<OverviewDashboard {...baseProps} alertas={[alerta]} />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 });

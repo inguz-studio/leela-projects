@@ -6,7 +6,8 @@
 //   (sinal honesto, não presente no mockup mas útil ao produtor). Presentational.
 // =============================================================================
 
-import { Badge } from '@leela/design-system';
+import { Link } from 'react-router-dom';
+import { Badge, Button } from '@leela/design-system';
 import type { BarChartDatum, DonutChartDatum } from '@leela/design-system';
 import { CountdownHero } from './CountdownHero';
 import { OverviewKpis } from './OverviewKpis';
@@ -60,7 +61,20 @@ function Alertas({ alertas }: { alertas: AlertaOperacional[] }): JSX.Element | n
             }
           >
             <span>{a.mensagem}</span>
-            {a.severidade === 'critico' ? <Badge variant="vulcao">Atenção</Badge> : null}
+            <div className="flex shrink-0 items-center gap-[var(--spacing-3)]">
+              {/* O alerta que NOMEIA um lugar do painel também leva até ele
+                  (DIAG-PAINEL-LACUNAS). `Link` do router, não `<a>` cru: a
+                  casca do evento é SPA e um href puro recarregaria o
+                  documento inteiro — mesmo motivo do `navSpa` do EventoShell. */}
+              {a.acao ? (
+                <Link to={a.acao.href}>
+                  <Button variant="secondary" size="sm">
+                    {a.acao.label}
+                  </Button>
+                </Link>
+              ) : null}
+              {a.severidade === 'critico' ? <Badge variant="vulcao">Atenção</Badge> : null}
+            </div>
           </li>
         ))}
       </ul>
