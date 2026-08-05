@@ -24,6 +24,7 @@
 // Comissionamento/split = fase 2 (decisão aberta).
 // =============================================================================
 
+import { sorteioUniforme } from '../aleatorio';
 import type { Timestamp } from '../index';
 
 // ---------------------------------------------------------------------------
@@ -97,10 +98,19 @@ export const ALFABETO_REF_CODIGO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export const REF_CODIGO_TAMANHO = 8;
 
 /**
- * Gera um refCodigo válido (8 chars do alfabeto sem ambíguos).
- * @param random fonte em [0,1) — injetável p/ teste determinístico.
+ * Fonte default do sorteio: entropia do sistema (Web Crypto), uniforme sobre
+ * os 31 símbolos — ver `aleatorio.ts` para o porquê de não ser `Math.random`.
+ * O número de faces vem do alfabeto, nunca escrito à mão.
  */
-export function gerarRefCodigo(random: () => number = Math.random): string {
+const SORTEIO_PADRAO = sorteioUniforme(ALFABETO_REF_CODIGO.length);
+
+/**
+ * Gera um refCodigo válido (8 chars do alfabeto sem ambíguos).
+ * @param random fonte em [0,1); default = entropia do sistema (Web Crypto,
+ *   uniforme sobre o alfabeto). Injetável p/ teste determinístico — a injeção
+ *   é o seam, e ela continua intacta.
+ */
+export function gerarRefCodigo(random: () => number = SORTEIO_PADRAO): string {
   let codigo = '';
   for (let i = 0; i < REF_CODIGO_TAMANHO; i++) {
     const r = Math.min(Math.max(random(), 0), 1 - Number.EPSILON);

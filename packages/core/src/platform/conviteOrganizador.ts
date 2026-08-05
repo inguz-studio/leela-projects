@@ -19,6 +19,7 @@
 // 31^8 ≈ 8.5e11 combinações contra 31^5 ≈ 2.9e7. Constante única (RN-157).
 // =============================================================================
 
+import { sorteioUniforme } from '../aleatorio';
 import { ALFABETO_CODIGO_CONVITE } from '../clubs/codigo-convite';
 
 // ---------------------------------------------------------------------------
@@ -122,12 +123,28 @@ export function validarCodigoOrganizador(codigo: string): boolean {
 }
 
 /**
+ * Fonte default do sorteio: entropia do sistema (Web Crypto), uniforme sobre
+ * os 31 símbolos — ver `aleatorio.ts` para o porquê de não ser `Math.random`.
+ * O número de faces vem do alfabeto, nunca escrito à mão.
+ *
+ * Aqui a troca vale MAIS do que nos outros geradores da casa: este código é
+ * credencial AO PORTADOR. `resgatarConviteOrganizador({codigo})` provisiona um
+ * tenant para quem o apresentar (RN-414), sem amarração ao e-mail do
+ * convidado — e o sorteio acontece no CLIENTE
+ * (`packages/api-client/src/platform/convites.ts`). Prever o código de um
+ * convite é escalada de privilégio, não só previsão de número.
+ */
+const SORTEIO_PADRAO = sorteioUniforme(ALFABETO_CODIGO_ORGANIZADOR.length);
+
+/**
  * Sorteia um código válido (RN-413).
  *
- * @param random fonte em [0, 1); default `Math.random`. Injetável nos testes.
+ * @param random fonte em [0, 1); default = entropia do sistema (Web Crypto,
+ *   uniforme sobre o alfabeto). Injetável nos testes — a injeção é o seam, e
+ *   ela continua intacta.
  * @pure (dado o RNG)
  */
-export function gerarCodigoOrganizador(random: () => number = Math.random): string {
+export function gerarCodigoOrganizador(random: () => number = SORTEIO_PADRAO): string {
   let codigo = '';
   for (let i = 0; i < TAMANHO_CODIGO_ORGANIZADOR; i++) {
     // Clamp defensivo: RNG fora de [0,1) não pode indexar fora do alfabeto.

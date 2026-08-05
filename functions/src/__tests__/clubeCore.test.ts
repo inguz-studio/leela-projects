@@ -77,6 +77,54 @@ describe('gerarCodigoConvite', () => {
   });
 });
 
+// ── sorteio default (RN-101 · fonte criptográfica) ────────────────────────
+//
+// O default era `Math.random`, e nenhum dos dois chamadores de produção passa
+// fonte: `functions/src/assessorias/cadastrarAssessoria.ts:366` e
+// `apps/painel/src/routes/clubes/novo/NovoClubePage.tsx:64` — este último NO
+// NAVEGADOR. O PRNG do V8 tem estado recuperável a partir de poucas saídas,
+// então quem cria alguns clubes prevê o código de convite dos próximos.
+
+describe('sorteio default do código de convite — entropia do sistema', () => {
+  it('1 · com `Math.random` PREGADO, o código NÃO sai dessa fonte', () => {
+    // ⚔ Linha vermelha com `= Math.random` no default: pregada em zero, a
+    // fonte do V8 produz 'AAAAA' e o gerador devolvia exatamente isso.
+    const original = Math.random;
+    let codigo: string;
+    try {
+      Math.random = (): number => 0;
+      codigo = gerarCodigoConvite();
+    } finally {
+      Math.random = original;
+    }
+    expect(codigo).not.toBe('A'.repeat(TAMANHO_CODIGO_CONVITE));
+    expect(validarCodigoConvite(codigo)).toBe(true);
+  });
+
+  it('2 · faixa: só símbolos do alfabeto, e os 31 aparecem', () => {
+    const vistos = new Set<string>();
+    for (let i = 0; i < 10_000; i++) {
+      for (const ch of gerarCodigoConvite()) vistos.add(ch);
+    }
+    expect(vistos.size).toBe(ALFABETO_CODIGO_CONVITE.length);
+    for (const ch of vistos) {
+      expect(ALFABETO_CODIGO_CONVITE.includes(ch)).toBe(true);
+    }
+  });
+
+  it('3 · variação: 50 códigos seguidos do default são distintos', () => {
+    const amostra = new Set<string>();
+    for (let i = 0; i < 50; i++) amostra.add(gerarCodigoConvite());
+    expect(amostra.size).toBe(50);
+  });
+
+  it('4 · a INJEÇÃO continua viva — fonte explícita ainda decide o código', () => {
+    expect(gerarCodigoConvite(() => 0)).toBe(
+      'A'.repeat(TAMANHO_CODIGO_CONVITE)
+    );
+  });
+});
+
 // ── validarClube / validarSlugClube ───────────────────────────────────────
 
 const CLUBE_OK: ClubeInput = {

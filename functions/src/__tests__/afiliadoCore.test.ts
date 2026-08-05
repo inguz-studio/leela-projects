@@ -32,6 +32,48 @@ describe('refCodigo (unicidade por chave — padrão cupom E04)', () => {
     expect(ALFABETO_REF_CODIGO).not.toMatch(/[0OIL1]/);
   });
 
+  // ── sorteio default (RN-313 · fonte criptográfica) ──────────────────────
+  //
+  // O default era `Math.random` e o único chamador de produção
+  // (`functions/src/affiliation/salvarAfiliado.ts:214`) chama sem fonte. O
+  // refCodigo vira link público de influenciador e carrega atribuição de
+  // comissão: prever o próximo é conseguir registrar-se com ele antes do dono.
+
+  it('sorteio default · 1 — com `Math.random` PREGADO, o código NÃO sai dessa fonte', () => {
+    // ⚔ Linha vermelha com `= Math.random` no default.
+    const original = Math.random;
+    let codigo: string;
+    try {
+      Math.random = (): number => 0;
+      codigo = gerarRefCodigo();
+    } finally {
+      Math.random = original;
+    }
+    expect(codigo).not.toBe('A'.repeat(REF_CODIGO_TAMANHO));
+    expect(isRefCodigoValido(codigo)).toBe(true);
+  });
+
+  it('sorteio default · 2 — faixa: só símbolos do alfabeto, e os 31 aparecem', () => {
+    const vistos = new Set<string>();
+    for (let i = 0; i < 10_000; i++) {
+      for (const ch of gerarRefCodigo()) vistos.add(ch);
+    }
+    expect(vistos.size).toBe(ALFABETO_REF_CODIGO.length);
+    for (const ch of vistos) {
+      expect(ALFABETO_REF_CODIGO.includes(ch)).toBe(true);
+    }
+  });
+
+  it('sorteio default · 3 — variação: 50 códigos seguidos são distintos', () => {
+    const amostra = new Set<string>();
+    for (let i = 0; i < 50; i++) amostra.add(gerarRefCodigo());
+    expect(amostra.size).toBe(50);
+  });
+
+  it('sorteio default · 4 — a INJEÇÃO continua viva', () => {
+    expect(gerarRefCodigo(() => 0)).toBe('A'.repeat(REF_CODIGO_TAMANHO));
+  });
+
   it('normaliza (trim+UPPER) e valida o padrão A-Z0-9 4..20', () => {
     expect(normalizarRefCodigo('  dioney10 ')).toBe('DIONEY10');
     expect(isRefCodigoValido('DIONEY10')).toBe(true);

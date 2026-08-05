@@ -105,6 +105,63 @@ describe('gerarCodigoOrganizador', () => {
   });
 });
 
+// ── sorteio default (RN-413 · fonte criptográfica) ────────────────────────
+//
+// Este código é o PIOR dos três que ainda sorteavam com `Math.random`: ele é
+// credencial ao portador — `resgatarConviteOrganizador({codigo})` provisiona
+// um TENANT para quem apresentar o código, sem amarração ao e-mail do
+// convidado (RN-414) — e é sorteado NO CLIENTE
+// (`packages/api-client/src/platform/convites.ts:86`, chamado do painel).
+// O PRNG do V8 (xorshift128+) tem estado interno recuperável a partir de
+// poucas saídas consecutivas: quem observa alguns códigos prevê os próximos,
+// e prever este código é escalada de privilégio, não só previsão de número.
+
+describe('sorteio default do código de organizador — entropia do sistema', () => {
+  it('1 · com `Math.random` PREGADO, o código NÃO sai dessa fonte', () => {
+    // ⚔ ESTA é a linha que fica vermelha com `= Math.random` no default:
+    // pregada em zero, a fonte do V8 produz 'AAAAAAAA' e o gerador devolve
+    // exatamente isso — prova de que era ela quem sorteava a credencial.
+    // O pregamento é global e curto; o `finally` devolve a fonte original.
+    const original = Math.random;
+    let codigo: string;
+    try {
+      Math.random = (): number => 0;
+      codigo = gerarCodigoOrganizador();
+    } finally {
+      Math.random = original;
+    }
+    expect(codigo).not.toBe('A'.repeat(TAMANHO_CODIGO_ORGANIZADOR));
+    expect(validarCodigoOrganizador(codigo)).toBe(true);
+  });
+
+  it('2 · faixa: só símbolos do alfabeto, e os 31 aparecem', () => {
+    const vistos = new Set<string>();
+    for (let i = 0; i < 10_000; i++) {
+      for (const ch of gerarCodigoOrganizador()) vistos.add(ch);
+    }
+    expect(vistos.size).toBe(ALFABETO_CODIGO_ORGANIZADOR.length);
+    for (const ch of vistos) {
+      expect(ALFABETO_CODIGO_ORGANIZADOR.includes(ch)).toBe(true);
+    }
+  });
+
+  it('3 · variação: 50 códigos seguidos do default são distintos', () => {
+    // Rede contra o modo de falha mais burro de uma troca de fonte: uma fonte
+    // travada daria o MESMO convite de plataforma para todo mundo.
+    const amostra = new Set<string>();
+    for (let i = 0; i < 50; i++) amostra.add(gerarCodigoOrganizador());
+    expect(amostra.size).toBe(50);
+  });
+
+  it('4 · a INJEÇÃO continua viva — fonte explícita ainda decide o código', () => {
+    // O seam de teste é o que a suíte usa para forçar colisão no resgate.
+    // Uma correção que o matasse trocaria um defeito por outro.
+    expect(gerarCodigoOrganizador(() => 0)).toBe(
+      'A'.repeat(TAMANHO_CODIGO_ORGANIZADOR)
+    );
+  });
+});
+
 describe('conviteExpirado / conviteResgatavel (RN-413)', () => {
   it('sem expiraEm nunca expira (P3)', () => {
     expect(conviteExpirado({}, AGORA)).toBe(false);

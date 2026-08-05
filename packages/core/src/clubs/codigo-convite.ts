@@ -8,6 +8,8 @@
 // Funções puras — sem I/O; o sorteio aceita um RNG injetável para teste.
 // =============================================================================
 
+import { sorteioUniforme } from '../aleatorio';
+
 /**
  * Alfabeto permitido (RN-101): A–Z sem O/I/L + dígitos 2–9 (sem 0/1).
  * 23 letras + 8 dígitos = 31 símbolos.
@@ -37,13 +39,21 @@ export function validarCodigoConvite(codigo: string): boolean {
 }
 
 /**
+ * Fonte default do sorteio: entropia do sistema (Web Crypto), uniforme sobre
+ * os 31 símbolos — ver `aleatorio.ts` para o porquê de não ser `Math.random`.
+ * O número de faces vem do alfabeto, nunca escrito à mão.
+ */
+const SORTEIO_PADRAO = sorteioUniforme(ALFABETO_CODIGO_CONVITE.length);
+
+/**
  * Gera um código de convite válido (RN-101).
  *
- * @param random — fonte de aleatoriedade em [0, 1); default Math.random.
- *   Injetável para testes determinísticos.
+ * @param random — fonte de aleatoriedade em [0, 1); default = entropia do
+ *   sistema (Web Crypto, uniforme sobre o alfabeto). Injetável para testes
+ *   determinísticos — a injeção é o seam, e ela continua intacta.
  * @returns código de 5 chars do alfabeto permitido (ex.: '8A3K9').
  */
-export function gerarCodigoConvite(random: () => number = Math.random): string {
+export function gerarCodigoConvite(random: () => number = SORTEIO_PADRAO): string {
   let codigo = '';
   for (let i = 0; i < TAMANHO_CODIGO_CONVITE; i++) {
     // Clamp defensivo: random() fora de [0,1) não pode indexar fora do alfabeto
