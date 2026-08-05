@@ -1,6 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+// S1228-T2 · RN-474/RN-475 — o prefixo NÃO é reimplementado aqui. Ele vive
+// numa constante única do core e chega a esta tela dentro de
+// `formatarCodigoPedido`, que é o que torna o veto CODPED-1 do dono barato:
+// trocar `PED-` por outra coisa passa a ser a troca de uma constante e um
+// redeploy, nunca uma varredura por literal espalhado nas telas.
+import { formatarCodigoPedido } from '@leela/core';
 import { Button } from '@/app/_ds/ds';
 import { formatarPreco } from '@/lib/formato';
 import type {
@@ -23,6 +29,54 @@ export interface LinhaConfirmacao {
 }
 
 /**
+ * A referência da compra que o comprador lê, fotografa e DITA (S1228-T2 ·
+ * RN-475). UMA implementação para os DOIS ramos da tela (pago e não-final):
+ * dois trechos iguais é como o id interno voltaria por um deles sem ninguém
+ * ver.
+ *
+ * O QUE SAIU DAQUI: `Pedido {charge.pedidoId}` — setenta e três caracteres
+ * com o **uid da conta do comprador em claro no meio**. O tamanho era o
+ * sintoma; o uid viajando numa tela que a pessoa fotografa e num print que ela
+ * encaminha era o dano (RN-475).
+ *
+ * AUSÊNCIA É AUSÊNCIA: sem código — pedido anterior ao backfill da 5b, ou
+ * leitura do doc que não voltou — esta linha simplesmente não existe. Nunca o
+ * id no lugar: um fallback aqui seria um ramo permanente de código para
+ * reintroduzir o vazamento em condição rara, que é a pior forma de mantê-lo.
+ * Quem decide se o valor é código é o core (`isCodigoPedidoValido`, dentro do
+ * `formatarCodigoPedido`) — esta tela não julga formato.
+ *
+ * Por que a linha some inteira e não vira travessão, ao contrário do campo do
+ * painel (5d): lá o travessão preenche um `dd` de uma lista de definição que
+ * continua existindo, e some-lo desalinharia a lista. Aqui não há rótulo
+ * órfão a segurar — uma frase "Pedido —" na tela de quem acabou de pagar não
+ * informa nada e ainda parece defeito.
+ */
+function ReferenciaDaCompra({
+  codigoPedido,
+  className = '',
+}: {
+  // OBRIGATÓRIA e possivelmente `undefined`, não opcional: sob
+  // `exactOptionalPropertyTypes` isso força cada chamador a DIZER o que passa
+  // — esquecer o código deixa de ser silêncio do compilador.
+  codigoPedido: string | undefined;
+  className?: string;
+}): React.JSX.Element | null {
+  const codigo = formatarCodigoPedido(codigoPedido);
+  if (codigo === '') return null;
+  return (
+    <p className={`text-xs text-text-tertiary ${className}`.trim()}>
+      Pedido{' '}
+      {/* O código sobe um degrau de contraste em relação ao rótulo: ele é o
+          que se lê em voz alta ao telefone, não letra miúda de rodapé.
+          `text-secondary` sobre `feedback-success-surface` dá 9,4:1 e sobre
+          as superfícies do tema já está na matriz do DS — AA nos dois ramos. */}
+      <span className="font-mono tracking-wider text-text-secondary">{codigo}</span>
+    </p>
+  );
+}
+
+/**
  * Etapa 5 — Confirmação. Mostra o estado real do pedido, resumo, ingresso/QR
  * por inscrito e o aviso de e-mail. Trata o estado "pendente" (PIX ainda não
  * confirmado) com honestidade — nada de "confirmado" fabricado.
@@ -31,6 +85,7 @@ export function StepConfirmacao({
   charge,
   confirmacao,
   statusPedidoConsultado,
+  codigoPedido,
   eventoNome,
   slug,
   responsavelEmail,
@@ -52,6 +107,17 @@ export function StepConfirmacao({
    * webhook do Asaas), então `confirmacao` é `null` e sempre foi.
    */
   statusPedidoConsultado?: string;
+  /**
+   * S1228-T2 · RN-474/RN-475 — os CINCO SÍMBOLOS limpos, como o doc do pedido
+   * os grava (sem prefixo). O `CreateInscricaoChargeResult` não os carrega: a
+   * fonte é a leitura do PRÓPRIO pedido que a S1225-T3 já abriu (RN-469), e
+   * quem a faz é o `CheckoutFlow`.
+   *
+   * OPCIONAL de propósito, e a leitura do ausente é a da RN-475: compra
+   * anterior ao backfill da 5b, ou leitura que não voltou ⇒ a linha some. O
+   * `pedidoId` NUNCA entra no lugar.
+   */
+  codigoPedido?: string;
   eventoNome: string;
   slug: string;
   responsavelEmail: string;
@@ -133,7 +199,7 @@ export function StepConfirmacao({
             {linhas.length === 1 ? 'Sua vaga está garantida' : 'As vagas estão garantidas'} em{' '}
             {eventoNome}.
           </p>
-          <p className="mt-2 font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
+          <ReferenciaDaCompra codigoPedido={codigoPedido} className="mt-2" />
         </section>
       ) : (
         <div className="flex flex-col gap-2">
@@ -142,7 +208,7 @@ export function StepConfirmacao({
           ) : (
             <AvisoPedidoEmConfirmacao email={responsavelEmail} />
           )}
-          <p className="font-mono text-xs text-text-tertiary">Pedido {charge.pedidoId}</p>
+          <ReferenciaDaCompra codigoPedido={codigoPedido} />
         </div>
       )}
 

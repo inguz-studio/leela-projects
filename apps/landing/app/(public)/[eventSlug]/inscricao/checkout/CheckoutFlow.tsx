@@ -484,6 +484,12 @@ export function CheckoutFlow({
   // S1225-T3 · RN-469 — o estado do pedido LIDO das Rules (PIX real). Fonte
   // paralela à `confirmacao`, que só existe quando houve chamada de confirmar.
   const [statusPedidoConsultado, setStatusPedidoConsultado] = useState<string | null>(null);
+  // S1228-T2 · RN-474/RN-475 — os cinco símbolos do código da COMPRA, lidos do
+  // MESMO doc que a S1225-T3 já lê. O `CreateInscricaoChargeResult` não os
+  // devolve (o servidor grava o campo mas não o projeta na resposta da
+  // callable), e a resposta que o checkout dá a isso é a leitura do próprio
+  // pedido, já autorizada pela RN-469 — não uma segunda porta.
+  const [codigoPedido, setCodigoPedido] = useState<string | null>(null);
   const [consultandoPedido, setConsultandoPedido] = useState(false);
   const [pedidoEmConfirmacao, setPedidoEmConfirmacao] = useState(false);
   // REV-S1225 · a consulta do GESTO falhou. Engolir a falha para não derrubar
@@ -1070,6 +1076,11 @@ export function CheckoutFlow({
     chaveRef.current = undefined;
     setCharge(null);
     setConfirmacao(null);
+    // S1228-T2: sem cobrança não há pedido, e código de pedido invalidado é
+    // pior que código nenhum — quem o ditasse citaria uma compra que não é a
+    // dela. A `ref` de leitura é chaveada pelo `pedidoId`, então a cobrança
+    // nova relê sozinha.
+    setCodigoPedido(null);
     setErroCharge(null);
     setErroConfirmar(null);
     setPixEstado('vivo');
@@ -1396,6 +1407,12 @@ export function CheckoutFlow({
       try {
         const pedido = await getPedido(getLeelaDb(), pedidoId);
         if (!montadoRef.current) return;
+        // S1228-T2 · o código da compra vem DE GRAÇA nesta leitura — o mesmo
+        // doc, o mesmo `parsePedido`, nenhuma chamada a mais. Ele é captado
+        // ANTES da porta do status: `codigoPedido` é imutável e não depende de
+        // desfecho nenhum, então prendê-lo ao ramo do `status` seria perder o
+        // código por um motivo que não tem nada a ver com ele.
+        if (pedido?.codigoPedido !== undefined) setCodigoPedido(pedido.codigoPedido);
         const status = pedido?.status ?? null;
         if (status === null) return;
         setStatusPedidoConsultado(status);
@@ -1447,6 +1464,39 @@ export function CheckoutFlow({
     // mudam (são as suas ÚNICAS dependências), então este efeito dispara uma
     // vez por cobrança — não é loop e não é polling disfarçado.
   }, [authPronto, charge, forma, consultarPedido]);
+
+  // ── S1228-T2 · o código da compra no caminho que NÃO é PIX ────────────────
+  //
+  // No PIX o código chega de carona na consulta de status acima, sem custo. No
+  // CARTÃO essa consulta não existe de propósito (o desfecho se resolve na
+  // própria chamada de pagar — CHECKOUT-FIX-0803), e sem esta leitura o
+  // comprador de cartão chegaria à confirmação sem referência NENHUMA da
+  // compra: nem o código, porque ninguém o leu, nem o id, porque a RN-475 o
+  // proibiu. Trocar um vazamento por um vazio não é o que a task pede.
+  //
+  // UMA leitura por pedido, e a `ref` é o que garante isso — o estado não
+  // serve de trava porque compra ANTERIOR ao backfill responde `undefined`
+  // para sempre, e um guard por `codigoPedido === null` releria a cada
+  // render. Falha é engolida com log, pela mesma razão que a consulta de
+  // status é acessória: nenhuma leitura pode derrubar a tela de quem pagou.
+  const codigoLidoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!authPronto || charge === null || forma === 'pix') return;
+    const pedidoId = charge.pedidoId;
+    if (codigoLidoRef.current === pedidoId) return;
+    codigoLidoRef.current = pedidoId;
+    void (async () => {
+      try {
+        const pedido = await getPedido(getLeelaDb(), pedidoId);
+        if (!montadoRef.current) return;
+        if (pedido?.codigoPedido !== undefined) setCodigoPedido(pedido.codigoPedido);
+      } catch (err) {
+        if (typeof console !== 'undefined') {
+          console.error('[checkout] Falha ao ler o código da compra.', err);
+        }
+      }
+    })();
+  }, [authPronto, charge, forma]);
 
   // ── C3-0803 · a cobrança PIX nasce no CLIQUE, e em nenhum outro lugar ──────
   //
@@ -1537,6 +1587,10 @@ export function CheckoutFlow({
       // pedido anterior foi cancelado (pix_expirado) e carregar o "Estamos
       // confirmando" dele para a cobrança nova seria falar do pedido errado.
       setStatusPedidoConsultado(null);
+      // S1228-T2 · a mesma frase, e aqui ela morde mais: o código é o que a
+      // pessoa DITA ao atendimento. Carregar o do pedido cancelado faria o
+      // balcão abrir a compra errada.
+      setCodigoPedido(null);
       setPedidoEmConfirmacao(false);
       setErroConsultaPedido(false);
       setErroCharge(null);
@@ -1951,6 +2005,11 @@ export function CheckoutFlow({
             // (PIX real, RN-469). Quem chegou aqui por consulta não tem
             // `ConfirmarPagamentoSandboxResult` nenhum — e não precisa ter.
             {...(statusPedidoConsultado !== null ? { statusPedidoConsultado } : {})}
+            // S1228-T2 · RN-475 — o código da compra, quando ele existe. A
+            // omissão é deliberada e é o contrato: sem código (compra anterior
+            // ao backfill, ou leitura que não voltou) a tela não escreve nada
+            // no lugar, e em nenhum ramo ela recebe o `pedidoId` para exibir.
+            {...(codigoPedido !== null ? { codigoPedido } : {})}
             {...(forma !== null ? { forma } : {})}
             taxaRepassada={evento.taxaRepassada}
             pixExpirado={pixExpirado}

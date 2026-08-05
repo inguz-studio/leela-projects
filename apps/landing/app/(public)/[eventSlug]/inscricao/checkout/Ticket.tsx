@@ -7,6 +7,26 @@ import QRCode from 'qrcode';
  * Ingresso por inscrito (ADR-011: cada inscrito recebe seu QR individual). O QR
  * codifica o id REAL do inscrito devolvido por `createInscricaoCharge` — é o
  * identificador de check-in, nada fabricado.
+ *
+ * ⚠ S1228-T2 · RN-475 — O `inscritoId` SAIU DA VISTA (era `:52-53`, em mono,
+ * com `title` para o texto completo). Ele é `{pedidoId}-i{n}`, ou seja, carrega
+ * o id do pedido INTEIRO — e portanto o uid da conta do comprador — dentro de
+ * si. Esta é a sexta superfície humana do id, e ela não estava no inventário de
+ * cinco da spec: a varredura de lá procurou por `pedidoId` e este vazamento
+ * viaja com outro nome. A razão da RN vale aqui palavra por palavra: a pessoa
+ * fotografa esta tela e encaminha o print.
+ *
+ * O QR CONTINUA codificando o `inscritoId`, e isso não contradiz nada: ele é a
+ * credencial de check-in, e a RN-475 separa exatamente isso — "continua sendo
+ * id interno onde é interno". O que a regra proíbe é o id em texto, para olho
+ * humano, numa superfície de produto.
+ *
+ * O que ficou no lugar: nada. O identificador humano do INGRESSO é o
+ * `codigoIngresso` (RN-396), e ele ainda não existe neste instante do fluxo —
+ * quem o emite é o webhook, depois do pagamento, e é o e-mail que o entrega. O
+ * identificador humano da COMPRA é o código do pedido, e ele está no topo da
+ * mesma tela. Inventar um terceiro rótulo aqui seria dar à pessoa um número
+ * que nenhum balcão reconhece.
  */
 export function Ticket({
   inscritoId,
@@ -48,9 +68,6 @@ export function Ticket({
         <p className="truncate text-sm font-semibold text-text-primary">{titulo}</p>
         <p className="text-sm text-text-secondary">
           {modalidade} · {kitLabel}
-        </p>
-        <p className="mt-1 truncate font-mono text-xs text-text-tertiary" title={inscritoId}>
-          {inscritoId}
         </p>
       </div>
     </div>

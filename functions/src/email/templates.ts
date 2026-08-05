@@ -96,6 +96,13 @@ export interface EmailRenderizado {
 // argumentos, então a troca de identidade não mexeu na lógica de nenhum deles.
 // ---------------------------------------------------------------------------
 
+// S1228-T2 · RN-474/RN-475 — o prefixo do código da compra NÃO é escrito aqui.
+// Ele vive numa constante única do core e chega dentro de
+// `formatarCodigoPedido`, que também é quem RECUSA valor fora do formato. É a
+// mesma disciplina que o `CODIGO_EMAIL_RE` abaixo já aplica ao código do
+// ingresso — com a diferença de que aqui a guarda é do core, e é ela que
+// mantém barato o veto CODPED-1 do dono sobre o `PED-`.
+import { formatarCodigoPedido } from '@leela/core';
 import {
   botao,
   blocoDestaque,
@@ -332,6 +339,20 @@ export interface IngressosCompraEmailInput {
    * link nenhum, com o código em texto, em vez de sair com URL inventada.
    */
   linkEvento?: string;
+  /**
+   * S1228-T2 · RN-474/RN-475 — os CINCO SÍMBOLOS limpos do código da compra,
+   * como o doc do pedido os grava. O prefixo entra na renderização.
+   *
+   * Até aqui a compra não tinha referência NENHUMA no e-mail: o que a
+   * mensagem imprimia era o `codigoIngresso`, que é de cada participante. Quem
+   * recebia e queria falar sobre a COMPRA não tinha o que citar, e o id
+   * interno não serve para isso — ele é `ped-{uid}-{chave}` e publicá-lo num
+   * texto que a pessoa encaminha entrega o uid da conta dela (RN-475).
+   *
+   * OPCIONAL: compra anterior ao backfill da 5b sai sem o bloco. Ausência é
+   * ausência — o id NUNCA ocupa o lugar.
+   */
+  codigoPedido?: string;
   ingressos: readonly IngressoDoEmail[];
 }
 
@@ -340,6 +361,38 @@ export const QR_POR_EMAIL_MAX = 10;
 
 /** Formato canônico do código no template (espelha core/tickets). */
 const CODIGO_EMAIL_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/;
+
+/**
+ * O bloco do código da COMPRA (S1228-T2 · RN-475).
+ *
+ * POR QUE ELE NÃO É UM `blocoDestaque` E NÃO É 32px: os dois códigos saem na
+ * MESMA mensagem, e o leitor precisa distinguir na primeira leitura. O código
+ * do ingresso é de cada participante, mora dentro do cartão dele e vale 32px
+ * porque é o que o operador do balcão lê da tela do celular a um metro de
+ * distância. O da compra é UM para a mensagem inteira, vive no corpo, antes
+ * dos cartões, e é lido de perto por quem vai escrever ao atendimento. Mesma
+ * família tipográfica (rótulo caixa-alta + valor mono), um degrau abaixo em
+ * tamanho e fora da moldura dos cartões: hierarquia sem competição.
+ *
+ * A frase de uso não é enfeite. Sem ela o destinatário vê dois códigos e não
+ * sabe qual citar, que é o problema que este bloco existe para resolver.
+ *
+ * @param codigoEsc o código JÁ FORMATADO (com prefixo) e JÁ ESCAPADO.
+ */
+function blocoCodigoDaCompra(codigoEsc: string): string {
+  return (
+    `<p style="margin:0 0 2px;font-family:${FONTE_UI};font-size:12px;` +
+    `line-height:18px;letter-spacing:0.08em;text-transform:uppercase;` +
+    `color:${PALETA.tintaSuave};">Código da compra</p>` +
+    `<p data-slot="codigo-compra" style="margin:0 0 4px;font-family:${FONTE_MONO};` +
+    `font-size:20px;letter-spacing:0.14em;font-weight:700;line-height:28px;` +
+    `color:${PALETA.tinta};">${codigoEsc}</p>` +
+    `<p style="margin:0 0 24px;font-family:${FONTE_UI};font-size:13px;` +
+    `line-height:20px;color:${PALETA.tintaSuave};">É este o código a citar ` +
+    `quando o assunto for a compra inteira. Cada participante tem o próprio ` +
+    `código de ingresso, logo abaixo.</p>`
+  );
+}
 
 /**
  * Data URI de PNG bem-formado — SÓ base64 de image/png, nada de `svg+xml`
@@ -370,6 +423,13 @@ export function renderIngressosCompraEmail(
   const eventoEsc = escapeHtml(evento);
   const linkEsc =
     input.linkEvento !== undefined ? escapeHtml(input.linkEvento) : '';
+  // S1228-T2 · quem julga o formato é o CORE. `''` = sem código (compra
+  // anterior ao backfill) ou valor corrompido — os dois desfechos produzem a
+  // mesma coisa, que é a omissão do bloco. `escapeHtml` sobre um valor que só
+  // pode conter `PED-` mais o alfabeto anti-ambíguo é defesa em profundidade:
+  // esta é a superfície de phishing do produto, e aqui nada entra em markup
+  // sem passar pelo escape (regra 1 do cabeçalho).
+  const codigoCompraEsc = escapeHtml(formatarCodigoPedido(input.codigoPedido));
 
   const blocos: string[] = [];
   const linhasTexto: string[] = [];
@@ -472,6 +532,11 @@ export function renderIngressosCompraEmail(
       `${nomeEsc}, sua compra foi confirmada. Abaixo está o ingresso de cada ` +
         `participante do pedido.`
     ) +
+      // O código da compra vem ANTES dos cartões de ingresso: ele é a
+      // referência da mensagem inteira, e quem procura "o número do meu
+      // pedido" para escrever ao atendimento não deve ter de rolar por cinco
+      // cartões de QR para achá-lo.
+      (codigoCompraEsc !== '' ? blocoCodigoDaCompra(codigoCompraEsc) : '') +
       (blocos.length > 0
         ? blocos.join('')
         : paragrafo(
@@ -486,6 +551,12 @@ export function renderIngressosCompraEmail(
   );
   const texto =
     `${nome}, sua compra em ${evento} foi confirmada.\n\n` +
+    // Mesma ordem do HTML, e o rótulo por extenso porque no texto puro não há
+    // tipografia para separar um código do outro — só a palavra.
+    (codigoCompraEsc !== ''
+      ? `Código da compra: ${formatarCodigoPedido(input.codigoPedido)}\n` +
+        `É este o código a citar quando o assunto for a compra inteira.\n\n`
+      : '') +
     `Ingressos do pedido:\n${linhasTexto.join('\n')}\n\n` +
     `No credenciamento basta apresentar o QR que está neste e-mail. Se a ` +
     `imagem não abrir, o código acima identifica a inscrição.` +

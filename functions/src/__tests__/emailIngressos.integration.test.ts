@@ -265,6 +265,93 @@ describe('renderIngressosCompraEmail — RN-398', () => {
     const dataUri = await gerarQrDataUrl('LLQR1.k1.abc.def', 240);
     expect(isQrDataUriValido(dataUri)).toBe(true);
   });
+
+  // -------------------------------------------------------------------------
+  // S1228-T2 · o código da COMPRA (RN-474/RN-475)
+  //
+  // Até esta task a compra não tinha referência NENHUMA no e-mail: o que a
+  // mensagem imprimia era o código de cada participante. Quem recebia e queria
+  // escrever ao atendimento sobre a COMPRA não tinha o que citar — e o id
+  // interno não serve, porque ele carrega o uid da conta.
+  // -------------------------------------------------------------------------
+  const doisIngressos = [
+    { nome: 'Marina', modalidade: '21k', codigo: 'AB2CD3', qrDataUri: QR_FAKE },
+    { nome: 'João', modalidade: '10k', codigo: 'XY7ZK9', qrDataUri: QR_FAKE },
+  ];
+
+  it('o código da compra sai com rótulo PRÓPRIO, e o prefixo vem do core', () => {
+    const email = renderIngressosCompraEmail({
+      ...base,
+      codigoPedido: 'K7MPQ',
+      ingressos: doisIngressos,
+    });
+    expect(email.html).toContain('Código da compra');
+    expect(email.html).toContain('PED-K7MPQ');
+    // Também no texto puro, que é o que sobra com as imagens bloqueadas.
+    expect(email.texto).toContain('Código da compra: PED-K7MPQ');
+  });
+
+  it('os DOIS códigos convivem, e o leitor distingue um do outro na primeira leitura', () => {
+    const email = renderIngressosCompraEmail({
+      ...base,
+      codigoPedido: 'K7MPQ',
+      ingressos: doisIngressos,
+    });
+    // Rótulos distintos, no singular de cada coisa: um por compra, um por
+    // participante.
+    expect(email.html).toContain('Código da compra');
+    expect(email.html).toContain('Código do ingresso');
+    // E o da compra vem ANTES do primeiro cartão de ingresso: quem procura "o
+    // número do meu pedido" não deve rolar cinco QR para achá-lo.
+    expect(email.html.indexOf('PED-K7MPQ')).toBeLessThan(
+      email.html.indexOf('data-slot="ingresso"')
+    );
+    // Ele NÃO está dentro de nenhum cartão de ingresso — é da mensagem inteira.
+    for (const bloco of email.html.split('data-slot="ingresso"').slice(1)) {
+      expect(bloco).not.toContain('PED-K7MPQ');
+    }
+    // E não compete em tamanho: o do ingresso é o de 32px; o da compra, 20px.
+    expect(email.html).toContain('font-size:32px');
+    expect(email.html).toContain('font-size:20px');
+  });
+
+  it('compra ANTERIOR ao backfill: o bloco simplesmente não existe', () => {
+    const email = renderIngressosCompraEmail({ ...base, ingressos: doisIngressos });
+    expect(email.html).not.toContain('Código da compra');
+    expect(email.html).not.toContain('PED-');
+    expect(email.texto).not.toContain('Código da compra');
+    // E o resto do e-mail continua inteiro — a ausência não leva nada junto.
+    expect(email.html).toContain('AB2CD3');
+    expect(email.texto).toContain('XY7ZK9');
+  });
+
+  it('código fora do formato é ausência, não "código": quem julga é o core', () => {
+    // `A0B3C` tem um ZERO, e o alfabeto anti-ambíguo da casa não tem zero.
+    // Mesma disciplina que o `CODIGO_EMAIL_RE` já aplica ao do ingresso:
+    // melhor a ausência honesta do que um número que o balcão não acha.
+    const email = renderIngressosCompraEmail({
+      ...base,
+      codigoPedido: 'A0B3C',
+      ingressos: doisIngressos,
+    });
+    expect(email.html).not.toContain('Código da compra');
+    expect(email.html).not.toContain('A0B3C');
+    expect(email.html).not.toContain('PED-');
+  });
+
+  it('o template não tem por onde imprimir o id: ele nunca o recebe', () => {
+    // Prova de FRONTEIRA, e não de comportamento: o contrato de entrada do
+    // template não carrega `pedidoId`. Nenhum literal do id pode aparecer no
+    // e-mail porque ele não atravessa esta função — e é isso que fecha a
+    // RN-475 no lado do e-mail, antes de qualquer asserção sobre texto.
+    const email = renderIngressosCompraEmail({
+      ...base,
+      codigoPedido: 'K7MPQ',
+      ingressos: doisIngressos,
+    });
+    expect(email.html).not.toMatch(/ped-[a-z0-9-]{10,}/i);
+    expect(email.texto).not.toMatch(/ped-[a-z0-9-]{10,}/i);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -294,7 +381,15 @@ afterAll(async () => {
   await testEnv?.cleanup();
 });
 
-async function semear(inscritos: readonly string[]): Promise<void> {
+/**
+ * @param codigoPedido S1228-T2 — os cinco símbolos limpos, como o checkout os
+ *   grava. OMITIR reproduz a compra anterior ao backfill da 5b, que é o estado
+ *   de dezessete pedidos em produção em 05/08.
+ */
+async function semear(
+  inscritos: readonly string[],
+  codigoPedido?: string
+): Promise<void> {
   const now = FieldValue.serverTimestamp();
   const batch = adminDb.batch();
   batch.set(adminDb.collection('tenants').doc(CASTELO_ID), {
@@ -323,6 +418,7 @@ async function semear(inscritos: readonly string[]): Promise<void> {
     eventoId: EVENTO_ID,
     status: 'pago',
     inscritoRefs: [...inscritos],
+    ...(codigoPedido !== undefined ? { codigoPedido } : {}),
     responsavel: {
       nome: 'Marina Compradora',
       email: 'marina@exemplo.test',
@@ -400,6 +496,79 @@ describe.skipIf(!hasEmulator)('enviarEmailIngressos — S1206-T6 (RN-398/219)', 
     expect(logs.docs[0]?.get('destinatario').ref).toBe('insc-2');
     expect(logs.docs[0]?.get('tipo')).toBe('transacional');
     expect(logs.docs[0]?.get('chave')).toBe('emailConfirmacao');
+  });
+
+  // S1228-T2 · RN-474/RN-475 — o fio inteiro: o código gravado no doc do
+  // pedido chega ao e-mail que sai, e o id do documento não.
+  it('o código do pedido viaja do doc até o e-mail — e o id interno NÃO', async () => {
+    await semear(['insc-1', 'insc-2'], 'K7MPQ');
+    const emissao = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const { provider, enviados } = providerEspiao();
+
+    const r = await enviarEmailIngressos(
+      adminDb,
+      { pedidoId: PEDIDO_ID, eventoId: EVENTO_ID, ingressos: emissao.ingressos },
+      provider
+    );
+
+    expect(r.status).toBe('enviado');
+    const enviado = enviados[0] as SendTransactionalParams;
+    expect(enviado.html).toContain('PED-K7MPQ');
+    expect(enviado.texto).toContain('PED-K7MPQ');
+    // O id do documento não entra em superfície humana (RN-475). Aqui ele é
+    // `ped-ingqr-mail`, e nenhuma das duas partes da mensagem o carrega.
+    expect(enviado.html).not.toContain(PEDIDO_ID);
+    expect(enviado.texto).not.toContain(PEDIDO_ID);
+    // E os códigos de ingresso continuam lá, ao lado — os dois convivem.
+    for (const ingresso of emissao.ingressos) {
+      expect(enviado.texto).toContain(ingresso.codigo);
+    }
+  });
+
+  it('compra ANTERIOR ao backfill: o e-mail sai sem referência, e ainda assim sem o id', async () => {
+    // O caso que a spec obriga a tratar: dezessete pedidos em produção ainda
+    // não têm código. A tentação seria "cair no id" — e é ela que a RN-475
+    // recusa por escrito, porque um fallback é um ramo permanente de código
+    // para reintroduzir o vazamento em condição rara.
+    await semear(['insc-1', 'insc-2']);
+    const emissao = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const { provider, enviados } = providerEspiao();
+
+    await enviarEmailIngressos(
+      adminDb,
+      { pedidoId: PEDIDO_ID, eventoId: EVENTO_ID, ingressos: emissao.ingressos },
+      provider
+    );
+
+    const enviado = enviados[0] as SendTransactionalParams;
+    expect(enviado.html).not.toContain('Código da compra');
+    expect(enviado.html).not.toContain('PED-');
+    expect(enviado.html).not.toContain(PEDIDO_ID);
+    expect(enviado.texto).not.toContain(PEDIDO_ID);
+    // O e-mail continua servindo: o ingresso de cada participante está inteiro.
+    expect(enviado.html.match(QR_IMG)).toHaveLength(2);
+    for (const ingresso of emissao.ingressos) {
+      expect(enviado.texto).toContain(ingresso.codigo);
+    }
+  });
+
+  it('código GRAVADO fora do formato não vira código no e-mail (nem abre porta ao id)', async () => {
+    // Dado corrompido no doc — o zero não existe no alfabeto da casa. O core
+    // recusa, e a recusa não pode virar a janela pela qual o id volta.
+    await semear(['insc-1', 'insc-2'], 'A0B3C');
+    const emissao = await emitirIngressosDoPedido(adminDb, PEDIDO_ID, RING);
+    const { provider, enviados } = providerEspiao();
+
+    await enviarEmailIngressos(
+      adminDb,
+      { pedidoId: PEDIDO_ID, eventoId: EVENTO_ID, ingressos: emissao.ingressos },
+      provider
+    );
+
+    const enviado = enviados[0] as SendTransactionalParams;
+    expect(enviado.html).not.toContain('A0B3C');
+    expect(enviado.html).not.toContain('Código da compra');
+    expect(enviado.html).not.toContain(PEDIDO_ID);
   });
 
   it('REPROCESSO do webhook: o e-mail NÃO é reenviado (RN-219)', async () => {

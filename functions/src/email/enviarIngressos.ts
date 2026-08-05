@@ -56,7 +56,12 @@
 import type * as admin from 'firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
-import { isCodigoIngressoValido, validarEmail, type EmailProvider } from '@leela/core';
+import {
+  isCodigoIngressoValido,
+  isCodigoPedidoValido,
+  validarEmail,
+  type EmailProvider,
+} from '@leela/core';
 import { registrarComunicacao } from '../eventos/logComunicacao';
 import { gerarQrDataUrl } from '../eventos/publicarEvento';
 import { urlIngressoPorLink, urlPublicaDoEvento } from '../eventos/basePublica';
@@ -154,6 +159,16 @@ export interface DestinatarioEmailIngressos {
   tenantId: string;
   /** `inscritoRefs` do pedido — insumo da chave de idempotência da RN-219. */
   inscritoRefs: string[];
+  /**
+   * S1228-T2 · RN-474/RN-475 — os cinco símbolos do código da COMPRA, do doc
+   * do pedido, sem prefixo. AUSENTE quando a compra é anterior ao backfill da
+   * 5b (dezessete pedidos medidos em produção em 05/08), e a ausência viaja
+   * como ausência: o template omite o bloco e o `pedidoId` não entra no lugar.
+   *
+   * Ele NÃO participa da chave de idempotência da RN-219 nem de nenhuma outra
+   * decisão deste módulo — é dado de apresentação, e só.
+   */
+  codigoPedido?: string;
 }
 
 /**
@@ -178,6 +193,12 @@ export async function lerDestinatarioEmailIngressos(
     return null;
   }
 
+  // S1228-T2 · o código da compra sai do doc que ESTA função já leu — nenhuma
+  // leitura a mais no caminho do e-mail. Quem decide se o valor é código é o
+  // core: campo ausente e campo corrompido colapsam no MESMO desfecho, que é
+  // `undefined`, e o template trata os dois como ausência.
+  const codigoPedidoRaw = pedidoSnap.get('codigoPedido') as unknown;
+
   const eventoSnap = await db.collection('eventos').doc(eventoId).get();
   return {
     email: emailRaw.trim().toLowerCase(),
@@ -186,6 +207,7 @@ export async function lerDestinatarioEmailIngressos(
     slug: (eventoSnap.get('slug') as string | undefined) ?? eventoId,
     tenantId: (eventoSnap.get('tenantId') as string | undefined) ?? '',
     inscritoRefs: (pedidoSnap.get('inscritoRefs') as string[] | undefined) ?? [],
+    ...(isCodigoPedidoValido(codigoPedidoRaw) ? { codigoPedido: codigoPedidoRaw } : {}),
   };
 }
 
@@ -274,6 +296,13 @@ export async function entregarEmailIngressos(
     nomeComprador: destinatario.nomeComprador,
     nomeEvento: destinatario.nomeEvento,
     ...(linkEvento !== null ? { linkEvento } : {}),
+    // S1228-T2 · a referência da COMPRA. O reenvio administrativo entra por
+    // esta mesma camada de baixo (F2 · BUILD-F2F5), então ele herda o código
+    // sem uma linha a mais — inclusive nas compras que o backfill carimbar
+    // depois de o primeiro e-mail ter saído sem ele.
+    ...(destinatario.codigoPedido !== undefined
+      ? { codigoPedido: destinatario.codigoPedido }
+      : {}),
     ingressos: paraTemplate,
   });
   await emailProvider.sendTransactional({
