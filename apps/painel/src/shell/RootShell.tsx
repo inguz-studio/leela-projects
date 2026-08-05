@@ -5,18 +5,34 @@
 // troca e rola. Substitui as montagens locais de AppShell que existiam em
 // OverviewShell e PlatformShell (bug do diagnóstico 2026-07-05: /eventos e
 // /clubes renderizavam sem menu).
+//
+// Adendo 13 (ordem do Vitor, 2026-08-05): a BARRA SUPERIOR foi suprimida do
+// sistema inteiro. O Adendo 12 já tinha tirado dali a busca e o "Novo evento";
+// sobraram só dois icon-buttons stub sem destino (Ajuda e Notificações), e uma
+// barra que existe para hospedar dois botões que não levam a lugar nenhum não
+// tem utilidade. Não é "esvaziar a barra": o componente sai do shell.
+//
+// Consequência de layout, medida antes de remover: o wrapper da toolbar era
+// IRMÃO de `children`, então o padding horizontal das telas nunca veio dele —
+// cada página traz o próprio (PageHeader `px-6`, contêineres `px-6`). O que
+// some é vertical, acima do primeiro elemento da página: 32px do `pt` do
+// wrapper + a altura da toolbar + seu `pb`/`mb` e a hairline. A moldura NÃO
+// ganha um `pt` de substituição, e por um motivo verificável: as rotas de
+// `/plataforma` nunca tiveram a toolbar e já entregam o PageHeader rente ao
+// topo do contêiner de rolagem — o `min-h` de 96px do PageHeader com conteúdo
+// centrado é o respiro. Suprimir a barra deixa o produtor IGUAL a esse padrão
+// já em produção, em vez de inventar uma barra invisível só para segurar
+// espaço. Telas com respiro próprio (EventoShell, `pt-5` no breadcrumb) seguem
+// intactas.
 // =============================================================================
 
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, CircleHelp } from 'lucide-react';
 import {
   AppShell,
   Avatar,
-  IconButton,
   Sidebar,
   SidebarFooter,
-  Toolbar,
 } from '@leela/design-system';
 import { shellSidebarSections } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
@@ -39,10 +55,6 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   // porque lá o dublê recebe o que o construtor manda — o adaptador ficava
   // entre os dois.
   const sections = shellSidebarSections(location.pathname, navigate, eventosAtivos);
-
-  // Toolbar global (T3) — só nas rotas do PRODUTOR (a /plataforma tem nav
-  // própria e nenhuma busca de operação). Mesma condição do sidebar.ts.
-  const produtor = !location.pathname.startsWith('/plataforma');
 
   // Bloco de marca (T2): a ANATOMIA `.brand` (padding, hairline, sub) é do DS —
   // reusamos os MESMOS tokens do SidebarBrand para não haver drift. O mark deixa
@@ -80,38 +92,7 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   return (
     <AppShell sidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}>
       {/* Área principal: único contêiner de rolagem — a sidebar não rola junto. */}
-      <div className="flex flex-col flex-1 overflow-y-auto">
-        {produtor && (
-          // A toolbar vive dentro da moldura da página do mockup (`.main`
-          // 32px 40px) — o conteúdo abaixo mantém o padding próprio de cada
-          // tela (a recomposição da Visão Geral é T4–T6).
-          <div className="px-[var(--layout-page-px)] pt-[var(--layout-page-pt)]">
-            {/*
-              Adendo 12 (revisão UX do Vitor, 2026-07-18): a busca do header
-              (stub sem índice real) e o botão "Novo evento" (fixo em todas as
-              telas) foram SUPRIMIDOS por ora. Criar evento segue disponível na
-              própria página /eventos (HubEventos tem o "+ Novo evento" primário).
-              A toolbar permanece só com Ajuda + Notificações (stubs T3).
-            */}
-            <Toolbar
-              end={
-                <>
-                  {/* Ajuda: sem destino real ainda — stub registrado (T3). */}
-                  <IconButton aria-label="Ajuda">
-                    <CircleHelp />
-                  </IconButton>
-                  {/* Notificações: sem fonte de não-lidas no cliente — pip
-                      desligado até existir dado real (stub registrado, T3). */}
-                  <IconButton aria-label="Notificações">
-                    <Bell />
-                  </IconButton>
-                </>
-              }
-            />
-          </div>
-        )}
-        {children}
-      </div>
+      <div className="flex flex-col flex-1 overflow-y-auto">{children}</div>
     </AppShell>
   );
 }

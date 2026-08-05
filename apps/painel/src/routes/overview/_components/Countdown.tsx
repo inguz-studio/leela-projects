@@ -8,8 +8,10 @@
 // D3 (2026-07-13): com a aba Comunicação aterrissada (E06-L3), a quick-action
 // central volta a ser "Comunicar" (fiel ao mockup: Ver inscritos · Comunicar ·
 // Check-in) — resolve a divergência antiga "Comunicar → Gerenciar" (a rota
-// agora existe). O bloco "Ações rápidas" geral segue fora (Novo evento na
-// Toolbar T3; "Ver todos" no section-link dos eventos T5).
+// agora existe). O bloco "Ações rápidas" geral segue fora ("Novo evento" vive
+// no HubEventos, em /eventos, desde o Adendo 12 — a barra superior que já foi
+// o destino dele saiu do shell no Adendo 13; "Ver todos" no section-link dos
+// eventos T5).
 // =============================================================================
 
 import { Skeleton, cn } from '@leela/design-system';

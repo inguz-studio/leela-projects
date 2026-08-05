@@ -51,7 +51,7 @@ describe('Countdown (S602-T1 · T6 card fiel)', () => {
     expect(onNavigate).toHaveBeenCalledWith('/eventos/meia-floripa-2026/credenciamento');
   });
 
-  it('bloco "Ações rápidas" geral saiu (Novo evento vive na Toolbar)', () => {
+  it('bloco "Ações rápidas" geral saiu (Novo evento vive em /eventos)', () => {
     render(<Countdown countdown={view()} loading={false} onNavigate={vi.fn()} />);
     expect(screen.queryByRole('button', { name: '+ Novo evento' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ações rápidas')).not.toBeInTheDocument();

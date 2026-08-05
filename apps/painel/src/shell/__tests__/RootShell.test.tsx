@@ -133,37 +133,45 @@ describe('RootShell (Lote B3 — shell raiz)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Lote FIDELIDADE T3 — toolbar global (busca ⌘K + icon-buttons + Novo evento)
+// Adendo 13 (ordem do Vitor, 2026-08-05) — a barra superior saiu do sistema
+// inteiro. Estes casos são CANÁRIO: se alguém remontar a headbar no shell sem
+// decisão nova, a suíte acusa aqui. O Adendo 12 já tinha suprimido a busca e o
+// "Novo evento"; o que restou foram dois stubs sem destino (Ajuda e
+// Notificações), e a barra saiu junto com eles.
 // ---------------------------------------------------------------------------
 
-describe('RootShell (T3 — toolbar global)', () => {
-  // Adendo 12 (2026-07-18): busca e "Novo evento" suprimidos do header. A
-  // toolbar do produtor fica só com Ajuda + Notificações.
-  it('rotas do produtor montam a toolbar só com ajuda e notificações', () => {
+describe('RootShell (Adendo 13 — sem barra superior)', () => {
+  it('rotas do produtor NÃO montam barra superior alguma', () => {
     renderAt('/');
-    const toolbar = screen.getByRole('toolbar', { name: 'Ferramentas globais' });
-    expect(within(toolbar).getByRole('button', { name: 'Ajuda' })).toBeInTheDocument();
-    expect(within(toolbar).getByRole('button', { name: 'Notificações' })).toBeInTheDocument();
+    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
   });
 
-  it('busca do header foi suprimida (Adendo 12)', () => {
+  it('os stubs Ajuda e Notificações saíram do shell', () => {
+    renderAt('/');
+    expect(screen.queryByRole('button', { name: 'Ajuda' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Notificações' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('iconbutton-pip')).not.toBeInTheDocument();
+  });
+
+  it('busca do header segue suprimida (Adendo 12)', () => {
     renderAt('/');
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
 
-  it('"Novo evento" foi suprimido do header — criar evento vive em /eventos (Adendo 12)', () => {
+  it('"Novo evento" não volta pelo shell — criar evento vive em /eventos', () => {
     renderAt('/');
-    const toolbar = screen.getByRole('toolbar', { name: 'Ferramentas globais' });
-    expect(within(toolbar).queryByRole('button', { name: /Novo evento/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Novo evento/ })).not.toBeInTheDocument();
   });
 
-  it('/plataforma NÃO tem a toolbar do produtor', () => {
+  it('/plataforma segue sem barra superior', () => {
     renderAt('/plataforma/tenants');
-    expect(screen.queryByRole('toolbar', { name: 'Ferramentas globais' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
   });
 
-  it('pip de notificações desligado sem fonte de não-lidas (honestidade)', () => {
+  it('o conteúdo da rota é o PRIMEIRO filho da área de rolagem (nada acima dele)', () => {
     renderAt('/');
-    expect(screen.queryByTestId('iconbutton-pip')).not.toBeInTheDocument();
+    const scroller = screen.getByTestId('path').parentElement;
+    expect(scroller).not.toBeNull();
+    expect(scroller?.firstElementChild).toBe(screen.getByTestId('path'));
   });
 });
