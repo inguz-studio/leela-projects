@@ -1,6 +1,6 @@
 ---
 tags: [leela, email, brevo, gatilhos, validacao-externa]
-atualizado: 2026-08-04
+atualizado: 2026-08-05
 trace: leela-build-2d6ee98d
 ---
 
@@ -100,6 +100,12 @@ O e-mail 3 é o único dos oito sem etiqueta na Brevo, o que abre um buraco na a
 
 O link do e-mail 8, quando ele subir, aponta para `https://leela-hub.web.app` por default. Esse endereço devolve a página "Site Not Found" do Firebase hoje, porque o painel nunca foi deployado ao canal de produção. Sem definir `LEELA_PAINEL_URL`, o e-mail chega com um link morto. O contexto está em [[estado-real]].
 
+## Um nono está especificado e não existe
+
+A rodada de 05/08 (`02-rodadas/2026-08-05-contas-landing/`) especificou o e-mail do **código de acesso**, que carrega os seis dígitos do primeiro acesso e da criação de conta na landing. Ele é a **RN-482** e ainda não foi escrito: nenhuma linha dele existe no repositório, e o catálogo continua listando oito porque oito é o que o produto envia.
+
+Três propriedades dele valem antecipar, porque mudam a leitura das seções acima quando ele chegar. O texto é **neutro** e não revela se existe conta, o que o torna o único dos nove cujo conteúdo é decidido por uma regra de segurança e não de comunicação. O documento do código é escrito **antes** do envio, e a chamada devolve erro quando o provedor recusa — nele, mais do que nos outros, "enviamos" para quem não vai receber é o incidente de 04/08 outra vez. E a política de **no máximo uma vez** vale igual: a repetição é a pessoa pedir de novo, dentro do limitador por endereço da RN-476.
+
 ## Vizinhos
 
-[[12-identidade-email]] tem o registro da noite em que a identidade entrou, com a tabela de contraste e as três decisões de desenho. [[estado-real]] diz o que está no ar. [[onboarding-externo]] é a porta de entrada de quem chega de fora.
+[[12-identidade-email]] tem o registro da noite em que a identidade entrou, com a tabela de contraste e as três decisões de desenho. [[estado-real]] diz o que está no ar. [[onboarding-externo]] é a porta de entrada de quem chega de fora. [[LEELA-E12-landing]] §"Delta as duas portas do modal de entrada" é o dono da RN-482.

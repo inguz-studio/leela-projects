@@ -3237,3 +3237,147 @@ meia-risca (o conserto entra nos DOIS normalizadores ou em nenhum, porque diverg
 única frase que o operador precisa aprender) e a coleção de reserva nunca é podada — o gatilho
 de "acrescentar um símbolo" tem de ser lido no **contador da coleção**, não no volume de vendas
 (**CODPED-PODA-1** no painel).
+
+## Delta as duas portas do modal de entrada (SPEC-CONTAS-LANDING · 2026-08-05)
+
+O dono abriu a landing com o modal de entrada na frente dele e pediu três coisas na mesma
+frase. Verbatim: *"Entrar precisa ter a logo da Leela, e precisamos colocar um CTA como botão
+terciário pequeno, para a pessa criar conta, nao temos esse fluxo de criação de conta na nossa
+landing page."*
+
+A logo é da lane `BUILD-MOTION`, que tem o `EntrarOverlay.tsx` em voo. O resto é desta rodada,
+em `02-rodadas/2026-08-05-contas-landing/`. A mecânica do código, a ordem de criação de conta e
+a fronteira entre tipos de conta são do [[LEELA-E00-fundacao-tecnica]], nas RN-476 a RN-480;
+aqui ficam as superfícies.
+
+**A frase do dono está correta na letra, e vale precisar onde ela dói.** O header tem um botão
+escrito "Criar conta de organizador" que aponta para **outra origem**, o `/cadastrar` do painel
+(`PublicHeader.tsx:74-79`). É a mesma travessia que a `S1221-T1` desfez para o "Entrar". Para
+quem quer participar de uma experiência, e não produzir uma, não existe porta: o único jeito de
+a conta nascer é comprar.
+
+### RN-481 (nova, dona) · o modal ganha duas portas terciárias, e elas navegam
+
+Os dois CTAs são **`variant="ghost" size="sm"`** do design system. Não existe variante chamada
+"terciária" — o DS tem `primary`, `secondary`, `destructive` e `ghost`
+(`packages/design-system/src/components/Button/variants.ts`) —, e o `ghost` é o terceiro degrau
+real da hierarquia: o primário é o "Entrar", o secundário é a borda, o ghost é o que resta.
+Inventar uma variante para atender ao nome criaria um degrau que o sistema não tem.
+
+**Eles navegam, não trocam o miolo do modal.** O motivo já está escrito no
+`RodapeEsqueciSenha.tsx`: trocar o conteúdo de um `aria-modal` embaixo do leitor de tela é a
+mudança de contexto que a WCAG 3.2 desaconselha, e quem vai digitar um código precisa de tela
+com foco próprio.
+
+Nascem `/primeiro-acesso` e `/criar-conta` na landing, com `noindex`, `no-store` e `disallow`,
+no tratamento que `/minha-conta` recebeu — são rotas novas sob o gate de busca e velocidade da
+S1200. Elas compartilham o campo de código e a moldura; o que muda é a copy e o campo de nome.
+
+**O caminho de volta é a superfície de risco nova.** O overlay devolvia a pessoa ao lugar de
+graça, porque não navegava; a rota precisa de um parâmetro. Ele aceita **apenas caminho
+relativo da própria origem**, conferido contra forma conhecida, e cai na home diante de
+qualquer outra coisa. Redirecionamento aberto numa tela que acabou de autenticar alguém é o
+clássico da categoria. Nenhum dado de pessoa entra na URL, que é invariante do projeto.
+
+**O rodapé do modal passa a ter três elementos**, e isso é muito. A pesquisa da Cheers mostra
+uma casa que resolve os três com um link só, "Esqueceu a senha ou ainda não criou uma?". O
+arranjo especificado respeita o pedido do dono sem empilhar: os dois botões ghost lado a lado,
+com o "Não sei minha senha" permanecendo como link discreto abaixo deles. Sob a RN-477, esse
+link e o "É meu primeiro acesso" são a **mesma máquina**, e fundi-los é uma linha a menos —
+está no painel como **CONTA-1**, não decidido aqui.
+
+**Estados honestos.** Cinco causas de negativa do servidor produzem a mesma frase na tela
+(RN-476), e a tela acrescenta só o que sabe por conta própria: quantas tentativas restam.
+Contar isso é deliberado e não afrouxa nada — quem tenta adivinhar já sabe quantas gastou, e
+quem errou de verdade precisa saber que a próxima é a última. O que a tela **nunca** diz é se
+aquele endereço tem conta. O campo de código não tem autopreenchimento, não vai para log e não
+viaja na URL: ele é credencial pelos dez minutos em que vive.
+
+**O `/definir-senha` não é apagado.** Ele continua com os cinco estados e continua sendo o
+destino do link que sai no e-mail da compra. Se o CONTA-1 decidir pela fusão, muda o destino,
+não a máquina.
+
+### RN-482 (nova, dona) · o e-mail do código é o nono, e falha de envio não é silêncio
+
+Entra no [[catalogo-de-emails]] como o nono, com a moldura de `functions/src/email/identidade.ts`
+que os oito já usam e etiqueta própria na Brevo. **Assunto e corpo neutros:** servem os quatro
+desfechos da RN-477 e não revelam se existe conta. Quem digitou um endereço errado recebe um
+código para um cadastro que não vai completar, e isso é tudo o que a mensagem revela.
+
+**O documento do código é escrito antes do envio.** Quando o provedor recusa, a chamada devolve
+erro explícito e marca o documento como morto. Devolver "enviamos" para quem nunca vai receber
+é o incidente de 04/08 servido de novo, e a doutrina de que falha de envio é incidente
+observável nasceu naquela madrugada. Sem provedor configurado, a chamada recusa antes de
+começar, no molde fail-closed que o e-mail 3 já pratica.
+
+**Sem repetição automática.** A política dos oito é no máximo uma vez, e ela vale para o nono:
+a repetição é a pessoa pedir de novo, dentro do limitador da RN-476.
+
+Sem canal por SMS nem por WhatsApp. A Sympla oferece os três; a Leela não coleta telefone de
+participante, o e-mail é a chave de tudo, e um canal a mais seria uma segunda superfície de
+credencial provando a mesma coisa.
+
+### S1229 · "É meu primeiro acesso" — quem já comprou define a senha com um código (nova)
+
+**Como** participante que comprou e nunca definiu senha, **quero** pedir um código no próprio
+modal de entrada, **para** entrar sem depender de um e-mail que pode não ter chegado.
+
+- **MoSCoW:** Must · **Estimativa:** L · **Superfície:** landing + functions · **Rota:** opus
+- **RNs:** RN-476, RN-477, RN-481, RN-482 (novas) · RN-453, RN-155, RN-419, RN-420, RN-452,
+  RN-469 (contexto)
+
+**Critérios de aceite:**
+
+- **Dado** o modal de entrada, **quando** ele abre, **então** existem dois botões ghost pequenos
+  no rodapé, e nenhum deles troca o conteúdo do diálogo.
+- **Dado** um endereço qualquer, **quando** peço o código, **então** a resposta e o tempo são os
+  mesmos para endereço com conta e sem conta, e o servidor não consulta a existência da conta
+  antes de enviar.
+- **Dado** um código correto, **quando** o digito, **então** defino a senha, o endereço é
+  marcado como verificado e **eu entro**, na mesma chamada, sem segundo login.
+- **Dado** código errado, vencido, já usado, de endereço que nunca pediu, ou teto esgotado,
+  **então** a resposta do servidor é a mesma nos cinco.
+- **Dado** um código, **quando** erro cinco vezes, **então** o código morre e um novo é
+  necessário.
+- **Dado** que peço um código novo, **então** o anterior deixa de valer.
+- **Dado** que o provedor de e-mail recusa, **então** a chamada devolve erro e a tela não diz
+  que enviou.
+
+**Tasks:** S1229-T1 (núcleo do código, ⚔) · S1229-T2 (o nono e-mail) · S1229-T3 (callable que
+pede, ⚔) · S1229-T4 (callable que consome, ramo de conta existente, ⚔) · S1229-T5 (as duas
+portas no modal) · S1229-T6 (a rota `/primeiro-acesso` e a guarda de volta). Ordem e
+dependências na fila da rodada.
+
+### S1230 · "Criar conta" — quem nunca comprou entra na Leela pela landing (nova)
+
+**Como** pessoa que nunca comprou, **quero** criar conta na própria landing, **para** existir na
+Leela antes de decidir participar de alguma coisa.
+
+- **MoSCoW:** Must · **Estimativa:** M · **Superfície:** landing + functions + core · **Rota:** opus
+- **RNs:** RN-477, RN-478, RN-479, RN-480, RN-481 (novas) · RN-446, RN-461, RN-466, RN-467,
+  RN-450 (contexto)
+
+**Critérios de aceite:**
+
+- **Dado** que digito o endereço de outra pessoa, **quando** não digito o código, **então**
+  nenhuma conta é criada e nenhum endereço fica ocupado.
+- **Dado** o código provado e nenhuma conta naquele endereço, **quando** completo o formulário,
+  **então** o servidor cria a conta e grava o consentimento, e **desfaz a conta se a gravação
+  falhar**.
+- **Dado** o checkbox do termo, **quando** a tela renderiza, **então** ele nasce desmarcado, com
+  finalidade declarada, e o carimbo vem do servidor (aceite datado pelo cliente é negado).
+- **Dado** que já tenho conta e vim por esta porta, **quando** o código é aceito, **então**
+  defino a senha e entro, **sem nenhuma mensagem de e-mail já cadastrado**.
+- **Dado** o fim do fluxo, **então** existe conta de participante com papel `athlete`, e não
+  existe `profissionais/{uid}`, claim de tenant nem `platform_admin`.
+
+**Tasks:** S1230-T1 (ramo de criação com consentimento, ⚔) · S1230-T2 (a rota `/criar-conta`) ·
+S1230-T3 (a prova da fronteira por teste, ⚔) · S1230-T4 (a condição de e-mail verificado na
+regra do pedido, ⚔), esta última **gated pelo POSSE-EMAIL-1** e sem partir sem o dono.
+
+### O que este delta não faz
+
+Não liga login social (QUALIF-5). Não apaga o `/definir-senha` nem o link do e-mail da compra
+(CONTA-1). Não redireciona o `/cadastrar` do painel nem rebatiza o botão do header (CONTA-2 e a
+fila da SPEC-QUALIFICACAO). Não decide o POSSE-EMAIL-1, apenas recomenda e remove o custo
+colateral da correção.

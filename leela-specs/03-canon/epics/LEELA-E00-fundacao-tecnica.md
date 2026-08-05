@@ -586,3 +586,175 @@ o que não é retroativo: é a primeira vez que aquela finalidade existe.
 fabricar o carimbo ausente é exatamente a prova que a RN-412 recusa. O que muda é que a
 promoção cria o momento natural onde a recoleta caberia, se o dono escolher essa opção.
 
+## Delta o primeiro acesso por código e a criação de conta na landing (2026-08-05 · SPEC-CONTAS-LANDING)
+
+O dono pediu duas portas no modal de entrada da landing, e a fala que as define traz um
+mecanismo que o produto não tem. Verbatim: *"Podemos ter o CTA 'É meu primeiro acesso' e Criar
+conta, primeiro acesso a pessoa define senha, após receber um código de verificação de 6
+dígitos numeros enviados por e-mail, e criar conta cria a conta nova de usuário, sem ser a
+profissional."*
+
+Rodada em `02-rodadas/2026-08-05-contas-landing/`. As superfícies são do E12; a mecânica de
+credencial, a ordem de criação de conta e a fronteira entre tipos de conta são deste épico.
+
+**Medido antes de escrever:** varredura por código numérico de verificação em `functions/src`,
+`packages` e `apps` devolve zero, e o Firebase Auth **não oferece** código por e-mail de forma
+nativa — ele entrega link de ação por e-mail e código por SMS para telefone. É peça nova, e é
+peça de credencial.
+
+**A referência que o dono citou não sustenta o número.** Ele mandou simular o fluxo da Cheers.
+A pesquisa de 05/08/2026 achou que a recuperação da Cheers é **link**, não código, e não achou
+fonte nenhuma dizendo seis dígitos. Quem documenta seis dígitos, com quinze minutos de prazo, é
+a Sympla. Os seis dígitos são **decisão do dono nesta fala**, não cópia verificada, e ficam
+registrados assim para que ninguém os defenda depois com autoridade que a pesquisa não dá. O
+detalhe, com fonte e data linha a linha, está em `02-spec-contas-landing.md` §Parte 2.
+
+### RN-476 · o código de seis dígitos é a prova de posse do e-mail (nova, dona · 2026-08-05)
+
+Seis dígitos decimais, com zeros à esquerda preservados — `000123` é código válido, e truncá-lo
+reduziria o espaço em silêncio. Sorteio com a **entropia do sistema**, nunca `Math.random`: a
+casa acabou de varrer o repositório inteiro por causa disso, em `61776052`, `8d779dce` e
+`20a9c904`, e nascer previsível reintroduziria na mesma semana o defeito que ela acabou de
+fechar.
+
+**Só o digest persiste, e ele é HMAC, não hash puro.** O material é o par
+`HMAC-SHA256(pepper, "<e-mail normalizado>:<código>")`, fail-closed quando o pepper falta. A
+razão é aritmética e o precedente é a RN-174: o token do convite de assessoria tem 256 bits e
+SHA-256 puro basta porque ninguém enumera 2²⁵⁶; um código de seis dígitos tem 10⁶ valores, e
+quem puser as mãos no documento calcula o milhão de digests em milissegundos. Amarrar ao
+endereço impede que um digest observado num documento seja testado contra outro.
+
+**Prazo de dez minutos.** É credencial de sessão, e a referência de mercado achada são os
+quinze minutos da Sympla. Por contraste deliberado, a **RN-420** registra que o link do
+ingresso **não** tem prazo, porque é comprovante de compra aberto meses depois. Confundir os
+dois em qualquer direção produz erro.
+
+**Uso único, teto e invalidação.** O consumo acontece dentro de uma transação, e o documento
+não é apagado no consumo: apagar faria a segunda tentativa cair no ramo "não existe" em vez de
+"já usado", e o servidor precisa distinguir os dois para contar tentativas. O teto é de **cinco
+tentativas por código**, e ao esgotar o código morre inteiro, não só aquela requisição — sem
+essa propriedade, um milhão de combinações contra um código vivo por dez minutos é força bruta
+resolvida numa tarde. O contador vive no mesmo documento e é incrementado na mesma transação da
+comparação; fora dela, dois pedidos simultâneos leem o mesmo valor e o teto vira decoração.
+Cada endereço tem **um código vivo**, e pedir um novo sobrescreve o anterior, para que pedir
+substitua a chance do atacante em vez de acumulá-la.
+
+**Comparação em tempo constante**, no molde do `provisionAssessoria.ts:89-90`.
+
+**Uma resposta só.** Código errado, vencido, já usado, de endereço que nunca pediu nada, e teto
+esgotado devolvem **a mesma negativa**. É a RN-419 aplicada a cinco causas em vez de quatro.
+
+**Limitador por alvo, e a borda que não é nossa.** O `consumirRateLimit` já existente, com
+chave derivada do e-mail: 3 em 15 minutos e 10 em 24 horas. **Não existe chave por origem**, e
+não por esquecimento: o `rateLimit.ts` tem a decisão escrita, com o motivo de que derivar IP
+confiável num callable é premissa de infraestrutura não verificável e que um balde por IP pune
+vizinho de NAT. O throttle volumétrico por origem é da borda, App Check e Cloud Armor, e a
+borda **não está ligada** — o pedido de código passa a ser mais um consumidor do item de CTO
+que já está no painel.
+
+**Operação:** o pepper é o terceiro segredo desse tipo na casa, ao lado do `CRM_ID_PEPPER` e
+das chaves do QR, e precisa existir no Secret Manager antes do deploy. Nenhum teste do emulador
+cobra isso. A coleção `codigosDeAcesso` nasce sem `match` nas Rules, deny-by-default, no mesmo
+tratamento de `rateLimits`.
+
+### RN-477 · as duas portas são a mesma máquina, e a divergência vem depois da prova (nova, dona · 2026-08-05)
+
+Se cada porta responder de acordo com o que encontra, o modal vira oráculo: digite um endereço
+em cada uma e descubra se aquela pessoa já comprou na Leela. Seria a falha que a `S1221-T1`
+acabou de fechar no login, reaberta ao lado dela.
+
+**Antes da prova, as duas portas são indistinguíveis.** Os dois CTAs pedem o endereço, dizem a
+mesma frase e o servidor faz o mesmo trabalho: gera, guarda, envia. **Sem consulta a "existe
+conta?" antes do envio**, o tempo também não distingue, porque não há ramo a mais para
+percorrer. Qualquer ramo que só exista quando a conta existe é oráculo, ainda que a mensagem
+seja igual.
+
+**Depois da prova, a divergência é livre**, e vale como frase: não é vazamento contar sobre a
+caixa de e-mail de quem acabou de provar que a tem. Os desfechos:
+
+| Entrou por | E a conta | O que acontece |
+|---|---|---|
+| É meu primeiro acesso | existe, sem senha | define a senha, o endereço é marcado como verificado, entra |
+| É meu primeiro acesso | **não existe** | a tela pede o nome junto da senha e cria a conta, com o termo |
+| Criar conta | **já existe** | pede só a senha, porque o nome já é conhecido, e entra |
+| Criar conta | não existe | caminho feliz do cadastro |
+| Qualquer uma | existe **com senha** | define outra senha e entra; funcionalmente é recuperação, e é honesto que seja |
+
+Nenhuma tela diz "você não tem conta" nem "e-mail já cadastrado". As duas frases são o oráculo
+voltando pela janela, e nenhuma delas pode existir no código.
+
+O que muda por porta é a moldura e a copy, nunca o que o servidor faz. O dono pediu duas portas
+e ganha duas portas; elas são rótulos, não máquinas.
+
+### RN-478 · a conta nasce depois da prova, e nasce inteira ou não nasce (nova, dona · 2026-08-05)
+
+Inverte a ordem que produziu duas feridas conhecidas. Hoje o único cadastro do produto cria a
+conta no Auth e depois grava o perfil, o que produziu a conta órfã que está no painel desde
+03/08 e a conta não verificada ocupando endereço alheio, que é o vetor medido do POSSE-EMAIL-1.
+
+**Enquanto o código não é digitado, nenhuma conta existe.** O que existe é um digest com prazo.
+Quem digitar o endereço de terceiro não cria nada, não ocupa nada e não impede nada.
+
+**Verificado o código, o servidor cria tudo numa chamada só:** conta no Auth com
+`emailVerified: true`, `atletas/{uid}` com o consentimento, e **desfaz a conta do Auth se a
+gravação falhar**. Nada de conta pela metade. É o desenho que o cadastro do organizador não
+tem, porque lá o cliente cria a conta e depois grava o documento, em dois passos e de duas
+origens; aqui o servidor faz os dois no mesmo lugar e pode desfazer o primeiro.
+
+**Isto não fecha o LGPD-1.** Ele é do caminho do organizador e é decisão jurídica do dono. Fica
+o registro de que a porta nova não herda a ferida.
+
+A gravação convive com o gatilho `onCreateUser`, que grava `atletas/{uid}` por conta própria,
+**por merge e nunca sobrescrevendo**, no mesmo padrão que o próprio gatilho já usa para a
+corrida com o rollback.
+
+### RN-479 · o consentimento da conta de participante (nova, dona · 2026-08-05)
+
+Checkbox nascendo desmarcado, finalidade declarada, versão e instante do **servidor** em
+`atletas/{uid}.consentimentoLgpd`, no molde da RN-446, com aceite datado pelo cliente sendo
+negado. `profissionais/{uid}` não é tocado, pela RN-450.
+
+A constante de versão é a do **termo da conta** que a RN-466 definiu, compartilhada com o
+`/cadastrar`, nunca uma cópia. Duas superfícies criando conta com dois termos diferentes seria
+exatamente a divergência que a RN-466 existe para impedir.
+
+**Quem chega pelo primeiro acesso de conta que já existe não vê checkbox nenhum.** Essa pessoa
+comprou, e o aceite dela está carimbado no pedido, com versão, instante e hash do material.
+Pedir de novo seria recoletar consentimento existente, o que a RN-467 já dispensa.
+
+### RN-480 · nenhuma das duas portas cria conta profissional (nova, dona · 2026-08-05)
+
+Verbatim do dono, na mesma fala: *"criar conta cria a conta nova de usuário, sem ser a
+profissional."*
+
+A porta nova cria conta de participante com papel `athlete`, e mais nada. Conta profissional
+continua sendo promoção de conta existente (RN-461). Conta de administração da plataforma
+continua sendo outra conta (RN-449, ratificada pelo dono em 05/08 no fechamento do ADMINSEP-1).
+Organizador e cliente continuam cabendo na mesma conta (RN-450).
+
+**A fronteira é provada por teste, não presumida:** passar pelas duas portas não produz
+`profissionais/{uid}`, não produz claim de tenant e não produz `platform_admin`.
+
+### Reconciliações deste delta
+
+- **RN-453 inalterada, e herdada inteira.** O primeiro acesso define a senha e **entra no
+  sistema**, com destino decidido pela origem. A RN-476 acrescenta um segundo caminho até o
+  mesmo desfecho, iniciado pela pessoa em vez de pelo e-mail. A ordem é aceite: senha primeiro,
+  sessão depois. Um código que abrisse sessão sozinho seria login sem senha, que é a jornada da
+  Sympla e não a que o dono descreveu.
+- **RN-155 inalterada,** e é ela que faz o primeiro acesso ser caso real aqui. A Sympla é o
+  oposto: lá a conta não nasce na compra, e por isso o caso não existe.
+- **RN-461 inalterada,** com uma consequência de superfície que sobe ao painel como
+  **CONTA-2**: quando a fila da SPEC-QUALIFICACAO rodar, o `/cadastrar` do painel fará o mesmo
+  que a porta nova, e o rótulo "Criar conta de organizador" do header
+  (`PublicHeader.tsx:74-79`) estará desatualizado.
+- **RN-469 inalterada.** Acrescentar `request.auth.token.email_verified == true` ao ramo de
+  vínculo por conta é **recomendação**, registrada no POSSE-EMAIL-1, e espera o dono. O que a
+  RN-476 muda é o custo: depois dela, toda sessão nomeada da landing tem o endereço verificado,
+  então a condição deixa de tirar acesso de alguém. Quem comprou e ainda não fez o primeiro
+  acesso continua lendo o próprio pedido pela sessão do checkout, que é o ramo que não muda, e
+  continua abrindo o ingresso pelo link assinado (RN-452).
+- **Login social fora do escopo.** `loginComGoogle` e `loginComApple` continuam escritos e sem
+  tela (QUALIF-5). Ligá-los aqui seria uma terceira porta no mesmo modal, na mesma semana, sem
+  o dono ter pedido.
+
