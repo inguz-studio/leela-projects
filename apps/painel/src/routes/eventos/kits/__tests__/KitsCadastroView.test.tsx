@@ -195,4 +195,27 @@ describe('KitsCadastroView (RN-211/213/215/216)', () => {
       expect(screen.getAllByRole('link', { name: 'Editar' })).toHaveLength(4);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // REV-PAINEL — os dois atalhos desta tela eram `<Link><Button/></Link>`, que
+  // produz `<a><button>`: o HTML proíbe descendente interativo dentro de `<a>`,
+  // e o efeito prático é DOIS pontos de tabulação por atalho, o primeiro deles
+  // um `<a>` sem classe nenhuma — portanto sem anel de foco (WCAG 2.4.7). O
+  // `getAllByRole('link', …)` acima passa nas duas formas, porque o nome
+  // acessível do `<a>` vem do texto do botão aninhado.
+  // -------------------------------------------------------------------------
+  describe('atalhos de navegação são UM controle cada', () => {
+    it('"+ Adicionar kit" e "Editar" não aninham botão dentro do link', () => {
+      view();
+      const atalhos = [
+        screen.getByRole('link', { name: '+ Adicionar kit' }),
+        ...screen.getAllByRole('link', { name: 'Editar' }),
+      ];
+      for (const atalho of atalhos) {
+        expect(atalho.querySelector('button, a, input, select, textarea')).toBeNull();
+        // O elemento que recebe o foco é o mesmo que traz o estilo de foco.
+        expect(atalho.className).toMatch(/focus-visible:ring/);
+      }
+    });
+  });
 });

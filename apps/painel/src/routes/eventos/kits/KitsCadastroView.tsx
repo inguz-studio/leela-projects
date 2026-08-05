@@ -67,9 +67,13 @@ export function KitsCadastroView({
           <h2 className="text-[length:var(--font-size-lg)] font-[var(--font-weight-semibold)] text-[var(--text-primary)]">
             Kits
           </h2>
-          <Link to={`/eventos/${slug}/kits/novo`}>
-            <Button variant="primary">+ Adicionar kit</Button>
-          </Link>
+          {/* `Button asChild` POR FORA e `Link` por dentro (REV-PAINEL). O
+              inverso gera `<a><button>`: HTML inválido (o `a` não admite
+              descendente interativo), dois pontos de tabulação para uma ação
+              só, e o primeiro deles um `<a>` sem classe — sem anel de foco. */}
+          <Button asChild variant="primary">
+            <Link to={`/eventos/${slug}/kits/novo`}>+ Adicionar kit</Link>
+          </Button>
         </div>
         {kits.length === 0 ? (
           <EmptyState
@@ -148,9 +152,10 @@ function KitCard({ kit, slug }: { kit: Kit; slug: string }): JSX.Element {
         </div>
       </dl>
       <div className="mt-auto">
-        <Link to={`/eventos/${slug}/kits/editar/${kit.id}`}>
-          <Button variant="ghost">Editar</Button>
-        </Link>
+        {/* Mesmo par do "+ Adicionar kit": `Button asChild` fora, `Link` dentro. */}
+        <Button asChild variant="ghost">
+          <Link to={`/eventos/${slug}/kits/editar/${kit.id}`}>Editar</Link>
+        </Button>
       </div>
     </article>
   );
