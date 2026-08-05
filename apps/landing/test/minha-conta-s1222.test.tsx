@@ -373,6 +373,32 @@ describe('S1222-T2 · a leitura que falha não vira lista vazia', () => {
     });
     await waitFor(() => expect(screen.getByText('Próximos')).toBeTruthy());
   });
+
+  it('⚔ REV-B4 · a aba de clubes que falha NÃO leva compras e ingressos junto', async () => {
+    // A `getMeusClubesEConvites` é a function mais nova da área — a única que
+    // pode não existir ainda quando a landing sobe. Dentro do `Promise.all`
+    // cru, a rejeição dela apagava a tela de COMPRAS, que só existe porque em
+    // 04/08 um PIX real não apareceu em superfície nenhuma. Falsificação:
+    // tirar o `catch` de `lerClubesDegradando` mata este caso.
+    getMeusIngressos.mockResolvedValue(ingressos());
+    getMinhasCompras.mockResolvedValue(compras());
+    getMeusClubesEConvites.mockRejectedValue(new Error('functions/not-found'));
+
+    await montar();
+    await sessao(ANA_NOMEADA);
+
+    await waitFor(() => expect(screen.getByText('Próximos')).toBeTruthy());
+    expect(screen.queryByText(/não conseguimos carregar sua conta/i)).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('tab', { name: /clubes e convites/i }));
+    });
+    // E a falha é DECLARADA, não maquiada de "você não tem nada".
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="clubes-lista-parcial"]')).toBeTruthy()
+    );
+    expect(document.querySelector('[data-slot="convites-lista-parcial"]')).toBeTruthy();
+  });
 });
 
 describe('S1222-T2 · o histórico de compras', () => {

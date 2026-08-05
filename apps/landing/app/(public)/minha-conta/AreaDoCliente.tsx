@@ -47,6 +47,36 @@ interface Dados {
   clubes: GetMeusClubesEConvitesResult;
 }
 
+/**
+ * ⚔ REV-B4 · a aba mais nova NÃO derruba as duas que o dono precisa ver.
+ *
+ * As três leituras iam no mesmo `Promise.all` sem rede de proteção, então uma
+ * rejeição de `getMeusClubesEConvites` — a function mais nova, a única que
+ * pode não estar deployada quando a landing sobe — mandava a ÁREA INTEIRA para
+ * `FalhaDeLeitura`, apagando "Minhas compras", que é a superfície que existe
+ * porque em 04/08 um PIX real não apareceu em lugar nenhum. Uma ordem de
+ * deploy trocada não pode custar isso.
+ *
+ * A degradação é DECLARADA, não calada: `clubesCompletos`/`convitesCompletos`
+ * em `false` fazem a tela dizer que pode estar faltando coisa — o mesmo sinal
+ * que o servidor já emite quando uma das três queries falha. Ingressos e
+ * compras continuam derrubando a área de propósito: ali, lista vazia por falha
+ * seria a mentira que a RN-451 proíbe.
+ */
+async function lerClubesDegradando(): Promise<GetMeusClubesEConvitesResult> {
+  try {
+    return await getMeusClubesEConvites();
+  } catch {
+    return {
+      estado: 'ok',
+      clubes: [],
+      convites: [],
+      clubesCompletos: false,
+      convitesCompletos: false,
+    };
+  }
+}
+
 export function AreaDoCliente(): React.JSX.Element {
   const sessao = useSessaoLeela();
   const [dados, setDados] = useState<Dados | null>(null);
@@ -64,7 +94,7 @@ export function AreaDoCliente(): React.JSX.Element {
     let vivo = true;
     setFalhou(false);
     ensureLeela();
-    void Promise.all([getMeusIngressos(), getMinhasCompras(), getMeusClubesEConvites()])
+    void Promise.all([getMeusIngressos(), getMinhasCompras(), lerClubesDegradando()])
       .then(([ingressos, compras, clubes]) => {
         if (vivo) setDados({ ingressos, compras, clubes });
       })
