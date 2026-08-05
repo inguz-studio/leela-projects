@@ -2518,28 +2518,90 @@ service cloud.firestore {
     // Coleção ROOT tenant-scoped por campo (`tenantId` + `eventoId`
     // denormalizados — mesma fronteira de `pagamentos`).
     //
-    // LEITURA: nesta fase SÓ o organizador — papel de gestão do tenant dono
-    // (tenant_owner/tenant_staff via isTenantWriter) ou platform_admin.
+    // LEITURA — DOIS lados, e só dois:
+    //
+    // (1) ORGANIZADOR — papel de gestão do tenant dono (tenant_owner/
+    // tenant_staff via isTenantWriter) ou platform_admin.
     // Guarda de PAPEL de propósito (review r1 fix 3): claim.tenantId puro
     // deixaria um token `role:'athlete'` com tenantId forjado ler, e
     // promoter (que lê outras coleções do tenant) enxergaria estado
     // FINANCEIRO — aqui vale a taxonomia do arquivo: owner/staff gerem,
     // promoter não vê dinheiro pelo cliente nesta fase.
-    // TODO(E12/checkout): o responsável/atleta lê o PRÓPRIO pedido só na
-    // story do checkout, com teste (mesmo gate do TODO de leitura pública
-    // de eventos). NÃO abrir antes.
+    //
+    // (2) O PRÓPRIO COMPRADOR — RN-469 (DEC-0804 · S1225-T1). Fecha o TODO
+    // que vivia aqui ("o responsável/atleta lê o PRÓPRIO pedido só na story
+    // do checkout, com teste … NÃO abrir antes"): a story chegou, e o TODO
+    // sempre foi SEQUENCIAMENTO, não proibição de produto (verbatim do dono
+    // em `01-decisoes-dono.md` da rodada 2026-08-04). Abre UMA leitura e
+    // mais nada — ver `ehCompradorDoPedido` abaixo.
+    //
+    // Fronteira que NÃO se move junto: nenhuma outra coleção abre.
+    // `inscritos` e `pessoas` seguem fechadas ao cliente e a área do cliente
+    // segue servida por callable (RN-451) — o que a RN-451 proíbe é dado de
+    // TENANT a token de participante; o pedido do próprio comprador é dado
+    // DELE (endereço e aceites incluídos, que ele mesmo forneceu).
     //
     // ESCRITA: NUNCA pelo cliente — estado financeiro (status, valorTotal,
     // pagamentoRef, formaPagamento, parcelas — CAMPOS_FUNCTION_PEDIDO no
     // core) é de escrita EXCLUSIVA de Function (Admin SDK bypassa Rules).
     // Negado até para platform_admin via client SDK (mesmo padrão de
     // `pagamentos` e do dashboard) — pedido forjado é fraude financeira.
+    // A RN-469 abre LEITURA e só leitura: o `write: if false` abaixo é o
+    // mesmo de antes, byte por byte.
     // CKMOD: `endereco` (PII do comprador) e `aceites` (prova versionada
     // RN-149 pattern) moram AQUI e herdam o write:false — inforjáveis e
     // irretocáveis por cliente por construção (escrita só na Function do
     // checkout, na MESMA tx que cria o pedido).
     match /pedidos/{pedidoId} {
-      allow read: if isTenantWriter(resource.data.tenantId) || isPlatformAdmin();
+      /**
+       * RN-469 — o comprador lê o PRÓPRIO pedido, e ninguém mais.
+       *
+       * DOIS vínculos, ambos gravados pelo SERVIDOR e inforjáveis pelo
+       * cliente (a coleção é `write: if false` — não há caminho de escrita
+       * por SDK que plante qualquer um dos dois):
+       *
+       *   (a) `responsavel.atletaId` — o uid da SESSÃO que criou o pedido no
+       *       checkout, inclusive a sessão ANÔNIMA da compra. Carimbado de
+       *       `caller.uid` dentro da tx de venda
+       *       (`createInscricaoCharge.ts`, campo `responsavel.atletaId`).
+       *   (b) `contaSemFriccao.contaUid` — a conta VINCULADA pela
+       *       confirmação de pagamento (RN-155/RN-174), escritor único
+       *       `contaSemFriccao.ts`. É por aqui que a pessoa relê o pedido
+       *       depois, já logada, pela área do cliente.
+       *
+       * Por que CAMPO e não prefixo do docId: o id é `ped-{uid}-{chave}` e
+       * um `startsWith('ped-' + uid + '-')` pareceria equivalente — mas ele
+       * transforma o FORMATO DO ID em fronteira de autorização. Um uid que
+       * contenha `-` (uid customizado; o formato não é garantido pelo Auth)
+       * faria o prefixo de um comprador casar com o pedido de outro. O
+       * campo não tem essa ambiguidade e é o mesmo dado que a Function já
+       * grava.
+       *
+       * Guardas de existência (`in`) antes de cada acesso: campo ausente
+       * (pedido legado sem `contaSemFriccao`, que é o caso NORMAL enquanto
+       * o pagamento não confirma) precisa dar FALSO, não erro de avaliação.
+       * O curto-circuito do `&&` garante isso.
+       *
+       * O que continua NEGADO, com teste: qualquer outro token — anônimo,
+       * `athlete` nomeado, comprador de OUTRO pedido, conta vinculada a
+       * outro pedido — e o promoter, que segue sem ver dinheiro.
+       */
+      function ehCompradorDoPedido() {
+        return isSignedIn()
+          && (
+            ('responsavel' in resource.data
+              && 'atletaId' in resource.data.responsavel
+              && resource.data.responsavel.atletaId == request.auth.uid)
+            ||
+            ('contaSemFriccao' in resource.data
+              && 'contaUid' in resource.data.contaSemFriccao
+              && resource.data.contaSemFriccao.contaUid == request.auth.uid)
+          );
+      }
+
+      allow read: if isTenantWriter(resource.data.tenantId)
+                     || isPlatformAdmin()
+                     || ehCompradorDoPedido();
       allow write: if false;
     }
 
