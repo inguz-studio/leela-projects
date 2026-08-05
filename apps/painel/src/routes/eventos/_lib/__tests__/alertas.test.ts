@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { diagnosticoVitrine } from '@leela/core';
 import { derivaAlertas } from '../alertas';
 import { ts } from '../../_test/fixtures';
 
@@ -207,5 +208,73 @@ describe('derivaAlertas · destino do alerta', () => {
       AGORA,
     );
     expect(alertas.every((a) => a.acao === undefined)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REV-PAINEL — o estado degradado pelo CAMINHO REAL, não pelo diagnóstico
+// fabricado à mão.
+//
+// Todos os casos acima montam o `DiagnosticoVitrine` na unha. Isso prova a
+// frase, mas não prova que o estado que produzia "undefined" é ALCANÇÁVEL: se
+// `diagnosticoVitrine` deixasse de classificar o evento sem modalidade como
+// `sem_preco`, os testes seguiriam verdes contra um caso que não existe mais —
+// e a porta voltaria a abrir por outro lado. Aqui a lista vazia entra no
+// `diagnosticoVitrine` de verdade (`@leela/core`) e o resultado dele é o que
+// alimenta o `derivaAlertas`.
+// ---------------------------------------------------------------------------
+
+describe('derivaAlertas · evento degradado pelo caminho real', () => {
+  it('modalidades: [] → diagnosticoVitrine devolve sem_preco com lista vazia', () => {
+    // Exatamente o que `eventoDegradado` (api-client) devolve quando o doc do
+    // evento não parseia: nenhuma modalidade.
+    const vitrine = diagnosticoVitrine([], new Date('2026-08-01T00:00:00Z'), AGORA);
+    expect(vitrine.vende).toBe(false);
+    expect(vitrine.motivo).toBe('sem_preco');
+    expect(vitrine.modalidadesSemPreco).toEqual([]);
+  });
+
+  it('e a tela do organizador recebe a frase própria, nunca "undefined"', () => {
+    const vitrine = diagnosticoVitrine([], new Date('2026-08-01T00:00:00Z'), AGORA);
+    const alertas = derivaAlertas(
+      {
+        slug: 'evento-degradado',
+        status: 'publicado',
+        data: ts(new Date('2026-08-01T00:00:00Z')),
+        qtdInscritos: 0,
+      },
+      AGORA,
+      vitrine,
+    );
+    const a = alertas.find((x) => x.id === 'vitrine-nao-vende');
+    expect(a?.mensagem).toBeDefined();
+    expect(a?.mensagem).not.toMatch(/undefined|\[object Object\]/);
+    expect(a?.mensagem).toContain('nenhuma modalidade');
+  });
+
+  it('nenhum alerta da família imprime undefined ou [object Object]', () => {
+    // Varredura da família inteira nos recortes que a tela realmente monta.
+    const recortes = [
+      { slug: 'e1', status: 'rascunho' as const, data: ts(new Date('2026-06-01T00:00:00Z')), qtdInscritos: 0 },
+      { slug: 'e2', status: 'publicado' as const, data: ts(new Date('2026-04-21T12:00:00Z')), qtdInscritos: 0 },
+      { slug: 'e3', status: 'publicado' as const, data: ts(new Date('2026-08-01T00:00:00Z')), qtdInscritos: 12 },
+    ];
+    const vitrines = [
+      null,
+      diagnosticoVitrine([], new Date('2026-08-01T00:00:00Z'), AGORA),
+      { vende: false, estado: 'esgotado' as const, motivo: 'esgotado' as const, modalidadesSemPreco: [] },
+      { vende: false, estado: 'encerrado' as const, motivo: 'lotes_encerrados' as const, modalidadesSemPreco: [] },
+      { vende: false, estado: 'encerrado' as const, motivo: 'sem_preco' as const, modalidadesSemPreco: ['5k'] },
+      { vende: true, estado: 'aberto' as const, motivo: null, modalidadesSemPreco: ['5k', '10k', '21k', '42k'] },
+    ];
+    for (const evento of recortes) {
+      for (const vitrine of vitrines) {
+        for (const a of derivaAlertas(evento, AGORA, vitrine)) {
+          expect(a.mensagem).not.toMatch(/undefined|\[object Object\]|NaN/);
+          // Destino nomeado nunca vira `/eventos/undefined/...`.
+          if (a.acao) expect(a.acao.href).not.toMatch(/undefined/);
+        }
+      }
+    }
   });
 });
