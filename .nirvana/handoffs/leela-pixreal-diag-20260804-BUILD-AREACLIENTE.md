@@ -25,7 +25,13 @@ aterrissar.
 
 | Task | O quê | Estado | Commit |
 |---|---|---|---|
-| `S1221-T1` | O login vira overlay no meio da landing | ✅ | (abaixo) |
+| `S1221-T1` | O login vira overlay no meio da landing | ✅ | `20bd6874` |
+| `C1 · S1223-T1` | `/definir-senha` na landing, com os três estados | ✅ | (abaixo) |
+
+**A BUILD-COD5A aterrissou** em `3acc6877` no meio desta lane, o que liberou
+`functions/`. A árvore tem, porém, trabalho de terceiro não versionado em
+`functions/src/__tests__/codigoPedidoReserva.attack.test.ts` (review da COD5A, ao que
+tudo indica) — todos os commits desta lane usam `--only`, arquivo a arquivo.
 
 ---
 
@@ -86,6 +92,58 @@ estoura pula o `cleanup` do RTL e contamina o seguinte com o DOM anterior — o 
 aparece como "found multiple elements", que parece defeito de componente. Os dois
 arquivos passaram a declarar `vi.setConfig({ testTimeout: 20_000 })`, com a razão
 escrita. É a mesma família do flake sob workers que o brief avisa.
+
+---
+
+## `C1 · S1223-T1` — o primeiro acesso termina onde o dono descreveu
+
+**O que mudou.** Nasceu `/definir-senha` na landing. O comprador clica no link do
+e-mail, define a senha e **já está dentro** — sem segundo login. Antes, o link caía no
+handler hospedado do Firebase (e, depois da DEPLOY-EMAIL, no `/redefinir-senha` do
+painel, onde a guarda de conta órfã derruba a sessão logo depois).
+
+**Arquivos**
+
+- `apps/landing/app/(public)/definir-senha/page.tsx` (novo) — Server Component fino:
+  lê o `oobCode` da query, `noindex`, `force-dynamic`.
+- `apps/landing/app/(public)/definir-senha/DefinirSenhaFlow.tsx` (novo) — os quatro
+  estados. Consome os três seams que já existiam (`verificarCodigoResetSenha`,
+  `confirmarResetSenha`, `loginComEmail`) e o `enviarResetSenha` para o reenvio.
+  **Nenhum seam novo, nenhum token inventado.**
+- `apps/landing/lib/areaDoCliente.ts` (novo) — ponto único de decisão do destino
+  pós-entrada, com a trava `AREA_CLIENTE_NO_AR` que impede apontar para um 404
+  enquanto a `S1222-T2` não existir.
+- `apps/landing/app/robots.ts` — `disallow: /definir-senha`.
+- `apps/landing/next.config.js` — `no-store` + `no-referrer` + `X-Robots-Tag` na rota.
+- `functions/src/eventos/slug.ts` — `definir-senha` entra em `SLUGS_RESERVADOS`.
+- `apps/landing/test/definir-senha-s1223.test.tsx` (novo) — 7 casos.
+
+**Como se sabe que o link já foi usado (decisão que a review deve atacar).** O Firebase
+não distingue "consumido" de "malformado": os dois voltam `auth/invalid-action-code`. A
+RN-453 exige três estados distinguíveis. O sinal é **local**: ao confirmar com sucesso
+gravamos uma marca do código neste navegador — um digest FNV-1a, nunca o `oobCode`, que
+é credencial. Fora deste navegador o caso degrada para `invalido`, que também tem saída
+(o reenvio). A marca é gravada **antes** do login: se o login falhar por rede o código
+já foi consumido de verdade, e voltar para "link inválido" seria mentira. Há caso de
+teste para exatamente isso.
+
+**Destino pós-senha.** Onda 1 (esta entrega): confirmação "sua conta está pronta" com
+CTA para a home. Quando a `S1222-T2` subir, `AREA_CLIENTE_NO_AR` vira `true` e as duas
+jornadas (esta e a `S1225-T4`) passam a apontar para Meus Ingressos de uma vez só.
+
+**Gates**
+
+- `tsc --noEmit` (landing) — zero. `tsc --noEmit` (functions) — zero.
+- `eslint app lib --max-warnings 0` (landing) — zero.
+- Suíte inteira da landing **2× seguidas**: `50 arquivos · 618 testes` verdes nas duas.
+- `functions`: rodado **só** `src/__tests__/slugReservado.test.ts` (7/7). A suíte
+  completa de functions não foi executada, por gate do brief.
+- `firestore.rules` intocado. Nenhuma Rule nova.
+
+**O que esta task NÃO fez, de propósito.** A C2 (`actionCodeSettings` por origem) não
+entrou aqui: a ordem da fila é inegociável e a C2 só sobe **depois** da C1 estar no ar.
+Enquanto isso, o link continua caindo no painel — o comprador ainda não é mandado para
+esta tela. A rota existe e está provada; falta o servidor apontar para ela.
 
 ## Para o maestro selar (não editei `leela-specs/`)
 

@@ -27,7 +27,10 @@ export default function robots(): MetadataRoute.Robots {
       // ingresso de gente, com token no caminho (S1214-T2 · RN-422). O
       // `disallow` é a terceira tranca, junto do `<meta robots>` da rota e do
       // `X-Robots-Tag` do next.config — crawler educado nem chega a pedir.
-      disallow: ['/*/inscricao', '/health', '/convite', '/ingresso'],
+      // `/definir-senha` carrega o `oobCode` do primeiro acesso na query —
+      // credencial de uso único, mesma disciplina de `/convite` (S1223-T1 ·
+      // RN-453).
+      disallow: ['/*/inscricao', '/health', '/convite', '/ingresso', '/definir-senha'],
     },
     sitemap: `${base}/sitemap.xml`,
     host: base,

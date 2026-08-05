@@ -31,6 +31,18 @@ const nextConfig = {
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
+      // Primeiro acesso do comprador (S1223-T1 · RN-453). O `oobCode` viaja na
+      // QUERY e é credencial de uso único: sem `no-referrer` ele sai no
+      // `Referer` de qualquer link de saída da página, e sem `no-store` fica em
+      // cache de CDN. Mesma razão da rota acima, superfície diferente.
+      {
+        source: '/definir-senha',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
     ];
   },
 };

@@ -61,6 +61,10 @@ export function slugCandidato(base: string, n: number): string {
 export const SLUGS_RESERVADOS: readonly string[] = [
   'ingresso',
   'convite',
+  // S1223-T1 · RN-453: a tela do primeiro acesso do comprador. Um evento
+  // chamado "Definir senha" sombrearia a rota para onde o e-mail de conta
+  // criada manda a pessoa — e ela ficaria sem caminho para entrar.
+  'definir-senha',
   'health',
   'robots.txt',
   'sitemap.xml',
