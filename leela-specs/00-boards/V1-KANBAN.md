@@ -83,6 +83,23 @@ tags:
         - [ ] S1226-T1 modelo e Rules, com o dado sensível fechado por construção e o carimbo de consentimento ⚔
         - [ ] S1226-T2 a seção na área do cliente, com a foto da conta e a Arena vazia como estado válido
         - [ ] S1226-T3 consentimento específico e visibilidade na tela: opt-in destacado, apagar apaga ⚔
+- [ ] **[E19/E11] O CRM passa a responder de onde vem a venda e de onde vem o público** — canal de origem com a comissão de cada um, distribuição por cidade e bairro, quem pagou e não apareceu e como o público paga; mais dois consertos de coleta que custam zero de atrito, porque o e-mail de cada participante e o código de município do CEP já são pedidos e descartados hoje 📋 proposto em 05/08 · **aguarda os vetos CRM-1, CRM-2, CRM-3 e CRM-4** [[LEELA-E19-crm]]
+    - [ ] **COL · O dado que já pedimos para de ser jogado fora**
+        - [ ] COL-T1 o e-mail de cada participante passa a ser guardado, e a identidade do cliente para de cair no último recurso ⚔
+        - [ ] COL-T2 o código de município do CEP deixa de ser descartado, e a contagem por cidade para de depender de texto digitado
+    - [ ] **V1 · De onde veio a venda**
+        - [ ] V1-T1 agregado de canal por evento — cupom, afiliado e direto, com a comissão de cada um
+        - [ ] V1-T2 o bloco na Visão geral, com evento sem canal nenhum mostrando cem por cento direto
+    - [ ] **V2 · De onde vem o público**
+        - [ ] V2-T1 agregado de localização por evento, sem identidade e com a mesma supressão do cohort ⚔
+        - [ ] V2-T2 o bloco de cidade e bairro, dizendo compradores e declarando a cobertura
+        - [ ] V2-T3 cidade e UF derivadas do endereço quando o participante é o próprio comprador ⚔
+        - [ ] V2-T4 concentração acumulada do organizador, para escolher onde fazer a próxima edição
+        - [ ] LOC-T1 o evento ganha endereço estruturado — vale sozinho, e não espera veto nenhum
+    - [ ] **V3 · Quem pagou e não apareceu**
+        - [ ] V3-T1 ausência e kit não retirado, com a guarda de só existir onde houve credenciamento
+    - [ ] **V4 · Como o seu público paga**
+        - [ ] V4-T1 PIX contra cartão e a escada de parcelas, insumo das decisões de juros
 - [ ] **[E09/E16] Antecipação de recebíveis sob demanda pelo admin** — juntar custo de parcelamento e custo de antecipação, aplicar markup e enxergar o faturamento da plataforma ao longo do tempo; a antecipação seria sob demanda, nunca automática, antecipando só o necessário para cobrir repasses 🧊 visão de produto declarada em 03/08, depois da S1610 · JUROS-2 [[LEELA-E09-financeiro-profissional]]
 - [ ] **[E12] O relógio do carrinho começa no clique de "Garantir inscrição"** — hoje os 15 minutos partem da primeira vez que o servidor calcula o preço; sua decisão de 2026-07-27 move o começo para o clique, o que pede um sinal de abertura na entrada da tela 📋 ajusta a RN-158 [[LEELA-E12-landing]]
 - [ ] **[E12/E09] Carrinho vencido cancela sozinho, e a tela avisa que está processando** — "expirou o tempo? cancela": a expiração vira agendamento por carrinho, sem varredura geral (hoje a regra já vale no uso e a varredura só carimba o abandono). Junto vem a tela ocupada com "processando sua compra" enquanto o servidor trabalha, que também troca a mensagem errada lida por quem já pagou e trava o "tentar de novo" pelo tempo restante 📋 [[LEELA-E12-landing]]
