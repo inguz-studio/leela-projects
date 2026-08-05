@@ -488,6 +488,93 @@ describe('⚔ sem `QR_TOKEN_KEYS` no runtime, a resposta DIZ que não há link',
 });
 
 // ---------------------------------------------------------------------------
+// ⚔ REV-AREACLIENTE — a OUTRA metade da mesma falha de configuração
+// ---------------------------------------------------------------------------
+
+describe('⚔ sem base pública no runtime, a resposta também DIZ que não há link', () => {
+  // São DUAS variáveis e um só buraco na tela. A lane mediu o keyring e não
+  // mediu a base: sem `LEELA_PUBLIC_URL` o `urlIngressoPorLink` devolvia `null`
+  // para TODOS os itens, com `linksDisponiveis: true` e nenhum log de erro — e
+  // o cartão então dizia "O ingresso está no e-mail da compra", que é
+  // exatamente o que NÃO é verdade nessa configuração (sem base, o e-mail
+  // também sai sem link — D-ING-8). Falha de configuração calada, com a tela
+  // afirmando um caminho que não existe: o 04/08 inteiro de novo.
+  it('keyring presente e base AUSENTE não pode devolver `linksDisponiveis: true`', async () => {
+    const guardadas = {
+      publica: process.env['LEELA_PUBLIC_URL'],
+      landing: process.env['NEXT_PUBLIC_LEELA_URL'],
+    };
+    delete process.env['LEELA_PUBLIC_URL'];
+    delete process.env['NEXT_PUBLIC_LEELA_URL'];
+    vi.resetModules();
+    try {
+      const modulo = await import('../cliente/meusIngressos');
+      const r = await modulo.getMeusIngressosCore(db, caller(), AGORA);
+      // Os ingressos pagos continuam na tela — a disciplina não muda.
+      expect(r.estado).toBe('ok');
+      expect(r.proximos.length).toBeGreaterThan(0);
+      // Mas a resposta não pode fingir que o caminho existe.
+      expect(r.linksDisponiveis).toBe(false);
+      for (const i of [...r.proximos, ...r.passados]) {
+        expect(i.linkIngresso).toBeNull();
+      }
+    } finally {
+      if (guardadas.publica !== undefined) process.env['LEELA_PUBLIC_URL'] = guardadas.publica;
+      if (guardadas.landing !== undefined) {
+        process.env['NEXT_PUBLIC_LEELA_URL'] = guardadas.landing;
+      }
+      vi.resetModules();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ⚔ REV-AREACLIENTE — o corte de fichas de pessoa não pode ser mudo
+// ---------------------------------------------------------------------------
+
+describe('⚔ mais fichas de pessoa que o teto: a lista DECLARA que pode faltar', () => {
+  // O vetor declarado pela lane era o `in` de 30 com `slice` — e ele é
+  // INALCANÇÁVEL: `pessoaIds` já chega com no máximo 10 (o `limit` do gate). O
+  // corte real acontece LÁ, dez fichas antes, e era ele que estava mudo: a
+  // fonte (b) perdia linhas e a resposta se declarava completa. Quem tem mais
+  // de dez fichas (correções de CPF ao longo dos anos) deixava de ver
+  // ingressos que recebeu de presente, sem nenhum aviso na tela.
+  const DORA_UID = 'conta-dora-area';
+  const DORA_EMAIL = 'dora@example.com';
+
+  beforeAll(async () => {
+    const agora = ts(AGORA);
+    const b = db.batch();
+    for (let i = 0; i < 12; i += 1) {
+      b.set(db.doc(`pessoas/cpf_dora_${i}`), {
+        cpf: `9999999${String(i).padStart(4, '0')}`,
+        contaUid: DORA_UID,
+        contaEmail: DORA_EMAIL,
+        criadoEm: agora,
+        atualizadoEm: agora,
+      });
+    }
+    await b.commit();
+  }, 30_000);
+
+  it('doze fichas para um teto de dez devolve `listaCompleta: false`', async () => {
+    const r = await getMeusIngressosCore(
+      db,
+      caller({ uid: DORA_UID, email: DORA_EMAIL }),
+      AGORA
+    );
+    expect(r.estado).toBe('ok');
+    expect(r.listaCompleta).toBe(false);
+  });
+
+  it('dentro do teto a lista continua se declarando completa — o sinal não é ruído', async () => {
+    const r = await getMeusIngressosCore(db, caller(), AGORA);
+    expect(r.estado).toBe('ok');
+    expect(r.listaCompleta).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 2. Sem sessão → `unauthenticated`
 // ---------------------------------------------------------------------------
 

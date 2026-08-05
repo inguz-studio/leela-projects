@@ -46,7 +46,7 @@ import * as admin from 'firebase-admin';
 import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
 import { isCodigoIngressoValido, isStatusInscrito, type StatusInscrito } from '@leela/core';
-import { urlIngressoPorLink } from '../eventos/basePublica';
+import { basePublica, urlIngressoPorLink } from '../eventos/basePublica';
 import { assinarLinkIngresso } from '../eventos/linkIngresso';
 import { obterQrKeyring } from '../eventos/qrToken';
 import {
@@ -91,8 +91,10 @@ export interface GetMeusIngressosResult {
    */
   listaCompleta: boolean;
   /**
-   * false = o keyring de assinatura não estava no runtime, então NENHUM link
-   * de ingresso pôde ser cunhado nesta resposta. Verdade DIFERENTE de
+   * false = NENHUM link de ingresso pôde ser cunhado nesta resposta, porque
+   * faltou configuração no runtime — o keyring de assinatura (`QR_TOKEN_KEYS`)
+   * ou a base pública (`LEELA_PUBLIC_URL`). As duas produzem o mesmo buraco na
+   * tela e por isso respondem à mesma pergunta. Verdade DIFERENTE de
    * `listaCompleta`: ali faltam linhas, aqui falta o caminho até o ingresso.
    * Existe para que a falha de configuração seja visível na tela, e não só num
    * log que ninguém lê — foi assim que o `asaasWebhook` engoliu 04/08.
@@ -156,7 +158,18 @@ export async function getMeusIngressosCore(
   }
 
   // ── Fonte (2): os inscritos das fichas reivindicadas por esta conta ───────
-  let listaCompleta = true;
+  //
+  // ⚔ REV-AREACLIENTE · o `slice(0, TETO_IN_PESSOAS)` abaixo é INALCANÇÁVEL:
+  // `pessoaIds` já vem com no máximo `TETO_PESSOAS_POR_CONTA` (10) e o teto do
+  // `in` é 30. O corte real acontece LÁ, e era ele que estava mudo. Fica como
+  // guarda do limite do Firestore para o dia em que o teto de fichas subir.
+  let listaCompleta = !conta.pessoasTruncadas;
+  if (conta.pessoasTruncadas) {
+    logger.warn('area_cliente_pessoas_truncadas', {
+      uid: caller.uid,
+      teto: conta.pessoaIds.length,
+    });
+  }
   if (conta.pessoaIds.length > 0) {
     try {
       const grupo = await db
@@ -195,12 +208,26 @@ export async function getMeusIngressosCore(
   // o incidente de 04/08 visto do outro lado. A pessoa vê o ingresso e o
   // código; o que falta é o atalho, e a tela diz que falta.
   const keyring = obterQrKeyring();
-  const linksDisponiveis = keyring !== null;
+  // ⚔ REV-AREACLIENTE · SÃO DUAS CONFIGURAÇÕES, e faltar qualquer uma produz o
+  // MESMO resultado na tela: nenhum link. Até aqui só o keyring era medido, e
+  // a base pública ausente (`LEELA_PUBLIC_URL`/`NEXT_PUBLIC_LEELA_URL`) fazia
+  // `urlIngressoPorLink` devolver `null` para TODOS os itens — sem log, sem
+  // `alerta`, e com `linksDisponiveis: true` mentindo para a tela. O cartão
+  // então dizia "O ingresso está no e-mail da compra", que é falso exatamente
+  // nessa configuração: sem base o e-mail TAMBÉM sai sem link (D-ING-8). Era o
+  // 04/08 inteiro de novo — falha de configuração calada, com a tela afirmando
+  // um caminho que não existe.
+  const base = basePublica();
+  const linksDisponiveis = keyring !== null && base !== null;
   if (!linksDisponiveis) {
-    logger.error('area_cliente_qr_keyring_ausente', {
+    logger.error('area_cliente_link_ingresso_indisponivel', {
       uid: caller.uid,
       alerta: true,
-      detalhe: 'QR_TOKEN_KEYS ausente no runtime — nenhum link de ingresso foi assinado.',
+      keyringAusente: keyring === null,
+      basePublicaAusente: base === null,
+      detalhe:
+        'Nenhum link de ingresso pôde ser assinado: falta QR_TOKEN_KEYS e/ou ' +
+        'LEELA_PUBLIC_URL no runtime.',
     });
   }
 

@@ -81,10 +81,12 @@ export interface GetMeusIngressosResult {
   /** false = a lista pode estar incompleta, e a tela precisa dizer isso. */
   listaCompleta: boolean;
   /**
-   * false = o servidor não tinha o keyring de assinatura e NENHUM link de
-   * ingresso pôde ser cunhado. Verdade diferente de `listaCompleta`: ali
-   * faltam linhas, aqui falta o caminho até o ingresso. A tela precisa dizer
-   * isso — falha de configuração calada foi o que engoliu o primeiro PIX real.
+   * false = NENHUM link de ingresso pôde ser cunhado porque faltou
+   * configuração no servidor (o keyring de assinatura ou a base pública das
+   * URLs — as duas produzem o mesmo buraco). Verdade diferente de
+   * `listaCompleta`: ali faltam linhas, aqui falta o caminho até o ingresso. A
+   * tela precisa dizer isso — falha de configuração calada foi o que engoliu o
+   * primeiro PIX real.
    */
   linksDisponiveis: boolean;
 }

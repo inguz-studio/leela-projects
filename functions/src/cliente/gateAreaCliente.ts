@@ -75,6 +75,15 @@ export interface ContaDoCliente {
    * no `contaSemFriccao`), e a conta ainda assim tem compras para ver.
    */
   pessoaIds: string[];
+  /**
+   * ⚔ REV-AREACLIENTE · true = a conta tem MAIS fichas de pessoa do que o teto
+   * abaixo, e `pessoaIds` está CORTADO. Quem consome a lista de ingressos por
+   * ficha precisa saber disso: um corte silencioso aqui apaga da tela o
+   * ingresso que a pessoa recebeu de presente, com a lista se declarando
+   * completa. É o mesmo defeito que o `try/catch` do índice de grupo já
+   * declara — faltava a outra metade.
+   */
+  pessoasTruncadas: boolean;
 }
 
 export type ResolucaoContaDoCliente =
@@ -107,14 +116,17 @@ export async function resolverContaDoCliente(
     return { estado: 'email_nao_verificado', conta: null };
   }
 
+  // `+1` para SABER que cortou, e não só cortar. O teto continua o mesmo; o
+  // que muda é que a truncagem deixa de ser invisível para quem monta a lista.
   const snap = await db
     .collection(COLECAO_PESSOAS)
     .where('contaUid', '==', caller.uid)
-    .limit(TETO_PESSOAS_POR_CONTA)
+    .limit(TETO_PESSOAS_POR_CONTA + 1)
     .get();
 
+  const pessoasTruncadas = snap.size > TETO_PESSOAS_POR_CONTA;
   const pessoaIds: string[] = [];
-  for (const doc of snap.docs) {
+  for (const doc of snap.docs.slice(0, TETO_PESSOAS_POR_CONTA)) {
     // RN-174 (b) no leitor: o e-mail do token precisa SER o e-mail da compra
     // que efetivou o claim. Claim legado sem carimbo, ou conta que trocou de
     // e-mail depois do claim: NEGADO (fail-closed, igual ao prefill). O
@@ -124,7 +136,7 @@ export async function resolverContaDoCliente(
     pessoaIds.push(doc.id);
   }
 
-  return { estado: 'ok', conta: { uid: caller.uid, email, pessoaIds } };
+  return { estado: 'ok', conta: { uid: caller.uid, email, pessoaIds, pessoasTruncadas } };
 }
 
 /**
