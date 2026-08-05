@@ -49,9 +49,24 @@
 // Rules, então este script escreve onde o organizador é negado — e o teste da
 // lane prova as duas metades no mesmo emulator.
 //
+// O DESTINO É DECLARADO, NÃO ADIVINHADO (REV-5B). `--project` sozinho NÃO diz
+// para onde a escrita vai: `FIRESTORE_EMULATOR_HOST` no ambiente desvia o
+// Admin SDK inteiro para o emulator, e o script continuaria imprimindo
+// "Projeto: leela-hub · Aplicado: 17" enquanto produção não recebe UMA letra.
+// Medido: com a variável no ambiente, `--project leela-hub --apply` escreve no
+// emulator, sai 0 e é indistinguível de uma execução real — o mesmo acidente
+// clássico que a obrigatoriedade do `--project` existe para fechar, entrando
+// pela porta de trás. Por isso o destino é declarado nos DOIS sentidos:
+//   - variável no ambiente  ⇒ `--emulador` é OBRIGATÓRIO;
+//   - variável ausente      ⇒ `--emulador` é RECUSADO.
+// Assim "achei que estava no emulator" não escreve em produção, e "achei que
+// estava em produção" não escreve no vazio. O destino sai impresso na primeira
+// linha, antes de qualquer leitura.
+//
 // Uso:
 //   node functions/scripts/backfill-codigo-pedido.mjs --project leela-hub
 //   node functions/scripts/backfill-codigo-pedido.mjs --project leela-hub --apply
+//   node functions/scripts/backfill-codigo-pedido.mjs --project demo-x --emulador --apply
 //
 // Pré-requisito de build: o script importa o gerador do core e o mecanismo de
 // reserva de `functions/lib` — reusar é o ponto, duplicar o alfabeto ou o nome
@@ -60,18 +75,24 @@
 //
 // Ambiente:
 //   GOOGLE_APPLICATION_CREDENTIALS / credencial padrão do ambiente.
-//   FIRESTORE_EMULATOR_HOST — quando presente, roda contra o emulator.
+//   FIRESTORE_EMULATOR_HOST — quando presente, exige `--emulador` (ver acima).
 // =============================================================================
 
 import admin from 'firebase-admin';
 
 const args = process.argv.slice(2);
 const aplicar = args.includes('--apply');
+const emuladorDeclarado = args.includes('--emulador');
 const projectId = valorDe('--project');
 
 function valorDe(flag) {
   const i = args.indexOf(flag);
-  return i >= 0 && i + 1 < args.length ? args[i + 1] : undefined;
+  if (i < 0 || i + 1 >= args.length) return undefined;
+  const valor = args[i + 1];
+  // `--project --apply` fazia `projectId = '--apply'` e seguia em MODO APLICAR
+  // até morrer com pilha do gRPC. Valor que começa com `--` é flag comida por
+  // flag, não é id de projeto.
+  return valor.startsWith('--') ? undefined : valor;
 }
 
 // `--project` é OBRIGATÓRIO e NÃO cai para `GOOGLE_CLOUD_PROJECT` como o
@@ -83,6 +104,30 @@ if (projectId === undefined || projectId.length === 0) {
   console.error(
     'ERRO: informe --project <id>. Sem default e sem variável de ambiente —\n' +
       'este backfill escreve em pedidos e cria reservas de código.'
+  );
+  process.exit(1);
+}
+
+// O DESTINO, declarado nos dois sentidos (ver cabeçalho). `--project` diz o
+// NOME do projeto; só esta variável diz para qual BANCO a escrita vai.
+const hostEmulador = process.env.FIRESTORE_EMULATOR_HOST;
+const contraEmulador = typeof hostEmulador === 'string' && hostEmulador.length > 0;
+
+if (contraEmulador && !emuladorDeclarado) {
+  console.error(
+    `ERRO: FIRESTORE_EMULATOR_HOST=${hostEmulador} está no ambiente.\n` +
+      `Esta execução NÃO chega ao projeto "${projectId}" — ela vai para o emulator,\n` +
+      'e o relatório de sucesso seria indistinguível de uma execução real.\n' +
+      '  ensaio/execução local  → repita com --emulador\n' +
+      '  produção               → limpe a variável e repita'
+  );
+  process.exit(1);
+}
+if (!contraEmulador && emuladorDeclarado) {
+  console.error(
+    'ERRO: você pediu --emulador e NÃO há FIRESTORE_EMULATOR_HOST no ambiente.\n' +
+      `Esta execução iria para o Firestore REAL do projeto "${projectId}".\n` +
+      'Suba o emulator (e exporte a variável) ou tire o --emulador.'
   );
   process.exit(1);
 }
@@ -127,10 +172,47 @@ function refDoInscrito(eventoId, inscritoId) {
   return db.collection('eventos').doc(eventoId).collection('inscritos').doc(inscritoId);
 }
 
+/**
+ * Um id de documento do Firestore: string não vazia, sem `/` (que faria a
+ * `.doc()` receber caminho de coleção) e que não seja `.` nem `..`.
+ */
+function ehIdDeDocumento(id) {
+  return (
+    typeof id === 'string' &&
+    id.length > 0 &&
+    !id.includes('/') &&
+    id !== '.' &&
+    id !== '..'
+  );
+}
+
+/**
+ * Os inscritos ALCANÇÁVEIS da compra, e quantos ficaram para trás.
+ *
+ * ⚠️ Filtrar por `length > 0` não bastava: um `inscritoRefs` com `'a/b'`
+ * derrubava a VARREDURA INTEIRA — `.doc('a/b')` lança, ninguém pega, e o dono
+ * via pilha do gRPC em vez do relatório, com os outros dezesseis pedidos sem
+ * atendimento (medido em REV-5B). Um dado torto num pedido não pode calar os
+ * outros; ele vira linha do relatório.
+ *
+ * Repetido também sai: `[A, A, B]` fazia a conta de espelhos dizer 3 onde há 2
+ * documentos, e a conta é justamente o que o dono confere antes de aplicar.
+ */
 function idsDosInscritos(dados) {
   const refs = dados['inscritoRefs'];
-  if (!Array.isArray(refs)) return [];
-  return refs.filter((id) => typeof id === 'string' && id.length > 0);
+  if (!Array.isArray(refs)) {
+    return { ids: [], foraDeAlcance: 0, formaTorta: refs !== undefined };
+  }
+  const bons = [];
+  let foraDeAlcance = 0;
+  for (const id of refs) {
+    if (!ehIdDeDocumento(id)) {
+      foraDeAlcance++;
+      continue;
+    }
+    if (!bons.includes(id)) bons.push(id);
+  }
+  return { ids: bons, foraDeAlcance, formaTorta: false };
 }
 
 /**
@@ -142,7 +224,7 @@ async function planejar(doc) {
   const dados = doc.data();
   const codigo = dados['codigoPedido'];
   const eventoId = typeof dados['eventoId'] === 'string' ? dados['eventoId'] : null;
-  const inscritoIds = idsDosInscritos(dados);
+  const { ids: inscritoIds, foraDeAlcance, formaTorta } = idsDosInscritos(dados);
   const item = {
     id: doc.id,
     eventoId,
@@ -157,9 +239,14 @@ async function planejar(doc) {
         : null,
     reservaFalta: false,
     reservaDeOutro: null,
+    vestigio: null,
     espelhosAusentes: 0,
     espelhosDivergentes: 0,
-    espelhosPerdidos: 0,
+    // Inscrito listado que este script NÃO alcança: id torto, doc inexistente,
+    // `pedidoRef` de outra compra, ou pedido sem `eventoId` (sem a sala, não há
+    // caminho até o inscrito). Todos entram no relatório em vez de sumirem.
+    espelhosPerdidos: foraDeAlcance + (eventoId === null ? inscritoIds.length : 0),
+    inscritoRefsTorto: formaTorta,
   };
 
   if (item.codigoTorto !== null) {
@@ -196,7 +283,37 @@ async function planejar(doc) {
       const espelho = snap.get('codigoPedido');
       if (espelho === undefined || espelho === null) item.espelhosAusentes++;
       else if (item.codigo === null || espelho !== item.codigo) item.espelhosDivergentes++;
+      // VESTÍGIO: o pedido não tem código, mas o ESPELHO tem um canônico. Só o
+      // pedido é autoritativo, então o remendo normal escreveria por cima —
+      // e por cima de um código que pode ter saído num e-mail, com o agravante
+      // de que o valor apagado fica SEM reserva e volta ao sorteio de amanhã.
+      // A mesma doutrina do campo torto vale aqui: decidir por ele é decisão
+      // de gente.
+      if (item.codigo === null && isCodigoPedidoValido(espelho)) {
+        item.vestigio = `espelho ${snap.id} guarda ${formatarCodigoPedido(espelho)}`;
+      }
     }
+  }
+
+  // VESTÍGIO, o outro lado: uma reserva já aponta para este pedido, mas o
+  // pedido não tem o campo. Sortear outro deixaria a primeira órfã para sempre
+  // — código que ninguém mais alcança e que a busca do operador não acha.
+  // Consulta por `pedidoId` (nunca por código): não é o oráculo que a spec
+  // recusou, é a pergunta inversa, feita pelo Admin SDK numa operação.
+  if (item.codigo === null && item.vestigio === null) {
+    const antiga = await db
+      .collection(PEDIDO_CODIGOS_COL)
+      .where('pedidoId', '==', doc.id)
+      .limit(1)
+      .get();
+    if (!antiga.empty) {
+      item.vestigio = `reserva ${formatarCodigoPedido(antiga.docs[0].id)} já é deste pedido`;
+    }
+  }
+
+  if (item.vestigio !== null) {
+    item.desfecho = 'vestigio';
+    return item;
   }
 
   const precisaEspelho = item.espelhosAusentes + item.espelhosDivergentes > 0;
@@ -252,7 +369,7 @@ async function aplicarUm(pedidoId) {
     const dados = snap.data();
     const atual = dados['codigoPedido'];
     const eventoId = typeof dados['eventoId'] === 'string' ? dados['eventoId'] : null;
-    const inscritoIds = idsDosInscritos(dados);
+    const { ids: inscritoIds } = idsDosInscritos(dados);
     const refsInscritos =
       eventoId === null ? [] : inscritoIds.map((id) => refDoInscrito(eventoId, id));
     const snapsInscritos =
@@ -283,6 +400,23 @@ async function aplicarUm(pedidoId) {
       // ele é decisão de gente.
       return { desfecho: 'codigo_torto', valor: String(atual) };
     } else {
+      // VESTÍGIO relido DENTRO da transação: se algum espelho desta compra já
+      // guarda um código canônico, ele é a única testemunha de um código que
+      // pode ter sido comunicado. Sortear outro apagaria a testemunha e
+      // devolveria o código antigo ao sorteio de amanhã, sem reserva. Não se
+      // decide isso sozinho.
+      const vestigio = snapsInscritos.find(
+        (s) =>
+          s.exists &&
+          s.get('pedidoRef') === pedidoId &&
+          isCodigoPedidoValido(s.get('codigoPedido'))
+      );
+      if (vestigio !== undefined) {
+        return {
+          desfecho: 'vestigio',
+          detalhe: `espelho ${vestigio.id} guarda ${formatarCodigoPedido(vestigio.get('codigoPedido'))}`,
+        };
+      }
       const sorteado = await sortearLivreNaTx(tx, col);
       if (sorteado === null) return { desfecho: MOTIVO_SEM_CODIGO_PEDIDO_LIVRE };
       codigo = sorteado.codigo;
@@ -337,12 +471,18 @@ const aRemendar = plano.filter((p) => p.desfecho === 'remendar');
 const jaOk = plano.filter((p) => p.desfecho === 'ja_ok');
 const tortos = plano.filter((p) => p.desfecho === 'codigo_torto');
 const deOutro = plano.filter((p) => p.desfecho === 'reserva_de_outro');
+const vestigios = plano.filter((p) => p.desfecho === 'vestigio');
 const espelhosPendentes = plano.reduce(
   (n, p) => n + p.espelhosAusentes + p.espelhosDivergentes,
   0
 );
+/** Quem o script NÃO resolve sozinho — a fila que exige decisão de gente. */
+const precisamDeGente = tortos.length + deOutro.length + vestigios.length;
 
 console.log(`Projeto: ${projectId}`);
+console.log(
+  `Destino: ${contraEmulador ? `EMULATOR ${hostEmulador}` : 'PRODUÇÃO — Firestore real'}`
+);
 console.log(`Modo: ${aplicar ? 'APLICAR (escreve)' : 'DRY-RUN (não escreve)'}`);
 console.log(`Pedidos lidos: ${snapPedidos.size}`);
 console.log(`Já completos: ${jaOk.length} · sem código: ${aCarimbar.length}`);
@@ -351,7 +491,7 @@ console.log(
 );
 console.log(`Espelhos a carimbar: ${espelhosPendentes}`);
 console.log(
-  `NÃO tocados — código fora do formato: ${tortos.length} · reserva de outro pedido: ${deOutro.length}`
+  `NÃO tocados — código fora do formato: ${tortos.length} · reserva de outro pedido: ${deOutro.length} · vestígio de código anterior: ${vestigios.length}`
 );
 
 for (const p of [...aCarimbar, ...aRemendar]) {
@@ -363,7 +503,8 @@ for (const p of [...aCarimbar, ...aRemendar]) {
     partes.push(`${p.espelhosDivergentes} espelho(s) divergente(s)`);
   }
   const perdidos =
-    p.espelhosPerdidos > 0 ? ` · ${p.espelhosPerdidos} inscrito(s) fora de alcance` : '';
+    (p.espelhosPerdidos > 0 ? ` · ${p.espelhosPerdidos} inscrito(s) fora de alcance` : '') +
+    (p.inscritoRefsTorto ? ' · inscritoRefs não é lista (nenhum espelho alcançado)' : '');
   console.log(
     `  ${p.id}\n    evento=${p.eventoId ?? '(sem eventoId)'} status=${p.status} ` +
       `inscritos=${p.inscritos}${perdidos}\n    → ${partes.join(' + ')}`
@@ -377,17 +518,52 @@ for (const p of deOutro) {
     `  [RESERVA DE OUTRO] ${p.id} — ${formatarCodigoPedido(p.codigo)} pertence a ${p.reservaDeOutro}`
   );
 }
+for (const p of vestigios) {
+  console.log(`  [VESTÍGIO] ${p.id} — sem codigoPedido, mas ${p.vestigio}`);
+}
 
 if (!aplicar) {
-  // O ensaio NÃO sorteia de propósito. Um código impresso aqui não seria o que
+  // O ensaio NÃO SORTEIA de propósito: um código sorteado aqui não seria o que
   // o `--apply` grava (o sorteio acontece dentro da transação, na hora), e um
   // código de mentira colado num chamado é pior que nenhum. O que o ensaio
   // promete é a CONTA, e ela é exata.
+  //
+  // ⚠️ Isto NÃO quer dizer que nenhum `PED-XXXXX` apareça na saída do ensaio:
+  // código JÁ GRAVADO é impresso (reserva que falta, reserva de outro,
+  // vestígio) porque é dado real e é o que o dono precisa para agir. A
+  // promessa é "nenhum código NOVO nasce no ensaio", não "nenhum código é
+  // impresso" — a redação anterior prometia a segunda e o teste que a
+  // guardava só valia para o cenário sem código nenhum (REV-5B).
   console.log(
     '\nDRY-RUN — nada foi escrito e nenhum código foi sorteado.\n' +
       'Repita com --apply para aplicar.'
   );
-  process.exit(0);
+  // O ensaio é também a CONFERÊNCIA do runbook, e ali o código de saída era
+  // sempre 0 — inclusive com pedido torto e reserva alheia na lista. Quem
+  // confiasse no código de saída não veria ninguém ficar para trás.
+  process.exit(precisamDeGente > 0 ? 1 : 0);
+}
+
+/**
+ * A falha é TRAVA TEMPORÁRIA (espera resolve) ou estado que precisa de gente?
+ *
+ * Medido em REV-5B: matar o script no meio (Ctrl-C / queda do terminal) deixa
+ * a transação em voo segurando a trava do pedido no servidor. Repetir o
+ * comando em seguida falha NAQUELE pedido com `10 ABORTED: Transaction lock
+ * timeout` por cerca de um minuto, e depois passa sozinho. O relatório antigo
+ * jogava isso no balaio "precisa de gente", que manda o dono investigar um
+ * estado que só precisava de um minuto de relógio.
+ */
+function ehTravaTemporaria(erro) {
+  const codigo = erro !== null && typeof erro === 'object' ? erro['code'] : undefined;
+  const texto = erro instanceof Error ? erro.message : String(erro);
+  // 10 = ABORTED, 4 = DEADLINE_EXCEEDED, 14 = UNAVAILABLE (gRPC)
+  return (
+    codigo === 10 ||
+    codigo === 4 ||
+    codigo === 14 ||
+    /ABORTED|lock timeout|DEADLINE_EXCEEDED|UNAVAILABLE|too much contention/i.test(texto)
+  );
 }
 
 let carimbados = 0;
@@ -415,12 +591,13 @@ for (const p of [...aCarimbar, ...aRemendar]) {
   } catch (erro) {
     // Falha alto e SEGUE: um pedido que não pegou não pode segurar os outros,
     // e o relatório final diz exatamente quem ficou.
+    const texto = erro instanceof Error ? erro.message : String(erro);
     ficaramDeFora.push({
       id: p.id,
-      motivo: 'erro',
-      detalhe: erro instanceof Error ? erro.message : String(erro),
+      motivo: ehTravaTemporaria(erro) ? 'temporario' : 'erro',
+      detalhe: texto,
     });
-    console.error(`  ${p.id}  FALHOU — ${erro instanceof Error ? erro.message : String(erro)}`);
+    console.error(`  ${p.id}  FALHOU — ${texto}`);
   }
 }
 
@@ -428,17 +605,27 @@ console.log(
   `\nAplicado: ${carimbados} pedido(s) carimbado(s) · ${reservas} reserva(s) · ${espelhos} espelho(s).`
 );
 console.log(
-  `Não tocados: ${tortos.length} fora do formato · ${deOutro.length} com reserva de outro pedido.`
+  `Não tocados: ${tortos.length} fora do formato · ${deOutro.length} com reserva de outro pedido · ${vestigios.length} com vestígio de código anterior.`
 );
 
-if (ficaramDeFora.length > 0 || tortos.length > 0 || deOutro.length > 0) {
+const temporarios = ficaramDeFora.filter((f) => f.motivo === 'temporario');
+const paraGente = ficaramDeFora.filter((f) => f.motivo !== 'temporario');
+
+if (temporarios.length > 0) {
+  console.error('\nTRAVA TEMPORÁRIA — repita o comando em um ou dois minutos:');
+  for (const f of temporarios) console.error(`  ${f.id} — ${f.detalhe}`);
+}
+
+if (paraGente.length > 0 || precisamDeGente > 0) {
   console.error('\nFICOU DE FORA (precisa de gente):');
   for (const p of tortos) console.error(`  ${p.id} — codigoPedido fora do formato`);
   for (const p of deOutro) console.error(`  ${p.id} — reserva pertence a ${p.reservaDeOutro}`);
-  for (const f of ficaramDeFora) {
+  for (const p of vestigios) console.error(`  ${p.id} — ${p.vestigio}`);
+  for (const f of paraGente) {
     console.error(
       `  ${f.id} — ${f.motivo}${f.motivo === MOTIVO_SEM_CODIGO_PEDIDO_LIVRE ? ' (o espaço encolheu: acrescentar um símbolo, não aumentar o teto)' : ''}`
     );
   }
-  process.exit(1);
 }
+
+if (ficaramDeFora.length > 0 || precisamDeGente > 0) process.exit(1);

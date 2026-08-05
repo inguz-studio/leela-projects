@@ -74,19 +74,21 @@ interface Saida {
   stderr: string;
 }
 
-function rodar(args: readonly string[]): Promise<Saida> {
+function rodar(
+  args: readonly string[],
+  opcoes: { semEmulador?: boolean } = {}
+): Promise<Saida> {
   return new Promise((ok, falhou) => {
-    const filho = spawn(process.execPath, [SCRIPT, ...args], {
-      cwd: RAIZ,
-      env: {
-        ...process.env,
-        FIRESTORE_EMULATOR_HOST: `127.0.0.1:${FIRESTORE_PORT}`,
-        // Um projeto no ambiente NÃO pode suprir a flag: se ele suprisse, o
-        // teste do `--project` obrigatório passaria de graça.
-        GOOGLE_CLOUD_PROJECT: 'projeto-do-ambiente-que-nao-vale',
-        GCLOUD_PROJECT: 'projeto-do-ambiente-que-nao-vale',
-      },
-    });
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      FIRESTORE_EMULATOR_HOST: `127.0.0.1:${FIRESTORE_PORT}`,
+      // Um projeto no ambiente NÃO pode suprir a flag: se ele suprisse, o
+      // teste do `--project` obrigatório passaria de graça.
+      GOOGLE_CLOUD_PROJECT: 'projeto-do-ambiente-que-nao-vale',
+      GCLOUD_PROJECT: 'projeto-do-ambiente-que-nao-vale',
+    };
+    if (opcoes.semEmulador === true) delete env['FIRESTORE_EMULATOR_HOST'];
+    const filho = spawn(process.execPath, [SCRIPT, ...args], { cwd: RAIZ, env });
     let stdout = '';
     let stderr = '';
     filho.stdout.on('data', (c: Buffer) => (stdout += c.toString()));
@@ -96,8 +98,15 @@ function rodar(args: readonly string[]): Promise<Saida> {
   });
 }
 
+/**
+ * O jeito NORMAL de rodar nesta suíte: contra o emulator, com o destino
+ * DECLARADO. `--emulador` não é enfeite — sem ele o script recusa rodar quando
+ * `FIRESTORE_EMULATOR_HOST` está no ambiente, e é essa recusa que impede a
+ * execução que diz "Projeto: leela-hub · Aplicado: 17" sem tocar em produção
+ * (REV-5B, defeito 1).
+ */
 const backfill = (extra: readonly string[] = []): Promise<Saida> =>
-  rodar(['--project', PROJECT_ID, ...extra]);
+  rodar(['--project', PROJECT_ID, '--emulador', ...extra]);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -221,15 +230,23 @@ async function conferirInvariante(): Promise<void> {
   const pedidos = await db.collection('pedidos').get();
   const mapa = await reservas();
   const vistos = new Set<string>();
+  const codigosDosPedidos = new Map<string, string>();
   for (const p of pedidos.docs) {
     const codigo = p.get('codigoPedido') as unknown;
     if (codigo === undefined || codigo === null) continue;
     if (!isCodigoPedidoValido(codigo)) continue;
+    codigosDosPedidos.set(p.id, codigo);
     expect(mapa.get(codigo), `reserva de ${codigo} (pedido ${p.id})`).toBe(p.id);
     expect(vistos.has(codigo), `código ${codigo} repetido entre pedidos`).toBe(false);
     vistos.add(codigo);
-    const refs = p.get('inscritoRefs') as string[];
+    const refs = p.get('inscritoRefs') as unknown;
+    // O invariante não pode morrer no dado torto que ele existe para medir:
+    // `inscritoRefs` com id que não é caminho de documento derrubava a própria
+    // conferência (REV-5B). A regra aqui é a mesma do script.
+    if (!Array.isArray(refs)) continue;
     for (const inscritoId of refs) {
+      if (typeof inscritoId !== 'string' || inscritoId.length === 0) continue;
+      if (inscritoId.includes('/') || inscritoId === '.' || inscritoId === '..') continue;
       const insc = await db.doc(`eventos/${EVENTO_ID}/inscritos/${inscritoId}`).get();
       if (!insc.exists) continue;
       const espelho = insc.get('codigoPedido') as unknown;
@@ -237,6 +254,15 @@ async function conferirInvariante(): Promise<void> {
         expect(espelho, `espelho de ${inscritoId}`).toBe(codigo);
       }
     }
+  }
+  // A DIREÇÃO INVERSA, que faltava: nenhuma reserva pode apontar para um
+  // pedido que carrega OUTRO código. Era por essa fresta que a reserva órfã
+  // passava sem ninguém medir (REV-5B).
+  for (const [codigo, pedidoId] of mapa) {
+    const doPedido = codigosDosPedidos.get(pedidoId);
+    expect(doPedido, `reserva ${codigo} aponta para ${pedidoId}, que carrega ${doPedido}`).toBe(
+      codigo
+    );
   }
 }
 
@@ -537,4 +563,209 @@ describe('o espelho é escrito pelo Admin SDK onde o cliente é negado', () => {
     ).toBe(codigo);
     await conferirInvariante();
   }, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// 6 · REV-5B — o que a review antagonista derrubou
+// ---------------------------------------------------------------------------
+
+describe('REV-5B · o destino é declarado, não adivinhado', () => {
+  it('com FIRESTORE_EMULATOR_HOST no ambiente, `--apply` sem `--emulador` RECUSA', async () => {
+    // O defeito: `--project leela-hub --apply` com a variável no ambiente
+    // escrevia no EMULATOR, imprimia "Projeto: leela-hub · Aplicado: N" e saía
+    // 0. Sucesso indistinguível de uma execução real, com produção intacta.
+    await semear({ id: 'ped-destino', inscritos: ['insc-d1'] });
+
+    const r = await rodar(['--project', 'leela-hub', '--apply']);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('FIRESTORE_EMULATOR_HOST');
+    expect(r.stderr).toContain('leela-hub');
+    expect(r.stdout).not.toContain('Aplicado');
+
+    // Nada foi lido nem escrito em nome do projeto errado.
+    expect(await codigoDoPedido('ped-destino')).toBeUndefined();
+    expect((await reservas()).size).toBe(0);
+  }, 60_000);
+
+  it('o ENSAIO também recusa: a conferência não pode mentir sobre o destino', async () => {
+    await semear({ id: 'ped-destino-2', inscritos: ['insc-d2'] });
+    const r = await rodar(['--project', 'leela-hub']);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('FIRESTORE_EMULATOR_HOST');
+    expect(r.stdout).not.toContain('Pedidos lidos');
+  }, 60_000);
+
+  it('`--emulador` SEM emulator no ambiente recusa — o engano na direção oposta', async () => {
+    // "Achei que estava no emulator" é o acidente que escreve em produção.
+    const r = await rodar(['--project', 'leela-hub', '--apply', '--emulador'], {
+      semEmulador: true,
+    });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('Firestore REAL');
+    expect(r.stdout).not.toContain('Pedidos lidos');
+  }, 60_000);
+
+  it('o destino sai IMPRESSO antes de qualquer leitura', async () => {
+    await semear({ id: 'ped-destino-3', inscritos: ['insc-d3'] });
+    const r = await backfill();
+    expect(r.stdout).toContain(`Destino: EMULATOR 127.0.0.1:${FIRESTORE_PORT}`);
+    expect(r.stdout.indexOf('Destino:')).toBeLessThan(r.stdout.indexOf('Pedidos lidos'));
+  }, 60_000);
+
+  it('`--project --apply` (flag comendo flag) não vira MODO APLICAR contra projeto inventado', async () => {
+    await semear({ id: 'ped-flag', inscritos: ['insc-f1'] });
+    const r = await rodar(['--project', '--apply']);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('--project');
+    // A recusa é a do guarda, não uma pilha do gRPC vazando de dentro.
+    expect(r.stderr).not.toContain('INVALID_ARGUMENT');
+    expect(await codigoDoPedido('ped-flag')).toBeUndefined();
+  }, 60_000);
+});
+
+describe('REV-5B · dado torto num pedido não cala os outros', () => {
+  it('`inscritoRefs` com id que não é caminho de documento não derruba a varredura', async () => {
+    // O defeito: `.doc('a/b')` lançava, ninguém pegava, e o dono via pilha do
+    // gRPC em vez do relatório — com os OUTROS pedidos sem atendimento.
+    await semear({ id: 'ped-torto-ref', inscritos: ['insc-bom'] });
+    await db
+      .collection('pedidos')
+      .doc('ped-torto-ref')
+      .update({ inscritoRefs: ['insc-bom', 'a/b', '', 42] });
+    await semear({ id: 'ped-vizinho', inscritos: ['insc-viz'] });
+
+    const ensaio = await backfill();
+    expect(ensaio.stdout).toContain('Pedidos lidos: 2');
+    expect(ensaio.stdout).toContain('fora de alcance');
+
+    const r = await backfill(['--apply']);
+    expect(r.code).toBe(0);
+    // O vizinho foi atendido, que é o ponto.
+    const cVizinho = await codigoDoPedido('ped-vizinho');
+    expect(isCodigoPedidoValido(cVizinho)).toBe(true);
+    // E o pedido torto também ganhou código, com o espelho que dá para alcançar.
+    const cTorto = await codigoDoPedido('ped-torto-ref');
+    expect(isCodigoPedidoValido(cTorto)).toBe(true);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-bom`).get()).get('codigoPedido')
+    ).toBe(cTorto);
+    await conferirInvariante();
+  }, 120_000);
+
+  it('id repetido em `inscritoRefs` não infla a conta que o dono confere', async () => {
+    await semear({ id: 'ped-dup', inscritos: ['insc-x', 'insc-y'] });
+    await db
+      .collection('pedidos')
+      .doc('ped-dup')
+      .update({ inscritoRefs: ['insc-x', 'insc-x', 'insc-y'] });
+
+    const ensaio = await backfill();
+    // Dois documentos de inscrito, não três.
+    expect(ensaio.stdout).toContain('Espelhos a carimbar: 2');
+
+    const r = await backfill(['--apply']);
+    expect(r.stdout).toContain('· 2 espelho(s).');
+    await conferirInvariante();
+  }, 120_000);
+});
+
+describe('REV-5B · vestígio de código anterior não é sobrescrito', () => {
+  it('espelho com código canônico e pedido sem código: o script NÃO sorteia por cima', async () => {
+    // O defeito: o backfill sorteava um código NOVO, carimbava o pedido e
+    // apagava o código do espelho — que podia já ter saído num e-mail — e
+    // ainda devolvia o valor apagado ao sorteio de amanhã, sem reserva.
+    await semear({ id: 'ped-vestigio', inscritos: ['insc-v1', 'insc-v2'] });
+    await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-v1`).update({ codigoPedido: 'H4J5K' });
+
+    const ensaio = await backfill();
+    expect(ensaio.stdout).toContain('vestígio de código anterior: 1');
+    expect(ensaio.stdout).toContain('[VESTÍGIO] ped-vestigio');
+    expect(ensaio.stdout).toContain('PED-H4J5K');
+    expect(ensaio.code).toBe(1);
+
+    const r = await backfill(['--apply']);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('ped-vestigio');
+    // Nada mudou: nem código no pedido, nem reserva, nem espelho trocado.
+    expect(await codigoDoPedido('ped-vestigio')).toBeUndefined();
+    expect((await reservas()).size).toBe(0);
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-v1`).get()).get('codigoPedido')
+    ).toBe('H4J5K');
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-v2`).get()).get('codigoPedido')
+    ).toBeUndefined();
+  }, 120_000);
+
+  it('reserva que já aponta para este pedido não vira reserva órfã', async () => {
+    // O defeito: o script ignorava a reserva existente, sorteava outro código,
+    // e a primeira ficava para sempre apontando para um pedido que carrega
+    // outro código — sumindo da busca do operador.
+    await semear({ id: 'ped-reserva-viva', inscritos: ['insc-rv'] });
+    await db.collection(PEDIDO_CODIGOS_COL).doc('M7N8P').set({
+      pedidoId: 'ped-reserva-viva',
+      criadoEm: AGORA,
+    });
+
+    const r = await backfill(['--apply']);
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('vestígio de código anterior: 1');
+    expect(r.stderr).toContain('PED-M7N8P');
+    expect(await codigoDoPedido('ped-reserva-viva')).toBeUndefined();
+    // Uma reserva, a que já existia — nenhuma segunda foi criada.
+    const mapa = await reservas();
+    expect(mapa.size).toBe(1);
+    expect(mapa.get('M7N8P')).toBe('ped-reserva-viva');
+  }, 120_000);
+
+  it('espelho divergente com pedido que TEM código próprio continua sendo curado', async () => {
+    // O guarda do vestígio não pode paralisar o remendo legítimo: código de
+    // outra produtora sobre pedido que tem código próprio, cura.
+    await semear({ id: 'ped-cura', inscritos: ['insc-cu'], codigoPedido: 'A2B3C' });
+    await db.collection(PEDIDO_CODIGOS_COL).doc('A2B3C').set({
+      pedidoId: 'ped-cura',
+      criadoEm: AGORA,
+    });
+    await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-cu`).update({ codigoPedido: 'Z9Y8X' });
+
+    const r = await backfill(['--apply']);
+    expect(r.code).toBe(0);
+    expect(await codigoDoPedido('ped-cura')).toBe('A2B3C');
+    expect(
+      (await db.doc(`eventos/${EVENTO_ID}/inscritos/insc-cu`).get()).get('codigoPedido')
+    ).toBe('A2B3C');
+    await conferirInvariante();
+  }, 120_000);
+});
+
+describe('REV-5B · o código de saída e a saída do ensaio', () => {
+  it('o ENSAIO sai 1 quando alguém precisa de gente — a conferência não mente', async () => {
+    // O defeito: o ensaio saía 0 SEMPRE, e o runbook usa o ensaio como
+    // conferência dizendo "0 = tudo entrou".
+    await semear({ id: 'ped-torto-saida', inscritos: ['insc-ts'], codigoPedido: 'abc' });
+    await semear({ id: 'ped-limpo', inscritos: ['insc-lp'] });
+
+    const comProblema = await backfill();
+    expect(comProblema.code).toBe(1);
+    expect(comProblema.stdout).toContain('[FORA DO FORMATO] ped-torto-saida');
+
+    // E sai 0 quando a fila inteira é resolúvel — inclusive com trabalho a fazer.
+    await limpar();
+    await semear({ id: 'ped-limpo-2', inscritos: ['insc-lp2'] });
+    expect((await backfill()).code).toBe(0);
+  }, 120_000);
+
+  it('o ensaio não SORTEIA, mas imprime código JÁ GRAVADO — a promessa exata', async () => {
+    // A afirmação anterior ("nenhum PED-XXXXX vaza para a saída do ensaio")
+    // era mais forte que o código: o ensaio imprime, sim, código já gravado
+    // quando falta a reserva ou quando ela é de outro. O que ele nunca faz é
+    // SORTEAR um código novo.
+    await semear({ id: 'ped-sem-reserva', inscritos: ['insc-sr'], codigoPedido: 'H4J5K' });
+    const r = await backfill();
+    expect(r.stdout).toContain('PED-H4J5K');
+    // Nenhum código NOVO nasceu: a única sequência PED- impressa é a gravada.
+    const impressos = new Set(r.stdout.match(/PED-[A-Z2-9]{5}/g) ?? []);
+    expect([...impressos]).toEqual(['PED-H4J5K']);
+    expect((await reservas()).size).toBe(0);
+  }, 60_000);
 });
