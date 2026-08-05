@@ -94,6 +94,46 @@ describe('Dialog — contrato a11y', () => {
   });
 });
 
+// FIX-OVERLAY-LOGIN (04/08) — o primitivo era o único overlay do DS sem portal
+// (Modal, Drawer e DropdownMenu já portalizavam). Em produção isso pôs o modal
+// de login da landing dentro de um `<header>` com `backdrop-blur`, que cria
+// bloco de contenção para `position: fixed`: o `inset-0` resolveu contra a
+// caixa do header (1920×64) e o modal nasceu cortado no topo, sem cortina.
+// A prova é ESTRUTURAL porque jsdom não calcula layout nem `backdrop-filter`.
+describe('Dialog — portal no body (imune a ancestral filtrado)', () => {
+  function AbrirDentroDeAncestralFiltrado(): React.JSX.Element {
+    const [open, setOpen] = React.useState(false);
+    return (
+      // O ancestral hostil, igual ao header da landing.
+      <div className="sticky top-0 z-40 backdrop-blur" data-testid="ancestral-filtrado">
+        <button type="button" onClick={() => setOpen(true)}>
+          Abrir dialog
+        </button>
+        <Dialog open={open} onOpenChange={setOpen} title="Título do dialog">
+          <p>Conteúdo do dialog.</p>
+        </Dialog>
+      </div>
+    );
+  }
+
+  it('renderiza no document.body, fora do ancestral que o continha', () => {
+    render(<AbrirDentroDeAncestralFiltrado />);
+    fireEvent.click(screen.getByRole('button', { name: /abrir dialog/i }));
+    const dialog = screen.getByRole('dialog');
+    const ancestral = screen.getByTestId('ancestral-filtrado');
+    expect(ancestral.contains(dialog)).toBe(false);
+    expect(dialog.parentElement).toBe(document.body);
+  });
+
+  it('desmonta o conteúdo portalizado ao fechar (não vaza nó no body)', () => {
+    render(<AbrirDentroDeAncestralFiltrado />);
+    fireEvent.click(screen.getByRole('button', { name: /abrir dialog/i }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
 describe('Dialog — focus trap (comportamento adquirido W2-F-05)', () => {
   it('ao abrir, o foco entra no primeiro focável (X de fechar)', () => {
     const { primeiro } = abrir();

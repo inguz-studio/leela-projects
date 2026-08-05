@@ -23,6 +23,16 @@ const SRC = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const EXTERNAL_ALLOWLIST = new Set([
   'react',
+  // `react-dom` entrou em 04/08 com o portal do `Dialog` (FIX-OVERLAY-LOGIN) e
+  // é decisão de arquitetura registrada, não drift. O perigo que esta allowlist
+  // guarda é o do `@radix-ui/*`: o dist EXTERNALIZA a dependência e, se ela não
+  // existir no grafo de quem consome, vira MODULE_NOT_FOUND no bundle público
+  // (o 500 da lane LPVK). `react-dom` não corre esse risco por três razões
+  // verificadas: é peerDependency declarada do DS, é externalizada pelo tsup
+  // pelo MESMO caminho que `react`, e é dependência direta da landing (Next não
+  // renderiza sem ela). Some-se que `Modal`, `Drawer` e `DropdownMenu` já a
+  // importavam pelo barrel — o `dialog.ts` era a exceção, não a regra.
+  'react-dom',
   'class-variance-authority',
   'clsx',
   'tailwind-merge',

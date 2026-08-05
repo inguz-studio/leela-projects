@@ -243,6 +243,128 @@ describe('⚔ REV-AREACLIENTE · a área do cliente é alcançável e a entrada 
   });
 });
 
+// ⚔ FIX-OVERLAY-LOGIN (04/08, defeito reportado pelo DONO em produção) — o
+// overlay abria colado no topo, cortado ao meio e sem cortina. Nada no
+// comportamento estava errado: o `fixed inset-0` do diálogo resolvia contra a
+// caixa do `<header>` (1920×64) em vez da viewport, porque `backdrop-filter`
+// cria bloco de contenção para descendentes `position: fixed` — a mesma regra
+// de `transform`/`filter`/`perspective`/`will-change`/`contain`.
+//
+// POR QUE A SUÍTE NÃO PEGOU: jsdom não calcula layout, então nenhum teste de
+// posição encontraria isto — e, pior, os casos acima renderizam o `ContaHeader`
+// SOZINHO, fora do header que o contém na página real. O defeito só existe na
+// composição. Por isso os casos abaixo (a) montam o slot dentro de uma réplica
+// do header e (b) provam que a réplica é fiel lendo a fonte do `PublicHeader`.
+// A asserção é ESTRUTURAL (quem é pai de quem), não visual — é o que sobrevive
+// à ausência de layout no jsdom.
+describe('⚔ FIX-OVERLAY-LOGIN · o overlay não pode nascer preso ao header', () => {
+  // Classes que criam bloco de contenção para `position: fixed`. Um ancestral
+  // com qualquer uma delas rouba o overlay da viewport.
+  const CLASSES_QUE_PRENDEM_FIXED = [
+    'backdrop-blur',
+    'backdrop-filter',
+    'filter',
+    'transform',
+    'perspective',
+    'will-change',
+    'contain-',
+  ];
+
+  function ancestralQuePrende(no: Element): HTMLElement | null {
+    let atual = no.parentElement;
+    while (atual !== null) {
+      const classes = atual.getAttribute('class') ?? '';
+      if (CLASSES_QUE_PRENDEM_FIXED.some((c) => classes.includes(c))) return atual;
+      atual = atual.parentElement;
+    }
+    return null;
+  }
+
+  /** Réplica do `PublicHeader` real — fidelidade provada pelo caso seguinte. */
+  async function renderNoHeader(): Promise<HTMLElement> {
+    const { ContaHeader } = await import('@/app/components/ContaHeader');
+    const { container } = render(
+      <header data-shell-publico className="sticky top-0 z-40 bg-surface-base/90 backdrop-blur">
+        <div className="flex h-16 items-center justify-between">
+          <nav className="flex items-center gap-1 sm:gap-2" aria-label="Ações">
+            <ContaHeader />
+          </nav>
+        </div>
+      </header>,
+    );
+    return container.querySelector('header') as HTMLElement;
+  }
+
+  it('aberto de dentro do header, o diálogo é filho do BODY — não do header', async () => {
+    const header = await renderNoHeader();
+    await abrirOverlay();
+    const dialog = screen.getByRole('dialog');
+    // O defeito em produção: o diálogo vivia dentro do `<nav>` do header.
+    expect(header.contains(dialog)).toBe(false);
+    expect(dialog.parentElement).toBe(document.body);
+  });
+
+  it('nenhum ancestral do diálogo cria bloco de contenção para `fixed`', async () => {
+    await renderNoHeader();
+    await abrirOverlay();
+    const culpado = ancestralQuePrende(screen.getByRole('dialog'));
+    // A mensagem entrega o ancestral culpado — o próximo a quebrar isto não
+    // precisa medir nada no navegador para saber quem foi.
+    expect(
+      culpado === null ? null : `${culpado.tagName}.${culpado.getAttribute('class') ?? ''}`,
+    ).toBeNull();
+  });
+
+  it('a réplica do header é fiel: o header REAL filtra e contém o slot de conta', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const fonte = readFileSync(resolve(__dirname, '../app/components/PublicHeader.tsx'), 'utf8');
+    // Se qualquer uma destas três deixar de valer, os dois casos acima viram
+    // teatro: ou o header parou de filtrar, ou o slot saiu de dentro dele.
+    expect(fonte).toContain('backdrop-blur');
+    expect(fonte).toContain('sticky top-0 z-40');
+    expect(fonte).toContain('<ContaHeader />');
+  });
+
+  it('o diálogo fica ACIMA do header (z-40) e da barra fixa de inscrição (z-40)', async () => {
+    await renderNoHeader();
+    await abrirOverlay();
+    // No body os três disputam no contexto raiz; preso no header, o z-50 do
+    // diálogo ficava capado dentro do z-40 dele e a barra do rodapé pintava
+    // por cima. Asserção de classe, não de layout — jsdom não pinta.
+    expect(screen.getByRole('dialog').getAttribute('class')).toContain('z-50');
+  });
+
+  it('Esc, clique fora e retorno de foco ao abridor sobrevivem ao portal', async () => {
+    await renderNoHeader();
+    const botao = abridor();
+    botao.focus();
+    await abrirOverlay();
+    const dialog = screen.getByRole('dialog');
+
+    // Clique na cortina (1ª via) — ela é o primeiro filho do container.
+    fireEvent.click(dialog.firstElementChild as HTMLElement);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(botao);
+
+    // Esc (2ª via) + retorno de foco, agora com o diálogo fora da árvore do
+    // header: o `returnFocusRef` aponta para um nó que continua no header.
+    await abrirOverlay();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(botao);
+  });
+
+  it('a trava de rolagem do fundo continua valendo com o portal', async () => {
+    await renderNoHeader();
+    await abrirOverlay();
+    expect(document.body.style.overflow).toBe('hidden');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.body.style.overflow).toBe('');
+  });
+});
+
 describe('S1221-T1 · a credencial não sobrevive ao fechamento', () => {
   it('fechar e reabrir o overlay devolve o campo de senha vazio', async () => {
     await renderConta();

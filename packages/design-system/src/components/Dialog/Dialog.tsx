@@ -26,9 +26,43 @@
  * header/body/footer) para reestilização futura (ex.: painel).
  * `z-50` segue a escala z consistente das superfícies (tokenização --z-* é
  * proposta registrada no W2-F-04/W1-M-04 — manter alinhado até lá).
+ *
+ * PORTAL PARA O BODY (defeito de produção 04/08 · FIX-OVERLAY-LOGIN)
+ * -----------------------------------------------------------------
+ * Este primitivo era o ÚNICO overlay do DS que renderizava in-place: `Modal`,
+ * `Drawer` e `DropdownMenu` já portalizavam. A omissão custou caro em produção.
+ *
+ * `position: fixed` NÃO resolve contra a viewport quando algum ancestral cria
+ * bloco de contenção — e `backdrop-filter` cria, pela mesma regra de
+ * `transform`/`filter`/`perspective`/`will-change`/`contain`. O `PublicHeader`
+ * da landing é `sticky top-0 z-40 ... backdrop-blur` e o slot de conta vive
+ * dentro dele; o `fixed inset-0` deste container passou a resolver contra a
+ * caixa do header (medido no ar: 1920×64 numa viewport de 911 de altura). O
+ * modal de login centralizava dentro de 64px, nascia cortado ao meio colado no
+ * topo, e a cortina não cobria tela nenhuma.
+ *
+ * A correção é o portal, não tirar o `backdrop-blur` do header: o blur é da
+ * marca e não é a causa — a causa é o overlay estar DENTRO dele. Portalizado no
+ * `document.body`, o container fica imune a QUALQUER ancestral filtrado, hoje e
+ * no futuro, para os quatro consumidores (login, regulamento, kit, aceites).
+ *
+ * Efeito colateral bem-vindo no empilhamento: o `backdrop-filter` do header
+ * também criava CONTEXTO DE EMPILHAMENTO, então o `z-50` daqui ficava preso
+ * dentro do `z-40` do header — a barra fixa "Garantir inscrição" da página do
+ * evento (também `z-40`, e posterior no DOM) pintava POR CIMA do modal. No body,
+ * os três disputam no contexto raiz e `z-50` ganha de ambos sem tocar em token.
+ *
+ * SSR (Next 14): `createPortal` toca `document`, que não existe no servidor, e
+ * um portal presente já na hidratação diverge do HTML do servidor. Por isso o
+ * portal só monta depois do primeiro efeito do cliente (`montado`), e o
+ * `useDialogBehavior` recebe `open && montado` — sem esse `&&`, um diálogo que
+ * nascesse aberto rodaria o efeito de foco com o painel ainda fora do DOM e o
+ * foco nunca entraria. Nenhum consumidor nasce aberto hoje; a trava é para que
+ * o primeiro que nascer não descubra isso em produção.
  */
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useDialogBehavior } from './useDialogBehavior';
@@ -88,15 +122,32 @@ export function Dialog({
 
   const close = React.useCallback(() => onOpenChange(false), [onOpenChange]);
 
+  // Só o cliente tem `document.body` — ver "PORTAL PARA O BODY" no topo.
+  const [montado, setMontado] = React.useState(false);
+  React.useEffect(() => {
+    setMontado(true);
+  }, []);
+
+  // `aberto` é o estado REAL da tela: aberto E com o painel podendo existir no
+  // DOM. O hook precisa dessa versão, não do `open` cru, senão o efeito de foco
+  // rodaria antes do portal existir.
+  const aberto = open && montado;
+
   // Comportamento (Esc, focus trap cíclico, scroll-lock, retorno de foco) é
   // fonte ÚNICA no hook compartilhado — foco de entrada no X (closeRef).
-  useDialogBehavior({ open, onClose: close, panelRef, initialFocusRef: closeRef, returnFocusRef });
+  useDialogBehavior({
+    open: aberto,
+    onClose: close,
+    panelRef,
+    initialFocusRef: closeRef,
+    returnFocusRef,
+  });
 
-  if (!open) return null;
+  if (!aberto) return null;
 
   const TitleTag = titleAs;
 
-  return (
+  return createPortal(
     <div
       className={cn(
         'fixed inset-0 z-50 flex items-end justify-center sm:items-center',
@@ -167,7 +218,8 @@ export function Dialog({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
