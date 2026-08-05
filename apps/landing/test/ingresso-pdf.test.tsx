@@ -23,11 +23,17 @@ import { inflateSync } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { isCodigoIngressoValido, type EstadoIngressoPagina } from '@leela/core';
+import type * as ModuloIngresso from '../lib/ingresso';
 
 // O leitor da Function é o ÚNICO ponto mockado: tudo o mais nestes testes é o
 // código de produção — a rota, o gerador do PDF e a página.
+//
+// O tipo do módulo original vem por IMPORT DE TIPO, e não por `typeof
+// import(...)` na chamada: a regra `consistent-type-imports` proíbe anotação
+// de tipo em forma de `import()`, e o gate `eslint --max-warnings 0` da landing
+// estava vermelho por causa desta linha desde `dadb10a1`.
 vi.mock('../lib/ingresso', async (original) => {
-  const real = await original<typeof import('../lib/ingresso')>();
+  const real = await original<typeof ModuloIngresso>();
   return { ...real, buscarIngressoPorLink: vi.fn() };
 });
 
