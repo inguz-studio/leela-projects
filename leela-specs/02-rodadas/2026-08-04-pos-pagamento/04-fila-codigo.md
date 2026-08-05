@@ -52,22 +52,67 @@ com as duas reconciliações desta rodada:
 | `B1 · S1222-T1` · callables do próprio dono da conta ⚔ | **entregue** | `9acb8fb5` — Rules intocadas; a leitura exige o e-mail **verificado** do token |
 | `B2 · S1222-T2` · a área na landing | **entregue** | `3acfe7a8` (+ `5ffb69e0`, o segredo que assina o link do ingresso passou a ser declarado) |
 | `B3 · S1222-T3` · meus dados e trocar senha | **entregue** | `cdef2987` — edita a identidade global (ADR-009), nunca o perfil de organizador |
-| `B4 · S1222-T4` · meus clubes e convites | **não iniciada** | é a única da frente B que sobra |
+| `B4 · S1222-T4` · meus clubes e convites | **entregue, ⚔ em review** | `4b72c556` (servidor, 22 casos) + `b3e51638` (tela, 14 casos) — `collectionGroup` keyed no trust anchor (molde `getMinhasAfiliacoes`), `orderBy(FieldPath.documentId())` porque ordenar por data **descartaria docs em silêncio** nesta coleção, e o aceite continua no link do e-mail porque o token só existe como hash. **Achado que muda a expectativa do produto:** não existe caminho pelo qual um participante entre num clube, então a tela nasce vazia para praticamente toda conta real (**CLUBES-1** no painel). Traz **três índices de grupo novos**. Lane REV-B4 em voo |
 | `B5 · S1222-T5` · as duas portas ⚔ | **entregue** | `bdebe384` — nenhum caminho da área alcança `/plataforma`; a leitura corrente do **ADMINSEP-2** foi implementada com ponto de mudança único |
 | `C1 · S1223-T1` · `/definir-senha` na landing ⚔ | **entregue** | `2d7f24d7` — nenhum seam novo, nenhum token inventado |
 | `C2 · S1223-T2` · destino por origem ⚔ | **entregue** | `6d092619` |
 | `C3 · S1223-T3` · domínio autorizado no Auth | **pendente** | passo de **operação**, fora da esteira — e agora mais urgente: é ele que faz a jornada de primeiro acesso terminar dentro da área |
 
-**A frente B está ⚔ e ainda não foi revisada.** A lane declarou oito vetores em ordem de risco, e
-os dois primeiros são de fronteira: o vínculo que autoriza o histórico (igualdade de uid é o
-isolamento, o e-mail é re-checagem em memória — existe combinação que devolva pedido de outra
-conta?) e a segunda fonte dos ingressos, cujo `in` corta silenciosamente acima de trinta fichas,
-sem marcar a lista como incompleta.
+**A frente B foi revisada em 05/08 — APROVADA-COM-FIXES** (lane REV-AREACLIENTE, `46a5eb8a` +
+`40f094b1` + `a1486abe`). Os dezesseis vetores das duas lanes de construção foram atacados e **a
+fronteira não quebrou**: o vínculo que autoriza o histórico se sustenta nos dois sentidos (uid
+igual com e-mail diferente é filtrado em memória, e-mail igual com uid diferente nunca chega à
+memória porque a query é por uid, e o campo não é forjável porque `pedidos` é `write: if false`),
+e a área é **estritamente mais fechada que a Rule da RN-469**. O segundo vetor declarado era
+**inalcançável** — o `in` de trinta nunca corta, porque o teto de pessoas por conta é dez —, e o
+corte real acontece dez fichas antes, no `.limit(10)`, onde ele era mudo (D4).
+
+O que caiu foram **quatro faltas caladas**, três delas da mesma classe que originou esta rodada.
+A maior não estava em vetor nenhum, porque cada task estava certa sozinha: **a área foi
+construída inteira e ficou sem rua** (D1, ALTA). Os únicos caminhos até `/minha-conta` eram os
+dois momentos em que a pessoa acabou de chegar; o rótulo da conta no header era texto morto; e o
+"não sei minha senha" que a `S1221-T1` registrou por escrito como pertencendo à C1 **nunca foi
+ligado** — a prop existia e nenhum chamador a usava. Isso deixava sem saída exatamente quem esta
+rodada existe para atender, porque a conta do comprador nasce sem senha e o link vai por e-mail;
+com o e-mail quebrado — 04/08 — a porta de entrada mandava usar o mesmo e-mail da compra e não
+oferecia caminho nenhum até uma senha, e é pior na **recompra**, em que o e-mail de "conta criada"
+não é enviado de propósito. Os outros três: senha gravada com login falho virava beco (D2), a
+falta da base pública deixava o cartão afirmar um caminho que não existe naquela configuração
+(D3), e o corte de fichas era mudo (D4). Linha de base nova da suíte da landing: **53 arquivos /
+665 testes**.
+
+⚠️ **O nome do log mudou** e a política de alerta da operação tem de casar:
+`area_cliente_qr_keyring_ausente` → **`area_cliente_link_ingresso_indisponivel`**, severidade
+ERROR, `alerta: true`, com `keyringAusente` e `basePublicaAusente` no payload. São **duas**
+variáveis a conferir antes do deploy, não uma.
+
+**A dependência A4 foi paga na mesma noite** (`b1bd5dc4`, revisada em `8d779dce`+`d58caa5d`), sem
+retrabalho na B1 — a decisão declarada de atravessar se confirmou correta, porque a dependência
+era de higiene do vínculo e não de autorização.
 
 **Pré-requisito de deploy que não é opcional:** `firebase deploy --only firestore:indexes`
 **antes** do deploy das functions. O emulador não cobra índice, então nenhum teste desta frente
 prova este passo; sem ele, `getMeusIngressos` degrada e quem foi presenteado não vê o próprio
 ingresso.
+
+**+05/08 · agora são QUATRO overrides de grupo, e o passo continua sendo um só.** A B4 acrescentou
+três `fieldOverride` COLLECTION_GROUP ao `firestore.indexes.json`, e as três queries dela dependem
+deles:
+
+| collectionGroup | fieldPath | queryScope |
+|---|---|---|
+| `inscritos` | `pessoaRef` | COLLECTION_GROUP ASC (da BUILD-AREACLIENTE-2) |
+| `membros` | `atletaId` | COLLECTION_GROUP ASC |
+| `afiliados` | `responsavelEmail` | COLLECTION_GROUP ASC |
+| `convites` | `email` | COLLECTION_GROUP ASC |
+
+Sem o deploy de índices cada query lança `FAILED_PRECONDITION`, e o caminho **não engole**: cai no
+`try/catch`, a lista volta vazia e a resposta traz o marcador de incompleta, que a tela diz, mais
+`logger.error` com `alerta: true`. A pessoa vê um aviso honesto em vez de uma lista vazia mentindo
+— mas **vê um aviso**, e é por isso que o passo não pode ser esquecido. **Política de alerta: três
+nomes novos para casar** — `area_cliente_clubes_falhou`,
+`area_cliente_convites_influenciador_falhou` e `area_cliente_convites_promotor_falhou`, todos ERROR
+com `alerta: true` e todos sem PII.
 
 **Dependência da fila que NÃO estava paga, e que a B1 atravessou por decisão declarada.** A fila
 ADMINSEP escreve a B1 como dependente da **A4** (`S032-T4` — o `contaSemFriccao` para de amarrar
@@ -176,13 +221,14 @@ segura a volta silenciosa do id numa tela futura.
 **5d não disputa território com ninguém** nesta rodada: `apps/painel` está livre. Ela pode
 correr em paralelo com 5c.
 
-**Estado em 05/08 · Frente 5 pela metade, fora do ar.**
+**Estado em 05/08 · Frente 5 construída inteira, fora do ar. Falta a execução do retroativo (ato
+do dono) e a review da 5c, em voo.**
 
 | # | Task | Estado | Prova |
 |---|---|---|---|
 | 5a | `S1228-T1` ⚔ | **entregue e revisada** | `3acc6877` · review `b8c7c29e` (APROVADA-COM-FIXES) · defeito D-1 fechado em `48fc7116`, sorteio criptográfico em `d36afb64` |
-| 5b | `S1228-T4` ⚔ | **entregue, aguardando review** | `d1d6582a` · 9/9 de integração com o script rodado como processo separado; **ensaio contra produção executado em leitura pura** — 17 pedidos, todos sem código, 22 espelhos a carimbar, zero fora de formato e zero reserva alheia · a execução com `--apply` continua sendo ato do dono |
-| 5c | `S1228-T2` | **pendente** | território `apps/landing` livre agora que a Frente 4 aterrissou |
+| 5b | `S1228-T4` ⚔ | **entregue e revisada** | `d1d6582a` · review `eea10348`+`813a38c1` — **REPROVADO na forma entregue, APROVADO depois dos dois fix-commits**. Sete defeitos; o desenho central resistiu a tudo e caiu a borda. Testes 9 → **21** · ver §Saída da review antagonista REV-5B |
+| 5c | `S1228-T2` | **entregue, ⚔ em review** | `6993a36a` · a tela mostra `PED-XXXXX` nos dois ramos e o e-mail ganhou o bloco "Código da compra" antes dos cartões de ingresso; cinco caminhos de ausência testados e asserção **tripla** de ausência do id. **ACHADO: a sexta superfície** — `Ticket.tsx` imprimia o `inscritoId`, que carrega o id do pedido inteiro. Suíte da landing 55/681, três execuções. Lane REV-5C em voo no fechamento do selo |
 | 5d | `S1228-T3` | **entregue** | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança |
 
 **A ordem da REV-COD5A foi cumprida.** A review escreveu que *"a 5d não deve ir para produção
@@ -201,10 +247,54 @@ documentos hoje** (a 5a não foi deployada, então o backfill entra num espaço 
 viva com que colidir), e **a compra do incidente PIXREAL está na lista** — a do ingresso `T93N7F`,
 paga em 04/08, ganha código na primeira execução real.
 
-**A 5b é ⚔ e ainda não foi revisada.** Ela escreve em produção e semeia a mesma coleção que o
-checkout consome, então a review não é opcional. Os quatro vetores de maior risco estão declarados
-no handoff da lane, e o primeiro deles é o que mais importa: provar que o ensaio realmente não
-escreve, atacando o caminho de leitura com `inscritoRefs` malformado.
+### Saída da review antagonista REV-5B (`eea10348` + `813a38c1`)
+
+**REPROVADO na forma entregue · APROVADO depois dos dois fix-commits.** A review não era opcional
+porque o script escreve em produção, e ela pagou o próprio custo: **sete defeitos**, um deles
+decisivo para a execução do dono. O desenho central — transação por pedido, `create` na reserva,
+porta do "já tem código", espelho autoritativo — resistiu a tudo que foi jogado contra ele. O que
+caiu foi a borda: para onde a escrita vai, o que a ferramenta faz com dado torto, e o que ela
+promete ao dono na saída.
+
+**Defeito 1 (ALTA), medido e não deduzido.** Com `FIRESTORE_EMULATOR_HOST` no ambiente,
+`node backfill --project leela-hub --apply` escreve no **emulador**, imprime `Projeto: leela-hub`,
+`Modo: APLICAR`, `Aplicado: N pedido(s)` e sai **0**. Com o seed carregado, a execução inteira do
+runbook — ensaio, aplicação, conferência — converge para zero e parece perfeita, com produção sem
+receber uma letra: o dono marcaria o card, a 5c e a 5d subiriam, e as dezessete compras
+continuariam sem código. É o acidente clássico que a obrigatoriedade do `--project` fechou pela
+frente, entrando pela porta de trás — e a variável está no fluxo de trabalho desta casa, porque o
+stack local do landing pede `FIRESTORE_EMULATOR_HOST=127.0.0.1:8180`. Agora o destino é declarado
+nos dois sentidos e sai impresso antes da primeira leitura (`Destino: PRODUÇÃO — Firestore real`).
+
+Os outros seis: `inscritoRefs` com id que não é caminho de documento derrubava a varredura
+inteira; espelho com código canônico sobre pedido sem código era **re-sorteado**, apagando o
+código já comunicado; reserva que já apontava para o pedido era ignorada e virava órfã;
+interrupção deixava trava de 60-75 s e o relatório mandava investigar; o **ensaio saía 0 sempre**,
+e o runbook usava o ensaio como conferência; e o teste de concorrência era flaky (~1 reprovação a
+cada 4). Testes **9 → 21**, verdes em três execuções seguidas.
+
+**As três condições da execução real** estão no card do dono em [[V1-KANBAN]] e não são
+formalidade: rebuild imediatamente antes (o script importa `functions/lib`, e a árvore desta
+madrugada teve lane em voo em `src/checkout`); conferir a linha `Destino:` do ensaio antes de
+digitar `--apply`; e gravar a saída em arquivo, porque o mapa pedido→código só existe ali — com o
+aviso de que esse arquivo carrega o **uid do comprador** e serve para chamado interno, não para
+print em grupo. Interromper **não corrompe** (medido com o processo morto no meio: zero reserva
+órfã, zero pedido com código sem reserva, zero espelho fora de sincronia), mas trava o pedido em
+voo por cerca de um minuto.
+
+**Auditoria somente-leitura contra `leela-hub`**, com credencial montada fora do repo e apagada em
+seguida, zero escrita: as medições da construção batem (17 pedidos, 0 completos, 22 espelhos a
+carimbar), e **nenhum** dos cenários de risco desta review existe na população de hoje —
+`pedidoCodigos` vazia, zero pedido com código, zero id repetido, zero shape torto e **zero espelho
+com código vivo**, que era o cenário de perda. O único defeito alcançável na execução real do dono
+era o **1**, que é ambiental. Os outros são guarda de borda, o que não os torna opcionais: a
+ferramenta fica no repo e a população cresce.
+
+**O que não foi provado, e está declarado:** o teto de 500 escritas por transação (o emulador não
+o aplica — 522 escritas commitaram sem erro, então a frase do handoff da 5b sobre a falha capturada
+segue sem lastro executável; sem risco hoje, porque a maior compra tem três inscritos), o `--apply`
+real contra produção (é ato do dono, por política) e a contenção com mais de duas execuções
+simultâneas.
 
 ## Paralelo técnico · F2 e F5 do diagnóstico correm fora desta fila
 
@@ -318,10 +408,29 @@ produziram, no molde dos RF2-*/RS1-* acima.
 | RS1-4 | **O seed local não tem `codigoPedido`.** `functions/src/seed/pedidos.seed.ts` grava os onze pedidos sem código e sem reserva, e `inscritos.seed.ts` só espelha o código do ingresso. No emulador e no preview, **todo** campo "Pedido" mostra travessão e a busca por código não acha nada — a RN-475 funcionando e parecendo defeito na hora de validar | Território `functions/`, fora das lanes que precisavam dele (5d é `apps/painel`). **Bloqueia a conferência visual da 5c e da 5d**: sem rodar o backfill da 5b contra o emulador, ou sem dar código ao seed, a validação do dono não é conclusiva |
 | RS1-5 | **`normalizarCodigoPedido` não come travessão nem meia-risca.** Ela tira `[\s-]+`; `–` e `—` sobrevivem, e o operador que colar `PED–A2B3C` de um WhatsApp com autocorreção não acha a compra | Não corrigido **de propósito**: `normalizarCodigoIngresso` tem exatamente o mesmo recorte, e divergir os dois quebra a única frase que o operador precisa aprender. **Entra nos dois normalizadores no mesmo commit, ou em nenhum** |
 | RS1-6 | **A callable do reenvio não devolve o código.** `CreateInscricaoChargeResult` não carrega `codigoPedido`, então a 5c vai ter de reler o doc do pedido (a RN-469 autoriza) | Contrato para quem pegar a 5c, não defeito. Fica escrito para a task não descobrir isso no meio |
-| RS1-8 | **O sorteio criptográfico não chegou ao caminho da venda.** `d36afb64` trocou o **default** de `gerarCodigoPedido`, mas o default nunca é alcançado: `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx` → `gerarCodigoPedido` passam `random` explicitamente, todos com `= Math.random` escrito. **Toda compra nova continua sorteando com o PRNG do V8** — que é exatamente a ressalva R-1 da REV-COD5A e o motivo declarado do próprio commit | Achado da lane do backfill ao tentar reusar o mecanismo, e o território (`functions/src/checkout`) tinha lane em voo. **Conserto de três linhas**: `random: () => number = Math.random` vira `random?: () => number` nos três pontos, continuando a repassar o argumento — `gerarCodigoPedido(undefined)` já cai no sorteio criptográfico, e a injeção dos testes fica intacta. **Em execução na lane BUILD-A4**, em commit separado. O `codigoIngresso` e o backfill não herdam o defeito |
+| RS1-8 | **O sorteio criptográfico não chegou ao caminho da venda.** `d36afb64` trocou o **default** de `gerarCodigoPedido`, mas o default nunca é alcançado: `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx` → `gerarCodigoPedido` passam `random` explicitamente, todos com `= Math.random` escrito. **Toda compra nova continua sorteando com o PRNG do V8** — que é exatamente a ressalva R-1 da REV-COD5A e o motivo declarado do próprio commit | Achado da lane do backfill ao tentar reusar o mecanismo, e o território (`functions/src/checkout`) tinha lane em voo. **Conserto de três linhas**: `random: () => number = Math.random` vira `random?: () => number` nos três pontos, continuando a repassar o argumento — `gerarCodigoPedido(undefined)` já cai no sorteio criptográfico, e a injeção dos testes fica intacta. **✅ FECHADO em 05/08 (`61776052`)**, exatamente nas três linhas propostas, com vermelho medido antes (`expected 'AAAAA' not to be 'AAAAA'`) e 4/4 depois. E o achado cresceu duas vezes: o **mesmo** padrão estava vivo no código do INGRESSO (`8d779dce`, achado pela REV-A4) e nos **três** geradores de `packages/core` — convite de organizador, convite de clube e refCodigo de afiliado (`20a9c904`, lane FIX-RNG-CORE). Varredura final: **zero `= Math.random` como default de parâmetro no repositório inteiro** |
 | RS1-9 | **Dois pedidos cancelados em produção apontam para inscrito que não existe.** Os dois PIX cancelados de 03/08 no `desafio-mtb-costa-lagoa-2026` listam em `inscritoRefs` um inscrito que não existe na coleção. É estado que a ADR-011 diz ser impossível — pedido e inscritos nascem no mesmo commit | Não é dano do backfill (ele lê antes de escrever e só carimba inscrito que existe **e** cujo `pedidoRef` bate; reporta "fora de alcance" e segue). **Higiene de dados, então não sobe ao dono** (R-0803B-1): pede investigação de quem tem o webhook de expiração e cancelamento na mão, **antes** de qualquer limpeza — o estado impossível é o sintoma, e limpar sem entender apaga a única evidência |
 | RS1-10 | **`pnpm build` na raiz falha e MUTA `pnpm-workspace.yaml`.** O gate de instalação quebra por `@sentry/cli` e, ao quebrar, escreve `'@sentry/cli': set this to true or false` dentro de `allowBuilds`. Duas lanes desta noite reverteram a linha à mão | Ruído de ferramenta que volta em toda lane que rodar o comando da raiz. O contorno em uso é build por pacote. Fechar decidindo o valor do `allowBuilds` de uma vez, em vez de reverter toda noite |
 | RS1-7 | **Config de emulador com `"host": "::"` produz falso-vermelho.** Testes que derivam o host de `FIRESTORE_EMULATOR_HOST` recebem um endereço IPv6 e falham com "client is offline", 25 de 26 vermelhos **sem nenhuma regressão real**; com `127.0.0.1` os 26 passam | Ruído de gate que pode **mascarar regressão de verdade** numa próxima lane. Padronizar IPv4 explícito em todas as configs de emulador do repositório, não só nas de lane. Três lanes desta noite já subiram com IPv4 por conta própria |
+
+### Fila técnica das reviews da madrugada de 05/08 (REV-5B, REV-AREACLIENTE, REV-A4 e FIX-RNG-CORE)
+
+Nenhum destes pede juízo de dono — o que pedia subiu ao painel. São os resíduos técnicos das
+quatro lanes, no mesmo molde dos itens acima e sem repetir nenhum deles.
+
+| # | O quê | Por que ficou de fora do fix |
+|---|---|---|
+| RS1-11 | **Não existe reprocesso do `contaSemFriccao`.** Quando a leitura de papel propaga uma falha do Auth, a conta **já nasceu** e a compra fica órfã: pedido sem carimbo, ficha sem vínculo, e-mail de senha nunca enviado. E não há caminho de volta — `reenviarEmailsPedido` gateia por `contaCriada === true` e o carimbo nem existe (devolve `nao_aplicavel`, medido), os três chamadores de `garantirContaSemFriccao` são os confirmadores e a confirmação é exactly-once, e não existe varredura equivalente ao `varrerIngressosOrfaos` | A classe é **anterior** à RN-449d — qualquer exceção entre o `criarConta` e o carimbo produz o mesmo estado. O que a A4 acrescentou é um gatilho novo no caminho **mais comum**, o do comprador de primeira viagem. Construir varredura agendada é feature, não fix de review. Mitigação que existe hoje e que faz disto MÉDIA: `solicitarRedefinicaoSenha` é público, neutro e funciona para conta sem senha. **O caso 1 do `revA4.antagonista` é o registro executável de que o reprocesso não existe** — quem o construir tem de fazer o caso mudar de desfecho, não apagá-lo |
+| RS1-12 | **`lerPedidosDaConta` limita 200 SEM `orderBy`.** O Firestore devolve os 200 primeiros por `__name__`, não os 200 mais recentes, e a ordenação por data é feita **depois, em memória, sobre o conjunto errado**. Acima de 200 compras a mais recente pode simplesmente não estar no conjunto — o defeito de 04/08 outra vez. E não existe `listaCompleta` do lado das compras | É a **única** da leva com potencial de repetir o defeito desta rodada, e a única que precisa de passo de deploy: a correção é `.orderBy('criadoEm','desc')` mais um índice **composto** novo (`contaSemFriccao.contaUid` ASC, `criadoEm` DESC). Por isso a review não a aplicou. A B4 já nasceu imune, com `orderBy(__name__)` explícito e leitura de `TETO + 1` para saber que cortou |
+| RS1-13 | **Seis suítes de `functions` gateiam por `FIRESTORE_EMULATOR_HOST` e não por `LEELA_FS_EMU_PORT`.** Rodar só com a porta faz a suíte inteira sair **skipped com exit 0**, que é indistinguível de verde para quem lê rápido | Armadilha **medida** nesta rodada, e é ruído de gate que mascara ausência de prova. Da mesma família do RS1-7 (o `"host": "::"`), e fecha junto: o gate tem de derivar de uma fonte só, e pular tem de ser visível na saída |
+| RS1-14 | **`packages/core` não tem runner de teste próprio.** Não há `vitest` nas dependências dele nem `vitest.config.ts`, então os testes do core moram em `functions/src/__tests__/*Core.test.ts` e o core depende do runner de `functions` para provar qualquer coisa | Recusado **de propósito** pela FIX-RNG-CORE, com a razão escrita: criar o runner exige `pnpm install`, que reescreve o `pnpm-lock.yaml` da raiz e mexe em `node_modules` **enquanto duas lanes estão em voo** buildando e testando — um lockfile compartilhado colide muito mais do que três arquivos de teste que ninguém está tocando. O momento de resolver é com as lanes paradas |
+| RS1-15 | **A árvore tem 14+ `firebase*.json` na raiz**, um por lane, e a tabela de portas é combinada de cabeça | Limpeza de fechamento de sprint. **Acrescentado pela REV-5B:** colisão de emulator é **indistinguível de regressão** — a primeira execução da suíte dela deu 8/9 e parecia regressão real, e era a porta de outra lane em voo; foi a terceira vez na rodada. Quem abrir lane tem de conferir a tabela de portas antes de escolher a sua, e **reservar `hub` e `logging` também**, não só firestore e auth |
+| RS1-16 | **O pregamento global de `Math.random` nos testes de sorteio só é seguro enquanto `fileParallelism: false` valer** em `functions/vitest.config.ts`. Depois da FIX-RNG-CORE são **cinco** arquivos, não dois | Frágil, não quebrado: a janela é uma chamada e o `finally` cobre exceção. O risco é alguém ligar paralelismo de arquivo num dia distante, e quem for fazê-lo tem de olhar os cinco antes |
+| RS1-17 | **A guarda de `NaN` não é uniforme entre os geradores.** `codigoPedido` e `codigoIngresso` ganharam `Number.isFinite` no clamp em `d36afb64`; `gerarCodigoOrganizador`, `gerarCodigoConvite` e `gerarRefCodigo` ainda têm o clamp antigo, e um `random()` que devolvesse `NaN` produziria a string `"undefined"` dentro do código | **Só alcançável por injeção explícita** (test-only) — o default novo nunca devolve `NaN` —, então é dívida de uniformidade e não defeito de produção. Ficou de fora porque o brief da lane mandava mudar **só o default**, e alargar sozinho é como uma correção vira duas |
+| RS1-18 | **O teto de 500 escritas por transação do backfill não tem prova executável.** O emulador não o aplica: um pedido com 520 inscritos commitou **522** escritas sem erro, então a frase do handoff da 5b ("a falha é capturada, o pedido fica de fora e o relatório o nomeia") segue sem lastro | Sem risco hoje — a maior compra de produção tem três inscritos —, mas a frase está escrita e não tem prova. Fecha quando alguém tiver como forçar o limite fora do emulador, ou some do handoff |
+| RS1-19 | **Quem não recebeu o e-mail do convite só consegue outro pelo organizador.** Reemitir token é `cadastrarAssessoria`/`salvarAfiliado`, as duas com gate de escritor do tenant, então o convidado não tem — e, pela regra da credencial, não **deve** ter — botão de reenviar dentro da área | Não é defeito: dar ao convidado um botão que reemite token criaria a segunda superfície de credencial que a spec proíbe. O que falta é o caminho **humano** — hoje a pessoa tem de pedir ao organizador por fora do produto, e nada na tela diz isso. O conserto barato é a caixa de convites dizer a quem pedir; o caro é uma solicitação de reenvio que passe pelo organizador. **CONVITE-1** |
+| RS1-20 | **O gate "suíte da landing 2× verde" depende de quantas lanes estão rodando emulator na máquina.** A B4 mediu: a linha de base só reproduz com `--testTimeout=30000`, porque o primeiro render do barrel do design system leva cerca de 17 segundos sob CPU disputada — o que é lentidão de ambiente, não regressão | Ruído de gate que **mascara e fabrica** vermelho, da mesma família do RS1-7 e do RS1-13. A lane não mexeu no config de propósito: mudar o `testTimeout` do arquivo é decisão de quem conduz, não de quem constrói. Enquanto ela não for tomada, o gate da landing tem de ser lido junto do número de lanes vivas |
+| — | **Higiene da REV-AREACLIENTE que não coube acima**, agrupada para não se perder: canal lateral de **tempo** na anti-enumeração do reenvio (o conteúdo é idêntico, provado; a latência não — piso de tempo fixo ou disparo sem `await`); `getClaims()` usando token em cache, o que faz um `platform_admin` com token velho ver a porta do organizador (nenhum caminho até `/plataforma`) e `tenantId: '   '` virar organizador; `salvarMeusDados` sem teto de tamanho no `nome` (sem XSS, porque o React escapa — o risco é doc inchado e nome absurdo denormalizado adiante); `montarIngresso` em silêncio quando `tenantId` está vazio; e o CTA do checkout vivendo **dentro** de `role="status" aria-live="polite"`, o que faz toda mudança nos irmãos re-anunciar a região inteira com o rótulo do CTA junto — ruído de leitor de tela no momento em que a pessoa mais precisa ouvir uma coisa só | Nenhuma bloqueia, nenhuma é regressão desta rodada, e todas são de uma linha a um parágrafo. Ficam listadas porque a review as mediu e ninguém deveria redescobri-las |
 
 ## Ordem executável, resumida
 
@@ -380,14 +489,19 @@ produziram, no molde dos RF2-*/RS1-* acima.
 - [x] toda compra nova nasce com código de cinco símbolos, único por reserva, e o retry da
       mesma chave de idempotência devolve o mesmo código — `3acc6877`, provado com RNG trocado
       de propósito no replay
-- [ ] nenhuma tela de comprador e nenhum e-mail imprime `pedidoId`, e o teste que cobra isso é
-      executável — **falta a 5c**; do lado do operador o id já saiu da vista (`3d666d40`)
+- [x] nenhuma tela de comprador e nenhum e-mail imprime `pedidoId`, e o teste que cobra isso é
+      executável — `6993a36a` do lado do comprador (com asserção **tripla** de ausência: o id
+      inteiro, o uid sozinho e o `inscritoId`, mais um canário que varre o diretório e vale para
+      a tela que alguém escrever amanhã) e `3d666d40` do lado do operador. **A varredura da spec
+      tinha deixado passar uma sexta superfície** — o `inscritoId` do cartão do ingresso, que
+      carrega o id do pedido dentro de si —, e é ela que o terceiro ramo da asserção pega
 - [x] a busca de inscritos acha a compra pelo código, e o rótulo do campo diz que ela busca
       por ele — `3d666d40`, as duas metades com teste
 - [x] o backfill roda em dry-run com contadores antes de qualquer escrita — `d1d6582a`, com o
       ensaio contra produção executado em leitura pura. **A convergência do rerun para zero só
       pode ser provada depois do `--apply`, que é ato do dono**; no emulador ela está presa por
       teste de idempotência
-- [x] review antagonista em contexto fresco em 1a, 1b e 5a — as três rodaram e as três voltaram
-      aprovadas com fixes (`706d9b02`+`a769cfb9`, `b8c7c29e`). **Faltam 3a e 3c (gated pelos
-      vetos da Arena) e a 5b, que aterrissou e ainda não foi revisada**
+- [x] review antagonista em contexto fresco em 1a, 1b, 5a e **5b** — as quatro rodaram
+      (`706d9b02`+`a769cfb9`, `b8c7c29e`, `eea10348`+`813a38c1`), e a da 5b foi a única que
+      **reprovou** antes de aprovar. **Faltam 3a e 3c**, gated pelos vetos da Arena, e a **5c**,
+      que aterrissou e está em review no fechamento deste selo

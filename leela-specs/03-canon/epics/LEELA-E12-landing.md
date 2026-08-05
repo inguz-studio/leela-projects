@@ -2802,6 +2802,44 @@ a autorização por campo cria (**PEDLIST-1**), e o fato de `contaSemFriccao.con
 busca por e-mail sem prova de posse, o que faz um vínculo derivado de e-mail não verificado valer
 como chave de leitura desta RN (**POSSE-EMAIL-1**, fronteira RN-174).
 
+**+05/08 · a área do cliente foi construída e a diretriz NÃO é cumprida por ela (REV-AREACLIENTE).**
+A diretriz diz que todo campo novo em `pedidos/{id}` nasce **visível** ao comprador, e a medição
+campo a campo da review mostrou que "visível" está valendo como "**autorizado**", que é coisa
+diferente. O painel de compras exibe **6 fatos** de um documento com **16 campos**: ficam
+invisíveis ao comprador, para sempre, `itens` (a decomposição monetária por inscrito — valorBase,
+desconto, valorFinal, taxaRepassada), `endereco`, `aceites`, `parcelas`, `pagamentoRef`,
+`responsavel.telefone` e `tenantId`. E o comentário do próprio componente afirma que o detalhe
+"continua onde já mora — a tela do checkout (S1225)", o que **não é verdade**: aquela consulta lê
+o `pedidoId` do estado do componente, e não existe rota, parâmetro nem link que a alcance depois.
+Fechou o navegador, acabou. `formaPagamento` atravessa a fronteira do callable e não é
+renderizado por ninguém, contradizendo o princípio escrito no cabeçalho do próprio módulo. **Isto
+é decisão do dono e está no painel como RN469-PROJECAO-1:** ou a linha da compra ganha caminho
+até o detalhe, ou esta diretriz passa a dizer "nasce **autorizado** ao comprador" — e a segunda
+opção é uma regra mais fraca do que a que está escrita hoje.
+
+**+05/08 · a exposição do POSSE-EMAIL-1 está MEDIDA, e a correção cabe em uma linha.** A Rule
+desta RN autoriza a leitura por `contaSemFriccao.contaUid == request.auth.uid` **sem exigir**
+`email_verified`; o callable da área exige. A Rule é, portanto, a superfície mais frouxa das
+duas. Cadeia completa, medida: um atacante registra `vitima@x.com` no `/cadastrar` (que é aberto)
+e **nunca verifica**; a vítima compra com o próprio endereço; na confirmação o `contaSemFriccao`
+acha a conta do atacante pelo e-mail e carimba `contaUid` nela; a **área nega** (o gate segura), e
+a **Rule permite** — o atacante lê o pedido inteiro, com nome, e-mail, telefone, endereço,
+aceites, itens e valores. Atenuante: exige conhecer o `pedidoId`, que é `ped-{uid}-{chave}` e não
+é enumerável, o que põe a severidade real em **MÉDIA**. Agravante que não depende de conhecer o
+id: a vítima ficava **permanentemente trancada fora da própria compra** — não cria conta porque o
+e-mail está tomado, não recebe o e-mail de "conta criada" porque ele é `nao_aplicavel` de
+propósito, e não tinha caminho até uma senha. **O fix D1 da mesma review removeu essa metade:**
+com o "Não sei minha senha", a vítima pede o link, o Firebase prova posse do e-mail e ela retoma
+a conta. A correção exata da Rule, **não implementada porque é literalmente a decisão do dono**, é
+acrescentar `&& request.auth.token.email_verified == true` **só no ramo (b)** de
+`ehCompradorDoPedido()`. O ramo (a), `responsavel.atletaId`, **não pode** ganhá-la: ele é o uid da
+sessão **anônima** do checkout, que nunca tem `email_verified`, e exigi-la ali quebraria a consulta
+do próprio pedido logo depois de pagar — a S1225-T3, que é a primeira metade do conserto de 04/08.
+Custo do fix: a conta vinculada e ainda não verificada perde a leitura direta do documento até
+confirmar o e-mail; ela já não vê nada na área hoje, então a perda é de superfície, não de função.
+**A fronteira continua imóvel**, e o caso 6 da suíte da BUILD-A4 fica vermelho se alguém a mover
+sem o dono.
+
 ### RN-470 (nova, dona) · feedback pós-pagamento em tela, para PIX e cartão
 
 Verbatim do dono: *"precisamos dar uma resposta para ele ou em tela, no caso de pix ou em
@@ -2926,10 +2964,35 @@ ADMINSEP. Fronteira com o E17 registrada lá e no painel (ARENA-3).
   seguiu assim mesmo: ela é higiene do vínculo, não autorização. Na sequência, a mesma lane
   entregou meus dados (`cdef2987`, sobre `atletas/{uid}` e nunca sobre o perfil de organizador) e
   as duas portas (`bdebe384`, com nenhum caminho da área alcançando `/plataforma`, que é a RN-449
-  virando tela). **Meus Clubes é o que sobra da frente**, e a frente inteira é ⚔ ainda não
-  revisada. **Premissa nova da spec:** a landing passou a ter uma área autenticada
+  virando tela). **Premissa nova da spec:** a landing passou a ter uma área autenticada
   (`/minha-conta`), com `noindex`, `no-store` e `disallow` — é rota nova sob o gate de busca e
   velocidade da S1200.
+- **+05/08 (madrugada) · a frente foi revisada, e a dependência A4 foi paga.** A REV-AREACLIENTE
+  atacou os dezesseis vetores e **a fronteira não quebrou** — a autorização se sustentou nos dois
+  sentidos e a área continua estritamente mais fechada que a Rule da RN-469. O que caiu foram
+  quatro faltas caladas, e a maior **não estava em vetor nenhum, porque cada task estava certa
+  sozinha**: a área foi construída inteira e ficou **sem rua**. Os únicos caminhos até
+  `/minha-conta` eram os dois momentos em que a pessoa acabou de chegar, o rótulo da conta no
+  header era texto morto, e o "não sei minha senha" que a C1 deveria ter ligado nunca foi ligado —
+  o que deixava sem saída exatamente quem esta rodada existe para atender, porque a conta do
+  comprador nasce sem senha e o link vai por e-mail. Consertados em `46a5eb8a`, `40f094b1` e
+  `a1486abe`, cada um com o teste que o teria pegado. **A dependência A4 (`S032-T4`) aterrissou na
+  mesma noite** (`b1bd5dc4`, revisada em `8d779dce`+`d58caa5d`), sem retrabalho na B1: a
+  dependência era de higiene do vínculo, e a B1 tinha atravessado por decisão declarada.
+  **Meus Clubes (B4) aterrissou** (`4b72c556` + `b3e51638`) e **a frente B fecha**, com a review
+  antagonista dela em voo. A caixa de convites **lista** e nunca cunha o link de aceite, porque o
+  token só existe como hash nos dois docs — cunhá-lo criaria a segunda superfície de credencial que
+  a spec proíbe em letra, e o aceite continua no link do e-mail. **Achado que muda a expectativa do
+  produto e não é defeito da lane:** não existe hoje nenhum caminho pelo qual um participante
+  **entre** num clube — os únicos escritores de membro são o painel do organizador, a Function de
+  agregado e o seed, e o convite de membro comum de clube é um convite **sem máquina de aceite**.
+  "Meus Clubes" nasce vazio para praticamente toda conta real, e o vazio é o caso **normal**, não a
+  borda; a tela foi escrita para não prometer um botão de entrar que o produto não tem. Virou
+  **CLUBES-1** no painel do dono. **Operação:** a frente passou a carregar **quatro**
+  `fieldOverride` COLLECTION_GROUP esperando um único `firebase deploy --only firestore:indexes`,
+  obrigatoriamente antes das functions — a ficha do inscrito, o vínculo de membro, o convite de
+  influenciador e o convite de promotor. O emulador não cobra índice de grupo, então **nenhum teste
+  da frente prova este passo**.
 
 ### RN-473 (nova, dona) · o PDF do ingresso é gerado sob demanda e baixado como arquivo (refina a RN-424)
 
@@ -3036,16 +3099,38 @@ todo código legível da casa, não só para o do pedido:
    e **ausência de fonte é erro, nunca queda para `Math.random`** — cair de volta esconderia o
    defeito exatamente onde ele importa. Zero mudança de formato: mesmos alfabetos, mesmos
    tamanhos, mesmos predicados. Isto é **decisão técnica do maestro, não juízo de dono**.
-   Commit `d36afb64`. **⚠ A diretriz ainda NÃO está cumprida no caminho da venda.** A lane do
-   backfill mediu depois, ao tentar reusar o mecanismo: o default trocado **nunca é alcançado**
-   no checkout, porque a cadeia inteira passa `random` explicitamente —
-   `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx` →
-   `gerarCodigoPedido`, todos com `= Math.random` escrito no default. **Toda compra nova continua
-   sorteando com o PRNG do V8.** O conserto é de três linhas (trocar
-   `random: () => number = Math.random` por `random?: () => number` nos três pontos e continuar
-   repassando o argumento), não muda comportamento de teste nenhum, e está **em execução na lane
-   BUILD-A4**, em commit separado (RS1-8 na fila da rodada). O `codigoIngresso` e o backfill
-   **não** herdam o defeito.
+   Commit `d36afb64`.
+
+   **✅ A diretriz está CUMPRIDA desde 2026-08-05, e só está desde que foi fechada em três
+   frentes.** O registro anterior deste parágrafo era **parcialmente falso** e vale escrever por
+   quê, porque o modo de falha se repete: trocar o **default** de um gerador não muda nada
+   enquanto algum chamador passar a fonte explicitamente — **o último default a falar vence**. O
+   `d36afb64` trocou o default; três cadeias continuaram passando o gerador antigo por cima dele,
+   e a correção ficou inerte por duas rodadas em código que parecia consertado.
+
+   | Frente | O que sorteava com o PRNG do V8 | Fechada em |
+   |---|---|---|
+   | **Venda** | `createInscricaoChargeCore` → `criarDocsDeCheckout` → `sortearCodigoPedidoNaTx`, os três com `= Math.random` no default e a callable nunca passando argumento — **toda compra nova** | `61776052` |
+   | **Ingresso** | `emitirIngressos.ts:340`, mesmo padrão, e nenhum dos quatro chamadores de produção passa fonte — **todo código de ingresso**, que é o que a pessoa dita no balcão (RN-397) | `8d779dce` |
+   | **Núcleo** | `gerarCodigoOrganizador` (RN-413), `gerarCodigoConvite` (RN-101) e `gerarRefCodigo` (RN-313), os três chamados sem fonte. O de organizador é de outra categoria: **provisiona um tenant** para quem apresentar o código, e é sorteado **no navegador**, onde qualquer um observa quantas saídas quiser — prever ali não é ser atendido como outra pessoa, é abrir um tenant | `20a9c904` |
+
+   A forma da correção é a mesma nas três: o parâmetro `random` perde o default e o `undefined`
+   atravessa até o gerador do núcleo, ou o default passa a ser o `sorteioUniforme` do núcleo.
+   Nenhuma assinatura muda para quem chama, nenhum formato de código muda, e **a injeção continua
+   viva** — cada gerador ganhou um caso provando isso explicitamente, porque uma correção que
+   matasse o seam trocaria um defeito por outro. Prova por gerador: pregar `Math.random` numa
+   fonte determinística e afirmar que o código **não** sai dessa fonte; vermelho medido em HEAD
+   antes de cada fix, verde depois.
+
+   **Varredura final do repositório inteiro: zero ocorrências de `= Math.random` como default de
+   parâmetro, em qualquer lugar.** Sobram dois `Math.random()` *chamados*, os dois intocados de
+   propósito e nenhum deles gerador de código de portador: o fallback atrás de
+   `crypto.randomUUID()` da chave de idempotência do checkout (RN-333) e o fallback de id de item
+   de lista no painel. Nos dois o caminho primário já é o Web Crypto.
+
+   **O que fica de doutrina, além do resultado:** quem trocar a fonte de um gerador tem de
+   conferir **os chamadores um a um**, e a conferência não é formalidade — é exatamente ela que
+   faltou nas duas rodadas em que esta diretriz esteve escrita e não cumprida.
 2. **O espelho do código no inscrito é campo de Function, e as Rules dizem isso.** Ele nasceu
    fora das duas listas `hasAny` do `firestore.rules` porque a constante do núcleo espelha essas
    listas literalmente e nomear ali um campo que as Rules não conhecem faria a constante mentir.
@@ -3077,6 +3162,19 @@ o prefixo. O id do documento **não é exibido** em tela de comprador nem em e-m
 - **Onde ele aparece hoje**, o código o substitui: a tela de confirmação do checkout nos dois
   ramos (`StepConfirmacao.tsx:129` e `:138`) e o campo "Pedido" do slide-in do inscrito
   (`InscritoSlideIn.tsx:361`), onde o id interno sai da vista e continua disponível para copiar.
+- **A sexta superfície, que o inventário não tinha (BUILD-5C · 2026-08-05).** `Ticket.tsx`
+  imprimia o **`inscritoId`** em mono, no cartão do ingresso da tela de confirmação. Ele é
+  `{pedidoId}-i{n}`: carrega o id do pedido inteiro, e portanto o uid da conta, dentro de si. As
+  cinco superfícies da spec saíram de uma varredura por `pedidoId`, e aqui o vazamento viaja com
+  **outro nome** — é a mesma tela que a pessoa fotografa, e o valor exibido é maior que o id que
+  a regra mandou tirar da linha de cima. Removido em `6993a36a`. **O QR continua codificando o
+  `inscritoId`**, e isso não contradiz nada: ele é a credencial de check-in, e esta regra separa
+  exatamente isso — o que ela proíbe é o id em texto, para olho humano, numa superfície de
+  produto. **Nada ficou no lugar, de propósito:** o identificador humano do ingresso é o
+  `codigoIngresso`, que não existe nesse instante do fluxo (quem o emite é o webhook, depois do
+  pagamento), e o da compra é o código do pedido, que está no topo da mesma tela — inventar um
+  terceiro rótulo daria à pessoa um número que nenhum balcão reconhece. Fica escrito porque a
+  próxima varredura por `pedidoId` deixaria esta superfície passar de novo.
 - **O e-mail da compra passa a carregar o código**, com rótulo próprio, ao lado dos códigos de
   ingresso que ele já imprime. Hoje a compra não tem referência nenhuma no e-mail, e é por isso
   que quem escreve ao atendimento não tem o que citar.
@@ -3124,8 +3222,14 @@ backfill, execução registrada). Detalhe e ordem na Frente 5 da fila da rodada.
 **Estado em 2026-08-05.** **T1 entregue e revisada** — `3acc6877`, review antagonista
 `b8c7c29e` (aprovada com fixes) e o defeito das Rules fechado em `48fc7116`+`d36afb64`. **T3
 entregue** — `3d666d40`, com o id interno saindo da vista do operador e a busca casando o código
-pelo caminho da RN-397. **T4 em execução** (a execução contra produção continua sendo ato do
-dono). **T2 pendente.** Nada disto está no ar, e a ordem da fila continua valendo numa coisa: o
+pelo caminho da RN-397. **T4 entregue e revisada** — `d1d6582a`, com a review antagonista
+**reprovando a forma entregue** e aprovando depois de dois consertos (`eea10348`+`813a38c1`):
+sete defeitos, o primeiro decisivo para a execução do dono, porque com `FIRESTORE_EMULATOR_HOST`
+no ambiente o `--apply` escrevia no emulador imprimindo relatório de produção e saindo zero. A
+execução contra produção continua sendo ato do dono, agora com três condições registradas no
+card. **T2 entregue** — `6993a36a`, com a tela e o e-mail carregando o código e o `pedidoId`
+saindo dos dois; **em review antagonista no fechamento deste selo** (lane REV-5C). Nada disto
+está no ar, e a ordem da fila continua valendo numa coisa: o
 backfill roda antes de T2 e T3 irem ao ar, senão as telas estreiam mostrando ausência em toda
 compra que já existe. Duas ressalvas da review que a implementação **não** consertou de
 propósito, e que viraram fila técnica: `normalizarCodigoPedido` não come travessão nem

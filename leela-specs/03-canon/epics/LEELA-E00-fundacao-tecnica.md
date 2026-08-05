@@ -418,6 +418,38 @@ do cliente o caminho de tomada da plataforma.
 Detalhe medido em `02-rodadas/2026-08-02-retomada/09-spec-contas-e-area-cliente.md`; forma
 testável e a allowlist de administração (premissa vetável) em `10-rns-contas-e-area-cliente.md`.
 
+**Estado em 2026-08-05 · a metade (d) saiu do papel, e as duas que ela NÃO cobre estão nomeadas.**
+A guarda do lado cliente está inteira em código e em teste (`b1bd5dc4`, `S032-T4`), com
+`conta_admin_nao_vinculavel` como string de contrato, e foi **revisada por antagonista** em
+contexto fresco (`8d779dce`+`7b69d544`+`d58caa5d`, aprovada com ressalvas). Três decisões da
+construção sobreviveram ao ataque e vale registrá-las porque elas são a regra virando desenho:
+o papel vem da **claim** e não do Firestore (a claim é a fonte única por RN-401, e ler o documento
+criaria uma segunda verdade que diverge no dia em que alguém trocar de lado); a leitura é do uid
+**final** e não do que a busca por e-mail devolveu, porque o re-read de corrida devolve conta
+alheia e o buraco estaria justamente no caminho em que a conta não é nossa; e a falha de Auth
+**propaga**, porque sem saber o papel não dá para afirmar que a conta não é de administração — a
+compra segue intocada, e o pedido sem carimbo é a pendência observável.
+
+**As duas metades que a RN-449d não cobre**, ambas medidas pela review e ambas no painel do dono:
+
+1. **O estoque acumulado continua aberto.** A regra fecha o **fluxo**, nunca o **estoque**: a
+   conta `platform_admin` que já tem ficha e carimbo antigos continua entrando na área do cliente
+   e lendo as compras velhas. Quem dimensiona é a **A5** (`S032-T5`), a varredura só-leitura, e
+   nenhuma migração vem antes do número dela. Item **ACUMULO-ESTOQUE-1**.
+2. **A área fica muda para quem foi recusado.** O `motivo` está carimbado no pedido e não chega a
+   superfície nenhuma: quem PAGOU e teve o vínculo recusado recebe da área exatamente a mesma
+   resposta de quem nunca comprou, que é a lista vazia que mente e que a RN-451 proíbe. Item
+   **AREA-MUDA-1**.
+
+**Lacuna técnica que a mesma review abriu, e que não é decisão de dono:** não existe reprocesso do
+vínculo. Quando a leitura de papel propaga uma falha, a conta **já nasceu** e a compra fica órfã,
+sem caminho de volta — o reenvio gateia por `contaCriada === true`, os três chamadores são os
+confirmadores e a confirmação é exactly-once, e não existe varredura equivalente ao
+`varrerIngressosOrfaos`. A classe é **anterior** à RN-449d; o que ela acrescentou foi um gatilho
+novo no caminho mais comum, o do comprador de primeira viagem. A saída que existe hoje é a pessoa
+pedir o "esqueci minha senha", que é público, neutro e funciona para conta sem senha — é por isso
+que a severidade é média. Está na fila técnica da rodada pós-pagamento.
+
 ### RN-450 · organizador e cliente cabem na mesma conta (nova, dona · 2026-08-04)
 
 A outra metade da frase do dono, e é afirmativa. Uma conta carrega ao mesmo tempo o perfil de

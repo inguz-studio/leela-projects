@@ -124,9 +124,58 @@ Nove lanes rodaram em paralelo sobre esta fila e sobre a fila ADMINSEP, serializ
 
 **As três reviews antagonistas da rodada voltaram aprovadas com fixes, e as três consertaram no commit da própria review.** Nenhuma delas foi feita por quem construiu. **Duas frentes ⚔ ainda não foram revisadas:** a área do cliente e o backfill — os vetores das duas estão declarados nos handoffs, e no caso do backfill a review não é opcional, porque ele escreve em produção.
 
+### A madrugada seguinte: mais nove lanes, e as duas frentes ⚔ revisadas
+
+O primeiro selo fechou com duas frentes esperando review. As duas foram revisadas, e as duas
+reviews mudaram o registro em vez de confirmá-lo. **Nenhuma destas lanes tocou `leela-specs/`**,
+pela mesma ordem — este registro e o segundo selo são a aterrissagem de todas. **Nada foi
+deployado.**
+
+| Lane | O que entregou | Prova |
+|---|---|---|
+| BUILD-5D | `S1228-T3` — o operador lê o código e acha a compra por ele | `3d666d40` · 85/85 nos alvos, 771/771 na vizinhança; o prefixo não foi reimplementado em lugar nenhum e o "copiar id interno" **não escreve o valor no DOM** |
+| BUILD-5B | `S1228-T4` — a ferramenta de retroativo, com ensaio por default | `d1d6582a` · uma transação por pedido, porque lote não é transação e carimbar sem reservar plantaria colisão contra o sorteio de amanhã; o gravador da reserva é o **mesmo** da venda, importado |
+| **REV-5B** | Review antagonista do retroativo — **REPROVOU e só aprovou depois de dois consertos** | `eea10348` + `813a38c1` · sete defeitos. O nº 1 era ALTA e decidia a execução do dono: **com a variável do emulador no ambiente, o `--apply` escrevia no emulador e imprimia relatório de produção, saindo zero** — e essa variável está no fluxo de trabalho desta casa. Testes 9 → **21**; auditoria somente-leitura contra produção confirmando que nenhum cenário de risco existe na população de hoje |
+| **REV-AREACLIENTE** | Review antagonista da área do cliente — APROVADA-COM-FIXES | `46a5eb8a`, `40f094b1`, `a1486abe` · dezesseis vetores atacados e **a fronteira não quebrou**: a área é estritamente mais fechada que a Rule. Quatro faltas caladas, e a maior não estava em vetor nenhum — **a área foi construída inteira e ficou sem rua**, com o "não sei minha senha" nunca ligado. Linha de base nova: 53 arquivos / 665 testes |
+| BUILD-A4 | `S032-T4` (a compra para de amarrar em conta de administração) + o sorteio da venda | `b1bd5dc4` e `61776052` · vermelho medido restaurando os fontes de HEAD (4 falhas), verde depois; a fronteira POSSE-EMAIL-1 presa em três lugares para ninguém a mover por acidente |
+| **REV-A4** | Review antagonista da guarda — APROVADO COM RESSALVAS | `8d779dce`, `7b69d544`, `d58caa5d` · nenhum dos oito vetores derrubou o código, em emulador **frio**. A review achou por conta o **gêmeo** do defeito de sorteio, no código do ingresso, e o fechou; e falsificou uma afirmação escrita do handoff da construção sobre a Rule |
+| BUILD-5C | `S1228-T2` — o código na tela e no e-mail | `6993a36a` · **achado: a sexta superfície do id** (`Ticket.tsx`, pelo `inscritoId`), invisível para a varredura anterior porque o vazamento viaja com outro nome. Suíte da landing 55/681, três execuções |
+| FIX-RNG-CORE | Os três geradores restantes do núcleo saem do PRNG do V8 | `20a9c904` · convite de organizador, convite de clube e refCodigo de afiliado; vermelho nos três antes, 87/87 depois, com prova de consumidor no Vite do painel. **Varredura final: zero geradores previsíveis no repositório** |
+| BUILD-B4 | `S1222-T4` — Meus Clubes e a caixa de convites; **a frente B fecha** | `4b72c556` (servidor, 22 casos) + `b3e51638` (tela, 14 casos) · a caixa **lista** e nunca cunha o link de aceite, porque o token só existe como hash. **Achado de produto:** não existe caminho para um participante entrar num clube |
+
+**A doutrina do sorteio criptográfico, que estava escrita e não cumprida, fechou em três frentes**
+— venda (`61776052`), ingresso (`8d779dce`) e núcleo (`20a9c904`). O modo de falha era o mesmo nos
+três: trocar o **default** de um gerador não muda nada enquanto algum chamador passar a fonte por
+cima, e o último a falar vence. O registro no épico foi corrigido, porque ele afirmava um estado
+que deixou de existir.
+
+**Duas lanes seguiam em voo no fechamento do segundo selo** e estão registradas como em execução,
+não como entregues: a **REV-5C** (review antagonista do código na tela e no e-mail) e a **REV-B4**
+(review antagonista de Meus Clubes). O que elas fecharem entra no próximo selo.
+
+**Sete itens novos subiram ao painel do dono** — RN469-PROJECAO-1, CTA-PIX-1, ADMIN-VE-AREA-1,
+TROCA-EMAIL-1, AREA-MUDA-1, ACUMULO-ESTOQUE-1 e CLUBES-1 —, mais a exposição **medida** do
+POSSE-EMAIL-1 com a correção exata de uma linha, acrescentada ao item que já existia sem decidir
+por ele. Dez itens novos entraram na fila técnica.
+
+### A ordem de operação cresceu: quatro índices, um passo só
+
+A sequência de deploy que o primeiro selo registrou continua valendo e ficou maior. São **quatro**
+`fieldOverride` COLLECTION_GROUP esperando um único `firebase deploy --only firestore:indexes`,
+**antes** do deploy das functions: a ficha do inscrito (da área do cliente), o vínculo de membro de
+clube, o convite de influenciador e o convite de promotor. O emulador não cobra índice de grupo,
+então **nenhum teste destas frentes prova este passo**. Sem ele, quem foi presenteado não vê o
+próprio ingresso e as três listas de clubes e convites voltam vazias — com aviso honesto na tela e
+três alertas novos no servidor, o que é o desenho certo e continua sendo um aviso que ninguém
+deveria ver.
+
 ### O que fica com o dono desta noite
 
 Uma coisa só, e ela é escrita em dado real: **rodar o backfill do código da compra contra produção**. O ensaio já rodou em leitura pura, a conta é exata e a compra do incidente PIXREAL está na lista. O comando, com o ensaio antes e a conferência depois, está no card da S1228 em [[V1-KANBAN]] e no handoff da lane. **A 5c e a 5d não vão ao ar antes disso.**
+
+**+05/08 (madrugada) · a execução ganhou três condições, e elas vieram de uma reprovação.** A review antagonista do retroativo reprovou a ferramenta na forma entregue, e o motivo decidia justamente esta execução: com a variável de emulador presente no ambiente, o comando escrevia no emulador e imprimia um relatório de sucesso de produção. As três condições estão escritas no card e nenhuma é formalidade — rebuild imediatamente antes, conferir a linha `Destino:` do ensaio antes de digitar `--apply`, e gravar a saída em arquivo, porque o mapa de compra para código só existe ali e ele carrega o identificador da conta do comprador (documento interno, não print de grupo). Interromper não corrompe nada, apenas trava por cerca de um minuto o pedido que estava em voo.
+
+**E a noite acrescentou sete decisões ao painel**, todas das duas reviews grandes: a projeção da compra que mostra seis de dezesseis campos (**RN469-PROJECAO-1**), o CTA que aparece com o PIX ainda pendente (**CTA-PIX-1**), a conta de administração vendo a área do cliente inteira (**ADMIN-VE-AREA-1**), a troca de e-mail que apaga o histórico em silêncio (**TROCA-EMAIL-1**), a área muda para quem pagou e teve o vínculo recusado (**AREA-MUDA-1**), o estoque de contas que já acumulam papéis (**ACUMULO-ESTOQUE-1**) e Meus Clubes nascendo vazio porque não existe caminho para entrar num clube (**CLUBES-1**).
 
 ### Dois itens saíram do painel por estarem construídos
 
@@ -134,7 +183,7 @@ A disciplina de limpeza mandou. **"Entrou em 03/08 · o login no meio da landing
 
 ### Uma ordem de operação que não é opcional
 
-O deploy desta área tem sequência: **`firebase deploy --only firestore:indexes` antes do deploy das functions.** O índice de grupo em `inscritos.pessoaRef` é novo, o emulador não cobra índice e nenhum teste da frente prova este passo. Sem ele, quem foi presenteado — o caso do pagador que compra para a família — não vê o próprio ingresso, e a lista volta declarando que está incompleta em vez de mentir. Junto: a **C3** (autorizar o domínio da landing no Auth) ficou mais urgente do que era, porque agora é ela que faz a jornada de primeiro acesso terminar dentro da área.
+O deploy desta área tem sequência: **`firebase deploy --only firestore:indexes` antes do deploy das functions.** O índice de grupo em `inscritos.pessoaRef` é novo, o emulador não cobra índice e nenhum teste da frente prova este passo. **+05/08: são quatro overrides agora, não um** — a B4 acrescentou os de membro de clube, convite de influenciador e convite de promotor. O passo continua sendo um só; ver §A ordem de operação cresceu acima. Sem ele, quem foi presenteado — o caso do pagador que compra para a família — não vê o próprio ingresso, e a lista volta declarando que está incompleta em vez de mentir. Junto: a **C3** (autorizar o domínio da landing no Auth) ficou mais urgente do que era, porque agora é ela que faz a jornada de primeiro acesso terminar dentro da área.
 
 ### O bloqueio que fica
 
