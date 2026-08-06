@@ -31,6 +31,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AppShell,
   Avatar,
+  SCROLL_Y_ONLY,
   Sidebar,
   SidebarFooter,
 } from '@leela/design-system';
@@ -91,8 +92,19 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
 
   return (
     <AppShell sidebar={<Sidebar brand={brand} sections={sections} footer={footer} />}>
-      {/* Área principal: único contêiner de rolagem — a sidebar não rola junto. */}
-      <div className="flex flex-col flex-1 overflow-y-auto">{children}</div>
+      {/* Área principal: único contêiner de rolagem da PÁGINA — a sidebar não
+          rola junto, e o eixo horizontal é fechado (BUILD-SCROLL-PADRAO).
+          O `overflow-y-auto` sozinho não entregava um contêiner de rolagem,
+          entregava dois: pela CSS Overflow 3 §3.1 o eixo x, deixado `visible`,
+          era promovido a `auto`. Qualquer tela que estourasse a largura desenhava
+          uma barra horizontal no painel inteiro, e no Windows/Chrome essa barra é
+          clássica: comia ~15px da altura útil e empurrava o conteúdo a estourar
+          na vertical também. Era a mesma cascata do menu secundário e do CRM, um
+          nível acima — por isso o defeito voltava em tela nova a cada rodada.
+          Tela larga agora é DEFEITO DA TELA e se conserta na tela (flex-wrap,
+          min-w-0, truncate); widget legitimamente largo (tabela, sub-nav) traz o
+          próprio contêiner de rolagem. Regra e constantes no DS: utils/scroll. */}
+      <div className={`flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>{children}</div>
     </AppShell>
   );
 }

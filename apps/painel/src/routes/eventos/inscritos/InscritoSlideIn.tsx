@@ -31,6 +31,7 @@ import {
   Divider,
   EmptyState,
   IconButton,
+  SCROLL_Y_ONLY,
   Skeleton,
   Tabs,
   type BadgeProps,
@@ -203,7 +204,11 @@ export function InscritoSlideIn({
         role="dialog"
         aria-modal="true"
         aria-labelledby="inscrito-slidein-titulo"
-        className="fixed right-0 top-0 z-50 flex h-full w-[var(--modal-width-md)] max-w-[calc(100vw-var(--spacing-8))] flex-col gap-[var(--spacing-5)] overflow-y-auto bg-[var(--surface-raised)] p-[var(--spacing-6)] shadow-[var(--elevation-3)]"
+        // Painel lateral: rola só na vertical. O eixo x era `visible` e o CSS o
+        // promovia a `auto` (CSS Overflow 3 §3.1), então em tela estreita o
+        // `max-w-[calc(100vw-…)]` fazia nascer uma barra horizontal ao lado da
+        // vertical. Regra e constantes no DS: utils/scroll.
+        className={`fixed right-0 top-0 z-50 flex h-full w-[var(--modal-width-md)] max-w-[calc(100vw-var(--spacing-8))] flex-col gap-[var(--spacing-5)] bg-[var(--surface-raised)] p-[var(--spacing-6)] shadow-[var(--elevation-3)] ${SCROLL_Y_ONLY}`}
       >
         <div className="flex items-start justify-between gap-[var(--spacing-4)]">
           <div className="flex items-center gap-[var(--spacing-3)]">
