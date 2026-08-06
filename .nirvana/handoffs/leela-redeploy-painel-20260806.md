@@ -253,8 +253,10 @@ Dois pontos registrados para não virarem falso alarme numa próxima leitura:
 1. 👀 **Conferir a tela de eventos (inscritos, lista longa) em `https://leela-hub.web.app`** — build
    `index-C2icjqor.js`. É a conferência visual que os testes não fazem: jsdom não calcula layout, e
    o próprio commit registra isso em `Not-tested`.
-2. ⚠️ **`git push` para `origin/main`** — reincidência pelo 3º fechamento seguido. Produção roda
-   código que só existe nesta máquina; este redeploy aumenta a exposição.
+2. ✅ **`git push` para `origin/main` — FEITO nesta lane** (`b5e30b32..19bebad3`, 18:50). A pendência
+   que vinha se repetindo há três fechamentos está fechada: `origin/main` e o local estão iguais
+   (0 à frente, 0 atrás), então o código que roda em produção deixou de existir só nesta máquina.
+   O `commit --only` preservou as sobras das outras lanes, inclusive a que estava staged.
 3. Seguem pendentes das lanes anteriores, **não tocadas aqui**: Password policy no Identity Platform
    (configuração manual dele), BREVO-1 (allowlist de IP), expurgo LGPD, tarifas do Asaas, matar
    conta demo, imagens de build não limpas.
