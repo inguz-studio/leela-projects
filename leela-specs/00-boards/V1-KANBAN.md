@@ -10,6 +10,23 @@ tags:
 
 ## 📋 Backlog
 
+- [ ] **[E12] A porta do painel do cliente para o painel profissional está quebrada** — o cartão "criar conta de organizador" manda quem está logada para o formulário de cadastro do painel, e como a conta dela já existe o sistema devolve a negativa genérica anti-enumeração. Passa a ser promoção da conta que já existe, com o destino sendo a vitrine da RN-510 e o código Leela à mão 📋 especificado em 06/08 · lane SPEC-PAINEL-CLIENTE · **pode sair a qualquer momento, não depende de decisão** [[LEELA-E12-landing]]
+    - [ ] **S1234 · A ponte para o painel profissional**
+        - [ ] S1234-T1 a promoção no servidor: `profissionais/{uid}` em `aguardando_convite` com o carimbo do termo, idempotente, com as cinco recusas nomeadas ⚔
+        - [ ] S1234-T3 a prova de fronteira: a ponte não concede tenant, não concede `platform_admin` e não altera papel ⚔ — **antes da tela**
+        - [ ] S1234-T2 o cartão da ponte nos dois estados, com o aceite do termo e o aviso do segundo login — ⚠️ `portaOrganizador.ts:52-68` tem comentário pinado que não pode ser "consertado"
+        - [ ] S1234-T4 a demonstração ponta a ponta: cliente atravessa, aterrissa em vitrine, o aviso sobe e o código resgata
+    - [ ] **S1235 · A travessia declarada nos dois sentidos**
+        - [ ] S1235-T1 o par do alternador no lado do cliente, com o vocabulário do `AlternadorDePainel`
+        - [ ] S1235-T2 a copy da travessia e o rebatismo da RN-468 nos rótulos (profissional, não organizador)
+- [ ] **[E12] O painel do cliente ganha casca, navegação e estados** — a área do cliente está no ar com as quatro abas e vira painel: cabeçalho de conta, navegação persistente e os estados de sistema com nome próprio, em vez de improviso por painel 📋 especificado em 06/08 · lane SPEC-PAINEL-CLIENTE · **retido: fica com você o PCLIENTE-1** (a forma, antes de você simular as telas) [[LEELA-E12-landing]]
+    - [ ] **S1233 · O painel do cliente ganha casca, navegação e estados**
+        - [ ] S1233-T1 a casca: cabeçalho de conta, navegação persistente e o comportamento em 320 pixels — precisa de `AppShell`, `PageHeader` e `Skeleton` atravessando o boundary de cliente da landing (três nomes no `export`)
+        - [ ] S1233-T2 os estados de sistema unificados, com vazio e falha separados por construção
+        - [ ] S1233-T3 a saída da conta ganha lugar fixo na casca
+- [ ] **[E12] Quem comprou não tem como pedir reembolso nem passar a inscrição adiante** — as máquinas existem no servidor e têm tela do lado do profissional; do lado de quem comprou a varredura na landing devolve zero. É promessa não cumprida à participante 📋 mapeado em 06/08 pela lane SPEC-PAINEL-CLIENTE · fora daquela onda por decisão (PCLIENTE-5): mexe em dinheiro e em máquina de estados, e pede rodada própria [[LEELA-E12-landing]]
+    - [ ] **S1236 · O pedido de reembolso pelo painel do cliente** — sem tarefas até a rodada própria (RN-339, RN-341, RN-342)
+    - [ ] **S1237 · A troca de titularidade pelo painel do cliente** — sem tarefas até a rodada própria (RN-343, RN-344, RN-345)
 - [ ] **[E00] A prontidão de deploy vira comando nomeado e passo de CI** — o script existe e roda hoje pelo caminho longo. O que falta é o atalho e o lugar dele na esteira automática, e isso mexe em arquivos que estavam com outra lane em voo 📋 devolvido em 06/08 pela lane SPEC-PROCESSO-DEPLOY · o ajuste inteiro está descrito em [[o-que-so-a-producao-cobra]] §"Onde o processo entra na esteira" [[o-que-so-a-producao-cobra]]
     - [ ] **S040 · A prontidão de deploy na esteira** — ⚠️ renumerada em 06/08 pela lane SEAL-0806: nasceu como `S034` e colidia com a `S034 · Painel Profissional na superfície`, que a SPEC-QUALIFICACAO já tinha reservado em 04/08
         - [ ] S040-T1 `"prontidao": "node scripts/prontidao-de-deploy.mjs"` em `functions/package.json` — uma linha, fora do território daquela lane

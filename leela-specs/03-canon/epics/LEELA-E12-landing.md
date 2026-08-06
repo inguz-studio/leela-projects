@@ -3632,3 +3632,137 @@ ar"** e estão em produção desde o deploy de 05/08, provado passo a passo em
 | S1228 · o código curto da compra | ✅ no ar — ⚠️ as dezessete compras que já existem seguem sem código até o retroativo rodar, e ele é ato do dono |
 | S1214-T5 · o botão que salva o ingresso em PDF | ✅ no ar — o smoke baixou o arquivo do ingresso do dono em produção |
 | S1232 · o login como overlay da landing | ✅ no ar — renumerada em 06/08, nasceu `S1221` e colidia com a régua de venda da VITRINE-FIX |
+
+## Delta o painel do cliente e a ponte para o profissional (SPEC-PAINEL-CLIENTE · 2026-08-06)
+
+O dono pediu, antes de qualquer código, a spec do painel do cliente *"com a opção dele entrar e
+se cadastrar no painel profissional"*. A varredura achou três coisas que mudaram o que a spec ia
+escrever: a área do cliente já está no ar com sete das oito coisas da RN-451; a oitava está no
+ar e **quebrada**; e a vitrine da RN-510, que aterrissou no mesmo dia, é o destino que faltava.
+
+Rodada em `02-rodadas/2026-08-06-painel-cliente/`, com o **inventário de telas** que o dono leva
+ao Claude Design em `04-inventario-de-telas.md`.
+
+### O defeito medido, que é o que a rodada conserta
+
+`PortasDaConta.tsx:67` manda a participante logada para `painelUrl('/cadastrar')`, e o
+`CadastrarPage.tsx:119` chama `criarContaComEmail`. Quem lê aquele cartão está autenticada, logo
+o e-mail dela já existe: a chamada volta `auth/email-already-in-use`, que o `authErrors.ts:47-54`
+mascara na negativa única anti-enumeração, por disciplina correta. A pessoa clica em "criar conta
+de organizador" e recebe uma frase genérica, sem caminho.
+
+O desenho certo já estava escrito em 04/08, na §"Duas portas para virar organizador" da
+SPEC-ADMINSEP: a pessoa **ganha o doc** `profissionais/{uid}` em `aguardando_convite` e cai no
+overlay do convite. A construção pulou o gesto de promoção. Esta rodada constrói o que a spec já
+dizia, e não inventa regra.
+
+### RN-511 (nova, dona) · o painel do cliente é a área amadurecida, e mora na landing
+
+Uma superfície só, em `/minha-conta`, que ganha casca de painel: cabeçalho de conta, navegação
+persistente das quatro áreas e estados de sistema com nome próprio. Não nasce endereço novo, não
+nasce aplicativo novo, e o painel profissional **não** vira casa de participante — a guarda de
+conta órfã do `destinoPosLogin.ts:83-93` fica intacta, pela mesma razão que o item 57 a criou.
+
+A aba escolhida continua fora da URL, e nenhum dado de pessoa entra em endereço. Sucede em
+superfície a RN-451, que continua valendo no escopo: as oito coisas que o dono pediu.
+
+**A alternativa, escrita para poder ser escolhida:** o painel do cliente como superfície dentro
+do painel profissional, com o alternador servindo os dois lados. Custa derrubar a guarda de conta
+órfã, abrir o painel a todo participante do ecossistema e refazer a fronteira que a
+FRONTEIRA-AUTH acabou de provar fechada. Sobe ao painel do dono como **PCLIENTE-1**, porque ela é
+o que trava a próxima ação dele: simular a forma errada joga fora a simulação inteira.
+
+### RN-512 (nova, dona) · a ponte é promoção da conta que já existe, nunca um segundo cadastro
+
+A porta chama uma promoção no servidor que cria `profissionais/{uid}` com `statusOnboarding:
+'aguardando_convite'` (RN-411) e carimba o termo do profissional com versão e instante do
+**servidor** (RN-446, RN-466). É **idempotente**: a segunda chamada devolve sucesso sem escrever e
+sem recoletar consentimento (RN-467).
+
+Ela **não** concede tenant, **não** concede papel e **não** concede capacidade de plataforma, e a
+fronteira é provada por teste, não presumida — molde da RN-480. Recusa nomeada, com erro tipado e
+nunca `internal`, para: sem sessão, sessão anônima do checkout, conta de administração de
+plataforma (RN-449), e aceite ausente ou datado pelo cliente.
+
+Mandar a pessoa ao `/cadastrar` do painel fica **proibido**, pela razão medida acima.
+
+**Consequência de segurança, escrita para não se perder:** como a promoção não concede nada, ela
+não é elevação de privilégio. O que ela concede é a travessia da guarda de conta órfã até uma tela
+que, por construção da RN-510, não consulta nada de tenant. O pior desfecho de um abuso é alguém
+ver a vitrine.
+
+### RN-513 (nova, dona) · os dois painéis são dois destinos de uma conta só, e a travessia é explícita
+
+Quem alcança os dois vê a saída **nos dois lados**, com o mesmo vocabulário do
+`AlternadorDePainel`; quem alcança um só não vê saída para o outro; conta de administração de
+plataforma não vê porta nenhuma, e nenhum caminho da área do cliente produz URL de `/plataforma`
+(RN-449, garantida pelo tipo `RotaPainel`, que só admite `/entrar` e `/cadastrar`).
+
+A travessia **pede a senha de novo**, porque `apps/landing` e `apps/painel` são sites de Hosting
+distintos e a sessão do Auth persiste por origem. O código de hoje já assume isso ao apontar para
+`/entrar`; o que falta é a tela dizer. Handoff por token custom entre as origens fica **recusado
+com razão**: seria uma segunda superfície de credencial para a mesma capacidade, que a casa
+proíbe em letra desde a spec do convite, e o ganho seria pular uma tela.
+
+O rótulo nomeia o **painel**, não a conta, e usa "profissional" pela RN-468. A copy no ar hoje
+diz *"Crie sua conta de organizador. Ela nasce separada desta"*, e a frase contradiz a RN-450: o
+que nasce separado é o documento de perfil, não a conta.
+
+### RN-514 (nova, dona) · quem chega pela ponte aterrissa em vitrine, e o código Leela continua sendo o mecanismo
+
+O destino da promoção é o painel profissional em **modo vitrine** (RN-510): o shell desenha, o
+menu navega, nenhuma consulta tenant-scoped sai, e o primeiro gesto sobe o aviso de boas-vindas
+com o campo de resgate.
+
+*"Se cadastrar no painel profissional"*, na fala do dono, é **começar esse caminho** — não criar
+segunda conta, nem virar profissional no clique. Aprovação self-service sem convite fica
+registrada e **não adotada**, porque revogaria o go-live controlado que ele decidiu. A ponte não
+pede exceção nenhuma na fronteira de auth que a FRONTEIRA-AUTH provou fechada com 18 URLs em
+produção.
+
+### LEELA-S1233 · O painel do cliente ganha casca, navegação e estados · (de-para novo · SPEC-PAINEL-CLIENTE)
+
+**Tasks:** `S1233-T1` (a casca: cabeçalho de conta, navegação persistente, comportamento em 320
+pixels), `S1233-T2` (os estados de sistema da área unificados — vazio e falha separados por
+construção), `S1233-T3` (a saída da conta com lugar fixo). **Retida pelo PCLIENTE-1.**
+
+Pré-requisito de uma linha: `AppShell`, `PageHeader` e `Skeleton` existem no design system e
+**ainda não atravessaram** o boundary de cliente da landing (`apps/landing/app/_ds/ds.ts`, que
+hoje exporta vinte e um nomes). São três nomes no `export`, não componente novo.
+
+### LEELA-S1234 · A ponte para o painel profissional · (de-para novo · SPEC-PAINEL-CLIENTE)
+
+**Tasks:** `S1234-T1` (a promoção no servidor, idempotente, com as cinco recusas nomeadas — ⚔),
+`S1234-T2` (o cartão da ponte nos dois estados, com o aceite e o aviso do segundo login),
+`S1234-T3` (a prova de fronteira: a ponte não concede tenant, `platform_admin` nem papel — ⚔),
+`S1234-T4` (a demonstração ponta a ponta até o resgate do código Leela). Fila e dependências em
+`02-rodadas/2026-08-06-painel-cliente/05-fila-codigo.md`.
+
+⚠️ Território: `portaOrganizador.ts:52-68` carrega um comentário **pinado** pela FRONTEIRA-AUTH.
+Ali o papel literal está certo, porque a pergunta é *"esta conta é SÓ da plataforma?"*. Trocar por
+`isPlatformAdmin` tira do dono — `tenant_owner` **com** a capacidade — a porta de organizador na
+própria área de cliente.
+
+### LEELA-S1235 · A travessia declarada nos dois sentidos · (de-para novo · SPEC-PAINEL-CLIENTE)
+
+**Tasks:** `S1235-T1` (o par do alternador no lado do cliente), `S1235-T2` (a copy da travessia e
+o rebatismo da RN-468 nos rótulos).
+
+### O que a rodada mapeou e deixou fora, com razão
+
+- **Reembolso e troca de titularidade.** As máquinas existem no servidor (RN-339, RN-341, RN-342,
+  RN-343, RN-344, RN-345) e têm superfície do lado do profissional. Do lado de quem comprou, a
+  varredura na landing devolve **zero**. É promessa não cumprida à participante, fica **mapeada**
+  e fora desta onda (**PCLIENTE-5**): mexe em dinheiro e em máquina de estados, e entrar de
+  carona numa onda de casca é o jeito de errar. Card de backlog no [[V1-KANBAN]], com a **S1236**
+  (pedido de reembolso) e a **S1237** (troca de titularidade) **reservadas e sem enunciado aqui**
+  até a rodada própria.
+- **A Arena Social (S1226).** Estava bloqueada por não existir área do cliente. A área existe, o
+  bloqueio caiu, e a ausência ganha razão nova: o campo que pode inferir orientação sexual é dado
+  sensível do art. 11 e está amarrado à mesma conversa jurídica do **LGPD-1**, que segue aberta
+  com o dono. Fora **por decisão** (**PCLIENTE-6**), com o enunciado da S1226 intacto.
+- **CONTA-1 e CONTA-2.** A ponte serve quem já tem conta e já está logada, então não depende de
+  nenhum dos dois. Quando aquela fila rodar, o rótulo do header muda e nada desta rodada muda.
+- **ADMINSEP-2.** Continua aberto, e esta rodada constrói sobre o default de lá (o botão leva ao
+  painel do profissional). Se o dono trocar a leitura, muda em `portaOrganizador.ts` e em nenhum
+  outro lugar.

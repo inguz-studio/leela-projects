@@ -1683,3 +1683,30 @@ citavam um teste de CSS buildado que nunca tinha sido escrito. Ele existe agora,
 **da fonte**, compila com o Tailwind e o preset reais, e traz falsificação embutida — compila
 a classe do DEF-C e exige zero declaração de fundo. Medição independente no `dist`: nenhuma
 ocorrência da classe quebrada, regra do véu presente, token em `rgba(0,0,0,.6)`.
+
+## Delta a vitrine ganha um segundo público (SPEC-PAINEL-CLIENTE · 2026-08-06)
+
+A RN-510 continua **inalterada no enunciado**. O que muda é quem chega nela.
+
+Até hoje, a vitrine servia uma pessoa só: quem se cadastrou pelo `/cadastrar` do painel e ficou
+em `aguardando_convite`. A rodada SPEC-PAINEL-CLIENTE
+(`02-rodadas/2026-08-06-painel-cliente/`) abre uma segunda origem: a participante que já comprou
+na Leela, já tem conta, e clica na porta do painel do cliente para conhecer o outro lado.
+
+O mecanismo dela é a **RN-512**, dona em [[LEELA-E12-landing]]: uma promoção no servidor que cria
+`profissionais/{uid}` em `aguardando_convite` (RN-411) com o carimbo do termo do profissional, e
+entrega a pessoa aqui. Vale registrar o que essa origem **não** faz, porque é o que mantém este
+épico intacto:
+
+- não concede tenant, papel nem capacidade de plataforma — a fronteira é provada por teste, no
+  molde da RN-480;
+- não altera a allowlist de quatro portas que a vitrine consulta, nem a lista `ROTAS_LIBERADAS`;
+- não muda o mecanismo do código Leela (RN-414), que continua sendo a chave de virar profissional;
+- não pede exceção na guarda de conta órfã do `destinoPosLogin`: ela passa a encontrar o doc que
+  procura, e continua barrando quem não o tem.
+
+**Consequência de volume, que é o que vale antecipar.** A vitrine passa a receber gente que já é
+cliente da plataforma, e não só quem procurou o painel. A "fila de pedidos de acesso" que a
+rodada de 28/07 deixou registrada como candidata natural — para o dono prospectar quem entrou em
+vitrine e não resgatou código — fica ainda mais atraente. Continua **não pedida**, e continua
+sendo card próprio se o dono quiser.
