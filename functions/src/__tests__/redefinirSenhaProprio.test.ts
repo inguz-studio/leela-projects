@@ -31,6 +31,9 @@
 import type * as admin from 'firebase-admin';
 import type { EmailProvider } from '@leela/core';
 import { describe, expect, it, vi, afterEach } from 'vitest';
+import { createRequire } from 'node:module';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import * as logger from 'firebase-functions/logger';
 import { ALERTA_EMAIL_TRANSACIONAL } from '../email/incidenteEmail';
 import {
@@ -471,12 +474,62 @@ function sdkQueFalha(err: Error, aoDegradar?: Error | string): AuthSdkDeLinkSenh
   };
 }
 
+/**
+ * Todo o JavaScript do `firebase-admin` INSTALADO, módulo de auth.
+ *
+ * O subpath `firebase-admin/lib/...` não é exportado pelo pacote, então o
+ * caminho sai do entry point resolvido (`.../firebase-admin/lib/index.js`) e
+ * desce para `auth/`. Se um dia a frase mudar de arquivo dentro de `auth/`, o
+ * teste continua valendo; se sair de `auth/`, ele quebra — e quebrar é o
+ * comportamento certo, porque isso também é o SDK mudando debaixo de nós.
+ */
+function fonteDeAuthDoAdminSdk(): string {
+  const resolver = createRequire(__filename);
+  const raizAuth = join(dirname(resolver.resolve('firebase-admin')), 'auth');
+  return readdirSync(raizAuth)
+    .filter((nome) => nome.endsWith('.js'))
+    .map((nome) => readFileSync(join(raizAuth, nome), 'utf8'))
+    .join('\n');
+}
+
 describe('S8 · endereço sem conta é "sem conta", não é falha de infra', () => {
   it('a frase do assert do SDK é lida como conta inexistente', () => {
     expect(classificarFalhaDeLink(erroDaProtecaoDeEnumeracao())).toBe('sem_conta');
     // A constante e a mensagem real não podem divergir: é a única evidência
     // que o SDK entrega, e o ramo inteiro depende dela.
     expect(erroDaProtecaoDeEnumeracao().message).toContain(MSG_SEM_OOB_LINK);
+  });
+
+  // -------------------------------------------------------------------------
+  // O DETECTOR QUE FALTAVA (review REV-SENHA · trace leela-pixreal-diag-20260804)
+  // -------------------------------------------------------------------------
+  // A lane DIAG-SENHA prometeu, no `Directive:` do commit e na seção "o que os
+  // testes não provam", que "se o `firebase-admin` mudar a frase do assert, o
+  // teste quebra junto". NÃO QUEBRAVA. O dublê acima monta a mensagem a partir
+  // de um literal escrito NESTE arquivo, e a constante `MSG_SEM_OOB_LINK` mora
+  // no nosso `linkDeAcao.ts` — as duas pontas da asserção eram nossas, e o SDK
+  // instalado não era lido por nenhum teste. Prova: trocando a frase dentro de
+  // `node_modules/firebase-admin/lib/auth/auth-api-request.js` a suíte seguia
+  // 38/38 verde, enquanto um probe contra produção com o mesmo `node_modules`
+  // já devolvia `classificarFalhaDeLink => 'desconhecida'` — ou seja, o sintoma
+  // de 05/08 de volta, sem um único teste vermelho.
+  //
+  // Agravante que a lane não viu: `functions/package.json` declara
+  // `firebase-admin: ^13.4.0` e `functions/scripts/bundle-deploy.mjs` copia
+  // ESSE INTERVALO para o `package.json` do artefato de deploy, resolvendo com
+  // `npm install`. A versão que sobe não é a mesma que a suíte roda por
+  // construção — ela é re-resolvida a cada deploy. O acoplamento a uma frase
+  // do SDK, portanto, não é um risco de "algum dia alguém atualiza": é um
+  // risco de qualquer deploy. Este teste é o gate que faltava; travar a versão
+  // exata do `firebase-admin` é a decisão que o torna redundante.
+  it('a frase NÃO é só nossa — ela existe no firebase-admin instalado', () => {
+    // A asserção é sobre o BOOLEANO, não sobre o texto: `toContain` num fonte
+    // de ~1 MB despeja o SDK inteiro no relatório de falha e esconde o que
+    // importa. Assim a linha vermelha diz a frase que sumiu.
+    expect({
+      frase: MSG_SEM_OOB_LINK,
+      presenteNoSdkInstalado: fonteDeAuthDoAdminSdk().includes(MSG_SEM_OOB_LINK),
+    }).toEqual({ frase: MSG_SEM_OOB_LINK, presenteNoSdkInstalado: true });
   });
 
   it('o dialeto clássico do Auth continua valendo', () => {
