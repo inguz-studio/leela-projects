@@ -91,6 +91,38 @@ describe('o contêiner de rolagem da página', () => {
     expect(roladores(main)).toHaveLength(1);
   });
 
+  // ---------------------------------------------------------------------------
+  // REV-SCROLL-RET — o caminho para a segunda barra que NÃO passa por `overflow`.
+  //
+  // Fechar os dois eixos resolve a barra que o próprio contêiner desenha. Não
+  // resolve a que o DOCUMENTO desenha. Um descendente `position:absolute` cujos
+  // ancestrais são todos `static` tem o `<html>` como bloco de contenção: nenhum
+  // `overflow-hidden` do caminho o recorta (recorte só alcança quem tem aquele
+  // elemento como bloco de contenção) e o scrollHeight do documento estica até
+  // ele. É o `.sr-only` da `Pagination`, da `Table` e do `Stepper` — e o da
+  // paginação cai DEPOIS de uma tabela longa, bem abaixo da dobra, em inscritos.
+  // Resultado: barra vertical do documento ao lado da barra da página.
+  //
+  // O showroom mediu isto primeiro e travou o `<html>` (showcase.css). No painel
+  // esse remédio envenena: as telas de autenticação (`AuthLayout`, `min-h-screen`)
+  // vivem FORA do AppShell e rolam no documento de propósito. Por isso a trava é
+  // por bloco de contenção, não por lock global.
+  // ---------------------------------------------------------------------------
+  it('o contêiner de rolagem é bloco de contenção do que rola dentro dele', () => {
+    const main = montar();
+    const scroller = main.querySelector<HTMLElement>('.overflow-y-auto');
+    // Sem `relative`, um absoluto do conteúdo escapa deste contêiner: não rola
+    // junto com o conteúdo E acende a barra do documento.
+    expect(scroller).toHaveClass('relative');
+  });
+
+  it('a moldura em volta é bloco de contenção — o absoluto não chega ao `<html>`', () => {
+    const main = montar();
+    // O `main` do AppShell é a barreira de fora. Com ele `static`, o
+    // `overflow-hidden` dele não alcança absoluto nenhum, e o documento estica.
+    expect(main).toHaveClass('relative');
+  });
+
   it('a moldura em volta NÃO rola (o `main` do AppShell é `overflow-hidden`)', () => {
     const main = montar();
     expect(main).toHaveClass('overflow-hidden');

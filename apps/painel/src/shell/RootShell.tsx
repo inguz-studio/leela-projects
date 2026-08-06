@@ -119,8 +119,17 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
           nível acima — por isso o defeito voltava em tela nova a cada rodada.
           Tela larga agora é DEFEITO DA TELA e se conserta na tela (flex-wrap,
           min-w-0, truncate); widget legitimamente largo (tabela, sub-nav) traz o
-          próprio contêiner de rolagem. Regra e constantes no DS: utils/scroll. */}
-      <div className={`flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>{children}</div>
+          próprio contêiner de rolagem. Regra e constantes no DS: utils/scroll.
+
+          `relative` (REV-SCROLL-RET): quem rola precisa ser o bloco de contenção
+          do que está dentro dele. Sem isso, um descendente `position:absolute`
+          de ancestrais todos `static` escapa deste contêiner e vai parar no
+          `<html>` — não rola junto com o conteúdo E estica o scrollHeight do
+          documento, acendendo uma segunda barra vertical ao lado desta. O
+          `<main>` do AppShell já é `relative` e barra a fuga; aqui a `relative`
+          resolve o outro lado, que é a semântica: o absoluto pertence ao
+          conteúdo que rola, não à moldura parada. */}
+      <div className={`relative flex flex-col flex-1 ${SCROLL_Y_ONLY}`}>{children}</div>
     </AppShell>
   );
 }

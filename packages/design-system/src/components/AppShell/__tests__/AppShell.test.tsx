@@ -23,6 +23,32 @@ describe('AppShell', () => {
     expect(screen.getByRole('navigation', { name: 'sidebar' })).toBeInTheDocument();
   });
 
+  // ---------------------------------------------------------------------------
+  // REV-SCROLL-RET — a metade da trava de rolagem que não é `overflow-*`.
+  //
+  // `overflow-hidden` no `<main>` só recorta descendente cujo bloco de contenção
+  // seja o próprio `<main>` (ou um filho dele). Um `position:absolute` com todos
+  // os ancestrais `static` — o `.sr-only` da `Pagination`, da `Table` e do
+  // `Stepper` — escapa para o bloco de contenção inicial, o `<html>`, e estica o
+  // scrollHeight do DOCUMENTO. Aí nasce uma segunda barra vertical ao lado da
+  // barra da página: o "scroll duplo" que nenhum conserto de eixo alcança,
+  // porque a causa é o bloco de contenção.
+  //
+  // jsdom não faz layout — isto é contrato de estilo, igual ao resto da família.
+  // ---------------------------------------------------------------------------
+  it('o `main` é bloco de contenção: absoluto de dentro não escapa para o documento', () => {
+    render(
+      <AppShell sidebar={<div>nav</div>}>
+        <p>Conteúdo</p>
+      </AppShell>,
+    );
+    const main = screen.getByRole('main');
+    expect(main).toHaveClass('relative');
+    // O par: sem `overflow-hidden` o `relative` não recorta nada, e sem
+    // `relative` o `overflow-hidden` não alcança o absoluto. Os dois ou nenhum.
+    expect(main).toHaveClass('overflow-hidden');
+  });
+
   it('renders children inside main', () => {
     render(
       <AppShell sidebar={<div>nav</div>}>

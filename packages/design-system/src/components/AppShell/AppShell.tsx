@@ -77,8 +77,29 @@ function AppShell({
       </Drawer>
 
       {/* Main content — min-w-0 permite encolher abaixo do conteúdo (trava o
-          scroll horizontal em mobile: a constraint IMPEDE, não só esconde). */}
-      <main className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
+          scroll horizontal em mobile: a constraint IMPEDE, não só esconde).
+
+          `relative` é a SEGUNDA metade da trava de rolagem, e ela não passa por
+          classe de overflow nenhuma (REV-SCROLL-RET). O `overflow-hidden` daqui
+          só recorta descendente cujo bloco de contenção seja este `<main>` ou
+          um filho dele. Um descendente `position:absolute` com TODOS os
+          ancestrais `static` — é o caso do `.sr-only` da `Pagination`, da
+          `Table` e do `Stepper` — pula para o bloco de contenção inicial, o
+          `<html>`: não é recortado por ninguém e estica o scrollHeight do
+          DOCUMENTO. Numa lista longa (inscritos) o `.sr-only` da paginação cai
+          bem abaixo da dobra, e o documento acende uma barra vertical ao lado
+          da barra da página — o "scroll duplo" que sobrevive a qualquer
+          conserto de `overflow-*`, porque a causa é o bloco de contenção, não o
+          eixo. Sendo `relative`, o `<main>` vira o bloco de contenção e o
+          `overflow-hidden` volta a alcançar esses descendentes.
+
+          Sem offsets e com `z-index: auto`, `relative` não move nada e NÃO cria
+          contexto de empilhamento — overlays portalizados no body (Modal,
+          Drawer, DropdownMenu, Popover) seguem intocados. O showroom tratou o
+          mesmo defeito travando o `<html>` (showcase.css); aqui isso não serve,
+          porque as telas de autenticação vivem FORA do AppShell e rolam no
+          documento de propósito (`min-h-screen`). */}
+      <main className="relative flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         {/* Barra superior mobile com o hambúrguer — só abaixo de lg. */}
         <div
           className={cn(
