@@ -3,6 +3,7 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import leelaTokens from "./packages/design-system/lint/leela-tokens-plugin.mjs";
 import leelaScroll from "./packages/design-system/lint/leela-scroll-plugin.mjs";
+import leelaAuth from "./packages/design-system/lint/leela-auth-plugin.mjs";
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
 export default [
@@ -106,6 +107,34 @@ export default [
     },
     rules: {
       "leela-scroll/no-scroll-de-um-eixo": "error",
+    },
+  },
+  {
+    // Fronteira de autenticação do painel (FRONTEIRA-AUTH): "ninguém entra no
+    // sistema sem estar autenticado". A verdade hoje é estrutural — `App.tsx`
+    // tem DOIS irmãos debaixo do `<BrowserRouter>`: o bloco público
+    // (`AuthLayout`: entrar, cadastrar, recuperar/redefinir senha) e o bloco do
+    // app (`RequireSessao`). Um TERCEIRO irmão é uma linha de diff, não quebra
+    // build nem teste, e nasce aberto ao mundo.
+    //
+    // A regra exige que todo `<Route>` de topo declare de que lado está. Abrir
+    // uma rota nova ao anônimo passa a exigir a edição DESTE arquivo — a
+    // decisão aparece sozinha no diff da review em vez de se esconder na
+    // indentação do App.tsx.
+    //
+    // Escopo: só o painel. A landing é Next (App Router), não tem `<Routes>`, e
+    // a fronteira dela é outro contrato (callables + Rules, sem sessão de
+    // servidor) — regra própria quando houver o que travar.
+    files: ["apps/painel/src/**/*.tsx"],
+    ignores: ["**/__tests__/**", "**/*.test.tsx"],
+    plugins: {
+      "leela-auth": leelaAuth,
+    },
+    rules: {
+      "leela-auth/rota-fora-da-fronteira": [
+        "error",
+        { guardas: ["RequireSessao"], publicas: ["AuthLayout"] },
+      ],
     },
   },
 ];
