@@ -114,6 +114,41 @@ Dois links de definição de senha gerados. Nenhuma senha definida, nenhuma cont
 
 ---
 
+## T7 · Transferência de titularidade — FEITO (06/08, depois do portão da metade 1)
+
+Autorizado pelo maestro depois que o dono definiu a senha, entrou e bateu em "Esta conta não tem acesso ao painel do organizador".
+
+### O que foi escrito (5 documentos, todos reconferidos por releitura)
+
+| documento | campo | antes | depois |
+|---|---|---|---|
+| `tenants/castelo-producoes` | `ownerUid` | `uid-marina-castelo` | `QbqlSxanxlcFeHCy4g47Vp7jlgz1` |
+| `perfis/castelo` | `ownerUid` | `uid-marina-castelo` | `QbqlSxanxlcFeHCy4g47Vp7jlgz1` |
+| `clubes/floripa-run-coletivo` | `ownerId` | `uid-marina-castelo` | `QbqlSxanxlcFeHCy4g47Vp7jlgz1` |
+| `eventos/teste-taxa-repassada` | `organizadorId` | `uid-marina-castelo` | `QbqlSxanxlcFeHCy4g47Vp7jlgz1` |
+| `eventos/corrida-inverno-floripa-2026` | `organizadorId` | `uid-marina-castelo` | `QbqlSxanxlcFeHCy4g47Vp7jlgz1` |
+
+Claim: `{"role":"athlete"}` → `{"role":"tenant_owner","tenantId":"castelo-producoes"}`, no formato exato de `mergeTenantClaims` (sem `demotedFromRole`). Senha e `emailVerified` preservados.
+
+### ⚠️ Divergência: eram 11 ponteiros sobreviventes, não 5
+
+A varredura completa achou **25 referências** a `uid-marina-castelo`; **11 sobrevivem** ao plano. Transferi só os **5 de titularidade**. Os outros 6 são **autoria e trilha de auditoria** — reescrevê-los seria falsificar histórico:
+
+- `clubes/floripa-run-coletivo/desafios/subidas-do-morro` · `autorId` (quem escreveu o desafio)
+- `clubes/floripa-run-coletivo/membros/membro-marina-castelo` · `atletaId` (a **filiação** da Marina ao clube — não é titularidade)
+- `tenants/castelo-producoes/parceirosAssessoria/51888000000199` · `criadoPor`
+- 3 × `tenants/castelo-producoes/repasses/repasse-demo-000{1,2,3}` · `transicoes[0].por` — **bloco financeiro, vetado nesta rodada**
+
+O sistema já tolera esse tipo de ponteiro pendurado: `repasses.transicoes[1].por` aponta para `uid-platform-admin`, que nunca existiu.
+
+### Prova
+
+Não consegui emitir um ID token real (a credencial de owner não tem `iam.serviceAccounts.signJwt`, e alterar IAM de produção para provar um ponto não é troca justa). Provei por dois caminhos que não dependem disso: a claim gravada, relida do servidor, e o **ruleset deployado** avaliado contra o **documento real** do pedido `8CDHM` pela API oficial de teste — quatro cenários, todos no esperado.
+
+⛔ **O dono precisa sair e entrar de novo.** `resolverSessao` só força refresh do token quando **nem** `role` **nem** `tenantId` estão no cache; o token dele tem `role: 'athlete'`, então não força, e ele continuaria vendo a tranca até o refresh natural (até 1h). O login novo passa por `lerSessaoPosLogin`, que usa `getClaims(true)`.
+
+---
+
 ## T5 e T6 · Script e dry-run — FEITO
 
 - Plano puro e testável: `functions/src/limpeza/planoLimpeza.ts`
