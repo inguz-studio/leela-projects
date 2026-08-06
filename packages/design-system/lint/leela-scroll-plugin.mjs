@@ -29,17 +29,52 @@
 const OPOSTO = /** @type {const} */ ({ x: 'y', y: 'x' });
 
 /**
- * Separa o prefixo de modificador do utilitário. O corte é o ÚLTIMO `:`, que é
- * o que o Tailwind usa: `max-lg:overflow-x-auto` → (`max-lg:`, `overflow-x-auto`);
- * `overflow-y-hidden` → (``, `overflow-y-hidden`).
+ * Separa o prefixo de modificador do utilitário. O corte é o último `:` FORA de
+ * colchete — o `:` de dentro pertence à propriedade arbitrária, não ao
+ * modificador (REV-SCROLL). `max-lg:overflow-x-auto` → (`max-lg:`,
+ * `overflow-x-auto`); `max-lg:[overflow-y:auto]` → (`max-lg:`,
+ * `[overflow-y:auto]`); `[scrollbar-width:none]` → (``, `[scrollbar-width:none]`).
+ *
+ * O `lastIndexOf(':')` cru cortava `[overflow-y:auto]` em (`[overflow-y:`,
+ * `auto]`) e o token inteiro saía do radar — era o vetor de fuga nº 1.
  * @param {string} token
  * @returns {{ prefixo: string, util: string }}
  */
 function separar(token) {
-  const corte = token.lastIndexOf(':');
+  let dentro = 0;
+  let corte = -1;
+  for (let i = 0; i < token.length; i += 1) {
+    const c = token[i];
+    if (c === '[') dentro += 1;
+    else if (c === ']') dentro -= 1;
+    else if (c === ':' && dentro === 0) corte = i;
+  }
   return corte === -1
     ? { prefixo: '', util: token }
     : { prefixo: token.slice(0, corte + 1), util: token.slice(corte + 1) };
+}
+
+/** Propriedade arbitrária de eixo: `[overflow-y:auto]`, `[overflow:hidden]`. */
+const ARBITRARIA = /^\[overflow(-x|-y)?:[^\]]+\]$/;
+
+/**
+ * Classifica o eixo que um utilitário declara, ou null se ele não declara eixo
+ * nenhum. Cobre as DUAS grafias que o Tailwind aceita e que este repo usa lado
+ * a lado: a utilitária (`overflow-y-auto`) e a arbitrária
+ * (`[overflow-y:auto]`) — a segunda é idioma da casa (`[overflow-wrap:anywhere]`
+ * na Table, `[scrollbar-width:none]` no SubNav), então era a mais provável de
+ * reintroduzir o defeito por baixo do gate.
+ * @param {string} util
+ * @returns {'x' | 'y' | 'ambos' | null}
+ */
+function eixoDe(util) {
+  if (ARBITRARIA.test(util)) {
+    const prop = util.slice(1, util.indexOf(':'));
+    return prop === 'overflow-x' ? 'x' : prop === 'overflow-y' ? 'y' : 'ambos';
+  }
+  if (!util.startsWith('overflow-')) return null;
+  const resto = util.slice('overflow-'.length);
+  return resto.startsWith('x-') ? 'x' : resto.startsWith('y-') ? 'y' : 'ambos';
 }
 
 /**
@@ -48,7 +83,7 @@ function separar(token) {
  * @returns {string | null}
  */
 export function findEixoSolto(value) {
-  if (!value.includes('overflow-')) return null;
+  if (!value.includes('overflow')) return null;
 
   /** @type {Map<string, Map<string, string>>} prefixo → (eixo → classe) */
   const porPrefixo = new Map();
@@ -56,10 +91,8 @@ export function findEixoSolto(value) {
   for (const token of value.split(/\s+/)) {
     if (token.length === 0) continue;
     const { prefixo, util } = separar(token);
-    if (!util.startsWith('overflow-')) continue;
-
-    const resto = util.slice('overflow-'.length);
-    const eixo = resto.startsWith('x-') ? 'x' : resto.startsWith('y-') ? 'y' : 'ambos';
+    const eixo = eixoDe(util);
+    if (eixo === null) continue;
 
     let eixos = porPrefixo.get(prefixo);
     if (!eixos) {
@@ -80,6 +113,20 @@ export function findEixoSolto(value) {
   return null;
 }
 
+/**
+ * Chaves de objeto de estilo que declaram eixo. Cobre a grafia camelCase do
+ * React (`overflowY`) e a grafia CSS entre aspas (`'overflow-y'`), as duas
+ * aceitas em `style={{ … }}`.
+ * @type {Record<string, 'x' | 'y' | 'ambos'>}
+ */
+const ESTILO_EIXO = {
+  overflow: 'ambos',
+  overflowX: 'x',
+  overflowY: 'y',
+  'overflow-x': 'x',
+  'overflow-y': 'y',
+};
+
 /** Constante sugerida na mensagem, pelo eixo que a pessoa quis rolar. */
 const SUGESTAO = {
   x: 'SCROLL_X_ONLY (ou SCROLL_X_ONLY_SEM_CROMO, em navegação)',
@@ -97,6 +144,8 @@ const noScrollDeUmEixo = {
     messages: {
       eixoSolto:
         "'{{classe}}' declara um eixo só. O CSS promove o eixo {{oposto}} de `visible` para `auto` (CSS Overflow 3 §3.1) e nasce uma segunda barra de rolagem — o defeito que o dono já reportou três vezes. Importe {{sugestao}} de '@leela/design-system' (ou de '../../utils/scroll' dentro do DS) e coloque a constante DEPOIS do `className` no cn(). A regra está em packages/design-system/src/utils/scroll.ts.",
+      eixoSoltoEmEstilo:
+        "`{{prop}}` sozinho num objeto de estilo declara um eixo só. O CSS promove o eixo {{oposto}} de `visible` para `auto` (CSS Overflow 3 §3.1) e nasce uma segunda barra de rolagem. Pior que pela classe: estilo inline vence qualquer utilitário, então a trava do componente não te protege aqui. Declare o par (`overflowX` E `overflowY`) ou, melhor, use {{sugestao}} de '@leela/design-system' em `className`. A regra está em packages/design-system/src/utils/scroll.ts.",
     },
     schema: [],
   },
@@ -108,7 +157,7 @@ const noScrollDeUmEixo = {
     function check(node, value) {
       const classe = findEixoSolto(value);
       if (classe === null) return;
-      const eixo = separar(classe).util.startsWith('overflow-x-') ? 'x' : 'y';
+      const eixo = eixoDe(separar(classe).util) === 'x' ? 'x' : 'y';
       context.report({
         node,
         messageId: 'eixoSolto',
@@ -122,6 +171,35 @@ const noScrollDeUmEixo = {
       },
       TemplateElement(node) {
         check(node, node.value.raw);
+      },
+      // O eixo solto também entra por objeto de estilo — `style={{ overflowY:
+      // 'auto' }}` (REV-SCROLL). Este vetor é o MAIS perigoso dos três: estilo
+      // inline ganha de qualquer utilitário, então nem a trava depois do
+      // `className` no `cn()` segura. A análise por literal de classe não o via.
+      ObjectExpression(node) {
+        /** @type {Map<'x' | 'y' | 'ambos', string>} */
+        const eixos = new Map();
+        for (const prop of node.properties) {
+          if (prop.type !== 'Property') continue;
+          const nome =
+            prop.key.type === 'Identifier' && !prop.computed
+              ? prop.key.name
+              : prop.key.type === 'Literal' && typeof prop.key.value === 'string'
+                ? prop.key.value
+                : null;
+          if (nome === null) continue;
+          const chave = ESTILO_EIXO[nome];
+          if (chave !== undefined) eixos.set(chave, nome);
+        }
+        if (eixos.has('ambos')) return;
+        if (eixos.has('x') && eixos.has('y')) return;
+        const eixo = eixos.has('x') ? 'x' : eixos.has('y') ? 'y' : null;
+        if (eixo === null) return;
+        context.report({
+          node,
+          messageId: 'eixoSoltoEmEstilo',
+          data: { prop: eixos.get(eixo), oposto: OPOSTO[eixo], sugestao: SUGESTAO[eixo] },
+        });
       },
     };
   },
