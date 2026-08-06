@@ -22,7 +22,8 @@
 //
 // Helpers de autorização reutilizados em todas as rules:
 //   isSignedIn()              — usuário autenticado
-//   isPlatformAdmin()         — role == 'platform_admin' no custom claim
+//   isPlatformAdmin()         — role == 'platform_admin' OU platformAdmin == true
+//                               (papel legado OU capacidade — lane PAPEL-DUPLO)
 //   isTenantMember(tenantId)  — tenantId do claim bate com o documento (leitura)
 //   isTenantWriter(tenantId)  — membro com papel de escrita (owner/staff)
 //   isTenantOwner(tenantId)   — apenas tenant_owner (writes mais sensíveis)
@@ -40,9 +41,39 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    /** platform_admin: acesso cross-tenant (leitura macro + configuração) */
+    /**
+     * platform_admin: acesso cross-tenant (leitura macro + configuração).
+     *
+     * PONTO ÚNICO DE DECISÃO — as ~129 chamadas deste arquivo passam por aqui,
+     * e nenhuma outra rule lê `token.role == 'platform_admin'` direto (as
+     * outras três leituras de `token.role`, em isTenantWriter/isTenantOwner,
+     * comparam com tenant_owner/tenant_staff). Alterar a autorização de
+     * plataforma é alterar ESTA função, e só ela.
+     *
+     * DUAS pernas desde a lane PAPEL-DUPLO (espelha `isPlatformAdmin` de
+     * `packages/core/src/platform/roles.ts`):
+     *   1. `role == 'platform_admin'` — contas legadas seguem valendo, zero
+     *      migração;
+     *   2. `platformAdmin == true` — CAPACIDADE ortogonal ao papel. `role` é
+     *      valor único: quando o dono virou `tenant_owner`, o papel de
+     *      plataforma foi sobrescrito e o painel master fechou na cara dele.
+     *      A capacidade coexiste com o papel operacional em vez de disputá-lo.
+     *
+     * A comparação é com `true` LITERAL: a claim só é gravada com esse valor
+     * (revogar APAGA a chave), e chave ausente em `request.auth.token` compara
+     * como não-igual sem erro de avaliação — mesma leitura que
+     * `isTenantMember` já faz com `tenantId`, que é ausente justamente nos
+     * platform_admin legados. Um `platformAdmin: "true"` (string) ou `false`
+     * NÃO passa.
+     *
+     * ⛔ Isto NÃO autoriza gravar crachá. Claims não moram no Firestore: são
+     * do Firebase Auth e só o Admin SDK escreve nelas. A concessão exige o
+     * papel LEGADO e vive em `functions/src/platform/setPlatformAdminCapability.ts`.
+     */
     function isPlatformAdmin() {
-      return isSignedIn() && request.auth.token.role == 'platform_admin';
+      return isSignedIn()
+        && (request.auth.token.role == 'platform_admin'
+            || request.auth.token.platformAdmin == true);
     }
 
     /**
