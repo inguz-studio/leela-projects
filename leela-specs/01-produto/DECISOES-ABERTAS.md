@@ -2,6 +2,8 @@
 
 > **Como ler.** Todo item tem a mesma forma: um parágrafo curto de contexto, depois o que fica com você, por que está na mesa agora, as opções com o default marcado e onde a resposta aterrissa. Nada aqui bloqueia código. Tudo roda com um default defensável em vigor, ratificar é confirmar o default, e mudar é ajuste no próximo lote.
 >
+> **Se forem muitos itens de uma vez, comece pela vista de triagem.** O [[DECISOES-ABERTAS-TRIAGEM]] é uma página de leitura sobre este painel, não um painel paralelo: ela ordena os mesmos itens em três blocos — o que trava trabalho, o que mexe em dinheiro ou em risco, e o que é preferência — com uma linha por item e o link de volta para cá. Ela não guarda resposta nenhuma. A fonte é este arquivo, e a triagem é redesenhada a cada leva.
+>
 > **Disciplina de limpeza.** Item resolvido sai deste painel na mesma aterrissagem. O registro completo, com o seu verbatim, passa a viver no arquivo da rodada em `02-rodadas/`. Este painel só carrega o que ainda é seu.
 >
 > **Última leva.** Você respondeu dezesseis itens em lote em 03/08. O registro completo, com o verbatim, as duas regras permanentes que ele gerou e as seis lanes que ele abriu, está em `02-rodadas/2026-08-02-retomada/08-achados-dono-0803.md` §DEC-0803B.
