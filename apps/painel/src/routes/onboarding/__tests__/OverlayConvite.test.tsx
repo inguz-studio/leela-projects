@@ -1,8 +1,11 @@
 // =============================================================================
-// OverlayConvite (S1609-T2 · RN-416/417) — a tela da conta travada.
+// OverlayConvite (ONBOARD-VITRINE · RN-510, sucedendo RN-416/417) — o aviso de
+// boas-vindas da conta em vitrine.
 //
 // O que esta suíte trava:
-//   - a copy do dono aparece e o overlay se anuncia como diálogo modal;
+//   - a copy do dono aparece (boas-vindas + falar com o time + código Leela);
+//   - o aviso BLOQUEIA enquanto está na tela e SAI por Esc e por botão — a
+//     troca de desenho da RN-416, que era não-descartável de propósito;
 //   - o código digitado sujo (minúscula, hífen, espaço) chega NORMALIZADO;
 //   - código incompleto não envia;
 //   - o CTA lê o destino da CONFIG (mailto e WhatsApp), nunca uma string fixa;
@@ -10,9 +13,9 @@
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { CONTATO_ONBOARDING_PADRAO } from '@leela/core';
+import { usuario } from '@/test/usuario';
 import { OverlayConvite, type OverlayConviteProps } from '../OverlayConvite';
 
 const base: OverlayConviteProps = {
@@ -21,6 +24,7 @@ const base: OverlayConviteProps = {
   erro: null,
   onResgatar: vi.fn(),
   onSair: vi.fn(),
+  onFechar: vi.fn(),
 };
 
 function montar(over: Partial<OverlayConviteProps> = {}) {
@@ -35,38 +39,66 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('OverlayConvite — bloqueio e copy', () => {
-  it('anuncia-se como diálogo modal com a copy do dono', () => {
+describe('OverlayConvite — a copy do dono', () => {
+  it('anuncia-se como diálogo modal e dá boas-vindas', () => {
     montar();
     const dialogo = screen.getByRole('dialog');
     expect(dialogo).toHaveAttribute('aria-modal', 'true');
-    expect(
-      screen.getByRole('heading', { name: /Seu acesso ainda não foi liberado/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Boas-vindas à Leela/i })).toBeInTheDocument();
   });
 
-  it('não oferece nenhum caminho de fechar/dispensar', () => {
-    // Não-descartável é requisito (RN-416): um overlay que fecha deixa a pessoa
-    // olhando para uma home que ela não pode usar.
+  it('orienta a falar com o time para receber o código Leela', () => {
+    // As três peças da ordem verbatim de 06/08, na mesma tela.
     montar();
-    expect(screen.queryByRole('button', { name: /fechar|dispensar|cancelar/i })).toBeNull();
+    expect(screen.getByText(/fale com o nosso time e receba o código Leela/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Falar com o time Leela/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/código Leela/i)).toBeInTheDocument();
   });
 
-  it('oferece o que a conta travada PODE fazer: conta e saída', () => {
+  it('quem só participa sabe onde procurar, em uma linha', () => {
+    // "Quem é só participante tem a área do cliente na landing" — sem virar
+    // labirinto: uma frase, sem segunda porta dentro do aviso.
+    montar();
+    expect(screen.getByText(/área do cliente/i)).toBeInTheDocument();
+  });
+
+  it('oferece o que a conta em vitrine PODE fazer: conta e saída', () => {
     montar();
     expect(screen.getByRole('link', { name: /Minha conta/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Sair$/i })).toBeInTheDocument();
+  });
+});
+
+describe('OverlayConvite — bloqueia, mas sai (RN-510)', () => {
+  it('Esc fecha o aviso', async () => {
+    // A RN-416 exigia o oposto (sem Esc) porque não havia nada por baixo para
+    // olhar. Com a vitrine há — e o dono convidou a pessoa a conhecê-la.
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    await usuario().keyboard('{Escape}');
+    expect(onFechar).toHaveBeenCalledTimes(1);
+  });
+
+  it('o botão de continuar olhando fecha o aviso', async () => {
+    const onFechar = vi.fn();
+    montar({ onFechar });
+    await usuario().click(screen.getByRole('button', { name: /Continuar olhando/i }));
+    expect(onFechar).toHaveBeenCalledTimes(1);
+  });
+
+  it('o foco entra no painel do aviso, não no campo de código', () => {
+    // O código é de quem vai ser profissional. Jogar o cursor nele anunciaria
+    // que digitar algo é o pedágio da tela.
+    montar();
+    expect(document.activeElement).not.toBe(screen.getByLabelText(/código Leela/i));
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
   });
 
   // ── DEF-C (ONBOARD-REV) ──────────────────────────────────────────────
   // O véu era `bg-[var(--surface-base)]/95` e essa classe não gera regra
   // nenhuma: modificador de opacidade sobre valor arbitrário `var()` é
-  // descartado no build. Medido no `dist` do `vite build --mode leela-hub`,
-  // antes e depois: zero regra contendo `\/95`; a regra
-  // `.bg-\[var\(--surface-base\)\]` existe mas não casa com a classe do
-  // elemento. O blur pegava; a cor de fundo, não — véu transparente num
-  // overlay que se anuncia bloqueante. O véu do produto tem token no DS
-  // (`--modal-overlay-bg`), o mesmo do backdrop do Modal.
+  // descartado no build. Aqui se mede a CLASSE; quem mede o CSS BUILDADO é
+  // `veu-buildado.test.ts`, que é a prova que faltava em 2026-08-03.
   it('DEF-C: o véu usa o token de overlay do DS, não uma classe que não compila', () => {
     montar();
     const dialogo = screen.getByRole('dialog');
@@ -81,15 +113,16 @@ describe('OverlayConvite — resgate', () => {
   it('normaliza o código digitado antes de entregar', async () => {
     const onResgatar = vi.fn();
     montar({ onResgatar });
-    await userEvent.type(screen.getByLabelText(/Código de convite/i), 'ab23-cd 45');
-    await userEvent.click(screen.getByRole('button', { name: /Liberar acesso/i }));
+    const user = usuario();
+    await user.type(screen.getByLabelText(/código Leela/i), 'ab23-cd 45');
+    await user.click(screen.getByRole('button', { name: /Liberar acesso/i }));
     expect(onResgatar).toHaveBeenCalledWith('AB23CD45');
   });
 
   it('código incompleto não envia', async () => {
     const onResgatar = vi.fn();
     montar({ onResgatar });
-    await userEvent.type(screen.getByLabelText(/Código de convite/i), 'AB23');
+    await usuario().type(screen.getByLabelText(/código Leela/i), 'AB23');
     expect(screen.getByRole('button', { name: /Liberar acesso/i })).toBeDisabled();
     expect(onResgatar).not.toHaveBeenCalled();
   });

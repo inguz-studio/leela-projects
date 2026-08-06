@@ -51,12 +51,14 @@ export function App() {
             element={
               <RequireSessao>
                 <RootShell>
-                  {/* S1609-T2 · RN-416 — conta sem convite não passa daqui. A
-                      tranca de DADO é das Rules (sem claim de tenant não há
-                      leitura); este gate é a experiência: overlay bloqueante
-                      por cima e a rota de destino não montada, para nenhuma
-                      query tenant-scoped sair só para voltar negada atrás do
-                      véu. Conta com tenant e platform_admin passam reto. */}
+                  {/* RN-510 (sucede a RN-416) — conta sem código Leela ENTRA,
+                      em modo vitrine. A tranca de DADO continua sendo das
+                      Rules (sem claim de tenant não há leitura); este gate é a
+                      experiência: no lugar da árvore de rotas monta a
+                      VitrinePainel, que não tem hook de dados nenhum — nenhuma
+                      query tenant-scoped sai daqui. O aviso de boas-vindas
+                      sobe na primeira interação. Conta com tenant e
+                      administração da plataforma passam reto. */}
                   <ContaTravadaGate>
                     <Routes>
                       {/* E02 · Visão Geral do produtor (rota-raiz autenticada) */}

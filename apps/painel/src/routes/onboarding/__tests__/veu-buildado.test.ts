@@ -1,0 +1,155 @@
+// =============================================================================
+// O VÉU, MEDIDO NO CSS QUE O BUILD PRODUZ (DEF-C · ONBOARD-REV → ONBOARD-VITRINE).
+//
+// POR QUE ESTE ARQUIVO EXISTE, e por que ele não é redundante com o teste de
+// classe que já mora em `OverlayConvite.test.tsx`.
+//
+// Em 2026-08-03 o véu do overlay era `bg-[var(--surface-base)]/95`. O teste de
+// então lia a CLASSE do elemento e passava verde: a string estava lá, com o
+// token certo e a opacidade certa. Só que o Tailwind DESCARTA modificador de
+// opacidade sobre valor arbitrário `var()` — a classe não vira regra nenhuma.
+// O overlay se anunciava bloqueante e o painel seguia visível por trás dele.
+// Nenhum teste podia pegar isso, porque nenhum teste olhava o produto do build:
+// o defeito nasce ENTRE a string e o CSS.
+//
+// Então a pergunta que este arquivo faz não é "a classe é a certa?" — é:
+//
+//   a classe que está HOJE no elemento do véu produz, quando compilada pelo
+//   MESMO Tailwind e pelo MESMO preset do painel, uma cor de fundo de verdade?
+//
+// Por isso a classe é LIDA DA FONTE, nunca escrita aqui. Trocar o véu por outra
+// classe que não compile — a próxima encarnação do DEF-C, com outro nome —
+// derruba este teste sem que ninguém precise se lembrar dele.
+//
+// A COMPILAÇÃO É A DE VERDADE, NÃO UMA IMITAÇÃO. O `tailwindcss` roda com o
+// preset do design-system (o mesmo que `tailwind.config.ts` do painel carrega)
+// sobre a classe extraída. O que sai daqui é o mesmo texto que o `vite build`
+// grava em `dist/assets/*.css` para essas utilidades — sem pagar um bundle
+// inteiro a cada `vitest run`.
+//
+// E A PROVA DE QUE A MEDIÇÃO MORDE: o último caso compila a classe do DEF-C,
+// exatamente como ela era, e exige ZERO declaração de fundo. Um gate que não
+// falha no defeito que veio prevenir é decoração; este falha.
+//
+// A segunda metade do véu não é utilidade, é TOKEN: `--modal-overlay-bg` pode
+// existir como regra e ainda assim ser `transparent`. O último bloco lê os
+// temas do DS e exige opacidade real em cada um.
+// =============================================================================
+
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import tailwindcss from 'tailwindcss';
+import leelaPreset from '@leela/design-system/tailwind-preset';
+import type { Config } from 'tailwindcss';
+
+const RAIZ_DS = resolve(__dirname, '../../../../../../packages/design-system');
+const FONTE_OVERLAY = resolve(__dirname, '../OverlayConvite.tsx');
+
+/**
+ * Compila `classes` com o Tailwind e o preset REAIS do painel e devolve o CSS.
+ * `preflight` sai de propósito: o reset não é o objeto da medição e só faria
+ * ruído de milhares de linhas em cada asserção.
+ */
+async function compilar(classes: string): Promise<string> {
+  const config = {
+    presets: [leelaPreset as Config],
+    content: [{ raw: `<div class="${classes}"></div>`, extension: 'html' }],
+    corePlugins: { preflight: false },
+  } as Config;
+  const resultado = await postcss([tailwindcss(config)]).process('@tailwind utilities;', {
+    from: undefined,
+  });
+  return resultado.css;
+}
+
+/**
+ * A classe do VÉU, lida da fonte — o elemento que carrega `role="dialog"`, que
+ * é o mesmo que pinta o fundo e cobre a tela inteira.
+ * @pure
+ */
+function classeDoVeu(): string {
+  const fonte = readFileSync(FONTE_OVERLAY, 'utf8');
+  const inicio = fonte.indexOf('role="dialog"');
+  expect(inicio, 'o elemento do véu (role="dialog") sumiu da fonte').toBeGreaterThan(-1);
+  const abertura = fonte.slice(inicio);
+  const classe = /className="([^"]+)"/.exec(abertura)?.[1];
+  expect(classe, 'o véu ficou sem className na fonte').toBeTruthy();
+  return classe ?? '';
+}
+
+/** Todas as declarações `background-color` do CSS compilado. @pure */
+function fundosDeclarados(css: string): string[] {
+  return [...css.matchAll(/background-color:\s*([^;}]+)/g)]
+    .map((m) => m[1]?.trim())
+    .filter((valor): valor is string => valor !== undefined);
+}
+
+describe('véu do overlay · o que o BUILD produz (DEF-C)', () => {
+  it('a classe que está na fonte compila em cor de fundo de verdade', async () => {
+    const css = await compilar(classeDoVeu());
+    const fundos = fundosDeclarados(css);
+    // Não é "a regra existe em algum lugar do bundle": é esta classe, esta
+    // compilação, esta declaração. O DEF-C passava justamente porque a regra
+    // que existia no bundle era de OUTRA classe.
+    expect(fundos.length, `nenhum background-color saiu do build:\n${css}`).toBeGreaterThan(0);
+    expect(fundos.some((valor) => valor.includes('var(--'))).toBe(true);
+  });
+
+  it('o fundo compilado aponta para o token de overlay do DS', async () => {
+    const css = await compilar(classeDoVeu());
+    expect(fundosDeclarados(css)).toContain('var(--modal-overlay-bg)');
+  });
+
+  it('o desfoque também compila (era a metade que já funcionava)', async () => {
+    // O blur pegava mesmo no desenho quebrado — `backdrop-blur` é utilidade
+    // padrão do Tailwind. Trava-se aqui para que a correção da cor não leve o
+    // desfoque junto por descuido.
+    //
+    // A corrente tem dois elos e os dois são medidos: o Tailwind guarda o valor
+    // numa variável própria (`--tw-backdrop-blur`) e só depois a consome no
+    // `backdrop-filter`. Medir só o segundo elo passaria verde com a variável
+    // vazia — que é a mesma classe de defeito do DEF-C, um degrau adiante.
+    const css = await compilar(classeDoVeu());
+    expect(css).toMatch(/--tw-backdrop-blur:\s*blur\(var\(--modal-overlay-blur\)\)/);
+    expect(css).toMatch(/[^-]backdrop-filter:[^;}]*var\(--tw-backdrop-blur\)/);
+  });
+
+  it('o véu não usa opacidade sobre valor arbitrário — a forma que não compila', () => {
+    // A classe de defeito inteira, não só a instância: qualquer `/NN` colado
+    // num `[...]` cai aqui, com o nome da classe no erro.
+    const suspeitas = classeDoVeu()
+      .split(/\s+/)
+      .filter((classe) => /\][/]\d+$/.test(classe));
+    expect(suspeitas, 'opacidade sobre valor arbitrário é descartada no build').toEqual([]);
+  });
+
+  it('FALSIFICAÇÃO: a classe do DEF-C, compilada, não produz fundo nenhum', async () => {
+    // O caso que prova que os anteriores medem alguma coisa. Se este passar a
+    // encontrar um fundo, é o Tailwind que mudou de comportamento — e aí os
+    // outros casos deste arquivo perderam o sentido e precisam ser relidos.
+    const css = await compilar('bg-[var(--surface-base)]/95');
+    expect(fundosDeclarados(css)).toEqual([]);
+  });
+});
+
+describe('véu do overlay · o token é opaco o bastante para ser véu', () => {
+  const TEMAS = ['themes/index.css', 'themes/brasa.css', 'themes/wine.css'] as const;
+
+  it.each(TEMAS)('%s define --modal-overlay-bg com opacidade real', (arquivo) => {
+    // Uma regra que resolve para `transparent` é o mesmo defeito com outra
+    // roupa: o véu existe no CSS e não cobre nada. 0,5 é o piso do que ainda
+    // lê como véu; o valor do produto hoje é 0,6.
+    const css = readFileSync(resolve(RAIZ_DS, arquivo), 'utf8');
+    const declaracoes = [...css.matchAll(/--modal-overlay-bg:\s*([^;]+);/g)]
+      .map((m) => m[1]?.trim())
+      .filter((valor): valor is string => valor !== undefined);
+    expect(declaracoes.length, `--modal-overlay-bg não existe em ${arquivo}`).toBeGreaterThan(0);
+    for (const valor of declaracoes) {
+      const alfa = /rgba?\([^)]*,\s*([\d.]+)\s*\)/.exec(valor)?.[1];
+      expect(alfa, `--modal-overlay-bg sem alfa legível em ${arquivo}: ${valor}`).toBeDefined();
+      expect(Number(alfa)).toBeGreaterThanOrEqual(0.5);
+    }
+  });
+});
