@@ -43,7 +43,7 @@ import {
   type Operacao,
   type Plano,
 } from '../src/limpeza/planoLimpeza';
-import { digitalDoPlano, executarPlano, validarReguaDoBackup } from '../src/limpeza/execucaoLimpeza';
+import { canonicalizar, digitalDoPlano, executarPlano, validarReguaDoBackup } from '../src/limpeza/execucaoLimpeza';
 
 const PROJETO = 'leela-hub';
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJETO}/databases/(default)/documents`;
@@ -529,7 +529,13 @@ async function main(): Promise<void> {
   relatorio(plano);
 
   if (!aplicar) {
-    fs.writeFileSync(arquivoPlano, JSON.stringify({ digital, alvo: ALVO, plano }, null, 2));
+    // O arquivo sai CANONICALIZADO, e não só a digital. Sem isto, dois
+    // dry-runs contra a mesma produção geram arquivos com o mesmo hash e
+    // texto diferente — a ordem dos campos dentro do PATCH de
+    // `platform/rollups` dança junto com a resposta da API REST. A digital
+    // aguenta; a revisão humana, não: o diff entre dois planos ficaria cheio
+    // de ruído e o olho pararia de procurar a linha que importa.
+    fs.writeFileSync(arquivoPlano, JSON.stringify(canonicalizar({ digital, alvo: ALVO, plano }), null, 2));
     console.log('\n── PLANO, DOCUMENTO A DOCUMENTO, NA ORDEM ──');
     plano.operacoes.forEach((op, i) => imprimir(op, i, plano.operacoes.length));
     console.log(`\n[3/4] plano congelado em ${arquivoPlano} (digital ${digital})`);
