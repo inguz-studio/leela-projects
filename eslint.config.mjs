@@ -85,8 +85,13 @@ export default [
     //
     // Testes ficam fora: `toHaveClass('overflow-y-hidden')` afirma uma classe
     // renderizada, não declara CSS de componente.
+    // O showroom entra no escopo (REV-SCROLL): ele monta o próprio contêiner de
+    // rolagem com o AppShell, exatamente como o RootShell do painel, e por ficar
+    // de fora ele guardou um `overflow-y-auto` solto durante toda a varredura,
+    // com o gate verde. O `lint` do DS também passou a varrer `showcase/src`.
     files: [
       "packages/design-system/src/**/*.{ts,tsx}",
+      "packages/design-system/showcase/src/**/*.{ts,tsx}",
       "apps/*/src/**/*.{ts,tsx}",
       "apps/*/app/**/*.{ts,tsx}",
     ],

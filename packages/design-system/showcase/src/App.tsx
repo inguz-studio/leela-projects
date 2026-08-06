@@ -9,6 +9,7 @@ import {
   Avatar,
   Badge,
   PageHeader,
+  SCROLL_Y_ONLY,
   Sidebar,
   SidebarFooter,
   sidebarNavIcon,
@@ -143,7 +144,15 @@ export function App(): JSX.Element {
         badges={<Badge variant="brand">showroom</Badge>}
       />
 
-      <div ref={contentRef} className="flex-1 overflow-y-auto">
+      {/* Contêiner de rolagem do showroom — o mesmo papel que o RootShell tem
+          no painel, e por isso a mesma trava. Ficou de fora da varredura do
+          BUILD-SCROLL-PADRAO porque `showcase/` não estava no escopo do
+          `leela-scroll/no-scroll-de-um-eixo` nem do `pnpm lint` do DS: o
+          `overflow-y-auto` solto sobrevivia aqui com o gate verde, e o eixo x,
+          promovido a `auto` pela CSS Overflow 3 §3.1, é exatamente o que
+          desenha a barra horizontal que o dono reportou três vezes. Escopo e
+          script corrigidos junto com esta linha. Regra em src/utils/scroll.ts. */}
+      <div ref={contentRef} className={`flex-1 ${SCROLL_Y_ONLY}`}>
         <div className="flex flex-col gap-[var(--spacing-8)] p-[var(--spacing-8)]">
           {route === 'inicio' && <HomePage />}
           {route === 'fundacoes' && <TokensPage />}
