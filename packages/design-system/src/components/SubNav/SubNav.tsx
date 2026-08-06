@@ -24,6 +24,7 @@
 
 import * as React from 'react';
 import { cn } from '../../utils/cn';
+import { SCROLL_X_ONLY_SEM_CROMO } from '../../utils/scroll';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,7 +102,7 @@ function SubNav({
         divider && 'border-b border-b-[var(--border-subtle)]',
         className,
         // ---------------------------------------------------------------------
-        // TRAVA DE OVERFLOW — DEPOIS do `className` DE PROPÓSITO (REV-LOTES).
+        // TRAVA DE ROLAGEM — DEPOIS do `className` DE PROPÓSITO (REV-LOTES).
         //
         // `cn` é `twMerge`, que resolve conflito pelo ÚLTIMO da lista. Enquanto
         // estas classes vinham antes do `className`, um consumidor passando
@@ -111,31 +112,19 @@ function SubNav({
         // ainda verde, porque ele renderiza sem `className`. Vindo por último, a
         // trava vence qualquer override: o eixo do SubNav não é configurável.
         // Cor, fundo, padding e borda seguem sobrescrevíveis (outros grupos).
+        //
+        // A escolha do SEM_CROMO é da navegação, e é o pedido literal do dono,
+        // feito duas vezes: `w-max` na lista estoura a largura em tablet/celular,
+        // a barra horizontal clássica do Windows/Chrome come ~15px da ALTURA do
+        // nav, a lista tem altura fixa (`h-[--subnav-height]`) e a sobra vira a
+        // barra VERTICAL. Sem cromo, nenhuma altura é roubada e a cascata não
+        // começa. As abas que não cabem continuam alcançáveis (gesto, trackpad,
+        // arrastar, setas ←/→) — por isso NÃO é `overflow-x: hidden`, que
+        // esconderia aba, o defeito que o Adendo 12 existiu para consertar.
+        //
+        // A regra da casa e o porquê do eixo y fechado estão em utils/scroll.ts.
         // ---------------------------------------------------------------------
-        // BUILD-LOTES-UX · frente F (REINCIDÊNCIA — o dono já tinha pedido isto).
-        //
-        // O Adendo 12 resolveu a QUEBRA de layout e deixou as duas barras de
-        // rolagem na tela. Elas nascem em cascata:
-        //   1. `w-max` na lista faz o conteúdo ficar mais largo que a barra em
-        //      tablet/celular → o `overflow-x: auto` desenha a barra horizontal.
-        //      No Windows/Chrome ela é CLÁSSICA (ocupa espaço), não overlay —
-        //      "no desktop nenhuma scrollbar aparece" era verdade só no desktop;
-        //   2. essa barra come ~15px da ALTURA de conteúdo do nav, e a lista tem
-        //      altura fixa (`h-[--subnav-height]`) → sobra vertical de exatamente
-        //      a espessura da barra;
-        //   3. pelo CSS de overflow, um eixo não-`visible` promove o outro de
-        //      `visible` a `auto` → a sobra do passo 2 vira a barra VERTICAL.
-        // Ou seja: a barra horizontal fabricava a vertical.
-        //
-        // Conserto na causa: some com o CROMO da barra — o scroll continua
-        // (gesto, trackpad, arrastar, e as setas ←/→ que já movem o foco), então
-        // nenhum pixel de altura é roubado e o passo 2 deixa de existir.
-        // `overflow-y-hidden` fecha o passo 3 de vez, e nunca corta conteúdo: a
-        // lista tem a altura exata do nav. NÃO usar `overflow-x: hidden` — isso
-        // esconderia as abas que não cabem, que é o que o Adendo 12 evitou.
-        'overflow-x-auto',
-        '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        'overflow-y-hidden',
+        SCROLL_X_ONLY_SEM_CROMO,
       )}
     >
       <ul role="list" className="flex w-max items-end gap-[var(--spacing-1)] h-[var(--subnav-height)]">

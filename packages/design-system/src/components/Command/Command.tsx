@@ -14,6 +14,7 @@
 import * as React from 'react';
 import { Command as CommandPrimitive } from 'cmdk';
 import { cn } from '../../utils/cn';
+import { SCROLL_Y_ONLY } from '../../utils/scroll';
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -61,7 +62,15 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn('max-h-[var(--command-list-max-height)] overflow-y-auto overflow-x-hidden p-[var(--spacing-1)]', className)}
+    // A lista já declarava os dois eixos — era a única peça do DS que fazia certo
+    // antes do padrão existir. Agora vem da constante, e DEPOIS do `className`:
+    // `cn` é `twMerge` e resolve pelo último, então na ordem antiga um consumidor
+    // apagava o eixo em silêncio. Regra em utils/scroll.ts.
+    className={cn(
+      'max-h-[var(--command-list-max-height)] p-[var(--spacing-1)]',
+      className,
+      SCROLL_Y_ONLY,
+    )}
     {...props}
   />
 ));

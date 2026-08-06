@@ -41,6 +41,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { SCROLL_Y_ONLY } from '../../utils/scroll';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -160,12 +161,17 @@ const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
         {/* Bloco de marca (slot componível — dados do consumidor) */}
         {brand}
 
-        {/* Nav (mockup `.nav`: 16x12, gap 2, labels no fluxo) */}
+        {/* Nav (mockup `.nav`: 16x12, gap 2, labels no fluxo).
+            Rola só na vertical: o rail tem largura fixa (`--sidebar-width`), e um
+            rótulo de item mais largo que ela desenhava barra horizontal dentro do
+            menu, porque o eixo x era `visible` e o CSS o promovia a `auto`.
+            Regra em utils/scroll.ts. */}
         <div
           className={cn(
-            'flex flex-col flex-1 overflow-y-auto',
+            'flex flex-col flex-1',
             'py-[var(--sidebar-nav-py)] px-[var(--sidebar-nav-px)]',
             'gap-[var(--sidebar-nav-gap)]',
+            SCROLL_Y_ONLY,
           )}
         >
           {sections.map((section) => (

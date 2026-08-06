@@ -21,6 +21,7 @@
 import * as React from 'react';
 import * as RadixTabs from '@radix-ui/react-tabs';
 import { cn } from '../../utils/cn';
+import { SCROLL_X_ONLY_SEM_CROMO } from '../../utils/scroll';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,6 +72,23 @@ function Tabs({
           'flex items-end gap-[var(--spacing-1)]',
           'h-[var(--subnav-height)]',
           'border-b border-b-[var(--border-subtle)]',
+          // -------------------------------------------------------------------
+          // A tira de abas rola sozinha (BUILD-SCROLL-PADRAO).
+          //
+          // Os gatilhos são `whitespace-nowrap` e, como itens de flex em linha,
+          // não encolhem abaixo do próprio texto. Sem contêiner de rolagem aqui,
+          // uma tira com muitas abas (o detalhe do inscrito, a comunicação do
+          // clube) transbordava e ia empurrar a PÁGINA na horizontal. Isso era
+          // barra horizontal no painel inteiro antes, e viraria aba recortada
+          // agora que o `RootShell` fecha o eixo x — por isso a tira ganha o
+          // próprio contêiner: cada widget largo carrega a própria rolagem.
+          //
+          // SEM_CROMO porque isto é navegação, o mesmo tratamento e o mesmo
+          // pedido do dono no `SubNav`: a aba cortada na borda é a afordância, e
+          // Radix já dá ←/→/Home/End. Em dado (a `Table`) a escolha é a oposta,
+          // com barra à mostra. Regra em utils/scroll.ts.
+          // -------------------------------------------------------------------
+          SCROLL_X_ONLY_SEM_CROMO,
         )}
       >
         {tabs.map((tab) => (

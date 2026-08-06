@@ -7,6 +7,7 @@ import { SubNav } from '../SubNav';
 import { Avatar } from '../Avatar';
 import { Badge } from '../Badge';
 import { Button } from '../Button';
+import { SCROLL_Y_ONLY } from '../../utils/scroll';
 
 const SECTIONS: SidebarSection[] = DEFAULT_SIDEBAR_SECTIONS.map((section) => ({
   ...section,
@@ -28,7 +29,10 @@ type Story = StoryObj<typeof AppShell>;
 export const Completo: Story = {
   render: () => (
     <AppShell sidebar={<Sidebar sections={SECTIONS} />}>
-      <div className="flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)] overflow-y-auto">
+      {/* Mesmo contêiner de rolagem do RootShell do painel: um só, vertical. */}
+      <div
+        className={`flex flex-col gap-[var(--spacing-4)] p-[var(--spacing-6)] ${SCROLL_Y_ONLY}`}
+      >
         <Breadcrumb
           items={[
             { label: 'Eventos', href: '#' },

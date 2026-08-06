@@ -91,6 +91,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
+import { SCROLL_Y_ONLY } from '../../utils/scroll';
 import { useDialogBehavior } from './useDialogBehavior';
 
 export interface DialogProps {
@@ -255,8 +256,13 @@ export function Dialog({
           </button>
         </div>
 
-        {/* Corpo com scroll interno — o conteúdo é do consumidor. */}
-        <div className={cn('overflow-y-auto px-5 py-4 sm:px-6', bodyClassName)}>{children}</div>
+        {/* Corpo com rolagem interna — o conteúdo é do consumidor.
+            A trava de eixo vem DEPOIS do `bodyClassName` de propósito: `cn` é
+            `twMerge` e resolve pelo último, então com ela antes um consumidor
+            apagava o eixo em silêncio. Só a vertical rola; a horizontal, que era
+            `visible` e o CSS promovia a `auto`, fica fechada — filho largo de
+            verdade traz o próprio contêiner. Regra em utils/scroll.ts. */}
+        <div className={cn('px-5 py-4 sm:px-6', bodyClassName, SCROLL_Y_ONLY)}>{children}</div>
 
         {footer !== undefined ? (
           <div

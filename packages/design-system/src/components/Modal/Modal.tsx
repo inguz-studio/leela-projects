@@ -58,6 +58,7 @@ import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
 import { estiloMotion, usePresencaOverlay } from '../../utils/overlayMotion';
+import { SCROLL_Y_ONLY } from '../../utils/scroll';
 import { useDialogBehavior } from '../Dialog/useDialogBehavior';
 
 // ---------------------------------------------------------------------------
@@ -147,7 +148,6 @@ function Modal({
           sizeClass[size],
           'max-w-[calc(100vw-var(--spacing-8))]',
           'max-h-[calc(100vh-var(--spacing-8))]',
-          'overflow-y-auto',
           // Superfície via alias shadcn→brasa (card = surface-raised)
           'bg-card',
           'rounded-[var(--radius-lg)]',
@@ -159,6 +159,25 @@ function Modal({
           'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95',
           'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
           className,
+          // ---------------------------------------------------------------------
+          // TRAVA DE ROLAGEM — DEPOIS do `className` DE PROPÓSITO
+          // (BUILD-SCROLL-PADRAO). O painel rola na vertical quando o formulário
+          // passa de `max-h`. O eixo X, que era `visible` e o CSS promovia a
+          // `auto`, agora é fechado: com `max-w-[calc(100vw-…)]`, qualquer filho
+          // largo (grade de campos, número sem quebra, rótulo comprido) desenhava
+          // uma barra horizontal DENTRO do modal, ao lado da vertical. Era esse o
+          // "scroll duplo" dos modais.
+          //
+          // Fechar não recorta nada de novo — o eixo promovido a `auto` já
+          // recortava — e `hidden` continua rolável por programa, então o campo
+          // que recebe foco por teclado continua sendo revelado. Filho largo de
+          // verdade (uma `Table`) traz o próprio contêiner de rolagem.
+          //
+          // `cn` é `twMerge` e resolve pelo ÚLTIMO: com a trava antes do
+          // `className`, um consumidor apagava o eixo em silêncio. Regra em
+          // utils/scroll.ts.
+          // ---------------------------------------------------------------------
+          SCROLL_Y_ONLY,
         )}
       >
         {/* Header: título + X */}

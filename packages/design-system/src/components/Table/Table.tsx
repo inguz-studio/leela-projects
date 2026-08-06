@@ -56,6 +56,7 @@
 
 import * as React from 'react';
 import { cn } from '../../utils/cn';
+import { SCROLL_X_ONLY } from '../../utils/scroll';
 import { EmptyState } from '../EmptyState/EmptyState';
 
 // ---------------------------------------------------------------------------
@@ -84,11 +85,34 @@ const TableRoot = React.forwardRef<HTMLTableElement, TableRootProps>(
     // toda largura: a grade densa fica e o scroll-x é CONTIDO aqui, nunca no body.
     <div
       className={cn(
-        'w-full overflow-x-auto',
+        'w-full',
         'bg-[var(--surface-raised)] rounded-[var(--radius-lg)] shadow-elev-1',
         cardMode &&
           'max-lg:overflow-visible max-lg:bg-transparent max-lg:rounded-none max-lg:shadow-none',
         containerClassName,
+        // ---------------------------------------------------------------------
+        // TRAVA DE ROLAGEM — DEPOIS do `containerClassName` DE PROPÓSITO
+        // (BUILD-SCROLL-PADRAO). `cn` é `twMerge` e resolve pelo ÚLTIMO: com a
+        // trava antes, um consumidor passando `overflow-y-auto` a apagava em
+        // silêncio e a barra vertical fantasma voltava. Vindo por último, o eixo
+        // do wrap não é configurável de fora; fundo, radius e sombra seguem.
+        //
+        // A tabela MANTÉM o cromo da barra horizontal, ao contrário do SubNav: em
+        // grade densa a barra é a única pista de que existe mais coluna para o
+        // lado. O que fecha é o eixo Y, que ninguém pediu e o CSS promovia a
+        // `auto` — a barra horizontal clássica do Windows/Chrome rouba ~15px de
+        // altura do wrap, e com as alturas fracionárias de uma `border-collapse`
+        // a sobra virava uma barra vertical de alguns pixels de curso. Era esse o
+        // "scroll duplo" dentro do card. Fechar o Y não recorta nada: a altura do
+        // wrap é `auto`, então o conteúdo nunca a excede.
+        //
+        // Em card-mode (<lg) o `max-lg:overflow-visible` acima segue mandando:
+        // ele é de outro modificador, o twMerge não o funde com estas, e a media
+        // query solta os dois eixos para a linha virar card.
+        //
+        // A regra da casa está em utils/scroll.ts.
+        // ---------------------------------------------------------------------
+        SCROLL_X_ONLY,
       )}
     >
       <table
