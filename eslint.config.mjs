@@ -2,6 +2,7 @@
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import leelaTokens from "./packages/design-system/lint/leela-tokens-plugin.mjs";
+import leelaScroll from "./packages/design-system/lint/leela-scroll-plugin.mjs";
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
 export default [
@@ -73,6 +74,33 @@ export default [
     },
     rules: {
       "leela-tokens/no-hardcoded-tokens": "error",
+    },
+  },
+  {
+    // Padrão de rolagem (BUILD-SCROLL-PADRAO): ninguém declara um eixo de
+    // overflow sozinho — o CSS promove o outro a `auto` e nasce a segunda barra
+    // de rolagem (o "scroll duplo" que o dono reportou três vezes). A regra
+    // completa e as três constantes estão em
+    // packages/design-system/src/utils/scroll.ts.
+    //
+    // Testes ficam fora: `toHaveClass('overflow-y-hidden')` afirma uma classe
+    // renderizada, não declara CSS de componente.
+    files: [
+      "packages/design-system/src/**/*.{ts,tsx}",
+      "apps/*/src/**/*.{ts,tsx}",
+      "apps/*/app/**/*.{ts,tsx}",
+    ],
+    ignores: [
+      "**/__tests__/**",
+      "**/*.test.{ts,tsx}",
+      // Mobile (RN) não usa Tailwind — estiliza por objeto de tema.
+      "apps/mobile/**",
+    ],
+    plugins: {
+      "leela-scroll": leelaScroll,
+    },
+    rules: {
+      "leela-scroll/no-scroll-de-um-eixo": "error",
     },
   },
 ];

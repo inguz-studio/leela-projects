@@ -183,3 +183,8 @@ export type { BarChartProps, BarChartDatum, DonutChartProps, DonutChartDatum } f
 
 // ── Utilities ──────────────────────────────────────────────────────────────
 export { cn } from './utils/cn';
+
+// Padrão de rolagem (BUILD-SCROLL-PADRAO): quem rola importa daqui, ninguém
+// escreve `overflow-x-*`/`overflow-y-*` na mão. A regra da casa, com a
+// causa-raiz do "scroll duplo", está no cabeçalho de ./utils/scroll.
+export { SCROLL_Y_ONLY, SCROLL_X_ONLY, SCROLL_X_ONLY_SEM_CROMO } from './utils/scroll';
