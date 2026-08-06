@@ -194,7 +194,7 @@ um abuso é alguém ver a vitrine.
 ## Parte 5 · As histórias
 
 Numeradas no [[LEELA-E12-landing]], que é o épico dono das superfícies da landing. Prova de não
-colisão em [[03-rns-delta]].
+colisão em `03-rns-delta.md`.
 
 ### LEELA-S1233 · O painel do cliente ganha casca, navegação e estados
 
@@ -245,5 +245,5 @@ lanes de conta.
 
 ## Vizinhos
 
-[[01-decisoes-dono]] tem o verbatim e as decisões. [[03-rns-delta]] tem as quatro regras.
+`01-decisoes-dono.md` tem o verbatim e as decisões. `03-rns-delta.md` tem as quatro regras.
 [[04-inventario-de-telas]] é a peça para o Claude Design. [[05-fila-codigo]] tem a ordem.

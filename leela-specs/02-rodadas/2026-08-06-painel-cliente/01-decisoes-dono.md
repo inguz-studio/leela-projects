@@ -146,6 +146,6 @@ o bloqueio caiu e a ausência precisa de razão nova.
 
 ## Vizinhos
 
-[[02-spec-painel-cliente]] tem o desenho e as histórias. [[03-rns-delta]] tem as regras novas.
+[[02-spec-painel-cliente]] tem o desenho e as histórias. `03-rns-delta.md` tem as regras novas.
 [[04-inventario-de-telas]] é o que vai para o Claude Design. [[05-fila-codigo]] tem a ordem de
 execução.

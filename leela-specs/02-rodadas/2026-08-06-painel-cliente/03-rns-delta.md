@@ -20,7 +20,7 @@ data: 2026-08-06
 > **sem enunciado no épico** até a rodada própria — reservar evita que a próxima lane as consuma
 > para outra coisa e deixe o card órfão.
 >
-> O texto canônico vive no épico dono, [[LEELA-E12-landing]]. Decisões em [[01-decisoes-dono]];
+> O texto canônico vive no épico dono, [[LEELA-E12-landing]]. Decisões em `01-decisoes-dono.md`;
 > spec em [[02-spec-painel-cliente]]; telas em [[04-inventario-de-telas]].
 
 ## Novas
