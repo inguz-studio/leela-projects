@@ -149,6 +149,56 @@ Não consegui emitir um ID token real (a credencial de owner não tem `iam.servi
 
 ---
 
+## T8 · Resposta à review antagonista — os 4 bloqueadores fechados
+
+Review: `.nirvana/handoffs/leela-rev-limpeza-20260806.md`. Veredito era BLOQUEAR. Cada correção tem um teste que **falha no planejador antigo** e passa no novo — a prova está em `functions/src/__tests__/limpezaProdFalsificacao.test.ts`, que roda a mesma asserção contra o commit `d887528e` congelado em `fixtures/`.
+
+| # | O que mudou | Teste que falhava antes |
+|---|---|---|
+| **B1** | O **documento do evento morre primeiro** (`ORDEM.EVENTO=10`), e não os agregados. Os quatro gates (`agregarFinanceiro:220`, `agregarEstoque:110`, `agregarDemografia:120`, `agregarComunicacoes:61`) checam `!eventoSnap.exists` — matar o pai desarma os quatro de uma vez. Agregados vão para `ORDEM.AGREGADOS=40`. Drenagem de 10s entre grupos. | `[B1] o financeiro sai DEPOIS dos inscritos e do evento` |
+| **B2** | Condenação por **lista literal congelada** no `ALVO`, nunca derivada do que ainda existe. Checkpoint por operação (`--retomar`). Alvo incoerente lança. | `[B2] queda logo depois do evento: a rodada 2 ainda apaga o resto` + varredura de **todos** os cortes possíveis |
+| **B3** | Gate real: `intocavel()` tira do plano documento sob caminho de uid protegido; `conflitosDeProtecao` **trava o `--apply`** (exit 4) sem `--aceitar-conflitos-de-protecao`. Pega uid em campo **e em chave composta**. | `[B3] ANTIGO falha: apaga documento sob uid protegido` |
+| **B4** | `podarChavesCondenadas` **desce até o fundo** em vez de parar no primeiro ramo. Os totais de raiz o plano NÃO forja: entram como `recomputesObrigatorios`. | `[B4] ANTIGO falha: deixa a chave morta lá no fundo` |
+
+### Ajustes
+
+- **A1** — `dadosBancariosSnapshot` e campos de identidade bancária (`titular`, `pixMascarado`, `documento`, `cnpj`, `cpf`) saíram do renomeador. Snapshot é registro do que era verdade na hora; "Leela LTDA" seria razão social inventada por concatenação. As edições caíram de 10 para 6.
+- **A4** — o portão do `--backup` agora **lista o prefixo no GCS**, exige `.overall_export_metadata` e imprime o instante do export. `--backup=x` passava antes; agora morre.
+- **A5** — o dry-run congela o plano em disco com **digital SHA-256**; o `--apply` recomputa e **recusa** (exit 3) se divergir.
+- **A6** — token OAuth cacheado em memória com o refresh guardado.
+- **Ordem 10 "certa por acidente"** — comentário e nome de teste corrigidos. A review provou que `onInscritoWriteAutomacao` sai na primeira linha em qualquer delete; a ordem dos disparos é **defesa em profundidade**, não a coisa que impede o e-mail. Nenhum teste afirma o contrário agora.
+
+### 🔴 Achado meu, além da review: o inventário estava incompleto
+
+`recomputeProfessionalDashboard` (`aggregateProfessionalDashboard.ts:213`) faz `.set()` **incondicional** em `profissionais/{profId}/dashboard/current` sem checar se o pai existe. Existem **4 documentos-fantasma** (pai inexistente com subcoleção) escondendo **31 documentos** que o inventário de 3.138 nunca viu — e **um deles foi criado pela minha própria transferência de titularidade**.
+
+Total real: **3.170**. O runner agora lista com `showMissing=true`. Isso sozinho revelou 10 órfãos novos (`profissionais/uid-marina-castelo/analyticsSnapshots/*` apontando para `noturna-beira-mar-2026`), varridos em `ORDEM.FANTASMAS=110` — por último, porque `onClubeWriteDashboard` recria dashboard até a ordem 70.
+
+### ✅ Correção de fato aceita: existe janela de 1 hora
+
+Eu escrevi "não existe voltar trinta minutos". Estava errado, e provei o contrário lendo produção num instante passado:
+
+```
+versionRetentionPeriod  3600s      earliestVersionTime  2026-08-06T14:02:16Z
+tenants/castelo-producoes.ownerUid
+  agora                    -> QbqlSxanxlcFeHCy4g47Vp7jlgz1
+  em 2026-08-06T14:05:00Z  -> uid-marina-castelo        ← antes da transferência
+  em 2026-08-06T13:00:00Z  -> FAILED_PRECONDITION: read_time is too old
+```
+
+Dentro de 60 minutos dá para ler em `readTime` passado e exportar com `snapshotTime`. **É a rede mais barata disponível e entra no runbook.**
+
+### Backup refeito
+
+O export do T1 (13:45:45Z) era **anterior** à transferência de titularidade. Novo export, posterior:
+`gs://leela-hub.firebasestorage.app/firestore-backups/leela-limpeza-prod-20260806-pos-titularidade` — `SUCCESSFUL`.
+
+### Dry-run refeito
+
+**2.810 exclusões e 6 edições**, sobrevivem 364 de 3.174. Digital `ee12004606f095dc`. Órfãos previstos: **3**, todos registro financeiro do tenant sobrevivente — vetados pelo maestro nesta rodada.
+
+---
+
 ## T5 e T6 · Script e dry-run — FEITO
 
 - Plano puro e testável: `functions/src/limpeza/planoLimpeza.ts`
