@@ -62,3 +62,31 @@ describe('rotaLiberadaNaConta (RN-416)', () => {
     expect(rotaLiberadaNaConta('/contabilidade')).toBe(false);
   });
 });
+
+// =============================================================================
+// A ISENÇÃO É DE QUEM ALCANÇA A PLATAFORMA, não de quem tem o papel literal
+// (FRONTEIRA-AUTH · sobre a PAPEL-DUPLO).
+//
+// `contaTravada` comparava `role === 'platform_admin'`. O administrador
+// nomeado por CAPACIDADE não tem tenant — e pela regra antiga receberia o
+// overlay bloqueante "peça um convite ao organizador", que é a tela errada
+// para a conta mais poderosa do sistema.
+// =============================================================================
+
+describe('contaTravada · crachá de duas pernas (RN-401)', () => {
+  it('capacidade sem tenant NÃO é conta travada', () => {
+    expect(contaTravada(sessao({ role: 'athlete', platformAdmin: true }))).toBe(false);
+  });
+
+  it('o DONO (tenant_owner + capacidade + tenant) segue destravado, como já estava', () => {
+    expect(
+      contaTravada(sessao({ role: 'tenant_owner', tenantId: 'castelo-producoes', platformAdmin: true })),
+    ).toBe(false);
+  });
+
+  it('`platformAdmin` que não é `true` não destrava ninguém', () => {
+    expect(
+      contaTravada(sessao({ role: 'athlete', platformAdmin: 'true' as unknown as true })),
+    ).toBe(true);
+  });
+});

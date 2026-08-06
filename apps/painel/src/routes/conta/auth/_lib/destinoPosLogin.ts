@@ -23,14 +23,36 @@
 // bookmark de `/entrar` e a do cadastro.
 // =============================================================================
 
-import type { Role } from '@leela/core';
+import { isPlatformAdmin, paineisDaConta, type AuthClaims, type Role } from '@leela/core';
 
 /** O que se sabe da conta logo depois do login (claims + doc do perfil). */
 export interface SessaoPosLogin {
   role: Role | null;
   tenantId: string | null;
+  /**
+   * A perna NOVA do crachá de plataforma (lane PAPEL-DUPLO). Sem ela, esta
+   * função lia só o `role` — e o administrador nomeado por CAPACIDADE, que não
+   * tem tenant nem doc de profissional, era barrado na porta como conta órfã.
+   */
+  platformAdmin?: true;
   /** `profissionais/{uid}` existe? Discriminante do organizador em onboarding. */
   temPerfilProfissional: boolean;
+}
+
+/**
+ * O crachá que o core sabe ler, montado do que se coletou no login.
+ *
+ * Exportado porque a `EntrarPage` monta o MESMO crachá para decidir se vale a
+ * pena ler `profissionais/{uid}`. Duas montagens do mesmo crachá seriam duas
+ * leituras do mesmo token que um dia discordam.
+ * @pure
+ */
+export function crachaPosLogin(sessao: Omit<SessaoPosLogin, 'temPerfilProfissional'>): AuthClaims {
+  return {
+    ...(sessao.role !== null ? { role: sessao.role } : {}),
+    ...(sessao.tenantId !== null ? { tenantId: sessao.tenantId } : {}),
+    ...(sessao.platformAdmin === true ? { platformAdmin: true as const } : {}),
+  } as AuthClaims;
 }
 
 export type DestinoPosLogin =
@@ -64,8 +86,9 @@ export function destinoPosLogin(
   // Deixar entrar produziria um painel vazio sem explicação — o overlay do
   // convite é para quem se cadastrou como organizador, não para toda conta do
   // ecossistema que descobrir a URL do painel.
+  const cracha = crachaPosLogin(sessao);
   if (
-    sessao.role !== 'platform_admin' &&
+    !isPlatformAdmin(cracha) &&
     sessao.tenantId === null &&
     !sessao.temPerfilProfissional
   ) {
@@ -79,12 +102,25 @@ export function destinoPosLogin(
     return { tipo: 'rota', destino: from };
   }
 
-  // Papel acumulado (admin + organizador na MESMA conta) resolve aqui, e
-  // resolve por precedência: a conta vai para `/plataforma` e pronto. É a
-  // decisão do dono de 03/08 — ACESSO ÚNICO, sem seletor de papel; a UX de
-  // visualização multi-papel é item futuro, de outra lane.
-  // NÃO transforme este `if` num seletor nem numa tela de escolha.
-  if (sessao.role === 'platform_admin') {
+  // A porta de ENTRADA é o painel onde a conta trabalha, e a regra é a mais
+  // simples que atende os quatro crachás: quem SÓ alcança a plataforma entra na
+  // plataforma; todo o resto entra na Visão Geral.
+  //
+  // Repare no que isso NÃO muda. O `platform_admin` legado não tem tenant, logo
+  // não tem lado de organizador, logo continua caindo em `/plataforma` como
+  // sempre caiu. O dono — `tenant_owner` COM a capacidade — continua caindo na
+  // Visão Geral, que é onde ele trabalha; o painel master fica a um clique no
+  // alternador, e não na cara dele todo login. O caso que muda é o que não
+  // existia: o administrador nomeado por CAPACIDADE e sem tenant, que pela
+  // regra antiga (comparando `role`) cairia numa Visão Geral sem tenant nenhum
+  // para mostrar.
+  //
+  // Continua valendo a decisão do dono de 03/08: ACESSO ÚNICO, sem seletor de
+  // papel no login. NÃO transforme este `if` numa tela de escolha — a travessia
+  // entre painéis é navegação DEPOIS de dentro (o alternador), não uma pergunta
+  // na porta.
+  const paineis = paineisDaConta(cracha);
+  if (paineis.master && !paineis.organizador) {
     return { tipo: 'rota', destino: ROTA_PLATAFORMA };
   }
 

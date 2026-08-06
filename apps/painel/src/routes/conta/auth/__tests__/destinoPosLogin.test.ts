@@ -143,3 +143,88 @@ describe('destinoPosLogin — deep-link do RequireSessao (FIX-AUTHGUARD)', () =>
     });
   });
 });
+
+// =============================================================================
+// AS DUAS PERNAS DO CRACHÁ na porta de entrada (FRONTEIRA-AUTH · PAPEL-DUPLO).
+//
+// Esta função comparava `role === 'platform_admin'` em DOIS lugares: na barra
+// da conta órfã e no destino. Com a administração da plataforma virando
+// CAPACIDADE, o administrador nomeado assim — que não tem tenant nem doc de
+// profissional — era barrado na porta como se fosse uma conta de atleta que
+// descobriu a URL do painel.
+// =============================================================================
+
+describe('destinoPosLogin · crachá de duas pernas (RN-401)', () => {
+  const SEM_ORIGEM = null;
+
+  it('admin por CAPACIDADE, sem tenant e sem doc: ENTRA e cai na plataforma', () => {
+    // Pela regra antiga (comparando `role`) esta conta levava o aviso de conta
+    // sem acesso e a sessão caía — o administrador novo trancado do lado de fora.
+    const decisao = destinoPosLogin(
+      { role: 'athlete', tenantId: null, platformAdmin: true, temPerfilProfissional: false },
+      SEM_ORIGEM,
+    );
+    expect(decisao).toEqual({ tipo: 'rota', destino: ROTA_PLATAFORMA });
+  });
+
+  it('o DONO (tenant_owner + capacidade) entra na Visão Geral, onde ele trabalha', () => {
+    // Ele alcança os dois painéis. A porta de entrada é a do trabalho dele; o
+    // painel master fica a um clique no alternador, e não na cara dele todo
+    // login. Este caso é o que trava a regra contra "melhorar" o destino.
+    const decisao = destinoPosLogin(
+      {
+        role: 'tenant_owner',
+        tenantId: 'castelo-producoes',
+        platformAdmin: true,
+        temPerfilProfissional: true,
+      },
+      SEM_ORIGEM,
+    );
+    expect(decisao).toEqual({ tipo: 'rota', destino: ROTA_VISAO_GERAL });
+  });
+
+  it('o crachá LEGADO segue caindo na plataforma — nada mudou para ele', () => {
+    const decisao = destinoPosLogin(
+      { role: 'platform_admin', tenantId: null, temPerfilProfissional: false },
+      SEM_ORIGEM,
+    );
+    expect(decisao).toEqual({ tipo: 'rota', destino: ROTA_PLATAFORMA });
+  });
+
+  it('conta órfã de verdade continua barrada — a capacidade não afrouxou a porta', () => {
+    const decisao = destinoPosLogin(
+      { role: 'athlete', tenantId: null, temPerfilProfissional: false },
+      SEM_ORIGEM,
+    );
+    expect(decisao.tipo).toBe('barrar');
+  });
+
+  it('`platformAdmin` que não é `true` não abre nada', () => {
+    const decisao = destinoPosLogin(
+      {
+        role: 'athlete',
+        tenantId: null,
+        platformAdmin: 'true' as unknown as true,
+        temPerfilProfissional: false,
+      },
+      SEM_ORIGEM,
+    );
+    expect(decisao.tipo).toBe('barrar');
+  });
+
+  it('deep-link continua vencendo o default, inclusive para quem alcança os dois', () => {
+    const decisao = destinoPosLogin(
+      {
+        role: 'tenant_owner',
+        tenantId: 'castelo-producoes',
+        platformAdmin: true,
+        temPerfilProfissional: true,
+      },
+      '/eventos/meia-floripa-2026/inscritos',
+    );
+    expect(decisao).toEqual({
+      tipo: 'rota',
+      destino: '/eventos/meia-floripa-2026/inscritos',
+    });
+  });
+});

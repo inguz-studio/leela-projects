@@ -121,3 +121,94 @@ describe('usePlatformSession (resiliência do claim de preview)', () => {
     expect(mocks.getClaims).not.toHaveBeenCalled();
   });
 });
+
+// =============================================================================
+// A SEGUNDA PORTA do painel master (lane FRONTEIRA-AUTH · sobre a PAPEL-DUPLO).
+//
+// As Rules já aceitavam as duas pernas do crachá e esta sessão continuava
+// lendo só o `role`. O dono virou `tenant_owner` — e `role`, sendo valor único,
+// apagou o `platform_admin` dele. Os DADOS abriam e a TELA respondia 403.
+//
+// Cada caso abaixo é um dos quatro crachás possíveis. O terceiro é o do dono.
+// =============================================================================
+
+describe('usePlatformSession · as duas pernas do crachá (RN-401)', () => {
+  it('crachá LEGADO (role platform_admin, sem capacidade) → entra, como sempre entrou', async () => {
+    fireSession(ADMIN);
+    mocks.getClaims.mockResolvedValue({ role: 'platform_admin' });
+
+    const { result } = renderHook(() => usePlatformSession());
+
+    await waitFor(() => expect(result.current.isAdmin).toBe(true));
+  });
+
+  it('crachá do DONO (tenant_owner + capacidade) → ENTRA — era o 403 do relato', async () => {
+    fireSession(ADMIN);
+    mocks.getClaims.mockResolvedValue({
+      role: 'tenant_owner',
+      tenantId: 'castelo-producoes',
+      platformAdmin: true,
+    });
+
+    const { result } = renderHook(() => usePlatformSession());
+
+    await waitFor(() => expect(result.current.isAdmin).toBe(true));
+    // O papel operacional dele NÃO é sobrescrito pela capacidade: ele continua
+    // sendo dono de produtora, e é isso que o alternador usa para saber que
+    // existem dois lados.
+    expect(result.current.role).toBe('tenant_owner');
+  });
+
+  it('capacidade SEM papel de plataforma e sem tenant → entra (o admin nomeado novo)', async () => {
+    fireSession(ADMIN);
+    mocks.getClaims.mockResolvedValue({ role: 'athlete', platformAdmin: true });
+
+    const { result } = renderHook(() => usePlatformSession());
+
+    await waitFor(() => expect(result.current.isAdmin).toBe(true));
+  });
+
+  it('tenant_owner PURO → 403, e o refresh forçado não inventa capacidade', async () => {
+    fireSession(ADMIN);
+    mocks.getClaims.mockResolvedValue({ role: 'tenant_owner', tenantId: 'castelo-producoes' });
+
+    const { result } = renderHook(() => usePlatformSession());
+
+    await waitFor(() => expect(result.current.status).toBe('authenticated'));
+    expect(result.current.isAdmin).toBe(false);
+  });
+
+  it('`platformAdmin` que não é `true` é NEGAÇÃO — nada de comparação frouxa', async () => {
+    // A string 'true', o número 1 e o booleano false já foram, cada um, a forma
+    // de uma capacidade falsa virar acesso real em algum sistema.
+    for (const lixo of ['true', 1, false, null, {}]) {
+      vi.clearAllMocks();
+      fireSession(ADMIN);
+      mocks.getClaims.mockResolvedValue({ role: 'tenant_owner', platformAdmin: lixo });
+
+      const { result } = renderHook(() => usePlatformSession());
+
+      await waitFor(() => expect(result.current.status).toBe('authenticated'));
+      expect(result.current.isAdmin).toBe(false);
+    }
+  });
+
+  it('capacidade recém concedida: cache sem ela → forceRefresh a encontra', async () => {
+    // O caso que o gatilho antigo (`!role`) nunca pegava: a conta TEM `role`
+    // (tenant_owner), então nada forçava o refresh, e o 403 durava até o token
+    // rodar sozinho. O gatilho agora é "o crachá em cache não concede".
+    fireSession(ADMIN);
+    mocks.getClaims.mockImplementation((force?: boolean) =>
+      Promise.resolve(
+        force
+          ? { role: 'tenant_owner', tenantId: 'castelo-producoes', platformAdmin: true }
+          : { role: 'tenant_owner', tenantId: 'castelo-producoes' },
+      ),
+    );
+
+    const { result } = renderHook(() => usePlatformSession());
+
+    await waitFor(() => expect(result.current.isAdmin).toBe(true));
+    expect(mocks.getClaims).toHaveBeenCalledWith(true);
+  });
+});

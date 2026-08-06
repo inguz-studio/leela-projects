@@ -21,6 +21,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
+import { portaDaConta } from '@/lib/portaOrganizador';
 
 // O header passou a puxar o barrel do DS pelo `ContaHeader`; com o teto
 // default de 5s o primeiro render do arquivo estoura por IMPORT, não por
@@ -137,5 +138,38 @@ describe('PublicFooter — eco da porta', () => {
   it('nenhuma porta do rodapé se chama só "Entrar"', async () => {
     await renderFooter();
     expect(screen.queryByRole('link', { name: 'Entrar' })).toBeNull();
+  });
+});
+
+// =============================================================================
+// A ARMADILHA DO CRACHÁ DE DUAS PERNAS (FRONTEIRA-AUTH · sobre a PAPEL-DUPLO).
+//
+// `portaDaConta` compara `role === 'platform_admin'` literalmente, e é a ÚNICA
+// comparação literal de papel que a varredura da fronteira deixou de pé. Estes
+// casos existem para que a próxima varredura não a "conserte": aqui a pergunta
+// é "esta conta é SÓ da plataforma?", não "esta conta administra a plataforma?".
+// =============================================================================
+
+describe('portaDaConta · crachá de duas pernas (RN-449 × RN-401)', () => {
+  it('o DONO (tenant_owner + capacidade) MANTÉM a porta de organizador', () => {
+    // Se alguém trocar o literal por `isPlatformAdmin`, este caso cai — e o
+    // dono perde, na própria área de cliente, o botão que leva ao painel dele.
+    expect(
+      portaDaConta({
+        role: 'tenant_owner',
+        tenantId: 'castelo-producoes',
+        platformAdmin: true,
+      }),
+    ).toBe('organizador');
+  });
+
+  it('capacidade SEM papel de organizador cai em `criar`, nunca em porta de plataforma', () => {
+    // A área do cliente não tem porta para `/plataforma` — e o tipo `RotaPainel`
+    // torna isso impossível de construir, não apenas proibido.
+    expect(portaDaConta({ role: 'athlete', platformAdmin: true })).toBe('criar');
+  });
+
+  it('o admin LEGADO puro segue sem porta nenhuma — RN-449 intacta', () => {
+    expect(portaDaConta({ role: 'platform_admin' })).toBeNull();
   });
 });

@@ -29,12 +29,12 @@ import {
   loginComEmail,
   logout,
 } from '@leela/api-client';
-import type { Role } from '@leela/core';
+import { isPlatformAdmin, type Role } from '@leela/core';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroLogin } from './_lib/authErrors';
 import { caminhoInternoSeguro, emailValido } from './_lib/authValidation';
-import { destinoPosLogin, type SessaoPosLogin } from './_lib/destinoPosLogin';
+import { crachaPosLogin, destinoPosLogin, type SessaoPosLogin } from './_lib/destinoPosLogin';
 
 interface EntrarLocationState {
   from?: string;
@@ -61,11 +61,20 @@ async function lerSessaoPosLogin(uid: string): Promise<SessaoPosLogin> {
     const claims = (await getClaims(true)) ?? {};
     const role = (claims['role'] as Role | undefined) ?? null;
     const tenantId = (claims['tenantId'] as string | undefined) ?? null;
-    if (tenantId !== null || role === 'platform_admin') {
-      return { role, tenantId, temPerfilProfissional: true };
+    // A perna NOVA do crachá (lane PAPEL-DUPLO) é coletada aqui porque quem
+    // decide a porta é o `destinoPosLogin`, e ele não pode decidir com meio
+    // crachá. Só `true` conta — o core é quem define isso, e `platformAdmin`
+    // nunca é gravado como `false`.
+    const platformAdmin = claims['platformAdmin'] === true ? (true as const) : undefined;
+    const base = { role, tenantId, ...(platformAdmin ? { platformAdmin } : {}) };
+    // O doc de profissional só é lido quando ele é o DISCRIMINANTE. Quem tem
+    // tenant ou alcança a plataforma já está decidido; a leitura seria um
+    // round-trip por login de graça.
+    if (tenantId !== null || isPlatformAdmin(crachaPosLogin(base))) {
+      return { ...base, temPerfilProfissional: true };
     }
     const perfil = await getProfissional(getLeelaDb(), uid);
-    return { role, tenantId, temPerfilProfissional: perfil !== null };
+    return { ...base, temPerfilProfissional: perfil !== null };
   } catch {
     return { role: null, tenantId: null, temPerfilProfissional: true };
   }

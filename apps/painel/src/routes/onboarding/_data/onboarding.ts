@@ -24,6 +24,7 @@ import {
 } from '@leela/api-client';
 import {
   CONTATO_ONBOARDING_PADRAO,
+  isPlatformAdmin,
   type AuthClaims,
   type ContatoOnboarding,
   type Role,
@@ -36,16 +37,27 @@ export interface ContaOnboardingSession {
   uid: string | null;
   role: Role | null;
   tenantId: string | null;
+  /** Perna NOVA do crachá de plataforma (lane PAPEL-DUPLO). Só `true` existe. */
+  platformAdmin?: true;
 }
 
 /**
  * A conta está TRAVADA (RN-416)? Só depois que a sessão é terminal: decidir em
  * 'loading' piscaria o overlay na cara de quem já tem acesso.
+ *
+ * A isenção é de quem ALCANÇA A PLATAFORMA, não de quem tem o papel literal.
+ * A regra antiga comparava `role === 'platform_admin'` e teria coberto de
+ * overlay bloqueante justamente o administrador nomeado por capacidade que não
+ * tem tenant — a conta certa recebendo a tela de "peça um convite".
  * @pure
  */
 export function contaTravada(session: ContaOnboardingSession): boolean {
   if (session.status !== 'authenticated') return false;
-  if (session.role === 'platform_admin') return false;
+  const cracha = {
+    ...(session.role !== null ? { role: session.role } : {}),
+    ...(session.platformAdmin === true ? { platformAdmin: true as const } : {}),
+  } as AuthClaims;
+  if (isPlatformAdmin(cracha)) return false;
   return session.tenantId === null;
 }
 
@@ -58,12 +70,20 @@ async function resolverSessao(uid: string): Promise<ContaOnboardingSession> {
     let claims = await lerClaims(false);
     // Sem NENHUM dos dois no cache, o token pode estar defasado (claim recém
     // gravada pelo resgate) — uma tentativa forçada antes de dar o veredito.
-    if (!claims.tenantId && !claims.role) claims = await lerClaims(true);
+    // Crachá VAZIO no cache = token possivelmente defasado (claim recém gravada
+    // pelo resgate, ou a capacidade recém concedida). A capacidade entra na
+    // conta de "vazio" junto com as outras duas: sem ela, a conta nomeada por
+    // capacidade e sem tenant nunca forçaria o refresh e ficaria presa no
+    // overlay até o token rodar sozinho.
+    if (!claims.tenantId && !claims.role && claims.platformAdmin !== true) {
+      claims = await lerClaims(true);
+    }
     return {
       status: 'authenticated',
       uid,
       role: claims.role ?? null,
       tenantId: claims.tenantId ?? null,
+      ...(claims.platformAdmin === true ? { platformAdmin: true as const } : {}),
     };
   } catch {
     try {
@@ -73,6 +93,7 @@ async function resolverSessao(uid: string): Promise<ContaOnboardingSession> {
         uid,
         role: claims.role ?? null,
         tenantId: claims.tenantId ?? null,
+        ...(claims.platformAdmin === true ? { platformAdmin: true as const } : {}),
       };
     } catch {
       // Token irrecuperável: autenticado sem papel. Estado TERMINAL — a conta

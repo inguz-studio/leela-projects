@@ -1,14 +1,24 @@
 // =============================================================================
 // Sessão do super-admin para as telas de plataforma.
 //
-// Lê o custom claim `role` (setado server-side) para decidir acesso:
-//   - platform_admin → opera todas as telas de plataforma;
-//   - tenant_owner   → só leitura do editor de termos (RN-404);
-//   - qualquer outro → 403 (PlatformGuard).
+// Lê o CRACHÁ (custom claims, setado server-side) para decidir acesso:
+//   - crachá que concede plataforma → opera todas as telas (RN-401);
+//   - qualquer outro                → 403 (PlatformGuard).
+//
+// "Concede plataforma" tem DUAS pernas desde a lane PAPEL-DUPLO, e quem decide
+// é `isPlatformAdmin` do core — nunca este arquivo:
+//   - `role === 'platform_admin'` — as contas legadas, sem migração;
+//   - `platformAdmin === true`    — a capacidade, que coexiste com o papel
+//                                   operacional da conta.
+// A segunda perna existe porque `role` é valor ÚNICO: no dia em que o dono
+// virou `tenant_owner`, o `platform_admin` dele foi sobrescrito e o painel
+// master fechou. Papel diz o que a conta É; capacidade diz o que ela TAMBÉM
+// PODE FAZER.
 //
 // Escopo LOCAL ao módulo de plataforma de propósito: este hook resolve um
-// contrato PRÓPRIO (decide por `role`), não é cópia do `useTenantSession`
-// (LEELA-DEBT-T1) — que resolve `tenantId`. Por isso não foi unificado com ele.
+// contrato PRÓPRIO (decide acesso à plataforma), não é cópia do
+// `useTenantSession` (LEELA-DEBT-T1) — que resolve `tenantId`. Por isso não foi
+// unificado com ele.
 //
 // -----------------------------------------------------------------------------
 // Por que resolve de forma RESILIENTE (LEELA-DEBT-REV · irmão do `711af42`)
@@ -37,6 +47,7 @@
 
 import { useEffect, useState } from 'react';
 import { getClaims, onSessionChange } from '@leela/api-client';
+import { isPlatformAdmin } from '@leela/core';
 import type { AuthClaims, Role } from '@leela/core';
 
 export type SessionStatus = 'loading' | 'authenticated' | 'anonymous';
@@ -45,34 +56,61 @@ export interface PlatformSession {
   status: SessionStatus;
   uid: string | null;
   role: Role | null;
-  /** true quando role === 'platform_admin' (RN-401). */
+  /**
+   * A conta alcança o painel master (RN-401). Deriva de `isPlatformAdmin` do
+   * core — as duas pernas do crachá. NUNCA compare `role` aqui: foi essa
+   * comparação que fechou o painel para o dono.
+   */
   isAdmin: boolean;
 }
 
-/** Lê o `role` do token; `force` refaz o ID token (pega claim recém-setado). */
-async function lerRole(force: boolean): Promise<Role | null> {
-  const claims = (await getClaims(force)) as AuthClaims | null;
-  return claims?.role ?? null;
+/** Lê o crachá INTEIRO do token; `force` refaz o ID token. */
+async function lerClaims(force: boolean): Promise<AuthClaims | null> {
+  return (await getClaims(force)) as AuthClaims | null;
 }
 
-/** Monta o estado terminal a partir do papel resolvido (`isAdmin` deriva dele). */
-function sessaoDe(uid: string, role: Role | null): PlatformSession {
-  return { status: 'authenticated', uid, role, isAdmin: role === 'platform_admin' };
+/**
+ * Monta o estado terminal a partir do crachá INTEIRO.
+ *
+ * A linha que estava aqui era `isAdmin: role === 'platform_admin'`, e era a
+ * SEGUNDA PORTA do painel master: as Rules já aceitavam as duas pernas do
+ * crachá (lane PAPEL-DUPLO) e esta função continuava lendo só o `role`,
+ * descartando o resto. O dono virou `tenant_owner` — e `role`, sendo valor
+ * único, apagou o `platform_admin` que ele tinha. Resultado: os dados abriam e
+ * a TELA respondia 403.
+ *
+ * `isPlatformAdmin` é o ponto único de decisão do core e aceita as duas pernas
+ * (papel legado OU capacidade). Aqui só se consome — nenhuma regra de quem é
+ * admin nasce no painel.
+ */
+function sessaoDe(uid: string, claims: AuthClaims | null): PlatformSession {
+  return {
+    status: 'authenticated',
+    uid,
+    role: claims?.role ?? null,
+    isAdmin: claims !== null && isPlatformAdmin(claims),
+  };
 }
 
-/** Cache → refresh forçado → terminal sem papel. Nunca fica em 'loading'. */
+/** Cache → refresh forçado → terminal sem crachá. Nunca fica em 'loading'. */
 async function resolverSessao(uid: string): Promise<PlatformSession> {
   try {
-    let role = await lerRole(false);
-    if (!role) role = await lerRole(true);
-    return sessaoDe(uid, role);
+    let claims = await lerClaims(false);
+    // Gatilho de refresh: o crachá em cache NÃO concede o painel. Antes era
+    // "não tem role", que é mais barato e estava errado para o caso que esta
+    // lane conserta — a conta recém-nomeada tem `role` (tenant_owner) e ainda
+    // não tem a capacidade no token, então o gatilho antigo nunca disparava e
+    // o 403 durava até o token rodar sozinho. O custo é um refresh por visita
+    // de não-admin a `/plataforma`, que é uma rota que não-admin não visita.
+    if (claims === null || !isPlatformAdmin(claims)) claims = await lerClaims(true);
+    return sessaoDe(uid, claims);
   } catch {
     // Cache falhou (ex.: token defasado pós-revoke) → uma última tentativa forçada.
     try {
-      return sessaoDe(uid, await lerRole(true));
+      return sessaoDe(uid, await lerClaims(true));
     } catch {
       // Token irrecuperável (refresh token revogado). NÃO trava em loading:
-      // autenticado sem papel → o guard responde 403, que é honesto e acionável.
+      // autenticado sem crachá → o guard responde 403, honesto e acionável.
       return sessaoDe(uid, null);
     }
   }

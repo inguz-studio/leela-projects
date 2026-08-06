@@ -51,6 +51,20 @@ export function portaDaConta(claims: Record<string, unknown> | null): PortaDaCon
   const role = typeof claims['role'] === 'string' ? claims['role'] : '';
   // RN-449, primeiro e antes de tudo: administração da plataforma não acumula
   // com cliente nem com organizador, e a área do cliente não é porta para ela.
+  //
+  // ⚠️ AQUI O PAPEL LITERAL ESTÁ CERTO, e trocá-lo por `isPlatformAdmin` é uma
+  // regressão — a varredura da FRONTEIRA-AUTH passou por esta linha e a deixou
+  // de pé de propósito. O que se pergunta aqui não é "esta conta administra a
+  // plataforma?", é "esta conta é SÓ administradora da plataforma?". Desde a
+  // lane PAPEL-DUPLO a administração é CAPACIDADE e coexiste com o papel
+  // operacional: o dono é `tenant_owner` da produtora dele E administra a
+  // plataforma. Com `isPlatformAdmin` ele cairia neste `return null` e PERDERIA
+  // a porta de organizador na própria área de cliente — a conta mais legítima
+  // do sistema ficando sem o botão que ela é a mais qualificada para usar.
+  //
+  // Quem tem a capacidade e nenhum papel de organizador cai adiante em `criar`,
+  // que é o correto: a área do cliente não tem, nem deve ter, porta para
+  // `/plataforma` (o tipo `RotaPainel` torna isso impossível por construção).
   if (role === 'platform_admin') return null;
 
   if ((PAPEIS_DE_ORGANIZADOR as readonly string[]).includes(role)) return 'organizador';
