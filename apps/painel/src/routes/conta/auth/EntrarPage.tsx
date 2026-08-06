@@ -21,7 +21,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Input } from '@leela/design-system';
+import { Button, Input, InputSenha } from '@leela/design-system';
 import {
   getClaims,
   getLeelaDb,
@@ -146,10 +146,13 @@ export function EntrarPage(): JSX.Element {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Input
+        {/* SEM `avaliacao` de propósito (FRONTEIRA-AUTH): aqui a senha já
+            existe. Medir a força de uma senha que a pessoa não pode trocar
+            nesta tela não orienta nada e ainda anuncia ao ombro do vizinho que
+            a senha dela é fraca. O medidor só aparece onde a senha NASCE. */}
+        <InputSenha
           id="entrar-senha"
           label="Senha"
-          type="password"
           autoComplete="current-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}

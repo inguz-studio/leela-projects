@@ -17,12 +17,12 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button, Input } from '@leela/design-system';
+import { Button, InputSenha } from '@leela/design-system';
 import { confirmarResetSenha, verificarCodigoResetSenha } from '@leela/api-client';
+import { avaliarSenha, exigenciaDeSenha, senhaValida } from '@leela/core';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroRedefinicao } from './_lib/authErrors';
-import { SENHA_MIN, senhaAtendeMinimo } from './_lib/authValidation';
 
 const LINK_CLASSE =
   'font-[var(--font-weight-medium)] text-[var(--action-brand-tint-fg)] hover:underline';
@@ -64,11 +64,13 @@ export function RedefinirSenhaPage(): JSX.Element {
   }, [oobCode]);
 
   const senhasBatem = senha.length > 0 && senha === confirmar;
-  const podeSalvar = senhaAtendeMinimo(senha) && senhasBatem && !salvando;
+  // A senha nasce nesta tela: quem libera o envio é a política do core, a
+  // mesma que a Function aplica. A avaliação sai de uma chamada só e serve ao
+  // gate e ao medidor.
+  const avaliacaoDaSenha = avaliarSenha(senha);
+  const podeSalvar = senhaValida(senha) && senhasBatem && !salvando;
 
   // exactOptionalPropertyTypes: só passar `errorMessage` quando há mensagem.
-  const senhaErro =
-    senha.length > 0 && !senhaAtendeMinimo(senha) ? `Use pelo menos ${SENHA_MIN} caracteres.` : undefined;
   const confirmarErro = confirmar.length > 0 && !senhasBatem ? 'As senhas não conferem.' : undefined;
 
   async function redefinir(event: FormEvent): Promise<void> {
@@ -131,20 +133,32 @@ export function RedefinirSenhaPage(): JSX.Element {
     <AuthCard title="Criar nova senha" description={`Redefinindo o acesso de ${codigo.email}.`}>
       <form className="flex flex-col gap-[var(--spacing-4)]" onSubmit={(e) => void redefinir(e)} noValidate>
         {erro ? <AuthAlert message={erro} /> : null}
-        <Input
-          id="redefinir-senha"
-          label="Nova senha"
-          type="password"
-          autoComplete="new-password"
-          autoFocus
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          {...(senhaErro ? { errorMessage: senhaErro } : {})}
-        />
-        <Input
+        {/* Senha NOVA: medidor ligado e a exigência escrita embaixo, vinda de
+            `exigenciaDeSenha()`. Aqui a dica pesa ainda mais que no cadastro —
+            quem chega por este link está trocando uma senha que já usava, e
+            precisa ler a regra nova antes de tentar repetir a antiga. */}
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <InputSenha
+            id="redefinir-senha"
+            label="Nova senha"
+            autoComplete="new-password"
+            autoFocus
+            aria-describedby="redefinir-senha-dica"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            avaliacao={avaliacaoDaSenha}
+          />
+          <span
+            id="redefinir-senha-dica"
+            className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+          >
+            {exigenciaDeSenha()}
+          </span>
+        </div>
+        {/* Confirmação SEM medidor: mede a mesma string do campo de cima. */}
+        <InputSenha
           id="redefinir-confirmar"
           label="Confirmar nova senha"
-          type="password"
           autoComplete="new-password"
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}

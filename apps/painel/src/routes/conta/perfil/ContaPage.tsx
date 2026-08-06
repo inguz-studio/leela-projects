@@ -22,7 +22,7 @@
 import * as React from 'react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Avatar, Button, FileInput, Input, useToast } from '@leela/design-system';
+import { Avatar, Button, FileInput, Input, InputSenha, useToast } from '@leela/design-system';
 import {
   atualizarFotoPerfil,
   atualizarNomeExibicao,
@@ -31,10 +31,10 @@ import {
   trocarSenha,
   uploadFotoPerfilConta,
 } from '@leela/api-client';
+import { avaliarSenha, exigenciaDeSenha, senhaValida } from '@leela/core';
 import { ajustarProporcaoImagem } from '@/components/upload';
 import { AuthAlert } from '../auth/AuthAlert';
 import { mensagemErroTrocaSenha } from '../auth/_lib/authErrors';
-import { SENHA_MIN, senhaAtendeMinimo } from '../auth/_lib/authValidation';
 import { useContaUsuario } from './useContaUsuario';
 
 const SECAO = 'flex flex-col gap-[var(--spacing-4)] rounded-[var(--card-radius)] bg-[var(--surface-raised)] p-[var(--spacing-6)]';
@@ -185,10 +185,12 @@ export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
   }
 
   const senhasBatem = novaSenha.length > 0 && novaSenha === confirmar;
+  // A NOVA senha passa pela política do core (a mesma da reauth do servidor);
+  // a ATUAL só precisa existir — ela já foi aceita quando nasceu, e revalidá-la
+  // contra a régua nova trancaria do lado de fora justamente quem veio trocar.
+  const avaliacaoDaNova = avaliarSenha(novaSenha);
   const podeTrocar =
-    senhaAtual.length > 0 && senhaAtendeMinimo(novaSenha) && senhasBatem && !trocando;
-  const novaSenhaErro =
-    novaSenha.length > 0 && !senhaAtendeMinimo(novaSenha) ? `Use pelo menos ${SENHA_MIN} caracteres.` : undefined;
+    senhaAtual.length > 0 && senhaValida(novaSenha) && senhasBatem && !trocando;
   const confirmarErro = confirmar.length > 0 && !senhasBatem ? 'As senhas não conferem.' : undefined;
 
   async function trocarSenhaSubmit(event: FormEvent): Promise<void> {
@@ -294,27 +296,39 @@ export function ContaPage({ recebimento }: ContaPageProps = {}): JSX.Element {
       <form className={SECAO} onSubmit={(e) => void trocarSenhaSubmit(e)} aria-label="Trocar senha">
         <span className={SECAO_TITULO}>Trocar senha</span>
         {erroSenha ? <AuthAlert message={erroSenha} /> : null}
-        <Input
+        {/* Senha ATUAL sem medidor: ela é credencial de reauth, não senha em
+            construção. Medir a força do que a pessoa já usa não muda nada e só
+            exibe o diagnóstico dela para quem estiver olhando a tela. */}
+        <InputSenha
           id="conta-senha-atual"
           label="Senha atual"
-          type="password"
           autoComplete="current-password"
           value={senhaAtual}
           onChange={(e) => setSenhaAtual(e.target.value)}
         />
-        <Input
-          id="conta-nova-senha"
-          label="Nova senha"
-          type="password"
-          autoComplete="new-password"
-          value={novaSenha}
-          onChange={(e) => setNovaSenha(e.target.value)}
-          {...(novaSenhaErro ? { errorMessage: novaSenhaErro } : {})}
-        />
-        <Input
+        {/* Senha NOVA: o único medidor desta seção, com a exigência escrita
+            embaixo (mesma frase que o servidor devolve). */}
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <InputSenha
+            id="conta-nova-senha"
+            label="Nova senha"
+            autoComplete="new-password"
+            aria-describedby="conta-nova-senha-dica"
+            value={novaSenha}
+            onChange={(e) => setNovaSenha(e.target.value)}
+            avaliacao={avaliacaoDaNova}
+          />
+          <span
+            id="conta-nova-senha-dica"
+            className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+          >
+            {exigenciaDeSenha()}
+          </span>
+        </div>
+        {/* Confirmação sem medidor: mede a mesma string do campo de cima. */}
+        <InputSenha
           id="conta-confirmar-senha"
           label="Confirmar nova senha"
-          type="password"
           autoComplete="new-password"
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}

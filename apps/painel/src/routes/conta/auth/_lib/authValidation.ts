@@ -1,11 +1,37 @@
 // =============================================================================
 // authValidation — validações CLIENTE das jornadas de conta (LEELA-S020).
-// Barreira de UX apenas: o servidor (Firebase Auth) é a autoridade final. O
-// mínimo de senha espelha o padrão do Firebase (6). Funções puras.
+// Barreira de UX apenas: o servidor (Firebase Auth) é a autoridade final.
+// Funções puras.
+//
+// -----------------------------------------------------------------------------
+// POR QUE A RÉGUA DE SENHA NÃO É MAIS ESCRITA AQUI (FRONTEIRA-AUTH)
+// -----------------------------------------------------------------------------
+// Este arquivo mantinha o PRÓPRIO piso de senha (`SENHA_MIN = 6`, "espelho do
+// padrão do Firebase") no mesmo repo em que `@leela/core` ·
+// `platform/politicaDeSenha` passou a ser a autoridade da casa — piso 8, mais
+// número e caractere especial, e a MESMA função que as Functions chamam antes
+// de criar usuário. Duas réguas sobre a mesma regra é exatamente o defeito que
+// o core já pagou uma vez (três pisos vivos ao mesmo tempo, tela recusando o
+// que a Function aceitava). Sobrou aqui o encaminhamento: a régua é uma só.
+//
+// Os dois nomes CONTINUAM exportados de propósito, em vez de sumirem: quem
+// importa daqui segue compilando e passa a exigir a política nova no mesmo
+// commit. São ponte, não API — tela nova importa de `@leela/core` direto.
+//
+// `senhaAtendeMinimo` delega a `senhaValida`, então hoje ela responde pela
+// política INTEIRA (comprimento + número + especial), não só pelo comprimento.
+// O nome ficou estreito de propósito: renomear os cinco pontos de chamada é
+// diff de outra lane, e mentir para menos (aceitar o que a política recusa)
+// seria pior que um nome apertado.
 // =============================================================================
 
-/** Comprimento mínimo de senha exigido pela Firebase Auth. */
-export const SENHA_MIN = 6;
+import { senhaValida } from '@leela/core';
+
+/**
+ * Piso de comprimento vigente. Reexportado do core — subir o piso é editar UM
+ * arquivo lá, e as telas do painel acompanham sem tocar em nada aqui.
+ */
+export { SENHA_MIN } from '@leela/core';
 
 /**
  * Aceita e-mail sintaticamente plausível. Deliberadamente leve — não tenta
@@ -16,9 +42,9 @@ export function emailValido(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alvo);
 }
 
-/** Senha atende ao mínimo do Firebase. */
+/** A senha passa na política da casa? Ver o cabeçalho sobre o nome. */
 export function senhaAtendeMinimo(senha: string): boolean {
-  return senha.length >= SENHA_MIN;
+  return senhaValida(senha);
 }
 
 /**

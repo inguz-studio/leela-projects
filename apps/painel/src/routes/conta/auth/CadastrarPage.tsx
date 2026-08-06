@@ -26,7 +26,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Checkbox, Input } from '@leela/design-system';
+import { Button, Checkbox, Input, InputSenha } from '@leela/design-system';
 import {
   atualizarNomeExibicao,
   criarContaComEmail,
@@ -39,13 +39,15 @@ import {
   ORGANIZACAO_MAX,
   ORGANIZACAO_MIN,
   TERMO_LGPD_FINALIDADE,
+  avaliarSenha,
+  exigenciaDeSenha,
+  senhaValida,
   telefoneValido,
   validarCadastroOrganizador,
 } from '@leela/core';
 import { AuthCard } from './AuthCard';
 import { AuthAlert } from './AuthAlert';
 import { mensagemErroCadastro } from './_lib/authErrors';
-import { SENHA_MIN, senhaAtendeMinimo } from './_lib/authValidation';
 
 const LINK_CLASSE =
   'font-[var(--font-weight-medium)] text-[var(--action-brand-tint-fg)] hover:underline';
@@ -86,11 +88,14 @@ export function CadastrarPage(): JSX.Element {
     organizacao,
     consentimentoLgpd: consentimento,
   });
+  // A senha nasce AQUI, então quem decide se ela serve é a política da casa
+  // (`@leela/core` · politicaDeSenha) — a mesma que as Functions chamam. A
+  // avaliação é calculada uma vez por render e alimenta as duas coisas: o gate
+  // do botão (`atende`) e o medidor do campo.
+  const avaliacaoDaSenha = avaliarSenha(senha);
   const podeCadastrar =
-    errosDoCadastro.length === 0 && senhaAtendeMinimo(senha) && senhasBatem && !enviando;
+    errosDoCadastro.length === 0 && senhaValida(senha) && senhasBatem && !enviando;
 
-  const senhaErro =
-    senha.length > 0 && !senhaAtendeMinimo(senha) ? `Use pelo menos ${SENHA_MIN} caracteres.` : undefined;
   const confirmarErro = confirmar.length > 0 && !senhasBatem ? 'As senhas não conferem.' : undefined;
   const telefoneErro =
     telefone.length > 0 && !telefoneValido(telefone) ? 'Informe DDD e número.' : undefined;
@@ -191,19 +196,38 @@ export function CadastrarPage(): JSX.Element {
           onChange={(e) => setOrganizacao(e.target.value)}
           {...(organizacaoErro ? { errorMessage: organizacaoErro } : {})}
         />
-        <Input
-          id="cadastrar-senha"
-          label="Senha"
-          type="password"
-          autoComplete="new-password"
-          value={senha}
-          onChange={(e) => setSenha(e.target.value)}
-          {...(senhaErro ? { errorMessage: senhaErro } : {})}
-        />
-        <Input
+        {/* Senha NOVA: medidor ligado, e a exigência escrita embaixo.
+            A dica não é redundante com o medidor — o medidor só fala DEPOIS da
+            primeira tecla ("Falta um número e um caractere especial"), e quem
+            escolhe a senha precisa saber a regra ANTES de digitar. A frase vem
+            de `exigenciaDeSenha()` e não da minha mão porque é a MESMA que a
+            Function devolve quando recusa: tela e servidor não se contradizem.
+            Sem `errorMessage` de propósito — o vermelho diria, em outras
+            palavras, o que o medidor já está dizendo em cima da dica. */}
+        <div className="flex flex-col gap-[var(--spacing-2)]">
+          <InputSenha
+            id="cadastrar-senha"
+            label="Senha"
+            autoComplete="new-password"
+            aria-describedby="cadastrar-senha-dica"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            avaliacao={avaliacaoDaSenha}
+          />
+          <span
+            id="cadastrar-senha-dica"
+            className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+          >
+            {exigenciaDeSenha()}
+          </span>
+        </div>
+        {/* Confirmação SEM medidor: ela é uma cópia da senha de cima. Um
+            segundo medidor mediria a mesma string duas vezes e transformaria a
+            tela num painel de barras que ninguém lê. O que este campo tem a
+            dizer é uma coisa só — se bate ou não bate. */}
+        <InputSenha
           id="cadastrar-confirmar"
           label="Confirmar senha"
-          type="password"
           autoComplete="new-password"
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}

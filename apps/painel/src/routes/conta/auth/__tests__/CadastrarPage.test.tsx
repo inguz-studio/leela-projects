@@ -6,7 +6,9 @@
 //     organização) e o consentimento LGPD EXPLÍCITO;
 //   - o checkbox de LGPD nasce DESMARCADO e sem ele o submit não vai;
 //   - o pós-cadastro ATERRISSA LOGADO na home (RN-411), não num beco;
-//   - erro de e-mail em uso orienta sem afirmar existência categórica.
+//   - erro de e-mail em uso orienta sem afirmar existência categórica;
+//   - (FRONTEIRA-AUTH) o gate da senha é a política do core, o medidor só
+//     aparece no campo onde a senha nasce e o olho não submete o formulário.
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -43,6 +45,14 @@ function renderPage(): void {
   );
 }
 
+/**
+ * Senha que passa na política da casa (`@leela/core` · politicaDeSenha): 14
+ * caracteres, um número e um caractere especial. O `segredo123` que este
+ * arquivo usava antes só atendia ao piso velho de 6 e hoje reprova no campo —
+ * é a mudança de régua, não uma quebra de teste.
+ */
+const SENHA_QUE_PASSA = 'trilha-longa9!';
+
 async function preencher(
   overrides: Partial<{
     nome: string;
@@ -58,7 +68,7 @@ async function preencher(
     email = 'marina@demo.dev',
     telefone = '48999998888',
     organizacao = 'Castelo Produções',
-    senha = 'segredo123',
+    senha = SENHA_QUE_PASSA,
     lgpd = true,
   } = overrides;
   // `userEvent.type` recusa string vazia — campo deixado em branco de
@@ -90,7 +100,7 @@ describe('CadastrarPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
 
     await waitFor(() =>
-      expect(mocks.criarContaComEmail).toHaveBeenCalledWith('marina@demo.dev', 'segredo123'),
+      expect(mocks.criarContaComEmail).toHaveBeenCalledWith('marina@demo.dev', SENHA_QUE_PASSA),
     );
     expect(mocks.atualizarNomeExibicao).toHaveBeenCalledWith('Marina Castelo');
     await waitFor(() =>
@@ -187,10 +197,69 @@ describe('CadastrarPage', () => {
     await userEvent.type(screen.getByLabelText('Nome'), 'Marina');
     await userEvent.type(screen.getByLabelText('E-mail'), 'marina@demo.dev');
     await userEvent.type(screen.getByLabelText('Senha'), '123');
-    expect(screen.getByText(/pelo menos 6 caracteres/i)).toBeInTheDocument();
+    // Quem diz o que falta agora é o medidor, com a lista inteira de uma vez
+    // (o piso E o caractere especial), não uma frase escrita à mão na tela.
+    expect(
+      screen.getByText(/Falta pelo menos 8 caracteres e um caractere especial/),
+    ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Confirmar senha'), '999');
     expect(screen.getByText('As senhas não conferem.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+  });
+
+  // ── FRONTEIRA-AUTH ─────────────────────────────────────────────────────
+  // A senha NASCE nesta tela, então aqui vale a política inteira do core — e
+  // não o piso de 6 que a tela carregava por conta própria.
+  it('o piso velho de 6 não passa mais: `abc12` fica de fora do botão', async () => {
+    renderPage();
+    await preencher({ senha: 'abc12' });
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(mocks.criarContaComEmail).not.toHaveBeenCalled();
+  });
+
+  it('comprimento sozinho não compra o botão: falta o caractere especial', async () => {
+    // 12 caracteres e um número — passaria em qualquer régua só de tamanho.
+    renderPage();
+    await preencher({ senha: 'abcdefghij12' });
+    expect(screen.getByText(/Falta um caractere especial/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeDisabled();
+  });
+
+  it('atendida a regra, o botão libera', async () => {
+    renderPage();
+    await preencher();
+    expect(screen.getByRole('button', { name: 'Criar conta' })).toBeEnabled();
+  });
+
+  it('a dica nomeia a exigência inteira ANTES da primeira tecla', async () => {
+    // A frase é a de `exigenciaDeSenha()` — a MESMA que a Function devolve ao
+    // recusar. Escrever uma variação à mão aqui é como tela e servidor voltam
+    // a se contradizer.
+    renderPage();
+    const dica = screen.getByText(/Use pelo menos 8 caracteres/);
+    expect(dica).toHaveTextContent('um número');
+    expect(dica).toHaveTextContent('um caractere especial');
+    // Descreve o campo de senha, não fica solta na tela.
+    expect(screen.getByLabelText('Senha').getAttribute('aria-describedby')).toContain(dica.id);
+  });
+
+  it('só a senha nova tem medidor — a confirmação não repete o diagnóstico', async () => {
+    renderPage();
+    await preencher({ senha: 'abc' });
+    // `abc` nos DOIS campos: se a confirmação também medisse, haveria duas
+    // leituras do mesmo diagnóstico na tela.
+    expect(screen.getAllByText('Senha fraca')).toHaveLength(1);
+  });
+
+  it('o olho revela a senha e NÃO submete o formulário', async () => {
+    renderPage();
+    await preencher(); // formulário VÁLIDO: se o clique submetesse, criaria a conta
+    const campo = screen.getByLabelText('Senha');
+    expect(campo).toHaveAttribute('type', 'password');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Mostrar a senha' })[0]!);
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(mocks.criarContaComEmail).not.toHaveBeenCalled();
   });
 
   it('e-mail em uso: erro orienta sem afirmar existência categórica', async () => {

@@ -1,6 +1,12 @@
 // =============================================================================
 // ContaPage (S020-T4) — perfil (nome/e-mail), troca de senha com reauth
 // obrigatória e estado honesto para anônimo. ContaRoutes registra /conta.
+//
+// FRONTEIRA-AUTH: os três campos de senha desta tela têm papéis diferentes e o
+// teste trava a diferença. A senha ATUAL é credencial de reauth (sem medidor, e
+// sem a régua nova — quem veio trocar a senha velha não pode ser trancado por
+// ela); a NOVA nasce aqui e responde à política do core, com medidor e dica; a
+// confirmação é cópia e não repete o diagnóstico.
 // =============================================================================
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -32,6 +38,12 @@ vi.mock('@leela/api-client', () => ({
 }));
 
 type FakeUser = { uid: string; displayName: string | null; email: string | null };
+
+/**
+ * Senha que passa na política da casa (14 caracteres, número e especial). O
+ * `novaSenha1` usado antes só atendia ao piso velho de 6.
+ */
+const SENHA_QUE_PASSA = 'trilha-longa9!';
 
 function comSessao(user: FakeUser | null): void {
   mocks.onSessionChange.mockImplementation((cb: (u: FakeUser | null) => void) => {
@@ -163,12 +175,14 @@ describe('ContaPage — troca de senha (reauth obrigatória)', () => {
     expect(trocar).toBeDisabled();
 
     await userEvent.type(screen.getByLabelText('Senha atual'), 'antiga123');
-    await userEvent.type(screen.getByLabelText('Nova senha'), 'novaSenha1');
-    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), 'novaSenha1');
+    await userEvent.type(screen.getByLabelText('Nova senha'), SENHA_QUE_PASSA);
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), SENHA_QUE_PASSA);
     expect(trocar).toBeEnabled();
     await userEvent.click(trocar);
 
-    await waitFor(() => expect(mocks.trocarSenha).toHaveBeenCalledWith('antiga123', 'novaSenha1'));
+    await waitFor(() =>
+      expect(mocks.trocarSenha).toHaveBeenCalledWith('antiga123', SENHA_QUE_PASSA),
+    );
     expect(await screen.findByText('Senha atualizada')).toBeInTheDocument();
     // Campos limpos após sucesso (não retém senha).
     expect(screen.getByLabelText('Senha atual')).toHaveValue('');
@@ -181,8 +195,8 @@ describe('ContaPage — troca de senha (reauth obrigatória)', () => {
     await screen.findByRole('heading', { name: 'Sua conta' });
 
     await userEvent.type(screen.getByLabelText('Senha atual'), 'chuteERrada');
-    await userEvent.type(screen.getByLabelText('Nova senha'), 'novaSenha1');
-    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), 'novaSenha1');
+    await userEvent.type(screen.getByLabelText('Nova senha'), SENHA_QUE_PASSA);
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), SENHA_QUE_PASSA);
     await userEvent.click(screen.getByRole('button', { name: 'Trocar senha' }));
 
     const alerta = await screen.findByRole('alert');
@@ -194,10 +208,75 @@ describe('ContaPage — troca de senha (reauth obrigatória)', () => {
     await screen.findByRole('heading', { name: 'Sua conta' });
     await userEvent.type(screen.getByLabelText('Senha atual'), 'antiga123');
     await userEvent.type(screen.getByLabelText('Nova senha'), '123');
-    expect(screen.getByText(/pelo menos 6 caracteres/i)).toBeInTheDocument();
+    // O que falta é dito pelo medidor, com a lista inteira de uma vez.
+    expect(
+      screen.getByText(/Falta pelo menos 8 caracteres e um caractere especial/),
+    ).toBeInTheDocument();
     await userEvent.type(screen.getByLabelText('Confirmar nova senha'), '999');
     expect(screen.getByText('As senhas não conferem.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trocar senha' })).toBeDisabled();
+  });
+
+  // ── FRONTEIRA-AUTH ─────────────────────────────────────────────────────
+  it('a NOVA senha responde à política do core: só o comprimento não destrava', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    const trocar = screen.getByRole('button', { name: 'Trocar senha' });
+
+    await userEvent.type(screen.getByLabelText('Senha atual'), 'antiga123');
+    await userEvent.type(screen.getByLabelText('Nova senha'), 'abcdefghij12');
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), 'abcdefghij12');
+    expect(screen.getByText(/Falta um caractere especial/)).toBeInTheDocument();
+    expect(trocar).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText('Nova senha'), '!');
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), '!');
+    expect(trocar).toBeEnabled();
+    expect(mocks.trocarSenha).not.toHaveBeenCalled();
+  });
+
+  it('a senha ATUAL não é revalidada pela régua nova — senão ninguém troca a antiga', async () => {
+    // `antiga123` não tem caractere especial: reprovaria em `senhaValida`.
+    // Ela é credencial de reauth, não senha em construção. Falsificação:
+    // aplique `senhaValida` ao campo da senha atual e este caso morre.
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    await userEvent.type(screen.getByLabelText('Senha atual'), 'antiga123');
+    await userEvent.type(screen.getByLabelText('Nova senha'), SENHA_QUE_PASSA);
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), SENHA_QUE_PASSA);
+    expect(screen.getByRole('button', { name: 'Trocar senha' })).toBeEnabled();
+  });
+
+  it('medidor SÓ na senha nova: nem a atual nem a confirmação diagnosticam', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    // A mesma string fraca nos TRÊS campos: um medidor só na tela.
+    await userEvent.type(screen.getByLabelText('Senha atual'), 'abc');
+    await userEvent.type(screen.getByLabelText('Nova senha'), 'abc');
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), 'abc');
+    expect(screen.getAllByText('Senha fraca')).toHaveLength(1);
+  });
+
+  it('a dica nomeia a exigência e descreve o campo da senha nova', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    const dica = screen.getByText(/Use pelo menos 8 caracteres/);
+    expect(dica).toHaveTextContent('um número');
+    expect(dica).toHaveTextContent('um caractere especial');
+    expect(screen.getByLabelText('Nova senha').getAttribute('aria-describedby')).toContain(dica.id);
+  });
+
+  it('o olho revela a senha e NÃO submete o formulário', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Sua conta' });
+    await userEvent.type(screen.getByLabelText('Senha atual'), 'antiga123');
+    await userEvent.type(screen.getByLabelText('Nova senha'), SENHA_QUE_PASSA);
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), SENHA_QUE_PASSA);
+    // Formulário VÁLIDO: se o botão do olho submetesse, a senha trocaria.
+    const campo = screen.getByLabelText('Nova senha');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Mostrar a senha' })[1]!);
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(mocks.trocarSenha).not.toHaveBeenCalled();
   });
 });
 

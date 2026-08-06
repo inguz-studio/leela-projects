@@ -129,6 +129,60 @@ describe('EntrarPage', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// O campo de senha da casa (FRONTEIRA-AUTH)
+//
+// Os três casos abaixo travam o que separa o login das telas onde a senha
+// NASCE: aqui não se mede, não se exige a política nova e o olho é um botão de
+// ver — não um botão de enviar.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('EntrarPage — o campo de senha', () => {
+  it('NÃO mede a força: senha existente não vira diagnóstico na tela', async () => {
+    renderEntrar();
+    await userEvent.type(screen.getByLabelText('Senha'), 'senha');
+    // Nenhum rótulo de força e nenhuma lista de pendências — medir a senha de
+    // quem só quer entrar não orienta nada e entrega o diagnóstico a quem
+    // estiver olhando por cima do ombro.
+    expect(screen.queryByText(/^Senha (fraca|média|forte)$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Falta/)).not.toBeInTheDocument();
+  });
+
+  it('a política NOVA não tranca quem tem senha antiga do lado de fora', async () => {
+    // `segredo123` não tem caractere especial: reprovaria em `senhaValida`.
+    // Contas criadas antes do piso novo continuam entrando — a régua só vale
+    // para senha que NASCE. Falsificação: gate o login com `senhaValida` e
+    // este caso morre.
+    mocks.loginComEmail.mockResolvedValue({ user: { uid: 'u1' } });
+    renderEntrar();
+    await userEvent.type(screen.getByLabelText('E-mail'), 'marina@demo.dev');
+    await userEvent.type(screen.getByLabelText('Senha'), 'segredo123');
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    await waitFor(() =>
+      expect(mocks.loginComEmail).toHaveBeenCalledWith('marina@demo.dev', 'segredo123'),
+    );
+  });
+
+  it('o olho revela a senha e NÃO submete o formulário', async () => {
+    // Defeito nº 1 desta feature: botão sem `type` dentro de <form> submete.
+    // O formulário está VÁLIDO de propósito — se o clique submetesse, o
+    // `loginComEmail` teria sido chamado.
+    renderEntrar();
+    await userEvent.type(screen.getByLabelText('E-mail'), 'marina@demo.dev');
+    await userEvent.type(screen.getByLabelText('Senha'), 'segredo123');
+    const campo = screen.getByLabelText('Senha');
+    expect(campo).toHaveAttribute('type', 'password');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar a senha' }));
+    expect(campo).toHaveAttribute('type', 'text');
+    expect(mocks.loginComEmail).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ocultar a senha' }));
+    expect(campo).toHaveAttribute('type', 'password');
+    expect(mocks.loginComEmail).not.toHaveBeenCalled();
+  });
+});
+
 describe('EntrarPage — roteamento por papel (item 57)', () => {
   beforeEach(() => {
     mocks.loginComEmail.mockResolvedValue({ user: { uid: 'u1' } });
