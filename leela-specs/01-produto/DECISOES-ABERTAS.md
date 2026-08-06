@@ -519,6 +519,15 @@ A assimetria é o que denuncia o defeito: o **termo de uso** guarda `materialHas
 - **Opções:** carimbar `materialHash` no aceite de saúde igual ao do termo de uso, e passar a versionar quando o texto muda · congelar o texto aceito dentro do pedido · deixar como está e assumir que o termo de saúde é declaração da pessoa, não contrato com a produtora — o que é defensável, mas precisa ser escolha e não acidente.
 - **Onde aterrissa:** `aceites.saude` no documento do pedido; `paragrafosDoTermoSaude` em `AceitesCompra.tsx`; `resolverOrganizadorPublico` em `apps/landing/lib/leitor.ts`. Medição em `.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`.
 
+### COMPROMETIDO-1 · três repasses vetados comprometem R$ 167,00 contra eventos que o expurgo apagou
+
+O expurgo de 06/08 rodou limpo (2.873 operações, provadas contra o banco), e o saldo se recompôs sozinho no meio da corrida por um gatilho que ninguém tinha listado — hoje `vendidoBruto` está aritmeticamente certo, a soma exata dos dois eventos vivos. O que sobrou errado é o `comprometido = 16700`: três repasses vetados seguram esse valor, e dois deles apontam para eventos que não existem mais. *O painel de caixa mostra dinheiro comprometido com evento apagado, e nenhuma tela de operador tem botão para desfazer isso.*
+
+- **O que fica com você:** decidir o destino dos três repasses vetados. É dinheiro, estava vetado antes do expurgo, e remendar por conta própria era exatamente o tipo de silêncio que você já proibiu.
+- **Por que agora:** enquanto eles existirem, o "disponível para repasse" nasce menor do que a realidade — o guard `disponível = entrou − comprometido` desconta valor preso em referência morta.
+- **Opções:** cancelar os três repasses vetados de vez, liberando o comprometido — os dois de evento apagado não têm mais contra o que correr · cancelar só os dois órfãos e manter o terceiro, que aponta para evento vivo · deixar como está até a próxima rodada de caixa, aceitando o disponível menor.
+- **Onde aterrissa:** os três documentos de `repasses` com status vetado; a medição completa está em `.nirvana/handoffs/leela-apply-limpeza-20260806.md`. A lacuna estrutural (recomputo de saldo sem caminho de operador) segue registrada na REV3.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
@@ -686,6 +695,10 @@ Duas pessoas reais se cadastraram em 06/08 e caíram na tela do código de convi
 - **O que fica com você:** decidir se o diretório de usuários entra na fila de construção e com que alcance (só contas aguardando convite, ou todas as contas com papel e origem). Envolve PII, então a spec herda o cuidado do P-IAMENU-1.
 - **Por que agora:** o caminho de hoje é o Console do Firebase (Authentication → Users lista todas as contas), que funciona mas é ferramenta de engenharia, não de operação. Enquanto o beta for você entregando convite na mão, dá para operar assim; no primeiro terceiro operando, não.
 - **Onde aterrissa:** spec nova sob [[LEELA-E16-plataforma-superadmin]] (tela em `/plataforma`); a emissão do convite em si já existe em `/plataforma/convites`.
+
+### Entrou em 06/08 · o retrato contínuo do banco está desligado (PITR — pendência do CTO)
+
+O expurgo pediu um export com hora exata (`snapshotTime`) e a API recusou: **Point-in-Time Recovery está desligado** no Firestore de produção. A corrida seguiu pela rede primária (export normal + importação), que está de pé e provada — mas ficou nomeada a causa do A3: sem PITR, não existe "voltar o banco para as 14h07 de ontem"; existe só o último export tirado à mão. *Um erro operacional grave hoje se desfaz até o export mais recente, não até o minuto anterior ao erro.* Ligar tem custo recorrente de armazenamento e política de retenção — decisão de infraestrutura para o CTO (sócio), não sua. Registro em `.nirvana/handoffs/leela-apply-limpeza-20260806.md`.
 
 ### Depois da fila · app v1 como PWA
 
