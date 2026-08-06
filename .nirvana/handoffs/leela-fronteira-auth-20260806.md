@@ -140,3 +140,142 @@ produtora e vê a PII de 803 inscritos**. Não testei contra produção. As cont
 | suíte de lint do DS | 3 arquivos · 40 testes · 0 falhas |
 | falsificação do lint | erro nominal, exit 1 |
 | falsificação do contrato | 5 falhas na rota do relato |
+
+---
+
+# Segunda tarefa — o campo de senha (revelar · regra · medidor)
+
+Pedido do dono, verbatim: ver a senha ao configurar/recuperar/entrar, exigir
+número e caractere especial, e indicar fraca ou forte.
+
+## §6 · Onde ficou, e por quê
+
+**Duas casas, não uma.** A régua em `packages/core/src/platform/politicaDeSenha.ts`;
+a apresentação em `packages/design-system/src/components/InputSenha/`.
+
+A régua não podia morar no design system porque **o servidor precisa dela**: três
+Cloud Functions criam ou trocam senha pelo Admin SDK, e Cloud Function não
+importa design system. A apresentação não podia morar no core porque core é
+puro, sem React. O componente recebe `avaliacao={avaliarSenha(senha)}` e desenha
+— mesmo desenho de `PlatformGuard` (presentacional) com `PlatformShell`
+(contêiner), que já é o padrão da casa.
+
+`Input` ganhou um slot `trailing`. Nasceu no primitivo, e não no consumidor,
+porque o `Input` renderiza label + campo + erro numa pilha: um botão posicionado
+por fora se ancora na PILHA e desliza sozinho quando a mensagem de erro aparece.
+Sem `trailing`, o DOM sai idêntico ao de sempre — é por isso que os 18 testes do
+`Input` seguem verdes sem uma linha alterada.
+
+**A régua estava em quatro lugares.** `SENHA_CONTA_MIN` (6) no core,
+`SENHA_MIN_AFILIADO` (8) na Function, `SENHA_MIN_ASSESSORIA` (8) copiado no
+api-client "como espelho de premissa", `SENHA_MIN` (6) no painel. Os quatro
+viraram apelidos de um número só, que subiu para **8**.
+
+## §7 · A política é garantia ou é orientação? Depende da porta.
+
+| Porta | Como a senha é gravada | A regra vale no servidor? |
+|---|---|---|
+| `provisionAfiliado` | `auth.createUser` (Admin SDK) | **Sim** — `senhaValida()` na Function |
+| `provisionAssessoria` | `auth.createUser` (Admin SDK) | **Sim** — `senhaValida()` na Function |
+| `concluirAcessoComProva` | `auth.updateUser`/`createUser` (Admin SDK) | **Sim** — `senhaDeContaValida()` (= a política) |
+| `/cadastrar` (painel) | `createUserWithEmailAndPassword` (browser → IdP) | **Não** — só a política nativa do IdP |
+| `/definir-senha`, `/redefinir-senha` | `confirmPasswordReset` (browser → IdP) | **Não** — idem |
+| troca de senha na conta | `updatePassword` (browser → IdP) | **Não** — idem |
+
+Para as três primeiras a regra é **garantia**: nenhuma chamada direta passa por
+cima. Para as três últimas é **orientação de interface** — quem chama o Identity
+Platform direto ignora a tela.
+
+**A ação que fecha isso não é de código, é de projeto** (e por isso não a
+executei — proibido escrever em produção):
+
+> Firebase Console → Authentication → Settings → Password policy → modo
+> **Require**, com: comprimento mínimo 8, "Numeric character required" e
+> "Non-alphanumeric character required" ligados. Equivalente por API: Identity
+> Toolkit `projects.updateConfig`, campo `passwordPolicyConfig`.
+> (docs.cloud.google.com/identity-platform/docs/password-policy, 06/08/2026.)
+
+**Achado que essa consulta pagou.** A lista de "non-alphanumeric" do Identity
+Platform é `^ $ * . [ ] { } ( ) ? " ! @ # % & / \ , > < ' : ; | _ ~ ` ` — e
+**não** inclui `-`, `+` nem `=`. A primeira versão do nosso conjunto incluía os
+três por reflexo. Com a política ligada no servidor, `senha-forte-123` passaria
+na tela e morreria no servidor, sem a pessoa entender por quê. O conjunto agora
+é cópia literal do publicado, com o caso travado por teste.
+
+## §8 · Comprimento mínimo — proposta, decisão do dono
+
+**Implementado: 8.** É o mínimo do NIST SP 800-63B e o piso que as duas portas
+de convite já praticavam; unificar para 6 seria afrouxar produção.
+
+**Proposta: subir para 12.** O NIST §5.1.1.2 recomenda explicitamente **não**
+impor regras de composição e priorizar comprimento + bloqueio de senhas vazadas,
+porque composição empurra a pessoa para `Senha1!` — oito caracteres que atendem
+a tudo e são a primeira coisa que um dicionário tenta. O NIST sugere 15 para
+senha escolhida por pessoa; 12 é o meio-termo que ainda cabe numa senha digitada
+no celular. Mudar é editar **uma** constante; os dois apps e as três Functions
+passam a exigir junto.
+
+Mitigação já embutida enquanto a decisão não vem: `Senha1!` atende à regra e sai
+**FRACA** no medidor, porque a força mede comprimento e variedade além da regra.
+Medidor que fica verde no mínimo ensina o mínimo. O caso está travado por teste.
+
+## §9 · Trava executável (mesmo padrão da fronteira)
+
+Lint `leela-auth/senha-fora-do-ds`: `<input type="password">` cru em `apps/` é
+erro, nas duas grafias (`"password"` e `{'password'}`). Eram 17 campos em 9
+arquivos quando a lane começou; o 18º será escrito por alguém que não leu nenhum
+dos outros, e é ele que a regra pega.
+
+## §10 · Superfícies trocadas (17 campos, 9 arquivos)
+
+| App | Arquivo | Campos | Medidor |
+|---|---|---|---|
+| painel | `routes/conta/auth/EntrarPage.tsx` | 1 (`current-password`) | não |
+| painel | `routes/conta/auth/CadastrarPage.tsx` | 2 | só na senha |
+| painel | `routes/conta/auth/RedefinirSenhaPage.tsx` | 2 | só na senha |
+| painel | `routes/conta/perfil/ContaPage.tsx` | 3 | só na nova |
+| landing | `(public)/definir-senha/DefinirSenhaFlow.tsx` | 1 | sim |
+| landing | `components/EntrarOverlay.tsx` | 1 (`current-password`) | não |
+| landing | `(public)/convite/ConviteForm.tsx` | 2 | só na senha |
+| landing | `(public)/convite/afiliado/AfiliadoConviteForm.tsx` | 2 | só na senha |
+| landing | `(public)/minha-conta/PainelMeusDados.tsx` | 2 | só na nova |
+
+Regra do medidor: entra onde a senha **nasce**. No login não orienta ninguém e
+anuncia ao vizinho de tela que a senha é fraca; no campo de confirmação leria a
+mesma string duas vezes.
+
+Duas decisões que valem veto do maestro:
+1. **A senha ATUAL não é revalidada** na troca (painel e landing). Validar ali
+   trancaria do lado de fora exatamente quem veio trocar uma senha antiga. Há
+   teste falsificável.
+2. **O login não aplica o piso novo.** Uma senha legada sem caractere especial
+   continua entrando. Aplicar a regra no login seria trancar todo mundo que já
+   tem conta.
+
+## §11 · Gates da segunda tarefa
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` core · api-client · DS · functions · painel · landing | exit 0 nos seis |
+| `eslint --max-warnings 0` painel · landing · DS | exit 0 nos três |
+| DS: InputSenha + Input + Field | 41 testes, 0 falhas (os 18 do `Input` sem uma linha alterada) |
+| painel: `src/routes/conta` | 11 arquivos · 128 testes · 0 falhas |
+| landing: os 5 arquivos tocados | 69 testes · 0 falhas |
+| política de senha (core) | 16 testes · 0 falhas |
+| lint do DS (3 plugins) | 45 testes · 0 falhas |
+| falsificação `senha-fora-do-ds` | campo cru → erro nominal, exit 1 |
+
+## §12 · O que ficou sem prova
+
+- **Pixel, contraste real e alvo de toque no celular.** jsdom não prova nenhum
+  dos três. O medidor foi desenhado com token do DS e a força é sempre PALAVRA
+  além de cor, mas quem confirma é o olho do dono.
+- **As suítes de integração das Functions** exigem os emuladores da lane e não
+  rodaram aqui. Os fixtures que dependiam do hífen como "especial" foram
+  corrigidos por leitura, não por execução.
+- **Se a política nativa do Identity Platform está ligada no `leela-hub`** —
+  é configuração de projeto, não de repo, e a lane não escreve em produção.
+- **O painel de decisões não foi editado.** `leela-specs/01-produto/DECISOES-ABERTAS.md`
+  está com alteração NÃO COMMITADA de outra lane (37 linhas removidas); um
+  `commit --only` nele carregaria o trabalho alheio junto. A decisão do
+  comprimento mínimo (§8) vai para o maestro registrar.
