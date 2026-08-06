@@ -223,10 +223,75 @@ const rotaForaDaFronteira = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Regra 2 — campo de senha cru (FRONTEIRA-AUTH · pedido do dono)
+// ---------------------------------------------------------------------------
+
+/**
+ * Todo `<input type="password">` de um app é o campo de senha da casa
+ * (`InputSenha` do DS) ou é um campo que esqueceu alguma coisa.
+ *
+ * A lista do que se esquece não é hipotética — é o brief do dono: mostrar/
+ * ocultar, `type="button"` no botão (senão ele submete o formulário), o
+ * `autocomplete` certo para o gerenciador de senha não morrer, a regra de
+ * composição e o medidor de força. Eram DEZESSETE campos em nove arquivos
+ * quando esta lane começou; o décimo oitavo é o que esta regra existe para
+ * pegar, porque ele será escrito por alguém que não leu nenhum dos outros.
+ *
+ * Pega as duas grafias que o JSX aceita: `type="password"` e
+ * `type={'password'}`. Escopo (eslint.config.mjs) é só `apps/` — o DS precisa
+ * do primitivo cru para construir o `InputSenha`.
+ * @param {any} ast
+ * @returns {any[]} nós JSXAttribute ofensores
+ */
+export function camposDeSenhaCrus(ast) {
+  /** @type {any[]} */
+  const achados = [];
+  percorrer(ast, (no) => {
+    if (no.type !== 'JSXAttribute') return;
+    if (no.name?.name !== 'type') return;
+    const v = no.value;
+    const literal =
+      v?.type === 'Literal'
+        ? v.value
+        : v?.type === 'JSXExpressionContainer' && v.expression?.type === 'Literal'
+          ? v.expression.value
+          : null;
+    if (literal === 'password') achados.push(no);
+  });
+  return achados;
+}
+
+/** @type {import('eslint').Rule.RuleModule} */
+const senhaForaDoDs = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'Campo de senha nos apps é o InputSenha do design system, não um <input type="password"> cru.',
+    },
+    schema: [],
+    messages: {
+      cru: 'Campo de senha cru. Use `InputSenha` do @leela/design-system — ele traz mostrar/ocultar (com `type="button"`, senão o botão submete o formulário), preserva o `autocomplete` do gerenciador de senha e desenha o medidor de força. A régua vem de `avaliarSenha()` do @leela/core.',
+    },
+  },
+  create(context) {
+    return {
+      'Program:exit'() {
+        const ast = context.sourceCode?.ast ?? context.getSourceCode().ast;
+        for (const no of camposDeSenhaCrus(ast)) {
+          context.report({ node: no, messageId: 'cru' });
+        }
+      },
+    };
+  },
+};
+
 const plugin = {
-  meta: { name: 'leela-auth', version: '1.0.0' },
+  meta: { name: 'leela-auth', version: '1.1.0' },
   rules: {
     'rota-fora-da-fronteira': rotaForaDaFronteira,
+    'senha-fora-do-ds': senhaForaDoDs,
   },
 };
 

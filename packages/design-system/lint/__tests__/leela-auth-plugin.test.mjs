@@ -9,7 +9,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { parse } from '@typescript-eslint/parser';
-import { rotasForaDaFronteira, acharRoutesRaiz } from '../leela-auth-plugin.mjs';
+import {
+  rotasForaDaFronteira,
+  acharRoutesRaiz,
+  camposDeSenhaCrus,
+} from '../leela-auth-plugin.mjs';
 
 /** Parseia TSX e devolve o Program (mesma configuração que o eslint usa). */
 function ast(codigo) {
@@ -182,5 +186,43 @@ describe('rotasForaDaFronteira — o que é legítimo e não pode ser barrado', 
       const codigo = `<${router}><Routes><Route path="/x" element={<Livre />} /></Routes></${router}>`;
       expect(paths(codigo)).toEqual(['/x']);
     }
+  });
+});
+
+describe('camposDeSenhaCrus — o decimo oitavo campo de senha', () => {
+  it('flagra `type="password"` cru num app', () => {
+    const codigo = `<input type="password" autoComplete="new-password" />`;
+    expect(camposDeSenhaCrus(ast(codigo))).toHaveLength(1);
+  });
+
+  it('flagra também a grafia por expressão, que escaparia de uma busca textual', () => {
+    expect(camposDeSenhaCrus(ast(`<input type={'password'} />`))).toHaveLength(1);
+  });
+
+  it('não confunde com os outros tipos de campo', () => {
+    const codigo = `
+      <form>
+        <input type="email" />
+        <input type="text" />
+        <input type="search" />
+        <Input type="tel" />
+      </form>
+    `;
+    expect(camposDeSenhaCrus(ast(codigo))).toEqual([]);
+  });
+
+  it('o InputSenha do DS não declara type — passa por construção', () => {
+    const codigo = `<InputSenha label="Senha" autoComplete="new-password" avaliacao={avaliarSenha(senha)} />`;
+    expect(camposDeSenhaCrus(ast(codigo))).toEqual([]);
+  });
+
+  it('acha todos, não só o primeiro (uma tela com senha + confirmação)', () => {
+    const codigo = `
+      <form>
+        <input type="password" name="senha" />
+        <input type="password" name="confirmar" />
+      </form>
+    `;
+    expect(camposDeSenhaCrus(ast(codigo))).toHaveLength(2);
   });
 });

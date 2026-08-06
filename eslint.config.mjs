@@ -137,4 +137,23 @@ export default [
       ],
     },
   },
+  {
+    // Campo de senha da casa (FRONTEIRA-AUTH · pedido do dono: revelar a senha,
+    // exigir número + caractere especial, indicar força). Eram DEZESSETE campos
+    // em nove arquivos, nos dois apps. O décimo oitavo será escrito por alguém
+    // que não leu nenhum dos outros — e é ele que esta regra pega, antes que
+    // nasça sem `type="button"` no botão (que submete o formulário) ou sem o
+    // `autocomplete` que o gerenciador de senha precisa.
+    //
+    // Escopo: só `apps/`. O design system precisa do `<input type="password">`
+    // cru para construir o `InputSenha`.
+    files: ["apps/painel/src/**/*.tsx", "apps/landing/app/**/*.tsx"],
+    ignores: ["**/__tests__/**", "**/*.test.tsx", "apps/mobile/**"],
+    plugins: {
+      "leela-auth": leelaAuth,
+    },
+    rules: {
+      "leela-auth/senha-fora-do-ds": "error",
+    },
+  },
 ];
