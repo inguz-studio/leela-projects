@@ -3537,3 +3537,98 @@ preço que a tela não mostrou. Fail-closed é o comportamento certo para dinhei
 O que a fronteira fecha antes disso: `qtdInscritos` conta qualquer status (RN-487), então quem já
 gerou uma cobrança PIX travou a configuração do evento inteiro. A única pessoa alcançável é a que
 ainda não gerou cobrança.
+
+## Delta o motor das duas portas de conta está de pé e no ar (2026-08-05 · BUILD-CONTAS-MOTOR → REV-CONTAS-MOTOR · DEPLOY-TUDO-0805)
+
+A spec das duas portas do modal é de 05/08 pela manhã e dizia "nada construído". À noite o motor
+estava construído, revisado por antagonista e **em produção**. Nenhuma regra de negócio nova: a
+RN-476 a RN-482 já são canônicas aqui e no [[LEELA-E00-fundacao-tecnica]]. O que este delta
+acrescenta é o estado por tarefa, o desvio de desenho que a construção declarou e as diretrizes que
+a review produziu.
+
+### Estado por tarefa
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S1229-T1 · o núcleo do código de seis dígitos | ✅ no ar | `39a98908` — ⚔ |
+| S1229-T2 · o nono e-mail do catálogo | ✅ no ar | `6f5b7915` |
+| S1229-T3 · a chamada que pede o código, sem consultar se a conta existe | ✅ no ar | `a0f12500` — ⚔ |
+| S1229-T4 · a chamada que consome o código | ✅ no ar | `23c644f2` — ⚔ saiu como **duas** chamadas |
+| S1229-REV · a review antagonista, seis defeitos | ✅ | `8f7dfa36`, `59980b48`, `6da5bd7f` |
+| S1229-T5 · as duas portas terciárias no rodapé do modal | 📋 | o bloqueio de arquivo caiu quando a lane de movimento aterrissou |
+| S1229-T6 · a rota de primeiro acesso e o campo de código | 📋 | |
+| S1230-T1 · a conta nasce depois da prova, inteira ou não nasce | ✅ no ar | `23c644f2` — ⚔ |
+| S1230-T2 · a rota de criar conta | 📋 | |
+| S1230-T3 · a prova por teste da fronteira de conta | 📋 | ⚔ não estava na ordem da lane do motor |
+| S1230-T4 · e-mail verificado no ramo (b) da regra do pedido | ✅ no ar | `cb33344e`, ruleset `4eabe733` — ⚔ |
+
+**O motor está no ar e o produto continua inalcançável**, e a distinção importa para quem ler isto
+depois: as três chamadas responderam ao smoke em produção, mas **nenhuma tela as chama**. As três
+tarefas de tela são o que falta.
+
+### O desvio de desenho, declarado pela construção
+
+A fila descrevia **uma** chamada para consumir o código; a construção entregou **duas** — uma prova
+o código e devolve se falta cadastro, a outra conclui com a senha. A razão está na tabela de
+estados da própria spec: numa chamada só, quem não tem conta teria o código consumido e receberia
+"falta o nome", precisando pedir **outro** código, contra um teto de três pedidos a cada quinze
+minutos.
+
+⛔ **A prova intermediária não é uma segunda superfície de credencial**, e o desenho foi feito para
+sustentar essa frase: 256 bits, digest com pepper no **mesmo** documento, domínio separado, uso
+único e o mesmo prazo do código. Quem encostar aqui mantém as cinco propriedades ou a frase deixa
+de ser verdade.
+
+### Diretrizes que a review antagonista produziu
+
+- ⛔ **Porta pública nova herda todas as fronteiras de conta, e ninguém lembra sozinho.** O defeito
+  mais grave da lane: a chamada é **pública e anônima**, e trocava a senha de uma conta de
+  administração da plataforma, carimbava o e-mail como verificado e devolvia sessão. A regra que
+  proíbe isso existia e estava aplicada no checkout desde 04/08; a porta nova nasceu sem ela.
+  Corrigido com a guarda **antes** do consumo do código.
+- **Erro de formulário não pode custar a credencial.** A prova era consumida antes de o servidor
+  saber em qual ramo estava, então quem esquecia o aceite perdia prova e código de uma vez.
+- ⛔ **Importar por conveniência de um módulo que declara segredo empresta o segredo.** O contrato
+  de segredos acusou: puxar uma constante de dentro do módulo de conta sem fricção fez a chamada
+  pública de credencial passar a **exigir a chave do provedor de e-mail**, sem ninguém pedir.
+  Trocado por um guard puro do núcleo. O fecho transitivo de segredos mordeu, e essa é a prova de
+  que ele funciona.
+- **Aborto de transação sob contenção precisa de desfecho próprio.** Medido: com oitenta palpites
+  simultâneos, as comparações caíram de cinco para duas e as outras setenta e oito viraram abortos
+  **sem uma linha de log**. Um limitador que não conta o que aborta não é limitador.
+- **Suíte tem de rodar duas vezes.** O verde do construtor foi colhido em execução única por
+  arquivo, e por isso não distinguia "a suíte passa" de "a suíte passa uma vez". Uma delas
+  reprovava na segunda.
+- **A asserção de força bruta é de igualdade, nunca de valor fixo.** O número de comparações depende
+  da carga, e travar um valor fixo seria instável por desenho.
+- **Alinhar a regra ao que a aplicação já faz é seguro; o inverso não é.** A exigência de e-mail
+  verificado no ramo (b) subiu **sem** mitigação de token em cache, com a razão medida: aquele ramo
+  não tem consumidor do lado do navegador, a área do cliente serve por chamada de servidor, e o
+  portão dela já exigia e-mail verificado. População trancada: nenhuma.
+- ⚠️ **Resíduo declarado, não buraco novo:** o vínculo da compra continua saindo de igualdade de
+  e-mail, então erro de digitação no checkout segue carimbando a compra na conta errada. O que muda
+  é que essa conta precisa agora provar posse do endereço.
+
+### O que ficou para o dono, e não é desta frente
+
+Nenhum item novo saiu desta lane. Seguem abertos o **CONTA-1** e o **CONTA-2**, e nenhum dos dois
+bloqueia o motor. A review nomeou **duas perguntas que são regra de produto**, e ficam registradas
+aqui em vez de virar item de painel enquanto ninguém as puxar: se o aceite de LGPD deve ser gravado
+quando a pessoa já tem conta e o documento dela não o carrega, e se a fronteira que hoje nomeia só
+a conta de administração deve passar a alcançar também a conta de organizador.
+
+## Delta o que subiu ao ar em 05/08, desta frente (DEPLOY-TUDO-0805)
+
+Para quem ler os cards antigos: **as frentes abaixo deixaram de estar "no repositório e fora do
+ar"** e estão em produção desde o deploy de 05/08, provado passo a passo em
+`.nirvana/handoffs/leela-deploy-tudo-0805.md`.
+
+| Frente | Estado |
+|---|---|
+| S1222 · a área do cliente, as cinco tarefas | ✅ no ar — os quatro índices de grupo que a frente exigia já estavam no servidor |
+| S1223 · o primeiro acesso do comprador | ✅ no ar — e a **T3**, que era passo de operação no Auth, já estava feita: o endereço da landing está na lista de domínios autorizados |
+| S1225 · o feedback do pedido na tela do checkout | ✅ no ar |
+| S1227 · o reenvio do e-mail que falhou | ✅ no ar — o que falta é a credencial do super-admin, não código |
+| S1228 · o código curto da compra | ✅ no ar — ⚠️ as dezessete compras que já existem seguem sem código até o retroativo rodar, e ele é ato do dono |
+| S1214-T5 · o botão que salva o ingresso em PDF | ✅ no ar — o smoke baixou o arquivo do ingresso do dono em produção |
+| S1232 · o login como overlay da landing | ✅ no ar — renumerada em 06/08, nasceu `S1221` e colidia com a régua de venda da VITRINE-FIX |

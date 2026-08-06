@@ -1022,3 +1022,109 @@ Registro dos deltas de dependência/rota desta trilha (já anotados in-line nas 
 - [ ] LEELA-S318-T4 — **O teste que fixa o rótulo `sem_kit` vivo (RN-507)** — duas coisas se chamam "sem kit" e só uma morre; o valor do enum `KitInscrito` é **rótulo de fallback** e sustenta cinco superfícies do credenciamento e do financeiro. Aceite: remover o valor `sem_kit` deixa **vermelha a suíte do credenciamento** (`kitJaConcluido`, denominador de kits a retirar, carimbo de `kitEntregueEm`), e não apenas a do checkout
 - [ ] LEELA-S318-T5 (⚔) — **O seed para de semear preço negativo (RN-509)** — `functions/src/seed/kits.seed.ts:64` (−15) e `functions/scripts/preview-seed-extra.ts:457` (−10), junto com o comentário que cita a RN-211. Sobe **antes** do reparo em produção, porque o runner já rodou duas vezes e uma terceira ressuscita os dois documentos. Aceite: `grep -rn "preco: -" functions/src/seed/ functions/scripts/` devolve zero
 - [ ] LEELA-S318-T6 (⚔⚔) — **O reparo dos dois kits em produção (RN-509)** — ⛔ **retido por SEMKIT-1**. Operação de plataforma sobre `meia-floripa-2026` (−15) e `sao-silvestre-floripa-2025` (−10), atravessando a RN-200 por **exceção declarada**: os dois eventos têm inscritos, então a Rule congela o preço e nega o delete, e o organizador não tem gesto nenhum que conserte. A exceção se sustenta pela medição — **nenhum pedido pago referencia qualquer um dos dois**, e `ItemPedido` nem tem campo de kit. Aceite: antes, dois kits com `kitEhDesconto` verdadeiro; depois, zero; contagem de inscritos, agregados financeiros e `qtdInscritos` **medidos** intactos, não afirmados
+
+---
+
+## RODADA 2026-08-05/06 · o dia inteiro, e a noite em que tudo subiu (SEAL-0806)
+
+> Selo do que aconteceu **depois** do selo anterior (`a1117fdd` e `b77f4f4f`, 05/08 de manhã).
+> Treze lanes, quinze horas, e o fecho: **painel, landing, regras e vinte e uma funções entraram em
+> produção num deploy só**. O painel estava vinte e duas horas atrás do repositório e passou a
+> estar em dia. Território deste selo: `leela-specs/` apenas, zero linha de código.
+
+### O mapa lane → entrega → prova
+
+| Lane | O que entregou | Prova | No ar? |
+|---|---|---|---|
+| **BUILD-MOTION** | o modal da landing para de nascer preso ao cabeçalho; overlays entram e saem animados, com a duração em token | `504b5b3a`, `bf93ed51` | ✅ |
+| **REV-MOTION** ⚔ | dois defeitos de ciclo de vida, os dois **altos**: a trava de rolagem devolvida por um overlay que já saiu, e o foco arrancado de dentro do overlay aberto | `bc4f2304` · design system 62 arquivos / 1154 casos | ✅ |
+| **BUILD-MOTION-ASSIM** | oitocentos para abrir, duzentos e cinquenta para fechar — decisão do dono, com a razão escrita em três lugares do código | `df0848a0` · 1156 casos (base 1154 + 2) | ✅ |
+| **BUILD-LOTES-UX** | cinco dos seis achados do dono na tela de lotes | `fd6e5e69`, `41ac6bbb`, `d4ce8d12`, `1357163a` · 809/80 na vizinhança, 38 casos novos | ✅ |
+| **REV-LOTES** ⚔ | um defeito **alto** (a prévia viva ligada na tela onde o campo está desabilitado, e a porta real seguia mostrando 31) e dois médios | `2a97a592`, `08a09465`, `c2b19244` · 816/80 e SubNav 24 (base 19) | ✅ |
+| **BUILD-CONTAS-MOTOR** | o código de seis dígitos inteiro: núcleo, nono e-mail, as duas chamadas e a regra do pedido | `39a98908`, `6f5b7915`, `a0f12500`, `23c644f2`, `cb33344e` · nove suítes arquivo a arquivo | ✅ |
+| **REV-CONTAS-MOTOR** ⚔ | seis defeitos, o maior deles a conta de administração entrando pela porta pública do participante | `8f7dfa36`, `59980b48`, `6da5bd7f` · onze suítes, **duas passadas completas** | ✅ |
+| **FIX-PARSE-DINHEIRO** | o separador de milhar parou de cortar o preço em sete superfícies | `300aba61` | ✅ |
+| **FIX-PARSE-MILHAR** | `1.234` num campo de preço passa a gravar mil duzentos e trinta e quatro; a pontuação vira módulo próprio; catorze campos de contagem consertados | `73e2944a`, `450a0734`, `9af33b17` | ✅ |
+| **REV-PARSE** ⚔ | um defeito **alto**: a decisão do dono virou corrupção de dinheiro por fator mil, silenciosa, pelo lado da semente do formulário | `41df2d7f` · painel 199/2030 → 199/2035 | ✅ |
+| **DIAG-CLUBES** | a causa do "os clubes não carregam": índice composto que nunca existiu, mais um segundo da mesma classe na lista de tenants, mais um auditor estático | `092de799` · 39 variantes de consulta, 18 índices | ✅ |
+| **DIAG-STORAGE-CAPA** | a causa do "não tenho permissão" ao trocar a capa: permissão de IAM que só o deploy interativo concede, e que nenhum deploy nosso concedia | `096311f9` · 85 casos de regra de arquivo | ✅ |
+| **DIAG-PAINEL-LACUNAS** | as duas perguntas do dono medidas, o alerta com destino, e o `undefined` fora da tela | `3fdfb6f5`, `b68286df` · 851/80 | ✅ |
+| **BUILD-SUPRIMIR-TOOLBAR** | a barra superior sai do layout raiz, e o teste que afirmava presença vira canário de ausência | `2332bebb`, `6d9853ab` · 18 arquivos / 169 casos | ✅ |
+| **REV-PAINEL** ⚔ | três defeitos, mais um pré-existente: sete rotas com o topo rente, controle dentro de controle, linha estourando em 320 pixels | `c9967d87`, `fb9f3b09`, `5f9f2b25`, `b793b906` · 200/2046 (base 199/2030) | ✅ |
+| **SPEC-MODALIDADE-KIT** · **SPEC-SEM-KIT** | as duas decisões do dono viram regra: a lista de modalidades ganha dono, o lote pode dispensar o kit, e o kit deixa de vender desconto | `500704f4`, `812711f2` · RN-500 a RN-509 | documento |
+| **DEPLOY-TUDO-0805** | sete passos, sete conferências pós-deploy, zero regressão | rulesets `34131880` e `4eabe733`, releases `1785983098700000` e `1785983161411000`, 21/21 funções | ✅ **é ele** |
+| **SPEC-PROCESSO-DEPLOY** | a família nomeada, a conferência de prontidão executável e a ordem obrigatória do deploy | `2d44681a` · verde e falseada contra produção | script |
+| **DIAG-SENHA** | o "esqueci minha senha" que morria para quem digita endereço sem conta | `cb5922a7` · 38/38 no arquivo alterado, contrato de segredos 23/23 | ⛔ **não** |
+
+### O que está no ar e o que não está, sem ambiguidade
+
+**No ar desde 05/08 à noite:** o painel inteiro (motion, lotes, parsers, alerta com destino, barra
+superior removida com o respiro recomposto, código da compra nas telas), a landing inteira (área do
+cliente, primeiro acesso, feedback do pedido, PDF do ingresso, login em overlay), as regras do
+Firestore com a exigência de e-mail verificado no ramo (b), as regras do Storage com o bloco da
+terceira foto do kit, e vinte e uma funções — entre elas as três do código de seis dígitos, que são
+novas.
+
+**Fora do ar:** o conserto da redefinição de senha (`cb5922a7`), que é posterior ao deploy e está em
+review. É a única frente do dia que não subiu.
+
+**Construído e sem tela:** o motor do código de seis dígitos responde em produção e **nenhuma tela o
+chama**. As três tarefas de tela são o que falta.
+
+**No repositório e por natureza fora do deploy:** o script de prontidão, que é ferramenta de quem
+deploya, e os documentos de spec.
+
+### A lição de método que se repetiu, e a formulação que ficou
+
+**Medição exata com conclusão errada.** Aconteceu duas vezes no dia, nas duas frentes de painel, e
+a review da barra superior a formulou melhor do que qualquer resumo:
+
+> As afirmações de medição do construtor estavam exatas. O que falhou foi a conclusão tirada delas.
+
+Na frente da barra superior, os oitenta e nove pixels removidos estavam contados token a token, e o
+argumento que dispensou recompor o espaço — "as telas já entregam o cabeçalho de página rente ao
+topo" — é verdadeiro para toda rota de plataforma. Ele só nunca foi conferido contra as áreas que
+**não** abrem com cabeçalho de página, e eram sete rotas de produtor.
+
+Na frente de lotes, a mesma forma: a prévia viva da capacidade foi construída, testada e declarada
+pronta, e funcionava. Só que foi ligada na tela onde o campo fica desabilitado exatamente quando a
+queixa do dono existe, e a porta real seguia mostrando trinta e um disponíveis enquanto ele digitava
+vinte. **O teste que dava a frente por verde montava um estado que o produto não alcança.**
+
+O padrão é o mesmo nas duas: o número está certo, o raciocínio em cima do número é válido, e a
+premissa que ninguém enunciou — *"toda tela abre com cabeçalho de página"*, *"o campo editável é
+este"* — é falsa. **A defesa não é medir melhor; é perguntar contra o que a medição foi conferida.**
+Quando a resposta é "contra o caminho que eu já estava olhando", falta uma review.
+
+Uma terceira aparição, de outra família, vale registrar junto: a lane de clubes recebeu no brief a
+afirmação "a consulta devolve zero documentos e **sem** erro", e a produção respondia HTTP 400 com a
+frase exata. A medição de entrada estava errada porque o **instrumento** contava documentos sem
+olhar o campo de erro. Ali não foi a conclusão que falhou, foi a medida — e o remédio é o mesmo,
+porque as duas coisas se corrigem no mesmo lugar: conferir contra algo que não seja o próprio
+caminho.
+
+### Três coisas que o dia devolveu e que nenhum card cobria
+
+1. **Colisão de identificador, e ela é mais antiga do que hoje.** Duas lanes tomaram `S033` e `S034`
+   no mesmo Backlog, com conteúdos completamente diferentes, e o mesmo aconteceu com `S1221`.
+   Renumerados neste selo para `S039`, `S040` e `S1232`, sempre preservando quem chegou primeiro.
+   **A varredura achou outras três, todas anteriores a esta rodada, e elas ficam como estão:**
+   `S1214` aparece em dois cards (a página do ingresso, no Backlog, e o botão de PDF, em execução —
+   é a mesma história em duas alturas, e isso é legítimo), e `S1222` e `S1223` carregam de verdade
+   dois assuntos diferentes cada uma, com metade já em Feito há semanas. Renumerar entrada de
+   histórico quebraria referência em épico e em relatório por um ganho cosmético, então ficam
+   nomeadas aqui em vez de mexidas. ⛔ **Lane de spec que abre história nova confere o board antes
+   de escolher o número** — a faixa livre não é a que o handoff supõe, e a prova é que duas lanes
+   do mesmo dia caíram nisso.
+2. **O arquivo que descreve o workspace suja sozinho** e, quando suja, quebra a instalação para
+   todo mundo. Foi revertido à mão três vezes no dia. Deixou de ser ruído e virou conserto com dono
+   pedido na fila técnica (RS1-10).
+3. **O gancho de incidente existe e do outro lado não há ninguém.** Zero políticas de alerta, zero
+   métricas de log, zero canais de notificação no projeto de produção. Roteado ao **CTO humano**,
+   não ao dono, por ser custo de infraestrutura recorrente.
+
+- [x] **LANE SEAL-0806 (selo)** — treze lanes aterrissadas nos boards, em sete épicos, na fila
+  técnica e no painel do dono. **Território `leela-specs/` apenas; zero linha de código; zero
+  deploy.** Duas colisões de identificador corrigidas (`S033`/`S034` e `S1221`). Nenhuma regra de
+  negócio nova: a faixa segue em **509**. O painel do dono ganhou **PARSE-1** e **RESPIRO-1**, e o
+  item de observabilidade foi para o CTO humano em vez de virar pergunta ao dono.

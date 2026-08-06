@@ -2221,3 +2221,92 @@ predicado que aquele mesmo bloco chama (`precoKitValido`, `:265-269`). São linh
 arquivo. **`S318-T1` antes de `S317-T2`**; em paralelo, colidem.
 
 Nenhuma tarefa da S316 é tocada.
+
+## Delta o estado real da S315, o parser pt-BR e o alerta com destino (2026-08-05 · REV-LOTES → FIX-PARSE → REV-PARSE · DIAG-PAINEL-LACUNAS)
+
+Três frentes deste épico fecharam no dia 05/08 e **estão no ar** desde o deploy do painel. Nenhuma
+regra de negócio nova: a RN-497 e a RN-498 já nasceram na SEAL-LOTES e não mudam aqui. O que este
+delta acrescenta é o estado por tarefa e as diretrizes que as reviews produziram.
+
+### S315 · o editor de lote diz a verdade — estado por tarefa
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| Frente A · o aviso acende no campo certo, e todos de uma vez | ✅ no ar | `41ac6bbb` + `2a97a592` |
+| Frente B · a recusa por janela sobreposta diz qual lote e quando | ✅ no ar | `41ac6bbb` |
+| Frente D · os três números, e o disponível que acompanha o total | ✅ no ar | `d4ce8d12` + `08a09465` — **entregue errado e refeito pela review** |
+| Frente E · desativar um lote vigente, sem invalidar quem comprou | ✅ no ar | `d4ce8d12` |
+| Frente F · a barra de rolagem do menu do evento, na causa | ✅ no ar | `fd6e5e69` + `1357163a` + `c2b19244` |
+| S315-T1 · a janela do lote vendido deixa de ser imutável (RN-497) | 📋 | ⚔ mexe em regra de servidor; é a única parte do pedido do dono que não foi entregue |
+| S315-T2 · o editor para de dizer que a janela aguarda selo | 📋 | depende da T1 |
+| S315-T3 · o estouro de vaga vira dado (RN-498) | 📋 | ⚔ `functions/` |
+| S315-T4 · a tela para de esconder o estouro (RN-498) | 📋 | depende da T3 |
+| **S315-T5 · preço com separador de milhar** | ✅ **no ar** | `300aba61`, `73e2944a`, `450a0734`, `9af33b17`, `41df2d7f` — **virou a S319**, porque cresceu |
+| S315-T6 a T9 · marcação de erro nas datas, reset do formulário, texto da recusa concorrente, sobreposição pré-existente | 📋 | os cinco achados de severidade baixa da review |
+
+### S319 · uma régua para dinheiro, outra para contagem, a mesma pontuação por baixo
+
+Nasceu como a `S315-T5` e cresceu no meio da execução, por duas razões. A primeira é de tamanho: o
+padrão que trocava só a primeira vírgula não estava em oito arquivos, estava em **sete campos de
+dinheiro e catorze de contagem**, e os dois lados liam mil como um. A segunda é a decisão do dono
+tomada no meio da rodada, e é ela que dá o nome à história.
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S319-T1 · o parser único de dinheiro e as sete superfícies | ✅ | `300aba61` |
+| S319-T2 · `1.234` num campo de preço grava mil duzentos e trinta e quatro | ✅ | `73e2944a` |
+| S319-T3 · a pontuação brasileira num lugar só, e o parser irmão de contagem | ✅ | `450a0734` |
+| S319-T4 · mil vagas param de virar uma, em catorze campos | ✅ | `9af33b17` |
+| S319-REV · o defeito do outro lado do caminho de volta | ✅ | `41df2d7f` — **ALTA**, corrupção por fator mil, silenciosa |
+| S319-T5 · a varredura do acervo | 📋 | leitura de produção; o conserto vale daqui para frente |
+
+**A regra do dono, e onde exatamente ela erra.** `1.234` é mil duzentos e trinta e quatro. O buraco
+tem tamanho conhecido e é o que ele aceitou: a leitura só erra quando o grupo final tem
+**exatamente três dígitos** e o primeiro grupo não começa por zero. `1.23` é um e vinte e três,
+`12.34` é doze e trinta e quatro, `0.500` é cinquenta centavos, e nenhum deles muda.
+
+**Diretrizes que a rodada produziu:**
+
+- ⛔ **Campo de dinheiro nasce com vírgula, nunca com ponto.** É a diretriz mais cara do dia, e ela
+  vem de um defeito real: depois que `1.234` passou a ser milhar, todo campo semeado a partir do
+  número cru passou a se contradizer com o parser que o lê. Abrir um kit de três casas decimais e
+  salvar **sem tocar em nada** gravava mil vezes o valor, sem erro, porque a validação de preço de
+  kit só exige número finito e a regra de servidor do kit não exigia centavo exato. Com vírgula não
+  existe leitura de milhar possível — é o que o editor de lote já fazia.
+- **O arredondamento de centavos é feito sobre os dígitos, não sobre o número.** Medido em cem mil
+  entradas: **zero quebras**, contra 572 do caminho anterior, que multiplicava por cem em ponto
+  flutuante. O erro do caminho anterior é intermitente, que é o pior tipo para dinheiro.
+- **Refatoração pura se prova por diferencial, não por teste.** A extração da pontuação para um
+  módulo próprio foi comparada em cento e setenta e sete mil entradas, antes e depois, campo a
+  campo, com zero divergência. A pergunta debaixo da alegação "os testes seguem verdes sem
+  alteração" — *isso não é porque os testes não cobrem o ramo mudado?* — fica respondida por cima:
+  mesmo que os testes não cobrissem nada, o diferencial cobre.
+- **A validação e a gravação são a mesma função.** Três silêncios foram fechados de passagem, e o
+  pior deles era um par que validava por uma função e gravava por outra: o teto do cupom passava na
+  validação e era gravado como ausente, o que significa **cupom ilimitado**.
+- **Onde a régua não alcança, ela não é aplicada pela metade.** Três arquivos de dinheiro ficaram
+  de fora com razão declarada, e a review corrigiu a premissa que os deixou de fora — eles **são**
+  dinheiro (fila técnica, RS1-23). Aplicar só a leitura deixaria o arquivo com duas réguas.
+
+### S320 · o alerta que manda configurar os lotes leva até eles
+
+Da lane de diagnóstico das duas perguntas do dono sobre modalidade e kit. As respostas viraram a
+**S316** e a **S317**; o que a lane consertou de imediato foi a afordância e um defeito de texto.
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S320-T1 · o alerta crítico ganha botão para a aba de lotes | ✅ no ar | `3fdfb6f5` — vale para os quatro casos que os lotes resolvem |
+| S320-T2 · evento sem modalidade para de escrever `undefined` na tela | ✅ no ar | `3fdfb6f5` |
+| S320-T3 · o círculo fechado entre Lotes e Configurações vira texto honesto | ✅ no ar | `3fdfb6f5` |
+| S320-T4 · o editor de kit diz onde o vínculo mora | ✅ no ar | `3fdfb6f5` |
+
+**O defeito de texto não era hipotético.** Evento com zero modalidades cai no diagnóstico de "sem
+preço" com lista vazia de modalidades sem preço, e a montagem da frase pegava o item anterior ao
+primeiro de uma lista vazia. A mensagem saía literalmente *"as modalidades e undefined estão sem
+preço"*. Documento que não parseia vira projeção degradada com lista vazia, então o caminho é
+alcançável em produção. A frase nova **não** oferece o caminho dos lotes, porque lá não haveria o
+que fazer: o lote exige uma modalidade existente.
+
+**Diretriz:** o círculo fechado entre duas telas — cada uma mandando o organizador para a outra, e
+nenhuma fazendo o que promete — é a forma que uma lacuna de produto assume quando ninguém a nomeia.
+O conserto barato é a tela contar o estado real; o conserto de verdade é a **S316**.

@@ -759,3 +759,137 @@ Organizador e cliente continuam cabendo na mesma conta (RN-450).
   tela (QUALIF-5). Ligá-los aqui seria uma terceira porta no mesmo modal, na mesma semana, sem
   o dono ter pedido.
 
+
+## Delta o que só a produção cobra, e a rodada inteira no ar (2026-08-05 e 06/08 · DIAG-CLUBES · DIAG-STORAGE-CAPA · DEPLOY-TUDO-0805 · SPEC-PROCESSO-DEPLOY · DIAG-SENHA)
+
+Cinco lanes de fundação no mesmo ciclo, quatro delas achando a mesma família de defeito: **verde na
+máquina de quem escreveu, quebrado no ar, e nenhum erro visível para quem estava olhando**. Nenhuma
+regra de negócio nova — a faixa segue em 509. O que este delta acrescenta é o estado por tarefa e
+as diretrizes.
+
+> ⚠️ **Renumeração de 06/08.** A lane SPEC-PROCESSO-DEPLOY tomou `S033` e `S034` sem ver que a
+> SPEC-QUALIFICACAO já os havia reservado em 04/08 (`S033 · Criar conta na Leela` e
+> `S034 · Painel Profissional na superfície`, os dois no Backlog). O par novo passou a ser **S039**
+> (a conferência, feita) e **S040** (a esteira, no Backlog). Os IDs da SPEC-QUALIFICACAO ficam onde
+> estavam, porque são os primeiros.
+
+### S035 · o índice que só a produção cobra
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S035-T1 · a causa-raiz provada, e o diagnóstico de entrada corrigido | ✅ | `092de799` |
+| S035-T2 · o segundo defeito da mesma classe, na lista de tenants | ✅ | `092de799` |
+| S035-T3 · os dois índices compostos, sem tocar nas isenções | ✅ | `092de799` — no ar antes de 05/08 |
+| S035-T4 · o auditor estático que exige índice declarado | ✅ | `092de799` — ⚔ entra na tarefa de teste do pacote |
+| S035-T5 · a guarda equivalente para as consultas de dentro das functions | 📋 | sem dono |
+
+**A correção de diagnóstico é a parte que vale guardar.** O brief dizia que a consulta devolvia
+"zero documentos e **sem** erro". A produção responde 400 com a frase exata *"a consulta exige um
+índice"*. **Não existe caminho silencioso no Firestore** — o silêncio era do instrumento de
+medição: em erro, a resposta vem como um item com campo de erro, e contar itens com documento dá
+zero sem nunca olhar o erro que veio junto. Quem engole a rejeição é sempre a camada de cima.
+
+**Diretrizes:**
+
+- ⛔ **O emulador não cobra índice.** Ele serve qualquer combinação de filtro e ordenação. Um teste
+  de integração no emulador passa com folga enquanto a produção erra na primeira linha, e nenhuma
+  quantidade de testes desse tipo muda isso. A cegueira é estrutural, e a lista completa do que o
+  emulador não sabe está em [[o-que-so-a-producao-cobra]].
+- **Filtro opcional esconde o defeito.** A lista de tenants quebra só quando o filtro é usado: sem
+  ele o índice automático serve. É o pior formato possível, porque o caminho comum funciona.
+- **Contar resposta de consulta sem olhar o campo de erro é medir errado.** Vale para qualquer
+  código que resuma resposta de banco.
+
+### S036 · a permissão que só o deploy interativo concede
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S036-T1 · a capa do evento reproduzida condição a condição | ✅ | `096311f9` — as quatro condições da regra passam |
+| S036-T2 · o alcance medido: o balde estava vazio desde sempre | ✅ | zero objetos em todo prefixo |
+| S036-T3 · duas guardas exigindo a mesma régua na regra e na tela | ✅ | `096311f9` |
+| S036-T4 · a permissão concedida, e a conferência que passa a acusá-la | ✅ | virou a C5 da S039 |
+| S036-T5 · a tela para de repassar a mensagem crua do provedor | 📋 | fila técnica, RS1-26 |
+
+**O defeito não estava no código.** As regras de arquivo consultam o banco para decidir se a imagem
+é sua, essa consulta atravessa dois serviços, e quem a executa é um agente de serviço do Google que
+precisa de uma permissão específica. Quem concede é o próprio comando de deploy, e ele **só concede
+quando roda em terminal interativo**. Todos os deploys da casa eram automatizados: a regra ficava
+publicada, correta e inútil. **Consequência medida: nenhum upload que dependa de checagem no banco
+jamais funcionou em produção** — capa de evento, capa de clube, logo de patrocinador e foto de kit.
+Só funcionavam foto de perfil e logo de marca, que não consultam o banco.
+
+**Diretriz:** ⛔ **quando a consulta entre serviços falha, a negação sai com a mesma frase de uma
+negação legítima.** Foi isso que fez o defeito durar. Quem lê não distingue "você não pode" de "eu
+não consegui perguntar", e nenhum teste local pode enxergar a diferença, porque o emulador resolve
+a consulta dentro do próprio processo, sem agente de serviço e sem permissão nenhuma.
+
+### S037 · a rodada inteira sobe ao ar
+
+Sete passos, sete conferências pós-deploy, zero regressão. Estado: **✅ tudo no ar**.
+
+O que subiu: regras do Storage (ruleset `34131880`), **21 das 96 functions** (3 criadas e 18
+atualizadas), regras do Firestore (ruleset `4eabe733`), landing e painel. O que **não** subiu:
+índices, porque arquivo e servidor já batiam — 18 compostos e 8 isenções, zero diferença — e as
+outras 75 functions, porque nenhum arquivo alterado desde a baseline **delas** é alcançado por
+aresta de runtime.
+
+**Diretrizes:**
+
+- ⛔ **A baseline de functions se mede no servidor, nunca no brief.** A âncora escrita no brief
+  estava errada, e o servidor mostrou por quê: **funções diferentes estavam em commits
+  diferentes**, 65 numa geração e 28 noutra, sete dias mais velha. A verdade é a data de
+  atualização de cada função no servidor, e foi preciso adotar **duas** baselines.
+- **A confirmação é reler o servidor, não ler o texto do comando.** "Deploy complete" é a opinião do
+  comando sobre si mesmo. Cada passo foi confirmado por API, com impressão digital do arquivo
+  publicado comparada à do arquivo local.
+- **O que fica de fora fica de fora com prova.** Os parsers de dinheiro mudaram no pacote comum, e
+  nenhum arquivo de functions os importa — são do painel, e entraram pelo passo do painel.
+- **Bundle heterogêneo em produção é o estado normal de deploys parciais**, e vale saber que
+  existe: três gerações do mesmo artefato convivem hoje.
+
+### S038 · o endereço sem conta parou de virar falha de infra
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S038-T1 · a causa-raiz provada contra produção, com controle positivo | ✅ | `cb5922a7` |
+| S038-T2 · a classificação do erro na porta única dos links de ação | ✅ | ⚔ `cb5922a7` |
+| S038-T3 · o desfecho de erro inesperado separado do de falha de envio | ✅ | `cb5922a7` |
+| S038-T4 · os dois registros crus viram incidente observável | ✅ | `cb5922a7` |
+| S038-T5 · quem foi afetado, medido sem PII | ✅ | uma tentativa; o endereço não tem conta e nunca comprou |
+| S038-T6 · **o deploy** | 📋 | ⛔ sem ele o conserto não existe para quem usa |
+| S038-T7 · a p50 real do caminho da conta que existe | 📋 | pré-existente, anotado e não feito |
+
+A proteção contra enumeração de e-mail está **ligada** no projeto, e o serviço deixou de responder
+"conta não existe": responde sucesso sem entregar o link. A biblioteca do servidor tem um validador
+que só conhece dois mundos e lança erro interno, então o ramo escrito para "conta não existe" virou
+**código morto no dia em que a proteção foi ligada**, e endereço desconhecido passou a viajar como
+exceção de infraestrutura. Quem **tem** conta continuava sendo atendido, e é por isso que não houve
+avalanche de reclamação.
+
+**Diretrizes:**
+
+- ⛔ **Não desligar a proteção de enumeração.** É a saída fácil e é a errada: ela protege os fluxos
+  do lado do navegador contra enumeração da base de clientes. O conserto certo é o servidor
+  entender o desfecho novo.
+- **A classificação exige o par código mais frase.** O código sozinho é o genérico da biblioteca e
+  cobre infra de verdade, que precisa continuar subindo em vez de virar um "conta não existe"
+  silencioso. Se a biblioteca mudar a frase, o ramo volta a ser inalcançável — e o teste quebra
+  junto, que é o aviso.
+- **Uma variável inicializada no desfecho errado manda caçar a chave errada.** O envelope nascia
+  como "falha de envio", então qualquer exceção antes do provedor saía acusando o provedor.
+- **A doutrina de incidente estava escrita e não estava aplicada neste arquivo.** Agora está. E a
+  resposta honesta para "por que ninguém soube" é maior que isso: o projeto tem **zero políticas de
+  alerta, zero métricas de log e zero canais de notificação** — o gancho existe e do outro lado não
+  há nada. Roteado ao CTO humano por ser custo de infraestrutura recorrente.
+
+### S039 e S040 · a conferência de prontidão
+
+A **S039** está feita (`2d44681a`): oito conferências que comparam **arquivo contra servidor**, três
+códigos de saída, e uma régua de honestidade que imprime o que o script não verifica junto do
+veredito. A primeira execução verde contra produção é de 06/08, e a conferência de permissão dentro
+dela é o retrato do conserto da **S036** — até a véspera ela seria vermelha. A **S040** é o que
+ficou: ligar o script a um comando nomeado e a um passo de esteira, fora do território daquela lane.
+
+⛔ **O script não entra na tarefa de teste do monorepo**: ele fala com a rede e depende de
+credencial de usuário, o que o torna impróprio para uma tarefa de build cacheável. O lugar dele é
+um passo explícito, chamado por quem deploya.

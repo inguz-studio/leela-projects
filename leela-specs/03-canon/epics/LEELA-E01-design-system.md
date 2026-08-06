@@ -360,3 +360,85 @@ alguém registra `@profissional` no dia seguinte.
 
 **Ordem obrigatória:** o rebatismo entra no mesmo lote da reescopagem do `/cadastrar` (RN-461),
 porque toca os mesmos arquivos. Separados, a segunda passada conflita com a primeira.
+
+## Delta o movimento dos overlays e a supressão da barra superior (2026-08-05 · BUILD-MOTION → REV-MOTION → BUILD-MOTION-ASSIM · BUILD-SUPRIMIR-TOOLBAR → REV-PAINEL)
+
+Duas frentes de design system no mesmo dia, as duas fechadas por review antagonista e as duas
+**no ar** desde o deploy de 05/08. Nenhuma regra de negócio nova: o que sai daqui é diretriz de
+desenho, e ela vale para quem encostar nos primitivos depois.
+
+### S002 · abrir e fechar deixam de ser o mesmo movimento
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S002-T1 · o modal da landing para de nascer preso ao cabeçalho | ✅ | `504b5b3a` — o diálogo não portalizava |
+| S002-T2 · overlays entram e saem animados, e a duração vira token | ✅ | `bf93ed51` |
+| S002-REV · a review antagonista acha dois defeitos de ciclo de vida | ✅ | `bc4f2304` — os dois de severidade **alta** |
+| S002-T3 · oitocentos para abrir, duzentos e cinquenta para fechar | ✅ | `df0848a0` — decisão do dono, verbatim: *"800ms para abrir, 250ms para fechar."* |
+| S002-T4 · o menu suspenso em saída, e o overlay que some por corte no login | 📋 | devolvidos pela review, sem dono |
+
+**A razão da assimetria está escrita em três lugares do código, de propósito, para não ser
+otimizada de volta por simetria:** a abertura é onde a marca aparece; o fechamento acontece depois
+de a pessoa já ter decidido sair, e ali a lentidão vira pedágio. Fechar é o gesto de quem quer
+voltar a mexer na página, e é o pior lugar do produto para gastar tempo. O menu de cento e vinte
+milissegundos **não** foi dividido pela mesma régua invertida: em cento e vinte não há pedágio a
+cobrar.
+
+**Diretrizes que a rodada produziu, e que valem para o próximo primitivo:**
+
+- **As duas durações viajam em par.** A interface recebe um objeto com entrada e saída, nunca dois
+  argumentos soltos, para que abrir e fechar não possam ser passados trocados por engano. O teste
+  lê o número do tema **gerado**, então nenhum número precisa ser caçado em teste, e trocar a saída
+  pela entrada derruba três casos.
+- **A trava de rolagem é contada, não guardada por cada um.** Cada diálogo salvava e restaurava o
+  estilo do corpo da página por conta própria; com a saída animada, o desmonte do primeiro devolvia
+  a rolagem oitocentos milissegundos depois, com o segundo já aberto. O conserto é um contador
+  compartilhado: o último que sai destrava.
+- **Quem devolve o foco é o topo da pilha, não o último a fechar.** Vale registrar que o primeiro
+  conserto estava errado — a regra "só o último devolve" quebra o caso empilhado —, e que o caso
+  empilhado virou teste permanente exatamente para o próximo conserto não ser vítima do anterior.
+- **Foco só em nó conectado.** Chamar foco num nó já removido não falha e não faz nada: o foco cai
+  no corpo da página, e some para quem navega por teclado.
+- ⛔ **Encurtar duração nunca conserta corrida — só a torna mais rara, que é o pior estado
+  possível.** A janela em que dois overlays disputam a página encolheu de oitocentos para duzentos
+  e cinquenta milissegundos e **não fechou**. Quem for mexer nisso conserta a corrida, não o número.
+- **O artefato buildado do design system não é versionado.** Quem deploya precisa rodar o build do
+  design system antes, e quem roda a suíte do painel depois de mexer aqui está testando a versão
+  anterior enquanto não houver alias no runner (fila técnica, RS1-27).
+
+### S003 · a barra superior sai, e cada área segura o próprio respiro
+
+| Tarefa | Estado | Prova |
+|---|---|---|
+| S003-T1 · a barra sai do layout raiz, com os imports órfãos | ✅ | `2332bebb` — 89px no desktop, 101px abaixo de 1024, contados token a token |
+| S003-T2 · o teste que afirmava presença vira canário da ausência | ✅ | `2332bebb` — reintroduzir a barra deixa quatro das cinco asserções vermelhas |
+| S003-REV · três defeitos corrigidos, mais um pré-existente | ✅ | `c9967d87`, `fb9f3b09`, `5f9f2b25`, `b793b906` |
+| S003-T3 · o primitivo órfão e os sete tokens sem consumidor | 📋 | `packages/**`, outra alçada — fila técnica, RS1-24 |
+
+**A lição de método desta frente é a mais transferível do dia, e a review a formulou melhor do que
+qualquer resumo: as afirmações de medição do construtor estavam exatas; o que falhou foi a
+conclusão tirada delas.** O argumento que dispensou recompor o espaço — "as telas já entregam o
+cabeçalho de página rente ao topo, e o respiro é dele" — é verdadeiro, e é verificável que toda
+rota de plataforma abre assim. Ele só nunca foi conferido contra as áreas que **não** abrem com
+cabeçalho de página. Duas abrem com menu secundário, que tem altura fixa e zero folga vertical, e
+sete rotas de produtor passaram a nascer com metade do respiro do controle declarado.
+
+**Diretrizes:**
+
+- **Controle dentro de controle é defeito, e o teste por papel não o pega.** Um link envolvendo um
+  botão produz HTML inválido, dois pontos de tabulação para uma ação só, e o anel de foco no
+  elemento errado — mas a busca por papel de link passa nas duas formas, porque o nome acessível do
+  link é computado a partir do texto do botão de dentro. **A convenção da casa é o botão por fora
+  com o comportamento de link por dentro**, que é o par que a tela de conta já usava; o commit
+  tinha invertido. O mesmo aninhamento estava vivo, de antes, nos dois atalhos da tela de kits.
+- **Linha de ação com texto ao lado precisa refluir.** Um grupo de ações que não encolhe ao lado de
+  um texto que também não encolhe estoura a largura em trezentos e vinte pixels, e pelo CSS de
+  overflow um eixo travado promove o outro: volta a barra de rolagem horizontal que o dono já
+  reportou duas vezes. O par que resolve é o mesmo que o cabeçalho de página do design system usa.
+- **O respiro de cada área é da moldura da área, nunca do shell.** Recompor no shell ressuscitaria
+  a barra invisível que a decisão do dono removeu, e alcançaria as telas de plataforma, que são o
+  controle. Os vinte pixels escolhidos são **calibragem, não teorema**, e por isso subiram ao painel
+  como **RESPIRO-1**.
+- **Nenhum número deste relatório saiu de pixel medido em navegador.** Todos saíram dos tokens do
+  design system e da árvore renderizada, porque o runner de teste não faz layout. A conferência
+  visual continua pendente e é do dono.

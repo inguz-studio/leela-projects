@@ -1503,3 +1503,23 @@ configuração do clube. RNs novas (RN-389 a RN-392) consolidadas no épico dono
 
 **O que não muda:** RN-185, RN-186, RN-187, RN-188 e a leitura/export pela lista de
 membros que já existe. O corte de v1 segue o mesmo, com anexo em fase 2.
+
+## Delta a tela de clubes desenhava lista vazia, e o clube existia (2026-08-05 · DIAG-CLUBES)
+
+A rota de clubes do painel mostrava nada. Os três clubes estavam no banco, com os campos certos e
+os tipos certos. O que faltava era o índice composto que a consulta exige — filtro por produtora
+mais ordenação por data de criação —, e ele nunca existiu, nem no arquivo do repositório nem no
+servidor.
+
+Sem regra nova. A história é a **S035** no [[LEELA-E00-fundacao-tecnica]], onde as diretrizes desta
+família ficam registradas. **Está no ar**: os dois índices foram deployados antes de 05/08 e a
+conferência do deploy provou a consulta devolvendo dois documentos, sem erro.
+
+**O que este épico precisa guardar:** o Firestore **recusou a consulta em voz alta**, com HTTP 400 e
+a frase exata. Quem engoliu foi a camada de cima — o painel contava os documentos da resposta,
+achava zero e desenhava o estado vazio sem nunca olhar o campo de erro que vinha junto. Toda tela
+de lista deste épico que resumir resposta de banco tem o mesmo risco, e o sintoma é sempre o mesmo:
+lista vazia honesta em cima de uma consulta que nem chegou a rodar.
+
+**Ponta que fica aberta e não é desta lane:** o painel continua engolindo a rejeição. Conserto de
+tela, sem dono.

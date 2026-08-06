@@ -1603,3 +1603,15 @@ organização.
 
 **Won't do preservado.** Coletar documento para identificar não é KYC. Verificação de identidade
 contra base oficial segue fora do escopo deste épico.
+
+## Delta a lista de tenants filtrada quebrava em produção (2026-08-05 · DIAG-CLUBES)
+
+Achado de raspão, enquanto a lane investigava outra tela. A listagem de produtoras do administrador
+da plataforma combina filtro por situação com ordenação por data de criação, e essa combinação
+exige um índice composto que não existia. **É traiçoeiro pelo formato:** sem filtro a consulta
+funciona, porque o índice automático de campo único serve; com filtro ela falha. O caminho comum
+está certo, e só o caminho filtrado quebra.
+
+Sem regra nova. O índice entrou junto com o de clubes e **está no ar**. A história é a **S035** no
+[[LEELA-E00-fundacao-tecnica]], onde as diretrizes desta família ficam registradas, e a tarefa de
+tela deste épico que o defeito alcança é a `S1601-T3`.

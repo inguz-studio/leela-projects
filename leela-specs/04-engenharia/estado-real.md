@@ -1,12 +1,18 @@
 ---
 tags: [leela, estado, deploy, divida-tecnica, validacao-externa]
-atualizado: 2026-08-04
-trace: leela-build-2d6ee98d
+atualizado: 2026-08-06
+trace: leela-pixreal-diag-20260804
 ---
 
 # Leela · estado real do sistema
 
-Retrato do que existe, do que está servindo tráfego e do que está construído sem estar no ar, em 04/08/2026. O documento existe por um motivo específico: um validador externo que descobre sozinho uma lacuna que a casa já conhecia para de confiar em todo o resto que leu.
+Retrato do que existe, do que está servindo tráfego e do que está construído sem estar no ar, em 04/08/2026, **com uma emenda de 06/08 que muda a conclusão principal**. O documento existe por um motivo específico: um validador externo que descobre sozinho uma lacuna que a casa já conhecia para de confiar em todo o resto que leu.
+
+> ⚠️ **Emenda de 06/08 · a seção "Construído, revisado e fora do ar" envelheceu, e envelheceu bem.** Na noite de 05/08 tudo o que estava represado subiu, num deploy só, com cada passo confirmado relendo o servidor: painel, landing, regras do Firestore, regras do Storage e vinte e uma das noventa e seis funções. **O painel passou a ter release no canal de produção** — `https://leela-hub.web.app` deixou de devolver a página de erro do Firebase —, e com ele o botão "Entrar" da landing pública deixou de cair no vazio. Onde este documento disser "construído e fora do ar", leia a emenda antes. Prova passo a passo em `.nirvana/handoffs/leela-deploy-tudo-0805.md`; o selo da rodada está em [[V1-CHECKLIST]] §RODADA 2026-08-05/06.
+>
+> **O que continua fora do ar:** o conserto da redefinição de senha, que é posterior ao deploy e está em review. Ele importa: a proteção contra enumeração de e-mail está ligada no projeto, e desde então **todo pedido de senha para endereço sem conta morre como falha de infraestrutura**. Quem tem conta continua sendo atendido.
+>
+> **O que a emenda não conserta:** o número de functions deste documento (89 exportadas) está velho — hoje são 96 no código e 97 no projeto, contando a da landing. E a tabela de dívida abaixo ganhou uma linha que não estava lá: o projeto tem **zero políticas de alerta, zero métricas de log e zero canais de notificação**, então falha nova continua invisível até alguém abrir o log.
 
 Isto não substitui o painel do dono. As decisões abertas, com opções e default em vigor, vivem em [[DECISOES-ABERTAS]] e continuam sendo a lista viva de tudo que espera resposta. Aqui fica a camada que o painel não carrega: endereços, artefatos, e a forma de conferir cada afirmação sem pedir acesso a ninguém.
 
@@ -35,7 +41,9 @@ O deploy das dezesseis consertou uma classe de defeito que já tinha custado com
 
 Esta é a seção que costuma faltar em documentação de projeto, e é a que mais importa para quem valida.
 
-### O painel nunca subiu ao canal de produção
+### O painel nunca subiu ao canal de produção — ⚠️ superado em 05/08
+
+> **Superado, e o registro fica.** O painel subiu ao canal de produção pela primeira vez em 04/08 às 04h55Z e recebeu a segunda versão em 06/08 às 02h26Z, com os arquivos servidos byte a byte iguais ao build local. `https://leela-hub.web.app` responde com o painel. O parágrafo abaixo descreve o estado da madrugada de 04/08 e está preservado porque ele é o que explica o botão quebrado que a landing serviu por dias.
 
 O site de Hosting `leela-hub` existe na configuração (`firebase.prod.json` declara `site: leela-hub` servindo `apps/painel/dist`), e o canal live dele não tem release. `https://leela-hub.web.app` devolve **HTTP 404 com a página "Site Not Found" do próprio Firebase**, e o mesmo vale para `https://leela-hub.firebaseapp.com`. O painel que o dono usa hoje é um canal de preview, que é temporário por natureza e expira.
 
@@ -72,6 +80,9 @@ A tabela lista o que a casa já sabe que está quebrado ou frágil, com a forma 
 | `isPlatformAdmin()` não recebe `tenantId` nas Rules | 129 ocorrências, leitura cross-tenant | ADMINSEP-3 em [[DECISOES-ABERTAS]] |
 | CI não é gate real | `.github/workflows/ci.yml` sobe só o emulador de Firestore | [[laudo-testes-2026-08-04]] §1.5 F |
 | Endereço público ainda é marcador | `{DOMINIO_LEELA}` nas specs, remetente em Gmail pessoal | itens 12 e 66 em [[DECISOES-ABERTAS]] |
+| **Zero políticas de alerta, zero métricas de log e zero canais de notificação** — o gancho de incidente existe no código e do outro lado não há ninguém | consultar as três superfícies de monitoramento do projeto `leela-hub`; as três devolvem vazio | item do CTO em [[DECISOES-ABERTAS]] §Fila de construção; medição em `.nirvana/handoffs/leela-senha-DIAG.md` §4 |
+| **Redefinição de senha morre para endereço sem conta** — a proteção de enumeração está ligada e a biblioteca do servidor não sabe traduzir o desfecho | o conserto existe em `cb5922a7` e **não está no ar** | `.nirvana/handoffs/leela-senha-DIAG.md` |
+| Nenhum teste olha o servidor; arquivo e produção divergem sem ninguém acusar | `node functions/scripts/prontidao-de-deploy.mjs` | [[o-que-so-a-producao-cobra]] · S039/S040 no [[V1-KANBAN]] |
 
 Os dois eventos são `noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026`. Ambos devolvem HTTP 200 e o texto "Inscrições encerradas" na madrugada de 04/08, enquanto o servidor cotaria a compra sem reclamar. A vitrine decide pelos lotes e o motor decide pelo preço; discordam.
 

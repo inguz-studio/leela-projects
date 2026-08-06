@@ -2475,3 +2475,33 @@ resolva.
 
 Falsificação: depois do reparo, uma varredura por `kitEhDesconto` sobre os kits de `leela-hub`
 devolve zero, e uma execução limpa do seed de produção **não** recria nenhum preço negativo.
+
+## Delta a imagem do kit e a capa do evento passaram a subir de verdade (2026-08-05 · DIAG-STORAGE-CAPA · DEPLOY-TUDO-0805)
+
+Duas metades do mesmo assunto fecharam no mesmo dia, e as duas eram de produção, não de código.
+
+**A primeira.** Toda regra de arquivo deste épico que pergunta ao banco "este evento é da sua
+produtora?" estava publicada, correta e **inútil**: quem executa essa pergunta é um agente de
+serviço do Google, ele precisa de uma permissão específica para ler o banco, e quem concede é o
+próprio comando de deploy — **só quando ele roda em terminal interativo**. Os deploys da casa eram
+todos automatizados. Consequência medida: o balde de arquivos estava **vazio, zero objetos em todo
+prefixo, desde sempre**. Capa de evento, foto de kit, capa de clube e logo de patrocinador nunca
+subiram. A permissão foi concedida em 05/08 e a conferência de prontidão passou a acusá-la todo
+deploy.
+
+**A segunda.** O bloco de regra da terceira foto do kit (RN-427) estava no arquivo desde 02/08 e o
+que estava publicado era de 29/07. Subiu no deploy de 05/08, como bloco puramente aditivo: nenhuma
+linha existente mudou, nenhuma permissão foi afrouxada nem revogada.
+
+Sem regra nova — a RN-227 e a RN-427 seguem como estão. A história é a **S036** no
+[[LEELA-E00-fundacao-tecnica]].
+
+**O que este épico precisa guardar:** ⛔ **quando a pergunta ao banco falha por permissão, a
+negação sai com a mesma frase de uma negação legítima.** O organizador lê "você não tem permissão
+para acessar este arquivo" nos dois casos, e não há como distinguir. É o que fez o defeito durar
+meses sem ninguém desconfiar de infraestrutura. A tradução dessa mensagem na tela está escrita e
+sem dono.
+
+**Ressalva honesta:** a prova de que o conserto funciona é de **configuração**, não de upload. As
+sete conferências pós-deploy são todas de leitura, e nenhuma subiu um arquivo. Trocar a capa de um
+evento de verdade continua sendo conferência do dono.
