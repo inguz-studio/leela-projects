@@ -41,7 +41,12 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
-import { COLECAO_PARCEIROS_ASSESSORIA } from '@leela/core';
+import {
+  COLECAO_PARCEIROS_ASSESSORIA,
+  SENHA_MIN as SENHA_MIN_CASA,
+  exigenciaDeSenha,
+  senhaValida,
+} from '@leela/core';
 import {
   ORIGEM_CONVITE_ASSESSORIA,
 } from './cadastrarAssessoria';
@@ -74,8 +79,14 @@ export interface ProvisionAssessoriaResult {
   replay: boolean;
 }
 
-/** Senha mínima da conta nova (premissa — acima do mínimo 6 do Firebase). */
-export const SENHA_MIN = 8;
+/**
+ * Piso da senha desta porta — APELIDO da política da casa (`@leela/core` ·
+ * platform/politicaDeSenha), não um número dela. Era `8` literal aqui e `8`
+ * copiado no api-client "como espelho de premissa": duas autoridades sobre a
+ * mesma régua, esperando o dia em que uma sobe e a outra não. Segue exportado
+ * porque o api-client importa; o valor vem de um lugar só.
+ */
+export const SENHA_MIN = SENHA_MIN_CASA;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -198,10 +209,13 @@ export async function provisionAssessoriaCore(
   // (token de convite não é prova de posse da conta — anti-takeover).
   if (!contaExiste) {
     const senha = typeof input?.senha === 'string' ? input.senha : '';
-    if (senha.length < SENHA_MIN) {
+    // Política inteira (comprimento + número + especial). Esta porta cria a
+    // conta pelo Admin SDK, então aqui a regra é GARANTIA, não orientação de
+    // interface: nenhuma chamada direta passa por cima.
+    if (!senhaValida(senha)) {
       throw new https.HttpsError(
         'invalid-argument',
-        `Senha é obrigatória para criar a conta (mínimo ${SENHA_MIN} caracteres).`
+        `Senha é obrigatória para criar a conta. ${exigenciaDeSenha()}`
       );
     }
     const displayName =

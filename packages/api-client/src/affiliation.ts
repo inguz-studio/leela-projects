@@ -9,6 +9,7 @@
 // =============================================================================
 
 import { httpsCallable } from 'firebase/functions';
+import { SENHA_MIN as SENHA_MIN_CASA } from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
 // ---------------------------------------------------------------------------
@@ -72,8 +73,14 @@ export async function salvarAfiliado(
 // provisionAfiliadoAccount (aceite PÚBLICO do convite PF — RN-316)
 // ---------------------------------------------------------------------------
 
-/** Senha mínima da conta nova (espelho do servidor). */
-export const SENHA_MIN_AFILIADO = 8;
+/**
+ * Piso da senha desta porta — APELIDO da política da casa, não um espelho.
+ * O comentário antigo dizia 'espelho do servidor', e espelho é exatamente o
+ * problema: o número vivia aqui E na Function, e no dia em que um subisse o
+ * outro seguiria aceitando o que o primeiro recusa. Agora os dois leem
+ * `@leela/core` · platform/politicaDeSenha.
+ */
+export const SENHA_MIN_AFILIADO = SENHA_MIN_CASA;
 
 export interface ProvisionAfiliadoClientInput {
   eventoId: string;

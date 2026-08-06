@@ -450,7 +450,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
   it('C1: aceite feliz cria conta + ativa + vincula; replay idempotente', async () => {
     const token = await convitePF();
     const r = await provisionAfiliadoCore(db, auth, {
-      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123',
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123!',
     });
     expect(r).toMatchObject({ ok: true, afiliadoId: 'DIONEY10', replay: false });
     const user = await auth.getUserByEmail('dioney@exemplo.com');
@@ -459,7 +459,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     expect(doc.get('responsavelUid')).toBe(user.uid);
 
     const r2 = await provisionAfiliadoCore(db, auth, {
-      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123',
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123!',
     });
     expect(r2.replay).toBe(true);
     expect((await auth.listUsers(1000)).users).toHaveLength(1);
@@ -468,10 +468,10 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
   it('C2: token errado/afiliado inexistente → permission-denied OPACO idêntico', async () => {
     await convitePF();
     const e1 = (await provisionAfiliadoCore(db, auth, {
-      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: 'a'.repeat(64), senha: 'senha-forte-123',
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: 'a'.repeat(64), senha: 'senha-forte-123!',
     }).catch((e) => e)) as { code: string; message: string };
     const e2 = (await provisionAfiliadoCore(db, auth, {
-      eventoId: EVENTO_ID, afiliadoId: 'NAOEXISTE', token: 'a'.repeat(64), senha: 'senha-forte-123',
+      eventoId: EVENTO_ID, afiliadoId: 'NAOEXISTE', token: 'a'.repeat(64), senha: 'senha-forte-123!',
     }).catch((e) => e)) as { code: string; message: string };
     expect(e1.code).toBe('permission-denied');
     expect(e2.code).toBe('permission-denied');
@@ -485,7 +485,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     });
     await expect(
       provisionAfiliadoCore(db, auth, {
-        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123',
+        eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'senha-forte-123!',
       })
     ).rejects.toThrow(/convite_expirado/);
   });
@@ -493,7 +493,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
   it('C4: rate-limit R2 — 30 falhas de token enchem o balde; 31ª = resource-exhausted; vítima com token VÁLIDO ainda aceita', async () => {
     const token = await convitePF();
     const input = (t: string) => ({
-      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: t, senha: 'senha-forte-123',
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: t, senha: 'senha-forte-123!',
     });
     for (let i = 0; i < ACEITE_LIMITE_POR_ALVO; i++) {
       const e = (await provisionAfiliadoComRateLimit(db, auth, input('b'.repeat(64)))
@@ -515,7 +515,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
       email: 'dioney@exemplo.com', password: 'senha-original-1',
     });
     const r = await provisionAfiliadoCore(db, auth, {
-      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'outra-senha-999',
+      eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token, senha: 'outra-senha-999!',
     });
     expect(r.replay).toBe(false);
     const depois = await auth.getUser(antes.uid);
@@ -574,13 +574,13 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     await expect(
       provisionAfiliadoCore(db, auth, {
         eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: tokenAntigo,
-        senha: 'senha-forte-123',
+        senha: 'senha-forte-123!',
       })
     ).rejects.toThrow(/Convite inválido/);
     // Token novo aceita e cria a conta NO E-MAIL CORRIGIDO
     const rAceite = await provisionAfiliadoCore(db, auth, {
       eventoId: EVENTO_ID, afiliadoId: 'DIONEY10',
-      token: r.tokenAceite as string, senha: 'senha-forte-123',
+      token: r.tokenAceite as string, senha: 'senha-forte-123!',
     });
     expect(rAceite.ok).toBe(true);
     const user = await auth.getUserByEmail('dioney.certo@exemplo.com');
@@ -606,7 +606,7 @@ describe.skipIf(!hasEmulator)('afiliados/influenciadores — R9-E (S-R9-11)', ()
     await expect(
       provisionAfiliadoCore(db, auth, {
         eventoId: EVENTO_ID, afiliadoId: 'DIONEY10', token: tokenAntigo,
-        senha: 'senha-forte-123',
+        senha: 'senha-forte-123!',
       })
     ).rejects.toThrow(/já foi aceito|Convite inválido/);
   });

@@ -29,6 +29,7 @@ import {
   type ParceriaAssessoria,
   type StatusParceriaAssessoria,
   type TipoCupom,
+  SENHA_MIN as SENHA_MIN_CASA,
 } from '@leela/core';
 import { getLeelaFunctions } from './firebase';
 
@@ -103,8 +104,12 @@ export interface ProvisionAssessoriaResult {
   replay: boolean;
 }
 
-/** Senha mínima da conta nova (espelho de SENHA_MIN da Function — premissa). */
-export const SENHA_MIN_ASSESSORIA = 8;
+/**
+ * Piso da senha desta porta — APELIDO da política da casa. Era 'espelho de
+ * SENHA_MIN da Function — premissa': duas autoridades sobre a mesma régua.
+ * Agora as duas leem `@leela/core` · platform/politicaDeSenha.
+ */
+export const SENHA_MIN_ASSESSORIA = SENHA_MIN_CASA;
 
 /**
  * Aceita o convite de assessoria (S1801-T2 — página pública de aceite na

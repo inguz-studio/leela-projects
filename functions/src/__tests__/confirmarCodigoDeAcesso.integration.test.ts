@@ -57,8 +57,8 @@ const RULES_PATH = resolve(__dirname, '../../../firestore.rules');
 process.env['CODIGO_ACESSO_PEPPER'] = 'pepper-teste-contas-rn476';
 process.env['FIREBASE_AUTH_EMULATOR_HOST'] ??= `127.0.0.1:${AUTH_PORT}`;
 
-const SENHA_NOVA = 'senha-nova-123';
-const SENHA_ANTIGA = 'senha-antiga-123';
+const SENHA_NOVA = 'senha-nova-123!';
+const SENHA_ANTIGA = 'senha-antiga-123!';
 
 let testEnv: RulesTestEnvironment;
 let db: admin.firestore.Firestore;
@@ -365,10 +365,16 @@ describe('RN-453 · senha primeiro, sessão depois (conta que já existe)', () =
     // A prova sobreviveu — a pessoa corrige a senha e conclui, sem pedir
     // outro código. Consumir a prova numa recusa de FORMA seria fazer a
     // pessoa recomeçar por um erro de digitação.
+    // A senha da correção passa na política INTEIRA (FRONTEIRA-AUTH:
+    // comprimento + número + caractere especial). Era `'a'.repeat(MIN)`, que
+    // media só comprimento — desde que a régua passou a exigir composição,
+    // oito letras iguais são recusadas pelo mesmo motivo que `abc`, e o caso
+    // deixaria de provar o que ele existe para provar (que a PROVA sobrevive
+    // a uma recusa de forma).
     const r = await concluirAcessoComProvaCore(db, auth, {
       email,
       prova,
-      senha: 'a'.repeat(SENHA_CONTA_MIN),
+      senha: `${'a'.repeat(SENHA_CONTA_MIN)}1!`,
     });
     expect(r.ok).toBe(true);
   });

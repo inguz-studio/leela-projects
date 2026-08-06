@@ -73,16 +73,20 @@ const SENHA_CONFORTAVEL = 12;
 /**
  * Caracteres que contam como "especial".
  *
- * O conjunto é o MESMO que o Identity Platform documenta como não-alfanumérico
- * na política de senha nativa dele. Isso não é detalhe: se a casa ligar a
- * política no servidor, uma tela com conjunto próprio recusaria senha que o
- * servidor aceita (ou pior, aceitaria a que ele recusa) e a pessoa ficaria
- * presa num formulário que se contradiz. Copiar o conjunto deles é o que
- * mantém as duas réguas iguais no dia em que a segunda for ligada.
+ * O conjunto é COPIADO, caractere por caractere, da lista que o Identity
+ * Platform publica como "non-alphanumeric" na política de senha nativa dele
+ * (docs.cloud.google.com/identity-platform/docs/password-policy, consultada em
+ * 2026-08-06). Isso não é detalhe: se a casa ligar a política no servidor, uma
+ * tela com conjunto próprio aceitaria senha que o servidor recusa, e a pessoa
+ * ficaria presa num formulário que se contradiz sem dizer por quê.
+ *
+ * ⚠ REPARE NO QUE NÃO ESTÁ AQUI: `-`, `+` e `=`. O hífen é o primeiro
+ * caractere que uma pessoa brasileira usa (`senha-forte-123`) e a primeira
+ * versão desta lista o incluía por reflexo — com a política nativa ligada,
+ * essa senha passaria na tela e morreria no servidor. Não acrescente nenhum
+ * caractere aqui sem que ele esteja na lista deles.
  */
-const ESPECIAIS = new Set(
-  '^$*.[]{}()?"!@#%&/\\,><\':;|_~`=+-'.split(''),
-);
+const ESPECIAIS = new Set('^$*.[]{}()?"!@#%&/\\,><\':;|_~`'.split(''));
 
 // ---------------------------------------------------------------------------
 // O contrato

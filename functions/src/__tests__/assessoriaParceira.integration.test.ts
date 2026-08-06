@@ -381,7 +381,7 @@ describe.skipIf(!hasEmulator)('assessorias parceiras — E18 backend (O3-L3B)', 
         tenantId: CASTELO_ID,
         parceriaId: CNPJ_KEY,
         token,
-        senha: 'senha-forte-8',
+        senha: 'senha-forte-8!',
         nome: 'Rodrigo Silva',
         ...extra,
       },
@@ -466,7 +466,7 @@ describe.skipIf(!hasEmulator)('assessorias parceiras — E18 backend (O3-L3B)', 
       password: 'senha-original-x',
     });
 
-    const r = await aceite(token, { senha: 'outra-senha-999' });
+    const r = await aceite(token, { senha: 'outra-senha-999!' });
     expect(r.replay).toBe(false);
 
     expect((await auth.listUsers(1000)).users.length).toBe(1);

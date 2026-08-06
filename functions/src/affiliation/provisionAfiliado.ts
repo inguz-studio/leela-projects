@@ -33,7 +33,12 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { FieldValue } from 'firebase-admin/firestore';
 import { https, runWith } from 'firebase-functions/v1';
 import * as logger from 'firebase-functions/logger';
-import { COLECAO_AFILIADOS } from '@leela/core';
+import {
+  COLECAO_AFILIADOS,
+  SENHA_MIN,
+  exigenciaDeSenha,
+  senhaValida,
+} from '@leela/core';
 import {
   ACEITE_JANELA_MS,
   ACEITE_LIMITE_POR_ALVO,
@@ -68,8 +73,16 @@ export interface ProvisionAfiliadoResult {
   replay: boolean;
 }
 
-/** Senha mínima da conta nova (mesma premissa do aceite E18). */
-export const SENHA_MIN_AFILIADO = 8;
+/**
+ * Piso da senha desta porta — APELIDO da política da casa, não um número dela.
+ *
+ * Nasceu como `8` literal aqui, e o api-client copiou o número "como espelho de
+ * premissa". Dois espelhos de uma premissa são duas autoridades esperando para
+ * divergir: no dia em que o piso subir num, o outro continua aceitando o que o
+ * primeiro recusa, e a pessoa é barrada por uma régua que a tela não mostrou.
+ * Continua exportado porque o api-client o importa; o valor vem do core.
+ */
+export const SENHA_MIN_AFILIADO = SENHA_MIN;
 
 /** Comparação em tempo constante de hashes hex (mesmo comprimento). */
 function tokenConfere(tokenInput: string, hashPersistido: unknown): boolean {
@@ -172,10 +185,14 @@ export async function provisionAfiliadoCore(
   // Conta NOVA exige senha; conta EXISTENTE nunca tem credencial tocada.
   if (!contaExiste) {
     const senha = typeof input?.senha === 'string' ? input.senha : '';
-    if (senha.length < SENHA_MIN_AFILIADO) {
+    // Política inteira (comprimento + número + especial), e AQUI é onde ela
+    // vale de verdade: esta porta cria a conta pelo Admin SDK, então o
+    // navegador não tem como passar por cima. A mesma frase da tela sai no
+    // erro — `exigenciaDeSenha()` é a fonte única das duas.
+    if (!senhaValida(senha)) {
       throw new https.HttpsError(
         'invalid-argument',
-        `Senha é obrigatória para criar a conta (mínimo ${SENHA_MIN_AFILIADO} caracteres).`
+        `Senha é obrigatória para criar a conta. ${exigenciaDeSenha()}`
       );
     }
     const displayName =

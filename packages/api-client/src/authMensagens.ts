@@ -24,7 +24,7 @@
 // (A única dependência é `@leela/core`, que também é puro: ver `SENHA_MIN`.)
 // =============================================================================
 
-import { SENHA_CONTA_MIN } from '@leela/core';
+import { SENHA_CONTA_MIN, senhaValida } from '@leela/core';
 
 interface FirebaseAuthLikeError {
   code?: unknown;
@@ -100,7 +100,12 @@ export function emailValido(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alvo);
 }
 
-/** Senha atende ao mínimo do Firebase. */
+/**
+ * A senha passa na política da casa? O nome fala em 'mínimo' por herança —
+ * desde a FRONTEIRA-AUTH a régua é a política INTEIRA (comprimento + número +
+ * caractere especial), porque uma tela mais frouxa que o servidor produz a
+ * pessoa que escolhe uma senha e é recusada depois de enviar.
+ */
 export function senhaAtendeMinimo(senha: string): boolean {
-  return senha.length >= SENHA_MIN;
+  return senhaValida(senha);
 }

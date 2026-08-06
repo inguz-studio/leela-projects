@@ -66,7 +66,7 @@ import {
   normalizarCodigoDeAcesso,
   normalizarEmailCodigo,
   senhaDeContaValida,
-  SENHA_CONTA_MIN,
+  exigenciaDeSenha,
   TERMO_CONTA_FINALIDADE,
   TERMO_CONTA_VERSAO,
   validarContaParticipante,
@@ -237,10 +237,12 @@ export async function concluirAcessoComProvaCore(
   const email = normalizarEmailCodigo(input?.email);
 
   if (!senhaDeContaValida(input?.senha)) {
-    throw new https.HttpsError(
-      'invalid-argument',
-      `Use uma senha de pelo menos ${SENHA_CONTA_MIN} caracteres.`
-    );
+    // `senhaDeContaValida` passou a ser a política INTEIRA (comprimento +
+    // número + especial), então a mensagem não pode mais falar só de
+    // comprimento: a pessoa leria "pelo menos N caracteres", digitaria N
+    // letras e seria recusada de novo, sem nunca ficar sabendo o motivo.
+    // `exigenciaDeSenha()` é a mesma frase que a tela mostra.
+    throw new https.HttpsError('invalid-argument', exigenciaDeSenha());
   }
   const senha = input?.senha as string;
 

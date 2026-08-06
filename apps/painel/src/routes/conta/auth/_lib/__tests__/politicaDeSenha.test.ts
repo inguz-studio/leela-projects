@@ -65,6 +65,18 @@ describe('a regra que o dono pediu: número + caractere especial', () => {
     expect(a.pendencias[0]).toContain(String(SENHA_MAX));
   });
 
+  it('o conjunto de especiais é o do Identity Platform — hífen NÃO conta', () => {
+    // O caso que salva a tela de se contradizer com o servidor: `-`, `+` e `=`
+    // ficam de FORA da lista que o Identity Platform publica. Uma senha como
+    // `senha-forte-123` passaria aqui e morreria lá se contássemos o hífen.
+    for (const fora of ['-', '+', '=']) {
+      expect(avaliarSenha(`senhaforte1${fora}`).requisitos.especial).toBe(false);
+    }
+    for (const dentro of ['!', '@', '#', '$', '%', '&', '*', '_', '~', '?', '.']) {
+      expect(avaliarSenha(`senhaforte1${dentro}`).requisitos.especial).toBe(true);
+    }
+  });
+
   it('é total: entrada que não é string não explode, só não vale', () => {
     for (const lixo of [undefined, null, 42, {}, []]) {
       expect(senhaValida(lixo)).toBe(false);
