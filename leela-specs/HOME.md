@@ -17,7 +17,7 @@ Só `HOME.md` e `README.md` moram na raiz. O resto está em pastas numeradas por
 | `01-produto/` | Visão e decisões: [[ROADMAP]], [[ROADMAP-VISUAL]], `roadmap.html`, [[V1-PRODUTOR-web]], [[DECISOES-ABERTAS]], [[EXPLICACAO-ONDE-ESTAMOS]] |
 | `02-rodadas/` | Uma pasta por rodada de trabalho (`<data>-<slug>/`). 17 rodadas; a mais recente é `2026-08-02-retomada/`. A convenção **como é praticada** está em [[onboarding-externo]] §4 |
 | `03-canon/` | Fonte da verdade durável: `epics/` (um por épico) + `adr/` (decisões de arquitetura) |
-| `04-engenharia/` | Qualidade transversal: [[convencoes-codigo]], [[definition-of-done]], [[estrategia-testes]], [[modelo-de-dados-firestore]], [[governanca-design]], [[00-TEMPLATE-spec]] |
+| `04-engenharia/` | Qualidade transversal: [[convencoes-codigo]], [[definition-of-done]], [[estrategia-testes]], [[modelo-de-dados-firestore]], [[governanca-design]], [[00-TEMPLATE-spec]], [[o-que-so-a-producao-cobra]] |
 | `05-discovery/` | Pesquisa e validação: benchmarks, parecer do conselho, gaps |
 | `06-backlog/` | [[BACKLOG]] (visão Jira Dataview) + `backlog/` (uma nota por story) |
 | `99-arquivo/` | Histórico congelado: [[MODELO-ROADMAP]], planos `next-trail/` e `next-trail-onda3/`, [[KICKOFF-BUILD]], [[IMPLEMENTATION-PLAN]], [[SETUP]], [[handoff-claude-design]] |
@@ -33,6 +33,7 @@ Trilha completa para quem nunca viu o projeto e vai conferir o que foi construí
 - [[indice-de-regras-de-negocio]] — onde mora cada faixa de RN, e os três conflitos conhecidos
 - [[como-verificar]] — subir o projeto, rodar os gates, e o alcance de cada um
 - [[laudo-testes-2026-08-04]] — o que os gates não provam, medido
+- [[o-que-so-a-producao-cobra]] — a família de defeitos que só aparece no ar, e a conferência de prontidão que roda antes de cada deploy
 - [[estado-real]] — o que está no ar, o que está fora do ar, e a dívida conhecida
 - [[catalogo-de-emails]] — os oito e-mails, com gatilho, destinatário e onde se mexe
 - [[fluxo-pos-pagamento]] — o caminho depois do pagamento, com o estado real de cada elo e o incidente de 04/08

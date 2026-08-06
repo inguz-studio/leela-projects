@@ -124,6 +124,14 @@ Duas ausências estruturais completam o quadro e não estão em nenhuma das sete
 
 A §3.2 do mesmo laudo traz um plano em três ondas com custo estimado por item. A ordem dele foi construída por risco ao dinheiro, e a primeira recomendação paga sozinha o esforço da segunda.
 
+## O gate que nenhum comando desta página cobre
+
+Todos os comandos acima medem o repositório. Nenhum deles olha o servidor, e existe uma família inteira de defeitos que só aparece lá: índice que o emulador não cobra, permissão de IAM que só existe em produção, regra publicada dias atrás do arquivo. Os três casos, com data e prova, e a conferência de prontidão que passa a rodar antes de todo deploy estão em [[o-que-so-a-producao-cobra]]. O comando é um só:
+
+```bash
+node functions/scripts/prontidao-de-deploy.mjs
+```
+
 ## Vizinhos
 
-[[onboarding-externo]] para a ordem de leitura. [[arquitetura-do-sistema]] para entender o que você está testando. [[estado-real]] para o que está no ar. [[estrategia-testes]] guarda a estratégia planejada na fase de desenho, que é documento de intenção e não retrato do que existe.
+[[onboarding-externo]] para a ordem de leitura. [[arquitetura-do-sistema]] para entender o que você está testando. [[estado-real]] para o que está no ar. [[o-que-so-a-producao-cobra]] para o que só a produção cobra. [[estrategia-testes]] guarda a estratégia planejada na fase de desenho, que é documento de intenção e não retrato do que existe.
