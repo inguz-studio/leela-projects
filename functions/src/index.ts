@@ -42,6 +42,11 @@ export {
 // Plataforma — multi-tenancy (E16-S1600-T2)
 export { setTenantClaims } from './platform/setTenantClaims';
 
+// Plataforma — capacidade de administração que COEXISTE com o papel operacional
+// (lane PAPEL-DUPLO). Autoridade de concessão = papel LEGADO platform_admin;
+// a capacidade não concede a si mesma.
+export { setPlatformAdminCapability } from './platform/setPlatformAdminCapability';
+
 // Plataforma — lifecycle do tenant (RN-402; wire de canTransition)
 export { transitionTenant } from './platform/tenantLifecycle';
 
