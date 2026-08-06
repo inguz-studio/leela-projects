@@ -667,6 +667,14 @@ Não é decisão sua, e está aqui pela mesma razão do item acima: para você s
 - **O que a política precisaria casar:** o campo de alerta que a doutrina já grava, com um canal de notificação atrás. É configuração de projeto, não código; nada no repositório muda.
 - **Onde aterrissa:** o projeto de produção `leela-hub`, no Cloud Logging e no Cloud Monitoring. Medição e comandos em `.nirvana/handoffs/leela-senha-DIAG.md` §4 e §6; a doutrina que produz o campo vive em `functions/src/email/incidenteEmail.ts` e o runbook em [[runbook-email-transacional]].
 
+### Entrou em 06/08 · quem se cadastra não aparece em lugar nenhum do painel (ADMIN-USUARIOS-1)
+
+Duas pessoas reais se cadastraram em 06/08 e caíram na tela do código de convite — comportamento correto, a porta do organizador é por convite (RN-413). O problema é o que veio depois: você não tem onde vê-las. O painel da plataforma lista convites, estornos, repasses e planos, mas não tem um diretório de contas; quem se cadastrou e ainda não é profissional é invisível para a administração. *Alguém se cadastra para virar organizador, espera o convite, e você nem sabe que a pessoa existe.*
+
+- **O que fica com você:** decidir se o diretório de usuários entra na fila de construção e com que alcance (só contas aguardando convite, ou todas as contas com papel e origem). Envolve PII, então a spec herda o cuidado do P-IAMENU-1.
+- **Por que agora:** o caminho de hoje é o Console do Firebase (Authentication → Users lista todas as contas), que funciona mas é ferramenta de engenharia, não de operação. Enquanto o beta for você entregando convite na mão, dá para operar assim; no primeiro terceiro operando, não.
+- **Onde aterrissa:** spec nova sob [[LEELA-E16-plataforma-superadmin]] (tela em `/plataforma`); a emissão do convite em si já existe em `/plataforma/convites`.
+
 ### Depois da fila · app v1 como PWA
 
 Sua decisão de 18/07 tirou o cadastro nas lojas do caminho do v1, e a reespecificação reduziu nove histórias para seis, com o ingresso passando a funcionar sem rede. *A Ana chega ao ginásio sem sinal e hoje o ingresso dela precisa de rede.*
