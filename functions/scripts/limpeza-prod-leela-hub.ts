@@ -6,18 +6,33 @@
 //   Simular (padrão, seguro) — grava o plano congelado em disco:
 //     node <compilado> --dry-run
 //   Executar (só com liberação do maestro):
-//     node <compilado> --apply --backup=gs://... --plano=plano.json
+//     node <compilado> --apply --plano=plano.json \
+//        --backup=gs://... --backup-minimo=<ISO-8601>
 //   Retomar depois de uma queda:
-//     node <compilado> --apply --backup=gs://... --plano=plano.json --retomar
+//     node <compilado> --apply --plano=plano.json --backup=... \
+//        --backup-minimo=<ISO> --retomar
 //
-// Revisado depois da review antagonista `leela-rev-limpeza-20260806.md`.
-// A inteligência mora em `../src/limpeza/planoLimpeza.ts` (função pura,
-// testada contra dado sintético e contra o planejador antigo congelado).
+// Revisado depois de DUAS reviews antagonistas: `leela-rev-limpeza-20260806.md`
+// (B1–B4, N1) e `leela-rev2-fria-20260806.md` (R1–R8).
+//
+// ── O QUE O `--apply` EXECUTA, E POR QUÊ ISSO MUDOU ─────────────────────────
+// Antes, o arquivo congelado servia só de checksum: `main()` recomputava o
+// plano do banco e iterava o RECOMPUTADO, lendo do congelado apenas `.digital`.
+// Mesmo com a digital consertada, o que rodava era um plano que ninguém tinha
+// lido — casando com o revisado por coincidência aritmética, não por
+// identidade. Agora o congelado é a FONTE DA EXECUÇÃO [R1]: a recomputação
+// sobrevive apenas como PORTÃO da primeira corrida, e na retomada nem isso —
+// replanejar sobre um banco meio apagado é aprovar plano novo sobre destroços,
+// exatamente o que o checkpoint existe para impedir [R2].
+//
+// A inteligência mora em `../src/limpeza/planoLimpeza.ts` (o plano) e
+// `../src/limpeza/execucaoLimpeza.ts` (a digital, a chave de checkpoint, o
+// laço e a régua do backup) — as duas testadas contra dado sintético em
+// `src/__tests__/limpezaProd*.test.ts`, sem tocar em rede.
 // =============================================================================
 
 /* eslint-disable no-console */
 
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as os from 'os';
 import {
@@ -28,6 +43,7 @@ import {
   type Operacao,
   type Plano,
 } from '../src/limpeza/planoLimpeza';
+import { digitalDoPlano, executarPlano, validarReguaDoBackup } from '../src/limpeza/execucaoLimpeza';
 
 const PROJETO = 'leela-hub';
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJETO}/databases/(default)/documents`;
@@ -82,6 +98,28 @@ const ALVO: AlvoLimpeza = {
   // fica VAZIO; nenhum substituto é inventado. Se um dia houver perfil da
   // Leela, quem preenche é o dono.
   linksARemover: ['instagram.com/casteloproducoes', 'castelo-producoes.example.com'],
+  // [R7] Decisão técnica, medida documento a documento em 06/08 (a medição
+  // inteira está no runbook, seção "Os dois fantasmas de semente"):
+  //
+  //   uid-felipe-martins  → VARRE OS 10. Ele é `ownerUid` de
+  //     `tenants/corrida-perfeita` (condenado) e `ownerId` de
+  //     `clubes/corrida-perfeita-sul` (condenado com os 37 documentos dele).
+  //     Depois da corrida não sobra UM documento de lastro dele. Os 9
+  //     `analyticsSnapshots` e o `dashboard/current` não citam id condenado
+  //     nenhum — por isso o Passo 3c sozinho os deixava —, mas `coletaDiaria`
+  //     (03:05, diário) descobre profissional por `listDocuments()`, que
+  //     devolve pai inexistente de propósito, e escreveria um documento novo
+  //     por dia para uma identidade sem nada vivo, para sempre.
+  //
+  //   uid-ritmo-forte     → FICA, e isto é decisão, não esquecimento. O clube
+  //     dele, `clubes/ritmo-forte-assessoria`, é do tenant que SOBREVIVE:
+  //     fica em pé com os 4 membros que o dashboard conta
+  //     (`membrosAtivosTotais: 4`). Varrer seria apagar o espelho de um clube
+  //     vivo — e o gatilho o recriaria na primeira escrita no clube. O pai
+  //     ausente (`profissionais/uid-ritmo-forte`) é a MESMA lacuna do dono, e
+  //     tem a mesma causa: `ownerId` apontando para uid sem conta. Está na
+  //     linha de base de 20 órfãos de 06/08, não é órfão novo desta lane.
+  identidadesFantasmaVarridas: ['uid-felipe-martins'],
 };
 
 // ── Credencial. [A6] O token é cacheado em memória. ─────────────────────────
@@ -316,7 +354,7 @@ async function editarDoc(caminho: string, mudancas: Record<string, unknown>): Pr
  * lista o prefixo no GCS, exige o metadado do export e devolve o instante em
  * que o backup foi tirado — que é o número que decide se ele serve.
  */
-async function validarBackup(uri: string): Promise<{ objetos: number; tirado: string }> {
+async function localizarBackup(uri: string): Promise<{ objetos: number; tirado: string }> {
   const m = /^gs:\/\/([^/]+)\/(.+?)\/?$/.exec(uri);
   if (m === null) throw new Error(`[limpeza] --backup precisa ser gs://bucket/prefixo — recebi "${uri}"`);
   const [, bucket, prefixo] = m;
@@ -333,13 +371,35 @@ async function validarBackup(uri: string): Promise<{ objetos: number; tirado: st
   return { objetos: itens.length, tirado: meta.updated };
 }
 
-// ── [A5] Plano congelado ────────────────────────────────────────────────────
-/** Impressão digital estável do plano: mesma ordem, mesmo conteúdo. */
-function digitalDoPlano(plano: Plano): string {
-  return crypto.createHash('sha256').update(JSON.stringify(plano.operacoes)).digest('hex');
+// ── [A5/R1] Plano congelado ─────────────────────────────────────────────────
+/** O arquivo que o dry-run grava e que o `--apply` EXECUTA. */
+interface PlanoCongelado {
+  readonly digital: string;
+  readonly alvo: AlvoLimpeza;
+  readonly plano: Plano;
 }
 
-// ── [B2] Checkpoint ─────────────────────────────────────────────────────────
+function lerPlanoCongelado(arquivo: string): PlanoCongelado {
+  const bruto = JSON.parse(fs.readFileSync(arquivo, 'utf8')) as Partial<PlanoCongelado>;
+  if (bruto.plano === undefined || !Array.isArray(bruto.plano.operacoes) || typeof bruto.digital !== 'string') {
+    throw new Error(`[limpeza] ${arquivo} não parece um plano congelado (falta .plano.operacoes ou .digital)`);
+  }
+  // Integridade do próprio arquivo. O congelado passou a ser a FONTE da
+  // execução, então uma edição manual nele — ou um download pela metade —
+  // mandaria escrita que ninguém revisou. A digital é do conteúdo, e o
+  // conteúdo tem de casar com ela antes de qualquer coisa.
+  const recalculada = digitalDoPlano(bruto.plano);
+  if (recalculada !== bruto.digital) {
+    throw new Error(
+      `[limpeza] ${arquivo} está CORROMPIDO ou foi editado à mão.\n` +
+        `          digital gravada:  ${bruto.digital}\n` +
+        `          digital do texto: ${recalculada}`
+    );
+  }
+  return bruto as PlanoCongelado;
+}
+
+// ── [B2/R3] Checkpoint ──────────────────────────────────────────────────────
 function lerCheckpoint(arquivo: string): Set<string> {
   if (!fs.existsSync(arquivo)) return new Set();
   return new Set(
@@ -349,7 +409,6 @@ function lerCheckpoint(arquivo: string): Set<string> {
       .filter((l) => l.trim() !== '')
   );
 }
-const chaveDaOp = (op: Operacao): string => `${op.tipo}:${op.caminho}`;
 
 const espera = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -362,13 +421,47 @@ function imprimir(op: Operacao, i: number, total: number): void {
   }
 }
 
+/**
+ * [B1 · ressalva da review · F11] Quanto esperar entre um grupo de ordem e o
+ * seguinte. A drenagem anterior era 10 s constantes — número chutado, e a
+ * review disse isso com todas as letras.
+ *
+ * MEDIDO no Cloud Logging do próprio projeto (transferência de titularidade de
+ * 06/08, que é o análogo mais próximo de uma edição da ordem 100):
+ *
+ *   clubes/floripa-run-coletivo escrito      14:22:40,527
+ *   onClubeWriteDashboard começou            14:22:44,492   (+3,97 s de despacho)
+ *   execução durou                            9.606 ms
+ *   última escrita do gatilho                14:22:54,097   (+13,57 s do write)
+ *   onEventoWriteDashboard, mesma janela     +16,45 s       (execução de 13.325 ms)
+ *
+ * Treze execuções observadas entre 03/08 e 06/08: 2.800 · 3.087 · 6.088 ·
+ * 6.624 · 6.641 · 6.667 · 6.810 · 7.201 · 7.553 · 7.602 · 9.221 · 9.606 ·
+ * 13.325 ms. Máximo ponta a ponta 17,3 s. **10 s não bastava.**
+ *
+ * Daí: 20 s entre grupos comuns, e 90 s antes do grupo FANTASMAS — o único
+ * limite em que atrasar o gatilho tem consequência, porque `onClubeWrite
+ * Dashboard` recria `profissionais/{uid}/dashboard/current` com `set`
+ * incondicional e a varredura da ordem 110 precisa vir DEPOIS dessa recriação.
+ * 90 s é 5,2× o pior caso medido. O preço é ~3,5 min numa corrida de 5 a 10,
+ * dentro da janela de 60 min de retenção de versão com folga.
+ */
+const DRENAGEM_PADRAO_MS = 20_000;
+const DRENAGEM_ANTES_DOS_FANTASMAS_MS = 90_000;
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const aplicar = args.includes('--apply');
   const retomar = args.includes('--retomar');
-  const backup = args.find((a) => a.startsWith('--backup='))?.slice('--backup='.length) ?? '';
-  const arquivoPlano = args.find((a) => a.startsWith('--plano='))?.slice('--plano='.length) ?? 'plano-limpeza.json';
-  const checkpoint = args.find((a) => a.startsWith('--checkpoint='))?.slice('--checkpoint='.length) ?? 'plano-limpeza.checkpoint';
+  const valor = (nome: string): string | undefined =>
+    args.find((a) => a.startsWith(`--${nome}=`))?.slice(nome.length + 3);
+  const backup = valor('backup') ?? '';
+  const backupMinimo = valor('backup-minimo') ?? '';
+  const backupIdadeMaxMin = Number(valor('backup-idade-max-min') ?? '180');
+  const arquivoPlano = valor('plano') ?? 'plano-limpeza.json';
+  const checkpoint = valor('checkpoint') ?? 'plano-limpeza.checkpoint';
+  const drenagemMs = Number(valor('drenagem-ms') ?? String(DRENAGEM_PADRAO_MS));
+  const drenagemFantasmasMs = Number(valor('drenagem-fantasmas-ms') ?? String(DRENAGEM_ANTES_DOS_FANTASMAS_MS));
   const aceitarConflitos = args.includes('--aceitar-conflitos-de-protecao');
 
   console.log('='.repeat(78));
@@ -377,14 +470,47 @@ async function main(): Promise<void> {
   console.log(`morre: ${ALVO.eventosCondenados.length} eventos · ${ALVO.tenantsCondenados.length} tenants (lista literal)`);
   console.log('='.repeat(78));
 
+  // ── [R4] O portão do backup, agora com régua ──────────────────────────────
   if (aplicar) {
     if (backup === '') {
       console.error('[limpeza] ABORTADO: --apply exige --backup=<uri do export>. Sem ele nada roda.');
       process.exit(2);
     }
-    const b = await validarBackup(backup);
+    if (backupMinimo === '') {
+      console.error('[limpeza] ABORTADO: --apply exige --backup-minimo=<ISO-8601>.');
+      console.error('          Sem instante mínimo o portão não compara com nada, e o export de 13:45');
+      console.error('          — anterior à transferência de titularidade — passava. Restaurar por ele');
+      console.error('          trancaria o dono fora do painel: o incidente da manhã, repetido pela rede.');
+      process.exit(2);
+    }
+    const b = await localizarBackup(backup);
     console.log(`\n[backup] ${b.objetos} objetos · export concluído em ${b.tirado}`);
-    console.log('[backup] ⚠️  confira que este instante é POSTERIOR à última mudança que você quer preservar.');
+    validarReguaDoBackup({
+      tirado: b.tirado,
+      minimo: backupMinimo,
+      agora: Date.now(),
+      idadeMaximaMin: backupIdadeMaxMin,
+    });
+    console.log(`[backup] régua OK: posterior a ${backupMinimo} e com menos de ${backupIdadeMaxMin} min de idade.`);
+  }
+
+  // ── [R2] A retomada NÃO replaneja. ────────────────────────────────────────
+  // Depois de uma queda parcial o banco tem menos documentos, o replanejamento
+  // produz menos operações e a digital diverge POR CONSTRUÇÃO — o processo
+  // morria no portão antes de chegar ao checkpoint, e a saída documentada
+  // ("refaça o dry-run") queria dizer aprovar um plano novo sobre destroços.
+  // Na retomada, a verdade é o arquivo congelado mais o checkpoint. Ponto.
+  if (aplicar && retomar) {
+    if (!fs.existsSync(arquivoPlano)) {
+      console.error(`[limpeza] ABORTADO: ${arquivoPlano} não existe. A retomada precisa do plano aprovado.`);
+      process.exit(2);
+    }
+    const congelado = lerPlanoCongelado(arquivoPlano);
+    console.log(`\n[1/2] RETOMANDO do plano congelado — produção NÃO é relida nem replanejada.`);
+    console.log(`      ${arquivoPlano} · ${congelado.plano.operacoes.length} operações · digital ${congelado.digital}`);
+    relatorio(congelado.plano);
+    await aplicarPlano(congelado.plano, checkpoint, { aceitarConflitos, retomar, drenagemMs, drenagemFantasmasMs });
+    return;
   }
 
   console.log('\n[1/4] lendo produção (com showMissing)…');
@@ -398,19 +524,56 @@ async function main(): Promise<void> {
   const apagar = plano.operacoes.filter((o) => o.tipo === 'apagar').length;
   console.log(`      ${apagar} exclusões, ${plano.operacoes.length - apagar} edições · digital ${digital.slice(0, 16)}`);
 
+  const vivos = inventario.filter((d) => !plano.operacoes.some((o) => o.tipo === 'apagar' && o.caminho === d.caminho));
+  console.log(`\n── SOBREVIVE ──\n  ${vivos.length} documentos (de ${inventario.length}).`);
+  relatorio(plano);
+
+  if (!aplicar) {
+    fs.writeFileSync(arquivoPlano, JSON.stringify({ digital, alvo: ALVO, plano }, null, 2));
+    console.log('\n── PLANO, DOCUMENTO A DOCUMENTO, NA ORDEM ──');
+    plano.operacoes.forEach((op, i) => imprimir(op, i, plano.operacoes.length));
+    console.log(`\n[3/4] plano congelado em ${arquivoPlano} (digital ${digital})`);
+    console.log('[4/4] DRY-RUN: nada foi escrito. Para executar:');
+    console.log(`      --apply --plano=${arquivoPlano} --backup=<uri> --backup-minimo=<ISO-8601>`);
+    return;
+  }
+
+  // ── [A5/R1] O portão da PRIMEIRA corrida ──────────────────────────────────
+  // Ele existe para uma pergunta só: produção ainda é a que foi revisada? Se
+  // não for, o plano aprovado descreve um banco que não existe mais. Depois
+  // que ele passa, quem executa é o ARQUIVO — não este plano recomputado.
+  console.log('\n[3/4] conferindo o plano aprovado contra a produção de agora…');
+  if (!fs.existsSync(arquivoPlano)) {
+    console.error(`[limpeza] ABORTADO: ${arquivoPlano} não existe. Rode o --dry-run e revise antes.`);
+    process.exit(2);
+  }
+  const congelado = lerPlanoCongelado(arquivoPlano);
+  if (congelado.digital !== digital) {
+    console.error('[limpeza] ABORTADO: o plano recomputado DIVERGE do aprovado.');
+    console.error(`          aprovado:    ${congelado.digital}`);
+    console.error(`          recomputado: ${digital}`);
+    console.error('          Produção mudou desde a revisão. Refaça o dry-run e revise de novo.');
+    console.error('          (Isto vale para a PRIMEIRA corrida. Numa retomada use --retomar: lá a');
+    console.error('           verdade é o arquivo congelado, e replanejar seria aprovar destroços.)');
+    process.exit(3);
+  }
+  console.log('      digital confere — e o que vai rodar é o ARQUIVO, não este plano recomputado.');
+
+  await aplicarPlano(congelado.plano, checkpoint, { aceitarConflitos, retomar, drenagemMs, drenagemFantasmasMs });
+}
+
+/** O relatório que o operador lê antes de decidir. Igual nos dois caminhos. */
+function relatorio(plano: Plano): void {
   console.log('\n── RESUMO POR COLEÇÃO ──');
   console.log(`${'caminho'.padEnd(46)}${'apagar'.padStart(8)}${'editar'.padStart(8)}`);
   for (const [forma, n] of Object.entries(plano.resumoPorColecao).sort()) {
     console.log(`${forma.slice(0, 45).padEnd(46)}${String(n.apagar).padStart(8)}${String(n.editar).padStart(8)}`);
   }
 
-  const vivos = inventario.filter((d) => !plano.operacoes.some((o) => o.tipo === 'apagar' && o.caminho === d.caminho));
-  console.log(`\n── SOBREVIVE ──\n  ${vivos.length} documentos (de ${inventario.length}).`);
-
   console.log('\n── ÓRFÃOS QUE O PLANO PREVINE ──');
   console.log(
     plano.orfaosPrevistos.length === 0
-      ? '  nenhuma referência pendurada NOVA prevista.'
+      ? '  nenhuma referência pendurada NOVA prevista (nem por valor, nem por prefixo de caminho).'
       : plano.orfaosPrevistos.map((o) => `  ⚠️  ${o.caminho} :: ${o.campo} -> ${o.valor}`).join('\n')
   );
 
@@ -421,81 +584,65 @@ async function main(): Promise<void> {
   console.log(`  intocáveis (fora do plano por caminho protegido): ${plano.intocaveis.length}`);
   for (const i of plano.intocaveis) console.log(`     ${i}`);
   console.log(`  conflitos (condenado que referencia uid protegido): ${plano.conflitosDeProtecao.length}`);
-  for (const c of plano.conflitosDeProtecao.slice(0, 20)) console.log(`     ${c.caminho} :: ${c.campo} -> ${c.uid}`);
-  if (plano.conflitosDeProtecao.length > 20) console.log(`     … e mais ${plano.conflitosDeProtecao.length - 20}`);
+  for (const c of plano.conflitosDeProtecao) console.log(`     ${c.caminho} :: ${c.campo} -> ${c.uid}`);
 
   console.log('\n── CONTAS QUE PERDEM O ÚLTIMO LASTRO (não são apagadas aqui) ──');
   console.log(plano.contasSemLastro.length === 0 ? '  nenhuma.' : `  ${plano.contasSemLastro.join('\n  ')}`);
 
-  console.log('\n── [B4] RECOMPUTES OBRIGATÓRIOS DEPOIS DA CORRIDA ──');
+  console.log('\n── [B4] CONFERÊNCIAS OBRIGATÓRIAS DEPOIS DA CORRIDA ──');
   plano.recomputesObrigatorios.forEach((r, i) => console.log(`  ${i + 1}. ${r}`));
+}
 
-  if (!aplicar) {
-    fs.writeFileSync(arquivoPlano, JSON.stringify({ digital, alvo: ALVO, plano }, null, 2));
-    console.log('\n── PLANO, DOCUMENTO A DOCUMENTO, NA ORDEM ──');
-    plano.operacoes.forEach((op, i) => imprimir(op, i, plano.operacoes.length));
-    console.log(`\n[3/4] plano congelado em ${arquivoPlano} (digital ${digital})`);
-    console.log('[4/4] DRY-RUN: nada foi escrito. Para executar:');
-    console.log(`      --apply --backup=<uri> --plano=${arquivoPlano}`);
-    return;
-  }
+interface OpcoesDeAplicacao {
+  readonly aceitarConflitos: boolean;
+  readonly retomar: boolean;
+  readonly drenagemMs: number;
+  readonly drenagemFantasmasMs: number;
+}
 
-  // [A5] O --apply recusa executar um plano que ninguém leu.
-  console.log('\n[3/4] conferindo contra o plano aprovado…');
-  if (!fs.existsSync(arquivoPlano)) {
-    console.error(`[limpeza] ABORTADO: ${arquivoPlano} não existe. Rode o --dry-run e revise antes.`);
-    process.exit(2);
-  }
-  const congelado = JSON.parse(fs.readFileSync(arquivoPlano, 'utf8')) as { digital: string };
-  if (congelado.digital !== digital) {
-    console.error('[limpeza] ABORTADO: o plano recomputado DIVERGE do aprovado.');
-    console.error(`          aprovado:   ${congelado.digital}`);
-    console.error(`          recomputado:${digital}`);
-    console.error('          Produção mudou desde a revisão. Refaça o dry-run e revise de novo.');
-    process.exit(3);
-  }
-  console.log('      digital confere.');
-
-  if (plano.conflitosDeProtecao.length > 0 && !aceitarConflitos) {
+/** O `--apply` de verdade. Recebe SEMPRE o plano congelado. [R1 item 2] */
+async function aplicarPlano(plano: Plano, checkpoint: string, op: OpcoesDeAplicacao): Promise<void> {
+  if (plano.conflitosDeProtecao.length > 0 && !op.aceitarConflitos) {
     console.error(`[limpeza] ABORTADO: ${plano.conflitosDeProtecao.length} condenado(s) referenciam uid protegido.`);
-    console.error('          Isto é decisão do dono, não do script. Reveja a lista acima.');
+    console.error('          Isto é decisão do dono, não do script. Leia a lista acima NA TELA — cada um');
+    console.error('          deles, um a um; o runbook traz a justificativa de classe de cada linha.');
     console.error('          Para seguir mesmo assim: --aceitar-conflitos-de-protecao');
     process.exit(4);
   }
 
   const feitas = lerCheckpoint(checkpoint);
-  if (retomar) console.log(`      retomando: ${feitas.size} operações já registradas no checkpoint.`);
+  if (op.retomar) console.log(`\n      retomando: ${feitas.size} operações já registradas no checkpoint.`);
   else if (feitas.size > 0) {
     console.error(`[limpeza] ABORTADO: ${checkpoint} já tem ${feitas.size} operações. Use --retomar ou apague o arquivo.`);
     process.exit(5);
   }
 
   console.log('\n[4/4] APLICANDO…');
-  let n = 0;
-  let ordemAtual = plano.operacoes[0]?.ordem ?? 0;
-  for (const op of plano.operacoes) {
-    // [B1] Drenagem entre grupos de ordem: dá tempo aos gatilhos em voo do
-    // grupo anterior antes de mexer no próximo. Sem isso, a garantia da ordem
-    // vale só para a ENFILEIRAÇÃO, não para o efeito.
-    if (op.ordem !== ordemAtual) {
-      console.log(`      — drenando gatilhos do grupo ${ordemAtual} antes de entrar no ${op.ordem} —`);
-      await espera(10_000);
-      ordemAtual = op.ordem;
-    }
-    const chave = chaveDaOp(op);
-    if (feitas.has(chave)) continue;
-    if (op.tipo === 'apagar') await apagarDoc(op.caminho);
-    else await editarDoc(op.caminho, op.mudancas);
-    // [B2] Checkpoint POR OPERAÇÃO, gravado antes de seguir. Depois de uma
-    // queda existe a lista exata do que foi feito.
-    fs.appendFileSync(checkpoint, `${chave}\n`);
-    n += 1;
-    if (n % 50 === 0) console.log(`      ${n} aplicadas (ordem ${op.ordem})`);
+  const r = await executarPlano(plano.operacoes, feitas, {
+    apagar: apagarDoc,
+    editar: editarDoc,
+    // [B2] Checkpoint POR OPERAÇÃO, gravado logo depois dela. Depois de uma
+    // queda existe a lista exata do que foi feito — e a chave carrega o índice
+    // no plano congelado, senão as duas operações que dividem `tipo:caminho`
+    // se cancelam na retomada [R3].
+    registrarFeita: (chave) => fs.appendFileSync(checkpoint, `${chave}\n`),
+    drenar: async (de, para) => {
+      const ms = para === ORDEM.FANTASMAS ? op.drenagemFantasmasMs : op.drenagemMs;
+      console.log(`      — drenando gatilhos do grupo ${de} por ${ms / 1000}s antes de entrar no ${para} —`);
+      await espera(ms);
+    },
+    aoProgresso: (n, o) => {
+      if (n % 50 === 0) console.log(`      ${n} aplicadas (ordem ${o.ordem})`);
+    },
+  });
+
+  console.log(`      ${r.aplicadas} operações aplicadas · ${r.puladas} já estavam no checkpoint.`);
+  if (r.aplicadas + r.puladas !== plano.operacoes.length) {
+    console.error(`[limpeza] ⚠️  ${plano.operacoes.length - r.aplicadas - r.puladas} operações não foram contabilizadas.`);
+    process.exit(6);
   }
-  console.log(`      ${n} operações aplicadas.`);
-  console.log('\n⚠️  A LANE NÃO ACABOU. Execute os recomputes obrigatórios listados acima e confira');
+  console.log('\n⚠️  A LANE NÃO ACABOU. Rode as conferências listadas acima e confira na tela');
   console.log('    gmvTotal, receitaLeelaTotal, tenantsAtivos, eventosAtivos e vendidoBruto.');
-  void ORDEM;
 }
 
 main().catch((e: unknown) => {

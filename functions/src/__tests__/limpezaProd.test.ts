@@ -525,6 +525,43 @@ describe('órfãos e contas', () => {
     expect(p.intocaveis).toContain('profissionais/uid-dono/dashboard/current');
   });
 
+  // [R7] O Passo 3c sozinho só condena filho de fantasma que REFERENCIE
+  // entidade condenada. Os 10 documentos de `uid-felipe-martins` não citam
+  // nenhuma — e mesmo assim são lixo, porque todo o lastro dele (o tenant e o
+  // clube) morre nesta corrida, e `coletaDiaria` escreveria um documento novo
+  // por dia para uma identidade sem nada vivo. Quem sabe disso é quem mediu,
+  // então a decisão entra DECLARADA, nunca inferida.
+  it('varre o subtree inteiro de identidade fantasma declarada, cite ela condenado ou não', () => {
+    const inv: DocInventario[] = [
+      ...mundo(),
+      { caminho: 'profissionais/uid-sem-lastro', campos: {}, fantasma: true },
+      doc('profissionais/uid-sem-lastro/dashboard/current', { inscricoesTotais: 0 }),
+      doc('profissionais/uid-sem-lastro/analyticsSnapshots/2026-08-06', { data: '2026-08-06' }),
+      { caminho: 'profissionais/uid-com-lastro', campos: {}, fantasma: true },
+      doc('profissionais/uid-com-lastro/dashboard/current', { membrosAtivosTotais: 4 }),
+    ];
+    const p = planejarLimpeza(inv, { ...ALVO, identidadesFantasmaVarridas: ['uid-sem-lastro'] });
+    const mortos = caminhos(p, 'apagar');
+    expect(mortos).toContain('profissionais/uid-sem-lastro/dashboard/current');
+    expect(mortos).toContain('profissionais/uid-sem-lastro/analyticsSnapshots/2026-08-06');
+    // O que não foi declarado FICA. Espelho de coisa viva não é lixo.
+    expect(mortos).not.toContain('profissionais/uid-com-lastro/dashboard/current');
+    expect(p.operacoes.find((o) => o.caminho === 'profissionais/uid-sem-lastro/dashboard/current')?.ordem).toBe(
+      ORDEM.FANTASMAS
+    );
+  });
+
+  it('a declaração NÃO fura a proteção de identidade', () => {
+    const inv: DocInventario[] = [
+      ...mundo(),
+      { caminho: 'profissionais/uid-dono', campos: {}, fantasma: true },
+      doc('profissionais/uid-dono/dashboard/current', { inscricoesTotais: 93 }),
+    ];
+    const p = planejarLimpeza(inv, { ...ALVO, identidadesFantasmaVarridas: ['uid-dono'] });
+    expect(caminhos(p, 'apagar')).not.toContain('profissionais/uid-dono/dashboard/current');
+    expect(p.intocaveis).toContain('profissionais/uid-dono/dashboard/current');
+  });
+
   it('conflito de proteção também pega uid dentro de chave composta', () => {
     const inv = [
       ...mundo(),
