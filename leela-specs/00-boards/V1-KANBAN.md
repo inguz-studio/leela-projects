@@ -190,6 +190,13 @@ tags:
 
 ## 🔄 Em execução
 
+- [ ] **[E16/E00] Quem se cadastra entra e conhece a Leela antes de precisar do código** — hoje a conta nova bate numa parede: um campo de código e mais nada, que foi onde duas pessoas reais pararam em 06/08. Passa a entrar no painel e circular por ele, e no primeiro clique — em botão, aba de menu ou pelo teclado — sobe um aviso de boas-vindas que orienta a falar com o nosso time para receber o código Leela. O código continua sendo coisa de quem vai ser profissional, e quem só participa de experiências é apontado para a área do cliente 🔄 construído em 06/08 · **falta a review antagonista e o deploy do dia** · sua ordem de 06/08 virou a **D-ONB-6** e a **RN-510**, que sucede a RN-416 [[LEELA-E16-plataforma-superadmin]]
+    - [ ] **S1609 · Resgate do código + a aterrissagem de quem ainda não tem** — a história é a mesma de 28/07; o que mudou foi a aterrissagem
+        - [x] S1609-T2 a parede virou vitrine, e o aviso responde ao gesto ⚔ — `f7477821` · a tela por baixo não consulta nada, e isso deixou de ser leitura: quatro portas permitidas, qualquer outra derruba o gate. O aviso bloqueia enquanto está na frente, sai por `Esc` e volta no gesto seguinte
+        - [x] S1609-T2-VEU a prova do véu no CSS que o build produz ⚔ — `f7477821` · o defeito de 03/08 (um véu que compilava transparente) tinha correção mas não tinha prova; agora tem, com falsificação embutida
+        - [ ] S1609-T2-REV review antagonista em contexto fresco — oito vetores declarados no handoff da lane
+        - [ ] S1609-T2-DEPLOY sobe junto com o deploy pendente do dia
+
 - [ ] **[E00/E16] A conta do painel admin é outra, e os ambientes se separam** — uma conta só continua valendo para organizador e cliente, e a de administração da plataforma passa a ser separada, com o servidor recusando o acúmulo; corrige um registro errado meu que já tinha virado código 🔄 a primeira tarefa saiu do papel na noite de 05/08, foi revisada por antagonista e **está no ar** — a guarda viaja dentro do `contaSemFriccao`, que subiu no deploy de 05/08 pelo `asaasWebhook` e pelo `confirmarPagamentoSandbox` · correção sua de 03/08 · substitui o card do item 57 (a) · **fica com você:** **ADMINSEP-3** (a conta de administração de produção é a de demonstração) e os dois itens novos do painel, **AREA-MUDA-1** e **ACUMULO-ESTOQUE-1** [[LEELA-E16-plataforma-superadmin]]
     - [ ] **S032 · A conta do painel de plataforma é outra**
         - [ ] S032-T1 o roteamento pós-login para de dizer que os papéis se acumulam

@@ -893,3 +893,25 @@ ficou: ligar o script a um comando nomeado e a um passo de esteira, fora do terr
 ⛔ **O script não entra na tarefa de teste do monorepo**: ele fala com a rede e depende de
 credencial de usuário, o que o torna impróprio para uma tarefa de build cacheável. O lugar dele é
 um passo explícito, chamado por quem deploya.
+
+## Delta a aterrissagem depois do cadastro deixa de ser parede (2026-08-06 · ONBOARD-VITRINE)
+
+Este épico é dono das **jornadas de conta** (S020) e do **cadastro do organizador** (S030). A
+ordem do dono de 06/08 não mexe em nenhum dos dois formulários: ela muda **onde a pessoa
+aterrissa** quando o cadastro termina.
+
+A regra nova é a **RN-510** e o enunciado canônico vive no épico dono da porta,
+[[LEELA-E16-plataforma-superadmin]]. Aqui ficam as três amarrações que são deste épico:
+
+1. **S020-T3 · o default "cadastro NÃO cria tenant" permanece.** Ele já tinha sobrevivido à
+   rodada de 28/07 e sobrevive a esta. O que muda de novo é só a aterrissagem: em 28/07 ela
+   virou "home com overlay" (RN-416); em 06/08 vira "**entra em vitrine, e o aviso sobe no
+   primeiro gesto**" (RN-510).
+2. **S020-T4 · `/conta` continua sendo da PESSOA.** Ali a rota real monta e o aviso não sobe.
+   Era a exceção da RN-416 e continua sendo, agora com nome novo: é a única rota em que a
+   vitrine sai da frente. Vale reperguntar, quando alguém mexer nisso, se ela ainda é a única.
+3. **RN-448 (precedência de acesso) inalterada.** `platform_admin` vence e cai em
+   `/plataforma`; organizador com tenant cai na Visão Geral; **conta sem tenant entra em
+   vitrine** em vez de encontrar a parede. Deep-link guardado continua vencendo o default.
+   `destinoPosLogin` não foi tocado por esta lane, e o refresh de crachá do PAPEL-DUPLO
+   continua sendo o que destrava o painel no resgate, sem novo login.

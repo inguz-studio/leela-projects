@@ -1615,3 +1615,71 @@ está certo, e só o caminho filtrado quebra.
 Sem regra nova. O índice entrou junto com o de clubes e **está no ar**. A história é a **S035** no
 [[LEELA-E00-fundacao-tecnica]], onde as diretrizes desta família ficam registradas, e a tarefa de
 tela deste épico que o defeito alcança é a `S1601-T3`.
+
+## Delta a parede do convite virou vitrine (2026-08-06 · ONBOARD-VITRINE)
+
+Ordem do dono em 06/08, depois de duas contas reais pararem na parede que a RN-416 desenhou.
+Verbatim e leitura completa em `02-rodadas/2026-07-28-onboarding-organizador/04-decisao-vitrine-0806.md`
+(**D-ONB-6**). Construção e gates em `.nirvana/handoffs/leela-onboard-vitrine-20260806.md`.
+
+### RN-510 (nova, dona) · a conta sem código entra em vitrine, e o aviso responde ao gesto
+
+**Sucede a RN-416**, que fica **marcada e legível** no lugar de apagada — o desenho de parede
+dela ainda explica por que a propriedade de dados existe.
+
+> **RN-510 · Vitrine e aviso de boas-vindas.** Conta autenticada **sem tenant e sem
+> administração da plataforma** (`statusOnboarding: 'aguardando_convite'`) **entra** no
+> painel em modo **vitrine**: o shell renderiza, o menu navega e cada área nomeia o que faz,
+> **sem número e sem exemplo**. Nenhuma consulta com escopo de tenant sai da vitrine — a
+> propriedade que a RN-416 protegia não muda de valor, só de mecanismo: em vez de a rota não
+> montar, monta-se uma tela **sem hook de dados**, e a propriedade passa a ser medida por
+> allowlist fechada sobre o api-client (prova executável, não leitura).
+> Na **primeira interação** — clique ou o equivalente por teclado (`Enter`/`Espaço`) sobre
+> algo acionável — sobe o **aviso de boas-vindas**: acolhe, orienta a falar com o time para
+> receber o **"código Leela"** (é o nome que a pessoa lê) e mantém o campo de resgate ali
+> mesmo (RN-414, inalterada). O aviso **bloqueia** enquanto está na tela (véu opaco,
+> `aria-modal`, armadilha de foco) e **fecha** por `Esc` ou botão; fechado, **rearma** — a
+> interação seguinte o traz de volta. Uma linha do aviso aponta a área do cliente na landing
+> para quem só participa. Enquanto o crachá está sendo lido, **nem a rota real nem a vitrine
+> montam**: é estado de espera, porque a janela de leitura deixava escapar consulta de tenant
+> de conta que ainda não se sabia sem tenant. `/conta` continua sendo da pessoa (RN-416
+> preservada nesta parte): ali a rota real monta e o aviso não sobe. A tranca de dado
+> continua sendo das Rules (RN-400/401) — a vitrine é experiência, como o overlay sempre foi.
+
+**Épico dono:** E16 · **consome:** E00 (jornadas de conta), E01 (componentes do DS).
+
+### O que muda na S1609-T2, sem virar história nova
+
+A `LEELA-S1609-T2` ("Overlay bloqueante + conta travada + CTA") foi **entregue em 03/08** e
+está reescrita por esta ordem. Ela continua sendo a tarefa dona da superfície; os critérios
+que mudaram:
+
+| Critério de 28/07 (RN-416) | Passa a ser (RN-510) |
+|---|---|
+| Overlay aterrissa na home, antes de qualquer gesto | A pessoa entra em vitrine; o aviso sobe na primeira interação |
+| Não-descartável (sem X, sem Esc, sem clique-fora) | Bloqueante enquanto aberto, **descartável** por `Esc` e botão, e rearma no gesto seguinte |
+| Rota de destino não monta | Monta a **vitrine** — tela sem consulta, que acompanha o endereço |
+| Copy "Seu acesso ainda não foi liberado" (P9) | Copy de boas-vindas; o código é nomeado **"código Leela"** e é coisa de quem vai ser profissional |
+| Foco entra no campo de código | Foco entra no painel do aviso — o campo não é pedágio |
+
+**Critério novo, que não existia:** com a conta em vitrine, o painel chama do api-client só
+`onSessionChange`, `getClaims`, `getLeelaDb` e `getContatoOnboarding`. Qualquer outro nome
+derruba o gate.
+
+### O defeito que a construção achou (não é regressão dela)
+
+O gate lia o crachá **renderizando as rotas reais** — decisão documentada em 03/08 e tida
+por inofensiva. Não era: nessa janela `/crm` disparava `getOverview` e `/marcas` disparava
+`listarMarcas`, porque o `enabled` das duas telas olha `uid`/`eventoId` e nunca `tenantId`.
+Duas consultas de tenant de uma conta que, um tique depois, se revelaria sem tenant — e que
+voltariam negadas, que é exatamente o custo que a parede dizia evitar. Fechado com estado de
+espera e travado por teste.
+
+### O véu, e por que ele voltou ao mesmo lugar
+
+O **DEF-C** (tabela de defeitos da ONBOARD-REV, acima) foi corrigido em 03/08 trocando a
+classe do véu pelos tokens do DS. O que **não** existia era a prova: os comentários do código
+citavam um teste de CSS buildado que nunca tinha sido escrito. Ele existe agora, lê a classe
+**da fonte**, compila com o Tailwind e o preset reais, e traz falsificação embutida — compila
+a classe do DEF-C e exige zero declaração de fundo. Medição independente no `dist`: nenhuma
+ocorrência da classe quebrada, regra do véu presente, token em `rgba(0,0,0,.6)`.
