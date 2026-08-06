@@ -2,11 +2,14 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import {
-  provisionAssessoriaAccount,
-  SENHA_MIN_ASSESSORIA,
-} from '@leela/api-client';
-import { Button, Input } from '@/app/_ds/ds';
+import { provisionAssessoriaAccount } from '@leela/api-client';
+// FRONTEIRA-AUTH · `SENHA_MIN_ASSESSORIA` (8) saiu daqui. Ela era uma cópia
+// local do piso — "espelho de premissa da Function", diz o comentário no
+// api-client — e cópia de regra é o que faz duas telas divergirem na primeira
+// vez que o piso sobe. A política única de `@leela/core` cobre o mesmo caso e
+// ainda traz os requisitos que o comprimento sozinho não via.
+import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 
 // Formulário de aceite do convite de assessoria (S1801-T2). Client Component:
@@ -42,7 +45,10 @@ function mensagemErro(err: unknown): string {
     return msg || 'Este convite não está mais disponível para aceite.';
   }
   if (code.includes('invalid-argument')) {
-    return msg || `Crie uma senha de pelo menos ${SENHA_MIN_ASSESSORIA} caracteres.`;
+    // A frase de fallback é a MESMA da dica do campo (`exigenciaDeSenha`): o
+    // servidor recusar por uma régua e a tela explicar outra é o defeito que
+    // deixa a pessoa presa num formulário que se contradiz.
+    return msg || exigenciaDeSenha();
   }
   return 'Não foi possível concluir o aceite agora. Tente novamente em instantes.';
 }
@@ -53,10 +59,12 @@ export function ConviteForm({ tenantId, parceriaId, token }: Props): React.JSX.E
   const [confirmar, setConfirmar] = useState('');
   const [estado, setEstado] = useState<Estado>({ fase: 'form' });
 
-  const senhaCurta = senha.length > 0 && senha.length < SENHA_MIN_ASSESSORIA;
+  // Uma avaliação por render: alimenta o medidor E trava o botão. O que era
+  // `senhaCurta` (mensagem de erro por comprimento) some — o medidor já diz o
+  // que falta, item a item, e duas vozes sobre a mesma pendência só brigam.
+  const avaliacao = avaliarSenha(senha);
   const naoConfere = confirmar.length > 0 && senha !== confirmar;
-  const podeEnviar =
-    senha.length >= SENHA_MIN_ASSESSORIA && senha === confirmar && estado.fase !== 'enviando';
+  const podeEnviar = avaliacao.atende && senha === confirmar && estado.fase !== 'enviando';
 
   async function onSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -122,19 +130,28 @@ export function ConviteForm({ tenantId, parceriaId, token }: Props): React.JSX.E
         placeholder="Nome do responsável"
         autoComplete="name"
       />
-      <Input
-        id="convite-senha"
-        label="Crie uma senha"
-        type="password"
-        value={senha}
-        onChange={(e) => setSenha(e.target.value)}
-        autoComplete="new-password"
-        {...(senhaCurta ? { errorMessage: `Use pelo menos ${SENHA_MIN_ASSESSORIA} caracteres.` } : {})}
-      />
-      <Input
+      <div>
+        {/* Senha NOVA: medidor LIGADO. */}
+        <InputSenha
+          id="convite-senha"
+          label="Crie uma senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          autoComplete="new-password"
+          avaliacao={avaliacao}
+          aria-describedby="convite-senha-regra"
+        />
+        <p id="convite-senha-regra" className="mt-1 text-sm text-text-secondary">
+          {exigenciaDeSenha()}
+        </p>
+      </div>
+      {/* Confirmação: medidor DESLIGADO. Ela repete a MESMA senha do campo de
+          cima — um segundo medidor mediria duas vezes a mesma coisa e faria a
+          pessoa procurar a diferença entre eles. O que este campo tem a dizer é
+          uma coisa só: se confere ou não. */}
+      <InputSenha
         id="convite-confirmar"
         label="Confirme a senha"
-        type="password"
         value={confirmar}
         onChange={(e) => setConfirmar(e.target.value)}
         autoComplete="new-password"

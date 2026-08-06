@@ -32,6 +32,12 @@ export {
   // Primitivos de formulário do checkout (S1203) — consumidos por Client
   // Components; passam por este boundary 'use client' para manter o padrão.
   Input,
+  // Campo de senha da casa (FRONTEIRA-AUTH). Entra por AQUI, e não por import
+  // direto do barrel, pelo mesmo motivo dos outros: o `InputSenha` tem estado
+  // (`useState` do olho mostrar/ocultar) e só pode ser avaliado no grafo de
+  // cliente. Ele NÃO conhece a política de senha — quem passa `avaliacao` é a
+  // tela, com `avaliarSenha()` de `@leela/core`.
+  InputSenha,
   Select,
   Checkbox,
   Field,

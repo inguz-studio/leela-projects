@@ -34,8 +34,11 @@ vi.mock('@leela/api-client', () => ({
   loginComEmail: (...a: unknown[]) => loginComEmail(...a),
   enviarResetSenha: (...a: unknown[]) => enviarResetSenha(...a),
   emailValido: (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim()),
-  senhaAtendeMinimo: (s: string) => s.length >= 6,
-  SENHA_MIN: 6,
+  // FRONTEIRA-AUTH · `senhaAtendeMinimo`/`SENHA_MIN` saíram daqui junto com a
+  // dependência da tela. A régua agora é `avaliarSenha`/`exigenciaDeSenha` de
+  // `@leela/core` — função PURA, deliberadamente NÃO mockada: um mock dizendo
+  // "6 caracteres bastam" faria esta suíte passar verde enquanto a tela real
+  // recusa a senha, que é o pior defeito que um teste pode ter.
   mensagemErroRedefinicao: () => 'Não foi possível redefinir a senha. Tente novamente.',
   // BUILD-MOTION: a fase `usado` passou a montar o `EntrarOverlay` (a pessoa
   // entra AQUI, sem ser mandada caçar o botão do header). O overlay consome a
@@ -75,15 +78,15 @@ describe('S1223-T1 · definir a senha deixa a pessoa DENTRO', () => {
     await renderFluxo('codigo-bom');
     await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
 
-    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'novasenha9!' } });
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });
 
     await waitFor(() => expect(screen.getByText(/sua conta está pronta/i)).not.toBeNull());
-    expect(confirmarResetSenha).toHaveBeenCalledWith('codigo-bom', 'senha-nova');
+    expect(confirmarResetSenha).toHaveBeenCalledWith('codigo-bom', 'novasenha9!');
     // A ordem é o aceite: confirmar e ENTÃO autenticar, com a mesma senha.
-    expect(loginComEmail).toHaveBeenCalledWith('ana@exemplo.dev', 'senha-nova');
+    expect(loginComEmail).toHaveBeenCalledWith('ana@exemplo.dev', 'novasenha9!');
     // Nenhuma tela de "entrar" no fim do caminho feliz.
     expect(screen.queryByRole('form', { name: 'Definir senha' })).toBeNull();
   });
@@ -115,7 +118,7 @@ describe('S1223-T1 · os três estados são distinguíveis', () => {
     loginComEmail.mockResolvedValue({ user: { uid: 'uid-ana' } });
     await renderFluxo('codigo-bom');
     await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
-    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'novasenha9!' } });
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });
@@ -157,7 +160,7 @@ describe('S1223-T1 · os três estados são distinguíveis', () => {
     );
     await renderFluxo('codigo-bom');
     await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
-    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'novasenha9!' } });
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });
@@ -182,7 +185,7 @@ describe('S1223-T1 · os três estados são distinguíveis', () => {
     );
     await renderFluxo('codigo-bom');
     await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
-    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'novasenha9!' } });
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });
@@ -230,5 +233,131 @@ describe('S1223-T1 · o reenvio não vira oráculo de quem comprou', () => {
     expect(confirmacoes[0]).toBe(confirmacoes[1]);
     expect(confirmacoes[0]).not.toContain('não encontrad');
     expect(confirmacoes[0]).toContain('Se houver uma conta');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FRONTEIRA-AUTH · a senha nova passou a obedecer à política única
+// ---------------------------------------------------------------------------
+//
+// A tela media COMPRIMENTO e só (`senhaAtendeMinimo`, 6 caracteres). Agora ela
+// consome `avaliarSenha`/`exigenciaDeSenha` de `@leela/core` — a mesma régua
+// que as Functions chamam. Os casos abaixo são falsificáveis por construção:
+// devolver a régua antiga faz `novasenha9` (dez caracteres, sem especial)
+// voltar a liberar o botão, e é exatamente isso que o primeiro caso mede.
+describe('FRONTEIRA-AUTH · a política da casa manda no campo de senha nova', () => {
+  /** A tela na fase `pronto`, com o campo de senha na mão. */
+  async function comFormulario(): Promise<HTMLInputElement> {
+    verificarCodigoResetSenha.mockResolvedValue('ana@exemplo.dev');
+    await renderFluxo('codigo-bom');
+    await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
+    return screen.getByLabelText(/nova senha/i) as HTMLInputElement;
+  }
+
+  function botaoSalvar(): HTMLButtonElement {
+    return screen.getByRole('button', { name: /salvar e entrar/i }) as HTMLButtonElement;
+  }
+
+  it('a dica nomeia os TRÊS requisitos, e não uma frase escrita à mão', async () => {
+    const { exigenciaDeSenha, SENHA_MIN } = await import('@leela/core');
+    await comFormulario();
+    const dica = document.getElementById('definir-senha-regra');
+    if (dica === null) throw new Error('dica da política ausente sob o campo de senha');
+    // Palavra por palavra igual à política: se alguém reescrever a frase na
+    // tela, ela deixa de bater com a mensagem que a Function devolve.
+    expect(dica.textContent).toBe(exigenciaDeSenha());
+    expect(dica.textContent).toContain(String(SENHA_MIN));
+    expect(dica.textContent).toMatch(/número/i);
+    expect(dica.textContent).toMatch(/especial/i);
+    // E ela é anunciada junto com o campo, não é decoração solta.
+    const campo = screen.getByLabelText(/nova senha/i);
+    expect(campo.getAttribute('aria-describedby') ?? '').toContain('definir-senha-regra');
+  });
+
+  it('o envio fica travado até a senha atender à regra INTEIRA', async () => {
+    const campo = await comFormulario();
+
+    // Vazia: travado.
+    expect(botaoSalvar().disabled).toBe(true);
+
+    // Dez caracteres com número e SEM especial — passava na régua antiga.
+    fireEvent.change(campo, { target: { value: 'novasenha9' } });
+    expect(botaoSalvar().disabled).toBe(true);
+
+    // Oito caracteres com especial e SEM número.
+    fireEvent.change(campo, { target: { value: 'novasenha!' } });
+    expect(botaoSalvar().disabled).toBe(true);
+
+    // Curta demais, mesmo com os dois requisitos de composição.
+    fireEvent.change(campo, { target: { value: 'nov9!' } });
+    expect(botaoSalvar().disabled).toBe(true);
+
+    // Os três juntos: libera.
+    fireEvent.change(campo, { target: { value: 'novasenha9!' } });
+    expect(botaoSalvar().disabled).toBe(false);
+  });
+
+  it('submeter com senha fora da regra não chega no Auth', async () => {
+    const campo = await comFormulario();
+    fireEvent.change(campo, { target: { value: 'novasenha9' } });
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
+    });
+    // A trava do botão é meia prova: `fireEvent.submit` passa por cima dela, e
+    // é a guarda dentro do handler que impede o pedido de sair.
+    expect(confirmarResetSenha).not.toHaveBeenCalled();
+  });
+
+  it('o medidor acompanha a senha e diz o que falta — em PALAVRA, não só em cor', async () => {
+    const campo = await comFormulario();
+    const medidor = (): HTMLElement => {
+      const alvo = document.getElementById('definir-senha-campo-forca');
+      if (alvo === null) throw new Error('medidor ausente no campo de senha nova');
+      return alvo;
+    };
+    // Campo em branco não recebe julgamento nenhum.
+    expect(medidor().textContent?.trim()).toBe('');
+
+    fireEvent.change(campo, { target: { value: 'novasenha' } });
+    expect(medidor().textContent).toMatch(/senha fraca/i);
+    // A pendência é nomeada: quem não distingue as cores lê o que falta.
+    expect(medidor().textContent).toMatch(/número/i);
+    expect(medidor().textContent).toMatch(/especial/i);
+
+    fireEvent.change(campo, { target: { value: 'ponte.de.corda.no.7' } });
+    expect(medidor().textContent).toMatch(/senha forte/i);
+  });
+
+  it('⚔ o olho de mostrar a senha NÃO submete o formulário', async () => {
+    const campo = await comFormulario();
+    fireEvent.change(campo, { target: { value: 'novasenha9!' } });
+
+    const olho = screen.getByRole('button', { name: /mostrar a senha/i }) as HTMLButtonElement;
+    // O defeito nº 1 desta feature: um `<button>` sem `type` dentro de `<form>`
+    // é `submit` por default — clicar para VER a senha gravaria a senha.
+    expect(olho.type).toBe('button');
+
+    await act(async () => {
+      fireEvent.click(olho);
+    });
+    expect(confirmarResetSenha).not.toHaveBeenCalled();
+    expect(loginComEmail).not.toHaveBeenCalled();
+    // E o formulário continua de pé, com a senha digitada intacta.
+    expect(screen.getByRole('form', { name: 'Definir senha' })).not.toBeNull();
+    expect((screen.getByLabelText(/nova senha/i) as HTMLInputElement).value).toBe('novasenha9!');
+
+    // O que o clique faz de verdade: troca `type` no MESMO nó do input, sem
+    // remontar (remontar perderia o gerenciador de senha e o cursor).
+    const revelado = screen.getByLabelText(/nova senha/i) as HTMLInputElement;
+    expect(revelado).toBe(campo);
+    expect(revelado.type).toBe('text');
+    // O `autoComplete` sobrevive à troca — sem ele o gerenciador não oferece
+    // guardar a senha que a pessoa acabou de criar.
+    expect(revelado.getAttribute('autocomplete')).toBe('new-password');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /ocultar a senha/i }));
+    });
+    expect((screen.getByLabelText(/nova senha/i) as HTMLInputElement).type).toBe('password');
   });
 });

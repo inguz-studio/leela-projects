@@ -378,6 +378,89 @@ describe('S1221-T1 · a credencial não sobrevive ao fechamento', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// FRONTEIRA-AUTH · o login NÃO mede a senha de ninguém
+// ---------------------------------------------------------------------------
+//
+// A regra, e o motivo: a senha aqui já existe. Um medidor nesta tela não muda
+// nada que a pessoa possa fazer (ela não troca a senha no login) e ainda
+// anuncia "senha fraca" no monitor de quem está entrando, à vista de quem
+// passa. Pior: aplicar a política nova como trava trancaria fora quem tem
+// senha antiga válida. A única condição continua sendo "digitou alguma coisa".
+describe('FRONTEIRA-AUTH · a entrada não julga a senha existente', () => {
+  it('o campo de senha do login não tem medidor nem exigência escrita', async () => {
+    const { exigenciaDeSenha } = await import('@leela/core');
+    await renderConta();
+    await abrirOverlay();
+    preencher('ana@exemplo.dev', 'x');
+    // O DS ancora o medidor em `{id}-forca`; sem `avaliacao` ele não nasce.
+    expect(document.getElementById('entrar-landing-senha-forca')).toBeNull();
+    const dialogo = screen.getByRole('dialog');
+    expect(dialogo.textContent ?? '').not.toContain(exigenciaDeSenha());
+    expect(dialogo.textContent ?? '').not.toMatch(/senha fraca|senha média|senha forte/i);
+  });
+
+  it('uma senha fora da política nova continua entrando — o piso vale para senha NOVA', async () => {
+    loginComEmail.mockImplementation(async () => {
+      emitir(nomeado());
+      return { user: nomeado() };
+    });
+    await renderConta();
+    await abrirOverlay();
+    // Curta, sem número, sem especial: reprovaria em qualquer campo de senha
+    // nova da casa. Aqui ela tem de passar — é a senha que a pessoa já tem.
+    preencher('ana@exemplo.dev', 'abc');
+    await act(async () => {
+      fireEvent.submit(screen.getByRole('form', { name: 'Entrar na Leela' }));
+    });
+    expect(loginComEmail).toHaveBeenCalledWith('ana@exemplo.dev', 'abc');
+  });
+
+  it('o `autoComplete` continua sendo `current-password`', async () => {
+    await renderConta();
+    await abrirOverlay();
+    // Virar `new-password` faria o gerenciador oferecer GERAR uma senha nova
+    // no formulário de entrar, e parar de preencher a que a pessoa guardou.
+    expect(screen.getByLabelText(/^senha$/i).getAttribute('autocomplete')).toBe(
+      'current-password',
+    );
+  });
+
+  it('⚔ o olho de mostrar a senha NÃO submete o formulário de entrada', async () => {
+    await renderConta();
+    await abrirOverlay();
+    preencher('ana@exemplo.dev', 'segredo');
+    const olho = screen.getByRole('button', { name: /mostrar a senha/i }) as HTMLButtonElement;
+    expect(olho.type).toBe('button');
+    await act(async () => {
+      fireEvent.click(olho);
+    });
+    // Nenhuma tentativa de login, e o overlay continua aberto.
+    expect(loginComEmail).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).not.toBeNull();
+    const campo = screen.getByLabelText(/^senha$/i) as HTMLInputElement;
+    expect(campo.type).toBe('text');
+    expect(campo.value).toBe('segredo');
+  });
+
+  it('a senha revelada não sobrevive ao fechamento do overlay', async () => {
+    await renderConta();
+    await abrirOverlay();
+    preencher('ana@exemplo.dev', 'segredo');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /mostrar a senha/i }));
+    });
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await abrirOverlay();
+    const campo = screen.getByLabelText(/^senha$/i) as HTMLInputElement;
+    expect(campo.value).toBe('');
+    // E reabre OCULTO: um campo que nasce visível expõe a senha de quem usa
+    // gerenciador e nem chegou a digitar.
+    expect(campo.type).toBe('password');
+  });
+});
+
 describe('a marca dentro do modal (pedido do dono · 04/08)', () => {
   it('o wordmark é o MESMO asset do header, e é decorativo', async () => {
     await renderConta();

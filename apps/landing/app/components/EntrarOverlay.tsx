@@ -50,7 +50,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Dialog } from '@leela/design-system/dialog';
 import { emailValido, loginComEmail, mensagemErroLogin } from '@leela/api-client';
-import { Button, Input } from '@/app/_ds/ds';
+import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 
 export interface EntrarOverlayProps {
@@ -153,10 +153,16 @@ export function EntrarOverlay({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <Input
+        {/* Senha EXISTENTE: medidor DESLIGADO, de propósito (sem `avaliacao`).
+            Medir a força de uma senha que já existe não muda nada que a pessoa
+            possa fazer nesta tela — ela não vai trocá-la aqui — e ainda
+            anunciaria "senha fraca" no monitor de quem está entrando, à vista
+            de quem passa. O mesmo vale para a exigência escrita: recusar o
+            login por regra nova trancaria fora quem tem senha antiga válida.
+            A trava continua sendo só "digitou alguma coisa". */}
+        <InputSenha
           id="entrar-landing-senha"
           label="Senha"
-          type="password"
           autoComplete="current-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}

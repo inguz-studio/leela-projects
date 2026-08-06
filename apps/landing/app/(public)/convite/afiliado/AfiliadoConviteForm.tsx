@@ -2,11 +2,13 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import {
-  provisionAfiliadoAccount,
-  SENHA_MIN_AFILIADO,
-} from '@leela/api-client';
-import { Button, Input } from '@/app/_ds/ds';
+import { provisionAfiliadoAccount } from '@leela/api-client';
+// FRONTEIRA-AUTH · `SENHA_MIN_AFILIADO` (8) saiu daqui pelo mesmo motivo que a
+// gêmea da assessoria: eram DUAS constantes locais para UMA regra, e cada tela
+// com a sua é o que faz o piso subir num lugar só. A política de `@leela/core`
+// é a autoridade única — a mesma que a Function de provisionamento chama.
+import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { ensureLeela } from '@/lib/leelaClient';
 
 // Aceite do convite de influenciador PF (S-R9-11-T6). Client Component:
@@ -43,7 +45,9 @@ function mensagemErro(err: unknown): string {
     return msg || 'Este convite não está mais disponível para aceite.';
   }
   if (code.includes('invalid-argument')) {
-    return msg || `Crie uma senha de pelo menos ${SENHA_MIN_AFILIADO} caracteres.`;
+    // Mesma frase da dica do campo — servidor e tela não podem explicar réguas
+    // diferentes sobre a senha que acabou de ser recusada.
+    return msg || exigenciaDeSenha();
   }
   return 'Não foi possível concluir o aceite agora. Tente novamente em instantes.';
 }
@@ -54,10 +58,11 @@ export function AfiliadoConviteForm({ eventoId, afiliadoId, token }: Props): Rea
   const [confirmar, setConfirmar] = useState('');
   const [estado, setEstado] = useState<Estado>({ fase: 'form' });
 
-  const senhaCurta = senha.length > 0 && senha.length < SENHA_MIN_AFILIADO;
+  // Uma avaliação por render: medidor e trava do botão leem o mesmo objeto.
+  // `senhaCurta` some — o medidor já lista as pendências, uma a uma.
+  const avaliacao = avaliarSenha(senha);
   const naoConfere = confirmar.length > 0 && senha !== confirmar;
-  const podeEnviar =
-    senha.length >= SENHA_MIN_AFILIADO && senha === confirmar && estado.fase !== 'enviando';
+  const podeEnviar = avaliacao.atende && senha === confirmar && estado.fase !== 'enviando';
 
   async function onSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -124,19 +129,26 @@ export function AfiliadoConviteForm({ eventoId, afiliadoId, token }: Props): Rea
         placeholder="Seu nome"
         autoComplete="name"
       />
-      <Input
-        id="afiliado-senha"
-        label="Crie uma senha"
-        type="password"
-        value={senha}
-        onChange={(e) => setSenha(e.target.value)}
-        autoComplete="new-password"
-        {...(senhaCurta ? { errorMessage: `Use pelo menos ${SENHA_MIN_AFILIADO} caracteres.` } : {})}
-      />
-      <Input
+      <div>
+        {/* Senha NOVA: medidor LIGADO. */}
+        <InputSenha
+          id="afiliado-senha"
+          label="Crie uma senha"
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+          autoComplete="new-password"
+          avaliacao={avaliacao}
+          aria-describedby="afiliado-senha-regra"
+        />
+        <p id="afiliado-senha-regra" className="mt-1 text-sm text-text-secondary">
+          {exigenciaDeSenha()}
+        </p>
+      </div>
+      {/* Confirmação: medidor DESLIGADO — ela repete a senha de cima, e medir o
+          mesmo segredo duas vezes só convida a comparar dois medidores. */}
+      <InputSenha
         id="afiliado-confirmar"
         label="Confirme a senha"
-        type="password"
         value={confirmar}
         onChange={(e) => setConfirmar(e.target.value)}
         autoComplete="new-password"

@@ -23,14 +23,12 @@
 // =============================================================================
 
 import { useEffect, useState, type FormEvent } from 'react';
-import {
-  lerMeusDados,
-  salvarMeusDados,
-  senhaAtendeMinimo,
-  SENHA_MIN,
-  trocarSenha,
-} from '@leela/api-client';
-import { Button, Input } from '@/app/_ds/ds';
+import { lerMeusDados, salvarMeusDados, trocarSenha } from '@leela/api-client';
+// FRONTEIRA-AUTH · a régua da senha nova vem da política do core. O
+// `senhaAtendeMinimo`/`SENHA_MIN` do api-client media só comprimento e era a
+// segunda autoridade sobre a mesma regra.
+import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Button, Input, InputSenha } from '@/app/_ds/ds';
 
 type FaseDados = 'carregando' | 'pronto' | 'salvando' | 'salvo' | 'falhou';
 type FaseSenha = 'pronto' | 'salvando' | 'salvo' | 'falhou';
@@ -49,6 +47,11 @@ export function PainelMeusDados({ email }: { email: string | null }): React.JSX.
   const [senhaAtual, setSenhaAtual] = useState('');
   const [senhaNova, setSenhaNova] = useState('');
   const [erroSenha, setErroSenha] = useState('');
+
+  // Só a senha NOVA é avaliada. A atual é credencial existente: ela é julgada
+  // pelo servidor na reauth, e a política nova não pode recusá-la aqui — quem
+  // tem senha antiga válida ficaria trancado fora da própria troca de senha.
+  const avaliacaoNova = avaliarSenha(senhaNova);
 
   useEffect(() => {
     let vivo = true;
@@ -81,8 +84,8 @@ export function PainelMeusDados({ email }: { email: string | null }): React.JSX.
   async function trocar(e: FormEvent): Promise<void> {
     e.preventDefault();
     setErroSenha('');
-    if (!senhaAtendeMinimo(senhaNova)) {
-      setErroSenha(`A senha nova precisa ter pelo menos ${SENHA_MIN} caracteres.`);
+    if (!avaliacaoNova.atende) {
+      setErroSenha(exigenciaDeSenha());
       return;
     }
     setFaseSenha('salvando');
@@ -158,9 +161,11 @@ export function PainelMeusDados({ email }: { email: string | null }): React.JSX.
             <label htmlFor="senha-atual" className="text-sm font-medium text-text-primary">
               Senha atual
             </label>
-            <Input
+            {/* Senha ATUAL: medidor DESLIGADO (sem `avaliacao`). Ela já existe
+                e não vai mudar de força por ser olhada — medi-la só serviria
+                para anunciar na tela que a senha vigente da pessoa é fraca. */}
+            <InputSenha
               id="senha-atual"
-              type="password"
               autoComplete="current-password"
               value={senhaAtual}
               onChange={(e) => setSenhaAtual(e.target.value)}
@@ -170,16 +175,17 @@ export function PainelMeusDados({ email }: { email: string | null }): React.JSX.
             <label htmlFor="senha-nova" className="text-sm font-medium text-text-primary">
               Senha nova
             </label>
-            <Input
+            {/* Senha NOVA: medidor LIGADO — aqui a pessoa está escolhendo. */}
+            <InputSenha
               id="senha-nova"
-              type="password"
               autoComplete="new-password"
               value={senhaNova}
+              avaliacao={avaliacaoNova}
               aria-describedby="senha-nova-regra"
               onChange={(e) => setSenhaNova(e.target.value)}
             />
             <p id="senha-nova-regra" className="mt-1 text-sm text-text-secondary">
-              Pelo menos {SENHA_MIN} caracteres.
+              {exigenciaDeSenha()}
             </p>
           </div>
           {erroSenha.length > 0 ? (

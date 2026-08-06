@@ -44,8 +44,10 @@ vi.mock('@leela/api-client', () => ({
   verificarCodigoResetSenha: async () => 'ana@exemplo.dev',
   confirmarResetSenha: async () => undefined,
   enviarResetSenha: async () => undefined,
-  senhaAtendeMinimo: (s: string) => s.length >= 6,
-  SENHA_MIN: 6,
+  // FRONTEIRA-AUTH · `senhaAtendeMinimo`/`SENHA_MIN` saíram do mock junto com a
+  // dependência: a régua da senha nova agora é a política de `@leela/core`,
+  // que NÃO é mockada aqui — é ela mesma que roda, e é por isso que a senha
+  // usada abaixo precisa atender de verdade.
   mensagemErroRedefinicao: () => 'Não foi possível redefinir a senha.',
 }));
 
@@ -116,7 +118,11 @@ describe('pontos de entrada do CLIENTE — abrem o overlay, não navegam', () =>
     );
     // Percorre o caminho curto: define a senha e volta ao MESMO código.
     await waitFor(() => expect(screen.getByLabelText(/nova senha/i)).not.toBeNull());
-    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'senha-nova' } });
+    // A senha atende à política da casa (8+, número, caractere especial) —
+    // sem isso o botão nem libera e a fase `usado` nunca chega. O especial é
+    // `!` de propósito: hífen NÃO está no conjunto do Identity Platform que a
+    // política copia, e um fixture com `-` quebraria sem avisar por quê.
+    fireEvent.change(screen.getByLabelText(/nova senha/i), { target: { value: 'novasenha9!' } });
     await act(async () => {
       fireEvent.submit(screen.getByRole('form', { name: 'Definir senha' }));
     });

@@ -50,11 +50,15 @@ import {
   enviarResetSenha,
   loginComEmail,
   mensagemErroRedefinicao,
-  senhaAtendeMinimo,
-  SENHA_MIN,
   verificarCodigoResetSenha,
 } from '@leela/api-client';
-import { Button, Input } from '@/app/_ds/ds';
+// FRONTEIRA-AUTH · a régua da senha vem do core, não do api-client. O
+// `senhaAtendeMinimo`/`SENHA_MIN` que estavam aqui só mediam COMPRIMENTO e
+// eram uma segunda autoridade sobre a mesma regra — a política única
+// (comprimento + número + caractere especial) mora em `politicaDeSenha`, é a
+// mesma que as Functions chamam, e é ela que decide se o botão libera.
+import { avaliarSenha, exigenciaDeSenha } from '@leela/core';
+import { Button, Input, InputSenha } from '@/app/_ds/ds';
 import { EntrarOverlay } from '@/app/components/EntrarOverlay';
 import { ensureLeela } from '@/lib/leelaClient';
 import { destinoPosEntrada } from '@/lib/areaDoCliente';
@@ -119,6 +123,12 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
   const [entrarAberto, setEntrarAberto] = useState(false);
   const botaoEntrar = useRef<HTMLButtonElement>(null);
 
+  // UMA avaliação por render, consumida pelos TRÊS lugares que precisam dela:
+  // o medidor, a trava do botão e a guarda do submit. Chamar `senhaValida()`
+  // por conta própria no handler abriria a porta para o botão liberar por uma
+  // régua e o envio recusar por outra.
+  const avaliacao = avaliarSenha(senha);
+
   useEffect(() => {
     let vivo = true;
     if (oobCode.length === 0) {
@@ -159,7 +169,7 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
 
   async function salvar(event: FormEvent): Promise<void> {
     event.preventDefault();
-    if (!senhaAtendeMinimo(senha) || salvando) return;
+    if (!avaliacao.atende || salvando) return;
     setErro(null);
     setSalvando(true);
     try {
@@ -317,23 +327,29 @@ export function DefinirSenhaFlow({ oobCode }: DefinirSenhaFlowProps): React.JSX.
           </p>
         ) : null}
         <div>
-          <Input
+          {/* Senha NOVA: medidor LIGADO. É a única situação em que medir força
+              orienta alguém — a pessoa ainda está escolhendo, e o medidor é o
+              que mostra que atender a regra é o piso, não o alvo. */}
+          <InputSenha
             id="definir-senha-campo"
             label="Nova senha"
-            type="password"
             autoComplete="new-password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
+            avaliacao={avaliacao}
             aria-describedby="definir-senha-regra"
           />
+          {/* A exigência vem da política, nunca escrita à mão: esta frase e a
+              mensagem que a Function devolve têm de ser a MESMA, senão a tela
+              e o servidor se contradizem no dia em que o piso mudar. */}
           <p id="definir-senha-regra" className="mt-1 text-sm text-text-secondary">
-            Pelo menos {SENHA_MIN} caracteres.
+            {exigenciaDeSenha()}
           </p>
         </div>
         <Button
           type="submit"
           variant="primary"
-          disabled={!senhaAtendeMinimo(senha) || salvando}
+          disabled={!avaliacao.atende || salvando}
           className="w-full"
         >
           {salvando ? 'Salvando…' : 'Salvar e entrar'}
