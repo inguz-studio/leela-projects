@@ -893,6 +893,7 @@ export {
 // RN-478/479/480). O `/cadastrar` do painel consome o MESMO contrato quando a
 // fila da SPEC-QUALIFICACAO rodar — dois contratos paralelos criando a mesma
 // conta é o CONTA-2 do painel.
+
 // Política de senha da casa — UMA autoridade para tela e servidor (FRONTEIRA-AUTH,
 // pedido do dono: número + caractere especial + medidor de força). Os apelidos
 // SENHA_CONTA_MIN/senhaDeContaValida logo abaixo apontam para cá.
