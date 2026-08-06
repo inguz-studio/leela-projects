@@ -77,6 +77,13 @@ export interface AlvoLimpeza {
   readonly uidsProtegidos: readonly string[];
   readonly nomeNovo: string;
   readonly nomeAntigo: string;
+  /**
+   * Links externos a remover, casados por trecho da URL. Decisão do dono, e
+   * por isso DECLARADA aqui e não inferida: link de semente apontando para
+   * conta que não existe é pior que campo ausente, mas qual link morre não é
+   * o script que decide.
+   */
+  readonly linksARemover?: readonly string[];
 }
 
 export type Operacao =
@@ -504,13 +511,17 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
     if (condenados.has(doc.caminho)) continue;
     const pai = souFilhoDeFantasma(doc.caminho);
     if (pai === undefined) continue;
-    if (referenciasA(doc.campos, idsCondenados).length === 0) continue;
+    // A PROTEÇÃO É CHECADA ANTES DO CONTEÚDO, e de propósito. Se eu olhasse
+    // primeiro se o documento aponta para condenado, o fantasma de identidade
+    // protegida que por acaso não aponta para nada sairia daqui em silêncio —
+    // preservado pelo CONTEÚDO dele, e não pela regra. A garantia tem de ser
+    // estrutural: fantasma sob identidade protegida é lacuna a preencher, e
+    // isso vale independente do que esteja escrito dentro dele.
     if (intocavel(pai, uidsProtegidos)) {
-      // Registrado, e não só pulado: o operador precisa ver que existe lixo
-      // apontando para evento morto que a proteção mandou preservar.
       intocaveis.push(doc.caminho);
       continue;
     }
+    if (referenciasA(doc.campos, idsCondenados).length === 0) continue;
     if (intocavel(doc.caminho, uidsProtegidos)) {
       intocaveis.push(doc.caminho);
       continue;
@@ -554,6 +565,31 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
       motivo: `nome de exibição: "${alvo.nomeAntigo}" vira "${alvo.nomeNovo}"`,
       ordem: ORDEM.SOBREVIVENTES,
     });
+  }
+
+  // ── Passo 4b: links de semente que o dono mandou remover. ────────────────
+  // Não é faxina automática: só sai o que está declarado em `linksARemover`.
+  // Um perfil público apontando para conta que não existe gasta a confiança
+  // de quem clica, mas inventar o link novo é do dono, não do script.
+  const linksARemover = alvo.linksARemover ?? [];
+  if (linksARemover.length > 0) {
+    for (const doc of inventario) {
+      if (condenados.has(doc.caminho)) continue;
+      const links = doc.campos['linksExternos'];
+      if (!Array.isArray(links)) continue;
+      const sobrevivem = links.filter((l) => {
+        const url = texto(mapa(l)['url']) ?? '';
+        return !linksARemover.some((trecho) => url.includes(trecho));
+      });
+      if (sobrevivem.length === links.length) continue;
+      operacoes.push({
+        tipo: 'editar',
+        caminho: doc.caminho,
+        mudancas: { linksExternos: clonar(sobrevivem) },
+        motivo: `link de semente removido por decisão do dono (${links.length - sobrevivem.length} de ${links.length})`,
+        ordem: ORDEM.SOBREVIVENTES,
+      });
+    }
   }
 
   // ── Passo 5: órfãos previstos, medidos no estado DEPOIS do plano. ────────

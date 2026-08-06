@@ -199,6 +199,61 @@ O export do T1 (13:45:45Z) era **anterior** à transferência de titularidade. N
 
 ---
 
+## T9 · Decisões A2/A3 e coordenação com PAPEL-DUPLO
+
+### 🔴 O handle NÃO pode virar `leela` — pare aqui
+
+A decisão nº 1 (`/@castelo` → `/@leela`) **não é executável**, e não por dificuldade técnica: por dois invariantes do próprio produto.
+
+1. **`leela` é o PRIMEIRO item de `HANDLES_RESERVADOS`** (`packages/core/src/perfil/perfil.ts:46`), junto com `leela_oficial` e `oficial`. `validarHandle()` recusa qualquer um deles. A plataforma reservou esse nome **para si**; dar `/@leela` a um tenant é entregar a identidade oficial da casa a uma produtora — mesmo que hoje o dono seja a mesma pessoa.
+2. **O handle é imutável por RN-160.** `perfis` é chaveada **pelo próprio handle** (o handle é o docId), as Rules dizem `write: if false`, e `salvarPerfil` detecta a manobra pelo nome: *"handle é imutável (RN-160): este organizador já tem o perfil @castelo"* (`functions/src/perfil/salvarPerfil.ts:150`). Não existe mecanismo de rename; só delete+create por Admin, furando os dois invariantes de uma vez.
+
+Não apliquei. Três caminhos, todos decisão do dono:
+
+- **(a) Apagar o perfil de semente.** `perfis/castelo` é 100% semente (bio genérica, site `.example.com`). Sem perfil, o dono cria o dele pelo fluxo do produto, que valida tudo. Custo: `/@castelo` deixa de existir — e não há mecanismo de redirecionamento pronto.
+- **(b) Outro handle não reservado** (`leelaexperiencias`, `sejaleela`…). Continua exigindo delete+create, ou seja, furar a RN-160 na mão.
+- **(c) Tirar `leela` da lista de reservados.** Mudança de produto, outra lane, e vale perguntar se a casa quer abrir mão do próprio nome.
+
+### Aplicado: link de semente (decisão nº 2)
+
+Entrou **no plano**, declarativo e congelado — não como escrita avulsa. `perfis/castelo.linksExternos` perde o Instagram (`1 de 2`). Nenhum link novo é inventado.
+
+⚠️ **`https://castelo-producoes.example.com` ("Site oficial") continua lá.** É link de semente pelo mesmo motivo — `.example.com` é domínio reservado que nunca resolve — mas você decidiu só o Instagram, e eu não estendo decisão sozinho.
+
+### Decisão nº 4 — o re-render **vai** trair, e eu meço o alcance
+
+Você pediu confirmação de que o caminho de re-render não trairia. **Ele trai.** Não há termo de saúde armazenado para reescrever: ele é montado na leitura.
+
+```
+paragrafosDoTermoSaude(eventoNome, organizadorNome) → `${organizadorNome} (organizador do evento)`
+   ← evento.organizador.nome
+   ← resolverOrganizadorPublico() lê perfis WHERE tenantId, devolve perfil.nome   (apps/landing/lib/leitor.ts:384)
+```
+
+Trocar `perfis/castelo.nome` para "Leela" muda **retroativamente a parte contratante** de declarações de saúde já aceitas. E o pedido guarda só `saude: { versao, aceiteEm }` — **sem `materialHash`**, enquanto `termos` **tem** `materialHash`. Essa assimetria é o defeito: ninguém sabe que texto foi aceito.
+
+**Alcance medido: 3 aceites sobrevivem, todos compras de teste do próprio dono** (`8CDHM` pago, `Q57PA` e `N4FHP` falhados). Nenhum terceiro afetado. Reportado, não consertado — é escopo de outra lane.
+
+### `admin@demo-leela.dev` — preservada por dependência viva
+
+Registrado no código com a condição que a libera. **Conferido no plano gerado, não presumido:** zero documentos apagados ou editados cujo caminho cite `FTqslV98itZUNGwL5ss6201d23Z2`. O plano nunca apagou conta de autenticação — contas são decisão do dono.
+
+### A conta do dono, e o fantasma que eu mesmo criei
+
+Conferido no plano gerado:
+
+```
+INTOCAVEIS declarados:
+   ✅ profissionais/QbqlSxanxlcFeHCy4g47Vp7jlgz1/dashboard/current
+admin@demo-leela.dev — algum doc apagado? NAO ✅
+conta do dono        — algum doc apagado? NAO ✅
+fantasma do dono     — apagado?           NAO ✅
+```
+
+⚠️ **Na primeira conferência ele estava seguro pelo motivo errado.** O Passo 3c checava o conteúdo antes da proteção, então o fantasma do dono — que por acaso não referencia nada condenado — saía em silêncio, preservado pelo que estava escrito dentro dele e não pela regra. Inverti a ordem: proteção primeiro. Agora a garantia é estrutural e tem teste de regressão.
+
+---
+
 ## T5 e T6 · Script e dry-run — FEITO
 
 - Plano puro e testável: `functions/src/limpeza/planoLimpeza.ts`

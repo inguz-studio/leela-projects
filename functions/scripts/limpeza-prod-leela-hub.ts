@@ -60,10 +60,26 @@ const ALVO: AlvoLimpeza = {
     'MOXZpvp8XugpwNN2ldZFIhmQh5H2', // checkout real (falhou) no evento que fica
     '10LF4k11YShiBa0TnNJI0kNY6eT2', // dugamer597@gmail.com — pessoa real
     'VFlceOpajTd8zgGqFXocI7iiHuS2', // eusouojoaocalixto@gmail.com — pessoa real
-    'FTqslV98itZUNGwL5ss6201d23Z2', // admin@demo-leela.dev
+    // admin@demo-leela.dev — PRESERVADA POR DEPENDÊNCIA VIVA, não por esquecimento.
+    // A lane PAPEL-DUPLO mediu que a autoridade para CONCEDER a capacidade de
+    // administração de plataforma é hoje o papel legado `platform_admin`, e só
+    // esta conta o tem. Apagá-la agora deixaria o sistema sem ninguém capaz de
+    // conceder a capacidade a quem quer que seja — inclusive de reparar a do
+    // dono, se ela se perder. Isto é dependência de sistema, e não apego.
+    //
+    // CONDIÇÃO QUE A LIBERA: existir outro caminho oficial de concessão, com
+    // registro de auditoria, aterrissado E aprovado em review. Enquanto essa
+    // prova não existir, esta linha não sai.
+    'FTqslV98itZUNGwL5ss6201d23Z2',
   ],
   nomeNovo: 'Leela',
   nomeAntigo: 'Castelo Produções',
+  // Decisão do maestro (2026-08-06): o Instagram de semente aponta para uma
+  // conta que não existe. Página pública levando ao vazio é pior que campo
+  // ausente. O perfil real da Leela, se houver, quem preenche é o dono.
+  // ⚠️ `https://castelo-producoes.example.com` (o "Site oficial") é link de
+  // semente pelo mesmo motivo e NÃO foi decidido — fica, aguardando o dono.
+  linksARemover: ['instagram.com/casteloproducoes'],
 };
 
 // ── Credencial. [A6] O token é cacheado em memória. ─────────────────────────
@@ -104,15 +120,43 @@ async function tokenDeAcesso(): Promise<string> {
   return tokenCache.valor;
 }
 
-async function chamar(url: string, init: RequestInit = {}): Promise<unknown> {
-  const tok = await tokenDeAcesso();
-  const r = await fetch(url, {
-    ...init,
-    headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
-  });
-  const texto = await r.text();
-  if (!r.ok) throw new Error(`[limpeza] HTTP ${r.status} em ${url}\n${texto.slice(0, 900)}`);
-  return texto === '' ? null : (JSON.parse(texto) as unknown);
+/**
+ * Chamada com retentativa em falha TRANSITÓRIA (rede caiu, 429, 5xx).
+ *
+ * Existe porque um `fetch failed` derrubou uma rodada inteira de leitura no
+ * meio — inofensivo no dry-run, mas num `--apply` de ~2.800 operações um
+ * piscar de rede abortaria a corrida e deixaria o banco pela metade. O
+ * checkpoint torna isso recuperável; a retentativa faz com que quase nunca
+ * seja preciso recuperar.
+ *
+ * Erro de LÓGICA (4xx que não 429) não é retentado: repetir um pedido malformado
+ * só gasta tempo e esconde o defeito.
+ */
+async function chamar(url: string, init: RequestInit = {}, tentativa = 1): Promise<unknown> {
+  const MAX = 5;
+  try {
+    const tok = await tokenDeAcesso();
+    const r = await fetch(url, {
+      ...init,
+      headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
+    });
+    const texto = await r.text();
+    if (!r.ok) {
+      const transitorio = r.status === 429 || r.status >= 500;
+      if (transitorio && tentativa < MAX) {
+        await espera(500 * 2 ** tentativa);
+        return chamar(url, init, tentativa + 1);
+      }
+      throw new Error(`[limpeza] HTTP ${r.status} em ${url}\n${texto.slice(0, 900)}`);
+    }
+    return texto === '' ? null : (JSON.parse(texto) as unknown);
+  } catch (e) {
+    const jaEhNosso = e instanceof Error && e.message.startsWith('[limpeza]');
+    if (jaEhNosso || tentativa >= MAX) throw e;
+    // Falha de transporte (`fetch failed`, DNS, socket) — vale repetir.
+    await espera(500 * 2 ** tentativa);
+    return chamar(url, init, tentativa + 1);
+  }
 }
 
 /** Falso-verde killer: qualquer `error` no corpo aborta a rodada. */

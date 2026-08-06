@@ -402,6 +402,40 @@ describe('cirurgia no CRM', () => {
   });
 });
 
+describe('links de semente declarados pelo dono', () => {
+  const comLinks = (): DocInventario[] => [
+    ...mundo(),
+    doc('perfis/castelo', {
+      tenantId: 'leela-tenant',
+      nome: 'Castelo Produções',
+      linksExternos: [
+        { label: 'Instagram', url: 'https://instagram.com/casteloproducoes' },
+        { label: 'Site oficial', url: 'https://castelo-producoes.example.com' },
+      ],
+    }),
+  ];
+
+  it('remove só o link declarado e preserva o resto', () => {
+    const p = planejarLimpeza(comLinks(), { ...ALVO, linksARemover: ['instagram.com/casteloproducoes'] });
+    const op = p.operacoes.find((o) => o.caminho === 'perfis/castelo' && o.motivo.includes('link de semente'));
+    const links = op?.tipo === 'editar' ? (op.mudancas['linksExternos'] as { label: string }[]) : [];
+    expect(links).toHaveLength(1);
+    expect(links[0]?.label).toBe('Site oficial');
+  });
+
+  it('sem declaração, não mexe em link nenhum', () => {
+    const p = planejarLimpeza(comLinks(), ALVO);
+    expect(p.operacoes.some((o) => o.motivo.includes('link de semente'))).toBe(false);
+  });
+
+  it('não inventa link novo no lugar do removido', () => {
+    const p = planejarLimpeza(comLinks(), { ...ALVO, linksARemover: ['instagram.com'] });
+    const op = p.operacoes.find((o) => o.motivo.includes('link de semente'));
+    const links = op?.tipo === 'editar' ? (op.mudancas['linksExternos'] as unknown[]) : [];
+    expect(JSON.stringify(links)).not.toMatch(/leela/i);
+  });
+});
+
 describe('nome da produtora', () => {
   it('troca o nome e não encosta no identificador', () => {
     const op = planejarLimpeza(mundo(), ALVO).operacoes.find((o) => o.caminho === 'tenants/leela-tenant');
@@ -455,6 +489,20 @@ describe('órfãos e contas', () => {
       ORDEM.FANTASMAS
     );
     expect(p.orfaosPrevistos).toEqual([]);
+  });
+
+  // Regressão: antes a proteção era checada DEPOIS do conteúdo, então o
+  // fantasma protegido que não apontava para nada saía em silêncio — salvo
+  // pelo que estava escrito dentro dele, e não pela regra.
+  it('declara intocável o fantasma protegido MESMO sem referência a condenado', () => {
+    const inv: DocInventario[] = [
+      ...mundo(),
+      { caminho: 'profissionais/uid-dono', campos: {}, fantasma: true },
+      doc('profissionais/uid-dono/dashboard/current', { inscricoesTotais: 93, receitaConfirmada: 23490 }),
+    ];
+    const p = planejarLimpeza(inv, ALVO);
+    expect(p.intocaveis).toContain('profissionais/uid-dono/dashboard/current');
+    expect(caminhos(p, 'apagar')).not.toContain('profissionais/uid-dono/dashboard/current');
   });
 
   it('não varre o fantasma de identidade protegida — ali o pai ausente é lacuna', () => {

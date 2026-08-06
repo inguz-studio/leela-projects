@@ -192,3 +192,59 @@ A saída real das duas execuções, verde e falseada, está no handoff da lane: 
 ## Em uma frase
 
 O emulador prova que o código está certo. Ele não prova, e não pode provar, que a produção está montada para executá-lo. Essa segunda pergunta agora tem quem a responda, em segundos, antes de cada deploy.
+
+---
+
+# Inventário por listagem não vê documento sob pai ausente
+
+**Lane:** `LIMPEZA-PROD` · 2026-08-06 · descoberto no meio de uma operação destrutiva, pelo pior caminho possível: a lane criou um dos casos que depois teve de encontrar.
+
+## O que aconteceu
+
+Para planejar a exclusão de sete eventos e cinco produtoras, montei o inventário de produção do jeito óbvio: listar as coleções da raiz, e para cada documento listar as subcoleções, recursivamente. Deu **3.138 documentos**, e esse número virou base de decisão — quantos morrem, quantos sobrevivem, quantos órfãos o plano previne.
+
+O número estava errado. O certo é **3.170**.
+
+No Firestore, subcoleção **não pertence** ao documento pai: ela existe por caminho próprio. Apagar `profissionais/{uid}` não apaga `profissionais/{uid}/dashboard/current` — e, pior, o pai apagado **some da listagem da coleção**. O subtree continua lá, cobrando armazenamento, respondendo a leitura direta, e invisível para qualquer varredura que comece listando.
+
+Eram 4 pais fantasmas escondendo 31 documentos. Um deles a própria lane criou, três horas antes, sem perceber.
+
+## A causa, que é de código e não de operação
+
+```ts
+// functions/src/overview/aggregateProfessionalDashboard.ts
+await db.collection('profissionais').doc(profId)
+  .collection('dashboard').doc('current')
+  .set({ ...current, atualizadoEm: FieldValue.serverTimestamp() });
+```
+
+`set` incondicional, sem checar se `profissionais/{profId}` existe. O gatilho `onEventoWriteDashboard` roda em `onWrite` — e `onWrite` acorda no **delete** — recomputando o dashboard do `organizadorId` que estava em `change.before`. Ou seja: apagar um evento **cria** um dashboard para o organizador dele, mesmo que esse organizador nunca tenha tido documento em `profissionais`.
+
+Quando transferi a titularidade dos dois eventos sobreviventes para a conta do dono, o mesmo gatilho criou `profissionais/{uid-do-dono}/dashboard/current` sob um pai que não existe. A lane fabricou o próprio fantasma.
+
+## A regra
+
+**Sempre que uma contagem for base de decisão destrutiva, liste com `showMissing`.**
+
+```
+GET /v1/projects/{p}/databases/(default)/documents/{colecao}?showMissing=true
+```
+
+O parâmetro devolve o documento-fantasma: sem `fields`, sem `createTime`, só o nome — e é o único jeito de descobrir que existe subtree pendurado ali. Distinguir é trivial:
+
+```ts
+const existeDeVerdade = (d) => d.createTime !== undefined || d.fields !== undefined;
+```
+
+Sem isso, o inventário não erra por pouco: ele erra **silenciosamente e para menos**, que é a direção perigosa. Um plano de exclusão calculado sobre ele termina declarando "zero órfãos" enquanto deixa órfão que ele mesmo não consegue enxergar. Foi exatamente o que o dry-run passou a mostrar quando a listagem mudou: **10 referências penduradas** que antes não apareciam em lugar nenhum.
+
+## O que generaliza
+
+1. **Contagem que autoriza destruição precisa provar que enxerga tudo.** "Listei e deu N" não é prova; é prova de que N documentos têm pai vivo.
+2. **Todo gatilho `onWrite` roda no delete.** Se ele escreve, ele escreve durante a limpeza — e pode escrever *depois* do que você acabou de apagar. Varredura de lixo vai por último, nunca no meio.
+3. **`set` em caminho aninhado sem checar o pai é uma fábrica de fantasma.** É barato de escrever, invisível em teste com emulador limpo, e só aparece quando alguém apaga o pai — meses depois, noutra lane.
+4. **A operação que investiga também suja.** A transferência de titularidade era leitura-e-escrita mínima, cinco campos, e mesmo assim disparou o gatilho e criou um fantasma. Medir de novo *depois* de escrever não é paranoia; foi o que fechou o caso.
+
+## Em uma frase
+
+Listagem mostra quem tem pai. Se a sua decisão apaga coisas, você precisa ver também os órfãos que já existem — e `showMissing` é a única porta.
