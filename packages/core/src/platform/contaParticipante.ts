@@ -21,33 +21,29 @@ import {
   TERMO_LGPD_FINALIDADE,
   TERMO_LGPD_VERSAO,
 } from './cadastroOrganizador';
+import { SENHA_MAX, SENHA_MIN, senhaValida } from './politicaDeSenha';
 
 // ---------------------------------------------------------------------------
 // Senha
 // ---------------------------------------------------------------------------
 
 /**
- * Mínimo da senha da conta — o mesmo do Firebase Auth, e o mesmo que o
- * `/definir-senha` já exige.
+ * O piso da senha desta porta é o piso da CASA — não um número desta porta.
  *
- * POR QUE 6 E NÃO 8: os convites de afiliado e de assessoria usam 8, e seria
- * fácil "endurecer" aqui por reflexo. Não é endurecer, é DIVERGIR: esta porta
- * é a mesma capacidade do `/definir-senha` (RN-453), que hoje aceita 6. Duas
- * telas que definem a senha da MESMA conta com réguas diferentes produzem a
- * pessoa que escolhe uma senha num lugar e é recusada no outro — e produzem a
- * dúvida sobre qual das duas é a regra. Se a casa quiser subir o piso, sobe o
- * dos dois no mesmo commit, e o número é este aqui.
+ * O comentário que estava aqui dizia, em 2026-07-28, que se a casa quisesse
+ * subir o piso ela subiria "o dos dois no mesmo commit, e o número é este
+ * aqui". O dono pediu a regra de composição (número + caractere especial) e
+ * esse dia chegou: o número saiu deste arquivo e virou `platform/politicaDeSenha`,
+ * onde a régua vale para as DUAS telas, para as três Functions que criam senha
+ * e para qualquer porta futura. Estes nomes continuam existindo porque o
+ * api-client e as Functions os importam — mas são apelidos, não autoridades.
  */
-export const SENHA_CONTA_MIN = 6;
-export const SENHA_CONTA_MAX = 4096;
+export const SENHA_CONTA_MIN = SENHA_MIN;
+export const SENHA_CONTA_MAX = SENHA_MAX;
 
-/** @pure */
+/** @pure — a política inteira (comprimento + número + especial). */
 export function senhaDeContaValida(senha: unknown): boolean {
-  return (
-    typeof senha === 'string' &&
-    senha.length >= SENHA_CONTA_MIN &&
-    senha.length <= SENHA_CONTA_MAX
-  );
+  return senhaValida(senha);
 }
 
 // ---------------------------------------------------------------------------

@@ -52,6 +52,19 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
    *   `variant='flat'` explícito continua válido (no-op, é o default).
    */
   variant?: 'flat' | 'bordered';
+  /**
+   * Adorno ancorado à direita DENTRO do campo (ex.: o olho de mostrar/ocultar
+   * do `InputSenha`). Nasceu como slot do primitivo, e não como markup do
+   * consumidor, por um motivo medido: o `Input` renderiza label + campo + erro
+   * numa pilha, então qualquer botão posicionado por fora se ancora na PILHA e
+   * desliza sozinho quando aparece a mensagem de erro. Só o primitivo conhece
+   * a caixa do campo.
+   *
+   * Quando ausente, o DOM sai EXATAMENTE como sempre saiu — o contêiner
+   * relativo só existe se houver adorno, para nenhum teste de estrutura dos
+   * consumidores atuais mudar de resposta.
+   */
+  trailing?: React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,6 +79,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       label,
       wrapperClassName,
       variant = 'flat',
+      trailing,
       id,
       disabled,
       'aria-describedby': ariaDescribedBy,
@@ -86,6 +100,22 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const describedBy =
       [ariaDescribedBy, hasError ? errorId : null].filter(Boolean).join(' ') || undefined;
 
+    /** Envolve o campo só quando há adorno — sem adorno o DOM é o de sempre. */
+    const comAdorno = (campo: React.ReactNode): React.ReactNode =>
+      trailing === undefined || trailing === null ? (
+        campo
+      ) : (
+        <div className="relative flex items-center">
+          {campo}
+          {/* Ancorado à caixa do CAMPO (não à pilha), por isso o inset-y-0 aqui
+              e não no wrapper de fora: a mensagem de erro pode nascer embaixo
+              sem empurrar o adorno. */}
+          <span className="absolute inset-y-0 right-0 flex items-center pr-[var(--spacing-1)]">
+            {trailing}
+          </span>
+        </div>
+      );
+
     return (
       <div className={cn('flex flex-col gap-1', wrapperClassName)}>
         {label ? (
@@ -97,6 +127,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         ) : null}
 
+        {comAdorno(
         <input
           ref={ref}
           id={fieldId}
@@ -129,10 +160,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             'disabled:cursor-not-allowed disabled:opacity-40',
             // Transition
             'transition-[border-color,box-shadow] duration-[var(--motion-duration-fast)] ease-[var(--motion-easing-default)]',
+            // Espaço para o adorno não deitar em cima do texto digitado.
+            trailing !== undefined &&
+              trailing !== null &&
+              'pr-[calc(var(--iconbtn-size)+var(--spacing-2))]',
             className,
           )}
           {...props}
-        />
+        />,
+        )}
 
         {hasError && errorMessage ? (
           <span

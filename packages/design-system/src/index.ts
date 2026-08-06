@@ -35,6 +35,14 @@ export { brasaTheme, wineTheme } from './theme/rn-themes';
 // ── Atoms ──────────────────────────────────────────────────────────────────
 export { Button, buttonVariants, type ButtonProps } from './components/Button';
 export { Input, type InputProps } from './components/Input';
+// Campo de senha da casa: revelar/ocultar + medidor de força (FRONTEIRA-AUTH).
+// A régua vive em @leela/core · politicaDeSenha; aqui é só a apresentação.
+export {
+  InputSenha,
+  type InputSenhaProps,
+  type AvaliacaoDeSenha,
+  type NivelForcaSenha,
+} from './components/InputSenha';
 export { FileInput, type FileInputProps } from './components/FileInput';
 export { Select, type SelectProps, type SelectOption } from './components/Select';
 export { Checkbox, type CheckboxProps } from './components/Checkbox';

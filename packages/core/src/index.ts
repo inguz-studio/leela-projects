@@ -808,9 +808,17 @@ export {
 export type { TenantStatus, TenantTipo, Tenant, TenantInput } from './platform/tenant';
 export { canTransition } from './platform/tenant';
 
-// Papéis e guards puros (E16-S1600-T2)
-export type { Role, AuthClaims, TrilhaOperacao } from './platform/roles';
-export { isPlatformAdmin, belongsToTenant, isTenantMember, canSetClaims } from './platform/roles';
+// Papéis e guards puros (E16-S1600-T2 · capacidade de plataforma na PAPEL-DUPLO)
+export type { Role, AuthClaims, TrilhaOperacao, PaineisDaConta } from './platform/roles';
+export {
+  isPlatformAdmin,
+  isLegacyPlatformAdminRole,
+  hasPlatformAdminCapability,
+  paineisDaConta,
+  belongsToTenant,
+  isTenantMember,
+  canSetClaims,
+} from './platform/roles';
 
 // Termos comerciais por tenant (E16-S1602-T1 · RN-404/405/406/410)
 export type {
@@ -885,6 +893,22 @@ export {
 // RN-478/479/480). O `/cadastrar` do painel consome o MESMO contrato quando a
 // fila da SPEC-QUALIFICACAO rodar — dois contratos paralelos criando a mesma
 // conta é o CONTA-2 do painel.
+// Política de senha da casa — UMA autoridade para tela e servidor (FRONTEIRA-AUTH,
+// pedido do dono: número + caractere especial + medidor de força). Os apelidos
+// SENHA_CONTA_MIN/senhaDeContaValida logo abaixo apontam para cá.
+export type {
+  AvaliacaoSenha,
+  ForcaSenha,
+  RequisitosSenha,
+} from './platform/politicaDeSenha';
+export {
+  SENHA_MIN,
+  SENHA_MAX,
+  avaliarSenha,
+  senhaValida,
+  exigenciaDeSenha,
+} from './platform/politicaDeSenha';
+
 export type { ContaParticipanteInput } from './platform/contaParticipante';
 export {
   SENHA_CONTA_MIN,
