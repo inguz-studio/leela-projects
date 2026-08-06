@@ -47,7 +47,15 @@ export type TipoEmailTransacional =
    * conseguir entrar — o incidente de 04/08 servido de novo, com uma
    * credencial no meio.
    */
-  | 'codigo_de_acesso';
+  | 'codigo_de_acesso'
+  /**
+   * O "esqueci minha senha" (lane DIAG-SENHA). Entrou na doutrina pelo mesmo
+   * motivo do anterior e com o mesmo custo: em 2026-08-05T11:43:11Z ele falhou
+   * em produção para um pedido real, gravou `desfecho: falha_envio` com um
+   * `logger.error` cru — sem o campo que a política casa — e ninguém soube. A
+   * falha só apareceu porque uma lane de deploy foi ler o log do dia seguinte.
+   */
+  | 'redefinir_senha';
 
 export interface IncidenteEmail {
   tipo: TipoEmailTransacional;

@@ -36,6 +36,26 @@
 // FAIL-CLOSED DO E-MAIL (RN-137): sem `BREVO_API_KEY` o `selectEmailProvider`
 // devolve null. Aqui isso é registrado como pendência no log e a resposta segue
 // neutra — a tela não pode virar detector de configuração do servidor.
+//
+// -----------------------------------------------------------------------------
+// O QUE 05/08 ENSINOU (lane DIAG-SENHA · trace leela-pixreal-diag-20260804)
+// -----------------------------------------------------------------------------
+// Às 11:43:11Z de 2026-08-05 esta function falhou para um pedido REAL com
+// `INTERNAL ASSERT FAILED: Unable to create the email action link` e gravou
+// `desfecho: falha_envio`. Três defeitos num só evento, e os três estão
+// consertados aqui:
+//
+//   1. O ramo "conta não existe" era inalcançável. O projeto tem proteção de
+//      enumeração ligada no Auth, e com ela o endereço desconhecido volta como
+//      assert do SDK, não como `auth/user-not-found`. A tradução agora mora em
+//      `classificarFalhaDeLink` (`linkDeAcao.ts`), que conhece os dois dialetos.
+//   2. O rótulo mentia. `falha_envio` era o valor INICIAL da variável, então
+//      toda exceção — inclusive a do Auth, antes de existir e-mail — saía
+//      acusando o provedor. Agora existe `erro_inesperado`.
+//   3. Ninguém foi avisado. Os dois `logger.error` deste arquivo passaram a
+//      registrar INCIDENTE (`incidenteEmail.ts`), com o campo `alerta` que a
+//      política do Cloud Logging casa. A falha foi descoberta um dia depois,
+//      por uma lane de deploy que foi ler o log por outro motivo.
 // =============================================================================
 
 import * as admin from 'firebase-admin';
@@ -45,8 +65,10 @@ import { validarEmail, type EmailProvider } from '@leela/core';
 import { selectEmailProvider } from '../email/selectEmailProvider';
 import { renderRedefinirSenhaEmail } from '../email/templates';
 import { consumirRateLimit, hashChave, type JanelaRateLimit } from '../shared/rateLimit';
+import { registrarIncidenteEmail } from '../email/incidenteEmail';
 import {
   actionCodeSettingsSenha,
+  classificarFalhaDeLink,
   ORIGEM_PADRAO,
   origemDeLinkValida,
   reescreverParaTelaDeSenha,
@@ -90,39 +112,66 @@ export interface RedefinicaoAuth {
   nomeDaConta(email: string): Promise<string>;
 }
 
+/**
+ * O pedaço do Admin SDK que o adapter usa. Existe como COSTURA (F1 da lane
+ * DIAG-SENHA): a tradução de erro do Auth em desfecho é onde o defeito de
+ * 05/08 morava, e ela não tinha um único teste porque `admin.auth()` é global.
+ * O default é o SDK de verdade — produção não enxerga diferença.
+ */
+export interface AuthSdkDeLinkSenha {
+  /** `generatePasswordResetLink`; sem `settings` = sem `continueUrl`. */
+  gerarLink(
+    email: string,
+    settings?: { url: string; handleCodeInApp: false }
+  ): Promise<string>;
+  /** `getUserByEmail(...).displayName`. */
+  nomeExibicao(email: string): Promise<string>;
+}
+
+/** A costura ligada no Admin SDK real. */
+export function authSdkDeLinkSenhaAdmin(): AuthSdkDeLinkSenha {
+  return {
+    async gerarLink(email, settings) {
+      return settings === undefined
+        ? admin.auth().generatePasswordResetLink(email)
+        : admin.auth().generatePasswordResetLink(email, settings);
+    },
+    async nomeExibicao(email) {
+      return (await admin.auth().getUserByEmail(email)).displayName ?? '';
+    },
+  };
+}
+
 /** Adapter default sobre `admin.auth()`. */
 export function redefinicaoAuthAdmin(
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
+  sdk: AuthSdkDeLinkSenha = authSdkDeLinkSenhaAdmin()
 ): RedefinicaoAuth {
   return {
     async gerarLinkRedefinicao(email, origem) {
       try {
-        return await admin
-          .auth()
-          .generatePasswordResetLink(email, actionCodeSettingsSenha(origem, env));
+        return await sdk.gerarLink(email, actionCodeSettingsSenha(origem, env));
       } catch (err) {
-        const code = (err as { code?: string }).code;
-        if (code === 'auth/user-not-found' || code === 'auth/email-not-found') {
-          return null;
-        }
+        const causa = classificarFalhaDeLink(err);
+        // `sem_conta` cobre os dois dialetos do Auth: o `auth/user-not-found`
+        // clássico e o assert de "sem oobLink" que a proteção de enumeração
+        // do projeto produz desde que foi ligada (ver `linkDeAcao.ts`). Sem
+        // este ramo, endereço desconhecido vira exceção e o pedido legítimo
+        // morre junto com ele.
+        if (causa === 'sem_conta') return null;
         // Domínio do `continueUrl` fora da allowlist de domínios autorizados do
         // Auth. Degradar para o link SEM `continueUrl` é melhor que deixar
         // alguém sem conseguir recuperar a conta por causa de configuração —
         // o `oobCode` é o que importa, e a reescrita para o painel acontece
         // depois de qualquer jeito. O WARN é o que faz alguém consertar.
-        if (
-          code === 'auth/invalid-continue-uri' ||
-          code === 'auth/unauthorized-continue-uri' ||
-          code === 'auth/missing-continue-uri'
-        ) {
-          logger.warn('reset_senha_continue_uri_recusada', { code });
+        if (causa === 'continue_uri_recusada') {
+          logger.warn('reset_senha_continue_uri_recusada', {
+            code: (err as { code?: string }).code,
+          });
           try {
-            return await admin.auth().generatePasswordResetLink(email);
+            return await sdk.gerarLink(email);
           } catch (err2) {
-            const code2 = (err2 as { code?: string }).code;
-            if (code2 === 'auth/user-not-found' || code2 === 'auth/email-not-found') {
-              return null;
-            }
+            if (classificarFalhaDeLink(err2) === 'sem_conta') return null;
             throw err2;
           }
         }
@@ -131,7 +180,7 @@ export function redefinicaoAuthAdmin(
     },
     async nomeDaConta(email) {
       try {
-        return (await admin.auth().getUserByEmail(email)).displayName ?? '';
+        return await sdk.nomeExibicao(email);
       } catch {
         return '';
       }
@@ -151,6 +200,14 @@ export type DesfechoRedefinicao =
   | 'email_invalido'
   | 'pendente_chave'
   | 'falha_envio'
+  /**
+   * Exceção que não é falha de ENVIO (DIAG-SENHA). O desfecho existe porque a
+   * ausência dele custou o diagnóstico de 05/08: o wrapper inicializava a
+   * variável em `falha_envio`, então qualquer exceção antes da Brevo — a do
+   * Auth, inclusive — era registrada com o rótulo de "a Brevo recusou". Quem
+   * lesse o log iria caçar a chave do provedor, que estava perfeita.
+   */
+  | 'erro_inesperado'
   | 'limite_estourado';
 
 /**
@@ -211,8 +268,12 @@ export async function solicitarRedefinicaoCore(
     });
     return 'enviado';
   } catch (err) {
-    logger.error('reset_senha_email_falhou', {
-      err: err instanceof Error ? err.message : String(err),
+    // DIAG-SENHA: falha de envio transacional é INCIDENTE, no molde da
+    // rodada (`incidenteEmail.ts`) — mesmo nome de evento de sempre, agora
+    // com o campo `alerta` que a política do Cloud Logging casa. Sem PII.
+    registrarIncidenteEmail('reset_senha_email_falhou', {
+      tipo: 'redefinir_senha',
+      erro: err,
     });
     return 'falha_envio';
   }
@@ -241,7 +302,9 @@ export async function solicitarRedefinicaoComTempoConstante(
   pisoMs: number = PISO_RESPOSTA_MS
 ): Promise<SolicitarRedefinicaoResultado> {
   const inicio = Date.now();
-  let desfecho: DesfechoRedefinicao = 'falha_envio';
+  // O default é `erro_inesperado`, não `falha_envio`: só chega aqui quem
+  // LANÇOU, e lançar antes da Brevo não é a Brevo recusando (DIAG-SENHA).
+  let desfecho: DesfechoRedefinicao = 'erro_inesperado';
   try {
     desfecho = await solicitarRedefinicaoCore(
       db,
@@ -253,8 +316,15 @@ export async function solicitarRedefinicaoComTempoConstante(
   } catch (err) {
     // Falha inesperada também responde neutro: um 500 só para conta existente
     // seria o mesmo oráculo por outro caminho.
-    logger.error('reset_senha_falhou', {
-      err: err instanceof Error ? err.message : String(err),
+    //
+    // MAS RESPONDER NEUTRO NÃO É NÃO CONTAR (DIAG-SENHA). Foi exatamente
+    // assim que 05/08 passou despercebido: a pessoa recebeu `{ ok: true }`,
+    // não recebeu e-mail nenhum, e o log ficou sem o campo que dispara
+    // alerta. O incidente usa o MESMO `alerta` dos outros e-mails — uma
+    // política só cobre a casa toda —, e o `tipo` diz qual caminho morreu.
+    registrarIncidenteEmail('reset_senha_falhou', {
+      tipo: 'redefinir_senha',
+      erro: err,
     });
   }
   // Sem PII (LGPD): o desfecho é categoria, nunca o e-mail.

@@ -210,3 +210,74 @@ export function reescreverParaOPainel(
 ): string {
   return reescreverParaTelaDeSenha(linkDoFirebase, 'organizador', env);
 }
+
+// ---------------------------------------------------------------------------
+// POR QUE O AUTH FALHA AO GERAR O LINK (lane DIAG-SENHA · trace
+// leela-pixreal-diag-20260804)
+// ---------------------------------------------------------------------------
+// Em 2026-08-05T11:43:11Z o "esqueci minha senha" morreu em produção com
+// `INTERNAL ASSERT FAILED: Unable to create the email action link`. A causa
+// não é bug do Auth nem domínio fora da allowlist: o projeto `leela-hub` é
+// Identity Platform com `emailPrivacyConfig.enableImprovedEmailPrivacy: true`,
+// e com essa proteção LIGADA o Identity Toolkit deixou de responder
+// `EMAIL_NOT_FOUND` para endereço sem conta. Ele responde HTTP 200 com o corpo
+// `{kind, email}` e NENHUM `oobLink` — justamente para não revelar quem existe.
+//
+// O Admin SDK não conhece esse desfecho: o `setResponseValidator` de
+// `generatePasswordResetLink` só sabe que "sem oobLink = deu errado" e lança
+// `auth/internal-error` com aquela frase de assert
+// (`firebase-admin/lib/auth/auth-api-request.js`). O ramo `auth/user-not-found`
+// que este repositório escreveu virou CÓDIGO MORTO no dia em que a proteção
+// foi ligada, e "conta não existe" passou a viajar como erro de infra.
+//
+// Por isso a classificação mora AQUI e não no chamador: é uma propriedade do
+// contrato do link de ação, e vale para todo caminho que gera um.
+//
+// ⚠ PARA QUEM FOR MEXER: a frase é a única evidência que o SDK entrega. Se o
+// firebase-admin mudar o texto, o ramo `sem_conta` volta a ser inalcançável e
+// o sintoma volta a ser o de 05/08. O teste `redefinirSenhaProprio` fixa a
+// frase EXATA que a produção cuspiu; ele quebrando é o aviso.
+// ---------------------------------------------------------------------------
+
+/**
+ * A frase que o Admin SDK usa quando o Identity Toolkit responde sem
+ * `oobLink`. Copiada do SDK, não inventada aqui.
+ */
+export const MSG_SEM_OOB_LINK = 'Unable to create the email action link';
+
+/** Por que o Auth recusou gerar o link. */
+export type CausaDeFalhaDeLink =
+  /** Não há conta para o endereço (com ou sem proteção de enumeração). */
+  | 'sem_conta'
+  /** `continueUrl` fora dos domínios autorizados do projeto. */
+  | 'continue_uri_recusada'
+  /** Qualquer outra coisa — infra, quota, permissão. NUNCA engolir. */
+  | 'desconhecida';
+
+/**
+ * Classifica o erro do `generate*Link`. PURO — é o que torna o desfecho de
+ * 05/08 reproduzível sem produção.
+ *
+ * `sem_conta` exige o PAR código + frase. Só o `auth/internal-error` não basta:
+ * ele é o código genérico do SDK e cobre falha real de infra, que precisa
+ * continuar subindo em vez de virar um "conta não existe" silencioso.
+ * @pure
+ */
+export function classificarFalhaDeLink(err: unknown): CausaDeFalhaDeLink {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (code === 'auth/user-not-found' || code === 'auth/email-not-found') {
+    return 'sem_conta';
+  }
+  if (
+    code === 'auth/invalid-continue-uri' ||
+    code === 'auth/unauthorized-continue-uri' ||
+    code === 'auth/missing-continue-uri'
+  ) {
+    return 'continue_uri_recusada';
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  if (code === 'auth/internal-error' && msg.includes(MSG_SEM_OOB_LINK)) {
+    return 'sem_conta';
+  }
+  return 'desconhecida';
+}

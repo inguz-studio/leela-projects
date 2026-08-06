@@ -17,13 +17,27 @@
  *       laudo INV-EMAIL-INGRESSO marcou como P2).
  *   S7. Degradação honesta: link torto ou sem `oobCode` volta o original, em
  *       vez de produzir um link de recuperação quebrado.
+ *
+ * Acrescentado pela lane DIAG-SENHA (trace leela-pixreal-diag-20260804), a
+ * partir da falha REAL de 2026-08-05T11:43:11Z:
+ *
+ *   S8. Endereço sem conta continua sendo "conta inexistente" mesmo com a
+ *       proteção de enumeração do Auth ligada — que é quando o SDK devolve um
+ *       assert genérico em vez de `auth/user-not-found`.
+ *   S9. O rótulo do desfecho não mente: exceção antes do envio não se chama
+ *       `falha_envio`.
+ *  S10. Falha aqui é INCIDENTE, com o campo que a política de alerta casa.
  */
 import type * as admin from 'firebase-admin';
 import type { EmailProvider } from '@leela/core';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import * as logger from 'firebase-functions/logger';
+import { ALERTA_EMAIL_TRANSACIONAL } from '../email/incidenteEmail';
 import {
   actionCodeSettingsSenha,
   basePainel,
+  classificarFalhaDeLink,
+  MSG_SEM_OOB_LINK,
   PAINEL_URL_PADRAO,
   ROTA_APOS_DEFINIR_SENHA,
   ROTA_REDEFINIR_SENHA,
@@ -32,8 +46,10 @@ import {
 import {
   janelaDoEmail,
   LIMITE_POR_EMAIL,
+  redefinicaoAuthAdmin,
   solicitarRedefinicaoComTempoConstante,
   solicitarRedefinicaoCore,
+  type AuthSdkDeLinkSenha,
   type RedefinicaoAuth,
 } from '../auth/solicitarRedefinicaoSenha';
 
@@ -410,5 +426,239 @@ describe('S7 · degradação honesta da reescrita', () => {
       { email: 'marina@exemplo.test' }
     );
     expect(desfecho).toBe('enviado');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S8/S9/S10 — a falha de 2026-08-05T11:43:11Z (lane DIAG-SENHA)
+// ---------------------------------------------------------------------------
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+/**
+ * O erro EXATO que a produção cuspiu. `code` e `message` são os que o
+ * `firebase-admin` monta em `auth-api-request.js` quando o Identity Toolkit
+ * responde 200 SEM `oobLink` — o que a proteção de enumeração faz para
+ * endereço sem conta.
+ */
+function erroDaProtecaoDeEnumeracao(): Error {
+  const err = new Error(
+    'INTERNAL ASSERT FAILED: Unable to create the email action link'
+  );
+  (err as Error & { code: string }).code = 'auth/internal-error';
+  return err;
+}
+
+function erroComCodigo(code: string, message = 'erro do auth'): Error {
+  const err = new Error(message);
+  (err as Error & { code: string }).code = code;
+  return err;
+}
+
+/** Costura do SDK que sempre falha do mesmo jeito. */
+function sdkQueFalha(err: Error, aoDegradar?: Error | string): AuthSdkDeLinkSenha {
+  return {
+    gerarLink: async (_email, settings) => {
+      if (settings === undefined) {
+        if (aoDegradar instanceof Error) throw aoDegradar;
+        if (typeof aoDegradar === 'string') return aoDegradar;
+      }
+      throw err;
+    },
+    nomeExibicao: async () => 'Marina Alves',
+  };
+}
+
+describe('S8 · endereço sem conta é "sem conta", não é falha de infra', () => {
+  it('a frase do assert do SDK é lida como conta inexistente', () => {
+    expect(classificarFalhaDeLink(erroDaProtecaoDeEnumeracao())).toBe('sem_conta');
+    // A constante e a mensagem real não podem divergir: é a única evidência
+    // que o SDK entrega, e o ramo inteiro depende dela.
+    expect(erroDaProtecaoDeEnumeracao().message).toContain(MSG_SEM_OOB_LINK);
+  });
+
+  it('o dialeto clássico do Auth continua valendo', () => {
+    expect(classificarFalhaDeLink(erroComCodigo('auth/user-not-found'))).toBe('sem_conta');
+    expect(classificarFalhaDeLink(erroComCodigo('auth/email-not-found'))).toBe('sem_conta');
+  });
+
+  it('continueUrl recusada é a SUA causa, não "sem conta"', () => {
+    for (const code of [
+      'auth/invalid-continue-uri',
+      'auth/unauthorized-continue-uri',
+      'auth/missing-continue-uri',
+    ]) {
+      expect(classificarFalhaDeLink(erroComCodigo(code))).toBe('continue_uri_recusada');
+    }
+  });
+
+  it('infra de verdade NÃO vira "sem conta" silenciosa', () => {
+    // O par código+frase é o que decide. `auth/internal-error` sozinho é o
+    // código genérico do SDK: engoli-lo esconderia quota, IAM e rede.
+    expect(classificarFalhaDeLink(erroComCodigo('auth/internal-error'))).toBe('desconhecida');
+    expect(classificarFalhaDeLink(new Error(MSG_SEM_OOB_LINK))).toBe('desconhecida');
+    expect(classificarFalhaDeLink(erroComCodigo('auth/quota-exceeded'))).toBe('desconhecida');
+    expect(classificarFalhaDeLink(null)).toBe('desconhecida');
+    expect(classificarFalhaDeLink('string solta')).toBe('desconhecida');
+  });
+
+  it('o adapter devolve null (não lança) para o erro real de produção', async () => {
+    const auth = redefinicaoAuthAdmin(ENV, sdkQueFalha(erroDaProtecaoDeEnumeracao()));
+    await expect(auth.gerarLinkRedefinicao('naoexiste@exemplo.test', 'organizador'))
+      .resolves.toBeNull();
+  });
+
+  it('e o desfecho volta a ser conta_inexistente, sem gastar a Brevo', async () => {
+    const provider = providerFake();
+    const desfecho = await solicitarRedefinicaoCore(
+      dbQueLibera(),
+      redefinicaoAuthAdmin(ENV, sdkQueFalha(erroDaProtecaoDeEnumeracao())),
+      provider,
+      { email: 'naoexiste@exemplo.test' }
+    );
+    expect(desfecho).toBe('conta_inexistente');
+    expect(provider.enviados).toHaveLength(0);
+  });
+
+  it('erro desconhecido continua SUBINDO pelo adapter', async () => {
+    const auth = redefinicaoAuthAdmin(ENV, sdkQueFalha(erroComCodigo('auth/quota-exceeded')));
+    await expect(
+      auth.gerarLinkRedefinicao('existe@exemplo.test', 'organizador')
+    ).rejects.toThrow('erro do auth');
+  });
+
+  it('continueUrl recusada degrada para o link sem settings', async () => {
+    const auth = redefinicaoAuthAdmin(
+      ENV,
+      sdkQueFalha(erroComCodigo('auth/unauthorized-continue-uri'), LINK_FIREBASE)
+    );
+    await expect(
+      auth.gerarLinkRedefinicao('existe@exemplo.test', 'organizador')
+    ).resolves.toBe(LINK_FIREBASE);
+  });
+
+  it('degradação que esbarra na proteção de enumeração também devolve null', async () => {
+    const auth = redefinicaoAuthAdmin(
+      ENV,
+      sdkQueFalha(
+        erroComCodigo('auth/unauthorized-continue-uri'),
+        erroDaProtecaoDeEnumeracao()
+      )
+    );
+    await expect(
+      auth.gerarLinkRedefinicao('naoexiste@exemplo.test', 'organizador')
+    ).resolves.toBeNull();
+  });
+
+  it('nomeDaConta engole a falha do SDK e não derruba o fluxo', async () => {
+    const auth = redefinicaoAuthAdmin(ENV, {
+      gerarLink: async () => LINK_FIREBASE,
+      nomeExibicao: async () => {
+        throw erroComCodigo('auth/user-not-found');
+      },
+    });
+    await expect(auth.nomeDaConta('x@exemplo.test')).resolves.toBe('');
+  });
+});
+
+describe('S9 · o rótulo do desfecho não mente', () => {
+  it('exceção antes do envio NÃO se chama falha_envio', async () => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    await solicitarRedefinicaoComTempoConstante(
+      dbQueLibera(),
+      {
+        gerarLinkRedefinicao: async () => {
+          throw erroComCodigo('auth/quota-exceeded');
+        },
+        nomeDaConta: async () => '',
+      },
+      providerFake(),
+      { email: 'existe@exemplo.test' },
+      new Date(),
+      5
+    );
+    expect(info).toHaveBeenCalledWith('reset_senha', { desfecho: 'erro_inesperado' });
+  });
+
+  it('a Brevo recusando CONTINUA se chamando falha_envio', async () => {
+    vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const recusa = {
+      sendTransactional: async () => {
+        throw new Error('401 unauthorized');
+      },
+    } as unknown as EmailProvider;
+    const desfecho = await solicitarRedefinicaoCore(
+      dbQueLibera(),
+      authComConta(),
+      recusa,
+      { email: 'existe@exemplo.test' }
+    );
+    expect(desfecho).toBe('falha_envio');
+  });
+});
+
+describe('S10 · a falha vira incidente com o campo que a política casa', () => {
+  it('a recusa da Brevo carrega alerta, severidade e tipo', async () => {
+    const erro = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const recusa = {
+      sendTransactional: async () => {
+        throw new Error('401 unauthorized');
+      },
+    } as unknown as EmailProvider;
+    await solicitarRedefinicaoCore(dbQueLibera(), authComConta(), recusa, {
+      email: 'marina@exemplo.test',
+    });
+
+    expect(erro).toHaveBeenCalledTimes(1);
+    const [evento, payload] = erro.mock.calls[0] as [string, Record<string, unknown>];
+    // O NOME do evento é preservado — quem já consulta por ele continua achando.
+    expect(evento).toBe('reset_senha_email_falhou');
+    expect(payload['alerta']).toBe(ALERTA_EMAIL_TRANSACIONAL);
+    expect(payload['severidade']).toBe('critico');
+    expect(payload['tipo']).toBe('redefinir_senha');
+    // LGPD: nem o e-mail nem o nome entram no incidente.
+    const serializado = JSON.stringify(payload);
+    expect(serializado).not.toContain('marina@exemplo.test');
+    expect(serializado).not.toContain('Marina');
+  });
+
+  it('a exceção inesperada também dispara alerta (o silêncio de 05/08)', async () => {
+    const erro = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    await solicitarRedefinicaoComTempoConstante(
+      dbQueLibera(),
+      {
+        gerarLinkRedefinicao: async () => {
+          throw erroComCodigo('auth/quota-exceeded');
+        },
+        nomeDaConta: async () => '',
+      },
+      providerFake(),
+      { email: 'existe@exemplo.test' },
+      new Date(),
+      5
+    );
+    const [evento, payload] = erro.mock.calls[0] as [string, Record<string, unknown>];
+    expect(evento).toBe('reset_senha_falhou');
+    expect(payload['alerta']).toBe(ALERTA_EMAIL_TRANSACIONAL);
+    expect(payload['severidade']).toBe('critico');
+  });
+
+  it('o caminho de 05/08 não alerta mais — porque não é mais falha', async () => {
+    const erro = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => undefined);
+    await solicitarRedefinicaoComTempoConstante(
+      dbQueLibera(),
+      redefinicaoAuthAdmin(ENV, sdkQueFalha(erroDaProtecaoDeEnumeracao())),
+      providerFake(),
+      { email: 'naoexiste@exemplo.test' },
+      new Date(),
+      5
+    );
+    expect(erro).not.toHaveBeenCalled();
+    expect(info).toHaveBeenCalledWith('reset_senha', { desfecho: 'conta_inexistente' });
   });
 });

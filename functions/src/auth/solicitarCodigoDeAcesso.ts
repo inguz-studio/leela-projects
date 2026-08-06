@@ -23,8 +23,9 @@
 // leitura condicional acrescentada antes do envio reabre o oráculo, mesmo que a
 // resposta continue idêntica. O ataque é medir a diferença de tempo entre
 // endereço conhecido e endereço inventado, com amostra grande. O `solicitar-
-// RedefinicaoSenha` precisa de um PISO de tempo porque ele TEM esse ramo
-// (`generatePasswordResetLink` devolve null para conta inexistente); aqui o
+// RedefinicaoSenha` precisa de um PISO de tempo porque ele TEM esse ramo (o
+// adapter dele traduz a recusa do `generatePasswordResetLink` em `null` para
+// conta inexistente — ver `classificarFalhaDeLink` em `linkDeAcao.ts`); aqui o
 // piso é desnecessário porque o ramo não existe — e essa é uma propriedade a
 // preservar, não uma economia a reverter.
 //
