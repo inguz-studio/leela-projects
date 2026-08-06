@@ -16,6 +16,10 @@
 >
 > **Leia com esta data na cabeça: 05/08 à noite, tudo o que estava represado subiu.** Painel, landing, regras do Firestore, regras do Storage e vinte e uma das noventa e seis funções entraram em produção num deploy só, com cada passo confirmado relendo o servidor. O painel estava vinte e duas horas atrás do repositório e passou a estar em dia. Onde este painel dizia "construído e fora do ar", agora diz "no ar" — e onde continuar dizendo "fora do ar", é porque de fato não subiu. **A única frente do dia que não subiu é o conserto da redefinição de senha**, que é posterior ao deploy e está em review. Prova passo a passo em `.nirvana/handoffs/leela-deploy-tudo-0805.md`.
 >
+> **Saiu em 06/08 · três itens deixaram de ser seus e viraram default permanente.** Você aprovou a proposta da triagem, verbatim: *"aprovado, pode virar default permanente esses três, e corrija"*. Saíram daqui o **12b** e o **QUALIF-6** (o pagador estrangeiro: o paliativo do comprador brasileiro pagando pelo estrangeiro vira o comportamento permanente, e o lote `ESTRANGEIRO-CHECKOUT` passa de gated por espera a fechado por decisão), o **11** (os três segredos: nunca foi seu, e a conferência que faltava foi feita no mesmo dia — a chave dos dados bancários existe no Secret Manager, e o endereço do monitoramento **não existe**, o que junta essa ponta ao item de observabilidade que já está com o CTO humano) e a hipótese **HIP-R9-01** (a pré-compra do clube-influenciador: a RN-315 vira a regra, sem prazo). Cada um saiu com a **condição de reabertura escrita**, porque default permanente sem condição é esquecimento com outro nome. O registro completo, com o verbatim de cada item como estava aqui, a verificação medida e as três condições, está em `02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`. O painel caiu de 60 para **56**.
+>
+> **Entrou em 06/08 · dois itens da limpeza do banco.** A lane que enxuga o `leela-hub` para uma produtora só trouxe duas decisões que não são dela: o **PERFIL-1** (a produtora passa a se chamar Leela e o endereço público dela continua `/@castelo`, porque `leela` é handle reservado da plataforma e o handle é imutável por regra) e o **ACEITE-1** (o termo de saúde é montado na leitura e não guarda impressão digital do texto aceito, ao contrário do termo de uso). Nenhum dos dois trava a limpeza. O painel vai de 56 para **58**.
+>
 > **Personagens dos exemplos.** Ana compra, Castelo organiza eventos, Marina opera o painel, Téo é influenciador afiliado. São ilustrativos, não pessoas do banco.
 
 ## Decisões que dependem de você
@@ -231,15 +235,6 @@ O login com Google e com Apple já está escrito no código e nenhuma tela usa. 
 - **Por que agora:** a Apple exige o botão dela para publicar app na App Store, então a conta vai ser necessária de qualquer forma. Antecipar evita subir a porta duas vezes.
 - **Opções:** subir Google agora e Apple quando as chaves existirem (**default proposto** — botão que quebra é pior que botão ausente) · segurar os dois até a Apple estar pronta.
 - **Onde aterrissa:** `packages/api-client/src/auth.ts`, cujo cabeçalho já lista as três pendências; RN-463 em [[LEELA-E00-fundacao-tecnica]].
-
-### QUALIF-6 · o passaporte entra como regra, mas a jornada do estrangeiro trava no pagamento
-
-Você pediu passaporte para quem não tem CPF, e isso já era regra registrada desde 19/07 (RN-175, RN-176 e RN-177). A parte de identidade está especificada e não custa quase nada, porque a chave do registro de pessoas já reservou o espaço do documento tipado. O que não anda é o pagamento: **o Asaas exige CPF ou CNPJ para cobrar**, e a liberação para cartão internacional é o item 12b, que você adiou em 26/07. *O estrangeiro se inscreve com passaporte e não consegue pagar sozinho.*
-
-- **O que fica com você:** reabrir o 12b com o gerente de contas do Asaas, ou seguir com o paliativo.
-- **Por que agora:** nada empurra, e o paliativo funciona. Só não pode ser prometido ao estrangeiro o que trava no checkout.
-- **Opções:** seguir com o paliativo, comprador brasileiro paga pelo estrangeiro inscrito com passaporte (**default em vigor**, custo zero, já registrado no 12b) · pedir a liberação, cerca de seis dias úteis, e mesmo assim só cartão internacional à vista, sem PIX, sem boleto e sem parcelamento.
-- **Onde aterrissa:** delta da RN-176 em [[LEELA-E12-landing]] e delta da RN-177 em [[LEELA-E19-crm]]; a tela segue no lote `ESTRANGEIRO-CHECKOUT`, gated.
 
 ### DEPLOY-1 · a porta de entrada do organizador está pronta e não está no ar
 
@@ -490,6 +485,28 @@ A aba de clubes da área do cliente foi construída e funciona. O que a descober
 - **Opções:** **manter o estado vazio honesto e abrir a entrada numa rodada própria** (**default proposto**) — a tela foi escrita de propósito para não prometer um botão que não existe, e a entrada no clube é épico de produto (E05), com convite, aceite e vínculo, não um ajuste de tela · **construir a entrada agora**, o que puxa a frente inteira do clube para dentro desta rodada · **esconder a aba até existir caminho de entrada**, que eu recomendo recusar: você pediu Meus Clubes no escopo da área, e esconder resolve a tela em vez de resolver o produto.
 - **Onde aterrissa:** `functions/src/cliente/meusClubes.ts` e `PainelClubes.tsx`; RN-101 e RN-451 em [[LEELA-E05-clubs]] e [[LEELA-E12-landing]]. Medição em `.nirvana/handoffs/leela-pixreal-diag-20260804-BUILD-B4.md` §1.1 e §1.7.
 
+### PERFIL-1 · a produtora passa a se chamar Leela e o endereço público dela continua sendo /@castelo
+
+A limpeza troca o nome de exibição da produtora de "Castelo Produções" para "Leela" em todas as superfícies. O endereço público do perfil dela **não** muda: continua `/@castelo`. Não é esquecimento, é a única saída que não quebra nada — e você precisa saber que ela existe. *Você abre o perfil da sua produtora, lê "Leela" no topo, e a barra de endereço diz `castelo`.*
+
+Duas travas do próprio produto impedem a troca. **`leela` é handle reservado da plataforma** (está na lista ao lado de `leela_oficial` e `oficial`): a casa guardou esse nome para si, e entregá-lo a uma produtora — mesmo sendo a sua — é abrir mão do próprio nome. E **o handle é imutável por regra**: ele é a própria chave do documento do perfil, a gravação direta é proibida, e a função que salva perfil recusa a manobra dizendo "handle é imutável: este organizador já tem o perfil @castelo".
+
+- **O que fica com você:** nada agora. Isto fica registrado para o dia em que o endereço incomodar.
+- **Por que agora:** porque a decisão foi tomada nesta rodada e some se não for escrita. É coerente com a sua escolha original — você descartou migrar justamente para não mexer em identificador, aceitando que `castelo-producoes` sobreviva em artefato técnico; `/@castelo` é a mesma classe de coisa: endereço de perfil de semente, sem tráfego, que ninguém alcança a não ser digitando.
+- **Opções:** **manter `/@castelo`** (**default em vigor**, custo zero) · **apagar o perfil e recriar** com handle novo — e aqui o custo é real e medido: a página pública do evento monta o bloco do organizador lendo o perfil pelo tenant, então qualquer intervalo sem perfil é **página pública de evento sem organizador** · **escolher um handle livre** (`leelaexperiencias`, `sejaleela`) — continua exigindo apagar e recriar, com a mesma janela · **tirar `leela` da lista de reservados**, que é mudança de produto e devolve a pergunta: a casa quer mesmo abrir mão do próprio nome para uma produtora?
+- **Onde aterrissa:** `perfis/castelo`; `HANDLES_RESERVADOS` e `validarHandle` em `packages/core/src/perfil/perfil.ts`; RN-160 em `functions/src/perfil/salvarPerfil.ts`. Medição em `.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`.
+
+### ACEITE-1 · ninguém sabe qual texto do termo de saúde a pessoa aceitou
+
+O pedido guarda o aceite do termo de saúde com **a versão e a hora, e nada mais**. O texto em si não é guardado nem carimbado: ele é **montado na hora da leitura**, e o nome da produtora entra nele vindo do perfil vigente. A consequência é que trocar o nome da produtora reescreve, para trás, quem era a parte contratante de todas as declarações de saúde já aceitas — sem versão nova e sem registro do que foi assinado. *A pessoa declarou estar apta perante "Castelo Produções"; amanhã a mesma tela dirá que ela declarou perante "Leela", e não existe uma linha provando o contrário.*
+
+A assimetria é o que denuncia o defeito: o **termo de uso** guarda `materialHash` — a impressão digital do texto aceito. O **termo de saúde** não guarda. Dois aceites lado a lado no mesmo pedido, um auditável e o outro não.
+
+- **O que fica com você:** nada agora, e por um motivo medido: **os três aceites que sobrevivem à limpeza são compras de teste suas** (`8CDHM`, `Q57PA`, `N4FHP`). Nenhum terceiro foi afetado, então o efeito prático hoje é nulo.
+- **Por que agora:** porque hoje custa quase nada e o preço sobe com cada venda real. No dia em que um participante de verdade contestar, a pergunta "o que exatamente ele aceitou?" não tem resposta no banco. Some com a LGPD-1, que já é a conversa jurídica sobre prova de consentimento.
+- **Opções:** carimbar `materialHash` no aceite de saúde igual ao do termo de uso, e passar a versionar quando o texto muda · congelar o texto aceito dentro do pedido · deixar como está e assumir que o termo de saúde é declaração da pessoa, não contrato com a produtora — o que é defensável, mas precisa ser escolha e não acidente.
+- **Onde aterrissa:** `aceites.saude` no documento do pedido; `paragrafosDoTermoSaude` em `AceitesCompra.tsx`; `resolverOrganizadorPublico` em `apps/landing/lib/leitor.ts`. Medição em `.nirvana/handoffs/leela-limpeza-prod-20260806.md §T9`.
+
 ## Ações que só você pode executar
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
@@ -553,34 +570,6 @@ A coluna de custo é o que transforma a tabela do admin em margem de verdade, e 
 - **O que fica com você:** buscar no painel do Asaas, ou com o gerente de contas, a tabela de tarifas vigente, incluindo o acréscimo por parcela.
 - **Por que agora:** é o único insumo que a construção não consegue produzir sozinha. A tela nasce funcionando sem ele, declarando a ausência em vez de estimar, porque você vai usar esses números para decidir preço e um número inventado aqui vira decisão errada.
 - **Onde aterrissa:** `platform/config.custoGateway`; RN-455 em [[LEELA-E16-plataforma-superadmin]]; lacunas L1 e L2 da spec da rodada. Enquanto isso, a tarefa T5 da S1610 passa a registrar o custo real de cada venda a partir do que o gateway devolve, o que fecha a lacuna pelo lado da medição em vez do lado do contrato.
-
-### 11 · os três segredos do primeiro deploy — status a confirmar
-
-São três valores de configuração que o servidor precisa ter, cada um protegendo uma coisa diferente: a chave que cifra os dados bancários (`BANK_DATA_KEY`), o endereço do monitoramento de erros e a semente que embaralha a identificação dos clientes no CRM (`CRM_ID_PEPPER`).
-
-- **O que fica com você:** nada de imediato. A execução é da esteira, não sua.
-- **Por que agora:** o primeiro deploy real já aconteceu e o item nasceu com a moldura "antes do primeiro deploy", que envelheceu.
-- **Falta verificar:** o audit log da DEPLOY-FINAL prova `CRM_ID_PEPPER`, `ASAAS_API_KEY` e `ASAAS_WEBHOOK_AUTH_TOKEN` presentes no `runWith` de `createInscricaoCharge` em `leela-hub`. `BANK_DATA_KEY` e o endereço do Sentry não foram conferidos em produção. Sem `BANK_DATA_KEY`, o cadastro bancário falha fechado e não abre.
-- **Onde aterrissa:** Secret Manager do projeto `leela-hub`; fontes `COMF2-REPORT` e `E19-CRM-REPORT`.
-
-### 12b · liberação da conta Asaas para pagador estrangeiro
-
-Adiado por você em 26/07 e ninguém está cobrando. Fica listado porque o checkout de estrangeiro segue parado enquanto isso, e o lote `ESTRANGEIRO-CHECKOUT` nem contato com o gerente de contas teve.
-
-- **O que fica com você:** contatar o gerente de contas do Asaas e pedir a liberação de cobrança para cartões emitidos no exterior, com prazo de cerca de 6 dias úteis.
-- **Por que agora:** nada empurra. A liberação cobre cobrança avulsa ou assinatura, paga só por cartão internacional, e não cobre parcelamento nem link de pagamento.
-- **Onde aterrissa:** lacunas L1 e L6 do `ESTRANGEIRO-PAGAMENTO-REPORT.md`, a resolver com o gerente. Paliativo de custo zero enquanto não sai: comprador brasileiro paga pelo estrangeiro, que se inscreve com passaporte, sem tocar na RN-173.
-
-## Hipótese a validar em campo
-
-### HIP-R9-01 · pré-compra do clube-influenciador
-
-Não é decisão a ratificar, é hipótese a testar com um organizador de verdade. Inscrições pelo link do clube entrariam em pré-compra e, ao atingir o mínimo definido pelo organizador, dispararia a cobrança de todas. *O Castelo publica o link com meta de 30 inscrições para liberar 20% de desconto, e a trigésima chega no oitavo dia, quando a reserva do cartão das primeiras já venceu.*
-
-- **O que fica com você:** uma conversa com um organizador real que responda as quatro questões de dinheiro. A janela da reserva no cartão, o que acontece quando o mínimo nunca é atingido, o que fazer com recusas parciais no disparo em lote, e se a pré-compra reserva vaga e estoque enquanto aguarda.
-- **Por que agora:** nada bloqueia. A versão retroativa do desconto é a parte cara, porque reabre reprocessamento de vendas já pagas, e segue parada.
-- **Opções:** validar em campo antes de escrever regra (**default conservador em vigor**: RN-315, o link do clube só ativa o desconto ao cruzar o mínimo, sem cobrança em lote).
-- **Onde aterrissa:** `02-rodadas/2026-07-18-ux-review/03-stories.md §S-R9-11`. Quando entrar, é dinheiro: rota opus com review antagonista obrigatória.
 
 ## Fila de construção
 
