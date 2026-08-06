@@ -84,6 +84,18 @@ export interface AlvoLimpeza {
    * o script que decide.
    */
   readonly linksARemover?: readonly string[];
+  /**
+   * [R7] Identidades cujo subtree FANTASMA inteiro é varrido, apontem elas
+   * para entidade condenada ou não.
+   *
+   * Declarada, e não inferida, porque a pergunta que decide não está no
+   * documento: é se o LASTRO daquela identidade sobrevive à limpeza. Um
+   * dashboard sob pai inexistente que espelha um clube VIVO é lacuna a
+   * preencher; o mesmo documento espelhando um clube que vai morrer é lixo
+   * que um cron realimenta todo dia às 03:05. O script não sabe a diferença;
+   * quem mediu, sabe. Ver o runbook para a medição de cada id daqui.
+   */
+  readonly identidadesFantasmaVarridas?: readonly string[];
 }
 
 export type Operacao =
@@ -152,6 +164,39 @@ const CAMPOS_EVENTO = ['eventoId', 'eventoVinculadoId'] as const;
 const segmentos = (caminho: string): string[] => caminho.split('/');
 export const colecaoRaiz = (caminho: string): string => segmentos(caminho)[0] ?? '';
 export const idNoNivel = (caminho: string, nivel: number): string | undefined => segmentos(caminho)[nivel * 2 + 1];
+
+/**
+ * O documento onde vivem os números macro da plataforma. [B4/F7]
+ * Declarado aqui, e não adivinhado por forma, porque recomputar total de
+ * dinheiro é ato nomeado: quem ler o plano tem de ver QUAL documento recebe
+ * número calculado por este script.
+ */
+export const CAMINHO_ROLLUPS = 'platform/rollups';
+
+/** Mesmo arredondamento de `roundMoney` do core. Replicado para o plano não
+ *  ganhar dependência: uma função pura de exclusão não importa a plataforma. */
+const arredondarDinheiro = (v: number): number => Math.round((v + Number.EPSILON) * 100) / 100;
+
+/**
+ * [N1] Os caminhos de DOCUMENTO que são ancestrais deste. Um caminho de
+ * documento tem número PAR de segmentos; os ancestrais são os prefixos pares
+ * mais curtos. `a/b/c/d/e/f` → `a/b/c/d`, `a/b`.
+ *
+ * É por aqui que a condenação vira transitiva em QUALQUER raiz. Antes ela só
+ * descia sob `eventos/` e `tenants/`, porque `eventoDoDoc`/`tenantDoDoc`
+ * resolviam o dono pelo caminho; sob `clubes/` o dono só saía de campo, e o
+ * modelo para de carregar `tenantId` no nível 1 — o que deixava 45 documentos
+ * de nível 2 vivos sob pai apagado, sem que nenhuma defesa os enxergasse.
+ */
+export function ancestraisDe(caminho: string): string[] {
+  const partes = segmentos(caminho);
+  const saida: string[] = [];
+  for (let n = partes.length - 2; n >= 2; n -= 2) saida.push(partes.slice(0, n).join('/'));
+  return saida;
+}
+
+/** Profundidade do documento: 0 para `col/doc`, 1 para `col/doc/sub/doc`… */
+const profundidade = (caminho: string): number => Math.floor(segmentos(caminho).length / 2) - 1;
 
 const texto = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 const numero = (v: unknown): number => (typeof v === 'number' ? v : 0);
@@ -334,6 +379,62 @@ export function podarChavesCondenadas(
 }
 
 /**
+ * [F7] Fecha os números macro no PRÓPRIO patch, em vez de deixar recado.
+ *
+ * A review rebaixou o B4 sem fechá-lo: a poda tirava as chaves dos tenants
+ * mortos e os totais de raiz continuavam do mundo antigo (R$ 364.627 de GMV,
+ * 4 tenants ativos) até alguém lembrar de chamar `recomputePlatformRollups` —
+ * callable manual de `platform_admin`, sem cron. Promessa em vez de garantia.
+ *
+ * O script já tem o mapa podado nas mãos, então o cálculo é o mesmo que o
+ * callable faz (`platform/rollups.ts`): somar `gmv` e `receitaLeela` dos
+ * sobreviventes e contar `status === 'ativo'`. `eventosAtivos` por tenant vem
+ * da contagem real de eventos publicados que sobrevivem — o callable NÃO
+ * conserta esse número, porque ele copia o campo denormalizado do documento do
+ * tenant, que ninguém mantém.
+ *
+ * O que este recompute NÃO faz, e por quê: `gmv` de cada tenant continua sendo
+ * o `gmvAcumulado` histórico. Ele é acumulador de venda que aconteceu, não
+ * derivada do que sobrou. Reescrevê-lo seria apagar registro de dinheiro por
+ * conta própria — a mesma linha que o ajuste A1 traçou para os snapshots
+ * bancários. Fica como decisão declarada do dono, no runbook.
+ */
+export function recomputarRollups(
+  campos: Readonly<Record<string, unknown>>,
+  jaPodado: Readonly<Record<string, unknown>>,
+  eventosAtivosPorTenant: ReadonlyMap<string, number>
+): Record<string, unknown> {
+  const base = jaPodado['tenants'] !== undefined ? jaPodado['tenants'] : campos['tenants'];
+  const tenants = mapa(clonar(base));
+  if (Object.keys(tenants).length === 0) return {};
+
+  let gmvTotal = 0;
+  let receitaLeelaTotal = 0;
+  let tenantsAtivos = 0;
+
+  for (const [id, bruto] of Object.entries(tenants)) {
+    const linha = mapa(bruto);
+    const ativos = eventosAtivosPorTenant.get(id) ?? 0;
+    linha['eventosAtivos'] = ativos;
+    const status = texto(linha['status']) ?? 'pending';
+    // Mesma derivação de `deriveTenantHealth` no core. Replicada, não
+    // importada, para o plano seguir sem dependência da plataforma.
+    linha['health'] = status === 'suspenso' ? 'critico' : status === 'pending' ? 'atencao' : ativos > 0 ? 'saudavel' : 'atencao';
+    if (status === 'ativo') tenantsAtivos += 1;
+    gmvTotal += numero(linha['gmv']);
+    receitaLeelaTotal += numero(linha['receitaLeela']);
+    tenants[id] = linha;
+  }
+
+  return {
+    tenants,
+    gmvTotal: arredondarDinheiro(gmvTotal),
+    receitaLeelaTotal: arredondarDinheiro(receitaLeelaTotal),
+    tenantsAtivos,
+  };
+}
+
+/**
  * [A1] Este campo pode ser renomeado por substring? Snapshot financeiro e
  * identidade bancária ficam de fora: um é registro histórico do que era
  * verdade na hora, o outro é o nome do titular de uma conta real, e "Leela
@@ -507,32 +608,79 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
   // A exceção é o fantasma de identidade PROTEGIDA: ali o pai ausente é uma
   // lacuna a preencher (o dono virou organizador e ainda não tem documento em
   // `profissionais`), e não lixo a varrer. Isso é decisão do dono.
+  const identidadesVarridas = new Set(alvo.identidadesFantasmaVarridas ?? []);
   for (const doc of inventario) {
     if (condenados.has(doc.caminho)) continue;
     const pai = souFilhoDeFantasma(doc.caminho);
     if (pai === undefined) continue;
-    // A PROTEÇÃO É CHECADA ANTES DO CONTEÚDO, e de propósito. Se eu olhasse
-    // primeiro se o documento aponta para condenado, o fantasma de identidade
-    // protegida que por acaso não aponta para nada sairia daqui em silêncio —
-    // preservado pelo CONTEÚDO dele, e não pela regra. A garantia tem de ser
-    // estrutural: fantasma sob identidade protegida é lacuna a preencher, e
-    // isso vale independente do que esteja escrito dentro dele.
-    if (intocavel(pai, uidsProtegidos)) {
+    // AS DUAS CHECAGENS DE PROTEÇÃO VÊM ANTES DO CONTEÚDO, e de propósito. Se
+    // eu olhasse primeiro se o documento aponta para condenado, o fantasma de
+    // identidade protegida que por acaso não aponta para nada sairia daqui em
+    // silêncio — preservado pelo CONTEÚDO dele, e não pela regra. A garantia
+    // tem de ser estrutural: fantasma sob identidade protegida é lacuna a
+    // preencher, e isso vale independente do que esteja escrito dentro dele.
+    // [B3-forma] A terceira checagem (o caminho PRÓPRIO do documento) estava
+    // depois do teste de conteúdo, e por isso um documento salvo pela regra
+    // aparecia como salvo pelo acaso: fora da lista `intocaveis`. Mesma
+    // decisão, agora visível.
+    if (intocavel(pai, uidsProtegidos) || intocavel(doc.caminho, uidsProtegidos)) {
       intocaveis.push(doc.caminho);
       continue;
     }
-    if (referenciasA(doc.campos, idsCondenados).length === 0) continue;
-    if (intocavel(doc.caminho, uidsProtegidos)) {
-      intocaveis.push(doc.caminho);
-      continue;
-    }
+    // [R7] Identidade declarada como varrida: some inteira, aponte para o que
+    // apontar. Ver o comentário de `identidadesFantasmaVarridas`.
+    const idDoFantasma = idNoNivel(pai, 0);
+    const varreTudo = idDoFantasma !== undefined && identidadesVarridas.has(idDoFantasma);
+    if (!varreTudo && referenciasA(doc.campos, idsCondenados).length === 0) continue;
     condenados.add(doc.caminho);
     operacoes.push({
       tipo: 'apagar',
       caminho: doc.caminho,
-      motivo: `lixo sob documento-fantasma (${pai}) apontando para entidade condenada`,
+      motivo: varreTudo
+        ? `lixo sob documento-fantasma (${pai}) de identidade sem lastro sobrevivente`
+        : `lixo sob documento-fantasma (${pai}) apontando para entidade condenada`,
       ordem: ORDEM.FANTASMAS,
     });
+  }
+
+  // ── Passo 3d: [N1] condenação TRANSITIVA por prefixo de caminho. ──────────
+  // Se o ancestral morre, o descendente morre — em qualquer raiz e qualquer
+  // profundidade. Sob `eventos/` e `tenants/` isso já valia de graça, porque o
+  // dono saía do caminho; sob `clubes/` o dono só saía de CAMPO, e o modelo
+  // para de carregar `tenantId` no nível 1. O resultado medido em produção
+  // eram 45 documentos de nível 2 (33 `acoes`, 12 `conversoes`) vivos sob pai
+  // apagado, enquanto o runner imprimia "nenhuma referência pendurada NOVA
+  // prevista" — as duas defesas passavam reto, porque `orfaosPrevistos` casa
+  // VALOR de string (e eles não citam id nenhum) e a varredura de fantasmas
+  // exige `fantasma === true` no inventário (e o pai só morre DURANTE a
+  // corrida). Laço até estabilizar: neto de condenado também é condenado.
+  for (let mudou = true; mudou; ) {
+    mudou = false;
+    for (const doc of inventario) {
+      if (condenados.has(doc.caminho)) continue;
+      const ancestralMorto = ancestraisDe(doc.caminho).find((a) => condenados.has(a));
+      if (ancestralMorto === undefined) continue;
+      const antes = condenados.size;
+      condenar(doc, `descendente de documento condenado (${ancestralMorto})`);
+      // `condenar` recusa em silêncio o que for intocável — e aí este
+      // documento vira SOBREVIVENTE sob pai apagado. O Passo 5 o denuncia
+      // como órfão estrutural; nunca fica calado.
+      if (condenados.size !== antes) mudou = true;
+    }
+  }
+
+  // [F7] Quantos eventos "ativos" cada tenant tem DEPOIS do plano. É a mesma
+  // definição que o produto usa: evento `publicado` que sobrevive. Medido em
+  // produção antes de escrever esta linha — hoje `castelo-producoes` tem 5
+  // publicados, e depois da limpeza fica com 2.
+  const eventosAtivosPorTenant = new Map<string, number>();
+  for (const doc of inventario) {
+    if (colecaoRaiz(doc.caminho) !== 'eventos' || segmentos(doc.caminho).length !== 2) continue;
+    if (condenados.has(doc.caminho)) continue;
+    if (texto(doc.campos['status']) !== 'publicado') continue;
+    const tn = texto(doc.campos['tenantId']);
+    if (tn === undefined) continue;
+    eventosAtivosPorTenant.set(tn, (eventosAtivosPorTenant.get(tn) ?? 0) + 1);
   }
 
   // ── Passo 3b: chave de mapa que É o id de um condenado. [B4] ─────────────
@@ -540,12 +688,16 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
     if (condenados.has(doc.caminho)) continue;
     if (segmentos(doc.caminho)[2] === 'crmClientes') continue; // já tratado acima
     const mudancas = podarChavesCondenadas(doc.campos, idsCondenados);
+    const ehRollup = doc.caminho === CAMINHO_ROLLUPS;
+    if (ehRollup) Object.assign(mudancas, recomputarRollups(doc.campos, mudancas, eventosAtivosPorTenant));
     if (Object.keys(mudancas).length === 0) continue;
     operacoes.push({
       tipo: 'editar',
       caminho: doc.caminho,
       mudancas,
-      motivo: 'mapa com chave de entidade condenada — chave removida',
+      motivo: ehRollup
+        ? 'rollups da plataforma: chaves de tenant condenado removidas e os totais recomputados dos sobreviventes'
+        : 'mapa com chave de entidade condenada — chave removida',
       ordem: ORDEM.SOBREVIVENTES,
     });
   }
@@ -605,6 +757,16 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
     for (const r of referenciasA(depois, idsCondenados)) {
       orfaosPrevistos.push({ caminho: doc.caminho, campo: r.campo, valor: r.valor });
     }
+    // [N1] Órfão ESTRUTURAL: o documento sobrevive, mas o caminho dele tem um
+    // prefixo que vai ser apagado. Ele não cita id condenado nenhum, então a
+    // varredura por VALOR acima passa reto — foi exatamente assim que 45
+    // documentos ficaram invisíveis para as duas defesas. Com a condenação
+    // transitiva do Passo 3d isto normalmente sai vazio; quando não sai, o
+    // motivo é uma trava de proteção, e aí a lane tem de DIZER, não calar.
+    const ancestralMorto = ancestraisDe(doc.caminho).find((a) => condenados.has(a));
+    if (ancestralMorto !== undefined) {
+      orfaosPrevistos.push({ caminho: doc.caminho, campo: '(caminho sob prefixo apagado)', valor: ancestralMorto });
+    }
   }
 
   // ── Passo 6: contas que perdem o último lastro. Relatadas, não apagadas. ──
@@ -617,7 +779,16 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
   }
   const contasSemLastro = todosUids.filter((u) => !uidsProtegidos.has(u) && !lastroVivo.has(u)).sort();
 
-  operacoes.sort((a, b) => a.ordem - b.ordem || a.caminho.localeCompare(b.caminho));
+  // Ordem do grupo primeiro. Dentro do grupo, o MAIS FUNDO sai primeiro: com a
+  // condenação transitiva, pai e filho podem cair no mesmo grupo (`clubes/{c}/
+  // desafios/{d}` e `.../acoes/{a}` são ambos FOLHAS_CLUBE), e o desempate
+  // alfabético punha o pai antes — abrindo uma janela, dentro da corrida, em
+  // que o filho existe sob pai já apagado. Filho antes de pai fecha a janela.
+  // O `localeCompare` fica como último desempate, para o plano continuar
+  // determinístico independentemente da ordem em que o inventário chegou.
+  operacoes.sort(
+    (a, b) => a.ordem - b.ordem || profundidade(b.caminho) - profundidade(a.caminho) || a.caminho.localeCompare(b.caminho)
+  );
 
   const resumoPorColecao: Record<string, { apagar: number; editar: number }> = {};
   for (const op of operacoes) {
@@ -631,24 +802,36 @@ export function planejarLimpeza(inventario: readonly DocInventario[], alvo: Alvo
 
   // ── [B4] O que o plano NÃO conserta, e o runbook precisa. ────────────────
   const recomputesObrigatorios = [
-    'platform/rollups — chamar `recomputePlatformRollups` (callable de platform_admin; NÃO há cron). ' +
-      'A poda tira as chaves dos tenants mortos, mas gmvTotal, receitaLeelaTotal, tenantsAtivos e ' +
-      'eventosAtivos continuam do mundo antigo. Conferir os quatro depois.',
+    'platform/rollups — os quatro números (gmvTotal, receitaLeelaTotal, tenantsAtivos e o ' +
+      'eventosAtivos de cada tenant) JÁ VÃO no PATCH desta corrida [F7]. `recomputePlatformRollups` ' +
+      '(callable de platform_admin; NÃO há cron) fica como CONFERÊNCIA depois, não como correção. ' +
+      'Atenção: o callable copia `tenants/{id}.eventosAtivos` do documento do tenant, que ninguém ' +
+      'mantém — rodá-lo sem corrigir esse campo desfaz o eventosAtivos que este plano acerta.',
     'tenants/{tenant}/saldo/current — recomputar EXPLICITAMENTE. Antes ele se curava por acidente, ' +
       'porque as 3 edições de repasses eram as últimas operações e disparavam onRepasseWrite. ' +
       'Com o snapshot fora do renomeador [A1] essas escritas somem, e a cura some junto.',
     'profissionais/{uid}/dashboard/current — onEventoWriteDashboard e onClubeWriteDashboard fazem ' +
       '`set` INCONDICIONAL, sem checar se o doc pai existe. Cada delete de evento/clube CRIA um ' +
-      'dashboard sob pai inexistente. Varrer documento-fantasma DEPOIS da drenagem.',
+      'dashboard sob pai inexistente. Varrer documento-fantasma DEPOIS da drenagem — e a drenagem ' +
+      'antes do grupo FANTASMAS é a única que precisa ser generosa (medida: 17,3 s do write até a ' +
+      'última escrita do gatilho, em 06/08 14:22).',
   ];
+
+  // Relatórios em ordem ESTÁVEL. A ordem de leitura do inventário é
+  // concorrente e não repetível; sem isto o arquivo congelado sai diferente a
+  // cada dry-run em partes que ninguém mudou, e a revisão perde o diff.
+  const chaveDoConflito = (c: { caminho: string; uid: string; campo: string }): string =>
+    `${c.caminho} ${c.campo} ${c.uid}`;
+  const chaveDoOrfao = (o: { caminho: string; campo: string; valor: string }): string =>
+    `${o.caminho} ${o.campo} ${o.valor}`;
 
   return {
     operacoes,
-    orfaosPrevistos,
+    orfaosPrevistos: [...orfaosPrevistos].sort((a, b) => chaveDoOrfao(a).localeCompare(chaveDoOrfao(b))),
     contasSemLastro,
     intocaveis: [...new Set(intocaveis)].sort(),
-    conflitosDeProtecao,
-    fantasmas,
+    conflitosDeProtecao: [...conflitosDeProtecao].sort((a, b) => chaveDoConflito(a).localeCompare(chaveDoConflito(b))),
+    fantasmas: [...fantasmas].sort(),
     recomputesObrigatorios,
     resumoPorColecao,
   };
