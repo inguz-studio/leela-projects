@@ -428,6 +428,15 @@ describe('links de semente declarados pelo dono', () => {
     expect(p.operacoes.some((o) => o.motivo.includes('link de semente'))).toBe(false);
   });
 
+  it('remove os dois e deixa o campo VAZIO, sem inventar substituto', () => {
+    const p = planejarLimpeza(comLinks(), {
+      ...ALVO,
+      linksARemover: ['instagram.com/casteloproducoes', 'castelo-producoes.example.com'],
+    });
+    const op = p.operacoes.find((o) => o.motivo.includes('link de semente'));
+    expect(op?.tipo === 'editar' && op.mudancas['linksExternos']).toEqual([]);
+  });
+
   it('não inventa link novo no lugar do removido', () => {
     const p = planejarLimpeza(comLinks(), { ...ALVO, linksARemover: ['instagram.com'] });
     const op = p.operacoes.find((o) => o.motivo.includes('link de semente'));

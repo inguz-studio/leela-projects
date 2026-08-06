@@ -74,12 +74,14 @@ const ALVO: AlvoLimpeza = {
   ],
   nomeNovo: 'Leela',
   nomeAntigo: 'Castelo Produções',
-  // Decisão do maestro (2026-08-06): o Instagram de semente aponta para uma
-  // conta que não existe. Página pública levando ao vazio é pior que campo
-  // ausente. O perfil real da Leela, se houver, quem preenche é o dono.
-  // ⚠️ `https://castelo-producoes.example.com` (o "Site oficial") é link de
-  // semente pelo mesmo motivo e NÃO foi decidido — fica, aguardando o dono.
-  linksARemover: ['instagram.com/casteloproducoes'],
+  // Decisão do maestro (2026-08-06), estendida na mesma rodada: os DOIS links
+  // do perfil são de semente e apontam para endereço que nunca resolve — o
+  // Instagram para uma conta que não existe, o "Site oficial" para
+  // `.example.com`, que é domínio reservado justamente para não resolver.
+  // Página pública levando ao vazio é pior que campo ausente. `linksExternos`
+  // fica VAZIO; nenhum substituto é inventado. Se um dia houver perfil da
+  // Leela, quem preenche é o dono.
+  linksARemover: ['instagram.com/casteloproducoes', 'castelo-producoes.example.com'],
 };
 
 // ── Credencial. [A6] O token é cacheado em memória. ─────────────────────────

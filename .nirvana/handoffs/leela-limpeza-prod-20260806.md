@@ -214,11 +214,17 @@ Não apliquei. Três caminhos, todos decisão do dono:
 - **(b) Outro handle não reservado** (`leelaexperiencias`, `sejaleela`…). Continua exigindo delete+create, ou seja, furar a RN-160 na mão.
 - **(c) Tirar `leela` da lista de reservados.** Mudança de produto, outra lane, e vale perguntar se a casa quer abrir mão do próprio nome.
 
-### Aplicado: link de semente (decisão nº 2)
+### Aplicado: links de semente (decisão nº 2, estendida)
 
-Entrou **no plano**, declarativo e congelado — não como escrita avulsa. `perfis/castelo.linksExternos` perde o Instagram (`1 de 2`). Nenhum link novo é inventado.
+Entrou **no plano**, declarativo e congelado — não como escrita avulsa. `perfis/castelo.linksExternos` perde **os dois** (`2 de 2`) e fica **vazio**: o Instagram aponta para conta que não existe e o "Site oficial" para `.example.com`, domínio reservado justamente para nunca resolver. Nenhum substituto é inventado.
 
-⚠️ **`https://castelo-producoes.example.com` ("Site oficial") continua lá.** É link de semente pelo mesmo motivo — `.example.com` é domínio reservado que nunca resolve — mas você decidiu só o Instagram, e eu não estendo decisão sozinho.
+### O handle `castelo` FICA — decisão do maestro, registrada no painel
+
+Nenhum dos três caminhos que levantei: fica o quarto. Só o **nome de exibição** muda. A coerência é com a escolha original do dono, que descartou migrar exatamente para não mexer em identificador, aceitando que `castelo-producoes` sobreviva em artefato técnico. `/@castelo` é a mesma classe de coisa.
+
+O caminho (a) — apagar o perfil para recriar — tem custo real e medido: `resolverOrganizadorPublico()` lê `perfis WHERE tenantId` para montar a página pública do evento, então qualquer intervalo sem perfil é **página pública de evento sem organizador**. Não vale por um slug.
+
+Registrado como decisão em aberto do dono no painel canônico (`leela-specs/01-produto/DECISOES-ABERTAS.md`, item `PERFIL-1`), com os três caminhos e o custo de cada um.
 
 ### Decisão nº 4 — o re-render **vai** trair, e eu meço o alcance
 
