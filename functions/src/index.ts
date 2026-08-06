@@ -62,6 +62,12 @@ export { provisionTenant } from './platform/provisionTenant';
 // provisionamento (provisionTenantCore).
 export { resgatarConviteOrganizador } from './platform/resgatarConviteOrganizador';
 
+// Plataforma — a ponte da área do cliente para o painel profissional
+// (E12-S1234-T1 · RN-512/514). Promoção da conta que JÁ existe: cria
+// `profissionais/{uid}` em `aguardando_convite`, idempotente, e não concede
+// tenant, papel nem capacidade — a fronteira é provada em teste próprio.
+export { promoverParaProfissional } from './platform/promoverParaProfissional';
+
 // Plataforma — rollups macro cross-tenant (E16-S1605-T2 · RN-409)
 export { recomputePlatformRollups } from './platform/rollups';
 

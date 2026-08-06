@@ -14,12 +14,21 @@
 //     ORGANIZADOR. Está no painel como ADMINSEP-2, aguardando ratificação; se
 //     o dono ratificar a outra leitura, muda AQUI e em nenhum outro lugar.
 //
-//   `criar` — a conta é só cliente. Ganha "criar conta de organizador", que
-//     leva à MESMA máquina do `/cadastrar` do painel: um doc
+//   `criar` — a conta é só cliente. Ganha "conhecer o painel profissional",
+//     que chama a PROMOÇÃO da conta que já existe (RN-512): um doc
 //     `profissionais/{uid}` com `statusOnboarding: 'aguardando_convite'`
-//     (RN-411) e o overlay bloqueante da ONBOARD-BUILD (RN-416). Uma máquina
-//     só, dois botões — a landing não constrói um segundo caminho de cadastro,
-//     porque dois caminhos divergem na primeira mudança de termo LGPD.
+//     (RN-411), escrito pelo servidor, idempotente, sem conceder tenant, papel
+//     nem capacidade. O destino é a vitrine da RN-510 (RN-514), onde o código
+//     Leela continua sendo o mecanismo.
+//
+//     ⛔ ATÉ 2026-08-06 ESTE BOTÃO APONTAVA PARA O `/cadastrar` DO PAINEL, e
+//     era um beco sem saída: quem lê este cartão está autenticada — a área
+//     inteira exige sessão nomeada —, então o `criarContaComEmail` de lá
+//     recebia `auth/email-already-in-use`, a máscara anti-enumeração engolia o
+//     erro (comportamento certo, que não muda) e a pessoa ficava sem caminho
+//     depois de preencher um formulário inteiro. A landing continua sem
+//     construir um segundo caminho de CADASTRO — o que ela ganhou não é
+//     cadastro, é promoção da conta que já existe.
 //
 //   `null` — conta de ADMINISTRAÇÃO da plataforma. Nenhuma porta. A RN-449
 //     proíbe o acúmulo entre administração e cliente, então nem o caminho para

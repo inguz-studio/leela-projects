@@ -6,12 +6,13 @@
  * em que a RN-449 vira tela.
  *
  * Aceite falsificável da task:
- *   - conta SÓ cliente não encontra o botão de organizador;
- *   - conta que ACUMULA encontra e chega ao painel do ORGANIZADOR;
+ *   - conta SÓ cliente não encontra a porta de quem já é profissional;
+ *   - conta que ACUMULA encontra e chega ao painel PROFISSIONAL;
  *   - nenhuma das duas alcança `/plataforma`;
- *   - "criar conta de organizador" termina na máquina que já existe (o
- *     `/cadastrar` do painel, que grava `statusOnboarding: 'aguardando_convite'`
- *     e entrega a pessoa no overlay travado), e não num segundo caminho.
+ *   - a porta de quem AINDA NÃO é profissional não manda ninguém ao
+ *     `/cadastrar` do painel (RN-512): quem lê este cartão já tem conta, e
+ *     aquele caminho a devolvia à negativa única anti-enumeração. O
+ *     comportamento novo tem prova própria em `minha-conta-ponte-s1234`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'fs';
@@ -22,7 +23,13 @@ import { portaDaConta } from '@/lib/portaOrganizador';
 vi.setConfig({ testTimeout: 20_000 });
 
 const getClaims = vi.fn();
-vi.mock('@leela/api-client', () => ({ getClaims: () => getClaims() }));
+const promoverParaProfissional = vi.fn();
+vi.mock('@leela/api-client', () => ({
+  getClaims: () => getClaims(),
+  promoverParaProfissional: () => promoverParaProfissional(),
+  motivoDaRecusaDaPromocao: () => 'indisponivel',
+}));
+vi.mock('@/lib/leelaClient', () => ({ ensureLeela: () => undefined }));
 
 async function montar(): Promise<void> {
   const { PortasDaConta } = await import('@/app/(public)/minha-conta/PortasDaConta');
@@ -83,24 +90,24 @@ describe('S1222-T5 · quem enxerga qual porta', () => {
 // ---------------------------------------------------------------------------
 
 describe('S1222-T5 · as portas na tela', () => {
-  it('conta só cliente NÃO encontra o botão de organizador', async () => {
+  it('conta só cliente NÃO encontra a porta de quem já é profissional', async () => {
     getClaims.mockResolvedValue({ role: 'athlete' });
     await montar();
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: /criar conta de organizador/i })).toBeTruthy()
+      expect(screen.getByRole('button', { name: /conhecer o painel profissional/i })).toBeTruthy()
     );
-    expect(screen.queryByRole('link', { name: /ir para o painel do organizador/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /ir para o painel profissional/i })).toBeNull();
   });
 
-  it('conta que acumula encontra a porta e ela leva ao PAINEL do organizador', async () => {
+  it('conta que acumula encontra a porta e ela leva ao PAINEL profissional', async () => {
     getClaims.mockResolvedValue({ role: 'tenant_owner', tenantId: 'castelo' });
     await montar();
     await waitFor(() =>
-      expect(screen.getByRole('link', { name: /ir para o painel do organizador/i })).toBeTruthy()
+      expect(screen.getByRole('link', { name: /ir para o painel profissional/i })).toBeTruthy()
     );
-    const link = screen.getByRole('link', { name: /ir para o painel do organizador/i });
+    const link = screen.getByRole('link', { name: /ir para o painel profissional/i });
     expect(link.getAttribute('href')).toMatch(/\/entrar$/);
-    expect(screen.queryByRole('link', { name: /criar conta de organizador/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /conhecer o painel profissional/i })).toBeNull();
   });
 
   it('⚔ conta de administração não vê porta alguma', async () => {
@@ -163,19 +170,23 @@ describe('⚔ RN-449 · nenhum caminho da área do cliente alcança /plataforma'
     expect(fonte).toContain("export type RotaPainel = '/entrar' | '/cadastrar';");
   });
 
-  it('"criar conta de organizador" termina na máquina que já existe, não numa nova', async () => {
-    getClaims.mockResolvedValue({ role: 'athlete' });
-    await montar();
-    await waitFor(() =>
-      expect(screen.getByRole('link', { name: /criar conta de organizador/i })).toBeTruthy()
-    );
-    const link = screen.getByRole('link', { name: /criar conta de organizador/i });
-    // É o `/cadastrar` do painel — quem grava `statusOnboarding:
-    // 'aguardando_convite'` (RN-411) e entrega a pessoa no overlay travado
-    // (RN-416). A landing não constrói um segundo caminho de cadastro: dois
-    // caminhos divergem na primeira mudança de termo LGPD.
-    expect(link.getAttribute('href')).toMatch(/\/cadastrar$/);
-    // E nenhuma superfície da área provisiona nada por conta própria.
+  it('⛔ RN-512 · NENHUMA porta da área manda a conta logada ao `/cadastrar`', async () => {
+    // O beco sem saída de 05→06/08: quem lê este cartão está autenticada, e o
+    // `/cadastrar` do painel só sabe CRIAR conta — devolvia
+    // `auth/email-already-in-use` mascarado e a pessoa ficava sem caminho.
+    for (const claims of [{ role: 'athlete' }, { role: 'tenant_owner', tenantId: 'castelo' }, {}]) {
+      getClaims.mockResolvedValue(claims);
+      await montar();
+      await waitFor(() => expect(getClaims).toHaveBeenCalled());
+      for (const a of Array.from(document.querySelectorAll('a[href]'))) {
+        expect(a.getAttribute('href') ?? '').not.toContain('/cadastrar');
+      }
+      cleanup();
+      getClaims.mockReset();
+    }
+
+    // E nenhuma superfície da área provisiona nada por conta própria: a
+    // promoção é callable do próprio dono da conta, e nenhuma Rule abre.
     const dir = resolve(__dirname, '../app/(public)/minha-conta');
     for (const arquivo of readdirSync(dir)) {
       if (!arquivo.endsWith('.tsx')) continue;

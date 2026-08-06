@@ -734,6 +734,14 @@ export type { TenantComOwner } from './platform/profissionais';
 // cliente em `profissionais` — o próprio doc, shape fechado pela Rule.
 export { criarPerfilOrganizador } from './platform/profissionais';
 export type { PerfilOrganizadorInput } from './platform/profissionais';
+// A ponte da área do cliente (S1234-T1 · RN-512): promoção da conta que JÁ
+// existe. Callable, não escrita de cliente — a área do cliente é servida por
+// callables do próprio dono da conta, e nenhuma Rule abre para `athlete`.
+export { promoverParaProfissional, motivoDaRecusaDaPromocao } from './platform/profissionais';
+export type {
+  PromocaoProfissionalResult,
+  MotivoRecusaPromocao,
+} from './platform/profissionais';
 
 // Convites de organizador do super-admin (S1608-T2 · RN-413): listar, gerar e
 // revogar pelo client SDK (Rules exigem platform_admin). Resgatar NÃO está

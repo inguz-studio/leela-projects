@@ -34,6 +34,8 @@ import {
   type Profissional,
   type Tenant,
 } from '@leela/core';
+import { httpsCallable } from 'firebase/functions';
+import { getLeelaFunctions } from '../firebase';
 import { getTenant } from './tenants';
 
 // ---------------------------------------------------------------------------
@@ -123,4 +125,79 @@ export async function criarPerfilOrganizador(
     criadoEm: serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });
+}
+
+// ---------------------------------------------------------------------------
+// A ponte da área do cliente (S1234-T1 · RN-512)
+// ---------------------------------------------------------------------------
+
+/**
+ * As recusas nomeadas da promoção. Vêm em `details.motivo` do callable; a
+ * TELA escolhe a frase, porque copy é voz do produto e não contrato de API.
+ * `indisponivel` é o balde do que não é recusa de regra (rede, deploy ainda
+ * não propagado) — e existe para que nenhuma dessas chegue à pessoa como
+ * "erro interno".
+ */
+export type MotivoRecusaPromocao =
+  | 'sem_sessao'
+  | 'sessao_anonima'
+  | 'conta_de_plataforma'
+  | 'aceite_ausente'
+  | 'aceite_datado_pelo_cliente'
+  | 'indisponivel';
+
+export interface PromocaoProfissionalResult {
+  statusOnboarding: 'aguardando_convite';
+  /** true = a conta já alcançava o painel profissional; nada foi escrito. */
+  jaExistia: boolean;
+}
+
+/**
+ * Promove a conta LOGADA a profissional (RN-512).
+ *
+ * A conta já existe — este é o gesto que a área do cliente precisava em vez de
+ * mandar a pessoa ao `/cadastrar` do painel, que só sabe CRIAR conta e devolve
+ * a negativa única anti-enumeração para quem já tem uma.
+ *
+ * Idempotente por construção do servidor: chamar duas vezes devolve sucesso e
+ * não recolhe consentimento (RN-467). O aceite viaja como booleano puro — a
+ * VERSÃO e o INSTANTE são carimbados pelo servidor (RN-446/RN-466), e mandar
+ * qualquer um dos dois daqui é recusado de propósito.
+ */
+export async function promoverParaProfissional(): Promise<PromocaoProfissionalResult> {
+  const fn = httpsCallable<{ aceiteTermo: true }, PromocaoProfissionalResult>(
+    getLeelaFunctions(),
+    'promoverParaProfissional'
+  );
+  const { data } = await fn({ aceiteTermo: true });
+  return data;
+}
+
+/** Motivos que o servidor nomeia — o resto cai em `indisponivel`. */
+const MOTIVOS_NOMEADOS: readonly string[] = [
+  'sem_sessao',
+  'sessao_anonima',
+  'conta_de_plataforma',
+  'aceite_ausente',
+  'aceite_datado_pelo_cliente',
+];
+
+/**
+ * Traduz a falha da promoção no motivo que a tela sabe dizer.
+ *
+ * A leitura é do `details.motivo` que o servidor manda, e NÃO do código HTTP:
+ * derivar o motivo do código obrigaria a tela a reconstruir a regra, e no dia
+ * em que uma recusa nova nascesse com o mesmo código a pessoa leria a frase
+ * errada. Motivo desconhecido vira `indisponivel` — nunca uma mensagem crua.
+ */
+export function motivoDaRecusaDaPromocao(erro: unknown): MotivoRecusaPromocao {
+  const detalhe = (erro as { details?: { motivo?: unknown } } | null)?.details?.motivo;
+  if (typeof detalhe === 'string' && MOTIVOS_NOMEADOS.includes(detalhe)) {
+    return detalhe as MotivoRecusaPromocao;
+  }
+  // Fallback estreito e só para o caso que o transporte resolve sozinho: sem
+  // sessão o SDK recusa antes de sair do navegador, e ali não há `details`.
+  const code = (erro as { code?: unknown } | null)?.code;
+  if (typeof code === 'string' && code.includes('unauthenticated')) return 'sem_sessao';
+  return 'indisponivel';
 }
