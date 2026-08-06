@@ -7,12 +7,20 @@ import { _resetEventosBadgeCache } from '../eventosBadge';
 
 // Sessão do rodapé (B4) + fonte do nav-badge (T2): usuário nomeado, claims com
 // tenant e 2 eventos ativos + 1 encerrado — sem Firebase real.
+//
+// O crachá virou VARIÁVEL (FRONTEIRA-AUTH) porque o shell passou a desenhar o
+// alternador de painéis a partir dele. O default é o de sempre: uma conta de
+// organizador, que não alterna nada — os casos existentes não mudam de resposta.
+const cracha = vi.hoisted(() => ({
+  atual: { tenantId: 'castelo', role: 'tenant_admin' } as Record<string, unknown>,
+}));
+
 vi.mock('@leela/api-client', () => ({
   onSessionChange: (cb: (user: { uid: string; displayName: string | null } | null) => void) => {
     cb({ uid: 'uid-marina', displayName: 'Marina Castelo' });
     return () => {};
   },
-  getClaims: () => Promise.resolve({ tenantId: 'castelo', role: 'tenant_admin' }),
+  getClaims: () => Promise.resolve(cracha.atual),
   getLeelaDb: () => ({}),
   listarEventosDoOrganizador: () =>
     Promise.resolve([
@@ -24,6 +32,7 @@ vi.mock('@leela/api-client', () => ({
 
 beforeEach(() => {
   _resetEventosBadgeCache();
+  cracha.atual = { tenantId: 'castelo', role: 'tenant_admin' };
 });
 
 // Smoke navegacional do Lote B3: a sidebar é SEMPRE visível (item 18 do DoD),
@@ -173,5 +182,70 @@ describe('RootShell (Adendo 13 — sem barra superior)', () => {
     const scroller = screen.getByTestId('path').parentElement;
     expect(scroller).not.toBeNull();
     expect(scroller?.firstElementChild).toBe(screen.getByTestId('path'));
+  });
+});
+
+// =============================================================================
+// O ALTERNADOR DE PAINÉIS na moldura (FRONTEIRA-AUTH · sobre a PAPEL-DUPLO).
+//
+// A fiação é o que estes casos provam: o componente já tem suíte própria, o que
+// falta é a prova de que o shell o desenha para o crachá certo e de que o
+// rótulo de contexto deixou de mentir.
+// =============================================================================
+
+describe('RootShell · alternador de painéis', () => {
+  it('conta de organizador NÃO vê alternador — ela só tem um painel', async () => {
+    renderAt('/');
+    await waitFor(() => expect(screen.getByText('Painel do Organizador')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
+  });
+
+  it('o DONO (tenant_owner + capacidade) vê o alternador oferecendo o master', async () => {
+    cracha.atual = {
+      tenantId: 'castelo-producoes',
+      role: 'tenant_owner',
+      platformAdmin: true,
+    };
+    renderAt('/');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Ir para o Painel Master' })).toBeInTheDocument(),
+    );
+  });
+
+  it('dentro do master, a moldura NOMEIA o master e oferece a volta', async () => {
+    // O sub da marca era o literal "Painel do Organizador" em TODA rota — e
+    // `/plataforma` sempre rodou dentro deste shell. Quem entrasse no painel
+    // master lia, no canto superior esquerdo, que estava no painel do
+    // organizador.
+    cracha.atual = {
+      tenantId: 'castelo-producoes',
+      role: 'tenant_owner',
+      platformAdmin: true,
+    };
+    renderAt('/plataforma/tenants');
+    await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
+    expect(
+      screen.getByRole('button', { name: 'Ir para o Painel do Organizador' }),
+    ).toBeInTheDocument();
+  });
+
+  it('o alternador leva de verdade para o outro painel', async () => {
+    cracha.atual = {
+      tenantId: 'castelo-producoes',
+      role: 'tenant_owner',
+      platformAdmin: true,
+    };
+    const usuario = userEvent.setup();
+    renderAt('/');
+    const alternar = await screen.findByRole('button', { name: 'Ir para o Painel Master' });
+    await usuario.click(alternar);
+    expect(screen.getByTestId('path')).toHaveTextContent('/plataforma');
+  });
+
+  it('admin LEGADO (sem tenant) não alterna — não há painel de organizador para ir', async () => {
+    cracha.atual = { role: 'platform_admin' };
+    renderAt('/plataforma');
+    await waitFor(() => expect(screen.getByText('Painel Master')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Ir para o Painel/ })).toBeNull();
   });
 });

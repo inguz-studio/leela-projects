@@ -38,6 +38,8 @@ import {
 import { shellSidebarSections } from './sidebar';
 import { useEventosAtivosBadge } from './eventosBadge';
 import { useShellSession } from './session';
+import { usePaineisDaConta } from './paineis';
+import { AlternadorDePainel, nomeDoPainelAtual } from './AlternadorDePainel';
 
 export interface RootShellProps {
   children: React.ReactNode;
@@ -48,6 +50,7 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
   const navigate = useNavigate();
   const { nome, fotoUrl } = useShellSession();
   const eventosAtivos = useEventosAtivosBadge();
+  const paineis = usePaineisDaConta();
 
   // `navigate` vai INTEIRO, sem adaptador. O `(href) => navigate(href)` que
   // morava aqui descartava em silêncio o segundo argumento, e com ele o
@@ -72,9 +75,22 @@ export function RootShell({ children }: RootShellProps): JSX.Element {
         data-slot="brand-logo"
         className="h-[var(--sidebar-brand-mark-size)] w-auto"
       />
+      {/* O sub deixou de ser literal (PAPEL-DUPLO): a MESMA moldura serve os
+          dois painéis — `/plataforma` sempre rodou dentro deste RootShell — e
+          o rótulo fixo "Painel do Organizador" mentia para quem estivesse no
+          painel master. Agora ele nomeia onde a conta está, que é o que faz o
+          alternador logo abaixo ser legível: um diz onde você está, o outro
+          diz para onde vai. */}
       <p className="mt-[var(--sidebar-brand-sub-mt)] text-[length:var(--sidebar-brand-sub-size)] font-[var(--font-weight-medium)] uppercase tracking-[var(--sidebar-brand-sub-spacing)] text-[var(--text-tertiary)]">
-        Painel do Organizador
+        {nomeDoPainelAtual(location.pathname)}
       </p>
+      {/* Só desenha para quem alcança os dois lados. Não é autorização — quem
+          nega é Rules + guards das Functions; ver o cabeçalho do componente. */}
+      {paineis.podeAlternar ? (
+        <div className="mt-[var(--spacing-3)]">
+          <AlternadorDePainel podeAlternar={paineis.podeAlternar} />
+        </div>
+      ) : null}
     </div>
   );
 
