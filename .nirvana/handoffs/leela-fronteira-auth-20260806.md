@@ -279,3 +279,81 @@ Duas decisões que valem veto do maestro:
   está com alteração NÃO COMMITADA de outra lane (37 linhas removidas); um
   `commit --only` nele carregaria o trabalho alheio junto. A decisão do
   comprimento mínimo (§8) vai para o maestro registrar.
+
+---
+
+# Terceira tarefa — o papel duplo na interface
+
+## §13 · A segunda porta, e as outras três que a varredura achou
+
+A `PAPEL-DUPLO` deixou as Rules aceitando as duas pernas do crachá (papel legado
+OU capacidade) e apontou `plataforma/_data/session.ts:60` como a porta que
+faltava. A varredura achou **seis** comparações literais de papel nos apps.
+Quatro estavam erradas:
+
+| # | Arquivo:linha (antes) | O que a comparação literal fazia | Agora |
+|---|---|---|---|
+| 1 | `plataforma/_data/session.ts:60` | 403 no dono — a porta do relato | `isPlatformAdmin(claims)` |
+| 2 | `conta/auth/_lib/destinoPosLogin.ts:68` | barrava na porta o admin nomeado por CAPACIDADE (sem tenant, sem doc de profissional) e derrubava a sessão dele | `isPlatformAdmin(crachá)` |
+| 3 | `conta/auth/_lib/destinoPosLogin.ts:87` | mandava esse mesmo admin para uma Visão Geral sem tenant nenhum | `paineisDaConta(crachá)` |
+| 4 | `onboarding/_data/onboarding.ts:48` | cobria esse admin com o overlay "peça um convite" | `isPlatformAdmin(crachá)` |
+
+**A quinta está CERTA e ficou de pé:** `apps/landing/lib/portaOrganizador.ts:54`.
+Ali a pergunta é *"esta conta é SÓ da plataforma?"*, não *"esta conta administra
+a plataforma?"* — trocar por `isPlatformAdmin` faria o dono perder a porta de
+organizador na própria área de cliente. Ficou pinada com três testes e com o
+porquê escrito na linha, para a próxima varredura não a "consertar".
+
+A sexta (`plataforma/_data/session.ts:48`) era um comentário desatualizado.
+
+**Nenhum destino de entrada muda para quem existe hoje.** Admin legado (sem
+tenant) continua em `/plataforma`; o dono continua na Visão Geral, onde trabalha.
+Só o caso que não existia — capacidade sem tenant — deixa de cair no lugar errado.
+
+**Gatilho de refresh corrigido junto:** era `!role`, e a conta recém-nomeada TEM
+`role` (`tenant_owner`), então nada forçava o refresh e o 403 durava até o token
+rodar sozinho. Agora o gatilho é "o crachá em cache não concede".
+
+## §14 · O alternador
+
+`apps/painel/src/shell/AlternadorDePainel.tsx` + `shell/paineis.ts`, desenhado no
+bloco de marca do `RootShell`.
+
+Três regras, cada uma travada por teste: **só aparece para quem alcança os dois**
+(`podeAlternar`); **rotula o destino**, não o estado; **não decide permissão** —
+há um caso que o monta com `podeAlternar` mentindo `true` só para provar que o
+clique navega e nada mais acontece.
+
+De quebra, o sub da marca deixou de mentir: era o literal "Painel do Organizador"
+em TODA rota, e `/plataforma` sempre rodou dentro deste mesmo shell.
+
+## §15 · Laudo da escrita negada
+
+Documento próprio: `.nirvana/handoffs/leela-fronteira-auth-20260806-LAUDO-ESCRITA-NEGADA.md`.
+
+Resumo: **12 de 13 leituras passam, 7 de 8 escritas recusam**, e só uma superfície
+diz ao dono que o motivo é permissão. Os guards das Functions continuam no papel
+literal (16 sítios, 5 helpers compartilhados) e são de outra lane. Dois achados
+que não são "mensagem ruim": o modal de dados bancários **audita um
+`negado_papel` por tentativa**, e a escrita que PASSA no tenant do próprio dono é
+carimbada `trilha: 'organizador'` — **corrupção silenciosa do rastro de
+auditoria**, que não se manifesta como erro.
+
+## §16 · Pendência DO DONO (não da lane)
+
+A janela anônima em `https://leela-hub.web.app/plataforma` continua sem resposta.
+Enquanto ele não reproduzir num navegador limpo, a hipótese de sessão residual
+segue **sem confirmação**. Se reproduzir, a lane reabre e vira incidente.
+
+## §17 · Gates da terceira tarefa
+
+| Gate | Resultado |
+|---|---|
+| `tsc --noEmit` painel · landing | exit 0 |
+| `eslint --max-warnings 0` painel · landing | exit 0 |
+| `usePlatformSession` (os quatro crachás) | 11 testes |
+| `destinoPosLogin` | 17 testes |
+| `contaTravada` | 12 testes |
+| `AlternadorDePainel` + `RootShell` | 22 + shell completo |
+| `portaDaConta` (landing, a armadilha pinada) | 26 testes nos dois arquivos |
+| falsificação da porta principal | 3 falhas, incluindo o caso do dono |
