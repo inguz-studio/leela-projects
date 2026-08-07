@@ -149,3 +149,18 @@ o bloqueio caiu e a ausência precisa de razão nova.
 [[02-spec-painel-cliente]] tem o desenho e as histórias. `03-rns-delta.md` tem as regras novas.
 [[04-inventario-de-telas]] é o que vai para o Claude Design. [[05-fila-codigo]] tem a ordem de
 execução.
+
+---
+
+## Direção do dono — 07/08 (verbatim, via chat)
+
+> "sobre o botao 'virar profissional', devemos testar coisas diferentes.. mas a primeira é 'Painel Profissional' ao invés de virar profissional. Podemos ter CTA's diferentes, que é 'Criar Club' e 'Organizar eventos', e no painel do organizador vamos liberando pelo nosso código de convite."
+
+O que isso decide, na leitura do maestro (corrigível pelo dono):
+
+1. **O rótulo da porta é "Painel Profissional"** — nomeia o lugar, não a transformação da pessoa. Isso RESPONDE a PCLIENTE-4 na direção do default proposto (o rótulo nomeia o painel), com o texto exato definido pelo dono.
+2. **Duas chamadas por intenção, para teste: "Criar Club" e "Organizar eventos".** São portas de entrada por trabalho-a-fazer, não um botão único genérico. A forma de teste (as duas lado a lado, ou variantes alternadas) fica em aberto — registrar o desenho antes de construir.
+3. **A liberação de capacidade continua pelo código de convite, dentro do painel** — nada muda na RN-413 nem na vitrine RN-510; o código Leela segue sendo o portão.
+4. **Impacto imediato:** o cartão construído pela PONTE-ONDA-A (`35a85f04`, ainda NÃO publicado) usa outro rótulo — ajustar o texto ANTES do deploy da ponte. "Criar Club" implica caminho de criação de clube que hoje não existe como superfície — entra como escopo a especificar (ondas B/C ou posterior), não como retrofit silencioso.
+
+**Contexto do dono no mesmo recado:** ele quer criar um TEMA NOVO (outros tokens de design e outra fonte) para testar nas interfaces atuais — a experimentação acontece no Claude Design sobre o projeto "Leela — Design System" já sincronizado; quando aprovar o visual, o tema vira oficial no DS (o mecanismo `data-theme` já suporta múltiplos temas — brasa e wine hoje; um terceiro é estruturalmente barato).
