@@ -289,3 +289,9 @@ Mexer em repasse é mexer em dinheiro, e isso não é decisão minha. Proposta n
 ## Ferramentas de medição (fora do repo, não commitadas)
 
 `C:\dev\leela-ops\limpeza-20260806\` — `gtok.mjs` (token OAuth do CLI), `fsrest.mjs` (cliente REST que **explode na chave `error` do `runQuery`**), `arvore.mjs`, `grafo.mjs`, `nomes.mjs`, `pendurados.mjs`, `linksenha.mjs`.
+
+---
+
+## SELO DO MAESTRO — 06/08 ~16h40 (pós-2º travamento do terminal)
+
+FIX3 está COMPLETO e PUSHED: `e14ce3f0` (R1/R3/R2/R4/N1/B4/R7/B3) + `fd73aac0` (runner: --apply executa o congelado, --retomar não replaneja, drenagem medida 20s/90s) + `42808c04` (sobra selada pelo maestro: arquivo congelado sai canonicalizado; 82/82 testes verdes na árvore exata). R6 SATISFEITO: senha de inguzbuilders@gmail.com definida pelo dono ~15h35, provada por signInWithPassword, registro em `leela-credenciais-20260806.md` + commit `d6837369`. Próximo passo do fluxo: REV3 fria (brief `leela-rev3-fria-20260806-enriched.md`) → LIBERAR → export fresco do Firestore (o de 13:45 é anterior à transferência de titularidade, reprova na régua nova) → `--apply`.
