@@ -8,10 +8,25 @@
     <script>
       // Anti-FOUC: aplica o tema persistido antes do primeiro paint.
       // Mesma chave usada pelo ThemeProvider do DS ('leela-theme-preference').
+      //
+      // A lista de temas válidos aqui tem de ser a MESMA de
+      // ThemeProvider.readStoredTheme / getThemeInitScript. Ela ficou para
+      // trás no rename 'leela' → 'wine' e o script passou a errar nos dois
+      // sentidos: 'wine' (o valor que o toggle grava hoje) caía no fallback e
+      // a tela nascia brasa até o mount corrigir; 'leela' (valor antigo ainda
+      // em localStorage de quem usava o showroom antes do rename) era
+      // estampado no <html> e não casa com bloco de tema NENHUM — a tela
+      // nascia sem token e sem `color-scheme`. Nos dois casos o script
+      // entregava exatamente o flash que existe para evitar, e desde a
+      // declaração de `color-scheme` no tema (8e10ab8f) o flash inclui a
+      // polaridade do cromo do NAVEGADOR: barra de rolagem clara piscando
+      // sobre o brasa, escura sobre o wine. Contrato em
+      // `src/theme/__tests__/showcase-init-theme.test.ts`.
       (function () {
         try {
           var t = localStorage.getItem('leela-theme-preference');
-          if (t !== 'brasa' && t !== 'leela') t = 'brasa';
+          if (t === 'leela') t = 'wine';
+          if (t !== 'brasa' && t !== 'wine') t = 'brasa';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'brasa');
