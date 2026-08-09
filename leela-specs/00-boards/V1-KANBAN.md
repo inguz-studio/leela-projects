@@ -10,32 +10,6 @@ tags:
 
 ## 📋 Backlog
 
-- [ ] **[E00/E12/E16] O corte de 09/08 vira conserto** — o dono disse que 67 decisões não é razoável e devolveu à esteira duplicidade, CTA inconsistente e contraste; trinta e nove itens saíram do painel dele e vinte e sete viraram trabalho, sem esperar resposta nenhuma 📋 decidido em 09/08 · lane PAINEL-CORTE · território e critério de aceite por item em [[02-fila-execucao]]; o registro das decisões em [[01-decisoes-maestro]] [[LEELA-E12-landing]]
-    - [ ] **S1242 · Os dezessete consertos de código do corte**
-        - [ ] S1242-T1 o aviso de boas-vindas adota o `Modal` do DS e a borda do cartão sobe para `--border-strong` — VITRINE-VEU-1 e VITRINE-CONTRASTE-1, mesmo arquivo, uma lane só
-        - [ ] S1242-T2 criar conta passa a ter uma porta só, e o rótulo antigo sai do header — CONTA-2
-        - [ ] S1242-T3 a página pública e o painel passam a contar o mesmo inscrito — INSCR-1
-        - [ ] S1242-T4 o card de conversão some até existir contagem de visitas — CONV-1, é a `S824-T1`
-        - [ ] S1242-T5 os treze campos numéricos ganham onde mostrar mensagem, e as cinco frases entram ⚔ — PARSE-1, lane própria
-        - [ ] S1242-T6 o conserto da redefinição de senha sobe — SENHA-1, deploy do que está em review
-        - [ ] S1242-T7 as duas functions de convite que nunca foram escritas nascem e as três sobem ⚔ — DEPLOY-1, lane própria, **com o seed do primeiro convite retido pelo LGPD-1**
-        - [ ] S1242-T8 o domínio de terceiro sai do último recurso do botão — item 66
-        - [ ] S1242-T9 o reenvio diz quando a lista sai parcial e para de carimbar o pedido como entregue — REENVIO-PARCIAL-1
-        - [ ] S1242-T10 anomalia em pedido pago abre pendência com o motivo nomeado — INSCRITO-APAGADO-1
-        - [ ] S1242-T11 a compra ganha tela de detalhe dentro da área do cliente — RN469-PROJECAO-1
-        - [ ] S1242-T12 o CTA da confirmação passa a rotular por estado — CTA-PIX-1
-        - [ ] S1242-T13 a área explica a compra recusada e a compra sob o e-mail antigo — AREA-MUDA-1 e TROCA-EMAIL-1, mesmo território, uma lane só
-        - [ ] S1242-T14 a porta ganha a sexta recusa nomeada ⚔ — PONTE-ELEGIVEL-1, é a `S1234-T7`, lane própria com review
-        - [ ] S1242-T15 a varredura do estoque roda, só leitura — ACUMULO-ESTOQUE-1, é a `S032-T5`
-    - [ ] **S1243 · As dez decisões que viram regra escrita** — nenhuma toca código de aplicação
-        - [ ] S1243-T1 RN-451: o botão da área leva ao painel do organizador — ADMINSEP-2, destrava a task B5
-        - [ ] S1243-T2 RN-500 e RN-502: a edição para em "sem venda", e remover recusa nomeando quem impede — MODAL-1 e MODAL-2, destravam a `S316`
-        - [ ] S1243-T3 RN-464 e RN-465: o CPF só identifica, e o número do CNPJ fica no recebimento — QUALIF-2 e QUALIF-1
-        - [ ] S1243-T4 RN-468: o rebatismo para no rótulo visível — QUALIF-3
-        - [ ] S1243-T5 RN-463: o botão da Apple só aparece quando as chaves existirem — QUALIF-5
-        - [ ] S1243-T6 RN-471: a Arena é seção da área do cliente, com a fronteira do E17 anotada — ARENA-3
-        - [ ] S1243-T7 RN-469: a listagem que atravessa produtoras passa a ser declarada — PEDLIST-1
-        - [ ] S1243-T8 RN-474: a coleção de reservas não é podada, e o alerta olha o tamanho acumulado — CODPED-PODA-1
 - [ ] **[E12] O painel do cliente ganha casca, navegação e estados** — a área do cliente está no ar com as quatro abas e vira painel: cabeçalho de conta, navegação persistente e os estados de sistema com nome próprio, em vez de improviso por painel 📋 especificado em 06/08 · lane SPEC-PAINEL-CLIENTE · **retido: fica com você o PCLIENTE-1** (a forma, antes de você simular as telas) [[LEELA-E12-landing]]
     - [ ] **S1233 · O painel do cliente ganha casca, navegação e estados**
         - [ ] S1233-T1 a casca: cabeçalho de conta, navegação persistente e o comportamento em 320 pixels — precisa de `AppShell`, `PageHeader` e `Skeleton` atravessando o boundary de cliente da landing (três nomes no `export`)
@@ -225,6 +199,32 @@ tags:
 
 ## 🔄 Em execução
 
+- [ ] **[E00/E12/E16] O corte de 09/08 vira conserto** — o dono disse que 67 decisões não é razoável e devolveu à esteira duplicidade, CTA inconsistente e contraste; trinta e nove itens saíram do painel dele e vinte e sete viraram trabalho, sem esperar resposta nenhuma 📋 decidido em 09/08 · lane PAINEL-CORTE · território e critério de aceite por item em [[02-fila-execucao]]; o registro das decisões em [[01-decisoes-maestro]] · 🔄 **onda A em execução desde 09/08**: BUILD-OVERLAY (T1, construída) e BUILD-PONTE-RECUSA (T14) [[LEELA-E12-landing]]
+    - [ ] **S1242 · Os dezessete consertos de código do corte**
+        - [x] S1242-T1 o aviso de boas-vindas adota o `Modal` do DS e a borda do cartão sobe para `--border-strong` — VITRINE-VEU-1 e VITRINE-CONTRASTE-1, mesmo arquivo, uma lane só · **construído em 09/08** (lane BUILD-OVERLAY, `7b55d1b3`) · ⚠️ **NÃO está no ar** (o painel inteiro espera deploy) e **sem review antagonista ainda**. Medido: com o aviso aberto os **oito** controles do fundo continuam existindo e **zero** continua alcançável (`inert` no contêiner do app; a lista nominal do jsdom bate elemento a elemento com a sonda que a review rodou no navegador); o aviso é portalizado para o `body`, trava a rolagem e devolve o foco. Contraste do limite do cartão, medido no `dist` e travado em teste nos dois temas: brasa **3,82:1** contra o cartão e **4,30:1** contra o velado (era 1,31:1 e 1,13:1); wine 3,74:1 e 5,90:1. **Achado que virou conserto na mesma lane:** o `Modal` foca o X ao abrir, e a mesma tecla que sobe o aviso o dispensava — os dois casos de teclado da ordem do dono caíam. **Achado para o DS:** o `Modal` **não** faz `inert`, ao contrário do que a fila supunha; o `inert` ficou na lane, candidato a subir para o DS com review própria
+        - [ ] S1242-T2 criar conta passa a ter uma porta só, e o rótulo antigo sai do header — CONTA-2
+        - [ ] S1242-T3 a página pública e o painel passam a contar o mesmo inscrito — INSCR-1
+        - [ ] S1242-T4 o card de conversão some até existir contagem de visitas — CONV-1, é a `S824-T1`
+        - [ ] S1242-T5 os treze campos numéricos ganham onde mostrar mensagem, e as cinco frases entram ⚔ — PARSE-1, lane própria
+        - [ ] S1242-T6 o conserto da redefinição de senha sobe — SENHA-1, deploy do que está em review
+        - [ ] S1242-T7 as duas functions de convite que nunca foram escritas nascem e as três sobem ⚔ — DEPLOY-1, lane própria, **com o seed do primeiro convite retido pelo LGPD-1**
+        - [ ] S1242-T8 o domínio de terceiro sai do último recurso do botão — item 66
+        - [ ] S1242-T9 o reenvio diz quando a lista sai parcial e para de carimbar o pedido como entregue — REENVIO-PARCIAL-1
+        - [ ] S1242-T10 anomalia em pedido pago abre pendência com o motivo nomeado — INSCRITO-APAGADO-1
+        - [ ] S1242-T11 a compra ganha tela de detalhe dentro da área do cliente — RN469-PROJECAO-1
+        - [ ] S1242-T12 o CTA da confirmação passa a rotular por estado — CTA-PIX-1
+        - [ ] S1242-T13 a área explica a compra recusada e a compra sob o e-mail antigo — AREA-MUDA-1 e TROCA-EMAIL-1, mesmo território, uma lane só
+        - [ ] S1242-T14 a porta ganha a sexta recusa nomeada ⚔ — PONTE-ELEGIVEL-1, é a `S1234-T7`, lane própria com review
+        - [ ] S1242-T15 a varredura do estoque roda, só leitura — ACUMULO-ESTOQUE-1, é a `S032-T5`
+    - [ ] **S1243 · As dez decisões que viram regra escrita** — nenhuma toca código de aplicação
+        - [ ] S1243-T1 RN-451: o botão da área leva ao painel do organizador — ADMINSEP-2, destrava a task B5
+        - [ ] S1243-T2 RN-500 e RN-502: a edição para em "sem venda", e remover recusa nomeando quem impede — MODAL-1 e MODAL-2, destravam a `S316`
+        - [ ] S1243-T3 RN-464 e RN-465: o CPF só identifica, e o número do CNPJ fica no recebimento — QUALIF-2 e QUALIF-1
+        - [ ] S1243-T4 RN-468: o rebatismo para no rótulo visível — QUALIF-3
+        - [ ] S1243-T5 RN-463: o botão da Apple só aparece quando as chaves existirem — QUALIF-5
+        - [ ] S1243-T6 RN-471: a Arena é seção da área do cliente, com a fronteira do E17 anotada — ARENA-3
+        - [ ] S1243-T7 RN-469: a listagem que atravessa produtoras passa a ser declarada — PEDLIST-1
+        - [ ] S1243-T8 RN-474: a coleção de reservas não é podada, e o alerta olha o tamanho acumulado — CODPED-PODA-1
 - [ ] **[E12] A porta do painel do cliente para o painel profissional está quebrada** — ✅ **o defeito está consertado e NO AR; o cartão segue aberto porque S1234-T5, S1234-T7 e a S1235 continuam pendentes** — o cartão "criar conta de organizador" mandava quem está logada para o formulário de cadastro do painel, e como a conta dela já existe o sistema devolvia a negativa genérica anti-enumeração. Passou a ser promoção da conta que já existe, com o destino sendo a vitrine da RN-510 e o código Leela à mão ✅ **NO AR desde 08/08 22:13** (lane DEPLOY-PONTE) — a callable `promoverParaProfissional` subiu às **21:59** e o bundle da landing às **22:13**, nessa ordem, porque landing nova com callable ausente faria o botão virar 404 · construído em 06/08 (`35a85f04`), **gates re-provados do zero em 08/08** pela PONTE-RET (verde de antes de um travamento não vale), **review antagonista em 08/08 APROVOU COM RESSALVAS** — quinze vetores, nenhum derrubou a ponte · o rótulo virou o que você pediu em 07/08 · **fica com você:** **PONTE-CTA-1** (três rótulos para a mesma porta — e a review acrescentou uma quarta opção, medir pelo servidor, que é bem mais barata que instrumentar a landing) e **PONTE-NOME-1** (quem entra pela porta vira produtora com o nome próprio, e **não tem como trocar**) · ✅ **PONTE-ELEGIVEL-1 decidido em 09/08**: a porta ganha a sexta recusa nomeada, em lane própria com review antagonista, porque muda contrato de chamada [[LEELA-E12-landing]]
     - [ ] **S1234 · A ponte para o painel profissional**
         - [x] S1234-T1 a promoção no servidor: `profissionais/{uid}` em `aguardando_convite` com o carimbo do termo, idempotente, com as cinco recusas nomeadas ⚔ — `35a85f04` · ✅ **NO AR em 08/08 21:59** (DEPLOY-PONTE)
