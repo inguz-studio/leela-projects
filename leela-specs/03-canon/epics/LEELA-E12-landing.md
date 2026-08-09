@@ -3682,7 +3682,22 @@ sem recoletar consentimento (RN-467).
 Ela **não** concede tenant, **não** concede papel e **não** concede capacidade de plataforma, e a
 fronteira é provada por teste, não presumida — molde da RN-480. Recusa nomeada, com erro tipado e
 nunca `internal`, para: sem sessão, sessão anônima do checkout, conta de administração de
-plataforma (RN-449), e aceite ausente ou datado pelo cliente.
+plataforma (RN-449), conta inelegível ao papel de organizador, e aceite ausente ou datado pelo
+cliente.
+
+**A sexta recusa, e por que ela existe (PONTE-ELEGIVEL-1 · 09/08).** A porta recusa **a mesma
+lista** que o resgate do código recusa (RN-414): passa quem não tem papel algum e o `athlete`
+limpo; não passam o divulgador (`promoter`), a conta de equipe, a dona de tenant e a `athlete` que
+carrega o marcador de demoção deliberada. A régua é **uma só** e as duas guardas a leem — a porta
+pelo token, o resgate pelo Auth Admin —, porque duas cópias da lista divergem e foi essa
+divergência que a review de 08/08 mediu: o divulgador e a ex-organizadora rebaixada atravessavam a
+porta, esperavam o convite e ouviam a recusa genérica do resgate dias depois, indistinguível de
+"código inválido".
+
+A recusa nova fala **da conta logada** e de nenhuma outra, então a uniformidade anti-enumeração da
+RN-414 continua de pé: a promoção não tem endereço de e-mail de entrada, e nada aqui ensina o
+estado de conta de terceiro. Quem **já tem tenant** continua atravessando com sucesso silencioso
+(`jaExistia`) em vez de receber recusa — ela já está do outro lado.
 
 Mandar a pessoa ao `/cadastrar` do painel fica **proibido**, pela razão medida acima.
 
@@ -3732,7 +3747,8 @@ hoje exporta vinte e um nomes). São três nomes no `export`, não componente no
 
 ### LEELA-S1234 · A ponte para o painel profissional · (de-para novo · SPEC-PAINEL-CLIENTE)
 
-**Tasks:** `S1234-T1` (a promoção no servidor, idempotente, com as cinco recusas nomeadas — ⚔),
+**Tasks:** `S1234-T1` (a promoção no servidor, idempotente, com as recusas nomeadas — cinco no ar
+desde 08/08, **seis** desde o PONTE-ELEGIVEL-1 de 09/08 — ⚔),
 `S1234-T2` (o cartão da ponte nos dois estados, com o aceite e o aviso do segundo login),
 `S1234-T3` (a prova de fronteira: a ponte não concede tenant, `platform_admin` nem papel — ⚔),
 `S1234-T4` (a demonstração ponta a ponta até o resgate do código Leela). Fila e dependências em
