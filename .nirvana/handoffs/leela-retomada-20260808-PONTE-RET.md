@@ -197,13 +197,130 @@ desenho não se desfaça em silêncio na próxima mão:
 
 ---
 
+## T3 · A4 — a demonstração que nunca tinha acontecido
+
+O emulator **subiu**. O risco de RAM não se materializou: no instante da subida a máquina tinha
+**1,14 GB livres** (`FreePhysicalMemory: 1169300`), acima dos 0,52 GB do início. Subi só o
+necessário — `--only firestore,auth`, sem UI e sem o emulator de functions.
+
+### O comando, inteiro
+
+```
+LEELA_USE_EMULATOR=1 LEELA_CLOCK=2026-03-15 \
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 \
+npx firebase-tools@13 emulators:exec --only firestore,auth --project demo-leela \
+  "cd functions && npx vitest run src/__tests__/promocaoProfissionalPonte.integration.test.ts"
+```
+
+**Duas notas de operação, para quem repetir:**
+
+1. A porta é **8080**, não 8180 — é o que está no `firebase.json` deste repo (`emulators.firestore.port`).
+   O 8180 do brief é a config de preview. `FIRESTORE_EMULATOR_HOST` está setado **explicitamente**,
+   que é o que impede a suíte de sair `skipped` com exit 0.
+2. `emulators:exec` roda o script a partir da **raiz** (onde vive o `firebase.json`), e ali `vitest`
+   não resolve. A primeira tentativa morreu com `'vitest' não é reconhecido`. O `cd functions &&`
+   dentro do script resolve.
+
+### A saída
+
+```
+✓ src/__tests__/promocaoProfissionalPonte.integration.test.ts (7 tests) 7991ms
+Test Files  1 passed (1)
+Tests       7 passed (7)
++  Script exited successfully (code 0)
+```
+
+### Os seis passos, e o que foi observado em cada um
+
+| Passo do dispatch | Provado? | Como, e o que se viu |
+|---|---|---|
+| 1 · participante logada clica na porta | **sim**, a parte de servidor | O caso monta a conta como o produto a produz: usuário Auth nomeado, claim `athlete`, doc `atletas/{uid}`. O clique em si é tela — coberto pelos 38 casos da landing |
+| 2 · `profissionais/{uid}` nasce em `aguardando_convite`, com termo carimbado pelo servidor | **sim** | Doc criado; `statusOnboarding: 'aguardando_convite'`; `versao`/`finalidade` da RN-466; **`aceitoEm` volta como `Timestamp` de verdade** — só um banco real resolve `serverTimestamp`, e é por isso que este caso não existia antes. `tenantId` ausente, `telefone`/`organizacao` vazios |
+| 3 · aterrissa na vitrine (RN-510) | **sim, por outra prova** | `vitrine-sem-query.test.tsx` (10 casos) + `vitrine-interacao.test.tsx` (10) + `destinoPosLogin.test.ts` — **37/37 verdes**. Não é o mesmo que um navegador atravessando |
+| 4 · o aviso sobe na **primeira interação**, não antes | **sim, por outra prova** | `vitrine-interacao.test.tsx`, no mesmo lote de 37 |
+| 5 · o código resgata e destrava | **sim** | `resgatarConviteCore` rodou **em cima do doc que a ponte criou**: `statusOnboarding` → `ativo`, `tenantId` gravado, claim vira `role: tenant_owner` + `tenantId`. E o consentimento que a **ponte** carimbou sobreviveu ao resgate |
+| 6 · o papel `athlete` sobrevive | **sim** | `atletas/{uid}` intacto depois da promoção; `customClaims` continua exatamente `{ role: 'athlete' }`; os dois documentos convivem (RN-450) |
+| idempotência | **sim, nas duas formas** | Sequencial: segunda chamada devolve `jaExistia: true`, **um** doc, e o `aceitoEm` é **o mesmo milissegundo** (RN-467 — consentimento carimbado não se recolhe). Concorrente: duas promoções em `Promise.all` → `[false, true]`, um doc |
+| as recusas contra banco real | **sim** | `conta_de_plataforma`, `aceite_ausente` e `aceite_datado_pelo_cliente` recusam **sem escrever nada** |
+
+### O que este arquivo NÃO prova, dito antes que a review descubra
+
+- **Não é um navegador.** Ninguém clicou. O que rodou foi o **core** (`promoverParaProfissionalCore`)
+  contra Firestore e Auth de verdade; o wrapper `https.onCall` — que só destrincha `context.auth` e
+  delega — não foi exercitado por HTTP. Uma travessia de navegador entre duas origens de Hosting
+  precisa das duas apps servidas, e a máquina não comporta isso hoje.
+- **O trigger `onCreateUser` não rodou** (o emulator de functions não subiu). O `atletas/{uid}` foi
+  gravado à mão para reproduzir o efeito dele. O ponto do caso não é o trigger: é que a promoção
+  **não encosta** nesse documento, e para isso ele precisa existir antes.
+- **Nada foi exercitado contra produção.** Continua verdade o que o trailer de `35a85f04` dizia
+  sobre produção.
+
+### ⚠️ A5 · O achado da demonstração: o tenant nasce com o nome da PESSOA, e não dá para trocar
+
+Observado no log do resgate, não esperado:
+
+```
+{"tenantId":"ana-paula","ownerUid":"lF7Td…","message":"provision_tenant_auto_cadastro"}
+```
+
+A conta de teste se chama "Ana Paula" e **não tem organização** — a ponte grava `organizacao: ''`
+de propósito, porque não tem formulário. No resgate, `sementeDoSlug` tenta
+`organizacao → nome → local-part do e-mail` e cai no **nome da pessoa**. O `tenantId` sai `ana-paula`.
+
+Por que isso não é cosmético:
+
+- `tenantId == slug`, determinístico, e o slug **é o docId do tenant**. DocId não se edita.
+- Varri por caminho de renomeação (`renomear|renameTenant|alterarSlug|mudarSlug` em `apps`,
+  `functions`, `packages`): **não existe nenhum**.
+- O comentário da ponte diz *"a pessoa preenche o perfil dela no painel"* — e preencher
+  `organizacao` **depois** não muda o slug, porque ele já foi cunhado no resgate. Quem entra pela
+  ponte e só depois registra a produtora fica com um identificador permanente com o nome próprio.
+
+**O que eu NÃO verifiquei, e não vou afirmar:** se esse `tenantId` chega ao endereço público. A
+rota `/@{handle}` da landing lê `perfis/{handle}` (E17), que é coleção **separada** com handle
+próprio. Se o handle é semeado pelo slug do tenant no dia em que o perfil nascer, o nome pessoal
+vira URL pública e a RN-160 a torna imutável — mas isso é hipótese minha, não medição. **Vetor
+nomeado para a PONTE-REV.**
+
+Não consertei. Consertar significaria pedir o nome da organização na ponte (formulário que a
+decisão de produto tirou de propósito) ou adiar a cunhagem do slug para depois do perfil — as duas
+coisas são decisão de produto, não ajuste de rótulo, e nenhuma cabe numa lane de véspera de review.
+
+---
+
 ## Colunas de honestidade
 
 | Item | Construído | Revisado | NO AR |
 |---|---|---|---|
-| Ponte (`35a85f04`) | sim, 06/08 | **não** — PONTE-REV é a wave 2 | **não** |
-| Rótulo novo do cartão | _em curso_ | não | não |
-| Gates re-provados | _em curso_ | n/a | n/a |
-| A4 contra emulator | _em curso_ | n/a | n/a |
+| Ponte — callable + cartão (`35a85f04`) | sim, 06/08 | **não** — PONTE-REV é a wave 2 | **NÃO** |
+| Rótulo novo do cartão (`ca72625c`) | sim, 08/08 | **não** | **NÃO** |
+| Gates re-provados do zero | sim, 08/08 | n/a | n/a |
+| A4 contra emulator (`+ commit T3`) | sim, 08/08 — 7/7 | **não** | n/a |
+| Fronteira falsificada de propósito | sim, 08/08 — 6/19 caem | n/a | n/a |
+| Achado A5 (tenant com nome da pessoa) | só **relatado** | — | — |
 
-Nada desta lane está resolvido. Está construído e (quando o for) provado — que é coisa diferente.
+**Nada desta lane está resolvido.** Está construído e provado, que é coisa diferente. A porta
+quebrada da área do cliente **continua quebrada em produção** neste minuto: a participante logada
+que clica ainda vai para o `/cadastrar` do painel. Só a DEPLOY-PONTE muda isso, e só depois da
+PONTE-REV.
+
+## O que a DEPLOY-PONTE precisa subir
+
+1. **A callable `promoverParaProfissional`** — nova. Sem ela o botão vira 404, exatamente como as
+   três portas do organizador já foram (o precedente está no LGPD-1 do painel: produção tinha 88
+   functions e o repositório exportava 89).
+2. **O bundle da landing** — o cartão com o rótulo novo.
+
+O contrato da callable **não mudou nesta lane**: o que vai ao ar é bit a bit o de `35a85f04`.
+Âncora de baseline para a prova por diff/hash: `.nirvana/handoffs/leela-redeploy-painel-20260806.md`,
+nunca a memória do maestro.
+
+## Vetores que deixo nomeados para a PONTE-REV
+
+1. **A5** — o `tenantId` cunhado com o nome da pessoa chega ao `/@handle` público? Eu não medi.
+2. **O wrapper `https.onCall`** nunca foi exercitado por HTTP; só o core rodou contra emulator.
+3. **A leitura de "a primeira é"** como ordem de variantes é minha, e o dono pode ter querido dois
+   botões (PONTE-CTA-1).
+4. **A suíte cheia da landing não é gate** nesta máquina (A3) — o verde que sustento é o dos
+   arquivos isolados.
+5. **`eslint app lib` não cobre `test/`** — buraco do projeto, contornado à mão nesta lane.

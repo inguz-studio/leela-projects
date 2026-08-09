@@ -3768,6 +3768,23 @@ trabalho vencer o teste e virar porta permanente, a conversa de vocabulário rea
 Decisão do dono em aberto: **PONTE-CTA-1** no painel canônico. Desenho completo e o que ficou de
 fora em `02-rodadas/2026-08-06-painel-cliente/06-desenho-do-cartao.md`.
 
+#### ⚠️ Ponta solta aberta pela demonstração A4 (08/08) · o tenant nasce com o nome da pessoa
+
+A promoção grava `organizacao: ''` de propósito — a ponte não tem formulário. No resgate do código,
+`sementeDoSlug` tenta `organizacao → nome → local-part do e-mail` e, para quem veio pela ponte, cai
+no **nome da pessoa**: a conta de demonstração "Ana Paula" recebeu `tenantId: 'ana-paula'`.
+
+O que torna isso permanente: `tenantId == slug` é determinístico e **é o docId do tenant**, e a
+varredura por caminho de renomeação (`renomear|renameTenant|alterarSlug|mudarSlug`) devolve **zero**
+em `apps`, `functions` e `packages`. Preencher a organização depois **não** corrige, porque o slug
+já foi cunhado no resgate.
+
+Não é defeito da ponte isolada — é a costura entre ela e a RN-413. As duas saídas conhecidas
+(pedir a organização na ponte, ou adiar a cunhagem do slug para depois do perfil) são **decisão de
+produto**, e ficam registradas sem default. Vetor aberto para a review antagonista: se o handle
+público da RN-160 for semeado por este slug, o nome pessoal vira URL e a RN-160 a torna imutável —
+**não medido**.
+
 ### LEELA-S1235 · A travessia declarada nos dois sentidos · (de-para novo · SPEC-PAINEL-CLIENTE)
 
 **Tasks:** `S1235-T1` (o par do alternador no lado do cliente), `S1235-T2` (a copy da travessia e
