@@ -43,7 +43,7 @@ Nenhum. Puramente apresentação.
 ## Tema · arquitetura de tokens (3 tiers)
 
 - **Primitives** (por tema): escalas de cor cruas. Tema `brasa`: Brasa 50→900 (500 `#FF450C`), Vulcão, Heroico, Vitória, Alerta, Neutros (surface base `#0C0C0C`, raised `#161616`). Tema `leela`: Oxblood `#7A1520` + Lima `#C8E84A` + neutros próprios.
-- **Semantic** (compartilhado entre temas): `--surface-base/raised/overlay/high/sunken`, `--text-primary/secondary/tertiary/disabled/brand/danger/success`, `--action-primary(+hover/pressed/disabled)/secondary/destructive`, `--border-subtle/default/strong/brand/focus/danger`, feedback success/danger/warning/info.
+- **Semantic** (compartilhado entre temas): `--surface-base/raised/overlay/high/sunken`, `--text-primary/secondary/tertiary/disabled/brand/danger/success`, `--action-primary(+hover/pressed/disabled)/secondary/destructive`, `--border-subtle/default/strong/brand/focus/danger`, feedback success/danger/warning/info, e `color.scheme` — a polaridade do tema (`dark` no brasa, `light` no wine), único token que também sai como **declaração** CSS (`color-scheme`) e não só como custom property (RN-518).
 - **Component:** `--btn-height-md`, etc.
 - **Tipografia:** por tema — `brasa`: Exo 2 (display+ui) + JetBrains Mono; `leela`: Figtree/Syne conforme a marca. Escala Major Third (10→50px); H3+ Bold Italic; sem italic ≤16px.
 - **Espaçamento** baseline 4px; **radius** none→pill; **elevação** elev-0→3 + elev-brand (glow); **motion** com `prefers-reduced-motion`; **ícones** Lucide 24×24 stroke 1.75 currentColor.
@@ -442,3 +442,62 @@ sete rotas de produtor passaram a nascer com metade do respiro do controle decla
 - **Nenhum número deste relatório saiu de pixel medido em navegador.** Todos saíram dos tokens do
   design system e da árvore renderizada, porque o runner de teste não faz layout. A conferência
   visual continua pendente e é do dono.
+
+---
+
+## Delta o cromo do navegador passa a obedecer ao tema (2026-08-08 · SCROLLBAR-TEMA)
+
+Terceiro relato de rolagem do dono, e o primeiro que não é sobre a barra existir:
+
+> "o scroll também não está respeitando as regras de DS, para ficar no dark mode."
+
+Os dois anteriores eram sobre **existência** e estão fechados: o eixo solto promovido a `auto` na
+cascata do menu (`fd6e5e69`, S315-F) e o `.sr-only` absoluto esticando o `scrollHeight`
+(`a06c16d4`). Este é sobre **cor**, e a causa é de outra natureza: `color-scheme` não existia em
+ponto nenhum do fonte, e sem ela o navegador assume o esquema claro para desenhar o cromo que não
+é do produto. Não é o DS sendo descumprido; é peça que nunca foi escrita.
+
+### RN-518 · a polaridade é do tema, e ela é a única declaração que sai de um token (nova · 2026-08-08)
+
+Todo tema declara a própria polaridade num token semântico, `color.scheme`, e o gerador a
+transforma em `color-scheme:` dentro do bloco daquele tema. Três afirmações, cada uma com o
+motivo:
+
+1. **Nasce no tema, não no app.** Um `color-scheme` colado no `index.html` do painel resolveria o
+   painel e deixaria de fora a landing, o showcase e o Storybook. No tema, ele nasce certo em
+   qualquer consumidor que importe o CSS, inclusive os que ainda não existem.
+2. **Cai no elemento raiz, e isso é requisito, não detalhe.** `color-scheme` só governa a barra de
+   rolagem da página a partir do `<html>`. Os dois apps já põem `data-theme` ali — o painel pelo
+   `ThemeProvider`, a landing estaticamente no layout —, e antes do mount o
+   `:root:not([data-theme])` cobre. Se algum dia o atributo migrar para o `<body>` ou para um
+   `<div>`, a barra volta a nascer clara e **nenhum teste pega**.
+3. **O valor acompanha o tema; constante é defeito.** O `wine` **não é um tema escuro**, ao
+   contrário do que a suposição corrente dizia: `--surface-base` é `#FDFAF7` e o texto é `#262220`.
+   Um `dark` fixo já estaria errado hoje. Tema ausente de token não recebe declaração nenhuma, e
+   cai no `normal` do navegador — degradação escolhida, porque carimbar um esquema errado é pior
+   que não carimbar.
+
+**Alcance maior que a barra, e declarado:** `color-scheme` é herdado, então a mesma linha muda
+também controles de formulário nativos, o caret e o preenchimento automático do navegador nos
+dois apps. Isso é ganho, e é a razão de o risco desta mudança ser "amplo" apesar de ela ter uma
+linha.
+
+**Diretrizes:**
+
+- **A cor da barra é do tema; a existência dela é do `utils/scroll.ts`.** São dois arquivos e duas
+  perguntas, e confundi-los foi o que fez o terceiro relato parecer reincidência do primeiro. Quem
+  mexer na aparência mexe no tema; quem mexer na existência mexe nas constantes de rolagem.
+- **`SCROLL_X_ONLY_SEM_CROMO` e `SCROLL_X_ONLY` ficam intactos.** Navegação sem cromo por ordem do
+  dono dita duas vezes; matriz de kits com a barra à mostra, porque ali ela é a única pista de que
+  há mais coluna.
+- **Estilizar a barra desliga o cromo nativo, não convive com ele.** `scrollbar-color` faz o Chrome
+  perder o desenho fino, e `::-webkit-scrollbar` ignora `color-scheme` por completo — quer dizer,
+  a preferência de acessibilidade configurada no sistema da pessoa deixa de valer nas nossas telas.
+  Por isso a barra nativa é o default e a estilizada subiu ao painel como **SCROLLBAR-1**, com os
+  candidatos medidos: `--border-default` reprova (1,67:1 no brasa, 1,46:1 no wine, contra um piso
+  de 3:1), `--border-strong` passa (4,13:1 e 3,60:1) e `--primary-500` passa com folga (5,69:1 e
+  10,33:1).
+- **Nenhum teste desta entrega prova o pixel.** jsdom não pinta barra de rolagem. Os 15 casos
+  provam contrato: a declaração existe em cada tema, vem do token, some quando o token some, e a
+  polaridade declarada bate com o brilho real de superfície contra texto — esse último é a trava
+  do terceiro tema. A cor na tela é conferência do dono, em navegador, depois do deploy.
