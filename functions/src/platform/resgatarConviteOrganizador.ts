@@ -89,6 +89,10 @@ import {
   type StatusConviteOrganizador,
 } from '@leela/core';
 import { consumirRateLimit, hashChave } from '../shared/rateLimit';
+import {
+  contaElegivelParaPapelDeOrganizador,
+  type ClaimsDeElegibilidade,
+} from './elegibilidadeOrganizador';
 import { provisionTenantCore } from './provisionTenant';
 
 // ---------------------------------------------------------------------------
@@ -147,6 +151,16 @@ async function slugLivre(
  * `tenant_staff`, `promoter`, `tenant_owner` e o `athlete` com o marcador de
  * demoção deliberada não.
  *
+ * A LISTA NÃO MORA MAIS AQUI (PONTE-ELEGIVEL-1). A régua é o
+ * `contaElegivelParaPapelDeOrganizador`, e a porta da área do cliente lê a
+ * MESMA função — era a divergência entre as duas guardas que deixava o
+ * divulgador e a ex-organizadora rebaixada atravessarem a porta para morrer
+ * aqui. O que continua sendo trabalho DESTE arquivo é a leitura do crachá no
+ * Auth e a decisão de fail-open quando ela falha.
+ *
+ * Exportada para que o teste da porta possa comparar as duas decisões contra a
+ * função de verdade, em vez de contra uma cópia da lista.
+ *
  * Existe por duas razões, e nenhuma delas é autorização — a autoridade segue
  * sendo o `provisionTenantCore`:
  *
@@ -167,18 +181,15 @@ async function slugLivre(
  * DEPOIS do ramo de replay: quem já resgatou é `tenant_owner` — inelegível por
  * esta régua — e o retry idempotente dessa conta tem de continuar de pé.
  */
-async function contaElegivelParaResgate(
+export async function contaElegivelParaResgate(
   auth: admin.auth.Auth,
   callerUid: string
 ): Promise<boolean> {
   try {
     const user = await auth.getUser(callerUid);
-    const claims = (user.customClaims ?? {}) as {
-      role?: string;
-      demotedFromRole?: unknown;
-    };
-    if (claims.role === undefined) return true;
-    return claims.role === 'athlete' && claims.demotedFromRole === undefined;
+    return contaElegivelParaPapelDeOrganizador(
+      (user.customClaims ?? {}) as ClaimsDeElegibilidade
+    );
   } catch {
     // Ler o papel falhou: NÃO é motivo para barrar quem talvez seja legítimo.
     // Fail-open aqui é seguro porque isto não autoriza nada — o
