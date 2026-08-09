@@ -148,3 +148,22 @@ Quatro pedem lane própria: **PONTE-ELEGIVEL-1** (muda contrato de chamada e a r
 existiram) e **ACUMULO-ESTOQUE-1** (roda contra dado de produção, só leitura). Dois pares dividem
 arquivo e têm de andar juntos: **VITRINE-VEU-1** com **VITRINE-CONTRASTE-1**, e **AREA-MUDA-1** com
 **TROCA-EMAIL-1** — lane vizinha em arquivo compartilhado é como trabalho verde some.
+
+### 4 · a triagem encolhida
+
+**Julguei que a vista de 397 linhas não paga mais o custo, e reduzi.** Ela existia para varrer 66
+itens de uma sentada com uma linha por item; com 28 o painel já cabe numa sentada, e manter 28
+resumos derivados só cria uma segunda página capaz de discordar da primeira. Não é hipótese: essa
+página já anunciava "56 itens" com o painel em 66, e ela mesma escrevia que estava atrasada em dez
+itens.
+
+O que ficou é a única coisa que o painel não carrega: **a ordem de ataque**. Os 28 aparecem só como
+identificadores, em quatro grupos — 11 que travam trabalho, 7 de dinheiro ou risco, 5 de forma do
+produto e as 5 ações —, com um parágrafo dizendo o que cada grupo segura. Sem "hoje / se você
+responder" por item, que é justamente o texto que apodrece.
+
+**Uma coisa da cauda antiga era durável e não podia sumir:** o critério que converte item parado em
+default permanente, aprovado por ele em 06/08. Conferi antes de apagar, e ele já vive inteiro em
+`02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`, com as duas travas. A página nova
+aponta para lá e explica como as duas réguas convivem — a de 06/08 converte por idade e silêncio, a
+de 09/08 por natureza do item, e as duas recusam dinheiro e dado pessoal.
