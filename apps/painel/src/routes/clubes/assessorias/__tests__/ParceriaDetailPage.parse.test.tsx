@@ -18,6 +18,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import type { ParceriaAssessoria } from '@leela/core';
 import { ParceriaDetailPage } from '../ParceriaDetailPage';
+import { REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import { mkEvento, ts } from '../../../eventos/_test/fixtures';
 
 const mocks = vi.hoisted(() => ({
@@ -121,6 +122,13 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer na condição de desco
       ),
     ).toBeInTheDocument();
     expect(campoTeto()).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('a régua do ponto e da vírgula fica embaixo do valor da condição', () => {
+    renderPage();
+    const campo = campoValor();
+    expect(document.getElementById(`${campo.id}-hint`)).toHaveTextContent(REGUA_PONTO_E_VIRGULA);
+    expect(campo.getAttribute('aria-describedby')).toContain(`${campo.id}-hint`);
   });
 
   it('BASELINE colar de planilha: "1.000" no teto atravessa o campo intacto e não acusa', () => {

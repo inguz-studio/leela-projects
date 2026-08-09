@@ -18,6 +18,7 @@ import { ToastProvider } from '@leela/design-system';
 import type { Campanha } from '@leela/core';
 import type * as ReactRouterDom from 'react-router-dom';
 import { AutomacoesPage } from '../AutomacoesPage';
+import { INTERVALO_PADRAO_DA_AUTOMACAO } from '../../../../lib/textosDeCampo';
 import { mkEvento, ts } from '../../_test/fixtures';
 
 const mocks = vi.hoisted(() => ({
@@ -103,6 +104,21 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no intervalo da automa
       ),
     ).toBeInTheDocument();
     expect(campoOffset()).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('o campo passa a dizer o que acontece quando fica vazio (avisa, não recusa)', async () => {
+    await abrirCampoDoIntervalo();
+    const campo = campoOffset();
+    expect(document.getElementById(`${campo.id}-hint`)).toHaveTextContent(
+      INTERVALO_PADRAO_DA_AUTOMACAO,
+    );
+    expect(campo.getAttribute('aria-describedby')).toContain(`${campo.id}-hint`);
+
+    // Avisa E deixa seguir: o campo em branco não fecha o botão, porque o
+    // corte escolheu avisar em vez de recusar.
+    fireEvent.change(campo, { target: { value: '' } });
+    expect(campo).not.toHaveAttribute('aria-invalid');
+    expect(document.getElementById(`${campo.id}-hint`)).toBeInTheDocument();
   });
 
   it('BASELINE colar de planilha: "1.000" atravessa o campo intacto', async () => {

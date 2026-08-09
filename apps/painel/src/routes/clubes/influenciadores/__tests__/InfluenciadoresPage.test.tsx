@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { InfluenciadoresPage } from '../InfluenciadoresPage';
+import { REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import type { AfiliadoDoTenant } from '@leela/api-client';
 
 const mocks = vi.hoisted(() => ({
@@ -355,5 +356,14 @@ describe('InfluenciadoresPage', () => {
         'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('PARSE-1 · a régua do ponto e da vírgula fica embaixo do valor', async () => {
+    mocks.getAfiliadosDoTenant.mockResolvedValue({ afiliados: [comSaldo(5000)] });
+    renderPage();
+    await abrirModal();
+    const campo = campoValor();
+    expect(document.getElementById(`${campo.id}-hint`)).toHaveTextContent(REGUA_PONTO_E_VIRGULA);
+    expect(campo.getAttribute('aria-describedby')).toContain(`${campo.id}-hint`);
   });
 });

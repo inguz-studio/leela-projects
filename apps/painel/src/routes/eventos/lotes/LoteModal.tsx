@@ -27,6 +27,7 @@ import * as React from 'react';
 import { Badge, Button, Input, Modal, useToast } from '@leela/design-system';
 import { DateTimeField } from '@/components/fields/DateTimeField';
 import type { CapacidadeLote, Lote } from '@leela/core';
+import { EXEMPLO_DE_MIL_NA_VAGA, REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import { formatDataHoraCurta, formatDinheiro, formatInt } from '../_lib/format';
 import {
   MSG_LOTE_VENDIDO,
@@ -237,6 +238,7 @@ export function LoteModal({
               label="Vaga (quantidade limite)"
               type="text"
               inputMode="numeric"
+              hint={EXEMPLO_DE_MIL_NA_VAGA}
               value={values.quantidadeLimite}
               onChange={(e) => set('quantidadeLimite', e.target.value)}
               disabled={congelado}
@@ -281,6 +283,7 @@ export function LoteModal({
           label={`Preço da inscrição em ${modalidade} (R$)`}
           type="text"
           inputMode="decimal"
+          hint={REGUA_PONTO_E_VIRGULA}
           placeholder="Ex.: 99,90"
           value={values.preco}
           onChange={(e) => set('preco', e.target.value)}

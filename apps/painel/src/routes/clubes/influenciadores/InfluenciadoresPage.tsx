@@ -34,6 +34,7 @@ import {
   registrarRepasseComissao,
   type AfiliadoDoTenant,
 } from '@leela/api-client';
+import { REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import { avaliarRepasse, textoInicialRepasse } from './_lib/repasseForm';
 import { ExtratoRepasses } from './_components/ExtratoRepasses';
 
@@ -346,6 +347,7 @@ export function InfluenciadoresPage(): JSX.Element {
                 inputMode="decimal"
                 autoComplete="off"
                 label="Valor do repasse (R$)"
+                hint={REGUA_PONTO_E_VIRGULA}
                 value={valorTexto}
                 onChange={(e) => setValorTexto(e.target.value)}
                 placeholder="0,00"

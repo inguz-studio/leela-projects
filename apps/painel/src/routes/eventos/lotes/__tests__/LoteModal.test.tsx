@@ -15,6 +15,7 @@ import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Lote } from '@leela/core';
 import { LoteModal } from '../LoteModal';
+import { EXEMPLO_DE_MIL_NA_VAGA, REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import { ts } from '../../_test/fixtures';
 import { inputLocalParaDate } from '../_lib/loteForm';
 
@@ -336,6 +337,33 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer nos campos do lote', (
         'Pontuação fora do padrão. Ponto separa milhar e vírgula separa centavos (ex.: 1.234,56).',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('a régua do ponto e da vírgula fica embaixo do preço, e o exemplo de mil embaixo da vaga', () => {
+    renderModal();
+    const preco = screen.getByLabelText('Preço da inscrição em 5k (R$)');
+    const vaga = screen.getByLabelText('Vaga (quantidade limite)');
+    // A dica é ANUNCIADA pelo campo, não só desenhada ao lado dele.
+    expect(document.getElementById(`${preco.id}-hint`)).toHaveTextContent(
+      REGUA_PONTO_E_VIRGULA,
+    );
+    expect(preco.getAttribute('aria-describedby')).toContain(`${preco.id}-hint`);
+    expect(document.getElementById(`${vaga.id}-hint`)).toHaveTextContent(
+      EXEMPLO_DE_MIL_NA_VAGA,
+    );
+    expect(vaga.getAttribute('aria-describedby')).toContain(`${vaga.id}-hint`);
+  });
+
+  it('a régua não se apaga quando a recusa aparece', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText('Nome do lote'), 'Lote 3');
+    await userEvent.type(screen.getByLabelText('Preço da inscrição em 5k (R$)'), '1,234.56');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar lote' }));
+    const preco = screen.getByLabelText('Preço da inscrição em 5k (R$)');
+    expect(document.getElementById(`${preco.id}-hint`)).toHaveTextContent(
+      REGUA_PONTO_E_VIRGULA,
+    );
+    expect(preco).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('BASELINE colar de planilha: "1.000" na vaga e "1.234,56" no preço atravessam o campo intactos', async () => {

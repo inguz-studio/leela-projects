@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { ToastProvider } from '@leela/design-system';
 import type { Cupom, Timestamp } from '@leela/core';
 import { CupomModal } from '../CupomModal';
+import { REGUA_PONTO_E_VIRGULA } from '../../../../../lib/textosDeCampo';
 
 function ts(ms: number): Timestamp {
   return {
@@ -212,6 +213,13 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no cupom', () => {
       ),
     ).toBeInTheDocument();
     expect(onSalvar).not.toHaveBeenCalled();
+  });
+
+  it('a régua do ponto e da vírgula fica embaixo do desconto', () => {
+    setup();
+    const valor = screen.getByLabelText('Desconto (%)');
+    expect(document.getElementById(`${valor.id}-hint`)).toHaveTextContent(REGUA_PONTO_E_VIRGULA);
+    expect(valor.getAttribute('aria-describedby')).toContain(`${valor.id}-hint`);
   });
 
   it('BASELINE colar de planilha: "1.000" no limite de usos vale mil resgates', async () => {

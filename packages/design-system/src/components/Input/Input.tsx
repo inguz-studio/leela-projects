@@ -37,6 +37,22 @@ import { cn } from '../../utils/cn';
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /** Error message shown below the field; also sets aria-invalid. */
   errorMessage?: string;
+  /**
+   * Texto de apoio PERMANENTE embaixo do campo — a régua que vale sempre, e
+   * não o que deu errado agora (essa é a `errorMessage`).
+   *
+   * Nasceu no PARSE-1, quando a régua do ponto e da vírgula precisou aparecer
+   * embaixo dos campos de dinheiro. O `Field` do DS já tinha `description` com
+   * a mesma função, mas `Field` é a casca para controle CRU: envolver um
+   * `Input` nele renderiza duas labels. Então a peça entra AQUI, com o mesmo
+   * token, o mesmo tamanho e o mesmo `aria-describedby` do `Field` — nenhuma
+   * moldura nova, e as telas que montavam o `<span>` à mão (`CapacidadeModal`,
+   * `EstoqueView`) passam a ter para onde migrar.
+   *
+   * Fica ENTRE o campo e o erro, e não depois dele: a régua não se move quando
+   * a recusa aparece.
+   */
+  hint?: React.ReactNode;
   /** Label visible above the field (for compact inline usage pass label via aria-label). */
   label?: string;
   /** Extra wrapper class. */
@@ -76,6 +92,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     {
       className,
       errorMessage,
+      hint,
       label,
       wrapperClassName,
       variant = 'flat',
@@ -94,11 +111,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const reactId = React.useId();
     const fieldId = id ?? reactId;
     const errorId = `${fieldId}-error`;
+    const hintId = `${fieldId}-hint`;
     const hasError = Boolean(errorMessage);
-    // Preserva o aria-describedby do consumidor (ex.: uma dica) e ANEXA o erro,
-    // em vez de um sobrescrever o outro.
+    const hasHint = hint !== undefined && hint !== null && hint !== false;
+    // Preserva o aria-describedby do consumidor (ex.: uma dica montada à mão) e
+    // ANEXA a dica e o erro, em vez de um sobrescrever o outro.
     const describedBy =
-      [ariaDescribedBy, hasError ? errorId : null].filter(Boolean).join(' ') || undefined;
+      [ariaDescribedBy, hasHint ? hintId : null, hasError ? errorId : null]
+        .filter(Boolean)
+        .join(' ') || undefined;
 
     /** Envolve o campo só quando há adorno — sem adorno o DOM é o de sempre. */
     const comAdorno = (campo: React.ReactNode): React.ReactNode =>
@@ -169,6 +190,15 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />,
         )}
+
+        {hasHint ? (
+          <span
+            id={hintId}
+            className="text-[length:var(--font-size-sm)] text-[var(--text-tertiary)]"
+          >
+            {hint}
+          </span>
+        ) : null}
 
         {hasError && errorMessage ? (
           <span

@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ToastProvider } from '@leela/design-system';
 import { KitEditor } from '../KitEditor';
+import {
+  CAPACIDADE_DE_KIT_EM_BRANCO,
+  REGUA_PONTO_E_VIRGULA,
+} from '../../../../lib/textosDeCampo';
 import { mkEvento, ts } from '../../_test/fixtures';
 import type { Evento, ItemKit, Kit } from '@leela/core';
 
@@ -286,6 +290,18 @@ describe('PARSE-1 · a recusa do parser tem onde aparecer no kit', () => {
       ),
     ).toBeInTheDocument();
     expect(onSalvarKit).not.toHaveBeenCalled();
+  });
+
+  it('a régua fica embaixo do preço, e a capacidade em branco passa a dizer o que vale', () => {
+    setup();
+    const preco = screen.getByLabelText(/Preço \(delta/i);
+    const capacidade = screen.getByLabelText('Capacidade');
+    expect(document.getElementById(`${preco.id}-hint`)).toHaveTextContent(REGUA_PONTO_E_VIRGULA);
+    expect(preco.getAttribute('aria-describedby')).toContain(`${preco.id}-hint`);
+    expect(document.getElementById(`${capacidade.id}-hint`)).toHaveTextContent(
+      CAPACIDADE_DE_KIT_EM_BRANCO,
+    );
+    expect(capacidade.getAttribute('aria-describedby')).toContain(`${capacidade.id}-hint`);
   });
 
   it('BASELINE colar de planilha: "1.000" na capacidade e "1.234,56" no preço viram mil e mil duzentos', async () => {

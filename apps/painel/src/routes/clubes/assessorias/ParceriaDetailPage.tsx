@@ -24,6 +24,7 @@ import { DateTimeField } from '@/components/fields/DateTimeField';
 import { definirCondicaoDesconto } from '@leela/api-client';
 import { AuthAlert } from '../../conta/auth/AuthAlert';
 import { mensagemDeContagem, mensagemDeValor } from '../../../lib/mensagemDoParser';
+import { REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import { useTenantSession } from '../../../lib/session/tenantSession';
 import { useEventosDoOrganizador, useParceriasAssessoria } from './_data/assessorias';
 import {
@@ -243,6 +244,7 @@ export function ParceriaDetailPage(): JSX.Element {
               label={values.tipo === 'percentual' ? 'Percentual (0–100)' : 'Valor em R$'}
               type="text"
               inputMode="decimal"
+              hint={REGUA_PONTO_E_VIRGULA}
               value={values.valor}
               onChange={(e) => set('valor', e.target.value)}
               placeholder={values.tipo === 'percentual' ? '10' : '25,00'}

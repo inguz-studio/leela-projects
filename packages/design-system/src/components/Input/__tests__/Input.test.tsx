@@ -138,4 +138,51 @@ describe('Input', () => {
     render(<Input aria-label="Nome" errorMessage="Obrigatório" />);
     expect(screen.getByRole('textbox')).toHaveClass('border-[var(--border-danger)]');
   });
+
+  // ── hint: a régua permanente do campo (PARSE-1) ─────────────────────────
+  describe('hint', () => {
+    it('não existe no DOM quando não é passado (o campo de sempre não muda)', () => {
+      render(<Input id="n" aria-label="Nome" />);
+      expect(document.getElementById('n-hint')).toBeNull();
+      expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-describedby');
+    });
+
+    it('aparece embaixo do campo e é anunciado por aria-describedby', () => {
+      render(<Input id="preco" aria-label="Preço" hint="O ponto separa o milhar." />);
+      const dica = document.getElementById('preco-hint');
+      expect(dica).toHaveTextContent('O ponto separa o milhar.');
+      expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', 'preco-hint');
+    });
+
+    it('convive com o erro: a régua fica, o erro entra depois dela', () => {
+      render(
+        <Input id="preco" aria-label="Preço" hint="A régua." errorMessage="Valor inválido." />,
+      );
+      const campo = screen.getByRole('textbox');
+      expect(campo).toHaveAttribute('aria-describedby', 'preco-hint preco-error');
+      expect(campo).toHaveAttribute('aria-invalid', 'true');
+      // A ordem no DOM importa: a dica não se move quando a recusa aparece.
+      const dica = document.getElementById('preco-hint')!;
+      const erro = document.getElementById('preco-error')!;
+      expect(dica.compareDocumentPosition(erro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('preserva o aria-describedby que o consumidor já tinha', () => {
+      render(
+        <>
+          <span id="externo">dica de fora</span>
+          <Input id="preco" aria-label="Preço" aria-describedby="externo" hint="A régua." />
+        </>,
+      );
+      expect(screen.getByRole('textbox')).toHaveAttribute(
+        'aria-describedby',
+        'externo preco-hint',
+      );
+    });
+
+    it('a cor sai de token, nunca de valor cravado (AA por estado)', () => {
+      render(<Input id="preco" aria-label="Preço" hint="A régua." />);
+      expect(document.getElementById('preco-hint')).toHaveClass('text-[var(--text-tertiary)]');
+    });
+  });
 });

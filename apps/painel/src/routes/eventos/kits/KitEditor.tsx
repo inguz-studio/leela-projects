@@ -44,6 +44,7 @@ import {
   type SlotFotoKit,
 } from '@leela/api-client';
 import { trilhaComNavSpa } from '../../../lib/navSpa';
+import { CAPACIDADE_DE_KIT_EM_BRANCO, REGUA_PONTO_E_VIRGULA } from '../../../lib/textosDeCampo';
 import type { ItemKitPayload } from './ItemKitModal';
 
 export type KitPayload = Omit<SalvarKitInput, 'tenantId'>;
@@ -412,6 +413,7 @@ export function KitEditor({
           label="Preço (delta sobre a inscrição, aceita negativo)"
           type="text"
           inputMode="decimal"
+          hint={REGUA_PONTO_E_VIRGULA}
           value={precoStr}
           onChange={(e) => {
             setPrecoStr(e.target.value);
@@ -429,6 +431,7 @@ export function KitEditor({
           label="Capacidade"
           type="text"
           inputMode="numeric"
+          hint={CAPACIDADE_DE_KIT_EM_BRANCO}
           value={capacidadeStr}
           onChange={(e) => {
             setCapacidadeStr(e.target.value);

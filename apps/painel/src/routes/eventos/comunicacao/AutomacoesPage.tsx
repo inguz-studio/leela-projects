@@ -41,6 +41,7 @@ import {
 } from '@leela/core';
 import type { EventoOutletContext } from '../evento/EventoLayout';
 import { mensagemDeContagem } from '../../../lib/mensagemDoParser';
+import { INTERVALO_PADRAO_DA_AUTOMACAO } from '../../../lib/textosDeCampo';
 import { canalCampanhaLabel } from '../_lib/campanhas';
 import {
   AUTOMACAO_VALORES_INICIAIS,
@@ -342,6 +343,7 @@ export function AutomacoesPage(): JSX.Element {
                   type="text"
                   inputMode="numeric"
                   label="Horas de offset (1–720)"
+                  hint={INTERVALO_PADRAO_DA_AUTOMACAO}
                   value={values.offsetHoras}
                   onChange={(e) => set('offsetHoras', e.target.value)}
                   {...(erroOffset !== null ? { errorMessage: erroOffset } : {})}

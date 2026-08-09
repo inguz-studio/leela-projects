@@ -20,6 +20,7 @@ import * as React from 'react';
 import { Button, Input, Modal, Radio, RadioGroup, useToast } from '@leela/design-system';
 import { DateTimeField } from '@/components/fields/DateTimeField';
 import type { Cupom, TipoCupom } from '@leela/core';
+import { REGUA_PONTO_E_VIRGULA } from '../../../../lib/textosDeCampo';
 import {
   dateParaInputLocal,
   timestampParaInputLocal,
@@ -185,6 +186,7 @@ export function CupomModal({
             label={percentual ? 'Desconto (%)' : 'Desconto (R$)'}
             type="text"
             inputMode="decimal"
+            hint={REGUA_PONTO_E_VIRGULA}
             placeholder={percentual ? 'Ex.: 10' : 'Ex.: 50,00'}
             value={values.valor}
             onChange={(e) => set('valor', e.target.value)}
