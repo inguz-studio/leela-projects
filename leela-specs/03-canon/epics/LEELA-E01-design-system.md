@@ -501,3 +501,30 @@ linha.
   provam contrato: a declaração existe em cada tema, vem do token, some quando o token some, e a
   polaridade declarada bate com o brilho real de superfície contra texto — esse último é a trava
   do terceiro tema. A cor na tela é conferência do dono, em navegador, depois do deploy.
+
+### RN-519 · quem estampa `data-theme` fora do DS tem de estampar um tema que existe (nova · 2026-08-08 · REV-SCROLLBAR)
+
+Corolário operacional da RN-518, e ela nasceu de um defeito real, não de zelo. A RN-518 afirma que
+a declaração "nasce certa em qualquer consumidor que importe o CSS". Isso é verdade para o CSS e
+falso para o **atributo**: quem escreve `data-theme` com um valor que não tem bloco no tema não
+recebe token nenhum e não recebe `color-scheme` nenhum. `:root:not([data-theme])` também não o
+socorre, porque o atributo *está* lá — só está errado.
+
+O `packages/design-system/showcase/index.html` é a única superfície do repositório que decide o
+tema **sem passar pelo DS**: sendo HTML estático, ele não importa o TypeScript e carrega uma cópia
+escrita à mão do script anti-FOUC. A cópia ficou no nome antigo do tema depois do rename
+`leela` → `wine`, e errava nos dois sentidos — `wine`, que é o valor que o toggle grava hoje, caía
+no fallback e a tela nascia `brasa`; `leela`, ainda em `localStorage` de quem usou o showroom antes
+do rename, era estampado tal e qual. Nos dois casos o script entregava exatamente o flash que
+existe para evitar, e desde `8e10ab8f` o flash carrega junto a polaridade do cromo do navegador.
+
+**A regra:** superfície que estampa `data-theme` por conta própria só pode estampar valor com bloco
+publicado em `themes/index.css`, e o valor tem de ser o **mesmo** que o `ThemeProvider` escolherá no
+mount — divergência entre os dois é a definição operacional de flash. A trava é
+`src/theme/__tests__/showcase-init-theme.test.ts`, e ela **executa o script real extraído do HTML**
+em vez de reimplementá-lo: uma reimplementação passaria verde com o arquivo errado, que é o defeito.
+
+**Dívida declarada, não paga:** a cópia continua sendo cópia. O caminho certo, se ela sair de
+sincronia outra vez, é injetar `getThemeInitScript()` por `transformIndexHtml` no vite do showroom;
+foi recusado agora por trocar um defeito de duas linhas por um passo de build numa superfície só de
+desenvolvimento (o showroom não tem alvo de Hosting).
