@@ -1,6 +1,6 @@
 ---
 tags: [leela, decisoes, triagem, vista]
-atualizado: 2026-08-06
+atualizado: 2026-08-09
 fonte: DECISOES-ABERTAS
 ---
 
@@ -16,7 +16,9 @@ fonte: DECISOES-ABERTAS
 
 > **Quatro linhas saíram em 06/08, e você as tirou.** Foram o 12b, o QUALIF-6, o 11 e o HIP-R9-01 — as três propostas do último bloco desta página, que você aprovou de uma vez. Elas não foram respondidas: deixaram de ser suas. O registro de cada uma, com o texto que estava no painel, o default que passou a valer e a condição que a traz de volta, está em `02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`.
 >
-> **E quatro linhas entraram depois que esta vista foi desenhada, então ela está atrasada e o painel está em 60.** Esta página é a leva de 06/08 e não foi redesenhada desde então. Faltam nela o **PCLIENTE-1** (a forma do painel do cliente, que precede a sua própria simulação), o **PERFIL-1** e o **ACEITE-1** (os dois que a limpeza do banco devolveu) e o **COMPROMETIDO-1** (os R$ 167,00 presos em três repasses vetados contra eventos apagados). Os quatro estão no painel com texto completo, e nenhum deles está escondido — só não está aqui. Vale a regra do topo desta página: **o painel manda, e a divergência é defeito meu.** A próxima leva redesenha esta vista inteira; até lá, os 56 abaixo são os 56 daquele dia, não o painel de hoje.
+> **E dez linhas entraram depois que esta vista foi desenhada, então ela está atrasada e o painel está em 66.** Esta página é a leva de 06/08 e não foi redesenhada desde então. Faltam nela o **PCLIENTE-1** (a forma do painel do cliente, que precede a sua própria simulação), o **PERFIL-1** e o **ACEITE-1** (os dois que a limpeza do banco devolveu), o **COMPROMETIDO-1** (os R$ 167,00 presos em três repasses vetados contra eventos apagados), os três da ponte para o painel profissional (**PONTE-CTA-1**, **PONTE-NOME-1** e **PONTE-ELEGIVEL-1**), os dois da review da vitrine (**VITRINE-VEU-1** e **VITRINE-CONTRASTE-1**) e o **SCROLLBAR-1**. Os dez estão no painel com texto completo, e nenhum deles está escondido, só não está aqui. Vale a regra do topo desta página: **o painel manda, e a divergência é defeito meu.** A próxima leva redesenha esta vista inteira; até lá, os 56 abaixo são os 56 daquele dia, não o painel de hoje.
+>
+> **Uma coisa mudou no painel em 09/08 e vale saber antes de clicar em qualquer link daqui.** Todo item aberto lá ganhou dois bullets novos: o **caso de uso**, que é a cena concreta em que a decisão aparece, e a **job story**, que é o trabalho de quem é servido por ela. As 56 linhas desta vista continuam válidas e todos os links continuam caindo no item certo. O que mudou é que o item do outro lado agora explica para quem aquela escolha trabalha.
 
 ---
 

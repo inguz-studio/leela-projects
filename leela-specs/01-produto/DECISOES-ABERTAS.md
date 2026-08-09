@@ -253,7 +253,7 @@ Quando a barra superior saiu, sumiram oitenta e nove pixels do alto de toda tela
 
 Você pediu para editar as modalidades, e hoje não existe caminho nenhum: a lista nasce na criação do evento e morre lá. O que a sua frase não decide é até quando a edição continua valendo. As Rules já autorizam enquanto o evento não vendeu, e a spec adotou essa fronteira. A alternativa é parar antes, no momento em que o evento é publicado.
 
-- **Caso de uso:** o Castelo publica a corrida com "21k" escrito errado, ninguém comprou ainda, e ele quer arrumar sem tirar a página do ar — que já está circulando no Instagram.
+- **Caso de uso:** o Castelo publica a corrida com "21k" escrito errado, ninguém comprou ainda, e ele quer arrumar sem tirar a página do ar, que já está circulando no Instagram.
 - **Job story:** quando eu descubro um erro de digitação na modalidade depois de publicar, eu quero corrigir com a página no ar, para não perder as visitas que o link já está trazendo.
 - **O que fica com você:** ratificar a fronteira, ou apertá-la.
 - **Por que agora:** é uma condição na Function e uma frase na tela agora; depois de construída, apertar a fronteira invalida telas que já ensinaram o organizador a editar.
@@ -275,7 +275,7 @@ Remover uma modalidade que ainda tem lote apontando para ela não deixa o lote �
 
 Você acabou de dizer que a plataforma não vende desconto por dispensar o kit. Existem dois documentos em produção que fazem exatamente isso: um "Sem kit" de **−R$ 15,00** na Meia Floripa 2026 e um de **−R$ 10,00** na São Silvestre 2025. Os dois vieram do seed, não de organizador, e a apuração conferiu o que importa antes de propor qualquer coisa: **ninguém comprou nenhum dos dois**. Zero inscritos apontam para eles, zero pedidos, zero pagamentos — e o modelo de pedido nem tem campo de kit, então não existe caminho para um pedido referenciar um. *Mexer neles não mexe em dinheiro que já entrou.*
 
-- **Caso de uso:** você abre a Meia Floripa 2026 para mostrar o produto a alguém e a lista de kits traz um "Sem kit" de −R$ 15,00 — exatamente o desconto por dispensar o kit que você acabou de proibir. Pelo painel você não consegue arrumar: o campo está bloqueado porque o evento já vendeu.
+- **Caso de uso:** você abre a Meia Floripa 2026 para mostrar o produto a alguém e a lista de kits traz um "Sem kit" de −R$ 15,00, que é exatamente o desconto por dispensar o kit que você acabou de proibir. Pelo painel você não consegue arrumar: o campo está bloqueado porque o evento já vendeu.
 - **Job story:** quando eu mostro a plataforma a um organizador novo, eu quero que os dados que ele vê digam a mesma coisa que as regras dizem, para o produto não ensinar o contrário do que eu decidi.
 - **O que fica com você:** qual dos três reparos, e a autorização para executá-lo em produção.
 - **Por que agora:** enquanto os dois documentos existem, a demonstração do produto ensina o contrário do que você decidiu. E há um detalhe de ordem que não pode ser esquecido: o seed de produção já rodou duas vezes, então **a fonte tem de ser corrigida antes do banco**, senão uma terceira execução ressuscita os dois.
@@ -380,7 +380,7 @@ O pacote inteiro foi construído, revisado por antagonista em contexto fresco e 
 
 Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente definitivo do e-mail depende dessa escolha.
 
-- **Caso de uso:** o Castelo quer divulgar a página do evento no Instagram, e o endereço de hoje nasce para quebrar — é um subdomínio de hospedagem que vai mudar quando o domínio de verdade existir.
+- **Caso de uso:** o Castelo quer divulgar a página do evento no Instagram, e o endereço de hoje nasce para quebrar. É um subdomínio de hospedagem que vai mudar de nome no dia em que o domínio de verdade existir.
 - **Job story:** quando eu divulgo a página do meu evento, eu quero um endereço que eu não tenha vergonha de colar e que continue funcionando depois, para não ter de reeditar cada post no dia em que o site mudar de casa.
 - **O que fica com você:** cravar o domínio público da Leela.
 - **Por que agora:** o produto já está no ar em `leela-landing.web.app` e o e-mail transacional sai por `vitoreldp@gmail.com`, que o DMARC do Gmail tende a jogar em spam quando a Brevo envia por ele.
@@ -707,8 +707,10 @@ O expurgo de 06/08 rodou limpo (2.873 operações, provadas contra o banco), e o
 
 ### ADMINSEP-3 · a conta de super-admin de produção é a conta de demonstração
 
-Achado enquanto eu apurava a separação de contas que você pediu. A conta que administra a plataforma em produção é `admin@demo-leela.dev`, com a senha `demo1234` — a mesma senha de vitrine que está publicada no repositório. O seed de produção a criou de propósito, junto com as contas de demonstração, e o login já foi provado funcionando contra `leela-hub`. *Qualquer pessoa que abra o repositório tem, hoje, a senha da conta que enxerga o CPF e o telefone de todos os inscritos de todos os organizadores, lê dados bancários em claro, aprova repasse, estorna compra, muda a tabela de taxa e cria outros administradores.*
+Achado enquanto eu apurava a separação de contas que você pediu. A conta que administra a plataforma em produção é `admin@demo-leela.dev`, com a senha `demo1234` — a mesma senha de vitrine que está publicada no repositório. O seed de produção a criou de propósito, junto com as contas de demonstração, e o login já foi provado funcionando contra `leela-hub`.
 
+- **Caso de uso:** qualquer pessoa que abra o repositório tem, hoje, a senha da conta que enxerga o CPF e o telefone de todos os inscritos de todos os organizadores, lê dados bancários em claro, aprova repasse, estorna compra, muda a tabela de taxa e cria outros administradores.
+- **Job story:** quando eu entrego meu CPF e meu telefone para me inscrever, eu quero que só quem administra a plataforma de verdade alcance esse dado, para a minha ficha não ficar atrás de uma senha publicada.
 - **O que fica com você:** escolher o e-mail real do administrador da plataforma e definir uma senha de verdade. Só você pode fazer as duas coisas.
 - **Por que agora:** é fator único, sem segundo fator, com App Check desligado, e o produto já está no ar com dado real de compra. Não depende de nenhuma decisão de arquitetura, e o ADMINSEP-1, que fechou em 05/08, não o tocou.
 - **Onde aterrissa:** a conta nova recebe a claim pelo caminho manual, que já é o declarado para produção; o seed para de semear administrador contra o projeto real; e a conta de demonstração é revogada. O passo a passo está na task A6 de `02-rodadas/2026-08-02-retomada/11-fila-contas-e-area-cliente.md`. As contas de organizador de demonstração podem ficar: elas não alcançam a plataforma.
@@ -718,6 +720,8 @@ Achado enquanto eu apurava a separação de contas que você pediu. A conta que 
 
 Você decidiu em 28/07 que a revisão vira uma só, do início ao fim: a home com as experiências, o produtor, a página do evento, a compra e o QR do ingresso na tela. O mesmo passeio ratifica a ADR-017, que deu ao design system duas portas sem a dependência que quebrava a landing com erro 500.
 
+- **Caso de uso:** você percorre a jornada como uma compradora percorreria — a home com as experiências, o produtor, a página do evento, a compra e o QR na tela — e é a primeira vez que uma compra real atravessa a plataforma inteira. Hoje `createInscricaoCharge` segue com zero sucesso na história.
+- **Job story:** quando eu compro pela primeira vez num site que eu não conheço, eu quero chegar ao ingresso na tela sem tropeçar em nada, para confiar que o meu dinheiro comprou alguma coisa.
 - **O que fica com você:** percorrer a jornada e comprar de verdade, com valor baixo. É o teste canônico do go-live.
 - **Por que agora:** a investigação de 02/08 provou que a função de cobrança nunca devolveu sucesso em produção, porque o identificador enviado ao banco tinha 155 caracteres num limite de 100. O conserto está no ar, revisado por antagonista, e `createInscricaoCharge` segue com zero sucesso na história.
 - **Onde aterrissa:** `https://leela-landing.web.app/meia-floripa-2026/inscricao`, com os cupons de teste HEROI10 e CORRA50 válidos até 08/09. A compra prova de uma vez o identificador aceito pelo gateway, o juro na tela e no documento, a conferência de versão do aceite e a origem carimbada na prova.
@@ -726,6 +730,8 @@ Você decidiu em 28/07 que a revisão vira uma só, do início ao fim: a home co
 
 Sete coisas entraram no ar entre 02 e 03/08 e nenhuma delas tem gate de código que substitua o seu olho: os três ícones de rede desenhados em casa (WhatsApp, TikTok e Strava não existem no lucide), o menu Feed · Eventos · Clubs na página do produtor, o respiro do rótulo nos grupos de escolha, o toque em qualquer ponto do cartão de modalidade e kit, e os três consertos do checkout de 03/08.
 
+- **Caso de uso:** alguém abre a página do produtor pela primeira vez e vê os três ícones de rede desenhados em casa, o menu Feed · Eventos · Clubs e os cartões de modalidade e kit. Nenhuma dessas peças tem gate de código capaz de substituir o seu olho.
+- **Job story:** quando eu abro a página de um evento pela primeira vez, eu quero que ela pareça acabada, para me sentir seguro de digitar o meu cartão ali.
 - **O que fica com você:** olhar e vetar o que não estiver certo. Cada peça é troca barata.
 - **Por que agora:** tudo está servido em produção, incluindo a página do produtor, e os vetos ficam mais caros depois que houver compra real em cima.
 - **Onde aterrissa:** `https://leela-landing.web.app/@castelo` para o menu e os ícones; `.../meia-floripa-2026/inscricao` para o select de parcelas completo na primeira abertura, o total que muda no ato e o loader "Preparando código PIX" só depois do clique. A copy "Modalidades disponíveis" e "Modalidade oficial" está nas duas.
@@ -737,14 +743,18 @@ Sete coisas entraram no ar entre 02 e 03/08 e nenhuma delas tem gate de código 
 
 A escrita de 03/08 foi minimalista por ordem explícita, então o documento vigente ficou em `versao: 1` enquanto o retrato imutável `v1` ainda diz juros zero. Nada quebra por causa disso, mas o histórico da v1 deixou de ser fiel.
 
+- **Caso de uso:** você abre os termos comerciais do Castelo no painel e salva sem mudar nada. Hoje o documento vigente diz `versao: 1` enquanto o retrato imutável da v1 ainda diz juros zero, e quem for ler o histórico depois vai ler uma coisa que não aconteceu.
+- **Job story:** quando eu preciso saber que condição comercial valia numa data passada, eu quero que o histórico mostre o que de fato estava valendo, para não defender um número que o próprio registro contradiz.
 - **O que fica com você:** abrir os termos e salvar sem mudar nada.
 - **Por que agora:** o próximo save pelo painel grava a v2 já com 2,89% e sela o rastro pelo caminho canônico, que é o único jeito de o histórico voltar a bater.
 - **Onde aterrissa:** `/plataforma` → Termos do tenant Castelo Produções.
 
 ### JUROS-3 · quem paga o custo quando o juro é zero
 
-Você determinou que "sem juros" será ferramenta do admin, liberada por tenant, nunca escolha do produtor. O contrato está especificado e nada será construído agora. Falta a única parte que é dinheiro: quando a plataforma zera o juro de um tenant, o custo de financiar aquela venda sai de quem. *Você libera 6x sem juros para o Castelo, a compradora paga o mesmo preço do à vista, e alguém absorve o que o gateway cobra por parcelar.*
+Você determinou que "sem juros" será ferramenta do admin, liberada por tenant, nunca escolha do produtor. O contrato está especificado e nada será construído agora. Falta a única parte que é dinheiro: quando a plataforma zera o juro de um tenant, o custo de financiar aquela venda sai de quem.
 
+- **Caso de uso:** você libera 6x sem juros para o Castelo, a compradora paga o mesmo preço do à vista, e alguém absorve o que o gateway cobra por parcelar.
+- **Job story:** quando a plataforma anuncia "sem juros" no meu evento, eu quero saber se esse desconto sai do meu líquido, para não descobrir a conta só quando o extrato chegar.
 - **O que fica com você:** dizer se a plataforma absorve ou se o custo desce para o líquido do produtor.
 - **Por que agora:** é uma linha na spec agora e um campo novo no pagamento mais uma linha no extrato depois. Decidir junto do contrato custa nada; decidir depois de construído é retrabalho de dinheiro.
 - **Opções:** a **plataforma absorve** (**default proposto**) — a RN-437 já diz que o juro do parcelamento não é receita do organizador, e a simetria manda que o custo também não seja despesa dele; cobrar do produtor contradiria a RN-182, que hoje define o líquido como `face − taxa(meio)` e mais nada · **descontar do líquido do produtor**, que é o caminho mais caro: pede campo novo no pagamento, linha nova no extrato e revisão da RN-182.
@@ -752,8 +762,10 @@ Você determinou que "sem juros" será ferramenta do admin, liberada por tenant,
 
 ### JUROS-4 · dois markups estão no registro e não são o mesmo modelo
 
-Você declarou duas coisas diferentes em duas semanas, e as duas viraram registro. Em 27/07, verbatim: *"já as parcelas, pode ir adicionando 2.5% a cada parcela, e depois eu edito"* — está no backlog como card. Em 03/08 você mandou preencher a tabela com 2,89% a.m., chamando o número de estimativa. *Numa venda de R$ 300,00 em 12x, um modelo cobra R$ 359,28 da compradora e o outro cobra R$ 390,00. Trinta reais e setenta e dois centavos de diferença na mesma venda, e a tabela do admin vai exibir um dos dois.*
+Você declarou duas coisas diferentes em duas semanas, e as duas viraram registro. Em 27/07, verbatim: *"já as parcelas, pode ir adicionando 2.5% a cada parcela, e depois eu edito"* — está no backlog como card. Em 03/08 você mandou preencher a tabela com 2,89% a.m., chamando o número de estimativa.
 
+- **Caso de uso:** numa venda de R$ 300,00 em 12x, um modelo cobra R$ 359,28 da compradora e o outro cobra R$ 390,00. Trinta reais e setenta e dois centavos de diferença na mesma venda, e a tabela do admin vai exibir um dos dois.
+- **Job story:** quando eu parcelo uma compra em doze vezes, eu quero saber quanto o parcelamento me custa a mais, para escolher entre parcelar e pagar à vista sabendo o preço da conveniência. Os dois modelos servem jobs diferentes do outro lado do balcão: o Price acerta a conta do dinheiro no tempo, e o acréscimo linear é o que um produtor consegue explicar sem calculadora.
 - **O que fica com você:** dizer qual vale. Nenhum é obviamente o vencedor, e por isso não há default proposto.
 - **Por que agora:** a tabela de margem vai exibir o markup, e exibir o número errado corrompe a decisão de preço que você vai tomar olhando para ela. É troca barata enquanto nada foi construído.
 - **Opções:** **Price a 2,89% a.m.** (19,8% sobre o principal em 12x) — está no ar hoje, é o que o teste de 03/08 exercitou e é o que a S314 construiu · **acréscimo linear de 2,5% por parcela** (30% em 12x na leitura direta, ou 27,5% se a contagem começar em 2x) — é a sua decisão mais recente e a mais simples de explicar a um produtor, e a própria frase admite as duas leituras, então escolhê-la pede dizer qual.
@@ -761,8 +773,10 @@ Você declarou duas coisas diferentes em duas semanas, e as duas viraram registr
 
 ### JUROS-5 · a tabela de tarifas do Asaas, que só você consegue buscar
 
-A coluna de custo é o que transforma a tabela do admin em margem de verdade, e o número que a preenche não existe em lugar nenhum do sistema. O que existe é benchmark de julho, com cartão à vista a 2,99% mais R$ 0,49 e a coluna de **parcelado vazia** para o Asaas, coletado sob a ressalva de não fechar taxa sem cotação por volume. *Você abre a tabela nova, lê "custo não configurado" em todas as linhas, e a coluna Margem fica vazia até alguém trazer o número do contrato.*
+A coluna de custo é o que transforma a tabela do admin em margem de verdade, e o número que a preenche não existe em lugar nenhum do sistema. O que existe é benchmark de julho, com cartão à vista a 2,99% mais R$ 0,49 e a coluna de **parcelado vazia** para o Asaas, coletado sob a ressalva de não fechar taxa sem cotação por volume.
 
+- **Caso de uso:** você abre a tabela nova, lê "custo não configurado" em todas as linhas, e a coluna Margem fica vazia até alguém trazer o número do contrato.
+- **Job story:** quando eu defino quanto cobrar pelo parcelamento, eu quero ver a margem ao lado de cada linha, para decidir preço com número em vez de com estimativa.
 - **O que fica com você:** buscar no painel do Asaas, ou com o gerente de contas, a tabela de tarifas vigente, incluindo o acréscimo por parcela.
 - **Por que agora:** é o único insumo que a construção não consegue produzir sozinha. A tela nasce funcionando sem ele, declarando a ausência em vez de estimar, porque você vai usar esses números para decidir preço e um número inventado aqui vira decisão errada.
 - **Onde aterrissa:** `platform/config.custoGateway`; RN-455 em [[LEELA-E16-plataforma-superadmin]]; lacunas L1 e L2 da spec da rodada. Enquanto isso, a tarefa T5 da S1610 passa a registrar o custo real de cada venda a partir do que o gateway devolve, o que fecha a lacuna pelo lado da medição em vez do lado do contrato.
@@ -770,6 +784,8 @@ A coluna de custo é o que transforma a tabela do admin em margem de verdade, e 
 ## Fila de construção
 
 > Ordem ratificada por você em 28/07 (DEC-0728). Roda em sequência sem nova consulta, e o detalhe de cada frente vive no card do backlog em [[V1-KANBAN]] e no épico correspondente. As frentes que nasceram da sua leva de 03/08 estão no fim, ainda sem posição.
+>
+> **Uma exceção que fica nomeada aqui.** O **ADMIN-USUARIOS-1**, mais abaixo, pede decisão sua e mora nesta seção porque a pergunta dele é literalmente de escopo de fila. Ele não entra na conta de 66 do cabeçalho, e está apontado nos dois lugares para você não descobrir tarde que existe uma decisão sua fora do bloco das decisões.
 >
 > **+05/08 · duas frentes desta lista saíram por estarem construídas:** o login no meio da landing e a área do cliente com os próprios ingressos. As duas perguntavam a posição na fila, e a pergunta ficou sem objeto — a noite de 05/08 construiu as duas, com o registro completo em `02-rodadas/2026-08-04-pos-pagamento/01-decisoes-dono.md` §O que a noite de 05/08 executou. **+05/08 (madrugada): a frente fechou** — Meus Clubes entrou (`4b72c556`+`b3e51638`) e a review da área rodou e consertou quatro defeitos. O que a construção da aba devolveu **é** seu, e virou o **CLUBES-1** acima: a tela nasce vazia porque não existe caminho para entrar num clube. **+05/08 (noite): as duas estão no ar.** O deploy tinha uma sequência obrigatória — quatro isenções de campo único antes das functions — e ela foi cumprida sem esforço: a conferência contra o servidor mostrou que os índices já batiam, arquivo e produção, então nada precisou subir ali.
 
@@ -867,8 +883,11 @@ Não é decisão sua, e está aqui pela mesma razão do item acima: para você s
 
 ### Entrou em 06/08 · quem se cadastra não aparece em lugar nenhum do painel (ADMIN-USUARIOS-1)
 
-Duas pessoas reais se cadastraram em 06/08 e caíram na tela do código de convite — comportamento correto, a porta do organizador é por convite (RN-413). O problema é o que veio depois: você não tem onde vê-las. O painel da plataforma lista convites, estornos, repasses e planos, mas não tem um diretório de contas; quem se cadastrou e ainda não é profissional é invisível para a administração. *Alguém se cadastra para virar organizador, espera o convite, e você nem sabe que a pessoa existe.*
+Duas pessoas reais se cadastraram em 06/08 e caíram na tela do código de convite — comportamento correto, a porta do organizador é por convite (RN-413). O problema é o que veio depois: você não tem onde vê-las. O painel da plataforma lista convites, estornos, repasses e planos, mas não tem um diretório de contas; quem se cadastrou e ainda não é profissional é invisível para a administração.
 
+- **Caso de uso:** alguém se cadastra para virar organizador, cai na tela do código de convite, espera, e você nem sabe que a pessoa existe. Aconteceu duas vezes em 06/08, com gente real.
+- **Job story:** quando eu me cadastro para virar organizador e caio na tela do código, eu quero que alguém do outro lado saiba que estou esperando, para o meu cadastro não morrer no silêncio.
+- **Esta é a decisão sua que mora fora do bloco das decisões**, e por isso ela não entra na conta de 66 do cabeçalho.
 - **O que fica com você:** decidir se o diretório de usuários entra na fila de construção e com que alcance (só contas aguardando convite, ou todas as contas com papel e origem). Envolve PII, então a spec herda o cuidado do P-IAMENU-1.
 - **Por que agora:** o caminho de hoje é o Console do Firebase (Authentication → Users lista todas as contas), que funciona mas é ferramenta de engenharia, não de operação. Enquanto o beta for você entregando convite na mão, dá para operar assim; no primeiro terceiro operando, não.
 - **Onde aterrissa:** spec nova sob [[LEELA-E16-plataforma-superadmin]] (tela em `/plataforma`); a emissão do convite em si já existe em `/plataforma/convites`.
