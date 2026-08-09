@@ -109,6 +109,27 @@ describe('vitrine · o aviso sobe na primeira interação (RN-510)', () => {
     expect(avisoNaTela()).toBeInTheDocument();
   });
 
+  // A REGRESSÃO DA MIGRAÇÃO, re-falsificada (REV-CORTE · 09/08). O `Modal` do
+  // DS foca o X ao abrir, e aqui o aviso sobe COMO RESPOSTA A UMA TECLA que
+  // ainda não terminou: a cauda do mesmo gesto caía no X e dispensava o aviso.
+  // A lane consertou focando o conteúdo (`tabIndex={-1}`, não acionável por
+  // Enter nem por espaço). Dois itens de menu × duas teclas, porque um item só
+  // não distingue "o desenho está certo" de "este nó em particular deu sorte".
+  it.each([
+    ['Clubs', '{Enter}'],
+    ['Clubs', ' '],
+    ['Eventos', '{Enter}'],
+    ['Eventos', ' '],
+  ])('a mesma tecla que sobe o aviso NÃO o dispensa (%s + %s)', async (item, tecla) => {
+    await abrirVitrine();
+    const user = usuario();
+    itemDeMenu(new RegExp(item, 'i')).focus();
+    await user.keyboard(tecla);
+    expect(avisoNaTela()).toBeInTheDocument();
+    // E o foco entrou no aviso, não ficou largado no fundo.
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true);
+  });
+
   it('clicar no vazio da moldura não sobe nada', async () => {
     // Só gesto sobre algo acionável conta. Clicar num parágrafo não é tentar
     // usar o painel, e trazer o aviso ali seria ruído.
@@ -131,6 +152,36 @@ describe('vitrine · o aviso fecha e REARMA (RN-510)', () => {
     expect(avisoNaTela()).toBeNull();
 
     await user.click(itemDeMenu(/CRM/i));
+    expect(avisoNaTela()).toBeInTheDocument();
+  });
+
+  // As DUAS saídas que a adoção do `Modal` trouxe de brinde (VITRINE-VEU-1).
+  // Elas não existiam no véu escrito à mão, então nenhum caso as cobria: a
+  // review exige que se comportem como "Continuar olhando" — fecham e REARMAM,
+  // nunca dispensam o aviso para sempre.
+  it('o X do `Modal` fecha e o aviso volta na interação seguinte', async () => {
+    await abrirVitrine();
+    const user = usuario();
+    await user.click(itemDeMenu(/Eventos/i));
+    expect(avisoNaTela()).toBeInTheDocument();
+
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /Fechar/i }));
+    expect(avisoNaTela()).toBeNull();
+
+    await user.click(itemDeMenu(/CRM/i));
+    expect(avisoNaTela()).toBeInTheDocument();
+  });
+
+  it('o clique no véu fecha e o aviso volta na interação seguinte', async () => {
+    await abrirVitrine();
+    const user = usuario();
+    await user.click(itemDeMenu(/Eventos/i));
+    expect(avisoNaTela()).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('modal-overlay'));
+    expect(avisoNaTela()).toBeNull();
+
+    await user.click(itemDeMenu(/Clubs/i));
     expect(avisoNaTela()).toBeInTheDocument();
   });
 

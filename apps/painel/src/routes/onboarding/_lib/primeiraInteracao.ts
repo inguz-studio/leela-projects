@@ -94,6 +94,19 @@ export interface AvisoDeVitrine {
 export function useAvisoNaPrimeiraInteracao(ativo: boolean): AvisoDeVitrine {
   const [aberto, setAberto] = useState(false);
 
+  // ⛔ `aberto` SÓ é verdade quando o aviso está mesmo na tela (REV-CORTE ·
+  // 09/08). O gate não desenha o aviso fora da vitrine — ele devolve os filhos
+  // antes disso —, mas o valor devolvido daqui é lido por quem age no DOM
+  // (`useFundoInerte`), e ali um `true` mentiroso vira dano real: o resgate
+  // bem-sucedido derruba a vitrine pela SESSÃO, sem passar por `fechar`, e o
+  // fundo ficava inerte para sempre. Derivar aqui é o conserto na raiz; a
+  // reposição abaixo impede que o estado ressuscite se a conta voltar à
+  // vitrine (outro login sem tenant), o que subiria o aviso sem gesto nenhum e
+  // quebraria a RN-510.
+  useEffect(() => {
+    if (!ativo && aberto) setAberto(false);
+  }, [ativo, aberto]);
+
   useEffect(() => {
     // Aberto: sem ouvintes. Ver decisão 2 no cabeçalho.
     if (!ativo || aberto) return undefined;
@@ -120,5 +133,5 @@ export function useAvisoNaPrimeiraInteracao(ativo: boolean): AvisoDeVitrine {
   const fechar = useCallback(() => setAberto(false), []);
   const abrir = useCallback(() => setAberto(true), []);
 
-  return { aberto, fechar, abrir };
+  return { aberto: ativo && aberto, fechar, abrir };
 }

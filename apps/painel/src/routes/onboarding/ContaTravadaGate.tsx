@@ -54,7 +54,7 @@
 // relida — o painel destrava na hora, sem novo login.
 // =============================================================================
 
-import { useRef, type ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { logout } from '@leela/api-client';
 import { Skeleton } from '@leela/design-system';
@@ -106,7 +106,18 @@ export function ContaTravadaGate({ children }: ContaTravadaGateProps): JSX.Eleme
   // está em `_lib/fundoInerte.ts`. O aviso é portalizado pelo `Modal` do DS
   // para o `body`, então fica irmão do contêiner e de fora do `inert`.
   const vitrineRef = useRef<HTMLDivElement>(null);
-  useFundoInerte(aviso.aberto, vitrineRef);
+  const liberarFundo = useFundoInerte(aviso.aberto, vitrineRef);
+
+  // ⛔ O fundo volta ao mundo ANTES de o React desmontar o aviso (REV-CORTE ·
+  // 09/08). As quatro saídas — X, Esc, clique no véu e "Continuar olhando" —
+  // desembocam todas aqui, e é aqui que o `inert` tem de cair: a limpeza do
+  // efeito roda DEPOIS da remoção da subárvore, e o `useDialogBehavior`
+  // devolve o foco ao abridor no meio desse intervalo. Foco em nó inerte é
+  // no-op no navegador — o retorno de foco morria calado. Medido pela review.
+  const fecharAviso = useCallback((): void => {
+    liberarFundo();
+    aviso.fechar();
+  }, [liberarFundo, aviso.fechar]);
 
   if (lendoCracha) {
     return (
@@ -122,7 +133,15 @@ export function ContaTravadaGate({ children }: ContaTravadaGateProps): JSX.Eleme
     const ok = await resgate.resgatar(codigo);
     // Sucesso: a claim nova já está no token (o hook forçou o refresh). Reler a
     // sessão derruba a vitrine sem recarregar a página.
-    if (ok) sessao.recarregar();
+    //
+    // ⛔ O aviso é BAIXADO por decisão, não pelo efeito colateral de a vitrine
+    // sumir por baixo dele. Sem esta linha o `aberto` seguia verdadeiro num
+    // aviso que já não estava na tela, e o `inert` do fundo nunca era devolvido
+    // — o painel recém-liberado nascia morto (REV-CORTE · 09/08).
+    if (ok) {
+      fecharAviso();
+      sessao.recarregar();
+    }
   }
 
   return (
@@ -135,7 +154,7 @@ export function ContaTravadaGate({ children }: ContaTravadaGateProps): JSX.Eleme
           erro={resgate.erro}
           onResgatar={(codigo) => void resgatar(codigo)}
           onSair={() => void logout()}
-          onFechar={aviso.fechar}
+          onFechar={fecharAviso}
         />
       ) : null}
     </>

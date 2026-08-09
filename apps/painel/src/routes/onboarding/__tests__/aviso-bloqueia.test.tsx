@@ -49,6 +49,13 @@ vi.mock('../../../lib/firebase', async (importOriginal) => ({
   initFirebase: () => undefined,
 }));
 
+/**
+ * O crachá que o token devolve. Começa VAZIO (conta em vitrine) e o resgate
+ * bem-sucedido o troca por um com tenant — é assim que a vitrine cai pela
+ * SESSÃO, que é o caminho feliz do produto e o que a review pegou quebrado.
+ */
+let crachaAtual: Record<string, unknown> = {};
+
 vi.mock('@leela/api-client', async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
   const espelho: Record<string, unknown> = {};
@@ -61,10 +68,14 @@ vi.mock('@leela/api-client', async (importOriginal) => {
       cb({ uid: 'u-vitrine' });
       return () => {};
     },
-    getClaims: async () => ({}),
+    getClaims: async () => crachaAtual,
     getLeelaDb: () => ({}),
     getLeelaFunctions: () => ({}),
     getContatoOnboarding: async () => CONTATO_ONBOARDING_PADRAO,
+    resgatarConviteOrganizador: async () => {
+      crachaAtual = { role: 'organizer', tenantId: 't-1' };
+      return { ok: true };
+    },
   };
 });
 
@@ -139,10 +150,12 @@ const OITO_CONTROLES_DO_FUNDO: readonly string[] = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  crachaAtual = {};
 });
 
 afterEach(() => {
   cleanup();
+  crachaAtual = {};
   window.history.pushState({}, '', '/');
 });
 
@@ -203,6 +216,81 @@ describe('vitrine · o fundo sai do alcance enquanto o aviso está na frente (DE
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector(`[${ATRIBUTO_INERTE}]`)).toBeNull();
     expect(nomes(alcancaveisNoFundo())).toEqual(OITO_CONTROLES_DO_FUNDO);
+  });
+});
+
+// =============================================================================
+// O FUNDO VOLTA AO MUNDO — as duas saídas que a review pegou quebradas
+// (REV-CORTE · 09/08). As duas são invisíveis para quem só olha o efeito do
+// `inert`, porque o jsdom não o implementa; as duas são medíveis pelo ATRIBUTO,
+// que é a propriedade que o navegador consome.
+// =============================================================================
+
+describe('vitrine · o `inert` cai em TODA saída, não só no botão (REV-CORTE)', () => {
+  it('o resgate que DÁ CERTO devolve o painel ao mundo', async () => {
+    // O caminho feliz do produto inteiro: a pessoa digita o código Leela, ele
+    // vale, a vitrine cai pela SESSÃO e o painel de verdade aparece. O aviso
+    // some sem passar por `fechar`, e era exatamente aí que o `inert` ficava
+    // preso no contêiner do app: aviso fora da tela, painel na tela, e nenhum
+    // dos seis links do menu alcançável até um F5. Medido pela review.
+    await abrirVitrine();
+    await usuario().click(
+      screen.getByRole('button', { name: /Como receber o código Leela/i }),
+    );
+    expect(document.querySelector(`[${ATRIBUTO_INERTE}]`)).not.toBeNull();
+
+    await usuario().type(screen.getByLabelText(/Já tem o código Leela/i), 'ABCDEFGH');
+    await usuario().click(screen.getByRole('button', { name: /Liberar acesso/i }));
+    await act(async () => {
+      await new Promise((resolver) => setTimeout(resolver, 0));
+    });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector(`[${ATRIBUTO_INERTE}]`)).toBeNull();
+  });
+
+  it('o retorno de foco NÃO acontece dentro da subárvore inerte', async () => {
+    // O `useDialogBehavior` devolve o foco ao abridor no desmonte, e o React
+    // processa a remoção da subárvore ANTES da limpeza do efeito do pai. Com o
+    // `inert` saindo só na limpeza, o `focus()` caía num nó inerte — no-op no
+    // navegador, foco largado no `<body>`, teclado recomeçando do topo da
+    // página (WCAG 2.4.3). É a promessa que a adoção do `Modal` veio cumprir.
+    //
+    // O jsdom foca assim mesmo (não implementa `inert`), então o caso não pode
+    // olhar o `activeElement`: ele registra ONDE o `focus()` foi chamado.
+    const chamadas: { alvo: string; sobInerte: boolean }[] = [];
+    const focoOriginal = HTMLElement.prototype.focus;
+    Object.defineProperty(HTMLElement.prototype, 'focus', {
+      configurable: true,
+      writable: true,
+      value: function espiao(this: HTMLElement, ...args: unknown[]): void {
+        chamadas.push({
+          alvo: `${this.tagName}:${(this.textContent ?? '').trim().slice(0, 20)}`,
+          sobInerte: this.closest(`[${ATRIBUTO_INERTE}]`) !== null,
+        });
+        (focoOriginal as (...a: unknown[]) => void).apply(this, args);
+      },
+    });
+
+    try {
+      await abrirVitrine();
+      const clubs = itemDeMenu(/Clubs/i);
+      await usuario().click(clubs);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      chamadas.length = 0;
+      await usuario().keyboard('{Escape}');
+
+      // O abridor recebe o foco de volta — e o recebe alcançável.
+      expect(chamadas.map((c) => c.alvo)).toContain('A:Clubs');
+      expect(chamadas.filter((c) => c.sobInerte)).toEqual([]);
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, 'focus', {
+        configurable: true,
+        writable: true,
+        value: focoOriginal,
+      });
+    }
   });
 });
 
