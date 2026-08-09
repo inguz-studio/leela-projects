@@ -6,7 +6,7 @@ repo: C:\dev\LEELA
 branch: main
 head_inicial: f15644e7
 data: 2026-08-09
-estado: em curso
+estado: fechada
 ---
 
 # PAINEL-CORTE · handoff vivo
@@ -167,3 +167,47 @@ default permanente, aprovado por ele em 06/08. Conferi antes de apagar, e ele j�
 `02-rodadas/2026-08-06-triagem-painel/01-decisoes-dono.md`, com as duas travas. A página nova
 aponta para lá e explica como as duas réguas convivem — a de 06/08 converte por idade e silêncio, a
 de 09/08 por natureza do item, e as duas recusam dinheiro e dado pessoal.
+
+### 5 · o board
+
+Duas frentes. **Os cards que retinham item decidido pararam de reter**, um a um: a lista de
+modalidades (MODAL-1 e MODAL-2), o card do Serviço e da conversão (CONV-1), o de virar profissional
+(os cinco QUALIF), o do rebatismo (QUALIF-3), o da Arena (ARENA-3), o da ponte (PONTE-ELEGIVEL-1),
+o da vitrine (VITRINE-VEU-1 e VITRINE-CONTRASTE-1), o da separação de contas (AREA-MUDA-1 e
+ACUMULO-ESTOQUE-1), o da área do cliente (quatro de uma vez), o do modal de senha (CONTA-1 e
+CONTA-2) e o da barra de rolagem (SCROLLBAR-1). Três tarefas mudaram de estado em vez de sumir: a
+`S032-T5` passou a autorizada com a trava do número maior que zero escrita nela, a `S1234-T7`
+passou a decidida com "lane própria, não pega carona em deploy pronto" no corpo, e a `S321-T4`
+virou 🧊 **fechada por decisão**, com a condição de volta. O card do kit registrou que o SEMKIT-1
+encolheu à autorização.
+
+**Dois cards novos, no padrão épico → história → tarefa.** No Backlog, "O corte de 09/08 vira
+conserto", com a `S1242` (quinze tarefas cobrindo os dezessete consertos de código) e a `S1243`
+(oito tarefas cobrindo as dez decisões que viram regra escrita). No Feito, "Dez perguntas do painel
+fecham com o default que já estava em vigor", com a `S1244` nomeando as dez e o que cada uma
+decidiu — card fechado por decisão, não por entrega, e está dito assim.
+
+## Fecho da lane
+
+Cinco entregáveis, cinco commits, tudo empurrado. **Duração: 1h06** (`09:47` no primeiro commit,
+`10:04` no último), dentro do teto de uma hora por pouco e sem lane paralela em nenhum momento.
+
+| # | Entregável | Commit |
+|---|------------|--------|
+| 1 | resgate: rodada + handoff, conferidos e corrigidos | `d82209bb` |
+| 2 | painel reescrito no lugar, 28 itens | `eba43277` |
+| 3 | fila de execução dos 27 consertos | `93af2020` |
+| 4 | triagem encolhida | `6ac1ee68` |
+| 5 | board: retenções desfeitas e dois cards novos | (este) |
+
+**O que fica para o dono, e é só isto:** 23 decisões e 5 ações. Dinheiro (6): SERV-1, SERV-2,
+SERV-3, ESTOURO-1, JUROS-3, JUROS-4. LGPD e jurídico (6): LGPD-1 com três frentes, PB-11, ARENA-1,
+CRM-2, CRM-3, CRM-4. Vocabulário (2): ARENA-2 e item 12. Forma do produto (7): PCLIENTE-1,
+PONTE-CTA-1, PONTE-NOME-1, SEMKIT-2, CRM-1, CLUBES-1, ADMIN-USUARIOS-1. Produção e reparo
+autorizado (2): SEMKIT-1 e COMPROMETIDO-1. Ações (5): ADMINSEP-3, item 69, VITRINE-2, JUROS-1,
+JUROS-5.
+
+**O que eu não fiz, de propósito.** Não toquei em código de aplicação, não rodei processo pesado e
+não abri nenhuma das lanes da fila — elas nascem no board e esperam despacho. Os wikilinks novos
+(`[[01-decisoes-maestro]]`, `[[02-fila-execucao]]`) não foram resolvidos contra o Obsidian; se o
+vault exigir caminho, é ajuste de uma linha em cada.
