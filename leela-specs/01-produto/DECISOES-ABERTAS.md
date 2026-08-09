@@ -309,8 +309,10 @@ Vale manter registrada a distinção que o item desfez: o e-mail de **primeiro a
 
 ### QUALIF-2 · a premissa "já temos o CPF" não vale, e você precisa escolher o que entra no lugar
 
-Você tirou o CPF do formulário porque a conta já teria o dado. Fui conferir e **não tem**: quem cria conta pelo `/cadastrar` não tem CPF em lugar nenhum do sistema, e o CPF só existe para quem comprou, pagou, se inscreveu e confirmou o e-mail. A sua leva seguinte quase conserta isso, ao propor CPF como identificador de cadastro, mas aí entra o login social, e nem Google nem Apple devolvem documento. *Um professor de ioga que quer vender a própria aula nunca comprou ingresso de ninguém, então o sistema não sabe quem ele é.*
+Você tirou o CPF do formulário porque a conta já teria o dado. Fui conferir e **não tem**: quem cria conta pelo `/cadastrar` não tem CPF em lugar nenhum do sistema, e o CPF só existe para quem comprou, pagou, se inscreveu e confirmou o e-mail. A sua leva seguinte quase conserta isso, ao propor CPF como identificador de cadastro, mas aí entra o login social, e nem Google nem Apple devolvem documento.
 
+- **Caso de uso:** um professor de ioga que quer vender a própria aula nunca comprou ingresso de ninguém, então o sistema não sabe quem ele é. Ele chega à porta do painel e o produto precisa decidir ali o que pedir.
+- **Job story:** quando eu decido vender a minha própria aula sem nunca ter comprado nada aqui, eu quero entrar pelo caminho que eu já uso todo dia, para não ser barrado por um documento logo na primeira tela.
 - **O que fica com você:** dizer se CPF é identificador de **entrada** (você loga com ele) ou só de **identificação** (você informa uma vez, e entra por e-mail ou social).
 - **Por que agora:** a resposta decide o desenho da porta, e a porta ainda não subiu. Depois de construída é retrabalho.
 - **Opções:** CPF só identifica, e é pedido uma vez no primeiro momento em que trabalha — no checkout para quem compra, na promoção a profissional para quem não comprou (**default proposto**, porque é a única leitura que sobrevive ao login social) · CPF também é credencial de login, e aí ele passa a ser obrigatório na porta para todo mundo, o que exclui quem entra por Apple ou Google e transforma um documento adivinhável em nome de usuário.
@@ -318,8 +320,10 @@ Você tirou o CPF do formulário porque a conta já teria o dado. Fui conferir e
 
 ### QUALIF-1 · o número do CNPJ é pedido quando você cria o painel, ou quando vai receber
 
-Você pediu para perguntar se a pessoa tem CNPJ e, se tiver, pedir o número para criar o painel. A pergunta é barata e útil, e ela entra. O **número** é outra conversa: ele só faz trabalho quando o dinheiro anda, e o produto já o pede nesse momento, no cadastro de recebimento. *A pessoa preenche o CNPJ para abrir o painel, cria três eventos, e o número fica seis meses guardado sem nada acontecer com ele.*
+Você pediu para perguntar se a pessoa tem CNPJ e, se tiver, pedir o número para criar o painel. A pergunta é barata e útil, e ela entra. O **número** é outra conversa: ele só faz trabalho quando o dinheiro anda, e o produto já o pede nesse momento, no cadastro de recebimento.
 
+- **Caso de uso:** a pessoa preenche o CNPJ para abrir o painel, cria três eventos, e o número fica seis meses guardado sem nada acontecer com ele.
+- **Job story:** quando eu abro o meu painel, eu quero preencher só o que é necessário para começar, para não entregar o número da minha empresa antes de existir dinheiro em jogo.
 - **O que fica com você:** dizer se o número entra na promoção junto da pergunta, ou fica no cadastro de recebimento.
 - **Por que agora:** é um campo a mais ou a menos num formulário que você pediu breve, e o desenho de onde o número fica guardado já está pronto nas duas hipóteses.
 - **Opções:** só a pergunta na promoção, e o número no recebimento (**default proposto** — o formulário fica mais curto e o dado chega quando serve) · a pergunta e o número na promoção, e aí o número vai para um subdocumento de leitura restrita, nunca para o documento que a equipe do tenant lê.
@@ -329,6 +333,8 @@ Você pediu para perguntar se a pessoa tem CNPJ e, se tiver, pedir o número par
 
 Você batizou o painel e eu concordo com o nome, com um argumento a mais do que o seu: a coleção do banco já se chama `profissionais` desde o começo, então a troca alinha a tela ao modelo, em vez de inventar vocabulário. O nome aparece em três alturas e elas custam coisas muito diferentes. *Trocar o nome do diretório e do pacote produz um diff enorme e não muda uma letra do que você vê na tela.*
 
+- **Caso de uso:** o Castelo entra e lê "Painel Profissional" no título, na barra lateral e no botão que o trouxe da landing. O nome da pasta no repositório continua dizendo outra coisa, e ele nunca vai ver isso.
+- **Job story:** quando eu entro na área onde eu trabalho, eu quero que ela se chame o que ela é, para saber num relance que estou no lugar de produzir e não na minha conta de cliente.
 - **O que fica com você:** dizer se a troca para no que se vê, ou vai até o nome técnico.
 - **Por que agora:** o rebatismo tem de entrar no mesmo lote da porta de entrada, porque toca os mesmos arquivos. Separado, custa duas vezes.
 - **Opções:** só o rótulo visível — título, sidebar, telas de entrada e os botões da landing (**default proposto**: cobre quase toda a percepção e "organizador" continua correto como papel de quem produz eventos) · também o identificador técnico, renomeando diretório, pacote e variáveis, o que é caro e invisível.
@@ -338,6 +344,8 @@ Você batizou o painel e eu concordo com o nome, com um argumento a mais do que 
 
 Você citou a Cheers como bom fluxo de referência e emendou com e-mail, CPF e login social. A frase tem duas leituras e eu não quis escolher por você: *fluxo de exemplo*, algo que vale copiar, ou *programa de indicação*, o indique-um-amigo. *A primeira leitura já está especificada; a segunda é um épico que ninguém abriu.*
 
+- **Caso de uso:** alguém indica a Leela para um amigo. Sob a primeira leitura não acontece nada de especial, e o amigo entra pela porta de sempre. Sob a segunda, ele entra por um link que carrega o nome de quem indicou, e existe recompensa a apurar e a pagar.
+- **Job story:** quando eu recomendo a plataforma para alguém que confia em mim, eu quero saber se essa indicação vale alguma coisa, para decidir se vale a pena recomendar de novo.
 - **O que fica com você:** uma palavra.
 - **Por que agora:** se era indicação, é escopo novo e entra na fila; se era exemplo, não há nada a fazer.
 - **Opções:** era exemplo de fluxo de entrada (**default assumido**, porque a frase segue falando de cadastro e login) · era programa de indicação, e aí abre frente própria.
@@ -346,8 +354,10 @@ Você citou a Cheers como bom fluxo de referência e emendou com e-mail, CPF e l
 
 ### QUALIF-5 · o Apple Sign-In depende de uma conta que só você abre
 
-O login com Google e com Apple já está escrito no código e nenhuma tela usa. Ligar o Google é trabalho de tela. Ligar a Apple exige Apple Developer Account com App ID e Service ID, uma chave `.p8` registrada no Firebase e verificação de domínio. *Sem as chaves, o botão da Apple aparece e lança erro na cara de quem clicar.*
+O login com Google e com Apple já está escrito no código e nenhuma tela usa. Ligar o Google é trabalho de tela. Ligar a Apple exige Apple Developer Account com App ID e Service ID, uma chave `.p8` registrada no Firebase e verificação de domínio.
 
+- **Caso de uso:** sem as chaves, o botão da Apple aparece na tela de entrada e lança erro na cara de quem clicar.
+- **Job story:** quando eu entro num site novo, eu quero usar a conta que eu já tenho no celular, para não inventar mais uma senha. Se o botão está ali, eu conto com ele.
 - **O que fica com você:** abrir a conta e gerar as chaves, ou dizer para subir só o Google agora.
 - **Por que agora:** a Apple exige o botão dela para publicar app na App Store, então a conta vai ser necessária de qualquer forma. Antecipar evita subir a porta duas vezes.
 - **Opções:** subir Google agora e Apple quando as chaves existirem (**default proposto** — botão que quebra é pior que botão ausente) · segurar os dois até a Apple estar pronta.
@@ -355,8 +365,10 @@ O login com Google e com Apple já está escrito no código e nenhuma tela usa. 
 
 ### DEPLOY-1 · a porta de entrada do organizador está pronta e não está no ar
 
-O pacote inteiro foi construído, revisado por antagonista em contexto fresco e está verde: cadastro aberto, tela de convites no super-admin, resgate atômico, overlay bloqueante e o roteamento pós-login que você ratificou. Nada disso foi para produção. *Você abre o site hoje e não existe onde um organizador novo clique para entrar.*
+O pacote inteiro foi construído, revisado por antagonista em contexto fresco e está verde: cadastro aberto, tela de convites no super-admin, resgate atômico, overlay bloqueante e o roteamento pós-login que você ratificou. Nada disso foi para produção.
 
+- **Caso de uso:** quando este item nasceu, um organizador novo abria o site e não tinha onde clicar para entrar. Metade subiu desde então, e hoje a cena é outra: ele encontra "Criar conta", chega até a tela do código de convite e para ali, porque a função que resgata o convite responde 404 em produção e nenhum convite foi semeado em ambiente nenhum.
+- **Job story:** quando eu decido organizar na Leela, eu quero criar a minha conta e atravessar a entrada até o fim, para começar a montar o meu evento no mesmo dia em que tomei a decisão.
 - **O que fica com você:** dizer quando sobe.
 - **Por que agora:** subir abre publicamente a entrada do organizador na landing e o cadastro aberto. Duas coisas pesam na conta e nenhuma delas é bloqueio: o veto **LGPD-1** acima está aberto, mas ele só se materializa no resgate de convite, e **nenhum convite foi semeado em ambiente nenhum** — a porta sobe fechada na prática; e a borda volumétrica (App Check e Cloud Armor desligados) vale para o cadastro aberto, que é o que fica exposto.
 - **Opções:** subir agora com o seed retido — **é a recomendação do maestro**, porque a jornada fica inalcançável sem convite e o roteamento pós-login já corrige em produção um destino que hoje erra · esperar a decisão LGPD-1 antes de qualquer deploy · subir só o roteamento pós-login e segurar a entrada na landing.
@@ -366,16 +378,20 @@ O pacote inteiro foi construído, revisado por antagonista em contexto fresco e 
 
 ### 12 · domínio público
 
-Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente definitivo do e-mail depende dessa escolha. *O Castelo quer divulgar a página do evento no Instagram e o endereço de hoje nasce para quebrar.*
+Todo endereço do produto ainda é o marcador `{DOMINIO_LEELA}`, e o remetente definitivo do e-mail depende dessa escolha.
 
+- **Caso de uso:** o Castelo quer divulgar a página do evento no Instagram, e o endereço de hoje nasce para quebrar — é um subdomínio de hospedagem que vai mudar quando o domínio de verdade existir.
+- **Job story:** quando eu divulgo a página do meu evento, eu quero um endereço que eu não tenha vergonha de colar e que continue funcionando depois, para não ter de reeditar cada post no dia em que o site mudar de casa.
 - **O que fica com você:** cravar o domínio público da Leela.
 - **Por que agora:** o produto já está no ar em `leela-landing.web.app` e o e-mail transacional sai por `vitoreldp@gmail.com`, que o DMARC do Gmail tende a jogar em spam quando a Brevo envia por ele.
 - **Onde aterrissa:** env dos dois apps, substituição do marcador nas specs e verificação DKIM/SPF/DMARC na Brevo. Puxa junto o item 66 e o placeholder `contato@leela.app`, que a porta de entrada do organizador já usa como CTA de "Falar com o time Leela".
 
 ### 66 · o botão "Ver página pública" aponta para um domínio de terceiro quando falta configuração
 
-O link que o afiliado copia já está resolvido: sem endereço configurado ele não sai, e a tela diz isso. O botão de navegação interna do organizador continua com `be-hero.com.br` cravado como último recurso, o mesmo domínio que você expulsou do e-mail da compra. *Você abre um ambiente novo para um teste, clica em "Ver página pública" e cai no site de outra empresa.*
+O link que o afiliado copia já está resolvido: sem endereço configurado ele não sai, e a tela diz isso. O botão de navegação interna do organizador continua com `be-hero.com.br` cravado como último recurso, o mesmo domínio que você expulsou do e-mail da compra.
 
+- **Caso de uso:** você abre um ambiente novo para um teste, clica em "Ver página pública" e cai no site de outra empresa.
+- **Job story:** quando eu clico em "Ver página pública" para conferir como o meu evento ficou, eu quero cair na minha página ou numa mensagem que explique a falta, para nunca ser jogado no site de um concorrente.
 - **O que fica com você:** ratificar a retirada do domínio do código.
 - **Por que agora:** em produção a configuração existe e o botão vai para o lugar certo; o risco é o ambiente novo que nascer sem ela, e a porta de entrada do organizador cria ambientes agora.
 - **Opções:** o botão declara que o ambiente não tem endereço configurado, o que é uma linha (**default proposto**) · manter o fallback fixo.
@@ -383,8 +399,10 @@ O link que o afiliado copia já está resolvido: sem endereço configurado ele n
 
 ### PB-11 · no retry, a prova de aceite carimba a versão que a pessoa não leu
 
-A conferência de versão vale na criação do pedido: se a tela declara uma versão diferente da vigente, o servidor recusa. No retry de uma compra já nascida, o carimbo usa a vigente sem conferir a exibida, e isso está medido: pedido sem bloco de aceite, política na v3, retry declarando a v1, resultado carimba a v3. *A Ana aceita a v1, a política vira v3 no meio da compra, e o retry carimba a v3 que ela nunca leu.*
+A conferência de versão vale na criação do pedido: se a tela declara uma versão diferente da vigente, o servidor recusa. No retry de uma compra já nascida, o carimbo usa a vigente sem conferir a exibida, e isso está medido: pedido sem bloco de aceite, política na v3, retry declarando a v1, resultado carimba a v3.
 
+- **Caso de uso:** a Ana aceita a v1, a política vira v3 no meio da compra, e o retry carimba a v3 que ela nunca leu. O documento fica com uma prova, e a prova aponta para um texto que não estava na tela dela.
+- **Job story:** quando eu aceito uma política antes de pagar, eu quero que fique registrado exatamente o texto que estava na minha frente, para que a prova do meu aceite corresponda ao que eu li.
 - **O que fica com você:** escolher entre prova ausente e prova errada. Recusar ali deixaria sem prova um pedido já pago.
 - **Por que agora:** é decisão jurídica, não técnica, e o caso de teste já está escrito no ponto exato onde a decisão vira código.
 - **Opções:** carimbar a vigente e manter a compra viva (**em vigor**) · recusar o retry divergente e ficar sem prova nesse pedido.
@@ -392,8 +410,10 @@ A conferência de versão vale na criação do pedido: se a tela declara uma ver
 
 ### VITRINE-1 · nada impede publicar um evento sem preço, e dois estão assim agora
 
-`publicarEvento` confere nome, data, local e modalidades. Preço não entra na conta, em modelo nenhum. `noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026` estão publicados em produção sem lote **e** sem percursos — o servidor recusa a venda tanto quanto a página. Não é a vitrine discordando do servidor: os dois concordam que não há o que cobrar. *O Castelo publica o evento, o painel diz "Publicado" em verde, e a página responde "Inscrições encerradas" para todo mundo que chega pelo Instagram.*
+`publicarEvento` confere nome, data, local e modalidades. Preço não entra na conta, em modelo nenhum. `noturna-beira-mar-2026` e `retiro-bem-estar-rio-vermelho-2026` estão publicados em produção sem lote **e** sem percursos — o servidor recusa a venda tanto quanto a página. Não é a vitrine discordando do servidor: os dois concordam que não há o que cobrar.
 
+- **Caso de uso:** o Castelo publica o evento, o painel diz "Publicado" em verde, e a página responde "Inscrições encerradas" para todo mundo que chega pelo Instagram.
+- **Job story:** quando o painel me diz que o meu evento está publicado, eu quero que a página pública esteja vendendo, para o verde da tela querer dizer a mesma coisa que o visitante encontra.
 - **O que fica com você:** decidir se publicar passa a exigir preço.
 - **Por que agora:** a lane VITRINE-FIX reconciliou a régua da página com a do servidor e entregou o alerta ao organizador, mas manteve deliberadamente a porta aberta — fechá-la muda o produto. `criarEvento` exige percursos e não cria lote nenhum, então exigir lote para publicar tornaria todo evento novo impublicável até alguém descobrir a aba Lotes.
 - **Opções:** manter livre e confiar no alerta crítico novo do painel (**em vigor**) · exigir ao menos um preço para publicar, o que pede migração dos dois eventos e revisão do fluxo de criação.
@@ -401,8 +421,10 @@ A conferência de versão vale na criação do pedido: se a tela declara uma ver
 
 ### VITRINE-2 · os dois eventos sem preço seguem publicados e visíveis
 
-Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra preço, os dois continuam no ar dizendo que as inscrições acabaram. *Quem chega neles hoje conclui que a plataforma está quebrada.*
+Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra preço, os dois continuam no ar dizendo que as inscrições acabaram.
 
+- **Caso de uso:** alguém chega hoje em `noturna-beira-mar-2026` ou em `retiro-bem-estar-rio-vermelho-2026`, lê "Inscrições encerradas" e conclui que a plataforma está quebrada. Os dois seguem no ar, com 60 e 28 inscritos já contabilizados.
+- **Job story:** quando eu abro a página de um evento que ainda vai acontecer, eu quero conseguir me inscrever ou entender por que não posso, para não ir embora achando que o site não funciona.
 - **O que fica com você:** cadastrar preço nos dois ou tirá-los do ar até que alguém cadastre.
 - **Por que agora:** são 60 e 28 inscritos já contabilizados, então despublicar tem efeito visível e não é decisão de máquina.
 - **Opções:** cadastrar lotes e deixar vender · despublicar até ter preço · deixar como está.
@@ -410,8 +432,10 @@ Consertar código não os faz vender: falta dado. Enquanto ninguém cadastra pre
 
 ### ARENA-1 · quem vê o que a pessoa preencheu na Arena Social
 
-Você pediu a Arena Social — mini bio, gênero, gêneros de interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta. A frase não diz quem vê, e visibilidade é a diferença entre um formulário e uma rede. *A Ana preenche a mini bio e os interesses; ou só ela vê (e a área ainda não conecta ninguém), ou outros participantes veem (e o produto precisa dizer isso a ela antes de ela preencher).*
+Você pediu a Arena Social — mini bio, gênero, gêneros de interesse (pessoas e experiências), interesses nos pilares de bem-estar e a foto da conta. A frase não diz quem vê, e visibilidade é a diferença entre um formulário e uma rede.
 
+- **Caso de uso:** a Ana preenche a mini bio e os interesses. Ou só ela vê, e a área ainda não conecta ninguém, ou outros participantes veem, e o produto precisa dizer isso a ela antes de ela preencher.
+- **Job story:** quando eu escrevo sobre mim numa plataforma, eu quero saber quem vai ler antes de começar a escrever, para decidir o quanto eu conto. As duas opções servem gente diferente: quem quer conhecer pessoas na mesma experiência é servida pela abertura, e quem só quer guardar os próprios dados é servida pelo fechamento.
 - **O que fica com você:** dizer quem vê o perfil da Arena.
 - **Por que agora:** a resposta desenha as Rules e as telas antes de virar código; mudar visibilidade depois de dado preenchido é retrabalho com dado de gente real.
 - **Opções:** só a própria pessoa vê, e a abertura para outros participantes vem depois, junto da feature de conexão (**default proposto** — o dado nasce guardado e nenhuma promessa é feita antes da hora) · participantes de uma mesma experiência veem o perfil de quem optou por aparecer · organizador da experiência também vê. Em qualquer opção, o campo de gêneros de pessoas segue a régua própria da RN-472 e **nunca** fica visível por default.
