@@ -3738,6 +3738,37 @@ hoje exporta vinte e um nomes). São três nomes no `export`, não componente no
 `S1234-T4` (a demonstração ponta a ponta até o resgate do código Leela). Fila e dependências em
 `02-rodadas/2026-08-06-painel-cliente/05-fila-codigo.md`.
 
+#### ✅ NO AR desde 08/08 (lane DEPLOY-PONTE)
+
+A ponte deixou de ser código dormindo. **Callable `promoverParaProfissional` publicada às 21:59**
+(`Successful create`, `state: ACTIVE`, hash `bf1108862d747f12ef41515eddc52bf4270f7ea9`, `us-central1`,
+1ª geração — o projeto passou de 98 para 99 funções) e **bundle da landing às 22:13**
+(`main-app-24c4fa540a35e5d0` → `main-app-1d580aaf540f899f`, 5 dos 20 chunks trocados).
+
+**A ordem é regra, não conveniência.** Functions primeiro: com a callable no ar e a landing velha,
+o comportamento em produção é o de antes; com a landing nova e a callable ausente, o botão vira
+**404**. E isso não é hipótese — antes do deploy, `POST /promoverParaProfissional` devolvia 404
+medido, com controle vivo em 401 e controle morto em 404 para provar que a sonda distingue.
+
+Provado dentro do bundle **baixado de produção** (os 22 chunks de `/minha-conta`, 1.298.007 bytes):
+`'Painel Profissional'` 1 · `'Quer organizar eventos ou criar um club?'` 1 · o aviso do segundo
+login 1 · `'promoverParaProfissional'` 1 · o rótulo antigo `'Conhecer o painel profissional'` **0** ·
+controle **0**.
+
+Em produção a callable responde `401` com `details.motivo: 'sem_sessao'` — recusa **tipada**, o que
+confirma no ar o risco que a PONTE-REV nomeou no vetor 12: se a `HttpsError` do módulo não fosse a
+classe do runtime, toda recusa sairia `internal` com a mensagem apagada.
+
+**Nenhum índice novo** — `firestore.indexes.json` intocado, a callable acessa Firestore só por
+`doc(uid)` e a conferência de prontidão bateu 18×18 índices e 8×8 `fieldOverrides` contra o servidor.
+
+⚠️ **Armadilha que quase publicou um botão morto:** a landing importa `promoverParaProfissional` de
+`@leela/api-client`, e o pacote resolve por `dist/`, não por fonte. O `dist/` estava 423 min atrás e
+tinha **zero** ocorrências do símbolo. O `tsup` do `api-client` era obrigatório e foi conferido antes
+do build (0 → 3). `packages/design-system` **não** precisou de rebuild.
+
+Relato completo em `.nirvana/handoffs/leela-retomada-20260808-DEPLOY-PONTE.md`.
+
 ⚠️ Território: `portaOrganizador.ts:52-68` carrega um comentário **pinado** pela FRONTEIRA-AUTH.
 Ali o papel literal está certo, porque a pergunta é *"esta conta é SÓ da plataforma?"*. Trocar por
 `isPlatformAdmin` tira do dono — `tenant_owner` **com** a capacidade — a porta de organizador na
