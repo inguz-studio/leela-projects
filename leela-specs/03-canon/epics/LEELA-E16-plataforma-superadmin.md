@@ -1710,3 +1710,52 @@ cliente da plataforma, e não só quem procurou o painel. A "fila de pedidos de 
 rodada de 28/07 deixou registrada como candidata natural — para o dono prospectar quem entrou em
 vitrine e não resgatou código — fica ainda mais atraente. Continua **não pedida**, e continua
 sendo card próprio se o dono quiser.
+
+## Delta o que a review antagonista mediu na vitrine (REV-VITRINE · 2026-08-08)
+
+A RN-510 continua **inalterada no enunciado**. A review de contexto frio atacou os nove vetores
+que a lane construtora declarou e a propriedade central resistiu: nenhuma query tenant-scoped sai
+da vitrine, e o véu compila em cor de verdade no CSS que o build entrega — medido no `dist`
+(`index-DufB2CDQ.css`, 109.895 bytes), não lido do código.
+
+O que muda no épico são **três pontas de mecanismo** que a review consertou, e que quem mexer na
+porta precisa saber que existem.
+
+**1 · A camada de PAPEL passou a ser verificável, como a de AUTH já era.** O painel empilha duas
+fronteiras em `App.tsx`: `RequireSessao` decide quem entra, `ContaTravadaGate` decide o que um
+autenticado vê. A primeira tinha lint (`leela-auth/rota-fora-da-fronteira`) e contrato de 28
+casos; a segunda não tinha nada. A review falsificou enxertando uma rota irmã com `RequireSessao`
+e sem `ContaTravadaGate`: **eslint verde, os 28 casos verdes, a allowlist verde, e `getOverview`
+saindo pela porta** para uma conta sem tenant. A allowlist não pegava porque visita uma lista de
+URLs escrita à mão. Agora existe `gate-de-papel.test.ts`, que lê a fonte do `App.tsx` e exige que
+toda rota debaixo do guarda de sessão monte também o gate de papel — rota nova que esqueça o gate
+aparece pelo `path`. **Consequência para quem escreve rota:** abrir rota autenticada fora do
+`ContaTravadaGate` passa a ser decisão declarada, não descuido silencioso.
+
+**2 · O estado de espera do crachá ganhou prazo.** O estado nasceu nesta rodada (é ele que fecha o
+vazamento de `getOverview`/`listarMarcas` na janela em que o claim ainda não voltou) e nasceu sem
+saída: `getClaims` que **nunca assenta** — a aba que o celular suspendeu no meio do refresh do
+token — deixava skeleton eterno, porque promessa pendurada não rejeita e o `catch` que trata a
+leitura com erro nunca rodava. Medido: cinco minutos de relógio simulado, o retângulo cinza ainda
+na tela. O prazo (12s) faz o caso pendurado terminar no **mesmo** estado terminal em que o caso
+com erro já terminava — autenticada sem papel, que é vitrine, fail-closed. Quando a leitura real
+assenta depois do prazo, ela sobrescreve e o painel volta sozinho.
+
+**3 · `/conta` entrou na medição.** `ROTAS_LIBERADAS` tem um nome só, e por isso `/conta` é o
+**único** endereço em que a conta em vitrine monta uma tela REAL, com hooks de dados — e era a
+única rota que a allowlist da RN-510 nunca visitava. Entrou, junto com `/conta/perfil-publico`. As
+duas estão limpas hoje; a `RecebimentoSection` (RN-366) e o editor de perfil público vivem lá
+dentro, e agora estão congeladas contra dado de tenant.
+
+**O que ficou como decisão do dono, e não como defeito.** O aviso é `role="dialog"` escrito à mão:
+o véu bloqueia o hit-test do ponteiro e **não** bloqueia tecnologia assistiva — medido, um clique
+de leitor de tela no menu navegou o painel com o aviso na frente, e em silêncio, porque os
+ouvintes de interação saem do documento enquanto ele está aberto. O `Modal` do DS já resolve isso
+(portal, armadilha cíclica, trava de rolagem, retorno de foco). E no tema brasa o cartão do aviso
+dá 1,13:1 contra o próprio fundo velado. Os dois estão em `DECISOES-ABERTAS.md` como
+**VITRINE-VEU-1** e **VITRINE-CONTRASTE-1**, com default em vigor.
+
+**Contraste, para não se remedir:** todo o texto do aviso e da vitrine passa AA nos dois temas,
+calculado dos tokens resolvidos do bundle. Pior par: botão primário em hover, 4,58:1 num limiar de
+4,5. Anel de foco: 6,15:1 sobre o cartão e 6,65:1 sobre a base, num limiar de 3. Números completos
+em `.nirvana/handoffs/leela-retomada-20260808-REV-VITRINE.md` §2.
