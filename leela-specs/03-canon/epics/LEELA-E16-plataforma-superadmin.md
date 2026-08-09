@@ -1759,3 +1759,54 @@ dá 1,13:1 contra o próprio fundo velado. Os dois estão em `DECISOES-ABERTAS.m
 calculado dos tokens resolvidos do bundle. Pior par: botão primário em hover, 4,58:1 num limiar de
 4,5. Anel de foco: 6,15:1 sobre o cartão e 6,65:1 sobre a base, num limiar de 3. Números completos
 em `.nirvana/handoffs/leela-retomada-20260808-REV-VITRINE.md` §2.
+
+
+## Delta a vitrine tem DUAS saídas, e a segunda não passa por "fechar" (REV-CORTE · 2026-08-09)
+
+A RN-510 continua **inalterada no enunciado**. O que entra aqui é uma ponta de mecanismo que o
+enunciado sempre pressupôs e nunca disse em voz alta, e que custou dois defeitos quando o
+VITRINE-VEU-1 trocou o véu escrito à mão pelo `Modal` do DS.
+
+O enunciado descreve o aviso subindo no gesto e **fechando** por `Esc` ou botão. Mas a vitrine
+também termina por outro caminho, que é o desfecho FELIZ dela: a pessoa resgata o código Leela,
+a claim de tenant nasce, a sessão é relida e a vitrine **cai** — com o aviso ainda aberto,
+porque foi de dentro dele que o código foi digitado. Esse caminho nunca passa por "fechar".
+
+**Por que isso virou defeito.** O VITRINE-VEU-1 precisou trazer `inert` para o fundo (o `Modal`
+do DS não o faz, e `aria-modal` é sinal e não trava). O `inert` foi amarrado ao estado "aviso
+aberto", e esse estado nunca virava falso na saída por resgate: o conteêner do app ficava inerte
+**para sempre**. Medido em 09/08, com o resgate dando certo: aviso fora da tela, `inert` no
+conteêner, os seis links do menu dentro dele. No navegador, o painel que a pessoa acabou de
+liberar não responde a mouse, teclado nem tecnologia assistiva até um F5.
+
+**A regra de mecanismo que fica escrita**, para quem mexer na porta:
+
+1. **Toda trava que o aviso põe no fundo é devolvida em TODAS as saídas** — as quatro do gesto
+   (X, `Esc`, clique no véu, "Continuar olhando") **e a saída por sessão**, que é o resgate bem
+   sucedido. Amarrar a devolução só à limpeza do efeito não basta: quando a vitrine cai por
+   baixo do aviso, as dependências não mudam e a limpeza nunca roda.
+2. **A devolução acontece ANTES do desmonte, não depois.** O React processa a remoção da
+   subárvore antes da limpeza do efeito do pai, e o retorno de foco ao abridor cai no meio desse
+   intervalo. Foco em nó inerte é no-op: quem fecha pelo `Esc` perde o foco para o `<body>` e
+   recomeça do topo da página (WCAG 2.4.3) — exatamente a promessa que a adoção do `Modal`
+   veio cumprir.
+3. **"O aviso está aberto" só pode ser verdade quando ele está na tela.** O estado é lido por
+   quem age no DOM, e ali um `true` mentiroso deixa de ser detalhe de render e vira dano.
+
+**A lacuna de prova que isto fecha, e que vale para qualquer lane futura:** o jsdom **não**
+implementa o comportamento do `inert` — ele guarda o atributo e não bloqueia clique nem foco. A
+lane construtora leu isso como "aqui não dá para medir". Dá: o **atributo** é medível, e é ele
+que o navegador consome. Os dois defeitos eram visíveis sem navegador nenhum. O que continua
+exigindo navegador é só o *efeito* — o clique sintético que não navega e o leitor de tela.
+
+**O que saiu de DECISÕES-ABERTAS nesta rodada:** VITRINE-VEU-1 e VITRINE-CONTRASTE-1 foram
+construídos em 09/08 e revisados no mesmo dia. O contraste do limite do cartão passou de 1,13:1
+(cartão contra o velado, brasa) para **3,82:1** de borda contra o cartão e **4,30:1** contra o
+velado; no wine, 3,74:1 e 5,90:1. Números reconferidos por conta independente na review, dos
+tokens resolvidos e do `dist`. `--surface-raised` **não** foi tocada — clareá-la continua sendo
+a condição de reabertura do item, e continua sendo do dono.
+
+**O que continua fora, de propósito:** o `inert` **não** subiu para dentro do `Modal` do DS. As
+outras 26 telas que o usam seguem sem trava de fundo, e a review reforça a recomendação de subir
+— com um motivo a mais: fora do DS, o ciclo de vida da trava não está amarrado ao do diálogo, e
+foi dessa folga que os dois defeitos nasceram. É conversa com review própria.
